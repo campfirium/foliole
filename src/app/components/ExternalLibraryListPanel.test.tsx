@@ -31,6 +31,17 @@ const entriesByFolderId = {
       openingText: 'The first useful sentence inside this external document.',
       relativePath: 'a.md',
       title: 'Alpha title'
+    },
+    {
+      absolutePath: '/library/two think/b.md',
+      extension: 'md' as const,
+      fileName: 'b.md',
+      folderId: 'folder-1',
+      folderPath: '/library/two think',
+      modifiedAt: '2026-04-20T00:00:00.000Z',
+      openingText: 'The second useful sentence inside this external document.',
+      relativePath: 'b.md',
+      title: 'Beta title'
     }
   ]
 };
@@ -100,6 +111,27 @@ it('opens the selected document in the external workspace surface', () => {
 
   expect(onOpenExternalSelection).toHaveBeenCalledWith({
     absolutePath: '/library/two think/a.md',
+    folderId: 'folder-1',
+    kind: 'document'
+  });
+});
+
+it('moves external document selection with arrow keys', () => {
+  const onOpenExternalSelection = vi.fn();
+
+  render(
+    <ExternalLibraryListPanel
+      entriesByFolderId={entriesByFolderId}
+      folders={folders}
+      onOpenExternalSelection={onOpenExternalSelection}
+      selection={{ folderId: 'folder-1', kind: 'folder' }}
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Alpha title' }), { key: 'ArrowDown' });
+
+  expect(onOpenExternalSelection).toHaveBeenCalledWith({
+    absolutePath: '/library/two think/b.md',
     folderId: 'folder-1',
     kind: 'document'
   });

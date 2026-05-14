@@ -1,20 +1,37 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-import type { NodeTreeRow } from '../model/nodeTree';
-
 function focusTreeItem(nodeId: string) {
   requestAnimationFrame(() => {
-    const element = document.querySelector<HTMLElement>(`[data-node-id="${nodeId}"]`);
+    const element = Array.from(document.querySelectorAll<HTMLElement>('[data-node-id]'))
+      .find((candidate) => candidate.dataset.nodeId === nodeId);
     element?.focus();
   });
 }
 
-function findParentRowNodeId(rows: NodeTreeRow[], index: number): string | null {
+export interface TreeKeyboardRow {
+  depth: number;
+  hasChildren: boolean;
+  id: string;
+}
+
+type NodeTreeKeyboardRow = {
+  depth: number;
+  hasChildren: boolean;
+  node: { id: string };
+};
+
+type KeyboardRow = TreeKeyboardRow | NodeTreeKeyboardRow;
+
+function getKeyboardRowId(row: KeyboardRow) {
+  return 'id' in row ? row.id : row.node.id;
+}
+
+function findParentRowNodeId(rows: readonly KeyboardRow[], index: number): string | null {
   const currentDepth = rows[index]?.depth ?? 0;
   for (let i = index - 1; i >= 0; i -= 1) {
     const row = rows[i];
     if (row && row.depth < currentDepth) {
-      return row.node.id;
+      return getKeyboardRowId(row);
     }
   }
   return null;
@@ -24,7 +41,7 @@ interface NodeListKeyboardInput {
   collapsedNodeIds: ReadonlySet<string>;
   onSelect: (nodeId: string) => void;
   onToggleCollapse: (nodeId: string) => void;
-  rows: NodeTreeRow[];
+  rows: readonly KeyboardRow[];
 }
 
 function selectAndFocus(nodeId: string, onSelect: (nodeId: string) => void) {
@@ -35,23 +52,27 @@ function selectAndFocus(nodeId: string, onSelect: (nodeId: string) => void) {
 function handleLinearNavigationKey(
   key: string,
   index: number,
-  rows: NodeTreeRow[],
+  rows: readonly KeyboardRow[],
   onSelect: (nodeId: string) => void
 ): boolean {
-  if (key === 'ArrowDown' && rows[index + 1]) {
-    selectAndFocus(rows[index + 1]?.node.id ?? '', onSelect);
+  const nextRow = rows[index + 1];
+  const previousRow = rows[index - 1];
+  const firstRow = rows[0];
+  const lastRow = rows[rows.length - 1];
+  if (key === 'ArrowDown' && nextRow) {
+    selectAndFocus(getKeyboardRowId(nextRow), onSelect);
     return true;
   }
-  if (key === 'ArrowUp' && rows[index - 1]) {
-    selectAndFocus(rows[index - 1]?.node.id ?? '', onSelect);
+  if (key === 'ArrowUp' && previousRow) {
+    selectAndFocus(getKeyboardRowId(previousRow), onSelect);
     return true;
   }
-  if (key === 'Home' && rows[0]) {
-    selectAndFocus(rows[0]?.node.id ?? '', onSelect);
+  if (key === 'Home' && firstRow) {
+    selectAndFocus(getKeyboardRowId(firstRow), onSelect);
     return true;
   }
-  if (key === 'End' && rows[rows.length - 1]) {
-    selectAndFocus(rows[rows.length - 1]?.node.id ?? '', onSelect);
+  if (key === 'End' && lastRow) {
+    selectAndFocus(getKeyboardRowId(lastRow), onSelect);
     return true;
   }
   return false;
@@ -60,8 +81,8 @@ function handleLinearNavigationKey(
 function handleHierarchyNavigationKey(
   key: string,
   index: number,
-  row: NodeTreeRow,
-  rows: NodeTreeRow[],
+  row: KeyboardRow,
+  rows: readonly KeyboardRow[],
   isCollapsed: boolean,
   onSelect: (nodeId: string) => void,
   onToggleCollapse: (nodeId: string) => void
@@ -69,17 +90,17 @@ function handleHierarchyNavigationKey(
   const nextRow = rows[index + 1];
   if (key === 'ArrowRight' && row.hasChildren) {
     if (isCollapsed) {
-      onToggleCollapse(row.node.id);
+      onToggleCollapse(getKeyboardRowId(row));
       return true;
     }
     if (nextRow && nextRow.depth > row.depth) {
-      selectAndFocus(nextRow.node.id, onSelect);
+      selectAndFocus(getKeyboardRowId(nextRow), onSelect);
       return true;
     }
   }
   if (key === 'ArrowLeft') {
     if (row.hasChildren && !isCollapsed) {
-      onToggleCollapse(row.node.id);
+      onToggleCollapse(getKeyboardRowId(row));
       return true;
     }
     const parentNodeId = findParentRowNodeId(rows, index);
@@ -98,7 +119,7 @@ export function createNodeListRowKeydownHandler({
   rows
 }: NodeListKeyboardInput) {
   return (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => {
-    const index = rows.findIndex((row) => row.node.id === nodeId);
+    const index = rows.findIndex((row) => getKeyboardRowId(row) === nodeId);
     if (index < 0) return;
 
     const row = rows[index];

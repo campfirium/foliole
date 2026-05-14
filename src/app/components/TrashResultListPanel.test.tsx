@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -26,6 +26,7 @@ function createNode(args: {
 }
 
 function renderTrashPanel(args: {
+  onSelectTrashNode?: (nodeId: string) => void;
   selectedTrashNodeId?: string | null;
   trashedNodeDeletedAtById?: Record<string, string | undefined>;
   trashedNodeIds: string[];
@@ -45,7 +46,7 @@ function renderTrashPanel(args: {
     <TrashResultListPanel
       nodeOrder={['folder', 'topic', 'item', 'solo']}
       nodesById={nodesById}
-      onSelectTrashNode={() => undefined}
+      onSelectTrashNode={args.onSelectTrashNode ?? (() => undefined)}
       selectedTrashNodeId={args.selectedTrashNodeId ?? null}
       trashedNodeIds={args.trashedNodeIds}
     />
@@ -98,4 +99,21 @@ it('defaults trash sorting to deleted time and orders roots by deletion time', (
   const rows = screen.getAllByRole('treeitem');
   expect(rows[0]).toHaveTextContent('Solo item');
   expect(rows[1]).toHaveTextContent('Folder A');
+});
+
+it('moves trash row selection with arrow keys', () => {
+  const onSelectTrashNode = vi.fn();
+  renderTrashPanel({
+    onSelectTrashNode,
+    selectedTrashNodeId: 'solo',
+    trashedNodeDeletedAtById: {
+      folder: '2026-05-01T00:00:00.000Z',
+      solo: '2026-05-03T00:00:00.000Z'
+    },
+    trashedNodeIds: ['folder', 'topic', 'item', 'solo']
+  });
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: /Solo item/ }), { key: 'ArrowDown' });
+
+  expect(onSelectTrashNode).toHaveBeenCalledWith('folder');
 });

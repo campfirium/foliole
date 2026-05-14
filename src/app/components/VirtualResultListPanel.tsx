@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
 import { NodeListStateSurface } from '../../features/nodes/components/NodeListStateSurface';
+import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { TrashListRows } from '../../features/nodes/components/TrashListRows';
 import {
   buildFlatNodeRows,
@@ -51,6 +52,22 @@ function useVirtualResultRows(
   }, [nodeViewById, nodes, nodesById, normalizedSort, searchQuery]);
 }
 
+function useVirtualResultKeyboard(
+  rows: ReturnType<typeof useVirtualResultRows>,
+  onSelectNode: (nodeId: string) => void
+) {
+  return useMemo(
+    () =>
+      createNodeListRowKeydownHandler({
+        collapsedNodeIds: new Set(),
+        onSelect: onSelectNode,
+        onToggleCollapse: () => undefined,
+        rows
+      }),
+    [onSelectNode, rows]
+  );
+}
+
 export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,6 +79,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
   const listNodesById = useMemo(() => toWorkspaceListNodesById(props.nodesById), [props.nodesById]);
   const rows = useVirtualResultRows(props.nodes, props.nodesById, searchQuery, contentSort.sort, nodeViewById);
   const selectedNodeIds = props.activeNodeId && rows.some((row) => row.node.id === props.activeNodeId) ? [props.activeNodeId] : [];
+  const onRowKeyDown = useVirtualResultKeyboard(rows, props.onSelectNode);
 
   return (
     <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
@@ -98,7 +116,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
               activeNodeId={selectedNodeIds[0] ?? null}
               nodesById={listNodesById}
               onContextMenu={() => undefined}
-              onKeyDown={() => undefined}
+              onKeyDown={onRowKeyDown}
               onSelect={(nodeId) => props.onSelectNode(nodeId)}
               rows={rows}
               rowSpacing={rowSpacing}

@@ -1,0 +1,68 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+import {
+  VIRTUAL_REMOVED_NODE_ID,
+  VIRTUAL_ROOT_NODE_ID
+} from '../../features/nodes/model/specialNodes';
+import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+
+import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
+
+function createVirtualNode(args: {
+  id: string;
+  parentNodeId: string | null;
+  specialKind: NonNullable<WorkspaceListNode['specialKind']>;
+  title: string;
+}): WorkspaceListNode {
+  return {
+    createdAt: '2026-05-01T00:00:00.000Z',
+    hasContent: false,
+    hasReveal: false,
+    id: args.id,
+    kind: 'folder',
+    parentNodeId: args.parentNodeId,
+    review: null,
+    specialKind: args.specialKind,
+    title: args.title,
+    updatedAt: '2026-05-01T00:00:00.000Z'
+  };
+}
+
+beforeEach(() => {
+  window.localStorage.clear();
+});
+
+it('moves from the virtual root to the Removed row with arrow keys', () => {
+  const onOpenVirtualView = vi.fn();
+  const root = createVirtualNode({
+    id: VIRTUAL_ROOT_NODE_ID,
+    parentNodeId: null,
+    specialKind: 'virtual-root',
+    title: 'Virtual'
+  });
+  const custom = createVirtualNode({
+    id: 'virtual-custom',
+    parentNodeId: VIRTUAL_ROOT_NODE_ID,
+    specialKind: 'virtual',
+    title: 'Custom virtual'
+  });
+
+  render(
+    <WorkspaceVirtualSection
+      activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
+      isVirtualViewOpen
+      nodeOrder={[VIRTUAL_ROOT_NODE_ID, 'virtual-custom']}
+      nodesById={{
+        [VIRTUAL_ROOT_NODE_ID]: root,
+        'virtual-custom': custom
+      }}
+      onOpenVirtualView={onOpenVirtualView}
+      onSelectNodeInVirtualView={vi.fn()}
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowDown' });
+
+  expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_REMOVED_NODE_ID);
+});

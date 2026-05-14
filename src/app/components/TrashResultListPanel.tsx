@@ -5,6 +5,7 @@ import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListR
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
 import { NodeListStateSurface } from '../../features/nodes/components/NodeListStateSurface';
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
+import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
 import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
 import { TrashListRows } from '../../features/nodes/components/TrashListRows';
@@ -50,6 +51,17 @@ function TrashRowsBody(props: {
   selectTrashNode: ReturnType<typeof useNodeSelectionHandler>;
   selectedNodeIds: string[];
 }) {
+  const onRowKeyDown = useMemo(
+    () =>
+      createNodeListRowKeydownHandler({
+        collapsedNodeIds: new Set(),
+        onSelect: props.selectTrashNode,
+        onToggleCollapse: () => undefined,
+        rows: props.rows
+      }),
+    [props.rows, props.selectTrashNode]
+  );
+
   return (
     <NodeListStateSurface
       className="flex min-h-full items-center justify-center py-6"
@@ -61,7 +73,7 @@ function TrashRowsBody(props: {
           activeNodeId={props.selectedNodeIds[0] ?? null}
           nodesById={props.nodesById}
           onContextMenu={props.contextMenu.openContextMenu}
-          onKeyDown={() => undefined}
+          onKeyDown={onRowKeyDown}
           onSelect={props.selectTrashNode}
           rows={props.rows}
           rowSpacing={props.rowSpacing}

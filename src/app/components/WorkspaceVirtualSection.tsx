@@ -35,7 +35,12 @@ function toggleCollapsed(nodeId: string, setCollapsedIds: React.Dispatch<React.S
   });
 }
 
-function renderRemovedRow(props: Pick<WorkspaceVirtualSectionProps, 'activeVirtualNodeId' | 'isVirtualViewOpen' | 'onOpenVirtualView'> & { rowSpacing: number }) {
+function renderRemovedRow(
+  props: Pick<WorkspaceVirtualSectionProps, 'activeVirtualNodeId' | 'isVirtualViewOpen' | 'onOpenVirtualView'> & {
+    onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
+    rowSpacing: number;
+  }
+) {
   return (
     <NodeTreeRow
       depth={1}
@@ -48,7 +53,7 @@ function renderRemovedRow(props: Pick<WorkspaceVirtualSectionProps, 'activeVirtu
       nodeId={VIRTUAL_REMOVED_NODE_ID}
       rowSpacing={props.rowSpacing}
       showIcon={false}
-      onKeyDown={() => undefined}
+      onKeyDown={props.onRowKeyDown}
       onSelect={() => props.onOpenVirtualView?.(VIRTUAL_REMOVED_NODE_ID)}
       onToggleCollapse={() => undefined}
     />
@@ -86,7 +91,7 @@ function renderVirtualRows(args: {
       />
     );
     return row.node.id === VIRTUAL_ROOT_NODE_ID
-      ? [virtualRow, renderRemovedRow({ ...args.props, rowSpacing: args.rowSpacing })]
+      ? [virtualRow, renderRemovedRow({ ...args.props, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing })]
       : [virtualRow];
   });
 }
@@ -101,18 +106,31 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, props.nodesById));
     return buildVisibleNodeTreeRows(buildNodeTree(virtualNodeIds, props.nodesById).rows, collapsedIds);
   }, [collapsedIds, props.nodeOrder, props.nodesById]);
+  const keyboardRows = useMemo(
+    () =>
+      rows.flatMap((row) =>
+        row.node.id === VIRTUAL_ROOT_NODE_ID
+          ? [row, { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }]
+          : [row]
+      ),
+    [rows]
+  );
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({
         collapsedNodeIds: collapsedIds,
         onSelect: (nodeId) => {
+          if (nodeId === VIRTUAL_REMOVED_NODE_ID) {
+            props.onOpenVirtualView?.(VIRTUAL_REMOVED_NODE_ID);
+            return;
+          }
           props.onOpenVirtualView?.(nodeId);
           props.onSelectNodeInVirtualView(nodeId);
         },
         onToggleCollapse: (nodeId) => toggleCollapsed(nodeId, setCollapsedIds),
-        rows
+        rows: keyboardRows
       }),
-    [collapsedIds, props, rows]
+    [collapsedIds, keyboardRows, props]
   );
 
   if (rows.length === 0) {

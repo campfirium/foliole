@@ -1,7 +1,6 @@
 import type { Dispatch, KeyboardEvent as ReactKeyboardEvent, SetStateAction } from 'react';
 
-import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
-import type { NodeTreeRow as NodeTreeRowModel } from '../../features/nodes/model/nodeTree';
+import { createNodeListRowKeydownHandler, type TreeKeyboardRow } from '../../features/nodes/components/NodeListTreeKeyboard';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
@@ -152,24 +151,11 @@ export function buildExternalTreeRows(
   ];
 }
 
-export function createKeyboardRow(row: ExternalTreeRowRecord): NodeTreeRowModel {
+export function createKeyboardRow(row: ExternalTreeRowRecord): TreeKeyboardRow {
   return {
     depth: row.depth,
-    descendantCount: 0,
     hasChildren: row.hasChildren,
-    node: {
-      anchorLink: null,
-      createdAt: '',
-      hasContent: false,
-      hasReveal: false,
-      id: row.id,
-      kind: 'folder',
-      parentNodeId: null,
-      reading: null,
-      review: null,
-      title: row.label,
-      updatedAt: ''
-    }
+    id: row.id
   };
 }
 

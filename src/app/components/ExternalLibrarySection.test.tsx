@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
@@ -73,4 +73,46 @@ it('groups Readwise-managed external folders under one Readwise row', () => {
   expect(screen.getByRole('treeitem', { name: /Articles/i })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: /Books/i })).toBeInTheDocument();
   expect(screen.queryByRole('treeitem', { name: /Readwise Articles/i })).toBeNull();
+});
+
+it('opens external settings from the setup row keyboard path', () => {
+  const onOpenExternalLibrarySettings = vi.fn();
+
+  render(
+    <ExternalLibrarySection
+      entriesByFolderId={{}}
+      folders={[]}
+      isExternalViewOpen
+      onOpenExternalLibrarySettings={onOpenExternalLibrarySettings}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ kind: 'root' }}
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'External' }), { key: 'Home' });
+
+  expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
+});
+
+it('keeps external folder tree left and right arrow behavior on hierarchical rows', () => {
+  render(
+    <ExternalLibrarySection
+      entriesByFolderId={{}}
+      folders={[
+        externalFolder('readwise-reader-import-articles', '/library/Articles'),
+        externalFolder('readwise-reader-import-books', '/library/Books')
+      ]}
+      isExternalViewOpen={false}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ kind: 'root' }}
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: /^Readwise$/i }), { key: 'ArrowLeft' });
+
+  expect(screen.queryByRole('treeitem', { name: /Articles/i })).toBeNull();
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: /^Readwise$/i }), { key: 'ArrowRight' });
+
+  expect(screen.getByRole('treeitem', { name: /Articles/i })).toBeInTheDocument();
 });

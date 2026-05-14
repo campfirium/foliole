@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
+import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import type {
   ExternalLibraryBrowseEntry,
@@ -112,6 +113,7 @@ function ExternalDocumentListBody(props: {
   selection: ExternalLibrarySelection;
 }) {
   const rowSpacing = getNodeListRowSpacing();
+  const onRowKeyDown = useExternalDocumentKeyboard(props.documents, props.onOpenExternalSelection);
 
   if (props.isLoading) {
     return <ExternalDocumentListLoadingState />;
@@ -127,32 +129,77 @@ function ExternalDocumentListBody(props: {
 
   return (
     <section aria-label="External folder contents" className="flex flex-col" role="tree">
-      {props.documents.map((document) => {
-        const isActive = props.selection.kind === 'document' && props.selection.absolutePath === document.absolutePath;
-        return (
-          <NodeTreeRow
-            depth={0}
-            hasChildren={false}
-            isActive={isActive}
-            isCollapsed={false}
-            isSelected={isActive}
-            key={document.absolutePath}
-            label={document.title}
-            nodeId={document.absolutePath}
-            rowSpacing={rowSpacing}
-            showIcon={false}
-            onSelect={() =>
-              props.onOpenExternalSelection({
-                absolutePath: document.absolutePath,
-                folderId: document.folderId,
-                kind: 'document'
-              })
-            }
-            onToggleCollapse={() => undefined}
-          />
-        );
-      })}
+      {props.documents.map((document) =>
+        renderExternalDocumentRow({
+          document,
+          onOpenExternalSelection: props.onOpenExternalSelection,
+          onRowKeyDown,
+          rowSpacing,
+          selection: props.selection
+        })
+      )}
     </section>
+  );
+}
+
+function useExternalDocumentKeyboard(
+  documents: ReturnType<typeof buildExternalLibraryFolderBrowseState>['documentItems'],
+  onOpenExternalSelection: (selection: ExternalLibrarySelection) => void
+) {
+  return useMemo(
+    () =>
+      createNodeListRowKeydownHandler({
+        collapsedNodeIds: new Set(),
+        onSelect: (absolutePath) => openExternalDocumentSelection(absolutePath, documents, onOpenExternalSelection),
+        onToggleCollapse: () => undefined,
+        rows: documents.map((document) => ({
+          depth: 0,
+          hasChildren: false,
+          id: document.absolutePath
+        }))
+      }),
+    [documents, onOpenExternalSelection]
+  );
+}
+
+function openExternalDocumentSelection(
+  absolutePath: string,
+  documents: ReturnType<typeof buildExternalLibraryFolderBrowseState>['documentItems'],
+  onOpenExternalSelection: (selection: ExternalLibrarySelection) => void
+) {
+  const document = documents.find((candidate) => candidate.absolutePath === absolutePath);
+  if (!document) return;
+  onOpenExternalSelection({
+    absolutePath: document.absolutePath,
+    folderId: document.folderId,
+    kind: 'document'
+  });
+}
+
+function renderExternalDocumentRow(args: {
+  document: ReturnType<typeof buildExternalLibraryFolderBrowseState>['documentItems'][number];
+  onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
+  onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
+  rowSpacing: number;
+  selection: ExternalLibrarySelection;
+}) {
+  const isActive = args.selection.kind === 'document' && args.selection.absolutePath === args.document.absolutePath;
+  return (
+    <NodeTreeRow
+      depth={0}
+      hasChildren={false}
+      isActive={isActive}
+      isCollapsed={false}
+      isSelected={isActive}
+      key={args.document.absolutePath}
+      label={args.document.title}
+      nodeId={args.document.absolutePath}
+      rowSpacing={args.rowSpacing}
+      showIcon={false}
+      onKeyDown={args.onRowKeyDown}
+      onSelect={() => openExternalDocumentSelection(args.document.absolutePath, [args.document], args.onOpenExternalSelection)}
+      onToggleCollapse={() => undefined}
+    />
   );
 }
 
