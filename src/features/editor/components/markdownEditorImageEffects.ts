@@ -1,13 +1,13 @@
-import { useEffect, useLayoutEffect, useState, type MutableRefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject } from 'react';
 
 interface UseFitBlockImageHeightArgs {
   fitBlockImagesToViewport: boolean;
   hostRef: MutableRefObject<HTMLDivElement | null>;
   hasMarkdownImages: boolean;
+  imageEffectKey: string;
   nodeId: string | null;
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   rootRef: MutableRefObject<HTMLDivElement | null>;
-  value: string;
 }
 
 function measureNonImageHeight(content: HTMLElement) {
@@ -25,15 +25,21 @@ function measureNonImageHeight(content: HTMLElement) {
   }, paddingTop + paddingBottom);
 }
 
+function useLatestRef<T>(value: T) {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
+
 function useImageHeightReporter(args: UseFitBlockImageHeightArgs) {
-  const { fitBlockImagesToViewport, hasMarkdownImages, hostRef, nodeId, onFitBlockImageMetricsChange, rootRef, value } = args;
+  const { fitBlockImagesToViewport, hasMarkdownImages, hostRef, imageEffectKey, nodeId, onFitBlockImageMetricsChange, rootRef } = args;
   const [imageMaxHeight, setImageMaxHeight] = useState<string | undefined>(undefined);
-  const imageEffectSource = hasMarkdownImages ? value : '';
+  const onFitBlockImageMetricsChangeRef = useLatestRef(onFitBlockImageMetricsChange);
 
   useLayoutEffect(() => {
     if (!fitBlockImagesToViewport || !hasMarkdownImages || !rootRef.current) {
       setImageMaxHeight(undefined);
-      onFitBlockImageMetricsChange?.(null);
+      onFitBlockImageMetricsChangeRef.current?.(null);
       return;
     }
 
@@ -46,12 +52,12 @@ function useImageHeightReporter(args: UseFitBlockImageHeightArgs) {
       const imageElements = Array.from(element.querySelectorAll('.cm-md-image-element-block')) as HTMLElement[];
       if (!content || !scroller || imageElements.length === 0) {
         setImageMaxHeight(undefined);
-        onFitBlockImageMetricsChange?.(null);
+        onFitBlockImageMetricsChangeRef.current?.(null);
         return;
       }
       const nonImageHeight = measureNonImageHeight(content);
       const nextHeight = Math.max(120, Math.floor((scroller.clientHeight - nonImageHeight - 8) / imageElements.length));
-      onFitBlockImageMetricsChange?.({ imageCount: imageElements.length, nonImageHeight, viewportHeight: scroller.clientHeight });
+      onFitBlockImageMetricsChangeRef.current?.({ imageCount: imageElements.length, nonImageHeight, viewportHeight: scroller.clientHeight });
       setImageMaxHeight((current) => {
         const nextValue = `${nextHeight}px`;
         return current === nextValue ? current : nextValue;
@@ -80,26 +86,26 @@ function useImageHeightReporter(args: UseFitBlockImageHeightArgs) {
       element.removeEventListener('load', handleImageLoad, true);
       resizeObserver?.disconnect();
     };
-  }, [fitBlockImagesToViewport, hasMarkdownImages, hostRef, imageEffectSource, nodeId, onFitBlockImageMetricsChange, rootRef]);
+  }, [fitBlockImagesToViewport, hasMarkdownImages, hostRef, imageEffectKey, nodeId, onFitBlockImageMetricsChangeRef, rootRef]);
 
   return imageMaxHeight;
 }
 
 interface UseImageLoadStateArgs {
   hasMarkdownImages: boolean;
+  imageEffectKey: string;
   nodeId: string | null;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   rootRef: MutableRefObject<HTMLDivElement | null>;
-  value: string;
 }
 
 function useImageLoadStateReporter(args: UseImageLoadStateArgs) {
-  const { hasMarkdownImages, nodeId, onImageLoadStateChange, rootRef, value } = args;
-  const imageEffectSource = hasMarkdownImages ? value : '';
+  const { hasMarkdownImages, imageEffectKey, nodeId, onImageLoadStateChange, rootRef } = args;
+  const onImageLoadStateChangeRef = useLatestRef(onImageLoadStateChange);
 
   useEffect(() => {
     if (!hasMarkdownImages || !rootRef.current) {
-      onImageLoadStateChange?.({ loadedCount: 0, totalCount: 0 });
+      onImageLoadStateChangeRef.current?.({ loadedCount: 0, totalCount: 0 });
       return;
     }
 
@@ -107,7 +113,7 @@ function useImageLoadStateReporter(args: UseImageLoadStateArgs) {
     let frameId = 0;
     const reportState = () => {
       const images = Array.from(element.querySelectorAll('.cm-md-image-element-block')) as HTMLImageElement[];
-      onImageLoadStateChange?.({
+      onImageLoadStateChangeRef.current?.({
         loadedCount: images.filter((image) => image.complete).length,
         totalCount: images.length
       });
@@ -131,7 +137,7 @@ function useImageLoadStateReporter(args: UseImageLoadStateArgs) {
       element.removeEventListener('error', handleImageEvent, true);
       element.removeEventListener('load', handleImageEvent, true);
     };
-  }, [hasMarkdownImages, imageEffectSource, nodeId, onImageLoadStateChange, rootRef]);
+  }, [hasMarkdownImages, imageEffectKey, nodeId, onImageLoadStateChangeRef, rootRef]);
 }
 
 export function useMarkdownEditorImageEffects(args: UseFitBlockImageHeightArgs & UseImageLoadStateArgs) {

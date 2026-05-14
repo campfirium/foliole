@@ -80,19 +80,24 @@ function useMarkdownEditorSurfaceModel(args: {
   value: string;
 }) {
   const mouseGesture = useEditorMouseGesture(args.adapterRef, args.hostRef, args.bindings, args.settings);
-  const hasMarkdownImages = useMemo(
-    () => args.value.includes('![') && args.value.includes('](') && collectMarkdownImageReferences(args.value).length > 0,
+  const markdownImageReferences = useMemo(
+    () => (args.value.includes('![') && args.value.includes('](') ? collectMarkdownImageReferences(args.value) : []),
     [args.value]
+  );
+  const hasMarkdownImages = markdownImageReferences.length > 0;
+  const imageEffectKey = useMemo(
+    () => markdownImageReferences.map((reference) => reference.fullMatch).join('\n'),
+    [markdownImageReferences]
   );
   const { imageMaxHeight } = useMarkdownEditorImageEffects({
     fitBlockImagesToViewport: args.fitBlockImagesToViewport,
     hostRef: args.hostRef,
     hasMarkdownImages,
+    imageEffectKey,
     nodeId: args.nodeId,
     ...(args.onFitBlockImageMetricsChange ? { onFitBlockImageMetricsChange: args.onFitBlockImageMetricsChange } : {}),
     ...(args.onImageLoadStateChange ? { onImageLoadStateChange: args.onImageLoadStateChange } : {}),
-    rootRef: args.rootRef,
-    value: args.value
+    rootRef: args.rootRef
   });
   const editorStyle = {
     '--editor-content-padding-top': args.contentPaddingTop,
