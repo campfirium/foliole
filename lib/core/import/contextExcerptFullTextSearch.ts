@@ -33,12 +33,24 @@ function expandRawStartToHeadingStart(content: string, rawStart: number) {
 
 function expandRawEndToAutolinkEnd(content: string, rawEnd: number) {
   const nextIndex = rawEnd + 1;
+  const markdownLinkEnd = findMarkdownLinkEndAtLabelEnd(content, nextIndex);
+  if (markdownLinkEnd !== null) {
+    return markdownLinkEnd;
+  }
   if (content[nextIndex] !== '>') {
     return nextIndex;
   }
   const lineStart = content.lastIndexOf('\n', rawEnd) + 1;
   const autolinkStart = content.lastIndexOf('<', rawEnd);
   return autolinkStart >= lineStart ? nextIndex + 1 : nextIndex;
+}
+
+function findMarkdownLinkEndAtLabelEnd(content: string, nextIndex: number) {
+  if (content[nextIndex] !== ']' || content[nextIndex + 1] !== '(') {
+    return null;
+  }
+  const linkEnd = content.indexOf(')', nextIndex + 2);
+  return linkEnd >= 0 ? linkEnd + 1 : null;
 }
 
 function collectStringRanges(haystack: string, needle: string) {

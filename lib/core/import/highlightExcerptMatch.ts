@@ -11,7 +11,6 @@ export interface HighlightExcerptCandidate {
 }
 
 export interface PreparedHighlightExcerptCandidate {
-  firstLineNormalized: string | null;
   label: string | null;
   quote: string;
   quoteLocator: ContextExcerptQuoteLocator | null;
@@ -29,20 +28,10 @@ function createQuoteWithoutTitle(quote: string) {
   return rest.length > 0 ? rest : null;
 }
 
-function createFirstLineNormalized(quote: string) {
-  const firstLine = quote
-    .replace(/\r\n?/g, '\n')
-    .split('\n')
-    .find((line) => line.trim().length > 0);
-  const normalized = firstLine ? normalizeQuoteText(firstLine) : '';
-  return normalized || null;
-}
-
 export function prepareHighlightExcerptCandidate(candidate: HighlightExcerptCandidate): PreparedHighlightExcerptCandidate {
   const quote = candidate.text;
   const quoteWithoutTitle = createQuoteWithoutTitle(quote);
   return {
-    firstLineNormalized: createFirstLineNormalized(quote),
     label: candidate.label?.trim() || null,
     quote,
     quoteLocator: createContextExcerptQuoteLocator(quote),
@@ -62,14 +51,16 @@ export function findPreparedHighlightExcerptInLocator(
   if (
     fullMatch ||
     !prepared.quoteWithoutTitle ||
-    !prepared.quoteWithoutTitleLocator ||
-    (prepared.firstLineNormalized && locator.normalizedFullText.includes(prepared.firstLineNormalized))
+    !prepared.quoteWithoutTitleLocator
   ) {
     return fullMatch;
   }
-  return findContextExcerptLocatorTextInLocatorByQuoteLocator(
+  const titlelessMatch = findContextExcerptLocatorTextInLocatorByQuoteLocator(
     locator,
     prepared.quoteWithoutTitle,
     prepared.quoteWithoutTitleLocator
   );
+  return titlelessMatch && normalizeQuoteText(titlelessMatch) === normalizeQuoteText(prepared.quoteWithoutTitle)
+    ? titlelessMatch
+    : null;
 }

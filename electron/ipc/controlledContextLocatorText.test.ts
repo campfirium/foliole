@@ -242,10 +242,10 @@ it('does not expand a heading match that starts inside heading text', () => {
 });
 
 it('matches highlight body when the reader title is not in the source', () => {
-  const source = ['Intro.', '', 'Body sentence one.', '', 'Body sentence two.'].join('\n');
-  const quote = ['Reader-only title', 'Body sentence one.', 'Body sentence two.'].join('\n');
+  const source = ['Intro.', '', 'Body sentence one.', '', '[Body sentence two](https://example.com).'].join('\n');
+  const quote = ['Reader-only title', 'Body sentence one.', '[Body sentence two](https://example.com).'].join('\n');
 
   const match = findLocatorText(source, quote);
 
-  expect(match).toBe(['Body sentence one.', '', 'Body sentence two.'].join('\n'));
+  expect(match).toBe(['Body sentence one.', '', '[Body sentence two](https://example.com).'].join('\n'));
 });
