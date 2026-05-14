@@ -134,21 +134,21 @@
   --workspace-folder-column-width: 200px;
   --workspace-topic-column-width: 100px;
   --document-content-inline-padding: 1.5rem;
-  --workspace-region-titlebar-rail-bg: #fcfcfc;
-  --workspace-region-titlebar-folder-bg: #fcfcfc;
-  --workspace-region-titlebar-topic-bg: #fcfcfc;
-  --workspace-region-titlebar-document-bg: #fcfcfc;
-  --workspace-region-titlebar-sidebar-bg: #fcfcfc;
-  --workspace-region-main-rail-bg: #f6f6f6;
-  --workspace-region-main-folder-bg: #f6f6f6;
-  --workspace-region-main-topic-bg: #f6f6f6;
-  --workspace-region-main-document-bg: #ffffff;
-  --workspace-region-main-sidebar-bg: #f6f6f6;
-  --workspace-region-footer-rail-bg: #fcfcfc;
-  --workspace-region-footer-folder-bg: #fcfcfc;
-  --workspace-region-footer-topic-bg: #fcfcfc;
-  --workspace-region-footer-document-bg: #fcfcfc;
-  --workspace-region-footer-sidebar-bg: #fcfcfc;
+  --workspace-region-titlebar-rail-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-titlebar-folder-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-titlebar-topic-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-titlebar-document-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-titlebar-sidebar-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-main-rail-bg: rgb(var(--color-bg-panel));
+  --workspace-region-main-folder-bg: rgb(var(--color-bg-panel));
+  --workspace-region-main-topic-bg: rgb(var(--color-bg-panel));
+  --workspace-region-main-document-bg: rgb(var(--color-canvas));
+  --workspace-region-main-sidebar-bg: rgb(var(--color-bg-panel));
+  --workspace-region-footer-rail-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-footer-folder-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-footer-topic-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-footer-document-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-footer-sidebar-bg: rgb(var(--color-bg-subtle));
   --workspace-region-main-rail-scrollbar-thumb-color: color-mix(
     in srgb,
     var(--workspace-region-main-rail-bg) 96%,
@@ -199,8 +199,12 @@
     var(--workspace-region-main-sidebar-bg) 92%,
     rgb(var(--color-foreground)) 8%
   );
-  --workspace-region-main-sidebar-panel-bg: #fbfbfb;
-  --workspace-region-main-sidebar-panel-elevated-bg: #ffffff;
+  --workspace-region-main-sidebar-panel-bg: color-mix(
+    in srgb,
+    rgb(var(--color-bg-subtle)) 83.333%,
+    rgb(var(--color-bg-panel))
+  );
+  --workspace-region-main-sidebar-panel-elevated-bg: rgb(var(--color-canvas));
   --workspace-region-main-document-content-divider: color-mix(
     in oklab,
     var(--workspace-region-main-document-token-bg) var(--workspace-document-content-divider-surface-weight),
