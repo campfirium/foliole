@@ -1,5 +1,5 @@
 import { cn } from '../../shared/lib/utils';
-import { AppButton, appFloatingSurfaceClassName } from '../../shared/ui';
+import { AppButton, appFloatingSurfaceClassName, appInputFocusVisibleClassName } from '../../shared/ui';
 
 export function AnnotationNotePanel(props: {
   draft: string;
@@ -17,7 +17,10 @@ export function AnnotationNotePanel(props: {
     >
       <textarea
         autoFocus
-        className="min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-foreground outline-none placeholder:text-foreground/45"
+        className={cn(
+          'min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-foreground placeholder:text-foreground/45',
+          appInputFocusVisibleClassName
+        )}
         onChange={(event) => props.onChange(event.target.value)}
         placeholder="Add a note..."
         value={props.draft}

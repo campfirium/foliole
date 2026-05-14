@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-import { AppEmptyState } from '../shared/ui';
+import { cn } from '../shared/lib/utils';
+import { AppEmptyState, appInputBorderFocusVisibleClassName } from '../shared/ui';
 
 export function CompanionSearchContent() {
   const [query, setQuery] = useState('');
@@ -10,7 +11,10 @@ export function CompanionSearchContent() {
       <label className="block">
         <span className="sr-only">Search topics</span>
         <input
-          className="h-12 w-full rounded-md border border-border bg-canvas px-4 text-base text-foreground outline-none transition placeholder:text-companion-text-secondary focus:border-border-strong"
+          className={cn(
+            'h-12 w-full rounded-md border border-border bg-canvas px-4 text-base text-foreground transition placeholder:text-companion-text-secondary',
+            appInputBorderFocusVisibleClassName
+          )}
           disabled
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search topics - coming soon"

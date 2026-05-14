@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
-import { appFloatingSurfaceClassName, AppButton } from '../shared/ui';
+import { appFloatingSurfaceClassName, AppButton, appInputFocusVisibleClassName } from '../shared/ui';
 
 import type { CompanionExistingHighlightTarget } from './companionExistingHighlightActions';
 
@@ -49,7 +49,10 @@ function CompanionSelectionNotePanel(props: {
     <div className={cn(appFloatingSurfaceClassName('popover'), 'mt-2 w-64 rounded-md p-2')} style={{ left: props.left, position: 'absolute', top: props.top }}>
       <textarea
         autoFocus
-        className="min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-foreground outline-none placeholder:text-foreground/45"
+        className={cn(
+          'min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-foreground placeholder:text-foreground/45',
+          appInputFocusVisibleClassName
+        )}
         onChange={(event) => props.onChange(event.target.value)}
         placeholder="Add annotation..."
         value={props.draft}

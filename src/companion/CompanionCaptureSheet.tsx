@@ -1,12 +1,14 @@
 import { FileUp, Mic, Clipboard, type LucideIcon } from 'lucide-react';
 
+import { cn } from '../shared/lib/utils';
 import {
   AppDialog,
   AppDialogClose,
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
-  AppDialogTitle
+  AppDialogTitle,
+  appInputFocusVisibleClassName
 } from '../shared/ui';
 
 function CaptureActionRow(props: {
@@ -55,7 +57,10 @@ export function CompanionCaptureSheet(props: {
               </button>
               <textarea
                 aria-label="Capture text"
-                className="min-h-24 w-full resize-none bg-transparent text-base leading-6 text-foreground outline-none placeholder:text-companion-text-tertiary"
+                className={cn(
+                  'min-h-24 w-full resize-none bg-transparent text-base leading-6 text-foreground placeholder:text-companion-text-tertiary',
+                  appInputFocusVisibleClassName
+                )}
                 placeholder="Type or speak a new topic"
               />
             </div>

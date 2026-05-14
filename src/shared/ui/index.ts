@@ -25,6 +25,10 @@ export { AppEmptyState, AppErrorState, AppLoadingState, AppSpinner } from './Emp
 export { AppIconButton } from './IconButton';
 export { LucideCatalogIcon, LUCIDE_ICON_OPTIONS } from './LucideIconCatalog';
 export { AppInput } from './Input';
+export {
+  appInputBorderFocusVisibleClassName,
+  appInputFocusVisibleClassName
+} from './InputFocus';
 export { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
 export { NodeBrowseList, type NodeBrowseListItem } from './NodeBrowseList';
 export {

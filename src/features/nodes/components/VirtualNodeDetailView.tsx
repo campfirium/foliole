@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { FolderListView } from '../../../app/components/FolderListView';
+import { cn } from '../../../shared/lib/utils';
+import { appInputBorderFocusVisibleClassName } from '../../../shared/ui';
 import type { Node } from '../model/nodeTypes';
 import { getVirtualNodePrimaryKeyword, getVirtualNodeResultNodes } from '../model/virtualNodeDetail';
 
@@ -54,7 +56,10 @@ function VirtualNodeFilterCard(props: {
         Keyword
       </label>
       <textarea
-        className="mt-2 min-h-24 w-full rounded-[var(--radius-2)] border border-border bg-bg px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-foreground/35 focus:border-border-strong"
+        className={cn(
+          'mt-2 min-h-24 w-full rounded-[var(--radius-2)] border border-border bg-bg px-3 py-2 text-sm text-foreground transition-colors placeholder:text-foreground/35',
+          appInputBorderFocusVisibleClassName
+        )}
         id={`virtual-node-filter-${props.nodeId}`}
         onChange={(event) => props.onDraftFilterChange(event.target.value)}
         placeholder="For now, save one keyword to match article titles or body text."
