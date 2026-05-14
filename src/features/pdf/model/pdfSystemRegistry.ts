@@ -1,3 +1,4 @@
+import { createBoundedCache } from '../../../shared/lib/boundedCache';
 import { markNodePositionRequested } from '../../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeAnchorLink } from '../../nodes/model/nodeTypes';
 
@@ -10,8 +11,11 @@ interface PdfExternalSearchRequest {
 }
 
 const activePdfSystems = new Map<string, Pick<PdfSystemExternalApi, 'requestAnchorJump'> & { requestSearch: (request: PdfExternalSearchRequest) => void }>();
-const pendingAnchorJumps = new Map<string, NonNullable<NodeAnchorLink['locator']>>();
-const pendingSearchRequests = new Map<string, PdfExternalSearchRequest>();
+const MAX_PENDING_PDF_REQUESTS = 128;
+const pendingAnchorJumps = createBoundedCache<string, NonNullable<NodeAnchorLink['locator']>>(
+  MAX_PENDING_PDF_REQUESTS
+);
+const pendingSearchRequests = createBoundedCache<string, PdfExternalSearchRequest>(MAX_PENDING_PDF_REQUESTS);
 
 export function registerPdfSystem(
   nodeId: string,
@@ -54,4 +58,10 @@ export function requestPdfSearch(nodeId: string, request: PdfExternalSearchReque
   }
   actions.requestSearch(request);
   return true;
+}
+
+export function resetPdfSystemRegistryForTest() {
+  activePdfSystems.clear();
+  pendingAnchorJumps.clear();
+  pendingSearchRequests.clear();
 }

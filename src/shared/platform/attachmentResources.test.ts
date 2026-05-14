@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 const capacitorMock = vi.hoisted(() => ({
   convertFileSrc: vi.fn((url: string) => `capacitor://${url}`),
@@ -18,45 +20,99 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
 
-import { resolveRuntimeAttachmentResource } from './attachmentResources';
+import {
+  readAttachmentResourceCacheStats,
+  resetAttachmentResourceResolutionCacheForTest,
+  resolveRuntimeAttachmentResource
+} from './attachmentResources';
+import { getRuntimeInvoke } from './runtimeInvoke';
 
-describe('attachmentResources', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    capacitorMock.getPlatform.mockReturnValue('android');
-    capacitorMock.isNativePlatform.mockReturnValue(true);
+vi.mock('./runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn()
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  capacitorMock.getPlatform.mockReturnValue('android');
+  capacitorMock.isNativePlatform.mockReturnValue(true);
+  vi.mocked(getRuntimeInvoke).mockReset();
+  resetAttachmentResourceResolutionCacheForTest();
+});
+
+it('resolves native Android attachment file URLs through Capacitor', async () => {
+  capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
+    mime_type: 'image/png',
+    resource_url: 'file:///data/user/0/com.foliole.android/files/attachments/hash-1',
+    status: 'ready'
   });
 
-  it('resolves native Android attachment file URLs through Capacitor', async () => {
-    capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
-      mime_type: 'image/png',
-      resource_url: 'file:///data/user/0/com.foliole.android/files/attachments/hash-1',
-      status: 'ready'
-    });
-
-    await expect(resolveRuntimeAttachmentResource('asset://att-android-1.png')).resolves.toEqual({
-      mime_type: 'image/png',
-      resource_url: 'capacitor://file:///data/user/0/com.foliole.android/files/attachments/hash-1',
-      status: 'ready'
-    });
-
-    expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
-      attachment_id: 'att-android-1'
-    });
+  await expect(resolveRuntimeAttachmentResource('asset://att-android-1.png')).resolves.toEqual({
+    mime_type: 'image/png',
+    resource_url: 'capacitor://file:///data/user/0/com.foliole.android/files/attachments/hash-1',
+    status: 'ready'
   });
 
-  it('passes through native Android missing file results', async () => {
-    capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
-      mime_type: 'image/png',
-      resource_url: null,
-      status: 'missing_file'
-    });
+  expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
+    attachment_id: 'att-android-1'
+  });
+});
 
-    await expect(resolveRuntimeAttachmentResource('asset://att-android-2.png')).resolves.toEqual({
+it('passes through native Android missing file results', async () => {
+  capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
+    mime_type: 'image/png',
+    resource_url: null,
+    status: 'missing_file'
+  });
+
+  await expect(resolveRuntimeAttachmentResource('asset://att-android-2.png')).resolves.toEqual({
+    mime_type: 'image/png',
+    resource_url: null,
+    status: 'missing_file'
+  });
+  expect(capacitorMock.convertFileSrc).not.toHaveBeenCalled();
+});
+
+it('bounds Android attachment resource resolution cache entries', async () => {
+  capacitorMock.plugin.resolveAttachmentResource.mockImplementation(({ attachment_id }: { attachment_id: string }) =>
+    Promise.resolve({
       mime_type: 'image/png',
-      resource_url: null,
-      status: 'missing_file'
-    });
-    expect(capacitorMock.convertFileSrc).not.toHaveBeenCalled();
+      resource_url: `file:///attachments/${attachment_id}`,
+      status: 'ready'
+    })
+  );
+
+  for (let index = 0; index < 513; index += 1) {
+    await resolveRuntimeAttachmentResource(`asset://att-android-${index}.png`);
+  }
+
+  expect(readAttachmentResourceCacheStats().entries).toBe(512);
+  capacitorMock.plugin.resolveAttachmentResource.mockClear();
+  await resolveRuntimeAttachmentResource('asset://att-android-0.png');
+
+  expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledTimes(1);
+});
+
+it('bounds desktop attachment resource resolution cache entries', async () => {
+  capacitorMock.isNativePlatform.mockReturnValue(false);
+  const invoke = vi.fn((_command: string, payload: { attachment_id: string }) =>
+    Promise.resolve({
+      mime_type: 'image/png',
+      resource_url: `file:///attachments/${payload.attachment_id}`,
+      status: 'ready'
+    })
+  );
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  for (let index = 0; index < 513; index += 1) {
+    await resolveRuntimeAttachmentResource(`asset://att-desktop-${index}.png`);
+  }
+
+  expect(readAttachmentResourceCacheStats().entries).toBe(512);
+  invoke.mockClear();
+  await resolveRuntimeAttachmentResource('asset://att-desktop-0.png');
+
+  expect(invoke).toHaveBeenCalledTimes(1);
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.resolveAttachmentResource, {
+    attachment_id: 'att-desktop-0'
   });
 });

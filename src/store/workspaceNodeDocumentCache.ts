@@ -1,13 +1,15 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { createBoundedCache } from '../shared/lib/boundedCache';
 
 import { isNodeDocumentLoaded, type WorkspaceNodeDocument } from './workspaceRendererBoundary';
 
 const MAX_CACHED_NODE_DOCUMENT_BYTES = 200 * 1024;
+const MAX_CACHED_NODE_DOCUMENTS = 256;
 const RECENT_HISTORY_PREFETCH_LIMIT = 12;
 const ACTIVE_NEIGHBOR_PREFETCH_LIMIT = 24;
 const VISIBLE_NODE_PREFETCH_LIMIT = 24;
 
-const cachedNodeDocumentById = new Map<string, WorkspaceNodeDocument>();
+const cachedNodeDocumentById = createBoundedCache<string, WorkspaceNodeDocument>(MAX_CACHED_NODE_DOCUMENTS);
 
 let visiblePrefetchNodeIds: string[] = [];
 

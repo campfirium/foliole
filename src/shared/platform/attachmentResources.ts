@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { parseAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
+import { createBoundedCache } from '../lib/boundedCache';
 
 import {
   FolioleCompanionSync,
@@ -21,7 +22,11 @@ function isAttachmentResourceResolution(value: unknown): value is NativeAttachme
   return candidate.status === 'ready' || candidate.status === 'not_found' || candidate.status === 'missing_file';
 }
 
-const attachmentResourceResolutionCache = new Map<string, Promise<NativeAttachmentResourceResolution | null>>();
+const MAX_ATTACHMENT_RESOURCE_RESOLUTIONS = 512;
+const attachmentResourceResolutionCache = createBoundedCache<
+  string,
+  Promise<NativeAttachmentResourceResolution | null>
+>(MAX_ATTACHMENT_RESOURCE_RESOLUTIONS);
 
 export function parseAttachmentId(resourceUrl: string) {
   return parseAssetMarkdownUrl(resourceUrl);
@@ -138,4 +143,8 @@ export function readAttachmentResourceCacheStats() {
 
 export function invalidateAttachmentResourceResolution(attachmentId: string) {
   attachmentResourceResolutionCache.delete(attachmentId);
+}
+
+export function resetAttachmentResourceResolutionCacheForTest() {
+  attachmentResourceResolutionCache.clear();
 }
