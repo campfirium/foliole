@@ -1,6 +1,11 @@
+import { createContextExcerptLocator, type ContextExcerptLocator } from '../import/contextExcerptLocator.js';
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import { collectBoundaryFragments } from '../import/controlledContextText.js';
 import { trimMatchedExcerpt } from '../import/controlledContextTrim.js';
+import {
+  findPreparedHighlightExcerptInLocator,
+  prepareHighlightExcerptCandidate
+} from '../import/highlightExcerptMatch.js';
 
 export interface AnchoredImportedHighlightRecord extends PreparedImportHighlightRecord {
   anchorId: string;
@@ -120,7 +125,19 @@ function resolveFullLocatorCandidate(highlightText: string, locatorText: string)
   return [firstLineOffset > 0 ? locatorText.slice(firstLineOffset) : locatorText];
 }
 
-function collectAnchorExcerptCandidates(highlight: PreparedImportHighlightRecord) {
+function collectNormalizedSourceCandidates(
+  locator: ContextExcerptLocator,
+  candidates: string[]
+) {
+  return candidates
+    .map((candidate) => {
+      const prepared = prepareHighlightExcerptCandidate({ text: candidate });
+      return findPreparedHighlightExcerptInLocator(locator, prepared);
+    })
+    .filter((candidate): candidate is string => Boolean(candidate));
+}
+
+function collectAnchorExcerptCandidates(locator: ContextExcerptLocator, highlight: PreparedImportHighlightRecord) {
   const highlightText = highlight.content.replace(/\n※ [\s\S]*$/u, '').trim();
   const candidates = [highlightText, highlight.content.trim()];
   const fullLocatorCandidates = highlight.locatorText ? resolveFullLocatorCandidate(highlightText, highlight.locatorText) : [];
@@ -133,7 +150,8 @@ function collectAnchorExcerptCandidates(highlight: PreparedImportHighlightRecord
       ]
     : [];
   candidates.push(...locatorCandidates);
-  return Array.from(new Set(candidates.map((candidate) => candidate.trim()).filter(Boolean)));
+  const directCandidates = Array.from(new Set(candidates.map((candidate) => candidate.trim()).filter(Boolean)));
+  return Array.from(new Set([...directCandidates, ...collectNormalizedSourceCandidates(locator, directCandidates)]));
 }
 
 export function applyImportedHighlightAnchors(input: {
@@ -148,12 +166,13 @@ export function applyImportedHighlightAnchors(input: {
   let searchFrom = 0;
   const occupiedRanges: Array<{ from: number; to: number }> = [];
   const locatedHighlights: AnchoredImportedHighlightRecord[] = [];
+  const locator = createContextExcerptLocator(content);
 
   input.highlights.forEach((highlight) => {
     if (!highlight.content.trim()) {
       return;
     }
-    const range = collectAnchorExcerptCandidates(highlight)
+    const range = collectAnchorExcerptCandidates(locator, highlight)
       .map((excerpt) => findAvailableOccurrence(content, excerpt, searchFrom, occupiedRanges))
       .find((candidate) => candidate !== null);
     if (!range) {

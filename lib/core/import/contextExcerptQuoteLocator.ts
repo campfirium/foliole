@@ -26,7 +26,7 @@ function stripQuoteMarkdown(value: string) {
     )
     .replace(/]\([^)]+\)/g, ' ')
     .replace(/(^|\s)•\s+/g, '$1')
-    .replace(/[|`*_>#]/g, ' ');
+    .replace(/[|`*_<>#]/g, ' ');
 }
 
 function compactWhitespace(value: string) {

@@ -95,3 +95,49 @@ it('backfills an existing readwise highlight child when a duplicate import can n
     origin: 'imported'
   });
 });
+
+it('anchors cleaned forum highlights back to the continuous source range', () => {
+  const content = [
+    '# 求助：百分是否有一键分屏功能',
+    '',
+    '|  |  |  |',
+    '| --- | --- | --- |',
+    '| *[中级会员](https://www.centbrowser.net/zh-cn/home.php?mod=spacecp&ac=usergroup&gid=12)* |  **[*8*#](https://www.centbrowser.net/zh-cn/forum.php?mod=redirect&goto=findpost&ptid=11755&pid=80148)** ',
+    '',
+    '|  |',
+    '| --- |',
+    "|  可以用小书签，我这只有横竖 2 分屏的。  新建一个书签，修改书签网址，把下面代码复制进去保存即可。 这两个小书签是在同一个窗口内进行分屏，点击后输入要分屏的网址，即可打开。空着不填会将当前网页复制为两个进行并排。  **垂直左右分屏**1. javascript:document.write('<HTML><FRAMESET COLS=50><FRAME SRC=left></FRAMESET></HTML>')",
+    '',
+    "*复制代码***水平上下分屏**1. javascript:document.write('<HTML><FRAMESET ROWS=50><FRAME SRC=top></FRAMESET></HTML>')",
+    '',
+    '*复制代码*   其实，你'
+  ].join('\n');
+  const highlight = [
+    '横竖 2 分屏的。',
+    '新建一个书签，修改书签网址，把下面代码复制进去保存即可。',
+    '这两个小书签是在同一个窗口内进行分屏，点击后输入要分屏的网址，即可打开。空着不填会将当前网页复制为两个进行并排。',
+    '**垂直左右分屏**',
+    "1. javascript:document.write('<HTML><FRAMESET COLS=50><FRAME SRC=left></FRAMESET></HTML>')",
+    '*复制代码*',
+    '**水平上下分屏**',
+    "1. javascript:document.write('<HTML><FRAMESET ROWS=50><FRAME SRC=top></FRAMESET></HTML>')",
+    '*复制代码*'
+  ].join('\n');
+  const imported = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content,
+      fileName: 'forum.md',
+      filePath: '/tmp/forum.md',
+      highlightSidecar: [{ text: highlight }],
+      importedAt: '2026-05-13T10:10:00.000Z',
+      kind: 'markdown',
+      sourceProfile: 'body_with_highlight_sidecar'
+    })
+  );
+  const childRows = readChildRows(imported.nodeId);
+  const anchor = JSON.parse(childRows[0]?.anchor_link ?? '{}') as { locator?: { from: number; originalText: string; to: number } };
+
+  expect(anchor.locator?.originalText).toContain('横竖 2 分屏的。');
+  expect(anchor.locator?.originalText).toContain('**水平上下分屏**');
+  expect(anchor.locator ? content.slice(anchor.locator.from, anchor.locator.to) : null).toBe(anchor.locator?.originalText);
+});

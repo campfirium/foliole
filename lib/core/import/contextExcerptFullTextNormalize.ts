@@ -79,6 +79,14 @@ function consumeLineMarker(raw: string, index: number) {
   return match?.[0].length ?? 0;
 }
 
+function consumeInlineMarkerAfterMarkdown(raw: string, index: number) {
+  if (!/[`*_]/u.test(raw[index - 1] ?? '')) {
+    return 0;
+  }
+  const match = /^(?:[-*+•]\s+|\d+[.)]\s+)/u.exec(raw.slice(index));
+  return match?.[0].length ?? 0;
+}
+
 export function normalizeFullTextWithMap(value: string) {
   const raw = normalizeLineEndings(value);
   const state = { normalized: '', rawIndexes: [] as number[] };
@@ -91,6 +99,12 @@ export function normalizeFullTextWithMap(value: string) {
         lineStart = false;
         continue;
       }
+    }
+    const inlineMarkerLength = consumeInlineMarkerAfterMarkdown(raw, index);
+    if (inlineMarkerLength > 0) {
+      index += inlineMarkerLength - 1;
+      lineStart = false;
+      continue;
     }
     const wikiLength = tryConsumeWikiLink(raw, index, state);
     if (wikiLength > 0) {
