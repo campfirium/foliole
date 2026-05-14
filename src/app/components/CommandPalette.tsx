@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { buildCommandMenuSections } from '../../shared/commands/menuModel';
-import { formatShortcutSetLabel } from '../../shared/commands/shortcuts';
+import { formatAriaKeyShortcuts, formatShortcutSetLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import {
   appFloatingEmptyStateClassName,
@@ -69,6 +69,8 @@ function CommandPaletteList({
           return (
             <li key={item.id}>
               <button
+                aria-keyshortcuts={formatAriaKeyShortcuts(item.shortcuts)}
+                aria-label={item.title}
                 className={appFloatingItemClassName('flex items-center justify-between text-sm')}
                 data-active={item.enabled && enabledIndex === activeIndex}
                 data-disabled={!item.enabled}

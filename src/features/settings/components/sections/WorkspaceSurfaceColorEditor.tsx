@@ -42,7 +42,9 @@ function useEditorDraft(value: string) {
 }
 
 function useCloseInteractions(onClose: () => void) {
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
+    restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
@@ -59,6 +61,7 @@ function useCloseInteractions(onClose: () => void) {
     return () => {
       window.removeEventListener('keydown', handleEscape);
       window.removeEventListener('pointerdown', handlePointerDown);
+      restoreFocusRef.current?.focus();
     };
   }, [onClose]);
 }
@@ -83,12 +86,19 @@ function WorkspaceSurfaceColorEditorBody(props: {
     setResolvedPosition(clampPopupPosition(props.position, nextSize, props.bounds));
   }, [props.bounds, props.position]);
 
+  useEffect(() => {
+    containerRef.current?.focus();
+  }, []);
+
   return (
     <div
-      ref={containerRef}
+      aria-label="Workspace surface color editor"
       className={cn(appFloatingSurfaceClassName('popover'), 'absolute z-popover-elevated w-[280px] rounded-md p-3 shadow-panel')}
       data-workspace-color-editor
+      ref={containerRef}
+      role="dialog"
       style={{ left: resolvedPosition.x, top: resolvedPosition.y }}
+      tabIndex={-1}
     >
       <WorkspaceSurfaceColorEditorFields currentColor={props.currentColor} draft={props.draft} onCommit={props.onCommit} />
     </div>

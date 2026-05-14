@@ -5,7 +5,7 @@ const menuModelMocks = vi.hoisted(() => ({
   buildCommandMenuSections: vi.fn((): Array<{
     id: string;
     title: string;
-    items: Array<{ enabled: boolean; id: string; title: string }>;
+    items: Array<{ enabled: boolean; id: string; title: string; shortcuts?: { primary?: { ctrlKey?: boolean; key: string }; secondary?: { key: string; metaKey?: boolean } } }>;
   }> => [])
 }));
 
@@ -41,7 +41,14 @@ it('keeps tab focus inside the command palette dialog', async () => {
     {
       id: 'navigation',
       title: 'Navigation',
-      items: [{ enabled: true, id: 'open-topic', title: 'Open topic' }]
+      items: [
+        {
+          enabled: true,
+          id: 'open-topic',
+          shortcuts: { primary: { ctrlKey: true, key: 'p' }, secondary: { key: 'p', metaKey: true } },
+          title: 'Open topic'
+        }
+      ]
     }
   ]);
 
@@ -60,6 +67,7 @@ it('keeps tab focus inside the command palette dialog', async () => {
   const result = screen.getByRole('button', { name: 'Open topic' });
 
   expect(dialog).toHaveAttribute('aria-modal', 'true');
+  expect(result).toHaveAttribute('aria-keyshortcuts', 'Control+P Meta+P');
   expect(screen.getByText('Navigation')).toBeInTheDocument();
   await waitFor(() => expect(input).toHaveFocus());
 

@@ -106,6 +106,40 @@ export function formatShortcutSetLabel(shortcuts: CommandShortcutSet | undefined
   return labels.join(' / ');
 }
 
+function formatAriaShortcutKey(key: string) {
+  const normalized = normalizeShortcutKey(key);
+  if (normalized === ' ' || normalized === 'Space') {
+    return 'Space';
+  }
+  return normalized.length === 1 ? normalized.toUpperCase() : normalized;
+}
+
+export function formatAriaShortcut(shortcut: CommandShortcut) {
+  const parts: string[] = [];
+  if (shortcut.ctrlKey) {
+    parts.push('Control');
+  }
+  if (shortcut.metaKey) {
+    parts.push('Meta');
+  }
+  if (shortcut.altKey) {
+    parts.push('Alt');
+  }
+  if (shortcut.shiftKey) {
+    parts.push('Shift');
+  }
+  parts.push(formatAriaShortcutKey(shortcut.key));
+  return parts.join('+');
+}
+
+export function formatAriaKeyShortcuts(shortcuts: CommandShortcutSet | undefined) {
+  if (!shortcuts) {
+    return undefined;
+  }
+  const labels = [shortcuts.primary, shortcuts.secondary].filter(Boolean).map((shortcut) => formatAriaShortcut(shortcut as CommandShortcut));
+  return labels.length ? labels.join(' ') : undefined;
+}
+
 export function parseShortcutLabel(value: string): CommandShortcut | null {
   const raw = value.trim();
   if (!raw) {

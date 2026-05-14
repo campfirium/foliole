@@ -4,7 +4,9 @@ import {
   getWorkspaceRailItemLabel,
   type WorkspaceRailItemConfig
 } from '../../features/settings/model/workspaceRailSettings';
-import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
+import { APP_COMMAND_IDS, type AppCommandId } from '../../shared/commands/ids';
+import { formatAriaKeyShortcuts } from '../../shared/commands/shortcuts';
 import {
   AppSelectionDropdownMenu,
   AppSelectionDropdownMenuItem,
@@ -49,6 +51,7 @@ function RailCommandButton({
         icon={<RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />}
         label={getWorkspaceRailItemLabel(item)}
         onClick={() => onRun(item.commandId)}
+        aria-keyshortcuts={formatAriaKeyShortcuts(DEFAULT_APP_COMMAND_SHORTCUTS[item.commandId as AppCommandId])}
       />
     </div>
   );

@@ -90,6 +90,47 @@ function FavoritesGrid(props: {
   );
 }
 
+function useThemeFavoritesPopoverFocus(args: {
+  panelRef: RefObject<HTMLDivElement | null>;
+  triggerRef: RefObject<HTMLButtonElement | null>;
+}) {
+  useEffect(() => {
+    args.panelRef.current?.focus();
+    return () => args.triggerRef.current?.focus();
+  }, [args.panelRef, args.triggerRef]);
+}
+
+function useThemeFavoritesPopoverDismiss(args: {
+  onClose: () => void;
+  panelRef: RefObject<HTMLDivElement | null>;
+  triggerRef: RefObject<HTMLButtonElement | null>;
+}) {
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+      if (args.panelRef.current?.contains(target) || args.triggerRef.current?.contains(target)) {
+        return;
+      }
+      args.onClose();
+    };
+    document.addEventListener('mousedown', handlePointerDown, true);
+    return () => document.removeEventListener('mousedown', handlePointerDown, true);
+  }, [args.onClose, args.panelRef, args.triggerRef]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        args.onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [args.onClose]);
+}
+
 export function WorkspaceSurfaceThemeFavoritesPopover(props: {
   currentPalette: string[];
   favorites: string[][];
@@ -100,31 +141,8 @@ export function WorkspaceSurfaceThemeFavoritesPopover(props: {
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        return;
-      }
-      if (panelRef.current?.contains(target) || props.triggerRef.current?.contains(target)) {
-        return;
-      }
-      props.onClose();
-    };
-    document.addEventListener('mousedown', handlePointerDown, true);
-    return () => document.removeEventListener('mousedown', handlePointerDown, true);
-  }, [props.onClose, props.triggerRef]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        props.onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [props.onClose]);
+  useThemeFavoritesPopoverFocus({ panelRef, triggerRef: props.triggerRef });
+  useThemeFavoritesPopoverDismiss({ onClose: props.onClose, panelRef, triggerRef: props.triggerRef });
 
   if (typeof document === 'undefined') {
     return null;
@@ -135,7 +153,9 @@ export function WorkspaceSurfaceThemeFavoritesPopover(props: {
       aria-label="Theme collection panel"
       className={cn(appFloatingSurfaceClassName('panel'), 'fixed z-panel-popover p-4 pointer-events-auto')}
       ref={panelRef}
+      role="dialog"
       style={{ left: props.position.left, top: props.position.top, width: props.position.width }}
+      tabIndex={-1}
     >
       {props.favorites.length > 0 ? (
         <FavoritesGrid

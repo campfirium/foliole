@@ -64,3 +64,24 @@ it('runs the shared light and dark mode command from the rail theme button', () 
 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleBaseColorMode);
 });
+
+it('exposes shortcuts on visible rail command buttons', () => {
+  window.localStorage.setItem(
+    'foliole-workspace-rail-items',
+    JSON.stringify([
+      {
+        commandId: APP_COMMAND_IDS.toggleList,
+        id: 'user.toggle-list',
+        labelOverride: 'Toggle List',
+        order: 0,
+        section: 'top',
+        source: 'user',
+        visible: true
+      }
+    ])
+  );
+
+  renderToolbar(false);
+
+  expect(screen.getByRole('button', { name: 'Toggle List' })).toHaveAttribute('aria-keyshortcuts', 'Control+Shift+L Meta+Shift+L');
+});
