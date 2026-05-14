@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { createDraftImportSource } from './importSourceWorkspaceModel';
@@ -11,10 +11,10 @@ function createSources(count: number) {
   }));
 }
 
-function renderTable(sourceCount: number) {
+function renderTable(sourceCount: number, onAddSource = vi.fn()) {
   return render(
     <ImportSourceTable
-      onAddSource={vi.fn()}
+      onAddSource={onAddSource}
       onChange={vi.fn()}
       onChangeAction={vi.fn()}
       onChooseHighlightFolder={vi.fn()}
@@ -27,11 +27,22 @@ function renderTable(sourceCount: number) {
   );
 }
 
+it('allows adding the first import source from an empty table', () => {
+  const onAddSource = vi.fn();
+  renderTable(0, onAddSource);
+
+  const addSourceButton = screen.getByRole('button', { name: 'Add source' });
+
+  expect(addSourceButton).toBeEnabled();
+  fireEvent.click(addSourceButton);
+  expect(onAddSource).toHaveBeenCalledTimes(1);
+});
+
 it('keeps short import source lists directly rendered', () => {
-  renderTable(3);
+  renderTable(1);
 
   expect(document.querySelector('[data-virtual-list="true"]')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Original folder draft-import-source-2' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Original folder draft-import-source-0' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add source' })).toBeEnabled();
 });
 

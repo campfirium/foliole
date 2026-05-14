@@ -101,7 +101,7 @@ export function ImportSourceTable({
     <div className={settingsActionTableClassName()} role="table" aria-label="Watch folders">
       <TableHeader />
       <ImportSourceRows actions={actions} sources={sources} />
-      <AddSourceRow disabled={sources.length === 0} onAddSource={onAddSource} />
+      <AddSourceRow onAddSource={onAddSource} />
     </div>
   );
 }

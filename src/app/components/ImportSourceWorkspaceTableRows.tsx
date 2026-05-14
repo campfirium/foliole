@@ -162,13 +162,12 @@ export function SourceRow({
   );
 }
 
-export function AddSourceRow(props: { disabled: boolean; onAddSource: () => void }) {
+export function AddSourceRow(props: { onAddSource: () => void }) {
   return (
     <div className={settingsActionTableRowClassName(TABLE_COLUMNS, 'pb-3 pt-1')}>
       <button
         aria-label="Add source"
         className={settingsActionTableAddButtonClassName()}
-        disabled={props.disabled}
         onClick={props.onAddSource}
         type="button"
       >
