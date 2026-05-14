@@ -19,9 +19,13 @@ function toRawRange(locator: FullTextLocator, start: number, endExclusive: numbe
   if (rawStart === undefined || rawEnd === undefined) {
     return null;
   }
+  const expandedStart = expandRawStartToInlineCodeStart(
+    locator.content,
+    expandRawStartToHeadingStart(locator.content, rawStart)
+  );
   return {
     end: expandRawEndToAutolinkEnd(locator.content, rawEnd),
-    start: expandRawStartToHeadingStart(locator.content, rawStart)
+    start: expandedStart
   };
 }
 
@@ -31,8 +35,19 @@ function expandRawStartToHeadingStart(content: string, rawStart: number) {
   return /^#{1,6}\s+$/u.test(prefix) ? lineStart : rawStart;
 }
 
+function isSingleBacktickAt(content: string, index: number) {
+  return content[index] === '`' && content[index - 1] !== '`' && content[index + 1] !== '`';
+}
+
+function expandRawStartToInlineCodeStart(content: string, rawStart: number) {
+  return isSingleBacktickAt(content, rawStart - 1) ? rawStart - 1 : rawStart;
+}
+
 function expandRawEndToAutolinkEnd(content: string, rawEnd: number) {
   const nextIndex = rawEnd + 1;
+  if (isSingleBacktickAt(content, nextIndex)) {
+    return nextIndex + 1;
+  }
   const markdownLinkEnd = findMarkdownLinkEndAtLabelEnd(content, nextIndex);
   if (markdownLinkEnd !== null) {
     return markdownLinkEnd;
