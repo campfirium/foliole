@@ -118,6 +118,26 @@ export default {
         'picker-thumb-ring-strong': 'var(--shadow-picker-thumb-ring-strong)',
         debug: 'var(--shadow-debug)'
       },
+      zIndex: {
+        'local-base': 'var(--z-local-base)',
+        'local-raised': 'var(--z-local-raised)',
+        'local-overlay': 'var(--z-local-overlay)',
+        'local-control': 'var(--z-local-control)',
+        'local-feedback': 'var(--z-local-feedback)',
+        'local-accent': 'var(--z-local-accent)',
+        surface: 'var(--z-surface)',
+        'surface-overlay': 'var(--z-surface-overlay)',
+        'surface-raised': 'var(--z-surface-raised)',
+        'workspace-overlay': 'var(--z-workspace-overlay)',
+        floating: 'var(--z-floating)',
+        debug: 'var(--z-debug)',
+        'modal-overlay': 'var(--z-modal-overlay)',
+        modal: 'var(--z-modal)',
+        dropdown: 'var(--z-dropdown)',
+        'panel-popover': 'var(--z-panel-popover)',
+        'preview-dialog': 'var(--z-preview-dialog)',
+        'popover-elevated': 'var(--z-popover-elevated)'
+      },
       borderRadius: {
         sm: 'var(--radius-sm)',
         md: 'var(--radius-md)',

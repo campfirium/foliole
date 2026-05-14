@@ -220,7 +220,7 @@ export function DocumentOutlineLayer({
   return (
     <div
       aria-label="Document outline hover zone"
-      className="pointer-events-auto absolute inset-y-0 right-0 z-20"
+      className="pointer-events-auto absolute inset-y-0 right-0 z-surface-overlay"
       onMouseEnter={(event) => {
         openOutline(event.clientY);
       }}

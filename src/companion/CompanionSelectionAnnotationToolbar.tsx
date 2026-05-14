@@ -144,7 +144,7 @@ export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnn
 
   return (
     <div
-      className="fixed z-50"
+      className="fixed z-floating"
       data-companion-selection-toolbar="true"
       onContextMenu={(event) => event.preventDefault()}
       onPointerDown={(event) => event.stopPropagation()}

@@ -38,7 +38,7 @@ export function PdfSearchDebugOverlay(props: PdfSearchDebugOverlayProps) {
   }
   const payload = resolveDebugPayload(props);
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[70] w-[460px] max-w-[70vw] rounded-md border border-border bg-bg-panel/95 p-3 shadow-debug">
+    <div className="pointer-events-none fixed bottom-4 right-4 z-debug w-[460px] max-w-[70vw] rounded-md border border-border bg-bg-panel/95 p-3 shadow-debug">
       <div className="pointer-events-auto mb-2 flex items-center justify-between">
         <p className="text-sm font-semibold text-foreground">Search debug</p>
         <button className="rounded px-2 py-1 text-xs text-foreground/70 hover:bg-bg-muted hover:text-foreground" onClick={props.onClose} type="button">

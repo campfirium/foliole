@@ -22,7 +22,7 @@ function hasWholeImageHighlight(presentation: ImageClozeEditorPresentation | nul
 function createImagePreviewTrigger(args: { alt: string; presentation: ImageClozeEditorPresentation | null; source: string }) {
   const button = document.createElement('button');
   button.className =
-    'cm-md-image-preview-trigger absolute right-2 top-2 z-10 inline-flex size-8 cursor-pointer items-center justify-center rounded-md border border-border/60 bg-bg-elevated/90 p-0 text-foreground shadow-panel transition-opacity hover:bg-bg-elevated focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+    'cm-md-image-preview-trigger absolute right-2 top-2 z-surface inline-flex size-8 cursor-pointer items-center justify-center rounded-md border border-border/60 bg-bg-elevated/90 p-0 text-foreground shadow-panel transition-opacity hover:bg-bg-elevated focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
   button.type = 'button';
   button.setAttribute('aria-label', 'Open image preview');
   button.innerHTML =

@@ -6,7 +6,7 @@ import { dispatchOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 
 const CLOZE_GUARD_CARD_CLASS_NAME = cn(
   appFloatingSurfaceClassName('panel'),
-  'fixed z-50 w-[26rem] rounded-lg p-4 text-foreground'
+  'fixed z-floating w-[26rem] rounded-lg p-4 text-foreground'
 );
 const CLOZE_GUARD_BORDERED_ACTION_CLASS_NAME =
   'border-[var(--app-control-border-color)] hover:border-[var(--app-control-border-hover-color)]';

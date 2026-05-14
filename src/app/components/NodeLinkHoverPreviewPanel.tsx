@@ -71,7 +71,7 @@ export function NodeLinkHoverPreviewPanel(props: NodeLinkHoverPreviewPanelProps)
   const panelStyle = resolvePanelStyle(props.preview);
 
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-40">
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-workspace-overlay">
       <section
         aria-label="Linked topic preview"
         className={appFloatingSurfaceClassName('panel', 'absolute flex flex-col overflow-hidden')}

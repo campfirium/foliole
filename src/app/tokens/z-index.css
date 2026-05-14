@@ -1,0 +1,20 @@
+:root {
+  --z-local-base: 0;
+  --z-local-raised: 1;
+  --z-local-overlay: 2;
+  --z-local-control: 3;
+  --z-local-feedback: 4;
+  --z-local-accent: 5;
+  --z-surface: 10;
+  --z-surface-overlay: 20;
+  --z-surface-raised: 30;
+  --z-workspace-overlay: 40;
+  --z-floating: 50;
+  --z-debug: 70;
+  --z-modal-overlay: 80;
+  --z-modal: 81;
+  --z-dropdown: 82;
+  --z-panel-popover: 83;
+  --z-preview-dialog: 90;
+  --z-popover-elevated: 95;
+}

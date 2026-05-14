@@ -3,7 +3,7 @@ import { cn } from '@/shared/lib/utils';
 const floatingSurfaceBaseClassName =
   'border border-[var(--app-floating-border-color)] bg-[var(--app-floating-surface-bg)]';
 const floatingOverlayBaseClassName =
-  'fixed inset-0 z-50 flex items-start justify-center bg-[var(--app-floating-overlay-bg)] px-4 pt-[12vh]';
+  'fixed inset-0 z-floating flex items-start justify-center bg-[var(--app-floating-overlay-bg)] px-4 pt-[12vh]';
 const floatingInputBaseClassName = [
   'w-full border-b border-[var(--app-floating-divider-color)] bg-[var(--app-floating-input-bg)] px-4 py-3 text-sm text-foreground outline-none',
   'placeholder:text-foreground/42'

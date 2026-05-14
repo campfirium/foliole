@@ -43,7 +43,7 @@ export function NodeListSearchOverlay(props: {
   }, []);
 
   return (
-    <div className="absolute inset-y-1 left-2 right-2 z-20 flex max-w-full items-center gap-2 overflow-hidden rounded-md border border-border bg-[var(--app-surface-control-bg)] px-2 shadow-none">
+    <div className="absolute inset-y-1 left-2 right-2 z-surface-overlay flex max-w-full items-center gap-2 overflow-hidden rounded-md border border-border bg-[var(--app-surface-control-bg)] px-2 shadow-none">
       <SearchTitlesIcon />
       <AppInput
         ref={inputRef}

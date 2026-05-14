@@ -19,7 +19,7 @@ export function CompanionBottomReviewBar(props: {
   }
 
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-20 bg-companion-content px-4 pb-5 pt-3">
+    <footer className="fixed inset-x-0 bottom-0 z-surface-overlay bg-companion-content px-4 pb-5 pt-3">
       <div className="mx-auto w-full max-w-[760px]">
         <ReviewActionBar
           ariaLabel="Companion review toolbar"

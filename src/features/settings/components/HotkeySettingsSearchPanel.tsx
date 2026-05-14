@@ -32,7 +32,7 @@ function HotkeyFilterMenu(props: {
         <ListFilter aria-hidden="true" size={17} strokeWidth={1.9} />
       </button>
       {open ? (
-        <div className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-10 z-50 min-w-44 overflow-hidden p-1')} role="menu">
+        <div className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-10 z-floating min-w-44 overflow-hidden p-1')} role="menu">
           {HOTKEY_FILTER_OPTIONS.map((option) => (
             <button
               className={HOTKEY_FILTER_ITEM_CLASS_NAME}

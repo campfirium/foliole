@@ -24,7 +24,7 @@ export const liveMarkdownTableTheme = {
     top: '0.35rem',
     transition: 'background-color 120ms ease, color 120ms ease, opacity 120ms ease',
     width: '1.75rem',
-    zIndex: '2'
+    zIndex: 'var(--z-local-overlay)'
   },
   '.cm-md-table-widget:hover .cm-md-table-preview-button, .cm-md-table-preview-button:focus-visible': {
     opacity: '1'

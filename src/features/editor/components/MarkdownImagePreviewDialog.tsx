@@ -30,7 +30,7 @@ function renderPreviewImage(
     >
       <img alt={image.alt || 'Image preview'} className="block max-h-[88vh] max-w-[88vw] object-contain" src={image.src} />
       {image.presentation?.regions?.length ? (
-        <div aria-hidden="true" className="cm-md-image-cloze-regions z-[1]">
+        <div aria-hidden="true" className="cm-md-image-cloze-regions z-local-raised">
           {image.presentation.regions.map((region) => (
             <div
               className="cm-md-image-cloze-region"
@@ -62,7 +62,7 @@ export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProp
         <AppDialogOverlay className="bg-[var(--app-floating-overlay-bg)]" />
         <AppDialogContent
           aria-describedby={undefined}
-          className="left-4 top-4 right-4 bottom-4 z-[90] max-w-none translate-x-0 translate-y-0 overflow-visible border-transparent bg-transparent p-0 shadow-none"
+          className="left-4 top-4 right-4 bottom-4 z-preview-dialog max-w-none translate-x-0 translate-y-0 overflow-visible border-transparent bg-transparent p-0 shadow-none"
         >
           <AppDialogTitle className="sr-only">Image preview</AppDialogTitle>
           <div
@@ -73,7 +73,7 @@ export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProp
               }
             }}
           >
-            <div className="absolute right-4 top-4 z-[1]">
+            <div className="absolute right-4 top-4 z-local-raised">
               <AppIconButton
                 className="bg-bg-elevated/92 text-foreground hover:bg-bg-elevated"
                 icon={<X aria-hidden="true" size={16} strokeWidth={2} />}

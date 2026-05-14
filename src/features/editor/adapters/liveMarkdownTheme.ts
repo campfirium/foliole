@@ -97,7 +97,7 @@ export const liveMarkdownTheme = EditorView.theme({
     position: 'absolute',
     transform: 'translateX(-50%)',
     whiteSpace: 'normal',
-    zIndex: '30'
+    zIndex: 'var(--z-surface-raised)'
   },
   '.cm-md-link-text': { color: 'var(--app-accent-color)', cursor: 'pointer', textDecoration: 'underline' },
   '.cm-md-source-highlight': {

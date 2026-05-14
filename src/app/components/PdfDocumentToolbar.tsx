@@ -30,7 +30,7 @@ interface PdfDocumentToolbarProps {
 }
 
 function resolveToolbarShellClassName() {
-  return 'sticky top-0 z-20 h-0 w-full px-4 pt-3 pointer-events-none';
+  return 'sticky top-0 z-surface-overlay h-0 w-full px-4 pt-3 pointer-events-none';
 }
 
 function resolveToolbarPanelClassName(isVisible: boolean) {

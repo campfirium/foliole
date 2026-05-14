@@ -28,7 +28,7 @@ type AppSelectionDropdownMenuItemProps = ButtonHTMLAttributes<HTMLButtonElement>
 function dropdownMenuContentClassName(className?: string) {
   return cn(
     appFloatingSurfaceClassName('popover'),
-    'pointer-events-auto z-50 min-w-[188px] overflow-hidden p-1 text-foreground',
+    'pointer-events-auto z-floating min-w-[188px] overflow-hidden p-1 text-foreground',
     className
   );
 }
@@ -82,7 +82,7 @@ function AppSelectionDropdownMenu({ children, left, onClose, top }: AppSelection
     <>
       <div
         aria-hidden="true"
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-workspace-overlay"
         onContextMenu={(event) => event.preventDefault()}
         onPointerDown={onClose}
       />

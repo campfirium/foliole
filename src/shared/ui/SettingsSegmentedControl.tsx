@@ -58,7 +58,7 @@ export function SettingsSegmentedControl({
               'min-w-0 max-w-[12rem] shrink-0 border-l border-settings-control-border/35 px-3 text-foreground/68 transition-colors first:border-l-0',
               'flex h-full items-center justify-center whitespace-nowrap',
               'hover:bg-settings-control-hover hover:text-foreground',
-              'focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring',
+              'focus-visible:relative focus-visible:z-surface focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring',
               active && 'bg-settings-segmented-active font-medium text-settings-segmented-active-foreground'
             )}
             disabled={disabled}

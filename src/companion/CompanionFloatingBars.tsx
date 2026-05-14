@@ -48,7 +48,7 @@ export function CompanionBottomTabBar(props: {
 
   return (
     <footer
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-companion-divider bg-companion-content px-4 pb-5 pt-2 shadow-panel"
+      className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pb-5 pt-2 shadow-panel"
       data-testid="companion-bottom-tab-bar"
     >
       <div className="mx-auto flex w-full max-w-[760px] items-center gap-1">

@@ -16,7 +16,7 @@ const AppDialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn('fixed inset-0 z-[80] bg-foreground/10', className)}
+    className={cn('fixed inset-0 z-modal-overlay bg-foreground/10', className)}
     {...props}
   />
 ));
@@ -30,7 +30,7 @@ const AppDialogContent = React.forwardRef<
     ref={ref}
     className={cn(
       appFloatingSurfaceClassName('panel'),
-      'fixed left-1/2 top-1/2 z-[81] -translate-x-1/2 -translate-y-1/2 text-foreground outline-none',
+      'fixed left-1/2 top-1/2 z-modal -translate-x-1/2 -translate-y-1/2 text-foreground outline-none',
       className
     )}
     {...props}

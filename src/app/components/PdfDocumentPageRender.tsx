@@ -232,16 +232,16 @@ function renderSearchHighlightsOnPage(pageNumber: number, pageSearchHighlights: 
         renderPdfOverlayRects(
           match,
           match.isActive
-            ? 'pointer-events-none absolute z-30 rounded-[2px] bg-[color:rgb(var(--app-highlight-color-rgb)/0.7)] ring-2 ring-[color:rgb(var(--app-highlight-color-rgb)/0.92)]'
-            : 'pointer-events-none absolute z-20 rounded-[2px] bg-[color:rgb(var(--app-highlight-color-rgb)/0.3)] ring-1 ring-[color:rgb(var(--app-highlight-color-rgb)/0.5)]',
+            ? 'pointer-events-none absolute z-surface-raised rounded-[2px] bg-[color:rgb(var(--app-highlight-color-rgb)/0.7)] ring-2 ring-[color:rgb(var(--app-highlight-color-rgb)/0.92)]'
+            : 'pointer-events-none absolute z-surface-overlay rounded-[2px] bg-[color:rgb(var(--app-highlight-color-rgb)/0.3)] ring-1 ring-[color:rgb(var(--app-highlight-color-rgb)/0.5)]',
           match.isActive ? 'pdf-search-match-active' : 'pdf-search-match-weak'
         ) ??
         renderPdfOverlayMarker(
           match,
           markerSize,
           match.isActive
-            ? 'pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[color:rgb(var(--app-highlight-color-rgb)/0.86)] ring-2 ring-[color:rgb(var(--app-highlight-color-rgb)/0.96)]'
-            : 'pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[color:rgb(var(--app-highlight-color-rgb)/0.4)] ring-1 ring-[color:rgb(var(--app-highlight-color-rgb)/0.5)]',
+            ? 'pointer-events-none absolute z-surface-raised -translate-x-1/2 -translate-y-1/2 rounded-full bg-[color:rgb(var(--app-highlight-color-rgb)/0.86)] ring-2 ring-[color:rgb(var(--app-highlight-color-rgb)/0.96)]'
+            : 'pointer-events-none absolute z-surface-overlay -translate-x-1/2 -translate-y-1/2 rounded-full bg-[color:rgb(var(--app-highlight-color-rgb)/0.4)] ring-1 ring-[color:rgb(var(--app-highlight-color-rgb)/0.5)]',
           match.isActive ? 'pdf-search-match-active' : 'pdf-search-match-weak'
         )
       )}
@@ -259,13 +259,13 @@ function renderSelectionOverlay(
   return (
     renderPdfOverlayRects(
       selectionLocator,
-      'pointer-events-none absolute z-20 rounded-[3px] bg-[var(--app-selection-surface-color)] ring-1 ring-[var(--app-selection-surface-color)]',
+      'pointer-events-none absolute z-surface-overlay rounded-[3px] bg-[var(--app-selection-surface-color)] ring-1 ring-[var(--app-selection-surface-color)]',
       'pdf-selection-rect'
     ) ??
     renderPdfOverlayMarker(
       selectionLocator,
       markerSize,
-      'pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-selection-surface-color)] shadow-marker ring-1 ring-[var(--app-selection-surface-color)]',
+      'pointer-events-none absolute z-surface-overlay -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-selection-surface-color)] shadow-marker ring-1 ring-[var(--app-selection-surface-color)]',
       'pdf-selection-marker'
     )
   );

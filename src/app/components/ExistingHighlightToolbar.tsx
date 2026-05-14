@@ -42,7 +42,7 @@ export function ExistingHighlightToolbar(props: {
 
   return createPortal(
     <div
-      className="fixed z-50"
+      className="fixed z-floating"
       data-annotation-toolbar="true"
       onContextMenu={(event) => event.preventDefault()}
       onPointerDown={(event) => event.stopPropagation()}

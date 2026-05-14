@@ -2,6 +2,7 @@
 @config "../../tailwind.config.js";
 @import "./generated/appearance-colors.css";
 @import "./tokens/shadows.css";
+@import "./tokens/z-index.css";
 
 * {
   box-sizing: border-box;
@@ -482,7 +483,7 @@ b {
   pointer-events: none;
   position: absolute;
   right: 0;
-  z-index: 4;
+  z-index: var(--z-local-feedback);
 }
 
 .workspace-region-main-rail {
@@ -578,7 +579,7 @@ b {
   position: absolute;
   right: 0;
   top: 0;
-  z-index: 2;
+  z-index: var(--z-local-overlay);
 }
 
 .window-titlebar-center-title {
@@ -699,7 +700,7 @@ b {
   position: absolute;
   right: 0;
   top: 0;
-  z-index: 1;
+  z-index: var(--z-local-raised);
   -webkit-app-region: no-drag;
 }
 
@@ -920,7 +921,7 @@ b {
   position: absolute;
   top: 0;
   width: 3px;
-  z-index: 5;
+  z-index: var(--z-local-accent);
 }
 
 .markdown-editor-host .cm-md-image-surface[data-md-image-highlighted='true'] {
@@ -972,7 +973,7 @@ b {
   object-fit: contain;
   position: relative;
   width: auto;
-  z-index: 1;
+  z-index: var(--z-local-raised);
 }
 
 .cm-md-image-element-block {
@@ -989,7 +990,7 @@ b {
   inset: 0;
   pointer-events: none;
   position: absolute;
-  z-index: 2;
+  z-index: var(--z-local-overlay);
 }
 
 .cm-md-image-cloze-region {
@@ -1054,7 +1055,7 @@ b {
   cursor: crosshair;
   inset: 0;
   position: absolute;
-  z-index: 2;
+  z-index: var(--z-local-overlay);
 }
 
 .cm-md-image-cloze-overlay[data-md-image-region-hover='true'] {
@@ -1077,7 +1078,7 @@ b {
   gap: 8px;
   position: absolute;
   transform: translate(10px, -50%);
-  z-index: 3;
+  z-index: var(--z-local-control);
 }
 
 .cm-md-image-cloze-actions[hidden] {
@@ -1087,7 +1088,7 @@ b {
 .cm-md-image-cloze-delete {
   position: absolute;
   transform: translate(10px, -50%);
-  z-index: 3;
+  z-index: var(--z-local-control);
 }
 
 .cm-md-image-cloze-delete[hidden] {
@@ -1105,7 +1106,7 @@ b {
   pointer-events: none;
   position: absolute;
   transform: translate(14px, -50%);
-  z-index: 4;
+  z-index: var(--z-local-feedback);
 }
 
 .cm-md-image-icon {
@@ -1235,7 +1236,7 @@ body.link-panel-dragging {
   justify-content: center;
   padding: 18px;
   position: fixed;
-  z-index: 80;
+  z-index: var(--z-modal-overlay);
 }
 
 @media (max-width: 1080px) {

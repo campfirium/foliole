@@ -119,7 +119,7 @@ function ExternalImportAction(args: {
   onHandleImport: () => void;
 }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-5 z-[2] overflow-visible">
+    <div className="pointer-events-none absolute inset-x-0 top-5 z-local-overlay overflow-visible">
       <div className="mx-auto flex w-full max-w-[var(--document-max-width)] justify-end px-[var(--document-content-inline-padding)]">
         <AppTooltip>
           <AppTooltipTrigger asChild>

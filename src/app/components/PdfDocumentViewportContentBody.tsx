@@ -57,7 +57,7 @@ interface PdfDocumentViewportContentBodyProps {
 function PdfDocumentLoadingOverlay() {
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center"
+      className="pointer-events-none absolute inset-0 z-workspace-overlay flex items-center justify-center"
       data-testid="pdf-document-loading-overlay"
     >
       <div aria-hidden="true" className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-foreground/65" />

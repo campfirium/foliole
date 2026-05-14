@@ -204,7 +204,7 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
   const drag = useWorkspaceRightPanelDrag(orderState);
 
   return (
-    <div className="window-titlebar-right-anchor-shell relative z-[3]" data-collapsed={isCollapsed}>
+    <div className="window-titlebar-right-anchor-shell relative z-local-control" data-collapsed={isCollapsed}>
       <div className="window-titlebar-right-content" data-collapsed={isCollapsed}>
         <div className="window-titlebar-right-expanded-action">
           <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />

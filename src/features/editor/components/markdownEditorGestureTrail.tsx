@@ -19,7 +19,7 @@ export function GestureTrailOverlay({
   return (
     <svg
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-20"
+      className="pointer-events-none absolute inset-0 z-surface-overlay"
       height={trail.height}
       viewBox={`0 0 ${trail.width} ${trail.height}`}
       width={trail.width}

@@ -115,7 +115,7 @@ export function WorkspaceBottomReviewToolbar(props: WorkspaceBottomReviewToolbar
         {props.isImmersiveMode ? null : <WorkspaceSurfaceRowOverlay row="footer" />}
         {props.isImmersiveMode ? null : <WorkspaceFooterRowDividers isListCollapsed={props.isListCollapsed} />}
         {props.isImmersiveMode ? null : (
-          <div className="relative z-[1]">
+          <div className="relative z-local-raised">
             <WorkspaceStudyDockTrigger
               canStartStudyMode={props.canStartStudyMode}
               isStudyMode={props.isStudyMode}
@@ -124,7 +124,7 @@ export function WorkspaceBottomReviewToolbar(props: WorkspaceBottomReviewToolbar
             />
           </div>
         )}
-        <div className="relative z-[1] min-w-0">
+        <div className="relative z-local-raised min-w-0">
           <WorkspaceBottomReviewToolbarContent {...props} />
         </div>
       </div>

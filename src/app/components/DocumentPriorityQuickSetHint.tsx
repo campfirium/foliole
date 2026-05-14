@@ -8,7 +8,7 @@ export function DocumentPriorityQuickSetHint({ isActive }: DocumentPriorityQuick
   }
 
   return (
-    <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
+    <div className="pointer-events-none absolute left-1/2 top-1/2 z-surface-overlay -translate-x-1/2 -translate-y-1/2">
       <div
         aria-live="polite"
         className="flex items-center gap-2 rounded-full border border-border/70 bg-bg-elevated/95 px-4 py-2 text-sm text-foreground/76 shadow-control"

@@ -135,7 +135,7 @@ function SimplePdfToolbar(props: {
   zoom: number;
 }) {
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-companion-divider bg-companion-surface px-1 py-2">
+    <div className="sticky top-0 z-surface flex items-center justify-between gap-2 border-b border-companion-divider bg-companion-surface px-1 py-2">
       {props.onBackToText ? (
         <AppButton onClick={props.onBackToText} variant="ghost">
           Text

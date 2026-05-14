@@ -162,7 +162,7 @@ function AutomaticSeedPopoverSurface(props: {
 }) {
   return (
     <div
-      className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-[95] max-h-80 w-72 overflow-y-auto rounded-md p-2.5 shadow-panel')}
+      className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-popover-elevated max-h-80 w-72 overflow-y-auto rounded-md p-2.5 shadow-panel')}
     >
       <AutomaticSeedSwatchGrid {...props} />
     </div>

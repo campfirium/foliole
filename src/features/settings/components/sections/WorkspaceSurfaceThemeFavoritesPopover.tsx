@@ -133,7 +133,7 @@ export function WorkspaceSurfaceThemeFavoritesPopover(props: {
   return createPortal(
     <div
       aria-label="Theme collection panel"
-      className={cn(appFloatingSurfaceClassName('panel'), 'fixed z-[83] p-4 pointer-events-auto')}
+      className={cn(appFloatingSurfaceClassName('panel'), 'fixed z-panel-popover p-4 pointer-events-auto')}
       ref={panelRef}
       style={{ left: props.position.left, top: props.position.top, width: props.position.width }}
     >

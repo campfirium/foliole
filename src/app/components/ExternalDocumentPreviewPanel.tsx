@@ -71,7 +71,7 @@ function PreviewWindow(args: {
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
 
   return (
-    <div aria-label="External document preview panel" className="pointer-events-none fixed inset-0 z-40" ref={args.overlayRef}>
+    <div aria-label="External document preview panel" className="pointer-events-none fixed inset-0 z-workspace-overlay" ref={args.overlayRef}>
       <section
         className={appFloatingSurfaceClassName('panel', 'pointer-events-auto absolute flex flex-col overflow-hidden')}
         style={args.frame.panelStyle}

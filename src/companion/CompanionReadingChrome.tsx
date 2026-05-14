@@ -30,7 +30,7 @@ export function ReadingChrome(props: {
 }) {
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-40 bg-companion-base/95 px-4 py-3 backdrop-blur">
+      <div className="fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-[760px] items-center gap-2">
           <ReadingChromeButton icon={X} label="Exit" onClick={props.onExit} />
           <ReadingChromeButton icon={ListTree} label="Outline" onClick={props.onOpenOutline} />
@@ -42,7 +42,7 @@ export function ReadingChrome(props: {
           <ReadingChromeButton icon={Info} label="Info" onClick={() => props.onOpenSheet('info')} />
         </div>
       </div>
-      <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
+      <div className="fixed bottom-5 right-5 z-workspace-overlay flex items-center gap-2">
         <ReadingChromeButton icon={EllipsisVertical} label="More reading actions" onClick={props.onOpenActions} />
       </div>
     </>

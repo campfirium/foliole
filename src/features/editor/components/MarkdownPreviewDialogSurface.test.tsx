@@ -19,7 +19,7 @@ const TABLE_PREVIEW = {
 };
 
 function expectSharedPreviewOverlay() {
-  const overlay = document.body.querySelector<HTMLElement>('.fixed.inset-0.z-\\[80\\]');
+  const overlay = document.body.querySelector<HTMLElement>('.fixed.inset-0.z-modal-overlay');
   expect(overlay?.className).toContain('bg-[var(--app-floating-overlay-bg)]');
   expect(overlay?.className).not.toContain('bg-foreground/60');
 }

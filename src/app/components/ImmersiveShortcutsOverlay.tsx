@@ -8,7 +8,7 @@ export function ImmersiveShortcutsOverlay({ visible }: { visible: boolean }) {
   return (
     <aside
       aria-label="Immersive reading shortcuts"
-      className="pointer-events-none absolute right-4 bottom-4 z-30 w-80 rounded-xl border border-border bg-bg-elevated/95 p-4 shadow-popover backdrop-blur"
+      className="pointer-events-none absolute right-4 bottom-4 z-surface-raised w-80 rounded-xl border border-border bg-bg-elevated/95 p-4 shadow-popover backdrop-blur"
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/45">Recommended Now</p>
       <h2 className="mt-2 text-sm font-semibold text-foreground">Immersive Reading</h2>

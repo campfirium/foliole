@@ -62,7 +62,7 @@ function ImportCatalogSortMenu(props: {
   sortKey: string;
 }) {
   return (
-    <AppDropdownMenuContent align="end" className="z-[82] min-w-[240px] p-1" sideOffset={8}>
+    <AppDropdownMenuContent align="end" className="z-dropdown min-w-[240px] p-1" sideOffset={8}>
       <AppDropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-medium text-foreground/45">
         Sort by
       </AppDropdownMenuLabel>

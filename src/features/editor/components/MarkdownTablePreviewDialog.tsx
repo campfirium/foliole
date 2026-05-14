@@ -107,7 +107,7 @@ function renderPreviewHeaderOverlay(preview: MarkdownTablePreviewRequest, column
   if (!headerRows.length) return null;
 
   return (
-    <div className="pointer-events-none absolute inset-x-10 top-8 z-[2] bg-canvas">
+    <div className="pointer-events-none absolute inset-x-10 top-8 z-local-overlay bg-canvas">
       <table className={tableClassName} aria-hidden="true">
         {renderColumnGroup(columnWidths)}
         <tbody>{headerRows.map((row, rowIndex) => renderTableRow(preview, row, columnCount, rowIndex))}</tbody>
@@ -208,14 +208,14 @@ export function MarkdownTablePreviewDialog(props: MarkdownTablePreviewDialogProp
         <AppDialogOverlay className="bg-[var(--app-floating-overlay-bg)]" />
         <AppDialogContent
           aria-describedby={undefined}
-          className="left-1/2 top-1/2 z-[90] max-w-none -translate-x-1/2 -translate-y-1/2 overflow-visible border-transparent bg-transparent p-0 shadow-none"
+          className="left-1/2 top-1/2 z-preview-dialog max-w-none -translate-x-1/2 -translate-y-1/2 overflow-visible border-transparent bg-transparent p-0 shadow-none"
         >
           <AppDialogTitle className="sr-only">Table preview</AppDialogTitle>
           <div
             className="relative max-h-[88vh] overflow-hidden rounded-md border border-border bg-canvas shadow-popover"
             style={panelStyle}
           >
-            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-8 bg-canvas" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-local-overlay h-8 bg-canvas" />
             {props.table ? renderPreviewHeaderOverlay(props.table, columnCount) : null}
             <div className="app-scrollbar max-h-[88vh] overflow-y-auto overflow-x-hidden px-10 pb-8 pt-8 [--app-scrollbar-thumb-color:rgb(var(--color-foreground)/0.04)] [--app-scrollbar-thumb-hover-color:rgb(var(--color-foreground)/0.12)]">
               {props.table ? renderPreviewTable(props.table) : null}

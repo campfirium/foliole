@@ -24,7 +24,7 @@ export function WorkspaceRightSidebarSplitter({
       aria-label="Resize inspector sidebar"
       aria-orientation="vertical"
       aria-valuenow={Math.round(rightSidebarWidth)}
-      className={cn('group relative z-10 self-stretch bg-transparent max-xl:hidden', isCollapsed && 'pointer-events-none opacity-0')}
+      className={cn('group relative z-surface self-stretch bg-transparent max-xl:hidden', isCollapsed && 'pointer-events-none opacity-0')}
       onDoubleClick={onResetLayout}
       onKeyDown={onRightSidebarSplitterKeyDown}
       onPointerDown={onRightSidebarSplitterPointerDown}

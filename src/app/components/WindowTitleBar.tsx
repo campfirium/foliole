@@ -1,7 +1,8 @@
-import { Copy, HardDrive, Minus, PanelLeft, PanelRight, Square, X } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
 import { memo, useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { workspaceChangeTimestamp } from 'virtual:workspace-change-timestamp';
 
+import { definedProps } from '../../shared/lib/definedProps';
 import { useRuntimeAvailability } from '../../shared/platform/runtimeAvailability';
 import {
   closeMainWindow,
@@ -11,15 +12,14 @@ import {
   queryMainWindowMaximized,
   toggleMainWindowMaximize
 } from '../../shared/platform/windowControls';
-import { definedProps } from '../../shared/lib/definedProps';
 
+import { WindowControlButtons } from './WindowControlButtons';
+import { WindowSidebarToggleButton } from './WindowSidebarToggleButton';
 import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
 import { WindowTitleBarViewButtons } from './WindowTitleBarViewButtons';
 import { WorkspaceSurfaceRowOverlay, WorkspaceTitlebarDividers } from './WorkspaceSurfaceRowOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-const TITLEBAR_ICON_SIZE = 16;
-const TITLEBAR_ICON_STROKE = 1.75;
 const WINDOW_CONTROLS_WIDTH = 138;
 interface WindowTitleBarProps {
   activeRightPanelId: WorkspaceRightPanelId;
@@ -35,14 +35,6 @@ interface WindowTitleBarProps {
   onOpenTrashView: () => void;
   onToggleListVisibility: () => void;
   rightSidebarWidth: number;
-}
-
-interface WindowControlButtonsProps {
-  controlsEnabled: boolean;
-  isMaximized: boolean;
-  onClose: () => void;
-  onMinimize: () => void;
-  onToggleMaximize: () => void;
 }
 
 function runWindowAction(action: () => Promise<void>) {
@@ -91,34 +83,6 @@ function useWindowControlState() {
     syncMaximizedState
   };
 }
-function SidebarToggleButton({
-  active,
-  label,
-  onClick,
-  side
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-  side: 'left' | 'right';
-}) {
-  return (
-    <button
-      aria-label={label}
-      className="window-titlebar-leading-button"
-      data-active={active}
-      onClick={onClick}
-      type="button"
-    >
-      {side === 'left' ? (
-        <PanelLeft aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-      ) : (
-        <PanelRight aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-      )}
-    </button>
-  );
-}
-
 function WindowLeadingActions({
   isListCollapsed,
   isTrashViewOpen,
@@ -127,19 +91,19 @@ function WindowLeadingActions({
 }: WindowTitleBarProps) {
   if (isListCollapsed) {
     return (
-      <div className="window-titlebar-left-zone relative z-[3]" data-collapsed="true">
+      <div className="window-titlebar-left-zone relative z-local-control" data-collapsed="true">
         <div className="window-titlebar-collapsed-left-action">
-          <SidebarToggleButton active={false} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
+          <WindowSidebarToggleButton active={false} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="window-titlebar-left-zone relative z-[3]" data-collapsed="false">
+    <div className="window-titlebar-left-zone relative z-local-control" data-collapsed="false">
       <div className="window-titlebar-leading">
         <div className="window-titlebar-leading-primary">
-          <SidebarToggleButton active={!isListCollapsed} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
+          <WindowSidebarToggleButton active={!isListCollapsed} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
         </div>
         <div className="window-titlebar-leading-secondary">
           <WindowTitleBarViewButtons
@@ -155,43 +119,11 @@ function WindowLeadingActions({
   );
 }
 
-function WindowControlButtons({ controlsEnabled, isMaximized, onClose, onMinimize, onToggleMaximize }: WindowControlButtonsProps) {
-  return (
-    <div className="window-titlebar-controls">
-      <button aria-label="Minimize" className="window-titlebar-button" disabled={!controlsEnabled} onClick={onMinimize} type="button">
-        <Minus aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-      </button>
-      <button
-        aria-label={isMaximized ? 'Restore' : 'Maximize'}
-        className="window-titlebar-button"
-        disabled={!controlsEnabled}
-        onClick={onToggleMaximize}
-        type="button"
-      >
-        {isMaximized ? (
-          <Copy aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-        ) : (
-          <Square aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-        )}
-      </button>
-      <button
-        aria-label="Close"
-        className="window-titlebar-button window-titlebar-button-close"
-        disabled={!controlsEnabled}
-        onClick={onClose}
-        type="button"
-      >
-        <X aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-      </button>
-    </div>
-  );
-}
-
 function WindowCenterTitle({ icon, onDoubleClick, title }: { icon?: 'external'; onDoubleClick: () => void; title: string | null }) {
   return (
     <div
       aria-hidden="true"
-      className="window-titlebar-center-slot window-titlebar-drag-fill relative z-[3]"
+      className="window-titlebar-center-slot window-titlebar-drag-fill relative z-local-control"
       onDoubleClick={onDoubleClick}
     >
       {title ? (

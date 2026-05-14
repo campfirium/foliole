@@ -134,7 +134,7 @@ export function LinkPanelStack(props: {
   }
 
   return (
-    <div aria-label="Link panels" className="pointer-events-none fixed inset-0 z-40">
+    <div aria-label="Link panels" className="pointer-events-none fixed inset-0 z-workspace-overlay">
       {props.panels.map((panel, index) => (
         <LinkPanelCard
           key={panel.id}

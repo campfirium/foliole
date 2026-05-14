@@ -25,7 +25,7 @@ const AppTooltipContent = React.forwardRef<
       collisionPadding={8}
       sideOffset={sideOffset}
       className={cn(
-        'z-50 max-w-[240px] rounded-[var(--app-tooltip-radius)] border border-[var(--app-tooltip-border-color)] bg-[var(--app-tooltip-bg)] px-[var(--app-tooltip-padding-x)] py-[var(--app-tooltip-padding-y)] text-[var(--app-tooltip-font-size)] font-normal leading-[var(--app-tooltip-line-height)] text-[var(--app-tooltip-fg)] [box-shadow:var(--app-tooltip-shadow)]',
+        'z-floating max-w-[240px] rounded-[var(--app-tooltip-radius)] border border-[var(--app-tooltip-border-color)] bg-[var(--app-tooltip-bg)] px-[var(--app-tooltip-padding-x)] py-[var(--app-tooltip-padding-y)] text-[var(--app-tooltip-font-size)] font-normal leading-[var(--app-tooltip-line-height)] text-[var(--app-tooltip-fg)] [box-shadow:var(--app-tooltip-shadow)]',
         className
       )}
       {...props}
