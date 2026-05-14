@@ -1,4 +1,4 @@
-import { Loader2, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 import {
   AppDialog,
@@ -6,7 +6,8 @@ import {
   AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
-  AppDialogTitle
+  AppDialogTitle,
+  AppSpinner
 } from '../shared/ui';
 
 import { CompanionSyncDeviceList } from './CompanionSyncDeviceList';
@@ -23,7 +24,7 @@ function SearchingDialogBody(props: {
       </AppDialogDescription>
       <div className="mt-5 flex items-center justify-between gap-3">
         <div className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-accent">
-          <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.8} />
+          <AppSpinner decorative size="sm" />
           <span>Searching...</span>
         </div>
         <button

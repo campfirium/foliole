@@ -1,4 +1,3 @@
-import { LoaderCircle } from 'lucide-react';
 import { forwardRef } from 'react';
 
 import type {
@@ -12,7 +11,8 @@ import {
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
-  AppDialogTitle
+  AppDialogTitle,
+  AppSpinner
 } from '../../shared/ui';
 
 const DESTINATION_LABELS: Record<NativeReadwiseSyncPreviewDestination, string> = {
@@ -166,7 +166,7 @@ const ReadwiseImportPreviewDialog = forwardRef<
         variant="primary"
       >
         {props.isStarting ? (
-          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+          <AppSpinner decorative size="sm" />
         ) : null}
         Start
       </AppButton>

@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { AppSpinner } from '../shared/ui';
 
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
@@ -29,7 +29,7 @@ function PairAction(props: {
     >
       {props.isConnecting ? (
         <>
-          <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.8} />
+          <AppSpinner decorative size="sm" />
           Connecting...
         </>
       ) : 'Connect'}

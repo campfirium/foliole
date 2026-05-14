@@ -1,17 +1,20 @@
-import { ArrowUpRight, CheckCircle2, Loader2, XCircle } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, XCircle } from 'lucide-react';
+
+import { AppSpinner } from '../../shared/ui';
 
 export type ClipboardImportNoticeTone = 'loading' | 'success' | 'error';
 
-const iconClassName = 'mt-0.5 size-4 shrink-0';
+const iconClassName = 'mt-0.5 shrink-0';
+const staticIconClassName = `${iconClassName} size-4`;
 
 function renderIcon(tone: ClipboardImportNoticeTone) {
   if (tone === 'loading') {
-    return <Loader2 aria-hidden="true" className={`${iconClassName} animate-spin`} strokeWidth={1.75} />;
+    return <AppSpinner className={iconClassName} decorative size="sm" />;
   }
   if (tone === 'success') {
-    return <CheckCircle2 aria-hidden="true" className={iconClassName} strokeWidth={1.75} />;
+    return <CheckCircle2 aria-hidden="true" className={staticIconClassName} strokeWidth={1.75} />;
   }
-  return <XCircle aria-hidden="true" className={iconClassName} strokeWidth={1.75} />;
+  return <XCircle aria-hidden="true" className={staticIconClassName} strokeWidth={1.75} />;
 }
 
 export function ClipboardImportNotice({

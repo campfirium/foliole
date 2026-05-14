@@ -1,8 +1,7 @@
-import { Loader2 } from 'lucide-react';
 import { forwardRef, useState } from 'react';
 
 import { useDesktopCompanionPairingRequests } from '../../shared/platform/useDesktopCompanionPairingRequests';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppSpinner } from '../../shared/ui';
 
 export function CompanionPairingRequestsDialog() {
   const state = useDesktopCompanionPairingRequests(2_000);
@@ -114,7 +113,7 @@ function PairingDialogActions({
   state: ReturnType<typeof useDesktopCompanionPairingRequests>;
 }) {
   const disabled = state.pendingActionId === request.pair_request_id;
-  const actionIcon = disabled ? <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.8} /> : null;
+  const actionIcon = disabled ? <AppSpinner decorative size="sm" /> : null;
   const [errorMessage, setErrorMessage] = useState('');
   const runPairingAction = async (action: (pairRequestId: string) => Promise<unknown>) => {
     setErrorMessage('');

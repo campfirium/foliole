@@ -6,6 +6,7 @@ import type { FolderListSortDirection, FolderListSortKey } from '../../features/
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
+import { AppSpinner } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
@@ -21,8 +22,13 @@ function renderPdfLoadingSurface() {
   return (
     <section aria-label="PDF reader panel" className="workspace-region-main-document flex min-h-0 flex-1 flex-col" data-testid="pdf-document-loading-shell">
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <div className="workspace-region-main-document pointer-events-none absolute inset-0 z-workspace-overlay flex items-center justify-center">
-          <div aria-hidden="true" className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-foreground/65" />
+        <div
+          aria-busy="true"
+          aria-label="Loading PDF reader"
+          className="workspace-region-main-document pointer-events-none absolute inset-0 z-workspace-overlay flex items-center justify-center"
+          role="status"
+        >
+          <AppSpinner decorative size="lg" />
         </div>
       </div>
     </section>

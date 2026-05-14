@@ -21,7 +21,7 @@ export {
   AppSelectionDropdownMenu,
   AppSelectionDropdownMenuItem
 } from './DropdownMenu';
-export { AppEmptyState, AppErrorState, AppLoadingState } from './EmptyState';
+export { AppEmptyState, AppErrorState, AppLoadingState, AppSpinner } from './EmptyState';
 export { AppIconButton } from './IconButton';
 export { LucideCatalogIcon, LUCIDE_ICON_OPTIONS } from './LucideIconCatalog';
 export { AppInput } from './Input';

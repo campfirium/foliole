@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
+import { AppSpinner } from '../../shared/ui';
 
 import type { PdfSearchStatus, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
@@ -57,10 +58,13 @@ interface PdfDocumentViewportContentBodyProps {
 function PdfDocumentLoadingOverlay() {
   return (
     <div
+      aria-busy="true"
+      aria-label="Loading PDF page"
       className="pointer-events-none absolute inset-0 z-workspace-overlay flex items-center justify-center"
       data-testid="pdf-document-loading-overlay"
+      role="status"
     >
-      <div aria-hidden="true" className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-foreground/65" />
+      <AppSpinner decorative size="lg" />
     </div>
   );
 }

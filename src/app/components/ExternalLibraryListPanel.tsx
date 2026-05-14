@@ -7,7 +7,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import { AppEmptyState, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
+import { AppEmptyState, AppSpinner, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import {
@@ -158,12 +158,9 @@ function ExternalDocumentListBody(props: {
 
 function ExternalDocumentListLoadingState() {
   return (
-    <div aria-busy="true" className="flex min-h-full items-center justify-center px-3 py-6">
+    <div aria-busy="true" className="flex min-h-full items-center justify-center px-3 py-6" role="status">
       <div className="flex flex-col items-center gap-3 text-center">
-        <div
-          aria-label="Loading external folder documents indicator"
-          className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-foreground/55"
-        />
+        <AppSpinner label="Loading external folder documents indicator" />
         <p className="m-0 text-sm text-foreground/65">Loading documents</p>
       </div>
     </div>

@@ -1,4 +1,6 @@
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+
+import { AppSpinner } from '../shared/ui';
 
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -14,7 +16,6 @@ export function CompanionSyncInlineStatus(props: {
   if (!isSyncing && !needsAttention) {
     return null;
   }
-  const Icon = isSyncing ? Loader2 : AlertCircle;
   const label = isSyncing ? 'Sync in progress' : 'Sync needs attention';
 
   return (
@@ -24,11 +25,15 @@ export function CompanionSyncInlineStatus(props: {
       onClick={props.onOpenSyncSettings}
       type="button"
     >
-      <Icon
-        aria-hidden="true"
-        className={`h-5 w-5 ${isSyncing ? 'animate-spin text-accent' : 'text-error'}`}
-        strokeWidth={1.8}
-      />
+      {isSyncing ? (
+        <AppSpinner decorative />
+      ) : (
+        <AlertCircle
+          aria-hidden="true"
+          className="h-5 w-5 text-error"
+          strokeWidth={1.8}
+        />
+      )}
     </button>
   );
 }

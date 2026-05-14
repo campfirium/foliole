@@ -12,6 +12,34 @@ interface ErrorStateProps extends EmptyStateProps {
   action?: ReactNode;
 }
 
+type AppSpinnerSize = 'sm' | 'md' | 'lg';
+
+const SPINNER_SIZE_CLASS_NAMES: Record<AppSpinnerSize, string> = {
+  lg: 'h-10 w-10',
+  md: 'h-6 w-6',
+  sm: 'h-4 w-4'
+};
+
+export function AppSpinner({
+  className,
+  decorative = false,
+  label,
+  size = 'md'
+}: {
+  className?: string;
+  decorative?: boolean;
+  label?: string;
+  size?: AppSpinnerSize;
+}) {
+  return (
+    <div
+      aria-hidden={decorative ? 'true' : undefined}
+      aria-label={!decorative ? label : undefined}
+      className={cn(SPINNER_SIZE_CLASS_NAMES[size], 'animate-spin rounded-full border-2 border-border border-t-foreground/55', className)}
+    />
+  );
+}
+
 export function AppEmptyState({ title, description, className }: EmptyStateProps) {
   return (
     <div className={cn('flex min-h-[120px] flex-col items-center justify-center gap-2 text-center text-sm text-foreground/60', className)} role="status">
@@ -24,7 +52,7 @@ export function AppEmptyState({ title, description, className }: EmptyStateProps
 export function AppLoadingState({ title, description, className }: EmptyStateProps) {
   return (
     <div aria-busy="true" className={cn('flex min-h-[120px] flex-col items-center justify-center gap-3 text-center text-sm text-foreground/60', className)} role="status">
-      <div aria-label={`${title} indicator`} className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-foreground/55" />
+      <AppSpinner label={`${title} indicator`} />
       <div className="flex flex-col items-center gap-2">
         <p className="m-0 text-sm font-semibold text-foreground">{title}</p>
         <p className="m-0 text-[13px]">{description}</p>
