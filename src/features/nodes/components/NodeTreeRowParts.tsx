@@ -21,26 +21,18 @@ export function renderNodeLabel(label: string, rename: ReturnType<typeof useRena
 export function NodeTreeRowExpandToggle(props: {
   hasChildren: boolean;
   isCollapsed: boolean;
-  label: string;
   nodeId: string;
   onToggleCollapse: (nodeId: string) => void;
 }) {
-  const projectedLabel = projectNodeListLabel(props.label);
   if (!props.hasChildren) {
     return <span aria-hidden="true" className="mr-2 size-[1.125rem] flex-none" />;
   }
   return (
     <span
-      aria-label={props.isCollapsed ? `Expand ${projectedLabel}` : `Collapse ${projectedLabel}`}
+      aria-hidden="true"
       className="mr-2 flex size-[1.125rem] flex-none items-center justify-center opacity-70"
+      data-node-tree-chevron="true"
       onClick={(event) => (event.stopPropagation(), props.onToggleCollapse(props.nodeId))}
-      onKeyDown={(event) =>
-        event.key === 'Enter' || event.key === ' '
-          ? (event.preventDefault(), event.stopPropagation(), props.onToggleCollapse(props.nodeId))
-          : undefined
-      }
-      role="button"
-      tabIndex={0}
     >
       <ChevronDownIcon className={cn(props.isCollapsed && '-rotate-90')} />
     </span>

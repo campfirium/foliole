@@ -150,7 +150,6 @@ function renderNodeTreeRowButtonBody(
       <NodeTreeRowExpandToggle
         hasChildren={props.hasChildren}
         isCollapsed={props.isCollapsed}
-        label={props.label}
         nodeId={props.nodeId}
         onToggleCollapse={props.onToggleCollapse}
       />
