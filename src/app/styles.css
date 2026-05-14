@@ -383,7 +383,7 @@ body {
   align-items: center;
   background: var(--app-surface-control-bg);
   border: 1px solid var(--app-control-border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: rgb(var(--color-foreground));
   cursor: default;
   display: inline-flex;
@@ -660,7 +660,7 @@ b {
   align-items: center;
   background: transparent;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--window-titlebar-action-color);
   cursor: pointer;
   display: inline-flex;
@@ -936,7 +936,7 @@ b {
       rgb(var(--app-highlight-color-rgb) / 0.38) calc(100% - 0.5em),
       rgb(var(--app-highlight-color-rgb) / 0.38) 100%
     );
-  border-radius: 0.6rem;
+  border-radius: var(--editor-radius-xl);
   padding-bottom: 0.5em;
   padding-top: 0.5em;
 }
@@ -961,7 +961,7 @@ b {
 }
 
 .markdown-editor-host .cm-md-image-surface-inline[data-md-image-highlighted='true'] {
-  border-radius: 0.35rem;
+  border-radius: var(--editor-radius-lg);
   padding-bottom: 0.35em;
   padding-top: 0.35em;
 }
@@ -995,7 +995,7 @@ b {
 }
 
 .cm-md-image-cloze-region {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border-style: solid;
   border-width: 2px;
   position: absolute;
@@ -1033,7 +1033,7 @@ b {
   align-items: center;
   background: rgb(var(--color-bg-elevated) / 0.96);
   border: 1px solid rgb(var(--color-border) / 0.85);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: rgb(var(--color-foreground));
   cursor: pointer;
   display: inline-flex;
@@ -1070,7 +1070,7 @@ b {
 .cm-md-image-cloze-draft {
   background: transparent;
   border: 2px dashed rgb(var(--color-foreground) / 0.92);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   position: absolute;
 }
 

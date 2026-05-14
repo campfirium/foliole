@@ -11,7 +11,7 @@ export const liveMarkdownTableTheme = {
     alignItems: 'center',
     backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--color-bg-elevated)) 92%, transparent)',
     border: '1px solid rgb(var(--color-border) / 0.5)',
-    borderRadius: '0.45rem',
+    borderRadius: 'var(--editor-radius-xl)',
     color: 'rgb(var(--color-foreground) / 0.72)',
     cursor: 'pointer',
     display: 'inline-flex',
