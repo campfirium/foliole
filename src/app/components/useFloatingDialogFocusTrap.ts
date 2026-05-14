@@ -11,26 +11,44 @@ const FOCUSABLE_SELECTOR = [
 ].join(',');
 
 let lastFocusedElement: HTMLElement | null = null;
-let isFocusTrackingEnabled = false;
+let focusTrackingUsers = 0;
 
-function enableFocusTracking() {
-  if (isFocusTrackingEnabled || typeof document === 'undefined') {
-    return;
+function rememberActiveElement() {
+  if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
+    lastFocusedElement = document.activeElement;
   }
-  const rememberActiveElement = () => {
-    if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
-      lastFocusedElement = document.activeElement;
-    }
-  };
-  document.addEventListener('focusin', (event) => {
-    lastFocusedElement = event.target instanceof HTMLElement ? event.target : null;
-  });
-  document.addEventListener('keydown', rememberActiveElement, true);
-  document.addEventListener('pointerdown', rememberActiveElement, true);
-  isFocusTrackingEnabled = true;
 }
 
-enableFocusTracking();
+function rememberFocusedElement(event: FocusEvent) {
+  lastFocusedElement = event.target instanceof HTMLElement ? event.target : null;
+}
+
+function retainFocusTracking() {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  focusTrackingUsers += 1;
+  if (focusTrackingUsers > 1) {
+    return;
+  }
+  document.addEventListener('focusin', rememberFocusedElement);
+  document.addEventListener('keydown', rememberActiveElement, true);
+  document.addEventListener('pointerdown', rememberActiveElement, true);
+}
+
+function releaseFocusTracking() {
+  if (typeof document === 'undefined' || focusTrackingUsers === 0) {
+    return;
+  }
+  focusTrackingUsers -= 1;
+  if (focusTrackingUsers > 0) {
+    return;
+  }
+  document.removeEventListener('focusin', rememberFocusedElement);
+  document.removeEventListener('keydown', rememberActiveElement, true);
+  document.removeEventListener('pointerdown', rememberActiveElement, true);
+  lastFocusedElement = null;
+}
 
 function getFocusableElements(container: HTMLElement) {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((element) => !element.hasAttribute('hidden'));
@@ -59,8 +77,9 @@ export function useFloatingDialogFocusTrap() {
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
-    enableFocusTracking();
+    retainFocusTracking();
     previousFocusRef.current = getCurrentRestoreTarget();
+    return releaseFocusTracking;
   }, []);
 
   useEffect(() => () => scheduleRestoreFocus(previousFocusRef.current), []);
