@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @config "../../tailwind.config.js";
 @import "./generated/appearance-colors.css";
+@import "./tokens/shadows.css";
 
 * {
   box-sizing: border-box;
@@ -79,9 +80,6 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --shadow-popover: 0 18px 40px rgb(15 17 19 / 0.12);
-  --shadow-panel: 0 10px 24px rgb(15 17 19 / 0.08);
-  --shadow-settings: 0 18px 42px rgb(15 17 19 / 0.08), 0 2px 6px rgb(15 17 19 / 0.03);
   --editor-radius-xs: 0.16rem;
   --editor-radius-sm: 0.2rem;
   --editor-radius-md: 0.25rem;

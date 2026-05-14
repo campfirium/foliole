@@ -12,7 +12,7 @@ export function resolvePdfOverlayMarkerSize(zoom: number) {
 export function renderPdfOverlayMarker(
   locator: PdfOverlayLocator,
   markerSize: number,
-  className = 'pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-highlight-surface-color)] shadow-sm ring-1 ring-[var(--app-highlight-surface-color)]',
+  className = 'pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-highlight-surface-color)] shadow-marker ring-1 ring-[var(--app-highlight-surface-color)]',
   testId = 'pdf-highlight-marker'
 ) {
   if (typeof locator.x !== 'number' || typeof locator.y !== 'number') {

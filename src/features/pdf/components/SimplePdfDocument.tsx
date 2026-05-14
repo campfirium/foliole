@@ -228,7 +228,7 @@ function SimplePdfPage(props: {
   const cropHeight = props.cropBox ? (props.cropBox.bottom - props.cropBox.top) * cropScale : undefined;
 
   return (
-    <div className="overflow-hidden bg-companion-surface shadow-sm" style={{ height: cropHeight, width: cropWidth }}>
+    <div className="overflow-hidden bg-companion-surface shadow-page" style={{ height: cropHeight, width: cropWidth }}>
       <div
         ref={pageRef}
         style={props.cropBox

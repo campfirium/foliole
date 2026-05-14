@@ -35,7 +35,7 @@ function resolveToolbarShellClassName() {
 
 function resolveToolbarPanelClassName(isVisible: boolean) {
   const visibilityClassName = isVisible ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0 pointer-events-none';
-  return `pointer-events-auto absolute left-1/2 top-3 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-bg-elevated px-4 py-2 shadow-sm transition-[opacity,transform] duration-200 ease-out ${visibilityClassName}`;
+  return `pointer-events-auto absolute left-1/2 top-3 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-bg-elevated px-4 py-2 shadow-control transition-[opacity,transform] duration-200 ease-out ${visibilityClassName}`;
 }
 
 function ToolbarDivider() {

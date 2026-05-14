@@ -64,7 +64,7 @@ function WorkspaceSurfaceColorArea(props: {
     >
       <div className="absolute inset-0 bg-[linear-gradient(90deg,#ffffff_0%,transparent_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_0%,#000000_100%)]" />
-      <div className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-[0_0_0_1px_rgb(var(--color-foreground)_/_0.45)]" style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%` }} />
+      <div className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-picker-thumb-ring-strong" style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%` }} />
     </div>
   );
 }
@@ -94,7 +94,7 @@ function WorkspaceSurfaceColorSliderSection(props: {
           role="presentation"
           style={{ backgroundImage: 'linear-gradient(90deg, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)' }}
         >
-          <div className="absolute top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-[0_0_0_1px_rgb(var(--color-foreground)_/_0.32)]" style={{ left: `${(hsv.h / 360) * 100}%` }} />
+          <div className="absolute top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-picker-thumb-ring" style={{ left: `${(hsv.h / 360) * 100}%` }} />
         </div>
       </div>
       <div
@@ -104,7 +104,7 @@ function WorkspaceSurfaceColorSliderSection(props: {
         role="presentation"
       >
         <div className="absolute inset-0 rounded-md" style={{ backgroundImage: `linear-gradient(90deg, transparent 0%, ${formatWorkspaceSurfaceColorCss({ ...props.color, a: 1 })} 100%)` }} />
-        <div className="absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-[0_0_0_1px_rgb(var(--color-foreground)_/_0.32)]" style={{ left: `${props.color.a * 100}%` }} />
+        <div className="absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-picker-thumb-ring" style={{ left: `${props.color.a * 100}%` }} />
       </div>
     </div>
   );

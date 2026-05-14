@@ -113,7 +113,7 @@ export function settingsSwitchClassName(active: boolean, className?: string) {
 
 export function settingsSwitchKnobClassName(active: boolean, className?: string) {
   return cn(
-    'absolute size-5 rounded-full bg-settings-switch-knob shadow-sm transition-transform',
+    'absolute size-5 rounded-full bg-settings-switch-knob shadow-marker transition-transform',
     active ? 'translate-x-[22px]' : 'translate-x-0.5',
     className
   );

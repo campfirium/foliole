@@ -59,7 +59,7 @@ function PdfZoomMenu(props: {
   }
 
   return (
-    <div className="absolute left-1/2 top-full z-30 mt-2 flex min-w-20 -translate-x-1/2 flex-col rounded-xl border border-border bg-bg-elevated p-1 shadow-sm" role="menu">
+    <div className="absolute left-1/2 top-full z-30 mt-2 flex min-w-20 -translate-x-1/2 flex-col rounded-xl border border-border bg-bg-elevated p-1 shadow-popover" role="menu">
       {PDF_ZOOM_OPTIONS.map((option) => (
         <button
           className="min-h-8 rounded-lg px-3 text-left text-xs text-foreground/80 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"

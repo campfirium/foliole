@@ -44,7 +44,7 @@ function HandoffReminderSwitch(props: {
       role="switch"
       type="button"
     >
-      <span className="h-5 w-5 rounded-full bg-canvas shadow-sm" />
+      <span className="h-5 w-5 rounded-full bg-canvas shadow-marker" />
     </button>
   );
 }

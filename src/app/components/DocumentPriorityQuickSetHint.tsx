@@ -11,7 +11,7 @@ export function DocumentPriorityQuickSetHint({ isActive }: DocumentPriorityQuick
     <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
       <div
         aria-live="polite"
-        className="flex items-center gap-2 rounded-full border border-border/70 bg-bg-elevated/95 px-4 py-2 text-sm text-foreground/76 shadow-sm"
+        className="flex items-center gap-2 rounded-full border border-border/70 bg-bg-elevated/95 px-4 py-2 text-sm text-foreground/76 shadow-control"
       >
         <span className="font-medium text-foreground/82">Set priority</span>
         <span aria-hidden="true" className="text-foreground/35">

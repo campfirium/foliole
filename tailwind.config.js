@@ -110,7 +110,13 @@ export default {
       boxShadow: {
         popover: 'var(--shadow-popover)',
         panel: 'var(--shadow-panel)',
-        settings: 'var(--shadow-settings)'
+        settings: 'var(--shadow-settings)',
+        control: 'var(--shadow-control)',
+        page: 'var(--shadow-page)',
+        marker: 'var(--shadow-marker)',
+        'picker-thumb-ring': 'var(--shadow-picker-thumb-ring)',
+        'picker-thumb-ring-strong': 'var(--shadow-picker-thumb-ring-strong)',
+        debug: 'var(--shadow-debug)'
       },
       borderRadius: {
         sm: 'var(--radius-sm)',

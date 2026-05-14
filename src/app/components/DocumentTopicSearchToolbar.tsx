@@ -225,7 +225,7 @@ function TopicSearchPanel(state: TopicSearchState) {
   };
   return (
     <div className="sticky top-0 z-20 h-0 w-full px-4 pt-3 pointer-events-none" data-testid="topic-search-toolbar">
-      <div className="pointer-events-auto absolute left-1/2 top-3 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-bg-elevated px-4 py-2 shadow-sm">
+      <div className="pointer-events-auto absolute left-1/2 top-3 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-bg-elevated px-4 py-2 shadow-control">
         <div className="flex items-center gap-1">
           <Search aria-hidden="true" className="ml-1 text-foreground/55" size={15} strokeWidth={2.1} />
           <AppInput

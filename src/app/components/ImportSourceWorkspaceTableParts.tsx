@@ -107,7 +107,7 @@ function KeepToggle({
       type="button"
     >
       <span
-        className={`inline-block size-5 rounded-full bg-white shadow-sm transition-transform ${
+        className={`inline-block size-5 rounded-full bg-white shadow-marker transition-transform ${
           checked ? 'translate-x-[22px]' : 'translate-x-[3px]'
         }`}
       />

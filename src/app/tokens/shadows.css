@@ -1,0 +1,11 @@
+:root {
+  --shadow-popover: 0 18px 40px rgb(15 17 19 / 0.12);
+  --shadow-panel: 0 10px 24px rgb(15 17 19 / 0.08);
+  --shadow-settings: 0 18px 42px rgb(15 17 19 / 0.08), 0 2px 6px rgb(15 17 19 / 0.03);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-page: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-marker: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-picker-thumb-ring: 0 0 0 1px rgb(var(--color-foreground) / 0.34);
+  --shadow-picker-thumb-ring-strong: 0 0 0 1px rgb(var(--color-foreground) / 0.45);
+  --shadow-debug: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}

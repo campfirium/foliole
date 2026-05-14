@@ -104,7 +104,7 @@ function PdfPageShell(props: {
         {!isRendered ? (
           <div
             aria-hidden="true"
-            className="absolute inset-0 rounded-sm bg-bg-panel/20 shadow-sm"
+            className="absolute inset-0 rounded-sm bg-bg-panel/20 shadow-page"
             style={{ height: placeholderDimensions.height, width: placeholderDimensions.width }}
           />
         ) : null}
@@ -154,7 +154,7 @@ export function renderPdfPagePlaceholder(
         args.pageElementsRef.current[args.pageNumber] = element;
       }}
     >
-      <div aria-hidden="true" className="rounded-sm bg-bg-panel/20 shadow-sm" style={{ height, width }} />
+      <div aria-hidden="true" className="rounded-sm bg-bg-panel/20 shadow-page" style={{ height, width }} />
     </div>
   );
 }
@@ -174,7 +174,7 @@ const PdfPageCanvas = memo(
   }) {
     return (
       <Page
-        className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
+        className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-page"
         onLoadSuccess={(page: unknown) => {
           const dimensions = resolvePdfPageDimensions(page);
           if (dimensions) {
@@ -265,7 +265,7 @@ function renderSelectionOverlay(
     renderPdfOverlayMarker(
       selectionLocator,
       markerSize,
-      'pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-selection-surface-color)] shadow-sm ring-1 ring-[var(--app-selection-surface-color)]',
+      'pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-selection-surface-color)] shadow-marker ring-1 ring-[var(--app-selection-surface-color)]',
       'pdf-selection-marker'
     )
   );
