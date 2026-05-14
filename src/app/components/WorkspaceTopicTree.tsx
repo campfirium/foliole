@@ -4,22 +4,21 @@ import { useNodeListDragController } from '../../features/nodes/components/NodeL
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
 import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
-import { useNodeTreeActiveItemScroll } from '../../features/nodes/components/useNodeTreeActiveItemScroll';
 import { buildNodeTree } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { normalizeWorkspaceContentSort, sortWorkspaceContentNodeIds } from './workspaceContentSort';
+import { useWorkspaceTopicTreeRows } from './workspaceTopicTreeContent';
 import {
-  renderWorkspaceTopicTreeBody,
-  toggleCollapsedNode,
-  useWorkspaceTopicTreeCollapse,
-  useWorkspaceTopicTreeRows
-} from './workspaceTopicTreeContent';
-import { WorkspaceTopicTreeHeaderBridge } from './WorkspaceTopicTreeHeaderBridge';
+  resolveWorkspaceTopicTreeFocusNodeId,
+  useWorkspaceTopicTreeAutoScroll,
+  useWorkspaceTopicTreeFocusState
+} from './workspaceTopicTreeFocus';
+import { renderWorkspaceTopicTreeShell } from './WorkspaceTopicTreeShell';
 
-interface WorkspaceTopicTreeProps {
+export interface WorkspaceTopicTreeProps {
   activeFolderId: string;
   activeNodeId: string | null;
   emptyStateDescription?: string;
@@ -30,12 +29,17 @@ interface WorkspaceTopicTreeProps {
   onSelectNode: (nodeId: string) => void;
 }
 
+export interface WorkspaceTopicTreeState {
+  sortedItemIds: string[];
+  tree: ReturnType<typeof buildNodeTree>;
+}
+
 function useWorkspaceTopicTreeState(
   itemIds: string[],
   nodesById: WorkspaceListNodesById,
   sort: ReturnType<typeof useWorkspaceContentSort>['sort'],
   nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
-) {
+): WorkspaceTopicTreeState {
   const contentSort = normalizeWorkspaceContentSort(sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name']);
   const sortedItemIds = useMemo(
     () => sortWorkspaceContentNodeIds(itemIds, nodesById, contentSort, nodeViewById),
@@ -59,15 +63,6 @@ function useWorkspaceTopicTreeActions() {
   };
 }
 
-function useWorkspaceTopicTreeCollapseState(props: WorkspaceTopicTreeProps, tree: ReturnType<typeof useWorkspaceTopicTreeState>['tree']) {
-  return useWorkspaceTopicTreeCollapse(
-    props.activeFolderId,
-    props.activeNodeId,
-    tree.rows,
-    tree.parentById
-  );
-}
-
 function useWorkspaceTopicTreeDrag(args: {
   itemIds: string[];
   moveNodes: ReturnType<typeof useWorkspaceTopicTreeActions>['moveNodes'];
@@ -84,7 +79,7 @@ function useWorkspaceTopicTreeDrag(args: {
   });
 }
 
-function useWorkspaceTopicTreeInteraction(args: {
+export function useWorkspaceTopicTreeInteraction(args: {
   activeFolderId: string;
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
@@ -162,15 +157,22 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
   const contentSort = useWorkspaceContentSort();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const { sortedItemIds, tree } = useWorkspaceTopicTreeState(props.itemIds, props.nodesById, contentSort.sort, nodeViewById);
-  const { collapsedNodeIds, setCollapsedNodeIds } = useWorkspaceTopicTreeCollapseState(props, tree);
+  const { collapsedNodeIds, setCollapsedNodeIds } = useWorkspaceTopicTreeFocusState(props, tree, nodeViewById);
   const { collapsibleNodeIds, searchQuery, setSearchQuery, visibleRows } = useWorkspaceTopicTreeRows(
     tree.rows,
     collapsedNodeIds
   );
+  const focusedNodeId = resolveWorkspaceTopicTreeFocusNodeId({
+    activeNodeId: props.activeNodeId,
+    nodeViewState: props.activeNodeId ? nodeViewById[props.activeNodeId] : undefined,
+    nodesById: props.nodesById,
+    rows: visibleRows
+  });
   const hasCollapsedNodes = collapsibleNodeIds.length > 0 && collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId));
+  const focusedRowIndex = focusedNodeId ? visibleRows.findIndex((row) => row.node.id === focusedNodeId) : -1;
   const interaction = useWorkspaceTopicTreeInteraction({
     activeFolderId: props.activeFolderId,
-    activeNodeId: props.activeNodeId,
+    activeNodeId: focusedNodeId,
     collapsedNodeIds,
     itemIds: sortedItemIds,
     nodesById: props.nodesById,
@@ -178,40 +180,29 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     onSelectNode: props.onSelectNode
   });
 
-  useNodeTreeActiveItemScroll({
-    activeNodeId: props.activeNodeId,
-    scopeKey: `${props.activeFolderId}:${visibleRows.length}`,
-    scrollContainerRef
+  useWorkspaceTopicTreeAutoScroll({
+    activeFolderId: props.activeFolderId,
+    focusedNodeId,
+    focusedRowIndex,
+    scrollContainerRef,
+    visibleRowsLength: visibleRows.length
   });
 
-  return (
-    <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
-      <WorkspaceTopicTreeHeaderBridge
-        activeFolderId={props.activeFolderId}
-        collapsibleNodeIds={collapsibleNodeIds}
-        contentSort={contentSort}
-        hasCollapsedNodes={hasCollapsedNodes}
-        onCreateTopic={(parentNodeId) => interaction.createChildNode(parentNodeId, '', 'topic')}
-        searchQuery={searchQuery}
-        setCollapsedNodeIds={setCollapsedNodeIds}
-        setSearchQuery={setSearchQuery}
-      />
-      {renderWorkspaceTopicTreeBody({
-        activeNodeId: props.activeNodeId,
-        collapsedNodeIds,
-        contextMenu: interaction.contextMenu,
-        drag: interaction.drag,
-        emptyStateDescription: props.emptyStateDescription ?? 'Add a topic to get started.',
-        emptyStateTitle: props.emptyStateTitle ?? 'No topics in this folder',
-        nodesById: props.nodesById,
-        onRenameNode: interaction.updateNodeTitle,
-        onSelectNode: interaction.handleSelectNode,
-        onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, setCollapsedNodeIds),
-        scrollContainerRef,
-        selectedNodeIds: interaction.topicTreeState.selectedNodeIds,
-        visibleRows
-      })}
-      {interaction.topicTreeMenu}
-    </aside>
-  );
+  return renderWorkspaceTopicTreeShell({
+    activeFolderId: props.activeFolderId,
+    collapsibleNodeIds,
+    collapsedNodeIds,
+    contentSort,
+    emptyStateDescription: props.emptyStateDescription,
+    emptyStateTitle: props.emptyStateTitle,
+    focusedNodeId,
+    hasCollapsedNodes,
+    interaction,
+    nodesById: props.nodesById,
+    scrollContainerRef,
+    searchQuery,
+    setCollapsedNodeIds,
+    setSearchQuery,
+    visibleRows
+  });
 }

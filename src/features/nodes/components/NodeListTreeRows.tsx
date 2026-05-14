@@ -156,6 +156,7 @@ export function NodeListRows(props: NodeListRowsProps) {
 
   return (
     <VirtualListSurface
+      autoScroll={false}
       estimateSize={() => resolveNodeTreeRowVirtualSize(props.rowSpacing)}
       getItemKey={(row) => row.node.id}
       items={props.rows}

@@ -1,8 +1,9 @@
-import { defaultRangeExtractor, useVirtualizer, type Range, type VirtualItem } from '@tanstack/react-virtual';
-import { useCallback, useMemo, useEffect, type ReactNode, type RefObject } from 'react';
+import { defaultRangeExtractor, useVirtualizer, type Range, type VirtualItem, type Virtualizer } from '@tanstack/react-virtual';
+import { useCallback, useMemo, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 
 const DEFAULT_VIRTUAL_LIST_THRESHOLD = 100;
 const DEFAULT_VIRTUAL_LIST_OVERSCAN = 8;
+const COMFORT_SCROLL_ANCHOR_RATIO = 0.38;
 
 export interface VirtualListRenderMeta {
   ariaPosInSet: number;
@@ -17,6 +18,7 @@ interface VirtualListSurfaceProps<TItem> {
   items: readonly TItem[];
   renderItem: (item: TItem, meta: VirtualListRenderMeta) => ReactNode;
   scrollElementRef: RefObject<HTMLElement | null>;
+  autoScroll?: boolean;
   className?: string;
   enabled?: boolean;
   overscan?: number;
@@ -26,6 +28,21 @@ interface VirtualListSurfaceProps<TItem> {
 
 export function shouldVirtualizeList(length: number, threshold = DEFAULT_VIRTUAL_LIST_THRESHOLD) {
   return length >= threshold;
+}
+
+export function resolveComfortScrollTop(args: {
+  containerHeight: number;
+  currentScrollTop: number;
+  itemEnd: number;
+  itemStart: number;
+  maxScrollTop: number;
+}) {
+  const viewportBottom = args.currentScrollTop + args.containerHeight;
+  if (args.itemEnd > args.currentScrollTop && args.itemStart < viewportBottom) {
+    return null;
+  }
+  const targetTop = args.itemStart - args.containerHeight * COMFORT_SCROLL_ANCHOR_RATIO;
+  return Math.max(0, Math.min(targetTop, args.maxScrollTop));
 }
 
 function renderStaticItems<TItem>(
@@ -81,7 +98,46 @@ function renderVirtualItems<TItem>(
   });
 }
 
+function useComfortVirtualListScroll(args: {
+  autoScroll: boolean;
+  isVirtual: boolean;
+  scrollElementRef: RefObject<HTMLElement | null>;
+  scrollToIndex: number | null | undefined;
+  scrollToKey: string | null;
+  virtualizer: Virtualizer<HTMLElement, Element>;
+}) {
+  const appliedRequestRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!args.autoScroll || !args.isVirtual || args.scrollToIndex === null || args.scrollToIndex === undefined || args.scrollToIndex < 0) {
+      appliedRequestRef.current = null;
+      return;
+    }
+    const requestKey = `${args.scrollToKey ?? 'unknown'}:${args.scrollToIndex}`;
+    if (appliedRequestRef.current === requestKey) {
+      return;
+    }
+    appliedRequestRef.current = requestKey;
+    const scrollElement = args.scrollElementRef.current;
+    const virtualItem = args.virtualizer.getVirtualItems().find((item) => item.index === args.scrollToIndex);
+    if (!scrollElement || !virtualItem) {
+      args.virtualizer.scrollToIndex(args.scrollToIndex, { align: 'center' });
+      return;
+    }
+    const nextScrollTop = resolveComfortScrollTop({
+      containerHeight: scrollElement.clientHeight,
+      currentScrollTop: scrollElement.scrollTop,
+      itemEnd: virtualItem.end,
+      itemStart: virtualItem.start,
+      maxScrollTop: Math.max(0, args.virtualizer.getTotalSize() - scrollElement.clientHeight)
+    });
+    if (nextScrollTop !== null) {
+      args.virtualizer.scrollToOffset(nextScrollTop);
+    }
+  }, [args.autoScroll, args.isVirtual, args.scrollElementRef, args.scrollToIndex, args.scrollToKey, args.virtualizer]);
+}
+
 export function VirtualListSurface<TItem>({
+  autoScroll = true,
   className,
   enabled = true,
   estimateSize,
@@ -116,12 +172,12 @@ export function VirtualListSurface<TItem>({
     rangeExtractor,
     useAnimationFrameWithResizeObserver: true
   });
+  const scrollToKey =
+    scrollToIndex !== null && scrollToIndex !== undefined && scrollToIndex >= 0 && scrollToIndex < items.length
+      ? getItemKey(items[scrollToIndex] as TItem)
+      : null;
 
-  useEffect(() => {
-    if (isVirtual && scrollToIndex !== null && scrollToIndex !== undefined && scrollToIndex >= 0) {
-      virtualizer.scrollToIndex(scrollToIndex, { align: 'auto' });
-    }
-  }, [isVirtual, scrollToIndex, virtualizer]);
+  useComfortVirtualListScroll({ autoScroll, isVirtual, scrollElementRef, scrollToIndex, scrollToKey, virtualizer });
 
   if (!isVirtual) {
     return renderStaticItems(items, estimateSize, getItemKey, renderItem);

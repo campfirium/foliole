@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { useRef, type ReactNode } from 'react';
 import { expect, it } from 'vitest';
 
-import { shouldVirtualizeList, VirtualListSurface } from './VirtualListSurface';
+import { resolveComfortScrollTop, shouldVirtualizeList, VirtualListSurface } from './VirtualListSurface';
 
 function VirtualListHarness(props: {
   children?: ReactNode;
@@ -63,4 +63,24 @@ it('allows callers to override the virtualization threshold', () => {
 
   expect(getVirtualList()).toBeInTheDocument();
   expect(screen.queryByText('Item 29')).not.toBeInTheDocument();
+});
+
+it('keeps already visible scroll targets in place', () => {
+  expect(resolveComfortScrollTop({
+    containerHeight: 400,
+    currentScrollTop: 500,
+    itemEnd: 650,
+    itemStart: 620,
+    maxScrollTop: 2000
+  })).toBeNull();
+});
+
+it('places offscreen scroll targets in a comfortable upper-middle viewport position', () => {
+  expect(resolveComfortScrollTop({
+    containerHeight: 400,
+    currentScrollTop: 0,
+    itemEnd: 1028,
+    itemStart: 1000,
+    maxScrollTop: 2000
+  })).toBe(848);
 });

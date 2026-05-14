@@ -172,6 +172,7 @@ export function WorkspaceTopicTreeRows({
       style={{ gap: `${rowGap}px` }}
     >
       <VirtualListSurface
+        autoScroll={false}
         estimateSize={() => 28 + rowSpacing * 2 + rowGap}
         getItemKey={(row) => row.node.id}
         items={rows}
