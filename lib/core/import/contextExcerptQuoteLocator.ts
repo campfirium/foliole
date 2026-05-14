@@ -5,6 +5,8 @@ function normalizeLineEndings(value: string) {
 const MAX_MATCHER_TEXT_LENGTH = 320;
 const MAX_ORDERED_FRAGMENTS = 128;
 const MIN_FRAGMENT_LENGTH = 4;
+const MAX_MARKDOWN_LINK_LABEL_LENGTH = 200;
+const MAX_MARKDOWN_LINK_DESTINATION_LENGTH = 500;
 
 function stripQuoteMarkdown(value: string) {
   return value
@@ -15,14 +17,20 @@ function stripQuoteMarkdown(value: string) {
     .replace(/\[\[([^\]]+)]]/g, '$1')
     .replace(/\[]\([^)]+\)/g, ' ')
     .replace(/\(\[View Highlight]\([^)]+\)\)/gi, ' ')
-    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(
+      new RegExp(
+        `\\[([^\\]]{1,${MAX_MARKDOWN_LINK_LABEL_LENGTH}})]\\([^\\)\\n]{1,${MAX_MARKDOWN_LINK_DESTINATION_LENGTH}}\\)`,
+        'g'
+      ),
+      '$1'
+    )
     .replace(/]\([^)]+\)/g, ' ')
     .replace(/(^|\s)•\s+/g, '$1')
     .replace(/[|`*_>#]/g, ' ');
 }
 
 function compactWhitespace(value: string) {
-  return value.replace(/\s+/g, ' ').trim();
+  return value.replace(/\s+/g, ' ').replace(/]\s+\[/g, '][').trim();
 }
 
 function stripLeadingListMarker(value: string) {
@@ -33,12 +41,13 @@ function stripLeadingListMarker(value: string) {
 }
 
 function normalizeQuoteText(value: string) {
-  return compactWhitespace(
-    normalizeLineEndings(value)
-      .split('\n')
-      .map((line) => stripLeadingListMarker(compactWhitespace(stripQuoteMarkdown(line))))
-      .join(' ')
-  );
+  return compactWhitespace(normalizeQuoteLines(value).join(' '));
+}
+
+function normalizeQuoteLines(value: string) {
+  return stripQuoteMarkdown(normalizeLineEndings(value))
+    .split('\n')
+    .map((line) => stripLeadingListMarker(compactWhitespace(line)));
 }
 
 function escapeRegex(value: string) {
@@ -103,4 +112,4 @@ export function createContextExcerptQuoteLocator(quote: string): ContextExcerptQ
   };
 }
 
-export { normalizeLineEndings, normalizeQuoteText };
+export { normalizeLineEndings, normalizeQuoteLines, normalizeQuoteText };

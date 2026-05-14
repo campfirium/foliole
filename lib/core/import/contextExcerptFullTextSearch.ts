@@ -1,6 +1,7 @@
-import { normalizeLineEndings, normalizeQuoteText, type ContextExcerptQuoteLocator } from './contextExcerptQuoteLocator.js';
+import { normalizeQuoteLines, normalizeQuoteText, type ContextExcerptQuoteLocator } from './contextExcerptQuoteLocator.js';
 
 const MAX_LENGTH_DELTA = 6;
+const MAX_ORDERED_LINE_RANGES = 64;
 
 interface FullTextLocator {
   content: string;
@@ -19,10 +20,9 @@ function toRawRange(locator: FullTextLocator, start: number, endExclusive: numbe
   if (rawStart === undefined || rawEnd === undefined) {
     return null;
   }
-  const expandedStart = expandRawStartToInlineCodeStart(
-    locator.content,
-    expandRawStartToHeadingStart(locator.content, rawStart)
-  );
+  const linkStart = expandRawStartToMarkdownLinkStart(locator.content, rawStart);
+  const headingStart = expandRawStartToHeadingStart(locator.content, linkStart);
+  const expandedStart = expandRawStartToInlineCodeStart(locator.content, headingStart);
   return {
     end: expandRawEndToAutolinkEnd(locator.content, rawEnd),
     start: expandedStart
@@ -33,6 +33,10 @@ function expandRawStartToHeadingStart(content: string, rawStart: number) {
   const lineStart = content.lastIndexOf('\n', rawStart - 1) + 1;
   const prefix = content.slice(lineStart, rawStart);
   return /^#{1,6}\s+$/u.test(prefix) ? lineStart : rawStart;
+}
+
+function expandRawStartToMarkdownLinkStart(content: string, rawStart: number) {
+  return content[rawStart - 1] === '[' && content[rawStart - 2] !== '!' ? rawStart - 1 : rawStart;
 }
 
 function isSingleBacktickAt(content: string, index: number) {
@@ -111,8 +115,7 @@ function isLengthClose(match: string, quote: string) {
 function containsOrderedQuoteParts(match: string, quote: string) {
   const normalizedMatch = normalizeQuoteText(match);
   let cursor = 0;
-  for (const rawLine of normalizeLineEndings(quote).split('\n')) {
-    const line = normalizeQuoteText(rawLine);
+  for (const line of normalizeQuoteLines(quote)) {
     if (!line) {
       continue;
     }
@@ -135,6 +138,24 @@ function uniqueValidRawMatch(locator: FullTextLocator, ranges: Range[], quote: s
     });
   const onlyRange = validRanges[0];
   return validRanges.length === 1 && onlyRange ? sliceRaw(locator, onlyRange) : null;
+}
+
+function collectOrderedLineRanges(locator: FullTextLocator, quote: string) {
+  const lines = normalizeQuoteLines(quote).filter((line) => line.length > 0);
+  const firstLine = lines[0];
+  if (!firstLine) {
+    return [];
+  }
+  const lastLine = lines[lines.length - 1] ?? firstLine;
+  const starts = collectStringRanges(locator.normalizedFullText, firstLine).slice(0, MAX_ORDERED_LINE_RANGES);
+  const ranges: Range[] = [];
+  for (const start of starts) {
+    const lastLineAt = locator.normalizedFullText.indexOf(lastLine, start.end);
+    if (lastLineAt >= 0) {
+      ranges.push({ end: lastLineAt + lastLine.length, start: start.start });
+    }
+  }
+  return ranges;
 }
 
 function collectBoundaryFragments(normalizedQuote: string) {
@@ -203,6 +224,10 @@ export function findFullTextLocatorMatch(
     if (regexMatch) {
       return regexMatch;
     }
+  }
+  const orderedLineMatch = uniqueValidRawMatch(locator, collectOrderedLineRanges(locator, quote), quote, quoteLocator.exactMatcher);
+  if (orderedLineMatch) {
+    return orderedLineMatch;
   }
   return uniqueValidRawMatch(locator, collectFragmentRanges(locator, quoteLocator), quote, quoteLocator.exactMatcher);
 }

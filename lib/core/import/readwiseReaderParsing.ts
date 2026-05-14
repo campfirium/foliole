@@ -49,6 +49,27 @@ function stripReadwiseLinkTail(block: string) {
     .trim();
 }
 
+function stripReaderLinePrefix(line: string) {
+  return line
+    .trim()
+    .replace(/^>\s*/, '')
+    .replace(/^[-*+•]\s+/, '')
+    .trim();
+}
+
+function isReaderActionLine(line: string) {
+  const stripped = stripReaderLinePrefix(line);
+  return /^\[Quote\]\([^)]*mode=quote[^)]*\)$/u.test(stripped) ||
+    /^\[\]\(javascript:void\(0\);?\)$/iu.test(stripped);
+}
+
+function stripReaderActionLines(block: string) {
+  return normalizeLineEndings(block)
+    .split('\n')
+    .filter((line) => !isReaderActionLine(line))
+    .join('\n');
+}
+
 function splitKeywordTail(block: string, keyword: string) {
   if (!keyword.trim()) {
     return { before: block.trim(), value: '' };
@@ -64,7 +85,7 @@ function splitKeywordTail(block: string, keyword: string) {
 }
 
 function parseHighlightMetadata(block: string, tagKeyword: string, noteKeyword: string) {
-  const withoutLinkTail = stripReadwiseLinkTail(block);
+  const withoutLinkTail = stripReadwiseLinkTail(stripReaderActionLines(block));
   const withoutTags = splitKeywordTail(withoutLinkTail, tagKeyword).before;
   const noteSplit = splitKeywordTail(withoutTags, noteKeyword);
   return {
