@@ -17,28 +17,28 @@ function EmptyBacklinksState({ description }: { description: string }) {
 }
 
 export function WorkspaceRightSidebarBacklinksPanel(props: WorkspaceRightSidebarBacklinksPanelProps) {
-  if (!props.activeNodeId) {
-    return <EmptyBacklinksState description="Select a note to inspect which notes point back to it." />;
-  }
-
-  const node = props.nodesById[props.activeNodeId];
-  if (!node) {
-    return null;
-  }
-
+  const node = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
   const backlinks = useNodeBacklinks({
-    targetNodeId: node.id,
+    targetNodeId: node?.id ?? null,
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,
     trashedNodeIds: props.trashedNodeIds
   });
 
+  if (!props.activeNodeId) {
+    return <EmptyBacklinksState description="Select a topic to inspect which topics point back to it." />;
+  }
+
+  if (!node) {
+    return null;
+  }
+
   return (
     <div className="flex min-h-0 flex-col gap-3">
-      <InspectorSection description={`Found ${backlinks.length} notes that mention this note.`} title="Backlinks">
+      <InspectorSection description={`Found ${backlinks.length} topics that mention this topic.`} title="Backlinks">
         <NodeBacklinksList
           backlinks={backlinks}
-          emptyLabel="No notes link back to this note yet."
+          emptyLabel="No topics link back to this topic yet."
           onSelectNode={props.onSelectNode}
         />
       </InspectorSection>
