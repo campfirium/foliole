@@ -4,7 +4,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { NODE_TITLE_SLOT_PADDING_TOP, shouldReserveNodeTitleSlot } from '../../shared/lib/nodeTitleSlot';
 import { updateNodeImageState } from '../../shared/platform/performanceDiagnosticsProbe';
-import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
+import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 import { hasCachedMarkdownImageReference } from './documentPanelImageReferenceCache';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
@@ -40,8 +40,20 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
     };
   }
 
+  const documentStatus = getNodeDocumentStatus(activeNode);
+  if (activeNode && activeNode.kind !== 'folder' && (documentStatus === 'failed' || documentStatus === 'missing')) {
+    return {
+      documentStatus,
+      emptyState: {
+        title: 'Topic body unavailable',
+        description: 'The selected topic body could not be loaded.'
+      }
+    };
+  }
+
   if (activeNode && activeNode.kind !== 'folder' && !isNodeDocumentLoaded(activeNode)) {
     return {
+      documentStatus,
       loadingLabel: 'Loading document',
       emptyState: {
         title: 'Loading document',
@@ -51,6 +63,7 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
   }
 
   return {
+    documentStatus,
     loadingLabel: undefined,
     emptyState: undefined
   };
@@ -76,6 +89,7 @@ function getDocumentPanelState(
 
   return {
     answerSectionMode: shouldFitItemImages ? 'balanced' : 'fixed',
+    documentStatus: startupState.documentStatus,
     editorContentPaddingBottom: undefined,
     loadingLabel: startupState.loadingLabel,
     emptyState,
@@ -158,6 +172,7 @@ export function getDocumentPanelView(
   return {
     activeNode,
     bodyProps: getDocumentPanelBodyProps(props, panelState, documentMaxWidth),
+    documentStatus: panelState.documentStatus,
     documentLayoutStyle: { '--document-max-width': `${documentMaxWidth}px` } as CSSProperties,
     loadingLabel: panelState.loadingLabel,
     isFolderListView: Boolean(

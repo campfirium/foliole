@@ -62,6 +62,15 @@ vi.mock('../../shared/platform/nodeBacklinksRuntimeRepository', () => ({
   loadRuntimeNodeBacklinks: nodeBacklinksBridgeMocks.loadRuntimeNodeBacklinks
 }));
 
+const workspaceNodePreparationMocks = vi.hoisted(() => ({
+  ensureWorkspaceNodeDocumentReady: vi.fn(async () => null)
+}));
+export const ensureWorkspaceNodeDocumentReady = workspaceNodePreparationMocks.ensureWorkspaceNodeDocumentReady;
+
+vi.mock('../../store/workspaceNodePreparation', () => ({
+  ensureWorkspaceNodeDocumentReady: workspaceNodePreparationMocks.ensureWorkspaceNodeDocumentReady
+}));
+
 export const baseNode = {
   id: 'node-1',
   kind: 'topic' as const,
@@ -163,6 +172,8 @@ beforeEach(() => {
   documentPanelBodyMock.mockReset();
   loadRuntimeNodeBacklinks.mockReset();
   loadRuntimeNodeBacklinks.mockResolvedValue(null);
+  ensureWorkspaceNodeDocumentReady.mockReset();
+  ensureWorkspaceNodeDocumentReady.mockResolvedValue(null);
   useNodeSourceUpdatePreview.mockReturnValue({
     isLoading: false,
     value: null

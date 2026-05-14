@@ -15,6 +15,7 @@ export interface WorkspaceRuntimeNode {
   createdAt: string;
   desiredRetention?: number | null;
   hideTitleHeading?: boolean;
+  bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   id: string;
   imageRegions?: NativeNodeSnapshotArgs['imageRegions'];
   isTitleManual?: boolean;

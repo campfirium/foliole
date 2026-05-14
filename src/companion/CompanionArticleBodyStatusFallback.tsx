@@ -1,7 +1,7 @@
 import { definedProps } from '../shared/lib/definedProps';
 import { AppEmptyState, AppErrorState, AppLoadingState } from '../shared/ui';
 
-type ArticleBodyStatus = 'empty' | 'failed' | 'fetching' | 'missing';
+type ArticleBodyStatus = 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
 
 export function CompanionArticleBodyStatusFallback(props: {
   bodyStatus: ArticleBodyStatus;
@@ -15,6 +15,9 @@ export function CompanionArticleBodyStatusFallback(props: {
   }
   if (props.bodyStatus === 'failed') {
     return <ArticleBodyMessage detail="Reconnect this device to desktop to retry." state="error" title="Topic body could not be loaded." {...definedProps({ heading: props.title })} />;
+  }
+  if (props.bodyStatus === 'ready') {
+    return null;
   }
   return <ArticleBodyMessage state="empty" title="This topic is empty." {...definedProps({ heading: props.title })} />;
 }

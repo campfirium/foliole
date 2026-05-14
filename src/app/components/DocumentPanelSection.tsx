@@ -1,17 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import { definedProps } from '../../shared/lib/definedProps';
 import {
-  markDocumentPanelBound,
-  markNodeBodyPainted,
-  markNodeBodyReady,
   recordComponentRender
 } from '../../shared/platform/performanceDiagnosticsProbe';
-import { definedProps } from '../../shared/lib/definedProps';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
+import { DocumentPanelDocumentStatusContent } from './DocumentPanelDocumentStatusContent';
 import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
 import { getDocumentPanelView } from './documentPanelSectionModel';
 import { DocumentPanelSectionOverlays } from './DocumentPanelSectionOverlays';
@@ -23,7 +21,9 @@ import {
 } from './documentPanelSectionSupport';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import { NodeLinkHoverPreviewPanel } from './NodeLinkHoverPreviewPanel';
+import { useDocumentPanelDocumentRetry } from './useDocumentPanelDocumentRetry';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
+import { useDocumentPanelPerformanceMarkers } from './useDocumentPanelPerformanceMarkers';
 import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
 import { useExternalLinkPanels } from './useExternalLinkPanels';
 import { useNodeBacklinks } from './useNodeBacklinks';
@@ -61,8 +61,9 @@ function useDocumentPanelTextAnchorState(props: DocumentPanelSectionProps) {
 
 function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const { editorDisplayMode, readingContentWidth } = useAppearanceSettings();
+  const { isRetryingDocument, retryDocumentLoad } = useDocumentPanelDocumentRetry(props.editorNodeId);
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const { bodyProps, documentLayoutStyle, isFolderListView, loadingLabel } = getDocumentPanelView(
+  const { bodyProps, documentLayoutStyle, documentStatus, isFolderListView, loadingLabel } = getDocumentPanelView(
     props,
     editorDisplayMode,
     readingContentWidth
@@ -83,7 +84,16 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     nodesById: props.nodesById,
     trashedNodeIds: props.trashedNodeIds
   });
-  const emptyContent = loadingLabel ? <DocumentPanelLoadingContent loadingLabel={loadingLabel} /> : undefined;
+  const emptyContent = documentStatus === 'failed' || documentStatus === 'missing'
+    ? (
+        <DocumentPanelDocumentStatusContent
+          loadingLabel="Loading document"
+          onRetry={retryDocumentLoad}
+          retrying={isRetryingDocument}
+          status={documentStatus}
+        />
+      )
+    : loadingLabel ? <DocumentPanelLoadingContent loadingLabel={loadingLabel} /> : undefined;
   useDocumentPanelPerformanceMarkers(props, Boolean(bodyProps.emptyState), isEditorDocumentLoaded);
 
   useDocumentPanelImageClozePresentation({
@@ -106,33 +116,6 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     handleSourceUpdatePanelOpenChange,
     sourceUpdatePreview: sourceUpdatePreview.value
   };
-}
-
-function useDocumentPanelPerformanceMarkers(
-  props: DocumentPanelSectionProps,
-  isEmptyState: boolean,
-  isEditorDocumentLoaded: boolean
-) {
-  useLayoutEffect(() => {
-    if (!props.editorNodeId || isEmptyState) {
-      return;
-    }
-    markDocumentPanelBound(props.editorNodeId, `content:${props.editorContent.length}`);
-  }, [isEmptyState, props.editorContent.length, props.editorNodeId]);
-
-  useEffect(() => {
-    const editorNodeId = props.editorNodeId;
-    if (!editorNodeId || isEmptyState || !isEditorDocumentLoaded) {
-      return;
-    }
-    const frameId = window.requestAnimationFrame(() => {
-      markNodeBodyPainted(editorNodeId);
-      window.requestAnimationFrame(() => {
-        markNodeBodyReady(editorNodeId);
-      });
-    });
-    return () => window.cancelAnimationFrame(frameId);
-  }, [isEditorDocumentLoaded, isEmptyState, props.editorContent, props.editorNodeId]);
 }
 
 function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {

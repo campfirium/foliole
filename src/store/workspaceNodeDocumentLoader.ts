@@ -5,10 +5,11 @@ import {
 
 import { readCachedWorkspaceNodeDocument, writeCachedWorkspaceNodeDocument } from './workspaceNodeDocumentCache';
 import type { WorkspaceNodeDocument } from './workspaceRendererBoundary';
-import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
+import { getNodeDocumentStatus, isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import { useWorkspaceStore } from './workspaceStore';
 
 export interface WorkspaceNodeDocumentLoadOptions {
+  forceLoad?: boolean;
   onLoadResolved?: (document: WorkspaceNodeDocument) => void;
   onLoadStarted?: () => void;
   preloadedDocument?: WorkspaceNodeDocument | null;
@@ -18,7 +19,7 @@ const pendingNodeDocumentLoadById = new Map<string, Promise<WorkspaceNodeDocumen
 
 export function shouldSkipNodeDocumentPreparation(nodeId: string) {
   const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
-  return !targetNode || isNodeDocumentLoaded(targetNode);
+  return !targetNode || isNodeDocumentLoaded(targetNode) || getNodeDocumentStatus(targetNode) === 'failed';
 }
 
 export function hasPendingNodeDocumentLoad(nodeId: string) {
@@ -35,7 +36,7 @@ export async function loadWorkspaceNodeDocument(
 
   let document = options.preloadedDocument ?? null;
   if (!document) {
-    const cachedDocument = readCachedWorkspaceNodeDocument(nodeId);
+    const cachedDocument = options.forceLoad ? null : readCachedWorkspaceNodeDocument(nodeId);
     if (cachedDocument) {
       options.onLoadResolved?.(cachedDocument);
       return cachedDocument;

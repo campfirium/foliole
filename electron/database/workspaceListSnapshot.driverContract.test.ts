@@ -36,6 +36,7 @@ const workspaceListRow = {
   hide_title_heading: 1,
   virtual_filter: null,
   opening_text: 'The first body paragraph.',
+  body_status: 'ready',
   has_content: 1,
   has_reveal: 1,
   anchor_link: null,
@@ -74,6 +75,7 @@ const expectedWorkspaceListSnapshot = {
       title: 'Node 1',
       isTitleManual: true,
       hideTitleHeading: true,
+      bodyStatus: 'ready',
       hasContent: true,
       hasReveal: true,
       openingText: 'The first body paragraph.',
@@ -117,14 +119,27 @@ it('queries lightweight list fields and reads opening_text instead of long-lived
 
   const workspaceListSql = queryAllSpy.mock.calls[0]?.[0];
   expect(workspaceListSql).toContain('AS has_content');
+  expect(workspaceListSql).toContain('AS body_status');
+  expect(workspaceListSql).toContain("cb.availability IN ('fetching', 'failed')");
   expect(workspaceListSql).toContain('n.body_blob_hash IS NOT NULL');
   expect(workspaceListSql).toContain('LENGTH(TRIM(n.content)) > 0');
   expect(workspaceListSql).toContain('AS has_reveal');
   expect(workspaceListSql).toContain('n.opening_text,');
   expect(workspaceListSql).not.toContain('content_blob_data');
+  expect(workspaceListSql).toContain('LEFT JOIN content_blobs cb');
   expect(workspaceListSql).toContain('node_reading_device_state');
   expect(workspaceListSql).not.toContain('n.reveal,');
   expect(workspaceListSql).not.toContain('n.content,');
+});
+
+it('preserves failed body status in lightweight list snapshots', () => {
+  queryAllSpy
+    .mockReturnValueOnce([{ ...workspaceListRow, body_status: 'failed' }])
+    .mockReturnValueOnce([])
+    .mockReturnValueOnce([{ node_id: 'node-1' }]);
+  queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
+
+  expect(loadWorkspaceListSnapshot(driver)?.nodesById['node-1']?.bodyStatus).toBe('failed');
 });
 
 it('prefers the persisted active node when it is still available', () => {

@@ -1,41 +1,23 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 
+import { collectActiveFolderRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryActiveFolder';
 import {
   listDocumentWorksetNodeIds,
   hasMatchingNodeIds,
   reconcileFocusedRendererBoundaryNodes
 } from './workspaceRendererBoundaryFocused';
 import { resolveNodeContentState, resolveNodeRevealState } from './workspaceRendererBoundaryState';
-export { isNodeDocumentLoaded, mergeWorkspaceNodeDocument, type WorkspaceNodeDocument } from './workspaceRendererBoundaryDocument';
+export {
+  getNodeDocumentStatus,
+  isNodeDocumentLoaded,
+  mergeWorkspaceNodeDocument,
+  type WorkspaceNodeDocument,
+  type WorkspaceNodeDocumentStatus
+} from './workspaceRendererBoundaryDocument';
 
 interface WorkspaceRendererBoundaryStateLike {
   activeNodeId: string | null;
   nodesById: Record<string, Node>;
-}
-
-function listActiveFolderChildNodeIds(activeNodeId: string | null, nodesById: Record<string, Node>) {
-  if (!activeNodeId) {
-    return [];
-  }
-  const activeNode = nodesById[activeNodeId];
-  if (!activeNode || activeNode.kind !== 'folder' || activeNode.specialKind === 'inbox') {
-    return [];
-  }
-  return Object.values(nodesById)
-    .filter((node) => node.parentNodeId === activeNodeId)
-    .map((node) => node.id);
-}
-
-function collectRendererBoundaryKeepNodeIds(
-  activeNodeId: string | null,
-  nodesById: Record<string, Node>,
-  keepNodeIds: ReadonlySet<string>
-) {
-  const nextKeepNodeIds = new Set(keepNodeIds);
-  for (const nodeId of listActiveFolderChildNodeIds(activeNodeId, nodesById)) {
-    nextKeepNodeIds.add(nodeId);
-  }
-  return nextKeepNodeIds;
 }
 
 function shouldKeepNodeDocument(
@@ -70,7 +52,7 @@ export function trimWorkspaceNodesForRendererBoundary(
   nodesById: Record<string, Node>,
   keepNodeIds: ReadonlySet<string> = new Set()
 ) {
-  const nextKeepNodeIds = collectRendererBoundaryKeepNodeIds(activeNodeId, nodesById, keepNodeIds);
+  const nextKeepNodeIds = collectActiveFolderRendererBoundaryKeepNodeIds(activeNodeId, nodesById, keepNodeIds);
 
   return Object.fromEntries(
     Object.entries(nodesById).map(([nodeId, node]) => [
@@ -95,6 +77,7 @@ function isBoundaryProjectionReusable(currentNode: Node | undefined, sourceNode:
     currentNode.title === sourceNode.title &&
     currentNode.isTitleManual === sourceNode.isTitleManual &&
     currentNode.hideTitleHeading === sourceNode.hideTitleHeading &&
+    currentNode.bodyStatus === sourceNode.bodyStatus &&
     currentNode.anchorLink === sourceNode.anchorLink &&
     currentNode.imageRegions === sourceNode.imageRegions &&
     currentNode.virtualFilter === sourceNode.virtualFilter &&
@@ -115,7 +98,7 @@ function reconcileWorkspaceRendererBoundaryNodes(
   activeNodeId: string | null,
   keepNodeIds: ReadonlySet<string>
 ) {
-  const nextKeepNodeIds = collectRendererBoundaryKeepNodeIds(activeNodeId, nextNodesById, keepNodeIds);
+  const nextKeepNodeIds = collectActiveFolderRendererBoundaryKeepNodeIds(activeNodeId, nextNodesById, keepNodeIds);
   let changed = Object.keys(currentNodesById).length !== Object.keys(nextNodesById).length;
   const nextBoundaryNodesById: Record<string, Node> = {};
 
@@ -139,12 +122,12 @@ function reconcileActiveNodeBoundaryChange(
   currentKeepNodeIds: ReadonlySet<string>,
   keepNodeIds: ReadonlySet<string>
 ) {
-  const previousKeepNodeIds = collectRendererBoundaryKeepNodeIds(
+  const previousKeepNodeIds = collectActiveFolderRendererBoundaryKeepNodeIds(
     currentState.activeNodeId,
     currentState.nodesById,
     currentKeepNodeIds
   );
-  const nextKeepNodeIds = collectRendererBoundaryKeepNodeIds(
+  const nextKeepNodeIds = collectActiveFolderRendererBoundaryKeepNodeIds(
     nextActiveNodeId,
     currentState.nodesById,
     keepNodeIds

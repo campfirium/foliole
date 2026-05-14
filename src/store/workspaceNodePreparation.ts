@@ -10,6 +10,7 @@ import type { WorkspaceState } from './workspaceStore';
 import { useWorkspaceStore } from './workspaceStore';
 
 interface EnsureWorkspaceNodeDocumentReadyOptions {
+  forceLoad?: boolean;
   keepWarm?: boolean;
   onDocumentMerged?: (document: WorkspaceNodeDocument) => void;
   onLoadResolved?: (document: WorkspaceNodeDocument) => void;
@@ -121,7 +122,7 @@ export async function ensureWorkspaceNodeDocumentReady(
   nodeId: string,
   options: EnsureWorkspaceNodeDocumentReadyOptions = {}
 ) {
-  if (shouldSkipNodeDocumentPreparation(nodeId)) {
+  if (!options.forceLoad && shouldSkipNodeDocumentPreparation(nodeId)) {
     return null;
   }
 
@@ -138,7 +139,7 @@ export async function openWorkspaceNodeWithPreparedDocument(
   nodeId: string,
   options: EnsureWorkspaceNodeDocumentReadyOptions = {}
 ) {
-  const document = shouldSkipNodeDocumentPreparation(nodeId)
+  const document = !options.forceLoad && shouldSkipNodeDocumentPreparation(nodeId)
     ? options.preloadedDocument ?? null
     : await loadWorkspaceNodeDocument(nodeId, options);
   if (options.shouldApply && !options.shouldApply()) {
