@@ -88,5 +88,5 @@ it('refreshes the active-node boundary projection when only image regions change
     currentState
   ) as typeof currentState;
 
-  expect(nextState.nodesById['node-1']!?.imageRegions).toBeNull();
+  expect(nextState.nodesById['node-1']?.imageRegions).toBeNull();
 });

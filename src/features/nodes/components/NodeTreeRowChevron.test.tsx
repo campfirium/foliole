@@ -1,11 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow } from './NodeTreeRow';
 
 function renderFolderRow(handlers?: {
-  onSelect?: ReturnType<typeof vi.fn>;
-  onToggleCollapse?: ReturnType<typeof vi.fn>;
+  onSelect?: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
+  onToggleCollapse?: (nodeId: string) => void;
 }) {
   const onSelect = handlers?.onSelect ?? vi.fn();
   const onToggleCollapse = handlers?.onToggleCollapse ?? vi.fn();

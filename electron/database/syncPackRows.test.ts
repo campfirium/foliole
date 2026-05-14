@@ -149,3 +149,19 @@ it('does not pack learning state rows when the node entity is gone', () => {
     syncObjects: []
   });
 });
+
+it('does not pack live node state rows when the node payload is gone', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+     ) VALUES
+       ('node', 'missing-live-node', 9, 'live-hash', 'desktop', '2026-04-27T00:09:00.000Z', NULL, 0),
+       ('node', 'missing-deleted-node', 10, 'deleted-hash', 'desktop', '2026-04-27T00:10:00.000Z',
+        '2026-04-27T00:10:00.000Z', 0)`
+  );
+
+  expect(loadPackRows(0, 10).stateRows.map((row) => `${row.object_type}:${row.object_id}`)).toEqual([
+    'node:missing-deleted-node'
+  ]);
+});

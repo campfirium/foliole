@@ -9,6 +9,7 @@ import {
   FOLDER_LIST_SORT_OPTIONS,
   getFolderListSortOrderOptions
 } from '../features/nodes/model/folderListSortOptions';
+import { definedProps } from '../shared/lib/definedProps';
 import {
   AppDialog,
   AppDialogClose,
@@ -17,7 +18,6 @@ import {
   AppDialogPortal,
   AppDialogTitle
 } from '../shared/ui';
-import { definedProps } from '../shared/lib/definedProps';
 
 function TopActionButton(props: {
   icon: LucideIcon;

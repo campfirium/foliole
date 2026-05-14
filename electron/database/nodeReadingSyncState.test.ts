@@ -93,7 +93,7 @@ it('writes sync object state for node reading snapshots and tombstones', () => {
   const activeState = getSyncObjectState();
 
   expect(activeState).toMatchObject({ deleted_at: null, object_id: 'node-reading', sync_dirty: 1 });
-  expect(String(activeState?.last_modified_by_device_id)).toMatch(/^desktop-/);
+  expect(String(activeState?.last_modified_by_device_id)).toMatch(/^device-/);
   expect(countNodeReadingChanges().count).toBe(0);
 
   upsertReadingNode(false);

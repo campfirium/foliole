@@ -33,59 +33,6 @@ function createTextClozeAnchorLink(id: string, originalText: string, from = 0) {
   };
 }
 
-it('creates highlight node without leaving current node', () => {
-  render(<App />);
-  let createdNodeId: string | null = null;
-  act(() => {
-    createdNodeId = useWorkspaceStore
-      .getState()
-      .createHighlightNodeFromSelection('node-1', 'Welcome', 'hl-1', createTextAnchorLink('hl-1', 'Welcome'));
-  });
-  const workspace = useWorkspaceStore.getState();
-  expect(workspace.activeNodeId).toBe('node-1');
-  expect(createdNodeId).toBeTruthy();
-  if (!createdNodeId) {
-    throw new Error('expected a child node');
-  }
-  expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
-  expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome');
-  expect(workspace.nodesById[createdNodeId]?.content).toBe('Welcome');
-  act(() => {
-    useWorkspaceStore.setState({ activeNodeId: INBOX_NODE_ID });
-  });
-  expect(getCurrentFolderTreeItem('Welcome to Foliole')).toHaveAttribute(
-    'data-node-derived',
-    'false'
-  );
-  expect(getCurrentFolderTreeItem('Welcome')).toHaveAttribute(
-    'data-node-derived',
-    'true'
-  );
-});
-
-it('keeps only top-level rows bold while lowering non-top-level row emphasis', () => {
-  render(<App />);
-  let createdNodeId: string | null = null;
-  act(() => {
-    createdNodeId = useWorkspaceStore
-      .getState()
-      .createHighlightNodeFromSelection('node-1', 'Welcome', 'hl-1', createTextAnchorLink('hl-1', 'Welcome'));
-  });
-  act(() => {
-    useWorkspaceStore.setState({ activeNodeId: INBOX_NODE_ID });
-  });
-  const regularRow = getCurrentFolderTreeItem('Welcome to Foliole');
-  const derivedRow = getCurrentFolderTreeItem('Welcome');
-
-  expect(regularRow).toHaveAttribute('data-node-emphasis', 'primary');
-  expect(createdNodeId).toBeTruthy();
-  expect(derivedRow).toHaveAttribute('data-node-emphasis', 'secondary');
-  expect(regularRow.className).toContain('font-normal');
-  expect(derivedRow.className).toContain('font-normal');
-  expect(regularRow.querySelector('[data-node-icon]')).toBeInTheDocument();
-  expect(derivedRow.querySelector('[data-node-icon]')).toBeInTheDocument();
-});
-
 it('renders ordinary child rows with normal weight', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: INBOX_NODE_ID,

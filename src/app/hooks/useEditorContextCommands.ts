@@ -94,52 +94,45 @@ function usePreservedSelectionPayload(args: {
   return preservedSelectionPayloadRef;
 }
 
-export function useEditorContextCommands({
-  activeNode,
-  activeNodeId,
-  createChildNode,
-  createHighlightNodeFromSelection,
-  createImageClozeNodes = () => [],
-  createQANodeFromSelection,
-  deleteNodePermanently,
-  deleteImageClozeRegion,
-  editorRef,
-  isTrashViewOpen,
-  trashedNodeIds,
-  nodesById,
-  onExitImmersiveMode,
-  onSelectNode,
-  updateNodeContent
-}: UseEditorContextCommandsParams) {
+export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
   const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
+  const createImageClozeNodes = args.createImageClozeNodes ?? (() => []);
+  const { activeNodeId, editorRef } = args;
   const preservedSelectionPayloadRef = usePreservedSelectionPayload({ activeNodeId, editorRef });
-  useSelectionAnnotationToolbar({ activeNodeId, editorRef, isTrashViewOpen, nodesById, setContextMenu, trashedNodeIds });
+  useSelectionAnnotationToolbar({
+    activeNodeId,
+    editorRef,
+    isTrashViewOpen: args.isTrashViewOpen,
+    nodesById: args.nodesById,
+    setContextMenu,
+    trashedNodeIds: args.trashedNodeIds
+  });
   useImageClozeEventBridge({
     activeNodeId,
     createImageClozeNodes,
-    deleteImageClozeRegion,
+    deleteImageClozeRegion: args.deleteImageClozeRegion,
     editorRef,
-    nodesById,
-    ...definedProps({ activeNode })
+    nodesById: args.nodesById,
+    ...definedProps({ activeNode: args.activeNode })
   });
   const closeContextMenu = () => setContextMenu(null);
-  const syncActiveNodeContentFromEditor = createSyncActiveNodeContentFromEditor(activeNodeId, editorRef, updateNodeContent);
+  const syncActiveNodeContentFromEditor = createSyncActiveNodeContentFromEditor(activeNodeId, editorRef, args.updateNodeContent);
   const handleEditorContextMenu = createHandleEditorContextMenu({
     activeNodeId,
     editorRef,
     getPreservedSelectionPayload: () => preservedSelectionPayloadRef.current,
-    isTrashViewOpen,
+    isTrashViewOpen: args.isTrashViewOpen,
     setContextMenu,
-    ...definedProps({ activeNode })
+    ...definedProps({ activeNode: args.activeNode })
   });
   const runSelectionCommand = createSelectionCommandRunner(contextMenu ? { payload: contextMenu.payload } : null, editorRef, closeContextMenu);
   const runSelectionCommandFromPayloadHandler = createPayloadSelectionRunner(closeContextMenu, editorRef);
   const selectionHandlers = createSelectionHandlers({
-    createChildNode,
-    createHighlightNodeFromSelection,
-    createQANodeFromSelection,
-    onExitImmersiveMode,
-    onSelectNode,
+    createChildNode: args.createChildNode,
+    createHighlightNodeFromSelection: args.createHighlightNodeFromSelection,
+    createQANodeFromSelection: args.createQANodeFromSelection,
+    onExitImmersiveMode: args.onExitImmersiveMode,
+    onSelectNode: args.onSelectNode,
     runSelectionCommand,
     runSelectionCommandFromPayloadHandler
   });
@@ -147,15 +140,15 @@ export function useEditorContextCommands({
     activeNodeId,
     closeContextMenu,
     contextMenu,
-    deleteNodePermanently,
+    deleteNodePermanently: args.deleteNodePermanently,
     editorRef,
     handleEditorContextMenu,
-    nodesById,
-    onSelectNode,
+    nodesById: args.nodesById,
+    onSelectNode: args.onSelectNode,
     selectionHandlers,
-    trashedNodeIds,
+    trashedNodeIds: args.trashedNodeIds,
     syncActiveNodeContentFromEditor,
-    updateNodeContent
+    updateNodeContent: args.updateNodeContent
   });
 }
 

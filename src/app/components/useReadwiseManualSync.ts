@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { NativeReadwiseImportRunResult } from '../../../lib/platform/nativeContract';
+import type { NativeReadwiseImportRunResult } from '../../../lib/platform/nativeImportContract';
 
 import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
 import {

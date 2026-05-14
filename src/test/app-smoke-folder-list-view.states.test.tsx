@@ -14,7 +14,7 @@ function getFolderListTitles() {
     .map((button) => button.getAttribute('aria-label')?.replace(/^Open\s+/, '') ?? '');
 }
 
-it('keeps default last-opened display and sorting on the same fallback field chain', () => {
+it('keeps default date-modified display and sorting on the same fallback field chain', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1', 'note-1', 'note-2'],
@@ -42,9 +42,9 @@ it('keeps default last-opened display and sorting on the same fallback field cha
 
   render(<App />);
 
-  expect(getFolderListTitles()).toEqual(['Created fallback', 'Updated value']);
-  expect(screen.getByTestId('folder-list-date-note-1')).toHaveTextContent('Never opened');
-  expect(screen.getByTestId('folder-list-date-note-2')).toHaveTextContent('Never opened');
+  expect(getFolderListTitles()).toEqual(['Updated value', 'Created fallback']);
+  expect(screen.getByTestId('folder-list-date-note-1')).toHaveTextContent('2026-04-03');
+  expect(screen.getByTestId('folder-list-date-note-2')).toHaveTextContent('2026-04-01');
 });
 
 it('still shows the normal document view for content nodes', async () => {

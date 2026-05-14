@@ -1,9 +1,9 @@
+import type { CompanionDesktopSyncProgress } from './companionDesktopSyncTypes';
 import { saveLocalPrimaryDeviceId } from './companionPrimaryDeviceIdentity';
 import {
   loadDesktopSyncDiagnostics,
   loadLocalSyncDiagnostics
 } from './companionSyncDiagnostics';
-import type { CompanionDesktopSyncProgress } from './companionDesktopSyncTypes';
 import { loadCompanionPairingState } from './companionWorkspacePairing';
 
 type AttachmentBreakdown = NonNullable<CompanionDesktopSyncProgress['attachmentBreakdown']>;

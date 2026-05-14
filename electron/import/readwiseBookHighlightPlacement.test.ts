@@ -27,13 +27,15 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { createReadwiseImportSources } from '../../lib/core/import/importManagerSettings.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { openDatabaseConnection, closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
-import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { loadReadwiseBookEpub } from './readwiseBookManualActions.js';
+import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
+import { createMultiChapterBookEpub } from './readwiseBooksEndToEnd.fixture.js';
 import { scanReadwiseBooksInventory } from './readwiseBooksInventory.js';
 
 let tempRoot = '';
@@ -81,43 +83,14 @@ async function createBooksFixture() {
     ].join('\n'),
     'utf8'
   );
-  saveImportManagerSettings({ readwiseRootPath: readwiseRoot });
+  saveImportManagerSettings({
+    readwiseReaderConfig: { ...createDefaultReadwiseReaderConfig(), enabled: true },
+    readwiseRootPath: readwiseRoot,
+    readwiseSources: createReadwiseImportSources(readwiseRoot).map((source) =>
+      source.kind === 'books' ? { ...source, keepState: 'enabled' as const } : source
+    )
+  });
   return { fullDocumentDir, highlightDir };
-}
-
-async function createMultiChapterBookEpub(fileName: string) {
-  const filePath = path.join(tempRoot, fileName);
-  await fs.writeFile(
-    filePath,
-    createTestZip([
-      { compression: 'store', content: 'application/epub+zip', name: 'mimetype' },
-      {
-        compression: 'store',
-        content:
-          '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
-        name: 'META-INF/container.xml'
-      },
-      {
-        compression: 'store',
-        content:
-          '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Manual Book</dc:title></metadata><manifest><item id="chapter-1" href="text/chapter-1.xhtml" media-type="application/xhtml+xml"/><item id="chapter-2" href="text/chapter-2.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="chapter-1"/><itemref idref="chapter-2"/></spine></package>',
-        name: 'OPS/book.opf'
-      },
-      {
-        compression: 'store',
-        content:
-          '<html><body><h1>Chapter 1</h1><p>First chapter keeps the early remembered quote in place.</p></body></html>',
-        name: 'OPS/text/chapter-1.xhtml'
-      },
-      {
-        compression: 'store',
-        content:
-          '<html><body><h1>Chapter 2</h1><p>Second chapter saves the later insight for a different section.</p></body></html>',
-        name: 'OPS/text/chapter-2.xhtml'
-      }
-    ])
-  );
-  return filePath;
 }
 
 function readImportedBook(rootNodeId: string) {
@@ -141,7 +114,7 @@ function parseAnchorLink(value: string) {
 
 async function importManualReadwiseBook() {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
-  const selectedEpubPath = await createMultiChapterBookEpub('selected-book-multi.epub');
+  const selectedEpubPath = await createMultiChapterBookEpub(tempRoot, 'selected-book-multi.epub');
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [selectedEpubPath] });
 
   const inventory = await scanReadwiseBooksInventory({
@@ -149,9 +122,9 @@ async function importManualReadwiseBook() {
     highlightDirectoryPath: highlightDir,
     readwiseConfig: createDefaultReadwiseReaderConfig()
   });
-  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
+  const nodeId = buildReadwiseBookPlaceholderNodeId('manual book');
 
-  expect(nodeId).toBeTruthy();
+  expect(inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId).toBeNull();
   await loadReadwiseBookEpub(nodeId!);
 
   const importedNodeId = (

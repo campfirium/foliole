@@ -1,7 +1,7 @@
 import type {
   NativeReadwiseCleanupEntry,
   NativeReadwiseCleanupPreviewResult
-} from '../../../lib/platform/nativeContract';
+} from '../../../lib/platform/nativeImportContract';
 import {
   AppButton,
   AppDialog,

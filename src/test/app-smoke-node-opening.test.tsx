@@ -62,6 +62,6 @@ it('updates active node content from editor changes', async () => {
     target: { value: 'Alpha Beta Gamma' }
   });
   await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-1']!?.content).toBe('Alpha Beta Gamma');
+    expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Alpha Beta Gamma');
   });
 });

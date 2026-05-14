@@ -82,10 +82,10 @@ it('keeps search results lightweight until the chosen node is opened', async () 
 
   seedSearchNodes();
 
-  expect(useWorkspaceStore.getState().nodesById['node-3']!?.hasContent).toBe(true);
-  expect(useWorkspaceStore.getState().nodesById['node-4']!?.hasContent).toBe(true);
-  expect(useWorkspaceStore.getState().nodesById['node-5']!?.content).toBe('');
-  expect(useWorkspaceStore.getState().nodesById['node-5']!?.hasContent).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById['node-3']?.hasContent).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById['node-4']?.hasContent).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById['node-5']?.content).toBe('');
+  expect(useWorkspaceStore.getState().nodesById['node-5']?.hasContent).toBe(true);
 
   render(<App />);
 

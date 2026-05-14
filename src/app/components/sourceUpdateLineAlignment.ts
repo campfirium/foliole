@@ -235,42 +235,52 @@ export function alignSourceUpdateLines(currentContent: string, updatedContent: s
     }
   }
 
+  return collectAlignedRows({ currentLines, currentProfiles, dp, updatedLines, updatedProfiles });
+}
+
+function collectAlignedRows(args: {
+  currentLines: string[];
+  currentProfiles: ReturnType<typeof buildLineProfiles>;
+  dp: Int32Array[];
+  updatedLines: string[];
+  updatedProfiles: ReturnType<typeof buildLineProfiles>;
+}) {
   const rows: SourceUpdateAlignedRow[] = [];
   let currentIndex = 0;
   let updatedIndex = 0;
 
-  while (currentIndex < currentProfiles.length && updatedIndex < updatedProfiles.length) {
-    const currentProfile = currentProfiles[currentIndex];
-    const updatedProfile = updatedProfiles[updatedIndex];
+  while (currentIndex < args.currentProfiles.length && updatedIndex < args.updatedProfiles.length) {
+    const currentProfile = args.currentProfiles[currentIndex];
+    const updatedProfile = args.updatedProfiles[updatedIndex];
     if (!currentProfile || !updatedProfile) break;
-    const pairScore = (dp[currentIndex + 1]?.[updatedIndex + 1] ?? 0) + getPairScore(currentProfile, updatedProfile);
-    const removeScore = (dp[currentIndex + 1]?.[updatedIndex] ?? 0) + getGapPenalty(currentProfile);
-    const addScore = (dp[currentIndex]?.[updatedIndex + 1] ?? 0) + getGapPenalty(updatedProfile);
-    const bestScore = dp[currentIndex]?.[updatedIndex] ?? 0;
+    const pairScore = (args.dp[currentIndex + 1]?.[updatedIndex + 1] ?? 0) + getPairScore(currentProfile, updatedProfile);
+    const removeScore = (args.dp[currentIndex + 1]?.[updatedIndex] ?? 0) + getGapPenalty(currentProfile);
+    const addScore = (args.dp[currentIndex]?.[updatedIndex + 1] ?? 0) + getGapPenalty(updatedProfile);
+    const bestScore = args.dp[currentIndex]?.[updatedIndex] ?? 0;
 
     if (bestScore === pairScore && pairScore >= removeScore && pairScore >= addScore) {
-      rows.push({ currentLine: currentLines[currentIndex] ?? '', updatedLine: updatedLines[updatedIndex] ?? '' });
+      rows.push({ currentLine: args.currentLines[currentIndex] ?? '', updatedLine: args.updatedLines[updatedIndex] ?? '' });
       currentIndex += 1;
       updatedIndex += 1;
       continue;
     }
 
     if (bestScore === removeScore && removeScore >= addScore) {
-      rows.push({ currentLine: currentLines[currentIndex] ?? '', updatedLine: null });
+      rows.push({ currentLine: args.currentLines[currentIndex] ?? '', updatedLine: null });
       currentIndex += 1;
       continue;
     }
 
-    rows.push({ currentLine: null, updatedLine: updatedLines[updatedIndex] ?? '' });
+    rows.push({ currentLine: null, updatedLine: args.updatedLines[updatedIndex] ?? '' });
     updatedIndex += 1;
   }
 
-  while (currentIndex < currentLines.length) {
-    rows.push({ currentLine: currentLines[currentIndex] ?? '', updatedLine: null });
+  while (currentIndex < args.currentLines.length) {
+    rows.push({ currentLine: args.currentLines[currentIndex] ?? '', updatedLine: null });
     currentIndex += 1;
   }
-  while (updatedIndex < updatedLines.length) {
-    rows.push({ currentLine: null, updatedLine: updatedLines[updatedIndex] ?? '' });
+  while (updatedIndex < args.updatedLines.length) {
+    rows.push({ currentLine: null, updatedLine: args.updatedLines[updatedIndex] ?? '' });
     updatedIndex += 1;
   }
 

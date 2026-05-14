@@ -2,8 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, it } from 'vitest';
 
-import type { WorkspaceListNode } from '../model/workspaceListNode';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
+import type { WorkspaceListNode } from '../model/workspaceListNode';
 
 import { NodeListTree } from './NodeListTree';
 

@@ -79,13 +79,17 @@ it('supports tree keyboard navigation for node list', async () => {
   fireEvent.keyDown(siblingButton, { key: 'Home' });
   await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1'));
 
+  fireEvent.click(within(getTopicListPanel()).getByRole('treeitem', { name: 'Inbox' }));
+  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe(INBOX_NODE_ID));
+  fireEvent.click(within(currentFolderPanel).getByRole('button', { name: 'Expand all topics' }));
   fireEvent.click(within(currentFolderPanel).getByRole('button', { name: 'Collapse all topics' }));
   expect(within(currentFolderPanel).queryByRole('treeitem', { name: /Child/i })).not.toBeInTheDocument();
 
-  fireEvent.keyDown(rootButton, { key: 'ArrowRight' });
+  const collapsedRootButton = within(currentFolderPanel).getByRole('treeitem', { name: /Root/i });
+  fireEvent.keyDown(collapsedRootButton, { key: 'ArrowRight' });
   const childButton = within(currentFolderPanel).getByRole('treeitem', { name: /Child/i });
 
-  fireEvent.keyDown(rootButton, { key: 'ArrowRight' });
+  fireEvent.keyDown(collapsedRootButton, { key: 'ArrowRight' });
   await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2'));
 
   fireEvent.keyDown(childButton, { key: 'ArrowLeft' });
@@ -142,12 +146,12 @@ it('moves selected nodes as one drag group and preserves selection order', () =>
   fireEvent.dragEnd(dragRow, { dataTransfer });
   rectSpy.mockRestore();
 
-  if (useWorkspaceStore.getState().nodesById['node-2']!?.parentNodeId !== 'node-4') {
+  if (useWorkspaceStore.getState().nodesById['node-2']?.parentNodeId !== 'node-4') {
     useWorkspaceStore.getState().moveNodes(['node-2', 'node-3'], 'node-4', 'child');
   }
   const state = useWorkspaceStore.getState();
-  expect(state.nodesById['node-3']!?.parentNodeId).toBe('node-4');
-  expect(state.nodesById['node-2']!?.parentNodeId).toBe('node-4');
+  expect(state.nodesById['node-3']?.parentNodeId).toBe('node-4');
+  expect(state.nodesById['node-2']?.parentNodeId).toBe('node-4');
   expect(state.nodeOrder).toEqual([INBOX_NODE_ID, 'node-1', 'node-4', 'node-2', 'node-3']);
 });
 

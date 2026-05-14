@@ -113,6 +113,9 @@ const allowedRegexInventory = [
     line: "const baseName = originalName.replace(/\\.[^.]+$/, '').trim();",
     owner: 'clipboard image filename cleanup'
   },
+  { path: 'src/features/editor/adapters/liveMarkdownFrontmatterWidget.ts', line: 'if (!/^[^\\s:/?#]+\\.[^\\s:/?#]+(?:[/?#].*)?$/.test(text)) return null;', owner: 'frontmatter link widget', reason: 'Recognizes bare host-like values before rendering an external link widget.' },
+  { path: 'src/features/editor/adapters/liveMarkdownFrontmatterWidget.ts', line: "return url ? url.hostname.replace(/^www\\./i, '') : value;", owner: 'frontmatter link widget', reason: 'Normalizes displayed host labels without changing the stored frontmatter value.' },
+  { path: 'src/features/editor/adapters/liveMarkdownTableScaffolds.ts', line: "return text.includes('|') && /^[\\s|]+$/.test(text);", owner: 'table scaffold rendering', reason: 'Detects pipe-only scaffold rows for table editing assistance.' },
   {
     path: 'src/features/editor/adapters/lineDiffDecorations.ts',
     line: "return text.replace(/^\\s*#{1,6}\\s*/, '');",
@@ -143,6 +146,7 @@ const allowedRegexInventory = [
     line: "return sliceWithoutRanges(source, from, to, hiddenRanges).trim().replace(/\\s+/g, ' ');",
     owner: 'heading text whitespace normalization'
   },
+  { path: 'src/features/editor/model/markdownFrontmatterProjection.ts', line: 'return /^https?:\\/\\/\\S+$/i.test(value);', owner: 'frontmatter URL projection', reason: 'Classifies complete HTTP(S) frontmatter values for link projection.' },
   {
     path: 'src/features/editor/model/markdownInlineProjection.ts',
     line: 'const PUNCTUATION_PATTERN = /^[.,;:!?]+$/;',
@@ -168,6 +172,7 @@ const allowedRegexInventory = [
     line: "return note.replace(/\\\\([\\\\}])/g, '$1').trim() || null;",
     owner: 'OB-like footnote note unescape'
   },
+  { path: 'src/features/editor/model/markdownTableCells.ts', line: 'const leadingWhitespace = rawText.match(/^\\s*/)?.[0].length ?? 0;', owner: 'markdown table cell projection', reason: 'Preserves table cell offsets while projecting cell text.' },
   {
     path: 'src/features/editor/model/markdownThematicBreakProjection.ts',
     line: "from: offset + lineStart + (line.match(/^\\s*/)?.[0].length ?? 0),",

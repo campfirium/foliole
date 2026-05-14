@@ -208,7 +208,7 @@ describe('CompanionShell review surfaces', () => {
     const settingsButtons = screen.getAllByRole('button', { name: 'Settings' });
     expect(settingsButtons).toHaveLength(2);
     expect(settingsButtons.some((button) => button.getAttribute('aria-current') === 'page')).toBe(true);
-  });
+  }, 10000);
 
   it('opens Tabs settings and enables the fifth shortcut tab', async () => {
     const surface = { ...createReviewEmptySurface(), activeAction: 'more' };

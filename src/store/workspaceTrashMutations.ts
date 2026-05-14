@@ -34,12 +34,7 @@ function removeImageRegionFromParent(parentNode: Node, deletedNode: Node, delete
     if (nextImageRegions === parentNode.imageRegions) {
       return parentNode;
     }
-    const { imageRegions: _imageRegions, ...parentWithoutImageRegions } = parentNode;
-    return {
-      ...(nextImageRegions !== undefined ? parentNode : parentWithoutImageRegions),
-      ...(nextImageRegions !== undefined ? { imageRegions: nextImageRegions } : {}),
-      updatedAt: deletedAt
-    };
+    return updateParentImageRegions(parentNode, nextImageRegions, deletedAt);
   }
   const anchorLink = deletedNode.anchorLink;
   if (!anchorLink || anchorLink.kind !== 'cloze' || !isImageClozeLocator(anchorLink.locator)) {
@@ -49,7 +44,12 @@ function removeImageRegionFromParent(parentNode: Node, deletedNode: Node, delete
   if (nextImageRegions === parentNode.imageRegions) {
     return parentNode;
   }
-  const { imageRegions: _imageRegions, ...parentWithoutImageRegions } = parentNode;
+  return updateParentImageRegions(parentNode, nextImageRegions, deletedAt);
+}
+
+function updateParentImageRegions(parentNode: Node, nextImageRegions: Node['imageRegions'], deletedAt: string) {
+  const parentWithoutImageRegions = { ...parentNode };
+  delete parentWithoutImageRegions.imageRegions;
   return {
     ...(nextImageRegions !== undefined ? parentNode : parentWithoutImageRegions),
     ...(nextImageRegions !== undefined ? { imageRegions: nextImageRegions } : {}),

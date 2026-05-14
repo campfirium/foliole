@@ -1,3 +1,5 @@
+import { definedProps } from '../shared/lib/definedProps';
+
 import {
   addNoteToCompanionExistingHighlight,
   deleteCompanionExistingHighlight,
@@ -5,7 +7,6 @@ import {
 } from './companionSelectionAnnotationActions';
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
-import { definedProps } from '../shared/lib/definedProps';
 
 import type { SelectionAnnotationPayload } from '@/shared/selectionAnnotationActions';
 

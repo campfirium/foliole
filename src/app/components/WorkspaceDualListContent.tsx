@@ -13,11 +13,11 @@ import {
   getVirtualRootResultNodes
 } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import { definedProps } from '../../shared/lib/definedProps';
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
@@ -161,6 +161,40 @@ function useWorkspaceFolderWidthCssVar(width: number) {
   }, [width]);
 }
 
+function renderWorkspaceFolderColumn(
+  props: WorkspaceDualListContentProps,
+  dualListState: ReturnType<typeof useWorkspaceDualListState>
+) {
+  return (
+    <WorkspaceFolderColumn
+      activeFolderId={dualListState.activeFolderId}
+      externalEntriesByFolderId={props.externalEntriesByFolderId}
+      externalFolders={props.externalFolders}
+      externalSelection={props.externalSelection}
+      folderNodeOrder={dualListState.folderNodeOrder}
+      folderNodesById={dualListState.folderNodesById}
+      isExternalViewOpen={props.isExternalViewOpen}
+      isTrashViewOpen={props.isTrashViewOpen}
+      isVirtualViewOpen={props.isVirtualViewOpen}
+      nodeOrder={props.nodeOrder}
+      nodesById={props.listNodesById}
+      onOpenMoveToNode={props.onOpenMoveToNode}
+      onOpenNotesView={props.onOpenNotesView}
+      onOpenExternalSelection={props.onOpenExternalSelection}
+      onOpenTrashView={props.onOpenTrashView}
+      onSelectNode={props.onSelectNode}
+      onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
+      onSelectTrashNode={props.onSelectTrashNode}
+      selectedTrashNodeId={props.selectedTrashNodeId}
+      {...definedProps({
+        activeVirtualNodeId: props.activeVirtualNodeId,
+        onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings,
+        onOpenVirtualView: props.onOpenVirtualView
+      })}
+    />
+  );
+}
+
 export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   const dualListState = useWorkspaceDualListState(props);
   const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
@@ -180,32 +214,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         className="workspace-region-main-folder flex min-h-0 min-w-0 overflow-hidden"
         style={{ flex: `0 0 ${folderListResize.width}px` }}
       >
-        <WorkspaceFolderColumn
-          activeFolderId={dualListState.activeFolderId}
-          externalEntriesByFolderId={props.externalEntriesByFolderId}
-          externalFolders={props.externalFolders}
-          externalSelection={props.externalSelection}
-          isExternalViewOpen={props.isExternalViewOpen}
-          folderNodeOrder={dualListState.folderNodeOrder}
-          folderNodesById={dualListState.folderNodesById}
-          isTrashViewOpen={props.isTrashViewOpen}
-          isVirtualViewOpen={props.isVirtualViewOpen}
-          nodeOrder={props.nodeOrder}
-          nodesById={props.listNodesById}
-          onOpenMoveToNode={props.onOpenMoveToNode}
-          onOpenNotesView={props.onOpenNotesView}
-          onOpenExternalSelection={props.onOpenExternalSelection}
-          onOpenTrashView={props.onOpenTrashView}
-          onSelectNode={props.onSelectNode}
-          onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
-          onSelectTrashNode={props.onSelectTrashNode}
-          selectedTrashNodeId={props.selectedTrashNodeId}
-          {...definedProps({
-            activeVirtualNodeId: props.activeVirtualNodeId,
-            onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings,
-            onOpenVirtualView: props.onOpenVirtualView
-          })}
-        />
+        {renderWorkspaceFolderColumn(props, dualListState)}
       </div>
       <WorkspaceDualListSplitter
         isResizing={folderListResize.isResizing}

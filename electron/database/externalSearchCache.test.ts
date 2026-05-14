@@ -24,8 +24,8 @@ import {
   refreshExternalSearchIndexes,
   searchExternalDocuments
 } from './externalSearchCache.js';
-import { loadExternalSearchBrowseEntries } from './externalSearchCacheRead.js';
 import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
+import { loadExternalSearchBrowseEntries } from './externalSearchCacheRead.js';
 import { saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
 

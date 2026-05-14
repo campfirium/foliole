@@ -1,5 +1,5 @@
-import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.ts';
 import { REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL } from './androidCompanionSyncPolicySql.ts';
+import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.ts';
 export { ANDROID_COMPANION_DIAGNOSTIC_READ_RULES } from './androidCompanionDiagnosticReadRules.ts';
 
 const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;

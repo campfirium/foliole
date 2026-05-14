@@ -54,3 +54,34 @@ it('keeps heavy column projections stable when selection stays in the same folde
   expect(result.current.topicNodesById).toBe(first.topicNodesById);
   expect(result.current.topicNodeOrder).toBe(first.topicNodeOrder);
 });
+
+it('uses the active topic as the content column root when that topic has children', () => {
+  const topicParentNodesById: WorkspaceListNodesById = {
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
+    'topic-parent': createNode({
+      id: 'topic-parent',
+      kind: 'topic',
+      parentNodeId: INBOX_NODE_ID,
+      title: 'Topic parent'
+    }),
+    'topic-child': createNode({
+      id: 'topic-child',
+      kind: 'topic',
+      parentNodeId: 'topic-parent',
+      title: 'Topic child'
+    })
+  };
+
+  const { result } = renderHook(() =>
+    useWorkspaceDualListState({
+      activeNodeId: 'topic-parent',
+      isTrashViewOpen: false,
+      listNodesById: topicParentNodesById,
+      nodeOrder: [INBOX_NODE_ID, 'topic-parent', 'topic-child'],
+      trashedNodeIds: []
+    })
+  );
+
+  expect(result.current.activeFolderColumnId).toBe('topic-parent');
+  expect(result.current.topicNodeOrder).toEqual(['topic-child']);
+});

@@ -135,9 +135,11 @@ export function NodeListRows(props: NodeListRowsProps) {
         : { description: 'Create or import a topic to start editing.', title: 'No topics' };
     return (
       <NodeListStateSurface
-        className={props.isTrashViewOpen ? 'flex min-h-full items-center justify-center px-3 py-6' : undefined}
         emptyState={emptyState}
         hasRows={false}
+        {...(props.isTrashViewOpen
+          ? { className: 'flex min-h-full items-center justify-center px-3 py-6' }
+          : {})}
       >
         {null}
       </NodeListStateSurface>

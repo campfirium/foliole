@@ -3,8 +3,8 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
-import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
+import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';

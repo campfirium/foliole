@@ -83,10 +83,6 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     setSyncProgress((previous) => mergeCompanionSyncProgressSession(previous, progress));
   }, []);
 
-  function clearError() {
-    setError(null);
-  }
-
   const snapshotActions = createWorkspaceSnapshotActions({
     setError,
     setReadableArticle,
@@ -120,7 +116,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
 
   return {
     bootstrapState,
-    clearError,
+    clearError: () => setError(null),
     error,
     readableArticle,
     state,

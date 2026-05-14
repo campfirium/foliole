@@ -85,7 +85,7 @@ describe('companionReadableArticle recent browse helpers', () => {
       'node-2': createViewState('node-2', '2026-04-24T10:00:00.000Z')
     };
 
-    expect(resolveCompanionRecentArticles(snapshot).map((article) => article.nodeId)).toEqual(['node-1', 'node-2', 'node-7']);
+    expect(resolveCompanionRecentArticles(snapshot, 'dateLastOpened').map((article) => article.nodeId)).toEqual(['node-1', 'node-2', 'node-7']);
   });
 
   it('excludes child topics and cloze items from recent articles', () => {
@@ -125,7 +125,7 @@ describe('companionReadableArticle directory browse helpers', () => {
       'node-1': createViewState('node-1', '2026-04-24T10:00:00.000Z')
     };
 
-    expect(resolveCompanionFolderViewByNodeId(snapshot, 'folder-1')?.items.map((item) => item.nodeId)).toEqual([
+    expect(resolveCompanionFolderViewByNodeId(snapshot, 'folder-1', 'dateLastOpened')?.items.map((item) => item.nodeId)).toEqual([
       'folder-2',
       'node-1',
       'node-3'

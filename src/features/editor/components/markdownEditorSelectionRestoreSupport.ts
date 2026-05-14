@@ -155,17 +155,25 @@ export function resolveRestoreTarget(args: {
   if (args.lastRestoredSelectionKey === selectionKey) {
     return null;
   }
-  return {
+  return createResolvedRestoreTarget(args, restoreContext, selectionKey, {
     adapter: args.adapter,
-    nodeId: args.nodeId,
+    nodeId: args.nodeId
+  });
+}
+
+function createResolvedRestoreTarget(
+  args: Parameters<typeof resolveRestoreTarget>[0],
+  restoreContext: NonNullable<ReturnType<typeof createRestoreTargetContext>>,
+  selectionKey: string,
+  target: { adapter: CodeMirrorEditorAdapter; nodeId: string }
+) {
+  return {
+    adapter: target.adapter,
+    nodeId: target.nodeId,
     ...(args.readingRestoreCommandId !== undefined ? { restoreCommandId: args.readingRestoreCommandId } : {}),
-    ...(
-      args.readingTargetViewportMode == null &&
-      typeof args.readingTargetViewportRatio !== 'number' &&
-      restoreContext.restoreScrollTop !== undefined
-        ? { restoreScrollTop: restoreContext.restoreScrollTop }
-        : {}
-    ),
+    ...(shouldUseRestoreScrollTop(args, restoreContext)
+      ? { restoreScrollTop: restoreContext.restoreScrollTop }
+      : {}),
     selection: restoreContext.selection,
     shouldNotifyApplying: shouldNotifyReadingPositionApply({
       ...(args.readingRestoreCommandId !== undefined ? { readingRestoreCommandId: args.readingRestoreCommandId } : {}),
@@ -177,6 +185,17 @@ export function resolveRestoreTarget(args: {
     selectionKey,
     ...(args.readingTargetViewportRatio !== undefined ? { targetViewportRatio: args.readingTargetViewportRatio } : {})
   };
+}
+
+function shouldUseRestoreScrollTop(
+  args: Parameters<typeof resolveRestoreTarget>[0],
+  restoreContext: NonNullable<ReturnType<typeof createRestoreTargetContext>>
+) {
+  return (
+    args.readingTargetViewportMode == null &&
+    typeof args.readingTargetViewportRatio !== 'number' &&
+    restoreContext.restoreScrollTop !== undefined
+  );
 }
 
 function createRestoreSelectionKey(

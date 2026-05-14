@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
 const capacitorMock = vi.hoisted(() => ({
   convertFileSrc: vi.fn((url: string) => `capacitor://${url}`),
@@ -94,13 +95,14 @@ it('bounds Android attachment resource resolution cache entries', async () => {
 
 it('bounds desktop attachment resource resolution cache entries', async () => {
   capacitorMock.isNativePlatform.mockReturnValue(false);
-  const invoke = vi.fn((_command: string, payload: { attachment_id: string }) =>
+  const invokeMock = vi.fn((_command: string, payload?: Record<string, unknown>) =>
     Promise.resolve({
       mime_type: 'image/png',
-      resource_url: `file:///attachments/${payload.attachment_id}`,
+      resource_url: `file:///attachments/${String(payload?.attachment_id ?? '')}`,
       status: 'ready'
     })
   );
+  const invoke: NativeInvoke = invokeMock;
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
   for (let index = 0; index < 513; index += 1) {
@@ -108,11 +110,11 @@ it('bounds desktop attachment resource resolution cache entries', async () => {
   }
 
   expect(readAttachmentResourceCacheStats().entries).toBe(512);
-  invoke.mockClear();
+  invokeMock.mockClear();
   await resolveRuntimeAttachmentResource('asset://att-desktop-0.png');
 
-  expect(invoke).toHaveBeenCalledTimes(1);
-  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.resolveAttachmentResource, {
+  expect(invokeMock).toHaveBeenCalledTimes(1);
+  expect(invokeMock).toHaveBeenCalledWith(NATIVE_COMMANDS.resolveAttachmentResource, {
     attachment_id: 'att-desktop-0'
   });
 });

@@ -158,17 +158,17 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={model.documentLayoutStyle}>
       <DocumentPanelSectionShell
-        bodyProps={{
+        bodyProps={definedProps({
+          ...model.bodyProps,
           onOpenExternalLink: handleOpenExternalLink,
           textAnchorDecorations: model.textAnchorState,
           onOpenNodeLink: interactions.handleOpenNodeLink,
           onPreviewNodeLink: nodeLinkPreview.handlePreviewNodeLink,
+          emptyContent: model.emptyContent,
           ...definedProps({
-            ...model.bodyProps,
-            emptyContent: model.emptyContent,
             onEditorReady: interactions.handleEditorReady
           })
-        }}
+        })}
         backlinks={topicBacklinks}
         isFolderListView={model.isFolderListView}
         isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}

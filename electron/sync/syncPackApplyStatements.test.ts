@@ -21,6 +21,9 @@ it('builds the applyable row filter used by sync pack apply', () => {
   expect(buildSyncPackApplyableRowsSql({ objectType: 'node' })).toContain(
     "AND incoming.object_type = 'node'"
   );
+  expect(buildSyncPackApplyableRowsSql({ objectType: 'node' })).toContain(
+    "incoming.deleted_at IS NOT NULL OR EXISTS"
+  );
 });
 
 it('builds external document pack apply statement', () => {

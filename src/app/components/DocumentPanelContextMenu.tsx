@@ -1,6 +1,6 @@
+import { definedProps } from '../../shared/lib/definedProps';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
-import { definedProps } from '../../shared/lib/definedProps';
 
 import { EditorContextMenu } from './EditorContextMenu';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';

@@ -60,7 +60,7 @@ function createUnresolvedLocatorHighlightHarness() {
 }
 
 function expectParentDocumentUntouched(harness: ReturnType<typeof createUnresolvedLocatorHighlightHarness>['harness']) {
-  expect(harness.getState().nodesById['node-1']!?.content).toBe('before answer after');
+  expect(harness.getState().nodesById['node-1']?.content).toBe('before answer after');
 }
 
 describe('createWorkspaceNodeActions soft delete sync', () => {

@@ -7,8 +7,8 @@ import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 
 import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 import type { EditorViewState } from '@/features/editor/components/markdownEditorTypes';
-import { definedProps } from '@/shared/lib/definedProps';
 import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
+import { definedProps } from '@/shared/lib/definedProps';
 import { syncCompanionAttachmentResourceFromDesktop } from '@/shared/platform/companionDesktopAttachmentResources';
 import { saveCompanionSyncActiveViewState } from '@/shared/platform/companionSyncObjects';
 import { AppButton } from '@/shared/ui';
@@ -42,6 +42,26 @@ function renderOriginalPdf(
   );
 }
 
+function useReadableArticleEditorState(props: {
+  isViewingPdfOriginal: boolean;
+  onSaveContent?: (nodeId: string, content: string) => Promise<void>;
+  readableArticle: ReadableArticle;
+}) {
+  const saveContent = props.onSaveContent;
+  const canEdit = Boolean(saveContent && (!props.readableArticle.bodyStatus || props.readableArticle.bodyStatus === 'ready'));
+  const editorState = useCompanionTopicEditAutosave({
+    canEdit: canEdit && !props.isViewingPdfOriginal,
+    initialContent: props.readableArticle.content,
+    nodeId: props.readableArticle.nodeId,
+    ...definedProps({
+      onSaveContent: saveContent
+        ? (content: string) => saveContent(props.readableArticle.nodeId, content)
+        : undefined
+    })
+  });
+  return { canEdit, editorState };
+}
+
 export function ReadableArticleDocument(props: {
   onAttachmentResourceSynced?: () => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
@@ -52,17 +72,10 @@ export function ReadableArticleDocument(props: {
 }) {
   const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
-  const canEdit = Boolean(props.onSaveContent && (!props.readableArticle.bodyStatus || props.readableArticle.bodyStatus === 'ready'));
-  const saveContent = props.onSaveContent;
-  const editorState = useCompanionTopicEditAutosave({
-    canEdit: canEdit && !isViewingPdfOriginal,
-    initialContent: props.readableArticle.content,
-    nodeId: props.readableArticle.nodeId,
-    ...definedProps({
-      onSaveContent: saveContent
-        ? (content: string) => saveContent(props.readableArticle.nodeId, content)
-        : undefined
-    })
+  const { canEdit, editorState } = useReadableArticleEditorState({
+    isViewingPdfOriginal,
+    readableArticle: props.readableArticle,
+    ...definedProps({ onSaveContent: props.onSaveContent })
   });
   const syncMissingAttachmentResource = useCallback(async (attachmentId: string) => {
     if (!props.syncEndpointUrl) return;

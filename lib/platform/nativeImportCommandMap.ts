@@ -13,8 +13,8 @@ import type {
   NativeTextImportArgs,
   NativeTextImportResult
 } from './nativeImportContract.js';
-import type { NativeMergeReadwiseTopicHighlightsResult } from './nativeStorageContract.js';
 import type { NativeRestoreRemovedSourceArgs, NativeRestoreRemovedSourceResult, NativeRemovedSourcesResult } from './nativeRemovedSourcesContract.js';
+import type { NativeMergeReadwiseTopicHighlightsResult } from './nativeStorageContract.js';
 
 export type NativeImportCommandMap = {
   [NATIVE_COMMANDS.runTextFileImport]: {

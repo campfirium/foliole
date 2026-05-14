@@ -4,7 +4,7 @@ import type {
   NativeReadwiseCleanupRunResult,
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
-} from '../../../lib/platform/nativeContract';
+} from '../../../lib/platform/nativeImportContract';
 import { definedProps } from '../../shared/lib/definedProps';
 import {
   AppButton,

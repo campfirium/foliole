@@ -121,7 +121,7 @@ it('clears import tracking tables and imported node trees together', () => {
   expect(counts.importSources.count).toBe(0);
   expect(counts.keepImportItems.count).toBe(0);
   expect(counts.nodes.count).toBe(0);
-  expect(counts.nodeOrder).toEqual([]);
+  expect(counts.nodeOrder).toEqual([{ node_id: 'special-inbox' }]);
   expect(counts.activeNode).toBeUndefined();
   expect(counts.nodeViewState.count).toBe(0);
 });

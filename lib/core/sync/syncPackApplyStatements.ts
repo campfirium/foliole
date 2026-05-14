@@ -27,6 +27,8 @@ export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOpti
     `SELECT 1 FROM main.sync_push_ack ack WHERE ack.object_type = incoming.object_type ` +
     `AND ack.object_id = incoming.object_id AND ack.state_seq IS NOT NULL ` +
     `AND incoming.state_seq >= ack.state_seq AND incoming.content_hash = current.content_hash))))` +
+    ` AND (incoming.object_type <> 'node' OR incoming.deleted_at IS NOT NULL OR EXISTS (` +
+    `SELECT 1 FROM ${alias}.nodes node_payload WHERE node_payload.id = incoming.object_id))` +
     typeFilter(options.objectType) +
     `)`;
 }

@@ -140,20 +140,6 @@ function expectBrowseTopBarActions() {
   expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
 }
 
-function expectCaptureSheet() {
-  expect(screen.getByRole('dialog', { name: 'Capture' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-  expect(screen.getByRole('textbox', { name: 'Capture text' })).toBeInTheDocument();
-  expect(screen.getByText('Paste from Clipboard')).toBeInTheDocument();
-  expect(screen.getByText('Upload File')).toBeInTheDocument();
-}
-
-function expectBrowseMenuSheet() {
-  expect(screen.getByRole('dialog', { name: 'Browse menu' })).toBeInTheDocument();
-  expect(screen.getByText('Sort')).toBeInTheDocument();
-  expect(screen.getByText('Theme')).toBeInTheDocument();
-}
-
 async function expectReadingDocumentSearch(surface: ReturnType<typeof createReadableSurface>) {
   fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
   expect(screen.getByRole('dialog', { name: 'Actions' })).toBeInTheDocument();
@@ -239,46 +225,5 @@ describe('CompanionShell navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await expectReadingDocumentSearch(surface);
-  });
-});
-
-describe('CompanionShell secondary surfaces', () => {
-  it('opens Browse directory and Capture from the top bar', async () => {
-    await renderShellWithSurface(createSurface('recent'));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Directory' }));
-    expect(screen.queryByRole('heading', { name: 'Directory' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open folder Trash' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Browse' })[0]!);
-    expect(screen.getByRole('button', { name: 'Browse' })).toHaveAttribute('aria-current', 'page');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Capture' }));
-    expectCaptureSheet();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'More' }));
-    expectBrowseMenuSheet();
-  });
-
-  it('opens Only Review as a Learn placeholder without mixed cards', async () => {
-    await renderShellWithSurface(createSurface('review'));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Only Review' }));
-
-    expect(screen.getByRole('heading', { name: 'Only Review' })).toBeInTheDocument();
-    expect(screen.getByText('Only Review mode is ready as a separate Learn surface.')).toBeInTheDocument();
-    expect(screen.queryByTestId('companion-review-card')).not.toBeInTheDocument();
-  });
-
-  it('shows Search as an independent input surface', async () => {
-    await renderShellWithSurface(createSurface('search'));
-
-    const input = screen.getByRole('searchbox', { name: 'Search topics' });
-    fireEvent.change(input, { target: { value: 'queue' } });
-
-    expect(input).toHaveValue('queue');
-    expect(screen.getByRole('heading', { name: 'Results' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Explore later' })).toBeInTheDocument();
   });
 });

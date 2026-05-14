@@ -3,11 +3,11 @@ import { memo } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import { definedProps } from '../../shared/lib/definedProps';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
@@ -67,67 +67,22 @@ function shouldShowWorkspaceEmptyState(args: {
   );
 }
 
-export const WorkspaceListArea = memo(function WorkspaceListArea({
-  activeNodeId,
-  activeVirtualNodeId,
-  isTrashViewOpen,
-  isVirtualViewOpen,
-  isExternalViewOpen,
-  isWorkspaceHydrated,
-  listNodesById,
-  nodesById,
-  nodeOrder,
-  onOpenMoveToNode,
-  onOpenNotesView,
-  onOpenExternalSelection,
-  onOpenExternalLibrarySettings,
-  onOpenTrashView,
-  onOpenVirtualView,
-  onSelectNode,
-  onSelectNodeInVirtualView,
-  onSelectTrashNode,
-  selectedTrashNodeId,
-  trashedNodeIds,
-  externalEntriesByFolderId,
-  externalFolders,
-  externalSelection
-}: WorkspaceListAreaProps) {
+export const WorkspaceListArea = memo(function WorkspaceListArea(props: WorkspaceListAreaProps) {
   const shouldShowEmptyState = shouldShowWorkspaceEmptyState({
-    isTrashViewOpen,
-    isVirtualViewOpen,
-    isExternalViewOpen,
-    nodeOrder,
-    trashedNodeIds,
-    ...definedProps({ isWorkspaceHydrated })
+    isTrashViewOpen: props.isTrashViewOpen,
+    isVirtualViewOpen: props.isVirtualViewOpen,
+    isExternalViewOpen: props.isExternalViewOpen,
+    nodeOrder: props.nodeOrder,
+    trashedNodeIds: props.trashedNodeIds,
+    ...definedProps({ isWorkspaceHydrated: props.isWorkspaceHydrated })
   });
 
   return (
     <div className="workspace-region-main-folder flex min-h-0 flex-1 flex-col overflow-hidden text-foreground">
       {renderWorkspaceListBody({
-        activeNodeId,
-        activeVirtualNodeId,
-        externalEntriesByFolderId,
-        externalFolders,
-        externalSelection,
-        isExternalViewOpen,
-        isTrashViewOpen,
-        isVirtualViewOpen,
-        listNodesById,
-        nodesById,
-        nodeOrder,
-        onOpenMoveToNode,
-        onOpenNotesView,
-        onOpenExternalSelection,
-        onOpenExternalLibrarySettings,
-        onOpenTrashView,
-        onOpenVirtualView,
-        onSelectNode,
-        onSelectNodeInVirtualView,
-        onSelectTrashNode,
-        selectedTrashNodeId,
+        ...props,
         shouldShowEmptyState,
-        trashedNodeIds,
-        ...definedProps({ isWorkspaceHydrated })
+        ...definedProps({ isWorkspaceHydrated: props.isWorkspaceHydrated })
       })}
     </div>
   );

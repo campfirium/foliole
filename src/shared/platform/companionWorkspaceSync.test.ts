@@ -197,7 +197,7 @@ function registerSnapshotPersistenceTest() {
 
     const state = await persistCompanionWorkspaceSnapshot(createUpdatedStoredSnapshot());
 
-    expect(state.workspace_snapshot?.nodesById['node-1']!).toMatchObject({
+    expect(state.workspace_snapshot?.nodesById['node-1']).toMatchObject({
       review: {
         due: '2026-04-25T12:00:00.000Z',
         lastReviewAt: '2026-04-22T12:30:00.000Z',
@@ -205,7 +205,7 @@ function registerSnapshotPersistenceTest() {
       }
     });
     const persistedState = await loadCompanionWorkspaceSyncState();
-    expect(persistedState.workspace_snapshot?.nodesById['node-1']!).toMatchObject({
+    expect(persistedState.workspace_snapshot?.nodesById['node-1']).toMatchObject({
       review: {
         due: '2026-04-25T12:00:00.000Z'
       }

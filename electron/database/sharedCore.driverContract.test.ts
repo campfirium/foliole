@@ -153,12 +153,12 @@ function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRu
     'Answer',
     JSON.stringify({ id: 'anchor-1', kind: 'highlight' }),
     null,
-    2,
+    null,
     null,
     '2026-03-14T00:00:00.000Z',
     '2026-03-14T00:00:00.000Z'
   ]);
-  expect(runs.upsertOrderRun).toHaveBeenCalledWith(['node-1', 2]);
+  expect(runs.upsertOrderRun).not.toHaveBeenCalled();
   expect(runs.upsertReadingRun).toHaveBeenCalledWith([
     'node-1',
     0,

@@ -129,6 +129,34 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_push_ack').get()).toEqual({ count: 0 });
 });
 
+it('does not apply live node state rows when the pack has no node payload', async () => {
+  const connection = openDatabaseConnection();
+  const db = new Database(incomingPath);
+  try {
+    db.prepare('DELETE FROM nodes WHERE id = ?').run('node-1');
+  } finally {
+    db.close();
+  }
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-node-orphan-state-test' });
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 0,
+      deviceId: 'android-device'
+    });
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+
+  expect(connection.sqlite.prepare(
+    `SELECT current_version_id, sync_dirty FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'`
+  ).get()).toEqual({
+    current_version_id: 'android#local',
+    sync_dirty: 0
+  });
+  expect(connection.sqlite.prepare('SELECT id FROM nodes WHERE id = ?').get('node-1')).toBeUndefined();
+});
+
 function createIncomingPack(filePath: string) {
   const db = new Database(filePath);
   try {

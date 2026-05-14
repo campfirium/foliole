@@ -228,7 +228,7 @@ describe('createWorkspaceNodeActions dismiss', () => {
     const dismissed = actions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
 
     expect(dismissed).toBe(true);
-    expect(harness.getState().nodesById['node-1']!?.reading).toMatchObject({
+    expect(harness.getState().nodesById['node-1']?.reading).toMatchObject({
       state: 'dismissed',
       repetitionCount: 0
     });

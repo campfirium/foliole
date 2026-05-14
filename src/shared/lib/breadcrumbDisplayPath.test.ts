@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { definedProps } from './definedProps';
 import { buildBreadcrumbDisplayPath, type BreadcrumbDisplayPathNode } from './breadcrumbDisplayPath';
+import { definedProps } from './definedProps';
 
 function createNode(
   id: string,

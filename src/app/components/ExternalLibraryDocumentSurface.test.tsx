@@ -117,11 +117,11 @@ it('renders the external folder contents in the center document area using the f
   );
 
   expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Sort list by Last opened' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
   expect(screen.getByTestId('folder-list-count')).toHaveTextContent('2');
   expect(screen.getByTestId('folder-list-title-/library/test 6/one.md')).toHaveTextContent('First title');
   expect(screen.getByTestId('folder-list-excerpt-/library/test 6/one.md')).toHaveTextContent('First opening preview from cache.');
-  expect(screen.getByTestId('folder-list-date-/library/test 6/one.md')).toHaveTextContent('Never opened');
+  expect(screen.getByTestId('folder-list-date-/library/test 6/one.md')).toHaveTextContent('2026-04-19');
 
   fireEvent.click(screen.getByRole('button', { name: 'Open First title' }));
 

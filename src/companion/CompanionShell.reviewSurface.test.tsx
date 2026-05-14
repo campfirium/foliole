@@ -155,7 +155,7 @@ describe('CompanionShell review surfaces', () => {
   it('shows the review empty state instead of falling back to reading content', async () => {
     await renderShellWithSurface(reviewSurface(null));
 
-    expect(screen.getByText('No items are due right now.')).toBeInTheDocument();
+    expect(screen.getByText('No items are due right now')).toBeInTheDocument();
     expect(screen.getByText(/Synced review state: 2 reading topics, 9 items\./)).toBeInTheDocument();
     expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
   });

@@ -1,10 +1,10 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { SchedulerCard, ReviewGrade } from '../features/review/model/reviewTypes';
+import { definedProps } from '../shared/lib/definedProps';
 import {
   saveCompanionSyncNodeReadingRecord,
   saveCompanionSyncNodeReviewRecord
 } from '../shared/platform/companionSyncObjects';
-import { definedProps } from '../shared/lib/definedProps';
 
 export interface CompanionReviewLogInput {
   cardAfter: SchedulerCard;

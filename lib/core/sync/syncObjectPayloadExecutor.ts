@@ -1,10 +1,10 @@
 import type { DbPort } from './dbPort.js';
-import { asObject, integer, numberOrNull, text, type JsonObject } from './syncObjectPayloadValues.js';
 import {
   applyNodeReadingObject,
   applyNodeReviewObject,
   type SyncObjectPayloadApplyOptions
 } from './syncObjectLearningPayloadExecutor.js';
+import { asObject, integer, numberOrNull, text, type JsonObject } from './syncObjectPayloadValues.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 export async function applySyncObjectPayloadWithDbPort(

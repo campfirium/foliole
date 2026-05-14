@@ -1,5 +1,5 @@
-import type { loadCompanionExternalDocument } from '../shared/platform/companionExternalDocuments';
 import { definedProps } from '../shared/lib/definedProps';
+import type { loadCompanionExternalDocument } from '../shared/platform/companionExternalDocuments';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
 type ExternalDocument = NonNullable<Awaited<ReturnType<typeof loadCompanionExternalDocument>>>;

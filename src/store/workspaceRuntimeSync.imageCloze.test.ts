@@ -75,7 +75,7 @@ describe('workspaceRuntimeSync image cloze clearing', () => {
           }
         },
         trashedNodeIds: []
-      })?.nodesById['node-1']!?.imageRegions
+      })?.nodesById['node-1']?.imageRegions
     ).toBeNull();
 
     await Promise.resolve();

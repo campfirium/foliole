@@ -11,6 +11,7 @@ let mockedAppDataDir = '/tmp/foliole-readwise-book-manual-reimport-tests';
 const { showOpenDialog } = vi.hoisted(() => ({
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/selected-book.epub'] })
 }));
+const primaryDeviceMock = vi.hoisted(() => ({ canRunExternalSources: true }));
 
 vi.mock('electron', () => ({
   dialog: { showOpenDialog },
@@ -25,7 +26,11 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
+vi.mock('../sync/primaryDeviceState.js', () => ({
+  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
+}));
 
+import { createReadwiseImportSources } from '../../lib/core/import/importManagerSettings.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -33,6 +38,7 @@ import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { loadReadwiseBookEpub } from './readwiseBookManualActions.js';
+import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { scanReadwiseBooksInventory } from './readwiseBooksInventory.js';
 
 let tempRoot = '';
@@ -40,6 +46,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-book-manual-reimport-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  primaryDeviceMock.canRunExternalSources = true;
   initializeDatabase();
   showOpenDialog.mockReset();
 });
@@ -57,7 +64,13 @@ async function createBooksFixture() {
   await fs.mkdir(fullDocumentDir, { recursive: true });
   await fs.writeFile(path.join(highlightDir, 'Manual Book.md'), '# Manual Book\n\n## Highlights\nSaved quote.\n', 'utf8');
   await fs.writeFile(path.join(fullDocumentDir, 'Manual Book.md'), '# Manual Book\n\n## Full Document\nWaiting for EPUB.\n', 'utf8');
-  saveImportManagerSettings({ readwiseRootPath: readwiseRoot });
+  saveImportManagerSettings({
+    readwiseReaderConfig: { ...createDefaultReadwiseReaderConfig(), enabled: true },
+    readwiseRootPath: readwiseRoot,
+    readwiseSources: createReadwiseImportSources(readwiseRoot).map((source) =>
+      source.kind === 'books' ? { ...source, keepState: 'enabled' as const } : source
+    )
+  });
   return { fullDocumentDir, highlightDir };
 }
 
@@ -101,11 +114,19 @@ it('reimports into the same readwise book node without creating another root nod
     highlightDirectoryPath: highlightDir,
     readwiseConfig: createDefaultReadwiseReaderConfig()
   });
-  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
+  const placeholderNodeId = buildReadwiseBookPlaceholderNodeId('manual book');
 
+  expect(inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId).toBeNull();
+
+  await expect(loadReadwiseBookEpub(placeholderNodeId)).resolves.toMatchObject({ status: 'selected' });
+  const firstReloadedInventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  const nodeId = firstReloadedInventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
   expect(nodeId).toBeTruthy();
 
-  await expect(loadReadwiseBookEpub(nodeId!)).resolves.toMatchObject({ status: 'selected' });
   await expect(loadReadwiseBookEpub(nodeId!)).resolves.toMatchObject({ status: 'selected' });
 
   const reloadedInventory = await scanReadwiseBooksInventory({

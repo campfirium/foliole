@@ -36,6 +36,21 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
       'companion-sync-pack-apply'
     );
     expect(resolvePlatformSubdomain('src/shared/platform/companionSyncCursors.ts')).toBe('companion-sync-reader');
+    expect(resolvePlatformSubdomain('src/shared/platform/companionPrimaryDeviceIdentity.ts')).toBe(
+      'companion-runtime-plugin'
+    );
+    expect(resolvePlatformSubdomain('src/shared/platform/readwiseReaderImportRuntimeRepository.ts')).toBe(
+      'import-runtime'
+    );
+    expect(resolvePlatformSubdomain('src/shared/platform/readwiseImportCleanupRuntimeRepository.ts')).toBe(
+      'import-runtime'
+    );
+    expect(resolvePlatformSubdomain('src/shared/platform/removedSourcesRuntimeRepository.ts')).toBe(
+      'import-runtime'
+    );
+    expect(resolvePlatformSubdomain('src/shared/platform/devReimportSelectedTopic.ts')).toBe(
+      'desktop-runtime-repository'
+    );
     expect(resolvePlatformSubdomain('src/shared/platform/unownedRuntimeThing.ts')).toBe(null);
   });
 
@@ -83,6 +98,21 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     `);
     await writeFixtureFile(repoRoot, 'src/shared/platform/companionSyncWriterQueue.ts', `
       export function runCompanionSyncWriterTask() {}
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('allows import runtime to refresh external runtime state after imports', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/shared/platform/readwiseReaderImportRuntimeRepository.ts', `
+      import { refreshRuntimeExternalSearchFolders } from './externalSearchRuntimeRepository';
+      export const refresh = refreshRuntimeExternalSearchFolders;
+    `);
+    await writeFixtureFile(repoRoot, 'src/shared/platform/externalSearchRuntimeRepository.ts', `
+      export function refreshRuntimeExternalSearchFolders() {}
     `);
 
     const result = inspectLayerDependencyBoundary({ repoRoot });

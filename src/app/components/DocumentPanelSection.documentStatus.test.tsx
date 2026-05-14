@@ -16,6 +16,32 @@ function getEmptyContent() {
   };
 }
 
+it('shows a loading state before workspace hydration finishes', () => {
+  renderSectionWithProps({
+    activeNodeId: null,
+    editorNodeId: null,
+    isWorkspaceHydrated: false,
+    nodesById: {}
+  });
+
+  const bodyProps = getEmptyContent();
+  expect(bodyProps.emptyState?.title).toBe('Loading workspace');
+  expect(bodyProps.emptyContent).toBeTruthy();
+});
+
+it('shows an empty state after hydration when no note is selected', () => {
+  renderSectionWithProps({
+    activeNodeId: null,
+    editorNodeId: null,
+    isWorkspaceHydrated: true,
+    nodesById: {}
+  });
+
+  const bodyProps = getEmptyContent();
+  expect(bodyProps.emptyState?.title).toBe('No document selected');
+  expect(bodyProps.emptyContent).toBeUndefined();
+});
+
 it('shows a retryable error state when the topic body failed to load', () => {
   renderSectionWithProps({
     nodesById: {

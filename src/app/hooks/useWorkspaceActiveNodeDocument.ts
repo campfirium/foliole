@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 
+import { definedProps } from '../../shared/lib/definedProps';
 import {
   beginNodeSelectionFlow,
   markNodeDocumentMerged,
   markNodeDocumentLoadResolved,
   markNodeDocumentLoadStarted
 } from '../../shared/platform/performanceDiagnosticsProbe';
-import { definedProps } from '../../shared/lib/definedProps';
 import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';

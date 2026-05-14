@@ -168,7 +168,7 @@ it('writes sync state for review grading without generic change log rows', () =>
     deleted_at: null,
     sync_dirty: 1
   });
-  expect(String(state?.last_modified_by_device_id)).toMatch(/^desktop-/);
+  expect(String(state?.last_modified_by_device_id)).toMatch(/^device-/);
   expect(change.count).toBe(0);
 });
 

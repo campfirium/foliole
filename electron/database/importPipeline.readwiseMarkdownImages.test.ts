@@ -83,8 +83,7 @@ it('keeps imported sidecar highlight locators aligned after local image rewrite'
   expect(locator ? nodeRow.content.slice(locator.from, locator.to) : null).toBe('大罗SEO target sentence.');
 });
 
-it('matches readwise highlights before remote image localization and remaps after image rewrite', async () => {
-  const readwiseRoot = await fs.mkdtemp(path.join(tempRoot, 'readwise-images-'));
+async function createReadwiseImageFixture(readwiseRoot: string) {
   const fullDir = path.join(readwiseRoot, 'Full Document Contents', 'Articles');
   const highlightDir = path.join(readwiseRoot, 'Articles');
   await fs.mkdir(fullDir, { recursive: true });
@@ -97,6 +96,12 @@ it('matches readwise highlights before remote image localization and remaps afte
     path.join(highlightDir, 'list.md'),
     ['# Article', '', '## Highlights', '', '- ![Avatar](https://cdn.example.com/avatar.png)', '  大罗SEO target sentence.'].join('\n')
   );
+  return { fullDir, highlightDir };
+}
+
+it('matches readwise highlights before remote image localization and remaps after image rewrite', async () => {
+  const readwiseRoot = await fs.mkdtemp(path.join(tempRoot, 'readwise-images-'));
+  const { fullDir, highlightDir } = await createReadwiseImageFixture(readwiseRoot);
 
   const prepared = await loadPreparedReadwiseImportRecord({
     adapterId: 'markdown_directory',

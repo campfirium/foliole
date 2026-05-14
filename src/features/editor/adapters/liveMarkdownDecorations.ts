@@ -144,6 +144,22 @@ function collectCalloutPrefixRangeByLineFrom(view: EditorView) {
   return rangesByLineFrom;
 }
 
+function collectViewportTablePlans(args: {
+  endLine: { to: number };
+  source: string;
+  startLine: { from: number };
+  view: EditorView;
+}) {
+  const tablePlans = collectMarkdownTablePlans({
+    activePosition: null,
+    anchorDecorations: getTextAnchorDecorations(args.view),
+    from: 0,
+    linkReferences: collectMarkdownLinkReferences(args.source),
+    text: args.source
+  });
+  return collectViewportMarkdownTablePlans(tablePlans, { from: args.startLine.from, to: args.endLine.to });
+}
+
 export function buildPreviewDecorationSet(view: EditorView, context: DecorationBuildContext): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
@@ -158,14 +174,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const lineClassByFrom = collectLineClassByFrom(view);
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
   const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
-  const tablePlans = collectMarkdownTablePlans({
-    activePosition: null,
-    anchorDecorations: getTextAnchorDecorations(view),
-    from: 0,
-    linkReferences,
-    text: source
-  });
-  const viewportTablePlans = collectViewportMarkdownTablePlans(tablePlans, { from: startLine.from, to: endLine.to });
+  const viewportTablePlans = collectViewportTablePlans({ endLine, source, startLine, view });
   const viewportPlans = collectPreviewViewportPlans({
     codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
     codeLineFroms: codeFenceProjection.codeLineFroms,

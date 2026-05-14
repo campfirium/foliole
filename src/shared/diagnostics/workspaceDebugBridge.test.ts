@@ -142,6 +142,7 @@ it('reads active node id and saved node view state through the debug bridge', as
   });
   expect(debugApi?.getNodeViewState('missing-node')).toBeNull();
 
+  const updated = await debugApi?.updateNodeContent('debug-node-1', 'Alpha Beta');
   const createdHighlightId = await debugApi?.createTextHighlightChild({
     anchorId: 'hl-debug-1',
     parentNodeId: 'debug-node-1',
@@ -153,7 +154,6 @@ it('reads active node id and saved node view state through the debug bridge', as
     parentNodeId: 'debug-node-1',
     prompt: '[...] Beta'
   });
-  const updated = await debugApi?.updateNodeContent('debug-node-1', 'Alpha Beta');
 
   expect(createdHighlightId).toBeTruthy();
   expect(createdClozeId).toBeTruthy();
@@ -164,7 +164,7 @@ it('reads active node id and saved node view state through the debug bridge', as
   expect(debugApi?.getNode('debug-node-1')).toMatchObject({
     content: 'Alpha Beta',
     id: 'debug-node-1',
-    title: 'Alpha Beta',
+    title: 'Debug Node 1',
     trashed: false
   });
   expect(useWorkspaceStore.getState().nodesById['debug-node-1']?.content).toBe('Alpha Beta');

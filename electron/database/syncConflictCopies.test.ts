@@ -107,14 +107,14 @@ it('creates one inbox conflict copy for divergent remote node versions', async (
   });
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM nodes WHERE id LIKE ?').get('conflict-copy-%'))
     .toEqual({ count: 1 });
-  expect(connection.sqlite.prepare('SELECT node_id, position FROM node_order WHERE node_id = ?').get(copyNodeId))
-    .toEqual({ node_id: copyNodeId, position: 0 });
+  expect(connection.sqlite.prepare('SELECT node_id FROM node_order WHERE node_id = ?').get(copyNodeId))
+    .toBeUndefined();
   expect(
     connection.sqlite
       .prepare('SELECT object_id, device_id, parent_version_id FROM node_sync_versions WHERE object_id = ?')
       .get(copyNodeId)
   ).toEqual({
-    device_id: expect.stringMatching(/^desktop-/),
+    device_id: expect.stringMatching(/^device-/),
     object_id: copyNodeId,
     parent_version_id: null
   });

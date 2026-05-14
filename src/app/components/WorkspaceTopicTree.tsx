@@ -193,8 +193,6 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     collapsibleNodeIds,
     collapsedNodeIds,
     contentSort,
-    emptyStateDescription: props.emptyStateDescription,
-    emptyStateTitle: props.emptyStateTitle,
     focusedNodeId,
     hasCollapsedNodes,
     interaction,
@@ -203,6 +201,10 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     searchQuery,
     setCollapsedNodeIds,
     setSearchQuery,
-    visibleRows
+    visibleRows,
+    ...(props.emptyStateDescription !== undefined
+      ? { emptyStateDescription: props.emptyStateDescription }
+      : {}),
+    ...(props.emptyStateTitle !== undefined ? { emptyStateTitle: props.emptyStateTitle } : {})
   });
 }

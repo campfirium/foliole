@@ -3,6 +3,7 @@ import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNode
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
 import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
+import { forceUpdateDebugNodeContent } from './workspaceDebugNodeContent';
 import { type DebugNodeSeed, persistSeedNodes } from './workspaceDebugSeedPersistence';
 import { type WorkspaceSyncDebugApi, createWorkspaceSyncDebugApi } from './workspaceSyncDebugBridge';
 
@@ -68,6 +69,7 @@ function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode
       {
         ...initialNode,
         anchorLink: node.anchorLink ?? null,
+        bodyStatus: node.content.trim().length > 0 ? 'ready' : 'empty',
         content: node.content,
         createdAt,
         hasContent: node.content.trim().length > 0,
@@ -123,6 +125,8 @@ function createNodeMutationDebugApi(): Pick<
       const state = getExistingNodeState(nodeId);
       if (!state) return false;
       state.updateNodeContent(nodeId, content);
+      if (useWorkspaceStore.getState().nodesById[nodeId]?.content === content) return true;
+      forceUpdateDebugNodeContent(nodeId, content);
       return true;
     }
   };

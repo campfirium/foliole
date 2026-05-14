@@ -113,17 +113,7 @@ function AnswerSection(props: DocumentPanelBodyLayoutProps) {
 
 function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
   if (props.emptyState) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col py-8">
-        <div className="flex min-h-0 flex-1 px-6 max-[1080px]:px-4">
-          {props.emptyContent ?? (
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              <AppEmptyState description={props.emptyState.description} title={props.emptyState.title} />
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return renderDocumentEmptyBody(props, props.emptyState);
   }
 
   const promptEditorKey = `prompt-${props.editorAppearanceKey}`;
@@ -171,6 +161,23 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
           textAnchorDecorations: props.textAnchorDecorations
         })}
       />
+    </div>
+  );
+}
+
+function renderDocumentEmptyBody(
+  props: DocumentPanelBodyLayoutProps,
+  emptyState: NonNullable<DocumentPanelBodyLayoutProps['emptyState']>
+) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col py-8">
+      <div className="flex min-h-0 flex-1 px-6 max-[1080px]:px-4">
+        {props.emptyContent ?? (
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            <AppEmptyState description={emptyState.description} title={emptyState.title} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

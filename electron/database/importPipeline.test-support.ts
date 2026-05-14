@@ -42,9 +42,8 @@ export function readInboxChildTitlesByOrder() {
     .prepare(
       `SELECT n.title
        FROM nodes n
-       JOIN node_order o ON o.node_id = n.id
        WHERE n.parent_id = 'special-inbox'
-       ORDER BY o.position ASC`
+       ORDER BY n.created_at DESC, n.title ASC`
     )
     .all() as Array<{ title: string }>;
 }

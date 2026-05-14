@@ -93,7 +93,7 @@ it('creates a sync version from a dirty node and clears the dirty flag', () => {
 
   const versionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z');
 
-  expect(versionId).toMatch(/^desktop-.*#0$/);
+  expect(versionId).toMatch(/^device-.*#0$/);
   expect(
     connection.driver.queryOne<{ sync_dirty: number; current_version_id: string | null; last_modified_by_device_id: string | null }>(
       'SELECT sync_dirty, current_version_id, last_modified_by_device_id FROM nodes WHERE id = ?',
@@ -101,7 +101,7 @@ it('creates a sync version from a dirty node and clears the dirty flag', () => {
     )
   ).toEqual({
     current_version_id: versionId,
-    last_modified_by_device_id: expect.stringMatching(/^desktop-/),
+    last_modified_by_device_id: expect.stringMatching(/^device-/),
     sync_dirty: 0
   });
   const versionRow = connection.driver.queryOne<{
@@ -138,7 +138,7 @@ it('creates an initial sync version for an unversioned clean node', () => {
       ['node-1']
     )
   ).toEqual({
-    current_version_id: expect.stringMatching(/^desktop-.*#0$/),
+    current_version_id: expect.stringMatching(/^device-.*#0$/),
     sync_dirty: 0
   });
   expect(
@@ -152,7 +152,7 @@ it('creates an initial sync version for an unversioned clean node', () => {
 it('uses node_order as the sync snapshot position source', () => {
   upsertTestNode();
   const connection = openDatabaseConnection();
-  connection.driver.execute('UPDATE nodes SET position = NULL WHERE id = ?', ['node-1']);
+  connection.driver.execute('UPDATE nodes SET kind = ?, position = NULL WHERE id = ?', ['folder', 'node-1']);
   connection.driver.execute(
     `INSERT INTO node_order (node_id, position) VALUES (?, ?)
      ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`,
@@ -196,7 +196,7 @@ it('creates a tombstone sync version when soft deleting a versioned node', () =>
     ['node-1']
   );
   expect(node).toEqual({
-    current_version_id: expect.stringMatching(/^desktop-.*#1$/),
+    current_version_id: expect.stringMatching(/^device-.*#1$/),
     deleted_at: '2026-04-21T10:02:00.000Z',
     sync_dirty: 0
   });

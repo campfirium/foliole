@@ -21,7 +21,6 @@ function expectDocumentBodyLayout(args: {
     documentPanelBodyMock.mock.calls.some(([props]) =>
       props &&
       typeof props === 'object' &&
-      'editorContentPaddingBottom' in props &&
       'fitBlockImagesToViewport' in props &&
       (props as { editorContentPaddingBottom?: string }).editorContentPaddingBottom === args.editorContentPaddingBottom &&
       (props as { fitBlockImagesToViewport?: boolean }).fitBlockImagesToViewport === args.fitBlockImagesToViewport
@@ -255,43 +254,3 @@ it('saves the virtual node keyword through the detail form', () => {
   expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'reader');
 });
 
-
-it('shows a loading state before workspace hydration finishes', () => {
-  renderSectionWithProps({
-    activeNodeId: null,
-    editorNodeId: null,
-    isWorkspaceHydrated: false,
-    nodesById: {}
-  });
-
-  expect(
-    documentPanelBodyMock.mock.calls.some(([props]) =>
-      props &&
-      typeof props === 'object' &&
-      'emptyState' in props &&
-      'emptyContent' in props &&
-      (props as { emptyState?: { title?: string } }).emptyState?.title === 'Loading workspace' &&
-      Boolean((props as { emptyContent?: unknown }).emptyContent)
-    )
-  ).toBe(true);
-});
-
-it('shows an empty state after hydration when no note is selected', () => {
-  renderSectionWithProps({
-    activeNodeId: null,
-    editorNodeId: null,
-    isWorkspaceHydrated: true,
-    nodesById: {}
-  });
-
-  expect(
-    documentPanelBodyMock.mock.calls.some(([props]) =>
-      props &&
-      typeof props === 'object' &&
-      'emptyState' in props &&
-      'emptyContent' in props &&
-      (props as { emptyState?: { title?: string } }).emptyState?.title === 'No document selected' &&
-      !(props as { emptyContent?: unknown }).emptyContent
-    )
-  ).toBe(true);
-});

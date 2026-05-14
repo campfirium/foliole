@@ -98,7 +98,7 @@ describe('companion new selection annotation actions', () => {
     });
 
     expect(result?.nodeId).toBe('node-00000000-0000-4000-8000-000000000001');
-    expect(result?.snapshot.nodesById['node-00000000-0000-4000-8000-000000000001']!).toMatchObject({
+    expect(result?.snapshot.nodesById['node-00000000-0000-4000-8000-000000000001']).toMatchObject({
       anchorLink: { id: 'anchor-1', kind: 'highlight' },
       content: 'Beta',
       kind: 'topic',

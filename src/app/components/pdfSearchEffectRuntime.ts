@@ -1,6 +1,7 @@
+import { definedProps } from '../../shared/lib/definedProps';
+
 import type { PdfSearchRequest, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfSearchMatch } from './pdfSearchMatchCollection';
-import { definedProps } from '../../shared/lib/definedProps';
 
 export function scrollToMatch(container: HTMLDivElement, match: PdfSearchMatch) {
   const shell = container.querySelector<HTMLElement>(`[data-pdf-page-number="${match.page}"]`);

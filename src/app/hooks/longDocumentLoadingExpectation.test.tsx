@@ -214,7 +214,7 @@ it('restores a mid-document reading position after the recent cache is eventuall
   useWorkspaceStore.getState().setActiveNode('node-2');
   view.rerender(<HookHarness activeNodeId="node-2" />);
   await expectNodeDocument('node-2', 'Loaded node 2 body');
-  expect(useWorkspaceStore.getState().nodesById['node-1']!?.content).toBe(longDocument);
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(longDocument);
 
   useWorkspaceStore.getState().setActiveNode('node-3');
   view.rerender(<HookHarness activeNodeId="node-3" />);
@@ -225,7 +225,7 @@ it('restores a mid-document reading position after the recent cache is eventuall
   await expectNodeDocument('node-4', 'Loaded node 4 body');
   await expectTrimmedNode('node-1');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']!?.content).toBe('');
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('');
   expect(useWorkspaceStore.getState().nodeViewById['node-1']).toMatchObject({
     scrollTop: 5_400,
     selection: { from: 48_000, to: 48_024 }
@@ -239,7 +239,7 @@ it('restores a mid-document reading position after the recent cache is eventuall
     <MarkdownEditor
       nodeId="node-1"
       onChange={vi.fn()}
-      value={useWorkspaceStore.getState().nodesById['node-1']!?.content ?? ''}
+      value={useWorkspaceStore.getState().nodesById['node-1']?.content ?? ''}
       {...definedProps({ nodeViewState: useWorkspaceStore.getState().nodeViewById['node-1'] })}
     />
   );

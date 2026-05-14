@@ -84,6 +84,14 @@ function seedAutoExpandState(includeSecondFolder = false) {
   }));
 }
 
+function clickRowChevron(row: HTMLElement) {
+  const chevron = row.querySelector('[data-node-tree-chevron="true"]');
+  if (!(chevron instanceof HTMLElement)) {
+    throw new Error('Expected row chevron');
+  }
+  fireEvent.click(chevron);
+}
+
 it('keeps derived branches collapsed by default while still showing the active path', () => {
   seedAutoExpandState(true);
 
@@ -112,7 +120,7 @@ it('keeps manual collapse and does not auto-expand another derived branch after 
   render(<App />);
 
   const listPanel = getCurrentFolderPanel();
-  fireEvent.click(within(listPanel).getByRole('button', { name: 'Collapse Article A' }));
+  clickRowChevron(within(listPanel).getByRole('treeitem', { name: 'Article A' }));
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A2' })).not.toBeInTheDocument();
 

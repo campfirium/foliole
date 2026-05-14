@@ -75,4 +75,29 @@ describe('native app menu', () => {
     expect(findMenuItem(items, 'nodes.enterPriorityMode')).toMatchObject({ accelerator: 'Control+M', enabled: true });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).toMatchObject({ accelerator: null, enabled: false });
   });
+
+  it('rebuilds menu items instead of mutating read-only accelerators', () => {
+    menuMock.buildFromTemplate.mockImplementation((template: Record<string, unknown>[]) => {
+      const menu = { items: template.map((item) => toMenuItem(item)) };
+      const target = findMenuItem(menu.items, 'editor.toggleImmersiveMode');
+      if (target) {
+        Object.defineProperty(target, 'accelerator', {
+          configurable: true,
+          value: null,
+          writable: false
+        });
+      }
+      return menu;
+    });
+
+    installAppMenu();
+
+    expect(() =>
+      syncAppMenuState(
+        ['editor.toggleImmersiveMode'],
+        [{ accelerator: 'F11', commandId: 'editor.toggleImmersiveMode' }]
+      )
+    ).not.toThrow();
+    expect(menuMock.setApplicationMenu).toHaveBeenCalledTimes(2);
+  });
 });

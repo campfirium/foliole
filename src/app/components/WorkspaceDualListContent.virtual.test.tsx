@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -224,7 +224,7 @@ it('collapses virtual descendants without removing the virtual section itself', 
   expect(screen.getByRole('treeitem', { name: 'Saved Search A' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Saved Search B' })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Collapse Virtual' }));
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowLeft' });
 
   expect(screen.queryByRole('treeitem', { name: 'Saved Search A' })).toBeNull();
   expect(screen.queryByRole('treeitem', { name: 'Saved Search B' })).toBeNull();

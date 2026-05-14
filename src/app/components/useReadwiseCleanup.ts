@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type {
   NativeReadwiseCleanupPreviewResult,
   NativeReadwiseCleanupRunResult
-} from '../../../lib/platform/nativeContract';
+} from '../../../lib/platform/nativeImportContract';
 
 type PreviewCleanup = () => Promise<NativeReadwiseCleanupPreviewResult | null>;
 type RunCleanup = () => Promise<NativeReadwiseCleanupRunResult | null>;

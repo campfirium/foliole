@@ -1,8 +1,8 @@
-import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from './androidCompanionSyncPayloadRoutingDefinitions.ts';
 import {
   ANDROID_COMPANION_SYNC_OBJECT_POLICY_DEFINITIONS,
   ANDROID_COMPANION_SYNC_OBJECT_TYPES
 } from './androidCompanionSyncObjectPolicyDefinitions.ts';
+import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from './androidCompanionSyncPayloadRoutingDefinitions.ts';
 
 export const ANDROID_COMPANION_RESOURCE_STATUSES = {
   cached: 'cached',

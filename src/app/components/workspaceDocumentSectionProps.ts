@@ -1,6 +1,7 @@
+import { definedProps } from '../../shared/lib/definedProps';
+
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
-import { definedProps } from '../../shared/lib/definedProps';
 
 function buildReadingPositionProps(props: WorkspaceDocumentSurfaceProps) {
   const restoreCommand = props.getReadingPositionRestoreCommand();

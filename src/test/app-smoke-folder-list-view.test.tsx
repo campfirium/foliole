@@ -15,7 +15,8 @@ function getFolderListTitles() {
 }
 
 function chooseFolderSort(label: 'Last opened' | 'Date modified') {
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Last opened' }), { key: 'ArrowDown' });
+  const folderListView = screen.getByRole('region', { name: 'Folder list view' });
+  fireEvent.keyDown(within(folderListView).getByRole('button', { name: /Sort list by / }), { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('menuitem', { name: label }));
 }
 
@@ -82,7 +83,7 @@ it('opens the selected child content when a folder list item is clicked', async 
   });
 });
 
-it('sorts folder items by last opened time by default', () => {
+it('sorts folder items by date modified by default', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1', 'note-1', 'note-2', 'note-3'],
@@ -115,10 +116,10 @@ it('sorts folder items by last opened time by default', () => {
 
   render(<App />);
 
-  expect(getFolderListTitles()).toEqual(['Middle note', 'Newest note', 'Old note']);
+  expect(getFolderListTitles()).toEqual(['Newest note', 'Middle note', 'Old note']);
 });
 
-it('switches to saved sorting and keeps folder open until a topic is opened', async () => {
+it('switches to last opened sorting and keeps folder open until a topic is opened', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1', 'note-1', 'note-2', 'note-3'],
@@ -151,7 +152,7 @@ it('switches to saved sorting and keeps folder open until a topic is opened', as
 
   render(<App />);
 
-  chooseFolderSort('Date modified');
+  chooseFolderSort('Last opened');
 
   expect(getFolderListTitles()).toEqual(['Alpha', 'Alpha', 'Beta']);
   expect(useWorkspaceStore.getState().activeNodeId).toBe('folder-1');

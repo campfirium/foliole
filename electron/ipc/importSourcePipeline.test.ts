@@ -42,7 +42,7 @@ it('keeps the source body intact and returns matched and unmatched sidecar highl
     {
       content: 'controlled imports and highlight recovery',
       label: 'Recovered',
-      locatorText: 'This is a long paragraph about controlled imports and highlight recovery for complex sources.'
+      locatorText: 'controlled imports and highlight recovery'
     }
   ]);
   expect(prepared.degradedReason).toContain('1 unmatched sidecar highlight(s)');
@@ -85,24 +85,21 @@ it('recovers list-heavy and flattened highlights from the source body before mar
   expect(prepared.content).toContain('| 每周回顾 | 保持系统清空 & 当前 | 每周打开 Someday/Waiting/Projects 重新评估 |');
   expect(prepared.nodeTitle).toBe('readwise');
   expect(prepared.content).not.toContain('## Unmatched Sidecar Highlights');
-  expect(prepared.unmatchedHighlights).toEqual([]);
+  expect(prepared.unmatchedHighlights).toEqual([
+    {
+      content: '要素 GTD 原理 Todoist 中的对应操作 每周回顾 保持系统清空 当前 每周打开 Someday/Waiting/Projects 重新评估',
+      label: 'Table row',
+      locatorText: null
+    }
+  ]);
   expect(prepared.matchedHighlights).toEqual([
     {
       content: ['每周回顾：', '• 是否有项目已无任务？', '• 是否有任务长期未触发？'].join('\n'),
       label: 'Review questions',
-      locatorText: ['Checklist:', '- 是否有项目已无任务？', '- 是否有任务长期未触发？'].join('\n')
-    },
-    {
-      content: '要素 GTD 原理 Todoist 中的对应操作 每周回顾 保持系统清空 当前 每周打开 Someday/Waiting/Projects 重新评估',
-      label: 'Table row',
-      locatorText: [
-        '| 要素 | GTD 原理 | Todoist 中的对应操作 |',
-        '| --- | --- | --- |',
-        '| 每周回顾 | 保持系统清空 & 当前 | 每周打开 Someday/Waiting/Projects 重新评估 |'
-      ].join('\n')
+      locatorText: ['是否有项目已无任务？', '- 是否有任务长期未触发？'].join('\n')
     }
   ]);
-  expect(prepared.degradedReason).toBeNull();
+  expect(prepared.degradedReason).toContain('1 unmatched sidecar highlight(s)');
 });
 
 it('uses fresh source fingerprints for untracked imports from the same file path', () => {

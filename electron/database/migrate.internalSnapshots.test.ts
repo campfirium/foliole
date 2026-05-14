@@ -25,7 +25,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
 import { resolveInternalDatabaseSnapshotDirectory } from './internalSnapshots.js';
-import { initializeDatabase } from './migrate.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
 
@@ -69,7 +69,7 @@ it('creates a managed safety snapshot before numbered schema migrations', async 
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(databasePath);
   const snapshotNames = await fs.readdir(snapshotDirectory);
   expect(snapshotNames.some((name) => name.startsWith('pre-migration-') && name.endsWith('.db'))).toBe(true);
-  expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(33);
+  expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
 function createVersionTwelveDatabase(databasePath: string) {

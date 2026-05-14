@@ -1,5 +1,5 @@
-import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { definedProps } from '../shared/lib/definedProps';
+import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
 import type { CompanionSyncPassInput } from './companionSyncPassResult';
 

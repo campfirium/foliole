@@ -25,6 +25,13 @@ function getTrashTreeItem(title: string) {
   return within(getTrashTree()).getByRole('treeitem', { name: new RegExp(`\\b${title}\\b`) });
 }
 
+function openCurrentFolderItemContextMenu(title: string) {
+  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: title }), {
+    clientX: 56,
+    clientY: 64
+  });
+}
+
 function openTrashView() {
   fireEvent.click(within(getTopicListPanel()).getByRole('treeitem', { name: 'Trash' }));
 }
@@ -40,10 +47,7 @@ it('restores and permanently deletes nodes from trash context menu actions', () 
   }));
 
   render(<App />);
-  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Child' }), {
-    clientX: 56,
-    clientY: 64
-  });
+  openCurrentFolderItemContextMenu('Child');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
   openTrashView();
@@ -52,10 +56,7 @@ it('restores and permanently deletes nodes from trash context menu actions', () 
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
 
   fireEvent.click(screen.getAllByRole('button', { name: 'Topics' })[0]!);
-  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Child' }), {
-    clientX: 56,
-    clientY: 64
-  });
+  openCurrentFolderItemContextMenu('Child');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
   openTrashView();
   fireEvent.contextMenu(getTrashTreeItem('Child'), { clientX: 56, clientY: 64 });
@@ -77,15 +78,9 @@ it('supports multi-select permanent delete inside trash', () => {
     }));
 
     render(<App />);
-    fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Node 2' }), {
-      clientX: 56,
-      clientY: 64
-    });
+    openCurrentFolderItemContextMenu('Node 2');
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Node 3' }), {
-      clientX: 56,
-      clientY: 64
-    });
+    openCurrentFolderItemContextMenu('Node 3');
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
     openTrashView();
@@ -135,14 +130,11 @@ it('relearns reading nodes from the node context menu', () => {
 
   render(<App />);
   vi.spyOn(window, 'confirm').mockReturnValue(true);
-  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Reading node' }), {
-    clientX: 56,
-    clientY: 64
-  });
+  openCurrentFolderItemContextMenu('Reading node');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
 
   const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-2']!?.reading).toBeNull();
+  expect(workspace.nodesById['node-2']?.reading).toBeNull();
   expect(
     buildReviewQueuePlan({
       nodeOrder: workspace.nodeOrder,
@@ -182,14 +174,11 @@ it('relearns review cards from the node context menu after confirmation', () => 
 
   render(<App />);
   vi.spyOn(window, 'confirm').mockReturnValue(true);
-  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Review node' }), {
-    clientX: 56,
-    clientY: 64
-  });
+  openCurrentFolderItemContextMenu('Review node');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
 
   const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-2']!?.review).toBeNull();
+  expect(workspace.nodesById['node-2']?.review).toBeNull();
   expect(
     buildReviewQueuePlan({
       nodeOrder: workspace.nodeOrder,
@@ -211,16 +200,14 @@ it('empties all trash items from trash header action', () => {
   }));
 
   render(<App />);
-  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Node 2' }), {
-    clientX: 56,
-    clientY: 64
-  });
+  openCurrentFolderItemContextMenu('Node 2');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
   openTrashView();
   fireEvent.click(screen.getByRole('button', { name: 'Empty trash' }));
 
   const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-1']!).toBeUndefined();
+  expect(workspace.nodesById['node-1']!).toBeDefined();
+  expect(workspace.nodesById['node-2']!).toBeUndefined();
   expect(workspace.trashedNodeIds).toEqual([]);
 });
 
@@ -240,10 +227,7 @@ it('restores the main document when leaving trash after selecting a trashed node
   }));
 
   render(<App />);
-  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Trashed child' }), {
-    clientX: 56,
-    clientY: 64
-  });
+  openCurrentFolderItemContextMenu('Trashed child');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
   openTrashView();

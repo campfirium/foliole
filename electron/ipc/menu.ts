@@ -10,33 +10,6 @@ import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../lib/core/nodes/folderTopicItem
 
 import { IPC_MENU_EVENT_CHANNEL, type MenuCommandEvent } from './contracts.js';
 
-const MENU_COMMAND_IDS = [
-  ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => command.appCommandId),
-  'import.singleFileToInbox',
-  'import.folderToInbox',
-  'import.clipboard',
-  'import.openManagement',
-  'workspace.openNotes',
-  'workspace.openTrash',
-  'workspace.openSettings',
-  'workspace.toggleList',
-  'editor.toggleDisplayMode',
-  'review.startStudyMode',
-  'review.revealAnswer',
-  'review.gradeAgain',
-  'review.gradeHard',
-  'review.gradeGood',
-  'review.gradeEasy',
-  'navigation.goBack',
-  'navigation.goForward',
-  'navigation.goToNode',
-  'navigation.goParent',
-  'document.findInTopic',
-  'nodes.enterPriorityMode',
-  'editor.toggleImmersiveMode',
-  'workspace.toggleDevTools'
-] as const;
-
 const menuItemsById = new Map<string, ElectronMenuItem>();
 
 export interface NativeMenuShortcutAccelerator {
@@ -44,8 +17,21 @@ export interface NativeMenuShortcutAccelerator {
   commandId: string;
 }
 
-function commandItem(label: string, commandId: string): MenuItemConstructorOptions {
+interface MenuState {
+  acceleratorsById: ReadonlyMap<string, string>;
+  enabledSet: ReadonlySet<string> | null;
+}
+
+const defaultMenuState: MenuState = {
+  acceleratorsById: new Map(),
+  enabledSet: null
+};
+
+function commandItem(label: string, commandId: string, state: MenuState): MenuItemConstructorOptions {
+  const accelerator = state.acceleratorsById.get(commandId);
   return {
+    ...(accelerator ? { accelerator } : {}),
+    enabled: state.enabledSet ? state.enabledSet.has(commandId) : true,
     id: commandId,
     label,
     click: () => {
@@ -70,78 +56,77 @@ function walkMenuItems(items: ElectronMenuItem[]) {
   }
 }
 
-export function installAppMenu() {
-  const template: MenuItemConstructorOptions[] = [
+function buildAppMenuTemplate(state: MenuState): MenuItemConstructorOptions[] {
+  return [
     {
       label: 'Workspace',
       submenu: [
-        ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => commandItem(command.menuLabel, command.appCommandId)),
+        ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => commandItem(command.menuLabel, command.appCommandId, state)),
         { type: 'separator' },
-        commandItem('Import Files…', 'import.singleFileToInbox'),
-        commandItem('Import Folder…', 'import.folderToInbox'),
-        commandItem('Import Clipboard', 'import.clipboard'),
+        commandItem('Import Files…', 'import.singleFileToInbox', state),
+        commandItem('Import Folder…', 'import.folderToInbox', state),
+        commandItem('Import Clipboard', 'import.clipboard', state),
         { type: 'separator' },
-        commandItem('Open Notes', 'workspace.openNotes'),
-        commandItem('Open Trash', 'workspace.openTrash'),
+        commandItem('Open Notes', 'workspace.openNotes', state),
+        commandItem('Open Trash', 'workspace.openTrash', state),
         { type: 'separator' },
-        commandItem('Toggle Left Panel', 'workspace.toggleList'),
-        commandItem('Settings', 'workspace.openSettings')
+        commandItem('Toggle Left Panel', 'workspace.toggleList', state),
+        commandItem('Settings', 'workspace.openSettings', state)
       ]
     },
     {
       label: 'Navigate',
       submenu: [
-        commandItem('Go Back', 'navigation.goBack'),
-        commandItem('Go Forward', 'navigation.goForward'),
-        commandItem('Go to…', 'navigation.goToNode'),
-        commandItem('Go to Parent', 'navigation.goParent')
+        commandItem('Go Back', 'navigation.goBack', state),
+        commandItem('Go Forward', 'navigation.goForward', state),
+        commandItem('Go to…', 'navigation.goToNode', state),
+        commandItem('Go to Parent', 'navigation.goParent', state)
       ]
     },
     {
       label: 'Review',
       submenu: [
-        commandItem('Start Study Mode', 'review.startStudyMode'),
-        commandItem('Show Answer', 'review.revealAnswer'),
+        commandItem('Start Study Mode', 'review.startStudyMode', state),
+        commandItem('Show Answer', 'review.revealAnswer', state),
         { type: 'separator' },
-        commandItem('Grade Again (1)', 'review.gradeAgain'),
-        commandItem('Grade Hard (2)', 'review.gradeHard'),
-        commandItem('Grade Good (3)', 'review.gradeGood'),
-        commandItem('Grade Easy (4)', 'review.gradeEasy')
+        commandItem('Grade Again (1)', 'review.gradeAgain', state),
+        commandItem('Grade Hard (2)', 'review.gradeHard', state),
+        commandItem('Grade Good (3)', 'review.gradeGood', state),
+        commandItem('Grade Easy (4)', 'review.gradeEasy', state)
       ]
     },
     {
       label: 'Editor',
       submenu: [
-        commandItem('Find in Topic', 'document.findInTopic'),
-        commandItem('Set Priority…', 'nodes.enterPriorityMode'),
+        commandItem('Find in Topic', 'document.findInTopic', state),
+        commandItem('Set Priority…', 'nodes.enterPriorityMode', state),
         { type: 'separator' },
-        commandItem('Toggle Source / Live Preview', 'editor.toggleDisplayMode'),
-        commandItem('Toggle Immersive Reading', 'editor.toggleImmersiveMode')
+        commandItem('Toggle Source / Live Preview', 'editor.toggleDisplayMode', state),
+        commandItem('Toggle Immersive Reading', 'editor.toggleImmersiveMode', state)
       ]
     },
     {
       label: 'Developer',
-      submenu: [commandItem('Toggle DevTools', 'workspace.toggleDevTools')]
+      submenu: [commandItem('Toggle DevTools', 'workspace.toggleDevTools', state)]
     }
   ];
+}
 
+function setAppMenu(template: MenuItemConstructorOptions[]) {
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
   menuItemsById.clear();
   walkMenuItems(menu.items);
 }
 
+export function installAppMenu() {
+  setAppMenu(buildAppMenuTemplate(defaultMenuState));
+}
+
 export function syncAppMenuState(enabledCommandIds: string[], shortcutAccelerators: NativeMenuShortcutAccelerator[] = []) {
   const enabledSet = new Set(enabledCommandIds);
   const acceleratorsById = new Map(shortcutAccelerators.map((item) => [item.commandId, item.accelerator]));
-  for (const commandId of MENU_COMMAND_IDS) {
-    const item = menuItemsById.get(commandId);
-    if (!item) {
-      continue;
-    }
-    item.enabled = enabledSet.has(commandId);
-    item.accelerator = acceleratorsById.get(commandId) ?? null;
-  }
+  setAppMenu(buildAppMenuTemplate({ acceleratorsById, enabledSet }));
 }
 
 export function bindMenuToWindow(window: ElectronBrowserWindow) {

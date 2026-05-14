@@ -92,7 +92,7 @@ it('returns dismissed reading nodes to pending from the node menu', () => {
   expect(screen.queryByRole('menuitem', { name: 'Dismiss' })).toBeNull();
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
 
-  expect(useWorkspaceStore.getState().nodesById['node-dismissed']!?.reading).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById['node-dismissed']?.reading).toBeNull();
   expect(within(panel).getByRole('treeitem', { name: 'Dismissed note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-state',
     'pending'

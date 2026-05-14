@@ -4,7 +4,7 @@ import type {
   NativeReadwiseSyncPreviewDestination,
   NativeReadwiseSyncPreviewEntry,
   NativeReadwiseSyncPreviewResult
-} from '../../../lib/platform/nativeContract';
+} from '../../../lib/platform/nativeImportContract';
 import {
   AppButton,
   AppDialog,

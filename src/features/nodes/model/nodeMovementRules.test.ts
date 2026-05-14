@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
 import { definedProps } from '../../../shared/lib/definedProps';
+
 import { canNodeAcceptMovedNode, canNodeBeMoved } from './nodeMovementRules';
 import type { Node } from './nodeTypes';
 

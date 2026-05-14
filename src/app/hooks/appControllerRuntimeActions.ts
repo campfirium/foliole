@@ -1,8 +1,8 @@
 import type { EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
-import { definedProps } from '../../shared/lib/definedProps';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemRegistry';
+import { definedProps } from '../../shared/lib/definedProps';
 import { LIST_WIDTH_DEFAULT, RIGHT_SIDEBAR_WIDTH_DEFAULT } from '../../store/workspaceLayoutDomain';
 import type { NodeViewState } from '../../store/workspaceStore';
 

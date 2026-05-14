@@ -36,11 +36,11 @@ const FILE_SUBDOMAIN_RULES = [
   ['companion-sync-pack-apply', /^companionSync(?:PackApply|PackNodes|PackTransfer)\.tsx?$/],
   ['companion-sync-writer', /^companion(?:ContentBlobSync|AttachmentResourceSync)\.tsx?$|^companionSync(?:WriterQueue|StateWriters|ReviewLogApply)\.tsx?$/],
   ['companion-sync-reader', /^companionSync(?:Cursors|WebCursors|NodeVersions|StateObjects|StateObjectIdentity|PushProtocol|EventSemantics)\.tsx?$/],
-  ['companion-runtime-plugin', /^companion(?:AppData|Bootstrap|Browse|Readable|External|Handoff|Pairing|Workspace)\w*\.tsx?$/],
-  ['import-runtime', /^(?:import|keepImport|pdfImports|readwiseBooks|readwiseReaderSetup|nodeBacklinks|nodeSource)\w*\.tsx?$/],
+  ['companion-runtime-plugin', /^companion(?:AppData|Bootstrap|Browse|Readable|External|Handoff|Pairing|PrimaryDevice|Workspace)\w*\.tsx?$/],
+  ['import-runtime', /^(?:import|keepImport|pdfImports|readwiseBooks|readwiseReaderSetup|readwiseReaderImport|readwiseImportCleanup|removedSources|nodeBacklinks|nodeSource)\w*\.tsx?$/],
   ['external-runtime', /^(?:external|linkPanel|articleMirror|readwiseTopic|remoteImageLocalization)\w*\.tsx?$/],
   ['diagnostics', /^(?:diagnosticBundle|desktopDebugProbe|performance|rendererErrorDiagnostics|workspaceSyncDebug)\w*\.tsx?$/],
-  ['desktop-runtime-repository', /^(?:appRuntimeCommandRepository|attachment|commandMenu|databaseBackup|desktopCompanionPairing|folderSelection|libraryPaths|native|readingPositionTrace|reviewScheduler|settings|useDesktopCompanionPairingRequests|windowControls|workspace)\w*\.tsx?$/]
+  ['desktop-runtime-repository', /^(?:appRuntimeCommandRepository|attachment|commandMenu|databaseBackup|desktopCompanionPairing|devReimportSelectedTopic|folderSelection|libraryPaths|native|readingPositionTrace|reviewScheduler|settings|useDesktopCompanionPairingRequests|windowControls|workspace)\w*\.tsx?$/]
 ];
 
 const ALLOWED_SUBDOMAIN_IMPORTS = {
@@ -89,7 +89,7 @@ const ALLOWED_SUBDOMAIN_IMPORTS = {
     'companion-sync-transfer',
     'companion-sync-diagnostics'
   ],
-  'import-runtime': ['runtime-core', 'desktop-runtime-repository', 'import-runtime'],
+  'import-runtime': ['runtime-core', 'desktop-runtime-repository', 'external-runtime', 'import-runtime'],
   'external-runtime': ['runtime-core', 'desktop-runtime-repository', 'companion-runtime-plugin', 'external-runtime'],
   diagnostics: ['runtime-core', 'diagnostics']
 };

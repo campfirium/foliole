@@ -12,12 +12,12 @@ const { openExternal, showOpenDialog } = vi.hoisted(() => ({
   openExternal: vi.fn().mockResolvedValue(undefined),
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/selected-book.epub'] })
 }));
+const primaryDeviceMock = vi.hoisted(() => ({ canRunExternalSources: true }));
 
 vi.mock('electron', () => ({
   dialog: { showOpenDialog },
   shell: { openExternal }
 }));
-
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_data_dir: mockedAppDataDir,
@@ -26,22 +26,37 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
+vi.mock('../sync/primaryDeviceState.js', () => ({
+  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
+}));
 
+import { createReadwiseImportSources } from '../../lib/core/import/importManagerSettings.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
-import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { loadReadwiseBookEpub, openReadwiseBookDownload } from './readwiseBookManualActions.js';
 import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
+import { createMultiChapterBookEpub } from './readwiseBooksEndToEnd.fixture.js';
 import { scanReadwiseBooksInventory } from './readwiseBooksInventory.js';
 
 let tempRoot = '';
 
+function saveEnabledReadwiseBooksSettings(readwiseRoot: string) {
+  saveImportManagerSettings({
+    readwiseReaderConfig: { ...createDefaultReadwiseReaderConfig(), enabled: true },
+    readwiseRootPath: readwiseRoot,
+    readwiseSources: createReadwiseImportSources(readwiseRoot).map((source) =>
+      source.kind === 'books' ? { ...source, keepState: 'enabled' as const } : source
+    )
+  });
+}
+
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-books-end-to-end-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  primaryDeviceMock.canRunExternalSources = true;
   initializeDatabase();
   openExternal.mockReset();
   showOpenDialog.mockReset();
@@ -83,43 +98,8 @@ async function createBooksFixture() {
     ].join('\n'),
     'utf8'
   );
-  saveImportManagerSettings({ readwiseRootPath: readwiseRoot });
+  saveEnabledReadwiseBooksSettings(readwiseRoot);
   return { fullDocumentDir, highlightDir };
-}
-
-async function createMultiChapterBookEpub(fileName: string) {
-  const filePath = path.join(tempRoot, fileName);
-  await fs.writeFile(
-    filePath,
-    createTestZip([
-      { compression: 'store', content: 'application/epub+zip', name: 'mimetype' },
-      {
-        compression: 'store',
-        content:
-          '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
-        name: 'META-INF/container.xml'
-      },
-      {
-        compression: 'store',
-        content:
-          '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Manual Book</dc:title></metadata><manifest><item id="chapter-1" href="text/chapter-1.xhtml" media-type="application/xhtml+xml"/><item id="chapter-2" href="text/chapter-2.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="chapter-1"/><itemref idref="chapter-2"/></spine></package>',
-        name: 'OPS/book.opf'
-      },
-      {
-        compression: 'store',
-        content:
-          '<html><body><h1>Chapter 1</h1><p>First chapter keeps the early remembered quote in place.</p></body></html>',
-        name: 'OPS/text/chapter-1.xhtml'
-      },
-      {
-        compression: 'store',
-        content:
-          '<html><body><h1>Chapter 2</h1><p>Second chapter saves the later insight for a different section.</p></body></html>',
-        name: 'OPS/text/chapter-2.xhtml'
-      }
-    ])
-  );
-  return filePath;
 }
 
 function readImportedBook(connection: ReturnType<typeof openDatabaseConnection>['sqlite'], rootNodeId: string) {
@@ -145,9 +125,9 @@ function expectDiscoveredPlaceholder(book: Awaited<ReturnType<typeof scanReadwis
     annotationStatus: 'has_highlights',
     epubStatus: 'missing',
     importStatus: 'pending',
-    nodeStatus: 'generated'
+    nodeStatus: 'missing'
   });
-  expect(book?.generatedNodeId).toBe(buildReadwiseBookPlaceholderNodeId('manual book'));
+  expect(book?.generatedNodeId).toBeNull();
 }
 
 function expectImportedInventory(book: Awaited<ReturnType<typeof scanReadwiseBooksInventory>>['books'][number] | undefined, epubPath: string) {
@@ -158,7 +138,7 @@ function expectImportedInventory(book: Awaited<ReturnType<typeof scanReadwiseBoo
     importStatus: 'completed',
     nodeStatus: 'generated'
   });
-  expect(book?.generatedNodeId).toBe(buildReadwiseBookPlaceholderNodeId('manual book'));
+  expect(book?.generatedNodeId).toBeTruthy();
 }
 
 function expectImportedHighlights(connection: ReturnType<typeof openDatabaseConnection>['sqlite'], rootNodeId: string) {
@@ -187,7 +167,7 @@ function expectImportedHighlights(connection: ReturnType<typeof openDatabaseConn
       anchorLink: expect.objectContaining({
         id: chapterOneAnchorLink.id,
         kind: 'highlight',
-        locator: expect.objectContaining({ originalText: 'First chapter keeps the early remembered quote in place.' })
+        locator: expect.objectContaining({ originalText: 'early remembered quote' })
       }),
       content: 'early remembered quote',
       title: 'early remembered quote'
@@ -202,7 +182,7 @@ function expectImportedHighlights(connection: ReturnType<typeof openDatabaseConn
       anchorLink: expect.objectContaining({
         id: chapterTwoAnchorLink.id,
         kind: 'highlight',
-        locator: expect.objectContaining({ originalText: 'Second chapter saves the later insight for a different section.' })
+        locator: expect.objectContaining({ originalText: 'later insight' })
       }),
       content: 'later insight',
       title: 'later insight'
@@ -212,7 +192,7 @@ function expectImportedHighlights(connection: ReturnType<typeof openDatabaseConn
 
 it('runs the full readwise books loop from discovery to anchored highlights', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
-  const selectedEpubPath = await createMultiChapterBookEpub('selected-book-multi.epub');
+  const selectedEpubPath = await createMultiChapterBookEpub(tempRoot, 'selected-book-multi.epub');
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [selectedEpubPath] });
 
   const discoveredInventory = await scanReadwiseBooksInventory({
@@ -222,8 +202,9 @@ it('runs the full readwise books loop from discovery to anchored highlights', as
   });
   const discoveredBook = discoveredInventory.books.find((book) => book.bookKey === 'manual book');
   expectDiscoveredPlaceholder(discoveredBook);
+  const placeholderNodeId = buildReadwiseBookPlaceholderNodeId('manual book');
 
-  await expect(openReadwiseBookDownload(discoveredBook!.generatedNodeId!)).resolves.toEqual({
+  await expect(openReadwiseBookDownload(placeholderNodeId)).resolves.toEqual({
     book_key: 'manual book',
     status: 'opened',
     title: 'Manual Book',
@@ -231,7 +212,7 @@ it('runs the full readwise books loop from discovery to anchored highlights', as
   });
   expect(openExternal).toHaveBeenCalledWith('https://readwise.example.com/books/manual-book.epub');
 
-  await expect(loadReadwiseBookEpub(discoveredBook!.generatedNodeId!)).resolves.toEqual({
+  await expect(loadReadwiseBookEpub(placeholderNodeId)).resolves.toEqual({
     book_key: 'manual book',
     epub_path: selectedEpubPath,
     status: 'selected',

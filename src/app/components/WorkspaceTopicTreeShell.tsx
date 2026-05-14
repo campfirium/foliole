@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import type { RefObject } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
@@ -23,7 +23,7 @@ export function renderWorkspaceTopicTreeShell(args: {
   hasCollapsedNodes: boolean;
   interaction: ReturnType<typeof useWorkspaceTopicTreeInteraction>;
   nodesById: WorkspaceListNodesById;
-  scrollContainerRef: ReturnType<typeof useRef<HTMLDivElement | null>>;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
   searchQuery: string;
   setCollapsedNodeIds: ReturnType<typeof useWorkspaceTopicTreeCollapse>['setCollapsedNodeIds'];
   setSearchQuery: (value: string) => void;

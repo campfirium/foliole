@@ -237,14 +237,14 @@ describe('workspace persistence renderer boundary hydrate', () => {
       scrollTop: 128,
       selection: { from: 4, to: 9 }
     });
-    expectTrimmedNodeDocument(payload?.state.nodesById['node-1']!);
-    expect(payload?.state.nodesById['node-2']!).toMatchObject({
+    expectTrimmedNodeDocument(payload?.state.nodesById['node-1']);
+    expect(payload?.state.nodesById['node-2']).toMatchObject({
       content: 'Recovered node 2 body',
       hasContent: true,
       reveal: 'Recovered node 2 answer',
       hasReveal: true
     });
-    expectTrimmedNodeDocument(payload?.state.nodesById['node-3']!);
+    expectTrimmedNodeDocument(payload?.state.nodesById['node-3']);
   });
 
 });
@@ -265,13 +265,13 @@ describe('workspace persistence renderer boundary pending edits', () => {
 
     const payload = readPersistedWorkspacePayload();
 
-    expect(payload?.state.nodesById['node-1']!).toMatchObject({
+    expect(payload?.state.nodesById['node-1']).toMatchObject({
       content: 'Unsynced node 1 body',
       hasContent: true,
       reveal: 'Unsynced node 1 answer',
       hasReveal: true
     });
-    expect(payload?.state.nodesById['node-2']!).toMatchObject({
+    expect(payload?.state.nodesById['node-2']).toMatchObject({
       content: 'Active node 2 body',
       hasContent: true,
       reveal: null,

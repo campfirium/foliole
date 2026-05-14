@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
-import type { NativeReadwiseSyncPreviewResult } from '../../../lib/platform/nativeContract';
+import type { NativeReadwiseSyncPreviewResult } from '../../../lib/platform/nativeImportContract';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';

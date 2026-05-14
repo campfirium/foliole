@@ -148,11 +148,6 @@ export function resolveActiveFolderColumnNodeId(
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: readonly string[]
 ) {
-  const activeFolderNodeId = resolveActiveFolderNodeId(activeNodeId, nodesById, trashedNodeIds);
-  if (activeFolderNodeId) {
-    return activeFolderNodeId;
-  }
-
   if (!activeNodeId) {
     return null;
   }
@@ -162,11 +157,20 @@ export function resolveActiveFolderColumnNodeId(
     return null;
   }
 
+  if (isVisibleFolderNode(activeNode, trashedNodeIds)) {
+    return activeNodeId;
+  }
+
   const hasVisibleChildren = nodeOrder.some(
     (nodeId) => !trashedNodeIds.includes(nodeId) && nodesById[nodeId]?.parentNodeId === activeNodeId
   );
   if (hasVisibleChildren) {
     return activeNodeId;
+  }
+
+  const activeFolderNodeId = resolveActiveFolderNodeId(activeNodeId, nodesById, trashedNodeIds);
+  if (activeFolderNodeId) {
+    return activeFolderNodeId;
   }
 
   return activeNode.parentNodeId ?? null;

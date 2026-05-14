@@ -92,14 +92,14 @@ async function importSelectedReadwiseBookEpub(input: {
     sourceTrackingMode: 'tracked',
     targetNodeId: input.targetNodeId
   });
+  const generatedNodeId = imported.nodeId || input.targetNodeId || input.book.generatedNodeId;
   input.onBeforeHighlightPlacement?.();
   await placeReadwiseBookHighlights({
     highlightMarkdownPath: input.book.highlightMarkdownPath,
     importedAt,
     readwiseConfig: loadImportManagerSettings().readwiseReaderConfig,
-    rootNodeId: input.targetNodeId
+    rootNodeId: generatedNodeId
   });
-  const generatedNodeId = input.targetNodeId || imported.nodeId || input.book.generatedNodeId;
   const updatedBook = {
     ...input.book,
     epubPath: input.epubPath,

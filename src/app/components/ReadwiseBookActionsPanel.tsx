@@ -13,6 +13,7 @@ import {
   type RuntimeReadwiseBookInventoryItem
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { AppButton } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 function resolveBook(activeNodeId: string, books: RuntimeReadwiseBookInventoryItem[]) {
   return books.find((book) => book.generatedNodeId === activeNodeId) ?? null;
@@ -150,6 +151,7 @@ function useReadwiseBookActions(activeNodeId: string | null) {
       const result = await loadRuntimeReadwiseBookEpub(activeNodeId);
       setStatusMessage(formatLoadMessage(result, book));
       if (result?.status === 'selected') {
+        await useWorkspaceStore.persist.rehydrate();
         setBook((current) =>
           current
             ? { ...current, epubStatus: 'received', importStatus: 'completed', nodeStatus: 'generated' }

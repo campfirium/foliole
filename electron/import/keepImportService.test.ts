@@ -30,7 +30,6 @@ import { softDeleteNodes } from '../database/nodeMutations.js';
 import {
   readImportedChildRows,
   saveReadwiseKeepImportSettings,
-  saveReadwiseKeepImportSettingsWithScope,
   seedReadwiseArticleFixture
 } from './keepImportReadwiseTestSupport.js';
 import { previewKeepImportRule, runKeepImportRule } from './keepImportService.js';

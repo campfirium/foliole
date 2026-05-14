@@ -1,10 +1,9 @@
-import { useEffect, useRef, type MutableRefObject } from 'react';
+import type { MutableRefObject } from 'react';
 
 import { definedProps } from '../../shared/lib/definedProps';
 
 import type { PdfPageTextEntry } from './pdfPageText';
-import { canScrollToMatch, resetSearchCursorState, resolveCursorByRequest, scrollToMatch, toSearchHighlights } from './pdfSearchEffectRuntime';
-import { collectMatches, getLastPdfSearchDebug } from './pdfSearchMatchCollection';
+import { usePdfSearchCycleEffect } from './pdfSearchEffectHooks';
 
 export interface PdfSearchRequest {
   direction: 'next' | 'previous';
@@ -17,7 +16,7 @@ export interface PdfSearchStatus {
   total: number;
 }
 
-interface PdfSearchArgs {
+export interface PdfSearchArgs {
   onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   onSearchRequestHandled?: (requestId: number) => void;
@@ -71,72 +70,7 @@ export interface PdfSearchDebugInfo {
   }>;
 }
 
-function normalizeQuery(value: string) {
-  return value.trim().toLocaleLowerCase();
-}
-
 export { collectMatches } from './pdfSearchMatchCollection';
-
-function runPdfSearchCycle(args: {
-  container: HTMLDivElement;
-  cursorRef: { current: number };
-  lastHandledTargetIdRef: { current: number | null };
-  lastQueryRef: { current: string };
-  lastRequestIdRef: { current: number | null };
-  onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
-  onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
-  onSearchRequestHandled?: (requestId: number) => void;
-  onSearchStatusChange: (status: PdfSearchStatus) => void;
-  onSearchTargetHandled?: (targetId: number) => void;
-  pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
-  pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
-  query: string;
-  searchRequest: PdfSearchRequest | null;
-  searchTarget: PdfSearchTarget | null;
-  totalPages: number;
-}) {
-  const matches = collectMatches(args.pageElementsRef, args.totalPages, args.query, args.pageTextByNumberRef);
-  args.onSearchDebugChange({ pages: getLastPdfSearchDebug() });
-  if (matches.length === 0) {
-    args.onSearchHighlightsChange([]);
-    resetSearchCursorState(args);
-    args.onSearchStatusChange({ current: 0, hasQuery: true, total: 0 });
-    return;
-  }
-
-  const { handledAction, queryChanged } = resolveCursorByRequest({
-    cursorRef: args.cursorRef,
-    lastHandledTargetIdRef: args.lastHandledTargetIdRef,
-    lastQueryRef: args.lastQueryRef,
-    lastRequestIdRef: args.lastRequestIdRef,
-    matches,
-    query: args.query,
-    searchRequest: args.searchRequest,
-    searchTarget: args.searchTarget
-  });
-  const match = matches[args.cursorRef.current];
-  if (!match) {
-    args.onSearchHighlightsChange([]);
-    args.onSearchStatusChange({ current: 0, hasQuery: true, total: matches.length });
-    return;
-  }
-  const shell = args.pageElementsRef.current[match.page] ?? null;
-
-  args.onSearchHighlightsChange(toSearchHighlights(matches, match.id));
-  const targetPendingPreciseLocation = handledAction?.kind === 'target' && !canScrollToMatch(match, shell);
-  if ((queryChanged || handledAction) && !targetPendingPreciseLocation) {
-    scrollToMatch(args.container, match);
-  }
-  args.onSearchStatusChange({ current: args.cursorRef.current + 1, hasQuery: true, total: matches.length });
-  if (handledAction?.kind === 'target' && !targetPendingPreciseLocation) {
-    args.lastHandledTargetIdRef.current = handledAction.id;
-    args.lastRequestIdRef.current = null;
-    args.onSearchTargetHandled?.(handledAction.id);
-  }
-  if (handledAction?.kind === 'request') {
-    args.onSearchRequestHandled?.(handledAction.id);
-  }
-}
 export function usePdfSearchEffect({
   onSearchDebugChange,
   onSearchHighlightsChange,
@@ -152,57 +86,21 @@ export function usePdfSearchEffect({
   searchRequest,
   totalPages
 }: PdfSearchArgs) {
-  const cursorRef = useRef(0);
-  const lastHandledTargetIdRef = useRef<number | null>(null);
-  const lastRequestIdRef = useRef<number | null>(null);
-  const lastQueryRef = useRef('');
-  const onSearchDebugChangeRef = useRef(onSearchDebugChange);
-  const onSearchRequestHandledRef = useRef(onSearchRequestHandled);
-  const onSearchStatusChangeRef = useRef(onSearchStatusChange);
-  const onSearchTargetHandledRef = useRef(onSearchTargetHandled);
-  const onSearchHighlightsChangeRef = useRef(onSearchHighlightsChange);
-
-  useUpdateSearchEffectCallbackRef(onSearchDebugChangeRef, onSearchDebugChange);
-  useUpdateSearchEffectCallbackRef(onSearchHighlightsChangeRef, onSearchHighlightsChange);
-  useUpdateSearchEffectCallbackRef(onSearchRequestHandledRef, onSearchRequestHandled);
-  useUpdateSearchEffectCallbackRef(onSearchStatusChangeRef, onSearchStatusChange);
-  useUpdateSearchEffectCallbackRef(onSearchTargetHandledRef, onSearchTargetHandled);
-
-  useEffect(() => {
-    const query = normalizeQuery(searchQuery);
-    const container = scrollContainerRef.current;
-    if (!query || !container || !totalPages) {
-      onSearchDebugChangeRef.current({ pages: [] });
-      onSearchHighlightsChangeRef.current([]);
-      resetSearchCursorState({ cursorRef, lastHandledTargetIdRef, lastRequestIdRef, lastQueryRef, query });
-      onSearchStatusChangeRef.current({ current: 0, hasQuery: query.length > 0, total: 0 });
-      return;
-    }
-    runPdfSearchCycle({
-      container,
-      cursorRef,
-      lastHandledTargetIdRef,
-      lastQueryRef,
-      lastRequestIdRef,
-      onSearchDebugChange: onSearchDebugChangeRef.current,
-      onSearchHighlightsChange: onSearchHighlightsChangeRef.current,
-      onSearchStatusChange: onSearchStatusChangeRef.current,
-      pageElementsRef,
-      pageTextByNumberRef,
-      query,
-      searchRequest,
-      searchTarget,
-      totalPages,
-      ...definedProps({
-        onSearchRequestHandled: onSearchRequestHandledRef.current,
-        onSearchTargetHandled: onSearchTargetHandledRef.current
-      })
-    });
-  }, [pageElementsRef, pageTextByNumberRef, searchQuery, searchRequest, searchRevision, searchTarget, scrollContainerRef, totalPages]);
-}
-
-function useUpdateSearchEffectCallbackRef<T>(ref: { current: T }, value: T) {
-  useEffect(() => {
-    ref.current = value;
-  }, [value]);
+  usePdfSearchCycleEffect({
+    pageElementsRef,
+    pageTextByNumberRef,
+    scrollContainerRef,
+    searchQuery,
+    searchRequest,
+    searchRevision,
+    searchTarget,
+    totalPages,
+    onSearchDebugChange,
+    onSearchHighlightsChange,
+    onSearchStatusChange,
+    ...definedProps({
+      onSearchRequestHandled,
+      onSearchTargetHandled
+    })
+  });
 }

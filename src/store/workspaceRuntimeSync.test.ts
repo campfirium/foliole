@@ -128,7 +128,7 @@ describe('workspaceRuntimeSync node mutations', () => {
         'node-1': createRuntimeSnapshotNodeFixture()
       },
       trashedNodeIds: []
-    })?.nodesById['node-1']!?.reading?.state).toBe('dismissed');
+    })?.nodesById['node-1']?.reading?.state).toBe('dismissed');
 
     await Promise.resolve();
 
@@ -139,7 +139,7 @@ describe('workspaceRuntimeSync node mutations', () => {
         'node-1': createRuntimeSnapshotNodeFixture()
       },
       trashedNodeIds: []
-    })?.nodesById['node-1']!?.reading).toBeNull();
+    })?.nodesById['node-1']?.reading).toBeNull();
   });
 
   it('sends node content updates through update_node_content command', () => {

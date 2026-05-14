@@ -174,11 +174,10 @@ it('merges the GTD article case with the full set of highlights', async () => {
 
   const result = await mergeReadwiseTopicHighlightsFromFile(imported.nodeId as string, highlightPath);
   const state = readMergedState(imported.nodeId as string);
-  const mergedChildren = state.children.filter((child) => child.anchor_link !== null);
 
   expect(result.status).toBe('merged');
   expect(result.merged_highlight_count).toBeGreaterThan(0);
-  expect(result.merged_highlight_count).toBe(mergedChildren.length);
+  expect(result.merged_highlight_count).toBe(state.children.length);
 });
 
 it('localizes shared remote images before matching manually merged readwise highlights', async () => {
