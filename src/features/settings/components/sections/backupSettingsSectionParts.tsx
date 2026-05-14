@@ -7,6 +7,8 @@ import {
   SETTINGS_INPUT_WIDTH_CLASS_NAME,
   SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME,
   SettingsControlSlot,
+  SettingsEmptyState,
+  SettingsLoadingState,
   SettingsRow,
   SettingsSection,
   settingsButtonClassName,
@@ -157,8 +159,8 @@ export function BackupListSection(props: {
         </SettingsControlSlot>
       </SettingsRow>
       {!props.isBackupActionsAvailable ? <SettingsRow description="Backup management is available in the desktop app." readonly title="Desktop runtime required" /> : null}
-      {props.isBackupActionsAvailable && props.isLoadingBackups ? <SettingsRow description="Scanning the backup folder." readonly title="Loading backups" /> : null}
-      {props.isBackupActionsAvailable && !props.isLoadingBackups && props.backups.length === 0 ? <SettingsRow description="No backups yet." readonly title="Empty backup list" /> : null}
+      {props.isBackupActionsAvailable && props.isLoadingBackups ? <SettingsLoadingState description="Scanning the backup folder." title="Loading backups" /> : null}
+      {props.isBackupActionsAvailable && !props.isLoadingBackups && props.backups.length === 0 ? <SettingsEmptyState description="No backups yet." title="Empty backup list" /> : null}
       {visibleBackups.map((entry) => (
         <SettingsRow description={formatBackupMeta(entry)} key={entry.filePath} title={entry.fileName}>
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>

@@ -4,6 +4,7 @@ import {
   ObjectConfigPathControl,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
+  SettingsLoadingState,
   SettingsRow,
   SettingsSection,
   settingsButtonClassName
@@ -128,11 +129,10 @@ function MirrorMaintenanceSection(props: SettingsImportSectionProps) {
 
 function LibraryPathLoadingRows() {
   return (
-    <>
-      <SettingsRow description="Loading library folders." readonly title="Loading Library Home" />
-      <SettingsRow description="Loading attachment folders." readonly title="Loading Assets" />
-      <SettingsRow description="Loading incoming file folder." readonly title="Loading Inbox" />
-    </>
+    <SettingsLoadingState
+      description="Loading library folders, attachment folders, and incoming file folder."
+      title="Loading library locations"
+    />
   );
 }
 

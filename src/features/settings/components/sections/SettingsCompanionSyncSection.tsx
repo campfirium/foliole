@@ -1,10 +1,12 @@
 import { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
-  settingsButtonClassName,
   SettingsControlSlot,
+  SettingsErrorState,
+  SettingsLoadingState,
   SettingsRow,
   SettingsSection,
+  settingsButtonClassName,
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
@@ -100,9 +102,11 @@ function ConnectedDevicesRow({
         <p className="mt-0.5 text-sm text-foreground/65">Approved devices that can sync with this desktop.</p>
       </div>
       {isLoading ? (
-        <p aria-busy="true" className="mt-4 text-sm text-foreground/45" role="status">
-          Loading connected devices...
-        </p>
+        <SettingsLoadingState
+          className="mt-3 px-0 py-0"
+          description="Loading connected devices..."
+          title="Loading connected devices"
+        />
       ) : (
         <ConnectedDeviceList devices={devices} onDisconnect={onDisconnect} pendingActionId={pendingActionId} />
       )}
@@ -154,9 +158,11 @@ export function SettingsCompanionSyncSection() {
         </SettingsControlSlot>
       </SettingsRow>
       {syncError ? (
-        <p className="m-0 px-5 text-sm text-error" role="alert">
-          {syncError}
-        </p>
+        <SettingsErrorState
+          className="px-5 py-3"
+          description={syncError}
+          title="Desktop sync unavailable"
+        />
       ) : null}
       <SettingsCompanionSyncPrimaryRows
         isBusy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
@@ -171,9 +177,11 @@ export function SettingsCompanionSyncSection() {
         pendingActionId={state.pendingActionId}
       />
       {state.error ? (
-        <p className="m-0 text-sm text-error" role="alert">
-          {state.error}
-        </p>
+        <SettingsErrorState
+          className="px-5 py-3"
+          description={state.error}
+          title="Sync devices unavailable"
+        />
       ) : null}
     </SettingsSection>
   );

@@ -33,8 +33,10 @@ const baseProps: SettingsImportSectionProps = {
 it('shows loading rows while library paths load', () => {
   render(<SettingsImportSection {...baseProps} isLoadingLibraryPaths />);
 
-  expect(screen.getByText('Loading Library Home')).toBeInTheDocument();
-  expect(screen.getByText('Loading attachment folders.')).toBeInTheDocument();
+  const status = screen.getByRole('status');
+  expect(status).toHaveAttribute('aria-busy', 'true');
+  expect(status).toHaveTextContent('Loading library locations');
+  expect(status).toHaveTextContent('Loading library folders, attachment folders, and incoming file folder.');
 });
 
 it('marks library path and mirror rebuild errors as alerts', () => {

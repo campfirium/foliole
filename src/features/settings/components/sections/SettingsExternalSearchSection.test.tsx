@@ -52,14 +52,17 @@ it('keeps the link panel browsing data action desktop-only', () => {
 it('shows a loading row while external sources load', () => {
   render(<SettingsExternalSearchSection {...baseProps} isLoading />);
 
-  expect(screen.getByText('Loading external sources')).toBeInTheDocument();
-  expect(screen.getByText('Loading external source folders.')).toBeInTheDocument();
+  const status = screen.getByRole('status');
+  expect(status).toHaveAttribute('aria-busy', 'true');
+  expect(status).toHaveTextContent('Loading external sources');
+  expect(status).toHaveTextContent('Loading external source folders.');
 });
 
 it('shows a retryable alert when external sources fail to load', () => {
   render(<SettingsExternalSearchSection {...baseProps} error="Could not load the external library." />);
 
   expect(screen.getByRole('alert')).toHaveTextContent('Could not load the external library.');
+  expect(screen.getByRole('alert')).toHaveTextContent('External sources unavailable');
 
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 

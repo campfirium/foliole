@@ -85,3 +85,42 @@ it('lets a secondary desktop become the primary device from sync settings', asyn
 
   expect(setDesktopAsPrimaryDevice).toHaveBeenCalledTimes(1);
 });
+
+it('announces connected devices loading through the settings state surface', () => {
+  companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({ isLoading: true }));
+
+  render(<SettingsCompanionSyncSection />);
+
+  const status = screen.getByRole('status');
+  expect(status).toHaveAttribute('aria-busy', 'true');
+  expect(status).toHaveTextContent('Loading connected devices');
+  expect(status).toHaveTextContent('Loading connected devices...');
+});
+
+it('shows sync server errors through the settings state surface', () => {
+  companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
+    overview: {
+      ...createState().overview,
+      server_status: {
+        ...createState().overview.server_status,
+        last_error: 'Port unavailable.'
+      }
+    }
+  }));
+
+  render(<SettingsCompanionSyncSection />);
+
+  expect(screen.getByRole('alert')).toHaveTextContent('Desktop sync unavailable');
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not open sync. Port unavailable.');
+});
+
+it('shows pairing state errors through the settings state surface', () => {
+  companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
+    error: 'Could not refresh paired devices.'
+  }));
+
+  render(<SettingsCompanionSyncSection />);
+
+  expect(screen.getByRole('alert')).toHaveTextContent('Sync devices unavailable');
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not refresh paired devices.');
+});

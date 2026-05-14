@@ -1,9 +1,8 @@
 import {
-  SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
-  SettingsControlSlot,
-  SettingsRow,
+  SettingsErrorState,
+  SettingsLoadingState,
   SettingsSection,
-  settingsButtonClassName
+  SettingsStateAction
 } from '../../../../shared/ui';
 
 import {
@@ -13,19 +12,17 @@ import {
 } from './backupSettingsSectionParts';
 import { useBackupSettingsSectionState } from './useBackupSettingsSectionState';
 
-const RETRY_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
-
 function BackupLoadingState() {
   return (
     <>
       <SettingsSection ariaLabel="Backup list loading section" title="Backups">
-        <SettingsRow description="Loading backup settings." readonly title="Loading" />
+        <SettingsLoadingState description="Loading backup settings." title="Loading" />
       </SettingsSection>
       <SettingsSection ariaLabel="Backup rules loading section" title="Backup rules">
-        <SettingsRow description="Loading backup settings." readonly title="Loading" />
+        <SettingsLoadingState description="Loading backup settings." title="Loading" />
       </SettingsSection>
       <SettingsSection ariaLabel="Backup location loading section" title="Backup location">
-        <SettingsRow description="Loading backup settings." readonly title="Loading" />
+        <SettingsLoadingState description="Loading backup settings." title="Loading" />
       </SettingsSection>
     </>
   );
@@ -37,13 +34,11 @@ function BackupLoadErrorState(props: {
 }) {
   return (
     <SettingsSection ariaLabel="Backup settings error section" title="Backups">
-      <SettingsRow description={props.errorMessage} title="Backup settings unavailable">
-        <SettingsControlSlot className="flex-[0_0_auto]">
-          <button className={RETRY_BUTTON_CLASS_NAME} onClick={props.onRetry} type="button">
-            Retry
-          </button>
-        </SettingsControlSlot>
-      </SettingsRow>
+      <SettingsErrorState
+        action={<SettingsStateAction label="Retry" onClick={props.onRetry} />}
+        description={props.errorMessage}
+        title="Backup settings unavailable"
+      />
     </SettingsSection>
   );
 }

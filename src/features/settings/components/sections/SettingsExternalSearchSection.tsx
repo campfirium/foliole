@@ -8,8 +8,11 @@ import { clearLinkPanelBrowsingData } from '../../../../shared/platform/linkPane
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
+  SettingsErrorState,
+  SettingsLoadingState,
   SettingsRow,
   SettingsSection,
+  SettingsStateAction,
   settingsButtonClassName
 } from '../../../../shared/ui';
 
@@ -81,7 +84,7 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
         description="Search, preview, and import content from folders that stay outside Foliole until you choose to bring them in."
         title="External sources"
       >
-        <SettingsRow description="Loading external source folders." readonly title="Loading external sources" />
+        <SettingsLoadingState description="Loading external source folders." title="Loading external sources" />
       </SettingsSection>
     );
   }
@@ -115,12 +118,11 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
       </div>
       <LinkPanelBrowsingDataRow isDesktopRuntime={props.isDesktopRuntime} />
       {props.error ? (
-        <div className="flex items-center gap-3" role="alert">
-          <p className="m-0 text-sm text-error">{props.error}</p>
-          <button className={settingsButtonClassName()} onClick={props.onRetryLoad} type="button">
-            Retry
-          </button>
-        </div>
+        <SettingsErrorState
+          action={<SettingsStateAction label="Retry" onClick={props.onRetryLoad} />}
+          description={props.error}
+          title="External sources unavailable"
+        />
       ) : null}
     </SettingsSection>
   );
