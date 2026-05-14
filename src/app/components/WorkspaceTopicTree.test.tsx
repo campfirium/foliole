@@ -192,7 +192,8 @@ it('keeps an expanded branch open when selecting another current-folder topic', 
   render(<WorkspaceTopicTreeHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
-  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Expand React Notes' }));
+  const reactNotesRow = within(itemColumn).getByRole('treeitem', { name: 'React Notes', expanded: false });
+  fireEvent.keyDown(reactNotesRow, { key: 'ArrowRight' });
 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
 

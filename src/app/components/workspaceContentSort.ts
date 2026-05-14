@@ -159,7 +159,12 @@ export function sortWorkspaceContentNodeIds(
     const node = nodesById[nodeId];
     if (!node) return;
     const parentId = node.parentNodeId && knownIds.has(node.parentNodeId) ? node.parentNodeId : null;
-    childrenByParent.set(parentId, [...(childrenByParent.get(parentId) ?? []), nodeId]);
+    const children = childrenByParent.get(parentId);
+    if (children) {
+      children.push(nodeId);
+    } else {
+      childrenByParent.set(parentId, [nodeId]);
+    }
   });
 
   const sortIds = (ids: string[]) =>

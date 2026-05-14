@@ -69,7 +69,12 @@ function buildTopicColumnIndex(
     const node = nodesById[nodeId];
     if (!node) return;
     const parentId = node.parentNodeId ?? null;
-    visibleChildrenByParent.set(parentId, [...(visibleChildrenByParent.get(parentId) ?? []), nodeId]);
+    const children = visibleChildrenByParent.get(parentId);
+    if (children) {
+      children.push(nodeId);
+    } else {
+      visibleChildrenByParent.set(parentId, [nodeId]);
+    }
   });
 
   return { orderIndexById, visibleChildrenByParent };

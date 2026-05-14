@@ -50,6 +50,7 @@ function findMenuItem(items: MockMenuItem[], id: string): MockMenuItem | null {
 
 describe('native app menu', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     menuMock.applicationMenu = null;
     menuMock.buildFromTemplate.mockImplementation((template: Record<string, unknown>[]) => ({
       items: template.map((item) => toMenuItem(item))
@@ -73,7 +74,8 @@ describe('native app menu', () => {
     const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
     expect(findMenuItem(items, 'editor.toggleImmersiveMode')).toMatchObject({ accelerator: 'F11', enabled: true });
     expect(findMenuItem(items, 'nodes.enterPriorityMode')).toMatchObject({ accelerator: 'Control+M', enabled: true });
-    expect(findMenuItem(items, 'workspace.toggleDevTools')).toMatchObject({ accelerator: null, enabled: false });
+    expect(findMenuItem(items, 'workspace.toggleDevTools')).toMatchObject({ enabled: false });
+    expect(findMenuItem(items, 'workspace.toggleDevTools')).not.toHaveProperty('accelerator');
   });
 
   it('rebuilds menu items instead of mutating read-only accelerators', () => {

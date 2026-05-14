@@ -100,6 +100,19 @@ function registerStartupWatchdog() {
   }, 5000);
 }
 
+function reportPendingModuleImport(stage: string, startedAt: number) {
+  reportRuntimeBootStage(stage, {
+    durationMs: Math.round(performance.now() - startedAt),
+    resources: performance
+      .getEntriesByType('resource')
+      .slice(-12)
+      .map((entry) => ({
+        duration: Math.round(entry.duration),
+        name: entry.name
+      }))
+  });
+}
+
 async function mountApp() {
   const rootElement = document.getElementById(ROOT_ID);
   if (!rootElement) {
@@ -120,9 +133,20 @@ async function mountApp() {
   });
   reportRuntimeBootStage('boot_context', bootContext);
 
+  reportRuntimeBootStage('app_module_import_start');
+  const appImportStartedAt = performance.now();
+  const appImportPendingTimer = window.setTimeout(
+    () => reportPendingModuleImport('app_module_import_pending', appImportStartedAt),
+    8000
+  );
   const { App } = await import('./app/App');
+  window.clearTimeout(appImportPendingTimer);
+  reportRuntimeBootStage('app_module_import_complete');
+  reportRuntimeBootStage('startup_error_boundary_import_start');
   const { StartupErrorBoundary } = await import('./shared/ui/StartupErrorBoundary');
+  reportRuntimeBootStage('startup_error_boundary_import_complete');
 
+  reportRuntimeBootStage('react_render_call_start');
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <StartupErrorBoundary
@@ -138,6 +162,7 @@ async function mountApp() {
       </StartupErrorBoundary>
     </React.StrictMode>
   );
+  reportRuntimeBootStage('react_render_call_complete');
   reportRuntimeBootStage('react_render_committed');
   registerStartupWatchdog();
 }

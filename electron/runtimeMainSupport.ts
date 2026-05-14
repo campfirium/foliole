@@ -22,6 +22,7 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
     autoHideMenuBar: false,
     show: false,
     webPreferences: {
+      backgroundThrottling: false,
       preload: preloadPath,
       contextIsolation: true,
       sandbox: true,

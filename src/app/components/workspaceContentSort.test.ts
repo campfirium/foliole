@@ -6,6 +6,7 @@ import {
   loadWorkspaceContentSortPreference,
   saveWorkspaceContentSortPreference,
   sortExternalDocuments,
+  sortWorkspaceContentNodeIds,
   sortWorkspaceContentRows
 } from './workspaceContentSort';
 
@@ -98,4 +99,26 @@ it('sorts workspace content by modified time using updatedAt', () => {
   ];
 
   expect(sortWorkspaceContentRows(rows, { direction: 'desc', key: 'modifiedAt' }).map((row) => row.node.id)).toEqual(['edited-later', 'imported-later']);
+});
+
+it('keeps large sibling groups ordered without changing hierarchy', () => {
+  const nodeCount = 600;
+  const nodeIds = Array.from({ length: nodeCount }, (_, index) => `node-${index}`);
+  const nodesById = Object.fromEntries(
+    nodeIds.map((nodeId, index) => [
+      nodeId,
+      {
+        ...createRow(nodeId, `Node ${String(index).padStart(3, '0')}`, `2026-04-20T00:${String(index % 60).padStart(2, '0')}:00.000Z`).node,
+        parentNodeId: 'folder'
+      }
+    ])
+  );
+  nodesById.folder = {
+    ...createRow('folder', 'Folder', '2026-04-20T00:00:00.000Z').node,
+    hasContent: false
+  };
+
+  expect(
+    sortWorkspaceContentNodeIds(['folder', ...nodeIds], nodesById, { direction: 'asc', key: 'name' }).slice(0, 5)
+  ).toEqual(['folder', 'node-0', 'node-1', 'node-2', 'node-3']);
 });

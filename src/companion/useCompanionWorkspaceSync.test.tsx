@@ -95,6 +95,7 @@ vi.mock('./useCompanionWorkspacePairing', () => ({
     },
     pairingStatus: 'idle',
     pendingPairRequest: null,
+    refreshPairingState: vi.fn(),
     requestPairing: vi.fn()
   })
 }));

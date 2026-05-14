@@ -2,8 +2,13 @@ import { expect, it, vi } from 'vitest';
 
 import {
   bindEmbeddedLinkPanelContents,
+  createMainWindowOptions,
   isAllowedEmbeddedLinkPanelUrl
 } from './runtimeMainSupport.js';
+
+it('keeps the startup renderer unthrottled while the hidden window is loading', () => {
+  expect(createMainWindowOptions('/tmp/preload.cjs').webPreferences?.backgroundThrottling).toBe(false);
+});
 
 it('allows only http and https URLs for embedded link panel window opens', () => {
   expect(isAllowedEmbeddedLinkPanelUrl('https://example.com/path')).toBe(true);
