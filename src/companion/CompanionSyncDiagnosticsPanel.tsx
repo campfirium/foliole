@@ -14,11 +14,13 @@ import {
   runCombinedSyncDiagnostics,
   type CombinedSyncDiagnosticResult
 } from '../shared/platform/companionSyncDiagnostics';
+import { AppEmptyState } from '../shared/ui';
 
 import { CompanionSyncConvergenceReport } from './CompanionSyncConvergenceReport';
 import { CompanionSyncDiagnosticCheckpoint } from './CompanionSyncDiagnosticCheckpoint';
 import { SnapshotMetrics } from './CompanionSyncDiagnosticMetrics';
 import { DirtyObjectRows, ObjectTypeRows, PendingAckRows } from './CompanionSyncDiagnosticsRows';
+import { CompanionSyncDiagnosticStatus } from './CompanionSyncDiagnosticStatus';
 import { buildSyncDiagnosticSummary } from './CompanionSyncDiagnosticSummary';
 import { friendlySyncDiagnosticVerdict } from './companionSyncDiagnosticVerdicts';
 
@@ -31,7 +33,7 @@ function severityClass(severity: SyncDiagnosticSeverity) {
 
 function VerdictList(props: { verdicts: SyncDiagnosticVerdict[] }) {
   if (props.verdicts.length === 0) {
-    return <p className="py-4 text-sm text-companion-text-secondary">No diagnostic verdicts yet.</p>;
+    return <AppEmptyState className="min-h-0 items-start py-4 text-left text-companion-text-secondary" description="Run diagnostics to collect sync findings." title="No diagnostic verdicts yet" />;
   }
   return (
     <div className="border-t border-companion-divider">
@@ -83,7 +85,11 @@ function SnapshotSection(props: {
           ) : null}
         </div>
       ) : (
-        <p className="mt-3 text-sm leading-6 text-companion-text-secondary">{props.empty}</p>
+        <AppEmptyState
+          className="mt-3 min-h-0 items-start text-left text-companion-text-secondary"
+          description="Run diagnostics from a paired device to fill this section."
+          title={props.empty}
+        />
       )}
     </section>
   );
@@ -200,7 +206,7 @@ export function CompanionSyncDiagnosticsPanel(props: { endpointUrl: string | nul
         onRunDiagnostic={() => void runDiagnostic()}
         status={status}
       />
-      {error ? <p className="text-sm leading-6 text-error">{error}</p> : null}
+      <CompanionSyncDiagnosticStatus error={error} status={status} />
       {result ? (
         <DiagnosticResultSections convergenceReport={convergenceReport} result={result} />
       ) : null}

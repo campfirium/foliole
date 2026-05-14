@@ -1,3 +1,5 @@
+import { AppEmptyState, AppErrorState } from '../shared/ui';
+
 type ReviewFallbackSession = {
   nextFsrsDueAt: string | null;
   nextReadingDueAt: string | null;
@@ -22,24 +24,35 @@ export function CompanionReviewFallback(props: {
     <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
       {props.hasSnapshot ? (
         <>
-          <p>{hasScheduledReviews ? 'No items are due right now.' : 'No items have been scheduled on this device yet.'}</p>
+          <AppEmptyState
+            className="min-h-0 items-start text-left text-companion-text-secondary"
+            description={hasScheduledReviews
+              ? 'Your synced review state has no due work right now.'
+              : 'Pull a newer snapshot when you want this device to refresh upcoming review work.'}
+            title={hasScheduledReviews ? 'No items are due right now' : 'No items scheduled on this device'}
+          />
           {nextReadingLabel ? <p className="mt-3">Next reading topic: {nextReadingLabel}</p> : null}
           {nextFsrsLabel ? <p className="mt-2">Next item: {nextFsrsLabel}</p> : null}
           <p className="mt-3">
             {hasScheduledReviews
               ? `Synced review state: ${props.reviewSession.scheduledReadingCount} reading topics, ${props.reviewSession.scheduledFsrsCount} items.`
-              : 'Pull a newer snapshot when you want this device to refresh upcoming review work.'}
+              : 'Connect to desktop to bring review work onto this device.'}
           </p>
         </>
       ) : (
-        <>
-          <p>No topics have been synced to this device yet.</p>
-          <p className="mt-3">
-            Connect this device with desktop and keep both devices on the same network.
-          </p>
-        </>
+        <AppEmptyState
+          className="min-h-0 items-start text-left text-companion-text-secondary"
+          description="Connect this device with desktop and keep both devices on the same network."
+          title="No topics synced yet"
+        />
       )}
-      {props.error ? <span className="mt-4 block text-error">{props.error}</span> : null}
+      {props.error ? (
+        <AppErrorState
+          className="mt-4 min-h-0 items-start text-left text-error"
+          description={props.error}
+          title="Review queue could not refresh"
+        />
+      ) : null}
     </section>
   );
 }

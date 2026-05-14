@@ -2,17 +2,18 @@ import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { definedProps } from '../shared/lib/definedProps';
 import type {
   FolderListSortDirection,
   FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
+import { definedProps } from '../shared/lib/definedProps';
 import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionRootDirectoryView,
   resolveCompanionTrashFolderViewByNodeId,
   resolveCompanionTrashView
 } from '../shared/platform/companionBrowseLists';
+import { AppEmptyState } from '../shared/ui';
 
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import {
@@ -51,9 +52,13 @@ function DirectoryList(props: {
 }) {
   if (props.sections.length === 0) {
     return (
-      <p className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-        {props.emptyLabel}
-      </p>
+      <div className="border-t border-companion-divider px-1 py-6">
+        <AppEmptyState
+          className="min-h-0 items-start text-left text-companion-text-secondary"
+          description="Add a topic or folder from desktop to see it here."
+          title={props.emptyLabel}
+        />
+      </div>
     );
   }
 

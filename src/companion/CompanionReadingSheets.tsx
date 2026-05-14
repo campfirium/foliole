@@ -6,6 +6,7 @@ import {
   AppDialog,
   AppDialogClose,
   AppDialogContent,
+  AppEmptyState,
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle
@@ -101,7 +102,11 @@ export function OutlineSheet(props: {
             {item.text}
           </button>
         )) : (
-          <p className="py-5 text-sm text-companion-text-secondary">No headings in this topic</p>
+          <AppEmptyState
+            className="min-h-0 items-start py-5 text-left text-companion-text-secondary"
+            description="Headings will appear here when this topic contains an outline."
+            title="No headings in this topic"
+          />
         )}
       </div>
     </ReadingBottomSheet>
@@ -114,8 +119,12 @@ export function ReadingFontSheet(props: {
 }) {
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Font">
-      <div className="border-t border-companion-divider py-5 text-sm text-companion-text-secondary">
-        Reading font controls are not available on Android yet.
+      <div className="border-t border-companion-divider py-5">
+        <AppEmptyState
+          className="min-h-0 items-start text-left text-companion-text-secondary"
+          description="Reading font controls are not available on Android yet."
+          title="Font controls are coming soon"
+        />
       </div>
     </ReadingBottomSheet>
   );
@@ -127,8 +136,12 @@ export function ReadingHighlightSheet(props: {
 }) {
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Highlight">
-      <div className="border-t border-companion-divider py-5 text-sm text-companion-text-secondary">
-        Highlight tools are not available on Android yet.
+      <div className="border-t border-companion-divider py-5">
+        <AppEmptyState
+          className="min-h-0 items-start text-left text-companion-text-secondary"
+          description="Highlight tools are not available on Android yet."
+          title="Highlight tools are coming soon"
+        />
       </div>
     </ReadingBottomSheet>
   );

@@ -1,6 +1,7 @@
 import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { inferSyncRunResult } from '../shared/platform/companionSyncActivityEvents';
+import { AppEmptyState } from '../shared/ui';
 
 import {
   formatSyncRunActivityMessage,
@@ -77,7 +78,11 @@ function CompletedActivitySection(props: { currentMessage: string | null; events
     return (
       <div className={props.currentMessage ? 'py-4' : 'border-b border-companion-divider py-4'}>
         <div className="mb-2 text-xs font-medium text-companion-text-secondary">Completed</div>
-        <p className="text-sm leading-6 text-companion-text-secondary">No completed sync activity yet.</p>
+        <AppEmptyState
+          className="min-h-0 items-start text-left text-companion-text-secondary"
+          description="Completed sync runs will appear here after this device syncs."
+          title="No completed sync activity yet"
+        />
       </div>
     );
   }

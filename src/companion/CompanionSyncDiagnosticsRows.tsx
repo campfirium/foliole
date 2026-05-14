@@ -3,6 +3,7 @@ import type {
   SyncDiagnosticDirtyObject,
   SyncDiagnosticPendingAck
 } from '../../lib/platform/syncDiagnosticsContract';
+import { AppEmptyState } from '../shared/ui';
 
 function formatSeq(value: number | null | undefined) {
   return typeof value === 'number' ? `${value}` : '-';
@@ -18,7 +19,7 @@ function formatObjectTypeStatus(row: SyncDiagnosticCountRange) {
 
 export function ObjectTypeRows(props: { rows: SyncDiagnosticCountRange[] }) {
   if (props.rows.length === 0) {
-    return <p className="py-3 text-sm text-companion-text-secondary">No sync objects yet.</p>;
+    return <AppEmptyState className="min-h-0 items-start py-3 text-left text-companion-text-secondary" description="Sync object totals will appear after a diagnostic run finds them." title="No sync objects yet" />;
   }
   return (
     <div className="border-t border-companion-divider">
@@ -35,7 +36,7 @@ export function ObjectTypeRows(props: { rows: SyncDiagnosticCountRange[] }) {
 
 export function DirtyObjectRows(props: { rows: SyncDiagnosticDirtyObject[] }) {
   if (props.rows.length === 0) {
-    return <p className="py-3 text-sm text-companion-text-secondary">No device changes waiting to send.</p>;
+    return <AppEmptyState className="min-h-0 items-start py-3 text-left text-companion-text-secondary" description="This device has no local changes queued for desktop." title="No device changes waiting to send" />;
   }
   return (
     <div className="border-t border-companion-divider">
@@ -55,7 +56,13 @@ export function DirtyObjectRows(props: { rows: SyncDiagnosticDirtyObject[] }) {
 
 export function PendingAckRows(props: { emptyText?: string; rows: SyncDiagnosticPendingAck[] }) {
   if (props.rows.length === 0) {
-    return <p className="py-3 text-sm text-companion-text-secondary">{props.emptyText ?? 'No desktop confirmations waiting.'}</p>;
+    return (
+      <AppEmptyState
+        className="min-h-0 items-start py-3 text-left text-companion-text-secondary"
+        description="This diagnostic section has no rows to report."
+        title={props.emptyText ?? 'No desktop confirmations waiting.'}
+      />
+    );
   }
   return (
     <div className="border-t border-companion-divider">
