@@ -1,6 +1,6 @@
 import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
-import { AppEmptyState, VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
+import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import { isInboxNode, isTrashNode, isVirtualRootNode } from '../model/specialNodes';
@@ -10,6 +10,7 @@ import {
 } from '../model/workspaceListNode';
 
 import { getDismissedFadeOpacity, shouldFadeDismissedWholeRow } from './nodeIconAppearanceSettings';
+import { NodeListStateSurface } from './NodeListStateSurface';
 import type { useNodeListDragController } from './NodeListTreeDrag';
 import { createNodeListRowKeydownHandler } from './NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from './NodeListTreeState';
@@ -115,18 +116,6 @@ function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
 }
 
 export function NodeListRows(props: NodeListRowsProps) {
-  if (props.rows.length === 0) {
-    return props.isTrashViewOpen ? (
-      <div className="flex min-h-full items-center justify-center px-3 py-6">
-        <AppEmptyState description="Deleted topics will appear here." title="Trash is empty" />
-      </div>
-    ) : props.isVirtualViewOpen ? (
-      <AppEmptyState description="Create a virtual folder to save a reusable filtered view." title="No virtual folders" />
-    ) : (
-      <AppEmptyState description="Create or import a topic to start editing." title="No topics" />
-    );
-  }
-
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({
@@ -137,6 +126,23 @@ export function NodeListRows(props: NodeListRowsProps) {
       }),
     [props.collapsedNodeIds, props.onSelect, props.onToggleCollapse, props.rows]
   );
+
+  if (props.rows.length === 0) {
+    const emptyState = props.isTrashViewOpen
+      ? { description: 'Deleted topics will appear here.', title: 'Trash is empty' }
+      : props.isVirtualViewOpen
+        ? { description: 'Create a virtual folder to save a reusable filtered view.', title: 'No virtual folders' }
+        : { description: 'Create or import a topic to start editing.', title: 'No topics' };
+    return (
+      <NodeListStateSurface
+        className={props.isTrashViewOpen ? 'flex min-h-full items-center justify-center px-3 py-6' : undefined}
+        emptyState={emptyState}
+        hasRows={false}
+      >
+        {null}
+      </NodeListStateSurface>
+    );
+  }
 
   if (props.isTrashViewOpen) {
     return (

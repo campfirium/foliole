@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type RefObject, type SetStateAction } from 'react';
 
+import { NodeListStateSurface } from '../../features/nodes/components/NodeListStateSurface';
 import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { type NodeListContextMenuController } from '../../features/nodes/components/NodeListTreeHooks';
 import { useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
 import { buildNodeTree, buildVisibleNodeTreeRows, collectNodeAncestorIds, filterNodeTreeRowsByTitle } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { AppEmptyState } from '../../shared/ui';
 
 import { WorkspaceTopicTreeRows } from './WorkspaceTopicTreeRows';
 
@@ -36,14 +36,14 @@ export function renderWorkspaceTopicTreeBody(args: {
         args.contextMenu.openRootContextMenu(event);
       }}
     >
-      {args.visibleRows.length === 0 ? (
-        <div className="flex min-h-full items-center justify-center px-3 py-6">
-          <AppEmptyState
-            description={args.emptyStateDescription}
-            title={args.emptyStateTitle}
-          />
-        </div>
-      ) : (
+      <NodeListStateSurface
+        className="flex min-h-full items-center justify-center px-3 py-6"
+        emptyState={{
+          description: args.emptyStateDescription,
+          title: args.emptyStateTitle
+        }}
+        hasRows={args.visibleRows.length > 0}
+      >
         <WorkspaceTopicTreeRows
           activeNodeId={args.activeNodeId}
           collapsedNodeIds={args.collapsedNodeIds}
@@ -57,7 +57,7 @@ export function renderWorkspaceTopicTreeBody(args: {
           scrollContainerRef={args.scrollContainerRef}
           selectedNodeIds={args.selectedNodeIds}
         />
-      )}
+      </NodeListStateSurface>
     </div>
   );
 }

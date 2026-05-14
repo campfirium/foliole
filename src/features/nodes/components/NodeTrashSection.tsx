@@ -1,9 +1,10 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
-import { AppButton, AppEmptyState } from '../../../shared/ui';
+import { AppButton } from '../../../shared/ui';
 import type { NodeTreeRow as NodeTreeRowModel } from '../model/nodeTree';
 
 import { getNodeListRowSpacing } from './nodeListRowSpacingSettings';
+import { NodeListStateSurface } from './NodeListStateSurface';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow } from './NodeTreeRow';
 
@@ -67,10 +68,11 @@ export function NodeTrashSection({
         className="pointer-events-none flex max-h-0 flex-col gap-2 overflow-hidden px-4 pt-0 opacity-0 transition-all duration-200 data-[open=true]:pointer-events-auto data-[open=true]:max-h-[52dvh] data-[open=true]:pt-2 data-[open=true]:opacity-100"
         data-open={isOpen}
       >
-        {rows.length === 0 ? (
-          <AppEmptyState description="Deleted topics will appear here." title="Trash is empty" />
-        ) : (
-          rows.map((row) => (
+        <NodeListStateSurface
+          emptyState={{ description: 'Deleted topics will appear here.', title: 'Trash is empty' }}
+          hasRows={rows.length > 0}
+        >
+          {rows.map((row) => (
             <NodeTreeRow
               descendantCount={row.descendantCount}
               depth={row.depth}
@@ -87,8 +89,8 @@ export function NodeTrashSection({
               onSelect={onSelect}
               onToggleCollapse={NOOP_TOGGLE_COLLAPSE}
             />
-          ))
-        )}
+          ))}
+        </NodeListStateSurface>
       </div>
     </section>
   );

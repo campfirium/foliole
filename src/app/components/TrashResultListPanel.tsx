@@ -3,6 +3,7 @@ import { useMemo, useRef, useState, type RefObject } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
+import { NodeListStateSurface } from '../../features/nodes/components/NodeListStateSurface';
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
 import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
@@ -10,7 +11,7 @@ import { TrashListRows } from '../../features/nodes/components/TrashListRows';
 import { buildFlatNodeRows } from '../../features/nodes/model/nodeTree';
 import { filterTrashRootIdsByTitle, selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { AppEmptyState, AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
+import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
@@ -49,28 +50,26 @@ function TrashRowsBody(props: {
   selectTrashNode: ReturnType<typeof useNodeSelectionHandler>;
   selectedNodeIds: string[];
 }) {
-  if (props.rows.length === 0) {
-    return (
-      <div className="flex min-h-full items-center justify-center py-6">
-        <AppEmptyState description="Deleted topics will appear here." title="Trash is empty" />
-      </div>
-    );
-  }
-
   return (
-    <div aria-label="Trash topics" className="flex flex-col gap-2" role="tree">
-      <TrashListRows
-        activeNodeId={props.selectedNodeIds[0] ?? null}
-        nodesById={props.nodesById}
-        onContextMenu={props.contextMenu.openContextMenu}
-        onKeyDown={() => undefined}
-        onSelect={props.selectTrashNode}
-        rows={props.rows}
-        rowSpacing={props.rowSpacing}
-        scrollContainerRef={props.scrollContainerRef}
-        selectedNodeIds={props.selectedNodeIds}
-      />
-    </div>
+    <NodeListStateSurface
+      className="flex min-h-full items-center justify-center py-6"
+      emptyState={{ description: 'Deleted topics will appear here.', title: 'Trash is empty' }}
+      hasRows={props.rows.length > 0}
+    >
+      <div aria-label="Trash topics" className="flex flex-col gap-2" role="tree">
+        <TrashListRows
+          activeNodeId={props.selectedNodeIds[0] ?? null}
+          nodesById={props.nodesById}
+          onContextMenu={props.contextMenu.openContextMenu}
+          onKeyDown={() => undefined}
+          onSelect={props.selectTrashNode}
+          rows={props.rows}
+          rowSpacing={props.rowSpacing}
+          scrollContainerRef={props.scrollContainerRef}
+          selectedNodeIds={props.selectedNodeIds}
+        />
+      </div>
+    </NodeListStateSurface>
   );
 }
 
