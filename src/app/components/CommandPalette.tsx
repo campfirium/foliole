@@ -154,7 +154,7 @@ export function CommandPalette({
   onClose,
   onRunCommand
 }: CommandPaletteProps) {
-  const focusTrap = useFloatingDialogFocusTrap();
+  const focusTrap = useFloatingDialogFocusTrap(isOpen);
   const { activeIndex, activeItems, displaySections, query, setActiveIndex, setQuery } =
     useCommandPaletteState({
       isOpen,

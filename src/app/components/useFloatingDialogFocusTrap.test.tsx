@@ -4,12 +4,6 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 
-const TRACKED_EVENTS = new Set(['focusin', 'keydown', 'pointerdown']);
-
-function getTrackedCalls(spy: ReturnType<typeof vi.spyOn>) {
-  return spy.mock.calls.filter(([type]) => TRACKED_EVENTS.has(String(type)));
-}
-
 function FloatingDialogHarness() {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -19,24 +13,6 @@ function FloatingDialogHarness() {
         Open dialog
       </button>
       {isOpen ? <FloatingDialog onClose={() => setIsOpen(false)} /> : null}
-    </>
-  );
-}
-
-function DualFloatingDialogHarness() {
-  const [firstOpen, setFirstOpen] = useState(true);
-  const [secondOpen, setSecondOpen] = useState(false);
-
-  return (
-    <>
-      <button onClick={() => setFirstOpen((value) => !value)} type="button">
-        Toggle first
-      </button>
-      <button onClick={() => setSecondOpen((value) => !value)} type="button">
-        Toggle second
-      </button>
-      {firstOpen ? <LabeledFloatingDialog label="First dialog" onClose={() => setFirstOpen(false)} /> : null}
-      {secondOpen ? <LabeledFloatingDialog label="Second dialog" onClose={() => setSecondOpen(false)} /> : null}
     </>
   );
 }
@@ -118,35 +94,10 @@ afterEach(() => {
 
 it('does not register document focus tracking listeners on import', async () => {
   const addSpy = vi.spyOn(document, 'addEventListener');
-
   vi.resetModules();
   await import('./useFloatingDialogFocusTrap');
 
-  expect(getTrackedCalls(addSpy)).toHaveLength(0);
-});
-
-it('registers document focus tracking only while hook instances are mounted', () => {
-  const addSpy = vi.spyOn(document, 'addEventListener');
-  const removeSpy = vi.spyOn(document, 'removeEventListener');
-
-  const { unmount } = render(<DualFloatingDialogHarness />);
-
-  expect(getTrackedCalls(addSpy)).toHaveLength(3);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Toggle second' }));
-  expect(getTrackedCalls(addSpy)).toHaveLength(3);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Close First dialog' }));
-  expect(getTrackedCalls(removeSpy)).toHaveLength(0);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Close Second dialog' }));
-  expect(getTrackedCalls(removeSpy)).toHaveLength(3);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Toggle first' }));
-  expect(getTrackedCalls(addSpy)).toHaveLength(6);
-
-  unmount();
-  expect(getTrackedCalls(removeSpy)).toHaveLength(6);
+  expect(addSpy).not.toHaveBeenCalled();
 });
 
 it('restores focus to the trigger when the floating dialog closes', async () => {

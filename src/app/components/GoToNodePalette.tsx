@@ -45,7 +45,7 @@ export function GoToNodePalette({
   trashedNodeIds
 }: GoToNodePaletteProps) {
   const handleSelectNode = onSelectNode ?? onOpenNode;
-  const focusTrap = useFloatingDialogFocusTrap();
+  const focusTrap = useFloatingDialogFocusTrap(isOpen);
   const { activeIndex, query, results, setActiveIndex, setQuery } = useGoToNodePaletteState({
     isOpen,
     nodeOrder,

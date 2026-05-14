@@ -10,55 +10,17 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])'
 ].join(',');
 
-let lastFocusedElement: HTMLElement | null = null;
-let focusTrackingUsers = 0;
-
-function rememberActiveElement() {
-  if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
-    lastFocusedElement = document.activeElement;
-  }
-}
-
-function rememberFocusedElement(event: FocusEvent) {
-  lastFocusedElement = event.target instanceof HTMLElement ? event.target : null;
-}
-
-function retainFocusTracking() {
-  if (typeof document === 'undefined') {
-    return;
-  }
-  focusTrackingUsers += 1;
-  if (focusTrackingUsers > 1) {
-    return;
-  }
-  document.addEventListener('focusin', rememberFocusedElement);
-  document.addEventListener('keydown', rememberActiveElement, true);
-  document.addEventListener('pointerdown', rememberActiveElement, true);
-}
-
-function releaseFocusTracking() {
-  if (typeof document === 'undefined' || focusTrackingUsers === 0) {
-    return;
-  }
-  focusTrackingUsers -= 1;
-  if (focusTrackingUsers > 0) {
-    return;
-  }
-  document.removeEventListener('focusin', rememberFocusedElement);
-  document.removeEventListener('keydown', rememberActiveElement, true);
-  document.removeEventListener('pointerdown', rememberActiveElement, true);
-  lastFocusedElement = null;
-}
-
 function getFocusableElements(container: HTMLElement) {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((element) => !element.hasAttribute('hidden'));
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (element) => !element.hasAttribute('hidden')
+  );
 }
 
 function getCurrentRestoreTarget() {
   if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
     return document.activeElement;
   }
-  return lastFocusedElement;
+  return null;
 }
 
 function restoreFocus(element: HTMLElement | null) {
@@ -72,17 +34,27 @@ function scheduleRestoreFocus(element: HTMLElement | null) {
   window.setTimeout(() => restoreFocus(element), 0);
 }
 
-export function useFloatingDialogFocusTrap() {
+export function useFloatingDialogFocusTrap(isActive = true) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
-    retainFocusTracking();
+    if (!isActive) {
+      return undefined;
+    }
     previousFocusRef.current = getCurrentRestoreTarget();
-    return releaseFocusTracking;
-  }, []);
+    return undefined;
+  }, [isActive]);
 
-  useEffect(() => () => scheduleRestoreFocus(previousFocusRef.current), []);
+  useEffect(
+    () => () => {
+      if (isActive) {
+        scheduleRestoreFocus(previousFocusRef.current);
+        previousFocusRef.current = null;
+      }
+    },
+    [isActive]
+  );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Tab') {

@@ -21,7 +21,7 @@ interface SearchPaletteProps {
 }
 
 export function SearchPalette(props: SearchPaletteProps) {
-  const focusTrap = useFloatingDialogFocusTrap();
+  const focusTrap = useFloatingDialogFocusTrap(props.isOpen);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const searchState = useSearchResults(props, query);
