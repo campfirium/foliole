@@ -45,6 +45,8 @@
   --window-titlebar-action-color: rgb(var(--color-foreground) / 0.62);
   --window-titlebar-action-hover-bg: rgb(var(--color-foreground) / 0.08);
   --window-titlebar-action-hover-color: rgb(var(--color-foreground) / 0.92);
+  --window-titlebar-close-hover-bg: #e81123;
+  --window-titlebar-close-hover-color: #fff;
   --node-icon-default-color: rgb(var(--color-foreground) / 0.65);
   --app-control-border-color: rgb(var(--color-foreground) / 0.22);
   --app-control-border-hover-color: rgb(var(--color-foreground) / 0.36);
@@ -802,8 +804,8 @@ b {
 }
 
 .window-titlebar-button-close:hover:not(:disabled) {
-  background: #e81123;
-  color: #fff;
+  background: var(--window-titlebar-close-hover-bg);
+  color: var(--window-titlebar-close-hover-color);
 }
 
 .window-titlebar-icon {
