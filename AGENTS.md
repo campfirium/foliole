@@ -96,8 +96,8 @@
 - 运行验证前必须先从 `package.json` / `npm run` 确认真实脚本入口；若不存在 `test`、`build` 或其他习惯性脚本名，必须改用仓库已声明的具体脚本，不得先运行不存在的默认命令。
 - 定向跑测试时必须先用 `rg --files` / `rg` 找到测试文件与相关 npm 脚本，再选择最窄可用入口；当前仓库测试入口以 `test:changed`、`test:desktop`、`test:shared`、`test:android`、`test:full` 和各质量闸脚本为准，而不是 `npm test`。
 - 改动 `lib/core/sync/syncPack*`、`electron/database/syncPack*`、`electron/sync/syncPack*`、`src/shared/platform/companionSyncPack*` 或 sync pack manifest / schema / apply 语义时，必须先跑 `npm run test:sync-pack`，通过后再按影响范围追加宿主验证；pre-push affected 路由会对推送范围内命中的这些路径自动执行同一检查。
-- 新增文件、拆分文件或修复 `max-lines` / `max-lines-per-function` 后，必须先对触碰文件跑 `node scripts/check-file-budget.mjs <file...>`，再跑对应窄 scope lint；pre-commit 只对 staged 新增 / 重命名文件自动执行预算检查，并对其中代码文件执行显式文件 lint。
-- 当前仓库有提交内容 / commit sequence 钩子、pre-push affected sync-pack 路由与手动 SQLite capability workflow；除此之外没有会自动补跑本轮质量闸的强制 hook / CI 兜底，质量闸由执行者按任务范围主动选择并运行。
+- 新增文件、拆分文件或修复 `max-lines` / `max-lines-per-function` 后，必须先对触碰文件跑 `node scripts/check-file-budget.mjs <file...>`，再跑对应窄 scope lint；pre-commit 对 staged 新增 / 重命名文件自动执行预算检查，对 staged 代码文件执行显式文件 lint，并按 critical routed tests 跑必要快速回归。
+- 当前仓库有提交内容 / commit sequence 钩子、pre-commit staged lint / 新增文件预算 / critical routed tests、pre-push affected sync-pack 路由与手动 SQLite capability workflow；除此之外没有会自动补跑本轮质量闸的强制 hook / CI 兜底，质量闸由执行者按任务范围主动选择并运行。
 - 默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环范围或技术风险超过“相关验证”覆盖面时，才升级到宿主 / 共享质量闸。
 - 相关最小验证默认由与本轮能力闭环直接对应的 `eslint`、`vitest`、局部 `tsc`、宿主链路 smoke test 与必要预览组成，而不是默认整仓或整宿主全跑；不得只验证最后一个文件、函数或调用点。
 - 质量闸属于升级入口，不是每个能力闭环的默认动作；满足条件时按范围选择：`npm run quality:desktop`、`npm run quality:android`、`npm run quality:android:device`、`npm run quality:shared`、`npm run quality:full`、`npm run quality:release` 或 `npm run quality:fast`。

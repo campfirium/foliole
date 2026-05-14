@@ -152,7 +152,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
   const topicBacklinks = buildTopicBacklinks({
     activeNodeId: draftProps.activeNodeId,
-    backlinks: model.backlinks,
+    backlinks: model.backlinks.value,
     nodesById: draftProps.nodesById
   });
   return (

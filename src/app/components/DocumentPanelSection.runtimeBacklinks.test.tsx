@@ -7,8 +7,21 @@ import {
   baseNode,
   buildSectionProps,
   createSectionElement,
+  renderSectionWithProps,
   loadRuntimeNodeBacklinks
 } from './DocumentPanelSection.testSupport';
+
+it('renders topic documents when runtime backlinks have no links', () => {
+  renderSectionWithProps({
+    nodeOrder: ['node-1'],
+    nodesById: {
+      'node-1': { ...baseNode, kind: 'topic', content: '# Topic body' }
+    }
+  });
+
+  expect(screen.getByText('Document body')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Open link references/ })).not.toBeInTheDocument();
+});
 
 it('does not reload runtime backlinks when only surrounding node content changes', async () => {
   loadRuntimeNodeBacklinks.mockResolvedValue([

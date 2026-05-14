@@ -1,4 +1,5 @@
 // @vitest-environment node
+/* global process */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
@@ -12,7 +13,10 @@ const PRE_COMMIT_VALIDATION_SCRIPT = path.join(REPO_ROOT, 'scripts', 'pre-commit
 
 function runCommand(command, args, cwd) {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd });
+    const child = spawn(command, args, {
+      cwd,
+      env: { ...process.env, PATH: `${path.join(cwd, 'node_modules', '.bin')}:${process.env.PATH}` }
+    });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (chunk) => {
@@ -44,6 +48,17 @@ async function createRepo() {
     '#!/usr/bin/env bash\nprintf "lint:%s\\n" "$*" >> calls.log\n',
     { encoding: 'utf8', mode: 0o755 }
   );
+  await writeFile(
+    path.join(repoDir, 'scripts', 'quality-critical-test-routes.mjs'),
+    'import { readFileSync } from "node:fs"; const files = readFileSync(0, "utf8"); if (files.includes("useNodeBacklinks.ts")) process.stdout.write("src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx\\n");\n',
+    'utf8'
+  );
+  await mkdir(path.join(repoDir, 'node_modules', '.bin'), { recursive: true });
+  await writeFile(
+    path.join(repoDir, 'node_modules', '.bin', 'npx'),
+    '#!/usr/bin/env bash\nprintf "npx:%s\\n" "$*" >> calls.log\n',
+    { encoding: 'utf8', mode: 0o755 }
+  );
   return repoDir;
 }
 
@@ -64,20 +79,43 @@ describe('pre-commit validation', () => {
     }
   });
 
-  it('runs budget and explicit lint only for added or renamed files', async () => {
+  it('runs budget for added files and lints all staged code files', async () => {
     const repoDir = await createRepo();
     try {
       await mkdir(path.join(repoDir, 'src'), { recursive: true });
+      await writeFile(path.join(repoDir, 'src', 'existing.ts'), 'export const value = 1;\n');
+      await runCommand('git', ['add', 'src/existing.ts'], repoDir);
+      await runCommand('git', ['commit', '-m', 'seed'], repoDir);
+      await writeFile(path.join(repoDir, 'src', 'existing.ts'), 'export const value = 2;\n');
       await writeFile(path.join(repoDir, 'src', 'new-file.ts'), 'export const value = 1;\n');
       await writeFile(path.join(repoDir, 'notes.md'), '# Notes\n');
-      await runCommand('git', ['add', 'src/new-file.ts', 'notes.md'], repoDir);
+      await runCommand('git', ['add', 'src/existing.ts', 'src/new-file.ts', 'notes.md'], repoDir);
 
       const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
 
       expect(result.code).toBe(0);
       const calls = await readFile(path.join(repoDir, 'calls.log'), 'utf8');
       expect(calls).toContain('budget:notes.md,src/new-file.ts');
-      expect(calls).toContain('lint:src/new-file.ts');
+      expect(calls).toContain('lint:src/existing.ts src/new-file.ts');
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it('runs critical routed tests for staged contract changes', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'src', 'app', 'components'), { recursive: true });
+      await writeFile(path.join(repoDir, 'src', 'app', 'components', 'useNodeBacklinks.ts'), 'export const value = 1;\n');
+      await runCommand('git', ['add', '.'], repoDir);
+
+      const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
+
+      expect(result.code).toBe(0);
+      const calls = await readFile(path.join(repoDir, 'calls.log'), 'utf8');
+      expect(calls).toContain(
+        'npx:vitest run --reporter=dot --silent=passed-only --pool=threads --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx'
+      );
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
