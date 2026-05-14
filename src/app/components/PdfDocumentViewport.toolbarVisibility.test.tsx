@@ -87,6 +87,7 @@ function buildBaseToolbarHarnessProps() {
     onContextMenu: () => undefined,
     onLoadError: () => undefined,
     onLoadSuccess: () => undefined,
+    onRetryLoad: () => undefined,
     onPdfReadingModeChange: () => undefined,
     onRotateClockwise: () => undefined,
     onSearchRequest: () => undefined,

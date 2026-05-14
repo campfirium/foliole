@@ -24,7 +24,7 @@ interface PdfDocumentSurfaceLayoutProps {
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSelectionContextMenu: JSX.Element;
   pdfSource: string;
-  reportLoadError: (message: string) => void;
+  reportLoadError: (message: string | null) => void;
   reportLoadSuccess: (numPages: number) => void;
   requestPageChange: (value: number) => void;
   rotateClockwise: () => void;
@@ -61,6 +61,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       onContextMenu={props.handleContextMenu}
       onLoadError={(message) => props.reportLoadError(message)}
       onLoadSuccess={(numPages) => props.reportLoadSuccess(numPages)}
+      onRetryLoad={() => props.reportLoadError(null)}
       onNextPage={() => props.stepPage(1)}
       onPageChange={props.requestPageChange}
       onPreviousPage={() => props.stepPage(-1)}

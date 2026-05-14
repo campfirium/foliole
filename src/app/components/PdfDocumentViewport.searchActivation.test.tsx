@@ -84,6 +84,7 @@ function PdfDocumentViewportSearchActivationHarness() {
       onContextMenu={() => undefined}
       onLoadError={() => undefined}
       onLoadSuccess={() => undefined}
+      onRetryLoad={() => undefined}
       onNextPage={() => undefined}
       onPageChange={() => undefined}
       onPdfReadingModeChange={() => undefined}

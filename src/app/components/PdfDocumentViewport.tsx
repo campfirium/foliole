@@ -19,6 +19,7 @@ interface PdfDocumentViewportProps {
   onNextPage: () => void;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
+  onRetryLoad: () => void;
   onSearchStatusChange: (status: PdfSearchStatus) => void;
   onClearSearch: () => void;
   onPageChange: (value: number) => void;
@@ -190,7 +191,7 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
     usePdfToolbarVisibility(props.searchQuery, scrollContainerRef, handleScroll);
 
   if (props.loadError) {
-    return <PdfDocumentErrorState loadError={props.loadError} />;
+    return <PdfDocumentErrorState loadError={props.loadError} onRetry={props.onRetryLoad} />;
   }
 
   return (
