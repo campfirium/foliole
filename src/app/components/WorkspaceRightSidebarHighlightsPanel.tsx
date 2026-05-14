@@ -8,7 +8,7 @@ import {
   projectWorkspaceListNodesById,
   type WorkspaceListNodesById
 } from '../../features/nodes/model/workspaceListNode';
-import { InspectorSection } from '../../shared/ui';
+import { AppErrorState, InspectorSection } from '../../shared/ui';
 
 interface WorkspaceRightSidebarHighlightsPanelProps {
   activeNodeId: string | null;
@@ -193,7 +193,7 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
     return <EmptyHighlightsState description="Select a document to browse its highlights." />;
   }
   if (!node) {
-    return null;
+    return <AppErrorState description="The selected topic is no longer available." title="Topic unavailable" />;
   }
   if (highlights.length === 0) {
     return <EmptyHighlightsState description="This topic and its derived topics have no highlights yet." />;

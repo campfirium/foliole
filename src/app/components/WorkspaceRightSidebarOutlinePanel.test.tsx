@@ -16,10 +16,11 @@ function renderOutline(content: string) {
   );
 }
 
-it('renders no content when the current topic has no outline', () => {
-  const { container } = renderOutline('Plain body without headings.');
+it('renders an empty state when the current topic has no outline', () => {
+  renderOutline('Plain body without headings.');
 
-  expect(container).toBeEmptyDOMElement();
+  expect(screen.getByRole('heading', { name: 'Outline' })).toBeInTheDocument();
+  expect(screen.getByText('This topic has no outline headings yet.')).toBeInTheDocument();
 });
 
 it('keeps all outline entries at normal font weight', () => {

@@ -2,6 +2,7 @@ import { ChevronDown } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 
 import { cn } from '../../shared/lib/utils';
+import { InspectorSection } from '../../shared/ui';
 
 import { mayHaveOutline, resolveActiveIndex, resolveDisplayItems } from './DocumentOutlineLayerModel';
 
@@ -112,7 +113,7 @@ export function WorkspaceRightSidebarOutlinePanel({
   }, [activeIndex]);
 
   if (outlineItems.length === 0) {
-    return null;
+    return <InspectorSection description="This topic has no outline headings yet." title="Outline" />;
   }
 
   return (

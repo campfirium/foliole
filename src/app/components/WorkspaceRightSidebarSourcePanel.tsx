@@ -1,6 +1,6 @@
 import type { RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
 import type { RuntimeKeepImportItemDetails, RuntimeNodeImportSource } from '../../shared/platform/nodeSourceRuntimeRepository';
-import { AppStatusBadge, InspectorSection } from '../../shared/ui';
+import { AppButton, AppErrorState, AppLoadingState, AppStatusBadge, InspectorSection } from '../../shared/ui';
 
 import { useNodeSourceDetails } from './useNodeSourceDetails';
 
@@ -70,6 +70,16 @@ function SourceInfoRow({ label, value, mono = false }: { label: string; value: s
 
 function EmptySourceInfoState({ description }: { description: string }) {
   return <InspectorSection description={description} title="Source info" />;
+}
+
+function SourceInfoErrorState({ description, onRetry }: { description: string; onRetry: () => void }) {
+  return (
+    <AppErrorState
+      action={<AppButton onClick={onRetry}>Retry</AppButton>}
+      description={description}
+      title="Source info could not be loaded"
+    />
+  );
 }
 
 function SourceSummarySection({ entries }: { entries: RuntimeTextImportResult[] }) {
@@ -183,13 +193,13 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
     return <EmptySourceInfoState description="Select a topic to inspect its import source and history." />;
   }
   if (!props.hasActiveNode) {
-    return null;
+    return <AppErrorState description="The selected topic is no longer available." title="Topic unavailable" />;
   }
   if (details.isLoading && !details.value) {
-    return <EmptySourceInfoState description="Loading source info..." />;
+    return <AppLoadingState description="Checking this topic's import source and history." title="Loading source info" />;
   }
   if (details.errorMessage && !details.value) {
-    return <EmptySourceInfoState description={details.errorMessage} />;
+    return <SourceInfoErrorState description={details.errorMessage} onRetry={details.retry} />;
   }
   if (!details.value) {
     return <EmptySourceInfoState description="This topic has no recorded import source yet." />;

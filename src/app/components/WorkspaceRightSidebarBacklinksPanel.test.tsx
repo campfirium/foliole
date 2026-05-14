@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -29,6 +29,34 @@ function createNode(overrides: Partial<Node>): Node {
   };
 }
 
+function createPanelNodes() {
+  return {
+    source: createNode({
+      id: 'source',
+      title: 'Source topic',
+      content: 'See [[Target topic]] for context.'
+    }),
+    target: createNode({
+      id: 'target',
+      title: 'Target topic'
+    })
+  };
+}
+
+function renderPanelWithNodes(activeNodeId: string | null, nodesById: Record<string, Node>, nodeOrder = ['target', 'source']) {
+  return render(
+    <StrictMode>
+      <WorkspaceRightSidebarBacklinksPanel
+        activeNodeId={activeNodeId}
+        nodeOrder={nodeOrder}
+        nodesById={nodesById}
+        onSelectNode={vi.fn()}
+        trashedNodeIds={[]}
+      />
+    </StrictMode>
+  );
+}
+
 function renderPanel(activeNodeId: string | null) {
   const nodesById = {
     source: createNode({
@@ -42,17 +70,7 @@ function renderPanel(activeNodeId: string | null) {
     })
   };
 
-  return render(
-    <StrictMode>
-      <WorkspaceRightSidebarBacklinksPanel
-        activeNodeId={activeNodeId}
-        nodeOrder={['target', 'source']}
-        nodesById={nodesById}
-        onSelectNode={vi.fn()}
-        trashedNodeIds={[]}
-      />
-    </StrictMode>
-  );
+  return renderPanelWithNodes(activeNodeId, nodesById);
 }
 
 function expectNoHookOrderWarning(messages: string[]) {
@@ -125,4 +143,37 @@ it('keeps hook order stable while the active topic changes', async () => {
   expect(loadRuntimeNodeBacklinks).toHaveBeenCalledWith('target');
   expect(loadRuntimeNodeBacklinks).not.toHaveBeenCalledWith('missing');
   consoleErrorSpy.mockRestore();
+});
+
+it('shows a loading state when runtime backlinks are pending and no local backlinks exist', () => {
+  loadRuntimeNodeBacklinks.mockImplementation(() => new Promise(() => undefined));
+
+  renderPanelWithNodes('target', { target: createNode({ id: 'target', title: 'Target topic' }) }, ['target']);
+
+  expect(screen.getByRole('status')).toHaveTextContent('Loading backlinks');
+});
+
+it('shows a retryable error when runtime backlinks fail without local backlinks', async () => {
+  loadRuntimeNodeBacklinks
+    .mockRejectedValueOnce(new Error('runtime failed'))
+    .mockRejectedValueOnce(new Error('runtime failed'))
+    .mockResolvedValueOnce([{ context: 'Runtime context', matchCount: 1, sourceNodeId: 'source', sourceTitle: 'Source topic' }]);
+
+  renderPanelWithNodes('target', createPanelNodes(), ['target']);
+
+  await waitFor(() => {
+    expect(screen.getByRole('alert')).toHaveTextContent('Backlinks could not be loaded');
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: /Source topic/ })).toBeInTheDocument();
+  });
+  expect(loadRuntimeNodeBacklinks).toHaveBeenCalledTimes(3);
+});
+
+it('shows an error when the selected backlinks topic is unavailable', () => {
+  renderPanelWithNodes('missing', {});
+
+  expect(screen.getByRole('alert')).toHaveTextContent('Topic unavailable');
 });

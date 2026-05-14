@@ -20,8 +20,9 @@ export async function loadRuntimeNodeBacklinks(nodeId: string): Promise<Backlink
         action: 'load_runtime_node_backlinks',
         area: 'bridge',
         command: NATIVE_COMMANDS.loadNodeBacklinks,
-        fallback: 'return_null'
+        fallback: 'throw_error'
       });
+      throw new Error('Runtime node backlinks payload invalid.');
     }
     return backlinks;
   } catch (error) {
@@ -29,9 +30,9 @@ export async function loadRuntimeNodeBacklinks(nodeId: string): Promise<Backlink
       action: 'load_runtime_node_backlinks',
       area: 'bridge',
       command: NATIVE_COMMANDS.loadNodeBacklinks,
-      fallback: 'return_null',
+      fallback: 'throw_error',
       error
     });
-    return null;
+    throw error;
   }
 }

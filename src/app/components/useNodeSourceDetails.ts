@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { updateSourceDetailsCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
@@ -24,6 +24,11 @@ function shouldPollPdfIndexStatus(value: RuntimeNodeSourceDetails | null) {
 export function useNodeSourceDetails(nodeId: string | null) {
   const [state, setState] = useState<NodeSourceDetailsState>(DEFAULT_STATE);
   const cacheRef = useRef<Record<string, RuntimeNodeSourceDetails | null>>({});
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const retry = useCallback(() => {
+    setRefreshKey((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     if (!nodeId) {
@@ -72,7 +77,7 @@ export function useNodeSourceDetails(nodeId: string | null) {
         window.clearTimeout(refreshTimer);
       }
     };
-  }, [nodeId]);
+  }, [nodeId, refreshKey]);
 
-  return state;
+  return { ...state, retry };
 }

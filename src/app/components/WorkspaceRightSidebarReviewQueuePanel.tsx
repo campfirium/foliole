@@ -1,6 +1,6 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
-import { InspectorSection } from '../../shared/ui';
+import { AppErrorState, InspectorSection } from '../../shared/ui';
 
 interface WorkspaceRightSidebarReviewQueuePanelProps {
   currentNodeId: string | null;
@@ -92,6 +92,16 @@ function EmptyQueueState() {
 export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
   if (props.queueNodeIds.length === 0) {
     return <EmptyQueueState />;
+  }
+
+  const missingQueueNodeId = props.queueNodeIds.find((nodeId) => !props.nodesById[nodeId]);
+  if (missingQueueNodeId) {
+    return (
+      <AppErrorState
+        description="Refresh the workspace before continuing review."
+        title="Review queue has an unavailable topic"
+      />
+    );
   }
 
   const displayQueueNodeIds = buildDisplayQueueNodeIds(props.queueNodeIds, props.currentNodeId);

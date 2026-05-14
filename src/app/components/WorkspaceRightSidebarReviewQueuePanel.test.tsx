@@ -61,3 +61,16 @@ it('shows the current actionable item first even when the whole queue starts wit
   expect(within(items[0]!).getByText('Current')).toBeInTheDocument();
   expect(within(items[1]!).getByText(/2\. Scheduled FSRS/)).toBeInTheDocument();
 });
+
+it('shows an error when the review queue references an unavailable topic', () => {
+  render(
+    <WorkspaceRightSidebarReviewQueuePanel
+      currentNodeId={null}
+      nodesById={{}}
+      queueNodeIds={['missing-topic']}
+    />
+  );
+
+  expect(screen.getByRole('alert')).toHaveTextContent('Review queue has an unavailable topic');
+  expect(screen.queryByText('Missing topic')).not.toBeInTheDocument();
+});

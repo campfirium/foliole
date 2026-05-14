@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
@@ -146,6 +146,14 @@ describe('WorkspaceRightSidebarSourcePanel', () => {
     });
   });
 
+  it('shows a loading state while source info is loading for the first time', () => {
+    loadRuntimeNodeSourceDetails.mockImplementation(() => new Promise(() => undefined));
+
+    renderSourcePanel();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading source info');
+  });
+
   it('shows a source info error when source details fail to load', async () => {
     loadRuntimeNodeSourceDetails.mockRejectedValue(new Error('source unavailable'));
     renderSourcePanel();
@@ -154,6 +162,21 @@ describe('WorkspaceRightSidebarSourcePanel', () => {
       expect(screen.getByText('Source info could not be loaded.')).toBeInTheDocument();
     });
     expect(screen.queryByText('This topic has no recorded import source yet.')).not.toBeInTheDocument();
+  });
+
+  it('retries loading source info from the error state', async () => {
+    loadRuntimeNodeSourceDetails
+      .mockRejectedValueOnce(new Error('source unavailable'))
+      .mockResolvedValueOnce(NODE_SOURCE_DETAILS);
+    renderSourcePanel();
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Source info could not be loaded');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    await expectLoadedNodeSourcePanel();
+    expect(loadRuntimeNodeSourceDetails).toHaveBeenCalledTimes(2);
   });
 
   it('shows inherited source info without a parent-jump button', async () => {
