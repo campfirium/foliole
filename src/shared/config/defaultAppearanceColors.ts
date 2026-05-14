@@ -25,6 +25,9 @@ export const DEFAULT_APPEARANCE_COLORS: Record<AppearanceDefaultColorMode, Appea
   }
 } as const;
 
+export const DEFAULT_NODE_ICON_COLOR = DEFAULT_APPEARANCE_COLORS.light.font;
+export const DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR = '#2f3b4d';
+
 export function hexColorToRgbChannels(value: string): string {
   const red = Number.parseInt(value.slice(1, 3), 16);
   const green = Number.parseInt(value.slice(3, 5), 16);

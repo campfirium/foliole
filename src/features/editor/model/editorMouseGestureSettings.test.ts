@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR } from '../../../shared/config/defaultAppearanceColors';
+
 import {
   DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS,
   getEditorMouseGestureBindings,
@@ -13,6 +15,10 @@ describe('editorMouseGestureSettings', () => {
 
   it('returns the default settings when storage is empty', () => {
     expect(getEditorMouseGestureSettings()).toEqual(DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS);
+  });
+
+  it('derives the trail color from the shared appearance default', () => {
+    expect(DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailColor).toBe(DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR);
   });
 
   it('normalizes malformed stored values', () => {

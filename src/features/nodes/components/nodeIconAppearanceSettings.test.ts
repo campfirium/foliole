@@ -1,8 +1,11 @@
 import { beforeEach, expect, it } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { DEFAULT_APPEARANCE_COLORS } from '../../../shared/config/defaultAppearanceColors';
 
 import {
+  DEFAULT_NODE_ICON_BASE_APPEARANCE,
+  DEFAULT_NODE_ICON_STATE_APPEARANCE,
   getNodeIconStateAppearance,
   shouldFadeDismissedWholeRow
 } from './nodeIconAppearanceSettings';
@@ -23,6 +26,13 @@ it('reads dismissed fade by icon kind', () => {
 
   expect(shouldFadeDismissedWholeRow('review')).toBe(true);
   expect(shouldFadeDismissedWholeRow('reading')).toBe(false);
+});
+
+it('derives default colors from the appearance foreground default', () => {
+  expect(DEFAULT_NODE_ICON_BASE_APPEARANCE.color).toBe(DEFAULT_APPEARANCE_COLORS.light.font);
+  expect(DEFAULT_NODE_ICON_STATE_APPEARANCE.pending.color).toBe(DEFAULT_APPEARANCE_COLORS.light.font);
+  expect(DEFAULT_NODE_ICON_STATE_APPEARANCE.scheduled.color).toBe(DEFAULT_APPEARANCE_COLORS.light.font);
+  expect(DEFAULT_NODE_ICON_STATE_APPEARANCE.dismissed.color).toBe(DEFAULT_APPEARANCE_COLORS.light.font);
 });
 
 it('allows zero width for single visible double-line layer', () => {

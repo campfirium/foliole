@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR } from '../../../shared/config/defaultAppearanceColors';
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
@@ -34,7 +35,7 @@ export const DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS: EditorMouseGestureSettings =
     'left-down': 'scroll-bottom'
   },
   segmentThresholdPx: 18,
-  trailColor: '#2f3b4d',
+  trailColor: DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR,
   trailLineWidth: 3,
   trailOpacity: 0.25,
   trailPointThresholdPx: 6

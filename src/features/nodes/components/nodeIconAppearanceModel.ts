@@ -1,3 +1,5 @@
+import { DEFAULT_NODE_ICON_COLOR } from '../../../shared/config/defaultAppearanceColors';
+
 import type { NodeTreeRowIconState } from './NodeTreeRowIconModel';
 
 export const NODE_ICON_SHAPE_OPTIONS = ['hexagon', 'diamond', 'circle', 'square', 'triangle', 'leaf'] as const;
@@ -29,14 +31,14 @@ export interface NodeIconStateAppearance {
 }
 
 export const DEFAULT_NODE_ICON_BASE_APPEARANCE: NodeIconBaseAppearance = {
-  color: '#202124',
+  color: DEFAULT_NODE_ICON_COLOR,
   lineWidth: 1.2,
   scale: 1
 };
 
 export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, NodeIconStateAppearance> = {
   pending: {
-    color: '#202124',
+    color: DEFAULT_NODE_ICON_COLOR,
     doubleLineDistance: 2,
     effect: 'none',
     fadeEnabled: false,
@@ -51,7 +53,7 @@ export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, No
     svg: ''
   },
   scheduled: {
-    color: '#202124',
+    color: DEFAULT_NODE_ICON_COLOR,
     doubleLineDistance: 2,
     effect: 'double-line',
     fadeEnabled: false,
@@ -66,7 +68,7 @@ export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, No
     svg: ''
   },
   dismissed: {
-    color: '#202124',
+    color: DEFAULT_NODE_ICON_COLOR,
     doubleLineDistance: 2,
     effect: 'none',
     fadeEnabled: true,

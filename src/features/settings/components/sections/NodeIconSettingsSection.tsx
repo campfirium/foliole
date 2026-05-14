@@ -9,6 +9,7 @@ import {
   settingsResetButtonClassName,
   settingsUtilityIconButtonClassName
 } from '../../../../shared/ui';
+import { DEFAULT_NODE_ICON_BASE_APPEARANCE } from '../../../nodes/components/nodeIconAppearanceSettings';
 import { NodeTreeRowIcon } from '../../../nodes/components/NodeTreeRowIcon';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from '../../../nodes/components/NodeTreeRowIconModel';
 
@@ -65,13 +66,13 @@ function IconColumn(props: {
           if (isTopic) {
             props.state.setTopicIcon('');
             props.state.setTopicSvg('');
-            props.state.setTopicColor('#202124');
+            props.state.setTopicColor(DEFAULT_NODE_ICON_BASE_APPEARANCE.color);
             props.state.setTopicLineWidth(1.2);
             props.state.setTopicScale(1);
           } else {
             props.state.setItemIcon('');
             props.state.setItemSvg('');
-            props.state.setItemColor('#202124');
+            props.state.setItemColor(DEFAULT_NODE_ICON_BASE_APPEARANCE.color);
             props.state.setItemLineWidth(1.2);
             props.state.setItemScale(1);
           }
