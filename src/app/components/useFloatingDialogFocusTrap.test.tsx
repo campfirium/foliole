@@ -29,6 +29,19 @@ function FloatingDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
+function RoleButtonDialog() {
+  const focusTrap = useFloatingDialogFocusTrap();
+
+  return (
+    <div onKeyDown={focusTrap.handleKeyDown} ref={focusTrap.containerRef} role="dialog">
+      <button type="button">First action</button>
+      <div role="button" tabIndex={0}>
+        Last role action
+      </div>
+    </div>
+  );
+}
+
 function LabeledFloatingDialog({ label, onClose }: { label: string; onClose: () => void }) {
   const focusTrap = useFloatingDialogFocusTrap();
 
@@ -125,6 +138,20 @@ it('cycles tab focus inside the floating dialog', () => {
 
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Tab', shiftKey: true });
   expect(closeButton).toHaveFocus();
+});
+
+it('cycles tab focus through role-based controls inside the floating dialog', () => {
+  render(<RoleButtonDialog />);
+
+  const firstButton = screen.getByRole('button', { name: 'First action' });
+  const roleButton = screen.getByRole('button', { name: 'Last role action' });
+  roleButton.focus();
+
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Tab' });
+  expect(firstButton).toHaveFocus();
+
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Tab', shiftKey: true });
+  expect(roleButton).toHaveFocus();
 });
 
 it('keeps focus stable when a keyboard-opened floating dialog closes', async () => {

@@ -1,20 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { KeyboardEvent } from 'react';
 
-const FOCUSABLE_SELECTOR = [
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  'a[href]',
-  '[tabindex]:not([tabindex="-1"])'
-].join(',');
-
-function getFocusableElements(container: HTMLElement) {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-    (element) => !element.hasAttribute('hidden')
-  );
-}
+import { getFocusableElements } from '../../shared/lib/focusableDom';
 
 function getCurrentRestoreTarget() {
   if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
