@@ -141,7 +141,6 @@ export function useReadwiseSetupController(props: SettingsReadwiseReaderContentP
   const { canPreview, draft } = useReadwiseDraftController(props);
   const sync = useReadwiseSyncPreviewFlow({
     draft,
-    onSave: props.onSave,
     ...definedProps({
       onPreviewSync: props.onPreviewSync,
       onRunSync: props.onRunSync
@@ -149,7 +148,6 @@ export function useReadwiseSetupController(props: SettingsReadwiseReaderContentP
   });
   const manualSync = useReadwiseManualSync({
     draft,
-    onSave: props.onSave,
     ...definedProps({ onRunSync: props.onRunSync })
   });
   const integration = resolveReadwiseIntegrationState({

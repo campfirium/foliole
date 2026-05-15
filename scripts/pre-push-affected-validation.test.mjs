@@ -15,6 +15,11 @@ function runCommand(command, args, cwd, options = {}) {
     const child = spawn(command, args, { cwd });
     let stdout = '';
     let stderr = '';
+    child.stdin.on('error', (error) => {
+      if (error.code !== 'EPIPE') {
+        throw error;
+      }
+    });
     child.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
     });

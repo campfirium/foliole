@@ -38,6 +38,15 @@ async function runReadwiseSource(source: EnabledReadwiseSource) {
   });
 }
 
+function isMissingReadwiseSourceDirectory(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error.code === 'ENOENT' || error.code === 'ENOTDIR')
+  );
+}
+
 function countImportedEntries(entries: Awaited<ReturnType<typeof runReadwiseSource>>) {
   return entries.filter(
     (entry) =>
@@ -86,7 +95,10 @@ async function runReadwiseReaderImportNow(input?: {
       entryCount += entries.length;
       importedCount += countImportedEntries(entries);
       skippedCount += entries.filter((entry) => entry.action === 'skipped').length;
-    } catch {
+    } catch (error) {
+      if (isMissingReadwiseSourceDirectory(error)) {
+        continue;
+      }
       failedCount += 1;
     }
   }

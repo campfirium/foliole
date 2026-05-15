@@ -95,7 +95,7 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
-          '  echo "[windows-restart-client] status: RUNNING head=current-head"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK head=current-head"',
           '  exit 0',
           'fi',
           'exit 1'
@@ -137,7 +137,7 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
-          '  echo "[windows-restart-client] status: RUNNING head=current-head"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK head=current-head"',
           '  exit 0',
           'fi',
           'if [ "${WINDOWS_CLIENT_ACTION}" = "full-restart" ]; then',
@@ -177,6 +177,10 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  if grep -q "^start$" "${ACTION_LOG}"; then',
+          '    echo "[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=current-head"',
+          '    exit 0',
+          '  fi',
           '  echo "[windows-restart-client] status: STOPPED reason=no-runtime"',
           '  exit 0',
           'fi',

@@ -20,6 +20,6 @@ it('keeps the start action label while showing progress feedback', () => {
 
   const startButton = screen.getByRole('button', { name: 'Start' });
   expect(startButton).toBeDisabled();
-  expect(startButton.querySelector('svg')).not.toBeNull();
+  expect(startButton.querySelector('.animate-spin')).not.toBeNull();
   expect(screen.queryByRole('button', { name: /Starting/ })).not.toBeInTheDocument();
 });

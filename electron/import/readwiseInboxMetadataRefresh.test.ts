@@ -113,9 +113,6 @@ it('refreshes Readwise Inbox metadata when stored source signatures are already 
       'summary: Tweets from 卡尔的AI沃茨, and 宝玉.',
       'url: https://twitter.com/i/lists/1869949878283186480?ts=1737155739.175127',
       '---',
-      '',
-      '# Same Title',
-      '',
       'Highlighted body.'
     ].join('\n')
   });

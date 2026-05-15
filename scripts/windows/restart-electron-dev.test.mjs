@@ -20,6 +20,8 @@ describe('restart-electron-dev script', () => {
     expect(script).toContain('status: RUNNING trust=OK');
     expect(script).toContain('status: STOPPED trust=FAILED reason=');
     expect(script).toContain('status: STOPPED trust=FAILED reason=no-runtime');
+    expect(script).toContain('reason = "window-not-responding"');
+    expect(script).toContain('responding=$($ReadyState.responding)');
   });
 
   it('reports discarded untrusted runtimes with trust details', async () => {

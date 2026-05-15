@@ -37,7 +37,7 @@ wait_for_running_status() {
     status_output="$(run_windows_client_action status)"
     status_exit=$?
     set -e
-    if [ "${status_exit}" -eq 0 ] && status_is_running "${status_output}"; then
+    if [ "${status_exit}" -eq 0 ] && status_is_running_trusted "${status_output}"; then
       echo "[windows-preview] ${status_label}: $(extract_status_detail "${status_output}")"
       return 0
     fi

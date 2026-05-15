@@ -93,10 +93,10 @@ describe('DocumentSourceUpdatePanel rendering', () => {
         editorAppearanceKey: 'appearance-1-source-update-current',
         editorContent: 'alpha\nbeta',
         editorHideScrollbar: true,
-        editorNodeId: 'node-1',
-        readOnly: undefined
+        editorNodeId: 'node-1'
       })
     );
+    expect(getPanelBodyCall(0)).not.toMatchObject({ readOnly: true });
     expect(documentPanelBodyMock).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({

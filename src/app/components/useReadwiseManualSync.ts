@@ -53,7 +53,6 @@ function resolveErrorMessage(error: unknown) {
 export function useReadwiseManualSync(input: {
   draft: ReadwiseSetupDraft;
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
-  onSave: (input: ReadwiseSetupPayload) => void;
 }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [status, setStatus] = useState<ManualSyncStatus>({
@@ -73,7 +72,6 @@ export function useReadwiseManualSync(input: {
     setIsSyncing(true);
     setStatus({ message: 'Syncing Readwise sources...', tone: 'normal' });
     try {
-      input.onSave(payload);
       setStatus(formatSyncResult(await input.onRunSync(payload)));
     } catch (error) {
       setStatus({ message: resolveErrorMessage(error), tone: 'error' });

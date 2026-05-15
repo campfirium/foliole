@@ -69,7 +69,7 @@ describe('CompanionSyncStatusDetails activity', () => {
 
     expect(screen.queryByText('Auto sync started.')).not.toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
-    expect(screen.getByText('No completed sync activity yet.')).toBeInTheDocument();
+    expect(screen.getByText('No completed sync activity yet')).toBeInTheDocument();
   });
 
   it('maps a legacy blocked run to a concrete local-change issue', () => {
@@ -93,7 +93,7 @@ describe('CompanionSyncStatusDetails activity', () => {
     }]);
 
     expect(screen.queryByText('Body files downloaded.')).not.toBeInTheDocument();
-    expect(screen.getByText('No completed sync activity yet.')).toBeInTheDocument();
+    expect(screen.getByText('No completed sync activity yet')).toBeInTheDocument();
   });
 
   it('shows repeated unchanged blocked facts only once', () => {
@@ -164,6 +164,6 @@ describe('CompanionSyncStatusDetails activity progress', () => {
 
     expect(screen.getByText('Now')).toBeInTheDocument();
     expect(screen.getByText('Syncing; waiting for the next progress update.')).toBeInTheDocument();
-    expect(screen.getByText('No completed sync activity yet.')).toBeInTheDocument();
+    expect(screen.getByText('No completed sync activity yet')).toBeInTheDocument();
   });
 });

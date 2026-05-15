@@ -55,6 +55,11 @@ it('resolves explicit body status before boolean content metadata', () => {
   expect(getNodeDocumentStatus({ content: 'Ready body', reveal: null, bodyStatus: 'ready', hasContent: true, hasReveal: false })).toBe('ready');
 });
 
+it('reloads an explicitly ready document when renderer trimming removed the body', () => {
+  expect(getNodeDocumentStatus({ content: '', reveal: null, bodyStatus: 'ready', hasContent: true, hasReveal: false })).toBe('fetching');
+  expect(isNodeDocumentLoaded({ content: '', reveal: null, bodyStatus: 'ready', hasContent: true, hasReveal: false })).toBe(false);
+});
+
 it('keeps body status when trimming documents at the renderer boundary', () => {
   const currentState = createTestWorkspaceState();
   const seedNode = currentState.nodesById['node-1']!;

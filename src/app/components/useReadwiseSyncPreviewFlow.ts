@@ -29,7 +29,6 @@ interface SyncFlowActions {
   draft: ReadwiseSetupDraft;
   onPreviewSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseSyncPreviewResult | null>;
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<unknown>;
-  onSave: (input: ReadwiseSetupPayload) => void;
 }
 
 export function enableReadwiseImportSource(sources: DraftImportSource[]) {
@@ -112,7 +111,6 @@ async function startSync(
   setters.setIsStartingSync(true);
   setters.setSyncError(null);
   try {
-    actions.onSave(payload);
     await actions.onRunSync(payload);
     setters.setSyncIntent(null);
     setters.setSyncPreview(null);

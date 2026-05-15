@@ -132,7 +132,7 @@ it('opens parent node with text highlight focus when highlight parent is not act
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: /highlight beta/i }));
+  fireEvent.click(screen.getByRole('button', { name: 'Beta' }));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',
@@ -227,7 +227,7 @@ it('routes current-parent text highlights through unified node selection without
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: /highlight beta/i }));
+  fireEvent.click(screen.getByRole('button', { name: 'Beta' }));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',

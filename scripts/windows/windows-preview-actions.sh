@@ -109,8 +109,13 @@ run_fallback_start() {
   start_exit=$?
   set -e
   if [ "${start_exit}" -eq 0 ] && status_is_started_or_running_trusted "${start_output}"; then
-    echo "[windows-preview] status: STARTED"
-    return 0
+    if wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_START_SECONDS}" "fallback start status"; then
+      echo "[windows-preview] status: STARTED"
+      return 0
+    fi
+    echo "[windows-preview] fallback start status check failed; falling back to full restart"
+    run_full_restart
+    return $?
   fi
   echo "[windows-preview] fallback start failed"
   if [ -n "${start_output}" ]; then

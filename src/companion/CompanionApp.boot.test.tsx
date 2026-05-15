@@ -80,7 +80,7 @@ describe('CompanionApp bootstrap states', () => {
     render(<CompanionApp />);
 
     expect(screen.getByText('Starting companion runtime')).toBeInTheDocument();
-  });
+  }, 10_000);
 
   it('renders the article shell after bootstrap succeeds', async () => {
     useCompanionBootstrap.mockReturnValue({

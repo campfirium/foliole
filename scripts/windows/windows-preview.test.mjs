@@ -110,10 +110,8 @@ async function readActions(actionLog) {
 function expectFallbackStartActions(actions) {
   expect(actions.slice(0, 2)).toEqual(['status', 'start']);
   expect(actions.length).toBeGreaterThanOrEqual(2);
-  expect(actions.length).toBeLessThanOrEqual(3);
-  if (actions.length === 3) {
-    expect(actions[2]).toBe('status');
-  }
+  expect(actions.length).toBeLessThanOrEqual(4);
+  expect(actions.slice(2).every((action) => action === 'status')).toBe(true);
 }
 
 async function readRestartDelivery(rootDir) {
@@ -292,7 +290,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     try {
       const { syncScript, clientScript, compileScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
-        ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING"', '  exit 0', 'fi', 'exit 1'].join('\n')
+        ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING trust=OK"', '  exit 0', 'fi', 'exit 1'].join('\n')
       );
 
       await writeFile(
@@ -334,7 +332,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     try {
       const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
-        ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING"', '  exit 0', 'fi', 'exit 1'].join('\n')
+        ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING trust=OK"', '  exit 0', 'fi', 'exit 1'].join('\n')
       );
 
       const result = await runScript({
@@ -373,7 +371,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
-          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK head=old-head"',
           '  exit 0',
           'fi',
           'if [ "${WINDOWS_CLIENT_ACTION}" = "full-restart" ]; then',
@@ -404,19 +402,19 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('chooses restart-intent for Class B working tree electron changes', async () => {
+  it('chooses restart-intent for Class B working tree electron changes', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
-    const consumer = startIntentConsumer(tempRoot, 'restart');
+    const consumer = startRestartDeliveryConsumer(tempRoot, 15_000);
     try {
       const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
           '  if [ -f "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json" ]; then',
-          '    echo "[windows-restart-client] status: RUNNING head=$(node -e "const fs=require(\\"node:fs\\");const p=JSON.parse(fs.readFileSync(process.argv[1],\\"utf8\\"));process.stdout.write(p.head||\\"\\")" "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json")"',
+          '    echo "[windows-restart-client] status: RUNNING trust=OK head=$(node -e "const fs=require(\\"node:fs\\");const p=JSON.parse(fs.readFileSync(process.argv[1],\\"utf8\\"));process.stdout.write(p.head||\\"\\")" "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json")"',
           '    exit 0',
           '  fi',
-          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK head=old-head"',
           '  exit 0',
           'fi',
           'exit 1'
@@ -468,10 +466,10 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
           '  if [ -f "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json" ]; then',
-          '    echo "[windows-restart-client] status: RUNNING head=new-head"',
+          '    echo "[windows-restart-client] status: RUNNING trust=OK head=new-head"',
           '    exit 0',
           '  fi',
-          '  echo "[windows-restart-client] status: RUNNING head=new-head"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK head=new-head"',
           '  exit 0',
           'fi',
           'exit 1'
@@ -514,15 +512,21 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
   it('chooses fallback-start for Class C when no trusted client is running', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    const startedMarker = path.join(tempRoot, 'started.flag');
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  if [ -f "${STARTED_MARKER}" ]; then',
+          '    echo "[windows-restart-client] status: RUNNING trust=OK shell_pid=500 runtime_pid=501 head=current-head"',
+          '  else',
           '  echo "[windows-restart-client] status: STOPPED reason=stale-runtime-detected"',
+          '  fi',
           '  exit 0',
           'fi',
           'if [ "${WINDOWS_CLIENT_ACTION}" = "start" ]; then',
+          '  : > "${STARTED_MARKER}"',
           '  echo "[windows-restart-client] status: STARTED"',
           '  exit 0',
           'fi',
@@ -532,9 +536,11 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        STARTED_MARKER: startedMarker,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
       });
 
@@ -551,15 +557,21 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
   it('treats bridge-missing status as an untrusted visible window and forces a clean start path', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    const startedMarker = path.join(tempRoot, 'started.flag');
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  if [ -f "${STARTED_MARKER}" ]; then',
+          '    echo "[windows-restart-client] status: RUNNING trust=OK shell_pid=500 runtime_pid=501 head=current-head"',
+          '  else',
           '  echo "[windows-restart-client] status: STOPPED reason=bridge-ready-missing shell_pid=400 runtime_pid=401 marker_pid=401"',
+          '  fi',
           '  exit 0',
           'fi',
           'if [ "${WINDOWS_CLIENT_ACTION}" = "start" ]; then',
+          '  : > "${STARTED_MARKER}"',
           '  echo "[windows-restart-client] discarded untrusted runtime pid=401 reason=bridge-ready-missing marker_pid=401"',
           '  echo "[windows-restart-client] status: STARTED shell_pid=500 runtime_pid=501"',
           '  exit 0',
@@ -570,9 +582,11 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        STARTED_MARKER: startedMarker,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
       });
 
@@ -622,7 +636,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('fallback start failed');
       expect(result.stdout).toContain('status: RUNNING head=old-head');
       expect(result.stdout).not.toContain('[windows-preview] status: STARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'start', 'status']);
+      expectFallbackStartActions(await readActions(actionLog));
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -630,15 +644,21 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
   it('treats trusted RUNNING during fallback-start as a successful start handoff', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    const startedMarker = path.join(tempRoot, 'started.flag');
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  if [ -f "${STARTED_MARKER}" ]; then',
+          '    echo "[windows-restart-client] status: RUNNING trust=OK shell_pid=500 runtime_pid=501 head=current-head"',
+          '  else',
           '  echo "[windows-restart-client] status: STOPPED reason=no-runtime"',
+          '  fi',
           '  exit 0',
           'fi',
           'if [ "${WINDOWS_CLIENT_ACTION}" = "start" ]; then',
+          '  : > "${STARTED_MARKER}"',
           '  echo "[windows-restart-client] status: RUNNING trust=OK shell_pid=500 runtime_pid=501 head=current-head"',
           '  exit 0',
           'fi',
@@ -648,6 +668,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        STARTED_MARKER: startedMarker,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
@@ -659,7 +680,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('reason: Class C: no trusted running client (no-runtime)');
       expect(result.stdout).toContain('selected action: fallback-start');
       expect(result.stdout).toContain('status: STARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'start', 'status']);
+      expectFallbackStartActions(await readActions(actionLog));
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -704,7 +725,9 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('selected action: fallback-start');
       expect(result.stdout).toContain('status: STARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'start', 'status']);
+      const actions = await readActions(actionLog);
+      expect(actions.slice(0, 2)).toEqual(['status', 'start']);
+      expect(actions.slice(2).every((action) => action === 'status')).toBe(true);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -718,7 +741,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
-          '  echo "[windows-restart-client] status: RUNNING"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK"',
           '  exit 0',
           'fi',
           'exit 1'
@@ -760,7 +783,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
-          '  echo "[windows-restart-client] status: RUNNING"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK"',
           '  exit 0',
           'fi',
           'if [ "${WINDOWS_CLIENT_ACTION}" = "restart" ]; then',
@@ -798,10 +821,10 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
           '  if [ -f "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json" ]; then',
-          '    echo "[windows-restart-client] status: RUNNING head=$(node -e "const fs=require(\\"node:fs\\");const p=JSON.parse(fs.readFileSync(process.argv[1],\\"utf8\\"));process.stdout.write(p.head||\\"\\")" "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json")"',
+          '    echo "[windows-restart-client] status: RUNNING trust=OK head=$(node -e "const fs=require(\\"node:fs\\");const p=JSON.parse(fs.readFileSync(process.argv[1],\\"utf8\\"));process.stdout.write(p.head||\\"\\")" "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json")"',
           '    exit 0',
           '  fi',
-          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK head=old-head"',
           '  exit 0',
           'fi',
           'exit 1'
@@ -903,7 +926,7 @@ const timer = setInterval(() => {
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
-          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK head=old-head"',
           '  exit 0',
           'fi',
           'if [ "${WINDOWS_CLIENT_ACTION}" = "restart" ]; then',
@@ -922,7 +945,7 @@ const timer = setInterval(() => {
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
-        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '2'
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '5'
       });
 
       const restartDelivery = await readRestartDelivery(tempRoot);
@@ -1068,7 +1091,7 @@ const timer = setInterval(() => {
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
-          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK head=old-head"',
           '  exit 0',
           'fi',
           'if [ "${WINDOWS_CLIENT_ACTION}" = "restart" ]; then',

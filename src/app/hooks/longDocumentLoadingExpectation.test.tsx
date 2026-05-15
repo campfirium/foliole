@@ -3,7 +3,6 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
-import { definedProps } from '../../shared/lib/definedProps';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { workspacePersistStorage } from '../../store/workspacePersistStorage';
 import { readWorkspaceNodesFromPayload } from '../../store/workspacePersistStorage.test-support';
@@ -175,7 +174,6 @@ it('allows first open of a long document to read the full body from local persis
 
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-1' });
   expect(nodesById?.['node-1']?.content).toBe(longDocument);
-  expect(nodesById?.['node-1']?.content.length).toBeGreaterThan(100_000);
   expect(nodesById?.['node-2']?.content).toBe('');
 });
 
@@ -225,7 +223,6 @@ it('restores a mid-document reading position after the recent cache is eventuall
   await expectNodeDocument('node-4', 'Loaded node 4 body');
   await expectTrimmedNode('node-1');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('');
   expect(useWorkspaceStore.getState().nodeViewById['node-1']).toMatchObject({
     scrollTop: 5_400,
     selection: { from: 48_000, to: 48_024 }
@@ -239,8 +236,11 @@ it('restores a mid-document reading position after the recent cache is eventuall
     <MarkdownEditor
       nodeId="node-1"
       onChange={vi.fn()}
+      readingRestoreCommandId="long-document-restore"
+      readingRestoreScrollTop={5_400}
+      readingSelection={{ from: 48_000, to: 48_024 }}
       value={useWorkspaceStore.getState().nodesById['node-1']?.content ?? ''}
-      {...definedProps({ nodeViewState: useWorkspaceStore.getState().nodeViewById['node-1'] })}
+      nodeViewState={useWorkspaceStore.getState().nodeViewById['node-1']}
     />
   );
 

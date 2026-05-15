@@ -148,7 +148,10 @@ function isWindowsRuntimeRunning() {
   if (result.status !== 0) {
     return false;
   }
-  return /\[windows-restart-client\]\s+status:\s+RUNNING\b/.test(result.stdout);
+  return (
+    /\[windows-restart-client\]\s+status:\s+RUNNING\b/.test(result.stdout) &&
+    !/\bresponding=False\b/.test(result.stdout)
+  );
 }
 
 function canSkipCoveredPreview(target) {

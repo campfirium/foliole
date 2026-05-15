@@ -481,12 +481,50 @@ function Test-RuntimeTrusted {
     }
   }
 
+  $runtimeProcess = Get-ProcessById -ProcessId $RuntimePid
+  if ($null -eq $runtimeProcess) {
+    return @{
+      ok = $false
+      reason = "runtime-missing"
+      markerPid = $appReady.markerPid
+      markerSession = $appReady.markerSession
+      bridgeMarkerPid = $bridgeReady.bridgeMarkerPid
+      bridgeMarkerSession = $bridgeReady.bridgeMarkerSession
+    }
+  }
+  if ($runtimeProcess.MainWindowHandle -eq 0) {
+    return @{
+      ok = $false
+      reason = "window-missing"
+      markerPid = $appReady.markerPid
+      markerSession = $appReady.markerSession
+      bridgeMarkerPid = $bridgeReady.bridgeMarkerPid
+      bridgeMarkerSession = $bridgeReady.bridgeMarkerSession
+      responding = $runtimeProcess.Responding
+      windowHandle = $runtimeProcess.MainWindowHandle
+    }
+  }
+  if (-not $runtimeProcess.Responding) {
+    return @{
+      ok = $false
+      reason = "window-not-responding"
+      markerPid = $appReady.markerPid
+      markerSession = $appReady.markerSession
+      bridgeMarkerPid = $bridgeReady.bridgeMarkerPid
+      bridgeMarkerSession = $bridgeReady.bridgeMarkerSession
+      responding = $runtimeProcess.Responding
+      windowHandle = $runtimeProcess.MainWindowHandle
+    }
+  }
+
   return @{
     ok = $true
     markerPid = $appReady.markerPid
     markerSession = $appReady.markerSession
     bridgeMarkerPid = $bridgeReady.bridgeMarkerPid
     bridgeMarkerSession = $bridgeReady.bridgeMarkerSession
+    responding = $runtimeProcess.Responding
+    windowHandle = $runtimeProcess.MainWindowHandle
   }
 }
 
@@ -509,6 +547,12 @@ function Format-AppReadyDetails {
   }
   if ($ReadyState.ContainsKey('bridgeMarkerSession') -and -not [string]::IsNullOrWhiteSpace($ReadyState.bridgeMarkerSession)) {
     $details += " bridge_marker_session=$($ReadyState.bridgeMarkerSession)"
+  }
+  if ($ReadyState.ContainsKey('windowHandle')) {
+    $details += " window_handle=$($ReadyState.windowHandle)"
+  }
+  if ($ReadyState.ContainsKey('responding')) {
+    $details += " responding=$($ReadyState.responding)"
   }
   return $details
 }
@@ -1248,7 +1292,7 @@ if ($Action -eq "status") {
       if ($null -ne $runtimeHead) {
         $headInfo = " head=$runtimeHead"
       }
-      Write-Info "status: RUNNING trust=OK pid=$($tracked.Id) runtime_pid=$($runtime.Id)$headInfo"
+      Write-Info "status: RUNNING trust=OK pid=$($tracked.Id) runtime_pid=$($runtime.Id)$headInfo$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     } else {
       Write-Info "status: STOPPED trust=FAILED reason=runtime-missing shell_pid=$($tracked.Id)"
     }
@@ -1265,7 +1309,7 @@ if ($Action -eq "status") {
     if ($null -ne $runtimeHead) {
       $headInfo = " head=$runtimeHead"
     }
-    Write-Info "status: RUNNING trust=OK runtime_pid=$($runtime.Id)$headInfo"
+    Write-Info "status: RUNNING trust=OK runtime_pid=$($runtime.Id)$headInfo$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     exit 0
   }
 

@@ -31,6 +31,10 @@ const readwiseSettings = vi.hoisted(() => ({
   ]
 }));
 
+function createMissingDirectoryError(code: 'ENOENT' | 'ENOTDIR') {
+  return Object.assign(new Error('missing Readwise source directory'), { code });
+}
+
 vi.mock('./keepImportService.js', () => ({
   runKeepImportRule
 }));
@@ -74,4 +78,41 @@ it('coalesces overlapping Readwise sync requests into one import pass', async ()
     expect.objectContaining({ imported_count: 1 }),
     expect.objectContaining({ imported_count: 1 })
   ]);
+});
+
+it('skips missing optional Readwise source directories without failing the sync', async () => {
+  const settings = createSettings();
+  settings.readwiseSources.push(
+    {
+      ...settings.readwiseSources[0]!,
+      highlightPath: '/readwise/Tweets',
+      id: 'draft-import-source-3',
+      kind: 'tweets',
+      primaryPath: '/readwise/Full Document Contents/Tweets'
+    },
+    {
+      ...settings.readwiseSources[0]!,
+      highlightPath: '/readwise/Podcasts',
+      id: 'draft-import-source-4',
+      kind: 'podcasts',
+      primaryPath: '/readwise/Full Document Contents/Podcasts'
+    }
+  );
+  runKeepImportRule
+    .mockResolvedValueOnce([
+      {
+        action: 'import_attempted',
+        importStatus: 'imported',
+        previewStatus: 'new'
+      }
+    ])
+    .mockRejectedValueOnce(createMissingDirectoryError('ENOENT'))
+    .mockRejectedValueOnce(createMissingDirectoryError('ENOTDIR'));
+
+  await expect(runReadwiseReaderImport({ settings })).resolves.toMatchObject({
+    failed_count: 0,
+    imported_count: 1,
+    source_count: 3,
+    status: 'completed'
+  });
 });

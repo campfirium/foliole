@@ -84,7 +84,7 @@ describe('preview-dedupe', () => {
       expect(storedHash.trim()).not.toBe('');
 
       const second = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo run >> runs.log'], {
-        PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND: 'echo "[windows-restart-client] status: RUNNING"'
+        PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND: 'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
       });
       expect(second.code).toBe(0);
       expect(second.stdout).toContain('[windows-preview] dedupe: covered hash=');
@@ -117,6 +117,34 @@ describe('preview-dedupe', () => {
       expect(second.code).toBe(0);
       expect(second.stdout).toContain('[windows-preview] dedupe: stale-covered hash=');
       expect(second.stdout).toContain('[windows-preview] dedupe: claimed hash=');
+      expect(second.stdout).toContain('[windows-preview] status: STARTED');
+      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\nsecond\n');
+    } finally {
+      await rm(repoRoot, { force: true, recursive: true });
+    }
+  });
+
+  it('runs a covered windows preview when the native runtime window is unresponsive', async () => {
+    const repoRoot = await createRepo();
+    try {
+      await writeFile(path.join(repoRoot, 'tracked.txt'), 'changed\n', 'utf8');
+
+      const first = await runDedupe(repoRoot, 'windows', [
+        'bash',
+        '-c',
+        'echo first >> runs.log && echo "[windows-preview] status: STARTED"'
+      ]);
+      const second = await runDedupe(repoRoot, 'windows', [
+        'bash',
+        '-c',
+        'echo second >> runs.log && echo "[windows-preview] status: STARTED"'
+      ], {
+        PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND: 'echo "[windows-restart-client] status: RUNNING trust=OK responding=False"'
+      });
+
+      expect(first.code).toBe(0);
+      expect(second.code).toBe(0);
+      expect(second.stdout).toContain('[windows-preview] dedupe: stale-covered hash=');
       expect(second.stdout).toContain('[windows-preview] status: STARTED');
       expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\nsecond\n');
     } finally {
@@ -199,7 +227,7 @@ describe('preview-dedupe', () => {
       await writeFile(path.join(repoRoot, 'ignored.txt'), 'ignored\n', 'utf8');
 
       const second = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo second >> runs.log'], {
-        PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND: 'echo "[windows-restart-client] status: RUNNING"'
+        PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND: 'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
       });
       expect(first.code).toBe(0);
       expect(second.code).toBe(0);

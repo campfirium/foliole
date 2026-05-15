@@ -31,9 +31,20 @@ function isRevealLoaded(node: WorkspaceDocumentStateNode) {
   return typeof revealState === 'boolean' ? !revealState || node.reveal !== null : true;
 }
 
+function resolveExplicitReadyStatus(node: WorkspaceDocumentStateNode) {
+  const contentState = resolveNodeContentState(node);
+  if (contentState === true && node.content.length === 0) {
+    return 'fetching';
+  }
+  return isRevealLoaded(node) ? 'ready' : 'fetching';
+}
+
 export function getNodeDocumentStatus(node: WorkspaceDocumentStateNode | null | undefined): WorkspaceNodeDocumentStatus {
   if (!node) {
     return 'missing';
+  }
+  if (node.bodyStatus === 'ready') {
+    return resolveExplicitReadyStatus(node);
   }
   if (isWorkspaceNodeDocumentStatus(node.bodyStatus)) {
     return node.bodyStatus;

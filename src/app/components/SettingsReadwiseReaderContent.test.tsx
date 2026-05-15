@@ -105,8 +105,8 @@ it('checks Readwise setup inline and turns on the integration from the settings 
   await waitFor(() => {
     expect(onRunSync).toHaveBeenCalledTimes(1);
   });
-  expect(onSave).toHaveBeenCalledTimes(2);
-  const saved = onSave.mock.calls[1]![0] as {
+  expect(onSave).toHaveBeenCalledTimes(1);
+  const saved = onRunSync.mock.calls[0]![0] as {
     config: ReadwiseReaderConfig;
     readwiseSources: DraftImportSource[];
   };
@@ -168,7 +168,7 @@ it('runs manual Readwise sync without opening the preview confirmation', async (
   });
   expect(screen.queryByRole('dialog', { name: 'Readwise preview' })).not.toBeInTheDocument();
   expect(onPreviewSync).not.toHaveBeenCalled();
-  expect(onSave).toHaveBeenCalledTimes(1);
+  expect(onSave).not.toHaveBeenCalled();
   expect(screen.getByText('Synced 1 Readwise source.')).toBeInTheDocument();
 });
 
@@ -205,7 +205,8 @@ it('previews changed import behavior before running manual Readwise sync', async
       })
     );
   });
-  expect(onSave).toHaveBeenCalledWith(
+  expect(onSave).not.toHaveBeenCalled();
+  expect(onRunSync).toHaveBeenCalledWith(
     expect.objectContaining({
       config: expect.objectContaining({ withoutHighlightsDestination: 'external' })
     })
