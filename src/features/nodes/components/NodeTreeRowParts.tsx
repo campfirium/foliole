@@ -1,4 +1,5 @@
 import { cn } from '../../../shared/lib/utils';
+import { TruncatedTextTooltip } from '../../../shared/ui';
 import { projectNodeListLabel } from '../model/nodeListLabelProjection';
 
 import { NodeRenameInput, type useRenameState } from './NodeTreeRowRename';
@@ -15,7 +16,12 @@ export function renderNodeLabel(label: string, rename: ReturnType<typeof useRena
       />
     );
   }
-  return <span className="block min-w-0 flex-1 truncate">{projectNodeListLabel(label)}</span>;
+  const projectedLabel = projectNodeListLabel(label);
+  return (
+    <TruncatedTextTooltip className="block min-w-0 flex-1 truncate" text={projectedLabel}>
+      {projectedLabel}
+    </TruncatedTextTooltip>
+  );
 }
 
 export function NodeTreeRowExpandToggle(props: {

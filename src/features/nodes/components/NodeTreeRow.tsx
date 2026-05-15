@@ -96,7 +96,6 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
   return (
     <NodeTreeRowFrame
       dropIntent={props.dropIntent ?? null}
-      {...(props.dragDisabledLabel !== undefined ? { dragDisabledLabel: props.dragDisabledLabel } : {})}
       isDragDisabled={props.isDragDisabled ?? false}
       isDropTarget={props.isDropTarget ?? false}
       nodeId={props.nodeId}

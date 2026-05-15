@@ -7,6 +7,7 @@ import {
   getWorkspaceListNodeLastOpenedLabel,
   getWorkspaceListNodeOpening
 } from '../../features/nodes/model/workspaceListNode';
+import { TruncatedTextTooltip } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListTextItem } from './FolderListItemRow';
@@ -35,9 +36,13 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
             onClick={() => props.onSelectNode(props.node.id)}
             type="button"
           >
-            <span className="line-clamp-2 block break-words" data-testid={`folder-list-title-${props.node.id}`}>
+            <TruncatedTextTooltip
+              className="line-clamp-2 block break-words"
+              data-testid={`folder-list-title-${props.node.id}`}
+              text={props.node.title}
+            >
               {props.node.title}
-            </span>
+            </TruncatedTextTooltip>
           </button>
           <span
             className="shrink-0 pt-1 text-[13px] leading-5 text-foreground/56"

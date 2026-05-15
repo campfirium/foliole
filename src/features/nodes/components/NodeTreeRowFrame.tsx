@@ -1,11 +1,9 @@
 import type { DragEvent as ReactDragEvent, ReactNode } from 'react';
 
 import { cn } from '../../../shared/lib/utils';
-import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../../shared/ui';
 
 interface NodeTreeRowFrameProps {
   children: ReactNode;
-  dragDisabledLabel?: string | null;
   dropIntent: 'before' | 'after' | 'child' | null;
   isDragDisabled: boolean;
   isDropTarget: boolean;
@@ -26,7 +24,7 @@ function resolveNodeRowFrameClassName(isDropTarget: boolean, dropIntent: NodeTre
 }
 
 export function NodeTreeRowFrame(props: NodeTreeRowFrameProps) {
-  const frame = (
+  return (
     <div
       className={resolveNodeRowFrameClassName(props.isDropTarget, props.dropIntent)}
       draggable={!props.isDragDisabled}
@@ -38,16 +36,5 @@ export function NodeTreeRowFrame(props: NodeTreeRowFrameProps) {
     >
       {props.children}
     </div>
-  );
-
-  if (!props.isDragDisabled || props.dragDisabledLabel === null) {
-    return frame;
-  }
-
-  return (
-    <AppTooltip>
-      <AppTooltipTrigger asChild>{frame}</AppTooltipTrigger>
-      <AppTooltipContent>{props.dragDisabledLabel ?? 'Derived topics cannot be moved.'}</AppTooltipContent>
-    </AppTooltip>
   );
 }

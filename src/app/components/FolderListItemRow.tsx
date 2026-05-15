@@ -1,3 +1,5 @@
+import { TruncatedTextTooltip } from '../../shared/ui';
+
 interface FolderListTextItemProps {
   active?: boolean;
   ariaLabel: string;
@@ -23,12 +25,13 @@ export function FolderListTextItem(props: FolderListTextItemProps) {
         type="button"
       >
         <div className="flex items-start justify-between gap-4">
-          <span
+          <TruncatedTextTooltip
             className="line-clamp-2 block min-w-0 flex-1 break-words text-[17px] font-normal leading-7 text-foreground"
             data-testid={`folder-list-title-${props.nodeId}`}
+            text={props.title}
           >
             {props.title}
-          </span>
+          </TruncatedTextTooltip>
           <span
             className="shrink-0 pt-1 text-[13px] leading-5 text-foreground/56"
             data-testid={`folder-list-date-${props.nodeId}`}

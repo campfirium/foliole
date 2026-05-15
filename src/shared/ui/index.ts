@@ -74,6 +74,7 @@ export {
   AppTooltipProvider,
   AppTooltipTrigger
 } from './Tooltip';
+export { TruncatedTextTooltip } from './TruncatedTextTooltip';
 export {
   appFloatingEmptyStateClassName,
   appFloatingInputClassName,
