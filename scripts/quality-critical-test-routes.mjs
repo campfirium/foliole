@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-/* global console, process */
+/* global URL, console, process */
 
 import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+const RUN_VITEST_WITH_SUMMARY_SCRIPT = fileURLToPath(new URL('./run-vitest-with-summary.mjs', import.meta.url));
 
 const BACKLINKS_CONTRACT_TESTS = [
   'src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx',
@@ -62,10 +64,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       process.exit(0);
     }
     console.log(`[quality-critical-test-routes] running ${tests.length} critical test file(s)`);
-    const result = spawnSync('npx', [
-      'vitest',
-      'run',
-      '--reporter=dot',
+    const result = spawnSync(process.execPath, [
+      RUN_VITEST_WITH_SUMMARY_SCRIPT,
+      '.tmp/vitest/critical.json',
+      '--',
       '--silent=passed-only',
       '--pool=threads',
       '--no-file-parallelism',

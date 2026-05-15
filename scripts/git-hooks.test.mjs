@@ -13,6 +13,7 @@ const HOOK_NAMES = ['commit-msg', 'pre-commit', 'pre-push'];
 const FILE_BUDGET_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-file-budget.mjs');
 const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-push-affected-validation.mjs');
 const PRE_COMMIT_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-commit-validation.mjs');
+const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality-critical-test-routes.mjs');
 const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-commit-sequence.mjs');
 const tempDirs = [];
 
@@ -49,6 +50,7 @@ async function createRepo() {
   await copyFile(FILE_BUDGET_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-file-budget.mjs'));
   await copyFile(AFFECTED_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'));
   await copyFile(PRE_COMMIT_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-commit-validation.mjs'));
+  await copyFile(CRITICAL_TEST_ROUTES_SCRIPT_PATH, path.join(repoDir, 'scripts', 'quality-critical-test-routes.mjs'));
   await chmod(path.join(repoDir, 'scripts', 'check-commit-sequence.mjs'), 0o755);
   await chmod(path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'), 0o755);
   await writeFile(

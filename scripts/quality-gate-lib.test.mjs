@@ -43,7 +43,7 @@ describe('quality-gate-lib.sh', () => {
           'second="$(create_quality_gate_log_file test)"',
           'printf "%s\\n%s\\n" "$first" "$second"'
         ].join('\n'),
-        REPO_ROOT,
+        tempRoot,
         {
           QUALITY_GATE_LOG_ROOT: tempRoot,
           QUALITY_GATE_RUN_ID: 'test-run'
@@ -72,7 +72,7 @@ describe('quality-gate-lib.sh', () => {
           'printf "test ok\\n" > "$second"',
           'printf "%s\\n%s\\n" "$first" "$second"'
         ].join('\n'),
-        REPO_ROOT,
+        tempRoot,
         {
           QUALITY_GATE_LOG_ROOT: tempRoot,
           QUALITY_GATE_RUN_ID: 'test-run'
@@ -108,7 +108,7 @@ describe('quality-gate-lib.sh', () => {
     expect(result.stdout.trim()).toBe(path.join(REPO_ROOT, '.tmp', 'logs', 'quality-gate'));
   });
 
-  it('uses longer default timeouts for android host tasks', async () => {
+  it('does not apply default outer timeouts to large test buckets', async () => {
     const result = await runBash(
       [
         `source "${QUALITY_GATE_LIB}"`,
@@ -116,14 +116,33 @@ describe('quality-gate-lib.sh', () => {
         'printf "%s\\n" "$(resolve_quality_gate_limit android:host:lint timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit android:host:test timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit android:host:device-test timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit check:android-boundary timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit test timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit test:desktop timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit test:android timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit test:shared timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit test:sync-pack timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit test:quality timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit test:full timeout_seconds)"'
       ].join('\n'),
       REPO_ROOT
     );
 
     expect(result.code).toBe(0);
-    expect(result.stdout.trim().split('\n')).toEqual(['1200', '1200', '1200', '1800', '600', '1200']);
+    expect(result.stdout.trim().split('\n')).toEqual([
+      '1200',
+      '1200',
+      '1200',
+      '1800',
+      '0',
+      '0',
+      '0',
+      '0',
+      '0',
+      '0',
+      '0',
+      '0'
+    ]);
   });
 
   it('keeps explicit timeout overrides for android host tasks', async () => {
@@ -165,7 +184,7 @@ describe('quality-gate-lib.sh', () => {
           'set -e',
           'printf "exit=%s\\n" "$exit_code"'
         ].join('\n'),
-        REPO_ROOT,
+        tempRoot,
         {
           QUALITY_GATE_LOG_ROOT: tempRoot,
           QUALITY_GATE_RUN_ID: 'test-run'
@@ -176,11 +195,12 @@ describe('quality-gate-lib.sh', () => {
       expect(result.stdout).toContain('exit=1');
       expect(result.stdout).toContain(`failed summary: ${failedSummary}`);
       expect(result.stdout).toContain(
-        'rerun: npx vitest run --reporter=dot --silent=passed-only --pool=threads --no-file-parallelism src/app/Foo.test.tsx'
+        'rerun: node scripts/run-vitest-with-summary.mjs .tmp/vitest/rerun.json -- --silent=passed-only --pool=threads --no-file-parallelism src/app/Foo.test.tsx'
       );
       await expect(readFile(failedSummary, 'utf8')).resolves.toContain('failed-test=src/app/Foo.test.tsx');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
 });

@@ -851,7 +851,7 @@ function Start-ElectronShell {
   if ([string]::IsNullOrWhiteSpace($runtimeHeadValue)) {
     $runtimeHeadValue = ""
   }
-  $command = "cd /d `"$WorkDir`" && set PATH=$nodeDir;%PATH% && set FOLIOLE_BOOT_SESSION=$bootSessionValue && set FOLIOLE_RUNTIME_HEAD=$runtimeHeadValue && set ELECTRON_RUN_AS_NODE= && call `"$npmCmd`" run electron:dev"
+  $command = "cd /d `"$WorkDir`" && set PATH=$nodeDir;%PATH% && set PATHEXT=.COM;.EXE;.BAT;.CMD;.PS1 && set FOLIOLE_BOOT_SESSION=$bootSessionValue && set FOLIOLE_RUNTIME_HEAD=$runtimeHeadValue && set ELECTRON_RUN_AS_NODE= && call `"$npmCmd`" run electron:dev"
 
   $proc = Start-Process `
     -FilePath "cmd.exe" `

@@ -15,7 +15,11 @@ function runCommand(command, args, cwd) {
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd,
-      env: { ...process.env, PATH: `${path.join(cwd, 'node_modules', '.bin')}:${process.env.PATH}` }
+      env: {
+        ...process.env,
+        PATH: `${path.join(cwd, 'node_modules', '.bin')}:${process.env.PATH}`,
+        VITEST_BIN: path.join(cwd, 'node_modules', '.bin', 'vitest')
+      }
     });
     let stdout = '';
     let stderr = '';
@@ -55,8 +59,8 @@ async function createRepo() {
   );
   await mkdir(path.join(repoDir, 'node_modules', '.bin'), { recursive: true });
   await writeFile(
-    path.join(repoDir, 'node_modules', '.bin', 'npx'),
-    '#!/usr/bin/env bash\nprintf "npx:%s\\n" "$*" >> calls.log\n',
+    path.join(repoDir, 'node_modules', '.bin', 'vitest'),
+    '#!/usr/bin/env bash\nprintf "vitest:%s\\n" "$*" >> calls.log\n',
     { encoding: 'utf8', mode: 0o755 }
   );
   return repoDir;
@@ -107,6 +111,14 @@ describe('pre-commit validation', () => {
     try {
       await mkdir(path.join(repoDir, 'src', 'app', 'components'), { recursive: true });
       await writeFile(path.join(repoDir, 'src', 'app', 'components', 'useNodeBacklinks.ts'), 'export const value = 1;\n');
+      await writeFile(
+        path.join(repoDir, 'src', 'app', 'components', 'DocumentPanelSection.runtimeBacklinks.test.tsx'),
+        'it("covers backlinks", () => {});\n'
+      );
+      await writeFile(
+        path.join(repoDir, 'src', 'app', 'components', 'WorkspaceRightSidebarBacklinksPanel.test.tsx'),
+        'it("covers backlinks", () => {});\n'
+      );
       await runCommand('git', ['add', '.'], repoDir);
 
       const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
@@ -114,8 +126,44 @@ describe('pre-commit validation', () => {
       expect(result.code).toBe(0);
       const calls = await readFile(path.join(repoDir, 'calls.log'), 'utf8');
       expect(calls).toContain(
-        'npx:vitest run --reporter=dot --silent=passed-only --pool=threads --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx'
+        'vitest:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/pre-commit-critical.json --silent=passed-only --pool=threads --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx'
       );
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it('blocks contract-sensitive staged changes without test maintenance', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'src', 'app', 'components'), { recursive: true });
+      await writeFile(path.join(repoDir, 'src', 'app', 'components', 'StatusPanel.tsx'), 'export const label = "Syncing";\n');
+      await runCommand('git', ['add', '.'], repoDir);
+
+      const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
+
+      expect(result.code).not.toBe(0);
+      expect(result.stderr).toContain('contract-sensitive changes require paired test maintenance');
+      expect(result.stderr).toContain('src/app/components/StatusPanel.tsx');
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it('allows contract-sensitive staged changes with paired test support updates', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'src', 'app', 'components'), { recursive: true });
+      await writeFile(path.join(repoDir, 'src', 'app', 'components', 'StatusPanel.tsx'), 'export const label = "Syncing";\n');
+      await writeFile(path.join(repoDir, 'src', 'app', 'components', 'StatusPanel.test.tsx'), 'it("covers status", () => {});\n');
+      await runCommand('git', ['add', '.'], repoDir);
+
+      const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
+
+      expect(result.code).toBe(0);
+      const calls = await readFile(path.join(repoDir, 'calls.log'), 'utf8');
+      expect(calls).toContain('src/app/components/StatusPanel.test.tsx');
+      expect(calls).toContain('src/app/components/StatusPanel.tsx');
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }

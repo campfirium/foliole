@@ -81,6 +81,9 @@ async function writePackageJson(rootDir, scripts) {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
     ...scripts
   };
+  for (const bucket of ['test:desktop', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality']) {
+    fixtureScripts[bucket] ??= scripts['test:full'];
+  }
   const packageJson = {
     name: 'quality-gate-fixture',
     private: true,
@@ -374,8 +377,8 @@ describe('quality-gate-fast.sh', () => {
       );
       await writeExecutable(
         tempRoot,
-        'node_modules/.bin/npx',
-        '#!/usr/bin/env bash\nif [[ "$1" == "vitest" ]]; then shift; fi\necho "related test:$*"\n'
+        'node_modules/.bin/vitest',
+        '#!/usr/bin/env bash\necho "related test:$*"\n'
       );
       await writeFixtureFile(
         tempRoot,
@@ -386,6 +389,7 @@ describe('quality-gate-fast.sh', () => {
 
       const result = await runQualityGate(tempRoot, {
         PATH: `${path.join(tempRoot, 'node_modules/.bin')}:${process.env.PATH}`,
+        VITEST_BIN: path.join(tempRoot, 'node_modules/.bin', 'vitest'),
         QUALITY_GATE_CHANGED_FILES: 'src/app/components/FancyCard.tsx'
       });
 
@@ -395,7 +399,7 @@ describe('quality-gate-fast.sh', () => {
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/FancyCard.tsx');
       expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
       expect(result.stdout).toContain(
-        'related test:run --reporter=dot --silent=passed-only --pool=threads --no-file-parallelism src/app/components/FancyCard.test.tsx'
+        'related test:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --no-file-parallelism src/app/components/FancyCard.test.tsx'
       );
       expect(result.stdout).not.toContain('repo lint should stay unused');
       expect(result.stdout).not.toContain('repo test should stay unused');

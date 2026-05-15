@@ -117,7 +117,7 @@ verify_windows_node_modules() {
     exit_code=$?
   else
     output="$(
-      powershell.exe -NoProfile -NonInteractive -Command "\$ErrorActionPreference='Stop'; Set-Location -LiteralPath '${WINDOWS_WORKDIR}'; npm ls --depth=0 --json --silent | Out-Null" 2>&1
+      powershell.exe -NoProfile -NonInteractive -Command "\$ErrorActionPreference='Stop'; \$env:PATHEXT='.COM;.EXE;.BAT;.CMD;.PS1'; Set-Location -LiteralPath '${WINDOWS_WORKDIR}'; npm.cmd ls --depth=0 --json --silent | Out-Null; if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }" 2>&1
     )"
     exit_code=$?
   fi

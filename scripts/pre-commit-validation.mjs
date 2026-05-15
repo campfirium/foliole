@@ -1,10 +1,27 @@
 #!/usr/bin/env node
-/* global console, process */
+/* global URL, console, process */
 
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
+import { resolveCriticalTestFiles } from './quality-critical-test-routes.mjs';
+
+const RUN_VITEST_WITH_SUMMARY_SCRIPT = fileURLToPath(new URL('./run-vitest-with-summary.mjs', import.meta.url));
 const LINTABLE_FILE_PATTERN = /\.(cjs|js|jsx|mjs|ts|tsx)$/u;
+const TEST_MAINTENANCE_FILE_PATTERN =
+  /(?:^|\/)(?:src\/test|tests|__tests__)\/|(?:\.test|\.spec|\.testSupport)\.(?:cjs|js|jsx|mjs|ts|tsx)$/u;
+const CONTRACT_SENSITIVE_PATTERNS = [
+  /^src\/(?:app|companion|features|shared\/ui)\/.*\.(?:ts|tsx)$/u,
+  /(?:schema|migration|manifest|generated|metadata)/iu,
+  /(?:sync|Sync|payload|Payload|apply|Apply|sql|SQL)/u,
+  /(?:bridge|Bridge|adapter|Adapter|runtime|Runtime|platform)/u,
+  /(?:security|sanitize|sanitizer|safe|unsafe|url|Url|URL|html|Html|markdown|Markdown|link|Link)/u,
+  /(?:props|Props)\.(?:ts|tsx)$/u
+];
+const PRE_PUSH_COVERED_CONTRACT_PATTERNS = [
+  /^(lib\/core\/sync\/syncPack|electron\/database\/syncPack|electron\/sync\/syncPack|src\/shared\/platform\/companionSyncPack)/u
+];
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -49,6 +66,37 @@ function runStagedCodeLint(files) {
   runStep('linting staged code files', 'bash', ['scripts/lint-changed.sh', ...lintableFiles]);
 }
 
+function isTestMaintenanceFile(file) {
+  return TEST_MAINTENANCE_FILE_PATTERN.test(file);
+}
+
+function isContractSensitiveFile(file) {
+  if (
+    !LINTABLE_FILE_PATTERN.test(file) ||
+    isTestMaintenanceFile(file) ||
+    PRE_PUSH_COVERED_CONTRACT_PATTERNS.some((pattern) => pattern.test(file))
+  ) {
+    return false;
+  }
+  return CONTRACT_SENSITIVE_PATTERNS.some((pattern) => pattern.test(file));
+}
+
+function runTestDriftGuard(files) {
+  const contractFiles = files.filter(isContractSensitiveFile);
+  if (contractFiles.length === 0 || files.some(isTestMaintenanceFile)) {
+    return;
+  }
+  const routedTests = resolveCriticalTestFiles(contractFiles);
+  if (routedTests.length > 0) {
+    return;
+  }
+  throw new Error([
+    'contract-sensitive changes require paired test maintenance or critical routed tests.',
+    `files: ${contractFiles.join(', ')}`,
+    'stage a related *.test.*, *.spec.*, *.testSupport.* file, or add a critical test route if existing tests already cover this contract.'
+  ].join('\n'));
+}
+
 function runCriticalTests(files) {
   if (files.length === 0 || !existsSync('scripts/quality-critical-test-routes.mjs')) {
     return;
@@ -60,10 +108,10 @@ function runCriticalTests(files) {
     return;
   }
   const tests = output.split(/\r?\n/u).filter(Boolean);
-  runStep('running critical routed tests', 'npx', [
-    'vitest',
-    'run',
-    '--reporter=dot',
+  runStep('running critical routed tests', 'node', [
+    RUN_VITEST_WITH_SUMMARY_SCRIPT,
+    '.tmp/vitest/pre-commit-critical.json',
+    '--',
     '--silent=passed-only',
     '--pool=threads',
     '--no-file-parallelism',
@@ -76,6 +124,7 @@ function main() {
   const files = collectStagedFiles();
   runAddedFileChecks(addedOrRenamedFiles);
   runStagedCodeLint(files);
+  runTestDriftGuard(files);
   runCriticalTests(files);
 }
 

@@ -77,6 +77,7 @@ describe('restart-electron-dev script', () => {
 
     expect(script).toContain('-ArgumentList "/d", "/c", $command');
     expect(script).toContain('-WindowStyle Hidden');
+    expect(script).toContain('set PATHEXT=.COM;.EXE;.BAT;.CMD;.PS1');
     expect(script).toContain('electron:dev shell launched in hidden terminal');
   });
 

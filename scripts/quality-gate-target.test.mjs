@@ -37,6 +37,9 @@ async function writePackageJson(rootDir, scripts) {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
     ...scripts
   };
+  for (const bucket of ['test:desktop', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality']) {
+    fixtureScripts[bucket] ??= scripts['test:full'];
+  }
   await writeFile(
     path.join(rootDir, 'package.json'),
     `${JSON.stringify({ name: 'quality-gate-target-fixture', private: true, scripts: fixtureScripts }, null, 2)}\n`,

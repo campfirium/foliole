@@ -65,19 +65,20 @@ describe('quality gate critical routes integration', () => {
       );
       await writeFileWithDirs(
         root,
-        'node_modules/.bin/npx',
-        '#!/usr/bin/env bash\nif [[ "$1" == "vitest" ]]; then shift; fi\necho "critical test:$*"\n',
+        'node_modules/.bin/vitest',
+        '#!/usr/bin/env bash\necho "critical test:$*"\n',
         0o755
       );
 
       const result = await runQualityGate(root, {
         PATH: `${path.join(root, 'node_modules/.bin')}:${process.env.PATH}`,
+        VITEST_BIN: path.join(root, 'node_modules/.bin', 'vitest'),
         QUALITY_GATE_CHANGED_FILES: 'src/app/components/useNodeBacklinks.ts'
       });
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: mid');
-      expect(result.stdout).toContain('critical test:run --reporter=dot --silent=passed-only --pool=threads --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx');
+      expect(result.stdout).toContain('critical test:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx');
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/useNodeBacklinks.ts');
     } finally {
       await rm(root, { recursive: true, force: true });
