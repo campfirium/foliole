@@ -19,6 +19,10 @@ export interface DatabaseConnection {
   dbPath: string;
 }
 
+interface OpenDatabaseConnectionOptions {
+  applyJournalMode?: boolean;
+}
+
 let cachedConnection: DatabaseConnection | null = null;
 
 function resolveConfiguredDatabasePath(): string {
@@ -29,17 +33,20 @@ export function resolveDatabasePath(): string {
   return cachedConnection?.dbPath ?? resolveConfiguredDatabasePath();
 }
 
-export function openDatabaseConnection(): DatabaseConnection {
+export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = {}): DatabaseConnection {
   if (cachedConnection) {
     return cachedConnection;
   }
 
+  const { applyJournalMode = true } = options;
   const runtimeDataPaths = resolveRuntimeDataPaths();
   const dbPath = runtimeDataPaths.databasePath;
   ensureLibraryPathLayout(loadLibraryPathSettingsSync());
 
   const sqlite = new BetterSqlite3(dbPath);
-  sqlite.pragma('journal_mode = WAL');
+  if (applyJournalMode) {
+    sqlite.pragma('journal_mode = WAL');
+  }
   sqlite.pragma('foreign_keys = ON');
 
   cachedConnection = {
@@ -48,6 +55,10 @@ export function openDatabaseConnection(): DatabaseConnection {
     dbPath
   };
   return cachedConnection;
+}
+
+export function enableDatabaseWriteAheadLog(connection: DatabaseConnection) {
+  connection.sqlite.pragma('journal_mode = WAL');
 }
 
 export function closeDatabaseConnection() {

@@ -6,7 +6,12 @@ import {
 } from '../../lib/core/database/migrations.js';
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
 
-import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
+import {
+  closeDatabaseConnection,
+  enableDatabaseWriteAheadLog,
+  openDatabaseConnection,
+  resolveDatabasePath
+} from './connection.js';
 import {
   isDatabaseCorruptionError,
   moveDatabaseToPreRebuildSnapshot,
@@ -27,7 +32,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_open_connection_start', {
       databasePath
     });
-    const connection = openDatabaseConnection();
+    const connection = openDatabaseConnection({ applyJournalMode: false });
     try {
       reportStage?.('database_open_connection_complete', {
         dbPath: connection.dbPath
@@ -35,6 +40,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
       reportStage?.('database_integrity_check_start');
       verifyDatabaseIntegrity(connection.sqlite);
       reportStage?.('database_integrity_check_complete');
+      enableDatabaseWriteAheadLog(connection);
       reportStage?.('database_schema_init_start');
       createPreMigrationSnapshotIfNeeded(connection);
       const initializedConnection = initializeDatabaseConnection(connection);
@@ -65,13 +71,14 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_recovery_open_connection_start', {
       databasePath: resolveDatabasePath()
     });
-    const connection = openDatabaseConnection();
+    const connection = openDatabaseConnection({ applyJournalMode: false });
     reportStage?.('database_recovery_open_connection_complete', {
       dbPath: connection.dbPath
     });
     reportStage?.('database_recovery_integrity_check_start');
     verifyDatabaseIntegrity(connection.sqlite);
     reportStage?.('database_recovery_integrity_check_complete');
+    enableDatabaseWriteAheadLog(connection);
     reportStage?.('database_recovery_schema_init_start');
     const initializedConnection = initializeDatabaseConnection(connection);
     reportStage?.('database_recovery_schema_init_complete');

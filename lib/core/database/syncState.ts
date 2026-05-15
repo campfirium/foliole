@@ -77,43 +77,37 @@ export function computeSyncContentHash(objectType: SyncObjectType, payload: Json
 }
 
 export function upsertSyncObjectState(driver: DatabaseDriver, input: SyncObjectStateInput): void {
-  driver.transaction((transactionDriver) => {
-    const nextSeq = (transactionDriver.queryOne<{ value: number }>(
-      'SELECT COALESCE(MAX(state_seq), 0) + 1 AS value FROM sync_object_state'
-    )?.value ?? 1);
-    transactionDriver.execute(
-      `INSERT INTO sync_object_state (
-         object_type,
-         object_id,
-         state_seq,
-         current_version_id,
-         content_hash,
-         last_modified_by_device_id,
-         updated_at,
-         deleted_at,
-         sync_dirty
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(object_type, object_id) DO UPDATE SET
-         state_seq = excluded.state_seq,
-         current_version_id = excluded.current_version_id,
-         content_hash = excluded.content_hash,
-         last_modified_by_device_id = excluded.last_modified_by_device_id,
-         updated_at = excluded.updated_at,
-         deleted_at = excluded.deleted_at,
-         sync_dirty = excluded.sync_dirty`,
-      [
-        input.objectType,
-        input.objectId,
-        nextSeq,
-        input.currentVersionId ?? null,
-        input.contentHash,
-        input.lastModifiedByDeviceId,
-        input.updatedAt,
-        input.deletedAt ?? null,
-        input.syncDirty ? 1 : 0
-      ]
-    );
-  });
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type,
+       object_id,
+       state_seq,
+       current_version_id,
+       content_hash,
+       last_modified_by_device_id,
+       updated_at,
+       deleted_at,
+       sync_dirty
+     ) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(object_type, object_id) DO UPDATE SET
+       state_seq = excluded.state_seq,
+       current_version_id = excluded.current_version_id,
+       content_hash = excluded.content_hash,
+       last_modified_by_device_id = excluded.last_modified_by_device_id,
+       updated_at = excluded.updated_at,
+       deleted_at = excluded.deleted_at,
+       sync_dirty = excluded.sync_dirty`,
+    [
+      input.objectType,
+      input.objectId,
+      input.currentVersionId ?? null,
+      input.contentHash,
+      input.lastModifiedByDeviceId,
+      input.updatedAt,
+      input.deletedAt ?? null,
+      input.syncDirty ? 1 : 0
+    ]
+  );
 }
 
 function toSyncObjectStateRecord(row: SyncObjectStateRow): SyncObjectStateRecord {

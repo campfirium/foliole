@@ -95,28 +95,30 @@ it('writes sync object state for attachment pdf text setting and view state', ()
 
 it('advances state sequence monotonically and queries by cursor', () => {
   const driver = openInitializedDriver();
-  for (let index = 0; index < 1000; index += 1) {
-    upsertSyncObjectState(driver, {
-      objectType: 'setting',
-      objectId: `setting-${index}`,
-      contentHash: computeSyncContentHash('setting', { index }),
+  driver.transaction((transactionDriver) => {
+    for (let index = 0; index < 1000; index += 1) {
+      upsertSyncObjectState(transactionDriver, {
+        objectType: 'setting',
+        objectId: `setting-${index}`,
+        contentHash: computeSyncContentHash('setting', { index }),
+        lastModifiedByDeviceId: 'desktop-1',
+        updatedAt: `2026-04-24T00:00:${String(index % 60).padStart(2, '0')}.000Z`
+      });
+    }
+    upsertSyncObjectState(transactionDriver, {
+      objectType: 'attachment',
+      objectId: 'att-1',
+      contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1' }),
       lastModifiedByDeviceId: 'desktop-1',
-      updatedAt: `2026-04-24T00:00:${String(index % 60).padStart(2, '0')}.000Z`
+      updatedAt: '2026-04-24T00:10:00.000Z'
     });
-  }
-  upsertSyncObjectState(driver, {
-    objectType: 'attachment',
-    objectId: 'att-1',
-    contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1' }),
-    lastModifiedByDeviceId: 'desktop-1',
-    updatedAt: '2026-04-24T00:10:00.000Z'
-  });
-  upsertSyncObjectState(driver, {
-    objectType: 'attachment',
-    objectId: 'att-1',
-    contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1', updated: true }),
-    lastModifiedByDeviceId: 'desktop-1',
-    updatedAt: '2026-04-24T00:11:00.000Z'
+    upsertSyncObjectState(transactionDriver, {
+      objectType: 'attachment',
+      objectId: 'att-1',
+      contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1', updated: true }),
+      lastModifiedByDeviceId: 'desktop-1',
+      updatedAt: '2026-04-24T00:11:00.000Z'
+    });
   });
 
   const duplicateSeqRows = driver.queryAll<{ count: number }>(
