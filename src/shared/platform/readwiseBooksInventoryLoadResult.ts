@@ -1,7 +1,7 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
+import { loadRuntimeInventoryResult, type RuntimeInventoryLoadResult } from './import/runtimeInventoryLoadResult';
 import { toRuntimeReadwiseBooksInventory, type RuntimeReadwiseBooksInventory } from './readwiseBooksRuntimePayloads';
-import { loadRuntimeInventoryResult, type RuntimeInventoryLoadResult } from './runtimeInventoryLoadResult';
 
 export function loadRuntimeReadwiseBooksInventoryResult(): Promise<RuntimeInventoryLoadResult<RuntimeReadwiseBooksInventory>> {
   return loadRuntimeInventoryResult({

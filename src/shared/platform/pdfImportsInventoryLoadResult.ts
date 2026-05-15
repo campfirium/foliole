@@ -1,7 +1,7 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
+import { loadRuntimeInventoryResult, type RuntimeInventoryLoadResult } from './import/runtimeInventoryLoadResult';
 import { toRuntimePdfImportsInventory, type RuntimePdfImportsInventory } from './pdfImportsRuntimePayloads';
-import { loadRuntimeInventoryResult, type RuntimeInventoryLoadResult } from './runtimeInventoryLoadResult';
 
 export function loadRuntimePdfImportsInventoryResult(): Promise<RuntimeInventoryLoadResult<RuntimePdfImportsInventory>> {
   return loadRuntimeInventoryResult({
