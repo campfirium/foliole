@@ -1,6 +1,7 @@
 import {
   loadRuntimeExternalSearchBrowseEntries,
   loadRuntimeExternalSearchFolders,
+  rebuildRuntimeExternalSearchIndex,
   subscribeRuntimeExternalSearchFolders,
   type RuntimeExternalSearchBrowseEntry,
   type RuntimeExternalSearchFolder
@@ -19,4 +20,8 @@ export function loadExternalLibraryBrowseEntries(folderId: string) {
 
 export function subscribeExternalLibraryFolders(listener: (folders: ExternalLibraryFolder[]) => void) {
   return subscribeRuntimeExternalSearchFolders(listener);
+}
+
+export function rebuildExternalLibraryIndex(folderId?: string) {
+  return rebuildRuntimeExternalSearchIndex(folderId);
 }

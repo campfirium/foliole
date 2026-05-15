@@ -37,6 +37,7 @@ it('opens the link panel when an external document preview link is clicked', () 
       onGoForward={vi.fn()}
       onHandleImport={vi.fn()}
       onOpenSelection={vi.fn()}
+      onPreviewEditorReady={vi.fn()}
       preview={{
         absolutePath: '/library/topic.md',
         content: '[docs](https://example.com/docs)',

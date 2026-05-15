@@ -97,6 +97,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   workspaceContentSort: 'foliole-workspace-content-sort',
   externalLibraryCollapsed: 'foliole-external-library-collapsed',
   externalLibraryFolderOrder: 'foliole-external-library-folder-order',
+  externalDocumentLastOpenedAt: 'foliole-external-document-last-opened-at',
   listCollapsed: 'foliole-workspace-list-collapsed',
   listWidth: 'foliole-workspace-list-width',
   dualListWidth: 'foliole-workspace-dual-list-width',

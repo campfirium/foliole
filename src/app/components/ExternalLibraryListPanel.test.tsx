@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import type { ElectronAPI } from '../../shared/platform/electronApi';
+
 import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
 
 const folders = [
@@ -48,6 +51,7 @@ const entriesByFolderId = {
 
 beforeEach(() => {
   window.localStorage.clear();
+  delete window.electronAPI;
 });
 
 it('reuses the compact item row style for external library items without dates or opening previews', () => {
@@ -64,6 +68,39 @@ it('reuses the compact item row style for external library items without dates o
   expect(screen.getByRole('button', { name: 'Sort list by Modified time' })).toBeInTheDocument();
   expect(screen.queryByText('2026-04-21')).toBeNull();
   expect(screen.queryByText('The first useful sentence inside this external document.')).toBeNull();
+});
+
+it('offers last opened sorting for external documents', () => {
+  render(
+    <ExternalLibraryListPanel
+      entriesByFolderId={entriesByFolderId}
+      folders={folders}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ folderId: 'folder-1', kind: 'folder' }}
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Modified time' }), { key: 'ArrowDown' });
+
+  expect(screen.getByRole('menuitem', { name: /Last opened/i })).toBeInTheDocument();
+});
+
+it('refreshes the selected external folder from the document list toolbar', () => {
+  const invoke = vi.fn(async () => folders);
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  render(
+    <ExternalLibraryListPanel
+      entriesByFolderId={entriesByFolderId}
+      folders={folders}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ directoryPath: 'nested', folderId: 'folder-1', kind: 'directory' }}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh external documents' }));
+
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.rebuildExternalSearchIndex, { folder_id: 'folder-1' });
 });
 
 it('shows a loading state while the selected external folder entries are not loaded yet', () => {

@@ -19,6 +19,7 @@ export function selectWorkspaceGridColumnProps({
   activeRightPanelId,
   documentNodeId,
   documentSurfaceProps,
+  externalOutlineDocument,
   listNodesById,
   outlineActivePosition,
   onSelectNode,
@@ -27,6 +28,7 @@ export function selectWorkspaceGridColumnProps({
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
   documentSurfaceProps: WorkspaceDocumentSurfaceProps;
+  externalOutlineDocument: WorkspaceRightSidebarProps['outlineDocument'];
   listNodesById: WorkspaceListNodesById;
   outlineActivePosition: number;
   onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
@@ -42,6 +44,7 @@ export function selectWorkspaceGridColumnProps({
     rightSidebarProps: selectWorkspaceRightSidebarProps({
       activeRightPanelId,
       documentNodeId,
+      externalOutlineDocument,
       outlineActivePosition,
       onSelectNode,
       props
@@ -102,12 +105,14 @@ function selectWorkspaceListSplitterProps(
 function selectWorkspaceRightSidebarProps({
   activeRightPanelId,
   documentNodeId,
+  externalOutlineDocument,
   outlineActivePosition,
   onSelectNode,
   props
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
+  externalOutlineDocument: WorkspaceRightSidebarProps['outlineDocument'];
   outlineActivePosition: number;
   onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
   props: WorkspaceGridContentProjectionSource;
@@ -125,7 +130,8 @@ function selectWorkspaceRightSidebarProps({
     reviewCurrentNodeId: props.review.reviewCurrentNodeId,
     reviewQueueNodeIds: props.review.reviewPanelQueueNodeIds,
     reviewSchedulerSettings: props.review.reviewSchedulerSettings,
-    trashedNodeIds: props.trash.trashedNodeIds
+    trashedNodeIds: props.trash.trashedNodeIds,
+    ...definedProps({ outlineDocument: externalOutlineDocument })
   };
 }
 

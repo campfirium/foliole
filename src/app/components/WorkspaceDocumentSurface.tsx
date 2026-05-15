@@ -3,9 +3,17 @@ import { useAppearanceSettings } from '../../features/settings/context/Appearanc
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
+import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
 import { RemovedSourcePreviewSurface } from './RemovedSourcePreviewSurface';
 import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
+
+const EMPTY_EXTERNAL_PREVIEW_STATE: ExternalDocumentPreviewLoadState = {
+  error: null,
+  isLoading: false,
+  preview: null,
+  retry: () => undefined
+};
 
 export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
   const { editorAppearanceKey, readingContentWidth } = useAppearanceSettings();
@@ -25,6 +33,8 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
           }
         }}
         onOpenSelection={props.onOpenExternalSelection}
+        onPreviewEditorReady={props.onExternalPreviewEditorReady ?? (() => undefined)}
+        previewState={props.externalPreviewState ?? EMPTY_EXTERNAL_PREVIEW_STATE}
         selection={props.externalSelection}
       />
     );

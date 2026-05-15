@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useRef } from 'react';
 
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
@@ -25,6 +26,7 @@ export function ExternalLibraryPreviewSurface(args: {
   onGoForward: () => void;
   onHandleImport: () => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
+  onPreviewEditorReady: (adapter: EditorAdapter | null) => void;
   preview: ExternalDocumentPreview;
 }) {
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
@@ -59,6 +61,7 @@ export function ExternalLibraryPreviewSurface(args: {
           nodeId={args.preview.absolutePath}
           onChange={() => undefined}
           onOpenExternalLink={handleOpenExternalLink}
+          onReady={args.onPreviewEditorReady}
           readOnly
           value={args.preview.content}
         />

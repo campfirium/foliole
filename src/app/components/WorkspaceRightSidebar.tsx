@@ -16,6 +16,12 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 type WorkspaceRightSidebarNodesById = Record<string, Node>;
 
+interface WorkspaceRightSidebarOutlineDocument {
+  activePosition: number;
+  content: string;
+  onRevealPosition: (position: number) => void;
+}
+
 interface WorkspaceRightSidebarPanelProps {
   activeNodeId: string | null;
   activePanelId: WorkspaceRightPanelId;
@@ -26,6 +32,7 @@ interface WorkspaceRightSidebarPanelProps {
   onRevealDocumentPosition?: (position: number) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
+  outlineDocument?: WorkspaceRightSidebarOutlineDocument;
   reviewCurrentNodeId: string | null;
   reviewQueueNodeIds: string[];
   reviewSchedulerSettings: ReviewSchedulerSettings;
@@ -171,14 +178,19 @@ function renderHighlightsPanel(
 }
 
 function renderOutlinePanel(
-  props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById' | 'onRevealDocumentPosition' | 'outlineActivePosition'>
+  props: Pick<
+    WorkspaceRightSidebarPanelProps,
+    'activeNodeId' | 'nodesById' | 'onRevealDocumentPosition' | 'outlineActivePosition' | 'outlineDocument'
+  >
 ) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
+  const outlineDocument = props.outlineDocument;
   return (
     <WorkspaceRightSidebarOutlinePanel
-      activePosition={props.outlineActivePosition}
-      content={activeNode?.content ?? ''}
-      onRevealPosition={props.onRevealDocumentPosition ?? (() => undefined)}
+      activePosition={outlineDocument?.activePosition ?? props.outlineActivePosition}
+      content={outlineDocument?.content ?? activeNode?.content ?? ''}
+      onRevealPosition={outlineDocument?.onRevealPosition ?? props.onRevealDocumentPosition ?? (() => undefined)}
+      {...(outlineDocument ? { emptyDescription: 'This document has no outline headings yet.' } : {})}
     />
   );
 }
@@ -193,6 +205,7 @@ export interface WorkspaceRightSidebarProps {
   onRevealDocumentPosition?: (position: number) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
+  outlineDocument?: WorkspaceRightSidebarOutlineDocument;
   reviewCurrentNodeId: string | null;
   reviewQueueNodeIds: string[];
   reviewSchedulerSettings: ReviewSchedulerSettings;

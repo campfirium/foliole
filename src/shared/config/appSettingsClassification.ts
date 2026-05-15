@@ -115,6 +115,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'workspaceContentSort',
   'externalLibraryCollapsed',
   'externalLibraryFolderOrder',
+  'externalDocumentLastOpenedAt',
   'listCollapsed',
   'listWidth',
   'dualListWidth',

@@ -1,10 +1,12 @@
-import { useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, type ReactNode } from 'react';
 
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import {
   projectWorkspaceListNodesById,
   type WorkspaceListNodesById
 } from '../../features/nodes/model/workspaceListNode';
 
+import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
 import {
   selectWorkspaceDocumentSurfaceProps
 } from './workspaceDocumentSurfaceProps';
@@ -34,9 +36,11 @@ export function WorkspaceGridContent({
   props: WorkspaceGridContentSource;
 }) {
   const listNodesById = useProjectedListNodesById(props.nodeList.nodesById);
+  const externalPreviewController = useExternalPreviewController(props);
   const documentSurfaceProps = useWorkspaceGridDocumentSurfaceProps({
     activeRightPanelId,
     documentNodeId,
+    externalPreviewController,
     isImmersiveEditing,
     onEnterImmersiveEdit,
     onShouldSuppressSelectionRestore,
@@ -59,6 +63,7 @@ export function WorkspaceGridContent({
           documentNodeId,
           documentSurfaceProps,
           listNodesById,
+          externalOutlineDocument: externalPreviewController.outlineDocument,
           outlineActivePosition,
           onSelectNode,
           props
@@ -71,6 +76,7 @@ export function WorkspaceGridContent({
 function useWorkspaceGridDocumentSurfaceProps({
   activeRightPanelId,
   documentNodeId,
+  externalPreviewController,
   isImmersiveEditing,
   onEnterImmersiveEdit,
   onShouldSuppressSelectionRestore,
@@ -78,6 +84,7 @@ function useWorkspaceGridDocumentSurfaceProps({
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
+  externalPreviewController: ReturnType<typeof useExternalPreviewController>;
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
@@ -93,16 +100,49 @@ function useWorkspaceGridDocumentSurfaceProps({
         onShouldSuppressSelectionRestore,
         props
       }),
+      externalPreviewState: externalPreviewController.previewState,
+      onExternalPreviewEditorReady: externalPreviewController.onEditorReady,
       showDocumentOutline
     }),
     [
       documentNodeId,
+      externalPreviewController,
       isImmersiveEditing,
       onEnterImmersiveEdit,
       onShouldSuppressSelectionRestore,
       props,
       showDocumentOutline
     ]
+  );
+}
+
+function useExternalPreviewController(props: WorkspaceGridContentSource) {
+  const editorRef = useRef<EditorAdapter | null>(null);
+  const previewPath =
+    props.externalLibrary.isExternalViewOpen && props.externalLibrary.externalSelection.kind === 'document'
+      ? props.externalLibrary.externalSelection.absolutePath
+      : null;
+  const previewState = useExternalSearchPreviewDocument(previewPath);
+  const onEditorReady = useCallback((adapter: EditorAdapter | null) => {
+    editorRef.current = adapter;
+  }, []);
+  const onRevealPosition = useCallback((position: number) => {
+    editorRef.current?.revealPosition(position);
+  }, []);
+  const outlineDocument = useMemo(
+    () =>
+      props.externalLibrary.isExternalViewOpen
+        ? {
+            activePosition: 0,
+            content: previewState.preview?.content ?? '',
+            onRevealPosition
+          }
+        : undefined,
+    [onRevealPosition, previewState.preview?.content, props.externalLibrary.isExternalViewOpen]
+  );
+  return useMemo(
+    () => ({ onEditorReady, outlineDocument, previewState }),
+    [onEditorReady, outlineDocument, previewState]
   );
 }
 

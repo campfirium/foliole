@@ -1,5 +1,7 @@
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { definedProps } from '../../shared/lib/definedProps';
 
+import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 
 export type WorkspaceDocumentSurfaceSource = Pick<
@@ -41,8 +43,10 @@ type WorkspaceDocumentSurfaceFlatSource =
 
 export type WorkspaceDocumentSurfaceProps = WorkspaceDocumentSurfaceFlatSource & {
   documentNodeId: string | null;
+  externalPreviewState?: ExternalDocumentPreviewLoadState;
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
+  onExternalPreviewEditorReady?: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore: () => boolean;
   showDocumentOutline?: boolean;
 };

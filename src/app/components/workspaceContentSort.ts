@@ -184,11 +184,17 @@ export function sortWorkspaceContentNodeIds(
 export function compareExternalDocuments(
   left: ExternalLibraryDocumentItem,
   right: ExternalLibraryDocumentItem,
-  sort: WorkspaceContentSortState
+  sort: WorkspaceContentSortState,
+  lastOpenedAtByPath: Record<string, string | undefined> = {}
 ) {
   if (sort.key === 'name') {
     const titleResult = compareText(left.title, right.title) * (sort.direction === 'asc' ? 1 : -1);
     if (titleResult !== 0) return titleResult;
+  } else if (sort.key === 'lastOpenedAt') {
+    const dateResult =
+      compareTimestampDesc(lastOpenedAtByPath[left.absolutePath], lastOpenedAtByPath[right.absolutePath]) *
+      directionMultiplier(sort.direction);
+    if (dateResult !== 0) return dateResult;
   } else {
     const dateResult = compareTimestampDesc(left.modifiedAt, right.modifiedAt) * directionMultiplier(sort.direction);
     if (dateResult !== 0) return dateResult;
@@ -200,9 +206,10 @@ export function compareExternalDocuments(
 
 export function sortExternalDocuments(
   documents: ExternalLibraryDocumentItem[],
-  sort: WorkspaceContentSortState
+  sort: WorkspaceContentSortState,
+  lastOpenedAtByPath: Record<string, string | undefined> = {}
 ) {
-  return [...documents].sort((left, right) => compareExternalDocuments(left, right, sort));
+  return [...documents].sort((left, right) => compareExternalDocuments(left, right, sort, lastOpenedAtByPath));
 }
 
 export function compareNaturalName(left: string, right: string) {

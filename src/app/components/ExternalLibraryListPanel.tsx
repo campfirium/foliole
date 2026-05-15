@@ -1,22 +1,25 @@
 import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
-import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import { AppEmptyState, AppSpinner, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
+import { AppEmptyState, AppSpinner } from '../../shared/ui';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
+import {
+  markExternalDocumentOpened,
+  useExternalDocumentLastOpenedAt
+} from './externalDocumentLastOpenedAt';
 import {
   buildExternalLibraryFolderBrowseState,
   type ExternalLibrarySelection
 } from './externalLibraryBrowseModel';
+import { ExternalLibraryListToolbar } from './ExternalLibraryListToolbar';
 import { normalizeWorkspaceContentSort, sortExternalDocuments } from './workspaceContentSort';
-import { WorkspaceContentSortControls } from './WorkspaceContentSortControls';
 
 interface ExternalLibraryListPanelProps {
   entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
@@ -30,42 +33,21 @@ function containsQuery(value: string, query: string) {
 }
 
 export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const contentSort = useWorkspaceContentSort();
-  const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['modifiedAt', 'name']);
-  const documents = useExternalDocumentListState(props, searchQuery, normalizedSort);
+  const lastOpenedAtByPath = useExternalDocumentLastOpenedAt();
+  const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['modifiedAt', 'lastOpenedAt', 'name']);
+  const documents = useExternalDocumentListState(props, searchQuery, normalizedSort, lastOpenedAtByPath);
 
   return (
     <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
-      <AppToolbar
-        as="header"
-        className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4"
-      >
-        {renderSearchLauncher(() => setIsSearchOpen(true))}
-        <ToolbarActionGroup ariaLabel="External folder content actions">
-          <WorkspaceContentSortControls
-            onChangeSortDirection={contentSort.setSortDirection}
-            onChangeSortKey={contentSort.setSortKey}
-            options={[
-              { key: 'modifiedAt', label: 'Modified time' },
-              { key: 'name', label: 'Name' }
-            ]}
-            sortDirection={normalizedSort.direction}
-            sortKey={normalizedSort.key}
-          />
-        </ToolbarActionGroup>
-        {isSearchOpen ? (
-          <NodeListSearchOverlay
-            onChangeSearchQuery={setSearchQuery}
-            onClose={() => {
-              setSearchQuery('');
-              setIsSearchOpen(false);
-            }}
-            searchQuery={searchQuery}
-          />
-        ) : null}
-      </AppToolbar>
+      <ExternalLibraryListToolbar
+        contentSort={contentSort}
+        normalizedSort={normalizedSort}
+        onChangeSearchQuery={setSearchQuery}
+        searchQuery={searchQuery}
+        selection={props.selection}
+      />
       <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 pt-2">
         <ExternalDocumentListBody
           documents={documents.documents}
@@ -81,7 +63,8 @@ export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
 function useExternalDocumentListState(
   props: ExternalLibraryListPanelProps,
   searchQuery: string,
-  sort: ReturnType<typeof useWorkspaceContentSort>['sort']
+  sort: ReturnType<typeof useWorkspaceContentSort>['sort'],
+  lastOpenedAtByPath: Record<string, string | undefined>
 ) {
   const activeFolderId = props.selection.kind === 'root' ? null : props.selection.folderId;
   const selectedFolder = activeFolderId ? props.folders.find((folder) => folder.id === activeFolderId) ?? null : null;
@@ -101,7 +84,7 @@ function useExternalDocumentListState(
       containsQuery(document.openingText ?? '', searchQuery)
   );
   return {
-    documents: sortExternalDocuments(filteredDocuments, sort),
+    documents: sortExternalDocuments(filteredDocuments, sort, lastOpenedAtByPath),
     isLoading
   };
 }
@@ -169,6 +152,7 @@ function openExternalDocumentSelection(
 ) {
   const document = documents.find((candidate) => candidate.absolutePath === absolutePath);
   if (!document) return;
+  markExternalDocumentOpened(document.absolutePath);
   onOpenExternalSelection({
     absolutePath: document.absolutePath,
     folderId: document.folderId,

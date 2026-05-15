@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
@@ -10,6 +11,7 @@ import type {
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
 
 import { useOpenImportedExternalDocument } from './externalDocumentImportState';
+import { markExternalDocumentOpened } from './externalDocumentLastOpenedAt';
 import {
   buildExternalLibraryFolderBrowseState,
   type ExternalLibrarySelection
@@ -19,7 +21,7 @@ import {
   resolveExternalSurfaceTitle
 } from './externalLibraryDocumentSurfaceSupport';
 import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
-import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
+import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
 import { FolderListView } from './FolderListView';
 
 interface ExternalLibraryDocumentSurfaceProps {
@@ -28,10 +30,12 @@ interface ExternalLibraryDocumentSurfaceProps {
   documentMaxWidth: number;
   entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   folders: ExternalLibraryFolder[];
+  onPreviewEditorReady: (adapter: EditorAdapter | null) => void;
   onOpenImportedNode: (result: ExternalDocumentImportResult) => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
   onGoBack: () => void;
   onGoForward: () => void;
+  previewState: ExternalDocumentPreviewLoadState;
   selection: ExternalLibrarySelection;
 }
 
@@ -151,6 +155,7 @@ function ExternalDocumentErrorSurface(args: { error: string; onRetry: () => void
 function renderExternalPreviewSurface(args: {
   isImporting: boolean;
   onHandleImport: () => void;
+  onPreviewEditorReady: (adapter: EditorAdapter | null) => void;
   preview: ExternalDocumentPreview;
   props: ExternalLibraryDocumentSurfaceProps;
 }) {
@@ -164,16 +169,22 @@ function renderExternalPreviewSurface(args: {
       onGoForward={args.props.onGoForward}
       onHandleImport={args.onHandleImport}
       onOpenSelection={args.props.onOpenSelection}
+      onPreviewEditorReady={args.onPreviewEditorReady}
       preview={args.preview}
     />
   );
 }
 
 export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSurfaceProps) {
-  const previewPath = props.selection.kind === 'document' ? props.selection.absolutePath : null;
-  const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(previewPath);
+  const { error, isLoading, preview, retry } = props.previewState;
   const { handleImport, isImporting } = useOpenImportedExternalDocument(preview, props.onOpenImportedNode);
   const { activeFolderId, documentNodes, documentNodesById, selectedFolder } = useExternalFolderBrowseState(props);
+
+  useEffect(() => {
+    if (props.selection.kind === 'document') {
+      markExternalDocumentOpened(props.selection.absolutePath);
+    }
+  }, [props.selection]);
 
   if ((props.selection.kind === 'folder' || props.selection.kind === 'directory') && activeFolderId) {
     return (
@@ -207,6 +218,7 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
   return renderExternalPreviewSurface({
     isImporting,
     onHandleImport: () => void handleImport(),
+    onPreviewEditorReady: props.onPreviewEditorReady,
     preview,
     props
   });

@@ -1,5 +1,7 @@
 import { beforeEach, expect, it } from 'vitest';
 
+import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
+import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 
 import {
@@ -19,7 +21,7 @@ const baseDocument = {
   relativePath: 'doc.md'
 };
 
-function createRow(id: string, title: string, updatedAt: string, createdAt = '2026-04-20T00:00:00.000Z') {
+function createRow(id: string, title: string, updatedAt: string, createdAt = '2026-04-20T00:00:00.000Z'): NodeTreeRow {
   return {
     depth: 0,
     descendantCount: 0,
@@ -70,6 +72,20 @@ it('sorts external documents by newest date by default and supports name descend
   expect(sortExternalDocuments(documents, { direction: 'desc', key: 'name' }).map((document) => document.title)).toEqual(['Beta', 'Alpha']);
 });
 
+it('sorts external documents by last opened time when available', () => {
+  const documents = [
+    { ...baseDocument, absolutePath: '/library/a.md', modifiedAt: '2026-04-22T00:00:00.000Z', title: 'Alpha' },
+    { ...baseDocument, absolutePath: '/library/b.md', modifiedAt: '2026-04-20T00:00:00.000Z', title: 'Beta' }
+  ];
+
+  expect(
+    sortExternalDocuments(documents, { direction: 'desc', key: 'lastOpenedAt' }, {
+      '/library/a.md': '2026-04-23T00:00:00.000Z',
+      '/library/b.md': '2026-04-24T00:00:00.000Z'
+    }).map((document) => document.title)
+  ).toEqual(['Beta', 'Alpha']);
+});
+
 it('sorts workspace content by last opened time when that context supports it', () => {
   const rows = [
     createRow('old', 'Old', '2026-04-22T00:00:00.000Z'),
@@ -104,15 +120,13 @@ it('sorts workspace content by modified time using updatedAt', () => {
 it('keeps large sibling groups ordered without changing hierarchy', () => {
   const nodeCount = 600;
   const nodeIds = Array.from({ length: nodeCount }, (_, index) => `node-${index}`);
-  const nodesById = Object.fromEntries(
-    nodeIds.map((nodeId, index) => [
-      nodeId,
-      {
-        ...createRow(nodeId, `Node ${String(index).padStart(3, '0')}`, `2026-04-20T00:${String(index % 60).padStart(2, '0')}:00.000Z`).node,
-        parentNodeId: 'folder'
-      }
-    ])
-  );
+  const nodesById: WorkspaceListNodesById = {};
+  nodeIds.forEach((nodeId, index) => {
+    nodesById[nodeId] = {
+      ...createRow(nodeId, `Node ${String(index).padStart(3, '0')}`, `2026-04-20T00:${String(index % 60).padStart(2, '0')}:00.000Z`).node,
+      parentNodeId: 'folder'
+    };
+  });
   nodesById.folder = {
     ...createRow('folder', 'Folder', '2026-04-20T00:00:00.000Z').node,
     hasContent: false

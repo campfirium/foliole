@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   loadExternalDocumentPreview,
@@ -55,5 +55,10 @@ export function useExternalSearchPreviewDocument(absolutePath: string | null) {
     }
   }, [absolutePath]);
 
-  return { error, isLoading, preview, retry };
+  return useMemo(
+    () => ({ error, isLoading, preview, retry }),
+    [error, isLoading, preview, retry]
+  );
 }
+
+export type ExternalDocumentPreviewLoadState = ReturnType<typeof useExternalSearchPreviewDocument>;

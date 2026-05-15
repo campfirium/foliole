@@ -11,6 +11,7 @@ const OUTLINE_SCROLL_MARGIN_PX = 32;
 interface WorkspaceRightSidebarOutlinePanelProps {
   activePosition: number;
   content: string;
+  emptyDescription?: string;
   onRevealPosition: (position: number) => void;
 }
 
@@ -98,6 +99,7 @@ export function scrollActiveOutlineItemIntoView(activeItem: HTMLElement) {
 export function WorkspaceRightSidebarOutlinePanel({
   activePosition,
   content,
+  emptyDescription = 'This topic has no outline headings yet.',
   onRevealPosition
 }: WorkspaceRightSidebarOutlinePanelProps) {
   const activeItemRef = useRef<HTMLButtonElement | null>(null);
@@ -113,7 +115,7 @@ export function WorkspaceRightSidebarOutlinePanel({
   }, [activeIndex]);
 
   if (outlineItems.length === 0) {
-    return <InspectorSection description="This topic has no outline headings yet." title="Outline" />;
+    return <InspectorSection description={emptyDescription} title="Outline" />;
   }
 
   return (
