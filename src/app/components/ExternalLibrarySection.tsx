@@ -102,7 +102,6 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
   );
 }
 
-
 function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord) {
   if (row.secondaryIconKind !== 'external-folder') {
     return null;

@@ -40,6 +40,12 @@ const baseProps = {
   reveal: ''
 };
 
+function getLayoutCallProps() {
+  const calls = layoutMocks.renderDocumentPanelBodyLayout.mock.calls as unknown as Array<[Record<string, unknown>]>;
+  expect(calls[0]).toBeDefined();
+  return calls[0]![0];
+}
+
 describe('DocumentPanelBody', () => {
   beforeEach(() => {
     layoutMocks.renderDocumentPanelBodyLayout.mockClear();
@@ -49,7 +55,7 @@ describe('DocumentPanelBody', () => {
   it('does not pass shared image height to non-item layouts', () => {
     render(<DocumentPanelBody {...baseProps} fitBlockImagesToViewport={false} />);
 
-    const calledProps = layoutMocks.renderDocumentPanelBodyLayout.mock.calls[0]?.[0] as Record<string, unknown>;
+    const calledProps = getLayoutCallProps();
     expect(calledProps.fitBlockImagesToViewport).toBe(false);
     expect(calledProps).not.toHaveProperty('sharedBlockImageMaxHeight');
   });
@@ -57,7 +63,7 @@ describe('DocumentPanelBody', () => {
   it('passes shared image height when viewport fitting is enabled', () => {
     render(<DocumentPanelBody {...baseProps} fitBlockImagesToViewport />);
 
-    const calledProps = layoutMocks.renderDocumentPanelBodyLayout.mock.calls[0]?.[0] as Record<string, unknown>;
+    const calledProps = getLayoutCallProps();
     expect(calledProps.fitBlockImagesToViewport).toBe(true);
     expect(calledProps.sharedBlockImageMaxHeight).toBe(321);
   });

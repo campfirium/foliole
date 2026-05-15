@@ -1,7 +1,6 @@
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-
-import { getRuntimeInvoke } from './runtimeInvoke';
-import { logRuntimeWarning } from './runtimeLogging';
+import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
+import { getRuntimeInvoke } from '../runtimeInvoke';
+import { logRuntimeWarning } from '../runtimeLogging';
 
 export type RuntimeInventoryLoadResult<T> =
   | { inventory: T; status: 'loaded' }

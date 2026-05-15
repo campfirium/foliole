@@ -240,7 +240,7 @@ it('restores a mid-document reading position after the recent cache is eventuall
       readingRestoreScrollTop={5_400}
       readingSelection={{ from: 48_000, to: 48_024 }}
       value={useWorkspaceStore.getState().nodesById['node-1']?.content ?? ''}
-      nodeViewState={useWorkspaceStore.getState().nodeViewById['node-1']}
+      nodeViewState={useWorkspaceStore.getState().nodeViewById['node-1']!}
     />
   );
 

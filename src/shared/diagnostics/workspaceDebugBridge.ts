@@ -1,4 +1,4 @@
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -62,7 +62,7 @@ function isWorkspaceDebugEnabled() {
   return Boolean((window as WorkspaceDebugWindow).electronAPI?.debug);
 }
 
-function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode: ReturnType<typeof createInitialWorkspaceState>['nodesById'][string]) {
+function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode: Node): Record<string, Node> {
   return Object.fromEntries(
     nodes.map((node, index) => [
       node.id,
