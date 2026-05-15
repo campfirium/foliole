@@ -153,7 +153,7 @@ it('deletes topics with timestamp drift inside the import tolerance', async () =
   });
 });
 
-it('keeps changed Readwise topics and removes their import tracking', async () => {
+it('deletes changed Readwise topics and removes their import tracking', async () => {
   const nodeId = await importReadwiseFixture();
   const keepItem = openDatabaseConnection().sqlite
     .prepare('SELECT last_imported_at FROM keep_import_items WHERE last_node_id = ?')
@@ -163,20 +163,18 @@ it('keeps changed Readwise topics and removes their import tracking', async () =
     .run('User changed body', addMilliseconds(keepItem.last_imported_at, 1001), nodeId);
 
   expect(previewReadwiseImportCleanup()).toMatchObject({
-    delete_count: 0,
-    keep_count: 1,
+    delete_count: 1,
+    keep_count: 0,
     total_count: 1
   });
   const result = runReadwiseImportCleanup();
 
   expect(result).toMatchObject({
-    deleted_count: 0,
-    detached_count: 1,
+    deleted_count: 1,
+    detached_count: 0,
     status: 'completed'
   });
-  expect(readRows('SELECT id, content FROM nodes WHERE id = ?', nodeId)).toEqual([
-    { content: 'User changed body', id: nodeId }
-  ]);
+  expect(readRows('SELECT id FROM nodes WHERE id = ?', nodeId)).toEqual([]);
   expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
   expect(readRows('SELECT * FROM import_sources')).toEqual([]);
   expect(readRows('SELECT * FROM import_runs')).toEqual([]);

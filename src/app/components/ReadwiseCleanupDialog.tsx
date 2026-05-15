@@ -21,17 +21,12 @@ function ReadwiseCleanupSummary({ preview }: { preview: NativeReadwiseCleanupPre
       ) : null}
       {preview.keep_count > 0 ? (
         <span className="rounded-md border border-border/70 px-2.5 py-1 text-sm text-foreground/72">
-          {preview.keep_count} will be kept
+          {preview.keep_count} with additions will be kept
         </span>
       ) : null}
       {preview.external_document_count > 0 ? (
         <span className="rounded-md border border-border/70 px-2.5 py-1 text-sm text-foreground/72">
           {preview.external_document_count} external documents will be removed
-        </span>
-      ) : null}
-      {preview.tracking_only_count > 0 ? (
-        <span className="rounded-md border border-border/70 px-2.5 py-1 text-sm text-foreground/72">
-          {preview.tracking_only_count} tracking records will be cleared
         </span>
       ) : null}
     </div>

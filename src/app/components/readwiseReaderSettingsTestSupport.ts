@@ -53,9 +53,9 @@ export function createReadwiseCleanupPreview(): NativeReadwiseCleanupPreviewResu
     delete_count: 1,
     entries: [
       {
-        action: 'delete' as const,
+        action: 'keep' as const,
         node_id: 'node-readwise-1',
-        reason: 'Readwise import is unchanged.',
+        reason: 'Topic has additions after import.',
         rule_id: 'draft-import-source-1',
         source_path: 'Plain.md',
         title: 'Plain'
@@ -63,10 +63,10 @@ export function createReadwiseCleanupPreview(): NativeReadwiseCleanupPreviewResu
     ],
     external_document_count: 0,
     external_folder_count: 0,
-    keep_count: 0,
+    keep_count: 1,
     previewed_at: '2026-05-11T00:00:00.000Z',
-    tracking_only_count: 0,
-    total_count: 1
+    tracking_only_count: 1,
+    total_count: 2
   };
 }
 
@@ -74,8 +74,8 @@ export function createReadwiseCleanupRunResult(): NativeReadwiseCleanupRunResult
   return {
     ...createReadwiseCleanupPreview(),
     cleaned_at: '2026-05-11T00:02:00.000Z',
-    deleted_count: 1,
-    detached_count: 0,
+    deleted_count: 0,
+    detached_count: 1,
     external_deleted_count: 0,
     status: 'completed' as const
   };

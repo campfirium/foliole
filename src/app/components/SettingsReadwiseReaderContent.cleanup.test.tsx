@@ -38,8 +38,9 @@ it('previews and runs Readwise cleanup from the setup action row', async () => {
   expect(
     await screen.findByRole('dialog', { name: 'Clean up Readwise imports' })
   ).toBeInTheDocument();
-  expect(screen.getByText('1 will be deleted')).toBeInTheDocument();
+  expect(screen.getByText('1 with additions will be kept')).toBeInTheDocument();
   expect(screen.getByText('Plain')).toBeInTheDocument();
+  expect(screen.queryByText('tracking records will be cleared')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Clean up' }));
 

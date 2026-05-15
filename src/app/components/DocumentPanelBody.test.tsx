@@ -49,23 +49,17 @@ describe('DocumentPanelBody', () => {
   it('does not pass shared image height to non-item layouts', () => {
     render(<DocumentPanelBody {...baseProps} fitBlockImagesToViewport={false} />);
 
-    expect(layoutMocks.renderDocumentPanelBodyLayout).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fitBlockImagesToViewport: false,
-        sharedBlockImageMaxHeight: undefined
-      })
-    );
+    const calledProps = layoutMocks.renderDocumentPanelBodyLayout.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(calledProps.fitBlockImagesToViewport).toBe(false);
+    expect(calledProps).not.toHaveProperty('sharedBlockImageMaxHeight');
   });
 
   it('passes shared image height when viewport fitting is enabled', () => {
     render(<DocumentPanelBody {...baseProps} fitBlockImagesToViewport />);
 
-    expect(layoutMocks.renderDocumentPanelBodyLayout).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fitBlockImagesToViewport: true,
-        sharedBlockImageMaxHeight: 321
-      })
-    );
+    const calledProps = layoutMocks.renderDocumentPanelBodyLayout.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(calledProps.fitBlockImagesToViewport).toBe(true);
+    expect(calledProps.sharedBlockImageMaxHeight).toBe(321);
   });
 
   it('keeps the document body top gap compact below the header chrome', () => {

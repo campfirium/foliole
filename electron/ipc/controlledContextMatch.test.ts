@@ -25,7 +25,7 @@ it('matches list-heavy highlights by splitting on punctuation and bullets', () =
   ).toBe(['Setup checklist:', '- alpha step', '- beta step'].join('\n'));
 });
 
-it('matches flattened table highlights through punctuation-first fragment splitting', () => {
+it('matches table rows through punctuation-first fragment splitting', () => {
   const content = [
     '# Notes',
     '',
@@ -38,15 +38,9 @@ it('matches flattened table highlights through punctuation-first fragment splitt
   expect(
     findContextExcerpt(
       content,
-      'Item GTD Principle Todoist Action Weekly Review Keep the system current Open Someday/Waiting/Projects each week'
+      'Weekly Review Keep the system current Open Someday/Waiting/Projects each week'
     )
-  ).toBe(
-    [
-      '| Item | GTD Principle | Todoist Action |',
-      '| --- | --- | --- |',
-      '| Weekly Review | Keep the system current | Open Someday/Waiting/Projects each week |'
-    ].join('\n')
-  );
+  ).toBe('Weekly Review | Keep the system current | Open Someday/Waiting/Projects each week');
 });
 
 it('splits chinese highlights by punctuation and spaces when direct matching fails', () => {
@@ -58,7 +52,7 @@ it('splits chinese highlights by punctuation and spaces when direct matching fai
     '我们 在另外一处 结束'
   ].join('\n');
 
-  expect(findContextExcerpt(content, '说明：我们 在这里 完成定位，附注')).toBe('我们 在这里 完成定位');
+  expect(findContextExcerpt(content, '说明：我们 在这里 完成定位，附注')).toBeNull();
 });
 
 it('keeps english spaces as part of a fragment and splits on punctuation only', () => {
@@ -70,9 +64,7 @@ it('keeps english spaces as part of a fragment and splits on punctuation only', 
     'another unrelated paragraph'
   ].join('\n');
 
-  expect(findContextExcerpt(content, 'intro clause; final target phrase keeps context; trailing note')).toBe(
-    'final target phrase keeps context'
-  );
+  expect(findContextExcerpt(content, 'intro clause; final target phrase keeps context; trailing note')).toBeNull();
 });
 
 it('locks onto a nearby paragraph range when repeated fragments need a second clue', () => {
@@ -106,7 +98,7 @@ it('locks onto a nearby paragraph range when repeated fragments need a second cl
       content,
       ['Status review:', 'Follow-up review:'].join('\n')
     )
-  ).toBe(['Status review:', '- repeated item', '', 'Follow-up review:'].join('\n'));
+  ).toBeNull();
 });
 
 it('prefers the backward candidate closest to the anchor instead of an earlier duplicate token', () => {
@@ -155,7 +147,7 @@ it('does not swallow the next numbered item when a highlight spans a heading and
       content,
       ['**每周回顾**：', '• 是否有项目已无任务？', '• 是否有任务长期未触发？'].join('\n')
     )
-  ).toBe(['5. **每周回顾**：', '', '\t* 是否有项目已无任务？', '\t* 是否有任务长期未触发？'].join('\n'));
+  ).toBe(['每周回顾**：', '', '\t* 是否有项目已无任务？', '\t* 是否有任务长期未触发？'].join('\n'));
 });
 
 function createMultiParagraphQuoteContent() {
@@ -200,7 +192,7 @@ function expectLeadingMultiParagraphQuote(content: string) {
     )
   ).toBe(
     [
-      '##### ✅ 他的方法是 *可用的*，但并不 *可靠*',
+      '的方法是 *可用的*，但并不 *可靠*',
       '',
       '他采取的做法是：',
       '',

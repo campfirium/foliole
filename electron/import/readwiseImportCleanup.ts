@@ -8,6 +8,7 @@ import { deleteNodesPermanently } from '../database/nodeMutations.js';
 import { isReadwiseExternalFolderId } from '../database/readwiseManagedExternalDocuments.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { hasReadwiseCleanupAdditions } from './readwiseCleanupAdditions.js';
 import { readReadwiseBookCleanupEntries } from './readwiseImportCleanupBooks.js';
 
 interface KeepImportCleanupRow {
@@ -19,6 +20,7 @@ interface KeepImportCleanupRow {
 
 interface NodeCleanupRow {
   created_at: string;
+  anchor_link: string | null;
   id: string;
   parent_id: string | null;
   title: string;
@@ -28,12 +30,6 @@ interface NodeCleanupRow {
 interface ReadwiseExternalCleanupRow {
   document_id: string;
   folder_id: string;
-}
-
-const IMPORT_TIMESTAMP_TOLERANCE_MS = 1000;
-
-function isAfterImportTolerance(timestamp: string, importedAt: string) {
-  return Date.parse(timestamp) > Date.parse(importedAt) + IMPORT_TIMESTAMP_TOLERANCE_MS;
 }
 
 function readReadwiseRuleIds() {
@@ -62,7 +58,7 @@ function readKeepImportRows() {
 
 function readNodeRows() {
   return openDatabaseConnection().sqlite
-    .prepare('SELECT id, parent_id, title, created_at, updated_at FROM nodes WHERE deleted_at IS NULL')
+    .prepare('SELECT id, parent_id, title, anchor_link, created_at, updated_at FROM nodes WHERE deleted_at IS NULL')
     .all() as NodeCleanupRow[];
 }
 
@@ -91,40 +87,17 @@ function collectSubtree(rootId: string, rows: NodeCleanupRow[]) {
   return collected;
 }
 
-function hasLearningState(nodeIds: string[]) {
-  if (nodeIds.length === 0) {
-    return false;
-  }
-  const placeholders = nodeIds.map(() => '?').join(', ');
-  const row = openDatabaseConnection().sqlite
-    .prepare(
-      `SELECT 1 AS found FROM node_review WHERE node_id IN (${placeholders})
-       UNION ALL
-       SELECT 1 AS found FROM node_reading WHERE node_id IN (${placeholders})
-       LIMIT 1`
-    )
-    .get(...nodeIds, ...nodeIds) as { found: number } | undefined;
-  return Boolean(row);
-}
-
-function resolveCleanupAction(row: KeepImportCleanupRow, subtree: NodeCleanupRow[]): Pick<NativeReadwiseCleanupEntry, 'action' | 'reason'> {
+function resolveCleanupAction(
+  row: KeepImportCleanupRow,
+  subtree: NodeCleanupRow[]
+): Pick<NativeReadwiseCleanupEntry, 'action' | 'reason'> {
   if (!row.last_imported_at || subtree.length === 0) {
     return { action: 'keep', reason: 'Topic is missing or has no import timestamp.' };
   }
-  const lastImportedAt = row.last_imported_at;
-  const nodeIds = subtree.map((node) => node.id);
-  if (hasLearningState(nodeIds)) {
-    return { action: 'keep', reason: 'Topic has reading or review state.' };
+  if (hasReadwiseCleanupAdditions(row.last_node_id ?? '', row.last_imported_at, subtree)) {
+    return { action: 'keep', reason: 'Topic has additions after import.' };
   }
-  const changedNode = subtree.find(
-    (node) =>
-      isAfterImportTolerance(node.updated_at, lastImportedAt) ||
-      isAfterImportTolerance(node.created_at, lastImportedAt)
-  );
-  if (changedNode) {
-    return { action: 'keep', reason: 'Topic or child topics were changed after import.' };
-  }
-  return { action: 'delete', reason: 'Readwise import is unchanged.' };
+  return { action: 'delete', reason: 'Readwise import has no additions.' };
 }
 
 function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewResult {

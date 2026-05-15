@@ -22,6 +22,7 @@ export function createEditorRef(
   scrollTop: number,
   selection: { from: number; to: number }
 ): MutableRefObject<{
+  getPrimaryVisiblePosition: () => number | null;
   getScrollTop: () => number;
   getSelection: () => { from: number; to: number };
   onScroll: (listener: (event: EditorScrollEvent) => void) => () => void;
@@ -29,6 +30,7 @@ export function createEditorRef(
   const scrollListeners = new Set<(event: EditorScrollEvent) => void>();
   return {
     current: {
+      getPrimaryVisiblePosition: () => null,
       getScrollTop: () => scrollTop,
       getSelection: () => selection,
       onScroll: (listener: (event: EditorScrollEvent) => void) => {
