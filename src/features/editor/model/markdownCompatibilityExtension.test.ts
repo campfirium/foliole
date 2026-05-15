@@ -18,6 +18,13 @@ describe('markdownCompatibilityExtension', () => {
     expect(names).toContain('EmphasisMark');
   });
 
+  it('recognizes line-ending strong emphasis with whitespace around the closing mark', () => {
+    const names = collectNodeNames('**小火箭方法。 **   ');
+
+    expect(names).toContain('LenientStrongEmphasis');
+    expect(names).toContain('EmphasisMark');
+  });
+
   it('leaves standard strong emphasis on the base parser path', () => {
     const names = collectNodeNames('**123**dsafdasdfasdf');
 

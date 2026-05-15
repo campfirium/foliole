@@ -75,6 +75,18 @@ describe('inlineTextDecorationPlans Markdown Compatibility', () => {
       ]
     });
   });
+
+  it('hides all triple-star nested emphasis and strong markers', () => {
+    expect(collectInlineTokenDecorationPlan(0, '***小火箭方法。 ***', false, false, [])).toEqual({
+      markRanges: [],
+      replaceRanges: [
+        { from: 0, to: 1 },
+        { from: 12, to: 13 },
+        { from: 1, to: 3 },
+        { from: 10, to: 12 }
+      ]
+    });
+  });
 });
 
 describe('inline semantic decoration plans', () => {

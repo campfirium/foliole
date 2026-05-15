@@ -1,5 +1,6 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import type { MarkdownInlineRange, MarkdownInlineRangeKind } from './markdownInlineProjectionTypes';
+import { collectLenientTripleStarCandidates } from './markdownLenientTripleStarProjection';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -148,21 +149,17 @@ function visitInlineCandidates(args: {
 }) {
   if (args.node.name === 'StrongEmphasis' || args.node.name === 'LenientStrongEmphasis') {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'strong'));
-    return;
   }
-  if (args.node.name === 'Emphasis') {
+  else if (args.node.name === 'Emphasis') {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'emphasis'));
-    return;
   }
-  if (args.node.name === 'Strikethrough') {
+  else if (args.node.name === 'Strikethrough') {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'strikethrough'));
-    return;
   }
-  if (args.node.name === 'SourceHighlight') {
+  else if (args.node.name === 'SourceHighlight') {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'sourceHighlight'));
-    return;
   }
-  if (args.node.name === 'InlineCode') {
+  else if (args.node.name === 'InlineCode') {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'inlineCode'));
     return;
   }
@@ -196,6 +193,7 @@ function collectInlineCandidates(text: string) {
     parentName: null,
     source: text
   });
+  candidates.push(...collectLenientTripleStarCandidates(text));
   return candidates.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }
 

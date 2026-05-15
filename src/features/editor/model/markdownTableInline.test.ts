@@ -57,6 +57,13 @@ describe('markdownTableInline Markdown Compatibility tokens', () => {
       { kind: 'text', text: '如果你的应用场景' }
     ]);
   });
+
+  it('tokenizes line-ending strong text with whitespace around the closing mark', () => {
+    expect(tokenizeMarkdownTableInlineText('**小火箭方法。 **   ')).toEqual([
+      { kind: 'strong', text: '小火箭方法。 ' },
+      { kind: 'text', text: '   ' }
+    ]);
+  });
 });
 
 describe('markdownTableInline OB-like tokens', () => {

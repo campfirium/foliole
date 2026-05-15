@@ -26,4 +26,10 @@ describe('inlineSemanticMarks', () => {
       { className: 'cm-md-strong', from: 13, to: 17 }
     ]);
   });
+
+  it('collects strong text inside triple-star nested emphasis', () => {
+    expect(collectStrongTextRanges(0, '***小火箭方法。 ***', false)).toEqual([
+      { className: 'cm-md-strong', from: 3, to: 10 }
+    ]);
+  });
 });

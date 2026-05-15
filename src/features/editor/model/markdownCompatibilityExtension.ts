@@ -8,6 +8,7 @@ function isWhitespaceCode(value: number) {
 
 function isLenientStrongClosing(cx: InlineContext, closeFrom: number) {
   const after = cx.char(closeFrom + 2);
+  if (isTrailingSpaceStrongClosing(cx, closeFrom)) return true;
   if (!isValidCode(after) || after === 42 || isWhitespaceCode(after)) return false;
   return isPunctuationCode(cx.char(closeFrom - 1));
 }
@@ -17,6 +18,28 @@ function isLenientStrongOpening(cx: InlineContext, openFrom: number, closeFrom: 
   if (cx.char(openFrom) !== 42 || cx.char(openFrom + 1) !== 42) return false;
   if (cx.char(openFrom - 1) === 42 || cx.char(openFrom - 1) === 92) return false;
   return !isWhitespaceCode(cx.char(openFrom + 2));
+}
+
+function isTrailingSpaceStrongClosing(cx: InlineContext, closeFrom: number) {
+  if (!isWhitespaceCode(cx.char(closeFrom - 1))) return false;
+  const beforeContent = findPreviousNonWhitespace(cx, closeFrom - 1);
+  if (beforeContent < cx.offset) return false;
+  return isOnlyWhitespaceUntilLineEnd(cx, closeFrom + 2);
+}
+
+function findPreviousNonWhitespace(cx: InlineContext, from: number) {
+  for (let cursor = from - 1; cursor >= cx.offset; cursor -= 1) {
+    if (!isWhitespaceCode(cx.char(cursor))) return cursor;
+  }
+  return -1;
+}
+
+function isOnlyWhitespaceUntilLineEnd(cx: InlineContext, from: number) {
+  for (let cursor = from; ; cursor += 1) {
+    const char = cx.char(cursor);
+    if (!isValidCode(char) || char === 10 || char === 13) return true;
+    if (!isWhitespaceCode(char)) return false;
+  }
 }
 
 function isPunctuationCode(value: number) {

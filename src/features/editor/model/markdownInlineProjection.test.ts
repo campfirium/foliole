@@ -56,6 +56,25 @@ describe('markdownInlineProjection Markdown Compatibility', () => {
 
 });
 
+describe('markdownInlineProjection trailing-space strong compatibility', () => {
+  it('projects line-ending strong emphasis with whitespace around the closing mark', () => {
+    expect(collectMarkdownInlineRanges('**小火箭方法。 **   ')).toEqual([
+      {
+        contentFrom: 2,
+        contentTo: 9,
+        from: 0,
+        kind: 'strong',
+        syntaxRanges: [
+          { from: 0, to: 2 },
+          { from: 9, to: 11 }
+        ],
+        text: '小火箭方法。 ',
+        to: 11
+      }
+    ]);
+  });
+});
+
 describe('markdownInlineProjection nested Markdown Compatibility', () => {
   it('projects lenient strong emphasis around inline links with valid syntax ranges', () => {
     expect(collectMarkdownInlineRanges('**[标日高级班](https://class.hujiang.com/course/30789?source=16483)**这一段')).toEqual([
@@ -70,6 +89,35 @@ describe('markdownInlineProjection nested Markdown Compatibility', () => {
         ],
         text: '[标日高级班](https://class.hujiang.com/course/30789?source=16483)',
         to: 64
+      }
+    ]);
+  });
+
+  it('projects triple-star strong emphasis as nested emphasis and strong ranges', () => {
+    expect(collectMarkdownInlineRanges('***小火箭方法。 ***')).toEqual([
+      {
+        contentFrom: 1,
+        contentTo: 12,
+        from: 0,
+        kind: 'emphasis',
+        syntaxRanges: [
+          { from: 0, to: 1 },
+          { from: 12, to: 13 }
+        ],
+        text: '**小火箭方法。 **',
+        to: 13
+      },
+      {
+        contentFrom: 3,
+        contentTo: 10,
+        from: 1,
+        kind: 'strong',
+        syntaxRanges: [
+          { from: 1, to: 3 },
+          { from: 10, to: 12 }
+        ],
+        text: '小火箭方法。 ',
+        to: 12
       }
     ]);
   });
