@@ -30,21 +30,7 @@ const EMPTY_STATUS: ReadwiseManualSyncStatus = {
   tone: 'normal'
 };
 
-function formatSyncProgress(processedCount: number, totalCount: number) {
-  return `Syncing ${processedCount}/${totalCount} Readwise source${
-    totalCount === 1 ? '' : 's'
-  }...`;
-}
-
-function countEnabledReadwiseSources(payload: ReadwiseSetupPayload) {
-  return payload.readwiseSources.filter(
-    (source) =>
-      source.keepState === 'enabled' &&
-      Boolean(source.kind) &&
-      source.primaryPath.trim().length > 0 &&
-      source.highlightPath.trim().length > 0
-  ).length;
-}
+const SYNC_PROGRESS_MESSAGE = 'Syncing Readwise sources...';
 
 function toManualFailedSources(result: NativeReadwiseImportRunResult) {
   return (result.failed_sources ?? []).map((source) => ({
@@ -116,11 +102,10 @@ export function useReadwiseManualSync(input: {
       { ...input.draft.draftConfig, enabled: true },
       enableReadwiseImportSource(input.draft.draftSources)
     );
-    const totalCount = countEnabledReadwiseSources(payload);
     setIsSyncing(true);
     setStatus({
       failedSources: [],
-      message: formatSyncProgress(0, totalCount),
+      message: SYNC_PROGRESS_MESSAGE,
       tone: 'normal'
     });
     let unsubscribe: (() => void) | null = null;
@@ -128,7 +113,7 @@ export function useReadwiseManualSync(input: {
       unsubscribe = await onReadwiseReaderImportProgress((progress) => {
         setStatus({
           failedSources: [],
-          message: formatSyncProgress(progress.processedCount, progress.totalCount),
+          message: SYNC_PROGRESS_MESSAGE,
           tone: progress.status === 'failed' ? 'error' : 'normal'
         });
       });

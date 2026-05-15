@@ -65,12 +65,14 @@ it('shows visible progress while manual Readwise sync is running', async () => {
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'Syncing...' })).toBeDisabled();
   });
-  expect(screen.getByRole('status')).toHaveTextContent('Syncing 0/4 Readwise sources...');
+  expect(screen.getByRole('status')).toHaveTextContent('Syncing Readwise sources...');
+  expect(screen.getByRole('status')).not.toHaveTextContent('0/4');
 
   act(() => {
     readwiseProgressHandler?.({ processedCount: 2, status: 'running', totalCount: 4 });
   });
-  expect(screen.getByRole('status')).toHaveTextContent('Syncing 2/4 Readwise sources...');
+  expect(screen.getByRole('status')).toHaveTextContent('Syncing Readwise sources...');
+  expect(screen.getByRole('status')).not.toHaveTextContent('2/4');
 
   runResult.resolve(createReadwiseImportRunResult());
   await waitFor(() => {
