@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { onWindowEscape } from '../../../../shared/platform/keyboard';
 import { appFloatingSurfaceClassName } from '../../../../shared/ui';
 import {
   formatWorkspaceSurfaceColorCss,
@@ -45,21 +46,16 @@ function useCloseInteractions(onClose: () => void) {
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target?.closest('[data-workspace-color-editor]')) {
         onClose();
       }
     };
-    window.addEventListener('keydown', handleEscape);
+    const unlistenEscape = onWindowEscape(onClose);
     window.addEventListener('pointerdown', handlePointerDown);
     return () => {
-      window.removeEventListener('keydown', handleEscape);
+      unlistenEscape();
       window.removeEventListener('pointerdown', handlePointerDown);
       restoreFocusRef.current?.focus();
     };

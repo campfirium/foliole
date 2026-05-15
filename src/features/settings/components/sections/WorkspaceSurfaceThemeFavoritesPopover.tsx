@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { createPortal } from 'react-dom';
 
+import { onWindowEscape } from '../../../../shared/platform/keyboard';
 import { appFloatingSurfaceClassName, settingsColorSwatchClassName, settingsPaletteButtonClassName, settingsUtilityIconButtonClassName } from '../../../../shared/ui';
 
 import { cn } from '@/shared/lib/utils';
@@ -120,15 +121,7 @@ function useThemeFavoritesPopoverDismiss(args: {
     return () => document.removeEventListener('mousedown', handlePointerDown, true);
   }, [args.onClose, args.panelRef, args.triggerRef]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        args.onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [args.onClose]);
+  useEffect(() => onWindowEscape(args.onClose), [args.onClose]);
 }
 
 export function WorkspaceSurfaceThemeFavoritesPopover(props: {

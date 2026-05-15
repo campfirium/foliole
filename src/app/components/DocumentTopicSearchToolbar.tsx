@@ -14,11 +14,10 @@ import {
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import { AppIconButton, AppInput } from '../../shared/ui';
 import { useCommandShortcutState } from '../hooks/reviewHotkeysState';
 
-import { DOCUMENT_TOPIC_SEARCH_OPEN_EVENT } from './documentTopicSearchEvents';
+import { useDocumentTopicSearchActivation } from './useDocumentTopicSearchActivation';
 
 interface DocumentTopicSearchToolbarProps {
   activeNode: Node | undefined;
@@ -89,7 +88,7 @@ function useTopicSearchState(args: DocumentTopicSearchToolbarProps): TopicSearch
   useRevealTopicSearchMatch(currentIndex, inputRef, isOpen, matches, args.onRevealDocumentSelection, setCurrentIndex);
   useTopicSearchDecorations(query, matches, currentIndex, isOpen, args.onUpdateSearchDecorations);
   useFocusTopicSearchInput(focusRequestId, inputRef);
-  useTopicSearchActivation(findShortcut, isSearchAvailable, setFocusRequestId, setIsOpen);
+  useDocumentTopicSearchActivation(findShortcut, isSearchAvailable, setFocusRequestId, setIsOpen);
 
   return {
     close: () => setIsOpen(false),
@@ -183,39 +182,6 @@ function useFocusTopicSearchInput(focusRequestId: number, inputRef: RefObject<HT
     inputRef.current?.focus();
     inputRef.current?.select();
   }, [focusRequestId, inputRef]);
-}
-
-function useTopicSearchActivation(
-  findShortcut: ReturnType<typeof useCommandShortcutState>['shortcutMap'][string],
-  isSearchAvailable: boolean,
-  setFocusRequestId: Dispatch<SetStateAction<number>>,
-  setIsOpen: Dispatch<SetStateAction<boolean>>
-) {
-  useEffect(() => {
-    const openSearch = () => {
-      if (!isSearchAvailable) {
-        return;
-      }
-      setIsOpen(true);
-      setFocusRequestId((value) => value + 1);
-    };
-
-    const handleCommandOpen = () => openSearch();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isSearchAvailable || !findShortcut || event.defaultPrevented || !matchesShortcutSet(event, findShortcut)) {
-        return;
-      }
-      event.preventDefault();
-      openSearch();
-    };
-
-    window.addEventListener(DOCUMENT_TOPIC_SEARCH_OPEN_EVENT, handleCommandOpen);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener(DOCUMENT_TOPIC_SEARCH_OPEN_EVENT, handleCommandOpen);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [findShortcut, isSearchAvailable, setFocusRequestId, setIsOpen]);
 }
 
 function TopicSearchPanel(state: TopicSearchState) {

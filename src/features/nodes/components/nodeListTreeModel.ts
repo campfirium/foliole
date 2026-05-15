@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 
-import { onWindowKeydown } from '../../../shared/platform/keyboard';
+import { onWindowEscape } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
 import { buildNodeTree } from '../model/nodeTree';
 import { VIRTUAL_ROOT_NODE_ID, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
@@ -140,7 +140,7 @@ function useNodeListTreeControllers(args: {
     trashedNodeIds: args.trashedNodeIds
   });
 
-  useEffect(() => onWindowKeydown((event) => event.key === 'Escape' && contextMenu.closeContextMenu()), [contextMenu]);
+  useEffect(() => onWindowEscape(contextMenu.closeContextMenu), [contextMenu]);
 
   return { collapse, contextMenu, handleSelectNode };
 }

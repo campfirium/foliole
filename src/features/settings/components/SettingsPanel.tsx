@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { onWindowKeydown, type KeydownUnlisten } from '../../../shared/platform/keyboard';
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
@@ -111,11 +112,15 @@ function useSettingsPreviewMode() {
     if (!isPreviewActive) {
       return undefined;
     }
-    const stopPreview = () => setIsPreviewActive(false);
-    window.addEventListener('keydown', stopPreview, { once: true });
+    let unlistenKeydown: KeydownUnlisten = () => {};
+    const stopPreview = () => {
+      setIsPreviewActive(false);
+      unlistenKeydown();
+    };
+    unlistenKeydown = onWindowKeydown(stopPreview);
     window.addEventListener('pointerdown', stopPreview, { once: true });
     return () => {
-      window.removeEventListener('keydown', stopPreview);
+      unlistenKeydown();
       window.removeEventListener('pointerdown', stopPreview);
     };
   }, [isPreviewActive]);

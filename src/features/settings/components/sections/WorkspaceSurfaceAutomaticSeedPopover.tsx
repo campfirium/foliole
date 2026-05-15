@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { onWindowEscape } from '../../../../shared/platform/keyboard';
 import {
   settingsColorSwatchClassName,
   settingsFieldClassName
@@ -35,16 +36,11 @@ function useAutomaticSeedPopoverState(color: WorkspaceSurfaceColorValue) {
         setOpen(false);
       }
     };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
     window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleEscape);
+    const unlistenEscape = onWindowEscape(() => setOpen(false));
     return () => {
       window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleEscape);
+      unlistenEscape();
     };
   }, [open]);
 

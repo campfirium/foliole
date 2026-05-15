@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import { appFloatingSurfaceClassName } from './FloatingSurface';
 
 import { cn } from '@/shared/lib/utils';
-import { onWindowKeydown } from '@/shared/platform/keyboard';
+import { onWindowEscape } from '@/shared/platform/keyboard';
 
 function AppDropdownMenu(props: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root>) {
   return <DropdownMenuPrimitive.Root modal={false} {...props} />;
@@ -72,7 +72,7 @@ function preventFocusSteal(event: { preventDefault: () => void }) {
 }
 
 function AppSelectionDropdownMenu({ children, left, onClose, top }: AppSelectionDropdownMenuProps) {
-  useEffect(() => onWindowKeydown((event) => event.key === 'Escape' && onClose()), [onClose]);
+  useEffect(() => onWindowEscape(onClose), [onClose]);
 
   if (typeof document === 'undefined') {
     return null;
