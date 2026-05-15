@@ -73,7 +73,9 @@ describe('liveMarkdown inline rendering', () => {
 
     adapter.destroy();
   });
+});
 
+describe('liveMarkdown link interactions', () => {
   it('routes GFM autolinks through the in-app link handler', () => {
     const host = createHost();
     const onOpenExternalLink = vi.fn();
@@ -81,30 +83,37 @@ describe('liveMarkdown inline rendering', () => {
       initialContent: 'Read https://example.com now.',
       onOpenExternalLink
     });
-
     const link = host.querySelector('[data-md-link-url="https://example.com"]');
     expect(link?.textContent).toBe('https://example.com');
-
     link?.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 320, clientY: 240 }));
-
-    expect(onOpenExternalLink).toHaveBeenCalledWith({
-      anchorPoint: { x: 320, y: 240 },
-      href: 'https://example.com'
-    });
+    expect(onOpenExternalLink).toHaveBeenCalledWith({ anchorPoint: { x: 320, y: 240 }, href: 'https://example.com' });
     expect(bridgeSpies.openExternalUrl).not.toHaveBeenCalled();
-
     adapter.destroy();
   });
 
+  it('routes forum title links through the in-app link handler', () => {
+    const host = createHost();
+    const onOpenExternalLink = vi.fn();
+    const adapter = new CodeMirrorEditorAdapter(host, {
+      initialContent: ['[Forum title]', '(https://example.com/forum)'].join('\n'),
+      onOpenExternalLink
+    });
+    const link = host.querySelector('[data-md-link-url="https://example.com/forum"]');
+    expect(link?.textContent).toBe('Forum title');
+    link?.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 320, clientY: 240 }));
+    expect(onOpenExternalLink).toHaveBeenCalledWith({ anchorPoint: { x: 320, y: 240 }, href: 'https://example.com/forum' });
+    adapter.destroy();
+  });
+});
+
+describe('liveMarkdown block markers', () => {
   it('renders GFM task list markers as checkbox presentation', () => {
     const host = createHost();
     const adapter = new CodeMirrorEditorAdapter(host, { initialContent: '- [x] Done\n- [ ] Todo' });
-
     expect(host.querySelectorAll('.cm-md-task-checkbox')).toHaveLength(2);
     expect(host.querySelectorAll('.cm-md-task-checkbox[data-md-task-checked="true"]')).toHaveLength(1);
     expect(host.querySelector('.cm-content')?.textContent).toContain('Done');
     expect(host.querySelector('.cm-content')?.textContent).not.toContain('[x]');
-
     adapter.destroy();
   });
 });

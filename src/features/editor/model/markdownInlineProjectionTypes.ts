@@ -8,6 +8,7 @@ export type MarkdownInlineToken =
   | { href: string; kind: 'autolink'; text: string }
   | { kind: 'footnote'; label: string; note: string | null }
   | { href: string; kind: 'link'; text: string }
+  | { kind: 'unsafeLink'; text: string }
   | { kind: 'embed'; target: string; text: string }
   | { kind: 'wikiLink'; text: string; title: string };
 
@@ -35,6 +36,8 @@ export interface MarkdownInlineLinkRange {
   hiddenRanges: Array<{ from: number; to: number }>;
   href: string;
   labelFrom: number;
+  labelText: string;
   labelTo: number;
+  safe: boolean;
   to: number;
 }

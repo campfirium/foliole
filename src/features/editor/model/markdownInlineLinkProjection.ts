@@ -4,6 +4,12 @@ import {
   normalizeMarkdownLinkReferenceLabel,
   type MarkdownLinkReferenceMap
 } from './markdownLinkReferences';
+import {
+  collectMarkdownEscapedRanges,
+  isSafeMarkdownLinkHref,
+  normalizeMarkdownLinkDestination,
+  projectMarkdownEscapedText
+} from './markdownLinkSafety';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -26,12 +32,24 @@ function createDirectLinkRange(args: {
   const openingBracket = marks[0];
   const closingBracket = marks[1];
   if (!openingBracket || !closingBracket || !url) return null;
+  const labelFrom = args.offset + openingBracket.to;
+  const labelTo = args.offset + closingBracket.from;
+  const labelSource = args.source.slice(openingBracket.to, closingBracket.from);
+  const labelText = projectMarkdownEscapedText(labelSource);
+  const hiddenRanges = [
+    ...marks,
+    url,
+    ...collectMarkdownEscapedRanges(labelSource, openingBracket.to)
+  ].map((range) => ({ from: args.offset + range.from, to: args.offset + range.to }));
+  const href = normalizeMarkdownLinkDestination(args.source.slice(url.from, url.to));
   return {
     from: args.offset + args.node.from,
-    hiddenRanges: [...marks, url].map((range) => ({ from: args.offset + range.from, to: args.offset + range.to })),
-    href: args.source.slice(url.from, url.to),
-    labelFrom: args.offset + openingBracket.to,
-    labelTo: args.offset + closingBracket.from,
+    hiddenRanges,
+    href,
+    labelFrom,
+    labelText,
+    labelTo,
+    safe: isSafeMarkdownLinkHref(href),
     to: args.offset + args.node.to
   };
 }
@@ -52,15 +70,25 @@ function createReferenceLinkRange(args: {
   const normalizedLabel = normalizeMarkdownLinkReferenceLabel(rawReferenceLabel) || normalizeMarkdownLinkReferenceLabel(labelText);
   const href = args.references.get(normalizedLabel);
   if (!href) return null;
+  const labelFrom = args.offset + openingBracket.to;
+  const labelTo = args.offset + closingBracket.from;
+  const projectedLabelText = projectMarkdownEscapedText(labelText);
+  const hiddenRanges = [
+    ...marks,
+    ...(label ? [label] : []),
+    ...collectMarkdownEscapedRanges(labelText, openingBracket.to)
+  ].map((range) => ({
+    from: args.offset + range.from,
+    to: args.offset + range.to
+  }));
   return {
     from: args.offset + args.node.from,
-    hiddenRanges: [...marks, ...(label ? [label] : [])].map((range) => ({
-      from: args.offset + range.from,
-      to: args.offset + range.to
-    })),
+    hiddenRanges,
     href,
-    labelFrom: args.offset + openingBracket.to,
-    labelTo: args.offset + closingBracket.from,
+    labelFrom,
+    labelText: projectedLabelText,
+    labelTo,
+    safe: isSafeMarkdownLinkHref(href),
     to: args.offset + args.node.to
   };
 }

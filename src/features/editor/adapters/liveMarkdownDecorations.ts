@@ -3,35 +3,24 @@ import { Decoration, type DecorationSet, type EditorView } from '@codemirror/vie
 
 import type { InlinePresentationPlan } from '../model/inlinePresentationPlans';
 import type { InlineTextDecorationPlan } from '../model/inlineTextDecorationPlans';
-import {
-  collectPreviewViewportPlans,
-  collectSourceViewportPlans,
-  type ViewportPreviewLinePlan,
-  type ViewportLineInput
-} from '../model/liveMarkdownViewportPlans';
-import {
-  collectMarkdownLineClassRanges,
-  collectMarkdownPrefixRanges,
-  collectMarkdownThematicBreakRanges,
-  type MarkdownPrefixRange
-} from '../model/markdownBlockProjection';
-import { collectMarkdownCodeFenceProjection } from '../model/markdownCodeFenceProjection';
-import {
-  collectMarkdownLinkReferenceRanges,
-  collectMarkdownLinkReferences,
-  type MarkdownLinkReferenceRange
-} from '../model/markdownLinkReferences';
-import { collectMarkdownCalloutPrefixRanges, type MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
-import {
-  collectMarkdownTablePlans,
-} from '../model/markdownTablePlans';
-import {
-  collectViewportMarkdownTablePlans,
-  isPositionInsideInactiveTable
-} from '../model/markdownTableViewport';
+import { collectPreviewViewportPlans, collectSourceViewportPlans, type ViewportPreviewLinePlan } from '../model/liveMarkdownViewportPlans';
+import { collectMarkdownForumTitleLinkRanges } from '../model/markdownForumTitleLinkProjection';
+import { collectMarkdownLinkReferences, type MarkdownLinkReferenceRange } from '../model/markdownLinkReferences';
+import { isPositionInsideInactiveTable } from '../model/markdownTableViewport';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
+import {
+  collectCalloutPrefixRangeByLineFrom,
+  collectCodeFenceProjection,
+  collectLineClassByFrom,
+  collectLinkReferenceRangeByLineFrom,
+  collectPrefixRangesByLineFrom,
+  collectThematicBreakLineFroms,
+  collectViewportLines,
+  collectViewportTablePlans
+} from './liveMarkdownDecorationCollections';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
+import { addForumTitleLinkDecorations } from './liveMarkdownForumTitleLinkDecorations';
 import { addImageDecorations } from './liveMarkdownInlineDecorations';
 import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
 import {
@@ -41,7 +30,6 @@ import {
   addReplace,
   addThematicBreakDecoration
 } from './liveMarkdownPrimitives';
-import { getTextAnchorDecorations } from './liveMarkdownState';
 import { addTableDecorations } from './liveMarkdownTables';
 import { addOrphanTableScaffoldDecorations } from './liveMarkdownTableScaffolds';
 import { resolveVisibleLineWindow } from './liveMarkdownViewport';
@@ -95,71 +83,6 @@ function hideLinkReferenceDefinition(
   return true;
 }
 
-function collectViewportLines(view: EditorView, startLineNumber: number, endLineNumber: number): ViewportLineInput[] {
-  const lines: ViewportLineInput[] = [];
-
-  for (let lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber += 1) {
-    const line = view.state.doc.line(lineNumber);
-    lines.push({ from: line.from, lineNumber, text: line.text });
-  }
-
-  return lines;
-}
-
-function collectCodeFenceProjection(view: EditorView) {
-  return collectMarkdownCodeFenceProjection(view.state.doc.toString());
-}
-
-function collectThematicBreakLineFroms(view: EditorView) {
-  return new Set(collectMarkdownThematicBreakRanges(view.state.doc.toString()).map((range) => range.from));
-}
-
-function collectLinkReferenceRangeByLineFrom(view: EditorView) {
-  const rangesByLineFrom = new Map<number, MarkdownLinkReferenceRange>();
-  for (const range of collectMarkdownLinkReferenceRanges(view.state.doc.toString())) {
-    rangesByLineFrom.set(range.lineFrom, range);
-  }
-  return rangesByLineFrom;
-}
-
-function collectLineClassByFrom(view: EditorView) {
-  return new Map(collectMarkdownLineClassRanges(view.state.doc.toString()).map((range) => [range.from, range.className]));
-}
-
-function collectPrefixRangesByLineFrom(view: EditorView) {
-  const rangesByLineFrom = new Map<number, MarkdownPrefixRange[]>();
-  for (const range of collectMarkdownPrefixRanges(view.state.doc.toString())) {
-    const ranges = rangesByLineFrom.get(range.lineFrom) ?? [];
-    ranges.push(range);
-    rangesByLineFrom.set(range.lineFrom, ranges);
-  }
-  return rangesByLineFrom;
-}
-
-function collectCalloutPrefixRangeByLineFrom(view: EditorView) {
-  const rangesByLineFrom = new Map<number, MarkdownCalloutPrefixRange>();
-  for (const range of collectMarkdownCalloutPrefixRanges(view.state.doc.toString())) {
-    rangesByLineFrom.set(range.lineFrom, range);
-  }
-  return rangesByLineFrom;
-}
-
-function collectViewportTablePlans(args: {
-  endLine: { to: number };
-  source: string;
-  startLine: { from: number };
-  view: EditorView;
-}) {
-  const tablePlans = collectMarkdownTablePlans({
-    activePosition: null,
-    anchorDecorations: getTextAnchorDecorations(args.view),
-    from: 0,
-    linkReferences: collectMarkdownLinkReferences(args.source),
-    text: args.source
-  });
-  return collectViewportMarkdownTablePlans(tablePlans, { from: args.startLine.from, to: args.endLine.to });
-}
-
 export function buildPreviewDecorationSet(view: EditorView, context: DecorationBuildContext): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
@@ -168,6 +91,9 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const source = view.state.doc.toString();
   const codeFenceProjection = collectCodeFenceProjection(view);
   const linkReferences = collectMarkdownLinkReferences(source);
+  const forumTitleLinks = collectMarkdownForumTitleLinkRanges(source).filter(
+    (link) => !(codeFenceProjection.codeLineFroms.has(link.from) || codeFenceProjection.codeLineFroms.has(link.urlLineFrom))
+  );
   const linkReferenceRangeByLineFrom = collectLinkReferenceRangeByLineFrom(view);
   const linkReferenceLineFroms = new Set(linkReferenceRangeByLineFrom.keys());
   const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
@@ -191,6 +117,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
 
   addTableDecorations(ranges, viewportTablePlans, view.state.doc);
   addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
+  addForumTitleLinkDecorations(ranges, forumTitleLinks);
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
     if (isPositionInsideInactiveTable(lineFrom, viewportTablePlans)) {

@@ -1,7 +1,9 @@
+import { collectMarkdownForumTitleLinkRanges } from './markdownForumTitleLinkProjection';
 import { collectMarkdownInlineLinkRanges } from './markdownInlineLinkProjection';
 import { collectMarkdownInlineRanges } from './markdownInlineProjection';
 import type { MarkdownInlineToken } from './markdownInlineProjectionTypes';
 import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
+import { isSafeMarkdownLinkHref } from './markdownLinkSafety';
 import {
   collectMarkdownEmbedRanges,
   collectMarkdownFootnoteRanges,
@@ -14,6 +16,7 @@ type MarkdownInlineTextCandidate =
   | { from: number; kind: 'embed'; target: string; text: string; to: number }
   | { from: number; kind: 'emphasis' | 'inlineCode' | 'sourceHighlight' | 'strikethrough' | 'strong'; text: string; to: number }
   | { from: number; href: string; kind: 'link'; text: string; to: number }
+  | { from: number; href: string; kind: 'forumTitleLink'; text: string; to: number }
   | { from: number; kind: 'wikiLink'; text: string; title: string; to: number };
 
 function collectInlineTextCandidates(text: string, references: MarkdownLinkReferenceMap): MarkdownInlineTextCandidate[] {
@@ -34,7 +37,14 @@ function collectInlineTextCandidates(text: string, references: MarkdownLinkRefer
     from: link.from,
     href: link.href,
     kind: 'link',
-    text: text.slice(link.labelFrom, link.labelTo),
+    text: link.labelText,
+    to: link.to
+  }));
+  const forumTitleLinkCandidates = collectMarkdownForumTitleLinkRanges(text).map((link): MarkdownInlineTextCandidate => ({
+    from: link.from,
+    href: link.href,
+    kind: 'forumTitleLink',
+    text: link.labelText,
     to: link.to
   }));
   const wikiCandidates = collectMarkdownWikiLinkRanges(text).map((link): MarkdownInlineTextCandidate => ({
@@ -51,7 +61,7 @@ function collectInlineTextCandidates(text: string, references: MarkdownLinkRefer
     text: text.slice(embed.labelFrom, embed.labelTo),
     to: embed.to
   }));
-  return [...markdownCandidates, ...footnoteCandidates, ...linkCandidates, ...wikiCandidates, ...embedCandidates]
+  return [...markdownCandidates, ...footnoteCandidates, ...linkCandidates, ...forumTitleLinkCandidates, ...wikiCandidates, ...embedCandidates]
     .sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }
 
@@ -63,11 +73,20 @@ export function projectMarkdownInlineText(text: string, references: MarkdownLink
     if (candidate.from < cursor) continue;
     if (candidate.from > cursor) tokens.push({ kind: 'text', text: text.slice(cursor, candidate.from) });
     if (candidate.kind === 'autolink') {
-      tokens.push({ href: candidate.href ?? candidate.text, kind: 'autolink', text: candidate.text });
+      const href = candidate.href ?? candidate.text;
+      if (isSafeMarkdownLinkHref(href)) {
+        tokens.push({ href, kind: 'autolink', text: candidate.text });
+      } else {
+        tokens.push({ kind: 'unsafeLink', text: candidate.text });
+      }
     } else if (candidate.kind === 'footnote') {
       tokens.push({ kind: 'footnote', label: candidate.label, note: candidate.note });
-    } else if (candidate.kind === 'link') {
-      tokens.push({ href: candidate.href, kind: 'link', text: candidate.text });
+    } else if (candidate.kind === 'link' || candidate.kind === 'forumTitleLink') {
+      if (isSafeMarkdownLinkHref(candidate.href)) {
+        tokens.push({ href: candidate.href, kind: 'link', text: candidate.text });
+      } else {
+        tokens.push({ kind: 'unsafeLink', text: candidate.text });
+      }
     } else if (candidate.kind === 'wikiLink') {
       tokens.push({ kind: 'wikiLink', text: candidate.text, title: candidate.title });
     } else if (candidate.kind === 'embed') {

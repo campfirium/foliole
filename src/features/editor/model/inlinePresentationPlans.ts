@@ -1,5 +1,6 @@
 import type { AutolinkMatch, EmbedMatch, InlineCodeMatch, InlineLinkMatch, WikiLinkMatch } from './inlineMarkdownMatches';
 import type { SemanticRange } from './inlineSemanticMarks';
+import { isSafeMarkdownLinkHref } from './markdownLinkSafety';
 
 export interface InlinePresentationMarkRange extends SemanticRange {
   attributes?: Record<string, string>;
@@ -45,10 +46,10 @@ export function collectInlineLinkPresentationPlan(
 
   for (const linkMatch of linkMatches) {
     markRanges.push({
-      className: 'cm-md-link-text',
+      className: isSafeMarkdownLinkHref(linkMatch.href) ? 'cm-md-link-text' : 'cm-md-link-text cm-md-link-text-unsafe',
       from: linkMatch.labelFrom,
       to: linkMatch.labelTo,
-      attributes: { 'data-md-link-url': linkMatch.href }
+      ...(isSafeMarkdownLinkHref(linkMatch.href) ? { attributes: { 'data-md-link-url': linkMatch.href } } : {})
     });
 
     for (const hiddenRange of linkMatch.hiddenRanges) {
@@ -72,10 +73,10 @@ export function collectAutolinkPresentationPlan(
 
   for (const linkMatch of linkMatches) {
     markRanges.push({
-      className: 'cm-md-link-text',
+      className: isSafeMarkdownLinkHref(linkMatch.href) ? 'cm-md-link-text' : 'cm-md-link-text cm-md-link-text-unsafe',
       from: linkMatch.labelFrom,
       to: linkMatch.labelTo,
-      attributes: { 'data-md-link-url': linkMatch.href }
+      ...(isSafeMarkdownLinkHref(linkMatch.href) ? { attributes: { 'data-md-link-url': linkMatch.href } } : {})
     });
 
     for (const hiddenRange of linkMatch.hiddenRanges) {

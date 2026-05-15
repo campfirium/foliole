@@ -25,7 +25,7 @@ function stripMarkdownUrlNoise(value: string) {
 
 function projectInlineTokenText(token: MarkdownInlineToken, depth: number): string {
   if (token.kind === 'footnote') return token.label;
-  if (token.kind === 'text' || token.kind === 'link' || token.kind === 'wikiLink' || token.kind === 'embed' || token.kind === 'autolink') {
+  if (token.kind === 'text' || token.kind === 'link' || token.kind === 'unsafeLink' || token.kind === 'wikiLink' || token.kind === 'embed' || token.kind === 'autolink') {
     return token.text;
   }
   return projectMarkdownInlinePlainText(token.text, depth + 1);

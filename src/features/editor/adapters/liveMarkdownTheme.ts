@@ -45,6 +45,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-line.cm-md-table-source-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', overflow: 'hidden', padding: '0 !important' },
   '.cm-line.cm-line-frontmatter-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-line.cm-line-link-reference-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
+  '.cm-line.cm-line-forum-title-link-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-line.cm-line-title-heading-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-line.cm-diff-line': { borderRadius: 'var(--editor-radius-lg)' },
   '.cm-line.cm-diff-line-added': { backgroundColor: DIFF_ADDED_SURFACE_COLOR },
@@ -100,6 +101,7 @@ export const liveMarkdownTheme = EditorView.theme({
     zIndex: 'var(--z-surface-raised)'
   },
   '.cm-md-link-text': { color: 'var(--app-accent-color)', cursor: 'pointer', textDecoration: 'underline' },
+  '.cm-md-link-text-unsafe': { color: 'var(--color-text-primary)', cursor: 'default', textDecoration: 'none' },
   '.cm-md-source-highlight': {
     backgroundColor: 'var(--editor-source-highlight-surface-color)',
     borderRadius: 'var(--editor-radius-sm)'

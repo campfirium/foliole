@@ -63,6 +63,7 @@ const STRONG_TABLE_PREVIEW = oneColumnPreview('**Bold**');
 const STRIKETHROUGH_TABLE_PREVIEW = oneColumnPreview('~~Gone~~');
 const INLINE_CODE_TABLE_PREVIEW = oneColumnPreview('`code`');
 const INLINE_LINK_TABLE_PREVIEW = oneColumnPreview('[docs](https://example.com)');
+const UNSAFE_LINK_TABLE_PREVIEW = oneColumnPreview('[unsafe](javascript:alert(1))');
 const REFERENCE_LINK_TABLE_PREVIEW = oneColumnPreview('[docs][ref]', {
   linkReferences: new Map([['ref', 'https://example.com']])
 });
@@ -161,6 +162,16 @@ describe('MarkdownTablePreviewDialog links and anchors', () => {
     const link = dialog.querySelector('td .cm-md-link-text[data-md-link-url="https://example.com"]');
     expect(link?.textContent).toBe('docs');
     expect(screen.getByRole('cell', { name: 'docs' })).toBeInTheDocument();
+  });
+
+  it('renders unsafe links as readable but non-clickable text inside the full table preview', async () => {
+    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={UNSAFE_LINK_TABLE_PREVIEW} />);
+
+    const dialog = await screen.findByRole('dialog');
+    const link = dialog.querySelector('td .cm-md-link-text-unsafe');
+    expect(link?.textContent).toBe('unsafe');
+    expect(dialog.querySelector('td [data-md-link-url]')).toBeNull();
+    expect(screen.getByRole('cell', { name: 'unsafe' })).toBeInTheDocument();
   });
 
   it('renders GFM reference-style links inside the full table preview', async () => {

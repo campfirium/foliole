@@ -178,6 +178,9 @@ function renderCellInlineContent(
     if (token.kind === 'autolink' || token.kind === 'link') {
       return <span className="cm-md-link-text" data-md-link-url={token.href} key={index}>{token.text}</span>;
     }
+    if (token.kind === 'unsafeLink') {
+      return <span className="cm-md-link-text cm-md-link-text-unsafe" key={index}>{token.text}</span>;
+    }
     if (token.kind === 'footnote') return renderFootnoteInlineContent(token.label, token.note, index);
     if (token.kind === 'wikiLink') {
       return <span className="cm-md-link-text" data-md-link-node-title={token.title} key={index}>{token.text}</span>;

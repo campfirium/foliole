@@ -20,7 +20,7 @@ function createInlineLinkMatch() {
       { from: 7, to: 10 },
       { from: 10, to: 11 }
     ],
-    href: 'url'
+    href: 'https://example.test/path'
   };
 }
 
@@ -79,14 +79,14 @@ describe('inlinePresentationPlans', () => {
     });
   });
 
-  it('builds inline link label marks with interactive url attributes', () => {
+  it('builds inline link label marks with safe url attributes', () => {
     expect(collectInlineLinkPresentationPlan([createInlineLinkMatch()], true)).toEqual({
       markRanges: [
         {
           className: 'cm-md-link-text',
           from: 1,
           to: 5,
-          attributes: { 'data-md-link-url': 'url' }
+          attributes: { 'data-md-link-url': 'https://example.test/path' }
         },
         { className: 'cm-md-syntax-visible', from: 0, to: 1 },
         { className: 'cm-md-syntax-visible', from: 5, to: 7 },

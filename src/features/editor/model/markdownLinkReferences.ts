@@ -1,4 +1,5 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { normalizeMarkdownLinkDestination } from './markdownLinkSafety';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -29,8 +30,7 @@ export function normalizeMarkdownLinkReferenceLabel(label: string) {
 }
 
 function normalizeReferenceUrl(rawUrl: string) {
-  const trimmed = rawUrl.trim();
-  return trimmed.startsWith('<') && trimmed.endsWith('>') ? trimmed.slice(1, -1).trim() : trimmed;
+  return normalizeMarkdownLinkDestination(rawUrl);
 }
 
 function findLineFrom(source: string, position: number) {

@@ -25,6 +25,7 @@ function appendInlineText(container: HTMLElement, text: string, references: Mark
     if (token.kind === 'autolink') appendAutolinkElement(container, token.text, token.href);
     if (token.kind === 'footnote') appendFootnoteElement(container, token.label, token.note);
     if (token.kind === 'link') appendAutolinkElement(container, token.text, token.href);
+    if (token.kind === 'unsafeLink') appendUnsafeLinkElement(container, token.text);
     if (token.kind === 'embed') appendEmbedElement(container, token.text, token.target);
     if (token.kind === 'wikiLink') appendWikiLinkElement(container, token.text, token.title);
   }
@@ -69,6 +70,13 @@ function appendAutolinkElement(container: HTMLElement, linkText: string, href: s
   const link = document.createElement('span');
   link.className = 'cm-md-link-text';
   link.dataset.mdLinkUrl = href;
+  link.textContent = linkText;
+  container.append(link);
+}
+
+function appendUnsafeLinkElement(container: HTMLElement, linkText: string) {
+  const link = document.createElement('span');
+  link.className = 'cm-md-link-text cm-md-link-text-unsafe';
   link.textContent = linkText;
   container.append(link);
 }
