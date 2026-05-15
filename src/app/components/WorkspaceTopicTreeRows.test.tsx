@@ -38,6 +38,22 @@ function createDragMock(): ReturnType<typeof useNodeListDragController> {
   };
 }
 
+function createTopicNode(index: number): WorkspaceListNode {
+  return {
+    anchorLink: null,
+    createdAt: '2026-05-02T00:00:00.000Z',
+    hasContent: true,
+    hasReveal: false,
+    id: `node-${index}`,
+    kind: 'topic',
+    parentNodeId: null,
+    reading: null,
+    review: null,
+    title: `Topic ${index}`,
+    updatedAt: '2026-05-02T00:00:00.000Z'
+  };
+}
+
 it('applies dismissed appearance to topic tree row text and icon', () => {
   window.localStorage.setItem(
     APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedTopicAppearance,
@@ -123,4 +139,29 @@ it('renders markdown-looking topic titles as plain list text', () => {
 
   expect(screen.getByRole('treeitem', { name: '煮饺子时中途要不要加凉水' })).toBeInTheDocument();
   expect(screen.queryByText('#煮饺子时中途要不要加凉水#')).not.toBeInTheDocument();
+});
+
+it('keeps virtual row sizing aligned with folder tree row spacing', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.nodeListRowSpacing, '6');
+  const nodes = Array.from({ length: 101 }, (_, index) => createTopicNode(index));
+  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node])) as WorkspaceListNodesById;
+
+  render(
+    <WorkspaceTopicTreeRows
+      activeNodeId={null}
+      collapsedNodeIds={new Set()}
+      drag={createDragMock()}
+      nodesById={nodesById}
+      onContextMenu={vi.fn()}
+      onRenameNode={vi.fn()}
+      onSelectNode={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rows={nodes.map(createRow)}
+      scrollContainerRef={createRef<HTMLDivElement>()}
+      selectedNodeIds={[]}
+    />
+  );
+
+  expect(screen.getByRole('tree', { name: 'Topic list' })).toHaveAttribute('data-node-list-row-gap', '4');
+  expect(document.querySelector('[data-virtual-list="true"]')).toHaveStyle({ height: `${101 * (20 + 6 * 2) + 100 * 4}px` });
 });

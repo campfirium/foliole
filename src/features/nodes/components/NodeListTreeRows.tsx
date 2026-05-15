@@ -10,13 +10,14 @@ import {
 } from '../model/workspaceListNode';
 
 import { getDismissedFadeOpacity, shouldFadeDismissedWholeRow } from './nodeIconAppearanceSettings';
+import { resolveNodeListRowGap, resolveNodeTreeRowVirtualSize } from './nodeListRowSpacingSettings';
 import { NodeListStateSurface } from './NodeListStateSurface';
 import type { useNodeListDragController } from './NodeListTreeDrag';
 import { createNodeListRowKeydownHandler } from './NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
 import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState, type NodeTreeRowIconKind } from './NodeTreeRowIconModel';
-import { TrashListRows, resolveNodeTreeRowVirtualSize } from './TrashListRows';
+import { TrashListRows } from './TrashListRows';
 
 interface NodeListRowsProps {
   activeNodeId: string | null;
@@ -116,6 +117,7 @@ function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
 }
 
 export function NodeListRows(props: NodeListRowsProps) {
+  const rowGap = resolveNodeListRowGap(props.rowSpacing);
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({
@@ -165,7 +167,7 @@ export function NodeListRows(props: NodeListRowsProps) {
   return (
     <VirtualListSurface
       autoScroll={false}
-      estimateSize={() => resolveNodeTreeRowVirtualSize(props.rowSpacing)}
+      estimateSize={(index) => resolveNodeTreeRowVirtualSize(props.rowSpacing, index === props.rows.length - 1 ? 0 : rowGap)}
       getItemKey={(row) => row.node.id}
       items={props.rows}
       renderItem={(row, meta) => renderNodeListRow(props, row, onRowKeyDown, meta)}

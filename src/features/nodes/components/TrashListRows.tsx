@@ -4,6 +4,7 @@ import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import { resolveNodeTreeRowVirtualSize } from './nodeListRowSpacingSettings';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
 
@@ -19,12 +20,7 @@ interface TrashListRowsProps {
   selectedNodeIds: string[];
 }
 
-const NODE_TREE_ROW_BASE_HEIGHT = 28;
 const TRASH_ROW_SECONDARY_LABEL_HEIGHT = 18;
-
-export function resolveNodeTreeRowVirtualSize(rowSpacing: number) {
-  return NODE_TREE_ROW_BASE_HEIGHT + rowSpacing * 2;
-}
 
 function resolveTrashRowVirtualSize(rowSpacing: number) {
   return resolveNodeTreeRowVirtualSize(rowSpacing) + TRASH_ROW_SECONDARY_LABEL_HEIGHT;

@@ -37,6 +37,19 @@ it('stores node list row spacing and removes the override when reset to default'
   });
 });
 
+it('resets node list row spacing to the default value', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.change(screen.getByLabelText('Topic list row spacing'), { target: { value: '2' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Reset topic list row spacing' }));
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Topic list row spacing')).toHaveValue(6);
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeListRowSpacing)).toBeNull();
+  });
+});
+
 it('stores the reading line height preset from appearance settings', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 

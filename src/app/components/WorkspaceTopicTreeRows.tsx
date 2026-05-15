@@ -6,7 +6,8 @@ import {
 } from '../../features/nodes/components/nodeIconAppearanceSettings';
 import {
   getNodeListRowSpacing,
-  resolveNodeListRowGap
+  resolveNodeListRowGap,
+  resolveNodeTreeRowVirtualSize
 } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -173,7 +174,7 @@ export function WorkspaceTopicTreeRows({
     >
       <VirtualListSurface
         autoScroll={false}
-        estimateSize={() => 28 + rowSpacing * 2 + rowGap}
+        estimateSize={(index) => resolveNodeTreeRowVirtualSize(rowSpacing, index === rows.length - 1 ? 0 : rowGap)}
         getItemKey={(row) => row.node.id}
         items={rows}
         renderItem={(row, meta) =>

@@ -7,7 +7,7 @@ export function resolveNodeRowButtonClassName(args: {
   isSelected: boolean;
 }) {
   return cn(
-    'gap-0 overflow-hidden pl-[calc(0.4rem+var(--node-depth,0)*1rem)] pr-[0.4rem]',
+    'gap-0 overflow-hidden pl-[calc(0.4rem+var(--node-depth,0)*1rem)] pr-[0.4rem] leading-5',
     'text-foreground',
     'font-normal',
     args.isSelected &&
