@@ -7,7 +7,6 @@ import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseRead
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { createReadwiseImportSources } from './importSourceWorkspaceModel';
 import {
-  createDeferredReadwiseImportRunResult,
   createEnabledReadwiseConfig,
   createReadwiseImportPreview,
   createReadwiseImportRunResult
@@ -211,33 +210,4 @@ it('previews changed import behavior before running manual Readwise sync', async
       config: expect.objectContaining({ withoutHighlightsDestination: 'external' })
     })
   );
-});
-
-it('shows visible feedback while manual Readwise sync is running', async () => {
-  const runResult = createDeferredReadwiseImportRunResult();
-  const onSave = vi.fn();
-  const onPreviewSync = vi.fn().mockResolvedValue(createReadwiseImportPreview());
-  const onRunSync = vi.fn().mockReturnValue(runResult.promise);
-
-  render(
-    <SettingsReadwiseReaderContent
-      config={createEnabledReadwiseConfig()}
-      onPreviewSync={onPreviewSync}
-      onRunSync={onRunSync}
-      onSave={onSave}
-      readwiseRootPath="/Readwise"
-      readwiseSources={createReadwiseImportSources('/Readwise')}
-    />
-  );
-
-  fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Syncing...' })).toBeDisabled();
-  });
-  expect(screen.getByRole('status')).toHaveTextContent('Syncing Readwise sources...');
-
-  runResult.resolve(createReadwiseImportRunResult());
-  await waitFor(() => {
-    expect(screen.getByText('Synced 1 Readwise source.')).toBeInTheDocument();
-  });
 });

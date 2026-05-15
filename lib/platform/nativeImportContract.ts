@@ -55,6 +55,18 @@ export type NativeReadwiseSyncPreviewHighlightType = 'with_highlights' | 'withou
 export type NativeReadwiseSyncPreviewSourceKind = 'articles' | 'books' | 'podcasts' | 'tweets';
 export type NativeReadwiseSyncPreviewStatus = 'blocked_deleted' | 'failed' | 'new' | 'off' | 'unchanged' | 'updated';
 
+export interface NativeReadwiseImportRunProgressEvent {
+  processedCount: number;
+  status: 'running' | 'completed' | 'failed';
+  totalCount: number;
+}
+
+export interface NativeReadwiseImportRunFailedSource {
+  reason: string;
+  source_kind: NativeReadwiseSyncPreviewSourceKind;
+  source_path: string;
+}
+
 export interface NativeReadwiseSyncPreviewEntry {
   blocked_location?: 'trash' | 'removed';
   destination: NativeReadwiseSyncPreviewDestination;
@@ -88,6 +100,7 @@ export interface NativeReadwiseImportRunResult {
   completed_at: string;
   entry_count?: number;
   failed_count: number;
+  failed_sources?: NativeReadwiseImportRunFailedSource[];
   imported_count?: number;
   source_count: number;
   skipped_count?: number;

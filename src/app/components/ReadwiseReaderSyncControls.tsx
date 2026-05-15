@@ -8,6 +8,8 @@ import {
   settingsFieldClassName
 } from '../../shared/ui';
 
+import type { ReadwiseManualSyncStatus } from './useReadwiseManualSync';
+
 const SYNC_FREQUENCY_OPTIONS = [
   { label: 'Every 1 hour', value: 'hourly' },
   { label: 'Every 12 hours', value: 'every_12_hours' },
@@ -15,30 +17,46 @@ const SYNC_FREQUENCY_OPTIONS = [
   { label: 'Every week', value: 'weekly' }
 ];
 
+function ReadwiseSyncStatusMessage(props: { status: ReadwiseManualSyncStatus }) {
+  if (!props.status.message) {
+    return null;
+  }
+  return (
+    <span
+      aria-live="polite"
+      className={
+        props.status.tone === 'error'
+          ? 'mt-1 block text-red-700'
+          : 'mt-1 block text-foreground/70'
+      }
+      role="status"
+    >
+      {props.status.message}
+      {props.status.failedSources.length ? (
+        <span className="mt-1 block space-y-1 text-xs leading-5">
+          {props.status.failedSources.map((source) => (
+            <span className="block break-words" key={`${source.sourceKind}:${source.sourcePath}`}>
+              {source.sourcePath}: {source.reason}
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function ReadwiseReaderSyncRow(props: {
   config: ReadwiseReaderConfig;
   disabled: boolean;
   isSyncing?: boolean;
   onChange: (field: keyof ReadwiseReaderConfig, value: string) => void;
   onSync: () => void;
-  status?: { message: string | null; tone: 'error' | 'normal' };
+  status?: ReadwiseManualSyncStatus;
 }) {
   const description = (
     <>
       Automatically scan while Foliole is open, or start a scan with the current settings.
-      {props.status?.message ? (
-        <span
-          aria-live="polite"
-          className={
-            props.status.tone === 'error'
-              ? 'mt-1 block text-red-700'
-              : 'mt-1 block text-foreground/70'
-          }
-          role="status"
-        >
-          {props.status.message}
-        </span>
-      ) : null}
+      {props.status ? <ReadwiseSyncStatusMessage status={props.status} /> : null}
     </>
   );
 

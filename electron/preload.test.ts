@@ -61,6 +61,7 @@ function executePreload(env: Record<string, string | undefined> = {}) {
         onNativeKeyboardInput: expect.any(Function),
         onNativeMenuCommand: expect.any(Function),
         onCompanionPairingRequestsChanged: expect.any(Function),
+        onReadwiseReaderImportProgress: expect.any(Function),
         onWorkspaceContentChanged: expect.any(Function),
         onWorkspaceSyncApplied: expect.any(Function),
         onWindowResized: expect.any(Function),
@@ -153,6 +154,36 @@ function executePreload(env: Record<string, string | undefined> = {}) {
     expect(ipcOn).toHaveBeenCalledWith('foliole:workspace-content-changed', expect.any(Function));
     expect(handler).toHaveBeenNthCalledWith(1, { scope: 'workspace' });
     expect(handler).toHaveBeenNthCalledWith(2, { scope: '' });
+  });
+
+  it('forwards sanitized Readwise Reader import progress events through preload', () => {
+    const { exposeInMainWorld, ipcOn } = executePreload();
+    const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+    const handler = vi.fn();
+
+    electronApi.onReadwiseReaderImportProgress(handler);
+    const listener = ipcOn.mock.calls[0]?.[1];
+    listener({}, { processedCount: 0, status: 'running', totalCount: 3 });
+    listener({}, { processedCount: -1, status: 'running', totalCount: 3 });
+    listener({}, { processedCount: 4, status: 'running', totalCount: 3 });
+    listener({}, { processedCount: 1, status: 'paused', totalCount: 3 });
+    listener({}, { processedCount: 3, status: 'completed', totalCount: 3 });
+
+    expect(ipcOn).toHaveBeenCalledWith(
+      'foliole:readwise-reader-import-progress',
+      expect.any(Function)
+    );
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenNthCalledWith(1, {
+      processedCount: 0,
+      status: 'running',
+      totalCount: 3
+    });
+    expect(handler).toHaveBeenNthCalledWith(2, {
+      processedCount: 3,
+      status: 'completed',
+      totalCount: 3
+    });
   });
 
   it('sends native hotkey recorder active state through preload', () => {

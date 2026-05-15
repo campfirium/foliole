@@ -1,11 +1,13 @@
 import {
   getElectronAPI,
+  type ReadwiseReaderImportProgressPayload,
   type WorkspaceContentChangedPayload,
   type WorkspaceSyncAppliedPayload
 } from './electronApi';
 import { isDesktopRuntime } from './runtime';
 
 export type ManagedInboxUpdateUnlisten = (() => void) | null;
+export type ReadwiseReaderImportProgressUnlisten = (() => void) | null;
 export type WorkspaceContentChangedUnlisten = (() => void) | null;
 export type WorkspaceSyncAppliedUnlisten = (() => void) | null;
 
@@ -28,6 +30,38 @@ export async function onManagedInboxUpdated(
       return;
     }
     handler(importId);
+  });
+}
+
+function isReadwiseReaderImportProgressPayload(
+  payload: unknown
+): payload is ReadwiseReaderImportProgressPayload {
+  if (!payload || typeof payload !== 'object') {
+    return false;
+  }
+  const progress = payload as ReadwiseReaderImportProgressPayload;
+  return (
+    Number.isFinite(progress.processedCount) &&
+    Number.isFinite(progress.totalCount) &&
+    progress.processedCount >= 0 &&
+    progress.totalCount >= 0 &&
+    progress.processedCount <= progress.totalCount &&
+    (progress.status === 'running' || progress.status === 'completed' || progress.status === 'failed')
+  );
+}
+
+export async function onReadwiseReaderImportProgress(
+  handler: (payload: ReadwiseReaderImportProgressPayload) => void
+): Promise<ReadwiseReaderImportProgressUnlisten> {
+  const bridge = getElectronBridge();
+  if (!bridge?.onReadwiseReaderImportProgress) {
+    return null;
+  }
+  return bridge.onReadwiseReaderImportProgress((payload) => {
+    if (!isReadwiseReaderImportProgressPayload(payload)) {
+      return;
+    }
+    handler(payload);
   });
 }
 

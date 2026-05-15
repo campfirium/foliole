@@ -9,6 +9,7 @@ const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
 const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
+const IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-reader-import-progress';
 const IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL = 'foliole:workspace-content-changed';
 const IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL = 'foliole:workspace-sync-applied';
 const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
@@ -25,6 +26,7 @@ function subscribe(channel, handler) {
     channel !== IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL &&
     channel !== IPC_MENU_EVENT_CHANNEL &&
     channel !== IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL &&
+    channel !== IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL &&
     channel !== IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL &&
     channel !== IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL &&
     channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL &&
@@ -64,6 +66,27 @@ function subscribe(channel, handler) {
       });
       return;
     }
+    if (channel === IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL) {
+      const processedCount = typeof payload?.processedCount === 'number' ? payload.processedCount : NaN;
+      const totalCount = typeof payload?.totalCount === 'number' ? payload.totalCount : NaN;
+      const status = payload?.status ?? '';
+      if (
+        !Number.isFinite(processedCount) ||
+        !Number.isFinite(totalCount) ||
+        processedCount < 0 ||
+        totalCount < 0 ||
+        processedCount > totalCount ||
+        (status !== 'running' && status !== 'completed' && status !== 'failed')
+      ) {
+        return;
+      }
+      handler({
+        processedCount,
+        status,
+        totalCount
+      });
+      return;
+    }
     if (channel === IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL) {
       handler({
         appliedNodeIds: Array.isArray(payload?.appliedNodeIds) ? payload.appliedNodeIds.filter((value) => typeof value === 'string') : [],
@@ -94,6 +117,8 @@ const electronApi = {
   onNativeMenuCommand: (handler) => subscribe(IPC_MENU_EVENT_CHANNEL, handler),
   onNativeKeyboardInput: (handler) => subscribe(IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL, handler),
   onReadwiseBookEpubProgress: (handler) => subscribe(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, handler),
+  onReadwiseReaderImportProgress: (handler) =>
+    subscribe(IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL, handler),
   onWorkspaceContentChanged: (handler) => subscribe(IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, handler),
   onWorkspaceSyncApplied: (handler) => subscribe(IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, handler),
   onCompanionPairingRequestsChanged: (handler) => subscribe(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, handler),

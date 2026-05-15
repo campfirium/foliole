@@ -25,6 +25,7 @@ import { ReadwiseDirectorySection, ReadwiseParserFields } from './ReadwiseReader
 import { ReadwiseReaderSyncRow } from './ReadwiseReaderSyncControls';
 import { ReadwiseSyncPreviewDialog } from './ReadwiseSyncPreviewDialog';
 import { useReadwiseCleanup } from './useReadwiseCleanup';
+import type { ReadwiseManualSyncStatus } from './useReadwiseManualSync';
 import {
   useReadwiseSetupController,
   type ReadwiseSetupPayload
@@ -59,7 +60,7 @@ function ReadwiseSetupSection(props: {
   onCheck: () => void;
   onSync: () => void;
   onCleanup: () => void;
-  syncStatus: { message: string | null; tone: 'error' | 'normal' };
+  syncStatus: ReadwiseManualSyncStatus;
   cleanupDisabled: boolean;
   syncDisabled: boolean;
   syncIsRunning: boolean;

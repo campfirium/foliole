@@ -1,7 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import type { ElectronAPI, WorkspaceContentChangedPayload, WorkspaceSyncAppliedPayload } from './electronApi';
+import type {
+  ElectronAPI,
+  ReadwiseReaderImportProgressPayload,
+  WorkspaceContentChangedPayload,
+  WorkspaceSyncAppliedPayload
+} from './electronApi';
 import {
+  onReadwiseReaderImportProgress,
   onWorkspaceContentChanged,
   onWorkspaceSyncApplied
 } from './runtimeShellEvents';
@@ -55,4 +61,34 @@ it('filters malformed workspace content changed events before reaching the handl
 
   expect(handler).toHaveBeenCalledTimes(1);
   expect(handler).toHaveBeenCalledWith({ scope: 'workspace' });
+});
+
+it('filters malformed Readwise Reader import progress events before reaching the handler', async () => {
+  const onReadwiseReaderImportProgressBridge = vi.fn(
+    (handler: (payload: ReadwiseReaderImportProgressPayload) => void) => {
+      handler({ processedCount: 0, status: 'running', totalCount: 2 });
+      handler({ processedCount: 3, status: 'running', totalCount: 2 });
+      handler({ processedCount: 2, status: 'paused' as never, totalCount: 2 });
+      handler({ processedCount: 2, status: 'completed', totalCount: 2 });
+      return () => undefined;
+    }
+  );
+  window.electronAPI = createMockElectronApi({
+    onReadwiseReaderImportProgress: onReadwiseReaderImportProgressBridge
+  });
+  const handler = vi.fn();
+
+  await onReadwiseReaderImportProgress(handler);
+
+  expect(handler).toHaveBeenCalledTimes(2);
+  expect(handler).toHaveBeenNthCalledWith(1, {
+    processedCount: 0,
+    status: 'running',
+    totalCount: 2
+  });
+  expect(handler).toHaveBeenNthCalledWith(2, {
+    processedCount: 2,
+    status: 'completed',
+    totalCount: 2
+  });
 });

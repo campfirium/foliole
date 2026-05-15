@@ -109,7 +109,7 @@ async function handleReadwiseImportCommand(
     return previewReadwiseReaderImport(args.settings);
   }
   if (request.command === NATIVE_COMMANDS.runReadwiseReaderImport) {
-    const result = await runReadwiseReaderImport(args);
+    const result = await runReadwiseReaderImport({ ...args, window: resolveTargetWindow(context) });
     notifyIfReadwiseReaderImportChanged(result);
     return result;
   }

@@ -203,7 +203,8 @@ it('routes Readwise Reader preview and run commands through native invoke', asyn
 
   expect(previewReadwiseReaderImport).toHaveBeenCalledWith({ readwiseRootPath: '/Readwise' });
   expect(runReadwiseReaderImport).toHaveBeenCalledWith({
-    settings: { readwiseRootPath: '/Readwise' }
+    settings: { readwiseRootPath: '/Readwise' },
+    window: mockWindow
   });
   expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
     scope: 'workspace'

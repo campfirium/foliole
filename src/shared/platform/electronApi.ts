@@ -23,6 +23,12 @@ export interface WorkspaceSyncAppliedPayload {
   appliedReviewOpIds: string[];
 }
 
+export interface ReadwiseReaderImportProgressPayload {
+  processedCount: number;
+  status: 'running' | 'completed' | 'failed';
+  totalCount: number;
+}
+
 export interface WorkspaceContentChangedPayload {
   scope: 'workspace';
 }
@@ -36,6 +42,9 @@ export interface ElectronAPI {
   onNativeKeyboardInput?: (handler: (payload: NativeKeyboardInputPayload) => void) => () => void;
   onReadwiseBookEpubProgress?: (
     handler: (payload: { detail: string; nodeId: string; phase: string; progress: number }) => void
+  ) => () => void;
+  onReadwiseReaderImportProgress?: (
+    handler: (payload: ReadwiseReaderImportProgressPayload) => void
   ) => () => void;
   onWorkspaceContentChanged?: (handler: (payload: WorkspaceContentChangedPayload) => void) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
