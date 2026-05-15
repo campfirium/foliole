@@ -1,5 +1,11 @@
 import type { DatabaseDriver } from './driver.js';
+import { buildFtsSearchQueryPlan, type FtsSearchQueryPlan } from './ftsSearchQuery.js';
 import { buildCrossPagePdfExcerpt } from './pdfCrossPageWorkspaceSearch.js';
+import {
+  mergeRankedResults,
+  sortAndLimitResults,
+  type RankedWorkspaceSearchResult
+} from './workspaceSearchResults.js';
 import {
   CONTENT_FALLBACK_SQL,
   MAX_RESULTS,
@@ -13,39 +19,10 @@ import {
   type WorkspaceSearchRow
 } from './workspaceSearchSql.js';
 
-interface RankedWorkspaceSearchResult extends WorkspaceSearchResult {
-  rank: number;
-}
-
 const EXCERPT_PADDING = 36;
 const EXCERPT_LENGTH = 96;
 
-export interface WorkspaceSearchResult {
-  excerpt: string;
-  id: string;
-  kind: 'external' | 'node' | 'pdf';
-  externalMatch: {
-    absolutePath: string;
-    folderId: string;
-    folderPath: string;
-    query: string;
-    relativePath: string;
-  } | null;
-  nodeMatch: {
-    from: number;
-    query: string;
-    to: number;
-  } | null;
-  pdfMatch: {
-    attachmentId: string;
-    matchStart: number;
-    page: number;
-    pageTextLength: number;
-    query: string;
-  } | null;
-  title: string;
-  updatedAt: string;
-}
+export type { WorkspaceSearchResult } from './workspaceSearchResults.js';
 
 function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, ' ').trim();
@@ -77,27 +54,6 @@ function buildPdfExcerpt(content: string, query: string, page: number) {
   const start = Math.max(0, matchStart - EXCERPT_PADDING);
   const end = Math.min(normalizedContent.length, matchStart + query.length + EXCERPT_PADDING);
   return `Page ${page} · ${start > 0 ? '...' : ''}${normalizedContent.slice(start, end)}${end < normalizedContent.length ? '...' : ''}`;
-}
-
-function sortAndLimitResults(results: RankedWorkspaceSearchResult[]) {
-  return results
-    .sort((left, right) => {
-      if (left.rank !== right.rank) {
-        return left.rank - right.rank;
-      }
-      return right.updatedAt.localeCompare(left.updatedAt);
-    })
-    .slice(0, MAX_RESULTS)
-    .map((result) => ({
-      excerpt: result.excerpt,
-      externalMatch: result.externalMatch,
-      id: result.id,
-      kind: result.kind,
-      nodeMatch: result.nodeMatch,
-      pdfMatch: result.pdfMatch,
-      title: result.title,
-      updatedAt: result.updatedAt
-    }));
 }
 
 function resolveNodeContentMatch(content: string, query: string) {
@@ -192,12 +148,15 @@ function loadFallbackPdfMatches(driver: DatabaseDriver, query: string) {
   })).filter((result): result is RankedWorkspaceSearchResult => result !== null);
 }
 
-function loadFtsNodeMatches(driver: DatabaseDriver, query: string) {
-  return driver.queryAll<WorkspaceSearchRow>(NODE_FTS_SQL, [query, MAX_RESULTS]).map((row) => buildNodeResult(row, query));
+function loadFtsNodeMatches(driver: DatabaseDriver, ftsQuery: string, highlightQuery: string) {
+  return driver.queryAll<WorkspaceSearchRow>(NODE_FTS_SQL, [ftsQuery, MAX_RESULTS]).map((row) => buildNodeResult(row, highlightQuery));
 }
 
-function loadFtsPdfMatches(driver: DatabaseDriver, query: string) {
-  return driver.queryAll<WorkspacePdfSearchRow>(PDF_FTS_SQL, [query, MAX_RESULTS]).map((row) => buildPdfResult(row, query)).filter((result): result is RankedWorkspaceSearchResult => result !== null);
+function loadFtsPdfMatches(driver: DatabaseDriver, ftsQuery: string, highlightQuery: string) {
+  return driver
+    .queryAll<WorkspacePdfSearchRow>(PDF_FTS_SQL, [ftsQuery, MAX_RESULTS])
+    .map((row) => buildPdfResult(row, highlightQuery))
+    .filter((result): result is RankedWorkspaceSearchResult => result !== null);
 }
 
 function loadCrossPagePdfMatches(driver: DatabaseDriver, query: string) {
@@ -210,14 +169,34 @@ function loadCrossPagePdfMatches(driver: DatabaseDriver, query: string) {
     .map((row) => buildCrossPagePdfResult(row, query));
 }
 
+function loadAdvancedFtsWorkspaceMatches(driver: DatabaseDriver, queryPlan: FtsSearchQueryPlan) {
+  if (!queryPlan.advancedQuery) {
+    return [];
+  }
+  try {
+    return [
+      ...loadFtsNodeMatches(driver, queryPlan.advancedQuery, queryPlan.highlightQuery),
+      ...loadFtsPdfMatches(driver, queryPlan.advancedQuery, queryPlan.highlightQuery)
+    ];
+  } catch {
+    return [];
+  }
+}
+
 export function searchWorkspace(driver: DatabaseDriver, query: string) {
-  const normalizedQuery = query.trim().toLowerCase();
+  const queryPlan = buildFtsSearchQueryPlan(query);
+  const normalizedQuery = queryPlan.normalizedQuery;
   if (!normalizedQuery) {
     return [];
   }
   const results =
     normalizedQuery.length <= 2
       ? [...loadFallbackNodeMatches(driver, normalizedQuery), ...loadFallbackPdfMatches(driver, normalizedQuery)]
-      : [...loadFtsNodeMatches(driver, normalizedQuery), ...loadFtsPdfMatches(driver, normalizedQuery), ...loadCrossPagePdfMatches(driver, normalizedQuery)];
-  return sortAndLimitResults(results);
+      : mergeRankedResults([
+          ...loadFtsNodeMatches(driver, queryPlan.literalQuery, queryPlan.normalizedQuery),
+          ...loadFtsPdfMatches(driver, queryPlan.literalQuery, queryPlan.normalizedQuery),
+          ...loadCrossPagePdfMatches(driver, queryPlan.normalizedQuery),
+          ...loadAdvancedFtsWorkspaceMatches(driver, queryPlan)
+        ]);
+  return sortAndLimitResults(results, MAX_RESULTS);
 }

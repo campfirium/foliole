@@ -1,3 +1,4 @@
+import { buildFtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 
 import { isExternalDocumentVisible, loadActiveImportedSourceLocators } from './externalDocumentImportVisibility.js';
@@ -19,6 +20,11 @@ import {
   toExternalResult
 } from './externalSearchCacheSupport.js';
 import { loadExternalSearchFolders, updateExternalSearchFolderIndexState } from './externalSearchFolders.js';
+import {
+  mergeExternalSearchRows,
+  readAdvancedExternalSearchRows,
+  readExternalSearchFtsRows
+} from './externalSearchQueryRows.js';
 import {
   loadReadwiseExternalSearchFolders,
   searchReadwiseExternalDocuments
@@ -152,7 +158,8 @@ export async function refreshExternalSearchIndexes(folderId?: string) {
 
 export function searchExternalDocuments(query: string) {
   const db = openExternalSearchCacheDatabase();
-  const normalizedQuery = query.trim().toLowerCase();
+  const queryPlan = buildFtsSearchQueryPlan(query);
+  const normalizedQuery = queryPlan.normalizedQuery;
   if (!normalizedQuery) {
     return [];
   }
@@ -178,28 +185,15 @@ export function searchExternalDocuments(query: string) {
              LIMIT 20`
           )
           .all(normalizedQuery, normalizedQuery, normalizedQuery) as ExternalSearchRow[]
-      : db
-          .prepare(
-            `SELECT
-              absolute_path,
-              file_name,
-              folder_id,
-              folder_path,
-              relative_path,
-              content AS text,
-              modified_at,
-              bm25(external_search_fts, 8.0, 5.0, 3.0, 1.0) AS rank
-             FROM external_search_fts
-             WHERE external_search_fts MATCH ?
-             ORDER BY rank ASC, modified_at DESC
-             LIMIT 20`
-          )
-          .all(normalizedQuery) as ExternalSearchRow[];
+      : mergeExternalSearchRows([
+          ...readExternalSearchFtsRows(db, queryPlan.literalQuery),
+          ...readAdvancedExternalSearchRows(db, queryPlan.advancedQuery)
+        ]);
   const activeImportedLocators = loadActiveImportedSourceLocators();
   return [
     ...rows
       .filter((row) => isExternalDocumentVisible(row.absolute_path, activeImportedLocators))
-      .map((row) => toExternalResult(row, normalizedQuery)),
-    ...searchReadwiseExternalDocuments(normalizedQuery)
+      .map((row) => toExternalResult(row, queryPlan.highlightQuery)),
+    ...searchReadwiseExternalDocuments(queryPlan)
   ];
 }

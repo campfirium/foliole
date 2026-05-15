@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { matchesFtsSearchText, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -160,19 +161,15 @@ export function loadReadwiseExternalSearchPreview(
   };
 }
 
-export function searchReadwiseExternalDocuments(query: string): NativeWorkspaceSearchResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
+export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan): NativeWorkspaceSearchResult[] {
+  const normalizedQuery = queryPlan.normalizedQuery;
   if (!normalizedQuery) {
     return [];
   }
   const activeImportedLocators = loadActiveImportedSourceLocators();
   return readReadwiseExternalDocumentRows()
     .filter((row) => isExternalDocumentVisible(resolveDocumentAbsolutePath(row), activeImportedLocators))
-    .filter((row) =>
-      [row.file_name, row.relative_path, row.content].some((value) =>
-        value.toLowerCase().includes(normalizedQuery)
-      )
-    )
+    .filter((row) => matchesFtsSearchText([row.file_name, row.relative_path, row.content].join(' '), queryPlan))
     .slice(0, 20)
     .map((row) => ({
       excerpt: row.opening_text ?? resolveNodeOpeningText(row.content, row.title) ?? '',
@@ -180,7 +177,7 @@ export function searchReadwiseExternalDocuments(query: string): NativeWorkspaceS
         absolutePath: resolveDocumentAbsolutePath(row),
         folderId: row.folder_id,
         folderPath: resolveReadwiseFolderPath(row.folder_id),
-        query: normalizedQuery,
+        query: queryPlan.highlightQuery,
         relativePath: row.relative_path
       },
       id: resolveDocumentAbsolutePath(row),
