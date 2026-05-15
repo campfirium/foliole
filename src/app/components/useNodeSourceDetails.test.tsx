@@ -72,7 +72,7 @@ describe('useNodeSourceDetails', () => {
     });
 
     rerender({ nodeId: null });
-    expect(result.current).toEqual({ errorMessage: '', isLoading: false, value: null });
+    expect(result.current).toEqual({ errorMessage: '', isLoading: false, retry: expect.any(Function), value: null });
 
     rerender({ nodeId: 'node-pdf' });
 
@@ -97,6 +97,7 @@ describe('useNodeSourceDetails', () => {
       expect(result.current).toEqual({
         errorMessage: 'Source info could not be loaded.',
         isLoading: false,
+        retry: expect.any(Function),
         value: null
       });
     });

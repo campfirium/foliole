@@ -35,7 +35,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
       discoveredSources.map(async (source) => ((await shouldKeepImportReadwiseSource(config, source)) ? source : null))
     )
   ).filter((source): source is DirectoryImportSourceDescriptor => source !== null);
-  await reconcileKeepImportCatalog(config, importableSources);
+  await reconcileKeepImportCatalog(config, discoveredSources);
   const runEntries: KeepImportRunEntry[] = [];
   for (const source of importableSources) {
     runEntries.push(

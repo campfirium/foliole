@@ -1,27 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { loadRuntimePdfImportsInventory, type RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
+import { loadRuntimePdfImportsInventoryResult } from '../../shared/platform/pdfImportsInventoryLoadResult';
+import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ImportCatalogLayout } from './ImportCatalogLayout';
 import { IMPORT_CATALOG_SORT_OPTIONS, parseImportCatalogSortKey, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
 import { PdfInventoryItem } from './ImportInventoryListItems';
+import { createImportInventoryErrorState, createImportInventoryUnavailableState, type ImportInventoryLoadIssue } from './ImportInventoryState';
 import { matchesImportSearch } from './importManagementSearch';
 
 function usePdfImportsInventoryState(enabled: boolean) {
-  const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadIssue, setLoadIssue] = useState<ImportInventoryLoadIssue | null>(null);
   const [pdfInventory, setPdfInventory] = useState<RuntimePdfImportsInventory | null>(null);
   const refreshPdfInventory = useCallback(async () => {
-    setErrorMessage('');
+    setLoadIssue(null);
     setIsLoading(true);
-    try {
-      setPdfInventory(await loadRuntimePdfImportsInventory());
-    } catch {
-      setErrorMessage('PDF imports could not be loaded.');
-    } finally {
-      setIsLoading(false);
+    const result = await loadRuntimePdfImportsInventoryResult();
+    if (result.status === 'loaded') {
+      setPdfInventory(result.inventory);
+    } else {
+      setPdfInventory(null);
+      setLoadIssue(result.status === 'unavailable' ? { kind: 'unavailable' } : { kind: 'failed', message: result.message });
     }
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -44,7 +47,7 @@ function usePdfImportsInventoryState(enabled: boolean) {
     };
   }, [enabled, refreshPdfInventory]);
 
-  return { errorMessage, isLoading, pdfInventory, refreshPdfInventory };
+  return { isLoading, loadIssue, pdfInventory, refreshPdfInventory };
 }
 
 const pdfSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
@@ -91,7 +94,7 @@ function formatCountLabel(filteredCount: number, totalCount: number) {
 }
 
 export function ImportSourceWorkspacePdfPage({ open }: { open: boolean }) {
-  const { errorMessage, isLoading, pdfInventory, refreshPdfInventory } = usePdfImportsInventoryState(open);
+  const { isLoading, loadIssue, pdfInventory, refreshPdfInventory } = usePdfImportsInventoryState(open);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const [query, setQuery] = useState('');
@@ -108,8 +111,11 @@ export function ImportSourceWorkspacePdfPage({ open }: { open: boolean }) {
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
       <ImportCatalogLayout
         countLabel={formatCountLabel(filteredItems.length, totalItems)}
+        {...(loadIssue?.kind === 'unavailable' ? { disabledState: createImportInventoryUnavailableState('PDFs') } : {})}
         emptyState={{ description: 'No PDF imports discovered yet.', title: 'PDF is empty' }}
-        {...(errorMessage ? { errorState: { description: 'Try again to load imported PDFs.', onRetry: refreshPdfInventory, title: errorMessage } } : {})}
+        {...(loadIssue?.kind === 'failed'
+          ? { errorState: createImportInventoryErrorState({ catalogName: 'PDFs', issue: loadIssue, onRetry: refreshPdfInventory }) }
+          : {})}
         hasItems={filteredItems.length > 0}
         isLoading={isLoading}
         loadingState={{ description: 'Checking imported PDFs.', title: 'Loading PDFs' }}

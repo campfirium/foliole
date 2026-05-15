@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
+import { loadRuntimeReadwiseBooksInventoryResult } from './readwiseBooksInventoryLoadResult';
 import { loadRuntimeReadwiseBooksInventory, onRuntimeReadwiseBookEpubProgress } from './readwiseBooksRuntimeRepository';
 
 function createMockElectronApi(invoke: NativeInvoke) {
@@ -35,6 +36,7 @@ const READWISE_BOOKS_INVENTORY_PAYLOAD = {
 };
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -77,6 +79,52 @@ it('returns null when the readwise books inventory payload is malformed', async 
       area: 'bridge',
       command: 'load_readwise_books_inventory',
       fallback: 'return_null'
+    })
+  );
+});
+
+it('returns unavailable when the readwise books inventory runtime is missing', async () => {
+  delete window.electronAPI;
+
+  await expect(loadRuntimeReadwiseBooksInventoryResult()).resolves.toEqual({ status: 'unavailable' });
+});
+
+it('returns failed when the readwise books inventory payload is malformed', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const invoke = vi.fn().mockResolvedValue({ books: [{}] });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(loadRuntimeReadwiseBooksInventoryResult()).resolves.toEqual({
+    message: 'Readwise Books inventory could not be loaded.',
+    status: 'failed'
+  });
+  expect(warn).toHaveBeenCalledWith(
+    '[bridge] native inventory payload invalid',
+    expect.objectContaining({
+      action: 'load_runtime_readwise_books_inventory',
+      area: 'bridge',
+      command: 'load_readwise_books_inventory',
+      fallback: 'return_failed'
+    })
+  );
+});
+
+it('returns failed with the thrown message when readwise books inventory loading rejects', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const invoke = vi.fn().mockRejectedValue(new Error('database is locked'));
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(loadRuntimeReadwiseBooksInventoryResult()).resolves.toEqual({
+    message: 'database is locked',
+    status: 'failed'
+  });
+  expect(warn).toHaveBeenCalledWith(
+    '[bridge] native inventory loading failed',
+    expect.objectContaining({
+      action: 'load_runtime_readwise_books_inventory',
+      area: 'bridge',
+      command: 'load_readwise_books_inventory',
+      fallback: 'return_failed'
     })
   );
 });

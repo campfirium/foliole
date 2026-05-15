@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { definedProps } from '../../shared/lib/definedProps';
-import { loadRuntimePdfImportsInventory, type RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
+import { loadRuntimePdfImportsInventoryResult } from '../../shared/platform/pdfImportsInventoryLoadResult';
+import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
+import { loadRuntimeReadwiseBooksInventoryResult } from '../../shared/platform/readwiseBooksInventoryLoadResult';
 import {
-  loadRuntimeReadwiseBooksInventory,
   resetRuntimeReadwiseBookImport,
   type RuntimeReadwiseBooksInventory
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
@@ -11,6 +12,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useFormalImport } from '../hooks/useFormalImport';
 
 import { IMPORT_CATALOG_SORT_OPTIONS, type ImportCatalogSortKey } from './importCatalogOrdering';
+import type { ImportInventoryLoadIssue } from './ImportInventoryState';
 import { matchesImportSearch } from './importManagementSearch';
 import { useOverviewSorting } from './importOverviewSorting';
 import { applyResetReadwiseBookImportToWorkspace, selectReadwiseBookNode } from './importSourceWorkspaceReadwiseBooks';
@@ -20,21 +22,22 @@ export type OverviewSortKey = ImportCatalogSortKey;
 
 function useOverviewInventories(enabled: boolean) {
   const [booksInventory, setBooksInventory] = useState<RuntimeReadwiseBooksInventory | null>(null);
-  const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadIssue, setLoadIssue] = useState<ImportInventoryLoadIssue | null>(null);
   const [pdfInventory, setPdfInventory] = useState<RuntimePdfImportsInventory | null>(null);
   const refresh = useCallback(async () => {
-    setErrorMessage('');
+    setLoadIssue(null);
     setIsLoading(true);
-    try {
-      const [books, pdf] = await Promise.all([loadRuntimeReadwiseBooksInventory(), loadRuntimePdfImportsInventory()]);
-      setBooksInventory(books);
-      setPdfInventory(pdf);
-    } catch {
-      setErrorMessage('Imports could not be loaded.');
-    } finally {
-      setIsLoading(false);
+    const [books, pdf] = await Promise.all([loadRuntimeReadwiseBooksInventoryResult(), loadRuntimePdfImportsInventoryResult()]);
+    setBooksInventory(books.status === 'loaded' ? books.inventory : null);
+    setPdfInventory(pdf.status === 'loaded' ? pdf.inventory : null);
+    const failedMessages = [books, pdf].filter((result) => result.status === 'failed').map((result) => result.message);
+    if (failedMessages.length > 0) {
+      setLoadIssue({ kind: 'failed', message: failedMessages.join(' ') });
+    } else if (books.status === 'unavailable' && pdf.status === 'unavailable') {
+      setLoadIssue({ kind: 'unavailable' });
     }
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -55,7 +58,7 @@ function useOverviewInventories(enabled: boolean) {
     return () => window.removeEventListener('focus', handleFocus);
   }, [enabled, refresh]);
 
-  return { booksInventory, errorMessage, isLoading, pdfInventory, refresh };
+  return { booksInventory, isLoading, loadIssue, pdfInventory, refresh };
 }
 
 async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
@@ -160,7 +163,7 @@ export function useImportOverviewState(input: {
   const formalImport = useFormalImport();
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
-  const { booksInventory, errorMessage, isLoading, pdfInventory, refresh } = useOverviewInventories(input.open);
+  const { booksInventory, isLoading, loadIssue, pdfInventory, refresh } = useOverviewInventories(input.open);
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<OverviewSortKey>('dateImported');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -190,10 +193,10 @@ export function useImportOverviewState(input: {
   return {
     actionMessage: actions.actionMessage,
     booksInventory,
-    errorMessage,
     handleOpenBookNode: actions.handleOpenBookNode,
     handleReimportBook: actions.handleReimportBook,
     isLoading,
+    loadIssue,
     nodesById,
     query,
     resettingNodeId: actions.resettingNodeId,

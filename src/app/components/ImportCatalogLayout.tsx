@@ -50,6 +50,7 @@ export function ImportCatalogHeader(props: {
 export function ImportCatalogLayout(props: {
   children: ReactNode;
   countLabel: string;
+  disabledState?: { description: string; title: string };
   emptyState: { description: string; title: string };
   errorState?: { description: string; onRetry: () => void; title: string };
   hasItems: boolean;
@@ -110,6 +111,13 @@ function renderImportCatalogBody(props: Parameters<typeof ImportCatalogLayout>[0
           description={props.errorState.description}
           title={props.errorState.title}
         />
+      </div>
+    );
+  }
+  if (props.disabledState) {
+    return (
+      <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
+        <AppEmptyState description={props.disabledState.description} title={props.disabledState.title} />
       </div>
     );
   }

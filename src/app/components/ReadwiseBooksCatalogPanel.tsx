@@ -5,18 +5,19 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { ImportCatalogLayout } from './ImportCatalogLayout';
 import type { ImportCatalogSortOption } from './ImportCatalogSortControls';
 import { ReadwiseBookInventoryItem } from './ImportInventoryListItems';
+import type { ImportInventoryCatalogState } from './ImportInventoryState';
 
 export function ReadwiseBooksCatalogPanel(props: {
   books: RuntimeReadwiseBooksInventory['books'];
   countLabel: string;
-  errorMessage: string;
+  disabledState?: ImportInventoryCatalogState;
+  errorState?: ImportInventoryCatalogState & { onRetry: () => void };
   isLoading: boolean;
   nodesById: ReturnType<typeof useWorkspaceStore.getState>['nodesById'];
   onChangeQuery: (value: string) => void;
   onChangeSortDirection: (sortDirection: 'asc' | 'desc') => void;
   onChangeSortKey: (value: string) => void;
   onOpenBookNode: (nodeId: string) => void;
-  onRetry: () => void;
   onResetBookImport: (input: { nodeId: string; title: string }) => void;
   query: string;
   resettingNodeId: string | null;
@@ -28,11 +29,12 @@ export function ReadwiseBooksCatalogPanel(props: {
   return (
     <ImportCatalogLayout
       countLabel={props.countLabel}
+      {...definedProps({
+        disabledState: props.disabledState
+      })}
       emptyState={{ description: 'No books discovered yet.', title: 'Readwise Books is empty' }}
       {...definedProps({
-        errorState: props.errorMessage
-          ? { description: 'Try again to load imported Readwise books.', onRetry: props.onRetry, title: props.errorMessage }
-          : undefined
+        errorState: props.errorState
       })}
       hasItems={props.books.length > 0}
       isLoading={props.isLoading}

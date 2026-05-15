@@ -1,31 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { loadRuntimeReadwiseBooksInventoryResult } from '../../shared/platform/readwiseBooksInventoryLoadResult';
 import {
-  loadRuntimeReadwiseBooksInventory,
   resetRuntimeReadwiseBookImport,
   type RuntimeReadwiseBooksInventory
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { IMPORT_CATALOG_SORT_OPTIONS, parseImportCatalogSortKey, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
+import { createImportInventoryErrorState, createImportInventoryUnavailableState, type ImportInventoryLoadIssue } from './ImportInventoryState';
 import { matchesImportSearch } from './importManagementSearch';
 import { applyResetReadwiseBookImportToWorkspace, selectReadwiseBookNode } from './importSourceWorkspaceReadwiseBooks';
 import { ReadwiseBooksCatalogPanel } from './ReadwiseBooksCatalogPanel';
 
 function useReadwiseBooksInventoryState(enabled: boolean) {
   const [booksInventory, setBooksInventory] = useState<RuntimeReadwiseBooksInventory | null>(null);
-  const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadIssue, setLoadIssue] = useState<ImportInventoryLoadIssue | null>(null);
   const refreshBooksInventory = useCallback(async () => {
-    setErrorMessage('');
+    setLoadIssue(null);
     setIsLoading(true);
-    try {
-      setBooksInventory(await loadRuntimeReadwiseBooksInventory());
-    } catch {
-      setErrorMessage('Readwise Books could not be loaded.');
-    } finally {
-      setIsLoading(false);
+    const result = await loadRuntimeReadwiseBooksInventoryResult();
+    if (result.status === 'loaded') {
+      setBooksInventory(result.inventory);
+    } else {
+      setBooksInventory(null);
+      setLoadIssue(result.status === 'unavailable' ? { kind: 'unavailable' } : { kind: 'failed', message: result.message });
     }
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -48,7 +50,7 @@ function useReadwiseBooksInventoryState(enabled: boolean) {
     };
   }, [enabled, refreshBooksInventory]);
 
-  return { booksInventory, errorMessage, isLoading, refreshBooksInventory };
+  return { booksInventory, isLoading, loadIssue, refreshBooksInventory };
 }
 
 async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
@@ -185,7 +187,7 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
   onOpenChange: (open: boolean) => void;
   onSelectNode?: (nodeId: string) => void;
 }) {
-  const { booksInventory, errorMessage, isLoading, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
+  const { booksInventory, isLoading, loadIssue, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const catalog = useReadwiseBookCatalogState(booksInventory, nodeViewById);
@@ -197,14 +199,16 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
         <ReadwiseBooksCatalogPanel
           books={catalog.filteredBooks}
           countLabel={catalog.countLabel}
-          errorMessage={errorMessage}
+          {...(loadIssue?.kind === 'unavailable' ? { disabledState: createImportInventoryUnavailableState('Readwise Books') } : {})}
+          {...(loadIssue?.kind === 'failed'
+            ? { errorState: createImportInventoryErrorState({ catalogName: 'Readwise Books', issue: loadIssue, onRetry: refreshBooksInventory }) }
+            : {})}
           isLoading={isLoading}
           nodesById={nodesById}
           onChangeQuery={catalog.setQuery}
           onChangeSortDirection={catalog.setSortDirection}
           onChangeSortKey={(value) => catalog.setSortKey(parseImportCatalogSortKey(value) ?? catalog.sortKey)}
           onOpenBookNode={actions.handleOpenBookNode}
-          onRetry={refreshBooksInventory}
           onResetBookImport={actions.handleReimportBook}
           query={catalog.query}
           resettingNodeId={actions.resettingNodeId}

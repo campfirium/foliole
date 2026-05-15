@@ -106,10 +106,11 @@ it('writes External destination files into the Readwise-managed external documen
   await runReadwiseArticles();
 
   expect(readRows('SELECT source_name FROM import_sources')).toEqual([]);
-  expect(readRows('SELECT source_path FROM keep_import_items')).toEqual([{ source_path: 'Highlighted.md' }]);
-  expect(
-    readRows('SELECT document_id, folder_id, relative_path, is_present FROM external_documents ORDER BY document_id ASC')
-  ).toEqual([
+  expect(readRows('SELECT source_path FROM keep_import_items ORDER BY source_path ASC')).toEqual([
+    { source_path: 'Highlighted.md' },
+    { source_path: 'Plain.md' }
+  ]);
+  expect(readRows('SELECT document_id, folder_id, relative_path, is_present FROM external_documents ORDER BY document_id ASC')).toEqual([
     {
       document_id: 'readwise-reader-import-articles:Highlighted.md',
       folder_id: 'readwise-reader-import-articles',
@@ -132,15 +133,13 @@ it('writes External destination files into the Readwise-managed external documen
   expect(searchExternalDocuments('Highlighted body').map((result) => result.id)).toContain(
     path.join(fixture.fullDocumentDir, 'Highlighted.md')
   );
-  expect(loadExternalSearchPreview(path.join(fixture.fullDocumentDir, 'Highlighted.md'))).toEqual(
-    expect.objectContaining({
-      content: expect.stringContaining('Highlighted body.'),
-      folder_id: 'readwise-reader-import-articles'
-    })
-  );
+  expect(loadExternalSearchPreview(path.join(fixture.fullDocumentDir, 'Highlighted.md'))).toEqual(expect.objectContaining({
+    content: expect.stringContaining('Highlighted body.'),
+    folder_id: 'readwise-reader-import-articles'
+  }));
 });
 
-it('skips Off destination without creating Inbox, External, or tracking rows', async () => {
+it('skips Off destination without creating Inbox or External rows', async () => {
   const fixture = await seedReadwiseFixture();
   saveReadwiseSettings(fixture, { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'off' });
   await fs.rm(path.join(fixture.highlightDir, 'Highlighted.md'));
@@ -149,7 +148,10 @@ it('skips Off destination without creating Inbox, External, or tracking rows', a
 
   expect(readRows('SELECT source_name FROM import_sources')).toEqual([]);
   expect(readRows('SELECT document_id FROM external_documents')).toEqual([]);
-  expect(readRows('SELECT source_path FROM keep_import_items')).toEqual([]);
+  expect(readRows('SELECT source_path FROM keep_import_items ORDER BY source_path ASC')).toEqual([
+    { source_path: 'Highlighted.md' },
+    { source_path: 'Plain.md' }
+  ]);
 });
 
 it('imports no-highlight sources into External after the behavior changes from Off', async () => {
@@ -233,7 +235,10 @@ it('imports a previously skipped no-highlight source after highlights appear', a
   await runReadwiseArticles();
 
   expect(readRows('SELECT source_name FROM import_sources')).toEqual([{ source_name: 'Plain.md' }]);
-  expect(readRows('SELECT source_path FROM keep_import_items')).toEqual([{ source_path: 'Plain.md' }]);
+  expect(readRows('SELECT source_path FROM keep_import_items ORDER BY source_path ASC')).toEqual([
+    { source_path: 'Highlighted.md' },
+    { source_path: 'Plain.md' }
+  ]);
 });
 
 it('does not recreate a locally deleted Readwise Inbox topic during sync', async () => {
@@ -286,8 +291,5 @@ it('keeps Inbox destination on the existing duplicate title path', async () => {
 
   await runReadwiseArticles();
 
-  expect(readRows("SELECT title FROM nodes WHERE parent_id = 'special-inbox' AND title LIKE 'Same Title%' ORDER BY title ASC")).toEqual([
-    { title: 'Same Title' },
-    { title: 'Same Title 2' }
-  ]);
+  expect(readRows("SELECT title FROM nodes WHERE parent_id = 'special-inbox' AND title LIKE 'Same Title%' ORDER BY title ASC")).toEqual([{ title: 'Same Title' }, { title: 'Same Title 2' }]);
 });

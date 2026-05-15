@@ -1,6 +1,7 @@
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
 
 import { ImportCatalogHeader } from './ImportCatalogLayout';
+import { createImportInventoryErrorState, createImportInventoryUnavailableState } from './ImportInventoryState';
 import { ImportOverviewContent } from './ImportOverviewContent';
 import { overviewSortOptions, useImportOverviewState } from './importOverviewState';
 
@@ -15,20 +16,11 @@ function ImportOverviewBody(props: {
       </div>
     );
   }
-  if (props.state.errorMessage) {
-    return (
-      <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
-        <AppErrorState
-          action={
-            <AppButton onClick={props.state.refresh} variant="primary">
-              Retry
-            </AppButton>
-          }
-          description="Try again to load recent imports, Readwise Books, and PDF imports."
-          title={props.state.errorMessage}
-        />
-      </div>
-    );
+  if (props.state.loadIssue?.kind === 'failed') {
+    return <ImportOverviewErrorState state={props.state} />;
+  }
+  if (props.state.loadIssue?.kind === 'unavailable') {
+    return <ImportOverviewUnavailableState />;
   }
   if (props.state.totalVisibleCount === 0) {
     return (
@@ -50,6 +42,39 @@ function ImportOverviewBody(props: {
       sortedInboxRuns={props.state.sortedInboxRuns}
       sortedPdfItems={props.state.sortedPdfItems}
     />
+  );
+}
+
+function ImportOverviewErrorState(props: { state: ReturnType<typeof useImportOverviewState> }) {
+  if (props.state.loadIssue?.kind !== 'failed') {
+    return null;
+  }
+  const errorState = createImportInventoryErrorState({
+    catalogName: 'recent imports',
+    issue: props.state.loadIssue,
+    onRetry: props.state.refresh
+  });
+  return (
+    <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
+      <AppErrorState
+        action={
+          <AppButton onClick={props.state.refresh} variant="primary">
+            Retry
+          </AppButton>
+        }
+        description={errorState.description}
+        title={errorState.title}
+      />
+    </div>
+  );
+}
+
+function ImportOverviewUnavailableState() {
+  const disabledState = createImportInventoryUnavailableState('recent imports');
+  return (
+    <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
+      <AppEmptyState description={disabledState.description} title={disabledState.title} />
+    </div>
   );
 }
 

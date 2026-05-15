@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
+import { loadRuntimePdfImportsInventoryResult } from './pdfImportsInventoryLoadResult';
 import { loadRuntimePdfImportsInventory } from './pdfImportsRuntimeRepository';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
@@ -51,4 +52,48 @@ it('normalizes the pdf imports inventory payload', async () => {
     scannedAt: '2026-04-04T01:06:00.000Z'
   });
   expect(invoke).toHaveBeenCalledWith('load_pdf_imports_inventory');
+});
+
+it('returns unavailable when the pdf imports inventory runtime is missing', async () => {
+  await expect(loadRuntimePdfImportsInventoryResult()).resolves.toEqual({ status: 'unavailable' });
+});
+
+it('returns failed when the pdf imports inventory payload is malformed', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const invoke = vi.fn().mockResolvedValue({ items: [{}] });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(loadRuntimePdfImportsInventoryResult()).resolves.toEqual({
+    message: 'PDF imports inventory could not be loaded.',
+    status: 'failed'
+  });
+  expect(warn).toHaveBeenCalledWith(
+    '[bridge] native inventory payload invalid',
+    expect.objectContaining({
+      action: 'load_runtime_pdf_imports_inventory',
+      area: 'bridge',
+      command: 'load_pdf_imports_inventory',
+      fallback: 'return_failed'
+    })
+  );
+});
+
+it('returns failed with the thrown message when pdf imports inventory loading rejects', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const invoke = vi.fn().mockRejectedValue(new Error('disk unavailable'));
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(loadRuntimePdfImportsInventoryResult()).resolves.toEqual({
+    message: 'disk unavailable',
+    status: 'failed'
+  });
+  expect(warn).toHaveBeenCalledWith(
+    '[bridge] native inventory loading failed',
+    expect.objectContaining({
+      action: 'load_runtime_pdf_imports_inventory',
+      area: 'bridge',
+      command: 'load_pdf_imports_inventory',
+      fallback: 'return_failed'
+    })
+  );
 });
