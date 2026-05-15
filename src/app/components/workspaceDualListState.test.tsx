@@ -55,7 +55,7 @@ it('keeps heavy column projections stable when selection stays in the same folde
   expect(result.current.topicNodeOrder).toBe(first.topicNodeOrder);
 });
 
-it('uses the active topic as the content column root when that topic has children', () => {
+it('keeps the active topic in its folder column when that topic has children', () => {
   const topicParentNodesById: WorkspaceListNodesById = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
     'topic-parent': createNode({
@@ -82,6 +82,6 @@ it('uses the active topic as the content column root when that topic has childre
     })
   );
 
-  expect(result.current.activeFolderColumnId).toBe('topic-parent');
-  expect(result.current.topicNodeOrder).toEqual(['topic-child']);
+  expect(result.current.activeFolderColumnId).toBe(INBOX_NODE_ID);
+  expect(result.current.topicNodeOrder).toEqual(['topic-parent', 'topic-child']);
 });

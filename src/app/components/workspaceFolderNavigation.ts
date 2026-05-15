@@ -161,13 +161,6 @@ export function resolveActiveFolderColumnNodeId(
     return activeNodeId;
   }
 
-  const hasVisibleChildren = nodeOrder.some(
-    (nodeId) => !trashedNodeIds.includes(nodeId) && nodesById[nodeId]?.parentNodeId === activeNodeId
-  );
-  if (hasVisibleChildren) {
-    return activeNodeId;
-  }
-
   const activeFolderNodeId = resolveActiveFolderNodeId(activeNodeId, nodesById, trashedNodeIds);
   if (activeFolderNodeId) {
     return activeFolderNodeId;
