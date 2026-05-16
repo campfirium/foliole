@@ -123,7 +123,10 @@ function parseAnchorLink(value: string) {
 function expectDiscoveredPlaceholder(book: Awaited<ReturnType<typeof scanReadwiseBooksInventory>>['books'][number] | undefined) {
   expect(book).toMatchObject({
     annotationStatus: 'has_highlights',
+    bodyState: 'unloaded',
     epubStatus: 'missing',
+    highlightState: 'pending',
+    highlightUnmatchedCount: null,
     importStatus: 'pending',
     nodeStatus: 'missing'
   });
@@ -133,8 +136,11 @@ function expectDiscoveredPlaceholder(book: Awaited<ReturnType<typeof scanReadwis
 function expectImportedInventory(book: Awaited<ReturnType<typeof scanReadwiseBooksInventory>>['books'][number] | undefined, epubPath: string) {
   expect(book).toMatchObject({
     annotationStatus: 'has_highlights',
+    bodyState: 'loaded',
     epubPath,
     epubStatus: 'received',
+    highlightState: 'placed',
+    highlightUnmatchedCount: 0,
     importStatus: 'completed',
     nodeStatus: 'generated'
   });

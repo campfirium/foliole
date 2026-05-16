@@ -41,13 +41,16 @@ vi.mock('./readwiseBooksInventory.js', () => ({
     books: [
       {
         annotationStatus: 'has_highlights',
+        bodyState: 'unloaded',
         bookKey: 'book-1',
         downloadUrl: 'https://readwise.io/reader/document_raw_content/1',
         epubPath: null,
         epubStatus: 'missing',
         fullDocumentMarkdownPath: '/tmp/book-1.md',
         generatedNodeId: 'node-book-1',
+        highlightState: 'pending',
         highlightMarkdownPath: '/tmp/book-1-highlights.md',
+        highlightUnmatchedCount: null,
         importStatus: 'pending',
         nodeStatus: 'generated',
         title: 'Book One'

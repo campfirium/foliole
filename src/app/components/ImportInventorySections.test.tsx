@@ -14,12 +14,15 @@ it('renders readwise books inside the shared list surface and keeps import actio
         books: [
           {
             annotationStatus: 'has_highlights',
+            bodyState: 'loaded',
             bookKey: 'book-1',
             epubPath: null,
             epubStatus: 'received',
             fullDocumentMarkdownPath: null,
             generatedNodeId: 'node-1',
+            highlightState: 'placed',
             highlightMarkdownPath: null,
+            highlightUnmatchedCount: 0,
             importStatus: 'completed',
             nodeStatus: 'generated',
             title: 'Atomic Habits'

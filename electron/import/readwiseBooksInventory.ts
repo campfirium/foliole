@@ -10,22 +10,28 @@ import { resolveGeneratedNodeId, resolveImportStatus } from './readwiseBooksInve
 import {
   mergePersistedReadwiseBooksInventory
 } from './readwiseBooksInventoryState.js';
+import { resolveInitialReadwiseBookHighlightState, resolveReadwiseBookBodyState } from './readwiseBookState.js';
 import { canRunReadwiseExternalSource } from './readwiseExternalSourceGuard.js';
 
 export type ReadwiseBookAnnotationStatus = 'has_highlights' | 'no_highlights';
+export type ReadwiseBookBodyState = 'loaded' | 'unloaded';
 export type ReadwiseBookNodeStatus = 'generated' | 'missing';
 export type ReadwiseBookEpubStatus = 'received' | 'missing';
+export type ReadwiseBookHighlightState = 'failed' | 'partial' | 'pending' | 'placed';
 export type ReadwiseBookImportStatus = 'completed' | 'pending';
 
 export interface ReadwiseBookInventoryItem {
   annotationStatus: ReadwiseBookAnnotationStatus;
+  bodyState: ReadwiseBookBodyState;
   bookKey: string;
   downloadUrl: string | null;
   epubPath: string | null;
   epubStatus: ReadwiseBookEpubStatus;
   fullDocumentMarkdownPath: string | null;
   generatedNodeId: string | null;
+  highlightState: ReadwiseBookHighlightState | null;
   highlightMarkdownPath: string | null;
+  highlightUnmatchedCount: number | null;
   importStatus: ReadwiseBookImportStatus;
   nodeStatus: ReadwiseBookNodeStatus;
   title: string;
@@ -178,16 +184,21 @@ export async function scanReadwiseBooksInventory(input: {
       const annotationStatus = await resolveAnnotationStatus(bucket, input.readwiseConfig);
       const downloadUrl = await resolveDownloadUrl(bucket);
       const generatedNodeId = resolveGeneratedNodeId(bucket);
+      const importStatus = resolveImportStatus(bucket);
+      const bodyState = resolveReadwiseBookBodyState(importStatus);
       return {
         annotationStatus,
+        bodyState,
         bookKey: bucket.key,
         downloadUrl,
         epubPath: bucket.epubPath,
         epubStatus: bucket.epubPath ? 'received' : 'missing',
         fullDocumentMarkdownPath: bucket.fullDocumentMarkdownPath,
         generatedNodeId,
+        highlightState: resolveInitialReadwiseBookHighlightState({ annotationStatus }),
         highlightMarkdownPath: bucket.highlightMarkdownPath,
-        importStatus: resolveImportStatus(bucket),
+        highlightUnmatchedCount: null,
+        importStatus,
         nodeStatus: generatedNodeId ? 'generated' : 'missing',
         title: bucket.title
       } satisfies ReadwiseBookInventoryItem;

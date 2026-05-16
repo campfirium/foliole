@@ -17,6 +17,9 @@ export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfi
   if (!readwiseSource?.highlightPath.trim()) {
     return false;
   }
+  if (readwiseSource.kind === 'books') {
+    return false;
+  }
   return shouldImportReadwiseSource(source, {
     highlightDirectoryPath: readwiseSource.highlightPath.trim(),
     readwiseConfig: settings.readwiseReaderConfig

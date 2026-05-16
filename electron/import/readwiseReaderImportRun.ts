@@ -39,6 +39,7 @@ function isEnabledReadwiseSource(
   return (
     source.keepState === 'enabled' &&
     Boolean(source.kind) &&
+    source.kind !== 'books' &&
     source.primaryPath.trim().length > 0 &&
     source.highlightPath.trim().length > 0
   );

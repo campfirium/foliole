@@ -11,13 +11,16 @@ import type { ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 function createBook(overrides: Partial<ReadwiseBookInventoryItem> = {}): ReadwiseBookInventoryItem {
   return {
     annotationStatus: 'has_highlights',
+    bodyState: 'unloaded',
     bookKey: 'annotated book',
     downloadUrl: null,
     epubPath: null,
     epubStatus: 'missing',
     fullDocumentMarkdownPath: '/Readwise/Full Document Contents/Books/Annotated Book.md',
     generatedNodeId: null,
+    highlightState: 'pending',
     highlightMarkdownPath: '/Readwise/Books/Annotated Book.md',
+    highlightUnmatchedCount: null,
     importStatus: 'pending',
     nodeStatus: 'missing',
     title: 'Annotated Book',

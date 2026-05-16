@@ -20,6 +20,7 @@ import {
   findPersistedReadwiseBookByNodeId,
   savePersistedReadwiseBookMovedToTop
 } from './readwiseBooksInventoryState.js';
+import { applyReadwiseBookPlacementState } from './readwiseBookState.js';
 import {
   canRunReadwiseExternalSource,
   createBlockedReadwiseBookDownloadResult,
@@ -94,20 +95,20 @@ async function importSelectedReadwiseBookEpub(input: {
   });
   const generatedNodeId = imported.nodeId || input.targetNodeId || input.book.generatedNodeId;
   input.onBeforeHighlightPlacement?.();
-  await placeReadwiseBookHighlights({
+  const placement = await placeReadwiseBookHighlights({
     highlightMarkdownPath: input.book.highlightMarkdownPath,
     importedAt,
     readwiseConfig: loadImportManagerSettings().readwiseReaderConfig,
     rootNodeId: generatedNodeId
   });
-  const updatedBook = {
+  const updatedBook = applyReadwiseBookPlacementState({
     ...input.book,
     epubPath: input.epubPath,
     epubStatus: 'received',
     generatedNodeId,
     importStatus: generatedNodeId ? 'completed' : input.book.importStatus,
     nodeStatus: generatedNodeId ? 'generated' : input.book.nodeStatus
-  } satisfies ReadwiseBookInventoryItem;
+  } satisfies ReadwiseBookInventoryItem, placement);
   const updatedInventory = {
     ...input.inventory,
     books: input.inventory.books.map((candidate) => (candidate.bookKey === input.book.bookKey ? updatedBook : candidate)),

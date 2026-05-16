@@ -91,9 +91,17 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
   });
 
   expect(inventory.books).toMatchObject([
-    { annotationStatus: 'has_highlights', bookKey: 'annotated book', generatedNodeId: null, nodeStatus: 'missing' },
+    {
+      annotationStatus: 'has_highlights',
+      bodyState: 'unloaded',
+      bookKey: 'annotated book',
+      generatedNodeId: null,
+      highlightState: 'pending',
+      highlightUnmatchedCount: null,
+      nodeStatus: 'missing'
+    },
     { bookKey: 'epub only book', epubStatus: 'received', generatedNodeId: null, nodeStatus: 'missing' },
-    { bookKey: 'plain book', generatedNodeId: expect.any(String), nodeStatus: 'generated' }
+    { bodyState: 'unloaded', bookKey: 'plain book', generatedNodeId: expect.any(String), nodeStatus: 'generated' }
   ]);
   expect(inventory.books[0]?.fullDocumentMarkdownPath).toBe(path.join(fullDocumentDir, 'Annotated Book.md'));
   expect(inventory.books[1]?.epubPath).toBe(path.join(fullDocumentDir, 'Epub Only Book.epub'));
@@ -203,6 +211,7 @@ it('keeps deleted book nodes missing during inventory refresh', async () => {
 
   expect(reloadedInventory.books.find((book) => book.bookKey === 'plain book')).toMatchObject({
     generatedNodeId: null,
+    bodyState: 'unloaded',
     importStatus: 'pending',
     nodeStatus: 'missing'
   });

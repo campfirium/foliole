@@ -57,12 +57,15 @@ export interface NativeReadwiseBookImportResetResult {
 
 export interface NativeReadwiseBookInventoryItem {
   annotation_status: 'has_highlights' | 'no_highlights';
+  body_state: 'loaded' | 'unloaded';
   book_key: string;
   epub_path: string | null;
   epub_status: 'received' | 'missing';
   full_document_markdown_path: string | null;
   generated_node_id: string | null;
+  highlight_state: 'failed' | 'partial' | 'pending' | 'placed' | null;
   highlight_markdown_path: string | null;
+  highlight_unmatched_count: number | null;
   import_status: 'completed' | 'pending';
   node_status: 'generated' | 'missing';
   title: string;

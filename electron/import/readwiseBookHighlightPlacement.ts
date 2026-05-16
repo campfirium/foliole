@@ -65,6 +65,14 @@ function buildSectionHighlightLocators(sections: ImportedBookSection[]) {
   }));
 }
 
+function normalizeBookHighlightText(value: string) {
+  return value.replace(/\r\n?/g, '\n').trim();
+}
+
+function filterBookSections(sections: ImportedBookSection[], highlightTexts: Set<string>) {
+  return sections.filter((section) => !highlightTexts.has(normalizeBookHighlightText(section.content)));
+}
+
 function buildSearchOrder(total: number, preferredStartIndex: number) {
   if (total === 0) {
     return [];
@@ -184,9 +192,11 @@ export async function placeReadwiseBookHighlights(input: {
     return { matchedCount: 0, unmatchedCount: 0 };
   }
 
-  const sections = readImportedBookSections(input.rootNodeId);
+  const highlights = extractReadwiseSidecarHighlights(markdown, input.readwiseConfig);
+  const highlightTexts = new Set(highlights.map((highlight) => normalizeBookHighlightText(highlight.text)).filter(Boolean));
+  const sections = filterBookSections(readImportedBookSections(input.rootNodeId), highlightTexts);
   if (sections.length === 0) {
-    return { matchedCount: 0, unmatchedCount: extractReadwiseSidecarHighlights(markdown, input.readwiseConfig).length };
+    return { matchedCount: 0, unmatchedCount: highlights.length };
   }
 
   const grouped = groupLocatedHighlights(sections, markdown, input.readwiseConfig);

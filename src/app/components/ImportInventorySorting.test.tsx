@@ -12,24 +12,30 @@ it('filters and sorts books for the Readwise Books panel', () => {
     books: [
       {
         annotationStatus: 'has_highlights',
+        bodyState: 'loaded',
         bookKey: 'book-z',
         epubPath: '/tmp/Zebra.epub',
         epubStatus: 'received',
         fullDocumentMarkdownPath: '/tmp/Zebra.md',
         generatedNodeId: 'node-z',
+        highlightState: 'placed',
         highlightMarkdownPath: '/tmp/Zebra Highlights.md',
+        highlightUnmatchedCount: 0,
         importStatus: 'completed',
         nodeStatus: 'generated',
         title: 'Zebra Book'
       },
       {
         annotationStatus: 'no_highlights',
+        bodyState: 'unloaded',
         bookKey: 'book-a',
         epubPath: '/tmp/Alpha.epub',
         epubStatus: 'received',
         fullDocumentMarkdownPath: '/tmp/Alpha.md',
         generatedNodeId: null,
+        highlightState: null,
         highlightMarkdownPath: '/tmp/Alpha Highlights.md',
+        highlightUnmatchedCount: null,
         importStatus: 'pending',
         nodeStatus: 'missing',
         title: 'Alpha Book'

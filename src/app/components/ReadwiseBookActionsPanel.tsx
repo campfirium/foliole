@@ -154,7 +154,7 @@ function useReadwiseBookActions(activeNodeId: string | null) {
         await useWorkspaceStore.persist.rehydrate();
         setBook((current) =>
           current
-            ? { ...current, epubStatus: 'received', importStatus: 'completed', nodeStatus: 'generated' }
+            ? { ...current, bodyState: 'loaded', epubStatus: 'received', importStatus: 'completed', nodeStatus: 'generated' }
             : current
         );
         setLoadProgress({ detail: 'Done.', progress: 1 });

@@ -29,11 +29,15 @@ function seedDefaultInventory() {
     books: [
       {
         annotationStatus: 'has_highlights',
+        bodyState: 'unloaded',
         bookKey: 'book-1',
         epubPath: null,
         epubStatus: 'missing',
+        fullDocumentMarkdownPath: '/tmp/book-1-full.md',
         generatedNodeId: 'node-book-1',
+        highlightState: 'pending',
         highlightMarkdownPath: '/tmp/book-1.md',
+        highlightUnmatchedCount: null,
         importStatus: 'pending',
         nodeStatus: 'generated',
         title: 'Book One'
@@ -139,11 +143,15 @@ describe('ReadwiseBookActionsPanel visibility', () => {
       books: [
         {
           annotationStatus: 'has_highlights',
+          bodyState: 'loaded',
           bookKey: 'book-1',
           epubPath: '/tmp/book-1.epub',
           epubStatus: 'received',
+          fullDocumentMarkdownPath: '/tmp/book-1-full.md',
           generatedNodeId: 'node-book-1',
+          highlightState: 'placed',
           highlightMarkdownPath: '/tmp/book-1.md',
+          highlightUnmatchedCount: 0,
           importStatus: 'completed',
           nodeStatus: 'generated',
           title: 'Book One'

@@ -40,12 +40,15 @@ const READWISE_INVENTORY_WITH_BOOK = {
   books: [
     {
       annotationStatus: 'has_highlights',
+      bodyState: 'unloaded',
       bookKey: 'book-1',
       epubPath: null,
       epubStatus: 'missing',
       fullDocumentMarkdownPath: null,
       generatedNodeId: 'node-1',
+      highlightState: 'pending',
       highlightMarkdownPath: null,
+      highlightUnmatchedCount: null,
       importStatus: 'completed',
       nodeStatus: 'generated',
       title: 'Deep Work'

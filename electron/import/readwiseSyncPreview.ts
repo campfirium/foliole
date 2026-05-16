@@ -35,6 +35,7 @@ type ReadwiseImportSource = ImportManagerSourceDraft & { kind: ReadwiseSourceKin
 function isReadwiseImportSource(source: ImportManagerSourceDraft): source is ReadwiseImportSource {
   return (
     Boolean(source.kind) &&
+    source.kind !== 'books' &&
     source.primaryPath.trim().length > 0 &&
     source.highlightPath.trim().length > 0
   );

@@ -3,82 +3,20 @@ import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 
 import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import type { ReadwiseBookInventoryItem, ReadwiseBooksInventory } from './readwiseBooksInventory.js';
+import { normalizePersistedReadwiseBooksInventoryState } from './readwiseBooksInventoryStateCodec.js';
+import { resolveReadwiseBookHighlightProgress } from './readwiseBookState.js';
 
 const READWISE_BOOKS_INVENTORY_STATE_KEY = 'readwise_books_inventory_state';
-const READWISE_BOOKS_INVENTORY_STATE_VERSION = 1;
+const READWISE_BOOKS_INVENTORY_STATE_VERSION = 2;
 
 type InventoryPaths = Pick<ReadwiseBooksInventory, 'fullDocumentDirectoryPath' | 'highlightDirectoryPath'>;
-
-interface PersistedReadwiseBooksInventoryState {
-  inventories: Record<string, ReadwiseBooksInventory>;
-  version: number;
-}
 
 function createInventoryKey(paths: InventoryPaths) {
   return `${paths.fullDocumentDirectoryPath}\u001f${paths.highlightDirectoryPath}`;
 }
 
-function isBookInventoryItem(value: unknown): value is ReadwiseBookInventoryItem {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-  const candidate = value as Partial<ReadwiseBookInventoryItem>;
-  return (
-    typeof candidate.annotationStatus === 'string' &&
-    typeof candidate.bookKey === 'string' &&
-    (typeof candidate.downloadUrl === 'string' || candidate.downloadUrl === null) &&
-    (typeof candidate.epubPath === 'string' || candidate.epubPath === null) &&
-    typeof candidate.epubStatus === 'string' &&
-    (typeof candidate.fullDocumentMarkdownPath === 'string' || candidate.fullDocumentMarkdownPath === null) &&
-    (typeof candidate.generatedNodeId === 'string' || candidate.generatedNodeId === null) &&
-    (typeof candidate.highlightMarkdownPath === 'string' || candidate.highlightMarkdownPath === null) &&
-    typeof candidate.importStatus === 'string' &&
-    typeof candidate.nodeStatus === 'string' &&
-    typeof candidate.title === 'string'
-  );
-}
-
-function normalizeInventory(value: unknown): ReadwiseBooksInventory | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-  const candidate = value as Partial<ReadwiseBooksInventory>;
-  if (
-    typeof candidate.fullDocumentDirectoryPath !== 'string' ||
-    typeof candidate.highlightDirectoryPath !== 'string' ||
-    typeof candidate.scannedAt !== 'string' ||
-    !Array.isArray(candidate.books)
-  ) {
-    return null;
-  }
-  const books = candidate.books.filter(isBookInventoryItem);
-  return {
-    books,
-    fullDocumentDirectoryPath: candidate.fullDocumentDirectoryPath,
-    highlightDirectoryPath: candidate.highlightDirectoryPath,
-    scannedAt: candidate.scannedAt
-  };
-}
-
-function normalizeState(value: unknown): PersistedReadwiseBooksInventoryState {
-  if (!value || typeof value !== 'object') {
-    return { inventories: {}, version: READWISE_BOOKS_INVENTORY_STATE_VERSION };
-  }
-  const candidate = value as Partial<PersistedReadwiseBooksInventoryState>;
-  const inventories = Object.entries(candidate.inventories ?? {}).reduce<Record<string, ReadwiseBooksInventory>>(
-    (accumulator, [key, inventory]) => {
-      const normalized = normalizeInventory(inventory);
-      if (normalized) {
-        accumulator[key] = normalized;
-      }
-      return accumulator;
-    },
-    {}
-  );
-  return {
-    inventories,
-    version: READWISE_BOOKS_INVENTORY_STATE_VERSION
-  };
+function normalizeState(value: unknown) {
+  return normalizePersistedReadwiseBooksInventoryState(value, READWISE_BOOKS_INVENTORY_STATE_VERSION);
 }
 
 function resolveGeneratedNodeId(book: ReadwiseBookInventoryItem, persistedBook?: ReadwiseBookInventoryItem) {
@@ -96,12 +34,15 @@ function resolveGeneratedNodeId(book: ReadwiseBookInventoryItem, persistedBook?:
 function isSameBookState(left: ReadwiseBookInventoryItem, right: ReadwiseBookInventoryItem) {
   return (
     left.annotationStatus === right.annotationStatus &&
+    left.bodyState === right.bodyState &&
     left.downloadUrl === right.downloadUrl &&
     left.epubPath === right.epubPath &&
     left.epubStatus === right.epubStatus &&
     left.fullDocumentMarkdownPath === right.fullDocumentMarkdownPath &&
     left.generatedNodeId === right.generatedNodeId &&
+    left.highlightState === right.highlightState &&
     left.highlightMarkdownPath === right.highlightMarkdownPath &&
+    left.highlightUnmatchedCount === right.highlightUnmatchedCount &&
     left.importStatus === right.importStatus &&
     left.nodeStatus === right.nodeStatus &&
     left.title === right.title
@@ -159,17 +100,20 @@ export function mergePersistedReadwiseBooksInventory(input: {
       const persistedBook = persistedInventory.books.find((candidate) => candidate.bookKey === book.bookKey);
       const generatedNodeId = resolveGeneratedNodeId(book, persistedBook);
       const nodeStatus = generatedNodeId && hasActiveNode(generatedNodeId) ? 'generated' : 'missing';
+      const importStatus =
+        nodeStatus === 'generated' && (book.importStatus === 'completed' || persistedBook?.importStatus === 'completed')
+          ? 'completed'
+          : 'pending';
       const mergedBook = {
         ...book,
+        bodyState: importStatus === 'completed' ? 'loaded' : 'unloaded',
         downloadUrl: book.downloadUrl ?? persistedBook?.downloadUrl ?? null,
         epubPath: book.epubPath ?? persistedBook?.epubPath ?? null,
         epubStatus: book.epubPath || persistedBook?.epubPath ? 'received' : 'missing',
         generatedNodeId,
-        importStatus:
-          nodeStatus === 'generated' && (book.importStatus === 'completed' || persistedBook?.importStatus === 'completed')
-            ? 'completed'
-            : 'pending',
-        nodeStatus
+        importStatus,
+        nodeStatus,
+        ...resolveReadwiseBookHighlightProgress(book, persistedBook)
       } satisfies ReadwiseBookInventoryItem;
       if (!persistedBook || !isSameBookState(mergedBook, persistedBook)) {
         changedBookKeys.push(book.bookKey);

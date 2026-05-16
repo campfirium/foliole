@@ -39,6 +39,9 @@ export async function resolveReadwiseKeepImportDestination(config: KeepImportRul
   if (!resolved) {
     return 'inbox';
   }
+  if (resolved.readwiseSource.kind === 'books') {
+    return 'off';
+  }
   const decision = await resolveReadwiseSourceImportDecision(source, {
     highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim(),
     readwiseConfig: resolved.readwiseConfig

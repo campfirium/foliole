@@ -161,8 +161,11 @@ it('imports the selected EPUB into the current readwise book node and keeps that
   });
   const reloadedBook = reloadedInventory.books.find((book) => book.bookKey === 'manual book');
   expect(reloadedBook).toMatchObject({
+    bodyState: 'loaded',
     epubPath: selectedEpubPath,
     epubStatus: 'received',
+    highlightState: 'failed',
+    highlightUnmatchedCount: 1,
     importStatus: 'completed'
   });
   expect(reloadedBook?.generatedNodeId).toBeTruthy();
