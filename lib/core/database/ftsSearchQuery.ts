@@ -17,6 +17,7 @@ export interface FtsSearchQueryPlan {
   highlightQuery: string;
   literalQuery: string;
   normalizedQuery: string;
+  termQuery: string | null;
   queryTokens: string[];
 }
 
@@ -38,6 +39,10 @@ function isSearchTermToken(token: string) {
 
 function normalizeSearchPhrase(tokens: string[]) {
   return tokens.map(normalizeSearchToken).filter(Boolean).join(' ');
+}
+
+function normalizeSearchTerms(tokens: string[]) {
+  return tokens.map(normalizeSearchToken).filter(Boolean);
 }
 
 function escapeFtsPhrase(value: string) {
@@ -156,6 +161,17 @@ function resolveHighlightQuery(tokens: string[], normalizedQuery: string, advanc
   return firstSearchTerm ? normalizeSearchToken(firstSearchTerm) : normalizedQuery;
 }
 
+function buildTermQuery(tokens: string[], advancedQuery: string | null) {
+  if (advancedQuery) {
+    return null;
+  }
+  const terms = normalizeSearchTerms(tokens);
+  if (terms.length <= 1) {
+    return null;
+  }
+  return terms.map(escapeFtsPhrase).join(' AND ');
+}
+
 export function buildFtsSearchQueryPlan(query: string): FtsSearchQueryPlan {
   const queryTokens = tokenizeSearchQuery(query);
   const normalizedQuery = normalizeSearchPhrase(queryTokens);
@@ -166,6 +182,7 @@ export function buildFtsSearchQueryPlan(query: string): FtsSearchQueryPlan {
     highlightQuery: resolveHighlightQuery(queryTokens, normalizedQuery, advancedQuery),
     literalQuery: normalizedQuery ? escapeFtsPhrase(normalizedQuery) : '',
     normalizedQuery,
+    termQuery: buildTermQuery(queryTokens, advancedQuery),
     queryTokens
   };
 }
@@ -176,6 +193,10 @@ export function matchesFtsSearchText(text: string, queryPlan: FtsSearchQueryPlan
   }
   const normalizedHaystack = text.toLowerCase().replace(/\s+/g, ' ').trim();
   if (normalizedHaystack.includes(queryPlan.normalizedQuery)) {
+    return true;
+  }
+  const terms = normalizeSearchTerms(queryPlan.queryTokens);
+  if (!queryPlan.advancedQuery && terms.length > 1 && terms.every((term) => normalizedHaystack.includes(term))) {
     return true;
   }
   const expression = queryPlan.advancedQuery ? buildSearchExpression(queryPlan.queryTokens) : null;

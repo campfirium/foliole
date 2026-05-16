@@ -183,6 +183,20 @@ function loadAdvancedFtsWorkspaceMatches(driver: DatabaseDriver, queryPlan: FtsS
   }
 }
 
+function loadTermFtsWorkspaceMatches(driver: DatabaseDriver, queryPlan: FtsSearchQueryPlan) {
+  if (!queryPlan.termQuery) {
+    return [];
+  }
+  try {
+    return [
+      ...loadFtsNodeMatches(driver, queryPlan.termQuery, queryPlan.highlightQuery),
+      ...loadFtsPdfMatches(driver, queryPlan.termQuery, queryPlan.highlightQuery)
+    ];
+  } catch {
+    return [];
+  }
+}
+
 export function searchWorkspace(driver: DatabaseDriver, query: string) {
   const queryPlan = buildFtsSearchQueryPlan(query);
   const normalizedQuery = queryPlan.normalizedQuery;
@@ -195,6 +209,7 @@ export function searchWorkspace(driver: DatabaseDriver, query: string) {
       : mergeRankedResults([
           ...loadFtsNodeMatches(driver, queryPlan.literalQuery, queryPlan.normalizedQuery),
           ...loadFtsPdfMatches(driver, queryPlan.literalQuery, queryPlan.normalizedQuery),
+          ...loadTermFtsWorkspaceMatches(driver, queryPlan),
           ...loadCrossPagePdfMatches(driver, queryPlan.normalizedQuery),
           ...loadAdvancedFtsWorkspaceMatches(driver, queryPlan)
         ]);

@@ -72,6 +72,19 @@ it('keeps punctuation and malformed advanced input on the ordinary workspace sea
   expect(searchWorkspace('Atlas AND AND Launch').map((result) => result.id)).toContain('node-literal');
 });
 
+it('finds ordinary multi-word workspace queries when punctuation separates the terms', () => {
+  insertNode({
+    id: 'node-colon-title',
+    title: 'Daily Import',
+    content: 'Lists Twitter List: January 17',
+    updatedAt: '2026-05-03T00:00:00.000Z'
+  });
+
+  const results = searchWorkspace('Lists Twitter List January');
+
+  expect(results.map((result) => result.id)).toContain('node-colon-title');
+});
+
 it('supplements node and PDF results with valid uppercase boolean search', () => {
   insertNode({
     id: 'node-advanced',

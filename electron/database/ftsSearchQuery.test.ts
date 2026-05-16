@@ -6,6 +6,7 @@ it('builds a quoted literal query and escapes embedded double quotes', () => {
   const plan = buildFtsSearchQueryPlan('Alpha "Bravo" c"d');
 
   expect(plan.literalQuery).toBe('"alpha bravo c""d"');
+  expect(plan.termQuery).toBe('"alpha" AND "bravo" AND "c""d"');
   expect(plan.advancedQuery).toBeNull();
 });
 
@@ -15,6 +16,13 @@ it('keeps punctuation out of the ordinary literal query', () => {
   expect(plan.literalQuery).toBe('"question"');
   expect(plan.advancedQuery).toBeNull();
   expect(matchesFtsSearchText('This question has a plain marker.', plan)).toBe(true);
+});
+
+it('matches ordinary text when punctuation separates query terms in the document', () => {
+  const plan = buildFtsSearchQueryPlan('Lists Twitter List January');
+
+  expect(matchesFtsSearchText('Lists Twitter List: January 17', plan)).toBe(true);
+  expect(plan.termQuery).toBe('"lists" AND "twitter" AND "list" AND "january"');
 });
 
 it('adds an advanced query only for standalone uppercase boolean operators', () => {
