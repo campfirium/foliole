@@ -33,6 +33,7 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
             props.onSelectNode(result.node_id);
           }
         }}
+        onOpenImportedNodeId={props.onSelectNode}
         onOpenSelection={props.onOpenExternalSelection}
         onPreviewEditorReady={props.onExternalPreviewEditorReady ?? (() => undefined)}
         previewState={props.externalPreviewState ?? EMPTY_EXTERNAL_PREVIEW_STATE}

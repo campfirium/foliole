@@ -44,7 +44,7 @@ export async function classifySource(
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
   const blockedState = isBlockedByDeletedNode(config.ruleId, sourcePath);
   const deleted = config.sourceType !== 'readwise' && blockedState.deleted;
-  const existingItem = config.sourceType === 'readwise' && blockedState.deleted ? null : blockedState.existingItem;
+  const existingItem = blockedState.existingItem;
   const notImported = existingItem?.last_status === 'discovered' && !existingItem.last_node_id;
   const primaryChanged = hasPrimarySourceChanged(existingItem, sourceSignature);
   const highlightChanged = config.sourceType === 'readwise' ? hasHighlightSourceChanged(existingItem, sourceSignature) : false;

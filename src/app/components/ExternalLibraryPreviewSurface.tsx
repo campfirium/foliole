@@ -26,6 +26,7 @@ export function ExternalLibraryPreviewSurface(args: {
   onGoBack: () => void;
   onGoForward: () => void;
   onHandleImport: () => void;
+  onOpenImportedNodeId: (nodeId: string) => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
   onPreviewEditorReady: (adapter: EditorAdapter | null) => void;
   preview: ExternalDocumentPreview;
@@ -33,12 +34,8 @@ export function ExternalLibraryPreviewSurface(args: {
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
 
-  const style = {
-    '--document-max-width': `${args.documentMaxWidth}px`
-  } as CSSProperties;
-
   return (
-    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col" style={style}>
+    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col" style={toDocumentWidthStyle(args.documentMaxWidth)}>
       <ExternalPreviewHeader
         canGoBack={args.canGoBack}
         canGoForward={args.canGoForward}
@@ -52,8 +49,10 @@ export function ExternalLibraryPreviewSurface(args: {
         ref={contentAreaRef}
       >
         <ExternalImportAction
+          importedNodeId={args.preview.importedNodeId ?? null}
           isImporting={args.isImporting}
           onHandleImport={args.onHandleImport}
+          onOpenImportedNodeId={args.onOpenImportedNodeId}
         />
         <MarkdownEditor
           blockImageMaxHeightOverride={520}
@@ -76,6 +75,10 @@ export function ExternalLibraryPreviewSurface(args: {
       </div>
     </section>
   );
+}
+
+function toDocumentWidthStyle(documentMaxWidth: number) {
+  return { '--document-max-width': `${documentMaxWidth}px` } as CSSProperties;
 }
 
 function ExternalPreviewHeader(args: {
@@ -120,25 +123,35 @@ function ExternalPreviewHeader(args: {
 }
 
 function ExternalImportAction(args: {
+  importedNodeId: string | null;
   isImporting: boolean;
   onHandleImport: () => void;
+  onOpenImportedNodeId: (nodeId: string) => void;
 }) {
+  const isImported = Boolean(args.importedNodeId);
+  const label = isImported ? 'Imported' : 'Import';
   return (
     <div className="pointer-events-none absolute inset-x-0 top-5 z-local-overlay overflow-visible">
       <div className="mx-auto flex w-full max-w-[var(--document-max-width)] justify-end px-[var(--document-content-inline-padding)]">
         <AppTooltip>
           <AppTooltipTrigger asChild>
             <button
-              aria-label="Import to Foliole"
+              aria-label={isImported ? 'Open imported Topic' : 'Import to Foliole'}
               className="pointer-events-auto inline-flex h-10 min-w-20 translate-x-[calc(100%+theme(spacing.3))] items-center justify-center rounded-md border border-transparent bg-[var(--app-accent-color)] px-4 text-sm font-medium text-accent-foreground shadow-control transition-colors hover:bg-[rgb(var(--app-accent-color-rgb)/0.88)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 max-[1280px]:translate-x-0"
               disabled={args.isImporting}
-              onClick={args.onHandleImport}
+              onClick={() => {
+                if (args.importedNodeId) {
+                  args.onOpenImportedNodeId(args.importedNodeId);
+                  return;
+                }
+                args.onHandleImport();
+              }}
               type="button"
             >
-              Import
+              {label}
             </button>
           </AppTooltipTrigger>
-          <AppTooltipContent side="left">Import to Foliole</AppTooltipContent>
+          <AppTooltipContent side="left">{isImported ? 'Open imported Topic' : 'Import to Foliole'}</AppTooltipContent>
         </AppTooltip>
       </div>
     </div>

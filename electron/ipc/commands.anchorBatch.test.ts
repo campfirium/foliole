@@ -32,7 +32,7 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
   loadReviewSchedulerSettings: vi.fn(),
   saveReviewSchedulerSettings: vi.fn()
 }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn() }));
 vi.mock('../mirror/rebuildMirrorOutput.js', () => ({ rebuildMirrorOutput: vi.fn() }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
@@ -66,6 +66,10 @@ it('handles batched parent and text-anchor mutations in one command', async () =
             kind: 'highlight',
             locator: { from: 6, to: 12, originalText: 'Better' }
           },
+          imageRegions: [{
+            attachmentId: 'asset-1',
+            regions: [{ height: 1, id: 'hl-1-image-0', width: 1, x: 0, y: 0 }]
+          }],
           updatedAt: '2026-03-06T00:00:03.000Z'
         }]
       }
@@ -78,7 +82,11 @@ it('handles batched parent and text-anchor mutations in one command', async () =
       nodeId: 'node-child',
       anchorLink: expect.objectContaining({
         locator: { from: 6, to: 12, originalText: 'Better' }
-      })
+      }),
+      imageRegions: [{
+        attachmentId: 'asset-1',
+        regions: [{ height: 1, id: 'hl-1-image-0', width: 1, x: 0, y: 0 }]
+      }]
     })
   ]);
 });

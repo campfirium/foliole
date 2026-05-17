@@ -1,7 +1,5 @@
-import { buildFtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 
-import { isExternalDocumentVisible, loadActiveImportedSourceLocators } from './externalDocumentImportVisibility.js';
 import {
   markExternalDocumentsMissing,
   replaceExternalDocumentsForFolder,
@@ -14,22 +12,14 @@ import {
   replaceFolderDocuments,
   scanFolder,
   scanFolderEntries,
-  type ExternalSearchRow,
   type ScannedDocument,
-  type ScannedDocumentEntry,
-  toExternalResult
+  type ScannedDocumentEntry
 } from './externalSearchCacheSupport.js';
 import { applyFolderDocumentChanges } from './externalSearchDocumentChanges.js';
 import { loadExternalSearchFolders, updateExternalSearchFolderIndexState } from './externalSearchFolders.js';
-import {
-  mergeExternalSearchRows,
-  readAdvancedExternalSearchRows,
-  readExternalSearchFtsRows
-} from './externalSearchQueryRows.js';
-import {
-  loadReadwiseExternalSearchFolders,
-  searchReadwiseExternalDocuments
-} from './readwiseManagedExternalDocuments.js';
+import { loadReadwiseExternalSearchFolders } from './readwiseManagedExternalDocuments.js';
+
+export { searchExternalDocuments } from './externalSearchDocumentSearch.js';
 
 type SqliteDatabase = import('better-sqlite3').Database;
 interface CachedFolderDocumentRow { absolute_path: string; is_present: number; modified_ms: number; relative_path: string; size_bytes: number }
@@ -183,46 +173,4 @@ export async function refreshExternalSearchIndexes(folderId?: string, options: E
     }
   }
   return [...loadExternalSearchFolders(), ...loadReadwiseExternalSearchFolders()];
-}
-
-export function searchExternalDocuments(query: string) {
-  const db = openExternalSearchCacheDatabase();
-  const queryPlan = buildFtsSearchQueryPlan(query);
-  const normalizedQuery = queryPlan.normalizedQuery;
-  if (!normalizedQuery) {
-    return [];
-  }
-  const rows =
-    normalizedQuery.length <= 2
-      ? db
-          .prepare(
-            `SELECT
-              absolute_path,
-              file_name,
-              folder_id,
-              folder_path,
-              relative_path,
-              content AS text,
-              modified_at,
-              1000 AS rank
-             FROM external_search_documents
-             WHERE is_present = 1
-               AND (instr(lower(file_name), ?) > 0
-                OR instr(lower(relative_path), ?) > 0
-                OR instr(lower(content), ?) > 0)
-             ORDER BY modified_ms DESC
-             LIMIT 20`
-          )
-          .all(normalizedQuery, normalizedQuery, normalizedQuery) as ExternalSearchRow[]
-      : mergeExternalSearchRows([
-          ...readExternalSearchFtsRows(db, queryPlan.literalQuery),
-          ...readAdvancedExternalSearchRows(db, queryPlan.advancedQuery)
-        ]);
-  const activeImportedLocators = loadActiveImportedSourceLocators();
-  return [
-    ...rows
-      .filter((row) => isExternalDocumentVisible(row.absolute_path, activeImportedLocators))
-      .map((row) => toExternalResult(row, queryPlan.highlightQuery)),
-    ...searchReadwiseExternalDocuments(queryPlan)
-  ];
 }

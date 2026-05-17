@@ -60,6 +60,7 @@ function toNodeAnchorLocatorUpdatePayload(node: WorkspaceRuntimeNode) {
   return {
     nodeId: node.id,
     anchorLink: node.anchorLink,
+    imageRegions: node.imageRegions ?? null,
     updatedAt: node.updatedAt
   };
 }

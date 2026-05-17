@@ -21,17 +21,17 @@ import type {
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
-import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
 import { RemovedSourcesPanel } from './RemovedSourcesPanel';
 import { TrashResultListPanel } from './TrashResultListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
+import { renderExternalContentColumn } from './workspaceDualListExternalContent';
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
 import { useWorkspaceDualListState } from './workspaceDualListState';
 import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
-interface WorkspaceDualListContentProps {
+export interface WorkspaceDualListContentProps {
   activeNodeId: string | null;
   activeVirtualNodeId?: string | null;
   externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
@@ -140,17 +140,6 @@ function renderVirtualContentColumn(props: WorkspaceDualListContentProps) {
       nodes={items}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNodeInVirtualView}
-    />
-  );
-}
-
-function renderExternalContentColumn(props: WorkspaceDualListContentProps) {
-  return (
-    <ExternalLibraryListPanel
-      entriesByFolderId={props.externalEntriesByFolderId}
-      folders={props.externalFolders}
-      onOpenExternalSelection={props.onOpenExternalSelection}
-      selection={props.externalSelection}
     />
   );
 }

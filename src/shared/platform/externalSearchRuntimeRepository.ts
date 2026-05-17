@@ -34,6 +34,7 @@ export interface RuntimeExternalSearchPreview {
   fileName: string;
   folderId: string;
   folderPath: string;
+  importedNodeId?: string | null;
   relativePath: string;
 }
 
@@ -43,6 +44,7 @@ export interface RuntimeExternalSearchBrowseEntry {
   fileName: string;
   folderId: string;
   folderPath: string;
+  importedNodeId?: string | null;
   modifiedAt: string;
   openingText: string | null;
   relativePath: string;
@@ -84,6 +86,7 @@ function toPreview(value: NativeExternalSearchPreview): RuntimeExternalSearchPre
     fileName: value.file_name,
     folderId: value.folder_id,
     folderPath: value.folder_path,
+    importedNodeId: value.imported_node_id ?? null,
     relativePath: value.relative_path
   };
 }
@@ -95,6 +98,7 @@ function toBrowseEntry(value: NativeExternalSearchBrowseEntry): RuntimeExternalS
     fileName: value.file_name,
     folderId: value.folder_id,
     folderPath: value.folder_path,
+    importedNodeId: value.imported_node_id ?? null,
     modifiedAt: value.modified_at,
     openingText: value.opening_text,
     relativePath: value.relative_path,

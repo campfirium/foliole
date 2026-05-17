@@ -100,7 +100,8 @@ export function listRemovedKeepImportItems(driver: DatabaseDriver) {
 
 export function markKeepImportItemsLocallyDeletedByNodeDeletedAt(
   driver: DatabaseDriver,
-  nodeDeletedAt: Array<{ deletedAt: string; nodeId: string }>
+  nodeDeletedAt: Array<{ deletedAt: string; nodeId: string }>,
+  options: { excludedRuleIds?: ReadonlySet<string> } = {}
 ) {
   if (nodeDeletedAt.length === 0) {
     return;
@@ -114,7 +115,51 @@ export function markKeepImportItemsLocallyDeletedByNodeDeletedAt(
        AND last_node_id = ?`
   );
   for (const row of nodeDeletedAt) {
+    if (hasExcludedKeepImportRule(driver, row.nodeId, options.excludedRuleIds)) {
+      continue;
+    }
     statement.run([row.deletedAt, row.nodeId]);
+  }
+}
+
+function hasExcludedKeepImportRule(driver: DatabaseDriver, nodeId: string, excludedRuleIds: ReadonlySet<string> | undefined) {
+  if (!excludedRuleIds?.size) {
+    return false;
+  }
+  const rows = driver.queryAll<{ rule_id: string }>(
+    `SELECT rule_id
+     FROM keep_import_items
+     WHERE source_state = 'present'
+       AND last_node_id = ?`,
+    [nodeId]
+  );
+  return rows.some((row) => excludedRuleIds.has(row.rule_id));
+}
+
+export function releaseKeepImportItemsByNodeIds(
+  driver: DatabaseDriver,
+  nodeIds: string[],
+  options: { includedRuleIds?: ReadonlySet<string>; releasedAt: string }
+) {
+  if (nodeIds.length === 0 || !options.includedRuleIds?.size) {
+    return;
+  }
+  const statement = driver.prepare(
+    `UPDATE keep_import_items
+     SET local_node_state = 'not_imported',
+         last_status = 'discovered',
+         last_node_id = NULL,
+         deleted_at = NULL,
+         last_imported_at = NULL,
+         last_seen_at = ?
+     WHERE source_state = 'present'
+       AND last_node_id = ?
+       AND rule_id = ?`
+  );
+  for (const nodeId of nodeIds) {
+    for (const ruleId of options.includedRuleIds) {
+      statement.run([options.releasedAt, nodeId, ruleId]);
+    }
   }
 }
 

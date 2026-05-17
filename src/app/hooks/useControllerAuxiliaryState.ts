@@ -3,8 +3,8 @@ import { useMemo } from 'react';
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
-import type { ExternalDocumentPreviewRequest } from '../components/externalDocumentPreviewState';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
+import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import { buildControllerPaletteState } from './appControllerPaletteState';
 import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -43,7 +43,7 @@ export function useControllerAuxiliaryState(args: {
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
-  onOpenExternalPreview: (request: ExternalDocumentPreviewRequest) => void;
+  onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
   paletteItems: CommandPaletteItem[];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
@@ -68,8 +68,11 @@ export function useControllerAuxiliaryState(args: {
   });
   const moveToNodeState = buildControllerMoveToNodeState({ runtime: args.controller.runtime, ws: args.ws });
   const searchState = buildControllerSearchState({
-    externalPreview: {
-      openExternalPreview: args.onOpenExternalPreview
+    externalLibrary: {
+      openExternalSelection: args.layoutProps.externalLibrary.onOpenExternalSelection
+    },
+    searchPreview: {
+      openSearchPreview: args.onOpenSearchPreview
     },
     nav: args.controller.nav,
     runtime: args.controller.runtime,

@@ -21,6 +21,17 @@ function isValidRange(range: HighlightRangeUpdate, contentLength: number) {
   );
 }
 
+function resolveSyncedHighlightContent(currentContent: string, previousText: string, nextText: string) {
+  if (currentContent === previousText) {
+    return nextText;
+  }
+  if (!currentContent.startsWith(previousText)) {
+    return null;
+  }
+  const suffix = currentContent.slice(previousText.length);
+  return suffix === '' || suffix.startsWith('\n') ? `${nextText}${suffix}` : null;
+}
+
 function buildUpdatedHighlightNode(args: {
   node: Node;
   parentContent: string;
@@ -39,7 +50,7 @@ function buildUpdatedHighlightNode(args: {
     to: args.range.to
   };
   const previousLocator = args.node.anchorLink.locator;
-  const shouldSyncContent = args.node.content === previousLocator.originalText;
+  const syncedContent = resolveSyncedHighlightContent(args.node.content, previousLocator.originalText, locator.originalText);
   const shouldSyncTitle = !args.node.isTitleManual && args.node.title === previousLocator.originalText;
   return {
     ...args.node,
@@ -47,7 +58,7 @@ function buildUpdatedHighlightNode(args: {
       ...args.node.anchorLink,
       locator
     },
-    ...(shouldSyncContent ? { content: locator.originalText } : {}),
+    ...(syncedContent !== null ? { content: syncedContent } : {}),
     ...(shouldSyncTitle ? { title: locator.originalText } : {}),
     updatedAt: args.timestamp
   } satisfies Node;

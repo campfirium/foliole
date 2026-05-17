@@ -5,7 +5,7 @@ import type { WorkspaceSearchResult } from './workspaceSearch';
 
 export async function openImportedExternalResult(
   result: ExternalDocumentImportResult,
-  onOpenResult: (result: WorkspaceSearchResult) => void,
+  onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void,
   setExternalPreviewPath: (value: string | null) => void
 ) {
   setExternalPreviewPath(null);

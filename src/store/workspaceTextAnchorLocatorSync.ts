@@ -1,4 +1,8 @@
 import {
+  deriveMarkdownImageTextAnchorRegions,
+  expandMarkdownImageTextLocator
+} from '../../lib/core/anchors/markdownImageTextAnchor';
+import {
   remapTextAnchorLocator
 } from '../features/editor/model/textAnchorLocatorResolution';
 import {
@@ -24,6 +28,10 @@ function areLocatorsEqual(left: TextAnchorLocator[], right: TextAnchorLocator[])
   });
 }
 
+function areImageRegionsEqual(left: Node['imageRegions'], right: Node['imageRegions']) {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
 function shouldSyncTextAnchorNode(node: Node, parentNodeId: string) {
   return node.parentNodeId === parentNodeId && getTextAnchorLocators(node.anchorLink?.locator).length > 0;
 }
@@ -41,8 +49,19 @@ function buildNextTextAnchorNode(args: {
   if (currentLocators.length === 0) {
     return null;
   }
-  const nextLocators = currentLocators.map((locator) => remapTextAnchorLocator(args.nextContent, locator, args.previousContent));
-  if (areLocatorsEqual(currentLocators, nextLocators)) {
+  const nextLocators = currentLocators.map((locator) =>
+    expandMarkdownImageTextLocator(
+      args.nextContent,
+      remapTextAnchorLocator(args.nextContent, locator, args.previousContent),
+      locator
+    )
+  );
+  const nextImageRegions = deriveMarkdownImageTextAnchorRegions({
+    anchorId: args.node.anchorLink.id,
+    content: args.nextContent,
+    locators: nextLocators
+  });
+  if (areLocatorsEqual(currentLocators, nextLocators) && areImageRegionsEqual(args.node.imageRegions, nextImageRegions)) {
     return null;
   }
   return {
@@ -51,6 +70,7 @@ function buildNextTextAnchorNode(args: {
       ...args.node.anchorLink,
       locator: createLocatorValue(nextLocators)
     },
+    imageRegions: nextImageRegions,
     updatedAt: args.timestamp
   } satisfies Node;
 }

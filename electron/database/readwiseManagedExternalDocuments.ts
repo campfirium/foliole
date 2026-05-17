@@ -7,13 +7,17 @@ import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.
 import type {
   NativeExternalSearchBrowseEntry,
   NativeExternalSearchFolder,
-  NativeExternalSearchPreview,
-  NativeWorkspaceSearchResult
+  NativeExternalSearchPreview
 } from '../../lib/platform/nativeStorageContract.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { isExternalDocumentVisible, loadActiveImportedSourceLocators } from './externalDocumentImportVisibility.js';
+import {
+  isExternalDocumentVisible,
+  loadActiveImportedSourceLocatorNodeIds,
+  loadActiveImportedSourceLocators,
+  resolveImportedNodeIdForExternalDocument
+} from './externalDocumentImportVisibility.js';
 
 const READWISE_EXTERNAL_FOLDER_PREFIX = 'readwise-reader-import';
 
@@ -84,7 +88,7 @@ function readReadwiseExternalDocumentRows(folderId?: string) {
     .all(...(folderId ? [folderId] : [])) as ReadwiseExternalDocumentRow[];
 }
 
-function toBrowseEntry(row: ReadwiseExternalDocumentRow): NativeExternalSearchBrowseEntry {
+function toBrowseEntry(row: ReadwiseExternalDocumentRow, importedNodeId: string | null = null): NativeExternalSearchBrowseEntry {
   const title =
     row.title ||
     resolveImportedNodeTitle({
@@ -98,6 +102,7 @@ function toBrowseEntry(row: ReadwiseExternalDocumentRow): NativeExternalSearchBr
     file_name: row.file_name,
     folder_id: row.folder_id,
     folder_path: resolveReadwiseFolderPath(row.folder_id),
+    imported_node_id: importedNodeId,
     modified_at: row.source_modified_at,
     opening_text: row.opening_text ?? resolveNodeOpeningText(row.content, title),
     relative_path: row.relative_path,
@@ -135,10 +140,12 @@ export function loadReadwiseExternalSearchFolders(): NativeExternalSearchFolder[
 }
 
 export function loadReadwiseExternalSearchBrowseEntries(folderId: string) {
-  const activeImportedLocators = loadActiveImportedSourceLocators();
+  const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
   return readReadwiseExternalDocumentRows(folderId)
-    .map(toBrowseEntry)
-    .filter((entry) => isExternalDocumentVisible(entry.absolute_path, activeImportedLocators));
+    .map((row) => {
+      const absolutePath = resolveDocumentAbsolutePath(row);
+      return toBrowseEntry(row, resolveImportedNodeIdForExternalDocument(absolutePath, importedNodeIdsByLocator));
+    });
 }
 
 export function loadReadwiseExternalSearchPreview(
@@ -147,7 +154,7 @@ export function loadReadwiseExternalSearchPreview(
   const row = readReadwiseExternalDocumentRows().find(
     (entry) => resolveDocumentAbsolutePath(entry) === absolutePath
   );
-  if (!row || !isExternalDocumentVisible(absolutePath)) {
+  if (!row) {
     return null;
   }
   return {
@@ -157,16 +164,18 @@ export function loadReadwiseExternalSearchPreview(
     file_name: row.file_name,
     folder_id: row.folder_id,
     folder_path: resolveReadwiseFolderPath(row.folder_id),
+    imported_node_id: resolveImportedNodeIdForExternalDocument(absolutePath),
     relative_path: row.relative_path
   };
 }
 
-export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan): NativeWorkspaceSearchResult[] {
+export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan) {
   const normalizedQuery = queryPlan.normalizedQuery;
   if (!normalizedQuery) {
     return [];
   }
   const activeImportedLocators = loadActiveImportedSourceLocators();
+  const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
   return readReadwiseExternalDocumentRows()
     .filter((row) => isExternalDocumentVisible(resolveDocumentAbsolutePath(row), activeImportedLocators))
     .filter((row) => matchesFtsSearchText([row.file_name, row.relative_path, row.content].join(' '), queryPlan))
@@ -177,6 +186,7 @@ export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan): 
         absolutePath: resolveDocumentAbsolutePath(row),
         folderId: row.folder_id,
         folderPath: resolveReadwiseFolderPath(row.folder_id),
+        importedNodeId: resolveImportedNodeIdForExternalDocument(resolveDocumentAbsolutePath(row), importedNodeIdsByLocator),
         query: queryPlan.highlightQuery,
         relativePath: row.relative_path
       },

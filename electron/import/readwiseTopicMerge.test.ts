@@ -70,8 +70,8 @@ function readMergedState(nodeId: string) {
     )
     .get(nodeId) as { body_blob_data: string; body_blob_hash: string; content: string } | undefined;
   const children = connection.sqlite
-    .prepare('SELECT content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
-    .all(nodeId) as Array<{ anchor_link: string | null; content: string }>;
+    .prepare('SELECT content, anchor_link, image_regions FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+    .all(nodeId) as Array<{ anchor_link: string | null; content: string; image_regions: string | null }>;
   return { children, node };
 }
 
@@ -235,5 +235,6 @@ it('localizes shared remote images before matching manually merged readwise high
   expect(state.children[0]?.content).not.toContain('View Highlight');
   expect(locator?.originalText).toContain('![Avatar](asset://');
   expect(locator ? state.node?.content.slice(locator.from, locator.to) : null).toBe(locator?.originalText);
+  expect(state.children[0]?.image_regions).not.toBeNull();
   expect(attachmentRows).toHaveLength(1);
 });

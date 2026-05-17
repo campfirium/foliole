@@ -188,7 +188,9 @@ it('renders search results as title context and path rows', async () => {
   expect(screen.getByText('Highlight')).toBeInTheDocument();
   expect(screen.queryByText('Content')).not.toBeInTheDocument();
   expect(screen.queryByText('Title')).not.toBeInTheDocument();
-  const resultButtons = screen.getAllByRole('button').filter((button) => button.getAttribute('aria-label') !== 'Search workspace');
+  const resultButtons = screen.getAllByRole('button').filter((button) =>
+    button.getAttribute('aria-label') !== 'Search workspace' && button.textContent !== 'Shift Preview'
+  );
   expect(resultButtons[0]).toHaveTextContent('Atlas note');
   expect(resultButtons[1]).toHaveTextContent('Atlas highlight');
 });

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { appFloatingInputClassName } from '../../shared/ui';
 
@@ -8,7 +9,7 @@ interface FloatingPaletteInputProps {
   inputLabel: string;
   onClose: () => void;
   onQueryChange: (value: string) => void;
-  onRunActive: () => void;
+  onRunActive: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
   onSetActiveIndex: (update: (current: number) => number) => void;
   placeholder: string;
   query: string;

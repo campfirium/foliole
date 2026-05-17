@@ -50,6 +50,7 @@ it('opens the link panel when an external document preview link is clicked', () 
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onHandleImport={vi.fn()}
+      onOpenImportedNodeId={vi.fn()}
       onOpenSelection={vi.fn()}
       onPreviewEditorReady={vi.fn()}
       preview={{
@@ -97,6 +98,7 @@ it('remounts the external library preview editor when editor appearance changes'
     onGoBack: vi.fn(),
     onGoForward: vi.fn(),
     onHandleImport: vi.fn(),
+    onOpenImportedNodeId: vi.fn(),
     onOpenSelection: vi.fn(),
     onPreviewEditorReady: vi.fn(),
     preview

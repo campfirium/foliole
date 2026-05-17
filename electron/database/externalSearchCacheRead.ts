@@ -5,7 +5,10 @@ import type {
   NativeExternalSearchPreview
 } from '../../lib/platform/nativeStorageContract.js';
 
-import { isExternalDocumentVisible, loadActiveImportedSourceLocators } from './externalDocumentImportVisibility.js';
+import {
+  loadActiveImportedSourceLocatorNodeIds,
+  resolveImportedNodeIdForExternalDocument
+} from './externalDocumentImportVisibility.js';
 import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
 import { resolveExternalPreviewSourceContent, rewriteExternalPreviewContent } from './externalSearchPreviewContent.js';
@@ -19,7 +22,7 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
   if (isReadwiseExternalFolderId(folderId)) {
     return loadReadwiseExternalSearchBrowseEntries(folderId);
   }
-  const activeImportedLocators = loadActiveImportedSourceLocators();
+  const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
   return (
     openExternalSearchCacheDatabase()
       .prepare(
@@ -38,7 +41,7 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
       modified_at: string;
       relative_path: string;
     }>
-  ).filter((row) => isExternalDocumentVisible(row.absolute_path, activeImportedLocators)).map((row) => {
+  ).map((row) => {
     const title = resolveImportedNodeTitle({
       content: row.content,
       sourceName: row.relative_path,
@@ -50,6 +53,7 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
       file_name: row.file_name,
       folder_id: row.folder_id,
       folder_path: row.folder_path,
+      imported_node_id: resolveImportedNodeIdForExternalDocument(row.absolute_path, importedNodeIdsByLocator),
       modified_at: row.modified_at,
       opening_text: resolveNodeOpeningText(row.content, title),
       relative_path: row.relative_path,
@@ -59,9 +63,6 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
 }
 
 export function loadExternalSearchPreview(absolutePath: string): NativeExternalSearchPreview | null {
-  if (!isExternalDocumentVisible(absolutePath)) {
-    return null;
-  }
   const row = openExternalSearchCacheDatabase()
     .prepare(
       `SELECT absolute_path, folder_id, folder_path, relative_path, file_name, extension, content
@@ -80,6 +81,7 @@ export function loadExternalSearchPreview(absolutePath: string): NativeExternalS
   if (!row) {
     return loadReadwiseExternalSearchPreview(absolutePath);
   }
+  const importedNodeId = resolveImportedNodeIdForExternalDocument(absolutePath);
   const folder = loadExternalSearchFolders().find((item) => item.id === row.folder_id) ?? null;
   const previewContent = resolveExternalPreviewSourceContent(row.content, row.absolute_path);
   return {
@@ -87,6 +89,7 @@ export function loadExternalSearchPreview(absolutePath: string): NativeExternalS
     content:
       row.extension === 'md'
         ? rewriteExternalPreviewContent(previewContent, row.absolute_path, folder)
-        : previewContent
+        : previewContent,
+    imported_node_id: importedNodeId
   };
 }

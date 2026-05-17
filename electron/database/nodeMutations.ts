@@ -17,7 +17,10 @@ import type {
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
-import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
+import {
+  markKeepImportItemsLocallyDeletedByNodeDeletedAt,
+  releaseReadwiseKeepImportItemsByNodeIds
+} from './keepImportItems.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import { withTransaction } from './transaction.js';
@@ -122,6 +125,7 @@ export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): stri
   const attachmentCleanupPlan = createAttachmentCleanupPlan(input.nodeIds);
   const nodeDeletedAt = readNodeDeletedAtForPermanentDelete(input.nodeIds, deletedAt);
   markKeepImportItemsLocallyDeletedByNodeDeletedAt(nodeDeletedAt);
+  releaseReadwiseKeepImportItemsByNodeIds(input.nodeIds, deletedAt);
   const affectedParentNodeIds = deleteNodesPermanentlyViaDriver(connection.driver, input);
   withTransaction(connection.driver, () => {
     cleanupOrphanAttachments(connection.driver, attachmentCleanupPlan);

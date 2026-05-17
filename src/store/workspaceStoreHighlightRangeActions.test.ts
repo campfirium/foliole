@@ -115,6 +115,33 @@ it('derives the updated locator text from the highlight child parent node', () =
   });
 });
 
+it('updates the anchored text inside a noted highlight child content', () => {
+  const { actions, harness } = createHarness();
+  harness.getState().nodesById['highlight-1'] = createHighlightNode({
+    content: 'Beta\n※ Existing note',
+    title: 'Beta'
+  });
+
+  const updated = actions.updateHighlightAnchorRange?.('highlight-1', { from: 6, to: 16 });
+
+  expect(updated).toBe(true);
+  expect(harness.getState().nodesById['highlight-1']).toEqual(expect.objectContaining({
+    content: 'Beta Gamma\n※ Existing note',
+    title: 'Beta Gamma',
+    anchorLink: expect.objectContaining({
+      locator: {
+        from: 6,
+        originalText: 'Beta Gamma',
+        to: 16
+      }
+    })
+  }));
+  expect(syncNodeContentToRuntime).toHaveBeenCalledWith(expect.objectContaining({
+    content: 'Beta Gamma\n※ Existing note',
+    title: 'Beta Gamma'
+  }));
+});
+
 it('rejects ambiguous or invalid highlight range updates', () => {
   const { actions, harness } = createHarness();
   harness.getState().nodesById['multi-range'] = createHighlightNode({
