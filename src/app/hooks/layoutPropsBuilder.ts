@@ -33,6 +33,7 @@ export function countDueReviewNodes(
 function createSessionActions(args: BuildLayoutPropsArgs) {
   const enterReviewMode = () =>
     enterReviewModeSession({
+      onReviewSessionStarted: args.onOpenNotesView,
       startReviewSession: args.startReviewSession,
       startStudyMode: args.startStudyMode
     });

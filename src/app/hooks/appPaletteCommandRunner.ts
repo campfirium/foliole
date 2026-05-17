@@ -32,6 +32,7 @@ interface PaletteCommandRunnerArgs {
   dismissReviewItem: () => boolean;
   isReviewMode: boolean;
   openImportManagement: () => void;
+  openNotesView: () => void;
   onToggleEditorDisplayMode: () => void;
   onToggleImmersiveMode: () => void;
   onToggleListVisibility: () => void;
@@ -128,7 +129,12 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
 export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
   const toggleReviewMode = () =>
     runReviewModeToggle(args.isReviewMode, {
-      enterReviewMode: () => enterReviewModeSession(args),
+      enterReviewMode: () =>
+        enterReviewModeSession({
+          onReviewSessionStarted: args.openNotesView,
+          startReviewSession: args.startReviewSession,
+          startStudyMode: args.startStudyMode
+        }),
       exitReviewMode: () => {
         args.exitReviewSession();
         args.exitStudyMode();

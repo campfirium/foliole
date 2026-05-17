@@ -3,26 +3,33 @@ import { expect, it, vi } from 'vitest';
 import { enterReviewModeSession, toggleReviewModeSession } from './reviewModeSessionActions';
 
 it('opens study mode after a review session starts', () => {
+  const onReviewSessionStarted = vi.fn();
   const startStudyMode = vi.fn();
 
   const started = enterReviewModeSession({
+    onReviewSessionStarted,
     startReviewSession: () => true,
     startStudyMode
   });
 
   expect(started).toBe(true);
+  expect(onReviewSessionStarted).toHaveBeenCalledTimes(1);
+  expect(onReviewSessionStarted.mock.invocationCallOrder[0]!).toBeLessThan(startStudyMode.mock.invocationCallOrder[0]!);
   expect(startStudyMode).toHaveBeenCalledWith({ force: true });
 });
 
 it('does not open study mode when the review queue is empty', () => {
+  const onReviewSessionStarted = vi.fn();
   const startStudyMode = vi.fn();
 
   const started = enterReviewModeSession({
+    onReviewSessionStarted,
     startReviewSession: () => false,
     startStudyMode
   });
 
   expect(started).toBe(false);
+  expect(onReviewSessionStarted).not.toHaveBeenCalled();
   expect(startStudyMode).not.toHaveBeenCalled();
 });
 

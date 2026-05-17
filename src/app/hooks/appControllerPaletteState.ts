@@ -171,6 +171,7 @@ function createPaletteRunnerArgs(args: {
     onToggleImmersiveMode: args.layoutProps.layoutChrome.onToggleImmersiveMode,
     onToggleListVisibility: args.layoutProps.layoutChrome.onToggleListVisibility,
     openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
+    openNotesView: args.layoutProps.nodeList.onOpenNotesView,
     openReadwiseReaderSettings: () => openReadwiseReaderSettings(args.runtime),
     openTrashView: args.trash.openTrashView,
     paletteItems: args.paletteItems,
