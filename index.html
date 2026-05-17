@@ -101,29 +101,6 @@
         position: relative;
       }
 
-      .startup-shell__titlebar::after {
-        background:
-          linear-gradient(
-            to right,
-            color-mix(in oklab, var(--startup-region-titlebar-rail-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-rail-divider-mix-target, var(--workspace-divider-mix-target))) 0,
-            color-mix(in oklab, var(--startup-region-titlebar-rail-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-rail-divider-mix-target, var(--workspace-divider-mix-target))) var(--workspace-rail-width),
-            color-mix(in oklab, var(--startup-region-titlebar-folder-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-folder-divider-mix-target, var(--workspace-divider-mix-target))) var(--workspace-rail-width),
-            color-mix(in oklab, var(--startup-region-titlebar-folder-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-folder-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width)),
-            color-mix(in oklab, var(--startup-region-titlebar-topic-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-topic-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width)),
-            color-mix(in oklab, var(--startup-region-titlebar-topic-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-topic-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width)),
-            color-mix(in oklab, var(--startup-region-titlebar-document-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-document-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width)),
-            color-mix(in oklab, var(--startup-region-titlebar-document-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-document-divider-mix-target, var(--workspace-divider-mix-target))) calc(100% - var(--workspace-right-sidebar-current-width)),
-            color-mix(in oklab, var(--startup-region-titlebar-sidebar-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-sidebar-divider-mix-target, var(--workspace-divider-mix-target))) calc(100% - var(--workspace-right-sidebar-current-width)),
-            color-mix(in oklab, var(--startup-region-titlebar-sidebar-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-titlebar-sidebar-divider-mix-target, var(--workspace-divider-mix-target))) 100%
-          );
-        bottom: 0;
-        content: '';
-        height: 1px;
-        left: 0;
-        position: absolute;
-        right: 0;
-      }
-
       .startup-shell__body {
         display: grid;
         grid-template-columns:
@@ -139,25 +116,21 @@
       .startup-shell__rail {
         background: var(--startup-region-main-rail-bg);
         box-sizing: border-box;
-        border-right: 1px solid color-mix(in oklab, var(--startup-region-main-rail-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-main-rail-divider-mix-target, var(--workspace-divider-mix-target)));
       }
 
       .startup-shell__folder {
         background: var(--startup-region-main-folder-bg);
         box-sizing: border-box;
-        border-right: 1px solid color-mix(in oklab, var(--startup-region-main-folder-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-main-folder-divider-mix-target, var(--workspace-divider-mix-target)));
       }
 
       .startup-shell__topic {
         background: var(--startup-region-main-topic-bg);
         box-sizing: border-box;
-        border-right: 1px solid color-mix(in oklab, var(--startup-region-main-topic-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-main-topic-divider-mix-target, var(--workspace-divider-mix-target)));
       }
 
       .startup-shell__document {
         background: var(--startup-region-main-document-bg);
         box-sizing: border-box;
-        border-right: 1px solid color-mix(in oklab, var(--startup-region-main-document-bg) var(--workspace-divider-subtle-surface-weight), var(--startup-region-main-document-divider-mix-target, var(--workspace-divider-mix-target)));
       }
 
       .startup-shell__sidebar {
