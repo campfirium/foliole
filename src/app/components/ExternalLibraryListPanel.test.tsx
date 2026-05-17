@@ -152,6 +152,38 @@ it('opens the selected document in the external workspace surface', () => {
   });
 });
 
+it('opens imported external documents in the external workspace surface', () => {
+  const onOpenExternalSelection = vi.fn();
+  const onSelectNode = vi.fn();
+
+  render(
+    <ExternalLibraryListPanel
+      entriesByFolderId={{
+        'folder-1': [
+          {
+            ...entriesByFolderId['folder-1'][0]!,
+            importedNodeId: 'node-imported'
+          }
+        ]
+      }}
+      folders={folders}
+      onOpenExternalSelection={onOpenExternalSelection}
+      onSelectNode={onSelectNode}
+      selection={{ folderId: 'folder-1', kind: 'folder' }}
+    />
+  );
+
+  expect(screen.queryByText('Imported')).toBeNull();
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Alpha title' }));
+
+  expect(onOpenExternalSelection).toHaveBeenCalledWith({
+    absolutePath: '/library/two think/a.md',
+    folderId: 'folder-1',
+    kind: 'document'
+  });
+  expect(onSelectNode).not.toHaveBeenCalled();
+});
+
 it('moves external document selection with arrow keys', () => {
   const onOpenExternalSelection = vi.fn();
 

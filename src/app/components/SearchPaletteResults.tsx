@@ -40,7 +40,8 @@ export function SearchPaletteList(props: {
   activeIndex: number;
   externalSectionStatus: string | null;
   nodesById: WorkspaceListNodesById;
-  onOpenResult: (result: WorkspaceSearchResult) => void;
+  onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
+  onSetActiveIndex: (value: number | ((current: number) => number)) => void;
   query: string;
   results: WorkspaceSearchResult[];
   sourceDetailsByNodeId: Record<string, RuntimeNodeSourceDetails | null | undefined>;
@@ -48,50 +49,129 @@ export function SearchPaletteList(props: {
   if (!props.results.length) return null;
 
   return (
-    <ul aria-label="Workspace search results" className={appFloatingListClassName()}>
+    <ul
+      aria-label="Workspace search results"
+      className={appFloatingListClassName()}
+      onWheel={(event) => {
+        if (Math.abs(event.deltaY) < 12) return;
+        props.onSetActiveIndex((current) =>
+          event.deltaY > 0
+            ? Math.min(current + 1, props.results.length - 1)
+            : Math.max(current - 1, 0)
+        );
+      }}
+    >
       {props.results.map((item, index) => (
-        <li key={`${item.id}-${item.kind}-${index}`}>
-          {index === 0 || props.results[index - 1]?.kind !== item.kind ? (
-            <div
-              className={appFloatingSectionHeaderClassName(
-                'flex items-center justify-between gap-3'
-              )}
-            >
-              <span>{item.kind === 'external' ? 'External folders' : item.kind === 'removed' ? 'Removed' : 'Foliole content'}</span>
-              {item.kind === 'external' && props.externalSectionStatus ? (
-                <span className={appFloatingMetaBadgeClassName('normal-case tracking-normal')}>
-                  {props.externalSectionStatus}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-          <button
-            className={appFloatingItemClassName('grid gap-1.5')}
-            data-active={index === props.activeIndex}
-            onClick={() => props.onOpenResult(item)}
-            type="button"
-          >
-            <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-foreground">
-              {renderSearchResultText(item.title, props.query)}
-            </span>
-            <span className="line-clamp-2 text-[13px] leading-5 text-foreground/60">
-              {renderSearchResultText(resolveSearchResultContext(item), props.query)}
-            </span>
-            <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-[11px] text-foreground/45">
-              <span className="min-w-0 truncate opacity-85">
-                {resolveSearchResultPathLabel(item, props.nodesById)}
-              </span>
-              <span className="flex shrink-0 items-center gap-1">
-                {item.kind === 'external'
-                  ? renderSearchResultMetaBadge(resolveExternalFolderLabel(item))
-                  : null}
-                {renderSearchResultMetaBadge(resolveSearchResultNodeBadge(item, props.nodesById))}
-                {renderSearchResultSourceLabel(props.sourceDetailsByNodeId[item.id])}
-              </span>
-            </span>
-          </button>
-        </li>
+        <SearchPaletteResultItem
+          active={index === props.activeIndex}
+          externalSectionStatus={props.externalSectionStatus}
+          index={index}
+          item={item}
+          key={`${item.id}-${item.kind}-${index}`}
+          nodesById={props.nodesById}
+          onOpenResult={props.onOpenResult}
+          onSetActiveIndex={props.onSetActiveIndex}
+          previousKind={props.results[index - 1]?.kind}
+          query={props.query}
+          sourceDetails={props.sourceDetailsByNodeId[item.id]}
+        />
       ))}
     </ul>
+  );
+}
+
+function SearchPaletteResultItem(props: {
+  active: boolean;
+  externalSectionStatus: string | null;
+  index: number;
+  item: WorkspaceSearchResult;
+  nodesById: WorkspaceListNodesById;
+  onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
+  onSetActiveIndex: (value: number | ((current: number) => number)) => void;
+  previousKind: WorkspaceSearchResult['kind'] | undefined;
+  query: string;
+  sourceDetails: RuntimeNodeSourceDetails | null | undefined;
+}) {
+  const item = props.item;
+  return (
+    <li className="relative">
+      {props.index === 0 || props.previousKind !== item.kind ? (
+        <SearchPaletteSectionHeader
+          externalSectionStatus={props.externalSectionStatus}
+          kind={item.kind}
+        />
+      ) : null}
+      {props.active ? (
+        <button
+          className={appFloatingMetaBadgeClassName('absolute right-3 top-2 z-10 text-[11px] hover:bg-[var(--app-floating-item-hover-bg)]')}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            props.onOpenResult(item, { preview: true });
+          }}
+          type="button"
+        >
+          Shift Preview
+        </button>
+      ) : null}
+      <button
+        className={appFloatingItemClassName(
+          'grid gap-1.5 data-[active=true]:bg-[var(--app-floating-item-active-bg)] data-[active=true]:shadow-none'
+        )}
+        data-active={props.active}
+        onClick={(event) => props.onOpenResult(item, { preview: event.shiftKey })}
+        onMouseEnter={() => props.onSetActiveIndex(props.index)}
+        type="button"
+      >
+        <span className={`min-w-0 truncate text-[15px] font-semibold leading-5 text-foreground ${props.active ? 'pr-32' : ''}`}>
+          {renderSearchResultText(item.title, props.query)}
+        </span>
+        <span className="line-clamp-2 text-[13px] leading-5 text-foreground/60">
+          {renderSearchResultText(resolveSearchResultContext(item), props.query)}
+        </span>
+        <SearchPaletteResultMeta
+          item={item}
+          nodesById={props.nodesById}
+          sourceDetails={props.sourceDetails}
+        />
+      </button>
+    </li>
+  );
+}
+
+function SearchPaletteSectionHeader(props: {
+  externalSectionStatus: string | null;
+  kind: WorkspaceSearchResult['kind'];
+}) {
+  return (
+    <div className={appFloatingSectionHeaderClassName('flex items-center justify-between gap-3')}>
+      <span>{props.kind === 'external' ? 'External folders' : props.kind === 'removed' ? 'Removed' : 'Foliole content'}</span>
+      {props.kind === 'external' && props.externalSectionStatus ? (
+        <span className={appFloatingMetaBadgeClassName('normal-case tracking-normal')}>
+          {props.externalSectionStatus}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function SearchPaletteResultMeta(props: {
+  item: WorkspaceSearchResult;
+  nodesById: WorkspaceListNodesById;
+  sourceDetails: RuntimeNodeSourceDetails | null | undefined;
+}) {
+  return (
+    <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-[11px] text-foreground/45">
+      <span className="min-w-0 truncate opacity-85">
+        {resolveSearchResultPathLabel(props.item, props.nodesById)}
+      </span>
+      <span className="flex shrink-0 items-center gap-1">
+        {props.item.kind === 'external'
+          ? renderSearchResultMetaBadge(resolveExternalFolderLabel(props.item))
+          : null}
+        {renderSearchResultMetaBadge(resolveSearchResultNodeBadge(props.item, props.nodesById))}
+        {renderSearchResultSourceLabel(props.sourceDetails)}
+      </span>
+    </span>
   );
 }

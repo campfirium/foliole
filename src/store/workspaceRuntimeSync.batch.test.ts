@@ -40,6 +40,7 @@ it('sends parent and affected anchor updates through one batch command', async (
     parentNodeId: 'node-1',
     content: 'Child',
     anchorLink: { id: 'hl-1', kind: 'highlight' as const, locator: { from: 1, originalText: 'hi', to: 3 } },
+    imageRegions: [{ attachmentId: 'asset-1', regions: [{ height: 1, id: 'hl-1-image-0', width: 1, x: 0, y: 0 }] }],
     title: 'Child',
     updatedAt: '2026-03-06T00:00:02.000Z'
   };
@@ -52,6 +53,7 @@ it('sends parent and affected anchor updates through one batch command', async (
     affectedAnchors: [expect.objectContaining({
       nodeId: 'node-2',
       anchorLink: { id: 'hl-1', kind: 'highlight', locator: { from: 1, originalText: 'hi', to: 3 } },
+      imageRegions: [{ attachmentId: 'asset-1', regions: [{ height: 1, id: 'hl-1-image-0', width: 1, x: 0, y: 0 }] }],
       updatedAt: '2026-03-06T00:00:02.000Z'
     })]
   });

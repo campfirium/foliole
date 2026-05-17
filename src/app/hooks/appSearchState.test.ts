@@ -42,12 +42,35 @@ it('keeps search palette data empty while closed', () => {
   expect(state.nodesById).toEqual({});
 });
 
-it('opens the external preview panel for external search results', () => {
-  const openExternalPreview = vi.fn();
+function createExternalResult() {
+  return {
+    excerpt: '...',
+    externalMatch: {
+      absolutePath: '/tmp/library/topic.md',
+      folderId: 'folder-1',
+      folderPath: '/tmp/library',
+      query: 'topic',
+      relativePath: 'topic.md'
+    },
+    id: '/tmp/library/topic.md',
+    kind: 'external' as const,
+    nodeMatch: null,
+    pdfMatch: null,
+    title: 'topic.md',
+    updatedAt: '2026-04-21T00:00:00.000Z'
+  };
+}
+
+it('opens external search results in the external library by default', () => {
+  const openExternalSelection = vi.fn();
+  const openSearchPreview = vi.fn();
   const setIsSearchPaletteOpen = vi.fn();
   const state = buildControllerSearchState({
-    externalPreview: {
-      openExternalPreview
+    externalLibrary: {
+      openExternalSelection
+    },
+    searchPreview: {
+      openSearchPreview
     },
     nav: {
       handleSelectNode: () => undefined
@@ -71,27 +94,54 @@ it('opens the external preview panel for external search results', () => {
     }
   });
 
-  state.onOpenResult({
-    excerpt: '...',
-    externalMatch: {
-      absolutePath: '/tmp/library/topic.md',
-      folderId: 'folder-1',
-      folderPath: '/tmp/library',
-      query: 'topic',
-      relativePath: 'topic.md'
+  state.onOpenResult(createExternalResult());
+
+  expect(openExternalSelection).toHaveBeenCalledWith({
+    absolutePath: '/tmp/library/topic.md',
+    folderId: 'folder-1',
+    kind: 'document'
+  });
+  expect(openSearchPreview).not.toHaveBeenCalled();
+  expect(setIsSearchPaletteOpen).toHaveBeenCalledWith(false);
+});
+
+it('opens the search preview panel for modified external search results', () => {
+  const openSearchPreview = vi.fn();
+  const openExternalSelection = vi.fn();
+  const setIsSearchPaletteOpen = vi.fn();
+  const state = buildControllerSearchState({
+    externalLibrary: {
+      openExternalSelection
     },
-    id: '/tmp/library/topic.md',
-    kind: 'external',
-    nodeMatch: null,
-    pdfMatch: null,
-    title: 'topic.md',
-    updatedAt: '2026-04-21T00:00:00.000Z'
+    searchPreview: {
+      openSearchPreview
+    },
+    nav: {
+      handleSelectNode: () => undefined
+    },
+    runtime: {
+      isSearchPaletteOpen: true,
+      setIsSearchPaletteOpen
+    },
+    trash: {
+      closeTrashView: () => undefined
+    },
+    virtualView: {
+      closeVirtualView: () => undefined
+    },
+    ws: {
+      nodeOrder: [],
+      nodeViewById: {},
+      nodesById: {} as never,
+      setNodeViewState: () => undefined,
+      trashedNodeIds: []
+    }
   });
 
-  expect(openExternalPreview).toHaveBeenCalledWith({
-    absolutePath: '/tmp/library/topic.md',
-    folderId: 'folder-1'
-  });
+  state.onOpenResult(createExternalResult(), { preview: true });
+
+  expect(openSearchPreview).toHaveBeenCalledWith(createExternalResult());
+  expect(openExternalSelection).not.toHaveBeenCalled();
   expect(setIsSearchPaletteOpen).toHaveBeenCalledWith(false);
 });
 

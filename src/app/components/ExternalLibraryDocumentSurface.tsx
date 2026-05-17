@@ -33,6 +33,7 @@ interface ExternalLibraryDocumentSurfaceProps {
   folders: ExternalLibraryFolder[];
   onPreviewEditorReady: (adapter: EditorAdapter | null) => void;
   onOpenImportedNode: (result: ExternalDocumentImportResult) => void;
+  onOpenImportedNodeId?: (nodeId: string) => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
   onGoBack: () => void;
   onGoForward: () => void;
@@ -78,7 +79,7 @@ function useExternalFolderBrowseState(props: Pick<ExternalLibraryDocumentSurface
     [documentNodes]
   );
 
-  return { activeFolderId, documentNodes, documentNodesById, selectedFolder };
+  return { activeFolderId, browseState, documentNodes, documentNodesById, selectedFolder };
 }
 
 function ExternalFolderListSurface(args: {
@@ -89,6 +90,14 @@ function ExternalFolderListSurface(args: {
   selectedFolder: ExternalLibraryFolder | null;
   selection: Extract<ExternalLibrarySelection, { kind: 'folder' | 'directory' }>;
 }) {
+  function handleSelectDocument(absolutePath: string) {
+    args.onOpenSelection({
+      absolutePath,
+      folderId: args.activeFolderId,
+      kind: 'document'
+    });
+  }
+
   return (
     <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
       <FolderListView
@@ -102,13 +111,7 @@ function ExternalFolderListSurface(args: {
         folderTitle={resolveExternalSurfaceTitle(args.selection, args.selectedFolder)}
         nodes={args.documentNodes}
         nodesById={args.documentNodesById}
-        onSelectNode={(absolutePath) =>
-          args.onOpenSelection({
-            absolutePath,
-            folderId: args.activeFolderId,
-            kind: 'document'
-          })
-        }
+        onSelectNode={handleSelectDocument}
         regionLabel="Folder list view"
       />
     </section>
@@ -156,6 +159,7 @@ function ExternalDocumentErrorSurface(args: { error: string; onRetry: () => void
 function renderExternalPreviewSurface(args: {
   isImporting: boolean;
   onHandleImport: () => void;
+  onOpenImportedNodeId: (nodeId: string) => void;
   onPreviewEditorReady: (adapter: EditorAdapter | null) => void;
   preview: ExternalDocumentPreview;
   props: ExternalLibraryDocumentSurfaceProps;
@@ -170,6 +174,7 @@ function renderExternalPreviewSurface(args: {
       onGoBack={args.props.onGoBack}
       onGoForward={args.props.onGoForward}
       onHandleImport={args.onHandleImport}
+      onOpenImportedNodeId={args.onOpenImportedNodeId}
       onOpenSelection={args.props.onOpenSelection}
       onPreviewEditorReady={args.onPreviewEditorReady}
       preview={args.preview}
@@ -220,6 +225,7 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
   return renderExternalPreviewSurface({
     isImporting,
     onHandleImport: () => void handleImport(),
+    onOpenImportedNodeId: props.onOpenImportedNodeId ?? (() => undefined),
     onPreviewEditorReady: props.onPreviewEditorReady,
     preview,
     props

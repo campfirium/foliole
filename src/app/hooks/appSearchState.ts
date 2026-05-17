@@ -1,7 +1,6 @@
 import { VIRTUAL_REMOVED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { requestPdfSearch } from '../../features/pdf/model/pdfSystemRegistry';
-import type { ExternalDocumentPreviewRequest } from '../components/externalDocumentPreviewState';
 import { setSelectedRemovedSource } from '../components/removedSourceSelectionStore';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
@@ -9,8 +8,11 @@ import { buildSearchState, toSearchNodesById } from './appControllerHelpers';
 import type { useWorkspaceSelectors } from './appControllerState';
 
 interface SearchStateArgs {
-  externalPreview?: {
-    openExternalPreview: (request: ExternalDocumentPreviewRequest) => void;
+  externalLibrary?: {
+    openExternalSelection: (selection: { absolutePath: string; folderId: string; kind: 'document' }) => void;
+  };
+  searchPreview?: {
+    openSearchPreview: (result: WorkspaceSearchResult) => void;
   };
   nav: {
     handleSelectNode: (nodeId: string) => void;
@@ -40,7 +42,7 @@ export interface AppSearchState {
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onClose: () => void;
-  onOpenResult: (result: WorkspaceSearchResult) => void;
+  onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
   trashedNodeIds: string[];
 }
 
@@ -52,9 +54,19 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
     isOpen ? toSearchNodesById(args.ws.nodesById) : {},
     args.ws.trashedNodeIds,
     () => args.runtime.setIsSearchPaletteOpen(false),
-    (result) => {
+    (result, options) => {
       args.trash.closeTrashView();
       args.virtualView?.closeVirtualView();
+      if (result.kind === 'external' && result.externalMatch?.importedNodeId) {
+        args.nav.handleSelectNode(result.externalMatch.importedNodeId);
+        args.runtime.setIsSearchPaletteOpen(false);
+        return;
+      }
+      if (options?.preview) {
+        args.searchPreview?.openSearchPreview(result);
+        args.runtime.setIsSearchPaletteOpen(false);
+        return;
+      }
       if (result.kind === 'removed' && result.removedMatch) {
         setSelectedRemovedSource(result.removedMatch.entry);
         args.virtualView?.openVirtualView?.(VIRTUAL_REMOVED_NODE_ID);
@@ -62,10 +74,11 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
         return;
       }
       if (result.kind === 'external' && result.externalMatch) {
-        args.externalPreview?.openExternalPreview({
+        const request = {
           absolutePath: result.externalMatch.absolutePath,
           folderId: result.externalMatch.folderId
-        });
+        };
+        args.externalLibrary?.openExternalSelection({ ...request, kind: 'document' });
         args.runtime.setIsSearchPaletteOpen(false);
         return;
       }

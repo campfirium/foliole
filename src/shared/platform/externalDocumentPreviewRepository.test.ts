@@ -38,6 +38,7 @@ it('loads external document previews through the native external search command'
     fileName: 'topic.md',
     folderId: 'folder-1',
     folderPath: '/library',
+    importedNodeId: null,
     relativePath: 'topic.md'
   });
 });

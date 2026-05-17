@@ -59,8 +59,8 @@ function seedNode(input: {
 
 function readNode(nodeId: string) {
   return openDatabaseConnection().sqlite
-    .prepare('SELECT content, anchor_link FROM nodes WHERE id = ?')
-    .get(nodeId) as { anchor_link: string | null; content: string };
+    .prepare('SELECT content, anchor_link, image_regions FROM nodes WHERE id = ?')
+    .get(nodeId) as { anchor_link: string | null; content: string; image_regions: string | null };
 }
 
 it('updates parent content and remaps text child locators through image rewrites', () => {
@@ -102,4 +102,42 @@ it('updates parent content and remaps text child locators through image rewrites
   });
   expect(readNode('node-parent').content).toBe(nextContent);
   expect(nextContent.slice(childAnchor.locator.from, childAnchor.locator.to)).toBe('Target sentence.');
+});
+
+it('expands remapped image locators to the full localized image markdown', () => {
+  const remoteImage = '![](https://cdn.example.com/cover.jpg)';
+  const previousContent = `Lead ${remoteImage}`;
+  seedNode({ content: previousContent, nodeId: 'node-parent', parentNodeId: null });
+  seedNode({
+    anchorLink: {
+      id: 'anchor-image',
+      kind: 'highlight',
+      locator: {
+        from: previousContent.indexOf(remoteImage),
+        originalText: remoteImage,
+        to: previousContent.indexOf(remoteImage) + remoteImage.length
+      }
+    },
+    content: remoteImage,
+    nodeId: 'node-child',
+    parentNodeId: 'node-parent'
+  });
+
+  const localImage = '![](asset://7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec.jpg)';
+  const nextContent = `Lead\n\n${localImage}`;
+  applyParentContentChange({
+    driver: openDatabaseConnection().driver,
+    nextContent,
+    nodeId: 'node-parent',
+    previousContent,
+    updatedAt: '2026-05-13T00:00:01.000Z'
+  });
+  const child = readNode('node-child');
+  const childAnchor = JSON.parse(child.anchor_link ?? '{}') as {
+    locator: { from: number; originalText: string; to: number };
+  };
+
+  expect(childAnchor.locator.originalText).toBe(localImage);
+  expect(nextContent.slice(childAnchor.locator.from, childAnchor.locator.to)).toBe(localImage);
+  expect(child.image_regions).toContain('7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec');
 });

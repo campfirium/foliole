@@ -36,8 +36,8 @@ afterEach(async () => {
 
 function getNodeRow(nodeId: string) {
   const connection = openDatabaseConnection();
-  return connection.sqlite.prepare('SELECT content, anchor_link FROM nodes WHERE id = ?').get(nodeId) as
-    | { content: string; anchor_link: string | null }
+  return connection.sqlite.prepare('SELECT content, anchor_link, image_regions FROM nodes WHERE id = ?').get(nodeId) as
+    | { content: string; anchor_link: string | null; image_regions: string | null }
     | undefined;
 }
 
@@ -80,11 +80,16 @@ it('updates only anchor locator fields without rewriting child content', () => {
       kind: 'highlight',
       locator: { from: 6, originalText: 'Better', to: 12 }
     },
+    imageRegions: [{
+      attachmentId: 'asset-1',
+      regions: [{ height: 1, id: 'hl-1-image-0', width: 1, x: 0, y: 0 }]
+    }],
     updatedAt: '2026-03-06T00:00:03.000Z'
   }]);
 
   expect(getNodeRow('node-child')).toEqual({
     content: 'Original child body',
-    anchor_link: '{"id":"hl-1","kind":"highlight","locator":{"from":6,"originalText":"Better","to":12}}'
+    anchor_link: '{"id":"hl-1","kind":"highlight","locator":{"from":6,"originalText":"Better","to":12}}',
+    image_regions: '[{"attachmentId":"asset-1","regions":[{"height":1,"id":"hl-1-image-0","width":1,"x":0,"y":0}]}]'
   });
 });

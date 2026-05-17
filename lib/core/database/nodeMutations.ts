@@ -110,6 +110,7 @@ export interface DeleteNodesPermanentlyInput {
 
 export interface UpdateNodeAnchorLinkInput {
   anchorLink: NodeAnchorLinkPayload;
+  imageRegions?: NodeImageRegionGroupPayload[] | null;
   nodeId: string;
   updatedAt: string;
 }
@@ -206,7 +207,12 @@ export function updateNodeAnchorLinks(driver: DatabaseDriver, inputs: UpdateNode
 
   driver.transaction(() => {
     for (const input of inputs) {
-      updateNodeAnchorLinkStatement.run([toAnchorLinkValue(input.anchorLink), input.updatedAt, input.nodeId]);
+      updateNodeAnchorLinkStatement.run([
+        toAnchorLinkValue(input.anchorLink),
+        toImageRegionsValue(input.imageRegions),
+        input.updatedAt,
+        input.nodeId
+      ]);
     }
   });
 }

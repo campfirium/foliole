@@ -17,6 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { saveImportManagerSettings } from '../import/importManagerSettings.js';
+
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { deleteNodesPermanently } from './nodeMutations.js';
@@ -115,5 +117,59 @@ it('uses the existing soft delete time as the removed time when a trashed topic 
     last_seen_at: '2026-03-06T00:00:00.000Z',
     last_status: 'blocked_deleted',
     local_node_state: 'locally_deleted'
+  });
+});
+
+it('releases Readwise keep imports when their topic is permanently deleted', () => {
+  seedNode('node-root', null, 0);
+  saveImportManagerSettings({
+    readwiseSources: [
+      {
+        highlightMode: 'split',
+        highlightPath: '/readwise/Articles',
+        id: 'readwise-articles',
+        keepPreview: null,
+        keepState: 'enabled',
+        kind: 'articles',
+        primaryPath: '/readwise/Full Document Contents/Articles'
+      }
+    ]
+  });
+  openDatabaseConnection().sqlite.prepare(
+    `INSERT INTO keep_import_items (
+       rule_id, source_path, source_mtime_ms, source_size_bytes,
+       source_state, local_node_state, has_source_update, last_node_id,
+       last_status, first_seen_at, last_seen_at, deleted_at, last_imported_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    'readwise-articles',
+    'Article.md',
+    1,
+    2,
+    'present',
+    'active',
+    0,
+    'node-root',
+    'imported',
+    '2026-03-06T00:00:00.000Z',
+    '2026-03-06T00:00:00.000Z',
+    null,
+    '2026-03-06T00:00:00.000Z'
+  );
+
+  deleteNodesPermanently({ nodeIds: ['node-root'], nodeOrder: [] });
+
+  expect(
+    openDatabaseConnection().sqlite.prepare(
+      `SELECT deleted_at, last_imported_at, last_node_id, last_status, local_node_state
+       FROM keep_import_items
+       WHERE rule_id = ? AND source_path = ?`
+    ).get('readwise-articles', 'Article.md')
+  ).toEqual({
+    deleted_at: null,
+    last_imported_at: null,
+    last_node_id: null,
+    last_status: 'discovered',
+    local_node_state: 'not_imported'
   });
 });

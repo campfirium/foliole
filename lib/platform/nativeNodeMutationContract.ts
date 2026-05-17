@@ -1,4 +1,12 @@
-import type { NativeNodeAnchorLocatorUpdateArgs, NativeNodeSnapshotArgs } from './nativeStorageContract.js';
+import type {
+  NativeNodeAnchorLocatorUpdateArgs,
+  NativeNodeSnapshotArgs,
+  NativeWorkspaceImageRegionGroup
+} from './nativeStorageContract.js';
+
+type NativeNodeAnchorUpdateArgs = NativeNodeAnchorLocatorUpdateArgs & {
+  imageRegions?: NativeWorkspaceImageRegionGroup[] | null;
+};
 
 export type NativeNodeSnapshotMutationSpec = {
   args: NativeNodeSnapshotArgs;
@@ -6,6 +14,6 @@ export type NativeNodeSnapshotMutationSpec = {
 };
 
 export type NativeNodeSnapshotBatchMutationSpec = {
-  args: { parent: NativeNodeSnapshotArgs; affectedAnchors: NativeNodeAnchorLocatorUpdateArgs[] };
+  args: { parent: NativeNodeSnapshotArgs; affectedAnchors: NativeNodeAnchorUpdateArgs[] };
   result: null;
 };

@@ -10,6 +10,7 @@ export interface WorkspaceSearchResult {
     absolutePath: string;
     folderId: string;
     folderPath: string;
+    importedNodeId?: string | null;
     query: string;
     relativePath: string;
   } | null;

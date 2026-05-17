@@ -76,7 +76,7 @@ export function parseNodeAnchorLocatorUpdateArray(value: unknown, field: string)
       reveal: null,
       position: null,
       createdAt: '',
-      imageRegions: null,
+      imageRegions: (item as Record<string, unknown>).imageRegions ?? null,
       reading: null
     } as Record<string, unknown>);
     if (!parsed.anchorLink) {
@@ -85,6 +85,7 @@ export function parseNodeAnchorLocatorUpdateArray(value: unknown, field: string)
     return {
       nodeId: parsed.nodeId,
       anchorLink: parsed.anchorLink,
+      imageRegions: parsed.imageRegions,
       updatedAt: parsed.updatedAt
     };
   });

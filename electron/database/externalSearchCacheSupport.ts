@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import type { NativeExternalSearchFolder, NativeWorkspaceSearchResult } from '../../lib/platform/nativeStorageContract.js';
+import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import {
   createExternalSearchScanRuntime,
@@ -162,13 +162,14 @@ function buildExternalExcerpt(content: string, query: string) {
   return `${start > 0 ? '...' : ''}${normalized.slice(start, end)}${end < normalized.length ? '...' : ''}`;
 }
 
-export function toExternalResult(row: ExternalSearchRow, query: string): NativeWorkspaceSearchResult {
+export function toExternalResult(row: ExternalSearchRow, query: string, importedNodeId: string | null = null) {
   return {
     excerpt: buildExternalExcerpt(row.text, query),
     externalMatch: {
       absolutePath: row.absolute_path,
       folderId: row.folder_id,
       folderPath: row.folder_path,
+      importedNodeId,
       query,
       relativePath: row.relative_path
     },

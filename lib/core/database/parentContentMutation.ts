@@ -1,3 +1,4 @@
+import { expandMarkdownImageTextLocator } from '../anchors/markdownImageTextAnchor.js';
 import { remapTextAnchorLocator, type TextAnchorLocator } from '../anchors/textAnchorLocator.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
@@ -81,7 +82,9 @@ function remapRawAnchorLink(value: string, previousContent: string, nextContent:
     return { reason: 'no_locator' as const };
   }
   if (isTextLocatorGroup(raw.locator)) {
-    const remappedRanges = raw.locator.ranges.map((locator) => remapTextAnchorLocator(nextContent, locator, previousContent));
+    const remappedRanges = raw.locator.ranges.map((locator) =>
+      expandMarkdownImageTextLocator(nextContent, remapTextAnchorLocator(nextContent, locator, previousContent), locator)
+    );
     raw.locator = { ranges: remappedRanges };
     return {
       imageRegions: toDerivedImageRegionsJson(nextContent, raw.id, remappedRanges),
@@ -89,7 +92,11 @@ function remapRawAnchorLink(value: string, previousContent: string, nextContent:
     };
   }
   if (isTextLocator(raw.locator)) {
-    const remappedLocator = remapTextAnchorLocator(nextContent, raw.locator, previousContent);
+    const remappedLocator = expandMarkdownImageTextLocator(
+      nextContent,
+      remapTextAnchorLocator(nextContent, raw.locator, previousContent),
+      raw.locator
+    );
     raw.locator = remappedLocator;
     return {
       imageRegions: toDerivedImageRegionsJson(nextContent, raw.id, [remappedLocator]),

@@ -68,7 +68,7 @@ export function createUpsertNodeReadingDeviceStateStatement(driver: DatabaseDriv
 export function createUpdateNodeAnchorLinkStatement(driver: DatabaseDriver) {
   return driver.prepare(
     `UPDATE nodes
-     SET anchor_link = ?, updated_at = ?, deleted_at = NULL
+     SET anchor_link = ?, image_regions = ?, updated_at = ?, deleted_at = NULL
      WHERE id = ?`
   );
 }

@@ -24,6 +24,7 @@ export interface NativeExternalSearchPreview {
   file_name: string;
   folder_id: string;
   folder_path: string;
+  imported_node_id?: string | null;
   relative_path: string;
 }
 
@@ -33,6 +34,7 @@ export interface NativeExternalSearchBrowseEntry {
   file_name: string;
   folder_id: string;
   folder_path: string;
+  imported_node_id?: string | null;
   modified_at: string;
   opening_text: string | null;
   relative_path: string;

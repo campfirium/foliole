@@ -3,6 +3,7 @@ export interface ExternalLibraryBrowseEntry {
   extension: 'md' | 'txt';
   fileName: string;
   folderId: string;
+  importedNodeId?: string | null;
   modifiedAt: string;
   openingText: string | null;
   relativePath: string;

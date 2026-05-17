@@ -5,8 +5,8 @@ import { getReviewSchedulerSettingsSignature } from '../../features/settings/mod
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { definedProps } from '../../shared/lib/definedProps';
-import type { ExternalDocumentPreviewRequest } from '../components/externalDocumentPreviewState';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
+import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import { useCurrentReviewPreview } from './appControllerHelpers';
 import { measureSelectionComputation } from './appControllerInstrumentation';
@@ -205,7 +205,7 @@ function buildControllerLayoutState(args: {
 }
 
 export function useAppController(args: {
-  onOpenExternalPreview: (request: ExternalDocumentPreviewRequest) => void;
+  onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
 }): AppControllerResult {
   const ws = useWorkspaceSelectors();
   const appearance = useAppearanceSettings();
@@ -251,7 +251,7 @@ export function useAppController(args: {
     hotkeys,
     isStudyMode,
     layoutProps,
-    onOpenExternalPreview: args.onOpenExternalPreview,
+    onOpenSearchPreview: args.onOpenSearchPreview,
     paletteItems,
     ws
   });

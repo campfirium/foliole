@@ -4,7 +4,7 @@ export function handleFloatingPaletteInputKeyDown(
   event: ReactKeyboardEvent<HTMLInputElement>,
   totalItems: number,
   onClose: () => void,
-  onRunActive: () => void,
+  onRunActive: (event: ReactKeyboardEvent<HTMLInputElement>) => void,
   onSetActiveIndex: (update: (current: number) => number) => void
 ) {
   if (event.key === 'Escape') {
@@ -24,6 +24,6 @@ export function handleFloatingPaletteInputKeyDown(
   }
   if (event.key === 'Enter') {
     event.preventDefault();
-    onRunActive();
+    onRunActive(event);
   }
 }

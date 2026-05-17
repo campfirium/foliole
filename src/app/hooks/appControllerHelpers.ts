@@ -26,7 +26,7 @@ export function buildSearchState(
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: string[],
   onClose: () => void,
-  onOpenResult: (result: WorkspaceSearchResult) => void
+  onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void
 ): AppSearchState {
   return { isOpen, nodeOrder, nodesById, onClose, onOpenResult, trashedNodeIds };
 }

@@ -15,11 +15,11 @@ import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
 import { CommandPalette } from './components/CommandPalette';
 import { CompanionPairingRequestsDialog } from './components/CompanionPairingRequestsDialog';
-import { ExternalDocumentPreviewPanel } from './components/ExternalDocumentPreviewPanel';
-import type { ExternalDocumentPreviewRequest } from './components/externalDocumentPreviewState';
 import { GoToNodePalette } from './components/GoToNodePalette';
 import { SearchPalette } from './components/SearchPalette';
+import { SearchResultPreviewPanel } from './components/SearchResultPreviewPanel';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
+import type { WorkspaceSearchResult } from './components/workspaceSearch';
 import { useAppController } from './hooks/useAppController';
 import { useReadwiseAutoSync } from './hooks/useReadwiseAutoSync';
 import {
@@ -30,13 +30,12 @@ import {
 type AppController = ReturnType<typeof useAppController>;
 
 function AppContent() {
-  const [externalPreviewRequest, setExternalPreviewRequest] =
-    useState<ExternalDocumentPreviewRequest | null>(null);
-  const handleOpenExternalPreview = useCallback((request: ExternalDocumentPreviewRequest) => {
-    setExternalPreviewRequest(request);
+  const [searchPreviewResult, setSearchPreviewResult] = useState<WorkspaceSearchResult | null>(null);
+  const handleOpenSearchPreview = useCallback((result: WorkspaceSearchResult) => {
+    setSearchPreviewResult(result);
   }, []);
   const controller = useAppController({
-    onOpenExternalPreview: handleOpenExternalPreview
+    onOpenSearchPreview: handleOpenSearchPreview
   });
   useWorkspaceSyncAppliedRefresh();
   useWorkspaceContentChangedRefresh();
@@ -62,8 +61,8 @@ function AppContent() {
         <WorkspaceLayout {...workspaceLayoutProps} />
         <AppOverlays
           controller={controller}
-          externalPreviewRequest={externalPreviewRequest}
-          onCloseExternalPreview={() => setExternalPreviewRequest(null)}
+          onCloseSearchPreview={() => setSearchPreviewResult(null)}
+          searchPreviewResult={searchPreviewResult}
         />
       </>
     </HotkeySettingsProvider>
@@ -116,12 +115,12 @@ function useReportAppReadyWhenHydrated(isWorkspaceHydrated?: boolean) {
 
 function AppOverlays({
   controller,
-  externalPreviewRequest,
-  onCloseExternalPreview
+  onCloseSearchPreview,
+  searchPreviewResult
 }: {
   controller: AppController;
-  externalPreviewRequest: ExternalDocumentPreviewRequest | null;
-  onCloseExternalPreview: () => void;
+  onCloseSearchPreview: () => void;
+  searchPreviewResult: WorkspaceSearchResult | null;
 }) {
   return (
     <>
@@ -138,22 +137,14 @@ function AppOverlays({
         onSelectNode={controller.moveToNodeState.onOpenNode}
         placeholder="Type a title..."
       />
-      <ExternalDocumentPreviewPanel
-        onClose={onCloseExternalPreview}
-        onOpenImportedNode={(result) => {
-          if (result.node_id) {
-            controller.layoutProps.navigation.onSelectNode(result.node_id);
-          }
-          onCloseExternalPreview();
+      <SearchResultPreviewPanel
+        nodesById={controller.layoutProps.nodeList.nodesById}
+        onClose={onCloseSearchPreview}
+        onOpenResult={(result) => {
+          controller.searchState.onOpenResult(result);
+          onCloseSearchPreview();
         }}
-        onOpenInExternalLibrary={(request) => {
-          controller.layoutProps.externalLibrary.onOpenExternalSelection({
-            absolutePath: request.absolutePath,
-            folderId: request.folderId,
-            kind: 'document'
-          });
-        }}
-        request={externalPreviewRequest}
+        result={searchPreviewResult}
       />
     </>
   );

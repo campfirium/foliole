@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
@@ -17,7 +18,7 @@ interface SearchPaletteProps {
   nodesById: WorkspaceListNodesById;
   trashedNodeIds: string[];
   onClose: () => void;
-  onOpenResult: (result: WorkspaceSearchResult) => void;
+  onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
 }
 
 export function SearchPalette(props: SearchPaletteProps) {
@@ -34,10 +35,10 @@ export function SearchPalette(props: SearchPaletteProps) {
     return null;
   }
 
-  const openActiveNode = () => {
+  const openActiveNode = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     const result = results[activeIndex];
     if (result) {
-      props.onOpenResult(result);
+      props.onOpenResult(result, { preview: event.shiftKey });
     }
   };
 
@@ -71,6 +72,7 @@ export function SearchPalette(props: SearchPaletteProps) {
           hasError={searchState.error}
           nodesById={props.nodesById}
           onOpenResult={props.onOpenResult}
+          onSetActiveIndex={setActiveIndex}
           query={query}
           results={results}
           sourceDetailsByNodeId={sourceDetailsByNodeId}
@@ -85,7 +87,8 @@ function SearchPaletteBody(props: {
   externalSectionStatus: string | null;
   hasError: boolean;
   nodesById: WorkspaceListNodesById;
-  onOpenResult: (result: WorkspaceSearchResult) => void;
+  onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
+  onSetActiveIndex: (value: number | ((current: number) => number)) => void;
   query: string;
   results: WorkspaceSearchResult[];
   sourceDetailsByNodeId: ReturnType<typeof useSearchResultSourceDetails>;
@@ -102,6 +105,7 @@ function SearchPaletteBody(props: {
       externalSectionStatus={props.externalSectionStatus}
       nodesById={props.nodesById}
       onOpenResult={props.onOpenResult}
+      onSetActiveIndex={props.onSetActiveIndex}
       query={props.query}
       results={props.results}
       sourceDetailsByNodeId={props.sourceDetailsByNodeId}
