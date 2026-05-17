@@ -92,6 +92,23 @@ it('updates a single-range highlight locator in place', () => {
   );
 });
 
+it('derives the updated locator text from the highlight child parent node', () => {
+  const { actions, harness } = createHarness();
+
+  const updated = actions.updateHighlightAnchorRange?.('highlight-1', { from: 0, to: 5 });
+
+  expect(updated).toBe(true);
+  expect(harness.getState().nodesById['highlight-1']?.anchorLink).toEqual({
+    id: 'hl-1',
+    kind: 'highlight',
+    locator: {
+      from: 0,
+      originalText: 'Alpha',
+      to: 5
+    }
+  });
+});
+
 it('rejects ambiguous or invalid highlight range updates', () => {
   const { actions, harness } = createHarness();
   harness.getState().nodesById['multi-range'] = createHighlightNode({

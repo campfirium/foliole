@@ -22,7 +22,7 @@ export async function localizeReadwiseTopicMergeTexts(sourceContent: string, hig
   const context = new ImageLocalizationContext();
   const [source, highlight] = await Promise.all([
     context.localizeMarkdown(sourceContent),
-    fs.readFile(highlightFilePath, 'utf8').then((content) => context.localizeMarkdown(content))
+    fs.readFile(highlightFilePath, 'utf8').then((content) => context.localizeMarkdown(content, { layoutLargeImages: false }))
   ]);
   return {
     attachmentIds: [...new Set([...source.attachmentIds, ...highlight.attachmentIds])],

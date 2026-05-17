@@ -142,18 +142,18 @@ function HighlightRangeHandle(props: {
       style={{
         left: props.position.left,
         top: props.position.top,
-        transform: `translate(${props.side === 'from' ? '-10px' : '-6px'}, -50%)`
+        transform: `translate(${props.side === 'from' ? '-7px' : '-5px'}, -50%)`
       }}
       title={props.side === 'from' ? 'Adjust Highlight start' : 'Adjust Highlight end'}
       type="button"
     >
       <span
-        className="h-5 w-1 rounded-full shadow-sm"
-        style={{ background: 'var(--app-highlight-surface-color)' }}
+        className="h-9 w-[3px] rounded-full"
+        style={{ background: 'rgb(var(--app-highlight-color-rgb) / 0.82)' }}
       />
       <span
-        className="absolute size-2.5 rounded-full border border-background shadow-sm"
-        style={{ background: 'var(--app-highlight-surface-color)' }}
+        className="absolute top-0 size-3 -translate-y-1 rounded-full border border-background shadow-sm"
+        style={{ background: 'rgb(var(--app-highlight-color-rgb) / 0.82)' }}
       />
     </button>
   );

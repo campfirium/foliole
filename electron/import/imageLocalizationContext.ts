@@ -28,6 +28,10 @@ export interface ImageLocalizationResult {
   text: string;
 }
 
+interface ImageLocalizationOptions {
+  layoutLargeImages?: boolean;
+}
+
 function isRemoteImageUrl(value: string) {
   try {
     const parsed = new URL(value);
@@ -70,7 +74,7 @@ export class ImageLocalizationContext {
   private readonly resultByUrl = new Map<string, Promise<LocalizedImage | null>>();
   private readonly degradedByUrl = new Map<string, string>();
 
-  async localizeMarkdown(markdown: string): Promise<ImageLocalizationResult> {
+  async localizeMarkdown(markdown: string, options: ImageLocalizationOptions = {}): Promise<ImageLocalizationResult> {
     const matches = collectRemoteMarkdownImages(markdown);
     if (matches.length === 0) {
       return { attachmentIds: [], degradedMessages: [], text: markdown };
@@ -83,13 +87,16 @@ export class ImageLocalizationContext {
       const localization = await this.resolveRemoteImage(match.sourceUrl);
       if (localization) {
         attachmentIds.add(localization.attachmentId);
-        const layout = layoutLocalizedMarkdownImage({
-          imageMarkdown: buildLocalizedMarkdownImage(match, localization.markdownUrl),
-          markdown,
-          range: match,
-          size: localization.size,
-          textBeforeImage
-        });
+        const imageMarkdown = buildLocalizedMarkdownImage(match, localization.markdownUrl);
+        const layout = options.layoutLargeImages === false
+          ? { before: textBeforeImage, cursor: match.to, image: imageMarkdown }
+          : layoutLocalizedMarkdownImage({
+              imageMarkdown,
+              markdown,
+              range: match,
+              size: localization.size,
+              textBeforeImage
+            });
         localized += layout.before;
         localized += layout.image;
         cursor = layout.cursor;

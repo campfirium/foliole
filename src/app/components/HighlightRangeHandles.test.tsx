@@ -70,7 +70,7 @@ it('renders visible range handles for an adjustable highlight', () => {
   expect(handles[0]?.textContent).toBe('');
   expect(handles[1]).toHaveClass('h-7', 'w-4', 'cursor-ew-resize');
   expect(handles[1]?.querySelector('.bg-cloze-yellow')).toBeNull();
-  expect((handles[0]?.firstElementChild as HTMLElement | null)?.style.background).toBe('var(--app-highlight-surface-color)');
+  expect((handles[0]?.firstElementChild as HTMLElement | null)?.style.background).toBe('rgb(var(--app-highlight-color-rgb) / 0.82)');
 });
 
 it('commits the dragged highlight range', () => {
