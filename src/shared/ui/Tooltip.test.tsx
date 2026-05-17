@@ -26,6 +26,8 @@ it('renders tooltip content with shared tooltip tokens', () => {
   expect(tooltip.className).toContain('bg-[var(--app-tooltip-bg)]');
   expect(tooltip.className).toContain('border-[var(--app-tooltip-border-color)]');
   expect(tooltip.className).toContain('text-[var(--app-tooltip-fg)]');
+  expect(tooltip.className).toContain('whitespace-normal');
+  expect(tooltip.className).toContain('[box-shadow:var(--app-tooltip-shadow)]');
 });
 
 it('enables title tooltip trigger only when text is truncated', () => {

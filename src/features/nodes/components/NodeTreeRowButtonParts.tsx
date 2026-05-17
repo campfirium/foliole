@@ -45,7 +45,7 @@ export function renderNodeTreeRowContent(props: {
           <span className="flex-none">{props.trailingLabelContent}</span>
         ) : null}
         {props.descendantCount > 0 ? (
-          <span aria-hidden="true" className="flex-none text-foreground/55">
+          <span aria-hidden="true" className="flex-none tabular-nums text-[12px] leading-5 text-foreground/48">
             ({props.descendantCount})
           </span>
         ) : null}
