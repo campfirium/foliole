@@ -94,6 +94,7 @@ it('renders the external folder contents in the center document area using the f
       canGoBack={false}
       canGoForward={false}
       documentMaxWidth={760}
+      editorAppearanceKey="preview"
       entriesByFolderId={entriesByFolderId}
       folders={folders}
       onGoBack={vi.fn()}
@@ -128,6 +129,7 @@ it('shows a loading state while an external library document is loading', () => 
       canGoBack={false}
       canGoForward={false}
       documentMaxWidth={760}
+      editorAppearanceKey="preview"
       entriesByFolderId={entriesByFolderId}
       folders={folders}
       onGoBack={vi.fn()}
@@ -156,6 +158,7 @@ it('shows an alert and retries when an external library document fails to load',
       canGoBack={false}
       canGoForward={false}
       documentMaxWidth={760}
+      editorAppearanceKey="preview"
       entriesByFolderId={entriesByFolderId}
       folders={folders}
       onGoBack={vi.fn()}
@@ -193,6 +196,7 @@ it('imports the external library preview and opens the imported topic', async ()
       canGoBack={false}
       canGoForward={false}
       documentMaxWidth={760}
+      editorAppearanceKey="preview"
       entriesByFolderId={entriesByFolderId}
       folders={folders}
       onGoBack={vi.fn()}

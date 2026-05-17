@@ -45,6 +45,7 @@ function renderDocumentBody(activeNodeId: string | null, bodyProps: ComponentPro
 
 function renderLegacyImageClozeContent(
   activeNode: Node,
+  editorAppearanceKey: string,
   onAnswerChange: (answer: string) => void,
   pdfCache: JSX.Element,
   showAnswer: boolean
@@ -52,7 +53,7 @@ function renderLegacyImageClozeContent(
   return (
     <>
       {pdfCache}
-      <ImageClozeCardView node={activeNode} onAnswerChange={onAnswerChange} showAnswer={showAnswer} />
+      <ImageClozeCardView editorAppearanceKey={editorAppearanceKey} node={activeNode} onAnswerChange={onAnswerChange} showAnswer={showAnswer} />
     </>
   );
 }
@@ -216,6 +217,7 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
   if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {
     return renderLegacyImageClozeContent(
       args.activeNode,
+      args.bodyProps.editorAppearanceKey,
       args.bodyProps.onAnswerChange,
       args.pdfCache,
       args.bodyProps.hasAnswerSection

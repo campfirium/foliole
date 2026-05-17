@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -7,6 +8,10 @@ import { ExternalDocumentPreviewPanel } from './ExternalDocumentPreviewPanel';
 
 const loadRuntimeExternalSearchPreview = vi.fn();
 const importExternalDocument = vi.fn();
+const mocks = vi.hoisted(() => ({
+  editorAppearanceKey: 'preview',
+  markdownEditorMounted: vi.fn()
+}));
 
 vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
   loadExternalDocumentPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
@@ -17,7 +22,16 @@ vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { value: string }) => <div>{props.value}</div>
+  MarkdownEditor: (props: { value: string }) => {
+    React.useEffect(() => {
+      mocks.markdownEditorMounted();
+    }, []);
+    return <div>{props.value}</div>;
+  }
+}));
+
+vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
+  useAppearanceSettings: () => ({ editorAppearanceKey: mocks.editorAppearanceKey })
 }));
 
 vi.mock('./LinkPanelStack', () => ({
@@ -35,6 +49,8 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  mocks.editorAppearanceKey = 'preview';
+  mocks.markdownEditorMounted.mockReset();
   importExternalDocument.mockReset();
   loadRuntimeExternalSearchPreview.mockReset();
 });

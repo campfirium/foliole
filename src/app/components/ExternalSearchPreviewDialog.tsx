@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
+import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import {
   importExternalDocument,
   type ExternalDocumentImportResult
@@ -11,6 +12,7 @@ import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPort
 import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
 
 function ExternalSearchPreviewBody(args: {
+  editorAppearanceKey: string;
   error: string | null;
   isLoading: boolean;
   onRetry: () => void;
@@ -53,6 +55,7 @@ function ExternalSearchPreviewBody(args: {
       blockImageMaxHeightOverride={520}
       blockImageWidthOverride="min(100%, 40rem)"
       className="h-full"
+      key={`external-search-${args.editorAppearanceKey}-${args.preview.absolutePath}`}
       nodeId={args.preview.absolutePath}
       onChange={() => undefined}
       readOnly
@@ -66,6 +69,7 @@ export function ExternalSearchPreviewDialog(props: {
   onImportComplete: (result: ExternalDocumentImportResult) => void;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { editorAppearanceKey } = useAppearanceSettings();
   const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(props.absolutePath);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -107,7 +111,7 @@ export function ExternalSearchPreviewDialog(props: {
             </div>
           </div>
           <div className="min-h-0 flex-1">
-            <ExternalSearchPreviewBody error={error} isLoading={isLoading} onRetry={retry} preview={preview} />
+            <ExternalSearchPreviewBody editorAppearanceKey={editorAppearanceKey} error={error} isLoading={isLoading} onRetry={retry} preview={preview} />
           </div>
         </AppDialogContent>
       </AppDialogPortal>

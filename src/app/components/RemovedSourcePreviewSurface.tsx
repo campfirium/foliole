@@ -142,6 +142,7 @@ function RemovedSourceEmptySurface() {
 function RemovedSourcePreviewContent(props: {
   confirmId: string | null;
   contentAreaRef: RefObject<HTMLDivElement>;
+  editorAppearanceKey: string;
   entry: SelectedRemovedSource;
   errorMessage: string;
   importSelectedSource: () => Promise<void>;
@@ -170,6 +171,7 @@ function RemovedSourcePreviewContent(props: {
         blockImageMaxHeightOverride={520}
         blockImageWidthOverride="min(100%, 40rem)"
         className="min-h-0 flex-1"
+        key={`removed-${props.editorAppearanceKey}-${props.entry.id}`}
         nodeId={props.entry.id}
         onChange={() => undefined}
         onOpenExternalLink={props.onOpenExternalLink}
@@ -190,6 +192,7 @@ export function RemovedSourcePreviewSurface(props: {
   canGoBack: boolean;
   canGoForward: boolean;
   documentMaxWidth: number;
+  editorAppearanceKey: string;
   onGoBack: () => void;
   onGoForward: () => void;
   onSelectNode: (nodeId: string) => void;
@@ -216,6 +219,7 @@ export function RemovedSourcePreviewSurface(props: {
       <RemovedSourcePreviewContent
         confirmId={importAction.confirmId}
         contentAreaRef={contentAreaRef}
+        editorAppearanceKey={props.editorAppearanceKey}
         entry={entry}
         errorMessage={importAction.errorMessage}
         importSelectedSource={importAction.importSelectedSource}

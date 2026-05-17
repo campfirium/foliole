@@ -23,6 +23,7 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
         canGoBack={props.canGoBack}
         canGoForward={props.canGoForward}
         documentMaxWidth={readingContentWidth}
+        editorAppearanceKey={editorAppearanceKey}
         entriesByFolderId={props.externalEntriesByFolderId}
         folders={props.externalFolders}
         onGoBack={props.onGoBack}
@@ -46,6 +47,7 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
         canGoBack={props.canGoBack}
         canGoForward={props.canGoForward}
         documentMaxWidth={readingContentWidth}
+        editorAppearanceKey={editorAppearanceKey}
         onGoBack={props.onGoBack}
         onGoForward={props.onGoForward}
         onSelectNode={props.onSelectNode}

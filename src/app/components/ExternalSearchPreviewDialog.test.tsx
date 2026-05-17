@@ -1,10 +1,15 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ExternalSearchPreviewDialog } from './ExternalSearchPreviewDialog';
 
 const loadRuntimeExternalSearchPreview = vi.fn();
 const importExternalDocument = vi.fn();
+const mocks = vi.hoisted(() => ({
+  editorAppearanceKey: 'preview',
+  markdownEditorMounted: vi.fn()
+}));
 
 vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
   loadExternalDocumentPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
@@ -15,10 +20,21 @@ vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { value: string }) => <div>{props.value}</div>
+  MarkdownEditor: (props: { value: string }) => {
+    React.useEffect(() => {
+      mocks.markdownEditorMounted();
+    }, []);
+    return <div>{props.value}</div>;
+  }
+}));
+
+vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
+  useAppearanceSettings: () => ({ editorAppearanceKey: mocks.editorAppearanceKey })
 }));
 
 beforeEach(() => {
+  mocks.editorAppearanceKey = 'preview';
+  mocks.markdownEditorMounted.mockReset();
   importExternalDocument.mockReset();
   loadRuntimeExternalSearchPreview.mockReset();
 });
@@ -53,6 +69,27 @@ it('shows a retryable error when the external search preview fails', async () =>
   await waitFor(() => {
     expect(screen.getByText('# Preview')).toBeInTheDocument();
   });
+});
+
+it('remounts the external search preview editor when editor appearance changes', async () => {
+  loadRuntimeExternalSearchPreview.mockResolvedValue({
+    absolutePath: '/library/topic.md',
+    content: '# Preview',
+    extension: 'md',
+    fileName: 'topic.md',
+    folderId: 'folder-1',
+    folderPath: '/library',
+    relativePath: 'topic.md'
+  });
+
+  const { rerender } = render(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
+  await screen.findByText('# Preview');
+  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
+
+  mocks.editorAppearanceKey = 'source';
+  rerender(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
+
+  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(2);
 });
 
 it('imports the loaded external preview through the external document import ability', async () => {

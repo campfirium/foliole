@@ -1,21 +1,32 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import React from 'react';
 import { expect, it, vi } from 'vitest';
 
 import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
 
+const mocks = vi.hoisted(() => ({
+  markdownEditorMounted: vi.fn()
+}));
+
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { className?: string; onOpenExternalLink?: (request: { href: string }) => void }) => (
-    <div className={props.className} data-testid="external-preview-editor">
-      <button onClick={() => props.onOpenExternalLink?.({ href: 'https://example.com/docs' })} type="button">
-        Open external link
-      </button>
-    </div>
-  )
+  MarkdownEditor: (props: { className?: string; onOpenExternalLink?: (request: { href: string }) => void }) => {
+    React.useEffect(() => {
+      mocks.markdownEditorMounted();
+    }, []);
+    return (
+      <div className={props.className} data-testid="external-preview-editor">
+        <button onClick={() => props.onOpenExternalLink?.({ href: 'https://example.com/docs' })} type="button">
+          Open external link
+        </button>
+      </div>
+    );
+  }
 }));
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
     editorDisplayMode: 'preview' as const,
+    editorAppearanceKey: 'preview',
     toggleEditorDisplayMode: vi.fn()
   })
 }));
@@ -32,6 +43,7 @@ it('opens the link panel when an external document preview link is clicked', () 
       canGoBack={false}
       canGoForward={false}
       documentMaxWidth={760}
+      editorAppearanceKey="preview"
       isImporting={false}
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
@@ -61,4 +73,36 @@ it('opens the link panel when an external document preview link is clicked', () 
   fireEvent.click(screen.getByRole('button', { name: 'Open external link' }));
 
   expect(screen.getByTestId('link-panel-count')).toHaveTextContent('1');
+});
+
+it('remounts the external library preview editor when editor appearance changes', () => {
+  mocks.markdownEditorMounted.mockReset();
+  const preview = {
+    absolutePath: '/library/topic.md',
+    content: '# Topic',
+    extension: 'md',
+    fileName: 'topic.md',
+    folderId: 'folder-1',
+    folderPath: '/library',
+    relativePath: 'topic.md'
+  };
+  const props = {
+    canGoBack: false,
+    canGoForward: false,
+    documentMaxWidth: 760,
+    isImporting: false,
+    onGoBack: vi.fn(),
+    onGoForward: vi.fn(),
+    onHandleImport: vi.fn(),
+    onOpenSelection: vi.fn(),
+    onPreviewEditorReady: vi.fn(),
+    preview
+  };
+  const { rerender } = render(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="preview" />);
+
+  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
+
+  rerender(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="source" />);
+
+  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(2);
 });

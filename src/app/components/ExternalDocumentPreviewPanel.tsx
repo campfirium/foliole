@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import type { MutableRefObject, PointerEvent as ReactPointerEvent } from 'react';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
+import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
@@ -23,6 +24,7 @@ interface ExternalDocumentPreviewPanelProps {
 }
 
 export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanelProps) {
+  const { editorAppearanceKey } = useAppearanceSettings();
   const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(props.request?.absolutePath ?? null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const frame = useExternalDocumentPreviewPanelFrame(overlayRef, Boolean(props.request));
@@ -37,6 +39,7 @@ export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanel
   return (
     <PreviewWindow
       error={error}
+      editorAppearanceKey={editorAppearanceKey}
       frame={frame}
       isImporting={isImporting}
       isLoading={isLoading}
@@ -56,6 +59,7 @@ export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanel
 
 function PreviewWindow(args: {
   error: string | null;
+  editorAppearanceKey: string;
   frame: ReturnType<typeof useExternalDocumentPreviewPanelFrame>;
   isImporting: boolean;
   isLoading: boolean;
@@ -91,6 +95,7 @@ function PreviewWindow(args: {
         <div className="relative min-h-0 flex-1 bg-canvas" ref={contentAreaRef}>
           <PreviewBody
             error={args.error}
+            editorAppearanceKey={args.editorAppearanceKey}
             isLoading={args.isLoading}
             onOpenExternalLink={handleOpenExternalLink}
             onRetry={args.onRetry}
@@ -103,15 +108,22 @@ function PreviewWindow(args: {
             panels={linkPanels}
           />
         </div>
-        {!args.frame.isFullscreen ? (
-          <div
-            aria-hidden="true"
-            className="absolute bottom-0 right-0 size-5 cursor-nwse-resize"
-            onPointerDown={args.frame.onResizeStart}
-          />
-        ) : null}
+        <PreviewResizeHandle frame={args.frame} />
       </section>
     </div>
+  );
+}
+
+function PreviewResizeHandle(args: { frame: ReturnType<typeof useExternalDocumentPreviewPanelFrame> }) {
+  if (args.frame.isFullscreen) {
+    return null;
+  }
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute bottom-0 right-0 size-5 cursor-nwse-resize"
+      onPointerDown={args.frame.onResizeStart}
+    />
   );
 }
 
@@ -161,6 +173,7 @@ function PreviewHeader(args: {
 
 function PreviewBody(args: {
   error: string | null;
+  editorAppearanceKey: string;
   isLoading: boolean;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onRetry: () => void;
@@ -203,6 +216,7 @@ function PreviewBody(args: {
       blockImageMaxHeightOverride={520}
       blockImageWidthOverride="min(100%, 40rem)"
       className="h-full"
+      key={`external-floating-${args.editorAppearanceKey}-${args.preview.absolutePath}`}
       nodeId={args.preview.absolutePath}
       onChange={() => undefined}
       onOpenExternalLink={args.onOpenExternalLink}

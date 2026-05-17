@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  markdownEditorMounted: vi.fn(),
   restoreRuntimeRemovedSource: vi.fn()
 }));
 
@@ -16,7 +18,12 @@ vi.mock('./DocumentPanelHeader', () => ({
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: ({ value }: { value: string }) => <article>{value}</article>
+  MarkdownEditor: ({ value }: { value: string }) => {
+    React.useEffect(() => {
+      mocks.markdownEditorMounted();
+    }, []);
+    return <article>{value}</article>;
+  }
 }));
 
 import { RemovedSourcePreviewSurface } from './RemovedSourcePreviewSurface';
@@ -39,6 +46,7 @@ function createRemovedSource() {
 }
 
 beforeEach(() => {
+  mocks.markdownEditorMounted.mockReset();
   mocks.restoreRuntimeRemovedSource.mockReset();
   setSelectedRemovedSource(null);
 });
@@ -54,6 +62,7 @@ it('renders Removed selection as an external-document style preview with Import 
       canGoBack={false}
       canGoForward={false}
       documentMaxWidth={720}
+      editorAppearanceKey="preview"
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onSelectNode={onSelectNode}
@@ -69,4 +78,37 @@ it('renders Removed selection as an external-document style preview with Import 
 
   await waitFor(() => expect(mocks.restoreRuntimeRemovedSource).toHaveBeenCalledWith(entry));
   expect(onSelectNode).toHaveBeenCalledWith('topic-new');
+});
+
+it('remounts the removed preview editor when editor appearance changes', () => {
+  const entry = createRemovedSource();
+  setSelectedRemovedSource(entry);
+
+  const { rerender } = render(
+    <RemovedSourcePreviewSurface
+      canGoBack={false}
+      canGoForward={false}
+      documentMaxWidth={720}
+      editorAppearanceKey="preview"
+      onGoBack={vi.fn()}
+      onGoForward={vi.fn()}
+      onSelectNode={vi.fn()}
+    />
+  );
+
+  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
+
+  rerender(
+    <RemovedSourcePreviewSurface
+      canGoBack={false}
+      canGoForward={false}
+      documentMaxWidth={720}
+      editorAppearanceKey="source"
+      onGoBack={vi.fn()}
+      onGoForward={vi.fn()}
+      onSelectNode={vi.fn()}
+    />
+  );
+
+  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(2);
 });

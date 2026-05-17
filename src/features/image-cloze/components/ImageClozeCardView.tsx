@@ -7,12 +7,13 @@ import { ImageClozeRegionSurface } from './ImageClozeRegionSurface';
 import { useImageClozeResource } from './useImageClozeResource';
 
 interface ImageClozeCardViewProps {
+  editorAppearanceKey: string;
   node: Node;
   onAnswerChange: (answer: string) => void;
   showAnswer: boolean;
 }
 
-export function ImageClozeCardView({ node, onAnswerChange, showAnswer }: ImageClozeCardViewProps) {
+export function ImageClozeCardView({ editorAppearanceKey, node, onAnswerChange, showAnswer }: ImageClozeCardViewProps) {
   const locator = getImageClozeLocator(node.anchorLink);
   const { resourceState, resourceUrl } = useImageClozeResource(locator?.attachmentId ?? null);
   const currentRegions = listImageClozePresentationRegions(node.imageRegions).filter(
@@ -30,7 +31,7 @@ export function ImageClozeCardView({ node, onAnswerChange, showAnswer }: ImageCl
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4 pt-4 max-[1080px]:px-2" data-testid="image-cloze-card-view">
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <ImageClozePromptSection node={node} />
+        <ImageClozePromptSection editorAppearanceKey={editorAppearanceKey} node={node} />
         {resourceState === 'ready' && resourceUrl ? (
           <ImageClozeRegionSurface
             hiddenRegionIds={showAnswer ? [] : currentRegions.length > 0 ? currentRegions.map((region) => region.id) : ['current']}
@@ -48,12 +49,12 @@ export function ImageClozeCardView({ node, onAnswerChange, showAnswer }: ImageCl
           </div>
         )}
       </div>
-      <ImageClozeAnswerSection node={node} onAnswerChange={onAnswerChange} showAnswer={showAnswer} />
+      <ImageClozeAnswerSection editorAppearanceKey={editorAppearanceKey} node={node} onAnswerChange={onAnswerChange} showAnswer={showAnswer} />
     </div>
   );
 }
 
-function ImageClozePromptSection({ node }: { node: Node }) {
+function ImageClozePromptSection({ editorAppearanceKey, node }: Pick<ImageClozeCardViewProps, 'editorAppearanceKey' | 'node'>) {
   if (!node.content.trim()) {
     return null;
   }
@@ -66,6 +67,7 @@ function ImageClozePromptSection({ node }: { node: Node }) {
           ariaLabel="Image cloze prompt"
           className="prompt-editor-host min-h-[140px]"
           hideTitleHeading={false}
+          key={`image-cloze-prompt-${editorAppearanceKey}-${node.id}`}
           nodeId={`${node.id}-image-cloze-prompt`}
           onChange={() => undefined}
           readOnly
@@ -80,7 +82,7 @@ function ImageClozeAnswerSection({
   node,
   onAnswerChange,
   showAnswer
-}: Pick<ImageClozeCardViewProps, 'node' | 'onAnswerChange' | 'showAnswer'>) {
+}: Pick<ImageClozeCardViewProps, 'editorAppearanceKey' | 'node' | 'onAnswerChange' | 'showAnswer'>) {
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-bg-panel">
       <div className="px-4 py-3 text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">Answer</div>
@@ -90,6 +92,7 @@ function ImageClozeAnswerSection({
             ariaLabel="Image cloze answer"
             className="answer-editor-host min-h-[220px]"
             hideTitleHeading={false}
+            key={`image-cloze-answer-${editorAppearanceKey}-${node.id}`}
             nodeId={`${node.id}-image-cloze-answer`}
             onChange={onAnswerChange}
             value={node.reveal ?? ''}

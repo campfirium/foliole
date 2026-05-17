@@ -21,6 +21,7 @@ export function ExternalLibraryPreviewSurface(args: {
   canGoBack: boolean;
   canGoForward: boolean;
   documentMaxWidth: number;
+  editorAppearanceKey: string;
   isImporting: boolean;
   onGoBack: () => void;
   onGoForward: () => void;
@@ -58,6 +59,7 @@ export function ExternalLibraryPreviewSurface(args: {
           blockImageMaxHeightOverride={520}
           blockImageWidthOverride="min(100%, 40rem)"
           className="min-h-0 flex-1"
+          key={`external-library-${args.editorAppearanceKey}-${args.preview.absolutePath}`}
           nodeId={args.preview.absolutePath}
           onChange={() => undefined}
           onOpenExternalLink={handleOpenExternalLink}

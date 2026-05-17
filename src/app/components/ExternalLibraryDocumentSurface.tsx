@@ -28,6 +28,7 @@ interface ExternalLibraryDocumentSurfaceProps {
   canGoBack: boolean;
   canGoForward: boolean;
   documentMaxWidth: number;
+  editorAppearanceKey: string;
   entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   folders: ExternalLibraryFolder[];
   onPreviewEditorReady: (adapter: EditorAdapter | null) => void;
@@ -164,6 +165,7 @@ function renderExternalPreviewSurface(args: {
       canGoBack={args.props.canGoBack}
       canGoForward={args.props.canGoForward}
       documentMaxWidth={args.props.documentMaxWidth}
+      editorAppearanceKey={args.props.editorAppearanceKey}
       isImporting={args.isImporting}
       onGoBack={args.props.onGoBack}
       onGoForward={args.props.onGoForward}
