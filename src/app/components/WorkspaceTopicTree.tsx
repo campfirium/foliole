@@ -3,51 +3,35 @@ import { useMemo, useRef } from 'react';
 import { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
-import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
-import { buildNodeTree } from '../../features/nodes/model/nodeTree';
+import type { NodeListState, NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
-import { sortWorkspaceContentNodeIds } from './workspaceContentNodeOrder';
-import { normalizeWorkspaceContentSort } from './workspaceContentSort';
-import { useWorkspaceTopicTreeRows } from './workspaceTopicTreeContent';
 import {
   resolveWorkspaceTopicTreeFocusNodeId,
-  useWorkspaceTopicTreeAutoScroll,
-  useWorkspaceTopicTreeFocusState
+  useWorkspaceTopicTreeAutoScroll
 } from './workspaceTopicTreeFocus';
+import {
+  useWorkspaceTopicTreeLazyModel
+} from './workspaceTopicTreeLazyModel';
+import {
+  buildTopicChildrenByParent,
+  type TopicChildrenByParent
+} from './workspaceTopicTreeLazyRows';
+import { useWorkspaceTopicTreeSelection } from './workspaceTopicTreeSelection';
 import { renderWorkspaceTopicTreeShell } from './WorkspaceTopicTreeShell';
 
 export interface WorkspaceTopicTreeProps {
   activeFolderId: string;
   activeNodeId: string | null;
+  childrenByParent?: TopicChildrenByParent;
   emptyStateDescription?: string;
   emptyStateTitle?: string;
   itemIds: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onSelectNode: (nodeId: string) => void;
-}
-
-export interface WorkspaceTopicTreeState {
-  sortedItemIds: string[];
-  tree: ReturnType<typeof buildNodeTree>;
-}
-
-function useWorkspaceTopicTreeState(
-  itemIds: string[],
-  nodesById: WorkspaceListNodesById,
-  sort: ReturnType<typeof useWorkspaceContentSort>['sort'],
-  nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
-): WorkspaceTopicTreeState {
-  const contentSort = normalizeWorkspaceContentSort(sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name']);
-  const sortedItemIds = useMemo(
-    () => sortWorkspaceContentNodeIds(itemIds, nodesById, contentSort, nodeViewById),
-    [contentSort, itemIds, nodeViewById, nodesById]
-  );
-  const tree = useMemo(() => buildNodeTree(sortedItemIds, nodesById), [nodesById, sortedItemIds]);
-  return { sortedItemIds, tree };
 }
 
 function useWorkspaceTopicTreeActions() {
@@ -83,46 +67,49 @@ function useWorkspaceTopicTreeDrag(args: {
 export function useWorkspaceTopicTreeInteraction(args: {
   activeFolderId: string;
   activeNodeId: string | null;
-  collapsedNodeIds: ReadonlySet<string>;
-  itemIds: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onSelectNode: (nodeId: string) => void;
+  rowIds: string[];
 }) {
   const actions = useWorkspaceTopicTreeActions();
-  const topicTreeState = useNodeListState(
-    args.activeNodeId,
-    true,
-    args.itemIds,
-    args.nodesById,
-    null,
-    args.collapsedNodeIds
-  );
-  const handleSelectNode = useNodeSelectionHandler({
+  const selection = useWorkspaceTopicTreeSelection({
     activeNodeId: args.activeNodeId,
-    isSelectionScopeActive: true,
     nodesById: args.nodesById,
     onSelectNode: args.onSelectNode,
-    onSelectTrashNode: () => undefined,
-    selectedTrashNodeId: null,
-    state: topicTreeState,
-    trashedNodeIds: []
+    rowIds: args.rowIds
   });
-  const contextMenu = useNodeListContextMenu(topicTreeState.selectedNodeIds, []);
+  const topicTreeState = useMemo<NodeListState>(() => ({
+    noteParentById: {},
+    noteRowIds: args.rowIds,
+    noteRows: [],
+    noteRowsAll: [],
+    selectedNodeIds: selection.selectedNodeIds,
+    selectionAnchorNodeId: selection.selectionAnchorNodeId,
+    setSelectedNodeIds: selection.setSelectedNodeIds,
+    setSelectionAnchorNodeId: selection.setSelectionAnchorNodeId,
+    trashRowIds: [],
+    trashRows: [],
+    trashRowsAll: [],
+    virtualRowIds: [],
+    virtualRows: [],
+    virtualRowsAll: []
+  }), [args.rowIds, selection]);
+  const contextMenu = useNodeListContextMenu(selection.selectedNodeIds, []);
   const drag = useWorkspaceTopicTreeDrag({
-    itemIds: args.itemIds,
+    itemIds: args.rowIds,
     moveNodes: actions.moveNodes,
     nodesById: args.nodesById,
-    selectedNodeIds: topicTreeState.selectedNodeIds
+    selectedNodeIds: selection.selectedNodeIds
   });
 
   return {
     ...actions,
     contextMenu,
     drag,
-    handleSelectNode,
+    handleSelectNode: selection.handleSelectNode,
     topicTreeState,
-    topicTreeMenu: renderWorkspaceTopicTreeMenu(args, actions, contextMenu, handleSelectNode, topicTreeState)
+    topicTreeMenu: renderWorkspaceTopicTreeMenu(args, actions, contextMenu, selection.handleSelectNode, topicTreeState)
   };
 }
 
@@ -130,8 +117,8 @@ function renderWorkspaceTopicTreeMenu(
   args: Parameters<typeof useWorkspaceTopicTreeInteraction>[0],
   actions: ReturnType<typeof useWorkspaceTopicTreeActions>,
   contextMenu: ReturnType<typeof useNodeListContextMenu>,
-  handleSelectNode: ReturnType<typeof useNodeSelectionHandler>,
-  topicTreeState: ReturnType<typeof useNodeListState>
+  handleSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void,
+  topicTreeState: NodeListState
 ) {
   return (
     <NodeListTreeMenu
@@ -153,16 +140,30 @@ function renderWorkspaceTopicTreeMenu(
   );
 }
 
-export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
   const contentSort = useWorkspaceContentSort();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
-  const { sortedItemIds, tree } = useWorkspaceTopicTreeState(props.itemIds, props.nodesById, contentSort.sort, nodeViewById);
-  const { collapsedNodeIds, setCollapsedNodeIds } = useWorkspaceTopicTreeFocusState(props, tree, nodeViewById);
-  const { collapsibleNodeIds, searchQuery, setSearchQuery, visibleRows } = useWorkspaceTopicTreeRows(
-    tree.rows,
-    collapsedNodeIds
+  const childrenByParent = useMemo(
+    () => props.childrenByParent ?? buildTopicChildrenByParent(props.itemIds, props.nodesById),
+    [props.childrenByParent, props.itemIds, props.nodesById]
   );
+  const rootItemIds = props.childrenByParent ? props.itemIds : childrenByParent.get(null) ?? [];
+  const lazyModel = useWorkspaceTopicTreeLazyModel({
+    activeFolderId: props.activeFolderId,
+    activeNodeId: props.activeNodeId,
+    childrenByParent,
+    itemIds: rootItemIds,
+    nodeViewById,
+    nodesById: props.nodesById,
+    sort: contentSort.sort
+  });
+  return { contentSort, lazyModel, nodeViewById };
+}
+
+export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const { contentSort, lazyModel, nodeViewById } = useWorkspaceTopicTreeData(props);
+  const { collapsedNodeIds, collapsibleNodeIds, rows: visibleRows, searchQuery, setCollapsedNodeIds, setSearchQuery } = lazyModel;
   const focusedNodeId = resolveWorkspaceTopicTreeFocusNodeId({
     activeNodeId: props.activeNodeId,
     nodeViewState: props.activeNodeId ? nodeViewById[props.activeNodeId] : undefined,
@@ -174,11 +175,10 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
   const interaction = useWorkspaceTopicTreeInteraction({
     activeFolderId: props.activeFolderId,
     activeNodeId: focusedNodeId,
-    collapsedNodeIds,
-    itemIds: sortedItemIds,
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,
-    onSelectNode: props.onSelectNode
+    onSelectNode: props.onSelectNode,
+    rowIds: visibleRows.map((row) => row.node.id)
   });
 
   useWorkspaceTopicTreeAutoScroll({

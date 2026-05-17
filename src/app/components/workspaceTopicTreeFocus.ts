@@ -6,7 +6,7 @@ import { getTextAnchorLocators } from '../../features/nodes/model/nodeTypes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { NodeViewState } from '../../store/workspaceStore';
 
-import type { WorkspaceTopicTreeProps, WorkspaceTopicTreeState } from './WorkspaceTopicTree';
+import type { WorkspaceTopicTreeProps } from './WorkspaceTopicTree';
 import { useWorkspaceTopicTreeCollapse } from './workspaceTopicTreeContent';
 
 function rangeContainsSelectionPoint(locator: { from: number; to: number }, selection: NonNullable<NodeViewState['selection']>) {
@@ -55,7 +55,7 @@ export function resolveWorkspaceTopicTreeFocusNodeId(args: {
 
 export function useWorkspaceTopicTreeFocusState(
   props: WorkspaceTopicTreeProps,
-  tree: WorkspaceTopicTreeState['tree'],
+  tree: { parentById: Record<string, string | null>; rows: NodeTreeRow[] },
   nodeViewById: Record<string, NodeViewState | undefined>
 ) {
   const candidateFocusedNodeId = resolveWorkspaceTopicTreeFocusNodeId({

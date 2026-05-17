@@ -49,6 +49,40 @@ wait_for_running_status() {
   return 1
 }
 
+wait_for_ready_markers_after() {
+  local requested_at="$1"
+  local timeout_seconds="$2"
+  local label="$3"
+  local boot_ready_path
+  local bridge_ready_path
+  local elapsed_seconds=0
+
+  boot_ready_path="$(resolve_boot_ready_path)"
+  bridge_ready_path="$(resolve_bridge_ready_path)"
+
+  while [ "${elapsed_seconds}" -lt "${timeout_seconds}" ]; do
+    local boot_timestamp=""
+    local bridge_timestamp=""
+    set +e
+    boot_timestamp="$(read_json_field "${boot_ready_path}" timestamp 2>/dev/null)"
+    local boot_exit=$?
+    bridge_timestamp="$(read_json_field "${bridge_ready_path}" timestamp 2>/dev/null)"
+    local bridge_exit=$?
+    set -e
+    if [ "${boot_exit}" -eq 0 ] && [ "${bridge_exit}" -eq 0 ] &&
+      iso_timestamp_gte "${boot_timestamp}" "${requested_at}" &&
+      iso_timestamp_gte "${bridge_timestamp}" "${requested_at}"; then
+      echo "[windows-preview] ${label} ready markers updated boot=${boot_timestamp} bridge=${bridge_timestamp}"
+      return 0
+    fi
+    sleep 1
+    elapsed_seconds=$((elapsed_seconds + 1))
+  done
+
+  echo "[windows-preview] ${label} ready markers timed out requested_at=${requested_at}"
+  return 1
+}
+
 restart_ready_can_use_existing_markers() {
   local requested_at="$1"
   local previous_runtime_pid="${2:-}"

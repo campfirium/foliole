@@ -111,6 +111,7 @@ function renderStandardContentColumn(
     <WorkspaceTopicTree
       activeFolderId={topicRootId}
       activeNodeId={props.activeNodeId}
+      childrenByParent={dualListState.topicChildrenByParent}
       itemIds={dualListState.topicNodeOrder}
       nodesById={dualListState.topicNodesById}
       onOpenMoveToNode={props.onOpenMoveToNode}

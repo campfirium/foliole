@@ -14,6 +14,7 @@ import { createEmptyWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
@@ -215,6 +216,7 @@ const workspaceStore = create<WorkspaceState>()(
           }
           return {
             activeNodeId: nodeId,
+            nodeViewById: markNodeOpenedViewState(state, nodeId),
             reviewSession: reconcileReviewSession(state, nodeId)
           };
         });

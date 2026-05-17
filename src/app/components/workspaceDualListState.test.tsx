@@ -55,6 +55,87 @@ it('keeps heavy column projections stable when selection stays in the same folde
   expect(result.current.topicNodeOrder).toBe(first.topicNodeOrder);
 });
 
+it('reuses the folder projection while switching between folders', () => {
+  const folderSwitchNodesById: WorkspaceListNodesById = {
+    ...nodesById,
+    'folder-b': createNode({ id: 'folder-b', kind: 'folder', title: 'Folder B' }),
+    'topic-c': createNode({ id: 'topic-c', kind: 'topic', parentNodeId: 'folder-b', title: 'Topic C' })
+  };
+  const baseProps = {
+    isTrashViewOpen: false,
+    listNodesById: folderSwitchNodesById,
+    nodeOrder: [INBOX_NODE_ID, 'folder-a', 'topic-a', 'topic-b', 'folder-b', 'topic-c'],
+    trashedNodeIds: []
+  };
+  const { result, rerender } = renderHook(
+    ({ activeNodeId }: { activeNodeId: string }) =>
+      useWorkspaceDualListState({ ...baseProps, activeNodeId }),
+    { initialProps: { activeNodeId: 'folder-a' } }
+  );
+  const folderNodesById = result.current.folderNodesById;
+
+  rerender({ activeNodeId: 'folder-b' });
+
+  expect(result.current.activeFolderColumnId).toBe('folder-b');
+  expect(result.current.folderNodesById).toBe(folderNodesById);
+  expect(result.current.topicNodeOrder).toEqual(['topic-c']);
+});
+
+it('reflects topic title edits from the latest source data', () => {
+  const baseProps = {
+    activeNodeId: 'folder-a',
+    isTrashViewOpen: false,
+    listNodesById: nodesById,
+    nodeOrder: [INBOX_NODE_ID, 'folder-a', 'topic-a', 'topic-b'],
+    trashedNodeIds: []
+  };
+  const { result, rerender } = renderHook(
+    ({ listNodesById }: { listNodesById: WorkspaceListNodesById }) =>
+      useWorkspaceDualListState({ ...baseProps, listNodesById }),
+    { initialProps: { listNodesById: nodesById } }
+  );
+
+  rerender({
+    listNodesById: {
+      ...nodesById,
+      'topic-a': { ...nodesById['topic-a']!, title: 'Renamed Topic A' }
+    }
+  });
+
+  expect(result.current.topicNodeOrder).toEqual(['topic-a', 'topic-b']);
+  expect(result.current.topicNodesById['topic-a']?.title).toBe('Renamed Topic A');
+});
+
+it('reflects moved topics in the selected folder without waiting for a later rebuild', () => {
+  const initialNodesById: WorkspaceListNodesById = {
+    ...nodesById,
+    'folder-b': createNode({ id: 'folder-b', kind: 'folder', title: 'Folder B' })
+  };
+  const nodeOrder = [INBOX_NODE_ID, 'folder-a', 'topic-a', 'topic-b', 'folder-b'];
+  const { result, rerender } = renderHook(
+    ({ listNodesById }: { listNodesById: WorkspaceListNodesById }) =>
+      useWorkspaceDualListState({
+        activeNodeId: 'folder-b',
+        isTrashViewOpen: false,
+        listNodesById,
+        nodeOrder,
+        trashedNodeIds: []
+      }),
+    { initialProps: { listNodesById: initialNodesById } }
+  );
+
+  expect(result.current.topicNodeOrder).toEqual([]);
+
+  rerender({
+    listNodesById: {
+      ...initialNodesById,
+      'topic-b': { ...initialNodesById['topic-b']!, parentNodeId: 'folder-b' }
+    }
+  });
+
+  expect(result.current.topicNodeOrder).toEqual(['topic-b']);
+});
+
 it('keeps the active topic in its folder column when that topic has children', () => {
   const topicParentNodesById: WorkspaceListNodesById = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
@@ -83,5 +164,6 @@ it('keeps the active topic in its folder column when that topic has children', (
   );
 
   expect(result.current.activeFolderColumnId).toBe(INBOX_NODE_ID);
-  expect(result.current.topicNodeOrder).toEqual(['topic-parent', 'topic-child']);
+  expect(result.current.topicNodeOrder).toEqual(['topic-parent']);
+  expect(result.current.topicChildrenByParent.get('topic-parent')).toEqual(['topic-child']);
 });

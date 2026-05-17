@@ -91,18 +91,27 @@ export function buildFolderNavigationNodeOrder(
   ];
 }
 
+export function buildFolderNavigationNodesByIdFromOrder(
+  folderNodeOrder: string[],
+  nodesById: WorkspaceListNodesById
+) {
+  const folderEntries: Array<[string, WorkspaceListNode | undefined]> = folderNodeOrder.map((nodeId) => [
+    nodeId,
+    nodeId === TRASH_NODE_ID ? createNavigationTrashNode() : nodesById[nodeId]
+  ]);
+  return Object.fromEntries(
+    folderEntries.filter((entry): entry is [string, WorkspaceListNode] => Boolean(entry[1]))
+  );
+}
+
 export function buildFolderNavigationNodesById(
   nodeOrder: string[],
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: readonly string[]
 ) {
-  const folderEntries: Array<[string, WorkspaceListNode | undefined]> = buildFolderNavigationNodeOrder(
-    nodeOrder,
-    nodesById,
-    trashedNodeIds
-  ).map((nodeId) => [nodeId, nodeId === TRASH_NODE_ID ? createNavigationTrashNode() : nodesById[nodeId]]);
-  return Object.fromEntries(
-    folderEntries.filter((entry): entry is [string, WorkspaceListNode] => Boolean(entry[1]))
+  return buildFolderNavigationNodesByIdFromOrder(
+    buildFolderNavigationNodeOrder(nodeOrder, nodesById, trashedNodeIds),
+    nodesById
   );
 }
 
