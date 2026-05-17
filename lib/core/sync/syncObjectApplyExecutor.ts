@@ -5,6 +5,7 @@ import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 const REMOTE_DEVICE_ID = 'sync-remote';
+export const SYNC_OBJECT_APPLY_BATCH_SIZE = 25;
 const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'attachment',
   'external_document',
@@ -26,6 +27,7 @@ interface ExistingSyncObjectState extends DbRow {
 export interface ApplySyncObjectsWithDbPortOptions {
   includeAlreadyApplied?: boolean;
   deviceId?: string;
+  onSkippedRecord?: (record: unknown, reason: unknown) => void;
 }
 
 type SyncObjectApplyStatus = 'apply' | 'already_applied' | 'stale';
@@ -36,9 +38,13 @@ export async function applySyncObjectsWithDbPort(
   options: ApplySyncObjectsWithDbPortOptions = {}
 ) {
   const appliedIds: string[] = [];
-  for (const record of records) {
-    const appliedId = await applySingleSyncObject(port, validateSyncObjectRecord(record), options);
-    if (appliedId) appliedIds.push(appliedId);
+  for (let index = 0; index < records.length; index += SYNC_OBJECT_APPLY_BATCH_SIZE) {
+    const batch = records.slice(index, index + SYNC_OBJECT_APPLY_BATCH_SIZE);
+    try {
+      appliedIds.push(...await applySyncObjectBatch(port, batch.map(validateSyncObjectRecord), options));
+    } catch {
+      appliedIds.push(...await applySyncObjectBatchWithIsolation(port, batch, options));
+    }
   }
   return appliedIds;
 }
@@ -58,35 +64,68 @@ function validateSyncObjectRecord(value: unknown): SyncPackSyncObjectRecord {
   };
 }
 
-async function applySingleSyncObject(
+async function applySyncObjectBatch(
+  port: DbPort,
+  records: SyncPackSyncObjectRecord[],
+  options: ApplySyncObjectsWithDbPortOptions
+) {
+  return await port.transaction(async (tx) => {
+    const appliedIds: string[] = [];
+    for (const record of records) {
+      const appliedId = await applySingleSyncObjectInTransaction(tx, record, options);
+      if (appliedId) appliedIds.push(appliedId);
+    }
+    return appliedIds;
+  });
+}
+
+async function applySyncObjectBatchWithIsolation(
+  port: DbPort,
+  records: NativeSyncObjectRecord[],
+  options: ApplySyncObjectsWithDbPortOptions
+) {
+  const appliedIds: string[] = [];
+  for (const record of records) {
+    try {
+      appliedIds.push(...await applySyncObjectBatch(port, [validateSyncObjectRecord(record)], options));
+    } catch (error) {
+      options.onSkippedRecord?.(record, error);
+    }
+  }
+  return appliedIds;
+}
+
+async function applySingleSyncObjectInTransaction(
   port: DbPort,
   record: SyncPackSyncObjectRecord,
   options: ApplySyncObjectsWithDbPortOptions
 ) {
-  return await port.transaction(async (tx) => {
-    const status = await getSyncObjectApplyStatus(tx, record);
-    if (status === 'already_applied') {
-      return options.includeAlreadyApplied ? `${record.object_type}:${record.object_id}` : null;
-    }
-    if (status === 'stale') return null;
-    const appliedPayload = await applySyncObjectPayloadWithDbPort(
-      tx,
-      record,
-      options.deviceId === undefined ? {} : { deviceId: options.deviceId }
-    );
-    if (appliedPayload === false) return null;
-    await tx.run(
-      `INSERT INTO sync_object_state (` +
-      `object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, deleted_at` +
-      `) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), ?, ?, ?, 0, ?) ` +
-      `ON CONFLICT(object_type, object_id) DO UPDATE SET ` +
-      `state_seq = excluded.state_seq, content_hash = excluded.content_hash, ` +
-      `last_modified_by_device_id = excluded.last_modified_by_device_id, updated_at = excluded.updated_at, ` +
-      `sync_dirty = excluded.sync_dirty, deleted_at = excluded.deleted_at`,
-      [record.object_type, record.object_id, record.content_hash, REMOTE_DEVICE_ID, record.updated_at, record.deleted_at]
-    );
-    return `${record.object_type}:${record.object_id}`;
-  });
+  const status = await getSyncObjectApplyStatus(port, record);
+  if (status === 'already_applied') {
+    return options.includeAlreadyApplied ? `${record.object_type}:${record.object_id}` : null;
+  }
+  if (status === 'stale') return null;
+  const appliedPayload = await applySyncObjectPayloadWithDbPort(
+    port,
+    record,
+    options.deviceId === undefined ? {} : { deviceId: options.deviceId }
+  );
+  if (appliedPayload === false) return null;
+  await upsertAppliedSyncObjectState(port, record);
+  return `${record.object_type}:${record.object_id}`;
+}
+
+async function upsertAppliedSyncObjectState(port: DbPort, record: SyncPackSyncObjectRecord) {
+  await port.run(
+    `INSERT INTO sync_object_state (` +
+    `object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, deleted_at` +
+    `) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), ?, ?, ?, 0, ?) ` +
+    `ON CONFLICT(object_type, object_id) DO UPDATE SET ` +
+    `state_seq = excluded.state_seq, content_hash = excluded.content_hash, ` +
+    `last_modified_by_device_id = excluded.last_modified_by_device_id, updated_at = excluded.updated_at, ` +
+    `sync_dirty = excluded.sync_dirty, deleted_at = excluded.deleted_at`,
+    [record.object_type, record.object_id, record.content_hash, REMOTE_DEVICE_ID, record.updated_at, record.deleted_at]
+  );
 }
 
 async function getSyncObjectApplyStatus(port: DbPort, record: SyncPackSyncObjectRecord): Promise<SyncObjectApplyStatus> {

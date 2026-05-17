@@ -26,15 +26,8 @@ export async function applySyncObjectsAsync(records: NativeSyncObjectRecord[], o
   if (records.length === 0) return [];
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-sync-object-apply' });
-  const appliedIds: string[] = [];
-
-  for (const record of records) {
-    try {
-      appliedIds.push(...await applySyncObjectsWithDbPort(port, [record], options));
-    } catch (error) {
-      warnSkippedSyncObject(record, error);
-    }
-  }
-
-  return appliedIds;
+  return applySyncObjectsWithDbPort(port, records, {
+    ...options,
+    onSkippedRecord: warnSkippedSyncObject
+  });
 }
