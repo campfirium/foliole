@@ -1,5 +1,5 @@
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
-import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 
@@ -144,41 +144,6 @@ export function sortTrashContentRows(
     if (dateResult !== 0) return dateResult;
     return compareWorkspaceContentNodes(left.node, right.node, { direction: 'asc', key: 'name' });
   });
-}
-
-export function sortWorkspaceContentNodeIds(
-  nodeIds: string[],
-  nodesById: WorkspaceListNodesById,
-  sort: WorkspaceContentSortState,
-  nodeViewById: Record<string, { updatedAt?: string | null } | undefined> = {}
-) {
-  const knownIds = new Set(nodeIds.filter((nodeId) => Boolean(nodesById[nodeId])));
-  const childrenByParent = new Map<string | null, string[]>();
-
-  nodeIds.forEach((nodeId) => {
-    const node = nodesById[nodeId];
-    if (!node) return;
-    const parentId = node.parentNodeId && knownIds.has(node.parentNodeId) ? node.parentNodeId : null;
-    const children = childrenByParent.get(parentId);
-    if (children) {
-      children.push(nodeId);
-    } else {
-      childrenByParent.set(parentId, [nodeId]);
-    }
-  });
-
-  const sortIds = (ids: string[]) =>
-    [...ids].sort((leftId, rightId) => compareWorkspaceContentNodes(nodesById[leftId]!, nodesById[rightId]!, sort, nodeViewById));
-
-  const sortedIds: string[] = [];
-  const walk = (parentId: string | null) => {
-    sortIds(childrenByParent.get(parentId) ?? []).forEach((nodeId) => {
-      sortedIds.push(nodeId);
-      walk(nodeId);
-    });
-  };
-  walk(null);
-  return sortedIds;
 }
 
 export function compareExternalDocuments(

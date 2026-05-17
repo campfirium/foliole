@@ -9,7 +9,8 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
-import { normalizeWorkspaceContentSort, sortWorkspaceContentNodeIds } from './workspaceContentSort';
+import { sortWorkspaceContentNodeIds } from './workspaceContentNodeOrder';
+import { normalizeWorkspaceContentSort } from './workspaceContentSort';
 import { useWorkspaceTopicTreeRows } from './workspaceTopicTreeContent';
 import {
   resolveWorkspaceTopicTreeFocusNodeId,

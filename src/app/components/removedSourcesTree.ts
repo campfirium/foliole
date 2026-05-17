@@ -2,7 +2,8 @@ import { buildNodeTree, buildVisibleNodeTreeRows } from '../../features/nodes/mo
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { RuntimeRemovedSourceEntry } from '../../shared/platform/removedSourcesRuntimeRepository';
 
-import { normalizeWorkspaceContentSort, sortWorkspaceContentNodeIds, type WorkspaceContentSortState } from './workspaceContentSort';
+import { sortWorkspaceContentNodeIds } from './workspaceContentNodeOrder';
+import { normalizeWorkspaceContentSort, type WorkspaceContentSortState } from './workspaceContentSort';
 
 export interface RemovedSourcesTreeModel {
   collapsibleNodeIds: string[];

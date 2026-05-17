@@ -4,11 +4,11 @@ import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 
+import { sortWorkspaceContentNodeIds } from './workspaceContentNodeOrder';
 import {
   loadWorkspaceContentSortPreference,
   saveWorkspaceContentSortPreference,
   sortExternalDocuments,
-  sortWorkspaceContentNodeIds,
   sortWorkspaceContentRows
 } from './workspaceContentSort';
 
@@ -123,7 +123,11 @@ it('keeps large sibling groups ordered without changing hierarchy', () => {
   const nodesById: WorkspaceListNodesById = {};
   nodeIds.forEach((nodeId, index) => {
     nodesById[nodeId] = {
-      ...createRow(nodeId, `Node ${String(index).padStart(3, '0')}`, `2026-04-20T00:${String(index % 60).padStart(2, '0')}:00.000Z`).node,
+      ...createRow(
+        nodeId,
+        `Node ${String(nodeCount - index).padStart(3, '0')}`,
+        `2026-04-20T00:${String(index % 60).padStart(2, '0')}:00.000Z`
+      ).node,
       parentNodeId: 'folder'
     };
   });
@@ -135,4 +139,29 @@ it('keeps large sibling groups ordered without changing hierarchy', () => {
   expect(
     sortWorkspaceContentNodeIds(['folder', ...nodeIds], nodesById, { direction: 'asc', key: 'name' }).slice(0, 5)
   ).toEqual(['folder', 'node-0', 'node-1', 'node-2', 'node-3']);
+});
+
+it('keeps child tree order independent from workspace content sort', () => {
+  const nodesById: WorkspaceListNodesById = {
+    folder: {
+      ...createRow('folder', 'Folder', '2026-04-20T00:00:00.000Z').node,
+      hasContent: false
+    },
+    lower: {
+      ...createRow('lower', 'Lower anchor', '2026-04-24T00:00:00.000Z').node,
+      anchorLink: { id: 'anchor-lower', kind: 'highlight', locator: { from: 20, originalText: 'Lower', to: 25 } },
+      parentNodeId: 'folder'
+    },
+    upper: {
+      ...createRow('upper', 'Upper anchor', '2026-04-20T00:00:00.000Z').node,
+      anchorLink: { id: 'anchor-upper', kind: 'highlight', locator: { from: 5, originalText: 'Upper', to: 10 } },
+      parentNodeId: 'folder'
+    }
+  };
+
+  expect(sortWorkspaceContentNodeIds(['folder', 'lower', 'upper'], nodesById, { direction: 'desc', key: 'modifiedAt' })).toEqual([
+    'folder',
+    'upper',
+    'lower'
+  ]);
 });
