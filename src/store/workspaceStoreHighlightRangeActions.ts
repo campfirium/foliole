@@ -38,12 +38,17 @@ function buildUpdatedHighlightNode(args: {
     originalText: args.parentContent.slice(args.range.from, args.range.to),
     to: args.range.to
   };
+  const previousLocator = args.node.anchorLink.locator;
+  const shouldSyncContent = args.node.content === previousLocator.originalText;
+  const shouldSyncTitle = !args.node.isTitleManual && args.node.title === previousLocator.originalText;
   return {
     ...args.node,
     anchorLink: {
       ...args.node.anchorLink,
       locator
     },
+    ...(shouldSyncContent ? { content: locator.originalText } : {}),
+    ...(shouldSyncTitle ? { title: locator.originalText } : {}),
     updatedAt: args.timestamp
   } satisfies Node;
 }

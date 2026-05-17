@@ -13,6 +13,7 @@ interface HighlightRangeHandlesProps {
 }
 
 interface HandlePosition {
+  height: number;
   left: number;
   top: number;
 }
@@ -26,7 +27,8 @@ function resolveHandlePosition(editor: EditorAdapter, position: number, side: 'f
   }
   return {
     left: side === 'from' ? rect.left : rect.right,
-    top: rect.top + rect.height / 2
+    height: rect.height,
+    top: rect.top
   };
 }
 
@@ -136,23 +138,27 @@ function HighlightRangeHandle(props: {
   return (
     <button
       aria-label={props.side === 'from' ? 'Adjust Highlight start' : 'Adjust Highlight end'}
-      className="fixed z-floating flex h-7 w-4 -translate-y-1/2 cursor-ew-resize items-center justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-selection-blue/50"
+      className="fixed z-floating flex w-4 cursor-ew-resize items-start justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-selection-blue/50"
       data-highlight-range-handle="true"
       onPointerDown={props.onPointerDown}
       style={{
+        height: Math.max(props.position.height, 18),
         left: props.position.left,
         top: props.position.top,
-        transform: `translate(${props.side === 'from' ? '-7px' : '-5px'}, -50%)`
+        transform: 'translateX(-50%)'
       }}
       title={props.side === 'from' ? 'Adjust Highlight start' : 'Adjust Highlight end'}
       type="button"
     >
       <span
-        className="h-9 w-[3px] rounded-full"
+        className="h-full w-[3px] rounded-full"
         style={{ background: 'rgb(var(--app-highlight-color-rgb) / 0.82)' }}
       />
       <span
-        className="absolute top-0 size-3 -translate-y-1 rounded-full border border-background shadow-sm"
+        className={[
+          'absolute size-3 rounded-full',
+          props.side === 'from' ? 'top-0 -translate-y-1/2' : 'bottom-0 translate-y-1/2'
+        ].join(' ')}
         style={{ background: 'rgb(var(--app-highlight-color-rgb) / 0.82)' }}
       />
     </button>

@@ -114,6 +114,7 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
     onCreateCloze: () => undefined,
     onCreateHighlight: () => undefined,
     onCreatePdfHighlight: () => false,
+    onAdjustExistingHighlightRange: () => true,
     onCutImage: () => undefined,
     onDeleteImage: () => undefined,
     onEditorChange: () => undefined,

@@ -65,12 +65,16 @@ it('renders visible range handles for an adjustable highlight', () => {
 
   const handles = document.querySelectorAll('[data-highlight-range-handle="true"]');
   expect(handles).toHaveLength(2);
-  expect(handles[0]).toHaveClass('h-7', 'w-4', 'cursor-ew-resize');
+  expect(handles[0]).toHaveClass('w-4', 'cursor-ew-resize');
   expect(handles[0]?.querySelector('.bg-cloze-yellow')).toBeNull();
   expect(handles[0]?.textContent).toBe('');
-  expect(handles[1]).toHaveClass('h-7', 'w-4', 'cursor-ew-resize');
+  expect(handles[1]).toHaveClass('w-4', 'cursor-ew-resize');
   expect(handles[1]?.querySelector('.bg-cloze-yellow')).toBeNull();
   expect((handles[0]?.firstElementChild as HTMLElement | null)?.style.background).toBe('rgb(var(--app-highlight-color-rgb) / 0.82)');
+  expect((handles[0] as HTMLElement).style.top).toBe('80px');
+  expect((handles[0] as HTMLElement).style.height).toBe('20px');
+  expect(handles[0]?.lastElementChild).toHaveClass('top-0', '-translate-y-1/2');
+  expect(handles[1]?.lastElementChild).toHaveClass('bottom-0', 'translate-y-1/2');
 });
 
 it('commits the dragged highlight range', () => {

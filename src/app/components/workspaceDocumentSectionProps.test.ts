@@ -47,6 +47,7 @@ function createSurfaceActionProps() {
     onCreatePdfHighlight: vi.fn(),
     onCutImage: vi.fn(),
     onDeleteImage: vi.fn(),
+    onAdjustExistingHighlightRange: vi.fn(() => true),
     onEditorChange: vi.fn(),
     onEditorContextMenu: vi.fn(),
     onEditorReady: vi.fn(),
@@ -122,4 +123,17 @@ it('passes only explicit restore commands to the editor restore target', () => {
   expect(sectionProps.editorReadingRestoreScrollTop).toBe(6400);
   expect(sectionProps.editorReadingSelection).toEqual({ from: 320, to: 320 });
   expect(sectionProps.editorReadingTargetViewportRatio).toBe(0.24);
+});
+
+it('passes existing highlight range adjustment through to the document section', () => {
+  const onAdjustExistingHighlightRange = vi.fn(() => true);
+  const sectionProps = buildDocumentSectionProps(
+    'node-1',
+    'appearance',
+    false,
+    () => false,
+    createSurfaceProps({ onAdjustExistingHighlightRange })
+  );
+
+  expect(sectionProps.onAdjustExistingHighlightRange).toBe(onAdjustExistingHighlightRange);
 });

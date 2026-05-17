@@ -1,4 +1,5 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { isTextAnchorLocator } from '../../features/nodes/model/nodeTypes';
 
 import { DocumentPanelContextMenu } from './DocumentPanelContextMenu';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
@@ -16,6 +17,22 @@ interface DocumentPanelSectionOverlaysProps {
   sourceUpdatePreview: { currentHighlightCount: number; updatedContent: string; updatedHighlightCount: number } | null;
 }
 
+export function resolveAdjustableHighlight(props: DocumentPanelSectionProps) {
+  const existingHighlight = props.contextMenu?.existingHighlight;
+  if (existingHighlight?.kind !== 'highlight' || !existingHighlight.canAdjustRange) {
+    return null;
+  }
+  const node = props.nodesById[existingHighlight.nodeId];
+  if (node?.anchorLink?.kind !== 'highlight' || !isTextAnchorLocator(node.anchorLink.locator)) {
+    return null;
+  }
+  return {
+    ...existingHighlight,
+    locator: node.anchorLink.locator,
+    originalText: node.anchorLink.locator.originalText
+  };
+}
+
 export function DocumentPanelSectionOverlays({
   currentSourceUpdateContent,
   documentMaxWidth,
@@ -26,8 +43,7 @@ export function DocumentPanelSectionOverlays({
   props,
   sourceUpdatePreview
 }: DocumentPanelSectionOverlaysProps) {
-  const existingHighlight = props.contextMenu?.existingHighlight;
-  const adjustableHighlight = existingHighlight?.kind === 'highlight' && existingHighlight.canAdjustRange ? existingHighlight : null;
+  const adjustableHighlight = resolveAdjustableHighlight(props);
   return (
     <>
       {sourceUpdatePreview ? (
@@ -47,7 +63,7 @@ export function DocumentPanelSectionOverlays({
       <HighlightRangeHandles
         editor={editorAdapter}
         highlight={adjustableHighlight}
-        onCommit={props.onAdjustExistingHighlightRange ?? (() => false)}
+        onCommit={props.onAdjustExistingHighlightRange}
       />
       <DocumentPanelContextMenu
         contextMenu={props.contextMenu}
@@ -59,6 +75,7 @@ export function DocumentPanelSectionOverlays({
         {...(props.onCreateHighlightFromPayload ? { onCreateHighlightFromPayload: props.onCreateHighlightFromPayload } : {})}
         onCreateNote={props.onCreateNote ?? (() => undefined)}
         onDeleteExistingHighlight={props.onDeleteExistingHighlight ?? (() => undefined)}
+        onOpenExistingHighlight={props.onOpenExistingHighlight ?? (() => undefined)}
         onCutImage={props.onCutImage}
         onDeleteImage={props.onDeleteImage}
         onExportImage={props.onExportImage}

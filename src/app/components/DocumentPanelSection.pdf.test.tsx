@@ -77,6 +77,7 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   onCreateCloze: () => undefined,
   onCreateHighlight: () => undefined,
   onCreatePdfHighlight: () => false,
+  onAdjustExistingHighlightRange: () => true,
   onCutImage: () => undefined,
   onDeleteImage: () => undefined,
   onEditorChange: () => undefined,

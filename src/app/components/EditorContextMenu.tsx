@@ -24,6 +24,7 @@ export interface EditorContextMenuProps {
   onCreateHighlight: () => void;
   onCreateNote: (note: string) => void;
   onDeleteExistingHighlight: () => void;
+  onOpenExistingHighlight: () => void;
   onCreateCloze: (options?: LongClozeGuardOptions) => void;
   onCreateClozeFromPayload: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
   onCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;

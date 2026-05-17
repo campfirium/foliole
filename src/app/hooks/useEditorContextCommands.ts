@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 
-import { appendHighlightCardNote } from '../../../lib/core/annotations/textAnnotationContent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { getSelectionCommandPayload, type SelectionCommandPayload } from '../contextCommands';
 
 import { createSelectionHandlers, runSelectionCommandFromPayload } from './editorSelectionCommandActions';
+import { createExistingHighlightHandlers } from './existingHighlightContextHandlers';
 import {
   createAddNoteToSelectionHighlightFromPayloadHandler,
   createToggleSelectionHighlightFromPayloadHandler
@@ -174,42 +173,6 @@ function createPayloadSelectionRunner(
     });
 }
 
-function createExistingHighlightHandlers(args: {
-  closeContextMenu: () => void;
-  contextMenu: EditorContextMenuState | null;
-  deleteNodePermanently: (nodeId: string) => void;
-  nodesById: Record<string, Node>;
-  selectionHandlers: ReturnType<typeof createSelectionHandlers>;
-  updateNodeContent: (nodeId: string, content: string) => void;
-}) {
-  const existingHighlight = args.contextMenu?.kind === 'selection' ? args.contextMenu.existingHighlight : null;
-  return {
-    handleCreateNote(note: string) {
-      if (!existingHighlight) {
-        args.selectionHandlers.handleCreateNote(note);
-        return;
-      }
-      const node = args.nodesById[existingHighlight.nodeId];
-      if (!node) {
-        return;
-      }
-      args.updateNodeContent(existingHighlight.nodeId, appendHighlightCardNote({
-        content: node.content,
-        note,
-        notePrefix: getHighlightAnnotationPrefix(),
-        originalText: existingHighlight.originalText
-      }));
-    },
-    handleDeleteExistingHighlight() {
-      if (!existingHighlight) {
-        return;
-      }
-      args.deleteNodePermanently(existingHighlight.nodeId);
-      args.closeContextMenu();
-    }
-  };
-}
-
 function buildEditorCommandsResult(args: {
   activeNodeId: string | null;
   closeContextMenu: () => void;
@@ -263,6 +226,7 @@ function buildEditorCommandsResult(args: {
     handleAddNoteToSelectionHighlightFromPayload,
     handleCreateNoteFromPayload: args.selectionHandlers.handleCreateNoteFromPayload,
     handleDeleteExistingHighlight: existingHighlightHandlers.handleDeleteExistingHighlight,
+    handleOpenExistingHighlight: existingHighlightHandlers.handleOpenExistingHighlight,
     handleCutImage: imageHandlers.handleCutImage,
     handleDeleteImage: imageHandlers.handleDeleteImage,
     handleEditorContextMenu: args.handleEditorContextMenu,

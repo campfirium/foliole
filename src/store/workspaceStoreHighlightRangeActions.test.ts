@@ -82,9 +82,15 @@ it('updates a single-range highlight locator in place', () => {
       to: 16
     }
   });
+  expect(harness.getState().nodesById['highlight-1']).toEqual(expect.objectContaining({
+    content: 'Beta Gamma',
+    title: 'Beta Gamma'
+  }));
   expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({
       id: 'highlight-1',
+      content: 'Beta Gamma',
+      title: 'Beta Gamma',
       anchorLink: expect.objectContaining({
         locator: expect.objectContaining({ originalText: 'Beta Gamma' })
       })
@@ -141,4 +147,32 @@ it('rejects ambiguous or invalid highlight range updates', () => {
   expect(actions.updateHighlightAnchorRange?.('highlight-1', { from: 6, to: 6 })).toBe(false);
   expect(actions.updateHighlightAnchorRange?.('highlight-1', { from: 6, to: 99 })).toBe(false);
   expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+});
+
+it('does not overwrite edited highlight child content or manual title', () => {
+  const { actions, harness } = createHarness();
+  harness.getState().nodesById['highlight-1'] = createHighlightNode({
+    content: 'My note about Beta',
+    isTitleManual: true,
+    title: 'Custom highlight title'
+  });
+
+  const updated = actions.updateHighlightAnchorRange?.('highlight-1', { from: 6, to: 16 });
+
+  expect(updated).toBe(true);
+  expect(harness.getState().nodesById['highlight-1']).toEqual(expect.objectContaining({
+    content: 'My note about Beta',
+    title: 'Custom highlight title',
+    anchorLink: expect.objectContaining({
+      locator: {
+        from: 6,
+        originalText: 'Beta Gamma',
+        to: 16
+      }
+    })
+  }));
+  expect(syncNodeContentToRuntime).toHaveBeenCalledWith(expect.objectContaining({
+    content: 'My note about Beta',
+    title: 'Custom highlight title'
+  }));
 });

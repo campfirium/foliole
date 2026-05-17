@@ -1,4 +1,4 @@
-import { MessageSquare, MoreHorizontal, X } from 'lucide-react';
+import { CornerDownRight, MessageSquare, MoreHorizontal, X } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -31,6 +31,7 @@ export function ExistingHighlightToolbar(props: {
   onClose: () => void;
   onCreateNote: (note: string) => void;
   onDeleteExistingHighlight: () => void;
+  onOpenExistingHighlight: () => void;
   top: number;
 }) {
   const [noteDraft, setNoteDraft] = useState('');
@@ -54,6 +55,9 @@ export function ExistingHighlightToolbar(props: {
         </ExistingHighlightToolbarButton>
         <ExistingHighlightToolbarButton label="Add Note" onClick={() => setIsNoteOpen(true)}>
           <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
+        </ExistingHighlightToolbarButton>
+        <ExistingHighlightToolbarButton label="Open" onClick={props.onOpenExistingHighlight}>
+          <CornerDownRight aria-hidden="true" size={19} strokeWidth={2} />
         </ExistingHighlightToolbarButton>
         <ExistingHighlightToolbarButton label="More" onClick={() => undefined}>
           <MoreHorizontal aria-hidden="true" size={19} strokeWidth={2} />

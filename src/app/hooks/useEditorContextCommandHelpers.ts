@@ -36,6 +36,7 @@ export interface EditorContextCommandsResult {
   handleAddNoteToSelectionHighlightFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
   handleCreateNoteFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
   handleDeleteExistingHighlight: () => void;
+  handleOpenExistingHighlight: () => void;
   handleCutImage: () => Promise<void>;
   handleDeleteImage: () => void;
   handleEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;

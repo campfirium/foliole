@@ -31,6 +31,7 @@ function requiredActionProps(overrides: Record<string, unknown> = {}) {
     onCreateHighlightFromPayload: vi.fn(),
     onCreateNote: vi.fn(),
     onDeleteExistingHighlight: vi.fn(),
+    onOpenExistingHighlight: vi.fn(),
     onCutImage: vi.fn(),
     onDeleteImage: vi.fn(),
     onExportImage: vi.fn(),
@@ -170,21 +171,26 @@ it('saves add note text from the floating note panel', () => {
 
 it('renders existing highlight actions without cloze', () => {
   const onDeleteExistingHighlight = vi.fn();
+  const onOpenExistingHighlight = vi.fn();
   render(
     <EditorContextMenu
       kind="selection"
       left={16}
       mode="existing-highlight-toolbar"
       top={24}
-      {...requiredActionProps({ onDeleteExistingHighlight })}
+      {...requiredActionProps({ onDeleteExistingHighlight, onOpenExistingHighlight })}
     />
   );
 
   expect(screen.getByRole('button', { name: 'Close Highlight' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add Note' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Cloze' })).toBeNull();
 
   fireEvent.click(screen.getByRole('button', { name: 'Close Highlight' }));
   expect(onDeleteExistingHighlight).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+  expect(onOpenExistingHighlight).toHaveBeenCalledTimes(1);
 });

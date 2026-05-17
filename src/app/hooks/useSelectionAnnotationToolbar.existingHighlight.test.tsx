@@ -101,10 +101,11 @@ function createHighlightElement() {
 it('opens an existing highlight toolbar from a highlight click', () => {
   const updateNodeContent = vi.fn();
   const deleteNodePermanently = vi.fn();
+  const onSelectNode = vi.fn();
   const highlightElement = createHighlightElement();
 
   const { result } = renderHook(() =>
-    useEditorContextCommands(buildHookArgs({ deleteNodePermanently, updateNodeContent }))
+    useEditorContextCommands(buildHookArgs({ deleteNodePermanently, onSelectNode, updateNodeContent }))
   );
 
   act(() => {
@@ -131,6 +132,17 @@ it('opens an existing highlight toolbar from a highlight click', () => {
   act(() => result.current.handleCreateNote('Reader thought'));
   expect(updateNodeContent).toHaveBeenCalledWith('highlight-1', 'Welcome\n※ Reader thought');
 
+  act(() => result.current.handleOpenExistingHighlight());
+  expect(onSelectNode).toHaveBeenCalledWith('highlight-1');
+
+  act(() => {
+    highlightElement.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true,
+      button: 0,
+      clientX: 80,
+      clientY: 100
+    }));
+  });
   act(() => result.current.handleDeleteExistingHighlight());
   expect(deleteNodePermanently).toHaveBeenCalledWith('highlight-1');
 });

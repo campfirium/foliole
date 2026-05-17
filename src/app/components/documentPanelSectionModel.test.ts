@@ -42,6 +42,7 @@ function buildProps(overrides: Partial<DocumentPanelSectionProps> = {}): Documen
     onCopyImage: () => undefined,
     onCreateHighlight: () => undefined,
     onCreatePdfHighlight: () => false,
+    onAdjustExistingHighlightRange: () => true,
     onCreateCloze: () => undefined,
     onCutImage: () => undefined,
     onDeleteImage: () => undefined,
