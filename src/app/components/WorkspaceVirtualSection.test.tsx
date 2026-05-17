@@ -62,7 +62,49 @@ it('moves from the virtual root to the Removed row with arrow keys', () => {
     />
   );
 
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowDown' });
 
   expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_REMOVED_NODE_ID);
+});
+
+it('hides the Removed row when the virtual root is collapsed', () => {
+  const root = createVirtualNode({
+    id: VIRTUAL_ROOT_NODE_ID,
+    parentNodeId: null,
+    specialKind: 'virtual-root',
+    title: 'Virtual'
+  });
+  const custom = createVirtualNode({
+    id: 'virtual-custom',
+    parentNodeId: VIRTUAL_ROOT_NODE_ID,
+    specialKind: 'virtual',
+    title: 'Custom virtual'
+  });
+
+  render(
+    <WorkspaceVirtualSection
+      activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
+      isVirtualViewOpen
+      nodeOrder={[VIRTUAL_ROOT_NODE_ID, 'virtual-custom']}
+      nodesById={{
+        [VIRTUAL_ROOT_NODE_ID]: root,
+        'virtual-custom': custom
+      }}
+      onOpenVirtualView={vi.fn()}
+      onSelectNodeInVirtualView={vi.fn()}
+    />
+  );
+
+  expect(screen.queryByRole('treeitem', { name: 'Removed' })).toBeNull();
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
+
+  expect(screen.getByRole('treeitem', { name: 'Removed' })).toBeInTheDocument();
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowLeft' });
+
+  expect(screen.queryByRole('treeitem', { name: 'Removed' })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: 'Custom virtual' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Virtual' })).toHaveAttribute('aria-expanded', 'false');
 });

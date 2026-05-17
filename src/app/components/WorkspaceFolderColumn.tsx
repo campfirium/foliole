@@ -50,15 +50,6 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
       isSelectionScopeActive={!props.isVirtualViewOpen && !props.isExternalViewOpen}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
-      key={
-        props.isVirtualViewOpen
-          ? 'regular-hidden-by-virtual'
-          : props.isExternalViewOpen
-            ? 'regular-hidden-by-external'
-            : props.isTrashViewOpen
-              ? 'regular-trash'
-              : 'regular-notes'
-      }
       nodeOrder={props.folderNodeOrder}
       nodesById={props.folderNodesById}
       onOpenMoveToNode={props.onOpenMoveToNode}

@@ -67,8 +67,7 @@ export function useWorkspaceTopicTreeFocusState(
   const collapse = useWorkspaceTopicTreeCollapse(
     props.activeFolderId,
     candidateFocusedNodeId,
-    tree.rows,
-    tree.parentById
+    tree.rows
   );
   return collapse;
 }

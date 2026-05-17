@@ -14,10 +14,7 @@ import {
 } from '../../shared/platform/externalLibraryFolderOrder';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
-import {
-  loadExternalCollapsedRowIds,
-  saveExternalCollapsedRowIds
-} from './externalLibraryCollapseSettings';
+import { saveExternalCollapsedRowIds } from './externalLibraryCollapseSettings';
 import { useExternalFolderDrag } from './ExternalLibrarySectionDrag';
 import {
   buildExternalTreeRows,
@@ -169,9 +166,5 @@ function useExternalRowKeyDown(
 }
 
 function loadInitialCollapsedIds(folders: ExternalLibraryFolder[]) {
-  const storedRowIds = loadExternalCollapsedRowIds();
-  if (storedRowIds !== null) {
-    return new Set(storedRowIds);
-  }
   return new Set(folders.map((folder) => buildFolderRowId(folder.id)));
 }

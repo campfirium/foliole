@@ -4,11 +4,10 @@ import { beforeEach, expect, it } from 'vitest';
 import { buildNodeTree, type NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNode } from '../model/workspaceListNode';
 
+import { resetNodeListCollapseSessionForTest } from './nodeListCollapseSession';
 import {
   loadManualCollapsedNoteNodeIds,
-  loadManualExpandedNoteNodeIds,
-  saveManualCollapsedNoteNodeIds,
-  saveManualExpandedNoteNodeIds
+  loadManualExpandedNoteNodeIds
 } from './nodeListCollapseSettings';
 import { useCollapsedNodeState } from './NodeListCollapseState';
 
@@ -16,7 +15,7 @@ function createNode(
   id: string,
   title: string,
   parentNodeId: string | null,
-  options?: { derived?: boolean }
+  options?: { derived?: boolean; kind?: 'folder' | 'topic' }
 ): WorkspaceListNode {
   return {
     anchorLink: options?.derived ? { id: `${id}-anchor`, kind: 'highlight' } : null,
@@ -24,6 +23,7 @@ function createNode(
     hasContent: true,
     hasReveal: false,
     id,
+    kind: options?.kind ?? 'topic',
     parentNodeId,
     review: null,
     title,
@@ -33,14 +33,13 @@ function createNode(
 
 beforeEach(() => {
   window.localStorage.clear();
+  resetNodeListCollapseSessionForTest();
 });
 
-it('does not overwrite manual collapse memory when auto-expanding the active node path', async () => {
-  saveManualCollapsedNoteNodeIds(['folder']);
-
+it('keeps collapsible folders collapsed even when the active node is inside them', async () => {
   const nodeOrder = ['folder', 'article', 'highlight'];
   const nodesById: Record<string, WorkspaceListNode> = {
-    folder: createNode('folder', 'Folder', null),
+    folder: createNode('folder', 'Folder', null, { kind: 'folder' }),
     article: createNode('article', 'Article', 'folder'),
     highlight: createNode('highlight', 'Highlight', 'article', { derived: true })
   };
@@ -50,7 +49,7 @@ it('does not overwrite manual collapse memory when auto-expanding the active nod
     activeNodeId: string | null;
   }
 
-  const { result, rerender } = renderHook(
+  const { result } = renderHook(
     ({ activeNodeId }: HookProps) =>
       useCollapsedNodeState({
         activeNodeId,
@@ -65,23 +64,21 @@ it('does not overwrite manual collapse memory when auto-expanding the active nod
   );
 
   expect(result.current.collapsedNoteNodeIds.has('folder')).toBe(true);
+  expect(result.current.collapsedNoteNodeIds.has('article')).toBe(true);
 
   await waitFor(() => {
-    expect(loadManualCollapsedNoteNodeIds()).toEqual(['folder']);
+    expect(loadManualCollapsedNoteNodeIds()).toEqual([]);
     expect(loadManualExpandedNoteNodeIds()).toEqual([]);
   });
-
-  rerender({ activeNodeId: null });
-
-  expect(result.current.collapsedNoteNodeIds.has('folder')).toBe(true);
 });
 
-it('lets manual collapse win over auto-expanded active ancestors', () => {
-  const nodeOrder = ['folder', 'article', 'highlight'];
+it('expands only the manually toggled folder branch', () => {
+  const nodeOrder = ['folder-a', 'article-a', 'folder-b', 'article-b'];
   const nodesById: Record<string, WorkspaceListNode> = {
-    folder: createNode('folder', 'Folder', null),
-    article: createNode('article', 'Article', 'folder'),
-    highlight: createNode('highlight', 'Highlight', 'article', { derived: true })
+    'folder-a': createNode('folder-a', 'Folder A', null, { kind: 'folder' }),
+    'article-a': createNode('article-a', 'Article A', 'folder-a'),
+    'folder-b': createNode('folder-b', 'Folder B', null, { kind: 'folder' }),
+    'article-b': createNode('article-b', 'Article B', 'folder-b')
   };
   const tree = buildNodeTree(nodeOrder, nodesById);
   const emptyTrashRows: NodeTreeRow[] = [];
@@ -97,20 +94,19 @@ it('lets manual collapse win over auto-expanded active ancestors', () => {
   );
 
   act(() => {
-    result.current.toggleNoteCollapse('folder');
+    result.current.toggleNoteCollapse('folder-a');
   });
 
-  expect(result.current.collapsedNoteNodeIds.has('folder')).toBe(true);
-  expect(loadManualCollapsedNoteNodeIds()).toEqual(['folder']);
-  expect(loadManualExpandedNoteNodeIds()).toEqual([]);
+  expect(result.current.collapsedNoteNodeIds.has('folder-a')).toBe(false);
+  expect(result.current.collapsedNoteNodeIds.has('folder-b')).toBe(true);
+  expect(loadManualCollapsedNoteNodeIds()).toEqual([]);
+  expect(loadManualExpandedNoteNodeIds()).toEqual(['folder-a']);
 });
 
 it('keeps collapse all effective even when the active node sits inside that branch', () => {
-  saveManualExpandedNoteNodeIds(['folder']);
-
   const nodeOrder = ['folder', 'article', 'highlight'];
   const nodesById: Record<string, WorkspaceListNode> = {
-    folder: createNode('folder', 'Folder', null),
+    folder: createNode('folder', 'Folder', null, { kind: 'folder' }),
     article: createNode('article', 'Article', 'folder'),
     highlight: createNode('highlight', 'Highlight', 'article', { derived: true })
   };

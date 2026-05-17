@@ -6,7 +6,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import { sortWorkspaceContentNodeIds } from './workspaceContentNodeOrder';
 import { normalizeWorkspaceContentSort, type WorkspaceContentSortState } from './workspaceContentSort';
 import { useStableWorkspaceContentItems } from './workspaceStableContentSort';
-import { collectActiveAncestorIds, useCollapsedTopicNodeIds } from './workspaceTopicTreeCollapseModel';
+import { useCollapsedTopicNodeIds } from './workspaceTopicTreeCollapseModel';
 import { getTopicChildren, type TopicChildrenByParent, useTopicRows } from './workspaceTopicTreeLazyRows';
 
 export function useWorkspaceTopicTreeLazyModel(args: {
@@ -36,15 +36,10 @@ export function useWorkspaceTopicTreeLazyModel(args: {
     () => rootIds.filter((nodeId) => getTopicChildren(nodeId, args.childrenByParent, args.nodesById).length > 0),
     [args.childrenByParent, args.nodesById, rootIds]
   );
-  const expandedNodeIds = useMemo(
-    () => collectActiveAncestorIds(args.activeNodeId, rootIds, args.nodesById),
-    [args.activeNodeId, args.nodesById, rootIds]
-  );
   const collapse = useCollapsedTopicNodeIds({
     activeFolderId: args.activeFolderId,
     activeNodeId: args.activeNodeId,
-    collapsibleNodeIds: initialCollapsibleNodeIds,
-    expandedNodeIds
+    collapsibleNodeIds: initialCollapsibleNodeIds
   });
   const rows = useTopicRows({
     childrenByParent: args.childrenByParent,
