@@ -30,13 +30,12 @@ const baseProps: SettingsImportSectionProps = {
   pendingLocation: null
 };
 
-it('shows loading rows while library paths load', () => {
+it('shows progress rows while library paths load', () => {
   render(<SettingsImportSection {...baseProps} isLoadingLibraryPaths />);
 
   const status = screen.getByRole('status');
   expect(status).toHaveAttribute('aria-busy', 'true');
-  expect(status).toHaveTextContent('Loading library locations');
-  expect(status).toHaveTextContent('Loading library folders, attachment folders, and incoming file folder.');
+  expect(status).toHaveTextContent('');
 });
 
 it('marks library path and mirror rebuild errors as alerts', () => {

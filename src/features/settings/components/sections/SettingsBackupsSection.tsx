@@ -16,13 +16,13 @@ function BackupLoadingState() {
   return (
     <>
       <SettingsSection ariaLabel="Backup list loading section" title="Backups">
-        <SettingsLoadingState description="Loading backup settings." title="Loading" />
+        <SettingsLoadingState />
       </SettingsSection>
       <SettingsSection ariaLabel="Backup rules loading section" title="Backup rules">
-        <SettingsLoadingState description="Loading backup settings." title="Loading" />
+        <SettingsLoadingState />
       </SettingsSection>
       <SettingsSection ariaLabel="Backup location loading section" title="Backup location">
-        <SettingsLoadingState description="Loading backup settings." title="Loading" />
+        <SettingsLoadingState />
       </SettingsSection>
     </>
   );

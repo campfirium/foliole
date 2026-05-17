@@ -182,7 +182,7 @@ function PreviewBody(args: {
   if (args.isLoading) {
     return (
       <div className="flex h-full items-center justify-center px-6">
-        <AppLoadingState description="Loading the selected external document." title="Loading external document" />
+        <AppLoadingState />
       </div>
     );
   }
@@ -206,7 +206,7 @@ function PreviewBody(args: {
   if (!args.preview) {
     return (
       <div className="flex h-full items-center justify-center px-6">
-        <AppLoadingState description="Loading the selected external document." title="Loading external document" />
+        <AppLoadingState />
       </div>
     );
   }
@@ -217,7 +217,7 @@ function PreviewBody(args: {
       blockImageWidthOverride="min(100%, 40rem)"
       className="h-full"
       key={`external-floating-${args.editorAppearanceKey}-${args.preview.absolutePath}`}
-      nodeId={args.preview.absolutePath}
+      nodeId={null}
       onChange={() => undefined}
       onOpenExternalLink={args.onOpenExternalLink}
       readOnly

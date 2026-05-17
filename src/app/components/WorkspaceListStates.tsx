@@ -26,10 +26,10 @@ export function WorkspaceListLoadingState() {
   return (
     <aside
       aria-busy="true"
-      aria-label="Loading workspace list"
+      aria-label="Workspace list progress"
       className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 items-center justify-center px-6"
     >
-      <AppLoadingState description="Loading topics and folders." title="Loading workspace" />
+      <AppLoadingState />
     </aside>
   );
 }

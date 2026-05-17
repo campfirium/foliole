@@ -207,7 +207,7 @@ export function ReadwiseBookActionsPanel({ activeNodeId }: { activeNodeId: strin
             {pendingAction === 'download' ? 'Opening…' : 'Download EPUB'}
           </AppButton>
           <AppButton disabled={isBusy} onClick={() => void runLoad()} size="sm" variant="ghost">
-            {pendingAction === 'load' ? 'Loading…' : 'Load EPUB'}
+            {pendingAction === 'load' ? 'Preparing…' : 'Load EPUB'}
           </AppButton>
         </div>
         {showLoadProgress ? (

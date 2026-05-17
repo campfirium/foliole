@@ -51,7 +51,7 @@ export function NodeListStateSurface({
   if (!loadState.isHydrated) {
     return (
       <div className={className}>
-        <AppLoadingState description="Loading topics and folders." title="Loading workspace" />
+        <AppLoadingState />
       </div>
     );
   }

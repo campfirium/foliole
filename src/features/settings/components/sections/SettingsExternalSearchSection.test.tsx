@@ -49,13 +49,12 @@ it('keeps the link panel browsing data action desktop-only', () => {
   expect(screen.getByRole('button', { name: 'Clear link panel browsing data' })).toBeDisabled();
 });
 
-it('shows a loading row while external sources load', () => {
+it('shows a progress row while external sources load', () => {
   render(<SettingsExternalSearchSection {...baseProps} isLoading />);
 
   const status = screen.getByRole('status');
   expect(status).toHaveAttribute('aria-busy', 'true');
-  expect(status).toHaveTextContent('Loading external sources');
-  expect(status).toHaveTextContent('Loading external source folders.');
+  expect(status).toHaveTextContent('');
 });
 
 it('shows a retryable alert when external sources fail to load', () => {

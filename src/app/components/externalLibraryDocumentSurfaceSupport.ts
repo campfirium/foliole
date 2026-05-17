@@ -18,7 +18,7 @@ export function resolveExternalSurfaceTitle(
   if (selection.kind === 'directory') {
     return selection.directoryPath.split('/').filter(Boolean).at(-1) ?? 'Directory';
   }
-  return 'Loading document';
+  return 'Preparing document';
 }
 
 export function resolveExternalSurfaceDescription(
@@ -40,5 +40,5 @@ export function resolveExternalSurfaceDescription(
   if (selection.kind === 'directory') {
     return 'Choose a document from the directory list to open its read-only preview.';
   }
-  return 'Loading the selected external document.';
+  return 'Preparing the selected external document.';
 }

@@ -88,7 +88,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const emptyContent = documentStatus === 'failed' || documentStatus === 'missing'
     ? (
         <DocumentPanelDocumentStatusContent
-          loadingLabel="Loading document"
+          loadingLabel="Document progress"
           onRetry={retryDocumentLoad}
           retrying={isRetryingDocument}
           status={documentStatus}

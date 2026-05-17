@@ -84,7 +84,7 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
         description="Search, preview, and import content from folders that stay outside Foliole until you choose to bring them in."
         title="External sources"
       >
-        <SettingsLoadingState description="Loading external source folders." title="Loading external sources" />
+        <SettingsLoadingState />
       </SettingsSection>
     );
   }

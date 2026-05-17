@@ -145,12 +145,12 @@ it('keeps hook order stable while the active topic changes', async () => {
   consoleErrorSpy.mockRestore();
 });
 
-it('shows a loading state when runtime backlinks are pending and no local backlinks exist', () => {
+it('shows a progress state when runtime backlinks are pending and no local backlinks exist', () => {
   loadRuntimeNodeBacklinks.mockImplementation(() => new Promise(() => undefined));
 
   renderPanelWithNodes('target', { target: createNode({ id: 'target', title: 'Target topic' }) }, ['target']);
 
-  expect(screen.getByRole('status')).toHaveTextContent('Loading backlinks');
+  expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
 });
 
 it('shows a retryable error when runtime backlinks fail without local backlinks', async () => {

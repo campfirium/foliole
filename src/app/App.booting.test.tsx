@@ -98,7 +98,7 @@ it('renders the workspace chrome immediately without a boot-only shell', async (
   render(<App />);
 
   expect(screen.getByText('workspace-layout')).toBeInTheDocument();
-  expect(screen.queryByRole('status', { name: 'Loading workspace' })).not.toBeInTheDocument();
+  expect(screen.queryByText('Preparing workspace')).not.toBeInTheDocument();
   expect(useAppController).toHaveBeenCalledTimes(1);
   await waitFor(() => {
     expect(ensureWorkspaceHydrated).toHaveBeenCalledTimes(1);

@@ -112,7 +112,7 @@ it('keeps the standard list surface blank while Removed sources load', () => {
 
   expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
-  expect(screen.queryByText('Loading Removed')).toBeNull();
+  expect(screen.queryByText('Preparing Removed')).toBeNull();
   expect(screen.queryByText('No removed topics')).toBeNull();
 });
 

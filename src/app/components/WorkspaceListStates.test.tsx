@@ -18,11 +18,11 @@ beforeEach(() => {
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-04-30T00:00:00.000Z')));
 });
 
-it('shows a loading state while the workspace list hydrates', () => {
+it('shows a progress state while the workspace list hydrates', () => {
   render(<WorkspaceListLoadingState />);
 
-  expect(screen.getByText('Loading workspace')).toBeInTheDocument();
-  expect(screen.getByText('Loading topics and folders.')).toBeInTheDocument();
+  expect(screen.getByLabelText('Workspace list progress')).toHaveAttribute('aria-busy', 'true');
+  expect(screen.queryByText('Preparing workspace')).toBeNull();
 });
 
 it('shows a retryable error when workspace hydration fails', async () => {

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { AppSpinner } from './EmptyState';
 import {
   SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
   settingsButtonClassName
@@ -41,8 +42,17 @@ function SettingsStateSurface({
   );
 }
 
-export function SettingsLoadingState(props: SettingsStateSurfaceProps) {
-  return <SettingsStateSurface aria-busy="true" role="status" {...props} />;
+export function SettingsLoadingState({ className }: { className?: string }) {
+  return (
+    <div
+      aria-busy="true"
+      className={cn('flex min-h-[82px] items-center justify-center px-5 py-5 text-foreground/65', className)}
+      data-settings-state-surface
+      role="status"
+    >
+      <AppSpinner decorative />
+    </div>
+  );
 }
 
 export function SettingsEmptyState(props: SettingsStateSurfaceProps) {

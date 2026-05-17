@@ -113,8 +113,7 @@ it('shows a loading state while the selected external folder entries are not loa
     />
   );
 
-  expect(screen.getByText('Loading documents')).toBeInTheDocument();
-  expect(screen.getByLabelText('Loading external folder documents indicator')).toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
   expect(screen.queryByText('No documents')).toBeNull();
 });
 
@@ -129,7 +128,7 @@ it('shows the empty state only after the selected external folder entries load e
   );
 
   expect(screen.getByText('No documents')).toBeInTheDocument();
-  expect(screen.queryByText('Loading documents')).toBeNull();
+  expect(screen.queryByText('Preparing documents')).toBeNull();
 });
 
 it('opens the selected document in the external workspace surface', () => {

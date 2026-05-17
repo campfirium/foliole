@@ -59,7 +59,7 @@ function PdfDocumentLoadingOverlay() {
   return (
     <div
       aria-busy="true"
-      aria-label="Loading PDF page"
+      aria-label="PDF page progress"
       className="pointer-events-none absolute inset-0 z-workspace-overlay flex items-center justify-center"
       data-testid="pdf-document-loading-overlay"
       role="status"

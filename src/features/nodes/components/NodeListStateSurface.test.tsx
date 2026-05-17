@@ -30,10 +30,11 @@ function renderListStateSurface(hasRows: boolean) {
   );
 }
 
-it('shows loading before empty rows are ready', () => {
+it('shows progress before empty rows are ready', () => {
   renderListStateSurface(false);
 
-  expect(screen.getByText('Loading workspace')).toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+  expect(screen.queryByText('Preparing workspace')).toBeNull();
   expect(screen.queryByText('No topics in this folder')).toBeNull();
 });
 
@@ -61,5 +62,5 @@ it('keeps ready rows visible even while hydration is pending', () => {
   renderListStateSurface(true);
 
   expect(screen.getByText('Ready rows')).toBeInTheDocument();
-  expect(screen.queryByText('Loading workspace')).toBeNull();
+  expect(screen.queryByRole('status')).toBeNull();
 });

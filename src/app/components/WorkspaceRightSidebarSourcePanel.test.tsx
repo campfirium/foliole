@@ -146,12 +146,12 @@ describe('WorkspaceRightSidebarSourcePanel', () => {
     });
   });
 
-  it('shows a loading state while source info is loading for the first time', () => {
+  it('shows a progress state while source info is loading for the first time', () => {
     loadRuntimeNodeSourceDetails.mockImplementation(() => new Promise(() => undefined));
 
     renderSourcePanel();
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading source info');
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
   });
 
   it('shows a source info error when source details fail to load', async () => {

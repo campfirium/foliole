@@ -48,7 +48,7 @@ export function WorkspaceRightSidebarBacklinksPanel(props: WorkspaceRightSidebar
   }
 
   if (backlinks.isLoading && backlinks.value.length === 0) {
-    return <AppLoadingState description="Checking topics that point back to this topic." title="Loading backlinks" />;
+    return <AppLoadingState />;
   }
 
   return (

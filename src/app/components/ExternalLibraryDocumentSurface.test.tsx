@@ -146,8 +146,8 @@ it('shows a loading state while an external library document is loading', () => 
     />
   );
 
-  expect(screen.getByText('Loading document')).toBeInTheDocument();
-  expect(screen.getByText('Loading the selected external document.')).toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+  expect(screen.queryByText('Preparing document')).toBeNull();
 });
 
 it('shows an alert and retries when an external library document fails to load', async () => {

@@ -38,7 +38,6 @@ export function ReadwiseBooksCatalogPanel(props: {
       })}
       hasItems={props.books.length > 0}
       isLoading={props.isLoading}
-      loadingState={{ description: 'Checking imported Readwise books.', title: 'Loading Readwise Books' }}
       onChangeQuery={props.onChangeQuery}
       onChangeSortDirection={props.onChangeSortDirection}
       onChangeSortKey={props.onChangeSortKey}

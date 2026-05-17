@@ -118,7 +118,6 @@ export function ImportSourceWorkspacePdfPage({ open }: { open: boolean }) {
           : {})}
         hasItems={filteredItems.length > 0}
         isLoading={isLoading}
-        loadingState={{ description: 'Checking imported PDFs.', title: 'Loading PDFs' }}
         onChangeQuery={setQuery}
         onChangeSortDirection={setSortDirection}
         onChangeSortKey={(value) => setSortKey(parseImportCatalogSortKey(value) ?? sortKey)}

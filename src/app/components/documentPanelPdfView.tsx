@@ -4,7 +4,7 @@ import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
-import { AppEmptyState } from '../../shared/ui';
+import { AppEmptyState, AppSpinner } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
@@ -80,7 +80,9 @@ function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>)
   if (state === 'loading') {
     return (
       <div data-testid="pdf-document-state-loading">
-        <AppEmptyState description="The reading container is checking the linked PDF source." title="Loading PDF reader" />
+        <div aria-busy="true" className="flex min-h-[120px] items-center justify-center" role="status">
+          <AppSpinner decorative />
+        </div>
       </div>
     );
   }

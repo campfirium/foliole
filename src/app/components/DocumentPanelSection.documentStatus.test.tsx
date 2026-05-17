@@ -16,7 +16,7 @@ function getEmptyContent() {
   };
 }
 
-it('shows a loading state before workspace hydration finishes', () => {
+it('shows a progress state before workspace hydration finishes', () => {
   renderSectionWithProps({
     activeNodeId: null,
     editorNodeId: null,
@@ -25,7 +25,7 @@ it('shows a loading state before workspace hydration finishes', () => {
   });
 
   const bodyProps = getEmptyContent();
-  expect(bodyProps.emptyState?.title).toBe('Loading workspace');
+  expect(bodyProps.emptyState?.title).toBe('Preparing workspace');
   expect(bodyProps.emptyContent).toBeTruthy();
 });
 
@@ -45,9 +45,9 @@ it('shows only the spinner while the selected topic body loads', () => {
 
   render(<>{getEmptyContent().emptyContent}</>);
 
-  expect(screen.getByLabelText('Loading document')).toBeInTheDocument();
-  expect(screen.queryByText('Loading document')).toBeNull();
-  expect(screen.queryByText('The selected document is still loading.')).toBeNull();
+  expect(screen.getByLabelText('Document progress')).toBeInTheDocument();
+  expect(screen.queryByText('Preparing document')).toBeNull();
+  expect(screen.queryByText('The selected document is still being prepared.')).toBeNull();
 });
 
 it('shows an empty state after hydration when no note is selected', () => {

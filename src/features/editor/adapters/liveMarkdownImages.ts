@@ -101,7 +101,7 @@ function createImageStatusElement(status: 'loading' | 'unavailable', display: Ma
   const element = document.createElement('span');
   element.className = display === 'inline' ? 'cm-md-image-status cm-md-image-status-inline' : 'cm-md-image-status cm-md-image-status-block';
   element.dataset.mdImageStatus = status;
-  element.textContent = status === 'loading' ? 'Loading image…' : 'Image unavailable';
+  element.textContent = status === 'loading' ? '' : 'Image unavailable';
   return element;
 }
 

@@ -14,10 +14,10 @@ export { hasVisibleTitleHeading } from '../../shared/lib/nodeTitleSlot';
 function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNode: Node | undefined) {
   if (props.isWorkspaceHydrated === false) {
     return {
-      loadingLabel: 'Loading document',
+      loadingLabel: 'Document progress',
       emptyState: {
-        title: 'Loading workspace',
-        description: 'Your notes are still being prepared.'
+        title: 'Preparing workspace',
+        description: 'Your topics are still being prepared.'
       }
     };
   }
@@ -54,10 +54,10 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
   if (activeNode && activeNode.kind !== 'folder' && !isNodeDocumentLoaded(activeNode)) {
     return {
       documentStatus,
-      loadingLabel: 'Loading document',
+      loadingLabel: 'Document progress',
       emptyState: {
-        title: 'Loading document',
-        description: 'The selected document is still loading.'
+        title: 'Preparing document',
+        description: 'The selected document is still being prepared.'
       }
     };
   }

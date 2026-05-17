@@ -8,7 +8,8 @@ const loadRuntimeExternalSearchPreview = vi.fn();
 const importExternalDocument = vi.fn();
 const mocks = vi.hoisted(() => ({
   editorAppearanceKey: 'preview',
-  markdownEditorMounted: vi.fn()
+  markdownEditorMounted: vi.fn(),
+  markdownEditorProps: vi.fn()
 }));
 
 vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
@@ -20,10 +21,11 @@ vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { value: string }) => {
+  MarkdownEditor: (props: { nodeId: string | null; readOnly?: boolean; value: string }) => {
     React.useEffect(() => {
       mocks.markdownEditorMounted();
     }, []);
+    mocks.markdownEditorProps(props);
     return <div>{props.value}</div>;
   }
 }));
@@ -35,16 +37,17 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
 beforeEach(() => {
   mocks.editorAppearanceKey = 'preview';
   mocks.markdownEditorMounted.mockReset();
+  mocks.markdownEditorProps.mockReset();
   importExternalDocument.mockReset();
   loadRuntimeExternalSearchPreview.mockReset();
 });
 
-it('shows a loading state while the external search preview loads', () => {
+it('shows a progress state while the external search preview loads', () => {
   loadRuntimeExternalSearchPreview.mockReturnValueOnce(new Promise(() => undefined));
 
   render(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
 
-  expect(screen.getByText('Loading external preview')).toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
 });
 
 it('shows a retryable error when the external search preview fails', async () => {
@@ -84,6 +87,7 @@ it('remounts the external search preview editor when editor appearance changes',
 
   const { rerender } = render(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
   await screen.findByText('# Preview');
+  expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.objectContaining({ nodeId: null, readOnly: true }));
   expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
 
   mocks.editorAppearanceKey = 'source';

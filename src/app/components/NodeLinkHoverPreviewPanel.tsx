@@ -41,8 +41,8 @@ function PreviewBody({ preview }: { preview: ResolvedNodeLinkPreview }) {
   if (preview.status === 'loading') {
     return (
       <AppEmptyState
-        description="Loading the linked topic content for hover preview."
-        title="Loading linked topic"
+        description="Preparing the linked topic content for hover preview."
+        title="Preparing linked topic"
       />
     );
   }

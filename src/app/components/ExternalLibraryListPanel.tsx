@@ -190,10 +190,7 @@ function renderExternalDocumentRow(args: {
 function ExternalDocumentListLoadingState() {
   return (
     <div aria-busy="true" className="flex min-h-full items-center justify-center px-3 py-6" role="status">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <AppSpinner label="Loading external folder documents indicator" />
-        <p className="m-0 text-sm text-foreground/65">Loading documents</p>
-      </div>
+      <AppSpinner decorative />
     </div>
   );
 }

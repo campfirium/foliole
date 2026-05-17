@@ -43,7 +43,7 @@ export function ImageClozeCardView({ editorAppearanceKey, node, onAnswerChange, 
         ) : (
           <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border border-border bg-bg-panel">
             <AppEmptyState
-              description={resourceState === 'missing' ? 'The source image is missing or unavailable.' : 'Loading image…'}
+              description={resourceState === 'missing' ? 'The source image is missing or unavailable.' : 'Preparing image.'}
               title={resourceState === 'missing' ? 'Image unavailable' : 'Preparing image'}
             />
           </div>

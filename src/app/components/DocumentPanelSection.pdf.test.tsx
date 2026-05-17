@@ -207,7 +207,7 @@ it('hides the interim pdf loading states behind a single loading overlay', async
 
   renderSection();
 
-  expect(screen.queryByText('Loading PDF...')).not.toBeInTheDocument();
+  expect(screen.queryByText('Preparing PDF...')).not.toBeInTheDocument();
   await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
 });
 

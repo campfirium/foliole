@@ -55,7 +55,6 @@ export function ImportCatalogLayout(props: {
   errorState?: { description: string; onRetry: () => void; title: string };
   hasItems: boolean;
   isLoading?: boolean;
-  loadingState?: { description: string; title: string };
   onChangeQuery: (value: string) => void;
   onChangeSortDirection: (sortDirection: 'asc' | 'desc') => void;
   onChangeSortKey: (sortKey: string) => void;
@@ -92,10 +91,10 @@ export function ImportCatalogLayout(props: {
 }
 
 function renderImportCatalogBody(props: Parameters<typeof ImportCatalogLayout>[0]) {
-  if (props.isLoading && props.loadingState) {
+  if (props.isLoading) {
     return (
       <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
-        <AppLoadingState description={props.loadingState.description} title={props.loadingState.title} />
+        <AppLoadingState />
       </div>
     );
   }

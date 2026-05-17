@@ -21,7 +21,7 @@ function ExternalSearchPreviewBody(args: {
   if (args.isLoading) {
     return (
       <div className="flex h-full items-center justify-center px-6">
-        <AppLoadingState description="Loading the selected external document." title="Loading external preview" />
+        <AppLoadingState />
       </div>
     );
   }
@@ -45,7 +45,7 @@ function ExternalSearchPreviewBody(args: {
   if (!args.preview) {
     return (
       <div className="flex h-full items-center justify-center px-6">
-        <AppLoadingState description="Loading the selected external document." title="Loading external preview" />
+        <AppLoadingState />
       </div>
     );
   }
@@ -56,7 +56,7 @@ function ExternalSearchPreviewBody(args: {
       blockImageWidthOverride="min(100%, 40rem)"
       className="h-full"
       key={`external-search-${args.editorAppearanceKey}-${args.preview.absolutePath}`}
-      nodeId={args.preview.absolutePath}
+      nodeId={null}
       onChange={() => undefined}
       readOnly
       value={args.preview.content}

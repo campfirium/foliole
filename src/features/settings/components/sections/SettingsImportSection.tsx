@@ -128,12 +128,7 @@ function MirrorMaintenanceSection(props: SettingsImportSectionProps) {
 }
 
 function LibraryPathLoadingRows() {
-  return (
-    <SettingsLoadingState
-      description="Loading library folders, attachment folders, and incoming file folder."
-      title="Loading library locations"
-    />
-  );
+  return <SettingsLoadingState />;
 }
 
 function LibraryPathRows(props: SettingsImportSectionProps) {

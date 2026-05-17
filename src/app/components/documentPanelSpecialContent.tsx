@@ -24,7 +24,7 @@ function renderPdfLoadingSurface() {
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div
           aria-busy="true"
-          aria-label="Loading PDF reader"
+          aria-label="PDF reader progress"
           className="workspace-region-main-document pointer-events-none absolute inset-0 z-workspace-overlay flex items-center justify-center"
           role="status"
         >

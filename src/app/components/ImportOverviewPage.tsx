@@ -12,7 +12,7 @@ function ImportOverviewBody(props: {
   if (props.state.isLoading) {
     return (
       <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
-        <AppLoadingState description="Checking watched sources and recent import runs." title="Loading recent imports" />
+        <AppLoadingState />
       </div>
     );
   }

@@ -102,11 +102,7 @@ function ConnectedDevicesRow({
         <p className="mt-0.5 text-sm text-foreground/65">Approved devices that can sync with this desktop.</p>
       </div>
       {isLoading ? (
-        <SettingsLoadingState
-          className="mt-3 px-0 py-0"
-          description="Loading connected devices..."
-          title="Loading connected devices"
-        />
+        <SettingsLoadingState className="mt-3 px-0 py-0" />
       ) : (
         <ConnectedDeviceList devices={devices} onDisconnect={onDisconnect} pendingActionId={pendingActionId} />
       )}

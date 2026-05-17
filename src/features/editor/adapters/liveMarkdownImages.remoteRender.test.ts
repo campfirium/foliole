@@ -50,11 +50,11 @@ describe('live markdown remote image rendering', () => {
     window.localStorage.clear();
   });
 
-  it('renders remote images through the internal protocol with a loading placeholder', async () => {
+  it('renders remote images through the internal protocol with a silent placeholder', async () => {
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/cover.png)');
 
     const status = host.querySelector('.cm-md-image-status[data-md-image-status="loading"]');
-    expect(status?.textContent).toContain('Loading image');
+    expect(status?.textContent).toBe('');
     const src = await waitForRemoteImageSrc(host);
     expect(src).toContain('persist=1');
     expect(src).toContain('nodeId=node-1');

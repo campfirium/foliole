@@ -10,7 +10,8 @@ const loadRuntimeExternalSearchPreview = vi.fn();
 const importExternalDocument = vi.fn();
 const mocks = vi.hoisted(() => ({
   editorAppearanceKey: 'preview',
-  markdownEditorMounted: vi.fn()
+  markdownEditorMounted: vi.fn(),
+  markdownEditorProps: vi.fn()
 }));
 
 vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
@@ -22,10 +23,11 @@ vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { value: string }) => {
+  MarkdownEditor: (props: { nodeId: string | null; readOnly?: boolean; value: string }) => {
     React.useEffect(() => {
       mocks.markdownEditorMounted();
     }, []);
+    mocks.markdownEditorProps(props);
     return <div>{props.value}</div>;
   }
 }));
@@ -51,6 +53,7 @@ beforeAll(() => {
 beforeEach(() => {
   mocks.editorAppearanceKey = 'preview';
   mocks.markdownEditorMounted.mockReset();
+  mocks.markdownEditorProps.mockReset();
   importExternalDocument.mockReset();
   loadRuntimeExternalSearchPreview.mockReset();
 });
@@ -85,6 +88,7 @@ it('renders the external document preview panel as a floating window for a reque
   await waitFor(() => {
     expect(screen.getByText('# Topic')).toBeInTheDocument();
   });
+  expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.objectContaining({ nodeId: null, readOnly: true }));
   const panel = overlay.querySelector('section');
   expect(panel).not.toBeNull();
   expect(panel?.style.width).toBeTruthy();
@@ -114,8 +118,8 @@ it('shows a loading state while the floating external preview is loading', () =>
     />
   );
 
-  expect(screen.getByText('Loading external document')).toBeInTheDocument();
-  expect(screen.getByText('Loading the selected external document.')).toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+  expect(screen.queryByText('Preparing document')).toBeNull();
 });
 
 it('shows an alert and retries when the floating external preview fails', async () => {

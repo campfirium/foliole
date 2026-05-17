@@ -12,6 +12,10 @@ interface ErrorStateProps extends EmptyStateProps {
   action?: ReactNode;
 }
 
+interface LoadingStateProps {
+  className?: string;
+}
+
 type AppSpinnerSize = 'sm' | 'md' | 'lg';
 
 const SPINNER_SIZE_CLASS_NAMES: Record<AppSpinnerSize, string> = {
@@ -49,14 +53,10 @@ export function AppEmptyState({ title, description, className }: EmptyStateProps
   );
 }
 
-export function AppLoadingState({ title, description, className }: EmptyStateProps) {
+export function AppLoadingState({ className }: LoadingStateProps) {
   return (
-    <div aria-busy="true" className={cn('flex min-h-[120px] flex-col items-center justify-center gap-3 text-center text-sm text-foreground/60', className)} role="status">
-      <AppSpinner label={`${title} indicator`} />
-      <div className="flex flex-col items-center gap-2">
-        <p className="m-0 text-sm font-semibold text-foreground">{title}</p>
-        <p className="m-0 text-[13px]">{description}</p>
-      </div>
+    <div aria-busy="true" className={cn('flex min-h-[120px] items-center justify-center text-foreground/60', className)} role="status">
+      <AppSpinner decorative />
     </div>
   );
 }

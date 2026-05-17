@@ -183,7 +183,7 @@ export function SimplePdfDocument(props: {
       <section className="flex min-h-[calc(100dvh-9rem)] items-center justify-center py-6">
         <AppEmptyState
           description={state === 'loading' && !loadFailed ? 'Preparing the synced PDF file.' : 'Sync this PDF attachment again from desktop.'}
-          title={state === 'loading' && !loadFailed ? 'Loading PDF' : 'PDF file unavailable'}
+          title={state === 'loading' && !loadFailed ? 'Preparing PDF' : 'PDF file unavailable'}
         />
       </section>
     );
@@ -201,7 +201,7 @@ export function SimplePdfDocument(props: {
       <div className="min-h-0 flex-1 overflow-auto py-3">
         <Document
           file={source}
-          loading={<AppEmptyState description="Preparing the PDF page." title="Loading PDF" />}
+          loading={<AppEmptyState description="Preparing the PDF page." title="Preparing PDF" />}
           noData={<AppEmptyState description="The synced PDF file is empty." title="No PDF file selected" />}
           onLoadError={() => setLoadFailed(true)}
           onLoadSuccess={({ numPages }) => {

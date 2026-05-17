@@ -86,15 +86,14 @@ it('lets a secondary desktop become the primary device from sync settings', asyn
   expect(setDesktopAsPrimaryDevice).toHaveBeenCalledTimes(1);
 });
 
-it('announces connected devices loading through the settings state surface', () => {
+it('announces connected devices progress through the settings state surface', () => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({ isLoading: true }));
 
   render(<SettingsCompanionSyncSection />);
 
   const status = screen.getByRole('status');
   expect(status).toHaveAttribute('aria-busy', 'true');
-  expect(status).toHaveTextContent('Loading connected devices');
-  expect(status).toHaveTextContent('Loading connected devices...');
+  expect(status).toHaveTextContent('');
 });
 
 it('shows sync server errors through the settings state surface', () => {

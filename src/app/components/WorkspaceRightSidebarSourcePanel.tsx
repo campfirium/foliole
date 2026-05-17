@@ -196,7 +196,7 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
     return <AppErrorState description="The selected topic is no longer available." title="Topic unavailable" />;
   }
   if (details.isLoading && !details.value) {
-    return <AppLoadingState description="Checking this topic's import source and history." title="Loading source info" />;
+    return <AppLoadingState />;
   }
   if (details.errorMessage && !details.value) {
     return <SourceInfoErrorState description={details.errorMessage} onRetry={details.retry} />;

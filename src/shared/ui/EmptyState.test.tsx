@@ -3,18 +3,18 @@ import { render, screen } from '@testing-library/react';
 import { AppLoadingState, AppSpinner } from './EmptyState';
 
 describe('AppSpinner', () => {
-  it('exposes a named loading indicator when not decorative', () => {
-    render(<AppSpinner label="Loading topics" size="sm" />);
+  it('exposes a named progress indicator when not decorative', () => {
+    render(<AppSpinner label="Progress indicator" size="sm" />);
 
-    const spinner = screen.getByLabelText('Loading topics');
+    const spinner = screen.getByLabelText('Progress indicator');
     expect(spinner).toHaveClass('h-4', 'w-4', 'animate-spin');
     expect(spinner).not.toHaveAttribute('aria-hidden');
   });
 
   it('supports fixed large overlay sizing', () => {
-    render(<AppSpinner label="Loading PDF" size="lg" />);
+    render(<AppSpinner label="PDF progress" size="lg" />);
 
-    expect(screen.getByLabelText('Loading PDF')).toHaveClass('h-10', 'w-10');
+    expect(screen.getByLabelText('PDF progress')).toHaveClass('h-10', 'w-10');
   });
 
   it('hides decorative indicators from assistive technology', () => {
@@ -27,10 +27,10 @@ describe('AppSpinner', () => {
 });
 
 describe('AppLoadingState', () => {
-  it('uses the shared spinner while announcing loading state', () => {
-    render(<AppLoadingState description="Loading topics and folders." title="Loading workspace" />);
+  it('uses only the shared spinner while announcing progress state', () => {
+    const { container } = render(<AppLoadingState />);
 
     expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByLabelText('Loading workspace indicator')).toHaveClass('h-6', 'w-6', 'animate-spin');
+    expect(container.querySelector('.animate-spin')).toHaveAttribute('aria-hidden', 'true');
   });
 });

@@ -132,7 +132,7 @@ function ExternalEmptySurface(args: {
 function ExternalDocumentLoadingSurface() {
   return (
     <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
-      <AppLoadingState description="Loading the selected external document." title="Loading document" />
+      <AppLoadingState />
     </section>
   );
 }
