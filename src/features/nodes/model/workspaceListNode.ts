@@ -1,5 +1,7 @@
+import { projectImageOnlyMarkdownLabel } from '../../../../lib/core/import/markdownImageLabel';
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
 
+import { UNTITLED_NODE_TITLE } from './deriveNodeTitle';
 import type {
   Node,
   NodeAnchorLink,
@@ -40,6 +42,13 @@ export interface WorkspaceListNode {
 
 export type WorkspaceListNodesById = Record<string, WorkspaceListNode | undefined>;
 
+function resolveWorkspaceListNodeTitle(node: Node) {
+  if (node.anchorLink?.kind !== 'highlight' || node.title !== UNTITLED_NODE_TITLE) {
+    return node.title;
+  }
+  return projectImageOnlyMarkdownLabel(node.content) || node.title;
+}
+
 export function toWorkspaceListNode(node: Node): WorkspaceListNode {
   return {
     anchorLink: node.anchorLink ?? null,
@@ -54,7 +63,7 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     reading: node.reading ?? null,
     review: node.review,
     ...(node.specialKind ? { specialKind: node.specialKind } : {}),
-    title: node.title,
+    title: resolveWorkspaceListNodeTitle(node),
     updatedAt: node.updatedAt
   };
 }
@@ -91,7 +100,7 @@ function isWorkspaceListProjectionReusable(
     projectedNode.reading === (sourceNode.reading ?? null) &&
     projectedNode.review === sourceNode.review &&
     projectedNode.specialKind === sourceNode.specialKind &&
-    projectedNode.title === sourceNode.title &&
+    projectedNode.title === resolveWorkspaceListNodeTitle(sourceNode) &&
     projectedNode.updatedAt === sourceNode.updatedAt
   );
 }

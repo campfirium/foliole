@@ -31,4 +31,9 @@ describe('nodeListLabelProjection', () => {
     expect(projectNodeListLabel('![Title](asset://hash.png) [下载](https://example.com/file)')).toBe('Title 下载');
     expect(projectNodeListLabel('(https://example.com/source) ### 功能介绍')).toBe('功能介绍');
   });
+
+  it('projects empty-alt image-only labels to a stable image summary', () => {
+    expect(projectNodeListLabel('![](asset://hash.png)')).toBe('Image highlight');
+    expect(projectNodeListLabel('![Cover](asset://hash.png)')).toBe('Cover');
+  });
 });

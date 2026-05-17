@@ -58,3 +58,41 @@ it('renders imported multiline markdown highlight labels without dangling strong
   ).toBeInTheDocument();
   expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
 });
+
+it('renders empty-alt image highlight labels without exposing the asset URL', () => {
+  const content = '![](asset://7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec.jpg)';
+  const parent: Node = {
+    ...BASE_NODE,
+    id: 'node-parent',
+    content
+  };
+  const highlight: Node = {
+    ...BASE_NODE,
+    id: 'node-highlight',
+    parentNodeId: 'node-parent',
+    content,
+    title: 'Image highlight',
+    anchorLink: {
+      id: 'hl-image',
+      kind: 'highlight',
+      locator: {
+        from: 0,
+        originalText: content,
+        to: content.length
+      }
+    }
+  };
+
+  render(
+    <WorkspaceRightSidebarHighlightsPanel
+      activeNodeId="node-parent"
+      nodeOrder={['node-parent', 'node-highlight']}
+      trashedNodeIds={[]}
+      nodesById={{ 'node-parent': parent, 'node-highlight': highlight }}
+      onRevealHighlight={() => undefined}
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Image highlight' })).toBeInTheDocument();
+  expect(screen.queryByText(/asset:\/\//)).not.toBeInTheDocument();
+});

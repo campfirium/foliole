@@ -16,4 +16,9 @@ describe('deriveNodeTitle', () => {
   it('keeps untitled sequencing stable', () => {
     expect(deriveNextUntitledNodeTitle([UNTITLED_NODE_TITLE, 'Untitled 2', 'Atlas'])).toBe('Untitled 3');
   });
+
+  it('derives a stable title for image-only markdown content', () => {
+    expect(deriveNodeTitleFromContent('![](asset://hash.png)')).toBe('Image highlight');
+    expect(deriveNodeTitleFromContent('![Cover](asset://hash.png)')).toBe('Cover');
+  });
 });

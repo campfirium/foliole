@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
+import { projectImageOnlyMarkdownLabel } from '../import/markdownImageLabel.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import type { DatabaseDriver } from './driver.js';
@@ -9,6 +10,10 @@ import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.j
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 function deriveImportedHighlightTitle(content: string) {
+  const imageOnlyTitle = projectImageOnlyMarkdownLabel(content);
+  if (imageOnlyTitle) {
+    return imageOnlyTitle;
+  }
   const firstLine = content
     .replace(/\r\n?/g, '\n')
     .split('\n')
