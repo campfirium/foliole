@@ -1,6 +1,13 @@
+import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { isTextAnchorLocator, type Node, type TextAnchorLocator } from '../features/nodes/model/nodeTypes';
+import { loadWorkspaceNodeDocumentFromRuntime } from '../shared/platform/workspaceRuntimeDocumentRepository';
 
-import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
+import {
+  readCachedWorkspaceNodeDocument,
+  syncWorkspaceNodeDocumentCacheFromNode,
+  writeCachedWorkspaceNodeDocument
+} from './workspaceNodeDocumentCache';
+import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -21,15 +28,59 @@ function isValidRange(range: HighlightRangeUpdate, contentLength: number) {
   );
 }
 
-function resolveSyncedHighlightContent(currentContent: string, previousText: string, nextText: string) {
-  if (currentContent === previousText) {
-    return nextText;
-  }
-  if (!currentContent.startsWith(previousText)) {
+function splitHighlightNoteSuffix(content: string) {
+  const noteIndex = content.search(/\n※ /u);
+  return noteIndex === -1
+    ? { body: content, suffix: '' }
+    : { body: content.slice(0, noteIndex), suffix: content.slice(noteIndex) };
+}
+
+function getMarkdownLinePrefix(line: string) {
+  return line.match(/^(\s*(?:(?:>\s*)+)?(?:(?:[-*+]\s+)|(?:\d+\.\s+)|(?:#{1,6}\s+))?)/u)?.[1] ?? '';
+}
+
+function resolveProjectedHighlightBody(body: string, previousText: string, nextText: string) {
+  const lines = body.split('\n');
+  const contentLines = lines.filter((line) => line.trim().length > 0);
+  const [line] = contentLines;
+  if (contentLines.length !== 1 || !line || deriveNodeTitleFromContent(line) !== previousText) {
     return null;
   }
-  const suffix = currentContent.slice(previousText.length);
-  return suffix === '' || suffix.startsWith('\n') ? `${nextText}${suffix}` : null;
+  const lineIndex = lines.indexOf(line);
+  lines[lineIndex] = `${getMarkdownLinePrefix(line)}${nextText}`;
+  return lines.join('\n');
+}
+
+function resolveSyncedHighlightContent(currentContent: string, previousText: string, nextText: string) {
+  const { body, suffix } = splitHighlightNoteSuffix(currentContent);
+  const projectedText = deriveNodeTitleFromContent(body);
+  const sourceTexts = Array.from(new Set(
+    [previousText, nextText.startsWith(projectedText) ? projectedText : ''].filter((text) => text.length > 0)
+  ));
+  for (const sourceText of sourceTexts) {
+    if (body === sourceText) {
+      return `${nextText}${suffix}`;
+    }
+    const projectedBody = resolveProjectedHighlightBody(body, sourceText, nextText);
+    if (projectedBody !== null) {
+      return `${projectedBody}${suffix}`;
+    }
+    if (body.startsWith(sourceText)) {
+      const bodySuffix = body.slice(sourceText.length);
+      if (bodySuffix === '' || bodySuffix.startsWith('\n')) {
+        return `${nextText}${bodySuffix}${suffix}`;
+      }
+    }
+  }
+  return null;
+}
+
+function mergeCachedDocumentIfNeeded(node: Node) {
+  if (isNodeDocumentLoaded(node)) {
+    return node;
+  }
+  const cachedDocument = readCachedWorkspaceNodeDocument(node.id);
+  return cachedDocument ? mergeWorkspaceNodeDocument(node, cachedDocument) : node;
 }
 
 function buildUpdatedHighlightNode(args: {
@@ -64,9 +115,46 @@ function buildUpdatedHighlightNode(args: {
   } satisfies Node;
 }
 
+async function syncUnloadedHighlightContent(args: {
+  nextNode: Node;
+  previousText: string;
+  set: WorkspaceSet;
+}) {
+  const document = await loadWorkspaceNodeDocumentFromRuntime(args.nextNode.id).catch(() => null);
+  if (!document) {
+    return;
+  }
+  const locator = args.nextNode.anchorLink?.locator;
+  if (!isTextAnchorLocator(locator)) {
+    return;
+  }
+  const syncedContent = resolveSyncedHighlightContent(document.content, args.previousText, locator.originalText);
+  if (syncedContent === null) {
+    syncNodeContentToRuntime(mergeWorkspaceNodeDocument(args.nextNode, document));
+    return;
+  }
+  const nextDocument = { ...document, content: syncedContent };
+  const hydratedNode = mergeWorkspaceNodeDocument(args.nextNode, nextDocument);
+  writeCachedWorkspaceNodeDocument(args.nextNode.id, nextDocument);
+  args.set((state) => {
+    const currentNode = state.nodesById[args.nextNode.id];
+    if (!currentNode || currentNode.updatedAt !== args.nextNode.updatedAt) {
+      return state;
+    }
+    return {
+      nodesById: {
+        ...state.nodesById,
+        [args.nextNode.id]: hydratedNode
+      }
+    };
+  });
+  syncNodeContentToRuntime(hydratedNode);
+}
+
 export function createUpdateHighlightAnchorRangeAction(set: WorkspaceSet) {
   return (highlightNodeId: string, range: HighlightRangeUpdate) => {
     let nextNodeForSync: Node | null = null;
+    let previousTextForUnloadedSync: string | null = null;
     set((state) => {
       const node = state.nodesById[highlightNodeId];
       if (!node || state.trashedNodeIds.includes(highlightNodeId)) {
@@ -76,8 +164,9 @@ export function createUpdateHighlightAnchorRangeAction(set: WorkspaceSet) {
       if (!parentNode) {
         return state;
       }
+      const documentNode = mergeCachedDocumentIfNeeded(node);
       const nextNode = buildUpdatedHighlightNode({
-        node,
+        node: documentNode,
         parentContent: parentNode.content,
         range,
         timestamp: new Date().toISOString()
@@ -86,6 +175,11 @@ export function createUpdateHighlightAnchorRangeAction(set: WorkspaceSet) {
         return state;
       }
       nextNodeForSync = nextNode;
+      if (!isNodeDocumentLoaded(documentNode)) {
+        previousTextForUnloadedSync = node.anchorLink?.locator && isTextAnchorLocator(node.anchorLink.locator)
+          ? node.anchorLink.locator.originalText
+          : null;
+      }
       return {
         nodesById: {
           ...state.nodesById,
@@ -96,8 +190,12 @@ export function createUpdateHighlightAnchorRangeAction(set: WorkspaceSet) {
     if (!nextNodeForSync) {
       return false;
     }
-    syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
-    syncNodeContentToRuntime(nextNodeForSync);
+    if (previousTextForUnloadedSync) {
+      void syncUnloadedHighlightContent({ nextNode: nextNodeForSync, previousText: previousTextForUnloadedSync, set });
+    } else {
+      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
+      syncNodeContentToRuntime(nextNodeForSync);
+    }
     return true;
   };
 }
