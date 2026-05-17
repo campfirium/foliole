@@ -31,6 +31,13 @@ function createNavHarness(args: {
       bumpReadingPositionRequest: vi.fn(),
       readingPositionRef: { current: { nodeId: null, selection: null } },
       readingPositionSyncRef: { current: { nodeId: null, state: null } }
+    },
+    externalView: {
+      canGoBack: false,
+      canGoForward: false,
+      goBack: vi.fn(() => false),
+      goForward: vi.fn(() => false),
+      isExternalViewOpen: false
     }
   } as never, onSelectNode);
   return { handleSelectBreadcrumbNode, nav, onSelectNode };

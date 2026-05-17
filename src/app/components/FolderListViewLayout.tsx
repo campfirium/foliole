@@ -180,6 +180,7 @@ export function FolderListViewLayout(props: {
   filteredNodes: Node[];
   folderTitle: string;
   itemCountLabel: string;
+  navigationOverlay?: ReactNode;
   searchResultLabel: string | null;
   onChangeSearchQuery: (value: string) => void;
   onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
@@ -192,7 +193,8 @@ export function FolderListViewLayout(props: {
 }) {
   return (
     <FolderListSurface>
-      <section aria-label="Folder list body" className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
+      <section aria-label="Folder list body" className="relative mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
+        {props.navigationOverlay}
         {props.headerMode === 'hidden' ? null : (
           <FolderListHeader
             currentViewActions={props.currentViewActions}

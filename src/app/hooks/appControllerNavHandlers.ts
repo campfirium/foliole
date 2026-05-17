@@ -8,8 +8,18 @@ export function createLayoutNav(
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void
 ) {
   return {
-    onGoBack: args.nav.handleGoBack,
-    onGoForward: args.nav.handleGoForward,
+    onGoBack: () => {
+      if (args.externalView.isExternalViewOpen && args.externalView.goBack()) {
+        return;
+      }
+      args.nav.handleGoBack();
+    },
+    onGoForward: () => {
+      if (args.externalView.canGoForward && args.externalView.goForward()) {
+        return;
+      }
+      args.nav.handleGoForward();
+    },
     onGoParent: args.nav.handleGoParent,
     onSelectBreadcrumbNode: (nodeId: string) => {
       const activeNodeId = args.ws.activeNodeId;
@@ -34,6 +44,14 @@ export function createLayoutNav(
     },
     shouldSuppressNavigationSelectionRestore: args.nav.shouldSuppressSelectionRestore
   };
+}
+
+export function resolveLayoutCanGoBack(args: BuildControllerLayoutPropsArgs) {
+  return args.externalView.isExternalViewOpen ? args.externalView.canGoBack || args.nav.canGoBack : args.nav.canGoBack;
+}
+
+export function resolveLayoutCanGoForward(args: BuildControllerLayoutPropsArgs) {
+  return args.externalView.canGoForward || args.nav.canGoForward;
 }
 
 export function createSelectTrashNodeHandler(args: BuildControllerLayoutPropsArgs) {

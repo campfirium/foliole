@@ -88,17 +88,19 @@ function createPreviewState(
 
 it('renders the external folder contents in the center document area using the folder list view', () => {
   const onOpenSelection = vi.fn();
+  const onGoBack = vi.fn();
+  const onGoForward = vi.fn();
 
   render(
     <ExternalLibraryDocumentSurface
-      canGoBack={false}
-      canGoForward={false}
+      canGoBack
+      canGoForward
       documentMaxWidth={760}
       editorAppearanceKey="preview"
       entriesByFolderId={entriesByFolderId}
       folders={folders}
-      onGoBack={vi.fn()}
-      onGoForward={vi.fn()}
+      onGoBack={onGoBack}
+      onGoForward={onGoForward}
       onOpenImportedNode={vi.fn()}
       onOpenSelection={onOpenSelection}
       onPreviewEditorReady={vi.fn()}
@@ -109,6 +111,10 @@ it('renders the external folder contents in the center document area using the f
 
   expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Go forward' }));
+  expect(onGoBack).toHaveBeenCalledTimes(1);
+  expect(onGoForward).toHaveBeenCalledTimes(1);
   expect(screen.getByTestId('folder-list-count')).toHaveTextContent('2');
   expect(screen.getByTestId('folder-list-title-/library/test 6/one.md')).toHaveTextContent('First title');
   expect(screen.getByTestId('folder-list-excerpt-/library/test 6/one.md')).toHaveTextContent('First opening preview from cache.');

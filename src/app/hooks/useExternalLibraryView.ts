@@ -9,6 +9,8 @@ import {
 } from '../../shared/platform/externalLibraryBrowseRepository';
 import type { ExternalLibrarySelection } from '../components/externalLibraryBrowseModel';
 
+import { useExternalLibraryViewHistory, type ExternalLibraryViewTarget } from './externalLibraryViewHistory';
+
 export function useExternalLibraryView() {
   const [isExternalViewOpen, setIsExternalViewOpen] = useState(false);
   const [selection, setSelection] = useState<ExternalLibrarySelection>({ kind: 'root' });
@@ -16,21 +18,33 @@ export function useExternalLibraryView() {
   const folders = useExternalFoldersState(setSelection, setEntriesByFolderId);
   usePreloadExternalFolderEntries(folders, entriesByFolderId, setEntriesByFolderId);
 
+  function applyHistoryTarget(target: ExternalLibraryViewTarget) {
+    if (target.kind === 'notes') {
+      setSelection({ kind: 'root' });
+      setIsExternalViewOpen(false);
+      return;
+    }
+    setSelection(target.selection);
+    setIsExternalViewOpen(true);
+  }
+  const history = useExternalLibraryViewHistory({ applyTarget: applyHistoryTarget, isExternalViewOpen, selection });
+
   return {
+    canGoBack: history.canGoBack,
+    canGoForward: history.canGoForward,
     entriesByFolderId,
     folders,
+    goBack: history.goBack,
+    goForward: history.goForward,
     isExternalViewOpen,
     openExternalDocument: (args: { absolutePath: string; folderId: string }) => {
-      setSelection({ absolutePath: args.absolutePath, folderId: args.folderId, kind: 'document' });
-      setIsExternalViewOpen(true);
+      history.openExternalTarget({ absolutePath: args.absolutePath, folderId: args.folderId, kind: 'document' });
     },
     openExternalFolder: (folderId?: string) => {
-      setSelection(folderId ? { folderId, kind: 'folder' } : { kind: 'root' });
-      setIsExternalViewOpen(true);
+      history.openExternalTarget(folderId ? { folderId, kind: 'folder' } : { kind: 'root' });
     },
     openExternalSelection: (nextSelection: ExternalLibrarySelection) => {
-      setSelection(nextSelection);
-      setIsExternalViewOpen(true);
+      history.openExternalTarget(nextSelection);
     },
     closeExternalView: () => {
       setSelection({ kind: 'root' });
