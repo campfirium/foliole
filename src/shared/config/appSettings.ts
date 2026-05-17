@@ -114,6 +114,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   managedInboxPath: MANAGED_INBOX_APP_SETTING_KEY,
   commandRecents: 'foliole-command-recents',
   nodePaletteRecents: 'foliole-node-palette-recents',
+  searchPaletteShortcutsCollapsed: 'foliole-search-palette-shortcuts-collapsed',
   commandShortcutOverrides: 'foliole-command-shortcut-overrides',
   desktopDeviceSyncEnabled: 'foliole-desktop-device-sync-enabled'
 } as const;

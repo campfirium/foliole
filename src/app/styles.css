@@ -62,7 +62,8 @@
   --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
   --app-floating-muted-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 32%, var(--workspace-region-main-document-bg) 68%);
   --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 34%, var(--workspace-region-main-document-bg) 66%);
-  --app-floating-item-active-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 48%, var(--workspace-region-main-document-bg) 52%);
+  --app-list-item-selected-bg: color-mix(in srgb, color-mix(in srgb, var(--workspace-region-main-document-token-bg) 68%, var(--workspace-region-main-document-bg) 32%) 96%, rgb(var(--color-foreground)) 4%);
+  --app-floating-item-active-bg: var(--app-list-item-selected-bg);
   --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 86%, var(--workspace-region-main-topic-scrollbar-thumb-color) 14%);
   --app-tooltip-bg: rgb(var(--color-foreground) / 0.92);
   --app-tooltip-fg: rgb(var(--color-background) / 0.98);
@@ -272,7 +273,8 @@
   --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
   --app-floating-muted-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 38%, var(--workspace-region-main-document-bg) 62%);
   --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 40%, var(--workspace-region-main-document-bg) 60%);
-  --app-floating-item-active-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 52%, var(--workspace-region-main-document-bg) 48%);
+  --app-list-item-selected-bg: color-mix(in srgb, color-mix(in srgb, var(--workspace-region-main-document-token-bg) 62%, var(--workspace-region-main-document-bg) 38%) 94%, rgb(var(--color-foreground)) 6%);
+  --app-floating-item-active-bg: var(--app-list-item-selected-bg);
   --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 78%, var(--workspace-region-main-topic-scrollbar-thumb-color) 22%);
   --app-tooltip-bg: color-mix(in srgb, rgb(var(--color-bg-elevated)) 86%, rgb(var(--color-foreground)) 14%);
   --app-tooltip-fg: rgb(var(--color-foreground));

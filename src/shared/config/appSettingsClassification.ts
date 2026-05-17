@@ -132,6 +132,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'managedInboxPath',
   'commandRecents',
   'nodePaletteRecents',
+  'searchPaletteShortcutsCollapsed',
   'commandShortcutOverrides'
 ] as const satisfies readonly AppSettingsStorageName[];
 
