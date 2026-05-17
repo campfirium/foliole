@@ -150,6 +150,12 @@ it('keeps the active topic in its folder column when that topic has children', (
       kind: 'topic',
       parentNodeId: 'topic-parent',
       title: 'Topic child'
+    }),
+    'topic-grandchild': createNode({
+      id: 'topic-grandchild',
+      kind: 'topic',
+      parentNodeId: 'topic-child',
+      title: 'Topic grandchild'
     })
   };
 
@@ -158,7 +164,7 @@ it('keeps the active topic in its folder column when that topic has children', (
       activeNodeId: 'topic-parent',
       isTrashViewOpen: false,
       listNodesById: topicParentNodesById,
-      nodeOrder: [INBOX_NODE_ID, 'topic-parent', 'topic-child'],
+      nodeOrder: [INBOX_NODE_ID, 'topic-parent', 'topic-child', 'topic-grandchild'],
       trashedNodeIds: []
     })
   );
@@ -166,4 +172,5 @@ it('keeps the active topic in its folder column when that topic has children', (
   expect(result.current.activeFolderColumnId).toBe(INBOX_NODE_ID);
   expect(result.current.topicNodeOrder).toEqual(['topic-parent']);
   expect(result.current.topicChildrenByParent.get('topic-parent')).toEqual(['topic-child']);
+  expect(result.current.topicChildrenByParent.get('topic-child')).toEqual(['topic-grandchild']);
 });

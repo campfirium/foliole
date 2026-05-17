@@ -25,7 +25,7 @@ function resolveItemsBySnapshotOrder<T>(items: T[], orderedIds: string[], getIte
 }
 
 export function useStableWorkspaceContentItems<T>(args: StableWorkspaceContentItemsArgs<T>) {
-  const snapshotRef = useRef<StableContentSortSnapshot | null>(null);
+  const snapshotsRef = useRef(new Map<string, StableContentSortSnapshot>());
   const sortControlKey = `${args.sort.key}\u0000${args.sort.direction}`;
   const membershipKey = useMemo(() => args.items.map(args.getItemId).join('\u0000'), [args.getItemId, args.items]);
   const snapshotKey = `${args.scopeKey}\u0000${membershipKey}\u0000${sortControlKey}`;
@@ -35,13 +35,13 @@ export function useStableWorkspaceContentItems<T>(args: StableWorkspaceContentIt
       return args.sortItems(args.items);
     }
 
-    const snapshot = snapshotRef.current;
-    if (!snapshot || snapshot.key !== snapshotKey) {
+    const snapshot = snapshotsRef.current.get(snapshotKey);
+    if (!snapshot) {
       const sortedItems = args.sortItems(args.items);
-      snapshotRef.current = {
+      snapshotsRef.current.set(snapshotKey, {
         key: snapshotKey,
         orderedIds: sortedItems.map(args.getItemId)
-      };
+      });
       return sortedItems;
     }
     return resolveItemsBySnapshotOrder(args.items, snapshot.orderedIds, args.getItemId);

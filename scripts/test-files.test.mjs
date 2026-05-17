@@ -1,0 +1,96 @@
+// @vitest-environment node
+/* global process */
+
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SCRIPT = path.join(REPO_ROOT, 'scripts', 'test-files.mjs');
+
+function runTestFiles(args, env = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [SCRIPT, ...args], {
+      cwd: REPO_ROOT,
+      env: {
+        ...process.env,
+        ...env,
+        NODE_OPTIONS: '',
+        npm_config_node_options: '',
+        npm_config_script_shell: ''
+      }
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('close', (code) => {
+      resolve({ code, stderr, stdout });
+    });
+  });
+}
+
+async function createFakeVitest(tempRoot) {
+  const argsPath = path.join(tempRoot, 'vitest-args.json');
+  const fakeVitestPath = path.join(tempRoot, 'fake-vitest.mjs');
+  await writeFile(
+    fakeVitestPath,
+    [
+      '#!/usr/bin/env node',
+      "import { mkdirSync, writeFileSync } from 'node:fs';",
+      "import path from 'node:path';",
+      `writeFileSync(${JSON.stringify(argsPath)}, JSON.stringify(process.argv.slice(2)));`,
+      "const outputArg = process.argv.find((arg) => arg.startsWith('--outputFile.json='));",
+      "const reportPath = outputArg?.slice('--outputFile.json='.length);",
+      "if (reportPath) {",
+      "  mkdirSync(path.dirname(reportPath), { recursive: true });",
+      "  writeFileSync(reportPath, JSON.stringify({ numPassedTestSuites: 1, numTotalTestSuites: 1, numPassedTests: 1, numTotalTests: 1, testResults: [] }));",
+      "}"
+    ].join('\n')
+  );
+  await chmod(fakeVitestPath, 0o755);
+  return { argsPath, fakeVitestPath };
+}
+
+describe('test-files', () => {
+  it('rejects missing files', async () => {
+    const result = await runTestFiles([]);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('Usage: npm run test:files');
+  });
+
+  it('rejects directory arguments', async () => {
+    const result = await runTestFiles(['src/app']);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('expected test file');
+  });
+
+  it('runs only explicit test file arguments through the vitest summary runner', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'test-files-'));
+    try {
+      await mkdir(path.join(tempRoot, 'nested'), { recursive: true });
+      const { argsPath, fakeVitestPath } = await createFakeVitest(tempRoot);
+      const result = await runTestFiles(['src/app/components/WorkspaceTopicTreeRows.test.tsx'], {
+        VITEST_BIN: fakeVitestPath
+      });
+
+      expect(result.code).toBe(0);
+      const vitestArgs = JSON.parse(await readFile(argsPath, 'utf8'));
+      expect(vitestArgs).toContain('src/app/components/WorkspaceTopicTreeRows.test.tsx');
+      expect(vitestArgs).not.toContain('src/app');
+      expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, tests 1/1 passed');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+});
