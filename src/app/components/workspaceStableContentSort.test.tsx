@@ -77,6 +77,9 @@ function StableSortScopeHarness() {
       <button onClick={() => setScopeKey('folder-b')} type="button">
         Switch folder
       </button>
+      <button onClick={() => setScopeKey('folder-a')} type="button">
+        Switch back
+      </button>
       <ol>
         {sortedItems.map((item) => (
           <li key={item.id}>{`${item.title}:${item.modifiedAt}`}</li>
@@ -117,5 +120,18 @@ it('rebuilds dynamic workspace content order after changing folder scope', () =>
   expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
     'Old:2026-04-22T00:00:00.000Z',
     'New:2026-04-21T00:00:00.000Z'
+  ]);
+});
+
+it('reuses a previous dynamic order when switching back to a folder scope', () => {
+  render(<StableSortScopeHarness />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Touch old' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Switch folder' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Switch back' }));
+
+  expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+    'New:2026-04-21T00:00:00.000Z',
+    'Old:2026-04-22T00:00:00.000Z'
   ]);
 });

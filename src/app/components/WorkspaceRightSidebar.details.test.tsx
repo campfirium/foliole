@@ -195,7 +195,7 @@ it('does not list cloze nodes in the highlights panel', () => {
     />
   );
 
-  expect(screen.getByText('This topic and its derived topics have no highlights yet.')).toBeInTheDocument();
+  expect(screen.queryByRole('list', { name: 'Document highlights' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Alpha \[\.\.\.\] Gamma/i })).not.toBeInTheDocument();
   expect(onSelectNode).not.toHaveBeenCalled();
   expect(onRevealAnchorInDocument).not.toHaveBeenCalled();

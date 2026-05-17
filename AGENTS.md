@@ -95,7 +95,8 @@
 - 不允许通过降低检查标准过关；禁止跳过关键检查、删除校验或用注释掩盖失败。
 - 包管理器必须按锁文件检测；当前仓库以 `npm` 为准。
 - 运行验证前必须先从 `package.json` / `npm run` 确认真实脚本入口；若不存在 `test`、`build` 或其他习惯性脚本名，必须改用仓库已声明的具体脚本，不得先运行不存在的默认命令。
-- 定向跑测试时必须先用 `rg --files` / `rg` 找到测试文件与相关 npm 脚本，再选择最窄可用入口；当前仓库测试入口以 `test:changed`、`test:desktop`、`test:shared`、`test:android`、`test:full` 和各质量闸脚本为准，而不是 `npm test`。
+- 定向跑测试时必须先用 `rg --files` / `rg` 找到测试文件与相关 npm 脚本，再选择最窄可用入口；当前仓库测试入口以 `test:files`、`test:changed`、`test:desktop`、`test:shared`、`test:android`、`test:full` 和各质量闸脚本为准，而不是 `npm test`。
+- 单文件或少量明确测试文件复验优先使用 `npm run test:files -- <file...>`；该入口只跑显式传入的测试文件，不消费 git diff。变更范围干净且需要按 HEAD 以来改动自动选测时使用 `npm run test:changed`。`test:desktop` 是桌面整体验收入口，除阶段验收、桌面多子系统联动、构建 / preload / IPC / sqlite 风险升级或用户明确要求外，不得用 `npm run test:desktop -- <file>` 代替窄测试。
 - 改动用户可见行为、数据 / sync / bridge / adapter / security contract 或测试断言时，必须按 `.lab/specs/_governance/test-drift-prevention-expectation.md` 定位对应测试 contract，并与行为变更同提交维护。
 - 处理测试红灯时，未完成 contract 归因前不得只改 expected；归因发现新脱节类型时回写测试脱节治理 spec。
 - 改动 `lib/core/sync/syncPack*`、`electron/database/syncPack*`、`electron/sync/syncPack*`、`src/shared/platform/companionSyncPack*` 或 sync pack manifest / schema / apply 语义时，必须先跑 `npm run test:sync-pack`，通过后再按影响范围追加宿主验证；pre-push affected 路由会对推送范围内命中的这些路径自动执行同一检查。

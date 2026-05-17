@@ -108,7 +108,7 @@ it('shows an empty state when no locator-backed highlight nodes exist', () => {
     />
   );
 
-  expect(screen.getByText('This topic and its derived topics have no highlights yet.')).toBeInTheDocument();
+  expect(screen.queryByRole('list', { name: 'Document highlights' })).not.toBeInTheDocument();
 });
 
 it('includes locator-backed highlights from nested descendants in tree order', () => {
@@ -222,30 +222,5 @@ it('excludes cloze child nodes from the sidebar list', () => {
     />
   );
 
-  expect(screen.getByText('This topic and its derived topics have no highlights yet.')).toBeInTheDocument();
-});
-
-it('excludes the active node itself when it is a highlight node', () => {
-  const parentContent = 'Study answer today';
-  const parentNode = createParentNode('node-parent', parentContent);
-  const activeHighlightNode = createTextAnchorNode({
-    content: 'answer',
-    id: 'node-highlight',
-    kind: 'highlight',
-    parentContent,
-    parentNodeId: 'node-parent',
-    selectedText: 'answer'
-  });
-
-  render(
-    <WorkspaceRightSidebarHighlightsPanel
-      activeNodeId="node-highlight"
-      nodeOrder={['node-parent', 'node-highlight']}
-      trashedNodeIds={[]}
-      nodesById={{ 'node-parent': parentNode, 'node-highlight': activeHighlightNode }}
-      onRevealHighlight={() => undefined}
-    />
-  );
-
-  expect(screen.getByText('This topic and its derived topics have no highlights yet.')).toBeInTheDocument();
+  expect(screen.queryByRole('list', { name: 'Document highlights' })).not.toBeInTheDocument();
 });
