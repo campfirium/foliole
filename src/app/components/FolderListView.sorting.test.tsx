@@ -92,6 +92,9 @@ describe('FolderListView date sorting', () => {
     expect(screen.getByTestId('folder-list-date-node-5')).toHaveTextContent('2026-04-01');
   });
 
+});
+
+describe('FolderListView last opened sorting', () => {
   it('sorts by most recently opened when requested', () => {
     renderFolderList(
       [
@@ -119,5 +122,55 @@ describe('FolderListView date sorting', () => {
     expect(getRenderedEntryTitles()).toEqual(['Newest open', 'Old open', 'Never opened']);
     expect(screen.getByTestId('folder-list-date-node-2')).toHaveTextContent('2026-04-04');
     expect(screen.getByTestId('folder-list-date-node-3')).toHaveTextContent('Never opened');
+  });
+
+});
+
+describe('FolderListView dynamic sorting', () => {
+  it('keeps the current dynamic sort order until the list is rebuilt', () => {
+    const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
+    const children = [
+      createNode({ id: 'node-1', title: 'Opened first', updatedAt: '2026-04-03T09:00:00.000Z' }),
+      createNode({ id: 'node-2', title: 'Opened later', updatedAt: '2026-04-02T09:00:00.000Z' })
+    ];
+    const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
+    const renderList = (nodeViewById: Record<string, NodeViewState | undefined>, sortKey: FolderListSortKey) => (
+      <FolderListView
+        folderNodeId="folder-1"
+        nodeOrder={['folder-1', ...children.map((node) => node.id)]}
+        nodeViewById={nodeViewById}
+        nodesById={nodesById}
+        onChangeSortDirection={() => undefined}
+        onChangeSortKey={() => undefined}
+        onSelectNode={vi.fn<(nodeId: string) => void>()}
+        sortDirection="desc"
+        sortKey={sortKey}
+      />
+    );
+    const { rerender } = render(renderList({
+      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-05T09:00:00.000Z' },
+      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-04T09:00:00.000Z' }
+    }, 'dateLastOpened'));
+
+    expect(getRenderedEntryTitles()).toEqual(['Opened first', 'Opened later']);
+
+    rerender(renderList({
+      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-05T09:00:00.000Z' },
+      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-06T09:00:00.000Z' }
+    }, 'dateLastOpened'));
+
+    expect(getRenderedEntryTitles()).toEqual(['Opened first', 'Opened later']);
+    expect(screen.getByTestId('folder-list-date-node-2')).toHaveTextContent('2026-04-06');
+
+    rerender(renderList({
+      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-05T09:00:00.000Z' },
+      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-06T09:00:00.000Z' }
+    }, 'dateImported'));
+    rerender(renderList({
+      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-05T09:00:00.000Z' },
+      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-06T09:00:00.000Z' }
+    }, 'dateLastOpened'));
+
+    expect(getRenderedEntryTitles()).toEqual(['Opened later', 'Opened first']);
   });
 });

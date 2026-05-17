@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
@@ -40,6 +40,51 @@ function filterFolderListNodes(nodes: Node[], searchQuery: string) {
   });
 }
 
+function isDynamicFolderListSortKey(sortKey: FolderListSortKey) {
+  return sortKey === 'dateLastOpened' || sortKey === 'dateSaved';
+}
+
+function buildListMembershipKey(nodes: Node[]) {
+  return nodes.map((node) => node.id).join('\u0000');
+}
+
+function resolveNodesBySnapshotOrder(nodes: Node[], orderedIds: string[]) {
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
+  return orderedIds.map((nodeId) => nodesById.get(nodeId)).filter((node): node is Node => Boolean(node));
+}
+
+function useSortedFolderListNodes(
+  listedNodes: Node[],
+  nodeViewById: Record<string, { updatedAt?: string | null } | undefined>,
+  sortKey: FolderListSortKey,
+  sortDirection: FolderListSortDirection,
+  listRebuildKey: string
+) {
+  const dynamicSortSnapshotRef = useRef<{ key: string; orderedIds: string[] } | null>(null);
+  const previousSortControlKeyRef = useRef<string | null>(null);
+  const listMembershipKey = useMemo(() => buildListMembershipKey(listedNodes), [listedNodes]);
+  const sortControlKey = `${sortKey}\u0000${sortDirection}`;
+  const dynamicSortSnapshotKey = `${listRebuildKey}\u0000${listMembershipKey}\u0000${sortKey}\u0000${sortDirection}`;
+
+  return useMemo(() => {
+    if (!isDynamicFolderListSortKey(sortKey)) {
+      previousSortControlKeyRef.current = sortControlKey;
+      return sortFolderListNodes(listedNodes, sortKey, sortDirection, nodeViewById);
+    }
+    const snapshot = dynamicSortSnapshotRef.current;
+    if (!snapshot || snapshot.key !== dynamicSortSnapshotKey || previousSortControlKeyRef.current !== sortControlKey) {
+      const sortedNodes = sortFolderListNodes(listedNodes, sortKey, sortDirection, nodeViewById);
+      dynamicSortSnapshotRef.current = {
+        key: dynamicSortSnapshotKey,
+        orderedIds: sortedNodes.map((node) => node.id)
+      };
+      previousSortControlKeyRef.current = sortControlKey;
+      return sortedNodes;
+    }
+    return resolveNodesBySnapshotOrder(listedNodes, snapshot.orderedIds);
+  }, [dynamicSortSnapshotKey, listedNodes, nodeViewById, sortControlKey, sortDirection, sortKey]);
+}
+
 export function useFolderListViewState(
   listedNodes: Node[],
   nodeViewById: Record<string, { updatedAt?: string | null } | undefined>,
@@ -49,7 +94,8 @@ export function useFolderListViewState(
   onChangeSearchQuery: ((searchQuery: string) => void) | undefined,
   onChangeSortKey: ((sortKey: FolderListSortKey) => void) | undefined,
   onChangeSortDirection: ((sortDirection: FolderListSortDirection) => void) | undefined,
-  defaultSortKey: FolderListSortKey
+  defaultSortKey: FolderListSortKey,
+  listRebuildKey: string
 ) {
   const [uncontrolledSortKey, setUncontrolledSortKey] = useState<FolderListSortKey>(defaultSortKey);
   const [uncontrolledSortDirection, setUncontrolledSortDirection] = useState<FolderListSortDirection>(
@@ -59,10 +105,7 @@ export function useFolderListViewState(
   const searchQuery = resolveControlledValue(controlledSearchQuery, uncontrolledSearchQuery);
   const sortKey = resolveControlledValue(controlledSortKey, uncontrolledSortKey);
   const sortDirection = resolveControlledValue(controlledSortDirection, uncontrolledSortDirection);
-  const childNodes = useMemo(
-    () => sortFolderListNodes(listedNodes, sortKey, sortDirection, nodeViewById),
-    [listedNodes, nodeViewById, sortDirection, sortKey]
-  );
+  const childNodes = useSortedFolderListNodes(listedNodes, nodeViewById, sortKey, sortDirection, listRebuildKey);
   const filteredNodes = useMemo(() => filterFolderListNodes(childNodes, searchQuery), [childNodes, searchQuery]);
   const itemCount = childNodes.length;
   const itemCountLabel = formatItemCount(itemCount);

@@ -101,6 +101,12 @@ function buildCurrentViewTopicSnapshots(filteredNodes: Node[]): CurrentViewTopic
     }));
 }
 
+function buildFolderListRebuildKey(props: FolderListViewProps, listedNodes: Node[]) {
+  const scopeKey = props.folderNodeId ?? props.regionLabel ?? 'custom';
+  const membershipKey = listedNodes.map((node) => node.id).join('\u0000');
+  return `${scopeKey}\u0000${membershipKey}`;
+}
+
 function useResolvedFolderListState(props: FolderListViewProps) {
   const storeNodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const nodeViewById = props.nodeViewById ?? storeNodeViewById;
@@ -126,7 +132,8 @@ function useResolvedFolderListState(props: FolderListViewProps) {
     props.onChangeSearchQuery,
     props.onChangeSortKey,
     props.onChangeSortDirection,
-    DEFAULT_FOLDER_LIST_SORT_KEY
+    DEFAULT_FOLDER_LIST_SORT_KEY,
+    buildFolderListRebuildKey(props, listedNodes)
   );
 
   return {

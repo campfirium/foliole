@@ -18,7 +18,7 @@ export function FolderListSortControls(props: {
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
-  const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Date imported';
+  const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Date modified';
   const orderOptions = getFolderListSortOrderOptions();
 
   return (
