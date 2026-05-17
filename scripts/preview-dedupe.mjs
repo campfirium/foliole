@@ -7,6 +7,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { waitForQuietPreviewRequest } from './preview-debounce.mjs';
+
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = path.resolve(process.env.PREVIEW_DEDUPE_REPO_ROOT ?? DEFAULT_REPO_ROOT);
 const VALID_TARGETS = new Set(['android', 'windows']);
@@ -180,6 +182,9 @@ async function main() {
   }
 
   console.log(`[${target}-preview] dedupe: claimed hash=${currentHash}`);
+  if (!(await waitForQuietPreviewRequest({ currentHash, runtimeDir: runtimeDir(), target }))) {
+    return 0;
+  }
   const exitCode = await runCommand(command);
   if (exitCode === 0) {
     await writeStoredHash(target, currentHash);
