@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
@@ -8,6 +9,10 @@ import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useExternalSectionStatus } from './searchPaletteExternalStatus';
 import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList } from './SearchPaletteResults';
 import { useOrderedSearchResults, useSearchResults } from './searchPaletteSearchState';
+import {
+  loadSearchPaletteShortcutsCollapsed,
+  saveSearchPaletteShortcutsCollapsed
+} from './searchPaletteShortcutsPreference';
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import type { WorkspaceSearchResult } from './workspaceSearch';
@@ -25,15 +30,14 @@ export function SearchPalette(props: SearchPaletteProps) {
   const focusTrap = useFloatingDialogFocusTrap(props.isOpen);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const shortcuts = useSearchPaletteShortcuts();
   const searchState = useSearchResults(props, query);
   const results = useOrderedSearchResults(searchState.results, props.nodesById);
   const externalSectionStatus = useExternalSectionStatus(props.isOpen);
   const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
   useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setQuery);
 
-  if (!props.isOpen) {
-    return null;
-  }
+  if (!props.isOpen) return null;
 
   const openActiveNode = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     const result = results[activeIndex];
@@ -77,9 +81,23 @@ export function SearchPalette(props: SearchPaletteProps) {
           results={results}
           sourceDetailsByNodeId={sourceDetailsByNodeId}
         />
+        <SearchPaletteShortcutsFooter collapsed={shortcuts.collapsed} onToggle={shortcuts.toggle} />
       </div>
     </div>
   );
+}
+
+function useSearchPaletteShortcuts() {
+  const [collapsed, setCollapsed] = useState(loadSearchPaletteShortcutsCollapsed);
+
+  return {
+    collapsed,
+    toggle: () => {
+      const nextCollapsed = !collapsed;
+      setCollapsed(nextCollapsed);
+      saveSearchPaletteShortcutsCollapsed(nextCollapsed);
+    }
+  };
 }
 
 function SearchPaletteBody(props: {
@@ -134,4 +152,49 @@ function useSearchPaletteLifecycle(
     }
     if (activeIndex >= resultCount) setActiveIndex(resultCount - 1);
   }, [activeIndex, resultCount, setActiveIndex]);
+}
+
+function SearchPaletteShortcutsFooter(props: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <footer className="relative flex min-h-11 items-center justify-center px-12 py-2.5 text-[11px] text-foreground/45">
+      {props.collapsed ? (
+        null
+      ) : (
+        <span className="flex min-w-0 flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-center">
+          <ShortcutHint keys={['Enter']} label="Open" />
+          <ShortcutHint keys={['Shift', 'Enter']} label="Preview" />
+          <ShortcutHint keys={['Shift', 'Click']} label="Preview" />
+        </span>
+      )}
+      <button
+        aria-label={props.collapsed ? 'Show search shortcuts' : 'Collapse search shortcuts'}
+        className="absolute right-5 top-1/2 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-foreground/32 transition-colors hover:text-foreground/58 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        onClick={props.onToggle}
+        type="button"
+      >
+        {props.collapsed ? <ChevronUp size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
+      </button>
+    </footer>
+  );
+}
+
+function ShortcutHint(props: {
+  keys: string[];
+  label: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span className="inline-flex items-center gap-0.5">
+        {props.keys.map((key) => (
+          <kbd className="font-semibold leading-none text-foreground/55" key={key}>
+            {key}
+          </kbd>
+        ))}
+      </span>
+      <span>{props.label}</span>
+    </span>
+  );
 }

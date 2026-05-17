@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import {
@@ -46,12 +48,19 @@ export function SearchPaletteList(props: {
   results: WorkspaceSearchResult[];
   sourceDetailsByNodeId: Record<string, RuntimeNodeSourceDetails | null | undefined>;
 }) {
+  const listRef = useRef<HTMLUListElement | null>(null);
+  useEffect(() => {
+    const activeRow = listRef.current?.querySelector('[data-search-result-active="true"]');
+    activeRow?.scrollIntoView?.({ block: 'nearest' });
+  }, [props.activeIndex]);
+
   if (!props.results.length) return null;
 
   return (
     <ul
       aria-label="Workspace search results"
       className={appFloatingListClassName()}
+      ref={listRef}
       onWheel={(event) => {
         if (Math.abs(event.deltaY) < 12) return;
         props.onSetActiveIndex((current) =>
@@ -101,29 +110,15 @@ function SearchPaletteResultItem(props: {
           kind={item.kind}
         />
       ) : null}
-      {props.active ? (
-        <button
-          className={appFloatingMetaBadgeClassName('absolute right-3 top-2 z-10 text-[11px] hover:bg-[var(--app-floating-item-hover-bg)]')}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            props.onOpenResult(item, { preview: true });
-          }}
-          type="button"
-        >
-          Shift Preview
-        </button>
-      ) : null}
       <button
-        className={appFloatingItemClassName(
-          'grid gap-1.5 data-[active=true]:bg-[var(--app-floating-item-active-bg)] data-[active=true]:shadow-none'
-        )}
+        className={appFloatingItemClassName('grid gap-1.5 data-[active=true]:bg-[var(--app-floating-item-active-bg)]')}
         data-active={props.active}
+        data-search-result-active={props.active}
         onClick={(event) => props.onOpenResult(item, { preview: event.shiftKey })}
         onMouseEnter={() => props.onSetActiveIndex(props.index)}
         type="button"
       >
-        <span className={`min-w-0 truncate text-[15px] font-semibold leading-5 text-foreground ${props.active ? 'pr-32' : ''}`}>
+        <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-foreground">
           {renderSearchResultText(item.title, props.query)}
         </span>
         <span className="line-clamp-2 text-[13px] leading-5 text-foreground/60">
