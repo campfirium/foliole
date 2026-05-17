@@ -1,5 +1,7 @@
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 
+import { isReadwiseImportedStructureNodeId } from './readwiseCleanupStructure.js';
+
 interface ReadwiseCleanupAdditionRow {
   anchor_link: string | null;
   created_at: string;
@@ -30,7 +32,11 @@ export function hasReadwiseCleanupAdditions(
   subtree: ReadwiseCleanupAdditionRow[]
 ) {
   return subtree.some((row) => {
-    if (row.id === rootNodeId || !isAfterImportTolerance(row.created_at, importedAt)) {
+    if (
+      row.id === rootNodeId ||
+      isReadwiseImportedStructureNodeId(row.id) ||
+      !isAfterImportTolerance(row.created_at, importedAt)
+    ) {
       return false;
     }
     return !isImportedAnchorLink(row.anchor_link);

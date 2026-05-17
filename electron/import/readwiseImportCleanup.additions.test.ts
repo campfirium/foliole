@@ -133,7 +133,9 @@ it('keeps a newly added non-imported child topic after import', async () => {
   expect(readRows('SELECT id FROM nodes WHERE id = ?', 'node-added-1')).toEqual([
     { id: 'node-added-1' }
   ]);
-  expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
+  expect(readRows('SELECT last_node_id FROM keep_import_items')).toEqual([
+    { last_node_id: nodeId }
+  ]);
 });
 
 it('does not keep an imported-derived child topic created after import', async () => {

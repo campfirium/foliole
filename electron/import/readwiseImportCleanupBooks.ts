@@ -1,6 +1,9 @@
 import type { NativeReadwiseCleanupEntry } from '../../lib/platform/nativeImportContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
+import type { ReadwiseCleanupCandidate } from './readwiseCleanupStructure.js';
+import { isReadwiseBookStructureNodeId } from './readwiseCleanupStructure.js';
+
 interface ReadwiseBookNodeRow {
   created_at: string;
   id: string;
@@ -31,6 +34,17 @@ function resolveReadwiseBookCleanupAction(row: ReadwiseBookNodeRow): Pick<Native
 }
 
 export function readReadwiseBookCleanupEntries(): NativeReadwiseCleanupEntry[] {
+  return readReadwiseBookCleanupCandidates().map((row) => ({
+    action: row.reason ? 'keep' : 'delete',
+    node_id: row.nodeId,
+    reason: row.reason ?? 'Readwise Books placeholder is unchanged.',
+    rule_id: row.ruleId,
+    source_path: row.sourcePath,
+    title: row.title ?? row.sourcePath
+  }));
+}
+
+export function readReadwiseBookCleanupCandidates(): ReadwiseCleanupCandidate[] {
   const rows = openDatabaseConnection().sqlite
     .prepare(
       `SELECT id, title, created_at, updated_at
@@ -40,11 +54,16 @@ export function readReadwiseBookCleanupEntries(): NativeReadwiseCleanupEntry[] {
        ORDER BY title COLLATE NOCASE ASC`
     )
     .all() as ReadwiseBookNodeRow[];
-  return rows.map((row) => ({
-    ...resolveReadwiseBookCleanupAction(row),
-    node_id: row.id,
-    rule_id: 'readwise-books',
-    source_path: row.title,
-    title: row.title
-  }));
+  return rows.filter((row) => isReadwiseBookStructureNodeId(row.id)).map((row): ReadwiseCleanupCandidate => {
+    const action = resolveReadwiseBookCleanupAction(row);
+    return {
+      ...(action.action === 'delete' ? { deleteReason: action.reason } : {}),
+      ...(action.action === 'keep' ? { reason: action.reason } : {}),
+      importedAt: row.created_at,
+      nodeId: row.id,
+      ruleId: 'readwise-books',
+      sourcePath: row.title,
+      title: row.title
+    };
+  });
 }

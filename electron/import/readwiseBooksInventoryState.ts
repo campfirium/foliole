@@ -159,3 +159,36 @@ export function savePersistedReadwiseBooksInventory(inventory: ReadwiseBooksInve
 export function savePersistedReadwiseBookMovedToTop(inventory: ReadwiseBooksInventory, bookKey: string) {
   savePersistedReadwiseBooksInventory(moveBookToTop(inventory, bookKey));
 }
+
+export function clearPersistedReadwiseBookGeneratedNodes(nodeIds: Set<string>, updatedAt = new Date().toISOString()) {
+  if (nodeIds.size === 0) {
+    return;
+  }
+  const state = normalizeState(loadJsonSetting(READWISE_BOOKS_INVENTORY_STATE_KEY));
+  let changed = false;
+  const inventories = Object.fromEntries(
+    Object.entries(state.inventories).map(([key, inventory]) => [
+      key,
+      {
+        ...inventory,
+        books: inventory.books.map((book) => {
+          if (!book.generatedNodeId || !nodeIds.has(book.generatedNodeId)) {
+            return book;
+          }
+          changed = true;
+          return {
+            ...book,
+            bodyState: 'unloaded' as const,
+            generatedNodeId: null,
+            importStatus: 'pending' as const,
+            nodeStatus: 'missing' as const
+          };
+        }),
+        scannedAt: updatedAt
+      }
+    ])
+  );
+  if (changed) {
+    saveJsonSetting(READWISE_BOOKS_INVENTORY_STATE_KEY, { ...state, inventories }, updatedAt);
+  }
+}

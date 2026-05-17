@@ -8,8 +8,15 @@ import { deleteNodesPermanently } from '../database/nodeMutations.js';
 import { isReadwiseExternalFolderId } from '../database/readwiseManagedExternalDocuments.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { clearPersistedReadwiseBookGeneratedNodes } from './readwiseBooksInventoryState.js';
 import { hasReadwiseCleanupAdditions } from './readwiseCleanupAdditions.js';
-import { readReadwiseBookCleanupEntries } from './readwiseImportCleanupBooks.js';
+import {
+  collectReadwiseCleanupSubtree,
+  isReadwiseBookStructureNodeId,
+  type ReadwiseCleanupCandidate,
+  reduceReadwiseCleanupRootCandidates
+} from './readwiseCleanupStructure.js';
+import { readReadwiseBookCleanupCandidates } from './readwiseImportCleanupBooks.js';
 
 interface KeepImportCleanupRow {
   last_imported_at: string | null;
@@ -69,54 +76,51 @@ function readReadwiseExternalRows() {
   return rows.filter((row) => isReadwiseExternalFolderId(row.folder_id));
 }
 
-function collectSubtree(rootId: string, rows: NodeCleanupRow[]) {
-  const byParent = new Map<string | null, NodeCleanupRow[]>();
-  rows.forEach((row) => {
-    byParent.set(row.parent_id, [...(byParent.get(row.parent_id) ?? []), row]);
-  });
-  const collected: NodeCleanupRow[] = [];
-  const visit = (nodeId: string) => {
-    const row = rows.find((candidate) => candidate.id === nodeId);
-    if (!row) {
-      return;
-    }
-    collected.push(row);
-    (byParent.get(nodeId) ?? []).forEach((child) => visit(child.id));
-  };
-  visit(rootId);
-  return collected;
-}
-
 function resolveCleanupAction(
-  row: KeepImportCleanupRow,
+  candidate: ReadwiseCleanupCandidate,
   subtree: NodeCleanupRow[]
 ): Pick<NativeReadwiseCleanupEntry, 'action' | 'reason'> {
-  if (!row.last_imported_at || subtree.length === 0) {
+  if (candidate.reason) {
+    return { action: 'keep', reason: candidate.reason };
+  }
+  if (!candidate.importedAt || subtree.length === 0) {
     return { action: 'keep', reason: 'Topic is missing or has no import timestamp.' };
   }
-  if (hasReadwiseCleanupAdditions(row.last_node_id ?? '', row.last_imported_at, subtree)) {
+  if (hasReadwiseCleanupAdditions(candidate.nodeId, candidate.importedAt, subtree)) {
     return { action: 'keep', reason: 'Topic has additions after import.' };
   }
-  return { action: 'delete', reason: 'Readwise import has no additions.' };
+  return { action: 'delete', reason: candidate.deleteReason ?? 'Readwise import has no additions.' };
+}
+
+function readKeepImportCleanupCandidates(keepRows: KeepImportCleanupRow[]): ReadwiseCleanupCandidate[] {
+  return keepRows.filter((row) => row.last_node_id).map((row) => ({
+    importedAt: row.last_imported_at,
+    nodeId: row.last_node_id ?? '',
+    ruleId: row.rule_id,
+    sourcePath: row.source_path
+  }));
 }
 
 function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewResult {
   const nodes = readNodeRows();
   const externalRows = readReadwiseExternalRows();
   const keepRows = readKeepImportRows();
-  const keepEntries = keepRows.filter((row) => row.last_node_id).map((row) => {
-    const subtree = collectSubtree(row.last_node_id ?? '', nodes);
+  const rootCandidates = reduceReadwiseCleanupRootCandidates(
+    [...readKeepImportCleanupCandidates(keepRows), ...readReadwiseBookCleanupCandidates()],
+    nodes
+  );
+  const entries = rootCandidates.map((candidate) => {
+    const subtree = collectReadwiseCleanupSubtree(candidate.nodeId, nodes);
     const root = subtree[0];
-    const action = resolveCleanupAction(row, subtree);
+    const action = resolveCleanupAction(candidate, subtree);
     return {
       ...action,
-      node_id: row.last_node_id ?? '',
-      rule_id: row.rule_id,
-      source_path: row.source_path,
-      title: root?.title ?? row.source_path
+      node_id: candidate.nodeId,
+      rule_id: candidate.ruleId,
+      source_path: candidate.sourcePath,
+      title: root?.title ?? candidate.title ?? candidate.sourcePath
     } satisfies NativeReadwiseCleanupEntry;
   });
-  const entries = [...keepEntries, ...readReadwiseBookCleanupEntries()];
   const trackingOnlyCount = keepRows.filter((row) => !row.last_node_id).length;
   return {
     delete_count: entries.filter((entry) => entry.action === 'delete').length,
@@ -148,22 +152,26 @@ function collectDeleteNodeIds(entries: NativeReadwiseCleanupEntry[]) {
   const nodes = readNodeRows();
   return entries
     .filter((entry) => entry.action === 'delete')
-    .flatMap((entry) => collectSubtree(entry.node_id, nodes).map((node) => node.id));
+    .flatMap((entry) => collectReadwiseCleanupSubtree(entry.node_id, nodes).map((node) => node.id));
 }
 
-function clearReadwiseTracking(entries: NativeReadwiseCleanupEntry[]) {
+function clearReadwiseTracking(deleteNodeIds: string[]) {
   const connection = openDatabaseConnection();
   const ruleIds = readReadwiseRuleIds();
-  const deleteKeepImport = connection.sqlite.prepare('DELETE FROM keep_import_items WHERE rule_id = ?');
+  const deleteTrackingOnlyKeepImport = connection.sqlite.prepare(
+    'DELETE FROM keep_import_items WHERE rule_id = ? AND last_node_id IS NULL'
+  );
+  const deleteKeepImport = connection.sqlite.prepare('DELETE FROM keep_import_items WHERE last_node_id = ?');
   const deleteImportRuns = connection.sqlite.prepare('DELETE FROM import_runs WHERE node_id = ?');
   const deleteImportSources = connection.sqlite.prepare('DELETE FROM import_sources WHERE latest_node_id = ?');
   connection.sqlite.transaction(() => {
     ruleIds.forEach((ruleId) => {
-      deleteKeepImport.run(ruleId);
+      deleteTrackingOnlyKeepImport.run(ruleId);
     });
-    entries.forEach((entry) => {
-      deleteImportRuns.run(entry.node_id);
-      deleteImportSources.run(entry.node_id);
+    deleteNodeIds.forEach((nodeId) => {
+      deleteKeepImport.run(nodeId);
+      deleteImportRuns.run(nodeId);
+      deleteImportSources.run(nodeId);
     });
   })();
 }
@@ -196,7 +204,8 @@ export function runReadwiseImportCleanup(): NativeReadwiseCleanupRunResult {
   const externalRows = readReadwiseExternalRows();
   const deleteNodeIds = collectDeleteNodeIds(preview.entries);
   const deletedIdSet = new Set(deleteNodeIds);
-  clearReadwiseTracking(preview.entries);
+  clearReadwiseTracking(deleteNodeIds);
+  clearPersistedReadwiseBookGeneratedNodes(new Set(deleteNodeIds.filter(isReadwiseBookStructureNodeId)), cleanedAt);
   const externalDeletedCount = clearReadwiseExternalDocuments(externalRows);
   if (deleteNodeIds.length > 0) {
     deleteNodesPermanently({
