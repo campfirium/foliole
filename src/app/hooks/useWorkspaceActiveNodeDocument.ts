@@ -9,7 +9,7 @@ import {
 } from '../../shared/platform/performanceDiagnosticsProbe';
 import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
-import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
+import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 interface UseWorkspaceActiveNodeDocumentOptions {
@@ -20,6 +20,10 @@ export function useWorkspaceActiveNodeDocument(
   activeNodeId: string | null,
   options: UseWorkspaceActiveNodeDocumentOptions = {}
 ) {
+  const activeNodeDocumentStatus = useWorkspaceStore((state) =>
+    activeNodeId ? getNodeDocumentStatus(state.nodesById[activeNodeId]) : 'missing'
+  );
+
   useEffect(() => {
     if (!hasWorkspaceRuntimeRepository() || !activeNodeId) {
       return;
@@ -55,5 +59,5 @@ export function useWorkspaceActiveNodeDocument(
     return () => {
       cancelled = true;
     };
-  }, [activeNodeId, options.keepWarm]);
+  }, [activeNodeDocumentStatus, activeNodeId, options.keepWarm]);
 }
