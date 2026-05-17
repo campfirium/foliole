@@ -20,6 +20,8 @@ import { isFsrsWorkspaceListNode } from '../../features/nodes/model/workspaceLis
 import { definedProps } from '../../shared/lib/definedProps';
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../shared/ui';
 
+const TOPIC_TREE_VIRTUALIZATION_THRESHOLD = 20;
+
 interface WorkspaceTopicTreeRowsProps {
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
@@ -137,6 +139,39 @@ function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
   return kind === 'reading' || kind === 'review' ? kind : undefined;
 }
 
+function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps & {
+  onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
+  rowGap: number;
+  rowSpacing: number;
+}) {
+  return (
+    <VirtualListSurface
+      autoScroll={false}
+      estimateSize={(index) => resolveNodeTreeRowVirtualSize(args.rowSpacing, index === args.rows.length - 1 ? 0 : args.rowGap)}
+      getItemKey={(row) => row.node.id}
+      items={args.rows}
+      renderItem={(row, meta) =>
+        renderWorkspaceTopicTreeRow(row, {
+          activeNodeId: args.activeNodeId,
+          collapsedNodeIds: args.collapsedNodeIds,
+          drag: args.drag,
+          meta,
+          nodesById: args.nodesById,
+          onContextMenu: args.onContextMenu,
+          onRenameNode: args.onRenameNode,
+          onRowKeyDown: args.onRowKeyDown,
+          onSelectNode: args.onSelectNode,
+          onToggleCollapse: args.onToggleCollapse,
+          rowSpacing: args.rowSpacing,
+          selectedNodeIds: args.selectedNodeIds
+        })}
+      scrollElementRef={args.scrollContainerRef}
+      scrollToIndex={args.activeNodeId ? args.rows.findIndex((row) => row.node.id === args.activeNodeId) : null}
+      threshold={TOPIC_TREE_VIRTUALIZATION_THRESHOLD}
+    />
+  );
+}
+
 export function WorkspaceTopicTreeRows({
   activeNodeId,
   collapsedNodeIds,
@@ -172,29 +207,22 @@ export function WorkspaceTopicTreeRows({
       role="tree"
       style={{ gap: `${rowGap}px` }}
     >
-      <VirtualListSurface
-        autoScroll={false}
-        estimateSize={(index) => resolveNodeTreeRowVirtualSize(rowSpacing, index === rows.length - 1 ? 0 : rowGap)}
-        getItemKey={(row) => row.node.id}
-        items={rows}
-        renderItem={(row, meta) =>
-        renderWorkspaceTopicTreeRow(row, {
-          activeNodeId,
-          collapsedNodeIds,
-          drag,
-          nodesById,
-          onContextMenu,
-          onRenameNode,
-          onRowKeyDown,
-          onSelectNode,
-          onToggleCollapse,
-          meta,
-          rowSpacing,
-          selectedNodeIds
-        })}
-        scrollElementRef={scrollContainerRef}
-        scrollToIndex={activeNodeId ? rows.findIndex((row) => row.node.id === activeNodeId) : null}
-      />
+      {renderWorkspaceTopicTreeVirtualList({
+        activeNodeId,
+        collapsedNodeIds,
+        drag,
+        nodesById,
+        onContextMenu,
+        onRenameNode,
+        onRowKeyDown,
+        onSelectNode,
+        onToggleCollapse,
+        rowGap,
+        rows,
+        rowSpacing,
+        scrollContainerRef,
+        selectedNodeIds
+      })}
     </section>
   );
 }

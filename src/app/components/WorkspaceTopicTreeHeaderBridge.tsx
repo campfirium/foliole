@@ -1,7 +1,8 @@
+import type { Dispatch, SetStateAction } from 'react';
+
 import type { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { normalizeWorkspaceContentSort } from './workspaceContentSort';
-import type { useWorkspaceTopicTreeCollapse } from './workspaceTopicTreeContent';
 import { WorkspaceTopicTreeHeader } from './WorkspaceTopicTreeHeader';
 
 interface WorkspaceTopicTreeHeaderBridgeProps {
@@ -11,7 +12,7 @@ interface WorkspaceTopicTreeHeaderBridgeProps {
   hasCollapsedNodes: boolean;
   onCreateTopic: (parentNodeId: string) => void;
   searchQuery: string;
-  setCollapsedNodeIds: ReturnType<typeof useWorkspaceTopicTreeCollapse>['setCollapsedNodeIds'];
+  setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
   setSearchQuery: (value: string) => void;
 }
 

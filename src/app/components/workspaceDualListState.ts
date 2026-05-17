@@ -1,15 +1,24 @@
 import { useMemo } from 'react';
 
-import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
+import {
+  INBOX_NODE_ID,
+  TRASH_NODE_ID,
+  isInboxNode,
+  isTrashNode,
+  isVirtualNode,
+  isVirtualRootNode
+} from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 import {
-  buildFolderNavigationNodeOrder,
-  buildFolderNavigationNodesById,
-  buildTopicNavigationNodesById,
+  buildFolderNavigationNodesByIdFromOrder,
   resolveActiveFolderColumnNodeId,
   resolveFocusedFolderNodeId
 } from './workspaceFolderNavigation';
+import {
+  buildWorkspaceListChildrenIndex,
+  type WorkspaceListChildrenIndex
+} from './workspaceListChildrenIndex';
 
 export interface WorkspaceDualListStateArgs {
   activeNodeId: string | null;
@@ -55,65 +64,59 @@ function isVisibleTopicNode(
   return Boolean(node && !trashedNodeIds.includes(nodeId) && node.kind !== 'folder');
 }
 
-function buildTopicColumnIndex(
-  nodeOrder: string[],
-  nodesById: WorkspaceListNodesById,
-  trashedNodeIds: readonly string[]
-) {
-  const orderIndexById = new Map<string, number>();
-  const visibleChildrenByParent = new Map<string | null, string[]>();
+function isVisibleFolderId(nodeId: string, nodesById: WorkspaceListNodesById) {
+  const node = nodesById[nodeId];
+  return Boolean(
+    node?.kind === 'folder' &&
+    !isVirtualRootNode(node) &&
+    !isVirtualNode(node)
+  );
+}
 
-  nodeOrder.forEach((nodeId, index) => {
-    orderIndexById.set(nodeId, index);
-    if (trashedNodeIds.includes(nodeId)) return;
+function buildFolderNodeOrderFromIndex(
+  index: WorkspaceListChildrenIndex,
+  nodesById: WorkspaceListNodesById
+) {
+  const regularFolderIds = index.visibleNodeIds.filter((nodeId) => {
     const node = nodesById[nodeId];
-    if (!node) return;
-    const parentId = node.parentNodeId ?? null;
-    const children = visibleChildrenByParent.get(parentId);
-    if (children) {
-      children.push(nodeId);
-    } else {
-      visibleChildrenByParent.set(parentId, [nodeId]);
-    }
+    return (
+      isVisibleFolderId(nodeId, nodesById) &&
+      nodeId !== INBOX_NODE_ID &&
+      nodeId !== TRASH_NODE_ID &&
+      !isInboxNode(node) &&
+      !isTrashNode(node)
+    );
   });
 
-  return { orderIndexById, visibleChildrenByParent };
+  return [
+    ...(index.visibleNodeIdSet.has(INBOX_NODE_ID) && isVisibleFolderId(INBOX_NODE_ID, nodesById)
+      ? [INBOX_NODE_ID]
+      : []),
+    ...regularFolderIds,
+    TRASH_NODE_ID
+  ];
 }
 
 function collectTopicColumnNodeIdsFromIndex(
   folderNodeId: string | null,
-  index: ReturnType<typeof buildTopicColumnIndex>,
+  index: WorkspaceListChildrenIndex,
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: readonly string[]
 ) {
   if (!folderNodeId) return [];
-  const topicNodeIds = new Set<string>();
-  const queue = (index.visibleChildrenByParent.get(folderNodeId) ?? []).filter((nodeId) =>
+  return (index.visibleChildrenByParent.get(folderNodeId) ?? []).filter((nodeId) =>
     isVisibleTopicNode(nodeId, nodesById, trashedNodeIds)
-  );
-  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
-    const nodeId = queue[queueIndex];
-    if (!nodeId) continue;
-    if (topicNodeIds.has(nodeId)) continue;
-    topicNodeIds.add(nodeId);
-    queue.push(
-      ...(index.visibleChildrenByParent.get(nodeId) ?? []).filter((childId) =>
-        isVisibleTopicNode(childId, nodesById, trashedNodeIds)
-      )
-    );
-  }
-  return [...topicNodeIds].sort((left, right) =>
-    (index.orderIndexById.get(left) ?? 0) - (index.orderIndexById.get(right) ?? 0)
   );
 }
 
 function useWorkspaceDualListStaticData(args: WorkspaceDualListStateArgs) {
   return useMemo(() => {
-    const folderNodeOrder = buildFolderNavigationNodeOrder(args.nodeOrder, args.listNodesById, args.trashedNodeIds);
+    const listIndex = buildWorkspaceListChildrenIndex(args.nodeOrder, args.listNodesById, args.trashedNodeIds);
+    const folderNodeOrder = buildFolderNodeOrderFromIndex(listIndex, args.listNodesById);
     return {
       folderNodeOrder,
-      folderNodesById: buildFolderNavigationNodesById(args.nodeOrder, args.listNodesById, args.trashedNodeIds),
-      topicIndex: buildTopicColumnIndex(args.nodeOrder, args.listNodesById, args.trashedNodeIds)
+      folderNodesById: buildFolderNavigationNodesByIdFromOrder(folderNodeOrder, args.listNodesById),
+      listIndex
     };
   }, [args.listNodesById, args.nodeOrder, args.trashedNodeIds]);
 }
@@ -126,7 +129,7 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
   return useMemo(() => {
     const topicNodeOrder = collectTopicColumnNodeIdsFromIndex(
       activeFolderColumnId,
-      staticData.topicIndex,
+      staticData.listIndex,
       args.listNodesById,
       args.trashedNodeIds
     );
@@ -136,8 +139,9 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
       activeFolderId,
       folderNodeOrder: staticData.folderNodeOrder,
       folderNodesById: staticData.folderNodesById,
+      topicChildrenByParent: staticData.listIndex.visibleChildrenByParent,
       topicNodeOrder,
-      topicNodesById: buildTopicNavigationNodesById(topicNodeOrder, args.listNodesById)
+      topicNodesById: args.listNodesById
     };
   }, [
     activeFolderColumnId,

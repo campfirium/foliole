@@ -41,7 +41,7 @@ const timer = setInterval(() => {
     requestedBy: payload.requestedBy,
     target: payload.target
   });
-  if (mode === 'restart') {
+  if (mode === 'restart' || mode === 'renderer-reload') {
     writeJson(bootReadyFile, {
       head: payload.head ?? null,
       pid: 501,

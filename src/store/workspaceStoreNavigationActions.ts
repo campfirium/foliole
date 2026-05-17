@@ -2,6 +2,7 @@ import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnost
 
 import { pushNavigationHistory, resolveAncestorAnchorLink, type NodeNavigationResult } from './workspaceNavigation';
 import type { WorkspaceState } from './workspaceStore';
+import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
 
 type WorkspaceSet = (
   partial:
@@ -62,8 +63,9 @@ function createOpenNodeAction(set: WorkspaceSet) {
       if (!isAvailableNode(state, nodeId)) {
         return state;
       }
+      const nodeViewById = markNodeOpenedViewState(state, nodeId);
       if (state.activeNodeId === nodeId && isReviewSessionSelectionSynced(state, nodeId)) {
-        return state;
+        return nodeViewById === state.nodeViewById ? state : { nodeViewById };
       }
       markNodeSelectionApplied(nodeId, state.nodesById);
       nextResult = { focusAnchor: null, nodeId };
@@ -75,7 +77,8 @@ function createOpenNodeAction(set: WorkspaceSet) {
               backStack: pushNavigationHistory(state.navigation.backStack, state.activeNodeId),
               forwardStack: []
             }
-          : { ...state.navigation, forwardStack: [] }
+          : { ...state.navigation, forwardStack: [] },
+        nodeViewById
       );
     });
     return nextResult;
@@ -93,10 +96,15 @@ function createGoBackAction(set: WorkspaceSet) {
       }
       markNodeSelectionApplied(targetNodeId, state.nodesById);
       nextResult = { focusAnchor: null, nodeId: targetNodeId };
-      return buildNavigationNodeState(state, targetNodeId, {
-        backStack: state.navigation.backStack.slice(0, -1),
-        forwardStack: [currentNodeId, ...state.navigation.forwardStack]
-      });
+      return buildNavigationNodeState(
+        state,
+        targetNodeId,
+        {
+          backStack: state.navigation.backStack.slice(0, -1),
+          forwardStack: [currentNodeId, ...state.navigation.forwardStack]
+        },
+        markNodeOpenedViewState(state, targetNodeId)
+      );
     });
     return nextResult;
   };
@@ -113,10 +121,15 @@ function createGoForwardAction(set: WorkspaceSet) {
       }
       markNodeSelectionApplied(targetNodeId, state.nodesById);
       nextResult = { focusAnchor: null, nodeId: targetNodeId };
-      return buildNavigationNodeState(state, targetNodeId, {
-        backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
-        forwardStack: state.navigation.forwardStack.slice(1)
-      });
+      return buildNavigationNodeState(
+        state,
+        targetNodeId,
+        {
+          backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
+          forwardStack: state.navigation.forwardStack.slice(1)
+        },
+        markNodeOpenedViewState(state, targetNodeId)
+      );
     });
     return nextResult;
   };
@@ -137,10 +150,15 @@ function createGoToParentAction(set: WorkspaceSet) {
       }
       markNodeSelectionApplied(parentNodeId, state.nodesById);
       nextResult = { focusAnchor: currentNode.anchorLink ?? null, nodeId: parentNodeId };
-      return buildNavigationNodeState(state, parentNodeId, {
-        backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
-        forwardStack: []
-      });
+      return buildNavigationNodeState(
+        state,
+        parentNodeId,
+        {
+          backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
+          forwardStack: []
+        },
+        markNodeOpenedViewState(state, parentNodeId)
+      );
     });
     return nextResult;
   };
@@ -160,10 +178,15 @@ function createJumpToAncestorAction(set: WorkspaceSet) {
       }
       markNodeSelectionApplied(ancestorNodeId, state.nodesById);
       nextResult = { focusAnchor: ancestorTarget.focusAnchor, nodeId: ancestorNodeId };
-      return buildNavigationNodeState(state, ancestorNodeId, {
-        backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
-        forwardStack: []
-      });
+      return buildNavigationNodeState(
+        state,
+        ancestorNodeId,
+        {
+          backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
+          forwardStack: []
+        },
+        markNodeOpenedViewState(state, ancestorNodeId)
+      );
     });
     return nextResult;
   };

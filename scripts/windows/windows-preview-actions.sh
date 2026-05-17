@@ -35,6 +35,17 @@ run_renderer_reload_intent() {
       run_restart_intent
       return $?
     fi
+    local requested_at=""
+    requested_at="$(read_json_field "$(resolve_renderer_reload_delivery_path)" requestedAt 2>/dev/null || true)"
+    if [ -z "${requested_at}" ]; then
+      echo "[windows-preview] renderer reload delivery missing requestedAt nonce=${reload_nonce}"
+      return 1
+    fi
+    if ! wait_for_ready_markers_after "${requested_at}" "${WINDOWS_PREVIEW_TIMEOUT_SECONDS}" "renderer reload"; then
+      echo "[windows-preview] renderer reload did not reach app_ready; falling back to full-restart"
+      run_full_restart
+      return $?
+    fi
     echo "[windows-preview] status: SYNCED"
     return 0
   fi

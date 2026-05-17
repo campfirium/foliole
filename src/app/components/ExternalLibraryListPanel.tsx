@@ -20,6 +20,7 @@ import {
 } from './externalLibraryBrowseModel';
 import { ExternalLibraryListToolbar } from './ExternalLibraryListToolbar';
 import { normalizeWorkspaceContentSort, sortExternalDocuments } from './workspaceContentSort';
+import { useStableWorkspaceContentItems } from './workspaceStableContentSort';
 
 interface ExternalLibraryListPanelProps {
   entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
@@ -83,8 +84,15 @@ function useExternalDocumentListState(
       containsQuery(document.title, searchQuery) ||
       containsQuery(document.openingText ?? '', searchQuery)
   );
+  const documents = useStableWorkspaceContentItems({
+    getItemId: (document) => document.absolutePath,
+    items: filteredDocuments,
+    scopeKey: activeFolderId ?? 'root',
+    sort,
+    sortItems: (items) => sortExternalDocuments(items, sort, lastOpenedAtByPath)
+  });
   return {
-    documents: sortExternalDocuments(filteredDocuments, sort, lastOpenedAtByPath),
+    documents,
     isLoading
   };
 }

@@ -159,7 +159,7 @@ const timer = setInterval(() => {
     requestedBy: payload.requestedBy,
     target: payload.target
   });
-  if (mode === 'restart') {
+  if (mode === 'restart' || mode === 'renderer-reload') {
     const readyTimestamp = new Date(Date.parse(payload.requestedAt) + 1000).toISOString();
     writeJson(bootReadyFile, {
       head: payload.head ?? null,

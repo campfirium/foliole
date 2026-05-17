@@ -1,14 +1,13 @@
-import type { RefObject } from 'react';
+import type { Dispatch, RefObject, SetStateAction } from 'react';
 
+import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import type { useWorkspaceTopicTreeInteraction } from './WorkspaceTopicTree';
 import {
   renderWorkspaceTopicTreeBody,
-  toggleCollapsedNode,
-  useWorkspaceTopicTreeCollapse,
-  useWorkspaceTopicTreeRows
+  toggleCollapsedNode
 } from './workspaceTopicTreeContent';
 import { WorkspaceTopicTreeHeaderBridge } from './WorkspaceTopicTreeHeaderBridge';
 
@@ -25,9 +24,9 @@ export function renderWorkspaceTopicTreeShell(args: {
   nodesById: WorkspaceListNodesById;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   searchQuery: string;
-  setCollapsedNodeIds: ReturnType<typeof useWorkspaceTopicTreeCollapse>['setCollapsedNodeIds'];
+  setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
   setSearchQuery: (value: string) => void;
-  visibleRows: ReturnType<typeof useWorkspaceTopicTreeRows>['visibleRows'];
+  visibleRows: NodeTreeRow[];
 }) {
   return (
     <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">

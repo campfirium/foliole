@@ -143,7 +143,7 @@ it('renders markdown-looking topic titles as plain list text', () => {
 
 it('keeps virtual row sizing aligned with folder tree row spacing', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.nodeListRowSpacing, '6');
-  const nodes = Array.from({ length: 101 }, (_, index) => createTopicNode(index));
+  const nodes = Array.from({ length: 20 }, (_, index) => createTopicNode(index));
   const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node])) as WorkspaceListNodesById;
 
   render(
@@ -163,5 +163,5 @@ it('keeps virtual row sizing aligned with folder tree row spacing', () => {
   );
 
   expect(screen.getByRole('tree', { name: 'Topic list' })).toHaveAttribute('data-node-list-row-gap', '4');
-  expect(document.querySelector('[data-virtual-list="true"]')).toHaveStyle({ height: `${101 * (20 + 6 * 2) + 100 * 4}px` });
+  expect(document.querySelector('[data-virtual-list="true"]')).toHaveStyle({ height: `${20 * (20 + 6 * 2) + 19 * 4}px` });
 });
