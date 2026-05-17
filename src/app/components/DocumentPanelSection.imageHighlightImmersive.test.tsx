@@ -8,6 +8,15 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DocumentPanelSection } from './DocumentPanelSection';
 
 const BASE_NODE_CONTENT = '![Cover](asset://hash-1.png)';
+const imageClozePresentation = vi.hoisted(() => ({
+  IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT: 'foliole:image-cloze-presentation-change',
+  getImageClozeEditorPresentation: vi.fn(() => null),
+  registerImageClozeEditorPresentation: vi.fn(),
+  unregisterImageClozeEditorPresentation: vi.fn(),
+  getImageClozeAnswerEditorNodeId: vi.fn((editorNodeId: string | null) =>
+    editorNodeId ? `${editorNodeId}::answer` : null
+  )
+}));
 const DOCUMENT_PANEL_PROPS = {
   activeNodeId: 'node-2',
   canGoBack: true,
@@ -103,6 +112,7 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
     toggleEditorDisplayMode: vi.fn()
   })
 }));
+vi.mock('../../features/image-cloze/model/imageClozePresentation', () => imageClozePresentation);
 vi.mock('../../features/settings/context/MouseGestureSettingsProvider', () => ({
   useMouseGestureSettings: () => ({
     bindings: {},
@@ -122,4 +132,15 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
 
 it('renders an image highlight child node in immersive mode without crashing', () => {
   expect(renderImageHighlightImmersivePanel).not.toThrow();
+});
+
+it('does not register the image highlight child regions against the child document itself', () => {
+  renderImageHighlightImmersivePanel();
+
+  expect(imageClozePresentation.registerImageClozeEditorPresentation).not.toHaveBeenCalledWith(
+    'node-2',
+    expect.objectContaining({
+      outlinedRegionIds: ['highlight-1-image-0']
+    })
+  );
 });

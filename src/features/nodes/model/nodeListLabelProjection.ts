@@ -1,3 +1,4 @@
+import { projectImageOnlyMarkdownLabel } from '../../../../lib/core/import/markdownImageLabel';
 import type { MarkdownInlineToken } from '../../editor/model/markdownInlineProjectionTypes';
 import { projectMarkdownInlineText } from '../../editor/model/markdownInlineTextProjection';
 
@@ -46,6 +47,10 @@ function projectMarkdownInlinePlainText(value: string, depth = 0): string {
 }
 
 export function projectNodeListLabel(label: string) {
+  const imageOnlyLabel = projectImageOnlyMarkdownLabel(label);
+  if (imageOnlyLabel) {
+    return imageOnlyLabel;
+  }
   const cleaned = stripMarkdownLinePrefix(stripMarkdownUrlNoise(stripMarkdownLinePrefix(label)));
   return stripBoundaryStrongMarkers(projectMarkdownInlinePlainText(cleaned)).trim().replace(/\s+/g, ' ');
 }

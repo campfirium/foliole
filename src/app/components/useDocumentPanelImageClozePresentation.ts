@@ -66,6 +66,13 @@ function registerFocusedImageClozePresentation(
   };
 }
 
+function resolveParentPresentationImageRegions(activeNode: Node) {
+  if (activeNode.anchorLink?.kind === 'highlight') {
+    return null;
+  }
+  return activeNode.imageRegions;
+}
+
 export function useDocumentPanelImageClozePresentation(args: {
   activeNode: Node | undefined;
   editorNodeId: string | null;
@@ -80,7 +87,7 @@ export function useDocumentPanelImageClozePresentation(args: {
     const answerNodeId = getImageClozeAnswerEditorNodeId(args.editorNodeId);
     const parentRegions = listImageClozePresentationRegions(
       mergeImageClozeRegionGroups(
-        args.activeNode.imageRegions,
+        resolveParentPresentationImageRegions(args.activeNode),
         deriveImageClozeRegionsFromChildren({
           nodeId: args.activeNode.id,
           nodesById: args.nodesById,

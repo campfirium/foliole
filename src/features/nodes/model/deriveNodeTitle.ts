@@ -1,3 +1,4 @@
+import { projectImageOnlyMarkdownLabel } from '../../../../lib/core/import/markdownImageLabel';
 import { NODE_TITLE_MAX_CHARS } from '../../../shared/config/nodeTitleConfig';
 
 export const UNTITLED_NODE_TITLE = 'Untitled';
@@ -55,6 +56,10 @@ function parseUntitledSequence(title: string) {
 }
 
 export function deriveNodeTitleFromContent(content: string) {
+  const imageOnlyTitle = projectImageOnlyMarkdownLabel(content);
+  if (imageOnlyTitle) {
+    return imageOnlyTitle;
+  }
   const headingTitle = pickHeadingTitle(content);
   if (headingTitle) {
     return headingTitle;

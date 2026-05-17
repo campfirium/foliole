@@ -203,11 +203,12 @@ it('imports image-only readwise highlights with a locator on the image markdown'
   });
   const imported = runPreparedImport(prepared);
   const childRow = openDatabaseConnection().sqlite
-    .prepare('SELECT content, anchor_link FROM nodes WHERE parent_id = ?')
-    .get(imported.nodeId as string) as { anchor_link: string | null; content: string };
+    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ?')
+    .get(imported.nodeId as string) as { anchor_link: string | null; content: string; title: string };
   const locator = parseAnchorLink(childRow.anchor_link).locator;
 
   expect(prepared.matchedHighlights).toMatchObject([{ content: '![](https://cdn.example.com/cover.jpg)' }]);
+  expect(childRow.title).toBe('Image highlight');
   expect(childRow.content).toContain('![](https://cdn.example.com/cover.jpg)');
   expect(locator?.originalText).toBe('![](https://cdn.example.com/cover.jpg)');
 });
