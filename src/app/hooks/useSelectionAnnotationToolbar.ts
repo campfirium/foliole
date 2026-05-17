@@ -11,6 +11,7 @@ import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
 const ACTIVE_HIGHLIGHT_CLASS = 'cm-md-highlight-active';
 const HIGHLIGHT_TARGET_SELECTOR = '.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-cloze, .cm-md-anchor-overlap';
 const EDITOR_TARGET_SELECTOR = '.cm-editor';
+const TOOLBAR_PRIMARY_ACTION_CENTER_OFFSET = 22;
 
 function getHighlightElement(target: EventTarget | null) {
   return target instanceof Element ? target.closest(HIGHLIGHT_TARGET_SELECTOR) : null;
@@ -28,13 +29,11 @@ function resolveSelectionToolbarPosition(event: MouseEvent) {
   const selection = window.getSelection();
   const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
   const rect = highlightRect ?? range?.getBoundingClientRect();
-  const anchor = rect && rect.width > 0 && rect.height > 0
-    ? { left: rect.left + rect.width / 2, top: rect.top }
-    : { left: event.clientX, top: event.clientY };
+  const anchor = { left: event.clientX, top: rect && rect.height > 0 ? rect.top : event.clientY };
   const toolbarWidth = 150;
   const notePanelWidth = 240;
   return {
-    left: Math.max(8, Math.min(anchor.left - toolbarWidth / 2, window.innerWidth - toolbarWidth - 8)),
+    left: Math.max(8, Math.min(anchor.left - TOOLBAR_PRIMARY_ACTION_CENTER_OFFSET, window.innerWidth - toolbarWidth - 8)),
     notePanelLeft: Math.max(8, Math.min(anchor.left - notePanelWidth / 2, window.innerWidth - notePanelWidth - 8)),
     notePanelTop: Math.max(8, (rect?.bottom ?? event.clientY) + 8),
     top: Math.max(8, anchor.top - 46)

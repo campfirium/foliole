@@ -75,6 +75,20 @@ function appendEditorTarget(child: HTMLElement) {
   document.body.append(editorElement);
 }
 
+function mockRect(left: number, top: number, width: number, height: number): DOMRect {
+  return {
+    bottom: top + height,
+    height,
+    left,
+    right: left + width,
+    toJSON: () => undefined,
+    top,
+    width,
+    x: left,
+    y: top
+  } as DOMRect;
+}
+
 it('opens an existing highlight toolbar from a highlight click', () => {
   const updateNodeContent = vi.fn();
   const deleteNodePermanently = vi.fn();
@@ -109,7 +123,7 @@ it('opens an existing highlight toolbar from a highlight click', () => {
   expect(result.current.contextMenu).toMatchObject({
     existingHighlight: { nodeId: 'highlight-1', originalText: 'Welcome' },
     kind: 'selection',
-    left: 15,
+    left: 58,
     mode: 'existing-highlight-toolbar',
     notePanelLeft: 8,
     notePanelTop: 120,
@@ -123,6 +137,47 @@ it('opens an existing highlight toolbar from a highlight click', () => {
 
   act(() => result.current.handleDeleteExistingHighlight());
   expect(deleteNodePermanently).toHaveBeenCalledWith('highlight-1');
+});
+
+it('anchors the selection toolbar primary action above the drag release point', () => {
+  const selectedText = document.createTextNode('Welcome');
+  const selectedSpan = document.createElement('span');
+  selectedSpan.append(selectedText);
+  appendEditorTarget(selectedSpan);
+  const range = document.createRange();
+  range.selectNodeContents(selectedText);
+  Object.defineProperty(range, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => mockRect(40, 90, 520, 22)
+  });
+  window.getSelection()?.removeAllRanges();
+  window.getSelection()?.addRange(range);
+
+  const adapter = createEditorAdapter({
+    getSelectionRanges: vi.fn(() => [{ from: 0, to: 7 }])
+  });
+  const { result } = renderHook(() =>
+    useEditorContextCommands(buildHookArgs({ editorRef: { current: adapter } }))
+  );
+
+  act(() => {
+    selectedSpan.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true,
+      button: 0,
+      clientX: 540,
+      clientY: 112
+    }));
+  });
+
+  expect(result.current.contextMenu).toMatchObject({
+    kind: 'selection',
+    left: 518,
+    mode: 'annotation-toolbar',
+    notePanelLeft: 420,
+    notePanelTop: 120,
+    payload: expect.objectContaining({ selectionText: 'Welcome' }),
+    top: 44
+  });
 });
 
 it('lets outside workspace item clicks finish without mutating editor selection', () => {
