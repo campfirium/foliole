@@ -13,6 +13,13 @@ function stripMarkdownLinePrefix(value: string) {
     .replace(/\s*#{1,6}$/, '');
 }
 
+function stripBoundaryStrongMarkers(value: string) {
+  return value
+    .replace(/^\*\*(?=\S)/, '')
+    .replace(/\s+\*\*$/, '')
+    .replace(/(?<=\S)\*\*$/, '');
+}
+
 function stripMarkdownUrlNoise(value: string) {
   const stripped = value
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
@@ -40,5 +47,5 @@ function projectMarkdownInlinePlainText(value: string, depth = 0): string {
 
 export function projectNodeListLabel(label: string) {
   const cleaned = stripMarkdownLinePrefix(stripMarkdownUrlNoise(stripMarkdownLinePrefix(label)));
-  return projectMarkdownInlinePlainText(cleaned).trim().replace(/\s+/g, ' ');
+  return stripBoundaryStrongMarkers(projectMarkdownInlinePlainText(cleaned)).trim().replace(/\s+/g, ' ');
 }

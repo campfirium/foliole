@@ -22,3 +22,23 @@ it('shows markdown node titles as plain list text outside rename mode', () => {
   expect(screen.getByRole('treeitem', { name: '这个版本切换，其实等于是在做一个确认' })).toBeInTheDocument();
   expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
 });
+
+it('hides dangling strong markers in markdown-looking node titles outside rename mode', () => {
+  render(
+    <NodeTreeRow
+      depth={0}
+      hasChildren={false}
+      isActive={false}
+      isCollapsed={false}
+      isSelected={false}
+      label="**链接： 解压密码： acgbns.com"
+      nodeId="node-1"
+      onSelect={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rowSpacing={0}
+    />
+  );
+
+  expect(screen.getByRole('treeitem', { name: '链接： 解压密码： acgbns.com' })).toBeInTheDocument();
+  expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
+});
