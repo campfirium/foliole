@@ -1,13 +1,27 @@
-import { appendBootEvent } from './ipc/boot.js';
+import { desktopTaskScheduler } from './desktopTaskScheduler.js';
+import type { DesktopTaskContext, DesktopTaskHandle } from './desktopTaskTypes.js';
 
-export function runStartupTask(label: string, task: () => Promise<unknown>) {
-  return task().catch((error) => {
-    console.error(label, error);
-    void appendBootEvent('startup_task_failed', {
-      label,
-      message: error instanceof Error ? error.message : String(error)
-    }).catch((bootError) => {
-      console.error('[electron-main] boot log failed: startup_task_failed', bootError);
-    });
+export function runStartupTask(
+  label: string,
+  task: (context: DesktopTaskContext) => Promise<unknown> | unknown
+): DesktopTaskHandle {
+  const id = label
+    .toLowerCase()
+    .replace(/^\[|\]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const handle = desktopTaskScheduler.submit({
+    concurrencyKey: id,
+    duplicatePolicy: 'coalesce',
+    failureLabel: label,
+    id,
+    label,
+    priority: 'startup',
+    run: task,
+    runOn: 'main',
+    source: 'startup-followup',
+    startup: true
   });
+  void handle.promise.catch(() => undefined);
+  return handle;
 }

@@ -7,6 +7,7 @@ import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { submitPdfIndexingTask } from './pdfIndexingTaskQueue.js';
 import { savePdfPageTextRows } from './pdfPageTextRows.js';
 
 const PDF_MIME_TYPE = 'application/pdf';
@@ -27,7 +28,6 @@ interface PdfIndexAttemptRow extends DatabaseRow {
 }
 
 const queuedAttachmentIds = new Set<string>();
-let isWorkerRunning = false;
 
 export function toPdfDocumentData(bytes: Uint8Array) {
   return new Uint8Array(bytes);
@@ -177,8 +177,17 @@ function updatePdfNodeOpeningTexts(attachmentId: string, pages: Array<{ page: nu
 }
 
 function enqueueInternal(attachmentId: string) {
+  if (queuedAttachmentIds.has(attachmentId)) {
+    return;
+  }
   queuedAttachmentIds.add(attachmentId);
-  void runQueueWorker();
+  const handle = submitPdfIndexingTask(attachmentId, async () => {
+    queuedAttachmentIds.delete(attachmentId);
+    await processOneAttachment(attachmentId);
+  });
+  void handle.promise.catch(() => {
+    queuedAttachmentIds.delete(attachmentId);
+  });
 }
 
 async function processOneAttachment(attachmentId: string) {
@@ -202,28 +211,6 @@ async function processOneAttachment(attachmentId: string) {
       return;
     }
     updatePdfIndexStatus({ attachmentId, error: message, indexedAt: null, status: PDF_STATUS_FAILED });
-  }
-}
-
-async function runQueueWorker() {
-  if (isWorkerRunning) {
-    return;
-  }
-  isWorkerRunning = true;
-  try {
-    while (queuedAttachmentIds.size > 0) {
-      const attachmentId = queuedAttachmentIds.values().next().value;
-      if (!attachmentId) {
-        break;
-      }
-      queuedAttachmentIds.delete(attachmentId);
-      await processOneAttachment(attachmentId);
-    }
-  } finally {
-    isWorkerRunning = false;
-    if (queuedAttachmentIds.size > 0) {
-      void runQueueWorker();
-    }
   }
 }
 

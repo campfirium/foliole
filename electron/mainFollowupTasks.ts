@@ -1,5 +1,6 @@
 import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
+import { startDesktopTaskWatchdog } from './desktopTaskWatchdog.js';
 import { startExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import { startKeepImportMonitor } from './import/keepImportMonitor.js';
 import { startManagedInboxMonitor } from './import/managedInboxMonitor.js';
@@ -8,13 +9,24 @@ import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
 import { runStartupTask } from './startupTasks.js';
 
+let watchdogStarted = false;
+
+function ensureDesktopTaskWatchdog() {
+  if (watchdogStarted) {
+    return;
+  }
+  watchdogStarted = true;
+  startDesktopTaskWatchdog();
+}
+
 export function startFollowupTasks() {
-  void runStartupTask('[backup] automatic backup reconcile failed', reconcileAutomaticDatabaseBackups);
-  void runStartupTask('[mirror] startup backfill failed', backfillMissingMirrorOutput);
-  void runStartupTask('[storage] legacy webview migration failed', migrateLegacyWebviewStorage);
-  resumePendingPdfAttachmentIndexing();
+  ensureDesktopTaskWatchdog();
+  runStartupTask('[backup] automatic backup reconcile failed', () => reconcileAutomaticDatabaseBackups());
+  runStartupTask('[mirror] startup backfill failed', backfillMissingMirrorOutput);
+  runStartupTask('[storage] legacy webview migration failed', () => migrateLegacyWebviewStorage());
+  runStartupTask('[pdf] pending indexing resume failed', resumePendingPdfAttachmentIndexing);
   void appendBootEvent('startup_followup_tasks_started');
-  void runStartupTask('[managed-inbox] startup monitor failed', startManagedInboxMonitor);
-  void runStartupTask('[keep-import] startup monitor failed', startKeepImportMonitor);
-  startExternalSearchBackgroundRefresh();
+  runStartupTask('[managed-inbox] startup monitor failed', startManagedInboxMonitor);
+  runStartupTask('[keep-import] startup monitor failed', startKeepImportMonitor);
+  runStartupTask('[external-search] background refresh scheduler failed', startExternalSearchBackgroundRefresh);
 }

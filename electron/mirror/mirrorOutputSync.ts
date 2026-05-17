@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { NativeMirrorOutputRebuildResult } from '../../lib/platform/nativeUtilityContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import type { DesktopTaskContext } from '../desktopTaskTypes.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { collectArticleMirrorTargets } from './articleMirrorOutput.js';
@@ -14,6 +15,28 @@ interface MirrorArticleRecord {
   articleId: string;
   mirroredAt: string;
   relativePath: string;
+}
+
+interface MirrorSyncOptions {
+  taskContext?: DesktopTaskContext;
+}
+
+function hydrateMirrorSnapshotBodies(snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>) {
+  const rows = openDatabaseConnection().driver.queryAll<{ content: string; id: string }>(
+    `SELECT n.id, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content
+     FROM nodes n
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     WHERE (n.kind = 'topic' OR n.anchor_link IS NOT NULL)
+       AND n.deleted_at IS NULL`,
+    []
+  );
+  for (const row of rows) {
+    const node = snapshot.nodesById[row.id];
+    if (node) {
+      node.content = row.content;
+    }
+  }
+  return snapshot;
 }
 
 function loadMirrorArticleRecords() {
@@ -129,11 +152,58 @@ function shouldWriteTarget(mode: MirrorSyncMode, fileUpdatedAt: string | null, r
   return record.mirroredAt < sourceUpdatedAt;
 }
 
-async function syncMirrorOutput(mode: MirrorSyncMode): Promise<NativeMirrorOutputRebuildResult> {
+async function processMirrorTargets(args: {
+  mode: MirrorSyncMode;
+  options: MirrorSyncOptions;
+  paths: ReturnType<typeof loadLibraryPathSettingsSync>;
+  recordsByArticleId: Map<string, MirrorArticleRecord>;
+  targets: ReturnType<typeof collectArticleMirrorTargets>;
+  updatedAt: string;
+}) {
+  let rebuiltArticleCount = 0;
+  let visitedArticleCount = 0;
+  for (const target of args.targets) {
+    if (args.options.taskContext?.signal.aborted) {
+      throw new DOMException('AbortError', 'AbortError');
+    }
+    const persistedRecord = args.recordsByArticleId.get(target.articleId) ?? null;
+    const fileUpdatedAt = await readFileUpdatedAt(target.targetPath);
+    const effectiveRecord =
+      persistedRecord ??
+      (fileUpdatedAt ? { articleId: target.articleId, mirroredAt: fileUpdatedAt, relativePath: target.relativePath } : null);
+    const pathChanged = Boolean(persistedRecord && persistedRecord.relativePath !== target.relativePath);
+    if (shouldWriteTarget(args.mode, fileUpdatedAt, effectiveRecord, target.sourceUpdatedAt) || pathChanged) {
+      if (persistedRecord && persistedRecord.relativePath !== target.relativePath) {
+        await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(args.paths.mirror, persistedRecord.relativePath));
+      }
+      await fs.mkdir(path.dirname(target.targetPath), { recursive: true });
+      await fs.writeFile(target.targetPath, target.markdown, 'utf8');
+      saveMirrorArticleRecord({ articleId: target.articleId, mirroredAt: args.updatedAt, relativePath: target.relativePath });
+      rebuiltArticleCount += 1;
+    } else if (!persistedRecord && effectiveRecord) {
+      saveMirrorArticleRecord(effectiveRecord);
+    }
+    visitedArticleCount += 1;
+    args.options.taskContext?.progress({
+      completed: visitedArticleCount,
+      message: 'processed mirror target',
+      total: args.targets.length,
+      unit: 'article'
+    });
+    await args.options.taskContext?.yieldIfNeeded();
+  }
+  return rebuiltArticleCount;
+}
+
+async function syncMirrorOutput(
+  mode: MirrorSyncMode,
+  options: MirrorSyncOptions = {}
+): Promise<NativeMirrorOutputRebuildResult> {
   const updatedAt = new Date().toISOString();
   const paths = loadLibraryPathSettingsSync();
-  const snapshot = loadWorkspaceSnapshot({ includeBody: true });
-  const targets = snapshot ? collectArticleMirrorTargets(snapshot, paths.mirror) : [];
+  const snapshot = loadWorkspaceSnapshot({ includeBody: false });
+  const hydratedSnapshot = snapshot ? hydrateMirrorSnapshotBodies(snapshot) : null;
+  const targets = hydratedSnapshot ? collectArticleMirrorTargets(hydratedSnapshot, paths.mirror) : [];
   const recordsByArticleId = loadMirrorArticleRecords();
   const targetArticleIds = new Set(targets.map((target) => target.articleId));
 
@@ -145,42 +215,7 @@ async function syncMirrorOutput(mode: MirrorSyncMode): Promise<NativeMirrorOutpu
 
   await removeLegacyMirrorArtifacts(paths.mirror, targets.map((target) => target.targetPath));
 
-  let rebuiltArticleCount = 0;
-
-  for (const target of targets) {
-    const persistedRecord = recordsByArticleId.get(target.articleId) ?? null;
-    const fileUpdatedAt = await readFileUpdatedAt(target.targetPath);
-    const effectiveRecord =
-      persistedRecord ??
-      (fileUpdatedAt
-        ? {
-            articleId: target.articleId,
-            mirroredAt: fileUpdatedAt,
-            relativePath: target.relativePath
-          }
-        : null);
-
-    const pathChanged = Boolean(persistedRecord && persistedRecord.relativePath !== target.relativePath);
-    if (!shouldWriteTarget(mode, fileUpdatedAt, effectiveRecord, target.sourceUpdatedAt) && !pathChanged) {
-      if (!persistedRecord && effectiveRecord) {
-        saveMirrorArticleRecord(effectiveRecord);
-      }
-      continue;
-    }
-
-    if (persistedRecord && persistedRecord.relativePath !== target.relativePath) {
-      await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(paths.mirror, persistedRecord.relativePath));
-    }
-
-    await fs.mkdir(path.dirname(target.targetPath), { recursive: true });
-    await fs.writeFile(target.targetPath, target.markdown, 'utf8');
-    saveMirrorArticleRecord({
-      articleId: target.articleId,
-      mirroredAt: updatedAt,
-      relativePath: target.relativePath
-    });
-    rebuiltArticleCount += 1;
-  }
+  const rebuiltArticleCount = await processMirrorTargets({ mode, options, paths, recordsByArticleId, targets, updatedAt });
 
   return {
     queued_article_count: mode === 'full' ? targets.length : rebuiltArticleCount,
@@ -199,6 +234,6 @@ export function syncIncrementalMirrorOutput() {
   return syncMirrorOutput('incremental');
 }
 
-export function backfillMissingMirrorOutput() {
-  return syncMirrorOutput('missing');
+export function backfillMissingMirrorOutput(context?: DesktopTaskContext) {
+  return syncMirrorOutput('missing', context ? { taskContext: context } : {});
 }

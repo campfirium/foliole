@@ -42,6 +42,18 @@ export interface ScannedDocumentEntry {
   sizeBytes: number;
 }
 
+export interface ExternalSearchWorkContext {
+  progress?: (progress: { completed?: number; message?: string; total?: number; unit?: string }) => void;
+  signal?: AbortSignal;
+  yieldIfNeeded?: () => Promise<void>;
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw new DOMException('AbortError', 'AbortError');
+  }
+}
+
 export async function scanFolder(
   folder: NativeExternalSearchFolder,
   rootPath: string,
@@ -64,8 +76,10 @@ export async function scanFolderEntries(
   defaultExcludedNames: Set<string>,
   items: ScannedDocumentEntry[],
   runtime: ExternalSearchScanRuntime | undefined = undefined,
-  autoExcludedPaths: string[] = []
+  autoExcludedPaths: string[] = [],
+  context?: ExternalSearchWorkContext
 ): Promise<void> {
+  throwIfAborted(context?.signal);
   const scanRuntime = runtime ?? createExternalSearchScanRuntime(autoExcludedPaths);
   const relativeDirectoryPath = path.relative(rootPath, currentPath);
   if (shouldSkipExternalSearchDirectory({
@@ -77,10 +91,11 @@ export async function scanFolderEntries(
   })) return;
   const entries = await fs.readdir(currentPath, { withFileTypes: true });
   for (const entry of entries) {
+    throwIfAborted(context?.signal);
     const absolutePath = path.join(currentPath, entry.name);
     if (entry.isDirectory()) {
-      await scanFolderEntries(folder, rootPath, absolutePath, defaultExcludedNames, items, scanRuntime);
-      await yieldExternalSearchScanWork(scanRuntime);
+      await scanFolderEntries(folder, rootPath, absolutePath, defaultExcludedNames, items, scanRuntime, [], context);
+      await (context?.yieldIfNeeded?.() ?? yieldExternalSearchScanWork(scanRuntime));
       continue;
     }
     if (!entry.isFile()) continue;
@@ -96,14 +111,18 @@ export async function scanFolderEntries(
       relativePath: path.relative(rootPath, absolutePath).replace(/\\/g, '/'),
       sizeBytes: stat.size
     });
-    await yieldExternalSearchScanWork(scanRuntime);
+    context?.progress?.({ completed: items.length, message: 'scanned external documents', unit: 'document' });
+    await (context?.yieldIfNeeded?.() ?? yieldExternalSearchScanWork(scanRuntime));
   }
 }
 
-export async function loadScannedDocument(entry: ScannedDocumentEntry): Promise<ScannedDocument> {
+export async function loadScannedDocument(entry: ScannedDocumentEntry, context?: ExternalSearchWorkContext): Promise<ScannedDocument> {
+  throwIfAborted(context?.signal);
+  const content = await fs.readFile(entry.absolutePath, 'utf8');
+  throwIfAborted(context?.signal);
   return {
     ...entry,
-    content: await fs.readFile(entry.absolutePath, 'utf8')
+    content
   };
 }
 
@@ -129,59 +148,6 @@ export function replaceFolderDocuments(
       insertFts.run(path.basename(document.fileName, path.extname(document.fileName)).trim() || document.fileName, document.fileName, document.relativePath, document.content, document.absolutePath, folder.id, folder.folder_path, document.modifiedAt);
     });
   })();
-  return indexedAt;
-}
-
-export function applyFolderDocumentChanges(args: {
-  db: import('better-sqlite3').Database;
-  deletedAbsolutePaths: string[];
-  documentsToUpsert: ScannedDocument[];
-  folder: NativeExternalSearchFolder;
-}) {
-  const deleteFts = args.db.prepare('DELETE FROM external_search_fts WHERE absolute_path = ?');
-  const markDocMissing = args.db.prepare('UPDATE external_search_documents SET is_present = 0 WHERE absolute_path = ?');
-  const upsertDoc = args.db.prepare(`INSERT OR REPLACE INTO external_search_documents (
-    absolute_path, folder_id, folder_path, relative_path, file_name, extension, size_bytes, modified_at, modified_ms, indexed_at, is_present, content
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const insertFts = args.db.prepare(`INSERT INTO external_search_fts (
-    title, file_name, relative_path, content, absolute_path, folder_id, folder_path, modified_at
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-  const indexedAt = new Date().toISOString();
-
-  args.db.transaction(() => {
-    args.deletedAbsolutePaths.forEach((absolutePath) => {
-      markDocMissing.run(absolutePath);
-      deleteFts.run(absolutePath);
-    });
-    args.documentsToUpsert.forEach((document) => {
-      deleteFts.run(document.absolutePath);
-      upsertDoc.run(
-        document.absolutePath,
-        args.folder.id,
-        args.folder.folder_path,
-        document.relativePath,
-        document.fileName,
-        document.extension,
-        document.sizeBytes,
-        document.modifiedAt,
-        document.modifiedMs,
-        indexedAt,
-        1,
-        document.content
-      );
-      insertFts.run(
-        path.basename(document.fileName, path.extname(document.fileName)).trim() || document.fileName,
-        document.fileName,
-        document.relativePath,
-        document.content,
-        document.absolutePath,
-        args.folder.id,
-        args.folder.folder_path,
-        document.modifiedAt
-      );
-    });
-  })();
-
   return indexedAt;
 }
 

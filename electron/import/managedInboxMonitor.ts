@@ -6,6 +6,7 @@ import { loadLibraryPathSettings } from '../ipc/libraryPaths.js';
 import { ensureManagedInboxRoot, resolveManagedInboxPaths } from '../ipc/managedInboxFolder.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
+import { submitImportMonitorTask } from './importMonitorTaskScheduler.js';
 import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
 
 interface ManagedInboxWatchHandle {
@@ -173,7 +174,14 @@ export function createManagedInboxMonitor(
     clearScheduledRun(state);
     state.debounceTimer = setTimeout(() => {
       state.debounceTimer = null;
-      void runImportCycle(deps, state, () => scheduleRun());
+      submitImportMonitorTask({
+        concurrencyKey: 'managed-inbox-import',
+        failureLabel: '[managed-inbox] auto import cycle failed',
+        id: 'managed-inbox-import-cycle',
+        label: 'Managed inbox import cycle',
+        run: () => runImportCycle(deps, state, () => scheduleRun()),
+        source: 'managed-inbox'
+      });
     }, immediate ? 0 : deps.debounceMs);
   }
 

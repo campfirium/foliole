@@ -9,7 +9,7 @@ import {
 } from './externalDocuments.js';
 import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import {
-  applyFolderDocumentChanges,
+  type ExternalSearchWorkContext,
   loadScannedDocument,
   replaceFolderDocuments,
   scanFolder,
@@ -19,6 +19,7 @@ import {
   type ScannedDocumentEntry,
   toExternalResult
 } from './externalSearchCacheSupport.js';
+import { applyFolderDocumentChanges } from './externalSearchDocumentChanges.js';
 import { loadExternalSearchFolders, updateExternalSearchFolderIndexState } from './externalSearchFolders.js';
 import {
   mergeExternalSearchRows,
@@ -32,6 +33,7 @@ import {
 
 type SqliteDatabase = import('better-sqlite3').Database;
 interface CachedFolderDocumentRow { absolute_path: string; is_present: number; modified_ms: number; relative_path: string; size_bytes: number }
+type ExternalSearchRefreshOptions = { documentChunkSize?: number; taskContext?: ExternalSearchWorkContext };
 
 function resolveAutoExcludedPaths() {
   const readwiseRootPath = loadImportManagerSettings().readwiseRootPath.trim();
@@ -48,11 +50,24 @@ function readCachedFolderDocuments(db: SqliteDatabase, folderId: string) {
     .all(folderId) as CachedFolderDocumentRow[];
 }
 
-async function syncExternalSearchFolder(db: SqliteDatabase, folder: ReturnType<typeof loadExternalSearchFolders>[number]) {
+async function syncExternalSearchFolder(
+  db: SqliteDatabase,
+  folder: ReturnType<typeof loadExternalSearchFolders>[number],
+  options: ExternalSearchRefreshOptions = {}
+) {
   const defaultExcludedNames = new Set(['.git', '.obsidian', '.trash', 'node_modules']);
   const autoExcludedPaths = resolveAutoExcludedPaths();
   const scannedEntries: ScannedDocumentEntry[] = [];
-  await scanFolderEntries(folder, folder.folder_path, folder.folder_path, defaultExcludedNames, scannedEntries, undefined, autoExcludedPaths);
+  await scanFolderEntries(
+    folder,
+    folder.folder_path,
+    folder.folder_path,
+    defaultExcludedNames,
+    scannedEntries,
+    undefined,
+    autoExcludedPaths,
+    options.taskContext
+  );
 
   const existingRows = readCachedFolderDocuments(db, folder.id);
   const existingByAbsolutePath = new Map(existingRows.map((row) => [row.absolute_path, row]));
@@ -66,13 +81,22 @@ async function syncExternalSearchFolder(db: SqliteDatabase, folder: ReturnType<t
   const deletedAbsolutePaths = deletedRows.map((row) => row.absolute_path);
   const documentsToUpsert: ScannedDocument[] = [];
   for (const entry of entriesToUpsert) {
-    documentsToUpsert.push(await loadScannedDocument(entry));
+    documentsToUpsert.push(await loadScannedDocument(entry, options.taskContext));
+    options.taskContext?.progress?.({
+      completed: documentsToUpsert.length,
+      message: 'read changed external documents',
+      total: entriesToUpsert.length,
+      unit: 'document'
+    });
+    await options.taskContext?.yieldIfNeeded?.();
   }
-  const indexedAt = applyFolderDocumentChanges({
+  const indexedAt = await applyFolderDocumentChanges({
     db,
     deletedAbsolutePaths,
     documentsToUpsert,
-    folder
+    folder,
+    ...(options.documentChunkSize === undefined ? {} : { documentChunkSize: options.documentChunkSize }),
+    ...(options.taskContext === undefined ? {} : { context: options.taskContext })
   });
   upsertExternalDocuments(folder, documentsToUpsert, indexedAt);
   markExternalDocumentsMissing(
@@ -123,10 +147,13 @@ export async function rebuildExternalSearchIndexes(folderId?: string) {
   return [...loadExternalSearchFolders(), ...loadReadwiseExternalSearchFolders()];
 }
 
-export async function refreshExternalSearchIndexes(folderId?: string) {
+export async function refreshExternalSearchIndexes(folderId?: string, options: ExternalSearchRefreshOptions = {}) {
   const folders = loadExternalSearchFolders().filter((folder) => !folderId || folder.id === folderId);
   const db = openExternalSearchCacheDatabase();
   for (const folder of folders) {
+    if (options.taskContext?.signal?.aborted) {
+      throw new DOMException('AbortError', 'AbortError');
+    }
     updateExternalSearchFolderIndexState({
       documentCount: folder.document_count,
       folderId: folder.id,
@@ -135,7 +162,8 @@ export async function refreshExternalSearchIndexes(folderId?: string) {
       status: 'indexing'
     });
     try {
-      const result = await syncExternalSearchFolder(db, folder);
+      options.taskContext?.progress?.({ message: `refreshing ${folder.folder_path}`, unit: 'folder' });
+      const result = await syncExternalSearchFolder(db, folder, options);
       updateExternalSearchFolderIndexState({
         documentCount: result.documentCount,
         folderId: folder.id,
@@ -143,6 +171,7 @@ export async function refreshExternalSearchIndexes(folderId?: string) {
         lastError: null,
         status: 'ready'
       });
+      await options.taskContext?.yieldIfNeeded?.();
     } catch (error) {
       updateExternalSearchFolderIndexState({
         documentCount: 0,

@@ -140,6 +140,37 @@ it('refreshes external search indexes incrementally for added, changed, and dele
   expect(readDocumentRow(steadyPath)?.indexed_at).toBe(steadyIndexedBefore);
 });
 
+it('reports high fanout refresh progress and writes changed documents in chunks', async () => {
+  const libraryRoot = path.join(tempRoot, 'library-progress');
+  await writeTextFile(path.join(libraryRoot, 'alpha.md'), 'alpha', '2026-04-21T01:00:00.000Z');
+  await writeTextFile(path.join(libraryRoot, 'beta.md'), 'beta', '2026-04-21T01:01:00.000Z');
+  await writeTextFile(path.join(libraryRoot, 'gamma.md'), 'gamma', '2026-04-21T01:02:00.000Z');
+  saveExternalSearchFolders([
+    {
+      attachment_mode: 'document_relative_first_then_fixed_root',
+      attachment_root_path: null,
+      excluded_dirs: [],
+      folder_path: libraryRoot,
+      id: 'folder-progress'
+    }
+  ]);
+  const progress: string[] = [];
+  const yieldIfNeeded = vi.fn(async () => undefined);
+
+  await refreshExternalSearchIndexes(undefined, {
+    documentChunkSize: 2,
+    taskContext: {
+      progress: (event) => progress.push(String(event.message)),
+      yieldIfNeeded
+    }
+  });
+
+  expect(progress).toContain('scanned external documents');
+  expect(progress).toContain('read changed external documents');
+  expect(progress.filter((message) => message === 'wrote external search upsert chunk')).toHaveLength(2);
+  expect(yieldIfNeeded).toHaveBeenCalled();
+});
+
 
 it('mirrors indexed external documents into the main sync tables', async () => {
   const libraryRoot = path.join(tempRoot, 'library-sync');

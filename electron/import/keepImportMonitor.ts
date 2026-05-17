@@ -1,14 +1,10 @@
-import fs from 'node:fs';
-
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { submitImportMonitorTask } from './importMonitorTaskScheduler.js';
 import { type KeepImportConfig, type KeepImportSourceConfig, resolveKeepImportConfigs } from './keepImportMonitorConfig.js';
 import { runKeepImportRule } from './keepImportService.js';
-
-interface KeepImportWatchHandle {
-  close(): void;
-}
+import { type KeepImportWatchHandle, watchKeepImportDirectory } from './keepImportWatch.js';
 
 interface KeepImportMonitorDeps {
   debounceMs: number;
@@ -30,24 +26,6 @@ export interface KeepImportMonitor {
   refreshFromSettings(): Promise<void>;
   start(): Promise<void>;
   stop(): void;
-}
-
-function watchKeepImportDirectory(rootPath: string, listener: () => void): KeepImportWatchHandle {
-  try {
-    const watcher = fs.watch(rootPath, { recursive: true }, listener);
-    return {
-      close() {
-        watcher.close();
-      }
-    };
-  } catch {
-    const watcher = fs.watch(rootPath, listener);
-    return {
-      close() {
-        watcher.close();
-      }
-    };
-  }
 }
 
 function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
@@ -150,7 +128,14 @@ function startConfigRun(
     clearScheduledRun(state);
     state.debounceTimer = setTimeout(() => {
       state.debounceTimer = null;
-      void runImportCycle(deps, startedRef, state, () => scheduleRun());
+      submitImportMonitorTask({
+        concurrencyKey: `keep-import:${state.config.adapterConfigId}`,
+        failureLabel: `[keep-import] auto cycle failed for ${state.config.directoryPath}`,
+        id: `keep-import:${state.config.adapterConfigId}`,
+        label: 'Keep import cycle',
+        run: () => runImportCycle(deps, startedRef, state, () => scheduleRun()),
+        source: 'keep-import'
+      });
     }, immediate ? 0 : deps.debounceMs);
   }
 
