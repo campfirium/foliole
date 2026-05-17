@@ -7,7 +7,8 @@ import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes'
 import { definedProps } from '../../shared/lib/definedProps';
 import { getSelectionCommandPayload, type SelectionCommandPayload } from '../contextCommands';
 
-import { createSelectionHandlers, runSelectionCommandFromPayload } from './editorSelectionCommandActions';
+import { createPayloadSelectionRunner } from './editorPayloadSelectionRunner';
+import { createSelectionHandlers } from './editorSelectionCommandActions';
 import { createExistingHighlightHandlers } from './existingHighlightContextHandlers';
 import {
   createAddNoteToSelectionHighlightFromPayloadHandler,
@@ -149,28 +150,6 @@ export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
     syncActiveNodeContentFromEditor,
     updateNodeContent: args.updateNodeContent
   });
-}
-
-function createPayloadSelectionRunner(
-  closeContextMenu: () => void,
-  editorRef: MutableRefObject<EditorAdapter | null>
-) {
-  return ({
-    onApplied,
-    payload,
-    keepOpen
-  }: {
-    keepOpen?: boolean;
-    onApplied: (payload: Parameters<typeof runSelectionCommandFromPayload>[0]['payload']) => string | null;
-    payload: Parameters<typeof runSelectionCommandFromPayload>[0]['payload'];
-  }) =>
-    runSelectionCommandFromPayload({
-      closeContextMenu,
-      editorRef,
-      onApplied,
-      payload,
-      ...definedProps({ keepOpen })
-    });
 }
 
 function buildEditorCommandsResult(args: {

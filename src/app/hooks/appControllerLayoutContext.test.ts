@@ -1,6 +1,6 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
-import { resolveEditorBindingArgs } from './appControllerLayoutContext';
+import { createLayoutEditorCtx, resolveEditorBindingArgs } from './appControllerLayoutContext';
 
 it('binds the trash preview editor to the selected trash node', () => {
   expect(
@@ -19,4 +19,16 @@ it('binds the trash preview editor to the selected trash node', () => {
     editorNodeId: 'trash-item-1',
     editorNodeViewState: { scrollTopRatio: 0.4 }
   });
+});
+
+it('passes the existing highlight open action into layout editor commands', () => {
+  const handleOpenExistingHighlight = vi.fn();
+  const editorCtx = createLayoutEditorCtx({
+    editorCtx: {
+      handleOpenExistingHighlight
+    },
+    ws: {}
+  } as never);
+
+  expect(editorCtx.onOpenExistingHighlight).toBe(handleOpenExistingHighlight);
 });
