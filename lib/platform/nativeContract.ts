@@ -2,11 +2,9 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
 import type { NativeImportCommandMap } from './nativeImportCommandMap.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
-import type {
-  NativeNodeSnapshotBatchMutationSpec,
-  NativeNodeSnapshotMutationSpec
-} from './nativeNodeMutationContract.js';
+import type { NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec } from './nativeNodeMutationContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
+import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
 import type {
   NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
   NativeImportRemoteImageAttachmentArgs, NativeImportLocalImageAttachmentResult,
@@ -21,15 +19,11 @@ import type {
 } from './nativeStorageContract.js';
 import type { NativeSyncCommandMap } from './nativeSyncCommandMap.js';
 import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
-import type {
-  NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult,
-  NativeReviewPreviewArgs, NativeReviewPreviewResult,
-  NativeSystemFontCatalog
-} from './nativeUtilityContract.js';
+import type { NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult, NativeSystemFontCatalog } from './nativeUtilityContract.js';
 export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
 
-export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSyncCommandMap & NativeImportCommandMap & {
+export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;

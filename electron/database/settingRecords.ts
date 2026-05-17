@@ -11,6 +11,7 @@ const SESSION_RESUME_KEYS = new Set(['readwise_book_epub_picker_state', 'window_
 const LOCAL_ONLY_KEYS = new Set([
   DEVICE_ID_KEY,
   LEGACY_DESKTOP_DEVICE_ID_KEY,
+  'remote-image-learned-sources-v1',
   'readwise_books_inventory_state',
   'watch_import_cursor_state'
 ]);

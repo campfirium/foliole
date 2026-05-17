@@ -84,14 +84,16 @@ it('uses the configured runtime fetch transport before writing the render cache'
   });
   expect(fetchTransport).toHaveBeenCalledWith(
     'https://example.com/images/runtime.png',
-    expect.objectContaining({ redirect: 'follow' })
+    expect.objectContaining({
+      headers: expect.objectContaining({ Accept: 'image/*,*/*;q=0.8' }),
+      redirect: 'follow'
+    })
   );
 });
 
-it('falls back to url extension when the response omits image content-type', async () => {
+it('falls back to url extension when the response omits content-type', async () => {
   const fetchMock = vi.fn().mockResolvedValue(
     new Response(new Uint8Array([1, 2, 3]), {
-      headers: { 'content-type': 'application/octet-stream' },
       status: 200
     })
   );

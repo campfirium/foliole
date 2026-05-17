@@ -27,6 +27,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'longClozeFrontGuardSelectionMin',
   'longClozeFrontGuardFrontMax',
   'autoLocalizeRemoteImages',
+  'remoteImageFailureHintDismissed',
   'editorDisplayMode',
   'settingsActiveCategory',
   'workspaceRailItems',

@@ -1,0 +1,86 @@
+import { appFloatingSurfaceClassName } from '../../../shared/ui/FloatingSurface';
+
+interface RemoteImageFailureContextMenuOptions {
+  anchor: HTMLElement;
+  canForgetLearnedSource?: boolean;
+  left: number;
+  onForgetLearnedSource: () => void;
+  onProvideSourceWebsite: () => void;
+  onRetry: () => void;
+  top: number;
+}
+
+let closeActiveMenu: (() => void) | null = null;
+
+function createMenuItem(label: string, onSelect: () => void) {
+  const item = document.createElement('button');
+  item.className = [
+    'relative flex min-h-9 w-full cursor-default select-none items-center px-3 text-left text-sm font-semibold outline-none transition-colors',
+    'hover:bg-[var(--app-selection-surface-color)] focus:bg-[var(--app-selection-surface-color)]'
+  ].join(' ');
+  item.role = 'menuitem';
+  item.textContent = label;
+  item.type = 'button';
+  item.addEventListener('pointerdown', (event) => event.preventDefault());
+  item.addEventListener('click', () => {
+    closeActiveRemoteImageFailureMenu();
+    onSelect();
+  });
+  return item;
+}
+
+function clampMenuPosition(left: number, top: number) {
+  const menuWidth = 208;
+  const menuHeight = 120;
+  return {
+    left: Math.max(8, Math.min(left, window.innerWidth - menuWidth - 8)),
+    top: Math.max(8, Math.min(top, window.innerHeight - menuHeight - 8))
+  };
+}
+
+export function closeActiveRemoteImageFailureMenu() {
+  closeActiveMenu?.();
+  closeActiveMenu = null;
+}
+
+export function openRemoteImageFailureContextMenu(options: RemoteImageFailureContextMenuOptions) {
+  closeActiveRemoteImageFailureMenu();
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 z-workspace-overlay';
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.addEventListener('pointerdown', closeActiveRemoteImageFailureMenu);
+  overlay.addEventListener('contextmenu', (event) => event.preventDefault());
+
+  const menu = document.createElement('div');
+  const position = clampMenuPosition(options.left, options.top);
+  menu.className = appFloatingSurfaceClassName('popover', 'fixed z-floating min-w-[188px] overflow-hidden p-1 text-foreground');
+  menu.role = 'menu';
+  menu.style.left = `${position.left}px`;
+  menu.style.top = `${position.top}px`;
+  menu.addEventListener('contextmenu', (event) => event.preventDefault());
+  const items = [
+    createMenuItem('Retry', options.onRetry),
+    createMenuItem('Provide source website', options.onProvideSourceWebsite)
+  ];
+  if (options.canForgetLearnedSource) {
+    items.push(createMenuItem('Forget learned source for this site', options.onForgetLearnedSource));
+  }
+  menu.append(...items);
+
+  const closeOnEscape = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') closeActiveRemoteImageFailureMenu();
+  };
+  const disconnectObserver = new MutationObserver(() => {
+    if (!options.anchor.isConnected) closeActiveRemoteImageFailureMenu();
+  });
+  closeActiveMenu = () => {
+    overlay.remove();
+    menu.remove();
+    window.removeEventListener('keydown', closeOnEscape);
+    disconnectObserver.disconnect();
+  };
+  document.body.append(overlay, menu);
+  disconnectObserver.observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('keydown', closeOnEscape);
+  menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+}

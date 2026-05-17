@@ -11,10 +11,13 @@ import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalization
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
+import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMenu';
 import {
   createMarkdownImageElement,
   type RequestEditorMeasure
 } from './liveMarkdownImageElement';
+import { createImageStatusElement } from './liveMarkdownImageStatus';
+import { createRemoteImageFailureStatus } from './liveMarkdownRemoteImageFailure';
 
 function parseImageRange(value: number) {
   return Number.isInteger(value) && value >= 0 ? String(value) : '';
@@ -67,9 +70,25 @@ function appendLoadingImageSurface(
   const surface = createImageSurface(imageMatch, source, editorNodeId, {
     deferSource: true,
     onError: () => {
-      wrapper.replaceChildren(createImageStatusElement('unavailable', imageMatch.display));
+      closeActiveRemoteImageFailureMenu();
+      const retry = () => {
+        const nextRetryKey = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const nextSource = buildRemoteRenderSource(imageMatch.source, editorNodeId, nextRetryKey);
+        closeActiveRemoteImageFailureMenu();
+        wrapper.replaceChildren();
+        appendLoadingImageSurface(wrapper, imageMatch, nextSource, editorNodeId, requestMeasure);
+        requestMeasure?.();
+      };
+      wrapper.replaceChildren(createRemoteImageFailureStatus({
+        editorNodeId,
+        imageMatch,
+        onRetry: retry,
+        requestMeasure
+      }));
+      requestMeasure?.();
     },
     onLoad: () => {
+      closeActiveRemoteImageFailureMenu();
       surface.classList.remove('cm-md-image-surface-loading');
       surface.removeAttribute('aria-hidden');
       surface.removeAttribute('style');
@@ -88,21 +107,14 @@ function appendLoadingImageSurface(
   wrapper.append(surface);
 }
 
-function buildRemoteRenderSource(sourceUrl: string, editorNodeId: string | null) {
+function buildRemoteRenderSource(sourceUrl: string, editorNodeId: string | null, retryKey: string | null = null) {
   const shouldPersist = shouldAutoLocalizeRemoteImages() && Boolean(editorNodeId);
   return buildRemoteImageRenderUrl({
-    nodeId: shouldPersist ? editorNodeId : null,
+    nodeId: editorNodeId,
     persist: shouldPersist,
+    retryKey,
     sourceUrl
   });
-}
-
-function createImageStatusElement(status: 'loading' | 'unavailable', display: MarkdownImageMatch['display']) {
-  const element = document.createElement('span');
-  element.className = display === 'inline' ? 'cm-md-image-status cm-md-image-status-inline' : 'cm-md-image-status cm-md-image-status-block';
-  element.dataset.mdImageStatus = status;
-  element.textContent = status === 'loading' ? '' : 'Image unavailable';
-  return element;
 }
 
 function appendResolvedAndroidAttachmentImage(
@@ -138,6 +150,7 @@ function appendResolvedAndroidAttachmentImage(
     wrapper.replaceChildren(
       createImageSurface(imageMatch, resolution.resource_url, editorNodeId, {
         onError: () => {
+          closeActiveRemoteImageFailureMenu();
           wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
         },
         requestMeasure
@@ -193,6 +206,7 @@ export function createMarkdownImageWidgetDom(
   wrapper.append(
     createImageSurface(imageMatch, attachmentSrc, editorNodeId, {
       onError: () => {
+        closeActiveRemoteImageFailureMenu();
         wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
       },
       requestMeasure

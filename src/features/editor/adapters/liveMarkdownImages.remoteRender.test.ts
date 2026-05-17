@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { REMOTE_IMAGE_PROTOCOL_SCHEME } from '../../../../lib/platform/remoteImageProtocolUrl';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { resetRemoteImageFailureHintDismissalForTests } from '../model/remoteImageFailureHintSetting';
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn(() => null)
@@ -10,6 +11,17 @@ vi.mock('../../../shared/platform/runtimeInvoke', () => ({
 
 vi.mock('../../../shared/platform/bridge', () => ({
   openExternalUrl: vi.fn()
+}));
+
+vi.mock('../../../shared/platform/remoteImageSourceRecovery', () => ({
+  forgetRemoteImageLearnedSource: vi.fn(),
+  loadRemoteImageSourceContext: vi.fn(async () => ({
+    imageHost: 'example.com',
+    learnedSourceOrigin: null,
+    source: 'none',
+    sourceOrigin: null
+  })),
+  saveRemoteImageSourceWebsite: vi.fn()
 }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
@@ -41,6 +53,7 @@ async function waitForRemoteImageSrc(host: HTMLElement) {
 
 describe('live markdown remote image rendering', () => {
   beforeEach(() => {
+    resetRemoteImageFailureHintDismissalForTests();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'true');
   });
@@ -77,7 +90,7 @@ describe('live markdown remote image rendering', () => {
     const src = await waitForRemoteImageSrc(host);
 
     expect(src).not.toContain('persist=1');
-    expect(src).not.toContain('nodeId=');
+    expect(src).toContain('nodeId=node-1');
 
     adapter.destroy();
   });
@@ -89,8 +102,26 @@ describe('live markdown remote image rendering', () => {
 
     await waitFor(() => {
       const status = host.querySelector('.cm-md-image-status[data-md-image-status="unavailable"]');
-      expect(status?.textContent).toContain('Image unavailable');
+      expect(status?.textContent).toContain("Image couldn't load");
+      expect(status?.textContent).toContain('Retry');
+      expect(status?.textContent).not.toContain('Copy image URL');
+      expect(status?.textContent).toContain('Use the image menu to provide the source website.');
     });
+
+    adapter.destroy();
+  });
+
+  it('adds a retry nonce when retrying a failed remote image from source', async () => {
+    const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
+
+    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await waitFor(() => {
+      expect(host.querySelector('.cm-md-image-status-action')).not.toBeNull();
+    });
+    (host.querySelector('.cm-md-image-status-action') as HTMLButtonElement | null)?.click();
+
+    const src = await waitForRemoteImageSrc(host);
+    expect(new URL(src).searchParams.get('retry')).toBeTruthy();
 
     adapter.destroy();
   });

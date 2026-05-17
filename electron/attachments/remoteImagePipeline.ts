@@ -1,171 +1,58 @@
-import path from 'node:path';
-
 import type {
   NativeImportLocalImageAttachmentResult,
   NativeImportRemoteImageAttachmentArgs
 } from '../../lib/platform/nativeStorageContract.js';
 
-import { importImageAttachmentBytes, normalizeImageFileName, resolveImageMimeType } from './importImageAttachmentBytes.js';
+import { importImageAttachmentBytes } from './importImageAttachmentBytes.js';
 import {
   configureRemoteImageCacheRoot,
   readRemoteImageCache,
   resetRemoteImageCacheForTests,
   writeRemoteImageCache
 } from './remoteImageCache.js';
-
-const REMOTE_IMAGE_TIMEOUT_MS = 12_000;
-const REMOTE_IMAGE_FAILURE_CACHE_MS = 30_000;
-
-type RemoteImageFetchTransport = (sourceUrl: string, init: RequestInit) => Promise<Response>;
-
-interface RemoteImageBytesResult {
-  bytes: Uint8Array;
-  cacheKey: string;
-  mimeType: string;
-  originalName: string;
-  sourceUrl: string;
-}
-
-type RemoteImageFetchResult =
-  | { status: 'ready'; resource: RemoteImageBytesResult }
-  | { status: 'error'; error: NativeImportLocalImageAttachmentResult };
+import { recordRemoteImageDiagnostic } from './remoteImageDiagnostics.js';
+import {
+  createRemoteImageDownloadError,
+  downloadRemoteImageBytes,
+  type RemoteImageErrorResult,
+  resolveImageHost,
+  resolveRemoteImageCacheKey,
+  resolveRemoteImageFailureCacheMs,
+  resolveRemoteImageFetchKey,
+  resolveRemoteImageTransportName,
+  type RemoteImageFetchOptions,
+  type RemoteImageFetchResult,
+  type RemoteImageFetchTransport
+} from './remoteImageDownload.js';
+import { learnRemoteImageSourceOrigin } from './remoteImageLearnedSources.js';
 
 const fetchByCacheKey = new Map<string, Promise<RemoteImageFetchResult>>();
 const importByNodeAndCacheKey = new Map<string, Promise<NativeImportLocalImageAttachmentResult>>();
-const failureByCacheKey = new Map<string, { error: NativeImportLocalImageAttachmentResult; expiresAt: number }>();
+const failureByCacheKey = new Map<string, { error: RemoteImageErrorResult; expiresAt: number }>();
 let fetchTransportForTests: RemoteImageFetchTransport | null = null;
 
-function createErrorResult(message: string, sourceUrl: string): NativeImportLocalImageAttachmentResult {
-  return {
-    status: 'error',
-    error_code: 'download_failed',
-    message,
-    source_path: sourceUrl
-  };
-}
-
-function createUnsupportedFormatResult(sourceUrl: string): NativeImportLocalImageAttachmentResult {
-  return {
-    status: 'error',
-    error_code: 'unsupported_format',
-    message: 'Only png, jpg, jpeg, webp, and gif images are supported.',
-    source_path: sourceUrl
-  };
-}
-
-function resolveRemoteImageCacheKey(sourceUrl: string) {
-  try {
-    const parsed = new URL(sourceUrl.trim());
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return null;
-    }
-    parsed.protocol = parsed.protocol.toLowerCase();
-    parsed.hostname = parsed.hostname.toLowerCase();
-    parsed.hash = '';
-    return parsed.toString();
-  } catch {
-    return null;
-  }
-}
-
-function resolveImageMimeTypeFromResponse(sourceUrl: string, response: Response) {
-  const headerValue = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
-  if (headerValue.startsWith('image/')) {
-    return headerValue;
-  }
-  return resolveImageMimeType(sourceUrl);
-}
-
-function resolveOriginalName(sourceUrl: string, mimeType: string) {
-  try {
-    const pathname = new URL(sourceUrl).pathname;
-    const decodedName = decodeURIComponent(path.basename(pathname));
-    return normalizeImageFileName(decodedName, mimeType);
-  } catch {
-    return normalizeImageFileName('', mimeType);
-  }
-}
-
-async function fetchRemoteImage(sourceUrl: string) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REMOTE_IMAGE_TIMEOUT_MS);
-  try {
-    return await resolveRemoteImageFetchTransport()(sourceUrl, {
-      redirect: 'follow',
-      signal: controller.signal
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function resolveRemoteImageFetchTransport(): RemoteImageFetchTransport {
-  return fetchTransportForTests ?? fetchRemoteImageWithRuntimeTransport;
-}
-
-async function fetchRemoteImageWithRuntimeTransport(sourceUrl: string, init: RequestInit) {
-  const electronNetFetch = await resolveElectronNetFetch();
-  if (electronNetFetch) {
-    return electronNetFetch(sourceUrl, init);
-  }
-  return fetch(sourceUrl, init);
-}
-
-async function resolveElectronNetFetch(): Promise<RemoteImageFetchTransport | null> {
-  if (!process.versions.electron) {
-    return null;
-  }
-  try {
-    const electronModule = await import('electron');
-    const netFetch = (electronModule as { net?: { fetch?: RemoteImageFetchTransport } }).net?.fetch;
-    return typeof netFetch === 'function' ? netFetch.bind(electronModule.net) : null;
-  } catch {
-    return null;
-  }
-}
-
-function readFailureCache(cacheKey: string) {
-  const cached = failureByCacheKey.get(cacheKey);
+function readFailureCache(fetchKey: string) {
+  const cached = failureByCacheKey.get(fetchKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.error;
   }
-  failureByCacheKey.delete(cacheKey);
+  failureByCacheKey.delete(fetchKey);
   return null;
 }
 
-async function loadRemoteImageBytes(sourceUrl: string, cacheKey: string): Promise<RemoteImageFetchResult> {
-  let response: Response;
-  try {
-    response = await fetchRemoteImage(sourceUrl);
-  } catch {
-    return { status: 'error', error: createErrorResult('The remote image could not be downloaded.', sourceUrl) };
+async function storeRemoteImageFetchResult(
+  sourceUrl: string,
+  sourceOrigin: string | null,
+  result: RemoteImageFetchResult
+) {
+  if (result.status === 'error') {
+    return result;
   }
-
-  if (!response.ok) {
-    return { status: 'error', error: createErrorResult(`The remote image request failed with status ${response.status}.`, sourceUrl) };
+  await writeRemoteImageCache(result.resource).catch(() => undefined);
+  if (result.strategy === 'source-origin') {
+    learnRemoteImageSourceOrigin(sourceUrl, sourceOrigin);
   }
-
-  const mimeType = resolveImageMimeTypeFromResponse(sourceUrl, response);
-  if (!mimeType) {
-    return { status: 'error', error: createUnsupportedFormatResult(sourceUrl) };
-  }
-
-  try {
-    const resource = {
-      bytes: new Uint8Array(await response.arrayBuffer()),
-      cacheKey,
-      mimeType,
-      originalName: resolveOriginalName(sourceUrl, mimeType),
-      sourceUrl
-    };
-    await writeRemoteImageCache(resource);
-    return {
-      status: 'ready',
-      resource
-    };
-  } catch {
-    return { status: 'error', error: createErrorResult('The remote image could not be read after download.', sourceUrl) };
-  }
+  return result;
 }
 
 export function resolveRemoteImageSourceCacheKey(sourceUrl: string) {
@@ -188,33 +75,64 @@ export function configureRemoteImageFetchTransportForTests(transport: RemoteImag
   fetchTransportForTests = transport;
 }
 
-export async function fetchRemoteImageResource(sourceUrl: string): Promise<RemoteImageFetchResult> {
+export async function fetchRemoteImageResource(
+  sourceUrl: string,
+  options: RemoteImageFetchOptions = {}
+): Promise<RemoteImageFetchResult> {
   const cacheKey = resolveRemoteImageCacheKey(sourceUrl);
   if (!cacheKey) {
-    return { status: 'error', error: createErrorResult('The remote image URL is not supported.', sourceUrl) };
+    return { status: 'error', error: createRemoteImageDownloadError('The remote image URL is not supported.', sourceUrl) };
   }
   const cachedResource = await readRemoteImageCache(cacheKey);
   if (cachedResource) {
-    return { status: 'ready', resource: cachedResource };
+    recordRemoteImageDiagnostic({
+      attempt: 0,
+      bytes: cachedResource.bytes.length,
+      cache: 'disk',
+      contentType: cachedResource.mimeType,
+      elapsedMs: 0,
+      errorCode: null,
+      imageHost: resolveImageHost(sourceUrl),
+      sourceOrigin: options.sourceOrigin ?? null,
+      status: 200,
+      strategy: options.sourceOrigin ? 'source-origin' : 'direct',
+      transport: resolveRemoteImageTransportName(fetchTransportForTests)
+    });
+    return { status: 'ready', resource: cachedResource, strategy: 'direct' };
   }
-  const cachedError = readFailureCache(cacheKey);
+  const fetchKey = resolveRemoteImageFetchKey(cacheKey, options.sourceOrigin ?? null);
+  const cachedError = options.bypassFailureCache ? null : readFailureCache(fetchKey);
   if (cachedError) {
+    recordRemoteImageDiagnostic({
+      attempt: 0,
+      bytes: null,
+      cache: 'failure',
+      contentType: null,
+      elapsedMs: 0,
+      errorCode: cachedError.error_code,
+      imageHost: resolveImageHost(sourceUrl),
+      sourceOrigin: options.sourceOrigin ?? null,
+      status: null,
+      strategy: options.sourceOrigin ? 'source-origin' : 'direct',
+      transport: resolveRemoteImageTransportName(fetchTransportForTests)
+    });
     return { status: 'error', error: cachedError };
   }
-  if (!fetchByCacheKey.has(cacheKey)) {
-    const promise = loadRemoteImageBytes(sourceUrl.trim(), cacheKey).then((result) => {
+  if (!fetchByCacheKey.has(fetchKey)) {
+    const promise = downloadRemoteImageBytes(sourceUrl.trim(), cacheKey, options.sourceOrigin ?? null, fetchTransportForTests).then(async (result) => {
       if (result.status === 'error') {
-        fetchByCacheKey.delete(cacheKey);
-        failureByCacheKey.set(cacheKey, {
+        fetchByCacheKey.delete(fetchKey);
+        failureByCacheKey.set(fetchKey, {
           error: result.error,
-          expiresAt: Date.now() + REMOTE_IMAGE_FAILURE_CACHE_MS
+          expiresAt: Date.now() + resolveRemoteImageFailureCacheMs(result.error)
         });
+        return result;
       }
-      return result;
+      return storeRemoteImageFetchResult(sourceUrl, options.sourceOrigin ?? null, result);
     });
-    fetchByCacheKey.set(cacheKey, promise);
+    fetchByCacheKey.set(fetchKey, promise);
   }
-  return fetchByCacheKey.get(cacheKey)!;
+  return fetchByCacheKey.get(fetchKey)!;
 }
 
 export async function importRemoteImageAttachment(
