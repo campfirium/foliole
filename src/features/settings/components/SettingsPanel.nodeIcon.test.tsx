@@ -121,3 +121,19 @@ it('keeps base icon preview independent from state effects', () => {
   expect(basePreview.container.querySelector('svg[data-node-custom-slot="secondary"]')).not.toBeNull();
   expect(basePreview.container.querySelector('[data-node-icon-effect="double-line"]')).toBeNull();
 });
+
+it('uses the theme-aware default color until the icon color is customized', () => {
+  const defaultPreview = render(<NodeTreeRowIcon kind="reading" preview state="pending" />);
+  const defaultIcon = defaultPreview.container.querySelector<HTMLElement>('[data-node-icon="leaf"]');
+  expect(defaultIcon).not.toBeNull();
+  expect(defaultIcon?.style.getPropertyValue('--node-icon-custom-color')).toBe('');
+  defaultPreview.unmount();
+
+  window.localStorage.setItem(
+    APP_SETTINGS_STORAGE_KEYS.nodeIconPendingTopicAppearance,
+    JSON.stringify({ color: '#7c3aed' })
+  );
+
+  const customPreview = render(<NodeTreeRowIcon kind="reading" preview state="pending" />);
+  expect(customPreview.container.querySelector<HTMLElement>('[data-node-icon="leaf"]')?.style.getPropertyValue('--node-icon-custom-color')).toBe('#7c3aed');
+});
