@@ -23,10 +23,10 @@ export function useStudyMode({ activeNodeId, isViewingTrashNode }: UseStudyModeO
   };
 
   useEffect(() => {
-    if (!canStartStudyMode && isStudyMode) {
+    if (isViewingTrashNode && isStudyMode) {
       setIsStudyMode(false);
     }
-  }, [canStartStudyMode, isStudyMode]);
+  }, [isStudyMode, isViewingTrashNode]);
 
   return {
     canStartStudyMode,
