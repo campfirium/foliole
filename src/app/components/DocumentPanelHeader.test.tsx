@@ -129,7 +129,7 @@ it('keeps breadcrumb and priority controls on the document content rail', () => 
   expect(rail).toContainElement(screen.getByRole('button', { name: /Priority P5 from the default fallback/i }));
 });
 
-it('keeps the folder-mode header free of right-side actions', () => {
+it('keeps the folder-mode header free of document controls', () => {
   render(
     <DocumentPanelHeader
       activeNodeId="node-1"

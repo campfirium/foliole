@@ -160,3 +160,93 @@ it('shows Readwise-managed external folders after a runtime refresh', async () =
     ]);
   });
 });
+
+it('keeps document panel navigation history when opening an external document from notes', async () => {
+  const invoke = vi.fn(async (command: string) => {
+    if (command === NATIVE_COMMANDS.loadExternalSearchFolders) {
+      return [createNativeFolder()];
+    }
+    if (command === NATIVE_COMMANDS.loadExternalSearchBrowseEntries) {
+      return [createNativeEntry()];
+    }
+    return null;
+  });
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  const { result } = renderHook(() => useExternalLibraryView());
+
+  await waitFor(() => {
+    expect(result.current.folders).toHaveLength(1);
+  });
+
+  act(() => {
+    result.current.openExternalDocument({ absolutePath: '/library/two think/a.md', folderId: 'folder-ext' });
+  });
+
+  expect(result.current.isExternalViewOpen).toBe(true);
+  expect(result.current.selection).toEqual({
+    absolutePath: '/library/two think/a.md',
+    folderId: 'folder-ext',
+    kind: 'document'
+  });
+  expect(result.current.canGoBack).toBe(true);
+
+  act(() => {
+    expect(result.current.goBack()).toBe(true);
+  });
+
+  expect(result.current.isExternalViewOpen).toBe(false);
+  expect(result.current.selection).toEqual({ kind: 'root' });
+  expect(result.current.canGoForward).toBe(true);
+
+  act(() => {
+    expect(result.current.goForward()).toBe(true);
+  });
+
+  expect(result.current.isExternalViewOpen).toBe(true);
+  expect(result.current.selection).toEqual({
+    absolutePath: '/library/two think/a.md',
+    folderId: 'folder-ext',
+    kind: 'document'
+  });
+});
+
+it('steps back through external folder selections before returning to notes', async () => {
+  const invoke = vi.fn(async (command: string) => {
+    if (command === NATIVE_COMMANDS.loadExternalSearchFolders) {
+      return [createNativeFolder()];
+    }
+    if (command === NATIVE_COMMANDS.loadExternalSearchBrowseEntries) {
+      return [createNativeEntry()];
+    }
+    return null;
+  });
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  const { result } = renderHook(() => useExternalLibraryView());
+
+  await waitFor(() => {
+    expect(result.current.folders).toHaveLength(1);
+  });
+
+  act(() => {
+    result.current.openExternalFolder('folder-ext');
+  });
+  act(() => {
+    result.current.openExternalDocument({ absolutePath: '/library/two think/a.md', folderId: 'folder-ext' });
+  });
+
+  act(() => {
+    expect(result.current.goBack()).toBe(true);
+  });
+
+  expect(result.current.isExternalViewOpen).toBe(true);
+  expect(result.current.selection).toEqual({ folderId: 'folder-ext', kind: 'folder' });
+
+  act(() => {
+    expect(result.current.goBack()).toBe(true);
+  });
+
+  expect(result.current.isExternalViewOpen).toBe(false);
+  expect(result.current.selection).toEqual({ kind: 'root' });
+});

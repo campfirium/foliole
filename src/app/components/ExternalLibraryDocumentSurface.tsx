@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type {
@@ -12,17 +11,14 @@ import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../
 
 import { useOpenImportedExternalDocument } from './externalDocumentImportState';
 import { markExternalDocumentOpened } from './externalDocumentLastOpenedAt';
-import {
-  buildExternalLibraryFolderBrowseState,
-  type ExternalLibrarySelection
-} from './externalLibraryBrowseModel';
+import { buildExternalFolderBrowseProjection, ExternalFolderListSurface } from './ExternalFolderListSurface';
+import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import {
   resolveExternalSurfaceDescription,
   resolveExternalSurfaceTitle
 } from './externalLibraryDocumentSurfaceSupport';
 import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
 import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
-import { FolderListView } from './FolderListView';
 
 interface ExternalLibraryDocumentSurfaceProps {
   canGoBack: boolean;
@@ -41,81 +37,12 @@ interface ExternalLibraryDocumentSurfaceProps {
   selection: ExternalLibrarySelection;
 }
 
-function toExternalDocumentNode(entry: Pick<ExternalLibraryBrowseEntry, 'absolutePath' | 'folderId' | 'modifiedAt' | 'openingText' | 'title'>): Node {
-  return {
-    content: '',
-    createdAt: entry.modifiedAt,
-    id: entry.absolutePath,
-    kind: 'topic',
-    openingText: entry.openingText,
-    parentNodeId: entry.folderId,
-    reading: null,
-    reveal: null,
-    review: null,
-    title: entry.title,
-    updatedAt: entry.modifiedAt
-  };
-}
-
 function useExternalFolderBrowseState(props: Pick<ExternalLibraryDocumentSurfaceProps, 'entriesByFolderId' | 'folders' | 'selection'>) {
-  const activeFolderId = props.selection.kind === 'root' ? null : props.selection.folderId;
-  const selectedFolder = activeFolderId
-    ? props.folders.find((folder) => folder.id === activeFolderId) ?? null
-    : null;
-  const folderEntries = selectedFolder ? props.entriesByFolderId[selectedFolder.id] ?? [] : [];
-  const browseState = useMemo(
-    () =>
-      !selectedFolder || props.selection.kind === 'root'
-        ? null
-        : buildExternalLibraryFolderBrowseState(selectedFolder, folderEntries, props.selection),
-    [folderEntries, props.selection, selectedFolder]
-  );
-  const documentNodes = useMemo(
-    () => (browseState?.documentItems ?? []).map((item) => toExternalDocumentNode(item)),
-    [browseState?.documentItems]
-  );
-  const documentNodesById = useMemo(
-    () => Object.fromEntries(documentNodes.map((node) => [node.id, node])),
-    [documentNodes]
-  );
-
-  return { activeFolderId, browseState, documentNodes, documentNodesById, selectedFolder };
-}
-
-function ExternalFolderListSurface(args: {
-  activeFolderId: string;
-  documentNodes: Node[];
-  documentNodesById: Record<string, Node>;
-  onOpenSelection: ExternalLibraryDocumentSurfaceProps['onOpenSelection'];
-  selectedFolder: ExternalLibraryFolder | null;
-  selection: Extract<ExternalLibrarySelection, { kind: 'folder' | 'directory' }>;
-}) {
-  function handleSelectDocument(absolutePath: string) {
-    args.onOpenSelection({
-      absolutePath,
-      folderId: args.activeFolderId,
-      kind: 'document'
-    });
-  }
-
-  return (
-    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
-      <FolderListView
-        emptyState={{
-          description:
-            args.selection.kind === 'folder'
-              ? 'No documents are available in the selected external folder.'
-              : 'No documents are available in the selected directory.',
-          title: 'No documents'
-        }}
-        folderTitle={resolveExternalSurfaceTitle(args.selection, args.selectedFolder)}
-        nodes={args.documentNodes}
-        nodesById={args.documentNodesById}
-        onSelectNode={handleSelectDocument}
-        regionLabel="Folder list view"
-      />
-    </section>
-  );
+  return useMemo(() => buildExternalFolderBrowseProjection(props), [
+    props.entriesByFolderId,
+    props.folders,
+    props.selection
+  ]);
 }
 
 function ExternalEmptySurface(args: {
@@ -197,8 +124,12 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
     return (
       <ExternalFolderListSurface
         activeFolderId={activeFolderId}
+        canGoBack={props.canGoBack}
+        canGoForward={props.canGoForward}
         documentNodes={documentNodes}
         documentNodesById={documentNodesById}
+        onGoBack={props.onGoBack}
+        onGoForward={props.onGoForward}
         onOpenSelection={props.onOpenSelection}
         selectedFolder={selectedFolder}
         selection={props.selection}

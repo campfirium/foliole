@@ -9,6 +9,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
+import { FolderListNavigationOverlay, type FolderListNavigationOverlayProps } from './FolderListNavigationOverlay';
 import { FolderListViewItem, type FolderListItemLayout } from './FolderListViewItem';
 import { FolderListViewLayout } from './FolderListViewLayout';
 import { useFolderListViewState } from './useFolderListViewState';
@@ -35,6 +36,7 @@ interface FolderListViewProps {
   regionLabel?: string;
   showEmbeddedHeader?: boolean;
   itemLayout?: FolderListItemLayout;
+  navigationOverlay?: FolderListNavigationOverlayProps;
   sortDirection?: FolderListSortDirection;
   sortKey?: FolderListSortKey;
   trashedNodeIds?: string[];
@@ -168,6 +170,7 @@ export function FolderListView(props: FolderListViewProps) {
           folderTitle={resolvedFolderTitle}
           headerMode={headerMode}
           itemCountLabel={state.itemCountLabel}
+          navigationOverlay={props.navigationOverlay ? <FolderListNavigationOverlay {...props.navigationOverlay} /> : null}
           onChangeSearchQuery={state.setSearchQuery}
           onChangeSortDirection={state.updateSortDirection}
           onChangeSortKey={state.updateSortKey}

@@ -11,6 +11,7 @@ import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
 import { renderDocumentPanelHeader } from './DocumentPanelHeaderChrome';
+import { FolderListHeaderNavigation } from './DocumentPanelHeaderNavigation';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import { DocumentPanelContent } from './DocumentPanelSectionParts';
 import { DocumentPriorityQuickSetHint } from './DocumentPriorityQuickSetHint';
@@ -97,6 +98,27 @@ function renderDocumentSearchToolbar(
   );
 }
 
+function renderFolderNavigationOverlay(props: DocumentPanelSectionProps, visible: boolean) {
+  if (!visible || props.isImmersiveMode) {
+    return null;
+  }
+
+  return (
+    <div className="pointer-events-none absolute left-4 top-0 z-workspace-overlay max-[1080px]:left-2">
+      <div className="pointer-events-auto">
+        <FolderListHeaderNavigation
+          canGoBack={props.canGoBack}
+          canGoForward={props.canGoForward}
+          canGoParent={props.canGoParent}
+          onGoBack={props.onGoBack}
+          onGoForward={props.onGoForward}
+          onGoParent={props.onGoParent}
+        />
+      </div>
+    </div>
+  );
+}
+
 function renderDocumentPanelContent(args: {
   bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
   folderListSortDirection: FolderListSortDirection;
@@ -161,6 +183,7 @@ export function DocumentPanelSectionShell({
 
   return (
     <section aria-label="Document panel" className="workspace-region-main-document relative flex h-full min-h-0 flex-1 flex-col text-foreground">
+      {renderFolderNavigationOverlay(props, isFolderListView)}
       {renderDocumentPanelChrome({
         backlinks,
         folderListSortDirection,

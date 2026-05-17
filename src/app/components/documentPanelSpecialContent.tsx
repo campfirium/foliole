@@ -10,9 +10,8 @@ import { AppSpinner } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
-import { DocumentPanelFolderContent } from './DocumentPanelFolderContent';
+import { renderFolderSpecialContent } from './DocumentPanelFolderSpecialContent';
 import { resolvePdfDocumentSurface, renderPdfDocumentSurface } from './documentPanelPdfView';
-import type { FolderListView } from './FolderListView';
 import { LinkPanelStack } from './LinkPanelStack';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
@@ -148,7 +147,7 @@ export function resolveDocumentPanelContentBody(args: {
   ) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
-  onOpenMoveToNode?: ComponentProps<typeof FolderListView>['onOpenMoveToNode'];
+  onOpenMoveToNode?: Parameters<typeof renderFolderSpecialContent>[0]['onOpenMoveToNode'];
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
@@ -197,22 +196,7 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
     );
   }
   if (args.isFolderListView && args.activeNodeId) {
-    return (
-      <DocumentPanelFolderContent
-        activeNodeId={args.activeNodeId}
-        folderListSortDirection={args.folderListSortDirection}
-        folderListSortKey={args.folderListSortKey}
-        folderTitle={args.activeNode?.title ?? 'Folder'}
-        nodeOrder={args.nodeOrder}
-        nodesById={args.nodesById}
-        onChangeFolderListSortDirection={args.onChangeFolderListSortDirection}
-        onChangeFolderListSortKey={args.onChangeFolderListSortKey}
-        onOpenMoveToNode={args.onOpenMoveToNode}
-        onSelectNode={args.onSelectNode}
-        pdfCache={args.pdfCache}
-        trashedNodeIds={args.trashedNodeIds}
-      />
-    );
+    return renderFolderSpecialContent({ ...args, activeNodeId: args.activeNodeId });
   }
   if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {
     return renderLegacyImageClozeContent(

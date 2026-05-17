@@ -14,7 +14,11 @@ import {
 
 import { DocumentPanelHeaderBacklinksMenu } from './DocumentPanelHeaderBacklinksMenu';
 import { DocumentPanelHeaderCenter } from './DocumentPanelHeaderCenter';
-import { ArrowLeftIcon, ArrowRightIcon, MoreOptionsIcon, SplitPanelIcon } from './DocumentPanelHeaderIcons';
+import { MoreOptionsIcon, SplitPanelIcon } from './DocumentPanelHeaderIcons';
+import {
+  DocumentPanelHeaderNavigation,
+  type DocumentPanelHeaderNavigationProps
+} from './DocumentPanelHeaderNavigation';
 import { DocumentPriorityControl } from './DocumentPriorityControl';
 
 interface DocumentPanelHeaderProps {
@@ -40,27 +44,6 @@ interface DocumentPanelHeaderProps {
   reviewSchedulerSettings: ReviewSchedulerSettings;
   showDocumentControls?: boolean;
   showSourceUpdateAction: boolean;
-}
-
-interface NavigationButtonsProps {
-  canGoBack: boolean;
-  canGoForward: boolean;
-  canGoParent: boolean;
-  onGoBack: () => void;
-  onGoForward: () => void;
-  onGoParent: () => void;
-}
-
-function NavigationButtons({ canGoBack, canGoForward, canGoParent, onGoBack, onGoForward, onGoParent }: NavigationButtonsProps) {
-  return (
-    <div className="flex shrink-0 items-center gap-1">
-      <AppIconButton className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground" disabled={!canGoBack} icon={<ArrowLeftIcon />} label="Go back" onClick={onGoBack} />
-      <AppIconButton className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground" disabled={!canGoForward} icon={<ArrowRightIcon />} label="Go forward" onClick={onGoForward} />
-      <button aria-label="Go to parent" className="sr-only" disabled={!canGoParent} onClick={onGoParent} type="button">
-        Go to parent
-      </button>
-    </div>
-  );
 }
 
 function SourceUpdateAction({
@@ -124,25 +107,27 @@ function renderHeaderActions(args: {
   );
 }
 
+function buildNavigationProps(args: DocumentPanelHeaderProps): DocumentPanelHeaderNavigationProps {
+  return {
+    canGoBack: args.canGoBack,
+    canGoForward: args.canGoForward,
+    canGoParent: args.canGoParent,
+    onGoBack: args.onGoBack,
+    onGoForward: args.onGoForward,
+    onGoParent: args.onGoParent
+  };
+}
+
 function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
   editorDisplayMode: ReturnType<typeof useAppearanceSettings>['editorDisplayMode'];
   toggleEditorDisplayMode: () => void;
 }) {
+  const navigationProps = buildNavigationProps(args);
+
   return (
     <div className="relative flex min-w-0 flex-1 items-center">
       <div className="absolute left-0 top-1/2 flex min-w-0 -translate-y-1/2 items-center">
-        {!args.isFolderListView ? (
-          <ToolbarActionGroup ariaLabel="Document navigation actions">
-            <NavigationButtons
-              canGoBack={args.canGoBack}
-              canGoForward={args.canGoForward}
-              canGoParent={args.canGoParent}
-              onGoBack={args.onGoBack}
-              onGoForward={args.onGoForward}
-              onGoParent={args.onGoParent}
-            />
-          </ToolbarActionGroup>
-        ) : null}
+        {!args.isFolderListView ? <DocumentPanelHeaderNavigation {...navigationProps} /> : null}
       </div>
       <DocumentPanelHeaderCenter
         activeNodeId={args.activeNodeId}
