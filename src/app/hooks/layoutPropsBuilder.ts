@@ -12,6 +12,7 @@ import type { WorkspaceLayoutProps } from '../components/workspaceLayoutGroupedP
 import type { WorkspaceLayoutFlatProps } from '../components/workspaceLayoutProps';
 
 import type { BuildLayoutPropsArgs } from './layoutPropsBuilderTypes';
+import { enterReviewModeSession } from './reviewModeSessionActions';
 
 export function countDueReviewNodes(
   nodeOrder: string[],
@@ -30,12 +31,17 @@ export function countDueReviewNodes(
 }
 
 function createSessionActions(args: BuildLayoutPropsArgs) {
+  const enterReviewMode = () =>
+    enterReviewModeSession({
+      startReviewSession: args.startReviewSession,
+      startStudyMode: args.startStudyMode
+    });
   return {
-    onStartStudyMode: () => (args.startReviewSession(), args.startStudyMode()),
+    onStartStudyMode: enterReviewMode,
     onToggleReviewSession: () =>
       args.isStudyMode
         ? (args.exitReviewSession(), args.exitStudyMode())
-        : (args.startReviewSession(), args.startStudyMode())
+        : enterReviewMode()
   };
 }
 

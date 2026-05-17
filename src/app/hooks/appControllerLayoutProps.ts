@@ -19,6 +19,7 @@ import {
   createToggleVirtualView
 } from './appControllerTrashViewHandlers';
 import { buildLayoutProps } from './layoutPropsBuilder';
+import type { StartStudyModeOptions } from './reviewModeSessionActions';
 import {
   createCloseSettingsHandler,
   createOpenSettingsHandler,
@@ -55,7 +56,7 @@ export interface BuildControllerLayoutPropsArgs {
   rightSidebarResize: ReturnType<typeof useRightSidebarResizer>;
   runtime: ReturnType<typeof useAppRuntime>;
   selectedTrashNode: Node | undefined;
-  startStudyMode: () => void;
+  startStudyMode: (options?: StartStudyModeOptions) => void;
   trash: ReturnType<typeof useTrashView>;
   externalView: ReturnType<typeof useExternalLibraryView>;
   virtualView: ReturnType<typeof useVirtualNodeView>;

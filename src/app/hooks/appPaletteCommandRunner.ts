@@ -1,6 +1,7 @@
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
 import { runAppCommand, runReviewModeToggle } from './appCommands';
+import { enterReviewModeSession, type StartStudyModeOptions } from './reviewModeSessionActions';
 
 interface PaletteCommandRunnerArgs {
   clearSettingsRequest: () => void;
@@ -48,7 +49,7 @@ interface PaletteCommandRunnerArgs {
   setSettingsOpen: (open: boolean) => void;
   startClipboardImport: () => void;
   startReviewSession: () => boolean;
-  startStudyMode: () => void;
+  startStudyMode: (options?: StartStudyModeOptions) => void;
   trashViewOpen: boolean;
 }
 
@@ -127,7 +128,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
 export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
   const toggleReviewMode = () =>
     runReviewModeToggle(args.isReviewMode, {
-      enterReviewMode: () => args.startReviewSession() && args.startStudyMode(),
+      enterReviewMode: () => enterReviewModeSession(args),
       exitReviewMode: () => {
         args.exitReviewSession();
         args.exitStudyMode();
