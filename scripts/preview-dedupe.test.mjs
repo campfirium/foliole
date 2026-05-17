@@ -44,6 +44,7 @@ function runDedupe(repoRoot, target, command, env = {}) {
         ...process.env,
         PREVIEW_DEDUPE_REPO_ROOT: repoRoot,
         PREVIEW_DEDUPE_RUNTIME_DIR: '.lab/internal/runtime',
+        PREVIEW_DEDUPE_QUIET_MS: '0',
         ...env
       }
     });
