@@ -52,6 +52,7 @@ interface PdfPageDimensionRow extends DatabaseRow {
 
 interface NodeContextRow extends DatabaseRow {
   anchor_link: string | null;
+  content: string;
   id: string;
   parent_id: string | null;
 }
@@ -62,12 +63,13 @@ export interface NodeSourceDetails {
   inheritedFromParent: boolean;
   keepImportItem: KeepImportItemRow | null;
   pdfPageDimensions: PdfPageDimensionRow[];
+  sourceNodeContent: string;
   sourceNodeId: string;
 }
 
 function resolveSourceNodeContext(driver: DatabaseDriver, nodeId: string) {
   const node = driver.queryOne<NodeContextRow>(
-    `SELECT id, parent_id, anchor_link
+    `SELECT id, parent_id, anchor_link, content
      FROM nodes
      WHERE id = ?`,
     [nodeId]
@@ -78,13 +80,27 @@ function resolveSourceNodeContext(driver: DatabaseDriver, nodeId: string) {
   if (node.anchor_link && node.parent_id) {
     return {
       inheritedFromParent: true,
+      sourceNodeContent: readNodeContent(driver, node.parent_id),
       sourceNodeId: node.parent_id
     };
   }
   return {
     inheritedFromParent: false,
+    sourceNodeContent: node.content,
     sourceNodeId: node.id
   };
+}
+
+function readNodeContent(driver: DatabaseDriver, nodeId: string) {
+  return (
+    driver.queryOne<{ content: string }>(
+      `SELECT content
+       FROM nodes
+       WHERE id = ?
+       LIMIT 1`,
+      [nodeId]
+    )?.content ?? ''
+  );
 }
 
 function readImportSource(driver: DatabaseDriver, nodeId: string) {
@@ -198,6 +214,7 @@ export function loadNodeSourceDetails(driver: DatabaseDriver, nodeId: string, ru
     inheritedFromParent: context.inheritedFromParent,
     keepImportItem: readKeepImportItem(driver, context.sourceNodeId),
     pdfPageDimensions: readPdfPageDimensions(driver, context.sourceNodeId),
+    sourceNodeContent: context.sourceNodeContent,
     sourceNodeId: context.sourceNodeId
   };
 }

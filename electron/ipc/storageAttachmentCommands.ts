@@ -3,9 +3,48 @@ import { copyAttachmentImageToClipboard, exportAttachmentImage } from '../attach
 import { importClipboardImageAttachment } from '../attachments/importClipboardImageAttachment.js';
 import { importLocalImageAttachment } from '../attachments/importLocalImageAttachment.js';
 import { importRemoteImageAttachment } from '../attachments/importRemoteImageAttachment.js';
+import {
+  forgetRemoteImageLearnedSource,
+  learnRemoteImageSourceOrigin
+} from '../attachments/remoteImageLearnedSources.js';
+import { resolveRemoteImageSourceContext } from '../attachments/remoteImageSourceContext.js';
 import { resolveAttachmentResource } from '../attachments/resourceResolver.js';
 
 import { asString } from './commandParsers.js';
+
+function handleRemoteImageSourceCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.loadRemoteImageSourceContext) {
+    const context = resolveRemoteImageSourceContext(
+      typeof args.node_id === 'string' ? args.node_id : null,
+      asString(args.source_url, 'source_url')
+    );
+    return {
+      image_host: context.imageHost,
+      learned_source_origin: context.learnedSourceOrigin,
+      source: context.source,
+      source_origin: context.sourceOrigin
+    };
+  }
+  if (command === NATIVE_COMMANDS.saveRemoteImageSourceOrigin) {
+    const result = learnRemoteImageSourceOrigin(
+      asString(args.source_url, 'source_url'),
+      asString(args.source_website, 'source_website')
+    );
+    return {
+      image_host: result.imageHost,
+      source_origin: result.sourceOrigin,
+      status: result.status
+    };
+  }
+  if (command === NATIVE_COMMANDS.forgetRemoteImageLearnedSource) {
+    const result = forgetRemoteImageLearnedSource(asString(args.source_url, 'source_url'));
+    return {
+      image_host: result.imageHost,
+      status: result.status
+    };
+  }
+  return undefined;
+}
 
 export function handleStorageAttachmentCommand(
   command: string,
@@ -33,6 +72,11 @@ export function handleStorageAttachmentCommand(
       nodeId: asString(args.nodeId, 'nodeId'),
       sourceUrl: asString(args.sourceUrl, 'sourceUrl')
     });
+  }
+
+  const remoteImageSourceResult = handleRemoteImageSourceCommand(command, args);
+  if (remoteImageSourceResult !== undefined) {
+    return remoteImageSourceResult;
   }
 
   if (command === NATIVE_COMMANDS.resolveAttachmentResource) {

@@ -70,6 +70,7 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   saveJsonSetting('device_id', 'device-test', '2026-03-06T00:00:00.000Z');
   saveJsonSetting('app_settings', { theme: 'dark' }, '2026-03-06T00:01:00.000Z');
   saveJsonSetting('watch_import_cursor_state', { cursor: 'local' }, '2026-03-06T00:02:00.000Z');
+  saveJsonSetting('remote-image-learned-sources-v1', { entries: {} }, '2026-03-06T00:03:00.000Z');
 
   const connection = openDatabaseConnection();
   const settingRecord = connection.sqlite
@@ -87,6 +88,9 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   const localOnlyCount = connection.sqlite
     .prepare('SELECT COUNT(*) AS count FROM setting_records WHERE key = ?')
     .get('watch_import_cursor_state') as { count: number };
+  const learnedSourcesCount = connection.sqlite
+    .prepare('SELECT COUNT(*) AS count FROM setting_records WHERE key = ?')
+    .get('remote-image-learned-sources-v1') as { count: number };
   const changeCount = connection.sqlite
     .prepare(
       `SELECT COUNT(*) AS count
@@ -111,4 +115,5 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   });
   expect(changeCount.count).toBe(0);
   expect(localOnlyCount.count).toBe(0);
+  expect(learnedSourcesCount.count).toBe(0);
 });

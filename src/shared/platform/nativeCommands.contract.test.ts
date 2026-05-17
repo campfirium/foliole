@@ -11,6 +11,7 @@ const CONTRACT_FILES = [
   'nativeExternalSearchCommandMap.ts',
   'nativeImportCommandMap.ts',
   'nativeReadwiseCommandMap.ts',
+  'nativeRemoteImageCommandMap.ts',
   'nativeSyncCommandMap.ts',
   'nativeUtilityCommandMap.ts'
 ];
