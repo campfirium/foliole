@@ -168,7 +168,6 @@ it('opens imported external documents in the external workspace surface', () => 
       }}
       folders={folders}
       onOpenExternalSelection={onOpenExternalSelection}
-      onSelectNode={onSelectNode}
       selection={{ folderId: 'folder-1', kind: 'folder' }}
     />
   );

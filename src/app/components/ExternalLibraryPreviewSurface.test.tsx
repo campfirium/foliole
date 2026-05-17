@@ -84,7 +84,7 @@ it('remounts the external library preview editor when editor appearance changes'
   const preview = {
     absolutePath: '/library/topic.md',
     content: '# Topic',
-    extension: 'md',
+    extension: 'md' as const,
     fileName: 'topic.md',
     folderId: 'folder-1',
     folderPath: '/library',
