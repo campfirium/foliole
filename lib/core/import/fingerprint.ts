@@ -17,6 +17,7 @@ import {
   type ImportSourceProfile
 } from './controlledContext.js';
 import { degradeUnmanagedEpubImages } from './epubEmbeddedResources.js';
+import { normalizeImportedFrontmatterTitle } from './frontmatterTitle.js';
 import { applyImportHighlightPolicy } from './highlightPolicy.js';
 import {
   resolveImportedNodeTitle,
@@ -100,10 +101,11 @@ function mergeNormalizedImportedBodyContent(input: {
 
 function resolvePreparedImportContent(input: CreatePreparedDesktopTextImportInput) {
   const normalizedInputContent = normalizeImportedContent(input.content);
+  const frontmatterTitleResult = normalizeImportedFrontmatterTitle(normalizedInputContent);
   const epubDegradedContent =
     input.kind === 'epub' || input.sourceProfile === 'epub'
-      ? degradeUnmanagedEpubImages(normalizedInputContent, new Set(input.managedEpubImageDestinations ?? []))
-      : { content: normalizedInputContent, degradedReason: null };
+      ? degradeUnmanagedEpubImages(frontmatterTitleResult.content, new Set(input.managedEpubImageDestinations ?? []))
+      : { content: frontmatterTitleResult.content, degradedReason: null };
   const highlightPolicyResult = applyImportHighlightPolicy(
     epubDegradedContent.content,
     input.highlightPolicy ?? 'reference_only'
@@ -121,6 +123,7 @@ function resolvePreparedImportContent(input: CreatePreparedDesktopTextImportInpu
   });
   return {
     contextResult,
+    frontmatterTitle: frontmatterTitleResult.title,
     highlightedContent,
     highlightPolicyResult,
     normalizedContent: normalizeImportedContent(
@@ -185,6 +188,7 @@ export function createPreparedDesktopTextImport(
     hideTitleHeading: input.hideTitleHeadingOverride ?? shouldHideImportedTitleHeading(preparedContent.highlightedContent),
     nodeTitle:
       input.nodeTitleOverride?.trim() ||
+      preparedContent.frontmatterTitle ||
       resolveImportedNodeTitle({
         content: preparedContent.highlightedContent,
         sourceName: input.fileName,
