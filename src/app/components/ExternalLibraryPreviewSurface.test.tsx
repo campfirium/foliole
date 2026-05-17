@@ -5,14 +5,16 @@ import { expect, it, vi } from 'vitest';
 import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
 
 const mocks = vi.hoisted(() => ({
-  markdownEditorMounted: vi.fn()
+  markdownEditorMounted: vi.fn(),
+  markdownEditorProps: vi.fn()
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { className?: string; onOpenExternalLink?: (request: { href: string }) => void }) => {
+  MarkdownEditor: (props: { className?: string; nodeId: string | null; onOpenExternalLink?: (request: { href: string }) => void }) => {
     React.useEffect(() => {
       mocks.markdownEditorMounted();
     }, []);
+    mocks.markdownEditorProps(props);
     return (
       <div className={props.className} data-testid="external-preview-editor">
         <button onClick={() => props.onOpenExternalLink?.({ href: 'https://example.com/docs' })} type="button">
@@ -69,6 +71,7 @@ it('opens the link panel when an external document preview link is clicked', () 
   expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveClass('translate-x-[calc(100%+theme(spacing.3))]');
   expect(screen.queryByText('/library/to sync/folder/topic.md')).not.toBeInTheDocument();
   expect(screen.getByTestId('link-panel-count')).toHaveTextContent('0');
+  expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.objectContaining({ nodeId: null, readOnly: true }));
 
   fireEvent.click(screen.getByRole('button', { name: 'Open external link' }));
 

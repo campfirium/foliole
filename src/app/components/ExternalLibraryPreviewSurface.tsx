@@ -60,7 +60,7 @@ export function ExternalLibraryPreviewSurface(args: {
           blockImageWidthOverride="min(100%, 40rem)"
           className="min-h-0 flex-1"
           key={`external-library-${args.editorAppearanceKey}-${args.preview.absolutePath}`}
-          nodeId={args.preview.absolutePath}
+          nodeId={null}
           onChange={() => undefined}
           onOpenExternalLink={handleOpenExternalLink}
           onReady={args.onPreviewEditorReady}
