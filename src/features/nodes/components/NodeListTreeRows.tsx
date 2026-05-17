@@ -45,6 +45,19 @@ function renderNodeListRow(
   meta?: VirtualListRenderMeta
 ) {
   const rowModel = resolveNodeListRowModel(props, row);
+  const onSelect = (nodeId: string, modifiers?: NodeSelectModifiers) => {
+    props.onSelect(nodeId, modifiers);
+    if (
+      !modifiers?.ctrlKey &&
+      !modifiers?.metaKey &&
+      !modifiers?.shiftKey &&
+      row.hasChildren &&
+      row.node.kind === 'folder' &&
+      props.collapsedNodeIds.has(nodeId)
+    ) {
+      props.onToggleCollapse(nodeId);
+    }
+  };
 
   return (
     <NodeTreeRowItem
@@ -77,7 +90,7 @@ function renderNodeListRow(
       {...(props.drag.onDropOnNode ? { onDrop: props.drag.onDropOnNode } : {})}
       onKeyDown={onRowKeyDown}
       {...(!rowModel.isInbox && !rowModel.isTrashRoot && !rowModel.isVirtualRoot && props.onRename ? { onRename: props.onRename } : {})}
-      onSelect={props.onSelect}
+      onSelect={onSelect}
       onToggleCollapse={props.onToggleCollapse}
     />
   );

@@ -70,10 +70,12 @@ function renderVirtualRows(args: {
 }) {
   return args.rows.flatMap((row) => {
     const isSelected = args.props.isVirtualViewOpen && (args.props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID) === row.node.id;
+    const isVirtualRoot = row.node.id === VIRTUAL_ROOT_NODE_ID;
+    const isVirtualRootCollapsed = args.collapsedIds.has(VIRTUAL_ROOT_NODE_ID);
     const virtualRow = (
       <NodeTreeRow
         depth={row.depth}
-        hasChildren={row.hasChildren}
+        hasChildren={isVirtualRoot ? true : row.hasChildren}
         isActive={isSelected}
         isCollapsed={args.collapsedIds.has(row.node.id)}
         isSelected={isSelected}
@@ -90,14 +92,14 @@ function renderVirtualRows(args: {
         onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, args.setCollapsedIds)}
       />
     );
-    return row.node.id === VIRTUAL_ROOT_NODE_ID
+    return isVirtualRoot && !isVirtualRootCollapsed
       ? [virtualRow, renderRemovedRow({ ...args.props, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing })]
       : [virtualRow];
   });
 }
 
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set([VIRTUAL_ROOT_NODE_ID]));
   const rowSpacing = getNodeListRowSpacing();
   const rows = useMemo(() => {
     const virtualNodeIds = props.nodeOrder.filter((nodeId) => {
@@ -109,11 +111,13 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
   const keyboardRows = useMemo(
     () =>
       rows.flatMap((row) =>
-        row.node.id === VIRTUAL_ROOT_NODE_ID
-          ? [row, { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }]
+        row.node.id === VIRTUAL_ROOT_NODE_ID && !collapsedIds.has(VIRTUAL_ROOT_NODE_ID)
+          ? [{ ...row, hasChildren: true }, { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }]
+          : row.node.id === VIRTUAL_ROOT_NODE_ID
+            ? [{ ...row, hasChildren: true }]
           : [row]
       ),
-    [rows]
+    [collapsedIds, rows]
   );
   const onRowKeyDown = useMemo(
     () =>

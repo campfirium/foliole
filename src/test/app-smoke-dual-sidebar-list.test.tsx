@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { beforeEach, expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { resetNodeListCollapseSessionForTest } from '../features/nodes/components/nodeListCollapseSession';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
@@ -18,6 +19,10 @@ function expandCurrentFolderTopicsIfAvailable() {
     fireEvent.click(button);
   }
 }
+
+beforeEach(() => {
+  resetNodeListCollapseSessionForTest();
+});
 
 function buildDualTreeSwitchState() {
   return (state: ReturnType<typeof useWorkspaceStore.getState>) => ({
@@ -111,6 +116,8 @@ it('shows folders in the left tree and topics in the adjacent topic tree', () =>
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   expect(within(listPanel).getByRole('treeitem', { name: 'Projects' })).toBeInTheDocument();
+  expect(within(listPanel).queryByRole('treeitem', { name: 'Research' })).not.toBeInTheDocument();
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Projects' }));
   expect(within(listPanel).getByRole('treeitem', { name: 'Research' })).toBeInTheDocument();
   expect(within(listPanel).queryByRole('treeitem', { name: 'Overview' })).not.toBeInTheDocument();
 
@@ -190,4 +197,47 @@ it('keeps the dual tree visible while switching between inbox, folder, and topic
   expandCurrentFolderTopicsIfAvailable();
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Inbox topic' })).toBeInTheDocument();
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Inbox child' })).toBeInTheDocument();
+});
+
+it('keeps expanded folder siblings open while switching selected folders', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'special-inbox',
+    nodeOrder: ['special-inbox', 'folder-a', 'folder-a-child', 'folder-b', 'folder-b-child'],
+    nodesById: {
+      ...state.nodesById,
+      'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A', content: '' }),
+      'folder-a-child': createNode({
+        id: 'folder-a-child',
+        kind: 'folder',
+        parentNodeId: 'folder-a',
+        title: 'Folder A child',
+        content: ''
+      }),
+      'folder-b': createNode({ id: 'folder-b', kind: 'folder', title: 'Folder B', content: '' }),
+      'folder-b-child': createNode({
+        id: 'folder-b-child',
+        kind: 'folder',
+        parentNodeId: 'folder-b',
+        title: 'Folder B child',
+        content: ''
+      })
+    }
+  }));
+
+  render(<App />);
+
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Folder A' }));
+  expect(within(listPanel).getByRole('treeitem', { name: 'Folder A child' })).toBeInTheDocument();
+
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Trash' }));
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Folder B' }));
+
+  expect(within(listPanel).getByRole('treeitem', { name: 'Folder A child' })).toBeInTheDocument();
+  expect(within(listPanel).getByRole('treeitem', { name: 'Folder B child' })).toBeInTheDocument();
+
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Folder B' }));
+
+  expect(within(listPanel).getByRole('treeitem', { name: 'Folder A child' })).toBeInTheDocument();
+  expect(within(listPanel).getByRole('treeitem', { name: 'Folder B child' })).toBeInTheDocument();
 });

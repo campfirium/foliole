@@ -1,12 +1,17 @@
 import { act, fireEvent, render, within } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { beforeEach, expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { resetNodeListCollapseSessionForTest } from '../features/nodes/components/nodeListCollapseSession';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, getCurrentFolderPanel, getTopicListPanel } from './app-smoke.shared';
+
+beforeEach(() => {
+  resetNodeListCollapseSessionForTest();
+});
 
 function buildAutoExpandNodes(includeSecondFolder = false) {
   return {
@@ -84,15 +89,7 @@ function seedAutoExpandState(includeSecondFolder = false) {
   }));
 }
 
-function clickRowChevron(row: HTMLElement) {
-  const chevron = row.querySelector('[data-node-tree-chevron="true"]');
-  if (!(chevron instanceof HTMLElement)) {
-    throw new Error('Expected row chevron');
-  }
-  fireEvent.click(chevron);
-}
-
-it('keeps derived branches collapsed by default while still showing the active path', () => {
+it('keeps branches collapsed by default without auto-expanding the active path', () => {
   seedAutoExpandState(true);
 
   render(<App />);
@@ -101,8 +98,8 @@ it('keeps derived branches collapsed by default while still showing the active p
   const currentFolderPanel = getCurrentFolderPanel();
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder A' })).toBeInTheDocument();
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Article A' })).toBeInTheDocument();
-  expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();
-  expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Highlight A2' })).toBeInTheDocument();
+  expect(within(currentFolderPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
+  expect(within(currentFolderPanel).queryByRole('treeitem', { name: 'Highlight A2' })).not.toBeInTheDocument();
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Article B' })).toBeInTheDocument();
   expect(within(currentFolderPanel).queryByRole('treeitem', { name: 'Highlight B1' })).not.toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder B' })).toBeInTheDocument();
@@ -114,13 +111,12 @@ it('keeps derived branches collapsed by default while still showing the active p
   expect(within(getCurrentFolderPanel()).queryByRole('treeitem', { name: 'Highlight C1' })).not.toBeInTheDocument();
 });
 
-it('keeps manual collapse and does not auto-expand another derived branch after focus moves', () => {
+it('keeps collapsed branches closed after focus moves', () => {
   seedAutoExpandState();
 
   render(<App />);
 
   const listPanel = getCurrentFolderPanel();
-  clickRowChevron(within(listPanel).getByRole('treeitem', { name: 'Article A' }));
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A2' })).not.toBeInTheDocument();
 
@@ -130,5 +126,5 @@ it('keeps manual collapse and does not auto-expand another derived branch after 
   });
   expect(useWorkspaceStore.getState().activeNodeId).toBe('article-b');
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
-  expect(within(listPanel).getByRole('treeitem', { name: 'Highlight B1' })).toBeInTheDocument();
+  expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight B1' })).not.toBeInTheDocument();
 });

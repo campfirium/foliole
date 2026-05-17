@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, type Dispatch, type SetStateAction } from 'react';
 
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import {
-  useAutoExpandedNoteNodeIds,
-  useDefaultCollapsedNoteNodeIds,
-  useStickyAutoExpandedNodeIds
-} from './NodeListAutoExpansionMemory';
+  useSessionCollapsedTrashNodeIds,
+  useSessionManualCollapsedNoteNodeIds,
+  useSessionManualExpandedNoteNodeIds
+} from './nodeListCollapseSession';
 import {
-  loadCollapsedTrashNodeIds,
-  loadManualCollapsedNoteNodeIds,
-  loadManualExpandedNoteNodeIds,
   saveCollapsedTrashNodeIds,
   saveManualCollapsedNoteNodeIds,
   saveManualExpandedNoteNodeIds
@@ -37,19 +34,11 @@ interface UseCollapsedNodeStateInput {
 }
 
 export function useCollapsedNodeState({
-  activeNodeId,
-  nodesById,
-  noteParentById,
   noteRowsAll,
   trashRowsAll
 }: UseCollapsedNodeStateInput): CollapsedNodeState {
-  const [collapsedTrashNodeIdList, setCollapsedTrashNodeIdList] = useState<string[]>(() => loadCollapsedTrashNodeIds());
-  const noteState = useNoteCollapsedState({
-    activeNodeId,
-    nodesById,
-    noteParentById,
-    noteRowsAll
-  });
+  const [collapsedTrashNodeIdList, setCollapsedTrashNodeIdList] = useSessionCollapsedTrashNodeIds();
+  const noteState = useNoteCollapsedState({ noteRowsAll });
   const collapsedTrashNodeIds = useMemo(
     () => new Set(collapsedTrashNodeIdList),
     [collapsedTrashNodeIdList]
@@ -78,9 +67,6 @@ export function useCollapsedNodeState({
 }
 
 function useNoteCollapsedState({
-  activeNodeId,
-  nodesById,
-  noteParentById,
   noteRowsAll
 }: Omit<UseCollapsedNodeStateInput, 'trashRowsAll'>) {
   const noteCollapsibleNodeIds = useNoteCollapsibleNodeIds(noteRowsAll);
@@ -92,30 +78,17 @@ function useNoteCollapsedState({
     setManualCollapsedNoteNodeIdList,
     setManualExpandedNoteNodeIdList
   } = useNoteManualCollapseState(noteCollapsibleNodeIds);
-  const defaultCollapsedNoteNodeIds = useDefaultCollapsedNoteNodeIds(nodesById, noteRowsAll);
-  const autoExpandedNoteNodeIds = useAutoExpandedNoteNodeIds(
-    activeNodeId,
-    nodesById,
-    noteParentById,
-    noteRowsAll
-  );
-  const stickyAutoExpandedNoteNodeIds = useStickyAutoExpandedNodeIds(
-    autoExpandedNoteNodeIds,
-    noteCollapsibleNodeIds
-  );
   const collapsedNoteNodeIds = useMemo(
     () =>
       mergeCollapsedNodeIds(
-        defaultCollapsedNoteNodeIds,
+        noteCollapsibleNodeIds,
         manualCollapsedNoteNodeIdList,
-        manualExpandedNoteNodeIdList,
-        stickyAutoExpandedNoteNodeIds
+        manualExpandedNoteNodeIdList
       ),
     [
-      defaultCollapsedNoteNodeIds,
+      noteCollapsibleNodeIds,
       manualCollapsedNoteNodeIdList,
-      manualExpandedNoteNodeIdList,
-      stickyAutoExpandedNoteNodeIds
+      manualExpandedNoteNodeIdList
     ]
   );
 
@@ -138,12 +111,8 @@ function useNoteCollapsibleNodeIds(noteRowsAll: NodeTreeRow[]) {
 }
 
 function useNoteManualCollapseState(noteCollapsibleNodeIds: ReadonlySet<string>) {
-  const [manualCollapsedNoteNodeIdList, setManualCollapsedNoteNodeIdList] = useState<string[]>(
-    () => loadManualCollapsedNoteNodeIds()
-  );
-  const [manualExpandedNoteNodeIdList, setManualExpandedNoteNodeIdList] = useState<string[]>(
-    () => loadManualExpandedNoteNodeIds()
-  );
+  const [manualCollapsedNoteNodeIdList, setManualCollapsedNoteNodeIdList] = useSessionManualCollapsedNoteNodeIds();
+  const [manualExpandedNoteNodeIdList, setManualExpandedNoteNodeIdList] = useSessionManualExpandedNoteNodeIds();
 
   useEffect(() => {
     setManualCollapsedNoteNodeIdList((prev) => prev.filter((id) => noteCollapsibleNodeIds.has(id)));
@@ -234,13 +203,9 @@ function checkHasCollapsedNotes(
 function mergeCollapsedNodeIds(
   autoCollapsedNodeIds: ReadonlySet<string>,
   manualCollapsedNodeIdList: string[],
-  manualExpandedNodeIdList: string[],
-  autoExpandedNodeIds: ReadonlySet<string>
+  manualExpandedNodeIdList: string[]
 ) {
   const next = new Set(autoCollapsedNodeIds);
-  for (const nodeId of autoExpandedNodeIds) {
-    next.delete(nodeId);
-  }
   for (const nodeId of manualCollapsedNodeIdList) {
     next.add(nodeId);
   }

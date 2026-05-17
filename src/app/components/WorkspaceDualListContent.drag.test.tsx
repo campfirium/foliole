@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
@@ -109,6 +109,45 @@ function mockMiddleDropZone(row: HTMLElement) {
   });
 }
 
+function FolderClickHarness() {
+  const [activeNodeId, setActiveNodeId] = useState('topic-a');
+  const nodesById = {
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
+    'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+    'folder-a-child': createNode({ id: 'folder-a-child', kind: 'folder', parentNodeId: 'folder-a', title: 'Folder A child' }),
+    'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-a', title: 'Topic A' }),
+    'folder-b': createNode({ id: 'folder-b', kind: 'folder', title: 'Folder B' }),
+    'folder-b-child': createNode({ id: 'folder-b-child', kind: 'folder', parentNodeId: 'folder-b', title: 'Folder B child' })
+  };
+  const nodeOrder = [INBOX_NODE_ID, 'folder-a', 'folder-a-child', 'topic-a', 'folder-b', 'folder-b-child'];
+
+  return (
+    <WorkspaceDualListContent
+      activeNodeId={activeNodeId}
+      activeVirtualNodeId={null}
+      externalEntriesByFolderId={{}}
+      externalFolders={[]}
+      externalSelection={{ kind: 'root' }}
+      isExternalViewOpen={false}
+      isTrashViewOpen={false}
+      isVirtualViewOpen={false}
+      listNodesById={nodesById}
+      nodeOrder={nodeOrder}
+      nodesById={nodesById}
+      onOpenExternalSelection={vi.fn()}
+      onOpenMoveToNode={vi.fn()}
+      onOpenNotesView={vi.fn()}
+      onOpenTrashView={vi.fn()}
+      onOpenVirtualView={vi.fn()}
+      onSelectNode={setActiveNodeId}
+      onSelectNodeInVirtualView={vi.fn()}
+      onSelectTrashNode={vi.fn()}
+      selectedTrashNodeId={null}
+      trashedNodeIds={[]}
+    />
+  );
+}
+
 beforeEach(() => {
   window.localStorage.clear();
 });
@@ -125,4 +164,16 @@ it('moves a current-folder topic when dropped onto a directory folder', () => {
   fireEvent.drop(targetFolderRow, { clientY: 50, dataTransfer: transfer });
 
   expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-b');
+});
+
+it('keeps sibling folder branches open when another folder is clicked', () => {
+  render(<FolderClickHarness />);
+
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Folder A' }));
+  expect(screen.getByRole('treeitem', { name: 'Folder A child' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Folder B' }));
+
+  expect(screen.getByRole('treeitem', { name: 'Folder A child' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Folder B child' })).toBeInTheDocument();
 });

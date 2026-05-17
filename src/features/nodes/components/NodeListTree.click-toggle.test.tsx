@@ -11,6 +11,7 @@ function createNode(args: {
   parentNodeId?: string | null;
   title: string;
   anchorLink?: { id: string; kind: 'highlight' };
+  kind?: 'folder' | 'topic';
 }) {
   return {
     anchorLink: args.anchorLink ?? null,
@@ -18,6 +19,7 @@ function createNode(args: {
     hasContent: true,
     hasReveal: false,
     id: args.id,
+    kind: args.kind ?? 'topic',
     parentNodeId: args.parentNodeId ?? null,
     review: null,
     title: args.title,
@@ -28,7 +30,7 @@ function createNode(args: {
 function NodeListTreeHarness() {
   const [activeNodeId, setActiveNodeId] = useState<string | null>('article-a');
   const nodesById = {
-    'folder-a': createNode({ id: 'folder-a', title: 'Folder A' }),
+    'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
     'article-a': createNode({ id: 'article-a', parentNodeId: 'folder-a', title: 'Article A' }),
     'highlight-a1': createNode({
       id: 'highlight-a1',
@@ -62,33 +64,34 @@ beforeEach(() => {
   }));
 });
 
-it('opens the clicked row without toggling its branch when children exist', () => {
+it('expands only the clicked folder branch', () => {
   render(<NodeListTreeHarness />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
-  const articleRow = within(listPanel).getByRole('treeitem', { name: 'Article A' });
+  const folderRow = within(listPanel).getByRole('treeitem', { name: 'Folder A' });
 
-  expect(within(listPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();
+  expect(within(listPanel).queryByRole('treeitem', { name: 'Article A' })).toBeNull();
 
-  fireEvent.click(articleRow);
-  expect(articleRow).toHaveAttribute('aria-current', 'page');
-  expect(within(listPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();
-
-  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Folder A' }));
+  fireEvent.click(folderRow);
+  expect(folderRow).toHaveAttribute('aria-current', 'page');
   expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toBeInTheDocument();
-  expect(within(listPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();
+  expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).toBeNull();
+
+  fireEvent.click(folderRow);
+  expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toBeInTheDocument();
 });
 
 it('shows every ctrl-selected row as selected', () => {
   render(<NodeListTreeHarness />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
-  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Folder A' }), { ctrlKey: true });
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Folder A' }));
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Article A' }), { ctrlKey: true });
 
   const selectedRows = within(listPanel).getAllByRole('treeitem', { selected: true });
   expect(selectedRows).toHaveLength(2);
   expect(within(listPanel).queryByText('2 selected')).toBeNull();
   expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toHaveAttribute('data-node-bulk-selected', 'true');
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('data-node-bulk-selected', 'true');
-  expect(within(listPanel).getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('data-active', 'false');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toHaveAttribute('data-active', 'false');
 });

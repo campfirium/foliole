@@ -1,50 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import type { ComponentProps } from 'react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
-import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import {
   resetExternalCollapsedRowIds,
   saveExternalCollapsedRowIds
 } from './externalLibraryCollapseSettings';
-import { WorkspaceDualListContent } from './WorkspaceDualListContent';
-
-function createNode(args: {
-  id: string;
-  kind: 'folder' | 'topic' | 'item';
-  parentNodeId?: string | null;
-  title: string;
-  content?: string;
-  specialKind?: 'inbox' | 'trash' | 'virtual-root' | 'virtual';
-  virtualFilter?: {
-    conditions: Array<{ field: 'text'; operator: 'contains'; value: string }>;
-    match: 'all';
-    version: 1;
-  } | null;
-}) {
-  return {
-    anchorLink: null,
-    createdAt: '2026-04-20T00:00:00.000Z',
-    content: args.content ?? '',
-    hasContent: args.kind !== 'folder',
-    hasReveal: args.kind === 'item',
-    id: args.id,
-    kind: args.kind,
-    parentNodeId: args.parentNodeId ?? null,
-    reading: null,
-    reveal: null,
-    review: null,
-    title: args.title,
-    updatedAt: '2026-04-20T00:00:00.000Z',
-    ...definedProps({
-      specialKind: args.specialKind,
-      virtualFilter: args.virtualFilter
-    })
-  };
-}
+import { createWorkspaceContentNode, renderWorkspaceContent } from './WorkspaceDualListContent.testUtils';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -98,11 +62,6 @@ const externalEntriesByFolderId = {
   ]
 };
 
-const simpleNodesById = {
-  [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
-  'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' })
-};
-
 function createExternalEntry(args: {
   absolutePath: string;
   fileName: string;
@@ -115,43 +74,12 @@ function createExternalEntry(args: {
   return { ...args, extension: 'md' as const, modifiedAt: '2026-04-21T00:00:00.000Z' };
 }
 
-function renderWorkspaceContent(
-  overrides: Partial<ComponentProps<typeof WorkspaceDualListContent>> = {}
-) {
-  render(
-    <WorkspaceDualListContent
-      activeNodeId={null}
-      activeVirtualNodeId={null}
-      externalEntriesByFolderId={{}}
-      externalFolders={[]}
-      externalSelection={{ kind: 'root' }}
-      isExternalViewOpen={false}
-      isTrashViewOpen={false}
-      isVirtualViewOpen={false}
-      nodesById={simpleNodesById}
-      listNodesById={simpleNodesById}
-      nodeOrder={[INBOX_NODE_ID, 'folder-a']}
-      onOpenMoveToNode={vi.fn()}
-      onOpenNotesView={vi.fn()}
-      onOpenExternalSelection={vi.fn()}
-      onOpenTrashView={vi.fn()}
-      onOpenVirtualView={vi.fn()}
-      onSelectNode={vi.fn()}
-      onSelectNodeInVirtualView={vi.fn()}
-      onSelectTrashNode={vi.fn()}
-      selectedTrashNodeId={null}
-      trashedNodeIds={[]}
-      {...overrides}
-    />
-  );
-}
-
 it('keeps the dual-column layout when opening trash search', () => {
   const trashNodesById = {
-    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
-    'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
-    'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-a', title: 'Topic A' }),
-    'item-a': createNode({ id: 'item-a', kind: 'item', parentNodeId: 'topic-a', title: 'Alpha Note' })
+    [INBOX_NODE_ID]: createWorkspaceContentNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
+    'folder-a': createWorkspaceContentNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+    'topic-a': createWorkspaceContentNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-a', title: 'Topic A' }),
+    'item-a': createWorkspaceContentNode({ id: 'item-a', kind: 'item', parentNodeId: 'topic-a', title: 'Alpha Note' })
   };
 
   renderWorkspaceContent({
@@ -229,7 +157,7 @@ it('opens external library settings from the External placeholder row when no fo
   expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
 });
 
-it('restores persisted external collapse state without affecting sibling roots', () => {
+it('ignores old external expansion memory and expands only the selected root', () => {
   saveExternalCollapsedRowIds([]);
 
   renderWorkspaceContent({
@@ -253,14 +181,14 @@ it('restores persisted external collapse state without affecting sibling roots',
     isExternalViewOpen: true
   });
 
-  expect(screen.getByRole('treeitem', { name: /^sub$/i })).toBeInTheDocument();
-  expect(screen.getByRole('treeitem', { name: /^sync$/i })).toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: /^sub$/i })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: /^sync$/i })).toBeNull();
 
   const externalFolderRow = screen.getByRole('treeitem', { name: /two think/i });
-  expect(externalFolderRow).toHaveAttribute('aria-expanded', 'true');
+  expect(externalFolderRow).toHaveAttribute('aria-expanded', 'false');
 
-  fireEvent.keyDown(externalFolderRow, { key: 'ArrowLeft' });
+  fireEvent.keyDown(externalFolderRow, { key: 'ArrowRight' });
 
-  expect(screen.queryByRole('treeitem', { name: /^sub$/i })).toBeNull();
-  expect(screen.getByRole('treeitem', { name: /^sync$/i })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: /^sub$/i })).toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: /^sync$/i })).toBeNull();
 });

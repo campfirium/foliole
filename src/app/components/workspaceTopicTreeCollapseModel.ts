@@ -1,22 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 
-import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-
-export function collectActiveAncestorIds(activeNodeId: string | null, rootIds: readonly string[], nodesById: WorkspaceListNodesById) {
-  if (!activeNodeId) return new Set<string>();
-  const rootIdSet = new Set(rootIds);
-  const ancestors: string[] = [];
-  let currentId = nodesById[activeNodeId]?.parentNodeId ?? null;
-  while (currentId) {
-    ancestors.push(currentId);
-    if (rootIdSet.has(currentId)) {
-      return new Set(ancestors);
-    }
-    currentId = nodesById[currentId]?.parentNodeId ?? null;
-  }
-  return rootIdSet.has(activeNodeId) ? new Set<string>() : new Set<string>();
-}
-
 interface TopicCollapseState {
   activeFolderId: string;
   activeNodeId: string | null;
@@ -37,12 +20,11 @@ export function useCollapsedTopicNodeIds(args: {
   activeFolderId: string;
   activeNodeId: string | null;
   collapsibleNodeIds: string[];
-  expandedNodeIds: ReadonlySet<string>;
 }) {
   const [state, setState] = useState(() => ({
     activeFolderId: args.activeFolderId,
     activeNodeId: args.activeNodeId,
-    collapsedNodeIds: new Set(args.collapsibleNodeIds.filter((nodeId) => !args.expandedNodeIds.has(nodeId)))
+    collapsedNodeIds: new Set(args.collapsibleNodeIds)
   }));
   const setCollapsedNodeIds = (value: Set<string> | ((current: Set<string>) => Set<string>)) =>
     updateCollapsedNodeIds(setState, value);
@@ -51,16 +33,14 @@ export function useCollapsedTopicNodeIds(args: {
     const next = {
       activeFolderId: args.activeFolderId,
       activeNodeId: args.activeNodeId,
-      collapsedNodeIds: new Set(args.collapsibleNodeIds.filter((nodeId) => !args.expandedNodeIds.has(nodeId)))
+      collapsedNodeIds: new Set(args.collapsibleNodeIds)
     };
     setState(next);
     return { collapsedNodeIds: next.collapsedNodeIds, setCollapsedNodeIds };
   }
 
   if (state.activeNodeId !== args.activeNodeId) {
-    const nextCollapsedNodeIds = new Set(state.collapsedNodeIds);
-    args.expandedNodeIds.forEach((nodeId) => nextCollapsedNodeIds.delete(nodeId));
-    const next = { ...state, activeNodeId: args.activeNodeId, collapsedNodeIds: nextCollapsedNodeIds };
+    const next = { ...state, activeNodeId: args.activeNodeId };
     setState(next);
     return { collapsedNodeIds: next.collapsedNodeIds, setCollapsedNodeIds };
   }
