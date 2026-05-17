@@ -67,3 +67,35 @@ export function buildNextReadingProfile(
     state: currentReading?.state ?? 'active'
   };
 }
+
+export function buildDismissedReadingProfile(args: {
+  currentNodeId: string;
+  currentReading: NodeReadingProfile | null | undefined;
+  defaultPriority: PushQueuePriority;
+  nodesById: Record<string, PriorityChainNode | undefined>;
+  now: string;
+}): NodeReadingProfile {
+  const priority =
+    parseLiteralUnion(args.currentReading?.priority, PUSH_QUEUE_PRIORITIES) ??
+    parseLiteralUnion(
+      resolveReadingPriorityChain({
+        currentNodeId: args.currentNodeId,
+        currentReading: args.currentReading,
+        defaultPriority: args.defaultPriority,
+        nodesById: args.nodesById
+      })[0],
+      PUSH_QUEUE_PRIORITIES
+    ) ??
+    args.defaultPriority;
+
+  return {
+    intervalDurationMs: args.currentReading?.intervalDurationMs ?? 0,
+    intervalGrowthFactor: args.currentReading?.intervalGrowthFactor ?? 1,
+    lastHandledAt: args.now,
+    nextAt: args.currentReading?.nextAt ?? args.now,
+    priority,
+    readingPosition: args.currentReading?.readingPosition ?? 0,
+    repetitionCount: args.currentReading?.repetitionCount ?? 0,
+    state: 'dismissed'
+  };
+}
