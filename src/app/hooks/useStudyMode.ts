@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import type { StartStudyModeOptions } from './reviewModeSessionActions';
+
 interface UseStudyModeOptions {
   activeNodeId: string | null;
   isViewingTrashNode: boolean;
@@ -9,8 +11,8 @@ export function useStudyMode({ activeNodeId, isViewingTrashNode }: UseStudyModeO
   const [isStudyMode, setIsStudyMode] = useState(false);
   const canStartStudyMode = Boolean(activeNodeId) && !isViewingTrashNode;
 
-  const startStudyMode = () => {
-    if (!canStartStudyMode) {
+  const startStudyMode = (options?: StartStudyModeOptions) => {
+    if (!canStartStudyMode && !options?.force) {
       return;
     }
     setIsStudyMode(true);

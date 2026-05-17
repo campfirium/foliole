@@ -6,6 +6,8 @@ import type { SettingsCategoryId } from '../../features/settings/model/settingsP
 import type { WorkspaceState } from '../../store/workspaceStore';
 import type { WorkspaceLayoutFlatProps } from '../components/workspaceLayoutProps';
 
+import type { StartStudyModeOptions } from './reviewModeSessionActions';
+
 export interface BuildLayoutPropsArgs {
   activeNodeId: string | null;
   isWorkspaceHydrated: boolean;
@@ -131,7 +133,7 @@ export interface BuildLayoutPropsArgs {
   reviewSession: WorkspaceState['reviewSession'];
   selectedTrashNodeId: string | null;
   showAnswerSection: boolean;
-  startStudyMode: () => void;
+  startStudyMode: (options?: StartStudyModeOptions) => void;
   startReviewSession: WorkspaceState['startReviewSession'];
   trashedNodeIds: string[];
   exitReviewSession: WorkspaceState['exitReviewSession'];

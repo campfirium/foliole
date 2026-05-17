@@ -51,12 +51,10 @@ function SettingsAction({ isSettingsOpen, onOpenSettings }: { isSettingsOpen: bo
 }
 
 function StudyAction({
-  canStartStudyMode,
   isStudyMode,
   onToggleReviewSession,
   reviewStatusText
 }: {
-  canStartStudyMode: boolean;
   isStudyMode: boolean;
   onToggleReviewSession: () => void;
   reviewStatusText: string;
@@ -74,7 +72,6 @@ function StudyAction({
             <AppIconButton
               className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
               data-active={isStudyMode}
-              disabled={!canStartStudyMode && !isStudyMode}
               icon={<Route aria-hidden="true" size={16} strokeWidth={1.75} />}
               label="Study"
               onClick={onToggleReviewSession}
@@ -124,7 +121,6 @@ function useWorkspaceRailToolbarState({
 }
 
 function renderStudyDock(props: {
-  canStartStudyMode: boolean;
   isStudyMode: boolean;
   onToggleReviewSession: () => void;
   reviewStatusText: string;
@@ -145,7 +141,6 @@ function renderStudyDock(props: {
       ) : null}
       <div className="flex h-[var(--workspace-bottom-toolbar-height)] w-full shrink-0 items-center justify-center">
         <StudyAction
-          canStartStudyMode={props.canStartStudyMode}
           isStudyMode={props.isStudyMode}
           onToggleReviewSession={props.onToggleReviewSession}
           reviewStatusText={props.reviewStatusText}
@@ -190,7 +185,6 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
         <SettingsAction isSettingsOpen={props.isSettingsOpen} onOpenSettings={props.onOpenSettings} />
       </div>
       {renderStudyDock({
-        canStartStudyMode: props.canStartStudyMode,
         isStudyMode: props.isStudyMode,
         onToggleReviewSession: props.onToggleReviewSession,
         reviewStatusText,
@@ -210,21 +204,16 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
   );
 }
 
-export function WorkspaceStudyDockTrigger({
-  canStartStudyMode,
-  isStudyMode,
-  onToggleReviewSession,
-  reviewDueCount
-}: {
+export function WorkspaceStudyDockTrigger(props: {
   canStartStudyMode: boolean;
   isStudyMode: boolean;
   onToggleReviewSession: () => void;
   reviewDueCount: number;
 }) {
-  const reviewStatusText = isStudyMode
-    ? `Reviewing (${Math.max(reviewDueCount, 0)} remaining)`
-    : reviewDueCount > 0
-      ? `Start review (${reviewDueCount} due)`
+  const reviewStatusText = props.isStudyMode
+    ? `Reviewing (${Math.max(props.reviewDueCount, 0)} remaining)`
+    : props.reviewDueCount > 0
+      ? `Start review (${props.reviewDueCount} due)`
       : 'Start review (no due cards)';
 
   return (
@@ -233,9 +222,8 @@ export function WorkspaceStudyDockTrigger({
       style={{ backgroundColor: 'var(--workspace-region-footer-rail-bg)' }}
     >
       <StudyAction
-        canStartStudyMode={canStartStudyMode}
-        isStudyMode={isStudyMode}
-        onToggleReviewSession={onToggleReviewSession}
+        isStudyMode={props.isStudyMode}
+        onToggleReviewSession={props.onToggleReviewSession}
         reviewStatusText={reviewStatusText}
       />
     </div>

@@ -76,7 +76,7 @@ function useDerivedControllerState(args: {
   priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
-  startStudyMode: () => void;
+  startStudyMode: ReturnType<typeof useWorkspaceControllerState>['study']['startStudyMode'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   const reviewDueCount = measureSelectionComputation(
@@ -172,7 +172,7 @@ function buildControllerLayoutState(args: {
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
-  startStudyMode: () => void;
+  startStudyMode: ReturnType<typeof useWorkspaceControllerState>['study']['startStudyMode'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   return buildAppControllerLayoutProps({

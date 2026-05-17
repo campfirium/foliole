@@ -7,10 +7,10 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
-function toolbar(isStudyMode: boolean, onRunRailAction = vi.fn()) {
+function toolbar(isStudyMode: boolean, onRunRailAction = vi.fn(), canStartStudyMode = true) {
   return (
     <WorkspaceSideToolbar
-      canStartStudyMode
+      canStartStudyMode={canStartStudyMode}
       isImportManagementOpen={false}
       isSettingsOpen={false}
       isStudyMode={isStudyMode}
@@ -63,6 +63,35 @@ it('runs the shared light and dark mode command from the rail theme button', () 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle Light/Dark Mode' }));
 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleBaseColorMode);
+});
+
+it('keeps the study button enabled when the current context cannot start study mode', () => {
+  const onToggleReviewSession = vi.fn();
+  render(
+    <AppearanceSettingsProvider>
+      <WorkspaceRailSettingsProvider>
+        <WorkspaceSideToolbar
+          canStartStudyMode={false}
+          isImportManagementOpen={false}
+          isSettingsOpen={false}
+          isStudyMode={false}
+          reviewDueCount={0}
+          onOpenImportManagement={vi.fn()}
+          onOpenSettings={vi.fn()}
+          onStartClipboardImport={vi.fn()}
+          onStartImport={vi.fn()}
+          onToggleReviewSession={onToggleReviewSession}
+        />
+      </WorkspaceRailSettingsProvider>
+    </AppearanceSettingsProvider>
+  );
+
+  const studyButton = screen.getByRole('button', { name: 'Study' });
+  expect(studyButton).not.toBeDisabled();
+
+  fireEvent.click(studyButton);
+
+  expect(onToggleReviewSession).toHaveBeenCalledTimes(1);
 });
 
 it('exposes shortcuts on visible rail command buttons', () => {
