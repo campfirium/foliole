@@ -70,7 +70,7 @@ function createHarness() {
 it('updates a single-range highlight locator in place', () => {
   const { actions, harness } = createHarness();
 
-  const updated = actions.updateHighlightAnchorRange?.('highlight-1', 'Alpha Beta Gamma', { from: 6, to: 16 });
+  const updated = actions.updateHighlightAnchorRange?.('highlight-1', { from: 6, to: 16 });
 
   expect(updated).toBe(true);
   expect(harness.getState().nodesById['highlight-1']?.anchorLink).toEqual({
@@ -118,11 +118,10 @@ it('rejects ambiguous or invalid highlight range updates', () => {
   harness.getState().trashedNodeIds = ['trashed-1'];
   harness.getState().nodesById['trashed-1'] = createHighlightNode({ id: 'trashed-1' });
 
-  expect(actions.updateHighlightAnchorRange?.('multi-range', 'Alpha Beta Gamma', { from: 0, to: 10 })).toBe(false);
-  expect(actions.updateHighlightAnchorRange?.('cloze-1', 'Alpha Beta Gamma', { from: 0, to: 10 })).toBe(false);
-  expect(actions.updateHighlightAnchorRange?.('trashed-1', 'Alpha Beta Gamma', { from: 0, to: 10 })).toBe(false);
-  expect(actions.updateHighlightAnchorRange?.('highlight-1', 'Alpha Beta Gamma', { from: 6, to: 6 })).toBe(false);
-  expect(actions.updateHighlightAnchorRange?.('highlight-1', 'Alpha Beta Gamma', { from: 6, to: 99 })).toBe(false);
-  expect(actions.updateHighlightAnchorRange?.('highlight-1', 'stale content', { from: 0, to: 5 })).toBe(false);
+  expect(actions.updateHighlightAnchorRange?.('multi-range', { from: 0, to: 10 })).toBe(false);
+  expect(actions.updateHighlightAnchorRange?.('cloze-1', { from: 0, to: 10 })).toBe(false);
+  expect(actions.updateHighlightAnchorRange?.('trashed-1', { from: 0, to: 10 })).toBe(false);
+  expect(actions.updateHighlightAnchorRange?.('highlight-1', { from: 6, to: 6 })).toBe(false);
+  expect(actions.updateHighlightAnchorRange?.('highlight-1', { from: 6, to: 99 })).toBe(false);
   expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
 });

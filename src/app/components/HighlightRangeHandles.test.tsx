@@ -60,18 +60,17 @@ it('renders visible range handles for an adjustable highlight', () => {
       editor={editor}
       highlight={{ locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
       onCommit={vi.fn()}
-      parentContent="Welcome to Foliole"
     />
   );
 
   const handles = document.querySelectorAll('[data-highlight-range-handle="true"]');
   expect(handles).toHaveLength(2);
-  expect(handles[0]).toHaveClass('h-6', 'w-4', 'cursor-ew-resize');
-  expect(handles[0]?.querySelector('.bg-cloze-yellow')).not.toBeNull();
-  expect(handles[0]?.querySelector('.bg-foreground\\/55')).not.toBeNull();
-  expect(handles[1]).toHaveClass('h-6', 'w-4', 'cursor-ew-resize');
-  expect(handles[1]?.querySelector('.bg-cloze-yellow')).not.toBeNull();
-  expect(handles[1]?.querySelector('.bg-foreground\\/55')).not.toBeNull();
+  expect(handles[0]).toHaveClass('h-7', 'w-4', 'cursor-ew-resize');
+  expect(handles[0]?.querySelector('.bg-cloze-yellow')).toBeNull();
+  expect(handles[0]?.textContent).toBe('');
+  expect(handles[1]).toHaveClass('h-7', 'w-4', 'cursor-ew-resize');
+  expect(handles[1]?.querySelector('.bg-cloze-yellow')).toBeNull();
+  expect((handles[0]?.firstElementChild as HTMLElement | null)?.style.background).toBe('var(--app-highlight-surface-color)');
 });
 
 it('commits the dragged highlight range', () => {
@@ -80,7 +79,8 @@ it('commits the dragged highlight range', () => {
     getDocumentPositionAtClientPoint: vi.fn(() => 3),
     getPositionClientRect: vi.fn((position: number) =>
       position === 0 ? mockRect(40, 80, 8, 20) : mockRect(124, 80, 8, 20)
-    )
+    ),
+    setHighlightRangePreview: vi.fn()
   });
 
   render(
@@ -88,7 +88,6 @@ it('commits the dragged highlight range', () => {
       editor={editor}
       highlight={{ locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
       onCommit={onCommit}
-      parentContent="Welcome to Foliole"
     />
   );
 
@@ -104,7 +103,8 @@ it('commits the dragged highlight range', () => {
   });
 
   expect(editor.setSelection).not.toHaveBeenCalled();
-  expect(onCommit).toHaveBeenCalledWith('highlight-1', 'Welcome to Foliole', { from: 3, to: 7 });
+  expect(editor.setHighlightRangePreview).toHaveBeenCalledWith('highlight-1', { from: 3, to: 7 });
+  expect(onCommit).toHaveBeenCalledWith('highlight-1', { from: 3, to: 7 });
 });
 
 it('keeps the committed range when pointerup follows pointermove before React state flushes', () => {
@@ -113,7 +113,8 @@ it('keeps the committed range when pointerup follows pointermove before React st
     getDocumentPositionAtClientPoint: vi.fn(() => 3),
     getPositionClientRect: vi.fn((position: number) =>
       position === 3 ? mockRect(70, 80, 8, 20) : mockRect(124, 80, 8, 20)
-    )
+    ),
+    setHighlightRangePreview: vi.fn()
   });
 
   render(
@@ -121,7 +122,6 @@ it('keeps the committed range when pointerup follows pointermove before React st
       editor={editor}
       highlight={{ locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
       onCommit={onCommit}
-      parentContent="Welcome to Foliole"
     />
   );
 
@@ -132,6 +132,6 @@ it('keeps the committed range when pointerup follows pointermove before React st
     document.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
   });
 
-  expect(onCommit).toHaveBeenCalledWith('highlight-1', 'Welcome to Foliole', { from: 3, to: 7 });
+  expect(onCommit).toHaveBeenCalledWith('highlight-1', { from: 3, to: 7 });
   expect(editor.getPositionClientRect).toHaveBeenLastCalledWith(7);
 });

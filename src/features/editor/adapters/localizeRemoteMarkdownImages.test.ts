@@ -27,6 +27,38 @@ describe('localizeRemoteMarkdownImages', () => {
     ).resolves.toBe('Before ![Cover](asset://hash-1.png) after');
   });
 
+  it('moves localized large remote images out of inline text', async () => {
+    importRemoteImageAttachment.mockResolvedValue({
+      status: 'imported',
+      attachment_id: 'hash-1',
+      intrinsic_size: { height: 960, width: 1280 },
+      original_name: 'cover.png'
+    });
+
+    await expect(
+      localizeRemoteMarkdownImages('node-1', 'Before ![Cover](https://example.com/cover.png) after')
+    ).resolves.toBe('Before\n\n![Cover](asset://hash-1.png)\n\nafter');
+  });
+
+  it('does not add spacing when a localized large remote image already occupies a line', async () => {
+    importRemoteImageAttachment.mockResolvedValue({
+      status: 'imported',
+      attachment_id: 'hash-1',
+      intrinsic_size: { height: 960, width: 1280 },
+      original_name: 'cover.png'
+    });
+
+    await expect(
+      localizeRemoteMarkdownImages('node-1', 'Before\n\n![Cover](https://example.com/cover.png)\n\nafter')
+    ).resolves.toBe('Before\n\n![Cover](asset://hash-1.png)\n\nafter');
+  });
+});
+
+describe('localizeRemoteMarkdownImages failures and parser coverage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('keeps the original markdown when download fails', async () => {
     importRemoteImageAttachment.mockResolvedValue({
       status: 'error',

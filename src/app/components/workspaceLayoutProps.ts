@@ -156,7 +156,7 @@ export interface WorkspaceLayoutFlatProps {
   onCreateHighlight: () => void;
   onCreateNote: (note: string) => void;
   onDeleteExistingHighlight: () => void;
-  onAdjustExistingHighlightRange: (highlightNodeId: string, parentContent: string, range: { from: number; to: number }) => boolean;
+  onAdjustExistingHighlightRange: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   onCreateSelectionHighlight: (payload: SelectionCommandPayload) => string | null;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onToggleSelectionHighlight: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;

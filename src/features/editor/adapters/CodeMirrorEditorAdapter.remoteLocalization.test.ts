@@ -63,6 +63,25 @@ it('rewrites remote markdown images by default after editor content changes', as
   adapter.destroy();
 });
 
+it('rewrites large remote images as standalone blocks after editor localization', async () => {
+  importRemoteImageAttachment.mockResolvedValue({
+    status: 'imported',
+    attachment_id: 'hash-1',
+    intrinsic_size: { height: 960, width: 1280 },
+    original_name: 'cover.png'
+  });
+  const { adapter, onChange } = createAdapter();
+
+  adapter.setNodeId('node-1');
+  adapter.replaceSelection('Before ![Remote](https://example.com/cover.png) after');
+  await waitForLocalization();
+
+  expect(adapter.getContent()).toBe('Before\n\n![Remote](asset://hash-1.png)\n\nafter');
+  expect(onChange).toHaveBeenLastCalledWith('Before\n\n![Remote](asset://hash-1.png)\n\nafter', { nodeId: 'node-1' });
+
+  adapter.destroy();
+});
+
 it('rewrites remote markdown images when the setting is explicitly enabled', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'true');
   importRemoteImageAttachment.mockResolvedValue({

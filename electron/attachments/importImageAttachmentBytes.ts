@@ -10,6 +10,7 @@ import {
   findAttachmentRecordById
 } from '../database/attachments.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { buildAttachmentStorageFileName } from './storagePath.js';
@@ -66,21 +67,24 @@ function ensureNodeExists(nodeId: string) {
 function toImportedResult(input: {
   attachment: ReturnType<typeof createAttachmentRecordIfNeeded>['attachment'];
   attachmentRecord: 'created' | 'reused';
+  intrinsicSize: { height: number; width: number } | null;
   mimeType: string;
   sizeBytes: number;
   storedFile: 'created' | 'reused';
 }): NativeImportLocalImageAttachmentResult {
-  return {
-    status: 'imported',
+  const result = {
+    status: 'imported' as const,
     attachment_id: input.attachment.id,
     attachment_record: input.attachmentRecord,
     created_at: input.attachment.createdAt,
     hash: input.attachment.id,
+    intrinsic_size: input.intrinsicSize,
     mime_type: input.mimeType,
     original_name: input.attachment.originalName ?? normalizeImageFileName('', input.mimeType),
     size_bytes: input.sizeBytes,
     stored_file: input.storedFile
   };
+  return result;
 }
 
 async function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
@@ -200,6 +204,7 @@ export async function importImageAttachmentBytes(
   return toImportedResult({
     attachment,
     attachmentRecord,
+    intrinsicSize: readImageIntrinsicSize(input.bytes),
     mimeType: normalizedMimeType,
     sizeBytes: input.bytes.byteLength,
     storedFile

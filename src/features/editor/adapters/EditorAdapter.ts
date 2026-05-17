@@ -71,6 +71,7 @@ export interface EditorAdapter {
   replaceRange(from: number, to: number, content: string): void;
   replaceSelection(content: string): void;
   setTextAnchorDecorations?(textAnchorDecorations: readonly EditorTextAnchorDecoration[]): void;
+  setHighlightRangePreview?(nodeId: string, range: EditorSelection | null): void;
   setReadOnly?(readOnly: boolean): void;
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;
   setSearchDecorations(searchDecorations: EditorSearchDecorations | null): void;

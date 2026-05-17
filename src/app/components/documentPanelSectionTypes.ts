@@ -56,7 +56,7 @@ export interface DocumentPanelSectionProps {
   onCreateHighlight: () => void;
   onCreateNote?: (note: string) => void;
   onDeleteExistingHighlight?: () => void;
-  onAdjustExistingHighlightRange?: (highlightNodeId: string, parentContent: string, range: { from: number; to: number }) => boolean;
+  onAdjustExistingHighlightRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;

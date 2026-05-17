@@ -48,7 +48,6 @@ export function DocumentPanelSectionOverlays({
         editor={editorAdapter}
         highlight={adjustableHighlight}
         onCommit={props.onAdjustExistingHighlightRange ?? (() => false)}
-        parentContent={props.editorContent}
       />
       <DocumentPanelContextMenu
         contextMenu={props.contextMenu}

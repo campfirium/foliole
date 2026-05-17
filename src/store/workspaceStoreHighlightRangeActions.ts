@@ -49,7 +49,7 @@ function buildUpdatedHighlightNode(args: {
 }
 
 export function createUpdateHighlightAnchorRangeAction(set: WorkspaceSet) {
-  return (highlightNodeId: string, parentContent: string, range: HighlightRangeUpdate) => {
+  return (highlightNodeId: string, range: HighlightRangeUpdate) => {
     let nextNodeForSync: Node | null = null;
     set((state) => {
       const node = state.nodesById[highlightNodeId];
@@ -57,12 +57,12 @@ export function createUpdateHighlightAnchorRangeAction(set: WorkspaceSet) {
         return state;
       }
       const parentNode = node.parentNodeId ? state.nodesById[node.parentNodeId] : null;
-      if (!parentNode || parentNode.content !== parentContent) {
+      if (!parentNode) {
         return state;
       }
       const nextNode = buildUpdatedHighlightNode({
         node,
-        parentContent,
+        parentContent: parentNode.content,
         range,
         timestamp: new Date().toISOString()
       });

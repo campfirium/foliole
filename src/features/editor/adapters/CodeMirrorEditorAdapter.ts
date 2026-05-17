@@ -4,9 +4,6 @@ import { EditorView } from '@codemirror/view';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
-import {
-  applyAdapterTextAnchorDecorations,
-} from './codeMirrorEditorAdapterPresentation';
 import { createCodeMirrorEditorAdapterRuntime } from './codeMirrorEditorAdapterRuntime';
 import {
   dispatchReadOnlyReconfigure,
@@ -29,6 +26,10 @@ import {
 } from './codeMirrorEditorMutations';
 import { clampEditorPosition } from './codeMirrorEditorPosition';
 import { getEditorLineBlockHeight, setEditorScrollTop } from './codeMirrorEditorViewport';
+import {
+  applyTextAnchorDecorationsWithHighlightPreview,
+  type HighlightRangePreview
+} from './codeMirrorHighlightRangePreview';
 import { reconfigureCodeMirrorLiveMarkdown } from './codeMirrorLiveMarkdownReconfigure';
 import { applyParagraphMarkerState } from './codeMirrorParagraphMarkerState';
 import { resolvePositionClientRect } from './codeMirrorPositionClientRect';
@@ -73,6 +74,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private view: EditorView;
   private hideTitleHeading = false;
   private textAnchorDecorations: readonly EditorTextAnchorDecoration[];
+  private highlightRangePreview: HighlightRangePreview | null = null;
 
   constructor(private readonly host: HTMLElement, options: CodeMirrorEditorAdapterOptions) {
     this.hideTitleHeading = options.hideTitleHeading === true;
@@ -171,12 +173,20 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
   setTextAnchorDecorations(textAnchorDecorations: readonly EditorTextAnchorDecoration[]) {
     this.textAnchorDecorations = textAnchorDecorations;
-    applyAdapterTextAnchorDecorations({
+    this.applyTextAnchorDecorationsWithPreview();
+    this.reconfigureLiveMarkdown();
+  }
+  setHighlightRangePreview(nodeId: string, range: EditorSelection | null) {
+    this.highlightRangePreview = range ? { nodeId, range } : null;
+    this.applyTextAnchorDecorationsWithPreview();
+  }
+  private applyTextAnchorDecorationsWithPreview() {
+    applyTextAnchorDecorationsWithHighlightPreview({
       compartment: this.textAnchorDecorationsCompartment,
-      textAnchorDecorations,
+      preview: this.highlightRangePreview,
+      textAnchorDecorations: this.textAnchorDecorations,
       view: this.view
     });
-    this.reconfigureLiveMarkdown();
   }
   getSelection(): EditorSelection {
     const { from, to } = this.view.state.selection.main;
