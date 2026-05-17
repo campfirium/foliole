@@ -181,7 +181,14 @@ it('merges the GTD article case with the full set of highlights', async () => {
 });
 
 it('localizes shared remote images before matching manually merged readwise highlights', async () => {
-  vi.mocked(fetch).mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), {
+  const largePngBytes = new Uint8Array([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    0x00, 0x00, 0x00, 0x0d,
+    0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x05, 0x00,
+    0x00, 0x00, 0x03, 0xc0
+  ]);
+  vi.mocked(fetch).mockResolvedValue(new Response(largePngBytes, {
     headers: { 'content-type': 'image/png' },
     status: 200
   }));
@@ -190,9 +197,7 @@ it('localizes shared remote images before matching manually merged readwise high
       content: [
         '# Article',
         '',
-        '![Avatar](https://cdn.example.com/avatar.png)',
-        '',
-        '大罗SEO target sentence.'
+        'Lead ![Avatar](https://cdn.example.com/avatar.png)'
       ].join('\n'),
       fileName: 'article.md',
       filePath: '/tmp/article.md',
@@ -207,8 +212,7 @@ it('localizes shared remote images before matching manually merged readwise high
       '',
       '## Highlights',
       '',
-      '- ![Avatar](https://cdn.example.com/avatar.png)',
-      '  大罗SEO target sentence.'
+      '- ![Avatar](https://cdn.example.com/avatar.png) ([View Highlight](https://read.readwise.io/read/01image))'
     ].join('\n')
   );
 
@@ -225,8 +229,10 @@ it('localizes shared remote images before matching manually merged readwise high
     .all(imported.nodeId as string);
 
   expect(fetch).toHaveBeenCalledTimes(1);
-  expect(state.node?.content).toContain('![Avatar](asset://');
+  expect(state.children).toHaveLength(1);
+  expect(state.node?.content).toContain('Lead\n\n![Avatar](asset://');
   expect(state.children[0]?.content).toContain('![Avatar](asset://');
+  expect(state.children[0]?.content).not.toContain('View Highlight');
   expect(locator?.originalText).toContain('![Avatar](asset://');
   expect(locator ? state.node?.content.slice(locator.from, locator.to) : null).toBe(locator?.originalText);
   expect(attachmentRows).toHaveLength(1);
