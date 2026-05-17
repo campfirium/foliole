@@ -5,33 +5,30 @@ import {
 } from '../../lib/core/import/importManagerSettings.js';
 import type {
   NativeReadwiseImportRunFailedSource,
-  NativeReadwiseImportRunProgressEvent,
   NativeReadwiseImportRunResult
 } from '../../lib/platform/nativeImportContract.js';
-import { IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL } from '../ipc/contracts.js';
 
 import { loadImportManagerSettings, saveImportManagerSettings } from './importManagerSettings.js';
-import { runKeepImportRule } from './keepImportService.js';
+import type { KeepImportProgressEvent } from './keepImportProgress.js';
+import { isKeepImportAbortError, throwIfKeepImportAborted } from './keepImportProgress.js';
+import { requestKeepImportRuleRun } from './keepImportService.js';
+import { runReadwiseBooksSource } from './readwiseReaderBooksRun.js';
+import {
+  createRunAccumulator,
+  publishAccumulatorProgress,
+  toReadwiseImportRunResult,
+  type ReadwiseImportProgressWindow,
+  type ReadwiseRunAccumulator
+} from './readwiseReaderRunAccumulator.js';
 
 type EnabledReadwiseSource = ImportManagerSourceDraft & { kind: ReadwiseSourceKind };
-type ReadwiseImportProgressWindow = {
-  isDestroyed: () => boolean;
-  webContents: {
-    send: (channel: string, payload: NativeReadwiseImportRunProgressEvent) => void;
-  };
-};
-interface ReadwiseRunAccumulator {
-  entryCount: number;
-  failedCount: number;
-  failedSources: NativeReadwiseImportRunFailedSource[];
-  importedCount: number;
-  processedCount: number;
-  skippedCount: number;
-  totalCount: number;
-  window?: ReadwiseImportProgressWindow | null;
+
+interface ActiveReadwiseReaderImport {
+  controller: AbortController;
+  promise: Promise<NativeReadwiseImportRunResult>;
 }
 
-let activeReadwiseReaderImport: Promise<NativeReadwiseImportRunResult> | null = null;
+let activeReadwiseReaderImport: ActiveReadwiseReaderImport | null = null;
 
 function isEnabledReadwiseSource(
   source: ImportManagerSourceDraft
@@ -39,7 +36,6 @@ function isEnabledReadwiseSource(
   return (
     source.keepState === 'enabled' &&
     Boolean(source.kind) &&
-    source.kind !== 'books' &&
     source.primaryPath.trim().length > 0 &&
     source.highlightPath.trim().length > 0
   );
@@ -51,11 +47,17 @@ function resolveRunSettings(input?: { settings?: unknown }) {
     : loadImportManagerSettings();
 }
 
-async function runReadwiseSource(source: EnabledReadwiseSource) {
-  return runKeepImportRule({
+async function runReadwiseSource(
+  source: EnabledReadwiseSource,
+  onProgress: (event: KeepImportProgressEvent) => void,
+  signal?: AbortSignal
+) {
+  return requestKeepImportRuleRun({
     directoryPath: source.primaryPath,
     highlightPolicy: 'reference_only',
+    onProgress,
     ruleId: source.id,
+    ...(signal ? { signal } : {}),
     sourceType: 'readwise'
   });
 }
@@ -86,16 +88,6 @@ function toFailedReadwiseSource(
   };
 }
 
-function publishReadwiseReaderImportProgress(
-  window: ReadwiseImportProgressWindow | null | undefined,
-  payload: NativeReadwiseImportRunProgressEvent
-) {
-  if (!window || window.isDestroyed()) {
-    return;
-  }
-  window.webContents.send(IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL, payload);
-}
-
 function countImportedEntries(entries: Awaited<ReturnType<typeof runReadwiseSource>>) {
   return entries.filter(
     (entry) =>
@@ -105,43 +97,22 @@ function countImportedEntries(entries: Awaited<ReturnType<typeof runReadwiseSour
   ).length;
 }
 
-function createRunAccumulator(
-  sources: EnabledReadwiseSource[],
-  window: ReadwiseImportProgressWindow | null | undefined
-): ReadwiseRunAccumulator {
-  return {
-    entryCount: 0,
-    failedCount: 0,
-    failedSources: [],
-    importedCount: 0,
-    processedCount: 0,
-    skippedCount: 0,
-    totalCount: sources.length,
-    ...(window ? { window } : {})
-  };
-}
-
-function publishAccumulatorProgress(
-  accumulator: ReadwiseRunAccumulator,
-  status: NativeReadwiseImportRunProgressEvent['status'] = 'running'
-) {
-  publishReadwiseReaderImportProgress(accumulator.window, {
-    processedCount: accumulator.processedCount,
-    status,
-    totalCount: accumulator.totalCount
-  });
-}
-
 async function applyReadwiseSourceRun(
   source: EnabledReadwiseSource,
   accumulator: ReadwiseRunAccumulator
 ) {
   try {
-    const entries = await runReadwiseSource(source);
+    throwIfKeepImportAborted(accumulator.signal);
+    const entries = await runReadwiseSource(source, (progress) => {
+      publishAccumulatorProgress(accumulator, 'running', progress);
+    }, accumulator.signal);
     accumulator.entryCount += entries.length;
     accumulator.importedCount += countImportedEntries(entries);
     accumulator.skippedCount += entries.filter((entry) => entry.action === 'skipped').length;
   } catch (error) {
+    if (isKeepImportAbortError(error)) {
+      throw error;
+    }
     if (!isMissingReadwiseSourceDirectory(error)) {
       accumulator.failedCount += 1;
       accumulator.failedSources.push(toFailedReadwiseSource(source, error));
@@ -151,20 +122,25 @@ async function applyReadwiseSourceRun(
   publishAccumulatorProgress(accumulator);
 }
 
-function toReadwiseImportRunResult(
-  accumulator: ReadwiseRunAccumulator,
-  status: NativeReadwiseImportRunResult['status']
-): NativeReadwiseImportRunResult {
-  return {
-    completed_at: new Date().toISOString(),
-    entry_count: accumulator.entryCount,
-    failed_count: accumulator.failedCount,
-    ...(accumulator.failedSources.length ? { failed_sources: accumulator.failedSources } : {}),
-    imported_count: accumulator.importedCount,
-    source_count: accumulator.totalCount,
-    skipped_count: accumulator.skippedCount,
-    status
-  };
+async function applyReadwiseBooksRun(
+  source: EnabledReadwiseSource,
+  accumulator: ReadwiseRunAccumulator
+) {
+  try {
+    const result = await runReadwiseBooksSource(source, accumulator.readwiseConfig, accumulator.signal);
+    accumulator.entryCount += result.entryCount;
+    accumulator.importedCount += result.importedCount;
+  } catch (error) {
+    if (isKeepImportAbortError(error)) {
+      throw error;
+    }
+    if (!isMissingReadwiseSourceDirectory(error)) {
+      accumulator.failedCount += 1;
+      accumulator.failedSources.push(toFailedReadwiseSource(source, error));
+    }
+  }
+  accumulator.processedCount += 1;
+  publishAccumulatorProgress(accumulator);
 }
 
 export async function runReadwiseReaderImport(input?: {
@@ -172,18 +148,30 @@ export async function runReadwiseReaderImport(input?: {
   window?: ReadwiseImportProgressWindow | null;
 }): Promise<NativeReadwiseImportRunResult> {
   if (activeReadwiseReaderImport) {
-    return activeReadwiseReaderImport;
+    return activeReadwiseReaderImport.promise;
   }
-  activeReadwiseReaderImport = runReadwiseReaderImportNow(input).finally(() => {
-    activeReadwiseReaderImport = null;
+  const controller = new AbortController();
+  const promise = runReadwiseReaderImportNow(input, controller.signal).finally(() => {
+    if (activeReadwiseReaderImport?.controller === controller) {
+      activeReadwiseReaderImport = null;
+    }
   });
-  return activeReadwiseReaderImport;
+  activeReadwiseReaderImport = { controller, promise };
+  return promise;
+}
+
+export function cancelReadwiseReaderImport() {
+  if (!activeReadwiseReaderImport) {
+    return { status: 'idle' as const };
+  }
+  activeReadwiseReaderImport.controller.abort();
+  return { status: 'cancelled' as const };
 }
 
 async function runReadwiseReaderImportNow(input?: {
   settings?: unknown;
   window?: ReadwiseImportProgressWindow | null;
-}): Promise<NativeReadwiseImportRunResult> {
+}, signal?: AbortSignal): Promise<NativeReadwiseImportRunResult> {
   const settings = resolveRunSettings(input);
   if (!settings.readwiseReaderConfig.enabled) {
     return {
@@ -197,11 +185,29 @@ async function runReadwiseReaderImportNow(input?: {
     };
   }
   const sources = settings.readwiseSources.filter(isEnabledReadwiseSource);
-  const accumulator = createRunAccumulator(sources, input?.window);
+  const accumulator = createRunAccumulator({
+    readwiseConfig: settings.readwiseReaderConfig,
+    ...(signal ? { signal } : {}),
+    sourceCount: sources.length,
+    ...(input?.window ? { window: input.window } : {})
+  });
   publishAccumulatorProgress(accumulator);
 
-  for (const source of sources) {
-    await applyReadwiseSourceRun(source, accumulator);
+  try {
+    for (const source of sources) {
+      throwIfKeepImportAborted(signal);
+      if (source.kind === 'books') {
+        await applyReadwiseBooksRun(source, accumulator);
+      } else {
+        await applyReadwiseSourceRun(source, accumulator);
+      }
+    }
+  } catch (error) {
+    if (!isKeepImportAbortError(error)) {
+      throw error;
+    }
+    publishAccumulatorProgress(accumulator, 'cancelled');
+    return toReadwiseImportRunResult(accumulator, 'cancelled');
   }
 
   const status = accumulator.failedCount > 0 ? 'failed' : 'completed';

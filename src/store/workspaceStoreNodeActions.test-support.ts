@@ -42,6 +42,7 @@ function createWorkspaceActionStubs() {
     setActiveNode: () => undefined,
     updateNodeTitle: () => undefined,
     updateNodeContent: () => undefined,
+    updateHighlightAnchorRange: () => false,
     updateVirtualNodeFilter: () => undefined,
     updateNodeReveal: () => undefined,
     updateNodePriority: () => undefined,

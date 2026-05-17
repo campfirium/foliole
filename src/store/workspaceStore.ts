@@ -47,6 +47,7 @@ export interface WorkspaceState {
   setActiveNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, title: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
+  updateHighlightAnchorRange?: (highlightNodeId: string, parentContent: string, range: { from: number; to: number }) => boolean;
   updateVirtualNodeFilter: (nodeId: string, value: string) => void;
   updateNodeReveal: (nodeId: string, reveal: string) => void;
   updateNodePriority: (nodeId: string, priority: number | null) => void;

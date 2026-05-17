@@ -21,6 +21,7 @@ export interface EditorSearchDecorations {
 export interface EditorTextAnchorDecoration {
   from: number;
   kind: 'cloze' | 'highlight';
+  nodeId?: string;
   to: number;
 }
 
@@ -45,7 +46,9 @@ export interface EditorAdapter {
   focus(): void;
   getContent(): string;
   getDocumentPositionAtViewportY(clientY: number): number | null;
+  getDocumentPositionAtClientPoint?(clientX: number, clientY: number): number | null;
   getPrimaryVisiblePosition?(): number | null;
+  getPositionClientRect?(position: number): DOMRect | null;
   getPositionViewportTop?(position: number): number | null;
   isPositionNearViewportRatio?(position: number, ratio: number, toleranceRatio?: number): boolean;
   getViewportRect?(): DOMRect | null;

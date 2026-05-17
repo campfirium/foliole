@@ -1,5 +1,6 @@
 import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
+import { startSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
 import { startDesktopTaskWatchdog } from './desktopTaskWatchdog.js';
 import { startExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import { startKeepImportMonitor } from './import/keepImportMonitor.js';
@@ -25,6 +26,7 @@ export function startFollowupTasks() {
   runStartupTask('[mirror] startup backfill failed', backfillMissingMirrorOutput);
   runStartupTask('[storage] legacy webview migration failed', () => migrateLegacyWebviewStorage());
   runStartupTask('[pdf] pending indexing resume failed', resumePendingPdfAttachmentIndexing);
+  runStartupTask('[search] invalidation scheduler failed', startSearchIndexInvalidationScheduler);
   void appendBootEvent('startup_followup_tasks_started');
   runStartupTask('[managed-inbox] startup monitor failed', startManagedInboxMonitor);
   runStartupTask('[keep-import] startup monitor failed', startKeepImportMonitor);

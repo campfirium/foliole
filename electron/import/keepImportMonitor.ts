@@ -38,6 +38,7 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
     async runCycle(config) {
       await runKeepImportRule({
         directoryPath: config.directoryPath,
+        highlightMode: config.highlightMode,
         highlightPolicy: config.highlightPolicy,
         ruleId: config.adapterConfigId,
         sourceType: config.sourceType
@@ -176,6 +177,7 @@ export function createKeepImportMonitor(
       if (
         existingState &&
         existingState.config.directoryPath === config.directoryPath &&
+        existingState.config.highlightMode === config.highlightMode &&
         existingState.config.highlightPolicy === config.highlightPolicy &&
         existingState.config.watchPaths.join('\u001f') === config.watchPaths.join('\u001f')
       ) {

@@ -5,7 +5,7 @@ import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
 import { applyParentContentChange } from './parentContentMutation.js';
-import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 const INBOX_NODE_ID = 'special-inbox';
 
@@ -91,7 +91,7 @@ export function writeNewNode(input: {
       input.importedAt
     ]
   );
-  syncWorkspaceSearchIndexForNodeIds(input.driver, [nodeId]);
+  enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, [nodeId]);
   return nodeId;
 }
 
@@ -123,7 +123,7 @@ export function updateExistingNode(input: {
     updatedAt: input.importedAt
   });
   if (!contentChange.written) {
-    syncWorkspaceSearchIndexForNodeIds(input.driver, [input.existingNode.id]);
+    enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, [input.existingNode.id]);
   }
   return input.existingNode.id;
 }

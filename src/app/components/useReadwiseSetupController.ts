@@ -23,6 +23,7 @@ export type { ReadwiseSetupPayload } from './useReadwiseSyncPreviewFlow';
 
 interface SettingsReadwiseReaderContentProps {
   config: ReadwiseReaderConfig;
+  onCancelSync?: () => Promise<unknown>;
   onPreviewSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseSyncPreviewResult | null>;
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
   onSave: (input: ReadwiseSetupPayload) => void;
@@ -142,6 +143,7 @@ export function useReadwiseSetupController(props: SettingsReadwiseReaderContentP
   const sync = useReadwiseSyncPreviewFlow({
     draft,
     ...definedProps({
+      onCancelSync: props.onCancelSync,
       onPreviewSync: props.onPreviewSync,
       onRunSync: props.onRunSync
     })
@@ -176,6 +178,7 @@ export function useReadwiseSetupController(props: SettingsReadwiseReaderContentP
       }
       void manualSync.runManualSync();
     },
+    isCancellingSync: sync.isCancellingSync,
     isStartingSync: sync.isStartingSync,
     isSyncPreviewing: sync.isSyncPreviewing,
     manualSyncStatus: manualSync.manualSyncStatus,
@@ -185,6 +188,7 @@ export function useReadwiseSetupController(props: SettingsReadwiseReaderContentP
     syncIntent: sync.syncIntent,
     syncIsRunning: manualSync.isManualSyncing,
     syncNotice: sync.syncNotice,
+    syncProgress: sync.syncProgress,
     syncPreview: sync.syncPreview
   };
 }

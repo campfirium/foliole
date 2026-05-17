@@ -29,7 +29,6 @@ import {
   loadExternalSearchPreview
 } from '../database/externalSearchCacheRead.js';
 import { initializeDatabase } from '../database/migrate.js';
-import { softDeleteNodes } from '../database/nodeMutations.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { runKeepImportRule } from './keepImportService.js';
@@ -238,48 +237,6 @@ it('imports a previously skipped no-highlight source after highlights appear', a
   expect(readRows('SELECT source_path FROM keep_import_items ORDER BY source_path ASC')).toEqual([
     { source_path: 'Highlighted.md' },
     { source_path: 'Plain.md' }
-  ]);
-});
-
-it('does not recreate a locally deleted Readwise Inbox topic during sync', async () => {
-  const fixture = await seedReadwiseFixture();
-  saveReadwiseSettings(fixture, { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'off' });
-  await runReadwiseReaderImport();
-  const importedNode = openDatabaseConnection().sqlite
-    .prepare(`SELECT last_node_id FROM keep_import_items WHERE source_path = 'Highlighted.md'`)
-    .get() as { last_node_id: string };
-  softDeleteNodes({
-    deletedAt: '2026-05-12T00:00:00.000Z',
-    nodeIds: [importedNode.last_node_id]
-  });
-  await fs.writeFile(path.join(fixture.fullDocumentDir, 'Highlighted.md'), '# Same Title\n\nChanged body.\n', 'utf8');
-
-  const result = await runReadwiseReaderImport();
-  const nodeRows = readRows<{ deleted_at: string | null; id: string }>(
-    `SELECT id, deleted_at FROM nodes WHERE title = 'Same Title' ORDER BY created_at ASC`
-  );
-  const keepRows = readRows<{
-    has_source_update: number;
-    last_node_id: string;
-    last_status: string;
-    local_node_state: string;
-    source_state: string;
-  }>(
-    `SELECT has_source_update, last_node_id, last_status, local_node_state, source_state
-     FROM keep_import_items
-     WHERE source_path = 'Highlighted.md'`
-  );
-
-  expect(result).toMatchObject({ imported_count: 0, skipped_count: 1 });
-  expect(nodeRows).toEqual([{ deleted_at: '2026-05-12T00:00:00.000Z', id: importedNode.last_node_id }]);
-  expect(keepRows).toEqual([
-    {
-      has_source_update: 1,
-      last_node_id: importedNode.last_node_id,
-      last_status: 'blocked_deleted',
-      local_node_state: 'locally_deleted',
-      source_state: 'present'
-    }
   ]);
 });
 

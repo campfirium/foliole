@@ -6,7 +6,6 @@ import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import {
   applyAdapterTextAnchorDecorations,
-  reconfigureAdapterLiveMarkdownState
 } from './codeMirrorEditorAdapterPresentation';
 import { createCodeMirrorEditorAdapterRuntime } from './codeMirrorEditorAdapterRuntime';
 import {
@@ -30,7 +29,9 @@ import {
 } from './codeMirrorEditorMutations';
 import { clampEditorPosition } from './codeMirrorEditorPosition';
 import { getEditorLineBlockHeight, setEditorScrollTop } from './codeMirrorEditorViewport';
+import { reconfigureCodeMirrorLiveMarkdown } from './codeMirrorLiveMarkdownReconfigure';
 import { applyParagraphMarkerState } from './codeMirrorParagraphMarkerState';
+import { resolvePositionClientRect } from './codeMirrorPositionClientRect';
 import {
   restoreEditorSelection,
   revealEditorSelection,
@@ -117,7 +118,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   focus() { this.view.focus(); }
   getContent() { return this.view.state.doc.toString(); }
   getDocumentPositionAtViewportY(clientY: number) { return resolveDocumentPositionAtViewportY(this.view, clientY); }
+  getDocumentPositionAtClientPoint(clientX: number, clientY: number) { return this.view.posAtCoords({ x: clientX, y: clientY }, false); }
   getPrimaryVisiblePosition() { return resolvePrimaryVisiblePosition(this.view); }
+  getPositionClientRect(position: number) { return resolvePositionClientRect(this.view, this.clampPosition(position)); }
   getPositionViewportTop(position: number) {
     return resolvePositionViewportTop(this.view, this.clampPosition(position))?.viewportTop ?? null;
   }
@@ -246,19 +249,5 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     };
   }
   onScroll(listener: Parameters<typeof subscribeToEditorScroll>[1]) { return subscribeToEditorScroll(this.view, listener); }
-  private reconfigureLiveMarkdown() {
-    reconfigureAdapterLiveMarkdownState({
-      liveMarkdownStateCompartment: this.liveMarkdownStateCompartment,
-      textAnchorDecorations: this.textAnchorDecorations,
-      hideTitleHeading: this.hideTitleHeading,
-      imageClozePresentationVersion: this.imageClozePresentationVersion,
-      nodeId: this.nodeId,
-      onMissingAttachmentResource: this.onMissingAttachmentResource,
-      onOpenExternalLink: this.onOpenExternalLink,
-      onOpenNodeLink: this.onOpenNodeLink,
-      onPreviewNodeLink: this.onPreviewNodeLink,
-      onPastedAnchors: this.onPastedAnchors,
-      view: this.view
-    });
-  }
+  private reconfigureLiveMarkdown() { reconfigureCodeMirrorLiveMarkdown({ liveMarkdownStateCompartment: this.liveMarkdownStateCompartment, textAnchorDecorations: this.textAnchorDecorations, hideTitleHeading: this.hideTitleHeading, imageClozePresentationVersion: this.imageClozePresentationVersion, nodeId: this.nodeId, onMissingAttachmentResource: this.onMissingAttachmentResource, onOpenExternalLink: this.onOpenExternalLink, onOpenNodeLink: this.onOpenNodeLink, onPreviewNodeLink: this.onPreviewNodeLink, onPastedAnchors: this.onPastedAnchors, view: this.view }); }
 }

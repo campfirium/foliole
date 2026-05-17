@@ -5,6 +5,7 @@ import {
   runReadwiseImportCleanupInRuntime
 } from '../../shared/platform/readwiseImportCleanupRuntimeRepository';
 import {
+  cancelReadwiseReaderImportInRuntime,
   previewReadwiseReaderImportInRuntime,
   runReadwiseReaderImportInRuntime
 } from '../../shared/platform/readwiseReaderImportRuntimeRepository';
@@ -41,6 +42,7 @@ export function createReadwiseReaderImportActions(
       setSettings(() => nextSettings);
       return runReadwiseReaderImportInRuntime(nextSettings);
     },
+    cancelReadwiseReaderImport: cancelReadwiseReaderImportInRuntime,
     previewReadwiseImportCleanup: previewReadwiseImportCleanupInRuntime,
     runReadwiseImportCleanup: runReadwiseImportCleanupInRuntime
   };

@@ -23,35 +23,41 @@ async function listMarkdownFiles(directoryPath: string) {
 
 function createScanResult(input: {
   candidateCount: number;
+  highlightOnlySourceCount: number;
   highlightedArticleCount: number;
   highlightedHighlightCount: number;
   message: string;
   sampledArticle: NativeReadwiseDetectionResult | null;
   totalArticleCount: number;
+  unparsedHighlightFileCount: number;
 }): NativeReadwiseDetectionResult {
   const samples = input.sampledArticle?.samples ?? [];
   const matchedHighlightCount = samples.filter((sample: NativeReadwiseDetectionSample) => sample.matched).length;
   return {
     checkedSourceCount: input.candidateCount,
     detectedHighlightCount: input.highlightedHighlightCount,
+    highlightOnlySourceCount: input.highlightOnlySourceCount,
     highlightedArticleCount: input.highlightedArticleCount,
     matchedHighlightCount,
     message: input.message,
     sampleCount: samples.length,
     samples,
     success: samples.length > 0 && matchedHighlightCount === samples.length,
-    totalArticleCount: input.totalArticleCount
+    totalArticleCount: input.totalArticleCount,
+    unparsedHighlightFileCount: input.unparsedHighlightFileCount
   };
 }
 
 function createNoHighlightedArticlesResult(totalArticleCount: number) {
   return createScanResult({
     candidateCount: 0,
+    highlightOnlySourceCount: 0,
     highlightedArticleCount: 0,
     highlightedHighlightCount: 0,
     message: 'No articles with highlights were found in the selected Readwise folders.',
     sampledArticle: null,
-    totalArticleCount
+    totalArticleCount,
+    unparsedHighlightFileCount: 0
   });
 }
 
@@ -82,6 +88,7 @@ async function inspectReadwiseSampleFiles(input: {
   let highlightedArticleCount = 0;
   let highlightedHighlightCount = 0;
   let sampledArticle: NativeReadwiseDetectionResult | null = null;
+  const fullDocumentFileNames = new Set(fullDocumentFiles);
 
   for (const fileName of markdownFiles) {
     const result = await inspectReadwiseSidecarFile(input, fileName);
@@ -94,10 +101,12 @@ async function inspectReadwiseSampleFiles(input: {
 
   return {
     candidateNames: markdownFiles,
+    highlightOnlySourceCount: markdownFiles.filter((fileName) => !fullDocumentFileNames.has(fileName)).length,
     highlightedArticleCount,
     highlightedHighlightCount,
     sampledArticle,
-    totalArticleCount: fullDocumentFiles.length
+    totalArticleCount: fullDocumentFiles.length,
+    unparsedHighlightFileCount: markdownFiles.length - highlightedArticleCount
   };
 }
 
@@ -150,17 +159,21 @@ function combineReadwiseSourceInspections(inspections: Awaited<ReturnType<typeof
   return inspections.reduce(
     (combined, inspection) => ({
       candidateCount: combined.candidateCount + inspection.candidateNames.length,
+      highlightOnlySourceCount: combined.highlightOnlySourceCount + inspection.highlightOnlySourceCount,
       highlightedArticleCount: combined.highlightedArticleCount + inspection.highlightedArticleCount,
       highlightedHighlightCount: combined.highlightedHighlightCount + inspection.highlightedHighlightCount,
       sampledArticle: combined.sampledArticle ?? inspection.sampledArticle,
-      totalArticleCount: combined.totalArticleCount + inspection.totalArticleCount
+      totalArticleCount: combined.totalArticleCount + inspection.totalArticleCount,
+      unparsedHighlightFileCount: combined.unparsedHighlightFileCount + inspection.unparsedHighlightFileCount
     }),
     {
       candidateCount: 0,
+      highlightOnlySourceCount: 0,
       highlightedArticleCount: 0,
       highlightedHighlightCount: 0,
       sampledArticle: null as NativeReadwiseDetectionResult | null,
-      totalArticleCount: 0
+      totalArticleCount: 0,
+      unparsedHighlightFileCount: 0
     }
   );
 }
@@ -181,11 +194,13 @@ export async function inspectReadwiseSources(input: {
   if (!inspectedFiles.sampledArticle) {
     return createScanResult({
       candidateCount: inspectedFiles.candidateCount,
+      highlightOnlySourceCount: inspectedFiles.highlightOnlySourceCount,
       highlightedArticleCount: inspectedFiles.highlightedArticleCount,
       highlightedHighlightCount: inspectedFiles.highlightedHighlightCount,
       message: 'No article with highlights was found in the selected Readwise folders.',
       sampledArticle: null,
-      totalArticleCount: inspectedFiles.totalArticleCount
+      totalArticleCount: inspectedFiles.totalArticleCount,
+      unparsedHighlightFileCount: inspectedFiles.unparsedHighlightFileCount
     });
   }
 
@@ -193,6 +208,7 @@ export async function inspectReadwiseSources(input: {
   const matchedHighlightCount = samples.filter((sample) => sample.matched).length;
   return createScanResult({
     candidateCount: inspectedFiles.candidateCount,
+    highlightOnlySourceCount: inspectedFiles.highlightOnlySourceCount,
     highlightedArticleCount: inspectedFiles.highlightedArticleCount,
     highlightedHighlightCount: inspectedFiles.highlightedHighlightCount,
     message:
@@ -200,6 +216,7 @@ export async function inspectReadwiseSources(input: {
         ? 'The sample article imported correctly.'
         : 'Detection finished, but some sampled highlights could not be matched back to the article body.',
     sampledArticle: inspectedFiles.sampledArticle,
-    totalArticleCount: inspectedFiles.totalArticleCount
+    totalArticleCount: inspectedFiles.totalArticleCount,
+    unparsedHighlightFileCount: inspectedFiles.unparsedHighlightFileCount
   });
 }

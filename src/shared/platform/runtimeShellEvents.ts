@@ -46,8 +46,34 @@ function isReadwiseReaderImportProgressPayload(
     progress.processedCount >= 0 &&
     progress.totalCount >= 0 &&
     progress.processedCount <= progress.totalCount &&
+    hasValidProgressPair(progress.sourceProcessedCount, progress.sourceTotalCount) &&
+    hasValidProgressPair(progress.highlightProcessedCount, progress.highlightTotalCount) &&
+    hasValidProgressPair(progress.indexProcessedCount, progress.indexTotalCount) &&
+    isOptionalNonNegative(progress.indexPendingCount) &&
+    isOptionalNonNegative(progress.indexFailedCount) &&
+    isOptionalNonNegative(progress.importWriteElapsedMs) &&
+    isOptionalNonNegative(progress.indexElapsedMs) &&
+    isValidReadwiseProgressPhase(progress.phase) &&
     (progress.status === 'running' || progress.status === 'completed' || progress.status === 'failed')
   );
+}
+
+function hasValidProgressPair(processed: number | undefined, total: number | undefined) {
+  return processed === undefined ||
+    total === undefined ||
+    (Number.isFinite(processed) && Number.isFinite(total) && processed >= 0 && total >= 0 && processed <= total);
+}
+
+function isOptionalNonNegative(value: number | undefined) {
+  return value === undefined || (Number.isFinite(value) && value >= 0);
+}
+
+function isValidReadwiseProgressPhase(phase: ReadwiseReaderImportProgressPayload['phase']) {
+  return phase === undefined ||
+    phase === 'indexing' ||
+    phase === 'scanning' ||
+    phase === 'writing' ||
+    phase === 'source_completed';
 }
 
 export async function onReadwiseReaderImportProgress(

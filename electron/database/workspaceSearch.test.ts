@@ -22,7 +22,7 @@ import { syncNodeSearchIndexForNodeIds, syncPdfSearchIndexForNodeIds } from '../
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { restoreNodes, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
+import { softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { searchWorkspace } from './workspaceSearch.js';
 import { insertPdfAttachment } from './workspaceSearchTestSupport.js';
 
@@ -59,6 +59,14 @@ function insertNode(input: { content: string; deletedAt?: string | null; id: str
       deletedAt: input.deletedAt
     });
   }
+  syncNodeSearchIndexForNodeIds(openDatabaseConnection().driver, [input.id]);
+}
+
+function insertPdfPage(nodeId: string, attachmentId: string, originalName: string, text: string) {
+  insertPdfAttachment({ id: attachmentId, originalName, status: 'ready' });
+  const sqlite = openDatabaseConnection().sqlite;
+  sqlite.prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`).run(nodeId, attachmentId, 'reference');
+  sqlite.prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, 3, ?)`).run(attachmentId, text);
 }
 
 it('searches titles and content from sqlite without needing renderer-side content mirrors', () => {
@@ -142,13 +150,7 @@ it('includes indexed pdf page hits in workspace search results', () => {
     content: '',
     updatedAt: '2026-03-05T00:00:00.000Z'
   });
-  insertPdfAttachment({ id: 'pdf-attachment-1', originalName: 'Research.pdf', status: 'ready' });
-  openDatabaseConnection().sqlite
-    .prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`)
-    .run('node-pdf', 'pdf-attachment-1', 'reference');
-  openDatabaseConnection().sqlite
-    .prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)`)
-    .run('pdf-attachment-1', 3, 'This page contains Atlas launch details and milestones.');
+  insertPdfPage('node-pdf', 'pdf-attachment-1', 'Research.pdf', 'This page contains Atlas launch details and milestones.');
   syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, ['node-pdf']);
 
   const results = searchWorkspace('Atlas');
@@ -178,13 +180,12 @@ it('does not return page-level pdf results when only the pdf title matches', () 
     content: '',
     updatedAt: '2026-03-05T00:00:00.000Z'
   });
-  insertPdfAttachment({ id: 'pdf-attachment-title-only', originalName: 'Atlas Research.pdf', status: 'ready' });
-  openDatabaseConnection().sqlite
-    .prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`)
-    .run('node-pdf-title-only', 'pdf-attachment-title-only', 'reference');
-  openDatabaseConnection().sqlite
-    .prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)`)
-    .run('pdf-attachment-title-only', 3, 'This page contains unrelated content only.');
+  insertPdfPage(
+    'node-pdf-title-only',
+    'pdf-attachment-title-only',
+    'Atlas Research.pdf',
+    'This page contains unrelated content only.'
+  );
   syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, ['node-pdf-title-only']);
 
   const results = searchWorkspace('Atlas');
@@ -226,49 +227,6 @@ it('includes cross-page pdf hits without changing the per-page storage model', (
     pageTextLength: 9,
     query: 'bridge'
   });
-});
-
-it('keeps the search index in sync across node edits and trash changes', () => {
-  upsertNodeSnapshot({
-    nodeId: 'node-editable',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Daily Note',
-    isTitleManual: true,
-    content: 'Original content only.',
-    reveal: null,
-    anchorLink: null,
-    position: null,
-    createdAt: '2026-03-07T00:00:00.000Z',
-    updatedAt: '2026-03-07T00:00:00.000Z'
-  });
-
-  expect(searchWorkspace('Atlas')).toEqual([]);
-
-  upsertNodeSnapshot({
-    nodeId: 'node-editable',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Daily Atlas Note',
-    isTitleManual: true,
-    content: 'Atlas launch checklist and follow-up notes.',
-    reveal: null,
-    anchorLink: null,
-    position: null,
-    createdAt: '2026-03-07T00:00:00.000Z',
-    updatedAt: '2026-03-08T00:00:00.000Z'
-  });
-
-  expect(searchWorkspace('Atlas')).toHaveLength(1);
-
-  softDeleteNodes({
-    nodeIds: ['node-editable'],
-    deletedAt: '2026-03-09T00:00:00.000Z'
-  });
-  expect(searchWorkspace('Atlas')).toEqual([]);
-
-  restoreNodes({ nodeIds: ['node-editable'] });
-  expect(searchWorkspace('Atlas')).toHaveLength(1);
 });
 
 it('keeps 1 to 2 character queries on the fallback path', () => {

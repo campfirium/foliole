@@ -21,7 +21,7 @@ const NODE_PATHS_CTE_SQL = `WITH RECURSIVE node_paths(node_id, path) AS (
     WHERE child.deleted_at IS NULL
   )`;
 
-const NODE_SEARCH_INSERT_SQL = `${NODE_PATHS_CTE_SQL}
+const NODE_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
   INSERT INTO node_search (title, path, content, node_id, updated_at)
   SELECT trim(n.title), COALESCE(paths.path, ''), COALESCE(CAST(cbd.data AS TEXT), n.content), n.id, n.updated_at
   FROM nodes n
@@ -29,10 +29,10 @@ const NODE_SEARCH_INSERT_SQL = `${NODE_PATHS_CTE_SQL}
     ON paths.node_id = n.id
   LEFT JOIN content_blob_data cbd
     ON cbd.hash = n.body_blob_hash
-  WHERE n.id = ?
+  WHERE n.id IN (SELECT id FROM temp_workspace_search_affected_ids)
     AND n.deleted_at IS NULL`;
 
-const PDF_SEARCH_INSERT_SQL = `${NODE_PATHS_CTE_SQL}
+const PDF_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
   INSERT INTO pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
   SELECT
     COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document'),
@@ -55,7 +55,7 @@ const PDF_SEARCH_INSERT_SQL = `${NODE_PATHS_CTE_SQL}
     ON paths.node_id = n.id
   INNER JOIN pdf_page_text ppt
     ON ppt.attachment_id = a.id
-  WHERE na.node_id = ?
+  WHERE na.node_id IN (SELECT id FROM temp_workspace_search_affected_ids)
     AND na.role = 'reference'`;
 
 const NODE_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
@@ -93,16 +93,33 @@ const PDF_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
   LEFT JOIN node_paths paths
     ON paths.node_id = n.id`;
 
-const NODE_DESCENDANT_IDS_SQL = `WITH RECURSIVE node_descendants(id) AS (
-    SELECT id
-    FROM nodes
-    WHERE id = ?
+const TEMP_SEED_IDS_SQL = `CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_seed_ids (
+  id TEXT PRIMARY KEY
+) WITHOUT ROWID`;
+
+const TEMP_AFFECTED_IDS_SQL = `CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_affected_ids (
+  id TEXT PRIMARY KEY
+) WITHOUT ROWID`;
+
+const INSERT_AFFECTED_DESCENDANT_IDS_SQL = `WITH RECURSIVE node_descendants(id, can_recurse) AS (
+    SELECT n.id, 1
+    FROM nodes n
+    INNER JOIN temp_workspace_search_seed_ids seeds
+      ON seeds.id = n.id
     UNION ALL
-    SELECT child.id
+    SELECT seeds.id, 0
+    FROM temp_workspace_search_seed_ids seeds
+    WHERE NOT EXISTS (
+      SELECT 1 FROM nodes n WHERE n.id = seeds.id
+    )
+    UNION ALL
+    SELECT child.id, 1
     FROM nodes child
     INNER JOIN node_descendants
       ON child.parent_id = node_descendants.id
+    WHERE node_descendants.can_recurse = 1
   )
+  INSERT OR IGNORE INTO temp_workspace_search_affected_ids (id)
   SELECT id
   FROM node_descendants`;
 
@@ -110,31 +127,49 @@ function toUniqueIds(ids: string[]) {
   return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
 }
 
-function expandNodeIdsForPathSync(driver: DatabaseDriver, nodeIds: string[]) {
-  const expandedIds = new Set<string>();
-  toUniqueIds(nodeIds).forEach((nodeId) => {
-    const rows = driver.queryAll<{ id: string }>(NODE_DESCENDANT_IDS_SQL, [nodeId]);
-    if (rows.length === 0) {
-      expandedIds.add(nodeId);
-      return;
-    }
-    rows.forEach((row) => {
-      expandedIds.add(row.id);
-    });
-  });
-  return [...expandedIds];
+function resetTempIds(driver: DatabaseDriver) {
+  driver.execute(TEMP_SEED_IDS_SQL);
+  driver.execute(TEMP_AFFECTED_IDS_SQL);
+  driver.execute('DELETE FROM temp_workspace_search_seed_ids');
+  driver.execute('DELETE FROM temp_workspace_search_affected_ids');
 }
 
-function deleteById(statement: ReturnType<DatabaseDriver['prepare']>, ids: string[]) {
-  toUniqueIds(ids).forEach((id) => {
-    statement.run([id]);
+function writeTempSeedIds(driver: DatabaseDriver, ids: string[]) {
+  const insertSeed = driver.prepare('INSERT OR IGNORE INTO temp_workspace_search_seed_ids (id) VALUES (?)');
+  ids.forEach((id) => {
+    insertSeed.run([id]);
   });
 }
 
-function insertById(statement: ReturnType<DatabaseDriver['prepare']>, ids: string[]) {
-  toUniqueIds(ids).forEach((id) => {
-    statement.run([id]);
-  });
+function countTempAffectedIds(driver: DatabaseDriver) {
+  return (
+    driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM temp_workspace_search_affected_ids')?.count ?? 0
+  );
+}
+
+function traceSearchIndexSync(seedCount: number, expandedCount: number, elapsedMs: number) {
+  if (typeof process === 'undefined' || process.env.FOLIOLE_SEARCH_INDEX_TRACE !== '1') {
+    return;
+  }
+  console.info(`[searchIndex] seed=${seedCount} expanded=${expandedCount} elapsed=${elapsedMs.toFixed(1)}ms`);
+}
+
+function prepareAffectedNodeIds(driver: DatabaseDriver, nodeIds: string[], options: { includeDescendants: boolean }) {
+  const seedIds = toUniqueIds(nodeIds);
+  resetTempIds(driver);
+  if (seedIds.length === 0) {
+    return { expandedCount: 0, seedCount: 0 };
+  }
+  writeTempSeedIds(driver, seedIds);
+  if (options.includeDescendants) {
+    driver.execute(INSERT_AFFECTED_DESCENDANT_IDS_SQL);
+  } else {
+    driver.execute(
+      `INSERT OR IGNORE INTO temp_workspace_search_affected_ids (id)
+       SELECT id FROM temp_workspace_search_seed_ids`
+    );
+  }
+  return { expandedCount: countTempAffectedIds(driver), seedCount: seedIds.length };
 }
 
 export function rebuildWorkspaceSearchIndexes(driver: DatabaseDriver) {
@@ -145,26 +180,38 @@ export function rebuildWorkspaceSearchIndexes(driver: DatabaseDriver) {
 }
 
 export function syncNodeSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: string[]) {
-  const deleteStatement = driver.prepare('DELETE FROM node_search WHERE node_id = ?');
-  const insertStatement = driver.prepare(NODE_SEARCH_INSERT_SQL);
-  deleteById(deleteStatement, nodeIds);
-  insertById(insertStatement, nodeIds);
+  const startedAt = Date.now();
+  const affected = prepareAffectedNodeIds(driver, nodeIds, { includeDescendants: false });
+  if (affected.expandedCount === 0) {
+    return;
+  }
+  driver.execute('DELETE FROM node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
+  driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
+  traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 
 export function syncPdfSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: string[]) {
-  const deleteStatement = driver.prepare('DELETE FROM pdf_search WHERE node_id = ?');
-  const insertStatement = driver.prepare(PDF_SEARCH_INSERT_SQL);
-  deleteById(deleteStatement, nodeIds);
-  insertById(insertStatement, nodeIds);
+  const startedAt = Date.now();
+  const affected = prepareAffectedNodeIds(driver, nodeIds, { includeDescendants: false });
+  if (affected.expandedCount === 0) {
+    return;
+  }
+  driver.execute('DELETE FROM pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
+  driver.execute(PDF_SEARCH_INSERT_AFFECTED_SQL);
+  traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 
 export function syncWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: string[]) {
-  const uniqueIds = expandNodeIdsForPathSync(driver, nodeIds);
-  if (uniqueIds.length === 0) {
+  const startedAt = Date.now();
+  const affected = prepareAffectedNodeIds(driver, nodeIds, { includeDescendants: true });
+  if (affected.expandedCount === 0) {
     return;
   }
-  syncNodeSearchIndexForNodeIds(driver, uniqueIds);
-  syncPdfSearchIndexForNodeIds(driver, uniqueIds);
+  driver.execute('DELETE FROM node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
+  driver.execute('DELETE FROM pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
+  driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
+  driver.execute(PDF_SEARCH_INSERT_AFFECTED_SQL);
+  traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 
 export function syncPdfSearchIndexForAttachmentIds(driver: DatabaseDriver, attachmentIds: string[]) {

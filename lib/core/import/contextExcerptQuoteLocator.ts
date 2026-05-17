@@ -12,14 +12,14 @@ function stripQuoteMarkdown(value: string) {
   return value
     .replace(/\\([\\`*_{}[\]()#+.!<>|-])/g, '$1')
     .replace(/<([^>\s]+)>/g, ' $1 ')
-    .replace(/!\[[^\]]*]\([^)]+\)/g, ' ')
+    .replace(/!\[[^\]]*]\([^)]+\)/g, (match) => ` ${match} `)
     .replace(/\[\[([^\]|]+)\|([^\]]+)]]/g, '$2')
     .replace(/\[\[([^\]]+)]]/g, '$1')
-    .replace(/\[]\([^)]+\)/g, ' ')
+    .replace(/(?<!!)\[]\([^)]+\)/g, ' ')
     .replace(/\(\[View Highlight]\([^)]+\)\)/gi, ' ')
     .replace(
       new RegExp(
-        `\\[([^\\]]{1,${MAX_MARKDOWN_LINK_LABEL_LENGTH}})]\\([^\\)\\n]{1,${MAX_MARKDOWN_LINK_DESTINATION_LENGTH}}\\)`,
+        `(?<!!)\\[([^\\]]{1,${MAX_MARKDOWN_LINK_LABEL_LENGTH}})]\\([^\\)\\n]{1,${MAX_MARKDOWN_LINK_DESTINATION_LENGTH}}\\)`,
         'g'
       ),
       '$1'

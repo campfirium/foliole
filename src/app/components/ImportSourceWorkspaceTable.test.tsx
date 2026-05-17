@@ -11,6 +11,15 @@ function createSources(count: number) {
   }));
 }
 
+function createSplitSource() {
+  return {
+    ...createDraftImportSource(101),
+    highlightMode: 'split' as const,
+    highlightPath: '/library/highlights',
+    primaryPath: '/library/originals'
+  };
+}
+
 function renderTable(sourceCount: number, onAddSource = vi.fn()) {
   return render(
     <ImportSourceTable
@@ -53,4 +62,26 @@ it('virtualizes large import source lists', () => {
   expect(screen.getByRole('button', { name: 'Original folder draft-import-source-0' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Original folder draft-import-source-199' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add source' })).toBeEnabled();
+});
+
+it('blocks preview for generic split sources until sidecar support exists', () => {
+  render(
+    <ImportSourceTable
+      onAddSource={vi.fn()}
+      onChange={vi.fn()}
+      onChangeAction={vi.fn()}
+      onChooseHighlightFolder={vi.fn()}
+      onChoosePrimaryFolder={vi.fn()}
+      onDeleteSource={vi.fn()}
+      onDisableKeepImport={vi.fn()}
+      onPreviewKeepImport={vi.fn()}
+      sources={[createSplitSource()]}
+    />
+  );
+
+  const previewButton = screen.getByRole('button', { name: 'Preview draft-import-source-101' });
+
+  expect(previewButton).toBeDisabled();
+  expect(previewButton).toHaveTextContent('Unavailable');
+  expect(previewButton).toHaveAttribute('title', 'Generic split highlights are not available yet.');
 });

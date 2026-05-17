@@ -48,6 +48,57 @@ function executePreload(env: Record<string, string | undefined> = {}) {
   };
 }
 
+const readwiseIndexProgressPayload = {
+  currentSourcePath: 'High Fanout.md',
+  indexFailedCount: 0,
+  indexElapsedMs: 1200,
+  indexPendingCount: 12,
+  indexProcessedCount: 8,
+  indexTotalCount: 20,
+  phase: 'indexing',
+  processedCount: 0,
+  sourceProcessedCount: 9,
+  sourceTotalCount: 100,
+  status: 'running',
+  totalCount: 3
+};
+
+const sanitizedReadwiseIndexProgressPayload = {
+  currentSourcePath: 'High Fanout.md',
+  highlightProcessedCount: undefined,
+  highlightTotalCount: undefined,
+  importWriteElapsedMs: undefined,
+  indexFailedCount: 0,
+  indexElapsedMs: 1200,
+  indexPendingCount: 12,
+  indexProcessedCount: 8,
+  indexTotalCount: 20,
+  phase: 'indexing',
+  processedCount: 0,
+  sourceProcessedCount: 9,
+  sourceTotalCount: 100,
+  status: 'running',
+  totalCount: 3
+};
+
+const sanitizedCompletedReadwiseProgressPayload = {
+  currentSourcePath: null,
+  highlightProcessedCount: undefined,
+  highlightTotalCount: undefined,
+  importWriteElapsedMs: undefined,
+  indexFailedCount: undefined,
+  indexElapsedMs: undefined,
+  indexPendingCount: undefined,
+  indexProcessedCount: undefined,
+  indexTotalCount: undefined,
+  phase: undefined,
+  processedCount: 3,
+  sourceProcessedCount: undefined,
+  sourceTotalCount: undefined,
+  status: 'completed',
+  totalCount: 3
+};
+
   it('boots under sandbox-limited require and exposes the bridge API', () => {
     const { exposeInMainWorld } = executePreload();
 
@@ -163,7 +214,7 @@ function executePreload(env: Record<string, string | undefined> = {}) {
 
     electronApi.onReadwiseReaderImportProgress(handler);
     const listener = ipcOn.mock.calls[0]?.[1];
-    listener({}, { processedCount: 0, status: 'running', totalCount: 3 });
+    listener({}, readwiseIndexProgressPayload);
     listener({}, { processedCount: -1, status: 'running', totalCount: 3 });
     listener({}, { processedCount: 4, status: 'running', totalCount: 3 });
     listener({}, { processedCount: 1, status: 'paused', totalCount: 3 });
@@ -174,16 +225,8 @@ function executePreload(env: Record<string, string | undefined> = {}) {
       expect.any(Function)
     );
     expect(handler).toHaveBeenCalledTimes(2);
-    expect(handler).toHaveBeenNthCalledWith(1, {
-      processedCount: 0,
-      status: 'running',
-      totalCount: 3
-    });
-    expect(handler).toHaveBeenNthCalledWith(2, {
-      processedCount: 3,
-      status: 'completed',
-      totalCount: 3
-    });
+    expect(handler).toHaveBeenNthCalledWith(1, sanitizedReadwiseIndexProgressPayload);
+    expect(handler).toHaveBeenNthCalledWith(2, sanitizedCompletedReadwiseProgressPayload);
   });
 
   it('sends native hotkey recorder active state through preload', () => {

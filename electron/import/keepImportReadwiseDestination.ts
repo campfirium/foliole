@@ -12,10 +12,8 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
 import { upsertReadwiseExternalDocument } from './readwiseExternalDocuments.js';
 import {
-  loadPreparedReadwiseImportRecord,
-  resolveReadwiseSourceImportDecision,
-  resolveReadwiseSourceSignature
-} from './readwisePreparedImport.js';
+  readwiseKeepAdapter
+} from './readwiseKeepAdapter.js';
 
 type ResolvedReadwiseSource = ImportManagerSourceDraft & { kind: ReadwiseSourceKind };
 
@@ -42,7 +40,7 @@ export async function resolveReadwiseKeepImportDestination(config: KeepImportRul
   if (resolved.readwiseSource.kind === 'books') {
     return 'off';
   }
-  const decision = await resolveReadwiseSourceImportDecision(source, {
+  const decision = await readwiseKeepAdapter.resolveImportDecision(source, {
     highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim(),
     readwiseConfig: resolved.readwiseConfig
   });
@@ -83,11 +81,11 @@ export async function runReadwiseExternalDocumentImport(config: KeepImportRuleCo
     return { detail: 'Readwise source is not configured.', failureReason: 'Readwise source is not configured.', importStatus: 'failed' as const };
   }
   const importedAt = new Date().toISOString();
-  const sourceSignature = await resolveReadwiseSourceSignature(source, {
+  const sourceSignature = await readwiseKeepAdapter.resolveSourceSignature(source, {
     highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim()
   });
   try {
-    const prepared = await loadPreparedReadwiseImportRecord(source, {
+    const prepared = await readwiseKeepAdapter.loadPreparedRecord(source, {
       highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim(),
       highlightPolicy: config.highlightPolicy,
       importedAt,
@@ -113,7 +111,7 @@ export async function runReadwiseExternalDocumentImport(config: KeepImportRuleCo
 function persistReadwiseExternalTracking(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor,
-  sourceSignature: Awaited<ReturnType<typeof resolveReadwiseSourceSignature>>,
+  sourceSignature: Awaited<ReturnType<typeof readwiseKeepAdapter.resolveSourceSignature>>,
   importedAt: string,
   status: 'failed' | 'imported'
 ) {

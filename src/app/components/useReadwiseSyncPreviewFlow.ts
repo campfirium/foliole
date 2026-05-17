@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type { NativeReadwiseSyncPreviewResult } from '../../../lib/platform/nativeImportContract';
+import type { ReadwiseReaderImportProgressPayload } from '../../shared/platform/electronApi';
+import { onReadwiseReaderImportProgress } from '../../shared/platform/runtimeShellEvents';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
@@ -17,16 +19,19 @@ export interface ReadwiseSetupPayload {
 }
 
 interface SyncStateSetters {
+  setIsCancellingSync: SetState<boolean>;
   setIsStartingSync: SetState<boolean>;
   setIsSyncPreviewing: SetState<boolean>;
   setSyncNotice: SetState<string | null>;
   setSyncError: SetState<string | null>;
   setSyncIntent: SetState<ReadwiseSyncIntent | null>;
+  setSyncProgress: SetState<ReadwiseReaderImportProgressPayload | null>;
   setSyncPreview: SetState<NativeReadwiseSyncPreviewResult | null>;
 }
 
 interface SyncFlowActions {
   draft: ReadwiseSetupDraft;
+  onCancelSync?: () => Promise<unknown>;
   onPreviewSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseSyncPreviewResult | null>;
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<unknown>;
 }
@@ -110,13 +115,29 @@ async function startSync(
   const payload = createSyncPayload(actions.draft, syncIntent);
   setters.setIsStartingSync(true);
   setters.setSyncError(null);
+  setters.setSyncProgress(null);
+  let unsubscribe: (() => void) | null = null;
   try {
-    await actions.onRunSync(payload);
+    unsubscribe = await onReadwiseReaderImportProgress(setters.setSyncProgress);
+  } catch {
+    unsubscribe = null;
+  }
+  try {
+    const result = await actions.onRunSync(payload);
+    if (typeof result === 'object' && result && 'status' in result && result.status === 'cancelled') {
+      setters.setSyncIntent(null);
+      setters.setSyncPreview(null);
+      setters.setSyncProgress(null);
+      return;
+    }
     setters.setSyncIntent(null);
     setters.setSyncPreview(null);
+    setters.setSyncProgress(null);
   } catch (error) {
     setters.setSyncError(resolveErrorMessage(error, 'Readwise sync failed.'));
   } finally {
+    unsubscribe?.();
+    setters.setIsCancellingSync(false);
     setters.setIsStartingSync(false);
   }
 }
@@ -126,29 +147,47 @@ export function useReadwiseSyncPreviewFlow(actions: SyncFlowActions) {
   const [syncPreview, setSyncPreview] = useState<NativeReadwiseSyncPreviewResult | null>(null);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncProgress, setSyncProgress] = useState<ReadwiseReaderImportProgressPayload | null>(null);
+  const [isCancellingSync, setIsCancellingSync] = useState(false);
   const [isSyncPreviewing, setIsSyncPreviewing] = useState(false);
   const [isStartingSync, setIsStartingSync] = useState(false);
   const setters = {
+    setIsCancellingSync,
     setIsStartingSync,
     setIsSyncPreviewing,
     setSyncNotice,
     setSyncError,
     setSyncIntent,
+    setSyncProgress,
     setSyncPreview
   };
 
-  function closeSyncPreview() {
-    if (isStartingSync) {
-      return;
-    }
+  function resetSyncPreview() {
     setSyncIntent(null);
     setSyncPreview(null);
     setSyncNotice(null);
     setSyncError(null);
+    setSyncProgress(null);
+  }
+
+  function closeSyncPreview() {
+    if (isStartingSync) {
+      if (!actions.onCancelSync || isCancellingSync) {
+        return;
+      }
+      setIsCancellingSync(true);
+      void actions.onCancelSync().catch((error) => {
+        setSyncError(resolveErrorMessage(error, 'Readwise cancel failed.'));
+        setIsCancellingSync(false);
+      });
+      return;
+    }
+    resetSyncPreview();
   }
 
   return {
     closeSyncPreview,
+    isCancellingSync,
     isStartingSync,
     isSyncPreviewing,
     openBlockedPreview: (notice: string) => {
@@ -162,6 +201,7 @@ export function useReadwiseSyncPreviewFlow(actions: SyncFlowActions) {
     syncError,
     syncIntent,
     syncNotice,
+    syncProgress,
     syncPreview
   };
 }

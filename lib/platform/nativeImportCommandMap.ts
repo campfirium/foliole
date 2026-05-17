@@ -6,13 +6,12 @@ import type {
   NativeDirectoryImportResult,
   NativeImportedTextFile,
   NativeImportOverview,
-  NativeKeepImportPreviewArgs,
-  NativeKeepImportPreviewResult,
   NativeNodeSourceDetails,
   NativePdfImportsInventory,
   NativeTextImportArgs,
   NativeTextImportResult
 } from './nativeImportContract.js';
+import type { NativeKeepImportPreviewArgs, NativeKeepImportPreviewResult } from './nativeKeepImportContract.js';
 import type { NativeRestoreRemovedSourceArgs, NativeRestoreRemovedSourceResult, NativeRemovedSourcesResult } from './nativeRemovedSourcesContract.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from './nativeStorageContract.js';
 

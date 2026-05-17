@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeReadwiseImportRunResult } from '../../../lib/platform/nativeImportContract';
@@ -26,20 +26,9 @@ vi.mock('../../shared/platform/runtimeShellEvents', () => ({
   onReadwiseReaderImportProgress
 }));
 
-let readwiseProgressHandler: ((payload: {
-  processedCount: number;
-  status: 'running' | 'completed' | 'failed';
-  totalCount: number;
-}) => void) | null = null;
-
 beforeEach(() => {
   inspectReadwiseReaderSetup.mockReset();
   onReadwiseReaderImportProgress.mockReset();
-  readwiseProgressHandler = null;
-  onReadwiseReaderImportProgress.mockImplementation(async (handler) => {
-    readwiseProgressHandler = handler;
-    return () => undefined;
-  });
 });
 
 type RunSync = (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
@@ -57,7 +46,7 @@ function renderManualSyncHarness(onRunSync: RunSync) {
   );
 }
 
-it('shows visible progress while manual Readwise sync is running', async () => {
+it('keeps manual Readwise sync status compact while running', async () => {
   const runResult = createDeferredReadwiseImportRunResult();
   renderManualSyncHarness(() => runResult.promise);
 
@@ -66,17 +55,12 @@ it('shows visible progress while manual Readwise sync is running', async () => {
     expect(screen.getByRole('button', { name: 'Syncing...' })).toBeDisabled();
   });
   expect(screen.getByRole('status')).toHaveTextContent('Syncing Readwise sources...');
-  expect(screen.getByRole('status')).not.toHaveTextContent('0/4');
-
-  act(() => {
-    readwiseProgressHandler?.({ processedCount: 2, status: 'running', totalCount: 4 });
-  });
-  expect(screen.getByRole('status')).toHaveTextContent('Syncing Readwise sources...');
-  expect(screen.getByRole('status')).not.toHaveTextContent('2/4');
+  expect(onReadwiseReaderImportProgress).not.toHaveBeenCalled();
+  expect(screen.getByRole('status')).not.toHaveTextContent(/pending|Sample source topic|\d+\/\d+/u);
 
   runResult.resolve(createReadwiseImportRunResult());
   await waitFor(() => {
-    expect(screen.getByText('Synced 1 Readwise source.')).toBeInTheDocument();
+    expect(screen.getByText('Synced 1 Readwise source topic.')).toBeInTheDocument();
   });
 });
 

@@ -4,6 +4,7 @@ import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } fr
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
 import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
+import { stopSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { stopDevScreenshotServer } from './devScreenshotServer.js';
@@ -51,6 +52,7 @@ function installBeforeQuitLifecycle() {
     devRestartIntentWatcher?.close();
     devRendererReloadIntentWatcher?.close();
     stopExternalSearchBackgroundRefresh();
+    stopSearchIndexInvalidationScheduler();
     stopManagedInboxMonitor();
     stopKeepImportMonitor();
     void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));

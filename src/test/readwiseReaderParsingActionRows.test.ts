@@ -43,3 +43,39 @@ it('keeps reader-looking text when it is not a whole action row', () => {
   expect(highlights[0]?.text).toContain('The word Quote is part of this sentence.');
   expect(highlights[0]?.text).toContain('Inline [](javascript:void(0);) also stays');
 });
+
+it('keeps image-only highlights as sidecar highlight content', () => {
+  const markdown = [
+    '# Image Sample',
+    '',
+    '## Highlights',
+    '- ![](https://cdn.example.com/cover.jpg) ([View Highlight](https://read.readwise.io/read/01image))'
+  ].join('\n');
+
+  const highlights = extractReadwiseSidecarHighlights(markdown, createDefaultReadwiseReaderConfig());
+
+  expect(highlights).toEqual([
+    {
+      note: null,
+      text: '![](https://cdn.example.com/cover.jpg)'
+    }
+  ]);
+});
+
+it('keeps image-only highlights with alt text as sidecar highlight content', () => {
+  const markdown = [
+    '# Image Sample',
+    '',
+    '## Highlights',
+    '- ![Cover](https://cdn.example.com/cover.jpg) ([View Highlight](https://read.readwise.io/read/01image))'
+  ].join('\n');
+
+  const highlights = extractReadwiseSidecarHighlights(markdown, createDefaultReadwiseReaderConfig());
+
+  expect(highlights).toEqual([
+    {
+      note: null,
+      text: '![Cover](https://cdn.example.com/cover.jpg)'
+    }
+  ]);
+});

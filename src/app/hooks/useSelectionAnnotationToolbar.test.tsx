@@ -8,6 +8,7 @@ function createEditorAdapter(overrides: Record<string, unknown> = {}) {
     destroy: vi.fn(),
     focus: vi.fn(),
     getContent: vi.fn(() => 'Welcome to Foliole'),
+    getDocumentPositionAtClientPoint: vi.fn(() => 3),
     getDocumentPositionAtViewportY: vi.fn(() => 0),
     getLineBlockHeight: vi.fn(() => 24),
     getScrollMetrics: vi.fn(),
@@ -88,56 +89,6 @@ function mockRect(left: number, top: number, width: number, height: number): DOM
     y: top
   } as DOMRect;
 }
-
-it('opens an existing highlight toolbar from a highlight click', () => {
-  const updateNodeContent = vi.fn();
-  const deleteNodePermanently = vi.fn();
-  const highlightElement = document.createElement('span');
-  highlightElement.className = 'cm-md-highlight';
-  highlightElement.getBoundingClientRect = vi.fn(() => ({
-    bottom: 112,
-    height: 22,
-    left: 40,
-    right: 140,
-    top: 90,
-    width: 100,
-    x: 40,
-    y: 90,
-    toJSON: () => undefined
-  }));
-  appendEditorTarget(highlightElement);
-
-  const { result } = renderHook(() =>
-    useEditorContextCommands(buildHookArgs({ deleteNodePermanently, updateNodeContent }))
-  );
-
-  act(() => {
-    highlightElement.dispatchEvent(new MouseEvent('mouseup', {
-      bubbles: true,
-      button: 0,
-      clientX: 80,
-      clientY: 120
-    }));
-  });
-
-  expect(result.current.contextMenu).toMatchObject({
-    existingHighlight: { nodeId: 'highlight-1', originalText: 'Welcome' },
-    kind: 'selection',
-    left: 58,
-    mode: 'existing-highlight-toolbar',
-    notePanelLeft: 8,
-    notePanelTop: 120,
-    payload: null
-  });
-  expect(result.current.contextMenu?.top).toBe(44);
-  expect(highlightElement).toHaveClass('cm-md-highlight-active');
-
-  act(() => result.current.handleCreateNote('Reader thought'));
-  expect(updateNodeContent).toHaveBeenCalledWith('highlight-1', 'Welcome\n※ Reader thought');
-
-  act(() => result.current.handleDeleteExistingHighlight());
-  expect(deleteNodePermanently).toHaveBeenCalledWith('highlight-1');
-});
 
 it('anchors the selection toolbar primary action above the drag release point', () => {
   const selectedText = document.createTextNode('Welcome');

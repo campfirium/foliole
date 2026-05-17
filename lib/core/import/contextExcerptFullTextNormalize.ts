@@ -34,7 +34,8 @@ function shouldAppendLinkBoundarySpace(raw: string, linkEnd: number) {
 }
 
 function tryConsumeMarkdownLink(raw: string, index: number, state: { normalized: string; rawIndexes: number[] }) {
-  const labelStart = raw[index] === '!' && raw[index + 1] === '[' ? index + 2 : raw[index] === '[' ? index + 1 : -1;
+  const isImage = raw[index] === '!' && raw[index + 1] === '[';
+  const labelStart = isImage ? index + 2 : raw[index] === '[' ? index + 1 : -1;
   if (labelStart < 0) {
     return 0;
   }
@@ -46,7 +47,11 @@ function tryConsumeMarkdownLink(raw: string, index: number, state: { normalized:
   if (linkEnd < 0) {
     return 0;
   }
-  if (raw[index] !== '!') {
+  if (isImage) {
+    for (let cursor = index; cursor <= linkEnd; cursor += 1) {
+      appendNormalizedCharacter(state, raw[cursor] ?? '', cursor);
+    }
+  } else {
     for (let cursor = labelStart; cursor < labelEnd; cursor += 1) {
       appendNormalizedCharacter(state, raw[cursor] ?? '', cursor);
     }

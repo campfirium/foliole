@@ -8,6 +8,7 @@ export interface NativeReadwiseDetectionSample {
 export interface NativeReadwiseDetectionResult {
   checkedSourceCount: number;
   detectedHighlightCount: number;
+  highlightOnlySourceCount: number;
   highlightedArticleCount: number;
   matchedHighlightCount: number;
   message: string;
@@ -15,6 +16,7 @@ export interface NativeReadwiseDetectionResult {
   samples: NativeReadwiseDetectionSample[];
   success: boolean;
   totalArticleCount: number;
+  unparsedHighlightFileCount: number;
 }
 
 export interface NativeReadwiseDetectionSource {

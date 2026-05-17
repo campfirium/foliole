@@ -143,6 +143,34 @@ it('wires readwise keep import into existing highlight-derived child creation', 
   }));
 });
 
+it('coalesces concurrent keep import requests for the same Readwise rule', async () => {
+  const fixture = await seedReadwiseArticleFixture(tempRoot);
+  saveReadwiseKeepImportSettings(fixture);
+  const config = {
+    directoryPath: fixture.fullDocumentDir,
+    highlightPolicy: 'reference_only',
+    ruleId: 'draft-import-source-1',
+    sourceType: 'readwise'
+  } as const;
+
+  const [firstRun, secondRun] = await Promise.all([
+    runKeepImportRule(config),
+    runKeepImportRule(config)
+  ]);
+
+  const importRunRows = openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT duplicate_semantic
+       FROM import_runs
+       WHERE source_name = 'Sample Article.md'
+       ORDER BY imported_at ASC`
+    )
+    .all() as Array<{ duplicate_semantic: string }>;
+
+  expect(firstRun).toBe(secondRun);
+  expect(importRunRows).toEqual([{ duplicate_semantic: 'new' }]);
+});
+
 it('treats sidecar highlight changes as a separate refresh trigger when the body file is unchanged', async () => {
   const fixture = await seedReadwiseArticleFixture(tempRoot);
   saveReadwiseKeepImportSettings(fixture);

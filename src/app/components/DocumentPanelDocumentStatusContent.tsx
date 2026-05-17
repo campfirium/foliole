@@ -1,5 +1,7 @@
-import { AppButton, AppErrorState, AppLoadingState } from '../../shared/ui';
+import { AppButton, AppErrorState } from '../../shared/ui';
 import type { WorkspaceNodeDocumentStatus } from '../../store/workspaceRendererBoundary';
+
+import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
 
 export function DocumentPanelDocumentStatusContent(props: {
   loadingLabel: string;
@@ -8,7 +10,7 @@ export function DocumentPanelDocumentStatusContent(props: {
   status: WorkspaceNodeDocumentStatus;
 }) {
   if (props.retrying || props.status === 'fetching') {
-    return <AppLoadingState description="The selected topic body is still loading." title={props.loadingLabel} />;
+    return <DocumentPanelLoadingContent loadingLabel={props.loadingLabel} />;
   }
   return (
     <AppErrorState

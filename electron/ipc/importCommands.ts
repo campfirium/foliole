@@ -11,7 +11,7 @@ import {
   previewReadwiseImportCleanup,
   runReadwiseImportCleanup
 } from '../import/readwiseImportCleanup.js';
-import { runReadwiseReaderImport } from '../import/readwiseReaderImportRun.js';
+import { cancelReadwiseReaderImport, runReadwiseReaderImport } from '../import/readwiseReaderImportRun.js';
 import { previewReadwiseReaderImport } from '../import/readwiseSyncPreview.js';
 
 import { asString } from './commandParsers.js';
@@ -25,6 +25,10 @@ import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.j
 
 function resolveNativeHighlightPolicy(value: unknown) {
   return value === 'adopt' ? 'adopt' : 'reference_only';
+}
+
+function resolveNativeHighlightMode(value: unknown) {
+  return value === 'split' ? 'split' : 'merged';
 }
 
 function resolveKeepImportSourceType(value: unknown) {
@@ -86,6 +90,7 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   if (request.command === NATIVE_COMMANDS.previewKeepImportRule) {
     return previewKeepImportRule({
       directoryPath: asString(args.directory_path, 'directory_path'),
+      highlightMode: resolveNativeHighlightMode(args.highlight_mode),
       highlightPolicy: resolveNativeHighlightPolicy(args.highlight_policy),
       ruleId: asString(args.rule_id, 'rule_id'),
       sourceType: resolveKeepImportSourceType(args.source_type)
@@ -112,6 +117,9 @@ async function handleReadwiseImportCommand(
     const result = await runReadwiseReaderImport({ ...args, window: resolveTargetWindow(context) });
     notifyIfReadwiseReaderImportChanged(result);
     return result;
+  }
+  if (request.command === NATIVE_COMMANDS.cancelReadwiseReaderImport) {
+    return cancelReadwiseReaderImport();
   }
   if (request.command === NATIVE_COMMANDS.previewReadwiseImportCleanup) {
     return previewReadwiseImportCleanup();

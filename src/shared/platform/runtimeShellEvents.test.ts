@@ -29,6 +29,36 @@ beforeEach(() => {
   delete window.electronAPI;
 });
 
+function emitReadwiseProgressPayloads(handler: (payload: ReadwiseReaderImportProgressPayload) => void) {
+  handler({ processedCount: 0, status: 'running', totalCount: 2 });
+  handler({
+    highlightProcessedCount: 10,
+    highlightTotalCount: 20,
+    phase: 'writing',
+    processedCount: 1,
+    sourceProcessedCount: 2,
+    sourceTotalCount: 4,
+    status: 'running',
+    totalCount: 2
+  });
+  handler({
+    indexFailedCount: 0,
+    indexElapsedMs: 1400,
+    indexPendingCount: 4,
+    indexProcessedCount: 6,
+    indexTotalCount: 10,
+    phase: 'indexing',
+    processedCount: 1,
+    status: 'running',
+    totalCount: 2
+  });
+  handler({ indexProcessedCount: 11, indexTotalCount: 10, phase: 'indexing', processedCount: 1, status: 'running', totalCount: 2 });
+  handler({ highlightProcessedCount: 21, highlightTotalCount: 20, processedCount: 1, status: 'running', totalCount: 2 });
+  handler({ processedCount: 3, status: 'running', totalCount: 2 });
+  handler({ processedCount: 2, status: 'paused' as never, totalCount: 2 });
+  handler({ processedCount: 2, status: 'completed', totalCount: 2 });
+}
+
 it('filters empty workspace sync applied events before reaching the handler', async () => {
   const onWorkspaceSyncAppliedBridge = vi.fn((handler: (payload: WorkspaceSyncAppliedPayload) => void) => {
     handler({ appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] });
@@ -66,10 +96,7 @@ it('filters malformed workspace content changed events before reaching the handl
 it('filters malformed Readwise Reader import progress events before reaching the handler', async () => {
   const onReadwiseReaderImportProgressBridge = vi.fn(
     (handler: (payload: ReadwiseReaderImportProgressPayload) => void) => {
-      handler({ processedCount: 0, status: 'running', totalCount: 2 });
-      handler({ processedCount: 3, status: 'running', totalCount: 2 });
-      handler({ processedCount: 2, status: 'paused' as never, totalCount: 2 });
-      handler({ processedCount: 2, status: 'completed', totalCount: 2 });
+      emitReadwiseProgressPayloads(handler);
       return () => undefined;
     }
   );
@@ -80,13 +107,34 @@ it('filters malformed Readwise Reader import progress events before reaching the
 
   await onReadwiseReaderImportProgress(handler);
 
-  expect(handler).toHaveBeenCalledTimes(2);
+  expect(handler).toHaveBeenCalledTimes(4);
   expect(handler).toHaveBeenNthCalledWith(1, {
     processedCount: 0,
     status: 'running',
     totalCount: 2
   });
   expect(handler).toHaveBeenNthCalledWith(2, {
+    highlightProcessedCount: 10,
+    highlightTotalCount: 20,
+    phase: 'writing',
+    processedCount: 1,
+    sourceProcessedCount: 2,
+    sourceTotalCount: 4,
+    status: 'running',
+    totalCount: 2
+  });
+  expect(handler).toHaveBeenNthCalledWith(3, {
+    indexFailedCount: 0,
+    indexElapsedMs: 1400,
+    indexPendingCount: 4,
+    indexProcessedCount: 6,
+    indexTotalCount: 10,
+    phase: 'indexing',
+    processedCount: 1,
+    status: 'running',
+    totalCount: 2
+  });
+  expect(handler).toHaveBeenNthCalledWith(4, {
     processedCount: 2,
     status: 'completed',
     totalCount: 2

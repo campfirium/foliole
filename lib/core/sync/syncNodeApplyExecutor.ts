@@ -20,7 +20,10 @@ import {
   buildRemoteNodeVersionUpsert
 } from './syncNodeApplyStatements.js';
 
-interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {}
+interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
+  parent_id: string | null;
+  title: string;
+}
 
 export interface ApplySyncNodesWithDbPortResult {
   appliedIds: string[];
@@ -83,7 +86,7 @@ async function upsertTextBodyBlob(
 async function loadLocalNodeSyncState(port: DbPort, nodeId: string) {
   return queryOne<LocalSyncNodeStateRow>(
     port,
-    `SELECT current_version_id, deleted_at, sync_dirty
+    `SELECT current_version_id, deleted_at, parent_id, sync_dirty, title
      FROM nodes
      WHERE id = ?`,
     [nodeId]
@@ -148,6 +151,46 @@ function toConflictRecord(record: NativeSyncNodeRecord): NativeSyncNodeConflictR
   };
 }
 
+async function enqueueNodeSearchInvalidation(port: DbPort, type: string, nodeId: string, updatedAt: string) {
+  const refreshed = await port.run(
+    `UPDATE search_index_invalidations
+     SET updated_at = ?, last_error = NULL
+     WHERE invalidation_type = ?
+       AND target_id = ?
+       AND status = 'pending'`,
+    [updatedAt, type, nodeId]
+  );
+  if (refreshed.changes > 0) {
+    return;
+  }
+  await port.run(
+    `INSERT INTO search_index_invalidations (
+       invalidation_type, target_id, status, attempts, last_error, created_at, updated_at, claimed_at, completed_at
+     ) VALUES (?, ?, 'pending', 0, NULL, ?, ?, NULL, NULL)`,
+    [type, nodeId, updatedAt, updatedAt]
+  );
+}
+
+async function enqueueAppliedNodeSearchInvalidations(
+  port: DbPort,
+  localNode: LocalSyncNodeStateRow | null,
+  record: NativeSyncNodeRecord,
+  updatedAt: string
+) {
+  if (record.snapshot.deleted_at) {
+    await enqueueNodeSearchInvalidation(port, 'node_subtree_deleted', record.object_id, updatedAt);
+    return;
+  }
+  if (localNode?.deleted_at) {
+    await enqueueNodeSearchInvalidation(port, 'node_subtree_restored', record.object_id, updatedAt);
+    return;
+  }
+  await enqueueNodeSearchInvalidation(port, 'node_workspace', record.object_id, updatedAt);
+  if (localNode && (localNode.parent_id !== record.snapshot.parent_id || localNode.title !== record.snapshot.title)) {
+    await enqueueNodeSearchInvalidation(port, 'node_subtree_path', record.object_id, updatedAt);
+  }
+}
+
 export async function applySyncNodesWithDbPort(
   port: DbPort,
   records: NativeSyncNodeRecord[],
@@ -161,6 +204,7 @@ export async function applySyncNodesWithDbPort(
     skippedConflictCopyIds: []
   };
   const ordered = orderNodesForApply(latestBranchHeadRecords(records));
+  const invalidatedAt = new Date().toISOString();
 
   await port.transaction(async (tx) => {
     for (const record of ordered) {
@@ -172,6 +216,7 @@ export async function applySyncNodesWithDbPort(
       const decision = decideIncomingNodeApply(localNode, record);
       if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
         await applyRemoteNode(tx, record, options);
+        await enqueueAppliedNodeSearchInvalidations(tx, localNode, record, invalidatedAt);
         result.appliedIds.push(record.object_id);
         continue;
       }

@@ -48,19 +48,22 @@ export function probeReadwiseArticleContent(input: {
     return {
       checkedSourceCount: 1,
       detectedHighlightCount: 0,
+      highlightOnlySourceCount: 0,
       highlightedArticleCount: 0,
       matchedHighlightCount: 0,
       message: 'No highlights were detected in the sampled article.',
       sampleCount: 0,
       samples: [],
       success: false,
-      totalArticleCount: 1
+      totalArticleCount: 1,
+      unparsedHighlightFileCount: 1
     };
   }
 
   return {
     checkedSourceCount: 1,
     detectedHighlightCount: highlightBlocks.length,
+    highlightOnlySourceCount: 0,
     highlightedArticleCount: 1,
     matchedHighlightCount,
     message:
@@ -70,6 +73,7 @@ export function probeReadwiseArticleContent(input: {
     sampleCount: samples.length,
     samples,
     success: matchedHighlightCount === samples.length,
-    totalArticleCount: 1
+    totalArticleCount: 1,
+    unparsedHighlightFileCount: 0
   };
 }

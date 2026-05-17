@@ -4,13 +4,12 @@ import {
   createDefaultImportManagerSettings,
   type ImportManagerSettings,
   type ImportNodeTitleStrategy,
-  type KeepImportPreviewSummary
 } from '../../../lib/core/import/importManagerSettings';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { selectRuntimeFolder } from '../../shared/platform/folderSelectionRuntimeRepository';
-import { previewRuntimeKeepImportRule } from '../../shared/platform/keepImportPreviewRuntimeRepository';
 
 import { createGenericSourceActions, replaceSource } from './importSourceGenericActions';
+import { createKeepImportActions } from './importSourceKeepActions';
 import { createReadwiseReaderImportActions } from './importSourceReadwiseRuntimeActions';
 import {
   applyReadwiseRootPath,
@@ -23,28 +22,6 @@ import {
   saveImportSourceWorkspaceSettings
 } from './importSourceWorkspaceSettings';
 type SetSettings = ReturnType<typeof usePersistedImportSourceWorkspaceSettings>[1];
-
-function toKeepPreviewSummary(
-  result: NonNullable<Awaited<ReturnType<typeof previewRuntimeKeepImportRule>>>
-) {
-  return {
-    blockedCount: result.blockedCount,
-    discoveredCount: result.discoveredCount,
-    failedCount: result.failedCount,
-    newCount: result.newCount,
-    previewedAt: result.previewedAt,
-    samples: result.entries.slice(0, 6).map((entry) => ({
-      contentPreview: entry.contentPreview,
-      detail: entry.detail,
-      detectedHighlightCount: entry.detectedHighlightCount,
-      highlightSamples: entry.highlightSamples,
-      sourcePath: entry.sourcePath,
-      status: entry.status
-    })),
-    unchangedCount: result.unchangedCount,
-    updatedCount: result.updatedCount
-  } satisfies KeepImportPreviewSummary;
-}
 
 function usePersistedImportSourceWorkspaceSettings() {
   const [settings, setSettings] = useState<ImportManagerSettings>(
@@ -119,54 +96,6 @@ function createReadwiseSourceActions(setSettings: SetSettings) {
         readwiseRootPath: selectedPath,
         readwiseSources: applyReadwiseRootPath(current.readwiseSources, selectedPath)
       }));
-    }
-  };
-}
-
-function createKeepImportActions(settings: ImportManagerSettings, setSettings: SetSettings) {
-  return {
-    handleConfirmKeepImport(sourceId: string, scope: 'readwiseSources' | 'sources') {
-      setSettings((current) => ({
-        ...current,
-        [scope]: replaceSource(current[scope], sourceId, (source) =>
-          source.keepPreview ? { ...source, keepState: 'enabled' } : source
-        )
-      }));
-    },
-    handleDisableKeepImport(sourceId: string, scope: 'readwiseSources' | 'sources') {
-      setSettings((current) => ({
-        ...current,
-        [scope]: replaceSource(current[scope], sourceId, (source) => ({
-          ...source,
-          keepState: source.keepPreview ? 'previewed' : 'draft'
-        }))
-      }));
-    },
-    async handlePreviewKeepImport(sourceId: string, scope: 'readwiseSources' | 'sources') {
-      const source = settings[scope].find((entry) => entry.id === sourceId);
-      if (!source?.primaryPath.trim()) {
-        return null;
-      }
-      const result = await previewRuntimeKeepImportRule({
-        directoryPath: source.primaryPath,
-        highlightPolicy:
-          scope === 'sources' && source.highlightMode === 'merged' ? 'adopt' : 'reference_only',
-        ruleId: source.id,
-        sourceType: scope === 'readwiseSources' ? 'readwise' : 'generic'
-      });
-      if (!result) {
-        return null;
-      }
-      const preview = toKeepPreviewSummary(result);
-      setSettings((current) => ({
-        ...current,
-        [scope]: replaceSource(current[scope], sourceId, (entry) => ({
-          ...entry,
-          keepPreview: preview,
-          keepState: 'previewed'
-        }))
-      }));
-      return preview;
     }
   };
 }

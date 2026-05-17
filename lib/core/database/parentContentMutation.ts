@@ -4,7 +4,8 @@ import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
-import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
+import { deriveImportedHighlightImageRegions } from './importedHighlightImageRegions.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 interface ParentNodeRow {
   [column: string]: unknown;
@@ -17,6 +18,7 @@ interface ChildAnchorRow {
   [column: string]: unknown;
   anchor_link: string | null;
   id: string;
+  image_regions: string | null;
 }
 
 export interface ParentContentChangeResult {
@@ -29,7 +31,7 @@ export interface ParentContentChangeResult {
 
 type RawAnchorRemapResult =
   | { reason: ParentContentChangeResult['skippedAnchors'][number]['reason'] }
-  | { value: string };
+  | { imageRegions: string | null; value: string };
 
 function readParentNode(driver: DatabaseDriver, nodeId: string) {
   return driver.queryOne<ParentNodeRow>(
@@ -42,7 +44,7 @@ function readParentNode(driver: DatabaseDriver, nodeId: string) {
 
 function readChildAnchors(driver: DatabaseDriver, parentNodeId: string) {
   return driver.queryAll<ChildAnchorRow>(
-    `SELECT id, anchor_link
+    `SELECT id, anchor_link, image_regions
      FROM nodes
      WHERE parent_id = ? AND deleted_at IS NULL AND anchor_link IS NOT NULL`,
     [parentNodeId]
@@ -74,21 +76,35 @@ function remapRawAnchorLink(value: string, previousContent: string, nextContent:
   if (!parsed) {
     return { reason: 'invalid_anchor_link' as const };
   }
-  const raw = JSON.parse(value) as { locator?: unknown };
+  const raw = JSON.parse(value) as { id?: unknown; locator?: unknown };
   if (!raw.locator) {
     return { reason: 'no_locator' as const };
   }
   if (isTextLocatorGroup(raw.locator)) {
-    raw.locator = {
-      ranges: raw.locator.ranges.map((locator) => remapTextAnchorLocator(nextContent, locator, previousContent))
+    const remappedRanges = raw.locator.ranges.map((locator) => remapTextAnchorLocator(nextContent, locator, previousContent));
+    raw.locator = { ranges: remappedRanges };
+    return {
+      imageRegions: toDerivedImageRegionsJson(nextContent, raw.id, remappedRanges),
+      value: JSON.stringify(raw)
     };
-    return { value: JSON.stringify(raw) };
   }
   if (isTextLocator(raw.locator)) {
-    raw.locator = remapTextAnchorLocator(nextContent, raw.locator, previousContent);
-    return { value: JSON.stringify(raw) };
+    const remappedLocator = remapTextAnchorLocator(nextContent, raw.locator, previousContent);
+    raw.locator = remappedLocator;
+    return {
+      imageRegions: toDerivedImageRegionsJson(nextContent, raw.id, [remappedLocator]),
+      value: JSON.stringify(raw)
+    };
   }
   return { reason: 'non_text_locator' as const };
+}
+
+function toDerivedImageRegionsJson(content: string, anchorId: unknown, locators: TextAnchorLocator[]) {
+  if (typeof anchorId !== 'string' || anchorId.trim().length === 0) {
+    return null;
+  }
+  const regions = deriveImportedHighlightImageRegions({ anchorId, content, locators });
+  return regions ? JSON.stringify(regions) : null;
 }
 
 function writeParentContent(input: {
@@ -153,18 +169,19 @@ export function applyParentContentChange(input: {
       skippedAnchors.push({ nodeId: row.id, reason: remapped.reason });
       return;
     }
-    if (remapped.value === row.anchor_link) {
+    if (remapped.value === row.anchor_link && remapped.imageRegions === row.image_regions) {
       return;
     }
-    input.driver.execute('UPDATE nodes SET anchor_link = ?, updated_at = ? WHERE id = ?', [
+    input.driver.execute('UPDATE nodes SET anchor_link = ?, image_regions = ?, updated_at = ? WHERE id = ?', [
       remapped.value,
+      remapped.imageRegions,
       input.updatedAt,
       row.id
     ]);
     affectedChildIds.push(row.id);
   });
 
-  syncWorkspaceSearchIndexForNodeIds(input.driver, [input.nodeId, ...affectedChildIds]);
+  enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, [input.nodeId, ...affectedChildIds]);
 
   return {
     affectedChildIds,

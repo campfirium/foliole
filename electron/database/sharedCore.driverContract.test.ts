@@ -87,24 +87,23 @@ beforeEach(() => {
   prepareSpy.mockReset();
   executeSpy.mockReset();
   transactionSpy.mockReset();
-  vi.mocked(driver.queryAll).mockReset();
-  vi.mocked(driver.queryAll).mockImplementation((sql, params) => {
-    if (!sql.includes('WITH RECURSIVE node_descendants')) {
-      return [];
+  vi.mocked(driver.queryOne).mockReset();
+  vi.mocked(driver.queryOne).mockImplementation((sql) => {
+    if (sql === 'SELECT COUNT(*) AS count FROM temp_workspace_search_affected_ids') {
+      return { count: 1 };
     }
-    return [{ id: String(params?.[0] ?? '') }];
+    return undefined;
   });
+  vi.mocked(driver.queryAll).mockReset();
+  vi.mocked(driver.queryAll).mockReturnValue([]);
   reviewMutationContext.createId.mockReset();
   reviewMutationContext.createId.mockReturnValueOnce('op-1').mockReturnValueOnce('log-1');
 });
 
 function createStatementRuns() {
   return {
-    deleteNodeSearchRun: vi.fn(),
-    deletePdfSearchRun: vi.fn(),
     deleteReadingRun: vi.fn(),
-    insertNodeSearchRun: vi.fn(),
-    insertPdfSearchRun: vi.fn(),
+    insertSearchSeedRun: vi.fn(),
     upsertNodeRun: vi.fn(),
     upsertOrderRun: vi.fn(),
     upsertReadingDeviceRun: vi.fn(),
@@ -119,10 +118,8 @@ function resolveNodeSnapshotRunSpy(sql: string, runs: ReturnType<typeof createSt
   if (sql.includes('INSERT INTO node_reading')) return runs.upsertReadingRun;
   if (sql === 'DELETE FROM node_reading WHERE node_id = ?') return runs.deleteReadingRun;
   if (sql === 'DELETE FROM node_reading_device_state WHERE node_id = ?') return runs.deleteReadingRun;
-  if (sql === 'DELETE FROM node_search WHERE node_id = ?') return runs.deleteNodeSearchRun;
-  if (sql.includes('INSERT INTO node_search')) return runs.insertNodeSearchRun;
-  if (sql === 'DELETE FROM pdf_search WHERE node_id = ?') return runs.deletePdfSearchRun;
-  return runs.insertPdfSearchRun;
+  if (sql === 'INSERT OR IGNORE INTO temp_workspace_search_seed_ids (id) VALUES (?)') return runs.insertSearchSeedRun;
+  return vi.fn();
 }
 
 function mockNodeSnapshotStatements() {
@@ -174,10 +171,20 @@ function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRu
 }
 
 function expectNodeSnapshotSearchSync(runs: ReturnType<typeof createStatementRuns>) {
-  expect(runs.deleteNodeSearchRun).toHaveBeenCalledWith(['node-1']);
-  expect(runs.insertNodeSearchRun).toHaveBeenCalledWith(['node-1']);
-  expect(runs.deletePdfSearchRun).toHaveBeenCalledWith(['node-1']);
-  expect(runs.insertPdfSearchRun).toHaveBeenCalledWith(['node-1']);
+  expect(runs.insertSearchSeedRun).toHaveBeenCalledWith(['node-1']);
+  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_seed_ids'));
+  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_affected_ids'));
+  expect(executeSpy).toHaveBeenCalledWith('DELETE FROM temp_workspace_search_seed_ids');
+  expect(executeSpy).toHaveBeenCalledWith('DELETE FROM temp_workspace_search_affected_ids');
+  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT OR IGNORE INTO temp_workspace_search_affected_ids'));
+  expect(executeSpy).toHaveBeenCalledWith(
+    'DELETE FROM node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)'
+  );
+  expect(executeSpy).toHaveBeenCalledWith(
+    'DELETE FROM pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)'
+  );
+  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO node_search'));
+  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO pdf_search'));
   expect(prepareSpy.mock.calls.map(([sql]) => sql)).toEqual(
     expect.arrayContaining([
       expect.stringContaining('INSERT INTO nodes'),
@@ -186,10 +193,7 @@ function expectNodeSnapshotSearchSync(runs: ReturnType<typeof createStatementRun
       expect.stringContaining('INSERT INTO node_reading_device_state'),
       'DELETE FROM node_reading WHERE node_id = ?',
       'DELETE FROM node_reading_device_state WHERE node_id = ?',
-      'DELETE FROM node_search WHERE node_id = ?',
-      expect.stringContaining('INSERT INTO node_search'),
-      'DELETE FROM pdf_search WHERE node_id = ?',
-      expect.stringContaining('INSERT INTO pdf_search')
+      'INSERT OR IGNORE INTO temp_workspace_search_seed_ids (id) VALUES (?)'
     ])
   );
 }
@@ -200,9 +204,9 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
   upsertNodeSnapshot(driver, nodeSnapshotInput);
 
   expect(transactionSpy).toHaveBeenCalledTimes(1);
-  expect(prepareSpy).toHaveBeenCalledTimes(10);
+  expect(prepareSpy).toHaveBeenCalledTimes(7);
   expect(driver.queryOne).toHaveBeenCalledWith('SELECT node_id FROM node_reading WHERE node_id = ?', ['node-1']);
-  expect(driver.queryAll).toHaveBeenCalledWith(expect.stringContaining('WITH RECURSIVE node_descendants'), ['node-1']);
+  expect(driver.queryOne).toHaveBeenCalledWith('SELECT COUNT(*) AS count FROM temp_workspace_search_affected_ids');
   expectNodeSnapshotPersistence(runs);
   expectNodeSnapshotSearchSync(runs);
 });
@@ -257,7 +261,6 @@ function expectReviewSyncWrites() {
   expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_object_state'), [
     'node_review',
     'node-1',
-    1,
     null,
     expect.any(String),
     'desktop-local',
@@ -273,7 +276,7 @@ it('writes review mutation via driver contract with injected context', () => {
 
   applyReviewGrade(driver, reviewMutationInput, reviewMutationContext);
 
-  expect(transactionSpy).toHaveBeenCalledTimes(2);
+  expect(transactionSpy).toHaveBeenCalledTimes(1);
   expectReviewPersistence(runs);
   expectReviewSyncWrites();
 });

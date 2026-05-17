@@ -4,8 +4,9 @@ import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import type { DatabaseDriver } from './driver.js';
+import { deriveImportedHighlightImageRegions } from './importedHighlightImageRegions.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
-import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 function deriveImportedHighlightTitle(content: string) {
   const firstLine = content
@@ -45,6 +46,21 @@ function createImportedClozePrompt(parentContent: string, highlight: AnchoredImp
   return `${parentContent.slice(0, highlight.from)}[...]${parentContent.slice(highlight.to)}`.trim() || '[...]';
 }
 
+function toImportedImageRegions(
+  parentContent: string,
+  highlight: PreparedImportHighlightRecord | AnchoredImportedHighlightRecord
+) {
+  if (!('anchorId' in highlight) || typeof highlight.from !== 'number' || typeof highlight.to !== 'number') {
+    return null;
+  }
+  const regions = deriveImportedHighlightImageRegions({
+    anchorId: highlight.anchorId,
+    content: parentContent,
+    locators: [{ from: highlight.from, to: highlight.to }]
+  });
+  return regions ? JSON.stringify(regions) : null;
+}
+
 export function insertImportedHighlightNodes(input: {
   driver: DatabaseDriver;
   highlights: Array<PreparedImportHighlightRecord | AnchoredImportedHighlightRecord> | undefined;
@@ -59,19 +75,20 @@ export function insertImportedHighlightNodes(input: {
   const insertNode = input.driver.prepare(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual,
-       content, opening_text, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 0, ?, ?, NULL, ?, ?, ?, NULL)`
+       content, opening_text, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 0, ?, ?, NULL, ?, ?, ?, ?, NULL)`
   );
   const insertClozeNode = input.driver.prepare(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual,
-       content, opening_text, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, 'item', NULL, NULL, ?, 0, ?, ?, ?, ?, ?, ?, NULL)`
+       content, opening_text, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, 'item', NULL, NULL, ?, 0, ?, ?, ?, ?, ?, ?, ?, NULL)`
   );
   const insertedNodeIds: string[] = [];
 
   input.highlights.forEach((highlight) => {
     const nodeId = `node-${randomUUID()}`;
+    const imageRegions = toImportedImageRegions(input.parentContent, highlight);
     insertedNodeIds.push(nodeId);
     if ('kind' in highlight && highlight.kind === 'cloze') {
       const promptContent = createImportedClozePrompt(input.parentContent, highlight);
@@ -84,6 +101,7 @@ export function insertImportedHighlightNodes(input: {
         resolveNodeOpeningText(promptContent, title),
         highlight.content,
         toImportedAnchorLink(highlight),
+        imageRegions,
         input.importedAt,
         input.importedAt
       ]);
@@ -96,13 +114,14 @@ export function insertImportedHighlightNodes(input: {
         highlight.content,
         resolveNodeOpeningText(highlight.content, title),
         toImportedAnchorLink(highlight),
+        imageRegions,
         input.importedAt,
         input.importedAt
       ]);
     }
   });
 
-  syncWorkspaceSearchIndexForNodeIds(input.driver, insertedNodeIds);
+  enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, insertedNodeIds);
 
   return input.highlights.length;
 }

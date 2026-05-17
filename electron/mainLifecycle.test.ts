@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
   presentInitialRendererWindow: vi.fn(),
   registerAttachmentProtocol: vi.fn(),
   registerRemoteImageProtocol: vi.fn(),
-  resolveAppPaths: vi.fn(() => ({ app_log_dir: '/logs' }))
+  resolveAppPaths: vi.fn(() => ({ app_cache_dir: '/cache', app_log_dir: '/logs' }))
 }));
 
 vi.mock('electron', () => ({

@@ -25,6 +25,7 @@ it('starts desktop followup tasks without a Readwise Books inventory write path'
   const labels = startupMocks.runStartupTask.mock.calls.map((call) => call[0]);
   expect(startupMocks.startDesktopTaskWatchdog).toHaveBeenCalledTimes(1);
   expect(labels).toContain('[pdf] pending indexing resume failed');
+  expect(labels).toContain('[search] invalidation scheduler failed');
   expect(labels).toContain('[external-search] background refresh scheduler failed');
   expect(labels).toContain('[keep-import] startup monitor failed');
   expect(labels).not.toContain('[readwise-books] startup node sync failed');

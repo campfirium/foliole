@@ -1,5 +1,4 @@
-import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
-import { isNodeContentLocked } from '../features/nodes/model/nodeContainers';
+import { UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { hasNodeContent } from '../features/nodes/model/nodeTypes';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
@@ -7,24 +6,24 @@ import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
-import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import {
   syncCreateNodeToRuntime,
   syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
-  syncNodeContentWithAnchorsToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
 import { type WorkspaceState } from './workspaceStore';
+import { createUpdateNodeContentAction } from './workspaceStoreContentActions';
 import {
   createHighlightFromSelectionAction,
   createQAFromSelectionAction,
   createRootNodeAction
 } from './workspaceStoreCreateActions';
+import { createUpdateHighlightAnchorRangeAction } from './workspaceStoreHighlightRangeActions';
 import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';
 import { createRelearnNodeAction } from './workspaceStoreNodeRelearnAction';
 import {
@@ -40,7 +39,6 @@ import {
 } from './workspaceStoreTreeActions';
 import { createVirtualNodeAction } from './workspaceStoreVirtualNodeActions';
 import { createUpdateVirtualNodeFilterAction } from './workspaceStoreVirtualNodeFilterActions';
-import { syncTextAnchorLocatorsForParentContent } from './workspaceTextAnchorLocatorSync';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
@@ -67,6 +65,7 @@ type WorkspaceNodeActions = Pick<
   | 'updateNodePriority'
   | 'updateNodeTitle'
   | 'updateNodeContent'
+  | 'updateHighlightAnchorRange'
   | 'updateVirtualNodeFilter'
   | 'updateNodeReveal'
 >;
@@ -100,58 +99,6 @@ function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceNodeActions['u
     }
   };
 }
-
-function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeContent'] {
-  return (nodeId, content) => {
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
-    let locatorUpdatedNodesForSync: WorkspaceState['nodesById'][string][] = [];
-    let nodeOrderForSync: string[] = [];
-    set((state) => {
-      const node = state.nodesById[nodeId];
-      if (
-        !node ||
-        !isNodeDocumentLoaded(node) ||
-        isProtectedRootNode(node) ||
-        isNodeContentLocked(nodeId, state.nodeOrder, state.nodesById, new Set(state.trashedNodeIds))
-        ) {
-        return state;
-      }
-      const timestamp = new Date().toISOString();
-      const derivedTitle = deriveNodeTitleFromContent(content);
-      const nextNode = {
-        ...node,
-        content,
-        hasContent: content.trim().length > 0,
-        hideTitleHeading: false,
-        title: node.isTitleManual ? node.title : derivedTitle,
-        updatedAt: timestamp
-      };
-      const nextNodesByIdWithParent = {
-        ...state.nodesById,
-        [nodeId]: nextNode
-      };
-      const locatorSync = syncTextAnchorLocatorsForParentContent({
-        nextContent: content,
-        nodesById: nextNodesByIdWithParent,
-        parentNodeId: nodeId,
-        previousContent: node.content,
-        timestamp
-      });
-      nextNodeForSync = nextNode;
-      locatorUpdatedNodesForSync = locatorSync.updatedNodes;
-      nodeOrderForSync = state.nodeOrder;
-      return {
-        nodesById: locatorSync.nextNodesById
-      };
-    });
-    if (nextNodeForSync) {
-      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
-      locatorUpdatedNodesForSync.forEach(syncWorkspaceNodeDocumentCacheFromNode);
-      syncNodeContentWithAnchorsToRuntime(nextNodeForSync, locatorUpdatedNodesForSync, nodeOrderForSync);
-    }
-  };
-}
-
 
 function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeReveal'] {
   return (nodeId, reveal) => {
@@ -250,6 +197,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     setNodeViewState: createSetNodeViewStateAction(set),
     updateNodeTitle: createUpdateNodeTitleAction(set),
     updateNodeContent: createUpdateNodeContentAction(set),
+    updateHighlightAnchorRange: createUpdateHighlightAnchorRangeAction(set),
     updateVirtualNodeFilter: createUpdateVirtualNodeFilterAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
     dismissNode: createDismissNodeAction(set),

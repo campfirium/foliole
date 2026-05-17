@@ -6,6 +6,7 @@ import { handleInvokeRequest } from './commands.js';
 
 const {
   loadReadwiseBookEpub,
+  cancelReadwiseReaderImport,
   mockWindow,
   openReadwiseBookDownload,
   previewReadwiseImportCleanup,
@@ -15,6 +16,7 @@ const {
   runReadwiseReaderImport
 } = vi.hoisted(() => ({
   loadReadwiseBookEpub: vi.fn(),
+  cancelReadwiseReaderImport: vi.fn(),
   mockWindow: {
     close: vi.fn(),
     isDestroyed: vi.fn(() => false),
@@ -50,7 +52,10 @@ vi.mock('../import/readwiseBookManualActions.js', () => ({
 vi.mock('../import/readwiseBookImportReset.js', () => ({
   resetReadwiseBookImport
 }));
-vi.mock('../import/readwiseReaderImportRun.js', () => ({ runReadwiseReaderImport }));
+vi.mock('../import/readwiseReaderImportRun.js', () => ({
+  cancelReadwiseReaderImport,
+  runReadwiseReaderImport
+}));
 vi.mock('../import/readwiseSyncPreview.js', () => ({ previewReadwiseReaderImport }));
 vi.mock('../import/readwiseImportCleanup.js', () => ({
   previewReadwiseImportCleanup,
@@ -122,6 +127,7 @@ beforeEach(() => {
     source_count: 1,
     status: 'completed'
   });
+  cancelReadwiseReaderImport.mockReturnValue({ status: 'cancelled' });
   previewReadwiseImportCleanup.mockReturnValue({
     delete_count: 1,
     entries: [],
@@ -209,6 +215,14 @@ it('routes Readwise Reader preview and run commands through native invoke', asyn
   expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
     scope: 'workspace'
   });
+});
+
+it('routes Readwise Reader cancel through native invoke', async () => {
+  await expect(
+    handleInvokeRequest({ command: 'cancel_readwise_reader_import', args: {} })
+  ).resolves.toEqual({ status: 'cancelled' });
+
+  expect(cancelReadwiseReaderImport).toHaveBeenCalledTimes(1);
 });
 
 it('routes Readwise cleanup and notifies workspace content changes only after cleanup runs', async () => {

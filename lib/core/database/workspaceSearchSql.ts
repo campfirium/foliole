@@ -35,30 +35,51 @@ export interface WorkspacePdfCrossPageSearchRow extends DatabaseRow {
 }
 
 export const MAX_RESULTS = 40;
-export const TITLE_FALLBACK_SQL = `SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at
+const VISIBLE_NODES_CTE_SQL = `WITH RECURSIVE visible_nodes(id) AS (
+  SELECT id
+  FROM nodes
+  WHERE parent_id IS NULL
+    AND deleted_at IS NULL
+  UNION ALL
+  SELECT child.id
+  FROM nodes child
+  INNER JOIN visible_nodes parent
+    ON parent.id = child.parent_id
+  WHERE child.deleted_at IS NULL
+)`;
+
+export const TITLE_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
+SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at
   FROM nodes n
+  INNER JOIN visible_nodes visible
+    ON visible.id = n.id
   LEFT JOIN content_blob_data cbd
     ON cbd.hash = n.body_blob_hash
-  WHERE n.deleted_at IS NULL
-    AND instr(lower(trim(n.title)), ?) > 0
+  WHERE instr(lower(trim(n.title)), ?) > 0
   ORDER BY n.updated_at DESC
   LIMIT ?`;
-export const CONTENT_FALLBACK_SQL = `SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at
+export const CONTENT_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
+SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at
   FROM nodes n
+  INNER JOIN visible_nodes visible
+    ON visible.id = n.id
   LEFT JOIN content_blob_data cbd
     ON cbd.hash = n.body_blob_hash
-  WHERE n.deleted_at IS NULL
-    AND instr(lower(trim(n.title)), ?) = 0
+  WHERE instr(lower(trim(n.title)), ?) = 0
     AND instr(lower(COALESCE(CAST(cbd.data AS TEXT), n.content)), ?) > 0
   ORDER BY n.updated_at DESC
   LIMIT ?`;
-export const NODE_FTS_SQL = `SELECT node_id AS id, title, path, content, updated_at, bm25(node_search, 8.0, 2.0, 1.0) AS rank
+export const NODE_FTS_SQL = `${VISIBLE_NODES_CTE_SQL}
+SELECT node_search.node_id AS id, title, path, content, updated_at, bm25(node_search, 8.0, 2.0, 1.0) AS rank
   FROM node_search
+  INNER JOIN visible_nodes visible
+    ON visible.id = node_search.node_id
   WHERE node_search MATCH ?
   ORDER BY rank ASC, updated_at DESC
   LIMIT ?`;
-export const PDF_FTS_SQL = `SELECT
-  node_id AS id,
+export const PDF_FTS_SQL = `${VISIBLE_NODES_CTE_SQL}
+SELECT
+  pdf_search.node_id AS id,
   title,
   path,
   text,
@@ -68,10 +89,13 @@ export const PDF_FTS_SQL = `SELECT
   page_text_length,
   bm25(pdf_search, 4.0, 2.0, 1.0) AS rank
 FROM pdf_search
+INNER JOIN visible_nodes visible
+  ON visible.id = pdf_search.node_id
 WHERE pdf_search MATCH ?
 ORDER BY rank ASC, updated_at DESC
 LIMIT ?`;
-export const PDF_FALLBACK_SQL = `SELECT
+export const PDF_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
+SELECT
   na.node_id AS id,
   COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
   ppt.text AS text,
@@ -83,13 +107,14 @@ FROM pdf_page_text ppt
 INNER JOIN attachments a ON a.id = ppt.attachment_id
 INNER JOIN node_attachments na ON na.attachment_id = a.id AND na.role = 'reference'
 INNER JOIN nodes n ON n.id = na.node_id
-WHERE n.deleted_at IS NULL
-  AND a.mime_type = 'application/pdf'
+INNER JOIN visible_nodes visible ON visible.id = n.id
+WHERE a.mime_type = 'application/pdf'
   AND a.pdf_index_status = 'ready'
   AND instr(lower(ppt.text), ?) > 0
 ORDER BY n.updated_at DESC
 LIMIT ?`;
-export const PDF_CROSS_PAGE_MATCH_SQL = `WITH page_pairs AS (
+export const PDF_CROSS_PAGE_MATCH_SQL = `${VISIBLE_NODES_CTE_SQL},
+page_pairs AS (
   SELECT
     na.node_id AS id,
     COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
@@ -111,8 +136,8 @@ export const PDF_CROSS_PAGE_MATCH_SQL = `WITH page_pairs AS (
   INNER JOIN attachments a ON a.id = ppt.attachment_id
   INNER JOIN node_attachments na ON na.attachment_id = a.id AND na.role = 'reference'
   INNER JOIN nodes n ON n.id = na.node_id
-  WHERE n.deleted_at IS NULL
-    AND a.mime_type = 'application/pdf'
+  INNER JOIN visible_nodes visible ON visible.id = n.id
+  WHERE a.mime_type = 'application/pdf'
     AND a.pdf_index_status = 'ready'
 )
 SELECT

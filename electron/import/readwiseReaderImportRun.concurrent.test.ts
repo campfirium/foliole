@@ -4,7 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL } from '../ipc/contracts.js';
 
-const runKeepImportRule = vi.hoisted(() => vi.fn());
+const requestKeepImportRuleRun = vi.hoisted(() => vi.fn());
 const readwiseSettings = vi.hoisted(() => ({
   readwiseReaderConfig: {
     enabled: true,
@@ -45,7 +45,7 @@ function createProgressWindow(destroyed = false) {
 }
 
 vi.mock('./keepImportService.js', () => ({
-  runKeepImportRule
+  requestKeepImportRuleRun
 }));
 
 vi.mock('./importManagerSettings.js', () => ({
@@ -53,20 +53,20 @@ vi.mock('./importManagerSettings.js', () => ({
   saveImportManagerSettings: vi.fn((settings) => settings)
 }));
 
-import { runReadwiseReaderImport } from './readwiseReaderImportRun.js';
+import { cancelReadwiseReaderImport, runReadwiseReaderImport } from './readwiseReaderImportRun.js';
 
 function createSettings() {
   return structuredClone(readwiseSettings);
 }
 
 beforeEach(() => {
-  runKeepImportRule.mockReset();
+  requestKeepImportRuleRun.mockReset();
 });
 
 it('coalesces overlapping Readwise sync requests into one import pass', async () => {
   let releaseImport!: () => void;
   const window = createProgressWindow();
-  runKeepImportRule.mockReturnValue(
+  requestKeepImportRuleRun.mockReturnValue(
     new Promise((resolve) => {
       releaseImport = () =>
         resolve([
@@ -82,7 +82,7 @@ it('coalesces overlapping Readwise sync requests into one import pass', async ()
   const first = runReadwiseReaderImport({ settings: createSettings(), window });
   const second = runReadwiseReaderImport({ settings: createSettings(), window });
 
-  expect(runKeepImportRule).toHaveBeenCalledTimes(1);
+  expect(requestKeepImportRuleRun).toHaveBeenCalledTimes(1);
   releaseImport();
   await expect(Promise.all([first, second])).resolves.toEqual([
     expect.objectContaining({ imported_count: 1 }),
@@ -99,6 +99,27 @@ it('coalesces overlapping Readwise sync requests into one import pass', async ()
     IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL,
     { processedCount: 1, status: 'completed', totalCount: 1 }
   );
+});
+
+it('cancels the active Readwise import pass', async () => {
+  requestKeepImportRuleRun.mockImplementation(
+    (config) =>
+      new Promise((_resolve, reject) => {
+        config.signal.addEventListener(
+          'abort',
+          () => reject(new DOMException('AbortError', 'AbortError')),
+          { once: true }
+        );
+      })
+  );
+
+  const running = runReadwiseReaderImport({ settings: createSettings() });
+  expect(cancelReadwiseReaderImport()).toEqual({ status: 'cancelled' });
+
+  await expect(running).resolves.toMatchObject({
+    imported_count: 0,
+    status: 'cancelled'
+  });
 });
 
 it('skips missing optional Readwise source directories without failing the sync', async () => {
@@ -119,7 +140,7 @@ it('skips missing optional Readwise source directories without failing the sync'
       primaryPath: '/readwise/Full Document Contents/Podcasts'
     }
   );
-  runKeepImportRule
+  requestKeepImportRuleRun
     .mockResolvedValueOnce([
       {
         action: 'import_attempted',
@@ -147,7 +168,7 @@ it('records real Readwise source failures with source path details', async () =>
     kind: 'tweets',
     primaryPath: '/readwise/Full Document Contents/Tweets'
   });
-  runKeepImportRule
+  requestKeepImportRuleRun
     .mockResolvedValueOnce([
       {
         action: 'import_attempted',
@@ -174,7 +195,7 @@ it('records real Readwise source failures with source path details', async () =>
 
 it('does not publish Readwise progress after the target window is destroyed', async () => {
   const window = createProgressWindow(true);
-  runKeepImportRule.mockResolvedValue([
+  requestKeepImportRuleRun.mockResolvedValue([
     {
       action: 'import_attempted',
       importStatus: 'imported',
@@ -185,4 +206,59 @@ it('does not publish Readwise progress after the target window is destroyed', as
   await runReadwiseReaderImport({ settings: createSettings(), window });
 
   expect(window.webContents.send).not.toHaveBeenCalled();
+});
+
+it('forwards per-file Readwise import progress from the Keep runner', async () => {
+  const window = createProgressWindow();
+  requestKeepImportRuleRun.mockImplementation(async (config) => {
+    config.onProgress?.({
+      currentSourcePath: 'High Fanout.md',
+      highlightProcessedCount: 0,
+      highlightTotalCount: 305,
+      phase: 'writing',
+      sourceProcessedCount: 0,
+      sourceTotalCount: 1
+    });
+    config.onProgress?.({
+      currentSourcePath: 'High Fanout.md',
+      highlightProcessedCount: 305,
+      highlightTotalCount: 305,
+      phase: 'writing',
+      sourceProcessedCount: 0,
+      sourceTotalCount: 1
+    });
+    return [
+      {
+        action: 'import_attempted',
+        importStatus: 'imported',
+        previewStatus: 'new'
+      }
+    ];
+  });
+
+  await runReadwiseReaderImport({ settings: createSettings(), window });
+
+  expect(window.webContents.send).toHaveBeenCalledWith(
+    IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL,
+    expect.objectContaining({
+      currentSourcePath: 'High Fanout.md',
+      highlightProcessedCount: 0,
+      highlightTotalCount: 305,
+      phase: 'writing',
+      processedCount: 0,
+      sourceProcessedCount: 0,
+      sourceTotalCount: 1,
+      status: 'running',
+      totalCount: 1
+    })
+  );
+  expect(window.webContents.send).toHaveBeenCalledWith(
+    IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL,
+    expect.objectContaining({
+      currentSourcePath: 'High Fanout.md',
+      highlightProcessedCount: 305,
+      highlightTotalCount: 305,
+      phase: 'writing'
+    })
+  );
 });

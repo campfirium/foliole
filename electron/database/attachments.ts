@@ -1,5 +1,5 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import { syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+import { enqueuePdfSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -90,16 +90,18 @@ export function createAttachmentRecord(input: AttachmentRecordInput): void {
 
 export function createNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
   const connection = openDatabaseConnection();
-  connection.driver.execute(
-    `INSERT INTO node_attachments (node_id, attachment_id, role)
-     VALUES (?, ?, ?)
-     ON CONFLICT(node_id, attachment_id, role) DO NOTHING`,
-    [input.nodeId, input.attachmentId, input.role]
-  );
-  if (changedRows() > 0) {
-    markNodeAttachmentLinksDirty(input.nodeId);
-  }
-  syncPdfSearchIndexForNodeIds(connection.driver, [input.nodeId]);
+  connection.driver.transaction(() => {
+    connection.driver.execute(
+      `INSERT INTO node_attachments (node_id, attachment_id, role)
+       VALUES (?, ?, ?)
+       ON CONFLICT(node_id, attachment_id, role) DO NOTHING`,
+      [input.nodeId, input.attachmentId, input.role]
+    );
+    if (changedRows() > 0) {
+      markNodeAttachmentLinksDirty(input.nodeId);
+      enqueuePdfSearchInvalidationForNodeIds(connection.driver, [input.nodeId]);
+    }
+  });
 }
 
 export function findAttachmentRecordById(id: string): AttachmentRecord | null {
@@ -165,13 +167,15 @@ export function listAttachmentNodeLinks(attachmentId: string): NodeAttachmentLin
 
 export function deleteNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
   const connection = openDatabaseConnection();
-  connection.driver.execute(
-    `DELETE FROM node_attachments
-     WHERE node_id = ? AND attachment_id = ? AND role = ?`,
-    [input.nodeId, input.attachmentId, input.role]
-  );
-  if (changedRows() > 0) {
-    markNodeAttachmentLinksDirty(input.nodeId);
-  }
-  syncPdfSearchIndexForNodeIds(connection.driver, [input.nodeId]);
+  connection.driver.transaction(() => {
+    connection.driver.execute(
+      `DELETE FROM node_attachments
+       WHERE node_id = ? AND attachment_id = ? AND role = ?`,
+      [input.nodeId, input.attachmentId, input.role]
+    );
+    if (changedRows() > 0) {
+      markNodeAttachmentLinksDirty(input.nodeId);
+      enqueuePdfSearchInvalidationForNodeIds(connection.driver, [input.nodeId]);
+    }
+  });
 }

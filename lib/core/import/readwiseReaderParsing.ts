@@ -11,10 +11,10 @@ function normalizeLineEndings(value: string) {
 
 function stripMarkdown(value: string) {
   return value
-    .replace(/!\[[^\]]*]\([^)]+\)/g, ' ')
+    .replace(/!\[[^\]]*]\([^)]+\)/g, (match) => ` ${match} `)
     .replace(/\[\[([^\]|]+)\|([^\]]+)]]/g, '$2')
     .replace(/\[\[([^\]]+)]]/g, '$1')
-    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/(?<!!)\[([^\]]+)]\([^)]+\)/g, '$1')
     .replace(/[`*_>#-]+/g, ' ');
 }
 

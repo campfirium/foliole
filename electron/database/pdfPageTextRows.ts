@@ -1,10 +1,10 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { enqueuePdfSearchInvalidationForAttachmentIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import {
   computeSyncContentHash,
   upsertSyncObjectState,
   type StateSyncObjectType
 } from '../../lib/core/database/syncState.js';
-import { syncPdfSearchIndexForAttachmentIds } from '../../lib/core/database/workspaceSearchIndex.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -104,10 +104,10 @@ export function savePdfPageTextRows(
       recordPdfPageTextDeleted(attachmentId, row.page, deviceId, now);
     }
     syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, deviceId, now);
+    enqueuePdfSearchInvalidationForAttachmentIds(connection.driver, [attachmentId]);
   });
 
   runInTransaction();
-  syncPdfSearchIndexForAttachmentIds(connection.driver, [attachmentId]);
 }
 
 export function deletePdfPageTextRowsForAttachment(attachmentId: string, deletedAt = new Date().toISOString()) {

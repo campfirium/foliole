@@ -3,6 +3,23 @@ import { AppButton, settingsSwitchClassName, settingsSwitchKnobClassName } from 
 
 import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
 
+function formatCount(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function formatSetupPreviewCounts(result: NativeReadwiseDetectionResult) {
+  const base = `Checked ${formatCount(result.checkedSourceCount, 'highlight file')} and ${formatCount(result.totalArticleCount, 'full document file')}`;
+  const labels = [
+    result.highlightOnlySourceCount > 0
+      ? formatCount(result.highlightOnlySourceCount, 'highlight-only file')
+      : null,
+    result.unparsedHighlightFileCount > 0
+      ? formatCount(result.unparsedHighlightFileCount, 'unparsed highlight file')
+      : null
+  ].filter((label): label is string => Boolean(label));
+  return `${base}${labels.length ? `; ${labels.join(', ')}` : ''}.`;
+}
+
 export function ReadwiseIntegrationSwitch(props: {
   disabled: boolean;
   enabled: boolean;
@@ -39,9 +56,7 @@ function ReadwiseSetupPreviewResult(props: { result: NativeReadwiseDetectionResu
     <div className="mt-4 border-t border-settings-divider/55 pt-4">
       <div>
         <div className="text-sm font-medium text-foreground">
-          Found {props.result.totalArticleCount} article
-          {props.result.totalArticleCount === 1 ? '' : 's'}, including{' '}
-          {props.result.highlightedArticleCount} with highlights.
+          {formatSetupPreviewCounts(props.result)}
         </div>
         <p className="mt-1 text-sm leading-5 text-foreground/65">
           {sampleLabel} shown below. Adjust the import settings and preview again if it does not

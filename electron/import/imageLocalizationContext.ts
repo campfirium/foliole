@@ -4,6 +4,9 @@ import { importImageAttachmentResource } from '../attachments/importImageAttachm
 import { fetchRemoteImageResource } from '../attachments/remoteImagePipeline.js';
 import { createNodeAttachmentLink } from '../database/attachments.js';
 
+import { readImageIntrinsicSize, type ImageIntrinsicSize } from './imageIntrinsicSize.js';
+import { layoutLocalizedMarkdownImage } from './localizedMarkdownImageLayout.js';
+
 interface MarkdownImageToken {
   alt: string;
   from: number;
@@ -16,6 +19,7 @@ interface MarkdownImageToken {
 interface LocalizedImage {
   attachmentId: string;
   markdownUrl: string;
+  size: ImageIntrinsicSize | null;
 }
 
 export interface ImageLocalizationResult {
@@ -75,15 +79,25 @@ export class ImageLocalizationContext {
     let localized = '';
     let cursor = 0;
     for (const match of matches) {
-      localized += markdown.slice(cursor, match.from);
+      const textBeforeImage = markdown.slice(cursor, match.from);
       const localization = await this.resolveRemoteImage(match.sourceUrl);
       if (localization) {
         attachmentIds.add(localization.attachmentId);
-        localized += buildLocalizedMarkdownImage(match, localization.markdownUrl);
+        const layout = layoutLocalizedMarkdownImage({
+          imageMarkdown: buildLocalizedMarkdownImage(match, localization.markdownUrl),
+          markdown,
+          range: match,
+          size: localization.size,
+          textBeforeImage
+        });
+        localized += layout.before;
+        localized += layout.image;
+        cursor = layout.cursor;
       } else {
+        localized += textBeforeImage;
         localized += match.raw;
+        cursor = match.to;
       }
-      cursor = match.to;
     }
     localized += markdown.slice(cursor);
     return {
@@ -118,7 +132,8 @@ export class ImageLocalizationContext {
     }
     return {
       attachmentId: imported.attachment_id,
-      markdownUrl: buildAssetMarkdownUrl(imported.attachment_id, imported.original_name)
+      markdownUrl: buildAssetMarkdownUrl(imported.attachment_id, imported.original_name),
+      size: readImageIntrinsicSize(fetched.resource.bytes)
     };
   }
 }

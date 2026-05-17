@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSearchDecorations, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -22,13 +22,16 @@ export function buildResolvedDocumentPanelProps(props: DocumentPanelSectionProps
 
 export function useDocumentPanelInteractions(props: DocumentPanelSectionProps) {
   const editorAdapterRef = useRef<EditorAdapter | null>(null);
+  const [editorAdapter, setEditorAdapter] = useState<EditorAdapter | null>(null);
 
   const handleEditorReady = (adapter: EditorAdapter | null) => {
     editorAdapterRef.current = adapter;
+    setEditorAdapter(adapter);
     props.onEditorReady(adapter);
   };
 
   return {
+    editorAdapter,
     handleEditorReady,
     handleOpenExternalLink: (request: ExternalLinkOpenRequest) => {
       props.onOpenExternalLink?.(request);

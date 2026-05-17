@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
-import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import type { PersistedImportRecord, PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
@@ -124,14 +124,16 @@ async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(
 
   const connection = openDatabaseConnection();
   const bodyBlobHash = upsertTextBodyBlob(connection.driver, rewrittenContent, importedAt);
-  connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
-    rewrittenContent,
-    bodyBlobHash,
-    resolveNodeOpeningText(rewrittenContent, node.title),
-    importedAt,
-    nodeId
-  ]);
-  syncWorkspaceSearchIndexForNodeIds(connection.driver, [nodeId]);
+  connection.driver.transaction(() => {
+    connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
+      rewrittenContent,
+      bodyBlobHash,
+      resolveNodeOpeningText(rewrittenContent, node.title),
+      importedAt,
+      nodeId
+    ]);
+    enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, [nodeId]);
+  });
 
   return {
     ...node,

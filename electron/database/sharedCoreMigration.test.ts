@@ -46,7 +46,7 @@ it('initializes a fresh database with the current schema', () => {
        `SELECT name
        FROM sqlite_master
        WHERE type = 'table' AND name IN (
-         'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_reading_device_state', 'node_sync_conflicts', 'node_sync_versions', 'node_view_state', 'nodes', 'node_reading', 'node_review', 'review_log', 'setting_records', 'settings', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
+         'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_reading_device_state', 'node_sync_conflicts', 'node_sync_versions', 'node_view_state', 'nodes', 'node_reading', 'node_review', 'review_log', 'search_index_invalidations', 'setting_records', 'settings', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
        )
        ORDER BY name ASC`
     )
@@ -65,6 +65,7 @@ it('initializes a fresh database with the current schema', () => {
     { name: 'node_view_state' },
     { name: 'nodes' },
     { name: 'review_log' },
+    { name: 'search_index_invalidations' },
     { name: 'setting_records' },
     { name: 'settings' },
     { name: 'sync_change_log' },
@@ -183,6 +184,18 @@ it('adds primary device commit columns to existing sync peers', () => {
     'primary_device_epoch',
     'primary_updated_by_device_id'
   ]));
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+});
+
+it('adds search index invalidation queue to existing v39 databases', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.pragma('user_version = 39');
+
+  initializeDatabaseConnection(connection);
+
+  expect(connection.sqlite
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'search_index_invalidations'")
+    .get()).toEqual({ name: 'search_index_invalidations' });
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 

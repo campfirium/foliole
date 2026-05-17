@@ -48,7 +48,8 @@ function useDocumentPanelTextAnchorState(props: DocumentPanelSectionProps) {
         return (
           previousDecoration?.from === nextDecoration?.from &&
           previousDecoration?.to === nextDecoration?.to &&
-          previousDecoration?.kind === nextDecoration?.kind
+          previousDecoration?.kind === nextDecoration?.kind &&
+          previousDecoration?.nodeId === nextDecoration?.nodeId
         );
       });
     if (isSame) {
@@ -191,6 +192,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
       <DocumentPanelSectionOverlays
         currentSourceUpdateContent={model.currentSourceUpdateContent}
         documentMaxWidth={model.bodyProps.documentMaxWidth}
+        editorAdapter={interactions.editorAdapter}
         handleSourceUpdateDraftChange={model.handleSourceUpdateDraftChange}
         handleSourceUpdatePanelOpenChange={model.handleSourceUpdatePanelOpenChange}
         isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}

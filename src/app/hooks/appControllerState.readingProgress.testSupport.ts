@@ -73,6 +73,7 @@ export function createWorkspaceState() {
     setRightSidebarWidth: vi.fn(),
     startReviewSession: vi.fn(),
     trashedNodeIds: [],
+    updateHighlightAnchorRange: vi.fn(() => false),
     updateNodeContent: vi.fn(),
     updateNodeDesiredRetention: vi.fn(),
     updateNodePriority: vi.fn(),

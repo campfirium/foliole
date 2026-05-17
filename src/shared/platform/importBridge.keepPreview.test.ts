@@ -33,6 +33,7 @@ it('forwards keep preview mode details to the runtime import bridge', async () =
 
   await previewRuntimeKeepImportRule({
     directoryPath: '/tmp/inbox',
+    highlightMode: 'merged',
     highlightPolicy: 'adopt',
     ruleId: 'draft-import-source-101',
     sourceType: 'generic'
@@ -40,6 +41,7 @@ it('forwards keep preview mode details to the runtime import bridge', async () =
 
   expect(invoke).toHaveBeenCalledWith('preview_keep_import_rule', {
     directory_path: '/tmp/inbox',
+    highlight_mode: 'merged',
     highlight_policy: 'adopt',
     rule_id: 'draft-import-source-101',
     source_type: 'generic'

@@ -44,12 +44,27 @@ function isAnnotationToolbarTarget(target: EventTarget | null) {
   return target instanceof Element && target.closest('[data-annotation-toolbar="true"]') !== null;
 }
 
+function isHighlightRangeHandleTarget(target: EventTarget | null) {
+  return target instanceof Element && target.closest('[data-highlight-range-handle="true"]') !== null;
+}
+
 function isEditorTarget(target: EventTarget | null) {
   return target instanceof Element && target.closest(EDITOR_TARGET_SELECTOR) !== null;
 }
 
 function isHighlightTarget(target: EventTarget | null) {
   return getHighlightElement(target) !== null;
+}
+
+function resolveHighlightClickPosition(
+  editor: EditorAdapter | null,
+  event: MouseEvent
+) {
+  const clickedPosition = editor?.getDocumentPositionAtClientPoint?.(event.clientX, event.clientY);
+  if (clickedPosition !== null && clickedPosition !== undefined) {
+    return clickedPosition;
+  }
+  return editor?.getSelection().from ?? null;
 }
 
 interface SelectionAnnotationToolbarArgs {
@@ -63,7 +78,7 @@ interface SelectionAnnotationToolbarArgs {
 
 function createAnnotationToolbarMouseDownHandler(args: SelectionAnnotationToolbarArgs) {
   return (event: MouseEvent) => {
-    if (isAnnotationToolbarTarget(event.target)) {
+    if (isAnnotationToolbarTarget(event.target) || isHighlightRangeHandleTarget(event.target)) {
       return;
     }
     clearActiveHighlightElements();
@@ -72,26 +87,29 @@ function createAnnotationToolbarMouseDownHandler(args: SelectionAnnotationToolba
 }
 
 function openExistingHighlightToolbar(args: SelectionAnnotationToolbarArgs, event: MouseEvent) {
-  const cursor = args.editorRef.current?.getSelection();
-  const highlightMatch = cursor && isHighlightTarget(event.target)
-    ? findTextAnchorAtPosition(args.activeNodeId ?? '', args.nodesById, cursor.from, args.trashedNodeIds)
+  const position = isHighlightTarget(event.target)
+    ? resolveHighlightClickPosition(args.editorRef.current, event)
+    : null;
+  const highlightMatch = position !== null
+    ? findTextAnchorAtPosition(args.activeNodeId ?? '', args.nodesById, position, args.trashedNodeIds)
     : null;
   if (!highlightMatch) {
-    return;
+    return false;
   }
-  const position = resolveSelectionToolbarPosition(event);
+  const toolbarPosition = resolveSelectionToolbarPosition(event);
   getHighlightElement(event.target)?.classList.add(ACTIVE_HIGHLIGHT_CLASS);
   args.setContextMenu({
     canRunCommands: true,
     existingHighlight: highlightMatch,
     kind: 'selection',
-    left: position.left,
+    left: toolbarPosition.left,
     mode: 'existing-highlight-toolbar',
-    notePanelLeft: position.notePanelLeft,
-    notePanelTop: position.notePanelTop,
+    notePanelLeft: toolbarPosition.notePanelLeft,
+    notePanelTop: toolbarPosition.notePanelTop,
     payload: null,
-    top: position.top
+    top: toolbarPosition.top
   });
+  return true;
 }
 
 function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarArgs) {
@@ -100,6 +118,9 @@ function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarA
       return;
     }
     if (isAnnotationToolbarTarget(event.target) || !isEditorTarget(event.target)) {
+      return;
+    }
+    if (isHighlightTarget(event.target) && openExistingHighlightToolbar(args, event)) {
       return;
     }
     const payload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);

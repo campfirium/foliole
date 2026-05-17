@@ -95,6 +95,7 @@ export interface BuildControllerLayoutPropsArgs {
     startReviewSession: (now?: string) => boolean;
     trashedNodeIds: string[];
     updateNodeContent: (nodeId: string, content: string) => void;
+    updateHighlightAnchorRange?: (highlightNodeId: string, parentContent: string, range: { from: number; to: number }) => boolean;
     updateVirtualNodeFilter: (nodeId: string, value: string) => void;
     updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
     updateNodePriority: (nodeId: string, priority: number | null) => void;

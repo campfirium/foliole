@@ -15,7 +15,11 @@ import {
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
 import { writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
-import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
+import { prepareNodeSearchInvalidationForUpsert } from './nodeSearchInvalidationForMutation.js';
+import {
+  enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds,
+  enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds
+} from './searchIndexInvalidations.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 interface NodeAnchorLinkPayload {
@@ -137,6 +141,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
   const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
 
   driver.transaction(() => {
+    const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input);
     ensureSpecialRootNodesForInput(driver, input);
     const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt);
     upsertNodeStatement.run([
@@ -174,7 +179,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       title: input.title,
       updatedAt: input.updatedAt
     });
-    syncWorkspaceSearchIndexForNodeIds(driver, [input.nodeId]);
+    enqueueSearchInvalidation();
   });
 }
 
@@ -217,7 +222,7 @@ export function softDeleteNodes(driver: DatabaseDriver, input: SoftDeleteNodesIn
     for (const nodeId of input.nodeIds) {
       setDeletedAtStatement.run([input.deletedAt, input.deletedAt, nodeId]);
     }
-    syncWorkspaceSearchIndexForNodeIds(driver, input.nodeIds);
+    enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds(driver, input.nodeIds);
   });
 }
 
@@ -229,7 +234,7 @@ export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): 
     for (const nodeId of input.nodeIds) {
       clearDeletedAtStatement.run([restoredAt, nodeId]);
     }
-    syncWorkspaceSearchIndexForNodeIds(driver, input.nodeIds);
+    enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds(driver, input.nodeIds);
   });
 }
 
@@ -263,7 +268,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
         insertOrderStatement.run([nodeId, index]);
       }
     }
-    syncWorkspaceSearchIndexForNodeIds(driver, input.nodeIds);
+    enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds(driver, input.nodeIds);
   });
 
   return [];

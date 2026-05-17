@@ -1,0 +1,89 @@
+import { recordPreparedImportFailure } from '../database/importPipeline.js';
+import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
+import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
+
+import { loadImportManagerSettings } from './importManagerSettings.js';
+import { runLoadedPreparedImportAttempt } from './keepImportLoadedPreparedImportAttempt.js';
+import {
+  loadPreparedKeepImportRecord,
+  resolveKeepImportSourceSignature
+} from './keepImportPreparedRecord.js';
+import type { KeepImportProgressSink } from './keepImportProgress.js';
+import { isKeepImportAbortError, throwIfKeepImportAborted } from './keepImportProgress.js';
+import type { KeepImportRuleConfig } from './keepImportService.js';
+import { persistKeepImportState } from './keepImportServiceState.js';
+import { isBlockedByDeletedNode } from './keepImportSourceClassifier.js';
+import { hasPrimarySourceChanged } from './keepImportSourceSignature.js';
+import { resolvePersistedSourceUpdateFlag } from './keepImportSourceUpdateState.js';
+
+function recordFailedKeepImportAttempt(input: {
+  config: KeepImportRuleConfig;
+  failureReason: string;
+  hasSourceUpdate: boolean;
+  importedAt: string;
+  source: DirectoryImportSourceDescriptor;
+  sourceSignature: {
+    highlight: { mtimeMs: number; sizeBytes: number } | null;
+    primary: { mtimeMs: number; sizeBytes: number };
+  };
+}) {
+  const record = recordPreparedImportFailure(
+    buildPreparedImportRecord(input.source, {
+      content: '',
+      highlightPolicy: input.config.highlightPolicy,
+      importedAt: input.importedAt,
+      titleStrategy: loadImportManagerSettings().titleStrategy
+    }),
+    input.failureReason
+  );
+  persistKeepImportState(input.config, input.source, input.sourceSignature, record, 'failed', input.hasSourceUpdate);
+  return {
+    detail: input.failureReason,
+    failureReason: input.failureReason,
+    importId: record.importId,
+    importStatus: 'failed' as const
+  };
+}
+
+export async function runKeepImportSourceImportAttempt(
+  config: KeepImportRuleConfig,
+  source: DirectoryImportSourceDescriptor,
+  options: { automaticDuplicateNoop: boolean; onProgress?: KeepImportProgressSink | undefined }
+) {
+  const importedAt = new Date().toISOString();
+  throwIfKeepImportAborted(config.signal);
+  const sourceSignature = await resolveKeepImportSourceSignature(config, source);
+  throwIfKeepImportAborted(config.signal);
+  const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
+  const hasSourceUpdate = resolvePersistedSourceUpdateFlag(
+    blockedState.existingItem,
+    hasPrimarySourceChanged(blockedState.existingItem, sourceSignature)
+  );
+  try {
+    const prepared = await loadPreparedKeepImportRecord(config, source, importedAt);
+    throwIfKeepImportAborted(config.signal);
+    return await runLoadedPreparedImportAttempt({
+      automaticDuplicateNoop: options.automaticDuplicateNoop,
+      config,
+      hasSourceUpdate,
+      onProgress: options.onProgress,
+      prepared,
+      ...(config.signal ? { signal: config.signal } : {}),
+      source,
+      sourceSignature
+    });
+  } catch (error) {
+    if (isKeepImportAbortError(error)) {
+      throw error;
+    }
+    const failureReason = error instanceof Error ? error.message : 'Unknown keep import failure';
+    return recordFailedKeepImportAttempt({
+      config,
+      failureReason,
+      hasSourceUpdate,
+      importedAt,
+      source,
+      sourceSignature
+    });
+  }
+}

@@ -80,6 +80,7 @@ function WorkspaceSettingsOverlayContent({
         <SettingsReadwiseReaderContent
           config={importSettings.readwiseReaderConfig}
           onSave={importSettings.handleSaveReadwiseReaderSetup}
+          onCancelSync={importSettings.cancelReadwiseReaderImport}
           onPreviewSync={importSettings.previewReadwiseReaderImport}
           onPreviewCleanup={importSettings.previewReadwiseImportCleanup}
           onRunCleanup={importSettings.runReadwiseImportCleanup}

@@ -95,7 +95,6 @@ function toImportSourcePayload(row: ImportSourceRow) {
   return {
     first_imported_at: row.first_imported_at ?? '',
     last_content_fingerprint: row.last_content_fingerprint,
-    last_imported_at: row.last_imported_at ?? '',
     latest_node_id: row.latest_node_id,
     provider: row.provider ?? '',
     source_fingerprint: row.source_fingerprint ?? '',

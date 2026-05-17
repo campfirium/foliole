@@ -74,7 +74,7 @@ it('keeps imported sidecar highlight locators aligned after local image rewrite'
     .prepare('SELECT content FROM nodes WHERE id = ?')
     .get(imported.nodeId as string) as { content: string };
   const childRow = openDatabaseConnection().sqlite
-    .prepare('SELECT anchor_link FROM nodes WHERE parent_id = ?')
+    .prepare('SELECT anchor_link, image_regions FROM nodes WHERE parent_id = ?')
     .get(imported.nodeId as string) as { anchor_link: string | null };
   const locator = parseAnchorLink(childRow.anchor_link).locator;
 
@@ -99,11 +99,8 @@ async function createReadwiseImageFixture(readwiseRoot: string) {
   return { fullDir, highlightDir };
 }
 
-it('matches readwise highlights before remote image localization and remaps after image rewrite', async () => {
-  const readwiseRoot = await fs.mkdtemp(path.join(tempRoot, 'readwise-images-'));
-  const { fullDir, highlightDir } = await createReadwiseImageFixture(readwiseRoot);
-
-  const prepared = await loadPreparedReadwiseImportRecord({
+async function loadPreparedReadwiseFixture(fullDir: string, highlightDir: string) {
+  return loadPreparedReadwiseImportRecord({
     adapterId: 'markdown_directory',
     filePath: path.join(fullDir, 'list.md'),
     kind: 'markdown',
@@ -117,7 +114,13 @@ it('matches readwise highlights before remote image localization and remaps afte
     kind: 'articles',
     readwiseConfig: createDefaultReadwiseReaderConfig()
   });
-  const imported = runPreparedImport(prepared);
+}
+
+it('matches readwise highlights before remote image localization and remaps after image rewrite', async () => {
+  const readwiseRoot = await fs.mkdtemp(path.join(tempRoot, 'readwise-images-'));
+  const { fullDir, highlightDir } = await createReadwiseImageFixture(readwiseRoot);
+
+  const imported = runPreparedImport(await loadPreparedReadwiseFixture(fullDir, highlightDir));
   const nodeRow = openDatabaseConnection().sqlite
     .prepare('SELECT content FROM nodes WHERE id = ?')
     .get(imported.nodeId as string) as { content: string };
@@ -144,11 +147,67 @@ it('matches readwise highlights before remote image localization and remaps afte
     updatedAt: '2026-05-13T00:00:01.000Z'
   });
   const remappedChildRow = openDatabaseConnection().sqlite
-    .prepare('SELECT anchor_link FROM nodes WHERE parent_id = ?')
-    .get(imported.nodeId as string) as { anchor_link: string | null };
+    .prepare('SELECT anchor_link, image_regions FROM nodes WHERE parent_id = ?')
+    .get(imported.nodeId as string) as { anchor_link: string | null; image_regions: string | null };
   const remappedLocator = parseAnchorLink(remappedChildRow.anchor_link).locator;
+  const imageRegions = JSON.parse(remappedChildRow.image_regions ?? 'null') as Array<{
+    attachmentId: string;
+    regions: Array<{ height: number; id: string; width: number; x: number; y: number }>;
+  }> | null;
   expect(remappedLocator ? rewrittenContent.slice(remappedLocator.from, remappedLocator.to) : null).toBe(
     remappedLocator?.originalText
   );
   expect(remappedLocator?.originalText).toContain('![Avatar](asset://attachment-avatar.png)');
+  expect(imageRegions).toEqual([
+    {
+      attachmentId: 'attachment-avatar',
+      regions: [
+        {
+          height: 1,
+          id: `${JSON.parse(remappedChildRow.anchor_link ?? '{}').id}-image-0`,
+          width: 1,
+          x: 0,
+          y: 0
+        }
+      ]
+    }
+  ]);
+});
+
+it('imports image-only readwise highlights with a locator on the image markdown', async () => {
+  const readwiseRoot = await fs.mkdtemp(path.join(tempRoot, 'readwise-image-only-'));
+  const fullDir = path.join(readwiseRoot, 'Full Document Contents', 'Articles');
+  const highlightDir = path.join(readwiseRoot, 'Articles');
+  await fs.mkdir(fullDir, { recursive: true });
+  await fs.mkdir(highlightDir, { recursive: true });
+  await fs.writeFile(path.join(fullDir, 'image.md'), '# Image\n\n![](https://cdn.example.com/cover.jpg)\n', 'utf8');
+  await fs.writeFile(
+    path.join(highlightDir, 'image.md'),
+    '# Image\n\n## Highlights\n- ![](https://cdn.example.com/cover.jpg) ([View Highlight](https://read.readwise.io/read/01image))\n',
+    'utf8'
+  );
+
+  const prepared = await loadPreparedReadwiseImportRecord({
+    adapterId: 'markdown_directory',
+    filePath: path.join(fullDir, 'image.md'),
+    kind: 'markdown',
+    mtimeMs: 1,
+    sizeBytes: 1,
+    sourceName: 'image.md'
+  }, {
+    highlightDirectoryPath: highlightDir,
+    highlightPolicy: 'reference_only',
+    importedAt: '2026-05-17T00:00:00.000Z',
+    kind: 'articles',
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  const imported = runPreparedImport(prepared);
+  const childRow = openDatabaseConnection().sqlite
+    .prepare('SELECT content, anchor_link FROM nodes WHERE parent_id = ?')
+    .get(imported.nodeId as string) as { anchor_link: string | null; content: string };
+  const locator = parseAnchorLink(childRow.anchor_link).locator;
+
+  expect(prepared.matchedHighlights).toMatchObject([{ content: '![](https://cdn.example.com/cover.jpg)' }]);
+  expect(childRow.content).toContain('![](https://cdn.example.com/cover.jpg)');
+  expect(locator?.originalText).toBe('![](https://cdn.example.com/cover.jpg)');
 });

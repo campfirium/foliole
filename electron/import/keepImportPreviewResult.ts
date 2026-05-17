@@ -1,4 +1,4 @@
-import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeImportContract.js';
+import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeKeepImportContract.js';
 
 interface KeepImportPreviewEntryLike {
   contentPreview: string | null;

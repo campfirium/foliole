@@ -23,6 +23,7 @@ export interface DocumentPanelSectionProps {
   canGoForward: boolean;
   canGoParent: boolean;
   contextMenu: WorkspaceEditorContextMenu | null;
+  editorAdapterRef?: import('react').MutableRefObject<EditorAdapter | null>;
   editorContent: string;
   editorAppearanceKey: string;
   isEditorReadOnly: boolean;
@@ -55,6 +56,7 @@ export interface DocumentPanelSectionProps {
   onCreateHighlight: () => void;
   onCreateNote?: (note: string) => void;
   onDeleteExistingHighlight?: () => void;
+  onAdjustExistingHighlightRange?: (highlightNodeId: string, parentContent: string, range: { from: number; to: number }) => boolean;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;

@@ -1,14 +1,9 @@
-import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 import { readKeepImportItem } from '../database/keepImportItems.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
-import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
 
-import { loadImportManagerSettings } from './importManagerSettings.js';
 import { persistDetectedSourceUpdate } from './keepImportDetectedSourceUpdate.js';
-import {
-  loadPreparedKeepImportRecord,
-  resolveKeepImportSourceSignature
-} from './keepImportPreparedRecord.js';
+import { resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
+import type { KeepImportProgressSink } from './keepImportProgress.js';
 import {
   resolveReadwiseKeepImportDestination,
   runReadwiseExternalDocumentImport,
@@ -16,50 +11,12 @@ import {
 } from './keepImportReadwiseDestination.js';
 import type { KeepImportRunEntry } from './keepImportReadwiseLogging.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
-import { persistBlockedKeepImportState, persistKeepImportState } from './keepImportServiceState.js';
+import { persistBlockedKeepImportState } from './keepImportServiceState.js';
 import { classifySource, isBlockedByDeletedNode } from './keepImportSourceClassifier.js';
+import { runKeepImportSourceImportAttempt } from './keepImportSourceImportAttempt.js';
 import { hasPrimarySourceChanged } from './keepImportSourceSignature.js';
-import { resolveKeepImportResultDetail, resolveKeepImportResultStatus, resolvePersistedSourceUpdateFlag } from './keepImportSourceUpdateState.js';
+import { resolvePersistedSourceUpdateFlag } from './keepImportSourceUpdateState.js';
 import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
-
-async function runKeepImportSource(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
-  const importedAt = new Date().toISOString();
-  const sourceSignature = await resolveKeepImportSourceSignature(config, source);
-  const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
-  const hasSourceUpdate = resolvePersistedSourceUpdateFlag(
-    blockedState.existingItem,
-    hasPrimarySourceChanged(blockedState.existingItem, sourceSignature)
-  );
-  try {
-    const record = runPreparedImport(await loadPreparedKeepImportRecord(config, source, importedAt));
-    const importStatus = resolveKeepImportResultStatus(record);
-    persistKeepImportState(config, source, sourceSignature, record, importStatus, hasSourceUpdate);
-    return {
-      detail: resolveKeepImportResultDetail(record, importStatus),
-      failureReason: record.failureReason,
-      importId: record.importId,
-      importStatus
-    };
-  } catch (error) {
-    const failureReason = error instanceof Error ? error.message : 'Unknown keep import failure';
-    const record = recordPreparedImportFailure(
-      buildPreparedImportRecord(source, {
-        content: '',
-        highlightPolicy: config.highlightPolicy,
-        importedAt,
-        titleStrategy: loadImportManagerSettings().titleStrategy
-      }),
-      failureReason
-    );
-    persistKeepImportState(config, source, sourceSignature, record, 'failed', hasSourceUpdate);
-    return {
-      detail: failureReason,
-      failureReason,
-      importId: record.importId,
-      importStatus: 'failed' as const
-    };
-  }
-}
 
 function createSkippedKeepImportEntry(input: {
   detail: string | null;
@@ -123,10 +80,56 @@ async function persistBlockedDeletedKeepImport(
   };
 }
 
+async function skipDetectedSourceUpdate(
+  config: KeepImportRuleConfig,
+  source: DirectoryImportSourceDescriptor,
+  previewStatus: KeepImportRunEntry['previewStatus']
+): Promise<KeepImportRunEntry> {
+  const result = await persistDetectedSourceUpdate(config, source);
+  notifyManagedInboxUpdated(result.importId);
+  return {
+    action: 'skipped',
+    detail: result.detail,
+    failureReason: result.failureReason,
+    importStatus: result.importStatus,
+    previewStatus,
+    sourcePath: source.sourceName
+  };
+}
+
+async function runImportAttempt(
+  config: KeepImportRuleConfig,
+  source: DirectoryImportSourceDescriptor,
+  options: { forceTopicImport?: boolean; notifyUpdate: boolean; onProgress?: KeepImportProgressSink | undefined },
+  previewStatus: KeepImportRunEntry['previewStatus']
+): Promise<KeepImportRunEntry> {
+  const result = await runKeepImportSourceImportAttempt(config, source, {
+    automaticDuplicateNoop: !options.forceTopicImport,
+    onProgress: options.onProgress
+  });
+  if ('noOp' in result && result.noOp) {
+    return createSkippedKeepImportEntry({
+      detail: result.detail,
+      failureReason: result.failureReason,
+      previewStatus,
+      sourcePath: source.sourceName
+    });
+  }
+  notifyKeepImportUpdated(result.importId, options.notifyUpdate);
+  return {
+    action: 'import_attempted',
+    detail: result.detail,
+    failureReason: result.failureReason,
+    importStatus: result.importStatus,
+    previewStatus,
+    sourcePath: source.sourceName
+  };
+}
+
 export async function runSingleKeepImportSource(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor,
-  options: { forceTopicImport?: boolean; notifyUpdate?: boolean } = {}
+  options: { forceTopicImport?: boolean; notifyUpdate?: boolean; onProgress?: KeepImportProgressSink | undefined } = {}
 ): Promise<KeepImportRunEntry> {
   const notifyUpdate = options.notifyUpdate ?? true;
   const preview = await classifySource(config, source);
@@ -160,27 +163,9 @@ export async function runSingleKeepImportSource(
     }
   }
   if (preview.status === 'updated') {
-    const result = await persistDetectedSourceUpdate(config, source);
-    notifyManagedInboxUpdated(result.importId);
-    return {
-      action: 'skipped',
-      detail: result.detail,
-      failureReason: result.failureReason,
-      importStatus: result.importStatus,
-      previewStatus: preview.status,
-      sourcePath: source.sourceName
-    };
+    return skipDetectedSourceUpdate(config, source, preview.status);
   }
-  const result = await runKeepImportSource(config, source);
-  notifyKeepImportUpdated(result.importId, notifyUpdate);
-  return {
-    action: 'import_attempted',
-    detail: result.detail,
-    failureReason: result.failureReason,
-    importStatus: result.importStatus,
-    previewStatus: preview.status,
-    sourcePath: source.sourceName
-  };
+  return runImportAttempt(config, source, { ...options, notifyUpdate }, preview.status);
 }
 
 async function runReadwiseDestination(

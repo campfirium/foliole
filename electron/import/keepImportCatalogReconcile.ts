@@ -8,6 +8,7 @@ import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipelin
 
 import { refreshKeepImportItemCache } from './keepImportItemCacheRefresh.js';
 import { resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
+import { resolveReadwiseKeepImportDestination } from './keepImportReadwiseDestination.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
 import { hasHighlightSourceChanged, hasPrimarySourceChanged } from './keepImportSourceSignature.js';
 
@@ -28,7 +29,12 @@ export async function reconcileKeepImportCatalog(config: KeepImportRuleConfig, s
   for (const source of sources) {
     const existingItem = readKeepImportItem(config.ruleId, source.sourceName);
     const sourceSignature = await resolveKeepImportSourceSignature(config, source);
-    await refreshKeepImportItemCache(config, source, seenAt);
+    const destination = config.sourceType === 'readwise'
+      ? await resolveReadwiseKeepImportDestination(config, source)
+      : 'inbox';
+    if (destination !== 'off') {
+      await refreshKeepImportItemCache(config, source, seenAt);
+    }
     const localNodeState = resolveLocalNodeState(existingItem);
     const changed =
       hasPrimarySourceChanged(existingItem, sourceSignature) ||

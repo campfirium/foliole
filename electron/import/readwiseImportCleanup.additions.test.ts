@@ -27,6 +27,7 @@ import { initializeDatabase } from '../database/migrate.js';
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { previewReadwiseImportCleanup, runReadwiseImportCleanup } from './readwiseImportCleanup.js';
 import { runReadwiseReaderImport } from './readwiseReaderImportRun.js';
+import { previewReadwiseReaderImport } from './readwiseSyncPreview.js';
 
 let tempRoot = '';
 
@@ -133,9 +134,13 @@ it('keeps a newly added non-imported child topic after import', async () => {
   expect(readRows('SELECT id FROM nodes WHERE id = ?', 'node-added-1')).toEqual([
     { id: 'node-added-1' }
   ]);
-  expect(readRows('SELECT last_node_id FROM keep_import_items')).toEqual([
-    { last_node_id: nodeId }
-  ]);
+  expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
+  expect(readRows('SELECT * FROM import_sources')).toEqual([]);
+  expect(readRows('SELECT * FROM import_runs')).toEqual([]);
+  await expect(previewReadwiseReaderImport()).resolves.toMatchObject({
+    blocked_count: 0,
+    write_count: 1
+  });
 });
 
 it('does not keep an imported-derived child topic created after import', async () => {

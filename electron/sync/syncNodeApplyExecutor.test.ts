@@ -122,6 +122,13 @@ it('applies remote nodes through the shared async DbPort executor', async () => 
       'SELECT node_id, attachment_id, role FROM node_attachments WHERE node_id = ? ORDER BY attachment_id ASC'
     ).all('node-1')
   ).toEqual([{ attachment_id: 'att-1', node_id: 'node-1', role: 'reference' }]);
+  expect(
+    connection.sqlite.prepare(
+      `SELECT invalidation_type, target_id, status
+       FROM search_index_invalidations
+       WHERE target_id = ?`
+    ).get('node-1')
+  ).toEqual({ invalidation_type: 'node_workspace', status: 'pending', target_id: 'node-1' });
 });
 
 it('allows host adapters to provide the text body hash implementation', async () => {

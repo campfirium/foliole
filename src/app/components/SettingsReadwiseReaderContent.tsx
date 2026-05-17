@@ -137,6 +137,7 @@ interface SettingsReadwiseReaderContentProps {
   config: ReadwiseReaderConfig;
   onPreviewCleanup?: () => Promise<NativeReadwiseCleanupPreviewResult | null>;
   onPreviewSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseSyncPreviewResult | null>;
+  onCancelSync?: () => Promise<unknown>;
   onRunCleanup?: () => Promise<NativeReadwiseCleanupRunResult | null>;
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
   onSave: (input: ReadwiseSetupPayload) => void;
@@ -180,12 +181,14 @@ export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderConte
       />
       <ReadwiseSyncPreviewDialog
         error={setup.syncError}
+        isCancelling={setup.isCancellingSync}
         isPreviewing={setup.isSyncPreviewing}
         isStarting={setup.isStartingSync}
         notice={setup.syncNotice}
         onCancel={setup.closeSyncPreview}
         onStart={setup.startSync}
         open={setup.syncIntent !== null}
+        progress={setup.syncProgress}
         preview={setup.syncPreview}
       />
       <ReadwiseCleanupDialog

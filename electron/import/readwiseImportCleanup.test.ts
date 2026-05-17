@@ -237,3 +237,18 @@ it('clears Readwise Books placeholders and tracking-only records', async () => {
   expect(readRows("SELECT id FROM nodes WHERE id = 'node-readwise-book-placeholder'")).toEqual([]);
   expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
 });
+
+it('clears tracking for Readwise topics already deleted from the active node tree', async () => {
+  const fixture = await seedReadwiseFixture();
+  saveReadwiseSettings(fixture);
+  await runReadwiseReaderImport();
+  const nodeId = readRows<{ last_node_id: string }>('SELECT last_node_id FROM keep_import_items')[0]?.last_node_id;
+  openDatabaseConnection().sqlite
+    .prepare("UPDATE nodes SET deleted_at = '2026-05-17T03:35:11.415Z' WHERE id = ?")
+    .run(nodeId);
+
+  expect(previewReadwiseImportCleanup()).toMatchObject({ keep_count: 1, total_count: 1 });
+  runReadwiseImportCleanup();
+
+  expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
+});

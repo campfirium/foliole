@@ -19,6 +19,7 @@ export interface ReadwiseSourceSignature {
 export interface ReadwiseSourceImportDecision {
   destination: ReadwiseWithoutHighlightsDestination;
   detectedHighlightCount: number;
+  hasHighlightFile: boolean;
   hasHighlights: boolean;
 }
 
@@ -63,17 +64,40 @@ export async function resolveReadwiseSourceImportDecision(
   }
 ) {
   const articlePath = path.join(options.highlightDirectoryPath, source.sourceName);
+  if (options.readwiseConfig.withoutHighlightsDestination === 'off') {
+    try {
+      const articleStats = await fs.stat(articlePath);
+      if (articleStats.size === 0) {
+        return {
+          destination: resolveReadwiseImportDestination(options.readwiseConfig, true),
+          detectedHighlightCount: 0,
+          hasHighlightFile: true,
+          hasHighlights: true
+        };
+      }
+    } catch {
+      return {
+        destination: 'off' as const,
+        detectedHighlightCount: 0,
+        hasHighlightFile: false,
+        hasHighlights: false
+      };
+    }
+  }
   let detectedHighlightCount = 0;
+  let hasHighlightFile = false;
   try {
     const articleMarkdown = await fs.readFile(articlePath, 'utf8');
+    hasHighlightFile = true;
     detectedHighlightCount = extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig).length;
   } catch {
     detectedHighlightCount = 0;
   }
-  const hasHighlights = detectedHighlightCount > 0;
+  const hasHighlights = hasHighlightFile;
   return {
     destination: resolveReadwiseImportDestination(options.readwiseConfig, hasHighlights),
     detectedHighlightCount,
+    hasHighlightFile,
     hasHighlights
   };
 }

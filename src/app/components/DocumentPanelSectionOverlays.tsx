@@ -1,10 +1,14 @@
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+
 import { DocumentPanelContextMenu } from './DocumentPanelContextMenu';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import { DocumentPanelSourceUpdatePanel } from './DocumentPanelSourceUpdatePanel';
+import { HighlightRangeHandles } from './HighlightRangeHandles';
 
 interface DocumentPanelSectionOverlaysProps {
   currentSourceUpdateContent: string;
   documentMaxWidth: number;
+  editorAdapter: EditorAdapter | null;
   handleSourceUpdateDraftChange: (content: string) => void;
   handleSourceUpdatePanelOpenChange: (open: boolean) => void;
   isSourceUpdatePanelOpen: boolean;
@@ -15,12 +19,15 @@ interface DocumentPanelSectionOverlaysProps {
 export function DocumentPanelSectionOverlays({
   currentSourceUpdateContent,
   documentMaxWidth,
+  editorAdapter,
   handleSourceUpdateDraftChange,
   handleSourceUpdatePanelOpenChange,
   isSourceUpdatePanelOpen,
   props,
   sourceUpdatePreview
 }: DocumentPanelSectionOverlaysProps) {
+  const existingHighlight = props.contextMenu?.existingHighlight;
+  const adjustableHighlight = existingHighlight?.kind === 'highlight' && existingHighlight.canAdjustRange ? existingHighlight : null;
   return (
     <>
       {sourceUpdatePreview ? (
@@ -37,6 +44,12 @@ export function DocumentPanelSectionOverlays({
           updatedContent={sourceUpdatePreview.updatedContent}
         />
       ) : null}
+      <HighlightRangeHandles
+        editor={editorAdapter}
+        highlight={adjustableHighlight}
+        onCommit={props.onAdjustExistingHighlightRange ?? (() => false)}
+        parentContent={props.editorContent}
+      />
       <DocumentPanelContextMenu
         contextMenu={props.contextMenu}
         onCloseContextMenu={props.onCloseContextMenu}

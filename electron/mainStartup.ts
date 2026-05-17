@@ -1,9 +1,13 @@
+import path from 'node:path';
+
 import type { BrowserWindow } from 'electron';
 
 import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js';
+import { configureRemoteImagePipelineCacheRoot } from './attachments/remoteImagePipeline.js';
 import { registerRemoteImageProtocol } from './attachments/remoteImageProtocol.js';
 import { startDevScreenshotServer } from './devScreenshotServer.js';
 import { appendBootEvent } from './ipc/boot.js';
+import { resolveAppPaths } from './ipc/paths.js';
 import { startFollowupTasks } from './mainFollowupTasks.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
@@ -44,6 +48,7 @@ export async function startInitialMainWindow(
   startDevScreenshotServer({ getWindow: () => startup.mainWindow });
   startup.installPairingFocusHandler();
   try {
+    configureRemoteImagePipelineCacheRoot(path.join(resolveAppPaths().app_cache_dir, 'remote-images'));
     registerAttachmentProtocol();
     registerRemoteImageProtocol();
   } catch (error) {

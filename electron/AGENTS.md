@@ -10,6 +10,7 @@
 - 本项目默认桌面优先，不按纯 Web 方案优先。
 - 默认客户端视角就是 Windows 客户端；未特别说明时，运行态、预览验收、数据库核对与人工补数据都以 Windows 客户端为准，不以 WSL 内临时路径或其他本机副本为准。
 - 默认主数据库固定视为 `D:\X\U\Foliole\Data\foliole.db`；在 WSL 内对应路径为 `/mnt/d/X/U/Foliole/Data/foliole.db`。未获用户明确批准前，不得自行改查其他数据库路径。
+- 诊断主数据库时必须先使用 `query-foliole-db` skill 的固定只读流程；不得先用 WSL `sqlite3`、WSL `better-sqlite3`、仓库 Node 依赖或直接打开 `/mnt/d/.../foliole.db` 查询正在运行的 Windows 活库，避免 WAL / SHM 跨宿主 I/O 误判。若固定流程覆盖不了，再走 Windows 侧只读 runtime 或停进程后的快照查询，并说明原因。
 - 系统能力优先经 Electron main process 暴露，再由 renderer 通过 bridge 调用；业务层不得散落 `ipcRenderer` 调用。
 - 文件路径、数据库路径、日志路径等统一由 Electron main process 解析；前端禁止拼平台绝对路径。
 - 持久化主路径统一走 Electron main process 与 sqlite；`localStorage` 仅允许用于可丢失 UI 偏好且必须可审计。

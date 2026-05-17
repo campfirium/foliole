@@ -1,9 +1,14 @@
 import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
-import type { ImportManagerSettings, ImportManagerSourceDraft } from '../../lib/core/import/importManagerSettings.js';
+import {
+  type ImportManagerSettings,
+  type ImportManagerSourceDraft
+} from '../../lib/core/import/importManagerSettings.js';
+import { isGenericSplitImportSourceUnsupported } from '../../lib/core/import/unsupportedKeepImportRules.js';
 
 export interface KeepImportConfig {
   adapterConfigId: string;
   directoryPath: string;
+  highlightMode: ImportManagerSourceDraft['highlightMode'];
   highlightPolicy: ImportHighlightPolicy;
   sourceType: 'generic' | 'readwise';
   watchPaths: string[];
@@ -30,7 +35,7 @@ function toKeepImportConfig(
 ): KeepImportSourceConfig | null {
   const directoryPath = normalizeKeepDirectoryPath(source.primaryPath);
   const highlightPath = normalizeKeepDirectoryPath(source.highlightPath);
-  if (source.keepState !== 'enabled' || !directoryPath) {
+  if (source.keepState !== 'enabled' || !directoryPath || isGenericSplitImportSourceUnsupported(source)) {
     return null;
   }
   const watchPaths = [directoryPath];
@@ -40,6 +45,7 @@ function toKeepImportConfig(
   return {
     adapterConfigId: source.id,
     directoryPath,
+    highlightMode: source.highlightMode,
     highlightPolicy: resolveSourceHighlightPolicy(source, sourceType),
     sourceId: source.id,
     sourceType,

@@ -1,6 +1,6 @@
 import { buildImportedHighlightPreviewFromMatches } from '../../lib/core/import/importedHighlightPreview.js';
 import { extractNodeOpeningPreview } from '../../lib/core/nodes/nodeOpeningPreview.js';
-import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeImportContract.js';
+import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeKeepImportContract.js';
 import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
@@ -42,7 +42,9 @@ export async function classifySource(
 ): Promise<KeepImportPreviewEntry> {
   const sourcePath = source.sourceName;
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
-  const { deleted, existingItem } = isBlockedByDeletedNode(config.ruleId, sourcePath);
+  const blockedState = isBlockedByDeletedNode(config.ruleId, sourcePath);
+  const deleted = config.sourceType !== 'readwise' && blockedState.deleted;
+  const existingItem = config.sourceType === 'readwise' && blockedState.deleted ? null : blockedState.existingItem;
   const notImported = existingItem?.last_status === 'discovered' && !existingItem.last_node_id;
   const primaryChanged = hasPrimarySourceChanged(existingItem, sourceSignature);
   const highlightChanged = config.sourceType === 'readwise' ? hasHighlightSourceChanged(existingItem, sourceSignature) : false;

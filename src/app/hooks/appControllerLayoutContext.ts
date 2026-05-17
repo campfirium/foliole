@@ -27,6 +27,7 @@ export function createLayoutEditorCtx(args: BuildControllerLayoutPropsArgs) {
     onCreateHighlightFromPayload: args.editorCtx.handleCreateHighlightFromPayload,
     onCreateNote: args.editorCtx.handleCreateNote,
     onDeleteExistingHighlight: args.editorCtx.handleDeleteExistingHighlight,
+    onAdjustExistingHighlightRange: args.ws.updateHighlightAnchorRange ?? (() => false),
     onCreateSelectionHighlight: args.editorCtx.handleCreateHighlightFromPayload,
     onToggleSelectionHighlight: args.editorCtx.handleToggleSelectionHighlightFromPayload,
     onCreateSelectionNote: args.editorCtx.handleCreateNoteFromPayload,

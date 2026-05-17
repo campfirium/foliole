@@ -25,6 +25,7 @@ function mockSuccessfulSetupInspection() {
   inspectReadwiseReaderSetup.mockResolvedValue({
     checkedSourceCount: 1,
     detectedHighlightCount: 1,
+    highlightOnlySourceCount: 0,
     highlightedArticleCount: 1,
     matchedHighlightCount: 1,
     message: 'Checked 1 source topic successfully.',
@@ -38,7 +39,8 @@ function mockSuccessfulSetupInspection() {
       }
     ],
     success: true,
-    totalArticleCount: 1
+    totalArticleCount: 1,
+    unparsedHighlightFileCount: 0
   });
 }
 
@@ -65,7 +67,9 @@ function renderReadwiseSettingsHarness(input: { config?: ReadwiseReaderConfig } 
 async function checkSetupPreview() {
   fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
   await waitFor(() => {
-    expect(screen.getByText('Found 1 article, including 1 with highlights.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Checked 1 highlight file and 1 full document file.')
+    ).toBeInTheDocument();
   });
 }
 
@@ -73,7 +77,7 @@ it('checks Readwise setup inline and turns on the integration from the settings 
   mockSuccessfulSetupInspection();
   const { onPreviewSync, onRunSync, onSave } = renderReadwiseSettingsHarness();
 
-  expect(screen.queryByRole('dialog', { name: 'Readwise preview' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('dialog', { name: 'Readwise import preview' })).not.toBeInTheDocument();
   await checkSetupPreview();
   expect(screen.getByText('Import preview')).toBeInTheDocument();
   expect(screen.getByText('highlighted passage')).toBeInTheDocument();
@@ -92,14 +96,14 @@ it('checks Readwise setup inline and turns on the integration from the settings 
   fireEvent.click(screen.getByRole('switch', { name: 'Readwise import' }));
 
   await waitFor(() => {
-    expect(screen.getByRole('dialog', { name: 'Readwise preview' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Readwise import preview' })).toBeInTheDocument();
   });
   expect(onPreviewSync).toHaveBeenCalledWith(
     expect.objectContaining({ readwiseRootPath: '/Readwise' })
   );
   expect(onSave).toHaveBeenCalledTimes(1);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 
   await waitFor(() => {
     expect(onRunSync).toHaveBeenCalledTimes(1);
@@ -131,7 +135,7 @@ it('explains why Readwise import cannot turn on before import preview', async ()
       'Import preview needs to be run and confirmed before Readwise import can be turned on.'
     )
   ).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
   expect(onPreviewSync).not.toHaveBeenCalled();
   expect(onRunSync).not.toHaveBeenCalled();
   expect(onSave).not.toHaveBeenCalled();
@@ -144,12 +148,12 @@ it('keeps Readwise import off when the enable preview is cancelled', async () =>
 
   fireEvent.click(screen.getByRole('switch', { name: 'Readwise import' }));
   await waitFor(() => {
-    expect(screen.getByRole('dialog', { name: 'Readwise preview' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Readwise import preview' })).toBeInTheDocument();
   });
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
   await waitFor(() => {
-    expect(screen.queryByRole('dialog', { name: 'Readwise preview' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Readwise import preview' })).not.toBeInTheDocument();
   });
   expect(onSave).toHaveBeenCalledTimes(1);
   expect(onRunSync).not.toHaveBeenCalled();
@@ -165,10 +169,10 @@ it('runs manual Readwise sync without opening the preview confirmation', async (
   await waitFor(() => {
     expect(onRunSync).toHaveBeenCalledTimes(1);
   });
-  expect(screen.queryByRole('dialog', { name: 'Readwise preview' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('dialog', { name: 'Readwise import preview' })).not.toBeInTheDocument();
   expect(onPreviewSync).not.toHaveBeenCalled();
   expect(onSave).not.toHaveBeenCalled();
-  expect(screen.getByText('Synced 1 Readwise source.')).toBeInTheDocument();
+  expect(screen.getByText('Synced 1 Readwise source topic.')).toBeInTheDocument();
 });
 
 it('previews changed import behavior before running manual Readwise sync', async () => {
@@ -186,7 +190,7 @@ it('previews changed import behavior before running manual Readwise sync', async
   fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
 
   await waitFor(() => {
-    expect(screen.getByRole('dialog', { name: 'Readwise preview' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Readwise import preview' })).toBeInTheDocument();
   });
   expect(onPreviewSync).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -195,7 +199,7 @@ it('previews changed import behavior before running manual Readwise sync', async
   );
   expect(onRunSync).not.toHaveBeenCalled();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 
   await waitFor(() => {
     expect(onRunSync).toHaveBeenCalledWith(

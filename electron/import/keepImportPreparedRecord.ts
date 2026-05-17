@@ -2,11 +2,7 @@ import { loadPreparedImportRecord, type DirectoryImportSourceDescriptor } from '
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
-import {
-  loadPreparedReadwiseImportRecord,
-  resolveReadwiseSourceSignature,
-  shouldImportReadwiseSource
-} from './readwisePreparedImport.js';
+import { readwiseKeepAdapter } from './readwiseKeepAdapter.js';
 
 export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
   if (config.sourceType !== 'readwise') {
@@ -20,7 +16,7 @@ export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfi
   if (readwiseSource.kind === 'books') {
     return false;
   }
-  return shouldImportReadwiseSource(source, {
+  return readwiseKeepAdapter.shouldImportSource(source, {
     highlightDirectoryPath: readwiseSource.highlightPath.trim(),
     readwiseConfig: settings.readwiseReaderConfig
   });
@@ -35,7 +31,7 @@ export async function loadPreparedKeepImportRecord(
     const settings = loadImportManagerSettings();
     const readwiseSource = settings.readwiseSources.find((entry) => entry.id === config.ruleId);
     if (readwiseSource?.highlightPath.trim() && readwiseSource.kind) {
-      return loadPreparedReadwiseImportRecord(source, {
+      return readwiseKeepAdapter.loadPreparedRecord(source, {
         highlightDirectoryPath: readwiseSource.highlightPath.trim(),
         highlightPolicy: config.highlightPolicy,
         importedAt,
@@ -58,7 +54,7 @@ export async function resolveKeepImportSourceSignature(config: KeepImportRuleCon
     const settings = loadImportManagerSettings();
     const readwiseSource = settings.readwiseSources.find((entry) => entry.id === config.ruleId);
     if (readwiseSource?.highlightPath.trim()) {
-      return resolveReadwiseSourceSignature(source, {
+      return readwiseKeepAdapter.resolveSourceSignature(source, {
         highlightDirectoryPath: readwiseSource.highlightPath.trim()
       });
     }

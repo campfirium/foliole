@@ -29,6 +29,7 @@ function normalizeTextAnchorDecoration(
   return {
     from,
     kind: decoration.kind,
+    ...(decoration.nodeId ? { nodeId: decoration.nodeId } : {}),
     to
   };
 }
@@ -76,7 +77,8 @@ function areTextAnchorDecorationsEqual(
       !rightDecoration ||
       leftDecoration.from !== rightDecoration.from ||
       leftDecoration.to !== rightDecoration.to ||
-      leftDecoration.kind !== rightDecoration.kind
+      leftDecoration.kind !== rightDecoration.kind ||
+      leftDecoration.nodeId !== rightDecoration.nodeId
     ) {
       return false;
     }

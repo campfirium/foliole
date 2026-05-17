@@ -76,12 +76,24 @@ function subscribe(channel, handler) {
         processedCount < 0 ||
         totalCount < 0 ||
         processedCount > totalCount ||
-        (status !== 'running' && status !== 'completed' && status !== 'failed')
+        (status !== 'cancelled' && status !== 'running' && status !== 'completed' && status !== 'failed')
       ) {
         return;
       }
       handler({
+        currentSourcePath: typeof payload?.currentSourcePath === 'string' ? payload.currentSourcePath : null,
+        highlightProcessedCount: typeof payload?.highlightProcessedCount === 'number' ? payload.highlightProcessedCount : undefined,
+        highlightTotalCount: typeof payload?.highlightTotalCount === 'number' ? payload.highlightTotalCount : undefined,
+        importWriteElapsedMs: typeof payload?.importWriteElapsedMs === 'number' ? payload.importWriteElapsedMs : undefined,
+        indexFailedCount: typeof payload?.indexFailedCount === 'number' ? payload.indexFailedCount : undefined,
+        indexElapsedMs: typeof payload?.indexElapsedMs === 'number' ? payload.indexElapsedMs : undefined,
+        indexPendingCount: typeof payload?.indexPendingCount === 'number' ? payload.indexPendingCount : undefined,
+        indexProcessedCount: typeof payload?.indexProcessedCount === 'number' ? payload.indexProcessedCount : undefined,
+        indexTotalCount: typeof payload?.indexTotalCount === 'number' ? payload.indexTotalCount : undefined,
+        phase: typeof payload?.phase === 'string' ? payload.phase : undefined,
         processedCount,
+        sourceProcessedCount: typeof payload?.sourceProcessedCount === 'number' ? payload.sourceProcessedCount : undefined,
+        sourceTotalCount: typeof payload?.sourceTotalCount === 'number' ? payload.sourceTotalCount : undefined,
         status,
         totalCount
       });

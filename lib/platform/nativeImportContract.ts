@@ -1,6 +1,6 @@
-import type { NativeReadwiseDetectionSample } from './nativeReadwiseContract.js';
+import type { NativeImportHighlightPolicy } from './nativeKeepImportContract.js';
 
-export type NativeImportHighlightPolicy = 'adopt' | 'reference_only';
+export type { NativeImportHighlightPolicy } from './nativeKeepImportContract.js';
 export type NativeImportNodeTitleStrategy = 'file_name' | 'heading';
 
 export type NativeDirectoryImportSourceAdapter =
@@ -22,42 +22,27 @@ export interface NativeDirectoryImportArgs extends NativeTextImportArgs {
   source_adapter?: NativeDirectoryImportSourceAdapter;
 }
 
-export interface NativeKeepImportPreviewArgs {
-  directory_path: string;
-  highlight_policy?: NativeImportHighlightPolicy;
-  rule_id: string;
-  source_type?: 'generic' | 'readwise';
-}
-
-export interface NativeKeepImportPreviewEntry {
-  content_preview?: string | null;
-  detail: string | null;
-  detected_highlight_count?: number;
-  highlight_samples?: NativeReadwiseDetectionSample[];
-  source_path: string;
-  status: 'blocked_deleted' | 'failed' | 'new' | 'unchanged' | 'updated';
-}
-
-export interface NativeKeepImportPreviewResult {
-  blocked_count: number;
-  discovered_count: number;
-  entries: NativeKeepImportPreviewEntry[];
-  failed_count: number;
-  new_count: number;
-  previewed_at: string;
-  root_path: string;
-  unchanged_count: number;
-  updated_count: number;
-}
-
 export type NativeReadwiseSyncPreviewDestination = 'external' | 'inbox' | 'off';
 export type NativeReadwiseSyncPreviewHighlightType = 'with_highlights' | 'without_highlights';
+export type NativeReadwiseSyncPreviewHighlightStatus = 'highlight_only' | 'unparsed' | NativeReadwiseSyncPreviewHighlightType;
 export type NativeReadwiseSyncPreviewSourceKind = 'articles' | 'books' | 'podcasts' | 'tweets';
-export type NativeReadwiseSyncPreviewStatus = 'blocked_deleted' | 'failed' | 'new' | 'off' | 'unchanged' | 'updated';
+export type NativeReadwiseSyncPreviewStatus = 'blocked_deleted' | 'failed' | 'new' | 'off' | 'unchanged' | 'unparsed' | 'updated';
 
 export interface NativeReadwiseImportRunProgressEvent {
+  currentSourcePath?: string | null;
+  highlightProcessedCount?: number;
+  highlightTotalCount?: number;
+  importWriteElapsedMs?: number;
+  indexFailedCount?: number;
+  indexElapsedMs?: number;
+  indexPendingCount?: number;
+  indexProcessedCount?: number;
+  indexTotalCount?: number;
+  phase?: 'indexing' | 'scanning' | 'writing' | 'source_completed';
   processedCount: number;
-  status: 'running' | 'completed' | 'failed';
+  sourceProcessedCount?: number;
+  sourceTotalCount?: number;
+  status: 'cancelled' | 'running' | 'completed' | 'failed';
   totalCount: number;
 }
 
@@ -72,7 +57,9 @@ export interface NativeReadwiseSyncPreviewEntry {
   destination: NativeReadwiseSyncPreviewDestination;
   detail: string | null;
   detected_highlight_count: number;
+  highlight_status?: NativeReadwiseSyncPreviewHighlightStatus;
   highlight_type: NativeReadwiseSyncPreviewHighlightType;
+  open_path?: string | null;
   source_kind: NativeReadwiseSyncPreviewSourceKind;
   source_path: string;
   status: NativeReadwiseSyncPreviewStatus;
@@ -104,7 +91,11 @@ export interface NativeReadwiseImportRunResult {
   imported_count?: number;
   source_count: number;
   skipped_count?: number;
-  status: 'completed' | 'failed';
+  status: 'cancelled' | 'completed' | 'failed';
+}
+
+export interface NativeReadwiseImportCancelResult {
+  status: 'cancelled' | 'idle';
 }
 
 export type NativeReadwiseCleanupAction = 'delete' | 'keep';

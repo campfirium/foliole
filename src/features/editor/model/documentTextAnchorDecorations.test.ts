@@ -59,6 +59,7 @@ function expectHighlightDecorationForContent(content: string, locator: { from: n
     {
       from: content.indexOf('Beta'),
       kind: 'highlight',
+      nodeId: 'node-2',
       to: content.indexOf('Beta') + 'Beta'.length
     }
   ]);
@@ -96,6 +97,7 @@ function registerDocumentTextAnchorDecorationTests() {
       {
         from: 6,
         kind: 'highlight',
+        nodeId: 'node-2',
         to: 10
       }
     ]);

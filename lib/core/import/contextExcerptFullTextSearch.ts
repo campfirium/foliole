@@ -1,4 +1,5 @@
 import { normalizeQuoteLines, normalizeQuoteText, type ContextExcerptQuoteLocator } from './contextExcerptQuoteLocator.js';
+import { canSkipFullTextLocatorSearch } from './contextExcerptSearchGate.js';
 
 const MAX_LENGTH_DELTA = 6;
 const MAX_ORDERED_LINE_RANGES = 64;
@@ -6,6 +7,7 @@ const MAX_ORDERED_LINE_RANGES = 64;
 interface FullTextLocator {
   content: string;
   normalizedFullText: string;
+  normalizedFullTextLower?: string;
   normalizedFullTextRawIndexes: number[];
 }
 
@@ -173,7 +175,7 @@ function collectBoundaryFragments(normalizedQuote: string) {
 }
 
 function collectFragmentRanges(locator: FullTextLocator, quoteLocator: ContextExcerptQuoteLocator) {
-  const haystack = locator.normalizedFullText.toLocaleLowerCase();
+  const haystack = locator.normalizedFullTextLower ?? locator.normalizedFullText.toLocaleLowerCase();
   const fragments = collectBoundaryFragments(quoteLocator.normalizedQuote);
   const ranges: Range[] = [];
   for (let startIndex = 0; startIndex < fragments.length; startIndex += 1) {
@@ -209,6 +211,9 @@ export function findFullTextLocatorMatch(
   quote: string,
   quoteLocator: ContextExcerptQuoteLocator
 ) {
+  if (canSkipFullTextLocatorSearch(locator, quoteLocator)) {
+    return null;
+  }
   const exactRanges = collectStringRanges(locator.normalizedFullText, quoteLocator.normalizedQuote);
   const exactMatch = uniqueValidRawMatch(locator, exactRanges, quote, quoteLocator.exactMatcher);
   if (exactMatch) {

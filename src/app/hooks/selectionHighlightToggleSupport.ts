@@ -10,7 +10,9 @@ export type NormalizedSelection = {
 };
 
 export type LocatorHighlightMatch = {
+  canAdjustRange?: boolean;
   kind: 'cloze' | 'highlight';
+  locator: { from: number; originalText: string; to: number };
   originalText: string;
   nodeId: string;
 };
@@ -59,7 +61,13 @@ export function findExactLocatorHighlight(
   if (!matchingNode || !matchingNode.anchorLink || !isTextAnchorLocator(matchingNode.anchorLink.locator)) {
     return null;
   }
-  return { kind: 'highlight', nodeId: matchingNode.id, originalText: matchingNode.anchorLink.locator.originalText };
+  return {
+    kind: 'highlight',
+    canAdjustRange: true,
+    locator: matchingNode.anchorLink.locator,
+    nodeId: matchingNode.id,
+    originalText: matchingNode.anchorLink.locator.originalText
+  };
 }
 
 export function findTextAnchorAtPosition(
@@ -77,9 +85,20 @@ export function findTextAnchorAtPosition(
     ) {
       return [];
     }
+    const canAdjustRange = node.anchorLink.kind === 'highlight' && isTextAnchorLocator(node.anchorLink.locator);
     return getTextAnchorLocators(node.anchorLink.locator)
       .filter((locator) => locator.from <= position && position < locator.to)
-      .map((locator) => ({ kind: node.anchorLink?.kind ?? 'highlight', nodeId: node.id, originalText: locator.originalText }));
+      .map((locator) => ({
+        ...(canAdjustRange ? { canAdjustRange } : {}),
+        kind: node.anchorLink?.kind ?? 'highlight',
+        locator,
+        nodeId: node.id,
+        originalText: locator.originalText
+      }));
   });
   return matches.length === 1 ? matches[0] ?? null : null;
+}
+
+export function isAdjustableTextHighlight(match: LocatorHighlightMatch | null | undefined) {
+  return Boolean(match?.canAdjustRange && match.kind === 'highlight' && match.locator.to > match.locator.from);
 }

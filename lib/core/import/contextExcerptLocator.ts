@@ -8,6 +8,7 @@ import {
 export interface ContextExcerptLocator {
   content: string;
   normalizedFullText: string;
+  normalizedFullTextLower: string;
   normalizedFullTextRawIndexes: number[];
 }
 
@@ -16,6 +17,7 @@ export function createContextExcerptLocator(content: string): ContextExcerptLoca
   return {
     content: fullText.raw,
     normalizedFullText: fullText.normalized,
+    normalizedFullTextLower: fullText.normalized.toLocaleLowerCase(),
     normalizedFullTextRawIndexes: fullText.rawIndexes
   };
 }

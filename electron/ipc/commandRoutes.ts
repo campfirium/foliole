@@ -11,6 +11,7 @@ const IMPORT_COMMANDS = [
   NATIVE_COMMANDS.inspectReadwiseReaderSetup,
   NATIVE_COMMANDS.previewReadwiseReaderImport,
   NATIVE_COMMANDS.runReadwiseReaderImport,
+  NATIVE_COMMANDS.cancelReadwiseReaderImport,
   NATIVE_COMMANDS.previewReadwiseImportCleanup,
   NATIVE_COMMANDS.runReadwiseImportCleanup,
   NATIVE_COMMANDS.openReadwiseBookDownload,

@@ -155,7 +155,15 @@ function collectDeleteNodeIds(entries: NativeReadwiseCleanupEntry[]) {
     .flatMap((entry) => collectReadwiseCleanupSubtree(entry.node_id, nodes).map((node) => node.id));
 }
 
-function clearReadwiseTracking(deleteNodeIds: string[]) {
+function collectTrackedNodeIds(entries: NativeReadwiseCleanupEntry[]) {
+  const nodes = readNodeRows();
+  return entries.flatMap((entry) => [
+    entry.node_id,
+    ...collectReadwiseCleanupSubtree(entry.node_id, nodes).map((node) => node.id)
+  ]);
+}
+
+function clearReadwiseTracking(trackedNodeIds: string[]) {
   const connection = openDatabaseConnection();
   const ruleIds = readReadwiseRuleIds();
   const deleteTrackingOnlyKeepImport = connection.sqlite.prepare(
@@ -168,7 +176,7 @@ function clearReadwiseTracking(deleteNodeIds: string[]) {
     ruleIds.forEach((ruleId) => {
       deleteTrackingOnlyKeepImport.run(ruleId);
     });
-    deleteNodeIds.forEach((nodeId) => {
+    trackedNodeIds.forEach((nodeId) => {
       deleteKeepImport.run(nodeId);
       deleteImportRuns.run(nodeId);
       deleteImportSources.run(nodeId);
@@ -203,8 +211,9 @@ export function runReadwiseImportCleanup(): NativeReadwiseCleanupRunResult {
   const preview = buildCleanupPreview(cleanedAt);
   const externalRows = readReadwiseExternalRows();
   const deleteNodeIds = collectDeleteNodeIds(preview.entries);
+  const trackedNodeIds = collectTrackedNodeIds(preview.entries);
   const deletedIdSet = new Set(deleteNodeIds);
-  clearReadwiseTracking(deleteNodeIds);
+  clearReadwiseTracking(trackedNodeIds);
   clearPersistedReadwiseBookGeneratedNodes(new Set(deleteNodeIds.filter(isReadwiseBookStructureNodeId)), cleanedAt);
   const externalDeletedCount = clearReadwiseExternalDocuments(externalRows);
   if (deleteNodeIds.length > 0) {

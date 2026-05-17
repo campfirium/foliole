@@ -9,6 +9,8 @@ import {
   backfillTextBodyBlobData,
   backfillTextBodyBlobOwners
 } from './numberedMigrationTextBodyBackfill.js';
+import { migrateSearchIndexInvalidationTypes } from './searchIndexInvalidationSchemaMigration.js';
+import { SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS } from './searchIndexInvalidationSchemaStatements.js';
 
 export const NUMBERED_MIGRATION_BASE_VERSION = 28;
 
@@ -159,6 +161,18 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         execOptionalIndex(sqlite, statement);
       }
     }
+  },
+  {
+    version: 40,
+    migrate: (sqlite) => {
+      for (const statement of SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS) {
+        sqlite.exec(statement);
+      }
+    }
+  },
+  {
+    version: 41,
+    migrate: migrateSearchIndexInvalidationTypes
   }
 ];
 

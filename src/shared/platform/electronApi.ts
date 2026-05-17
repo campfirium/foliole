@@ -24,8 +24,20 @@ export interface WorkspaceSyncAppliedPayload {
 }
 
 export interface ReadwiseReaderImportProgressPayload {
+  currentSourcePath?: string | null;
+  highlightProcessedCount?: number;
+  highlightTotalCount?: number;
+  importWriteElapsedMs?: number;
+  indexFailedCount?: number;
+  indexElapsedMs?: number;
+  indexPendingCount?: number;
+  indexProcessedCount?: number;
+  indexTotalCount?: number;
+  phase?: 'indexing' | 'scanning' | 'writing' | 'source_completed';
   processedCount: number;
-  status: 'running' | 'completed' | 'failed';
+  sourceProcessedCount?: number;
+  sourceTotalCount?: number;
+  status: 'cancelled' | 'running' | 'completed' | 'failed';
   totalCount: number;
 }
 

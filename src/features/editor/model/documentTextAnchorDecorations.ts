@@ -65,6 +65,7 @@ function resolveNodeTextAnchorDecorations(
     .map((selection) => ({
       from: selection.from,
       kind: anchorLink.kind,
+      nodeId: node.id,
       to: selection.to
     }));
 }

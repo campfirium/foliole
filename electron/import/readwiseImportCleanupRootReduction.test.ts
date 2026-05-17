@@ -112,7 +112,7 @@ it('reduces nested imported records to one top-level cleanup root', () => {
   expect(readRows('SELECT id FROM nodes WHERE id IN (?, ?)', 'node-readwise-parent', 'node-readwise-child')).toEqual([]);
 });
 
-it('keeps tracking for roots blocked by a real user addition', () => {
+it('detaches tracking for roots kept by a real user addition', () => {
   const importedAt = '2026-05-11T13:01:00.000Z';
   insertNode('node-readwise-kept', null, 'Kept', importedAt);
   insertNode('node-user-added', 'node-readwise-kept', 'User Added', '2026-05-11T13:01:02.000Z');
@@ -125,10 +125,10 @@ it('keeps tracking for roots blocked by a real user addition', () => {
   expect(result).toMatchObject({ deleted_count: 1, detached_count: 1 });
   expect(previewReadwiseImportCleanup()).toMatchObject({
     delete_count: 0,
-    keep_count: 1,
-    total_count: 1
+    keep_count: 0,
+    total_count: 0
   });
-  expect(readRows('SELECT source_path FROM keep_import_items')).toEqual([{ source_path: 'Kept.md' }]);
+  expect(readRows('SELECT source_path FROM keep_import_items')).toEqual([]);
 });
 
 it('treats Readwise Books EPUB chapters and imported anchors as imported structure', () => {

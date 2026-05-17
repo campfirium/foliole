@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 import type { NativeReadwiseImportRunResult } from '../../../lib/platform/nativeImportContract';
-import { onReadwiseReaderImportProgress } from '../../shared/platform/runtimeShellEvents';
 
 import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
 import {
@@ -67,7 +66,7 @@ function formatSyncResult(result: NativeReadwiseImportRunResult | null): Readwis
   if (typeof result.imported_count === 'number') {
     return {
       failedSources: [],
-      message: `Synced ${result.imported_count} Readwise source${
+      message: `Synced ${result.imported_count} Readwise source topic${
         result.imported_count === 1 ? '' : 's'
       }.`,
       tone: 'normal'
@@ -108,18 +107,6 @@ export function useReadwiseManualSync(input: {
       message: SYNC_PROGRESS_MESSAGE,
       tone: 'normal'
     });
-    let unsubscribe: (() => void) | null = null;
-    try {
-      unsubscribe = await onReadwiseReaderImportProgress((progress) => {
-        setStatus({
-          failedSources: [],
-          message: SYNC_PROGRESS_MESSAGE,
-          tone: progress.status === 'failed' ? 'error' : 'normal'
-        });
-      });
-    } catch {
-      unsubscribe = null;
-    }
     try {
       setStatus(formatSyncResult(await input.onRunSync(payload)));
     } catch (error) {
@@ -129,7 +116,6 @@ export function useReadwiseManualSync(input: {
         tone: 'error'
       });
     } finally {
-      unsubscribe?.();
       setIsSyncing(false);
     }
   }

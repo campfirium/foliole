@@ -2,7 +2,7 @@ import { repairTextAnchorLocatorInContent, type TextAnchorLocator } from '../anc
 
 import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver } from './driver.js';
-import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 interface CandidateRow {
   [column: string]: unknown;
@@ -117,7 +117,7 @@ export function repairImportedAnchorLocators(input: {
   });
 
   if (write && repairedNodeIds.length > 0) {
-    syncWorkspaceSearchIndexForNodeIds(input.driver, repairedNodeIds);
+    enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, repairedNodeIds);
   }
 
   return { repairedNodeIds, skipped, write };

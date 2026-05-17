@@ -24,10 +24,29 @@ it('uses adopt highlight handling for generic merged keep imports', () => {
   expect(resolveKeepImportConfigs(settings)).toEqual([
     expect.objectContaining({
       directoryPath: '/tmp/merged-source',
+      highlightMode: 'merged',
       highlightPolicy: 'adopt',
       sourceId: 'draft-import-source-101',
       sourceType: 'generic',
       watchPaths: ['/tmp/merged-source']
     })
   ]);
+});
+
+it('does not enable generic split keep imports before a sidecar adapter exists', () => {
+  const settings = createDefaultImportManagerSettings();
+  settings.sources = [
+    {
+      actionMode: 'keep',
+      archivePath: '',
+      highlightMode: 'split',
+      highlightPath: '/tmp/highlights',
+      id: 'draft-import-source-102',
+      keepPreview: null,
+      keepState: 'enabled',
+      primaryPath: '/tmp/originals'
+    }
+  ];
+
+  expect(resolveKeepImportConfigs(settings)).toEqual([]);
 });

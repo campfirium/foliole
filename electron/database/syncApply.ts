@@ -1,4 +1,5 @@
-import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+import { requestSearchIndexInvalidationProcessing } from '../../lib/core/database/searchIndexInvalidationRuntime.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -35,8 +36,9 @@ export async function applySyncNodesAsync(records: NativeSyncNodeRecord[], optio
         conflictCopyIds.push(copyNodeId);
       }
     }
-    syncWorkspaceSearchIndexForNodeIds(connection.driver, [...result.appliedIds, ...conflictCopyIds]);
+    enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, conflictCopyIds);
   });
+  requestSearchIndexInvalidationProcessing();
 
   return result.appliedIds;
 }

@@ -29,6 +29,27 @@ it('shows a loading state before workspace hydration finishes', () => {
   expect(bodyProps.emptyContent).toBeTruthy();
 });
 
+it('shows only the spinner while the selected topic body loads', () => {
+  renderSectionWithProps({
+    nodesById: {
+      'node-1': {
+        ...baseNode,
+        bodyStatus: 'fetching',
+        content: '',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false
+      }
+    }
+  });
+
+  render(<>{getEmptyContent().emptyContent}</>);
+
+  expect(screen.getByLabelText('Loading document')).toBeInTheDocument();
+  expect(screen.queryByText('Loading document')).toBeNull();
+  expect(screen.queryByText('The selected document is still loading.')).toBeNull();
+});
+
 it('shows an empty state after hydration when no note is selected', () => {
   renderSectionWithProps({
     activeNodeId: null,

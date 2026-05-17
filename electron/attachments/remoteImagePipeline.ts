@@ -6,9 +6,17 @@ import type {
 } from '../../lib/platform/nativeStorageContract.js';
 
 import { importImageAttachmentBytes, normalizeImageFileName, resolveImageMimeType } from './importImageAttachmentBytes.js';
+import {
+  configureRemoteImageCacheRoot,
+  readRemoteImageCache,
+  resetRemoteImageCacheForTests,
+  writeRemoteImageCache
+} from './remoteImageCache.js';
 
 const REMOTE_IMAGE_TIMEOUT_MS = 12_000;
 const REMOTE_IMAGE_FAILURE_CACHE_MS = 30_000;
+
+type RemoteImageFetchTransport = (sourceUrl: string, init: RequestInit) => Promise<Response>;
 
 interface RemoteImageBytesResult {
   bytes: Uint8Array;
@@ -25,6 +33,7 @@ type RemoteImageFetchResult =
 const fetchByCacheKey = new Map<string, Promise<RemoteImageFetchResult>>();
 const importByNodeAndCacheKey = new Map<string, Promise<NativeImportLocalImageAttachmentResult>>();
 const failureByCacheKey = new Map<string, { error: NativeImportLocalImageAttachmentResult; expiresAt: number }>();
+let fetchTransportForTests: RemoteImageFetchTransport | null = null;
 
 function createErrorResult(message: string, sourceUrl: string): NativeImportLocalImageAttachmentResult {
   return {
@@ -81,12 +90,37 @@ async function fetchRemoteImage(sourceUrl: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REMOTE_IMAGE_TIMEOUT_MS);
   try {
-    return await fetch(sourceUrl, {
+    return await resolveRemoteImageFetchTransport()(sourceUrl, {
       redirect: 'follow',
       signal: controller.signal
     });
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+function resolveRemoteImageFetchTransport(): RemoteImageFetchTransport {
+  return fetchTransportForTests ?? fetchRemoteImageWithRuntimeTransport;
+}
+
+async function fetchRemoteImageWithRuntimeTransport(sourceUrl: string, init: RequestInit) {
+  const electronNetFetch = await resolveElectronNetFetch();
+  if (electronNetFetch) {
+    return electronNetFetch(sourceUrl, init);
+  }
+  return fetch(sourceUrl, init);
+}
+
+async function resolveElectronNetFetch(): Promise<RemoteImageFetchTransport | null> {
+  if (!process.versions.electron) {
+    return null;
+  }
+  try {
+    const electronModule = await import('electron');
+    const netFetch = (electronModule as { net?: { fetch?: RemoteImageFetchTransport } }).net?.fetch;
+    return typeof netFetch === 'function' ? netFetch.bind(electronModule.net) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -117,15 +151,17 @@ async function loadRemoteImageBytes(sourceUrl: string, cacheKey: string): Promis
   }
 
   try {
+    const resource = {
+      bytes: new Uint8Array(await response.arrayBuffer()),
+      cacheKey,
+      mimeType,
+      originalName: resolveOriginalName(sourceUrl, mimeType),
+      sourceUrl
+    };
+    await writeRemoteImageCache(resource);
     return {
       status: 'ready',
-      resource: {
-        bytes: new Uint8Array(await response.arrayBuffer()),
-        cacheKey,
-        mimeType,
-        originalName: resolveOriginalName(sourceUrl, mimeType),
-        sourceUrl
-      }
+      resource
     };
   } catch {
     return { status: 'error', error: createErrorResult('The remote image could not be read after download.', sourceUrl) };
@@ -140,12 +176,26 @@ export function resetRemoteImagePipelineForTests() {
   fetchByCacheKey.clear();
   importByNodeAndCacheKey.clear();
   failureByCacheKey.clear();
+  fetchTransportForTests = null;
+  resetRemoteImageCacheForTests();
+}
+
+export function configureRemoteImagePipelineCacheRoot(root: string | null) {
+  configureRemoteImageCacheRoot(root);
+}
+
+export function configureRemoteImageFetchTransportForTests(transport: RemoteImageFetchTransport | null) {
+  fetchTransportForTests = transport;
 }
 
 export async function fetchRemoteImageResource(sourceUrl: string): Promise<RemoteImageFetchResult> {
   const cacheKey = resolveRemoteImageCacheKey(sourceUrl);
   if (!cacheKey) {
     return { status: 'error', error: createErrorResult('The remote image URL is not supported.', sourceUrl) };
+  }
+  const cachedResource = await readRemoteImageCache(cacheKey);
+  if (cachedResource) {
+    return { status: 'ready', resource: cachedResource };
   }
   const cachedError = readFailureCache(cacheKey);
   if (cachedError) {

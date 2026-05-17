@@ -60,6 +60,7 @@ export function useWorkspaceSelectors() {
       startReviewSession: state.startReviewSession,
       trashedNodeIds: state.trashedNodeIds,
       updateNodeContent: state.updateNodeContent,
+      updateHighlightAnchorRange: state.updateHighlightAnchorRange ?? (() => false),
       updateVirtualNodeFilter: state.updateVirtualNodeFilter,
       updateNodeDesiredRetention: state.updateNodeDesiredRetention,
       updateNodePriority: state.updateNodePriority,

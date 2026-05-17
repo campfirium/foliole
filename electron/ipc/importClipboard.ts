@@ -5,7 +5,7 @@ import { clipboard } from 'electron';
 
 import { decideClipboardPasteSource } from '../../lib/clipboard/clipboardPasteSource.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import type { NativeTextImportArgs, NativeTextImportResult } from '../../lib/platform/nativeContract.js';
@@ -97,14 +97,16 @@ async function runClipboardFileImport(filePaths: string[], args?: NativeTextImpo
 function updateImportedNodeContent(nodeId: string, content: string, nodeTitle: string, importedAt: string) {
   const connection = openDatabaseConnection();
   const bodyBlobHash = upsertTextBodyBlob(connection.driver, content, importedAt);
-  connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
-    content,
-    bodyBlobHash,
-    resolveNodeOpeningText(content, nodeTitle),
-    importedAt,
-    nodeId
-  ]);
-  syncWorkspaceSearchIndexForNodeIds(connection.driver, [nodeId]);
+  connection.driver.transaction(() => {
+    connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
+      content,
+      bodyBlobHash,
+      resolveNodeOpeningText(content, nodeTitle),
+      importedAt,
+      nodeId
+    ]);
+    enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, [nodeId]);
+  });
 }
 
 async function runClipboardImageImport(args?: NativeTextImportArgs) {

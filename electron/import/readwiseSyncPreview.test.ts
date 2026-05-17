@@ -176,7 +176,7 @@ it('marks tracked unchanged sources without writing during preview', async () =>
   expect(preview.entries).toContainEqual(expect.objectContaining({ source_path: 'Highlighted.md', status: 'unchanged' }));
 });
 
-it('marks locally deleted Readwise sources as blocked instead of new', async () => {
+it('treats locally deleted tracked Readwise sources as new imports', async () => {
   const fixture = await seedReadwiseFixture();
   saveReadwiseSettings(fixture, { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'off' });
   await runReadwiseReaderImport();
@@ -190,18 +190,16 @@ it('marks locally deleted Readwise sources as blocked instead of new', async () 
 
   const preview = await previewReadwiseReaderImport();
 
-  expect(preview).toMatchObject({ blocked_count: 1, trash_count: 1, removed_count: 0, write_count: 0 });
+  expect(preview).toMatchObject({ blocked_count: 0, trash_count: 0, removed_count: 0, write_count: 1 });
   expect(preview.entries).toContainEqual(
     expect.objectContaining({
-      blocked_location: 'trash',
-      detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
       source_path: 'Highlighted.md',
-      status: 'blocked_deleted'
+      status: 'new'
     })
   );
 });
 
-it('counts hard-deleted Readwise sources as removed imports during preview', async () => {
+it('treats hard-deleted tracked Readwise sources as new imports during preview', async () => {
   const fixture = await seedReadwiseFixture();
   saveReadwiseSettings(fixture, { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'off' });
   await runReadwiseReaderImport();
@@ -215,17 +213,16 @@ it('counts hard-deleted Readwise sources as removed imports during preview', asy
 
   const preview = await previewReadwiseReaderImport();
 
-  expect(preview).toMatchObject({ blocked_count: 1, trash_count: 0, removed_count: 1, write_count: 0 });
+  expect(preview).toMatchObject({ blocked_count: 0, trash_count: 0, removed_count: 0, write_count: 1 });
   expect(preview.entries).toContainEqual(
     expect.objectContaining({
-      blocked_location: 'removed',
       source_path: 'Highlighted.md',
-      status: 'blocked_deleted'
+      status: 'new'
     })
   );
 });
 
-it('returns a failed entry when a configured Readwise folder cannot be scanned', async () => {
+it('uses highlight files when the configured full document folder cannot be scanned', async () => {
   const fixture = await seedReadwiseFixture();
   const invalidPrimaryPath = path.join(tempRoot, 'readwise-file-instead-of-folder.md');
   await fs.writeFile(invalidPrimaryPath, 'not a folder', 'utf8');
@@ -235,8 +232,15 @@ it('returns a failed entry when a configured Readwise folder cannot be scanned',
   );
 
   await expect(previewReadwiseReaderImport()).resolves.toMatchObject({
-    failed_count: 1,
+    failed_count: 0,
     total_count: 1,
-    write_count: 0
+    write_count: 1
+  });
+  const preview = await previewReadwiseReaderImport();
+  expect(preview.entries[0]).toMatchObject({
+    destination: 'inbox',
+    highlight_status: 'highlight_only',
+    source_path: 'Highlighted.md',
+    status: 'new'
   });
 });

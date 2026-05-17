@@ -35,6 +35,7 @@ import { closeExternalSearchCacheDatabase } from '../database/externalSearchCach
 import { initializeDatabase } from '../database/migrate.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
+import type { KeepImportProgressEvent } from './keepImportProgress.js';
 import { runKeepImportRule } from './keepImportService.js';
 
 let tempRoot = '';
@@ -73,10 +74,11 @@ async function seedFixture() {
   return { fullDocumentDir, highlightDir, readwiseRoot: path.join(tempRoot, 'readwise') };
 }
 
-async function runReadwiseArticles(fullDocumentDir: string) {
+async function runReadwiseArticles(fullDocumentDir: string, onProgress?: (event: KeepImportProgressEvent) => void) {
   await runKeepImportRule({
     directoryPath: fullDocumentDir,
     highlightPolicy: 'reference_only',
+    ...(onProgress ? { onProgress } : {}),
     ruleId: 'draft-import-source-1',
     sourceType: 'readwise'
   });
@@ -121,4 +123,64 @@ it('keeps Readwise inbox checks on the lightweight path without remote image dow
   expect(readRows("SELECT source_path FROM keep_import_items WHERE source_path = 'Highlighted.md'")).toEqual([
     { source_path: 'Highlighted.md' }
   ]);
+});
+
+it('skips Readwise sources without a sidecar on the off path without reading source content', async () => {
+  const fixture = await seedFixture();
+  await fs.rm(path.join(fixture.fullDocumentDir, 'Highlighted.md'));
+  await fs.rm(path.join(fixture.highlightDir, 'Highlighted.md'));
+  await fs.writeFile(
+    path.join(fixture.fullDocumentDir, 'No Highlight.md'),
+    [
+      '# No Highlight',
+      '',
+      '## Metadata',
+      '- Author: Someone',
+      '',
+      '## Full Document',
+      'Body that should not be read.'
+    ].join('\n'),
+    'utf8'
+  );
+  saveImportManagerSettings({
+    readwiseReaderConfig: {
+      highlightsHeading: '## Highlights',
+      importScope: 'highlights_only',
+      validatedAt: '2026-05-11T00:00:00.000Z',
+      withHighlightsDestination: 'inbox',
+      withoutHighlightsDestination: 'off'
+    },
+    readwiseRootPath: fixture.readwiseRoot,
+    readwiseSources: [
+      {
+        highlightMode: 'split',
+        highlightPath: fixture.highlightDir,
+        id: 'draft-import-source-1',
+        keepPreview: null,
+        keepState: 'enabled',
+        kind: 'articles',
+        primaryPath: fixture.fullDocumentDir
+      }
+    ]
+  });
+  const readFileSpy = vi.spyOn(fs, 'readFile');
+  const progressEvents: KeepImportProgressEvent[] = [];
+
+  await runReadwiseArticles(fixture.fullDocumentDir, (event) => progressEvents.push(event));
+
+  expect(
+    readFileSpy.mock.calls.some(([filePath]) => String(filePath).endsWith('No Highlight.md'))
+  ).toBe(false);
+  expect(readRows("SELECT source_name FROM import_runs WHERE source_name = 'No Highlight'")).toEqual([]);
+  expect(readRows("SELECT source_name FROM import_sources WHERE source_name = 'No Highlight'")).toEqual([]);
+  expect(readRows("SELECT object_id FROM sync_object_state WHERE object_type = 'import_source'")).toEqual([]);
+  expect(readRows("SELECT source_path FROM keep_import_items WHERE source_path = 'No Highlight.md'")).toEqual([
+    { source_path: 'No Highlight.md' }
+  ]);
+  expect(progressEvents.at(-1)).toEqual(expect.objectContaining({
+    currentSourcePath: 'No Highlight.md',
+    phase: 'source_completed',
+    sourceProcessedCount: 1,
+    sourceTotalCount: 1
+  }));
 });

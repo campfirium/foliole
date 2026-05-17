@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import {
   normalizeImportManagerSettings,
   type ImportManagerSettings,
@@ -12,10 +14,7 @@ import type {
   NativeReadwiseSyncPreviewStatus
 } from '../../lib/platform/nativeImportContract.js';
 import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
-import {
-  discoverDirectoryImportSources,
-  type DirectoryImportSourceDescriptor
-} from '../ipc/importSourcePipeline.js';
+import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { hasHighlightSourceChanged, hasPrimarySourceChanged } from './keepImportSourceSignature.js';
@@ -23,6 +22,11 @@ import {
   resolveReadwiseSourceImportDecision,
   resolveReadwiseSourceSignature
 } from './readwisePreparedImport.js';
+import { discoverReadwiseImportSources } from './readwiseSourceDiscovery.js';
+import {
+  resolveReadwisePreviewHighlightStatus,
+  sortReadwisePreviewEntries
+} from './readwiseSyncPreviewEntryState.js';
 
 export type ReadwiseSyncPreviewDestination = NativeReadwiseSyncPreviewDestination;
 export type ReadwiseSyncPreviewEntry = NativeReadwiseSyncPreviewEntry;
@@ -35,7 +39,6 @@ type ReadwiseImportSource = ImportManagerSourceDraft & { kind: ReadwiseSourceKin
 function isReadwiseImportSource(source: ImportManagerSourceDraft): source is ReadwiseImportSource {
   return (
     Boolean(source.kind) &&
-    source.kind !== 'books' &&
     source.primaryPath.trim().length > 0 &&
     source.highlightPath.trim().length > 0
   );
@@ -58,28 +61,37 @@ function resolveTrackingStatus(
     ? readKeepImportNodeState(existingItem.last_node_id)
     : null;
   if (existingItem.last_node_id && (!nodeState || nodeState.deleted_at !== null)) {
-    return 'blocked_deleted' as const;
+    return 'new' as const;
   }
   return primaryChanged || highlightChanged ? 'updated' : 'unchanged';
 }
 
-function resolveBlockedLocation(ruleId: string, source: DirectoryImportSourceDescriptor) {
-  const existingItem = readKeepImportItem(ruleId, source.sourceName);
-  const nodeState = existingItem?.last_node_id
-    ? readKeepImportNodeState(existingItem.last_node_id)
-    : null;
-  return nodeState?.deleted_at ? 'trash' : 'removed';
-}
-
 function resolveLocationCounts(entries: ReadwiseSyncPreviewEntry[]) {
   const activeCount = entries.filter((entry) => entry.status === 'unchanged').length;
-  const blockedEntries = entries.filter((entry) => entry.status === 'blocked_deleted');
   return {
     activeCount,
-    blockedCount: blockedEntries.length,
-    removedCount: blockedEntries.filter((entry) => entry.blocked_location !== 'trash').length,
-    trashCount: blockedEntries.filter((entry) => entry.blocked_location === 'trash').length,
+    blockedCount: 0,
+    removedCount: 0,
+    trashCount: 0,
   };
+}
+
+function resolvePreviewStatus(input: {
+  decision: Awaited<ReturnType<typeof resolveReadwiseSourceImportDecision>>;
+  existingItem: ReturnType<typeof readKeepImportItem>;
+  readwiseSource: ReadwiseImportSource;
+  source: DirectoryImportSourceDescriptor;
+  sourceSignature: Awaited<ReturnType<typeof resolveReadwiseSourceSignature>>;
+}) {
+  if (input.decision.destination === 'off') {
+    return 'off' as const;
+  }
+  return resolveTrackingStatus(
+    input.readwiseSource.id,
+    input.source,
+    hasHighlightSourceChanged(input.existingItem, input.sourceSignature),
+    hasPrimarySourceChanged(input.existingItem, input.sourceSignature)
+  );
 }
 
 async function buildSourceEntry(
@@ -95,26 +107,25 @@ async function buildSourceEntry(
     highlightDirectoryPath: readwiseSource.highlightPath
   });
   const existingItem = readKeepImportItem(readwiseSource.id, source.sourceName);
-  const status =
-    decision.destination === 'off'
-      ? 'off'
-      : resolveTrackingStatus(
-          readwiseSource.id,
-          source,
-          hasHighlightSourceChanged(existingItem, sourceSignature),
-          hasPrimarySourceChanged(existingItem, sourceSignature)
-        );
+  const status = resolvePreviewStatus({ decision, existingItem, readwiseSource, source, sourceSignature });
+  const hasHighlightFile = sourceSignature.highlight !== null;
+  const primaryPath = path.join(readwiseSource.primaryPath, source.sourceName);
+  const hasPrimaryFile = source.filePath === primaryPath;
+  const highlightStatus = resolveReadwisePreviewHighlightStatus({ decision, hasPrimaryFile });
   return {
-    ...(status === 'blocked_deleted' ? { blocked_location: resolveBlockedLocation(readwiseSource.id, source) } : {}),
     destination: decision.destination,
     detail:
-      decision.destination === 'off'
+      highlightStatus === 'unparsed'
+        ? 'Highlight file was found, but no highlights matched the current parser settings.'
+        : highlightStatus === 'highlight_only'
+          ? 'Highlight file was found without a matching full document source file.'
+        : decision.destination === 'off'
         ? 'Skipped by current import behavior.'
-        : status === 'blocked_deleted'
-          ? 'This source was deleted in Foliole and will stay blocked until you import it again manually.'
-          : null,
+        : null,
     detected_highlight_count: decision.detectedHighlightCount,
-    highlight_type: decision.hasHighlights ? 'with_highlights' : 'without_highlights',
+    highlight_status: highlightStatus,
+    highlight_type: hasHighlightFile ? 'with_highlights' : 'without_highlights',
+    open_path: hasHighlightFile ? path.join(readwiseSource.highlightPath, source.sourceName) : source.filePath,
     source_kind: readwiseSource.kind,
     source_path: source.sourceName,
     status
@@ -126,8 +137,9 @@ async function previewReadwiseSource(
   settings: ImportManagerSettings
 ) {
   try {
-    const sources = await discoverDirectoryImportSources(readwiseSource.primaryPath, {
-      supportedKinds: ['markdown']
+    const sources = await discoverReadwiseImportSources({
+      highlightDirectoryPath: readwiseSource.highlightPath,
+      primaryDirectoryPath: readwiseSource.primaryPath
     });
     return Promise.all(sources.map((source) => buildSourceEntry(source, readwiseSource, settings)));
   } catch (error) {
@@ -173,13 +185,13 @@ export async function previewReadwiseReaderImport(
       write_count: 0
     };
   }
-  const entries = (
+  const entries = sortReadwisePreviewEntries((
     await Promise.all(
       settings.readwiseSources
         .filter(isReadwiseImportSource)
         .map((source) => previewReadwiseSource(source, settings))
     )
-  ).flat();
+  ).flat());
   const locationCounts = resolveLocationCounts(entries);
   return {
     active_count: locationCounts.activeCount,

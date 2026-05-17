@@ -8,6 +8,7 @@ export type { RuntimeKeepImportPreviewEntry, RuntimeKeepImportPreviewResult } fr
 
 export async function previewRuntimeKeepImportRule(args: {
   directoryPath: string;
+  highlightMode?: 'merged' | 'split';
   highlightPolicy?: 'adopt' | 'reference_only';
   ruleId: string;
   sourceType?: 'generic' | 'readwise';
@@ -21,6 +22,7 @@ export async function previewRuntimeKeepImportRule(args: {
     const result = toRuntimeKeepImportPreviewResult(
       await runtimeInvoke(NATIVE_COMMANDS.previewKeepImportRule, {
         directory_path: args.directoryPath,
+        highlight_mode: args.highlightMode,
         highlight_policy: args.highlightPolicy,
         source_type: args.sourceType,
         rule_id: args.ruleId

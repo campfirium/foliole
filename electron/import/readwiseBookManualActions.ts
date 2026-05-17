@@ -1,6 +1,6 @@
 import { shell, type BrowserWindow } from 'electron';
 
-import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import type {
   NativeReadwiseBookEpubProgressEvent,
   NativeReadwiseBookDownloadResult,
@@ -50,15 +50,18 @@ function refreshPlaceholderNode(book: ReadwiseBookInventoryItem) {
   if (book.generatedNodeId !== placeholderNodeId) {
     return;
   }
-  openDatabaseConnection().sqlite
-    .prepare('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
-    .run(
-      buildReadwiseBookPlaceholderContent(book),
-      null,
-      new Date().toISOString(),
-      placeholderNodeId
-    );
-  syncWorkspaceSearchIndexForNodeIds(openDatabaseConnection().driver, [placeholderNodeId]);
+  const connection = openDatabaseConnection();
+  connection.driver.transaction(() => {
+    connection.sqlite
+      .prepare('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
+      .run(
+        buildReadwiseBookPlaceholderContent(book),
+        null,
+        new Date().toISOString(),
+        placeholderNodeId
+      );
+    enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, [placeholderNodeId]);
+  });
 }
 
 export async function openReadwiseBookDownload(nodeId: string): Promise<NativeReadwiseBookDownloadResult> {

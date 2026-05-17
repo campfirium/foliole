@@ -1,6 +1,7 @@
 import type { ImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
+  NativeReadwiseImportCancelResult,
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeContract';
@@ -34,4 +35,12 @@ export async function runReadwiseReaderImportInRuntime(
     await refreshRuntimeExternalSearchFolders();
   }
   return result;
+}
+
+export async function cancelReadwiseReaderImportInRuntime(): Promise<NativeReadwiseImportCancelResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  return runtimeInvoke(NATIVE_COMMANDS.cancelReadwiseReaderImport);
 }

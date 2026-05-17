@@ -21,6 +21,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDatabase } from '../database/migrate.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
+import { loadPersistedReadwiseBooksInventory } from './readwiseBooksInventoryState.js';
 import { runReadwiseReaderImport } from './readwiseReaderImportRun.js';
 import { previewReadwiseReaderImport } from './readwiseSyncPreview.js';
 
@@ -58,7 +59,30 @@ async function seedReadwiseSources() {
   return { articleHighlightPath, articlePrimaryPath, bookHighlightPath, bookPrimaryPath, readwiseRoot };
 }
 
-it('skips Readwise Books during ordinary Reader preview and run', async () => {
+function readActiveNodeTitles() {
+  return (openDatabaseConnection().sqlite
+    .prepare(`SELECT title FROM nodes WHERE deleted_at IS NULL ORDER BY title ASC`)
+    .all() as Array<{ title: string }>).map((row) => row.title);
+}
+
+function expectPendingBookInventory(paths: Awaited<ReturnType<typeof seedReadwiseSources>>) {
+  expect(
+    loadPersistedReadwiseBooksInventory({
+      fullDocumentDirectoryPath: paths.bookPrimaryPath,
+      highlightDirectoryPath: paths.bookHighlightPath
+    })?.books
+  ).toContainEqual(
+    expect.objectContaining({
+      annotationStatus: 'has_highlights',
+      bodyState: 'unloaded',
+      bookKey: 'book placeholder',
+      importStatus: 'pending',
+      title: 'Book Placeholder'
+    })
+  );
+}
+
+it('includes Readwise Books in Reader import without creating placeholder topics', async () => {
   const paths = await seedReadwiseSources();
   saveImportManagerSettings({
     readwiseReaderConfig: {
@@ -93,14 +117,19 @@ it('skips Readwise Books during ordinary Reader preview and run', async () => {
   });
 
   await expect(previewReadwiseReaderImport()).resolves.toMatchObject({
-    total_count: 1,
-    write_count: 1
+    total_count: 2,
+    with_highlights_count: 2,
+    write_count: 2
   });
-  await runReadwiseReaderImport();
+  await expect(runReadwiseReaderImport()).resolves.toMatchObject({
+    entry_count: 2,
+    imported_count: 2,
+    source_count: 2,
+    status: 'completed'
+  });
 
-  const titles = (openDatabaseConnection().sqlite
-    .prepare(`SELECT title FROM nodes WHERE deleted_at IS NULL ORDER BY title ASC`)
-    .all() as Array<{ title: string }>).map((row) => row.title);
+  const titles = readActiveNodeTitles();
   expect(titles).toContain('Highlighted');
   expect(titles).not.toContain('Book Placeholder');
+  expectPendingBookInventory(paths);
 });

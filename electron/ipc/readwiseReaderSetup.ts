@@ -6,13 +6,15 @@ function createEmptyResult(message: string): NativeReadwiseDetectionResult {
   return {
     checkedSourceCount: 0,
     detectedHighlightCount: 0,
+    highlightOnlySourceCount: 0,
     highlightedArticleCount: 0,
     matchedHighlightCount: 0,
     message,
     sampleCount: 0,
     samples: [],
     success: false,
-    totalArticleCount: 0
+    totalArticleCount: 0,
+    unparsedHighlightFileCount: 0
   };
 }
 

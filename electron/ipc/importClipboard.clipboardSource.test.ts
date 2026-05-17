@@ -27,7 +27,9 @@ vi.mock('../attachments/importImageAttachmentBytes.js', () => ({
   normalizeImageFileName: vi.fn((originalName: string | null | undefined) => originalName || 'pasted-image.png')
 }));
 vi.mock('../database/connection.js', () => ({ openDatabaseConnection: vi.fn() }));
-vi.mock('../../lib/core/database/workspaceSearchIndex.js', () => ({ syncWorkspaceSearchIndexForNodeIds: vi.fn() }));
+vi.mock('../../lib/core/database/searchIndexInvalidations.js', () => ({
+  enqueueWorkspaceSearchInvalidationForNodeIds: vi.fn()
+}));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated }));
 vi.mock('./importTextFile.js', async () => {
   const actual = await vi.importActual<typeof import('./importTextFile.js')>('./importTextFile.js');

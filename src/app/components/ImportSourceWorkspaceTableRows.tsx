@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { importActionOptions } from '../../../lib/core/import/importSourceActions';
+import { isGenericSplitImportSourceUnsupported } from '../../../lib/core/import/unsupportedKeepImportRules';
 import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
 import {
@@ -49,6 +50,7 @@ function PreviewCell(props: {
   onDisableKeepImport: (sourceId: string) => void;
   onPreviewKeepImport: (sourceId: string) => void;
 }) {
+  const unsupportedSplit = isGenericSplitImportSourceUnsupported(props.source);
   if (props.source.keepState === 'enabled') {
     return (
       <AppButton
@@ -66,12 +68,12 @@ function PreviewCell(props: {
     <AppButton
       aria-label={`Preview ${props.source.id}`}
       className="h-9 w-full min-w-0 px-2.5 text-sm"
-      disabled={!props.source.primaryPath.trim()}
+      disabled={!props.source.primaryPath.trim() || unsupportedSplit}
       onClick={() => props.onPreviewKeepImport(props.source.id)}
-      title={formatKeepStateLabel(props.source.keepState)}
+      title={unsupportedSplit ? 'Generic split highlights are not available yet.' : formatKeepStateLabel(props.source.keepState)}
       variant="primary"
     >
-      Preview
+      {unsupportedSplit ? 'Unavailable' : 'Preview'}
     </AppButton>
   );
 }

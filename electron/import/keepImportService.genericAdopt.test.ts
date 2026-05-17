@@ -105,3 +105,29 @@ it('adopts inline markdown highlights for generic merged keep imports', async ()
     }
   ]);
 });
+
+it('fails fast for unsupported generic split keep imports', async () => {
+  const sourceDir = path.join(tempRoot, 'split-source');
+  await fs.mkdir(sourceDir, { recursive: true });
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Imported\nBody\n', 'utf8');
+
+  await expect(
+    previewKeepImportRule({
+      directoryPath: sourceDir,
+      highlightMode: 'split',
+      highlightPolicy: 'reference_only',
+      ruleId: 'draft-import-source-102',
+      sourceType: 'generic'
+    })
+  ).rejects.toThrow('Generic split highlights are not available yet.');
+
+  await expect(
+    runKeepImportRule({
+      directoryPath: sourceDir,
+      highlightMode: 'split',
+      highlightPolicy: 'reference_only',
+      ruleId: 'draft-import-source-102',
+      sourceType: 'generic'
+    })
+  ).rejects.toThrow('Generic split highlights are not available yet.');
+});
