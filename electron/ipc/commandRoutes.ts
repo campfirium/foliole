@@ -39,6 +39,7 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.loadImportOverview,
   NATIVE_COMMANDS.loadRemovedSources,
   NATIVE_COMMANDS.restoreRemovedSource,
+  NATIVE_COMMANDS.devReimportCurrentTopicSource,
   NATIVE_COMMANDS.loadPdfImportsInventory,
   NATIVE_COMMANDS.loadReadwiseBooksInventory,
   NATIVE_COMMANDS.loadImportManagerSettings,

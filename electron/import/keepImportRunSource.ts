@@ -105,6 +105,7 @@ async function runImportAttempt(
 ): Promise<KeepImportRunEntry> {
   const result = await runKeepImportSourceImportAttempt(config, source, {
     automaticDuplicateNoop: !options.forceTopicImport,
+    clearSourceUpdateOnSuccess: Boolean(options.forceTopicImport),
     onProgress: options.onProgress
   });
   if ('noOp' in result && result.noOp) {
@@ -162,7 +163,7 @@ export async function runSingleKeepImportSource(
       return readwiseResult;
     }
   }
-  if (preview.status === 'updated') {
+  if (preview.status === 'updated' && !options.forceTopicImport) {
     return skipDetectedSourceUpdate(config, source, preview.status);
   }
   return runImportAttempt(config, source, { ...options, notifyUpdate }, preview.status);

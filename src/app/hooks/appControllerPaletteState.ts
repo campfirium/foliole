@@ -5,7 +5,6 @@ import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorE
 import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
-import { collectNodeSubtreeIds } from '../../store/workspaceHelpers';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
@@ -80,18 +79,14 @@ function createReimportSelectedTopicCommand(args: {
     }
     await args.runtime.flushPendingEditorDraftImmediately();
     const result = await devReimportSelectedTopic({
-      nodeId,
-      nodeIdsToDelete: collectNodeSubtreeIds(nodeId, args.ws.nodesById),
-      nodeOrder: args.ws.nodeOrder
+      nodeId
     });
     if (result.status !== 'reimported') {
       window.alert(result.detail);
       return false;
     }
     await useWorkspaceStore.persist.rehydrate();
-    if (result.nodeId) {
-      useWorkspaceStore.getState().openNode(result.nodeId);
-    }
+    useWorkspaceStore.getState().openNode(result.nodeId ?? nodeId);
     return true;
   };
 }

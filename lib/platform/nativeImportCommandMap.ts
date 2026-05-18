@@ -4,6 +4,7 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
   NativeDirectoryImportArgs,
   NativeDirectoryImportResult,
+  NativeDevReimportCurrentTopicSourceResult,
   NativeImportedTextFile,
   NativeImportOverview,
   NativeNodeSourceDetails,
@@ -57,6 +58,10 @@ export type NativeImportCommandMap = {
   [NATIVE_COMMANDS.restoreRemovedSource]: {
     args: NativeRestoreRemovedSourceArgs;
     result: NativeRestoreRemovedSourceResult;
+  };
+  [NATIVE_COMMANDS.devReimportCurrentTopicSource]: {
+    args: { node_id: string };
+    result: NativeDevReimportCurrentTopicSourceResult;
   };
   [NATIVE_COMMANDS.loadPdfImportsInventory]: {
     args: undefined;

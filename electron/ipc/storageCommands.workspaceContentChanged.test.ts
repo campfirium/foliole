@@ -5,6 +5,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const { mergeReadwiseTopicHighlights } = vi.hoisted(() => ({
   mergeReadwiseTopicHighlights: vi.fn()
 }));
+const { reimportCurrentTopicSource } = vi.hoisted(() => ({
+  reimportCurrentTopicSource: vi.fn()
+}));
 const { notifyWorkspaceContentChanged } = vi.hoisted(() => ({
   notifyWorkspaceContentChanged: vi.fn()
 }));
@@ -26,6 +29,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   upsertNodeSnapshot
 }));
 vi.mock('../database/workspaceSearch.js', () => ({ searchWorkspace: vi.fn() }));
+vi.mock('../import/currentSourceReimport.js', () => ({ reimportCurrentTopicSource }));
 vi.mock('../import/readwiseTopicMerge.js', () => ({ mergeReadwiseTopicHighlights }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 vi.mock('./workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentChanged }));
@@ -104,5 +108,21 @@ it('notifies workspace content changes when reset import data deletes nodes', as
     deletedNodeCount: 4
   });
 
+  expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(1);
+});
+
+it('notifies workspace content changes after current source reimport', async () => {
+  reimportCurrentTopicSource.mockResolvedValue({
+    detail: null,
+    node_id: 'node-1',
+    reimported_at: '2026-05-18T00:00:00.000Z',
+    status: 'reimported'
+  });
+
+  await expect(handleStorageCommand('dev_reimport_current_topic_source', { node_id: 'node-1' })).resolves.toMatchObject({
+    status: 'reimported'
+  });
+
+  expect(reimportCurrentTopicSource).toHaveBeenCalledWith('node-1');
   expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(1);
 });
