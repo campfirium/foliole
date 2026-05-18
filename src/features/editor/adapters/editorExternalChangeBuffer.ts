@@ -3,6 +3,7 @@ import type { EditorDocumentChangeMeta } from './codeMirrorEditorAdapterSupport'
 export interface EditorExternalChangeBufferArgs {
   flushDelayMs?: number;
   getCurrentContent: () => string;
+  getCurrentNodeId: () => string | null;
   isApplyingExternalContent: () => boolean;
   onFlush: (content: string, nodeId: string | null) => void;
 }
@@ -31,7 +32,9 @@ export class EditorExternalChangeBuffer {
     if (this.pendingChange === null || this.args.isApplyingExternalContent()) {
       return;
     }
-    this.pendingChange = { ...this.pendingChange, content: this.args.getCurrentContent() };
+    if (this.pendingChange.nodeId === this.args.getCurrentNodeId()) {
+      this.pendingChange = { ...this.pendingChange, content: this.args.getCurrentContent() };
+    }
     this.scheduleFlush();
   }
 
