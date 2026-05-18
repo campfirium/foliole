@@ -7,6 +7,7 @@ import type {
   NativeExternalSearchPreview
 } from '../../../lib/platform/nativeStorageContract';
 
+import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 type ExternalSearchFoldersListener = (folders: RuntimeExternalSearchFolder[]) => void;
@@ -35,6 +36,8 @@ export interface RuntimeExternalSearchPreview {
   folderId: string;
   folderPath: string;
   importedNodeId?: string | null;
+  isPresent?: boolean | undefined;
+  lastOpenedAt?: string | null;
   relativePath: string;
 }
 
@@ -45,6 +48,8 @@ export interface RuntimeExternalSearchBrowseEntry {
   folderId: string;
   folderPath: string;
   importedNodeId?: string | null;
+  isPresent?: boolean | undefined;
+  lastOpenedAt?: string | null;
   modifiedAt: string;
   openingText: string | null;
   relativePath: string;
@@ -87,6 +92,8 @@ function toPreview(value: NativeExternalSearchPreview): RuntimeExternalSearchPre
     folderId: value.folder_id,
     folderPath: value.folder_path,
     importedNodeId: value.imported_node_id ?? null,
+    isPresent: value.is_present,
+    lastOpenedAt: value.last_opened_at ?? null,
     relativePath: value.relative_path
   };
 }
@@ -99,6 +106,8 @@ function toBrowseEntry(value: NativeExternalSearchBrowseEntry): RuntimeExternalS
     folderId: value.folder_id,
     folderPath: value.folder_path,
     importedNodeId: value.imported_node_id ?? null,
+    isPresent: value.is_present,
+    lastOpenedAt: value.last_opened_at ?? null,
     modifiedAt: value.modified_at,
     openingText: value.opening_text,
     relativePath: value.relative_path,
@@ -180,4 +189,19 @@ export async function importRuntimeExternalSearchDocument(absolutePath: string) 
     return null;
   }
   return runtimeInvoke(NATIVE_COMMANDS.importExternalSearchDocument, { absolute_path: absolutePath }) as Promise<NativeTextImportResult | null>;
+}
+
+export async function openRuntimeExternalDocumentFile(path: string) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  const result = await runtimeInvoke(NATIVE_COMMANDS.openExternalDocumentFile, { path });
+  return result ? toBrowseEntry(result as NativeExternalSearchBrowseEntry) : null;
+}
+
+export function subscribeRuntimeExternalDocumentFileOpened(
+  handler: (payload: { absolutePath: string; folderId: string }) => void
+) {
+  return getElectronAPI()?.onExternalDocumentFileOpened?.(handler) ?? (() => undefined);
 }

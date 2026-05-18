@@ -21,6 +21,7 @@ export const NATIVE_COMMANDS = {
   rebuildExternalSearchIndex: 'rebuild_external_search_index',
   loadExternalSearchBrowseEntries: 'load_external_search_browse_entries',
   loadExternalSearchPreview: 'load_external_search_preview',
+  openExternalDocumentFile: 'open_external_document_file',
   importExternalSearchDocument: 'import_external_search_document',
   loadNodeSourceDetails: 'load_node_source_details',
   loadNodeSourceUpdatePreview: 'load_node_source_update_preview',

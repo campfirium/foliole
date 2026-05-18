@@ -32,6 +32,7 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.rebuildExternalSearchIndex,
   NATIVE_COMMANDS.loadExternalSearchBrowseEntries,
   NATIVE_COMMANDS.loadExternalSearchPreview,
+  NATIVE_COMMANDS.openExternalDocumentFile,
   NATIVE_COMMANDS.loadNodeSourceDetails,
   NATIVE_COMMANDS.loadNodeSourceUpdatePreview,
   NATIVE_COMMANDS.mergeReadwiseTopicHighlights,

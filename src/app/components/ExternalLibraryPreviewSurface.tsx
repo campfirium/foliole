@@ -54,6 +54,7 @@ export function ExternalLibraryPreviewSurface(args: {
           onHandleImport={args.onHandleImport}
           onOpenImportedNodeId={args.onOpenImportedNodeId}
         />
+        <ExternalArchivedNotice isPresent={args.preview.isPresent} />
         <MarkdownEditor
           blockImageMaxHeightOverride={520}
           blockImageWidthOverride="min(100%, 40rem)"
@@ -74,6 +75,19 @@ export function ExternalLibraryPreviewSurface(args: {
         />
       </div>
     </section>
+  );
+}
+
+function ExternalArchivedNotice(args: { isPresent?: boolean | undefined }) {
+  if (args.isPresent !== false) {
+    return null;
+  }
+  return (
+    <div className="mx-auto mb-2 w-full max-w-[var(--document-max-width)] px-[var(--document-content-inline-padding)]">
+      <div className="rounded-md border border-border/70 bg-panel px-3 py-2 text-sm text-foreground/70">
+        Original file is unavailable. Foliole is showing the recently opened version.
+      </div>
+    </div>
   );
 }
 

@@ -9,6 +9,7 @@ import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { stopDevScreenshotServer } from './devScreenshotServer.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
+import { installExternalDocumentFileOpenLifecycle } from './externalDocumentFileOpen.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
@@ -164,7 +165,10 @@ function installAppProcessDiagnostics() {
   app.on('web-contents-created', (_, contents) => bindEmbeddedLinkPanelContents(contents));
 }
 
-function installActivateLifecycle(args: MainLifecycleArgs) {
+function installActivateLifecycle(
+  args: MainLifecycleArgs,
+  onWindowReady: (window: BrowserWindow) => void
+) {
   app.on('activate', async () => {
     notifyExternalSearchUserActivity();
     if (BrowserWindow.getAllWindows().length !== 0) {
@@ -174,14 +178,17 @@ function installActivateLifecycle(args: MainLifecycleArgs) {
     await args.loadMainWindow(window);
     await presentInitialRendererWindow(window);
     await args.activateMainWindow(window);
+    onWindowReady(window);
   });
 }
 
 export function installMainLifecycle(args: MainLifecycleArgs) {
+  const externalDocumentFileOpen = installExternalDocumentFileOpenLifecycle();
   installSingleInstanceGate(args.runtimeMode);
   installBeforeQuitLifecycle();
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
     focusWindow(BrowserWindow.getAllWindows()[0]);
+    externalDocumentFileOpen.enqueueFromArgv(argv);
     notifyExternalSearchSecondInstance();
   });
   app.whenReady().then(async () => {
@@ -198,7 +205,8 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
       mainWindow,
       startCompanionSyncIfEnabled
     });
-    installActivateLifecycle(args);
+    externalDocumentFileOpen.setReadyWindow(mainWindow);
+    installActivateLifecycle(args, externalDocumentFileOpen.setReadyWindow);
   });
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

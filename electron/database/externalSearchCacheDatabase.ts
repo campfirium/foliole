@@ -33,14 +33,15 @@ export function openExternalSearchCacheDatabase() {
     modified_ms INTEGER NOT NULL,
     indexed_at TEXT NOT NULL,
     is_present INTEGER NOT NULL DEFAULT 1,
+    last_opened_at TEXT,
+    opened_expires_at TEXT,
+    missing_at TEXT,
     content TEXT NOT NULL
   )`);
-  const hasPresenceColumn = cachedCacheDb
-    .prepare(`SELECT COUNT(*) AS count FROM pragma_table_info('external_search_documents') WHERE name = 'is_present'`)
-    .get() as { count: number };
-  if (!hasPresenceColumn.count) {
-    cachedCacheDb.exec('ALTER TABLE external_search_documents ADD COLUMN is_present INTEGER NOT NULL DEFAULT 1');
-  }
+  ensureExternalSearchDocumentColumn('is_present', 'ALTER TABLE external_search_documents ADD COLUMN is_present INTEGER NOT NULL DEFAULT 1');
+  ensureExternalSearchDocumentColumn('last_opened_at', 'ALTER TABLE external_search_documents ADD COLUMN last_opened_at TEXT');
+  ensureExternalSearchDocumentColumn('opened_expires_at', 'ALTER TABLE external_search_documents ADD COLUMN opened_expires_at TEXT');
+  ensureExternalSearchDocumentColumn('missing_at', 'ALTER TABLE external_search_documents ADD COLUMN missing_at TEXT');
   cachedCacheDb.exec(`CREATE INDEX IF NOT EXISTS idx_external_search_documents_folder_id
     ON external_search_documents (folder_id)`);
   cachedCacheDb.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS external_search_fts USING fts5(
@@ -55,6 +56,15 @@ export function openExternalSearchCacheDatabase() {
     tokenize = 'trigram'
   )`);
   return cachedCacheDb;
+}
+
+function ensureExternalSearchDocumentColumn(name: string, statement: string) {
+  const result = cachedCacheDb
+    ?.prepare(`SELECT COUNT(*) AS count FROM pragma_table_info('external_search_documents') WHERE name = ?`)
+    .get(name) as { count: number } | undefined;
+  if (!result?.count) {
+    cachedCacheDb?.exec(statement);
+  }
 }
 
 export function closeExternalSearchCacheDatabase() {

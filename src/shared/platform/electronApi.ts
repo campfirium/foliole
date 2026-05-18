@@ -45,6 +45,11 @@ export interface WorkspaceContentChangedPayload {
   scope: 'workspace';
 }
 
+export interface ExternalDocumentFileOpenedPayload {
+  absolutePath: string;
+  folderId: string;
+}
+
 export interface ElectronAPI {
   debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
@@ -61,6 +66,7 @@ export interface ElectronAPI {
   onWorkspaceContentChanged?: (handler: (payload: WorkspaceContentChangedPayload) => void) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;
+  onExternalDocumentFileOpened?: (handler: (payload: ExternalDocumentFileOpenedPayload) => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;
   setNativeHotkeyRecordingActive?: (active: boolean) => void;
 }
