@@ -94,6 +94,7 @@ it('reflects topic title edits from the latest source data', () => {
       useWorkspaceDualListState({ ...baseProps, listNodesById }),
     { initialProps: { listNodesById: nodesById } }
   );
+  const folderTopicCountById = result.current.folderTopicCountById;
 
   rerender({
     listNodesById: {
@@ -104,6 +105,7 @@ it('reflects topic title edits from the latest source data', () => {
 
   expect(result.current.topicNodeOrder).toEqual(['topic-a', 'topic-b']);
   expect(result.current.topicNodesById['topic-a']?.title).toBe('Renamed Topic A');
+  expect(result.current.folderTopicCountById).toBe(folderTopicCountById);
 });
 
 it('reflects moved topics in the selected folder without waiting for a later rebuild', () => {

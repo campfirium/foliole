@@ -101,7 +101,7 @@ function renderVirtualRows(args: {
 }
 
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set([VIRTUAL_ROOT_NODE_ID]));
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const rowSpacing = getNodeListRowSpacing();
   const rows = useMemo(() => {
     const virtualNodeIds = props.nodeOrder.filter((nodeId) => {

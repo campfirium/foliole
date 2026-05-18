@@ -7,12 +7,11 @@ function createTrashedNodeSet(trashedNodeIds: readonly string[]) {
   return new Set(trashedNodeIds);
 }
 
-export function resolveTrashRootId(
+function resolveTrashRootIdFromSet(
   nodeId: string,
   nodesById: Record<string, TrashNode | undefined>,
-  trashedNodeIds: readonly string[]
+  trashedNodeSet: ReadonlySet<string>
 ) {
-  const trashedNodeSet = createTrashedNodeSet(trashedNodeIds);
   if (!trashedNodeSet.has(nodeId)) return null;
 
   let rootId = nodeId;
@@ -24,14 +23,23 @@ export function resolveTrashRootId(
   return rootId;
 }
 
+export function resolveTrashRootId(
+  nodeId: string,
+  nodesById: Record<string, TrashNode | undefined>,
+  trashedNodeIds: readonly string[]
+) {
+  return resolveTrashRootIdFromSet(nodeId, nodesById, createTrashedNodeSet(trashedNodeIds));
+}
+
 export function selectTrashRootIds(
   nodeOrder: readonly string[],
   nodesById: Record<string, TrashNode | undefined>,
   trashedNodeIds: readonly string[]
 ) {
   const rootIds = new Set<string>();
+  const trashedNodeSet = createTrashedNodeSet(trashedNodeIds);
   for (const nodeId of nodeOrder) {
-    if (resolveTrashRootId(nodeId, nodesById, trashedNodeIds) === nodeId) {
+    if (resolveTrashRootIdFromSet(nodeId, nodesById, trashedNodeSet) === nodeId) {
       rootIds.add(nodeId);
     }
   }
@@ -52,11 +60,13 @@ export function filterTrashRootIdsByTitle(
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   if (!normalizedQuery) return [...rootIds];
 
+  const rootIdSet = new Set(rootIds);
   const matchingRootIds = new Set<string>();
+  const trashedNodeSet = createTrashedNodeSet(trashedNodeIds);
   for (const nodeId of nodeOrder) {
     if (!matchesQuery(nodesById[nodeId], normalizedQuery)) continue;
-    const rootId = resolveTrashRootId(nodeId, nodesById, trashedNodeIds);
-    if (rootId && rootIds.includes(rootId)) {
+    const rootId = resolveTrashRootIdFromSet(nodeId, nodesById, trashedNodeSet);
+    if (rootId && rootIdSet.has(rootId)) {
       matchingRootIds.add(rootId);
     }
   }
