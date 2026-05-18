@@ -69,3 +69,17 @@ export function resolveFallbackFromTargets(
     .find((parentNodeId) => parentNodeId && nextNodesById[parentNodeId] && !excludedNodeIds.has(parentNodeId));
   return findFallbackActiveNodeId(fallbackParentId ?? null, nextNodeOrder, nextNodesById, excludedNodeIds);
 }
+
+export function resolveReviewAwareFallbackFromTargets(
+  targetNodeIds: string[],
+  state: WorkspaceState,
+  nextNodeOrder: string[],
+  nextNodesById: Record<string, Node>,
+  excludedNodeIds: ReadonlySet<string>
+) {
+  const nextQueuedNodeId =
+    state.reviewSession.currentNodeId && excludedNodeIds.has(state.reviewSession.currentNodeId)
+      ? state.reviewSession.queueNodeIds.find((nodeId) => nextNodesById[nodeId] && !excludedNodeIds.has(nodeId))
+      : null;
+  return nextQueuedNodeId ?? resolveFallbackFromTargets(targetNodeIds, state, nextNodeOrder, nextNodesById, excludedNodeIds);
+}

@@ -8,7 +8,7 @@ import type { WorkspaceState } from './workspaceStore';
 import {
   collectDeletedNodeIds,
   collectRootDeleteTargets,
-  resolveFallbackFromTargets
+  resolveReviewAwareFallbackFromTargets
 } from './workspaceTrashMutationTargets';
 
 export interface DeleteNodeMutationResult {
@@ -176,7 +176,7 @@ export function computeDeleteNodesMutation(state: WorkspaceState, nodeIds: strin
   const nextActiveNodeId =
     state.activeNodeId && !hiddenNodeIds.has(state.activeNodeId)
       ? state.activeNodeId
-      : resolveFallbackFromTargets(targetNodeIds, state, state.nodeOrder, nextNodesById, hiddenNodeIds);
+      : resolveReviewAwareFallbackFromTargets(targetNodeIds, state, state.nodeOrder, nextNodesById, hiddenNodeIds);
   const nextNavigation =
     nextActiveNodeId === null
       ? { ...INITIAL_WORKSPACE_NAVIGATION_STATE }
@@ -231,7 +231,7 @@ export function computeDeleteNodesPermanentlyMutation(
   const nextActiveNodeId =
     state.activeNodeId && !deletedNodeIds.has(state.activeNodeId) && !hiddenNodeIds.has(state.activeNodeId)
       ? state.activeNodeId
-      : resolveFallbackFromTargets(targetNodeIds, state, nextNodeOrder, nextNodesById, hiddenNodeIds);
+      : resolveReviewAwareFallbackFromTargets(targetNodeIds, state, nextNodeOrder, nextNodesById, hiddenNodeIds);
   const nextNavigation =
     nextActiveNodeId === null
       ? { ...INITIAL_WORKSPACE_NAVIGATION_STATE }
