@@ -1,6 +1,7 @@
 import {
   recordPreparedImportFailure as recordPreparedImportFailureViaDriver,
-  runPreparedImport as runPreparedImportViaDriver
+  runPreparedImport as runPreparedImportViaDriver,
+  type RunPreparedImportOptions
 } from '../../lib/core/database/index.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
@@ -110,8 +111,8 @@ function linkPreparedLocalizedImages(record: PersistedImportRecord, prepared: Pr
   });
 }
 
-export function runPreparedImport(input: PreparedImportRecord) {
-  const record = rewriteMarkdownLocalImages(runPreparedImportViaDriver(openDatabaseConnection().driver, input), input);
+export function runPreparedImport(input: PreparedImportRecord, options?: RunPreparedImportOptions) {
+  const record = rewriteMarkdownLocalImages(runPreparedImportViaDriver(openDatabaseConnection().driver, input, options), input);
   linkPreparedLocalizedImages(record, input);
   if (input.sourceKind !== 'pdf' || !record.nodeId || record.resultStatus === 'failed') {
     return record;

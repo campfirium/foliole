@@ -67,7 +67,7 @@ function canReimportSelectedTopic(args: {
     return false;
   }
   const activeNode = args.ws.nodesById[args.activeNodeId];
-  return Boolean(activeNode && activeNode.kind === 'topic' && !activeNode.anchorLink && !args.ws.trashedNodeIds.includes(args.activeNodeId));
+  return Boolean(activeNode && activeNode.kind !== 'folder' && !args.ws.trashedNodeIds.includes(args.activeNodeId));
 }
 
 function canToggleImmersiveMode(args: {

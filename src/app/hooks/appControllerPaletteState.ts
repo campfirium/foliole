@@ -5,6 +5,7 @@ import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorE
 import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
+import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
@@ -86,7 +87,7 @@ function createReimportSelectedTopicCommand(args: {
       return false;
     }
     await useWorkspaceStore.persist.rehydrate();
-    useWorkspaceStore.getState().openNode(result.nodeId ?? nodeId);
+    await openWorkspaceNodeWithPreparedDocument(result.nodeId ?? nodeId, { forceLoad: true });
     return true;
   };
 }
