@@ -46,6 +46,30 @@ function getTextAnchorLocators(locator: unknown): TextAnchorLocator[] {
   return [];
 }
 
+function resolveUniqueOriginalTextSelection(parentContent: string, locator: TextAnchorLocator) {
+  if (locator.originalText.length === 0) {
+    return null;
+  }
+
+  const firstIndex = parentContent.indexOf(locator.originalText);
+  if (firstIndex < 0) {
+    return null;
+  }
+  const secondIndex = parentContent.indexOf(locator.originalText, firstIndex + Math.max(1, locator.originalText.length));
+  return secondIndex < 0
+    ? { from: firstIndex, to: firstIndex + locator.originalText.length }
+    : null;
+}
+
+function resolveLocatorSelection(parentContent: string, locator: TextAnchorLocator) {
+  const from = Math.max(0, Math.min(locator.from, parentContent.length));
+  const to = Math.max(from, Math.min(locator.to, parentContent.length));
+  if (parentContent.slice(from, to) === locator.originalText) {
+    return { from, to };
+  }
+  return resolveUniqueOriginalTextSelection(parentContent, locator);
+}
+
 function resolveNodeTextAnchorDecorations(
   node: TextAnchorDecorationNode,
   parentContent: string
@@ -56,12 +80,8 @@ function resolveNodeTextAnchorDecorations(
     return [];
   }
   return locators
-    .map((locator) => {
-      const from = Math.max(0, Math.min(locator.from, parentContent.length));
-      const to = Math.max(from, Math.min(locator.to, parentContent.length));
-      return { from, to };
-    })
-    .filter((selection) => selection.from < selection.to)
+    .map((locator) => resolveLocatorSelection(parentContent, locator))
+    .filter((selection): selection is { from: number; to: number } => Boolean(selection && selection.from < selection.to))
     .map((selection) => ({
       from: selection.from,
       kind: anchorLink.kind,
