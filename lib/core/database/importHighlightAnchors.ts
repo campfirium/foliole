@@ -18,6 +18,11 @@ function normalizeLineEndings(value: string) {
   return value.replace(/\r\n?/g, '\n');
 }
 
+function resolveInitialSearchFrom(content: string) {
+  const frontmatterMatch = /^---\n[\s\S]*?\n---(?:\n+|$)/.exec(normalizeLineEndings(content));
+  return frontmatterMatch ? frontmatterMatch[0].length : 0;
+}
+
 function normalizeLooseWhitespaceWithMap(value: string) {
   const raw = normalizeLineEndings(value);
   let normalized = '';
@@ -52,10 +57,11 @@ function normalizeLooseWhitespaceWithMap(value: string) {
 function findAvailableOccurrence(
   content: string,
   excerpt: string,
+  minSearchFrom: number,
   searchFrom: number,
   occupiedRanges: Array<{ from: number; to: number }>
 ) {
-  const attempts = [searchFrom, 0];
+  const attempts = [Math.max(searchFrom, minSearchFrom), minSearchFrom];
   for (const startFrom of attempts) {
     let startIndex = startFrom;
     while (startIndex <= content.length) {
@@ -77,9 +83,9 @@ function findAvailableOccurrence(
     return null;
   }
   for (const startFrom of attempts) {
-    let normalizedStartIndex = normalizedContent.rawIndexes.findIndex((index) => index >= startFrom);
+    let normalizedStartIndex = normalizedContent.rawIndexes.findIndex((index) => index >= Math.max(startFrom, minSearchFrom));
     if (normalizedStartIndex < 0) {
-      normalizedStartIndex = 0;
+      normalizedStartIndex = normalizedContent.rawIndexes.findIndex((index) => index >= minSearchFrom);
     }
     while (normalizedStartIndex <= normalizedContent.normalized.length) {
       const foundAt = normalizedContent.normalized.indexOf(normalizedExcerpt, normalizedStartIndex);
@@ -163,7 +169,8 @@ export function applyImportedHighlightAnchors(input: {
     return { content, highlights: [] as AnchoredImportedHighlightRecord[] };
   }
 
-  let searchFrom = 0;
+  const minSearchFrom = resolveInitialSearchFrom(content);
+  let searchFrom = minSearchFrom;
   const occupiedRanges: Array<{ from: number; to: number }> = [];
   const locatedHighlights: AnchoredImportedHighlightRecord[] = [];
   const locator = createContextExcerptLocator(content);
@@ -173,7 +180,7 @@ export function applyImportedHighlightAnchors(input: {
       return;
     }
     const range = collectAnchorExcerptCandidates(locator, highlight)
-      .map((excerpt) => findAvailableOccurrence(content, excerpt, searchFrom, occupiedRanges))
+      .map((excerpt) => findAvailableOccurrence(content, excerpt, minSearchFrom, searchFrom, occupiedRanges))
       .find((candidate) => candidate !== null);
     if (!range) {
       return;
