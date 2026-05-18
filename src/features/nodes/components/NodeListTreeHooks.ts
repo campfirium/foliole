@@ -69,6 +69,7 @@ export function useNodeListContextMenu(
 
 export interface NodeListCollapseController {
   collapseAllNotes: () => void;
+  expandNoteCollapse: (nodeId: string) => void;
   hasCollapsibleNotes: boolean;
   expandAllNotes: () => void;
   hasCollapsedNotes: boolean;
@@ -80,6 +81,7 @@ interface UseNodeCollapseControlsInput {
   expandAllNotes: () => void;
   hasCollapsibleNotes: boolean;
   hasCollapsedNotes: boolean;
+  expandNoteCollapse: (nodeId: string) => void;
   setCollapsedTrashNodeIdList: Dispatch<SetStateAction<string[]>>;
   toggleNoteCollapse: (nodeId: string) => void;
   trashRowsAll: NodeTreeRow[];
@@ -88,6 +90,7 @@ interface UseNodeCollapseControlsInput {
 
 export function useNodeCollapseControls({
   collapseAllNotes,
+  expandNoteCollapse,
   expandAllNotes,
   hasCollapsibleNotes,
   hasCollapsedNotes,
@@ -114,5 +117,5 @@ export function useNodeCollapseControls({
     );
   }, [setCollapsedTrashNodeIdList, toggleNoteCollapse, trashedNodeIds]);
 
-  return { collapseAllNotes, expandAllNotes, hasCollapsibleNotes, hasCollapsedNotes, toggleCollapse };
+  return { collapseAllNotes, expandAllNotes, expandNoteCollapse, hasCollapsibleNotes, hasCollapsedNotes, toggleCollapse };
 }

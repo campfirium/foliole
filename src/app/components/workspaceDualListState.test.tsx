@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
-import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 import { useWorkspaceDualListState } from './workspaceDualListState';
@@ -134,6 +134,51 @@ it('reflects moved topics in the selected folder without waiting for a later reb
   });
 
   expect(result.current.topicNodeOrder).toEqual(['topic-b']);
+});
+
+it('counts visible topics under folders without counting nested folders', () => {
+  const folderCountNodesById: WorkspaceListNodesById = {
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
+    'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+    'folder-child': createNode({ id: 'folder-child', kind: 'folder', parentNodeId: 'folder-a', title: 'Folder child' }),
+    'folder-empty': createNode({ id: 'folder-empty', kind: 'folder', parentNodeId: 'folder-a', title: 'Empty child' }),
+    'topic-nested': createNode({ id: 'topic-nested', kind: 'topic', parentNodeId: 'folder-child', title: 'Nested Topic' })
+  };
+
+  const { result } = renderHook(() =>
+    useWorkspaceDualListState({
+      activeNodeId: 'folder-a',
+      isTrashViewOpen: false,
+      listNodesById: folderCountNodesById,
+      nodeOrder: [INBOX_NODE_ID, 'folder-a', 'folder-child', 'folder-empty', 'topic-nested'],
+      trashedNodeIds: []
+    })
+  );
+
+  expect(result.current.folderTopicCountById.get('folder-a')).toBe(1);
+  expect(result.current.folderTopicCountById.get('folder-child')).toBe(1);
+  expect(result.current.folderTopicCountById.has('folder-empty')).toBe(false);
+});
+
+it('counts visible trash roots on the Trash navigation row', () => {
+  const trashNodesById: WorkspaceListNodesById = {
+    ...nodesById,
+    'folder-trash': createNode({ id: 'folder-trash', kind: 'folder', title: 'Deleted Folder' }),
+    'topic-trash-child': createNode({ id: 'topic-trash-child', kind: 'topic', parentNodeId: 'folder-trash', title: 'Covered Topic' }),
+    'topic-trash': createNode({ id: 'topic-trash', kind: 'topic', title: 'Deleted Topic' })
+  };
+
+  const { result } = renderHook(() =>
+    useWorkspaceDualListState({
+      activeNodeId: 'folder-a',
+      isTrashViewOpen: false,
+      listNodesById: trashNodesById,
+      nodeOrder: [INBOX_NODE_ID, 'folder-a', 'topic-a', 'topic-b', 'folder-trash', 'topic-trash-child', 'topic-trash'],
+      trashedNodeIds: ['folder-trash', 'topic-trash-child', 'topic-trash']
+    })
+  );
+
+  expect(result.current.folderTopicCountById.get(TRASH_NODE_ID)).toBe(2);
 });
 
 it('keeps the active topic in its folder column when that topic has children', () => {

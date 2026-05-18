@@ -116,3 +116,19 @@ it('keeps external folder tree left and right arrow behavior on hierarchical row
 
   expect(screen.getByRole('treeitem', { name: /Articles/i })).toBeInTheDocument();
 });
+
+it('places the external folder icon after the label and keeps the count separate', () => {
+  render(
+    <ExternalLibrarySection
+      entriesByFolderId={{}}
+      folders={[externalFolder('folder-1', '/library/1act')]}
+      isExternalViewOpen={false}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ kind: 'root' }}
+    />
+  );
+
+  const row = screen.getByRole('treeitem', { name: /1act/i });
+  expect(row).toHaveTextContent('1');
+  expect(row.querySelector('[aria-label="External folder"]')).toBeInTheDocument();
+});

@@ -20,6 +20,7 @@ export interface CollapsedNodeState {
   collapsedNoteNodeIds: ReadonlySet<string>;
   collapsedTrashNodeIds: ReadonlySet<string>;
   setCollapsedTrashNodeIdList: Dispatch<SetStateAction<string[]>>;
+  expandNoteCollapse: (nodeId: string) => void;
   toggleNoteCollapse: (nodeId: string) => void;
   collapseAllNotes: () => void;
   expandAllNotes: () => void;
@@ -54,6 +55,12 @@ export function useCollapsedNodeState({
     collapsedNoteNodeIds: noteState.collapsedNoteNodeIds,
     collapsedTrashNodeIds,
     setCollapsedTrashNodeIdList,
+    expandNoteCollapse: (nodeId: string) =>
+      expandManualCollapseNode(
+        nodeId,
+        noteState.setManualCollapsedNoteNodeIdList,
+        noteState.setManualExpandedNoteNodeIdList
+      ),
     toggleNoteCollapse: (nodeId: string) =>
       toggleManualCollapseNode(
         nodeId,
@@ -178,6 +185,15 @@ function toggleManualCollapseNode(
   setManualExpandedNoteNodeIdList((prev) =>
     isCollapsed ? appendUnique(prev, nodeId) : prev.filter((id) => id !== nodeId)
   );
+}
+
+function expandManualCollapseNode(
+  nodeId: string,
+  setManualCollapsedNoteNodeIdList: Dispatch<SetStateAction<string[]>>,
+  setManualExpandedNoteNodeIdList: Dispatch<SetStateAction<string[]>>
+) {
+  setManualCollapsedNoteNodeIdList((prev) => prev.filter((id) => id !== nodeId));
+  setManualExpandedNoteNodeIdList((prev) => appendUnique(prev, nodeId));
 }
 
 function setManualCollapseState(

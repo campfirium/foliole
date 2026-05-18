@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { useEffect } from 'react';
+import { useMemo } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -28,8 +28,10 @@ import { renderExternalContentColumn } from './workspaceDualListExternalContent'
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
 import { useWorkspaceDualListState } from './workspaceDualListState';
 import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
+import { useWorkspaceFolderWidthCssVar } from './workspaceFolderWidthCssVar';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
+import { buildVirtualResultCountById } from './workspaceVirtualResultCounts';
 
 export interface WorkspaceDualListContentProps {
   activeNodeId: string | null;
@@ -148,15 +150,10 @@ function renderVirtualContentColumn(props: WorkspaceDualListContentProps) {
   );
 }
 
-function useWorkspaceFolderWidthCssVar(width: number) {
-  useEffect(() => {
-    document.documentElement.style.setProperty('--workspace-folder-column-width', `${width}px`);
-  }, [width]);
-}
-
 function renderWorkspaceFolderColumn(
   props: WorkspaceDualListContentProps,
-  dualListState: ReturnType<typeof useWorkspaceDualListState>
+  dualListState: ReturnType<typeof useWorkspaceDualListState>,
+  virtualResultCountById: ReadonlyMap<string, number>
 ) {
   return (
     <WorkspaceFolderColumn
@@ -166,6 +163,7 @@ function renderWorkspaceFolderColumn(
       externalSelection={props.externalSelection}
       folderNodeOrder={dualListState.folderNodeOrder}
       folderNodesById={dualListState.folderNodesById}
+      folderTopicCountById={dualListState.folderTopicCountById}
       isExternalViewOpen={props.isExternalViewOpen}
       isTrashViewOpen={props.isTrashViewOpen}
       isVirtualViewOpen={props.isVirtualViewOpen}
@@ -179,6 +177,7 @@ function renderWorkspaceFolderColumn(
       onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
       onSelectTrashNode={props.onSelectTrashNode}
       selectedTrashNodeId={props.selectedTrashNodeId}
+      virtualResultCountById={virtualResultCountById}
       {...definedProps({
         activeVirtualNodeId: props.activeVirtualNodeId,
         onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings,
@@ -192,6 +191,10 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   const dualListState = useWorkspaceDualListState(props);
   const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
   const topicRootId = dualListState.activeFolderColumnId ?? dualListState.activeFolderId ?? null;
+  const virtualResultCountById = useMemo(
+    () => buildVirtualResultCountById(props),
+    [props.nodeOrder, props.nodesById, props.trashedNodeIds]
+  );
   useWorkspaceFolderWidthCssVar(folderListResize.width);
 
   if (!topicRootId && !props.isVirtualViewOpen && !props.isExternalViewOpen) {
@@ -207,7 +210,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         className="workspace-region-main-folder flex min-h-0 min-w-0 overflow-hidden"
         style={{ flex: `0 0 ${folderListResize.width}px` }}
       >
-        {renderWorkspaceFolderColumn(props, dualListState)}
+        {renderWorkspaceFolderColumn(props, dualListState, virtualResultCountById)}
       </div>
       <WorkspaceDualListSplitter
         isResizing={folderListResize.isResizing}

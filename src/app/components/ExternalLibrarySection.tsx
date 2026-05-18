@@ -75,6 +75,7 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
               isDragDisabled={row.secondaryIconKind !== 'external-folder'}
               isDropTarget={drag.state?.targetId === row.id}
               isSelected={row.isSelected}
+              descendantCount={row.documentCount ?? 0}
               key={row.id}
               label={row.label}
               nodeId={row.id}
@@ -105,7 +106,7 @@ function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord) {
   }
   return (
     <span aria-label="External folder" className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45">
-      <HardDrive aria-hidden="true" className="translate-y-px" size={14} strokeWidth={1.7} />
+      <HardDrive aria-hidden="true" className="-translate-y-[1px]" size={14} strokeWidth={1.7} />
     </span>
   );
 }

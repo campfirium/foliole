@@ -21,6 +21,7 @@ interface WorkspaceVirtualSectionProps {
   nodesById: WorkspaceListNodesById;
   onOpenVirtualView?: (nodeId?: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
+  virtualResultCountById?: ReadonlyMap<string, number>;
 }
 
 function toggleCollapsed(nodeId: string, setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>) {
@@ -82,6 +83,7 @@ function renderVirtualRows(args: {
         key={row.node.id}
         label={row.node.title}
         nodeId={row.node.id}
+        descendantCount={args.props.virtualResultCountById?.get(row.node.id) ?? 0}
         rowSpacing={args.rowSpacing}
         showIcon={false}
         onKeyDown={args.onRowKeyDown}

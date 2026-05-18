@@ -4,6 +4,11 @@ import { canNodeBeMoved } from '../model/nodeMovementRules';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import {
+  canDropNodeListSourceOnRoot,
+  resolveNodeListDropIntent,
+  type NodeListDropIntent
+} from './nodeListDragIntent';
+import {
   clearNodeListDragSource,
   isInvalidNodeListDropTarget,
   readNodeListDragSource,
@@ -11,10 +16,7 @@ import {
   writeNodeListDragSource
 } from './NodeListDragSource';
 
-const DROP_INTENT_EDGE_RATIO = 0.25;
-
-type DropIntent = 'before' | 'after' | 'child';
-type MoveIntent = DropIntent | 'root';
+type MoveIntent = NodeListDropIntent | 'root';
 
 interface UseNodeListDragControllerInput {
   disableRootDrop: boolean;
@@ -27,7 +29,7 @@ interface UseNodeListDragControllerInput {
 
 export interface NodeListDragController {
   dropTargetNodeId: string | null;
-  dropIntent: DropIntent | null;
+  dropIntent: NodeListDropIntent | null;
   isRootDropActive: boolean;
   onDragEnd: () => void;
   onDragEnterNode: (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => void;
@@ -39,7 +41,7 @@ export interface NodeListDragController {
 }
 
 interface DragState {
-  dropIntent: DropIntent | null;
+  dropIntent: NodeListDropIntent | null;
   dropTargetNodeId: string | null;
   isRootDropActive: boolean;
   sourceNodeIds: string[];
@@ -52,19 +54,6 @@ function createInitialDragState(): DragState {
     isRootDropActive: false,
     sourceNodeIds: []
   };
-}
-
-function resolveDropIntent(event: ReactDragEvent<HTMLElement>): DropIntent {
-  const rowRect = event.currentTarget.getBoundingClientRect();
-  const topEdge = rowRect.top + rowRect.height * DROP_INTENT_EDGE_RATIO;
-  const bottomEdge = rowRect.bottom - rowRect.height * DROP_INTENT_EDGE_RATIO;
-  if (event.clientY <= topEdge) {
-    return 'before';
-  }
-  if (event.clientY >= bottomEdge) {
-    return 'after';
-  }
-  return 'child';
 }
 
 function createNodeDropHandler(
@@ -94,6 +83,7 @@ function createNodeDropHandler(
 
 function createRootDropHandler(
   disableRootDrop: boolean,
+  nodesById: WorkspaceListNodesById,
   sourceNodeIds: string[],
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean,
   setState: (next: DragState) => void
@@ -101,7 +91,11 @@ function createRootDropHandler(
   return (event: ReactDragEvent<HTMLElement>) => {
     event.preventDefault();
     const effectiveSourceNodeIds = readNodeListDragSource(event, sourceNodeIds);
-    if (disableRootDrop || effectiveSourceNodeIds.length === 0) {
+    if (
+      disableRootDrop ||
+      effectiveSourceNodeIds.length === 0 ||
+      !canDropNodeListSourceOnRoot(effectiveSourceNodeIds, nodesById)
+    ) {
       setState(createInitialDragState());
       return;
     }
@@ -130,7 +124,8 @@ function createNodeDragOverHandler(
 
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    const dropIntent = resolveDropIntent(event);
+    const isCrossTreeDrop = effectiveSourceNodeIds.some((nodeId) => !nodesById[nodeId]);
+    const dropIntent = isCrossTreeDrop ? 'child' : resolveNodeListDropIntent(event);
     setState((prev) => ({
       ...prev,
       dropIntent,
@@ -166,12 +161,17 @@ function createDragStartHandler(
 
 function createDragOverRootHandler(
   disableRootDrop: boolean,
+  nodesById: WorkspaceListNodesById,
   sourceNodeIds: string[],
   setState: (updater: (prev: DragState) => DragState) => void
 ) {
   return (event: ReactDragEvent<HTMLElement>) => {
     const effectiveSourceNodeIds = readNodeListDragSource(event, sourceNodeIds);
-    if (disableRootDrop || effectiveSourceNodeIds.length === 0) {
+    if (
+      disableRootDrop ||
+      effectiveSourceNodeIds.length === 0 ||
+      !canDropNodeListSourceOnRoot(effectiveSourceNodeIds, nodesById)
+    ) {
       return;
     }
     event.preventDefault();
@@ -208,12 +208,12 @@ export function useNodeListDragController({
     [isTrashViewOpen, moveNodes, state]
   );
   const onDragOverRoot = useMemo(
-    () => createDragOverRootHandler(disableRootDrop, state.sourceNodeIds, setState),
-    [disableRootDrop, state.sourceNodeIds]
+    () => createDragOverRootHandler(disableRootDrop, nodesById, state.sourceNodeIds, setState),
+    [disableRootDrop, nodesById, state.sourceNodeIds]
   );
   const onDropRoot = useMemo(
-    () => createRootDropHandler(disableRootDrop, state.sourceNodeIds, moveNodes, setState),
-    [disableRootDrop, moveNodes, state.sourceNodeIds]
+    () => createRootDropHandler(disableRootDrop, nodesById, state.sourceNodeIds, moveNodes, setState),
+    [disableRootDrop, moveNodes, nodesById, state.sourceNodeIds]
   );
 
   return {

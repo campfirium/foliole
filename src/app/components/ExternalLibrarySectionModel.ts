@@ -23,6 +23,7 @@ export interface ExternalTreeRowRecord {
   id: string;
   isSelected: boolean;
   label: string;
+  documentCount?: number;
   secondaryIconKind?: 'external-folder';
   secondaryLabel?: string;
   selection: Extract<ExternalLibrarySelection, { folderId: string }> | null;
@@ -63,6 +64,7 @@ function buildDirectoryTreeRow(
     id: buildDirectoryRowId(node.folderId, node.directoryPath),
     isSelected: selection.kind === 'directory' && selection.folderId === node.folderId && selection.directoryPath === node.directoryPath,
     label: node.name,
+    documentCount: node.documentCount,
     selection: {
       directoryPath: node.directoryPath,
       folderId: node.folderId,
@@ -90,6 +92,7 @@ function buildFolderTreeRows(
       selection.folderId === folder.id &&
       (selection.kind === 'folder' || browseState.selectedDirectoryPath === null),
     label: options.label,
+    documentCount: folder.documentCount,
     secondaryIconKind: 'external-folder',
     selection: { folderId: folder.id, kind: 'folder' }
   }];
@@ -115,6 +118,7 @@ function buildReadwiseGroupRows(
     id: READWISE_GROUP_ROW_ID,
     isSelected: false,
     label: 'Readwise',
+    documentCount: folders.reduce((total, folder) => total + folder.documentCount, 0),
     selection: null
   }];
   if (collapsedIds.has(READWISE_GROUP_ROW_ID)) {

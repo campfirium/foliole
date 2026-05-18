@@ -42,6 +42,7 @@ interface NodeListTreeContentProps {
   restoreNode: (nodeId: string) => void;
   returnNode: (nodeId: string, now?: string) => boolean;
   reviewSession: ReviewSessionState;
+  rowCountByNodeId?: ReadonlyMap<string, number>;
   rowSpacing: number;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
@@ -87,6 +88,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         onSearchQueryChange={setSearchQuery}
         onSelect={props.onSelect}
         reviewSession={props.reviewSession}
+        rowCountByNodeId={props.rowCountByNodeId}
         rowSpacing={props.rowSpacing}
         searchQuery={searchQuery}
         selectedNodeIds={props.selectedNodeIds}

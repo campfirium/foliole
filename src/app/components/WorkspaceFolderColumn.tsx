@@ -22,6 +22,7 @@ interface WorkspaceFolderColumnProps {
   isVirtualViewOpen: boolean;
   folderNodeOrder: string[];
   folderNodesById: WorkspaceListNodesById;
+  folderTopicCountById: ReadonlyMap<string, number>;
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
@@ -34,6 +35,7 @@ interface WorkspaceFolderColumnProps {
   onSelectNodeInVirtualView: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
+  virtualResultCountById?: ReadonlyMap<string, number>;
 }
 
 function getActiveFolderSelectionId(props: WorkspaceFolderColumnProps) {
@@ -52,6 +54,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
       isVirtualViewOpen={false}
       nodeOrder={props.folderNodeOrder}
       nodesById={props.folderNodesById}
+      rowCountByNodeId={props.folderTopicCountById}
       onOpenMoveToNode={props.onOpenMoveToNode}
       onOpenNotesView={props.onOpenNotesView}
       onSelectNode={(nodeId) => {
@@ -74,6 +77,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
             nodeOrder={props.nodeOrder}
             nodesById={props.nodesById}
             onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
+            virtualResultCountById={props.virtualResultCountById}
             {...definedProps({
               activeVirtualNodeId: props.activeVirtualNodeId,
               onOpenVirtualView: props.onOpenVirtualView

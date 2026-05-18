@@ -40,6 +40,7 @@ function buildNodeListTreeContentProps(args: {
   nodesById: NodeListTreeProps['nodesById'];
   onOpenMoveToNode: NodeListTreeProps['onOpenMoveToNode'];
   onOpenNotesView: NodeListTreeProps['onOpenNotesView'];
+  rowCountByNodeId?: NodeListTreeProps['rowCountByNodeId'];
   rowSpacing: number;
   runtimeState: NodeListTreeRuntimeState;
   selectedTrashNodeId: string | null;
@@ -71,6 +72,7 @@ function buildNodeListTreeContentProps(args: {
     restoreNode: args.model.restoreNode,
     returnNode: args.model.returnNode,
     reviewSession: args.runtimeState.reviewSession,
+    rowCountByNodeId: args.rowCountByNodeId,
     rowSpacing: args.rowSpacing,
     selectedNodeIds: args.model.state.selectedNodeIds,
     selectedTrashNodeId: args.selectedTrashNodeId,
@@ -102,6 +104,7 @@ function useNodeListTreeSelectionDiagnostics(args: {
 function NodeListTreeImpl({
   activeNodeId,
   bodyAppendContent,
+  rowCountByNodeId,
   isSelectionScopeActive = true,
   isTrashViewOpen,
   isVirtualViewOpen,
@@ -147,6 +150,7 @@ function NodeListTreeImpl({
     onOpenNotesView,
     rowSpacing,
     runtimeState,
+    rowCountByNodeId,
     selectedTrashNodeId,
     showVirtualCreateAction,
     showTitleSearch
