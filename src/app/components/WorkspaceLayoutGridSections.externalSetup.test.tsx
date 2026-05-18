@@ -55,6 +55,7 @@ it('opens external library settings from the empty External row in the real list
       externalFolders={[]}
       externalSelection={{ kind: 'root' }}
       isExternalViewOpen
+      isStudyMode={false}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       isWorkspaceHydrated
@@ -70,6 +71,7 @@ it('opens external library settings from the empty External row in the real list
       onSelectNode={vi.fn()}
       onSelectNodeInVirtualView={vi.fn()}
       onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
       selectedTrashNodeId={null}
       trashedNodeIds={[]}
     />

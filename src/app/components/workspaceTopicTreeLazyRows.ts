@@ -34,6 +34,18 @@ export function getTopicChildren(parentId: string | null, childrenByParent: Topi
   return (childrenByParent.get(parentId) ?? []).filter((nodeId) => isTopicNode(nodeId, nodesById));
 }
 
+export function buildTopicParentIdByNodeId(
+  childrenByParent: TopicChildrenByParent
+) {
+  const parentIdByNodeId = new Map<string, string | null>();
+  childrenByParent.forEach((nodeIds, parentId) => {
+    nodeIds.forEach((nodeId) => {
+      parentIdByNodeId.set(nodeId, parentId);
+    });
+  });
+  return parentIdByNodeId;
+}
+
 function createRow(nodeId: string, depth: number, childrenByParent: TopicChildrenByParent, nodesById: WorkspaceListNodesById): NodeTreeRow | null {
   const node = nodesById[nodeId];
   if (!node || node.kind === 'folder') return null;

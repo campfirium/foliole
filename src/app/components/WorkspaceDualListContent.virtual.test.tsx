@@ -56,6 +56,7 @@ function renderVirtualContentColumn() {
       externalFolders={[]}
       externalSelection={{ kind: 'root' }}
       isExternalViewOpen={false}
+      isStudyMode={false}
       isTrashViewOpen={false}
       isVirtualViewOpen
       nodesById={{
@@ -82,6 +83,7 @@ function renderVirtualContentColumn() {
       onSelectNode={onSelectNode}
       onSelectNodeInVirtualView={onSelectNodeInVirtualView}
       onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
       selectedTrashNodeId={null}
       trashedNodeIds={[]}
     />
@@ -102,6 +104,7 @@ function renderVirtualRootAggregate() {
       externalFolders={[]}
       externalSelection={{ kind: 'root' }}
       isExternalViewOpen={false}
+      isStudyMode={false}
       isTrashViewOpen={false}
       isVirtualViewOpen
       nodesById={{
@@ -135,6 +138,7 @@ function renderVirtualRootAggregate() {
       onSelectNode={onSelectNode}
       onSelectNodeInVirtualView={onSelectNodeInVirtualView}
       onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
       selectedTrashNodeId={null}
       trashedNodeIds={[]}
     />
@@ -184,6 +188,7 @@ it('opens virtual view when selecting a virtual folder from the lower section wh
       externalFolders={[]}
       externalSelection={{ kind: 'root' }}
       isExternalViewOpen={false}
+      isStudyMode={false}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       nodesById={{
@@ -207,6 +212,7 @@ it('opens virtual view when selecting a virtual folder from the lower section wh
       onSelectNode={vi.fn()}
       onSelectNodeInVirtualView={onSelectNodeInVirtualView}
       onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
       selectedTrashNodeId={null}
       trashedNodeIds={[]}
     />

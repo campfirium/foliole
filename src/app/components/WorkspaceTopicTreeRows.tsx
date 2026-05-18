@@ -1,26 +1,26 @@
-import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react';
+import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
 
 import {
-  getDismissedFadeOpacity,
-  shouldFadeDismissedWholeRow
-} from '../../features/nodes/components/nodeIconAppearanceSettings';
-import {
-  getNodeListRowSpacing,
-  resolveNodeListRowGap,
   resolveNodeTreeRowVirtualSize
 } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from '../../features/nodes/components/NodeTreeRow';
-import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState, type NodeTreeRowIconKind } from '../../features/nodes/components/NodeTreeRowIconModel';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { isFsrsWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../shared/ui';
 
+import {
+  resolveWorkspaceTopicTreeRowDragProps,
+  resolveWorkspaceTopicTreeRowModel
+} from './workspaceTopicTreeRowModel';
+import { useWorkspaceTopicTreeRowScrollLayout } from './workspaceTopicTreeScrollPadding';
+
 const TOPIC_TREE_VIRTUALIZATION_THRESHOLD = 20;
+
+export type WorkspaceTopicTreeScrollPlacement = 'comfort' | 'second-visible-row' | 'near-visible-row';
 
 interface WorkspaceTopicTreeRowsProps {
   activeNodeId: string | null;
@@ -32,8 +32,38 @@ interface WorkspaceTopicTreeRowsProps {
   onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
   rows: NodeTreeRow[];
+  scrollPlacement?: WorkspaceTopicTreeScrollPlacement;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  scrollTargetNodeId?: string | null;
   selectedNodeIds: string[];
+}
+
+function resolveActiveRowIndex(rows: readonly NodeTreeRow[], activeNodeId: string | null) {
+  return activeNodeId ? rows.findIndex((row) => row.node.id === activeNodeId) : null;
+}
+
+function resolveSecondVisibleRowAnchorIndex(rows: readonly NodeTreeRow[], activeNodeId: string | null) {
+  const activeRowIndex = resolveActiveRowIndex(rows, activeNodeId);
+  return activeRowIndex === null || activeRowIndex < 0 ? null : Math.max(activeRowIndex - 1, 0);
+}
+
+function resolveNearVisibleRowAnchorIndex(rows: readonly NodeTreeRow[], activeNodeId: string | null) {
+  const activeRowIndex = resolveActiveRowIndex(rows, activeNodeId);
+  return activeRowIndex === null || activeRowIndex < 0 ? null : Math.max(activeRowIndex - 2, 0);
+}
+
+function resolveScrollAnchorIndex(
+  rows: readonly NodeTreeRow[],
+  scrollTargetNodeId: string | null,
+  scrollPlacement: WorkspaceTopicTreeScrollPlacement | undefined
+) {
+  if (scrollPlacement === 'second-visible-row') {
+    return resolveSecondVisibleRowAnchorIndex(rows, scrollTargetNodeId);
+  }
+  if (scrollPlacement === 'near-visible-row') {
+    return resolveNearVisibleRowAnchorIndex(rows, scrollTargetNodeId);
+  }
+  return null;
 }
 
 function renderWorkspaceTopicTreeRow(
@@ -65,7 +95,7 @@ function renderWorkspaceTopicTreeRow(
       isCollapsed={args.collapsedNodeIds.has(row.node.id)}
       isDerived={rowModel.isDerivedNode}
       isMuted={rowModel.shouldFadeWholeRow}
-      mutedOpacity={rowModel.shouldFadeWholeRow ? getDismissedFadeOpacity(rowModel.leafIconKind) : 1}
+      mutedOpacity={rowModel.mutedOpacity}
       isSelected={rowModel.isSelected}
       key={row.node.id}
       label={row.node.title}
@@ -85,68 +115,15 @@ function renderWorkspaceTopicTreeRow(
   );
 }
 
-function resolveWorkspaceTopicTreeRowModel(
-  row: NodeTreeRow,
-  args: Parameters<typeof renderWorkspaceTopicTreeRow>[1]
-) {
-  const node = args.nodesById[row.node.id];
-  const isSelected = args.selectedNodeIds.includes(row.node.id);
-  const isDerivedNode = Boolean(node?.anchorLink);
-  const isReviewCard = isFsrsWorkspaceListNode(node);
-  const nodeIconState = resolveNodeTreeRowIconState({
-    isDismissed: node?.reading?.state === 'dismissed',
-    hasEnteredSchedule: resolveHasEnteredSchedule(node, isReviewCard)
-  });
-  const nodeIconKind = resolveNodeTreeRowIconKind({
-    hasChildren: row.hasChildren,
-    isCollapsed: args.collapsedNodeIds.has(row.node.id),
-    isReviewCard,
-    kind: node?.kind ?? 'topic'
-  });
-  const leafIconKind = resolveLeafIconKind(nodeIconKind);
-  const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow(leafIconKind);
-
-  return { isDerivedNode, isSelected, leafIconKind, nodeIconKind, nodeIconState, shouldFadeWholeRow };
-}
-
-function resolveHasEnteredSchedule(
-  node: WorkspaceListNodesById[string] | undefined,
-  isReviewCard: boolean
-) {
-  return isReviewCard
-    ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
-    : (node?.reading?.repetitionCount ?? 0) > 0;
-}
-
-function resolveWorkspaceTopicTreeRowDragProps(
-  nodeId: string,
-  isDerivedNode: boolean,
-  drag: ReturnType<typeof useNodeListDragController>
-) {
-  return {
-    dropIntent: drag.dropTargetNodeId === nodeId ? drag.dropIntent : null,
-    isDragDisabled: isDerivedNode,
-    isDropTarget: drag.dropTargetNodeId === nodeId,
-    onDragEnd: drag.onDragEnd,
-    onDragEnter: drag.onDragEnterNode,
-    onDragOver: drag.onDragOverNode,
-    onDragStart: drag.onDragStartNode,
-    onDrop: drag.onDropOnNode
-  };
-}
-
-function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
-  return kind === 'reading' || kind === 'review' ? kind : undefined;
-}
-
 function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps & {
   onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
   rowGap: number;
   rowSpacing: number;
 }) {
+  const scrollTargetNodeId = args.scrollTargetNodeId ?? args.activeNodeId;
   return (
     <VirtualListSurface
-      autoScroll={false}
+      autoScroll={args.scrollPlacement === 'second-visible-row' || args.scrollPlacement === 'near-visible-row'}
       estimateSize={(index) => resolveNodeTreeRowVirtualSize(args.rowSpacing, index === args.rows.length - 1 ? 0 : args.rowGap)}
       getItemKey={(row) => row.node.id}
       items={args.rows}
@@ -165,10 +142,32 @@ function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps &
           rowSpacing: args.rowSpacing,
           selectedNodeIds: args.selectedNodeIds
         })}
+      scrollAnchorIndex={resolveScrollAnchorIndex(args.rows, scrollTargetNodeId, args.scrollPlacement)}
       scrollElementRef={args.scrollContainerRef}
-      scrollToIndex={args.activeNodeId ? args.rows.findIndex((row) => row.node.id === args.activeNodeId) : null}
+      scrollToIndex={resolveActiveRowIndex(args.rows, scrollTargetNodeId)}
       threshold={TOPIC_TREE_VIRTUALIZATION_THRESHOLD}
     />
+  );
+}
+
+function renderWorkspaceTopicTreeRowsSection(args: {
+  children: ReactNode;
+  rowGap: number;
+  rowSpacing: number;
+  scrollPaddingBottom: number;
+  scrollPaddingTop: number;
+}) {
+  return (
+    <section
+      aria-label="Topic list"
+      className="flex flex-1 flex-col"
+      data-node-list-row-gap={String(args.rowGap)}
+      data-node-list-row-spacing={String(args.rowSpacing)}
+      role="tree"
+      style={{ gap: `${args.rowGap}px`, paddingBottom: args.scrollPaddingBottom, paddingTop: args.scrollPaddingTop }}
+    >
+      {args.children}
+    </section>
   );
 }
 
@@ -182,11 +181,18 @@ export function WorkspaceTopicTreeRows({
   onSelectNode,
   onToggleCollapse,
   rows,
+  scrollPlacement,
   scrollContainerRef,
+  scrollTargetNodeId,
   selectedNodeIds
 }: WorkspaceTopicTreeRowsProps) {
-  const rowSpacing = getNodeListRowSpacing();
-  const rowGap = resolveNodeListRowGap(rowSpacing);
+  const { rowGap, rowSpacing, scrollPaddingBottom, scrollPaddingTop } = useWorkspaceTopicTreeRowScrollLayout({
+    activeNodeId,
+    rows,
+    scrollContainerRef,
+    scrollPlacement,
+    scrollTargetNodeId
+  });
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({
@@ -198,16 +204,12 @@ export function WorkspaceTopicTreeRows({
     [collapsedNodeIds, onSelectNode, onToggleCollapse, rows]
   );
 
-  return (
-    <section
-      aria-label="Topic list"
-      className="flex flex-1 flex-col"
-      data-node-list-row-gap={String(rowGap)}
-      data-node-list-row-spacing={String(rowSpacing)}
-      role="tree"
-      style={{ gap: `${rowGap}px` }}
-    >
-      {renderWorkspaceTopicTreeVirtualList({
+  return renderWorkspaceTopicTreeRowsSection({
+    rowGap,
+    rowSpacing,
+    scrollPaddingBottom,
+    scrollPaddingTop,
+    children: renderWorkspaceTopicTreeVirtualList({
         activeNodeId,
         collapsedNodeIds,
         drag,
@@ -221,8 +223,8 @@ export function WorkspaceTopicTreeRows({
         rows,
         rowSpacing,
         scrollContainerRef,
-        selectedNodeIds
-      })}
-    </section>
-  );
+        selectedNodeIds,
+        ...definedProps({ scrollPlacement, scrollTargetNodeId })
+      })
+  });
 }

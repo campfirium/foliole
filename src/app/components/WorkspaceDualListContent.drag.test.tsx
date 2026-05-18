@@ -71,6 +71,7 @@ function renderWorkspaceContent(
       externalFolders={[]}
       externalSelection={{ kind: 'root' }}
       isExternalViewOpen={false}
+      isStudyMode={false}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       listNodesById={nodesById}
@@ -84,6 +85,7 @@ function renderWorkspaceContent(
       onSelectNode={vi.fn()}
       onSelectNodeInVirtualView={vi.fn()}
       onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
       selectedTrashNodeId={null}
       trashedNodeIds={[]}
       {...overrides}
@@ -129,6 +131,7 @@ function FolderClickHarness() {
       externalFolders={[]}
       externalSelection={{ kind: 'root' }}
       isExternalViewOpen={false}
+      isStudyMode={false}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       listNodesById={nodesById}
@@ -142,6 +145,7 @@ function FolderClickHarness() {
       onSelectNode={setActiveNodeId}
       onSelectNodeInVirtualView={vi.fn()}
       onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
       selectedTrashNodeId={null}
       trashedNodeIds={[]}
     />

@@ -18,6 +18,7 @@ import { WorkspaceListEmptyState, WorkspaceListLoadingState } from './WorkspaceL
 export interface WorkspaceListAreaProps {
   activeNodeId: string | null;
   activeVirtualNodeId: string | null;
+  isStudyMode: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   isExternalViewOpen: boolean;
@@ -34,6 +35,7 @@ export interface WorkspaceListAreaProps {
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
+  reviewCurrentNodeId: string | null;
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
   externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
@@ -97,6 +99,7 @@ function renderWorkspaceListBody(
     | 'externalFolders'
     | 'externalSelection'
     | 'isExternalViewOpen'
+    | 'isStudyMode'
     | 'isTrashViewOpen'
     | 'isVirtualViewOpen'
     | 'isWorkspaceHydrated'
@@ -112,6 +115,7 @@ function renderWorkspaceListBody(
     | 'onSelectNode'
     | 'onSelectNodeInVirtualView'
     | 'onSelectTrashNode'
+    | 'reviewCurrentNodeId'
     | 'selectedTrashNodeId'
     | 'trashedNodeIds'
   > & { shouldShowEmptyState: boolean }
@@ -134,6 +138,7 @@ function renderWorkspaceDualListBody(
     | 'externalFolders'
     | 'externalSelection'
     | 'isExternalViewOpen'
+    | 'isStudyMode'
     | 'isTrashViewOpen'
     | 'isVirtualViewOpen'
     | 'listNodesById'
@@ -148,6 +153,7 @@ function renderWorkspaceDualListBody(
     | 'onSelectNode'
     | 'onSelectNodeInVirtualView'
     | 'onSelectTrashNode'
+    | 'reviewCurrentNodeId'
     | 'selectedTrashNodeId'
     | 'trashedNodeIds'
   >
@@ -160,6 +166,7 @@ function renderWorkspaceDualListBody(
       externalFolders={props.externalFolders}
       externalSelection={props.externalSelection}
       isExternalViewOpen={props.isExternalViewOpen}
+      isStudyMode={props.isStudyMode}
       isTrashViewOpen={props.isTrashViewOpen}
       isVirtualViewOpen={props.isVirtualViewOpen}
       listNodesById={props.listNodesById}
@@ -174,6 +181,7 @@ function renderWorkspaceDualListBody(
       onSelectNode={props.onSelectNode}
       onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
       onSelectTrashNode={props.onSelectTrashNode}
+      reviewCurrentNodeId={props.reviewCurrentNodeId}
       selectedTrashNodeId={props.selectedTrashNodeId}
       trashedNodeIds={props.trashedNodeIds}
     />

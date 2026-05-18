@@ -1,9 +1,11 @@
 import type { RefObject } from 'react';
 
 import { useNodeTreeActiveItemScroll } from '../../features/nodes/components/useNodeTreeActiveItemScroll';
+import type { NodeTreeActiveItemScrollPlacement } from '../../features/nodes/components/useNodeTreeActiveItemScroll';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import { getTextAnchorLocators } from '../../features/nodes/model/nodeTypes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { WorkspaceTopicTreeProps } from './WorkspaceTopicTree';
@@ -76,12 +78,16 @@ export function useWorkspaceTopicTreeAutoScroll(args: {
   activeFolderId: string;
   focusedNodeId: string | null;
   focusedRowIndex: number;
+  placement?: NodeTreeActiveItemScrollPlacement;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  scrollNodeId?: string | null;
   visibleRowsLength: number;
 }) {
+  const scrollNodeId = args.scrollNodeId ?? args.focusedNodeId;
   useNodeTreeActiveItemScroll({
-    activeNodeId: args.focusedNodeId,
-    scopeKey: `${args.activeFolderId}:${args.visibleRowsLength}:${args.focusedRowIndex}`,
-    scrollContainerRef: args.scrollContainerRef
+    activeNodeId: scrollNodeId,
+    scopeKey: `${args.activeFolderId}:${args.visibleRowsLength}:${args.focusedRowIndex}:${scrollNodeId ?? 'none'}`,
+    scrollContainerRef: args.scrollContainerRef,
+    ...definedProps({ placement: args.placement })
   });
 }

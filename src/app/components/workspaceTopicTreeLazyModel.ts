@@ -7,12 +7,18 @@ import { sortWorkspaceContentNodeIds } from './workspaceContentNodeOrder';
 import { normalizeWorkspaceContentSort, type WorkspaceContentSortState } from './workspaceContentSort';
 import { useStableWorkspaceContentItems } from './workspaceStableContentSort';
 import { useCollapsedTopicNodeIds } from './workspaceTopicTreeCollapseModel';
-import { getTopicChildren, type TopicChildrenByParent, useTopicRows } from './workspaceTopicTreeLazyRows';
+import {
+  buildTopicParentIdByNodeId,
+  getTopicChildren,
+  type TopicChildrenByParent,
+  useTopicRows
+} from './workspaceTopicTreeLazyRows';
 
 export function useWorkspaceTopicTreeLazyModel(args: {
   activeFolderId: string;
   activeNodeId: string | null;
   childrenByParent: TopicChildrenByParent;
+  forceVisibleNodeId?: string | null;
   itemIds: string[];
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodesById: WorkspaceListNodesById;
@@ -36,10 +42,15 @@ export function useWorkspaceTopicTreeLazyModel(args: {
     () => rootIds.filter((nodeId) => getTopicChildren(nodeId, args.childrenByParent, args.nodesById).length > 0),
     [args.childrenByParent, args.nodesById, rootIds]
   );
+  const parentIdByNodeId = useMemo(
+    () => buildTopicParentIdByNodeId(args.childrenByParent),
+    [args.childrenByParent]
+  );
   const collapse = useCollapsedTopicNodeIds({
-    activeFolderId: args.activeFolderId,
-    activeNodeId: args.activeNodeId,
-    collapsibleNodeIds: initialCollapsibleNodeIds
+    ...buildTopicCollapseArgs(args),
+    childrenByParent: args.childrenByParent,
+    collapsibleNodeIds: initialCollapsibleNodeIds,
+    parentIdByNodeId
   });
   const rows = useTopicRows({
     childrenByParent: args.childrenByParent,
@@ -62,5 +73,19 @@ export function useWorkspaceTopicTreeLazyModel(args: {
     setCollapsedNodeIds: collapse.setCollapsedNodeIds,
     setSearchQuery,
     sortedItemIds: rootIds
+  };
+}
+
+function buildTopicCollapseArgs(args: {
+  activeFolderId: string;
+  activeNodeId: string | null;
+  forceVisibleNodeId?: string | null;
+}) {
+  return {
+    activeFolderId: args.activeFolderId,
+    activeNodeId: args.activeNodeId,
+    ...(args.forceVisibleNodeId !== undefined
+      ? { forceVisibleNodeId: args.forceVisibleNodeId }
+      : {})
   };
 }

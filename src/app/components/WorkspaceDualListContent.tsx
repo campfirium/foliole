@@ -38,6 +38,7 @@ export interface WorkspaceDualListContentProps {
   externalFolders: ExternalLibraryFolder[];
   externalSelection: ExternalLibrarySelection;
   isExternalViewOpen: boolean;
+  isStudyMode: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   listNodesById: WorkspaceListNodesById;
@@ -52,6 +53,7 @@ export interface WorkspaceDualListContentProps {
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
+  reviewCurrentNodeId: string | null;
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
 }
@@ -112,6 +114,7 @@ function renderStandardContentColumn(
       activeFolderId={topicRootId}
       activeNodeId={props.activeNodeId}
       childrenByParent={dualListState.topicChildrenByParent}
+      forceVisibleNodeId={props.isStudyMode ? props.reviewCurrentNodeId : null}
       itemIds={dualListState.topicNodeOrder}
       nodesById={dualListState.topicNodesById}
       onOpenMoveToNode={props.onOpenMoveToNode}
