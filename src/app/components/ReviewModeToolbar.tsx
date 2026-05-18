@@ -4,7 +4,7 @@ import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
-import { FsrsRevealAction, ReadingReviewActions, ReviewCompleteAction, ReviewGradeActions } from './ReviewModeToolbarActions';
+import { FsrsRevealAction, ReadingReviewActions, ReviewCompleteAction, ResumeReviewAction, ReviewGradeActions } from './ReviewModeToolbarActions';
 
 interface ReviewModeToolbarProps {
   className?: string;
@@ -12,9 +12,11 @@ interface ReviewModeToolbarProps {
   isStudyMode: boolean;
   isAnswerRevealed: boolean;
   isCurrentItemGradable: boolean;
+  isCurrentReviewItemVisible: boolean;
   isReviewEditing: boolean;
   reviewCompletedCount: number;
   reviewCurrentNodeId: string | null;
+  reviewCurrentTitle: string | undefined;
   reviewQueueCount: number;
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
   onCompleteReviewItem: () => boolean;
@@ -22,6 +24,7 @@ interface ReviewModeToolbarProps {
   onDismissReviewItem: () => boolean;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
+  onResumeReviewItem: () => void;
   style?: CSSProperties;
 }
 
@@ -102,39 +105,48 @@ function ReviewSessionSummary({
   return `${Math.max(reviewQueueCount, 0)} left · ${Math.max(reviewCompletedCount, 0)} done`;
 }
 
-export function ReviewModeToolbar({
+function ReviewPausedSummary({ reviewCurrentTitle }: Pick<ReviewModeToolbarProps, 'reviewCurrentTitle'>) {
+  const title = reviewCurrentTitle?.trim();
+  return title ? `Review paused · ${title}` : 'Review paused';
+}
+
+function ActiveReviewActionBar({
   className,
-  showSummary = true,
-  isStudyMode,
+  errorMessage,
   isAnswerRevealed,
   isCurrentItemGradable,
   isReviewEditing,
-  reviewCompletedCount,
-  reviewCurrentNodeId,
-  reviewQueueCount,
-  onGrade,
+  isSubmitting,
   onCompleteReviewItem,
   onDeferReviewItem,
   onDismissReviewItem,
   onRevealAnswer,
-  onExitReviewMode,
-  style
-}: ReviewModeToolbarProps) {
-  const { errorMessage, isSubmitting, retryGrade, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
-
-  if (!isStudyMode) {
-    return null;
-  }
-
-  if (!reviewCurrentNodeId) {
-    return <ReviewCompleteBar onExitReviewMode={onExitReviewMode} {...definedProps({ className, style })} />;
-  }
-
+  retryGrade,
+  reviewCompletedCount,
+  reviewQueueCount,
+  showSummary,
+  style,
+  submitGrade
+}: Pick<
+  ReviewModeToolbarProps,
+  | 'className'
+  | 'isAnswerRevealed'
+  | 'isCurrentItemGradable'
+  | 'isReviewEditing'
+  | 'onCompleteReviewItem'
+  | 'onDeferReviewItem'
+  | 'onDismissReviewItem'
+  | 'onRevealAnswer'
+  | 'reviewCompletedCount'
+  | 'reviewQueueCount'
+  | 'showSummary'
+  | 'style'
+> & ReturnType<typeof useGradeFeedback>) {
   return (
     <ReviewActionBar
       ariaLabel="Review mode toolbar"
       {...definedProps({ className, style })}
-      mode={isStudyMode ? 'study' : 'edit'}
+      mode="study"
       primary={!isCurrentItemGradable ? (
         <ReadingReviewActions
           onCompleteReviewItem={onCompleteReviewItem}
@@ -154,6 +166,70 @@ export function ReviewModeToolbar({
       reviewInputMode={isReviewEditing ? 'editing' : 'hotkeys'}
       reviewItemKind={isCurrentItemGradable ? 'fsrs' : 'reading'}
       secondary={showSummary ? <ReviewSessionSummary reviewCompletedCount={reviewCompletedCount} reviewQueueCount={reviewQueueCount} /> : null}
+    />
+  );
+}
+
+export function ReviewModeToolbar({
+  className,
+  showSummary = true,
+  isStudyMode,
+  isAnswerRevealed,
+  isCurrentItemGradable,
+  isCurrentReviewItemVisible,
+  isReviewEditing,
+  reviewCompletedCount,
+  reviewCurrentNodeId,
+  reviewQueueCount,
+  onGrade,
+  onCompleteReviewItem,
+  onDeferReviewItem,
+  onDismissReviewItem,
+  onRevealAnswer,
+  onExitReviewMode,
+  onResumeReviewItem,
+  reviewCurrentTitle,
+  style
+}: ReviewModeToolbarProps) {
+  const { errorMessage, isSubmitting, retryGrade, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
+
+  if (!isStudyMode) {
+    return null;
+  }
+
+  if (!reviewCurrentNodeId) {
+    return <ReviewCompleteBar onExitReviewMode={onExitReviewMode} {...definedProps({ className, style })} />;
+  }
+
+  if (!isCurrentReviewItemVisible) {
+    return (
+      <ReviewActionBar
+        ariaLabel="Review mode toolbar"
+        {...definedProps({ className, style })}
+        mode="study"
+        primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
+        secondary={showSummary ? <ReviewPausedSummary reviewCurrentTitle={reviewCurrentTitle} /> : null}
+      />
+    );
+  }
+
+  return (
+    <ActiveReviewActionBar
+      errorMessage={errorMessage}
+      isAnswerRevealed={isAnswerRevealed}
+      isCurrentItemGradable={isCurrentItemGradable}
+      isReviewEditing={isReviewEditing}
+      isSubmitting={isSubmitting}
+      onCompleteReviewItem={onCompleteReviewItem}
+      onDeferReviewItem={onDeferReviewItem}
+      onDismissReviewItem={onDismissReviewItem}
+      onRevealAnswer={onRevealAnswer}
+      retryGrade={retryGrade}
+      reviewCompletedCount={reviewCompletedCount}
+      reviewQueueCount={reviewQueueCount}
+      showSummary={showSummary}
+      submitGrade={submitGrade}
+      {...definedProps({ className, style })}
     />
   );
 }

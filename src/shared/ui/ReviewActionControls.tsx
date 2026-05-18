@@ -147,3 +147,11 @@ export function ReviewCompleteAction({ onExitReviewMode }: { onExitReviewMode: (
     </AppButton>
   );
 }
+
+export function ResumeReviewAction({ onResumeReviewItem }: { onResumeReviewItem: () => void }) {
+  return (
+    <AppButton aria-label="Resume review" className="min-w-32 px-5" onClick={onResumeReviewItem} size="md" variant="primary">
+      Resume
+    </AppButton>
+  );
+}

@@ -14,8 +14,10 @@ export interface WorkspaceBottomReviewToolbarProps {
   isListCollapsed: boolean;
   isReviewEditing: boolean;
   isStudyMode: boolean;
+  isCurrentReviewItemVisible: boolean;
   reviewCompletedCount: number;
   reviewCurrentNodeId: string | null;
+  reviewCurrentTitle: string | undefined;
   reviewDueCount: number;
   reviewQueueCount: number;
   onCompleteReviewItem: () => boolean;
@@ -24,19 +26,40 @@ export interface WorkspaceBottomReviewToolbarProps {
   onExitReviewMode: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
   onRevealAnswer: () => void;
+  onResumeReviewItem: () => void;
   onToggleReviewSession: () => void;
 }
 
-export type WorkspaceBottomReviewToolbarSource = Pick<WorkspaceLayoutProps, 'layoutChrome' | 'review'>;
+export type WorkspaceBottomReviewToolbarSource = Pick<
+  WorkspaceLayoutProps,
+  'externalLibrary' | 'layoutChrome' | 'navigation' | 'nodeList' | 'review' | 'trash' | 'virtualView'
+>;
+
+function getReviewCurrentTitle(source: WorkspaceBottomReviewToolbarSource) {
+  const currentNodeId = source.review.reviewCurrentNodeId;
+  if (!currentNodeId) {
+    return undefined;
+  }
+  return source.nodeList.nodesById[currentNodeId]?.title;
+}
 
 export function selectWorkspaceBottomReviewToolbarProps(
   props: WorkspaceBottomReviewToolbarSource
 ): WorkspaceBottomReviewToolbarProps {
-  const { layoutChrome, review } = props;
+  const { externalLibrary, layoutChrome, navigation, nodeList, review, trash, virtualView } = props;
+  const isCurrentReviewItemVisible = Boolean(
+    review.reviewCurrentNodeId &&
+      navigation.activeNodeId === review.reviewCurrentNodeId &&
+      !externalLibrary.isExternalViewOpen &&
+      !trash.isViewingTrashNode &&
+      !trash.isTrashViewOpen &&
+      !virtualView.isVirtualViewOpen
+  );
   return {
     canStartStudyMode: review.canStartStudyMode,
     isAnswerRevealed: review.isAnswerRevealed,
     isCurrentReviewItemGradable: review.isCurrentReviewItemGradable,
+    isCurrentReviewItemVisible,
     isImmersiveMode: layoutChrome.isImmersiveMode,
     isListCollapsed: layoutChrome.isListCollapsed,
     isReviewEditing: review.isReviewEditing,
@@ -47,9 +70,16 @@ export function selectWorkspaceBottomReviewToolbarProps(
     onExitReviewMode: review.onExitReviewMode,
     onGradeReview: review.onGradeReview,
     onRevealAnswer: review.onRevealAnswer,
+    onResumeReviewItem: () => {
+      if (review.reviewCurrentNodeId) {
+        nodeList.onOpenNotesView();
+        navigation.onSelectNode(review.reviewCurrentNodeId);
+      }
+    },
     onToggleReviewSession: review.onToggleReviewSession,
     reviewCompletedCount: review.reviewCompletedCount,
     reviewCurrentNodeId: review.reviewCurrentNodeId,
+    reviewCurrentTitle: getReviewCurrentTitle(props),
     reviewDueCount: review.reviewDueCount,
     reviewQueueCount: review.reviewQueueCount
   };
@@ -74,10 +104,12 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
         showSummary={false}
         isAnswerRevealed={props.isAnswerRevealed}
         isCurrentItemGradable={props.isCurrentReviewItemGradable}
+        isCurrentReviewItemVisible={props.isCurrentReviewItemVisible}
         isReviewEditing={props.isReviewEditing}
         isStudyMode={props.isStudyMode}
         reviewCompletedCount={props.reviewCompletedCount}
         reviewCurrentNodeId={props.reviewCurrentNodeId}
+        reviewCurrentTitle={props.reviewCurrentTitle}
         reviewQueueCount={props.reviewQueueCount}
         onCompleteReviewItem={props.onCompleteReviewItem}
         onDeferReviewItem={props.onDeferReviewItem}
@@ -85,6 +117,7 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
         onExitReviewMode={props.onExitReviewMode}
         onGrade={props.onGradeReview}
         onRevealAnswer={props.onRevealAnswer}
+        onResumeReviewItem={props.onResumeReviewItem}
       />
       {props.isImmersiveMode ? null : (
         <>

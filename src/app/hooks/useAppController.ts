@@ -10,6 +10,7 @@ import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 import { useCurrentReviewPreview } from './appControllerHelpers';
 import { measureSelectionComputation } from './appControllerInstrumentation';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
+import { useReviewEditingState } from './appControllerReviewEditing';
 import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import type { AppControllerResult } from './appControllerTypes';
 import { countDueReviewNodes } from './layoutPropsBuilder';
@@ -20,7 +21,6 @@ import { useControllerPaletteItems } from './useControllerPaletteItems';
 import { useFormalImport } from './useFormalImport';
 import { usePriorityQuickSet } from './usePriorityQuickSet';
 import { useReviewQueueDocumentPrefetch } from './useReviewQueueDocumentPrefetch';
-import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
 
 function useControllerPriorityQuickSet(args: {
@@ -91,37 +91,6 @@ function useDerivedControllerState(args: {
     })
   );
   return { layoutProps, paletteItems };
-}
-
-function useReviewEditingState(args: {
-  hotkeys: ReturnType<typeof useCommandShortcutState>;
-  isCurrentReviewItemGradable: boolean;
-  isStudyMode: boolean;
-  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
-  return useReviewKeyboardShortcuts({
-    isStudyMode: args.isStudyMode,
-    isCommandPaletteOpen: args.runtime.isCommandPaletteOpen,
-    isSearchPaletteOpen: args.runtime.isSearchPaletteOpen,
-    isSettingsOpen: args.runtime.isSettingsOpen,
-    reviewCurrentNodeId: args.ws.reviewSession.currentNodeId,
-    isAnswerRevealed: args.ws.reviewSession.isAnswerRevealed,
-    isCurrentItemGradable: args.isCurrentReviewItemGradable,
-    revealAnswerShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.revealReviewAnswer],
-    gradeAgainShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.gradeReviewAgain],
-    gradeHardShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.gradeReviewHard],
-    gradeGoodShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.gradeReviewGood],
-    gradeEasyShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.gradeReviewEasy],
-    readingLaterShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.readingReviewLater],
-    readingReadShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.readingReviewRead],
-    readingDismissShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.readingReviewDismiss],
-    completeReviewItem: args.ws.completeReviewItem,
-    deferReviewItem: args.ws.deferReviewItem,
-    dismissReviewItem: args.ws.dismissReviewItem,
-    revealReviewAnswer: args.ws.revealReviewAnswer,
-    gradeReviewCard: args.ws.gradeReviewCard
-  });
 }
 
 function buildAppControllerResult(args: {
@@ -199,12 +168,13 @@ export function useAppController(args: {
   const priorityQuickSet = useControllerPriorityQuickSet({ hotkeys, runtime: controller.runtime, ws });
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
   useReviewQueueDocumentPrefetch(ws.reviewSession);
-  const isCurrentReviewItemGradable =
-    (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
+  const isCurrentReviewItemGradable = (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
   const isReviewEditing = useReviewEditingState({
     hotkeys,
+    isExternalViewOpen: controller.externalView.isExternalViewOpen,
     isCurrentReviewItemGradable,
     isStudyMode,
+    isVirtualViewOpen: controller.virtualView.isVirtualViewOpen,
     runtime: controller.runtime,
     ws
   });

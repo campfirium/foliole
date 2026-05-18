@@ -45,6 +45,7 @@ export {
   FsrsRevealAction,
   ReadingReviewActions,
   ReviewCompleteAction,
+  ResumeReviewAction,
   ReviewGradeActions
 } from './ReviewActionControls';
 export { AppStatusBadge } from './StatusBadge';

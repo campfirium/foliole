@@ -10,6 +10,7 @@ interface UseReviewKeyboardShortcutsArgs {
   isSearchPaletteOpen: boolean;
   isSettingsOpen: boolean;
   reviewCurrentNodeId: string | null;
+  isCurrentReviewItemVisible: boolean;
   isAnswerRevealed: boolean;
   isCurrentItemGradable: boolean;
   revealAnswerShortcuts: CommandShortcutSet | undefined;
@@ -121,7 +122,7 @@ function handleReviewKeydown(
     event.preventDefault();
     return;
   }
-  if (isTargetEditing || !args.reviewCurrentNodeId) {
+  if (isTargetEditing || !args.reviewCurrentNodeId || !args.isCurrentReviewItemVisible) {
     return;
   }
 
