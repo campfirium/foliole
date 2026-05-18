@@ -129,16 +129,18 @@ function resolveFsrsQueueNodeIds(args: {
 
 function resolveReadingQueueNodeIds(args: {
   candidates: ReviewQueueNode[];
+  interleaveSources: boolean;
   nodeOrder: string[];
   nodesById: Record<string, ReviewQueueNode | undefined>;
   pushQueueRules: UnifiedPushQueueRules;
 }) {
   const random = createSeededRandom(`reading|${args.nodeOrder.join('|')}`);
   return assembleReadingPushQueue(
-    args.candidates.map((node) => ({
+    args.candidates.map((node, index) => ({
       id: node.id,
       priority: resolveNodePriority(node, args.nodesById, args.pushQueueRules.defaultPriority),
-      nextAt: resolveReadingNextAt(node)
+      nextAt: resolveReadingNextAt(node),
+      ...(args.interleaveSources ? { sourceId: node.parentNodeId ?? node.id, sourceOrder: index } : {})
     })),
     { priorityRatio: args.pushQueueRules.priorityRatio, random }
   ).map((entry) => entry.id);
@@ -219,6 +221,7 @@ export function buildReviewQueuePlan(args: {
   });
   const readingQueueNodeIds = resolveReadingQueueNodeIds({
     candidates: readingCandidates,
+    interleaveSources: !includeScheduled,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
     pushQueueRules

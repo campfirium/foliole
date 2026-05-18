@@ -52,6 +52,67 @@ it('sorts reading bucket cards by nextAt before roulette assembly', () => {
   expect(queue.map((item) => item.id)).toEqual(['reading-2', 'reading-3', 'reading-1']);
 });
 
+it('keeps reading nextAt order when source interleaving metadata is absent', () => {
+  const queue = assembleReadingPushQueue([
+    { id: 'reading-1', priority: 4, nextAt: '2026-03-16T15:00:00.000Z' },
+    { id: 'reading-2', priority: 4, nextAt: '2026-03-16T09:00:00.000Z' },
+    { id: 'reading-3', priority: 4, nextAt: '2026-03-16T12:00:00.000Z' }
+  ]);
+
+  expect(queue.map((item) => item.id)).toEqual(['reading-2', 'reading-3', 'reading-1']);
+});
+
+it('uses coprime stride ordering inside a single reading source group', () => {
+  const queue = assembleReadingPushQueue(
+    Array.from({ length: 12 }, (_, index) => ({
+      id: `a-${index + 1}`,
+      priority: 4,
+      nextAt: '2026-03-16T09:00:00.000Z',
+      sourceId: 'source-a',
+      sourceOrder: index
+    }))
+  );
+
+  expect(queue.map((item) => item.id)).toEqual(['a-1', 'a-8', 'a-3', 'a-10', 'a-5', 'a-12', 'a-7', 'a-2', 'a-9', 'a-4', 'a-11', 'a-6']);
+});
+
+it('interleaves multiple reading source groups after each group is stride ordered', () => {
+  const queue = assembleReadingPushQueue([
+    { id: 'a-1', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 0 },
+    { id: 'a-2', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 1 },
+    { id: 'a-3', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 2 },
+    { id: 'b-1', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-b', sourceOrder: 3 },
+    { id: 'b-2', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-b', sourceOrder: 4 },
+    { id: 'b-3', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-b', sourceOrder: 5 }
+  ]);
+
+  expect(queue.map((item) => item.id)).toEqual(['a-1', 'b-1', 'a-3', 'b-3', 'a-2', 'b-2']);
+});
+
+it('does not source-interleave across reading priority buckets', () => {
+  const queue = assembleReadingPushQueue(
+    [
+      { id: 'p1-a-1', priority: 1, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 0 },
+      { id: 'p9-a-1', priority: 9, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 1 },
+      { id: 'p1-a-2', priority: 1, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 2 },
+      { id: 'p9-a-2', priority: 9, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 3 },
+      { id: 'p1-a-3', priority: 1, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 4 }
+    ],
+    { random: () => 0 }
+  );
+
+  expect(queue.map((item) => item.id)).toEqual(['p1-a-1', 'p1-a-3', 'p1-a-2', 'p9-a-1', 'p9-a-2']);
+});
+
+it('keeps one or two reading source entries in source order', () => {
+  const queue = assembleReadingPushQueue([
+    { id: 'a-1', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 0 },
+    { id: 'a-2', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 1 }
+  ]);
+
+  expect(queue.map((item) => item.id)).toEqual(['a-1', 'a-2']);
+});
+
 it('treats the P1/P9 weight ratio as the roulette probability ratio', () => {
   const buckets = createRegularPriorityBuckets({ 1: ['p1'], 9: ['p9'] });
 
@@ -91,7 +152,7 @@ it('places absolute priority cards before regular buckets', () => {
     [
       { id: 'absolute-1', priority: 0, nextAt: '2026-03-16T18:00:00.000Z' },
       { id: 'regular-1', priority: 1, nextAt: '2026-03-16T08:00:00.000Z' },
-      { id: 'absolute-2', priority: 0, nextAt: '2026-03-16T07:00:00.000Z' },
+      { id: 'absolute-2', priority: 0, nextAt: '2026-03-16T07:00:00.000Z', sourceId: 'absolute-source', sourceOrder: 0 },
       { id: 'regular-9', priority: 9, nextAt: '2026-03-16T06:00:00.000Z' }
     ],
     { random: () => 0.1 }

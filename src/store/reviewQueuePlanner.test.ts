@@ -5,6 +5,7 @@ import {
   createClozeReviewNode,
   createPlannerBackedQueueNodes,
   createReadingNode,
+  createReadingProfile,
   createReviewNode
 } from './reviewQueuePlanner.test-support';
 
@@ -85,6 +86,57 @@ it('keeps empty structure-only nodes out of the reading queue', () => {
 
   expect(plan.readingQueueNodeIds).toEqual(['reading-1']);
   expect(plan.queueNodeIds).toEqual(['fsrs-1', 'reading-1']);
+});
+
+it('source-interleaves due reading nodes by direct parent and planner order', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const nodes = Array.from({ length: 12 }, (_, index) => ({
+    ...createReadingNode(`reading-${index + 1}`, '2026-03-02T08:00:00.000Z'),
+    parentNodeId: 'source-topic'
+  }));
+  const nodeOrder = nodes.map((node) => node.id);
+  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]));
+
+  const plan = buildReviewQueuePlan({ nodeOrder, nodesById, now, trashedNodeIds: [] });
+
+  expect(plan.readingQueueNodeIds).toEqual([
+    'reading-1',
+    'reading-8',
+    'reading-3',
+    'reading-10',
+    'reading-5',
+    'reading-12',
+    'reading-7',
+    'reading-2',
+    'reading-9',
+    'reading-4',
+    'reading-11',
+    'reading-6'
+  ]);
+});
+
+it('keeps scheduled reading inspection ordered by nextAt without source interleaving', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const nodes = [
+    {
+      ...createReadingNode('reading-late', '2026-03-01T08:00:00.000Z', 'reading content', createReadingProfile('2026-03-13T08:00:00.000Z')),
+      parentNodeId: 'source-topic'
+    },
+    {
+      ...createReadingNode('reading-early', '2026-03-01T08:00:00.000Z', 'reading content', createReadingProfile('2026-03-11T08:00:00.000Z')),
+      parentNodeId: 'source-topic'
+    },
+    {
+      ...createReadingNode('reading-middle', '2026-03-01T08:00:00.000Z', 'reading content', createReadingProfile('2026-03-12T08:00:00.000Z')),
+      parentNodeId: 'source-topic'
+    }
+  ];
+  const nodeOrder = nodes.map((node) => node.id);
+  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]));
+
+  const plan = buildReviewQueuePlan({ includeScheduled: true, nodeOrder, nodesById, now, trashedNodeIds: [] });
+
+  expect(plan.readingQueueNodeIds).toEqual(['reading-early', 'reading-middle', 'reading-late']);
 });
 
 it('queues cloze review nodes in the FSRS lane even when reveal is empty', () => {
