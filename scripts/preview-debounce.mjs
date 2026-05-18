@@ -5,6 +5,8 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
+const DEFAULT_PREVIEW_QUIET_MS = 3 * 60_000;
+
 function requestPath(runtimeDir, target) {
   return path.join(runtimeDir, `${target}-preview.request.json`);
 }
@@ -19,7 +21,7 @@ export function readQuietMs(target, env = process.env) {
     }
     return parsedValue;
   }
-  return 60_000;
+  return DEFAULT_PREVIEW_QUIET_MS;
 }
 
 async function writePreviewRequest(runtimeDir, target, request) {

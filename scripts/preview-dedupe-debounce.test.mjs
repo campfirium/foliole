@@ -73,9 +73,9 @@ function runDedupe(repoRoot, label) {
 }
 
 describe('preview-dedupe debounce', () => {
-  it('defaults to a quiet window for every preview target', () => {
-    expect(readQuietMs('windows', {})).toBe(60_000);
-    expect(readQuietMs('android', {})).toBe(60_000);
+  it('defaults to a three-minute quiet window for every preview target', () => {
+    expect(readQuietMs('windows', {})).toBe(180_000);
+    expect(readQuietMs('android', {})).toBe(180_000);
   });
 
   it('allows the quiet window to be overridden for tests and local tuning', () => {
