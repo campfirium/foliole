@@ -65,7 +65,7 @@ function expectHighlightDecorationForContent(content: string, locator: { from: n
   ]);
 }
 
-function registerDocumentTextAnchorDecorationTests() {
+function registerBasicDocumentTextAnchorDecorationTests() {
   it('collects direct child text anchors for the active document', () => {
     const content = 'Alpha Beta Gamma';
     expectHighlightDecorationForContent(content, {
@@ -73,34 +73,6 @@ function registerDocumentTextAnchorDecorationTests() {
       originalText: 'Beta',
       to: content.indexOf('Beta') + 'Beta'.length
     });
-  });
-
-  it('renders by stored locator positions without re-matching text', () => {
-    expect(
-      collectDocumentTextAnchorDecorations({
-        activeNodeId: 'node-1',
-        nodesById: {
-          'node-1': createParentNode('Start Alpha Beta Gamma'),
-          'node-2': createHighlightChildNode({
-            locator: {
-              from: 6,
-              originalText: 'Beta',
-              to: 10
-            },
-            parentNodeId: 'node-1'
-          })
-        },
-        parentContent: 'Start Alpha Beta Gamma',
-        trashedNodeIds: []
-      })
-    ).toEqual([
-      {
-        from: 6,
-        kind: 'highlight',
-        nodeId: 'node-2',
-        to: 10
-      }
-    ]);
   });
 
   it('hides zero-width locators from visible highlight decorations', () => {
@@ -125,6 +97,58 @@ function registerDocumentTextAnchorDecorationTests() {
   });
 }
 
+function registerStaleDocumentTextAnchorDecorationTests() {
+  it('repairs stale visible decorations when original text has one current match', () => {
+    expect(
+      collectDocumentTextAnchorDecorations({
+        activeNodeId: 'node-1',
+        nodesById: {
+          'node-1': createParentNode('Start Alpha Beta Gamma'),
+          'node-2': createHighlightChildNode({
+            locator: {
+              from: 6,
+              originalText: 'Beta',
+              to: 10
+            },
+            parentNodeId: 'node-1'
+          })
+        },
+        parentContent: 'Start Alpha Beta Gamma',
+        trashedNodeIds: []
+      })
+    ).toEqual([
+      {
+        from: 12,
+        kind: 'highlight',
+        nodeId: 'node-2',
+        to: 16
+      }
+    ]);
+  });
+
+  it('hides stale visible decorations when original text is ambiguous', () => {
+    expect(
+      collectDocumentTextAnchorDecorations({
+        activeNodeId: 'node-1',
+        nodesById: {
+          'node-1': createParentNode('Start Beta Alpha Beta Gamma'),
+          'node-2': createHighlightChildNode({
+            locator: {
+              from: 11,
+              originalText: 'Beta',
+              to: 15
+            },
+            parentNodeId: 'node-1'
+          })
+        },
+        parentContent: 'Start Beta Alpha Beta Gamma',
+        trashedNodeIds: []
+      })
+    ).toEqual([]);
+  });
+}
+
 describe('documentTextAnchorDecorations', () => {
-  registerDocumentTextAnchorDecorationTests();
+  registerBasicDocumentTextAnchorDecorationTests();
+  registerStaleDocumentTextAnchorDecorationTests();
 });
