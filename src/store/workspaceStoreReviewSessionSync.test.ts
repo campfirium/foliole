@@ -96,3 +96,43 @@ it('advances review session when the current queued node is deleted', () => {
   expect(state.reviewSession.totalNodeCount).toBe(1);
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
 });
+
+it('opens the next review node instead of the parent folder when deleting a nested current review node', () => {
+  useWorkspaceStore.setState({
+    activeNodeId: 'fsrs-1',
+    nodeOrder: ['folder-1', 'fsrs-1', 'reading-1'],
+    nodesById: {
+      'folder-1': {
+        ...createReadingNode('folder-1'),
+        content: '',
+        kind: 'folder',
+        parentNodeId: null,
+        review: null
+      },
+      'fsrs-1': {
+        ...createFsrsNode('fsrs-1'),
+        parentNodeId: 'folder-1'
+      },
+      'reading-1': {
+        ...createReadingNode('reading-1'),
+        parentNodeId: 'folder-1'
+      }
+    },
+    reviewSession: {
+      currentNodeId: 'fsrs-1',
+      isAnswerRevealed: true,
+      queueNodeIds: ['fsrs-1', 'reading-1'],
+      totalNodeCount: 2
+    }
+  });
+
+  useWorkspaceStore.getState().deleteNode('fsrs-1');
+
+  const state = useWorkspaceStore.getState();
+  expect(state.trashedNodeIds).toContain('fsrs-1');
+  expect(state.activeNodeId).toBe('reading-1');
+  expect(state.reviewSession.currentNodeId).toBe('reading-1');
+  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1']);
+  expect(state.reviewSession.totalNodeCount).toBe(1);
+  expect(state.reviewSession.isAnswerRevealed).toBe(false);
+});
