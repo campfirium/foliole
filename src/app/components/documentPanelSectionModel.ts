@@ -181,10 +181,11 @@ export function getDocumentPanelView(
     documentLayoutStyle: { '--document-max-width': `${documentMaxWidth}px` } as CSSProperties,
     loadingLabel: panelState.loadingLabel,
     isFolderListView: Boolean(
-      activeNode &&
-        activeNode.kind === 'folder' &&
-        !isVirtualNode(activeNode) &&
-        (props.editorNodeId === props.activeNodeId || isInboxNode(activeNode))
+      props.isTrashViewOpen && (!activeNode || activeNode.kind === 'folder') ||
+        activeNode &&
+          activeNode.kind === 'folder' &&
+          !isVirtualNode(activeNode) &&
+          (props.editorNodeId === props.activeNodeId || isInboxNode(activeNode))
     )
   };
 }

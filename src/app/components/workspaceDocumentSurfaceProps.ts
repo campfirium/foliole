@@ -35,6 +35,7 @@ type WorkspaceDocumentSurfaceFlatSource =
     | 'onSelectNode'
     | 'onSelectNodeInVirtualView'
   > &
+  Pick<WorkspaceLayoutProps['trash'], 'onSelectTrashNode'> &
   Pick<WorkspaceLayoutProps['nodeList'], 'nodeOrder' | 'nodesById' | 'onOpenMoveToNode'> &
   WorkspaceLayoutProps['readingPosition'] &
   Pick<WorkspaceLayoutProps['review'], 'reviewSchedulerSettings'> &
@@ -118,7 +119,8 @@ function selectDocumentSurfaceNavigation(props: WorkspaceDocumentSurfaceSource) 
     onOpenExternalView: props.externalLibrary.onOpenExternalView,
     onSelectBreadcrumbNode: props.navigation.onSelectBreadcrumbNode,
     onSelectNode: props.navigation.onSelectNode,
-    onSelectNodeInVirtualView: props.navigation.onSelectNodeInVirtualView
+    onSelectNodeInVirtualView: props.navigation.onSelectNodeInVirtualView,
+    onSelectTrashNode: props.trash.onSelectTrashNode
   };
 }
 

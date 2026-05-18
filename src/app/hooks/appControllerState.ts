@@ -175,7 +175,7 @@ export function useWorkspaceControllerState(
   ws: ReturnType<typeof useWorkspaceSelectors>,
   isWorkspaceHydrated: boolean
 ) {
-  const trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
+  const trash = useTrashView({ trashedNodeIds: ws.trashedNodeIds });
   useWorkspaceActiveNodeDocument(ws.activeNodeId);
   useWorkspaceActiveNodeDocument(trash.selectedTrashNodeId, { keepWarm: true });
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;

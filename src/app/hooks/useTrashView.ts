@@ -1,32 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 
 interface UseTrashViewParams {
-  nodeOrder: string[];
   trashedNodeIds: string[];
 }
 
-export function useTrashView({ nodeOrder, trashedNodeIds }: UseTrashViewParams) {
+export function useTrashView({ trashedNodeIds }: UseTrashViewParams) {
   const [isTrashViewOpen, setIsTrashViewOpen] = useState(false);
   const [selectedTrashNodeId, setSelectedTrashNodeId] = useState<string | null>(null);
 
-  const trashedNodeOrder = useMemo(
-    () => nodeOrder.filter((nodeId) => trashedNodeIds.includes(nodeId)),
-    [nodeOrder, trashedNodeIds]
-  );
+  const trashedNodeIdSet = useMemo(() => new Set(trashedNodeIds), [trashedNodeIds]);
 
   useEffect(() => {
     if (!isTrashViewOpen) {
       setSelectedTrashNodeId(null);
       return;
     }
-    if (trashedNodeOrder.length === 0) {
+    if (selectedTrashNodeId && !trashedNodeIdSet.has(selectedTrashNodeId)) {
       setSelectedTrashNodeId(null);
-      return;
     }
-    if (!selectedTrashNodeId || !trashedNodeIds.includes(selectedTrashNodeId)) {
-      setSelectedTrashNodeId(trashedNodeOrder[0] ?? null);
-    }
-  }, [isTrashViewOpen, selectedTrashNodeId, trashedNodeIds, trashedNodeOrder]);
+  }, [isTrashViewOpen, selectedTrashNodeId, trashedNodeIdSet]);
 
   const openTrashView = () => {
     setIsTrashViewOpen(true);
