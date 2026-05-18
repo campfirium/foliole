@@ -8,10 +8,7 @@ import {
   VIRTUAL_REMOVED_NODE_ID,
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
-import {
-  getOrderedVirtualNodeResultNodes,
-  getVirtualRootResultNodes
-} from '../../features/nodes/model/virtualNodeDetail';
+import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 import type {
@@ -31,7 +28,6 @@ import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
 import { useWorkspaceFolderWidthCssVar } from './workspaceFolderWidthCssVar';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
-import { buildVirtualResultCountById } from './workspaceVirtualResultCounts';
 
 export interface WorkspaceDualListContentProps {
   activeNodeId: string | null;
@@ -60,21 +56,19 @@ export interface WorkspaceDualListContentProps {
   trashedNodeIds: string[];
 }
 
-function collectVirtualContentItemIds(args: WorkspaceDualListContentProps) {
+function collectVirtualContentItemIds(
+  args: WorkspaceDualListContentProps,
+  virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>
+) {
   const activeVirtualNodeId = args.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
   if (activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
-    return getVirtualRootResultNodes(args.nodeOrder, args.nodesById, args.trashedNodeIds).map((node) => node.id);
+    return virtualResultIndex.rootResultIds;
   }
   const activeVirtualNode = args.nodesById[activeVirtualNodeId];
   if (!isVirtualNode(activeVirtualNode)) {
     return [];
   }
-  return getOrderedVirtualNodeResultNodes(
-    activeVirtualNodeId,
-    args.nodeOrder,
-    args.nodesById,
-    activeVirtualNode.virtualFilter
-  ).map((node) => node.id);
+  return virtualResultIndex.resultIdsByVirtualId.get(activeVirtualNodeId) ?? [];
 }
 
 function renderSingleListFallback(props: WorkspaceDualListContentProps) {
@@ -125,12 +119,15 @@ function renderStandardContentColumn(
   );
 }
 
-function renderVirtualContentColumn(props: WorkspaceDualListContentProps) {
+function renderVirtualContentColumn(
+  props: WorkspaceDualListContentProps,
+  virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>
+) {
   const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
   if (activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID) {
     return <RemovedSourcesPanel onSelectNode={props.onSelectNode} />;
   }
-  const itemIds = collectVirtualContentItemIds(props);
+  const itemIds = collectVirtualContentItemIds(props, virtualResultIndex);
   const items = itemIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));
 
   return (
@@ -191,8 +188,8 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   const dualListState = useWorkspaceDualListState(props);
   const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
   const topicRootId = dualListState.activeFolderColumnId ?? dualListState.activeFolderId ?? null;
-  const virtualResultCountById = useMemo(
-    () => buildVirtualResultCountById(props),
+  const virtualResultIndex = useMemo(
+    () => buildVirtualNodeResultIndex(props),
     [props.nodeOrder, props.nodesById, props.trashedNodeIds]
   );
   useWorkspaceFolderWidthCssVar(folderListResize.width);
@@ -210,7 +207,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         className="workspace-region-main-folder flex min-h-0 min-w-0 overflow-hidden"
         style={{ flex: `0 0 ${folderListResize.width}px` }}
       >
-        {renderWorkspaceFolderColumn(props, dualListState, virtualResultCountById)}
+        {renderWorkspaceFolderColumn(props, dualListState, virtualResultIndex.countById)}
       </div>
       <WorkspaceDualListSplitter
         isResizing={folderListResize.isResizing}
@@ -220,7 +217,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
       />
       <div className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {props.isVirtualViewOpen
-          ? renderVirtualContentColumn(props)
+          ? renderVirtualContentColumn(props, virtualResultIndex)
           : props.isExternalViewOpen
             ? renderExternalContentColumn(props)
           : topicRootId

@@ -54,6 +54,63 @@ function matchesVirtualNodeFilter(node: Node, filter: VirtualNodeFilter | null |
   return runnableConditions.every((condition) => searchableText.includes(normalizeSearchText(condition.value)));
 }
 
+function isVirtualResultCandidate(node: Node | undefined) {
+  return Boolean(node && !node.specialKind && !node.anchorLink && node.kind !== 'folder');
+}
+
+function matchesPreparedVirtualNodeFilter(
+  searchableText: string,
+  conditions: Array<{ value: string }>
+) {
+  return conditions.every((condition) => searchableText.includes(normalizeSearchText(condition.value)));
+}
+
+export interface VirtualNodeResultIndex {
+  countById: Map<string, number>;
+  resultIdsByVirtualId: Map<string, string[]>;
+  rootResultIds: string[];
+}
+
+export function buildVirtualNodeResultIndex(args: {
+  nodeOrder: string[];
+  nodesById: Record<string, Node>;
+  trashedNodeIds?: readonly string[];
+}): VirtualNodeResultIndex {
+  const trashedNodeIdSet = new Set(args.trashedNodeIds ?? []);
+  const candidateIds: string[] = [];
+  const searchableTextById = new Map<string, string>();
+  for (const nodeId of args.nodeOrder) {
+    const node = args.nodesById[nodeId];
+    if (!isVirtualResultCandidate(node)) continue;
+    candidateIds.push(nodeId);
+    searchableTextById.set(nodeId, `${node!.title}\n${node!.content}`.toLocaleLowerCase());
+  }
+
+  const countById = new Map<string, number>();
+  const resultIdsByVirtualId = new Map<string, string[]>();
+  const rootResultIdSet = new Set<string>();
+  for (const nodeId of args.nodeOrder) {
+    const node = args.nodesById[nodeId];
+    if (!isVirtualNode(node)) continue;
+    const conditions = getRunnableConditions(node.virtualFilter);
+    const resultIds = conditions.length === 0
+      ? []
+      : candidateIds.filter((candidateId) => {
+          const searchableText = searchableTextById.get(candidateId);
+          return Boolean(searchableText && matchesPreparedVirtualNodeFilter(searchableText, conditions));
+        });
+    resultIdsByVirtualId.set(nodeId, resultIds);
+    if (resultIds.length > 0) countById.set(nodeId, resultIds.length);
+    if (!trashedNodeIdSet.has(nodeId) && node.parentNodeId === VIRTUAL_ROOT_NODE_ID) {
+      resultIds.forEach((resultId) => rootResultIdSet.add(resultId));
+    }
+  }
+
+  const rootResultIds = args.nodeOrder.filter((nodeId) => !trashedNodeIdSet.has(nodeId) && rootResultIdSet.has(nodeId));
+  if (rootResultIds.length > 0) countById.set(VIRTUAL_ROOT_NODE_ID, rootResultIds.length);
+  return { countById, resultIdsByVirtualId, rootResultIds };
+}
+
 export function getVirtualNodeResultReferences(
   activeNodeId: string,
   nodesById: Record<string, Node>,
@@ -80,7 +137,7 @@ export function resolveVirtualNodeResultNodes(
 ) {
   return references
     .map((reference) => nodesById[reference.sourceNodeId])
-    .filter((node): node is Node => Boolean(node && !node.specialKind && !node.anchorLink && node.kind !== 'folder'));
+    .filter((node): node is Node => Boolean(isVirtualResultCandidate(node)));
 }
 
 export function getVirtualNodeResultNodes(

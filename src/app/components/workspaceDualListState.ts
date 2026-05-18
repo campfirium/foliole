@@ -1,23 +1,19 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
-import {
-  INBOX_NODE_ID,
-  TRASH_NODE_ID,
-  isInboxNode,
-  isTrashNode,
-  isVirtualNode,
-  isVirtualRootNode
-} from '../../features/nodes/model/specialNodes';
-import { selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
+import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
+import {
+  buildWorkspaceDualListStructureData,
+  buildWorkspaceListStructureSignature,
+  type WorkspaceDualListStructureData
+} from './workspaceDualListStructure';
 import {
   buildFolderNavigationNodesByIdFromOrder,
   resolveActiveFolderColumnNodeId,
   resolveFocusedFolderNodeId
 } from './workspaceFolderNavigation';
 import {
-  buildWorkspaceListChildrenIndex,
   type WorkspaceListChildrenIndex
 } from './workspaceListChildrenIndex';
 
@@ -27,6 +23,11 @@ export interface WorkspaceDualListStateArgs {
   listNodesById: WorkspaceListNodesById;
   nodeOrder: string[];
   trashedNodeIds: string[];
+}
+
+interface WorkspaceDualListStructureCache {
+  data: WorkspaceDualListStructureData;
+  signature: string;
 }
 
 function useActiveFolderColumns(args: WorkspaceDualListStateArgs) {
@@ -65,39 +66,6 @@ function isVisibleTopicNode(
   return Boolean(node && !trashedNodeIds.includes(nodeId) && node.kind !== 'folder');
 }
 
-function isVisibleFolderId(nodeId: string, nodesById: WorkspaceListNodesById) {
-  const node = nodesById[nodeId];
-  return Boolean(
-    node?.kind === 'folder' &&
-    !isVirtualRootNode(node) &&
-    !isVirtualNode(node)
-  );
-}
-
-function buildFolderNodeOrderFromIndex(
-  index: WorkspaceListChildrenIndex,
-  nodesById: WorkspaceListNodesById
-) {
-  const regularFolderIds = index.visibleNodeIds.filter((nodeId) => {
-    const node = nodesById[nodeId];
-    return (
-      isVisibleFolderId(nodeId, nodesById) &&
-      nodeId !== INBOX_NODE_ID &&
-      nodeId !== TRASH_NODE_ID &&
-      !isInboxNode(node) &&
-      !isTrashNode(node)
-    );
-  });
-
-  return [
-    ...(index.visibleNodeIdSet.has(INBOX_NODE_ID) && isVisibleFolderId(INBOX_NODE_ID, nodesById)
-      ? [INBOX_NODE_ID]
-      : []),
-    ...regularFolderIds,
-    TRASH_NODE_ID
-  ];
-}
-
 function collectTopicColumnNodeIdsFromIndex(
   folderNodeId: string | null,
   index: WorkspaceListChildrenIndex,
@@ -110,72 +78,36 @@ function collectTopicColumnNodeIdsFromIndex(
   );
 }
 
-function countVisibleTopicsInSubtree(
-  nodeId: string,
-  index: WorkspaceListChildrenIndex,
-  nodesById: WorkspaceListNodesById,
-  cache: Map<string, number>
-): number {
-  const cached = cache.get(nodeId);
-  if (cached !== undefined) return cached;
+function useWorkspaceDualListStructureData(args: WorkspaceDualListStateArgs) {
+  const cacheRef = useRef<WorkspaceDualListStructureCache | null>(null);
+  const signature = buildWorkspaceListStructureSignature(
+    args.nodeOrder,
+    args.listNodesById,
+    args.trashedNodeIds
+  );
 
-  let count = 0;
-  for (const childId of index.visibleChildrenByParent.get(nodeId) ?? []) {
-    const child = nodesById[childId];
-    if (!child) continue;
-    count += child.kind === 'folder' ? 0 : 1;
-    count += countVisibleTopicsInSubtree(childId, index, nodesById, cache);
+  if (cacheRef.current?.signature === signature) {
+    return cacheRef.current.data;
   }
-  cache.set(nodeId, count);
-  return count;
-}
 
-function buildFolderTopicCountById(
-  folderNodeOrder: string[],
-  index: WorkspaceListChildrenIndex,
-  nodesById: WorkspaceListNodesById,
-  nodeOrder: string[],
-  trashedNodeIds: readonly string[]
-) {
-  const countCache = new Map<string, number>();
-  const countById = new Map<string, number>();
-  for (const folderId of folderNodeOrder) {
-    const count = countVisibleTopicsInSubtree(folderId, index, nodesById, countCache);
-    if (count > 0) countById.set(folderId, count);
-  }
-  const trashCount = selectTrashRootIds(nodeOrder, nodesById, [...trashedNodeIds]).length;
-  if (trashCount > 0) countById.set(TRASH_NODE_ID, trashCount);
-  return countById;
-}
-
-function useWorkspaceDualListStaticData(args: WorkspaceDualListStateArgs) {
-  return useMemo(() => {
-    const listIndex = buildWorkspaceListChildrenIndex(args.nodeOrder, args.listNodesById, args.trashedNodeIds);
-    const folderNodeOrder = buildFolderNodeOrderFromIndex(listIndex, args.listNodesById);
-    return {
-      folderTopicCountById: buildFolderTopicCountById(
-        folderNodeOrder,
-        listIndex,
-        args.listNodesById,
-        args.nodeOrder,
-        args.trashedNodeIds
-      ),
-      folderNodeOrder,
-      folderNodesById: buildFolderNavigationNodesByIdFromOrder(folderNodeOrder, args.listNodesById),
-      listIndex
-    };
-  }, [args.listNodesById, args.nodeOrder, args.trashedNodeIds]);
+  const data = buildWorkspaceDualListStructureData(args);
+  cacheRef.current = { data, signature };
+  return data;
 }
 
 export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
   const activeColumns = useActiveFolderColumns(args);
   const { activeFolderColumnId, activeFolderId } = activeColumns;
-  const staticData = useWorkspaceDualListStaticData(args);
+  const structureData = useWorkspaceDualListStructureData(args);
+  const folderNodesById = useMemo(
+    () => buildFolderNavigationNodesByIdFromOrder(structureData.folderNodeOrder, args.listNodesById),
+    [args.listNodesById, structureData.folderNodeOrder]
+  );
 
   return useMemo(() => {
     const topicNodeOrder = collectTopicColumnNodeIdsFromIndex(
       activeFolderColumnId,
-      staticData.listIndex,
+      structureData.listIndex,
       args.listNodesById,
       args.trashedNodeIds
     );
@@ -183,10 +115,10 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
     return {
       activeFolderColumnId,
       activeFolderId,
-      folderNodeOrder: staticData.folderNodeOrder,
-      folderNodesById: staticData.folderNodesById,
-      folderTopicCountById: staticData.folderTopicCountById,
-      topicChildrenByParent: staticData.listIndex.visibleChildrenByParent,
+      folderNodeOrder: structureData.folderNodeOrder,
+      folderNodesById,
+      folderTopicCountById: structureData.folderTopicCountById,
+      topicChildrenByParent: structureData.listIndex.visibleChildrenByParent,
       topicNodeOrder,
       topicNodesById: args.listNodesById
     };
@@ -195,6 +127,7 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
     activeFolderId,
     args.listNodesById,
     args.trashedNodeIds,
-    staticData
+    folderNodesById,
+    structureData
   ]);
 }

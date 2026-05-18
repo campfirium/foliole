@@ -40,4 +40,29 @@ describe('trash root model', () => {
   it('matches subtree titles while returning root ids', () => {
     expect(filterTrashRootIdsByTitle(['folder'], nodeOrder, nodesById, ['folder', 'topic', 'item'], 'needle')).toEqual(['folder']);
   });
+
+  it('keeps root selection stable for large covered trash subtrees', () => {
+    const manyNodesById: Record<string, WorkspaceListNode> = {
+      root: createNode('root', 'Root'),
+      solo: createNode('solo', 'Solo')
+    };
+    const manyNodeOrder = ['root'];
+    const manyTrashedNodeIds = ['root'];
+    let parentNodeId = 'root';
+    for (let index = 0; index < 1000; index += 1) {
+      const nodeId = `child-${index}`;
+      manyNodesById[nodeId] = createNode(nodeId, `Child ${index}`, parentNodeId);
+      manyNodeOrder.push(nodeId);
+      manyTrashedNodeIds.push(nodeId);
+      parentNodeId = nodeId;
+    }
+    manyNodeOrder.push('solo');
+    manyTrashedNodeIds.push('solo');
+
+    expect(selectTrashRootIds(manyNodeOrder, manyNodesById, manyTrashedNodeIds)).toEqual(['root', 'solo']);
+  });
+
+  it('matches deep covered descendants without changing root order', () => {
+    expect(filterTrashRootIdsByTitle(['folder', 'solo'], nodeOrder, nodesById, ['folder', 'topic', 'item', 'solo'], 'needle')).toEqual(['folder']);
+  });
 });
