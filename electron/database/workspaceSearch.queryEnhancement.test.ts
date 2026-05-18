@@ -17,7 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+import { syncNodeSearchIndexForNodeIds, syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -52,6 +52,7 @@ function insertNode(input: { content: string; id: string; title: string; updated
     createdAt: '2026-05-01T00:00:00.000Z',
     updatedAt: input.updatedAt
   });
+  syncNodeSearchIndexForNodeIds(openDatabaseConnection().driver, [input.id]);
 }
 
 it('keeps punctuation and malformed advanced input on the ordinary workspace search path', () => {
@@ -83,6 +84,84 @@ it('finds ordinary multi-word workspace queries when punctuation separates the t
   const results = searchWorkspace('Lists Twitter List January');
 
   expect(results.map((result) => result.id)).toContain('node-colon-title');
+});
+
+it('finds ordinary multi-word workspace queries when short terms are mixed with indexed terms', () => {
+  insertNode({
+    id: 'node-short-terms',
+    title: 'Open AI新模型 o1 usage',
+    content: 'Prompt for me-o1 notes.',
+    updatedAt: '2026-05-04T00:00:00.000Z'
+  });
+  insertNode({
+    id: 'node-missing-short-term',
+    title: 'Open AI新模型 usage',
+    content: 'Prompt notes without the model suffix.',
+    updatedAt: '2026-05-05T00:00:00.000Z'
+  });
+
+  const results = searchWorkspace('Open AI 新模型 o1');
+  const resultIds = results.map((result) => result.id);
+
+  expect(resultIds).toContain('node-short-terms');
+  expect(resultIds).not.toContain('node-missing-short-term');
+});
+
+it('orders copied literal matches ahead of adjacent pair and term-only matches', () => {
+  insertNode({
+    id: 'node-term-only',
+    title: 'Term Only',
+    content: 'Open notes mention 新模型 and later AI with o1 separately.',
+    updatedAt: '2026-05-06T00:00:00.000Z'
+  });
+  insertNode({
+    id: 'node-pair',
+    title: 'Open AI新模型 o1 usage',
+    content: '',
+    updatedAt: '2026-05-05T00:00:00.000Z'
+  });
+  insertNode({
+    id: 'node-literal',
+    title: 'Open AI 新模型 o1 usage',
+    content: '',
+    updatedAt: '2026-05-04T00:00:00.000Z'
+  });
+
+  const resultIds = searchWorkspace('Open AI 新模型 o1').map((result) => result.id);
+
+  expect(resultIds.indexOf('node-literal')).toBeLessThan(resultIds.indexOf('node-pair'));
+  expect(resultIds.indexOf('node-pair')).toBeLessThan(resultIds.indexOf('node-term-only'));
+});
+
+it('uses substring AND fallback for all-short mixed Chinese queries', () => {
+  insertNode({
+    id: 'node-ai-china',
+    title: 'AI 中国 notes',
+    content: 'Two short terms should both count.',
+    updatedAt: '2026-05-06T00:00:00.000Z'
+  });
+  insertNode({
+    id: 'node-ai-only',
+    title: 'AI notes',
+    content: 'Missing the Chinese short term.',
+    updatedAt: '2026-05-07T00:00:00.000Z'
+  });
+
+  const resultIds = searchWorkspace('AI 中国').map((result) => result.id);
+
+  expect(resultIds).toContain('node-ai-china');
+  expect(resultIds).not.toContain('node-ai-only');
+});
+
+it('normalizes CJK punctuation in workspace queries', () => {
+  insertNode({
+    id: 'node-cjk-punctuation',
+    title: 'Atlas Launch',
+    content: 'Launch notes imported from a comma-separated query.',
+    updatedAt: '2026-05-08T00:00:00.000Z'
+  });
+
+  expect(searchWorkspace('Atlas，Launch').map((result) => result.id)).toContain('node-cjk-punctuation');
 });
 
 it('supplements node and PDF results with valid uppercase boolean search', () => {
