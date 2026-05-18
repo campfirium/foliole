@@ -42,6 +42,10 @@ describe('markdownImageMatches', () => {
     ]);
   });
 
+  it('does not collect unsafe data url image sources', () => {
+    expect(collectImageMatches(0, '![Inline](data:text/html;base64,PGgxPk5vPC9oMT4=)')).toEqual([]);
+  });
+
   it('collects parser-backed image URLs without title suffixes', () => {
     expect(collectImageMatches(0, '![Cover](https://example.com/a.png "Title")')).toEqual([
       {

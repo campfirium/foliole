@@ -1,4 +1,5 @@
 import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
+import { isSafeMarkdownDataImageUrl } from '../../../../lib/platform/markdownImageDataUrl';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { collectMarkdownInlineRanges } from './markdownInlineProjection';
@@ -29,7 +30,12 @@ interface ParserImageMatch {
 function isBrowserImageSource(value: string) {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === 'data:' || parsed.protocol === 'file:' || parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    return (
+      isSafeMarkdownDataImageUrl(value) ||
+      parsed.protocol === 'file:' ||
+      parsed.protocol === 'http:' ||
+      parsed.protocol === 'https:'
+    );
   } catch {
     return false;
   }

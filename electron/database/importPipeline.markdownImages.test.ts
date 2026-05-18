@@ -66,6 +66,7 @@ async function createMarkdownImportFixture(rootDir: string) {
       'Obsidian image embed: ![[Pasted image 2026-03-30 100000.png]]',
       'Obsidian nested embed: ![[images/chart.webp|Chart alias]]',
       'Obsidian note embed: ![[Linked note]]',
+      'Inline data image: ![Inline data](data:image/png;base64,cG5n)',
       'Remote image: ![Remote](https://example.com/remote.png)',
       'Missing image: ![Missing](missing.png)'
     ].join('\n')
@@ -94,6 +95,7 @@ function expectImportedMarkdownImageContent(nodeRow: { body_blob_data: string; b
   expect(nodeRow.content).toContain('![Pasted image 2026-03-30 100000](asset://');
   expect(nodeRow.content).toContain('![Chart alias](asset://');
   expect(nodeRow.content).toContain('![[Linked note]]');
+  expect(nodeRow.content).toContain('![Inline data](data:image/png;base64,cG5n)');
   expect(nodeRow.content).toContain('![Remote](https://example.com/remote.png)');
   expect(nodeRow.content).toContain('[Missing local image:');
   expect(nodeRow.content).toContain('asset://');

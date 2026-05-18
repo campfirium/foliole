@@ -50,6 +50,26 @@ describe('markdownImagePresentation', () => {
   it('builds data image render state for inline preview resources', () => {
     expectBrowserImagePlan('data:image/png;base64,abc123');
   });
+
+  it('does not build a browser image source for unsafe data resources', () => {
+    expect(
+      buildMarkdownImageRenderPlan({
+        attachmentId: null,
+        alt: 'Preview',
+        display: 'inline',
+        from: 0,
+        source: 'data:text/html;base64,PGgxPk5vPC9oMT4=',
+        to: 10
+      })
+    ).toEqual({
+      attachmentProtocolSrc: null,
+      browserImageSrc: null,
+      display: 'inline',
+      fallbackStatus: 'unavailable',
+      imageSrc: null,
+      isRemote: false
+    });
+  });
 });
 
 describe('markdownImagePresentation attachments', () => {
