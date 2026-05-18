@@ -6,8 +6,10 @@ import { type NodeListContextMenuController } from '../../features/nodes/compone
 import { useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
 import { buildNodeTree, buildVisibleNodeTreeRows, filterNodeTreeRowsByTitle } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import { WorkspaceTopicTreeRows } from './WorkspaceTopicTreeRows';
+import type { WorkspaceTopicTreeScrollPlacement } from './WorkspaceTopicTreeRows';
 
 export function renderWorkspaceTopicTreeBody(args: {
   activeNodeId: string | null;
@@ -20,7 +22,9 @@ export function renderWorkspaceTopicTreeBody(args: {
   onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
   onToggleCollapse: (nodeId: string) => void;
+  scrollPlacement?: WorkspaceTopicTreeScrollPlacement;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  scrollTargetNodeId?: string | null;
   selectedNodeIds: string[];
   visibleRows: ReturnType<typeof buildVisibleNodeTreeRows>;
 }) {
@@ -56,6 +60,7 @@ export function renderWorkspaceTopicTreeBody(args: {
           rows={args.visibleRows}
           scrollContainerRef={args.scrollContainerRef}
           selectedNodeIds={args.selectedNodeIds}
+          {...definedProps({ scrollPlacement: args.scrollPlacement, scrollTargetNodeId: args.scrollTargetNodeId })}
         />
       </NodeListStateSurface>
     </div>

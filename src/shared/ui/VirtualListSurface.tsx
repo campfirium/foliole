@@ -22,6 +22,7 @@ interface VirtualListSurfaceProps<TItem> {
   className?: string;
   enabled?: boolean;
   overscan?: number;
+  scrollAnchorIndex?: number | null;
   scrollToIndex?: number | null;
   threshold?: number;
 }
@@ -101,6 +102,7 @@ function renderVirtualItems<TItem>(
 function useComfortVirtualListScroll(args: {
   autoScroll: boolean;
   isVirtual: boolean;
+  scrollAnchorIndex: number | null | undefined;
   scrollElementRef: RefObject<HTMLElement | null>;
   scrollToIndex: number | null | undefined;
   scrollToKey: string | null;
@@ -117,6 +119,15 @@ function useComfortVirtualListScroll(args: {
       return;
     }
     appliedRequestRef.current = requestKey;
+    if (args.scrollAnchorIndex !== null && args.scrollAnchorIndex !== undefined && args.scrollAnchorIndex >= 0) {
+      const anchorItem = args.virtualizer.getVirtualItems().find((item) => item.index === args.scrollAnchorIndex);
+      if (anchorItem) {
+        args.virtualizer.scrollToOffset(anchorItem.start);
+        return;
+      }
+      args.virtualizer.scrollToIndex(args.scrollAnchorIndex, { align: 'start' });
+      return;
+    }
     const scrollElement = args.scrollElementRef.current;
     const virtualItem = args.virtualizer.getVirtualItems().find((item) => item.index === args.scrollToIndex);
     if (!scrollElement || !virtualItem) {
@@ -133,7 +144,7 @@ function useComfortVirtualListScroll(args: {
     if (nextScrollTop !== null) {
       args.virtualizer.scrollToOffset(nextScrollTop);
     }
-  }, [args.autoScroll, args.isVirtual, args.scrollElementRef, args.scrollToIndex, args.scrollToKey, args.virtualizer]);
+  }, [args.autoScroll, args.isVirtual, args.scrollAnchorIndex, args.scrollElementRef, args.scrollToIndex, args.scrollToKey, args.virtualizer]);
 }
 
 export function VirtualListSurface<TItem>({
@@ -145,6 +156,7 @@ export function VirtualListSurface<TItem>({
   items,
   overscan = DEFAULT_VIRTUAL_LIST_OVERSCAN,
   renderItem,
+  scrollAnchorIndex,
   scrollToIndex,
   scrollElementRef,
   threshold = DEFAULT_VIRTUAL_LIST_THRESHOLD
@@ -154,12 +166,15 @@ export function VirtualListSurface<TItem>({
   const rangeExtractor = useMemo(
     () => (range: Range) => {
       const indexes = defaultRangeExtractor(range);
-      if (scrollToIndex === null || scrollToIndex === undefined || scrollToIndex < 0) {
+      const pinnedIndexes = [scrollToIndex, scrollAnchorIndex].filter(
+        (index): index is number => index !== null && index !== undefined && index >= 0
+      );
+      if (pinnedIndexes.length === 0) {
         return indexes;
       }
-      return indexes.includes(scrollToIndex) ? indexes : [...indexes, scrollToIndex].sort((a, b) => a - b);
+      return [...new Set([...indexes, ...pinnedIndexes])].sort((a, b) => a - b);
     },
-    [scrollToIndex]
+    [scrollAnchorIndex, scrollToIndex]
   );
   const virtualizer = useVirtualizer({
     count: items.length,
@@ -177,7 +192,7 @@ export function VirtualListSurface<TItem>({
       ? getItemKey(items[scrollToIndex] as TItem)
       : null;
 
-  useComfortVirtualListScroll({ autoScroll, isVirtual, scrollElementRef, scrollToIndex, scrollToKey, virtualizer });
+  useComfortVirtualListScroll({ autoScroll, isVirtual, scrollAnchorIndex, scrollElementRef, scrollToIndex, scrollToKey, virtualizer });
 
   if (!isVirtual) {
     return renderStaticItems(items, estimateSize, getItemKey, renderItem);

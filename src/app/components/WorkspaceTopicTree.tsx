@@ -5,6 +5,7 @@ import { useNodeListContextMenu } from '../../features/nodes/components/NodeList
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
 import type { NodeListState, NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
@@ -19,6 +20,7 @@ import {
   buildTopicChildrenByParent,
   type TopicChildrenByParent
 } from './workspaceTopicTreeLazyRows';
+import { resolveWorkspaceTopicTreeReviewScroll } from './workspaceTopicTreeReviewScroll';
 import { useWorkspaceTopicTreeSelection } from './workspaceTopicTreeSelection';
 import { renderWorkspaceTopicTreeShell } from './WorkspaceTopicTreeShell';
 
@@ -28,6 +30,7 @@ export interface WorkspaceTopicTreeProps {
   childrenByParent?: TopicChildrenByParent;
   emptyStateDescription?: string;
   emptyStateTitle?: string;
+  forceVisibleNodeId?: string | null;
   itemIds: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
@@ -155,7 +158,8 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     itemIds: rootItemIds,
     nodeViewById,
     nodesById: props.nodesById,
-    sort: contentSort.sort
+    sort: contentSort.sort,
+    ...definedProps({ forceVisibleNodeId: props.forceVisibleNodeId })
   });
   return { contentSort, lazyModel, nodeViewById };
 }
@@ -172,6 +176,12 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
   });
   const hasCollapsedNodes = collapsibleNodeIds.length > 0 && collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId));
   const focusedRowIndex = focusedNodeId ? visibleRows.findIndex((row) => row.node.id === focusedNodeId) : -1;
+  const reviewScroll = resolveWorkspaceTopicTreeReviewScroll({
+    focusedNodeId,
+    forceVisibleNodeId: props.forceVisibleNodeId,
+    nodesById: props.nodesById,
+    rows: visibleRows
+  });
   const interaction = useWorkspaceTopicTreeInteraction({
     activeFolderId: props.activeFolderId,
     activeNodeId: focusedNodeId,
@@ -185,7 +195,9 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     activeFolderId: props.activeFolderId,
     focusedNodeId,
     focusedRowIndex,
+    placement: reviewScroll.placement,
     scrollContainerRef,
+    scrollNodeId: reviewScroll.scrollNodeId,
     visibleRowsLength: visibleRows.length
   });
 
@@ -199,6 +211,8 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     interaction,
     nodesById: props.nodesById,
     scrollContainerRef,
+    scrollPlacement: reviewScroll.placement,
+    scrollTargetNodeId: reviewScroll.scrollNodeId,
     searchQuery,
     setCollapsedNodeIds,
     setSearchQuery,

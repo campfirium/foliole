@@ -76,6 +76,7 @@ it('renders Readwise-managed external folders distinctly in the workspace node l
       ]}
       externalSelection={{ folderId: 'readwise-reader-import-articles', kind: 'folder' }}
       isExternalViewOpen={true}
+      isStudyMode={false}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       listNodesById={nodesById}
@@ -89,6 +90,7 @@ it('renders Readwise-managed external folders distinctly in the workspace node l
       onSelectNode={vi.fn()}
       onSelectNodeInVirtualView={vi.fn()}
       onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
       selectedTrashNodeId={null}
       trashedNodeIds={[]}
     />

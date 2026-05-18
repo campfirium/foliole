@@ -2,6 +2,7 @@ import type { Dispatch, RefObject, SetStateAction } from 'react';
 
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import type { useWorkspaceTopicTreeInteraction } from './WorkspaceTopicTree';
@@ -10,6 +11,7 @@ import {
   toggleCollapsedNode
 } from './workspaceTopicTreeContent';
 import { WorkspaceTopicTreeHeaderBridge } from './WorkspaceTopicTreeHeaderBridge';
+import type { WorkspaceTopicTreeScrollPlacement } from './WorkspaceTopicTreeRows';
 
 export function renderWorkspaceTopicTreeShell(args: {
   activeFolderId: string;
@@ -23,9 +25,11 @@ export function renderWorkspaceTopicTreeShell(args: {
   interaction: ReturnType<typeof useWorkspaceTopicTreeInteraction>;
   nodesById: WorkspaceListNodesById;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  scrollPlacement?: WorkspaceTopicTreeScrollPlacement;
   searchQuery: string;
   setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
   setSearchQuery: (value: string) => void;
+  scrollTargetNodeId?: string | null;
   visibleRows: NodeTreeRow[];
 }) {
   return (
@@ -53,7 +57,8 @@ export function renderWorkspaceTopicTreeShell(args: {
         onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, args.setCollapsedNodeIds),
         scrollContainerRef: args.scrollContainerRef,
         selectedNodeIds: args.interaction.topicTreeState.selectedNodeIds,
-        visibleRows: args.visibleRows
+        visibleRows: args.visibleRows,
+        ...definedProps({ scrollPlacement: args.scrollPlacement, scrollTargetNodeId: args.scrollTargetNodeId })
       })}
       {args.interaction.topicTreeMenu}
     </aside>

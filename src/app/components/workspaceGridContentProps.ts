@@ -69,6 +69,7 @@ function selectWorkspaceListAreaProps({
     externalFolders: props.externalLibrary.externalFolders,
     externalSelection: props.externalLibrary.externalSelection,
     isExternalViewOpen: props.externalLibrary.isExternalViewOpen,
+    isStudyMode: props.review.isStudyMode,
     isTrashViewOpen: props.trash.isTrashViewOpen,
     isVirtualViewOpen: props.virtualView.isVirtualViewOpen,
     listNodesById,
@@ -83,6 +84,7 @@ function selectWorkspaceListAreaProps({
     onSelectNode,
     onSelectNodeInVirtualView: props.navigation.onSelectNodeInVirtualView,
     onSelectTrashNode: props.trash.onSelectTrashNode,
+    reviewCurrentNodeId: props.review.reviewCurrentNodeId,
     selectedTrashNodeId: props.trash.selectedTrashNodeId,
     trashedNodeIds: props.trash.trashedNodeIds,
     ...definedProps({ isWorkspaceHydrated: props.layoutChrome.isWorkspaceHydrated })

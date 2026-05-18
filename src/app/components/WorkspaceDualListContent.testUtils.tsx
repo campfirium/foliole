@@ -57,6 +57,7 @@ export function renderWorkspaceContent(
       externalFolders={[]}
       externalSelection={{ kind: 'root' }}
       isExternalViewOpen={false}
+      isStudyMode={false}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       nodesById={simpleNodesById}
@@ -70,6 +71,7 @@ export function renderWorkspaceContent(
       onSelectNode={vi.fn()}
       onSelectNodeInVirtualView={vi.fn()}
       onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
       selectedTrashNodeId={null}
       trashedNodeIds={[]}
       {...overrides}

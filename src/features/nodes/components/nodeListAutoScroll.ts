@@ -41,4 +41,30 @@ export function scrollActiveTreeItemIntoView(container: HTMLElement | null, node
   const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
   container.scrollTop = Math.max(0, Math.min(targetTop, maxScrollTop));
 }
+
+export function scrollTreeItemToSecondVisibleRow(container: HTMLElement | null, nodeId: string | null) {
+  scrollTreeItemToVisibleRowOffset(container, nodeId, 1);
+}
+
+export function scrollTreeItemToNearbyVisibleRow(container: HTMLElement | null, nodeId: string | null) {
+  scrollTreeItemToVisibleRowOffset(container, nodeId, 2);
+}
+
+function scrollTreeItemToVisibleRowOffset(container: HTMLElement | null, nodeId: string | null, rowsBefore: number) {
+  if (!container || !nodeId) {
+    return;
+  }
+  const treeItems = Array.from(container.querySelectorAll<HTMLElement>('[role="treeitem"][data-node-id]'));
+  const itemIndex = treeItems.findIndex((treeItem) => treeItem.dataset.nodeId === nodeId);
+  if (itemIndex < 0) {
+    return;
+  }
+  const anchorItem = treeItems[Math.max(itemIndex - rowsBefore, 0)];
+  if (!anchorItem) {
+    return;
+  }
+  const { top } = resolveTreeItemPosition(container, anchorItem);
+  const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+  container.scrollTop = Math.max(0, Math.min(top, maxScrollTop));
+}
 const COMFORT_SCROLL_ANCHOR_RATIO = 0.38;
