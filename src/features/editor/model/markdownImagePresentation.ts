@@ -1,3 +1,5 @@
+import { isSafeMarkdownDataImageUrl } from '../../../../lib/platform/markdownImageDataUrl';
+
 import type { MarkdownImageMatch } from './markdownImageMatches';
 
 export interface MarkdownImageRenderPlan {
@@ -21,7 +23,7 @@ function isRemoteHttpImageSource(value: string) {
 function isInlineBrowserImageSource(value: string) {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === 'data:' || parsed.protocol === 'file:';
+    return isSafeMarkdownDataImageUrl(value) || parsed.protocol === 'file:';
   } catch {
     return false;
   }
