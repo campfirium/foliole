@@ -1,4 +1,9 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import {
+  loadOpenedExternalSearchFolder,
+  recordOpenedExternalDocument,
+  refreshOpenedExternalDocumentRows
+} from '../database/externalOpenedDocuments.js';
 import { rebuildExternalSearchIndexes } from '../database/externalSearchCache.js';
 import { pruneExternalSearchCache } from '../database/externalSearchCacheMaintenance.js';
 import {
@@ -13,7 +18,11 @@ import { asNullableString, asString } from './commandParsers.js';
 
 export function handleExternalSearchStorageCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadExternalSearchFolders) {
-    return [...loadExternalSearchFolders(), ...loadReadwiseExternalSearchFolders()];
+    return refreshOpenedExternalDocumentRows().then(() => [
+      ...loadExternalSearchFolders(),
+      ...[loadOpenedExternalSearchFolder()].filter((folder) => folder !== null),
+      ...loadReadwiseExternalSearchFolders()
+    ]);
   }
   if (command === NATIVE_COMMANDS.saveExternalSearchFolders) {
     const folders = Array.isArray(args.folders) ? args.folders : [];
@@ -30,6 +39,9 @@ export function handleExternalSearchStorageCommand(command: string, args: Record
   }
   if (command === NATIVE_COMMANDS.loadExternalSearchPreview) {
     return loadExternalSearchPreview(asString(args.absolute_path, 'absolute_path'));
+  }
+  if (command === NATIVE_COMMANDS.openExternalDocumentFile) {
+    return recordOpenedExternalDocument(asString(args.path, 'path'));
   }
   return undefined;
 }

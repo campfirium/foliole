@@ -16,9 +16,20 @@
     "electron-dist/**/*",
     "package.json"
   ],
+  "fileAssociations": [
+    {
+      "description": "Markdown document",
+      "ext": ["md", "markdown"],
+      "name": "Markdown Document",
+      "role": "Viewer"
+    }
+  ],
   "win": {
     "target": ["nsis"],
     "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "perMachine": true
   },
   "linux": {
     "target": ["AppImage"],

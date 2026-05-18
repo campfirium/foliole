@@ -36,6 +36,12 @@ export type NativeExternalSearchCommandMap = {
     };
     result: NativeExternalSearchPreview | null;
   };
+  [NATIVE_COMMANDS.openExternalDocumentFile]: {
+    args: {
+      path: string;
+    };
+    result: NativeExternalSearchBrowseEntry | null;
+  };
   [NATIVE_COMMANDS.importExternalSearchDocument]: {
     args: {
       absolute_path: string;

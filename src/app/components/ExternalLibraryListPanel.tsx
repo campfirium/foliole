@@ -187,6 +187,7 @@ function renderExternalDocumentRow(args: {
       label={args.document.title}
       nodeId={args.document.absolutePath}
       rowSpacing={args.rowSpacing}
+      secondaryLabel={args.document.isPresent === false ? 'Archived' : undefined}
       showIcon={false}
       onKeyDown={args.onRowKeyDown}
       onSelect={() => openExternalDocumentSelection(args.document.absolutePath, [args.document], args.onOpenExternalSelection)}

@@ -4,6 +4,8 @@ export interface ExternalLibraryBrowseEntry {
   fileName: string;
   folderId: string;
   importedNodeId?: string | null;
+  isPresent?: boolean | undefined;
+  lastOpenedAt?: string | null;
   modifiedAt: string;
   openingText: string | null;
   relativePath: string;
