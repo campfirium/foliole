@@ -122,7 +122,7 @@ describe('companionReadableArticle title slot', () => {
     expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-2')?.contentPaddingTop).toBe(titleSlot);
   });
 
-  it('does not reserve title space for visible headings or nested EPUB-style child topics', () => {
+  it('does not reserve title space for visible headings and keeps it for titleless child topics', () => {
     const snapshot = createExplicitArticleSnapshot();
     snapshot.nodesById['node-1'] = {
       ...snapshot.nodesById['node-1']!,
@@ -134,8 +134,9 @@ describe('companionReadableArticle title slot', () => {
       parentNodeId: 'node-1'
     };
 
+    const titleSlot = 'calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))';
     expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')?.contentPaddingTop).toBeUndefined();
-    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-2')?.contentPaddingTop).toBeUndefined();
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-2')?.contentPaddingTop).toBe(titleSlot);
   });
 });
 
@@ -191,6 +192,6 @@ describe('companionReadableArticle anchors', () => {
 
     const result = resolveReadableCompanionArticleByNodeId(snapshot, 'node-1');
 
-    expect(result?.textAnchorDecorations).toEqual([{ from: 8, kind: 'highlight', to: 12 }]);
+    expect(result?.textAnchorDecorations).toEqual([{ from: 9, kind: 'highlight', nodeId: 'node-highlight', to: 13 }]);
   });
 });

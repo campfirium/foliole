@@ -28,10 +28,6 @@ function resolveVisibleContentStart(content: string) {
   return normalized.slice(4 + closingMatch.index + closingMatch[0].length).trimStart();
 }
 
-function isInboxLikeNode(node: NodeTitleSlotNode | undefined) {
-  return node?.specialKind === 'inbox' || node?.id === 'special-inbox';
-}
-
 export function shouldReserveNodeTitleSlot<T extends NodeTitleSlotNode>(
   args: {
     content: string;
@@ -44,11 +40,5 @@ export function shouldReserveNodeTitleSlot<T extends NodeTitleSlotNode>(
   if (!args.node || hasVisibleTitleHeading(args.content, args.hideTitleHeading)) {
     return false;
   }
-  const parentNode = args.node.parentNodeId ? args.nodesById[args.node.parentNodeId] : undefined;
-  const isPrimaryTopic = args.node.kind === 'topic' && (
-    args.node.parentNodeId === null ||
-    isInboxLikeNode(parentNode) ||
-    Boolean(args.isPrimaryTopic?.(args.node, args.nodesById))
-  );
-  return Boolean(args.node.anchorLink) || isPrimaryTopic;
+  return true;
 }
