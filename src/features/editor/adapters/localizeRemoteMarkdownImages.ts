@@ -27,19 +27,76 @@ function isRemoteImageUrl(value: string) {
   }
 }
 
+function consumeLabelWhitespaceBefore(markdown: string, index: number) {
+  let cursor = index;
+  while (cursor > 0 && /\s/u.test(markdown[cursor - 1] ?? '')) {
+    cursor -= 1;
+  }
+  return cursor;
+}
+
+function consumeLabelWhitespaceAfter(markdown: string, index: number) {
+  let cursor = index;
+  while (cursor < markdown.length && /\s/u.test(markdown[cursor] ?? '')) {
+    cursor += 1;
+  }
+  return cursor;
+}
+
+function findWrappingLinkEnd(markdown: string, targetStart: number) {
+  let depth = 0;
+  for (let index = targetStart; index < markdown.length; index += 1) {
+    const character = markdown[index];
+    if (character === '\n') {
+      return -1;
+    }
+    if (character === '(') {
+      depth += 1;
+      continue;
+    }
+    if (character !== ')') {
+      continue;
+    }
+    if (depth === 0) {
+      return index + 1;
+    }
+    depth -= 1;
+  }
+  return -1;
+}
+
+function resolveImageOnlyWrappingLink(markdown: string, reference: { end: number; start: number }) {
+  const labelStart = consumeLabelWhitespaceBefore(markdown, reference.start);
+  const labelEnd = consumeLabelWhitespaceAfter(markdown, reference.end);
+  if (markdown[labelStart - 1] !== '[' || markdown[labelEnd] !== ']' || markdown[labelEnd + 1] !== '(') {
+    return null;
+  }
+  const linkEnd = findWrappingLinkEnd(markdown, labelEnd + 2);
+  if (linkEnd < 0) {
+    return null;
+  }
+  return {
+    from: labelStart - 1,
+    to: linkEnd
+  };
+}
+
 function collectRemoteMarkdownImages(markdown: string) {
   const matches: MarkdownImageToken[] = [];
 
   for (const reference of collectMarkdownImageReferences(markdown)) {
     const parsedTarget = parseMarkdownImageTarget(reference.rawTarget);
     if (parsedTarget && isRemoteImageUrl(parsedTarget.destination)) {
+      const wrappingLink = resolveImageOnlyWrappingLink(markdown, reference);
+      const from = wrappingLink?.from ?? reference.start;
+      const to = wrappingLink?.to ?? reference.end;
       matches.push({
         alt: reference.altText,
-        from: reference.start,
-        raw: reference.fullMatch,
+        from,
+        raw: markdown.slice(from, to),
         sourceUrl: parsedTarget.destination,
         suffix: parsedTarget.suffix,
-        to: reference.end
+        to
       });
     }
   }

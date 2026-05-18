@@ -54,6 +54,43 @@ describe('localizeRemoteMarkdownImages', () => {
   });
 });
 
+describe('localizeRemoteMarkdownImages wrapped links', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('replaces image-only wrapping links when localizing remote images', async () => {
+    importRemoteImageAttachment.mockResolvedValue({
+      status: 'imported',
+      attachment_id: 'hash-1',
+      original_name: 'cover.png'
+    });
+
+    await expect(
+      localizeRemoteMarkdownImages(
+        'node-1',
+        '[\n\n![](https://blogger.googleusercontent.com/img/a/cover)\n\n](https://blogger.googleusercontent.com/img/a/cover)'
+      )
+    ).resolves.toBe('![](asset://hash-1.png)');
+  });
+
+  it('keeps large wrapped remote images as clean standalone blocks before following text', async () => {
+    importRemoteImageAttachment.mockResolvedValue({
+      status: 'imported',
+      attachment_id: 'hash-1',
+      intrinsic_size: { height: 816, width: 1456 },
+      original_name: 'cover.png'
+    });
+
+    await expect(
+      localizeRemoteMarkdownImages(
+        'node-1',
+        '[\n\n![](https://blogger.googleusercontent.com/img/a/cover)\n\n](https://blogger.googleusercontent.com/img/a/cover)正文'
+      )
+    ).resolves.toBe('![](asset://hash-1.png)\n\n正文');
+  });
+});
+
 describe('localizeRemoteMarkdownImages failures and parser coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
