@@ -59,9 +59,10 @@ function persistImportedHighlightNodes(input: {
   importedAt: string;
   nodeId: string;
   prepared: PreparedImportRecord;
+  resetImportedStructure: boolean;
   matchedAnchoredHighlights: Array<PreparedImportHighlightRecord | ReturnType<typeof applyImportedHighlightAnchors>['highlights'][number]>;
 }) {
-  if (input.prepared.sourceProfile !== 'body_with_highlight_sidecar') {
+  if (input.prepared.sourceProfile !== 'body_with_highlight_sidecar' || input.resetImportedStructure) {
     replaceImportedHighlightNodes({
       driver: input.driver,
       highlights: input.matchedAnchoredHighlights as ReturnType<typeof applyImportedHighlightAnchors>['highlights'],
@@ -92,9 +93,12 @@ function finalizeImportRecord(driver: DatabaseDriver, record: PersistedImportRec
 function buildBaseImportRecord(
   existingSource: ImportSourceRow | null,
   existingNode: ExistingNodeRow | null,
-  prepared: PreparedImportRecord
+  prepared: PreparedImportRecord,
+  options: { forceUpdateExisting: boolean }
 ): { baseRecord: PersistedImportRecord; duplicateSemantic: PersistedImportRecord['duplicateSemantic'] } {
-  const duplicateSemantic = resolveDuplicateSemantic(existingSource, existingNode, prepared.contentFingerprint);
+  const duplicateSemantic = options.forceUpdateExisting
+    ? 'updated'
+    : resolveDuplicateSemantic(existingSource, existingNode, prepared.contentFingerprint);
   return {
     baseRecord: buildImportRecord(prepared, prepared.degradedReason ? 'degraded' : 'imported', duplicateSemantic, {
       degradedReason: prepared.degradedReason,
@@ -112,9 +116,10 @@ function resolvePreparedNodeId(input: {
   duplicateSemantic: PersistedImportRecord['duplicateSemantic'];
   existingNode: ExistingNodeRow | null;
   prepared: PreparedImportRecord;
+  resetImportedStructure: boolean;
 }) {
   if (input.duplicateSemantic === 'updated' && input.existingNode && !input.existingNode.deleted_at) {
-    if (input.prepared.sourceProfile === 'body_with_highlight_sidecar') {
+    if (input.prepared.sourceProfile === 'body_with_highlight_sidecar' && !input.resetImportedStructure) {
       return updateExistingReadwiseNode({
         driver: input.driver,
         existingNode: input.existingNode,
@@ -141,10 +146,14 @@ function resolvePreparedNodeId(input: {
   });
 }
 
-function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord) {
+function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord, options: RunPreparedImportOptions) {
   const existingSource = readExistingSource(driver, prepared.sourceFingerprint);
-  const existingNode = existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null;
-  const { baseRecord, duplicateSemantic } = buildBaseImportRecord(existingSource, existingNode, prepared);
+  const forcedExistingNode = options.forceUpdateExistingNodeId ? readExistingNode(driver, options.forceUpdateExistingNodeId) : null;
+  const existingNode = forcedExistingNode ?? (existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null);
+  const forceUpdateExisting = Boolean(forcedExistingNode && !forcedExistingNode.deleted_at);
+  const { baseRecord, duplicateSemantic } = buildBaseImportRecord(existingSource, existingNode, prepared, {
+    forceUpdateExisting
+  });
   if (duplicateSemantic === 'duplicate') {
     if (prepared.sourceProfile === 'body_with_highlight_sidecar' && existingNode && !existingNode.deleted_at) {
       updateExistingReadwiseNode({
@@ -173,7 +182,8 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     driver,
     duplicateSemantic,
     existingNode,
-    prepared
+    prepared,
+    resetImportedStructure: Boolean(options.resetImportedStructure)
   });
   persistImportedHighlightNodes({
     anchoredContent: anchoredImport.content,
@@ -182,13 +192,23 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     importedAt: baseRecord.importedAt,
     matchedAnchoredHighlights: anchoredImport.highlights,
     nodeId,
-    prepared
+    prepared,
+    resetImportedStructure: Boolean(options.resetImportedStructure)
   });
   return finalizeImportRecord(driver, { ...baseRecord, nodeId });
 }
 
-export function runPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord): PersistedImportRecord {
-  return driver.transaction(() => performPreparedImport(driver, prepared));
+export interface RunPreparedImportOptions {
+  forceUpdateExistingNodeId?: string;
+  resetImportedStructure?: boolean;
+}
+
+export function runPreparedImport(
+  driver: DatabaseDriver,
+  prepared: PreparedImportRecord,
+  options: RunPreparedImportOptions = {}
+): PersistedImportRecord {
+  return driver.transaction(() => performPreparedImport(driver, prepared, options));
 }
 
 export function recordPreparedImportFailure(

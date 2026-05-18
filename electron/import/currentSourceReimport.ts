@@ -1,15 +1,12 @@
 import type { NativeDevReimportCurrentTopicSourceResult } from '../../lib/platform/nativeImportContract.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { runPreparedImport } from '../database/importPipeline.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 
+import { processSearchIndexForKeepImportSource } from './keepImportIndexingProgress.js';
 import { buildKeepImportSourceDescriptor, resolveKeepImportRuleConfig } from './keepImportManualSource.js';
-import { runSingleKeepImportSource } from './keepImportRunSource.js';
-
-function readLatestNodeId(ruleId: string, sourcePath: string) {
-  return openDatabaseConnection().sqlite
-    .prepare('SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?')
-    .get(ruleId, sourcePath) as { last_node_id: string | null } | undefined;
-}
+import { loadPreparedKeepImportRecord, resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
+import { persistKeepImportState } from './keepImportServiceState.js';
+import { resolveKeepImportResultDetail, resolveKeepImportResultStatus } from './keepImportSourceUpdateState.js';
 
 export async function reimportCurrentTopicSource(nodeId: string): Promise<NativeDevReimportCurrentTopicSourceResult> {
   const reimportedAt = new Date().toISOString();
@@ -34,19 +31,30 @@ export async function reimportCurrentTopicSource(nodeId: string): Promise<Native
   }
   try {
     const source = await buildKeepImportSourceDescriptor(config, item.source_path);
-    const result = await runSingleKeepImportSource(config, source, { forceTopicImport: true });
-    const latest = readLatestNodeId(item.rule_id, source.sourceName);
-    if (result.importStatus === 'failed' || !latest?.last_node_id) {
+    const sourceSignature = await resolveKeepImportSourceSignature(config, source);
+    const prepared = await loadPreparedKeepImportRecord(config, source, reimportedAt);
+    const record = runPreparedImport(prepared, {
+      forceUpdateExistingNodeId: details.sourceNodeId,
+      resetImportedStructure: true
+    });
+    const indexedRecord = processSearchIndexForKeepImportSource({
+      onProgress: undefined,
+      record,
+      sourceName: source.sourceName
+    });
+    const importStatus = resolveKeepImportResultStatus(indexedRecord);
+    persistKeepImportState(config, source, sourceSignature, indexedRecord, importStatus, false);
+    if (indexedRecord.resultStatus === 'failed' || !indexedRecord.nodeId) {
       return {
-        detail: result.detail ?? 'Re-import did not update a topic.',
-        node_id: latest?.last_node_id ?? null,
+        detail: indexedRecord.failureReason ?? 'Re-import did not update a topic.',
+        node_id: indexedRecord.nodeId,
         reimported_at: reimportedAt,
         status: 'failed'
       };
     }
     return {
-      detail: result.detail,
-      node_id: latest.last_node_id,
+      detail: resolveKeepImportResultDetail(indexedRecord, importStatus),
+      node_id: indexedRecord.nodeId,
       reimported_at: reimportedAt,
       status: 'reimported'
     };

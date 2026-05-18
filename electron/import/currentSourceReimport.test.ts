@@ -104,6 +104,51 @@ it('reimports an updated keep source into the same active topic', async () => {
   });
 });
 
+it('overwrites local article edits even when the source file is unchanged', async () => {
+  await fs.writeFile(path.join(tempRoot, 'entry.md'), '# Entry\n\nSource body\n', 'utf8');
+  saveGenericKeepSettings(tempRoot);
+
+  await runKeepImportRule({
+    directoryPath: tempRoot,
+    highlightPolicy: 'adopt',
+    ruleId: 'draft-import-source-401'
+  });
+
+  const connection = openDatabaseConnection();
+  const first = connection.sqlite
+    .prepare(`SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?`)
+    .get('draft-import-source-401', 'entry.md') as { last_node_id: string };
+
+  connection.sqlite
+    .prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?')
+    .run('# Entry\n\nEdited in app\n', new Date().toISOString(), first.last_node_id);
+
+  const result = await reimportCurrentTopicSource(first.last_node_id);
+  const node = connection.sqlite
+    .prepare('SELECT content, deleted_at FROM nodes WHERE id = ?')
+    .get(first.last_node_id) as { content: string; deleted_at: string | null };
+  const latestRun = connection.sqlite
+    .prepare(
+      `SELECT duplicate_semantic, node_id, result_status
+       FROM import_runs
+       WHERE node_id = ?
+       ORDER BY imported_at DESC
+       LIMIT 1`
+    )
+    .get(first.last_node_id);
+
+  expect(result).toMatchObject({
+    node_id: first.last_node_id,
+    status: 'reimported'
+  });
+  expect(node).toEqual({ content: '# Entry\n\nSource body\n', deleted_at: null });
+  expect(latestRun).toMatchObject({
+    duplicate_semantic: 'updated',
+    node_id: first.last_node_id,
+    result_status: 'imported'
+  });
+});
+
 it('does not reimport a topic without an active keep source', async () => {
   const result = await reimportCurrentTopicSource('missing-node');
 

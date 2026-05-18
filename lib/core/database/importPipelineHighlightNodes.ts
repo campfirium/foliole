@@ -15,8 +15,8 @@ function isImportedAnchorLink(value: string | null) {
     return false;
   }
   try {
-    const parsed = JSON.parse(value) as { origin?: unknown };
-    return parsed?.origin === 'imported';
+    const parsed = JSON.parse(value) as { id?: unknown; origin?: unknown };
+    return parsed?.origin === 'imported' || (typeof parsed?.id === 'string' && parsed.id.startsWith('imported-highlight-'));
   } catch {
     return false;
   }
