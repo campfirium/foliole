@@ -63,6 +63,8 @@ export function DocumentPanelContextMenu({
       onExportImage={onExportImage}
       selectionPayload={contextMenu.payload}
       top={contextMenu.top}
+      webLookupDocumentText={contextMenu.webLookupDocumentText}
+      webLookupPayload={contextMenu.webLookupPayload}
     />
   );
 }

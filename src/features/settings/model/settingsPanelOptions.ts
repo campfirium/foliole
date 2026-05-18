@@ -11,6 +11,7 @@ export type SettingsCategoryId =
   | 'external-search'
   | 'mouse-gestures'
   | 'rail'
+  | 'web-lookup'
   | 'appearance'
   | 'library'
   | 'import'
@@ -22,6 +23,7 @@ export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCateg
   { id: 'about', label: 'General', description: 'View version, diagnostics, and support tools.' },
   { id: 'appearance', label: 'Appearance', description: 'Adjust the look and density of the workspace.' },
   { id: 'editor', label: 'Editor', description: 'Configure editing and writing behavior.' },
+  { id: 'web-lookup', label: 'Right-click menu', description: 'Configure external menu items for Topic text.' },
   { id: 'review', label: 'Review', description: 'Tune the scheduler and review queue.' },
   { id: 'rail', label: 'Action bar', description: 'Choose which workspace actions are shown.' },
   { id: 'hotkeys', label: 'Hotkeys', description: 'Customize keyboard shortcuts.' },
@@ -37,7 +39,7 @@ export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCateg
 export const SETTINGS_CATEGORY_GROUPS: Array<{ categoryIds: SettingsCategoryId[]; label: string }> = [
   {
     label: 'Workspace',
-    categoryIds: ['about', 'appearance', 'editor', 'review', 'hotkeys', 'mouse-gestures', 'rail']
+    categoryIds: ['about', 'appearance', 'editor', 'web-lookup', 'review', 'hotkeys', 'mouse-gestures', 'rail']
   },
   {
     label: 'Storage',

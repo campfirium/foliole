@@ -43,6 +43,8 @@ export interface WorkspaceEditorContextMenu {
   notePanelTop?: number;
   payload?: SelectionCommandPayload | null;
   top: number;
+  webLookupDocumentText?: string | null;
+  webLookupPayload?: SelectionCommandPayload | null;
 }
 
 export interface WorkspaceLayoutFlatProps {

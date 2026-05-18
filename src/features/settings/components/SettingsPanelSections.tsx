@@ -22,6 +22,7 @@ import { SettingsImportSection } from './sections/SettingsImportSection';
 import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSection';
 import { SettingsRailSection } from './sections/SettingsRailSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
+import { SettingsWebLookupSection } from './sections/SettingsWebLookupSection';
 
 import { cn } from '@/shared/lib/utils';
 import { AppButton, AppPanel } from '@/shared/ui';
@@ -197,6 +198,8 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
   switch (props.activeCategory) {
     case 'editor':
       return <SettingsEditorSection />;
+    case 'web-lookup':
+      return <SettingsWebLookupSection />;
     case 'appearance':
       return <SettingsAppearanceSection onEnterPreview={props.onEnterPreview} />;
     case 'rail':
