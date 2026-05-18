@@ -102,13 +102,32 @@ describe('live markdown remote image rendering', () => {
 
     await waitFor(() => {
       const status = host.querySelector('.cm-md-image-status[data-md-image-status="unavailable"]');
-      expect(status?.textContent).toContain("Image couldn't load");
-      expect(status?.textContent).toContain('Retry');
+      expect(status?.textContent).toContain('Image unavailable');
+      expect(host.querySelector('.cm-md-image-status-frame')).not.toBeNull();
+      expect(host.querySelector('.cm-md-image-status-frame-glyph')).not.toBeNull();
+      expect(status?.textContent).toContain('example.com');
+      expect(status?.textContent).toContain('/missing.png');
+      expect(host.querySelector('button[aria-label="Retry"]')).not.toBeNull();
+      expect(host.querySelector('button[aria-label="Add source"]')).not.toBeNull();
+      expect(host.querySelector('button[aria-label="Remove"]')).not.toBeNull();
       expect(status?.textContent).not.toContain('Copy image URL');
-      expect(status?.textContent).toContain('Use the image menu to provide the source website.');
     });
 
     adapter.destroy();
+  });
+
+});
+
+describe('live markdown remote image retry action', () => {
+  beforeEach(() => {
+    resetRemoteImageFailureHintDismissalForTests();
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'true');
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    window.localStorage.clear();
   });
 
   it('adds a retry nonce when retrying a failed remote image from source', async () => {
@@ -116,9 +135,9 @@ describe('live markdown remote image rendering', () => {
 
     getRemoteImage(host)?.dispatchEvent(new Event('error'));
     await waitFor(() => {
-      expect(host.querySelector('.cm-md-image-status-action')).not.toBeNull();
+      expect(host.querySelector('button[aria-label="Retry"]')).not.toBeNull();
     });
-    (host.querySelector('.cm-md-image-status-action') as HTMLButtonElement | null)?.click();
+    (host.querySelector('button[aria-label="Retry"]') as HTMLButtonElement | null)?.click();
 
     const src = await waitForRemoteImageSrc(host);
     expect(new URL(src).searchParams.get('retry')).toBeTruthy();

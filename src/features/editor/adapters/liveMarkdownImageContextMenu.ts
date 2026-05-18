@@ -6,6 +6,7 @@ interface RemoteImageFailureContextMenuOptions {
   left: number;
   onForgetLearnedSource: () => void;
   onProvideSourceWebsite: () => void;
+  onRemoveImage?: (() => void) | null;
   onRetry: () => void;
   top: number;
 }
@@ -49,7 +50,10 @@ export function openRemoteImageFailureContextMenu(options: RemoteImageFailureCon
   overlay.className = 'fixed inset-0 z-workspace-overlay';
   overlay.setAttribute('aria-hidden', 'true');
   overlay.addEventListener('pointerdown', closeActiveRemoteImageFailureMenu);
-  overlay.addEventListener('contextmenu', (event) => event.preventDefault());
+  overlay.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
 
   const menu = document.createElement('div');
   const position = clampMenuPosition(options.left, options.top);
@@ -57,11 +61,17 @@ export function openRemoteImageFailureContextMenu(options: RemoteImageFailureCon
   menu.role = 'menu';
   menu.style.left = `${position.left}px`;
   menu.style.top = `${position.top}px`;
-  menu.addEventListener('contextmenu', (event) => event.preventDefault());
+  menu.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
   const items = [
     createMenuItem('Retry', options.onRetry),
-    createMenuItem('Provide source website', options.onProvideSourceWebsite)
+    createMenuItem('Add source', options.onProvideSourceWebsite)
   ];
+  if (options.onRemoveImage) {
+    items.push(createMenuItem('Remove', options.onRemoveImage));
+  }
   if (options.canForgetLearnedSource) {
     items.push(createMenuItem('Forget learned source for this site', options.onForgetLearnedSource));
   }

@@ -42,9 +42,32 @@ class MarkdownImageWidget extends WidgetType {
       this.imageMatch,
       this.editorNodeId,
       this.onMissingAttachmentResource,
-      () => view.requestMeasure()
+      () => view.requestMeasure(),
+      () => removeMarkdownImage(view, this.imageMatch)
     );
   }
+}
+
+function resolveMarkdownImageRemovalRange(view: EditorView, imageMatch: MarkdownImageMatch) {
+  const line = view.state.doc.lineAt(imageMatch.from);
+  const lineText = line.text;
+  const imageText = view.state.doc.sliceString(imageMatch.from, imageMatch.to);
+  if (lineText.trim() !== imageText.trim()) {
+    return { from: imageMatch.from, to: imageMatch.to };
+  }
+
+  const from = line.from === 0 ? line.from : line.from - 1;
+  const to = line.to < view.state.doc.length ? line.to + 1 : line.to;
+  return { from, to };
+}
+
+function removeMarkdownImage(view: EditorView, imageMatch: MarkdownImageMatch) {
+  const range = resolveMarkdownImageRemovalRange(view, imageMatch);
+  view.dispatch({
+    changes: { from: range.from, to: range.to, insert: '' },
+    selection: { anchor: range.from }
+  });
+  view.requestMeasure();
 }
 
 export function addImageDecorations(
