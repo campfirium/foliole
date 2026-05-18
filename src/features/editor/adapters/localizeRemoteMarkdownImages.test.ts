@@ -52,6 +52,22 @@ describe('localizeRemoteMarkdownImages', () => {
       localizeRemoteMarkdownImages('node-1', 'Before\n\n![Cover](https://example.com/cover.png)\n\nafter')
     ).resolves.toBe('Before\n\n![Cover](asset://hash-1.png)\n\nafter');
   });
+
+  it('joins consecutive localized small remote images into one inline run', async () => {
+    importRemoteImageAttachment.mockImplementation(async (_nodeId: string, sourceUrl: string) => ({
+      status: 'imported',
+      attachment_id: sourceUrl.includes('up') ? 'hash-up' : sourceUrl.includes('dots') ? 'hash-dots' : 'hash-down',
+      intrinsic_size: { height: 64, width: 64 },
+      original_name: 'icon.png'
+    }));
+
+    await expect(
+      localizeRemoteMarkdownImages(
+        'node-1',
+        '![Up](https://example.com/up.png)\n![Dots](https://example.com/dots.png)\n![Down](https://example.com/down.png)'
+      )
+    ).resolves.toBe('![Up](asset://hash-up.png) ![Dots](asset://hash-dots.png) ![Down](asset://hash-down.png)');
+  });
 });
 
 describe('localizeRemoteMarkdownImages wrapped links', () => {

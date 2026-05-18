@@ -110,9 +110,14 @@ function buildLocalizedMarkdownImage(token: MarkdownImageToken, attachmentId: st
 }
 
 const LARGE_IMAGE_MIN_WIDTH = 320;
+const SMALL_IMAGE_MAX_SIDE = 128;
 
 function isLargeImage(size: { height: number; width: number } | null | undefined) {
   return Boolean(size && size.width >= LARGE_IMAGE_MIN_WIDTH);
+}
+
+function isSmallImage(size: { height: number; width: number } | null | undefined) {
+  return Boolean(size && size.width <= SMALL_IMAGE_MAX_SIDE && size.height <= SMALL_IMAGE_MAX_SIDE);
 }
 
 function findLineStart(text: string, index: number) {
@@ -135,12 +140,19 @@ function consumeInlineWhitespace(text: string, index: number) {
 function layoutLocalizedMarkdownImage(input: {
   imageMarkdown: string;
   markdown: string;
+  previousLocalizedImageWasSmall: boolean;
   range: MarkdownImageToken;
   size: { height: number; width: number } | null | undefined;
   textBeforeImage: string;
 }) {
+  if (isSmallImage(input.size)) {
+    const before =
+      input.previousLocalizedImageWasSmall && input.textBeforeImage.trim().length === 0 ? ' ' : input.textBeforeImage;
+    return { before, cursor: input.range.to, image: input.imageMarkdown, isSmall: true };
+  }
+
   if (!isLargeImage(input.size)) {
-    return { before: input.textBeforeImage, cursor: input.range.to, image: input.imageMarkdown };
+    return { before: input.textBeforeImage, cursor: input.range.to, image: input.imageMarkdown, isSmall: false };
   }
 
   const lineStart = findLineStart(input.markdown, input.range.from);
@@ -148,13 +160,14 @@ function layoutLocalizedMarkdownImage(input: {
   const hasTextBefore = input.markdown.slice(lineStart, input.range.from).trim().length > 0;
   const hasTextAfter = input.markdown.slice(input.range.to, lineEnd).trim().length > 0;
   if (!hasTextBefore && !hasTextAfter) {
-    return { before: input.textBeforeImage, cursor: input.range.to, image: input.imageMarkdown };
+    return { before: input.textBeforeImage, cursor: input.range.to, image: input.imageMarkdown, isSmall: false };
   }
 
   return {
     before: hasTextBefore ? `${input.textBeforeImage.replace(/[ \t]+$/u, '')}\n\n` : input.textBeforeImage,
     cursor: hasTextAfter ? consumeInlineWhitespace(input.markdown, input.range.to) : input.range.to,
-    image: hasTextAfter ? `${input.imageMarkdown}\n\n` : input.imageMarkdown
+    image: hasTextAfter ? `${input.imageMarkdown}\n\n` : input.imageMarkdown,
+    isSmall: false
   };
 }
 
@@ -175,6 +188,7 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
   >();
   let localized = '';
   let cursor = 0;
+  let previousLocalizedImageWasSmall = false;
 
   for (const match of matches) {
     if (!resultByUrl.has(match.sourceUrl)) {
@@ -197,6 +211,7 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
       const layout = layoutLocalizedMarkdownImage({
         imageMarkdown: buildLocalizedMarkdownImage(match, localization.attachmentId, localization.originalName),
         markdown,
+        previousLocalizedImageWasSmall,
         range: match,
         size: localization.intrinsicSize,
         textBeforeImage: markdown.slice(cursor, match.from)
@@ -204,10 +219,12 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
       localized += layout.before;
       localized += layout.image;
       cursor = layout.cursor;
+      previousLocalizedImageWasSmall = layout.isSmall;
     } else {
       localized += markdown.slice(cursor, match.from);
       localized += match.raw;
       cursor = match.to;
+      previousLocalizedImageWasSmall = false;
     }
   }
 
