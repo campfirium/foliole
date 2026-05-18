@@ -80,12 +80,13 @@ describe('documentPanelSectionModel', () => {
     expect(getDocumentPanelView(buildProps({ editorContent: '**# Node 1**\nBody' }), 'preview', 860).bodyProps.editorContentPaddingTop).toBeUndefined();
   });
 
-  it('reserves title space only for derived cards and top-level topics', () => {
+  it('reserves title space for every node without a visible title heading', () => {
     const inboxNode: Node = { ...baseNode, id: 'special-inbox', kind: 'folder', specialKind: 'inbox' };
     expect(shouldReserveTitleSlot({ ...baseNode, anchorLink: { id: 'a1', kind: 'highlight' } }, {}, 'Body only', false)).toBe(true);
     expect(shouldReserveTitleSlot({ ...baseNode, parentNodeId: null, kind: 'topic' }, {}, 'Body only', false)).toBe(true);
     expect(shouldReserveTitleSlot({ ...baseNode, parentNodeId: 'special-inbox', kind: 'topic' }, { 'special-inbox': inboxNode }, 'Body only', false)).toBe(true);
-    expect(shouldReserveTitleSlot({ ...baseNode, parentNodeId: 'book-1', kind: 'topic' }, {}, 'Body only', false)).toBe(false);
+    expect(shouldReserveTitleSlot({ ...baseNode, parentNodeId: 'book-1', kind: 'topic' }, {}, 'Body only', false)).toBe(true);
+    expect(shouldReserveTitleSlot({ ...baseNode, parentNodeId: 'book-1', kind: 'topic' }, {}, '# Visible title\nBody', false)).toBe(false);
   });
 
   it('adds a reader end cushion only to single-pane preview documents', () => {
