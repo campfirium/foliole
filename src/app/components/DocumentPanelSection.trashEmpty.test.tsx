@@ -78,3 +78,32 @@ it('offers permanent delete for the current trash directory list', () => {
 
   expect(deleteNodesPermanently).toHaveBeenCalledWith(['folder']);
 });
+
+it('shows a Trash breadcrumb and Restore action for a selected deleted topic', () => {
+  const restoreNode = vi.fn();
+  const onSelectNode = vi.fn();
+  useWorkspaceStore.setState((state) => ({ ...state, restoreNode }));
+
+  renderSectionWithProps({
+    activeNodeId: 'topic',
+    editorNodeId: 'topic',
+    editorContent: '# Deleted topic',
+    isEditorReadOnly: true,
+    isTrashViewOpen: true,
+    isWorkspaceHydrated: true,
+    nodeOrder: ['folder', 'topic'],
+    nodesById: {
+      folder: { ...baseNode, id: 'folder', kind: 'folder', title: 'Original folder' },
+      topic: { ...baseNode, id: 'topic', parentNodeId: 'folder', title: 'Deleted topic' }
+    },
+    onSelectNode,
+    trashedNodeIds: ['topic']
+  });
+
+  expect(screen.getByRole('button', { name: 'Trash' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Original folder' })).toBeNull();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+  expect(restoreNode).toHaveBeenCalledWith('topic');
+  expect(onSelectNode).toHaveBeenCalledWith('topic');
+});
