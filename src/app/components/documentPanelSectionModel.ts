@@ -11,6 +11,8 @@ import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 
 export { hasVisibleTitleHeading } from '../../shared/lib/nodeTitleSlot';
 
+const READER_END_CUSHION_PADDING = 'clamp(calc(var(--workspace-bottom-toolbar-height) + 1.5rem), 36dvh, 26rem)';
+
 function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNode: Node | undefined) {
   if (props.isWorkspaceHydrated === false) {
     return {
@@ -87,14 +89,17 @@ function getDocumentPanelState(
     : false;
   const shouldFitItemImages = shouldCheckItemImages && (hasPromptImage || hasAnswerImage);
 
+  const hasAnswerSection = Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && showAnswerSection);
+  const shouldUseReaderEndCushion = !emptyState && !hasAnswerSection && editorDisplayMode === 'preview';
+
   return {
     answerSectionMode: shouldFitItemImages ? 'balanced' : 'fixed',
     documentStatus: startupState.documentStatus,
-    editorContentPaddingBottom: undefined,
+    editorContentPaddingBottom: shouldUseReaderEndCushion ? READER_END_CUSHION_PADDING : undefined,
     loadingLabel: startupState.loadingLabel,
     emptyState,
     fitBlockImagesToViewport: shouldFitItemImages,
-    hasAnswerSection: Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && showAnswerSection),
+    hasAnswerSection,
     reveal
   } as const;
 }

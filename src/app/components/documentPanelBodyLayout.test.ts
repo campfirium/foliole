@@ -8,7 +8,7 @@ const editorLifecycle = vi.hoisted(() => ({
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { nodeId: string | null; trailingDivider?: boolean }) => {
+  MarkdownEditor: (props: { contentPaddingBottom?: string; nodeId: string | null; trailingDivider?: boolean }) => {
     useEffect(() => {
       editorLifecycle.mountedNodeIds.push(props.nodeId ?? 'none');
       return () => {
@@ -17,6 +17,7 @@ vi.mock('../../features/editor/components/MarkdownEditor', () => ({
     }, [props.nodeId]);
     return createElement('div', {
       'data-testid': `editor-${props.nodeId ?? 'none'}`,
+      'data-content-padding-bottom': props.contentPaddingBottom,
       'data-trailing-divider': props.trailingDivider ? 'true' : 'false'
     });
   }
@@ -110,5 +111,18 @@ describe('renderDocumentPanelBodyLayout', () => {
 
     expect(view.container.querySelector('[aria-hidden="true"]')).toBeNull();
     expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-trailing-divider', 'true');
+  });
+
+  it('passes the reader end cushion only to the prompt editor', () => {
+    const view = render(
+      renderDocumentPanelBodyLayout(createLayoutProps({
+        editorContentPaddingBottom: 'clamp(6rem, 36dvh, 26rem)',
+        hasAnswerSection: true,
+        reveal: 'Beta'
+      }))
+    );
+
+    expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-content-padding-bottom', 'clamp(6rem, 36dvh, 26rem)');
+    expect(view.getByTestId('editor-node-1::answer')).not.toHaveAttribute('data-content-padding-bottom');
   });
 });

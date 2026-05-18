@@ -87,4 +87,24 @@ describe('documentPanelSectionModel', () => {
     expect(shouldReserveTitleSlot({ ...baseNode, parentNodeId: 'special-inbox', kind: 'topic' }, { 'special-inbox': inboxNode }, 'Body only', false)).toBe(true);
     expect(shouldReserveTitleSlot({ ...baseNode, parentNodeId: 'book-1', kind: 'topic' }, {}, 'Body only', false)).toBe(false);
   });
+
+  it('adds a reader end cushion only to single-pane preview documents', () => {
+    const loadedNode: Node = { ...baseNode, content: '# Node 1' };
+    const preview = getDocumentPanelView(buildProps({ nodesById: { 'node-1': loadedNode } }), 'preview', 860).bodyProps;
+    expect(preview.editorContentPaddingBottom).toBe('clamp(calc(var(--workspace-bottom-toolbar-height) + 1.5rem), 36dvh, 26rem)');
+
+    const source = getDocumentPanelView(buildProps({ nodesById: { 'node-1': loadedNode } }), 'source', 860).bodyProps;
+    expect(source.editorContentPaddingBottom).toBeUndefined();
+
+    const answerNode: Node = { ...loadedNode, reveal: 'Back' };
+    const withAnswer = getDocumentPanelView(
+      buildProps({
+        nodesById: { 'node-1': answerNode },
+        showAnswerSection: true
+      }),
+      'preview',
+      860
+    ).bodyProps;
+    expect(withAnswer.editorContentPaddingBottom).toBeUndefined();
+  });
 });
