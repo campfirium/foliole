@@ -4,6 +4,7 @@ import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
+import { type ExistingNodeRow, type ImportSourceRow, resolveExistingImportTarget } from './importPipelineExistingTarget.js';
 import { replaceImportedHighlightNodes } from './importPipelineHighlightNodes.js';
 import { updateExistingNode, writeNewNode } from './importPipelineNodes.js';
 import {
@@ -15,41 +16,9 @@ import {
 import { updateExistingReadwiseNode } from './importReadwiseHighlightBackfill.js';
 import { resolveReadwiseHighlightUpdate } from './importReadwiseHighlightUpdates.js';
 
-interface ImportSourceRow {
-  [column: string]: unknown;
-  latest_node_id: string | null;
-  last_content_fingerprint: string;
-}
-
-interface ExistingNodeRow {
-  [column: string]: unknown;
-  content: string;
-  created_at: string;
-  deleted_at: string | null;
-  id: string;
-  parent_id: string | null;
-}
-
-function readExistingSource(driver: DatabaseDriver, sourceFingerprint: string) {
-  return (
-    driver.queryOne<ImportSourceRow>(
-      `SELECT latest_node_id, last_content_fingerprint
-       FROM import_sources
-       WHERE source_fingerprint = ?`,
-      [sourceFingerprint]
-    ) ?? null
-  );
-}
-
-function readExistingNode(driver: DatabaseDriver, nodeId: string) {
-  return (
-    driver.queryOne<ExistingNodeRow>(
-      `SELECT n.id, n.parent_id, n.content, n.created_at, n.deleted_at
-       FROM nodes n
-       WHERE n.id = ?`,
-      [nodeId]
-    ) ?? null
-  );
+export interface RunPreparedImportOptions {
+  forceUpdateExistingNodeId?: string;
+  resetImportedStructure?: boolean;
 }
 
 function persistImportedHighlightNodes(input: {
@@ -103,7 +72,7 @@ function buildBaseImportRecord(
     baseRecord: buildImportRecord(prepared, prepared.degradedReason ? 'degraded' : 'imported', duplicateSemantic, {
       degradedReason: prepared.degradedReason,
       failureReason: null,
-      nodeId: duplicateSemantic === 'new' ? null : existingSource?.latest_node_id ?? null
+      nodeId: duplicateSemantic === 'new' ? null : existingNode?.id ?? existingSource?.latest_node_id ?? null
     }),
     duplicateSemantic
   };
@@ -147,10 +116,11 @@ function resolvePreparedNodeId(input: {
 }
 
 function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord, options: RunPreparedImportOptions) {
-  const existingSource = readExistingSource(driver, prepared.sourceFingerprint);
-  const forcedExistingNode = options.forceUpdateExistingNodeId ? readExistingNode(driver, options.forceUpdateExistingNodeId) : null;
-  const existingNode = forcedExistingNode ?? (existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null);
-  const forceUpdateExisting = Boolean(forcedExistingNode && !forcedExistingNode.deleted_at);
+  const { existingNode, existingSource, forceUpdateExisting } = resolveExistingImportTarget(
+    driver,
+    prepared,
+    options.forceUpdateExistingNodeId
+  );
   const { baseRecord, duplicateSemantic } = buildBaseImportRecord(existingSource, existingNode, prepared, {
     forceUpdateExisting
   });
@@ -198,11 +168,6 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
   return finalizeImportRecord(driver, { ...baseRecord, nodeId });
 }
 
-export interface RunPreparedImportOptions {
-  forceUpdateExistingNodeId?: string;
-  resetImportedStructure?: boolean;
-}
-
 export function runPreparedImport(
   driver: DatabaseDriver,
   prepared: PreparedImportRecord,
@@ -217,13 +182,12 @@ export function recordPreparedImportFailure(
   failureReason: string
 ): PersistedImportRecord {
   return driver.transaction(() => {
-    const existingSource = readExistingSource(driver, prepared.sourceFingerprint);
-    const existingNode = existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null;
+    const { existingNode, existingSource } = resolveExistingImportTarget(driver, prepared);
     const duplicateSemantic = resolveDuplicateSemantic(existingSource, existingNode, prepared.contentFingerprint);
     const failedRecord = buildImportRecord(prepared, 'failed', duplicateSemantic, {
       degradedReason: null,
       failureReason,
-      nodeId: duplicateSemantic === 'new' ? null : existingSource?.latest_node_id ?? null
+      nodeId: duplicateSemantic === 'new' ? null : existingNode?.id ?? existingSource?.latest_node_id ?? null
     });
     writeImportSource(driver, failedRecord);
     writeImportEvent(driver, failedRecord);

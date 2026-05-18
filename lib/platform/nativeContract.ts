@@ -2,7 +2,7 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
 import type { NativeImportCommandMap } from './nativeImportCommandMap.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
-import type { NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec } from './nativeNodeMutationContract.js';
+import type { NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec, NativeRestoreNodesResult } from './nativeNodeMutationContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
 import type {
@@ -20,7 +20,7 @@ import type {
 import type { NativeSyncCommandMap } from './nativeSyncCommandMap.js';
 import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type { NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult, NativeSystemFontCatalog } from './nativeUtilityContract.js';
-export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js';
+export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeNodeMutationContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
 
 export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & {
@@ -195,7 +195,7 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
   };
   [NATIVE_COMMANDS.restoreNodes]: {
     args: { nodeIds: string[] };
-    result: null;
+    result: NativeRestoreNodesResult;
   };
   [NATIVE_COMMANDS.deleteNodesPermanently]: {
     args: { nodeIds: string[]; nodeOrder: string[] };

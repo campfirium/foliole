@@ -23,9 +23,9 @@ export function TrashDocumentRestoreAction({
   return restorableTrashNodeId
     ? (
         <DocumentRestoreAction
-          onRestore={() => {
-            restoreNode(restorableTrashNodeId);
-            onSelectNode(restorableTrashNodeId);
+          onRestore={async () => {
+            const targetNodeId = await restoreNode(restorableTrashNodeId);
+            onSelectNode(targetNodeId ?? restorableTrashNodeId);
           }}
         />
       )

@@ -32,11 +32,11 @@ describe('workspaceRuntimeSync persistence mutations', () => {
     expectNoWorkspacePersist(invoke);
   });
 
-  it('syncs restore mutations through restore_nodes command', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
+  it('syncs restore mutations through restore_nodes command', async () => {
+    const invoke = vi.fn().mockResolvedValue({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    syncRestoreNodesToRuntime({ nodeIds: ['node-1'] });
+    await syncRestoreNodesToRuntime({ nodeIds: ['node-1'] });
 
     expect(invoke).toHaveBeenCalledWith('restore_nodes', { nodeIds: ['node-1'] });
     expectNoWorkspacePersist(invoke);

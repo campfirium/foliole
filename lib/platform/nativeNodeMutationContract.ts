@@ -17,3 +17,11 @@ export type NativeNodeSnapshotBatchMutationSpec = {
   args: { parent: NativeNodeSnapshotArgs; affectedAnchors: NativeNodeAnchorUpdateArgs[] };
   result: null;
 };
+
+export interface NativeRestoreNodesResult {
+  restoredNodeIds: string[];
+  skippedConflicts: Array<{
+    liveNodeId: string;
+    trashNodeId: string;
+  }>;
+}

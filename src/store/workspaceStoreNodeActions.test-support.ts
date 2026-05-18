@@ -59,7 +59,7 @@ function createWorkspaceActionStubs() {
     deleteNode: () => undefined,
     deleteImageClozeRegion: () => undefined,
     deleteNodes: () => undefined,
-    restoreNode: () => undefined,
+    restoreNode: async () => null,
     deleteNodePermanently: () => undefined,
     deleteNodesPermanently: () => undefined,
     createRootNode: () => 'unused',
