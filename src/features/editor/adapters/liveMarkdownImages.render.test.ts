@@ -41,6 +41,7 @@ async function expectUnavailableInternalImage(host: HTMLElement) {
     const placeholder = host.querySelector('.cm-md-image-status[data-md-image-status="unavailable"]');
     expect(placeholder).not.toBeNull();
     expect(placeholder?.textContent).toContain('Image unavailable');
+    expect(placeholder?.querySelector('button[aria-label="Remove"]')).not.toBeNull();
   });
 }
 

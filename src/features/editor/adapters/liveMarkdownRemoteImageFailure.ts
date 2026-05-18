@@ -4,11 +4,6 @@ import {
   saveRemoteImageSourceWebsite
 } from '../../../shared/platform/remoteImageSourceRecovery';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
-import {
-  dismissRemoteImageFailureHintForSession,
-  dismissRemoteImageFailureHintPermanently,
-  shouldShowRemoteImageFailureHint
-} from '../model/remoteImageFailureHintSetting';
 
 import {
   openRemoteImageFailureContextMenu
@@ -19,6 +14,7 @@ import { createImageStatusElement } from './liveMarkdownImageStatus';
 interface RemoteImageFailureStatusOptions {
   editorNodeId: string | null;
   imageMatch: MarkdownImageMatch;
+  onRemoveImage?: (() => void) | null;
   onRetry: () => void;
   requestMeasure: RequestEditorMeasure;
 }
@@ -52,19 +48,14 @@ export function createRemoteImageFailureStatus(options: RemoteImageFailureStatus
         left: event.clientX,
         onForgetLearnedSource: forgetLearnedSource,
         onProvideSourceWebsite: provideSourceWebsite,
+        onRemoveImage: options.onRemoveImage ?? null,
         onRetry: options.onRetry,
         top: event.clientY
       });
     },
-    onDismissHint: () => {
-      dismissRemoteImageFailureHintForSession();
-      options.requestMeasure?.();
-    },
-    onDismissHintPermanently: () => {
-      dismissRemoteImageFailureHintPermanently();
-      options.requestMeasure?.();
-    },
+    onProvideSourceWebsite: provideSourceWebsite,
+    onRemoveImage: options.onRemoveImage ?? null,
     onRetry: options.onRetry,
-    showRecoveryHint: shouldShowRemoteImageFailureHint()
+    sourceUrl: options.imageMatch.source
   });
 }

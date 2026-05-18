@@ -18,6 +18,7 @@ import {
 } from './liveMarkdownImageElement';
 import { createImageStatusElement } from './liveMarkdownImageStatus';
 import { createRemoteImageFailureStatus } from './liveMarkdownRemoteImageFailure';
+import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
 
 function parseImageRange(value: number) {
   return Number.isInteger(value) && value >= 0 ? String(value) : '';
@@ -64,7 +65,8 @@ function appendLoadingImageSurface(
   imageMatch: MarkdownImageMatch,
   source: string,
   editorNodeId: string | null,
-  requestMeasure: RequestEditorMeasure
+  requestMeasure: RequestEditorMeasure,
+  onRemoveImage: (() => void) | null
 ) {
   wrapper.append(createImageStatusElement('loading', imageMatch.display));
   const surface = createImageSurface(imageMatch, source, editorNodeId, {
@@ -76,12 +78,13 @@ function appendLoadingImageSurface(
         const nextSource = buildRemoteRenderSource(imageMatch.source, editorNodeId, nextRetryKey);
         closeActiveRemoteImageFailureMenu();
         wrapper.replaceChildren();
-        appendLoadingImageSurface(wrapper, imageMatch, nextSource, editorNodeId, requestMeasure);
+        appendLoadingImageSurface(wrapper, imageMatch, nextSource, editorNodeId, requestMeasure, onRemoveImage);
         requestMeasure?.();
       };
       wrapper.replaceChildren(createRemoteImageFailureStatus({
         editorNodeId,
         imageMatch,
+        onRemoveImage,
         onRetry: retry,
         requestMeasure
       }));
@@ -123,7 +126,8 @@ function appendResolvedAndroidAttachmentImage(
   renderPlan: ReturnType<typeof buildMarkdownImageRenderPlan>,
   editorNodeId: string | null,
   onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null,
-  requestMeasure: RequestEditorMeasure
+  requestMeasure: RequestEditorMeasure,
+  onRemoveImage: (() => void) | null
 ) {
   wrapper.append(createImageStatusElement('loading', renderPlan.display));
   let didRetry = false;
@@ -135,7 +139,7 @@ function appendResolvedAndroidAttachmentImage(
         try {
           await onMissingAttachmentResource(imageMatch.attachmentId);
         } catch {
-          wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
+          wrapper.replaceChildren(createUnavailableImageStatus(imageMatch, onRemoveImage));
           requestMeasure?.();
           return;
         }
@@ -143,7 +147,7 @@ function appendResolvedAndroidAttachmentImage(
         await resolveImage();
         return;
       }
-      wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
+      wrapper.replaceChildren(createUnavailableImageStatus(imageMatch, onRemoveImage));
       requestMeasure?.();
       return;
     }
@@ -151,7 +155,7 @@ function appendResolvedAndroidAttachmentImage(
       createImageSurface(imageMatch, resolution.resource_url, editorNodeId, {
         onError: () => {
           closeActiveRemoteImageFailureMenu();
-          wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
+          wrapper.replaceChildren(createUnavailableImageStatus(imageMatch, onRemoveImage));
         },
         requestMeasure
       })
@@ -165,7 +169,8 @@ export function createMarkdownImageWidgetDom(
   imageMatch: MarkdownImageMatch,
   editorNodeId: string | null = null,
   onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null = null,
-  requestMeasure: RequestEditorMeasure = null
+  requestMeasure: RequestEditorMeasure = null,
+  onRemoveImage: (() => void) | null = null
 ) {
   const renderPlan = buildMarkdownImageRenderPlan(imageMatch);
   const wrapper = document.createElement('span');
@@ -178,7 +183,14 @@ export function createMarkdownImageWidgetDom(
   wrapper.dataset.mdImageTo = parseImageRange(imageMatch.to);
 
   if (renderPlan.isRemote && renderPlan.imageSrc) {
-    appendLoadingImageSurface(wrapper, imageMatch, buildRemoteRenderSource(renderPlan.imageSrc, editorNodeId), editorNodeId, requestMeasure);
+    appendLoadingImageSurface(
+      wrapper,
+      imageMatch,
+      buildRemoteRenderSource(renderPlan.imageSrc, editorNodeId),
+      editorNodeId,
+      requestMeasure,
+      onRemoveImage
+    );
     return wrapper;
   }
 
@@ -188,18 +200,18 @@ export function createMarkdownImageWidgetDom(
   }
 
   if (renderPlan.fallbackStatus) {
-    wrapper.append(createImageStatusElement(renderPlan.fallbackStatus, renderPlan.display));
+    wrapper.append(createUnavailableImageStatus(imageMatch, onRemoveImage));
     return wrapper;
   }
 
   const attachmentSrc = renderPlan.attachmentProtocolSrc;
   if (!attachmentSrc) {
-    wrapper.append(createImageStatusElement('unavailable', renderPlan.display));
+    wrapper.append(createUnavailableImageStatus(imageMatch, onRemoveImage));
     return wrapper;
   }
 
   if (isNativeAndroidCompanionRuntime()) {
-    appendResolvedAndroidAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource, requestMeasure);
+    appendResolvedAndroidAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource, requestMeasure, onRemoveImage);
     return wrapper;
   }
 
@@ -207,7 +219,7 @@ export function createMarkdownImageWidgetDom(
     createImageSurface(imageMatch, attachmentSrc, editorNodeId, {
       onError: () => {
         closeActiveRemoteImageFailureMenu();
-        wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
+        wrapper.replaceChildren(createUnavailableImageStatus(imageMatch, onRemoveImage));
       },
       requestMeasure
     })

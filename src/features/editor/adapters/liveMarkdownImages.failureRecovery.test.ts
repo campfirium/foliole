@@ -45,6 +45,11 @@ async function waitForFailedStatus(
   return host.querySelector(selector) as HTMLElement;
 }
 
+function clickStatusButton(host: HTMLElement, label: string) {
+  const button = host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+  button?.click();
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
   bridgeMock.forgetRemoteImageLearnedSource.mockReset().mockResolvedValue(true);
@@ -69,16 +74,20 @@ describe('live markdown remote image failure recovery menu', () => {
   it('opens a block failed image context menu and saves a source website for the current image', async () => {
     vi.spyOn(window, 'prompt').mockReturnValue('https://source.example/article?id=1');
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
+    const parentContextMenu = vi.fn();
+    host.addEventListener('contextmenu', parentContextMenu);
 
     getRemoteImage(host)?.dispatchEvent(new Event('error'));
     const status = await waitForFailedStatus(host);
-    const contextMenu = createEvent.contextMenu(status, { clientX: 28, clientY: 36 });
+    const contextMenu = createEvent.contextMenu(status, { bubbles: true, clientX: 28, clientY: 36 });
     fireEvent(status, contextMenu);
 
     await waitFor(() => {
-      expect(document.body.querySelector('[role="menu"]')?.textContent).toContain('Provide source website');
+      expect(document.body.querySelector('[role="menu"]')?.textContent).toContain('Add source');
+      expect(document.body.querySelector('[role="menu"]')?.textContent).toContain('Remove');
     });
     expect(contextMenu.defaultPrevented).toBe(true);
+    expect(parentContextMenu).not.toHaveBeenCalled();
     (document.body.querySelectorAll('[role="menuitem"]')[1] as HTMLButtonElement | undefined)?.click();
 
     await waitFor(() => {
@@ -110,7 +119,7 @@ describe('live markdown remote image failure recovery menu', () => {
     await waitFor(() => {
       expect(document.body.querySelector('[role="menu"]')?.textContent).toContain('Forget learned source for this site');
     });
-    (document.body.querySelectorAll('[role="menuitem"]')[2] as HTMLButtonElement | undefined)?.click();
+    (document.body.querySelectorAll('[role="menuitem"]')[3] as HTMLButtonElement | undefined)?.click();
 
     await waitFor(() => {
       expect(bridgeMock.forgetRemoteImageLearnedSource).toHaveBeenCalledWith('https://example.com/missing.png');
@@ -151,7 +160,7 @@ describe('live markdown remote image failure retry actions', () => {
     (document.body.querySelectorAll('[role="menuitem"]')[1] as HTMLButtonElement | undefined)?.click();
 
     await waitFor(() => {
-      expect(host.querySelector('.cm-md-image-status[data-md-image-status="unavailable"]')?.textContent).toContain("Image couldn't load");
+      expect(host.querySelector('.cm-md-image-status[data-md-image-status="unavailable"]')?.textContent).toContain('Image unavailable');
     });
     expect(bridgeMock.saveRemoteImageSourceWebsite).not.toHaveBeenCalled();
 
@@ -160,24 +169,47 @@ describe('live markdown remote image failure retry actions', () => {
 });
 
 describe('live markdown remote image failure recovery hint', () => {
-  it('persists the permanent failed image recovery hint dismissal', async () => {
+  it('uses the inline action bar instead of a separate recovery hint', async () => {
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/one.png)');
 
     getRemoteImage(host)?.dispatchEvent(new Event('error'));
-    await waitFor(() => {
-      expect(host.querySelector('.cm-md-image-recovery-hint')).not.toBeNull();
-    });
-    (host.querySelectorAll('.cm-md-image-recovery-hint .cm-md-image-status-action')[1] as HTMLButtonElement | undefined)?.click();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.remoteImageFailureHintDismissed)).toBe('true');
-
-    adapter.setContent('![Remote](https://example.com/two.png)');
-    await waitFor(() => {
-      expect(getRemoteImage(host)?.src).toContain('two.png');
-    });
-    getRemoteImage(host)?.dispatchEvent(new Event('error'));
-
     await waitForFailedStatus(host);
-    expect(host.querySelector('.cm-md-image-recovery-hint')).toBeNull();
+    expect(host.querySelector('.cm-md-image-status-tip')).toBeNull();
+    expect(host.querySelector('button[aria-label="Retry"]')).not.toBeNull();
+    expect(host.querySelector('button[aria-label="Add source"]')).not.toBeNull();
+    expect(host.querySelector('button[aria-label="Remove"]')).not.toBeNull();
+
+    adapter.destroy();
+  });
+
+  it('saves a source website from the visible recovery action', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValue('https://source.example/article');
+    const { adapter, host } = createAdapterHost('![Remote](https://example.com/one.png)');
+
+    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await waitForFailedStatus(host);
+    clickStatusButton(host, 'Add source');
+
+    await waitFor(() => {
+      expect(bridgeMock.saveRemoteImageSourceWebsite).toHaveBeenCalledWith(
+        'https://example.com/one.png',
+        'https://source.example/article'
+      );
+    });
+
+    adapter.destroy();
+  });
+
+  it('removes a failed image from the document when the visible remove action is used', async () => {
+    const { adapter, host } = createAdapterHost('Lead\n\n![Remote](https://example.com/one.png)\n\nTail');
+
+    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await waitForFailedStatus(host);
+    clickStatusButton(host, 'Remove');
+
+    await waitFor(() => {
+      expect(adapter.getContent()).toBe('Lead\n\nTail');
+    });
 
     adapter.destroy();
   });
