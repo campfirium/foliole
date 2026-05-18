@@ -39,7 +39,7 @@ export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function App
   return (
     <button
       className={cn(
-        'inline-flex shrink-0 items-center justify-center gap-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex shrink-0 items-center justify-center gap-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45',
         !isList && resolveSizeClass(size),
         resolveVariantClass(variant),
         active && isList && 'border border-border-strong bg-foreground/[0.05] text-foreground',
