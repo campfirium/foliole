@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode, RefObject } from 'react';
+import type { ComponentProps, RefObject } from 'react';
 
 import { ImageClozeCardView } from '../../features/image-cloze/components/ImageClozeCardView';
 import { isLegacyImageClozeNode } from '../../features/image-cloze/model/imageCloze';
@@ -6,42 +6,16 @@ import type { FolderListSortDirection, FolderListSortKey } from '../../features/
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
-import { AppSpinner } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { renderFolderSpecialContent } from './DocumentPanelFolderSpecialContent';
-import { resolvePdfDocumentSurface, renderPdfDocumentSurface } from './documentPanelPdfView';
+import { resolvePdfDocumentSurface } from './documentPanelPdfView';
+import { renderPdfOrBodyContent } from './DocumentPanelRegularContent';
 import { DocumentPanelTrashContent } from './DocumentPanelTrashContent';
-import { LinkPanelStack } from './LinkPanelStack';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import { VirtualDocumentSurface } from './VirtualDocumentSurface';
-
-function renderPdfLoadingSurface() {
-  return (
-    <section aria-label="PDF reader panel" className="workspace-region-main-document flex min-h-0 flex-1 flex-col" data-testid="pdf-document-loading-shell">
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <div
-          aria-busy="true"
-          aria-label="PDF reader progress"
-          className="workspace-region-main-document pointer-events-none absolute inset-0 z-workspace-overlay flex items-center justify-center"
-          role="status"
-        >
-          <AppSpinner decorative size="lg" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function renderDocumentBody(activeNodeId: string | null, bodyProps: ComponentProps<typeof DocumentPanelBody>) {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col" data-testid="document-panel-content-body">
-      <DocumentPanelBody {...bodyProps} />
-    </div>
-  );
-}
 
 function renderLegacyImageClozeContent(
   activeNode: Node,
@@ -55,74 +29,6 @@ function renderLegacyImageClozeContent(
       {pdfCache}
       <ImageClozeCardView editorAppearanceKey={editorAppearanceKey} node={activeNode} onAnswerChange={onAnswerChange} showAnswer={showAnswer} />
     </>
-  );
-}
-
-function renderPdfOrBodyShell(contentAreaRef: RefObject<HTMLDivElement | null>, pdfCache: JSX.Element, content: ReactNode, panelStack: JSX.Element) {
-  return (
-    <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef as ComponentProps<'div'>['ref']}>
-      {pdfCache}
-      {content}
-      {panelStack}
-    </div>
-  );
-}
-
-function renderPdfOrBodyContent(args: {
-  activeNodeId: string | null;
-  bodyProps: ComponentProps<typeof DocumentPanelBody>;
-  contentAreaRef: RefObject<HTMLDivElement | null>;
-  isActivePdfCachedVisible: boolean;
-  linkPanels: LinkPanelRecord[];
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
-  onCloseExternalLink: (panelId: string) => void;
-  onLinkPanelStateChange: (
-    panelId: string,
-    state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>
-  ) => void;
-  onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
-  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
-  pdfCache: JSX.Element;
-  pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
-  pdfHighlightLocators: PdfHighlightLocator[];
-  shouldHideEditorBodyDuringSourceLoad: boolean;
-}) {
-  const panelStack = (
-    <LinkPanelStack
-      anchorRootRef={args.contentAreaRef}
-      onClose={args.onCloseExternalLink}
-      onStateChange={args.onLinkPanelStateChange}
-      panels={args.linkPanels}
-    />
-  );
-
-  if (!args.pdfDocumentSurface) {
-    return renderPdfOrBodyShell(
-      args.contentAreaRef,
-      args.pdfCache,
-      args.shouldHideEditorBodyDuringSourceLoad ? renderPdfLoadingSurface() : renderDocumentBody(args.activeNodeId, args.bodyProps),
-      panelStack
-    );
-  }
-
-  if (args.pdfDocumentSurface.state === 'ready') {
-    return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, null, panelStack);
-  }
-
-  return renderPdfOrBodyShell(
-    args.contentAreaRef,
-    args.pdfCache,
-    !args.isActivePdfCachedVisible
-      ? renderPdfDocumentSurface(
-          args.pdfDocumentSurface,
-          { editorNodeId: args.bodyProps.editorNodeId, editorNodeViewState: args.bodyProps.editorNodeViewState },
-          args.pdfHighlightLocators,
-          args.onCreatePdfHighlight,
-          args.onPersistPdfViewState,
-          args.onOpenExternalLink
-        )
-      : null,
-    panelStack
   );
 }
 
@@ -170,16 +76,19 @@ export function resolveDocumentPanelContentBody(args: {
     bodyProps: args.bodyProps,
     contentAreaRef: args.contentAreaRef,
     isActivePdfCachedVisible: args.isActivePdfCachedVisible,
+    isTrashViewOpen: args.isTrashViewOpen,
     linkPanels: args.linkPanels,
     onCreatePdfHighlight: args.onCreatePdfHighlight,
     onCloseExternalLink: args.onCloseExternalLink,
     onLinkPanelStateChange: args.onLinkPanelStateChange,
     onOpenExternalLink: args.onOpenExternalLink,
     onPersistPdfViewState: args.onPersistPdfViewState,
+    onSelectNode: args.onSelectNode,
     pdfCache: args.pdfCache,
     pdfDocumentSurface: args.pdfDocumentSurface,
     pdfHighlightLocators: args.pdfHighlightLocators,
-    shouldHideEditorBodyDuringSourceLoad: args.shouldHideEditorBodyDuringSourceLoad
+    shouldHideEditorBodyDuringSourceLoad: args.shouldHideEditorBodyDuringSourceLoad,
+    trashedNodeIds: args.trashedNodeIds
   });
 }
 
