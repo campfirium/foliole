@@ -96,9 +96,9 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
   }
   if (command === NATIVE_COMMANDS.restoreNodes) {
     const parsed = parseRestoreNodesArgs(args);
-    restoreNodes(parsed);
-    scheduleMirrorSync(parsed.nodeIds);
-    return completeWorkspaceMutation();
+    const result = restoreNodes(parsed);
+    scheduleMirrorSync(result.restoredNodeIds);
+    return completeWorkspaceMutation(result);
   }
   if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
     const parsed = parseDeleteNodesPermanentlyArgs(args);

@@ -113,14 +113,14 @@ describe('createWorkspaceNodeActions soft delete sync', () => {
     });
   });
 
-  it('syncs restore command through runtime bridge', () => {
+  it('syncs restore command through runtime bridge', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const nodeId = actions.createChildNode('node-1', 'child');
 
     actions.deleteNode(nodeId);
     vi.clearAllMocks();
-    actions.restoreNode(nodeId);
+    await actions.restoreNode(nodeId);
 
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1);
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [nodeId] });
@@ -133,7 +133,7 @@ describe('createWorkspaceNodeActions trash root normalization sync', () => {
     vi.clearAllMocks();
   });
 
-  it('restores the highest trashed ancestor when a covered child is requested', () => {
+  it('restores the highest trashed ancestor when a covered child is requested', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const parentNodeId = actions.createRootNode('Folder', 'folder');
@@ -141,7 +141,7 @@ describe('createWorkspaceNodeActions trash root normalization sync', () => {
 
     actions.deleteNode(parentNodeId);
     vi.clearAllMocks();
-    actions.restoreNode(childNodeId);
+    await actions.restoreNode(childNodeId);
 
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1);
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [parentNodeId, childNodeId] });
@@ -155,7 +155,7 @@ describe('createWorkspaceNodeActions unresolved locator lifecycle sync', () => {
     vi.clearAllMocks();
   });
 
-  it('soft deletes and restores unresolved locator highlights without rewriting the parent document', () => {
+  it('soft deletes and restores unresolved locator highlights without rewriting the parent document', async () => {
     const { actions, harness } = createUnresolvedLocatorHighlightHarness();
 
     vi.clearAllMocks();
@@ -169,7 +169,7 @@ describe('createWorkspaceNodeActions unresolved locator lifecycle sync', () => {
     expectParentDocumentUntouched(harness);
 
     vi.clearAllMocks();
-    actions.restoreNode('node-highlight');
+    await actions.restoreNode('node-highlight');
 
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: ['node-highlight'] });

@@ -15,12 +15,15 @@ import {
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
 import { writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
+import { resolveRestoreNodesResult, type RestoreNodesResult } from './nodeRestoreConflicts.js';
 import { prepareNodeSearchInvalidationForUpsert } from './nodeSearchInvalidationForMutation.js';
 import {
   enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds,
   enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds
 } from './searchIndexInvalidations.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
+
+export type { RestoreNodesResult } from './nodeRestoreConflicts.js';
 
 interface NodeAnchorLinkPayload {
   id: string;
@@ -232,15 +235,17 @@ export function softDeleteNodes(driver: DatabaseDriver, input: SoftDeleteNodesIn
   });
 }
 
-export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): void {
+export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): RestoreNodesResult {
   const restoredAt = new Date().toISOString();
   const clearDeletedAtStatement = driver.prepare('UPDATE nodes SET deleted_at = NULL, updated_at = ? WHERE id = ?');
 
-  driver.transaction(() => {
-    for (const nodeId of input.nodeIds) {
+  return driver.transaction(() => {
+    const result = resolveRestoreNodesResult(driver, input.nodeIds);
+    for (const nodeId of result.restoredNodeIds) {
       clearDeletedAtStatement.run([restoredAt, nodeId]);
     }
-    enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds(driver, input.nodeIds);
+    enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds(driver, result.restoredNodeIds);
+    return result;
   });
 }
 

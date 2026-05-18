@@ -27,6 +27,7 @@ export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string, focusAnchor: NodeAnchorLink | null = null) => {
     args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
+    args.trash.closeTrashView();
     const activeNode = args.ws.activeNodeId ? args.ws.nodesById[args.ws.activeNodeId] : null;
     const inheritedParentAnchor =
       !focusAnchor && activeNode?.parentNodeId === nodeId ? activeNode.anchorLink ?? null : null;

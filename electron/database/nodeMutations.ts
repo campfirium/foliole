@@ -10,6 +10,7 @@ import {
 import type {
   DeleteNodesPermanentlyInput,
   RestoreNodesInput,
+  RestoreNodesResult,
   SoftDeleteNodesInput,
   UpdateNodeAnchorLinkInput,
   UpsertNodeSnapshotInput
@@ -28,6 +29,7 @@ import { withTransaction } from './transaction.js';
 export type {
   DeleteNodesPermanentlyInput,
   RestoreNodesInput,
+  RestoreNodesResult,
   SoftDeleteNodesInput,
   UpdateNodeAnchorLinkInput,
   UpsertNodeSnapshotInput
@@ -102,13 +104,13 @@ export function softDeleteNodes(input: SoftDeleteNodesInput): void {
   }
 }
 
-export function restoreNodes(input: RestoreNodesInput): void {
+export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {
   const connection = openDatabaseConnection();
   const now = new Date().toISOString();
   const deviceId = loadOrCreateDesktopDeviceId(now);
-  withTransaction(connection.driver, () => {
-    restoreNodesViaDriver(connection.driver, input);
-    for (const nodeId of input.nodeIds) {
+  return withTransaction(connection.driver, () => {
+    const result = restoreNodesViaDriver(connection.driver, input);
+    for (const nodeId of result.restoredNodeIds) {
       connection.driver.execute(
         `UPDATE nodes
          SET last_modified_by_device_id = ?, sync_dirty = 1
@@ -116,6 +118,7 @@ export function restoreNodes(input: RestoreNodesInput): void {
         [deviceId, nodeId]
       );
     }
+    return result;
   });
 }
 

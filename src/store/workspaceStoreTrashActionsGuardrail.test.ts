@@ -101,17 +101,18 @@ describe('workspace trash runtime guardrail', () => {
     expectCommandsOnly(invoke, 'soft_delete_nodes');
   });
 
-  it('restoreNode uses restore_nodes only and never save_workspace_state', () => {
+  it('restoreNode uses restore_nodes only and never save_workspace_state', async () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const seedNodeId = actions.createRootNode('');
     const childNodeId = actions.createChildNode(seedNodeId, 'child');
+    invoke.mockResolvedValue({ restoredNodeIds: [childNodeId], skippedConflicts: [] });
 
     actions.deleteNode(childNodeId);
     vi.clearAllMocks();
-    actions.restoreNode(childNodeId);
+    await actions.restoreNode(childNodeId);
 
     expectCommandsOnly(invoke, 'restore_nodes');
   });

@@ -180,7 +180,7 @@ it('creates image cloze item nodes with prompt context and reveal image content'
   expectCreatedImageClozeNodes(createdIds as string[]);
 });
 
-it('removes the topic image region when the linked image cloze item is deleted and restores it from the child node', () => {
+it('removes the topic image region when the linked image cloze item is deleted and restores it from the child node', async () => {
   const [createdId] = createImageClozeNodes();
   expect(createdId).toBeTruthy();
 
@@ -188,7 +188,7 @@ it('removes the topic image region when the linked image cloze item is deleted a
 
   expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toBeNull();
 
-  useWorkspaceStore.getState().restoreNode(createdId as string);
+  await useWorkspaceStore.getState().restoreNode(createdId as string);
 
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain(createdId as string);
 });

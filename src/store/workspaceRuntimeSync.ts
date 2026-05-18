@@ -15,6 +15,7 @@ import {
 import type {
   WorkspaceReadingProgressSavePayload,
   WorkspaceRelearnNodePayload,
+  WorkspaceRestoreNodesResult,
   WorkspaceReviewGradeSyncPayload,
   WorkspaceRuntimeNode,
   WorkspaceRuntimeNodeDocument
@@ -78,8 +79,8 @@ export function syncSoftDeleteNodesToRuntime(payload: { nodeIds: string[]; delet
   softDeleteWorkspaceNodes(payload);
 }
 
-export function syncRestoreNodesToRuntime(payload: { nodeIds: string[] }) {
-  restoreWorkspaceNodes(payload);
+export async function syncRestoreNodesToRuntime(payload: { nodeIds: string[] }): Promise<WorkspaceRestoreNodesResult> {
+  return restoreWorkspaceNodes(payload);
 }
 
 export function syncDeleteNodesPermanentlyToRuntime(payload: { nodeIds: string[]; nodeOrder: string[] }) {

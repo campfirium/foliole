@@ -5,6 +5,7 @@ import type {
   NativeNodeSnapshotArgs,
   NativeReadingProgressSnapshot,
   NativeRelearnNodeArgs,
+  NativeRestoreNodesResult,
   NativeSaveReadingProgressArgs,
   NativeWorkspaceSnapshot
 } from '../../../lib/platform/nativeContract';
@@ -41,6 +42,7 @@ export interface WorkspaceRuntimeNodeDocument {
 export type WorkspaceRuntimeNodeSnapshot = NativeNodeSnapshotArgs;
 export type WorkspaceRuntimeSnapshot = NativeWorkspaceSnapshot;
 export type WorkspaceReadingProgressSnapshot = NativeReadingProgressSnapshot;
+export type WorkspaceRestoreNodesResult = NativeRestoreNodesResult;
 export type WorkspaceReadingProgressSavePayload = NativeSaveReadingProgressArgs;
 export type WorkspaceReviewGradeSyncPayload = NativeApplyReviewGradeArgs;
 export type WorkspaceRelearnNodePayload = NativeRelearnNodeArgs;

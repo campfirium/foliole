@@ -65,7 +65,7 @@ export interface WorkspaceState {
   deleteNode: (nodeId: string) => void;
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   deleteNodes: (nodeIds: string[]) => void;
-  restoreNode: (nodeId: string) => void;
+  restoreNode: (nodeId: string) => Promise<string | null>;
   deleteNodePermanently: (nodeId: string) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   createRootNode: (content?: string, kind?: NodeKind) => string;

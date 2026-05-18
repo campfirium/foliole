@@ -65,7 +65,10 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
     updatedAt: '2026-03-06T00:05:00.000Z'
   })
 }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./boot.js', () => ({
+  appendBootEvent: vi.fn(),
+  bootReport: vi.fn().mockResolvedValue(undefined)
+}));
 vi.mock('./review.js', () => ({
   reviewGrade: vi.fn().mockReturnValue({ reviewed_at: '2026-03-04T00:00:00.000Z', card: {} })
 }));
@@ -79,6 +82,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockWindow.isMaximized.mockReturnValue(false);
   vi.mocked(deleteNodesPermanently).mockReturnValue([]);
+  vi.mocked(restoreNodes).mockReturnValue({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
 });
 
 it('handles node mutation commands', async () => {
@@ -197,7 +201,7 @@ it('handles restore node command', async () => {
         nodeIds: ['node-1']
       }
     })
-  ).resolves.toBeNull();
+  ).resolves.toEqual({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
 
   expect(restoreNodes).toHaveBeenCalledWith({
     nodeIds: ['node-1']

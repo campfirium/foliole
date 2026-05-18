@@ -118,7 +118,7 @@ function createNodeMutationDebugApi(): Pick<
     restoreNode: async (nodeId) => {
       const state = getExistingNodeState(nodeId);
       if (!state) return false;
-      state.restoreNode(nodeId);
+      await state.restoreNode(nodeId);
       return true;
     },
     updateNodeContent: async (nodeId, content) => {

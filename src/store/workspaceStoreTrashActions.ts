@@ -1,10 +1,9 @@
 import { isImageClozeLocator, removeImageClozeRegion } from '../features/image-cloze/model/imageCloze';
 
-import { collectNodeSubtreeIds } from './workspaceHelpers';
-import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import { createRestoreNodeAction, type RestoreNodeRuntimeHandlers } from './workspaceStoreRestoreAction';
 import { computeDeleteNodesMutation, computeDeleteNodesPermanentlyMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
-import { collectDeleteActionTargets, collectTrashRootActionTargets } from './workspaceTrashMutationTargets';
+import { collectDeleteActionTargets } from './workspaceTrashMutationTargets';
 
 type WorkspaceSet = (
   partial:
@@ -26,7 +25,7 @@ type WorkspaceTrashActions = Pick<
 interface TrashRuntimeHandlers {
   syncNodeContent: DeleteNodeSyncHandlers['syncNodeContent'];
   syncSoftDeleteNodes: DeleteNodeSyncHandlers['syncSoftDeleteNodes'];
-  syncRestoreNodes: (payload: { nodeIds: string[] }) => void;
+  syncRestoreNodes: RestoreNodeRuntimeHandlers['syncRestoreNodes'];
   syncDeleteNodesPermanently: DeleteNodeSyncHandlers['syncDeleteNodesPermanently'];
 }
 
@@ -207,44 +206,6 @@ function createDeleteImageClozeRegionAction(
     if (updatedParentNode) {
       runtimeHandlers.syncNodeContent(updatedParentNode);
     }
-  };
-}
-
-function createRestoreNodeAction(set: WorkspaceSet, runtimeHandlers: TrashRuntimeHandlers): WorkspaceTrashActions['restoreNode'] {
-  return (nodeId) => {
-    let idsToRestoreForSync: string[] = [];
-
-    set((state) => {
-      const rootNodeId = collectTrashRootActionTargets(state, [nodeId])[0];
-      if (!rootNodeId) {
-        return state;
-      }
-      idsToRestoreForSync = collectNodeSubtreeIds(rootNodeId, state.nodesById);
-      const idsToRestoreSet = new Set(idsToRestoreForSync);
-      const nextTrashedNodeIds = state.trashedNodeIds.filter((id) => !idsToRestoreSet.has(id));
-      const nextTrashedNodeDeletedAtById = { ...state.trashedNodeDeletedAtById };
-      idsToRestoreForSync.forEach((id) => {
-        delete nextTrashedNodeDeletedAtById[id];
-      });
-      const nextActiveNodeId = state.activeNodeId ?? rootNodeId;
-      const nextState = {
-        ...state,
-        activeNodeId: nextActiveNodeId,
-        trashedNodeDeletedAtById: nextTrashedNodeDeletedAtById,
-        trashedNodeIds: nextTrashedNodeIds
-      };
-      return {
-        activeNodeId: nextActiveNodeId,
-        reviewSession: reconcileReviewSession(nextState, nextActiveNodeId),
-        trashedNodeDeletedAtById: nextTrashedNodeDeletedAtById,
-        trashedNodeIds: nextTrashedNodeIds
-      };
-    });
-
-    if (idsToRestoreForSync.length === 0) {
-      return;
-    }
-    runtimeHandlers.syncRestoreNodes({ nodeIds: idsToRestoreForSync });
   };
 }
 
