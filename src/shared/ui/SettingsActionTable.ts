@@ -22,7 +22,7 @@ export function settingsActionTableRowClassName(columnsClassName: string, classN
 export function settingsActionTableAddButtonClassName(className?: string) {
   return cn(
     'col-span-full flex h-9 items-center justify-center gap-2 rounded-md border border-dashed border-settings-control-border bg-transparent text-sm text-foreground/60 transition-colors',
-    'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+    'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45',
     className
   );
 }

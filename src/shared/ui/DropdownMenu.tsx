@@ -111,7 +111,7 @@ function AppSelectionDropdownMenuItem({
     <button
       className={cn(
         dropdownMenuItemClassName(className),
-        'w-full text-left hover:bg-[var(--app-selection-surface-color)] disabled:pointer-events-none disabled:opacity-50'
+        'w-full text-left hover:bg-[var(--app-selection-surface-color)] disabled:pointer-events-none disabled:opacity-45'
       )}
       onMouseDown={(event) => {
         preventFocusSteal(event);

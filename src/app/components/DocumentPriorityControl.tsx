@@ -11,7 +11,7 @@ import {
 } from '../../shared/ui';
 
 const PRIORITY_TRIGGER_CLASS =
-  'inline-flex h-6 min-w-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-1.5 text-sm font-medium leading-none text-foreground/45 transition-colors hover:border-border/60 hover:bg-foreground/[0.04] hover:text-foreground/70 data-[state=open]:border-border/70 data-[state=open]:bg-foreground/[0.05] data-[state=open]:text-foreground/75 disabled:cursor-default disabled:opacity-55';
+  'inline-flex h-6 min-w-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-1.5 text-sm font-medium leading-none text-foreground/45 transition-colors hover:border-border/60 hover:bg-foreground/[0.04] hover:text-foreground/70 data-[state=open]:border-border/70 data-[state=open]:bg-foreground/[0.05] data-[state=open]:text-foreground/75 disabled:cursor-default disabled:opacity-45';
 
 function describePrioritySource(source: 'explicit' | 'inherited' | 'default', value: number, shortcutLabel?: string) {
   const suffix = shortcutLabel ? ` Shortcut ${shortcutLabel}.` : '';

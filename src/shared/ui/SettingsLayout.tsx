@@ -1,23 +1,11 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { cn } from '@/shared/lib/utils';
 
-interface SettingsSectionProps {
-  actions?: ReactNode;
-  ariaLabel?: string;
-  children: ReactNode;
-  className?: string;
-  description?: string;
-  title?: string;
-}
-
-interface SettingsRowProps extends HTMLAttributes<HTMLDivElement> {
-  children?: ReactNode;
-  className?: string;
-  description?: ReactNode;
-  readonly?: boolean;
-  title: string;
-}
+export { SettingsSection } from './SettingsSection';
+export type { SettingsSectionProps } from './SettingsSection';
+export { SettingsRow } from './SettingsRow';
+export type { SettingsRowProps } from './SettingsRow';
 
 export const SETTINGS_BUTTON_WIDTH_CLASS_NAME = '';
 export const SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME = 'w-36';
@@ -83,7 +71,7 @@ export function settingsFieldClassName(className?: string) {
     'h-9 w-full min-w-0 rounded-md border border-settings-control-border bg-settings-control px-3 text-sm text-foreground transition-colors',
     'hover:border-settings-control-border-hover hover:bg-settings-control-hover',
     'focus-visible:border-settings-control-border-hover focus-visible:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-    'disabled:cursor-not-allowed disabled:opacity-50',
+    'disabled:cursor-not-allowed disabled:opacity-45',
     className
   );
 }
@@ -93,7 +81,7 @@ export function settingsButtonClassName(className?: string) {
     'inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-settings-control-border bg-settings-control px-3 text-sm text-foreground/88 transition-colors',
     'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground',
     'active:bg-settings-control-active focus-visible:border-settings-control-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-    'disabled:pointer-events-none disabled:opacity-50',
+    'disabled:pointer-events-none disabled:opacity-45',
     className
   );
 }
@@ -106,7 +94,7 @@ export function settingsSwitchClassName(active: boolean, className?: string) {
   return cn(
     'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors',
     active ? 'bg-settings-switch-on' : 'bg-settings-switch-off',
-    'hover:brightness-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+    'hover:brightness-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45',
     className
   );
 }
@@ -174,39 +162,6 @@ export function settingsValueBoxClassName(className?: string) {
   return cn('rounded-md border border-transparent bg-settings-control px-3 py-2 text-sm text-foreground/75', className);
 }
 
-export function SettingsSection({
-  actions,
-  ariaLabel,
-  children,
-  className,
-  description,
-  title
-}: SettingsSectionProps) {
-  const hasHeader = Boolean(title || description || actions);
-
-  return (
-    <section aria-label={ariaLabel} className={cn('mb-8 space-y-3 last:mb-0', className)}>
-      {hasHeader ? (
-        <div className="flex items-start justify-between gap-4 px-5">
-          <div className="min-w-0">
-            {title ? <h3 className="text-[0.95rem] font-semibold text-foreground">{title}</h3> : null}
-            {description ? <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{description}</p> : null}
-          </div>
-          {actions ? <div className="shrink-0">{actions}</div> : null}
-        </div>
-      ) : null}
-      <div
-        className={cn(
-          'overflow-hidden rounded-md bg-settings-group',
-          '[&>[data-settings-row]+[data-settings-row]]:before:block'
-        )}
-      >
-        {children}
-      </div>
-    </section>
-  );
-}
-
 export function SettingsGroup({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
@@ -215,33 +170,6 @@ export function SettingsGroup({ children, className }: { children: ReactNode; cl
         className
       )}
     >
-      {children}
-    </div>
-  );
-}
-
-export function SettingsRow({
-  children,
-  className,
-  description,
-  readonly = false,
-  title,
-  ...rest
-}: SettingsRowProps) {
-  return (
-    <div
-      className={cn(
-        'relative flex min-h-[82px] items-start justify-between gap-6 px-5 py-5 before:absolute before:left-5 before:right-5 before:top-0 before:hidden before:border-t before:border-settings-divider/55 first:before:hidden max-[1080px]:flex-col max-[1080px]:items-start',
-        readonly && 'text-foreground/80',
-        className
-      )}
-      data-settings-row
-      {...rest}
-    >
-      <div className="min-w-0 flex-1">
-        <h4 className="text-[0.95rem] font-normal text-foreground">{title}</h4>
-        {description ? <p className="mt-0.5 text-sm text-foreground/65">{description}</p> : null}
-      </div>
       {children}
     </div>
   );

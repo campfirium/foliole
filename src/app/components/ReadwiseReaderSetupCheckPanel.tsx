@@ -29,7 +29,7 @@ export function ReadwiseIntegrationSwitch(props: {
     <button
       aria-checked={props.enabled}
       aria-label="Readwise import"
-      className="inline-flex items-center gap-2 rounded-md text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex items-center gap-2 rounded-md text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45"
       disabled={props.disabled}
       onClick={props.onToggle}
       role="switch"
