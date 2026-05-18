@@ -35,7 +35,7 @@ export interface WorkspacePdfCrossPageSearchRow extends DatabaseRow {
 }
 
 export const MAX_RESULTS = 40;
-const VISIBLE_NODES_CTE_SQL = `WITH RECURSIVE visible_nodes(id) AS (
+export const VISIBLE_NODES_CTE_SQL = `WITH RECURSIVE visible_nodes(id) AS (
   SELECT id
   FROM nodes
   WHERE parent_id IS NULL
