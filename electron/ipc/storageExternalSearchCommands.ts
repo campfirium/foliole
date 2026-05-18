@@ -16,20 +16,24 @@ import { notifyExternalSearchFoldersChanged } from '../externalSearchBackgroundR
 
 import { asNullableString, asString } from './commandParsers.js';
 
+function appendManagedExternalSearchFolders(savedFolders: ReturnType<typeof loadExternalSearchFolders>) {
+  return [
+    ...savedFolders,
+    ...[loadOpenedExternalSearchFolder()].filter((folder) => folder !== null),
+    ...loadReadwiseExternalSearchFolders()
+  ];
+}
+
 export function handleExternalSearchStorageCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadExternalSearchFolders) {
-    return refreshOpenedExternalDocumentRows().then(() => [
-      ...loadExternalSearchFolders(),
-      ...[loadOpenedExternalSearchFolder()].filter((folder) => folder !== null),
-      ...loadReadwiseExternalSearchFolders()
-    ]);
+    return refreshOpenedExternalDocumentRows().then(() => appendManagedExternalSearchFolders(loadExternalSearchFolders()));
   }
   if (command === NATIVE_COMMANDS.saveExternalSearchFolders) {
     const folders = Array.isArray(args.folders) ? args.folders : [];
     const savedFolders = saveExternalSearchFolders(folders as Parameters<typeof saveExternalSearchFolders>[0]);
     pruneExternalSearchCache(savedFolders.map((folder) => folder.id));
     notifyExternalSearchFoldersChanged();
-    return [...savedFolders, ...loadReadwiseExternalSearchFolders()];
+    return appendManagedExternalSearchFolders(savedFolders);
   }
   if (command === NATIVE_COMMANDS.rebuildExternalSearchIndex) {
     return rebuildExternalSearchIndexes(asNullableString(args.folder_id, 'folder_id') ?? undefined);
