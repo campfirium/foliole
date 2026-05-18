@@ -121,7 +121,9 @@ it('keeps the last valid markdown selection payload when right-click clears the 
     payload: expect.objectContaining({
       parentNodeId: 'node-1',
       selectionText: 'Welcome'
-    })
+    }),
+    webLookupDocumentText: 'Welcome to Foliole',
+    webLookupPayload: null
   });
 });
 

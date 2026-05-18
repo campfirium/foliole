@@ -33,6 +33,27 @@ it('closes selection-safe menu on escape', () => {
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 
+it('lets passthrough selection menus close without stealing the outside pointer target', () => {
+  const onClose = vi.fn();
+  const onPointerDown = vi.fn();
+
+  render(
+    <>
+      <button onPointerDown={onPointerDown} type="button">Editor target</button>
+      <AppSelectionDropdownMenu left={40} onClose={onClose} outsidePointerMode="passthrough" top={56}>
+        <AppSelectionDropdownMenuItem>Lookup</AppSelectionDropdownMenuItem>
+      </AppSelectionDropdownMenu>
+    </>
+  );
+
+  expect(document.querySelector('.fixed.inset-0.z-workspace-overlay')).toBeNull();
+
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Editor target' }));
+
+  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(onPointerDown).toHaveBeenCalledTimes(1);
+});
+
 it('uses the shared selection surface color token for hover and focus states', () => {
   render(
     <AppSelectionDropdownMenu left={40} onClose={() => undefined} top={56}>

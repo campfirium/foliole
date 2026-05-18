@@ -134,7 +134,8 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'commandRecents',
   'nodePaletteRecents',
   'searchPaletteShortcutsCollapsed',
-  'commandShortcutOverrides'
+  'commandShortcutOverrides',
+  'webLookupEntries'
 ] as const satisfies readonly AppSettingsStorageName[];
 
 export const RENDERER_PREFERENCE_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];

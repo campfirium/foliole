@@ -104,9 +104,9 @@ export function createHandleEditorContextMenu(args: {
     }
 
     const position = normalizeContextMenuPosition(event.clientX, event.clientY);
-    const commandPayload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current)
-      ?? args.getPreservedSelectionPayload?.()
-      ?? null;
+    const editorContent = args.editorRef.current?.getContent() ?? null;
+    const livePayload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);
+    const commandPayload = livePayload ?? args.getPreservedSelectionPayload?.() ?? null;
     const imageContextMenu = resolveImageContextMenuState(event, position);
     if (imageContextMenu) {
       const fallbackPayload = getSelectionCommandPayloadForRanges(
@@ -130,7 +130,9 @@ export function createHandleEditorContextMenu(args: {
       left: position.left,
       mode: 'context-menu',
       payload: commandPayload,
-      top: position.top
+      top: position.top,
+      webLookupDocumentText: editorContent,
+      webLookupPayload: livePayload
     });
     refreshSelectionHighlight(args.editorRef.current);
   };

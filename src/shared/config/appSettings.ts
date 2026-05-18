@@ -117,6 +117,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   nodePaletteRecents: 'foliole-node-palette-recents',
   searchPaletteShortcutsCollapsed: 'foliole-search-palette-shortcuts-collapsed',
   commandShortcutOverrides: 'foliole-command-shortcut-overrides',
+  webLookupEntries: 'foliole-web-lookup-entries',
   desktopDeviceSyncEnabled: 'foliole-desktop-device-sync-enabled'
 } as const;
 

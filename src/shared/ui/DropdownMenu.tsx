@@ -1,6 +1,6 @@
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import * as React from 'react';
-import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { appFloatingSurfaceClassName } from './FloatingSurface';
@@ -20,6 +20,7 @@ interface AppSelectionDropdownMenuProps {
   children: ReactNode;
   left: number;
   onClose: () => void;
+  outsidePointerMode?: 'blocking' | 'passthrough';
   top: number;
 }
 
@@ -71,8 +72,28 @@ function preventFocusSteal(event: { preventDefault: () => void }) {
   event.preventDefault();
 }
 
-function AppSelectionDropdownMenu({ children, left, onClose, top }: AppSelectionDropdownMenuProps) {
+function AppSelectionDropdownMenu({
+  children,
+  left,
+  onClose,
+  outsidePointerMode = 'blocking',
+  top
+}: AppSelectionDropdownMenuProps) {
+  const menuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => onWindowEscape(onClose), [onClose]);
+  useEffect(() => {
+    if (outsidePointerMode !== 'passthrough') {
+      return undefined;
+    }
+    const closeOnOutsidePointerDown = (event: PointerEvent) => {
+      if (menuRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      onClose();
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePointerDown, true);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointerDown, true);
+  }, [onClose, outsidePointerMode]);
 
   if (typeof document === 'undefined') {
     return null;
@@ -80,16 +101,19 @@ function AppSelectionDropdownMenu({ children, left, onClose, top }: AppSelection
 
   return createPortal(
     <>
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 z-workspace-overlay"
-        onContextMenu={(event) => event.preventDefault()}
-        onPointerDown={onClose}
-      />
+      {outsidePointerMode === 'blocking' ? (
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-workspace-overlay"
+          onContextMenu={(event) => event.preventDefault()}
+          onPointerDown={onClose}
+        />
+      ) : null}
       <div
         aria-label="Selection commands"
         className={cn(dropdownMenuContentClassName(), 'fixed')}
         onContextMenu={(event) => event.preventDefault()}
+        ref={menuRef}
         role="menu"
         style={{ left: `${left}px`, top: `${top}px` }}
       >

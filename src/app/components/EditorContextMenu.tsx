@@ -10,6 +10,7 @@ import { resolveLongClozeGuardAction, type LongClozeGuardOptions } from '../hook
 import { AnnotationNotePanel } from './AnnotationNotePanel';
 import { ClozeGuardPanel } from './ClozeGuardPanel';
 import { ExistingHighlightToolbar } from './ExistingHighlightToolbar';
+import { WebLookupSelectionMenu } from './WebLookupSelectionMenu';
 
 export interface EditorContextMenuProps {
   kind: 'image' | 'selection';
@@ -19,6 +20,8 @@ export interface EditorContextMenuProps {
   notePanelTop?: number;
   selectionPayload?: SelectionCommandPayload | null | undefined;
   top: number;
+  webLookupDocumentText?: string | null | undefined;
+  webLookupPayload?: SelectionCommandPayload | null | undefined;
   onClose: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
@@ -204,6 +207,18 @@ export function EditorContextMenu(props: EditorContextMenuProps) {
 
   if (props.mode === 'existing-highlight-toolbar') {
     return <ExistingHighlightToolbar {...props} />;
+  }
+
+  if (props.mode === 'context-menu') {
+    return (
+      <WebLookupSelectionMenu
+        documentText={props.webLookupDocumentText}
+        left={props.left}
+        onClose={props.onClose}
+        selectionPayload={props.webLookupPayload}
+        top={props.top}
+      />
+    );
   }
 
   if (props.mode !== 'annotation-toolbar') {
