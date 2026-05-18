@@ -44,6 +44,46 @@ it('uses locator text as context while anchoring only the highlight text', () =>
   ]);
 });
 
+it('prefers visible body content over matching frontmatter summary text', () => {
+  vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('66666666-6666-6666-6666-666666666666');
+  const anchorId = 'imported-highlight-66666666-6666-6666-6666-666666666666';
+  const content = [
+    '---',
+    'summary: Target sentence appears in metadata first.',
+    '---',
+    '',
+    'Intro.',
+    'Target sentence appears in the article body.',
+    'Tail.'
+  ].join('\n');
+
+  const anchored = applyImportedHighlightAnchors({
+    content,
+    highlights: [{ content: 'Target sentence appears', label: null }]
+  });
+
+  expect(anchored.highlights).toEqual([
+    {
+      anchorId,
+      content: 'Target sentence appears',
+      from: 68,
+      kind: 'highlight',
+      label: null,
+      locatorText: 'Target sentence appears',
+      to: 91
+    }
+  ]);
+});
+
+it('does not anchor imported highlights to frontmatter metadata', () => {
+  const anchored = applyImportedHighlightAnchors({
+    content: ['---', 'summary: Metadata-only highlight text.', '---', '', 'Visible body text.'].join('\n'),
+    highlights: [{ content: 'Metadata-only highlight text', label: null }]
+  });
+
+  expect(anchored.highlights).toEqual([]);
+});
+
 it('prefers the full highlight text before fragment-bounded locator candidates', () => {
   vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('44444444-4444-4444-4444-444444444444');
   const anchorId = 'imported-highlight-44444444-4444-4444-4444-444444444444';
