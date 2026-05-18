@@ -30,6 +30,7 @@ export const NATIVE_COMMANDS = {
   loadImportOverview: 'load_import_overview',
   loadRemovedSources: 'load_removed_sources',
   restoreRemovedSource: 'restore_removed_source',
+  devReimportCurrentTopicSource: 'dev_reimport_current_topic_source',
   loadPdfImportsInventory: 'load_pdf_imports_inventory',
   loadImportManagerSettings: 'load_import_manager_settings',
   runClipboardImport: 'run_clipboard_import',

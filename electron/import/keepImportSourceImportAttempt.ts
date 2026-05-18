@@ -48,7 +48,11 @@ function recordFailedKeepImportAttempt(input: {
 export async function runKeepImportSourceImportAttempt(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor,
-  options: { automaticDuplicateNoop: boolean; onProgress?: KeepImportProgressSink | undefined }
+  options: {
+    automaticDuplicateNoop: boolean;
+    clearSourceUpdateOnSuccess?: boolean;
+    onProgress?: KeepImportProgressSink | undefined;
+  }
 ) {
   const importedAt = new Date().toISOString();
   throwIfKeepImportAborted(config.signal);
@@ -65,7 +69,7 @@ export async function runKeepImportSourceImportAttempt(
     return await runLoadedPreparedImportAttempt({
       automaticDuplicateNoop: options.automaticDuplicateNoop,
       config,
-      hasSourceUpdate,
+      hasSourceUpdate: options.clearSourceUpdateOnSuccess ? false : hasSourceUpdate,
       onProgress: options.onProgress,
       prepared,
       ...(config.signal ? { signal: config.signal } : {}),

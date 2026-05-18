@@ -8,6 +8,7 @@ const CONTRACT_FILES = [
   'lib/platform/nativeExternalSearchCommandMap.ts',
   'lib/platform/nativeImportCommandMap.ts',
   'lib/platform/nativeReadwiseCommandMap.ts',
+  'lib/platform/nativeRemoteImageCommandMap.ts',
   'lib/platform/nativeSyncCommandMap.ts',
   'lib/platform/nativeUtilityCommandMap.ts'
 ];

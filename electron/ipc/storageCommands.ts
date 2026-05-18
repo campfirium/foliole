@@ -10,6 +10,7 @@ import {
   upsertNodeSnapshot
 } from '../database/nodeMutations.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
+import { reimportCurrentTopicSource } from '../import/currentSourceReimport.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
 import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
 import { restoreRemovedSource } from '../import/removedSourceRestore.js';
@@ -199,6 +200,13 @@ async function handleImportMutationCommand(
   if (command === NATIVE_COMMANDS.restoreRemovedSource) {
     const result = await restoreRemovedSource(asString(args.rule_id, 'rule_id'), asString(args.source_path, 'source_path'));
     if (result.status === 'restored' && result.node_id) {
+      notifyWorkspaceContentChanged();
+    }
+    return result;
+  }
+  if (command === NATIVE_COMMANDS.devReimportCurrentTopicSource) {
+    const result = await reimportCurrentTopicSource(asString(args.node_id, 'node_id'));
+    if (result.status === 'reimported' && result.node_id) {
       notifyWorkspaceContentChanged();
     }
     return result;

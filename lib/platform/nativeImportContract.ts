@@ -167,6 +167,10 @@ export interface NativeDirectoryImportResult {
   entries: NativeDirectoryImportEntry[];
 }
 
+export type NativeDevReimportCurrentTopicSourceResult =
+  | { detail: string | null; node_id: string; reimported_at: string; status: 'reimported' }
+  | { detail: string; node_id: string | null; reimported_at: string; status: 'failed' | 'unavailable' };
+
 export interface NativeImportOverview {
   latest_failure: NativeTextImportResult | null;
   latest_result: NativeTextImportResult | null;
