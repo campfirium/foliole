@@ -52,11 +52,11 @@ it('keeps an active review session when the current node is deleted', () => {
   expect(screen.getByTestId('mode')).toHaveTextContent('on');
 });
 
-it('exits review mode when trash view opens', () => {
+it('keeps review mode paused when trash view opens', () => {
   render(<Probe />);
 
   act(() => screen.getByRole('button', { name: 'forced' }).click());
   act(() => screen.getByRole('button', { name: 'open trash' }).click());
 
-  expect(screen.getByTestId('mode')).toHaveTextContent('off');
+  expect(screen.getByTestId('mode')).toHaveTextContent('on');
 });

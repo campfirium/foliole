@@ -8,6 +8,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
     <ReviewModeToolbar
       isAnswerRevealed={false}
       isCurrentItemGradable={false}
+      isCurrentReviewItemVisible
       isReviewEditing={false}
       isStudyMode
       reviewCompletedCount={0}
@@ -17,7 +18,9 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       onExitReviewMode={vi.fn()}
       onGrade={vi.fn(async () => true)}
       onRevealAnswer={vi.fn()}
+      onResumeReviewItem={vi.fn()}
       reviewCurrentNodeId="node-1"
+      reviewCurrentTitle={undefined}
       reviewQueueCount={3}
       {...overrides}
     />
@@ -50,6 +53,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
     <ReviewModeToolbar
       isAnswerRevealed
       isCurrentItemGradable
+      isCurrentReviewItemVisible
       isReviewEditing={false}
       isStudyMode
       reviewCompletedCount={0}
@@ -59,7 +63,9 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       onExitReviewMode={vi.fn()}
       onGrade={onGrade}
       onRevealAnswer={onRevealAnswer}
+      onResumeReviewItem={vi.fn()}
       reviewCurrentNodeId="node-1"
+      reviewCurrentTitle={undefined}
       reviewQueueCount={1}
     />
   );
@@ -91,4 +97,20 @@ it('shows a retry action when saving a grade fails', async () => {
 
   expect(onGrade).toHaveBeenNthCalledWith(1, 2);
   expect(onGrade).toHaveBeenNthCalledWith(2, 2);
+});
+
+it('shows only resume when the visible topic is outside the current review item', () => {
+  const onResumeReviewItem = vi.fn();
+  renderToolbar({
+    isCurrentReviewItemVisible: false,
+    onResumeReviewItem,
+    reviewCurrentTitle: 'Current topic'
+  });
+
+  expect(screen.getByText('Review paused · Current topic')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Resume review' }));
+  expect(onResumeReviewItem).toHaveBeenCalledTimes(1);
 });

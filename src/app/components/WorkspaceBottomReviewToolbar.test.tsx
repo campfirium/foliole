@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import {
+  selectWorkspaceBottomReviewToolbarProps,
   WorkspaceBottomReviewToolbar,
   type WorkspaceBottomReviewToolbarProps
 } from './WorkspaceBottomReviewToolbar';
@@ -15,8 +16,10 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
     isListCollapsed: false,
     isReviewEditing: false,
     isStudyMode: true,
+    isCurrentReviewItemVisible: true,
     reviewCompletedCount: 0,
     reviewCurrentNodeId: 'node-1',
+    reviewCurrentTitle: 'Review topic',
     reviewDueCount: 2,
     reviewQueueCount: 2,
     onCompleteReviewItem: vi.fn(() => true),
@@ -25,6 +28,7 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
     onExitReviewMode: vi.fn(),
     onGradeReview: vi.fn(async () => true),
     onRevealAnswer: vi.fn(),
+    onResumeReviewItem: vi.fn(),
     onToggleReviewSession: vi.fn(),
     ...overrides
   };
@@ -43,4 +47,55 @@ it('keeps the review footer list summary when the left sidebar is expanded', () 
 
   expect(screen.getByText('2 left · 0 done')).toBeInTheDocument();
   expect(screen.getByLabelText('Review mode toolbar')).toHaveClass('col-start-3');
+});
+
+it('replaces review actions with resume when the current review item is not visible', () => {
+  const onResumeReviewItem = vi.fn();
+  render(
+    <WorkspaceBottomReviewToolbar
+      {...createProps({ isCurrentReviewItemVisible: false, onResumeReviewItem })}
+    />
+  );
+
+  expect(screen.getByText('2 left · 0 done')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
+
+  screen.getByRole('button', { name: 'Resume review' }).click();
+  expect(onResumeReviewItem).toHaveBeenCalledTimes(1);
+});
+
+it('treats external, trash, and virtual surfaces as paused review surfaces', () => {
+  const onOpenNotesView = vi.fn();
+  const onSelectNode = vi.fn();
+  const source = {
+    externalLibrary: { isExternalViewOpen: true },
+    layoutChrome: { isImmersiveMode: false, isListCollapsed: false },
+    navigation: { activeNodeId: 'node-1', onSelectNode },
+    nodeList: { nodesById: { 'node-1': { title: 'Review topic' } }, onOpenNotesView },
+    review: createProps(),
+    trash: { isTrashViewOpen: false, isViewingTrashNode: false },
+    virtualView: { isVirtualViewOpen: false }
+  };
+
+  const externalProps = selectWorkspaceBottomReviewToolbarProps(source as never);
+  expect(externalProps.isCurrentReviewItemVisible).toBe(false);
+
+  const trashProps = selectWorkspaceBottomReviewToolbarProps({
+    ...source,
+    externalLibrary: { isExternalViewOpen: false },
+    trash: { isTrashViewOpen: true, isViewingTrashNode: true }
+  } as never);
+  expect(trashProps.isCurrentReviewItemVisible).toBe(false);
+
+  const virtualProps = selectWorkspaceBottomReviewToolbarProps({
+    ...source,
+    externalLibrary: { isExternalViewOpen: false },
+    virtualView: { isVirtualViewOpen: true }
+  } as never);
+  expect(virtualProps.isCurrentReviewItemVisible).toBe(false);
+
+  externalProps.onResumeReviewItem();
+  expect(onOpenNotesView).toHaveBeenCalledTimes(1);
+  expect(onSelectNode).toHaveBeenCalledWith('node-1');
 });
