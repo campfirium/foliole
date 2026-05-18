@@ -8,6 +8,7 @@ const MAX_CACHED_NODE_DOCUMENTS = 256;
 const RECENT_HISTORY_PREFETCH_LIMIT = 12;
 const ACTIVE_NEIGHBOR_PREFETCH_LIMIT = 24;
 const VISIBLE_NODE_PREFETCH_LIMIT = 24;
+const REVIEW_QUEUE_PREFETCH_LIMIT = 12;
 
 const cachedNodeDocumentById = createBoundedCache<string, WorkspaceNodeDocument>(MAX_CACHED_NODE_DOCUMENTS);
 
@@ -124,10 +125,12 @@ export function listWorkspaceNodeDocumentPrefetchCandidates(args: {
   navigationBackStack: string[];
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  reviewQueueNodeIds?: string[];
   visibleNodeIds?: string[];
 }) {
   return uniqueNodeIds([
     ...listHistoryPrefetchNodeIds(args.activeNodeId, args.navigationBackStack),
+    ...(args.reviewQueueNodeIds ?? []).filter((nodeId) => nodeId !== args.activeNodeId).slice(0, REVIEW_QUEUE_PREFETCH_LIMIT),
     ...listActiveNeighborPrefetchNodeIds(args.activeNodeId, args.nodeOrder, args.nodesById),
     ...(args.visibleNodeIds ?? [])
   ]).filter((nodeId) => nodeId !== args.activeNodeId);

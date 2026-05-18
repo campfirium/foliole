@@ -67,6 +67,7 @@ export function requestWorkspaceNodeDocumentPreload() {
     navigationBackStack: state.navigation.backStack,
     nodeOrder: state.nodeOrder,
     nodesById: state.nodesById,
+    reviewQueueNodeIds: state.reviewSession.queueNodeIds,
     visibleNodeIds: getVisibleWorkspaceNodeDocumentPrefetchNodeIds()
   });
 

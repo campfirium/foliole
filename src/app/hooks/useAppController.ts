@@ -3,7 +3,6 @@ import { useAppearanceSettings } from '../../features/settings/context/Appearanc
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import type { CommandPaletteItem } from '../../shared/commands/types';
 import { definedProps } from '../../shared/lib/definedProps';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
@@ -12,9 +11,7 @@ import { useCurrentReviewPreview } from './appControllerHelpers';
 import { measureSelectionComputation } from './appControllerInstrumentation';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
 import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
-import type { AppGoToNodeState } from './appGoToNodeState';
-import type { AppHotkeySettings } from './appHotkeySettings';
-import type { AppSearchState } from './appSearchState';
+import type { AppControllerResult } from './appControllerTypes';
 import { countDueReviewNodes } from './layoutPropsBuilder';
 import { APP_SHORTCUT_COMMAND_IDS, useCommandShortcutState } from './reviewHotkeysState';
 import { openCompanionSyncSettings } from './settingsOverlayRequest';
@@ -22,26 +19,9 @@ import { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import { useControllerPaletteItems } from './useControllerPaletteItems';
 import { useFormalImport } from './useFormalImport';
 import { usePriorityQuickSet } from './usePriorityQuickSet';
+import { useReviewQueueDocumentPrefetch } from './useReviewQueueDocumentPrefetch';
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
-
-export interface AppPaletteState {
-  isOpen: boolean;
-  items: CommandPaletteItem[];
-  recentCommandIds: string[];
-  onClose: () => void;
-  onRunCommand: (id: string) => void;
-}
-
-export interface AppControllerResult {
-  hotkeySettings: AppHotkeySettings;
-  goToNodeState: AppGoToNodeState;
-  moveToNodeState: AppGoToNodeState;
-  layoutProps: WorkspaceLayoutProps;
-  onOpenCompanionSyncSettings: () => void;
-  paletteState: AppPaletteState;
-  searchState: AppSearchState;
-}
 
 function useControllerPriorityQuickSet(args: {
   hotkeys: ReturnType<typeof useCommandShortcutState>;
@@ -218,6 +198,7 @@ export function useAppController(args: {
   const hotkeys = useCommandShortcutState(APP_SHORTCUT_COMMAND_IDS);
   const priorityQuickSet = useControllerPriorityQuickSet({ hotkeys, runtime: controller.runtime, ws });
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
+  useReviewQueueDocumentPrefetch(ws.reviewSession);
   const isCurrentReviewItemGradable =
     (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
   const isReviewEditing = useReviewEditingState({

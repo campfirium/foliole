@@ -5,9 +5,9 @@ import type { CommandPaletteItem } from '../../shared/commands/types';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import type { useWorkspaceSelectors } from './appControllerState';
+import type { AppPaletteState } from './appControllerTypes';
 import type { AppGoToNodeState } from './appGoToNodeState';
 import type { AppSearchState } from './appSearchState';
-import type { AppPaletteState } from './useAppController';
 import { useReviewPreview } from './useReviewPreview';
 
 export function buildPaletteState(
