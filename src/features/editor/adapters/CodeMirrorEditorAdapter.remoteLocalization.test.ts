@@ -119,6 +119,26 @@ it('detects remote markdown images through the shared image parser before rewrit
   adapter.destroy();
 });
 
+it('removes image-only wrapping links when localizing remote markdown images', async () => {
+  importRemoteImageAttachment.mockResolvedValue({
+    status: 'imported',
+    attachment_id: 'hash-1',
+    intrinsic_size: { height: 816, width: 1456 },
+    original_name: 'cover.png'
+  });
+  const { adapter } = createAdapter();
+
+  adapter.setNodeId('node-1');
+  adapter.replaceSelection(
+    '[\n\n![](https://blogger.googleusercontent.com/img/a/cover)\n\n](https://blogger.googleusercontent.com/img/a/cover)正文'
+  );
+  await waitForLocalization();
+
+  expect(adapter.getContent()).toBe('![](asset://hash-1.png)\n\n正文');
+
+  adapter.destroy();
+});
+
 it('skips remote download when the setting is turned off', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'false');
   const { adapter } = createAdapter();
