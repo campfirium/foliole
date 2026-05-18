@@ -15,10 +15,14 @@ function AppTooltip(props: React.ComponentPropsWithoutRef<typeof TooltipPrimitiv
   );
 }
 
+type AppTooltipContentProps = React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> & {
+  arrow?: boolean;
+};
+
 const AppTooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className, sideOffset = 6, ...props }, ref) => (
+  AppTooltipContentProps
+>(({ arrow = false, children, className, sideOffset = 6, ...props }, ref) => (
   <TooltipPrimitive.Portal>
     <TooltipPrimitive.Content
       ref={ref}
@@ -29,7 +33,12 @@ const AppTooltipContent = React.forwardRef<
         className
       )}
       {...props}
-    />
+    >
+      {children}
+      {arrow ? (
+        <TooltipPrimitive.Arrow className="fill-[var(--app-tooltip-bg)] stroke-[var(--app-tooltip-border-color)]" height={7} width={12} />
+      ) : null}
+    </TooltipPrimitive.Content>
   </TooltipPrimitive.Portal>
 ));
 AppTooltipContent.displayName = TooltipPrimitive.Content.displayName;
