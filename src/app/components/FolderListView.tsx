@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -33,6 +33,7 @@ interface FolderListViewProps {
     description: string;
     title: string;
   };
+  currentViewActions?: ReactNode;
   regionLabel?: string;
   showEmbeddedHeader?: boolean;
   itemLayout?: FolderListItemLayout;
@@ -165,7 +166,7 @@ export function FolderListView(props: FolderListViewProps) {
       <section aria-label={props.regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
           currentEmptyState={resolvedEmptyState}
-          currentViewActions={currentViewActions}
+          currentViewActions={props.currentViewActions ?? currentViewActions}
           filteredNodes={state.filteredNodes}
           folderTitle={resolvedFolderTitle}
           headerMode={headerMode}

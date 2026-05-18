@@ -12,6 +12,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { renderFolderSpecialContent } from './DocumentPanelFolderSpecialContent';
 import { resolvePdfDocumentSurface, renderPdfDocumentSurface } from './documentPanelPdfView';
+import { DocumentPanelTrashContent } from './DocumentPanelTrashContent';
 import { LinkPanelStack } from './LinkPanelStack';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
@@ -136,6 +137,7 @@ export function resolveDocumentPanelContentBody(args: {
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void;
   isActivePdfCachedVisible: boolean;
   isFolderListView: boolean;
+  isTrashViewOpen: boolean;
   linkPanels: LinkPanelRecord[];
   nodeOrder: string[];
   nodesById: Record<string, Node>;
@@ -151,6 +153,7 @@ export function resolveDocumentPanelContentBody(args: {
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
+  onSelectTrashNode?: ((nodeId: string) => void) | undefined;
   pdfCache: JSX.Element;
   pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
   pdfHighlightLocators: PdfHighlightLocator[];
@@ -181,6 +184,23 @@ export function resolveDocumentPanelContentBody(args: {
 }
 
 function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPanelContentBody>[0]) {
+  if (args.isTrashViewOpen && (!args.activeNode || args.activeNode.kind === 'folder') && args.onSelectTrashNode) {
+    return (
+      <DocumentPanelTrashContent
+        folderListSortDirection={args.folderListSortDirection}
+        folderListSortKey={args.folderListSortKey}
+        folderNodeId={args.activeNode?.id ?? null}
+        folderTitle={args.activeNode?.title ?? 'Trash'}
+        nodeOrder={args.nodeOrder}
+        nodesById={args.nodesById}
+        onChangeFolderListSortDirection={args.onChangeFolderListSortDirection}
+        onChangeFolderListSortKey={args.onChangeFolderListSortKey}
+        onSelectTrashNode={args.onSelectTrashNode}
+        pdfCache={args.pdfCache}
+        trashedNodeIds={args.trashedNodeIds}
+      />
+    );
+  }
   if (args.activeNode && (isVirtualNode(args.activeNode) || isVirtualRootNode(args.activeNode))) {
     return (
       <VirtualDocumentSurface

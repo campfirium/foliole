@@ -78,6 +78,7 @@ export interface DocumentPanelSectionProps {
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView?: (nodeId: string) => void;
+  onSelectTrashNode?: ((nodeId: string) => void) | undefined;
   priorityQuickSetShortcutLabel?: string;
   reviewSchedulerSettings?: ReviewSchedulerSettings;
   nodeOrder: string[];

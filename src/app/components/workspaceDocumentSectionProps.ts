@@ -95,6 +95,7 @@ export function buildDocumentSectionProps(
       onCreateHighlightFromPayload: props.onCreateHighlightFromPayload,
       onPastedTextAnchors: props.onPastedTextAnchors,
       onSelectNodeInVirtualView: props.onSelectNodeInVirtualView,
+      onSelectTrashNode: props.onSelectTrashNode,
       showDocumentOutline: props.showDocumentOutline
     })
   };

@@ -144,6 +144,7 @@ function renderDocumentPanelContent(args: {
       onChangeFolderListSortDirection={args.onChangeFolderListSortDirection}
       onChangeFolderListSortKey={args.onChangeFolderListSortKey}
       isFolderListView={args.isFolderListView}
+      isTrashViewOpen={Boolean(args.props.isTrashViewOpen)}
       nodeOrder={args.props.nodeOrder}
       trashedNodeIds={args.props.trashedNodeIds}
       nodesById={args.props.nodesById}
@@ -154,6 +155,7 @@ function renderDocumentPanelContent(args: {
       onPersistPdfViewState={args.props.onPersistPdfViewState}
       onSelectNode={args.props.onSelectNode}
       onSelectNodeInVirtualView={args.props.onSelectNodeInVirtualView ?? args.props.onSelectNode}
+      onSelectTrashNode={args.props.onSelectTrashNode}
       linkPanels={args.linkPanels}
       onCloseExternalLink={args.onCloseExternalLink}
       onLinkPanelStateChange={args.onLinkPanelStateChange}

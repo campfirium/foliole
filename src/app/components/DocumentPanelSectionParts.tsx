@@ -24,6 +24,7 @@ interface DocumentPanelContentProps {
   onChangeFolderListSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void;
   isFolderListView: boolean;
+  isTrashViewOpen: boolean;
   nodeOrder: string[];
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
@@ -34,6 +35,7 @@ interface DocumentPanelContentProps {
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView?: (nodeId: string) => void;
+  onSelectTrashNode?: ((nodeId: string) => void) | undefined;
   linkPanels: LinkPanelRecord[];
   onCloseExternalLink: (panelId: string) => void;
   onLinkPanelStateChange: (
@@ -158,6 +160,7 @@ function buildDocumentPanelContentBodyArgs(
     onChangeFolderListSortKey: props.onChangeFolderListSortKey,
     isActivePdfCachedVisible: derived.isActivePdfCachedVisible,
     isFolderListView: props.isFolderListView,
+    isTrashViewOpen: props.isTrashViewOpen,
     nodeOrder: props.nodeOrder,
     trashedNodeIds: props.trashedNodeIds,
     nodesById: props.nodesById,
@@ -168,6 +171,7 @@ function buildDocumentPanelContentBodyArgs(
     onPersistPdfViewState: props.onPersistPdfViewState,
     onSelectNode: props.onSelectNode,
     onSelectNodeInVirtualView: props.onSelectNodeInVirtualView ?? props.onSelectNode,
+    onSelectTrashNode: props.onSelectTrashNode,
     linkPanels: props.linkPanels,
     onCloseExternalLink: props.onCloseExternalLink,
     onLinkPanelStateChange: props.onLinkPanelStateChange,
