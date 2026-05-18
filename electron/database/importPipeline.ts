@@ -5,7 +5,9 @@ import {
 } from '../../lib/core/database/index.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
+import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
+import { parseMarkdownDataImageSize } from '../../lib/platform/markdownImageDataUrl.js';
 
 import { createNodeAttachmentLink } from './attachments.js';
 import { openDatabaseConnection } from './connection.js';
@@ -33,6 +35,57 @@ function readImportNodeContent(nodeId: string) {
   ) ?? null;
 }
 
+const SMALL_IMAGE_MAX_SIDE = 128;
+
+function isSmallDataImageDestination(destination: string) {
+  const size = parseMarkdownDataImageSize(destination);
+  return Boolean(size && size.width <= SMALL_IMAGE_MAX_SIDE && size.height <= SMALL_IMAGE_MAX_SIDE);
+}
+
+function compactConsecutiveSmallDataImages(content: string) {
+  let compacted = '';
+  let cursor = 0;
+  let previousWasSmallDataImage = false;
+
+  for (const reference of collectMarkdownImageReferences(content)) {
+    const parsedTarget = parseMarkdownImageTarget(reference.rawTarget);
+    const isSmallDataImage = Boolean(parsedTarget && isSmallDataImageDestination(parsedTarget.destination));
+    const gap = content.slice(cursor, reference.start);
+    compacted += previousWasSmallDataImage && isSmallDataImage && gap.trim().length === 0 ? ' ' : gap;
+    compacted += reference.fullMatch;
+    cursor = reference.end;
+    previousWasSmallDataImage = isSmallDataImage;
+  }
+
+  return `${compacted}${content.slice(cursor)}`;
+}
+
+function rewriteImportImageReferences(input: {
+  content: string;
+  degradedMessages: string[];
+  nodeId: string;
+  sourceLocator: string;
+}) {
+  return rewriteInlineImageReferences(input.content, (reference) => {
+    const importResult = importMarkdownImageAttachment({
+      destination: reference.destination,
+      nodeId: input.nodeId,
+      sourceLocator: input.sourceLocator,
+      syntax: reference.syntax
+    });
+    if (importResult.status === 'skipped') {
+      return reference.fullMatch;
+    }
+    if (importResult.status === 'error') {
+      input.degradedMessages.push(importResult.message);
+      return `[${importResult.message}]`;
+    }
+
+    const suffix = reference.suffix ? ` ${reference.suffix}` : '';
+    return `![${reference.altText}](${buildAssetMarkdownUrl(importResult.attachmentId, importResult.originalName)}${suffix})`;
+  });
+}
+
 function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: PreparedImportRecord) {
   if (
     prepared.sourceKind !== 'markdown' ||
@@ -47,24 +100,13 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
   const persistedNode = readImportNodeContent(nodeId);
   const currentContent = persistedNode?.content ?? prepared.content;
   const degradedMessages: string[] = [];
-  const rewrittenContent = rewriteInlineImageReferences(currentContent, (reference) => {
-    const importResult = importMarkdownImageAttachment({
-      destination: reference.destination,
-      nodeId,
-      sourceLocator: prepared.sourceLocator,
-      syntax: reference.syntax
-    });
-    if (importResult.status === 'skipped') {
-      return reference.fullMatch;
-    }
-    if (importResult.status === 'error') {
-      degradedMessages.push(importResult.message);
-      return `[${importResult.message}]`;
-    }
-
-    const suffix = reference.suffix ? ` ${reference.suffix}` : '';
-    return `![${reference.altText}](${buildAssetMarkdownUrl(importResult.attachmentId, importResult.originalName)}${suffix})`;
+  const rewrittenImagesContent = rewriteImportImageReferences({
+    content: currentContent,
+    degradedMessages,
+    nodeId,
+    sourceLocator: prepared.sourceLocator
   });
+  const rewrittenContent = compactConsecutiveSmallDataImages(rewrittenImagesContent);
 
   if (rewrittenContent === currentContent && degradedMessages.length === 0) {
     return record;

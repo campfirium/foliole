@@ -170,6 +170,24 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   await expectStoredAttachmentFiles({ assetsDir, attachments });
 });
 
+it('compacts consecutive small data-url markdown images during import', () => {
+  const smallPngDataUrl =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const imported = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: `![Up](${smallPngDataUrl})\n![Down](${smallPngDataUrl})`,
+      degradedReason: null,
+      fileName: 'small-icons.md',
+      filePath: path.join(tempRoot, 'small-icons.md'),
+      importedAt: '2026-05-18T10:10:00.000Z',
+      kind: 'markdown'
+    })
+  );
+
+  const nodeRow = openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get(imported.nodeId as string) as { content: string };
+  expect(nodeRow.content).toBe(`![Up](${smallPngDataUrl}) ![Down](${smallPngDataUrl})`);
+});
+
 it('resolves obsidian image embeds from the configured external attachment folder during import', async () => {
   const vaultRoot = await fs.mkdtemp(path.join(tempRoot, 'external-vault-'));
   const noteDir = path.join(vaultRoot, 'ir');
