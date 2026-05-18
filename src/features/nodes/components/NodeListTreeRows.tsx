@@ -27,10 +27,12 @@ interface NodeListRowsProps {
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onExpandCollapse: (nodeId: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onRename: (nodeId: string, title: string) => void;
   onToggleCollapse: (nodeId: string) => void;
   reviewSession: ReviewSessionState;
+  rowCountByNodeId?: ReadonlyMap<string, number>;
   rowSpacing: number;
   rows: NodeTreeRow[];
   scrollContainerRef: RefObject<HTMLDivElement | null>;
@@ -45,23 +47,17 @@ function renderNodeListRow(
   meta?: VirtualListRenderMeta
 ) {
   const rowModel = resolveNodeListRowModel(props, row);
-  const onSelect = (nodeId: string, modifiers?: NodeSelectModifiers) => {
-    props.onSelect(nodeId, modifiers);
-    if (
-      !modifiers?.ctrlKey &&
-      !modifiers?.metaKey &&
-      !modifiers?.shiftKey &&
-      row.hasChildren &&
-      row.node.kind === 'folder' &&
-      props.collapsedNodeIds.has(nodeId)
-    ) {
-      props.onToggleCollapse(nodeId);
+  const onSelect = createNodeListRowSelectHandler(props, row);
+  const onDragOver = (nodeId: string, event: Parameters<typeof props.drag.onDragOverNode>[1]) => {
+    props.drag.onDragOverNode(nodeId, event);
+    if (shouldExpandFolderOnDragOver(row, props.collapsedNodeIds)) {
+      props.onExpandCollapse(nodeId);
     }
   };
 
   return (
     <NodeTreeRowItem
-      descendantCount={props.isTrashViewOpen ? 0 : row.descendantCount}
+      descendantCount={resolveNodeListRowCount(props, row)}
       depth={props.isTrashViewOpen ? 0 : row.depth}
       hasChildren={props.isTrashViewOpen ? false : row.hasChildren}
       isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
@@ -85,7 +81,7 @@ function renderNodeListRow(
       {...(props.onContextMenu ? { onContextMenu: props.onContextMenu } : {})}
       {...(props.drag.onDragEnd ? { onDragEnd: props.drag.onDragEnd } : {})}
       {...(props.drag.onDragEnterNode ? { onDragEnter: props.drag.onDragEnterNode } : {})}
-      {...(props.drag.onDragOverNode ? { onDragOver: props.drag.onDragOverNode } : {})}
+      {...(props.drag.onDragOverNode ? { onDragOver } : {})}
       {...(props.drag.onDragStartNode ? { onDragStart: props.drag.onDragStartNode } : {})}
       {...(props.drag.onDropOnNode ? { onDrop: props.drag.onDropOnNode } : {})}
       onKeyDown={onRowKeyDown}
@@ -94,6 +90,36 @@ function renderNodeListRow(
       onToggleCollapse={props.onToggleCollapse}
     />
   );
+}
+
+function createNodeListRowSelectHandler(props: NodeListRowsProps, row: NodeTreeRow) {
+  return (nodeId: string, modifiers?: NodeSelectModifiers) => {
+    props.onSelect(nodeId, modifiers);
+    if (shouldExpandFolderOnSelect(row, nodeId, props.collapsedNodeIds, modifiers)) {
+      props.onToggleCollapse(nodeId);
+    }
+  };
+}
+
+function shouldExpandFolderOnSelect(
+  row: NodeTreeRow,
+  nodeId: string,
+  collapsedNodeIds: ReadonlySet<string>,
+  modifiers?: NodeSelectModifiers
+) {
+  return !modifiers?.ctrlKey && !modifiers?.metaKey && !modifiers?.shiftKey && shouldExpandFolder(row, nodeId, collapsedNodeIds);
+}
+
+function shouldExpandFolderOnDragOver(row: NodeTreeRow, collapsedNodeIds: ReadonlySet<string>) {
+  return shouldExpandFolder(row, row.node.id, collapsedNodeIds);
+}
+
+function shouldExpandFolder(row: NodeTreeRow, nodeId: string, collapsedNodeIds: ReadonlySet<string>) {
+  return row.hasChildren && row.node.kind === 'folder' && collapsedNodeIds.has(nodeId);
+}
+
+function resolveNodeListRowCount(props: NodeListRowsProps, row: NodeTreeRow) {
+  return props.isTrashViewOpen ? 0 : (props.rowCountByNodeId?.get(row.node.id) ?? row.descendantCount);
 }
 
 function resolveNodeListRowModel(props: NodeListRowsProps, row: NodeTreeRow) {

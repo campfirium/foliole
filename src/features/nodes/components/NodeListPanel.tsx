@@ -47,6 +47,7 @@ interface NodeListPanelProps {
   onSearchQueryChange: (searchQuery: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   reviewSession: ReviewSessionState;
+  rowCountByNodeId?: ReadonlyMap<string, number>;
   rowSpacing: number;
   searchQuery: string;
   selectedNodeIds: string[];
@@ -118,10 +119,12 @@ function renderNodeTreeSection(
         isVirtualViewOpen={props.isVirtualViewOpen}
         nodesById={props.nodesById}
         onContextMenu={props.contextMenu.openContextMenu}
+        onExpandCollapse={props.collapse.expandNoteCollapse}
         onRename={props.onRenameNode}
         onSelect={props.onSelect}
         onToggleCollapse={props.collapse.toggleCollapse}
         reviewSession={props.reviewSession}
+        rowCountByNodeId={props.rowCountByNodeId}
         rowSpacing={props.rowSpacing}
         rows={props.activeRows}
         scrollContainerRef={scrollContainerRef}

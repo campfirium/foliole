@@ -108,3 +108,40 @@ it('hides the Removed row when the virtual root is collapsed', () => {
   expect(screen.queryByRole('treeitem', { name: 'Custom virtual' })).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'Virtual' })).toHaveAttribute('aria-expanded', 'false');
 });
+
+it('shows virtual result counts without counting virtual child folders', () => {
+  const root = createVirtualNode({
+    id: VIRTUAL_ROOT_NODE_ID,
+    parentNodeId: null,
+    specialKind: 'virtual-root',
+    title: 'Virtual'
+  });
+  const custom = createVirtualNode({
+    id: 'virtual-custom',
+    parentNodeId: VIRTUAL_ROOT_NODE_ID,
+    specialKind: 'virtual',
+    title: 'Custom virtual'
+  });
+
+  render(
+    <WorkspaceVirtualSection
+      activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
+      isVirtualViewOpen
+      nodeOrder={[VIRTUAL_ROOT_NODE_ID, 'virtual-custom']}
+      nodesById={{
+        [VIRTUAL_ROOT_NODE_ID]: root,
+        'virtual-custom': custom
+      }}
+      virtualResultCountById={new Map([
+        [VIRTUAL_ROOT_NODE_ID, 3],
+        ['virtual-custom', 2]
+      ])}
+      onOpenVirtualView={vi.fn()}
+      onSelectNodeInVirtualView={vi.fn()}
+    />
+  );
+
+  expect(screen.getByRole('treeitem', { name: 'Virtual' })).toHaveTextContent('3');
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
+  expect(screen.getByRole('treeitem', { name: 'Custom virtual' })).toHaveTextContent('2');
+});

@@ -22,6 +22,44 @@ function resolveSelectModifiers(event: ReactMouseEvent<HTMLButtonElement>): Node
   };
 }
 
+function renderLabelCluster(props: {
+  label: string;
+  rename: ReturnType<typeof useRenameState>;
+  trailingLabelContent?: ReactNode;
+}) {
+  if (!props.trailingLabelContent) {
+    return renderNodeLabel(props.label, props.rename);
+  }
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
+      {renderNodeLabel(props.label, props.rename, 'block min-w-0 truncate')}
+      {renderInlineTrailingContent(props.trailingLabelContent)}
+    </span>
+  );
+}
+
+function renderInlineTrailingContent(content: ReactNode) {
+  if (!content) {
+    return null;
+  }
+  return (
+    <span className="flex-none">
+      {content}
+    </span>
+  );
+}
+
+function renderRowCount(descendantCount: number) {
+  if (descendantCount <= 0) {
+    return null;
+  }
+  return (
+    <span aria-hidden="true" className="ml-auto flex-none tabular-nums text-[12px] leading-5 text-foreground/48">
+      {descendantCount}
+    </span>
+  );
+}
+
 export function renderNodeTreeRowContent(props: {
   descendantCount: number;
   isMuted: boolean;
@@ -40,15 +78,12 @@ export function renderNodeTreeRowContent(props: {
     >
       <span className="flex min-w-0 w-full items-center gap-1.5 overflow-hidden">
         {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
-        {renderNodeLabel(props.label, props.rename)}
-        {props.trailingLabelContent ? (
-          <span className="flex-none">{props.trailingLabelContent}</span>
-        ) : null}
-        {props.descendantCount > 0 ? (
-          <span aria-hidden="true" className="flex-none tabular-nums text-[12px] leading-5 text-foreground/48">
-            ({props.descendantCount})
-          </span>
-        ) : null}
+        {renderLabelCluster({
+          label: props.label,
+          rename: props.rename,
+          trailingLabelContent: props.trailingLabelContent
+        })}
+        {renderRowCount(props.descendantCount)}
       </span>
       {props.secondaryLabel ? (
         <span className="min-w-0 truncate text-xs text-foreground/55">{props.secondaryLabel}</span>

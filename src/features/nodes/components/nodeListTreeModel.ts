@@ -15,6 +15,7 @@ import { useNodeListState, useNodeSelectionHandler } from './NodeListTreeState';
 export interface NodeListTreeProps {
   activeNodeId: string | null;
   bodyAppendContent?: ReactNode;
+  rowCountByNodeId?: ReadonlyMap<string, number>;
   isSelectionScopeActive?: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
@@ -121,6 +122,7 @@ function useNodeListTreeControllers(args: {
   const contextMenu = useNodeListContextMenu(args.state.selectedNodeIds, args.trashedNodeIds);
   const collapse = useNodeCollapseControls({
     collapseAllNotes: args.collapsedState.collapseAllNotes,
+    expandNoteCollapse: args.collapsedState.expandNoteCollapse,
     expandAllNotes: args.collapsedState.expandAllNotes,
     hasCollapsibleNotes: args.collapsedState.hasCollapsibleNotes,
     hasCollapsedNotes: args.collapsedState.hasCollapsedNotes,

@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState, type ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { resetNodeListCollapseSessionForTest } from '../../features/nodes/components/nodeListCollapseSession';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -50,9 +51,10 @@ function renderWorkspaceContent(
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
     'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
     'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-a', title: 'Topic A' }),
-    'folder-b': createNode({ id: 'folder-b', kind: 'folder', title: 'Folder B' })
+    'folder-b': createNode({ id: 'folder-b', kind: 'folder', title: 'Folder B' }),
+    'folder-b-child': createNode({ id: 'folder-b-child', kind: 'folder', parentNodeId: 'folder-b', title: 'Folder B child' })
   };
-  const nodeOrder = [INBOX_NODE_ID, 'folder-a', 'topic-a', 'folder-b'];
+  const nodeOrder = [INBOX_NODE_ID, 'folder-a', 'topic-a', 'folder-b', 'folder-b-child'];
 
   useWorkspaceStore.setState((state) => ({
     ...state,
@@ -154,6 +156,7 @@ function FolderClickHarness() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  resetNodeListCollapseSessionForTest();
 });
 
 it('moves a current-folder topic when dropped onto a directory folder', () => {
@@ -168,6 +171,52 @@ it('moves a current-folder topic when dropped onto a directory folder', () => {
   fireEvent.drop(targetFolderRow, { clientY: 50, dataTransfer: transfer });
 
   expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-b');
+});
+
+it('drops current-folder topics into directory folders even near row edges', () => {
+  renderWorkspaceContent();
+  const transfer = createDragTransfer();
+  const topicRow = screen.getByRole('treeitem', { name: 'Topic A' });
+  const targetFolderRow = screen.getByRole('treeitem', { name: 'Folder B' });
+  mockMiddleDropZone(targetFolderRow);
+
+  fireEvent.dragStart(topicRow, { dataTransfer: transfer });
+  fireEvent.dragOver(targetFolderRow, { clientY: 0, dataTransfer: transfer });
+  fireEvent.drop(targetFolderRow, { clientY: 0, dataTransfer: transfer });
+
+  expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-b');
+});
+
+it('does not offer the directory root as a drop target for current-folder topics', () => {
+  renderWorkspaceContent();
+  const transfer = createDragTransfer();
+  const topicRow = screen.getByRole('treeitem', { name: 'Topic A' });
+  const folderTree = screen.getAllByRole('tree', { name: 'Topic list' })[0];
+
+  if (!folderTree) {
+    throw new Error('Expected folder tree.');
+  }
+  fireEvent.dragStart(topicRow, { dataTransfer: transfer });
+  fireEvent.dragOver(folderTree, { dataTransfer: transfer });
+
+  expect(screen.queryByText('Drop to move topic to root')).not.toBeInTheDocument();
+});
+
+it('expands a collapsed directory folder while dragging a topic over it', async () => {
+  renderWorkspaceContent();
+  const transfer = createDragTransfer();
+  const topicRow = screen.getByRole('treeitem', { name: 'Topic A' });
+  const targetFolderRow = screen.getByRole('treeitem', { name: 'Folder B' });
+  mockMiddleDropZone(targetFolderRow);
+
+  expect(screen.queryByRole('treeitem', { name: 'Folder B child' })).not.toBeInTheDocument();
+
+  fireEvent.dragStart(topicRow, { dataTransfer: transfer });
+  fireEvent.dragOver(targetFolderRow, { clientY: 50, dataTransfer: transfer });
+
+  await waitFor(() => {
+    expect(screen.getByRole('treeitem', { name: 'Folder B child' })).toBeInTheDocument();
+  });
 });
 
 it('keeps sibling folder branches open when another folder is clicked', () => {
