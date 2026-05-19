@@ -65,7 +65,7 @@ function saveReadwiseKeepSettings(primaryDir: string, highlightDir: string) {
   });
 }
 
-it('rebuilds readwise article content and replaces imported child highlights', async () => {
+async function prepareReadwiseArticleFixture() {
   const primaryDir = path.join(tempRoot, 'readwise', 'Full Document Contents', 'Articles');
   const highlightDir = path.join(tempRoot, 'readwise', 'Articles');
   await fs.mkdir(primaryDir, { recursive: true });
@@ -73,31 +73,45 @@ it('rebuilds readwise article content and replaces imported child highlights', a
   await fs.writeFile(path.join(primaryDir, 'entry.md'), '# Entry\n\nSource body.\n', 'utf8');
   await fs.writeFile(path.join(highlightDir, 'entry.md'), '# Entry\n\n## Highlights\nSource body.\n', 'utf8');
   saveReadwiseKeepSettings(primaryDir, highlightDir);
-
   await runKeepImportRule({
     directoryPath: primaryDir,
     highlightPolicy: 'adopt',
     ruleId: 'draft-readwise-source-401',
     sourceType: 'readwise'
   });
+}
 
-  const connection = openDatabaseConnection();
-  const first = connection.sqlite
-    .prepare(`SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?`)
-    .get('draft-readwise-source-401', 'entry.md') as { last_node_id: string };
-  connection.sqlite
-    .prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?')
-    .run('# Entry\n\nEdited in app.\n', new Date().toISOString(), first.last_node_id);
-  insertImportedChild(first.last_node_id, 'node-stale-imported-highlight', JSON.stringify({
+function seedStaleChildren(parentNodeId: string) {
+  insertImportedChild(parentNodeId, 'node-stale-imported-highlight', JSON.stringify({
     id: 'stale-anchor',
     kind: 'highlight',
     origin: 'imported'
   }));
-  insertImportedChild(first.last_node_id, 'node-legacy-imported-highlight', JSON.stringify({
+  insertImportedChild(parentNodeId, 'node-legacy-imported-highlight', JSON.stringify({
     id: 'imported-highlight-legacy',
     kind: 'highlight',
     locator: { from: 0, originalText: 'legacy', to: 6 }
   }));
+  insertGeneratedUnanchoredChild(parentNodeId, 'node-unanchored-imported-highlight');
+  insertReadingState('node-unanchored-imported-highlight');
+  insertManualChild(parentNodeId, 'node-manual-child');
+}
+
+function readKeepImportNodeId() {
+  return openDatabaseConnection().sqlite
+    .prepare(`SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?`)
+    .get('draft-readwise-source-401', 'entry.md') as { last_node_id: string };
+}
+
+it('rebuilds readwise article content and replaces imported child highlights', async () => {
+  await prepareReadwiseArticleFixture();
+
+  const connection = openDatabaseConnection();
+  const first = readKeepImportNodeId();
+  connection.sqlite
+    .prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?')
+    .run('# Entry\n\nEdited in app.\n', new Date().toISOString(), first.last_node_id);
+  seedStaleChildren(first.last_node_id);
 
   await expect(reimportCurrentTopicSource(first.last_node_id)).resolves.toMatchObject({
     node_id: first.last_node_id,
@@ -113,20 +127,26 @@ it('rebuilds readwise article content and replaces imported child highlights', a
     .get(first.last_node_id) as { content: string };
   const importedChildren = connection.sqlite
     .prepare(
-      `SELECT content, title
+      `SELECT anchor_link, content, title
        FROM nodes
        WHERE parent_id = ?
-         AND anchor_link LIKE '%"origin":"imported"%'
        ORDER BY created_at ASC`
     )
     .all(first.last_node_id);
 
   expect(node.content).toBe('# Entry\n\n## Entry\n\nSource body.');
-  expect(importedChildren).toHaveLength(1);
-  expect(importedChildren[0]).toMatchObject({
-    content: 'Source body.',
-    title: 'Source body.'
-  });
+  expect(importedChildren).toEqual([
+    expect.objectContaining({
+      anchor_link: null,
+      content: 'manual note',
+      title: 'Manual child'
+    }),
+    expect.objectContaining({
+      anchor_link: expect.stringContaining('"origin":"imported"'),
+      content: 'Source body.',
+      title: 'Source body.'
+    })
+  ]);
 });
 
 function insertImportedChild(parentNodeId: string, nodeId: string, anchorLink: string) {
@@ -136,4 +156,33 @@ function insertImportedChild(parentNodeId: string, nodeId: string, anchorLink: s
        VALUES (?, ?, 'topic', 'Image highlight', 'stale', ?, ?, ?)`
     )
     .run(nodeId, parentNodeId, anchorLink, '2026-05-18T00:00:00.000Z', '2026-05-18T00:00:00.000Z');
+}
+
+function insertGeneratedUnanchoredChild(parentNodeId: string, nodeId: string) {
+  openDatabaseConnection().sqlite
+    .prepare(
+      `INSERT INTO nodes (id, parent_id, kind, title, is_title_manual, content, anchor_link, created_at, updated_at)
+       VALUES (?, ?, 'topic', 'Generated old highlight', 0, 'stale generated', NULL, ?, ?)`
+    )
+    .run(nodeId, parentNodeId, '2026-05-18T00:00:00.001Z', '2026-05-18T00:00:00.001Z');
+}
+
+function insertManualChild(parentNodeId: string, nodeId: string) {
+  openDatabaseConnection().sqlite
+    .prepare(
+      `INSERT INTO nodes (id, parent_id, kind, title, is_title_manual, content, anchor_link, created_at, updated_at)
+       VALUES (?, ?, 'topic', 'Manual child', 1, 'manual note', NULL, ?, ?)`
+    )
+    .run(nodeId, parentNodeId, '2026-05-18T00:00:00.002Z', '2026-05-18T00:00:00.002Z');
+}
+
+function insertReadingState(nodeId: string) {
+  openDatabaseConnection().sqlite
+    .prepare(
+      `INSERT INTO node_reading (
+        node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at,
+        priority, repetition_count, state
+      ) VALUES (?, 0, 1, ?, ?, 0, 0, 'active')`
+    )
+    .run(nodeId, '2026-05-18T00:00:00.003Z', '2026-05-18T00:00:00.003Z');
 }

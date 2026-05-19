@@ -1,3 +1,4 @@
+import { normalizeChineseVariants } from './chineseVariantNormalization.js';
 import { normalizeLineEndings } from './contextExcerptQuoteLocator.js';
 
 function appendCompactWhitespace(state: { normalized: string; rawIndexes: number[] }, rawIndex: number) {
@@ -17,7 +18,7 @@ function appendNormalizedCharacter(
     appendCompactWhitespace(state, rawIndex);
     return;
   }
-  state.normalized += character;
+  state.normalized += normalizeChineseVariants(character);
   state.rawIndexes.push(rawIndex);
 }
 
