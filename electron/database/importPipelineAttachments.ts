@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { isDataUrlDestination } from '../../lib/platform/markdownImageDataUrl.js';
+import { isDataUrlDestination, normalizeSafeMarkdownDataImageUrl } from '../../lib/platform/markdownImageDataUrl.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import { buildAttachmentStorageFileName } from '../attachments/storagePath.js';
 
@@ -145,7 +145,12 @@ export function importMarkdownImageAttachment(input: {
   sourceLocator: string;
   syntax: 'markdown' | 'obsidian';
 }) {
-  if (isRemoteImageDestination(input.destination) || isDataUrlDestination(input.destination) || input.destination.startsWith('asset://')) {
+  if (
+    isRemoteImageDestination(input.destination) ||
+    isDataUrlDestination(input.destination) ||
+    normalizeSafeMarkdownDataImageUrl(input.destination) ||
+    input.destination.startsWith('asset://')
+  ) {
     return { status: 'skipped' as const };
   }
   const candidatePaths = resolveLocalImageSourcePaths(input.destination, input.sourceLocator);

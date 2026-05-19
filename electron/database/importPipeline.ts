@@ -7,7 +7,7 @@ import { applyParentContentChange } from '../../lib/core/database/parentContentM
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
-import { parseMarkdownDataImageSize } from '../../lib/platform/markdownImageDataUrl.js';
+import { normalizeSafeMarkdownDataImageUrl, parseMarkdownDataImageSize } from '../../lib/platform/markdownImageDataUrl.js';
 
 import { createNodeAttachmentLink } from './attachments.js';
 import { openDatabaseConnection } from './connection.js';
@@ -67,6 +67,12 @@ function rewriteImportImageReferences(input: {
   sourceLocator: string;
 }) {
   return rewriteInlineImageReferences(input.content, (reference) => {
+    const normalizedDataImageUrl = normalizeSafeMarkdownDataImageUrl(reference.destination);
+    if (normalizedDataImageUrl) {
+      const suffix = reference.suffix ? ` ${reference.suffix}` : '';
+      return `![${reference.altText}](${normalizedDataImageUrl}${suffix})`;
+    }
+
     const importResult = importMarkdownImageAttachment({
       destination: reference.destination,
       nodeId: input.nodeId,
