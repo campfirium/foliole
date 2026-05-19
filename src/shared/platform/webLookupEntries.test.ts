@@ -24,7 +24,10 @@ it('defaults to ChatGPT then Google while keeping DuckDuckGo hidden', () => {
     ['google', true],
     ['duckduckgo', false]
   ]);
-  expect(getEnabledWebLookupEntries().map((entry) => entry.label)).toEqual(['ChatGPT', 'Google']);
+  expect(getEnabledWebLookupEntries().map((entry) => entry.label)).toEqual([
+    'Summarize with ChatGPT',
+    'Search with Google'
+  ]);
 });
 
 it('persists built-in entry visibility through the app settings key', () => {
@@ -69,15 +72,37 @@ it('resolves prompt actions from selection or current topic text', () => {
 
   expect(resolveWebLookupAction(chatgpt, { documentText: 'Full topic', selectionText: 'Selected text' })).toEqual({
     kind: 'prompt',
-    label: 'Ask ChatGPT about selection',
-    url: 'https://chatgpt.com/?prompt=Summarize%20the%20following%20content:%0A%0AContent:%0ASelected%20text'
+    label: 'Summarize with ChatGPT',
+    url: 'https://chatgpt.com/?prompt=Summarize%20the%20following%20selection:%0A%0ASelected%20text'
   });
   expect(resolveWebLookupAction(chatgpt, { documentText: 'Full topic', selectionText: null })).toEqual({
     kind: 'prompt',
-    label: 'Ask ChatGPT about full content',
-    url: 'https://chatgpt.com/?prompt=Summarize%20the%20following%20content:%0A%0AContent:%0AFull%20topic'
+    label: 'Summarize with ChatGPT',
+    url: 'https://chatgpt.com/?prompt=Summarize%20the%20following%20selection:%0A%0AFull%20topic'
   });
   expect(resolveWebLookupAction(google, { documentText: 'Full topic', selectionText: null })).toBeNull();
+});
+
+it('uses the configured label as the context menu text', () => {
+  updateWebLookupEntry('chatgpt', { label: 'ChatGPT summarize this' });
+  const chatgpt = getWebLookupEntries().find((entry) => entry.id === 'chatgpt')!;
+
+  expect(resolveWebLookupAction(chatgpt, { documentText: 'Full topic', selectionText: 'Selected text' })?.label)
+    .toBe('ChatGPT summarize this');
+});
+
+it('migrates stored built-in labels that still match old defaults', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.webLookupEntries, JSON.stringify([
+    { id: 'chatgpt', label: 'ChatGPT' },
+    { id: 'google', label: 'Google' },
+    { id: 'duckduckgo', label: 'DuckDuckGo' }
+  ]));
+
+  expect(getWebLookupEntries().map((entry) => entry.label)).toEqual([
+    'Summarize with ChatGPT',
+    'Search with Google',
+    'Search with DuckDuckGo'
+  ]);
 });
 
 it('moves entries and migrates the old ChatGPT default template', () => {
@@ -88,12 +113,23 @@ it('moves entries and migrates the old ChatGPT default template', () => {
     }
   ]));
 
-  expect(getWebLookupEntries()[0].urlTemplate).toContain('Content:');
+  expect(getWebLookupEntries()[0].urlTemplate).toContain('following selection');
   expect(moveWebLookupEntry('google', 'chatgpt').map((entry) => entry.id)).toEqual([
     'google',
     'chatgpt',
     'duckduckgo'
   ]);
+});
+
+it('migrates the previous ChatGPT content default template', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.webLookupEntries, JSON.stringify([
+    {
+      id: 'chatgpt',
+      urlTemplate: 'https://chatgpt.com/?prompt=Summarize the following content:%0A%0AContent:%0A{selection}'
+    }
+  ]));
+
+  expect(getWebLookupEntries()[0].urlTemplate).toContain('following selection');
 });
 
 it('adds and removes custom selection-only entries', () => {

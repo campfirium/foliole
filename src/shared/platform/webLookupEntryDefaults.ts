@@ -13,6 +13,12 @@ export interface WebLookupEntry {
 }
 
 export const CHATGPT_DEFAULT_LINK = [
+  'https://chatgpt.com/?prompt=Summarize the following selection:',
+  '',
+  WEB_LOOKUP_SELECTION_PLACEHOLDER
+].join('%0A');
+
+export const CHATGPT_CONTENT_DEFAULT_LINK = [
   'https://chatgpt.com/?prompt=Summarize the following content:',
   '',
   'Content:',
@@ -50,7 +56,7 @@ export const BUILT_IN_WEB_LOOKUP_ENTRIES: WebLookupEntry[] = [
     enabled: true,
     id: 'chatgpt',
     kind: 'prompt',
-    label: 'ChatGPT',
+    label: 'Summarize with ChatGPT',
     urlTemplate: CHATGPT_DEFAULT_LINK
   },
   {
@@ -58,7 +64,7 @@ export const BUILT_IN_WEB_LOOKUP_ENTRIES: WebLookupEntry[] = [
     enabled: true,
     id: 'google',
     kind: 'search',
-    label: 'Google',
+    label: 'Search with Google',
     urlTemplate: `https://www.google.com/search?q=${WEB_LOOKUP_SELECTION_PLACEHOLDER}`
   },
   {
@@ -66,7 +72,7 @@ export const BUILT_IN_WEB_LOOKUP_ENTRIES: WebLookupEntry[] = [
     enabled: false,
     id: 'duckduckgo',
     kind: 'search',
-    label: 'DuckDuckGo',
+    label: 'Search with DuckDuckGo',
     urlTemplate: `https://duckduckgo.com/?q=${WEB_LOOKUP_SELECTION_PLACEHOLDER}`
   }
 ];
