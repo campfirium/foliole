@@ -74,7 +74,7 @@ function useDerivedControllerState(args: {
         args.reviewSettings.reviewSchedulerSettings.pushQueue
       )
   );
-  const paletteItems = useControllerPaletteItems(args);
+  const paletteItems = useControllerPaletteItems({ ...args, reviewDueCount });
   const layoutProps = measureSelectionComputation(args.ws.activeNodeId, args.ws.nodeOrder.length, 'layout_props', () =>
     buildControllerLayoutState({
       controller: args.controller,
