@@ -5,6 +5,26 @@ import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { createMarkdownImageWidgetDom } from './liveMarkdownImages';
+import { canReuseMarkdownImageWidgetDom, updateMarkdownImageWidgetDomRange } from './liveMarkdownImageWidgetDom';
+
+function parseWidgetRangeValue(value: string | undefined, fallback: number) {
+  if (!value) {
+    return fallback;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function resolveCurrentImageMatchFromDom(dom: HTMLElement | null, imageMatch: MarkdownImageMatch): MarkdownImageMatch {
+  if (!dom) {
+    return imageMatch;
+  }
+  return {
+    ...imageMatch,
+    from: parseWidgetRangeValue(dom.dataset.mdImageFrom, imageMatch.from),
+    to: parseWidgetRangeValue(dom.dataset.mdImageTo, imageMatch.to)
+  };
+}
 
 class MarkdownImageWidget extends WidgetType {
   readonly editorNodeId: string | null;
@@ -38,13 +58,24 @@ class MarkdownImageWidget extends WidgetType {
   }
 
   override toDOM(view: EditorView) {
-    return createMarkdownImageWidgetDom(
+    let widgetDom: HTMLElement | null = null;
+    widgetDom = createMarkdownImageWidgetDom(
       this.imageMatch,
       this.editorNodeId,
       this.onMissingAttachmentResource,
       () => view.requestMeasure(),
-      () => removeMarkdownImage(view, this.imageMatch)
+      () => removeMarkdownImage(view, resolveCurrentImageMatchFromDom(widgetDom, this.imageMatch)),
+      this.presentationVersion
     );
+    return widgetDom;
+  }
+
+  override updateDOM(dom: HTMLElement) {
+    if (!canReuseMarkdownImageWidgetDom(dom, this.imageMatch, this.editorNodeId, this.presentationVersion)) {
+      return false;
+    }
+    updateMarkdownImageWidgetDomRange(dom, this.imageMatch);
+    return true;
   }
 }
 

@@ -2,6 +2,7 @@ import { folioleMarkdownParser } from './folioleMarkdownParser';
 import type { MarkdownInlineLinkRange } from './markdownInlineProjectionTypes';
 import {
   normalizeMarkdownLinkReferenceLabel,
+  type MarkdownSyntaxTree,
   type MarkdownLinkReferenceMap
 } from './markdownLinkReferences';
 import {
@@ -11,7 +12,6 @@ import {
   projectMarkdownEscapedText
 } from './markdownLinkSafety';
 
-type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 function collectChildNodes(node: MarkdownSyntaxNode, names: ReadonlySet<string>) {
@@ -117,15 +117,26 @@ function visitLinkRanges(args: {
   }
 }
 
+function collectParsedMarkdownInlineLinkRangesFromTree(args: {
+  offset: number;
+  references: MarkdownLinkReferenceMap;
+  text: string;
+  tree: MarkdownSyntaxTree;
+}) {
+  const links: MarkdownInlineLinkRange[] = [];
+  visitLinkRanges({ links, node: args.tree.topNode, offset: args.offset, references: args.references, source: args.text });
+  return links.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+}
+
 function collectParsedMarkdownInlineLinkRanges(args: {
   offset: number;
   references: MarkdownLinkReferenceMap;
   text: string;
 }) {
-  const tree: MarkdownSyntaxTree = folioleMarkdownParser.parse(args.text);
-  const links: MarkdownInlineLinkRange[] = [];
-  visitLinkRanges({ links, node: tree.topNode, offset: args.offset, references: args.references, source: args.text });
-  return links.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+  return collectParsedMarkdownInlineLinkRangesFromTree({
+    ...args,
+    tree: folioleMarkdownParser.parse(args.text)
+  });
 }
 
 function collectIndentedListItemLinkRanges(args: {
@@ -150,6 +161,18 @@ export function collectMarkdownInlineLinkRanges(
   references: MarkdownLinkReferenceMap = new Map()
 ): MarkdownInlineLinkRange[] {
   const parsedLinks = collectParsedMarkdownInlineLinkRanges({ offset, references, text });
+  return parsedLinks.length > 0
+    ? parsedLinks
+    : collectIndentedListItemLinkRanges({ offset, references, text });
+}
+
+export function collectMarkdownInlineLinkRangesFromTree(
+  tree: MarkdownSyntaxTree,
+  text: string,
+  offset = 0,
+  references: MarkdownLinkReferenceMap = new Map()
+): MarkdownInlineLinkRange[] {
+  const parsedLinks = collectParsedMarkdownInlineLinkRangesFromTree({ offset, references, text, tree });
   return parsedLinks.length > 0
     ? parsedLinks
     : collectIndentedListItemLinkRanges({ offset, references, text });

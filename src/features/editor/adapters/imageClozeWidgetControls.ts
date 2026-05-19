@@ -101,60 +101,86 @@ export function createImageClozeDraftController(args: {
   };
 }
 
-export function appendImageClozeDraftButtons(args: {
+type ImageClozeDraftButtonArgs = {
   attachmentId: string;
   draft: ImageClozeDraftController;
   from: number;
+  getImageRange?: () => { from: number; to: number };
   host: HTMLElement;
   overlay: HTMLElement;
   to: number;
-}) {
+};
+
+function getDraftImageRange(args: ImageClozeDraftButtonArgs) {
+  return args.getImageRange?.() ?? { from: args.from, to: args.to };
+}
+
+function createConfirmDraftButton(args: ImageClozeDraftButtonArgs) {
+  return createImageClozeActionButton({
+    ariaLabel: 'Confirm image cloze',
+    iconPath: 'M3 8.5 6.2 11.7 13 4.8',
+    onClick: (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const draftRect = args.draft.dragHandlers.getDraftRect();
+      if (!draftRect) {
+        return;
+      }
+      const imageRange = getDraftImageRange(args);
+      dispatchImageClozeCreate({
+        attachmentId: args.attachmentId,
+        imageRange,
+        regions: [
+          ...args.draft.consumePendingRegions(),
+          buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect, from: imageRange.from, to: imageRange.to })
+        ]
+      });
+      const anchorPoint = args.draft.actionAnchorPoint();
+      if (anchorPoint) {
+        showImageClozeFeedback(args.host, 'Item created.', anchorPoint.x, anchorPoint.y);
+      }
+      args.draft.resetDraft();
+    }
+  });
+}
+
+function createCancelDraftButton(args: Pick<ImageClozeDraftButtonArgs, 'draft'>) {
+  return createImageClozeActionButton({
+    ariaLabel: 'Cancel image cloze',
+    iconPath: 'M4 4 12 12 M12 4 4 12',
+    onClick: (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      args.draft.resetDraft();
+    }
+  });
+}
+
+function createAddDraftRegionButton(args: ImageClozeDraftButtonArgs) {
+  return createImageClozeActionButton({
+    ariaLabel: 'Add image cloze region',
+    iconPath: 'M8 3.5v9 M3.5 8h9',
+    onClick: (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const draftRect = args.draft.dragHandlers.getDraftRect();
+      if (!draftRect) {
+        return;
+      }
+      const imageRange = getDraftImageRange(args);
+      args.draft.addPendingRegion(
+        buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect, from: imageRange.from, to: imageRange.to })
+      );
+      args.draft.resetDraft();
+      args.overlay.hidden = false;
+    }
+  });
+}
+
+export function appendImageClozeDraftButtons(args: ImageClozeDraftButtonArgs) {
   args.draft.draftActions.append(
-    createImageClozeActionButton({
-      ariaLabel: 'Confirm image cloze',
-      iconPath: 'M3 8.5 6.2 11.7 13 4.8',
-      onClick: (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const draftRect = args.draft.dragHandlers.getDraftRect();
-        if (!draftRect) {
-          return;
-        }
-        dispatchImageClozeCreate({
-          attachmentId: args.attachmentId,
-          imageRange: { from: args.from, to: args.to },
-          regions: [...args.draft.consumePendingRegions(), buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect, from: args.from, to: args.to })]
-        });
-        const anchorPoint = args.draft.actionAnchorPoint();
-        if (anchorPoint) {
-          showImageClozeFeedback(args.host, 'Item created.', anchorPoint.x, anchorPoint.y);
-        }
-        args.draft.resetDraft();
-      }
-    }),
-    createImageClozeActionButton({
-      ariaLabel: 'Cancel image cloze',
-      iconPath: 'M4 4 12 12 M12 4 4 12',
-      onClick: (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        args.draft.resetDraft();
-      }
-    }),
-    createImageClozeActionButton({
-      ariaLabel: 'Add image cloze region',
-      iconPath: 'M8 3.5v9 M3.5 8h9',
-      onClick: (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const draftRect = args.draft.dragHandlers.getDraftRect();
-        if (!draftRect) {
-          return;
-        }
-        args.draft.addPendingRegion(buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect, from: args.from, to: args.to }));
-        args.draft.resetDraft();
-        args.overlay.hidden = false;
-      }
-    })
+    createConfirmDraftButton(args),
+    createCancelDraftButton(args),
+    createAddDraftRegionButton(args)
   );
 }

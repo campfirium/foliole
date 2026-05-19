@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { collectMarkdownInlineLinkRangesFromTree } from './markdownInlineLinkProjection';
+import { collectMarkdownLinkReferencesFromTree } from './markdownLinkReferences';
 import { collectMultilineLinkPresentationPlans } from './markdownMultilineLinkPresentation';
 
 const MULTILINE_LINK = [
@@ -42,5 +45,15 @@ describe('markdown multiline link presentation', () => {
       expect.objectContaining({ className: 'cm-md-syntax-visible', from: 2, to: 3 }),
       expect.objectContaining({ className: 'cm-md-syntax-visible', from: 42, to: 101 })
     ]));
+  });
+
+  it('accepts link ranges collected from an already parsed markdown tree', () => {
+    const tree = folioleMarkdownParser.parse(MULTILINE_LINK);
+    const references = collectMarkdownLinkReferencesFromTree(tree, MULTILINE_LINK);
+    const links = collectMarkdownInlineLinkRangesFromTree(tree, MULTILINE_LINK, 0, references);
+
+    expect(collectMultilineLinkPresentationPlans({ links, source: MULTILINE_LINK })).toEqual(
+      collectMultilineLinkPresentationPlans({ source: MULTILINE_LINK })
+    );
   });
 });

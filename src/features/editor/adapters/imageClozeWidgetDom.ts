@@ -41,6 +41,25 @@ function createImagePreviewTrigger(args: { alt: string; presentation: ImageCloze
   return button;
 }
 
+function parseImageRangeValue(value: string | undefined, fallback: number) {
+  if (!value) {
+    return fallback;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function resolveCurrentImageRange(wrapper: HTMLElement, fallback: { from: number; to: number }) {
+  const widget = wrapper.closest<HTMLElement>('.cm-md-image-widget');
+  if (!widget) {
+    return fallback;
+  }
+  return {
+    from: parseImageRangeValue(widget.dataset.mdImageFrom, fallback.from),
+    to: parseImageRangeValue(widget.dataset.mdImageTo, fallback.to)
+  };
+}
+
 export function createImageClozeImageSurface(args: {
   attachmentId: string | null;
   presentation?: ImageClozeEditorPresentation | null;
@@ -84,6 +103,7 @@ export function createImageClozeImageSurface(args: {
       attachmentId: args.attachmentId,
       draftRectElement,
       from: args.from,
+      getImageRange: () => resolveCurrentImageRange(wrapper, { from: args.from, to: args.to }),
       overlay,
       ...(args.presentation !== undefined ? { presentation: args.presentation } : {}),
       regionLayer,

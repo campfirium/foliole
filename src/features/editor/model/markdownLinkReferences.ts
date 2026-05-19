@@ -1,7 +1,7 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { normalizeMarkdownLinkDestination } from './markdownLinkSafety';
 
-type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
+export type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 export type MarkdownLinkReferenceMap = ReadonlyMap<string, string>;
@@ -75,16 +75,22 @@ function visitLinkReferences(node: MarkdownSyntaxNode, source: string, reference
   }
 }
 
-export function collectMarkdownLinkReferences(text: string): MarkdownLinkReferenceMap {
-  const tree: MarkdownSyntaxTree = folioleMarkdownParser.parse(text);
+export function collectMarkdownLinkReferencesFromTree(tree: MarkdownSyntaxTree, text: string): MarkdownLinkReferenceMap {
   const references = new Map<string, string>();
   visitLinkReferences(tree.topNode, text, references);
   return references;
 }
 
-export function collectMarkdownLinkReferenceRanges(text: string): MarkdownLinkReferenceRange[] {
-  const tree: MarkdownSyntaxTree = folioleMarkdownParser.parse(text);
+export function collectMarkdownLinkReferenceRangesFromTree(tree: MarkdownSyntaxTree, text: string): MarkdownLinkReferenceRange[] {
   const ranges: MarkdownLinkReferenceRange[] = [];
   visitLinkReferenceRanges(tree.topNode, text, ranges);
   return ranges.sort((left, right) => left.from - right.from);
+}
+
+export function collectMarkdownLinkReferences(text: string): MarkdownLinkReferenceMap {
+  return collectMarkdownLinkReferencesFromTree(folioleMarkdownParser.parse(text), text);
+}
+
+export function collectMarkdownLinkReferenceRanges(text: string): MarkdownLinkReferenceRange[] {
+  return collectMarkdownLinkReferenceRangesFromTree(folioleMarkdownParser.parse(text), text);
 }
