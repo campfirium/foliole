@@ -27,7 +27,13 @@ function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [PREVIEW_SCRIPT], {
       cwd: REPO_ROOT,
-      env: { ...process.env, WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true', ...TEST_PREVIEW_TIMEOUTS, ...env }
+      env: {
+        ...process.env,
+        WINDOWS_NATIVE_ABI_CHECK_COMMAND: 'true',
+        WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true',
+        ...TEST_PREVIEW_TIMEOUTS,
+        ...env
+      }
     });
     let stdout = '';
     let stderr = '';
@@ -274,7 +280,8 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('step 3/4: verify windows node_modules');
       expect(result.stdout).toContain('windows node_modules check failed');
-      expect(result.stdout).toContain('hint: run npm install in');
+      expect(result.stdout).toContain('restore Electron native ABI before preview');
+      expect(result.stdout).toContain('do not run plain Node npm rebuild for better-sqlite3');
       expect(result.stdout).toContain('missing: @tanstack/react-virtual');
       expect(result.stdout).toContain('npm install required');
       expect(result.stdout).not.toContain('step 4/4: apply update action');
