@@ -7,6 +7,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { useWorkspaceDualListState } from './workspaceDualListState';
 
 function createNode(args: {
+  anchorLink?: NonNullable<WorkspaceListNodesById[string]>['anchorLink'];
   id: string;
   kind: 'folder' | 'topic' | 'item';
   parentNodeId?: string | null;
@@ -14,6 +15,7 @@ function createNode(args: {
 }): NonNullable<WorkspaceListNodesById[string]> {
   return {
     createdAt: '2026-04-20T00:00:00.000Z',
+    ...(args.anchorLink !== undefined ? { anchorLink: args.anchorLink } : {}),
     hasContent: args.kind !== 'folder',
     hasReveal: args.kind === 'item',
     id: args.id,
@@ -138,13 +140,16 @@ it('reflects moved topics in the selected folder without waiting for a later reb
   expect(result.current.topicNodeOrder).toEqual(['topic-b']);
 });
 
-it('counts visible topics under folders without counting nested folders', () => {
+it('counts native content under folders without counting nested folders or derived nodes', () => {
   const folderCountNodesById: WorkspaceListNodesById = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
     'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
     'folder-child': createNode({ id: 'folder-child', kind: 'folder', parentNodeId: 'folder-a', title: 'Folder child' }),
     'folder-empty': createNode({ id: 'folder-empty', kind: 'folder', parentNodeId: 'folder-a', title: 'Empty child' }),
-    'topic-nested': createNode({ id: 'topic-nested', kind: 'topic', parentNodeId: 'folder-child', title: 'Nested Topic' })
+    'topic-direct': createNode({ id: 'topic-direct', kind: 'topic', parentNodeId: 'folder-a', title: 'Direct Topic' }),
+    'topic-nested': createNode({ id: 'topic-nested', kind: 'topic', parentNodeId: 'folder-child', title: 'Nested Topic' }),
+    'topic-highlight': createNode({ anchorLink: { id: 'hl-1', kind: 'highlight' }, id: 'topic-highlight', kind: 'topic', parentNodeId: 'topic-nested', title: 'Highlight' }),
+    'item-cloze': createNode({ anchorLink: { id: 'cloze-1', kind: 'cloze' }, id: 'item-cloze', kind: 'item', parentNodeId: 'topic-nested', title: 'Cloze' })
   };
 
   const { result } = renderHook(() =>
@@ -152,14 +157,14 @@ it('counts visible topics under folders without counting nested folders', () => 
       activeNodeId: 'folder-a',
       isTrashViewOpen: false,
       listNodesById: folderCountNodesById,
-      nodeOrder: [INBOX_NODE_ID, 'folder-a', 'folder-child', 'folder-empty', 'topic-nested'],
+      nodeOrder: [INBOX_NODE_ID, 'folder-a', 'folder-child', 'folder-empty', 'topic-direct', 'topic-nested', 'topic-highlight', 'item-cloze'],
       trashedNodeIds: []
     })
   );
 
   expect(result.current.folderTopicCountById.get('folder-a')).toBe(1);
   expect(result.current.folderTopicCountById.get('folder-child')).toBe(1);
-  expect(result.current.folderTopicCountById.has('folder-empty')).toBe(false);
+  expect(result.current.folderTopicCountById.get('folder-empty')).toBe(0);
 });
 
 it('counts visible trash roots on the Trash navigation row', () => {
