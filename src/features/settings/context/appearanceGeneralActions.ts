@@ -3,6 +3,7 @@ import { type FrontmatterDisplayMode, setFrontmatterDisplayMode } from '../../ed
 import { resetFrontmatterMetaFields, setFrontmatterMetaFields } from '../../editor/model/frontmatterMetaFieldsSetting';
 import { type MarkdownSyntaxVisibility, setMarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import { setAutoLocalizeRemoteImages } from '../../editor/model/remoteImageLocalizationSetting';
+import { setSelectionToolbarEnabled, setSelectionToolbarOpacityPercent } from '../../editor/model/selectionToolbarSettings';
 import {
   INTERFACE_FONT_SIZE_DEFAULT,
   type InterfaceFontPreset,
@@ -42,6 +43,8 @@ export type GeneralAppearanceActions = Pick<
   | 'setInterfaceFontPreset'
   | 'setInterfaceFontSize'
   | 'setMarkdownSyntaxVisibility'
+  | 'setSelectionToolbarEnabled'
+  | 'setSelectionToolbarOpacityPercent'
   | 'setMonospaceFontPreset'
   | 'setPdfReadingMode'
   | 'setReadingContentWidth'
@@ -66,6 +69,8 @@ export function createGeneralAppearanceActions(state: AppearanceState): GeneralA
     setInterfaceFontPreset: (value: InterfaceFontPreset) => (setInterfaceFontPreset(value), state.setInterfaceFontPresetState(value)),
     setInterfaceFontSize: (value: number) => (setInterfaceFontSize(value), state.setInterfaceFontSizeState(value)),
     setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => (setMarkdownSyntaxVisibility(value), state.setMarkdownSyntaxVisibilityState(value)),
+    setSelectionToolbarEnabled: (value: boolean) => (setSelectionToolbarEnabled(value), state.setSelectionToolbarEnabledState(value)),
+    setSelectionToolbarOpacityPercent: (value: number) => state.setSelectionToolbarOpacityPercentState(setSelectionToolbarOpacityPercent(value)),
     setMonospaceFontPreset: (value: MonospaceFontPreset) => (setMonospaceFontPreset(value), state.setMonospaceFontPresetState(value)),
     setPdfReadingMode: (value: PdfReadingMode) => (setPdfReadingMode(value), state.setPdfReadingModeState(value)),
     setReadingContentWidth: (value: number) => (setReadingContentWidth(value), state.setReadingContentWidthState(value)),

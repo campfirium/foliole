@@ -10,6 +10,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   longClozeFrontGuardFrontMax: 'foliole-long-cloze-front-guard-front-max',
   autoLocalizeRemoteImages: 'foliole-auto-localize-remote-images',
   remoteImageFailureHintDismissed: 'foliole-remote-image-failure-hint-dismissed',
+  selectionToolbarEnabled: 'foliole-selection-toolbar-enabled',
+  selectionToolbarOpacityPercent: 'foliole-selection-toolbar-opacity-percent',
   editorDisplayMode: 'foliole-editor-display-mode',
   settingsActiveCategory: 'foliole-settings-active-category',
   workspaceRailItems: 'foliole-workspace-rail-items',

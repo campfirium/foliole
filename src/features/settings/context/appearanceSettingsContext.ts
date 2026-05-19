@@ -37,6 +37,8 @@ export interface AppearanceSettingsContextValue {
   frontmatterDisplayMode: FrontmatterDisplayMode;
   frontmatterMetaFields: string;
   selectionColorPreset: SelectionColorPreset;
+  selectionToolbarEnabled: boolean;
+  selectionToolbarOpacityPercent: number;
   highlightColorPreset: HighlightColorPreset;
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
@@ -69,6 +71,8 @@ export interface AppearanceSettingsContextValue {
   setInterfaceFontPreset: (value: InterfaceFontPreset) => void;
   setInterfaceFontSize: (value: number) => void;
   setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => void;
+  setSelectionToolbarEnabled: (value: boolean) => void;
+  setSelectionToolbarOpacityPercent: (value: number) => void;
   setMonospaceFontPreset: (value: MonospaceFontPreset) => void;
   setPdfReadingMode: (value: PdfReadingMode) => void;
   setReadingContentWidth: (value: number) => void;

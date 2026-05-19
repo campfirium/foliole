@@ -54,6 +54,7 @@ interface UseEditorContextCommandsParams {
   nodesById: Record<string, Node>;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
+  selectionToolbarEnabled?: boolean;
   updateNodeContent: (nodeId: string, content: string) => void;
 }
 
@@ -101,6 +102,7 @@ export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
     editorRef,
     isTrashViewOpen: args.isTrashViewOpen,
     nodesById: args.nodesById,
+    selectionToolbarEnabled: args.selectionToolbarEnabled ?? true,
     setContextMenu,
     trashedNodeIds: args.trashedNodeIds
   });

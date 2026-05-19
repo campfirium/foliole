@@ -65,6 +65,7 @@
   --app-list-item-selected-bg: color-mix(in srgb, color-mix(in srgb, var(--workspace-region-main-document-token-bg) 68%, var(--workspace-region-main-document-bg) 32%) 96%, rgb(var(--color-foreground)) 4%);
   --app-floating-item-active-bg: var(--app-list-item-selected-bg);
   --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 86%, var(--workspace-region-main-topic-scrollbar-thumb-color) 14%);
+  --app-selection-toolbar-opacity: 1;
   --app-tooltip-bg: color-mix(in srgb, rgb(var(--color-bg-elevated)) 92%, rgb(var(--color-bg-panel)) 8%);
   --app-tooltip-fg: rgb(var(--color-foreground));
   --app-tooltip-border-color: rgb(var(--color-foreground) / 0.13);

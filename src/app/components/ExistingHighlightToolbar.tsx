@@ -49,7 +49,7 @@ export function ExistingHighlightToolbar(props: {
       onPointerDown={(event) => event.stopPropagation()}
       style={{ left: props.left, top: props.top }}
     >
-      <div className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar">
+      <div className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar" style={{ opacity: 'var(--app-selection-toolbar-opacity)' }}>
         <ExistingHighlightToolbarButton label="Close Highlight" onClick={props.onDeleteExistingHighlight}>
           <X aria-hidden="true" size={19} strokeWidth={2} />
         </ExistingHighlightToolbarButton>

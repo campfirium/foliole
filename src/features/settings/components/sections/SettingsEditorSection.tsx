@@ -30,6 +30,8 @@ import {
 } from '../../../editor/model/longClozeFrontGuardSetting';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 
+import { SelectionToolbarSettingsRow } from './SelectionToolbarSettingsRow';
+
 function HighlightAnnotationPrefixRow() {
   const [prefix, setPrefix] = useState(() => getHighlightAnnotationPrefix());
   const updatePrefix = (value: string) => {
@@ -213,6 +215,7 @@ export function SettingsEditorSection() {
             />
           </SettingsControlSlot>
         </SettingsRow>
+        <SelectionToolbarSettingsRow />
         <FrontmatterMetaFieldsRow />
       </SettingsSection>
       <SettingsSection ariaLabel="Cloze guard settings section" title="Cloze guard">

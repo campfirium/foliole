@@ -72,6 +72,7 @@ interface SelectionAnnotationToolbarArgs {
   editorRef: MutableRefObject<EditorAdapter | null>;
   isTrashViewOpen: boolean;
   nodesById: Record<string, Node>;
+  selectionToolbarEnabled?: boolean;
   setContextMenu: (value: EditorContextMenuState | null) => void;
   trashedNodeIds: string[];
 }
@@ -114,7 +115,7 @@ function openExistingHighlightToolbar(args: SelectionAnnotationToolbarArgs, even
 
 function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarArgs) {
   return (event: MouseEvent) => {
-    if (event.button !== 0 || args.isTrashViewOpen || !args.activeNodeId) {
+    if (!args.selectionToolbarEnabled || event.button !== 0 || args.isTrashViewOpen || !args.activeNodeId) {
       return;
     }
     if (isAnnotationToolbarTarget(event.target) || !isEditorTarget(event.target)) {
@@ -143,6 +144,12 @@ function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarA
 }
 
 export function useSelectionAnnotationToolbar(args: SelectionAnnotationToolbarArgs) {
+  useEffect(() => {
+    if (args.selectionToolbarEnabled === false) {
+      args.setContextMenu(null);
+    }
+  }, [args.selectionToolbarEnabled, args.setContextMenu]);
+
   useEffect(() => {
     const handleMouseDown = createAnnotationToolbarMouseDownHandler(args);
     const handleMouseUp = createAnnotationToolbarMouseUpHandler(args);

@@ -154,3 +154,39 @@ it('lets outside workspace item clicks finish without mutating editor selection'
   expect(adapter.setSelection).not.toHaveBeenCalled();
   expect(result.current.contextMenu).toBeNull();
 });
+
+it('keeps the selection toolbar closed when the floating toolbar setting is off', () => {
+  const selectedText = document.createTextNode('Welcome');
+  const selectedSpan = document.createElement('span');
+  selectedSpan.append(selectedText);
+  appendEditorTarget(selectedSpan);
+  const range = document.createRange();
+  range.selectNodeContents(selectedText);
+  Object.defineProperty(range, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => mockRect(40, 90, 520, 22)
+  });
+  window.getSelection()?.removeAllRanges();
+  window.getSelection()?.addRange(range);
+
+  const adapter = createEditorAdapter({
+    getSelectionRanges: vi.fn(() => [{ from: 0, to: 7 }])
+  });
+  const { result } = renderHook(() =>
+    useEditorContextCommands(buildHookArgs({
+      editorRef: { current: adapter },
+      selectionToolbarEnabled: false
+    }))
+  );
+
+  act(() => {
+    selectedSpan.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true,
+      button: 0,
+      clientX: 540,
+      clientY: 112
+    }));
+  });
+
+  expect(result.current.contextMenu).toBeNull();
+});

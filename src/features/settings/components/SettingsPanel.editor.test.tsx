@@ -43,6 +43,23 @@ it('edits frontmatter meta fields from editor settings', () => {
   expect(input).toHaveValue('author|byline, url|link|source|source_url');
 });
 
+it('edits the floating toolbar opacity and visibility from editor settings', () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
+
+  const opacity = screen.getByLabelText('Floating toolbar opacity');
+  const toggle = screen.getByRole('switch', { name: 'Show floating toolbar' });
+
+  expect(opacity).toHaveValue('100');
+  expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+  fireEvent.change(opacity, { target: { value: '0' } });
+  fireEvent.click(toggle);
+
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionToolbarOpacityPercent)).toBe('0');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionToolbarEnabled)).toBe('false');
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
+});
+
 it('edits the long cloze front guard mode from editor settings', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
 

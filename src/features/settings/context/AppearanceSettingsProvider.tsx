@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 
+import { applySelectionToolbarOpacityPercent } from '../../editor/model/selectionToolbarSettings';
 import {
   applyAppearanceSettings,
   getAccentColorPreset,
@@ -183,6 +184,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
       workspaceSurfacePalette: state.workspaceSurfacePaletteState
     });
+    applySelectionToolbarOpacityPercent(state.selectionToolbarOpacityPercentState);
   }, [
     state.accentColorPresetState,
     state.baseColorModeState,
@@ -200,6 +202,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
     state.readingContentWidthState,
     state.readingLineHeightState,
     state.selectionColorPresetState,
+    state.selectionToolbarOpacityPercentState,
     state.resolvedBaseColorModeState,
     state.uiFontPresetState,
     state.workspaceSurfaceAssignmentsState,
