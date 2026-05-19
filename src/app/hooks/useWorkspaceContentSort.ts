@@ -10,6 +10,7 @@ import {
 } from '../components/workspaceContentSort';
 
 export function useWorkspaceContentSort() {
+  const [sortRefreshVersion, setSortRefreshVersion] = useState(0);
   const [sort, setSort] = useState<WorkspaceContentSortState>(() => loadWorkspaceContentSortPreference());
 
   useEffect(() => {
@@ -19,11 +20,14 @@ export function useWorkspaceContentSort() {
   return {
     setSortDirection: (direction: WorkspaceContentSortDirection) =>
       setSort((current) => ({ ...current, direction })),
-    setSortKey: (key: WorkspaceContentSortKey) =>
+    setSortKey: (key: WorkspaceContentSortKey) => {
+      setSortRefreshVersion((current) => current + 1);
       setSort((current) => ({
         direction: current.key === key ? current.direction : resolveDefaultWorkspaceContentSortDirection(key),
         key
-      })),
+      }));
+    },
+    sortRefreshVersion,
     sort
   };
 }

@@ -97,6 +97,7 @@ export function useFolderListViewState(
   defaultSortKey: FolderListSortKey,
   listRebuildKey: string
 ) {
+  const [sortRefreshVersion, setSortRefreshVersion] = useState(0);
   const [uncontrolledSortKey, setUncontrolledSortKey] = useState<FolderListSortKey>(defaultSortKey);
   const [uncontrolledSortDirection, setUncontrolledSortDirection] = useState<FolderListSortDirection>(
     DEFAULT_FOLDER_LIST_SORT_DIRECTION
@@ -105,7 +106,7 @@ export function useFolderListViewState(
   const searchQuery = resolveControlledValue(controlledSearchQuery, uncontrolledSearchQuery);
   const sortKey = resolveControlledValue(controlledSortKey, uncontrolledSortKey);
   const sortDirection = resolveControlledValue(controlledSortDirection, uncontrolledSortDirection);
-  const childNodes = useSortedFolderListNodes(listedNodes, nodeViewById, sortKey, sortDirection, listRebuildKey);
+  const childNodes = useSortedFolderListNodes(listedNodes, nodeViewById, sortKey, sortDirection, `${listRebuildKey}\u0000${sortRefreshVersion}`);
   const filteredNodes = useMemo(() => filterFolderListNodes(childNodes, searchQuery), [childNodes, searchQuery]);
   const itemCount = childNodes.length;
   const itemCountLabel = formatItemCount(itemCount);
@@ -126,6 +127,7 @@ export function useFolderListViewState(
     },
     updateSortKey: (nextSortKey: FolderListSortKey) => {
       const nextSortDirection = resolveDefaultFolderListSortDirection();
+      setSortRefreshVersion((current) => current + 1);
       if (controlledSortKey === undefined) {
         setUncontrolledSortKey(nextSortKey);
       }

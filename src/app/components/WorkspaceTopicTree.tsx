@@ -158,6 +158,7 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     itemIds: rootItemIds,
     nodeViewById,
     nodesById: props.nodesById,
+    sortRefreshVersion: contentSort.sortRefreshVersion,
     sort: contentSort.sort,
     ...definedProps({ forceVisibleNodeId: props.forceVisibleNodeId })
   });

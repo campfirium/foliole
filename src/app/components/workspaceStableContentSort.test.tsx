@@ -123,7 +123,7 @@ it('rebuilds dynamic workspace content order after changing folder scope', () =>
   ]);
 });
 
-it('reuses a previous dynamic order when switching back to a folder scope', () => {
+it('rebuilds dynamic order when switching back to a folder scope', () => {
   render(<StableSortScopeHarness />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Touch old' }));
@@ -131,7 +131,7 @@ it('reuses a previous dynamic order when switching back to a folder scope', () =
   fireEvent.click(screen.getByRole('button', { name: 'Switch back' }));
 
   expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-    'New:2026-04-21T00:00:00.000Z',
-    'Old:2026-04-22T00:00:00.000Z'
+    'Old:2026-04-22T00:00:00.000Z',
+    'New:2026-04-21T00:00:00.000Z'
   ]);
 });
