@@ -6,7 +6,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
 import { FsrsRevealAction, ReadingReviewActions, ReviewCompleteAction, ResumeReviewAction, ReviewGradeActions } from './ReviewModeToolbarActions';
-import { ReviewSessionModeControl } from './ReviewSessionModeControl';
+import { ReviewToolbarProgressLine, ReviewToolbarSessionActions } from './ReviewToolbarSessionFrame';
 
 interface ReviewModeToolbarProps {
   className?: string;
@@ -30,16 +30,23 @@ interface ReviewModeToolbarProps {
   onExitReviewMode: () => void;
   onResumeReviewItem: () => void;
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
+  showProgress?: boolean;
   style?: CSSProperties;
 }
 
 function ReviewCompleteBar({
   className,
   onExitReviewMode,
+  reviewCompletedCount,
+  reviewQueueCount,
+  showProgress = true,
   style
 }: {
   className?: string;
   onExitReviewMode: () => void;
+  reviewCompletedCount: number;
+  reviewQueueCount: number;
+  showProgress?: boolean;
   style?: CSSProperties;
 }) {
   return (
@@ -48,6 +55,7 @@ function ReviewCompleteBar({
       {...definedProps({ className, style })}
       mode="study"
       primary={<ReviewCompleteAction onExitReviewMode={onExitReviewMode} />}
+      progress={showProgress ? <ReviewToolbarProgressLine completedCount={reviewCompletedCount} queueCount={reviewQueueCount} /> : null}
     />
   );
 }
@@ -113,7 +121,7 @@ function ActiveReviewActionBar({
   isSubmitting, onCompleteReviewItem, onDeferReviewItem, onDismissReviewItem,
   onRevealAnswer, onSetReviewSessionMode, retryGrade, reviewCompletedCount, reviewQueueCount,
   reviewSessionMode,
-  showSessionModeControl, showSummary, style, submitGrade
+  showProgress = true, showSessionModeControl, showSummary, style, submitGrade
 }: Pick<
   ReviewModeToolbarProps,
   | 'className'
@@ -129,31 +137,35 @@ function ActiveReviewActionBar({
   | 'reviewQueueCount'
   | 'reviewSessionMode'
   | 'showSessionModeControl'
+  | 'showProgress'
   | 'showSummary'
   | 'style'
 > & ReturnType<typeof useGradeFeedback>) {
+  const actions = !isCurrentItemGradable ? (
+    <ReadingReviewActions onCompleteReviewItem={onCompleteReviewItem} onDeferReviewItem={onDeferReviewItem} onDismissReviewItem={onDismissReviewItem} />
+  ) : !isAnswerRevealed ? (
+    <FsrsRevealAction onRevealAnswer={onRevealAnswer} />
+  ) : (
+    <ReviewGradeActions
+      errorMessage={errorMessage}
+      isSubmitting={isSubmitting}
+      {...definedProps({ onRetry: retryGrade })}
+      submitGrade={submitGrade}
+    />
+  );
+
   return (
     <ReviewActionBar
       ariaLabel="Review mode toolbar"
       {...definedProps({ className, style })}
       mode="study"
-      primary={!isCurrentItemGradable ? (
-        <ReadingReviewActions onCompleteReviewItem={onCompleteReviewItem} onDeferReviewItem={onDeferReviewItem} onDismissReviewItem={onDismissReviewItem} />
-      ) : !isAnswerRevealed ? (
-        <FsrsRevealAction onRevealAnswer={onRevealAnswer} />
-      ) : (
-        <ReviewGradeActions
-          errorMessage={errorMessage}
-          isSubmitting={isSubmitting}
-          {...definedProps({ onRetry: retryGrade })}
-          submitGrade={submitGrade}
-        />
-      )}
+      primary={showSessionModeControl ? (
+        <ReviewToolbarSessionActions actions={actions} onSetReviewSessionMode={onSetReviewSessionMode} reviewSessionMode={reviewSessionMode} />
+      ) : actions}
+      progress={showProgress ? <ReviewToolbarProgressLine completedCount={reviewCompletedCount} queueCount={reviewQueueCount} /> : null}
       reviewInputMode={isReviewEditing ? 'editing' : 'hotkeys'}
       reviewItemKind={isCurrentItemGradable ? 'fsrs' : 'reading'}
-      secondary={showSessionModeControl ? (
-        <ReviewSessionModeControl mode={reviewSessionMode} onChangeMode={onSetReviewSessionMode} />
-      ) : showSummary ? `${Math.max(reviewQueueCount, 0)} left · ${Math.max(reviewCompletedCount, 0)} done` : null}
+      secondary={!showSessionModeControl && showSummary ? `${Math.max(reviewQueueCount, 0)} left · ${Math.max(reviewCompletedCount, 0)} done` : null}
     />
   );
 }
@@ -163,7 +175,8 @@ export function ReviewModeToolbar({
   isAnswerRevealed, isCurrentItemGradable, isCurrentReviewItemVisible, isReviewEditing,
   reviewCompletedCount, reviewCurrentNodeId, reviewQueueCount, onGrade,
   onCompleteReviewItem, onDeferReviewItem, onDismissReviewItem, onRevealAnswer,
-  onExitReviewMode, onResumeReviewItem, onSetReviewSessionMode, reviewCurrentTitle, reviewSessionMode, style
+  onExitReviewMode, onResumeReviewItem, onSetReviewSessionMode, reviewCurrentTitle, reviewSessionMode,
+  showProgress = true, style
 }: ReviewModeToolbarProps) {
   const { errorMessage, isSubmitting, retryGrade, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
 
@@ -172,7 +185,15 @@ export function ReviewModeToolbar({
   }
 
   if (!reviewCurrentNodeId) {
-    return <ReviewCompleteBar onExitReviewMode={onExitReviewMode} {...definedProps({ className, style })} />;
+    return (
+      <ReviewCompleteBar
+        onExitReviewMode={onExitReviewMode}
+        reviewCompletedCount={reviewCompletedCount}
+        reviewQueueCount={reviewQueueCount}
+        showProgress={showProgress}
+        {...definedProps({ className, style })}
+      />
+    );
   }
 
   if (!isCurrentReviewItemVisible) {
@@ -182,6 +203,7 @@ export function ReviewModeToolbar({
         {...definedProps({ className, style })}
         mode="study"
         primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
+        progress={showProgress ? <ReviewToolbarProgressLine completedCount={reviewCompletedCount} queueCount={reviewQueueCount} /> : null}
         secondary={showSummary ? <ReviewPausedSummary reviewCurrentTitle={reviewCurrentTitle} /> : null}
       />
     );
@@ -203,6 +225,7 @@ export function ReviewModeToolbar({
       reviewCompletedCount={reviewCompletedCount}
       reviewQueueCount={reviewQueueCount}
       reviewSessionMode={reviewSessionMode}
+      showProgress={showProgress}
       showSessionModeControl={showSessionModeControl}
       showSummary={showSummary}
       submitGrade={submitGrade}
