@@ -31,6 +31,18 @@ export function isSafeMarkdownDataImageUrl(value: string) {
   }
 }
 
+export function normalizeSafeMarkdownDataImageUrl(value: string) {
+  const trimmedValue = value.trim();
+  if (isSafeMarkdownDataImageUrl(trimmedValue)) return trimmedValue;
+
+  try {
+    const decodedValue = decodeURIComponent(trimmedValue);
+    return decodedValue !== trimmedValue && isSafeMarkdownDataImageUrl(decodedValue) ? decodedValue : null;
+  } catch {
+    return null;
+  }
+}
+
 function decodeBase64Prefix(value: string, maxChars: number) {
   try {
     const decoded = globalThis.atob(value.slice(0, maxChars));
