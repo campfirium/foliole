@@ -178,6 +178,9 @@ export const liveMarkdownTheme = EditorView.theme({
     width: '3px'
   },
   '.cm-activeLine': { backgroundColor: 'transparent' },
+  '.markdown-editor-host[data-review-caret-line="true"] &.cm-focused .cm-activeLine': {
+    backgroundColor: 'rgb(var(--color-foreground) / 0.035)'
+  },
   '.cm-content ::selection': {
     backgroundColor: TEXT_SELECTION_BACKGROUND_COLOR,
     color: 'var(--app-text-selection-fg-color)',

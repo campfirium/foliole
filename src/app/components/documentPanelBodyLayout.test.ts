@@ -8,7 +8,12 @@ const editorLifecycle = vi.hoisted(() => ({
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { contentPaddingBottom?: string; nodeId: string | null; trailingDivider?: boolean }) => {
+  MarkdownEditor: (props: {
+    contentPaddingBottom?: string;
+    nodeId: string | null;
+    reviewCaretLineHighlight?: boolean;
+    trailingDivider?: boolean;
+  }) => {
     useEffect(() => {
       editorLifecycle.mountedNodeIds.push(props.nodeId ?? 'none');
       return () => {
@@ -18,6 +23,7 @@ vi.mock('../../features/editor/components/MarkdownEditor', () => ({
     return createElement('div', {
       'data-testid': `editor-${props.nodeId ?? 'none'}`,
       'data-content-padding-bottom': props.contentPaddingBottom,
+      'data-review-caret-line': props.reviewCaretLineHighlight ? 'true' : 'false',
       'data-trailing-divider': props.trailingDivider ? 'true' : 'false'
     });
   }
@@ -124,5 +130,18 @@ describe('renderDocumentPanelBodyLayout', () => {
 
     expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-content-padding-bottom', 'clamp(6rem, 36dvh, 26rem)');
     expect(view.getByTestId('editor-node-1::answer')).not.toHaveAttribute('data-content-padding-bottom');
+  });
+
+  it('limits the review caret-line hint to the prompt editor', () => {
+    const view = render(
+      renderDocumentPanelBodyLayout(createLayoutProps({
+        hasAnswerSection: true,
+        reveal: 'Beta',
+        reviewCaretLineHighlight: true
+      }))
+    );
+
+    expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-review-caret-line', 'true');
+    expect(view.getByTestId('editor-node-1::answer')).toHaveAttribute('data-review-caret-line', 'false');
   });
 });

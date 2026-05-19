@@ -31,6 +31,7 @@ interface DocumentPanelBodyProps {
   editorDiffDecorations?: EditorDiffDecorations | null;
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;
+  reviewCaretLineHighlight?: boolean;
   emptyContent?: ReactNode;
   editorNodeId: string | null;
   editorReadingRestoreCommandId?: string | null;

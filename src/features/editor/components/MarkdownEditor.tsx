@@ -34,6 +34,7 @@ function MarkdownEditorSurface(args: {
   onContextMenu: MarkdownEditorProps['onContextMenu'];
   onDoubleClick: MarkdownEditorProps['onDoubleClick'];
   readOnly: boolean;
+  reviewCaretLineHighlight: boolean;
   rootRef: MutableRefObject<HTMLDivElement | null>;
 }) {
   return (
@@ -55,6 +56,7 @@ function MarkdownEditorSurface(args: {
         data-fit-block-images={args.fitBlockImagesToViewport ? 'true' : 'false'}
         data-immersive-editing={args.immersiveEditing ? 'true' : 'false'}
         data-read-only={args.readOnly ? 'true' : 'false'}
+        data-review-caret-line={args.reviewCaretLineHighlight ? 'true' : 'false'}
         ref={args.hostRef}
         style={args.editorStyle}
       />
@@ -188,6 +190,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         onContextMenu={props.onContextMenu}
         onDoubleClick={props.onDoubleClick}
         readOnly={props.readOnly === true}
+        reviewCaretLineHighlight={props.reviewCaretLineHighlight === true}
         rootRef={rootRef}
       />
       <MarkdownImagePreviewDialog image={previewImage} onOpenChange={(open) => !open && closePreview()} />
