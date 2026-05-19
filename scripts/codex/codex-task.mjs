@@ -6,21 +6,12 @@ import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
 import { REPO_ROOT, TODO_PATH, parseFirstTodoTask } from './todo-ledger.mjs';
+import { assertAgentCompletionMessage } from './codex-task-completion.mjs';
+import { buildPrompt, parseTaskRequest } from './codex-task-prompt.mjs';
 
 const LOG_DIR = path.join(REPO_ROOT, 'logs', 'codex');
 const DEFAULT_CODEX_TASK_TIMEOUT_MS = 30 * 60 * 1000;
 const CODEX_TASK_TIMEOUT_KILL_GRACE_MS = 5_000;
-const TASK_SKILL_DIRECTIVE = /^\[skills?:\s*([^\]]+)\]\s*/i;
-const EXPLICIT_SKILL_RULES = [
-  { skill: 'build-sync', patterns: [/执行构建并同步指令/, /build and sync/i] },
-  { skill: 'sync-only', patterns: [/执行同步指令/, /sync only/i] },
-  { skill: 'commit-note', patterns: [/执行提交指令/, /(?:^|\s)(?:提交|commit)(?:$|\s)/i] },
-  { skill: 'session-handoff', patterns: [/^(继续|continue)$/i, /(?:handoff|交接|继续到下次|continue later)/i] },
-  { skill: 'impl-task', patterns: [/执行实施任务指令/] },
-  { skill: 'merge-sop', patterns: [/执行合并分支指令/] },
-  { skill: 'obsidian-release', patterns: [/执行发布指令/] },
-  { skill: 'web-design-guidelines', patterns: [/执行设计指南指令/] }
-];
 
 function parseArgs(argv) {
   const options = {
@@ -123,47 +114,15 @@ function createTimestamp() {
   return new Date().toISOString().replace(/[:]/g, '-');
 }
 
-export function parseTaskRequest(rawTask) {
-  const normalizedTask = rawTask.trim();
-  const directiveMatch = normalizedTask.match(TASK_SKILL_DIRECTIVE);
-  const directiveSkills = directiveMatch
-    ? directiveMatch[1]
-        .split(',')
-        .map((skill) => skill.trim())
-        .filter(Boolean)
-    : [];
-  const task = directiveMatch ? normalizedTask.slice(directiveMatch[0].length).trim() : normalizedTask;
-  const matchedSkills = EXPLICIT_SKILL_RULES.flatMap(({ skill, patterns }) =>
-    patterns.some((pattern) => pattern.test(task)) ? [skill] : []
-  );
-  const skills = [...new Set([...directiveSkills, ...matchedSkills])];
-
-  return { skills, task };
-}
-
-export function buildPrompt(task) {
-  const request = parseTaskRequest(task);
-  const promptLines = [
-    `Work in repository: ${REPO_ROOT}`,
-    'Read AGENTS.md first and follow the repo workflow in .lab/atlas/workflow.md.',
-    `Implement exactly one minimal acceptable task: ${request.task}`,
-    'Constraints:',
-    '- Stay within the task boundary and avoid unrelated refactors.',
-    '- Run minimal relevant verification before finishing.',
-    '- Update .lab task ledger only if the task state changes.',
-    '- Report summary, verification, root cause if applicable, and remaining risk.'
-  ];
-
-  if (request.skills.length > 0) {
-    promptLines.splice(
-      2,
-      0,
-      'Explicit skill triggers for this task:',
-      ...request.skills.map((skill) => `- Use skill: ${skill}`)
-    );
+async function assertAgentCompletionFile(filePath) {
+  try {
+    assertAgentCompletionMessage(await readFile(filePath, 'utf8'));
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return;
+    }
+    throw error;
   }
-
-  return promptLines.join('\n');
 }
 
 export function buildCodexArgs({ task, model, fullAuto, lastMessageFile }) {
@@ -210,6 +169,10 @@ export async function runCodexTask(options) {
     const child = spawn('codex', args, {
       cwd: REPO_ROOT,
       detached: process.platform !== 'win32',
+      env: {
+        ...process.env,
+        PREVIEW_DEDUPE_WAIT_ON_FAILURE: process.env.PREVIEW_DEDUPE_WAIT_ON_FAILURE ?? '1'
+      },
       stdio: ['pipe', 'inherit', 'inherit']
     });
     let didTimeout = false;
@@ -223,14 +186,19 @@ export async function runCodexTask(options) {
     child.stdin.write(prompt);
     child.stdin.end();
     child.on('error', reject);
-    child.on('exit', (code) => {
+    child.on('exit', async (code) => {
       clearTimeout(timeout);
       if (didTimeout) {
         reject(createCodexTaskTimeoutError(task, timeoutMs));
         return;
       }
       if (code === 0) {
-        resolve(undefined);
+        try {
+          await assertAgentCompletionFile(lastMessageFile);
+          resolve(undefined);
+        } catch (error) {
+          reject(error);
+        }
         return;
       }
       reject(new Error(`codex exec failed with code ${code ?? 'null'}`));
@@ -253,3 +221,4 @@ if (isMainModule) {
 }
 
 export { DEFAULT_CODEX_TASK_TIMEOUT_MS, resolveCodexTaskTimeoutMs };
+export { buildPrompt, parseTaskRequest };

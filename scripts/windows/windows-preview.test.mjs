@@ -325,8 +325,8 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('electron-dist stale; compiling runtime bundle');
       expect(result.stdout).toContain('[mock-electron-compile] status: COMPILED');
       expect(result.stdout).toContain('[windows-sync] status: SYNCED');
-      expect(result.stdout).toContain('status: SYNCED');
-      expect(await readActions(actionLog)).toEqual(['status']);
+      expect(result.stdout).toContain('[windows-preview] status: STARTED');
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -357,14 +357,14 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('selected action: renderer-reload-intent');
       expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
       expect(result.stdout).toContain('renderer reload delivery acknowledged nonce=1');
-      expect(result.stdout).toContain('status: SYNCED');
+      expect(result.stdout).toContain('[windows-preview] status: STARTED');
       expect(rendererReloadDelivery).toMatchObject({
         nonce: 1,
         requestedBy: 'wsl-windows-preview',
         target: 'electron-dev-renderer',
         reason: 'Class A: renderer-only sync path'
       });
-      expect(await readActions(actionLog)).toEqual(['status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -631,6 +631,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       const result = await runScript({
         ACTION_LOG: actionLog,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_PREVIEW_TIMEOUT_START_SECONDS: '1',
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
@@ -769,14 +770,14 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('reason: Class A: renderer-only sync path');
       expect(result.stdout).toContain('selected action: renderer-reload-intent');
       expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
-      expect(result.stdout).toContain('status: SYNCED');
+      expect(result.stdout).toContain('[windows-preview] status: STARTED');
       expect(result.stdout).not.toContain('[windows-sync] include electron-dist');
       expect(rendererReloadDelivery).toMatchObject({
         nonce: 1,
         target: 'electron-dev-renderer',
         reason: 'Class A: renderer-only sync path'
       });
-      expect(await readActions(actionLog)).toEqual(['status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });

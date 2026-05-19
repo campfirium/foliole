@@ -38,6 +38,13 @@ describe('codex-task helpers', () => {
     expect(prompt).toContain('implement one task');
   });
 
+  it('tells spawned agents to keep working when preview startup fails', () => {
+    const prompt = buildPrompt('implement one task');
+
+    expect(prompt).toContain('Treat failed verification or preview startup as unfinished work');
+    expect(prompt).toContain('do not send a normal completion report');
+  });
+
   it('adds explicit commit-note skill trigger for commit-like requests', () => {
     const prompt = buildPrompt('执行提交指令');
 

@@ -7,7 +7,11 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { waitForQuietPreviewRequest } from './preview-debounce.mjs';
+import {
+  runScheduledPreview,
+  shouldForcePreview,
+} from './preview-dedupe-scheduler.mjs';
+import { buildDiagnostics, formatDiagnosticsSummary } from './preview-dedupe-diagnostics.mjs';
 
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = path.resolve(process.env.PREVIEW_DEDUPE_REPO_ROOT ?? DEFAULT_REPO_ROOT);
@@ -15,6 +19,9 @@ const VALID_TARGETS = new Set(['android', 'windows']);
 const TARGET_PATHS = {
   android: [
     'android/',
+    'scripts/preview-dedupe-scheduler.mjs',
+    'scripts/preview-dedupe-state-store.mjs',
+    'scripts/preview-dedupe.mjs',
     'scripts/android/',
     'src/companion/',
     'src/shared/',
@@ -27,6 +34,9 @@ const TARGET_PATHS = {
   ],
   windows: [
     'electron/',
+    'scripts/preview-dedupe-scheduler.mjs',
+    'scripts/preview-dedupe-state-store.mjs',
+    'scripts/preview-dedupe.mjs',
     'scripts/windows/',
     'src/app/',
     'src/features/',
@@ -163,6 +173,39 @@ function canSkipCoveredPreview(target) {
   return isWindowsRuntimeRunning();
 }
 
+async function logDiagnostics(target, stage) {
+  if (process.env.PREVIEW_DEDUPE_DIAGNOSTICS === '0') {
+    return;
+  }
+  try {
+    const diagnostics = await buildDiagnostics({ runtimeDir: runtimeDir(), target, windowsStatus: target === 'windows' });
+    console.log(`[${target}-preview] diagnostics ${stage}: ${JSON.stringify(formatDiagnosticsSummary(diagnostics))}`);
+  } catch (error) {
+    console.log(`[${target}-preview] diagnostics ${stage}: unavailable ${error.message}`);
+  }
+}
+
+async function runPreviewFlow({ command, requireActualPreview, target }) {
+  const currentHash = await workspaceHash(target);
+  const storedHash = await readStoredHash(target);
+  const forced = shouldForcePreview();
+  if (!forced && !requireActualPreview && storedHash === currentHash) {
+    if (canSkipCoveredPreview(target)) {
+      console.log(`[${target}-preview] dedupe: covered hash=${currentHash}`);
+      console.log(`[${target}-preview] status: ${target === 'windows' ? 'STARTED' : 'SYNCED'}`);
+      return { exitCode: 0, hash: currentHash, previewed: target === 'windows' };
+    }
+    console.log(`[${target}-preview] dedupe: stale-covered hash=${currentHash}`);
+  }
+
+  console.log(`[${target}-preview] dedupe: claimed hash=${currentHash}`);
+  const exitCode = await runCommand(command);
+  if (exitCode === 0) {
+    await writeStoredHash(target, currentHash);
+  }
+  return { exitCode, hash: currentHash, previewed: true };
+}
+
 async function main() {
   const { command, target } = parseArgs(process.argv.slice(2));
   if (!VALID_TARGETS.has(target) || command.length === 0) {
@@ -170,25 +213,13 @@ async function main() {
     return 2;
   }
 
-  const currentHash = await workspaceHash(target);
-  const storedHash = await readStoredHash(target);
-  if (storedHash === currentHash) {
-    if (canSkipCoveredPreview(target)) {
-      console.log(`[${target}-preview] dedupe: covered hash=${currentHash}`);
-      console.log(`[${target}-preview] status: SYNCED`);
-      return 0;
-    }
-    console.log(`[${target}-preview] dedupe: stale-covered hash=${currentHash}`);
-  }
-
-  console.log(`[${target}-preview] dedupe: claimed hash=${currentHash}`);
-  if (!(await waitForQuietPreviewRequest({ currentHash, runtimeDir: runtimeDir(), target }))) {
-    return 0;
-  }
-  const exitCode = await runCommand(command);
-  if (exitCode === 0) {
-    await writeStoredHash(target, currentHash);
-  }
+  await logDiagnostics(target, 'before');
+  const exitCode = await runScheduledPreview({
+    runPreview: ({ requireActualPreview }) => runPreviewFlow({ command, requireActualPreview, target }),
+    runtimeDir: runtimeDir(),
+    target
+  });
+  await logDiagnostics(target, 'after');
   return exitCode;
 }
 

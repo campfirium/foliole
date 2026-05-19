@@ -43,6 +43,7 @@
     "test:changed": "node scripts/run-vitest-with-summary.mjs .tmp/vitest/changed.json -- --silent=passed-only --pool=threads --no-file-parallelism --changed HEAD",
     "check:android-boundary": "node scripts/run-vitest-with-summary.mjs .tmp/vitest/android-boundary.json -- --silent=passed-only --pool=threads --no-file-parallelism scripts/android/java-adapter-boundary.test.mjs scripts/android/java-sql-surface.test.mjs scripts/android/schema-inventory.test.mjs scripts/android/android-sync-*.test.mjs src/shared/platform/companionSqlBoundary.test.ts src/shared/platform/companionSyncWriterQueue.test.ts",
     "windows:preview": "node scripts/preview-dedupe.mjs windows -- bash scripts/windows/windows-preview.sh",
+    "preview:diag": "node scripts/preview-dedupe-diagnostics.mjs",
     "desktop:spike:electron": "node scripts/windows/playwright-electron-spike.mjs",
     "desktop:inspect:renders": "WINDOWS_DESKTOP_TEST_SKIP_BUILD=1 WINDOWS_DESKTOP_TEST_CONFIG=playwright.render-diagnostics.config.ts bash scripts/windows/windows-desktop-test.sh",
     "desktop:test:windows": "bash scripts/windows/windows-desktop-test.sh",

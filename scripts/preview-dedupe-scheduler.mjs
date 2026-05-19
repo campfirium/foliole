@@ -1,0 +1,216 @@
+/* global console, process */
+
+import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
+
+import { isPidAlive, withStateLock } from './preview-dedupe-state-store.mjs';
+
+const DEFAULT_WINDOW_MS = { android: 0, windows: 3 * 60_000 };
+const RESULT_POLL_MS = 200;
+const STATE_STALE_MS = 15 * 60_000;
+
+function readDurationMs(env, key, defaultValue) {
+  const rawValue = env[key];
+  if (rawValue === undefined) {
+    return defaultValue;
+  }
+  const parsedValue = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    throw new Error(`${key} must be a non-negative integer`);
+  }
+  return parsedValue;
+}
+
+export function readWindowMs(target, env = process.env) {
+  return readDurationMs(
+    env,
+    `PREVIEW_DEDUPE_${target.toUpperCase()}_WINDOW_MS`,
+    readDurationMs(env, `PREVIEW_DEDUPE_${target.toUpperCase()}_COOLDOWN_MS`, DEFAULT_WINDOW_MS[target] ?? 0)
+  );
+}
+
+export function shouldForcePreview(env = process.env) {
+  return env.PREVIEW_DEDUPE_FORCE === '1';
+}
+
+function readWaitOnFailure(env = process.env) {
+  return env.PREVIEW_DEDUPE_WAIT_ON_FAILURE === '1';
+}
+
+function canTakeOver(run, now) {
+  return run?.status === 'running' && now - Number(run.startedAt) > STATE_STALE_MS && !isPidAlive(run.driverPid);
+}
+
+function createRun(requestId, now) {
+  return {
+    driverPid: process.pid,
+    driverRequestId: requestId,
+    runId: randomUUID(),
+    startedAt: now,
+    status: 'running',
+    waiters: [requestId]
+  };
+}
+
+function createPendingRun(requestId, now) {
+  return {
+    createdAt: now,
+    runId: randomUUID(),
+    status: 'pending',
+    waiters: [requestId]
+  };
+}
+
+function normalizeState(state) {
+  return {
+    acceptingUntil: Number(state.acceptingUntil) || 0,
+    activeRunId: state.activeRunId ?? null,
+    nextRunId: state.nextRunId ?? null,
+    runs: state.runs && typeof state.runs === 'object' ? state.runs : {}
+  };
+}
+
+function completeRun(state, runId, result, windowMs) {
+  const now = Date.now();
+  const completedRun = {
+    ...state.runs[runId],
+    completedAt: now,
+    exitCode: result.exitCode,
+    hash: result.hash,
+    previewed: result.previewed,
+    status: 'completed'
+  };
+  state.runs[runId] = completedRun;
+  if (result.exitCode === 0) {
+    for (const [waitingRunId, run] of Object.entries(state.runs)) {
+      if (run.status === 'waiting-success') {
+        state.runs[waitingRunId] = {
+          ...run,
+          completedAt: completedRun.completedAt,
+          exitCode: completedRun.exitCode,
+          hash: completedRun.hash,
+          previewed: completedRun.previewed,
+          runId: waitingRunId,
+          status: 'completed'
+        };
+      }
+    }
+  }
+  if (state.activeRunId === runId) {
+    state.activeRunId = null;
+  }
+  state.acceptingUntil = result.exitCode === 0 && result.previewed ? now + windowMs : 0;
+}
+
+function holdRunUntilSuccess(state, runId, result) {
+  const now = Date.now();
+  state.runs[runId] = {
+    ...state.runs[runId],
+    failedAt: now,
+    lastExitCode: result.exitCode,
+    lastHash: result.hash,
+    status: 'waiting-success'
+  };
+  if (state.activeRunId === runId) {
+    state.activeRunId = null;
+  }
+  state.acceptingUntil = 0;
+}
+
+function registerNextRun(state, requestId, now) {
+  if (!state.nextRunId) {
+    const run = createPendingRun(requestId, now);
+    state.nextRunId = run.runId;
+    state.runs[run.runId] = run;
+    return run.runId;
+  }
+  state.runs[state.nextRunId].waiters.push(requestId);
+  return state.nextRunId;
+}
+
+function chooseAction(state, requestId, assignedRunId) {
+  const now = Date.now();
+  if (canTakeOver(state.runs[state.activeRunId], now) || state.runs[state.activeRunId]?.status === 'completed') {
+    state.activeRunId = null;
+  }
+  if (assignedRunId && state.runs[assignedRunId]?.status === 'completed') {
+    return { kind: 'result', run: state.runs[assignedRunId] };
+  }
+  if (assignedRunId && state.runs[assignedRunId]?.status === 'waiting-success') {
+    return { kind: 'wait', runId: assignedRunId };
+  }
+  if (state.activeRunId) {
+    return { kind: 'wait', runId: assignedRunId ?? registerNextRun(state, requestId, now) };
+  }
+  if (state.acceptingUntil > now) {
+    return { kind: 'wait', runId: assignedRunId ?? registerNextRun(state, requestId, now) };
+  }
+  state.acceptingUntil = 0;
+  if (!assignedRunId && !state.nextRunId) {
+    const run = createRun(requestId, now);
+    state.runs[run.runId] = run;
+    state.activeRunId = run.runId;
+    return { kind: 'drive', requireActualPreview: false, runId: run.runId };
+  }
+  const runId = assignedRunId ?? registerNextRun(state, requestId, now);
+  state.runs[runId] = { ...state.runs[runId], driverPid: process.pid, driverRequestId: requestId, startedAt: now, status: 'running' };
+  state.activeRunId = runId;
+  if (state.nextRunId === runId) state.nextRunId = null;
+  return { kind: 'drive', requireActualPreview: true, runId };
+}
+
+export async function runScheduledPreview({
+  runtimeDir,
+  target,
+  runPreview,
+  waitOnFailure = readWaitOnFailure(),
+  windowMs = readWindowMs(target)
+}) {
+  const requestId = randomUUID();
+  let assignedRunId = null;
+  let announcedDeferredRunId = null;
+  while (true) {
+    const action = await withStateLock({
+      runtimeDir,
+      target,
+      fn: (rawState) => {
+        const state = normalizeState(rawState);
+        const value = chooseAction(state, requestId, assignedRunId);
+        return { state, value };
+      }
+    });
+    assignedRunId = action.runId ?? assignedRunId;
+    if (action.kind === 'result') {
+      if (action.run.exitCode === 0) {
+        console.log(`[${target}-preview] status: ${action.run.previewed || target === 'windows' ? 'STARTED' : 'SYNCED'}`);
+      }
+      return action.run.exitCode;
+    }
+    if (action.kind === 'wait') {
+      if (announcedDeferredRunId !== assignedRunId) {
+        console.log(`[${target}-preview] request: accepted run=${assignedRunId}`);
+        announcedDeferredRunId = assignedRunId;
+      }
+      await delay(RESULT_POLL_MS);
+      continue;
+    }
+    console.log(`[${target}-preview] request: driver run=${assignedRunId}`);
+    const result = await runPreview({ requireActualPreview: action.requireActualPreview });
+    await withStateLock({
+      runtimeDir,
+      target,
+      fn: (rawState) => {
+        const state = normalizeState(rawState);
+        if (result.exitCode !== 0 && waitOnFailure) {
+          holdRunUntilSuccess(state, assignedRunId, result);
+        } else {
+          completeRun(state, assignedRunId, result, windowMs);
+        }
+        return { state, value: null };
+      }
+    });
+    if (result.exitCode === 0 || !waitOnFailure) {
+      return result.exitCode;
+    }
+  }
+}

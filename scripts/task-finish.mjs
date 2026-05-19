@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SUCCESS_PREVIEW_STATUSES = {
   android: new Set(['OPENED', 'STARTED', 'SYNCED']),
-  windows: new Set(['STARTED', 'SYNCED'])
+  windows: new Set(['STARTED'])
 };
 const RETRYABLE_PREVIEW_STATUSES = {
   android: new Set(),

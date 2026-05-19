@@ -42,9 +42,11 @@ function runDedupe(repoRoot, target, command, env = {}) {
       cwd: repoRoot,
       env: {
         ...process.env,
+        PREVIEW_DEDUPE_ANDROID_COOLDOWN_MS: '0',
         PREVIEW_DEDUPE_REPO_ROOT: repoRoot,
         PREVIEW_DEDUPE_RUNTIME_DIR: '.lab/internal/runtime',
-        PREVIEW_DEDUPE_QUIET_MS: '0',
+        PREVIEW_DEDUPE_WAIT_ON_FAILURE: '0',
+        PREVIEW_DEDUPE_WINDOWS_WINDOW_MS: '0',
         ...env
       }
     });
@@ -89,7 +91,7 @@ describe('preview-dedupe', () => {
       });
       expect(second.code).toBe(0);
       expect(second.stdout).toContain('[windows-preview] dedupe: covered hash=');
-      expect(second.stdout).toContain('[windows-preview] status: SYNCED');
+      expect(second.stdout).toContain('[windows-preview] status: STARTED');
       expect(await readFile(runLog, 'utf8')).toBe('run\n');
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
@@ -153,15 +155,18 @@ describe('preview-dedupe', () => {
     }
   });
 
-  it('does not mark a failed preview hash as covered', async () => {
+  it('does not mark a failed preview hash as successfully covered', async () => {
     const repoRoot = await createRepo();
     try {
       await writeFile(path.join(repoRoot, 'tracked.txt'), 'changed\n', 'utf8');
+      await mkdir(path.join(repoRoot, 'src', 'app'), { recursive: true });
+      await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 1;\n', 'utf8');
 
       const first = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo fail >> runs.log; exit 7']);
       expect(first.code).toBe(7);
       await expect(readHash(repoRoot, 'windows')).rejects.toThrow();
 
+      await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 2;\n', 'utf8');
       const second = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo pass >> runs.log']);
       expect(second.code).toBe(0);
       expect(second.stdout).toContain('[windows-preview] dedupe: claimed hash=');
@@ -239,4 +244,5 @@ describe('preview-dedupe', () => {
       await rm(repoRoot, { force: true, recursive: true });
     }
   });
+
 });

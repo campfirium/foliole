@@ -2,7 +2,12 @@
 
 run_sync_only() {
   echo "[windows-preview] selected action: sync-only"
-  echo "[windows-preview] status: SYNCED"
+  if wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS}" "sync-only status"; then
+    echo "[windows-preview] status: STARTED"
+    return 0
+  fi
+  echo "[windows-preview] sync-only status check failed; falling back to full-restart"
+  run_full_restart
 }
 
 run_renderer_reload_intent() {
@@ -46,7 +51,12 @@ run_renderer_reload_intent() {
       run_full_restart
       return $?
     fi
-    echo "[windows-preview] status: SYNCED"
+    if ! wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS}" "renderer reload status"; then
+      echo "[windows-preview] renderer reload status check failed; falling back to full-restart"
+      run_full_restart
+      return $?
+    fi
+    echo "[windows-preview] status: STARTED"
     return 0
   fi
   echo "[windows-preview] renderer reload intent failed"
@@ -127,6 +137,12 @@ run_fallback_start() {
     echo "[windows-preview] fallback start status check failed; falling back to full restart"
     run_full_restart
     return $?
+  fi
+  local recovery_status=""
+  if recovery_status="$(probe_running_status_detail)"; then
+    echo "[windows-preview] fallback start recovery status: $(extract_status_detail "${recovery_status}")"
+    echo "[windows-preview] status: STARTED"
+    return 0
   fi
   echo "[windows-preview] fallback start failed"
   if [ -n "${start_output}" ]; then
