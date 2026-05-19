@@ -1,6 +1,28 @@
 import { describe, expect, it } from 'vitest';
 
+import { collectMarkdownInlineLinkRanges } from './markdownInlineLinkProjection';
 import { collectMarkdownInlineRanges } from './markdownInlineProjection';
+
+const LONG_ZHIHU_LINK_STRONG = '**《[Chrome插件《Anki 划词制卡助手》使用说明(含视频教程)](https://link.zhihu.com/?target=https%3A//ninja33.github.io/20160817/anki-dict-helper-chrome-extension/)》**。';
+
+describe('markdownInlineProjection punctuation emphasis compatibility', () => {
+  it('projects punctuation-wrapped emphasis next to CJK text', () => {
+    expect(collectMarkdownInlineRanges('过时的*（垃圾）*。')).toEqual([
+      {
+        contentFrom: 4,
+        contentTo: 8,
+        from: 3,
+        kind: 'emphasis',
+        syntaxRanges: [
+          { from: 3, to: 4 },
+          { from: 8, to: 9 }
+        ],
+        text: '（垃圾）',
+        to: 9
+      }
+    ]);
+  });
+});
 
 describe('markdownInlineProjection Markdown Compatibility', () => {
   it('projects lenient strong emphasis as strong text without changing source content', () => {
@@ -54,6 +76,54 @@ describe('markdownInlineProjection Markdown Compatibility', () => {
     ]);
   });
 
+});
+
+describe('markdownInlineProjection spaced strong links', () => {
+  it('projects long imported punctuation-wrapped links as strong text', () => {
+    const text = `详见${LONG_ZHIHU_LINK_STRONG}`;
+    const closeFrom = text.lastIndexOf('**');
+
+    expect(collectMarkdownInlineRanges(text)[0]).toMatchObject({
+      contentFrom: 4,
+      contentTo: closeFrom,
+      from: 2,
+      kind: 'strong',
+      syntaxRanges: [
+        { from: 2, to: 4 },
+        { from: closeFrom, to: closeFrom + 2 }
+      ],
+      to: closeFrom + 2
+    });
+  });
+
+  it('projects spaced strong emphasis around punctuation-wrapped links', () => {
+    expect(collectMarkdownInlineRanges('详见** 《[A](https://e.test)》 **。')).toEqual([
+      {
+        contentFrom: 4,
+        contentTo: 27,
+        from: 2,
+        kind: 'strong',
+        syntaxRanges: [
+          { from: 2, to: 4 },
+          { from: 27, to: 29 }
+        ],
+        text: ' 《[A](https://e.test)》 ',
+        to: 29
+      }
+    ]);
+  });
+
+  it('keeps inner links projectable when spaced strong markers are hidden', () => {
+    const [linkRange] = collectMarkdownInlineLinkRanges('详见** 《[A](https://e.test)》 **。');
+
+    expect(linkRange).toMatchObject({
+      href: 'https://e.test',
+      labelFrom: 7,
+      labelText: 'A',
+      labelTo: 8,
+      safe: true
+    });
+  });
 });
 
 describe('markdownInlineProjection trailing-space strong compatibility', () => {

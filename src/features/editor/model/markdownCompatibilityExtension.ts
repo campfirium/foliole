@@ -1,6 +1,7 @@
 import type { BlockContext, InlineContext, Line, MarkdownConfig } from '@lezer/markdown';
 
-const MAX_LENIENT_STRONG_CONTENT_LENGTH = 80;
+const MAX_LENIENT_STRONG_CONTENT_LENGTH = 1200;
+const MAX_LENIENT_EMPHASIS_CONTENT_LENGTH = 80;
 
 function isWhitespaceCode(value: number) {
   return value === 9 || value === 10 || value === 13 || value === 32;
@@ -10,7 +11,7 @@ function isLenientStrongClosing(cx: InlineContext, closeFrom: number) {
   const after = cx.char(closeFrom + 2);
   if (isTrailingSpaceStrongClosing(cx, closeFrom)) return true;
   if (!isValidCode(after) || after === 42 || isWhitespaceCode(after)) return false;
-  return isPunctuationCode(cx.char(closeFrom - 1));
+  return isPunctuationCode(resolveStrongClosingContentCode(cx, closeFrom));
 }
 
 function isLenientStrongOpening(cx: InlineContext, openFrom: number, closeFrom: number) {
@@ -18,6 +19,21 @@ function isLenientStrongOpening(cx: InlineContext, openFrom: number, closeFrom: 
   if (cx.char(openFrom) !== 42 || cx.char(openFrom + 1) !== 42) return false;
   if (cx.char(openFrom - 1) === 42 || cx.char(openFrom - 1) === 92) return false;
   return !isWhitespaceCode(cx.char(openFrom + 2));
+}
+
+function isLenientEmphasisClosing(cx: InlineContext, closeFrom: number) {
+  if (cx.char(closeFrom - 1) === 42 || cx.char(closeFrom + 1) === 42) return false;
+  const after = cx.char(closeFrom + 1);
+  if (!isValidCode(after) || isWhitespaceCode(after)) return false;
+  return isPunctuationCode(cx.char(closeFrom - 1));
+}
+
+function isLenientEmphasisOpening(cx: InlineContext, openFrom: number, closeFrom: number) {
+  if (openFrom < cx.offset || closeFrom - openFrom <= 1) return false;
+  if (cx.char(openFrom) !== 42) return false;
+  if (cx.char(openFrom - 1) === 42 || cx.char(openFrom - 1) === 92 || cx.char(openFrom + 1) === 42) return false;
+  const after = cx.char(openFrom + 1);
+  return !isWhitespaceCode(after) && isPunctuationCode(after);
 }
 
 function isTrailingSpaceStrongClosing(cx: InlineContext, closeFrom: number) {
@@ -32,6 +48,12 @@ function findPreviousNonWhitespace(cx: InlineContext, from: number) {
     if (!isWhitespaceCode(cx.char(cursor))) return cursor;
   }
   return -1;
+}
+
+function resolveStrongClosingContentCode(cx: InlineContext, closeFrom: number) {
+  if (!isWhitespaceCode(cx.char(closeFrom - 1))) return cx.char(closeFrom - 1);
+  const previousContent = findPreviousNonWhitespace(cx, closeFrom);
+  return previousContent < cx.offset ? -1 : cx.char(previousContent);
 }
 
 function isOnlyWhitespaceUntilLineEnd(cx: InlineContext, from: number) {
@@ -60,10 +82,35 @@ function parseLenientStrongEmphasis(cx: InlineContext, pos: number) {
     const char = cx.char(cursor);
     if (char === 10 || char === 13) return -1;
     if (!isLenientStrongOpening(cx, cursor, pos)) continue;
-    return cx.addElement(cx.elt('LenientStrongEmphasis', cursor, pos + 2, [
-      cx.elt('EmphasisMark', cursor, cursor + 2),
-      cx.elt('EmphasisMark', pos, pos + 2)
-    ]));
+    return addLenientInlineElement(cx, 'LenientStrongEmphasis', cursor, cursor + 2, pos, pos + 2);
+  }
+
+  return -1;
+}
+
+function addLenientInlineElement(
+  cx: InlineContext,
+  name: string,
+  openFrom: number,
+  openTo: number,
+  closeFrom: number,
+  closeTo: number
+) {
+  return cx.addElement(cx.elt(name, openFrom, closeTo, [
+    cx.elt('EmphasisMark', openFrom, openTo),
+    cx.elt('EmphasisMark', closeFrom, closeTo)
+  ]));
+}
+
+function parseLenientPunctuationEmphasis(cx: InlineContext, pos: number) {
+  if (!isLenientEmphasisClosing(cx, pos)) return -1;
+  const searchFrom = Math.max(cx.offset, pos - MAX_LENIENT_EMPHASIS_CONTENT_LENGTH - 1);
+
+  for (let cursor = pos - 1; cursor >= searchFrom; cursor -= 1) {
+    const char = cx.char(cursor);
+    if (char === 10 || char === 13) return -1;
+    if (!isLenientEmphasisOpening(cx, cursor, pos)) continue;
+    return addLenientInlineElement(cx, 'LenientPunctuationEmphasis', cursor, cursor + 1, pos, pos + 1);
   }
 
   return -1;
@@ -108,7 +155,7 @@ function addLenientStrongATXHeading(cx: BlockContext, line: Line, text: string, 
 
 export const markdownCompatibilityExtensions: MarkdownConfig[] = [
   {
-    defineNodes: ['LenientStrongATXHeading', 'LenientStrongEmphasis'],
+    defineNodes: ['LenientPunctuationEmphasis', 'LenientStrongATXHeading', 'LenientStrongEmphasis'],
     parseBlock: [
       {
         name: 'LenientStrongATXHeading',
@@ -122,6 +169,13 @@ export const markdownCompatibilityExtensions: MarkdownConfig[] = [
       }
     ],
     parseInline: [
+      {
+        name: 'LenientPunctuationEmphasis',
+        parse(cx, next, pos) {
+          return next === 42 ? parseLenientPunctuationEmphasis(cx, pos) : -1;
+        },
+        before: 'Emphasis'
+      },
       {
         name: 'LenientStrongEmphasis',
         parse(cx, next, pos) {

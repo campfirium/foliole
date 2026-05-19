@@ -11,6 +11,13 @@ function collectNodeNames(markdown: string) {
 }
 
 describe('markdownCompatibilityExtension', () => {
+  it('recognizes punctuation-wrapped emphasis next to CJK text', () => {
+    const names = collectNodeNames('过时的*（垃圾）*。');
+
+    expect(names).toContain('LenientPunctuationEmphasis');
+    expect(names).toContain('EmphasisMark');
+  });
+
   it('recognizes lenient strong emphasis before adjacent text', () => {
     const names = collectNodeNames('**实操含义：**如果你的应用场景');
 

@@ -5,6 +5,7 @@ import {
   collectInlineTokenDecorationPlan,
   collectEmphasisTextDecorationPlan,
   collectSourceHighlightDecorationPlan,
+  collectStrongTextDecorationPlan,
   collectStrikethroughTextDecorationPlan
 } from './inlineTextDecorationPlans';
 
@@ -58,6 +59,16 @@ describe('inlineTextDecorationPlans', () => {
 });
 
 describe('inlineTextDecorationPlans Markdown Compatibility', () => {
+  it('hides single-star markers around punctuation-wrapped emphasis', () => {
+    expect(collectInlineTokenDecorationPlan(0, '过时的*（垃圾）*。', false, false, [])).toEqual({
+      markRanges: [],
+      replaceRanges: [
+        { from: 3, to: 4 },
+        { from: 8, to: 9 }
+      ]
+    });
+  });
+
   it('hides both strong markers when lenient strong wraps an inline link', () => {
     expect(
       collectInlineTokenDecorationPlan(
@@ -76,6 +87,16 @@ describe('inlineTextDecorationPlans Markdown Compatibility', () => {
     });
   });
 
+  it('hides spaced strong markers around punctuation-wrapped links', () => {
+    expect(collectInlineTokenDecorationPlan(0, '详见** 《[A](https://e.test)》 **。', false, false, [])).toEqual({
+      markRanges: [],
+      replaceRanges: [
+        { from: 2, to: 4 },
+        { from: 27, to: 29 }
+      ]
+    });
+  });
+
   it('hides all triple-star nested emphasis and strong markers', () => {
     expect(collectInlineTokenDecorationPlan(0, '***小火箭方法。 ***', false, false, [])).toEqual({
       markRanges: [],
@@ -90,6 +111,20 @@ describe('inlineTextDecorationPlans Markdown Compatibility', () => {
 });
 
 describe('inline semantic decoration plans', () => {
+  it('marks punctuation-wrapped emphasis content ranges', () => {
+    expect(collectEmphasisTextDecorationPlan(0, '过时的*（垃圾）*。', false)).toEqual({
+      markRanges: [{ className: 'cm-md-emphasis', from: 4, to: 8 }],
+      replaceRanges: []
+    });
+  });
+
+  it('marks spaced punctuation-wrapped link strong content ranges', () => {
+    expect(collectStrongTextDecorationPlan(0, '详见** 《[A](https://e.test)》 **。', false)).toEqual({
+      markRanges: [{ className: 'cm-md-strong', from: 4, to: 27 }],
+      replaceRanges: []
+    });
+  });
+
   it('marks strikethrough content ranges', () => {
     expect(collectStrikethroughTextDecorationPlan(0, 'A ~~gone~~ item', false)).toEqual({
       markRanges: [{ className: 'cm-md-strikethrough', from: 4, to: 8 }],

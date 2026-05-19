@@ -23,6 +23,16 @@ afterEach(() => {
 });
 
 describe('live markdown strong rendering', () => {
+  it('hides imported long-link strong delimiters while keeping the link readable', () => {
+    const { adapter, host } = createAdapterHost('详见**《[Chrome插件《Anki 划词制卡助手》使用说明(含视频教程)](https://link.zhihu.com/?target=https%3A//ninja33.github.io/20160817/anki-dict-helper-chrome-extension/)》**。');
+
+    expect(host.querySelector('.cm-content')?.textContent).toBe('详见《Chrome插件《Anki 划词制卡助手》使用说明(含视频教程)》。');
+    expect(host.querySelector('.cm-md-strong')?.textContent).toContain('Chrome插件');
+    expect(host.querySelector('.cm-md-link-text')?.textContent).toBe('Chrome插件《Anki 划词制卡助手》使用说明(含视频教程)');
+
+    adapter.destroy();
+  });
+
   it('hides malformed triple-star delimiters while rendering strong text', () => {
     const { adapter, host } = createAdapterHost('***小火箭方法。 ***');
 

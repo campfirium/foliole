@@ -51,10 +51,26 @@ describe('markdownTableInline GFM tokens', () => {
 });
 
 describe('markdownTableInline Markdown Compatibility tokens', () => {
+  it('tokenizes punctuation-wrapped emphasis from the shared parser projection', () => {
+    expect(tokenizeMarkdownTableInlineText('过时的*（垃圾）*。')).toEqual([
+      { kind: 'text', text: '过时的' },
+      { kind: 'emphasis', text: '（垃圾）' },
+      { kind: 'text', text: '。' }
+    ]);
+  });
+
   it('tokenizes lenient strong labels from the shared parser projection', () => {
     expect(tokenizeMarkdownTableInlineText('**实操含义：**如果你的应用场景')).toEqual([
       { kind: 'strong', text: '实操含义：' },
       { kind: 'text', text: '如果你的应用场景' }
+    ]);
+  });
+
+  it('tokenizes spaced strong text around punctuation-wrapped links from the shared parser projection', () => {
+    expect(tokenizeMarkdownTableInlineText('详见** 《[A](https://e.test)》 **。')).toEqual([
+      { kind: 'text', text: '详见' },
+      { kind: 'strong', text: ' 《[A](https://e.test)》 ' },
+      { kind: 'text', text: '。' }
     ]);
   });
 
