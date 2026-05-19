@@ -6,16 +6,30 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
-function createNode(id: string, title: string) {
+function createNode(
+  id: string,
+  title: string,
+  options: {
+    anchorFrom?: number;
+    parentNodeId?: string | null;
+  } = {}
+) {
   return {
-    anchorLink: null,
+    anchorLink:
+      options.anchorFrom === undefined
+        ? null
+        : {
+            id: `${id}-anchor`,
+            kind: 'highlight' as const,
+            locator: { from: options.anchorFrom, originalText: title, to: options.anchorFrom + title.length }
+          },
     content: 'Body',
     createdAt: '2026-04-20T00:00:00.000Z',
     hasContent: true,
     hasReveal: false,
     id,
     kind: 'topic' as const,
-    parentNodeId: null,
+    parentNodeId: options.parentNodeId ?? null,
     reveal: null,
     review: null,
     title,
@@ -26,6 +40,11 @@ function createNode(id: string, title: string) {
 function rowTitles() {
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   return within(itemColumn).getAllByRole('treeitem').map((row) => row.textContent);
+}
+
+function rowNodeIds() {
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+  return within(itemColumn).getAllByRole('treeitem').map((row) => row.getAttribute('data-node-id'));
 }
 
 function chooseLastOpenedSort() {
@@ -95,13 +114,37 @@ function LastOpenedFolderSwitchHarness() {
   );
 }
 
+function LastOpenedDerivedChildrenHarness() {
+  const [activeNodeId, setActiveNodeId] = useState<string | null>('article-a-upper');
+  const nodesById = {
+    'article-a': createNode('article-a', 'Earlier'),
+    'article-b': createNode('article-b', 'Latest'),
+    'article-a-upper': createNode('article-a-upper', 'Upper child', { anchorFrom: 5, parentNodeId: 'article-a' }),
+    'article-a-lower': createNode('article-a-lower', 'Lower child', { anchorFrom: 20, parentNodeId: 'article-a' })
+  };
+
+  return (
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId={activeNodeId}
+      forceVisibleNodeId="article-a-upper"
+      itemIds={['article-a', 'article-b', 'article-a-lower', 'article-a-upper']}
+      nodesById={nodesById}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={setActiveNodeId}
+    />
+  );
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   useWorkspaceStore.setState((state) => ({
     ...state,
     nodeViewById: {
       'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-01T09:00:00.000Z' },
-      'article-b': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' }
+      'article-b': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' },
+      'article-a-lower': { scrollTop: 0, selection: null, updatedAt: '2026-04-04T09:00:00.000Z' },
+      'article-a-upper': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' }
     },
     trashedNodeIds: []
   }));
@@ -146,4 +189,12 @@ it('refreshes last-opened order after leaving and returning to a folder', () => 
 
   fireEvent.click(screen.getByRole('button', { name: 'Open folder A' }));
   expect(rowTitles()).toEqual(['Earlier', 'Latest']);
+});
+
+it('keeps derived children independent from last-opened sorting', () => {
+  render(<LastOpenedDerivedChildrenHarness />);
+
+  chooseLastOpenedSort();
+
+  expect(rowNodeIds()).toEqual(['article-b', 'article-a', 'article-a-upper', 'article-a-lower']);
 });
