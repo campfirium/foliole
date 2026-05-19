@@ -126,6 +126,7 @@ function readImportSource(driver: DatabaseDriver, nodeId: string) {
          ON attachment.id = node_attachment.attachment_id
         AND attachment.mime_type = 'application/pdf'
        WHERE latest_node_id = ?
+       ORDER BY CASE WHEN lower(source_kind) = 'pdf' THEN 0 ELSE 1 END, last_imported_at DESC
        LIMIT 1`,
       [nodeId]
     ) ?? null
