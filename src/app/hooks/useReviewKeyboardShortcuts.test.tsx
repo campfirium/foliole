@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
@@ -28,6 +28,7 @@ function ReviewShortcutHarness(
     deferReviewItem: vi.fn(() => true),
     deleteCurrentReviewItem: vi.fn(() => true),
     dismissReviewItem: vi.fn(() => true),
+    resumeReviewItem: vi.fn(),
     revealReviewAnswer: vi.fn(),
     gradeReviewCard: vi.fn(async () => true),
     ...overrides
@@ -36,6 +37,7 @@ function ReviewShortcutHarness(
 }
 
 afterEach(() => {
+  cleanup();
   document.body.innerHTML = '';
 });
 
@@ -51,6 +53,21 @@ it('ignores review action shortcuts while the current review item is not visible
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' }));
 
   expect(completeReviewItem).not.toHaveBeenCalled();
+});
+
+it('resumes the hidden review item with Space', () => {
+  const resumeReviewItem = vi.fn();
+  render(
+    <ReviewShortcutHarness
+      isCurrentReviewItemVisible={false}
+      readingReadShortcuts={{ primary: { key: 'w' }, secondary: { key: ' ' } }}
+      resumeReviewItem={resumeReviewItem}
+    />
+  );
+
+  fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+
+  expect(resumeReviewItem).toHaveBeenCalledTimes(1);
 });
 
 it('runs review action shortcuts when the current review item is visible', () => {
