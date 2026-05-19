@@ -197,7 +197,7 @@ export function RemovedSourceContextMenu(props: {
         onContextMenu={(event) => event.preventDefault()}
         sideOffset={0}
       >
-        <AppDropdownMenuItem onSelect={() => props.onImport(props.entry!)}>Import to Foliole</AppDropdownMenuItem>
+        <AppDropdownMenuItem onSelect={() => props.onImport(props.entry!)}>Re-import to Foliole</AppDropdownMenuItem>
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );

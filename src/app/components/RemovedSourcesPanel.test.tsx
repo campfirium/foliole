@@ -101,7 +101,7 @@ it('uses the standard topic list surface for Removed sources', async () => {
   expect(screen.getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Readwise' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Alpha Removed' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Import to Foliole' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Re-import to Foliole' })).toBeNull();
   expect(screen.queryByText('No import selected')).toBeNull();
 });
 
@@ -171,7 +171,7 @@ it('imports a Removed source from the row context menu', async () => {
     clientX: 160,
     clientY: 120
   });
-  fireEvent.click(await screen.findByRole('menuitem', { name: 'Import to Foliole' }));
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Re-import to Foliole' }));
 
   await waitFor(() => expect(mocks.restoreRuntimeRemovedSource).toHaveBeenCalledWith(entry));
   expect(onSelectNode).toHaveBeenCalledWith('topic-new');

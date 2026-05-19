@@ -117,11 +117,11 @@ function useRemovedSourceContextMenu(args: {
 }) {
   const [contextMenu, setContextMenu] = useState<{ entry: RuntimeRemovedSourceEntry; left: number; top: number } | null>(null);
 
-  function importRemovedSource(entry: RuntimeRemovedSourceEntry) {
+  function reimportRemovedSource(entry: RuntimeRemovedSourceEntry) {
     setContextMenu(null);
     void restoreRuntimeRemovedSource(entry).then((result) => {
       if (!result || result.status === 'failed') {
-        window.alert(result?.detail?.trim() || 'Import failed.');
+        window.alert(result?.detail?.trim() || 'Re-import failed.');
         return;
       }
       setSelectedRemovedSource(null);
@@ -130,7 +130,7 @@ function useRemovedSourceContextMenu(args: {
     });
   }
 
-  return { contextMenu, importRemovedSource, setContextMenu };
+  return { contextMenu, reimportRemovedSource, setContextMenu };
 }
 
 function renderRemovedSourcesBody(args: {
@@ -219,7 +219,7 @@ export function RemovedSourcesPanel(props: { onSelectNode?: (nodeId: string) => 
         entry={contextMenu.contextMenu?.entry ?? null}
         left={contextMenu.contextMenu?.left ?? 0}
         onClose={() => contextMenu.setContextMenu(null)}
-        onImport={contextMenu.importRemovedSource}
+        onImport={contextMenu.reimportRemovedSource}
         top={contextMenu.contextMenu?.top ?? 0}
       />
     </aside>

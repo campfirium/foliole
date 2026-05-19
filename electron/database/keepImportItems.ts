@@ -5,12 +5,10 @@ import {
   markMissingKeepImportItems as markMissingKeepImportItemsViaDriver,
   readKeepImportItem as readKeepImportItemViaDriver,
   readKeepImportNodeState as readKeepImportNodeStateViaDriver,
-  releaseKeepImportItemsByNodeIds as releaseKeepImportItemsByNodeIdsViaDriver,
   upsertKeepImportItem as upsertKeepImportItemViaDriver,
   type KeepImportItemRow,
   type UpsertKeepImportItemInput
 } from '../../lib/core/database/keepImportItems.js';
-import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 
 import { openDatabaseConnection } from './connection.js';
 
@@ -44,9 +42,7 @@ export function listRemovedKeepImportItems() {
 }
 
 export function markKeepImportItemsLocallyDeletedByNodeDeletedAt(nodeDeletedAt: Array<{ deletedAt: string; nodeId: string }>) {
-  return markKeepImportItemsLocallyDeletedByNodeDeletedAtViaDriver(openDatabaseConnection().driver, nodeDeletedAt, {
-    excludedRuleIds: readReadwiseRuleIds()
-  });
+  return markKeepImportItemsLocallyDeletedByNodeDeletedAtViaDriver(openDatabaseConnection().driver, nodeDeletedAt);
 }
 
 export function markMissingKeepImportItems(ruleId: string, presentSourcePaths: string[]) {
@@ -55,15 +51,4 @@ export function markMissingKeepImportItems(ruleId: string, presentSourcePaths: s
 
 export function upsertKeepImportItem(input: UpsertKeepImportItemInput) {
   return upsertKeepImportItemViaDriver(openDatabaseConnection().driver, input);
-}
-
-export function releaseReadwiseKeepImportItemsByNodeIds(nodeIds: string[], releasedAt: string) {
-  return releaseKeepImportItemsByNodeIdsViaDriver(openDatabaseConnection().driver, nodeIds, {
-    includedRuleIds: readReadwiseRuleIds(),
-    releasedAt
-  });
-}
-
-function readReadwiseRuleIds() {
-  return new Set(loadImportManagerSettings().readwiseSources.map((source) => source.id));
 }

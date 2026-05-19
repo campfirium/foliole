@@ -1,11 +1,10 @@
-import fs from 'node:fs/promises';
-
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 import { rewriteExternalPreviewContent } from '../database/externalSearchPreviewContent.js';
 import { readKeepImportItemCache, upsertKeepImportItemCache } from '../database/keepImportItemCache.js';
-import { toImportPayload, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
+import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
+import { loadPreparedKeepImportRecord } from './keepImportPreparedRecord.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
 
 function createPreviewFolder(directoryPath: string): NativeExternalSearchFolder {
@@ -24,23 +23,34 @@ function createPreviewFolder(directoryPath: string): NativeExternalSearchFolder 
   };
 }
 
-export async function refreshKeepImportItemCache(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor, refreshedAt: string) {
-  const existing = readKeepImportItemCache(config.ruleId, source.sourceName);
-  if (
-    existing?.source_mtime_ms === source.mtimeMs &&
-    existing.source_size_bytes === source.sizeBytes
-  ) {
-    return;
+function resolveCachedTitle(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor, prepared: Awaited<ReturnType<typeof loadPreparedKeepImportRecord>>) {
+  if (config.sourceType === 'readwise') {
+    return prepared.nodeTitle;
   }
-  const rawContent = await fs.readFile(source.filePath, 'utf8');
-  const content = toImportPayload(rawContent, source.kind, source.sourceName).content;
-  const title = resolveImportedNodeTitle({
-    content,
+  return resolveImportedNodeTitle({
+    content: prepared.content,
     sourceName: source.sourceName,
     titleStrategy: 'heading'
   });
+}
+
+function canReuseExistingCache(existing: NonNullable<ReturnType<typeof readKeepImportItemCache>>, source: DirectoryImportSourceDescriptor) {
+  return existing.source_mtime_ms === source.mtimeMs && existing.source_size_bytes === source.sizeBytes;
+}
+
+export async function refreshKeepImportItemCache(
+  config: KeepImportRuleConfig,
+  source: DirectoryImportSourceDescriptor,
+  refreshedAt: string,
+  options: { force?: boolean } = {}
+) {
+  const existing = readKeepImportItemCache(config.ruleId, source.sourceName);
+  if (!options.force && existing && canReuseExistingCache(existing, source)) {
+    return;
+  }
+  const prepared = await loadPreparedKeepImportRecord(config, source, refreshedAt);
   const previewContent = rewriteExternalPreviewContent(
-    content,
+    prepared.content,
     source.filePath,
     createPreviewFolder(config.directoryPath)
   );
@@ -52,6 +62,6 @@ export async function refreshKeepImportItemCache(config: KeepImportRuleConfig, s
     sourceMtimeMs: source.mtimeMs,
     sourcePath: source.sourceName,
     sourceSizeBytes: source.sizeBytes,
-    title
+    title: resolveCachedTitle(config, source, prepared)
   });
 }

@@ -128,7 +128,9 @@ it('detaches tracking for roots kept by a real user addition', () => {
     keep_count: 0,
     total_count: 0
   });
-  expect(readRows('SELECT source_path FROM keep_import_items')).toEqual([]);
+  expect(readRows('SELECT source_path FROM keep_import_items')).toEqual([
+    { source_path: 'Deleted.md' }
+  ]);
 });
 
 it('treats Readwise Books EPUB chapters and imported anchors as imported structure', () => {

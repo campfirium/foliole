@@ -22,6 +22,7 @@ vi.mock('./managedInboxEvents.js', () => ({
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { listRemovedKeepImportItems } from '../database/keepImportItems.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
@@ -102,7 +103,7 @@ async function importReadwiseFixture() {
   return row.node_id;
 }
 
-it('deletes unchanged Readwise import topics and tracking rows', async () => {
+it('deletes unchanged Readwise import topics and keeps removed tracking rows', async () => {
   const nodeId = await importReadwiseFixture();
 
   expect(previewReadwiseImportCleanup()).toMatchObject({
@@ -118,7 +119,26 @@ it('deletes unchanged Readwise import topics and tracking rows', async () => {
     status: 'completed'
   });
   expect(readRows('SELECT id FROM nodes WHERE id = ?', nodeId)).toEqual([]);
-  expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
+  expect(
+    readRows<{ last_node_id: string; last_status: string; local_node_state: string }>(
+      'SELECT last_node_id, last_status, local_node_state FROM keep_import_items'
+    )
+  ).toEqual([
+    {
+      last_node_id: nodeId,
+      last_status: 'blocked_deleted',
+      local_node_state: 'locally_deleted'
+    }
+  ]);
+  expect(listRemovedKeepImportItems()).toEqual([
+    expect.objectContaining({
+      last_node_id: nodeId,
+      last_status: 'blocked_deleted',
+      local_node_state: 'locally_deleted',
+      rule_id: 'draft-import-source-1',
+      source_path: 'Plain.md'
+    })
+  ]);
   expect(readRows('SELECT * FROM import_sources')).toEqual([]);
   expect(readRows('SELECT * FROM import_runs')).toEqual([]);
   expect(nodeId).toBeTruthy();
@@ -153,7 +173,7 @@ it('deletes topics with timestamp drift inside the import tolerance', async () =
   });
 });
 
-it('deletes changed Readwise topics and removes their import tracking', async () => {
+it('deletes changed Readwise topics and keeps removed tracking rows', async () => {
   const nodeId = await importReadwiseFixture();
   const keepItem = openDatabaseConnection().sqlite
     .prepare('SELECT last_imported_at FROM keep_import_items WHERE last_node_id = ?')
@@ -175,7 +195,17 @@ it('deletes changed Readwise topics and removes their import tracking', async ()
     status: 'completed'
   });
   expect(readRows('SELECT id FROM nodes WHERE id = ?', nodeId)).toEqual([]);
-  expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
+  expect(
+    readRows<{ last_node_id: string; last_status: string; local_node_state: string }>(
+      'SELECT last_node_id, last_status, local_node_state FROM keep_import_items'
+    )
+  ).toEqual([
+    {
+      last_node_id: nodeId,
+      last_status: 'blocked_deleted',
+      local_node_state: 'locally_deleted'
+    }
+  ]);
   expect(readRows('SELECT * FROM import_sources')).toEqual([]);
   expect(readRows('SELECT * FROM import_runs')).toEqual([]);
 });
@@ -203,52 +233,4 @@ it('removes Readwise-managed External documents and sync rows', async () => {
   expect(readRows('SELECT document_id FROM external_documents')).toEqual([]);
   expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
   expect(readRows("SELECT object_id FROM sync_object_state WHERE object_type = 'external_document'")).toEqual([]);
-});
-
-it('clears Readwise Books placeholders and tracking-only records', async () => {
-  const fixture = await seedReadwiseFixture();
-  saveReadwiseSettings(fixture);
-  const connection = openDatabaseConnection().sqlite;
-  connection
-    .prepare(
-      `INSERT INTO keep_import_items (
-        rule_id, source_path, source_mtime_ms, source_size_bytes, has_source_update,
-        last_node_id, last_status, first_seen_at, last_seen_at, last_imported_at
-      ) VALUES (?, ?, 1, 1, 0, NULL, 'imported', ?, ?, ?)`
-    )
-    .run('draft-import-source-1', 'Tracking only.md', '2026-05-11T00:00:00.000Z', '2026-05-11T00:00:00.000Z', '2026-05-11T00:00:00.000Z');
-  connection
-    .prepare(
-      `INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
-       VALUES ('node-readwise-book-placeholder', 'special-inbox', 'topic', 'Readwise Book', '# Readwise Book', ?, ?)`
-    )
-    .run('2026-05-11T00:00:00.000Z', '2026-05-11T00:00:00.000Z');
-  connection
-    .prepare("INSERT INTO node_order (node_id, position) VALUES ('node-readwise-book-placeholder', 0)")
-    .run();
-
-  expect(previewReadwiseImportCleanup()).toMatchObject({
-    delete_count: 1,
-    tracking_only_count: 1,
-    total_count: 2
-  });
-  runReadwiseImportCleanup();
-
-  expect(readRows("SELECT id FROM nodes WHERE id = 'node-readwise-book-placeholder'")).toEqual([]);
-  expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
-});
-
-it('clears tracking for Readwise topics already deleted from the active node tree', async () => {
-  const fixture = await seedReadwiseFixture();
-  saveReadwiseSettings(fixture);
-  await runReadwiseReaderImport();
-  const nodeId = readRows<{ last_node_id: string }>('SELECT last_node_id FROM keep_import_items')[0]?.last_node_id;
-  openDatabaseConnection().sqlite
-    .prepare("UPDATE nodes SET deleted_at = '2026-05-17T03:35:11.415Z' WHERE id = ?")
-    .run(nodeId);
-
-  expect(previewReadwiseImportCleanup()).toMatchObject({ keep_count: 1, total_count: 1 });
-  runReadwiseImportCleanup();
-
-  expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
 });
