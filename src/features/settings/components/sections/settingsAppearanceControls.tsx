@@ -96,6 +96,7 @@ function ColorSettingRow(props: {
 }
 
 export function AccentColorRow(props: {
+  defaultAccentColor: string;
   onAccentColorPresetReset: () => void;
   safeAccentColor: string;
   setAccentColorPreset: (value: string) => void;
@@ -103,7 +104,7 @@ export function AccentColorRow(props: {
   return (
     <ColorSettingRow
       colorInputAriaLabel="Accent color picker"
-      defaultValue={DEFAULT_ACCENT_COLOR_PRESET}
+      defaultValue={props.defaultAccentColor || DEFAULT_ACCENT_COLOR_PRESET}
       description="Choose accent color for selected states, links, and quote rendering."
       onChange={props.setAccentColorPreset}
       onReset={props.onAccentColorPresetReset}
@@ -135,6 +136,7 @@ export function FontColorRow(props: {
 }
 
 export function HighlightColorRow(props: {
+  defaultHighlightColor: string;
   onHighlightColorPresetReset: () => void;
   safeHighlightColor: string;
   setHighlightColorPreset: (value: string) => void;
@@ -142,7 +144,7 @@ export function HighlightColorRow(props: {
   return (
     <ColorSettingRow
       colorInputAriaLabel="Highlight color picker"
-      defaultValue={DEFAULT_HIGHLIGHT_COLOR_PRESET}
+      defaultValue={props.defaultHighlightColor || DEFAULT_HIGHLIGHT_COLOR_PRESET}
       description="Choose the color used for highlight marks in both the editor and PDF."
       onChange={props.setHighlightColorPreset}
       onReset={props.onHighlightColorPresetReset}
@@ -154,6 +156,7 @@ export function HighlightColorRow(props: {
 }
 
 export function SelectionColorRow(props: {
+  defaultSelectionColor: string;
   onSelectionColorPresetReset: () => void;
   safeSelectionColor: string;
   setSelectionColorPreset: (value: string) => void;
@@ -161,7 +164,7 @@ export function SelectionColorRow(props: {
   return (
     <ColorSettingRow
       colorInputAriaLabel="Selection color picker"
-      defaultValue={DEFAULT_SELECTION_COLOR_PRESET}
+      defaultValue={props.defaultSelectionColor || DEFAULT_SELECTION_COLOR_PRESET}
       description="Choose the color used for text selection in both the editor and PDF."
       onChange={props.setSelectionColorPreset}
       onReset={props.onSelectionColorPresetReset}
@@ -173,6 +176,7 @@ export function SelectionColorRow(props: {
 }
 
 export function ClozeColorRow(props: {
+  defaultClozeColor: string;
   onClozeColorPresetReset: () => void;
   safeClozeColor: string;
   setClozeColorPreset: (value: string) => void;
@@ -180,7 +184,7 @@ export function ClozeColorRow(props: {
   return (
     <ColorSettingRow
       colorInputAriaLabel="Cloze color picker"
-      defaultValue={DEFAULT_CLOZE_COLOR_PRESET}
+      defaultValue={props.defaultClozeColor || DEFAULT_CLOZE_COLOR_PRESET}
       description="Choose the color used for cloze marks in the editor."
       onChange={props.setClozeColorPreset}
       onReset={props.onClozeColorPresetReset}

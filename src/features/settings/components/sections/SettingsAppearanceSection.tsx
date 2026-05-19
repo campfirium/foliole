@@ -1,17 +1,11 @@
 import {
-  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
-  SettingsControlSlot,
-  SettingsRow,
   SettingsSection,
-  SettingsSegmentedRow,
-  settingsSwitchClassName,
-  settingsSwitchKnobClassName
+  SettingsSegmentedRow
 } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
   DEFAULT_CLOZE_COLOR_PRESET,
-  DEFAULT_DARK_FONT_COLOR_PRESET,
   DEFAULT_FONT_COLOR_PRESET,
   DEFAULT_HIGHLIGHT_COLOR_PRESET,
   DEFAULT_SELECTION_COLOR_PRESET
@@ -20,14 +14,10 @@ import { useSettingsFontOptions } from '../useSettingsFontOptions';
 
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
 import { NodeListRowSpacingSection } from './NodeListRowSpacingSection';
-import { ReadingContentWidthRow } from './ReadingContentWidthRow';
 import {
-  AccentColorRow,
-  ClozeColorRow,
-  FontColorRow,
-  HighlightColorRow,
-  SelectionColorRow
-} from './settingsAppearanceControls';
+  AppearanceLearningColorSection,
+  AppearanceReadingSection
+} from './SettingsAppearanceColorSections';
 import { SettingsAppearanceFontSection } from './SettingsAppearanceFontSection';
 import { WorkspaceSurfaceColorSection } from './WorkspaceSurfaceColorSection';
 
@@ -93,121 +83,6 @@ function AppearanceColorModeSection(props: ReturnType<typeof useAppearanceSectio
   );
 }
 
-function AppearancePdfReadingModeRow(props: ReturnType<typeof useAppearanceSectionState>) {
-  const { appearance } = props;
-
-  return (
-    <SettingsSegmentedRow
-      description="Choose how PDF pages render in the reader. Original keeps the source page, inverted uses a softer dark reading preset, and warm keeps a paper-like tone."
-      label="PDF reading mode"
-      onChange={(value) => appearance.setPdfReadingMode(value as typeof appearance.pdfReadingMode)}
-      options={[
-        { label: 'Original', value: 'original' },
-        { label: 'Inverted', value: 'inverted' },
-        { label: 'Warm', value: 'warm' }
-      ]}
-      value={appearance.pdfReadingMode}
-    />
-  );
-}
-
-function ReadingLineHeightRow(props: ReturnType<typeof useAppearanceSectionState>) {
-  const { appearance } = props;
-
-  return (
-    <SettingsSegmentedRow
-      description="Set the reading line height for topics. The choice is saved and applied after restart."
-      label="Reading line height"
-      onChange={(value) => appearance.setReadingLineHeight(value as typeof appearance.readingLineHeight)}
-      options={[
-        { label: 'Compact', value: 'compact' },
-        { label: 'Standard', value: 'standard' },
-        { label: 'Relaxed', value: 'relaxed' }
-      ]}
-      value={appearance.readingLineHeight}
-    />
-  );
-}
-
-function DimImagesInDarkModeRow(props: ReturnType<typeof useAppearanceSectionState>) {
-  const { appearance } = props;
-
-  return (
-    <SettingsRow
-      description="Apply a gentle dimming filter to regular document images when the app is in dark mode."
-      title="Dim images in dark mode"
-    >
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <button
-          aria-checked={appearance.dimImagesInDarkMode}
-          aria-label="Dim images in dark mode"
-          className={settingsSwitchClassName(appearance.dimImagesInDarkMode)}
-          onClick={() => appearance.setDimImagesInDarkMode(!appearance.dimImagesInDarkMode)}
-          role="switch"
-          type="button"
-        >
-          <span
-            aria-hidden="true"
-            className={settingsSwitchKnobClassName(appearance.dimImagesInDarkMode)}
-          />
-        </button>
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
-
-function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionState>) {
-  const {
-    appearance,
-    safeAccentColor,
-    safeClozeColor,
-    safeFontColor,
-    safeHighlightColor,
-    safeSelectionColor
-  } = props;
-  const defaultFontColor = appearance.resolvedBaseColorMode === 'dark'
-    ? DEFAULT_DARK_FONT_COLOR_PRESET
-    : DEFAULT_FONT_COLOR_PRESET;
-
-  return (
-    <SettingsSection ariaLabel="Appearance color section" title="Color">
-      <FontColorRow
-        defaultFontColor={defaultFontColor}
-        onFontColorPresetReset={appearance.resetFontColorPreset}
-        safeFontColor={safeFontColor}
-        setFontColorPreset={(value) => appearance.setFontColorPreset(value as typeof appearance.fontColorPreset)}
-      />
-      <AccentColorRow
-        onAccentColorPresetReset={appearance.resetAccentColorPreset}
-        safeAccentColor={safeAccentColor}
-        setAccentColorPreset={(value) => appearance.setAccentColorPreset(value as typeof appearance.accentColorPreset)}
-      />
-      <SelectionColorRow
-        onSelectionColorPresetReset={appearance.resetSelectionColorPreset}
-        safeSelectionColor={safeSelectionColor}
-        setSelectionColorPreset={(value) => appearance.setSelectionColorPreset(value as typeof appearance.selectionColorPreset)}
-      />
-      <HighlightColorRow
-        onHighlightColorPresetReset={appearance.resetHighlightColorPreset}
-        safeHighlightColor={safeHighlightColor}
-        setHighlightColorPreset={(value) => appearance.setHighlightColorPreset(value as typeof appearance.highlightColorPreset)}
-      />
-      <ClozeColorRow
-        onClozeColorPresetReset={appearance.resetClozeColorPreset}
-        safeClozeColor={safeClozeColor}
-        setClozeColorPreset={(value) => appearance.setClozeColorPreset(value as typeof appearance.clozeColorPreset)}
-      />
-      <AppearancePdfReadingModeRow {...props} />
-      <ReadingLineHeightRow {...props} />
-      <ReadingContentWidthRow
-        onReadingContentWidthChange={appearance.setReadingContentWidth}
-        readingContentWidth={appearance.readingContentWidth}
-      />
-      <DimImagesInDarkModeRow {...props} />
-    </SettingsSection>
-  );
-}
-
 function AppearanceSupportingSections(props: ReturnType<typeof useAppearanceSectionState>) {
   const { appearance, fontOptions } = props;
 
@@ -243,7 +118,15 @@ export function SettingsAppearanceSection(props: { onEnterPreview: () => void })
     <>
       <AppearanceColorModeSection {...state} />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
-      <AppearanceColorSection {...state} />
+      <AppearanceLearningColorSection
+        appearance={state.appearance}
+        safeAccentColor={state.safeAccentColor}
+        safeClozeColor={state.safeClozeColor}
+        safeFontColor={state.safeFontColor}
+        safeHighlightColor={state.safeHighlightColor}
+        safeSelectionColor={state.safeSelectionColor}
+      />
+      <AppearanceReadingSection appearance={state.appearance} />
       <AppearanceSupportingSections {...state} />
     </>
   );

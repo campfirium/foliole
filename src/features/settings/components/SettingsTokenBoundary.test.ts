@@ -11,6 +11,7 @@ const SETTINGS_FILES = [
   'src/features/settings/components/sections/backupSettingsSectionParts.tsx',
   'src/features/settings/components/sections/reviewSettingsControls.tsx',
   'src/features/settings/components/sections/settingsAppearanceControls.tsx',
+  'src/features/settings/components/sections/SettingsAppearanceColorSections.tsx',
   'src/features/settings/components/sections/NodeListRowSpacingSection.tsx',
   'src/features/settings/components/sections/SettingsAppearanceSection.tsx',
   'src/features/settings/components/sections/SettingsExternalSearchSection.tsx',
