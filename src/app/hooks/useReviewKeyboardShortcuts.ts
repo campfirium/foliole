@@ -4,6 +4,8 @@ import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 
+import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
+
 interface UseReviewKeyboardShortcutsArgs {
   isStudyMode: boolean;
   isCommandPaletteOpen: boolean;
@@ -26,26 +28,9 @@ interface UseReviewKeyboardShortcutsArgs {
   deferReviewItem: () => boolean;
   deleteCurrentReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
+  resumeReviewItem: () => void;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => Promise<boolean>;
-}
-
-const NON_TEXT_INPUT_TYPES = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
-
-function isEditableElement(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  if (target.isContentEditable || target.closest('[contenteditable="true"]')) {
-    return true;
-  }
-  if (target instanceof HTMLTextAreaElement) {
-    return !target.readOnly && !target.disabled;
-  }
-  if (target instanceof HTMLInputElement) {
-    return !target.readOnly && !target.disabled && !NON_TEXT_INPUT_TYPES.has(target.type.toLowerCase());
-  }
-  return false;
 }
 
 export function useReviewKeyboardShortcuts(args: UseReviewKeyboardShortcutsArgs) {
@@ -62,7 +47,7 @@ function useReviewEditingState(isStudyMode: boolean) {
       setIsReviewEditing(false);
       return;
     }
-    const syncEditingState = (target: EventTarget | null) => setIsReviewEditing(isEditableElement(target));
+    const syncEditingState = (target: EventTarget | null) => setIsReviewEditing(isEditableKeyboardTarget(target));
     syncEditingState(document.activeElement);
     const handleFocusIn = (event: FocusEvent) => syncEditingState(event.target);
     const handleFocus = (event: FocusEvent) => syncEditingState(event.target);
@@ -91,13 +76,21 @@ function useReviewEditingEscapeHandler(
     ) {
       return undefined;
     }
-    return onWindowEscape((event) => {
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
       }
+      blurActiveKeyboardTarget();
       setIsReviewEditing(false);
       event.preventDefault();
-    });
+      event.stopPropagation();
+    };
+    window.addEventListener('keydown', handleEscape, true);
+    const unlistenFallback = onWindowEscape(handleEscape);
+    return () => {
+      window.removeEventListener('keydown', handleEscape, true);
+      unlistenFallback();
+    };
   }, [args.isCommandPaletteOpen, args.isSearchPaletteOpen, args.isSettingsOpen, args.isStudyMode, isReviewEditing, setIsReviewEditing]);
 }
 
@@ -138,19 +131,21 @@ function handleReviewKeydown(
   if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.isComposing || event.repeat) {
     return;
   }
-  const isTargetEditing = isEditableElement(event.target) || isEditableElement(document.activeElement) || isReviewEditing;
+  const isTargetEditing = isEditableKeyboardTarget(event.target) || isEditableKeyboardTarget(document.activeElement) || isReviewEditing;
   if (event.key === 'Escape') {
     if (!isTargetEditing) {
       return;
     }
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
+    blurActiveKeyboardTarget();
     setIsReviewEditing(false);
     event.preventDefault();
     return;
   }
   if (isTargetEditing || !args.reviewCurrentNodeId || !args.isCurrentReviewItemVisible) {
+    if (!isTargetEditing && args.reviewCurrentNodeId && !args.isCurrentReviewItemVisible) {
+      const resumeShortcuts = args.isCurrentItemGradable ? args.revealAnswerShortcuts : args.readingReadShortcuts;
+      tryRunShortcut(event, resumeShortcuts, args.resumeReviewItem);
+    }
     return;
   }
 

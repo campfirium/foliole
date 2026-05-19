@@ -51,7 +51,14 @@ it('supports review keyboard flow with edit mode guard (Esc -> Space -> 1/2/3/4)
   fireEvent.keyDown(editor, { key: ' ', code: 'Space' });
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
 
-  fireEvent.keyDown(window, { key: 'Escape' });
+  const stopEscapePropagation = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+    }
+  };
+  editor.addEventListener('keydown', stopEscapePropagation);
+  fireEvent.keyDown(editor, { key: 'Escape' });
+  editor.removeEventListener('keydown', stopEscapePropagation);
   await waitFor(() => {
     expect(document.activeElement).not.toBe(editor);
   });

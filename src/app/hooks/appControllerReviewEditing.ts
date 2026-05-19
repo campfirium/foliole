@@ -10,6 +10,7 @@ export function useReviewEditingState(args: {
   isCurrentReviewItemGradable: boolean;
   isStudyMode: boolean;
   isVirtualViewOpen: boolean;
+  onResumeReviewItem: () => void;
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
@@ -48,6 +49,7 @@ export function useReviewEditingState(args: {
       return true;
     },
     dismissReviewItem: args.ws.dismissReviewItem,
+    resumeReviewItem: args.onResumeReviewItem,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     gradeReviewCard: args.ws.gradeReviewCard
   });

@@ -18,8 +18,10 @@ import { APP_SHORTCUT_COMMAND_IDS, useCommandShortcutState } from './reviewHotke
 import { openCompanionSyncSettings } from './settingsOverlayRequest';
 import { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import { useControllerPaletteItems } from './useControllerPaletteItems';
+import { useCurrentNodeKeyboardShortcuts } from './useCurrentNodeKeyboardShortcuts';
 import { useFormalImport } from './useFormalImport';
 import { usePriorityQuickSet } from './usePriorityQuickSet';
+import { useResumeReviewItem } from './useResumeReviewItem';
 import { useReviewQueueDocumentPrefetch } from './useReviewQueueDocumentPrefetch';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
 
@@ -166,15 +168,18 @@ export function useAppController(args: {
   const { exitStudyMode, isStudyMode, startStudyMode } = controller.study;
   const hotkeys = useCommandShortcutState(APP_SHORTCUT_COMMAND_IDS);
   const priorityQuickSet = useControllerPriorityQuickSet({ hotkeys, runtime: controller.runtime, ws });
+  useCurrentNodeKeyboardShortcuts({ controller, isStudyMode, ws });
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
   useReviewQueueDocumentPrefetch(ws.reviewSession);
   const isCurrentReviewItemGradable = (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
+  const resumeReviewItem = useResumeReviewItem({ controller, ws });
   const isReviewEditing = useReviewEditingState({
     hotkeys,
     isExternalViewOpen: controller.externalView.isExternalViewOpen,
     isCurrentReviewItemGradable,
     isStudyMode,
     isVirtualViewOpen: controller.virtualView.isVirtualViewOpen,
+    onResumeReviewItem: resumeReviewItem,
     runtime: controller.runtime,
     ws
   });
