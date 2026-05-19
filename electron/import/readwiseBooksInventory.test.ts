@@ -30,7 +30,11 @@ import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
-import { loadReadwiseBooksInventory, scanReadwiseBooksInventory } from './readwiseBooksInventory.js';
+import { scanReadwiseBooksInventory } from './readwiseBooksInventory.js';
+import {
+  loadReadwiseBooksInventory,
+  loadReadwiseBooksInventoryForPaths
+} from './readwiseBooksInventoryLoad.js';
 
 let tempRoot = '';
 
@@ -215,4 +219,31 @@ it('keeps deleted book nodes missing during inventory refresh', async () => {
     importStatus: 'pending',
     nodeStatus: 'missing'
   });
+});
+
+it('refreshes cached book node state without rereading unchanged markdown', async () => {
+  const { fullDocumentDir, highlightDir } = await seedReadwiseBooksFixture();
+  const input = {
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  };
+  const initial = (await loadReadwiseBooksInventoryForPaths(input)).inventory;
+  const plainBook = initial.books.find((book) => book.bookKey === 'plain book');
+  expect(plainBook?.generatedNodeId).toBeTruthy();
+  openDatabaseConnection().sqlite
+    .prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?')
+    .run('2026-04-04T00:00:00.000Z', plainBook!.generatedNodeId);
+
+  const readFile = vi.spyOn(fs, 'readFile');
+  const cached = (await loadReadwiseBooksInventoryForPaths(input)).inventory;
+
+  expect(readFile.mock.calls).toEqual([]);
+  expect(cached.books.find((book) => book.bookKey === 'plain book')).toMatchObject({
+    generatedNodeId: null,
+    bodyState: 'unloaded',
+    importStatus: 'pending',
+    nodeStatus: 'missing'
+  });
+  readFile.mockRestore();
 });

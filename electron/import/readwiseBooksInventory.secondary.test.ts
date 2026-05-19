@@ -27,7 +27,7 @@ import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
-import { loadReadwiseBooksInventory } from './readwiseBooksInventory.js';
+import { loadReadwiseBooksInventory } from './readwiseBooksInventoryLoad.js';
 
 let tempRoot = '';
 

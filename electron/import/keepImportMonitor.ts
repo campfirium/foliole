@@ -1,12 +1,10 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 
-import { loadImportManagerSettings } from './importManagerSettings.js';
 import { submitImportMonitorTask } from './importMonitorTaskScheduler.js';
 import { type KeepImportConfig, type KeepImportSourceConfig, resolveKeepImportConfigs } from './keepImportMonitorConfig.js';
-import { runKeepImportRule } from './keepImportService.js';
-import { type KeepImportWatchHandle, watchKeepImportDirectory } from './keepImportWatch.js';
+import type { KeepImportWatchHandle } from './keepImportWatch.js';
 
-interface KeepImportMonitorDeps {
+export interface KeepImportMonitorDeps {
   debounceMs: number;
   loadSettings(): ImportManagerSettings;
   logError(message: string, error: unknown): void;
@@ -17,6 +15,8 @@ interface KeepImportMonitorDeps {
 interface KeepImportSourceState {
   config: KeepImportSourceConfig;
   debounceTimer: ReturnType<typeof setTimeout> | null;
+  hasCompletedRun: boolean;
+  dirtySinceLastRun: boolean;
   importInFlight: boolean;
   rerunRequested: boolean;
   watchers: KeepImportWatchHandle[];
@@ -24,34 +24,17 @@ interface KeepImportSourceState {
 
 export interface KeepImportMonitor {
   refreshFromSettings(): Promise<void>;
+  isSnapshotFresh(ruleId: string): boolean;
   start(): Promise<void>;
   stop(): void;
-}
-
-function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
-  return {
-    debounceMs: 250,
-    loadSettings: loadImportManagerSettings,
-    logError(message, error) {
-      console.error(message, error);
-    },
-    async runCycle(config) {
-      await runKeepImportRule({
-        directoryPath: config.directoryPath,
-        highlightMode: config.highlightMode,
-        highlightPolicy: config.highlightPolicy,
-        ruleId: config.adapterConfigId,
-        sourceType: config.sourceType
-      });
-    },
-    watch: watchKeepImportDirectory
-  };
 }
 
 function createSourceState(config: KeepImportSourceConfig): KeepImportSourceState {
   return {
     config,
     debounceTimer: null,
+    dirtySinceLastRun: false,
+    hasCompletedRun: false,
     importInFlight: false,
     rerunRequested: false,
     watchers: []
@@ -81,6 +64,7 @@ async function ensureWatcher(
   }
   state.watchers = state.config.watchPaths.map((watchPath) =>
     deps.watch(watchPath, () => {
+      state.dirtySinceLastRun = true;
       if (state.importInFlight) {
         state.rerunRequested = true;
         return;
@@ -109,6 +93,8 @@ async function runImportCycle(
     do {
       state.rerunRequested = false;
       await deps.runCycle(state.config);
+      state.hasCompletedRun = true;
+      state.dirtySinceLastRun = false;
     } while (state.rerunRequested && startedRef.current);
   } catch (error) {
     deps.logError(`[keep-import] auto cycle failed for ${state.config.directoryPath}`, error);
@@ -144,9 +130,35 @@ function startConfigRun(
   return scheduleRun;
 }
 
-export function createKeepImportMonitor(
-  deps: KeepImportMonitorDeps = createDefaultKeepImportMonitorDeps()
-): KeepImportMonitor {
+function isSameSourceConfig(left: KeepImportSourceConfig, right: KeepImportSourceConfig) {
+  return (
+    left.directoryPath === right.directoryPath &&
+    left.highlightMode === right.highlightMode &&
+    left.highlightPolicy === right.highlightPolicy &&
+    left.watchPaths.join('\u001f') === right.watchPaths.join('\u001f')
+  );
+}
+
+function syncSourceState(input: {
+  deps: KeepImportMonitorDeps;
+  config: KeepImportSourceConfig;
+  sourceStateById: Map<string, KeepImportSourceState>;
+  startedRef: { current: boolean };
+  stopSource(state: KeepImportSourceState): void;
+}) {
+  const existingState = input.sourceStateById.get(input.config.adapterConfigId);
+  if (existingState && isSameSourceConfig(existingState.config, input.config)) {
+    return;
+  }
+  if (existingState) {
+    input.stopSource(existingState);
+  }
+  const nextState = createSourceState(input.config);
+  input.sourceStateById.set(input.config.adapterConfigId, nextState);
+  startConfigRun(input.deps, input.startedRef, nextState);
+}
+
+export function createKeepImportMonitor(deps: KeepImportMonitorDeps): KeepImportMonitor {
   const sourceStateById = new Map<string, KeepImportSourceState>();
   const startedRef = { current: false };
 
@@ -172,30 +184,22 @@ export function createKeepImportMonitor(
       sourceStateById.delete(configId);
     }
 
-    for (const config of nextConfigs) {
-      const existingState = sourceStateById.get(config.adapterConfigId);
-      if (
-        existingState &&
-        existingState.config.directoryPath === config.directoryPath &&
-        existingState.config.highlightMode === config.highlightMode &&
-        existingState.config.highlightPolicy === config.highlightPolicy &&
-        existingState.config.watchPaths.join('\u001f') === config.watchPaths.join('\u001f')
-      ) {
-        continue;
-      }
-
-      if (existingState) {
-        stopSource(existingState);
-      }
-
-      const nextState = createSourceState(config);
-      sourceStateById.set(config.adapterConfigId, nextState);
-      startConfigRun(deps, startedRef, nextState);
-    }
+    nextConfigs.forEach((config) => syncSourceState({ config, deps, sourceStateById, startedRef, stopSource }));
   }
 
   return {
     refreshFromSettings,
+    isSnapshotFresh(ruleId: string) {
+      const state = sourceStateById.get(ruleId);
+      return Boolean(
+        startedRef.current &&
+        state?.hasCompletedRun &&
+        !state.importInFlight &&
+        !state.rerunRequested &&
+        !state.debounceTimer &&
+        !state.dirtySinceLastRun
+      );
+    },
     async start() {
       if (startedRef.current) {
         return;
@@ -213,16 +217,9 @@ export function createKeepImportMonitor(
   };
 }
 
-const keepImportMonitor = createKeepImportMonitor();
-
-export async function startKeepImportMonitor() {
-  await keepImportMonitor.start();
-}
-
-export async function refreshKeepImportMonitorFromSettings() {
-  await keepImportMonitor.refreshFromSettings();
-}
-
-export function stopKeepImportMonitor() {
-  keepImportMonitor.stop();
-}
+export {
+  isKeepImportMonitorSnapshotFresh,
+  refreshKeepImportMonitorFromSettings,
+  startKeepImportMonitor,
+  stopKeepImportMonitor
+} from './keepImportMonitorRuntime.js';

@@ -80,7 +80,7 @@ function readImportedNodeContent() {
 }
 
 it('refreshes Readwise Inbox metadata when stored source signatures are already current', async () => {
-  const firstContent = ['## Metadata', '- Author: [[waudero]]', '', '## Full Document', 'Highlighted body.'].join('\n');
+  const firstContent = ['## Full Document', 'Highlighted body.'].join('\n');
   const fixture = await seedReadwiseSource(firstContent);
   await runReadwiseReaderImport();
 

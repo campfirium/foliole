@@ -36,7 +36,7 @@ vi.mock('../ipc/epubImport.js', () => ({
   runEpubImport
 }));
 
-vi.mock('./readwiseBooksInventory.js', () => ({
+vi.mock('./readwiseBooksInventoryLoad.js', () => ({
   loadReadwiseBooksInventory: vi.fn().mockResolvedValue({
     books: [
       {

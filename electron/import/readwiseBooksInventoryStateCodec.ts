@@ -1,4 +1,8 @@
-import type { ReadwiseBookInventoryItem, ReadwiseBooksInventory } from './readwiseBooksInventory.js';
+import type {
+  ReadwiseBookInventoryItem,
+  ReadwiseBooksInventory,
+  ReadwiseBooksSourceSignature
+} from './readwiseBooksInventory.js';
 
 export interface PersistedReadwiseBooksInventoryState {
   inventories: Record<string, ReadwiseBooksInventory>;
@@ -48,6 +52,26 @@ function normalizeBookInventoryItem(book: ReadwiseBookInventoryItem): ReadwiseBo
   };
 }
 
+function normalizeSourceSignature(value: unknown): ReadwiseBooksSourceSignature | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const candidate = value as Partial<ReadwiseBooksSourceSignature>;
+  if (candidate.version !== 1 || !Array.isArray(candidate.entries)) {
+    return undefined;
+  }
+  const entries = candidate.entries.filter((entry): entry is ReadwiseBooksSourceSignature['entries'][number] => (
+    typeof entry === 'object' &&
+    entry !== null &&
+    (entry.sourceGroup === 'fullDocument' || entry.sourceGroup === 'highlight') &&
+    typeof entry.sourceName === 'string' &&
+    typeof entry.kind === 'string' &&
+    typeof entry.mtimeMs === 'number' &&
+    typeof entry.sizeBytes === 'number'
+  ));
+  return entries.length === candidate.entries.length ? { entries, version: 1 } : undefined;
+}
+
 function normalizeInventory(value: unknown): ReadwiseBooksInventory | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -61,11 +85,13 @@ function normalizeInventory(value: unknown): ReadwiseBooksInventory | null {
   ) {
     return null;
   }
+  const sourceSignature = normalizeSourceSignature(candidate.sourceSignature);
   return {
     books: candidate.books.filter(isBookInventoryItem).map(normalizeBookInventoryItem),
     fullDocumentDirectoryPath: candidate.fullDocumentDirectoryPath,
     highlightDirectoryPath: candidate.highlightDirectoryPath,
-    scannedAt: candidate.scannedAt
+    scannedAt: candidate.scannedAt,
+    ...(sourceSignature ? { sourceSignature } : {})
   };
 }
 

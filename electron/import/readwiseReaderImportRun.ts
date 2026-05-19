@@ -7,8 +7,10 @@ import type {
   NativeReadwiseImportRunFailedSource,
   NativeReadwiseImportRunResult
 } from '../../lib/platform/nativeImportContract.js';
+import { countPresentKeepImportItems } from '../database/keepImportItems.js';
 
 import { loadImportManagerSettings, saveImportManagerSettings } from './importManagerSettings.js';
+import { isKeepImportMonitorSnapshotFresh } from './keepImportMonitorRuntime.js';
 import type { KeepImportProgressEvent } from './keepImportProgress.js';
 import { isKeepImportAbortError, throwIfKeepImportAborted } from './keepImportProgress.js';
 import { requestKeepImportRuleRun } from './keepImportService.js';
@@ -143,6 +145,14 @@ async function applyReadwiseBooksRun(
   publishAccumulatorProgress(accumulator);
 }
 
+function applyReadwiseSnapshotRun(source: EnabledReadwiseSource, accumulator: ReadwiseRunAccumulator) {
+  const entryCount = countPresentKeepImportItems(source.id);
+  accumulator.entryCount += entryCount;
+  accumulator.skippedCount += entryCount;
+  accumulator.processedCount += 1;
+  publishAccumulatorProgress(accumulator);
+}
+
 export async function runReadwiseReaderImport(input?: {
   settings?: unknown;
   window?: ReadwiseImportProgressWindow | null;
@@ -198,6 +208,8 @@ async function runReadwiseReaderImportNow(input?: {
       throwIfKeepImportAborted(signal);
       if (source.kind === 'books') {
         await applyReadwiseBooksRun(source, accumulator);
+      } else if (isKeepImportMonitorSnapshotFresh(source.id)) {
+        applyReadwiseSnapshotRun(source, accumulator);
       } else {
         await applyReadwiseSourceRun(source, accumulator);
       }

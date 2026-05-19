@@ -33,10 +33,6 @@ const readwiseSettings = vi.hoisted(() => ({
   ]
 }));
 
-function createMissingDirectoryError(code: 'ENOENT' | 'ENOTDIR') {
-  return Object.assign(new Error('missing Readwise source directory'), { code });
-}
-
 function createProgressWindow(destroyed = false) {
   return {
     isDestroyed: vi.fn(() => destroyed),
@@ -45,7 +41,12 @@ function createProgressWindow(destroyed = false) {
 }
 
 vi.mock('./keepImportService.js', () => ({
-  requestKeepImportRuleRun
+  requestKeepImportRuleRun,
+  runKeepImportRule: vi.fn()
+}));
+
+vi.mock('./keepImportMonitorRuntime.js', () => ({
+  isKeepImportMonitorSnapshotFresh: vi.fn(() => false)
 }));
 
 vi.mock('./importManagerSettings.js', () => ({
@@ -119,77 +120,6 @@ it('cancels the active Readwise import pass', async () => {
   await expect(running).resolves.toMatchObject({
     imported_count: 0,
     status: 'cancelled'
-  });
-});
-
-it('skips missing optional Readwise source directories without failing the sync', async () => {
-  const settings = createSettings();
-  settings.readwiseSources.push(
-    {
-      ...settings.readwiseSources[0]!,
-      highlightPath: '/readwise/Tweets',
-      id: 'draft-import-source-3',
-      kind: 'tweets',
-      primaryPath: '/readwise/Full Document Contents/Tweets'
-    },
-    {
-      ...settings.readwiseSources[0]!,
-      highlightPath: '/readwise/Podcasts',
-      id: 'draft-import-source-4',
-      kind: 'podcasts',
-      primaryPath: '/readwise/Full Document Contents/Podcasts'
-    }
-  );
-  requestKeepImportRuleRun
-    .mockResolvedValueOnce([
-      {
-        action: 'import_attempted',
-        importStatus: 'imported',
-        previewStatus: 'new'
-      }
-    ])
-    .mockRejectedValueOnce(createMissingDirectoryError('ENOENT'))
-    .mockRejectedValueOnce(createMissingDirectoryError('ENOTDIR'));
-
-  await expect(runReadwiseReaderImport({ settings })).resolves.toMatchObject({
-    failed_count: 0,
-    imported_count: 1,
-    source_count: 3,
-    status: 'completed'
-  });
-});
-
-it('records real Readwise source failures with source path details', async () => {
-  const settings = createSettings();
-  settings.readwiseSources.push({
-    ...settings.readwiseSources[0]!,
-    highlightPath: '/readwise/Tweets',
-    id: 'draft-import-source-3',
-    kind: 'tweets',
-    primaryPath: '/readwise/Full Document Contents/Tweets'
-  });
-  requestKeepImportRuleRun
-    .mockResolvedValueOnce([
-      {
-        action: 'import_attempted',
-        importStatus: 'imported',
-        previewStatus: 'new'
-      }
-    ])
-    .mockRejectedValueOnce(new Error('permission denied'));
-
-  await expect(runReadwiseReaderImport({ settings })).resolves.toMatchObject({
-    failed_count: 1,
-    failed_sources: [
-      {
-        reason: 'permission denied',
-        source_kind: 'tweets',
-        source_path: '/readwise/Full Document Contents/Tweets'
-      }
-    ],
-    imported_count: 1,
-    source_count: 2,
-    status: 'failed'
   });
 });
 

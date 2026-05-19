@@ -54,3 +54,53 @@ it('watches both readwise full document and highlight folders', async () => {
   monitor.stop();
   vi.useRealTimers();
 });
+
+it('reports a fresh snapshot only after a clean monitor cycle', async () => {
+  vi.useFakeTimers();
+  let listener: (() => void) | null = null;
+  const runCycle = vi.fn(async () => undefined);
+  const monitor = createKeepImportMonitor({
+    debounceMs: 0,
+    loadSettings: () => ({
+      ...createDefaultImportManagerSettings(),
+      readwiseReaderConfig: {
+        ...createDefaultImportManagerSettings().readwiseReaderConfig,
+        validatedAt: '2026-03-26T01:00:00.000Z'
+      },
+      readwiseRootPath: '/tmp/readwise',
+      readwiseSources: [
+        {
+          actionMode: 'keep',
+          archivePath: '',
+          highlightMode: 'split',
+          highlightPath: '/tmp/readwise/Articles',
+          id: 'draft-import-source-1',
+          keepPreview: null,
+          keepState: 'enabled',
+          kind: 'articles',
+          primaryPath: '/tmp/readwise/Full Document Contents/Articles'
+        }
+      ],
+      updatedAt: '2026-03-26T01:00:00.000Z'
+    }),
+    logError: vi.fn(),
+    runCycle,
+    watch: vi.fn((_path, nextListener) => {
+      listener = nextListener;
+      return { close: vi.fn() };
+    })
+  });
+
+  expect(monitor.isSnapshotFresh('draft-import-source-1')).toBe(false);
+  await monitor.start();
+  await vi.runAllTimersAsync();
+  expect(monitor.isSnapshotFresh('draft-import-source-1')).toBe(true);
+
+  listener?.();
+  expect(monitor.isSnapshotFresh('draft-import-source-1')).toBe(false);
+  await vi.runAllTimersAsync();
+  expect(monitor.isSnapshotFresh('draft-import-source-1')).toBe(true);
+
+  monitor.stop();
+  vi.useRealTimers();
+});
