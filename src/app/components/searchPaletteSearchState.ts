@@ -20,6 +20,25 @@ interface SearchSourceProps {
   trashedNodeIds: string[];
 }
 
+const SEARCH_QUERY_DEBOUNCE_MS = 160;
+
+function useSearchExecutionQuery(isOpen: boolean, query: string) {
+  const [executionQuery, setExecutionQuery] = useState('');
+  const trimmedQuery = query.trim();
+  useEffect(() => {
+    if (!isOpen || !trimmedQuery) {
+      setExecutionQuery('');
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setExecutionQuery(query);
+    }, SEARCH_QUERY_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [isOpen, query, trimmedQuery]);
+  return executionQuery;
+}
+
 function useRuntimeSearchResults(isOpen: boolean, hasRuntime: boolean, query: string) {
   const [runtimeResults, setRuntimeResults] = useState<WorkspaceSearchResult[]>([]);
   const [runtimeError, setRuntimeError] = useState(false);
@@ -74,16 +93,24 @@ function useRemovedSearchResults(isOpen: boolean, query: string) {
 }
 
 export function useSearchResults(props: SearchSourceProps, query: string) {
-  const localResults = useMemo(
-    () => buildWorkspaceSearchResults(props.nodeOrder, props.nodesById, props.trashedNodeIds, query),
-    [props.nodeOrder, props.nodesById, props.trashedNodeIds, query]
-  );
   const hasRuntime = hasWorkspaceSearchRuntimeRepository();
-  const { runtimeError, runtimeResults } = useRuntimeSearchResults(props.isOpen, hasRuntime, query);
-  const removedResults = useRemovedSearchResults(props.isOpen, query);
+  const executionQuery = useSearchExecutionQuery(props.isOpen, query);
+  const hasPendingQuery = query.trim() !== executionQuery.trim();
+  const localResults = useMemo(
+    () =>
+      hasRuntime
+        ? []
+        : buildWorkspaceSearchResults(props.nodeOrder, props.nodesById, props.trashedNodeIds, executionQuery),
+    [executionQuery, hasRuntime, props.nodeOrder, props.nodesById, props.trashedNodeIds]
+  );
+  const { runtimeError, runtimeResults } = useRuntimeSearchResults(props.isOpen, hasRuntime, executionQuery);
+  const removedResults = useRemovedSearchResults(props.isOpen, executionQuery);
   const results = useMemo(
-    () => (hasRuntime ? [...runtimeResults, ...removedResults] : [...localResults, ...removedResults]),
-    [hasRuntime, localResults, removedResults, runtimeResults]
+    () =>
+      hasPendingQuery
+        ? []
+        : (hasRuntime ? [...runtimeResults, ...removedResults] : [...localResults, ...removedResults]),
+    [hasPendingQuery, hasRuntime, localResults, removedResults, runtimeResults]
   );
   return { error: hasRuntime ? runtimeError : false, results };
 }
