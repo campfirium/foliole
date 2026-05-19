@@ -42,7 +42,17 @@ function shouldSkipCommandShortcut(args: {
     return true;
   }
   const isEditing = isEditableElement(args.event.target) || isEditableElement(document.activeElement);
-  return isEditing && !args.event.altKey && !args.event.ctrlKey && !args.event.metaKey && !FUNCTION_KEY_PATTERN.test(args.event.key);
+  if (!isEditing) {
+    return false;
+  }
+  const isAppUndoRedoShortcut =
+    args.event.key.toLowerCase() === 'z' &&
+    !args.event.altKey &&
+    (args.event.ctrlKey || args.event.metaKey);
+  if (isAppUndoRedoShortcut) {
+    return true;
+  }
+  return !args.event.altKey && !args.event.ctrlKey && !args.event.metaKey && !FUNCTION_KEY_PATTERN.test(args.event.key);
 }
 
 export function useAppCommandShortcutDispatcher(args: {

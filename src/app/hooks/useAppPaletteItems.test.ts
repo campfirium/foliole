@@ -28,6 +28,7 @@ function createPaletteArgs(activeNodeId: string) {
     reviewSession: { isAnswerRevealed: false },
     study: { canStartStudyMode: false },
     ws: {
+      appActionHistory: initial.appActionHistory,
       nodeOrder: ['node-1'],
       nodesById: {
         'node-1': {

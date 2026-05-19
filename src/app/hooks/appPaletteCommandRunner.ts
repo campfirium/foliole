@@ -34,6 +34,7 @@ interface PaletteCommandRunnerArgs {
   deleteCurrentReviewItem: () => boolean;
   deferReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
+  redoWorkspaceAction: () => boolean;
   isReviewMode: boolean;
   openImportManagement: () => void;
   openNotesView: () => void;
@@ -56,6 +57,7 @@ interface PaletteCommandRunnerArgs {
   startReviewSession: () => boolean;
   startStudyMode: (options?: StartStudyModeOptions) => void;
   trashViewOpen: boolean;
+  undoWorkspaceAction: () => boolean;
 }
 
 function createPaletteSettingsActions(args: PaletteCommandRunnerArgs) {
@@ -73,9 +75,27 @@ function createPaletteSettingsActions(args: PaletteCommandRunnerArgs) {
   };
 }
 
+function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
+  return {
+    deleteCurrentReviewItem: () => args.deleteCurrentReviewItem(),
+    gradeReviewAgain: () => args.gradeReviewCard(1),
+    gradeReviewHard: () => args.gradeReviewCard(2),
+    gradeReviewGood: () => args.gradeReviewCard(3),
+    gradeReviewEasy: () => args.gradeReviewCard(4),
+    readingReviewDismiss: () => args.dismissReviewItem(),
+    readingReviewLater: () => args.deferReviewItem(),
+    readingReviewRead: () => args.completeReviewItem(),
+    revealReviewAnswer: args.revealReviewAnswer,
+    toggleReviewMode
+  };
+}
+
 function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
   return {
     ...createPaletteSettingsActions(args),
+    ...createPaletteReviewCommandActions(args, toggleReviewMode),
+    undo: () => args.undoWorkspaceAction(),
+    redo: () => args.redoWorkspaceAction(),
     createFolder: args.createFolder,
     createItem: args.createItem,
     createSelectionCloze: args.createSelectionCloze,
@@ -116,21 +136,11 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     openNotes: args.closeTrashView,
     openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
     restartApp: args.onRestartApp,
-    revealReviewAnswer: args.revealReviewAnswer,
     startClipboardImport: args.startClipboardImport,
-    toggleReviewMode,
     toggleEditorDisplayMode: args.onToggleEditorDisplayMode,
     toggleImmersiveMode: args.onToggleImmersiveMode,
     toggleList: args.onToggleListVisibility,
-    toggleDevTools: args.onToggleDevTools,
-    gradeReviewAgain: () => args.gradeReviewCard(1),
-    gradeReviewHard: () => args.gradeReviewCard(2),
-    gradeReviewGood: () => args.gradeReviewCard(3),
-    gradeReviewEasy: () => args.gradeReviewCard(4),
-    readingReviewLater: () => args.deferReviewItem(),
-    readingReviewRead: () => args.completeReviewItem(),
-    readingReviewDismiss: () => args.dismissReviewItem(),
-    deleteCurrentReviewItem: () => args.deleteCurrentReviewItem()
+    toggleDevTools: args.onToggleDevTools
   };
 }
 

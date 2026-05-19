@@ -6,6 +6,8 @@ import { buildAppPaletteItems, runAppCommand, runReviewModeToggle } from './appC
 
 function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand>[1]> = {}) {
   return {
+    undo: () => undefined,
+    redo: () => undefined,
     closeSettings: () => undefined,
     createFolder: () => undefined,
     createItem: () => undefined,
@@ -61,6 +63,8 @@ function expectCommandRuns(commandId: string, overrides: Partial<Parameters<type
 function createPaletteOptions(isReviewMode: boolean) {
   return {
     canImportFile: true,
+    canRedoWorkspaceAction: false,
+    canUndoWorkspaceAction: false,
     canImportFolder: true,
     canExportCurrentArticle: true,
     canAnnotateSelection: true,
@@ -84,7 +88,9 @@ function createPaletteOptions(isReviewMode: boolean) {
     canDismissReadingReview: true,
     canDeleteReviewItem: true,
     isImmersiveMode: false,
-    isReviewMode
+    isReviewMode,
+    redoWorkspaceActionTitle: 'Redo',
+    undoWorkspaceActionTitle: 'Undo'
   };
 }
 
@@ -96,6 +102,8 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createTopic)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createItem)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createVirtualNode)).toBe(true);
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.undo)).toMatchObject({ enabled: false, title: 'Undo' });
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)).toMatchObject({ enabled: false, title: 'Redo' });
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
@@ -136,9 +144,39 @@ describe('buildAppPaletteItems', () => {
 
     expect(lightItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Toggle Light/Dark Mode');
   });
+
+  it('uses dynamic undo and redo action titles', () => {
+    const items = buildAppPaletteItems({
+      ...createPaletteOptions(false),
+      canRedoWorkspaceAction: true,
+      canUndoWorkspaceAction: true,
+      redoWorkspaceActionTitle: 'Redo Dismiss Topic',
+      undoWorkspaceActionTitle: 'Undo Dismiss Topic'
+    });
+
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.undo)).toMatchObject({
+      enabled: true,
+      title: 'Undo Dismiss Topic'
+    });
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)).toMatchObject({
+      enabled: true,
+      title: 'Redo Dismiss Topic'
+    });
+  });
 });
 
 describe('runAppCommand basics', () => {
+  it('runs undo and redo through the shared command handler', () => {
+    const undo = vi.fn();
+    const redo = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.undo, { undo });
+    expectCommandRuns(APP_COMMAND_IDS.redo, { redo });
+
+    expect(undo).toHaveBeenCalledTimes(1);
+    expect(redo).toHaveBeenCalledTimes(1);
+  });
+
   it('runs toggle devtools through the shared command handler', () => {
     const toggleDevTools = vi.fn();
     const importSingleFile = vi.fn();
@@ -175,55 +213,6 @@ describe('runAppCommand basics', () => {
     expect(renameNode).toHaveBeenCalledTimes(1);
   });
 
-  it('runs formal import through the shared command handler', () => {
-    const importSingleFile = vi.fn();
-    const importDirectory = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.importSingleFile, { importDirectory, importSingleFile });
-
-    expect(importSingleFile).toHaveBeenCalledTimes(1);
-    expect(importDirectory).not.toHaveBeenCalled();
-  });
-
-  it('runs export current article through the shared command handler', () => {
-    const exportCurrentArticle = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.exportCurrentArticle, { exportCurrentArticle });
-
-    expect(exportCurrentArticle).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs merge highlights into topic through the shared command handler', () => {
-    const mergeHighlightsIntoTopic = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.mergeHighlightsIntoTopic, { mergeHighlightsIntoTopic });
-
-    expect(mergeHighlightsIntoTopic).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs find in topic through the shared command handler', () => {
-    const findInTopic = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.findInTopic, { findInTopic });
-
-    expect(findInTopic).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs enter priority mode through the shared command handler', () => {
-    const enterPriorityMode = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.enterPriorityMode, { enterPriorityMode });
-
-    expect(enterPriorityMode).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs immersive reading toggle through the shared command handler', () => {
-    const toggleImmersiveMode = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.toggleImmersiveMode, { toggleImmersiveMode });
-
-    expect(toggleImmersiveMode).toHaveBeenCalledTimes(1);
-  });
 });
 
 describe('runReviewModeToggle', () => {

@@ -20,6 +20,8 @@ export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}
     deleteNodesPermanently: vi.fn(),
     dismissNode: vi.fn(() => false),
     dismissReviewItem: vi.fn(() => false),
+    undoWorkspaceAction: vi.fn(() => false),
+    redoWorkspaceAction: vi.fn(() => false),
     exitReviewSession: vi.fn(),
     goBack: vi.fn(() => null),
     goForward: vi.fn(() => null),

@@ -1,9 +1,5 @@
 import { UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
-import type { Node } from '../features/nodes/model/nodeTypes';
-import { hasNodeContent } from '../features/nodes/model/nodeTypes';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
-import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
-import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
@@ -25,6 +21,7 @@ import {
 } from './workspaceStoreCreateActions';
 import { createUpdateHighlightAnchorRangeAction } from './workspaceStoreHighlightRangeActions';
 import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';
+import { createDismissNodeAction } from './workspaceStoreNodeDismissAction';
 import { createRelearnNodeAction } from './workspaceStoreNodeRelearnAction';
 import {
   createUpdateNodeDesiredRetentionAction,
@@ -126,52 +123,6 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
       syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
       syncNodeRevealToRuntime(nextNodeForSync);
     }
-  };
-}
-
-function createDismissNodeAction(set: WorkspaceSet): WorkspaceNodeActions['dismissNode'] {
-  return (nodeId, now = new Date().toISOString()) => {
-    let dismissed = false;
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
-    set((state) => {
-      const node = state.nodesById[nodeId];
-      if (
-        !node ||
-        isProtectedRootNode(node) ||
-        !hasNodeContent(node) ||
-        !isReadingReviewItemNode(node) ||
-        node.reading?.state === 'dismissed'
-      ) {
-        return state;
-      }
-      dismissed = true;
-      const defaultPriority = getCurrentReviewSchedulerSettings().pushQueue.defaultPriority;
-      const nextNode: Node = {
-        ...node,
-        reading: {
-          intervalDurationMs: node.reading?.intervalDurationMs ?? 0,
-          intervalGrowthFactor: node.reading?.intervalGrowthFactor ?? 1,
-          lastHandledAt: node.reading?.lastHandledAt ?? now,
-          nextAt: node.reading?.nextAt ?? now,
-          priority: node.reading?.priority ?? defaultPriority,
-          readingPosition: node.reading?.readingPosition ?? 0,
-          repetitionCount: node.reading?.repetitionCount ?? 0,
-          state: 'dismissed'
-        },
-        updatedAt: now
-      };
-      nextNodeForSync = nextNode;
-      return {
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: nextNode
-        }
-      };
-    });
-    if (nextNodeForSync) {
-      syncNodeContentToRuntime(nextNodeForSync);
-    }
-    return dismissed;
   };
 }
 

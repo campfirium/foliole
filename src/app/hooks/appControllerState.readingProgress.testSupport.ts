@@ -23,9 +23,17 @@ function createWorkspaceReviewSession() {
   };
 }
 
+function createWorkspaceNavigation() {
+  return {
+    backStack: [],
+    forwardStack: []
+  };
+}
+
 export function createWorkspaceState() {
   return {
     activeNodeId: 'node-1',
+    appActionHistory: { redoStack: [], undoStack: [] },
     createChildNode: vi.fn(),
     createHighlightNodeFromSelection: vi.fn(),
     createImageClozeNodes: vi.fn(),
@@ -51,16 +59,14 @@ export function createWorkspaceState() {
     listWidth: 280,
     moveNode: vi.fn(),
     moveNodes: vi.fn(),
-    navigation: {
-      backStack: [],
-      forwardStack: []
-    },
+    navigation: createWorkspaceNavigation(),
     nodeOrder: ['node-1'],
     nodeViewById: {},
     nodesById: {
       'node-1': createWorkspaceNode()
     },
     openNode: vi.fn(),
+    redoWorkspaceAction: vi.fn(),
     resetLayout: vi.fn(),
     revealReviewAnswer: vi.fn(),
     reviewSession: createWorkspaceReviewSession(),
@@ -73,6 +79,7 @@ export function createWorkspaceState() {
     setRightSidebarWidth: vi.fn(),
     startReviewSession: vi.fn(),
     trashedNodeIds: [],
+    undoWorkspaceAction: vi.fn(),
     updateHighlightAnchorRange: vi.fn(() => false),
     updateNodeContent: vi.fn(),
     updateNodeDesiredRetention: vi.fn(),
