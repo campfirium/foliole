@@ -1,4 +1,5 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import type { UnifiedPushQueueRules } from '../features/review/model/unifiedPushQueueRules';
 
 import { buildReviewQueuePlan, type ReviewQueuePlan } from './reviewQueuePlanner';
@@ -6,6 +7,7 @@ import { buildReviewQueuePlan, type ReviewQueuePlan } from './reviewQueuePlanner
 interface CachedReviewQueuePlanArgs {
   includeScheduled?: boolean;
   limit?: number;
+  mode?: ReviewSessionMode;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   now: string;
@@ -21,6 +23,7 @@ function hasSameArgs(current: CachedReviewQueuePlanArgs, previous: CachedReviewQ
     previous &&
       previous.includeScheduled === current.includeScheduled &&
       previous.limit === current.limit &&
+      previous.mode === current.mode &&
       previous.nodeOrder === current.nodeOrder &&
       previous.nodesById === current.nodesById &&
       previous.now === current.now &&

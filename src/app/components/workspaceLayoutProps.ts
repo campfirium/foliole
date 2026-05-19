@@ -6,6 +6,7 @@ import type { EditorSelection, EditorViewportMode } from '../../features/editor/
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
@@ -86,6 +87,7 @@ export interface WorkspaceLayoutFlatProps {
   reviewQueueCount: number;
   reviewCompletedCount: number;
   reviewStatus: 'awaiting-answer' | 'answer-revealed' | 'completed';
+  reviewSessionMode: ReviewSessionMode;
   isResizingList: boolean;
   isResizingRightSidebar: boolean;
   isTrashViewOpen: boolean;
@@ -187,6 +189,7 @@ export interface WorkspaceLayoutFlatProps {
   onDeferReviewItem: () => boolean;
   onDismissReviewItem: () => boolean;
   onExitReviewMode: () => void;
+  onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
   reviewSchedulerSettings: ReviewSchedulerSettings;
   selectedTrashNodeId: string | null;
 }

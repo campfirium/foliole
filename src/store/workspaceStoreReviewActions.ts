@@ -5,39 +5,16 @@ import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSche
 import { advanceReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
-import { buildCachedReviewQueuePlan } from './reviewQueuePlannerCached';
 import { buildNextReadingProfile, createEmptyReviewSession, resolveReadingPriorityChain } from './workspaceReviewReading';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { applyGradedReviewState, persistReviewGradeMutation } from './workspaceStoreReviewActionHelpers';
 import { createDismissReviewItemAction } from './workspaceStoreReviewDismissAction';
+import { createSetReviewSessionModeAction, createStartReviewSessionAction } from './workspaceStoreReviewSessionActions';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
-type WorkspaceReviewActions = Pick<WorkspaceState, 'completeReviewItem' | 'deferReviewItem' | 'dismissReviewItem' | 'exitReviewSession' | 'gradeReviewCard' | 'revealReviewAnswer' | 'startReviewSession'>;
-function buildReviewQueue(state: WorkspaceState, now: string): string[] {
-  return buildCachedReviewQueuePlan({
-    nodeOrder: state.nodeOrder,
-    nodesById: state.nodesById,
-    now,
-    trashedNodeIds: state.trashedNodeIds
-  }).queueNodeIds;
-}
-function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceReviewActions['startReviewSession'] {
-  return (now = new Date().toISOString()) => {
-    let started = false;
-    set((state) => {
-      const queueNodeIds = buildReviewQueue(state, now);
-      if (queueNodeIds.length === 0) return state;
-      started = true;
-      return {
-        activeNodeId: queueNodeIds[0] ?? state.activeNodeId,
-        reviewSession: { currentNodeId: queueNodeIds[0] ?? null, isAnswerRevealed: false, queueNodeIds, totalNodeCount: queueNodeIds.length }
-      };
-    });
-    return started;
-  };
-}
+type WorkspaceReviewActions = Pick<WorkspaceState, 'completeReviewItem' | 'deferReviewItem' | 'dismissReviewItem' | 'exitReviewSession' | 'gradeReviewCard' | 'revealReviewAnswer' | 'setReviewSessionMode' | 'startReviewSession'>;
 function createRevealReviewAnswerAction(set: WorkspaceSet): WorkspaceReviewActions['revealReviewAnswer'] {
   return () => {
     set((state) => {
@@ -205,6 +182,7 @@ export function createWorkspaceReviewActions(
 ): WorkspaceReviewActions {
   return {
     startReviewSession: createStartReviewSessionAction(set),
+    setReviewSessionMode: createSetReviewSessionModeAction(set),
     revealReviewAnswer: createRevealReviewAnswerAction(set),
     gradeReviewCard: createGradeReviewCardAction(set, get, scheduler),
     completeReviewItem: createCompleteReviewItemAction(set, get),

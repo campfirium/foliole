@@ -1,6 +1,7 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../features/nodes/model/nodeTypes';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
 import type { WorkspaceActionHistoryState } from './workspaceActionHistory';
@@ -18,6 +19,7 @@ export interface WorkspaceState {
   nodesById: Record<string, Node>;
   rendererBoundaryKeepNodeIds: string[];
   reviewSession: ReviewSessionState;
+  reviewSessionMode: ReviewSessionMode;
   trashedNodeDeletedAtById: Record<string, string | undefined>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
@@ -46,6 +48,7 @@ export interface WorkspaceState {
   redoWorkspaceAction: (now?: string) => boolean;
   relearnNode: (nodeId: string, now?: string) => boolean;
   startReviewSession: (now?: string) => boolean;
+  setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
   completeReviewItem: (now?: string) => boolean;

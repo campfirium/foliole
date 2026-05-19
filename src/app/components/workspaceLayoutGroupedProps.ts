@@ -109,6 +109,7 @@ export interface WorkspaceLayoutProps {
     | 'reviewQueueCount'
     | 'reviewCompletedCount'
     | 'reviewStatus'
+    | 'reviewSessionMode'
     | 'onStartStudyMode'
     | 'onToggleReviewSession'
     | 'onRevealAnswer'
@@ -117,6 +118,7 @@ export interface WorkspaceLayoutProps {
     | 'onDeferReviewItem'
     | 'onDismissReviewItem'
     | 'onExitReviewMode'
+    | 'onSetReviewSessionMode'
     | 'reviewSchedulerSettings'
   >;
   layoutChrome: Pick<WorkspaceLayoutFlatProps, LayoutStateKeys>;

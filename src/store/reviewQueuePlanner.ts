@@ -3,15 +3,17 @@ import { forgetting_curve } from 'ts-fsrs';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { hasNodeContent } from '../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode, isReadingReviewItemNode, type ReviewItemNodeLike } from '../features/review/model/reviewItemKind';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { toSchedulerCard } from '../features/review/model/reviewTypes';
 import { assembleFsrsPushQueue, assembleReadingPushQueue } from '../features/review/model/unifiedPushQueueAssembler';
 import {
-  buildQueueMixCycle,
   normalizePushQueuePriority,
   resolveInheritedPushQueuePriority,
   type UnifiedPushQueueRules
 } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+
+import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode';
 
 export interface ReviewQueuePlan {
   fsrsCandidateCount: number;
@@ -146,70 +148,49 @@ function resolveReadingQueueNodeIds(args: {
   ).map((entry) => entry.id);
 }
 
-function mixUnifiedPushQueues(args: {
-  fsrsQueueNodeIds: string[];
-  limit?: number;
-  pushQueueRules: UnifiedPushQueueRules;
-  readingQueueNodeIds: string[];
+function collectReviewQueueCandidates(args: {
+  includeScheduled: boolean;
+  nodeOrder: string[];
+  nodesById: Record<string, ReviewQueueNode | undefined>;
+  now: string;
+  trashedNodeIds: Set<string>;
 }) {
-  const queueNodeIds: string[] = [];
-  const limit = args.limit ?? Number.POSITIVE_INFINITY;
-  const cycle = buildQueueMixCycle(args.pushQueueRules.queueMixRatio);
-  let fsrsIndex = 0;
-  let readingIndex = 0;
-  let cycleIndex = 0;
-
-  while (
-    queueNodeIds.length < limit &&
-    (fsrsIndex < args.fsrsQueueNodeIds.length || readingIndex < args.readingQueueNodeIds.length)
-  ) {
-    const nextKind = cycle[cycleIndex % cycle.length];
-    cycleIndex += 1;
-
-    const nextId =
-      nextKind === 'fsrs'
-        ? args.fsrsQueueNodeIds[fsrsIndex++]
-        : args.readingQueueNodeIds[readingIndex++];
-
-    if (nextId) {
-      queueNodeIds.push(nextId);
+  const fsrsCandidates: ReviewQueueNode[] = [];
+  const readingCandidates: ReviewQueueNode[] = [];
+  args.nodeOrder.forEach((nodeId) => {
+    if (args.trashedNodeIds.has(nodeId)) return;
+    const node = args.nodesById[nodeId];
+    const isReadingCandidate = args.includeScheduled ? isSchedulableReadingNode(node) : isQueueableReadingNode(node, args.now);
+    if (node && isReadingCandidate) {
+      readingCandidates.push(node);
+      return;
     }
-  }
-
-  return queueNodeIds;
+    const isFsrsCandidate = args.includeScheduled ? isSchedulableFsrsNode(node) : isDueFsrsNode(node, args.now);
+    if (node && isFsrsCandidate) fsrsCandidates.push(node);
+  });
+  return { fsrsCandidates, readingCandidates };
 }
 
 export function buildReviewQueuePlan(args: {
   includeScheduled?: boolean;
   limit?: number;
+  mode?: ReviewSessionMode;
   nodeOrder: string[];
   nodesById: Record<string, ReviewQueueNode | undefined>;
   now: string;
   pushQueueRules?: UnifiedPushQueueRules;
   trashedNodeIds: string[];
 }): ReviewQueuePlan {
-  const fsrsCandidates: ReviewQueueNode[] = [];
-  const readingCandidates: ReviewQueueNode[] = [];
   const includeScheduled = args.includeScheduled ?? false;
+  const mode = args.mode ?? 'recommended';
   const pushQueueRules = args.pushQueueRules ?? getCurrentReviewSchedulerSettings().pushQueue;
   const trashedNodeIds = new Set(args.trashedNodeIds);
-
-  args.nodeOrder.forEach((nodeId) => {
-    if (trashedNodeIds.has(nodeId)) {
-      return;
-    }
-
-    const node = args.nodesById[nodeId];
-    const isReadingCandidate = includeScheduled ? isSchedulableReadingNode(node) : isQueueableReadingNode(node, args.now);
-    if (node && isReadingCandidate) {
-      readingCandidates.push(node);
-      return;
-    }
-
-    const isFsrsCandidate = includeScheduled ? isSchedulableFsrsNode(node) : isDueFsrsNode(node, args.now);
-    if (node && isFsrsCandidate) {
-      fsrsCandidates.push(node);
-    }
+  const { fsrsCandidates, readingCandidates } = collectReviewQueueCandidates({
+    includeScheduled,
+    nodeOrder: args.nodeOrder,
+    nodesById: args.nodesById,
+    now: args.now,
+    trashedNodeIds
   });
 
   const fsrsQueueNodeIds = resolveFsrsQueueNodeIds({
@@ -226,9 +207,10 @@ export function buildReviewQueuePlan(args: {
     nodesById: args.nodesById,
     pushQueueRules
   });
-  const queueNodeIds = mixUnifiedPushQueues({
+  const queueNodeIds = resolveModeQueueNodeIds({
     fsrsQueueNodeIds,
     ...(args.limit !== undefined ? { limit: args.limit } : {}),
+    mode,
     pushQueueRules,
     readingQueueNodeIds
   });
