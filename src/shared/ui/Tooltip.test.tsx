@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import { AppTooltip, AppTooltipContent, AppTooltipProvider, AppTooltipTrigger } from './Tooltip';
@@ -116,6 +116,58 @@ it('positions truncated title tooltip from the current list boundary', () => {
     else Reflect.deleteProperty(HTMLElement.prototype, 'scrollWidth');
     if (clientWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
     else Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth');
+  }
+});
+
+it('draws truncated title tooltip as one measured bubble path', async () => {
+  const resizeObserver = globalThis.ResizeObserver;
+  const scrollWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth');
+  const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+  const getBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+  globalThis.ResizeObserver = TestResizeObserver as typeof ResizeObserver;
+  Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 120 });
+  Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 80 });
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    return {
+      bottom: 40,
+      height: 40,
+      left: 0,
+      right: 160,
+      top: 0,
+      width: 160,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    };
+  };
+
+  try {
+    render(<TruncatedTextTooltip text="Long title">Long title</TruncatedTextTooltip>);
+    const trigger = screen.getByText('Long title');
+    fireEvent.pointerMove(trigger, { pointerType: 'mouse' });
+    fireEvent.pointerEnter(trigger, { pointerType: 'mouse' });
+
+    const tooltipContent = await screen.findByRole('tooltip');
+    const tooltip = tooltipContent.parentElement;
+    expect(tooltip?.className).toContain('border-transparent');
+    expect(tooltip?.className).toContain('bg-transparent');
+    expect(tooltip?.className).not.toContain('before:border-r-[var(--app-tooltip-border-color)]');
+    const arrow = document.querySelector('svg[aria-hidden="true"]');
+    expect(arrow).not.toBeNull();
+    expect(arrow).toHaveClass('left-[-8px]');
+    expect(arrow).toHaveAttribute('viewBox', '0 0 168 40');
+    const bubblePath = arrow?.querySelector('path[stroke="var(--app-tooltip-border-color)"]');
+    expect(bubblePath).toHaveAttribute('fill', 'var(--app-tooltip-bg)');
+    expect(bubblePath).toHaveAttribute('vector-effect', 'non-scaling-stroke');
+    expect(bubblePath?.getAttribute('d')).toContain('L 0 20');
+    expect(bubblePath?.getAttribute('d')).toContain('Q 8 0 20 0');
+  } finally {
+    HTMLElement.prototype.getBoundingClientRect = getBoundingClientRect;
+    if (scrollWidth) Object.defineProperty(HTMLElement.prototype, 'scrollWidth', scrollWidth);
+    else Reflect.deleteProperty(HTMLElement.prototype, 'scrollWidth');
+    if (clientWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+    else Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth');
+    globalThis.ResizeObserver = resizeObserver;
   }
 });
 
