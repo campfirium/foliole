@@ -18,7 +18,7 @@ export function resolveTextAnchorDecorationsWithHighlightPreview(args: {
   }
   const preview = args.preview;
   return args.textAnchorDecorations.map((decoration) => {
-    if (decoration.kind !== 'highlight' || decoration.nodeId !== preview.nodeId) {
+    if (decoration.nodeId !== preview.nodeId) {
       return decoration;
     }
     return {

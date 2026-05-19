@@ -128,3 +128,46 @@ it('recovers unloaded stale child content when the stored locator already moved 
     title: 'Beta Gamma Delta'
   }));
 });
+
+it('loads unloaded cloze child content before syncing the adjusted range', async () => {
+  vi.mocked(loadWorkspaceNodeDocumentFromRuntime).mockResolvedValue({
+    content: 'Alpha [...] Gamma',
+    hideTitleHeading: false,
+    kind: 'item',
+    reveal: 'Beta'
+  });
+  const { actions, harness } = createHarness();
+  harness.getState().nodesById['cloze-1'] = {
+    ...harness.getState().nodesById['highlight-1']!,
+    anchorLink: {
+      id: 'cloze-1',
+      kind: 'cloze',
+      locator: { from: 6, originalText: 'Beta', to: 10 }
+    },
+    bodyStatus: 'missing',
+    content: '',
+    id: 'cloze-1',
+    kind: 'item',
+    reveal: 'Beta',
+    title: 'Alpha [...] Gamma'
+  };
+
+  const updated = actions.updateHighlightAnchorRange?.('cloze-1', { from: 6, to: 16 });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(updated).toBe(true);
+  expect(loadWorkspaceNodeDocumentFromRuntime).toHaveBeenCalledWith('cloze-1');
+  expect(harness.getState().nodesById['cloze-1']).toEqual(expect.objectContaining({
+    content: 'Alpha [...]',
+    reveal: 'Beta Gamma',
+    title: 'Alpha [...]',
+    anchorLink: expect.objectContaining({
+      locator: { from: 6, originalText: 'Beta Gamma', to: 16 }
+    })
+  }));
+  expect(syncNodeContentToRuntime).toHaveBeenCalledWith(expect.objectContaining({
+    content: 'Alpha [...]',
+    reveal: 'Beta Gamma',
+    title: 'Alpha [...]'
+  }));
+});

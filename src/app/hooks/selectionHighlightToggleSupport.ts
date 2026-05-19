@@ -85,7 +85,7 @@ export function findTextAnchorAtPosition(
     ) {
       return [];
     }
-    const canAdjustRange = node.anchorLink.kind === 'highlight' && isTextAnchorLocator(node.anchorLink.locator);
+    const canAdjustRange = isTextAnchorLocator(node.anchorLink.locator);
     return getTextAnchorLocators(node.anchorLink.locator)
       .filter((locator) => locator.from <= position && position < locator.to)
       .map((locator) => ({
@@ -100,5 +100,5 @@ export function findTextAnchorAtPosition(
 }
 
 export function isAdjustableTextHighlight(match: LocatorHighlightMatch | null | undefined) {
-  return Boolean(match?.canAdjustRange && match.kind === 'highlight' && match.locator.to > match.locator.from);
+  return Boolean(match?.canAdjustRange && match.locator.to > match.locator.from);
 }

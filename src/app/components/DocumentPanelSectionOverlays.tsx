@@ -19,11 +19,14 @@ interface DocumentPanelSectionOverlaysProps {
 
 export function resolveAdjustableHighlight(props: DocumentPanelSectionProps) {
   const existingHighlight = props.contextMenu?.existingHighlight;
-  if (existingHighlight?.kind !== 'highlight' || !existingHighlight.canAdjustRange) {
+  if (
+    (existingHighlight?.kind !== 'highlight' && existingHighlight?.kind !== 'cloze') ||
+    !existingHighlight.canAdjustRange
+  ) {
     return null;
   }
   const node = props.nodesById[existingHighlight.nodeId];
-  if (node?.anchorLink?.kind !== 'highlight' || !isTextAnchorLocator(node.anchorLink.locator)) {
+  if (node?.anchorLink?.kind !== existingHighlight.kind || !isTextAnchorLocator(node.anchorLink.locator)) {
     return null;
   }
   return {

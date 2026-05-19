@@ -6,6 +6,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 interface HighlightRangeHandlesProps {
   editor: EditorAdapter | null;
   highlight: {
+    kind: 'cloze' | 'highlight';
     locator: { from: number; to: number };
     nodeId: string;
   } | null;
@@ -131,13 +132,17 @@ function useHighlightRangeDrag(args: {
 }
 
 function HighlightRangeHandle(props: {
+  kind: 'cloze' | 'highlight';
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   position: HandlePosition;
   side: 'from' | 'to';
 }) {
+  const color = props.kind === 'cloze'
+    ? 'rgb(var(--app-cloze-color-rgb) / 0.82)'
+    : 'rgb(var(--app-highlight-color-rgb) / 0.82)';
   return (
     <button
-      aria-label={props.side === 'from' ? 'Adjust Highlight start' : 'Adjust Highlight end'}
+      aria-label={props.side === 'from' ? 'Adjust anchor start' : 'Adjust anchor end'}
       className="fixed z-floating flex w-4 cursor-ew-resize items-start justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-selection-blue/50"
       data-highlight-range-handle="true"
       onPointerDown={props.onPointerDown}
@@ -147,19 +152,19 @@ function HighlightRangeHandle(props: {
         top: props.position.top,
         transform: 'translateX(-50%)'
       }}
-      title={props.side === 'from' ? 'Adjust Highlight start' : 'Adjust Highlight end'}
+      title={props.side === 'from' ? 'Adjust anchor start' : 'Adjust anchor end'}
       type="button"
     >
       <span
         className="h-full w-[3px] rounded-full"
-        style={{ background: 'rgb(var(--app-highlight-color-rgb) / 0.82)' }}
+        style={{ background: color }}
       />
       <span
         className={[
           'absolute size-3 rounded-full',
           props.side === 'from' ? 'top-0 -translate-y-1/2' : 'bottom-0 translate-y-1/2'
         ].join(' ')}
-        style={{ background: 'rgb(var(--app-highlight-color-rgb) / 0.82)' }}
+        style={{ background: color }}
       />
     </button>
   );
@@ -195,8 +200,8 @@ export function HighlightRangeHandles(props: HighlightRangeHandlesProps) {
 
   return createPortal(
     <>
-      <HighlightRangeHandle onPointerDown={(event) => startDrag('from', event)} position={positions.from} side="from" />
-      <HighlightRangeHandle onPointerDown={(event) => startDrag('to', event)} position={positions.to} side="to" />
+      <HighlightRangeHandle kind={props.highlight.kind} onPointerDown={(event) => startDrag('from', event)} position={positions.from} side="from" />
+      <HighlightRangeHandle kind={props.highlight.kind} onPointerDown={(event) => startDrag('to', event)} position={positions.to} side="to" />
     </>,
     document.body
   );

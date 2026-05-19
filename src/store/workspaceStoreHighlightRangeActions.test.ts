@@ -184,19 +184,10 @@ it('rejects ambiguous or invalid highlight range updates', () => {
       }
     }
   });
-  harness.getState().nodesById['cloze-1'] = createHighlightNode({
-    id: 'cloze-1',
-    anchorLink: {
-      id: 'cloze-1',
-      kind: 'cloze',
-      locator: { from: 6, originalText: 'Beta', to: 10 }
-    }
-  });
   harness.getState().trashedNodeIds = ['trashed-1'];
   harness.getState().nodesById['trashed-1'] = createHighlightNode({ id: 'trashed-1' });
 
   expect(actions.updateHighlightAnchorRange?.('multi-range', { from: 0, to: 10 })).toBe(false);
-  expect(actions.updateHighlightAnchorRange?.('cloze-1', { from: 0, to: 10 })).toBe(false);
   expect(actions.updateHighlightAnchorRange?.('trashed-1', { from: 0, to: 10 })).toBe(false);
   expect(actions.updateHighlightAnchorRange?.('highlight-1', { from: 6, to: 6 })).toBe(false);
   expect(actions.updateHighlightAnchorRange?.('highlight-1', { from: 6, to: 99 })).toBe(false);

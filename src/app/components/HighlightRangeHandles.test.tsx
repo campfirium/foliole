@@ -58,7 +58,7 @@ it('renders visible range handles for an adjustable highlight', () => {
   render(
     <HighlightRangeHandles
       editor={editor}
-      highlight={{ locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
+      highlight={{ kind: 'highlight', locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
       onCommit={vi.fn()}
     />
   );
@@ -90,7 +90,7 @@ it('commits the dragged highlight range', () => {
   render(
     <HighlightRangeHandles
       editor={editor}
-      highlight={{ locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
+      highlight={{ kind: 'highlight', locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
       onCommit={onCommit}
     />
   );
@@ -124,7 +124,7 @@ it('keeps the committed range when pointerup follows pointermove before React st
   render(
     <HighlightRangeHandles
       editor={editor}
-      highlight={{ locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
+      highlight={{ kind: 'highlight', locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
       onCommit={onCommit}
     />
   );
@@ -138,4 +138,23 @@ it('keeps the committed range when pointerup follows pointermove before React st
 
   expect(onCommit).toHaveBeenCalledWith('highlight-1', { from: 3, to: 7 });
   expect(editor.getPositionClientRect).toHaveBeenLastCalledWith(7);
+});
+
+it('uses the cloze anchor color for cloze range handles', () => {
+  const editor = createEditorAdapter({
+    getPositionClientRect: vi.fn((position: number) =>
+      position === 0 ? mockRect(40, 80, 8, 20) : mockRect(124, 80, 8, 20)
+    )
+  });
+
+  render(
+    <HighlightRangeHandles
+      editor={editor}
+      highlight={{ kind: 'cloze', locator: { from: 0, to: 7 }, nodeId: 'cloze-1' }}
+      onCommit={vi.fn()}
+    />
+  );
+
+  const handle = document.querySelector('[data-highlight-range-handle="true"]');
+  expect((handle?.firstElementChild as HTMLElement | null)?.style.background).toBe('rgb(var(--app-cloze-color-rgb) / 0.82)');
 });
