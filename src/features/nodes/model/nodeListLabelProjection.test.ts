@@ -37,10 +37,26 @@ describe('nodeListLabelProjection', () => {
   it('drops markdown image and url noise from projected labels', () => {
     expect(projectNodeListLabel('![Title](asset://hash.png) [下载](https://example.com/file)')).toBe('Title 下载');
     expect(projectNodeListLabel('(https://example.com/source) ### 功能介绍')).toBe('功能介绍');
+    expect(projectNodeListLabel('Before ![](asset://hash.png) after')).toBe('Before after');
   });
 
   it('projects empty-alt image-only labels to a stable image summary', () => {
     expect(projectNodeListLabel('![](asset://hash.png)')).toBe('Image highlight');
     expect(projectNodeListLabel('![Cover](asset://hash.png)')).toBe('Cover');
+  });
+
+  it('cleans markdown fragments cut by search excerpts', () => {
+    expect(projectNodeListLabel('这 90 分钟就是我们之前提到的超日节律（ultradian cycle）。 **...')).toBe(
+      '这 90 分钟就是我们之前提到的超日节律（ultradian cycle）。 ...'
+    );
+    expect(projectNodeListLabel('你得先知道有 NOT DONE 这样一个命令的存在。 ![图片](')).toBe(
+      '你得先知道有 NOT DONE 这样一个命令的存在。 图片'
+    );
+  });
+
+  it('projects wiki links embeds and footnotes for shared display text', () => {
+    expect(projectNodeListLabel('[[Project Atlas|Atlas]] ![[diagram.png]] [^memo]')).toBe(
+      'Atlas diagram.png memo'
+    );
   });
 });

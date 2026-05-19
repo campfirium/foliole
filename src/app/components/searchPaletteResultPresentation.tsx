@@ -1,17 +1,19 @@
 import type { ReactNode } from 'react';
 
+import { projectMarkdownDisplayText } from '../../features/nodes/model/nodeListLabelProjection';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { appFloatingMetaBadgeClassName } from '../../shared/ui';
 
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
-function normalizeQuery(query: string) {
-  return query.trim().toLocaleLowerCase();
+function normalizeQuery(query: string, project: boolean) {
+  const displayQuery = project ? projectMarkdownDisplayText(query) : query;
+  return displayQuery.trim().toLocaleLowerCase();
 }
 
-function buildSegments(text: string, query: string) {
-  const normalizedQuery = normalizeQuery(query);
+function buildSegments(text: string, query: string, project: boolean) {
+  const normalizedQuery = normalizeQuery(query, project);
   if (!normalizedQuery) {
     return [{ matched: false, text }];
   }
@@ -34,8 +36,10 @@ function buildSegments(text: string, query: string) {
   return segments.filter((segment) => segment.text.length > 0);
 }
 
-export function renderSearchResultText(text: string, query: string) {
-  return buildSegments(text, query).map((segment, index) =>
+export function renderSearchResultText(text: string, query: string, options?: { project?: boolean }) {
+  const project = options?.project !== false;
+  const displayText = project ? projectMarkdownDisplayText(text) : text;
+  return buildSegments(displayText, query, project).map((segment, index) =>
     segment.matched ? (
       <span
         className="font-semibold"
@@ -82,6 +86,9 @@ export function resolveSearchResultPathLabel(
 }
 
 export function resolveSearchResultContext(result: WorkspaceSearchResult) {
+  if (result.kind === 'node') {
+    return projectMarkdownDisplayText(result.excerpt);
+  }
   return result.excerpt;
 }
 

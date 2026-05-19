@@ -102,6 +102,7 @@ function SearchPaletteResultItem(props: {
   sourceDetails: RuntimeNodeSourceDetails | null | undefined;
 }) {
   const item = props.item;
+  const projectResultText = item.kind === 'node';
   return (
     <li className="relative">
       {props.index === 0 || props.previousKind !== item.kind ? (
@@ -119,10 +120,10 @@ function SearchPaletteResultItem(props: {
         type="button"
       >
         <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-foreground">
-          {renderSearchResultText(item.title, props.query)}
+          {renderSearchResultText(item.title, props.query, { project: projectResultText })}
         </span>
         <span className="line-clamp-2 text-[13px] leading-5 text-foreground/60">
-          {renderSearchResultText(resolveSearchResultContext(item), props.query)}
+          {renderSearchResultText(resolveSearchResultContext(item), props.query, { project: projectResultText })}
         </span>
         <SearchPaletteResultMeta
           item={item}

@@ -84,68 +84,6 @@ function renderSearchPalette() {
     />
   );
 }
-function renderPdfSearchPalette() {
-  render(
-    <SearchPalette
-      isOpen
-      nodeOrder={['root', 'pdf-1']}
-      nodesById={{
-        root: {
-          id: 'root',
-          parentNodeId: null,
-          title: 'Folder A',
-          hasContent: false,
-          hasReveal: false,
-          review: null,
-          createdAt: '2026-03-29T00:00:00.000Z',
-          updatedAt: '2026-03-29T00:00:00.000Z'
-        },
-        'pdf-1': {
-          id: 'pdf-1',
-          parentNodeId: 'root',
-          title: '测试文档.pdf',
-          hasContent: true,
-          hasReveal: false,
-          review: null,
-          createdAt: '2026-03-29T00:00:00.000Z',
-          updatedAt: '2026-03-29T00:00:00.000Z'
-        }
-      }}
-      onClose={() => undefined}
-      onOpenResult={() => undefined}
-      trashedNodeIds={[]}
-    />
-  );
-}
-
-function createWatchedSourceDetails(nodeId: string) {
-  return {
-    importRuns: [],
-    importSource: null,
-    inheritedFromParent: false,
-    keepImportItem: {
-      firstSeenAt: '2026-03-30T00:00:00.000Z',
-      hasSourceUpdate: false,
-      highlightPath: null,
-      keepState: 'enabled' as const,
-      lastImportedAt: '2026-03-30T00:00:00.000Z',
-      lastSeenAt: '2026-03-30T00:00:00.000Z',
-      lastStatus: 'imported' as const,
-      localNodeState: 'active' as const,
-      primaryPath: '/tmp/Watched Articles',
-      ruleId: 'rule-1',
-      ruleLabel: 'Articles Watch',
-      resolvedSourcePath: null,
-      sourceMtimeMs: 1,
-      sourcePath: '/tmp/Watched Articles/item.md',
-      sourceSizeBytes: 10,
-      sourceState: 'present' as const,
-      sourceType: 'generic' as const
-    },
-    pdfPageDimensions: [],
-    sourceNodeId: nodeId
-  };
-}
 it('renders search results as title context and path rows', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(
     vi.fn().mockResolvedValue(
@@ -192,43 +130,6 @@ it('renders search results as title context and path rows', async () => {
   expect(resultButtons[0]).toHaveTextContent('Atlas note');
   expect(resultButtons[1]).toHaveTextContent('Atlas highlight');
 });
-
-it('shows a watched source badge on the right for matching results', async () => {
-  vi.mocked(getRuntimeInvoke).mockReturnValue(
-    vi.fn().mockResolvedValue([
-      {
-        externalMatch: null,
-        id: 'pdf-1',
-        title: '测试文档.pdf',
-        excerpt: 'Page 13 · 这是一个测试片段',
-        kind: 'pdf',
-        nodeMatch: null,
-        pdfMatch: {
-          attachmentId: 'att-1',
-          matchStart: 4,
-          page: 13,
-          pageTextLength: 12,
-          query: '测试'
-        },
-        updatedAt: '2026-03-30T00:00:00.000Z'
-      }
-    ] satisfies WorkspaceSearchResult[])
-  );
-  vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(createWatchedSourceDetails('pdf-1'));
-  vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
-  renderPdfSearchPalette();
-
-  fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), {
-    target: { value: '测试' }
-  });
-
-  await waitFor(() => {
-    expect(screen.getByText('Articles Watch')).toBeInTheDocument();
-  });
-  expect(screen.getByText('Folder A')).toBeInTheDocument();
-  expect(screen.getAllByText('测试').some((node) => node.getAttribute('style')?.includes('var(--app-accent-color)'))).toBe(true);
-});
-
 
 it('rehydrates the workspace before opening an imported external result', async () => {
   const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue(undefined);

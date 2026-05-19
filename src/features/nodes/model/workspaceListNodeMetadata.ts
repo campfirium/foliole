@@ -1,5 +1,6 @@
 import { extractNodeOpeningPreview, NODE_OPENING_PREVIEW_FALLBACK } from '../../../../lib/core/nodes/nodeOpeningPreview';
 
+import { projectMarkdownDisplayText } from './nodeListLabelProjection';
 import type { Node } from './nodeTypes';
 
 const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
@@ -95,15 +96,8 @@ function stripMarkdownLinePrefix(line: string) {
     .replace(/^#{1,6}\s+/, '');
 }
 
-function stripMarkdownInline(value: string) {
-  return value
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/[*_~`]+/g, '');
-}
-
 function normalizePreviewText(content: string) {
-  return stripMarkdownInline(
+  return projectMarkdownDisplayText(
     stripLeadingFrontmatter(content)
       .replace(/\r\n/g, '\n')
       .split('\n')

@@ -7,6 +7,7 @@ const MAX_INLINE_PROJECTION_DEPTH = 3;
 function stripMarkdownLinePrefix(value: string) {
   return value
     .trim()
+    .replace(/(^|[.\s])#{1,6}\s+/g, '$1')
     .replace(/^>\s*/, '')
     .replace(/^[-*+]\s+/, '')
     .replace(/^\d+\.\s+/, '')
@@ -50,11 +51,23 @@ function unescapeMarkdownPunctuation(value: string) {
   return value.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, '$1');
 }
 
-export function projectNodeListLabel(label: string) {
+function stripTruncatedMarkdownFragments(value: string) {
+  return value
+    .replace(/!\[([^\]]*)\]\([^)]*$/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*$/g, '$1')
+    .replace(/\*\*/g, '');
+}
+
+export function projectMarkdownDisplayText(label: string) {
   const imageOnlyLabel = projectImageOnlyMarkdownLabel(label);
   if (imageOnlyLabel) {
     return imageOnlyLabel;
   }
   const cleaned = stripMarkdownLinePrefix(stripMarkdownUrlNoise(stripMarkdownLinePrefix(label)));
-  return unescapeMarkdownPunctuation(stripBoundaryStrongMarkers(projectMarkdownInlinePlainText(cleaned))).trim().replace(/\s+/g, ' ');
+  return unescapeMarkdownPunctuation(stripTruncatedMarkdownFragments(stripBoundaryStrongMarkers(projectMarkdownInlinePlainText(cleaned))))
+    .replace(/\[\^([^\]]+)\]/g, '$1')
+    .trim()
+    .replace(/\s+/g, ' ');
 }
+
+export const projectNodeListLabel = projectMarkdownDisplayText;
