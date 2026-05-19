@@ -74,7 +74,7 @@ it('keeps a source snapshot catalog row for readwise files that are not imported
     .prepare(`SELECT COUNT(*) AS count FROM import_sources WHERE source_name = 'Plain Article.md'`)
     .get() as { count: number };
 
-  expect(firstRun).toEqual([]);
+  expect(firstRun).toEqual([expect.objectContaining({ action: 'skipped', sourcePath: 'Plain Article.md' })]);
   expect(catalogRow).toEqual({
     last_node_id: null,
     last_status: 'discovered',
@@ -85,10 +85,7 @@ it('keeps a source snapshot catalog row for readwise files that are not imported
     connection.sqlite
       .prepare(`SELECT title, content FROM keep_import_item_cache WHERE rule_id = ? AND source_path = ?`)
       .get('draft-import-source-1', 'Plain Article.md')
-  ).toMatchObject({
-    content: '# Plain\nNo highlights yet.\n',
-    title: 'Plain'
-  });
+  ).toBeUndefined();
   expect(importSourceCount.count).toBe(0);
 
   await fs.rm(path.join(fullDocumentDir, 'Plain Article.md'));

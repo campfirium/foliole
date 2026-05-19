@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { saveImportManagerSettings } from '../import/importManagerSettings.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { listRemovedKeepImportItems } from './keepImportItems.js';
 import { initializeDatabase } from './migrate.js';
 import { deleteNodesPermanently } from './nodeMutations.js';
 import { seedNode } from './nodeMutations.test.helpers.js';
@@ -46,7 +47,7 @@ it('marks tracked keep imports as blocked when their topic is permanently delete
        last_status, first_seen_at, last_seen_at, last_imported_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
-    'readwise-articles',
+    'generic-keep-source',
     'Article.md',
     1,
     2,
@@ -67,13 +68,21 @@ it('marks tracked keep imports as blocked when their topic is permanently delete
       `SELECT deleted_at, last_seen_at, last_status, local_node_state
        FROM keep_import_items
        WHERE rule_id = ? AND source_path = ?`
-    ).get('readwise-articles', 'Article.md')
+    ).get('generic-keep-source', 'Article.md')
   ).toEqual({
     deleted_at: expect.any(String),
     last_seen_at: '2026-03-06T00:00:00.000Z',
     last_status: 'blocked_deleted',
     local_node_state: 'locally_deleted'
   });
+  expect(listRemovedKeepImportItems()).toEqual([
+    expect.objectContaining({
+      local_node_state: 'locally_deleted',
+      last_status: 'blocked_deleted',
+      rule_id: 'generic-keep-source',
+      source_path: 'Article.md'
+    })
+  ]);
 });
 
 it('uses the existing soft delete time as the removed time when a trashed topic is cleared', () => {
@@ -90,7 +99,7 @@ it('uses the existing soft delete time as the removed time when a trashed topic 
        last_status, first_seen_at, last_seen_at, last_imported_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
-    'readwise-articles',
+    'generic-keep-source',
     'Article.md',
     1,
     2,
@@ -111,7 +120,7 @@ it('uses the existing soft delete time as the removed time when a trashed topic 
       `SELECT deleted_at, last_seen_at, last_status, local_node_state
        FROM keep_import_items
        WHERE rule_id = ? AND source_path = ?`
-    ).get('readwise-articles', 'Article.md')
+    ).get('generic-keep-source', 'Article.md')
   ).toEqual({
     deleted_at: '2026-03-06T00:10:00.000Z',
     last_seen_at: '2026-03-06T00:00:00.000Z',
@@ -120,7 +129,7 @@ it('uses the existing soft delete time as the removed time when a trashed topic 
   });
 });
 
-it('releases Readwise keep imports when their topic is permanently deleted', () => {
+it('keeps manually deleted Readwise keep imports in Removed', () => {
   seedNode('node-root', null, 0);
   saveImportManagerSettings({
     readwiseSources: [
@@ -166,10 +175,10 @@ it('releases Readwise keep imports when their topic is permanently deleted', () 
        WHERE rule_id = ? AND source_path = ?`
     ).get('readwise-articles', 'Article.md')
   ).toEqual({
-    deleted_at: null,
-    last_imported_at: null,
-    last_node_id: null,
-    last_status: 'discovered',
-    local_node_state: 'not_imported'
+    deleted_at: expect.any(String),
+    last_imported_at: '2026-03-06T00:00:00.000Z',
+    last_node_id: 'node-root',
+    last_status: 'blocked_deleted',
+    local_node_state: 'locally_deleted'
   });
 });

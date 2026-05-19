@@ -51,7 +51,7 @@ beforeEach(() => {
   setSelectedRemovedSource(null);
 });
 
-it('renders Removed selection as an external-document style preview with Restore inside the document', async () => {
+it('renders Removed selection as an external-document style preview with Re-import inside the document', async () => {
   const onSelectNode = vi.fn();
   const entry = createRemovedSource();
   mocks.restoreRuntimeRemovedSource.mockResolvedValue({ node_id: 'topic-new', status: 'restored' });
@@ -70,11 +70,11 @@ it('renders Removed selection as an external-document style preview with Restore
   );
 
   expect(screen.getByRole('region', { name: 'Document area' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Restore' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Re-import' })).toBeInTheDocument();
   expect(screen.getByText(/Alpha Removed/)).toBeInTheDocument();
   expect(screen.getByText(/Full source text/)).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Re-import' }));
 
   await waitFor(() => expect(mocks.restoreRuntimeRemovedSource).toHaveBeenCalledWith(entry));
   expect(onSelectNode).toHaveBeenCalledWith('topic-new');

@@ -41,8 +41,9 @@ function RemovedImportAction(props: {
 }) {
   return (
     <DocumentRestoreAction
+      ariaLabel="Re-import"
       disabled={props.isImporting}
-      label={props.isImporting ? 'Restoring...' : props.needsSourceUpdateConfirm ? 'Restore current source' : 'Restore'}
+      label={props.isImporting ? 'Re-importing...' : props.needsSourceUpdateConfirm ? 'Re-import current source' : 'Re-import'}
       onRestore={props.onImport}
     />
   );
@@ -103,13 +104,13 @@ function useRemovedSourceImportAction(entry: SelectedRemovedSource | null, onSel
     try {
       const result = await restoreRuntimeRemovedSource(entry);
       if (!result || result.status === 'failed') {
-        setErrorMessage(result?.detail?.trim() || 'Import failed.');
+        setErrorMessage(result?.detail?.trim() || 'Re-import failed.');
         return;
       }
       setSelectedRemovedSource(null);
       if (result.node_id) onSelectNode(result.node_id);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Import failed.');
+      setErrorMessage(error instanceof Error ? error.message : 'Re-import failed.');
     } finally {
       setIsImporting(false);
     }
@@ -148,7 +149,7 @@ function RemovedSourcePreviewContent(props: {
       />
       {props.confirmId === props.entry.id ? (
         <p className="mx-auto w-full max-w-[var(--document-max-width)] px-[var(--document-content-inline-padding)] py-2 text-sm text-foreground/70">
-          The source changed after this topic was deleted. Import will use the current source text.
+          The source changed after this topic was deleted. Re-import will use the current source text.
         </p>
       ) : null}
       {props.errorMessage ? (

@@ -25,6 +25,14 @@ function reblockRemovedSource(ruleId: string, sourcePath: string, restoredAt: st
   ).run(restoredAt, ruleId, sourcePath);
 }
 
+function shouldForceRemovedSourceTopicImport(config: NonNullable<ReturnType<typeof resolveKeepImportRuleConfig>>) {
+  return config.sourceType !== 'readwise';
+}
+
+function isSuccessfulRemovedSourceImport(status: Awaited<ReturnType<typeof runSingleKeepImportSource>>['importStatus']) {
+  return Boolean(status && status !== 'failed');
+}
+
 export async function restoreRemovedSource(ruleId: string, sourcePath: string): Promise<NativeRestoreRemovedSourceResult> {
   const restoredAt = new Date().toISOString();
   const config = resolveKeepImportRuleConfig(ruleId);
@@ -34,14 +42,16 @@ export async function restoreRemovedSource(ruleId: string, sourcePath: string): 
   try {
     const source = await buildKeepImportSourceDescriptor(config, sourcePath);
     unblockRemovedSource(ruleId, source.sourceName, restoredAt);
-    const result = await runSingleKeepImportSource(config, source, { forceTopicImport: true });
+    const result = await runSingleKeepImportSource(config, source, {
+      forceTopicImport: shouldForceRemovedSourceTopicImport(config)
+    });
     if (result.importStatus === 'failed' || !result.importStatus) {
       reblockRemovedSource(ruleId, source.sourceName, restoredAt);
     }
     const nodeId = openDatabaseConnection().sqlite
       .prepare('SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?')
       .get(ruleId, source.sourceName) as { last_node_id: string | null } | undefined;
-    if (!nodeId?.last_node_id) {
+    if (!nodeId?.last_node_id && !isSuccessfulRemovedSourceImport(result.importStatus)) {
       reblockRemovedSource(ruleId, source.sourceName, restoredAt);
       return {
         detail: result.detail ?? 'Import again did not create a topic.',
@@ -52,9 +62,9 @@ export async function restoreRemovedSource(ruleId: string, sourcePath: string): 
     }
     return {
       detail: result.detail,
-      node_id: nodeId.last_node_id,
+      node_id: nodeId?.last_node_id ?? null,
       restored_at: restoredAt,
-      status: result.importStatus === 'failed' || !result.importStatus ? 'failed' : 'restored'
+      status: isSuccessfulRemovedSourceImport(result.importStatus) ? 'restored' : 'failed'
     };
   } catch (error) {
     reblockRemovedSource(ruleId, sourcePath, restoredAt);
