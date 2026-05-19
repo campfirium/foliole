@@ -1,5 +1,10 @@
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade } from '../features/review/model/reviewTypes';
 
+import {
+  createTopicDismissHistoryEntry,
+  pushWorkspaceUndoEntry,
+  type WorkspaceTopicReadingActionTitle
+} from './workspaceActionHistory';
 import { advanceReviewSession, completeReviewSession } from './workspaceReviewReading';
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -59,4 +64,28 @@ export function applyGradedReviewState(args: {
           })
     };
   });
+}
+
+export function createReadingReviewHistoryPatch(args: {
+  afterReading: NonNullable<WorkspaceState['nodesById'][string]['reading']>;
+  afterReviewSession: WorkspaceState['reviewSession'];
+  beforeReading: WorkspaceState['nodesById'][string]['reading'] | null | undefined;
+  beforeReviewSession: WorkspaceState['reviewSession'];
+  nodeId: string;
+  state: WorkspaceState;
+  title: WorkspaceTopicReadingActionTitle;
+}) {
+  return {
+    appActionHistory: pushWorkspaceUndoEntry(
+      args.state.appActionHistory,
+      createTopicDismissHistoryEntry({
+        afterReading: args.afterReading,
+        afterReviewSession: args.afterReviewSession,
+        beforeReading: args.beforeReading,
+        beforeReviewSession: args.beforeReviewSession,
+        nodeId: args.nodeId,
+        title: args.title
+      })
+    )
+  };
 }

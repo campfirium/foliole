@@ -11,6 +11,7 @@ import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
 
 const ACTION_HISTORY_LIMIT = 50;
 const DISMISS_TOPIC_ACTION_TITLE = 'Dismiss Topic';
+export type WorkspaceTopicReadingActionTitle = 'Complete Topic' | 'Defer Topic' | typeof DISMISS_TOPIC_ACTION_TITLE;
 
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
@@ -23,7 +24,7 @@ export interface WorkspaceTopicDismissHistoryEntry {
   beforeReading: NodeReadingProfile | null;
   beforeReviewSession?: WorkspaceState['reviewSession'] | null;
   nodeId: string;
-  title: typeof DISMISS_TOPIC_ACTION_TITLE;
+  title: WorkspaceTopicReadingActionTitle;
   type: 'topic.dismiss';
 }
 
@@ -73,6 +74,7 @@ export function createTopicDismissHistoryEntry(args: {
   beforeReading: NodeReadingProfile | null | undefined;
   beforeReviewSession?: WorkspaceState['reviewSession'] | null;
   nodeId: string;
+  title?: WorkspaceTopicReadingActionTitle;
 }): WorkspaceTopicDismissHistoryEntry {
   return {
     afterReading: cloneReadingProfile(args.afterReading)!,
@@ -80,7 +82,7 @@ export function createTopicDismissHistoryEntry(args: {
     beforeReading: cloneReadingProfile(args.beforeReading),
     beforeReviewSession: cloneReviewSession(args.beforeReviewSession),
     nodeId: args.nodeId,
-    title: DISMISS_TOPIC_ACTION_TITLE,
+    title: args.title ?? DISMISS_TOPIC_ACTION_TITLE,
     type: 'topic.dismiss'
   };
 }

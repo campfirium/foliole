@@ -1,13 +1,10 @@
-import type { Node } from '../features/nodes/model/nodeTypes';
-import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
+import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
-import { advanceReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
-import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
-import { buildNextReadingProfile, createEmptyReviewSession, resolveReadingPriorityChain } from './workspaceReviewReading';
-import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
+import { createEmptyReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
+import { createCompleteReviewItemAction, createDeferReviewItemAction } from './workspaceStoreReadingReviewActions';
 import { applyGradedReviewState, persistReviewGradeMutation } from './workspaceStoreReviewActionHelpers';
 import { createDismissReviewItemAction } from './workspaceStoreReviewDismissAction';
 import { createSetReviewSessionModeAction, createStartReviewSessionAction } from './workspaceStoreReviewSessionActions';
@@ -21,123 +18,6 @@ function createRevealReviewAnswerAction(set: WorkspaceSet): WorkspaceReviewActio
       if (!state.reviewSession.currentNodeId) return state;
       return { reviewSession: { ...state.reviewSession, isAnswerRevealed: true } };
     });
-  };
-}
-function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceReviewActions['deferReviewItem'] {
-  return () => {
-    const now = new Date().toISOString();
-    const snapshot = get();
-    const currentNodeId = snapshot.reviewSession.currentNodeId;
-    if (!currentNodeId) return false;
-    if (snapshot.activeNodeId !== currentNodeId) return false;
-    const currentNode = snapshot.nodesById[currentNodeId];
-    const remainingQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
-    if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
-    const currentReading = currentNode.reading;
-    const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
-    const nextReading = advanceReadingScheduleCoreFields({
-      lastHandledAt: now,
-      ...(currentReading?.intervalDurationMs !== undefined ? { previousIntervalDurationMs: currentReading.intervalDurationMs } : {}),
-      previousRepetitionCount: currentReading?.repetitionCount ?? 0,
-      priorityChain: resolveReadingPriorityChain({
-        currentNodeId,
-        currentReading,
-        defaultPriority: pushQueueSettings.defaultPriority,
-        nodesById: snapshot.nodesById
-      }),
-      ...(pushQueueSettings.readingInitialIntervalMs !== undefined ? { initialIntervalMs: pushQueueSettings.readingInitialIntervalMs } : {}),
-      ...(pushQueueSettings.readingIntervalGrowthFactorRange ? { range: pushQueueSettings.readingIntervalGrowthFactorRange } : {})
-    });
-    const nextNodeId = remainingQueue[0] ?? null;
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
-    set((state) => {
-      const node = state.nodesById[currentNodeId];
-      if (!node) return state;
-      const nextReadingProfile = buildNextReadingProfile(nextReading, node.reading);
-      const nextNode: Node = {
-        ...node,
-        reading: nextReadingProfile,
-        updatedAt: now
-      };
-      nextNodeForSync = nextNode;
-      return {
-        activeNodeId: nextNodeId ?? state.activeNodeId,
-        nodesById: {
-          ...state.nodesById,
-          [currentNodeId]: nextNode
-        },
-        reviewSession: nextNodeId
-          ? {
-              currentNodeId: nextNodeId,
-              isAnswerRevealed: false,
-              queueNodeIds: remainingQueue,
-              totalNodeCount: snapshot.reviewSession.totalNodeCount
-            }
-          : createEmptyReviewSession()
-      };
-    });
-    if (nextNodeForSync) {
-      syncNodeContentToRuntime(nextNodeForSync);
-    }
-    return true;
-  };
-}
-function createCompleteReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceReviewActions['completeReviewItem'] {
-  return (now = new Date().toISOString()) => {
-    const snapshot = get();
-    const currentNodeId = snapshot.reviewSession.currentNodeId;
-    if (!currentNodeId) return false;
-    if (snapshot.activeNodeId !== currentNodeId) return false;
-    const currentNode = snapshot.nodesById[currentNodeId];
-    if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
-    const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
-    const nextNodeId = nextQueue[0] ?? null;
-    const currentReading = currentNode.reading;
-    const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
-    const nextReading = advanceReadingScheduleCoreFields({
-      lastHandledAt: now,
-      ...(currentReading?.intervalDurationMs !== undefined ? { previousIntervalDurationMs: currentReading.intervalDurationMs } : {}),
-      previousRepetitionCount: currentReading?.repetitionCount ?? 0,
-      priorityChain: resolveReadingPriorityChain({
-        currentNodeId,
-        currentReading,
-        defaultPriority: pushQueueSettings.defaultPriority,
-        nodesById: snapshot.nodesById
-      }),
-      ...(pushQueueSettings.readingInitialIntervalMs !== undefined ? { initialIntervalMs: pushQueueSettings.readingInitialIntervalMs } : {}),
-      ...(pushQueueSettings.readingIntervalGrowthFactorRange ? { range: pushQueueSettings.readingIntervalGrowthFactorRange } : {})
-    });
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
-    set((state) => {
-      const node = state.nodesById[currentNodeId];
-      if (!node) return state;
-      const nextReadingProfile = buildNextReadingProfile(nextReading, node.reading);
-      const nextNode: Node = {
-        ...node,
-        reading: nextReadingProfile,
-        updatedAt: now
-      };
-      nextNodeForSync = nextNode;
-      return {
-        activeNodeId: nextNodeId ?? state.activeNodeId,
-        nodesById: {
-          ...state.nodesById,
-          [currentNodeId]: nextNode
-        },
-        reviewSession: nextNodeId
-          ? {
-              currentNodeId: nextNodeId,
-              isAnswerRevealed: false,
-              queueNodeIds: nextQueue,
-              totalNodeCount: snapshot.reviewSession.totalNodeCount
-            }
-          : createEmptyReviewSession()
-      };
-    });
-    if (nextNodeForSync) {
-      syncNodeContentToRuntime(nextNodeForSync);
-    }
-    return true;
   };
 }
 function createGradeReviewCardAction(set: WorkspaceSet, get: WorkspaceGet, scheduler: ReviewSchedulerAdapter): WorkspaceReviewActions['gradeReviewCard'] {
