@@ -65,3 +65,14 @@ it('uses the shared selection surface color token for hover and focus states', (
   expect(item.className).toContain('focus:bg-[var(--app-selection-surface-color)]');
   expect(item.className).toContain('hover:bg-[var(--app-selection-surface-color)]');
 });
+
+it('renders menus above tooltip-level floating surfaces', () => {
+  render(
+    <AppSelectionDropdownMenu left={40} onClose={() => undefined} top={56}>
+      <AppSelectionDropdownMenuItem>Highlight</AppSelectionDropdownMenuItem>
+    </AppSelectionDropdownMenu>
+  );
+
+  const menu = screen.getByRole('menu', { name: 'Selection commands' });
+  expect(menu.className).toContain('z-dropdown');
+});

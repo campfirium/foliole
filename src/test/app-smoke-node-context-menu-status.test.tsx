@@ -42,20 +42,24 @@ function openNodeMenu(name: string) {
   return panel;
 }
 
+function createReadingState(state: 'active' | 'done' | 'dismissed' = 'active') {
+  return {
+    intervalDurationMs: 24 * 60 * 60 * 1000,
+    intervalGrowthFactor: 1.3,
+    lastHandledAt: '2026-03-16T00:00:00.000Z',
+    nextAt: '2026-03-17T00:00:00.000Z',
+    priority: 5,
+    readingPosition: 0,
+    repetitionCount: 1,
+    state
+  };
+}
+
 it('shows relearn actions for pending reading nodes and keeps the pending icon state', () => {
   seedTopicInInbox({
     nodeId: 'node-pending',
     title: 'Pending note',
-    reading: {
-      intervalDurationMs: 24 * 60 * 60 * 1000,
-      intervalGrowthFactor: 1.3,
-      lastHandledAt: '2026-03-16T00:00:00.000Z',
-      nextAt: '2026-03-17T00:00:00.000Z',
-      priority: 5,
-      readingPosition: 0,
-      repetitionCount: 1,
-      state: 'active'
-    }
+    reading: createReadingState()
   });
 
   render(<App />);
@@ -73,16 +77,7 @@ it('returns dismissed reading nodes to pending from the node menu', () => {
   seedTopicInInbox({
     nodeId: 'node-dismissed',
     title: 'Dismissed note',
-    reading: {
-      intervalDurationMs: 24 * 60 * 60 * 1000,
-      intervalGrowthFactor: 1.3,
-      lastHandledAt: '2026-03-16T00:00:00.000Z',
-      nextAt: '2026-03-17T00:00:00.000Z',
-      priority: 5,
-      readingPosition: 0,
-      repetitionCount: 1,
-      state: 'dismissed'
-    }
+    reading: createReadingState('dismissed')
   });
 
   render(<App />);
@@ -97,6 +92,35 @@ it('returns dismissed reading nodes to pending from the node menu', () => {
     'data-node-icon-state',
     'pending'
   );
+});
+
+it('dismisses an entire topic from the node menu without deleting it', () => {
+  const childTopic = createNode({
+    id: 'node-child',
+    kind: 'topic',
+    parentNodeId: 'node-parent',
+    title: 'Nested topic',
+    content: '# Nested topic',
+    reading: createReadingState()
+  });
+  seedTopicInInbox({
+    nodeId: 'node-parent',
+    title: 'Long topic',
+    reading: createReadingState(),
+    extraNode: childTopic
+  });
+
+  render(<App />);
+
+  openNodeMenu('Long topic');
+  const menuItems = screen.getAllByRole('menuitem').map((item) => item.textContent);
+  expect(menuItems.indexOf('Dismiss Entire Topic')).toBe(menuItems.indexOf('Dismiss') + 1);
+
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Dismiss Entire Topic' }));
+
+  expect(useWorkspaceStore.getState().nodesById['node-parent']?.reading?.state).toBe('dismissed');
+  expect(useWorkspaceStore.getState().nodesById['node-child']?.reading?.state).toBe('dismissed');
+  expect(useWorkspaceStore.getState().nodesById['node-child']).toBeDefined();
 });
 
 it('creates a child node from the inbox menu', () => {

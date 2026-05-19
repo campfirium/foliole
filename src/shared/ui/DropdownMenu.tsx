@@ -29,7 +29,7 @@ type AppSelectionDropdownMenuItemProps = ButtonHTMLAttributes<HTMLButtonElement>
 function dropdownMenuContentClassName(className?: string) {
   return cn(
     appFloatingSurfaceClassName('popover'),
-    'pointer-events-auto z-floating min-w-[188px] overflow-hidden p-1 text-foreground',
+    'pointer-events-auto z-dropdown min-w-[188px] overflow-hidden p-1 text-foreground',
     className
   );
 }

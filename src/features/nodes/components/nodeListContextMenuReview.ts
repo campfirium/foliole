@@ -29,6 +29,32 @@ export function canDismissNode(node: WorkspaceListNode | undefined) {
   return node.reading?.state !== 'dismissed';
 }
 
+function collectDescendantIds(rootNodeId: string, nodesById: WorkspaceListNodesById) {
+  const descendants: string[] = [];
+  const pending = [rootNodeId];
+  while (pending.length > 0) {
+    const currentId = pending.shift();
+    if (!currentId) {
+      continue;
+    }
+    for (const node of Object.values(nodesById)) {
+      if (node?.parentNodeId === currentId) {
+        descendants.push(node.id);
+        pending.push(node.id);
+      }
+    }
+  }
+  return descendants;
+}
+
+export function collectDismissEntireTopicTargets(rootNodeId: string, nodesById: WorkspaceListNodesById) {
+  const rootNode = nodesById[rootNodeId];
+  if (rootNode?.kind !== 'topic') {
+    return [];
+  }
+  return [rootNodeId, ...collectDescendantIds(rootNodeId, nodesById)].filter((nodeId) => canDismissNode(nodesById[nodeId]));
+}
+
 export function canRelearnNode(node: WorkspaceListNode | undefined) {
   if (!node || !node.hasContent) {
     return false;
@@ -49,4 +75,12 @@ export function hasReturnTargets(nodeIds: string[], nodesById: WorkspaceListNode
 
 export function hasDismissTargets(nodeIds: string[], nodesById: WorkspaceListNodesById) {
   return nodeIds.some((nodeId) => canDismissNode(nodesById[nodeId]));
+}
+
+export function hasDismissEntireTopicTargets(nodeIds: string[], nodesById: WorkspaceListNodesById) {
+  if (nodeIds.length !== 1) {
+    return false;
+  }
+  const rootNodeId = nodeIds[0];
+  return Boolean(rootNodeId && collectDismissEntireTopicTargets(rootNodeId, nodesById).length > 0);
 }
