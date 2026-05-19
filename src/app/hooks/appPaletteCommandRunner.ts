@@ -8,8 +8,11 @@ interface PaletteCommandRunnerArgs {
   closeTrashView: () => void;
   createFolder: () => void;
   createItem: () => void;
+  createSelectionCloze: () => void;
+  createSelectionHighlight: () => void;
   createTopic: () => void;
   createVirtualNode: () => void;
+  addSelectionNote: () => void;
   enterPriorityMode: () => void;
   exportCurrentArticle: () => Promise<boolean>;
   findInTopic: () => void;
@@ -75,8 +78,11 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     ...createPaletteSettingsActions(args),
     createFolder: args.createFolder,
     createItem: args.createItem,
+    createSelectionCloze: args.createSelectionCloze,
+    createSelectionHighlight: args.createSelectionHighlight,
     createTopic: args.createTopic,
     createVirtualNode: args.createVirtualNode,
+    addSelectionNote: args.addSelectionNote,
     enterPriorityMode: args.enterPriorityMode,
     exportCurrentArticle: () => {
       void args.exportCurrentArticle();

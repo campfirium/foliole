@@ -82,6 +82,17 @@ function canToggleImmersiveMode(args: {
   return Boolean(activeNode && activeNode.kind !== 'folder');
 }
 
+function canAnnotateSelection(args: {
+  activeNodeId: string | null;
+  isViewingTrashNode: boolean;
+  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
+}) {
+  if (!args.activeNodeId || args.isViewingTrashNode || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
+    return false;
+  }
+  return args.ws.nodesById[args.activeNodeId]?.kind !== 'folder';
+}
+
 function buildPaletteOptions(
   args: Parameters<typeof useAppPaletteItems>[0],
   canMoveToNode: boolean,
@@ -90,6 +101,7 @@ function buildPaletteOptions(
   const canUseCurrentTopic = canMergeHighlightsIntoTopic(args);
   return {
     canExportCurrentArticle: canExportCurrentArticle(args),
+    canAnnotateSelection: canAnnotateSelection(args),
     canImportFile: args.formalImportAvailable,
     canImportFolder: args.formalImportAvailable,
     canMergeHighlightsIntoTopic: canUseCurrentTopic,

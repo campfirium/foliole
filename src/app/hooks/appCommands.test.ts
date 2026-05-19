@@ -9,8 +9,11 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     closeSettings: () => undefined,
     createFolder: () => undefined,
     createItem: () => undefined,
+    createSelectionCloze: () => undefined,
+    createSelectionHighlight: () => undefined,
     createTopic: () => undefined,
     createVirtualNode: () => undefined,
+    addSelectionNote: () => undefined,
     enterPriorityMode: () => undefined,
     exportCurrentArticle: () => undefined,
     findInTopic: () => undefined,
@@ -60,6 +63,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canImportFile: true,
     canImportFolder: true,
     canExportCurrentArticle: true,
+    canAnnotateSelection: true,
     canMergeHighlightsIntoTopic: true,
     canRenameNode: true,
     canReimportSelectedTopic: true,
@@ -110,6 +114,9 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.createSelectionHighlight)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.createSelectionCloze)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.addSelectionNote)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
 }
 

@@ -77,3 +77,8 @@ describe('default command shortcuts', () => {
     expect(matchesShortcutSet(keyEvent({ key: '4' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewDismiss])).toBe(true);
   });
 });
+
+it('registers core selection annotation shortcuts on Alt Z, Alt X, and Alt A', () => {
+  const cases = [['z', APP_COMMAND_IDS.createSelectionHighlight], ['x', APP_COMMAND_IDS.createSelectionCloze], ['a', APP_COMMAND_IDS.addSelectionNote]] as const;
+  expect(cases.every(([key, id]) => matchesShortcutSet(keyEvent({ key, altKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[id]))).toBe(true);
+});

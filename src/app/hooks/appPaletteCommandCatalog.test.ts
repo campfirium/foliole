@@ -9,6 +9,7 @@ const enabledOptions: BuildAppPaletteItemsOptions = {
   canDeleteReviewItem: true,
   canDeferReadingReview: true,
   canDismissReadingReview: true,
+  canAnnotateSelection: true,
   canExportCurrentArticle: true,
   canFindInCurrentTopic: true,
   canGoBack: true,

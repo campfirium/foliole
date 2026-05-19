@@ -32,6 +32,7 @@ export interface EditorContextCommandsResult {
   handleCreateHighlight: () => void;
   handleCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
   handleCreateNote: (note: string) => void;
+  handleOpenSelectionNote: () => void;
   handleToggleSelectionHighlightFromPayload: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
   handleAddNoteToSelectionHighlightFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
   handleCreateNoteFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
@@ -74,13 +75,18 @@ function selectionPayloadOverlapsImage(
 }
 
 export function createSelectionCommandRunner(
-  contextMenu: Pick<SelectionContextMenuState, 'payload'> | null,
+  args: {
+    activeNodeId: string | null;
+    contextMenu: Pick<SelectionContextMenuState, 'payload'> | null;
+  },
   editorRef: MutableRefObject<EditorAdapter | null>,
   closeContextMenu: () => void
 ) {
   return (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => {
     void anchorKind;
-    const payload = contextMenu?.payload;
+    const payload = args.contextMenu?.payload ?? (
+      args.activeNodeId ? getSelectionCommandPayload(args.activeNodeId, editorRef.current) : null
+    );
     if (!payload || !editorRef.current || payload.entries.length === 0) {
       return;
     }

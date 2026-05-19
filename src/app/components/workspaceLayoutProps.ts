@@ -36,6 +36,7 @@ export interface WorkspaceEditorContextMenu {
     originalText: string;
     nodeId: string;
   };
+  initialNoteOpen?: boolean;
   kind: 'image' | 'selection';
   left: number;
   mode?: 'annotation-toolbar' | 'context-menu' | 'existing-highlight-toolbar';
@@ -157,6 +158,7 @@ export interface WorkspaceLayoutFlatProps {
   onCopyImage: () => void;
   onCreateHighlight: () => void;
   onCreateNote: (note: string) => void;
+  onOpenSelectionNote: () => void;
   onDeleteExistingHighlight: () => void;
   onOpenExistingHighlight: () => void;
   onAdjustExistingHighlightRange: (highlightNodeId: string, range: { from: number; to: number }) => boolean;

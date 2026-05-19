@@ -1,5 +1,5 @@
 import { Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cn } from '../../shared/lib/utils';
@@ -15,6 +15,7 @@ import { WebLookupSelectionMenu } from './WebLookupSelectionMenu';
 export interface EditorContextMenuProps {
   kind: 'image' | 'selection';
   left: number;
+  initialNoteOpen?: boolean;
   mode?: 'annotation-toolbar' | 'context-menu' | 'existing-highlight-toolbar';
   notePanelLeft?: number;
   notePanelTop?: number;
@@ -62,7 +63,7 @@ function resolveNotePanelPosition(props: Pick<EditorContextMenuProps, 'left' | '
   };
 }
 
-type AnnotationToolbarProps = Pick<EditorContextMenuProps, 'left' | 'notePanelLeft' | 'notePanelTop' | 'selectionPayload' | 'top' | 'onClose' | 'onCreateHighlight' | 'onCreateClozeFromPayload' | 'onCreateHighlightFromPayload' | 'onCreateNote' | 'onCreateCloze'>;
+type AnnotationToolbarProps = Pick<EditorContextMenuProps, 'initialNoteOpen' | 'left' | 'notePanelLeft' | 'notePanelTop' | 'selectionPayload' | 'top' | 'onClose' | 'onCreateHighlight' | 'onCreateClozeFromPayload' | 'onCreateHighlightFromPayload' | 'onCreateNote' | 'onCreateCloze'>;
 
 function createClozeToolbarAction(props: Pick<AnnotationToolbarProps, 'onCreateCloze' | 'onCreateClozeFromPayload' | 'onCreateHighlight' | 'onCreateHighlightFromPayload' | 'selectionPayload'> & { onOpenGuard: () => void }) {
   return () => {
@@ -146,8 +147,12 @@ function AnnotationToolbarPanels(props: AnnotationToolbarProps & {
 
 function AnnotationToolbar(props: AnnotationToolbarProps) {
   const [noteDraft, setNoteDraft] = useState('');
-  const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const [isNoteOpen, setIsNoteOpen] = useState(Boolean(props.initialNoteOpen));
   const [isClozeGuardOpen, setIsClozeGuardOpen] = useState(false);
+
+  useEffect(() => {
+    setIsNoteOpen(Boolean(props.initialNoteOpen));
+  }, [props.initialNoteOpen, props.selectionPayload]);
 
   if (typeof document === 'undefined') {
     return null;

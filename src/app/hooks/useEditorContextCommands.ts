@@ -8,12 +8,9 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { getSelectionCommandPayload, type SelectionCommandPayload } from '../contextCommands';
 
 import { createPayloadSelectionRunner } from './editorPayloadSelectionRunner';
+import { createSelectionAnnotationHandlers } from './editorSelectionAnnotationHandlers';
 import { createSelectionHandlers } from './editorSelectionCommandActions';
 import { createExistingHighlightHandlers } from './existingHighlightContextHandlers';
-import {
-  createAddNoteToSelectionHighlightFromPayloadHandler,
-  createToggleSelectionHighlightFromPayloadHandler
-} from './selectionHighlightToggle';
 import {
   buildEditorContextCommandsResult,
   createHandleEditorContextMenu,
@@ -125,7 +122,7 @@ export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
     setContextMenu,
     ...definedProps({ activeNode: args.activeNode })
   });
-  const runSelectionCommand = createSelectionCommandRunner(contextMenu ? { payload: contextMenu.payload } : null, editorRef, closeContextMenu);
+  const runSelectionCommand = createSelectionCommandRunner({ activeNodeId, contextMenu: contextMenu ? { payload: contextMenu.payload } : null }, editorRef, closeContextMenu);
   const runSelectionCommandFromPayloadHandler = createPayloadSelectionRunner(closeContextMenu, editorRef);
   const selectionHandlers = createSelectionHandlers({
     createChildNode: args.createChildNode,
@@ -146,6 +143,7 @@ export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
     nodesById: args.nodesById,
     onSelectNode: args.onSelectNode,
     selectionHandlers,
+    setContextMenu,
     trashedNodeIds: args.trashedNodeIds,
     syncActiveNodeContentFromEditor,
     updateNodeContent: args.updateNodeContent
@@ -162,6 +160,7 @@ function buildEditorCommandsResult(args: {
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   selectionHandlers: ReturnType<typeof createSelectionHandlers>;
+  setContextMenu: (value: EditorContextMenuState | null) => void;
   trashedNodeIds: string[];
   syncActiveNodeContentFromEditor: () => void;
   updateNodeContent: (nodeId: string, content: string) => void;
@@ -172,24 +171,7 @@ function buildEditorCommandsResult(args: {
     editorRef: args.editorRef,
     syncActiveNodeContentFromEditor: args.syncActiveNodeContentFromEditor
   });
-  const handleToggleSelectionHighlightFromPayload = createToggleSelectionHighlightFromPayloadHandler({
-    activeNodeId: args.activeNodeId,
-    createHighlightFromPayload: args.selectionHandlers.handleCreateHighlightFromPayload,
-    deleteNodePermanently: args.deleteNodePermanently,
-    editorRef: args.editorRef,
-    nodesById: args.nodesById,
-    syncActiveNodeContentFromEditor: args.syncActiveNodeContentFromEditor,
-    trashedNodeIds: args.trashedNodeIds
-  });
-  const handleAddNoteToSelectionHighlightFromPayload = createAddNoteToSelectionHighlightFromPayloadHandler({
-    activeNodeId: args.activeNodeId,
-    createHighlightFromPayload: args.selectionHandlers.handleCreateNoteFromPayload,
-    editorRef: args.editorRef,
-    nodesById: args.nodesById,
-    onSelectNode: args.onSelectNode,
-    trashedNodeIds: args.trashedNodeIds,
-    updateNodeContent: args.updateNodeContent
-  });
+  const selectionAnnotationHandlers = createSelectionAnnotationHandlers(args);
   const existingHighlightHandlers = createExistingHighlightHandlers(args);
 
   return buildEditorContextCommandsResult({
@@ -201,8 +183,7 @@ function buildEditorCommandsResult(args: {
     handleCreateHighlight: args.selectionHandlers.handleCreateHighlight,
     handleCreateHighlightFromPayload: args.selectionHandlers.handleCreateHighlightFromPayload,
     handleCreateNote: existingHighlightHandlers.handleCreateNote,
-    handleToggleSelectionHighlightFromPayload,
-    handleAddNoteToSelectionHighlightFromPayload,
+    ...selectionAnnotationHandlers,
     handleCreateNoteFromPayload: args.selectionHandlers.handleCreateNoteFromPayload,
     handleDeleteExistingHighlight: existingHighlightHandlers.handleDeleteExistingHighlight,
     handleOpenExistingHighlight: existingHighlightHandlers.handleOpenExistingHighlight,
