@@ -1,3 +1,5 @@
+import { normalizeChineseVariants } from './chineseVariantNormalization.js';
+
 function normalizeLineEndings(value: string) {
   return value.replace(/\r\n?/g, '\n');
 }
@@ -41,13 +43,13 @@ function stripLeadingListMarker(value: string) {
 }
 
 function normalizeQuoteText(value: string) {
-  return compactWhitespace(normalizeQuoteLines(value).join(' '));
+  return normalizeChineseVariants(compactWhitespace(normalizeQuoteLines(value).join(' ')));
 }
 
 function normalizeQuoteLines(value: string) {
   return stripQuoteMarkdown(normalizeLineEndings(value))
     .split('\n')
-    .map((line) => stripLeadingListMarker(compactWhitespace(line)));
+    .map((line) => normalizeChineseVariants(stripLeadingListMarker(compactWhitespace(line))));
 }
 
 function escapeRegex(value: string) {
