@@ -46,6 +46,7 @@ export function DocumentPanelContextMenu({
       left={contextMenu.left}
       {...definedProps({
         mode: contextMenu.mode,
+        initialNoteOpen: contextMenu.initialNoteOpen,
         notePanelLeft: contextMenu.notePanelLeft,
         notePanelTop: contextMenu.notePanelTop
       })}

@@ -13,6 +13,7 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import { buildPaletteState } from './appControllerHelpers';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createPaletteCommandRunner } from './appPaletteCommandRunner';
+import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
 import { restartAppWithReadingProgress } from './appRestartPersistence';
 import { clearSettingsRequest, openReadwiseReaderSettings } from './settingsOverlayRequest';
 import type { useFormalImport } from './useFormalImport';
@@ -160,6 +161,7 @@ function createPaletteRunnerArgs(args: {
     createItem: createDirectNodeCommand('item', args),
     createTopic: createDirectNodeCommand('topic', args),
     createVirtualNode: createVirtualNodeCommand(args),
+    ...createSelectionAnnotationPaletteActions(args),
     enterPriorityMode: args.layoutProps.document.onEnterPriorityQuickSet,
     deferReviewItem: args.ws.deferReviewItem,
     deleteCurrentReviewItem: createDeleteCurrentReviewItemCommand({ ws: args.ws }),

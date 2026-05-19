@@ -9,8 +9,11 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     closeSettings: () => undefined,
     createFolder: () => undefined,
     createItem: () => undefined,
+    createSelectionCloze: () => undefined,
+    createSelectionHighlight: () => undefined,
     createTopic: () => undefined,
     createVirtualNode: () => undefined,
+    addSelectionNote: () => undefined,
     enterPriorityMode: () => undefined,
     exportCurrentArticle: () => undefined,
     findInTopic: () => undefined,
@@ -85,6 +88,20 @@ it('runs open Readwise Reader settings through the shared command handler', () =
   expectCommandRuns(APP_COMMAND_IDS.openReadwiseReaderSettings, { openReadwiseReaderSettings });
 
   expect(openReadwiseReaderSettings).toHaveBeenCalledTimes(1);
+});
+
+it('runs selection annotation actions through the shared command handler', () => {
+  const createSelectionHighlight = vi.fn();
+  const createSelectionCloze = vi.fn();
+  const addSelectionNote = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.createSelectionHighlight, { createSelectionHighlight });
+  expectCommandRuns(APP_COMMAND_IDS.createSelectionCloze, { createSelectionCloze });
+  expectCommandRuns(APP_COMMAND_IDS.addSelectionNote, { addSelectionNote });
+
+  expect(createSelectionHighlight).toHaveBeenCalledTimes(1);
+  expect(createSelectionCloze).toHaveBeenCalledTimes(1);
+  expect(addSelectionNote).toHaveBeenCalledTimes(1);
 });
 
 it('runs light and dark mode toggle through the shared command handler', () => {

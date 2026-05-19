@@ -29,6 +29,7 @@ export interface BuildLayoutPropsArgs {
     | 'onCreateHighlight'
     | 'onCreateHighlightFromPayload'
     | 'onCreateNote'
+    | 'onOpenSelectionNote'
     | 'onDeleteExistingHighlight'
     | 'onOpenExistingHighlight'
     | 'onAdjustExistingHighlightRange'

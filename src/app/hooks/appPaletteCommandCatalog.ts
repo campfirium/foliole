@@ -9,6 +9,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canImportFile: boolean;
   canImportFolder: boolean;
   canMergeHighlightsIntoTopic: boolean;
+  canAnnotateSelection: boolean;
   canRenameNode: boolean;
   canReimportSelectedTopic: boolean;
   canResetImportData: boolean;
@@ -59,6 +60,9 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     section: 'Editor',
     keywords: ['merge', 'highlights', 'topic', 'append', 'file']
   },
+  { id: APP_COMMAND_IDS.createSelectionHighlight, title: 'Highlight Selection', section: 'Editor', keywords: ['highlight', 'selection', 'excerpt'] },
+  { id: APP_COMMAND_IDS.createSelectionCloze, title: 'Cloze Selection', section: 'Editor', keywords: ['cloze', 'selection', 'item'] },
+  { id: APP_COMMAND_IDS.addSelectionNote, title: 'Annotate Selection', section: 'Editor', keywords: ['highlight', 'selection', 'annotation'] },
   { id: APP_COMMAND_IDS.restartApp, title: 'Restart App', section: 'Workspace', keywords: ['restart', 'relaunch'] },
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
   { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Developer', keywords: ['developer', 'inspect'] },
@@ -134,6 +138,13 @@ function isEditorCommandEnabled(id: string, options: BuildAppPaletteItemsOptions
   }
   if (id === APP_COMMAND_IDS.mergeHighlightsIntoTopic) {
     return options.canMergeHighlightsIntoTopic;
+  }
+  if (
+    id === APP_COMMAND_IDS.createSelectionHighlight ||
+    id === APP_COMMAND_IDS.createSelectionCloze ||
+    id === APP_COMMAND_IDS.addSelectionNote
+  ) {
+    return options.canAnnotateSelection;
   }
   if (id === APP_COMMAND_IDS.findInTopic) {
     return options.canFindInCurrentTopic;

@@ -16,6 +16,9 @@ interface RunAppCommandActions {
   exportCurrentArticle: () => void | Promise<void>;
   findInTopic: () => void;
   mergeHighlightsIntoTopic: () => void | Promise<void>;
+  createSelectionHighlight: () => void;
+  createSelectionCloze: () => void;
+  addSelectionNote: () => void;
   openImportManagement: () => void;
   goBack: () => void;
   goForward: () => void;
@@ -91,6 +94,9 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.enterPriorityMode]: actions.enterPriorityMode,
     [APP_COMMAND_IDS.findInTopic]: actions.findInTopic,
     [APP_COMMAND_IDS.mergeHighlightsIntoTopic]: actions.mergeHighlightsIntoTopic,
+    [APP_COMMAND_IDS.createSelectionHighlight]: actions.createSelectionHighlight,
+    [APP_COMMAND_IDS.createSelectionCloze]: actions.createSelectionCloze,
+    [APP_COMMAND_IDS.addSelectionNote]: actions.addSelectionNote,
     [APP_COMMAND_IDS.restartApp]: actions.restartApp,
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,
     [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,

@@ -68,6 +68,7 @@ export interface WorkspaceLayoutProps {
     | 'onCopyImage'
     | 'onCreateHighlight'
     | 'onCreateNote'
+    | 'onOpenSelectionNote'
     | 'onDeleteExistingHighlight'
     | 'onOpenExistingHighlight'
     | 'onAdjustExistingHighlightRange'
