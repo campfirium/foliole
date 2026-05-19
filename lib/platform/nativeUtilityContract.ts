@@ -189,3 +189,13 @@ export interface NativeSqliteRestoreResult {
   totalPages: number;
   remainingPages: number;
 }
+
+export interface NativeSourceDispositionSummary {
+  recordCount: number;
+  sizeBytes: number;
+}
+
+export interface NativeSourceDispositionRestoreResult {
+  dismissedCount: number;
+  trashedCount: number;
+}

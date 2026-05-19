@@ -16,6 +16,7 @@ export {
   reviewLog,
   settingRecords,
   settings,
+  sourceDispositionStates,
   syncChangeLog,
   syncPeerCursors,
   syncObjectState,

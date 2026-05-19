@@ -3,6 +3,11 @@ import type { BrowserWindow } from 'electron';
 import { LIBRARY_PATH_LOCATIONS } from '../../lib/platform/libraryPaths.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
+import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
+import {
+  resetSourceDispositions,
+  summarizeSourceDispositions
+} from '../database/sourceDispositionStates.js';
 import { loadSyncPeers, saveSyncPeers } from '../database/syncPeers.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
@@ -44,6 +49,9 @@ export async function handleSettingsStorageCommand(
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
   if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();
+  if (command === NATIVE_COMMANDS.loadSourceDispositionSummary) return summarizeSourceDispositions();
+  if (command === NATIVE_COMMANDS.restoreSourceDispositions) return restoreSourceDispositions();
+  if (command === NATIVE_COMMANDS.resetSourceDispositions) return resetSourceDispositions();
   if (command === NATIVE_COMMANDS.rebuildMirrorOutput) return rebuildMirrorOutput();
   if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
   if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);

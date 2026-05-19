@@ -52,6 +52,7 @@
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
     "oneoff:workspace:migrate": "node scripts/migrate-workspace-data.mjs",
     "oneoff:workspace:backfill-opening-text": "node --experimental-strip-types scripts/backfill-node-opening-text.ts",
+    "oneoff:source-dispositions:backfill": "node --experimental-strip-types scripts/backfill-source-disposition-states.ts",
     "sqlite:backup": "node --experimental-strip-types scripts/sqlite-maintenance.ts backup",
     "sqlite:restore": "node --experimental-strip-types scripts/sqlite-maintenance.ts restore",
     "oneoff:sqlite:node-kind-report": "node --experimental-strip-types scripts/node-kind-report.ts",

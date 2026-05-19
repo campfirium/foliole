@@ -213,6 +213,14 @@ export const keepImportItemCache = sqliteTable('keep_import_item_cache', {
   pk: primaryKey({ columns: [table.ruleId, table.sourcePath] })
 }));
 
+export const sourceDispositionStates = sqliteTable('source_disposition_states', {
+  sourceKind: text('source_kind').notNull(),
+  sourceScope: text('source_scope').notNull(),
+  originalTitle: text('original_title').notNull(),
+  disposition: text('disposition').notNull(),
+  updatedAt: text('updated_at').notNull()
+}, (table) => [primaryKey({ columns: [table.sourceKind, table.sourceScope, table.originalTitle] })]);
+
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),

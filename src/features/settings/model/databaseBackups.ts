@@ -6,6 +6,12 @@ import {
   type RuntimeSqliteBackupResult,
   type RuntimeSqliteRestoreResult
 } from '../../../shared/platform/settingsRuntimeRepository';
+export {
+  loadSourceDispositionSummary,
+  resetSourceDispositions,
+  restoreSourceDispositions
+} from './sourceDispositionBackups';
+export type { SourceDispositionActionResult } from './sourceDispositionBackups';
 
 export interface DatabaseBackupEntry {
   fileName: string;

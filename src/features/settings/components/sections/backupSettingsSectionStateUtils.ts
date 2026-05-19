@@ -1,7 +1,11 @@
+import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
 import {
   createDatabaseBackup,
+  loadSourceDispositionSummary,
   reloadAfterDatabaseRestore,
+  resetSourceDispositions,
   restoreDatabaseBackup,
+  restoreSourceDispositions,
   type DatabaseBackupEntry
 } from '../../model/databaseBackups';
 import {
@@ -104,4 +108,41 @@ export async function runRestoreBackup(
   }
   setStatusMessage(`Backup restored from ${entry.fileName}. Reloading workspace…`);
   reloadAfterDatabaseRestore();
+}
+
+export async function runRestoreSourceDispositions(args: {
+  setIsRestoringSourceStates: (value: boolean) => void;
+  setSourceDispositionSummary: (value: RuntimeSourceDispositionSummary) => void;
+  setSourceStateStatusMessage: (value: string) => void;
+}) {
+  args.setIsRestoringSourceStates(true);
+  const result = await restoreSourceDispositions();
+  if (!result) {
+    args.setSourceStateStatusMessage('Source state restore is available in the desktop app.');
+  } else if (result.ok && 'dismissedCount' in result.value) {
+    args.setSourceStateStatusMessage(`Restored ${result.value.dismissedCount} dismissed and ${result.value.trashedCount} deleted source states.`);
+  } else if (!result.ok) {
+    args.setSourceStateStatusMessage(result.errorMessage);
+  }
+  args.setSourceDispositionSummary(await loadSourceDispositionSummary());
+  args.setIsRestoringSourceStates(false);
+}
+
+export async function runResetSourceDispositions(args: {
+  setIsResettingSourceStates: (value: boolean) => void;
+  setSourceDispositionSummary: (value: RuntimeSourceDispositionSummary) => void;
+  setSourceStateStatusMessage: (value: string) => void;
+}) {
+  args.setIsResettingSourceStates(true);
+  const result = await resetSourceDispositions();
+  if (!result) {
+    args.setSourceStateStatusMessage('Source state reset is available in the desktop app.');
+  } else if (result.ok && 'recordCount' in result.value) {
+    args.setSourceDispositionSummary(result.value);
+    args.setSourceStateStatusMessage('Source states reset.');
+  } else if (!result.ok) {
+    args.setSourceStateStatusMessage(result.errorMessage);
+    args.setSourceDispositionSummary(await loadSourceDispositionSummary());
+  }
+  args.setIsResettingSourceStates(false);
 }

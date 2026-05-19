@@ -1,69 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { selectRuntimeFolder } from '../../../../shared/platform/folderSelectionRuntimeRepository';
-import { loadRuntimeLibraryPathSettings } from '../../../../shared/platform/libraryPathsRuntimeRepository';
 import { useRuntimeAvailability } from '../../../../shared/platform/runtimeAvailability';
+import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
 import {
   areDatabaseBackupActionsAvailable,
   listDatabaseBackups,
   type DatabaseBackupEntry
 } from '../../model/databaseBackups';
-import {
-  loadDatabaseBackupSettings,
-  type DatabaseBackupSettings
-} from '../../model/databaseBackupSettings';
+import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
+import { useDefaultBackupPath, useInitialBackupData } from './backupSettingsSectionLoadHooks';
 import {
   persistBackupSettings,
   runCreateBackup,
+  runResetSourceDispositions,
   runRestoreBackup,
+  runRestoreSourceDispositions,
   updateDraftValue
 } from './backupSettingsSectionStateUtils';
-
-function useInitialBackupData(
-  isDesktopRuntime: boolean,
-  reloadKey: number,
-  setBackups: (value: DatabaseBackupEntry[]) => void,
-  setDraft: (value: DatabaseBackupSettings) => void,
-  setIsLoadingBackups: (value: boolean) => void,
-  setLoadErrorMessage: (value: string) => void,
-  setSettings: (value: DatabaseBackupSettings) => void
-) {
-  useEffect(() => {
-    let alive = true;
-    setLoadErrorMessage('');
-    setIsLoadingBackups(true);
-    void loadDatabaseBackupSettings()
-      .then((value) => {
-        if (!alive) return;
-        setSettings(value);
-        setDraft(value);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setLoadErrorMessage('Could not load backup settings.');
-        setIsLoadingBackups(false);
-      });
-    if (!isDesktopRuntime) {
-      setBackups([]);
-      setIsLoadingBackups(false);
-    } else {
-      void listDatabaseBackups()
-        .then((entries) => {
-          if (!alive) return;
-          setBackups(entries);
-        })
-        .finally(() => {
-          if (alive) {
-            setIsLoadingBackups(false);
-          }
-        });
-    }
-    return () => {
-      alive = false;
-    };
-  }, [isDesktopRuntime, reloadKey, setBackups, setDraft, setIsLoadingBackups, setLoadErrorMessage, setSettings]);
-}
 
 function useBackupStateStore() {
   const [settings, setSettings] = useState<DatabaseBackupSettings | null>(null);
@@ -72,7 +27,11 @@ function useBackupStateStore() {
   const [defaultBackupPath, setDefaultBackupPath] = useState('Library Home/Backups');
   const [isLoadingBackups, setIsLoadingBackups] = useState(true);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [isResettingSourceStates, setIsResettingSourceStates] = useState(false);
+  const [isRestoringSourceStates, setIsRestoringSourceStates] = useState(false);
   const [restoringPath, setRestoringPath] = useState('');
+  const [sourceDispositionSummary, setSourceDispositionSummary] = useState<RuntimeSourceDispositionSummary>({ recordCount: 0, sizeBytes: 0 });
+  const [sourceStateStatusMessage, setSourceStateStatusMessage] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [loadErrorMessage, setLoadErrorMessage] = useState('');
@@ -84,6 +43,8 @@ function useBackupStateStore() {
     defaultBackupPath,
     isCreatingBackup,
     isLoadingBackups,
+    isResettingSourceStates,
+    isRestoringSourceStates,
     isSavingSettings,
     loadErrorMessage,
     pathErrorMessage,
@@ -93,39 +54,36 @@ function useBackupStateStore() {
     setDraft,
     setIsCreatingBackup,
     setIsLoadingBackups,
+    setIsResettingSourceStates,
+    setIsRestoringSourceStates,
     setIsSavingSettings,
     setLoadErrorMessage,
     setPathErrorMessage,
     setRestoringPath,
     setSettings,
+    setSourceDispositionSummary,
+    setSourceStateStatusMessage,
     setStatusMessage,
     settings,
+    sourceDispositionSummary,
+    sourceStateStatusMessage,
     statusMessage
   };
 }
 
-function joinBackupPath(libraryHome: string) {
-  const separator = libraryHome.includes('\\') ? '\\' : '/';
-  return `${libraryHome.replace(/[\\/]+$/, '')}${separator}Backups`;
-}
-
-function useDefaultBackupPath(
-  isDesktopRuntime: boolean,
-  setDefaultBackupPath: (value: string) => void
-) {
-  useEffect(() => {
-    let alive = true;
-    if (!isDesktopRuntime) {
-      return undefined;
-    }
-    void loadRuntimeLibraryPathSettings().then((paths) => {
-      if (!alive || !paths) return;
-      setDefaultBackupPath(joinBackupPath(paths.libraryHome));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [isDesktopRuntime, setDefaultBackupPath]);
+async function updateBackupPath(args: {
+  draft: DatabaseBackupSettings;
+  saveDraft: (nextSettings: DatabaseBackupSettings, refreshBackups?: boolean) => void;
+  setPathErrorMessage: (value: string) => void;
+}) {
+  try {
+    const nextPath = await selectRuntimeFolder();
+    if (!nextPath) return;
+    args.setPathErrorMessage('');
+    args.saveDraft({ ...args.draft, backup_dir: nextPath }, true);
+  } catch {
+    args.setPathErrorMessage('Could not choose a new backup folder.');
+  }
 }
 
 function useBackupActionHandlers(args: {
@@ -138,6 +96,10 @@ function useBackupActionHandlers(args: {
   setPathErrorMessage: (value: string) => void;
   setRestoringPath: (value: string) => void;
   setSettings: (value: DatabaseBackupSettings) => void;
+  setSourceDispositionSummary: (value: RuntimeSourceDispositionSummary) => void;
+  setIsResettingSourceStates: (value: boolean) => void;
+  setIsRestoringSourceStates: (value: boolean) => void;
+  setSourceStateStatusMessage: (value: string) => void;
   setStatusMessage: (value: string) => void;
 }) {
   const saveDraft = (nextSettings: DatabaseBackupSettings, refreshBackups = false) =>
@@ -154,6 +116,8 @@ function useBackupActionHandlers(args: {
   const handleCreateBackup = () => void runCreateBackup(args.refreshBackups, args.setIsCreatingBackup, args.setStatusMessage);
   const handleRestoreBackup = (entry: DatabaseBackupEntry) =>
     void runRestoreBackup(entry, args.setRestoringPath, args.setStatusMessage);
+  const handleRestoreSourceDispositions = () => void runRestoreSourceDispositions(args);
+  const handleResetSourceDispositions = () => void runResetSourceDispositions(args);
   const handleDraftField = (field: keyof DatabaseBackupSettings, value: string) => {
     if (!args.draft) return;
     saveDraft(updateDraftValue(args.draft, field, value));
@@ -165,20 +129,15 @@ function useBackupActionHandlers(args: {
   };
   const handleChangeBackupPath = async () => {
     if (!args.draft) return;
-    try {
-      const nextPath = await selectRuntimeFolder();
-      if (!nextPath) return;
-      args.setPathErrorMessage('');
-      saveDraft({ ...args.draft, backup_dir: nextPath }, true);
-    } catch {
-      args.setPathErrorMessage('Could not choose a new backup folder.');
-    }
+    await updateBackupPath({ draft: args.draft, saveDraft, setPathErrorMessage: args.setPathErrorMessage });
   };
   return {
     handleChangeBackupPath,
     handleCreateBackup,
     handleDraftField,
     handleRestoreBackup,
+    handleRestoreSourceDispositions,
+    handleResetSourceDispositions,
     handleRestoreBackupPathDefault
   };
 }
@@ -193,6 +152,7 @@ export function useBackupSettingsSectionState() {
     isDesktopRuntime,
     reloadKey,
     state.setBackups,
+    state.setSourceDispositionSummary,
     state.setDraft,
     state.setIsLoadingBackups,
     state.setLoadErrorMessage,
@@ -210,6 +170,10 @@ export function useBackupSettingsSectionState() {
     setPathErrorMessage: state.setPathErrorMessage,
     setRestoringPath: state.setRestoringPath,
     setSettings: state.setSettings,
+    setSourceDispositionSummary: state.setSourceDispositionSummary,
+    setIsResettingSourceStates: state.setIsResettingSourceStates,
+    setIsRestoringSourceStates: state.setIsRestoringSourceStates,
+    setSourceStateStatusMessage: state.setSourceStateStatusMessage,
     setStatusMessage: state.setStatusMessage
   });
 
@@ -221,11 +185,15 @@ export function useBackupSettingsSectionState() {
     isCreatingBackup: state.isCreatingBackup,
     isDesktopRuntime,
     isLoadingBackups: state.isLoadingBackups,
+    isResettingSourceStates: state.isResettingSourceStates,
+    isRestoringSourceStates: state.isRestoringSourceStates,
     isSavingSettings: state.isSavingSettings,
     loadErrorMessage: state.loadErrorMessage,
     pathErrorMessage: state.pathErrorMessage,
     retryInitialLoad: () => setReloadKey((value) => value + 1),
     restoringPath: state.restoringPath,
+    sourceDispositionSummary: state.sourceDispositionSummary,
+    sourceStateStatusMessage: state.sourceStateStatusMessage,
     statusMessage: state.statusMessage
   };
 }

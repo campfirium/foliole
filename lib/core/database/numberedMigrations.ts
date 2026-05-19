@@ -11,6 +11,7 @@ import {
 } from './numberedMigrationTextBodyBackfill.js';
 import { migrateSearchIndexInvalidationTypes } from './searchIndexInvalidationSchemaMigration.js';
 import { SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS } from './searchIndexInvalidationSchemaStatements.js';
+import { SOURCE_DISPOSITION_SCHEMA_STATEMENTS } from './sourceDispositionSchemaStatements.js';
 
 export const NUMBERED_MIGRATION_BASE_VERSION = 28;
 
@@ -173,6 +174,14 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 41,
     migrate: migrateSearchIndexInvalidationTypes
+  },
+  {
+    version: 42,
+    migrate: (sqlite) => {
+      for (const statement of SOURCE_DISPOSITION_SCHEMA_STATEMENTS) {
+        sqlite.exec(statement);
+      }
+    }
   }
 ];
 
