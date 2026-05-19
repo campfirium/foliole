@@ -11,6 +11,8 @@ import type {
   NativeMirrorOutputRebuildResult,
   NativePerformanceMemorySnapshot,
   NativeReadingPositionTraceLogAppendArgs,
+  NativeSourceDispositionRestoreResult,
+  NativeSourceDispositionSummary,
   NativeSqliteBackupEntry,
   NativeSqliteBackupResult,
   NativeSqliteRestoreResult,
@@ -71,6 +73,18 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.restoreSqliteDatabase]: {
     args: { sourcePath: string };
     result: NativeSqliteRestoreResult;
+  };
+  [NATIVE_COMMANDS.loadSourceDispositionSummary]: {
+    args: undefined;
+    result: NativeSourceDispositionSummary;
+  };
+  [NATIVE_COMMANDS.restoreSourceDispositions]: {
+    args: undefined;
+    result: NativeSourceDispositionRestoreResult;
+  };
+  [NATIVE_COMMANDS.resetSourceDispositions]: {
+    args: undefined;
+    result: NativeSourceDispositionSummary;
   };
   [NATIVE_COMMANDS.rebuildMirrorOutput]: {
     args: undefined;

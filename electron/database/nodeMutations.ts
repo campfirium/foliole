@@ -21,6 +21,10 @@ import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
+import {
+  clearNodeSourceDisposition,
+  recordNodeSourceDisposition
+} from './sourceDispositionStates.js';
 import { withTransaction } from './transaction.js';
 
 export type {
@@ -37,6 +41,13 @@ export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
     ...input,
     deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
   });
+  if ('reading' in input) {
+    if (input.reading?.state === 'dismissed') {
+      recordNodeSourceDisposition(input.nodeId, 'dismissed', input.updatedAt);
+    } else {
+      clearNodeSourceDisposition(input.nodeId);
+    }
+  }
 }
 
 export function upsertNodeSnapshots(inputs: UpsertNodeSnapshotInput[]): void {
@@ -47,6 +58,13 @@ export function upsertNodeSnapshots(inputs: UpsertNodeSnapshotInput[]): void {
         ...input,
         deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
       });
+      if ('reading' in input) {
+        if (input.reading?.state === 'dismissed') {
+          recordNodeSourceDisposition(input.nodeId, 'dismissed', input.updatedAt);
+        } else {
+          clearNodeSourceDisposition(input.nodeId);
+        }
+      }
     });
   });
 }
@@ -88,6 +106,7 @@ export function softDeleteNodes(input: SoftDeleteNodesInput): void {
   withTransaction(connection.driver, () => {
     softDeleteNodesViaDriver(connection.driver, input);
     for (const nodeId of input.nodeIds) {
+      recordNodeSourceDisposition(nodeId, 'soft_deleted', input.deletedAt);
       connection.driver.execute(
         `UPDATE nodes
          SET last_modified_by_device_id = ?, sync_dirty = 1
@@ -108,6 +127,7 @@ export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {
   return withTransaction(connection.driver, () => {
     const result = restoreNodesViaDriver(connection.driver, input);
     for (const nodeId of result.restoredNodeIds) {
+      clearNodeSourceDisposition(nodeId);
       connection.driver.execute(
         `UPDATE nodes
          SET last_modified_by_device_id = ?, sync_dirty = 1
@@ -124,6 +144,9 @@ export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): stri
   const deletedAt = new Date().toISOString();
   const attachmentCleanupPlan = createAttachmentCleanupPlan(input.nodeIds);
   const nodeDeletedAt = readNodeDeletedAtForPermanentDelete(input.nodeIds, deletedAt);
+  for (const row of nodeDeletedAt) {
+    recordNodeSourceDisposition(row.nodeId, 'hard_deleted', row.deletedAt);
+  }
   markKeepImportItemsLocallyDeletedByNodeDeletedAt(nodeDeletedAt);
   const affectedParentNodeIds = deleteNodesPermanentlyViaDriver(connection.driver, input);
   withTransaction(connection.driver, () => {

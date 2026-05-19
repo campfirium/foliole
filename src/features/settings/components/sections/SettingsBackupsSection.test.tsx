@@ -14,6 +14,7 @@ vi.mock('../../model/databaseBackups', () => ({
   areDatabaseBackupActionsAvailable: vi.fn(),
   createDatabaseBackup: vi.fn(),
   listDatabaseBackups: vi.fn(),
+  loadSourceDispositionSummary: vi.fn(),
   reloadAfterDatabaseRestore: vi.fn(),
   restoreDatabaseBackup: vi.fn()
 }));
@@ -23,6 +24,7 @@ import {
   areDatabaseBackupActionsAvailable,
   createDatabaseBackup,
   listDatabaseBackups,
+  loadSourceDispositionSummary,
   reloadAfterDatabaseRestore,
   restoreDatabaseBackup
 } from '../../model/databaseBackups';
@@ -64,6 +66,7 @@ beforeEach(() => {
   vi.mocked(areDatabaseBackupActionsAvailable).mockReset();
   vi.mocked(createDatabaseBackup).mockReset();
   vi.mocked(listDatabaseBackups).mockReset();
+  vi.mocked(loadSourceDispositionSummary).mockReset();
   vi.mocked(reloadAfterDatabaseRestore).mockReset();
   vi.mocked(restoreDatabaseBackup).mockReset();
 
@@ -71,6 +74,7 @@ beforeEach(() => {
   vi.mocked(loadDatabaseBackupSettings).mockResolvedValue(defaultSettings);
   vi.mocked(saveDatabaseBackupSettings).mockResolvedValue(defaultSettings);
   vi.mocked(listDatabaseBackups).mockResolvedValue(defaultBackups);
+  vi.mocked(loadSourceDispositionSummary).mockResolvedValue({ recordCount: 2, sizeBytes: 1536 });
   vi.mocked(createDatabaseBackup).mockResolvedValue({
     ok: true,
     value: {
@@ -105,6 +109,9 @@ it('shows backup settings and backup list in the backups section', async () => {
   expect(screen.getByDisplayValue('24').parentElement?.className).toContain('flex-[0_0_160px]');
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
   expect(screen.getByText(/Auto backup · daily/)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Source states' })).toBeInTheDocument();
+  expect(screen.getByText('Restore source states')).toBeInTheDocument();
+  expect(screen.getByText('2 records / 2 KB')).toBeInTheDocument();
 });
 
 it('shows a retry action when backup settings fail to load', async () => {
@@ -195,6 +202,7 @@ it('shows only three backups by default and expands the rest on demand', async (
 
   await screen.findByRole('button', { name: 'Show 1 more' });
   expect(screen.queryByText('auto-daily-2026-04-02_08-00-00-000.db')).not.toBeInTheDocument();
+  expect(screen.getByText('More backups').compareDocumentPosition(screen.getByRole('heading', { name: 'Source states' }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
   fireEvent.click(screen.getByRole('button', { name: 'Show 1 more' }));
 

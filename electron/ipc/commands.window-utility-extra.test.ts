@@ -103,7 +103,7 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
   loadReviewSchedulerSettings: vi.fn().mockReturnValue(defaultReviewSchedulerSettings),
   saveReviewSchedulerSettings: vi.fn().mockReturnValue(defaultReviewSchedulerSettings)
 }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn().mockReturnValue({ card: {}, reviewed_at: '2026-03-04T00:00:00.000Z' }) }));
 
 beforeEach(() => {
