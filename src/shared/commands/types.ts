@@ -9,6 +9,7 @@ export interface CommandShortcut {
 export interface CommandShortcutSet {
   primary?: CommandShortcut;
   secondary?: CommandShortcut;
+  tertiary?: CommandShortcut;
 }
 
 export interface CommandPaletteItem {

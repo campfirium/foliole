@@ -12,7 +12,13 @@ function createPaletteArgs(activeNodeId: string) {
     activeNodeId,
     formalImportAvailable: true,
     hasReviewCard: false,
-    hotkeys: { shortcutMap: {} },
+    hotkeys: {
+      overrides: {},
+      resetAllShortcuts: () => undefined,
+      resetShortcut: () => undefined,
+      shortcutMap: {},
+      updateShortcut: () => ({ status: 'applied' as const })
+    },
     isCurrentReviewItemGradable: false,
     isImmersiveMode: false,
     isStudyMode: false,
@@ -37,7 +43,9 @@ function createPaletteArgs(activeNodeId: string) {
 }
 
 it('enables developer source reimport for the current non-folder topic surface', () => {
-  const { result } = renderHook(() => useAppPaletteItems(createPaletteArgs('node-1') as Parameters<typeof useAppPaletteItems>[0]));
+  const { result } = renderHook(() =>
+    useAppPaletteItems(createPaletteArgs('node-1') as unknown as Parameters<typeof useAppPaletteItems>[0])
+  );
 
   expect(result.current.find((item) => item.id === APP_COMMAND_IDS.reimportSelectedTopic)).toMatchObject({
     enabled: true

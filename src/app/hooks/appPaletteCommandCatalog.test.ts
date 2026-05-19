@@ -6,6 +6,7 @@ import { type BuildAppPaletteItemsOptions, getAppPaletteCommands } from './appPa
 
 const enabledOptions: BuildAppPaletteItemsOptions = {
   canCompleteReadingReview: true,
+  canDeleteReviewItem: true,
   canDeferReadingReview: true,
   canDismissReadingReview: true,
   canExportCurrentArticle: true,

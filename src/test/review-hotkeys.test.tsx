@@ -47,10 +47,14 @@ it('supports review keyboard flow with edit mode guard (Esc -> Space -> 1/2/3/4)
 
   const editor = screen.getByTestId('editor-value');
   editor.focus();
+  fireEvent.focusIn(editor);
   fireEvent.keyDown(editor, { key: ' ', code: 'Space' });
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
 
-  fireEvent.keyDown(editor, { key: 'Escape' });
+  fireEvent.keyDown(window, { key: 'Escape' });
+  await waitFor(() => {
+    expect(document.activeElement).not.toBe(editor);
+  });
   fireEvent.keyDown(window, { key: ' ', code: 'Space' });
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'Good' })).toBeInTheDocument();
@@ -69,7 +73,7 @@ it('shows separate primary and secondary review shortcuts in hotkey settings', (
   expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
 });
 
-it('uses reading hotkeys without reusing FSRS grading semantics', async () => {
+it('uses reading hotkeys with QWE primary keys and Space as Read', async () => {
   seedActiveNode(
     createNode({
       id: 'node-1',
@@ -92,6 +96,47 @@ it('uses reading hotkeys without reusing FSRS grading semantics', async () => {
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
   });
+});
+
+it('uses numeric reading fallback keys', async () => {
+  seedActiveNode(
+    createNode({
+      id: 'node-1',
+      title: 'Node 1',
+      content: 'Body',
+      kind: 'topic'
+    })
+  );
+
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.keyDown(window, { key: '3', code: 'Digit3' });
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
+  });
+});
+
+it('deletes the current review item', async () => {
+  seedActiveNode(
+    createNode({
+      id: 'node-1',
+      title: 'Node 1',
+      content: 'Body',
+      kind: 'topic'
+    })
+  );
+
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.keyDown(window, { key: 'Delete', code: 'Delete' });
+
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().trashedNodeIds).toContain('node-1');
+  });
+  expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
 });
 
 it('supports quick priority changes from the two-step shortcut', () => {

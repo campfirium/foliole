@@ -16,6 +16,7 @@ const DEDICATED_SHORTCUT_COMMAND_IDS = new Set<string>([
 ]);
 
 const NON_TEXT_INPUT_TYPES = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
+const FUNCTION_KEY_PATTERN = /^F(?:[1-9]|1[0-9]|2[0-4])$/;
 
 function isEditableElement(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
@@ -41,7 +42,7 @@ function shouldSkipCommandShortcut(args: {
     return true;
   }
   const isEditing = isEditableElement(args.event.target) || isEditableElement(document.activeElement);
-  return isEditing && !args.event.altKey && !args.event.ctrlKey && !args.event.metaKey;
+  return isEditing && !args.event.altKey && !args.event.ctrlKey && !args.event.metaKey && !FUNCTION_KEY_PATTERN.test(args.event.key);
 }
 
 export function useAppCommandShortcutDispatcher(args: {

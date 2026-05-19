@@ -45,6 +45,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     readingReviewLater: () => undefined,
     readingReviewRead: () => undefined,
     readingReviewDismiss: () => undefined,
+    deleteCurrentReviewItem: () => undefined,
     toggleDevTools: () => undefined,
     ...overrides
   };

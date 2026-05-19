@@ -89,10 +89,12 @@ export function resolveCommandShortcutMap({ commandIds, defaults, overrides }: R
     const defaultEntry = defaults[commandId];
     const primary = resolveOverrideShortcut(overrideEntry?.primary) ?? defaultEntry?.primary;
     const secondary = resolveOverrideShortcut(overrideEntry?.secondary) ?? defaultEntry?.secondary;
-    if (primary || secondary) {
+    const tertiary = defaultEntry?.tertiary;
+    if (primary || secondary || tertiary) {
       resolved[commandId] = {
         ...(primary ? { primary } : {}),
-        ...(secondary ? { secondary } : {})
+        ...(secondary ? { secondary } : {}),
+        ...(tertiary ? { tertiary } : {})
       };
       continue;
     }

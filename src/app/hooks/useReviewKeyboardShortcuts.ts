@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandShortcutSet } from '../../shared/commands/types';
-import { onWindowKeydown } from '../../shared/platform/keyboard';
+import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 
 interface UseReviewKeyboardShortcutsArgs {
   isStudyMode: boolean;
@@ -21,8 +21,10 @@ interface UseReviewKeyboardShortcutsArgs {
   readingLaterShortcuts: CommandShortcutSet | undefined;
   readingReadShortcuts: CommandShortcutSet | undefined;
   readingDismissShortcuts: CommandShortcutSet | undefined;
+  deleteCurrentItemShortcuts: CommandShortcutSet | undefined;
   completeReviewItem: () => boolean;
   deferReviewItem: () => boolean;
+  deleteCurrentReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => Promise<boolean>;
@@ -48,6 +50,7 @@ function isEditableElement(target: EventTarget | null) {
 
 export function useReviewKeyboardShortcuts(args: UseReviewKeyboardShortcutsArgs) {
   const [isReviewEditing, setIsReviewEditing] = useReviewEditingState(args.isStudyMode);
+  useReviewEditingEscapeHandler(args, isReviewEditing, setIsReviewEditing);
   useReviewHotkeyHandler(args, isReviewEditing, setIsReviewEditing);
   return isReviewEditing;
 }
@@ -71,6 +74,31 @@ function useReviewEditingState(isStudyMode: boolean) {
     };
   }, [isStudyMode]);
   return [isReviewEditing, setIsReviewEditing] as const;
+}
+
+function useReviewEditingEscapeHandler(
+  args: UseReviewKeyboardShortcutsArgs,
+  isReviewEditing: boolean,
+  setIsReviewEditing: (value: boolean) => void
+) {
+  useEffect(() => {
+    if (
+      !args.isStudyMode ||
+      !isReviewEditing ||
+      args.isCommandPaletteOpen ||
+      args.isSearchPaletteOpen ||
+      args.isSettingsOpen
+    ) {
+      return undefined;
+    }
+    return onWindowEscape((event) => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      setIsReviewEditing(false);
+      event.preventDefault();
+    });
+  }, [args.isCommandPaletteOpen, args.isSearchPaletteOpen, args.isSettingsOpen, args.isStudyMode, isReviewEditing, setIsReviewEditing]);
 }
 
 function useReviewHotkeyHandler(
@@ -123,6 +151,10 @@ function handleReviewKeydown(
     return;
   }
   if (isTargetEditing || !args.reviewCurrentNodeId || !args.isCurrentReviewItemVisible) {
+    return;
+  }
+
+  if (tryRunShortcut(event, args.deleteCurrentItemShortcuts, args.deleteCurrentReviewItem)) {
     return;
   }
 

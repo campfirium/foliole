@@ -45,6 +45,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     readingReviewLater: () => undefined,
     readingReviewRead: () => undefined,
     readingReviewDismiss: () => undefined,
+    deleteCurrentReviewItem: () => undefined,
     toggleDevTools: () => undefined,
     ...overrides
   };
@@ -77,6 +78,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canDeferReadingReview: true,
     canCompleteReadingReview: true,
     canDismissReadingReview: true,
+    canDeleteReviewItem: true,
     isImmersiveMode: false,
     isReviewMode
   };

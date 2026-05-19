@@ -1,3 +1,4 @@
+import { getShortcutSetShortcuts } from './shortcuts';
 import type { CommandShortcut, CommandShortcutSet } from './types';
 
 const FUNCTION_KEY_PATTERN = /^F(?:[1-9]|1[0-9]|2[0-4])$/;
@@ -26,7 +27,7 @@ function isMacPlatform(platform = resolvePlatform()) {
 }
 
 function getShortcutCandidates(shortcuts: CommandShortcutSet) {
-  return [shortcuts.primary, shortcuts.secondary].filter(Boolean) as CommandShortcut[];
+  return getShortcutSetShortcuts(shortcuts);
 }
 
 function selectPlatformShortcut(shortcuts: CommandShortcutSet, platform?: string) {

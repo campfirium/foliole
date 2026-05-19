@@ -27,6 +27,7 @@ export const APP_COMMAND_IDS = {
   readingReviewLater: 'review.readingLater',
   readingReviewRead: 'review.readingRead',
   readingReviewDismiss: 'review.readingDismiss',
+  deleteCurrentReviewItem: 'review.deleteCurrentItem',
   importSingleFile: 'import.singleFileToInbox',
   importFolder: 'import.folderToInbox',
   clipboardImport: 'import.clipboard',
