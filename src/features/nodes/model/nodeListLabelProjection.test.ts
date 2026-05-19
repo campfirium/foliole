@@ -22,6 +22,13 @@ describe('nodeListLabelProjection', () => {
     );
   });
 
+  it('projects markdown escaped punctuation to visible plain text', () => {
+    expect(projectNodeListLabel('最小\\_实验\\_来验证我们\\_要给\\_用户做的功能。')).toBe(
+      '最小_实验_来验证我们_要给_用户做的功能。'
+    );
+    expect(projectNodeListLabel('\\"Build-Measure-Learn\\"')).toBe('"Build-Measure-Learn"');
+  });
+
   it('strips heading markers even when imported titles have no marker spacing', () => {
     expect(projectNodeListLabel('#煮饺子时中途要不要加凉水#')).toBe('煮饺子时中途要不要加凉水');
     expect(projectNodeListLabel('### 功能介绍')).toBe('功能介绍');

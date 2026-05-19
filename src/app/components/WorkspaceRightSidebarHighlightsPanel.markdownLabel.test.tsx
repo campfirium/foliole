@@ -59,6 +59,46 @@ it('renders imported multiline markdown highlight labels without dangling strong
   expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
 });
 
+it('renders markdown escaped punctuation as readable sidebar text', () => {
+  const content = 'MVP 不是把一个小功能直接丢给用户，而是做一个最小\\_实验\\_来验证我们\\_要给\\_用户做的功能。';
+  const parent: Node = {
+    ...BASE_NODE,
+    id: 'node-parent',
+    content
+  };
+  const highlight: Node = {
+    ...BASE_NODE,
+    id: 'node-highlight',
+    parentNodeId: 'node-parent',
+    content,
+    title: content,
+    anchorLink: {
+      id: 'hl-escaped',
+      kind: 'highlight',
+      locator: {
+        from: 0,
+        originalText: content,
+        to: content.length
+      }
+    }
+  };
+
+  render(
+    <WorkspaceRightSidebarHighlightsPanel
+      activeNodeId="node-parent"
+      nodeOrder={['node-parent', 'node-highlight']}
+      trashedNodeIds={[]}
+      nodesById={{ 'node-parent': parent, 'node-highlight': highlight }}
+      onRevealHighlight={() => undefined}
+    />
+  );
+
+  expect(screen.getByRole('button')).toHaveTextContent(
+    'MVP 不是把一个小功能直接丢给用户，而是做一个最小_实验_来验证我们_要给_用户做的功能。'
+  );
+  expect(screen.queryByText(/\\/)).not.toBeInTheDocument();
+});
+
 it('renders empty-alt image highlight labels without exposing the asset URL', () => {
   const content = '![](asset://7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec.jpg)';
   const parent: Node = {
