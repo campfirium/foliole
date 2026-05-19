@@ -19,6 +19,7 @@ function AppearanceHarness() {
       <div>{appearance.pdfReadingMode}</div>
       <div>{appearance.readingLineHeight}</div>
       <div>{appearance.readingContentWidth}</div>
+      <div>{appearance.selectionToolbarOpacityPercent}</div>
       <button onClick={appearance.toggleEditorDisplayMode} type="button">
         Toggle mode
       </button>
@@ -43,6 +44,9 @@ function AppearanceHarness() {
       <button onClick={() => appearance.setReadingContentWidth(920)} type="button">
         Set reading width
       </button>
+      <button onClick={() => appearance.setSelectionToolbarOpacityPercent(42)} type="button">
+        Set toolbar opacity
+      </button>
       <button onClick={appearance.toggleBaseColorMode} type="button">
         Toggle light/dark
       </button>
@@ -57,6 +61,23 @@ beforeEach(() => {
   window.localStorage.clear();
   delete document.body.dataset.bootSkeleton;
 });
+
+function expectToolbarOpacity(value: string) {
+  expect(document.documentElement.style.getPropertyValue('--app-selection-toolbar-opacity')).toBe(value);
+}
+
+function applyAppearanceHarnessUpdates() {
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle mode' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Show syntax' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Full frontmatter' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Set frontmatter meta' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Warm PDF' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Set reading width' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Set toolbar opacity' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Dim images' }));
+}
 
 it('hydrates saved appearance settings and persists updates through the shared provider', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.editorDisplayMode, 'source');
@@ -82,17 +103,10 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(document.documentElement.style.getPropertyValue('--app-interface-font-family')).toBe('var(--font-family-interface)');
   expect(document.documentElement.style.getPropertyValue('--content-panel-font-family')).toBe('var(--font-family-text)');
   expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('860px');
+  expectToolbarOpacity('1');
   expect(document.body.dataset.bootSkeleton).toBeUndefined();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Toggle mode' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Show syntax' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Full frontmatter' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Set frontmatter meta' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Warm PDF' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Set reading width' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Dim images' }));
+  applyAppearanceHarnessUpdates();
 
   expect(screen.getByText('preview')).toBeInTheDocument();
   expect(screen.getByText('full')).toBeInTheDocument();
@@ -103,6 +117,7 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('warm')).toBeInTheDocument();
   expect(screen.getByText('relaxed')).toBeInTheDocument();
   expect(screen.getByText('920')).toBeInTheDocument();
+  expect(screen.getByText('42')).toBeInTheDocument();
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.editorDisplayMode)).toBe('preview');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.frontmatterDisplayMode)).toBe('full');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.frontmatterMetaFields)).toBe('aliases, source');
@@ -112,10 +127,12 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.pdfReadingMode)).toBe('warm');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('relaxed');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingContentWidth)).toBe('920');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionToolbarOpacityPercent)).toBe('42');
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('true');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
   expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('920px');
+  expectToolbarOpacity('0.42');
 
   fireEvent.click(screen.getByRole('button', { name: 'Reset frontmatter meta' }));
   expect(screen.getByText('author|byline, url|link|source|source_url')).toBeInTheDocument();

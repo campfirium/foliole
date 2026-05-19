@@ -6,6 +6,13 @@ import type { useAppearanceStateValues } from './AppearanceSettingsProvider';
 
 type AppearanceStateValues = ReturnType<typeof useAppearanceStateValues>;
 
+function createSelectionToolbarSettingsValue(state: AppearanceStateValues) {
+  return {
+    selectionToolbarEnabled: state.selectionToolbarEnabledState,
+    selectionToolbarOpacityPercent: state.selectionToolbarOpacityPercentState
+  };
+}
+
 export function useAppearanceSettingsValue(state: AppearanceStateValues): AppearanceSettingsContextValue {
   return useMemo(
     () => ({
@@ -25,6 +32,7 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       frontmatterMetaFields: state.frontmatterMetaFieldsState,
       highlightColorPreset: state.highlightColorPresetState,
       selectionColorPreset: state.selectionColorPresetState,
+      ...createSelectionToolbarSettingsValue(state),
       interfaceFontPreset: state.interfaceFontPresetState,
       interfaceFontSize: state.interfaceFontSizeState,
       markdownSyntaxVisibility: state.markdownSyntaxVisibilityState,
@@ -51,8 +59,8 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       state.frontmatterDisplayModeState,
       state.frontmatterMetaFieldsState,
       state.highlightColorPresetState,
-      state.selectionColorPresetState,
-      state.resolvedBaseColorModeState,
+      state.selectionColorPresetState, state.selectionToolbarEnabledState,
+      state.selectionToolbarOpacityPercentState, state.resolvedBaseColorModeState,
       state.interfaceFontPresetState,
       state.interfaceFontSizeState,
       state.markdownSyntaxVisibilityState,
@@ -63,6 +71,5 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       state.uiFontPresetState,
       state.workspaceSurfaceAssignmentsState,
       state.workspaceSurfacePaletteState
-    ]
-  );
+    ]);
 }

@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
+import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceLayoutState } from '../../store/workspaceLayoutDomain';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -114,6 +115,7 @@ function useWorkspaceEditorController(
   saveActiveNodeView: ReturnType<typeof useSaveActiveNodeView>,
   navigationReadingPosition: ReturnType<typeof useNavigationReadingPosition>
 ) {
+  const { selectionToolbarEnabled } = useAppearanceSettings();
   const nav = useWorkspaceNavigation({
     activeNodeContent: activeNode?.content ?? null,
     activeNodeId: ws.activeNodeId,
@@ -148,6 +150,7 @@ function useWorkspaceEditorController(
     nodesById: ws.nodesById,
     onExitImmersiveMode: () => runtime.setIsImmersiveMode(false),
     onSelectNode: (nodeId) => nav.handleSelectNode(nodeId),
+    selectionToolbarEnabled,
     updateNodeContent: ws.updateNodeContent,
     ...definedProps({ activeNode })
   });

@@ -63,6 +63,7 @@ export type AppearanceState = {
   readingLineHeightState: ReadingLineHeight;
   readingContentWidthState: number;
   selectionColorPresetState: SelectionColorPreset;
+  selectionToolbarEnabledState: boolean; selectionToolbarOpacityPercentState: number;
   uiFontPresetState: InterfaceFontPreset;
   workspaceSurfaceAssignmentsState: AppearanceSettingsContextValue['workspaceSurfaceAssignments'];
   workspaceSurfacePaletteState: AppearanceSettingsContextValue['workspaceSurfacePalette'];
@@ -87,6 +88,7 @@ export type AppearanceState = {
   setReadingContentWidthState: Setter<number>;
   setReadingLineHeightState: Setter<ReadingLineHeight>;
   setSelectionColorPresetState: Setter<SelectionColorPreset>;
+  setSelectionToolbarEnabledState: Setter<boolean>; setSelectionToolbarOpacityPercentState: Setter<number>;
   setUiFontPresetState: Setter<InterfaceFontPreset>;
   setWorkspaceSurfaceAssignmentsState: Setter<AppearanceSettingsContextValue['workspaceSurfaceAssignments']>;
   setWorkspaceSurfacePaletteState: Setter<AppearanceSettingsContextValue['workspaceSurfacePalette']>;
@@ -150,43 +152,6 @@ function getDefaultSelectionColor(mode: ResolvedBaseColorMode) {
   return mode === 'dark' ? DEFAULT_DARK_SELECTION_COLOR_PRESET : DEFAULT_SELECTION_COLOR_PRESET;
 }
 
-type AppearanceActions = Pick<
-  AppearanceSettingsContextValue,
-  | 'resetAccentColorPreset'
-  | 'resetClozeColorPreset'
-  | 'resetFontColorPreset'
-  | 'resetHighlightColorPreset'
-  | 'resetInterfaceFontSize'
-  | 'resetFrontmatterMetaFields'
-  | 'resetSelectionColorPreset'
-  | 'resetWorkspaceSurfaceSettings'
-  | 'setAccentColorPreset'
-  | 'setAutoLocalizeRemoteImages'
-  | 'setBaseColorMode'
-  | 'setClozeColorPreset'
-  | 'setCustomInterfaceFont'
-  | 'setCustomMonospaceFont'
-  | 'setCustomUiFont'
-  | 'setDimImagesInDarkMode'
-  | 'setFontColorPreset'
-  | 'setFrontmatterDisplayMode'
-  | 'setFrontmatterMetaFields'
-  | 'setHighlightColorPreset'
-  | 'setInterfaceFontPreset'
-  | 'setInterfaceFontSize'
-  | 'setMarkdownSyntaxVisibility'
-  | 'setMonospaceFontPreset'
-  | 'setPdfReadingMode'
-  | 'setReadingContentWidth'
-  | 'setReadingLineHeight'
-  | 'setSelectionColorPreset'
-  | 'setUiFontPreset'
-  | 'setWorkspaceSurfaceAssignments'
-  | 'setWorkspaceSurfacePalette'
-  | 'toggleBaseColorMode'
-  | 'toggleEditorDisplayMode'
->;
-
 function createColorPresetActions(state: AppearanceState) {
   return {
     resetAccentColorPreset: () => {
@@ -222,7 +187,7 @@ function createColorPresetActions(state: AppearanceState) {
   };
 }
 
-export function createAppearanceActions(state: AppearanceState): AppearanceActions {
+export function createAppearanceActions(state: AppearanceState) {
   return {
     ...createColorPresetActions(state),
     ...createGeneralAppearanceActions(state),
