@@ -10,6 +10,7 @@ import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalization
 import type { EditorContentChangeMeta, EditorMissingAttachmentResourceHandler, EditorTextAnchorDecoration } from './EditorAdapter';
 import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
 import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
+import { hasLocalizedImageOnlyRemoteWrappingLink } from './markdownImageWrappingLinks';
 
 export interface CodeMirrorEditorAdapterOptions {
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
@@ -69,11 +70,12 @@ export function createReadOnlyExtensions(readOnly: boolean) {
   return [EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)];
 }
 
-function hasRemoteMarkdownImage(content: string) {
-  return collectMarkdownImageReferences(content).some((reference) => {
+function hasLocalizableMarkdownImageContent(content: string) {
+  const hasRemoteMarkdownImage = collectMarkdownImageReferences(content).some((reference) => {
     const parsed = parseMarkdownImageTarget(reference.rawTarget);
     return parsed?.destination.startsWith('http://') || parsed?.destination.startsWith('https://');
   });
+  return hasRemoteMarkdownImage || hasLocalizedImageOnlyRemoteWrappingLink(content);
 }
 
 export function dispatchLiveMarkdownReconfigure(args: {
@@ -143,7 +145,7 @@ export class RemoteImageLocalizationController {
     }
 
     const currentContent = this.args.getContent();
-    if (!hasRemoteMarkdownImage(currentContent)) {
+    if (!hasLocalizableMarkdownImageContent(currentContent)) {
       return;
     }
     if (!shouldAutoLocalizeRemoteImages()) {

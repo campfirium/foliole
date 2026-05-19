@@ -2,6 +2,12 @@ import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../
 import { buildAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { importRemoteImageAttachment } from '../../../shared/platform/remoteImageLocalization';
 
+import {
+  isRemoteImageLinkTarget,
+  removeLocalizedImageOnlyRemoteWrappingLinks,
+  resolveImageWrappingLink
+} from './markdownImageWrappingLinks';
+
 interface MarkdownImageToken {
   alt: string;
   from: number;
@@ -27,71 +33,18 @@ function isRemoteImageUrl(value: string) {
   }
 }
 
-function consumeLabelWhitespaceBefore(markdown: string, index: number) {
-  let cursor = index;
-  while (cursor > 0 && /\s/u.test(markdown[cursor - 1] ?? '')) {
-    cursor -= 1;
-  }
-  return cursor;
-}
-
-function consumeLabelWhitespaceAfter(markdown: string, index: number) {
-  let cursor = index;
-  while (cursor < markdown.length && /\s/u.test(markdown[cursor] ?? '')) {
-    cursor += 1;
-  }
-  return cursor;
-}
-
-function findWrappingLinkEnd(markdown: string, targetStart: number) {
-  let depth = 0;
-  for (let index = targetStart; index < markdown.length; index += 1) {
-    const character = markdown[index];
-    if (character === '\n') {
-      return -1;
-    }
-    if (character === '(') {
-      depth += 1;
-      continue;
-    }
-    if (character !== ')') {
-      continue;
-    }
-    if (depth === 0) {
-      return index + 1;
-    }
-    depth -= 1;
-  }
-  return -1;
-}
-
-function resolveImageOnlyWrappingLink(markdown: string, reference: { end: number; start: number }) {
-  const labelStart = consumeLabelWhitespaceBefore(markdown, reference.start);
-  const labelEnd = consumeLabelWhitespaceAfter(markdown, reference.end);
-  if (markdown[labelStart - 1] !== '[' || markdown[labelEnd] !== ']' || markdown[labelEnd + 1] !== '(') {
-    return null;
-  }
-  const linkEnd = findWrappingLinkEnd(markdown, labelEnd + 2);
-  if (linkEnd < 0) {
-    return null;
-  }
-  return {
-    from: labelStart - 1,
-    to: linkEnd
-  };
-}
-
 function collectRemoteMarkdownImages(markdown: string) {
   const matches: MarkdownImageToken[] = [];
 
   for (const reference of collectMarkdownImageReferences(markdown)) {
     const parsedTarget = parseMarkdownImageTarget(reference.rawTarget);
     if (parsedTarget && isRemoteImageUrl(parsedTarget.destination)) {
-      const wrappingLink = resolveImageOnlyWrappingLink(markdown, reference);
-      const from = wrappingLink?.from ?? reference.start;
-      const to = wrappingLink?.to ?? reference.end;
+      const wrappingLink = resolveImageWrappingLink(markdown, reference);
+      const imageWrappingLink = wrappingLink && isRemoteImageLinkTarget(wrappingLink.target) ? wrappingLink : null;
+      const from = imageWrappingLink?.from ?? reference.start;
+      const to = imageWrappingLink?.to ?? reference.end;
       matches.push({
-        alt: reference.altText,
+        alt: imageWrappingLink?.caption || reference.altText,
         from,
         raw: markdown.slice(from, to),
         sourceUrl: parsedTarget.destination,
@@ -172,9 +125,10 @@ function layoutLocalizedMarkdownImage(input: {
 }
 
 export async function localizeRemoteMarkdownImages(nodeId: string, markdown: string) {
-  const matches = collectRemoteMarkdownImages(markdown);
+  const markdownWithoutStaleWrappingLinks = removeLocalizedImageOnlyRemoteWrappingLinks(markdown);
+  const matches = collectRemoteMarkdownImages(markdownWithoutStaleWrappingLinks);
   if (matches.length === 0) {
-    return markdown;
+    return markdownWithoutStaleWrappingLinks;
   }
 
   const resultByUrl = new Map<
@@ -210,24 +164,24 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
     if (localization) {
       const layout = layoutLocalizedMarkdownImage({
         imageMarkdown: buildLocalizedMarkdownImage(match, localization.attachmentId, localization.originalName),
-        markdown,
+        markdown: markdownWithoutStaleWrappingLinks,
         previousLocalizedImageWasSmall,
         range: match,
         size: localization.intrinsicSize,
-        textBeforeImage: markdown.slice(cursor, match.from)
+        textBeforeImage: markdownWithoutStaleWrappingLinks.slice(cursor, match.from)
       });
       localized += layout.before;
       localized += layout.image;
       cursor = layout.cursor;
       previousLocalizedImageWasSmall = layout.isSmall;
     } else {
-      localized += markdown.slice(cursor, match.from);
+      localized += markdownWithoutStaleWrappingLinks.slice(cursor, match.from);
       localized += match.raw;
       cursor = match.to;
       previousLocalizedImageWasSmall = false;
     }
   }
 
-  localized += markdown.slice(cursor);
+  localized += markdownWithoutStaleWrappingLinks.slice(cursor);
   return localized;
 }

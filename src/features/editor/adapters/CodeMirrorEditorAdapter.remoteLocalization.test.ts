@@ -139,6 +139,22 @@ it('removes image-only wrapping links when localizing remote markdown images', a
   adapter.destroy();
 });
 
+it('cleans stale remote wrappers around already localized images after the node opens', async () => {
+  const { adapter, onChange } = createAdapter();
+
+  adapter.setContent(
+    '[\n\n![image](asset://hash-1.png)\n\nimage1971×1242 140 KB](https://cdn.example.com/uploads/original/2X/f/cover.png)\n正文'
+  );
+  adapter.setNodeId('node-1');
+  await waitForLocalization();
+
+  expect(adapter.getContent()).toBe('![image1971×1242 140 KB](asset://hash-1.png)\n正文');
+  expect(importRemoteImageAttachment).not.toHaveBeenCalled();
+  expect(onChange).toHaveBeenLastCalledWith('![image1971×1242 140 KB](asset://hash-1.png)\n正文', { nodeId: 'node-1' });
+
+  adapter.destroy();
+});
+
 it('skips remote download when the setting is turned off', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'false');
   const { adapter } = createAdapter();
