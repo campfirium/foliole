@@ -13,6 +13,7 @@ interface PaletteCommandRunnerArgs {
   createTopic: () => void;
   createVirtualNode: () => void;
   addSelectionNote: () => void;
+  repairTable: () => boolean;
   enterPriorityMode: () => void;
   exportCurrentArticle: () => Promise<boolean>;
   findInTopic: () => void;
@@ -103,6 +104,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     createTopic: args.createTopic,
     createVirtualNode: args.createVirtualNode,
     addSelectionNote: args.addSelectionNote,
+    repairTable: args.repairTable,
     enterPriorityMode: args.enterPriorityMode,
     exportCurrentArticle: () => {
       void args.exportCurrentArticle();

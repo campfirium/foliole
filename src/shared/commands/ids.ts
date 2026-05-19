@@ -20,6 +20,7 @@ export const APP_COMMAND_IDS = {
   createSelectionHighlight: 'editor.createSelectionHighlight',
   createSelectionCloze: 'editor.createSelectionCloze',
   addSelectionNote: 'editor.addSelectionNote',
+  repairTable: 'editor.repairTable',
   goParent: 'navigation.goParent',
   toggleEditorDisplayMode: 'editor.toggleDisplayMode',
   toggleImmersiveMode: 'editor.toggleImmersiveMode',

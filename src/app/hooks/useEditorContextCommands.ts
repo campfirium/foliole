@@ -8,11 +8,11 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { getSelectionCommandPayload, type SelectionCommandPayload } from '../contextCommands';
 
 import { createPayloadSelectionRunner } from './editorPayloadSelectionRunner';
+import { repairEditorTable } from './editorRepairTableCommand';
 import { createSelectionAnnotationHandlers } from './editorSelectionAnnotationHandlers';
 import { createSelectionHandlers } from './editorSelectionCommandActions';
 import { createExistingHighlightHandlers } from './existingHighlightContextHandlers';
 import {
-  buildEditorContextCommandsResult,
   createHandleEditorContextMenu,
   createImageCommandHandlers,
   createSelectionCommandRunner,
@@ -176,7 +176,7 @@ function buildEditorCommandsResult(args: {
   const selectionAnnotationHandlers = createSelectionAnnotationHandlers(args);
   const existingHighlightHandlers = createExistingHighlightHandlers(args);
 
-  return buildEditorContextCommandsResult({
+  return {
     closeContextMenu: args.closeContextMenu,
     contextMenu: args.contextMenu,
     handleCopyImage: imageHandlers.handleCopyImage,
@@ -189,9 +189,19 @@ function buildEditorCommandsResult(args: {
     handleCreateNoteFromPayload: args.selectionHandlers.handleCreateNoteFromPayload,
     handleDeleteExistingHighlight: existingHighlightHandlers.handleDeleteExistingHighlight,
     handleOpenExistingHighlight: existingHighlightHandlers.handleOpenExistingHighlight,
+    handleRepairTable: () => {
+      const repaired = repairEditorTable({
+        activeNodeId: args.activeNodeId,
+        editorRef: args.editorRef,
+        selection: args.contextMenu?.kind === 'selection' ? args.contextMenu.tableRepairSelection : null,
+        updateNodeContent: args.updateNodeContent
+      });
+      if (repaired) args.closeContextMenu();
+      return repaired;
+    },
     handleCutImage: imageHandlers.handleCutImage,
     handleDeleteImage: imageHandlers.handleDeleteImage,
     handleEditorContextMenu: args.handleEditorContextMenu,
     handleExportImage: imageHandlers.handleExportImage
-  });
+  };
 }

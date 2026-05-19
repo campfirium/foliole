@@ -78,6 +78,7 @@ export function buildDocumentSectionProps(
     onCreateNote: props.onCreateNote,
     onDeleteExistingHighlight: props.onDeleteExistingHighlight,
     onOpenExistingHighlight: props.onOpenExistingHighlight,
+    onRepairTable: props.onRepairTable,
     onAdjustExistingHighlightRange: props.onAdjustExistingHighlightRange,
     onCreatePdfHighlight: props.onCreatePdfHighlight,
     onCutImage: props.onCutImage,

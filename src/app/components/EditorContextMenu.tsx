@@ -4,38 +4,13 @@ import { createPortal } from 'react-dom';
 
 import { cn } from '../../shared/lib/utils';
 import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem, appFloatingSurfaceClassName } from '../../shared/ui';
-import type { SelectionCommandPayload } from '../contextCommands';
-import { resolveLongClozeGuardAction, type LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
+import { resolveLongClozeGuardAction } from '../hooks/editorClozeGuardrail';
 
 import { AnnotationNotePanel } from './AnnotationNotePanel';
 import { ClozeGuardPanel } from './ClozeGuardPanel';
+import type { EditorContextMenuProps } from './editorContextMenuProps';
 import { ExistingHighlightToolbar } from './ExistingHighlightToolbar';
 import { WebLookupSelectionMenu } from './WebLookupSelectionMenu';
-
-export interface EditorContextMenuProps {
-  kind: 'image' | 'selection';
-  left: number;
-  initialNoteOpen?: boolean;
-  mode?: 'annotation-toolbar' | 'context-menu' | 'existing-highlight-toolbar';
-  notePanelLeft?: number;
-  notePanelTop?: number;
-  selectionPayload?: SelectionCommandPayload | null | undefined;
-  top: number;
-  webLookupDocumentText?: string | null | undefined;
-  webLookupPayload?: SelectionCommandPayload | null | undefined;
-  onClose: () => void;
-  onCopyImage: () => void;
-  onCreateHighlight: () => void;
-  onCreateNote: (note: string) => void;
-  onDeleteExistingHighlight: () => void;
-  onOpenExistingHighlight: () => void;
-  onCreateCloze: (options?: LongClozeGuardOptions) => void;
-  onCreateClozeFromPayload: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
-  onCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
-  onCutImage: () => void;
-  onDeleteImage: () => void;
-  onExportImage: () => void;
-}
 
 function AnnotationToolbarButton(props: {
   children: JSX.Element;
@@ -220,6 +195,8 @@ export function EditorContextMenu(props: EditorContextMenuProps) {
         documentText={props.webLookupDocumentText}
         left={props.left}
         onClose={props.onClose}
+        onRepairTable={props.onRepairTable}
+        repairTableAvailable={props.repairTableAvailable}
         selectionPayload={props.webLookupPayload}
         top={props.top}
       />

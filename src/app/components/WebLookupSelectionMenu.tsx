@@ -1,4 +1,4 @@
-import { MessageCircle, Search } from 'lucide-react';
+import { MessageCircle, Search, Table } from 'lucide-react';
 
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import {
@@ -15,6 +15,8 @@ interface WebLookupSelectionMenuProps {
   documentText?: string | null | undefined;
   left: number;
   onClose: () => void;
+  onRepairTable?: () => void;
+  repairTableAvailable?: boolean;
   selectionPayload?: SelectionCommandPayload | null | undefined;
   top: number;
 }
@@ -43,12 +45,23 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
       resolved.action !== null
     ));
 
-  if (entries.length === 0) {
+  if (entries.length === 0 && !props.repairTableAvailable) {
     return null;
   }
 
   return (
     <AppSelectionDropdownMenu left={props.left} onClose={props.onClose} outsidePointerMode="passthrough" top={props.top}>
+      {props.repairTableAvailable ? (
+        <AppSelectionDropdownMenuItem
+          onClick={() => {
+            props.onRepairTable?.();
+          }}
+        >
+          <Table aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} />
+          <span className="min-w-0 truncate">Repair Table</span>
+        </AppSelectionDropdownMenuItem>
+      ) : null}
+      {props.repairTableAvailable && entries.length > 0 ? <SelectionMenuSeparator /> : null}
       {entries.map(({ action, entry }) => (
         <AppSelectionDropdownMenuItem
           key={entry.id}

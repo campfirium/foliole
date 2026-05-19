@@ -21,6 +21,7 @@ interface RunAppCommandActions {
   createSelectionHighlight: () => void;
   createSelectionCloze: () => void;
   addSelectionNote: () => void;
+  repairTable: () => boolean | void;
   openImportManagement: () => void;
   goBack: () => void;
   goForward: () => void;
@@ -101,6 +102,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.createSelectionHighlight]: actions.createSelectionHighlight,
     [APP_COMMAND_IDS.createSelectionCloze]: actions.createSelectionCloze,
     [APP_COMMAND_IDS.addSelectionNote]: actions.addSelectionNote,
+    [APP_COMMAND_IDS.repairTable]: actions.repairTable,
     [APP_COMMAND_IDS.restartApp]: actions.restartApp,
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,
     [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,

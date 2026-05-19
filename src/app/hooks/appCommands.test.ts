@@ -16,6 +16,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     createTopic: () => undefined,
     createVirtualNode: () => undefined,
     addSelectionNote: () => undefined,
+    repairTable: () => undefined,
     enterPriorityMode: () => undefined,
     exportCurrentArticle: () => undefined,
     findInTopic: () => undefined,
@@ -69,6 +70,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canExportCurrentArticle: true,
     canAnnotateSelection: true,
     canMergeHighlightsIntoTopic: true,
+    canRepairTable: true,
     canRenameNode: true,
     canReimportSelectedTopic: true,
     canResetImportData: true,
@@ -125,6 +127,7 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createSelectionHighlight)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createSelectionCloze)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.addSelectionNote)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.repairTable)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
 }
 
@@ -211,6 +214,14 @@ describe('runAppCommand basics', () => {
     expectCommandRuns(APP_COMMAND_IDS.renameNode, { renameNode });
 
     expect(renameNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs repair table through the shared command handler', () => {
+    const repairTable = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.repairTable, { repairTable });
+
+    expect(repairTable).toHaveBeenCalledTimes(1);
   });
 
 });

@@ -137,6 +137,7 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onOpenSelectionNote: props.editorCommands.onOpenSelectionNote,
     onDeleteExistingHighlight: props.editorCommands.onDeleteExistingHighlight,
     onOpenExistingHighlight: props.editorCommands.onOpenExistingHighlight,
+    onRepairTable: props.editorCommands.onRepairTable,
     onAdjustExistingHighlightRange: props.editorCommands.onAdjustExistingHighlightRange,
     onCreateSelectionHighlight: props.editorCommands.onCreateSelectionHighlight,
     onToggleSelectionHighlight: props.editorCommands.onToggleSelectionHighlight,

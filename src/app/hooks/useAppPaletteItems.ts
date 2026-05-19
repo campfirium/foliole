@@ -108,6 +108,7 @@ function buildPaletteOptions(
     canImportFile: args.formalImportAvailable,
     canImportFolder: args.formalImportAvailable,
     canMergeHighlightsIntoTopic: canUseCurrentTopic,
+    canRepairTable: canAnnotateSelection(args),
     canRenameNode: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
     canReimportSelectedTopic: canReimportSelectedTopic(args),
     canResetImportData: args.formalImportAvailable,
