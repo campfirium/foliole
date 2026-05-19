@@ -41,6 +41,23 @@ describe('markdownImageMatches', () => {
       }
     ]);
   });
+});
+
+describe('markdownImageMatches data url safety', () => {
+  it('collects base64 svg data url image sources from exported markdown', () => {
+    const markdown = '![取消高亮](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiPjwvc3ZnPg==)';
+
+    expect(collectImageMatches(0, markdown)).toEqual([
+      {
+        attachmentId: null,
+        alt: '取消高亮',
+        display: 'block',
+        from: 0,
+        source: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiPjwvc3ZnPg==',
+        to: markdown.length
+      }
+    ]);
+  });
 
   it('does not collect unsafe data url image sources', () => {
     expect(collectImageMatches(0, '![Inline](data:text/html;base64,PGgxPk5vPC9oMT4=)')).toEqual([]);

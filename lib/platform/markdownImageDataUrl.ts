@@ -2,6 +2,7 @@ const SAFE_MARKDOWN_DATA_IMAGE_MIME_TYPES = new Set([
   'image/gif',
   'image/jpeg',
   'image/png',
+  'image/svg+xml',
   'image/webp'
 ]);
 

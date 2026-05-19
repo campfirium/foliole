@@ -51,6 +51,10 @@ describe('markdownImagePresentation', () => {
     expectBrowserImagePlan('data:image/png;base64,abc123');
   });
 
+  it('builds svg data image render state for exported inline icons', () => {
+    expectBrowserImagePlan('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiPjwvc3ZnPg==');
+  });
+
   it('does not build a browser image source for unsafe data resources', () => {
     expect(
       buildMarkdownImageRenderPlan({
