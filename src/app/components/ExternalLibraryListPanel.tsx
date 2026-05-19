@@ -38,7 +38,13 @@ export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
   const contentSort = useWorkspaceContentSort();
   const lastOpenedAtByPath = useExternalDocumentLastOpenedAt();
   const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['modifiedAt', 'lastOpenedAt', 'name']);
-  const documents = useExternalDocumentListState(props, searchQuery, normalizedSort, lastOpenedAtByPath);
+  const documents = useExternalDocumentListState(
+    props,
+    searchQuery,
+    normalizedSort,
+    lastOpenedAtByPath,
+    contentSort.sortRefreshVersion
+  );
 
   return (
     <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
@@ -65,7 +71,8 @@ function useExternalDocumentListState(
   props: ExternalLibraryListPanelProps,
   searchQuery: string,
   sort: ReturnType<typeof useWorkspaceContentSort>['sort'],
-  lastOpenedAtByPath: Record<string, string | undefined>
+  lastOpenedAtByPath: Record<string, string | undefined>,
+  sortRefreshVersion: number
 ) {
   const activeFolderId = props.selection.kind === 'root' ? null : props.selection.folderId;
   const selectedFolder = activeFolderId ? props.folders.find((folder) => folder.id === activeFolderId) ?? null : null;
@@ -87,6 +94,7 @@ function useExternalDocumentListState(
   const documents = useStableWorkspaceContentItems({
     getItemId: (document) => document.absolutePath,
     items: filteredDocuments,
+    refreshKey: sortRefreshVersion,
     scopeKey: activeFolderId ?? 'root',
     sort,
     sortItems: (items) => sortExternalDocuments(items, sort, lastOpenedAtByPath)

@@ -98,3 +98,59 @@ it('updates a controlled sort direction through the toolbar menu', () => {
 
   expect(getRenderedEntryTitles()).toEqual(['First imported', 'Last imported']);
 });
+
+it('refreshes last-opened order when the active sort option is selected again', () => {
+  function ControlledFolderList() {
+    const [sortKey, setSortKey] = useState<FolderListSortKey>('dateLastOpened');
+    const [sortDirection, setSortDirection] = useState<FolderListSortDirection>('desc');
+    const [nodeViewById, setNodeViewById] = useState<Record<string, NodeViewState | undefined>>({
+      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-01T09:00:00.000Z' },
+      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' }
+    });
+    const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
+    const children = [
+      createNode({ id: 'node-1', title: 'Earlier' }),
+      createNode({ id: 'node-2', title: 'Latest' })
+    ];
+    const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
+
+    return (
+      <>
+        <button
+          onClick={() =>
+            setNodeViewById({
+              'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' },
+              'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' }
+            })
+          }
+          type="button"
+        >
+          Simulate opened node
+        </button>
+        <FolderListView
+          folderNodeId="folder-1"
+          nodeOrder={['folder-1', ...children.map((node) => node.id)]}
+          nodeViewById={nodeViewById}
+          nodesById={nodesById}
+          onChangeSortDirection={setSortDirection}
+          onChangeSortKey={setSortKey}
+          onSelectNode={() => undefined}
+          sortDirection={sortDirection}
+          sortKey={sortKey}
+        />
+      </>
+    );
+  }
+
+  render(<ControlledFolderList />);
+
+  expect(getRenderedEntryTitles()).toEqual(['Latest', 'Earlier']);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Simulate opened node' }));
+  expect(getRenderedEntryTitles()).toEqual(['Latest', 'Earlier']);
+
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Last opened' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Last opened' }));
+
+  expect(getRenderedEntryTitles()).toEqual(['Earlier', 'Latest']);
+});

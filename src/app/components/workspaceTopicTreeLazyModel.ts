@@ -14,7 +14,7 @@ import {
   useTopicRows
 } from './workspaceTopicTreeLazyRows';
 
-export function useWorkspaceTopicTreeLazyModel(args: {
+interface WorkspaceTopicTreeLazyModelArgs {
   activeFolderId: string;
   activeNodeId: string | null;
   childrenByParent: TopicChildrenByParent;
@@ -22,13 +22,17 @@ export function useWorkspaceTopicTreeLazyModel(args: {
   itemIds: string[];
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodesById: WorkspaceListNodesById;
+  sortRefreshVersion?: number;
   sort: WorkspaceContentSortState;
-}) {
+}
+
+export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModelArgs) {
   const [searchQuery, setSearchQuery] = useState('');
   const contentSort = normalizeWorkspaceContentSort(args.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name']);
   const rootIds = useStableWorkspaceContentItems({
     getItemId: (nodeId) => nodeId,
     items: args.itemIds,
+    refreshKey: args.sortRefreshVersion,
     scopeKey: `${args.activeFolderId}:root`,
     sort: contentSort,
     sortItems: (ids) => sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeViewById)
