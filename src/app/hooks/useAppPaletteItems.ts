@@ -120,7 +120,7 @@ function buildPaletteOptions(
     canToggleImmersiveMode: canToggleImmersiveMode(args),
     canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
     canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
-    canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
+    canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode || args.reviewDueCount > 0,
     canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,
     canDeferReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canCompleteReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
@@ -145,6 +145,7 @@ export function useAppPaletteItems(args: {
   isStudyMode: boolean;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   reviewSession: ReturnType<typeof useWorkspaceSelectors>['reviewSession'];
+  reviewDueCount: number;
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
   ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'appActionHistory' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
 }) {

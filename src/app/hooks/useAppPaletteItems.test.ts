@@ -6,7 +6,7 @@ import { createInitialWorkspaceState } from '../../store/workspaceStore';
 
 import { useAppPaletteItems } from './useAppPaletteItems';
 
-function createPaletteArgs(activeNodeId: string) {
+function createPaletteArgs(activeNodeId: string | null) {
   const initial = createInitialWorkspaceState(new Date('2026-05-18T00:00:00.000Z'));
   return {
     activeNodeId,
@@ -26,6 +26,7 @@ function createPaletteArgs(activeNodeId: string) {
     nav: { canGoBack: false, canGoForward: false, canGoParent: false },
     resolvedBaseColorMode: 'light' as const,
     reviewSession: { isAnswerRevealed: false },
+    reviewDueCount: 0,
     study: { canStartStudyMode: false },
     ws: {
       appActionHistory: initial.appActionHistory,
@@ -49,6 +50,20 @@ it('enables developer source reimport for the current non-folder topic surface',
   );
 
   expect(result.current.find((item) => item.id === APP_COMMAND_IDS.reimportSelectedTopic)).toMatchObject({
+    enabled: true
+  });
+});
+
+it('enables review mode from the directory list when due review items exist without an active topic', () => {
+  const { result } = renderHook(() =>
+    useAppPaletteItems({
+      ...createPaletteArgs(null),
+      activeNodeId: null,
+      reviewDueCount: 2
+    } as unknown as Parameters<typeof useAppPaletteItems>[0])
+  );
+
+  expect(result.current.find((item) => item.id === APP_COMMAND_IDS.startStudyMode)).toMatchObject({
     enabled: true
   });
 });
