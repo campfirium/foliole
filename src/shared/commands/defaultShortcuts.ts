@@ -33,7 +33,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.revealReviewAnswer]: { primary: { key: ' ' } },
   [APP_COMMAND_IDS.gradeReviewAgain]: { primary: { key: '1' } },
   [APP_COMMAND_IDS.gradeReviewHard]: { primary: { key: '2' } },
-  [APP_COMMAND_IDS.gradeReviewGood]: { primary: { key: '3' } },
+  [APP_COMMAND_IDS.gradeReviewGood]: { primary: { key: '3' }, secondary: { key: ' ' } },
   [APP_COMMAND_IDS.gradeReviewEasy]: { primary: { key: '4' } },
   [APP_COMMAND_IDS.readingReviewLater]: { primary: { key: 'q' }, secondary: { key: '1' } },
   [APP_COMMAND_IDS.readingReviewRead]: { primary: { key: 'w' }, secondary: { key: ' ' }, tertiary: { key: '3' } },
