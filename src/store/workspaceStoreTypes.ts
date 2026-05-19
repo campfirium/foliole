@@ -48,6 +48,7 @@ export interface WorkspaceState {
   redoWorkspaceAction: (now?: string) => boolean;
   relearnNode: (nodeId: string, now?: string) => boolean;
   startReviewSession: (now?: string) => boolean;
+  resumeReviewSession: (now?: string) => boolean;
   setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
@@ -98,6 +99,8 @@ export interface WorkspacePersistedState {
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  reviewSession: ReviewSessionState;
+  reviewSessionMode: ReviewSessionMode;
   trashedNodeDeletedAtById: Record<string, string | undefined>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
@@ -112,9 +115,14 @@ export interface WorkspaceLayoutState {
 }
 
 export interface ReviewSessionState {
+  completedAt?: string | null;
+  continueNodeId?: string | null;
   currentNodeId: string | null;
   isAnswerRevealed: boolean;
   queueNodeIds: string[];
+  readTopicCount?: number;
+  reviewedItemCount?: number;
+  sessionStartedAt?: string | null;
   totalNodeCount: number;
 }
 
