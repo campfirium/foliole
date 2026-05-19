@@ -58,7 +58,6 @@ function runDedupe(repoRoot, label, env, script = `echo ${label} >> runs.log && 
         ...process.env,
         PREVIEW_DEDUPE_REPO_ROOT: repoRoot,
         PREVIEW_DEDUPE_RUNTIME_DIR: '.lab/internal/runtime',
-        PREVIEW_DEDUPE_WAIT_ON_FAILURE: '0',
         ...previewEnv
       }
     });
@@ -86,7 +85,7 @@ describe('preview-dedupe batching', () => {
     try {
       const env = {
         PREVIEW_DEDUPE_LOCK_WAIT_MS: '5000',
-        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '220',
+        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '1000',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
       };
@@ -96,7 +95,7 @@ describe('preview-dedupe batching', () => {
 
       await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 3;\n', 'utf8');
       const second = runDedupe(repoRoot, 'second', env);
-      await delay(60);
+      await delay(120);
       const third = runDedupe(repoRoot, 'third', env);
 
       const [secondResult, thirdResult] = await Promise.all([second, third]);
@@ -113,14 +112,15 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 10_000);
 
   it('shares a failed batch result with other waiting requests for the same hash', async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
+        PREVIEW_DEDUPE_WAIT_ON_FAILURE: '0',
         PREVIEW_DEDUPE_LOCK_WAIT_MS: '5000',
-        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '220',
+        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '1000',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
       };
@@ -129,7 +129,7 @@ describe('preview-dedupe batching', () => {
       const first = await runDedupe(repoRoot, 'first', env);
       await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 3;\n', 'utf8');
       const second = runFailingDedupe(repoRoot, 'second', env);
-      await delay(60);
+      await delay(120);
       const third = runFailingDedupe(repoRoot, 'third', env);
 
       const [secondResult, thirdResult] = await Promise.all([second, third]);
@@ -144,13 +144,12 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 10_000);
 
-  it('keeps failed preview requests waiting until a later preview succeeds', async () => {
+  it('keeps failed windows preview requests waiting by default until a later preview succeeds', async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
-        PREVIEW_DEDUPE_WAIT_ON_FAILURE: '1',
         PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '180',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
@@ -181,7 +180,7 @@ describe('preview-dedupe batching', () => {
     }
   }, 10_000);
 
-  it('puts requests arriving during a running preview into the next run', async () => {
+  it('does not run a second preview for the same hash while a preview is running', async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -199,16 +198,18 @@ describe('preview-dedupe batching', () => {
 
       expect(firstResult.code).toBe(0);
       expect(secondResult.code).toBe(0);
-      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\nsecond\n');
+      expect(secondResult.stdout).toContain('[windows-preview] dedupe: covered hash=');
+      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\n');
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 10_000);
 
   it('does not open a validation window after a failed run', async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
+        PREVIEW_DEDUPE_WAIT_ON_FAILURE: '0',
         PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '220',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'

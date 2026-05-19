@@ -7,11 +7,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import {
-  runScheduledPreview,
-  shouldForcePreview,
-} from './preview-dedupe-scheduler.mjs';
+import { runScheduledPreview, shouldForcePreview } from './preview-dedupe-scheduler.mjs';
 import { buildDiagnostics, formatDiagnosticsSummary } from './preview-dedupe-diagnostics.mjs';
+import { appendPreviewEvent } from './preview-dedupe-event-log.mjs';
 
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = path.resolve(process.env.PREVIEW_DEDUPE_REPO_ROOT ?? DEFAULT_REPO_ROOT);
@@ -21,6 +19,7 @@ const TARGET_PATHS = {
     'android/',
     'scripts/preview-dedupe-scheduler.mjs',
     'scripts/preview-dedupe-state-store.mjs',
+    'scripts/preview-dedupe-event-log.mjs',
     'scripts/preview-dedupe.mjs',
     'scripts/android/',
     'src/companion/',
@@ -36,6 +35,7 @@ const TARGET_PATHS = {
     'electron/',
     'scripts/preview-dedupe-scheduler.mjs',
     'scripts/preview-dedupe-state-store.mjs',
+    'scripts/preview-dedupe-event-log.mjs',
     'scripts/preview-dedupe.mjs',
     'scripts/windows/',
     'src/app/',
@@ -72,9 +72,7 @@ function runGitBuffer(args) {
 }
 
 function isTargetPath(target, filePath) {
-  return TARGET_PATHS[target]?.some((targetPath) => (
-    targetPath.endsWith('/') ? filePath.startsWith(targetPath) : filePath === targetPath
-  )) ?? true;
+  return TARGET_PATHS[target]?.some((targetPath) => (targetPath.endsWith('/') ? filePath.startsWith(targetPath) : filePath === targetPath)) ?? true;
 }
 
 function listUntrackedFiles(target) {
@@ -185,21 +183,30 @@ async function logDiagnostics(target, stage) {
   }
 }
 
+function logEvent(target, event, fields) {
+  return appendPreviewEvent({ event, fields, runtimeDir: runtimeDir(), target });
+}
+
 async function runPreviewFlow({ command, requireActualPreview, target }) {
   const currentHash = await workspaceHash(target);
   const storedHash = await readStoredHash(target);
   const forced = shouldForcePreview();
-  if (!forced && !requireActualPreview && storedHash === currentHash) {
+  await logEvent(target, 'hash-compared', { currentHash, forced, requireActualPreview, storedHash: storedHash || null });
+  if (!forced && storedHash === currentHash) {
     if (canSkipCoveredPreview(target)) {
-      console.log(`[${target}-preview] dedupe: covered hash=${currentHash}`);
+      await logEvent(target, 'real-preview-skipped', { action: 'skip-real-preview', currentHash, reason: 'covered-running-runtime' });
+      console.log(`[${target}-preview] dedupe: covered hash=${currentHash} action=skip-real-preview`);
       console.log(`[${target}-preview] status: ${target === 'windows' ? 'STARTED' : 'SYNCED'}`);
       return { exitCode: 0, hash: currentHash, previewed: target === 'windows' };
     }
+    await logEvent(target, 'covered-runtime-stale', { currentHash, reason: 'covered-hash-runtime-not-running' });
     console.log(`[${target}-preview] dedupe: stale-covered hash=${currentHash}`);
   }
 
+  await logEvent(target, 'real-preview-claimed', { currentHash, forced, requireActualPreview, storedHash: storedHash || null });
   console.log(`[${target}-preview] dedupe: claimed hash=${currentHash}`);
   const exitCode = await runCommand(command);
+  await logEvent(target, 'real-preview-finished', { currentHash, exitCode });
   if (exitCode === 0) {
     await writeStoredHash(target, currentHash);
   }

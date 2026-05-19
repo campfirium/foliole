@@ -136,18 +136,15 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
     }
   });
 
-  it('classifies mixed renderer and electron changes as Class D full restart', async () => {
+  it('classifies mixed renderer and electron changes as a runtime restart intent', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-regression-'));
+    const consumer = startIntentConsumer(tempRoot, 'restart', REPO_ROOT);
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
           '  echo "[windows-restart-client] status: RUNNING trust=OK head=current-head"',
-          '  exit 0',
-          'fi',
-          'if [ "${WINDOWS_CLIENT_ACTION}" = "full-restart" ]; then',
-          '  echo "[windows-restart-client] status: RESTARTED mode=full-shell-restart shell_pid=101 runtime_pid=202"',
           '  exit 0',
           'fi',
           'exit 1'
@@ -166,12 +163,13 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('reason: Class D: working tree runtime and renderer changes require shell restart');
+      expect(result.stdout).toContain('reason: Class B: working tree runtime and renderer changes detected');
       expect(result.stdout).toContain('[windows-sync] include electron-dist');
-      expect(result.stdout).toContain('selected action: full-restart');
+      expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: STARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'full-restart']);
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
+      consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
