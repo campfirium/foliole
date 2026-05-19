@@ -33,6 +33,12 @@ describe('codex task completion guard', () => {
     expect(() => assertAgentCompletionMessage(message)).toThrow('agent reported preview failure');
   });
 
+  it('rejects final reports that skip a required Windows preview', () => {
+    const message = 'R：未跑 Windows 预览，因为当前桌面 lint/typecheck 以及一个既有 heading 渲染断言仍有非本轮红灯。';
+
+    expect(() => assertAgentCompletionMessage(message)).toThrow('agent reported preview failure');
+  });
+
   it('rejects synced-only Windows preview reports that still claim pushed', () => {
     const message = ['V：测试、lint、文件预算通过，Windows 预览已同步；但自动截图服务现在连不上。', 'pushed'].join('\n');
 
