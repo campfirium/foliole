@@ -122,14 +122,14 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('selected action: renderer-reload-intent');
       expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
-      expect(result.stdout).toContain('status: SYNCED');
+      expect(result.stdout).toContain('[windows-preview] status: STARTED');
       expect(rendererReloadDelivery).toMatchObject({
         nonce: 1,
         head: 'current-head',
         reason: 'Class A: renderer-only sync path',
         target: 'electron-dev-renderer'
       });
-      expect(await readActions(actionLog)).toEqual(['status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });

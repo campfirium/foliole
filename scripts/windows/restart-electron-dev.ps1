@@ -823,10 +823,11 @@ function Wait-ElectronHealthy {
     [int]$MaxSeconds = 10
   )
 
+  $shellExited = $false
   for ($second = 0; $second -lt $MaxSeconds; $second += 1) {
     $shell = Get-ProcessById -ProcessId $ShellPid
     if ($null -eq $shell) {
-      return @{ ok = $false; reason = "shell-exited" }
+      $shellExited = $true
     }
 
     $runtime = Get-TrackedRuntimeProcess -WorkDir $WorkDir
@@ -846,6 +847,9 @@ function Wait-ElectronHealthy {
     Start-Sleep -Seconds 1
   }
 
+  if ($shellExited) {
+    return @{ ok = $false; reason = "shell-exited" }
+  }
   return @{ ok = $false; reason = "runtime-not-detected" }
 }
 

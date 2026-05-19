@@ -110,7 +110,7 @@ describe('task-finish helpers', () => {
       .mockResolvedValueOnce({
         code: 0,
         stderr: '',
-        stdout: '[windows-preview] status: SYNCED\n'
+        stdout: '[windows-preview] status: STARTED\n'
       });
 
     const result = await runTaskFinish({
@@ -124,7 +124,7 @@ describe('task-finish helpers', () => {
       attemptCount: 2,
       executed: true,
       exitCode: 0,
-      previewStatus: 'SYNCED',
+      previewStatus: 'STARTED',
       status: 'EXECUTED'
     });
   });
@@ -160,11 +160,11 @@ describe('task-finish helpers', () => {
     });
   });
 
-  it('returns failure when preview fails', async () => {
+  it('returns failure when windows preview only syncs without starting', async () => {
     const runWindowsPreview = vi.fn().mockResolvedValue({
-      code: 1,
-      stderr: 'preview failed',
-      stdout: ''
+      code: 0,
+      stderr: '',
+      stdout: '[windows-preview] status: SYNCED\n'
     });
     const collectDiagnosticsMock = vi.fn().mockResolvedValue({ latestBootEvent: { stage: 'missing' } });
 
@@ -181,7 +181,7 @@ describe('task-finish helpers', () => {
       },
       executed: true,
       exitCode: 1,
-      previewStatus: null,
+      previewStatus: 'SYNCED',
       status: 'FAILED'
     });
   });
