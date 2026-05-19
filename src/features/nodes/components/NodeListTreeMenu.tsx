@@ -10,8 +10,8 @@ import { isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
-import { hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
-import { createDismissNodeAction, createReturnNodeAction } from './nodeListMenuActions';
+import { hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
+import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction } from './nodeListMenuActions';
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { requestNodeRename } from './NodeTreeRowRename';
@@ -136,6 +136,13 @@ function createMergeHighlightsIntoTopicHandler(args: {
   };
 }
 
+function resolveCreateCommands(menuState: ReturnType<typeof buildMenuState>) {
+  if (menuState.showVirtualCreateOnly || isVirtualNode(menuState.primaryTarget)) {
+    return [];
+  }
+  return resolveAllowedFolderTopicItemCommands(menuState.isRootMenu ? null : menuState.primaryTarget?.kind ?? null);
+}
+
 export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
   if (!props.contextMenu.menuPosition) {
     return null;
@@ -145,13 +152,7 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
 
   return (
     <NodeListContextMenu
-      createCommands={
-        menuState.showVirtualCreateOnly
-          ? []
-          : isVirtualNode(menuState.primaryTarget)
-            ? []
-            : resolveAllowedFolderTopicItemCommands(menuState.isRootMenu ? null : menuState.primaryTarget?.kind ?? null)
-      }
+      createCommands={resolveCreateCommands(menuState)}
       isTrashMenu={props.contextMenu.contextMenuMode === 'trash'}
       left={props.contextMenu.menuPosition.left}
       onClose={props.contextMenu.closeContextMenu}
@@ -166,6 +167,12 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
         props.contextMenu.closeContextMenu()
       )}
       onDeleteNodePermanently={() => (props.deleteNodesPermanently(menuState.contextTargets), props.contextMenu.closeContextMenu())}
+      onDismissEntireTopic={createDismissEntireTopicAction(
+        menuState.primaryTargetId,
+        props.nodesById,
+        props.dismissNode,
+        props.contextMenu.closeContextMenu
+      )}
       onDismissNode={createDismissNodeAction(menuState.contextTargets, props.dismissNode, props.contextMenu.closeContextMenu)}
       onMergeHighlightsIntoTopic={createMergeHighlightsIntoTopicHandler({
         closeContextMenu: props.contextMenu.closeContextMenu,
@@ -183,6 +190,7 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
       )}
       onReturnNode={createReturnNodeAction(menuState.contextTargets, props.returnNode, props.contextMenu.closeContextMenu)}
       showDeleteAction={menuState.showDeleteAction}
+      showDismissEntireTopicAction={menuState.isNotesMenu && hasDismissEntireTopicTargets(menuState.contextTargets, props.nodesById)}
       showDismissAction={menuState.isNotesMenu && hasDismissTargets(menuState.contextTargets, props.nodesById)}
       showMergeHighlightsIntoTopicAction={menuState.showMergeHighlightsIntoTopicAction}
       showMoveToNodeAction={menuState.showMoveToNodeAction}

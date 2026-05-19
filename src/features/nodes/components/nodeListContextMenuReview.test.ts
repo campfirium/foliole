@@ -6,7 +6,9 @@ import type { WorkspaceListNode } from '../model/workspaceListNode';
 import {
   canDismissNode,
   canRelearnNode,
-  canReturnNode
+  canReturnNode,
+  collectDismissEntireTopicTargets,
+  hasDismissEntireTopicTargets
 } from './nodeListContextMenuReview';
 
 function createReadingState(state: 'active' | 'done' | 'dismissed' = 'active') {
@@ -82,5 +84,27 @@ describe('node list review actions', () => {
         })
       )
     ).toBe(true);
+  });
+
+  it('collects the topic itself and nested reading topics for entire-topic dismiss', () => {
+    const nodesById = {
+      root: createNode({ id: 'root', kind: 'topic', title: 'Root', reading: createReadingState('dismissed') }),
+      child: createNode({ id: 'child', kind: 'topic', parentNodeId: 'root', title: 'Child', reading: createReadingState() }),
+      grandchild: createNode({ id: 'grandchild', kind: 'topic', parentNodeId: 'child', title: 'Grandchild', reading: createReadingState() }),
+      card: createNode({ id: 'card', kind: 'item', parentNodeId: 'root', title: 'Card', hasReveal: true })
+    };
+
+    expect(collectDismissEntireTopicTargets('root', nodesById)).toEqual(['child', 'grandchild']);
+    expect(hasDismissEntireTopicTargets(['root'], nodesById)).toBe(true);
+  });
+
+  it('keeps entire-topic dismiss scoped to one topic target', () => {
+    const nodesById = {
+      root: createNode({ id: 'root', kind: 'topic', title: 'Root', reading: createReadingState() }),
+      folder: createNode({ id: 'folder', kind: 'folder', title: 'Folder', reading: createReadingState() })
+    };
+
+    expect(hasDismissEntireTopicTargets(['root', 'folder'], nodesById)).toBe(false);
+    expect(hasDismissEntireTopicTargets(['folder'], nodesById)).toBe(false);
   });
 });

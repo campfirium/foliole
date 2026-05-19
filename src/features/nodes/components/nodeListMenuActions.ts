@@ -1,3 +1,7 @@
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
+
+import { collectDismissEntireTopicTargets } from './nodeListContextMenuReview';
+
 export function confirmReturnNodeReset(targetCount: number) {
   return window.confirm(
     targetCount > 1
@@ -17,6 +21,25 @@ export function createReturnNodeAction(
       return;
     }
     contextTargets.forEach((id) => returnNode(id));
+    closeContextMenu();
+  };
+}
+
+export function createDismissEntireTopicAction(
+  rootNodeId: string | null,
+  nodesById: WorkspaceListNodesById,
+  dismissNode: (nodeId: string, now?: string) => boolean,
+  closeContextMenu: () => void
+) {
+  return () => {
+    if (!rootNodeId) {
+      closeContextMenu();
+      return;
+    }
+    const now = new Date().toISOString();
+    for (const nodeId of collectDismissEntireTopicTargets(rootNodeId, nodesById)) {
+      dismissNode(nodeId, now);
+    }
     closeContextMenu();
   };
 }

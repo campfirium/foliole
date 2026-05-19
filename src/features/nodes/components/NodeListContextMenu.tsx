@@ -11,6 +11,7 @@ interface NodeListContextMenuProps {
   onCreateCommand: (commandId: string) => void;
   onDeleteNode: () => void;
   onDeleteNodePermanently: () => void;
+  onDismissEntireTopic?: () => void;
   onDismissNode?: () => void;
   onMergeHighlightsIntoTopic?: () => void;
   onMoveToNode?: () => void;
@@ -19,6 +20,7 @@ interface NodeListContextMenuProps {
   onReturnNode?: () => void;
   onRestoreNode: () => void;
   showDeleteAction?: boolean;
+  showDismissEntireTopicAction?: boolean;
   showDismissAction?: boolean;
   showMergeHighlightsIntoTopicAction?: boolean;
   showMoveToNodeAction?: boolean;
@@ -38,6 +40,7 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       createCommands={props.createCommands}
       onCreateCommand={props.onCreateCommand}
       onDeleteNode={props.onDeleteNode}
+      {...(props.onDismissEntireTopic ? { onDismissEntireTopic: props.onDismissEntireTopic } : {})}
       {...(props.onDismissNode ? { onDismissNode: props.onDismissNode } : {})}
       {...(props.onMergeHighlightsIntoTopic ? { onMergeHighlightsIntoTopic: props.onMergeHighlightsIntoTopic } : {})}
       {...(props.onMoveToNode ? { onMoveToNode: props.onMoveToNode } : {})}
@@ -45,6 +48,7 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       {...(props.onRenameNode ? { onRenameNode: props.onRenameNode } : {})}
       {...(props.onReturnNode ? { onReturnNode: props.onReturnNode } : {})}
       {...(props.showDeleteAction !== undefined ? { showDeleteAction: props.showDeleteAction } : {})}
+      {...(props.showDismissEntireTopicAction !== undefined ? { showDismissEntireTopicAction: props.showDismissEntireTopicAction } : {})}
       {...(props.showDismissAction !== undefined ? { showDismissAction: props.showDismissAction } : {})}
       {...(props.showMergeHighlightsIntoTopicAction !== undefined ? { showMergeHighlightsIntoTopicAction: props.showMergeHighlightsIntoTopicAction } : {})}
       {...(props.showMoveToNodeAction !== undefined ? { showMoveToNodeAction: props.showMoveToNodeAction } : {})}
@@ -99,6 +103,7 @@ function NoteMenuItems({
   createCommands,
   onCreateCommand,
   onDeleteNode,
+  onDismissEntireTopic,
   onDismissNode,
   onMergeHighlightsIntoTopic,
   onMoveToNode,
@@ -106,6 +111,7 @@ function NoteMenuItems({
   onRenameNode,
   onReturnNode,
   showDeleteAction,
+  showDismissEntireTopicAction,
   showDismissAction,
   showMergeHighlightsIntoTopicAction,
   showMoveToNodeAction,
@@ -124,6 +130,7 @@ function NoteMenuItems({
       {showRootCreateOnly ? null : showRenameAction && onRenameNode ? <AppDropdownMenuItem onSelect={onRenameNode}>Rename</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showReturnAction && onReturnNode ? <AppDropdownMenuItem onSelect={onReturnNode}>Relearn</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDismissAction && onDismissNode ? <AppDropdownMenuItem onSelect={onDismissNode}>Dismiss</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showDismissEntireTopicAction && onDismissEntireTopic ? <AppDropdownMenuItem onSelect={onDismissEntireTopic}>Dismiss Entire Topic</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showMergeHighlightsIntoTopicAction && onMergeHighlightsIntoTopic ? <AppDropdownMenuItem onSelect={onMergeHighlightsIntoTopic}>Merge Highlights</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showPasteIntoNodeAction && onPasteIntoNode ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showMoveToNodeAction && onMoveToNode ? <AppDropdownMenuItem onSelect={onMoveToNode}>Move to…</AppDropdownMenuItem> : null}
