@@ -1,5 +1,6 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import type { MarkdownInlineRange, MarkdownInlineRangeKind } from './markdownInlineProjectionTypes';
+import { collectLenientSpacedStrongCandidates } from './markdownLenientSpacedStrongProjection';
 import { collectLenientTripleStarCandidates } from './markdownLenientTripleStarProjection';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
@@ -150,7 +151,7 @@ function visitInlineCandidates(args: {
   if (args.node.name === 'StrongEmphasis' || args.node.name === 'LenientStrongEmphasis') {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'strong'));
   }
-  else if (args.node.name === 'Emphasis') {
+  else if (args.node.name === 'Emphasis' || args.node.name === 'LenientPunctuationEmphasis') {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'emphasis'));
   }
   else if (args.node.name === 'Strikethrough') {
@@ -193,8 +194,17 @@ function collectInlineCandidates(text: string) {
     parentName: null,
     source: text
   });
+  candidates.push(...collectLenientSpacedStrongCandidates(text));
   candidates.push(...collectLenientTripleStarCandidates(text));
-  return candidates.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+  return candidates
+    .filter((candidate) => isValidInlineCandidate(candidate, text.length))
+    .sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+}
+
+function isValidInlineCandidate(candidate: InlineProjectionCandidate, textLength: number) {
+  if (candidate.from < 0 || candidate.to > textLength || candidate.contentFrom < candidate.from) return false;
+  if (candidate.contentTo > candidate.to || candidate.contentFrom > candidate.contentTo) return false;
+  return candidate.syntaxRanges.every((range) => range.from >= candidate.from && range.to <= candidate.to && range.from <= range.to);
 }
 
 export function collectMarkdownInlineRanges(text: string, offset = 0): MarkdownInlineRange[] {
