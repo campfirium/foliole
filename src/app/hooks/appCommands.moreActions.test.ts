@@ -6,6 +6,8 @@ import { runAppCommand } from './appCommands';
 
 function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand>[1]> = {}) {
   return {
+    undo: () => undefined,
+    redo: () => undefined,
     closeSettings: () => undefined,
     createFolder: () => undefined,
     createItem: () => undefined,

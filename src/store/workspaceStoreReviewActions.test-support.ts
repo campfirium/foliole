@@ -3,9 +3,10 @@ import { expect, vi } from 'vitest';
 import type { Node, NodeReadingProfile, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
-import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { createInitialWorkspaceState } from './workspaceStore';
+
+export { expectReviewRuntimeSyncCalled } from './workspaceStoreReviewRuntimeSyncExpectations.test-support';
 
 type WorkspaceSetInput =
   | WorkspaceState
@@ -119,6 +120,8 @@ export function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     updateNodePriority: () => undefined,
     updateNodeDesiredRetention: () => undefined,
     dismissNode: () => false,
+    undoWorkspaceAction: () => false,
+    redoWorkspaceAction: () => false,
     relearnNode: () => false,
     startReviewSession: () => false,
     revealReviewAnswer: () => undefined,
@@ -204,39 +207,6 @@ function expectNextQueueState(state: WorkspaceState) {
     state: 1,
     lastReviewAt: '2026-03-03T00:00:00.000Z'
   });
-}
-
-const EXPECTED_REVIEW_RUNTIME_SYNC = {
-  nodeId: 'qa-1',
-  grade: 3,
-  reviewedAt: '2026-03-03T00:00:00.000Z',
-  cardBefore: {
-    due: '2026-03-03T00:00:00.000Z',
-    last_review: null,
-    state: 0,
-    stability: 0,
-    difficulty: 0,
-    elapsed_days: 0,
-    scheduled_days: 0,
-    reps: 0,
-    lapses: 0
-  },
-  cardAfter: {
-    due: '2026-03-10T00:00:00.000Z',
-    last_review: '2026-03-03T00:00:00.000Z',
-    state: 1,
-    stability: 3,
-    difficulty: 4,
-    elapsed_days: 1,
-    scheduled_days: 7,
-    reps: 1,
-    lapses: 0
-  }
-};
-
-export function expectReviewRuntimeSyncCalled() {
-  expect(syncReviewGradeToRuntime).toHaveBeenCalledTimes(1);
-  expect(syncReviewGradeToRuntime).toHaveBeenCalledWith(EXPECTED_REVIEW_RUNTIME_SYNC);
 }
 
 export function expectReviewQueueAdvanced(state: WorkspaceState) {

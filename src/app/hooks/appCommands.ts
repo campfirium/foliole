@@ -6,6 +6,8 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { getAppPaletteCommands, type BuildAppPaletteItemsOptions } from './appPaletteCommandCatalog';
 
 interface RunAppCommandActions {
+  undo: () => boolean | void;
+  redo: () => boolean | void;
   importDirectory: () => void | Promise<void>;
   closeSettings: () => void;
   createFolder: () => void;
@@ -78,6 +80,8 @@ export function runReviewModeToggle(isReviewMode: boolean, actions: ReviewModeTo
 
 export function runAppCommand(id: string, actions: RunAppCommandActions) {
   const handlers: Record<string, () => CommandActionResult> = {
+    [APP_COMMAND_IDS.undo]: actions.undo,
+    [APP_COMMAND_IDS.redo]: actions.redo,
     [APP_COMMAND_IDS.createFolder]: actions.createFolder,
     [APP_COMMAND_IDS.createTopic]: actions.createTopic,
     [APP_COMMAND_IDS.createItem]: actions.createItem,

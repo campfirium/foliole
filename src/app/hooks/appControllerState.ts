@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
-import { useWorkspaceLayoutState } from '../../store/workspaceLayoutDomain';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import {
   useActiveNodeReadingPositionRestore,
   useNavigationReadingPosition
 } from './appControllerNavigationReadingPosition';
 import { useSaveActiveNodeView } from './appControllerSaveActiveNodeView';
+import { useWorkspaceSelectors } from './appWorkspaceSelectors';
 import { useAppRuntime } from './useAppRuntime';
 import { useEditorContextCommands } from './useEditorContextCommands';
 import { useExternalLibraryView } from './useExternalLibraryView';
@@ -26,52 +24,7 @@ import { useVirtualNodeView } from './useVirtualNodeView';
 import { useWorkspaceActiveNodeDocument } from './useWorkspaceActiveNodeDocument';
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
-export function useWorkspaceSelectors() {
-  const ws = useWorkspaceStore(
-    useShallow((state) => ({
-      activeNodeId: state.activeNodeId,
-      isHydrated: state.isHydrated,
-      createChildNode: state.createChildNode,
-      createVirtualNode: state.createVirtualNode,
-      createHighlightNodeFromSelection: state.createHighlightNodeFromSelection,
-      createImageClozeNodes: state.createImageClozeNodes,
-      createQANodeFromSelection: state.createQANodeFromSelection,
-      createRootNode: state.createRootNode,
-      deleteNode: state.deleteNode,
-      deleteNodePermanently: state.deleteNodePermanently,
-      deleteImageClozeRegion: state.deleteImageClozeRegion,
-      dismissReviewItem: state.dismissReviewItem,
-      completeReviewItem: state.completeReviewItem,
-      deferReviewItem: state.deferReviewItem,
-      goBack: state.goBack,
-      goForward: state.goForward,
-      goToParent: state.goToParent,
-      gradeReviewCard: state.gradeReviewCard,
-      jumpToAncestorNode: state.jumpToAncestorNode,
-      moveNode: state.moveNode,
-      moveNodes: state.moveNodes,
-      navigation: state.navigation,
-      nodesById: state.nodesById,
-      nodeOrder: state.nodeOrder,
-      nodeViewById: state.nodeViewById,
-      openNode: state.openNode,
-      revealReviewAnswer: state.revealReviewAnswer,
-      reviewSession: state.reviewSession,
-      setNodeViewState: state.setNodeViewState,
-      startReviewSession: state.startReviewSession,
-      trashedNodeIds: state.trashedNodeIds,
-      updateNodeContent: state.updateNodeContent,
-      updateHighlightAnchorRange: state.updateHighlightAnchorRange ?? (() => false),
-      updateVirtualNodeFilter: state.updateVirtualNodeFilter,
-      updateNodeDesiredRetention: state.updateNodeDesiredRetention,
-      updateNodePriority: state.updateNodePriority,
-      updateNodeReveal: state.updateNodeReveal,
-      exitReviewSession: state.exitReviewSession
-    }))
-  );
-  const layout = useWorkspaceLayoutState();
-  return { ...ws, ...layout };
-}
+export { useWorkspaceSelectors };
 
 export function useNowIso(tickMs = 15_000) {
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());

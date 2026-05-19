@@ -1,4 +1,4 @@
-import { type Compartment } from '@codemirror/state';
+import { Transaction, type Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import { reconfigureDecorationCompartment } from './codeMirrorEditorAdapterView';
@@ -14,6 +14,7 @@ export function applyExternalEditorContent(args: {
   view: EditorView;
 }) {
   args.view.dispatch({
+    annotations: Transaction.addToHistory.of(false),
     changes: { from: 0, to: args.currentContent.length, insert: args.content }
   });
 }

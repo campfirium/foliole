@@ -149,6 +149,8 @@ function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     updateNodePriority: () => undefined,
     updateNodeDesiredRetention: () => undefined,
     dismissNode: () => false,
+    undoWorkspaceAction: () => false,
+    redoWorkspaceAction: () => false,
     relearnNode: () => false,
     startReviewSession: () => false,
     revealReviewAnswer: () => undefined,

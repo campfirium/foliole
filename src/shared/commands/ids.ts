@@ -7,6 +7,8 @@ export const APP_COMMAND_IDS = {
   closeCommandPalette: 'ui.closeCommandPalette',
   closeSettings: 'ui.closeSettings',
   closeContextMenu: 'ui.closeContextMenu',
+  undo: 'app.undo',
+  redo: 'app.redo',
   goBack: 'navigation.goBack',
   goForward: 'navigation.goForward',
   goToNode: 'navigation.goToNode',

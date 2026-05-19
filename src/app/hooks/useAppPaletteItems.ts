@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { canNodeAcceptMovedChildren } from '../../features/nodes/model/nodeContainers';
 import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
 import { definedProps } from '../../shared/lib/definedProps';
+import { getWorkspaceRedoTitle, getWorkspaceUndoTitle } from '../../store/workspaceActionHistory';
 import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 
 import { buildAppPaletteItems } from './appCommands';
@@ -100,6 +101,8 @@ function buildPaletteOptions(
 ) {
   const canUseCurrentTopic = canMergeHighlightsIntoTopic(args);
   return {
+    canRedoWorkspaceAction: args.ws.appActionHistory.redoStack.length > 0,
+    canUndoWorkspaceAction: args.ws.appActionHistory.undoStack.length > 0,
     canExportCurrentArticle: canExportCurrentArticle(args),
     canAnnotateSelection: canAnnotateSelection(args),
     canImportFile: args.formalImportAvailable,
@@ -124,7 +127,9 @@ function buildPaletteOptions(
     canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDeleteReviewItem: args.hasReviewCard,
     isImmersiveMode: args.isImmersiveMode,
-    isReviewMode: args.isStudyMode
+    isReviewMode: args.isStudyMode,
+    redoWorkspaceActionTitle: getWorkspaceRedoTitle(args.ws.appActionHistory),
+    undoWorkspaceActionTitle: getWorkspaceUndoTitle(args.ws.appActionHistory)
   };
 }
 
@@ -141,7 +146,7 @@ export function useAppPaletteItems(args: {
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   reviewSession: ReturnType<typeof useWorkspaceSelectors>['reviewSession'];
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
-  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
+  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'appActionHistory' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
 }) {
   const hasNavigableNodes = useMemo(
     () => args.ws.nodeOrder.some((nodeId) => !args.ws.trashedNodeIds.includes(nodeId) && Boolean(args.ws.nodesById[nodeId])),

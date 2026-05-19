@@ -1,3 +1,5 @@
+import { undo } from '@codemirror/commands';
+import type { EditorView } from '@codemirror/view';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
@@ -11,6 +13,10 @@ vi.mock('../../../shared/platform/remoteImageLocalization', () => ({
 }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
+
+function getEditorView(adapter: CodeMirrorEditorAdapter) {
+  return (adapter as unknown as { view: EditorView }).view;
+}
 
 async function waitForLocalization() {
   await vi.advanceTimersByTimeAsync(220);
@@ -59,6 +65,25 @@ it('rewrites remote markdown images by default after editor content changes', as
   expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/cover.png');
   expect(onChange).toHaveBeenLastCalledWith('![Remote](asset://hash-1.png)', { nodeId: 'node-1' });
   expect(window.confirm).not.toHaveBeenCalled();
+
+  adapter.destroy();
+});
+
+it('does not restore the remote image URL from editor undo history', async () => {
+  importRemoteImageAttachment.mockResolvedValue({
+    status: 'imported',
+    attachment_id: 'hash-1',
+    original_name: 'cover.png'
+  });
+  const { adapter } = createAdapter();
+
+  adapter.setNodeId('node-1');
+  adapter.replaceSelection('![Remote](https://example.com/cover.png)');
+  await waitForLocalization();
+
+  expect(adapter.getContent()).toBe('![Remote](asset://hash-1.png)');
+  undo(getEditorView(adapter));
+  expect(adapter.getContent()).toBe('![Remote](asset://hash-1.png)');
 
   adapter.destroy();
 });

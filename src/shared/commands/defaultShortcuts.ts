@@ -9,6 +9,11 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.closeCommandPalette]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.closeSettings]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.closeContextMenu]: { primary: { key: 'Escape' } },
+  [APP_COMMAND_IDS.undo]: { primary: { key: 'z', ctrlKey: true }, secondary: { key: 'z', metaKey: true } },
+  [APP_COMMAND_IDS.redo]: {
+    primary: { key: 'z', ctrlKey: true, shiftKey: true },
+    secondary: { key: 'z', metaKey: true, shiftKey: true }
+  },
   [APP_COMMAND_IDS.goBack]: { primary: { key: 'ArrowLeft', altKey: true } },
   [APP_COMMAND_IDS.goForward]: { primary: { key: 'ArrowRight', altKey: true } },
   [APP_COMMAND_IDS.renameNode]: { primary: { key: 'F2' } },

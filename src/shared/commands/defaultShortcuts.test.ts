@@ -78,6 +78,13 @@ describe('default command shortcuts', () => {
   });
 });
 
+it('registers app undo and redo without editor-only modifiers', () => {
+  expect(matchesShortcutSet(keyEvent({ key: 'z', ctrlKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.undo])).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: 'z', metaKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.undo])).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: 'z', ctrlKey: true, shiftKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.redo])).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: 'z', metaKey: true, shiftKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.redo])).toBe(true);
+});
+
 it('registers core selection annotation shortcuts on Alt Z, Alt X, and Alt A', () => {
   const cases = [['z', APP_COMMAND_IDS.createSelectionHighlight], ['x', APP_COMMAND_IDS.createSelectionCloze], ['a', APP_COMMAND_IDS.addSelectionNote]] as const;
   expect(cases.every(([key, id]) => matchesShortcutSet(keyEvent({ key, altKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[id]))).toBe(true);

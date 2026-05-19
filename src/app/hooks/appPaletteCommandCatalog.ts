@@ -5,6 +5,8 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { isReviewCommandEnabled, REVIEW_PALETTE_COMMANDS, type ReviewPaletteCommandOptions } from './appPaletteReviewCommands';
 
 export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions {
+  canRedoWorkspaceAction: boolean;
+  canUndoWorkspaceAction: boolean;
   canExportCurrentArticle: boolean;
   canImportFile: boolean;
   canImportFolder: boolean;
@@ -23,6 +25,8 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canSetNodePriority: boolean;
   isImmersiveMode: boolean;
   isReviewMode: boolean;
+  redoWorkspaceActionTitle: string;
+  undoWorkspaceActionTitle: string;
 }
 
 interface AppPaletteCommandMeta {
@@ -45,6 +49,8 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     section: 'Create',
     keywords: ['create', 'virtual', 'saved', 'view']
   },
+  { id: APP_COMMAND_IDS.undo, title: 'Undo', section: 'Workspace', keywords: ['undo', 'history'] },
+  { id: APP_COMMAND_IDS.redo, title: 'Redo', section: 'Workspace', keywords: ['redo', 'history'] },
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
@@ -100,6 +106,12 @@ function resolveCommandTitle(id: string, isReviewMode: boolean, title: string) {
 }
 
 function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, title: string) {
+  if (id === APP_COMMAND_IDS.undo) {
+    return options.undoWorkspaceActionTitle;
+  }
+  if (id === APP_COMMAND_IDS.redo) {
+    return options.redoWorkspaceActionTitle;
+  }
   if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
     return options.isImmersiveMode ? 'Exit Immersive Reading' : 'Enter Immersive Reading';
   }
@@ -107,6 +119,12 @@ function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, t
 }
 
 function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+  if (id === APP_COMMAND_IDS.undo) {
+    return options.canUndoWorkspaceAction;
+  }
+  if (id === APP_COMMAND_IDS.redo) {
+    return options.canRedoWorkspaceAction;
+  }
   if (id === APP_COMMAND_IDS.openTrash || id === APP_COMMAND_IDS.restartApp || id === APP_COMMAND_IDS.toggleList) {
     return true;
   }

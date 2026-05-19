@@ -25,6 +25,8 @@ function Harness({
     items,
     runCommand,
     shortcutMap: {
+      'app.undo': { primary: { ctrlKey: true, key: 'z' } },
+      'app.redo': { primary: { ctrlKey: true, key: 'z', shiftKey: true } },
       'workspace.createFolder': { primary: { ctrlKey: true, altKey: true, key: 'f' } },
       'editor.toggleDisplayMode': { primary: { ctrlKey: true, key: '\\' } },
       'workspace.toggleList': { primary: { ctrlKey: true, key: 'l' } }
@@ -76,6 +78,40 @@ it('can dispatch newly routed create command shortcuts', () => {
 
   expect(event.defaultPrevented).toBe(true);
   expect(runCommand).toHaveBeenCalledWith('workspace.createFolder');
+});
+
+it('dispatches app undo when no editable text is focused', () => {
+  const runCommand = vi.fn();
+  render(
+    <Harness
+      items={[{ enabled: true, id: 'app.undo', title: 'Undo Dismiss Topic' }]}
+      runCommand={runCommand}
+    />
+  );
+
+  const event = dispatchShortcut({ ctrlKey: true, key: 'z' });
+
+  expect(event.defaultPrevented).toBe(true);
+  expect(runCommand).toHaveBeenCalledWith('app.undo');
+});
+
+it('does not dispatch app undo or redo while editable text is focused', () => {
+  const runCommand = vi.fn();
+  render(
+    <Harness
+      items={[
+        { enabled: true, id: 'app.undo', title: 'Undo Dismiss Topic' },
+        { enabled: true, id: 'app.redo', title: 'Redo Dismiss Topic' }
+      ]}
+      runCommand={runCommand}
+    />
+  );
+  const input = document.querySelector('input')!;
+  input.focus();
+
+  expect(dispatchShortcut({ ctrlKey: true, key: 'z' }).defaultPrevented).toBe(false);
+  expect(dispatchShortcut({ ctrlKey: true, key: 'z', shiftKey: true }).defaultPrevented).toBe(false);
+  expect(runCommand).not.toHaveBeenCalled();
 });
 
 it('does not run disabled commands or commands while another command surface is open', () => {
