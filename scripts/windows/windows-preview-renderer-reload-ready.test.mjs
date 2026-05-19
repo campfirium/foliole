@@ -18,6 +18,7 @@ function runScript(env) {
       cwd: REPO_ROOT,
       env: {
         ...process.env,
+        WINDOWS_NATIVE_ABI_CHECK_COMMAND: 'true',
         WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true',
         WINDOWS_PREVIEW_TIMEOUT_SECONDS: '2',
         WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '2',

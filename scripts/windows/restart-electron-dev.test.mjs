@@ -5,6 +5,7 @@ import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
 const SCRIPT_PATH = path.resolve(process.cwd(), 'scripts/windows/restart-electron-dev.ps1');
+const NATIVE_ABI_PREFLIGHT_PATH = path.resolve(process.cwd(), 'scripts/windows/native-abi-preflight.ps1');
 
 describe('restart-electron-dev script', () => {
   it('matches the nested electron main entry command line used by Windows dev runtime', async () => {
@@ -91,16 +92,20 @@ describe('restart-electron-dev script', () => {
 
   it('preflights native modules with Electron before waiting for app-ready markers', async () => {
     const script = await readFile(SCRIPT_PATH, 'utf8');
+    const preflight = await readFile(NATIVE_ABI_PREFLIGHT_PATH, 'utf8');
 
-    expect(script).toContain('function Assert-NativeModulesLoadInElectron');
-    expect(script).toContain("$env:ELECTRON_RUN_AS_NODE = \"1\"");
-    expect(script).toContain('foliole-native-module-preflight.js');
-    expect(script).toContain("Replace('\\', '/')");
-    expect(script).toContain('node_modules\\better-sqlite3');
-    expect(script).toContain("require('$betterSqliteModulePath');");
-    expect(script).toContain('& $electronPath $preflightScript');
-    expect(script).toContain('$exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }');
-    expect(script).toContain('native module preflight failed: better-sqlite3 load failed');
+    expect(script).toContain('$NativeAbiPreflightScript = Join-Path $PSScriptRoot "native-abi-preflight.ps1"');
+    expect(script).toContain('. $NativeAbiPreflightScript');
     expect(script).toContain('Assert-NativeModulesLoadInElectron -WorkDir $WorkDir');
+    expect(preflight).toContain('function Assert-NativeModulesLoadInElectron');
+    expect(preflight).toContain("$env:ELECTRON_RUN_AS_NODE = \"1\"");
+    expect(preflight).toContain('foliole-native-module-preflight.js');
+    expect(preflight).toContain("Replace('\\', '/')");
+    expect(preflight).toContain('node_modules\\better-sqlite3');
+    expect(preflight).toContain("require('$betterSqliteModulePath');");
+    expect(preflight).toContain('& $electronPath $preflightScript');
+    expect(preflight).toContain('$exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }');
+    expect(preflight).toContain('native module preflight failed: better-sqlite3 load failed');
+    expect(preflight).toContain('restore better-sqlite3 for the Electron ABI');
   });
 });

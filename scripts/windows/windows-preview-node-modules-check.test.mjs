@@ -21,7 +21,8 @@ function runNodeModulesCheck(env) {
           'set -euo pipefail',
           'source scripts/windows/windows-preview-common.sh',
           'source scripts/windows/windows-preview-client.sh',
-          'verify_windows_node_modules'
+          'verify_windows_node_modules',
+          'verify_windows_native_abi'
         ].join('\n')
       ],
       {
@@ -67,17 +68,47 @@ describe('windows preview node_modules check', () => {
       const result = await runNodeModulesCheck({
         COMMAND_LOG: commandLog,
         PATH: `${tempRoot}:${process.env.PATH}`,
+        WINDOWS_NATIVE_ABI_CHECK_COMMAND: 'true',
         WINDOWS_NODE_MODULES_CHECK_COMMAND: '',
         WINDOWS_WORKDIR: 'C:\\dev\\foliole'
       });
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('windows node_modules check passed');
+      expect(result.stdout).toContain('windows native ABI preflight passed');
       const command = await readFile(commandLog, 'utf8');
       expect(command).toContain("PATHEXT='.COM;.EXE;.BAT;.CMD;.PS1'");
       expect(command).toContain('npm.cmd ls --depth=0 --json --silent');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  it('does not suggest a plain npm install when dependency completeness fails', async () => {
+    const result = await runNodeModulesCheck({
+      WINDOWS_NATIVE_ABI_CHECK_COMMAND: 'true',
+      WINDOWS_NODE_MODULES_CHECK_COMMAND: 'echo missing dependency; exit 7',
+      WINDOWS_WORKDIR: 'C:\\dev\\foliole'
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('windows node_modules check failed');
+    expect(result.stdout).not.toContain('run npm install in C:\\dev\\foliole');
+    expect(result.stdout).toContain('restore Electron native ABI before preview');
+    expect(result.stdout).toContain('do not run plain Node npm rebuild for better-sqlite3');
+  });
+
+  it('stops before later preview actions when native ABI preflight fails', async () => {
+    const result = await runNodeModulesCheck({
+      WINDOWS_NATIVE_ABI_CHECK_COMMAND: 'echo ABI mismatch; exit 9',
+      WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true',
+      WINDOWS_WORKDIR: 'C:\\dev\\foliole'
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('windows node_modules check passed');
+    expect(result.stdout).toContain('windows native ABI preflight failed');
+    expect(result.stdout).toContain('restore better-sqlite3 for the Electron ABI');
+    expect(result.stdout).toContain('ABI mismatch');
   });
 });

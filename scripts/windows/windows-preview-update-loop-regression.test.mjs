@@ -25,7 +25,13 @@ function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [PREVIEW_SCRIPT], {
       cwd: REPO_ROOT,
-      env: { ...process.env, WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true', ...TEST_PREVIEW_TIMEOUTS, ...env }
+      env: {
+        ...process.env,
+        WINDOWS_NATIVE_ABI_CHECK_COMMAND: 'true',
+        WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true',
+        ...TEST_PREVIEW_TIMEOUTS,
+        ...env
+      }
     });
     let stdout = '';
     let stderr = '';
