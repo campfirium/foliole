@@ -51,7 +51,7 @@ export function WorkspaceContentSortControls(props: {
     <AppTooltip>
       <AppDropdownMenu>
         <WorkspaceContentSortTrigger triggerLabel={triggerLabel} />
-        <AppTooltipContent>{tooltipLabel}</AppTooltipContent>
+        <AppTooltipContent avoidCollisions={false} side="top">{tooltipLabel}</AppTooltipContent>
         <AppDropdownMenuContent align="end" className="min-w-[220px] p-1" sideOffset={8}>
           <AppDropdownMenuLabel className="px-3 pb-1 pt-2 text-xs font-medium text-foreground/45">
             Sort by

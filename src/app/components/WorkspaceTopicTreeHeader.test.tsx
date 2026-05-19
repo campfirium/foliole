@@ -64,3 +64,29 @@ it('disables the toggle when the current folder has no collapsible items', () =>
 
   expect(screen.getByRole('button', { name: 'Collapse all topics' })).toBeDisabled();
 });
+
+it('keeps the top toolbar sort tooltip above the trigger', async () => {
+  render(
+    <WorkspaceTopicTreeHeader
+      hasCollapsibleNodes
+      hasCollapsedNodes={false}
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
+      onCreateTopic={vi.fn()}
+      onSearchQueryChange={vi.fn()}
+      onToggleCollapseAll={vi.fn()}
+      searchQuery=""
+      sortDirection="desc"
+      sortKey="lastOpenedAt"
+    />
+  );
+
+  const trigger = screen.getByRole('button', { name: 'Sort list by Last opened' });
+  fireEvent.pointerMove(trigger, { pointerType: 'mouse' });
+  fireEvent.pointerEnter(trigger, { pointerType: 'mouse' });
+
+  const tooltip = await screen.findByRole('tooltip');
+  expect(tooltip).toHaveTextContent('Sort list by Last opened: Newest first');
+  expect(tooltip.parentElement).toHaveAttribute('data-side', 'top');
+  expect(tooltip.parentElement).not.toHaveAttribute('data-side', 'bottom');
+});
