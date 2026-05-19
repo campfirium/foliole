@@ -1,14 +1,16 @@
 import { type Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, type EditorView } from '@codemirror/view';
 
+import { folioleMarkdownParser } from '../model/folioleMarkdownParser';
 import type { InlinePresentationPlan } from '../model/inlinePresentationPlans';
 import type { InlineTextDecorationPlan } from '../model/inlineTextDecorationPlans';
-import { collectPreviewViewportPlans, collectSourceViewportPlans, type ViewportPreviewLinePlan } from '../model/liveMarkdownViewportPlans';
+import { collectPreviewViewportPlans, collectSourceViewportPlans } from '../model/liveMarkdownViewportPlans';
 import { collectMarkdownForumTitleLinkRanges } from '../model/markdownForumTitleLinkProjection';
-import { collectMarkdownLinkReferences, type MarkdownLinkReferenceRange } from '../model/markdownLinkReferences';
+import { collectMarkdownInlineLinkRangesFromTree } from '../model/markdownInlineLinkProjection';
+import type { MarkdownInlineLinkRange } from '../model/markdownInlineProjectionTypes';
+import { collectMarkdownLinkReferencesFromTree, type MarkdownLinkReferenceRange } from '../model/markdownLinkReferences';
 import { collectMultilineLinkPresentationPlans } from '../model/markdownMultilineLinkPresentation';
-import { isPositionInsideInactiveTable } from '../model/markdownTableViewport';
-import { collectReadwiseOriginalFilePlaceholderRanges } from '../model/readwiseOriginalFilePlaceholder';
+import { collectReadwiseOriginalFilePlaceholderRangesFromLines } from '../model/readwiseOriginalFilePlaceholder';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import {
@@ -23,14 +25,11 @@ import {
 } from './liveMarkdownDecorationCollections';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addForumTitleLinkDecorations } from './liveMarkdownForumTitleLinkDecorations';
-import { addImageDecorations } from './liveMarkdownInlineDecorations';
-import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
+import { addPreviewViewportDecorations } from './liveMarkdownPreviewViewportDecorations';
 import {
   addCodeFenceDecoration,
-  addLine,
   addMark,
   addReplace,
-  addThematicBreakDecoration
 } from './liveMarkdownPrimitives';
 import { addReadwiseOriginalFileDecorations } from './liveMarkdownReadwiseOriginalFile';
 import { addTableDecorations } from './liveMarkdownTables';
@@ -57,28 +56,10 @@ function applyInlinePresentationPlan(ranges: Range<Decoration>[], plan: InlinePr
   for (const range of plan.replaceRanges) addReplace(ranges, range.from, range.to);
 }
 
-function addPreviewImageDecorations(
-  ranges: Range<Decoration>[],
-  plan: ViewportPreviewLinePlan['plan'],
-  context: DecorationBuildContext
-) {
-  if (!plan.imageVisible) {
-    return;
-  }
-  addImageDecorations(
-    ranges,
-    plan.imageMatches,
-    false,
-    context.nodeId,
-    context.imageClozePresentationVersion,
-    context.onMissingAttachmentResource
-  );
-}
-
 function addMultilineLinkDecorations(
   ranges: Range<Decoration>[],
   source: string,
-  args: { syntaxVisible?: boolean; syntaxVisiblePosition?: number | null } = {}
+  args: { links?: readonly MarkdownInlineLinkRange[]; syntaxVisible?: boolean; syntaxVisiblePosition?: number | null } = {}
 ) {
   for (const inlinePlan of collectMultilineLinkPresentationPlans({ source, ...args })) {
     applyInlinePresentationPlan(ranges, inlinePlan);
@@ -96,24 +77,20 @@ function hideLinkReferenceDefinition(
   return true;
 }
 
-function addPreviewPrefixDecorations(
-  ranges: Range<Decoration>[],
-  lineFrom: number,
-  lineText: string,
-  plan: ViewportPreviewLinePlan['plan'],
-  context: {
-    calloutPrefixRangeByLineFrom: ReturnType<typeof collectCalloutPrefixRangeByLineFrom>;
-    prefixRangesByLineFrom: ReturnType<typeof collectPrefixRangesByLineFrom>;
-  }
+function collectViewportReadwiseOriginalFilePlaceholders(
+  view: EditorView,
+  startLineNumber: number,
+  endLineNumber: number,
+  viewportRange: { from: number; to: number }
 ) {
-  if (!plan.prefixVisible) return;
-  const calloutPrefixRange = context.calloutPrefixRangeByLineFrom.get(lineFrom);
-  const prefixRanges = context.prefixRangesByLineFrom.get(lineFrom);
-  addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, {
-    ...(calloutPrefixRange ? { calloutPrefixRange } : {}),
-    forceHideHeadingSyntax: true,
-    ...(prefixRanges ? { prefixRanges } : {})
-  });
+  const readwiseStartLineNumber = Math.max(1, startLineNumber - 3);
+  const readwiseEndLineNumber = Math.min(view.state.doc.lines, endLineNumber + 3);
+  return collectReadwiseOriginalFilePlaceholderRangesFromLines(
+    collectViewportLines(view, readwiseStartLineNumber, readwiseEndLineNumber)
+  ).filter((range) =>
+    (range.to >= viewportRange.from && range.from <= viewportRange.to) ||
+    range.hiddenRanges.some((hiddenRange) => hiddenRange.to >= viewportRange.from && hiddenRange.from <= viewportRange.to)
+  );
 }
 
 export function buildPreviewDecorationSet(view: EditorView, context: DecorationBuildContext): DecorationSet {
@@ -122,8 +99,11 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const startLine = view.state.doc.line(startLineNumber);
   const endLine = view.state.doc.line(endLineNumber);
   const source = view.state.doc.toString();
+  const markdownTree = folioleMarkdownParser.parse(source);
+  const viewportLines = collectViewportLines(view, startLineNumber, endLineNumber);
   const codeFenceProjection = collectCodeFenceProjection(view);
-  const linkReferences = collectMarkdownLinkReferences(source);
+  const linkReferences = collectMarkdownLinkReferencesFromTree(markdownTree, source);
+  const inlineLinks = collectMarkdownInlineLinkRangesFromTree(markdownTree, source, 0, linkReferences);
   const forumTitleLinks = collectMarkdownForumTitleLinkRanges(source).filter(
     (link) => !(codeFenceProjection.codeLineFroms.has(link.from) || codeFenceProjection.codeLineFroms.has(link.urlLineFrom))
   );
@@ -134,9 +114,10 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
   const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
   const viewportTablePlans = collectViewportTablePlans({ endLine, source, startLine, view });
-  const readwiseOriginalFilePlaceholders = collectReadwiseOriginalFilePlaceholderRanges(source).filter(
-    (range) => range.to >= startLine.from && range.from <= endLine.to
-  );
+  const readwiseOriginalFilePlaceholders = collectViewportReadwiseOriginalFilePlaceholders(view, startLineNumber, endLineNumber, {
+    from: startLine.from,
+    to: endLine.to
+  });
   const viewportPlans = collectPreviewViewportPlans({
     codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
     codeLineFroms: codeFenceProjection.codeLineFroms,
@@ -144,7 +125,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     hideTitleHeading: context.hideTitleHeading,
     lineClassByFrom,
     linkReferenceLineFroms,
-    lines: collectViewportLines(view, startLineNumber, endLineNumber),
+    lines: viewportLines,
     linkReferences,
     markdownSyntaxVisible: context.markdownSyntaxVisible,
     startInCodeBlock: false,
@@ -156,26 +137,17 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
   addForumTitleLinkDecorations(ranges, forumTitleLinks);
   addMultilineLinkDecorations(ranges, source, {
+    links: inlineLinks,
     syntaxVisiblePosition: context.markdownSyntaxVisible ? context.activePosition : null
   });
 
-  for (const { lineFrom, lineText, plan } of viewportPlans) {
-    if (isPositionInsideInactiveTable(lineFrom, viewportTablePlans)) {
-      continue;
-    }
-    if (plan.lineClass) addLine(ranges, lineFrom, plan.lineClass);
-    if (hideLinkReferenceDefinition(ranges, lineFrom, linkReferenceRangeByLineFrom)) continue;
-    addPreviewImageDecorations(ranges, plan, context);
-    addPreviewPrefixDecorations(ranges, lineFrom, lineText, plan, { calloutPrefixRangeByLineFrom, prefixRangesByLineFrom });
-    addThematicBreakDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, plan.isThematicBreak);
-    addCodeFenceDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, plan.isCodeFenceLine);
-    addFootnoteDecorations(ranges, plan.footnoteMatches);
-    if (!plan.showSyntaxOnLine) {
-      for (const escapedRange of plan.escapedRanges) addReplace(ranges, escapedRange.from, escapedRange.to);
-    }
-    for (const inlinePlan of plan.inlinePresentationPlans) applyInlinePresentationPlan(ranges, inlinePlan);
-    for (const textPlan of plan.textDecorationPlans) applyInlineTextDecorationPlan(ranges, textPlan);
-  }
+  addPreviewViewportDecorations(ranges, viewportPlans, viewportTablePlans, {
+    ...context,
+    calloutPrefixRangeByLineFrom,
+    hideLinkReferenceDefinition: (targetRanges, lineFrom) =>
+      hideLinkReferenceDefinition(targetRanges, lineFrom, linkReferenceRangeByLineFrom),
+    prefixRangesByLineFrom
+  });
 
   return Decoration.set(ranges, true);
 }
@@ -184,8 +156,10 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const source = view.state.doc.toString();
+  const markdownTree = folioleMarkdownParser.parse(source);
   const codeFenceProjection = collectCodeFenceProjection(view);
-  const linkReferences = collectMarkdownLinkReferences(source);
+  const linkReferences = collectMarkdownLinkReferencesFromTree(markdownTree, source);
+  const inlineLinks = collectMarkdownInlineLinkRangesFromTree(markdownTree, source, 0, linkReferences);
   const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
   const viewportPlans = collectSourceViewportPlans({
@@ -196,7 +170,7 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
     startInCodeBlock: false
   });
 
-  addMultilineLinkDecorations(ranges, source, { syntaxVisible: true });
+  addMultilineLinkDecorations(ranges, source, { links: inlineLinks, syntaxVisible: true });
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
     const calloutPrefixRange = calloutPrefixRangeByLineFrom.get(lineFrom);

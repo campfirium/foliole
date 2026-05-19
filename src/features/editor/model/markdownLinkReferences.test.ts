@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { folioleMarkdownParser } from './folioleMarkdownParser';
 import {
+  collectMarkdownLinkReferenceRangesFromTree,
   collectMarkdownLinkReferenceRanges,
+  collectMarkdownLinkReferencesFromTree,
   collectMarkdownLinkReferences,
   normalizeMarkdownLinkReferenceLabel
 } from './markdownLinkReferences';
@@ -21,5 +24,17 @@ describe('markdownLinkReferences', () => {
     expect(collectMarkdownLinkReferenceRanges('Text\n\n[ref]: https://example.com')).toEqual([
       { from: 6, lineFrom: 6, to: 32 }
     ]);
+  });
+
+  it('reuses a parsed markdown tree for references and ranges', () => {
+    const source = 'Text\n\n[ref]: https://example.com';
+    const tree = folioleMarkdownParser.parse(source);
+
+    expect(Array.from(collectMarkdownLinkReferencesFromTree(tree, source))).toEqual(
+      Array.from(collectMarkdownLinkReferences(source))
+    );
+    expect(collectMarkdownLinkReferenceRangesFromTree(tree, source)).toEqual(
+      collectMarkdownLinkReferenceRanges(source)
+    );
   });
 });

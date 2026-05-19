@@ -17,12 +17,12 @@ import {
   type RequestEditorMeasure
 } from './liveMarkdownImageElement';
 import { createImageStatusElement } from './liveMarkdownImageStatus';
+import {
+  setMarkdownImageWidgetDomIdentity,
+  updateMarkdownImageWidgetDomRange
+} from './liveMarkdownImageWidgetDom';
 import { createRemoteImageFailureStatus } from './liveMarkdownRemoteImageFailure';
 import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
-
-function parseImageRange(value: number) {
-  return Number.isInteger(value) && value >= 0 ? String(value) : '';
-}
 
 function createImageSurface(
   imageMatch: MarkdownImageMatch,
@@ -170,17 +170,14 @@ export function createMarkdownImageWidgetDom(
   editorNodeId: string | null = null,
   onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null = null,
   requestMeasure: RequestEditorMeasure = null,
-  onRemoveImage: (() => void) | null = null
+  onRemoveImage: (() => void) | null = null,
+  presentationVersion = 0
 ) {
   const renderPlan = buildMarkdownImageRenderPlan(imageMatch);
   const wrapper = document.createElement('span');
   wrapper.className = imageMatch.display === 'block' ? 'cm-md-image-widget cm-md-image-widget-block' : 'cm-md-image-widget cm-md-image-widget-inline';
-  wrapper.dataset.mdImageAlt = imageMatch.alt;
-  wrapper.dataset.mdImageAttachmentId = imageMatch.attachmentId ?? '';
-  wrapper.dataset.mdImageDisplay = imageMatch.display;
-  wrapper.dataset.mdImageFrom = parseImageRange(imageMatch.from);
-  wrapper.dataset.mdImageSource = imageMatch.source;
-  wrapper.dataset.mdImageTo = parseImageRange(imageMatch.to);
+  setMarkdownImageWidgetDomIdentity(wrapper, imageMatch, editorNodeId, presentationVersion);
+  updateMarkdownImageWidgetDomRange(wrapper, imageMatch);
 
   if (renderPlan.isRemote && renderPlan.imageSrc) {
     appendLoadingImageSurface(

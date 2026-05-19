@@ -149,17 +149,20 @@ function createSelectionHandlers(args: {
     }
   };
 }
-export function attachImageClozeOverlayInteractions(args: {
+
+type OverlayInteractionArgs = {
   attachmentId: string;
   draftRectElement: HTMLElement;
   from: number;
+  getImageRange?: () => { from: number; to: number };
   overlay: HTMLElement;
   presentation?: ImageClozeEditorPresentation | null;
   regionLayer: HTMLElement;
   to: number;
   wrapper: HTMLElement;
-}) {
-  const host = args.overlay.parentElement ?? args.wrapper;
+};
+
+function createDraftControllerForOverlay(args: OverlayInteractionArgs, host: HTMLElement) {
   const draft = createImageClozeDraftController({
     attachmentId: args.attachmentId,
     draftRectElement: args.draftRectElement,
@@ -169,7 +172,31 @@ export function attachImageClozeOverlayInteractions(args: {
     regionLayer: args.regionLayer,
     to: args.to
   });
-  appendImageClozeDraftButtons({ attachmentId: args.attachmentId, draft, from: args.from, host, overlay: args.overlay, to: args.to });
+  appendImageClozeDraftButtons({
+    attachmentId: args.attachmentId,
+    draft,
+    from: args.from,
+    ...(args.getImageRange ? { getImageRange: args.getImageRange } : {}),
+    host,
+    overlay: args.overlay,
+    to: args.to
+  });
+  return draft;
+}
+
+function attachSavedRegionPointerHandlers(args: {
+  regionLayer: HTMLElement;
+  selection: Pick<ReturnType<typeof createSelectionHandlers>, 'handlePointerDown' | 'handlePointerMove'>;
+}) {
+  for (const regionElement of Array.from(args.regionLayer.querySelectorAll<HTMLElement>('.cm-md-image-cloze-region'))) {
+    regionElement.addEventListener('pointerdown', args.selection.handlePointerDown);
+    regionElement.addEventListener('pointermove', args.selection.handlePointerMove);
+  }
+}
+
+export function attachImageClozeOverlayInteractions(args: OverlayInteractionArgs) {
+  const host = args.overlay.parentElement ?? args.wrapper;
+  const draft = createDraftControllerForOverlay(args, host);
   const deleteControl = createDeleteControl((event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -184,10 +211,7 @@ export function attachImageClozeOverlayInteractions(args: {
     ...(args.presentation !== undefined ? { presentation: args.presentation } : {}),
     regionLayer: args.regionLayer
   });
-  for (const regionElement of Array.from(args.regionLayer.querySelectorAll<HTMLElement>('.cm-md-image-cloze-region'))) {
-    regionElement.addEventListener('pointerdown', selection.handlePointerDown);
-    regionElement.addEventListener('pointermove', selection.handlePointerMove);
-  }
+  attachSavedRegionPointerHandlers({ regionLayer: args.regionLayer, selection });
   args.overlay.append(draft.draftActions, deleteControl.container);
   return {
     clearHover: selection.clearHover,
