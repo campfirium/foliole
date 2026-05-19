@@ -178,14 +178,16 @@ it('compacts consecutive small data-url markdown images during import', () => {
       content: `![Up](${smallPngDataUrl})\n![Down](${smallPngDataUrl})`,
       degradedReason: null,
       fileName: 'small-icons.md',
-      filePath: path.join(tempRoot, 'small-icons.md'),
+      filePath: 'D:\\X\\Dropbox\\obs\\clip\\Full Document Contents\\Articles\\small-icons.md',
       importedAt: '2026-05-18T10:10:00.000Z',
       kind: 'markdown'
     })
   );
 
   const nodeRow = openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get(imported.nodeId as string) as { content: string };
+  expect(imported.resultStatus).toBe('imported');
   expect(nodeRow.content).toBe(`![Up](${smallPngDataUrl}) ![Down](${smallPngDataUrl})`);
+  expect(nodeRow.content).not.toContain('Unsupported local image');
 });
 
 it('resolves obsidian image embeds from the configured external attachment folder during import', async () => {
