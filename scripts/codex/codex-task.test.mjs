@@ -42,7 +42,8 @@ describe('codex-task helpers', () => {
     const prompt = buildPrompt('implement one task');
 
     expect(prompt).toContain('Treat failed verification or preview startup as unfinished work');
-    expect(prompt).toContain('do not send a normal completion report');
+    expect(prompt).toContain('only allowed after npm run windows:preview reaches [windows-preview] status: STARTED');
+    expect(prompt).toContain('keep the task unfinished until a later successful preview can release it');
   });
 
   it('adds explicit commit-note skill trigger for commit-like requests', () => {

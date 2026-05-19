@@ -1,4 +1,5 @@
 const PREVIEW_FAILURE_PATTERNS = [
+  /(?:未跑|没跑|没有跑|未执行|没有执行).*Windows\s*预览/iu,
   /预览.*(?:没完成|未完成|失败|没有完成)/u,
   /预览.*(?:restart|full restart|START_FAILED|RESTART_FAILED).*失败/iu,
   /预览.*(?:启动失败|fallback-start|shell-exited)/iu,
@@ -8,6 +9,7 @@ const PREVIEW_FAILURE_PATTERNS = [
   /(?:停止|杀掉|终止).*挂起.*(?:预览|进程)/u,
   /挂起进程/u,
   /(?:不能|不)(?:标|写)\s*pushed/iu,
+  /Windows\s*preview\s+(?:was\s+)?(?:not\s+run|skipped|not\s+executed)/iu,
   /preview\s+(?:failed|did not complete|never reached|was not completed)/iu,
   /preview-dedupe.*waiting/iu,
   /(?:START_FAILED|RESTART_FAILED|full restart failed|startup health check failed|fallback-start|shell-exited|app-ready-timeout|app_ready_timeout)/iu
