@@ -110,6 +110,7 @@ function buildPaletteOptions(
     canDeferReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canCompleteReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+    canDeleteReviewItem: args.hasReviewCard,
     isImmersiveMode: args.isImmersiveMode,
     isReviewMode: args.isStudyMode
   };

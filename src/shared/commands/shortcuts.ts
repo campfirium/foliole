@@ -1,5 +1,16 @@
 import type { CommandShortcut, CommandShortcutSet } from './types';
 
+const SHORTCUT_SET_SLOTS = ['primary', 'secondary', 'tertiary'] as const;
+
+export function getShortcutSetShortcuts(shortcuts: CommandShortcutSet | undefined) {
+  if (!shortcuts) {
+    return [];
+  }
+  return SHORTCUT_SET_SLOTS
+    .map((slot) => shortcuts[slot])
+    .filter((shortcut): shortcut is CommandShortcut => Boolean(shortcut));
+}
+
 function normalizeShortcutFlag(value: boolean | undefined) {
   return value ?? false;
 }
@@ -99,10 +110,7 @@ export function serializeShortcut(shortcut: CommandShortcut) {
 }
 
 export function formatShortcutSetLabel(shortcuts: CommandShortcutSet | undefined) {
-  if (!shortcuts) {
-    return '';
-  }
-  const labels = [shortcuts.primary, shortcuts.secondary].filter(Boolean).map((shortcut) => formatShortcutLabel(shortcut as CommandShortcut));
+  const labels = getShortcutSetShortcuts(shortcuts).map(formatShortcutLabel);
   return labels.join(' / ');
 }
 
@@ -133,10 +141,7 @@ export function formatAriaShortcut(shortcut: CommandShortcut) {
 }
 
 export function formatAriaKeyShortcuts(shortcuts: CommandShortcutSet | undefined) {
-  if (!shortcuts) {
-    return undefined;
-  }
-  const labels = [shortcuts.primary, shortcuts.secondary].filter(Boolean).map((shortcut) => formatAriaShortcut(shortcut as CommandShortcut));
+  const labels = getShortcutSetShortcuts(shortcuts).map(formatAriaShortcut);
   return labels.length ? labels.join(' ') : undefined;
 }
 
@@ -191,8 +196,5 @@ export function parseShortcutLabel(value: string): CommandShortcut | null {
 }
 
 export function matchesShortcutSet(event: KeyboardEvent, shortcuts: CommandShortcutSet | undefined) {
-  if (!shortcuts) {
-    return false;
-  }
-  return [shortcuts.primary, shortcuts.secondary].some((shortcut) => (shortcut ? matchesShortcut(event, shortcut) : false));
+  return getShortcutSetShortcuts(shortcuts).some((shortcut) => matchesShortcut(event, shortcut));
 }

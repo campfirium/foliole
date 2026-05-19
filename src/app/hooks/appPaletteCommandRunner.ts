@@ -28,6 +28,7 @@ interface PaletteCommandRunnerArgs {
   reimportSelectedTopic: () => Promise<boolean>;
   resetImportData: () => Promise<boolean>;
   completeReviewItem: () => boolean;
+  deleteCurrentReviewItem: () => boolean;
   deferReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
   isReviewMode: boolean;
@@ -122,7 +123,8 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     gradeReviewEasy: () => args.gradeReviewCard(4),
     readingReviewLater: () => args.deferReviewItem(),
     readingReviewRead: () => args.completeReviewItem(),
-    readingReviewDismiss: () => args.dismissReviewItem()
+    readingReviewDismiss: () => args.dismissReviewItem(),
+    deleteCurrentReviewItem: () => args.deleteCurrentReviewItem()
   };
 }
 

@@ -63,6 +63,28 @@ describe('command keymap overrides', () => {
   });
 });
 
+describe('command keymap tertiary defaults', () => {
+  it('preserves tertiary default shortcuts alongside overrides', () => {
+    const resolved = resolveCommandShortcutMap({
+      commandIds: ['review.readingRead'],
+      defaults: {
+        'review.readingRead': {
+          primary: { key: 'w' },
+          secondary: { key: ' ' },
+          tertiary: { key: '3' }
+        }
+      },
+      overrides: {
+        'review.readingRead': { primary: 'R' }
+      }
+    });
+
+    expect(resolved['review.readingRead']?.primary).toMatchObject({ key: 'r' });
+    expect(resolved['review.readingRead']?.secondary).toMatchObject({ key: ' ' });
+    expect(resolved['review.readingRead']?.tertiary).toMatchObject({ key: '3' });
+  });
+});
+
 describe('command keymap parsing', () => {
   beforeEach(() => {
     clearStorage();

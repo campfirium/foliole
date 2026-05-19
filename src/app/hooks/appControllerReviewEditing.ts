@@ -36,8 +36,17 @@ export function useReviewEditingState(args: {
     readingLaterShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.readingReviewLater],
     readingReadShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.readingReviewRead],
     readingDismissShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.readingReviewDismiss],
+    deleteCurrentItemShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.deleteCurrentReviewItem],
     completeReviewItem: args.ws.completeReviewItem,
     deferReviewItem: args.ws.deferReviewItem,
+    deleteCurrentReviewItem: () => {
+      const nodeId = args.ws.reviewSession.currentNodeId;
+      if (!nodeId) {
+        return false;
+      }
+      args.ws.deleteNode(nodeId);
+      return true;
+    },
     dismissReviewItem: args.ws.dismissReviewItem,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     gradeReviewCard: args.ws.gradeReviewCard

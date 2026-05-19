@@ -113,6 +113,19 @@ function createRestartAppCommand(args: {
   };
 }
 
+function createDeleteCurrentReviewItemCommand(args: {
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return () => {
+    const nodeId = args.ws.reviewSession.currentNodeId;
+    if (!nodeId) {
+      return false;
+    }
+    args.ws.deleteNode(nodeId);
+    return true;
+  };
+}
+
 function createPaletteNavigationActions(args: {
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
@@ -149,6 +162,7 @@ function createPaletteRunnerArgs(args: {
     createVirtualNode: createVirtualNodeCommand(args),
     enterPriorityMode: args.layoutProps.document.onEnterPriorityQuickSet,
     deferReviewItem: args.ws.deferReviewItem,
+    deleteCurrentReviewItem: createDeleteCurrentReviewItemCommand({ ws: args.ws }),
     dismissReviewItem: args.ws.dismissReviewItem,
     exitReviewSession: args.ws.exitReviewSession,
     exitStudyMode: args.study.exitStudyMode,

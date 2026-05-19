@@ -23,7 +23,8 @@ export const REVIEW_SHORTCUT_COMMAND_IDS = [
   APP_COMMAND_IDS.gradeReviewEasy,
   APP_COMMAND_IDS.readingReviewLater,
   APP_COMMAND_IDS.readingReviewRead,
-  APP_COMMAND_IDS.readingReviewDismiss
+  APP_COMMAND_IDS.readingReviewDismiss,
+  APP_COMMAND_IDS.deleteCurrentReviewItem
 ] as const;
 
 export const DOCUMENT_SHORTCUT_COMMAND_IDS = [APP_COMMAND_IDS.findInTopic, APP_COMMAND_IDS.enterPriorityMode] as const;

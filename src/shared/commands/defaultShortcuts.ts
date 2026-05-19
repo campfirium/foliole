@@ -21,12 +21,14 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.toggleImmersiveMode]: { primary: { key: 'F11' } },
   [APP_COMMAND_IDS.toggleDevTools]: { primary: { key: 'i', ctrlKey: true, shiftKey: true }, secondary: { key: 'i', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.toggleList]: { primary: { key: 'l', ctrlKey: true, shiftKey: true }, secondary: { key: 'l', metaKey: true, shiftKey: true } },
+  [APP_COMMAND_IDS.startStudyMode]: { primary: { key: 'r', altKey: true }, secondary: { key: 'F1' } },
   [APP_COMMAND_IDS.revealReviewAnswer]: { primary: { key: ' ' } },
   [APP_COMMAND_IDS.gradeReviewAgain]: { primary: { key: '1' } },
   [APP_COMMAND_IDS.gradeReviewHard]: { primary: { key: '2' } },
   [APP_COMMAND_IDS.gradeReviewGood]: { primary: { key: '3' } },
   [APP_COMMAND_IDS.gradeReviewEasy]: { primary: { key: '4' } },
-  [APP_COMMAND_IDS.readingReviewLater]: { primary: { key: '1' } },
-  [APP_COMMAND_IDS.readingReviewRead]: { primary: { key: '3' }, secondary: { key: ' ' } },
-  [APP_COMMAND_IDS.readingReviewDismiss]: { primary: { key: '5' } }
+  [APP_COMMAND_IDS.readingReviewLater]: { primary: { key: 'q' }, secondary: { key: '1' } },
+  [APP_COMMAND_IDS.readingReviewRead]: { primary: { key: 'w' }, secondary: { key: ' ' }, tertiary: { key: '3' } },
+  [APP_COMMAND_IDS.readingReviewDismiss]: { primary: { key: 'e' }, secondary: { key: '4' } },
+  [APP_COMMAND_IDS.deleteCurrentReviewItem]: { primary: { key: 'Delete' } }
 };

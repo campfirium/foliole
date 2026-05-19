@@ -2,7 +2,9 @@ import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../lib/core/nodes/folderTopicI
 import { VIRTUAL_NODE_COMMAND } from '../../../lib/core/nodes/virtualNodeCommands';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
-export interface BuildAppPaletteItemsOptions {
+import { isReviewCommandEnabled, REVIEW_PALETTE_COMMANDS, type ReviewPaletteCommandOptions } from './appPaletteReviewCommands';
+
+export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions {
   canExportCurrentArticle: boolean;
   canImportFile: boolean;
   canImportFolder: boolean;
@@ -18,12 +20,6 @@ export interface BuildAppPaletteItemsOptions {
   canFindInCurrentTopic: boolean;
   canToggleImmersiveMode: boolean;
   canSetNodePriority: boolean;
-  canRevealAnswer: boolean;
-  canToggleReviewMode: boolean;
-  canGradeReview: boolean;
-  canDeferReadingReview: boolean;
-  canCompleteReadingReview: boolean;
-  canDismissReadingReview: boolean;
   isImmersiveMode: boolean;
   isReviewMode: boolean;
 }
@@ -89,15 +85,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.toggleImmersiveMode, title: 'Toggle Immersive Reading', section: 'Editor', keywords: ['immersive', 'reading', 'focus', 'fullscreen'] },
   { id: APP_COMMAND_IDS.enterPriorityMode, title: 'Set Priority…', section: 'Editor', keywords: ['priority', 'queue', 'p0', 'p1', 'quick set'] },
   { id: APP_COMMAND_IDS.toggleEditorDisplayMode, title: 'Toggle Editor Display Mode', section: 'Editor' },
-  { id: APP_COMMAND_IDS.startStudyMode, title: 'Enter Review Mode', section: 'Review' },
-  { id: APP_COMMAND_IDS.revealReviewAnswer, title: 'Reveal Review Answer', section: 'Review' },
-  { id: APP_COMMAND_IDS.gradeReviewAgain, title: 'Grade Review: Again', section: 'Review', keywords: ['grade'] },
-  { id: APP_COMMAND_IDS.gradeReviewHard, title: 'Grade Review: Hard', section: 'Review', keywords: ['grade'] },
-  { id: APP_COMMAND_IDS.gradeReviewGood, title: 'Grade Review: Good', section: 'Review', keywords: ['grade'] },
-  { id: APP_COMMAND_IDS.gradeReviewEasy, title: 'Grade Review: Easy', section: 'Review', keywords: ['grade'] },
-  { id: APP_COMMAND_IDS.readingReviewLater, title: 'Reading: Later', section: 'Review', keywords: ['reading'] },
-  { id: APP_COMMAND_IDS.readingReviewRead, title: 'Reading: Read', section: 'Review', keywords: ['reading'] },
-  { id: APP_COMMAND_IDS.readingReviewDismiss, title: 'Reading: Dismiss', section: 'Review', keywords: ['reading'] }
+  ...REVIEW_PALETTE_COMMANDS
 ];
 
 function resolveCommandTitle(id: string, isReviewMode: boolean, title: string) {
@@ -112,15 +100,6 @@ function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, t
     return options.isImmersiveMode ? 'Exit Immersive Reading' : 'Enter Immersive Reading';
   }
   return resolveCommandTitle(id, options.isReviewMode, title);
-}
-
-function isReviewGradeCommand(id: string) {
-  return (
-    id === APP_COMMAND_IDS.gradeReviewAgain ||
-    id === APP_COMMAND_IDS.gradeReviewHard ||
-    id === APP_COMMAND_IDS.gradeReviewGood ||
-    id === APP_COMMAND_IDS.gradeReviewEasy
-  );
 }
 
 function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
@@ -183,28 +162,6 @@ function isNavigationCommandEnabled(id: string, options: BuildAppPaletteItemsOpt
   }
   if (id === APP_COMMAND_IDS.goParent) {
     return options.canGoParent;
-  }
-  return null;
-}
-
-function isReviewCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
-  if (id === APP_COMMAND_IDS.startStudyMode) {
-    return options.canToggleReviewMode;
-  }
-  if (id === APP_COMMAND_IDS.revealReviewAnswer) {
-    return options.canRevealAnswer;
-  }
-  if (id === APP_COMMAND_IDS.readingReviewLater) {
-    return options.canDeferReadingReview;
-  }
-  if (id === APP_COMMAND_IDS.readingReviewRead) {
-    return options.canCompleteReadingReview;
-  }
-  if (id === APP_COMMAND_IDS.readingReviewDismiss) {
-    return options.canDismissReadingReview;
-  }
-  if (isReviewGradeCommand(id)) {
-    return options.canGradeReview;
   }
   return null;
 }

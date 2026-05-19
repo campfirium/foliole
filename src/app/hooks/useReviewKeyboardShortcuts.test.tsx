@@ -23,8 +23,10 @@ function ReviewShortcutHarness(
     readingLaterShortcuts: { primary: { key: 'l' } },
     readingReadShortcuts: { primary: { key: 'r' } },
     readingDismissShortcuts: { primary: { key: 'd' } },
+    deleteCurrentItemShortcuts: { primary: { key: 'Delete' } },
     completeReviewItem: vi.fn(() => true),
     deferReviewItem: vi.fn(() => true),
+    deleteCurrentReviewItem: vi.fn(() => true),
     dismissReviewItem: vi.fn(() => true),
     revealReviewAnswer: vi.fn(),
     gradeReviewCard: vi.fn(async () => true),
@@ -63,4 +65,18 @@ it('runs review action shortcuts when the current review item is visible', () =>
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' }));
 
   expect(completeReviewItem).toHaveBeenCalledTimes(1);
+});
+
+it('deletes the visible review item with Delete', () => {
+  const deleteCurrentReviewItem = vi.fn(() => true);
+  render(
+    <ReviewShortcutHarness
+      deleteCurrentReviewItem={deleteCurrentReviewItem}
+      isCurrentReviewItemVisible
+    />
+  );
+
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }));
+
+  expect(deleteCurrentReviewItem).toHaveBeenCalledTimes(1);
 });

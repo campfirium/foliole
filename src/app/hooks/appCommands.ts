@@ -45,6 +45,7 @@ interface RunAppCommandActions {
   readingReviewLater: () => void;
   readingReviewRead: () => void;
   readingReviewDismiss: () => void;
+  deleteCurrentReviewItem: () => boolean | void;
   toggleDevTools: () => void;
 }
 
@@ -113,7 +114,8 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.gradeReviewEasy]: actions.gradeReviewEasy,
     [APP_COMMAND_IDS.readingReviewLater]: actions.readingReviewLater,
     [APP_COMMAND_IDS.readingReviewRead]: actions.readingReviewRead,
-    [APP_COMMAND_IDS.readingReviewDismiss]: actions.readingReviewDismiss
+    [APP_COMMAND_IDS.readingReviewDismiss]: actions.readingReviewDismiss,
+    [APP_COMMAND_IDS.deleteCurrentReviewItem]: actions.deleteCurrentReviewItem
   };
 
   const handler = handlers[id];
