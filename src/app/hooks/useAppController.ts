@@ -58,6 +58,7 @@ function useDerivedControllerState(args: {
   priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
+  resumeReviewItem: () => void;
   startStudyMode: ReturnType<typeof useWorkspaceControllerState>['study']['startStudyMode'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
@@ -88,6 +89,7 @@ function useDerivedControllerState(args: {
       reviewDueCount,
       reviewPreview: args.reviewPreview,
       reviewSettings: args.reviewSettings,
+      resumeReviewItem: args.resumeReviewItem,
       startStudyMode: args.startStudyMode,
       ws: args.ws
     })
@@ -123,6 +125,7 @@ function buildControllerLayoutState(args: {
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
+  resumeReviewItem: () => void;
   startStudyMode: ReturnType<typeof useWorkspaceControllerState>['study']['startStudyMode'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
@@ -141,6 +144,7 @@ function buildControllerLayoutState(args: {
     reviewDueCount: args.reviewDueCount,
     reviewPreview: args.reviewPreview,
     reviewSettings: args.reviewSettings,
+    resumeReviewItem: args.resumeReviewItem,
     rightSidebarResize: args.controller.rightSidebarResize,
     runtime: args.controller.runtime,
     runImportDirectory: args.formalImport.startImportDirectory,
@@ -172,7 +176,7 @@ export function useAppController(args: {
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
   useReviewQueueDocumentPrefetch(ws.reviewSession);
   const isCurrentReviewItemGradable = (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
-  const resumeReviewItem = useResumeReviewItem({ controller, ws });
+  const resumeReviewItem = useResumeReviewItem({ controller, nowIso, reviewSettings, ws });
   const isReviewEditing = useReviewEditingState({
     hotkeys,
     isExternalViewOpen: controller.externalView.isExternalViewOpen,
@@ -197,6 +201,7 @@ export function useAppController(args: {
     priorityQuickSet,
     reviewPreview,
     reviewSettings,
+    resumeReviewItem,
     startStudyMode,
     ws
   });

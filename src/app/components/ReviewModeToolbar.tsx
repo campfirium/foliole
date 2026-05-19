@@ -5,7 +5,8 @@ import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
-import { FsrsRevealAction, ReadingReviewActions, ReviewCompleteAction, ResumeReviewAction, ReviewGradeActions } from './ReviewModeToolbarActions';
+import { FsrsRevealAction, ReadingReviewActions, ResumeReviewAction, ReviewGradeActions } from './ReviewModeToolbarActions';
+import { ReviewNoCurrentItemBar } from './ReviewModeToolbarNoCurrent';
 import { ReviewToolbarProgressLine, ReviewToolbarSessionActions } from './ReviewToolbarSessionFrame';
 
 interface ReviewModeToolbarProps {
@@ -21,43 +22,19 @@ interface ReviewModeToolbarProps {
   reviewCurrentNodeId: string | null;
   reviewCurrentTitle: string | undefined;
   reviewQueueCount: number;
+  reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   reviewSessionMode: ReviewSessionMode;
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
   onDismissReviewItem: () => boolean;
+  onContinueReading: () => void;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
   onResumeReviewItem: () => void;
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
   showProgress?: boolean;
   style?: CSSProperties;
-}
-
-function ReviewCompleteBar({
-  className,
-  onExitReviewMode,
-  reviewCompletedCount,
-  reviewQueueCount,
-  showProgress = true,
-  style
-}: {
-  className?: string;
-  onExitReviewMode: () => void;
-  reviewCompletedCount: number;
-  reviewQueueCount: number;
-  showProgress?: boolean;
-  style?: CSSProperties;
-}) {
-  return (
-    <ReviewActionBar
-      ariaLabel="Review mode toolbar"
-      {...definedProps({ className, style })}
-      mode="study"
-      primary={<ReviewCompleteAction onExitReviewMode={onExitReviewMode} />}
-      progress={showProgress ? <ReviewToolbarProgressLine completedCount={reviewCompletedCount} queueCount={reviewQueueCount} /> : null}
-    />
-  );
 }
 
 function useGradeFeedback(
@@ -153,13 +130,14 @@ function ActiveReviewActionBar({
       submitGrade={submitGrade}
     />
   );
+  const showActionFrame = showSessionModeControl && (!isCurrentItemGradable || isAnswerRevealed);
 
   return (
     <ReviewActionBar
       ariaLabel="Review mode toolbar"
       {...definedProps({ className, style })}
       mode="study"
-      primary={showSessionModeControl ? (
+      primary={showActionFrame ? (
         <ReviewToolbarSessionActions actions={actions} onSetReviewSessionMode={onSetReviewSessionMode} reviewSessionMode={reviewSessionMode} />
       ) : actions}
       progress={showProgress ? <ReviewToolbarProgressLine completedCount={reviewCompletedCount} queueCount={reviewQueueCount} /> : null}
@@ -175,23 +153,23 @@ export function ReviewModeToolbar({
   isAnswerRevealed, isCurrentItemGradable, isCurrentReviewItemVisible, isReviewEditing,
   reviewCompletedCount, reviewCurrentNodeId, reviewQueueCount, onGrade,
   onCompleteReviewItem, onDeferReviewItem, onDismissReviewItem, onRevealAnswer,
-  onExitReviewMode, onResumeReviewItem, onSetReviewSessionMode, reviewCurrentTitle, reviewSessionMode,
+  onContinueReading, onResumeReviewItem, onSetReviewSessionMode, reviewCurrentTitle, reviewSessionMode, reviewStatus,
   showProgress = true, style
 }: ReviewModeToolbarProps) {
   const { errorMessage, isSubmitting, retryGrade, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
 
-  if (!isStudyMode) {
-    return null;
-  }
+  if (!isStudyMode) return null;
 
   if (!reviewCurrentNodeId) {
     return (
-      <ReviewCompleteBar
-        onExitReviewMode={onExitReviewMode}
+      <ReviewNoCurrentItemBar
+        {...definedProps({ className, style })}
+        onContinueReading={onContinueReading}
+        onResumeReviewItem={onResumeReviewItem}
         reviewCompletedCount={reviewCompletedCount}
         reviewQueueCount={reviewQueueCount}
-        showProgress={showProgress}
-        {...definedProps({ className, style })}
+        reviewStatus={reviewStatus}
+        showSummary={showSummary}
       />
     );
   }

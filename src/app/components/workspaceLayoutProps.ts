@@ -86,7 +86,14 @@ export interface WorkspaceLayoutFlatProps {
   reviewQueueVisibility: ReviewQueueVisibility | null;
   reviewQueueCount: number;
   reviewCompletedCount: number;
-  reviewStatus: 'awaiting-answer' | 'answer-revealed' | 'completed';
+  reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
+  reviewSummary: {
+    completedAt: string | null;
+    continueNodeId: string | null;
+    readTopicCount: number;
+    reviewedItemCount: number;
+    sessionStartedAt: string | null;
+  };
   reviewSessionMode: ReviewSessionMode;
   isResizingList: boolean;
   isResizingRightSidebar: boolean;
@@ -188,6 +195,8 @@ export interface WorkspaceLayoutFlatProps {
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
   onDismissReviewItem: () => boolean;
+  onContinueReading: () => void;
+  onResumeReviewItem: () => void;
   onExitReviewMode: () => void;
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
   reviewSchedulerSettings: ReviewSchedulerSettings;

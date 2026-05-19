@@ -135,6 +135,7 @@ export interface BuildLayoutPropsArgs {
   reviewSession: WorkspaceState['reviewSession'];
   reviewSessionMode: WorkspaceState['reviewSessionMode'];
   setReviewSessionMode: WorkspaceState['setReviewSessionMode'];
+  onResumeReviewItem: () => void;
   selectedTrashNodeId: string | null;
   showAnswerSection: boolean;
   startStudyMode: (options?: StartStudyModeOptions) => void;

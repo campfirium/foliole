@@ -5,6 +5,7 @@ import type { UnifiedPushQueueRules } from '../../features/review/model/unifiedP
 import { definedProps } from '../../shared/lib/definedProps';
 import { buildCachedReviewQueuePlan } from '../../store/reviewQueuePlannerCached';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
+import { isReviewSessionCompleted } from '../../store/workspaceReviewReading';
 import type { WorkspaceState } from '../../store/workspaceStore';
 import { buildReviewQueueVisibility } from '../components/reviewQueueVisibility';
 import { groupWorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
@@ -53,8 +54,32 @@ function getReviewSessionSummary(reviewSession: WorkspaceState['reviewSession'])
     ? reviewSession.isAnswerRevealed
       ? 'answer-revealed'
       : 'awaiting-answer'
-    : 'completed';
-  return { reviewCompletedCount, reviewQueueCount, reviewStatus };
+    : isReviewSessionCompleted(reviewSession)
+      ? 'completed'
+      : 'idle';
+  const reviewSummary: WorkspaceLayoutFlatProps['reviewSummary'] = {
+    completedAt: reviewSession.completedAt ?? null,
+    continueNodeId: reviewSession.continueNodeId ?? null,
+    readTopicCount: reviewSession.readTopicCount ?? 0,
+    reviewedItemCount: reviewSession.reviewedItemCount ?? 0,
+    sessionStartedAt: reviewSession.sessionStartedAt ?? null
+  };
+  return { reviewCompletedCount, reviewQueueCount, reviewStatus, reviewSummary };
+}
+
+function createContinueReadingAction(args: BuildLayoutPropsArgs) {
+  return () => {
+    const continueNodeId = args.reviewSession.continueNodeId;
+    const targetNodeId =
+      continueNodeId && args.nodesById[continueNodeId] && !args.trashedNodeIds.includes(continueNodeId)
+        ? continueNodeId
+        : args.activeNodeId;
+    args.exitReviewSession();
+    args.onOpenNotesView();
+    if (targetNodeId && args.nodesById[targetNodeId] && !args.trashedNodeIds.includes(targetNodeId)) {
+      args.nav.onSelectNode(targetNodeId);
+    }
+  };
 }
 
 export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutProps {
@@ -63,7 +88,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
   const previewNodeId = args.isViewingTrashNode ? args.selectedTrashNodeId : args.activeNodeId;
   const previewNode = previewNodeId ? args.nodesById[previewNodeId] : undefined;
-  const { reviewCompletedCount, reviewQueueCount, reviewStatus } = getReviewSessionSummary(
+  const { reviewCompletedCount, reviewQueueCount, reviewStatus, reviewSummary } = getReviewSessionSummary(
     args.reviewSession
   );
   const reviewQueueVisibility = buildReviewQueueVisibility({
@@ -86,7 +111,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     editorAdapterRef: args.editorAdapterRef, editorContent: args.documentNode?.content ?? '', isImmersiveMode: args.isImmersiveMode, isEditorReadOnly: args.isViewingTrashNode ? true : previewNodeId ? !previewNode || !isNodeDocumentLoaded(previewNode) || isNodeContentLocked(previewNodeId, args.nodeOrder, args.nodesById, new Set(args.trashedNodeIds)) : false, isPriorityQuickSetActive: args.isPriorityQuickSetActive, editorNodeId: args.editorNodeId, ...definedProps({ editorNodeViewState: args.editorNodeViewState }),
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange, onEnterPriorityQuickSet: args.onEnterPriorityQuickSet, priorityQuickSetShortcutLabel: args.priorityQuickSetShortcutLabel,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, requestedSettingsCategory: args.requestedSettingsCategory, requestedSettingsDialog: args.requestedSettingsDialog, isReviewEditing: args.isReviewEditing,
-    isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewPanelQueueNodeIds, reviewQueueNodeIds: args.reviewSession.queueNodeIds, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, reviewSessionMode: args.reviewSessionMode, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isVirtualViewOpen: args.isVirtualViewOpen, isExternalViewOpen: args.isExternalViewOpen, activeVirtualNodeId: args.activeVirtualNodeId, isViewingTrashNode: args.isViewingTrashNode,
+    isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewPanelQueueNodeIds, reviewQueueNodeIds: args.reviewSession.queueNodeIds, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, reviewSummary, reviewSessionMode: args.reviewSessionMode, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isVirtualViewOpen: args.isVirtualViewOpen, isExternalViewOpen: args.isExternalViewOpen, activeVirtualNodeId: args.activeVirtualNodeId, isViewingTrashNode: args.isViewingTrashNode,
     isListCollapsed: args.isListCollapsed, isRightSidebarCollapsed: args.isRightSidebarCollapsed, showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, trashedNodeIds: args.trashedNodeIds, nodesById: args.nodesById, externalFolders: args.externalFolders, externalEntriesByFolderId: args.externalEntriesByFolderId, externalSelection: args.externalSelection, nodeViewById: args.nodeViewById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange, onRegisterEditorDraftFlush: args.onRegisterEditorDraftFlush, onNodeContentChange: args.onNodeContentChange, setNodeViewState: args.setNodeViewState,
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode, onSelectNodeInVirtualView: args.nav.onSelectNodeInVirtualView, shouldSuppressNavigationSelectionRestore: args.nav.shouldSuppressNavigationSelectionRestore,
     onRevealAnchorInDocument: args.onRevealAnchorInDocument,
@@ -112,7 +137,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onStartClipboardImport: args.onStartClipboardImport,
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCopyImage: args.editorCtx.onCopyImage, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateNote: args.editorCtx.onCreateNote, onOpenSelectionNote: args.editorCtx.onOpenSelectionNote, onDeleteExistingHighlight: args.editorCtx.onDeleteExistingHighlight, onOpenExistingHighlight: args.editorCtx.onOpenExistingHighlight, onRepairTable: args.editorCtx.onRepairTable, onAdjustExistingHighlightRange: args.editorCtx.onAdjustExistingHighlightRange, onCreateSelectionHighlight: args.editorCtx.onCreateSelectionHighlight, onToggleSelectionHighlight: args.editorCtx.onToggleSelectionHighlight, onCreateSelectionNote: args.editorCtx.onCreateSelectionNote, onCreatePdfHighlight: args.editorCtx.onCreatePdfHighlight, onCreateCloze: args.editorCtx.onCreateCloze, onCutImage: args.editorCtx.onCutImage, onDeleteImage: args.editorCtx.onDeleteImage, onExportImage: args.editorCtx.onExportImage, ...definedProps({ onCreateHighlightFromPayload: args.editorCtx.onCreateHighlightFromPayload, onPastedTextAnchors: args.onPastedTextAnchors, onCreateClozeFromPayload: args.editorCtx.onCreateClozeFromPayload }),
     onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions,
-    onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession, onSetReviewSessionMode: args.setReviewSessionMode,
+    onRevealAnswer: args.revealReviewAnswer, onResumeReviewItem: args.onResumeReviewItem, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onContinueReading: createContinueReadingAction(args), onExitReviewMode: sessionActions.onToggleReviewSession, onSetReviewSessionMode: args.setReviewSessionMode,
     reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, selectedTrashNodeId: args.selectedTrashNodeId
   };
   return groupWorkspaceLayoutProps(flatProps);

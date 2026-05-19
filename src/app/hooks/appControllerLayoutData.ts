@@ -75,6 +75,7 @@ function createLayoutReviewData(args: BuildControllerLayoutPropsArgs) {
     reviewPreview: args.reviewPreview,
     reviewSession: args.ws.reviewSession,
     reviewSessionMode: args.ws.reviewSessionMode,
+    onResumeReviewItem: args.resumeReviewItem,
     setReviewSessionMode: args.ws.setReviewSessionMode,
     showAnswerSection: !args.isStudyMode || args.ws.reviewSession.isAnswerRevealed,
     startReviewSession: args.ws.startReviewSession,

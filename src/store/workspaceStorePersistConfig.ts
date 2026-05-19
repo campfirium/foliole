@@ -6,6 +6,7 @@ import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
 import { collectRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryKeepNodeIds';
+import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStore';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 
@@ -22,6 +23,25 @@ function resolveMergedActiveNodeId(current: WorkspaceState, next: WorkspaceState
   return canKeepCurrentActiveNode(current, next) ? current.activeNodeId : next.activeNodeId;
 }
 
+function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedState {
+  return {
+    activeNodeId: state.activeNodeId,
+    layout: state.layout,
+    nodeViewById: state.nodeViewById,
+    nodeOrder: state.nodeOrder,
+    nodesById: trimWorkspaceNodesForRendererBoundary(
+      state.activeNodeId,
+      state.nodesById,
+      collectRendererBoundaryKeepNodeIds(state, state)
+    ),
+    reviewSession: state.reviewSession,
+    reviewSessionMode: state.reviewSessionMode,
+    trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
+    trashedNodeIds: state.trashedNodeIds,
+    untitledSequenceByParent: state.untitledSequenceByParent
+  };
+}
+
 export function createWorkspaceStorePersistConfig(
   onHydrated: (error?: unknown) => void
 ): PersistOptions<WorkspaceState, WorkspacePersistedState> {
@@ -29,20 +49,7 @@ export function createWorkspaceStorePersistConfig(
     name: 'foliole-workspace-v1',
     skipHydration: true,
     storage: createJSONStorage<WorkspacePersistedState>(() => workspacePersistStorage),
-    partialize: (state: WorkspaceState): WorkspacePersistedState => ({
-      activeNodeId: state.activeNodeId,
-      layout: state.layout,
-      nodeViewById: state.nodeViewById,
-      nodeOrder: state.nodeOrder,
-      nodesById: trimWorkspaceNodesForRendererBoundary(
-        state.activeNodeId,
-        state.nodesById,
-        collectRendererBoundaryKeepNodeIds(state, state)
-      ),
-      trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
-      trashedNodeIds: state.trashedNodeIds,
-      untitledSequenceByParent: state.untitledSequenceByParent
-    }),
+    partialize: partializeWorkspaceState,
     merge: (persistedState, current) => {
       const persisted = parsePersistedWorkspaceState(persistedState);
       const nextState = {
@@ -54,6 +61,8 @@ export function createWorkspaceStorePersistConfig(
           ...persisted.layout
         },
         nodeViewById: persisted.nodeViewById ?? current.nodeViewById,
+        reviewSession: persisted.reviewSession ?? current.reviewSession,
+        reviewSessionMode: persisted.reviewSessionMode ?? current.reviewSessionMode,
         trashedNodeDeletedAtById: persisted.trashedNodeDeletedAtById ?? current.trashedNodeDeletedAtById,
         untitledSequenceByParent:
           persisted.untitledSequenceByParent ?? current.untitledSequenceByParent
@@ -67,7 +76,12 @@ export function createWorkspaceStorePersistConfig(
           trashedNodeIds: nextState.trashedNodeIds
         })
       };
-      return withWorkspaceRendererBoundary(nextWorkspaceState, current);
+      return withWorkspaceRendererBoundary({
+        ...nextWorkspaceState,
+        reviewSession: persisted.reviewSession
+          ? reconcileReviewSession(nextWorkspaceState)
+          : nextWorkspaceState.reviewSession
+      }, current);
     },
     onRehydrateStorage: () => (_state: unknown, error?: unknown) => {
       onHydrated(error);

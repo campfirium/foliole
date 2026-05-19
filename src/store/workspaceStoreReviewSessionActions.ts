@@ -1,7 +1,12 @@
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { buildCachedReviewQueuePlan } from './reviewQueuePlannerCached';
-import { createEmptyReviewSession } from './workspaceReviewReading';
+import {
+  advanceReviewSession,
+  createEmptyReviewSession,
+  createStartedReviewSession
+} from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
@@ -12,6 +17,18 @@ function buildReviewQueue(state: WorkspaceState, now: string, mode: ReviewSessio
     nodeOrder: state.nodeOrder,
     nodesById: state.nodesById,
     now,
+    pushQueueRules: getCurrentReviewSchedulerSettings().pushQueue,
+    trashedNodeIds: state.trashedNodeIds
+  }).queueNodeIds;
+}
+
+function buildDisplayedReviewQueue(state: WorkspaceState, now: string): string[] {
+  return buildCachedReviewQueuePlan({
+    includeScheduled: true,
+    nodeOrder: state.nodeOrder,
+    nodesById: state.nodesById,
+    now,
+    pushQueueRules: getCurrentReviewSchedulerSettings().pushQueue,
     trashedNodeIds: state.trashedNodeIds
   }).queueNodeIds;
 }
@@ -25,10 +42,39 @@ export function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceStat
       started = true;
       return {
         activeNodeId: queueNodeIds[0] ?? state.activeNodeId,
-        reviewSession: { currentNodeId: queueNodeIds[0] ?? null, isAnswerRevealed: false, queueNodeIds, totalNodeCount: queueNodeIds.length }
+        reviewSession: createStartedReviewSession({
+          continueNodeId: state.activeNodeId,
+          currentNodeId: queueNodeIds[0] ?? null,
+          queueNodeIds,
+          sessionStartedAt: now,
+          totalNodeCount: queueNodeIds.length
+        })
       };
     });
     return started;
+  };
+}
+
+export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceState['resumeReviewSession'] {
+  return (now = new Date().toISOString()) => {
+    let resumed = false;
+    set((state) => {
+      const queueNodeIds = buildDisplayedReviewQueue(state, now);
+      const currentNodeId = queueNodeIds[0] ?? null;
+      if (!currentNodeId) return state;
+      resumed = true;
+      return {
+        activeNodeId: currentNodeId,
+        reviewSession: createStartedReviewSession({
+          continueNodeId: state.reviewSession.continueNodeId ?? state.activeNodeId,
+          currentNodeId,
+          queueNodeIds,
+          sessionStartedAt: state.reviewSession.sessionStartedAt ?? now,
+          totalNodeCount: queueNodeIds.length
+        })
+      };
+    });
+    return resumed;
   };
 }
 
@@ -42,7 +88,11 @@ export function createSetReviewSessionModeAction(set: WorkspaceSet): WorkspaceSt
       return {
         activeNodeId: queueNodeIds[0] ?? state.activeNodeId,
         reviewSession: queueNodeIds.length
-          ? { currentNodeId: queueNodeIds[0] ?? null, isAnswerRevealed: false, queueNodeIds, totalNodeCount: completedCount + queueNodeIds.length }
+          ? advanceReviewSession(state.reviewSession, {
+              nextNodeId: queueNodeIds[0]!,
+              queueNodeIds,
+              totalNodeCount: completedCount + queueNodeIds.length
+            })
           : createEmptyReviewSession(),
         reviewSessionMode: mode
       };

@@ -19,6 +19,71 @@ export function createEmptyReviewSession(): WorkspaceState['reviewSession'] {
   return { currentNodeId: null, isAnswerRevealed: false, queueNodeIds: [], totalNodeCount: 0 };
 }
 
+export function isReviewSessionCompleted(reviewSession: WorkspaceState['reviewSession']) {
+  return !reviewSession.currentNodeId && reviewSession.totalNodeCount > 0 && reviewSession.queueNodeIds.length === 0;
+}
+
+export function createStartedReviewSession(args: {
+  continueNodeId: string | null;
+  currentNodeId: string | null;
+  queueNodeIds: string[];
+  sessionStartedAt: string;
+  totalNodeCount: number;
+}): WorkspaceState['reviewSession'] {
+  return {
+    completedAt: null,
+    continueNodeId: args.continueNodeId,
+    currentNodeId: args.currentNodeId,
+    isAnswerRevealed: false,
+    queueNodeIds: args.queueNodeIds,
+    readTopicCount: 0,
+    reviewedItemCount: 0,
+    sessionStartedAt: args.sessionStartedAt,
+    totalNodeCount: args.totalNodeCount
+  };
+}
+
+export function advanceReviewSession(
+  reviewSession: WorkspaceState['reviewSession'],
+  args: {
+    nextNodeId: string;
+    queueNodeIds: string[];
+    readTopicDelta?: number;
+    reviewedItemDelta?: number;
+    totalNodeCount?: number;
+  }
+): WorkspaceState['reviewSession'] {
+  return {
+    ...reviewSession,
+    completedAt: null,
+    currentNodeId: args.nextNodeId,
+    isAnswerRevealed: false,
+    queueNodeIds: args.queueNodeIds,
+    readTopicCount: (reviewSession.readTopicCount ?? 0) + (args.readTopicDelta ?? 0),
+    reviewedItemCount: (reviewSession.reviewedItemCount ?? 0) + (args.reviewedItemDelta ?? 0),
+    totalNodeCount: args.totalNodeCount ?? reviewSession.totalNodeCount
+  };
+}
+
+export function completeReviewSession(
+  reviewSession: WorkspaceState['reviewSession'],
+  args: {
+    completedAt: string;
+    readTopicDelta?: number;
+    reviewedItemDelta?: number;
+  }
+): WorkspaceState['reviewSession'] {
+  return {
+    ...reviewSession,
+    completedAt: args.completedAt,
+    currentNodeId: null,
+    isAnswerRevealed: false,
+    queueNodeIds: [],
+    readTopicCount: (reviewSession.readTopicCount ?? 0) + (args.readTopicDelta ?? 0),
+    reviewedItemCount: (reviewSession.reviewedItemCount ?? 0) + (args.reviewedItemDelta ?? 0)
+  };
+}
+
 export function resolveNodePriorityChain(
   currentNodeId: string,
   nodesById: Record<string, PriorityChainNode | undefined>

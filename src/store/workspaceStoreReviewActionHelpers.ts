@@ -1,6 +1,6 @@
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade } from '../features/review/model/reviewTypes';
 
-import { createEmptyReviewSession } from './workspaceReviewReading';
+import { advanceReviewSession, completeReviewSession } from './workspaceReviewReading';
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -48,13 +48,15 @@ export function applyGradedReviewState(args: {
         }
       },
       reviewSession: args.nextNodeId
-        ? {
-            currentNodeId: args.nextNodeId,
-            isAnswerRevealed: false,
+        ? advanceReviewSession(args.snapshot.reviewSession, {
+            nextNodeId: args.nextNodeId,
             queueNodeIds: args.nextQueue,
-            totalNodeCount: args.snapshot.reviewSession.totalNodeCount
-          }
-        : createEmptyReviewSession()
+            reviewedItemDelta: 1
+          })
+        : completeReviewSession(args.snapshot.reviewSession, {
+            completedAt: args.now,
+            reviewedItemDelta: 1
+          })
     };
   });
 }

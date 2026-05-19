@@ -54,6 +54,7 @@ export interface BuildControllerLayoutPropsArgs {
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReviewSchedulerSettingsContextValue;
+  resumeReviewItem: () => void;
   rightSidebarResize: ReturnType<typeof useRightSidebarResizer>;
   runtime: ReturnType<typeof useAppRuntime>;
   selectedTrashNode: Node | undefined;
@@ -85,6 +86,7 @@ export interface BuildControllerLayoutPropsArgs {
     nodesById: Record<string, Node>;
     nodeViewById: Record<string, NodeViewState | undefined>;
     resetLayout: () => void;
+    resumeReviewSession: (now?: string) => boolean;
     revealReviewAnswer: () => void;
     reviewSession: ReviewSessionState;
     reviewSessionMode: ReviewSessionMode;
