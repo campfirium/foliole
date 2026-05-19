@@ -3,8 +3,6 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 
 import type { WorkspaceTopicTreeScrollPlacement } from './WorkspaceTopicTreeRows';
 
-const DERIVED_PARENT_SECOND_ROW_MAX_DISTANCE = 16;
-
 export function resolveWorkspaceTopicTreeReviewScroll(args: {
   focusedNodeId: string | null;
   forceVisibleNodeId: string | null | undefined;
@@ -19,16 +17,10 @@ export function resolveWorkspaceTopicTreeReviewScroll(args: {
   }
 
   const focusedNode = args.focusedNodeId ? args.nodesById[args.focusedNodeId] : null;
-  const parentNodeId = focusedNode?.anchorLink ? focusedNode.parentNodeId : null;
-  const focusedRowIndex = findRowIndex(args.rows, args.focusedNodeId);
+  const parentNodeId = focusedNode?.parentNodeId ?? null;
   const parentRowIndex = findRowIndex(args.rows, parentNodeId);
 
-  if (
-    parentNodeId &&
-    parentRowIndex !== null &&
-    focusedRowIndex !== null &&
-    focusedRowIndex - parentRowIndex <= DERIVED_PARENT_SECOND_ROW_MAX_DISTANCE
-  ) {
+  if (parentNodeId && parentRowIndex !== null) {
     return { placement: 'second-visible-row', scrollNodeId: parentNodeId };
   }
 
