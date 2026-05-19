@@ -10,6 +10,7 @@ import {
 import {
   collectInlineCodeSyntaxDecorationPlan,
   collectInlineTokenDecorationPlan,
+  collectDanglingNoteAsteriskDecorationPlan,
   collectEmphasisTextDecorationPlan,
   collectSourceHighlightDecorationPlan,
   collectStrongTextDecorationPlan,
@@ -68,6 +69,7 @@ function collectPreviewTextDecorationPlans(args: {
   const preservedRanges = args.preservedRanges.concat(args.footnoteRanges);
   return [
     collectInlineTokenDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock, args.showSyntaxOnLine, preservedRanges),
+    collectDanglingNoteAsteriskDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
     collectEmphasisTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
     collectStrongTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
     collectStrikethroughTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),

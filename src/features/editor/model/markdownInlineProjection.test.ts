@@ -24,6 +24,41 @@ describe('markdownInlineProjection punctuation emphasis compatibility', () => {
   });
 });
 
+describe('markdownInlineProjection adjacent CJK strong compatibility', () => {
+  it('keeps later strong spans when a spaced closing mark precedes them', () => {
+    const text = '那就是**动力 (motivation) **。 **我们将讨论快乐和奖励**，讨论**成瘾**，讨论相关的**神经化学**';
+
+    expect(collectMarkdownInlineRanges(text).map((range) => range.text)).toEqual([
+      '动力 (motivation) ',
+      '我们将讨论快乐和奖励',
+      '成瘾',
+      '神经化学'
+    ]);
+  });
+
+  it('projects adjacent CJK strong emphasis when parser exposes empty emphasis marks', () => {
+    const text = '多巴胺释放带来的**愉悦感都会稍微减少一点**。恶魔般的是，**痛苦反应却稍微增加了**。';
+    const firstOpen = text.indexOf('**');
+    const firstClose = text.indexOf('**', firstOpen + 2);
+    const secondOpen = text.indexOf('**', firstClose + 2);
+    const secondClose = text.indexOf('**', secondOpen + 2);
+    const ranges = collectMarkdownInlineRanges(text);
+
+    expect(ranges.map((range) => range.text)).toEqual(['愉悦感都会稍微减少一点', '痛苦反应却稍微增加了']);
+    expect(ranges.map((range) => range.kind)).toEqual(['strong', 'strong']);
+    expect(ranges.map((range) => [range.from, range.contentFrom, range.contentTo, range.to])).toEqual([
+      [firstOpen, firstOpen + 2, firstClose, firstClose + 2],
+      [secondOpen, secondOpen + 2, secondClose, secondClose + 2]
+    ]);
+    expect(ranges.flatMap((range) => range.syntaxRanges)).toEqual([
+      { from: firstOpen, to: firstOpen + 2 },
+      { from: firstClose, to: firstClose + 2 },
+      { from: secondOpen, to: secondOpen + 2 },
+      { from: secondClose, to: secondClose + 2 }
+    ]);
+  });
+});
+
 describe('markdownInlineProjection Markdown Compatibility', () => {
   it('projects lenient strong emphasis as strong text without changing source content', () => {
     expect(collectMarkdownInlineRanges('**实操含义：**如果你的应用场景')).toEqual([

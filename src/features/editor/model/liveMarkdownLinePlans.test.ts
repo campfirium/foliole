@@ -2,6 +2,25 @@ import { describe, expect, it } from 'vitest';
 
 import { collectPreviewLineDecorationPlan, collectSourceLineDecorationPlan } from './liveMarkdownLinePlans';
 
+describe('liveMarkdown dangling note preview line plans', () => {
+  it('hides dangling note emphasis markers in blockquote preview', () => {
+    const plan = collectPreviewLineDecorationPlan({
+      hideTitleHeading: false,
+      inCodeBlock: false,
+      isCursorLine: false,
+      lineFrom: 10,
+      lineNumber: 1,
+      lineText: '> \\*注：前体意味着多巴胺是用于制造肾上腺素的东西。',
+      markdownSyntaxVisible: false
+    });
+
+    expect(plan.textDecorationPlans[1]).toEqual({
+      markRanges: [],
+      replaceRanges: [{ from: 13, to: 14 }]
+    });
+  });
+});
+
 describe('liveMarkdown preview line plans', () => {
   it('builds preview plans for title and fenced lines', () => {
     expect(

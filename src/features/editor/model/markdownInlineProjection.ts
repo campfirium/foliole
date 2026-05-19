@@ -1,5 +1,7 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { overlapsInlineCandidateRange, selectInlineProjectionCandidates } from './markdownInlineCandidateSelection';
 import type { MarkdownInlineRange, MarkdownInlineRangeKind } from './markdownInlineProjectionTypes';
+import { collectLenientAdjacentStrongCandidates } from './markdownLenientAdjacentStrongProjection';
 import { collectLenientSpacedStrongCandidates } from './markdownLenientSpacedStrongProjection';
 import { collectLenientTripleStarCandidates } from './markdownLenientTripleStarProjection';
 
@@ -9,6 +11,7 @@ type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 interface InlineProjectionCandidate {
   contentFrom: number;
   contentTo: number;
+  compatibility?: boolean;
   href?: string;
   kind: MarkdownInlineRangeKind;
   syntaxRanges: Array<{ from: number; to: number }>;
@@ -194,11 +197,18 @@ function collectInlineCandidates(text: string) {
     parentName: null,
     source: text
   });
-  candidates.push(...collectLenientSpacedStrongCandidates(text));
-  candidates.push(...collectLenientTripleStarCandidates(text));
-  return candidates
-    .filter((candidate) => isValidInlineCandidate(candidate, text.length))
-    .sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+  const inlineCodeCandidates = candidates.filter((candidate) => candidate.kind === 'inlineCode');
+  const compatibilityCandidates = [
+    ...collectLenientAdjacentStrongCandidates(text),
+    ...collectLenientSpacedStrongCandidates(text),
+    ...collectLenientTripleStarCandidates(text)
+  ].filter((candidate) => !inlineCodeCandidates.some((item) => overlapsInlineCandidateRange(item, candidate)))
+    .map((candidate) => ({ ...candidate, compatibility: true }));
+  const validCandidates = [...candidates, ...compatibilityCandidates]
+    .filter((candidate) => isValidInlineCandidate(candidate, text.length));
+  return selectInlineProjectionCandidates(validCandidates.filter((candidate) =>
+    candidate.compatibility || !compatibilityCandidates.some((item) => item.kind === candidate.kind && overlapsInlineCandidateRange(item, candidate))
+  ));
 }
 
 function isValidInlineCandidate(candidate: InlineProjectionCandidate, textLength: number) {
