@@ -11,6 +11,7 @@ export function CompanionBottomReviewBar(props: {
   onDismissReviewItem: () => void;
   onGrade: (grade: BottomBarGrade) => void;
   onRevealAnswer: () => void;
+  reviewCardKey: string | null;
   statusLabel?: string | null;
   visible: boolean;
 }) {
@@ -24,6 +25,7 @@ export function CompanionBottomReviewBar(props: {
         <ReviewActionBar
           ariaLabel="Companion review toolbar"
           className="h-auto border-0 bg-transparent px-0"
+          key={props.reviewCardKey}
           mode="study"
           primary={
             props.itemKind === 'reading' ? (
