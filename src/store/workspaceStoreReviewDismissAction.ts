@@ -15,7 +15,7 @@ export function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceG
   return (now = new Date().toISOString()) => {
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
-    if (!currentNodeId) return false;
+    if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);

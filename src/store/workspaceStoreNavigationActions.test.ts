@@ -11,7 +11,7 @@ beforeEach(() => {
   resetWorkspaceStore();
 });
 
-it('re-syncs review session when re-opening the already active queued node', () => {
+it('keeps review paused when re-opening an already active queued topic', () => {
   const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
 
   useWorkspaceStore.setState({
@@ -57,9 +57,9 @@ it('re-syncs review session when re-opening the already active queued node', () 
 
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('fsrs-1');
-  expect(state.reviewSession.currentNodeId).toBe('fsrs-1');
-  expect(state.reviewSession.isAnswerRevealed).toBe(false);
-  expect(state.reviewSession.queueNodeIds).toEqual(['fsrs-1', 'reading-1']);
+  expect(state.reviewSession.currentNodeId).toBe('reading-1');
+  expect(state.reviewSession.isAnswerRevealed).toBe(true);
+  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1', 'fsrs-1']);
 });
 
 it('keeps the previous document warm when opening another node through navigation', () => {

@@ -9,6 +9,7 @@ export function reconcileReviewSession(
   state: WorkspaceState,
   nextActiveNodeId: string | null = state.activeNodeId
 ): WorkspaceState['reviewSession'] {
+  void nextActiveNodeId;
   const queuedNodeIds = state.reviewSession.queueNodeIds.filter((nodeId) =>
     isVisibleQueuedNode(state, nodeId)
   );
@@ -24,9 +25,7 @@ export function reconcileReviewSession(
   const currentNodeId = state.reviewSession.currentNodeId;
   const currentQueuedNodeId =
     currentNodeId && queuedNodeIds.includes(currentNodeId) ? currentNodeId : null;
-  const syncedQueuedNodeId =
-    nextActiveNodeId && queuedNodeIds.includes(nextActiveNodeId) ? nextActiveNodeId : null;
-  const nextCurrentNodeId = syncedQueuedNodeId ?? currentQueuedNodeId ?? queuedNodeIds[0] ?? null;
+  const nextCurrentNodeId = currentQueuedNodeId ?? queuedNodeIds[0] ?? null;
   if (!nextCurrentNodeId) {
     return createEmptyReviewSession();
   }

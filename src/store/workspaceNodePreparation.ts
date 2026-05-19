@@ -6,6 +6,7 @@ import { loadWorkspaceNodeDocument, shouldSkipNodeDocumentPreparation } from './
 import type { WorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { RECENT_RENDERER_BOUNDARY_NODE_LIMIT } from './workspaceRendererBoundaryKeepNodeIds';
+import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import { useWorkspaceStore } from './workspaceStore';
 
@@ -49,25 +50,6 @@ function mergePreparedNodeDocument(
   options.onDocumentMerged?.(document);
 }
 
-function syncReviewSessionSelection(state: WorkspaceState, nodeId: string) {
-  if (!state.reviewSession.currentNodeId || !state.reviewSession.queueNodeIds.includes(nodeId)) {
-    return state.reviewSession;
-  }
-  return {
-    ...state.reviewSession,
-    currentNodeId: nodeId,
-    isAnswerRevealed: false,
-    queueNodeIds: [nodeId, ...state.reviewSession.queueNodeIds.filter((queuedNodeId) => queuedNodeId !== nodeId)]
-  };
-}
-
-function isReviewSessionSelectionSynced(state: WorkspaceState, nodeId: string) {
-  if (state.reviewSession.currentNodeId !== nodeId) {
-    return false;
-  }
-  return state.reviewSession.queueNodeIds[0] === nodeId;
-}
-
 function buildPreparedOpenState(
   state: WorkspaceState,
   nodeId: string,
@@ -88,7 +70,7 @@ function buildPreparedOpenState(
           [nodeId]: mergedTargetNode
         };
 
-  if (state.activeNodeId === nodeId && isReviewSessionSelectionSynced(state, nodeId) && nextNodesById === state.nodesById) {
+  if (state.activeNodeId === nodeId && nextNodesById === state.nodesById) {
     return state;
   }
 
@@ -104,7 +86,7 @@ function buildPreparedOpenState(
         }
       : { ...state.navigation, forwardStack: [] },
     nodesById: nextNodesById,
-    reviewSession: syncReviewSessionSelection(
+    reviewSession: reconcileReviewSession(
       {
         ...state,
         nodesById: nextNodesById

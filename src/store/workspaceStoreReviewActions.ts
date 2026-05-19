@@ -52,6 +52,7 @@ function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Work
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId) return false;
+    if (snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     const remainingQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
     if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
@@ -109,6 +110,7 @@ function createCompleteReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): W
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId) return false;
+    if (snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
@@ -166,6 +168,7 @@ function createGradeReviewCardAction(set: WorkspaceSet, get: WorkspaceGet, sched
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || !snapshot.reviewSession.isAnswerRevealed) return false;
+    if (snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isFsrsReviewItemNode(currentNode)) return false;
     const cardBefore = toSchedulerCard(currentNode.review, now);

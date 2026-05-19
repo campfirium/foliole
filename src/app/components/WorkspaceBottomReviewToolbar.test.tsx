@@ -99,3 +99,17 @@ it('treats external, trash, and virtual surfaces as paused review surfaces', () 
   expect(onOpenNotesView).toHaveBeenCalledTimes(1);
   expect(onSelectNode).toHaveBeenCalledWith('node-1');
 });
+
+it('treats a different queued topic as a paused review surface', () => {
+  const source = {
+    externalLibrary: { isExternalViewOpen: false },
+    layoutChrome: { isImmersiveMode: false, isListCollapsed: false },
+    navigation: { activeNodeId: 'node-2', onSelectNode: vi.fn() },
+    nodeList: { nodesById: { 'node-1': { title: 'Review topic' } }, onOpenNotesView: vi.fn() },
+    review: createProps({ reviewCurrentNodeId: 'node-1' }),
+    trash: { isTrashViewOpen: false, isViewingTrashNode: false },
+    virtualView: { isVirtualViewOpen: false }
+  };
+
+  expect(selectWorkspaceBottomReviewToolbarProps(source as never).isCurrentReviewItemVisible).toBe(false);
+});

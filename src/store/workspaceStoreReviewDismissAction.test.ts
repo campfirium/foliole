@@ -52,3 +52,21 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
     })
   );
 });
+
+it('does not dismiss the current review item while another topic is open', () => {
+  const now = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createReadingNode('reading-1', now), createReadingNode('reading-2', now)])
+  );
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
+    grade: createSchedulerGradeMock(),
+    preview: previewStub
+  });
+
+  actions.startReviewSession(now);
+  harness.setState({ activeNodeId: 'reading-2' });
+
+  expect(actions.dismissReviewItem(now)).toBe(false);
+  expect(harness.getState().nodesById['reading-1']?.reading?.state).toBe('active');
+  expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+});

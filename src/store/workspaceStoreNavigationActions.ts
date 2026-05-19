@@ -1,6 +1,7 @@
 import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
 
 import { pushNavigationHistory, resolveAncestorAnchorLink, type NodeNavigationResult } from './workspaceNavigation';
+import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
 
@@ -23,25 +24,6 @@ function isAvailableNode(state: WorkspaceState, nodeId: string) {
   return Boolean(state.nodesById[nodeId]) && !state.trashedNodeIds.includes(nodeId);
 }
 
-function syncReviewSessionSelection(state: WorkspaceState, nodeId: string) {
-  if (!state.reviewSession.currentNodeId || !state.reviewSession.queueNodeIds.includes(nodeId)) {
-    return state.reviewSession;
-  }
-  return {
-    ...state.reviewSession,
-    currentNodeId: nodeId,
-    isAnswerRevealed: false,
-    queueNodeIds: [nodeId, ...state.reviewSession.queueNodeIds.filter((queuedNodeId) => queuedNodeId !== nodeId)]
-  };
-}
-
-function isReviewSessionSelectionSynced(state: WorkspaceState, nodeId: string) {
-  if (state.reviewSession.currentNodeId !== nodeId) {
-    return false;
-  }
-  return state.reviewSession.queueNodeIds[0] === nodeId;
-}
-
 function buildNavigationNodeState(
   state: WorkspaceState,
   nodeId: string,
@@ -52,7 +34,7 @@ function buildNavigationNodeState(
     activeNodeId: nodeId,
     navigation,
     nodeViewById,
-    reviewSession: syncReviewSessionSelection(state, nodeId)
+    reviewSession: reconcileReviewSession(state, nodeId)
   };
 }
 
@@ -64,7 +46,7 @@ function createOpenNodeAction(set: WorkspaceSet) {
         return state;
       }
       const nodeViewById = markNodeOpenedViewState(state, nodeId);
-      if (state.activeNodeId === nodeId && isReviewSessionSelectionSynced(state, nodeId)) {
+      if (state.activeNodeId === nodeId) {
         return nodeViewById === state.nodeViewById ? state : { nodeViewById };
       }
       markNodeSelectionApplied(nodeId, state.nodesById);

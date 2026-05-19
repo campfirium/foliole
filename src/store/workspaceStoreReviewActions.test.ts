@@ -201,6 +201,22 @@ it('postpones reading items by advancing nextAt and removing them from the curre
   });
 });
 
+it('does not complete or postpone reading while another topic is open', () => {
+  const now = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createReadingNode('reading-1', now), createReadingNode('reading-2', now)])
+  );
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade: createSchedulerGradeMock(), preview: previewStub });
+
+  actions.startReviewSession(now);
+  harness.setState({ activeNodeId: 'reading-2' });
+
+  expect(actions.completeReviewItem(now)).toBe(false);
+  expect(actions.deferReviewItem()).toBe(false);
+  expect(harness.getState().reviewSession.currentNodeId).toBe('reading-1');
+  expect(harness.getState().reviewSession.queueNodeIds).toEqual(['reading-1', 'reading-2']);
+});
+
 it('dismisses reading items and removes them from future queues', () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(
