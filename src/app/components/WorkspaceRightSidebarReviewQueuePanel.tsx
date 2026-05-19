@@ -9,10 +9,11 @@ interface WorkspaceRightSidebarReviewQueuePanelProps {
 }
 
 function buildDisplayQueueNodeIds(queueNodeIds: string[], currentNodeId: string | null) {
-  if (!currentNodeId || !queueNodeIds.includes(currentNodeId)) {
+  const currentIndex = currentNodeId ? queueNodeIds.indexOf(currentNodeId) : -1;
+  if (currentIndex <= 0) {
     return queueNodeIds;
   }
-  return [currentNodeId, ...queueNodeIds.filter((nodeId) => nodeId !== currentNodeId)];
+  return [...queueNodeIds.slice(currentIndex), ...queueNodeIds.slice(0, currentIndex)];
 }
 
 function getQueueItemKindLabel(node: Node | undefined) {
