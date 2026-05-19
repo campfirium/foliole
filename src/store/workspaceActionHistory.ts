@@ -1,5 +1,10 @@
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 
+import {
+  applyTopicDeleteWorkspaceHistory,
+  cloneReviewSession,
+  type WorkspaceTopicDeleteHistoryEntry
+} from './workspaceDeleteActionHistory';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
@@ -22,7 +27,7 @@ export interface WorkspaceTopicDismissHistoryEntry {
   type: 'topic.dismiss';
 }
 
-export type WorkspaceActionHistoryEntry = WorkspaceTopicDismissHistoryEntry;
+export type WorkspaceActionHistoryEntry = WorkspaceTopicDeleteHistoryEntry | WorkspaceTopicDismissHistoryEntry;
 
 export interface WorkspaceActionHistoryState {
   redoStack: WorkspaceActionHistoryEntry[];
@@ -39,17 +44,6 @@ function trimHistoryStack(stack: WorkspaceActionHistoryEntry[]) {
 
 export function cloneReadingProfile(reading: NodeReadingProfile | null | undefined): NodeReadingProfile | null {
   return reading ? { ...reading } : null;
-}
-
-function cloneReviewSession(
-  reviewSession: WorkspaceState['reviewSession'] | null | undefined
-): WorkspaceState['reviewSession'] | null {
-  return reviewSession
-    ? {
-        ...reviewSession,
-        queueNodeIds: [...reviewSession.queueNodeIds]
-      }
-    : null;
 }
 
 function isSameReadingProfile(
@@ -132,7 +126,7 @@ function resolveHistoryApply(args: {
   mode: 'redo' | 'undo';
 }) {
   const entry = getTopEntry(args.history, args.mode);
-  if (!entry) {
+  if (!entry || entry.type !== 'topic.dismiss') {
     return null;
   }
   const expectedReading = args.mode === 'undo' ? entry.afterReading : entry.beforeReading;
@@ -187,6 +181,10 @@ function createApplyWorkspaceHistoryAction(
 ) {
   return (now = new Date().toISOString()) => {
     const snapshot = get();
+    const entry = getTopEntry(snapshot.appActionHistory, mode);
+    if (entry?.type === 'topic.delete') {
+      return applyTopicDeleteWorkspaceHistory({ entry, mode, popInvalidTopEntry, set, updateHistoryAfterApply });
+    }
     const apply = resolveHistoryApply({ history: snapshot.appActionHistory, mode });
     if (!apply) {
       return false;
