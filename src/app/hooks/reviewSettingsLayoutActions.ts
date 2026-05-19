@@ -55,9 +55,6 @@ function createSchedulerSettingActions(saveSettings: (patch: ReviewSchedulerSett
       }
       saveSettings({ maximumIntervalDays: Math.round(value) });
     },
-    onEnableFuzzChange: (value: boolean) => {
-      saveSettings({ enableFuzz: value });
-    },
     onEnableShortTermChange: (value: boolean) => {
       saveSettings({ enableShortTerm: value });
     }

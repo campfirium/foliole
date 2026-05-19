@@ -13,7 +13,6 @@ export interface ReviewSchedulerSettings {
   algorithm: string;
   desiredRetention: number;
   maximumIntervalDays: number;
-  enableFuzz: boolean;
   enableShortTerm: boolean;
   pushQueue: UnifiedPushQueueRules;
   updatedAt: string;
@@ -22,7 +21,6 @@ export interface ReviewSchedulerSettings {
 export interface ReviewSchedulerSettingsSavePatch {
   desiredRetention?: number;
   maximumIntervalDays?: number;
-  enableFuzz?: boolean;
   enableShortTerm?: boolean;
   pushQueue?: UnifiedPushQueueRulesPatch;
 }
@@ -40,7 +38,6 @@ export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
   algorithm: REVIEW_SCHEDULER_ALGORITHM,
   desiredRetention: 0.9,
   maximumIntervalDays: 36500,
-  enableFuzz: false,
   enableShortTerm: false,
   pushQueue: DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   updatedAt: '1970-01-01T00:00:00.000Z'
@@ -107,10 +104,6 @@ export function normalizeReviewSchedulerSettings(payload: unknown): ReviewSchedu
       value.maximumIntervalDays,
       DEFAULT_REVIEW_SCHEDULER_SETTINGS.maximumIntervalDays
     ),
-    enableFuzz:
-      typeof value.enableFuzz === 'boolean'
-        ? value.enableFuzz
-        : DEFAULT_REVIEW_SCHEDULER_SETTINGS.enableFuzz,
     enableShortTerm:
       typeof value.enableShortTerm === 'boolean'
         ? value.enableShortTerm
@@ -142,7 +135,7 @@ export function createReviewSchedulerParameters(settings: ReviewSchedulerSetting
   return generatorParameters({
     request_retention: settings.desiredRetention,
     maximum_interval: settings.maximumIntervalDays,
-    enable_fuzz: settings.enableFuzz,
+    enable_fuzz: true,
     enable_short_term: settings.enableShortTerm
   });
 }
@@ -152,7 +145,6 @@ export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSet
     settings.algorithm,
     settings.desiredRetention.toFixed(2),
     settings.maximumIntervalDays,
-    settings.enableFuzz ? '1' : '0',
     settings.enableShortTerm ? '1' : '0',
     settings.pushQueue.defaultPriority,
     settings.pushQueue.priorityRatio.toFixed(2),
@@ -167,7 +159,6 @@ export function getReviewSchedulerVersion(settings: ReviewSchedulerSettings) {
     settings.algorithm,
     `dr=${settings.desiredRetention.toFixed(2)}`,
     `mi=${settings.maximumIntervalDays}`,
-    `fz=${settings.enableFuzz ? '1' : '0'}`,
     `st=${settings.enableShortTerm ? '1' : '0'}`,
     `pqdp=${settings.pushQueue.defaultPriority}`,
     `pqpr=${settings.pushQueue.priorityRatio.toFixed(2)}`,

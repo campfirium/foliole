@@ -21,7 +21,10 @@ import { closeDatabaseConnection } from './database/connection.js';
 import { initializeDatabase } from './database/migrate.js';
 import {
   DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+  createReviewSchedulerParameters,
+  getReviewSchedulerVersion,
   loadReviewSchedulerSettings,
+  normalizeReviewSchedulerSettings,
   saveReviewSchedulerSettings
 } from './reviewSchedulerSettings.js';
 
@@ -42,7 +45,6 @@ it('persists normalized review scheduler settings into sqlite settings table', (
   const saved = saveReviewSchedulerSettings({
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
-    enableFuzz: true,
     enableShortTerm: true,
     pushQueue: {
       priorityRatio: 7,
@@ -55,7 +57,6 @@ it('persists normalized review scheduler settings into sqlite settings table', (
     algorithm: DEFAULT_REVIEW_SCHEDULER_SETTINGS.algorithm,
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
-    enableFuzz: true,
     enableShortTerm: true,
     pushQueue: {
       defaultPriority: 5,
@@ -68,7 +69,6 @@ it('persists normalized review scheduler settings into sqlite settings table', (
   expect(loadReviewSchedulerSettings()).toMatchObject({
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
-    enableFuzz: true,
     enableShortTerm: true,
     pushQueue: {
       priorityRatio: 7,
@@ -88,11 +88,21 @@ it('accepts low but still valid desired retention values', () => {
   expect(saved.desiredRetention).toBe(0.01);
 });
 
+it('keeps interval fuzz built in even when legacy settings disabled it', () => {
+  const normalized = normalizeReviewSchedulerSettings({
+    ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+    enableFuzz: false
+  });
+
+  expect('enableFuzz' in normalized).toBe(false);
+  expect(createReviewSchedulerParameters(normalized).enable_fuzz).toBe(true);
+  expect(getReviewSchedulerVersion(normalized)).not.toContain('fz=');
+});
+
 it('preserves existing non-updated scheduler settings on partial save', () => {
   saveReviewSchedulerSettings({
     desiredRetention: 0.87,
     maximumIntervalDays: 240,
-    enableFuzz: true,
     enableShortTerm: true,
     pushQueue: {
       priorityRatio: 6,
@@ -113,7 +123,6 @@ it('preserves existing non-updated scheduler settings on partial save', () => {
   expect(saved).toMatchObject({
     desiredRetention: 0.84,
     maximumIntervalDays: 240,
-    enableFuzz: true,
     enableShortTerm: true,
     pushQueue: {
       priorityRatio: 6,

@@ -18,7 +18,6 @@ it('handles review scheduler storage commands', async () => {
         settings: {
           desiredRetention: 0.8,
           maximumIntervalDays: 180,
-          enableFuzz: true,
           enableShortTerm: true,
           pushQueue: {
             priorityRatio: 7,
@@ -31,7 +30,6 @@ it('handles review scheduler storage commands', async () => {
   ).resolves.toMatchObject({
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
-    enableFuzz: true,
     enableShortTerm: true,
     pushQueue: {
       priorityRatio: 7,

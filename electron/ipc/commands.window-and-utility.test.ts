@@ -26,7 +26,6 @@ const {
     algorithm: 'ts-fsrs@4.3.0',
     desiredRetention: 0.9,
     maximumIntervalDays: 36500,
-    enableFuzz: false,
     enableShortTerm: false,
     pushQueue: {
       defaultPriority: 5,

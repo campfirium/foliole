@@ -139,7 +139,6 @@ it('saves the full scheduler settings payload through the native command', async
     {
       desiredRetention: 0.83,
       maximumIntervalDays: 120,
-      enableFuzz: true,
       enableShortTerm: true,
       pushQueue: createPushQueueSettings(pushQueuePatch),
       updatedAt: '2026-03-14T00:00:00.000Z'
@@ -151,14 +150,12 @@ it('saves the full scheduler settings payload through the native command', async
     saveReviewSchedulerSettings({
       desiredRetention: 0.83,
       maximumIntervalDays: 120,
-      enableFuzz: true,
       enableShortTerm: true,
       pushQueue: pushQueuePatch
     })
   ).resolves.toMatchObject({
     desiredRetention: 0.83,
     maximumIntervalDays: 120,
-    enableFuzz: true,
     enableShortTerm: true,
     pushQueue: pushQueuePatch
   });
@@ -168,7 +165,6 @@ it('saves the full scheduler settings payload through the native command', async
     createExpectedSavedSettings({
       desiredRetention: 0.83,
       maximumIntervalDays: 120,
-      enableFuzz: true,
       enableShortTerm: true,
       pushQueue: pushQueuePatch,
       updatedAt: '2026-03-13T00:00:00.000Z'
@@ -181,7 +177,6 @@ it('preserves previously loaded values during partial saves', async () => {
     {
       desiredRetention: 0.86,
       maximumIntervalDays: 240,
-      enableFuzz: true,
       enableShortTerm: true,
       pushQueue: {
         defaultPriority: 5,
@@ -195,7 +190,6 @@ it('preserves previously loaded values during partial saves', async () => {
     {
       desiredRetention: 0.84,
       maximumIntervalDays: 240,
-      enableFuzz: true,
       enableShortTerm: true,
       pushQueue: {
         defaultPriority: 5,
@@ -221,7 +215,6 @@ it('preserves previously loaded values during partial saves', async () => {
     createSettings({
       desiredRetention: 0.84,
       maximumIntervalDays: 240,
-      enableFuzz: true,
       enableShortTerm: true,
       pushQueue: {
         ...DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue,
