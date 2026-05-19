@@ -9,8 +9,8 @@ type TruncatedTextTooltipProps = {
 
 const DEFAULT_SIDE_OFFSET = 6;
 const TOOLTIP_ARROW_WIDTH = 8;
-const TOOLTIP_ARROW_HEIGHT = 16;
-const TOOLTIP_RADIUS = 12;
+const TOOLTIP_ARROW_HEIGHT = 14;
+const TOOLTIP_RADIUS = 8;
 const TOOLTIP_BOUNDARY_GAP = 2;
 const TOOLTIP_BOUNDARY_SELECTORS = [
   '.workspace-region-main-topic',
@@ -112,7 +112,7 @@ function TruncatedTooltipContent(props: {
   return (
     <AppTooltipContent
       align="center"
-      className="relative max-w-[min(16rem,calc(100vw-2rem))] overflow-visible border-transparent bg-transparent p-0 text-foreground/86 [--app-tooltip-bg:color-mix(in_srgb,rgb(var(--color-bg-elevated))_88%,rgb(var(--color-bg-panel))_12%)] [--app-tooltip-border-color:rgb(var(--color-foreground)/0.12)] [--app-tooltip-fg:rgb(var(--color-foreground)/0.86)] [--app-tooltip-shadow:var(--shadow-panel)]"
+      className="relative max-w-[min(15rem,calc(100vw-2rem))] overflow-visible border-transparent bg-transparent p-0 text-foreground/86 [--app-tooltip-bg:color-mix(in_srgb,rgb(var(--color-bg-elevated))_88%,rgb(var(--color-bg-panel))_12%)] [--app-tooltip-border-color:rgb(var(--color-foreground)/0.12)] [--app-tooltip-fg:rgb(var(--color-foreground)/0.86)] [--app-tooltip-line-height:1.375rem] [--app-tooltip-padding-x:0.75rem] [--app-tooltip-padding-y:0.5rem] [--app-tooltip-shadow:var(--shadow-panel)]"
       ref={props.setTooltipElement}
       side="right"
       sideOffset={props.sideOffset}
