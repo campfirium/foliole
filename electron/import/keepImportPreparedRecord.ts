@@ -1,7 +1,9 @@
+import { readKeepImportItem } from '../database/keepImportItems.js';
 import { loadPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
+import { hasHighlightSourceChanged, hasPrimarySourceChanged } from './keepImportSourceSignature.js';
 import { readwiseKeepAdapter } from './readwiseKeepAdapter.js';
 
 export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
@@ -15,6 +17,17 @@ export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfi
   }
   if (readwiseSource.kind === 'books') {
     return false;
+  }
+  const sourceSignature = await readwiseKeepAdapter.resolveSourceSignature(source, {
+    highlightDirectoryPath: readwiseSource.highlightPath.trim()
+  });
+  const existingItem = readKeepImportItem(config.ruleId, source.sourceName);
+  if (
+    existingItem &&
+    !hasPrimarySourceChanged(existingItem, sourceSignature) &&
+    !hasHighlightSourceChanged(existingItem, sourceSignature)
+  ) {
+    return !(existingItem.last_status === 'discovered' && !existingItem.last_node_id);
   }
   return readwiseKeepAdapter.shouldImportSource(source, {
     highlightDirectoryPath: readwiseSource.highlightPath.trim(),

@@ -82,8 +82,7 @@ function expectPendingBookInventory(paths: Awaited<ReturnType<typeof seedReadwis
   );
 }
 
-it('includes Readwise Books in Reader import without creating placeholder topics', async () => {
-  const paths = await seedReadwiseSources();
+function saveReaderSettings(paths: Awaited<ReturnType<typeof seedReadwiseSources>>) {
   saveImportManagerSettings({
     readwiseReaderConfig: {
       enabled: true,
@@ -115,6 +114,11 @@ it('includes Readwise Books in Reader import without creating placeholder topics
       }
     ]
   });
+}
+
+it('includes Readwise Books in Reader import without creating placeholder topics', async () => {
+  const paths = await seedReadwiseSources();
+  saveReaderSettings(paths);
 
   await expect(previewReadwiseReaderImport()).resolves.toMatchObject({
     total_count: 2,
@@ -127,6 +131,19 @@ it('includes Readwise Books in Reader import without creating placeholder topics
     source_count: 2,
     status: 'completed'
   });
+  const readFile = vi.spyOn(fs, 'readFile');
+  await expect(runReadwiseReaderImport()).resolves.toMatchObject({
+    entry_count: 2,
+    imported_count: 0,
+    source_count: 2,
+    status: 'completed'
+  });
+  expect(
+    readFile.mock.calls
+      .map(([filePath]) => String(filePath))
+      .filter((filePath) => filePath.includes(`${path.sep}Books${path.sep}`))
+  ).toEqual([]);
+  readFile.mockRestore();
 
   const titles = readActiveNodeTitles();
   expect(titles).toContain('Highlighted');

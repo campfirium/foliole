@@ -6,10 +6,10 @@ import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import {
   extractReadwiseDownloadUrl,
-  loadReadwiseBooksInventory,
   type ReadwiseBookInventoryItem,
   type ReadwiseBooksInventory
 } from './readwiseBooksInventory.js';
+import { loadReadwiseBooksInventory } from './readwiseBooksInventoryLoad.js';
 import { findPersistedReadwiseBookByNodeId } from './readwiseBooksInventoryState.js';
 import { resolveReadwiseTopicMergeSource } from './readwiseTopicMergeSource.js';
 

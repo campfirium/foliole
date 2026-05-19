@@ -159,7 +159,7 @@ const PDF_IMPORTS_INVENTORY_PAYLOAD = {
 };
 
 vi.mock('../database/importOverview.js', () => ({ loadImportOverview }));
-vi.mock('../import/readwiseBooksInventory.js', () => ({ loadReadwiseBooksInventory }));
+vi.mock('../import/readwiseBooksInventoryLoad.js', () => ({ loadReadwiseBooksInventory }));
 vi.mock('../database/pdfImportsInventory.js', () => ({ loadPdfImportsInventory }));
 vi.mock('../database/importMaintenance.js', () => ({ resetImportData }));
 vi.mock('../database/nodeMutations.js', () => ({

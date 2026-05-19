@@ -1,17 +1,17 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import type { ImportSourceKind } from '../../lib/core/import/contract.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
-import { loadImportManagerSettings } from './importManagerSettings.js';
 import { resolveGeneratedNodeId, resolveImportStatus } from './readwiseBooksInventoryDatabase.js';
 import {
-  mergePersistedReadwiseBooksInventory
-} from './readwiseBooksInventoryState.js';
+  createReadwiseBooksSourceSignature
+} from './readwiseBooksInventorySignature.js';
+import { mergePersistedReadwiseBooksInventory } from './readwiseBooksInventoryState.js';
 import { resolveInitialReadwiseBookHighlightState, resolveReadwiseBookBodyState } from './readwiseBookState.js';
-import { canRunReadwiseExternalSource } from './readwiseExternalSourceGuard.js';
 
 export type ReadwiseBookAnnotationStatus = 'has_highlights' | 'no_highlights';
 export type ReadwiseBookBodyState = 'loaded' | 'unloaded';
@@ -42,6 +42,18 @@ export interface ReadwiseBooksInventory {
   fullDocumentDirectoryPath: string;
   highlightDirectoryPath: string;
   scannedAt: string;
+  sourceSignature?: ReadwiseBooksSourceSignature;
+}
+
+export interface ReadwiseBooksSourceSignature {
+  entries: Array<{
+    kind: ImportSourceKind;
+    mtimeMs: number;
+    sizeBytes: number;
+    sourceGroup: 'fullDocument' | 'highlight';
+    sourceName: string;
+  }>;
+  version: 1;
 }
 
 interface ReadwiseBookSourceBucket {
@@ -52,17 +64,6 @@ interface ReadwiseBookSourceBucket {
   key: string;
   sourceName: string;
   title: string;
-}
-
-function createEmptyInventory(paths: {
-  fullDocumentDirectoryPath: string;
-  highlightDirectoryPath: string;
-}): ReadwiseBooksInventory {
-  return {
-    books: [],
-    ...paths,
-    scannedAt: new Date().toISOString()
-  };
 }
 
 function stripExtension(sourceName: string) {
@@ -206,27 +207,8 @@ export async function scanReadwiseBooksInventory(input: {
   ),
     fullDocumentDirectoryPath: input.fullDocumentDirectoryPath,
     highlightDirectoryPath: input.highlightDirectoryPath,
-    scannedAt
+    scannedAt,
+    sourceSignature: createReadwiseBooksSourceSignature({ fullDocumentSources, highlightSources })
   } satisfies ReadwiseBooksInventory;
   return mergePersistedReadwiseBooksInventory({ currentInventory: scannedInventory });
-}
-
-export async function loadReadwiseBooksInventory() {
-  const settings = loadImportManagerSettings();
-  const booksSource = settings.readwiseSources.find((source) => source.kind === 'books');
-  const paths = {
-    fullDocumentDirectoryPath: booksSource?.primaryPath.trim() ?? '',
-    highlightDirectoryPath: booksSource?.highlightPath.trim() ?? ''
-  };
-  const canScanBooks =
-    settings.readwiseReaderConfig.enabled &&
-    booksSource?.keepState === 'enabled' &&
-    canRunReadwiseExternalSource();
-  if (!canScanBooks) {
-    return createEmptyInventory(paths);
-  }
-  return scanReadwiseBooksInventory({
-    ...paths,
-    readwiseConfig: settings.readwiseReaderConfig
-  });
 }

@@ -1,5 +1,5 @@
 import type { ReadwiseBookInventoryItem } from '../import/readwiseBooksInventory.js';
-import { loadReadwiseBooksInventory } from '../import/readwiseBooksInventory.js';
+import { loadReadwiseBooksInventory } from '../import/readwiseBooksInventoryLoad.js';
 
 function toNativeReadwiseBookInventoryItem(book: ReadwiseBookInventoryItem) {
   return {

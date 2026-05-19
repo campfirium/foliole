@@ -5,7 +5,8 @@ import { deleteNodesPermanently, upsertNodeSnapshot } from '../database/nodeMuta
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
-import { loadReadwiseBooksInventory, type ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
+import type { ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
+import { loadReadwiseBooksInventory } from './readwiseBooksInventoryLoad.js';
 import {
   findPersistedReadwiseBookByNodeId,
   savePersistedReadwiseBookMovedToTop

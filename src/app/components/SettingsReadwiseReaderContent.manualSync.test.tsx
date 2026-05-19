@@ -92,3 +92,23 @@ it('shows failed Readwise source details after manual sync', async () => {
     screen.getByText('/Readwise/Full Document Contents/Tweets: permission denied')
   ).toBeInTheDocument();
 });
+
+it('does not present unchanged scanned Readwise sources as synced topics', async () => {
+  const onRunSync: RunSync = async () => ({
+    completed_at: '2026-05-11T00:01:00.000Z',
+    entry_count: 30,
+    failed_count: 0,
+    imported_count: 0,
+    source_count: 30,
+    skipped_count: 30,
+    status: 'completed'
+  });
+  renderManualSyncHarness(onRunSync);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
+
+  await waitFor(() => {
+    expect(screen.getByText('No new or changed Readwise sources.')).toBeInTheDocument();
+  });
+  expect(screen.queryByText('Synced 30 Readwise source topics.')).not.toBeInTheDocument();
+});

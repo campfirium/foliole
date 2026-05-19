@@ -18,6 +18,17 @@ export function readKeepImportItem(ruleId: string, sourcePath: string) {
   return readKeepImportItemViaDriver(openDatabaseConnection().driver, ruleId, sourcePath);
 }
 
+export function countPresentKeepImportItems(ruleId: string) {
+  return (
+    openDatabaseConnection().driver.queryOne<{ count: number }>(
+      `SELECT COUNT(*) AS count
+       FROM keep_import_items
+       WHERE rule_id = ? AND source_state = 'present'`,
+      [ruleId]
+    )?.count ?? 0
+  );
+}
+
 export function readKeepImportNodeState(nodeId: string) {
   return readKeepImportNodeStateViaDriver(openDatabaseConnection().driver, nodeId);
 }
