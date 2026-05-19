@@ -53,16 +53,12 @@ export function sortWorkspaceContentNodeIds(
   const sortIds = (ids: string[]) =>
     [...ids].sort((leftId, rightId) => compareWorkspaceContentNodes(nodesById[leftId]!, nodesById[rightId]!, sort, nodeViewById));
 
-  const sortChildIds = (ids: string[]) => {
-    if (!ids.every((nodeId) => resolveTextAnchorPosition(nodesById[nodeId]) !== null)) {
-      return ids;
-    }
-    return [...ids].sort((leftId, rightId) => compareTextAnchorOrder(nodesById[leftId]!, nodesById[rightId]!));
-  };
-
   const sortedIds: string[] = [];
   const walk = (parentId: string | null) => {
-    const childIds = parentId === null ? sortIds(childrenByParent.get(parentId) ?? []) : sortChildIds(childrenByParent.get(parentId) ?? []);
+    const childIds =
+      parentId === null
+        ? sortIds(childrenByParent.get(parentId) ?? [])
+        : sortWorkspaceContentChildNodeIds(childrenByParent.get(parentId) ?? [], nodesById);
     childIds.forEach((nodeId) => {
       sortedIds.push(nodeId);
       walk(nodeId);
@@ -70,4 +66,14 @@ export function sortWorkspaceContentNodeIds(
   };
   walk(null);
   return sortedIds;
+}
+
+export function sortWorkspaceContentChildNodeIds(
+  nodeIds: string[],
+  nodesById: WorkspaceListNodesById
+) {
+  if (!nodeIds.every((nodeId) => resolveTextAnchorPosition(nodesById[nodeId]) !== null)) {
+    return nodeIds;
+  }
+  return [...nodeIds].sort((leftId, rightId) => compareTextAnchorOrder(nodesById[leftId]!, nodesById[rightId]!));
 }

@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { NodeViewState } from '../../store/workspaceStore';
 
-import { sortWorkspaceContentNodeIds } from './workspaceContentNodeOrder';
+import { sortWorkspaceContentChildNodeIds, sortWorkspaceContentNodeIds } from './workspaceContentNodeOrder';
 import { normalizeWorkspaceContentSort, type WorkspaceContentSortState } from './workspaceContentSort';
 import { useStableWorkspaceContentItems } from './workspaceStableContentSort';
 import { useCollapsedTopicNodeIds } from './workspaceTopicTreeCollapseModel';
@@ -39,8 +39,8 @@ export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModel
   });
   const sortIds = useCallback(
     (parentId: string | null, ids: string[]) =>
-      parentId === null ? rootIds.filter((nodeId) => ids.includes(nodeId)) : sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeViewById),
-    [args.nodeViewById, args.nodesById, contentSort, rootIds]
+      parentId === null ? rootIds.filter((nodeId) => ids.includes(nodeId)) : sortWorkspaceContentChildNodeIds(ids, args.nodesById),
+    [args.nodesById, rootIds]
   );
   const initialCollapsibleNodeIds = useMemo(
     () => rootIds.filter((nodeId) => getTopicChildren(nodeId, args.childrenByParent, args.nodesById).length > 0),
