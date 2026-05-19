@@ -17,7 +17,8 @@ it('shows built-in right-click menu items with DuckDuckGo disabled by default', 
   expect(screen.getByDisplayValue('Google')).toBeInTheDocument();
   expect(screen.getByDisplayValue('DuckDuckGo')).toBeInTheDocument();
   expect(screen.getByRole('switch', { name: 'Show DuckDuckGo in context menu' })).toHaveAttribute('aria-checked', 'false');
-  expect(screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'ChatGPT link' }).value).toContain('{selection}');
+  expect(screen.queryByRole('button', { name: 'Remove ChatGPT' })).toBeNull();
+  expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'ChatGPT link' }).value).toContain('Content:');
 });
 
 it('toggles whether an entry appears in the context menu', () => {
@@ -56,4 +57,14 @@ it('adds and removes a custom menu item', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Remove New menu item' }));
   expect(screen.queryByDisplayValue('New menu item')).toBeNull();
+});
+
+it('reorders menu items by dragging the handle', () => {
+  render(<SettingsWebLookupSection />);
+
+  fireEvent.drop(screen.getByTestId('web-lookup-row-chatgpt'), {
+    dataTransfer: { getData: () => 'google' }
+  });
+
+  expect(getEnabledWebLookupEntries().map((entry) => entry.id)).toEqual(['google', 'chatgpt']);
 });

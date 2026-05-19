@@ -1,20 +1,19 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
+import {
+  BUILT_IN_WEB_LOOKUP_ENTRIES,
+  CHATGPT_OLD_DEFAULT_LINK,
+  CHATGPT_SOURCE_TEXT_DEFAULT_LINK,
+  CHATGPT_TEXT_LABEL_DEFAULT_LINK,
+  CHATGPT_TEXT_DEFAULT_LINK,
+  WEB_LOOKUP_QUERY_MAX_LENGTH,
+  WEB_LOOKUP_SELECTION_PLACEHOLDER,
+  type WebLookupEntry,
+  type WebLookupEntryKind
+} from './webLookupEntryDefaults';
 
-export const WEB_LOOKUP_SELECTION_PLACEHOLDER = '{selection}';
-export const WEB_LOOKUP_QUERY_MAX_LENGTH = 4000;
-
-type WebLookupEntryKind = 'prompt' | 'search';
-
-export interface WebLookupEntry {
-  builtIn: boolean;
-  enabled: boolean;
-  id: string;
-  kind: WebLookupEntryKind;
-  label: string;
-  urlTemplate: string;
-}
+export { WEB_LOOKUP_QUERY_MAX_LENGTH, WEB_LOOKUP_SELECTION_PLACEHOLDER, type WebLookupEntry } from './webLookupEntryDefaults';
 
 interface WebLookupContext {
   documentText?: string | null | undefined;
@@ -29,40 +28,6 @@ interface ResolvedWebLookupAction {
 
 type StoredWebLookupEntry = Partial<WebLookupEntry> & { id?: unknown };
 type WebLookupEntryPatch = Partial<Pick<WebLookupEntry, 'enabled' | 'label' | 'urlTemplate'>>;
-
-const CHATGPT_DEFAULT_LINK = [
-  'https://chatgpt.com/?prompt=Please summarize the text inside %3Cselection%3E.',
-  '%3Cselection%3E',
-  WEB_LOOKUP_SELECTION_PLACEHOLDER,
-  '%3C%2Fselection%3E'
-].join('%0A');
-
-const BUILT_IN_WEB_LOOKUP_ENTRIES: WebLookupEntry[] = [
-  {
-    builtIn: true,
-    enabled: true,
-    id: 'chatgpt',
-    kind: 'prompt',
-    label: 'ChatGPT',
-    urlTemplate: CHATGPT_DEFAULT_LINK
-  },
-  {
-    builtIn: true,
-    enabled: true,
-    id: 'google',
-    kind: 'search',
-    label: 'Google',
-    urlTemplate: `https://www.google.com/search?q=${WEB_LOOKUP_SELECTION_PLACEHOLDER}`
-  },
-  {
-    builtIn: true,
-    enabled: false,
-    id: 'duckduckgo',
-    kind: 'search',
-    label: 'DuckDuckGo',
-    urlTemplate: `https://duckduckgo.com/?q=${WEB_LOOKUP_SELECTION_PLACEHOLDER}`
-  }
-];
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -105,13 +70,18 @@ function applyStoredEntry(defaultEntry: WebLookupEntry, stored: StoredWebLookupE
   if (!stored) {
     return defaultEntry;
   }
+  const storedTemplate = typeof stored.urlTemplate === 'string' ? normalizeTemplatePlaceholder(stored.urlTemplate) : '';
   return {
     ...defaultEntry,
     enabled: typeof stored.enabled === 'boolean' ? stored.enabled : defaultEntry.enabled,
     kind: isValidEntryKind(stored.kind) ? stored.kind : defaultEntry.kind,
     label: typeof stored.label === 'string' && stored.label.trim() ? stored.label.trim() : defaultEntry.label,
-    urlTemplate: isValidUrlTemplate(stored.urlTemplate)
-      ? normalizeTemplatePlaceholder(stored.urlTemplate)
+    urlTemplate: isValidUrlTemplate(storedTemplate) &&
+      storedTemplate !== CHATGPT_OLD_DEFAULT_LINK &&
+      storedTemplate !== CHATGPT_TEXT_DEFAULT_LINK &&
+      storedTemplate !== CHATGPT_SOURCE_TEXT_DEFAULT_LINK &&
+      storedTemplate !== CHATGPT_TEXT_LABEL_DEFAULT_LINK
+      ? storedTemplate
       : defaultEntry.urlTemplate
   };
 }
@@ -162,7 +132,13 @@ export function getWebLookupEntries(): WebLookupEntry[] {
     .filter((entry) => typeof entry.id === 'string' && !BUILT_IN_WEB_LOOKUP_ENTRIES.some((builtInEntry) => builtInEntry.id === entry.id))
     .map(toCustomEntry)
     .filter((entry): entry is WebLookupEntry => entry !== null);
-  return [...builtIn, ...custom];
+  const entries = [...builtIn, ...custom];
+  const defaultOrder = new Map(entries.map((entry, index) => [entry.id, index]));
+  const storedOrder = new Map(storedEntries.map((entry, index) => [entry.id, index]));
+  return entries.sort((left, right) => (
+    (storedOrder.get(left.id) ?? storedEntries.length + (defaultOrder.get(left.id) ?? 0)) -
+    (storedOrder.get(right.id) ?? storedEntries.length + (defaultOrder.get(right.id) ?? 0))
+  ));
 }
 
 export function getEnabledWebLookupEntries() {
@@ -208,6 +184,18 @@ export function removeWebLookupEntry(entryId: string) {
   return entries;
 }
 
+export function moveWebLookupEntry(entryId: string, targetId: string) {
+  const entries = getWebLookupEntries();
+  const from = entries.findIndex((entry) => entry.id === entryId);
+  const to = entries.findIndex((entry) => entry.id === targetId);
+  if (from < 0 || to < 0 || from === to) return entries;
+  const nextEntries = [...entries];
+  const [entry] = nextEntries.splice(from, 1);
+  nextEntries.splice(to, 0, entry);
+  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.webLookupEntries, serializeEntries(nextEntries));
+  return nextEntries;
+}
+
 export function resolveWebLookupUrl(entry: WebLookupEntry, sourceText: string) {
   if (!isValidUrlTemplate(entry.urlTemplate)) {
     return null;
@@ -238,7 +226,7 @@ export function resolveWebLookupAction(
     return null;
   }
   const label = entry.kind === 'prompt'
-    ? `Ask ${entry.label} with ${selectionText ? 'selected text' : 'full content'}`
+    ? `Ask ${entry.label} about ${selectionText ? 'selection' : 'full content'}`
     : `Search with ${entry.label}`;
   return { kind: entry.kind, label, url };
 }

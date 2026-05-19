@@ -7,6 +7,7 @@ import {
   getEnabledWebLookupEntries,
   getWebLookupEntries,
   removeWebLookupEntry,
+  moveWebLookupEntry,
   resolveWebLookupAction,
   resolveWebLookupUrl,
   updateWebLookupEntry,
@@ -68,15 +69,31 @@ it('resolves prompt actions from selection or current topic text', () => {
 
   expect(resolveWebLookupAction(chatgpt, { documentText: 'Full topic', selectionText: 'Selected text' })).toEqual({
     kind: 'prompt',
-    label: 'Ask ChatGPT with selected text',
-    url: 'https://chatgpt.com/?prompt=Please%20summarize%20the%20text%20inside%20%3Cselection%3E.%0A%3Cselection%3E%0ASelected%20text%0A%3C%2Fselection%3E'
+    label: 'Ask ChatGPT about selection',
+    url: 'https://chatgpt.com/?prompt=Summarize%20the%20following%20content:%0A%0AContent:%0ASelected%20text'
   });
   expect(resolveWebLookupAction(chatgpt, { documentText: 'Full topic', selectionText: null })).toEqual({
     kind: 'prompt',
-    label: 'Ask ChatGPT with full content',
-    url: 'https://chatgpt.com/?prompt=Please%20summarize%20the%20text%20inside%20%3Cselection%3E.%0A%3Cselection%3E%0AFull%20topic%0A%3C%2Fselection%3E'
+    label: 'Ask ChatGPT about full content',
+    url: 'https://chatgpt.com/?prompt=Summarize%20the%20following%20content:%0A%0AContent:%0AFull%20topic'
   });
   expect(resolveWebLookupAction(google, { documentText: 'Full topic', selectionText: null })).toBeNull();
+});
+
+it('moves entries and migrates the old ChatGPT default template', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.webLookupEntries, JSON.stringify([
+    {
+      id: 'chatgpt',
+      urlTemplate: 'https://chatgpt.com/?prompt=Please summarize the text inside %3Cselection%3E.%0A%3Cselection%3E%0A{selection}%0A%3C%2Fselection%3E'
+    }
+  ]));
+
+  expect(getWebLookupEntries()[0].urlTemplate).toContain('Content:');
+  expect(moveWebLookupEntry('google', 'chatgpt').map((entry) => entry.id)).toEqual([
+    'google',
+    'chatgpt',
+    'duckduckgo'
+  ]);
 });
 
 it('adds and removes custom selection-only entries', () => {

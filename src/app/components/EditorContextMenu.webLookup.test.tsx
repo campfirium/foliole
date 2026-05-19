@@ -66,12 +66,12 @@ it('renders enabled web lookup entries from the live selection payload', () => {
   );
 
   expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-    'Ask ChatGPT with selected text',
+    'Ask ChatGPT about selection',
     'Search with Google'
   ]);
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT with selected text' }));
-  expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Please%20summarize%20the%20text%20inside%20%3Cselection%3E.%0A%3Cselection%3E%0ASelected%20text%20that%20should%20be%20a%20highlight%0A%3C%2Fselection%3E');
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT about selection' }));
+  expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Summarize%20the%20following%20content:%0A%0AContent:%0ASelected%20text%20that%20should%20be%20a%20highlight');
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 
@@ -95,7 +95,7 @@ it('keeps hidden web lookup entries out of the selection context menu', () => {
     />
   );
 
-  expect(screen.queryByRole('menuitem', { name: 'Ask ChatGPT with selected text' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Ask ChatGPT about selection' })).toBeNull();
   expect(screen.getByRole('menuitem', { name: 'Search with Google' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Search with DuckDuckGo' })).toBeInTheDocument();
 });
@@ -114,9 +114,9 @@ it('opens ChatGPT with topic text without reusing a preserved command selection 
     />
   );
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT with full content' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT about full content' }));
 
-  expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Please%20summarize%20the%20text%20inside%20%3Cselection%3E.%0A%3Cselection%3E%0AFull%20topic%20text%0A%3C%2Fselection%3E');
+  expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Summarize%20the%20following%20content:%0A%0AContent:%0AFull%20topic%20text');
   expect(screen.queryByRole('menuitem', { name: 'Search with Google' })).toBeNull();
 });
 
