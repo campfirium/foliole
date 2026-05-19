@@ -63,6 +63,33 @@ describe('liveMarkdown preview line plans', () => {
       }
     ]);
   });
+
+});
+
+describe('liveMarkdown nested list link preview line plans', () => {
+  it('adds link presentation for nested list item lines scanned in isolation', () => {
+    const plan = collectPreviewLineDecorationPlan({
+      hideTitleHeading: false,
+      inCodeBlock: false,
+      isCursorLine: false,
+      lineFrom: 0,
+      lineNumber: 2,
+      lineText: '    - [Home 家](https://aquafina-water-bottle.github.io/jp-mining-note/)',
+      markdownSyntaxVisible: false
+    });
+
+    expect(plan.inlinePresentationPlans[1]).toMatchObject({
+      markRanges: [
+        {
+          attributes: { 'data-md-link-url': 'https://aquafina-water-bottle.github.io/jp-mining-note/' },
+          className: 'cm-md-link-text',
+          from: 7,
+          to: 13
+        }
+      ],
+      replaceRanges: expect.arrayContaining([{ from: 6, to: 7 }, { from: 13, to: 14 }])
+    });
+  });
 });
 
 describe('liveMarkdown reference-style preview line plans', () => {

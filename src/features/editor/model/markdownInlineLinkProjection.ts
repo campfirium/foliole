@@ -117,13 +117,40 @@ function visitLinkRanges(args: {
   }
 }
 
+function collectParsedMarkdownInlineLinkRanges(args: {
+  offset: number;
+  references: MarkdownLinkReferenceMap;
+  text: string;
+}) {
+  const tree: MarkdownSyntaxTree = folioleMarkdownParser.parse(args.text);
+  const links: MarkdownInlineLinkRange[] = [];
+  visitLinkRanges({ links, node: tree.topNode, offset: args.offset, references: args.references, source: args.text });
+  return links.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+}
+
+function collectIndentedListItemLinkRanges(args: {
+  offset: number;
+  references: MarkdownLinkReferenceMap;
+  text: string;
+}) {
+  const listItem = /^(?:[ \t]+)(?:[-+*]|\d{1,9}[.)])[ \t]+/.exec(args.text);
+  if (!listItem) return [];
+  const contentFrom = listItem[0].length;
+  const content = args.text.slice(contentFrom);
+  return collectParsedMarkdownInlineLinkRanges({
+    offset: args.offset + contentFrom,
+    references: args.references,
+    text: content
+  });
+}
+
 export function collectMarkdownInlineLinkRanges(
   text: string,
   offset = 0,
   references: MarkdownLinkReferenceMap = new Map()
 ): MarkdownInlineLinkRange[] {
-  const tree: MarkdownSyntaxTree = folioleMarkdownParser.parse(text);
-  const links: MarkdownInlineLinkRange[] = [];
-  visitLinkRanges({ links, node: tree.topNode, offset, references, source: text });
-  return links.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+  const parsedLinks = collectParsedMarkdownInlineLinkRanges({ offset, references, text });
+  return parsedLinks.length > 0
+    ? parsedLinks
+    : collectIndentedListItemLinkRanges({ offset, references, text });
 }

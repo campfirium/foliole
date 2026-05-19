@@ -19,6 +19,29 @@ describe('markdown link compatibility matrix plain links', () => {
     expect(projectMarkdownInlineText(text)).toEqual([{ href: 'https://example.test/path_(one)', kind: 'link', text: '*label' }]);
     expect(tokenizeMarkdownTableInlineText(text)).toEqual([{ href: 'https://example.test/path_(one)', kind: 'link', text: '*label' }]);
   });
+
+  it('projects indented list item links when live Markdown scans a nested line in isolation', () => {
+    const text = '    - [Home 家](https://aquafina-water-bottle.github.io/jp-mining-note/)';
+    const [linkRange] = collectMarkdownInlineLinkRanges(text);
+    expect(linkRange).toMatchObject({
+      href: 'https://aquafina-water-bottle.github.io/jp-mining-note/',
+      labelFrom: 7,
+      labelText: 'Home 家',
+      labelTo: 13,
+      safe: true
+    });
+    expect(collectInlineLinkPresentationPlan([linkRange!], false)).toMatchObject({
+      markRanges: [
+        {
+          attributes: { 'data-md-link-url': 'https://aquafina-water-bottle.github.io/jp-mining-note/' },
+          className: 'cm-md-link-text',
+          from: 7,
+          to: 13
+        }
+      ],
+      replaceRanges: expect.arrayContaining([{ from: 6, to: 7 }, { from: 13, to: 14 }])
+    });
+  });
 });
 
 describe('markdown link compatibility matrix unsafe links', () => {
