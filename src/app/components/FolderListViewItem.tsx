@@ -1,4 +1,5 @@
 import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+import { projectMarkdownDisplayText } from '../../features/nodes/model/nodeListLabelProjection';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   WORKSPACE_LIST_OPENING_FALLBACK,
@@ -25,13 +26,13 @@ type FolderListItemProps = {
   sortKey: FolderListSortKey;
 };
 
-function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: string; locationPath: string }) {
+function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: string; displayTitle: string; locationPath: string }) {
   return (
     <li>
       <div className="flex flex-col gap-2 py-5">
         <div className="flex items-start justify-between gap-4">
           <button
-            aria-label={`Open ${props.node.title}`}
+            aria-label={`Open ${props.displayTitle}`}
             className="min-w-0 flex-1 text-left text-[17px] font-normal leading-7 text-foreground transition-colors hover:text-accent-strong focus-visible:outline-none"
             onClick={() => props.onSelectNode(props.node.id)}
             type="button"
@@ -39,9 +40,9 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
             <TruncatedTextTooltip
               className="line-clamp-2 block break-words"
               data-testid={`folder-list-title-${props.node.id}`}
-              text={props.node.title}
+              text={props.displayTitle}
             >
-              {props.node.title}
+              {props.displayTitle}
             </TruncatedTextTooltip>
           </button>
           <span
@@ -52,7 +53,7 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
           </span>
         </div>
         <button
-          aria-label={`Open real location for ${props.node.title}`}
+          aria-label={`Open real location for ${props.displayTitle}`}
           className="w-fit max-w-full truncate text-left text-[13px] leading-5 text-foreground/56 underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:outline-none"
           onClick={() => (props.onSelectNodePath ?? props.onSelectNode)(props.node.id)}
           type="button"
@@ -67,7 +68,8 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
 export function FolderListViewItem(props: FolderListItemProps) {
   const author = getWorkspaceListNodeAuthor(props.node);
   const opening = getWorkspaceListNodeOpening(props.node);
-  const summary = opening === WORKSPACE_LIST_OPENING_FALLBACK ? '' : opening;
+  const displayTitle = projectMarkdownDisplayText(props.node.title) || props.node.title;
+  const summary = opening === WORKSPACE_LIST_OPENING_FALLBACK ? '' : projectMarkdownDisplayText(opening);
   const dateLabel =
     props.sortKey === 'dateLastOpened'
       ? getWorkspaceListNodeLastOpenedLabel(props.nodeViewState)
@@ -75,18 +77,18 @@ export function FolderListViewItem(props: FolderListItemProps) {
   const locationPath = resolveFolderListLocationPath(props.node, props.nodesById);
 
   if (props.itemLayout === 'virtual-result') {
-    return renderVirtualResultItem({ ...props, dateLabel, locationPath });
+    return renderVirtualResultItem({ ...props, dateLabel, displayTitle, locationPath });
   }
 
   return (
     <FolderListTextItem
-      ariaLabel={`Open ${props.node.title}`}
+      ariaLabel={`Open ${displayTitle}`}
       author={author}
       dateLabel={dateLabel}
       nodeId={props.node.id}
       onClick={() => props.onSelectNode(props.node.id)}
       summary={summary}
-      title={props.node.title}
+      title={displayTitle}
     />
   );
 }

@@ -72,4 +72,20 @@ describe('FolderListView content', () => {
 
     expect(screen.queryByTestId('folder-list-meta-node-2')).not.toBeInTheDocument();
   });
+
+  it('renders markdown titles and summaries as readable list text', () => {
+    renderFolderList([
+      createNode({
+        id: 'node-3',
+        title: '## **前体**',
+        content: '## **色氨酸**\n\n![Cover](asset://cover.png) [Project](https://example.com) helps make serotonin.'
+      })
+    ]);
+
+    expect(screen.getByTestId('folder-list-title-node-3')).toHaveTextContent('前体');
+    expect(screen.getByTestId('folder-list-excerpt-node-3')).toHaveTextContent(
+      '色氨酸 Cover Project helps make serotonin.'
+    );
+    expect(screen.queryByText(/##|\*\*|asset:\/\//)).not.toBeInTheDocument();
+  });
 });
