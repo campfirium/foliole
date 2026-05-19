@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
-import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
+import {
+  syncNodeContentToRuntime,
+  syncRestoreNodesToRuntime,
+  syncSoftDeleteNodesToRuntime
+} from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -113,6 +117,69 @@ describe('workspace application action history', () => {
     expect(harness.getState().nodeViewById['node-1']).toMatchObject({
       scrollTop: 0,
       selection: null
+    });
+  });
+});
+
+describe('workspace application delete action history', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('restores a deleted current review topic and session position when undoing Delete Topic', () => {
+    const harness = createHarness();
+    const nodeActions = createWorkspaceNodeActions(harness.setState);
+    const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+    const secondNode = {
+      ...harness.getState().nodesById['node-1']!,
+      content: 'Second',
+      id: 'node-2',
+      title: 'Second'
+    };
+    harness.setState((state) => ({
+      activeNodeId: 'node-1',
+      nodeOrder: [...state.nodeOrder, 'node-2'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': secondNode
+      },
+      reviewSession: {
+        currentNodeId: 'node-1',
+        isAnswerRevealed: true,
+        queueNodeIds: ['node-1', 'node-2'],
+        totalNodeCount: 2
+      }
+    }));
+
+    nodeActions.deleteNode('node-1');
+
+    expect(harness.getState().activeNodeId).toBe('node-2');
+    expect(harness.getState().reviewSession.currentNodeId).toBe('node-2');
+    expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({
+      nodeIds: ['node-1'],
+      title: 'Delete Topic',
+      type: 'topic.delete'
+    });
+
+    expect(historyActions.undoWorkspaceAction('2026-03-19T00:00:00.000Z')).toBe(true);
+
+    expect(harness.getState().trashedNodeIds).not.toContain('node-1');
+    expect(harness.getState().activeNodeId).toBe('node-1');
+    expect(harness.getState().reviewSession).toMatchObject({
+      currentNodeId: 'node-1',
+      isAnswerRevealed: true,
+      queueNodeIds: ['node-1', 'node-2'],
+      totalNodeCount: 2
+    });
+    expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: ['node-1'] });
+
+    expect(historyActions.redoWorkspaceAction('2026-03-20T00:00:00.000Z')).toBe(true);
+
+    expect(harness.getState().trashedNodeIds).toContain('node-1');
+    expect(harness.getState().activeNodeId).toBe('node-2');
+    expect(syncSoftDeleteNodesToRuntime).toHaveBeenLastCalledWith({
+      deletedAt: expect.any(String),
+      nodeIds: ['node-1']
     });
   });
 });

@@ -1,5 +1,6 @@
 import { isImageClozeLocator, removeImageClozeRegion } from '../features/image-cloze/model/imageCloze';
 
+import { createTopicDeleteHistoryPatch } from './workspaceDeleteActionHistory';
 import type { WorkspaceState } from './workspaceStore';
 import { createRestoreNodeAction, type RestoreNodeRuntimeHandlers } from './workspaceStoreRestoreAction';
 import { computeDeleteNodesMutation, computeDeleteNodesPermanentlyMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
@@ -23,15 +24,9 @@ type WorkspaceTrashActions = Pick<
 >;
 
 interface TrashRuntimeHandlers {
-  syncNodeContent: DeleteNodeSyncHandlers['syncNodeContent'];
-  syncSoftDeleteNodes: DeleteNodeSyncHandlers['syncSoftDeleteNodes'];
-  syncRestoreNodes: RestoreNodeRuntimeHandlers['syncRestoreNodes'];
-  syncDeleteNodesPermanently: DeleteNodeSyncHandlers['syncDeleteNodesPermanently'];
-}
-
-interface DeleteNodeSyncHandlers {
   syncNodeContent: (node: WorkspaceState['nodesById'][string], position?: number) => void;
   syncSoftDeleteNodes: (payload: { nodeIds: string[]; deletedAt: string }) => void;
+  syncRestoreNodes: RestoreNodeRuntimeHandlers['syncRestoreNodes'];
   syncDeleteNodesPermanently: (payload: { nodeIds: string[]; nodeOrder: string[] }) => void;
 }
 
@@ -85,7 +80,7 @@ function findLiveImageClozeChildNodeIds(
     .map((node) => node.id);
 }
 
-function syncDeleteMutation(runtimeHandlers: DeleteNodeSyncHandlers, mutation: DeleteNodeMutationResult | null) {
+function syncDeleteMutation(runtimeHandlers: TrashRuntimeHandlers, mutation: DeleteNodeMutationResult | null) {
   if (!mutation || mutation.nodeIds.length === 0) {
     return;
   }
@@ -98,7 +93,7 @@ function syncDeleteMutation(runtimeHandlers: DeleteNodeSyncHandlers, mutation: D
   });
 }
 
-function syncPermanentDeleteMutation(runtimeHandlers: DeleteNodeSyncHandlers, mutation: DeleteNodeMutationResult | null) {
+function syncPermanentDeleteMutation(runtimeHandlers: TrashRuntimeHandlers, mutation: DeleteNodeMutationResult | null) {
   if (!mutation || mutation.nodeIds.length === 0 || !mutation.nodeOrder) {
     return;
   }
@@ -113,13 +108,13 @@ function syncPermanentDeleteMutation(runtimeHandlers: DeleteNodeSyncHandlers, mu
 
 function createDeleteNodesAction(
   set: WorkspaceSet,
-  runtimeHandlers: DeleteNodeSyncHandlers
+  runtimeHandlers: TrashRuntimeHandlers
 ): WorkspaceTrashActions['deleteNodes'] {
   return (nodeIds) => {
     let mutation: DeleteNodeMutationResult | null = null;
     set((state) => {
       mutation = computeDeleteNodesMutation(state, nodeIds);
-      return mutation ? mutation.patch : state;
+      return mutation ? createTopicDeleteHistoryPatch(state, mutation) : state;
     });
     syncDeleteMutation(runtimeHandlers, mutation);
   };
@@ -162,7 +157,7 @@ function reconcileExplicitImageRegionRemoval(
 
 function createDeleteImageClozeRegionAction(
   set: WorkspaceSet,
-  runtimeHandlers: DeleteNodeSyncHandlers
+  runtimeHandlers: TrashRuntimeHandlers
 ): WorkspaceTrashActions['deleteImageClozeRegion'] {
   return (parentNodeId, attachmentId, regionId) => {
     let mutation: DeleteNodeMutationResult | null = null;
@@ -211,7 +206,7 @@ function createDeleteImageClozeRegionAction(
 
 function createDeleteNodesPermanentlyAction(
   set: WorkspaceSet,
-  runtimeHandlers: DeleteNodeSyncHandlers
+  runtimeHandlers: TrashRuntimeHandlers
 ): WorkspaceTrashActions['deleteNodesPermanently'] {
   return (nodeIds) => {
     let mutation: DeleteNodeMutationResult | null = null;
