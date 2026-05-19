@@ -15,6 +15,7 @@ export function CompanionShellOverlays(props: {
   onSecondaryDestination(destinationId: CompanionSecondaryDestinationId): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
 }) {
+  const currentReviewCard = props.surface.reviewSession.currentCard;
   const isReadableArticleImmersive = props.surface.activeAction === 'recent'
     && Boolean(props.surface.readableArticle)
     && Boolean(props.surface.selectedBrowseNodeId)
@@ -40,8 +41,9 @@ export function CompanionShellOverlays(props: {
         onDismissReviewItem={props.surface.handleDismissReviewItem}
         onGrade={props.surface.handleGradeReview}
         onRevealAnswer={props.surface.handleRevealAnswer}
+        reviewCardKey={currentReviewCard ? `${currentReviewCard.itemKind}:${currentReviewCard.nodeId}` : null}
         statusLabel={null}
-        visible={props.surface.activeAction === 'review' && Boolean(props.surface.reviewSession.currentCard)}
+        visible={props.surface.activeAction === 'review' && Boolean(currentReviewCard)}
       />
     </>
   );
