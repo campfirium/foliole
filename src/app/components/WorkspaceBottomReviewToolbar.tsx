@@ -2,6 +2,7 @@ import type { ReviewSessionMode } from '../../features/review/model/reviewSessio
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
+import { ReviewToolbarProgressLine } from './ReviewToolbarSessionFrame';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceStudyDockTrigger } from './WorkspaceSideToolbar';
@@ -93,19 +94,18 @@ export function selectWorkspaceBottomReviewToolbarProps(
 function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbarProps) {
   return (
     <div
-      className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
+      className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-visible ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
     >
       {props.isListCollapsed ? null : (
         <>
-          <div className="flex min-w-0 items-center bg-transparent px-4 text-sm font-medium text-foreground/70 max-[1080px]:hidden">
-            {Math.max(props.reviewQueueCount, 0)} left · {Math.max(props.reviewCompletedCount, 0)} done
-          </div>
+          <div aria-hidden="true" className="bg-transparent max-[1080px]:hidden" />
           <div aria-hidden="true" className="bg-transparent max-[1080px]:hidden" />
         </>
       )}
       <ReviewModeToolbar
-        className="col-start-3 h-full bg-transparent px-6 max-[1080px]:col-start-1"
+        className="col-start-3 row-start-1 h-full bg-transparent px-6 max-[1080px]:col-start-1"
         style={{ borderTopColor: 'transparent' }}
+        showProgress={false}
         showSessionModeControl
         showSummary={false}
         isAnswerRevealed={props.isAnswerRevealed}
@@ -127,6 +127,9 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
         onSetReviewSessionMode={props.onSetReviewSessionMode}
         reviewSessionMode={props.reviewSessionMode}
       />
+      <div className="pointer-events-none relative z-workspace-overlay col-start-3 row-start-1 h-full max-[1080px]:col-start-1">
+        <ReviewToolbarProgressLine completedCount={props.reviewCompletedCount} queueCount={props.reviewQueueCount} />
+      </div>
       {props.isImmersiveMode ? null : (
         <>
           <div aria-hidden="true" className="hidden bg-transparent xl:block" />

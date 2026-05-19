@@ -17,6 +17,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
 
+vi.stubGlobal('ResizeObserver', class { disconnect() {} observe() {} unobserve() {} });
+
 const { App } = await import('../app/App');
 
 function createReadingProfile(nextAt: string) {
@@ -46,8 +48,8 @@ function createDueReview() {
   };
 }
 
-function expectReviewToolbarSummary(summary: string) {
-  expect(screen.getAllByText(summary).length).toBeGreaterThan(0);
+function expectReviewToolbarSummary(left: number, done: number, total: number) {
+  expect(screen.getAllByLabelText(`Today's review: ${left} left · ${done} done · ${total} total`).length).toBeGreaterThan(0);
 }
 
 function getSelectedTreeItem(name: string) {
@@ -122,7 +124,7 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
   expect(screen.getByRole('button', { name: 'Study' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
   await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-2', 'node-1']));
-  expectReviewToolbarSummary('2 left · 0 done');
+  expectReviewToolbarSummary(2, 0, 2);
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Again' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
@@ -154,7 +156,7 @@ it('enters review mode with the reading queue when no FSRS cards are due', async
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
 
   await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-1']));
-  expectReviewToolbarSummary('1 left · 0 done');
+  expectReviewToolbarSummary(1, 0, 1);
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
@@ -199,11 +201,11 @@ it('syncs node list selection when review grading advances active node', async (
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
-  expectReviewToolbarSummary('2 left · 0 done');
+  expectReviewToolbarSummary(2, 0, 2);
   fireEvent.click(await screen.findByRole('button', { name: 'Show Answer' }));
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
   await waitFor(() => {
-    expectReviewToolbarSummary('1 left · 1 done');
+    expectReviewToolbarSummary(1, 1, 2);
   });
 
   await waitFor(() => {

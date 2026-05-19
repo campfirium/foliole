@@ -29,13 +29,25 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
   );
 }
 
-it('renders reading actions and queue status inside the shared review action bar', () => {
-  renderToolbar();
+it('renders reading actions with session controls and hidden progress text', () => {
+  renderToolbar({ showSessionModeControl: true, showSummary: false });
 
   expect(document.querySelector('[data-review-item-kind="reading"]')).toBeInTheDocument();
   expect(screen.getByLabelText('Reading review actions')).toBeInTheDocument();
+  expect(screen.getByLabelText('Change session mode')).toBeInTheDocument();
+  expect(screen.getByLabelText('Reading time (coming soon)')).toBeInTheDocument();
+  expect(screen.getByLabelText("Today's review: 3 left · 0 done · 3 total")).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
+  expect(screen.queryByText('3 left · 0 done')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByLabelText('Change session mode'));
+  expect(screen.getByText('This session')).toBeInTheDocument();
+});
+
+it('keeps legacy summary text when session controls are not shown', () => {
+  renderToolbar();
+
   expect(screen.getByText('3 left · 0 done')).toBeInTheDocument();
 });
 
