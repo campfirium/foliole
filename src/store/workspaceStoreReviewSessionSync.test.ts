@@ -45,7 +45,7 @@ beforeEach(() => {
   resetWorkspaceStore();
 });
 
-it('re-syncs review session when setActiveNode selects another queued review node', () => {
+it('keeps the current review item when setActiveNode selects another queued topic', () => {
   useWorkspaceStore.setState({
     activeNodeId: 'reading-1',
     nodeOrder: ['reading-1', 'fsrs-1'],
@@ -65,9 +65,9 @@ it('re-syncs review session when setActiveNode selects another queued review nod
 
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('fsrs-1');
-  expect(state.reviewSession.currentNodeId).toBe('fsrs-1');
-  expect(state.reviewSession.queueNodeIds).toEqual(['fsrs-1', 'reading-1']);
-  expect(state.reviewSession.isAnswerRevealed).toBe(false);
+  expect(state.reviewSession.currentNodeId).toBe('reading-1');
+  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1', 'fsrs-1']);
+  expect(state.reviewSession.isAnswerRevealed).toBe(true);
 });
 
 it('advances review session when the current queued node is deleted', () => {
