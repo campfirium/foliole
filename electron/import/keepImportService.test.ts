@@ -143,41 +143,6 @@ it('wires readwise keep import into existing highlight-derived child creation', 
   }));
 });
 
-it('keeps a soft-deleted Readwise import occupied instead of treating it as new', async () => {
-  const fixture = await seedReadwiseArticleFixture(tempRoot);
-  saveReadwiseKeepImportSettings(fixture);
-
-  await runKeepImportRule({
-    directoryPath: fixture.fullDocumentDir,
-    highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-1',
-    sourceType: 'readwise'
-  });
-  const importedNode = openDatabaseConnection().sqlite
-    .prepare(`SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?`)
-    .get('draft-import-source-1', 'Sample Article.md') as { last_node_id: string };
-
-  softDeleteNodes({
-    deletedAt: '2026-03-25T00:10:00.000Z',
-    nodeIds: [importedNode.last_node_id]
-  });
-
-  const preview = await previewKeepImportRule({
-    directoryPath: fixture.fullDocumentDir,
-    highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-1',
-    sourceType: 'readwise'
-  });
-
-  expect(preview.entries).toEqual([
-    expect.objectContaining({
-      detail: 'No file changes detected since the last keep scan.',
-      source_path: 'Sample Article.md',
-      status: 'unchanged'
-    })
-  ]);
-});
-
 it('coalesces concurrent keep import requests for the same Readwise rule', async () => {
   const fixture = await seedReadwiseArticleFixture(tempRoot);
   saveReadwiseKeepImportSettings(fixture);
