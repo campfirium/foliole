@@ -109,3 +109,49 @@ it('stores appearance colors in the active base color mode', async () => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionColorDark)).toBe('#224488');
   });
 });
+
+it('uses dark color defaults for appearance color reset controls', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Reset accent color')).toBeDisabled();
+    expect(screen.getByLabelText('Reset selection color')).toBeDisabled();
+    expect(screen.getByLabelText('Reset highlight color')).toBeDisabled();
+    expect(screen.getByLabelText('Reset cloze color')).toBeDisabled();
+  });
+
+  fireEvent.change(screen.getByLabelText('Accent color picker'), {
+    target: { value: '#88aa99' }
+  });
+  fireEvent.change(screen.getByLabelText('Selection color picker'), {
+    target: { value: '#7799dd' }
+  });
+  fireEvent.change(screen.getByLabelText('Highlight color picker'), {
+    target: { value: '#66bbdd' }
+  });
+  fireEvent.change(screen.getByLabelText('Cloze color picker'), {
+    target: { value: '#ddbb66' }
+  });
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Reset accent color')).not.toBeDisabled();
+    expect(screen.getByLabelText('Reset selection color')).not.toBeDisabled();
+    expect(screen.getByLabelText('Reset highlight color')).not.toBeDisabled();
+    expect(screen.getByLabelText('Reset cloze color')).not.toBeDisabled();
+  });
+
+  fireEvent.click(screen.getByLabelText('Reset accent color'));
+  fireEvent.click(screen.getByLabelText('Reset selection color'));
+  fireEvent.click(screen.getByLabelText('Reset highlight color'));
+  fireEvent.click(screen.getByLabelText('Reset cloze color'));
+
+  await waitFor(() => {
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.accentColorDark)).toBe('#7fb18d');
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionColorDark)).toBe('#78a6ff');
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.highlightColorDark)).toBe('#5cc8f3');
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.clozeColorDark)).toBe('#e1c15a');
+  });
+});
