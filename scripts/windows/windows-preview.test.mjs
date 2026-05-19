@@ -371,18 +371,19 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('chooses full restart when committed runtime changes and renderer source changes are both pending', async () => {
+  it('chooses restart-intent when committed runtime changes and renderer source changes are both pending', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    const consumer = startIntentConsumer(tempRoot, 'restart');
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  if [ -f "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json" ]; then',
+          '    echo "[windows-restart-client] status: RUNNING trust=OK head=old-head"',
+          '    exit 0',
+          '  fi',
           '  echo "[windows-restart-client] status: RUNNING trust=OK head=old-head"',
-          '  exit 0',
-          'fi',
-          'if [ "${WINDOWS_CLIENT_ACTION}" = "full-restart" ]; then',
-          '  echo "[windows-restart-client] status: RESTARTED mode=full-shell-restart shell_pid=101 runtime_pid=202"',
           '  exit 0',
           'fi',
           'exit 1'
@@ -395,16 +396,19 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/features/editor/adapters/liveMarkdownTheme.ts',
         WINDOWS_PREVIEW_COMMITTED_ELECTRON_CHANGES: '1',
+        WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('reason: Class D: runtime behind committed electron changes with renderer changes');
-      expect(result.stdout).toContain('selected action: full-restart');
+      expect(result.stdout).toContain('reason: Class B: runtime behind committed electron changes with renderer changes');
+      expect(result.stdout).toContain('selected action: restart-intent');
+      expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
       expect(result.stdout).toContain('status: STARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'full-restart']);
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
+      consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
     }
   });

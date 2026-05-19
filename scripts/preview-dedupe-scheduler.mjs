@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { appendPreviewEvent } from './preview-dedupe-event-log.mjs';
 import { isPidAlive, withStateLock } from './preview-dedupe-state-store.mjs';
 
 const DEFAULT_WINDOW_MS = { android: 0, windows: 3 * 60_000 };
@@ -33,8 +34,11 @@ export function shouldForcePreview(env = process.env) {
   return env.PREVIEW_DEDUPE_FORCE === '1';
 }
 
-function readWaitOnFailure(env = process.env) {
-  return env.PREVIEW_DEDUPE_WAIT_ON_FAILURE === '1';
+function readWaitOnFailure(target, env = process.env) {
+  if (env.PREVIEW_DEDUPE_WAIT_ON_FAILURE !== undefined) {
+    return env.PREVIEW_DEDUPE_WAIT_ON_FAILURE === '1';
+  }
+  return target === 'windows';
 }
 
 function canTakeOver(run, now) {
@@ -128,6 +132,18 @@ function registerNextRun(state, requestId, now) {
   return state.nextRunId;
 }
 
+function createWaitAction(state, runId, reason, now) {
+  const waitingRun = state.runs[runId];
+  return {
+    acceptingRemainingSec: Math.max(0, Math.ceil((state.acceptingUntil - now) / 1000)),
+    activeRunId: state.activeRunId,
+    kind: 'wait',
+    reason,
+    runId,
+    waiters: waitingRun?.waiters?.length ?? 0
+  };
+}
+
 function chooseAction(state, requestId, assignedRunId) {
   const now = Date.now();
   if (canTakeOver(state.runs[state.activeRunId], now) || state.runs[state.activeRunId]?.status === 'completed') {
@@ -137,13 +153,13 @@ function chooseAction(state, requestId, assignedRunId) {
     return { kind: 'result', run: state.runs[assignedRunId] };
   }
   if (assignedRunId && state.runs[assignedRunId]?.status === 'waiting-success') {
-    return { kind: 'wait', runId: assignedRunId };
+    return createWaitAction(state, assignedRunId, 'waiting-for-success', now);
   }
   if (state.activeRunId) {
-    return { kind: 'wait', runId: assignedRunId ?? registerNextRun(state, requestId, now) };
+    return createWaitAction(state, assignedRunId ?? registerNextRun(state, requestId, now), 'active-run', now);
   }
   if (state.acceptingUntil > now) {
-    return { kind: 'wait', runId: assignedRunId ?? registerNextRun(state, requestId, now) };
+    return createWaitAction(state, assignedRunId ?? registerNextRun(state, requestId, now), 'validation-window', now);
   }
   state.acceptingUntil = 0;
   if (!assignedRunId && !state.nextRunId) {
@@ -163,7 +179,7 @@ export async function runScheduledPreview({
   runtimeDir,
   target,
   runPreview,
-  waitOnFailure = readWaitOnFailure(),
+  waitOnFailure = readWaitOnFailure(target),
   windowMs = readWindowMs(target)
 }) {
   const requestId = randomUUID();
@@ -188,13 +204,17 @@ export async function runScheduledPreview({
     }
     if (action.kind === 'wait') {
       if (announcedDeferredRunId !== assignedRunId) {
-        console.log(`[${target}-preview] request: accepted run=${assignedRunId}`);
+        await appendPreviewEvent({ event: 'request-waiting', fields: action, runtimeDir, target });
+        console.log(
+          `[${target}-preview] request: accepted run=${assignedRunId} reason=${action.reason} remainingSec=${action.acceptingRemainingSec} activeRun=${action.activeRunId ?? 'none'} waiters=${action.waiters}`
+        );
         announcedDeferredRunId = assignedRunId;
       }
       await delay(RESULT_POLL_MS);
       continue;
     }
-    console.log(`[${target}-preview] request: driver run=${assignedRunId}`);
+    await appendPreviewEvent({ event: 'request-driving', fields: action, runtimeDir, target });
+    console.log(`[${target}-preview] request: driver run=${assignedRunId} requireActualPreview=${action.requireActualPreview}`);
     const result = await runPreview({ requireActualPreview: action.requireActualPreview });
     await withStateLock({
       runtimeDir,
@@ -209,6 +229,7 @@ export async function runScheduledPreview({
         return { state, value: null };
       }
     });
+    await appendPreviewEvent({ event: 'run-completed', fields: { runId: assignedRunId, ...result }, runtimeDir, target });
     if (result.exitCode === 0 || !waitOnFailure) {
       return result.exitCode;
     }

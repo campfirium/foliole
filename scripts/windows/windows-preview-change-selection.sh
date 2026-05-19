@@ -167,8 +167,8 @@ select_update_action() {
     fi
     if has_runtime_code_changes "${changed_files}"; then
       if has_renderer_source_changes "${changed_files}"; then
-        SELECTED_ACTION="full-restart"
-        SELECTED_REASON="Class D: working tree runtime and renderer changes require shell restart"
+        SELECTED_ACTION="restart-intent"
+        SELECTED_REASON="Class B: working tree runtime and renderer changes detected"
         return 0
       fi
       SELECTED_ACTION="restart-intent"
@@ -177,8 +177,8 @@ select_update_action() {
     fi
     if has_committed_electron_changes_since "${runtime_head}"; then
       if has_renderer_source_changes "${changed_files}"; then
-        SELECTED_ACTION="full-restart"
-        SELECTED_REASON="Class D: runtime behind committed electron changes with renderer changes"
+        SELECTED_ACTION="restart-intent"
+        SELECTED_REASON="Class B: runtime behind committed electron changes with renderer changes"
         return 0
       fi
       SELECTED_ACTION="restart-intent"
