@@ -151,6 +151,9 @@ it('draws truncated title tooltip as one measured bubble path', async () => {
     const tooltip = tooltipContent.parentElement;
     expect(tooltip?.className).toContain('border-transparent');
     expect(tooltip?.className).toContain('bg-transparent');
+    expect(tooltip?.className).toContain('max-w-[min(15rem,calc(100vw-2rem))]');
+    expect(tooltip?.className).toContain('[--app-tooltip-padding-x:0.75rem]');
+    expect(tooltip?.className).toContain('[--app-tooltip-padding-y:0.5rem]');
     expect(tooltip?.className).not.toContain('before:border-r-[var(--app-tooltip-border-color)]');
     const arrow = document.querySelector('svg[aria-hidden="true"]');
     expect(arrow).not.toBeNull();
@@ -160,7 +163,7 @@ it('draws truncated title tooltip as one measured bubble path', async () => {
     expect(bubblePath).toHaveAttribute('fill', 'var(--app-tooltip-bg)');
     expect(bubblePath).toHaveAttribute('vector-effect', 'non-scaling-stroke');
     expect(bubblePath?.getAttribute('d')).toContain('L 0 20');
-    expect(bubblePath?.getAttribute('d')).toContain('Q 8 0 20 0');
+    expect(bubblePath?.getAttribute('d')).toContain('Q 8 0 16 0');
   } finally {
     HTMLElement.prototype.getBoundingClientRect = getBoundingClientRect;
     if (scrollWidth) Object.defineProperty(HTMLElement.prototype, 'scrollWidth', scrollWidth);
