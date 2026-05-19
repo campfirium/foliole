@@ -7,7 +7,7 @@ function formatAnnotationStatus(status: ReadwiseBookInventoryItem['annotationSta
 }
 
 function formatEpubStatus(status: ReadwiseBookInventoryItem['epubStatus']) {
-  return status === 'received' ? 'EPUB received' : 'EPUB missing';
+  return status === 'received' ? 'Original file received' : 'Original file missing';
 }
 
 function formatImportStatus(status: ReadwiseBookInventoryItem['importStatus']) {
@@ -29,8 +29,8 @@ export function buildReadwiseBookPlaceholderContent(book: ReadwiseBookInventoryI
     `- ${formatImportStatus(book.importStatus)}`,
     '',
     '## Next actions',
-    '- Download EPUB*',
-    '- Load EPUB*',
+    '- Download original file*',
+    '- Load original file*',
     '',
     '*In progress. These actions will be connected in a later task.*'
   ].join('\n');

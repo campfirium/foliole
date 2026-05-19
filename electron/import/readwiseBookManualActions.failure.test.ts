@@ -109,14 +109,14 @@ beforeEach(() => {
 it('returns a failed result instead of throwing when epub import fails', async () => {
   await expect(loadReadwiseBookEpub('node-book-1')).resolves.toEqual({
     book_key: 'book-1',
-    error_message: 'Could not load this EPUB. Please try another file.',
+    error_message: 'Could not load this original file. Please try another file.',
     epub_path: null,
     status: 'failed',
     title: 'Book One'
   });
 });
 
-it('blocks manual readwise download and EPUB import when this desktop is secondary', async () => {
+it('blocks manual readwise download and original file import when this desktop is secondary', async () => {
   primaryDeviceMock.canRunExternalSources = false;
 
   await expect(openReadwiseBookDownload('node-book-1')).resolves.toEqual({

@@ -150,7 +150,7 @@ it('imports the selected EPUB into the current readwise book node and keeps that
     title: 'Manual Book'
   });
   expect(showOpenDialog).toHaveBeenCalledWith({
-    filters: [{ extensions: ['epub'], name: 'EPUB' }],
+    filters: [{ extensions: ['epub', 'pdf'], name: 'Original file' }],
     properties: ['openFile']
   });
 
@@ -227,7 +227,7 @@ it('reopens the picker from the last selected EPUB folder after restart', async 
   });
   expect(showOpenDialog).toHaveBeenNthCalledWith(2, {
     defaultPath: downloadDir,
-    filters: [{ extensions: ['epub'], name: 'EPUB' }],
+    filters: [{ extensions: ['epub', 'pdf'], name: 'Original file' }],
     properties: ['openFile']
   });
 });

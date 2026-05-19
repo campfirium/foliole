@@ -10,6 +10,7 @@ import { resolvePdfDocumentSurface, renderPdfDocumentSurface } from './documentP
 import { LinkPanelStack } from './LinkPanelStack';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
+import { ReadwiseBookDocumentGate } from './ReadwiseBookDocumentGate';
 import { TrashDocumentRestoreAction } from './TrashDocumentRestoreAction';
 
 function renderPdfLoadingSurface() {
@@ -32,7 +33,9 @@ function renderPdfLoadingSurface() {
 function renderDocumentBody(activeNodeId: string | null, bodyProps: ComponentProps<typeof DocumentPanelBody>) {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="document-panel-content-body">
-      <DocumentPanelBody {...bodyProps} />
+      <ReadwiseBookDocumentGate activeContent={bodyProps.editorContent} activeNodeId={activeNodeId}>
+        <DocumentPanelBody {...bodyProps} />
+      </ReadwiseBookDocumentGate>
     </div>
   );
 }
