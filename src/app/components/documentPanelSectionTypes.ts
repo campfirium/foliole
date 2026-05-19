@@ -27,6 +27,7 @@ export interface DocumentPanelSectionProps {
   editorContent: string;
   editorAppearanceKey: string;
   isEditorReadOnly: boolean;
+  reviewCaretLineHighlight?: boolean;
   isImmersiveEditing?: boolean;
   isImmersiveMode?: boolean;
   onEnterImmersiveEdit?: () => void;

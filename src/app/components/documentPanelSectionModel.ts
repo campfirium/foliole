@@ -131,6 +131,7 @@ function getDocumentPanelBodyProps(
       : undefined,
     editorHideTitleHeading,
     immersiveEditing: props.isImmersiveMode && props.isImmersiveEditing,
+    reviewCaretLineHighlight: props.reviewCaretLineHighlight,
     editorNodeId: props.editorNodeId,
     editorReadingRestoreCommandId: props.editorReadingRestoreCommandId,
     editorReadingRestoreScrollTop: props.editorReadingRestoreScrollTop,

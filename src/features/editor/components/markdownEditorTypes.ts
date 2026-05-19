@@ -59,6 +59,7 @@ export interface MarkdownEditorProps {
   onReady?: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore?: () => boolean;
   readOnly?: boolean;
+  reviewCaretLineHighlight?: boolean;
   onSetReadingPositionSelection?: (selection: EditorSelection) => void;
   value: string;
 }

@@ -8,14 +8,13 @@ import type { EditorViewportMode } from '../../features/editor/adapters/EditorAd
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/nodeLinkPreview';
-import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
 import { definedProps } from '../../shared/lib/definedProps';
-import { cn } from '../../shared/lib/utils';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentOutlineLayer } from './DocumentOutlineLayer';
+import { DocumentPanelAnswerSection } from './DocumentPanelAnswerSection';
 
 export interface BlockImageMetrics {
   imageCount: number;
@@ -35,6 +34,7 @@ export interface DocumentPanelBodyLayoutProps {
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;
   immersiveEditing?: boolean;
+  reviewCaretLineHighlight?: boolean;
   editorNodeId: string | null;
   editorReadingRestoreCommandId?: string | null;
   editorReadingRestoreScrollTop?: number;
@@ -75,40 +75,6 @@ export interface DocumentPanelBodyLayoutProps {
   reveal: string;
   sharedBlockImageMaxHeight?: number;
   showDocumentOutline?: boolean;
-}
-
-function AnswerSection(props: DocumentPanelBodyLayoutProps) {
-  const answerNodeId = getImageClozeAnswerEditorNodeId(props.editorNodeId);
-  const answerEditorKey = `answer-${props.editorAppearanceKey}-${answerNodeId ?? 'none'}`;
-
-  return (
-    <section
-      aria-label="Cloze answer section"
-      className={cn(
-        'relative flex min-h-0 overflow-hidden',
-        props.answerSectionMode === 'balanced' ? 'flex-1' : 'flex-[0_0_calc(30dvh+60px)]'
-      )}
-    >
-      <MarkdownEditor
-        ariaLabel="Answer editor"
-        className="answer-editor-host min-h-0"
-        hideTitleHeading={false}
-        key={answerEditorKey}
-        nodeId={answerNodeId}
-        onChange={props.onAnswerChange}
-        value={props.reveal}
-        {...definedProps({
-          blockImageMaxHeightOverride: props.sharedBlockImageMaxHeight,
-          debugId: props.answerEditorDebugId,
-          fitBlockImagesToViewport: props.fitBlockImagesToViewport,
-          onFitBlockImageMetricsChange: props.onAnswerImageMetricsChange,
-          onImageLoadStateChange: props.onAnswerImageLoadStateChange,
-          onPastedAnchors: props.onPastedTextAnchors,
-          readOnly: props.readOnly
-        })}
-      />
-    </section>
-  );
 }
 
 function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
@@ -158,6 +124,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
           readingSelection: props.editorReadingSelection,
           readingTargetViewportMode: props.editorReadingTargetViewportMode,
           readingTargetViewportRatio: props.editorReadingTargetViewportRatio,
+          reviewCaretLineHighlight: props.reviewCaretLineHighlight,
           textAnchorDecorations: props.textAnchorDecorations
         })}
       />
@@ -203,7 +170,7 @@ export function renderDocumentPanelBodyLayout(props: DocumentPanelBodyLayoutProp
       <div className="document-panel-editor-stack flex h-full min-h-0 w-full flex-1 flex-col">
         {renderDocumentBodyContent(props)}
         {props.hasAnswerSection && !props.emptyState ? (
-          <AnswerSection {...props} />
+          <DocumentPanelAnswerSection {...props} />
         ) : null}
       </div>
     </div>
