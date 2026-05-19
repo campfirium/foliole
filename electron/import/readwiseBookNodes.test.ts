@@ -44,4 +44,5 @@ it('builds placeholder content without creating workspace nodes', () => {
       importStatus: 'completed'
     }))
   ).toContain('Book import completed');
+  expect(buildReadwiseBookPlaceholderContent(createBook())).toContain('Load original file');
 });

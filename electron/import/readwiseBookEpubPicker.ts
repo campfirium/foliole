@@ -41,8 +41,8 @@ export function saveRecentReadwiseBookEpubDirectory(epubPath: string) {
   });
 }
 
-async function resolveReadwiseBookEpubDialogDefaultPath(book: ReadwiseBookInventoryItem) {
-  const currentEpubPath = book.epubPath?.trim() ?? '';
+async function resolveReadwiseBookEpubDialogDefaultPath(book: ReadwiseBookInventoryItem | null) {
+  const currentEpubPath = book?.epubPath?.trim() ?? '';
   if (currentEpubPath && (await pathExists(currentEpubPath))) {
     return currentEpubPath;
   }
@@ -50,11 +50,11 @@ async function resolveReadwiseBookEpubDialogDefaultPath(book: ReadwiseBookInvent
   return recentDirectory && (await pathExists(recentDirectory)) ? recentDirectory : undefined;
 }
 
-export async function selectReadwiseBookEpubPath(book: ReadwiseBookInventoryItem, window: BrowserWindow | null) {
+export async function selectReadwiseBookEpubPath(book: ReadwiseBookInventoryItem | null, window: BrowserWindow | null) {
   const defaultPath = await resolveReadwiseBookEpubDialogDefaultPath(book);
   const dialogOptions = {
     ...(defaultPath ? { defaultPath } : {}),
-    filters: [{ extensions: ['epub'], name: 'EPUB' }],
+    filters: [{ extensions: ['epub', 'pdf'], name: 'Original file' }],
     properties: ['openFile']
   } satisfies Parameters<typeof dialog.showOpenDialog>[0];
   const selection = window

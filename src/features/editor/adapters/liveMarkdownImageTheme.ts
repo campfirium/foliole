@@ -131,6 +131,20 @@ export const liveMarkdownImageTheme = {
     height: '1.12rem',
     width: '1.12rem'
   },
+  '.cm-md-readwise-original-file-action': {
+    color: 'color-mix(in srgb, var(--color-text-secondary) 58%, transparent)'
+  },
+  '.cm-md-readwise-original-file-action:hover, .cm-md-readwise-original-file-action:focus-visible': {
+    color: 'color-mix(in srgb, var(--color-text-secondary) 84%, transparent)'
+  },
+  '.cm-md-readwise-original-file-detail': {
+    color: 'color-mix(in srgb, var(--color-text-secondary) 64%, transparent)',
+    fontSize: '0.78rem',
+    lineHeight: '1.35',
+    marginTop: '0.55rem',
+    maxWidth: '34rem',
+    whiteSpace: 'normal'
+  },
   '.cm-md-image-status-block': {},
   '.cm-md-image-status-inline': {
     backgroundColor: 'color-mix(in srgb, var(--color-bg-muted) 48%, transparent)',

@@ -8,6 +8,7 @@ import { collectMarkdownForumTitleLinkRanges } from '../model/markdownForumTitle
 import { collectMarkdownLinkReferences, type MarkdownLinkReferenceRange } from '../model/markdownLinkReferences';
 import { collectMultilineLinkPresentationPlans } from '../model/markdownMultilineLinkPresentation';
 import { isPositionInsideInactiveTable } from '../model/markdownTableViewport';
+import { collectReadwiseOriginalFilePlaceholderRanges } from '../model/readwiseOriginalFilePlaceholder';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import {
@@ -31,6 +32,7 @@ import {
   addReplace,
   addThematicBreakDecoration
 } from './liveMarkdownPrimitives';
+import { addReadwiseOriginalFileDecorations } from './liveMarkdownReadwiseOriginalFile';
 import { addTableDecorations } from './liveMarkdownTables';
 import { addOrphanTableScaffoldDecorations } from './liveMarkdownTableScaffolds';
 import { resolveVisibleLineWindow } from './liveMarkdownViewport';
@@ -132,6 +134,9 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
   const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
   const viewportTablePlans = collectViewportTablePlans({ endLine, source, startLine, view });
+  const readwiseOriginalFilePlaceholders = collectReadwiseOriginalFilePlaceholderRanges(source).filter(
+    (range) => range.to >= startLine.from && range.from <= endLine.to
+  );
   const viewportPlans = collectPreviewViewportPlans({
     codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
     codeLineFroms: codeFenceProjection.codeLineFroms,
@@ -147,6 +152,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   });
 
   addTableDecorations(ranges, viewportTablePlans, view.state.doc);
+  addReadwiseOriginalFileDecorations(ranges, readwiseOriginalFilePlaceholders, context.nodeId);
   addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
   addForumTitleLinkDecorations(ranges, forumTitleLinks);
   addMultilineLinkDecorations(ranges, source, {

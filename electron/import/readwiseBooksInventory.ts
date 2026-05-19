@@ -96,7 +96,7 @@ async function discoverSources(rootDir: string, supportedKinds: Array<'epub' | '
   }
 }
 
-function extractReadwiseDownloadUrl(markdown: string) {
+export function extractReadwiseDownloadUrl(markdown: string) {
   const directDownloadMatch = /\[Download original file[^\]]*]\((https?:\/\/[^)\s]+)\)/i.exec(markdown);
   if (directDownloadMatch?.[1]) {
     return directDownloadMatch[1];

@@ -159,7 +159,7 @@ it('resets an imported readwise book back to its pre-load placeholder state', as
     status: 'reset',
     title: 'Manual Book'
   });
-  expect(resetResult.content).toContain('EPUB missing');
+  expect(resetResult.content).toContain('Original file missing');
   expect(resetResult.content).toContain('Book import pending');
 
   const reloadedInventory = await scanReadwiseBooksInventory({
@@ -178,7 +178,7 @@ it('resets an imported readwise book back to its pre-load placeholder state', as
   const rootNode = openDatabaseConnection().sqlite
     .prepare('SELECT content, opening_text, reveal FROM nodes WHERE id = ? AND deleted_at IS NULL')
     .get(nodeId) as { content: string; opening_text: string | null; reveal: string | null } | undefined;
-  expect(rootNode?.content).toContain('Load EPUB');
+  expect(rootNode?.content).toContain('Load original file');
   expect(rootNode?.opening_text).toBeNull();
   expect(rootNode?.reveal).toBeNull();
 

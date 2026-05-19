@@ -31,7 +31,7 @@ export function createBlockedReadwiseBookEpubResult(book: ReadwiseBookInventoryI
 export function createReadwiseBookEpubFailureResult(book: ReadwiseBookInventoryItem): NativeReadwiseBookEpubLoadResult {
   return {
     book_key: book.bookKey,
-    error_message: 'Could not load this EPUB. Please try another file.',
+    error_message: 'Could not load this original file. Please try another file.',
     epub_path: null,
     status: 'failed',
     title: book.title
