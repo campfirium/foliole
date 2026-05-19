@@ -105,6 +105,33 @@ describe('localizeRemoteMarkdownImages wrapped links', () => {
       )
     ).resolves.toBe('![](asset://hash-1.png)\n\n正文');
   });
+
+  it('removes stale remote image wrapping links around already localized images', async () => {
+    await expect(
+      localizeRemoteMarkdownImages(
+        'node-1',
+        '[\n\n![image](asset://hash-1.png)\n\nimage1971×1242 140 KB](https://cdn.example.com/uploads/original/2X/f/cover.png)\n正文'
+      )
+    ).resolves.toBe('![image1971×1242 140 KB](asset://hash-1.png)\n正文');
+
+    expect(importRemoteImageAttachment).not.toHaveBeenCalled();
+  });
+
+  it('uses the remote image wrapping link caption as the localized image alt text', async () => {
+    importRemoteImageAttachment.mockResolvedValue({
+      status: 'imported',
+      attachment_id: 'hash-1',
+      intrinsic_size: { height: 816, width: 1456 },
+      original_name: 'cover.png'
+    });
+
+    await expect(
+      localizeRemoteMarkdownImages(
+        'node-1',
+        '[\n\n![image](https://cdn.example.com/uploads/original/2X/f/cover.png)\n\nimage1971×1242 140 KB](https://cdn.example.com/uploads/original/2X/f/cover.png)正文'
+      )
+    ).resolves.toBe('![image1971×1242 140 KB](asset://hash-1.png)\n\n正文');
+  });
 });
 
 describe('localizeRemoteMarkdownImages failures and parser coverage', () => {
