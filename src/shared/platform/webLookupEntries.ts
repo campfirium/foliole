@@ -3,6 +3,7 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
 import {
   BUILT_IN_WEB_LOOKUP_ENTRIES,
+  CHATGPT_CONTENT_DEFAULT_LINK,
   CHATGPT_OLD_DEFAULT_LINK,
   CHATGPT_SOURCE_TEXT_DEFAULT_LINK,
   CHATGPT_TEXT_LABEL_DEFAULT_LINK,
@@ -28,6 +29,12 @@ interface ResolvedWebLookupAction {
 
 type StoredWebLookupEntry = Partial<WebLookupEntry> & { id?: unknown };
 type WebLookupEntryPatch = Partial<Pick<WebLookupEntry, 'enabled' | 'label' | 'urlTemplate'>>;
+
+const LEGACY_BUILT_IN_LABELS: Record<string, string> = {
+  chatgpt: 'ChatGPT',
+  duckduckgo: 'DuckDuckGo',
+  google: 'Google'
+};
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -71,12 +78,15 @@ function applyStoredEntry(defaultEntry: WebLookupEntry, stored: StoredWebLookupE
     return defaultEntry;
   }
   const storedTemplate = typeof stored.urlTemplate === 'string' ? normalizeTemplatePlaceholder(stored.urlTemplate) : '';
+  const storedLabel = typeof stored.label === 'string' && stored.label.trim() ? stored.label.trim() : '';
+  const label = storedLabel && storedLabel !== LEGACY_BUILT_IN_LABELS[defaultEntry.id] ? storedLabel : defaultEntry.label;
   return {
     ...defaultEntry,
     enabled: typeof stored.enabled === 'boolean' ? stored.enabled : defaultEntry.enabled,
     kind: isValidEntryKind(stored.kind) ? stored.kind : defaultEntry.kind,
-    label: typeof stored.label === 'string' && stored.label.trim() ? stored.label.trim() : defaultEntry.label,
+    label,
     urlTemplate: isValidUrlTemplate(storedTemplate) &&
+      storedTemplate !== CHATGPT_CONTENT_DEFAULT_LINK &&
       storedTemplate !== CHATGPT_OLD_DEFAULT_LINK &&
       storedTemplate !== CHATGPT_TEXT_DEFAULT_LINK &&
       storedTemplate !== CHATGPT_SOURCE_TEXT_DEFAULT_LINK &&
@@ -225,8 +235,5 @@ export function resolveWebLookupAction(
   if (!url) {
     return null;
   }
-  const label = entry.kind === 'prompt'
-    ? `Ask ${entry.label} about ${selectionText ? 'selection' : 'full content'}`
-    : `Search with ${entry.label}`;
-  return { kind: entry.kind, label, url };
+  return { kind: entry.kind, label: entry.label, url };
 }

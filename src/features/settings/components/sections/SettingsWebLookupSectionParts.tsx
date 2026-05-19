@@ -13,7 +13,7 @@ import {
 
 export const MENU_ITEM_COLUMNS = '[grid-template-columns:2rem_minmax(132px,0.36fr)_minmax(280px,1fr)_5rem_3rem]';
 
-const MENU_ITEM_HEADERS = ['Name', 'Link', 'Shown'];
+const MENU_ITEM_HEADERS = ['Menu label', 'Link', 'Shown'];
 
 export function WebLookupToggle(props: {
   entry: WebLookupEntry;
@@ -22,7 +22,7 @@ export function WebLookupToggle(props: {
   return (
     <button
       aria-checked={props.entry.enabled}
-      aria-label={`${props.entry.enabled ? 'Hide' : 'Show'} ${props.entry.label} in context menu`}
+      aria-label={`${props.entry.enabled ? 'Hide' : 'Show'} menu item: ${props.entry.label}`}
       className={settingsSwitchClassName(props.entry.enabled)}
       onClick={() => props.onToggle(!props.entry.enabled)}
       role="switch"

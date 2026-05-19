@@ -13,31 +13,32 @@ it('shows built-in right-click menu items with DuckDuckGo disabled by default', 
   render(<SettingsWebLookupSection />);
 
   expect(screen.getByRole('heading', { name: 'Right-click menu items' })).toBeInTheDocument();
-  expect(screen.getByDisplayValue('ChatGPT')).toBeInTheDocument();
-  expect(screen.getByDisplayValue('Google')).toBeInTheDocument();
-  expect(screen.getByDisplayValue('DuckDuckGo')).toBeInTheDocument();
-  expect(screen.getByRole('switch', { name: 'Show DuckDuckGo in context menu' })).toHaveAttribute('aria-checked', 'false');
-  expect(screen.queryByRole('button', { name: 'Remove ChatGPT' })).toBeNull();
-  expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'ChatGPT link' }).value).toContain('Content:');
+  expect(screen.getByDisplayValue('Summarize with ChatGPT')).toBeInTheDocument();
+  expect(screen.getByDisplayValue('Search with Google')).toBeInTheDocument();
+  expect(screen.getByDisplayValue('Search with DuckDuckGo')).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: 'Show menu item: Search with DuckDuckGo' })).toHaveAttribute('aria-checked', 'false');
+  expect(screen.queryByRole('button', { name: 'Remove Summarize with ChatGPT' })).toBeNull();
+  expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Summarize with ChatGPT link' }).value)
+    .toContain('following selection');
 });
 
 it('toggles whether an entry appears in the context menu', () => {
   render(<SettingsWebLookupSection />);
 
-  fireEvent.click(screen.getByRole('switch', { name: 'Show DuckDuckGo in context menu' }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Show menu item: Search with DuckDuckGo' }));
 
   expect(getEnabledWebLookupEntries().map((entry) => entry.id)).toEqual([
     'chatgpt',
     'google',
     'duckduckgo'
   ]);
-  expect(screen.getByRole('switch', { name: 'Hide DuckDuckGo in context menu' })).toHaveAttribute('aria-checked', 'true');
+  expect(screen.getByRole('switch', { name: 'Hide menu item: Search with DuckDuckGo' })).toHaveAttribute('aria-checked', 'true');
 });
 
-it('updates the ChatGPT menu name and link', () => {
+it('updates the ChatGPT menu label and link', () => {
   render(<SettingsWebLookupSection />);
 
-  fireEvent.change(screen.getByRole('textbox', { name: 'ChatGPT menu item name' }), {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Summarize with ChatGPT menu label' }), {
     target: { value: 'Summarize' }
   });
   fireEvent.change(screen.getByRole('textbox', { name: 'Summarize link' }), {

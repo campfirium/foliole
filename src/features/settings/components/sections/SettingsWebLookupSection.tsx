@@ -53,7 +53,7 @@ function MenuItemRow(props: {
     >
       <DragHandle entry={props.entry} onDragEnd={props.onDragEnd} onDragStart={props.onDragStart} />
       <input
-        aria-label={`${props.entry.label} menu item name`}
+        aria-label={`${props.entry.label} menu label`}
         className={settingsFieldClassName()}
         onChange={(event) => props.onUpdate(props.entry.id, { label: event.target.value })}
         value={props.entry.label}
@@ -107,7 +107,7 @@ export function SettingsWebLookupSection() {
   return (
     <SettingsSection
       ariaLabel="Right-click menu items settings section"
-      description="Configure each menu name and link. Use {selection} where Foliole should insert the current text."
+      description="Configure each menu label and link. Use {selection} where Foliole should insert the current text."
       title="Right-click menu items"
     >
       <div className={settingsActionTableClassName()} role="table" aria-label="Right-click menu items">
