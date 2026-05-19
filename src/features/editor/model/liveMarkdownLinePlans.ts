@@ -19,6 +19,7 @@ import {
 import { collectImageMatches, type MarkdownImageMatch } from './markdownImageMatches';
 import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
 export interface PreviewLineDecorationPlan {
+  escapedRanges: ReturnType<typeof collectPreviewLineMatchState>['escapedRanges'];
   footnoteMatches: ReturnType<typeof collectPreviewLineMatchState>['footnoteMatches'];
   imageMatches: MarkdownImageMatch[];
   imageVisible: boolean;
@@ -139,6 +140,7 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
   const {
     autolinkMatches,
     embedMatches,
+    escapedRanges,
     footnoteMatches,
     footnoteRanges,
     inlineCodeMatches,
@@ -148,6 +150,7 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
   } = collectPreviewLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock, imageMatches, linkReferences);
 
   return {
+    escapedRanges,
     footnoteMatches,
     imageMatches,
     imageVisible: !args.inCodeBlock,

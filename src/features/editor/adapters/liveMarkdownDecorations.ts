@@ -164,6 +164,9 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     addThematicBreakDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, plan.isThematicBreak);
     addCodeFenceDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, plan.isCodeFenceLine);
     addFootnoteDecorations(ranges, plan.footnoteMatches);
+    if (!plan.showSyntaxOnLine) {
+      for (const escapedRange of plan.escapedRanges) addReplace(ranges, escapedRange.from, escapedRange.to);
+    }
     for (const inlinePlan of plan.inlinePresentationPlans) applyInlinePresentationPlan(ranges, inlinePlan);
     for (const textPlan of plan.textDecorationPlans) applyInlineTextDecorationPlan(ranges, textPlan);
   }

@@ -17,10 +17,21 @@ describe('inlineLineMatchPlans', () => {
     expect(state.wikiLinkMatches).toHaveLength(1);
   });
 
+  it('collects plain Markdown escape markers outside preserved ranges in preview', () => {
+    const state = collectPreviewLineMatchState(0, '\\*\\*\\* `\\*` [\\*](url)', false, []);
+
+    expect(state.escapedRanges).toEqual([
+      { from: 0, to: 1 },
+      { from: 2, to: 3 },
+      { from: 4, to: 5 }
+    ]);
+  });
+
   it('skips inline-only collectors inside code blocks in source mode', () => {
     expect(collectSourceLineMatchState(0, '`x` ^[1] [a](b) [[Node]] [...]', true)).toEqual({
       autolinkMatches: [],
       embedMatches: [],
+      escapedRanges: [],
       footnoteRanges: [],
       imageMatches: [],
       inlineCodeMatches: [],

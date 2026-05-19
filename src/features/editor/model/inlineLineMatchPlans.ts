@@ -14,9 +14,11 @@ import {
   type WikiLinkMatch
 } from './inlineMarkdownMatches';
 import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
+import { collectMarkdownEscapedRanges } from './markdownLinkSafety';
 
 export interface MarkdownLineMatchState {
   footnoteRanges: RangeBounds[];
+  escapedRanges: RangeBounds[];
   imageMatches: RangeBounds[];
   autolinkMatches: AutolinkMatch[];
   embedMatches: EmbedMatch[];
@@ -25,6 +27,13 @@ export interface MarkdownLineMatchState {
   wikiLinkMatches: WikiLinkMatch[];
   preservedRanges: RangeBounds[];
   footnoteMatches: FootnoteMatch[];
+}
+
+function isWithinRanges(from: number, to: number, ranges: ReadonlyArray<RangeBounds>) {
+  for (const range of ranges) {
+    if (from < range.to && to > range.from) return true;
+  }
+  return false;
 }
 
 export function collectPreviewLineMatchState(
@@ -47,6 +56,11 @@ export function collectPreviewLineMatchState(
     from: match.from,
     to: match.to
   }));
+  const escapedRanges = inCodeBlock
+    ? []
+    : collectMarkdownEscapedRanges(lineText, lineFrom).filter(
+        (match) => !isWithinRanges(match.from, match.to, linkPreservedRanges.concat(linkRanges))
+      );
   const autolinkMatches = inCodeBlock
     ? []
     : collectAutolinkMatches(lineFrom, lineText, linkPreservedRanges.concat(linkRanges));
@@ -54,6 +68,7 @@ export function collectPreviewLineMatchState(
   return {
     autolinkMatches,
     embedMatches,
+    escapedRanges,
     footnoteRanges,
     imageMatches,
     inlineCodeMatches,
@@ -89,6 +104,7 @@ export function collectSourceLineMatchState(
   return {
     autolinkMatches,
     embedMatches,
+    escapedRanges: [],
     footnoteRanges,
     imageMatches: [],
     inlineCodeMatches,

@@ -64,6 +64,21 @@ describe('markdownImageMatches', () => {
   });
 });
 
+describe('markdownImageMatches imported social attachments', () => {
+  it('collects bracketed alt attachment images from imported social content', () => {
+    expect(collectImageMatches(0, '请教老师，![[作揖]](asset://hash-1.png)  ')).toEqual([
+      {
+        attachmentId: 'hash-1',
+        alt: '作揖',
+        display: 'inline',
+        from: 5,
+        source: 'asset://hash-1.png',
+        to: 32
+      }
+    ]);
+  });
+});
+
 describe('markdownImageMatches replacement ranges', () => {
   it('keeps long remote image URLs in the replaced image range', () => {
     const markdown =
