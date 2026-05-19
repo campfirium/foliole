@@ -25,7 +25,6 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000;
 interface SettingsReviewSectionProps {
   desiredRetention: number;
   maximumIntervalDays: number;
-  enableFuzz: boolean;
   enableShortTerm: boolean;
   defaultPriority: number;
   priorityRatio: number;
@@ -36,7 +35,6 @@ interface SettingsReviewSectionProps {
   readingIntervalGrowthFactorMax: number;
   onDesiredRetentionChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
-  onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
   onDefaultPriorityChange: (value: number) => void;
   onPriorityRatioChange: (value: number) => void;
@@ -61,11 +59,9 @@ function SchedulerCoreRows(props: Pick<
   SettingsReviewSectionProps,
   | 'desiredRetention'
   | 'maximumIntervalDays'
-  | 'enableFuzz'
   | 'enableShortTerm'
   | 'onDesiredRetentionChange'
   | 'onMaximumIntervalDaysChange'
-  | 'onEnableFuzzChange'
   | 'onEnableShortTermChange'
 >) {
   return (
@@ -98,11 +94,6 @@ function SchedulerCoreRows(props: Pick<
             <ReviewNumberInput ariaLabel="Maximum interval days" min={1} onChange={props.onMaximumIntervalDaysChange} step={1} value={props.maximumIntervalDays} />
           </SettingsControlSlot>
         }
-      />
-      <ReviewSettingRow
-        title="Spread same-day cards"
-        description="Slightly randomize intervals so cards due on the same day get spread out."
-        control={<ReviewToggleControl ariaLabel="Interval fuzz" onChange={props.onEnableFuzzChange} value={props.enableFuzz} />}
       />
       <ReviewSettingRow
         title="Short-term scheduling"
@@ -171,11 +162,9 @@ export function SettingsReviewSection() {
     <SettingsSection ariaLabel="Review settings section" title="Scheduler">
       <SchedulerCoreRows
         desiredRetention={reviewSchedulerSettings.desiredRetention}
-        enableFuzz={reviewSchedulerSettings.enableFuzz}
         enableShortTerm={reviewSchedulerSettings.enableShortTerm}
         maximumIntervalDays={reviewSchedulerSettings.maximumIntervalDays}
         onDesiredRetentionChange={reviewSettings.onDesiredRetentionChange}
-        onEnableFuzzChange={reviewSettings.onEnableFuzzChange}
         onEnableShortTermChange={reviewSettings.onEnableShortTermChange}
         onMaximumIntervalDaysChange={reviewSettings.onMaximumIntervalDaysChange}
       />

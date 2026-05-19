@@ -12,7 +12,6 @@ function createScheduler(desiredRetention: number) {
     loadSettings: () => ({
       desiredRetention,
       maximumIntervalDays: 36500,
-      enableFuzz: false,
       enableShortTerm: false
     }),
     getSettingsVersion: (settings) => `dr=${settings.desiredRetention.toFixed(2)}`,
@@ -20,7 +19,7 @@ function createScheduler(desiredRetention: number) {
       generatorParameters({
         request_retention: settings.desiredRetention,
         maximum_interval: settings.maximumIntervalDays,
-        enable_fuzz: settings.enableFuzz,
+        enable_fuzz: true,
         enable_short_term: settings.enableShortTerm
       })
   });

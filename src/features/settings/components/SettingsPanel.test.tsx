@@ -159,16 +159,14 @@ it('updates remaining review scheduler controls from review settings section', a
   fireEvent.change(screen.getByLabelText('Maximum interval days'), {
     target: { value: '365' }
   });
-  fireEvent.change(screen.getByLabelText('Interval fuzz'), {
-    target: { value: 'on' }
-  });
   fireEvent.change(screen.getByLabelText('Short-term scheduling'), {
     target: { value: 'on' }
   });
 
   await waitFor(() => {
     expect(screen.getByLabelText('Maximum interval days')).toHaveValue(365);
-    expect(screen.getByLabelText('Interval fuzz')).toHaveValue('on');
+    expect(screen.queryByLabelText('Interval fuzz')).not.toBeInTheDocument();
+    expect(screen.queryByText('Spread same-day cards')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Short-term scheduling')).toHaveValue('on');
   });
 });

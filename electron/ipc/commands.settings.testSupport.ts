@@ -223,7 +223,6 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
     algorithm: 'ts-fsrs@4.3.0',
     desiredRetention: 0.9,
     maximumIntervalDays: 36500,
-    enableFuzz: false,
     enableShortTerm: false,
     pushQueue: {
       defaultPriority: 5,
@@ -238,7 +237,6 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
     algorithm: 'ts-fsrs@4.3.0',
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
-    enableFuzz: true,
     enableShortTerm: true,
     pushQueue: {
       defaultPriority: 5,

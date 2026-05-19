@@ -6,7 +6,6 @@ export interface ReviewSchedulerSettingsContextValue {
   reviewSchedulerSettings: ReviewSchedulerSettings;
   onDefaultPriorityChange: (value: number) => void;
   onDesiredRetentionChange: (value: number) => void;
-  onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
   onPriorityRatioChange: (value: number) => void;
