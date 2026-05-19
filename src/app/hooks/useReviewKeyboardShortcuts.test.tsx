@@ -97,3 +97,19 @@ it('deletes the visible review item with Delete', () => {
 
   expect(deleteCurrentReviewItem).toHaveBeenCalledTimes(1);
 });
+
+it('grades the revealed review card as Good with Space', () => {
+  const gradeReviewCard = vi.fn(async () => true);
+  render(
+    <ReviewShortcutHarness
+      gradeGoodShortcuts={{ primary: { key: '3' }, secondary: { key: ' ' } }}
+      gradeReviewCard={gradeReviewCard}
+      isAnswerRevealed
+      isCurrentItemGradable
+    />
+  );
+
+  fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+
+  expect(gradeReviewCard).toHaveBeenCalledWith(3);
+});

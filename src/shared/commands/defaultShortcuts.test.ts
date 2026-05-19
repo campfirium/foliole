@@ -78,6 +78,13 @@ describe('default command shortcuts', () => {
   });
 });
 
+it('registers Space as the auxiliary shortcut for Good review grade', () => {
+  const shortcuts = DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.gradeReviewGood];
+
+  expect(matchesShortcutSet(keyEvent({ key: '3' }), shortcuts)).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: ' ' }), shortcuts)).toBe(true);
+});
+
 it('registers app undo and redo without editor-only modifiers', () => {
   expect(matchesShortcutSet(keyEvent({ key: 'z', ctrlKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.undo])).toBe(true);
   expect(matchesShortcutSet(keyEvent({ key: 'z', metaKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.undo])).toBe(true);
