@@ -59,21 +59,22 @@ function buildFolderNodeOrderFromIndex(
   ];
 }
 
-function buildVisibleTopicSubtreeCountById(
+function isNativeContentNode(nodeId: string, nodesById: WorkspaceListNodesById) {
+  const node = nodesById[nodeId];
+  return Boolean(node && node.kind !== 'folder' && !node.anchorLink);
+}
+
+function buildDirectNativeContentCountByFolderId(
+  folderNodeOrder: string[],
   index: WorkspaceListChildrenIndex,
   nodesById: WorkspaceListNodesById
 ) {
   const countById = new Map<string, number>();
-  for (let indexOfNode = index.visibleNodeIds.length - 1; indexOfNode >= 0; indexOfNode -= 1) {
-    const nodeId = index.visibleNodeIds[indexOfNode];
-    if (!nodeId) continue;
-    const node = nodesById[nodeId];
-    if (!node) continue;
-    let count = node.kind === 'folder' ? 0 : 1;
-    for (const childId of index.visibleChildrenByParent.get(nodeId) ?? []) {
-      count += countById.get(childId) ?? 0;
-    }
-    countById.set(nodeId, count);
+  for (const folderId of folderNodeOrder) {
+    const count = (index.visibleChildrenByParent.get(folderId) ?? []).filter((nodeId) =>
+      isNativeContentNode(nodeId, nodesById)
+    ).length;
+    countById.set(folderId, count);
   }
   return countById;
 }
@@ -85,14 +86,9 @@ function buildFolderTopicCountById(
   nodeOrder: string[],
   trashedNodeIds: readonly string[]
 ) {
-  const subtreeTopicCountById = buildVisibleTopicSubtreeCountById(index, nodesById);
-  const countById = new Map<string, number>();
-  for (const folderId of folderNodeOrder) {
-    const count = subtreeTopicCountById.get(folderId) ?? 0;
-    if (count > 0) countById.set(folderId, count);
-  }
+  const countById = buildDirectNativeContentCountByFolderId(folderNodeOrder, index, nodesById);
   const trashCount = selectTrashRootIds(nodeOrder, nodesById, trashedNodeIds).length;
-  if (trashCount > 0) countById.set(TRASH_NODE_ID, trashCount);
+  countById.set(TRASH_NODE_ID, trashCount);
   return countById;
 }
 
@@ -111,6 +107,7 @@ export function buildWorkspaceListStructureSignature(
     parts.push([
       nodeId,
       node?.kind ?? '',
+      node?.anchorLink ? 'anchored' : '',
       node?.parentNodeId ?? '',
       node?.specialKind ?? ''
     ].join('\u001e'));
