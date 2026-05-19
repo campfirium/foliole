@@ -11,6 +11,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canImportFile: boolean;
   canImportFolder: boolean;
   canMergeHighlightsIntoTopic: boolean;
+  canRepairTable: boolean;
   canAnnotateSelection: boolean;
   canRenameNode: boolean;
   canReimportSelectedTopic: boolean;
@@ -69,6 +70,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.createSelectionHighlight, title: 'Highlight Selection', section: 'Editor', keywords: ['highlight', 'selection', 'excerpt'] },
   { id: APP_COMMAND_IDS.createSelectionCloze, title: 'Cloze Selection', section: 'Editor', keywords: ['cloze', 'selection', 'item'] },
   { id: APP_COMMAND_IDS.addSelectionNote, title: 'Annotate Selection', section: 'Editor', keywords: ['highlight', 'selection', 'annotation'] },
+  { id: APP_COMMAND_IDS.repairTable, title: 'Repair Table', section: 'Editor', keywords: ['markdown', 'table', 'repair'] },
   { id: APP_COMMAND_IDS.restartApp, title: 'Restart App', section: 'Workspace', keywords: ['restart', 'relaunch'] },
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
   { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Developer', keywords: ['developer', 'inspect'] },
@@ -172,6 +174,9 @@ function isEditorCommandEnabled(id: string, options: BuildAppPaletteItemsOptions
   }
   if (id === APP_COMMAND_IDS.enterPriorityMode) {
     return options.canSetNodePriority;
+  }
+  if (id === APP_COMMAND_IDS.repairTable) {
+    return options.canRepairTable;
   }
   return null;
 }

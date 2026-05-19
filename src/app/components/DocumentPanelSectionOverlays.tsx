@@ -79,6 +79,7 @@ export function DocumentPanelSectionOverlays({
         onCreateNote={props.onCreateNote ?? (() => undefined)}
         onDeleteExistingHighlight={props.onDeleteExistingHighlight ?? (() => undefined)}
         onOpenExistingHighlight={props.onOpenExistingHighlight ?? (() => undefined)}
+        onRepairTable={props.onRepairTable}
         onCutImage={props.onCutImage}
         onDeleteImage={props.onDeleteImage}
         onExportImage={props.onExportImage}

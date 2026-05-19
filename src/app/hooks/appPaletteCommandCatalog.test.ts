@@ -20,6 +20,7 @@ const enabledOptions: BuildAppPaletteItemsOptions = {
   canImportFile: true,
   canImportFolder: true,
   canMergeHighlightsIntoTopic: true,
+  canRepairTable: true,
   canMoveToNode: true,
   canRenameNode: true,
   canReimportSelectedTopic: true,
@@ -49,6 +50,7 @@ describe('getAppPaletteCommands', () => {
     expect(sectionFor(APP_COMMAND_IDS.enterPriorityMode)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.exportCurrentArticle)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe('Editor');
+    expect(sectionFor(APP_COMMAND_IDS.repairTable)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.renameNode)).toBe('Workspace');
   });
 });

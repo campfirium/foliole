@@ -13,6 +13,7 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
 import { restartAppWithReadingProgress } from './appRestartPersistence';
+import { repairEditorTable } from './editorRepairTableCommand';
 import { clearSettingsRequest, openReadwiseReaderSettings } from './settingsOverlayRequest';
 import type { useFormalImport } from './useFormalImport';
 
@@ -203,6 +204,11 @@ export function createPaletteRunnerArgs(args: {
     openTrashView: args.trash.openTrashView,
     paletteItems: args.paletteItems,
     recordRecentCommand: args.runtime.recordRecentCommand,
+    repairTable: () => repairEditorTable({
+      activeNodeId: args.ws.activeNodeId,
+      editorRef: args.runtime.editorRef,
+      updateNodeContent: args.ws.updateNodeContent
+    }),
     reimportSelectedTopic: createReimportSelectedTopicCommand(args),
     resetImportData: args.formalImport.resetImportData,
     setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,

@@ -32,6 +32,7 @@ export interface BuildLayoutPropsArgs {
     | 'onOpenSelectionNote'
     | 'onDeleteExistingHighlight'
     | 'onOpenExistingHighlight'
+    | 'onRepairTable'
     | 'onAdjustExistingHighlightRange'
     | 'onCreateSelectionHighlight'
     | 'onToggleSelectionHighlight'

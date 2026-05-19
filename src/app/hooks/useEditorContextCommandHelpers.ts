@@ -13,6 +13,7 @@ import {
 import { resolveImageContextMenuState, type ImageContextMenuState } from '../editorImageContextMenu';
 
 import type { LongClozeGuardOptions } from './editorClozeGuardrail';
+import { resolveEditorRepairTableEdit, selectionFromRepairPayload } from './editorRepairTableCommand';
 import type { LocatorHighlightMatch } from './selectionHighlightToggleSupport';
 
 export interface SelectionContextMenuState extends WorkspaceEditorContextMenu {
@@ -33,6 +34,7 @@ export interface EditorContextCommandsResult {
   handleCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
   handleCreateNote: (note: string) => void;
   handleOpenSelectionNote: () => void;
+  handleRepairTable: () => boolean;
   handleToggleSelectionHighlightFromPayload: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
   handleAddNoteToSelectionHighlightFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
   handleCreateNoteFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
@@ -42,12 +44,6 @@ export interface EditorContextCommandsResult {
   handleDeleteImage: () => void;
   handleEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleExportImage: () => Promise<void>;
-}
-
-export function buildEditorContextCommandsResult(
-  result: EditorContextCommandsResult
-): EditorContextCommandsResult {
-  return result;
 }
 
 function refreshSelectionHighlight(adapter: EditorAdapter | null) {
@@ -84,9 +80,7 @@ export function createSelectionCommandRunner(
 ) {
   return (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => {
     void anchorKind;
-    const payload = args.contextMenu?.payload ?? (
-      args.activeNodeId ? getSelectionCommandPayload(args.activeNodeId, editorRef.current) : null
-    );
+    const payload = args.contextMenu?.payload ?? (args.activeNodeId ? getSelectionCommandPayload(args.activeNodeId, editorRef.current) : null);
     if (!payload || !editorRef.current || payload.entries.length === 0) {
       return;
     }
@@ -113,6 +107,9 @@ export function createHandleEditorContextMenu(args: {
     const editorContent = args.editorRef.current?.getContent() ?? null;
     const livePayload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);
     const commandPayload = livePayload ?? args.getPreservedSelectionPayload?.() ?? null;
+    const clickPosition = args.editorRef.current?.getDocumentPositionAtClientPoint?.(event.clientX, event.clientY) ?? null;
+    const repairSelection = selectionFromRepairPayload(commandPayload) ?? (clickPosition === null ? null : { from: clickPosition, to: clickPosition });
+    const tableRepairSelection = repairSelection ? resolveEditorRepairTableEdit(args.editorRef.current, repairSelection) : null;
     const imageContextMenu = resolveImageContextMenuState(event, position);
     if (imageContextMenu) {
       const fallbackPayload = getSelectionCommandPayloadForRanges(
@@ -136,6 +133,8 @@ export function createHandleEditorContextMenu(args: {
       left: position.left,
       mode: 'context-menu',
       payload: commandPayload,
+      repairTableAvailable: Boolean(tableRepairSelection),
+      tableRepairSelection: tableRepairSelection ? repairSelection : null,
       top: position.top,
       webLookupDocumentText: editorContent,
       webLookupPayload: livePayload

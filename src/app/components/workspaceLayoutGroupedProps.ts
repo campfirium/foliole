@@ -71,6 +71,7 @@ export interface WorkspaceLayoutProps {
     | 'onOpenSelectionNote'
     | 'onDeleteExistingHighlight'
     | 'onOpenExistingHighlight'
+    | 'onRepairTable'
     | 'onAdjustExistingHighlightRange'
     | 'onCreateSelectionHighlight'
     | 'onToggleSelectionHighlight'

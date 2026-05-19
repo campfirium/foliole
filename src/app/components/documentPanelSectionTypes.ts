@@ -58,6 +58,7 @@ export interface DocumentPanelSectionProps {
   onCreateNote?: (note: string) => void;
   onDeleteExistingHighlight?: () => void;
   onOpenExistingHighlight?: () => void;
+  onRepairTable: () => boolean;
   onAdjustExistingHighlightRange: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;

@@ -43,6 +43,8 @@ export interface WorkspaceEditorContextMenu {
   notePanelLeft?: number;
   notePanelTop?: number;
   payload?: SelectionCommandPayload | null;
+  repairTableAvailable?: boolean;
+  tableRepairSelection?: EditorSelection | null;
   top: number;
   webLookupDocumentText?: string | null;
   webLookupPayload?: SelectionCommandPayload | null;
@@ -161,6 +163,7 @@ export interface WorkspaceLayoutFlatProps {
   onOpenSelectionNote: () => void;
   onDeleteExistingHighlight: () => void;
   onOpenExistingHighlight: () => void;
+  onRepairTable: () => boolean;
   onAdjustExistingHighlightRange: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   onCreateSelectionHighlight: (payload: SelectionCommandPayload) => string | null;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
