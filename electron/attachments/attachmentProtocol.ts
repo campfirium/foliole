@@ -12,6 +12,7 @@ export function registerAttachmentProtocolScheme() {
     {
       scheme: ATTACHMENT_PROTOCOL_SCHEME,
       privileges: {
+        corsEnabled: true,
         secure: true,
         standard: true,
         supportFetchAPI: true

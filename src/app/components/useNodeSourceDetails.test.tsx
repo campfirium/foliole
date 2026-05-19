@@ -1,8 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 
+import { READWISE_ORIGINAL_FILE_LOADED_EVENT } from './readwiseBookActionState';
 import { useNodeSourceDetails } from './useNodeSourceDetails';
 
 const { loadRuntimeNodeSourceDetails } = vi.hoisted(() => ({
@@ -42,64 +43,85 @@ function createPdfDetails(nodeId: string): RuntimeNodeSourceDetails {
   };
 }
 
-describe('useNodeSourceDetails', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+async function primeCachedNodeDetails() {
+  const request = createDeferred<RuntimeNodeSourceDetails | null>();
+  const details = createPdfDetails('node-pdf');
+  loadRuntimeNodeSourceDetails.mockImplementationOnce(() => request.promise);
+  const { result, rerender } = renderHook(({ nodeId }: { nodeId: string | null }) => useNodeSourceDetails(nodeId), {
+    initialProps: { nodeId: 'node-pdf' }
   });
-
-  it('reuses cached node details immediately when revisiting the same node', async () => {
-    const firstRequest = createDeferred<RuntimeNodeSourceDetails | null>();
-    const secondRequest = createDeferred<RuntimeNodeSourceDetails | null>();
-    const cachedDetails = createPdfDetails('node-pdf');
-
-    loadRuntimeNodeSourceDetails.mockImplementationOnce(() => firstRequest.promise).mockImplementationOnce(() => secondRequest.promise);
-
-    const initialProps: { nodeId: string | null } = { nodeId: 'node-pdf' };
-    const { result, rerender } = renderHook(({ nodeId }: { nodeId: string | null }) => useNodeSourceDetails(nodeId), {
-      initialProps
-    });
-
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.value).toBeNull();
-
-    await act(async () => {
-      firstRequest.resolve(cachedDetails);
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.value).toEqual(cachedDetails);
-    });
-
-    rerender({ nodeId: null });
-    expect(result.current).toEqual({ errorMessage: '', isLoading: false, retry: expect.any(Function), value: null });
-
-    rerender({ nodeId: 'node-pdf' });
-
+  expect(result.current.isLoading).toBe(true);
+  expect(result.current.value).toBeNull();
+  await act(async () => {
+    request.resolve(details);
+  });
+  await waitFor(() => {
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.value).toEqual(cachedDetails);
+    expect(result.current.value).toEqual(details);
+  });
+  return { details, result, rerender };
+}
 
-    await act(async () => {
-      secondRequest.resolve(cachedDetails);
-    });
+it('reuses cached node details immediately when revisiting the same node', async () => {
+  const secondRequest = createDeferred<RuntimeNodeSourceDetails | null>();
+  const { details, result, rerender } = await primeCachedNodeDetails();
+  loadRuntimeNodeSourceDetails.mockImplementationOnce(() => secondRequest.promise);
 
-    await waitFor(() => expect(loadRuntimeNodeSourceDetails).toHaveBeenCalledTimes(2));
+  rerender({ nodeId: null });
+  expect(result.current).toEqual({ errorMessage: '', isLoading: false, retry: expect.any(Function), value: null });
+
+  rerender({ nodeId: 'node-pdf' });
+
+  expect(result.current.isLoading).toBe(false);
+  expect(result.current.value).toEqual(details);
+
+  await act(async () => {
+    secondRequest.resolve(details);
   });
 
-  it('exposes a load error without turning it into an empty source state', async () => {
-    loadRuntimeNodeSourceDetails.mockRejectedValue(new Error('source unavailable'));
+  await waitFor(() => expect(loadRuntimeNodeSourceDetails).toHaveBeenCalledTimes(2));
+});
 
-    const { result } = renderHook(() => useNodeSourceDetails('node-source'));
+it('exposes a load error without turning it into an empty source state', async () => {
+  loadRuntimeNodeSourceDetails.mockRejectedValue(new Error('source unavailable'));
 
-    expect(result.current.isLoading).toBe(true);
+  const { result } = renderHook(() => useNodeSourceDetails('node-source'));
 
-    await waitFor(() => {
-      expect(result.current).toEqual({
-        errorMessage: 'Source info could not be loaded.',
-        isLoading: false,
-        retry: expect.any(Function),
-        value: null
-      });
+  expect(result.current.isLoading).toBe(true);
+
+  await waitFor(() => {
+    expect(result.current).toEqual({
+      errorMessage: 'Source info could not be loaded.',
+      isLoading: false,
+      retry: expect.any(Function),
+      value: null
     });
   });
+});
+
+it('refreshes node source details after a readwise original file is loaded', async () => {
+  const initialDetails = createPdfDetails('node-source');
+  const refreshedDetails = {
+    ...createPdfDetails('node-source'),
+    importSource: {
+      ...createPdfDetails('node-source').importSource!,
+      sourceLocator: '/tmp/refreshed.pdf'
+    }
+  };
+  loadRuntimeNodeSourceDetails.mockResolvedValueOnce(initialDetails).mockResolvedValueOnce(refreshedDetails);
+
+  const { result } = renderHook(() => useNodeSourceDetails('node-source'));
+
+  await waitFor(() => expect(result.current.value).toEqual(initialDetails));
+
+  act(() => {
+    window.dispatchEvent(new CustomEvent(READWISE_ORIGINAL_FILE_LOADED_EVENT, { detail: { nodeId: 'node-source' } }));
+  });
+
+  await waitFor(() => expect(result.current.value).toEqual(refreshedDetails));
+  expect(loadRuntimeNodeSourceDetails).toHaveBeenCalledTimes(2);
 });

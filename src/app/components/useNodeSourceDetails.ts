@@ -3,6 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { updateSourceDetailsCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
 
+import {
+  READWISE_ORIGINAL_FILE_LOADED_EVENT,
+  type ReadwiseOriginalFileLoadedEventDetail
+} from './readwiseBookActionState';
+
 interface NodeSourceDetailsState {
   errorMessage: string;
   isLoading: boolean;
@@ -21,6 +26,22 @@ function shouldPollPdfIndexStatus(value: RuntimeNodeSourceDetails | null) {
   return status === 'pending' || status === 'indexing';
 }
 
+function useReadwiseOriginalFileLoadedRefresh(nodeId: string | null, retry: () => void) {
+  useEffect(() => {
+    if (!nodeId) {
+      return undefined;
+    }
+    function handleReadwiseOriginalFileLoaded(event: Event) {
+      const detail = event instanceof CustomEvent ? event.detail as ReadwiseOriginalFileLoadedEventDetail | null : null;
+      if (detail?.nodeId === nodeId) {
+        retry();
+      }
+    }
+    window.addEventListener(READWISE_ORIGINAL_FILE_LOADED_EVENT, handleReadwiseOriginalFileLoaded);
+    return () => window.removeEventListener(READWISE_ORIGINAL_FILE_LOADED_EVENT, handleReadwiseOriginalFileLoaded);
+  }, [nodeId, retry]);
+}
+
 export function useNodeSourceDetails(nodeId: string | null) {
   const [state, setState] = useState<NodeSourceDetailsState>(DEFAULT_STATE);
   const cacheRef = useRef<Record<string, RuntimeNodeSourceDetails | null>>({});
@@ -29,6 +50,8 @@ export function useNodeSourceDetails(nodeId: string | null) {
   const retry = useCallback(() => {
     setRefreshKey((value) => value + 1);
   }, []);
+
+  useReadwiseOriginalFileLoadedRefresh(nodeId, retry);
 
   useEffect(() => {
     if (!nodeId) {

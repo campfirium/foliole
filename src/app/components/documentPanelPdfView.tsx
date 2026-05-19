@@ -27,6 +27,9 @@ function isPdfSourceDetails(details: RuntimeNodeSourceDetails | null) {
 }
 
 function resolvePdfSourceHint(details: RuntimeNodeSourceDetails) {
+  if (details.importSource?.sourceKind.toLowerCase() === 'pdf') {
+    return details.importSource.sourceLocator || null;
+  }
   return details.keepImportItem?.resolvedSourcePath || details.keepImportItem?.sourcePath || details.importSource?.sourceLocator || null;
 }
 

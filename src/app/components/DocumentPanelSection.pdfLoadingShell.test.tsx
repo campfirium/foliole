@@ -65,6 +65,20 @@ it('hides the imported pdf placeholder while source details are still loading', 
   expect(screen.queryByText('Linked PDF source ready for the reader surface.')).not.toBeInTheDocument();
 });
 
+it('keeps readwise original file text visible while source details are still loading', () => {
+  useNodeSourceDetails.mockReturnValue({ isLoading: true, value: null } as never);
+
+  render(
+    <DocumentPanelSection
+      {...defaultProps}
+      editorContent={'# Paper\n\nFull text of this document omitted because this document is a PDF\n[Download original file ->](https://readwise.io/reader/document_raw_content/1)'}
+    />
+  );
+
+  expect(screen.queryByTestId('pdf-document-loading-shell')).not.toBeInTheDocument();
+  expect(screen.getByTestId('document-panel-body')).toBeInTheDocument();
+});
+
 it('keeps markdown visible while source details load when frontmatter only mentions a pdf url', () => {
   useNodeSourceDetails.mockReturnValue({ isLoading: true, value: null } as never);
 

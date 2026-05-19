@@ -14,6 +14,12 @@ import {
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+export const READWISE_ORIGINAL_FILE_LOADED_EVENT = 'foliole:readwise-original-file-loaded';
+
+export interface ReadwiseOriginalFileLoadedEventDetail {
+  nodeId: string;
+}
+
 export function isReadwiseOriginalFileLoaded(book: RuntimeReadwiseBookInventoryItem | null) {
   return book?.epubStatus === 'received' || book?.bodyState === 'loaded' || book?.importStatus === 'completed';
 }
@@ -124,6 +130,11 @@ export function useReadwiseBookActions(activeNodeId: string | null) {
       setStatusMessage(formatLoadMessage(result, book));
       if (result?.status === 'selected') {
         await useWorkspaceStore.persist.rehydrate();
+        window.dispatchEvent(
+          new CustomEvent<ReadwiseOriginalFileLoadedEventDetail>(READWISE_ORIGINAL_FILE_LOADED_EVENT, {
+            detail: { nodeId: activeNodeId }
+          })
+        );
         setBook((current) =>
           current
             ? { ...current, bodyState: 'loaded', epubStatus: 'received', importStatus: 'completed', nodeStatus: 'generated' }

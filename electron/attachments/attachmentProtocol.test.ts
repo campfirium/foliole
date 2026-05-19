@@ -47,6 +47,7 @@ it('registers the attachment scheme with secure standard privileges', () => {
     {
       scheme: ATTACHMENT_PROTOCOL_SCHEME,
       privileges: {
+        corsEnabled: true,
         secure: true,
         standard: true,
         supportFetchAPI: true

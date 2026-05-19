@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 const { loadNodeSourceDetails } = vi.hoisted(() => ({
   loadNodeSourceDetails: vi.fn()
@@ -8,20 +8,20 @@ const { loadNodeSourceDetails } = vi.hoisted(() => ({
 const { listNodeAttachments } = vi.hoisted(() => ({
   listNodeAttachments: vi.fn()
 }));
-const { resolveAttachmentFile } = vi.hoisted(() => ({
-  resolveAttachmentFile: vi.fn()
-}));
 
 vi.mock('../database/nodeSourceDetails.js', () => ({ loadNodeSourceDetails }));
 vi.mock('../database/attachments.js', () => ({ listNodeAttachments }));
-vi.mock('../attachments/resourceResolver.js', () => ({ resolveAttachmentFile }));
 vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn(() => ({ readwiseSources: [], sources: [] }))
 }));
 
 import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
 
-it('serializes pdf attachment sources as file URLs for the desktop PDF reader', () => {
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+function mockPdfSource(sourceLocator: string) {
   loadNodeSourceDetails.mockReturnValue({
     importRuns: [],
     importSource: {
@@ -32,7 +32,7 @@ it('serializes pdf attachment sources as file URLs for the desktop PDF reader', 
       provider: 'desktop_text_file',
       source_fingerprint: 'source-1',
       source_kind: 'pdf',
-      source_locator: 'foliole-asset://attachment/pdf-hash',
+      source_locator: sourceLocator,
       source_name: 'paper.pdf'
     },
     inheritedFromParent: false,
@@ -40,6 +40,10 @@ it('serializes pdf attachment sources as file URLs for the desktop PDF reader', 
     pdfPageDimensions: [],
     sourceNodeId: 'node-1'
   });
+}
+
+it('serializes pdf attachment sources through the managed attachment protocol for the desktop PDF reader', () => {
+  mockPdfSource('foliole-asset://attachment/pdf-hash');
   listNodeAttachments.mockReturnValue([
     {
       attachmentId: 'pdf-hash',
@@ -47,17 +51,30 @@ it('serializes pdf attachment sources as file URLs for the desktop PDF reader', 
       attachment: { mimeType: 'application/pdf' }
     }
   ]);
-  resolveAttachmentFile.mockReturnValue({
-    filePath: '/tmp/foliole-assets/pdf-hash.pdf',
-    mimeType: 'application/pdf',
-    status: 'ready'
-  });
 
   expect(toNativeNodeSourceDetails('node-1')?.import_source).toEqual(
     expect.objectContaining({
       source_kind: 'pdf',
-      source_locator: 'file:///tmp/foliole-assets/pdf-hash.pdf',
+      source_locator: 'foliole-asset://attachment/pdf-hash',
       source_name: 'paper.pdf'
+    })
+  );
+});
+
+it('keeps pdf reader sources on the managed attachment copy even when the import source has an original file path', () => {
+  mockPdfSource('/tmp/foliole-source-details-payload-source.pdf');
+  listNodeAttachments.mockReturnValue([
+    {
+      attachmentId: 'pdf-hash',
+      role: 'reference',
+      attachment: { mimeType: 'application/pdf' }
+    }
+  ]);
+
+  expect(toNativeNodeSourceDetails('node-1')?.import_source).toEqual(
+    expect.objectContaining({
+      source_kind: 'pdf',
+      source_locator: 'foliole-asset://attachment/pdf-hash'
     })
   );
 });
