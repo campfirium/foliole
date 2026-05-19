@@ -133,6 +133,8 @@ export interface BuildLayoutPropsArgs {
   reviewDueCount: number;
   reviewPreview: SchedulerPreviewResult | null;
   reviewSession: WorkspaceState['reviewSession'];
+  reviewSessionMode: WorkspaceState['reviewSessionMode'];
+  setReviewSessionMode: WorkspaceState['setReviewSessionMode'];
   selectedTrashNodeId: string | null;
   showAnswerSection: boolean;
   startStudyMode: (options?: StartStudyModeOptions) => void;

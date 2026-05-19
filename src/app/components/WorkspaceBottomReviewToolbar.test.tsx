@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -22,6 +22,7 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
     reviewCurrentTitle: 'Review topic',
     reviewDueCount: 2,
     reviewQueueCount: 2,
+    reviewSessionMode: 'recommended',
     onCompleteReviewItem: vi.fn(() => true),
     onDeferReviewItem: vi.fn(() => true),
     onDismissReviewItem: vi.fn(() => true),
@@ -29,6 +30,7 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
     onGradeReview: vi.fn(async () => true),
     onRevealAnswer: vi.fn(),
     onResumeReviewItem: vi.fn(),
+    onSetReviewSessionMode: vi.fn(),
     onToggleReviewSession: vi.fn(),
     ...overrides
   };
@@ -45,8 +47,41 @@ it('collapses the review footer list summary with the left sidebar', () => {
 it('keeps the review footer list summary when the left sidebar is expanded', () => {
   render(<WorkspaceBottomReviewToolbar {...createProps()} />);
 
+  expect(screen.getByRole('button', { name: 'Change session mode' })).toBeInTheDocument();
   expect(screen.getByText('2 left · 0 done')).toBeInTheDocument();
   expect(screen.getByLabelText('Review mode toolbar')).toHaveClass('col-start-3');
+});
+
+it('keeps the session mode control visible when the left sidebar is collapsed', () => {
+  render(<WorkspaceBottomReviewToolbar {...createProps({ isListCollapsed: true })} />);
+
+  expect(screen.getByRole('button', { name: 'Change session mode' })).toBeInTheDocument();
+  expect(screen.queryByText('2 left · 0 done')).not.toBeInTheDocument();
+});
+
+it('shows session mode choices and marks temporary mode in the real footer summary', async () => {
+  const onSetReviewSessionMode = vi.fn();
+  const { rerender } = render(
+    <WorkspaceBottomReviewToolbar {...createProps({ onSetReviewSessionMode })} />
+  );
+
+  await act(async () => {
+    const button = screen.getByRole('button', { name: 'Change session mode' });
+    fireEvent.pointerDown(button, { button: 0, ctrlKey: false, pointerType: 'mouse' });
+    fireEvent.click(button);
+  });
+  expect(screen.getByRole('menuitem', { name: /Recommended flow/ })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: /Review items first/ })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: /Reading only/ })).toBeInTheDocument();
+
+  await act(async () => {
+    fireEvent.click(screen.getByRole('menuitem', { name: /Review items first/ }));
+  });
+  expect(onSetReviewSessionMode).toHaveBeenCalledWith('review-first');
+  rerender(<WorkspaceBottomReviewToolbar {...createProps({ reviewSessionMode: 'review-first' })} />);
+  expect(screen.getByRole('button', { name: 'Session mode: Review items first' })).toBeInTheDocument();
+  expect(screen.queryByText('Review items first')).not.toBeInTheDocument();
+  expect(screen.getByText('2 left · 0 done')).toBeInTheDocument();
 });
 
 it('replaces review actions with resume when the current review item is not visible', () => {

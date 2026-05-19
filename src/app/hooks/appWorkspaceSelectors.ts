@@ -36,6 +36,8 @@ export function useWorkspaceSelectors() {
       redoWorkspaceAction: state.redoWorkspaceAction,
       revealReviewAnswer: state.revealReviewAnswer,
       reviewSession: state.reviewSession,
+      reviewSessionMode: state.reviewSessionMode,
+      setReviewSessionMode: state.setReviewSessionMode,
       setNodeViewState: state.setNodeViewState,
       startReviewSession: state.startReviewSession,
       trashedNodeIds: state.trashedNodeIds,

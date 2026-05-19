@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { DEFAULT_REVIEW_SESSION_MODE } from '../features/review/model/reviewSessionMode';
+
 import { createEmptyWorkspaceActionHistory, createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { loadWorkspaceLayoutPreferenceSnapshot } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE } from './workspaceNavigation';
@@ -50,6 +52,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'rendererBoundaryKeepNodeIds'
   | 'nodeViewById'
   | 'reviewSession'
+  | 'reviewSessionMode'
   | 'trashedNodeDeletedAtById'
   | 'trashedNodeIds'
   | 'untitledSequenceByParent'
@@ -67,6 +70,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
       queueNodeIds: [],
       totalNodeCount: 0
     },
+    reviewSessionMode: DEFAULT_REVIEW_SESSION_MODE,
     trashedNodeDeletedAtById: {},
     untitledSequenceByParent: {}
   };

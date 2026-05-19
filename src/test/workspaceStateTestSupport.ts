@@ -35,6 +35,7 @@ export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}
     resetLayout: vi.fn(),
     restoreNode: vi.fn(async () => null),
     revealReviewAnswer: vi.fn(),
+    setReviewSessionMode: vi.fn(),
     setActiveNode: vi.fn(),
     setDocumentMaxWidth: vi.fn(),
     setListCollapsed: vi.fn(),

@@ -19,9 +19,11 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       onGrade={vi.fn(async () => true)}
       onRevealAnswer={vi.fn()}
       onResumeReviewItem={vi.fn()}
+      onSetReviewSessionMode={vi.fn()}
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle={undefined}
       reviewQueueCount={3}
+      reviewSessionMode="recommended"
       {...overrides}
     />
   );
@@ -64,9 +66,11 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       onGrade={onGrade}
       onRevealAnswer={onRevealAnswer}
       onResumeReviewItem={vi.fn()}
+      onSetReviewSessionMode={vi.fn()}
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle={undefined}
       reviewQueueCount={1}
+      reviewSessionMode="recommended"
     />
   );
 

@@ -1,5 +1,6 @@
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
+import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
@@ -86,7 +87,9 @@ export interface BuildControllerLayoutPropsArgs {
     resetLayout: () => void;
     revealReviewAnswer: () => void;
     reviewSession: ReviewSessionState;
+    reviewSessionMode: ReviewSessionMode;
     rightSidebarWidth: number;
+    setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void;
     setListCollapsed: (collapsed: boolean) => void;
     setListWidth: (width: number) => void;
     setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;

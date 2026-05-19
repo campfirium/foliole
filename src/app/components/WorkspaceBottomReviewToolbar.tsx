@@ -1,3 +1,4 @@
+import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
@@ -20,6 +21,7 @@ export interface WorkspaceBottomReviewToolbarProps {
   reviewCurrentTitle: string | undefined;
   reviewDueCount: number;
   reviewQueueCount: number;
+  reviewSessionMode: ReviewSessionMode;
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
   onDismissReviewItem: () => boolean;
@@ -27,6 +29,7 @@ export interface WorkspaceBottomReviewToolbarProps {
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
   onRevealAnswer: () => void;
   onResumeReviewItem: () => void;
+  onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
   onToggleReviewSession: () => void;
 }
 
@@ -76,12 +79,14 @@ export function selectWorkspaceBottomReviewToolbarProps(
         navigation.onSelectNode(review.reviewCurrentNodeId);
       }
     },
+    onSetReviewSessionMode: review.onSetReviewSessionMode,
     onToggleReviewSession: review.onToggleReviewSession,
     reviewCompletedCount: review.reviewCompletedCount,
     reviewCurrentNodeId: review.reviewCurrentNodeId,
     reviewCurrentTitle: getReviewCurrentTitle(props),
     reviewDueCount: review.reviewDueCount,
-    reviewQueueCount: review.reviewQueueCount
+    reviewQueueCount: review.reviewQueueCount,
+    reviewSessionMode: review.reviewSessionMode
   };
 }
 
@@ -101,6 +106,7 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
       <ReviewModeToolbar
         className="col-start-3 h-full bg-transparent px-6 max-[1080px]:col-start-1"
         style={{ borderTopColor: 'transparent' }}
+        showSessionModeControl
         showSummary={false}
         isAnswerRevealed={props.isAnswerRevealed}
         isCurrentItemGradable={props.isCurrentReviewItemGradable}
@@ -118,6 +124,8 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
         onGrade={props.onGradeReview}
         onRevealAnswer={props.onRevealAnswer}
         onResumeReviewItem={props.onResumeReviewItem}
+        onSetReviewSessionMode={props.onSetReviewSessionMode}
+        reviewSessionMode={props.reviewSessionMode}
       />
       {props.isImmersiveMode ? null : (
         <>
