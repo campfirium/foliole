@@ -59,6 +59,21 @@ export function collectInlineTokenDecorationPlan(
   return { markRanges, replaceRanges };
 }
 
+export function collectDanglingNoteAsteriskDecorationPlan(
+  from: number,
+  text: string,
+  inCodeBlock: boolean
+): InlineTextDecorationPlan {
+  if (inCodeBlock) return { markRanges: [], replaceRanges: [] };
+  const match = /^(\s*(?:>\s*)?)(\\?)\*注[：:]/u.exec(text);
+  if (!match) return { markRanges: [], replaceRanges: [] };
+  const asteriskFrom = from + match[1].length + match[2].length;
+  return {
+    markRanges: [],
+    replaceRanges: [{ from: asteriskFrom, to: asteriskFrom + 1 }]
+  };
+}
+
 export function collectInlineCodeSyntaxDecorationPlan(
   codeMatches: ReadonlyArray<InlineCodeDelimiterRange>
 ): InlineTextDecorationPlan {
