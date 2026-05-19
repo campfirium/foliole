@@ -1,7 +1,9 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 
 import type {
   NodeViewState,
+  ReviewSessionState,
   WorkspaceLayoutState,
   WorkspacePersistedState
 } from './workspaceStore';
@@ -114,6 +116,37 @@ function parseNumberValueRecord(value: unknown) {
   return Object.fromEntries(entries);
 }
 
+function parseReviewSession(value: unknown): ReviewSessionState | undefined {
+  if (!isPlainRecord(value)) {
+    return undefined;
+  }
+  if (
+    (value.currentNodeId !== null && typeof value.currentNodeId !== 'string') ||
+    typeof value.isAnswerRevealed !== 'boolean' ||
+    !isStringArray(value.queueNodeIds) ||
+    typeof value.totalNodeCount !== 'number'
+  ) {
+    return undefined;
+  }
+  return {
+    ...(typeof value.completedAt === 'string' || value.completedAt === null ? { completedAt: value.completedAt } : {}),
+    ...(typeof value.continueNodeId === 'string' || value.continueNodeId === null ? { continueNodeId: value.continueNodeId } : {}),
+    currentNodeId: value.currentNodeId,
+    isAnswerRevealed: value.isAnswerRevealed,
+    queueNodeIds: value.queueNodeIds,
+    ...(typeof value.readTopicCount === 'number' ? { readTopicCount: value.readTopicCount } : {}),
+    ...(typeof value.reviewedItemCount === 'number' ? { reviewedItemCount: value.reviewedItemCount } : {}),
+    ...(typeof value.sessionStartedAt === 'string' || value.sessionStartedAt === null ? { sessionStartedAt: value.sessionStartedAt } : {}),
+    totalNodeCount: value.totalNodeCount
+  };
+}
+
+function parseReviewSessionMode(value: unknown): ReviewSessionMode | undefined {
+  return value === 'recommended' || value === 'review-first' || value === 'reading-only'
+    ? value
+    : undefined;
+}
+
 export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspacePersistedState> {
   if (!isPlainRecord(value)) {
     return {};
@@ -123,6 +156,8 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   const activeNodeId = parseActiveNodeId(value.activeNodeId, nodesById);
   const layout = parseLayout(value.layout);
   const nodeViewById = parseNodeViewById(value.nodeViewById);
+  const reviewSession = parseReviewSession(value.reviewSession);
+  const reviewSessionMode = parseReviewSessionMode(value.reviewSessionMode);
   const trashedNodeDeletedAtById = parseStringValueRecord(value.trashedNodeDeletedAtById);
   const untitledSequenceByParent = parseNumberValueRecord(value.untitledSequenceByParent);
   return {
@@ -131,6 +166,8 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
     ...(layout ? { layout } : {}),
     ...(nodeViewById ? { nodeViewById } : {}),
     ...(isStringArray(value.nodeOrder) ? { nodeOrder: value.nodeOrder } : {}),
+    ...(reviewSession ? { reviewSession } : {}),
+    ...(reviewSessionMode ? { reviewSessionMode } : {}),
     ...(trashedNodeDeletedAtById ? { trashedNodeDeletedAtById } : {}),
     ...(isStringArray(value.trashedNodeIds) ? { trashedNodeIds: value.trashedNodeIds } : {}),
     ...(untitledSequenceByParent ? { untitledSequenceByParent } : {})

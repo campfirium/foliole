@@ -40,6 +40,8 @@ it('advances to next review node after show-answer and grade', async () => {
   expect(started).toBe(true);
   expect(harness.getState().reviewSession.currentNodeId).toBe('qa-1');
   expect(harness.getState().reviewSession.isAnswerRevealed).toBe(false);
+  expect(harness.getState().reviewSession.sessionStartedAt).toBe(due);
+  expect(harness.getState().reviewSession.continueNodeId).toBe('qa-1');
 
   actions.revealReviewAnswer();
   expect(harness.getState().reviewSession.isAnswerRevealed).toBe(true);
@@ -79,6 +81,10 @@ it('ends session when grading the last review node', async () => {
   expect(harness.getState().reviewSession.currentNodeId).toBeNull();
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([]);
   expect(harness.getState().reviewSession.isAnswerRevealed).toBe(false);
+  expect(harness.getState().reviewSession.completedAt).toBe(due);
+  expect(harness.getState().reviewSession.reviewedItemCount).toBe(1);
+  expect(harness.getState().reviewSession.readTopicCount).toBe(0);
+  expect(harness.getState().reviewSession.totalNodeCount).toBe(1);
   expect(harness.getState().activeNodeId).toBe('qa-1');
 });
 
@@ -170,6 +176,7 @@ it('completes reading items without showing grading and advances the queue', () 
   expect(harness.getState().activeNodeId).toBe('reading-2');
   expect(harness.getState().reviewSession.currentNodeId).toBe('reading-2');
   expect(harness.getState().reviewSession.queueNodeIds).toEqual(['reading-2']);
+  expect(harness.getState().reviewSession.readTopicCount).toBe(1);
   expect(harness.getState().nodesById['reading-1']?.reading).toMatchObject({
     lastHandledAt: now,
     repetitionCount: 2
@@ -194,6 +201,7 @@ it('postpones reading items by advancing nextAt and removing them from the curre
   expect(harness.getState().activeNodeId).toBe('reading-2');
   expect(harness.getState().reviewSession.currentNodeId).toBe('reading-2');
   expect(harness.getState().reviewSession.queueNodeIds).toEqual(['reading-2']);
+  expect(harness.getState().reviewSession.readTopicCount).toBe(0);
   expect(harness.getState().nodesById['reading-1']?.reading).toMatchObject({
     lastHandledAt: now,
     nextAt: '2026-03-04T07:12:00.000Z',

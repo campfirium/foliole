@@ -22,26 +22,21 @@ export function reconcileReviewSession(
     queuedNodeIds.length,
     state.reviewSession.totalNodeCount - removedQueueCount
   );
-  const currentNodeId = state.reviewSession.currentNodeId;
-  const currentQueuedNodeId =
-    currentNodeId && queuedNodeIds.includes(currentNodeId) ? currentNodeId : null;
-  const nextCurrentNodeId = currentQueuedNodeId ?? queuedNodeIds[0] ?? null;
+  const nextCurrentNodeId = queuedNodeIds[0] ?? null;
   if (!nextCurrentNodeId) {
     return createEmptyReviewSession();
   }
 
-  const nextQueueNodeIds = [
-    nextCurrentNodeId,
-    ...queuedNodeIds.filter((nodeId) => nodeId !== nextCurrentNodeId)
-  ];
   const canKeepAnswerRevealed =
     nextCurrentNodeId === state.reviewSession.currentNodeId &&
     nextCurrentNodeId === state.reviewSession.queueNodeIds[0];
 
   return {
+    ...state.reviewSession,
+    completedAt: null,
     currentNodeId: nextCurrentNodeId,
     isAnswerRevealed: canKeepAnswerRevealed ? state.reviewSession.isAnswerRevealed : false,
-    queueNodeIds: nextQueueNodeIds,
+    queueNodeIds: queuedNodeIds,
     totalNodeCount: nextTotalNodeCount
   };
 }

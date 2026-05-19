@@ -1,6 +1,9 @@
-type ReviewStatus = 'awaiting-answer' | 'answer-revealed' | 'completed';
+type ReviewStatus = 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
 
 function getReviewStatusLabel(status: ReviewStatus) {
+  if (status === 'idle') {
+    return 'Study mode';
+  }
   if (status === 'awaiting-answer') {
     return 'Awaiting answer';
   }

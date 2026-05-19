@@ -26,6 +26,13 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
   const persisted = {
     ...current,
     activeNodeId: INBOX_NODE_ID,
+    reviewSession: {
+      currentNodeId: INBOX_NODE_ID,
+      isAnswerRevealed: true,
+      queueNodeIds: [INBOX_NODE_ID],
+      totalNodeCount: 1
+    },
+    reviewSessionMode: 'reading-only' as const,
     layout: {
       ...current.layout,
       documentMaxWidth: 920,
@@ -52,6 +59,13 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
     scrollTop: 42,
     selection: { from: 1, to: 4 }
   });
+  expect(merged?.reviewSession).toMatchObject({
+    currentNodeId: INBOX_NODE_ID,
+    isAnswerRevealed: true,
+    queueNodeIds: [INBOX_NODE_ID],
+    totalNodeCount: 1
+  });
+  expect(merged?.reviewSessionMode).toBe('reading-only');
   expect(merged?.nodesById[INBOX_NODE_ID]?.id).toBe(INBOX_NODE_ID);
 });
 

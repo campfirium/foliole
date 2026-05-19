@@ -70,6 +70,30 @@ it('keeps the current review item when setActiveNode selects another queued topi
   expect(state.reviewSession.isAnswerRevealed).toBe(true);
 });
 
+it('normalizes a hydrated review session to the next queued item', () => {
+  useWorkspaceStore.setState({
+    activeNodeId: 'reading-1',
+    nodeOrder: ['reading-1', 'fsrs-1'],
+    nodesById: {
+      'reading-1': createReadingNode('reading-1'),
+      'fsrs-1': createFsrsNode('fsrs-1')
+    },
+    reviewSession: {
+      currentNodeId: 'fsrs-1',
+      isAnswerRevealed: true,
+      queueNodeIds: ['reading-1', 'fsrs-1'],
+      totalNodeCount: 2
+    }
+  });
+
+  useWorkspaceStore.getState().setActiveNode('fsrs-1');
+
+  const state = useWorkspaceStore.getState();
+  expect(state.reviewSession.currentNodeId).toBe('reading-1');
+  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1', 'fsrs-1']);
+  expect(state.reviewSession.isAnswerRevealed).toBe(false);
+});
+
 it('advances review session when the current queued node is deleted', () => {
   useWorkspaceStore.setState({
     activeNodeId: 'fsrs-1',

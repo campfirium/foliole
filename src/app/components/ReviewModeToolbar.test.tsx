@@ -13,6 +13,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       isStudyMode
       reviewCompletedCount={0}
       onCompleteReviewItem={vi.fn(() => true)}
+      onContinueReading={vi.fn()}
       onDeferReviewItem={vi.fn(() => true)}
       onDismissReviewItem={vi.fn(() => true)}
       onExitReviewMode={vi.fn()}
@@ -23,6 +24,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle={undefined}
       reviewQueueCount={3}
+      reviewStatus="awaiting-answer"
       reviewSessionMode="recommended"
       {...overrides}
     />
@@ -54,9 +56,11 @@ it('keeps legacy summary text when session controls are not shown', () => {
 it('switches to fsrs reveal and grade actions in the shared review action bar', async () => {
   const onRevealAnswer = vi.fn();
   const onGrade = vi.fn(async () => true);
-  const { rerender } = renderToolbar({ isCurrentItemGradable: true, onGrade, onRevealAnswer });
+  const { rerender } = renderToolbar({ isCurrentItemGradable: true, onGrade, onRevealAnswer, showSessionModeControl: true });
 
   expect(document.querySelector('[data-review-item-kind="fsrs"]')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Change session mode')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Reading time (coming soon)')).not.toBeInTheDocument();
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
   });
@@ -72,6 +76,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       isStudyMode
       reviewCompletedCount={0}
       onCompleteReviewItem={vi.fn(() => true)}
+      onContinueReading={vi.fn()}
       onDeferReviewItem={vi.fn(() => true)}
       onDismissReviewItem={vi.fn(() => true)}
       onExitReviewMode={vi.fn()}
@@ -82,10 +87,14 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle={undefined}
       reviewQueueCount={1}
+      reviewStatus="answer-revealed"
       reviewSessionMode="recommended"
+      showSessionModeControl
     />
   );
 
+  expect(screen.getByLabelText('Change session mode')).toBeInTheDocument();
+  expect(screen.getByLabelText('Reading time (coming soon)')).toBeInTheDocument();
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Good' }));
   });
@@ -129,4 +138,48 @@ it('shows only resume when the visible topic is outside the current review item'
 
   fireEvent.click(screen.getByRole('button', { name: 'Resume review' }));
   expect(onResumeReviewItem).toHaveBeenCalledTimes(1);
+});
+
+it('shows completed without progress and continues reading when the review phase is complete', () => {
+  const onContinueReading = vi.fn();
+  renderToolbar({
+    onContinueReading,
+    reviewCompletedCount: 3,
+    reviewCurrentNodeId: null,
+    reviewQueueCount: 0,
+    reviewStatus: 'completed'
+  });
+
+  expect(screen.getByText('Review complete')).toBeInTheDocument();
+  expect(screen.queryByLabelText("Today's review: 0 left · 3 done · 3 total")).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Resume review' }));
+  expect(onContinueReading).toHaveBeenCalledTimes(1);
+});
+
+it('resumes from the queue when study mode has no current item but queued items exist', () => {
+  const onContinueReading = vi.fn();
+  const onResumeReviewItem = vi.fn();
+  renderToolbar({
+    onContinueReading,
+    onResumeReviewItem,
+    reviewCurrentNodeId: null,
+    reviewQueueCount: 3,
+    reviewStatus: 'idle'
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Resume review' }));
+  expect(onResumeReviewItem).toHaveBeenCalledTimes(1);
+  expect(onContinueReading).not.toHaveBeenCalled();
+});
+
+it('keeps an empty dev-restored status bar in idle study mode', () => {
+  renderToolbar({
+    reviewCurrentNodeId: null,
+    reviewQueueCount: 0,
+    reviewStatus: 'idle'
+  });
+
+  expect(screen.getByText('Study mode')).toBeInTheDocument();
+  expect(screen.queryByText('Review complete')).not.toBeInTheDocument();
 });

@@ -35,6 +35,7 @@ export function useWorkspaceSelectors() {
       openNode: state.openNode,
       redoWorkspaceAction: state.redoWorkspaceAction,
       revealReviewAnswer: state.revealReviewAnswer,
+      resumeReviewSession: state.resumeReviewSession,
       reviewSession: state.reviewSession,
       reviewSessionMode: state.reviewSessionMode,
       setReviewSessionMode: state.setReviewSessionMode,
