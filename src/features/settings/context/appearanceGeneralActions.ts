@@ -10,6 +10,7 @@ import {
   type MonospaceFontPreset,
   type PdfReadingMode,
   type ReadingLineHeight,
+  type ReadingParagraphSpacing,
   setBaseColorMode,
   setCustomInterfaceFont,
   setCustomMonospaceFont,
@@ -21,6 +22,7 @@ import {
   setPdfReadingMode,
   setReadingContentWidth,
   setReadingLineHeight,
+  setReadingParagraphSpacing,
   setUiFontPreset
 } from '../model/appearanceSettings';
 import type { BaseColorMode } from '../model/baseColorMode';
@@ -49,6 +51,7 @@ export type GeneralAppearanceActions = Pick<
   | 'setPdfReadingMode'
   | 'setReadingContentWidth'
   | 'setReadingLineHeight'
+  | 'setReadingParagraphSpacing'
   | 'setUiFontPreset'
   | 'toggleBaseColorMode'
   | 'toggleEditorDisplayMode'
@@ -74,7 +77,8 @@ export function createGeneralAppearanceActions(state: AppearanceState): GeneralA
     setMonospaceFontPreset: (value: MonospaceFontPreset) => (setMonospaceFontPreset(value), state.setMonospaceFontPresetState(value)),
     setPdfReadingMode: (value: PdfReadingMode) => (setPdfReadingMode(value), state.setPdfReadingModeState(value)),
     setReadingContentWidth: (value: number) => (setReadingContentWidth(value), state.setReadingContentWidthState(value)),
-    setReadingLineHeight: (value: ReadingLineHeight) => (setReadingLineHeight(value), state.setReadingLineHeightState(value)),
+    setReadingLineHeight: (value: ReadingLineHeight) => state.setReadingLineHeightState(setReadingLineHeight(value)),
+    setReadingParagraphSpacing: (value: ReadingParagraphSpacing) => state.setReadingParagraphSpacingState(setReadingParagraphSpacing(value)),
     setUiFontPreset: (value: InterfaceFontPreset) => (setUiFontPreset(value), state.setUiFontPresetState(value)),
     toggleBaseColorMode: () => {
       const next = state.resolvedBaseColorModeState === 'dark' ? 'light' : 'dark';

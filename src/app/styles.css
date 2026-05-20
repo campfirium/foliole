@@ -846,7 +846,7 @@ b {
 
 .markdown-editor-host .cm-scroller {
   font-size: var(--content-panel-font-size, 1.0625rem);
-  line-height: var(--content-panel-line-height, 1.75);
+  line-height: var(--content-panel-line-height, 1.65);
   scrollbar-color: var(--app-scrollbar-thumb-color) transparent;
   scrollbar-width: thin;
 }

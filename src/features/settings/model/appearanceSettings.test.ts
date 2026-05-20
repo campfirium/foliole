@@ -16,12 +16,14 @@ import {
   getCustomMonospaceFont,
   getCustomUiFont,
   getHighlightColorPreset,
+  getReadingParagraphSpacing,
   getReadingLineHeight,
   getSelectionColorPreset,
   setCustomInterfaceFont,
   setCustomMonospaceFont,
   setCustomUiFont,
-  setReadingLineHeight
+  setReadingLineHeight,
+  setReadingParagraphSpacing
 } from './appearanceSettings';
 
 beforeEach(() => {
@@ -59,15 +61,35 @@ it('falls back to dedicated defaults for selection and cloze colors', () => {
   expect(getClozeColorPreset()).toBe('#facc15');
 });
 
-it('stores reading line height presets and ignores unknown values', () => {
-  expect(getReadingLineHeight()).toBe('standard');
+it('stores reading line height and normalizes old preset values', () => {
+  expect(getReadingLineHeight()).toBe(1.65);
 
-  setReadingLineHeight('relaxed');
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('relaxed');
-  expect(getReadingLineHeight()).toBe('relaxed');
+  setReadingLineHeight(1.85);
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('1.85');
+  expect(getReadingLineHeight()).toBe(1.85);
 
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight, '1.72');
-  expect(getReadingLineHeight()).toBe('standard');
+  expect(getReadingLineHeight()).toBe(1.7);
+
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight, 'relaxed');
+  expect(getReadingLineHeight()).toBe(1.85);
+
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight, 'bad');
+  expect(getReadingLineHeight()).toBe(1.65);
+});
+
+it('stores paragraph spacing and ignores unknown values', () => {
+  expect(getReadingParagraphSpacing()).toBe(0.75);
+
+  setReadingParagraphSpacing(1.25);
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingParagraphSpacing)).toBe('1.25');
+  expect(getReadingParagraphSpacing()).toBe(1.25);
+
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.readingParagraphSpacing, '1.27');
+  expect(getReadingParagraphSpacing()).toBe(1.25);
+
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.readingParagraphSpacing, 'bad');
+  expect(getReadingParagraphSpacing()).toBe(0.75);
 });
 
 it('uses dedicated dark defaults for reading colors', () => {

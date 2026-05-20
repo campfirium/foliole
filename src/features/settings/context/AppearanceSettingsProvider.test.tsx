@@ -18,6 +18,7 @@ function AppearanceHarness() {
       <div>{appearance.dimImagesInDarkMode ? 'dim-on' : 'dim-off'}</div>
       <div>{appearance.pdfReadingMode}</div>
       <div>{appearance.readingLineHeight}</div>
+      <div>{appearance.readingParagraphSpacing}</div>
       <div>{appearance.readingContentWidth}</div>
       <div>{appearance.selectionToolbarOpacityPercent}</div>
       <button onClick={appearance.toggleEditorDisplayMode} type="button">
@@ -38,8 +39,11 @@ function AppearanceHarness() {
       <button onClick={() => appearance.setPdfReadingMode('warm')} type="button">
         Warm PDF
       </button>
-      <button onClick={() => appearance.setReadingLineHeight('relaxed')} type="button">
+      <button onClick={() => appearance.setReadingLineHeight(1.85)} type="button">
         Relax line height
+      </button>
+      <button onClick={() => appearance.setReadingParagraphSpacing(1.25)} type="button">
+        Set paragraph spacing
       </button>
       <button onClick={() => appearance.setReadingContentWidth(920)} type="button">
         Set reading width
@@ -73,6 +77,7 @@ function applyAppearanceHarnessUpdates() {
   fireEvent.click(screen.getByRole('button', { name: 'Set frontmatter meta' }));
   fireEvent.click(screen.getByRole('button', { name: 'Warm PDF' }));
   fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Set paragraph spacing' }));
   fireEvent.click(screen.getByRole('button', { name: 'Set reading width' }));
   fireEvent.click(screen.getByRole('button', { name: 'Set toolbar opacity' }));
   fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
@@ -95,11 +100,13 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('light')).toBeInTheDocument();
   expect(screen.getByText('dim-off')).toBeInTheDocument();
   expect(screen.getByText('inverted')).toBeInTheDocument();
-  expect(screen.getByText('standard')).toBeInTheDocument();
+  expect(screen.getByText('1.65')).toBeInTheDocument();
+  expect(screen.getByText('0.75')).toBeInTheDocument();
   expect(screen.getByText('860')).toBeInTheDocument();
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('inverted');
-  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.65');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('0.75em');
   expect(document.documentElement.style.getPropertyValue('--app-interface-font-family')).toBe('var(--font-family-interface)');
   expect(document.documentElement.style.getPropertyValue('--content-panel-font-family')).toBe('var(--font-family-text)');
   expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('860px');
@@ -115,7 +122,8 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('dark')).toBeInTheDocument();
   expect(screen.getByText('dim-on')).toBeInTheDocument();
   expect(screen.getByText('warm')).toBeInTheDocument();
-  expect(screen.getByText('relaxed')).toBeInTheDocument();
+  expect(screen.getByText('1.85')).toBeInTheDocument();
+  expect(screen.getByText('1.25')).toBeInTheDocument();
   expect(screen.getByText('920')).toBeInTheDocument();
   expect(screen.getByText('42')).toBeInTheDocument();
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.editorDisplayMode)).toBe('preview');
@@ -125,12 +133,14 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.baseColor)).toBe('dark');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode)).toBe('true');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.pdfReadingMode)).toBe('warm');
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('relaxed');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('1.85');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingParagraphSpacing)).toBe('1.25');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingContentWidth)).toBe('920');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionToolbarOpacityPercent)).toBe('42');
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('true');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
-  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.85');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('1.25em');
   expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('920px');
   expectToolbarOpacity('0.42');
 
@@ -146,11 +156,11 @@ it('keeps the selected reading line height when the color mode changes', () => {
   );
 
   fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
-  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.85');
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
   expect(screen.getByText('dark')).toBeInTheDocument();
-  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.85');
 });
 
 it('applies the same reading line height values after the color mode changes first', () => {
@@ -162,8 +172,8 @@ it('applies the same reading line height values after the color mode changes fir
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
   expect(screen.getByText('dark')).toBeInTheDocument();
-  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.65');
 
   fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
-  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.85');
 });

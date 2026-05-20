@@ -28,10 +28,12 @@ describe('markdownBlockProjection', () => {
 
     expect(collectMarkdownLineClassRanges(text).map(({ className, from }) => ({ className, from }))).toEqual([
       { className: 'cm-line-h1', from: 0 },
+      { className: 'cm-line-paragraph', from: 8 },
       { className: 'cm-line-quote', from: 19 },
       { className: 'cm-line-list-unordered', from: 27 },
       { className: 'cm-line-list-unordered cm-line-task-list', from: 34 },
-      { className: 'cm-line-list', from: 45 }
+      { className: 'cm-line-list', from: 45 },
+      { className: 'cm-line-paragraph', from: 56 }
     ]);
   });
 
