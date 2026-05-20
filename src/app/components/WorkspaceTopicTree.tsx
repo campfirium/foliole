@@ -147,7 +147,7 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     nodesById: props.nodesById,
     sortRefreshVersion: contentSort.sortRefreshVersion,
     sort: contentSort.sort,
-    hideDismissedTopics: props.forceVisibleNodeId ? false : dismissedTopicVisibility.viewHideDismissedTopics,
+    hideDismissedTopics: dismissedTopicVisibility.viewHideDismissedTopics,
     ...definedProps({ forceVisibleNodeId: props.forceVisibleNodeId })
   });
   return { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility };

@@ -60,9 +60,12 @@ function createRow(nodeId: string, depth: number, childrenByParent: TopicChildre
 
 function collectRows(args: TopicRowsArgs) {
   const rows: NodeTreeRow[] = [];
+  const fullyDismissedBranchIds = args.reviewContextNodeIds
+    ? collectFullyDismissedTopicBranchIds(args)
+    : null;
   const walk = (parentId: string | null, ids: string[], depth: number) => {
     args.sortIds(parentId, ids).forEach((nodeId) => {
-      if (!shouldCollectNode(args, nodeId, args.reviewContextNodeIds ?? null)) return;
+      if (!shouldCollectNode(args, nodeId, args.reviewContextNodeIds ?? null, fullyDismissedBranchIds)) return;
       const row = createRow(nodeId, depth, args.childrenByParent, args.nodesById);
       if (!row) return;
       rows.push(row);
@@ -135,9 +138,29 @@ function collectReviewContextNodeIds(args: Pick<TopicRowsArgs, 'childrenByParent
   return contextNodeIds;
 }
 
-function shouldCollectNode(args: TopicRowsArgs, nodeId: string, reviewContextNodeIds: ReadonlySet<string> | null) {
+function collectFullyDismissedTopicBranchIds(args: Pick<TopicRowsArgs, 'childrenByParent' | 'nodesById' | 'rootIds'>) {
+  const branchIds = new Set<string>();
+  const visit = (nodeId: string): boolean => {
+    if (!isDismissedTopic(nodeId, args.nodesById)) return false;
+    const childIds = getTopicChildren(nodeId, args.childrenByParent, args.nodesById);
+    const childDismissedStates = childIds.map(visit);
+    const allChildrenDismissed = childDismissedStates.every(Boolean);
+    if (allChildrenDismissed) branchIds.add(nodeId);
+    return allChildrenDismissed;
+  };
+  args.rootIds.forEach(visit);
+  return branchIds;
+}
+
+function shouldCollectNode(
+  args: TopicRowsArgs,
+  nodeId: string,
+  reviewContextNodeIds: ReadonlySet<string> | null,
+  fullyDismissedBranchIds: ReadonlySet<string> | null
+) {
   if (reviewContextNodeIds) {
-    return !isDismissedTopic(nodeId, args.nodesById) || reviewContextNodeIds.has(nodeId);
+    if (!args.hideDismissedTopics) return true;
+    return reviewContextNodeIds.has(nodeId) || !fullyDismissedBranchIds?.has(nodeId);
   }
   return !args.hideDismissedTopics || !isDismissedTopic(nodeId, args.nodesById);
 }
