@@ -16,6 +16,9 @@ src-tauri/
 .tmp-*/
 .tmp-vitest/
 .tmp-vitest-*/
+.home/
+.npm-cache/
+.electron-user-data/
 .windows-native-boot-ready.json
 .windows-native-bridge-ready.json
 .codex
