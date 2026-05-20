@@ -55,6 +55,19 @@ it('keeps the review footer list summary when the left sidebar is expanded', () 
   expect(screen.getByLabelText('Review mode toolbar')).toHaveClass('col-start-3');
 });
 
+it('recalculates the progress total when the active review queue is replanned', () => {
+  const { rerender } = render(
+    <WorkspaceBottomReviewToolbar {...createProps({ reviewCompletedCount: 4, reviewQueueCount: 6 })} />
+  );
+
+  expect(screen.getByLabelText("Today's review: 6 left · 4 done · 10 total")).toBeInTheDocument();
+
+  rerender(<WorkspaceBottomReviewToolbar {...createProps({ reviewCompletedCount: 4, reviewQueueCount: 3 })} />);
+
+  expect(screen.getByLabelText("Today's review: 3 left · 4 done · 7 total")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Today's review: 3 left · 4 done · 10 total")).not.toBeInTheDocument();
+});
+
 it('keeps the session mode controls hidden while waiting to reveal an answer', () => {
   render(<WorkspaceBottomReviewToolbar {...createProps({ isListCollapsed: true })} />);
 
@@ -132,10 +145,10 @@ it('hides the footer progress line after review completion', () => {
     />
   );
 
-  expect(screen.getByText('Review complete')).toBeInTheDocument();
+  expect(screen.queryByText('Review complete')).not.toBeInTheDocument();
   expect(screen.queryByLabelText("Today's review: 0 left · 2 done · 2 total")).not.toBeInTheDocument();
 
-  screen.getByRole('button', { name: 'Resume review' }).click();
+  screen.getByRole('button', { name: 'Continue reading' }).click();
   expect(onContinueReading).toHaveBeenCalledTimes(1);
 });
 

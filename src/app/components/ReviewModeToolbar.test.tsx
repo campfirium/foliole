@@ -150,10 +150,10 @@ it('shows completed without progress and continues reading when the review phase
     reviewStatus: 'completed'
   });
 
-  expect(screen.getByText('Review complete')).toBeInTheDocument();
+  expect(screen.queryByText('Review complete')).not.toBeInTheDocument();
   expect(screen.queryByLabelText("Today's review: 0 left · 3 done · 3 total")).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Resume review' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
   expect(onContinueReading).toHaveBeenCalledTimes(1);
 });
 

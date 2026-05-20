@@ -49,6 +49,7 @@ export interface WorkspaceEditorContextMenu {
   top: number;
   webLookupDocumentText?: string | null;
   webLookupPayload?: SelectionCommandPayload | null;
+  webLookupTitle?: string | null;
 }
 
 export interface WorkspaceLayoutFlatProps {
@@ -65,6 +66,7 @@ export interface WorkspaceLayoutFlatProps {
   isPriorityQuickSetActive: boolean;
   onNodePriorityChange: (nodeId: string, priority: number | null) => void;
   onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => void;
+  onNodeShortTermChange: (nodeId: string, enableShortTerm: boolean | null) => void;
   onEnterPriorityQuickSet: () => void;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -90,7 +92,11 @@ export interface WorkspaceLayoutFlatProps {
   reviewSummary: {
     completedAt: string | null;
     continueNodeId: string | null;
+    createdItemCount: number;
+    createdTopicCount: number;
+    readingElapsedMs: number;
     readTopicCount: number;
+    reviewElapsedMs: number;
     reviewedItemCount: number;
     sessionStartedAt: string | null;
   };

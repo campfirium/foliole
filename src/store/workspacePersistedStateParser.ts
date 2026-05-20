@@ -131,10 +131,13 @@ function parseReviewSession(value: unknown): ReviewSessionState | undefined {
   return {
     ...(typeof value.completedAt === 'string' || value.completedAt === null ? { completedAt: value.completedAt } : {}),
     ...(typeof value.continueNodeId === 'string' || value.continueNodeId === null ? { continueNodeId: value.continueNodeId } : {}),
+    ...(typeof value.currentItemStartedAt === 'string' || value.currentItemStartedAt === null ? { currentItemStartedAt: value.currentItemStartedAt } : {}),
     currentNodeId: value.currentNodeId,
     isAnswerRevealed: value.isAnswerRevealed,
     queueNodeIds: value.queueNodeIds,
+    ...(typeof value.readingElapsedMs === 'number' ? { readingElapsedMs: value.readingElapsedMs } : {}),
     ...(typeof value.readTopicCount === 'number' ? { readTopicCount: value.readTopicCount } : {}),
+    ...(typeof value.reviewElapsedMs === 'number' ? { reviewElapsedMs: value.reviewElapsedMs } : {}),
     ...(typeof value.reviewedItemCount === 'number' ? { reviewedItemCount: value.reviewedItemCount } : {}),
     ...(typeof value.sessionStartedAt === 'string' || value.sessionStartedAt === null ? { sessionStartedAt: value.sessionStartedAt } : {}),
     totalNodeCount: value.totalNodeCount

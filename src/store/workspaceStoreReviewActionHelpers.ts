@@ -6,7 +6,9 @@ import {
   pushWorkspaceUndoEntry,
   type WorkspaceTopicReadingActionTitle
 } from './workspaceActionHistory';
+import { buildCurrentReviewSessionQueue } from './workspaceReviewLiveQueue';
 import { advanceReviewSession, completeReviewSession } from './workspaceReviewReading';
+import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -41,8 +43,6 @@ export function applyGradedReviewState(args: {
   set: WorkspaceSet;
   snapshot: WorkspaceState;
   currentNodeId: string;
-  nextNodeId: string | null;
-  nextQueue: string[];
   nextReviewProfile: ReturnType<typeof toNodeReviewProfile>;
   reviewedAt: string;
   now: string;
@@ -50,25 +50,32 @@ export function applyGradedReviewState(args: {
   args.set((state) => {
     const node = state.nodesById[args.currentNodeId];
     if (!node) return state;
+    const nextNodesById = {
+      ...state.nodesById,
+      [args.currentNodeId]: {
+        ...node,
+        review: { ...args.nextReviewProfile, lastReviewAt: args.reviewedAt },
+        updatedAt: args.now
+      }
+    };
+    const nextQueue = buildCurrentReviewSessionQueue(state, args.now, { nodesById: nextNodesById });
+    const nextNodeId = nextQueue[0] ?? null;
+    const reviewElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
     return {
-      activeNodeId: args.nextNodeId ?? state.activeNodeId,
-      nodesById: {
-        ...state.nodesById,
-        [args.currentNodeId]: {
-          ...node,
-          review: { ...args.nextReviewProfile, lastReviewAt: args.reviewedAt },
-          updatedAt: args.now
-        }
-      },
-      reviewSession: args.nextNodeId && hasRemainingReviewCards(args.nextQueue, state.nodesById)
+      activeNodeId: nextNodeId ?? state.activeNodeId,
+      nodesById: nextNodesById,
+      reviewSession: nextNodeId && hasRemainingReviewCards(nextQueue, nextNodesById)
         ? advanceReviewSession(args.snapshot.reviewSession, {
-            nextNodeId: args.nextNodeId,
-            queueNodeIds: args.nextQueue,
+            handledAt: args.now,
+            nextNodeId,
+            queueNodeIds: nextQueue,
+            reviewElapsedMsDelta,
             reviewedItemDelta: 1
           })
         : completeReviewSession(args.snapshot.reviewSession, {
             completedAt: args.now,
-            continueNodeId: args.nextNodeId,
+            continueNodeId: nextNodeId,
+            reviewElapsedMsDelta,
             reviewedItemDelta: 1
           })
     };
