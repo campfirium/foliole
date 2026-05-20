@@ -51,6 +51,7 @@
     "electron:compile": "tsc -p electron/tsconfig.json",
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:dev:native": "node scripts/windows/electron-dev-native.mjs",
+    "electron:native:health": "node scripts/windows/electron-native-health-check.mjs",
     "electron:rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "dev:screenshot": "bash scripts/windows/dev-screenshot.sh",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
