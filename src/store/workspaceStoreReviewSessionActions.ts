@@ -1,36 +1,36 @@
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
-import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
-import { buildCachedReviewQueuePlan } from './reviewQueuePlannerCached';
+import { buildCurrentReviewSessionQueue, buildLiveReviewQueue } from './workspaceReviewLiveQueue';
 import {
   advanceReviewSession,
   createEmptyReviewSession,
   createStartedReviewSession
 } from './workspaceReviewReading';
+import { resolveReviewSessionProgress } from './workspaceReviewSessionProgress';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
 function buildReviewQueue(state: WorkspaceState, now: string, mode: ReviewSessionMode): string[] {
-  return buildCachedReviewQueuePlan({
-    mode,
-    nodeOrder: state.nodeOrder,
-    nodesById: state.nodesById,
-    now,
-    pushQueueRules: getCurrentReviewSchedulerSettings().pushQueue,
-    trashedNodeIds: state.trashedNodeIds
-  }).queueNodeIds;
+  return buildLiveReviewQueue(state, now, { mode });
 }
 
-function buildDisplayedReviewQueue(state: WorkspaceState, now: string): string[] {
-  return buildCachedReviewQueuePlan({
-    includeScheduled: true,
-    nodeOrder: state.nodeOrder,
-    nodesById: state.nodesById,
-    now,
-    pushQueueRules: getCurrentReviewSchedulerSettings().pushQueue,
-    trashedNodeIds: state.trashedNodeIds
-  }).queueNodeIds;
+function buildReadingPushQueue(state: WorkspaceState, now: string) {
+  return buildLiveReviewQueue(state, now, { mode: 'reading-only' });
+}
+
+function buildCurrentSessionQueue(state: WorkspaceState, now: string, mode = state.reviewSessionMode) {
+  return mode === state.reviewSessionMode
+    ? buildCurrentReviewSessionQueue(state, now)
+    : buildLiveReviewQueue(state, now, { mode });
+}
+
+function resolveResumeCurrentNodeId(state: WorkspaceState, queueNodeIds: string[]) {
+  const currentNodeId = state.reviewSession.currentNodeId;
+  if (currentNodeId && queueNodeIds.includes(currentNodeId)) {
+    return currentNodeId;
+  }
+  return queueNodeIds[0] ?? null;
 }
 
 export function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceState['startReviewSession'] {
@@ -38,16 +38,18 @@ export function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceStat
     let started = false;
     set((state) => {
       const queueNodeIds = buildReviewQueue(state, now, state.reviewSessionMode);
-      if (queueNodeIds.length === 0) return state;
+      const isTaskQueue = queueNodeIds.length > 0;
+      const fallbackQueueNodeIds = isTaskQueue ? queueNodeIds : buildReadingPushQueue(state, now);
+      if (fallbackQueueNodeIds.length === 0) return state;
       started = true;
       return {
-        activeNodeId: queueNodeIds[0] ?? state.activeNodeId,
+        activeNodeId: fallbackQueueNodeIds[0] ?? state.activeNodeId,
         reviewSession: createStartedReviewSession({
           continueNodeId: state.activeNodeId,
-          currentNodeId: queueNodeIds[0] ?? null,
-          queueNodeIds,
+          currentNodeId: fallbackQueueNodeIds[0] ?? null,
+          queueNodeIds: fallbackQueueNodeIds,
           sessionStartedAt: now,
-          totalNodeCount: queueNodeIds.length
+          totalNodeCount: isTaskQueue ? queueNodeIds.length : 0
         })
       };
     });
@@ -59,8 +61,8 @@ export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceSta
   return (now = new Date().toISOString()) => {
     let resumed = false;
     set((state) => {
-      const queueNodeIds = buildDisplayedReviewQueue(state, now);
-      const currentNodeId = queueNodeIds[0] ?? null;
+      const queueNodeIds = buildCurrentSessionQueue(state, now);
+      const currentNodeId = resolveResumeCurrentNodeId(state, queueNodeIds);
       if (!currentNodeId) return state;
       resumed = true;
       return {
@@ -81,10 +83,12 @@ export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceSta
 export function createSetReviewSessionModeAction(set: WorkspaceSet): WorkspaceState['setReviewSessionMode'] {
   return (mode, now = new Date().toISOString()) => {
     set((state) => {
-      if (state.reviewSessionMode === mode) return state;
-      if (!state.reviewSession.currentNodeId) return { reviewSessionMode: mode };
+      const isSameMode = state.reviewSessionMode === mode;
+      if (!state.reviewSession.currentNodeId) {
+        return isSameMode ? state : { reviewSessionMode: mode };
+      }
       const queueNodeIds = buildReviewQueue(state, now, mode);
-      const completedCount = Math.max(state.reviewSession.totalNodeCount - state.reviewSession.queueNodeIds.length, 0);
+      const completedCount = resolveReviewSessionProgress(state.reviewSession).reviewCompletedCount;
       return {
         activeNodeId: queueNodeIds[0] ?? state.activeNodeId,
         reviewSession: queueNodeIds.length
