@@ -4,11 +4,11 @@ import process from 'node:process';
 
 import { describe, expect, it } from 'vitest';
 
-import { isForbiddenWorkdir, isWslBashPath, resolvePilotPreflight } from './windows-native-pilot-preflight.mjs';
+import { findGitBashPath, isForbiddenWorkdir, isWslBashPath, resolvePilotPreflight } from './windows-native-pilot-preflight.mjs';
 
 describe('windows-native-pilot-preflight', () => {
   it('defaults to the dedicated D drive pilot workspace', () => {
-    const result = resolvePilotPreflight({});
+    const result = resolvePilotPreflight({}, { gitBashCandidates: [] });
     const expectedWorkdir = process.platform === 'win32' ? process.cwd() : 'D:\\C\\foliole';
 
     expect(result.ok).toBe(true);
@@ -20,6 +20,14 @@ describe('windows-native-pilot-preflight', () => {
     expect(result.warnings).toContain(
       'Git Bash path was not provided; Windows npm scripts that call bash must verify it before migration.'
     );
+  });
+
+  it('auto-detects Git Bash from known candidates when no script shell is configured', () => {
+    const result = resolvePilotPreflight({}, { gitBashCandidates: ['C:\\missing\\bash.exe', process.execPath] });
+
+    expect(findGitBashPath(['C:\\missing\\bash.exe', process.execPath])).toBe(process.execPath);
+    expect(result.config.gitBashPath).toBe(process.execPath);
+    expect(result.warnings).toContain(`Git Bash path was auto-detected; set FOLIOLE_WINDOWS_GIT_BASH if this changes: ${process.execPath}`);
   });
 
   it('rejects protected roots and whitespace pilot paths', () => {
