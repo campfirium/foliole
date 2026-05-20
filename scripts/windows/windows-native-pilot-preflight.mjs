@@ -1,0 +1,100 @@
+#!/usr/bin/env node
+/* global console, process */
+
+import { fileURLToPath } from 'node:url';
+
+const DEFAULT_WORKDIR = 'D:\\C\\foliole';
+const FORBIDDEN_PREFIXES = ['D:\\X\\', 'C:\\Users\\'];
+
+export function normalizeWindowsPath(value) {
+  return String(value || '')
+    .trim()
+    .replaceAll('/', '\\')
+    .replace(/\\+$/u, '');
+}
+
+function hasDriveRoot(value) {
+  return /^[A-Za-z]:\\/u.test(value);
+}
+
+function hasWhitespace(value) {
+  return /\s/u.test(value);
+}
+
+export function isWslBashPath(value) {
+  const normalized = normalizeWindowsPath(value).toLowerCase();
+  return normalized === 'c:\\windows\\system32\\bash.exe';
+}
+
+export function isForbiddenWorkdir(value) {
+  const normalized = `${normalizeWindowsPath(value)}\\`.toUpperCase();
+  return FORBIDDEN_PREFIXES.some((prefix) => normalized.startsWith(prefix.toUpperCase()));
+}
+
+export function resolvePilotPreflight(env = process.env) {
+  const workdir = normalizeWindowsPath(env.FOLIOLE_WINDOWS_NATIVE_WORKDIR || env.WINDOWS_NATIVE_WORKDIR || DEFAULT_WORKDIR);
+  const gitBashPath = normalizeWindowsPath(env.FOLIOLE_WINDOWS_GIT_BASH || env.npm_config_script_shell || '');
+  const errors = [];
+  const warnings = [];
+
+  if (!hasDriveRoot(workdir)) {
+    errors.push(`workdir must be an absolute Windows drive path: ${workdir || '(empty)'}`);
+  }
+  if (hasWhitespace(workdir)) {
+    errors.push(`workdir must not contain whitespace for the first pilot: ${workdir}`);
+  }
+  if (isForbiddenWorkdir(workdir)) {
+    errors.push(`workdir must not be under a protected user/data root: ${workdir}`);
+  }
+  if (isWslBashPath(gitBashPath)) {
+    errors.push(`bash path resolves to WSL bash; use Git Bash explicitly: ${gitBashPath}`);
+  }
+  if (!gitBashPath) {
+    warnings.push('Git Bash path was not provided; Windows npm scripts that call bash must verify it before migration.');
+  }
+
+  return {
+    config: {
+      electronUserDataDir: `${workdir}\\.electron-user-data`,
+      gitBashPath,
+      homeDir: `${workdir}\\.home`,
+      npmCacheDir: `${workdir}\\.npm-cache`,
+      tempDir: `${workdir}\\.tmp`,
+      workdir
+    },
+    errors,
+    ok: errors.length === 0,
+    warnings
+  };
+}
+
+function printResult(result) {
+  console.log(`[windows-native-preflight] workdir=${result.config.workdir}`);
+  console.log(`[windows-native-preflight] home=${result.config.homeDir}`);
+  console.log(`[windows-native-preflight] npm-cache=${result.config.npmCacheDir}`);
+  console.log(`[windows-native-preflight] electron-user-data=${result.config.electronUserDataDir}`);
+  if (result.config.gitBashPath) {
+    console.log(`[windows-native-preflight] git-bash=${result.config.gitBashPath}`);
+  }
+  for (const warning of result.warnings) {
+    console.log(`[windows-native-preflight] warning: ${warning}`);
+  }
+  for (const error of result.errors) {
+    console.error(`[windows-native-preflight] error: ${error}`);
+  }
+  console.log(`[windows-native-preflight] status: ${result.ok ? 'OK' : 'FAILED'}`);
+}
+
+function main() {
+  const result = resolvePilotPreflight();
+  if (process.argv.includes('--json')) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    printResult(result);
+  }
+  process.exit(result.ok ? 0 : 1);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}

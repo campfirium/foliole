@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -12,18 +12,23 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RUNNER = path.join(REPO_ROOT, 'scripts', 'run-vitest-with-summary.mjs');
 
-function runSummary(tempRoot, reportPath, exitCode = 1) {
+function runSummary(tempRoot, reportPath, exitCode = 1, envOverrides = null) {
+  const vitestEnv =
+    envOverrides ??
+    {
+      FAKE_VITEST_EXIT: String(exitCode),
+      VITEST_BIN: process.execPath
+    };
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [RUNNER, reportPath, '--', 'src/Foo.test.ts'], {
       cwd: tempRoot,
       env: {
         ...process.env,
-        VITEST_BIN: process.execPath,
         VITEST_SUMMARY_SLOW_LIMIT: '2',
+        ...vitestEnv,
         NODE_OPTIONS: '',
         npm_config_node_options: '',
-        npm_config_script_shell: '',
-        FAKE_VITEST_EXIT: String(exitCode)
+        npm_config_script_shell: ''
       }
     });
     let stdout = '';
@@ -38,6 +43,27 @@ function runSummary(tempRoot, reportPath, exitCode = 1) {
       resolve({ code, stderr, stdout });
     });
   });
+}
+
+async function createFakeVitestPackage(tempRoot) {
+  const packageDir = path.join(tempRoot, 'node_modules', 'vitest');
+  const argsPath = path.join(tempRoot, 'vitest-args.json');
+  await mkdir(packageDir, { recursive: true });
+  await writeFile(
+    path.join(packageDir, 'vitest.mjs'),
+    [
+      "import { mkdirSync, writeFileSync } from 'node:fs';",
+      "import path from 'node:path';",
+      `writeFileSync(${JSON.stringify(argsPath)}, JSON.stringify(process.argv.slice(2)));`,
+      "const outputArg = process.argv.find((arg) => arg.startsWith('--outputFile.json='));",
+      "const reportPath = outputArg?.slice('--outputFile.json='.length);",
+      "if (reportPath) {",
+      "  mkdirSync(path.dirname(reportPath), { recursive: true });",
+      "  writeFileSync(reportPath, JSON.stringify({ numPassedTestSuites: 1, numTotalTestSuites: 1, numPassedTests: 1, numTotalTests: 1, testResults: [] }));",
+      "}"
+    ].join('\n')
+  );
+  return argsPath;
 }
 
 describe('run-vitest-with-summary', () => {
@@ -82,6 +108,27 @@ describe('run-vitest-with-summary', () => {
       expect(result.stdout).toContain('600ms src/Slow.test.ts');
       expect(result.stdout).toContain('[vitest-summary] slowest tests: top 2');
       expect(result.stdout).toContain('500ms src/Slow.test.ts :: slow pass');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('uses the vitest package module entry before platform-specific bin shims', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'vitest-summary-module-'));
+    const reportPath = path.join(tempRoot, '.tmp', 'vitest', 'summary.json');
+    try {
+      const argsPath = await createFakeVitestPackage(tempRoot);
+      const result = await runSummary(tempRoot, reportPath, 0, {
+        VITEST_BIN: '',
+        VITEST_PLATFORM_FOR_TEST: 'win32',
+        VITEST_SUMMARY_SLOW_LIMIT: '2'
+      });
+
+      expect(result.code).toBe(0);
+      const args = JSON.parse(await readFile(argsPath, 'utf8'));
+      expect(args[0]).toBe('run');
+      expect(args).toContain('src/Foo.test.ts');
+      expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, tests 1/1 passed');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
