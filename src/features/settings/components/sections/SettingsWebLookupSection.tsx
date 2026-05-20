@@ -107,7 +107,7 @@ export function SettingsWebLookupSection() {
   return (
     <SettingsSection
       ariaLabel="Right-click menu items settings section"
-      description="Configure each menu label and link. Use {selection} where Foliole should insert the current text."
+      description="Configure each menu label and link. Use {selection} for the current text and {title} for the current topic title."
       title="Right-click menu items"
     >
       <div className={settingsActionTableClassName()} role="table" aria-label="Right-click menu items">

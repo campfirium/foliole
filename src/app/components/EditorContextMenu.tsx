@@ -198,6 +198,7 @@ export function EditorContextMenu(props: EditorContextMenuProps) {
         onRepairTable={props.onRepairTable}
         repairTableAvailable={props.repairTableAvailable}
         selectionPayload={props.webLookupPayload}
+        titleText={props.webLookupTitle}
         top={props.top}
       />
     );

@@ -13,13 +13,13 @@ it('shows built-in right-click menu items with DuckDuckGo disabled by default', 
   render(<SettingsWebLookupSection />);
 
   expect(screen.getByRole('heading', { name: 'Right-click menu items' })).toBeInTheDocument();
-  expect(screen.getByDisplayValue('Summarize with ChatGPT')).toBeInTheDocument();
+  expect(screen.getByDisplayValue('Ask ChatGPT')).toBeInTheDocument();
   expect(screen.getByDisplayValue('Search with Google')).toBeInTheDocument();
   expect(screen.getByDisplayValue('Search with DuckDuckGo')).toBeInTheDocument();
   expect(screen.getByRole('switch', { name: 'Show menu item: Search with DuckDuckGo' })).toHaveAttribute('aria-checked', 'false');
-  expect(screen.queryByRole('button', { name: 'Remove Summarize with ChatGPT' })).toBeNull();
-  expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Summarize with ChatGPT link' }).value)
-    .toContain('following selection');
+  expect(screen.queryByRole('button', { name: 'Remove Ask ChatGPT' })).toBeNull();
+  expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Ask ChatGPT link' }).value)
+    .toContain('{title}');
 });
 
 it('toggles whether an entry appears in the context menu', () => {
@@ -38,16 +38,16 @@ it('toggles whether an entry appears in the context menu', () => {
 it('updates the ChatGPT menu label and link', () => {
   render(<SettingsWebLookupSection />);
 
-  fireEvent.change(screen.getByRole('textbox', { name: 'Summarize with ChatGPT menu label' }), {
-    target: { value: 'Summarize' }
+  fireEvent.change(screen.getByRole('textbox', { name: 'Ask ChatGPT menu label' }), {
+    target: { value: 'Ask' }
   });
-  fireEvent.change(screen.getByRole('textbox', { name: 'Summarize link' }), {
-    target: { value: 'https://chatgpt.com/?prompt=Summarize:%0A{selection}' }
+  fireEvent.change(screen.getByRole('textbox', { name: 'Ask link' }), {
+    target: { value: 'https://chatgpt.com/?prompt=Ask:%0A{selection}' }
   });
 
   const chatgpt = getEnabledWebLookupEntries().find((entry) => entry.id === 'chatgpt');
-  expect(chatgpt?.label).toBe('Summarize');
-  expect(chatgpt?.urlTemplate).toBe('https://chatgpt.com/?prompt=Summarize:%0A{selection}');
+  expect(chatgpt?.label).toBe('Ask');
+  expect(chatgpt?.urlTemplate).toBe('https://chatgpt.com/?prompt=Ask:%0A{selection}');
 });
 
 it('adds and removes a custom menu item', () => {

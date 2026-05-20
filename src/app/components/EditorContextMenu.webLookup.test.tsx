@@ -10,19 +10,19 @@ vi.mock('../../shared/platform/runtimeExternalNavigation', () => ({
   openExternalUrl: vi.fn().mockResolvedValue(undefined)
 }));
 
-function createSelectionPayload() {
+function createSelectionPayload(selectionText = 'Selected text that should be a highlight') {
   return {
     anchorId: 'anchor-1',
-    clozeContent: 'Selected text that should be a highlight',
+    clozeContent: selectionText,
     entries: [{
       anchorId: 'anchor-1',
-      clozeContent: 'Selected text that should be a highlight',
-      locator: { from: 0, originalText: 'Selected text that should be a highlight', to: 39 },
-      range: { from: 0, to: 39 },
-      selectionText: 'Selected text that should be a highlight'
+      clozeContent: selectionText,
+      locator: { from: 0, originalText: selectionText, to: selectionText.length },
+      range: { from: 0, to: selectionText.length },
+      selectionText
     }],
     parentNodeId: 'node-1',
-    selectionText: 'Selected text that should be a highlight'
+    selectionText
   };
 }
 
@@ -47,6 +47,10 @@ function requiredActionProps(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   window.localStorage.clear();
   vi.mocked(openExternalUrl).mockClear();
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: vi.fn().mockResolvedValue(undefined) }
+  });
 });
 
 it('renders enabled web lookup entries from the live selection payload', () => {
@@ -61,17 +65,18 @@ it('renders enabled web lookup entries from the live selection payload', () => {
       top={24}
       webLookupDocumentText="Full topic text"
       webLookupPayload={payload}
+      webLookupTitle="My Topic"
       {...requiredActionProps({ onClose })}
     />
   );
 
   expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-    'Summarize with ChatGPT',
+    'Ask ChatGPT',
     'Search with Google'
   ]);
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Summarize with ChatGPT' }));
-  expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Summarize%20the%20following%20selection:%0A%0ASelected%20text%20that%20should%20be%20a%20highlight');
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT' }));
+  expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Selected%20text%20that%20should%20be%20a%20highlight%EF%BC%88%E3%80%8AMy%20Topic%E3%80%8B%EF%BC%89');
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 
@@ -91,11 +96,12 @@ it('keeps hidden web lookup entries out of the selection context menu', () => {
       top={24}
       webLookupDocumentText="Full topic text"
       webLookupPayload={payload}
+      webLookupTitle="My Topic"
       {...requiredActionProps()}
     />
   );
 
-  expect(screen.queryByRole('menuitem', { name: 'Summarize with ChatGPT' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Ask ChatGPT' })).toBeNull();
   expect(screen.getByRole('menuitem', { name: 'Search with Google' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Search with DuckDuckGo' })).toBeInTheDocument();
 });
@@ -110,14 +116,71 @@ it('opens ChatGPT with topic text without reusing a preserved command selection 
       top={24}
       webLookupDocumentText="Full topic text"
       webLookupPayload={null}
+      webLookupTitle="My Topic"
       {...requiredActionProps()}
     />
   );
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Summarize with ChatGPT' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT' }));
 
-  expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Summarize%20the%20following%20selection:%0A%0AFull%20topic%20text');
+  expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Full%20topic%20text%EF%BC%88%E3%80%8AMy%20Topic%E3%80%8B%EF%BC%89');
   expect(screen.queryByRole('menuitem', { name: 'Search with Google' })).toBeNull();
+});
+
+it('copies a selected prompt above the measured ChatGPT URL boundary before opening ChatGPT', async () => {
+  const onClose = vi.fn();
+  const longSelection = 'a'.repeat(5900);
+  const payload = createSelectionPayload(longSelection);
+  render(
+    <EditorContextMenu
+      kind="selection"
+      left={16}
+      mode="context-menu"
+      selectionPayload={payload}
+      top={24}
+      webLookupDocumentText="Full topic text"
+      webLookupPayload={payload}
+      webLookupTitle="My Topic"
+      {...requiredActionProps({ onClose })}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT' }));
+
+  expect(await screen.findByRole('status')).toHaveTextContent('Selection is too long to send this way');
+  expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${longSelection}（《My Topic》）`);
+  expect(openExternalUrl).not.toHaveBeenCalled();
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Continue' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/');
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it('copies topic text above the measured ChatGPT URL boundary and lets the user cancel opening ChatGPT', async () => {
+  const onClose = vi.fn();
+  const longDocument = 'b'.repeat(5900);
+  render(
+    <EditorContextMenu
+      kind="selection"
+      left={16}
+      mode="context-menu"
+      selectionPayload={createSelectionPayload()}
+      top={24}
+      webLookupDocumentText={longDocument}
+      webLookupPayload={null}
+      webLookupTitle="My Topic"
+      {...requiredActionProps({ onClose })}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT' }));
+
+  expect(await screen.findByRole('status')).toHaveTextContent('Full topic is too long to send this way');
+  expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${longDocument}（《My Topic》）`);
+  expect(openExternalUrl).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(openExternalUrl).not.toHaveBeenCalled();
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('keeps the editor click target reachable while the web lookup menu is open', () => {

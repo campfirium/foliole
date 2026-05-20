@@ -5,33 +5,31 @@ import {
   BUILT_IN_WEB_LOOKUP_ENTRIES,
   CHATGPT_CONTENT_DEFAULT_LINK,
   CHATGPT_OLD_DEFAULT_LINK,
+  CHATGPT_SUMMARIZE_SELECTION_DEFAULT_LINK,
   CHATGPT_SOURCE_TEXT_DEFAULT_LINK,
   CHATGPT_TEXT_LABEL_DEFAULT_LINK,
   CHATGPT_TEXT_DEFAULT_LINK,
-  WEB_LOOKUP_QUERY_MAX_LENGTH,
   WEB_LOOKUP_SELECTION_PLACEHOLDER,
   type WebLookupEntry,
   type WebLookupEntryKind
 } from './webLookupEntryDefaults';
+import { isValidUrlTemplate, normalizeTemplatePlaceholder } from './webLookupTemplateResolution';
 
-export { WEB_LOOKUP_QUERY_MAX_LENGTH, WEB_LOOKUP_SELECTION_PLACEHOLDER, type WebLookupEntry } from './webLookupEntryDefaults';
-
-interface WebLookupContext {
-  documentText?: string | null | undefined;
-  selectionText?: string | null | undefined;
-}
-
-interface ResolvedWebLookupAction {
-  kind: WebLookupEntryKind;
-  label: string;
-  url: string;
-}
+export {
+  WEB_LOOKUP_PROMPT_MAX_ENCODED_LENGTH,
+  WEB_LOOKUP_QUERY_MAX_LENGTH,
+  WEB_LOOKUP_SELECTION_PLACEHOLDER,
+  WEB_LOOKUP_TITLE_PLACEHOLDER,
+  type WebLookupEntry
+} from './webLookupEntryDefaults';
+export { resolveWebLookupAction } from './webLookupActionResolution';
+export { resolveWebLookupUrl } from './webLookupTemplateResolution';
 
 type StoredWebLookupEntry = Partial<WebLookupEntry> & { id?: unknown };
 type WebLookupEntryPatch = Partial<Pick<WebLookupEntry, 'enabled' | 'label' | 'urlTemplate'>>;
 
 const LEGACY_BUILT_IN_LABELS: Record<string, string> = {
-  chatgpt: 'ChatGPT',
+  chatgpt: 'ChatGPT|Summarize with ChatGPT',
   duckduckgo: 'DuckDuckGo',
   google: 'Google'
 };
@@ -42,28 +40,6 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function isValidEntryKind(value: unknown): value is WebLookupEntryKind {
   return value === 'prompt' || value === 'search';
-}
-
-function normalizeTemplatePlaceholder(value: string) {
-  return value
-    .replaceAll('{query}', WEB_LOOKUP_SELECTION_PLACEHOLDER)
-    .replaceAll('{text}', WEB_LOOKUP_SELECTION_PLACEHOLDER);
-}
-
-function isValidUrlTemplate(value: unknown): value is string {
-  if (typeof value !== 'string') {
-    return false;
-  }
-  const template = normalizeTemplatePlaceholder(value);
-  if (!template.includes(WEB_LOOKUP_SELECTION_PLACEHOLDER)) {
-    return false;
-  }
-  try {
-    const url = new URL(template.replace(WEB_LOOKUP_SELECTION_PLACEHOLDER, 'test'));
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch {
-    return false;
-  }
 }
 
 function sanitizeStoredEntry(value: unknown): StoredWebLookupEntry | null {
@@ -79,7 +55,8 @@ function applyStoredEntry(defaultEntry: WebLookupEntry, stored: StoredWebLookupE
   }
   const storedTemplate = typeof stored.urlTemplate === 'string' ? normalizeTemplatePlaceholder(stored.urlTemplate) : '';
   const storedLabel = typeof stored.label === 'string' && stored.label.trim() ? stored.label.trim() : '';
-  const label = storedLabel && storedLabel !== LEGACY_BUILT_IN_LABELS[defaultEntry.id] ? storedLabel : defaultEntry.label;
+  const legacyLabels = LEGACY_BUILT_IN_LABELS[defaultEntry.id]?.split('|') ?? [];
+  const label = storedLabel && !legacyLabels.includes(storedLabel) ? storedLabel : defaultEntry.label;
   return {
     ...defaultEntry,
     enabled: typeof stored.enabled === 'boolean' ? stored.enabled : defaultEntry.enabled,
@@ -87,6 +64,7 @@ function applyStoredEntry(defaultEntry: WebLookupEntry, stored: StoredWebLookupE
     label,
     urlTemplate: isValidUrlTemplate(storedTemplate) &&
       storedTemplate !== CHATGPT_CONTENT_DEFAULT_LINK &&
+      storedTemplate !== CHATGPT_SUMMARIZE_SELECTION_DEFAULT_LINK &&
       storedTemplate !== CHATGPT_OLD_DEFAULT_LINK &&
       storedTemplate !== CHATGPT_TEXT_DEFAULT_LINK &&
       storedTemplate !== CHATGPT_SOURCE_TEXT_DEFAULT_LINK &&
@@ -204,36 +182,4 @@ export function moveWebLookupEntry(entryId: string, targetId: string) {
   nextEntries.splice(to, 0, entry);
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.webLookupEntries, serializeEntries(nextEntries));
   return nextEntries;
-}
-
-export function resolveWebLookupUrl(entry: WebLookupEntry, sourceText: string) {
-  if (!isValidUrlTemplate(entry.urlTemplate)) {
-    return null;
-  }
-  const query = sourceText.trim().slice(0, WEB_LOOKUP_QUERY_MAX_LENGTH);
-  if (!query) {
-    return null;
-  }
-  const resolved = normalizeTemplatePlaceholder(entry.urlTemplate)
-    .replaceAll(WEB_LOOKUP_SELECTION_PLACEHOLDER, encodeURIComponent(query));
-  try {
-    const url = new URL(resolved);
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-export function resolveWebLookupAction(
-  entry: WebLookupEntry,
-  context: WebLookupContext
-): ResolvedWebLookupAction | null {
-  const selectionText = context.selectionText?.trim() ?? '';
-  const documentText = context.documentText?.trim() ?? '';
-  const sourceText = selectionText || (entry.kind === 'prompt' ? documentText : '');
-  const url = sourceText ? resolveWebLookupUrl(entry, sourceText) : null;
-  if (!url) {
-    return null;
-  }
-  return { kind: entry.kind, label: entry.label, url };
 }

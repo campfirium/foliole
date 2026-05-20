@@ -1,5 +1,7 @@
 export const WEB_LOOKUP_SELECTION_PLACEHOLDER = '{selection}';
+export const WEB_LOOKUP_TITLE_PLACEHOLDER = '{title}';
 export const WEB_LOOKUP_QUERY_MAX_LENGTH = 4000;
+export const WEB_LOOKUP_PROMPT_MAX_ENCODED_LENGTH = 5850;
 
 export type WebLookupEntryKind = 'prompt' | 'search';
 
@@ -12,11 +14,16 @@ export interface WebLookupEntry {
   urlTemplate: string;
 }
 
-export const CHATGPT_DEFAULT_LINK = [
+export const CHATGPT_SUMMARIZE_SELECTION_DEFAULT_LINK = [
   'https://chatgpt.com/?prompt=Summarize the following selection:',
   '',
   WEB_LOOKUP_SELECTION_PLACEHOLDER
 ].join('%0A');
+
+export const CHATGPT_DEFAULT_LINK = [
+  'https://chatgpt.com/?prompt=',
+  `${WEB_LOOKUP_SELECTION_PLACEHOLDER}（《${WEB_LOOKUP_TITLE_PLACEHOLDER}》）`
+].join('');
 
 export const CHATGPT_CONTENT_DEFAULT_LINK = [
   'https://chatgpt.com/?prompt=Summarize the following content:',
@@ -56,7 +63,7 @@ export const BUILT_IN_WEB_LOOKUP_ENTRIES: WebLookupEntry[] = [
     enabled: true,
     id: 'chatgpt',
     kind: 'prompt',
-    label: 'Summarize with ChatGPT',
+    label: 'Ask ChatGPT',
     urlTemplate: CHATGPT_DEFAULT_LINK
   },
   {
