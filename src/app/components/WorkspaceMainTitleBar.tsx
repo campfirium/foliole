@@ -9,7 +9,7 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export type WorkspaceTitleBarSource = Pick<
   WorkspaceLayoutProps,
-  'externalLibrary' | 'layoutChrome' | 'navigation' | 'nodeList' | 'trash'
+  'externalLibrary' | 'layoutChrome' | 'navigation' | 'nodeList' | 'review' | 'trash'
 >;
 
 function resolveExternalTitleBarTitle(props: {
@@ -50,6 +50,10 @@ function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: Record<str
   return cursor?.title.trim() || 'Untitled';
 }
 
+function resolveReviewTitleBarTitle(review: WorkspaceLayoutProps['review']) {
+  return review.isStudyMode && review.reviewStatus === 'completed' ? 'Review queue' : null;
+}
+
 export function WorkspaceMainTitleBar({
   activeRightPanelId,
   onOpenNotesView,
@@ -63,7 +67,7 @@ export function WorkspaceMainTitleBar({
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   props: WorkspaceTitleBarSource;
 }) {
-  const { externalLibrary, layoutChrome, navigation, nodeList, trash } = props;
+  const { externalLibrary, layoutChrome, navigation, nodeList, review, trash } = props;
   if (layoutChrome.isImmersiveMode) {
     return null;
   }
@@ -71,7 +75,7 @@ export function WorkspaceMainTitleBar({
   return (
     <WindowTitleBar
       activeRightPanelId={activeRightPanelId}
-      centerTitle={externalTitle ?? resolveWindowTitleBarTitle(
+      centerTitle={externalTitle ?? resolveReviewTitleBarTitle(review) ?? resolveWindowTitleBarTitle(
         trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId,
         nodeList.nodesById
       )}

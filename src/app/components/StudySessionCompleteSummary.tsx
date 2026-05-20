@@ -39,12 +39,12 @@ function SummaryRow({
 }) {
   return (
     <div className="grid min-h-12 grid-cols-[minmax(6rem,1fr)_auto_auto] items-baseline gap-x-5">
-      <div className="text-sm font-medium text-muted-foreground">{label}</div>
+      <div className="text-sm font-normal text-muted-foreground">{label}</div>
       <div className="text-right">
-        <span className="text-[28px] font-semibold leading-none text-foreground">{count}</span>
+        <span className="text-[26px] font-medium leading-none text-accent">{count}</span>
         <span className="ml-2 text-sm text-muted-foreground">{pluralize(count, unit)}</span>
       </div>
-      <div className="min-w-20 text-right text-sm font-medium text-muted-foreground">
+      <div className="min-w-20 text-right text-sm font-normal text-muted-foreground">
         {elapsedMs === undefined ? null : formatElapsedMs(elapsedMs)}
       </div>
     </div>
@@ -62,7 +62,7 @@ export function StudySessionCompleteSummary({
   return (
     <div className="flex min-h-0 flex-1 items-start justify-center bg-canvas px-8 pt-[18vh] text-foreground">
       <div className="w-full max-w-[520px]">
-        <h1 className="text-[34px] font-semibold leading-tight text-foreground">Queue cleared</h1>
+        <h1 className="text-[30px] font-medium leading-tight text-accent">Queue cleared</h1>
         <div className="mt-8 space-y-3">
           {reviewedItemCount > 0 ? (
             <SummaryRow count={reviewedItemCount} elapsedMs={reviewElapsedMs} label="Reviewed" unit="item" />

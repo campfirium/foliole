@@ -203,6 +203,21 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
   });
 });
 
+describe('WorkspaceLayoutMain review title bar rendering', () => {
+  it('shows the review queue title after the study session is completed', () => {
+    render(
+      <WorkspaceLayoutMain
+        {...createProps({
+          isStudyMode: true,
+          reviewStatus: 'completed'
+        })}
+      />
+    );
+
+    expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Review queue' }));
+  });
+});
+
 describe('WorkspaceLayoutMain external title bar rendering', () => {
   it('forwards the external document title and marker when an external document is selected', () => {
     render(

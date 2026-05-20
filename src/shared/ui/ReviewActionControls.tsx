@@ -158,7 +158,7 @@ export function ResumeReviewAction({ onResumeReviewItem }: { onResumeReviewItem:
 
 export function ContinueReadingAction({ onContinueReading }: { onContinueReading: () => void }) {
   return (
-    <AppButton aria-label="Continue reading" className="min-w-40 px-5" onClick={onContinueReading} size="md" variant="primary">
+    <AppButton aria-label="Continue reading" className="min-w-40 px-5" onClick={onContinueReading} size="md" variant="ghost">
       Continue reading
     </AppButton>
   );
