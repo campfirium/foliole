@@ -69,6 +69,7 @@ export function completeReviewSession(
   reviewSession: WorkspaceState['reviewSession'],
   args: {
     completedAt: string;
+    continueNodeId?: string | null;
     readTopicDelta?: number;
     reviewedItemDelta?: number;
   }
@@ -76,6 +77,7 @@ export function completeReviewSession(
   return {
     ...reviewSession,
     completedAt: args.completedAt,
+    continueNodeId: args.continueNodeId ?? reviewSession.continueNodeId,
     currentNodeId: null,
     isAnswerRevealed: false,
     queueNodeIds: [],

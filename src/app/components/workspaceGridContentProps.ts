@@ -49,7 +49,23 @@ export function selectWorkspaceGridColumnProps({
       onSelectNode,
       props
     }),
-    rightSidebarSplitterProps: selectWorkspaceRightSidebarSplitterProps(props)
+    rightSidebarSplitterProps: selectWorkspaceRightSidebarSplitterProps(props),
+    studySessionCompleteSummaryProps: selectStudySessionCompleteSummaryProps(props)
+  };
+}
+
+function selectStudySessionCompleteSummaryProps(
+  props: WorkspaceGridContentProjectionSource
+): WorkspaceGridColumnProps['studySessionCompleteSummaryProps'] {
+  if (!props.review.isStudyMode || props.review.reviewStatus !== 'completed') {
+    return null;
+  }
+  return {
+    completedAt: props.review.reviewSummary.completedAt,
+    onContinueReading: props.review.onContinueReading,
+    readTopicCount: props.review.reviewSummary.readTopicCount,
+    reviewedItemCount: props.review.reviewSummary.reviewedItemCount,
+    sessionStartedAt: props.review.reviewSummary.sessionStartedAt
   };
 }
 

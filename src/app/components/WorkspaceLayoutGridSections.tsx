@@ -10,6 +10,8 @@ import type {
 } from '../../shared/platform/externalLibraryBrowseRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
+import { StudySessionCompleteSummary } from './StudySessionCompleteSummary';
+import type { StudySessionCompleteSummaryProps } from './StudySessionCompleteSummary';
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
@@ -189,13 +191,19 @@ function renderWorkspaceDualListBody(
 }
 
 export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
-  documentSurfaceProps
+  documentSurfaceProps,
+  studySessionCompleteSummaryProps
 }: {
   documentSurfaceProps: WorkspaceDocumentSurfaceProps;
+  studySessionCompleteSummaryProps: StudySessionCompleteSummaryProps | null;
 }) {
   return (
     <section aria-label="Document and review area" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
-      <WorkspaceDocumentSurface {...documentSurfaceProps} />
+      {studySessionCompleteSummaryProps ? (
+        <StudySessionCompleteSummary {...studySessionCompleteSummaryProps} />
+      ) : (
+        <WorkspaceDocumentSurface {...documentSurfaceProps} />
+      )}
     </section>
   );
 });

@@ -7,7 +7,11 @@ import {
   createTopicDismissHistoryEntry,
   pushWorkspaceUndoEntry
 } from './workspaceActionHistory';
-import { buildDismissedReadingProfile, createEmptyReviewSession } from './workspaceReviewReading';
+import {
+  advanceReviewSession,
+  buildDismissedReadingProfile,
+  completeReviewSession
+} from './workspaceReviewReading';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -26,13 +30,11 @@ export function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceG
     const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
     const nextNodeId = nextQueue[0] ?? null;
     const nextReviewSession = nextNodeId
-      ? {
-          currentNodeId: nextNodeId,
-          isAnswerRevealed: false,
-          queueNodeIds: nextQueue,
-          totalNodeCount: snapshot.reviewSession.totalNodeCount
-        }
-      : createEmptyReviewSession();
+      ? advanceReviewSession(snapshot.reviewSession, {
+          nextNodeId,
+          queueNodeIds: nextQueue
+        })
+      : completeReviewSession(snapshot.reviewSession, { completedAt: now });
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[currentNodeId];
