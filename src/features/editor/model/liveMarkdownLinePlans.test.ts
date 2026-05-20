@@ -75,7 +75,7 @@ describe('liveMarkdown preview line plans', () => {
 
     expect(plan.inlinePresentationPlans.at(-1)?.markRanges).toEqual([
       {
-        attributes: { 'data-md-link-url': 'https://example.com' },
+        attributes: { 'data-md-link-url': 'https://example.com', title: 'Ctrl-click to open in browser' },
         className: 'cm-md-link-text',
         from: 4,
         to: 23
@@ -100,7 +100,7 @@ describe('liveMarkdown nested list link preview line plans', () => {
     expect(plan.inlinePresentationPlans[1]).toMatchObject({
       markRanges: [
         {
-          attributes: { 'data-md-link-url': 'https://aquafina-water-bottle.github.io/jp-mining-note/' },
+          attributes: { 'data-md-link-url': 'https://aquafina-water-bottle.github.io/jp-mining-note/', title: 'Ctrl-click to open in browser' },
           className: 'cm-md-link-text',
           from: 7,
           to: 13
@@ -145,7 +145,7 @@ describe('liveMarkdown reference-style preview line plans', () => {
     expect(plan.inlinePresentationPlans[1]).toEqual({
       markRanges: [
         {
-          attributes: { 'data-md-link-url': 'https://example.com' },
+          attributes: { 'data-md-link-url': 'https://example.com', title: 'Ctrl-click to open in browser' },
           className: 'cm-md-link-text',
           from: 5,
           to: 9

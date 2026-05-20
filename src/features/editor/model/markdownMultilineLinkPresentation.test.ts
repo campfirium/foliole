@@ -16,7 +16,7 @@ describe('markdown multiline link presentation', () => {
       {
         markRanges: [
           {
-            attributes: { 'data-md-link-url': 'https://aquafina-water-bottle.github.io/jp-mining-note/faq/' },
+            attributes: { 'data-md-link-url': 'https://aquafina-water-bottle.github.io/jp-mining-note/faq/', title: 'Ctrl-click to open in browser' },
             className: 'cm-md-link-text',
             from: 3,
             to: 40
