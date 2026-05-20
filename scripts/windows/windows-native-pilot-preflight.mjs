@@ -3,7 +3,9 @@
 
 import { fileURLToPath } from 'node:url';
 
-const DEFAULT_WORKDIR = 'D:\\C\\foliole';
+import { resolveWindowsNativePaths, WINDOWS_NATIVE_REPO_ROOT } from './windows-native-paths.mjs';
+
+const DEFAULT_WORKDIR = process.platform === 'win32' ? WINDOWS_NATIVE_REPO_ROOT : 'D:\\C\\foliole';
 const FORBIDDEN_PREFIXES = ['D:\\X\\', 'C:\\Users\\'];
 
 export function normalizeWindowsPath(value) {
@@ -34,6 +36,7 @@ export function isForbiddenWorkdir(value) {
 export function resolvePilotPreflight(env = process.env) {
   const workdir = normalizeWindowsPath(env.FOLIOLE_WINDOWS_NATIVE_WORKDIR || env.WINDOWS_NATIVE_WORKDIR || DEFAULT_WORKDIR);
   const gitBashPath = normalizeWindowsPath(env.FOLIOLE_WINDOWS_GIT_BASH || env.npm_config_script_shell || '');
+  const nativePaths = resolveWindowsNativePaths(workdir);
   const errors = [];
   const warnings = [];
 
@@ -55,10 +58,13 @@ export function resolvePilotPreflight(env = process.env) {
 
   return {
     config: {
-      electronUserDataDir: `${workdir}\\.electron-user-data`,
+      bridgeReadyFile: nativePaths.bridgeReadyFile,
+      electronUserDataDir: nativePaths.userDataPath,
       gitBashPath,
       homeDir: `${workdir}\\.home`,
+      logDir: nativePaths.logDir,
       npmCacheDir: `${workdir}\\.npm-cache`,
+      readyFile: nativePaths.appReadyFile,
       tempDir: `${workdir}\\.tmp`,
       workdir
     },
@@ -73,6 +79,9 @@ function printResult(result) {
   console.log(`[windows-native-preflight] home=${result.config.homeDir}`);
   console.log(`[windows-native-preflight] npm-cache=${result.config.npmCacheDir}`);
   console.log(`[windows-native-preflight] electron-user-data=${result.config.electronUserDataDir}`);
+  console.log(`[windows-native-preflight] ready-marker=${result.config.readyFile}`);
+  console.log(`[windows-native-preflight] bridge-marker=${result.config.bridgeReadyFile}`);
+  console.log(`[windows-native-preflight] log-dir=${result.config.logDir}`);
   if (result.config.gitBashPath) {
     console.log(`[windows-native-preflight] git-bash=${result.config.gitBashPath}`);
   }
