@@ -89,7 +89,7 @@ export function resolveImportStatus(bucket: Pick<ReadwiseBookSourceLookup, 'epub
     .prepare(
       `SELECT node_id
        FROM import_runs
-       WHERE source_kind = 'epub'
+       WHERE source_kind IN ('epub', 'pdf')
          AND source_locator = ?
          AND node_id IS NOT NULL
          AND result_status IN ('imported', 'degraded')
