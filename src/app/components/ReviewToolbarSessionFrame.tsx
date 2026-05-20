@@ -1,5 +1,5 @@
 import { Clock3, Sprout } from 'lucide-react';
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import { cn } from '../../shared/lib/utils';
@@ -11,18 +11,6 @@ const READING_TIME_PLACEHOLDER_LABEL = 'Reading time (coming soon)';
 
 function clampProgress(value: number) {
   return Math.min(Math.max(value, 0), 1);
-}
-
-function useFrozenReviewTotal(currentTotal: number) {
-  const [frozenTotal, setFrozenTotal] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (frozenTotal === null && currentTotal > 0) {
-      setFrozenTotal(currentTotal);
-    }
-  }, [currentTotal, frozenTotal]);
-
-  return frozenTotal ?? currentTotal;
 }
 
 function formatReviewProgressLabel(completed: number, remaining: number, total: number) {
@@ -38,7 +26,7 @@ export function ReviewToolbarProgressLine({
 }) {
   const completed = Math.max(completedCount, 0);
   const currentTotal = completed + Math.max(queueCount, 0);
-  const total = useFrozenReviewTotal(currentTotal);
+  const total = currentTotal;
 
   if (total <= 0) {
     return null;

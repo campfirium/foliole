@@ -1,13 +1,9 @@
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
-import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
-import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { definedProps } from '../../shared/lib/definedProps';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
-import { useCurrentReviewPreview } from './appControllerHelpers';
 import { measureSelectionComputation } from './appControllerInstrumentation';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
 import { useReviewEditingState } from './appControllerReviewEditing';
@@ -18,31 +14,13 @@ import { APP_SHORTCUT_COMMAND_IDS, useCommandShortcutState } from './reviewHotke
 import { openCompanionSyncSettings } from './settingsOverlayRequest';
 import { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import { useControllerPaletteItems } from './useControllerPaletteItems';
+import { useControllerPriorityQuickSet } from './useControllerPriorityQuickSet';
 import { useCurrentNodeKeyboardShortcuts } from './useCurrentNodeKeyboardShortcuts';
 import { useFormalImport } from './useFormalImport';
-import { usePriorityQuickSet } from './usePriorityQuickSet';
 import { useResumeReviewItem } from './useResumeReviewItem';
 import { useReviewQueueDocumentPrefetch } from './useReviewQueueDocumentPrefetch';
+import { useReviewSessionRuntime } from './useReviewSessionRuntime';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
-
-function useControllerPriorityQuickSet(args: {
-  hotkeys: ReturnType<typeof useCommandShortcutState>;
-  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
-  return usePriorityQuickSet({
-    activeNodeId: args.ws.activeNodeId,
-    blocked:
-      args.runtime.isCommandPaletteOpen ||
-      args.runtime.isSearchPaletteOpen ||
-      args.runtime.isSettingsOpen ||
-      args.runtime.isGoToNodePaletteOpen ||
-      args.runtime.isMoveToNodePaletteOpen ||
-      args.runtime.isViewingTrashNode,
-    onPriorityChange: args.ws.updateNodePriority,
-    ...definedProps({ shortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.enterPriorityMode] })
-  });
-}
 
 function useDerivedControllerState(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
@@ -56,7 +34,7 @@ function useDerivedControllerState(args: {
   isWorkspaceHydrated: boolean;
   nowIso: string;
   priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
-  reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
+  reviewPreview: ReturnType<typeof useReviewSessionRuntime>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
   resumeReviewItem: () => void;
   startStudyMode: ReturnType<typeof useWorkspaceControllerState>['study']['startStudyMode'];
@@ -123,7 +101,7 @@ function buildControllerLayoutState(args: {
   nowIso: string;
   priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
   reviewDueCount: number;
-  reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
+  reviewPreview: ReturnType<typeof useReviewSessionRuntime>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
   resumeReviewItem: () => void;
   startStudyMode: ReturnType<typeof useWorkspaceControllerState>['study']['startStudyMode'];
@@ -173,7 +151,7 @@ export function useAppController(args: {
   const hotkeys = useCommandShortcutState(APP_SHORTCUT_COMMAND_IDS);
   const priorityQuickSet = useControllerPriorityQuickSet({ hotkeys, runtime: controller.runtime, ws });
   useCurrentNodeKeyboardShortcuts({ controller, isStudyMode, ws });
-  const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
+  const reviewPreview = useReviewSessionRuntime({ isStudyMode, nowIso, reviewSettings, ws });
   useReviewQueueDocumentPrefetch(ws.reviewSession);
   const isCurrentReviewItemGradable = (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
   const resumeReviewItem = useResumeReviewItem({ controller, nowIso, reviewSettings, ws });

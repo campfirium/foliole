@@ -67,9 +67,12 @@ it('renders optional tooltip arrows using the tooltip surface tokens', () => {
     );
 
     const arrow = document.querySelector('svg');
+    const arrowPath = document.querySelector('svg path');
     expect(arrow).not.toBeNull();
-    expect(arrow).toHaveClass('fill-[var(--app-tooltip-bg)]');
-    expect(arrow).toHaveClass('stroke-[var(--app-tooltip-border-color)]');
+    expect(arrow).toHaveClass('translate-y-[-1px]');
+    expect(arrowPath).toHaveAttribute('d', 'M 0 0 L 6 7 L 12 0');
+    expect(arrowPath).toHaveAttribute('fill', 'var(--app-tooltip-bg)');
+    expect(arrowPath).toHaveAttribute('stroke', 'var(--app-tooltip-border-color)');
   } finally {
     globalThis.ResizeObserver = resizeObserver;
   }

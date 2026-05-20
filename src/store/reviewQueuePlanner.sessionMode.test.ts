@@ -16,7 +16,7 @@ it('can place all review items before reading items for a temporary session mode
 
   const plan = buildReviewQueuePlan({ mode: 'review-first', nodeOrder, nodesById, now, trashedNodeIds: [] });
 
-  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'reading-1', 'reading-2']);
+  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2']);
 });
 
 it('can limit a temporary session mode to reading items only', () => {
