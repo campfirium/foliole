@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
@@ -51,15 +51,18 @@ it('shows the current actionable item first even when the whole queue starts wit
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-now"
       nodesById={nodesById}
+      onSelectNode={() => undefined}
       queueNodeIds={['fsrs-later', 'reading-now']}
     />
   );
 
   const items = within(screen.getByRole('list', { name: 'Review queue items' })).getAllByRole('listitem');
 
-  expect(within(items[0]!).getByText(/1\. Reading Now/)).toBeInTheDocument();
-  expect(within(items[0]!).getByText('Current')).toBeInTheDocument();
-  expect(within(items[1]!).getByText(/2\. Scheduled FSRS/)).toBeInTheDocument();
+  expect(items[0]!).toHaveTextContent('1Reading Now');
+  expect(items[1]!).toHaveTextContent('2Scheduled FSRS');
+  expect(screen.queryByText('Current')).not.toBeInTheDocument();
+  expect(screen.queryByText('Queued')).not.toBeInTheDocument();
+  expect(screen.queryByText(/Scheduled ·/)).not.toBeInTheDocument();
 });
 
 it('keeps the mixed queue cadence after the current reading item', () => {
@@ -84,6 +87,7 @@ it('keeps the mixed queue cadence after the current reading item', () => {
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-1"
       nodesById={nodesById}
+      onSelectNode={() => undefined}
       queueNodeIds={[
         'fsrs-1',
         'fsrs-2',
@@ -103,8 +107,8 @@ it('keeps the mixed queue cadence after the current reading item', () => {
 
   const items = within(screen.getByRole('list', { name: 'Review queue items' })).getAllByRole('listitem');
 
-  expect(within(items[0]!).getByText(/1\. Reading 1/)).toBeInTheDocument();
-  expect(within(items[6]!).getByText(/7\. Reading 2/)).toBeInTheDocument();
+  expect(items[0]!).toHaveTextContent('1Reading 1');
+  expect(items[6]!).toHaveTextContent('7Reading 2');
 });
 
 it('shows an error when the review queue references an unavailable topic', () => {
@@ -112,10 +116,30 @@ it('shows an error when the review queue references an unavailable topic', () =>
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
       nodesById={{}}
+      onSelectNode={() => undefined}
       queueNodeIds={['missing-topic']}
     />
   );
 
   expect(screen.getByRole('alert')).toHaveTextContent('Review queue has an unavailable topic');
   expect(screen.queryByText('Missing topic')).not.toBeInTheDocument();
+});
+
+it('opens the queued node from the title only', () => {
+  const onSelectNode = vi.fn();
+
+  render(
+    <WorkspaceRightSidebarReviewQueuePanel
+      currentNodeId={null}
+      nodesById={{
+        'reading-1': createNode({ id: 'reading-1', title: 'Reading 1' })
+      }}
+      onSelectNode={onSelectNode}
+      queueNodeIds={['reading-1']}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Reading 1' }));
+
+  expect(onSelectNode).toHaveBeenCalledWith('reading-1');
 });

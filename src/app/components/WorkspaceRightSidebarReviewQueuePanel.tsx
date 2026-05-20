@@ -1,10 +1,11 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
-import { AppErrorState, InspectorSection } from '../../shared/ui';
+import { AppErrorState } from '../../shared/ui';
 
 interface WorkspaceRightSidebarReviewQueuePanelProps {
   currentNodeId: string | null;
   nodesById: Record<string, Node>;
+  onSelectNode: (nodeId: string) => void;
   queueNodeIds: string[];
 }
 
@@ -14,10 +15,6 @@ function buildDisplayQueueNodeIds(queueNodeIds: string[], currentNodeId: string 
     return queueNodeIds;
   }
   return [...queueNodeIds.slice(currentIndex), ...queueNodeIds.slice(0, currentIndex)];
-}
-
-function getQueueItemKindLabel(node: Node | undefined) {
-  return isFsrsReviewItemNode(node) ? 'Review item' : 'Reading';
 }
 
 function getQueueItemTitle(node: Node | undefined) {
@@ -48,45 +45,48 @@ function formatShortDateTime(value: string | null | undefined) {
   });
 }
 
-function getQueueItemScheduleLabel(node: Node | undefined) {
+function getQueueItemTimeLabel(node: Node | undefined) {
   if (!node) {
-    return 'Missing schedule';
+    return 'Unknown';
   }
   if (isFsrsReviewItemNode(node)) {
-    const due = node.review?.due;
-    if (!due) {
-      return 'Review · Unscheduled';
-    }
-    const isDue = Date.parse(due) <= Date.now();
-    return `${isDue ? 'Due' : 'Scheduled'} · ${formatShortDateTime(due)}`;
+    return formatShortDateTime(node.review?.due);
   }
-  return `Next · ${formatShortDateTime(node.reading?.nextAt ?? node.createdAt)}`;
+  return formatShortDateTime(node.reading?.nextAt ?? node.createdAt);
 }
 
-function QueueSummary({ fsrsCount, readingCount, totalCount }: { fsrsCount: number; readingCount: number; totalCount: number }) {
+function QueueHeader({ fsrsCount, readingCount }: { fsrsCount: number; readingCount: number }) {
   return (
-    <InspectorSection title="Whole queue">
-      <dl className="mt-3 grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Total</dt>
-          <dd className="mt-1 text-base font-semibold text-foreground">{totalCount}</dd>
-        </div>
-        <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Review items</dt>
-          <dd className="mt-1 text-base font-semibold text-foreground">{fsrsCount}</dd>
-        </div>
-        <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Reading</dt>
-          <dd className="mt-1 text-base font-semibold text-foreground">{readingCount}</dd>
-        </div>
-      </dl>
-    </InspectorSection>
+    <header className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-3">
+      <h2 className="m-0 text-[13px] font-medium uppercase tracking-[0.02em] text-foreground/55">Review</h2>
+      <p className="whitespace-nowrap text-[12px] text-foreground/45">
+        <span>{fsrsCount}</span> items · <span>{readingCount}</span> topics
+      </p>
+    </header>
   );
 }
 
 function EmptyQueueState() {
   return (
-    <InspectorSection description="No scheduled review items are available right now." title="Review queue" />
+    <section className="min-h-0">
+      <QueueHeader fsrsCount={0} readingCount={0} />
+      <p className="px-4 py-3 text-[13px] text-foreground/55">No review entries are available right now.</p>
+    </section>
+  );
+}
+
+function QueueKindIcon({ kind }: { kind: 'item' | 'topic' }) {
+  if (kind === 'item') {
+    return (
+      <svg aria-hidden="true" className="size-4 text-foreground/35" fill="none" focusable="false" viewBox="0 0 16 16">
+        <polygon points="8,2.8 13.2,8 8,13.2 2.8,8" stroke="currentColor" strokeWidth="1.25" />
+      </svg>
+    );
+  }
+  return (
+    <svg aria-hidden="true" className="size-4 text-foreground/35" fill="none" focusable="false" viewBox="0 0 16 16">
+      <polygon points="8,2.2 13.1,5.1 13.1,10.9 8,13.8 2.9,10.9 2.9,5.1" stroke="currentColor" strokeWidth="1.25" />
+    </svg>
   );
 }
 
@@ -110,35 +110,29 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
   const readingCount = props.queueNodeIds.length - fsrsCount;
 
   return (
-    <div className="flex min-h-0 flex-col gap-3">
-      <QueueSummary fsrsCount={fsrsCount} readingCount={readingCount} totalCount={props.queueNodeIds.length} />
-      <InspectorSection className="p-2" title="Review queue">
-        <ol aria-label="Review queue items" className="flex flex-col gap-1">
-          {displayQueueNodeIds.map((nodeId, index) => {
-            const node = props.nodesById[nodeId];
-            const isCurrent = nodeId === props.currentNodeId;
+    <section className="flex min-h-0 flex-col">
+      <QueueHeader fsrsCount={fsrsCount} readingCount={readingCount} />
+      <ol aria-label="Review queue items" className="min-h-0 flex-1 overflow-y-auto py-1">
+        {displayQueueNodeIds.map((nodeId, index) => {
+          const node = props.nodesById[nodeId];
+          const kind = isFsrsReviewItemNode(node) ? 'item' : 'topic';
 
-            return (
-              <li
-                key={nodeId}
-                className="rounded-md border border-transparent px-2 py-2 data-[current=true]:border-border data-[current=true]:bg-foreground/[0.04]"
-                data-current={isCurrent}
+          return (
+            <li key={nodeId} className="grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)_auto] items-center gap-2 px-4 py-1.5 hover:bg-foreground/[0.025]">
+              <span className="text-right text-[11px] tabular-nums text-foreground/28">{index + 1}</span>
+              <QueueKindIcon kind={kind} />
+              <button
+                className="min-w-0 truncate text-left text-[13.5px] font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/35"
+                onClick={() => props.onSelectNode(nodeId)}
+                type="button"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{index + 1}. {getQueueItemTitle(node)}</p>
-                    <p className="mt-1 text-[12px] text-foreground/60">{getQueueItemKindLabel(node)} queue</p>
-                    <p className="mt-1 text-[12px] text-foreground/45">{getQueueItemScheduleLabel(node)}</p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-[11px] font-medium text-foreground/70">
-                    {isCurrent ? 'Current' : 'Queued'}
-                  </span>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      </InspectorSection>
-    </div>
+                {getQueueItemTitle(node)}
+              </button>
+              <span className="whitespace-nowrap text-[11.5px] tabular-nums text-foreground/35">{getQueueItemTimeLabel(node)}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
