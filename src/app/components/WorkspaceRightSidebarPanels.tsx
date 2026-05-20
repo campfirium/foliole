@@ -72,11 +72,13 @@ const SourceInfoSidebarPanel = memo(function SourceInfoSidebarPanel(props: {
 const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
   currentNodeId: string | null;
   nodesById: WorkspaceRightSidebarNodesById;
+  onSelectNode: (nodeId: string) => void;
   queueNodeIds: string[];
 }) {
   return <WorkspaceRightSidebarReviewQueuePanel {...props} />;
 }, (previousProps, nextProps) => {
   if (previousProps.currentNodeId !== nextProps.currentNodeId) return false;
+  if (previousProps.onSelectNode !== nextProps.onSelectNode) return false;
   if (previousProps.queueNodeIds.length !== nextProps.queueNodeIds.length) return false;
   return previousProps.queueNodeIds.every((nodeId, index) => {
     if (nodeId !== nextProps.queueNodeIds[index]) return false;
@@ -126,12 +128,13 @@ function renderBacklinksPanel(
 }
 
 function renderReviewQueuePanel(
-  props: Pick<WorkspaceRightSidebarPanelProps, 'reviewCurrentNodeId' | 'nodesById' | 'reviewQueueNodeIds'>
+  props: Pick<WorkspaceRightSidebarPanelProps, 'reviewCurrentNodeId' | 'nodesById' | 'onSelectNode' | 'reviewQueueNodeIds'>
 ) {
   return (
     <ReviewQueueSidebarPanel
       currentNodeId={props.reviewCurrentNodeId}
       nodesById={props.nodesById}
+      onSelectNode={props.onSelectNode}
       queueNodeIds={props.reviewQueueNodeIds}
     />
   );
