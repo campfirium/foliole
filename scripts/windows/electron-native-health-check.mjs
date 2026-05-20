@@ -1,11 +1,16 @@
 /* global URL, console, process, setTimeout */
 
 import { spawn } from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isViteServerReady } from '../electron-dev-server.mjs';
+import {
+  readMarker,
+  resetReadyMarkers,
+  verifyRendererReload,
+  waitForReadyMarkers
+} from './electron-native-health-check-support.mjs';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const VITE_HOST = '127.0.0.1';
@@ -111,66 +116,11 @@ function stopChild(child) {
   }
 }
 
-function markerPath(name) {
-  return path.join(repoRoot, name);
-}
-
-function resetMarkers() {
-  for (const name of ['.windows-native-boot-ready.json', '.windows-native-bridge-ready.json']) {
-    fs.rmSync(markerPath(name), { force: true });
-  }
-}
-
-function readMarker(name) {
-  try {
-    return JSON.parse(fs.readFileSync(markerPath(name), 'utf8'));
-  } catch {
-    return null;
-  }
-}
-
-export function markerMatches(marker, expectedStage, expectedSession, expectedPid) {
-  return Boolean(
-    marker &&
-    marker.stage === expectedStage &&
-    marker.session === expectedSession &&
-    marker.pid === expectedPid
-  );
-}
-
-export function readyMarkersMatch(appReady, bridgeReady, expectedSession) {
-  return Boolean(
-    appReady &&
-    bridgeReady &&
-    appReady.stage === 'app_ready' &&
-    bridgeReady.stage === 'bridge_ready' &&
-    appReady.session === expectedSession &&
-    bridgeReady.session === expectedSession &&
-    appReady.pid === bridgeReady.pid
-  );
-}
-
 function appendOutputTail(tail, chunk) {
   tail.push(...String(chunk).split(/\r?\n/u).filter(Boolean));
   if (tail.length > OUTPUT_TAIL_LIMIT) {
     tail.splice(0, tail.length - OUTPUT_TAIL_LIMIT);
   }
-}
-
-async function waitForReadyMarkers(input) {
-  const deadline = Date.now() + CHECK_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    const appReady = readMarker('.windows-native-boot-ready.json');
-    const bridgeReady = readMarker('.windows-native-bridge-ready.json');
-    if (readyMarkersMatch(appReady, bridgeReady, input.session)) {
-      return { appReady, bridgeReady };
-    }
-    if (input.electron.exitCode !== null) {
-      throw new Error(`electron exited before ready markers code=${input.electron.exitCode}`);
-    }
-    await wait(500);
-  }
-  throw new Error(`ready markers timed out pid=${input.pid} session=${input.session}`);
 }
 
 async function main() {
@@ -191,7 +141,7 @@ async function main() {
     FOLIOLE_WORKDIR: repoRoot
   };
   delete env.ELECTRON_RUN_AS_NODE;
-  resetMarkers();
+  resetReadyMarkers(repoRoot);
   const electron = run(electronPath, ['electron-dist/electron/main.js'], {
     env,
     shell: false,
@@ -202,13 +152,21 @@ async function main() {
   electron.stdout.on('data', (chunk) => appendOutputTail(outputTail, chunk));
   electron.stderr.on('data', (chunk) => appendOutputTail(outputTail, chunk));
   try {
-    const markers = await waitForReadyMarkers({ electron, pid: electron.pid, session });
+    const markers = await waitForReadyMarkers({
+      electron,
+      pid: electron.pid,
+      repoRoot,
+      session,
+      timeoutMs: CHECK_TIMEOUT_MS
+    });
     console.log(
       `[electron-native-health] status: READY runtime_pid=${markers.appReady.pid} session=${session} renderer=${vite.viteUrl} bridge=${markers.bridgeReady.payload?.bridgeAvailable === true ? 'OK' : 'UNKNOWN'}`
     );
     if (markers.appReady.pid !== electron.pid) {
       console.log(`[electron-native-health] runtime marker pid=${markers.appReady.pid} launch_pid=${electron.pid}`);
     }
+    const reloadNonce = await verifyRendererReload({ repoRoot, timeoutMs: CHECK_TIMEOUT_MS });
+    console.log(`[electron-native-health] renderer reload: DELIVERED nonce=${reloadNonce}`);
   } catch (error) {
     console.error(`[electron-native-health] status: FAILED reason=${error instanceof Error ? error.message : String(error)}`);
     if (outputTail.length > 0) {
@@ -216,7 +174,7 @@ async function main() {
     }
     process.exitCode = 1;
   } finally {
-    const appReady = readMarker('.windows-native-boot-ready.json');
+    const appReady = readMarker(repoRoot, '.windows-native-boot-ready.json');
     if (appReady?.pid && appReady.pid !== electron.pid) {
       try {
         process.kill(appReady.pid);

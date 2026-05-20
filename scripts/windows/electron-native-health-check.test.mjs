@@ -2,7 +2,8 @@
 
 import { expect, it } from 'vitest';
 
-import { markerMatches, readyMarkersMatch } from './electron-native-health-check.mjs';
+import { markerMatches, readyMarkersMatch } from './electron-native-health-check-support.mjs';
+import { createRendererReloadIntent } from './write-renderer-reload-intent.mjs';
 
 it('matches ready markers by stage, session, and runtime pid', () => {
   const marker = {
@@ -24,4 +25,18 @@ it('accepts app and bridge markers with the same session and runtime pid', () =>
   expect(readyMarkersMatch(appReady, bridgeReady, 'session-1')).toBe(true);
   expect(readyMarkersMatch({ ...appReady, pid: 456 }, bridgeReady, 'session-1')).toBe(false);
   expect(readyMarkersMatch(appReady, { ...bridgeReady, session: 'session-2' }, 'session-1')).toBe(false);
+});
+
+it('uses the existing renderer reload intent contract', () => {
+  expect(createRendererReloadIntent({
+    head: '',
+    nonce: 1,
+    reason: 'windows-native-health-check',
+    requestedAt: '2026-05-21T00:00:00.000Z',
+    requestedBy: 'windows-native-health-check'
+  })).toMatchObject({
+    kind: 'foliole.electron.dev.renderer-reload-intent.v1',
+    nonce: 1,
+    target: 'electron-dev-renderer'
+  });
 });
