@@ -4,7 +4,7 @@ import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migratio
 import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 42;
+export const DATABASE_SCHEMA_VERSION = 43;
 
 const LEGACY_REBUILD_REQUIRED_MESSAGE =
   'existing database schema is no longer supported; reset foliole.db and initialize fresh schema';

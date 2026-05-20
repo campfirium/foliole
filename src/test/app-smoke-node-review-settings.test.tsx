@@ -71,6 +71,7 @@ it('updates the default priority copy when the global fallback changes', () => {
       nodesById={nodesById}
       onDesiredRetentionChange={() => undefined}
       onPriorityChange={() => undefined}
+      onShortTermChange={() => undefined}
       reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
     />
   );
@@ -84,6 +85,7 @@ it('updates the default priority copy when the global fallback changes', () => {
       nodesById={nodesById}
       onDesiredRetentionChange={() => undefined}
       onPriorityChange={() => undefined}
+      onShortTermChange={() => undefined}
       reviewSchedulerSettings={{
         ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
         pushQueue: {

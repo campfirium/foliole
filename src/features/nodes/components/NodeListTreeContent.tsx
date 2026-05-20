@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
+import { getCurrentReviewSchedulerSettings } from '../../settings/model/reviewSchedulerSettings';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -10,6 +11,7 @@ import type {
   NodeListContextMenuController
 } from './NodeListTreeHooks';
 import { NodeListTreeMenu } from './NodeListTreeMenu';
+import { NodeReviewSchedulingDialog } from './NodeReviewSchedulingDialog';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { useNodeListSearchRows } from './useNodeListSearchRows';
 
@@ -50,10 +52,13 @@ interface NodeListTreeContentProps {
   showVirtualCreateAction?: boolean;
   state: NodeListState;
   trashedNodeIds: string[];
+  updateNodePriority: (nodeId: string, priority: number | null) => void;
+  updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
   updateNodeTitle: (nodeId: string, title: string) => void;
 }
 
 export function NodeListTreeContent(props: NodeListTreeContentProps) {
+  const [reviewSchedulingNodeId, setReviewSchedulingNodeId] = useState<string | null>(null);
   const { filteredActiveRows, searchQuery, setSearchQuery } = useNodeListSearchRows({
     activeRows: props.activeRows,
     isTrashViewOpen: props.isTrashViewOpen,
@@ -98,7 +103,15 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         trashRowIds={props.state.trashRowIds}
         trashRowsLength={props.state.trashRows.length}
       />
-      <NodeListTreeMenu {...props} />
+      <NodeListTreeMenu {...props} onOpenReviewScheduling={setReviewSchedulingNodeId} />
+      <NodeReviewSchedulingDialog
+        defaultPriority={getCurrentReviewSchedulerSettings().pushQueue.defaultPriority}
+        node={reviewSchedulingNodeId ? (props.nodesById[reviewSchedulingNodeId] ?? null) : null}
+        nodesById={props.nodesById}
+        onClose={() => setReviewSchedulingNodeId(null)}
+        onPriorityChange={props.updateNodePriority}
+        onShortTermChange={props.updateNodeShortTerm}
+      />
     </>
   );
 }

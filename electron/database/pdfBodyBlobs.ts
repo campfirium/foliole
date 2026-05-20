@@ -75,6 +75,7 @@ function upsertNodePackState(node: PdfReferenceNodeRow, bodyContent: string, ope
     createdAt: node.created_at,
     deletedAt: node.deleted_at,
     desiredRetention: node.desired_retention,
+    enableShortTerm: null,
     hideTitleHeading: node.hide_title_heading === 1,
     id: node.id,
     imageRegions: node.image_regions,

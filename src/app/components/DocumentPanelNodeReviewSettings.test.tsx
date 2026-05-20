@@ -8,6 +8,7 @@ import { DocumentPanelNodeReviewSettings } from './DocumentPanelNodeReviewSettin
 it('renders node review settings inside the shared inspector section', () => {
   const onDesiredRetentionChange = vi.fn();
   const onPriorityChange = vi.fn();
+  const onShortTermChange = vi.fn();
 
   render(
     <DocumentPanelNodeReviewSettings
@@ -30,16 +31,19 @@ it('renders node review settings inside the shared inspector section', () => {
       }}
       onDesiredRetentionChange={onDesiredRetentionChange}
       onPriorityChange={onPriorityChange}
+      onShortTermChange={onShortTermChange}
       reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
     />
   );
 
-  expect(screen.getByRole('heading', { level: 3, name: 'Review scheduling' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 3, name: 'Review options' })).toBeInTheDocument();
   expect(screen.getByText(/memory target/i)).toBeInTheDocument();
 
   fireEvent.change(screen.getByLabelText('Review desired retention'), { target: { value: '0.85' } });
   fireEvent.change(screen.getByLabelText('Review queue priority'), { target: { value: '3' } });
+  fireEvent.change(screen.getByLabelText('Short-term learning steps'), { target: { value: 'enabled' } });
 
   expect(onDesiredRetentionChange).toHaveBeenCalledWith('node-1', 0.85);
   expect(onPriorityChange).toHaveBeenCalledWith('node-1', 3);
+  expect(onShortTermChange).toHaveBeenCalledWith('node-1', true);
 });

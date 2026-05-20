@@ -61,6 +61,7 @@ function toPendingWorkspaceNode(
     kind: pendingNode.kind,
     priority: pendingNode.priority ?? null,
     desiredRetention: pendingNode.desiredRetention ?? null,
+    enableShortTerm: pendingNode.enableShortTerm ?? null,
     title: pendingNode.title,
     isTitleManual: pendingNode.isTitleManual,
     hideTitleHeading: pendingNode.hideTitleHeading === true,

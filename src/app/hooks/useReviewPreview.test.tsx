@@ -15,6 +15,7 @@ interface HookProps {
   currentNodeId: string | null;
   isAnswerRevealed: boolean;
   isStudyMode: boolean;
+  nodesById?: Record<string, { enableShortTerm?: boolean | null; parentNodeId: string | null } | undefined>;
   previewSeed: string;
   reviewProfile: NodeReviewProfile | null;
 }
@@ -52,7 +53,10 @@ function createPreviewResult(scheduledDays: number): SchedulerPreviewResult {
 }
 
 function PreviewProbe(props: HookProps) {
-  const preview = useReviewPreview(props);
+  const preview = useReviewPreview({
+    ...props,
+    nodesById: props.nodesById ?? { 'node-1': { parentNodeId: null } }
+  });
   return <output data-testid="preview-good-days">{preview?.Good.card.scheduled_days ?? 'none'}</output>;
 }
 
@@ -160,6 +164,8 @@ it('requests a fresh preview when scheduler setting signature changes', async ()
 
   await waitFor(() => {
     expect(preview).toHaveBeenCalledTimes(2);
+  });
+  await waitFor(() => {
     expect(screen.getByTestId('preview-good-days')).toHaveTextContent('12');
   });
 });

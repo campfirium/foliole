@@ -15,6 +15,7 @@ export interface WorkspaceRuntimeNode {
   content: string;
   createdAt: string;
   desiredRetention?: number | null;
+  enableShortTerm?: boolean | null;
   hideTitleHeading?: boolean;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   id: string;

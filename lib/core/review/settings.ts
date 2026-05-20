@@ -25,6 +25,10 @@ export interface ReviewSchedulerSettingsSavePatch {
   pushQueue?: UnifiedPushQueueRulesPatch;
 }
 
+export interface ReviewSchedulerRuntimeOverrides {
+  enableShortTerm?: boolean;
+}
+
 export const PUSH_QUEUE_SETTINGS_SCOPE = Object.freeze({
   priority: 'node-inherited',
   defaultPriority: 'global-fallback',
@@ -131,12 +135,16 @@ export function mergeReviewSchedulerSettingsPatch(
   });
 }
 
-export function createReviewSchedulerParameters(settings: ReviewSchedulerSettings) {
+export function createReviewSchedulerParameters(
+  settings: ReviewSchedulerSettings,
+  overrides: ReviewSchedulerRuntimeOverrides = {}
+) {
+  const enableShortTerm = overrides.enableShortTerm ?? settings.enableShortTerm;
   return generatorParameters({
     request_retention: settings.desiredRetention,
     maximum_interval: settings.maximumIntervalDays,
     enable_fuzz: true,
-    enable_short_term: settings.enableShortTerm
+    enable_short_term: enableShortTerm
   });
 }
 
@@ -154,12 +162,16 @@ export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSet
   ].join('|');
 }
 
-export function getReviewSchedulerVersion(settings: ReviewSchedulerSettings) {
+export function getReviewSchedulerVersion(
+  settings: ReviewSchedulerSettings,
+  overrides: ReviewSchedulerRuntimeOverrides = {}
+) {
+  const enableShortTerm = overrides.enableShortTerm ?? settings.enableShortTerm;
   return [
     settings.algorithm,
     `dr=${settings.desiredRetention.toFixed(2)}`,
     `mi=${settings.maximumIntervalDays}`,
-    `st=${settings.enableShortTerm ? '1' : '0'}`,
+    `st=${enableShortTerm ? '1' : '0'}`,
     `pqdp=${settings.pushQueue.defaultPriority}`,
     `pqpr=${settings.pushQueue.priorityRatio.toFixed(2)}`,
     `pqmx=${settings.pushQueue.queueMixRatio.reading}:${settings.pushQueue.queueMixRatio.fsrs}`,

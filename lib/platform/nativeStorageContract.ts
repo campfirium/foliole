@@ -79,6 +79,7 @@ export interface NativeWorkspaceNodeSnapshot {
   kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
+  enableShortTerm?: boolean | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading?: boolean;
@@ -216,6 +217,7 @@ export interface NativeNodeSnapshotArgs {
   kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
+  enableShortTerm?: boolean | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading?: boolean;

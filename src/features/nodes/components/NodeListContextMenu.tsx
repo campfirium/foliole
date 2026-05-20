@@ -15,6 +15,7 @@ interface NodeListContextMenuProps {
   onDismissNode?: () => void;
   onMergeHighlightsIntoTopic?: () => void;
   onMoveToNode?: () => void;
+  onOpenReviewScheduling?: () => void;
   onPasteIntoNode?: () => void;
   onRenameNode?: () => void;
   onReturnNode?: () => void;
@@ -24,6 +25,7 @@ interface NodeListContextMenuProps {
   showDismissAction?: boolean;
   showMergeHighlightsIntoTopicAction?: boolean;
   showMoveToNodeAction?: boolean;
+  showReviewSchedulingAction?: boolean;
   showPasteIntoNodeAction?: boolean;
   showRenameAction?: boolean;
   showRootCreateOnly?: boolean;
@@ -44,6 +46,7 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       {...(props.onDismissNode ? { onDismissNode: props.onDismissNode } : {})}
       {...(props.onMergeHighlightsIntoTopic ? { onMergeHighlightsIntoTopic: props.onMergeHighlightsIntoTopic } : {})}
       {...(props.onMoveToNode ? { onMoveToNode: props.onMoveToNode } : {})}
+      {...(props.onOpenReviewScheduling ? { onOpenReviewScheduling: props.onOpenReviewScheduling } : {})}
       {...(props.onPasteIntoNode ? { onPasteIntoNode: props.onPasteIntoNode } : {})}
       {...(props.onRenameNode ? { onRenameNode: props.onRenameNode } : {})}
       {...(props.onReturnNode ? { onReturnNode: props.onReturnNode } : {})}
@@ -52,6 +55,7 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       {...(props.showDismissAction !== undefined ? { showDismissAction: props.showDismissAction } : {})}
       {...(props.showMergeHighlightsIntoTopicAction !== undefined ? { showMergeHighlightsIntoTopicAction: props.showMergeHighlightsIntoTopicAction } : {})}
       {...(props.showMoveToNodeAction !== undefined ? { showMoveToNodeAction: props.showMoveToNodeAction } : {})}
+      {...(props.showReviewSchedulingAction !== undefined ? { showReviewSchedulingAction: props.showReviewSchedulingAction } : {})}
       {...(props.showPasteIntoNodeAction !== undefined ? { showPasteIntoNodeAction: props.showPasteIntoNodeAction } : {})}
       {...(props.showRenameAction !== undefined ? { showRenameAction: props.showRenameAction } : {})}
       {...(props.showRootCreateOnly !== undefined ? { showRootCreateOnly: props.showRootCreateOnly } : {})}
@@ -107,6 +111,7 @@ function NoteMenuItems({
   onDismissNode,
   onMergeHighlightsIntoTopic,
   onMoveToNode,
+  onOpenReviewScheduling,
   onPasteIntoNode,
   onRenameNode,
   onReturnNode,
@@ -115,6 +120,7 @@ function NoteMenuItems({
   showDismissAction,
   showMergeHighlightsIntoTopicAction,
   showMoveToNodeAction,
+  showReviewSchedulingAction,
   showPasteIntoNodeAction,
   showRenameAction,
   showRootCreateOnly,
@@ -134,6 +140,7 @@ function NoteMenuItems({
       {showRootCreateOnly ? null : showMergeHighlightsIntoTopicAction && onMergeHighlightsIntoTopic ? <AppDropdownMenuItem onSelect={onMergeHighlightsIntoTopic}>Merge Highlights</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showPasteIntoNodeAction && onPasteIntoNode ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showMoveToNodeAction && onMoveToNode ? <AppDropdownMenuItem onSelect={onMoveToNode}>Move to…</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showReviewSchedulingAction && onOpenReviewScheduling ? <AppDropdownMenuItem onSelect={onOpenReviewScheduling}>Review options…</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDeleteAction ? <AppDropdownMenuItem onSelect={onDeleteNode}>Delete</AppDropdownMenuItem> : null}
     </>
   );

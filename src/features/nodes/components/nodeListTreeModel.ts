@@ -57,6 +57,8 @@ function useNodeWorkspaceActions() {
     reviewSession: useWorkspaceStore((state) => state.reviewSession),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     trashedNodeIds: useWorkspaceStore((state) => state.trashedNodeIds),
+    updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
+    updateNodeShortTerm: useWorkspaceStore((state) => state.updateNodeShortTerm),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)
   };
 }
@@ -216,6 +218,8 @@ function buildNodeListTreeModelResult(
     state,
     trashedNodeIds: workspace.trashedNodeIds,
     trashTreeBuildDurationMs: treeData.trashTreeBuildDurationMs,
+    updateNodePriority: workspace.updateNodePriority,
+    updateNodeShortTerm: workspace.updateNodeShortTerm,
     updateNodeTitle: workspace.updateNodeTitle,
     virtualTreeBuildDurationMs: treeData.virtualTreeBuildDurationMs
   };

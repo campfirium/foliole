@@ -47,6 +47,7 @@ export function useWorkspaceSelectors() {
       updateVirtualNodeFilter: state.updateVirtualNodeFilter,
       updateNodeDesiredRetention: state.updateNodeDesiredRetention,
       updateNodePriority: state.updateNodePriority,
+      updateNodeShortTerm: state.updateNodeShortTerm,
       updateNodeReveal: state.updateNodeReveal,
       undoWorkspaceAction: state.undoWorkspaceAction,
       exitReviewSession: state.exitReviewSession

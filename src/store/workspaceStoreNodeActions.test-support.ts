@@ -47,6 +47,7 @@ function createWorkspaceActionStubs() {
     updateNodeReveal: () => undefined,
     updateNodePriority: () => undefined,
     updateNodeDesiredRetention: () => undefined,
+    updateNodeShortTerm: () => undefined,
     dismissNode: () => false,
     undoWorkspaceAction: () => false,
     redoWorkspaceAction: () => false,

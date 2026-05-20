@@ -37,6 +37,7 @@ export interface WorkspaceNodeSnapshot {
   kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
+  enableShortTerm?: boolean | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading: boolean;
@@ -69,6 +70,7 @@ export interface WorkspaceNodeRowShape {
   created_at: string;
   deleted_at: string | null;
   desired_retention: number | null;
+  enable_short_term: number | null;
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
@@ -168,6 +170,9 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
   }
   if (typeof row.desired_retention === 'number') {
     node.desiredRetention = row.desired_retention;
+  }
+  if (typeof row.enable_short_term === 'number') {
+    node.enableShortTerm = row.enable_short_term === 1;
   }
   if (
     row.body_status === 'empty' ||

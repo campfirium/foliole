@@ -62,6 +62,10 @@ final class FolioleCompanionDatabaseMigration {
             addSyncBaseContentHashIfMissing(context, database);
             return;
         }
+        if (actionType(context, "addNodesEnableShortTermIfMissing").equals(type)) {
+            addNodesEnableShortTermIfMissing(context, database);
+            return;
+        }
         throw new IllegalStateException("Companion migration plan has unknown action: " + type);
     }
 
@@ -131,6 +135,10 @@ final class FolioleCompanionDatabaseMigration {
 
     private static void addNodeViewStateSourceIfMissing(Context context, SQLiteDatabase database) {
         addColumnIfMissing(context, database, "nodeViewStateSource");
+    }
+
+    private static void addNodesEnableShortTermIfMissing(Context context, SQLiteDatabase database) {
+        addColumnIfMissing(context, database, "nodesEnableShortTerm");
     }
 
     private static void addColumnIfMissing(Context context, SQLiteDatabase database, String groupName) {

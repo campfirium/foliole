@@ -70,6 +70,7 @@ function computeConflictCopyContentHash(args: {
     createdAt: args.timestamp,
     deletedAt: null,
     desiredRetention: null,
+    enableShortTerm: null,
     hideTitleHeading: args.snapshot.hide_title_heading,
     id: args.copyNodeId,
     imageRegions: null,
@@ -100,14 +101,15 @@ function upsertConflictCopyNode(args: {
 }) {
   args.driver.execute(
     `INSERT INTO nodes (
-       id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
+       id, parent_id, kind, priority, desired_retention, enable_short_term, title, is_title_manual, hide_title_heading,
        content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
        current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, ?, ?, 0, ?, ?, NULL)
+     ) VALUES (?, ?, 'topic', NULL, NULL, NULL, ?, 1, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, ?, ?, 0, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
-       kind = excluded.kind,
-       title = excluded.title,
+      kind = excluded.kind,
+      enable_short_term = excluded.enable_short_term,
+      title = excluded.title,
        is_title_manual = excluded.is_title_manual,
        hide_title_heading = excluded.hide_title_heading,
        content = excluded.content,

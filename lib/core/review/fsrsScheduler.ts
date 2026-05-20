@@ -6,19 +6,25 @@ export type SchedulerRating = 'Again' | 'Hard' | 'Good' | 'Easy';
 
 export interface FsrsGradeRequest {
   card: SchedulerCard;
+  enableShortTerm?: boolean;
   rating: SchedulerRating;
   now: string;
 }
 
 export interface FsrsPreviewRequest {
   card: SchedulerCard;
+  enableShortTerm?: boolean;
   now: string;
+}
+
+export interface FsrsSchedulerRuntimeOverrides {
+  enableShortTerm?: boolean;
 }
 
 export interface FsrsSchedulerSource<TSettings> {
   loadSettings: () => TSettings;
-  getSettingsVersion: (settings: TSettings) => string;
-  createParameters: (settings: TSettings) => Parameters<typeof fsrs>[0];
+  getSettingsVersion: (settings: TSettings, overrides?: FsrsSchedulerRuntimeOverrides) => string;
+  createParameters: (settings: TSettings, overrides?: FsrsSchedulerRuntimeOverrides) => Parameters<typeof fsrs>[0];
 }
 
 interface FsrsCardSnapshot {
@@ -87,13 +93,17 @@ function toSchedulerResult(item: {
 export function createFsrsReviewScheduler<TSettings>(source: FsrsSchedulerSource<TSettings>) {
   let schedulerCache: { key: string; scheduler: FSRS } | null = null;
 
-  function getScheduler() {
+  function createRuntimeOverrides(request: { enableShortTerm?: boolean }): FsrsSchedulerRuntimeOverrides | undefined {
+    return request.enableShortTerm === undefined ? undefined : { enableShortTerm: request.enableShortTerm };
+  }
+
+  function getScheduler(overrides?: FsrsSchedulerRuntimeOverrides) {
     const settings = source.loadSettings();
-    const key = source.getSettingsVersion(settings);
+    const key = source.getSettingsVersion(settings, overrides);
     if (!schedulerCache || schedulerCache.key !== key) {
       schedulerCache = {
         key,
-        scheduler: fsrs(source.createParameters(settings))
+        scheduler: fsrs(source.createParameters(settings, overrides))
       };
     }
     return schedulerCache.scheduler;
@@ -102,12 +112,16 @@ export function createFsrsReviewScheduler<TSettings>(source: FsrsSchedulerSource
   return {
     grade(request: FsrsGradeRequest): SchedulerGradeResult {
       const reviewAt = new Date(request.now);
-      const next = getScheduler().next(toFsrsCard(request.card), reviewAt, toRating(request.rating));
+      const next = getScheduler(createRuntimeOverrides(request)).next(
+        toFsrsCard(request.card),
+        reviewAt,
+        toRating(request.rating)
+      );
       return toSchedulerResult(next);
     },
     preview(request: FsrsPreviewRequest): SchedulerPreviewResult {
       const reviewAt = new Date(request.now);
-      const preview = getScheduler().repeat(toFsrsCard(request.card), reviewAt);
+      const preview = getScheduler(createRuntimeOverrides(request)).repeat(toFsrsCard(request.card), reviewAt);
       return {
         Again: toSchedulerResult(preview[Rating.Again]),
         Hard: toSchedulerResult(preview[Rating.Hard]),

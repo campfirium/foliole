@@ -12,6 +12,7 @@ export interface WorkspaceNodeRow extends DatabaseRow {
   kind: string | null;
   priority: number | null;
   desired_retention: number | null;
+  enable_short_term: number | null;
   title: string;
   is_title_manual: number;
   hide_title_heading: number;
@@ -98,6 +99,7 @@ export function buildWorkspaceListNodesById(rows: WorkspaceNodeRow[]) {
       kind: parseNodeKind(row.kind),
       priority: row.priority,
       desiredRetention: row.desired_retention,
+      enableShortTerm: typeof row.enable_short_term === 'number' ? row.enable_short_term === 1 : null,
       title: row.title,
       isTitleManual: row.is_title_manual === 1,
       hideTitleHeading: row.hide_title_heading === 1,

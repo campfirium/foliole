@@ -104,6 +104,7 @@ export interface BuildControllerLayoutPropsArgs {
     updateVirtualNodeFilter: (nodeId: string, value: string) => void;
     updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
     updateNodePriority: (nodeId: string, priority: number | null) => void;
+    updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
     updateNodeReveal: (nodeId: string, reveal: string) => void;
     isHydrated: boolean;
   };
@@ -138,6 +139,7 @@ function createLayoutHandlerArgs(
     ...createReadingPositionHandlers(args),
     onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => args.ws.updateNodeDesiredRetention(nodeId, desiredRetention),
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),
+    onNodeShortTermChange: (nodeId: string, enableShortTerm: boolean | null) => args.ws.updateNodeShortTerm(nodeId, enableShortTerm),
     onOpenMoveToNode: args.runtime.openMoveToNodePalette,
     onOpenSettings: createOpenSettingsHandler(args.runtime),
     onOpenExternalView: args.externalView.openExternalFolder,

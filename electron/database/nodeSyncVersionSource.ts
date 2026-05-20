@@ -11,6 +11,7 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow {
   current_version_id: string | null;
   deleted_at: string | null;
   desired_retention: number | null;
+  enable_short_term: number | null;
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
@@ -50,6 +51,7 @@ export function loadNodeSyncVersionSource(nodeId: string) {
        kind,
        priority,
        desired_retention,
+       enable_short_term,
        title,
        is_title_manual,
        hide_title_heading,
@@ -82,6 +84,7 @@ export function buildNodeSyncSnapshot(row: NodeSyncVersionSourceRow, nodeId: str
     created_at: row.created_at,
     deleted_at: row.deleted_at,
     desired_retention: row.desired_retention,
+    enable_short_term: row.enable_short_term === null ? null : row.enable_short_term === 1,
     hide_title_heading: row.hide_title_heading === 1,
     id: row.id,
     image_regions: row.image_regions,
@@ -109,6 +112,7 @@ export function computeNodeSyncVersionHash(row: NodeSyncVersionSourceRow, nodeId
     createdAt: row.created_at,
     deletedAt: row.deleted_at,
     desiredRetention: row.desired_retention,
+    enableShortTerm: row.enable_short_term === null ? null : row.enable_short_term === 1,
     hideTitleHeading: row.hide_title_heading === 1,
     id: row.id,
     imageRegions: row.image_regions,

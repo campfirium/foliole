@@ -7,6 +7,7 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     kind TEXT NOT NULL DEFAULT 'topic',
     priority INTEGER,
     desired_retention REAL,
+    enable_short_term INTEGER,
     title TEXT NOT NULL,
     is_title_manual INTEGER NOT NULL DEFAULT 0,
     hide_title_heading INTEGER NOT NULL DEFAULT 0,

@@ -106,6 +106,7 @@ export interface NativeSyncNodeRecord {
     created_at: string;
     deleted_at: string | null;
     desired_retention: number | null;
+    enable_short_term?: boolean | null;
     hide_title_heading: boolean;
     id: string;
     image_regions: string | null;

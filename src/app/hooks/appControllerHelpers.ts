@@ -56,7 +56,7 @@ export function buildGoToNodeState(
 }
 
 type WorkspaceSelectors = {
-  nodesById: Record<string, { review: NodeReviewProfile | null } | undefined>;
+  nodesById: Record<string, { enableShortTerm?: boolean | null; parentNodeId: string | null; review: NodeReviewProfile | null } | undefined>;
   reviewSession: {
     currentNodeId: string | null;
     isAnswerRevealed: boolean;
@@ -70,6 +70,7 @@ export function useCurrentReviewPreview(
 ) {
   return useReviewPreview({
     currentNodeId: ws.reviewSession.currentNodeId,
+    nodesById: ws.nodesById,
     isAnswerRevealed: ws.reviewSession.isAnswerRevealed,
     isStudyMode,
     previewSeed,

@@ -25,6 +25,7 @@ function createNodeRecord(overrides: Partial<NativeSyncNodeRecord> = {}): Native
       created_at: '2026-04-21T10:00:00.000Z',
       deleted_at: null,
       desired_retention: 0.8,
+      enable_short_term: true,
       hide_title_heading: true,
       id: 'node-1',
       image_regions: null,
@@ -56,6 +57,7 @@ it('builds the canonical remote node upsert params', () => {
     'item',
     2,
     0.8,
+    1,
     'Remote Node',
     1,
     1,
@@ -83,7 +85,7 @@ it('builds remote version upsert only for complete version metadata', () => {
     'phone',
     '2026-04-21T11:00:00.000Z',
     'hash-1',
-    expect.stringContaining('"title":"Remote Node"')
+    expect.stringContaining('"enable_short_term":true')
   ]);
   expect(buildRemoteNodeVersionUpsert(createNodeRecord({ version_id: null }))).toBeNull();
 });

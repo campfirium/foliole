@@ -100,7 +100,7 @@ export function DocumentPriorityControl({
             key={priority}
             disabled={!isEditable}
             onSelect={() => onPriorityChange(activeNodeId, priority)}
-            title={priority === 0 ? 'P0 has absolute scheduling privilege.' : undefined}
+            title={priority === 0 ? 'P0 comes first and is not delayed by priority scaling.' : undefined}
           >
             {renderPriorityOptionLabel(priority, resolvedPriority.value === priority)}
           </AppDropdownMenuItem>

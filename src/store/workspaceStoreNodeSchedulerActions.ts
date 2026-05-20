@@ -57,3 +57,25 @@ export function createUpdateNodeDesiredRetentionAction(
     }
   };
 }
+
+export function createUpdateNodeShortTermAction(set: WorkspaceSet): WorkspaceState['updateNodeShortTerm'] {
+  return (nodeId, enableShortTerm) => {
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
+    set((state) => {
+      const node = state.nodesById[nodeId];
+      if (!node) {
+        return state;
+      }
+      const nextNode = {
+        ...node,
+        enableShortTerm: enableShortTerm === null ? null : enableShortTerm === true,
+        updatedAt: new Date().toISOString()
+      };
+      nextNodeForSync = nextNode;
+      return { nodesById: { ...state.nodesById, [nodeId]: nextNode } };
+    });
+    if (nextNodeForSync) {
+      syncNodeContentToRuntime(nextNodeForSync);
+    }
+  };
+}

@@ -2,14 +2,13 @@ import { useMemo, useRef } from 'react';
 
 import { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
-import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
-import type { NodeListState, NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
+import type { NodeListState } from '../../features/nodes/components/NodeListTreeState';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
-import { useDismissedTopicVisibility } from './useDismissedTopicVisibility';
 
+import { useDismissedTopicVisibility } from './useDismissedTopicVisibility';
 import {
   resolveWorkspaceTopicTreeFocusNodeId,
   useWorkspaceTopicTreeAutoScroll
@@ -21,6 +20,7 @@ import {
   buildTopicChildrenByParent,
   type TopicChildrenByParent
 } from './workspaceTopicTreeLazyRows';
+import { WorkspaceTopicTreeMenu } from './WorkspaceTopicTreeMenu';
 import { resolveWorkspaceTopicTreeReviewScroll } from './workspaceTopicTreeReviewScroll';
 import { useWorkspaceTopicTreeSelection } from './workspaceTopicTreeSelection';
 import { renderWorkspaceTopicTreeShell } from './WorkspaceTopicTreeShell';
@@ -38,7 +38,7 @@ export interface WorkspaceTopicTreeProps {
   onSelectNode: (nodeId: string) => void;
 }
 
-function useWorkspaceTopicTreeActions() {
+export function useWorkspaceTopicTreeActions() {
   return {
     createChildNode: useWorkspaceStore((state) => state.createChildNode),
     createVirtualNode: useWorkspaceStore((state) => state.createVirtualNode),
@@ -48,6 +48,8 @@ function useWorkspaceTopicTreeActions() {
     moveNodes: useWorkspaceStore((state) => state.moveNodes),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     returnNode: useWorkspaceStore((state) => state.relearnNode),
+    updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
+    updateNodeShortTerm: useWorkspaceStore((state) => state.updateNodeShortTerm),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)
   };
 }
@@ -113,41 +115,24 @@ export function useWorkspaceTopicTreeInteraction(args: {
     drag,
     handleSelectNode: selection.handleSelectNode,
     topicTreeState,
-    topicTreeMenu: renderWorkspaceTopicTreeMenu(args, actions, contextMenu, selection.handleSelectNode, topicTreeState)
+    topicTreeMenu: (
+      <WorkspaceTopicTreeMenu
+        actions={actions}
+        activeFolderId={args.activeFolderId}
+        contextMenu={contextMenu}
+        handleSelectNode={selection.handleSelectNode}
+        nodesById={args.nodesById}
+        onOpenMoveToNode={args.onOpenMoveToNode}
+        topicTreeState={topicTreeState}
+      />
+    )
   };
-}
-
-function renderWorkspaceTopicTreeMenu(
-  args: Parameters<typeof useWorkspaceTopicTreeInteraction>[0],
-  actions: ReturnType<typeof useWorkspaceTopicTreeActions>,
-  contextMenu: ReturnType<typeof useNodeListContextMenu>,
-  handleSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void,
-  topicTreeState: NodeListState
-) {
-  return (
-    <NodeListTreeMenu
-      contextMenu={contextMenu}
-      createChildNode={actions.createChildNode}
-      createGlobalNode={(content = '', kind = 'topic') => actions.createChildNode(args.activeFolderId, content, kind)}
-      createVirtualNode={actions.createVirtualNode}
-      deleteNodes={actions.deleteNodes}
-      deleteNodesPermanently={actions.deleteNodesPermanently}
-      dismissNode={actions.dismissNode}
-      isVirtualViewOpen={false}
-      nodesById={args.nodesById}
-      onOpenMoveToNode={args.onOpenMoveToNode}
-      onSelect={handleSelectNode}
-      restoreNode={actions.restoreNode}
-      returnNode={actions.returnNode}
-      state={topicTreeState}
-    />
-  );
 }
 
 function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
   const contentSort = useWorkspaceContentSort();
-  const dismissedTopicVisibility = useDismissedTopicVisibility();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const dismissedTopicVisibility = useDismissedTopicVisibility();
   const childrenByParent = useMemo(
     () => props.childrenByParent ?? buildTopicChildrenByParent(props.itemIds, props.nodesById),
     [props.childrenByParent, props.itemIds, props.nodesById]
@@ -161,8 +146,8 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     nodeViewById,
     nodesById: props.nodesById,
     sortRefreshVersion: contentSort.sortRefreshVersion,
-    hideDismissedTopics: props.forceVisibleNodeId ? false : dismissedTopicVisibility.viewHideDismissedTopics,
     sort: contentSort.sort,
+    hideDismissedTopics: props.forceVisibleNodeId ? false : dismissedTopicVisibility.viewHideDismissedTopics,
     ...definedProps({ forceVisibleNodeId: props.forceVisibleNodeId })
   });
   return { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility };

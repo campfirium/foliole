@@ -80,6 +80,8 @@ function buildNodeListTreeContentProps(args: {
     showTitleSearch: args.showTitleSearch,
     state: args.model.state,
     trashedNodeIds: args.model.trashedNodeIds,
+    updateNodePriority: args.model.updateNodePriority,
+    updateNodeShortTerm: args.model.updateNodeShortTerm,
     updateNodeTitle: args.model.updateNodeTitle
   };
 }

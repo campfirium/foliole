@@ -13,6 +13,7 @@ export function canonicalCompanionNodePayload(node: WorkspaceNodeSnapshot) {
     created_at: node.createdAt,
     deleted_at: node.deletedAt ?? null,
     desired_retention: node.desiredRetention ?? null,
+    enable_short_term: node.enableShortTerm ?? null,
     hide_title_heading: node.hideTitleHeading,
     id: node.id,
     image_regions: serialize(node.imageRegions),

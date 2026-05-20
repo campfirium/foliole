@@ -111,7 +111,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   workspaceSnapshotNodes: {
     resultKey: 'nodes',
     sql:
-      'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.title, n.is_title_manual, ' +
+      'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.title, n.is_title_manual, ' +
       'n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, ' +
       'n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, ' +
       'rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, ' +
@@ -130,6 +130,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'kind', source: 'kind', type: 'nullableString' },
       { key: 'priority', source: 'priority', type: 'long' },
       { key: 'desired_retention', source: 'desired_retention', type: 'double' },
+      { key: 'enable_short_term', source: 'enable_short_term', type: 'long' },
       { key: 'title', source: 'title', type: 'nullableString' },
       { key: 'is_title_manual', source: 'is_title_manual', type: 'long' },
       { key: 'hide_title_heading', source: 'hide_title_heading', type: 'long' },

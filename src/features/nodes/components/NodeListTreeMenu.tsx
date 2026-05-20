@@ -27,6 +27,7 @@ interface NodeListTreeMenuProps {
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
+  onOpenReviewScheduling?: (nodeId: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   restoreNode: (nodeId: string) => void;
   returnNode: (nodeId: string, now?: string) => boolean;
@@ -60,6 +61,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     showDeleteAction: isSingleNodeTarget ? !isProtectedRootNode(primaryTarget) : contextTargets.length > 0,
     showMergeHighlightsIntoTopicAction: showNodeImportActions,
     showMoveToNodeAction: isSingleNodeTarget && canNodeBeMoved(primaryTarget),
+    showReviewSchedulingAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget) && !isVirtualRootNode(primaryTarget) && !isVirtualNode(primaryTarget),
     showNodeImportActions,
     showRenameAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget),
     showVirtualCreateOnly: props.isVirtualViewOpen || (isSingleNodeTarget && isVirtualRootNode(primaryTarget))
@@ -114,6 +116,18 @@ function createMoveToNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: 
     }
     props.onSelect(primaryTargetId);
     props.onOpenMoveToNode();
+    props.contextMenu.closeContextMenu();
+  };
+}
+
+function createOpenReviewSchedulingHandler(
+  props: NodeListTreeMenuProps,
+  primaryTargetId: string | null
+) {
+  return () => {
+    if (primaryTargetId && props.onOpenReviewScheduling) {
+      props.onOpenReviewScheduling(primaryTargetId);
+    }
     props.contextMenu.closeContextMenu();
   };
 }
@@ -179,6 +193,7 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
         primaryTargetId: menuState.primaryTargetId
       })}
       onMoveToNode={createMoveToNodeHandler(props, menuState.primaryTargetId)}
+      onOpenReviewScheduling={createOpenReviewSchedulingHandler(props, menuState.primaryTargetId)}
       onPasteIntoNode={props.contextMenu.closeContextMenu}
       onRenameNode={() => (
         requestNodeRename(menuState.primaryTargetId),
@@ -194,6 +209,7 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
       showDismissAction={menuState.isNotesMenu && hasDismissTargets(menuState.contextTargets, props.nodesById)}
       showMergeHighlightsIntoTopicAction={menuState.showMergeHighlightsIntoTopicAction}
       showMoveToNodeAction={menuState.showMoveToNodeAction}
+      showReviewSchedulingAction={menuState.showReviewSchedulingAction && Boolean(props.onOpenReviewScheduling)}
       showPasteIntoNodeAction={menuState.showNodeImportActions}
       showRenameAction={menuState.showRenameAction}
       showRootCreateOnly={menuState.isRootMenu || menuState.showVirtualCreateOnly}

@@ -55,6 +55,7 @@ export interface WorkspaceLayoutProps {
     | 'onEditorContextMenu'
     | 'onNodePriorityChange'
     | 'onNodeDesiredRetentionChange'
+    | 'onNodeShortTermChange'
     | 'onEnterPriorityQuickSet'
     | 'onRevealAnchorInDocument'
     | 'onPersistPdfViewState'

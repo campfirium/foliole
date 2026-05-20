@@ -38,6 +38,7 @@ export function createWorkspaceRuntimeNodeSnapshot(
     kind: node.kind,
     priority: node.priority ?? null,
     desiredRetention: node.desiredRetention ?? null,
+    enableShortTerm: node.enableShortTerm ?? null,
     title: node.title,
     isTitleManual: Boolean(node.isTitleManual),
     hideTitleHeading: Boolean(node.hideTitleHeading),

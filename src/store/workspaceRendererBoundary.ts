@@ -73,6 +73,7 @@ function isBoundaryProjectionReusable(currentNode: Node | undefined, sourceNode:
     currentNode.kind === sourceNode.kind &&
     currentNode.priority === sourceNode.priority &&
     currentNode.desiredRetention === sourceNode.desiredRetention &&
+    currentNode.enableShortTerm === sourceNode.enableShortTerm &&
     currentNode.specialKind === sourceNode.specialKind &&
     currentNode.title === sourceNode.title &&
     currentNode.isTitleManual === sourceNode.isTitleManual &&

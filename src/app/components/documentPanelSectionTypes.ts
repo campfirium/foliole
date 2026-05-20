@@ -48,6 +48,7 @@ export interface DocumentPanelSectionProps {
   onRegisterEditorDraftFlush?: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
   onNodePriorityChange?: (nodeId: string, priority: number | null) => void;
+  onNodeShortTermChange?: (nodeId: string, enableShortTerm: boolean | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore?: () => boolean;

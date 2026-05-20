@@ -86,6 +86,7 @@ export function createWorkspaceState() {
     updateNodeContent: vi.fn(),
     updateNodeDesiredRetention: vi.fn(),
     updateNodePriority: vi.fn(),
+    updateNodeShortTerm: vi.fn(),
     updateNodeReveal: vi.fn(),
     updateVirtualNodeFilter: vi.fn()
   };

@@ -15,6 +15,7 @@ export function buildResolvedDocumentPanelProps(props: DocumentPanelSectionProps
     ...props,
     isPriorityQuickSetActive: props.isPriorityQuickSetActive ?? false,
     onNodePriorityChange: props.onNodePriorityChange ?? (() => undefined),
+    onNodeShortTermChange: props.onNodeShortTermChange ?? (() => undefined),
     priorityQuickSetShortcutLabel: props.priorityQuickSetShortcutLabel ?? '',
     reviewSchedulerSettings: props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS
   };
