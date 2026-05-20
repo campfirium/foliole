@@ -72,7 +72,8 @@ function printStatus() {
   const state = readClientState();
   const ready = readReadyState();
   if (ready) {
-    const head = state?.head ? ` head=${state.head}` : '';
+    const runtimeHead = ready.appReady.head ?? state?.head;
+    const head = runtimeHead ? ` head=${runtimeHead}` : '';
     console.log(`[windows-restart-client] status: RUNNING trust=OK shell_pid=${state?.shellPid ?? 'unknown'} runtime_pid=${ready.appReady.pid}${head}`);
     return { ok: true, ready, state };
   }
@@ -171,7 +172,8 @@ async function stopClient({ print = true } = {}) {
   const state = readClientState();
   const ready = readReadyState();
   await killPid(state?.shellPid);
-  await killPid(state?.runtimePid ?? ready?.appReady.pid);
+  await killPid(state?.runtimePid);
+  await killPid(ready?.appReady.pid);
   await removeClientState(stateFile);
   await resetMarkers();
   if (print) {

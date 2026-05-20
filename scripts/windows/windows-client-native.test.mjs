@@ -25,6 +25,8 @@ it('uses Node-native process control instead of wrapping the legacy PowerShell c
   expect(script).toContain("spawn(process.execPath, ['scripts/windows/electron-dev-native.mjs']");
   expect(script).toContain("stdio: ['ignore', logs.stdoutFd, logs.stderrFd]");
   expect(script).toContain("runCapture('taskkill.exe'");
+  expect(script).toContain('ready.appReady.head ?? state?.head');
+  expect(script).toContain('await killPid(ready?.appReady.pid)');
   expect(script).not.toContain('.pipe(logs.');
   expect(script).not.toContain('powershell.exe');
   expect(script).not.toContain('restart-electron-dev.ps1');
