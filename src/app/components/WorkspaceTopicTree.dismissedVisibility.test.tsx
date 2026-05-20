@@ -110,7 +110,57 @@ it('keeps title search able to show dismissed matches while the view hides dismi
   expect(within(itemColumn).getByRole('treeitem', { name: 'Dismissed Parent' })).toBeInTheDocument();
 });
 
-it('shows dismissed ancestors but not dismissed sibling branches for the active review item', () => {
+it('shows all dismissed branches for the active review item when topic focus is off', () => {
+  const nodesById = {
+    'source-topic': createTopic({ id: 'source-topic', readingState: 'dismissed', title: 'Source Topic' }),
+    'review-item': createTopic({
+      id: 'review-item',
+      parentNodeId: 'source-topic',
+      readingState: 'active',
+      title: 'Review Item'
+    }),
+    'dismissed-sibling': createTopic({
+      id: 'dismissed-sibling',
+      parentNodeId: 'source-topic',
+      readingState: 'dismissed',
+      title: 'Dismissed Sibling'
+    }),
+    'partial-parent': createTopic({
+      id: 'partial-parent',
+      parentNodeId: 'source-topic',
+      readingState: 'dismissed',
+      title: 'Partial Parent'
+    }),
+    'active-child': createTopic({
+      id: 'active-child',
+      parentNodeId: 'partial-parent',
+      readingState: 'active',
+      title: 'Active Child'
+    })
+  };
+
+  render(
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId="review-item"
+      forceVisibleNodeId="review-item"
+      itemIds={['source-topic', 'review-item', 'dismissed-sibling', 'partial-parent', 'active-child']}
+      nodesById={nodesById}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Source Topic' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Review Item' })).toHaveAttribute('aria-current', 'page');
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Dismissed Sibling' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Partial Parent' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Active Child' })).toBeInTheDocument();
+});
+
+it('hides fully dismissed branches but keeps partially dismissed branches for the focused active review item', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.viewHideDismissedTopics, 'true');
   const nodesById = {
     'source-topic': createTopic({ id: 'source-topic', readingState: 'dismissed', title: 'Source Topic' }),
     'review-item': createTopic({
