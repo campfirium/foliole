@@ -119,7 +119,12 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-highlight-overlap:hover, .cm-md-highlight-overlap.cm-md-highlight-active': {
     backgroundColor: 'color-mix(in srgb, var(--app-highlight-surface-color) 78%, rgb(var(--color-foreground)) 22%)'
   },
-  '.cm-md-cloze-placeholder': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
+  '.cm-md-cloze-placeholder': {
+    color: 'color-mix(in srgb, var(--app-cloze-color) 78%, var(--color-text-primary))',
+    fontWeight: '600',
+    letterSpacing: '0.08em',
+    paddingInline: '0.08em'
+  },
   '.cm-md-anchor-tag-token': { color: 'var(--app-accent-color)', opacity: '0.9' },
   '.cm-md-anchor-tag-delimiter': { color: 'var(--app-accent-color)', opacity: '0.7' },
   '.cm-md-anchor-tag-kind': { color: 'var(--app-accent-color)', fontWeight: '700', opacity: '1' },

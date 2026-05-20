@@ -13,8 +13,17 @@ describe('inlineLineMatchPlans', () => {
       { from: 12, to: 18 }
     ]);
     expect(state.footnoteRanges).toEqual([{ from: 19, to: 23 }]);
+    expect(state.clozePlaceholderRanges).toEqual([{ from: 45, to: 50 }]);
     expect(state.inlineLinkMatches).toHaveLength(1);
     expect(state.wikiLinkMatches).toHaveLength(1);
+  });
+
+  it('skips cloze placeholders inside preserved ranges', () => {
+    const lineText = '`[...]` [...](url) \\[...] [...]';
+    const state = collectPreviewLineMatchState(0, lineText, false, []);
+    const visiblePlaceholderFrom = lineText.lastIndexOf('[...]');
+
+    expect(state.clozePlaceholderRanges).toEqual([{ from: visiblePlaceholderFrom, to: visiblePlaceholderFrom + 5 }]);
   });
 
   it('collects plain Markdown escape markers outside preserved ranges in preview', () => {
@@ -30,6 +39,7 @@ describe('inlineLineMatchPlans', () => {
   it('skips inline-only collectors inside code blocks in source mode', () => {
     expect(collectSourceLineMatchState(0, '`x` ^[1] [a](b) [[Node]] [...]', true)).toEqual({
       autolinkMatches: [],
+      clozePlaceholderRanges: [],
       embedMatches: [],
       escapedRanges: [],
       footnoteRanges: [],

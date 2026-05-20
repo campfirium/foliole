@@ -1,6 +1,7 @@
 import { collectPreviewLineMatchState, collectSourceLineMatchState } from './inlineLineMatchPlans';
 import {
   collectAutolinkPresentationPlan,
+  collectClozePlaceholderPresentationPlan,
   collectEmbedPresentationPlan,
   collectInlineCodePresentationPlan,
   collectInlineLinkPresentationPlan,
@@ -109,19 +110,22 @@ function resolvePreviewLineClass(args: {
 
 function collectPreviewInlinePresentationPlans(args: {
   autolinkMatches: ReturnType<typeof collectPreviewLineMatchState>['autolinkMatches'];
+  clozePlaceholderRanges: ReturnType<typeof collectPreviewLineMatchState>['clozePlaceholderRanges'];
   embedMatches: ReturnType<typeof collectPreviewLineMatchState>['embedMatches'];
   inlineCodeMatches: ReturnType<typeof collectPreviewLineMatchState>['inlineCodeMatches'];
   inlineLinkMatches: ReturnType<typeof collectPreviewLineMatchState>['inlineLinkMatches'];
   showSyntaxOnLine: boolean;
   wikiLinkMatches: ReturnType<typeof collectPreviewLineMatchState>['wikiLinkMatches'];
 }) {
-  return [
+  const plans = [
     collectInlineCodePresentationPlan(args.inlineCodeMatches, args.showSyntaxOnLine),
     collectInlineLinkPresentationPlan(args.inlineLinkMatches, args.showSyntaxOnLine),
     collectWikiLinkPresentationPlan(args.wikiLinkMatches, args.showSyntaxOnLine),
     collectEmbedPresentationPlan(args.embedMatches, args.showSyntaxOnLine),
     collectAutolinkPresentationPlan(args.autolinkMatches, args.showSyntaxOnLine)
   ];
+  if (args.clozePlaceholderRanges.length) plans.push(collectClozePlaceholderPresentationPlan(args.clozePlaceholderRanges));
+  return plans;
 }
 
 export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlanArgs): PreviewLineDecorationPlan {
@@ -141,6 +145,7 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
   const imageMatches = collectImageMatches(args.lineFrom, args.lineText, linkReferences);
   const {
     autolinkMatches,
+    clozePlaceholderRanges,
     embedMatches,
     escapedRanges,
     footnoteMatches,
@@ -158,6 +163,7 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
     imageVisible: !args.inCodeBlock,
     inlinePresentationPlans: collectPreviewInlinePresentationPlans({
       autolinkMatches,
+      clozePlaceholderRanges,
       embedMatches,
       inlineCodeMatches,
       inlineLinkMatches,
@@ -191,6 +197,7 @@ export function collectSourceLineDecorationPlan(args: {
 }): SourceLineDecorationPlan {
   const {
     autolinkMatches,
+    clozePlaceholderRanges,
     embedMatches,
     footnoteMatches,
     footnoteRanges,
@@ -207,7 +214,8 @@ export function collectSourceLineDecorationPlan(args: {
       collectInlineLinkPresentationPlan(inlineLinkMatches, true),
       collectWikiLinkPresentationPlan(wikiLinkMatches, true),
       collectEmbedPresentationPlan(embedMatches, true),
-      collectAutolinkPresentationPlan(autolinkMatches, true)
+      collectAutolinkPresentationPlan(autolinkMatches, true),
+      ...(clozePlaceholderRanges.length ? [collectClozePlaceholderPresentationPlan(clozePlaceholderRanges)] : [])
     ],
     isCodeFenceLine,
     isThematicBreak: args.thematicBreakLineFroms?.has(args.lineFrom) ?? false,

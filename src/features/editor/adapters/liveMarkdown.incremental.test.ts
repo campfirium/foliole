@@ -68,7 +68,7 @@ describe('liveMarkdown inline rendering', () => {
     expect(host.querySelector('.cm-md-source-highlight')?.textContent).toBe('highlight');
     expect(host.querySelector('.cm-md-highlight')).toBeNull();
     expect(host.querySelector('.cm-md-cloze')).toBeNull();
-    expect(host.querySelector('.cm-md-cloze-placeholder')).toBeNull();
+    expect(host.querySelector('.cm-md-cloze-placeholder')?.textContent).toBe('[...]');
     expect(host.querySelector('.cm-content')?.textContent).toBe('highlight {{cloze}} [...]');
 
     adapter.destroy();

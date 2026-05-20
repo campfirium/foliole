@@ -41,6 +41,10 @@ it('uses dedicated selection, highlight, and cloze color tokens', () => {
   expect(cssText).toContain('cursor: pointer;');
   expect(cssText).toContain('.cm-md-highlight-active');
   expect(cssText).toContain('var(--app-cloze-surface-color)');
+  expect(cssText).toContain('var(--app-cloze-color)');
+  expect(cssText).toContain('font-weight: 600;');
+  expect(cssText).toContain('letter-spacing: 0.08em;');
+  expect(cssText).toContain('padding-inline: 0.08em;');
   expect(cssText).toContain('var(--app-diff-added-surface-color)');
   expect(cssText).toContain('var(--app-diff-removed-surface-color)');
   expect(cssText).toContain('var(--app-accent-color)');
