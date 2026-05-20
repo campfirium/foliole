@@ -14,7 +14,9 @@ import { resolveImageContextMenuState, type ImageContextMenuState } from '../edi
 
 import type { LongClozeGuardOptions } from './editorClozeGuardrail';
 import { resolveEditorRepairTableEdit, selectionFromRepairPayload } from './editorRepairTableCommand';
+import { refreshSelectionHighlight } from './selectionHighlightRefresh';
 import type { LocatorHighlightMatch } from './selectionHighlightToggleSupport';
+import { resolveWebLookupTitle } from './webLookupTitle';
 
 export interface SelectionContextMenuState extends WorkspaceEditorContextMenu {
   existingHighlight?: LocatorHighlightMatch;
@@ -44,20 +46,6 @@ export interface EditorContextCommandsResult {
   handleDeleteImage: () => void;
   handleEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleExportImage: () => Promise<void>;
-}
-
-function refreshSelectionHighlight(adapter: EditorAdapter | null) {
-  if (!adapter) {
-    return;
-  }
-  const selections = adapter.getSelectionRanges().filter((selection) => selection.from !== selection.to);
-  if (selections.length === 0) {
-    return;
-  }
-  requestAnimationFrame(() => {
-    adapter.setSelectionRanges(selections);
-    adapter.focus();
-  });
 }
 
 function selectionPayloadOverlapsImage(
@@ -95,6 +83,7 @@ export function createHandleEditorContextMenu(args: {
   editorRef: MutableRefObject<EditorAdapter | null>;
   getPreservedSelectionPayload?: () => SelectionCommandPayload | null;
   isTrashViewOpen: boolean;
+  nodesById: Record<string, Node>;
   setContextMenu: (value: EditorContextMenuState) => void;
 }) {
   return (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -137,7 +126,8 @@ export function createHandleEditorContextMenu(args: {
       tableRepairSelection: tableRepairSelection ? repairSelection : null,
       top: position.top,
       webLookupDocumentText: editorContent,
-      webLookupPayload: livePayload
+      webLookupPayload: livePayload,
+      webLookupTitle: resolveWebLookupTitle(args.activeNodeId, args.nodesById)
     });
     refreshSelectionHighlight(args.editorRef.current);
   };

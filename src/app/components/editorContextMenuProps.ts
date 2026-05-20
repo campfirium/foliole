@@ -13,6 +13,7 @@ export interface EditorContextMenuProps {
   top: number;
   webLookupDocumentText?: string | null | undefined;
   webLookupPayload?: SelectionCommandPayload | null | undefined;
+  webLookupTitle?: string | null | undefined;
   onClose: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;

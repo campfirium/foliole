@@ -70,6 +70,7 @@ export function DocumentPanelContextMenu({
       top={contextMenu.top}
       webLookupDocumentText={contextMenu.webLookupDocumentText}
       webLookupPayload={contextMenu.webLookupPayload}
+      webLookupTitle={contextMenu.webLookupTitle}
     />
   );
 }

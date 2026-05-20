@@ -121,6 +121,7 @@ export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
     editorRef,
     getPreservedSelectionPayload: () => preservedSelectionPayloadRef.current,
     isTrashViewOpen: args.isTrashViewOpen,
+    nodesById: args.nodesById,
     setContextMenu,
     ...definedProps({ activeNode: args.activeNode })
   });

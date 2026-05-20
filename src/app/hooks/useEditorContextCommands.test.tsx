@@ -94,7 +94,16 @@ it('keeps the last valid markdown selection payload when right-click clears the 
 
   const editorRef = { current: adapter };
   const { result } = renderHook(() =>
-    useEditorContextCommands(buildHookArgs({ editorRef }))
+    useEditorContextCommands(buildHookArgs({
+      activeNode: { id: 'node-child', content: 'Welcome to Foliole', parentNodeId: 'node-source', title: 'Selected sentence' } as never,
+      activeNodeId: 'node-child',
+      editorRef,
+      nodesById: {
+        'node-folder': { id: 'node-folder', kind: 'folder', parentNodeId: null, title: 'Inbox' },
+        'node-source': { id: 'node-source', kind: 'topic', parentNodeId: 'node-folder', title: 'Source Article' },
+        'node-child': { id: 'node-child', content: 'Welcome to Foliole', kind: 'topic', parentNodeId: 'node-source', title: 'Selected sentence' }
+      } as never
+    }))
   );
 
   act(() => {
@@ -119,11 +128,12 @@ it('keeps the last valid markdown selection payload when right-click clears the 
     canRunCommands: true,
     kind: 'selection',
     payload: expect.objectContaining({
-      parentNodeId: 'node-1',
+      parentNodeId: 'node-child',
       selectionText: 'Welcome'
     }),
     webLookupDocumentText: 'Welcome to Foliole',
-    webLookupPayload: null
+    webLookupPayload: null,
+    webLookupTitle: 'Source Article'
   });
 });
 
