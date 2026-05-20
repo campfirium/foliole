@@ -70,6 +70,20 @@ it('resumes the hidden review item with Space', () => {
   expect(resumeReviewItem).toHaveBeenCalledTimes(1);
 });
 
+it('deletes the hidden current review item with Delete', () => {
+  const deleteCurrentReviewItem = vi.fn(() => true);
+  render(
+    <ReviewShortcutHarness
+      deleteCurrentReviewItem={deleteCurrentReviewItem}
+      isCurrentReviewItemVisible={false}
+    />
+  );
+
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }));
+
+  expect(deleteCurrentReviewItem).toHaveBeenCalledTimes(1);
+});
+
 it('runs review action shortcuts when the current review item is visible', () => {
   const completeReviewItem = vi.fn(() => true);
   render(

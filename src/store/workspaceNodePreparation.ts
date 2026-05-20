@@ -91,7 +91,8 @@ function buildPreparedOpenState(
         ...state,
         nodesById: nextNodesById
       },
-      nodeId
+      nodeId,
+      { preferActiveQueuedNode: true }
     ),
     rendererBoundaryKeepNodeIds: [
       ...(state.activeNodeId ? [state.activeNodeId] : []),
