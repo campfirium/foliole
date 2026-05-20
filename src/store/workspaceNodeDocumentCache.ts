@@ -7,6 +7,7 @@ const MAX_CACHED_NODE_DOCUMENT_BYTES = 200 * 1024;
 const MAX_CACHED_NODE_DOCUMENTS = 256;
 const RECENT_HISTORY_PREFETCH_LIMIT = 12;
 const ACTIVE_NEIGHBOR_PREFETCH_LIMIT = 24;
+const ACTIVE_ANCESTOR_PREFETCH_LIMIT = 8;
 const VISIBLE_NODE_PREFETCH_LIMIT = 24;
 const REVIEW_QUEUE_PREFETCH_LIMIT = 12;
 
@@ -120,6 +121,24 @@ function listActiveNeighborPrefetchNodeIds(
   return uniqueNodeIds([...siblingNodeIds, ...childNodeIds]).slice(0, ACTIVE_NEIGHBOR_PREFETCH_LIMIT);
 }
 
+function listActiveAncestorPrefetchNodeIds(activeNodeId: string | null, nodesById: Record<string, Node>) {
+  if (!activeNodeId) {
+    return [];
+  }
+
+  const ancestorNodeIds: string[] = [];
+  const visitedNodeIds = new Set<string>([activeNodeId]);
+  let cursorId = nodesById[activeNodeId]?.parentNodeId ?? null;
+
+  while (cursorId && !visitedNodeIds.has(cursorId) && ancestorNodeIds.length < ACTIVE_ANCESTOR_PREFETCH_LIMIT) {
+    visitedNodeIds.add(cursorId);
+    ancestorNodeIds.push(cursorId);
+    cursorId = nodesById[cursorId]?.parentNodeId ?? null;
+  }
+
+  return ancestorNodeIds;
+}
+
 export function listWorkspaceNodeDocumentPrefetchCandidates(args: {
   activeNodeId: string | null;
   navigationBackStack: string[];
@@ -131,6 +150,7 @@ export function listWorkspaceNodeDocumentPrefetchCandidates(args: {
   return uniqueNodeIds([
     ...listHistoryPrefetchNodeIds(args.activeNodeId, args.navigationBackStack),
     ...(args.reviewQueueNodeIds ?? []).filter((nodeId) => nodeId !== args.activeNodeId).slice(0, REVIEW_QUEUE_PREFETCH_LIMIT),
+    ...listActiveAncestorPrefetchNodeIds(args.activeNodeId, args.nodesById),
     ...listActiveNeighborPrefetchNodeIds(args.activeNodeId, args.nodeOrder, args.nodesById),
     ...(args.visibleNodeIds ?? [])
   ]).filter((nodeId) => nodeId !== args.activeNodeId);
