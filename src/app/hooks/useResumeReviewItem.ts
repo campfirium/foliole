@@ -14,15 +14,11 @@ export function resolveResumeReviewNodeId(args: {
   trashedNodeIds: string[];
 }) {
   const isLiveNode = (nodeId: string) => Boolean(args.nodesById[nodeId]) && !args.trashedNodeIds.includes(nodeId);
-  const queueNodeId = args.queueNodeIds.find(isLiveNode);
-  if (queueNodeId) {
-    return queueNodeId;
-  }
   const currentNodeId = args.reviewSession.currentNodeId;
-  if (currentNodeId && args.reviewSession.queueNodeIds.includes(currentNodeId) && isLiveNode(currentNodeId)) {
+  if (currentNodeId && args.queueNodeIds.includes(currentNodeId) && isLiveNode(currentNodeId)) {
     return currentNodeId;
   }
-  return args.reviewSession.queueNodeIds.find(isLiveNode) ?? (currentNodeId && isLiveNode(currentNodeId) ? currentNodeId : null);
+  return args.queueNodeIds.find(isLiveNode) ?? null;
 }
 
 export function useResumeReviewItem(args: {
@@ -32,14 +28,29 @@ export function useResumeReviewItem(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   return useCallback(() => {
-    const queueNodeIds = buildCachedReviewQueuePlan({
-      includeScheduled: true,
-      nodeOrder: args.ws.nodeOrder,
+    const sessionNodeIds = args.ws.reviewSession.currentNodeId
+      ? [
+          args.ws.reviewSession.currentNodeId,
+          ...args.ws.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== args.ws.reviewSession.currentNodeId)
+        ]
+      : args.ws.reviewSession.queueNodeIds;
+    const sessionPlan = buildCachedReviewQueuePlan({
+      nodeOrder: sessionNodeIds,
       nodesById: args.ws.nodesById,
       now: args.nowIso,
       pushQueueRules: args.reviewSettings.reviewSchedulerSettings.pushQueue,
       trashedNodeIds: args.ws.trashedNodeIds
-    }).queueNodeIds;
+    });
+    const sessionQueueNodeIds = sessionPlan.queueNodeIds;
+    const queueNodeIds = sessionQueueNodeIds.length
+      ? sessionQueueNodeIds
+      : buildCachedReviewQueuePlan({
+          nodeOrder: args.ws.nodeOrder,
+          nodesById: args.ws.nodesById,
+          now: args.nowIso,
+          pushQueueRules: args.reviewSettings.reviewSchedulerSettings.pushQueue,
+          trashedNodeIds: args.ws.trashedNodeIds
+        }).queueNodeIds;
     const nodeId = resolveResumeReviewNodeId({
       nodesById: args.ws.nodesById,
       queueNodeIds,
@@ -49,7 +60,9 @@ export function useResumeReviewItem(args: {
     if (!nodeId) {
       return;
     }
-    args.ws.resumeReviewSession(args.nowIso);
+    if (!args.ws.resumeReviewSession(args.nowIso)) {
+      return;
+    }
     args.controller.runtime.flushPendingEditorDraft();
     args.controller.runtime.setIsViewingTrashNode(false);
     args.controller.trash.closeTrashView();
