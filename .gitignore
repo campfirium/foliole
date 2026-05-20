@@ -25,4 +25,5 @@ src-tauri/
 .windows-dev-renderer-reload-delivered.json
 .windows-dev-restart-intent.json
 .windows-dev-restart-delivered.json
+.windows-native-client-state.json
 .codex
