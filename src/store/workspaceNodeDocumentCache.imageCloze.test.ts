@@ -63,3 +63,34 @@ it('keeps prefetch candidate volume below the document cache limit', () => {
 
   expect(candidates.length).toBeLessThan(256);
 });
+
+it('prefetches the native ancestor while reading a derived child node', () => {
+  const state = createInitialWorkspaceState(new Date('2026-04-10T00:00:00.000Z'));
+  const candidates = listWorkspaceNodeDocumentPrefetchCandidates({
+    activeNodeId: 'highlight-1',
+    navigationBackStack: [],
+    nodeOrder: ['native-1', 'highlight-1'],
+    nodesById: {
+      ...state.nodesById,
+      'native-1': {
+        ...state.nodesById['node-1']!,
+        id: 'native-1',
+        parentNodeId: null,
+        title: 'Native topic'
+      },
+      'highlight-1': {
+        ...state.nodesById['node-1']!,
+        id: 'highlight-1',
+        anchorLink: {
+          id: 'anchor-1',
+          kind: 'highlight',
+          locator: { from: 0, originalText: 'Native', to: 6 }
+        },
+        parentNodeId: 'native-1',
+        title: 'Derived highlight'
+      }
+    }
+  });
+
+  expect(candidates).toContain('native-1');
+});
