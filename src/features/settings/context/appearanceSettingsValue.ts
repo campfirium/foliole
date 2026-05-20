@@ -13,6 +13,14 @@ function createSelectionToolbarSettingsValue(state: AppearanceStateValues) {
   };
 }
 
+function createReadingSettingsValue(state: AppearanceStateValues) {
+  return {
+    readingContentWidth: state.readingContentWidthState,
+    readingLineHeight: state.readingLineHeightState,
+    readingParagraphSpacing: state.readingParagraphSpacingState
+  };
+}
+
 export function useAppearanceSettingsValue(state: AppearanceStateValues): AppearanceSettingsContextValue {
   return useMemo(
     () => ({
@@ -38,8 +46,7 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       markdownSyntaxVisibility: state.markdownSyntaxVisibilityState,
       monospaceFontPreset: state.monospaceFontPresetState,
       pdfReadingMode: state.pdfReadingModeState,
-      readingContentWidth: state.readingContentWidthState,
-      readingLineHeight: state.readingLineHeightState,
+      ...createReadingSettingsValue(state),
       uiFontPreset: state.uiFontPresetState,
       workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
       workspaceSurfacePalette: state.workspaceSurfacePaletteState,
@@ -68,6 +75,7 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       state.pdfReadingModeState,
       state.readingContentWidthState,
       state.readingLineHeightState,
+      state.readingParagraphSpacingState,
       state.uiFontPresetState,
       state.workspaceSurfaceAssignmentsState,
       state.workspaceSurfacePaletteState

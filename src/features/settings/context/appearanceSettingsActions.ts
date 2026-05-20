@@ -25,6 +25,7 @@ import {
   type MonospaceFontPreset,
   type PdfReadingMode,
   type ReadingLineHeight,
+  type ReadingParagraphSpacing,
   type SelectionColorPreset,
   setAccentColorPreset,
   setClozeColorPreset,
@@ -61,6 +62,7 @@ export type AppearanceState = {
   monospaceFontPresetState: MonospaceFontPreset;
   pdfReadingModeState: PdfReadingMode;
   readingLineHeightState: ReadingLineHeight;
+  readingParagraphSpacingState: ReadingParagraphSpacing;
   readingContentWidthState: number;
   selectionColorPresetState: SelectionColorPreset;
   selectionToolbarEnabledState: boolean; selectionToolbarOpacityPercentState: number;
@@ -87,6 +89,7 @@ export type AppearanceState = {
   setPdfReadingModeState: Setter<PdfReadingMode>;
   setReadingContentWidthState: Setter<number>;
   setReadingLineHeightState: Setter<ReadingLineHeight>;
+  setReadingParagraphSpacingState: Setter<ReadingParagraphSpacing>;
   setSelectionColorPresetState: Setter<SelectionColorPreset>;
   setSelectionToolbarEnabledState: Setter<boolean>; setSelectionToolbarOpacityPercentState: Setter<number>;
   setUiFontPresetState: Setter<InterfaceFontPreset>;

@@ -28,6 +28,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'longClozeFrontGuardFrontMax',
   'autoLocalizeRemoteImages',
   'remoteImageFailureHintDismissed',
+  'readwiseOriginalFileTipDismissed',
   'selectionToolbarEnabled',
   'selectionToolbarOpacityPercent',
   'editorDisplayMode',
@@ -40,6 +41,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'baseColor',
   'pdfReadingMode',
   'readingLineHeight',
+  'readingParagraphSpacing',
   'readingContentWidth',
   'dimImagesInDarkMode',
   'fontColor',
@@ -138,7 +140,9 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'nodePaletteRecents',
   'searchPaletteShortcutsCollapsed',
   'commandShortcutOverrides',
-  'webLookupEntries'
+  'webLookupEntries',
+  'devReviewStatusBarPersistenceEnabled',
+  'devReviewStatusBarOpen'
 ] as const satisfies readonly AppSettingsStorageName[];
 
 export const RENDERER_PREFERENCE_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];

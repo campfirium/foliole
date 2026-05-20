@@ -50,14 +50,25 @@ it('resets node list row spacing to the default value', async () => {
   });
 });
 
-it('stores the reading line height preset from appearance settings', async () => {
+it('stores the reading line height value from appearance settings', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  fireEvent.click(screen.getByRole('radio', { name: 'Relaxed' }));
+  fireEvent.change(screen.getByLabelText('Line height'), { target: { value: '1.85' } });
 
   await waitFor(() => {
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('relaxed');
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('1.85');
+  });
+});
+
+it('stores the paragraph spacing value from appearance settings', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.change(screen.getByLabelText('Paragraph spacing'), { target: { value: '1.25' } });
+
+  await waitFor(() => {
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingParagraphSpacing)).toBe('1.25');
   });
 });
 

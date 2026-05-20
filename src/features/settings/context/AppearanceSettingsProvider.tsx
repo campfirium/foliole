@@ -15,8 +15,6 @@ import {
   getFontColorPreset,
   getHighlightColorPreset,
   getPdfReadingMode,
-  getReadingContentWidth,
-  getReadingLineHeight,
   getSelectionColorPreset,
   getMonospaceFontPreset,
   getUiFontPreset,
@@ -26,6 +24,7 @@ import {
 import { resolveBaseColorMode } from '../model/baseColorMode';
 
 import { useEditorSettingsStateValues } from './appearanceEditorState';
+import { useReadingAppearanceState } from './appearanceReadingState';
 import { AppearanceSettingsContext, useAppearanceSettings } from './appearanceSettingsContext';
 import { useAppearanceSettingsValue } from './appearanceSettingsValue';
 
@@ -66,13 +65,12 @@ function useModeScopedAppearanceState(resolvedBaseColorMode: 'dark' | 'light') {
 export function useAppearanceStateValues() {
   const initialModeState = getInitialAppearanceModeState();
   const editorSettings = useEditorSettingsStateValues();
+  const readingSettings = useReadingAppearanceState();
   const modeScoped = useModeScopedAppearanceState(initialModeState.resolvedBaseColorMode);
   const [baseColorModeState, setBaseColorModeState] = useState(() => initialModeState.baseColorMode);
   const [dimImagesInDarkModeState, setDimImagesInDarkModeState] = useState(() => getDimImagesInDarkMode());
   const [resolvedBaseColorModeState, setResolvedBaseColorModeState] = useState(() => initialModeState.resolvedBaseColorMode);
   const [pdfReadingModeState, setPdfReadingModeState] = useState(() => getPdfReadingMode());
-  const [readingContentWidthState, setReadingContentWidthState] = useState(() => getReadingContentWidth());
-  const [readingLineHeightState, setReadingLineHeightState] = useState(() => getReadingLineHeight());
   const [uiFontPresetState, setUiFontPresetState] = useState(() => getUiFontPreset());
   const [customUiFontState, setCustomUiFontState] = useState(() => getCustomUiFont());
   const [interfaceFontPresetState, setInterfaceFontPresetState] = useState(() => getInterfaceFontPreset());
@@ -84,6 +82,7 @@ export function useAppearanceStateValues() {
   return {
     ...modeScoped,
     ...editorSettings,
+    ...readingSettings,
     baseColorModeState,
     dimImagesInDarkModeState,
     customInterfaceFontState,
@@ -93,8 +92,6 @@ export function useAppearanceStateValues() {
     interfaceFontSizeState,
     monospaceFontPresetState,
     pdfReadingModeState,
-    readingContentWidthState,
-    readingLineHeightState,
     resolvedBaseColorModeState,
     setBaseColorModeState,
     setDimImagesInDarkModeState,
@@ -105,8 +102,6 @@ export function useAppearanceStateValues() {
     setInterfaceFontSizeState,
     setMonospaceFontPresetState,
     setPdfReadingModeState,
-    setReadingContentWidthState,
-    setReadingLineHeightState,
     setResolvedBaseColorModeState,
     setUiFontPresetState,
     uiFontPresetState
@@ -170,6 +165,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       pdfReadingMode: state.pdfReadingModeState,
       readingContentWidth: state.readingContentWidthState,
       readingLineHeight: state.readingLineHeightState,
+      readingParagraphSpacing: state.readingParagraphSpacingState,
       clozeColor: state.clozeColorPresetState,
       customInterfaceFont: state.customInterfaceFontState,
       customMonospaceFont: state.customMonospaceFontState,
@@ -201,6 +197,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
     state.pdfReadingModeState,
     state.readingContentWidthState,
     state.readingLineHeightState,
+    state.readingParagraphSpacingState,
     state.selectionColorPresetState,
     state.selectionToolbarOpacityPercentState,
     state.resolvedBaseColorModeState,

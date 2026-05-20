@@ -22,6 +22,8 @@ import {
 } from '../../model/appearanceSettings';
 
 import { ReadingContentWidthRow } from './ReadingContentWidthRow';
+import { ReadingLineHeightRow } from './ReadingLineHeightRow';
+import { ReadingParagraphSpacingRow } from './ReadingParagraphSpacingRow';
 import {
   AccentColorRow,
   ClozeColorRow,
@@ -48,22 +50,6 @@ function AppearancePdfReadingModeRow(props: { appearance: AppearanceSettings }) 
         { label: 'Warm', value: 'warm' }
       ]}
       value={props.appearance.pdfReadingMode}
-    />
-  );
-}
-
-function ReadingLineHeightRow(props: { appearance: AppearanceSettings }) {
-  return (
-    <SettingsSegmentedRow
-      description="Set the reading line height for topics. The choice is saved and applied after restart."
-      label="Reading line height"
-      onChange={(value) => props.appearance.setReadingLineHeight(value as typeof props.appearance.readingLineHeight)}
-      options={[
-        { label: 'Compact', value: 'compact' },
-        { label: 'Standard', value: 'standard' },
-        { label: 'Relaxed', value: 'relaxed' }
-      ]}
-      value={props.appearance.readingLineHeight}
     />
   );
 }
@@ -143,7 +129,14 @@ export function AppearanceReadingSection(props: { appearance: AppearanceSettings
   return (
     <SettingsSection ariaLabel="Appearance reading section" title="Reading">
       <AppearancePdfReadingModeRow appearance={props.appearance} />
-      <ReadingLineHeightRow appearance={props.appearance} />
+      <ReadingLineHeightRow
+        onReadingLineHeightChange={props.appearance.setReadingLineHeight}
+        readingLineHeight={props.appearance.readingLineHeight}
+      />
+      <ReadingParagraphSpacingRow
+        onReadingParagraphSpacingChange={props.appearance.setReadingParagraphSpacing}
+        readingParagraphSpacing={props.appearance.readingParagraphSpacing}
+      />
       <ReadingContentWidthRow
         onReadingContentWidthChange={props.appearance.setReadingContentWidth}
         readingContentWidth={props.appearance.readingContentWidth}

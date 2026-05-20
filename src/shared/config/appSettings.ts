@@ -10,6 +10,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   longClozeFrontGuardFrontMax: 'foliole-long-cloze-front-guard-front-max',
   autoLocalizeRemoteImages: 'foliole-auto-localize-remote-images',
   remoteImageFailureHintDismissed: 'foliole-remote-image-failure-hint-dismissed',
+  readwiseOriginalFileTipDismissed: 'foliole-readwise-original-file-tip-dismissed',
   selectionToolbarEnabled: 'foliole-selection-toolbar-enabled',
   selectionToolbarOpacityPercent: 'foliole-selection-toolbar-opacity-percent',
   editorDisplayMode: 'foliole-editor-display-mode',
@@ -22,6 +23,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   baseColor: 'foliole-base-color',
   pdfReadingMode: 'foliole-pdf-reading-mode',
   readingLineHeight: 'foliole-reading-line-height',
+  readingParagraphSpacing: 'foliole-reading-paragraph-spacing',
   readingContentWidth: 'foliole-reading-content-width',
   dimImagesInDarkMode: 'foliole-dim-images-in-dark-mode',
   fontColor: 'foliole-font-color',
@@ -121,6 +123,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   searchPaletteShortcutsCollapsed: 'foliole-search-palette-shortcuts-collapsed',
   commandShortcutOverrides: 'foliole-command-shortcut-overrides',
   webLookupEntries: 'foliole-web-lookup-entries',
+  devReviewStatusBarPersistenceEnabled: 'foliole-dev-review-status-bar-persistence-enabled',
+  devReviewStatusBarOpen: 'foliole-dev-review-status-bar-open',
   desktopDeviceSyncEnabled: 'foliole-desktop-device-sync-enabled'
 } as const;
 
@@ -128,15 +132,13 @@ export const APP_SETTINGS_OPTIONS = {
   markdownSyntaxVisibility: ['hidden', 'visible'] as const,
   frontmatterDisplayMode: ['compact', 'full'] as const,
   editorDisplayMode: ['preview', 'source'] as const,
-  pdfReadingMode: ['original', 'inverted', 'warm'] as const,
-  readingLineHeight: ['compact', 'standard', 'relaxed'] as const
+  pdfReadingMode: ['original', 'inverted', 'warm'] as const
 } as const;
 
 export type MarkdownSyntaxVisibility = (typeof APP_SETTINGS_OPTIONS.markdownSyntaxVisibility)[number];
 export type FrontmatterDisplayMode = (typeof APP_SETTINGS_OPTIONS.frontmatterDisplayMode)[number];
 export type EditorDisplayMode = (typeof APP_SETTINGS_OPTIONS.editorDisplayMode)[number];
 export type PdfReadingMode = (typeof APP_SETTINGS_OPTIONS.pdfReadingMode)[number];
-export type ReadingLineHeight = (typeof APP_SETTINGS_OPTIONS.readingLineHeight)[number];
 
 export interface PersistedAppSettings {
   autoLocalizeRemoteImages: boolean;

@@ -11,6 +11,7 @@ import type {
   InterfaceFontPreset,
   PdfReadingMode,
   ReadingLineHeight,
+  ReadingParagraphSpacing,
   SelectionColorPreset,
   MonospaceFontPreset,
   WorkspaceSurfaceAssignments,
@@ -33,6 +34,7 @@ export interface AppearanceSettingsContextValue {
   pdfReadingMode: PdfReadingMode;
   readingContentWidth: number;
   readingLineHeight: ReadingLineHeight;
+  readingParagraphSpacing: ReadingParagraphSpacing;
   fontColorPreset: FontColorPreset;
   frontmatterDisplayMode: FrontmatterDisplayMode;
   frontmatterMetaFields: string;
@@ -77,6 +79,7 @@ export interface AppearanceSettingsContextValue {
   setPdfReadingMode: (value: PdfReadingMode) => void;
   setReadingContentWidth: (value: number) => void;
   setReadingLineHeight: (value: ReadingLineHeight) => void;
+  setReadingParagraphSpacing: (value: ReadingParagraphSpacing) => void;
   setUiFontPreset: (value: InterfaceFontPreset) => void;
   setWorkspaceSurfaceAssignments: (value: WorkspaceSurfaceAssignments) => void;
   setWorkspaceSurfacePalette: (value: WorkspaceSurfacePalette) => void;

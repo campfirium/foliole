@@ -17,7 +17,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '&': { backgroundColor: 'transparent', height: '100%' },
   '.cm-scroller': {
     color: 'var(--content-panel-text-color, var(--color-text-primary))',
-    lineHeight: 'var(--content-panel-line-height, 1.75)'
+    lineHeight: 'var(--content-panel-line-height, 1.65)'
   },
   '.cm-cursor, .cm-dropCursor': {
     borderLeftColor: 'var(--color-text-primary)'
@@ -34,6 +34,7 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-widgetBuffer': { width: '0px' },
   '.cm-line': { padding: 0 },
+  '.cm-line.cm-line-paragraph': { paddingBottom: 'var(--content-panel-paragraph-spacing, 0.75em)' },
   '.cm-line:has(.cm-md-image-widget-block)': { fontSize: '0', lineHeight: '0', minHeight: '0' },
   '.cm-line.cm-line-h1': { fontSize: 'var(--content-panel-h1-font-size, 1.5rem)', fontWeight: '700', letterSpacing: '-0.01em', paddingBottom: liveMarkdownSpacing.h1BlockEnd, paddingTop: liveMarkdownSpacing.h1BlockStart },
   '.cm-line.cm-line-h2': { fontSize: 'var(--content-panel-h2-font-size, 1.25rem)', fontWeight: '700', paddingBottom: liveMarkdownSpacing.h2BlockEnd, paddingTop: liveMarkdownSpacing.h2BlockStart },

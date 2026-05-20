@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   applyEditorTypographyScale,
   applyReadingLineHeight,
+  applyReadingParagraphSpacing,
+  normalizeReadingLineHeight,
+  normalizeReadingParagraphSpacing,
   resolveInterfaceFontFamily,
   resolveUiFontFamily
 } from './appearanceTypography';
@@ -31,16 +34,33 @@ describe('reading typography font stacks', () => {
 });
 
 describe('applyReadingLineHeight', () => {
-  it('maps the three reading presets to one theme-independent value set', () => {
+  it('applies a normalized theme-independent line height value', () => {
     const root = document.createElement('div');
 
-    applyReadingLineHeight(root, 'compact');
-    expect(root.style.getPropertyValue('--content-panel-line-height')).toBe('1.6');
+    applyReadingLineHeight(root, 1.65);
+    expect(root.style.getPropertyValue('--content-panel-line-height')).toBe('1.65');
+  });
 
-    applyReadingLineHeight(root, 'standard');
-    expect(root.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
+  it('clamps and snaps custom line height to the supported range', () => {
+    expect(normalizeReadingLineHeight(1.333)).toBe(1.35);
+    expect(normalizeReadingLineHeight(1.1)).toBe(1.3);
+    expect(normalizeReadingLineHeight(2.2)).toBe(2);
+    expect(normalizeReadingLineHeight('bad')).toBe(1.65);
+  });
+});
 
-    applyReadingLineHeight(root, 'relaxed');
-    expect(root.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
+describe('applyReadingParagraphSpacing', () => {
+  it('applies a normalized font-relative paragraph spacing value', () => {
+    const root = document.createElement('div');
+
+    applyReadingParagraphSpacing(root, 0.75);
+    expect(root.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('0.75em');
+  });
+
+  it('clamps and snaps custom paragraph spacing to the supported range', () => {
+    expect(normalizeReadingParagraphSpacing(0.77)).toBe(0.75);
+    expect(normalizeReadingParagraphSpacing(-1)).toBe(0);
+    expect(normalizeReadingParagraphSpacing(2)).toBe(1.5);
+    expect(normalizeReadingParagraphSpacing('bad')).toBe(0.75);
   });
 });

@@ -5,6 +5,7 @@ import {
   resolveMarkdownHeadingLineClass,
   type MarkdownHeadingPrefixRange
 } from './markdownBlockHeadingProjection';
+import { collectPlainParagraphLineClassRanges } from './markdownParagraphLineClasses';
 import {
   collectMarkdownHyphenThematicBreakLines,
   collectMarkdownThematicBreakNodes,
@@ -211,6 +212,9 @@ export function collectMarkdownLineClassRanges(text: string, offset = 0): Markdo
     parentName: null,
     source: text
   });
+  for (const range of collectPlainParagraphLineClassRanges(text, offset, collectMarkdownThematicBreakRanges(text, offset), new Set(lineClasses.keys()))) {
+    setLineClass(lineClasses, range.from, range.className, range.priority);
+  }
   return Array.from(lineClasses.values()).sort((left, right) => left.from - right.from);
 }
 
