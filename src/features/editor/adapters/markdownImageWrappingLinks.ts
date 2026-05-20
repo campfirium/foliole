@@ -55,6 +55,10 @@ function replaceImageAlt(reference: { altText: string; fullMatch: string; rawTar
   return `![${escapedAlt || reference.altText}](${reference.rawTarget})`;
 }
 
+function wrapImageInLink(imageMarkdown: string, target: string) {
+  return `[${imageMarkdown}](${target})`;
+}
+
 export function hasLocalizedImageOnlyRemoteWrappingLink(markdown: string) {
   return collectMarkdownImageReferences(markdown).some((reference) => {
     const parsedTarget = parseMarkdownImageTarget(reference.rawTarget);
@@ -74,7 +78,8 @@ export function removeLocalizedImageOnlyRemoteWrappingLinks(markdown: string) {
       : null;
     if (!wrappingLink || !isRemoteImageLinkTarget(wrappingLink.target) || wrappingLink.from < cursor) continue;
     normalized += markdown.slice(cursor, wrappingLink.from);
-    normalized += wrappingLink.caption ? replaceImageAlt(reference, wrappingLink.caption) : reference.fullMatch;
+    const imageMarkdown = wrappingLink.caption ? replaceImageAlt(reference, wrappingLink.caption) : reference.fullMatch;
+    normalized += wrapImageInLink(imageMarkdown, wrappingLink.target);
     cursor = wrappingLink.to;
   }
   return cursor === 0 ? markdown : `${normalized}${markdown.slice(cursor)}`;

@@ -144,7 +144,7 @@ it('detects remote markdown images through the shared image parser before rewrit
   adapter.destroy();
 });
 
-it('removes image-only wrapping links when localizing remote markdown images', async () => {
+it('preserves image-only wrapping links when localizing remote markdown images', async () => {
   importRemoteImageAttachment.mockResolvedValue({
     status: 'imported',
     attachment_id: 'hash-1',
@@ -159,12 +159,12 @@ it('removes image-only wrapping links when localizing remote markdown images', a
   );
   await waitForLocalization();
 
-  expect(adapter.getContent()).toBe('![](asset://hash-1.png)\n\n正文');
+  expect(adapter.getContent()).toBe('[![](asset://hash-1.png)](https://blogger.googleusercontent.com/img/a/cover)\n\n正文');
 
   adapter.destroy();
 });
 
-it('cleans stale remote wrappers around already localized images after the node opens', async () => {
+it('keeps stale remote wrappers around already localized images after the node opens', async () => {
   const { adapter, onChange } = createAdapter();
 
   adapter.setContent(
@@ -173,9 +173,9 @@ it('cleans stale remote wrappers around already localized images after the node 
   adapter.setNodeId('node-1');
   await waitForLocalization();
 
-  expect(adapter.getContent()).toBe('![image1971×1242 140 KB](asset://hash-1.png)\n正文');
+  expect(adapter.getContent()).toBe('[![image1971×1242 140 KB](asset://hash-1.png)](https://cdn.example.com/uploads/original/2X/f/cover.png)\n正文');
   expect(importRemoteImageAttachment).not.toHaveBeenCalled();
-  expect(onChange).toHaveBeenLastCalledWith('![image1971×1242 140 KB](asset://hash-1.png)\n正文', { nodeId: 'node-1' });
+  expect(onChange).toHaveBeenLastCalledWith('[![image1971×1242 140 KB](asset://hash-1.png)](https://cdn.example.com/uploads/original/2X/f/cover.png)\n正文', { nodeId: 'node-1' });
 
   adapter.destroy();
 });

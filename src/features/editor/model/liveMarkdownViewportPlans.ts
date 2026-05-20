@@ -4,6 +4,7 @@ import {
   type PreviewLineDecorationPlan,
   type SourceLineDecorationPlan
 } from './liveMarkdownLinePlans';
+import type { MarkdownImageMatch } from './markdownImageMatches';
 import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
 
 export interface ViewportLineInput {
@@ -34,6 +35,7 @@ export function collectPreviewViewportPlans(args: {
   lines: ReadonlyArray<ViewportLineInput>;
   linkReferences?: MarkdownLinkReferenceMap;
   markdownSyntaxVisible: boolean;
+  documentImageMatches?: ReadonlyArray<MarkdownImageMatch>;
   startInCodeBlock: boolean;
   thematicBreakLineFroms?: ReadonlySet<number>;
 }): ViewportPreviewLinePlan[] {
@@ -56,11 +58,32 @@ export function collectPreviewViewportPlans(args: {
       markdownSyntaxVisible: args.markdownSyntaxVisible,
       ...(args.thematicBreakLineFroms ? { thematicBreakLineFroms: args.thematicBreakLineFroms } : {})
     });
-    plans.push({ lineFrom: line.from, lineText: line.text, plan });
+    plans.push({
+      lineFrom: line.from,
+      lineText: line.text,
+      plan: applyDocumentImageMatches(plan, args.documentImageMatches)
+    });
     inCodeBlock = args.codeLineFroms ? inCodeBlock : plan.nextInCodeBlock;
   }
 
   return plans;
+}
+
+function applyDocumentImageMatches(
+  plan: PreviewLineDecorationPlan,
+  documentImageMatches: ReadonlyArray<MarkdownImageMatch> | undefined
+): PreviewLineDecorationPlan {
+  if (!documentImageMatches?.length || !plan.imageMatches.length) return plan;
+  return {
+    ...plan,
+    imageMatches: plan.imageMatches.map((lineImage) => {
+      const documentImage = documentImageMatches.find(
+        (item) => item.source === lineImage.source && lineImage.from >= item.from && lineImage.to <= item.to
+      );
+      if (!documentImage?.linkHref) return lineImage;
+      return { ...lineImage, linkHref: documentImage.linkHref };
+    })
+  };
 }
 
 export function collectSourceViewportPlans(args: {

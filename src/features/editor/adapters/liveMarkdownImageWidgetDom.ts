@@ -19,6 +19,7 @@ export function setMarkdownImageWidgetDomIdentity(
   wrapper.dataset.mdImageAttachmentId = imageMatch.attachmentId ?? '';
   wrapper.dataset.mdImageDisplay = imageMatch.display;
   wrapper.dataset.mdImageEditorNodeId = editorNodeId ?? '';
+  wrapper.dataset.mdImageLinkHref = imageMatch.linkHref ?? '';
   wrapper.dataset.mdImagePresentationVersion = String(presentationVersion);
   wrapper.dataset.mdImageSource = imageMatch.source;
 }
@@ -34,6 +35,7 @@ export function canReuseMarkdownImageWidgetDom(
     wrapper.dataset.mdImageAttachmentId === (imageMatch.attachmentId ?? '') &&
     wrapper.dataset.mdImageDisplay === imageMatch.display &&
     wrapper.dataset.mdImageEditorNodeId === (editorNodeId ?? '') &&
+    wrapper.dataset.mdImageLinkHref === (imageMatch.linkHref ?? '') &&
     wrapper.dataset.mdImagePresentationVersion === String(presentationVersion) &&
     wrapper.dataset.mdImageSource === imageMatch.source
   );

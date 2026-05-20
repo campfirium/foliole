@@ -52,9 +52,14 @@ class MarkdownImageWidget extends WidgetType {
       this.imageMatch.alt === other.imageMatch.alt &&
       this.imageMatch.attachmentId === other.imageMatch.attachmentId &&
       this.imageMatch.from === other.imageMatch.from &&
+      this.imageMatch.linkHref === other.imageMatch.linkHref &&
       this.imageMatch.source === other.imageMatch.source &&
       this.imageMatch.to === other.imageMatch.to
     );
+  }
+
+  override ignoreEvent(event: Event) {
+    return event.type !== 'click' && event.type !== 'auxclick';
   }
 
   override toDOM(view: EditorView) {
