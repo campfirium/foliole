@@ -41,6 +41,7 @@
 
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
 - 涉及环境变量、后台进程、重定向、路径拼接、Electron 启动或多步 Windows 命令时，必须优先写成 Node `.mjs` runner；确实需要 Windows 宿主能力时，使用已提交的 `.ps1` / `.cmd` 文件入口，并通过简单 `-File` 或脚本路径调用。
+- Windows 原生 Codex 检查或控制现有 Windows Electron 客户端时，优先使用 `npm run windows:client:native -- <status|start|stop|restart|full-restart>`；该入口直接调用既有 `restart-electron-dev.ps1`，避免 Bash `wslpath`、WSL mirror 默认目录和 PowerShell inline command 转义。
 - 禁止在仓库脚本中新增 `powershell.exe -Command ...`、复杂 `cmd.exe /c ... && ...`、内联 `set VAR=... && npm ...`、或跨 PowerShell / cmd 多层嵌套命令；这些模式必须沉到受测 runner 文件中。
 - `scripts/pre-commit-validation.mjs` 会拦截新增或修改后的 `package.json` 与 `scripts/windows/**` 中的脆弱 Windows shell 内联命令；需要例外时，先补充明确的 runner、测试和本规则更新，不得只绕过 hook。
 - 遇到 `better-sqlite3` / native module 的 `NODE_MODULE_VERSION` mismatch 时，使用 `npm run electron:rebuild:native` 恢复 Electron ABI；不得使用普通 `npm rebuild better-sqlite3` 替代。
