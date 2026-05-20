@@ -12,6 +12,13 @@ export interface InlinePresentationPlan {
   replaceRanges: SemanticRange[];
 }
 
+export function createExternalLinkPresentationAttributes(href: string) {
+  return {
+    'data-md-link-url': href,
+    title: 'Ctrl-click to open in browser'
+  };
+}
+
 export function collectInlineCodePresentationPlan(
   codeMatches: ReadonlyArray<InlineCodeMatch>,
   showSyntax: boolean
@@ -49,7 +56,7 @@ export function collectInlineLinkPresentationPlan(
       className: isSafeMarkdownLinkHref(linkMatch.href) ? 'cm-md-link-text' : 'cm-md-link-text cm-md-link-text-unsafe',
       from: linkMatch.labelFrom,
       to: linkMatch.labelTo,
-      ...(isSafeMarkdownLinkHref(linkMatch.href) ? { attributes: { 'data-md-link-url': linkMatch.href } } : {})
+      ...(isSafeMarkdownLinkHref(linkMatch.href) ? { attributes: createExternalLinkPresentationAttributes(linkMatch.href) } : {})
     });
 
     for (const hiddenRange of linkMatch.hiddenRanges) {
@@ -76,7 +83,7 @@ export function collectAutolinkPresentationPlan(
       className: isSafeMarkdownLinkHref(linkMatch.href) ? 'cm-md-link-text' : 'cm-md-link-text cm-md-link-text-unsafe',
       from: linkMatch.labelFrom,
       to: linkMatch.labelTo,
-      ...(isSafeMarkdownLinkHref(linkMatch.href) ? { attributes: { 'data-md-link-url': linkMatch.href } } : {})
+      ...(isSafeMarkdownLinkHref(linkMatch.href) ? { attributes: createExternalLinkPresentationAttributes(linkMatch.href) } : {})
     });
 
     for (const hiddenRange of linkMatch.hiddenRanges) {

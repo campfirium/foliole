@@ -8,6 +8,7 @@ import { handleClipboardImagePaste, handleInternalClipboardPaste, handleMarkdown
 import { activeNodeIdFacet, openExternalLinkFacet, openNodeLinkFacet, previewNodeLinkFacet } from './liveMarkdownState';
 
 const previewKeyByView = new WeakMap<EditorView, string>();
+const BROWSER_OPEN_MOUSE_BUTTON = 1;
 
 function resolveEditorView(currentTarget: EventTarget | null) {
   const editorHost = currentTarget instanceof HTMLElement ? currentTarget : null;
@@ -61,25 +62,38 @@ function buildPreviewKey(request: EditorNodeLinkPreviewRequest) {
   ].join(':');
 }
 
+function shouldOpenExternalLinkInBrowser(event: MouseEvent) {
+  return event.button === BROWSER_OPEN_MOUSE_BUTTON || event.ctrlKey || event.metaKey;
+}
+
+function handleExternalLinkClick(event: MouseEvent) {
+  const element = resolveElement(event.target);
+  const linkElement = element?.closest('[data-md-link-url]');
+  if (!(linkElement instanceof HTMLElement)) return false;
+
+  const href = linkElement.dataset.mdLinkUrl;
+  const editorView = resolveEditorView(event.currentTarget);
+  const onOpenExternalLink = editorView?.state.facet(openExternalLinkFacet) ?? null;
+  if (!href || !onOpenExternalLink) return false;
+
+  event.preventDefault();
+  onOpenExternalLink({
+    anchorPoint: { x: event.clientX, y: event.clientY },
+    href,
+    ...(shouldOpenExternalLinkInBrowser(event) ? { target: 'browser' } : {})
+  });
+  return true;
+}
+
 export const markdownInteractionHandlers = EditorView.domEventHandlers({
+  auxclick(event) {
+    return handleExternalLinkClick(event);
+  },
   click(event) {
     const element = resolveElement(event.target);
     if (!(element instanceof HTMLElement)) return false;
 
-    const linkElement = element.closest('[data-md-link-url]');
-    if (linkElement instanceof HTMLElement) {
-      const href = linkElement.dataset.mdLinkUrl;
-      const editorView = resolveEditorView(event.currentTarget);
-      const onOpenExternalLink = editorView?.state.facet(openExternalLinkFacet) ?? null;
-      if (!href) return false;
-      if (!onOpenExternalLink) return false;
-      event.preventDefault();
-      onOpenExternalLink({
-        anchorPoint: { x: event.clientX, y: event.clientY },
-        href
-      });
-      return true;
-    }
+    if (element.closest('[data-md-link-url]')) return handleExternalLinkClick(event);
 
     const wikiLinkElement = element.closest('[data-md-link-node-title]');
     if (!(wikiLinkElement instanceof HTMLElement)) return false;

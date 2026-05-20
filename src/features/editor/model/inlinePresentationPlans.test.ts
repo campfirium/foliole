@@ -86,7 +86,7 @@ describe('inlinePresentationPlans', () => {
           className: 'cm-md-link-text',
           from: 1,
           to: 5,
-          attributes: { 'data-md-link-url': 'https://example.test/path' }
+          attributes: { 'data-md-link-url': 'https://example.test/path', title: 'Ctrl-click to open in browser' }
         },
         { className: 'cm-md-syntax-visible', from: 0, to: 1 },
         { className: 'cm-md-syntax-visible', from: 5, to: 7 },
@@ -144,7 +144,7 @@ describe('autolink presentation plans', () => {
     ).toEqual({
       markRanges: [
         {
-          attributes: { 'data-md-link-url': 'https://example.com' },
+          attributes: { 'data-md-link-url': 'https://example.com', title: 'Ctrl-click to open in browser' },
           className: 'cm-md-link-text',
           from: 4,
           to: 23
@@ -170,7 +170,7 @@ describe('autolink presentation plans', () => {
     expect(collectAutolinkPresentationPlan([match], false)).toEqual({
       markRanges: [
         {
-          attributes: { 'data-md-link-url': 'https://example.com' },
+          attributes: { 'data-md-link-url': 'https://example.com', title: 'Ctrl-click to open in browser' },
           className: 'cm-md-link-text',
           from: 5,
           to: 24

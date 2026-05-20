@@ -13,7 +13,7 @@ describe('markdown link compatibility matrix plain links', () => {
     expect(linkRange).toMatchObject({ href: 'https://example.test/path_(one)', labelText: '*label', safe: true });
     expect(linkRange?.hiddenRanges).toEqual(expect.arrayContaining([{ from: 0, to: 1 }, { from: 1, to: 2 }, { from: 8, to: 9 }, { from: 9, to: 10 }]));
     expect(collectInlineLinkPresentationPlan([linkRange!], false)).toMatchObject({
-      markRanges: [{ attributes: { 'data-md-link-url': 'https://example.test/path_(one)' }, className: 'cm-md-link-text', from: 1, to: 8 }]
+      markRanges: [{ attributes: { 'data-md-link-url': 'https://example.test/path_(one)', title: 'Ctrl-click to open in browser' }, className: 'cm-md-link-text', from: 1, to: 8 }]
     });
     expect(collectInlineLinkPresentationPlan([linkRange!], true).markRanges).toEqual(expect.arrayContaining([expect.objectContaining({ className: 'cm-md-link-text', from: 1, to: 8 }), expect.objectContaining({ className: 'cm-md-syntax-visible', from: 0, to: 1 })]));
     expect(projectMarkdownInlineText(text)).toEqual([{ href: 'https://example.test/path_(one)', kind: 'link', text: '*label' }]);
@@ -33,7 +33,7 @@ describe('markdown link compatibility matrix plain links', () => {
     expect(collectInlineLinkPresentationPlan([linkRange!], false)).toMatchObject({
       markRanges: [
         {
-          attributes: { 'data-md-link-url': 'https://aquafina-water-bottle.github.io/jp-mining-note/' },
+          attributes: { 'data-md-link-url': 'https://aquafina-water-bottle.github.io/jp-mining-note/', title: 'Ctrl-click to open in browser' },
           className: 'cm-md-link-text',
           from: 7,
           to: 13
