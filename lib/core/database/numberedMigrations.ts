@@ -182,6 +182,12 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         sqlite.exec(statement);
       }
     }
+  },
+  {
+    version: 43,
+    migrate: (sqlite) => {
+      addColumnIfMissing(sqlite, 'nodes', 'enable_short_term', 'INTEGER');
+    }
   }
 ];
 

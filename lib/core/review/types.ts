@@ -15,12 +15,14 @@ export interface SchedulerCard {
 
 export interface SchedulerGradeInput {
   card: SchedulerCard;
+  enableShortTerm?: boolean;
   grade: ReviewGrade;
   now: string;
 }
 
 export interface SchedulerPreviewInput {
   card: SchedulerCard;
+  enableShortTerm?: boolean;
   now: string;
 }
 

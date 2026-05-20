@@ -4,6 +4,7 @@
     "type": "type"
   },
   "actionTypes": {
+    "addNodesEnableShortTermIfMissing": "addNodesEnableShortTermIfMissing",
     "addNodeViewStateSourceIfMissing": "addNodeViewStateSourceIfMissing",
     "addSyncBaseContentHashIfMissing": "addSyncBaseContentHashIfMissing",
     "backfillNodeAttachmentsFromVersions": "backfillNodeAttachmentsFromVersions",
@@ -134,6 +135,18 @@
         }
       ],
       "beforeVersion": 15
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to upgrade companion node scheduling schema.",
+          "type": "installSchema"
+        },
+        {
+          "type": "addNodesEnableShortTermIfMissing"
+        }
+      ],
+      "beforeVersion": 16
     }
   ],
   "planKeys": {
@@ -147,6 +160,12 @@
     "tableName": "tableName"
   },
   "repairRules": {
+    "nodesEnableShortTerm": {
+      "columnName": "enable_short_term",
+      "errorMessage": "Failed to add node short-term scheduling column.",
+      "statementName": "nodesEnableShortTermColumn",
+      "tableName": "nodes"
+    },
     "nodeViewStateSource": {
       "columnName": "source",
       "errorMessage": "Failed to add node view state source column.",
@@ -192,6 +211,7 @@
     }
   },
   "statementsByName": {
+    "nodesEnableShortTermColumn": "ALTER TABLE nodes ADD COLUMN enable_short_term INTEGER",
     "nodeViewStateSourceColumn": "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",
     "syncObjectStateDropLegacyTable": "DROP TABLE sync_object_state",
     "syncObjectStateBaseContentHashColumn": "ALTER TABLE sync_object_state ADD COLUMN base_content_hash TEXT",

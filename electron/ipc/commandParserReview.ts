@@ -5,6 +5,7 @@ import type {
 } from '../../lib/platform/nativeContract.js';
 
 import {
+  asBoolean,
   asFiniteNumber,
   asIntegerInRange,
   asLiteralUnion,
@@ -40,6 +41,9 @@ function parseReviewRequest(value: unknown, field: string) {
   const request = asObject(value, field);
   return {
     card: parseSchedulerCard(request.card, `${field}.card`),
+    ...(request.enableShortTerm === undefined
+      ? {}
+      : { enableShortTerm: asBoolean(request.enableShortTerm, `${field}.enableShortTerm`) }),
     now: asTimestamp(request.now, `${field}.now`)
   };
 }

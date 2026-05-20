@@ -130,6 +130,7 @@ export interface NativeSchedulerCard {
 export interface NativeReviewGradeArgs {
   request: {
     card: NativeSchedulerCard;
+    enableShortTerm?: boolean;
     rating: 'Again' | 'Hard' | 'Good' | 'Easy';
     now: string;
   };
@@ -138,6 +139,7 @@ export interface NativeReviewGradeArgs {
 export interface NativeReviewPreviewArgs {
   request: {
     card: NativeSchedulerCard;
+    enableShortTerm?: boolean;
     now: string;
   };
 }

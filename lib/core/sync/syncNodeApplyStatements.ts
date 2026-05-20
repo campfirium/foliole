@@ -8,15 +8,16 @@ export interface SyncNodeStatement {
 }
 
 export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
-  id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
+  id, parent_id, kind, priority, desired_retention, enable_short_term, title, is_title_manual, hide_title_heading,
   content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
   current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
   kind = excluded.kind,
   priority = excluded.priority,
   desired_retention = excluded.desired_retention,
+  enable_short_term = excluded.enable_short_term,
   title = excluded.title,
   is_title_manual = excluded.is_title_manual,
   hide_title_heading = excluded.hide_title_heading,
@@ -69,6 +70,7 @@ export function buildRemoteNodeUpsert(record: NativeSyncNodeRecord, bodyBlobHash
       snapshot.kind,
       snapshot.priority,
       snapshot.desired_retention,
+      snapshot.enable_short_term == null ? null : snapshot.enable_short_term ? 1 : 0,
       snapshot.title,
       snapshot.is_title_manual ? 1 : 0,
       snapshot.hide_title_heading ? 1 : 0,

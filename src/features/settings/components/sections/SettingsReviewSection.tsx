@@ -16,8 +16,7 @@ import {
   DefaultPriorityControl,
   QueueMixRatioControl,
   ReadingGrowthFactorRangeControl,
-  ReviewNumberInput,
-  ReviewToggleControl
+  ReviewNumberInput
 } from './reviewSettingsControls';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -25,7 +24,6 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000;
 interface SettingsReviewSectionProps {
   desiredRetention: number;
   maximumIntervalDays: number;
-  enableShortTerm: boolean;
   defaultPriority: number;
   priorityRatio: number;
   queueMixRatioReading: number;
@@ -35,7 +33,6 @@ interface SettingsReviewSectionProps {
   readingIntervalGrowthFactorMax: number;
   onDesiredRetentionChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
-  onEnableShortTermChange: (value: boolean) => void;
   onDefaultPriorityChange: (value: number) => void;
   onPriorityRatioChange: (value: number) => void;
   onQueueMixRatioReadingChange: (value: number) => void;
@@ -59,10 +56,8 @@ function SchedulerCoreRows(props: Pick<
   SettingsReviewSectionProps,
   | 'desiredRetention'
   | 'maximumIntervalDays'
-  | 'enableShortTerm'
   | 'onDesiredRetentionChange'
   | 'onMaximumIntervalDaysChange'
-  | 'onEnableShortTermChange'
 >) {
   return (
     <>
@@ -94,11 +89,6 @@ function SchedulerCoreRows(props: Pick<
             <ReviewNumberInput ariaLabel="Maximum interval days" min={1} onChange={props.onMaximumIntervalDaysChange} step={1} value={props.maximumIntervalDays} />
           </SettingsControlSlot>
         }
-      />
-      <ReviewSettingRow
-        title="Short-term scheduling"
-        description="Enable extra short-term learning steps for new or forgotten cards."
-        control={<ReviewToggleControl ariaLabel="Short-term scheduling" onChange={props.onEnableShortTermChange} value={props.enableShortTerm} />}
       />
     </>
   );
@@ -162,10 +152,8 @@ export function SettingsReviewSection() {
     <SettingsSection ariaLabel="Review settings section" title="Scheduler">
       <SchedulerCoreRows
         desiredRetention={reviewSchedulerSettings.desiredRetention}
-        enableShortTerm={reviewSchedulerSettings.enableShortTerm}
         maximumIntervalDays={reviewSchedulerSettings.maximumIntervalDays}
         onDesiredRetentionChange={reviewSettings.onDesiredRetentionChange}
-        onEnableShortTermChange={reviewSettings.onEnableShortTermChange}
         onMaximumIntervalDaysChange={reviewSettings.onMaximumIntervalDaysChange}
       />
       <PushQueueRows

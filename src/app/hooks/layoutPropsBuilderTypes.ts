@@ -82,6 +82,7 @@ export interface BuildLayoutPropsArgs {
   nodeViewById: WorkspaceLayoutFlatProps['nodeViewById'];
   onNodeDesiredRetentionChange: WorkspaceLayoutFlatProps['onNodeDesiredRetentionChange'];
   onNodePriorityChange: WorkspaceLayoutFlatProps['onNodePriorityChange'];
+  onNodeShortTermChange: WorkspaceLayoutFlatProps['onNodeShortTermChange'];
   onAnswerChange: WorkspaceLayoutFlatProps['onAnswerChange'];
   onEditorChange: WorkspaceLayoutFlatProps['onEditorChange'];
   onRegisterEditorDraftFlush: WorkspaceLayoutFlatProps['onRegisterEditorDraftFlush'];

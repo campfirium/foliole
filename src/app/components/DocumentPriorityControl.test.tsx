@@ -58,11 +58,11 @@ it('renders a compact priority picker with only priority values', () => {
   expect(within(menu).getAllByRole('menuitem')).toHaveLength(10);
   expect(within(menu).getByRole('menuitem', { name: 'P0' })).toHaveAttribute(
     'title',
-    'P0 has absolute scheduling privilege.'
+    'P0 comes first and is not delayed by priority scaling.'
   );
   expect(within(menu).getByRole('menuitem', { name: 'P5' })).toBeInTheDocument();
   expect(screen.queryByText(/Inherit/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/Use inherited value/i)).not.toBeInTheDocument();
-  expect(screen.queryByText(/Absolute privilege/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/priority scaling/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/Current/i)).not.toBeInTheDocument();
 });

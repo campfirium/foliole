@@ -43,6 +43,12 @@ function assertTimestamp(value: unknown, field: string): asserts value is string
   }
 }
 
+function assertOptionalBoolean(value: unknown, field: string): void {
+  if (value !== undefined && typeof value !== 'boolean') {
+    throw new Error(`Invalid scheduler field "${field}": expected boolean`);
+  }
+}
+
 export function assertSchedulerCard(value: unknown, field = 'card'): asserts value is SchedulerCard {
   if (!isRecord(value)) {
     throw new Error(`Invalid scheduler field "${field}": expected object`);
@@ -64,6 +70,7 @@ export function assertSchedulerCard(value: unknown, field = 'card'): asserts val
 
 export function assertSchedulerGradeInput(input: SchedulerGradeInput): void {
   assertSchedulerCard(input.card, 'card');
+  assertOptionalBoolean(input.enableShortTerm, 'enableShortTerm');
   assertTimestamp(input.now, 'now');
   if (input.grade !== 1 && input.grade !== 2 && input.grade !== 3 && input.grade !== 4) {
     throw new Error('Invalid scheduler field "grade": expected 1 | 2 | 3 | 4');
@@ -80,6 +87,7 @@ export function assertSchedulerGradeResult(value: unknown): asserts value is Sch
 
 export function assertSchedulerPreviewInput(input: SchedulerPreviewInput): void {
   assertSchedulerCard(input.card, 'card');
+  assertOptionalBoolean(input.enableShortTerm, 'enableShortTerm');
   assertTimestamp(input.now, 'now');
 }
 

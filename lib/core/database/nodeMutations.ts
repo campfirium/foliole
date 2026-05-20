@@ -82,6 +82,7 @@ export interface UpsertNodeSnapshotInput {
   kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
+  enableShortTerm?: boolean | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading?: boolean;
@@ -154,6 +155,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       input.kind,
       input.priority ?? null,
       input.desiredRetention ?? null,
+      input.enableShortTerm == null ? null : input.enableShortTerm ? 1 : 0,
       input.title,
       input.isTitleManual ? 1 : 0,
       input.hideTitleHeading === true ? 1 : 0,

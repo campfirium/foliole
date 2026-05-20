@@ -56,6 +56,9 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     kind: asNodeKind(args.kind, 'kind'),
     priority: asNullableInteger(args.priority, 'priority'),
     desiredRetention: asNullableFiniteNumber(args.desiredRetention, 'desiredRetention'),
+    enableShortTerm: args.enableShortTerm === undefined || args.enableShortTerm === null
+      ? null
+      : asBoolean(args.enableShortTerm, 'enableShortTerm'),
     title: asString(args.title, 'title'),
     isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
     hideTitleHeading: args.hideTitleHeading === undefined ? false : asBoolean(args.hideTitleHeading, 'hideTitleHeading'),

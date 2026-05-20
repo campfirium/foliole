@@ -81,6 +81,7 @@ export interface Node {
   kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
+  enableShortTerm?: boolean | null;
   specialKind?: NodeSpecialKind;
   title: string;
   isTitleManual?: boolean;

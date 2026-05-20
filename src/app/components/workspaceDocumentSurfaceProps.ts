@@ -152,6 +152,7 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onNodeContentChange: props.document.onNodeContentChange,
     onNodeDesiredRetentionChange: props.document.onNodeDesiredRetentionChange,
     onNodePriorityChange: props.document.onNodePriorityChange,
+    onNodeShortTermChange: props.document.onNodeShortTermChange,
     onEnterPriorityQuickSet: props.document.onEnterPriorityQuickSet,
     onPersistPdfViewState: props.document.onPersistPdfViewState,
     onRegisterEditorDraftFlush: props.document.onRegisterEditorDraftFlush,

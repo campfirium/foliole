@@ -6,6 +6,7 @@ export const nodes = sqliteTable('nodes', {
   kind: text('kind').notNull().default('topic'),
   priority: integer('priority'),
   desiredRetention: real('desired_retention'),
+  enableShortTerm: integer('enable_short_term', { mode: 'boolean' }),
   title: text('title').notNull(),
   isTitleManual: integer('is_title_manual', { mode: 'boolean' }).notNull().default(false),
   hideTitleHeading: integer('hide_title_heading', { mode: 'boolean' }).notNull().default(false),

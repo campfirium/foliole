@@ -47,6 +47,7 @@ export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}
     updateNodeContent: vi.fn(),
     updateNodeDesiredRetention: vi.fn(),
     updateNodePriority: vi.fn(),
+    updateNodeShortTerm: vi.fn(),
     updateNodeReveal: vi.fn(),
     updateNodeTitle: vi.fn(),
     updateVirtualNodeFilter: vi.fn(),

@@ -27,6 +27,7 @@ export interface WorkspaceListNode {
   anchorLink?: NodeAnchorLink | null;
   createdAt: string;
   desiredRetention?: number | null;
+  enableShortTerm?: boolean | null;
   hasContent: boolean;
   hasReveal: boolean;
   id: string;
@@ -54,6 +55,7 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     anchorLink: node.anchorLink ?? null,
     createdAt: node.createdAt,
     desiredRetention: node.desiredRetention ?? null,
+    enableShortTerm: node.enableShortTerm ?? null,
     hasContent: hasNodeContent(node),
     hasReveal: hasNodeReveal(node),
     id: node.id,
@@ -91,6 +93,7 @@ function isWorkspaceListProjectionReusable(
     projectedNode.anchorLink === (sourceNode.anchorLink ?? null) &&
     projectedNode.createdAt === sourceNode.createdAt &&
     projectedNode.desiredRetention === (sourceNode.desiredRetention ?? null) &&
+    projectedNode.enableShortTerm === (sourceNode.enableShortTerm ?? null) &&
     projectedNode.hasContent === hasNodeContent(sourceNode) &&
     projectedNode.hasReveal === hasNodeReveal(sourceNode) &&
     projectedNode.id === sourceNode.id &&

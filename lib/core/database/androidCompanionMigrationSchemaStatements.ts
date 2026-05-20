@@ -1,4 +1,5 @@
 export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
+  nodesEnableShortTermColumn: 'ALTER TABLE nodes ADD COLUMN enable_short_term INTEGER',
   nodeViewStateSourceColumn: "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",
   syncObjectStateDropLegacyTable: 'DROP TABLE sync_object_state',
   syncObjectStateBaseContentHashColumn: 'ALTER TABLE sync_object_state ADD COLUMN base_content_hash TEXT',
@@ -23,6 +24,7 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
 };
 
 export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
+  addNodesEnableShortTermIfMissing: 'addNodesEnableShortTermIfMissing',
   addNodeViewStateSourceIfMissing: 'addNodeViewStateSourceIfMissing',
   addSyncBaseContentHashIfMissing: 'addSyncBaseContentHashIfMissing',
   backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
@@ -114,10 +116,23 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to upgrade companion core indexes.', type: 'installSchema' }],
     beforeVersion: 15
+  },
+  {
+    actions: [
+      { errorMessage: 'Failed to upgrade companion node scheduling schema.', type: 'installSchema' },
+      { type: 'addNodesEnableShortTermIfMissing' }
+    ],
+    beforeVersion: 16
   }
 ] as const;
 
 export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {
+  nodesEnableShortTerm: {
+    columnName: 'enable_short_term',
+    errorMessage: 'Failed to add node short-term scheduling column.',
+    statementName: 'nodesEnableShortTermColumn',
+    tableName: 'nodes'
+  },
   nodeViewStateSource: {
     columnName: 'source',
     errorMessage: 'Failed to add node view state source column.',
