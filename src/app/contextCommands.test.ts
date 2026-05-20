@@ -110,6 +110,38 @@ function runBuildsOnePayloadEntryPerSelectedRangeCase() {
   expect(payload?.clozeContent).toBe('[...] Beta [...] Delta');
 }
 
+function runKeepsMarkdownStrongMarksAroundClozeCase() {
+  const content = '- 无论多复杂的任务，**都必须最终分解为可执行的下一步**，并纳入系统';
+  const textFrom = content.indexOf('都必须');
+  const textTo = content.indexOf('**，');
+  const payload = getSelectionCommandPayloadForContentRanges('node-1', content, [
+    { from: textFrom, to: textTo + '**'.length }
+  ]);
+
+  expect(payload?.entries).toEqual([
+    expect.objectContaining({
+      locator: {
+        from: textFrom,
+        originalText: '都必须最终分解为可执行的下一步',
+        to: textTo
+      },
+      range: { from: textFrom, to: textTo },
+      selectionText: '都必须最终分解为可执行的下一步'
+    })
+  ]);
+  expect(payload?.clozeContent).toBe('- 无论多复杂的任务，**[...]**，并纳入系统');
+}
+
+function runKeepsMarkdownStrongMarksFromRawStrongSelectionCase() {
+  const content = '**可执行的下一步**';
+  const payload = getSelectionCommandPayloadForContentRanges('node-1', content, [
+    { from: 0, to: content.length }
+  ]);
+
+  expect(payload?.selectionText).toBe('可执行的下一步');
+  expect(payload?.clozeContent).toBe('**[...]**');
+}
+
 describe('getSelectionCommandPayload', () => {
   it('preserves line breaks when building cloze content from selection', () => {
     const content = '# Title\n\nFirst line\nSecond line';
@@ -139,6 +171,10 @@ describe('getSelectionCommandPayload', () => {
       })
     ]);
   });
+
+  it('keeps markdown strong marks around the cloze when selecting the visible strong text', runKeepsMarkdownStrongMarksAroundClozeCase);
+
+  it('keeps markdown strong marks when the selection includes both raw strong delimiters', runKeepsMarkdownStrongMarksFromRawStrongSelectionCase);
 
   it('builds one payload entry per selected range', runBuildsOnePayloadEntryPerSelectedRangeCase);
 
