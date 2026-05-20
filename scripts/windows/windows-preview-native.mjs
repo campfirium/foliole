@@ -1,4 +1,4 @@
-/* global URL, console, process */
+/* global console, process */
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -16,12 +16,15 @@ import {
   wait
 } from './windows-preview-native-runtime.mjs';
 import { isTrustedRunningStatus, parseWindowsClientStatus, selectNativePreviewAction } from './windows-preview-native-support.mjs';
+import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
-const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const clientScript = path.join(repoRoot, 'scripts', 'windows', 'windows-client-native.mjs');
-const nativeAbiScript = path.join(repoRoot, 'scripts', 'windows', 'native-abi-preflight.ps1');
-const restartDeliveryFile = path.join(repoRoot, '.windows-dev-restart-delivered.json');
-const reloadDeliveryFile = path.join(repoRoot, '.windows-dev-renderer-reload-delivered.json');
+const {
+  clientScript,
+  nativeAbiScript,
+  reloadDeliveryFile,
+  repoRoot,
+  restartDeliveryFile
+} = resolveWindowsNativePaths();
 const PREVIEW_TIMEOUT_MS = Number.parseInt(process.env.WINDOWS_PREVIEW_TIMEOUT_MS ?? '25000', 10);
 
 async function ensureFreshElectronDist() {
