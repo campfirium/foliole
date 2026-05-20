@@ -157,6 +157,21 @@ it('shows completed without progress and continues reading when the review phase
   expect(onContinueReading).toHaveBeenCalledTimes(1);
 });
 
+it('continues reading with Space after the review phase is complete', () => {
+  const onContinueReading = vi.fn();
+  renderToolbar({
+    onContinueReading,
+    reviewCompletedCount: 3,
+    reviewCurrentNodeId: null,
+    reviewQueueCount: 0,
+    reviewStatus: 'completed'
+  });
+
+  fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+
+  expect(onContinueReading).toHaveBeenCalledTimes(1);
+});
+
 it('resumes from the queue when study mode has no current item but queued items exist', () => {
   const onContinueReading = vi.fn();
   const onResumeReviewItem = vi.fn();
