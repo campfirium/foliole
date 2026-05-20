@@ -50,6 +50,7 @@
     "windows:native:preflight": "node scripts/windows/windows-native-pilot-preflight.mjs",
     "electron:compile": "tsc -p electron/tsconfig.json",
     "electron:dev": "node scripts/electron-dev.mjs",
+    "electron:dev:native": "node scripts/windows/electron-dev-native.mjs",
     "dev:screenshot": "bash scripts/windows/dev-screenshot.sh",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
     "oneoff:workspace:migrate": "node scripts/migrate-workspace-data.mjs",

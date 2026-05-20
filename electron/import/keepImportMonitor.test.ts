@@ -6,6 +6,13 @@ import { createDefaultImportManagerSettings } from '../../lib/core/import/import
 
 import { createKeepImportMonitor } from './keepImportMonitor.js';
 
+function triggerWatchListener(listener: (() => void) | null) {
+  if (!listener) {
+    throw new Error('watch listener was not registered');
+  }
+  listener();
+}
+
 it('watches both readwise full document and highlight folders', async () => {
   vi.useFakeTimers();
   const watch = vi.fn(() => ({ close: vi.fn() }));
@@ -96,7 +103,7 @@ it('reports a fresh snapshot only after a clean monitor cycle', async () => {
   await vi.runAllTimersAsync();
   expect(monitor.isSnapshotFresh('draft-import-source-1')).toBe(true);
 
-  listener?.();
+  triggerWatchListener(listener);
   expect(monitor.isSnapshotFresh('draft-import-source-1')).toBe(false);
   await vi.runAllTimersAsync();
   expect(monitor.isSnapshotFresh('draft-import-source-1')).toBe(true);

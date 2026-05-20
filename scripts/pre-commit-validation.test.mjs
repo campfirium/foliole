@@ -12,13 +12,14 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const PRE_COMMIT_VALIDATION_SCRIPT = path.join(REPO_ROOT, 'scripts', 'pre-commit-validation.mjs');
 
 function runCommand(command, args, cwd) {
+  const vitestBinName = process.platform === 'win32' ? 'vitest.cmd' : 'vitest';
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd,
       env: {
         ...process.env,
         PATH: `${path.join(cwd, 'node_modules', '.bin')}:${process.env.PATH}`,
-        VITEST_BIN: path.join(cwd, 'node_modules', '.bin', 'vitest')
+        VITEST_BIN: path.join(cwd, 'node_modules', '.bin', vitestBinName)
       }
     });
     let stdout = '';
@@ -63,6 +64,11 @@ async function createRepo() {
     '#!/usr/bin/env bash\nprintf "vitest:%s\\n" "$*" >> calls.log\n',
     { encoding: 'utf8', mode: 0o755 }
   );
+  await writeFile(
+    path.join(repoDir, 'node_modules', '.bin', 'vitest.cmd'),
+    '@echo off\r\necho vitest:%*>> calls.log\r\n',
+    'utf8'
+  );
   return repoDir;
 }
 
@@ -76,7 +82,7 @@ describe('pre-commit validation', () => {
 
       const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
 
-      expect(result.code).toBe(0);
+      expect(result.code, result.stderr).toBe(0);
       expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).not.toContain('sync-pack');
     } finally {
       await rm(repoDir, { recursive: true, force: true });
@@ -97,7 +103,7 @@ describe('pre-commit validation', () => {
 
       const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
 
-      expect(result.code).toBe(0);
+      expect(result.code, result.stderr).toBe(0);
       const calls = await readFile(path.join(repoDir, 'calls.log'), 'utf8');
       expect(calls).toContain('budget:notes.md,src/new-file.ts');
       expect(calls).toContain('lint:src/existing.ts src/new-file.ts');
@@ -123,7 +129,7 @@ describe('pre-commit validation', () => {
 
       const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
 
-      expect(result.code).toBe(0);
+      expect(result.code, result.stderr).toBe(0);
       const calls = await readFile(path.join(repoDir, 'calls.log'), 'utf8');
       expect(calls).toContain(
         'vitest:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/pre-commit-critical.json --silent=passed-only --pool=threads --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx'
@@ -164,6 +170,93 @@ describe('pre-commit validation', () => {
       const calls = await readFile(path.join(repoDir, 'calls.log'), 'utf8');
       expect(calls).toContain('src/app/components/StatusPanel.test.tsx');
       expect(calls).toContain('src/app/components/StatusPanel.tsx');
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it('blocks fragile inline Windows shell commands from being staged', async () => {
+    const repoDir = await createRepo();
+    try {
+      await writeFile(
+        path.join(repoDir, 'package.json'),
+        JSON.stringify({
+          scripts: {
+            'bad:preview': 'powershell.exe -NoProfile -Command "$env:FOO=\'bar\'; cmd.exe /c npm.cmd run electron:dev"'
+          }
+        }),
+        'utf8'
+      );
+      await runCommand('git', ['add', 'package.json'], repoDir);
+
+      const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
+
+      expect(result.code).not.toBe(0);
+      expect(result.stderr).toContain('windows shell policy violation');
+      expect(result.stderr).toContain('package.json');
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it('allows Windows native wrappers that delegate to Node runners', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'scripts', 'windows'), { recursive: true });
+      await writeFile(
+        path.join(repoDir, 'package.json'),
+        JSON.stringify({
+          scripts: {
+            'electron:dev:native': 'node scripts/windows/electron-dev-native.mjs'
+          }
+        }),
+        'utf8'
+      );
+      await writeFile(
+        path.join(repoDir, 'scripts', 'windows', 'electron-dev-native.mjs'),
+        'process.env.FOLIOLE_USER_DATA_PATH ??= ".electron-user-data"; await import("../electron-dev.mjs");\n',
+        'utf8'
+      );
+      await runCommand('git', ['add', 'package.json', 'scripts/windows/electron-dev-native.mjs'], repoDir);
+
+      const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
+
+      expect(result.code).toBe(0);
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not block edits near legacy Windows shell commands unless the fragile command is newly added', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'scripts', 'windows'), { recursive: true });
+      await writeFile(
+        path.join(repoDir, 'scripts', 'windows', 'legacy-preview.sh'),
+        [
+          '#!/usr/bin/env bash',
+          'powershell.exe -NoProfile -Command "$env:FOO=\'bar\'; npm.cmd run electron:dev"',
+          ''
+        ].join('\n'),
+        { encoding: 'utf8', mode: 0o755 }
+      );
+      await runCommand('git', ['add', '.'], repoDir);
+      await runCommand('git', ['commit', '-m', 'seed legacy script'], repoDir);
+      await writeFile(
+        path.join(repoDir, 'scripts', 'windows', 'legacy-preview.sh'),
+        [
+          '#!/usr/bin/env bash',
+          '# unrelated maintenance note',
+          'powershell.exe -NoProfile -Command "$env:FOO=\'bar\'; npm.cmd run electron:dev"',
+          ''
+        ].join('\n'),
+        { encoding: 'utf8', mode: 0o755 }
+      );
+      await runCommand('git', ['add', 'scripts/windows/legacy-preview.sh'], repoDir);
+
+      const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
+
+      expect(result.code, result.stderr).toBe(0);
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
