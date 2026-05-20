@@ -27,7 +27,7 @@ function createPaletteArgs(activeNodeId: string | null) {
     resolvedBaseColorMode: 'light' as const,
     reviewSession: { isAnswerRevealed: false },
     reviewDueCount: 0,
-    study: { canStartStudyMode: false },
+    study: { canStartStudyMode: false, isDevReviewStatusBarPersistenceEnabled: false },
     ws: {
       appActionHistory: initial.appActionHistory,
       nodeOrder: ['node-1'],

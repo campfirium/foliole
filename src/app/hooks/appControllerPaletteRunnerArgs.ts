@@ -168,6 +168,18 @@ function createPaletteViewActions() {
   };
 }
 
+function createPaletteStudyActions(args: {
+  isStudyMode: boolean;
+  study: ReturnType<typeof useWorkspaceControllerState>['study'];
+}) {
+  return {
+    exitStudyMode: args.study.exitStudyMode,
+    isReviewMode: args.isStudyMode,
+    startStudyMode: args.study.startStudyMode,
+    toggleDevReviewStatusBarPersistence: args.study.toggleDevReviewStatusBarPersistence
+  };
+}
+
 export function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
@@ -190,15 +202,14 @@ export function createPaletteRunnerArgs(args: {
     ...createSelectionAnnotationPaletteActions(args),
     ...createPaletteReviewActions(args),
     ...createPaletteHistoryActions(args),
+    ...createPaletteStudyActions(args),
     enterPriorityMode: args.layoutProps.document.onEnterPriorityQuickSet,
-    exitStudyMode: args.study.exitStudyMode,
     exportCurrentArticle: createExportCurrentArticleCommand(args),
     findInTopic: requestDocumentTopicSearchOpen,
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
     ...createPaletteNavigationActions(args),
     importDirectory: args.formalImport.startImportDirectory,
     importSingleFile: args.formalImport.startImportFile,
-    isReviewMode: args.isStudyMode,
     onRestartApp: createRestartAppCommand(args),
     onToggleBaseColorMode: args.appearance.toggleBaseColorMode,
     ...createPaletteViewActions(),
@@ -224,7 +235,6 @@ export function createPaletteRunnerArgs(args: {
     setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
     setSettingsOpen: args.runtime.setIsSettingsOpen,
     startClipboardImport: args.layoutProps.imports.onStartClipboardImport,
-    startStudyMode: args.study.startStudyMode,
     trashViewOpen: args.trash.isTrashViewOpen
   };
 }

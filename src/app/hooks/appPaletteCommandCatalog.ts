@@ -2,6 +2,11 @@ import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../lib/core/nodes/folderTopicI
 import { VIRTUAL_NODE_COMMAND } from '../../../lib/core/nodes/virtualNodeCommands';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
+import {
+  DEVELOPER_PALETTE_COMMANDS,
+  isDeveloperCommandEnabled,
+  resolveDeveloperPaletteTitle
+} from './appPaletteDeveloperCommands';
 import { isReviewCommandEnabled, REVIEW_PALETTE_COMMANDS, type ReviewPaletteCommandOptions } from './appPaletteReviewCommands';
 
 export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions {
@@ -16,6 +21,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canRenameNode: boolean;
   canReimportSelectedTopic: boolean;
   canResetImportData: boolean;
+  canToggleDevReviewStatusBarPersistence: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
   canGoToNode: boolean;
@@ -25,6 +31,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canToggleImmersiveMode: boolean;
   canSetNodePriority: boolean;
   isImmersiveMode: boolean;
+  isDevReviewStatusBarPersistenceEnabled: boolean;
   isReviewMode: boolean;
   redoWorkspaceActionTitle: string;
   undoWorkspaceActionTitle: string;
@@ -56,8 +63,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
   { id: APP_COMMAND_IDS.openImportManagement, title: 'Open Import Management', section: 'Import', keywords: ['import', 'manage', 'removed'] },
-  { id: APP_COMMAND_IDS.resetImportData, title: 'DEV Reset Import Data', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reset', 'clear', 'records'] },
-  { id: APP_COMMAND_IDS.reimportSelectedTopic, title: 'Dev: Re-import Selected Topic', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reimport', 'topic', 'removed'] },
+  ...DEVELOPER_PALETTE_COMMANDS,
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
   { id: APP_COMMAND_IDS.renameNode, title: 'Rename', section: 'Workspace', keywords: ['rename', 'topic', 'folder'] },
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Editor', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
@@ -118,6 +124,8 @@ function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, t
   if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
     return options.isImmersiveMode ? 'Exit Immersive Reading' : 'Enter Immersive Reading';
   }
+  const developerTitle = resolveDeveloperPaletteTitle(id, options);
+  if (developerTitle) return developerTitle;
   return resolveCommandTitle(id, options.isReviewMode, title);
 }
 
@@ -143,12 +151,6 @@ function isImportCommandEnabled(id: string, options: BuildAppPaletteItemsOptions
   }
   if (id === APP_COMMAND_IDS.importFolder) {
     return options.canImportFolder;
-  }
-  if (id === APP_COMMAND_IDS.resetImportData) {
-    return options.canResetImportData;
-  }
-  if (id === APP_COMMAND_IDS.reimportSelectedTopic) {
-    return options.canReimportSelectedTopic;
   }
   return null;
 }
@@ -207,6 +209,7 @@ export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItem
     isImportCommandEnabled,
     isEditorCommandEnabled,
     isNavigationCommandEnabled,
+    isDeveloperCommandEnabled,
     isReviewCommandEnabled
   ].reduce<boolean | null>((current, resolver) => current ?? resolver(id, options), null);
   if (enabled !== null) {

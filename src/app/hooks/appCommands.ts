@@ -34,6 +34,7 @@ interface RunAppCommandActions {
   importSingleFile: () => void | Promise<void>;
   reimportSelectedTopic: () => void | Promise<void>;
   resetImportData: () => boolean | void;
+  toggleDevReviewStatusBarPersistence: () => void;
   startClipboardImport: () => void;
   openNotes: () => void;
   openReadwiseReaderSettings: () => void;
@@ -93,6 +94,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.clipboardImport]: actions.startClipboardImport,
     [APP_COMMAND_IDS.openImportManagement]: actions.openImportManagement,
     [APP_COMMAND_IDS.resetImportData]: actions.resetImportData,
+    [APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence]: actions.toggleDevReviewStatusBarPersistence,
     [APP_COMMAND_IDS.reimportSelectedTopic]: actions.reimportSelectedTopic,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,

@@ -23,14 +23,20 @@ const enabledOptions: BuildAppPaletteItemsOptions = {
   canRepairTable: true,
   canMoveToNode: true,
   canRenameNode: true,
+  canRedoWorkspaceAction: true,
   canReimportSelectedTopic: true,
   canResetImportData: true,
+  canToggleDevReviewStatusBarPersistence: true,
   canRevealAnswer: true,
   canSetNodePriority: true,
   canToggleImmersiveMode: true,
   canToggleReviewMode: true,
+  canUndoWorkspaceAction: true,
   isImmersiveMode: false,
-  isReviewMode: false
+  isDevReviewStatusBarPersistenceEnabled: false,
+  isReviewMode: false,
+  redoWorkspaceActionTitle: 'Redo',
+  undoWorkspaceActionTitle: 'Undo'
 };
 
 function sectionFor(commandId: string) {
@@ -47,10 +53,24 @@ describe('getAppPaletteCommands', () => {
   it('keeps command palette sections aligned with the information architecture', () => {
     expect(sectionFor(APP_COMMAND_IDS.toggleDevTools)).toBe('Developer');
     expect(sectionFor(APP_COMMAND_IDS.reimportSelectedTopic)).toBe('Developer');
+    expect(sectionFor(APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence)).toBe('Developer');
     expect(sectionFor(APP_COMMAND_IDS.enterPriorityMode)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.exportCurrentArticle)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.repairTable)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.renameNode)).toBe('Workspace');
+  });
+
+  it('uses dynamic labels for the dev review status bar memory toggle', () => {
+    expect(
+      getAppPaletteCommands({ ...enabledOptions, isDevReviewStatusBarPersistenceEnabled: false }).find(
+        (item) => item.id === APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence
+      )?.title
+    ).toBe('DEV Enable Review Status Bar Memory');
+    expect(
+      getAppPaletteCommands({ ...enabledOptions, isDevReviewStatusBarPersistenceEnabled: true }).find(
+        (item) => item.id === APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence
+      )?.title
+    ).toBe('DEV Disable Review Status Bar Memory');
   });
 });

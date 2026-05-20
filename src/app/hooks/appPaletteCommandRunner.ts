@@ -31,6 +31,7 @@ interface PaletteCommandRunnerArgs {
   importSingleFile: () => Promise<boolean>;
   reimportSelectedTopic: () => Promise<boolean>;
   resetImportData: () => Promise<boolean>;
+  toggleDevReviewStatusBarPersistence: () => void;
   completeReviewItem: () => boolean;
   deleteCurrentReviewItem: () => boolean;
   deferReviewItem: () => boolean;
@@ -136,6 +137,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
       }
       void args.resetImportData();
     },
+    toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,
     openNotes: args.closeTrashView,
     openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
     restartApp: args.onRestartApp,

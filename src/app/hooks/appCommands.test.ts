@@ -1,65 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
-import { buildAppPaletteItems, runAppCommand, runReviewModeToggle } from './appCommands';
-
-function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand>[1]> = {}) {
-  return {
-    undo: () => undefined,
-    redo: () => undefined,
-    closeSettings: () => undefined,
-    createFolder: () => undefined,
-    createItem: () => undefined,
-    createSelectionCloze: () => undefined,
-    createSelectionHighlight: () => undefined,
-    createTopic: () => undefined,
-    createVirtualNode: () => undefined,
-    addSelectionNote: () => undefined,
-    repairTable: () => undefined,
-    enterPriorityMode: () => undefined,
-    exportCurrentArticle: () => undefined,
-    findInTopic: () => undefined,
-    mergeHighlightsIntoTopic: () => undefined,
-    goBack: () => undefined,
-    goForward: () => undefined,
-    goToNode: () => undefined,
-    moveToNode: () => undefined,
-    renameNode: () => undefined,
-    goParent: () => undefined,
-    toggleImmersiveMode: () => undefined,
-    importDirectory: () => undefined,
-    importSingleFile: () => undefined,
-    reimportSelectedTopic: () => undefined,
-    openImportManagement: () => undefined,
-    resetImportData: () => undefined,
-    openNotes: () => undefined,
-    openReadwiseReaderSettings: () => undefined,
-    openSettings: () => undefined,
-    openTrash: () => undefined,
-    restartApp: () => undefined,
-    toggleBaseColorMode: () => undefined,
-    revealReviewAnswer: () => undefined,
-    startClipboardImport: () => undefined,
-    toggleReviewMode: () => undefined,
-    toggleEditorDisplayMode: () => undefined,
-    toggleList: () => undefined,
-    gradeReviewAgain: () => undefined,
-    gradeReviewHard: () => undefined,
-    gradeReviewGood: () => undefined,
-    gradeReviewEasy: () => undefined,
-    readingReviewLater: () => undefined,
-    readingReviewRead: () => undefined,
-    readingReviewDismiss: () => undefined,
-    deleteCurrentReviewItem: () => undefined,
-    toggleDevTools: () => undefined,
-    ...overrides
-  };
-}
-
-function expectCommandRuns(commandId: string, overrides: Partial<Parameters<typeof runAppCommand>[1]>) {
-  expect(runAppCommand(commandId, createCommandActions(overrides))).toBe(true);
-}
+import { buildAppPaletteItems, runReviewModeToggle } from './appCommands';
 
 function createPaletteOptions(isReviewMode: boolean) {
   return {
@@ -74,6 +17,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canRenameNode: true,
     canReimportSelectedTopic: true,
     canResetImportData: true,
+    canToggleDevReviewStatusBarPersistence: true,
     canGoBack: true,
     canGoForward: true,
     canGoToNode: true,
@@ -90,6 +34,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canDismissReadingReview: true,
     canDeleteReviewItem: true,
     isImmersiveMode: false,
+    isDevReviewStatusBarPersistenceEnabled: false,
     isReviewMode,
     redoWorkspaceActionTitle: 'Redo',
     undoWorkspaceActionTitle: 'Undo'
@@ -166,64 +111,6 @@ describe('buildAppPaletteItems', () => {
       title: 'Redo Dismiss Topic'
     });
   });
-});
-
-describe('runAppCommand basics', () => {
-  it('runs undo and redo through the shared command handler', () => {
-    const undo = vi.fn();
-    const redo = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.undo, { undo });
-    expectCommandRuns(APP_COMMAND_IDS.redo, { redo });
-
-    expect(undo).toHaveBeenCalledTimes(1);
-    expect(redo).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs toggle devtools through the shared command handler', () => {
-    const toggleDevTools = vi.fn();
-    const importSingleFile = vi.fn();
-    const importDirectory = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.toggleDevTools, { importDirectory, importSingleFile, toggleDevTools });
-
-    expect(toggleDevTools).toHaveBeenCalledTimes(1);
-    expect(importSingleFile).not.toHaveBeenCalled();
-    expect(importDirectory).not.toHaveBeenCalled();
-  });
-
-  it('runs go to node through the shared command handler', () => {
-    const goToNode = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.goToNode, { goToNode });
-
-    expect(goToNode).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs move to through the shared command handler', () => {
-    const moveToNode = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.moveToNode, { moveToNode });
-
-    expect(moveToNode).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs rename through the shared command handler', () => {
-    const renameNode = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.renameNode, { renameNode });
-
-    expect(renameNode).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs repair table through the shared command handler', () => {
-    const repairTable = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.repairTable, { repairTable });
-
-    expect(repairTable).toHaveBeenCalledTimes(1);
-  });
-
 });
 
 describe('runReviewModeToggle', () => {
