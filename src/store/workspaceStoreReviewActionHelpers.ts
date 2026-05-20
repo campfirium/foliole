@@ -1,3 +1,4 @@
+import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade } from '../features/review/model/reviewTypes';
 
 import {
@@ -12,6 +13,13 @@ import type { WorkspaceState } from './workspaceStore';
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
+
+function hasRemainingReviewCards(
+  queueNodeIds: string[],
+  nodesById: WorkspaceState['nodesById']
+) {
+  return queueNodeIds.some((nodeId) => isFsrsReviewItemNode(nodesById[nodeId]));
+}
 
 export async function persistReviewGradeMutation(args: {
   currentNodeId: string;
@@ -52,7 +60,7 @@ export function applyGradedReviewState(args: {
           updatedAt: args.now
         }
       },
-      reviewSession: args.nextNodeId
+      reviewSession: args.nextNodeId && hasRemainingReviewCards(args.nextQueue, state.nodesById)
         ? advanceReviewSession(args.snapshot.reviewSession, {
             nextNodeId: args.nextNodeId,
             queueNodeIds: args.nextQueue,
@@ -60,6 +68,7 @@ export function applyGradedReviewState(args: {
           })
         : completeReviewSession(args.snapshot.reviewSession, {
             completedAt: args.now,
+            continueNodeId: args.nextNodeId,
             reviewedItemDelta: 1
           })
     };

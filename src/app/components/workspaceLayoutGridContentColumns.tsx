@@ -1,3 +1,4 @@
+import type { StudySessionCompleteSummaryProps } from './StudySessionCompleteSummary';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import {
   WorkspaceDocumentArea,
@@ -13,6 +14,7 @@ import {
 
 export interface WorkspaceGridColumnProps {
   documentSurfaceProps: WorkspaceDocumentSurfaceProps;
+  studySessionCompleteSummaryProps: StudySessionCompleteSummaryProps | null;
   isImmersiveMode: boolean;
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
@@ -22,11 +24,14 @@ export interface WorkspaceGridColumnProps {
   rightSidebarSplitterProps: WorkspaceRightSidebarSplitterProps;
 }
 
-function renderDocumentColumn(args: Pick<WorkspaceGridColumnProps, 'documentSurfaceProps'>) {
+function renderDocumentColumn(
+  args: Pick<WorkspaceGridColumnProps, 'documentSurfaceProps' | 'studySessionCompleteSummaryProps'>
+) {
   return (
     <WorkspaceDocumentArea
       key="document"
       documentSurfaceProps={args.documentSurfaceProps}
+      studySessionCompleteSummaryProps={args.studySessionCompleteSummaryProps}
     />
   );
 }
