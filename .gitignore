@@ -21,4 +21,8 @@ src-tauri/
 .electron-user-data/
 .windows-native-boot-ready.json
 .windows-native-bridge-ready.json
+.windows-dev-renderer-reload-intent.json
+.windows-dev-renderer-reload-delivered.json
+.windows-dev-restart-intent.json
+.windows-dev-restart-delivered.json
 .codex
