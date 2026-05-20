@@ -30,6 +30,7 @@ interface RunAppCommandActions {
   renameNode: () => void;
   goParent: () => void;
   toggleImmersiveMode: () => void;
+  toggleDismissedTopicsVisibility: () => void;
   importSingleFile: () => void | Promise<void>;
   reimportSelectedTopic: () => void | Promise<void>;
   resetImportData: () => boolean | void;
@@ -117,6 +118,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.renameNode]: actions.renameNode,
     [APP_COMMAND_IDS.goParent]: actions.goParent,
     [APP_COMMAND_IDS.toggleImmersiveMode]: actions.toggleImmersiveMode,
+    [APP_COMMAND_IDS.toggleDismissedTopicsVisibility]: actions.toggleDismissedTopicsVisibility,
     [APP_COMMAND_IDS.toggleEditorDisplayMode]: actions.toggleEditorDisplayMode,
     [APP_COMMAND_IDS.startStudyMode]: actions.toggleReviewMode,
     [APP_COMMAND_IDS.revealReviewAnswer]: actions.revealReviewAnswer,

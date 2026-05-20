@@ -62,6 +62,7 @@ function collectRows(args: TopicRowsArgs) {
   const rows: NodeTreeRow[] = [];
   const walk = (parentId: string | null, ids: string[], depth: number) => {
     args.sortIds(parentId, ids).forEach((nodeId) => {
+      if (!shouldCollectNode(args, nodeId, args.reviewContextNodeIds ?? null)) return;
       const row = createRow(nodeId, depth, args.childrenByParent, args.nodesById);
       if (!row) return;
       rows.push(row);
@@ -99,17 +100,71 @@ function collectSearchRows(args: Omit<TopicRowsArgs, 'collapsedNodeIds'>) {
 interface TopicRowsArgs {
   childrenByParent: TopicChildrenByParent;
   collapsedNodeIds: ReadonlySet<string>;
+  hideDismissedTopics?: boolean;
   nodesById: WorkspaceListNodesById;
+  reviewTargetNodeId?: string | null;
+  reviewContextNodeIds?: ReadonlySet<string> | null;
   rootIds: string[];
   searchQuery: string;
   sortIds: (parentId: string | null, ids: string[]) => string[];
 }
 
+function isDismissedTopic(nodeId: string, nodesById: WorkspaceListNodesById) {
+  return nodesById[nodeId]?.reading?.state === 'dismissed';
+}
+
+function buildParentIdByNodeId(childrenByParent: TopicChildrenByParent) {
+  const parentIdByNodeId = new Map<string, string | null>();
+  childrenByParent.forEach((nodeIds, parentId) => {
+    nodeIds.forEach((nodeId) => parentIdByNodeId.set(nodeId, parentId));
+  });
+  return parentIdByNodeId;
+}
+
+function collectReviewContextNodeIds(args: Pick<TopicRowsArgs, 'childrenByParent' | 'nodesById' | 'reviewTargetNodeId'>) {
+  const contextNodeIds = new Set<string>();
+  const targetNodeId = args.reviewTargetNodeId;
+  if (!targetNodeId || !args.nodesById[targetNodeId]) return contextNodeIds;
+  const parentIdByNodeId = buildParentIdByNodeId(args.childrenByParent);
+  let currentNodeId: string | null | undefined = targetNodeId;
+  while (currentNodeId) {
+    if (contextNodeIds.has(currentNodeId)) break;
+    contextNodeIds.add(currentNodeId);
+    currentNodeId = parentIdByNodeId.get(currentNodeId) ?? null;
+  }
+  return contextNodeIds;
+}
+
+function shouldCollectNode(args: TopicRowsArgs, nodeId: string, reviewContextNodeIds: ReadonlySet<string> | null) {
+  if (reviewContextNodeIds) {
+    return !isDismissedTopic(nodeId, args.nodesById) || reviewContextNodeIds.has(nodeId);
+  }
+  return !args.hideDismissedTopics || !isDismissedTopic(nodeId, args.nodesById);
+}
+
 export function useTopicRows(args: TopicRowsArgs) {
-  const { childrenByParent, collapsedNodeIds, nodesById, rootIds, searchQuery, sortIds } = args;
+  const { childrenByParent, collapsedNodeIds, nodesById, reviewTargetNodeId, rootIds, searchQuery, sortIds } = args;
+  const hideDismissedTopics = args.hideDismissedTopics ?? false;
+  const activeReviewTargetNodeId = reviewTargetNodeId ?? null;
   return useMemo(() => {
     const searchRows = collectSearchRows({ childrenByParent, nodesById, rootIds, searchQuery, sortIds });
     if (searchRows) return searchRows;
-    return collectRows({ childrenByParent, collapsedNodeIds, nodesById, rootIds, searchQuery, sortIds });
-  }, [childrenByParent, collapsedNodeIds, nodesById, rootIds, searchQuery, sortIds]);
+    const reviewContextNodeIds = activeReviewTargetNodeId
+      ? collectReviewContextNodeIds({ childrenByParent, nodesById, reviewTargetNodeId: activeReviewTargetNodeId })
+      : null;
+    if (!hideDismissedTopics && !reviewContextNodeIds) {
+      return collectRows({ childrenByParent, collapsedNodeIds, nodesById, rootIds, searchQuery, sortIds });
+    }
+    return collectRows({
+      childrenByParent,
+      collapsedNodeIds,
+      hideDismissedTopics,
+      nodesById,
+      reviewTargetNodeId: activeReviewTargetNodeId,
+      reviewContextNodeIds,
+      rootIds,
+      searchQuery,
+      sortIds
+    });
+  }, [activeReviewTargetNodeId, childrenByParent, collapsedNodeIds, hideDismissedTopics, nodesById, rootIds, searchQuery, sortIds]);
 }

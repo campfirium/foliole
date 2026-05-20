@@ -28,8 +28,10 @@ export function renderWorkspaceTopicTreeShell(args: {
   scrollPlacement?: WorkspaceTopicTreeScrollPlacement;
   searchQuery: string;
   setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
+  onToggleDismissedTopicsVisibility: () => void;
   setSearchQuery: (value: string) => void;
   scrollTargetNodeId?: string | null;
+  viewHideDismissedTopics: boolean;
   visibleRows: NodeTreeRow[];
 }) {
   return (
@@ -40,9 +42,11 @@ export function renderWorkspaceTopicTreeShell(args: {
         contentSort={args.contentSort}
         hasCollapsedNodes={args.hasCollapsedNodes}
         onCreateTopic={(parentNodeId) => args.interaction.createChildNode(parentNodeId, '', 'topic')}
+        onToggleDismissedTopicsVisibility={args.onToggleDismissedTopicsVisibility}
         searchQuery={args.searchQuery}
         setCollapsedNodeIds={args.setCollapsedNodeIds}
         setSearchQuery={args.setSearchQuery}
+        viewHideDismissedTopics={args.viewHideDismissedTopics}
       />
       {renderWorkspaceTopicTreeBody({
         activeNodeId: args.focusedNodeId,

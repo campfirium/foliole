@@ -24,6 +24,7 @@ export const APP_COMMAND_IDS = {
   goParent: 'navigation.goParent',
   toggleEditorDisplayMode: 'editor.toggleDisplayMode',
   toggleImmersiveMode: 'editor.toggleImmersiveMode',
+  toggleDismissedTopicsVisibility: 'view.toggleDismissedTopicsVisibility',
   startStudyMode: 'review.startStudyMode',
   revealReviewAnswer: 'review.revealAnswer',
   gradeReviewAgain: 'review.gradeAgain',
