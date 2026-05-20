@@ -63,68 +63,65 @@ function expectCommandRuns(commandId: string, overrides: Partial<Parameters<type
   expect(runAppCommand(commandId, createCommandActions(overrides))).toBe(true);
 }
 
-it('runs create topic through the shared command handler', () => {
-  const createTopic = vi.fn();
+it('runs undo and redo through the shared command handler', () => {
+  const undo = vi.fn();
+  const redo = vi.fn();
 
-  expectCommandRuns(APP_COMMAND_IDS.createTopic, { createTopic });
+  expectCommandRuns(APP_COMMAND_IDS.undo, { undo });
+  expectCommandRuns(APP_COMMAND_IDS.redo, { redo });
 
-  expect(createTopic).toHaveBeenCalledTimes(1);
+  expect(undo).toHaveBeenCalledTimes(1);
+  expect(redo).toHaveBeenCalledTimes(1);
 });
 
-it('runs create virtual node through the shared command handler', () => {
-  const createVirtualNode = vi.fn();
+it('runs toggle devtools through the shared command handler', () => {
+  const toggleDevTools = vi.fn();
+  const importSingleFile = vi.fn();
+  const importDirectory = vi.fn();
 
-  expectCommandRuns(APP_COMMAND_IDS.createVirtualNode, { createVirtualNode });
+  expectCommandRuns(APP_COMMAND_IDS.toggleDevTools, { importDirectory, importSingleFile, toggleDevTools });
 
-  expect(createVirtualNode).toHaveBeenCalledTimes(1);
+  expect(toggleDevTools).toHaveBeenCalledTimes(1);
+  expect(importSingleFile).not.toHaveBeenCalled();
+  expect(importDirectory).not.toHaveBeenCalled();
 });
 
-it('runs restart app through the shared command handler', () => {
-  const restartApp = vi.fn();
+it('runs the dev review status bar persistence toggle through the shared command handler', () => {
+  const toggleDevReviewStatusBarPersistence = vi.fn();
 
-  expectCommandRuns(APP_COMMAND_IDS.restartApp, { restartApp });
+  expectCommandRuns(APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence, { toggleDevReviewStatusBarPersistence });
 
-  expect(restartApp).toHaveBeenCalledTimes(1);
+  expect(toggleDevReviewStatusBarPersistence).toHaveBeenCalledTimes(1);
 });
 
-it('runs open Readwise Reader settings through the shared command handler', () => {
-  const openReadwiseReaderSettings = vi.fn();
+it('runs go to node through the shared command handler', () => {
+  const goToNode = vi.fn();
 
-  expectCommandRuns(APP_COMMAND_IDS.openReadwiseReaderSettings, { openReadwiseReaderSettings });
+  expectCommandRuns(APP_COMMAND_IDS.goToNode, { goToNode });
 
-  expect(openReadwiseReaderSettings).toHaveBeenCalledTimes(1);
+  expect(goToNode).toHaveBeenCalledTimes(1);
 });
 
-it('runs selection annotation actions through the shared command handler', () => {
-  const createSelectionHighlight = vi.fn();
-  const createSelectionCloze = vi.fn();
-  const addSelectionNote = vi.fn();
+it('runs move to through the shared command handler', () => {
+  const moveToNode = vi.fn();
 
-  expectCommandRuns(APP_COMMAND_IDS.createSelectionHighlight, { createSelectionHighlight });
-  expectCommandRuns(APP_COMMAND_IDS.createSelectionCloze, { createSelectionCloze });
-  expectCommandRuns(APP_COMMAND_IDS.addSelectionNote, { addSelectionNote });
+  expectCommandRuns(APP_COMMAND_IDS.moveToNode, { moveToNode });
 
-  expect(createSelectionHighlight).toHaveBeenCalledTimes(1);
-  expect(createSelectionCloze).toHaveBeenCalledTimes(1);
-  expect(addSelectionNote).toHaveBeenCalledTimes(1);
+  expect(moveToNode).toHaveBeenCalledTimes(1);
 });
 
-it('runs light and dark mode toggle through the shared command handler', () => {
-  const toggleBaseColorMode = vi.fn();
+it('runs rename through the shared command handler', () => {
+  const renameNode = vi.fn();
 
-  expectCommandRuns(APP_COMMAND_IDS.toggleBaseColorMode, { toggleBaseColorMode });
+  expectCommandRuns(APP_COMMAND_IDS.renameNode, { renameNode });
 
-  expect(toggleBaseColorMode).toHaveBeenCalledTimes(1);
+  expect(renameNode).toHaveBeenCalledTimes(1);
 });
 
-it('lets reset import data cancel without reporting success', () => {
-  const resetImportData = vi.fn(() => false);
+it('runs repair table through the shared command handler', () => {
+  const repairTable = vi.fn();
 
-  expect(
-    runAppCommand(APP_COMMAND_IDS.resetImportData, createCommandActions({
-      resetImportData
-    }))
-  ).toBe(false);
+  expectCommandRuns(APP_COMMAND_IDS.repairTable, { repairTable });
 
-  expect(resetImportData).toHaveBeenCalledTimes(1);
+  expect(repairTable).toHaveBeenCalledTimes(1);
 });

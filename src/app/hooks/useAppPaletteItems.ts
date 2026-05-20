@@ -112,6 +112,7 @@ function buildPaletteOptions(
     canRenameNode: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
     canReimportSelectedTopic: canReimportSelectedTopic(args),
     canResetImportData: args.formalImportAvailable,
+    canToggleDevReviewStatusBarPersistence: import.meta.env.DEV,
     canGoBack: args.nav.canGoBack,
     canGoForward: args.nav.canGoForward,
     canGoToNode: hasNavigableNodes,
@@ -128,6 +129,7 @@ function buildPaletteOptions(
     canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDeleteReviewItem: args.hasReviewCard,
     isImmersiveMode: args.isImmersiveMode,
+    isDevReviewStatusBarPersistenceEnabled: args.study.isDevReviewStatusBarPersistenceEnabled,
     isReviewMode: args.isStudyMode,
     redoWorkspaceActionTitle: getWorkspaceRedoTitle(args.ws.appActionHistory),
     undoWorkspaceActionTitle: getWorkspaceUndoTitle(args.ws.appActionHistory)
