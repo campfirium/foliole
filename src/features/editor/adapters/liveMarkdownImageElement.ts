@@ -8,6 +8,7 @@ export function createMarkdownImageElement(args: {
   deferSource?: boolean;
   onError?: (() => void) | null;
   onLoad?: (() => void) | null;
+  linkHref?: string;
   requestMeasure?: RequestEditorMeasure;
   source: string;
 }) {
@@ -31,6 +32,10 @@ export function createMarkdownImageElement(args: {
       args.onLoad?.();
       args.requestMeasure?.();
     }, { once: true });
+  }
+  if (args.linkHref) {
+    image.dataset.mdLinkUrl = args.linkHref;
+    image.title = 'Ctrl-click to open in browser';
   }
   if (args.deferSource) {
     queueMicrotask(() => {

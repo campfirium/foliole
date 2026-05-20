@@ -2,11 +2,13 @@ import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/pl
 import { isSafeMarkdownDataImageUrl } from '../../../../lib/platform/markdownImageDataUrl';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { resolveMarkdownImageWrappingLink } from './markdownImageWrappingLink';
 import { collectMarkdownInlineRanges } from './markdownInlineProjection';
 import {
   normalizeMarkdownLinkReferenceLabel,
   type MarkdownLinkReferenceMap
 } from './markdownLinkReferences';
+import { isSafeMarkdownLinkHref, normalizeMarkdownLinkDestination } from './markdownLinkSafety';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -17,6 +19,7 @@ export interface MarkdownImageMatch {
   alt: string;
   display: 'block' | 'inline';
   from: number;
+  linkHref?: string;
   source: string;
   to: number;
 }
@@ -24,6 +27,7 @@ export interface MarkdownImageMatch {
 interface ParserImageMatch {
   altText: string;
   fullMatch: string;
+  linkHref?: string;
   rawTarget: string;
   start: number;
 }
@@ -147,25 +151,34 @@ function createParserImageMatch(
   if (altFrom === undefined || altTo === undefined) return null;
   const rawTarget = url ? text.slice(url.from, url.to) : resolveReferenceImageTarget(text, altFrom, altTo, label, references);
   if (!rawTarget) return null;
-  const outerLink = resolveImageOnlyWrappingLink(node);
+  const outerLink =
+    resolveImageOnlyWrappingLink(node, text) ??
+    resolveMarkdownImageWrappingLink(text, node.from, node.to);
   const from = outerLink?.from ?? node.from;
   const to = outerLink?.to ?? node.to;
   return {
     altText: normalizeAltText(text, altFrom, altTo),
     fullMatch: text.slice(from, to),
+    ...(outerLink?.target && isSafeMarkdownLinkHref(outerLink.target) ? { linkHref: normalizeMarkdownLinkDestination(outerLink.target) } : {}),
     rawTarget: normalizeImageUrl(rawTarget),
     start: from
   };
 }
 
-function resolveImageOnlyWrappingLink(node: MarkdownSyntaxNode) {
+function resolveImageOnlyWrappingLink(node: MarkdownSyntaxNode, text: string) {
   const parent = node.parent;
   if (parent?.name !== 'Link') return null;
   const marks = collectChildNodes(parent, 'LinkMark');
+  const url = collectChildNodes(parent, 'URL')[0];
   const labelStart = marks[0]?.to;
   const labelEnd = marks[1]?.from;
-  if (labelStart === node.from && labelEnd === node.to) {
-    return parent;
+  if (labelStart === undefined || labelEnd === undefined) return null;
+  if (text.slice(labelStart, node.from).trim().length === 0) {
+    return {
+      from: parent.from,
+      target: url ? text.slice(url.from, url.to) : null,
+      to: parent.to
+    };
   }
   return null;
 }
@@ -205,6 +218,7 @@ export function collectImageMatches(from: number, text: string, references: Mark
         alt: match.altText,
         display: resolveImageDisplay(text, match.start, match.fullMatch),
         from: start,
+        ...(match.linkHref ? { linkHref: match.linkHref } : {}),
         source,
         to: start + match.fullMatch.length
       });

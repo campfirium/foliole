@@ -48,6 +48,7 @@ function createImageSurface(
         alt: imageMatch.alt,
         deferSource: imageOptions.deferSource ?? false,
         display: imageMatch.display,
+        ...(imageMatch.linkHref ? { linkHref: imageMatch.linkHref } : {}),
         onError: imageOptions.onError ?? null,
         onLoad: imageOptions.onLoad ?? null,
         requestMeasure: imageOptions.requestMeasure ?? null,

@@ -15,6 +15,7 @@ interface MarkdownImageToken {
   sourceUrl: string;
   suffix: string;
   to: number;
+  wrappingLinkTarget?: string;
 }
 
 interface LocalizedRemoteImageImport {
@@ -49,7 +50,8 @@ function collectRemoteMarkdownImages(markdown: string) {
         raw: markdown.slice(from, to),
         sourceUrl: parsedTarget.destination,
         suffix: parsedTarget.suffix,
-        to
+        to,
+        ...(imageWrappingLink ? { wrappingLinkTarget: imageWrappingLink.target } : {})
       });
     }
   }
@@ -59,7 +61,8 @@ function collectRemoteMarkdownImages(markdown: string) {
 
 function buildLocalizedMarkdownImage(token: MarkdownImageToken, attachmentId: string, originalName: string) {
   const suffix = token.suffix ? ` ${token.suffix}` : '';
-  return `![${token.alt}](${buildAssetMarkdownUrl(attachmentId, originalName)}${suffix})`;
+  const imageMarkdown = `![${token.alt}](${buildAssetMarkdownUrl(attachmentId, originalName)}${suffix})`;
+  return token.wrappingLinkTarget ? `[${imageMarkdown}](${token.wrappingLinkTarget})` : imageMarkdown;
 }
 
 const LARGE_IMAGE_MIN_WIDTH = 320;
@@ -153,7 +156,7 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
         imported
           ? {
               attachmentId: imported.attachment_id,
-              intrinsicSize: imported.intrinsic_size,
+              intrinsicSize: imported.intrinsic_size ?? null,
               originalName: imported.original_name
             }
           : null

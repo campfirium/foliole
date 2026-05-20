@@ -113,7 +113,30 @@ describe('markdownImageMatches replacement ranges', () => {
 
     expect(collectImageMatches(0, markdown)[0]).toMatchObject({
       from: 0,
+      linkHref: 'https://example.com/cover.png',
       source: 'https://example.com/cover.png',
+      to: markdown.length
+    });
+  });
+
+  it('keeps the wrapping link href for linked attachment images', () => {
+    const markdown = '[![Cover](asset://hash-1.png)](https://example.com/post)';
+
+    expect(collectImageMatches(0, markdown)[0]).toMatchObject({
+      attachmentId: 'hash-1',
+      linkHref: 'https://example.com/post',
+      source: 'asset://hash-1.png'
+    });
+  });
+
+  it('keeps the wrapping link href when the image label has spacing and caption text', () => {
+    const markdown = '[\n\n![image](asset://hash-1.png)\n\nimage1971×1242 140 KB](https://example.com/post)';
+
+    expect(collectImageMatches(0, markdown)[0]).toMatchObject({
+      attachmentId: 'hash-1',
+      from: 0,
+      linkHref: 'https://example.com/post',
+      source: 'asset://hash-1.png',
       to: markdown.length
     });
   });

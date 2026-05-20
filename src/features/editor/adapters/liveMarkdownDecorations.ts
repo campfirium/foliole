@@ -6,6 +6,7 @@ import type { InlinePresentationPlan } from '../model/inlinePresentationPlans';
 import type { InlineTextDecorationPlan } from '../model/inlineTextDecorationPlans';
 import { collectPreviewViewportPlans, collectSourceViewportPlans } from '../model/liveMarkdownViewportPlans';
 import { collectMarkdownForumTitleLinkRanges } from '../model/markdownForumTitleLinkProjection';
+import { collectImageMatches } from '../model/markdownImageMatches';
 import { collectMarkdownInlineLinkRangesFromTree } from '../model/markdownInlineLinkProjection';
 import type { MarkdownInlineLinkRange } from '../model/markdownInlineProjectionTypes';
 import { collectMarkdownLinkReferencesFromTree, type MarkdownLinkReferenceRange } from '../model/markdownLinkReferences';
@@ -103,6 +104,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const viewportLines = collectViewportLines(view, startLineNumber, endLineNumber);
   const codeFenceProjection = collectCodeFenceProjection(view);
   const linkReferences = collectMarkdownLinkReferencesFromTree(markdownTree, source);
+  const documentImageMatches = collectImageMatches(0, source, linkReferences);
   const inlineLinks = collectMarkdownInlineLinkRangesFromTree(markdownTree, source, 0, linkReferences);
   const forumTitleLinks = collectMarkdownForumTitleLinkRanges(source).filter(
     (link) => !(codeFenceProjection.codeLineFroms.has(link.from) || codeFenceProjection.codeLineFroms.has(link.urlLineFrom))
@@ -128,6 +130,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     lines: viewportLines,
     linkReferences,
     markdownSyntaxVisible: context.markdownSyntaxVisible,
+    documentImageMatches,
     startInCodeBlock: false,
     thematicBreakLineFroms
   });

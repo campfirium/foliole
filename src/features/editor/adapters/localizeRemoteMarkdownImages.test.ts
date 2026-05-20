@@ -75,7 +75,7 @@ describe('localizeRemoteMarkdownImages wrapped links', () => {
     vi.clearAllMocks();
   });
 
-  it('replaces image-only wrapping links when localizing remote images', async () => {
+  it('preserves image-only wrapping links when localizing remote images', async () => {
     importRemoteImageAttachment.mockResolvedValue({
       status: 'imported',
       attachment_id: 'hash-1',
@@ -87,7 +87,7 @@ describe('localizeRemoteMarkdownImages wrapped links', () => {
         'node-1',
         '[\n\n![](https://blogger.googleusercontent.com/img/a/cover)\n\n](https://blogger.googleusercontent.com/img/a/cover)'
       )
-    ).resolves.toBe('![](asset://hash-1.png)');
+    ).resolves.toBe('[![](asset://hash-1.png)](https://blogger.googleusercontent.com/img/a/cover)');
   });
 
   it('keeps large wrapped remote images as clean standalone blocks before following text', async () => {
@@ -103,16 +103,16 @@ describe('localizeRemoteMarkdownImages wrapped links', () => {
         'node-1',
         '[\n\n![](https://blogger.googleusercontent.com/img/a/cover)\n\n](https://blogger.googleusercontent.com/img/a/cover)正文'
       )
-    ).resolves.toBe('![](asset://hash-1.png)\n\n正文');
+    ).resolves.toBe('[![](asset://hash-1.png)](https://blogger.googleusercontent.com/img/a/cover)\n\n正文');
   });
 
-  it('removes stale remote image wrapping links around already localized images', async () => {
+  it('keeps stale remote image wrapping links around already localized images', async () => {
     await expect(
       localizeRemoteMarkdownImages(
         'node-1',
         '[\n\n![image](asset://hash-1.png)\n\nimage1971×1242 140 KB](https://cdn.example.com/uploads/original/2X/f/cover.png)\n正文'
       )
-    ).resolves.toBe('![image1971×1242 140 KB](asset://hash-1.png)\n正文');
+    ).resolves.toBe('[![image1971×1242 140 KB](asset://hash-1.png)](https://cdn.example.com/uploads/original/2X/f/cover.png)\n正文');
 
     expect(importRemoteImageAttachment).not.toHaveBeenCalled();
   });
@@ -130,7 +130,7 @@ describe('localizeRemoteMarkdownImages wrapped links', () => {
         'node-1',
         '[\n\n![image](https://cdn.example.com/uploads/original/2X/f/cover.png)\n\nimage1971×1242 140 KB](https://cdn.example.com/uploads/original/2X/f/cover.png)正文'
       )
-    ).resolves.toBe('![image1971×1242 140 KB](asset://hash-1.png)\n\n正文');
+    ).resolves.toBe('[![image1971×1242 140 KB](asset://hash-1.png)](https://cdn.example.com/uploads/original/2X/f/cover.png)\n\n正文');
   });
 });
 
