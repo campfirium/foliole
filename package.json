@@ -49,6 +49,7 @@
     "desktop:test:windows": "bash scripts/windows/windows-desktop-test.sh",
     "windows:native:preflight": "node scripts/windows/windows-native-pilot-preflight.mjs",
     "windows:client:native": "node scripts/windows/windows-client-native.mjs",
+    "windows:preview:native": "node scripts/windows/windows-preview-native.mjs",
     "electron:compile": "tsc -p electron/tsconfig.json",
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:dev:native": "node scripts/windows/electron-dev-native.mjs",
