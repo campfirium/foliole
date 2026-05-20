@@ -22,6 +22,21 @@ const CONTRACT_SENSITIVE_PATTERNS = [
 const PRE_PUSH_COVERED_CONTRACT_PATTERNS = [
   /^(lib\/core\/sync\/syncPack|electron\/database\/syncPack|electron\/sync\/syncPack|src\/shared\/platform\/companionSyncPack)/u
 ];
+const WINDOWS_SHELL_POLICY_FILES = [
+  /^package\.json$/u,
+  /^scripts\/windows\/.*\.(?:cmd|bat|mjs|ps1|sh)$/u
+];
+
+const WINDOWS_SHELL_POLICY_PATTERNS = [
+  {
+    pattern: /\bpowershell(?:\.exe)?\b[\s\S]*\s-Command\s/iu,
+    reason: 'use a checked-in Node runner or a PowerShell -File entrypoint instead of inline powershell -Command'
+  },
+  {
+    pattern: /\bcmd(?:\.exe)?\b[\s\S]*\s\/[cd]\s[\s\S]*(?:&&|\bset\s+[A-Za-z_][A-Za-z0-9_]*=|>>?|2>>?|\bstart\s+)/iu,
+    reason: 'put complex cmd.exe /c logic in a checked-in .cmd/.mjs runner instead of an inline command string'
+  }
+];
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -97,6 +112,34 @@ function runTestDriftGuard(files) {
   ].join('\n'));
 }
 
+function stagedAddedLines(file) {
+  return run('git', ['diff', '--cached', '--unified=0', '--', file])
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith('+') && !line.startsWith('+++'))
+    .map((line) => line.slice(1))
+    .join('\n');
+}
+
+function runWindowsShellPolicyGuard(files) {
+  const checkedFiles = files.filter((file) => WINDOWS_SHELL_POLICY_FILES.some((pattern) => pattern.test(file)));
+  const violations = [];
+  for (const file of checkedFiles) {
+    const content = stagedAddedLines(file);
+    for (const { pattern, reason } of WINDOWS_SHELL_POLICY_PATTERNS) {
+      if (pattern.test(content)) {
+        violations.push(`${file}: ${reason}`);
+      }
+    }
+  }
+  if (violations.length === 0) {
+    return;
+  }
+  throw new Error([
+    'windows shell policy violation: do not persist fragile inline Windows shell commands.',
+    ...violations
+  ].join('\n'));
+}
+
 function runCriticalTests(files) {
   if (files.length === 0 || !existsSync('scripts/quality-critical-test-routes.mjs')) {
     return;
@@ -124,6 +167,7 @@ function main() {
   const files = collectStagedFiles();
   runAddedFileChecks(addedOrRenamedFiles);
   runStagedCodeLint(files);
+  runWindowsShellPolicyGuard(files);
   runTestDriftGuard(files);
   runCriticalTests(files);
 }
