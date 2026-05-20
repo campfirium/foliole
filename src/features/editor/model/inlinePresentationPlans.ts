@@ -144,3 +144,14 @@ export function collectEmbedPresentationPlan(
 
   return { markRanges, replaceRanges };
 }
+
+export function collectClozePlaceholderPresentationPlan(ranges: ReadonlyArray<SemanticRange>): InlinePresentationPlan {
+  return {
+    markRanges: ranges.map((range) => ({
+      className: 'cm-md-cloze-placeholder',
+      from: range.from,
+      to: range.to
+    })),
+    replaceRanges: []
+  };
+}

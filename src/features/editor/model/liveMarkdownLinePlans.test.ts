@@ -109,6 +109,24 @@ describe('liveMarkdown nested list link preview line plans', () => {
       replaceRanges: expect.arrayContaining([{ from: 6, to: 7 }, { from: 13, to: 14 }])
     });
   });
+
+  it('adds cloze placeholder presentation to preview plans', () => {
+    const plan = collectPreviewLineDecorationPlan({
+      hideTitleHeading: false,
+      inCodeBlock: false,
+      isCursorLine: false,
+      lineFrom: 0,
+      lineNumber: 1,
+      lineText: 'Remember [...] now',
+      markdownSyntaxVisible: false
+    });
+
+    expect(plan.inlinePresentationPlans.at(-1)).toEqual({
+      markRanges: [{ className: 'cm-md-cloze-placeholder', from: 9, to: 14 }],
+      replaceRanges: []
+    });
+  });
+
 });
 
 describe('liveMarkdown reference-style preview line plans', () => {
@@ -209,7 +227,7 @@ describe('liveMarkdown source line plans', () => {
     });
 
     expect(plan.footnoteMatches).toEqual([]);
-    expect(plan.inlinePresentationPlans).toHaveLength(4);
+    expect(plan.inlinePresentationPlans).toHaveLength(5);
     expect(plan.textDecorationPlans).toHaveLength(2);
     expect(plan.nextInCodeBlock).toBe(false);
   });

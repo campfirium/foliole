@@ -18,6 +18,7 @@ import { collectMarkdownEscapedRanges } from './markdownLinkSafety';
 
 export interface MarkdownLineMatchState {
   footnoteRanges: RangeBounds[];
+  clozePlaceholderRanges: RangeBounds[];
   escapedRanges: RangeBounds[];
   imageMatches: RangeBounds[];
   autolinkMatches: AutolinkMatch[];
@@ -34,6 +35,24 @@ function isWithinRanges(from: number, to: number, ranges: ReadonlyArray<RangeBou
     if (from < range.to && to > range.from) return true;
   }
   return false;
+}
+
+function collectClozePlaceholderRanges(lineFrom: number, lineText: string, preservedRanges: ReadonlyArray<RangeBounds>) {
+  const ranges: RangeBounds[] = [];
+  const placeholder = '[...]';
+  let index = lineText.indexOf(placeholder);
+
+  while (index !== -1) {
+    const from = lineFrom + index;
+    const to = from + placeholder.length;
+    const escaped = index > 0 && lineText[index - 1] === '\\';
+    if (!escaped && !isWithinRanges(from, to, preservedRanges)) {
+      ranges.push({ from, to });
+    }
+    index = lineText.indexOf(placeholder, index + placeholder.length);
+  }
+
+  return ranges;
 }
 
 export function collectPreviewLineMatchState(
@@ -56,6 +75,9 @@ export function collectPreviewLineMatchState(
     from: match.from,
     to: match.to
   }));
+  const clozePlaceholderRanges = inCodeBlock
+    ? []
+    : collectClozePlaceholderRanges(lineFrom, lineText, linkPreservedRanges.concat(linkRanges));
   const escapedRanges = inCodeBlock
     ? []
     : collectMarkdownEscapedRanges(lineText, lineFrom).filter(
@@ -67,6 +89,7 @@ export function collectPreviewLineMatchState(
 
   return {
     autolinkMatches,
+    clozePlaceholderRanges,
     embedMatches,
     escapedRanges,
     footnoteRanges,
@@ -97,12 +120,16 @@ export function collectSourceLineMatchState(
     from: match.from,
     to: match.to
   }));
+  const clozePlaceholderRanges = inCodeBlock
+    ? []
+    : collectClozePlaceholderRanges(lineFrom, lineText, linkPreservedRanges.concat(linkRanges));
   const autolinkMatches = inCodeBlock
     ? []
     : collectAutolinkMatches(lineFrom, lineText, linkPreservedRanges.concat(linkRanges));
 
   return {
     autolinkMatches,
+    clozePlaceholderRanges,
     embedMatches,
     escapedRanges: [],
     footnoteRanges,
