@@ -15,7 +15,7 @@ import {
   runChecked,
   wait
 } from './windows-preview-native-runtime.mjs';
-import { parseWindowsClientStatus, selectNativePreviewAction } from './windows-preview-native-support.mjs';
+import { isTrustedRunningStatus, parseWindowsClientStatus, selectNativePreviewAction } from './windows-preview-native-support.mjs';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const clientScript = path.join(repoRoot, 'scripts', 'windows', 'windows-client-native.mjs');
@@ -92,12 +92,12 @@ async function waitForDelivery(filePath, nonce, label) {
   return false;
 }
 
-async function waitForTrustedRunning(label) {
+async function waitForTrustedRunning(label, expectedHead = '') {
   const deadline = Date.now() + PREVIEW_TIMEOUT_MS;
   while (Date.now() < deadline) {
     const status = await runCapture(process.execPath, [clientScript, 'status']);
     const parsed = parseWindowsClientStatus(`${status.stdout}${status.stderr}`);
-    if (parsed.status === 'RUNNING' && parsed.trusted) {
+    if (isTrustedRunningStatus(parsed, { expectedHead })) {
       console.log(`[windows-preview-native] ${label}: ${parsed.detail}`);
       return true;
     }
@@ -120,7 +120,7 @@ async function runIntent(action, currentHead, reason) {
   if (!await waitForDelivery(deliveryPath, result.intent.nonce, label)) {
     throw new Error(`${label} delivery timed out nonce=${result.intent.nonce}`);
   }
-  if (!await waitForTrustedRunning(`${label} status`)) {
+  if (!await waitForTrustedRunning(`${label} status`, currentHead)) {
     throw new Error(`${label} did not reach trusted running status`);
   }
 }
@@ -133,7 +133,7 @@ async function applyAction(selection, currentHead, dryRun) {
     return 'DRY_RUN';
   }
   if (selection.action === 'sync-only') {
-    if (!await waitForTrustedRunning('sync-only status')) {
+    if (!await waitForTrustedRunning('sync-only status', currentHead)) {
       throw new Error('sync-only status check failed');
     }
     return 'STARTED';

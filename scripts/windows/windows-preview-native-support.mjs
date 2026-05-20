@@ -10,6 +10,13 @@ export function parseWindowsClientStatus(output) {
   };
 }
 
+export function isTrustedRunningStatus(status, { expectedHead = '' } = {}) {
+  if (status.status !== 'RUNNING' || !status.trusted) {
+    return false;
+  }
+  return !expectedHead || status.head === expectedHead;
+}
+
 export function isShellConfigFile(file) {
   return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|package\.json|package-lock\.json)$/u.test(file);
 }
