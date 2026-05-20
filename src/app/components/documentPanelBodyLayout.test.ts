@@ -107,7 +107,7 @@ describe('renderDocumentPanelBodyLayout', () => {
     expect(editorLifecycle.mountedNodeIds).toEqual(['node-1', 'node-2']);
   });
 
-  it('moves the answer divider into the prompt editor layer', () => {
+  it('keeps the answer divider between the prompt and answer sections', () => {
     const view = render(
       renderDocumentPanelBodyLayout(createLayoutProps({
         hasAnswerSection: true,
@@ -115,8 +115,8 @@ describe('renderDocumentPanelBodyLayout', () => {
       }))
     );
 
-    expect(view.container.querySelector('[aria-hidden="true"]')).toBeNull();
-    expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-trailing-divider', 'true');
+    expect(view.container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+    expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-trailing-divider', 'false');
   });
 
   it('passes the reader end cushion only to the prompt editor', () => {

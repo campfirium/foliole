@@ -92,7 +92,6 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         key={promptEditorKey}
         nodeId={props.editorNodeId}
         onChange={props.onEditorChange}
-        trailingDivider={props.hasAnswerSection}
         value={props.editorContent}
         {...definedProps({
           blockImageMaxHeightOverride: props.sharedBlockImageMaxHeight,
@@ -163,6 +162,15 @@ function renderDocumentOutline(props: DocumentPanelBodyLayoutProps) {
   );
 }
 
+function DocumentSectionDivider(props: Pick<DocumentPanelBodyLayoutProps, 'documentMaxWidth'>) {
+  void props.documentMaxWidth;
+  return (
+    <div aria-hidden="true" className="relative h-3 shrink-0">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-px -translate-x-1/2 -translate-y-1/2 bg-[var(--workspace-region-main-document-content-divider)] [width:min(100%,var(--document-max-width))]" />
+    </div>
+  );
+}
+
 export function renderDocumentPanelBodyLayout(props: DocumentPanelBodyLayoutProps) {
   return (
     <div className="relative flex h-full min-h-0 w-full">
@@ -170,7 +178,10 @@ export function renderDocumentPanelBodyLayout(props: DocumentPanelBodyLayoutProp
       <div className="document-panel-editor-stack flex h-full min-h-0 w-full flex-1 flex-col">
         {renderDocumentBodyContent(props)}
         {props.hasAnswerSection && !props.emptyState ? (
-          <DocumentPanelAnswerSection {...props} />
+          <>
+            <DocumentSectionDivider documentMaxWidth={props.documentMaxWidth} />
+            <DocumentPanelAnswerSection {...props} />
+          </>
         ) : null}
       </div>
     </div>
