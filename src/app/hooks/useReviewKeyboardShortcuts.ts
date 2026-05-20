@@ -143,6 +143,9 @@ function handleReviewKeydown(
   }
   if (isTargetEditing || !args.reviewCurrentNodeId || !args.isCurrentReviewItemVisible) {
     if (!isTargetEditing && args.reviewCurrentNodeId && !args.isCurrentReviewItemVisible) {
+      if (tryRunShortcut(event, args.deleteCurrentItemShortcuts, args.deleteCurrentReviewItem)) {
+        return;
+      }
       const resumeShortcuts = args.isCurrentItemGradable ? args.revealAnswerShortcuts : args.readingReadShortcuts;
       tryRunShortcut(event, resumeShortcuts, args.resumeReviewItem);
     }
