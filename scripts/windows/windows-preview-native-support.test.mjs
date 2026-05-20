@@ -6,6 +6,7 @@ import {
   isRendererSourceFile,
   isRuntimeFile,
   isShellConfigFile,
+  isTrustedRunningStatus,
   parseWindowsClientStatus,
   selectNativePreviewAction
 } from './windows-preview-native-support.mjs';
@@ -21,6 +22,16 @@ it('parses trusted Windows client status output', () => {
     status: 'RUNNING',
     trusted: true
   });
+});
+
+it('requires the expected head for trusted running status when provided', () => {
+  const status = parseWindowsClientStatus(
+    '[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123'
+  );
+
+  expect(isTrustedRunningStatus(status)).toBe(true);
+  expect(isTrustedRunningStatus(status, { expectedHead: 'abc123' })).toBe(true);
+  expect(isTrustedRunningStatus(status, { expectedHead: 'def456' })).toBe(false);
 });
 
 it('classifies native preview file groups', () => {
