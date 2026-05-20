@@ -5,8 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } from './windows-client-native-logs.mjs';
+import { killPid, runCapture } from './windows-client-native-process.mjs';
 import {
-  processAlive,
   readClientState as readClientStateFile,
   readReadyState as readReadyStateFiles,
   removeClientState,
@@ -41,34 +41,8 @@ function readReadyState() {
 }
 
 async function currentHead() {
-  const result = await runCapture('git', ['rev-parse', 'HEAD']);
+  const result = await runCapture('git', ['rev-parse', 'HEAD'], { cwd: repoRoot });
   return result.code === 0 ? result.stdout.trim() : '';
-}
-
-function runCapture(command, args, options = {}) {
-  return new Promise((resolve) => {
-    let stdout = '';
-    let stderr = '';
-    const child = spawn(command, args, {
-      cwd: options.cwd ?? repoRoot,
-      env: options.env ?? process.env,
-      shell: false,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: true
-    });
-    child.stdout.on('data', (chunk) => {
-      stdout += String(chunk);
-    });
-    child.stderr.on('data', (chunk) => {
-      stderr += String(chunk);
-    });
-    child.on('error', (error) => {
-      resolve({ code: 1, error, stderr, stdout });
-    });
-    child.on('exit', (code) => {
-      resolve({ code: code ?? 1, error: null, stderr, stdout });
-    });
-  });
 }
 
 function printStatus() {
@@ -158,17 +132,6 @@ async function startClient({ print = true } = {}) {
     console.log(`[windows-restart-client] status: STARTED shell_pid=${child.pid} runtime_pid=${ready.appReady.pid}`);
   }
   return { alreadyRunning: false, ready, state: readClientState() };
-}
-
-async function killPid(pid) {
-  if (!processAlive(pid)) {
-    return;
-  }
-  const result = await runCapture('taskkill.exe', ['/PID', String(pid), '/T', '/F']);
-  if (result.code !== 0 && processAlive(pid)) {
-    const detail = `${result.stdout}${result.stderr}`.split(/\r?\n/u).filter(Boolean).slice(-8).join(' ');
-    throw new Error(`taskkill failed pid=${pid}${detail ? ` ${detail}` : ''}`);
-  }
 }
 
 async function stopClient({ print = true } = {}) {

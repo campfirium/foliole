@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 export const WINDOWS_NATIVE_REPO_ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
 export function resolveWindowsNativePaths(repoRoot = WINDOWS_NATIVE_REPO_ROOT) {
+  // Marker paths must stay aligned with the Electron main boot-report writer.
   return {
     appReadyFile: path.join(repoRoot, '.windows-native-boot-ready.json'),
     bridgeReadyFile: path.join(repoRoot, '.windows-native-bridge-ready.json'),
