@@ -2,7 +2,7 @@
 /* global console, process */
 
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const DEFAULT_SLOW_LIMIT = 10;
@@ -17,8 +17,27 @@ function parseArgs(argv) {
   return { reportPath, vitestArgs: argv.slice(separatorIndex + 1) };
 }
 
-function resolveVitestBin() {
-  return process.env.VITEST_BIN || path.join(process.cwd(), 'node_modules', '.bin', 'vitest');
+function resolveVitestCommand() {
+  const platform = process.env.VITEST_PLATFORM_FOR_TEST || process.platform;
+  if (process.env.VITEST_BIN) {
+    return {
+      argsPrefix: [],
+      command: process.env.VITEST_BIN,
+      shell: platform === 'win32' && /\.cmd$/i.test(process.env.VITEST_BIN)
+    };
+  }
+
+  const moduleEntry = path.join(process.cwd(), 'node_modules', 'vitest', 'vitest.mjs');
+  if (existsSync(moduleEntry)) {
+    return { argsPrefix: [moduleEntry], command: process.execPath, shell: false };
+  }
+
+  const binName = platform === 'win32' ? 'vitest.cmd' : 'vitest';
+  return {
+    argsPrefix: [],
+    command: path.join(process.cwd(), 'node_modules', '.bin', binName),
+    shell: platform === 'win32'
+  };
 }
 
 function toNumber(value) {
@@ -123,9 +142,25 @@ async function main() {
   const { reportPath, vitestArgs } = parseArgs(process.argv.slice(2));
   mkdirSync(path.dirname(reportPath), { recursive: true });
   const args = ['run', '--reporter=dot', '--reporter=json', `--outputFile.json=${reportPath}`, ...vitestArgs];
-  const child = spawn(resolveVitestBin(), args, { stdio: 'inherit' });
+  const vitestCommand = resolveVitestCommand();
+  const child = spawn(vitestCommand.command, [...vitestCommand.argsPrefix, ...args], {
+    shell: vitestCommand.shell,
+    stdio: 'inherit'
+  });
   const exitCode = await new Promise((resolve) => {
-    child.on('close', (code) => resolve(code ?? 1));
+    let settled = false;
+    const finish = (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(code);
+    };
+    child.on('error', (error) => {
+      console.error(`[vitest-summary] failed to start vitest: ${error.message}`);
+      finish(1);
+    });
+    child.on('close', (code) => finish(code ?? 1));
   });
   printSummary(reportPath);
   process.exit(exitCode);
