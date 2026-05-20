@@ -41,6 +41,7 @@ interface PaletteCommandRunnerArgs {
   openNotesView: () => void;
   onToggleEditorDisplayMode: () => void;
   onToggleImmersiveMode: () => void;
+  onToggleDismissedTopicsVisibility: () => void;
   onToggleListVisibility: () => void;
   onRestartApp: () => void;
   onToggleBaseColorMode: () => void;
@@ -140,6 +141,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     restartApp: args.onRestartApp,
     startClipboardImport: args.startClipboardImport,
     toggleEditorDisplayMode: args.onToggleEditorDisplayMode,
+    toggleDismissedTopicsVisibility: args.onToggleDismissedTopicsVisibility,
     toggleImmersiveMode: args.onToggleImmersiveMode,
     toggleList: args.onToggleListVisibility,
     toggleDevTools: args.onToggleDevTools

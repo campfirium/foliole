@@ -7,6 +7,7 @@ import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readw
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
@@ -161,6 +162,12 @@ function createPaletteNavigationActions(args: {
   };
 }
 
+function createPaletteViewActions() {
+  return {
+    onToggleDismissedTopicsVisibility: requestToggleDismissedTopicVisibility
+  };
+}
+
 export function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
@@ -194,6 +201,7 @@ export function createPaletteRunnerArgs(args: {
     isReviewMode: args.isStudyMode,
     onRestartApp: createRestartAppCommand(args),
     onToggleBaseColorMode: args.appearance.toggleBaseColorMode,
+    ...createPaletteViewActions(),
     onToggleDevTools: toggleMainWindowDevTools,
     onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode,
     onToggleImmersiveMode: args.layoutProps.layoutChrome.onToggleImmersiveMode,

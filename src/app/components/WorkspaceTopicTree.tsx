@@ -8,6 +8,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
+import { useDismissedTopicVisibility } from './useDismissedTopicVisibility';
 
 import {
   resolveWorkspaceTopicTreeFocusNodeId,
@@ -145,6 +146,7 @@ function renderWorkspaceTopicTreeMenu(
 
 function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
   const contentSort = useWorkspaceContentSort();
+  const dismissedTopicVisibility = useDismissedTopicVisibility();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const childrenByParent = useMemo(
     () => props.childrenByParent ?? buildTopicChildrenByParent(props.itemIds, props.nodesById),
@@ -159,15 +161,16 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     nodeViewById,
     nodesById: props.nodesById,
     sortRefreshVersion: contentSort.sortRefreshVersion,
+    hideDismissedTopics: props.forceVisibleNodeId ? false : dismissedTopicVisibility.viewHideDismissedTopics,
     sort: contentSort.sort,
     ...definedProps({ forceVisibleNodeId: props.forceVisibleNodeId })
   });
-  return { contentSort, lazyModel, nodeViewById };
+  return { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility };
 }
 
 export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const { contentSort, lazyModel, nodeViewById } = useWorkspaceTopicTreeData(props);
+  const { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility } = useWorkspaceTopicTreeData(props);
   const { collapsedNodeIds, collapsibleNodeIds, rows: visibleRows, searchQuery, setCollapsedNodeIds, setSearchQuery } = lazyModel;
   const focusedNodeId = resolveWorkspaceTopicTreeFocusNodeId({
     activeNodeId: props.activeNodeId,
@@ -216,7 +219,9 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     scrollTargetNodeId: reviewScroll.scrollNodeId,
     searchQuery,
     setCollapsedNodeIds,
+    onToggleDismissedTopicsVisibility: dismissedTopicVisibility.toggleDismissedTopicsVisibility,
     setSearchQuery,
+    viewHideDismissedTopics: dismissedTopicVisibility.viewHideDismissedTopics,
     visibleRows,
     ...(props.emptyStateDescription !== undefined
       ? { emptyStateDescription: props.emptyStateDescription }

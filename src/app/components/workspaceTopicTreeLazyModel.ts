@@ -19,6 +19,7 @@ interface WorkspaceTopicTreeLazyModelArgs {
   activeNodeId: string | null;
   childrenByParent: TopicChildrenByParent;
   forceVisibleNodeId?: string | null;
+  hideDismissedTopics?: boolean;
   itemIds: string[];
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodesById: WorkspaceListNodesById;
@@ -32,7 +33,7 @@ export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModel
   const rootIds = useStableWorkspaceContentItems({
     getItemId: (nodeId) => nodeId,
     items: args.itemIds,
-    refreshKey: args.sortRefreshVersion,
+    ...(args.sortRefreshVersion !== undefined ? { refreshKey: args.sortRefreshVersion } : {}),
     scopeKey: `${args.activeFolderId}:root`,
     sort: contentSort,
     sortItems: (ids) => sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeViewById)
@@ -59,7 +60,9 @@ export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModel
   const rows = useTopicRows({
     childrenByParent: args.childrenByParent,
     collapsedNodeIds: collapse.collapsedNodeIds,
+    hideDismissedTopics: args.hideDismissedTopics ?? false,
     nodesById: args.nodesById,
+    reviewTargetNodeId: args.forceVisibleNodeId ?? null,
     rootIds,
     searchQuery,
     sortIds

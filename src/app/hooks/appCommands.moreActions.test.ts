@@ -26,6 +26,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     moveToNode: () => undefined,
     renameNode: () => undefined,
     goParent: () => undefined,
+    toggleDismissedTopicsVisibility: () => undefined,
     toggleImmersiveMode: () => undefined,
     importDirectory: () => undefined,
     importSingleFile: () => undefined,

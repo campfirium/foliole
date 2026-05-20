@@ -1,8 +1,8 @@
-import { ChevronsDownUp, ChevronsUpDown, FilePlus2 } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, FilePlus2, Focus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
-import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
+import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
 import type { WorkspaceContentSortDirection, WorkspaceContentSortKey } from './workspaceContentSort';
 import { WorkspaceContentSortControls } from './WorkspaceContentSortControls';
@@ -13,9 +13,11 @@ interface WorkspaceTopicTreeHeaderProps {
   onChangeSortDirection: (sortDirection: WorkspaceContentSortDirection) => void;
   onChangeSortKey: (sortKey: WorkspaceContentSortKey) => void;
   onCreateTopic: () => void;
+  onToggleDismissedTopicsVisibility?: () => void;
   onSearchQueryChange: (searchQuery: string) => void;
   onToggleCollapseAll: () => void;
   searchQuery: string;
+  viewHideDismissedTopics?: boolean;
   sortDirection: WorkspaceContentSortDirection;
   sortKey: WorkspaceContentSortKey;
 }
@@ -26,11 +28,13 @@ export function WorkspaceTopicTreeHeader({
   onChangeSortDirection,
   onChangeSortKey,
   onCreateTopic,
+  onToggleDismissedTopicsVisibility = () => undefined,
   onToggleCollapseAll,
   onSearchQueryChange,
   searchQuery,
   sortDirection,
-  sortKey
+  sortKey,
+  viewHideDismissedTopics = false
 }: WorkspaceTopicTreeHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(searchQuery));
 
@@ -59,9 +63,11 @@ export function WorkspaceTopicTreeHeader({
         onChangeSortDirection={onChangeSortDirection}
         onChangeSortKey={onChangeSortKey}
         onCreateTopic={onCreateTopic}
+        onToggleDismissedTopicsVisibility={onToggleDismissedTopicsVisibility}
         onToggleCollapseAll={onToggleCollapseAll}
         sortDirection={sortDirection}
         sortKey={sortKey}
+        viewHideDismissedTopics={viewHideDismissedTopics}
       />
       {isSearchOpen ? (
         <NodeListSearchOverlay
@@ -96,6 +102,24 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
         label={props.hasCollapsedNodes ? 'Expand all topics' : 'Collapse all topics'}
         onClick={props.onToggleCollapseAll}
       />
+      <AppTooltip>
+        <AppTooltipTrigger asChild>
+          <span className="inline-flex">
+            <AppIconButton
+              aria-pressed={props.viewHideDismissedTopics}
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground aria-pressed:bg-foreground/[0.08] aria-pressed:text-foreground"
+              icon={<Focus size={16} strokeWidth={1.9} />}
+              label={props.viewHideDismissedTopics ? 'Show all topics' : 'Focus active topics'}
+              onClick={props.onToggleDismissedTopicsVisibility}
+            />
+          </span>
+        </AppTooltipTrigger>
+        <AppTooltipContent align="center" avoidCollisions={false} side="top" sideOffset={8}>
+          {props.viewHideDismissedTopics
+            ? 'Show all topic branches.'
+            : 'Focus active topics by hiding dismissed branches.'}
+        </AppTooltipContent>
+      </AppTooltip>
       <AppIconButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
         icon={<FilePlus2 size={16} strokeWidth={1.9} />}

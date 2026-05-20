@@ -11,9 +11,11 @@ interface WorkspaceTopicTreeHeaderBridgeProps {
   contentSort: ReturnType<typeof useWorkspaceContentSort>;
   hasCollapsedNodes: boolean;
   onCreateTopic: (parentNodeId: string) => void;
+  onToggleDismissedTopicsVisibility: () => void;
   searchQuery: string;
   setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
   setSearchQuery: (value: string) => void;
+  viewHideDismissedTopics: boolean;
 }
 
 export function WorkspaceTopicTreeHeaderBridge(props: WorkspaceTopicTreeHeaderBridgeProps) {
@@ -29,12 +31,14 @@ export function WorkspaceTopicTreeHeaderBridge(props: WorkspaceTopicTreeHeaderBr
       onChangeSortKey={contentSort.setSortKey}
       onCreateTopic={() => props.onCreateTopic(props.activeFolderId)}
       onSearchQueryChange={props.setSearchQuery}
+      onToggleDismissedTopicsVisibility={props.onToggleDismissedTopicsVisibility}
       onToggleCollapseAll={() =>
         props.setCollapsedNodeIds(props.hasCollapsedNodes ? new Set() : new Set(props.collapsibleNodeIds))
       }
       searchQuery={props.searchQuery}
       sortDirection={contentSort.sort.direction}
       sortKey={contentSort.sort.key}
+      viewHideDismissedTopics={props.viewHideDismissedTopics}
     />
   );
 }
