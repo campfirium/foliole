@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 /* global console, process */
 
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { resolveWindowsNativePaths, WINDOWS_NATIVE_REPO_ROOT } from './windows-native-paths.mjs';
 
 const DEFAULT_WORKDIR = process.platform === 'win32' ? WINDOWS_NATIVE_REPO_ROOT : 'D:\\C\\foliole';
 const FORBIDDEN_PREFIXES = ['D:\\X\\', 'C:\\Users\\'];
+const DEFAULT_GIT_BASH_CANDIDATES = [
+  'C:\\Program Files\\Git\\bin\\bash.exe',
+  'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+  'C:\\Users\\zephu\\scoop\\apps\\git\\current\\bin\\bash.exe'
+];
 
 export function normalizeWindowsPath(value) {
   return String(value || '')
@@ -33,9 +39,14 @@ export function isForbiddenWorkdir(value) {
   return FORBIDDEN_PREFIXES.some((prefix) => normalized.startsWith(prefix.toUpperCase()));
 }
 
-export function resolvePilotPreflight(env = process.env) {
+export function findGitBashPath(candidates = DEFAULT_GIT_BASH_CANDIDATES) {
+  return candidates.map(normalizeWindowsPath).find((candidate) => candidate && fs.existsSync(candidate)) ?? '';
+}
+
+export function resolvePilotPreflight(env = process.env, options = {}) {
   const workdir = normalizeWindowsPath(env.FOLIOLE_WINDOWS_NATIVE_WORKDIR || env.WINDOWS_NATIVE_WORKDIR || DEFAULT_WORKDIR);
-  const gitBashPath = normalizeWindowsPath(env.FOLIOLE_WINDOWS_GIT_BASH || env.npm_config_script_shell || '');
+  const configuredGitBashPath = normalizeWindowsPath(env.FOLIOLE_WINDOWS_GIT_BASH || env.npm_config_script_shell || '');
+  const gitBashPath = configuredGitBashPath || findGitBashPath(options.gitBashCandidates);
   const nativePaths = resolveWindowsNativePaths(workdir);
   const errors = [];
   const warnings = [];
@@ -54,6 +65,8 @@ export function resolvePilotPreflight(env = process.env) {
   }
   if (!gitBashPath) {
     warnings.push('Git Bash path was not provided; Windows npm scripts that call bash must verify it before migration.');
+  } else if (!configuredGitBashPath) {
+    warnings.push(`Git Bash path was auto-detected; set FOLIOLE_WINDOWS_GIT_BASH if this changes: ${gitBashPath}`);
   }
 
   return {
