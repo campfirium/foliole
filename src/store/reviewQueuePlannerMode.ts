@@ -14,9 +14,12 @@ function mixUnifiedPushQueues(args: {
   let readingIndex = 0;
   let cycleIndex = 0;
 
-  while (queueNodeIds.length < limit && (fsrsIndex < args.fsrsQueueNodeIds.length || readingIndex < args.readingQueueNodeIds.length)) {
+  while (queueNodeIds.length < limit && fsrsIndex < args.fsrsQueueNodeIds.length) {
     const nextKind = cycle[cycleIndex % cycle.length];
     cycleIndex += 1;
+    if (nextKind === 'reading' && readingIndex >= args.readingQueueNodeIds.length) {
+      continue;
+    }
     const nextId = nextKind === 'fsrs' ? args.fsrsQueueNodeIds[fsrsIndex++] : args.readingQueueNodeIds[readingIndex++];
     if (nextId) queueNodeIds.push(nextId);
   }
@@ -34,7 +37,7 @@ export function resolveModeQueueNodeIds(args: {
   const limit = args.limit ?? Number.POSITIVE_INFINITY;
   const limited = (nodeIds: string[]) => nodeIds.slice(0, limit);
   if (args.mode === 'review-first') {
-    return limited([...args.fsrsQueueNodeIds, ...args.readingQueueNodeIds]);
+    return limited([...args.fsrsQueueNodeIds, ...mixUnifiedPushQueues(args).filter((nodeId) => args.readingQueueNodeIds.includes(nodeId))]);
   }
   if (args.mode === 'reading-only') {
     return limited(args.readingQueueNodeIds);

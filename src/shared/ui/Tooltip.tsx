@@ -19,6 +19,30 @@ type AppTooltipContentProps = React.ComponentPropsWithoutRef<typeof TooltipPrimi
   arrow?: boolean;
 };
 
+function AppTooltipArrow() {
+  return (
+    <TooltipPrimitive.Arrow asChild height={7} width={12}>
+      <svg
+        aria-hidden="true"
+        className="translate-y-[-1px] overflow-visible"
+        focusable="false"
+        height="7"
+        viewBox="0 0 12 7"
+        width="12"
+      >
+        <path
+          d="M 0 0 L 6 7 L 12 0"
+          fill="var(--app-tooltip-bg)"
+          stroke="var(--app-tooltip-border-color)"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    </TooltipPrimitive.Arrow>
+  );
+}
+
 const AppTooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
   AppTooltipContentProps
@@ -35,9 +59,7 @@ const AppTooltipContent = React.forwardRef<
       {...props}
     >
       {children}
-      {arrow ? (
-        <TooltipPrimitive.Arrow className="fill-[var(--app-tooltip-bg)] stroke-[var(--app-tooltip-border-color)]" height={7} width={12} />
-      ) : null}
+      {arrow ? <AppTooltipArrow /> : null}
     </TooltipPrimitive.Content>
   </TooltipPrimitive.Portal>
 ));

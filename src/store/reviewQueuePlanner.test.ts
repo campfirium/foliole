@@ -28,13 +28,13 @@ it('assembles dedicated FSRS and reading queues, then mixes them at the spec 5:1
 
   expect(plan.fsrsQueueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3', 'fsrs-4', 'fsrs-5', 'fsrs-6']);
   expect(plan.readingQueueNodeIds).toEqual(['reading-1', 'reading-2']);
-  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3', 'fsrs-4', 'fsrs-5', 'reading-1', 'fsrs-6', 'reading-2']);
+  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3', 'fsrs-4', 'fsrs-5', 'reading-1', 'fsrs-6']);
   expect(plan.fsrsCandidateCount).toBe(6);
   expect(plan.readingCandidateCount).toBe(2);
-  expect(plan.overflowCount).toBe(0);
+  expect(plan.overflowCount).toBe(1);
 });
 
-it('removes the legacy daily cap and keeps mixing until both queues are exhausted', () => {
+it('removes the legacy daily cap but keeps the task queue item-centered', () => {
   const now = '2026-03-10T12:00:00.000Z';
   const fsrsNodes = Array.from({ length: 12 }, (_, index) =>
     createReviewNode(`fsrs-${index + 1}`, `2026-02-${String(index + 1).padStart(2, '0')}T08:00:00.000Z`, {
@@ -51,7 +51,7 @@ it('removes the legacy daily cap and keeps mixing until both queues are exhauste
 
   const plan = buildReviewQueuePlan({ nodeOrder, nodesById, now, trashedNodeIds: [] });
 
-  expect(plan.queueNodeIds).toHaveLength(15);
+  expect(plan.queueNodeIds).toHaveLength(14);
   expect(plan.queueNodeIds).toEqual([
     'fsrs-1',
     'fsrs-2',
@@ -66,10 +66,9 @@ it('removes the legacy daily cap and keeps mixing until both queues are exhauste
     'fsrs-10',
     'reading-2',
     'fsrs-11',
-    'fsrs-12',
-    'reading-3'
+    'fsrs-12'
   ]);
-  expect(plan.overflowCount).toBe(0);
+  expect(plan.overflowCount).toBe(1);
 });
 
 it('keeps empty structure-only nodes out of the reading queue', () => {
@@ -85,7 +84,28 @@ it('keeps empty structure-only nodes out of the reading queue', () => {
   const plan = buildReviewQueuePlan({ nodeOrder, nodesById, now, trashedNodeIds: [] });
 
   expect(plan.readingQueueNodeIds).toEqual(['reading-1']);
-  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'reading-1']);
+  expect(plan.queueNodeIds).toEqual(['fsrs-1']);
+});
+
+it('does not pull the whole reading lane into a small item-centered task queue', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const fsrsNodes = Array.from({ length: 3 }, (_, index) =>
+    createReviewNode(`fsrs-${index + 1}`, `2026-02-${String(index + 1).padStart(2, '0')}T08:00:00.000Z`, {
+      reps: 2,
+      state: 2
+    })
+  );
+  const readingNodes = Array.from({ length: 12 }, (_, index) =>
+    createReadingNode(`reading-${index + 1}`, `2026-02-${String(index + 1).padStart(2, '0')}T08:00:00.000Z`)
+  );
+  const nodes = [...fsrsNodes, ...readingNodes];
+  const nodeOrder = nodes.map((node) => node.id);
+  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]));
+
+  const plan = buildReviewQueuePlan({ nodeOrder, nodesById, now, trashedNodeIds: [] });
+
+  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3']);
+  expect(plan.overflowCount).toBe(12);
 });
 
 it('source-interleaves due reading nodes by direct parent and planner order', () => {
@@ -152,7 +172,7 @@ it('queues cloze review nodes in the FSRS lane even when reveal is empty', () =>
 
   expect(plan.fsrsQueueNodeIds).toEqual(['cloze-1']);
   expect(plan.readingQueueNodeIds).toEqual(['reading-1']);
-  expect(plan.queueNodeIds).toEqual(['cloze-1', 'reading-1']);
+  expect(plan.queueNodeIds).toEqual(['cloze-1']);
 });
 
 it('keeps topic nodes in the reading lane and item nodes in the fsrs lane based on kind', () => {
@@ -172,7 +192,7 @@ it('keeps topic nodes in the reading lane and item nodes in the fsrs lane based 
 
   expect(plan.readingQueueNodeIds).toEqual(['topic-reveal']);
   expect(plan.fsrsQueueNodeIds).toEqual(['item-no-reveal']);
-  expect(plan.queueNodeIds).toEqual(['item-no-reveal', 'topic-reveal']);
+  expect(plan.queueNodeIds).toEqual(['item-no-reveal']);
 });
 
 it('can build the whole queue including scheduled review items for queue inspection', () => {
@@ -188,7 +208,7 @@ it('can build the whole queue including scheduled review items for queue inspect
 
   expect(plan.fsrsQueueNodeIds).toEqual(['cloze-scheduled']);
   expect(plan.readingQueueNodeIds).toEqual(['reading-due']);
-  expect(plan.queueNodeIds).toEqual(['cloze-scheduled', 'reading-due']);
+  expect(plan.queueNodeIds).toEqual(['cloze-scheduled']);
 });
 
 it('replaces legacy due and createdAt ordering with inherited priority, FSRS retrievability, and reading nextAt', () => {
@@ -215,8 +235,7 @@ it('replaces legacy due and createdAt ordering with inherited priority, FSRS ret
     'fsrs-5',
     'fsrs-6',
     'reading-early-nextAt',
-    'fsrs-high-r',
-    'reading-late-nextAt'
+    'fsrs-high-r'
   ]);
   expect(plan.fsrsQueueNodeIds).not.toEqual([
     'fsrs-absolute',

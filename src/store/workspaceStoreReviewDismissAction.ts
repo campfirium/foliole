@@ -7,6 +7,7 @@ import {
   createTopicDismissHistoryEntry,
   pushWorkspaceUndoEntry
 } from './workspaceActionHistory';
+import { buildCurrentReviewSessionQueue } from './workspaceReviewLiveQueue';
 import {
   advanceReviewSession,
   buildDismissedReadingProfile,
@@ -27,14 +28,6 @@ export function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceG
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
-    const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
-    const nextNodeId = nextQueue[0] ?? null;
-    const nextReviewSession = nextNodeId
-      ? advanceReviewSession(snapshot.reviewSession, {
-          nextNodeId,
-          queueNodeIds: nextQueue
-        })
-      : completeReviewSession(snapshot.reviewSession, { completedAt: now });
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[currentNodeId];
@@ -53,6 +46,15 @@ export function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceG
         updatedAt: now
       };
       nextNodeForSync = nextNode;
+      const nextNodesById = { ...state.nodesById, [currentNodeId]: nextNode };
+      const nextQueue = buildCurrentReviewSessionQueue(state, now, { nodesById: nextNodesById });
+      const nextNodeId = nextQueue[0] ?? null;
+      const nextReviewSession = nextNodeId
+        ? advanceReviewSession(snapshot.reviewSession, {
+            nextNodeId,
+            queueNodeIds: nextQueue
+          })
+        : completeReviewSession(snapshot.reviewSession, { completedAt: now });
       return {
         activeNodeId: nextNodeId ?? state.activeNodeId,
         appActionHistory: pushWorkspaceUndoEntry(
@@ -65,10 +67,7 @@ export function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceG
             nodeId: currentNodeId
           })
         ),
-        nodesById: {
-          ...state.nodesById,
-          [currentNodeId]: nextNode
-        },
+        nodesById: nextNodesById,
         reviewSession: nextReviewSession
       };
     });
