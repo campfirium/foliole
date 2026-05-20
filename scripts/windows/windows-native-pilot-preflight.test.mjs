@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import process from 'node:process';
+
 import { describe, expect, it } from 'vitest';
 
 import { isForbiddenWorkdir, isWslBashPath, resolvePilotPreflight } from './windows-native-pilot-preflight.mjs';
@@ -7,10 +9,14 @@ import { isForbiddenWorkdir, isWslBashPath, resolvePilotPreflight } from './wind
 describe('windows-native-pilot-preflight', () => {
   it('defaults to the dedicated D drive pilot workspace', () => {
     const result = resolvePilotPreflight({});
+    const expectedWorkdir = process.platform === 'win32' ? process.cwd() : 'D:\\C\\foliole';
 
     expect(result.ok).toBe(true);
-    expect(result.config.workdir).toBe('D:\\C\\foliole');
-    expect(result.config.homeDir).toBe('D:\\C\\foliole\\.home');
+    expect(result.config.workdir).toBe(expectedWorkdir);
+    expect(result.config.homeDir).toBe(`${expectedWorkdir}\\.home`);
+    expect(result.config.readyFile).toBe(`${expectedWorkdir}\\.windows-native-boot-ready.json`);
+    expect(result.config.bridgeReadyFile).toBe(`${expectedWorkdir}\\.windows-native-bridge-ready.json`);
+    expect(result.config.logDir).toBe(`${expectedWorkdir}\\.tmp\\windows-native-client`);
     expect(result.warnings).toContain(
       'Git Bash path was not provided; Windows npm scripts that call bash must verify it before migration.'
     );
