@@ -1,6 +1,8 @@
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences';
 import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl';
 import type { EditorAdapter, EditorSelection } from '../features/editor/adapters/EditorAdapter';
+import { collectMarkdownInlineRanges } from '../features/editor/model/markdownInlineProjection';
+import type { MarkdownInlineRange } from '../features/editor/model/markdownInlineProjectionTypes';
 import type { NodeImageRegionGroup, TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 
 export interface SelectionCommandEntry {
@@ -67,18 +69,19 @@ function buildSelectionCommandPayload(
   }
   const entries = selections
     .map((range): SelectionCommandEntry | null => {
-      const locator = buildTextLocator(content, range);
+      const normalizedRange = normalizeMarkdownInlineSelectionRange(content, range);
+      const locator = buildTextLocator(content, normalizedRange);
       if (!locator) {
         return null;
       }
-      const prefix = content.slice(0, range.from);
-      const suffix = content.slice(range.to);
+      const prefix = content.slice(0, normalizedRange.from);
+      const suffix = content.slice(normalizedRange.to);
       const clozeRawContent = `${prefix}${CLOZE_PLACEHOLDER}${suffix}`;
       return {
         anchorId: createAnchorId(),
         clozeContent: clozeRawContent || CLOZE_PLACEHOLDER,
         locator,
-        range,
+        range: normalizedRange,
         selectionText: locator.originalText
       };
     })
@@ -104,6 +107,40 @@ function buildTextLocator(content: string, range: EditorSelection): TextAnchorLo
   const to = Math.max(from, range.to - trailingWhitespaceLength);
   const originalText = content.slice(from, to);
   return originalText ? { from, originalText, to } : null;
+}
+
+function normalizeMarkdownInlineSelectionRange(content: string, range: EditorSelection): EditorSelection {
+  const inlineRange = collectMarkdownInlineRanges(content).find((candidate) => canTrimInlineSelection(candidate, range));
+  if (!inlineRange) return range;
+
+  return {
+    from: Math.max(range.from, inlineRange.contentFrom),
+    to: Math.min(range.to, inlineRange.contentTo)
+  };
+}
+
+function canTrimInlineSelection(candidate: MarkdownInlineRange, range: EditorSelection) {
+  if (range.from < candidate.from || range.to > candidate.to) return false;
+  const semanticFrom = Math.max(range.from, candidate.contentFrom);
+  const semanticTo = Math.min(range.to, candidate.contentTo);
+  if (semanticFrom >= semanticTo) return false;
+
+  return (
+    isRangeCoveredBySyntax(candidate.syntaxRanges, range.from, semanticFrom) &&
+    isRangeCoveredBySyntax(candidate.syntaxRanges, semanticTo, range.to)
+  );
+}
+
+function isRangeCoveredBySyntax(syntaxRanges: MarkdownInlineRange['syntaxRanges'], from: number, to: number) {
+  if (from >= to) return true;
+  let cursor = from;
+  for (const syntaxRange of syntaxRanges) {
+    if (syntaxRange.to <= cursor) continue;
+    if (syntaxRange.from > cursor) return false;
+    cursor = Math.max(cursor, syntaxRange.to);
+    if (cursor >= to) return true;
+  }
+  return false;
 }
 
 function getNormalizedSelectionRanges(adapter: EditorAdapter, max: number) {
