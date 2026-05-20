@@ -42,6 +42,7 @@ export { AppPanel } from './Panel';
 export { InspectorSection } from './InspectorSection';
 export { ReviewActionBar } from './ReviewActionBar';
 export {
+  ContinueReadingAction,
   FsrsRevealAction,
   ReadingReviewActions,
   ReviewCompleteAction,

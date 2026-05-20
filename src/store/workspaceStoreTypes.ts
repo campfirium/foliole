@@ -43,6 +43,7 @@ export interface WorkspaceState {
   updateNodeReveal: (nodeId: string, reveal: string) => void;
   updateNodePriority: (nodeId: string, priority: number | null) => void;
   updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
+  updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
   dismissNode: (nodeId: string, now?: string) => boolean;
   undoWorkspaceAction: (now?: string) => boolean;
   redoWorkspaceAction: (now?: string) => boolean;
@@ -117,10 +118,13 @@ export interface WorkspaceLayoutState {
 export interface ReviewSessionState {
   completedAt?: string | null;
   continueNodeId?: string | null;
+  currentItemStartedAt?: string | null;
   currentNodeId: string | null;
   isAnswerRevealed: boolean;
   queueNodeIds: string[];
+  readingElapsedMs?: number;
   readTopicCount?: number;
+  reviewElapsedMs?: number;
   reviewedItemCount?: number;
   sessionStartedAt?: string | null;
   totalNodeCount: number;

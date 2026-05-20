@@ -62,8 +62,11 @@ function selectStudySessionCompleteSummaryProps(
   }
   return {
     completedAt: props.review.reviewSummary.completedAt,
-    onContinueReading: props.review.onContinueReading,
+    createdItemCount: props.review.reviewSummary.createdItemCount,
+    createdTopicCount: props.review.reviewSummary.createdTopicCount,
+    readingElapsedMs: props.review.reviewSummary.readingElapsedMs,
     readTopicCount: props.review.reviewSummary.readTopicCount,
+    reviewElapsedMs: props.review.reviewSummary.reviewElapsedMs,
     reviewedItemCount: props.review.reviewSummary.reviewedItemCount,
     sessionStartedAt: props.review.reviewSummary.sessionStartedAt
   };

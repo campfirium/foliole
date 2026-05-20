@@ -8,6 +8,7 @@ import type { ReadingScheduleCoreFields } from '../features/review/model/unified
 import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
 
 import type { WorkspaceState } from './workspaceStore';
+import { applyReviewSessionProgress } from './workspaceReviewSessionProgress';
 
 interface PriorityChainNode {
   id: string;
@@ -33,10 +34,13 @@ export function createStartedReviewSession(args: {
   return {
     completedAt: null,
     continueNodeId: args.continueNodeId,
+    currentItemStartedAt: args.sessionStartedAt,
     currentNodeId: args.currentNodeId,
     isAnswerRevealed: false,
     queueNodeIds: args.queueNodeIds,
+    readingElapsedMs: 0,
     readTopicCount: 0,
+    reviewElapsedMs: 0,
     reviewedItemCount: 0,
     sessionStartedAt: args.sessionStartedAt,
     totalNodeCount: args.totalNodeCount
@@ -48,21 +52,22 @@ export function advanceReviewSession(
   args: {
     nextNodeId: string;
     queueNodeIds: string[];
+    handledAt?: string;
+    readingElapsedMsDelta?: number;
     readTopicDelta?: number;
+    reviewElapsedMsDelta?: number;
     reviewedItemDelta?: number;
     totalNodeCount?: number;
   }
 ): WorkspaceState['reviewSession'] {
-  return {
+  return applyReviewSessionProgress({
     ...reviewSession,
     completedAt: null,
     currentNodeId: args.nextNodeId,
     isAnswerRevealed: false,
     queueNodeIds: args.queueNodeIds,
-    readTopicCount: (reviewSession.readTopicCount ?? 0) + (args.readTopicDelta ?? 0),
-    reviewedItemCount: (reviewSession.reviewedItemCount ?? 0) + (args.reviewedItemDelta ?? 0),
     totalNodeCount: args.totalNodeCount ?? reviewSession.totalNodeCount
-  };
+  }, args);
 }
 
 export function completeReviewSession(
@@ -70,20 +75,20 @@ export function completeReviewSession(
   args: {
     completedAt: string;
     continueNodeId?: string | null;
+    readingElapsedMsDelta?: number;
     readTopicDelta?: number;
+    reviewElapsedMsDelta?: number;
     reviewedItemDelta?: number;
   }
 ): WorkspaceState['reviewSession'] {
-  return {
+  return applyReviewSessionProgress({
     ...reviewSession,
     completedAt: args.completedAt,
     continueNodeId: args.continueNodeId ?? reviewSession.continueNodeId,
     currentNodeId: null,
     isAnswerRevealed: false,
-    queueNodeIds: [],
-    readTopicCount: (reviewSession.readTopicCount ?? 0) + (args.readTopicDelta ?? 0),
-    reviewedItemCount: (reviewSession.reviewedItemCount ?? 0) + (args.reviewedItemDelta ?? 0)
-  };
+    queueNodeIds: []
+  }, { ...args, handledAt: args.completedAt });
 }
 
 export function resolveNodePriorityChain(

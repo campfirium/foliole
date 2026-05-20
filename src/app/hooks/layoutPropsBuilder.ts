@@ -6,6 +6,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { buildCachedReviewQueuePlan } from '../../store/reviewQueuePlannerCached';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { isReviewSessionCompleted } from '../../store/workspaceReviewReading';
+import { resolveReviewSessionProgress } from '../../store/workspaceReviewSessionProgress';
 import type { WorkspaceState } from '../../store/workspaceStore';
 import { buildReviewQueueVisibility } from '../components/reviewQueueVisibility';
 import { groupWorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
@@ -47,9 +48,34 @@ function createSessionActions(args: BuildLayoutPropsArgs) {
   };
 }
 
-function getReviewSessionSummary(reviewSession: WorkspaceState['reviewSession']) {
-  const reviewQueueCount = reviewSession.queueNodeIds.length;
-  const reviewCompletedCount = Math.max(reviewSession.totalNodeCount - reviewQueueCount, 0);
+export function countCreatedNodesDuringSession(
+  reviewSession: WorkspaceState['reviewSession'],
+  nodesById: WorkspaceState['nodesById']
+) {
+  const startMs = reviewSession.sessionStartedAt ? Date.parse(reviewSession.sessionStartedAt) : NaN;
+  const endMs = reviewSession.completedAt ? Date.parse(reviewSession.completedAt) : NaN;
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+    return { createdItemCount: 0, createdTopicCount: 0 };
+  }
+  let createdItemCount = 0;
+  let createdTopicCount = 0;
+  for (const node of Object.values(nodesById)) {
+    const createdAtMs = Date.parse(node.createdAt);
+    if (!Number.isFinite(createdAtMs) || createdAtMs <= startMs || createdAtMs > endMs) {
+      continue;
+    }
+    if (node.kind === 'item') createdItemCount += 1;
+    if (node.kind === 'topic') createdTopicCount += 1;
+  }
+  return { createdItemCount, createdTopicCount };
+}
+
+function getReviewSessionSummary(
+  reviewSession: WorkspaceState['reviewSession'],
+  nodesById: WorkspaceState['nodesById']
+) {
+  const { reviewCompletedCount, reviewQueueCount } = resolveReviewSessionProgress(reviewSession);
+  const createdCounts = countCreatedNodesDuringSession(reviewSession, nodesById);
   const reviewStatus: WorkspaceLayoutFlatProps['reviewStatus'] = reviewSession.currentNodeId
     ? reviewSession.isAnswerRevealed
       ? 'answer-revealed'
@@ -60,7 +86,11 @@ function getReviewSessionSummary(reviewSession: WorkspaceState['reviewSession'])
   const reviewSummary: WorkspaceLayoutFlatProps['reviewSummary'] = {
     completedAt: reviewSession.completedAt ?? null,
     continueNodeId: reviewSession.continueNodeId ?? null,
+    createdItemCount: createdCounts.createdItemCount,
+    createdTopicCount: createdCounts.createdTopicCount,
+    readingElapsedMs: reviewSession.readingElapsedMs ?? 0,
     readTopicCount: reviewSession.readTopicCount ?? 0,
+    reviewElapsedMs: reviewSession.reviewElapsedMs ?? 0,
     reviewedItemCount: reviewSession.reviewedItemCount ?? 0,
     sessionStartedAt: reviewSession.sessionStartedAt ?? null
   };
@@ -89,7 +119,8 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   const previewNodeId = args.isViewingTrashNode ? args.selectedTrashNodeId : args.activeNodeId;
   const previewNode = previewNodeId ? args.nodesById[previewNodeId] : undefined;
   const { reviewCompletedCount, reviewQueueCount, reviewStatus, reviewSummary } = getReviewSessionSummary(
-    args.reviewSession
+    args.reviewSession,
+    args.nodesById
   );
   const reviewQueueVisibility = buildReviewQueueVisibility({
     currentNodeId: args.reviewSession.currentNodeId,
@@ -109,7 +140,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   const flatProps: WorkspaceLayoutFlatProps = {
     activeNodeId: args.activeNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
     editorAdapterRef: args.editorAdapterRef, editorContent: args.documentNode?.content ?? '', isImmersiveMode: args.isImmersiveMode, isEditorReadOnly: args.isViewingTrashNode ? true : previewNodeId ? !previewNode || !isNodeDocumentLoaded(previewNode) || isNodeContentLocked(previewNodeId, args.nodeOrder, args.nodesById, new Set(args.trashedNodeIds)) : false, isPriorityQuickSetActive: args.isPriorityQuickSetActive, editorNodeId: args.editorNodeId, ...definedProps({ editorNodeViewState: args.editorNodeViewState }),
-    onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange, onEnterPriorityQuickSet: args.onEnterPriorityQuickSet, priorityQuickSetShortcutLabel: args.priorityQuickSetShortcutLabel,
+    onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange, onNodeShortTermChange: args.onNodeShortTermChange, onEnterPriorityQuickSet: args.onEnterPriorityQuickSet, priorityQuickSetShortcutLabel: args.priorityQuickSetShortcutLabel,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, requestedSettingsCategory: args.requestedSettingsCategory, requestedSettingsDialog: args.requestedSettingsDialog, isReviewEditing: args.isReviewEditing,
     isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewPanelQueueNodeIds, reviewQueueNodeIds: args.reviewSession.queueNodeIds, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, reviewSummary, reviewSessionMode: args.reviewSessionMode, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isVirtualViewOpen: args.isVirtualViewOpen, isExternalViewOpen: args.isExternalViewOpen, activeVirtualNodeId: args.activeVirtualNodeId, isViewingTrashNode: args.isViewingTrashNode,
     isListCollapsed: args.isListCollapsed, isRightSidebarCollapsed: args.isRightSidebarCollapsed, showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, trashedNodeIds: args.trashedNodeIds, nodesById: args.nodesById, externalFolders: args.externalFolders, externalEntriesByFolderId: args.externalEntriesByFolderId, externalSelection: args.externalSelection, nodeViewById: args.nodeViewById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange, onRegisterEditorDraftFlush: args.onRegisterEditorDraftFlush, onNodeContentChange: args.onNodeContentChange, setNodeViewState: args.setNodeViewState,

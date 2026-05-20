@@ -155,3 +155,11 @@ export function ResumeReviewAction({ onResumeReviewItem }: { onResumeReviewItem:
     </AppButton>
   );
 }
+
+export function ContinueReadingAction({ onContinueReading }: { onContinueReading: () => void }) {
+  return (
+    <AppButton aria-label="Continue reading" className="min-w-40 px-5" onClick={onContinueReading} size="md" variant="primary">
+      Continue reading
+    </AppButton>
+  );
+}

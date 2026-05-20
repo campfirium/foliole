@@ -1,18 +1,15 @@
-import { AppButton } from '../../shared/ui';
-
 export interface StudySessionCompleteSummaryProps {
   completedAt: string | null;
+  createdItemCount: number;
+  createdTopicCount: number;
+  readingElapsedMs: number;
   readTopicCount: number;
+  reviewElapsedMs: number;
   reviewedItemCount: number;
   sessionStartedAt: string | null;
-  onContinueReading: () => void;
 }
 
-function formatElapsedTime(startedAt: string | null, completedAt: string | null) {
-  if (!startedAt || !completedAt) {
-    return 'Just now';
-  }
-  const elapsedMs = new Date(completedAt).getTime() - new Date(startedAt).getTime();
+function formatElapsedMs(elapsedMs: number) {
   if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) {
     return 'Just now';
   }
@@ -25,41 +22,64 @@ function formatElapsedTime(startedAt: string | null, completedAt: string | null)
   return minutes ? `${hours} hr ${minutes} min` : `${hours} hr`;
 }
 
-function SummaryStat({ label, value }: { label: string; value: string }) {
+function pluralize(count: number, singular: string) {
+  return count === 1 ? singular : `${singular}s`;
+}
+
+function SummaryRow({
+  count,
+  elapsedMs,
+  label,
+  unit
+}: {
+  count: number;
+  elapsedMs?: number;
+  label: string;
+  unit: string;
+}) {
   return (
-    <div className="min-w-0 border-l border-border px-4 first:border-l-0 first:pl-0">
-      <div className="text-[22px] font-semibold leading-tight text-foreground">{value}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+    <div className="grid min-h-12 grid-cols-[minmax(6rem,1fr)_auto_auto] items-baseline gap-x-5">
+      <div className="text-sm font-medium text-muted-foreground">{label}</div>
+      <div className="text-right">
+        <span className="text-[28px] font-semibold leading-none text-foreground">{count}</span>
+        <span className="ml-2 text-sm text-muted-foreground">{pluralize(count, unit)}</span>
+      </div>
+      <div className="min-w-20 text-right text-sm font-medium text-muted-foreground">
+        {elapsedMs === undefined ? null : formatElapsedMs(elapsedMs)}
+      </div>
     </div>
   );
 }
 
 export function StudySessionCompleteSummary({
-  completedAt,
-  onContinueReading,
+  createdItemCount,
+  createdTopicCount,
+  readingElapsedMs,
   readTopicCount,
-  reviewedItemCount,
-  sessionStartedAt
+  reviewElapsedMs,
+  reviewedItemCount
 }: StudySessionCompleteSummaryProps) {
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center bg-canvas px-8 py-10 text-foreground">
-      <div className="w-full max-w-[640px]">
-        <div className="mb-7">
-          <p className="text-sm font-medium text-green-accent">Review queue clear</p>
-          <h1 className="mt-2 text-[28px] font-semibold leading-tight">Review complete</h1>
-          <p className="mt-3 max-w-[520px] text-sm leading-6 text-muted-foreground">
-            Your due review phase is complete. Continue reading when you are ready.
-          </p>
-        </div>
-        <div className="grid grid-cols-3 gap-0 border-y border-border py-5">
-          <SummaryStat label="Reviewed Items" value={String(reviewedItemCount)} />
-          <SummaryStat label="Read Topics" value={String(readTopicCount)} />
-          <SummaryStat label="Time spent" value={formatElapsedTime(sessionStartedAt, completedAt)} />
-        </div>
-        <div className="mt-7 flex justify-center">
-          <AppButton className="min-w-40 px-5" onClick={onContinueReading} size="md" variant="primary">
-            Continue reading
-          </AppButton>
+    <div className="flex min-h-0 flex-1 items-start justify-center bg-canvas px-8 pt-[18vh] text-foreground">
+      <div className="w-full max-w-[520px]">
+        <h1 className="text-[34px] font-semibold leading-tight text-foreground">Queue cleared</h1>
+        <div className="mt-8 space-y-3">
+          {reviewedItemCount > 0 ? (
+            <SummaryRow count={reviewedItemCount} elapsedMs={reviewElapsedMs} label="Reviewed" unit="item" />
+          ) : null}
+          {readTopicCount > 0 ? (
+            <SummaryRow count={readTopicCount} elapsedMs={readingElapsedMs} label="Read" unit="topic" />
+          ) : null}
+          {createdItemCount > 0 || createdTopicCount > 0 ? (
+            <div className="pt-4">
+              {createdItemCount > 0 ? (
+                <SummaryRow count={createdItemCount} label="Created" unit="item" />
+              ) : null}
+              {createdTopicCount > 0 ? (
+                <SummaryRow count={createdTopicCount} label={createdItemCount > 0 ? '' : 'Created'} unit="topic" />
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
-import { ResumeReviewAction } from './ReviewModeToolbarActions';
+import { ContinueReadingAction, ResumeReviewAction } from './ReviewModeToolbarActions';
 
 interface ReviewNoCurrentItemBarProps {
   className?: string;
@@ -26,9 +26,9 @@ function ReviewCompleteBar({
       ariaLabel="Review mode toolbar"
       {...definedProps({ className, style })}
       mode="study"
-      primary={<ResumeReviewAction onResumeReviewItem={onContinueReading} />}
+      primary={<ContinueReadingAction onContinueReading={onContinueReading} />}
       progress={null}
-      secondary="Review complete"
+      secondary={null}
     />
   );
 }
