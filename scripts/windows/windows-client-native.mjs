@@ -1,4 +1,4 @@
-/* global URL, console, process, setTimeout */
+/* global console, process, setTimeout */
 
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -13,14 +13,17 @@ import {
   resetReadyMarkers,
   saveClientState
 } from './windows-client-native-state.mjs';
+import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 export const WINDOWS_CLIENT_ACTIONS = new Set(['status', 'start', 'stop', 'restart', 'full-restart']);
 
-const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const stateFile = path.join(repoRoot, '.windows-native-client-state.json');
-const appReadyFile = path.join(repoRoot, '.windows-native-boot-ready.json');
-const bridgeReadyFile = path.join(repoRoot, '.windows-native-bridge-ready.json');
-const logDir = path.join(repoRoot, '.tmp', 'windows-native-client');
+const {
+  appReadyFile,
+  bridgeReadyFile,
+  logDir,
+  repoRoot,
+  stateFile
+} = resolveWindowsNativePaths();
 const healthTimeoutMs = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '90000', 10);
 
 function wait(ms) {
