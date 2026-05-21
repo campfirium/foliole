@@ -92,6 +92,7 @@ function useWorkspaceEditorController(
   const editorCtx = useEditorContextCommands({
     activeNodeId: ws.activeNodeId,
     createChildNode: ws.createChildNode,
+    createFormulaClozeNode: ws.createFormulaClozeNode,
     createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection,
     createImageClozeNodes: ws.createImageClozeNodes,
     createQANodeFromSelection: ws.createQANodeFromSelection,

@@ -1,27 +1,14 @@
-export interface FormulaRect {
-  height: number;
-  width: number;
-  x: number;
-  y: number;
-}
+import type {
+  FormulaDomSelectionDescriptor,
+  FormulaDomSelectionLeaf,
+  FormulaRegionRect
+} from '../../nodes/model/nodeTypes';
 
-export interface FormulaDomSelectionLeaf {
-  path: number[];
-  structureFingerprint: string;
-  textFingerprint: string;
-}
-
-export interface FormulaDomSelectionDescriptor {
-  algorithm: 'katex-dom-leaf-v1';
-  fallbackRect: FormulaRect;
-  leaves: FormulaDomSelectionLeaf[];
-}
-
-type BoxProvider = (element: HTMLElement) => FormulaRect;
+type BoxProvider = (element: HTMLElement) => FormulaRegionRect;
 
 const ALGORITHM: FormulaDomSelectionDescriptor['algorithm'] = 'katex-dom-leaf-v1';
 
-function intersects(left: FormulaRect, right: FormulaRect) {
+function intersects(left: FormulaRegionRect, right: FormulaRegionRect) {
   return (
     left.x < right.x + right.width &&
     left.x + left.width > right.x &&
@@ -30,7 +17,7 @@ function intersects(left: FormulaRect, right: FormulaRect) {
   );
 }
 
-function unionRects(rects: readonly FormulaRect[]): FormulaRect {
+function unionRects(rects: readonly FormulaRegionRect[]): FormulaRegionRect {
   const minX = Math.min(...rects.map((rect) => rect.x));
   const minY = Math.min(...rects.map((rect) => rect.y));
   const maxX = Math.max(...rects.map((rect) => rect.x + rect.width));
@@ -38,7 +25,7 @@ function unionRects(rects: readonly FormulaRect[]): FormulaRect {
   return { height: maxY - minY, width: maxX - minX, x: minX, y: minY };
 }
 
-function toRelativeRect(rect: FormulaRect, rootRect: FormulaRect): FormulaRect {
+function toRelativeRect(rect: FormulaRegionRect, rootRect: FormulaRegionRect): FormulaRegionRect {
   if (rootRect.width <= 0 || rootRect.height <= 0) return { height: 0, width: 0, x: 0, y: 0 };
   return {
     height: rect.height / rootRect.height,
@@ -81,6 +68,16 @@ function resolvePath(root: HTMLElement, leaf: HTMLElement) {
   return path;
 }
 
+function resolveLeafByPath(root: HTMLElement, path: readonly number[]) {
+  let current: HTMLElement | null = root;
+  for (const index of path) {
+    const next: HTMLElement | null | undefined = current ? getElementChildren(current)[index] : null;
+    if (!next) return null;
+    current = next;
+  }
+  return current;
+}
+
 function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, ' ');
 }
@@ -93,6 +90,15 @@ function createLeafDescriptor(visualRoot: HTMLElement, leaf: HTMLElement): Formu
   };
 }
 
+function leafMatchesDescriptor(leaf: HTMLElement, descriptor: FormulaDomSelectionLeaf) {
+  const structureFingerprint = Array.from(leaf.classList).sort().join('.');
+  const textFingerprint = normalizeText(leaf.textContent ?? '');
+  return (
+    (!descriptor.structureFingerprint || descriptor.structureFingerprint === structureFingerprint) &&
+    (!descriptor.textFingerprint || descriptor.textFingerprint === textFingerprint)
+  );
+}
+
 export function listFormulaSelectionLeaves(root: HTMLElement): HTMLElement[] {
   const visualRoot = resolveVisualRoot(root);
   const leaves: HTMLElement[] = [];
@@ -102,7 +108,7 @@ export function listFormulaSelectionLeaves(root: HTMLElement): HTMLElement[] {
 
 export function createFormulaDomSelectionDescriptor(
   root: HTMLElement,
-  selectionRect: FormulaRect,
+  selectionRect: FormulaRegionRect,
   getBox: BoxProvider
 ): FormulaDomSelectionDescriptor | null {
   const rootRect = getBox(root);
@@ -115,4 +121,19 @@ export function createFormulaDomSelectionDescriptor(
     fallbackRect: toRelativeRect(unionRects(selectedRects), rootRect),
     leaves: selected.map((leaf) => createLeafDescriptor(visualRoot, leaf))
   };
+}
+
+export function measureFormulaDomSelectionDescriptor(
+  root: HTMLElement,
+  selection: FormulaDomSelectionDescriptor,
+  getBox: BoxProvider
+): FormulaRegionRect | null {
+  const rootRect = getBox(root);
+  const visualRoot = resolveVisualRoot(root);
+  const selectedRects = selection.leaves
+    .map((leaf) => resolveLeafByPath(visualRoot, leaf.path))
+    .filter((leaf, index): leaf is HTMLElement => Boolean(leaf && leafMatchesDescriptor(leaf, selection.leaves[index]!)))
+    .map(getBox);
+  if (selectedRects.length === 0) return null;
+  return toRelativeRect(unionRects(selectedRects), rootRect);
 }

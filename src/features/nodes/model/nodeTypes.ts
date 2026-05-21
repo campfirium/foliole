@@ -45,6 +45,34 @@ export interface ImageAnchorLocator {
   y: number;
 }
 
+export interface FormulaRegionRect {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+export interface FormulaDomSelectionLeaf {
+  path: number[];
+  structureFingerprint: string;
+  textFingerprint: string;
+}
+
+export interface FormulaDomSelectionDescriptor {
+  algorithm: 'katex-dom-leaf-v1';
+  fallbackRect: FormulaRegionRect;
+  leaves: FormulaDomSelectionLeaf[];
+}
+
+export interface FormulaAnchorLocator {
+  display: 'block' | 'inline';
+  fallbackRect: FormulaRegionRect;
+  formulaSource: string;
+  kind: 'formula-region';
+  occurrenceKey: string;
+  selection: FormulaDomSelectionDescriptor;
+}
+
 export interface TextAnchorLocator {
   from: number;
   originalText: string;
@@ -71,7 +99,7 @@ export interface NodeImageRegionGroup {
 export interface NodeAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze';
-  locator?: PdfAnchorLocator | ImageAnchorLocator | TextAnchorLocator | TextAnchorLocatorGroup;
+  locator?: PdfAnchorLocator | ImageAnchorLocator | FormulaAnchorLocator | TextAnchorLocator | TextAnchorLocatorGroup;
 }
 
 export type NodeSpecialKind = 'inbox' | 'trash' | 'virtual-root' | 'virtual';
@@ -141,6 +169,17 @@ export function isTextAnchorLocatorGroup(locator: NodeAnchorLink['locator'] | nu
             typeof range.originalText === 'string'
         )
       )
+  );
+}
+
+export function isFormulaAnchorLocator(locator: NodeAnchorLink['locator'] | null | undefined): locator is FormulaAnchorLocator {
+  return Boolean(
+    locator &&
+      'kind' in locator &&
+      locator.kind === 'formula-region' &&
+      'occurrenceKey' in locator &&
+      typeof locator.occurrenceKey === 'string' &&
+      locator.occurrenceKey.trim().length > 0
   );
 }
 

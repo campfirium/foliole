@@ -142,7 +142,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   addReadwiseOriginalFileDecorations(ranges, readwiseOriginalFilePlaceholders, context.nodeId);
   addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
   addForumTitleLinkDecorations(ranges, forumTitleLinks);
-  addMathDecorations(ranges, mathRanges, view, context.activePosition);
+  addMathDecorations(ranges, mathRanges, view, context.activePosition, context.nodeId, context.imageClozePresentationVersion);
   addCodeFenceSyntaxHighlightDecorations(ranges, source, codeFenceProjection.codeBlocks, viewportRange);
   addMultilineLinkDecorations(ranges, source, {
     links: inlineLinks,

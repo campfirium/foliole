@@ -7,6 +7,7 @@ export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}
     ...createInitialWorkspaceState(),
     completeReviewItem: vi.fn(() => false),
     createChildNode: vi.fn(() => 'node-child'),
+    createFormulaClozeNode: vi.fn(() => null),
     createHighlightNodeFromSelection: vi.fn(() => 'node-highlight'),
     createImageClozeNodes: vi.fn(() => []),
     createQANodeFromSelection: vi.fn(() => null),

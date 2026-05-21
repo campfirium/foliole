@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react';
 
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
+import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
 import {
@@ -22,6 +23,7 @@ import {
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import { NodeLinkHoverPreviewPanel } from './NodeLinkHoverPreviewPanel';
 import { useDocumentPanelDocumentRetry } from './useDocumentPanelDocumentRetry';
+import { useDocumentPanelFormulaClozePresentation } from './useDocumentPanelFormulaClozePresentation';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
 import { useDocumentPanelPerformanceMarkers } from './useDocumentPanelPerformanceMarkers';
 import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
@@ -60,6 +62,21 @@ function useDocumentPanelTextAnchorState(props: DocumentPanelSectionProps) {
   }, [props.activeNodeId, props.editorContent, props.nodesById, props.trashedNodeIds]);
 }
 
+function useDocumentPanelClozePresentations(activeNode: Node | undefined, props: DocumentPanelSectionProps) {
+  useDocumentPanelImageClozePresentation({
+    activeNode,
+    editorNodeId: props.editorNodeId,
+    nodesById: props.nodesById,
+    trashedNodeIds: props.trashedNodeIds
+  });
+  useDocumentPanelFormulaClozePresentation({
+    activeNode,
+    editorNodeId: props.editorNodeId,
+    nodesById: props.nodesById,
+    trashedNodeIds: props.trashedNodeIds
+  });
+}
+
 function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const { editorDisplayMode, readingContentWidth } = useAppearanceSettings();
   const { isRetryingDocument, retryDocumentLoad } = useDocumentPanelDocumentRetry(props.editorNodeId);
@@ -96,13 +113,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
       )
     : loadingLabel ? <DocumentPanelLoadingContent loadingLabel={loadingLabel} /> : undefined;
   useDocumentPanelPerformanceMarkers(props, Boolean(bodyProps.emptyState), isEditorDocumentLoaded);
-
-  useDocumentPanelImageClozePresentation({
-    activeNode,
-    editorNodeId: props.editorNodeId,
-    nodesById: props.nodesById,
-    trashedNodeIds: props.trashedNodeIds
-  });
+  useDocumentPanelClozePresentations(activeNode, props);
 
   return {
     bodyProps,

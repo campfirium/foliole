@@ -49,18 +49,25 @@ function createWorkspaceLayoutState() {
   };
 }
 
+function createWorkspaceCreationActions() {
+  return {
+    createChildNode: vi.fn(),
+    createFormulaClozeNode: vi.fn(),
+    createHighlightNodeFromSelection: vi.fn(),
+    createImageClozeNodes: vi.fn(),
+    createQANodeFromSelection: vi.fn(),
+    createRootNode: vi.fn(),
+    createVirtualNode: vi.fn()
+  };
+}
+
 export function createWorkspaceState() {
   return {
     activeNodeId: 'node-1',
     appActionHistory: { redoStack: [], undoStack: [] },
     ...createWorkspaceEditorOperationState(),
     ...createWorkspaceLayoutState(),
-    createChildNode: vi.fn(),
-    createHighlightNodeFromSelection: vi.fn(),
-    createImageClozeNodes: vi.fn(),
-    createQANodeFromSelection: vi.fn(),
-    createRootNode: vi.fn(),
-    createVirtualNode: vi.fn(),
+    ...createWorkspaceCreationActions(),
     completeReviewItem: vi.fn(),
     deferReviewItem: vi.fn(),
     deleteImageClozeRegion: vi.fn(),

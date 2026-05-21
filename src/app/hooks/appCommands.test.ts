@@ -111,6 +111,19 @@ describe('buildAppPaletteItems', () => {
       title: 'Redo Dismiss Topic'
     });
   });
+
+  it('exposes Ctrl+Y as a redo shortcut', () => {
+    const items = buildAppPaletteItems({
+      ...createPaletteOptions(false),
+      canRedoWorkspaceAction: true,
+      redoWorkspaceActionTitle: 'Redo Create Annotation'
+    });
+
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)?.shortcuts?.tertiary).toMatchObject({
+      ctrlKey: true,
+      key: 'y'
+    });
+  });
 });
 
 describe('runReviewModeToggle', () => {

@@ -45,8 +45,9 @@ function shouldSkipCommandShortcut(args: {
   if (!isEditing) {
     return false;
   }
+  const key = args.event.key.toLowerCase();
   const isAppUndoRedoShortcut =
-    args.event.key.toLowerCase() === 'z' &&
+    (key === 'z' || key === 'y') &&
     !args.event.altKey &&
     (args.event.ctrlKey || args.event.metaKey);
   if (isAppUndoRedoShortcut) {

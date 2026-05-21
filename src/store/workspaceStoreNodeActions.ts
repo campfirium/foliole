@@ -19,6 +19,7 @@ import {
   createHighlightFromSelectionAction,
   createQAFromSelectionAction
 } from './workspaceStoreCreateActions';
+import { createFormulaClozeNodeAction } from './workspaceStoreFormulaClozeActions';
 import { createUpdateHighlightAnchorRangeAction } from './workspaceStoreHighlightRangeActions';
 import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';
 import { createDismissNodeAction } from './workspaceStoreNodeDismissAction';
@@ -44,6 +45,7 @@ type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state
 type WorkspaceNodeActions = Pick<
   WorkspaceState,
   | 'createChildNode'
+  | 'createFormulaClozeNode'
   | 'createHighlightNodeFromSelection'
   | 'createImageClozeNodes'
   | 'createQANodeFromSelection'
@@ -165,6 +167,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     createChildNode: createChildNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
     createVirtualNode: createVirtualNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
+    createFormulaClozeNode: createFormulaClozeNodeAction(set, runtimeHandlers, reconcileReviewSession),
     createImageClozeNodes: createImageClozeNodesAction(set, runtimeHandlers, reconcileReviewSession),
     createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers),
     deleteImageClozeRegion: trashActions.deleteImageClozeRegion,
