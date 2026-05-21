@@ -7,6 +7,7 @@ import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } fr
 import { killPid, runCapture } from './windows-client-native-process.mjs';
 import {
   readClientState as readClientStateFile,
+  readReadyStateFromBootEvents,
   readReadyState as readReadyStateFiles,
   removeClientState,
   resetReadyMarkers,
@@ -18,6 +19,7 @@ export const WINDOWS_CLIENT_ACTIONS = new Set(['status', 'start', 'stop', 'resta
 
 const {
   appReadyFile,
+  bootEventLogFile,
   bridgeReadyFile,
   logDir,
   nativeStartScript,
@@ -38,7 +40,8 @@ function readClientState() {
 }
 
 function readReadyState() {
-  return readReadyStateFiles({ appReadyFile, bridgeReadyFile, windowVisibleFile });
+  return readReadyStateFiles({ appReadyFile, bridgeReadyFile, windowVisibleFile }) ??
+    readReadyStateFromBootEvents(bootEventLogFile);
 }
 
 async function currentHead() {
@@ -127,7 +130,8 @@ async function startClient({ print = true } = {}) {
     stderrLog: logs.stderrLog,
     stdoutLog: logs.stdoutLog
   });
-  const ready = await waitForReady(session);
+  let ready = await waitForReady(session);
+  ready ??= readReadyState();
   if (!ready) {
     printStartupLogTail(readClientState());
     await removeClientState(stateFile);

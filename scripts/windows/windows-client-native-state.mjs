@@ -11,6 +11,14 @@ function readJson(filePath) {
   }
 }
 
+function readBootEvents(filePath) {
+  try {
+    return fs.readFileSync(filePath, 'utf8').split(/\r?\n/u).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export function processAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) {
     return false;
@@ -31,6 +39,10 @@ export function readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFil
   const appReady = readJson(appReadyFile);
   const bridgeReady = readJson(bridgeReadyFile);
   const windowVisible = readJson(windowVisibleFile);
+  return resolveTrustedReadyState({ appReady, bridgeReady, windowVisible });
+}
+
+function resolveTrustedReadyState({ appReady, bridgeReady, windowVisible }) {
   if (
     appReady?.stage === 'app_ready' &&
     bridgeReady?.stage === 'bridge_ready' &&
@@ -45,6 +57,35 @@ export function readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFil
     processAlive(windowVisible.pid)
   ) {
     return { appReady, bridgeReady, windowVisible };
+  }
+  return null;
+}
+
+function parseBootEvent(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
+  }
+}
+
+export function readReadyStateFromBootEvents(eventLogFile) {
+  const bySession = new Map();
+  const lines = readBootEvents(eventLogFile);
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const event = parseBootEvent(lines[index]);
+    if (!event?.session || typeof event.stage !== 'string') {
+      continue;
+    }
+    const entry = bySession.get(event.session) ?? {};
+    if (event.stage === 'app_ready' && !entry.appReady) entry.appReady = event;
+    if (event.stage === 'bridge_ready' && !entry.bridgeReady) entry.bridgeReady = event;
+    if (event.stage === 'window_visible' && !entry.windowVisible) entry.windowVisible = event;
+    bySession.set(event.session, entry);
+    const ready = resolveTrustedReadyState(entry);
+    if (ready) {
+      return ready;
+    }
   }
   return null;
 }
