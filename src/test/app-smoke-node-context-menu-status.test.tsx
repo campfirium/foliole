@@ -42,7 +42,7 @@ function openNodeMenu(name: string) {
   return panel;
 }
 
-function createReadingState(state: 'active' | 'done' | 'dismissed' = 'active') {
+function createReadingState(state: 'active' | 'done' | 'dismissed' | 'locked' = 'active') {
   return {
     intervalDurationMs: 24 * 60 * 60 * 1000,
     intervalGrowthFactor: 1.3,
@@ -121,6 +121,59 @@ it('dismisses an entire topic from the node menu without deleting it', () => {
   expect(useWorkspaceStore.getState().nodesById['node-parent']?.reading?.state).toBe('dismissed');
   expect(useWorkspaceStore.getState().nodesById['node-child']?.reading?.state).toBe('dismissed');
   expect(useWorkspaceStore.getState().nodesById['node-child']).toBeDefined();
+});
+
+it('toggles sequential reading from source topic menus and confirms the release rule', () => {
+  const firstTopic = createNode({
+    id: 'node-first',
+    kind: 'topic',
+    parentNodeId: 'node-source',
+    title: 'First derived topic',
+    content: '# First derived topic',
+    reading: createReadingState()
+  });
+  const secondTopic = createNode({
+    id: 'node-second',
+    kind: 'topic',
+    parentNodeId: 'node-source',
+    title: 'Second derived topic',
+    content: '# Second derived topic',
+    reading: createReadingState()
+  });
+  seedTopicInInbox({
+    nodeId: 'node-source',
+    title: 'Source topic',
+    extraNode: firstTopic
+  });
+  useWorkspaceStore.setState((state) => ({
+    nodeOrder: [INBOX_NODE_ID, 'node-source', 'node-first', 'node-second'],
+    nodesById: {
+      ...state.nodesById,
+      'node-second': secondTopic
+    }
+  }));
+  render(<App />);
+  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+  openNodeMenu('Source topic');
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Enable Sequential Reading' }));
+
+  expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Only after the earlier topic is Dismissed'));
+  expect(useWorkspaceStore.getState().nodesById['node-source']?.sequentialReadingEnabled).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById['node-first']?.reading?.state).toBe('active');
+  expect(useWorkspaceStore.getState().nodesById['node-second']?.reading?.state).toBe('locked');
+
+  openNodeMenu('Source topic');
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Disable Sequential Reading' }));
+  expect(useWorkspaceStore.getState().nodesById['node-second']?.reading?.state).toBe('active');
+});
+
+it('hides sequential reading actions from non-source menus', () => {
+  render(<App />);
+
+  openNodeMenu('Inbox');
+  expect(screen.queryByRole('menuitem', { name: 'Enable Sequential Reading' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Disable Sequential Reading' })).toBeNull();
 });
 
 it('creates a child node from the inbox menu', () => {

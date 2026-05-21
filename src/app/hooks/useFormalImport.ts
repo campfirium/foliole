@@ -4,7 +4,6 @@ import { hasAppRuntimeCommandRepository } from '../../shared/platform/appRuntime
 import {
   runRuntimeClipboardImport,
   runRuntimeDirectoryImport,
-  runRuntimeTextFileImport,
   type RuntimeDirectoryImportResult,
   type RuntimeTextImportResult
 } from '../../shared/platform/importExecutionRuntimeRepository';
@@ -12,6 +11,7 @@ import { loadRuntimeImportOverview } from '../../shared/platform/importOverviewR
 import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { runFormalImportFileFlow } from './formalImportFileFlow';
 import { runResetImportDataFlow } from './formalImportReset';
 import {
   applyCancelledImportStatus,
@@ -154,7 +154,7 @@ function useFormalImportBootstrap(isAvailable: boolean, hasLoadedOverview: boole
 
 function useFormalImportActions() {
   const startClipboardImport = useCallback(() => runImportFlow(runRuntimeClipboardImport, shouldRehydrateWorkspace, applyImportResultStatus), []);
-  const startImportFile = useCallback(() => runImportFlow(runRuntimeTextFileImport, shouldRehydrateWorkspace, applyImportResultStatus), []);
+  const startImportFile = useCallback(() => runImportFlow(runFormalImportFileFlow, shouldRehydrateWorkspace, applyImportResultStatus), []);
   const startImportDirectory = useCallback(
     () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport),
     []

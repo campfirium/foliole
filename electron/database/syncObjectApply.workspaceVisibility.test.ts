@@ -23,6 +23,7 @@ import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContra
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { loadReadingProgress } from './readingProgress.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
+import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 let tempRoot = '';
@@ -111,6 +112,10 @@ it('makes Android-applied reading and review visible while keeping view state de
     readingPosition: 0,
     state: 'locked'
   });
+  expect(loadWorkspaceListSnapshot()?.nodesById['node-1']?.reading).toMatchObject({
+    readingPosition: 0,
+    state: 'locked'
+  });
   expect(workspaceSnapshot?.nodesById['node-1']?.review).toMatchObject({
     lastReviewAt: '2026-04-22T08:10:00.000Z',
     reps: 4,
@@ -125,4 +130,23 @@ it('makes Android-applied reading and review visible while keeping view state de
   expect(openDatabaseConnection().sqlite
     .prepare('SELECT COUNT(*) AS count FROM node_view_state')
     .get()).toEqual({ count: 0 });
+});
+
+it('rejects unknown Android reading states instead of downcasting them', async () => {
+  insertNode('node-1');
+
+  await expect(applySyncObjectsAsync([{
+    content_hash: 'hash-reading-android',
+    deleted_at: null,
+    object_id: 'node-1',
+    object_type: 'node_reading',
+    payload_json: JSON.stringify({
+      last_handled_at: '2026-04-22T08:10:00.000Z',
+      next_at: '2026-04-23T08:10:00.000Z',
+      state: 'paused'
+    }),
+    updated_at: '2026-04-22T08:10:00.000Z'
+  }])).resolves.toEqual([]);
+
+  expect(loadWorkspaceSnapshot()?.nodesById['node-1']?.reading).toBeNull();
 });

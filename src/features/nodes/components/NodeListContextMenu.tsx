@@ -20,6 +20,7 @@ interface NodeListContextMenuProps {
   onRenameNode?: () => void;
   onReturnNode?: () => void;
   onRestoreNode: () => void;
+  onToggleSequentialReading?: () => void;
   showDeleteAction?: boolean;
   showDismissEntireTopicAction?: boolean;
   showDismissAction?: boolean;
@@ -30,6 +31,8 @@ interface NodeListContextMenuProps {
   showRenameAction?: boolean;
   showRootCreateOnly?: boolean;
   showReturnAction?: boolean;
+  showSequentialReadingAction?: boolean;
+  sequentialReadingEnabled?: boolean;
   top: number;
 }
 
@@ -60,6 +63,9 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       {...(props.showRenameAction !== undefined ? { showRenameAction: props.showRenameAction } : {})}
       {...(props.showRootCreateOnly !== undefined ? { showRootCreateOnly: props.showRootCreateOnly } : {})}
       {...(props.showReturnAction !== undefined ? { showReturnAction: props.showReturnAction } : {})}
+      {...(props.showSequentialReadingAction !== undefined ? { showSequentialReadingAction: props.showSequentialReadingAction } : {})}
+      {...(props.onToggleSequentialReading ? { onToggleSequentialReading: props.onToggleSequentialReading } : {})}
+      {...(props.sequentialReadingEnabled !== undefined ? { sequentialReadingEnabled: props.sequentialReadingEnabled } : {})}
     />
   );
 }
@@ -115,6 +121,7 @@ function NoteMenuItems({
   onPasteIntoNode,
   onRenameNode,
   onReturnNode,
+  onToggleSequentialReading,
   showDeleteAction,
   showDismissEntireTopicAction,
   showDismissAction,
@@ -124,7 +131,9 @@ function NoteMenuItems({
   showPasteIntoNodeAction,
   showRenameAction,
   showRootCreateOnly,
-  showReturnAction
+  showReturnAction,
+  showSequentialReadingAction,
+  sequentialReadingEnabled
 }: Omit<NodeListContextMenuProps, 'isTrashMenu' | 'left' | 'onClose' | 'onDeleteNodePermanently' | 'onRestoreNode' | 'top'>) {
   return (
     <>
@@ -137,6 +146,11 @@ function NoteMenuItems({
       {showRootCreateOnly ? null : showReturnAction && onReturnNode ? <AppDropdownMenuItem onSelect={onReturnNode}>Relearn</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDismissAction && onDismissNode ? <AppDropdownMenuItem onSelect={onDismissNode}>Dismiss</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDismissEntireTopicAction && onDismissEntireTopic ? <AppDropdownMenuItem onSelect={onDismissEntireTopic}>Dismiss Entire Topic</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showSequentialReadingAction && onToggleSequentialReading ? (
+        <AppDropdownMenuItem onSelect={onToggleSequentialReading}>
+          {sequentialReadingEnabled ? 'Disable Sequential Reading' : 'Enable Sequential Reading'}
+        </AppDropdownMenuItem>
+      ) : null}
       {showRootCreateOnly ? null : showMergeHighlightsIntoTopicAction && onMergeHighlightsIntoTopic ? <AppDropdownMenuItem onSelect={onMergeHighlightsIntoTopic}>Merge Highlights</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showPasteIntoNodeAction && onPasteIntoNode ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showMoveToNodeAction && onMoveToNode ? <AppDropdownMenuItem onSelect={onMoveToNode}>Move to…</AppDropdownMenuItem> : null}

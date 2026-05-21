@@ -38,6 +38,7 @@ export function WorkspaceTopicTreeMenu(props: {
         onSelect={props.handleSelectNode}
         restoreNode={props.actions.restoreNode}
         returnNode={props.actions.returnNode}
+        setNodeSequentialReading={props.actions.setNodeSequentialReading}
         state={props.topicTreeState}
       />
       <NodeReviewSchedulingDialog

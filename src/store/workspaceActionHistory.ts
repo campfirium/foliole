@@ -1,6 +1,14 @@
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 
 import {
+  applyReadingSnapshot,
+  applyRelatedReadingSnapshots,
+  areRelatedReadingsValid,
+  cloneReadingProfile,
+  cloneRelatedReadings,
+  isSameReadingProfile
+} from './workspaceActionHistoryReading';
+import {
   applyTopicDeleteWorkspaceHistory,
   cloneReviewSession,
   type WorkspaceTopicDeleteHistoryEntry
@@ -8,6 +16,8 @@ import {
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
+
+export { cloneReadingProfile } from './workspaceActionHistoryReading';
 
 const ACTION_HISTORY_LIMIT = 50;
 const DISMISS_TOPIC_ACTION_TITLE = 'Dismiss Topic';
@@ -24,6 +34,11 @@ export interface WorkspaceTopicDismissHistoryEntry {
   beforeReading: NodeReadingProfile | null;
   beforeReviewSession?: WorkspaceState['reviewSession'] | null;
   nodeId: string;
+  relatedReadings?: Array<{
+    afterReading: NodeReadingProfile | null;
+    beforeReading: NodeReadingProfile | null;
+    nodeId: string;
+  }>;
   title: WorkspaceTopicReadingActionTitle;
   type: 'topic.dismiss';
 }
@@ -43,40 +58,20 @@ function trimHistoryStack(stack: WorkspaceActionHistoryEntry[]) {
   return stack.slice(Math.max(0, stack.length - ACTION_HISTORY_LIMIT));
 }
 
-export function cloneReadingProfile(reading: NodeReadingProfile | null | undefined): NodeReadingProfile | null {
-  return reading ? { ...reading } : null;
-}
-
-function isSameReadingProfile(
-  left: NodeReadingProfile | null | undefined,
-  right: NodeReadingProfile | null | undefined
-) {
-  const a = left ?? null;
-  const b = right ?? null;
-  if (!a || !b) {
-    return a === b;
-  }
-  return (
-    a.intervalDurationMs === b.intervalDurationMs &&
-    a.intervalGrowthFactor === b.intervalGrowthFactor &&
-    a.lastHandledAt === b.lastHandledAt &&
-    a.nextAt === b.nextAt &&
-    a.priority === b.priority &&
-    a.readingPosition === b.readingPosition &&
-    a.repetitionCount === b.repetitionCount &&
-    a.state === b.state
-  );
-}
-
 export function createTopicDismissHistoryEntry(args: {
   afterReading: NodeReadingProfile;
   afterReviewSession?: WorkspaceState['reviewSession'] | null;
   beforeReading: NodeReadingProfile | null | undefined;
   beforeReviewSession?: WorkspaceState['reviewSession'] | null;
   nodeId: string;
+  relatedReadings?: Array<{
+    afterReading: NodeReadingProfile | null | undefined;
+    beforeReading: NodeReadingProfile | null | undefined;
+    nodeId: string;
+  }>;
   title?: WorkspaceTopicReadingActionTitle;
 }): WorkspaceTopicDismissHistoryEntry {
-  return {
+  const entry: WorkspaceTopicDismissHistoryEntry = {
     afterReading: cloneReadingProfile(args.afterReading)!,
     afterReviewSession: cloneReviewSession(args.afterReviewSession),
     beforeReading: cloneReadingProfile(args.beforeReading),
@@ -85,12 +80,11 @@ export function createTopicDismissHistoryEntry(args: {
     title: args.title ?? DISMISS_TOPIC_ACTION_TITLE,
     type: 'topic.dismiss'
   };
+  if (args.relatedReadings?.length) entry.relatedReadings = cloneRelatedReadings(args.relatedReadings) ?? [];
+  return entry;
 }
 
-export function pushWorkspaceUndoEntry(
-  history: WorkspaceActionHistoryState,
-  entry: WorkspaceActionHistoryEntry
-): WorkspaceActionHistoryState {
+export function pushWorkspaceUndoEntry(history: WorkspaceActionHistoryState, entry: WorkspaceActionHistoryEntry): WorkspaceActionHistoryState {
   return {
     redoStack: [],
     undoStack: trimHistoryStack([...history.undoStack, entry])
@@ -99,14 +93,6 @@ export function pushWorkspaceUndoEntry(
 
 function popStack(stack: WorkspaceActionHistoryEntry[]) {
   return stack.slice(0, -1);
-}
-
-function applyReadingSnapshot(node: Node, reading: NodeReadingProfile | null, now: string): Node {
-  return {
-    ...node,
-    reading: cloneReadingProfile(reading),
-    updatedAt: now
-  };
 }
 
 function popInvalidTopEntry(
@@ -133,7 +119,12 @@ function resolveHistoryApply(args: {
   }
   const expectedReading = args.mode === 'undo' ? entry.afterReading : entry.beforeReading;
   const nextReading = args.mode === 'undo' ? entry.beforeReading : entry.afterReading;
-  return { entry, expectedReading, nextReading };
+  const relatedReadings = (entry.relatedReadings ?? []).map((reading) => ({
+    expectedReading: args.mode === 'undo' ? reading.afterReading : reading.beforeReading,
+    nextReading: args.mode === 'undo' ? reading.beforeReading : reading.afterReading,
+    nodeId: reading.nodeId
+  }));
+  return { entry, expectedReading, nextReading, relatedReadings };
 }
 
 function updateHistoryAfterApply(
@@ -195,8 +186,9 @@ function createApplyWorkspaceHistoryAction(
     const isInvalid =
       !node ||
       snapshot.trashedNodeIds.includes(apply.entry.nodeId) ||
-      !isSameReadingProfile(node.reading, apply.expectedReading);
-    let nextNodeForSync: Node | null = null;
+      !isSameReadingProfile(node.reading, apply.expectedReading) ||
+      !areRelatedReadingsValid(apply.relatedReadings, snapshot.nodesById);
+    let nextNodesForSync: Node[] = [];
     set((state) => {
       if (isInvalid) {
         return { appActionHistory: popInvalidTopEntry(state.appActionHistory, mode) };
@@ -206,18 +198,22 @@ function createApplyWorkspaceHistoryAction(
         return { appActionHistory: popInvalidTopEntry(state.appActionHistory, mode) };
       }
       const nextNode = applyReadingSnapshot(currentNode, apply.nextReading, now);
-      nextNodeForSync = nextNode;
+      const nextNodesById = {
+        ...state.nodesById,
+        [apply.entry.nodeId]: nextNode
+      };
+      applyRelatedReadingSnapshots({ nextNodesById, now, readings: apply.relatedReadings });
+      nextNodesForSync = [nextNode, ...apply.relatedReadings
+        .map((related) => nextNodesById[related.nodeId])
+        .filter((relatedNode): relatedNode is Node => Boolean(relatedNode))];
       return {
         ...getNavigationPatchAfterApply(state, apply.entry, mode),
         appActionHistory: updateHistoryAfterApply(state.appActionHistory, apply.entry, mode),
-        nodesById: {
-          ...state.nodesById,
-          [apply.entry.nodeId]: nextNode
-        }
+        nodesById: nextNodesById
       };
     });
-    if (nextNodeForSync) {
-      syncNodeContentToRuntime(nextNodeForSync);
+    if (nextNodesForSync.length > 0) {
+      nextNodesForSync.forEach((node) => syncNodeContentToRuntime(node));
       return true;
     }
     return false;

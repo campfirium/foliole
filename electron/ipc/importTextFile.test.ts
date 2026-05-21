@@ -204,7 +204,8 @@ it('routes EPUB previews and imports through the dedicated extractor', async () 
   );
   expect(runEpubImport).toHaveBeenCalledWith(
     expect.objectContaining({ filePath: '/tmp/book.epub', kind: 'epub', sourceName: 'book.epub' }),
-    expect.any(String)
+    expect.any(String),
+    {}
   );
   expect(readFile).not.toHaveBeenCalled();
   expect(runPreparedImport).not.toHaveBeenCalled();

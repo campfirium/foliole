@@ -10,8 +10,8 @@ import { isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
-import { hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
-import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction } from './nodeListMenuActions';
+import { canToggleSequentialReading, hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
+import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction, createToggleSequentialReadingAction } from './nodeListMenuActions';
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { requestNodeRename } from './NodeTreeRowRename';
@@ -31,6 +31,7 @@ interface NodeListTreeMenuProps {
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   restoreNode: (nodeId: string) => void;
   returnNode: (nodeId: string, now?: string) => boolean;
+  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean;
   state: NodeListState;
 }
 
@@ -62,6 +63,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     showMergeHighlightsIntoTopicAction: showNodeImportActions,
     showMoveToNodeAction: isSingleNodeTarget && canNodeBeMoved(primaryTarget),
     showReviewSchedulingAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget) && !isVirtualRootNode(primaryTarget) && !isVirtualNode(primaryTarget),
+    showSequentialReadingAction: isSingleNodeTarget && canToggleSequentialReading(primaryTarget, props.nodesById),
     showNodeImportActions,
     showRenameAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget),
     showVirtualCreateOnly: props.isVirtualViewOpen || (isSingleNodeTarget && isVirtualRootNode(primaryTarget))
@@ -157,64 +159,68 @@ function resolveCreateCommands(menuState: ReturnType<typeof buildMenuState>) {
   return resolveAllowedFolderTopicItemCommands(menuState.isRootMenu ? null : menuState.primaryTarget?.kind ?? null);
 }
 
+function buildNodeListContextMenuProps(
+  props: NodeListTreeMenuProps,
+  menuPosition: NonNullable<NodeListContextMenuController['menuPosition']>,
+  menuState: ReturnType<typeof buildMenuState>
+) {
+  return {
+    createCommands: resolveCreateCommands(menuState),
+    isTrashMenu: props.contextMenu.contextMenuMode === 'trash',
+    left: menuPosition.left,
+    onClose: props.contextMenu.closeContextMenu,
+    onCreateCommand: createCreateNodeHandler(props, menuState.primaryTargetId, menuState.isRootMenu, menuState.showVirtualCreateOnly),
+    onDeleteNode: () => (
+      props.deleteNodes(sortNodeIdsByVisibleOrder(menuState.contextTargets, props.state.noteRowIds)),
+      props.contextMenu.closeContextMenu()
+    ),
+    onDeleteNodePermanently: () => (props.deleteNodesPermanently(menuState.contextTargets), props.contextMenu.closeContextMenu()),
+    onDismissEntireTopic: createDismissEntireTopicAction(
+      menuState.primaryTargetId,
+      props.nodesById,
+      props.dismissNode,
+      props.contextMenu.closeContextMenu
+    ),
+    onDismissNode: createDismissNodeAction(menuState.contextTargets, props.dismissNode, props.contextMenu.closeContextMenu),
+    onMergeHighlightsIntoTopic: createMergeHighlightsIntoTopicHandler({
+      closeContextMenu: props.contextMenu.closeContextMenu,
+      primaryTargetId: menuState.primaryTargetId
+    }),
+    onMoveToNode: createMoveToNodeHandler(props, menuState.primaryTargetId),
+    onOpenReviewScheduling: createOpenReviewSchedulingHandler(props, menuState.primaryTargetId),
+    onPasteIntoNode: props.contextMenu.closeContextMenu,
+    onRenameNode: () => (requestNodeRename(menuState.primaryTargetId), props.contextMenu.closeContextMenu()),
+    onRestoreNode: () => (
+      menuState.contextTargets.forEach((id) => props.restoreNode(id)),
+      props.contextMenu.closeContextMenu()
+    ),
+    onReturnNode: createReturnNodeAction(menuState.contextTargets, props.returnNode, props.contextMenu.closeContextMenu),
+    onToggleSequentialReading: createToggleSequentialReadingAction({
+      closeContextMenu: props.contextMenu.closeContextMenu,
+      nodesById: props.nodesById,
+      primaryTargetId: menuState.primaryTargetId,
+      setNodeSequentialReading: props.setNodeSequentialReading
+    }),
+    sequentialReadingEnabled: menuState.primaryTarget?.sequentialReadingEnabled === true,
+    showDeleteAction: menuState.showDeleteAction,
+    showDismissAction: menuState.isNotesMenu && hasDismissTargets(menuState.contextTargets, props.nodesById),
+    showDismissEntireTopicAction: menuState.isNotesMenu && hasDismissEntireTopicTargets(menuState.contextTargets, props.nodesById),
+    showMergeHighlightsIntoTopicAction: menuState.showMergeHighlightsIntoTopicAction,
+    showMoveToNodeAction: menuState.showMoveToNodeAction,
+    showPasteIntoNodeAction: menuState.showNodeImportActions,
+    showRenameAction: menuState.showRenameAction,
+    showReturnAction: menuState.isNotesMenu && hasReturnTargets(menuState.contextTargets, props.nodesById),
+    showReviewSchedulingAction: menuState.showReviewSchedulingAction && Boolean(props.onOpenReviewScheduling),
+    showRootCreateOnly: menuState.isRootMenu || menuState.showVirtualCreateOnly,
+    showSequentialReadingAction: menuState.isNotesMenu && menuState.showSequentialReadingAction,
+    top: menuPosition.top
+  };
+}
+
 export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
   if (!props.contextMenu.menuPosition) {
     return null;
   }
 
-  const menuState = buildMenuState(props);
-
-  return (
-    <NodeListContextMenu
-      createCommands={resolveCreateCommands(menuState)}
-      isTrashMenu={props.contextMenu.contextMenuMode === 'trash'}
-      left={props.contextMenu.menuPosition.left}
-      onClose={props.contextMenu.closeContextMenu}
-      onCreateCommand={createCreateNodeHandler(
-        props,
-        menuState.primaryTargetId,
-        menuState.isRootMenu,
-        menuState.showVirtualCreateOnly
-      )}
-      onDeleteNode={() => (
-        props.deleteNodes(sortNodeIdsByVisibleOrder(menuState.contextTargets, props.state.noteRowIds)),
-        props.contextMenu.closeContextMenu()
-      )}
-      onDeleteNodePermanently={() => (props.deleteNodesPermanently(menuState.contextTargets), props.contextMenu.closeContextMenu())}
-      onDismissEntireTopic={createDismissEntireTopicAction(
-        menuState.primaryTargetId,
-        props.nodesById,
-        props.dismissNode,
-        props.contextMenu.closeContextMenu
-      )}
-      onDismissNode={createDismissNodeAction(menuState.contextTargets, props.dismissNode, props.contextMenu.closeContextMenu)}
-      onMergeHighlightsIntoTopic={createMergeHighlightsIntoTopicHandler({
-        closeContextMenu: props.contextMenu.closeContextMenu,
-        primaryTargetId: menuState.primaryTargetId
-      })}
-      onMoveToNode={createMoveToNodeHandler(props, menuState.primaryTargetId)}
-      onOpenReviewScheduling={createOpenReviewSchedulingHandler(props, menuState.primaryTargetId)}
-      onPasteIntoNode={props.contextMenu.closeContextMenu}
-      onRenameNode={() => (
-        requestNodeRename(menuState.primaryTargetId),
-        props.contextMenu.closeContextMenu()
-      )}
-      onRestoreNode={() => (
-        menuState.contextTargets.forEach((id) => props.restoreNode(id)),
-        props.contextMenu.closeContextMenu()
-      )}
-      onReturnNode={createReturnNodeAction(menuState.contextTargets, props.returnNode, props.contextMenu.closeContextMenu)}
-      showDeleteAction={menuState.showDeleteAction}
-      showDismissEntireTopicAction={menuState.isNotesMenu && hasDismissEntireTopicTargets(menuState.contextTargets, props.nodesById)}
-      showDismissAction={menuState.isNotesMenu && hasDismissTargets(menuState.contextTargets, props.nodesById)}
-      showMergeHighlightsIntoTopicAction={menuState.showMergeHighlightsIntoTopicAction}
-      showMoveToNodeAction={menuState.showMoveToNodeAction}
-      showReviewSchedulingAction={menuState.showReviewSchedulingAction && Boolean(props.onOpenReviewScheduling)}
-      showPasteIntoNodeAction={menuState.showNodeImportActions}
-      showRenameAction={menuState.showRenameAction}
-      showRootCreateOnly={menuState.isRootMenu || menuState.showVirtualCreateOnly}
-      showReturnAction={menuState.isNotesMenu && hasReturnTargets(menuState.contextTargets, props.nodesById)}
-      top={props.contextMenu.menuPosition.top}
-    />
-  );
+  return <NodeListContextMenu {...buildNodeListContextMenuProps(props, props.contextMenu.menuPosition, buildMenuState(props))} />;
 }

@@ -69,7 +69,13 @@ export async function runImportForFilePath(filePath: string, args?: NativeTextIm
 
   try {
     if (source.kind === 'epub') {
-      return toNativeTextImportResult(await runEpubImport(source, importedAt));
+      return toNativeTextImportResult(
+        await runEpubImport(source, importedAt, {
+          ...(args?.sequential_reading_mode === 'free' || args?.sequential_reading_mode === 'sequential'
+            ? { sequentialReadingMode: args.sequential_reading_mode }
+            : {})
+        })
+      );
     }
     return toNativeTextImportResult(
       runPreparedImport(
@@ -130,6 +136,13 @@ export async function runTextFileImport(
   window?: BrowserWindow | null,
   args?: NativeTextImportArgs
 ): Promise<NativeTextImportResult | null> {
+  if (typeof args?.file_path === 'string' && args.file_path.trim()) {
+    const result = await runImportForFilePath(args.file_path, args);
+    if (result?.import_id) {
+      notifyManagedInboxUpdated(result.import_id);
+    }
+    return result;
+  }
   const filePaths = await selectImportFilePaths(window);
   if (!filePaths?.length) {
     return null;

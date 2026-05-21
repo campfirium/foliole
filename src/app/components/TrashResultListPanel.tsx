@@ -107,6 +107,7 @@ function TrashContextMenu(props: {
       onSelect={props.selectTrashNode}
       restoreNode={props.workspaceActions.restoreNode}
       returnNode={props.workspaceActions.returnNode}
+      setNodeSequentialReading={props.workspaceActions.setNodeSequentialReading}
       state={props.listState}
     />
   );
@@ -179,7 +180,8 @@ function useTrashWorkspaceActions() {
     deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
     dismissNode: useWorkspaceStore((state) => state.dismissNode),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
-    returnNode: useWorkspaceStore((state) => state.relearnNode)
+    returnNode: useWorkspaceStore((state) => state.relearnNode),
+    setNodeSequentialReading: useWorkspaceStore((state) => state.setNodeSequentialReading)
   };
 }
 

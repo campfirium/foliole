@@ -76,6 +76,7 @@ function buildNodeListTreeContentProps(args: {
     rowSpacing: args.rowSpacing,
     selectedNodeIds: args.model.state.selectedNodeIds,
     selectedTrashNodeId: args.selectedTrashNodeId,
+    setNodeSequentialReading: args.model.setNodeSequentialReading,
     showVirtualCreateAction: args.showVirtualCreateAction,
     showTitleSearch: args.showTitleSearch,
     state: args.model.state,

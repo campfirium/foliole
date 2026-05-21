@@ -16,7 +16,8 @@ it('applies node reading and review payload records', async () => {
           interval_duration_ms: 3600,
           interval_growth_factor: 1.5,
           device_id: 'device-1',
-          reading_position: 128
+          reading_position: 128,
+          state: 'active'
         }),
         updated_at: '2026-05-04T03:00:00.000Z'
       },
@@ -55,7 +56,7 @@ it('does not apply another device reading position from node reading payload', a
       deleted_at: null,
       object_id: 'node-1',
       object_type: 'node_reading',
-      payload_json: JSON.stringify({ device_id: 'other-device', reading_position: 128 }),
+      payload_json: JSON.stringify({ device_id: 'other-device', reading_position: 128, state: 'active' }),
       updated_at: '2026-05-04T03:00:00.000Z'
     }]),
     run: vi.fn(async (sql: string) => {
@@ -80,7 +81,7 @@ it('does not apply legacy reading position payloads without an explicit local de
       deleted_at: null,
       object_id: 'node-1',
       object_type: 'node_reading',
-      payload_json: JSON.stringify({ reading_position: 128 }),
+      payload_json: JSON.stringify({ reading_position: 128, state: 'active' }),
       updated_at: '2026-05-04T03:00:00.000Z'
     }]),
     run: vi.fn(async (sql: string) => {

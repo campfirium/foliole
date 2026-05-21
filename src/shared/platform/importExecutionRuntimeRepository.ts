@@ -13,6 +13,11 @@ import { logRuntimeWarning } from './runtimeLogging';
 
 export type ImportHighlightPolicy = 'adopt' | 'reference_only';
 export type ImportNodeTitleStrategy = 'file_name' | 'heading';
+export type ImportSequentialReadingMode = 'free' | 'sequential';
+export interface RuntimeTextImportOptions {
+  filePath?: string;
+  sequentialReadingMode?: ImportSequentialReadingMode;
+}
 export type {
   RuntimeDirectoryImportEntry,
   RuntimeDirectoryImportResult,
@@ -20,9 +25,15 @@ export type {
   RuntimeTextImportResult
 } from './importRuntimePayloads';
 
-function toImportArgs(highlightPolicy?: ImportHighlightPolicy, titleStrategy?: ImportNodeTitleStrategy) {
+function toImportArgs(
+  highlightPolicy?: ImportHighlightPolicy,
+  titleStrategy?: ImportNodeTitleStrategy,
+  options?: RuntimeTextImportOptions
+) {
   return {
+    ...(options?.filePath ? { file_path: options.filePath } : {}),
     ...(highlightPolicy ? { highlight_policy: highlightPolicy } : {}),
+    ...(options?.sequentialReadingMode ? { sequential_reading_mode: options.sequentialReadingMode } : {}),
     ...(titleStrategy ? { title_strategy: titleStrategy } : {})
   };
 }
@@ -65,7 +76,8 @@ export async function selectRuntimeImportTextFile(
 
 export async function runRuntimeTextFileImport(
   highlightPolicy?: ImportHighlightPolicy,
-  titleStrategy?: ImportNodeTitleStrategy
+  titleStrategy?: ImportNodeTitleStrategy,
+  options?: RuntimeTextImportOptions
 ): Promise<RuntimeTextImportResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -73,7 +85,7 @@ export async function runRuntimeTextFileImport(
   }
 
   try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.runTextFileImport, toImportArgs(highlightPolicy, titleStrategy));
+    const result = await runtimeInvoke(NATIVE_COMMANDS.runTextFileImport, toImportArgs(highlightPolicy, titleStrategy, options));
     if (result === null) {
       return null;
     }

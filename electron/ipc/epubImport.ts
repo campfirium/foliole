@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
-import type { PersistedImportRecord, PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
+import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -14,8 +14,10 @@ import { runPreparedImport } from '../database/importPipeline.js';
 
 import { readRawEpubBook } from './epubImportBook.js';
 import { persistImportedOpeningTexts } from './epubImportOpeningText.js';
+import { appendReason, applyAggregateDegrade } from './epubImportResult.js';
 import { ensureTrackedImportTarget } from './epubImportTracking.js';
 import { type RawBookNode } from './epubImportTree.js';
+import { applyEpubSequentialReadingMode } from './epubSequentialReading.js';
 import { type ImportSourceDescriptor } from './importSourcePipeline.js';
 
 interface PreparedBookNode {
@@ -36,15 +38,10 @@ interface PreparedImportNodeContent {
 }
 
 interface EpubImportOptions {
+  sequentialReadingMode?: 'free' | 'sequential';
   sourceIdentity?: string;
   sourceTrackingMode?: 'tracked' | 'untracked';
   targetNodeId?: string;
-}
-
-function appendReason(current: string | null, next: string | null) {
-  if (!next) return current;
-  if (!current) return next;
-  return current.includes(next) ? current : `${current}; ${next}`;
 }
 
 function createChapterNodeId(sourceFingerprint: string, chapterKey: string) {
@@ -182,17 +179,6 @@ async function syncBookNodes(parentNodeId: string, sourceFingerprint: string, im
   return { finalizedNodes, nodeIdsByKey };
 }
 
-function applyAggregateDegrade(record: PersistedImportRecord, degradedReason: string | null) {
-  if (!degradedReason || !record.nodeId) return record;
-  const connection = openDatabaseConnection();
-  connection.driver.execute('UPDATE import_runs SET result_status = ?, degraded_reason = ? WHERE id = ?', [
-    'degraded',
-    degradedReason,
-    record.importId
-  ]);
-  return { ...record, degradedReason, resultStatus: 'degraded' as const };
-}
-
 export async function loadEpubPreview(source: ImportSourceDescriptor) {
   const book = await readRawEpubBook(source);
   const importedAt = new Date().toISOString();
@@ -231,6 +217,16 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
     title: rootNode.nodeTitle
   });
   const { finalizedNodes, nodeIdsByKey } = await syncBookNodes(imported.nodeId, imported.sourceFingerprint, importedAt, nodes);
+  if (options?.sequentialReadingMode) {
+    const connection = openDatabaseConnection();
+    applyEpubSequentialReadingMode({
+      driver: connection.driver,
+      importedAt,
+      mode: options.sequentialReadingMode,
+      nodeIds: [...nodeIdsByKey.values()],
+      sourceNodeId: imported.nodeId
+    });
+  }
   persistImportedOpeningTexts({
     finalizedNodes,
     finalizedRoot,
