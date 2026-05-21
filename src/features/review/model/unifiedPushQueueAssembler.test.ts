@@ -62,55 +62,71 @@ it('keeps reading nextAt order when source interleaving metadata is absent', () 
   expect(queue.map((item) => item.id)).toEqual(['reading-2', 'reading-3', 'reading-1']);
 });
 
-it('uses coprime stride ordering inside a single reading source group', () => {
+it('uses material path dispersion inside a reading pressure window', () => {
   const queue = assembleReadingPushQueue(
     Array.from({ length: 12 }, (_, index) => ({
-      id: `a-${index + 1}`,
+      dueAt: '2026-03-16T09:00:00.000Z',
+      id: `a-${String(index + 1).padStart(2, '0')}`,
+      intervalDurationMs: 24 * 60 * 60 * 1000,
       priority: 4,
       nextAt: '2026-03-16T09:00:00.000Z',
-      sourceId: 'source-a',
-      sourceOrder: index
-    }))
+      pathNodeIds: ['source-a', `a-${String(index + 1).padStart(2, '0')}`]
+    })),
+    { materialDispersion: { now: '2026-03-18T09:00:00.000Z' } }
   );
 
-  expect(queue.map((item) => item.id)).toEqual(['a-1', 'a-8', 'a-3', 'a-10', 'a-5', 'a-12', 'a-7', 'a-2', 'a-9', 'a-4', 'a-11', 'a-6']);
+  expect(queue.map((item) => item.id)).toEqual(['a-01', 'a-12', 'a-11', 'a-10', 'a-09', 'a-08', 'a-07', 'a-06', 'a-05', 'a-04', 'a-03', 'a-02']);
 });
 
-it('interleaves multiple reading source groups after each group is stride ordered', () => {
-  const queue = assembleReadingPushQueue([
-    { id: 'a-1', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 0 },
-    { id: 'a-2', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 1 },
-    { id: 'a-3', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 2 },
-    { id: 'b-1', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-b', sourceOrder: 3 },
-    { id: 'b-2', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-b', sourceOrder: 4 },
-    { id: 'b-3', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-b', sourceOrder: 5 }
-  ]);
+it('places a small source inside a large-source pressure window instead of leaving it at the end', () => {
+  const entries = [
+    ...Array.from({ length: 19 }, (_, index) => ({
+      dueAt: '2026-03-16T09:00:00.000Z',
+      id: `a-${String(index + 1).padStart(2, '0')}`,
+      intervalDurationMs: 24 * 60 * 60 * 1000,
+      priority: 4,
+      nextAt: '2026-03-16T09:00:00.000Z',
+      pathNodeIds: ['source-a', `a-${String(index + 1).padStart(2, '0')}`]
+    })),
+    {
+      dueAt: '2026-03-16T09:00:00.000Z',
+      id: 'b-01',
+      intervalDurationMs: 24 * 60 * 60 * 1000,
+      priority: 4,
+      nextAt: '2026-03-16T09:00:00.000Z',
+      pathNodeIds: ['source-b', 'b-01']
+    }
+  ];
+  const queue = assembleReadingPushQueue(entries, { materialDispersion: { now: '2026-03-18T09:00:00.000Z' } });
 
-  expect(queue.map((item) => item.id)).toEqual(['a-1', 'b-1', 'a-3', 'b-3', 'a-2', 'b-2']);
+  expect(queue.map((item) => item.id).slice(0, 4)).toEqual(['a-01', 'b-01', 'a-19', 'a-18']);
 });
 
-it('does not source-interleave across reading priority buckets', () => {
+it('does not disperse material across reading priority buckets', () => {
   const queue = assembleReadingPushQueue(
     [
-      { id: 'p1-a-1', priority: 1, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 0 },
-      { id: 'p9-a-1', priority: 9, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 1 },
-      { id: 'p1-a-2', priority: 1, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 2 },
-      { id: 'p9-a-2', priority: 9, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 3 },
-      { id: 'p1-a-3', priority: 1, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 4 }
+      { dueAt: '2026-03-16T09:00:00.000Z', id: 'p1-a-1', intervalDurationMs: 86400000, priority: 1, nextAt: '2026-03-16T09:00:00.000Z', pathNodeIds: ['a', '1'] },
+      { dueAt: '2026-03-16T09:00:00.000Z', id: 'p9-a-1', intervalDurationMs: 86400000, priority: 9, nextAt: '2026-03-16T09:00:00.000Z', pathNodeIds: ['a', '2'] },
+      { dueAt: '2026-03-16T09:00:00.000Z', id: 'p1-a-2', intervalDurationMs: 86400000, priority: 1, nextAt: '2026-03-16T09:00:00.000Z', pathNodeIds: ['a', '3'] },
+      { dueAt: '2026-03-16T09:00:00.000Z', id: 'p9-a-2', intervalDurationMs: 86400000, priority: 9, nextAt: '2026-03-16T09:00:00.000Z', pathNodeIds: ['a', '4'] },
+      { dueAt: '2026-03-16T09:00:00.000Z', id: 'p1-a-3', intervalDurationMs: 86400000, priority: 1, nextAt: '2026-03-16T09:00:00.000Z', pathNodeIds: ['a', '5'] }
     ],
-    { random: () => 0 }
+    { materialDispersion: { now: '2026-03-18T09:00:00.000Z' }, random: () => 0 }
   );
 
-  expect(queue.map((item) => item.id)).toEqual(['p1-a-1', 'p1-a-3', 'p1-a-2', 'p9-a-1', 'p9-a-2']);
+  expect(queue.map((item) => item.id)).toEqual(['p1-a-1', 'p1-a-3', 'p1-a-2', 'p9-a-2', 'p9-a-1']);
 });
 
-it('keeps one or two reading source entries in source order', () => {
-  const queue = assembleReadingPushQueue([
-    { id: 'a-1', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 0 },
-    { id: 'a-2', priority: 4, nextAt: '2026-03-16T09:00:00.000Z', sourceId: 'source-a', sourceOrder: 1 }
-  ]);
+it('swaps two reading material entries in a path window', () => {
+  const queue = assembleReadingPushQueue(
+    [
+      { dueAt: '2026-03-16T09:00:00.000Z', id: 'a-1', intervalDurationMs: 86400000, priority: 4, nextAt: '2026-03-16T09:00:00.000Z', pathNodeIds: ['source-a', 'a-1'] },
+      { dueAt: '2026-03-16T09:00:00.000Z', id: 'a-2', intervalDurationMs: 86400000, priority: 4, nextAt: '2026-03-16T09:00:00.000Z', pathNodeIds: ['source-a', 'a-2'] }
+    ],
+    { materialDispersion: { now: '2026-03-18T09:00:00.000Z' } }
+  );
 
-  expect(queue.map((item) => item.id)).toEqual(['a-1', 'a-2']);
+  expect(queue.map((item) => item.id)).toEqual(['a-2', 'a-1']);
 });
 
 it('treats the P1/P9 weight ratio as the roulette probability ratio', () => {

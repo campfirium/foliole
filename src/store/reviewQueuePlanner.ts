@@ -14,6 +14,8 @@ import {
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode';
+import { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths';
+import { parseReviewQueueTimestamp } from './reviewQueuePlannerTime';
 
 export interface ReviewQueuePlan {
   fsrsCandidateCount: number;
@@ -25,14 +27,6 @@ export interface ReviewQueuePlan {
 }
 
 export type ReviewQueueNode = ReviewItemNodeLike & Pick<Node, 'content' | 'createdAt' | 'hasContent' | 'id' | 'parentNodeId' | 'priority' | 'reading'>;
-
-function parseTimestamp(timestamp: string) {
-  const parsed = Date.parse(timestamp);
-  if (Number.isNaN(parsed)) {
-    throw new TypeError(`Invalid timestamp: ${timestamp}`);
-  }
-  return parsed;
-}
 
 function createSeededRandom(seedInput: string) {
   let hash = 2166136261;
@@ -54,7 +48,7 @@ function isQueueableReadingNode(node: ReviewQueueNode | undefined, now: string):
   if (node.reading && node.reading.state !== 'active') {
     return false;
   }
-  return parseTimestamp(resolveReadingNextAt(node)) <= parseTimestamp(now);
+  return parseReviewQueueTimestamp(resolveReviewQueueReadingDueAt(node)) <= parseReviewQueueTimestamp(now);
 }
 
 function isSchedulableReadingNode(node: ReviewQueueNode | undefined): node is ReviewQueueNode {
@@ -71,15 +65,11 @@ function isDueFsrsNode(node: ReviewQueueNode | undefined, now: string): node is 
   if (!node || !isFsrsReviewItemNode(node)) {
     return false;
   }
-  return parseTimestamp(node.review?.due ?? now) <= parseTimestamp(now);
+  return parseReviewQueueTimestamp(node.review?.due ?? now) <= parseReviewQueueTimestamp(now);
 }
 
 function isSchedulableFsrsNode(node: ReviewQueueNode | undefined): node is ReviewQueueNode {
   return Boolean(node && isFsrsReviewItemNode(node));
-}
-
-function resolveReadingNextAt(node: ReviewQueueNode) {
-  return node.reading?.nextAt ?? node.createdAt;
 }
 
 function resolveNodePriority(node: ReviewQueueNode, nodesById: Record<string, ReviewQueueNode | undefined>, defaultPriority: UnifiedPushQueueRules['defaultPriority']) {
@@ -106,7 +96,7 @@ function resolveFsrsRetrievability(node: ReviewQueueNode, now: string) {
   if (!card.last_review || card.stability <= 0) {
     return 0;
   }
-  const elapsedDays = Math.max((parseTimestamp(now) - parseTimestamp(card.last_review)) / (24 * 60 * 60 * 1000), 0);
+  const elapsedDays = Math.max((parseReviewQueueTimestamp(now) - parseReviewQueueTimestamp(card.last_review)) / (24 * 60 * 60 * 1000), 0);
   const retrievability = forgetting_curve(elapsedDays, card.stability);
   return Number.isFinite(retrievability) ? retrievability : 0;
 }
@@ -131,20 +121,37 @@ function resolveFsrsQueueNodeIds(args: {
 
 function resolveReadingQueueNodeIds(args: {
   candidates: ReviewQueueNode[];
-  interleaveSources: boolean;
+  disperseMaterial: boolean;
   nodeOrder: string[];
   nodesById: Record<string, ReviewQueueNode | undefined>;
+  now: string;
   pushQueueRules: UnifiedPushQueueRules;
 }) {
   const random = createSeededRandom(`reading|${args.nodeOrder.join('|')}`);
   return assembleReadingPushQueue(
-    args.candidates.map((node, index) => ({
-      id: node.id,
-      priority: resolveNodePriority(node, args.nodesById, args.pushQueueRules.defaultPriority),
-      nextAt: resolveReadingNextAt(node),
-      ...(args.interleaveSources ? { sourceId: node.parentNodeId ?? node.id, sourceOrder: index } : {})
-    })),
-    { priorityRatio: args.pushQueueRules.priorityRatio, random }
+    args.candidates.map((node) => {
+      const dueAt = resolveReviewQueueReadingDueAt(node);
+      return {
+        dueAt,
+        id: node.id,
+        intervalDurationMs: node.reading?.intervalDurationMs,
+        nextAt: dueAt,
+        pathNodeIds: resolveReviewQueueNodePathNodeIds(node, args.nodesById),
+        priority: resolveNodePriority(node, args.nodesById, args.pushQueueRules.defaultPriority),
+      };
+    }),
+    {
+      ...(args.disperseMaterial
+        ? {
+            materialDispersion: {
+              now: args.now,
+              readingInitialIntervalMs: args.pushQueueRules.readingInitialIntervalMs
+            }
+          }
+        : {}),
+      priorityRatio: args.pushQueueRules.priorityRatio,
+      random
+    }
   ).map((entry) => entry.id);
 }
 
@@ -202,9 +209,10 @@ export function buildReviewQueuePlan(args: {
   });
   const readingQueueNodeIds = resolveReadingQueueNodeIds({
     candidates: readingCandidates,
-    interleaveSources: !includeScheduled,
+    disperseMaterial: !includeScheduled,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
+    now: args.now,
     pushQueueRules
   });
   const queueNodeIds = resolveModeQueueNodeIds({
