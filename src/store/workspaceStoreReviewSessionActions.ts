@@ -19,6 +19,17 @@ function buildReadingPushQueue(state: WorkspaceState, now: string) {
   return buildLiveReviewQueue(state, now, { mode: 'reading-only' });
 }
 
+function buildStartReviewQueue(state: WorkspaceState, now: string) {
+  const liveQueue = buildLiveReviewQueueOutput(state, now, { mode: state.reviewSessionMode });
+  if (liveQueue.taskNodeIds.length > 0) {
+    return liveQueue.taskNodeIds;
+  }
+  if (state.reviewSessionMode === 'recommended') {
+    return buildReadingPushQueue(state, now);
+  }
+  return [];
+}
+
 function buildCurrentSessionQueue(state: WorkspaceState, now: string, mode = state.reviewSessionMode) {
   return mode === state.reviewSessionMode
     ? buildCurrentReviewSessionQueue(state, now)
@@ -37,20 +48,17 @@ export function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceStat
   return (now = new Date().toISOString()) => {
     let started = false;
     set((state) => {
-      const liveQueue = buildLiveReviewQueueOutput(state, now, { mode: state.reviewSessionMode });
-      const queueNodeIds = liveQueue.taskNodeIds;
-      const isTaskQueue = queueNodeIds.length > 0;
-      const fallbackQueueNodeIds = isTaskQueue ? queueNodeIds : buildReadingPushQueue(state, now);
-      if (fallbackQueueNodeIds.length === 0) return state;
+      const queueNodeIds = buildStartReviewQueue(state, now);
+      if (queueNodeIds.length === 0) return state;
       started = true;
       return {
-        activeNodeId: fallbackQueueNodeIds[0] ?? state.activeNodeId,
+        activeNodeId: queueNodeIds[0] ?? state.activeNodeId,
         reviewSession: createStartedReviewSession({
           continueNodeId: state.activeNodeId,
-          currentNodeId: fallbackQueueNodeIds[0] ?? null,
-          queueNodeIds: fallbackQueueNodeIds,
+          currentNodeId: queueNodeIds[0] ?? null,
+          queueNodeIds,
           sessionStartedAt: now,
-          totalNodeCount: fallbackQueueNodeIds.length
+          totalNodeCount: queueNodeIds.length
         })
       };
     });
