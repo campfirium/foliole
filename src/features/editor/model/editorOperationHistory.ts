@@ -75,7 +75,7 @@ export function applyEditorOperationHistory(args: ApplyEditorOperationHistoryArg
   applied: boolean;
 } {
   const entry = getEditorOperationTopEntry(args.history, args.mode);
-  if (!entry || entry.nodeId !== args.currentNodeId || !args.applyEntry(entry, args.mode)) {
+  if (!entry || !canApplyEditorOperationEntryForCurrentNode(entry, args.currentNodeId) || !args.applyEntry(entry, args.mode)) {
     return { applied: false, entry, history: args.history };
   }
   return {
@@ -83,6 +83,16 @@ export function applyEditorOperationHistory(args: ApplyEditorOperationHistoryArg
     entry,
     history: moveEditorOperationEntry(args.history, entry, args.mode)
   };
+}
+
+export function canApplyEditorOperationEntryForCurrentNode(
+  entry: EditorOperationHistoryEntry | null | undefined,
+  currentNodeId: string | null | undefined
+) {
+  if (!entry) {
+    return false;
+  }
+  return entry.type === 'text.edit' ? entry.nodeId === currentNodeId : true;
 }
 
 export function getEditorOperationUndoTitle(history: EditorOperationHistoryState) {
