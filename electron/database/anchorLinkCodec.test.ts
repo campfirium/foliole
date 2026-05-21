@@ -112,9 +112,48 @@ function registerGroupedLocatorTest() {
   });
 }
 
+function registerFormulaLocatorTest() {
+  it('keeps formula locators when payload contains DOM selection and fallback rects', () => {
+    const value = JSON.stringify({
+      id: 'formula-1',
+      kind: 'cloze',
+      locator: {
+        display: 'inline',
+        fallbackRect: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+        formulaSource: '$E=mc^2$',
+        kind: 'formula-region',
+        occurrenceKey: 'node-1:0:E=mc^2',
+        selection: {
+          algorithm: 'katex-dom-leaf-v1',
+          fallbackRect: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+          leaves: [{ path: [0, 1], structureFingerprint: 'mord', textFingerprint: 'E' }]
+        }
+      }
+    });
+
+    expect(parseStoredAnchorLink(value)).toEqual({
+      id: 'formula-1',
+      kind: 'cloze',
+      locator: {
+        display: 'inline',
+        fallbackRect: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+        formulaSource: '$E=mc^2$',
+        kind: 'formula-region',
+        occurrenceKey: 'node-1:0:E=mc^2',
+        selection: {
+          algorithm: 'katex-dom-leaf-v1',
+          fallbackRect: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+          leaves: [{ path: [0, 1], structureFingerprint: 'mord', textFingerprint: 'E' }]
+        }
+      }
+    });
+  });
+}
+
 describe('parseStoredAnchorLink', () => {
   registerTextLocatorTest();
   registerPdfLocatorTest();
   registerMalformedLocatorTest();
   registerGroupedLocatorTest();
+  registerFormulaLocatorTest();
 });

@@ -12,6 +12,7 @@ export function useWorkspaceSelectors() {
       isHydrated: state.isHydrated,
       createChildNode: state.createChildNode,
       createVirtualNode: state.createVirtualNode,
+      createFormulaClozeNode: state.createFormulaClozeNode,
       createHighlightNodeFromSelection: state.createHighlightNodeFromSelection,
       createImageClozeNodes: state.createImageClozeNodes,
       createQANodeFromSelection: state.createQANodeFromSelection,

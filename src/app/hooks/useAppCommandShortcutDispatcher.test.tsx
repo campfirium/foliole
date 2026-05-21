@@ -26,7 +26,7 @@ function Harness({
     runCommand,
     shortcutMap: {
       'app.undo': { primary: { ctrlKey: true, key: 'z' } },
-      'app.redo': { primary: { ctrlKey: true, key: 'z', shiftKey: true } },
+      'app.redo': { primary: { ctrlKey: true, key: 'z', shiftKey: true }, tertiary: { ctrlKey: true, key: 'y' } },
       'workspace.createFolder': { primary: { ctrlKey: true, altKey: true, key: 'f' } },
       'editor.toggleDisplayMode': { primary: { ctrlKey: true, key: '\\' } },
       'workspace.toggleList': { primary: { ctrlKey: true, key: 'l' } }
@@ -111,7 +111,23 @@ it('does not dispatch app undo or redo while editable text is focused', () => {
 
   expect(dispatchShortcut({ ctrlKey: true, key: 'z' }).defaultPrevented).toBe(false);
   expect(dispatchShortcut({ ctrlKey: true, key: 'z', shiftKey: true }).defaultPrevented).toBe(false);
+  expect(dispatchShortcut({ ctrlKey: true, key: 'y' }).defaultPrevented).toBe(false);
   expect(runCommand).not.toHaveBeenCalled();
+});
+
+it('dispatches app redo from Ctrl+Y when no editable text is focused', () => {
+  const runCommand = vi.fn();
+  render(
+    <Harness
+      items={[{ enabled: true, id: 'app.redo', title: 'Redo Create Annotation' }]}
+      runCommand={runCommand}
+    />
+  );
+
+  const event = dispatchShortcut({ ctrlKey: true, key: 'y' });
+
+  expect(event.defaultPrevented).toBe(true);
+  expect(runCommand).toHaveBeenCalledWith('app.redo');
 });
 
 it('does not run disabled commands or commands while another command surface is open', () => {

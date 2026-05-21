@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../../features/formula-cloze/model/formulaCloze';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -19,10 +20,9 @@ import {
   createSyncActiveNodeContentFromEditor,
   type EditorContextMenuState
 } from './useEditorContextCommandHelpers';
-import { useImageClozeEventBridge } from './useImageClozeEventBridge';
-import { useSelectionAnnotationToolbar } from './useSelectionAnnotationToolbar';
+import { useEditorContextCommandSurfaces } from './useEditorContextCommandSurfaces';
 
-interface UseEditorContextCommandsParams {
+export interface UseEditorContextCommandsParams {
   activeNode?: Node;
   activeNodeId: string | null;
   createChildNode: (parentNodeId: string, content?: string) => string;
@@ -39,6 +39,11 @@ interface UseEditorContextCommandsParams {
     sourcePayload: ImageClozeSourcePayload,
     regions: ImageClozeDraftRegion[]
   ) => string[];
+  createFormulaClozeNode?: (
+    parentNodeId: string,
+    payload: FormulaClozeCreatePayload,
+    sourcePayload: FormulaClozeSourcePayload
+  ) => string | null;
   createQANodeFromSelection: (
     parentNodeId: string,
     clozeContent: string,
@@ -91,31 +96,6 @@ function usePreservedSelectionPayload(args: {
   }, [args.activeNodeId, args.editorRef]);
 
   return preservedSelectionPayloadRef;
-}
-
-function useEditorContextCommandSurfaces(
-  args: UseEditorContextCommandsParams,
-  setContextMenu: (value: EditorContextMenuState | null) => void
-) {
-  const createImageClozeNodes = args.createImageClozeNodes ?? (() => []);
-  useSelectionAnnotationToolbar({
-    activeNodeId: args.activeNodeId,
-    editorRef: args.editorRef,
-    isTrashViewOpen: args.isTrashViewOpen,
-    nodesById: args.nodesById,
-    selectionToolbarEnabled: args.selectionToolbarEnabled ?? true,
-    setContextMenu,
-    trashedNodeIds: args.trashedNodeIds
-  });
-  useImageClozeEventBridge({
-    activeNodeId: args.activeNodeId,
-    createImageClozeNodes,
-    deleteImageClozeRegion: args.deleteImageClozeRegion,
-    editorRef: args.editorRef,
-    flushPendingEditorDraft: args.flushPendingEditorDraft,
-    nodesById: args.nodesById,
-    ...definedProps({ activeNode: args.activeNode })
-  });
 }
 
 export function useEditorContextCommands(args: UseEditorContextCommandsParams) {

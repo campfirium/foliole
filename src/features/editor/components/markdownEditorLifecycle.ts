@@ -4,6 +4,7 @@ import {
   markEditorContentSyncCompleted,
   markEditorContentSyncStarted
 } from '../../../shared/platform/performanceDiagnosticsProbe';
+import { FORMULA_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../formula-cloze/model/formulaClozePresentation';
 import { IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../image-cloze/model/imageClozePresentation';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorDiffDecorations, EditorViewportMode } from '../adapters/EditorAdapter';
@@ -108,8 +109,10 @@ export function useEditorAppearanceEffects(
     };
 
     window.addEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
+    window.addEventListener(FORMULA_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
     return () => {
       window.removeEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
+      window.removeEventListener(FORMULA_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
     };
   }, [adapterRef, nodeId]);
 }

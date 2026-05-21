@@ -38,7 +38,7 @@ function resolveTextMirrorLocator(
       ? { from: range.from, originalText: range.originalText, to: range.to }
       : null;
   }
-  if (typeof locator.from === 'number' && typeof locator.to === 'number') {
+  if ('from' in locator && 'to' in locator && typeof locator.from === 'number' && typeof locator.to === 'number') {
     return {
       from: locator.from,
       ...('originalText' in locator ? { originalText: locator.originalText } : {}),

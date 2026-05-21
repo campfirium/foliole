@@ -1,3 +1,5 @@
+import { parseFormulaLocator, type FormulaStoredAnchorLocator } from './anchorLinkFormulaCodec';
+
 export interface StoredAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze';
@@ -17,7 +19,7 @@ export interface StoredAnchorLink {
     width?: number;
     x: number;
     y: number;
-  } | {
+  } | FormulaStoredAnchorLocator | {
     ranges: Array<{
       from: number;
       originalText: string;
@@ -180,6 +182,7 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
         page?: unknown;
         ranges?: unknown;
         rects?: unknown;
+        selection?: unknown;
         to?: unknown;
         width?: unknown;
         x?: unknown;
@@ -202,6 +205,11 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
     const textLocator = parseTextLocator(locator);
     if (textLocator) {
       base.locator = textLocator;
+      return base;
+    }
+    const formulaLocator = parseFormulaLocator(locator);
+    if (formulaLocator) {
+      base.locator = formulaLocator;
       return base;
     }
     const visualLocator = parseVisualLocator(locator);

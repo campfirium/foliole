@@ -18,6 +18,31 @@ export interface NativeWorkspaceAnchorLink {
     x: number;
     y: number;
   } | {
+    display: 'block' | 'inline';
+    fallbackRect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    formulaSource: string;
+    kind: 'formula-region';
+    occurrenceKey: string;
+    selection: {
+      algorithm: 'katex-dom-leaf-v1';
+      fallbackRect: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      };
+      leaves: Array<{
+        path: number[];
+        structureFingerprint: string;
+        textFingerprint: string;
+      }>;
+    };
+  } | {
     ranges: Array<{
       from: number;
       originalText: string;

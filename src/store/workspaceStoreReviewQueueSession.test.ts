@@ -69,6 +69,7 @@ function createWorkspaceActionStubs() {
     createVirtualNode: () => 'unused',
     createHighlightNodeFromSelection: () => null,
     createQANodeFromSelection: () => null,
+    createFormulaClozeNode: () => null,
     createImageClozeNodes: () => [],
     moveNode: () => false,
     moveNodes: () => false

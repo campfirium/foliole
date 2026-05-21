@@ -12,7 +12,8 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.undo]: { primary: { key: 'z', ctrlKey: true }, secondary: { key: 'z', metaKey: true } },
   [APP_COMMAND_IDS.redo]: {
     primary: { key: 'z', ctrlKey: true, shiftKey: true },
-    secondary: { key: 'z', metaKey: true, shiftKey: true }
+    secondary: { key: 'z', metaKey: true, shiftKey: true },
+    tertiary: { key: 'y', ctrlKey: true }
   },
   [APP_COMMAND_IDS.goBack]: { primary: { key: 'ArrowLeft', altKey: true } },
   [APP_COMMAND_IDS.goForward]: { primary: { key: 'ArrowRight', altKey: true } },

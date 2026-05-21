@@ -3,6 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { liveMarkdownCodeFenceTheme } from './liveMarkdownCodeFenceTheme';
 import { liveMarkdownFrontmatterTheme } from './liveMarkdownFrontmatterTheme';
 import { liveMarkdownImageTheme } from './liveMarkdownImageTheme';
+import { liveMarkdownMathTheme } from './liveMarkdownMathTheme';
 import { liveMarkdownSpacing } from './liveMarkdownSpacing';
 import { liveMarkdownTableTheme } from './liveMarkdownTableTheme';
 
@@ -73,17 +74,7 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-document-section-divider': { padding: liveMarkdownSpacing.sectionDividerPadding },
   '.cm-md-inline-code': { backgroundColor: 'rgb(var(--color-foreground) / 0.08)', borderRadius: 'var(--editor-radius-md)', fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 var(--editor-space-xxs)' },
-  '.cm-md-math-widget-inline': { display: 'inline-block', paddingInline: '0.08em', verticalAlign: '-0.08em' },
-  '.cm-md-math-widget-block': { display: 'block', margin: 'var(--editor-space-md) 0', overflowX: 'auto', overflowY: 'hidden', padding: 'var(--editor-space-xs) 0' },
-  '.cm-md-math-widget-error': {
-    backgroundColor: 'rgb(var(--color-foreground) / 0.08)',
-    borderRadius: 'var(--editor-radius-sm)',
-    color: 'var(--color-text-secondary)',
-    fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))',
-    fontSize: 'var(--content-panel-code-font-size, 0.86rem)',
-    padding: '0 var(--editor-space-xxs)',
-    whiteSpace: 'pre-wrap'
-  },
+  ...liveMarkdownMathTheme,
   ...liveMarkdownCodeFenceTheme,
   '.cm-md-footnote-widget': { display: 'inline-block', lineHeight: '1', marginInline: liveMarkdownSpacing.footnoteMarkerInline, position: 'relative', verticalAlign: 'super' },
   '.cm-md-footnote-marker': {
