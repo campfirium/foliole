@@ -199,6 +199,23 @@ it('resumes from the queue when study mode has no current item but queued items 
   expect(onContinueReading).not.toHaveBeenCalled();
 });
 
+it('resumes from the queue with Space when study mode has no current item but queued items exist', () => {
+  const onContinueReading = vi.fn();
+  const onResumeReviewItem = vi.fn();
+  renderToolbar({
+    onContinueReading,
+    onResumeReviewItem,
+    reviewCurrentNodeId: null,
+    reviewQueueCount: 3,
+    reviewStatus: 'idle'
+  });
+
+  fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+
+  expect(onResumeReviewItem).toHaveBeenCalledTimes(1);
+  expect(onContinueReading).not.toHaveBeenCalled();
+});
+
 it('keeps an empty dev-restored status bar in idle study mode', () => {
   renderToolbar({
     reviewCurrentNodeId: null,
