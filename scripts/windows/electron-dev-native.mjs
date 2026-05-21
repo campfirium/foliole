@@ -10,7 +10,11 @@ const { repoRoot, userDataPath } = resolveWindowsNativePaths();
 const localLibraryHome = 'D:\\X\\U\\Foliole';
 const debugLibraryHome = path.join(userDataPath, 'native-debug-library');
 
-function copyIfSourceIsNewer(sourcePath, targetPath) {
+function shouldUseDebugLibraryCopy() {
+  return process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY === '1';
+}
+
+function copyDatabaseIfSourceIsNewer(sourcePath, targetPath) {
   if (!fs.existsSync(sourcePath)) {
     return false;
   }
@@ -25,10 +29,14 @@ function copyIfSourceIsNewer(sourcePath, targetPath) {
   return true;
 }
 
-function resolveDebugLibraryHome() {
+function resolveLibraryHome() {
+  if (!shouldUseDebugLibraryCopy()) {
+    return localLibraryHome;
+  }
+
   const sourceDatabasePath = path.join(localLibraryHome, 'Data', 'foliole.db');
   const targetDatabasePath = path.join(debugLibraryHome, 'Data', 'foliole.db');
-  if (copyIfSourceIsNewer(sourceDatabasePath, targetDatabasePath)) {
+  if (copyDatabaseIfSourceIsNewer(sourceDatabasePath, targetDatabasePath)) {
     console.info(`[electron-dev-native] refreshed debug database copy: ${targetDatabasePath}`);
   }
   return fs.existsSync(targetDatabasePath) ? debugLibraryHome : localLibraryHome;
@@ -63,6 +71,6 @@ process.env.FOLIOLE_SKIP_STARTUP_NODE_SYNC_FLUSH ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_SCHEMA_INIT ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_WINDOW_STATE ??= '1';
-ensureLocalLibraryPathSettings(resolveDebugLibraryHome());
+ensureLocalLibraryPathSettings(resolveLibraryHome());
 
 await import('../electron-dev.mjs');
