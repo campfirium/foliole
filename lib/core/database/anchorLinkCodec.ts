@@ -1,4 +1,4 @@
-import { parseFormulaLocator, type FormulaStoredAnchorLocator } from './anchorLinkFormulaCodec';
+import { parseFormulaLocator, type FormulaStoredAnchorLocator } from './anchorLinkFormulaCodec.js';
 
 export interface StoredAnchorLink {
   id: string;

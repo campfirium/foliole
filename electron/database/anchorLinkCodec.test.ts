@@ -148,6 +148,23 @@ function registerFormulaLocatorTest() {
       }
     });
   });
+
+  it('drops malformed formula locators instead of trusting partial payloads', () => {
+    const value = JSON.stringify({
+      id: 'formula-2',
+      kind: 'cloze',
+      locator: {
+        display: 'inline',
+        kind: 'formula-region',
+        occurrenceKey: 'node-1:0:E=mc^2'
+      }
+    });
+
+    expect(parseStoredAnchorLink(value)).toEqual({
+      id: 'formula-2',
+      kind: 'cloze'
+    });
+  });
 }
 
 describe('parseStoredAnchorLink', () => {
