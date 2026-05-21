@@ -68,7 +68,7 @@ it('uses material path dispersion inside a reading pressure window', () => {
       dueAt: '2026-03-16T09:00:00.000Z',
       id: `a-${String(index + 1).padStart(2, '0')}`,
       intervalDurationMs: 24 * 60 * 60 * 1000,
-      priority: 4,
+      priority: 4 as const,
       nextAt: '2026-03-16T09:00:00.000Z',
       pathNodeIds: ['source-a', `a-${String(index + 1).padStart(2, '0')}`]
     })),
@@ -84,7 +84,7 @@ it('places a small source inside a large-source pressure window instead of leavi
       dueAt: '2026-03-16T09:00:00.000Z',
       id: `a-${String(index + 1).padStart(2, '0')}`,
       intervalDurationMs: 24 * 60 * 60 * 1000,
-      priority: 4,
+      priority: 4 as const,
       nextAt: '2026-03-16T09:00:00.000Z',
       pathNodeIds: ['source-a', `a-${String(index + 1).padStart(2, '0')}`]
     })),
@@ -92,11 +92,11 @@ it('places a small source inside a large-source pressure window instead of leavi
       dueAt: '2026-03-16T09:00:00.000Z',
       id: 'b-01',
       intervalDurationMs: 24 * 60 * 60 * 1000,
-      priority: 4,
+      priority: 4 as const,
       nextAt: '2026-03-16T09:00:00.000Z',
       pathNodeIds: ['source-b', 'b-01']
     }
-  ];
+  ] satisfies Parameters<typeof assembleReadingPushQueue>[0];
   const queue = assembleReadingPushQueue(entries, { materialDispersion: { now: '2026-03-18T09:00:00.000Z' } });
 
   expect(queue.map((item) => item.id).slice(0, 4)).toEqual(['a-01', 'b-01', 'a-19', 'a-18']);

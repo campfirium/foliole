@@ -4,6 +4,7 @@ import { asAnchorLink } from './commandParserAnchorLink.js';
 import { asImageRegions } from './commandParserImageRegions.js';
 import {
   asBoolean,
+  asIntegerInRange,
   asNodeKind,
   asNullableFiniteNumber,
   asNullableInteger,
@@ -22,6 +23,18 @@ interface ReadingProfilePayload {
   readingPosition: number;
   repetitionCount: number;
   state: ReadingState;
+}
+
+interface ReviewProfilePayload {
+  due: string;
+  lastReviewAt: string | null;
+  state: 0 | 1 | 2 | 3;
+  stability: number;
+  difficulty: number;
+  elapsedDays: number;
+  scheduledDays: number;
+  reps: number;
+  lapses: number;
 }
 
 function asReadingState(value: unknown, field: string): ReadingProfilePayload['state'] {
@@ -51,6 +64,27 @@ function asReadingProfile(value: unknown, field: string): ReadingProfilePayload 
   };
 }
 
+function asReviewProfile(value: unknown, field: string): ReviewProfilePayload | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  const payload = value as Record<string, unknown>;
+  return {
+    due: asTimestamp(payload.due, `${field}.due`),
+    lastReviewAt: asNullableString(payload.lastReviewAt, `${field}.lastReviewAt`),
+    state: asIntegerInRange(payload.state, `${field}.state`, 0, 3) as ReviewProfilePayload['state'],
+    stability: asNullableFiniteNumber(payload.stability, `${field}.stability`) ?? 0,
+    difficulty: asNullableFiniteNumber(payload.difficulty, `${field}.difficulty`) ?? 0,
+    elapsedDays: asNullableInteger(payload.elapsedDays, `${field}.elapsedDays`) ?? 0,
+    scheduledDays: asNullableInteger(payload.scheduledDays, `${field}.scheduledDays`) ?? 0,
+    reps: asNullableInteger(payload.reps, `${field}.reps`) ?? 0,
+    lapses: asNullableInteger(payload.lapses, `${field}.lapses`) ?? 0
+  };
+}
+
 export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
   return {
     nodeId: asString(args.nodeId, 'nodeId'),
@@ -73,6 +107,7 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
     imageRegions: asImageRegions(args.imageRegions, 'imageRegions'),
     reading: asReadingProfile(args.reading, 'reading'),
+    review: asReviewProfile(args.review, 'review'),
     position: asNullableInteger(args.position, 'position'),
     createdAt: asString(args.createdAt, 'createdAt'),
     updatedAt: asString(args.updatedAt, 'updatedAt')

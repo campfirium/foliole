@@ -26,6 +26,7 @@ export interface WorkspaceRuntimeNode {
   parentNodeId: string | null;
   priority?: number | null;
   reading?: NativeNodeSnapshotArgs['reading'];
+  review?: NativeNodeSnapshotArgs['review'];
   reveal: string | null;
   title: string;
   updatedAt: string;

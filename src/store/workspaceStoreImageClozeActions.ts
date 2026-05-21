@@ -8,7 +8,7 @@ import {
   normalizeImageClozeSourcePayload,
   updateParentNodeImageRegions
 } from './workspaceImageClozeCreationHelpers';
-import { createDefaultReviewProfile } from './workspaceSeed';
+import { createImageClozeReviewProfile } from './workspaceImageClozeReview';
 import type { WorkspaceState } from './workspaceStore';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
@@ -70,7 +70,7 @@ function createImageClozeNode(
     ],
     hasReveal: true,
     reveal: sourcePayload.revealContent,
-    review: createDefaultReviewProfile(timestamp),
+    review: createImageClozeReviewProfile(state, timestamp),
     createdAt: timestamp,
     updatedAt: timestamp
   };

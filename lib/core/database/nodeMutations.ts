@@ -19,6 +19,8 @@ import {
 } from './nodeMutationStatements.js';
 import { writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
 import { resolveRestoreNodesResult, type RestoreNodesResult } from './nodeRestoreConflicts.js';
+import { createUpsertNodeReviewStatement } from './nodeReviewMutationStatements.js';
+import { writeNodeReviewSnapshotWithSync } from './nodeReviewSyncState.js';
 import { prepareNodeSearchInvalidationForUpsert } from './nodeSearchInvalidationForMutation.js';
 import {
   enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds,
@@ -73,6 +75,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
   const upsertNodeOrderStatement = createUpsertNodeOrderStatement(driver);
   const upsertNodeReadingStatement = createUpsertNodeReadingStatement(driver);
   const upsertNodeReadingDeviceStateStatement = createUpsertNodeReadingDeviceStateStatement(driver);
+  const upsertNodeReviewStatement = createUpsertNodeReviewStatement(driver);
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
   const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
 
@@ -112,6 +115,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       upsertDeviceState: upsertNodeReadingDeviceStateStatement.run,
       upsertReading: upsertNodeReadingStatement.run
     });
+    writeNodeReviewSnapshotWithSync(driver, input, upsertNodeReviewStatement.run);
     bumpUntitledSequenceByParent(driver, {
       parentNodeId: input.parentNodeId,
       title: input.title,

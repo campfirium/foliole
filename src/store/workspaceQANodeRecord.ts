@@ -3,7 +3,7 @@ import {
 } from '../features/nodes/model/deriveNodeTitle';
 import type { NodeAnchorLink } from '../features/nodes/model/nodeTypes';
 
-import { createDefaultReviewProfile } from './workspaceSeed';
+import { createNewItemReviewProfiles } from './newItemReviewSlots';
 import type { WorkspaceState } from './workspaceStore';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
@@ -31,6 +31,11 @@ export function createQANodeFromSelectionRecord(args: {
     args.parentNodeId,
     args.state
   );
+  const reviewProfiles = createNewItemReviewProfiles({
+    batchSize: 1,
+    nodesById: args.state.nodesById,
+    now: args.timestamp
+  });
   return {
     node: {
       id: args.nodeId,
@@ -42,7 +47,7 @@ export function createQANodeFromSelectionRecord(args: {
       anchorLink: resolveClozeAnchorLink(args.anchorId, args.anchorLink),
       hasReveal: true,
       reveal: args.answerContent,
-      review: createDefaultReviewProfile(args.timestamp),
+      review: reviewProfiles[0] ?? null,
       createdAt: args.timestamp,
       updatedAt: args.timestamp
     },

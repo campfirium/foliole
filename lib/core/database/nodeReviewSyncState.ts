@@ -1,9 +1,9 @@
-import type { DatabaseDriver } from './driver.js';
+import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
 import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 export interface NodeReviewSyncPayload {
   due: string;
-  lastReviewAt: string;
+  lastReviewAt: string | null;
   state: number;
   stability: number;
   difficulty: number;
@@ -23,6 +23,13 @@ export interface NodeReviewSyncContext {
 export interface NodeReviewResetContext {
   deviceId: string;
   deletedAt: string;
+}
+
+export interface WriteNodeReviewSyncInput {
+  nodeId: string;
+  deviceId?: string;
+  review?: NodeReviewSyncPayload | null;
+  updatedAt: string;
 }
 
 function toNodeReviewHash(nodeId: string, payload: NodeReviewSyncPayload) {
@@ -80,4 +87,34 @@ export function recordNodeReviewTombstone(
     updatedAt: context.deletedAt,
     syncDirty: true
   });
+}
+
+export function writeNodeReviewSnapshotWithSync(
+  driver: DatabaseDriver,
+  input: WriteNodeReviewSyncInput,
+  upsertReview: (params?: DatabaseBindParams) => void
+) {
+  if (!input.review) {
+    return;
+  }
+  upsertReview([
+    input.nodeId,
+    input.review.due,
+    input.review.lastReviewAt,
+    input.review.state,
+    input.review.stability,
+    input.review.difficulty,
+    input.review.elapsedDays,
+    input.review.scheduledDays,
+    input.review.reps,
+    input.review.lapses
+  ]);
+  if (input.deviceId) {
+    recordNodeReviewSyncState(driver, input.nodeId, input.review, {
+      deviceId: input.deviceId,
+      logId: '',
+      opId: '',
+      reviewedAt: input.updatedAt
+    });
+  }
 }

@@ -3,6 +3,18 @@ import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import type { NodeReadingPayload } from './nodeReadingPayload.js';
 
+export interface NodeReviewPayload {
+  due: string;
+  lastReviewAt: string | null;
+  state: 0 | 1 | 2 | 3;
+  stability: number;
+  difficulty: number;
+  elapsedDays: number;
+  scheduledDays: number;
+  reps: number;
+  lapses: number;
+}
+
 export interface NodeAnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze';
@@ -61,6 +73,7 @@ export interface UpsertNodeSnapshotInput {
   anchorLink: NodeAnchorLinkPayload | null;
   imageRegions?: NodeImageRegionGroupPayload[] | null;
   reading?: NodeReadingPayload | null;
+  review?: NodeReviewPayload | null;
   position: number | null;
   createdAt: string;
   updatedAt: string;

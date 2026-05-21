@@ -33,6 +33,7 @@ function createSeedRuntimeNode(node: DebugNodeSeed, index: number): WorkspaceRun
     parentNodeId: node.parentNodeId ?? null,
     priority: null,
     reading: null,
+    review: null,
     reveal: node.reveal ?? null,
     title: node.title,
     updatedAt: `2026-04-08T00:00:${String(index).padStart(2, '0')}.000Z`,

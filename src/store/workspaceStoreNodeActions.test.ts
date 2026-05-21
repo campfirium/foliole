@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
@@ -74,6 +74,10 @@ describe('createWorkspaceNodeActions content/title sync', () => {
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
     expect(syncNodeContentWithAnchorsToRuntime).not.toHaveBeenCalled();
   });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('createWorkspaceNodeActions root creation sync', () => {
@@ -197,6 +201,28 @@ describe('createWorkspaceNodeActions create sync', () => {
         content: 'Child body'
       })
     );
+  });
+
+  it('assigns new item review due to the next local day slot', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-21T08:00:00.000Z'));
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    const childNodeId = actions.createChildNode('node-1', 'Prompt', 'item');
+    const childNode = harness.getState().nodesById[childNodeId];
+
+    expect(childNode?.review).toEqual(expect.objectContaining({
+      due: new Date(2026, 4, 22).toISOString(),
+      lastReviewAt: null,
+      reps: 0,
+      state: 0
+    }));
+    expect(syncCreateNodeToRuntime).toHaveBeenCalledWith(expect.objectContaining({
+      id: childNodeId,
+      kind: 'item',
+      review: expect.objectContaining({ due: new Date(2026, 4, 22).toISOString() })
+    }));
   });
 
 });

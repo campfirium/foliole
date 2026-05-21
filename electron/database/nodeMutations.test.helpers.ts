@@ -55,6 +55,22 @@ export function getReviewCounts(nodeId: string) {
   };
 }
 
+export function getNodeReviewRow(nodeId: string) {
+  return openDatabaseConnection().sqlite
+    .prepare('SELECT due, last_review_at, reps, state FROM node_review WHERE node_id = ?')
+    .get(nodeId) as { due: string; last_review_at: string | null; reps: number; state: number } | undefined;
+}
+
+export function getNodeReviewSyncRow(nodeId: string) {
+  return openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT object_type, object_id, sync_dirty
+       FROM sync_object_state
+       WHERE object_type = 'node_review' AND object_id = ?`
+    )
+    .get(nodeId) as { object_id: string; object_type: string; sync_dirty: number } | undefined;
+}
+
 export function getNodeReadingRow(nodeId: string) {
   return openDatabaseConnection().sqlite
     .prepare('SELECT node_id, state FROM node_reading WHERE node_id = ?')
