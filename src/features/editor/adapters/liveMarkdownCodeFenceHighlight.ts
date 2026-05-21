@@ -43,6 +43,7 @@ function isIdentifierChar(char: string) {
 
 function scanQuotedString(code: string, from: number) {
   const quote = code[from];
+  if (!quote) return from + 1;
   let index = from + 1;
   while (index < code.length) {
     if (code[index] === '\\') {
@@ -74,7 +75,7 @@ function scanScriptLikeTokens(code: string) {
   const tokens: CodeFenceToken[] = [];
   let index = 0;
   while (index < code.length) {
-    const char = code[index];
+    const char = code[index] ?? '';
     if (code.startsWith('//', index)) {
       const to = scanLineComment(code, index);
       tokens.push({ from: index, kind: 'comment', to });
@@ -106,13 +107,13 @@ function scanScriptLikeTokens(code: string) {
 
 function scanIdentifier(code: string, from: number) {
   let index = from + 1;
-  while (index < code.length && isIdentifierChar(code[index])) index += 1;
+  while (index < code.length && isIdentifierChar(code[index] ?? '')) index += 1;
   return index;
 }
 
 function nextNonSpace(code: string, from: number) {
   let index = from;
-  while (index < code.length && /\s/.test(code[index])) index += 1;
+  while (index < code.length && /\s/.test(code[index] ?? '')) index += 1;
   return index;
 }
 
@@ -146,13 +147,13 @@ function scanHtmlTokens(code: string) {
 
 function scanHtmlTag(code: string, from: number, tokens: CodeFenceToken[]) {
   let index = from + (code[from + 1] === '/' ? 2 : 1);
-  if (isIdentifierStart(code[index])) {
+  if (isIdentifierStart(code[index] ?? '')) {
     const to = scanIdentifier(code, index);
     tokens.push({ from: index, kind: 'tag', to });
     index = to;
   }
   while (index < code.length && code[index] !== '>') {
-    const char = code[index];
+    const char = code[index] ?? '';
     if (char === '"' || char === '\'') {
       const to = scanQuotedString(code, index);
       tokens.push({ from: index, kind: 'string', to });

@@ -10,6 +10,7 @@ import { collectImageMatches } from '../model/markdownImageMatches';
 import { collectMarkdownInlineLinkRangesFromTree } from '../model/markdownInlineLinkProjection';
 import type { MarkdownInlineLinkRange } from '../model/markdownInlineProjectionTypes';
 import { collectMarkdownLinkReferencesFromTree, type MarkdownLinkReferenceRange } from '../model/markdownLinkReferences';
+import { collectMarkdownMathRangesFromTree } from '../model/markdownMathRanges';
 import { collectMultilineLinkPresentationPlans } from '../model/markdownMultilineLinkPresentation';
 import { collectReadwiseOriginalFilePlaceholderRangesFromLines } from '../model/readwiseOriginalFilePlaceholder';
 
@@ -27,6 +28,7 @@ import {
 } from './liveMarkdownDecorationCollections';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addForumTitleLinkDecorations } from './liveMarkdownForumTitleLinkDecorations';
+import { addMathDecorations } from './liveMarkdownMath';
 import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
 import { addPreviewViewportDecorations } from './liveMarkdownPreviewViewportDecorations';
 import {
@@ -109,6 +111,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const linkReferences = collectMarkdownLinkReferencesFromTree(markdownTree, source);
   const documentImageMatches = collectImageMatches(0, source, linkReferences);
   const inlineLinks = collectMarkdownInlineLinkRangesFromTree(markdownTree, source, 0, linkReferences);
+  const mathRanges = collectMarkdownMathRangesFromTree(markdownTree, source);
   const forumTitleLinks = collectMarkdownForumTitleLinkRanges(source).filter(
     (link) => !(codeFenceProjection.codeLineFroms.has(link.from) || codeFenceProjection.codeLineFroms.has(link.urlLineFrom))
   );
@@ -139,6 +142,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   addReadwiseOriginalFileDecorations(ranges, readwiseOriginalFilePlaceholders, context.nodeId);
   addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
   addForumTitleLinkDecorations(ranges, forumTitleLinks);
+  addMathDecorations(ranges, mathRanges, view, context.activePosition);
   addCodeFenceSyntaxHighlightDecorations(ranges, source, codeFenceProjection.codeBlocks, viewportRange);
   addMultilineLinkDecorations(ranges, source, {
     links: inlineLinks,
