@@ -8,7 +8,8 @@ const state = vi.hoisted(() => ({
   appendMainProcessDiagnosticLog: vi.fn(),
   originalWorkdir: process.env.FOLIOLE_WORKDIR,
   originalHead: process.env.FOLIOLE_RUNTIME_HEAD,
-  originalSession: process.env.FOLIOLE_BOOT_SESSION
+  originalSession: process.env.FOLIOLE_BOOT_SESSION,
+  originalArgv: [...process.argv]
 }));
 
 vi.mock('../diagnostics/mainProcessDiagnostics.js', () => ({
@@ -21,6 +22,7 @@ afterEach(() => {
   process.env.FOLIOLE_WORKDIR = state.originalWorkdir;
   process.env.FOLIOLE_RUNTIME_HEAD = state.originalHead;
   process.env.FOLIOLE_BOOT_SESSION = state.originalSession;
+  process.argv = [...state.originalArgv];
   state.appendMainProcessDiagnosticLog.mockReset();
 });
 
@@ -97,4 +99,17 @@ it('writes a window visible marker for native preview health checks', async () =
     source: 'main',
     stage: 'window_visible'
   });
+});
+
+it('prefers explicit relaunch boot session args over stale environment session', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-session-arg-'));
+  process.env.FOLIOLE_WORKDIR = repoRoot;
+  process.env.FOLIOLE_BOOT_SESSION = 'old-session';
+  process.argv = [...state.originalArgv, '--foliole-boot-session=new-session'];
+
+  await bootReport('app_ready', { source: 'relaunch' });
+
+  const paths = resolveBootArtifactPaths(repoRoot);
+  const marker = JSON.parse(fs.readFileSync(paths.readyMarkerPath, 'utf8'));
+  expect(marker.session).toBe('new-session');
 });

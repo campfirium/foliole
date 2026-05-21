@@ -9,7 +9,7 @@ import { restartAppWithReadingProgress } from './appRestartPersistence';
 
 const mocks = vi.hoisted(() => ({
   getRuntimeInvoke: vi.fn(),
-  restartMainWindowApp: vi.fn(() => Promise.resolve()),
+  restartMainWindowDevApp: vi.fn(() => Promise.resolve()),
   logRuntimeWarning: vi.fn()
 }));
 
@@ -18,7 +18,7 @@ vi.mock('../../shared/platform/runtimeInvoke', () => ({
 }));
 
 vi.mock('../../shared/platform/windowControls', () => ({
-  restartMainWindowApp: mocks.restartMainWindowApp
+  restartMainWindowDevApp: mocks.restartMainWindowDevApp
 }));
 
 vi.mock('../../shared/platform/runtimeLogging', () => ({
@@ -45,7 +45,7 @@ function createEditorRef(
 
 beforeEach(() => {
   mocks.getRuntimeInvoke.mockReset();
-  mocks.restartMainWindowApp.mockClear();
+  mocks.restartMainWindowDevApp.mockClear();
   mocks.logRuntimeWarning.mockClear();
 });
 
@@ -81,7 +81,7 @@ it('flushes the current reading position before restarting', async () => {
     source: 'close-flush',
     updatedAt: expect.any(String)
   });
-  expect(mocks.restartMainWindowApp).toHaveBeenCalledTimes(1);
+  expect(mocks.restartMainWindowDevApp).toHaveBeenCalledTimes(1);
 });
 
 it('still restarts when the flush fails', async () => {
@@ -99,7 +99,7 @@ it('still restarts when the flush fails', async () => {
   });
 
   expect(mocks.logRuntimeWarning).toHaveBeenCalled();
-  expect(mocks.restartMainWindowApp).toHaveBeenCalledTimes(1);
+  expect(mocks.restartMainWindowDevApp).toHaveBeenCalledTimes(1);
 });
 
 it('normalizes scroll and selection before flushing on restart', async () => {

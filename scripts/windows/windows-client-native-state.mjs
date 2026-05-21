@@ -38,11 +38,11 @@ export function readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFil
     appReady.session &&
     appReady.session === bridgeReady.session &&
     appReady.session === windowVisible.session &&
-    appReady.pid === bridgeReady.pid &&
-    appReady.pid === windowVisible.pid &&
     bridgeReady.payload?.bridgeAvailable === true &&
     windowVisible.payload?.isVisible === true &&
-    processAlive(appReady.pid)
+    processAlive(appReady.pid) &&
+    processAlive(bridgeReady.pid) &&
+    processAlive(windowVisible.pid)
   ) {
     return { appReady, bridgeReady, windowVisible };
   }

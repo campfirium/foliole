@@ -124,6 +124,7 @@ const WINDOW_AND_UTILITY_COMMANDS = [
   NATIVE_COMMANDS.windowClose,
   NATIVE_COMMANDS.windowIsMaximized,
   NATIVE_COMMANDS.windowMinimize,
+  NATIVE_COMMANDS.windowRestartDevApp,
   NATIVE_COMMANDS.windowRestartApp,
   NATIVE_COMMANDS.windowToggleDevTools,
   NATIVE_COMMANDS.windowToggleMaximize

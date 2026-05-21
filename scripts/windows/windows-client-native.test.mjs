@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { spawn } from 'node:child_process';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -23,11 +24,18 @@ it('rejects unsupported native Windows client actions before process control', (
 it('uses Node-native process control instead of wrapping the legacy PowerShell client', async () => {
   const script = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native.mjs'), 'utf8');
   const processScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-process.mjs'), 'utf8');
+  const restartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-restart.mjs'), 'utf8');
 
   expect(script).toContain("spawn(process.execPath, ['scripts/windows/electron-dev-native.mjs']");
   expect(script).toContain("stdio: ['ignore', logs.stdoutFd, logs.stderrFd]");
-  expect(processScript).toContain("runCapture('taskkill.exe'");
-  expect(processScript).toContain('FOLIOLE_WINDOWS_TASKKILL_TIMEOUT_MS');
+  expect(processScript).toContain("process.kill(pid, 'SIGTERM')");
+  expect(processScript).toContain('FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS');
+  expect(script).toContain("await forceRestartClient('dev-shell-restart')");
+  expect(script).not.toContain('requestControlledRuntimeRestart');
+  expect(script).not.toContain('controlled restart timed out; runtime left for inspection');
+  expect(script).toContain('startup health check failed: app-ready-timeout shell_pid=');
+  expect(processScript).not.toContain('taskkill');
+  expect(restartScript).not.toContain('forced-cleanup');
   expect(script).toContain('ready.appReady.head ?? state?.head');
   expect(script).toContain('await killPid(ready?.appReady.pid)');
   expect(script).toContain('windowVisibleFile');
@@ -71,12 +79,17 @@ it('treats stale ready markers with a dead runtime pid as not running', async ()
   }
 });
 
-it('requires app, bridge, and visible-window markers from the same native runtime', async () => {
+it('accepts renderer and main-process markers for the same native session', async () => {
   const tempDir = path.join(process.cwd(), '.tmp', `windows-client-native-window-test-${Date.now()}`);
   const appReadyFile = path.join(tempDir, 'app-ready.json');
   const bridgeReadyFile = path.join(tempDir, 'bridge-ready.json');
   const windowVisibleFile = path.join(tempDir, 'window-visible.json');
+  const main = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], {
+    stdio: 'ignore',
+    windowsHide: true
+  });
   const pid = process.pid;
+  const mainPid = main.pid;
 
   await mkdir(tempDir, { recursive: true });
   try {
@@ -96,13 +109,49 @@ it('requires app, bridge, and visible-window markers from the same native runtim
 
     await writeFile(windowVisibleFile, JSON.stringify({
       payload: { isVisible: true },
-      pid,
+      pid: mainPid,
       session: 'same-session',
       stage: 'window_visible'
     }), 'utf8');
 
     expect(readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFile })?.windowVisible.stage).toBe('window_visible');
+
+    await writeFile(appReadyFile, JSON.stringify({
+      pid,
+      session: 'other-session',
+      stage: 'app_ready'
+    }), 'utf8');
+    expect(readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFile })).toBeNull();
+
+    await writeFile(appReadyFile, JSON.stringify({
+      pid,
+      session: 'same-session',
+      stage: 'app_ready'
+    }), 'utf8');
+    await writeFile(bridgeReadyFile, JSON.stringify({
+      payload: { bridgeAvailable: true },
+      pid,
+      session: 'other-session',
+      stage: 'bridge_ready'
+    }), 'utf8');
+    expect(readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFile })).toBeNull();
+
+    await writeFile(bridgeReadyFile, JSON.stringify({
+      payload: { bridgeAvailable: true },
+      pid,
+      session: 'same-session',
+      stage: 'bridge_ready'
+    }), 'utf8');
+    await writeFile(windowVisibleFile, JSON.stringify({
+      payload: { isVisible: true },
+      pid: mainPid,
+      session: 'other-session',
+      stage: 'window_visible'
+    }), 'utf8');
+
+    expect(readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFile })).toBeNull();
   } finally {
+    main.kill();
     await rm(tempDir, { force: true, recursive: true });
   }
 });

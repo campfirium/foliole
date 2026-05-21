@@ -53,13 +53,13 @@ it('selects fallback start when no trusted runtime is running', () => {
   });
 });
 
-it('prefers restart intent for runtime changes on trusted clients', () => {
+it('prefers full shell restart for runtime changes on trusted native debug clients', () => {
   expect(selectNativePreviewAction({
     changedFiles: ['electron/main.ts'],
     currentHead: 'abc123',
     status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
   })).toMatchObject({
-    action: 'restart-intent'
+    action: 'full-restart'
   });
 });
 

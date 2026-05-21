@@ -4,7 +4,7 @@ import type { EditorSelection } from '../../features/editor/adapters/EditorAdapt
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import { logRuntimeWarning } from '../../shared/platform/runtimeLogging';
-import { restartMainWindowApp } from '../../shared/platform/windowControls';
+import { restartMainWindowDevApp } from '../../shared/platform/windowControls';
 import {
   hasWorkspaceRuntimeRepository,
   saveWorkspaceReadingProgressNow
@@ -120,5 +120,5 @@ export async function restartAppWithReadingProgress(args: RestartWithReadingProg
   pushDebugTrace('reading-progress.restart-command', {
     activeNodeId: captured?.nodeId ?? args.activeNodeId ?? null
   });
-  await restartMainWindowApp();
+  await restartMainWindowDevApp();
 }

@@ -52,7 +52,7 @@ function printStatus() {
   if (ready) {
     const runtimeHead = ready.appReady.head ?? state?.head;
     const head = runtimeHead ? ` head=${runtimeHead}` : '';
-    console.log(`[windows-restart-client] status: RUNNING trust=OK shell_pid=${state?.shellPid ?? 'unknown'} runtime_pid=${ready.appReady.pid}${head}`);
+    console.log(`[windows-restart-client] status: RUNNING trust=OK shell_pid=${state?.shellPid ?? 'unknown'} runtime_pid=${ready.windowVisible.pid}${head}`);
     return { ok: true, ready, state };
   }
   console.log('[windows-restart-client] status: STOPPED trust=FAILED reason=no-runtime');
@@ -112,17 +112,16 @@ async function startClient({ print = true } = {}) {
   });
   const ready = await waitForReady(session);
   if (!ready) {
-    await killPid(child.pid);
     closeClientLogStreams(logs);
     printStartupLogTail(readClientState());
     await removeClientState(stateFile);
     await resetMarkers();
-    throw new Error('startup health check failed: app-ready-timeout');
+    throw new Error(`startup health check failed: app-ready-timeout shell_pid=${child.pid} left-for-inspection`);
   }
   closeClientLogStreams(logs);
   await saveState({
     head,
-    runtimePid: ready.appReady.pid,
+    runtimePid: ready.windowVisible.pid,
     session,
     shellPid: child.pid,
     startedAt: new Date().toISOString(),
@@ -130,7 +129,7 @@ async function startClient({ print = true } = {}) {
     stdoutLog: logs.stdoutLog
   });
   if (print) {
-    console.log(`[windows-restart-client] status: STARTED shell_pid=${child.pid} runtime_pid=${ready.appReady.pid}`);
+    console.log(`[windows-restart-client] status: STARTED shell_pid=${child.pid} runtime_pid=${ready.windowVisible.pid}`);
   }
   return { alreadyRunning: false, ready, state: readClientState() };
 }
@@ -148,10 +147,22 @@ async function stopClient({ print = true } = {}) {
   }
 }
 
-async function restartClient(mode) {
+async function forceRestartClient(mode) {
+  console.log(`[windows-restart-client] controlled-stop action=${mode}`);
   await stopClient({ print: false });
   const started = await startClient({ print: false });
-  console.log(`[windows-restart-client] status: RESTARTED mode=${mode} shell_pid=${started.state.shellPid} runtime_pid=${started.ready.appReady.pid}`);
+  console.log(`[windows-restart-client] status: RESTARTED mode=${mode} shell_pid=${started.state.shellPid} runtime_pid=${started.ready.windowVisible.pid}`);
+}
+
+async function restartRuntimeClient() {
+  const existing = printStatus();
+  if (!existing.ok) {
+    const started = await startClient({ print: false });
+    console.log(`[windows-restart-client] status: STARTED shell_pid=${started.state.shellPid} runtime_pid=${started.ready.windowVisible.pid}`);
+    return;
+  }
+
+  await forceRestartClient('dev-shell-restart');
 }
 
 export function resolveWindowsClientAction(argv) {
@@ -172,8 +183,10 @@ async function main() {
     await startClient();
   } else if (action === 'stop') {
     await stopClient();
-  } else if (action === 'restart' || action === 'full-restart') {
-    await restartClient(action === 'restart' ? 'runtime-only' : 'full-shell-restart');
+  } else if (action === 'restart') {
+    await restartRuntimeClient();
+  } else if (action === 'full-restart') {
+    await forceRestartClient('full-shell-restart');
   }
 }
 

@@ -25,6 +25,57 @@ export { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/cor
 
 type DatabaseInitStageReporter = (stage: string, payload?: unknown) => void;
 
+function shouldSkipStartupIntegrityCheck() {
+  return process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK === '1';
+}
+
+function shouldSkipStartupWalEnable() {
+  return process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE === '1';
+}
+
+function shouldSkipStartupSchemaInit() {
+  return process.env.FOLIOLE_SKIP_STARTUP_SCHEMA_INIT === '1';
+}
+
+function verifyStartupDatabaseIntegrity(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter) {
+  if (shouldSkipStartupIntegrityCheck()) {
+    reportStage?.('database_integrity_check_skipped', {
+      reason: 'startup-integrity-check-disabled'
+    });
+    return;
+  }
+  reportStage?.('database_integrity_check_start');
+  verifyDatabaseIntegrity(connection.sqlite);
+  reportStage?.('database_integrity_check_complete');
+}
+
+function enableStartupWriteAheadLog(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter) {
+  if (shouldSkipStartupWalEnable()) {
+    reportStage?.('database_wal_enable_skipped', {
+      reason: 'startup-wal-enable-disabled'
+    });
+    return;
+  }
+  enableDatabaseWriteAheadLog(connection);
+}
+
+function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter) {
+  verifyStartupDatabaseIntegrity(connection, reportStage);
+  enableStartupWriteAheadLog(connection, reportStage);
+  if (shouldSkipStartupSchemaInit()) {
+    reportStage?.('database_schema_init_skipped', {
+      reason: 'startup-schema-init-disabled'
+    });
+    return connection;
+  }
+  reportStage?.('database_schema_init_start');
+  createPreMigrationSnapshotIfNeeded(connection);
+  const initializedConnection = initializeDatabaseConnection(connection);
+  reportStage?.('database_schema_init_complete');
+  seedInitialWorkspace(initializedConnection);
+  return initializedConnection;
+}
+
 export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
   const databasePath = resolveDatabasePath();
 
@@ -37,16 +88,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
       reportStage?.('database_open_connection_complete', {
         dbPath: connection.dbPath
       });
-      reportStage?.('database_integrity_check_start');
-      verifyDatabaseIntegrity(connection.sqlite);
-      reportStage?.('database_integrity_check_complete');
-      enableDatabaseWriteAheadLog(connection);
-      reportStage?.('database_schema_init_start');
-      createPreMigrationSnapshotIfNeeded(connection);
-      const initializedConnection = initializeDatabaseConnection(connection);
-      reportStage?.('database_schema_init_complete');
-      seedInitialWorkspace(initializedConnection);
-      return initializedConnection;
+      return initializeOpenedDatabase(connection, reportStage);
     } catch (error) {
       closeDatabaseConnection();
       throw error;

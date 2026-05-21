@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 
 import { processAlive } from './windows-client-native-state.mjs';
 
-const DEFAULT_TASKKILL_TIMEOUT_MS = 15000;
+const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 15000;
 
 export function runCapture(command, args, options = {}) {
   return new Promise((resolve) => {
@@ -56,18 +56,37 @@ export function runCapture(command, args, options = {}) {
   });
 }
 
+async function waitForProcessExit(pid, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!processAlive(pid)) {
+      return true;
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, 250);
+    });
+  }
+  return !processAlive(pid);
+}
+
 export async function killPid(pid, options = {}) {
   if (!processAlive(pid)) {
     return;
   }
   const timeoutMs = options.timeoutMs ?? Number.parseInt(
-    process.env.FOLIOLE_WINDOWS_TASKKILL_TIMEOUT_MS ?? String(DEFAULT_TASKKILL_TIMEOUT_MS),
+    process.env.FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS ?? String(DEFAULT_PROCESS_EXIT_TIMEOUT_MS),
     10
   );
-  const result = await runCapture('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { timeoutMs });
-  if (result.code !== 0 && processAlive(pid)) {
-    const errorDetail = result.error instanceof Error ? result.error.message : '';
-    const detail = `${result.stdout}${result.stderr}${errorDetail}`.split(/\r?\n/u).filter(Boolean).slice(-8).join(' ');
-    throw new Error(`taskkill failed pid=${pid}${detail ? ` ${detail}` : ''}`);
+  try {
+    process.kill(pid, 'SIGTERM');
+  } catch (error) {
+    if (!processAlive(pid)) {
+      return;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`process terminate failed pid=${pid} ${message}`);
+  }
+  if (!await waitForProcessExit(pid, timeoutMs)) {
+    throw new Error(`process terminate timed out pid=${pid}`);
   }
 }

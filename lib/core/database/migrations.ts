@@ -18,8 +18,11 @@ function createFreshSchema(sqlite: DatabaseMigrationTarget) {
 }
 
 export function initializeDatabaseSchema(sqlite: DatabaseMigrationTarget) {
+  const currentVersion = readUserVersion(sqlite);
+  if (currentVersion === DATABASE_SCHEMA_VERSION) {
+    return;
+  }
   const applyInTransaction = sqlite.transaction(() => {
-    const currentVersion = readUserVersion(sqlite);
     if (currentVersion === 0) {
       createFreshSchema(sqlite);
       return;

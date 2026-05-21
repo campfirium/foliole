@@ -21,6 +21,11 @@ function resolveRepoRoot() {
   return process.cwd();
 }
 
+function resolveBootSession() {
+  const sessionArg = process.argv.find((arg) => arg.startsWith('--foliole-boot-session='));
+  return sessionArg?.slice('--foliole-boot-session='.length) || process.env.FOLIOLE_BOOT_SESSION || null;
+}
+
 async function appendJsonLine(filePath: string, payload: unknown) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.appendFile(filePath, `${JSON.stringify(payload)}\n`, 'utf8');
@@ -36,7 +41,7 @@ function createBootEvent(stage: string, payload: unknown, source: BootEventSourc
     head: process.env.FOLIOLE_RUNTIME_HEAD ?? null,
     payload,
     pid: process.pid,
-    session: process.env.FOLIOLE_BOOT_SESSION ?? null,
+    session: resolveBootSession(),
     source,
     stage,
     timestamp: new Date().toISOString()

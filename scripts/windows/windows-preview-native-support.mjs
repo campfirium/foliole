@@ -48,10 +48,10 @@ export function selectNativePreviewAction({ changedFiles, currentHead, status })
       return { action: 'full-restart', reason: 'Class D: working tree shell/vite config changes detected' };
     }
     if (hasFile(changedFiles, isRuntimeFile)) {
-      return { action: 'restart-intent', reason: 'Class B: working tree runtime changes detected' };
+      return { action: 'full-restart', reason: 'Class B: working tree runtime changes detected' };
     }
     if (status.head && currentHead && status.head !== currentHead) {
-      return { action: 'restart-intent', reason: 'Class B: runtime behind current checkout head' };
+      return { action: 'full-restart', reason: 'Class B: runtime behind current checkout head' };
     }
     if (hasFile(changedFiles, isRendererSourceFile)) {
       return { action: 'renderer-reload-intent', reason: 'Class A: renderer source changes detected' };

@@ -18,6 +18,7 @@ const {
   showItemInFolder,
   showOpenDialog,
   syncAppMenuState,
+  requestDevShellRestart,
   flushAllDirtyNodeSyncVersions
 } = vi.hoisted(() => ({
   defaultReviewSchedulerSettings: {
@@ -67,6 +68,7 @@ const {
   showItemInFolder: vi.fn(),
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] }),
   syncAppMenuState: vi.fn(),
+  requestDevShellRestart: vi.fn(() => false),
   flushAllDirtyNodeSyncVersions: vi.fn(() => ['node-1'])
 }));
 
@@ -86,6 +88,7 @@ vi.mock('node:fs/promises', () => ({
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState }));
 vi.mock('../diagnostics/diagnosticBundle.js', () => ({ exportDiagnosticBundle }));
+vi.mock('../devShellRestartRequest.js', () => ({ requestDevShellRestart }));
 vi.mock('./paths.js', () => ({ resolveAppPaths: vi.fn().mockReturnValue({ app_cache_dir: '/cache', app_config_dir: '/config', app_data_dir: '/data', app_log_dir: '/log' }) }));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
@@ -107,6 +110,7 @@ vi.mock('./review.js', () => ({ reviewGrade: vi.fn().mockReturnValue({ card: {},
 
 beforeEach(() => {
   vi.clearAllMocks();
+  requestDevShellRestart.mockReturnValue(false);
   mockWindow.isMaximized.mockReturnValue(false);
 });
 
@@ -134,6 +138,16 @@ it('handles typed native utility commands', async () => {
   expect(openExternal).toHaveBeenCalledWith('https://example.com');
   expect(openPath).toHaveBeenCalledWith('/tmp/source.md');
   expect(syncAppMenuState).toHaveBeenCalledWith(['node.create'], []);
+});
+
+it('handles the dev app restart command through a shell restart request', async () => {
+  requestDevShellRestart.mockReturnValue(true);
+
+  await expect(handleInvokeRequest({ command: 'window_restart_dev_app' })).resolves.toBeNull();
+
+  expect(requestDevShellRestart).toHaveBeenCalledWith({ reason: 'in-app-dev-restart' });
+  expect(mockApp.relaunch).not.toHaveBeenCalled();
+  expect(mockApp.exit).toHaveBeenCalledWith(0);
 });
 
 it('handles window commands through invoke channel', async () => {
