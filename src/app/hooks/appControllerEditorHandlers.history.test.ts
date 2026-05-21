@@ -33,21 +33,20 @@ function createNodesById() {
   };
 }
 
-function createEditorOperationHistory() {
+function createEditorOperationHistory(mode: 'after-create' | 'after-undo' = 'after-create') {
+  const annotationEntry = {
+    annotations: [{ kind: 'highlight', nodeId: 'highlight-1', parentNodeId: 'node-1' }],
+    nodeId: 'node-1',
+    title: 'Create Annotation',
+    type: 'annotation.create'
+  };
   return {
-    redoStack: [],
-    undoStack: [
-      {
-        annotations: [{ kind: 'highlight', nodeId: 'highlight-1', parentNodeId: 'node-1' }],
-        nodeId: 'node-1',
-        title: 'Create Annotation',
-        type: 'annotation.create'
-      }
-    ]
+    redoStack: mode === 'after-undo' ? [annotationEntry] : [],
+    undoStack: mode === 'after-create' ? [annotationEntry] : []
   };
 }
 
-function createArgs() {
+function createArgs(mode?: 'after-create' | 'after-undo') {
   const pushEditorOperationEntry = vi.fn();
   const updateNodeContent = vi.fn();
   return {
@@ -57,7 +56,7 @@ function createArgs() {
       runtime: { isViewingTrashNode: false },
       ws: {
         activeNodeId: 'node-1',
-        editorOperationHistory: createEditorOperationHistory(),
+        editorOperationHistory: createEditorOperationHistory(mode),
         nodeOrder: ['node-1', 'highlight-1'],
         nodesById: createNodesById(),
         pushEditorOperationEntry,
@@ -71,6 +70,15 @@ function createArgs() {
 describe('app controller editor history handlers', () => {
   it('ignores the stale blank editor change that can arrive after creating an annotation', () => {
     const { args, pushEditorOperationEntry, updateNodeContent } = createArgs();
+
+    createEditorChangeHandler(args)('');
+
+    expect(pushEditorOperationEntry).not.toHaveBeenCalled();
+    expect(updateNodeContent).not.toHaveBeenCalled();
+  });
+
+  it('keeps annotation redo available when a stale blank editor change arrives after undoing it', () => {
+    const { args, pushEditorOperationEntry, updateNodeContent } = createArgs('after-undo');
 
     createEditorChangeHandler(args)('');
 

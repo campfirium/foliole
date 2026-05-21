@@ -11,12 +11,14 @@ export type SelectNodeHandler = (nodeId: string, focusAnchor?: NodeAnchorLink | 
 
 function isBlankTextEditAfterAnnotation(args: BuildControllerLayoutPropsArgs, nodeId: string, content: string) {
   const node = args.ws.nodesById[nodeId];
-  const topEntry = args.ws.editorOperationHistory.undoStack.at(-1);
+  const topEntries = [
+    args.ws.editorOperationHistory.undoStack.at(-1),
+    args.ws.editorOperationHistory.redoStack.at(-1)
+  ];
   return (
     content.length === 0 &&
     Boolean(node?.content) &&
-    topEntry?.type === 'annotation.create' &&
-    topEntry.nodeId === nodeId
+    topEntries.some((entry) => entry?.type === 'annotation.create' && entry.nodeId === nodeId)
   );
 }
 
