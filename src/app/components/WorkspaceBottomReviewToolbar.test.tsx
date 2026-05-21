@@ -51,7 +51,7 @@ it('keeps the review footer list summary when the left sidebar is expanded', () 
 
   expect(screen.queryByRole('button', { name: 'Change session mode' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Reading time (coming soon)')).not.toBeInTheDocument();
-  expect(screen.getByLabelText("Today's review: 2 left · 0 done · 2 total")).toBeInTheDocument();
+  expect(screen.getByLabelText('This session: 2 left · 0 done · 2 total')).toBeInTheDocument();
   expect(screen.getByLabelText('Review mode toolbar')).toHaveClass('col-start-3');
 });
 
@@ -60,12 +60,12 @@ it('recalculates the progress total when the active review queue is replanned', 
     <WorkspaceBottomReviewToolbar {...createProps({ reviewCompletedCount: 4, reviewQueueCount: 6 })} />
   );
 
-  expect(screen.getByLabelText("Today's review: 6 left · 4 done · 10 total")).toBeInTheDocument();
+  expect(screen.getByLabelText('This session: 6 left · 4 done · 10 total')).toBeInTheDocument();
 
   rerender(<WorkspaceBottomReviewToolbar {...createProps({ reviewCompletedCount: 4, reviewQueueCount: 3 })} />);
 
-  expect(screen.getByLabelText("Today's review: 3 left · 4 done · 7 total")).toBeInTheDocument();
-  expect(screen.queryByLabelText("Today's review: 3 left · 4 done · 10 total")).not.toBeInTheDocument();
+  expect(screen.getByLabelText('This session: 3 left · 4 done · 7 total')).toBeInTheDocument();
+  expect(screen.queryByLabelText('This session: 3 left · 4 done · 10 total')).not.toBeInTheDocument();
 });
 
 it('keeps the session mode controls hidden while waiting to reveal an answer', () => {
@@ -112,7 +112,7 @@ it('shows session mode choices and marks temporary mode in the real footer summa
   );
   expect(screen.getByRole('button', { name: 'Session mode: Review items first' })).toBeInTheDocument();
   expect(screen.queryByText('Review items first')).not.toBeInTheDocument();
-  expect(screen.getByLabelText("Today's review: 2 left · 0 done · 2 total")).toBeInTheDocument();
+  expect(screen.getByLabelText('Review session: 2 review items left · 0 done · 2 total')).toBeInTheDocument();
 });
 
 it('replaces review actions with resume when the current review item is not visible', () => {
@@ -123,7 +123,7 @@ it('replaces review actions with resume when the current review item is not visi
     />
   );
 
-  expect(screen.getByLabelText("Today's review: 2 left · 0 done · 2 total")).toBeInTheDocument();
+  expect(screen.getByLabelText('This session: 2 left · 0 done · 2 total')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
 
@@ -146,7 +146,7 @@ it('hides the footer progress line after review completion', () => {
   );
 
   expect(screen.queryByText('Review complete')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText("Today's review: 0 left · 2 done · 2 total")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('This session: 0 left · 2 done · 2 total')).not.toBeInTheDocument();
 
   screen.getByRole('button', { name: 'Continue reading' }).click();
   expect(onContinueReading).toHaveBeenCalledTimes(1);

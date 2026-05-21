@@ -68,6 +68,7 @@ function selectStudySessionCompleteSummaryProps(
     readTopicCount: props.review.reviewSummary.readTopicCount,
     reviewElapsedMs: props.review.reviewSummary.reviewElapsedMs,
     reviewedItemCount: props.review.reviewSummary.reviewedItemCount,
+    reviewSessionMode: props.review.reviewSessionMode,
     sessionStartedAt: props.review.reviewSummary.sessionStartedAt
   };
 }

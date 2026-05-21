@@ -1,3 +1,5 @@
+import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+
 export interface StudySessionCompleteSummaryProps {
   completedAt: string | null;
   createdItemCount: number;
@@ -6,6 +8,7 @@ export interface StudySessionCompleteSummaryProps {
   readTopicCount: number;
   reviewElapsedMs: number;
   reviewedItemCount: number;
+  reviewSessionMode: ReviewSessionMode;
   sessionStartedAt: string | null;
 }
 
@@ -51,18 +54,25 @@ function SummaryRow({
   );
 }
 
+function getCompletionTitle(mode: ReviewSessionMode) {
+  if (mode === 'review-first') return 'Review items complete';
+  if (mode === 'reading-only') return 'Reading session complete';
+  return 'Session complete';
+}
+
 export function StudySessionCompleteSummary({
   createdItemCount,
   createdTopicCount,
   readingElapsedMs,
   readTopicCount,
   reviewElapsedMs,
+  reviewSessionMode,
   reviewedItemCount
 }: StudySessionCompleteSummaryProps) {
   return (
     <div className="flex min-h-0 flex-1 items-start justify-center bg-canvas px-8 pt-[18vh] text-foreground">
       <div className="w-full max-w-[520px]">
-        <h1 className="text-[30px] font-medium leading-tight text-accent">Session complete</h1>
+        <h1 className="text-[30px] font-medium leading-tight text-accent">{getCompletionTitle(reviewSessionMode)}</h1>
         <div className="mt-8 space-y-3">
           {reviewedItemCount > 0 ? (
             <SummaryRow count={reviewedItemCount} elapsedMs={reviewElapsedMs} label="Reviewed" unit="item" />

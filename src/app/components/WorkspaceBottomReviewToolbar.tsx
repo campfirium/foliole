@@ -130,7 +130,11 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
       />
       <div className="pointer-events-none relative z-workspace-overlay col-start-3 row-start-1 h-full max-[1080px]:col-start-1">
         {props.reviewStatus === 'completed' || props.reviewStatus === 'idle' ? null : (
-          <ReviewToolbarProgressLine completedCount={props.reviewCompletedCount} queueCount={props.reviewQueueCount} />
+          <ReviewToolbarProgressLine
+            completedCount={props.reviewCompletedCount}
+            queueCount={props.reviewQueueCount}
+            reviewSessionMode={props.reviewSessionMode}
+          />
         )}
       </div>
       {props.isImmersiveMode ? null : (

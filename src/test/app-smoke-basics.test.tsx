@@ -49,7 +49,7 @@ function createDueReview() {
 }
 
 function expectReviewToolbarSummary(left: number, done: number, total: number) {
-  expect(screen.getAllByLabelText(`Today's review: ${left} left · ${done} done · ${total} total`).length).toBeGreaterThan(0);
+  expect(screen.getAllByLabelText(`This session: ${left} left · ${done} done · ${total} total`).length).toBeGreaterThan(0);
 }
 
 function getSelectedTreeItem(name: string) {
@@ -123,8 +123,8 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
 
   expect(screen.getByRole('button', { name: 'Study' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
-  await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-2', 'node-1']));
-  expectReviewToolbarSummary(2, 0, 2);
+  await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-2']));
+  expectReviewToolbarSummary(1, 0, 1);
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Again' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
@@ -163,12 +163,12 @@ it('enters review mode with the reading queue when no FSRS cards are due', async
 
   fireEvent.click(screen.getByRole('button', { name: 'Read' }));
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue reading' })).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Review complete' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
   await waitFor(() => {
-    expect(screen.queryByLabelText('Review mode toolbar')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
   });
 });
 
@@ -240,12 +240,12 @@ it('keeps review toolbar visible in completed state until user exits', async () 
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
 
   await waitFor(() => {
-    expect(screen.getByText('Review complete')).toBeInTheDocument();
+    expect(screen.getByText('Session complete')).toBeInTheDocument();
   });
-  expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Continue reading' })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Review complete' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
   await waitFor(() => {
-    expect(screen.queryByLabelText('Review mode toolbar')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
   });
 });
