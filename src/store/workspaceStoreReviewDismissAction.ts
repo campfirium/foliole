@@ -7,7 +7,7 @@ import {
   createTopicDismissHistoryEntry,
   pushWorkspaceUndoEntry
 } from './workspaceActionHistory';
-import { buildCurrentReviewSessionQueue } from './workspaceReviewLiveQueue';
+import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   advanceReviewSession,
   buildDismissedReadingProfile,
@@ -20,6 +20,31 @@ type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 type WorkspaceGet = () => WorkspaceState;
+
+function buildNextDismissReviewSession(args: {
+  currentNodeId: string;
+  nextNodesById: WorkspaceState['nodesById'];
+  now: string;
+  snapshot: WorkspaceState;
+  state: WorkspaceState;
+}) {
+  const nextQueue = buildCurrentReviewSessionQueueOutput(args.state, args.now, {
+    excludedNodeIds: [args.currentNodeId],
+    nodesById: args.nextNodesById,
+    releaseCurrentPin: true
+  });
+  const nextNodeId = nextQueue.currentNodeId;
+  const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
+  return {
+    nextNodeId,
+    nextReviewSession: nextNodeId
+      ? advanceReviewSession(args.snapshot.reviewSession, {
+          nextNodeId,
+          queueNodeIds: nextQueue.taskNodeIds
+        })
+      : completeReviewSession(args.snapshot.reviewSession, { completedAt: args.now, continueNodeId })
+  };
+}
 
 export function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet) {
   return (now = new Date().toISOString()) => {
@@ -47,16 +72,15 @@ export function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceG
       };
       nextNodeForSync = nextNode;
       const nextNodesById = { ...state.nodesById, [currentNodeId]: nextNode };
-      const nextQueue = buildCurrentReviewSessionQueue(state, now, { nodesById: nextNodesById });
-      const nextNodeId = nextQueue[0] ?? null;
-      const nextReviewSession = nextNodeId
-        ? advanceReviewSession(snapshot.reviewSession, {
-            nextNodeId,
-            queueNodeIds: nextQueue
-          })
-        : completeReviewSession(snapshot.reviewSession, { completedAt: now });
+      const { nextNodeId, nextReviewSession } = buildNextDismissReviewSession({
+        currentNodeId,
+        nextNodesById,
+        now,
+        snapshot,
+        state
+      });
       return {
-        activeNodeId: nextNodeId ?? state.activeNodeId,
+        activeNodeId: nextNodeId ?? nextReviewSession.continueNodeId ?? state.activeNodeId,
         appActionHistory: pushWorkspaceUndoEntry(
           state.appActionHistory,
           createTopicDismissHistoryEntry({

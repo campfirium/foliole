@@ -62,7 +62,7 @@ export function StudySessionCompleteSummary({
   return (
     <div className="flex min-h-0 flex-1 items-start justify-center bg-canvas px-8 pt-[18vh] text-foreground">
       <div className="w-full max-w-[520px]">
-        <h1 className="text-[30px] font-medium leading-tight text-accent">Queue cleared</h1>
+        <h1 className="text-[30px] font-medium leading-tight text-accent">Session complete</h1>
         <div className="mt-8 space-y-3">
           {reviewedItemCount > 0 ? (
             <SummaryRow count={reviewedItemCount} elapsedMs={reviewElapsedMs} label="Reviewed" unit="item" />

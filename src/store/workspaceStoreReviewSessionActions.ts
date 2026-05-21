@@ -1,6 +1,6 @@
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 
-import { buildCurrentReviewSessionQueue, buildLiveReviewQueue } from './workspaceReviewLiveQueue';
+import { buildCurrentReviewSessionQueue, buildLiveReviewQueue, buildLiveReviewQueueOutput } from './workspaceReviewLiveQueue';
 import {
   advanceReviewSession,
   createEmptyReviewSession,
@@ -37,7 +37,8 @@ export function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceStat
   return (now = new Date().toISOString()) => {
     let started = false;
     set((state) => {
-      const queueNodeIds = buildReviewQueue(state, now, state.reviewSessionMode);
+      const liveQueue = buildLiveReviewQueueOutput(state, now, { mode: state.reviewSessionMode });
+      const queueNodeIds = liveQueue.taskNodeIds;
       const isTaskQueue = queueNodeIds.length > 0;
       const fallbackQueueNodeIds = isTaskQueue ? queueNodeIds : buildReadingPushQueue(state, now);
       if (fallbackQueueNodeIds.length === 0) return state;
@@ -49,7 +50,7 @@ export function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceStat
           currentNodeId: fallbackQueueNodeIds[0] ?? null,
           queueNodeIds: fallbackQueueNodeIds,
           sessionStartedAt: now,
-          totalNodeCount: isTaskQueue ? queueNodeIds.length : 0
+          totalNodeCount: fallbackQueueNodeIds.length
         })
       };
     });

@@ -13,7 +13,10 @@ import {
 it('shows a completed checkpoint after the last review card before reading topics', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(
-    createWorkspaceFixture([createQaNode('qa-1', now), createReadingNode('reading-1', now)])
+    {
+      ...createWorkspaceFixture([createQaNode('qa-1', now), createReadingNode('reading-1', now)]),
+      reviewSessionMode: 'review-first'
+    }
   );
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
     grade: createSchedulerGradeMock(),
@@ -34,7 +37,7 @@ it('shows a completed checkpoint after the last review card before reading topic
     readTopicCount: 0,
     reviewedItemCount: 1,
     sessionStartedAt: now,
-    totalNodeCount: 2
+    totalNodeCount: 1
   });
   expect(harness.getState().activeNodeId).toBe('reading-1');
 });

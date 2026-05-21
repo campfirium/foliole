@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
-import { buildCachedReviewQueuePlan } from '../../store/reviewQueuePlannerCached';
+import { buildCurrentReviewSessionQueueOutput } from '../../store/workspaceReviewLiveQueue';
 import type { ReviewSessionState } from '../../store/workspaceStore';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -28,29 +28,7 @@ export function useResumeReviewItem(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   return useCallback(() => {
-    const sessionNodeIds = args.ws.reviewSession.currentNodeId
-      ? [
-          args.ws.reviewSession.currentNodeId,
-          ...args.ws.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== args.ws.reviewSession.currentNodeId)
-        ]
-      : args.ws.reviewSession.queueNodeIds;
-    const sessionPlan = buildCachedReviewQueuePlan({
-      nodeOrder: sessionNodeIds,
-      nodesById: args.ws.nodesById,
-      now: args.nowIso,
-      pushQueueRules: args.reviewSettings.reviewSchedulerSettings.pushQueue,
-      trashedNodeIds: args.ws.trashedNodeIds
-    });
-    const sessionQueueNodeIds = sessionPlan.queueNodeIds;
-    const queueNodeIds = sessionQueueNodeIds.length
-      ? sessionQueueNodeIds
-      : buildCachedReviewQueuePlan({
-          nodeOrder: args.ws.nodeOrder,
-          nodesById: args.ws.nodesById,
-          now: args.nowIso,
-          pushQueueRules: args.reviewSettings.reviewSchedulerSettings.pushQueue,
-          trashedNodeIds: args.ws.trashedNodeIds
-        }).queueNodeIds;
+    const queueNodeIds = buildCurrentReviewSessionQueueOutput(args.ws, args.nowIso).taskNodeIds;
     const nodeId = resolveResumeReviewNodeId({
       nodesById: args.ws.nodesById,
       queueNodeIds,

@@ -5,6 +5,7 @@ import type { UnifiedPushQueueRules } from '../../features/review/model/unifiedP
 import { definedProps } from '../../shared/lib/definedProps';
 import { buildCachedReviewQueuePlan } from '../../store/reviewQueuePlannerCached';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
+import { buildLiveReviewQueueOutput } from '../../store/workspaceReviewLiveQueue';
 import { isReviewSessionCompleted } from '../../store/workspaceReviewReading';
 import { resolveReviewSessionProgress } from '../../store/workspaceReviewSessionProgress';
 import type { WorkspaceState } from '../../store/workspaceStore';
@@ -128,14 +129,9 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     queueNodeIds: args.reviewSession.queueNodeIds,
     reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings
   });
-  const reviewPanelQueueNodeIds = buildCachedReviewQueuePlan({
-    includeScheduled: true,
-    nodeOrder: args.nodeOrder,
-    nodesById: args.nodesById,
-    now: args.nowIso,
-    pushQueueRules: args.reviewSettings.reviewSchedulerSettings.pushQueue,
-    trashedNodeIds: args.trashedNodeIds
-  }).queueNodeIds;
+  const reviewPanelQueueNodeIds = buildLiveReviewQueueOutput(args, args.nowIso, {
+    pinnedNodeId: args.reviewSession.currentNodeId
+  }).visibleNodeIds;
 
   const flatProps: WorkspaceLayoutFlatProps = {
     activeNodeId: args.activeNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,

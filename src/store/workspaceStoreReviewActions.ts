@@ -3,7 +3,7 @@ import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/revie
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
-import { buildCurrentReviewSessionQueue } from './workspaceReviewLiveQueue';
+import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 import { createCompleteReviewItemAction, createDeferReviewItemAction } from './workspaceStoreReadingReviewActions';
@@ -53,13 +53,13 @@ function skipStaleReviewCard(args: {
   set: WorkspaceSet;
   snapshot: WorkspaceState;
 }) {
-  const nextQueue = buildCurrentReviewSessionQueue(args.snapshot, args.now);
-  const nextNodeId = nextQueue[0] ?? null;
+  const nextQueue = buildCurrentReviewSessionQueueOutput(args.snapshot, args.now, { releaseCurrentPin: true });
+  const nextNodeId = nextQueue.currentNodeId;
   args.set({
     activeNodeId: nextNodeId ?? args.snapshot.activeNodeId,
     reviewSession: nextNodeId
-      ? advanceReviewSession(args.snapshot.reviewSession, { handledAt: args.now, nextNodeId, queueNodeIds: nextQueue })
-      : completeReviewSession(args.snapshot.reviewSession, { completedAt: args.now })
+      ? advanceReviewSession(args.snapshot.reviewSession, { handledAt: args.now, nextNodeId, queueNodeIds: nextQueue.taskNodeIds })
+      : completeReviewSession(args.snapshot.reviewSession, { completedAt: args.now, continueNodeId: nextQueue.extensionNodeIds[0] ?? null })
   });
 }
 
