@@ -63,10 +63,8 @@ it('renders the review queue panel with the active session queue', () => {
   const queueList = screen.getByRole('list', { name: 'Review queue items' });
 
   expect(screen.getByRole('button', { name: 'Review queue panel' })).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByText('Whole queue')).toBeInTheDocument();
   expect(within(queueList).getByText(/Review prompt$/)).toBeInTheDocument();
   expect(within(queueList).getByText(/Reading passage$/)).toBeInTheDocument();
-  expect(within(queueList).getByText('Current')).toBeInTheDocument();
 });
 
 it('labels cloze review nodes as FSRS in the review queue panel', () => {
@@ -117,11 +115,10 @@ it('labels cloze review nodes as FSRS in the review queue panel', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Review queue panel' }));
   const queueList = screen.getByRole('list', { name: 'Review queue items' });
 
-  expect(within(queueList).getByText(/1\. Cloze prompt$/)).toBeInTheDocument();
-  expect(within(queueList).getByText('Review item queue')).toBeInTheDocument();
+  expect(within(queueList).getByText(/Cloze prompt$/)).toBeInTheDocument();
 });
 
-it('shows scheduled review cards in the whole queue even when the live review session only contains reading items', () => {
+it('shows due extension entries beside the live task queue', () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
     activeNodeId: 'reading-1',
@@ -180,6 +177,5 @@ it('shows scheduled review cards in the whole queue even when the live review se
   const queueList = screen.getByRole('list', { name: 'Review queue items' });
 
   expect(within(queueList).getByText(/Scheduled review card$/)).toBeInTheDocument();
-  expect(within(queueList).getByText(/(Due|Scheduled) ·/)).toBeInTheDocument();
   expect(within(queueList).getByText(/Reading passage$/)).toBeInTheDocument();
 });

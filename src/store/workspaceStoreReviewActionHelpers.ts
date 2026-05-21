@@ -1,4 +1,3 @@
-import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade } from '../features/review/model/reviewTypes';
 
 import {
@@ -6,7 +5,7 @@ import {
   pushWorkspaceUndoEntry,
   type WorkspaceTopicReadingActionTitle
 } from './workspaceActionHistory';
-import { buildCurrentReviewSessionQueue } from './workspaceReviewLiveQueue';
+import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { advanceReviewSession, completeReviewSession } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
@@ -15,13 +14,6 @@ import type { WorkspaceState } from './workspaceStore';
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
-
-function hasRemainingReviewCards(
-  queueNodeIds: string[],
-  nodesById: WorkspaceState['nodesById']
-) {
-  return queueNodeIds.some((nodeId) => isFsrsReviewItemNode(nodesById[nodeId]));
-}
 
 export async function persistReviewGradeMutation(args: {
   currentNodeId: string;
@@ -58,25 +50,30 @@ export function applyGradedReviewState(args: {
         updatedAt: args.now
       }
     };
-    const nextQueue = buildCurrentReviewSessionQueue(state, args.now, { nodesById: nextNodesById });
-    const nextNodeId = nextQueue[0] ?? null;
-    const reviewElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
-    return {
-      activeNodeId: nextNodeId ?? state.activeNodeId,
+    const nextQueue = buildCurrentReviewSessionQueueOutput(state, args.now, {
       nodesById: nextNodesById,
-      reviewSession: nextNodeId && hasRemainingReviewCards(nextQueue, nextNodesById)
+      releaseCurrentPin: true
+    });
+    const nextNodeId = nextQueue.currentNodeId;
+    const reviewElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
+    const reviewedItemDelta = nextQueue.taskNodeIds.includes(args.currentNodeId) ? 0 : 1;
+    const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
+    return {
+      activeNodeId: nextNodeId ?? continueNodeId ?? state.activeNodeId,
+      nodesById: nextNodesById,
+      reviewSession: nextNodeId
         ? advanceReviewSession(args.snapshot.reviewSession, {
             handledAt: args.now,
             nextNodeId,
-            queueNodeIds: nextQueue,
+            queueNodeIds: nextQueue.taskNodeIds,
             reviewElapsedMsDelta,
-            reviewedItemDelta: 1
+            reviewedItemDelta
           })
         : completeReviewSession(args.snapshot.reviewSession, {
             completedAt: args.now,
-            continueNodeId: nextNodeId,
+            continueNodeId,
             reviewElapsedMsDelta,
-            reviewedItemDelta: 1
+            reviewedItemDelta
           })
     };
   });

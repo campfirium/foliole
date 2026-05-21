@@ -215,7 +215,6 @@ it('starts a session from the planner-backed FSRS/reading mixed queue order', ()
     'fsrs-5',
     'fsrs-6',
     'reading-early-nextAt',
-    'fsrs-high-r',
-    'reading-late-nextAt'
+    'fsrs-high-r'
   ]);
 });

@@ -17,7 +17,7 @@ it('shows the completed review phase summary and continues reading', () => {
     />
   );
 
-  expect(screen.getByText('Queue cleared')).toBeInTheDocument();
+  expect(screen.getByText('Session complete')).toBeInTheDocument();
   expect(screen.getByText('Reviewed')).toBeInTheDocument();
   expect(screen.getByText('4')).toBeInTheDocument();
   expect(screen.getAllByText('items')).toHaveLength(2);

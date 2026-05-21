@@ -3,7 +3,7 @@ import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind
 import { advanceReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
-import { buildCurrentReviewSessionQueue } from './workspaceReviewLiveQueue';
+import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   advanceReviewSession,
   buildNextReadingProfile,
@@ -57,13 +57,18 @@ export function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet
       const nextNode: Node = { ...node, reading: nextReadingProfile, updatedAt: now };
       nextNodeForSync = nextNode;
       const nextNodesById = { ...state.nodesById, [currentNodeId]: nextNode };
-      const nextQueue = buildCurrentReviewSessionQueue(state, now, { nodesById: nextNodesById });
-      const nextNodeId = nextQueue[0] ?? null;
+      const nextQueue = buildCurrentReviewSessionQueueOutput(state, now, {
+        excludedNodeIds: [currentNodeId],
+        nodesById: nextNodesById,
+        releaseCurrentPin: true
+      });
+      const nextNodeId = nextQueue.currentNodeId;
+      const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
       const reviewSession = nextNodeId
-        ? advanceReviewSession(snapshot.reviewSession, { handledAt: now, nextNodeId, queueNodeIds: nextQueue })
-        : completeReviewSession(snapshot.reviewSession, { completedAt: now });
+        ? advanceReviewSession(snapshot.reviewSession, { handledAt: now, nextNodeId, queueNodeIds: nextQueue.taskNodeIds })
+        : completeReviewSession(snapshot.reviewSession, { completedAt: now, continueNodeId });
       return {
-        activeNodeId: nextNodeId ?? state.activeNodeId,
+        activeNodeId: nextNodeId ?? continueNodeId ?? state.activeNodeId,
         ...createReadingReviewHistoryPatch({
           afterReading: nextReadingProfile,
           afterReviewSession: reviewSession,
@@ -99,13 +104,18 @@ export function createCompleteReviewItemAction(set: WorkspaceSet, get: Workspace
       const nextNode: Node = { ...node, reading: nextReadingProfile, updatedAt: now };
       nextNodeForSync = nextNode;
       const nextNodesById = { ...state.nodesById, [currentNodeId]: nextNode };
-      const nextQueue = buildCurrentReviewSessionQueue(state, now, { nodesById: nextNodesById });
-      const nextNodeId = nextQueue[0] ?? null;
+      const nextQueue = buildCurrentReviewSessionQueueOutput(state, now, {
+        excludedNodeIds: [currentNodeId],
+        nodesById: nextNodesById,
+        releaseCurrentPin: true
+      });
+      const nextNodeId = nextQueue.currentNodeId;
+      const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
       const reviewSession = nextNodeId
-        ? advanceReviewSession(snapshot.reviewSession, { handledAt: now, nextNodeId, queueNodeIds: nextQueue, readingElapsedMsDelta, readTopicDelta: 1 })
-        : completeReviewSession(snapshot.reviewSession, { completedAt: now, readingElapsedMsDelta, readTopicDelta: 1 });
+        ? advanceReviewSession(snapshot.reviewSession, { handledAt: now, nextNodeId, queueNodeIds: nextQueue.taskNodeIds, readingElapsedMsDelta, readTopicDelta: 1 })
+        : completeReviewSession(snapshot.reviewSession, { completedAt: now, continueNodeId, readingElapsedMsDelta, readTopicDelta: 1 });
       return {
-        activeNodeId: nextNodeId ?? state.activeNodeId,
+        activeNodeId: nextNodeId ?? continueNodeId ?? state.activeNodeId,
         ...createReadingReviewHistoryPatch({
           afterReading: nextReadingProfile,
           afterReviewSession: reviewSession,

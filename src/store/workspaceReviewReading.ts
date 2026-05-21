@@ -7,8 +7,8 @@ import {
 import type { ReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
 
-import type { WorkspaceState } from './workspaceStore';
 import { applyReviewSessionProgress } from './workspaceReviewSessionProgress';
+import type { WorkspaceState } from './workspaceStore';
 
 interface PriorityChainNode {
   id: string;
@@ -84,7 +84,7 @@ export function completeReviewSession(
   return applyReviewSessionProgress({
     ...reviewSession,
     completedAt: args.completedAt,
-    continueNodeId: args.continueNodeId ?? reviewSession.continueNodeId,
+    continueNodeId: args.continueNodeId ?? reviewSession.continueNodeId ?? null,
     currentNodeId: null,
     isAnswerRevealed: false,
     queueNodeIds: []
