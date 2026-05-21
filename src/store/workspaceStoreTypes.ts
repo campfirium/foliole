@@ -1,4 +1,8 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
+import type {
+  EditorOperationHistoryEntry,
+  EditorOperationHistoryState
+} from '../features/editor/model/editorOperationHistory';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../features/nodes/model/nodeTypes';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
@@ -10,6 +14,7 @@ import type { NodeNavigationResult, WorkspaceNavigationState } from './workspace
 export interface WorkspaceState {
   activeNodeId: string | null;
   appActionHistory: WorkspaceActionHistoryState;
+  editorOperationHistory: EditorOperationHistoryState;
   isHydrated: boolean;
   workspaceHydrationError: string | null;
   layout: WorkspaceLayoutState;
@@ -47,6 +52,10 @@ export interface WorkspaceState {
   dismissNode: (nodeId: string, now?: string) => boolean;
   undoWorkspaceAction: (now?: string) => boolean;
   redoWorkspaceAction: (now?: string) => boolean;
+  pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
+  deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
+  undoEditorOperation: () => boolean;
+  redoEditorOperation: () => boolean;
   relearnNode: (nodeId: string, now?: string) => boolean;
   startReviewSession: (now?: string) => boolean;
   resumeReviewSession: (now?: string) => boolean;

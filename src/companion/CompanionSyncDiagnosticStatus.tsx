@@ -1,4 +1,4 @@
-import { AppErrorState, AppLoadingState } from '../shared/ui';
+import { AppEmptyState, AppErrorState } from '../shared/ui';
 
 export function CompanionSyncDiagnosticStatus(props: {
   error: string | null;
@@ -15,7 +15,7 @@ export function CompanionSyncDiagnosticStatus(props: {
   }
   if (props.status === 'running') {
     return (
-      <AppLoadingState
+      <AppEmptyState
         className="min-h-0 items-start text-left text-companion-text-secondary"
         description="Collecting sync state from this device and desktop."
         title="Running sync diagnostic"
@@ -24,7 +24,7 @@ export function CompanionSyncDiagnosticStatus(props: {
   }
   if (props.status === 'checking') {
     return (
-      <AppLoadingState
+      <AppEmptyState
         className="min-h-0 items-start text-left text-companion-text-secondary"
         description="Checking whether this device and desktop have converged."
         title="Running convergence check"

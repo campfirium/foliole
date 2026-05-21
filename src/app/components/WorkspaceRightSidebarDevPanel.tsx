@@ -10,6 +10,8 @@ import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { InspectorSection } from '../../shared/ui';
 
+import { WorkspaceRightSidebarHistoryDevSection } from './WorkspaceRightSidebarHistoryDevSection';
+
 interface WorkspaceRightSidebarDevPanelProps {
   activeNodeId: string | null;
   nodesById: Record<string, Node>;
@@ -195,6 +197,7 @@ function DevPanelContent({ data }: { data: DevPanelResolvedData }) {
       </InspectorSection>
 
       <ReadingProfileSection reading={node.reading} />
+      <WorkspaceRightSidebarHistoryDevSection activeNodeId={node.id} />
 
       <InspectorSection contentClassName="grid grid-cols-[minmax(88px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]" title="Topic">
         <dl className="contents">

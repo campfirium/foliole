@@ -8,6 +8,7 @@ export function useWorkspaceSelectors() {
     useShallow((state) => ({
       activeNodeId: state.activeNodeId,
       appActionHistory: state.appActionHistory,
+      editorOperationHistory: state.editorOperationHistory,
       isHydrated: state.isHydrated,
       createChildNode: state.createChildNode,
       createVirtualNode: state.createVirtualNode,
@@ -16,6 +17,7 @@ export function useWorkspaceSelectors() {
       createQANodeFromSelection: state.createQANodeFromSelection,
       createRootNode: state.createRootNode,
       deleteNode: state.deleteNode,
+      deleteEditorAnnotationNodes: state.deleteEditorAnnotationNodes,
       deleteNodePermanently: state.deleteNodePermanently,
       deleteImageClozeRegion: state.deleteImageClozeRegion,
       dismissReviewItem: state.dismissReviewItem,
@@ -34,6 +36,7 @@ export function useWorkspaceSelectors() {
       nodeViewById: state.nodeViewById,
       openNode: state.openNode,
       redoWorkspaceAction: state.redoWorkspaceAction,
+      redoEditorOperation: state.redoEditorOperation,
       revealReviewAnswer: state.revealReviewAnswer,
       resumeReviewSession: state.resumeReviewSession,
       reviewSession: state.reviewSession,
@@ -43,6 +46,7 @@ export function useWorkspaceSelectors() {
       startReviewSession: state.startReviewSession,
       trashedNodeIds: state.trashedNodeIds,
       updateNodeContent: state.updateNodeContent,
+      pushEditorOperationEntry: state.pushEditorOperationEntry,
       updateHighlightAnchorRange: state.updateHighlightAnchorRange ?? (() => false),
       updateVirtualNodeFilter: state.updateVirtualNodeFilter,
       updateNodeDesiredRetention: state.updateNodeDesiredRetention,
@@ -50,6 +54,7 @@ export function useWorkspaceSelectors() {
       updateNodeShortTerm: state.updateNodeShortTerm,
       updateNodeReveal: state.updateNodeReveal,
       undoWorkspaceAction: state.undoWorkspaceAction,
+      undoEditorOperation: state.undoEditorOperation,
       exitReviewSession: state.exitReviewSession
     }))
   );

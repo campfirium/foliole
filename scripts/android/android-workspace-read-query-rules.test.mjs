@@ -51,7 +51,7 @@ describe('Android workspace read query rules', () => {
         expect.objectContaining({ outputKey: 'bodyBlobHash', rowKey: 'body_blob_hash' })
       ])
     );
-    expect(definitions.workspaceRead.snapshot.readingPayload.validStates).toEqual(['active', 'done', 'dismissed']);
+    expect(definitions.workspaceRead.snapshot.readingPayload.validStates).toEqual(['active', 'done', 'dismissed', 'locked']);
     expect(definitions.workspaceRead.snapshot.reviewPayload.fields).toEqual(
       expect.arrayContaining([expect.objectContaining({ outputKey: 'lastReviewAt', rowKey: 'last_review_at' })])
     );

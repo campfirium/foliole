@@ -8,9 +8,9 @@ const bridgeMock = vi.hoisted(() => ({
   forgetRemoteImageLearnedSource: vi.fn(async () => true),
   loadRemoteImageSourceContext: vi.fn(async () => ({
     imageHost: 'example.com',
-    learnedSourceOrigin: null,
-    source: 'none',
-    sourceOrigin: null
+    learnedSourceOrigin: null as string | null,
+    source: 'none' as 'learned' | 'node' | 'none',
+    sourceOrigin: null as string | null
   })),
   saveRemoteImageSourceWebsite: vi.fn(async () => true)
 }));
@@ -55,9 +55,9 @@ beforeEach(() => {
   bridgeMock.forgetRemoteImageLearnedSource.mockReset().mockResolvedValue(true);
   bridgeMock.loadRemoteImageSourceContext.mockReset().mockResolvedValue({
     imageHost: 'example.com',
-    learnedSourceOrigin: null,
-    source: 'none',
-    sourceOrigin: null
+    learnedSourceOrigin: null as string | null,
+    source: 'none' as 'learned' | 'node' | 'none',
+    sourceOrigin: null as string | null
   });
   bridgeMock.saveRemoteImageSourceWebsite.mockReset().mockResolvedValue(true);
   resetRemoteImageFailureHintDismissalForTests();

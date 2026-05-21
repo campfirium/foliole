@@ -1,3 +1,5 @@
+import { isReadingState, type ReadingState } from '../../lib/core/review/readingState.js';
+
 import { asAnchorLink } from './commandParserAnchorLink.js';
 import { asImageRegions } from './commandParserImageRegions.js';
 import {
@@ -19,11 +21,11 @@ interface ReadingProfilePayload {
   priority: number;
   readingPosition: number;
   repetitionCount: number;
-  state: 'active' | 'done' | 'dismissed';
+  state: ReadingState;
 }
 
 function asReadingState(value: unknown, field: string): ReadingProfilePayload['state'] {
-  if (value === 'active' || value === 'done' || value === 'dismissed') {
+  if (isReadingState(value)) {
     return value;
   }
   throw new Error(`invalid argument: ${field}`);
@@ -59,6 +61,9 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     enableShortTerm: args.enableShortTerm === undefined || args.enableShortTerm === null
       ? null
       : asBoolean(args.enableShortTerm, 'enableShortTerm'),
+    sequentialReadingEnabled: args.sequentialReadingEnabled === undefined || args.sequentialReadingEnabled === null
+      ? null
+      : asBoolean(args.sequentialReadingEnabled, 'sequentialReadingEnabled'),
     title: asString(args.title, 'title'),
     isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
     hideTitleHeading: args.hideTitleHeading === undefined ? false : asBoolean(args.hideTitleHeading, 'hideTitleHeading'),

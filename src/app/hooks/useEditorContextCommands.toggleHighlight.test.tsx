@@ -13,9 +13,9 @@ function createEditorAdapter(content: string, from: number, to: number) {
   };
 }
 
-it('hard deletes a locator-only highlight without rewriting parent content', () => {
+it('soft deletes a locator-only highlight without rewriting parent content', () => {
   const content = 'Alpha\n\nBeta';
-  const deleteNodePermanently = vi.fn();
+  const deleteEditorAnnotationNodes = vi.fn();
   const createHighlightNodeFromSelection = vi.fn(() => 'highlight-2');
   const updateNodeContent = vi.fn();
   const adapter = createEditorAdapter(content, 0, 'Alpha'.length);
@@ -27,9 +27,10 @@ it('hard deletes a locator-only highlight without rewriting parent content', () 
       createChildNode: vi.fn(() => 'child-note'),
       createHighlightNodeFromSelection,
       createQANodeFromSelection: vi.fn(() => 'qa-1'),
-      deleteNodePermanently,
+      deleteEditorAnnotationNodes,
       deleteImageClozeRegion: vi.fn(),
       editorRef: { current: adapter } as never,
+      flushPendingEditorDraft: vi.fn(() => false),
       isTrashViewOpen: false,
       trashedNodeIds: [],
       nodesById: {
@@ -66,7 +67,7 @@ it('hard deletes a locator-only highlight without rewriting parent content', () 
     });
   });
 
-  expect(deleteNodePermanently).toHaveBeenCalledWith('highlight-1');
+  expect(deleteEditorAnnotationNodes).toHaveBeenCalledWith(['highlight-1']);
   expect(createHighlightNodeFromSelection).not.toHaveBeenCalled();
   expect(adapter.replaceRange).not.toHaveBeenCalled();
   expect(updateNodeContent).not.toHaveBeenCalled();

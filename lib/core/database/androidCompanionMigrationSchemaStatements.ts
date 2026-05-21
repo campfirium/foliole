@@ -1,5 +1,6 @@
 export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
   nodesEnableShortTermColumn: 'ALTER TABLE nodes ADD COLUMN enable_short_term INTEGER',
+  nodesSequentialReadingEnabledColumn: 'ALTER TABLE nodes ADD COLUMN sequential_reading_enabled INTEGER',
   nodeViewStateSourceColumn: "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",
   syncObjectStateDropLegacyTable: 'DROP TABLE sync_object_state',
   syncObjectStateBaseContentHashColumn: 'ALTER TABLE sync_object_state ADD COLUMN base_content_hash TEXT',
@@ -25,6 +26,7 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
 
 export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   addNodesEnableShortTermIfMissing: 'addNodesEnableShortTermIfMissing',
+  addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
   addNodeViewStateSourceIfMissing: 'addNodeViewStateSourceIfMissing',
   addSyncBaseContentHashIfMissing: 'addSyncBaseContentHashIfMissing',
   backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
@@ -123,6 +125,13 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
       { type: 'addNodesEnableShortTermIfMissing' }
     ],
     beforeVersion: 16
+  },
+  {
+    actions: [
+      { errorMessage: 'Failed to upgrade companion sequential reading schema.', type: 'installSchema' },
+      { type: 'addNodesSequentialReadingEnabledIfMissing' }
+    ],
+    beforeVersion: 17
   }
 ] as const;
 
@@ -131,6 +140,12 @@ export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {
     columnName: 'enable_short_term',
     errorMessage: 'Failed to add node short-term scheduling column.',
     statementName: 'nodesEnableShortTermColumn',
+    tableName: 'nodes'
+  },
+  nodesSequentialReadingEnabled: {
+    columnName: 'sequential_reading_enabled',
+    errorMessage: 'Failed to add node sequential reading column.',
+    statementName: 'nodesSequentialReadingEnabledColumn',
     tableName: 'nodes'
   },
   nodeViewStateSource: {

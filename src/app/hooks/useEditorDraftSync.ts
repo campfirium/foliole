@@ -240,5 +240,5 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     };
   }, [flushDraft, flushDraftImmediately, onRegisterFlush]);
 
-  return { editorContent, handleEditorChange };
+  return { editorContent, flushDraft, handleEditorChange };
 }

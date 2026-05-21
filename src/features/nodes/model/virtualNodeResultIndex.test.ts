@@ -20,7 +20,7 @@ const baseNode: Node = {
   updatedAt: '2026-03-06T00:00:00.000Z'
 };
 
-function createSharedIndexNodes(countedContent: (value: string) => string) {
+function createSharedIndexNodes(countedContent: (value: string) => string): Record<string, Node> {
   return {
     'special-virtual-root': {
       ...baseNode,

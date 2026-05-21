@@ -11,6 +11,7 @@ interface PdfReferenceNodeRow extends DatabaseRow {
   created_at: string;
   deleted_at: string | null;
   desired_retention: number | null;
+  enable_short_term: number | null;
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
@@ -20,6 +21,7 @@ interface PdfReferenceNodeRow extends DatabaseRow {
   position: number | null;
   priority: number | null;
   reveal: string | null;
+  sequential_reading_enabled: number | null;
   title: string;
   virtual_filter: string | null;
 }
@@ -41,7 +43,8 @@ function buildPdfBodyContent(title: string, pages: PdfPageTextInput[]) {
 function listPdfReferenceNodes(attachmentId: string) {
   return openDatabaseConnection().driver.queryAll<PdfReferenceNodeRow>(
     `SELECT
-       n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.title, n.is_title_manual,
+       n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term,
+       n.sequential_reading_enabled, n.title, n.is_title_manual,
        n.hide_title_heading, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.position,
        n.created_at, n.deleted_at
      FROM nodes n
@@ -75,7 +78,8 @@ function upsertNodePackState(node: PdfReferenceNodeRow, bodyContent: string, ope
     createdAt: node.created_at,
     deletedAt: node.deleted_at,
     desiredRetention: node.desired_retention,
-    enableShortTerm: null,
+    enableShortTerm: node.enable_short_term === null ? null : node.enable_short_term === 1,
+    sequentialReadingEnabled: node.sequential_reading_enabled === null ? null : node.sequential_reading_enabled === 1,
     hideTitleHeading: node.hide_title_heading === 1,
     id: node.id,
     imageRegions: node.image_regions,

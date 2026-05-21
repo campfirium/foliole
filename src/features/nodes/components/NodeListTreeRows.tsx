@@ -32,7 +32,7 @@ interface NodeListRowsProps {
   onRename: (nodeId: string, title: string) => void;
   onToggleCollapse: (nodeId: string) => void;
   reviewSession: ReviewSessionState;
-  rowCountByNodeId?: ReadonlyMap<string, number>;
+  rowCountByNodeId?: ReadonlyMap<string, number> | undefined;
   rowSpacing: number;
   rows: NodeTreeRow[];
   scrollContainerRef: RefObject<HTMLDivElement | null>;
@@ -78,14 +78,14 @@ function renderNodeListRow(
       nodeIconState={rowModel.nodeIconState}
       showIcon={false}
       rowSpacing={props.rowSpacing}
-      {...(props.onContextMenu ? { onContextMenu: props.onContextMenu } : {})}
-      {...(props.drag.onDragEnd ? { onDragEnd: props.drag.onDragEnd } : {})}
-      {...(props.drag.onDragEnterNode ? { onDragEnter: props.drag.onDragEnterNode } : {})}
-      {...(props.drag.onDragOverNode ? { onDragOver } : {})}
-      {...(props.drag.onDragStartNode ? { onDragStart: props.drag.onDragStartNode } : {})}
-      {...(props.drag.onDropOnNode ? { onDrop: props.drag.onDropOnNode } : {})}
+      onContextMenu={props.onContextMenu}
+      onDragEnd={props.drag.onDragEnd}
+      onDragEnter={props.drag.onDragEnterNode}
+      onDragOver={onDragOver}
+      onDragStart={props.drag.onDragStartNode}
+      onDrop={props.drag.onDropOnNode}
       onKeyDown={onRowKeyDown}
-      {...(!rowModel.isInbox && !rowModel.isTrashRoot && !rowModel.isVirtualRoot && props.onRename ? { onRename: props.onRename } : {})}
+      {...(!rowModel.isInbox && !rowModel.isTrashRoot && !rowModel.isVirtualRoot ? { onRename: props.onRename } : {})}
       onSelect={onSelect}
       onToggleCollapse={props.onToggleCollapse}
     />

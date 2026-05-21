@@ -16,6 +16,15 @@ function run(command, args, options = {}) {
   });
 }
 
+function createElectronArgs(entryPath) {
+  const args = ['electron'];
+  if (process.env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION === '1') {
+    args.push('--disable-gpu', '--disable-gpu-compositing', '--disable-gpu-sandbox');
+  }
+  args.push(entryPath);
+  return args;
+}
+
 function wait(ms) {
   return new Promise((resolve) => {
     globalThis.setTimeout(resolve, ms);
@@ -91,7 +100,7 @@ await new Promise((resolve, reject) => {
 const viteState = await startViteWithPortFallback();
 const vite = viteState.viteProc;
 
-const electron = run('npx', ['electron', 'electron-dist/electron/main.js'], {
+const electron = run('npx', createElectronArgs('electron-dist/electron/main.js'), {
   env: createElectronLaunchEnv(process.env, viteState.viteUrl)
 });
 

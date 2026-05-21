@@ -25,6 +25,9 @@ export function collectReadwiseOriginalFilePlaceholderRangesFromLines(
   const ranges: ReadwiseOriginalFilePlaceholderRange[] = [];
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
+    if (!line) {
+      continue;
+    }
     const omittedMatch = OMITTED_RE.exec(line.text);
     if (!omittedMatch) {
       continue;
@@ -51,11 +54,14 @@ function buildPlaceholderRange(
   from: number,
   kind: string
 ): ReadwiseOriginalFilePlaceholderRange {
-  const to = from + lines[index].text.length;
+  const to = from + (lines[index]?.text.length ?? 0);
   let sourceLabel = 'Readwise original file';
   const hiddenRanges: Array<{ from: number; to: number }> = [];
   for (let cursor = index + 1; cursor < lines.length && cursor <= index + 3; cursor += 1) {
     const line = lines[cursor];
+    if (!line) {
+      continue;
+    }
     const downloadUrl = DOWNLOAD_RE.exec(line.text)?.[1] ?? RAW_CONTENT_RE.exec(line.text)?.[1] ?? null;
     if (downloadUrl) {
       sourceLabel = formatSourceLabel(downloadUrl);

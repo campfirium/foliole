@@ -1,31 +1,10 @@
-import type { MutableRefObject } from 'react';
-
 import { formatHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import type { NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
 import { createSelectionAnnotationAnchorLink } from '../../shared/selectionAnnotationActions';
 import type { SelectionCommandPayload } from '../contextCommands';
 
 import { resolveLongClozeGuardAction, type LongClozeGuardOptions } from './editorClozeGuardrail';
-
-export function runSelectionCommandFromPayload(args: {
-  closeContextMenu?: () => void;
-  editorRef: MutableRefObject<EditorAdapter | null>;
-  keepOpen?: boolean;
-  onApplied: (payload: SelectionCommandPayload) => string | null;
-  payload: SelectionCommandPayload;
-}) {
-  if (!args.editorRef.current || args.payload.entries.length === 0) {
-    args.closeContextMenu?.();
-    return null;
-  }
-  const createdNodeId = args.onApplied(args.payload);
-  if (!args.keepOpen) {
-    args.closeContextMenu?.();
-  }
-  return createdNodeId;
-}
 
 function createHighlightFactory(
   createHighlightNodeFromSelection: (
@@ -82,8 +61,10 @@ function createClozeHandlers(args: {
     anchorId: string,
     anchorLink?: NodeAnchorLink
   ) => string | null;
+  flushPendingEditorDraft: () => boolean;
   runSelectionCommand: (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => void;
   runSelectionCommandFromPayloadHandler: (args: {
+    flushPendingEditorDraft: () => boolean;
     keepOpen?: boolean;
     onApplied: (payload: SelectionCommandPayload) => string | null;
     payload: SelectionCommandPayload;
@@ -99,8 +80,9 @@ function createClozeHandlers(args: {
     );
     return null;
   };
-  const applyClozeGuardrail = (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => {
+  const applyClozeGuardrail = (payload: SelectionCommandPayload, options?: LongClozeGuardOptions, flushDraft = false) => {
     if (options?.skipGuard) {
+      if (flushDraft) args.flushPendingEditorDraft();
       return createClozeFromPayload(payload);
     }
     const action = resolveLongClozeGuardAction(payload);
@@ -108,18 +90,23 @@ function createClozeHandlers(args: {
       options?.onRemind?.();
       return null;
     }
-    return action === 'highlight' ? args.createHighlightFromPayload(payload) : createClozeFromPayload(payload);
+    if (action === 'highlight') {
+      return args.createHighlightFromPayload(payload);
+    }
+    if (flushDraft) args.flushPendingEditorDraft();
+    return createClozeFromPayload(payload);
   };
 
   return {
     handleCreateCloze(options?: LongClozeGuardOptions) {
       args.runSelectionCommand((payload) => {
-        applyClozeGuardrail(payload, options);
+        applyClozeGuardrail(payload, options, true);
       }, 'cloze');
     },
     handleCreateClozeFromPayload(payload: SelectionCommandPayload, options?: LongClozeGuardOptions) {
       return args.runSelectionCommandFromPayloadHandler({
         keepOpen: Boolean(options?.onRemind),
+        flushPendingEditorDraft: args.flushPendingEditorDraft,
         onApplied: (appliedPayload) => applyClozeGuardrail(appliedPayload, options),
         payload
       });
@@ -136,10 +123,12 @@ function createHighlightHandlers(args: {
     anchorLink?: NodeAnchorLink,
     imageRegions?: NodeImageRegionGroup[] | null
   ) => string | null;
+  flushPendingEditorDraft: () => boolean;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
   runSelectionCommand: (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => void;
   runSelectionCommandFromPayloadHandler: (args: {
+    flushPendingEditorDraft: () => boolean;
     onApplied: (payload: SelectionCommandPayload) => string | null;
     payload: SelectionCommandPayload;
   }) => string | null;
@@ -157,17 +146,20 @@ function createHighlightHandlers(args: {
         if (!normalizedNote) {
           return;
         }
+        args.flushPendingEditorDraft();
         createNoteFromPayload(payload, normalizedNote);
       }, 'highlight');
     },
     handleCreateHighlightFromPayload(payload: SelectionCommandPayload) {
       return args.runSelectionCommandFromPayloadHandler({
+        flushPendingEditorDraft: args.flushPendingEditorDraft,
         onApplied: createHighlight,
         payload
       });
     },
     handleCreateNoteFromPayload(payload: SelectionCommandPayload, note?: string) {
       return args.runSelectionCommandFromPayloadHandler({
+        flushPendingEditorDraft: args.flushPendingEditorDraft,
         onApplied: (appliedPayload) => createNoteFromPayload(appliedPayload, note),
         payload
       });
@@ -191,10 +183,12 @@ export function createSelectionHandlers(args: {
     anchorId: string,
     anchorLink?: NodeAnchorLink
   ) => string | null;
+  flushPendingEditorDraft: () => boolean;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
   runSelectionCommand: (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => void;
   runSelectionCommandFromPayloadHandler: (args: {
+    flushPendingEditorDraft: () => boolean;
     onApplied: (payload: SelectionCommandPayload) => string | null;
     payload: SelectionCommandPayload;
   }) => string | null;

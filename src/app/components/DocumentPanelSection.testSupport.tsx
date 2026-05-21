@@ -115,6 +115,7 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
     onCreateHighlight: () => undefined,
     onCreatePdfHighlight: () => false,
     onAdjustExistingHighlightRange: () => true,
+    onRepairTable: () => false,
     onCutImage: () => undefined,
     onDeleteImage: () => undefined,
     onEditorChange: () => undefined,

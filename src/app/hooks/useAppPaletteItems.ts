@@ -1,5 +1,9 @@
 import { useMemo } from 'react';
 
+import {
+  getEditorOperationRedoTitle,
+  getEditorOperationUndoTitle
+} from '../../features/editor/model/editorOperationHistory';
 import { canNodeAcceptMovedChildren } from '../../features/nodes/model/nodeContainers';
 import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -94,15 +98,38 @@ function canAnnotateSelection(args: {
   return args.ws.nodesById[args.activeNodeId]?.kind !== 'folder';
 }
 
+export function resolveEditorAwarePaletteHistoryOptions(args: {
+  activeNodeId: string | null;
+  appActionHistory: Parameters<typeof getWorkspaceUndoTitle>[0];
+  editorOperationHistory: Parameters<typeof getEditorOperationUndoTitle>[0];
+}) {
+  const canUndoEditorOperation = args.editorOperationHistory.undoStack.at(-1)?.nodeId === args.activeNodeId;
+  const canRedoEditorOperation = args.editorOperationHistory.redoStack.at(-1)?.nodeId === args.activeNodeId;
+  return {
+    canRedoWorkspaceAction: canRedoEditorOperation || args.appActionHistory.redoStack.length > 0,
+    canUndoWorkspaceAction: canUndoEditorOperation || args.appActionHistory.undoStack.length > 0,
+    redoWorkspaceActionTitle: canRedoEditorOperation
+      ? getEditorOperationRedoTitle(args.editorOperationHistory)
+      : getWorkspaceRedoTitle(args.appActionHistory),
+    undoWorkspaceActionTitle: canUndoEditorOperation
+      ? getEditorOperationUndoTitle(args.editorOperationHistory)
+      : getWorkspaceUndoTitle(args.appActionHistory)
+  };
+}
+
 function buildPaletteOptions(
   args: Parameters<typeof useAppPaletteItems>[0],
   canMoveToNode: boolean,
   hasNavigableNodes: boolean
 ) {
   const canUseCurrentTopic = canMergeHighlightsIntoTopic(args);
+  const historyOptions = resolveEditorAwarePaletteHistoryOptions({
+    activeNodeId: args.activeNodeId,
+    appActionHistory: args.ws.appActionHistory,
+    editorOperationHistory: args.ws.editorOperationHistory
+  });
   return {
-    canRedoWorkspaceAction: args.ws.appActionHistory.redoStack.length > 0,
-    canUndoWorkspaceAction: args.ws.appActionHistory.undoStack.length > 0,
+    ...historyOptions,
     canExportCurrentArticle: canExportCurrentArticle(args),
     canAnnotateSelection: canAnnotateSelection(args),
     canImportFile: args.formalImportAvailable,
@@ -130,9 +157,7 @@ function buildPaletteOptions(
     canDeleteReviewItem: args.hasReviewCard,
     isImmersiveMode: args.isImmersiveMode,
     isDevReviewStatusBarPersistenceEnabled: args.study.isDevReviewStatusBarPersistenceEnabled,
-    isReviewMode: args.isStudyMode,
-    redoWorkspaceActionTitle: getWorkspaceRedoTitle(args.ws.appActionHistory),
-    undoWorkspaceActionTitle: getWorkspaceUndoTitle(args.ws.appActionHistory)
+    isReviewMode: args.isStudyMode
   };
 }
 
@@ -150,7 +175,7 @@ export function useAppPaletteItems(args: {
   reviewSession: ReturnType<typeof useWorkspaceSelectors>['reviewSession'];
   reviewDueCount: number;
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
-  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'appActionHistory' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
+  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'appActionHistory' | 'editorOperationHistory' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
 }) {
   const hasNavigableNodes = useMemo(
     () => args.ws.nodeOrder.some((nodeId) => !args.ws.trashedNodeIds.includes(nodeId) && Boolean(args.ws.nodesById[nodeId])),

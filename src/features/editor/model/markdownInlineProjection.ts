@@ -203,7 +203,7 @@ function collectInlineCandidates(text: string) {
     ...collectLenientSpacedStrongCandidates(text),
     ...collectLenientTripleStarCandidates(text)
   ].filter((candidate) => !inlineCodeCandidates.some((item) => overlapsInlineCandidateRange(item, candidate)))
-    .map((candidate) => ({ ...candidate, compatibility: true }));
+    .map((candidate): InlineProjectionCandidate => ({ ...candidate, compatibility: true }));
   const validCandidates = [...candidates, ...compatibilityCandidates]
     .filter((candidate) => isValidInlineCandidate(candidate, text.length));
   return selectInlineProjectionCandidates(validCandidates.filter((candidate) =>

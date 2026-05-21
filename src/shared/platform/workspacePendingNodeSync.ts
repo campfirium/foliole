@@ -62,6 +62,7 @@ function toPendingWorkspaceNode(
     priority: pendingNode.priority ?? null,
     desiredRetention: pendingNode.desiredRetention ?? null,
     enableShortTerm: pendingNode.enableShortTerm ?? null,
+    sequentialReadingEnabled: pendingNode.sequentialReadingEnabled ?? null,
     title: pendingNode.title,
     isTitleManual: pendingNode.isTitleManual,
     hideTitleHeading: pendingNode.hideTitleHeading === true,

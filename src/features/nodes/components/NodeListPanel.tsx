@@ -47,7 +47,7 @@ interface NodeListPanelProps {
   onSearchQueryChange: (searchQuery: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   reviewSession: ReviewSessionState;
-  rowCountByNodeId?: ReadonlyMap<string, number>;
+  rowCountByNodeId?: ReadonlyMap<string, number> | undefined;
   rowSpacing: number;
   searchQuery: string;
   selectedNodeIds: string[];

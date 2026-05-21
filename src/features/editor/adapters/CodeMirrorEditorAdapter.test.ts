@@ -50,9 +50,7 @@ const {
 }));
 
 vi.mock('@codemirror/commands', () => ({
-  defaultKeymap: ['default-keymap'],
-  history: vi.fn(() => 'history-extension'),
-  historyKeymap: ['history-keymap']
+  defaultKeymap: ['default-keymap']
 }));
 
 vi.mock('@codemirror/lang-markdown', () => ({

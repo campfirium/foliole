@@ -159,6 +159,21 @@ it('keeps scheduled reading inspection ordered by nextAt without source interlea
   expect(plan.readingQueueNodeIds).toEqual(['reading-early', 'reading-middle', 'reading-late']);
 });
 
+it('keeps locked reading nodes out of the due and scheduled reading lanes', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const nodes = [
+    createReadingNode('reading-active', '2026-03-01T08:00:00.000Z', 'reading content', createReadingProfile('2026-03-09T08:00:00.000Z')),
+    createReadingNode('reading-locked', '2026-03-01T08:00:00.000Z', 'reading content', createReadingProfile('2026-03-09T08:00:00.000Z', { state: 'locked' })),
+    createReadingNode('reading-locked-future', '2026-03-01T08:00:00.000Z', 'reading content', createReadingProfile('2026-03-19T08:00:00.000Z', { state: 'locked' }))
+  ];
+  const nodeOrder = nodes.map((node) => node.id);
+  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]));
+
+  const plan = buildReviewQueuePlan({ includeScheduled: true, nodeOrder, nodesById, now, trashedNodeIds: [] });
+
+  expect(plan.readingQueueNodeIds).toEqual(['reading-active']);
+});
+
 it('queues cloze review nodes in the FSRS lane even when reveal is empty', () => {
   const now = '2026-03-10T12:00:00.000Z';
   const nodes = [

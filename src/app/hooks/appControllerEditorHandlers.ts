@@ -1,11 +1,46 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { isNodeContentLocked } from '../../features/nodes/model/nodeContainers';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, isProtectedRootNode } from '../../features/nodes/model/specialNodes';
+import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 import { isVirtualEditorNode } from './appControllerLayoutContext';
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 
 export type SelectNodeHandler = (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
+
+function isBlankTextEditAfterAnnotation(args: BuildControllerLayoutPropsArgs, nodeId: string, content: string) {
+  const node = args.ws.nodesById[nodeId];
+  const topEntry = args.ws.editorOperationHistory.undoStack.at(-1);
+  return (
+    content.length === 0 &&
+    Boolean(node?.content) &&
+    topEntry?.type === 'annotation.create' &&
+    topEntry.nodeId === nodeId
+  );
+}
+
+function pushTextEditOperation(args: BuildControllerLayoutPropsArgs, nodeId: string, content: string) {
+  const node = args.ws.nodesById[nodeId];
+  if (
+    !node ||
+    node.content === content ||
+    isBlankTextEditAfterAnnotation(args, nodeId, content) ||
+    args.ws.trashedNodeIds.includes(nodeId) ||
+    !isNodeDocumentLoaded(node) ||
+    isProtectedRootNode(node) ||
+    isNodeContentLocked(nodeId, args.ws.nodeOrder, args.ws.nodesById, new Set(args.ws.trashedNodeIds))
+  ) {
+    return;
+  }
+  args.ws.pushEditorOperationEntry({
+    afterContent: content,
+    beforeContent: node.content,
+    nodeId,
+    title: 'Edit Text',
+    type: 'text.edit'
+  });
+}
 
 export function createAnswerChangeHandler(args: BuildControllerLayoutPropsArgs) {
   return (answer: string) => {
@@ -21,6 +56,10 @@ export function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) 
       return;
     }
     if (args.ws.activeNodeId) {
+      if (isBlankTextEditAfterAnnotation(args, args.ws.activeNodeId, content)) {
+        return;
+      }
+      pushTextEditOperation(args, args.ws.activeNodeId, content);
       args.ws.updateNodeContent(args.ws.activeNodeId, content);
       return;
     }
@@ -43,6 +82,10 @@ export function createNodeContentChangeHandler(args: BuildControllerLayoutPropsA
       args.ws.updateVirtualNodeFilter(nodeId, content);
       return;
     }
+    if (isBlankTextEditAfterAnnotation(args, nodeId, content)) {
+      return;
+    }
+    pushTextEditOperation(args, nodeId, content);
     args.ws.updateNodeContent(nodeId, content);
   };
 }

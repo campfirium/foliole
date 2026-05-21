@@ -33,7 +33,7 @@ function useDerivedControllerState(args: {
   isStudyMode: boolean;
   isWorkspaceHydrated: boolean;
   nowIso: string;
-  priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
+  priorityQuickSet: ReturnType<typeof useControllerPriorityQuickSet>;
   reviewPreview: ReturnType<typeof useReviewSessionRuntime>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
   resumeReviewItem: () => void;
@@ -99,7 +99,7 @@ function buildControllerLayoutState(args: {
   isStudyMode: boolean;
   isWorkspaceHydrated: boolean;
   nowIso: string;
-  priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
+  priorityQuickSet: ReturnType<typeof useControllerPriorityQuickSet>;
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useReviewSessionRuntime>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;

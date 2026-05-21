@@ -1,5 +1,6 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
 import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
+import { isReadingState, type ReadingState } from '../review/readingState.js';
 
 import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver } from './driver.js';
@@ -25,7 +26,7 @@ interface WorkspaceReadingProfile {
   priority: number;
   readingPosition: number;
   repetitionCount: number;
-  state: 'active' | 'done' | 'dismissed';
+  state: ReadingState;
 }
 
 export interface WorkspaceNodeSnapshot {
@@ -38,6 +39,7 @@ export interface WorkspaceNodeSnapshot {
   priority?: number | null;
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
+  sequentialReadingEnabled?: boolean | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading: boolean;
@@ -71,6 +73,7 @@ export interface WorkspaceNodeRowShape {
   deleted_at: string | null;
   desired_retention: number | null;
   enable_short_term: number | null;
+  sequential_reading_enabled: number | null;
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
@@ -110,7 +113,7 @@ function toReadingProfile(row: WorkspaceNodeRowShape): WorkspaceReadingProfile |
   if (typeof row.reading_last_handled_at !== 'string' || typeof row.reading_next_at !== 'string') {
     return null;
   }
-  if (row.reading_state !== 'active' && row.reading_state !== 'done' && row.reading_state !== 'dismissed') {
+  if (!isReadingState(row.reading_state)) {
     return null;
   }
   return {
@@ -173,6 +176,9 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
   }
   if (typeof row.enable_short_term === 'number') {
     node.enableShortTerm = row.enable_short_term === 1;
+  }
+  if (typeof row.sequential_reading_enabled === 'number') {
+    node.sequentialReadingEnabled = row.sequential_reading_enabled === 1;
   }
   if (
     row.body_status === 'empty' ||

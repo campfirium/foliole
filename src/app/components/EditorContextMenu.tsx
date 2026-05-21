@@ -2,6 +2,7 @@ import { Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis } from 'l
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
 import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem, appFloatingSurfaceClassName } from '../../shared/ui';
 import { resolveLongClozeGuardAction } from '../hooks/editorClozeGuardrail';
@@ -195,11 +196,13 @@ export function EditorContextMenu(props: EditorContextMenuProps) {
         documentText={props.webLookupDocumentText}
         left={props.left}
         onClose={props.onClose}
-        onRepairTable={props.onRepairTable}
-        repairTableAvailable={props.repairTableAvailable}
         selectionPayload={props.webLookupPayload}
         titleText={props.webLookupTitle}
         top={props.top}
+        {...definedProps({
+          onRepairTable: props.onRepairTable,
+          repairTableAvailable: props.repairTableAvailable
+        })}
       />
     );
   }

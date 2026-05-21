@@ -2,11 +2,11 @@ import type { PersistedNodeViewState } from '../../platform/persistedNodeViewSta
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
+import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
 import {
   buildOrderedNodeIds,
   buildWorkspaceSnapshotNode,
   resolveSnapshotActiveNodeId,
-  type WorkspaceNodeAttachmentSnapshot,
   type WorkspaceNodeSnapshot
 } from './workspaceSnapshotHelpers.js';
 import { loadPersistedNodeViewById } from './workspaceSnapshotNodeViewState.js';
@@ -32,6 +32,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   priority: number | null;
   desired_retention: number | null;
   enable_short_term: number | null;
+  sequential_reading_enabled: number | null;
   title: string;
   is_title_manual: number;
   hide_title_heading: number;
@@ -66,14 +67,6 @@ interface WorkspaceNodeRow extends DatabaseRow {
 
 interface NodeOrderRow extends DatabaseRow {
   node_id: string;
-}
-
-interface NodeAttachmentSnapshotRow extends DatabaseRow {
-  attachment_id: string;
-  mime_type: string | null;
-  node_id: string;
-  original_name: string | null;
-  role: string;
 }
 
 const ACTIVE_NODE_META_KEY = 'active_node_id';
@@ -115,6 +108,7 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
        n.priority,
        n.desired_retention,
        n.enable_short_term,
+       n.sequential_reading_enabled,
        n.title,
        n.is_title_manual,
        n.hide_title_heading,
@@ -166,39 +160,6 @@ function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
   );
 }
 
-function queryNodeAttachmentRows(driver: DatabaseDriver): NodeAttachmentSnapshotRow[] {
-  return driver.queryAll<NodeAttachmentSnapshotRow>(
-    `SELECT
-       node_attachments.node_id,
-       node_attachments.attachment_id,
-       node_attachments.role,
-       attachments.mime_type,
-       attachments.original_name
-     FROM node_attachments
-     LEFT JOIN attachments ON attachments.id = node_attachments.attachment_id
-     ORDER BY node_attachments.node_id ASC, node_attachments.role ASC, node_attachments.attachment_id ASC`
-  );
-}
-
-function attachNodeAttachments(
-  nodesById: Record<string, WorkspaceNodeSnapshot>,
-  attachmentRows: NodeAttachmentSnapshotRow[]
-) {
-  for (const row of attachmentRows) {
-    const node = nodesById[row.node_id];
-    if (!node) {
-      continue;
-    }
-    const attachment: WorkspaceNodeAttachmentSnapshot = {
-      attachmentId: row.attachment_id,
-      mimeType: row.mime_type,
-      originalName: row.original_name,
-      role: row.role
-    };
-    node.attachments = [...(node.attachments ?? []), attachment];
-  }
-}
-
 function buildSnapshotRows(
   driver: DatabaseDriver,
   rows: WorkspaceNodeRow[],
@@ -213,7 +174,7 @@ function buildSnapshotRows(
       trashedNodeIds.push(row.id);
     }
   }
-  attachNodeAttachments(nodesById, queryNodeAttachmentRows(driver));
+  attachWorkspaceNodeAttachments(driver, nodesById);
   const nodeOrder = buildOrderedNodeIds(rows, orderedRows, nodesById);
   const persistedNodeViewById = loadPersistedNodeViewById(driver);
 

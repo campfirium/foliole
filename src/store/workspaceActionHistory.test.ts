@@ -75,6 +75,9 @@ describe('workspace application action history', () => {
       title: 'Dismiss Topic',
       type: 'topic.dismiss'
     });
+    if (entry?.type !== 'topic.dismiss') {
+      throw new Error('Expected topic dismiss history entry');
+    }
     expect(entry?.afterReading).toMatchObject({
       lastHandledAt: '2026-03-18T00:00:00.000Z',
       state: 'dismissed'

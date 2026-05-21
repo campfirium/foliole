@@ -13,6 +13,7 @@ export interface NodeSyncHashInput {
   deletedAt: string | null;
   desiredRetention: number | null;
   enableShortTerm: boolean | null;
+  sequentialReadingEnabled: boolean | null;
   hideTitleHeading: boolean;
   id: string;
   imageRegions: string | null;
@@ -58,6 +59,7 @@ export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
     deleted_at: normalizeIso(input.deletedAt),
     desired_retention: input.desiredRetention ?? null,
     enable_short_term: input.enableShortTerm ?? null,
+    sequential_reading_enabled: input.sequentialReadingEnabled ?? null,
     hide_title_heading: input.hideTitleHeading,
     id: input.id,
     image_regions: normalizeNullableText(input.imageRegions),

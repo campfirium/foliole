@@ -40,7 +40,7 @@ function buildNodeListTreeContentProps(args: {
   nodesById: NodeListTreeProps['nodesById'];
   onOpenMoveToNode: NodeListTreeProps['onOpenMoveToNode'];
   onOpenNotesView: NodeListTreeProps['onOpenNotesView'];
-  rowCountByNodeId?: NodeListTreeProps['rowCountByNodeId'];
+  rowCountByNodeId?: NodeListTreeProps['rowCountByNodeId'] | undefined;
   rowSpacing: number;
   runtimeState: NodeListTreeRuntimeState;
   selectedTrashNodeId: string | null;

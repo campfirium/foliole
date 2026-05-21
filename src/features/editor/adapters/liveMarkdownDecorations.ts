@@ -26,6 +26,7 @@ import {
 } from './liveMarkdownDecorationCollections';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addForumTitleLinkDecorations } from './liveMarkdownForumTitleLinkDecorations';
+import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
 import { addPreviewViewportDecorations } from './liveMarkdownPreviewViewportDecorations';
 import {
   addCodeFenceDecoration,

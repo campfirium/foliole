@@ -56,7 +56,7 @@ function androidStateRecords(): NativeSyncObjectRecord[] {
       last_handled_at: '2026-04-22T08:10:00.000Z',
       next_at: '2026-04-23T08:10:00.000Z',
       reading_position: 9,
-      state: 'active'
+      state: 'locked'
     }),
     updated_at: '2026-04-22T08:10:00.000Z'
   }, {
@@ -109,7 +109,7 @@ it('makes Android-applied reading and review visible while keeping view state de
     .get()).toBeUndefined();
   expect(workspaceSnapshot?.nodesById['node-1']?.reading).toMatchObject({
     readingPosition: 0,
-    state: 'active'
+    state: 'locked'
   });
   expect(workspaceSnapshot?.nodesById['node-1']?.review).toMatchObject({
     lastReviewAt: '2026-04-22T08:10:00.000Z',

@@ -21,6 +21,7 @@ interface MockMenuItem {
   accelerator?: string | null;
   enabled?: boolean;
   id?: string;
+  role?: string;
   submenu?: { items: MockMenuItem[] };
 }
 
@@ -29,6 +30,7 @@ function toMenuItem(item: Record<string, unknown>): MockMenuItem {
     ...(item.accelerator === undefined ? {} : { accelerator: item.accelerator as string | null }),
     ...(item.enabled === undefined ? {} : { enabled: item.enabled as boolean }),
     ...(item.id === undefined ? {} : { id: item.id as string }),
+    ...(item.role === undefined ? {} : { role: item.role as string }),
     ...(Array.isArray(item.submenu)
       ? { submenu: { items: item.submenu.map((child) => toMenuItem(child as Record<string, unknown>)) } }
       : {})
@@ -48,17 +50,19 @@ function findMenuItem(items: MockMenuItem[], id: string): MockMenuItem | null {
   return null;
 }
 
-describe('native app menu', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    menuMock.applicationMenu = null;
-    menuMock.buildFromTemplate.mockImplementation((template: Record<string, unknown>[]) => ({
-      items: template.map((item) => toMenuItem(item))
-    }));
-    menuMock.setApplicationMenu.mockImplementation((menu: { items: unknown[] }) => {
-      menuMock.applicationMenu = menu;
-    });
+function resetMenuMock() {
+  vi.clearAllMocks();
+  menuMock.applicationMenu = null;
+  menuMock.buildFromTemplate.mockImplementation((template: Record<string, unknown>[]) => ({
+    items: template.map((item) => toMenuItem(item))
+  }));
+  menuMock.setApplicationMenu.mockImplementation((menu: { items: unknown[] }) => {
+    menuMock.applicationMenu = menu;
   });
+}
+
+describe('native app menu command state', () => {
+  beforeEach(resetMenuMock);
 
   it('syncs enabled state and accelerators onto registered command menu items', () => {
     installAppMenu();
@@ -77,6 +81,26 @@ describe('native app menu', () => {
     expect(findMenuItem(items, 'workspace.toggleDevTools')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).not.toHaveProperty('accelerator');
   });
+
+  it('exposes undo and redo as app commands instead of Electron native roles', () => {
+    syncAppMenuState(
+      ['app.undo'],
+      [
+        { accelerator: 'Control+Z', commandId: 'app.undo' },
+        { accelerator: 'Control+Y', commandId: 'app.redo' }
+      ]
+    );
+
+    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+    expect(findMenuItem(items, 'app.undo')).toMatchObject({ accelerator: 'Control+Z', enabled: true });
+    expect(findMenuItem(items, 'app.undo')).not.toHaveProperty('role');
+    expect(findMenuItem(items, 'app.redo')).toMatchObject({ enabled: false });
+    expect(findMenuItem(items, 'app.redo')).not.toHaveProperty('role');
+  });
+});
+
+describe('native app menu rebuilding', () => {
+  beforeEach(resetMenuMock);
 
   it('rebuilds menu items instead of mutating read-only accelerators', () => {
     menuMock.buildFromTemplate.mockImplementation((template: Record<string, unknown>[]) => {

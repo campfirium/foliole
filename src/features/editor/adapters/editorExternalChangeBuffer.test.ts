@@ -8,6 +8,7 @@ describe('EditorExternalChangeBuffer', () => {
     const onFlush = vi.fn();
     const buffer = new EditorExternalChangeBuffer({
       getCurrentContent: () => 'abcde',
+      getCurrentNodeId: () => 'node-1',
       isApplyingExternalContent: () => false,
       onFlush
     });

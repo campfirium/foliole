@@ -1,5 +1,6 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
 import { parseVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
+import { isReadingState } from '../review/readingState.js';
 
 import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseRow } from './driver.js';
@@ -13,6 +14,7 @@ export interface WorkspaceNodeRow extends DatabaseRow {
   priority: number | null;
   desired_retention: number | null;
   enable_short_term: number | null;
+  sequential_reading_enabled: number | null;
   title: string;
   is_title_manual: number;
   hide_title_heading: number;
@@ -53,7 +55,7 @@ function toReadingProfile(row: WorkspaceNodeRow) {
   if (typeof row.reading_last_handled_at !== 'string' || typeof row.reading_next_at !== 'string') {
     return null;
   }
-  if (row.reading_state !== 'active' && row.reading_state !== 'done' && row.reading_state !== 'dismissed') {
+  if (!isReadingState(row.reading_state)) {
     return null;
   }
   return {
@@ -100,6 +102,9 @@ export function buildWorkspaceListNodesById(rows: WorkspaceNodeRow[]) {
       priority: row.priority,
       desiredRetention: row.desired_retention,
       enableShortTerm: typeof row.enable_short_term === 'number' ? row.enable_short_term === 1 : null,
+      sequentialReadingEnabled: typeof row.sequential_reading_enabled === 'number'
+        ? row.sequential_reading_enabled === 1
+        : null,
       title: row.title,
       isTitleManual: row.is_title_manual === 1,
       hideTitleHeading: row.hide_title_heading === 1,

@@ -68,7 +68,7 @@ function resolvePreviewContent(args: {
 
 export function SearchResultPreviewPanel(props: SearchResultPreviewPanelProps) {
   const { editorAppearanceKey } = useAppearanceSettings();
-  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const frame = useExternalDocumentPreviewPanelFrame(overlayRef, Boolean(props.result));
   const externalPath = props.result?.kind === 'external' ? props.result.externalMatch?.absolutePath ?? null : null;
   const external = useExternalSearchPreviewDocument(externalPath);
@@ -108,7 +108,7 @@ function SearchResultPreviewWindow(props: {
   isLoading: boolean;
   onClose: () => void;
   onOpenResult: (result: WorkspaceSearchResult) => void;
-  overlayRef: RefObject<HTMLDivElement | null>;
+  overlayRef: RefObject<HTMLDivElement>;
   result: WorkspaceSearchResult;
 }) {
   return (

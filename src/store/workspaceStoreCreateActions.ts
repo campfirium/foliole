@@ -1,13 +1,11 @@
-import type { NodeKind } from '../../lib/core/nodes/nodeKind';
+import { pushEditorOperationEntry } from '../features/editor/model/editorOperationHistory';
 import {
-  deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
-import type { NodeAnchorLink } from '../features/nodes/model/nodeTypes';
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
+import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
+import { createQANodeFromSelectionRecord } from './workspaceQANodeRecord';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
-import { createDefaultReviewProfile } from './workspaceSeed';
 import type { WorkspaceState } from './workspaceStore';
 import { createHighlightNodeRecord } from './workspaceStoreHighlightNodeRecord';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
@@ -27,32 +25,6 @@ interface RuntimeSyncHandlers {
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
-function createQANodeRecord(args: {
-  anchorId?: string;
-  anchorLink?: NodeAnchorLink;
-  answerContent: string;
-  nodeId: string;
-  parentNodeId: string;
-  promptContent: string;
-  timestamp: string;
-  title: string;
-}): WorkspaceNode {
-  return {
-    id: args.nodeId,
-    parentNodeId: args.parentNodeId,
-    kind: 'item',
-    title: args.title,
-    hasContent: args.promptContent.length > 0,
-    content: args.promptContent,
-    anchorLink: resolveClozeAnchorLink(args.anchorId, args.anchorLink),
-    hasReveal: true,
-    reveal: args.answerContent,
-    review: createDefaultReviewProfile(args.timestamp),
-    createdAt: args.timestamp,
-    updatedAt: args.timestamp
-  };
-}
-
 function syncCreatedNode(node: WorkspaceNode | null, nodeOrder: string[] | null, handlers: RuntimeSyncHandlers) {
   if (!node || !nodeOrder) {
     return;
@@ -61,96 +33,6 @@ function syncCreatedNode(node: WorkspaceNode | null, nodeOrder: string[] | null,
   if (node.kind === 'folder') {
     handlers.syncNodeOrder(nodeOrder);
   }
-}
-
-function resolveRootCreationParentId(kind: NodeKind, state: WorkspaceState) {
-  if (kind === 'folder') return null;
-  if (!state.nodesById[INBOX_NODE_ID]) {
-    throw new Error('Workspace invariant violated: Inbox node is missing.');
-  }
-  return INBOX_NODE_ID;
-}
-
-function createRootNodeRecord(args: {
-  content: string;
-  kind: NodeKind;
-  nodeId: string;
-  parentNodeId: string | null;
-  state: WorkspaceState;
-  timestamp: string;
-}) {
-  const untitledState = resolveCreatedNodeTitleState(
-    deriveNodeTitleFromContent(args.content),
-    args.parentNodeId,
-    args.state
-  );
-  const node: WorkspaceNode = {
-    id: args.nodeId,
-    parentNodeId: args.parentNodeId,
-    kind: args.kind,
-    title: untitledState.title,
-    hasContent: args.content.trim().length > 0,
-    content: args.content,
-    anchorLink: null,
-    hasReveal: false,
-    reveal: null,
-    review: null,
-    createdAt: args.timestamp,
-    updatedAt: args.timestamp
-  };
-  return { node, untitledState };
-}
-
-export function createRootNodeAction(
-  set: WorkspaceSet,
-  handlers: RuntimeSyncHandlers
-): WorkspaceState['createRootNode'] {
-  return (content = '', kind: NodeKind = 'topic') => {
-    const nodeId = `node-${crypto.randomUUID()}`;
-    const timestamp = new Date().toISOString();
-    let createdNode: WorkspaceNode | null = null;
-    let nextNodeOrder: string[] | null = null;
-
-    set((state) => {
-      const parentNodeId = resolveRootCreationParentId(kind, state);
-      const created = createRootNodeRecord({
-        content,
-        kind,
-        nodeId,
-        parentNodeId,
-        state,
-        timestamp
-      });
-      nextNodeOrder = parentNodeId === INBOX_NODE_ID
-        ? [INBOX_NODE_ID, nodeId, ...state.nodeOrder.filter((id) => id !== INBOX_NODE_ID)]
-        : [...state.nodeOrder, nodeId];
-      createdNode = created.node;
-      const nextNodesById = { ...state.nodesById, [nodeId]: createdNode };
-      return {
-        activeNodeId: nodeId,
-        nodeOrder: nextNodeOrder,
-        nodesById: nextNodesById,
-        untitledSequenceByParent: created.untitledState.untitledSequenceByParent,
-        reviewSession: reconcileReviewSession(
-          {
-            ...state,
-            activeNodeId: nodeId,
-            nodeOrder: nextNodeOrder,
-            nodesById: nextNodesById,
-            untitledSequenceByParent: created.untitledState.untitledSequenceByParent
-          },
-          nodeId
-        )
-      };
-    });
-    if (createdNode && nextNodeOrder) {
-      handlers.syncNodeCreation(createdNode);
-      if (kind === 'folder') {
-        handlers.syncNodeOrder(nextNodeOrder);
-      }
-    }
-    return nodeId;
-  };
 }
 
 export function createHighlightFromSelectionAction(
@@ -192,7 +74,11 @@ export function createHighlightFromSelectionAction(
         ...state.nodesById,
         [childNodeId]: createdNode
       };
+      const operationEntry = createEditorAnnotationCreateEntry([createdNode], parentNodeId, nextNodeOrder);
       return {
+        ...(operationEntry
+          ? { editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, operationEntry) }
+          : {}),
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
         untitledSequenceByParent: untitledState.untitledSequenceByParent,
@@ -229,36 +115,35 @@ export function createQAFromSelectionAction(
       if (!parentNode) {
         return state;
       }
-      const untitledState = resolveCreatedNodeTitleState(
-        deriveNodeTitleForCloze(normalizedPrompt, normalizedAnswer),
-        parentNodeId,
-        state
-      );
-      const nextNode = createQANodeRecord({
+      const created = createQANodeFromSelectionRecord({
         ...(anchorId !== undefined ? { anchorId } : {}),
         ...(anchorLink !== undefined ? { anchorLink } : {}),
         answerContent: normalizedAnswer,
         nodeId: childNodeId,
         parentNodeId,
         promptContent: normalizedPrompt,
-        timestamp,
-        title: untitledState.title
+        state,
+        timestamp
       });
-      createdNode = nextNode;
+      createdNode = created.node;
       nextNodeOrder = [...state.nodeOrder, childNodeId];
       const nextNodesById = {
         ...state.nodesById,
-        [childNodeId]: nextNode
+        [childNodeId]: created.node
       };
+      const operationEntry = createEditorAnnotationCreateEntry([created.node], parentNodeId, nextNodeOrder);
       return {
+        ...(operationEntry
+          ? { editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, operationEntry) }
+          : {}),
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
-        untitledSequenceByParent: untitledState.untitledSequenceByParent,
+        untitledSequenceByParent: created.untitledSequenceByParent,
         reviewSession: reconcileReviewSession({
           ...state,
           nodeOrder: nextNodeOrder,
           nodesById: nextNodesById,
-          untitledSequenceByParent: untitledState.untitledSequenceByParent
+          untitledSequenceByParent: created.untitledSequenceByParent
         })
       };
     });
@@ -267,11 +152,4 @@ export function createQAFromSelectionAction(
     }
     return childNodeId;
   };
-}
-
-function resolveClozeAnchorLink(anchorId?: string, anchorLink?: NodeAnchorLink): NodeAnchorLink | null {
-  if (anchorLink && anchorLink.kind === 'cloze' && typeof anchorLink.id === 'string' && anchorLink.id.trim().length > 0) {
-    return anchorLink;
-  }
-  return null;
 }

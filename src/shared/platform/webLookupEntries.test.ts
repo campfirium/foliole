@@ -190,7 +190,7 @@ it('moves entries and migrates the old ChatGPT default template', () => {
     }
   ]));
 
-  expect(getWebLookupEntries()[0].urlTemplate).toContain('{title}');
+  expect(getWebLookupEntries()[0]!.urlTemplate).toContain('{title}');
   expect(moveWebLookupEntry('google', 'chatgpt').map((entry) => entry.id)).toEqual([
     'google',
     'chatgpt',
@@ -206,7 +206,7 @@ it('migrates the previous ChatGPT content default template', () => {
     }
   ]));
 
-  expect(getWebLookupEntries()[0].urlTemplate).toContain('{title}');
+  expect(getWebLookupEntries()[0]!.urlTemplate).toContain('{title}');
 });
 
 it('migrates the previous ChatGPT selection default template', () => {
@@ -217,7 +217,7 @@ it('migrates the previous ChatGPT selection default template', () => {
     }
   ]));
 
-  expect(getWebLookupEntries()[0].urlTemplate).toContain('{title}');
+  expect(getWebLookupEntries()[0]!.urlTemplate).toContain('{title}');
 });
 
 it('persists menu links with title and selection placeholders', () => {

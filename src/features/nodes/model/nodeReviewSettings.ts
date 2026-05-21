@@ -1,13 +1,14 @@
-import type { PushQueuePriority } from '../../review/model/unifiedPushQueueRules';
-import { normalizePushQueuePriority } from '../../review/model/unifiedPushQueueRules';
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../settings/model/reviewSchedulerSettings';
 import {
   resolveNodeSetting,
   resolveNodeShortTermSetting,
   type ResolvedNodeSetting
 } from '../../../../lib/core/review/nodeSettings';
+import { normalizePushQueuePriority, type PushQueuePriority } from '../../review/model/unifiedPushQueueRules';
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../settings/model/reviewSchedulerSettings';
 
 import type { Node } from './nodeTypes';
+
+type ReviewSettingNode = Pick<Node, 'desiredRetention' | 'enableShortTerm' | 'parentNodeId' | 'priority'>;
 
 export { resolveNodeShortTermSetting, type ResolvedNodeSetting };
 
@@ -27,7 +28,7 @@ export function normalizeNodeDesiredRetention(
 
 export function resolveNodePrioritySetting(
   nodeId: string,
-  nodesById: Record<string, Node | undefined>,
+  nodesById: Record<string, ReviewSettingNode | undefined>,
   fallback: PushQueuePriority
 ): ResolvedNodeSetting<PushQueuePriority> {
   return resolveNodeSetting({
@@ -44,7 +45,7 @@ export function resolveNodePrioritySetting(
 
 export function resolveNodeDesiredRetentionSetting(
   nodeId: string,
-  nodesById: Record<string, Node | undefined>,
+  nodesById: Record<string, Pick<ReviewSettingNode, 'desiredRetention' | 'parentNodeId'> | undefined>,
   fallback = DEFAULT_REVIEW_SCHEDULER_SETTINGS.desiredRetention
 ): ResolvedNodeSetting<number> {
   return resolveNodeSetting({

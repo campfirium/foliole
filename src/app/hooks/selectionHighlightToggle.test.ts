@@ -26,8 +26,9 @@ function createEditorRef(content: string, selection: { from: number; to: number 
 function createHandlerArgs(args: {
   anchorLink: { id: string; kind: 'highlight'; locator?: { from: number; originalText: string; to: number } };
   createHighlightFromPayload?: (payload: SelectionCommandPayload) => string | null;
-  deleteNodePermanently?: (nodeId: string) => void;
+  deleteEditorAnnotationNodes?: (nodeIds: string[]) => void;
   editorRef: ReturnType<typeof createEditorRef>['editorRef'];
+  flushPendingEditorDraft?: () => boolean;
   syncActiveNodeContentFromEditor?: () => void;
 }) {
   const childNode: Node = {
@@ -45,8 +46,9 @@ function createHandlerArgs(args: {
   return {
     activeNodeId: 'parent-1',
     createHighlightFromPayload: args.createHighlightFromPayload ?? vi.fn<(payload: SelectionCommandPayload) => string | null>(() => 'node-new'),
-    deleteNodePermanently: args.deleteNodePermanently ?? vi.fn<(nodeId: string) => void>(),
+    deleteEditorAnnotationNodes: args.deleteEditorAnnotationNodes ?? vi.fn<(nodeIds: string[]) => void>(),
     editorRef: args.editorRef,
+    flushPendingEditorDraft: args.flushPendingEditorDraft ?? vi.fn(() => false),
     nodesById: {
       'child-1': childNode
     },
@@ -60,12 +62,12 @@ function runLocatorOnlyRemovalCase() {
   const { editorRef, replaceRange } = createEditorRef(content, { from: 7, to: 12 });
 
   const createHighlightFromPayload = vi.fn(() => 'node-new');
-  const deleteNodePermanently = vi.fn();
+  const deleteEditorAnnotationNodes = vi.fn();
   const syncActiveNodeContentFromEditor = vi.fn();
   const handler = createToggleSelectionHighlightFromPayloadHandler(createHandlerArgs({
     anchorLink: { id: 'anchor-1', kind: 'highlight', locator: { from: 7, originalText: 'Alpha', to: 12 } },
     createHighlightFromPayload,
-    deleteNodePermanently,
+    deleteEditorAnnotationNodes,
     editorRef,
     syncActiveNodeContentFromEditor
   }));
@@ -85,7 +87,7 @@ function runLocatorOnlyRemovalCase() {
   });
 
   expect(result).toBe('deleted');
-  expect(deleteNodePermanently).toHaveBeenCalledWith('child-1');
+  expect(deleteEditorAnnotationNodes).toHaveBeenCalledWith(['child-1']);
   expect(replaceRange).not.toHaveBeenCalled();
   expect(syncActiveNodeContentFromEditor).not.toHaveBeenCalled();
   expect(createHighlightFromPayload).not.toHaveBeenCalled();
@@ -96,12 +98,12 @@ function runLocatorMismatchCreatesNewHighlightCase() {
   const { editorRef, replaceRange } = createEditorRef(content, { from: 19, to: 24 });
 
   const createHighlightFromPayload = vi.fn(() => 'node-new');
-  const deleteNodePermanently = vi.fn();
+  const deleteEditorAnnotationNodes = vi.fn();
   const syncActiveNodeContentFromEditor = vi.fn();
   const handler = createToggleSelectionHighlightFromPayloadHandler(createHandlerArgs({
     anchorLink: { id: 'anchor-1', kind: 'highlight', locator: { from: 7, originalText: 'Alpha', to: 12 } },
     createHighlightFromPayload,
-    deleteNodePermanently,
+    deleteEditorAnnotationNodes,
     editorRef,
     syncActiveNodeContentFromEditor
   }));
@@ -122,7 +124,7 @@ function runLocatorMismatchCreatesNewHighlightCase() {
 
   expect(result).toBe('created');
   expect(createHighlightFromPayload).toHaveBeenCalledTimes(1);
-  expect(deleteNodePermanently).not.toHaveBeenCalled();
+  expect(deleteEditorAnnotationNodes).not.toHaveBeenCalled();
   expect(replaceRange).not.toHaveBeenCalled();
   expect(syncActiveNodeContentFromEditor).not.toHaveBeenCalled();
 }

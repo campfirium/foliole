@@ -66,11 +66,11 @@ export function DocumentPanelContextMenu({
       onDeleteImage={onDeleteImage}
       onExportImage={onExportImage}
       selectionPayload={contextMenu.payload}
-      repairTableAvailable={contextMenu.repairTableAvailable}
       top={contextMenu.top}
       webLookupDocumentText={contextMenu.webLookupDocumentText}
       webLookupPayload={contextMenu.webLookupPayload}
       webLookupTitle={contextMenu.webLookupTitle}
+      {...definedProps({ repairTableAvailable: contextMenu.repairTableAvailable })}
     />
   );
 }

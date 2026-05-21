@@ -1,4 +1,5 @@
-import type { FocusEvent as ReactFocusEvent, MouseEvent as ReactMouseEvent } from 'react';
+import type { FocusEvent as ReactFocusEvent, FormEvent as ReactFormEvent, MouseEvent as ReactMouseEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type {
@@ -44,6 +45,7 @@ export interface MarkdownEditorProps {
   readingTargetViewportRatio?: number | null;
   nodeViewState?: EditorViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string, commandId?: string) => void;
+  onBeforeInputCapture?: (event: ReactFormEvent<HTMLDivElement>) => void;
   onBlurCapture?: (event: ReactFocusEvent<HTMLDivElement>) => void;
   onChange: (value: string, meta?: EditorContentChangeMeta) => void;
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
@@ -57,9 +59,12 @@ export interface MarkdownEditorProps {
   onPreviewNodeLink?: (request: EditorNodeLinkPreviewRequest | null) => void;
   onPastedAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
+  onRedo?: () => boolean;
   onShouldSuppressSelectionRestore?: () => boolean;
   readOnly?: boolean;
   reviewCaretLineHighlight?: boolean;
   onSetReadingPositionSelection?: (selection: EditorSelection) => void;
+  onUndo?: () => boolean;
+  onKeyDownCapture?: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   value: string;
 }

@@ -52,6 +52,13 @@ import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowS
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+if (process.env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION === '1') {
+  app.commandLine.appendSwitch('disable-gpu');
+  app.commandLine.appendSwitch('disable-gpu-compositing');
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+  app.disableHardwareAcceleration();
+  console.info('[electron-main] hardware acceleration disabled for this session');
+}
 const configuredIdentity = configureRuntimeAppIdentity(app, fs.mkdirSync.bind(fs));
 const runtimeMode = resolveRuntimeMode();
 const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({

@@ -24,7 +24,7 @@ public class FolioleCompanionWorkspaceSnapshotNodeOrderTest {
         database = SQLiteDatabase.create(null);
         database.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', priority INTEGER, " +
-            "desired_retention REAL, title TEXT NOT NULL, is_title_manual INTEGER NOT NULL DEFAULT 0, " +
+            "desired_retention REAL, enable_short_term INTEGER, sequential_reading_enabled INTEGER, title TEXT NOT NULL, is_title_manual INTEGER NOT NULL DEFAULT 0, " +
             "hide_title_heading INTEGER NOT NULL DEFAULT 0, content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, " +
             "opening_text TEXT, virtual_filter TEXT, reveal TEXT, anchor_link TEXT, image_regions TEXT, position INTEGER, " +
             "current_version_id TEXT, last_modified_by_device_id TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0, " +

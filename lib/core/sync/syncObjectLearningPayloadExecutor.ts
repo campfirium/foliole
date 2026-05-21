@@ -1,3 +1,5 @@
+import { isReadingState } from '../review/readingState.js';
+
 import type { DbPort } from './dbPort.js';
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
@@ -17,6 +19,10 @@ export async function applyNodeReadingObject(
     return;
   }
   const payload = asObject(record);
+  const state = text(payload.state);
+  if (!isReadingState(state)) {
+    throw new Error('invalid node_reading state');
+  }
   await port.run(
     `INSERT INTO node_reading (node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state) ` +
     `VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET interval_duration_ms = excluded.interval_duration_ms, ` +
@@ -24,7 +30,7 @@ export async function applyNodeReadingObject(
     `priority = excluded.priority, repetition_count = excluded.repetition_count, state = excluded.state`,
     [record.object_id, integer(payload.interval_duration_ms), numberOrNull(payload.interval_growth_factor) ?? 1,
       text(payload.last_handled_at) ?? record.updated_at, text(payload.next_at) ?? record.updated_at,
-      numberOrNull(payload.priority) ?? 0, integer(payload.repetition_count), text(payload.state) ?? 'active']
+      numberOrNull(payload.priority) ?? 0, integer(payload.repetition_count), state]
   );
   await applyReadingPosition(port, record, payload, options.deviceId);
 }

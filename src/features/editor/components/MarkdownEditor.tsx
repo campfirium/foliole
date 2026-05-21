@@ -14,6 +14,7 @@ import { GestureTrailOverlay, buildGestureTrailPath } from './markdownEditorGest
 import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
 import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
+import { handleEditorUndoRedoBeforeInput, handleEditorUndoRedoKeyDown } from './markdownEditorUndoRedoShortcut';
 import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
 import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
@@ -31,8 +32,10 @@ function MarkdownEditorSurface(args: {
   immersiveEditing: boolean;
   mouseGesture: ReturnType<typeof useEditorMouseGesture>;
   onBlurCapture: MarkdownEditorProps['onBlurCapture'];
+  onBeforeInputCapture: MarkdownEditorProps['onBeforeInputCapture'];
   onContextMenu: MarkdownEditorProps['onContextMenu'];
   onDoubleClick: MarkdownEditorProps['onDoubleClick'];
+  onKeyDownCapture: MarkdownEditorProps['onKeyDownCapture'];
   readOnly: boolean;
   reviewCaretLineHighlight: boolean;
   rootRef: MutableRefObject<HTMLDivElement | null>;
@@ -40,9 +43,11 @@ function MarkdownEditorSurface(args: {
   return (
     <div
       className="relative h-full w-full overflow-hidden"
+      onBeforeInputCapture={args.onBeforeInputCapture}
       onBlurCapture={args.onBlurCapture}
       onContextMenu={(event) => args.mouseGesture.handleContextMenu(event, args.onContextMenu)}
       onDoubleClick={args.onDoubleClick}
+      onKeyDownCapture={args.onKeyDownCapture}
       onMouseDownCapture={args.mouseGesture.handleMouseDownCapture}
       ref={args.rootRef}
     >
@@ -187,8 +192,10 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         immersiveEditing={props.immersiveEditing === true}
         mouseGesture={surface.mouseGesture}
         onBlurCapture={props.onBlurCapture}
+        onBeforeInputCapture={(event) => handleEditorUndoRedoBeforeInput(event, props)}
         onContextMenu={props.onContextMenu}
         onDoubleClick={props.onDoubleClick}
+        onKeyDownCapture={(event) => handleEditorUndoRedoKeyDown(event, props)}
         readOnly={props.readOnly === true}
         reviewCaretLineHighlight={props.reviewCaretLineHighlight === true}
         rootRef={rootRef}

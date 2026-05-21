@@ -84,7 +84,7 @@ export function createHandleEditorContextMenu(args: {
   getPreservedSelectionPayload?: () => SelectionCommandPayload | null;
   isTrashViewOpen: boolean;
   nodesById: Record<string, Node>;
-  setContextMenu: (value: EditorContextMenuState) => void;
+  setContextMenu: (value: EditorContextMenuState | null) => void;
 }) {
   return (event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();

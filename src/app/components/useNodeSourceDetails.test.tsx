@@ -52,7 +52,7 @@ async function primeCachedNodeDetails() {
   const details = createPdfDetails('node-pdf');
   loadRuntimeNodeSourceDetails.mockImplementationOnce(() => request.promise);
   const { result, rerender } = renderHook(({ nodeId }: { nodeId: string | null }) => useNodeSourceDetails(nodeId), {
-    initialProps: { nodeId: 'node-pdf' }
+    initialProps: { nodeId: 'node-pdf' as string | null }
   });
   expect(result.current.isLoading).toBe(true);
   expect(result.current.value).toBeNull();

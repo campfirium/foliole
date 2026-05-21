@@ -13,8 +13,9 @@ import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
 
 export function createSelectionAnnotationHandlers(args: {
   activeNodeId: string | null;
-  deleteNodePermanently: (nodeId: string) => void;
+  deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  flushPendingEditorDraft: () => boolean;
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   selectionHandlers: ReturnType<typeof createSelectionHandlers>;
@@ -26,8 +27,9 @@ export function createSelectionAnnotationHandlers(args: {
   const handleToggleSelectionHighlightFromPayload = createToggleSelectionHighlightFromPayloadHandler({
     activeNodeId: args.activeNodeId,
     createHighlightFromPayload: args.selectionHandlers.handleCreateHighlightFromPayload,
-    deleteNodePermanently: args.deleteNodePermanently,
+    deleteEditorAnnotationNodes: args.deleteEditorAnnotationNodes,
     editorRef: args.editorRef,
+    flushPendingEditorDraft: args.flushPendingEditorDraft,
     nodesById: args.nodesById,
     syncActiveNodeContentFromEditor: args.syncActiveNodeContentFromEditor,
     trashedNodeIds: args.trashedNodeIds
@@ -36,6 +38,7 @@ export function createSelectionAnnotationHandlers(args: {
     activeNodeId: args.activeNodeId,
     createHighlightFromPayload: args.selectionHandlers.handleCreateNoteFromPayload,
     editorRef: args.editorRef,
+    flushPendingEditorDraft: args.flushPendingEditorDraft,
     nodesById: args.nodesById,
     onSelectNode: args.onSelectNode,
     trashedNodeIds: args.trashedNodeIds,

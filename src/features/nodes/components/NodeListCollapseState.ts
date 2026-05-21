@@ -75,7 +75,7 @@ export function useCollapsedNodeState({
 
 function useNoteCollapsedState({
   noteRowsAll
-}: Omit<UseCollapsedNodeStateInput, 'trashRowsAll'>) {
+}: Pick<UseCollapsedNodeStateInput, 'noteRowsAll'>) {
   const noteCollapsibleNodeIds = useNoteCollapsibleNodeIds(noteRowsAll);
   const {
     collapseAllNotes,

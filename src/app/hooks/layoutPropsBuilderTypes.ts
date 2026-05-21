@@ -85,6 +85,8 @@ export interface BuildLayoutPropsArgs {
   onNodeShortTermChange: WorkspaceLayoutFlatProps['onNodeShortTermChange'];
   onAnswerChange: WorkspaceLayoutFlatProps['onAnswerChange'];
   onEditorChange: WorkspaceLayoutFlatProps['onEditorChange'];
+  onEditorUndo: WorkspaceLayoutFlatProps['onEditorUndo'];
+  onEditorRedo: WorkspaceLayoutFlatProps['onEditorRedo'];
   onRegisterEditorDraftFlush: WorkspaceLayoutFlatProps['onRegisterEditorDraftFlush'];
   onPastedTextAnchors: WorkspaceLayoutFlatProps['onPastedTextAnchors'];
   onEnterPriorityQuickSet: WorkspaceLayoutFlatProps['onEnterPriorityQuickSet'];

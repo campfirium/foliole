@@ -98,6 +98,9 @@ function buildAppMenuTemplate(state: MenuState): MenuItemConstructorOptions[] {
     {
       label: 'Editor',
       submenu: [
+        commandItem('Undo', 'app.undo', state),
+        commandItem('Redo', 'app.redo', state),
+        { type: 'separator' },
         commandItem('Find in Topic', 'document.findInTopic', state),
         commandItem('Set Priority…', 'nodes.enterPriorityMode', state),
         { type: 'separator' },
