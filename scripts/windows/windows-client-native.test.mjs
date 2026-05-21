@@ -21,27 +21,41 @@ it('rejects unsupported native Windows client actions before process control', (
   );
 });
 
-it('uses Node-native process control instead of wrapping the legacy PowerShell client', async () => {
+it('starts the native dev runner through a Windows-owned process', async () => {
   const script = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native.mjs'), 'utf8');
   const processScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-process.mjs'), 'utf8');
   const restartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-restart.mjs'), 'utf8');
+  const startScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-electron-dev-native.ps1'), 'utf8');
 
-  expect(script).toContain("spawn(process.execPath, ['scripts/windows/electron-dev-native.mjs']");
-  expect(script).toContain("stdio: ['ignore', logs.stdoutFd, logs.stderrFd]");
+  expect(script).toContain("'powershell.exe'");
+  expect(script).toContain("'-File'");
+  expect(script).toContain('nativeStartScript');
+  expect(script).toContain('closeClientLogStreams(logs)');
+  expect(script).toContain('native dev runner start failed');
+  expect(startScript).toContain('Start-Process');
+  expect(startScript).toContain('-FilePath $NodePath');
+  expect(startScript).toContain('-ArgumentList @($scriptPath)');
+  expect(startScript).not.toContain('/d /c');
+  expect(startScript).toContain('-RedirectStandardOutput $StdoutLog');
+  expect(startScript).toContain('-RedirectStandardError $StderrLog');
+  expect(startScript).toContain('$env:FOLIOLE_BOOT_SESSION = $Session');
+  expect(startScript).toContain('$env:FOLIOLE_RUNTIME_HEAD = $RuntimeHead');
+  expect(processScript).toContain("runCapture('taskkill.exe', ['/PID', String(pid), '/T', '/F']");
   expect(processScript).toContain("process.kill(pid, 'SIGTERM')");
+  expect(processScript).toContain('setTimeout(() => {');
+  expect(processScript).toContain('child.stdout?.destroy()');
+  expect(processScript).toContain('child.stderr?.destroy()');
   expect(processScript).toContain('FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS');
   expect(script).toContain("await forceRestartClient('dev-shell-restart')");
   expect(script).not.toContain('requestControlledRuntimeRestart');
   expect(script).not.toContain('controlled restart timed out; runtime left for inspection');
   expect(script).toContain('startup health check failed: app-ready-timeout shell_pid=');
-  expect(processScript).not.toContain('taskkill');
   expect(restartScript).not.toContain('forced-cleanup');
   expect(script).toContain('ready.appReady.head ?? state?.head');
   expect(script).toContain('await killPid(ready?.appReady.pid)');
   expect(script).toContain('windowVisibleFile');
   expect(script).toContain('readReadyStateFiles({ appReadyFile, bridgeReadyFile, windowVisibleFile })');
   expect(script).not.toContain('.pipe(logs.');
-  expect(script).not.toContain('powershell.exe');
   expect(script).not.toContain('restart-electron-dev.ps1');
   expect(script).not.toContain('buildPowerShellArgs');
 });

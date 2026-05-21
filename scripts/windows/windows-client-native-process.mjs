@@ -20,7 +20,11 @@ export function runCapture(command, args, options = {}) {
       if (timeout) {
         clearTimeout(timeout);
       }
-      resolve(result);
+      setTimeout(() => {
+        child.stdout?.destroy();
+        child.stderr?.destroy();
+        resolve({ ...result, stderr, stdout });
+      }, 50);
     };
     const child = spawn(command, args, {
       cwd: options.cwd ?? process.cwd(),
@@ -72,6 +76,18 @@ async function waitForProcessExit(pid, timeoutMs) {
 export async function killPid(pid, options = {}) {
   if (!processAlive(pid)) {
     return;
+  }
+  if (process.platform === 'win32') {
+    const result = await runCapture('taskkill.exe', ['/PID', String(pid), '/T', '/F'], {
+      timeoutMs: options.timeoutMs ?? Number.parseInt(
+        process.env.FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS ?? String(DEFAULT_PROCESS_EXIT_TIMEOUT_MS),
+        10
+      )
+    });
+    if (result.code === 0 || !processAlive(pid)) {
+      return;
+    }
+    throw new Error(`process tree terminate failed pid=${pid} ${result.stderr.trim() || result.stdout.trim()}`);
   }
   const timeoutMs = options.timeoutMs ?? Number.parseInt(
     process.env.FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS ?? String(DEFAULT_PROCESS_EXIT_TIMEOUT_MS),

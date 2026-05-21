@@ -1,6 +1,5 @@
 /* global console, process, setTimeout */
 
-import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,6 +20,7 @@ const {
   appReadyFile,
   bridgeReadyFile,
   logDir,
+  nativeStartScript,
   repoRoot,
   stateFile,
   windowVisibleFile
@@ -44,6 +44,34 @@ function readReadyState() {
 async function currentHead() {
   const result = await runCapture('git', ['rev-parse', 'HEAD'], { cwd: repoRoot });
   return result.code === 0 ? result.stdout.trim() : '';
+}
+
+async function startNativeDevRunner({ head, logs, session }) {
+  const result = await runCapture('powershell.exe', [
+    '-NoProfile',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-File',
+    nativeStartScript,
+    '-NodePath',
+    process.execPath,
+    '-WorkDir',
+    repoRoot,
+    '-Session',
+    session,
+    '-RuntimeHead',
+    head,
+    '-StdoutLog',
+    logs.stdoutLog,
+    '-StderrLog',
+    logs.stderrLog
+  ], { cwd: repoRoot, timeoutMs: 30000 });
+  const shellPid = Number.parseInt(result.stdout.match(/shell_pid=(\d+)/u)?.[1] ?? '', 10);
+  if (result.code !== 0 || !Number.isInteger(shellPid)) {
+    const reason = result.stderr.trim() || result.stdout.trim() || result.error?.message || 'missing shell_pid';
+    throw new Error(`native dev runner start failed: ${reason}`);
+  }
+  return shellPid;
 }
 
 function printStatus() {
@@ -89,47 +117,34 @@ async function startClient({ print = true } = {}) {
   const session = `windows-native-client-${Date.now()}`;
   const head = await currentHead();
   const logs = await createClientLogStreams(logDir, session);
-  const child = spawn(process.execPath, ['scripts/windows/electron-dev-native.mjs'], {
-    cwd: repoRoot,
-    detached: true,
-    env: {
-      ...process.env,
-      FOLIOLE_BOOT_SESSION: session,
-      FOLIOLE_RUNTIME_HEAD: head
-    },
-    shell: false,
-    stdio: ['ignore', logs.stdoutFd, logs.stderrFd],
-    windowsHide: true
-  });
-  child.unref();
+  closeClientLogStreams(logs);
+  const shellPid = await startNativeDevRunner({ head, logs, session });
   await saveState({
     head,
     session,
-    shellPid: child.pid,
+    shellPid,
     startedAt: new Date().toISOString(),
     stderrLog: logs.stderrLog,
     stdoutLog: logs.stdoutLog
   });
   const ready = await waitForReady(session);
   if (!ready) {
-    closeClientLogStreams(logs);
     printStartupLogTail(readClientState());
     await removeClientState(stateFile);
     await resetMarkers();
-    throw new Error(`startup health check failed: app-ready-timeout shell_pid=${child.pid} left-for-inspection`);
+    throw new Error(`startup health check failed: app-ready-timeout shell_pid=${shellPid} left-for-inspection`);
   }
-  closeClientLogStreams(logs);
   await saveState({
     head,
     runtimePid: ready.windowVisible.pid,
     session,
-    shellPid: child.pid,
+    shellPid,
     startedAt: new Date().toISOString(),
     stderrLog: logs.stderrLog,
     stdoutLog: logs.stdoutLog
   });
   if (print) {
-    console.log(`[windows-restart-client] status: STARTED shell_pid=${child.pid} runtime_pid=${ready.windowVisible.pid}`);
+    console.log(`[windows-restart-client] status: STARTED shell_pid=${shellPid} runtime_pid=${ready.windowVisible.pid}`);
   }
   return { alreadyRunning: false, ready, state: readClientState() };
 }
