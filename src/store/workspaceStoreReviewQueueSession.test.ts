@@ -12,6 +12,17 @@ type WorkspaceSetInput =
   | Partial<WorkspaceState>
   | ((snapshot: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>);
 
+function createHistoryActionStubs() {
+  return {
+    undoWorkspaceAction: () => false,
+    redoWorkspaceAction: () => false,
+    pushEditorOperationEntry: () => undefined,
+    deleteEditorAnnotationNodes: () => undefined,
+    undoEditorOperation: () => false,
+    redoEditorOperation: () => false
+  };
+}
+
 function createReviewProfile(due: string, overrides: Partial<NodeReviewProfile> = {}): NodeReviewProfile {
   return {
     due,
@@ -150,10 +161,10 @@ function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     updateNodeDesiredRetention: () => undefined,
     updateNodeShortTerm: () => undefined,
     dismissNode: () => false,
-    undoWorkspaceAction: () => false,
-    redoWorkspaceAction: () => false,
+    ...createHistoryActionStubs(),
     relearnNode: () => false,
     startReviewSession: () => false,
+    resumeReviewSession: () => false,
     setReviewSessionMode: () => undefined,
     revealReviewAnswer: () => undefined,
     gradeReviewCard: async () => false,

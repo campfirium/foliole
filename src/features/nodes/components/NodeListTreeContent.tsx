@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 
-import { getCurrentReviewSchedulerSettings } from '../../settings/model/reviewSchedulerSettings';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
+import { getCurrentReviewSchedulerSettings } from '../../settings/model/reviewSchedulerSettings';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
@@ -11,8 +11,8 @@ import type {
   NodeListContextMenuController
 } from './NodeListTreeHooks';
 import { NodeListTreeMenu } from './NodeListTreeMenu';
-import { NodeReviewSchedulingDialog } from './NodeReviewSchedulingDialog';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
+import { NodeReviewSchedulingDialog } from './NodeReviewSchedulingDialog';
 import { useNodeListSearchRows } from './useNodeListSearchRows';
 
 interface NodeListTreeContentProps {
@@ -44,7 +44,7 @@ interface NodeListTreeContentProps {
   restoreNode: (nodeId: string) => void;
   returnNode: (nodeId: string, now?: string) => boolean;
   reviewSession: ReviewSessionState;
-  rowCountByNodeId?: ReadonlyMap<string, number>;
+  rowCountByNodeId?: ReadonlyMap<string, number> | undefined;
   rowSpacing: number;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;

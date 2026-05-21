@@ -155,7 +155,7 @@ function updateHistoryAfterApply(
 
 function getNavigationPatchAfterApply(
   state: WorkspaceState,
-  entry: WorkspaceActionHistoryEntry,
+  entry: WorkspaceTopicDismissHistoryEntry,
   mode: 'redo' | 'undo'
 ) {
   const reviewSession = mode === 'undo' ? entry.beforeReviewSession : entry.afterReviewSession;

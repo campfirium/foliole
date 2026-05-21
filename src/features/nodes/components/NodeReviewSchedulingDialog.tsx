@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { normalizePushQueuePriority } from '../../review/model/unifiedPushQueueRules';
 import {
   resolveNodePrioritySetting,
   resolveNodeShortTermSetting,
@@ -131,16 +132,17 @@ export function NodeReviewSchedulingDialog(props: {
   if (!node) {
     return null;
   }
-  const shortTerm = resolveNodeShortTermSetting(node.id, props.nodesById);
-  const priority = resolveNodePrioritySetting(node.id, props.nodesById, props.defaultPriority);
+  const nodeId = node.id;
+  const shortTerm = resolveNodeShortTermSetting(nodeId, props.nodesById);
+  const priority = resolveNodePrioritySetting(nodeId, props.nodesById, normalizePushQueuePriority(props.defaultPriority));
   const draft = useNodeReviewSchedulingDraft({ node, priority, shortTerm });
 
   function commitAndClose() {
     if (draft.isPriorityDirty) {
-      props.onPriorityChange(node.id, draft.priorityDraft);
+      props.onPriorityChange(nodeId, draft.priorityDraft);
     }
     if (draft.isShortTermDirty) {
-      props.onShortTermChange(node.id, draft.shortTermDraft);
+      props.onShortTermChange(nodeId, draft.shortTermDraft);
     }
     props.onClose();
   }

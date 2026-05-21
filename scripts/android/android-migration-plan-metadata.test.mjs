@@ -50,6 +50,7 @@ describe('Android migration plan metadata', () => {
     const schema = JSON.parse(await readFile(MIGRATION_SCHEMA, 'utf8'));
 
     expect(schema.actionTypes).toMatchObject({
+      addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
       installSchema: 'installSchema',
       migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
     });
@@ -66,7 +67,12 @@ describe('Android migration plan metadata', () => {
       statementName: 'statementName',
       tableName: 'tableName'
     });
-    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(schema.repairRules.nodesSequentialReadingEnabled).toMatchObject({
+      columnName: 'sequential_reading_enabled',
+      statementName: 'nodesSequentialReadingEnabledColumn',
+      tableName: 'nodes'
+    });
     expect(schema.repairRules.syncObjectStateSequence).toMatchObject({
       legacyRowsQueryName: 'migrationLegacySyncObjectStateRows',
       nextInsertMutationName: 'migrationSyncObjectStateNextInsert',

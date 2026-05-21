@@ -109,6 +109,7 @@ export function createAddNoteToSelectionHighlightFromPayloadHandler(args: {
   activeNodeId: string | null;
   createHighlightFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  flushPendingEditorDraft: () => boolean;
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   trashedNodeIds: string[];
@@ -129,6 +130,7 @@ export function createAddNoteToSelectionHighlightFromPayloadHandler(args: {
     if (!node) {
       return null;
     }
+    args.flushPendingEditorDraft();
     args.updateNodeContent(existingHighlightMatch.nodeId, appendHighlightCardNote({
       content: node.content,
       note,
@@ -143,8 +145,9 @@ export function createAddNoteToSelectionHighlightFromPayloadHandler(args: {
 export function createToggleSelectionHighlightFromPayloadHandler(args: {
   activeNodeId: string | null;
   createHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
-  deleteNodePermanently: (nodeId: string) => void;
+  deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  flushPendingEditorDraft: () => boolean;
   nodesById: Record<string, Node>;
   syncActiveNodeContentFromEditor: () => void;
   trashedNodeIds: string[];
@@ -158,7 +161,8 @@ export function createToggleSelectionHighlightFromPayloadHandler(args: {
       args.trashedNodeIds
     );
     if (existingHighlightMatch) {
-      args.deleteNodePermanently(existingHighlightMatch.nodeId);
+      args.flushPendingEditorDraft();
+      args.deleteEditorAnnotationNodes([existingHighlightMatch.nodeId]);
       return 'deleted' as const;
     }
     return args.createHighlightFromPayload(payload) ? 'created' as const : null;

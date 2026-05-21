@@ -133,13 +133,23 @@ function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     onCommit: commitEditorContent,
     ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
   });
+  const handleEditorUndo = useCallback(() => {
+    editorDraft.flushDraft();
+    return props.onEditorUndo?.() ?? false;
+  }, [editorDraft.flushDraft, props.onEditorUndo]);
+  const handleEditorRedo = useCallback(() => {
+    editorDraft.flushDraft();
+    return props.onEditorRedo?.() ?? false;
+  }, [editorDraft.flushDraft, props.onEditorRedo]);
   return useMemo(
     () => ({
       ...props,
       editorContent: editorDraft.editorContent,
-      onEditorChange: editorDraft.handleEditorChange
+      onEditorChange: editorDraft.handleEditorChange,
+      onEditorUndo: handleEditorUndo,
+      onEditorRedo: handleEditorRedo
     }),
-    [editorDraft.editorContent, editorDraft.handleEditorChange, props]
+    [editorDraft.editorContent, editorDraft.handleEditorChange, handleEditorRedo, handleEditorUndo, props]
   );
 }
 

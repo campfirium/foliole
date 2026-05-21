@@ -48,6 +48,8 @@ export interface WorkspaceLayoutProps {
     | 'nodeViewById'
     | 'onAnswerChange'
     | 'onEditorChange'
+    | 'onEditorUndo'
+    | 'onEditorRedo'
     | 'onRegisterEditorDraftFlush'
     | 'onNodeContentChange'
     | 'setNodeViewState'

@@ -1,10 +1,13 @@
-import {
-  appendImageClozeRegions,
-  type ImageClozeDraftRegion,
-  type ImageClozeSourcePayload
-} from '../features/image-cloze/model/imageCloze';
+import { pushEditorOperationEntry } from '../features/editor/model/editorOperationHistory';
+import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
 
+import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
+import {
+  normalizeImageClozeRegions,
+  normalizeImageClozeSourcePayload,
+  updateParentNodeImageRegions
+} from './workspaceImageClozeCreationHelpers';
 import { createDefaultReviewProfile } from './workspaceSeed';
 import type { WorkspaceState } from './workspaceStore';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
@@ -12,9 +15,7 @@ import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
 interface RuntimeSyncHandlers {
-  syncNodeContent: (node: WorkspaceNode) => void;
-  syncNodeCreation: (node: WorkspaceNode) => void;
-  syncNodeOrder: (nodeOrder: string[]) => void;
+  syncNodeContent: (node: WorkspaceNode) => void; syncNodeCreation: (node: WorkspaceNode) => void;
 }
 
 type WorkspaceSet = (
@@ -23,20 +24,6 @@ type WorkspaceSet = (
     | Partial<WorkspaceState>
     | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
-
-function normalizeImageClozeRegions(attachmentId: string, regions: ImageClozeDraftRegion[]) {
-  return regions
-    .map((region) => ({
-      ...region,
-      answer: region.answer.trim()
-    }))
-    .filter(
-      (region) =>
-        attachmentId.length > 0 &&
-        region.width > 0 &&
-        region.height > 0
-    );
-}
 
 function createImageClozeNode(
   parentNodeId: string,
@@ -94,13 +81,6 @@ function createImageClozeNode(
   };
 }
 
-function normalizeImageClozeSourcePayload(sourcePayload: ImageClozeSourcePayload) {
-  return {
-    promptContent: sourcePayload.promptContent.trim(),
-    revealContent: sourcePayload.revealContent.trim()
-  };
-}
-
 function createImageClozeNodeBatch(args: {
   normalizedAttachmentId: string;
   normalizedRegions: ImageClozeDraftRegion[];
@@ -134,19 +114,6 @@ function createImageClozeNodeBatch(args: {
     createdNodes: [nextNode.createdNode],
     nextNodesById,
     untitledSequenceByParent
-  };
-}
-
-function updateParentNodeImageRegions(
-  parentNode: WorkspaceNode,
-  attachmentId: string,
-  regions: ImageClozeDraftRegion[],
-  timestamp: string
-) {
-  return {
-    ...parentNode,
-    imageRegions: appendImageClozeRegions(parentNode.imageRegions, attachmentId, regions),
-    updatedAt: timestamp
   };
 }
 
@@ -198,7 +165,15 @@ function buildImageClozeStateUpdate(args: {
   batch.nextNodesById[args.parentNodeId] = updatedParentNode;
 
   const nextNodeOrder = [...args.state.nodeOrder, ...batch.createdNodes.map((node) => node.id)];
+  const operationEntry = createEditorAnnotationCreateEntry(
+    batch.createdNodes,
+    args.parentNodeId,
+    nextNodeOrder
+  );
   const nextState = {
+    ...(operationEntry
+      ? { editorOperationHistory: pushEditorOperationEntry(args.state.editorOperationHistory, operationEntry) }
+      : {}),
     nodeOrder: nextNodeOrder,
     nodesById: batch.nextNodesById,
     untitledSequenceByParent: batch.untitledSequenceByParent

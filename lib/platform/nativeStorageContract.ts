@@ -3,39 +3,9 @@ import type { VirtualNodeFilter } from '../core/nodes/virtualNodeFilter.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
 
 import type { NativeSchedulerCard } from './nativeContract.js';
+import type { NativeWorkspaceReadingProfile } from './nativeReadingContract.js';
+import type { NativeWorkspaceAnchorLink, NativeWorkspaceImageRegionGroup } from './nativeWorkspaceNodeContract.js';
 import type { NodeViewStateWriteSource } from './persistedNodeViewState.js';
-
-export interface NativeWorkspaceAnchorLink {
-  id: string;
-  kind: 'highlight' | 'cloze';
-  locator?: {
-    attachmentId?: string;
-    from?: number;
-    height?: number;
-    originalText?: string;
-    page?: number;
-    rects?: Array<{
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    }>;
-    to?: number;
-    width?: number;
-    x: number;
-    y: number;
-  } | {
-    ranges: Array<{
-      from: number;
-      originalText: string;
-      to: number;
-    }>;
-  } | {
-    from: number;
-    originalText: string;
-    to: number;
-  };
-}
 
 export interface NativeWorkspaceReviewProfile {
   due: string;
@@ -49,30 +19,6 @@ export interface NativeWorkspaceReviewProfile {
   lapses: number;
 }
 
-export interface NativeWorkspaceReadingProfile {
-  intervalDurationMs: number;
-  intervalGrowthFactor: number;
-  lastHandledAt: string;
-  nextAt: string;
-  priority: number;
-  readingPosition: number;
-  repetitionCount: number;
-  state: 'active' | 'done' | 'dismissed';
-}
-
-export interface NativeWorkspaceImageRegion {
-  id: string;
-  height: number;
-  width: number;
-  x: number;
-  y: number;
-}
-
-export interface NativeWorkspaceImageRegionGroup {
-  attachmentId: string;
-  regions: NativeWorkspaceImageRegion[];
-}
-
 export interface NativeWorkspaceNodeSnapshot {
   id: string;
   parentNodeId: string | null;
@@ -80,6 +26,7 @@ export interface NativeWorkspaceNodeSnapshot {
   priority?: number | null;
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
+  sequentialReadingEnabled?: boolean | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading?: boolean;
@@ -157,6 +104,12 @@ export type {
   NativeExternalSearchPreview
 } from './nativeExternalSearchContract.js';
 export type * from './nativeSyncContract.js';
+export type { NativeWorkspaceReadingProfile } from './nativeReadingContract.js';
+export type {
+  NativeWorkspaceAnchorLink,
+  NativeWorkspaceImageRegion,
+  NativeWorkspaceImageRegionGroup
+} from './nativeWorkspaceNodeContract.js';
 
 export interface NativeImportLocalImageAttachmentArgs {
   nodeId: string;
@@ -218,6 +171,7 @@ export interface NativeNodeSnapshotArgs {
   priority?: number | null;
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
+  sequentialReadingEnabled?: boolean | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading?: boolean;

@@ -39,9 +39,10 @@ function buildHookArgs(overrides: Record<string, unknown> = {}) {
     createChildNode: vi.fn(() => 'child-note'),
     createHighlightNodeFromSelection: vi.fn(() => 'highlight-1'),
     createQANodeFromSelection: vi.fn(() => 'qa-1'),
-    deleteNodePermanently: vi.fn(),
+    deleteEditorAnnotationNodes: vi.fn(),
     deleteImageClozeRegion: vi.fn(),
     editorRef: { current: createEditorAdapter() },
+    flushPendingEditorDraft: vi.fn(() => false),
     isTrashViewOpen: false,
     nodesById: {
       'highlight-1': {
@@ -100,12 +101,12 @@ function createHighlightElement() {
 
 it('opens an existing highlight toolbar from a highlight click', () => {
   const updateNodeContent = vi.fn();
-  const deleteNodePermanently = vi.fn();
+  const deleteEditorAnnotationNodes = vi.fn();
   const onSelectNode = vi.fn();
   const highlightElement = createHighlightElement();
 
   const { result } = renderHook(() =>
-    useEditorContextCommands(buildHookArgs({ deleteNodePermanently, onSelectNode, updateNodeContent }))
+    useEditorContextCommands(buildHookArgs({ deleteEditorAnnotationNodes, onSelectNode, updateNodeContent }))
   );
 
   act(() => {
@@ -144,7 +145,7 @@ it('opens an existing highlight toolbar from a highlight click', () => {
     }));
   });
   act(() => result.current.handleDeleteExistingHighlight());
-  expect(deleteNodePermanently).toHaveBeenCalledWith('highlight-1');
+  expect(deleteEditorAnnotationNodes).toHaveBeenCalledWith(['highlight-1']);
 });
 
 it('opens an existing highlight toolbar from the clicked highlight position before the cursor moves', () => {

@@ -12,6 +12,7 @@ import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearc
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
 import { restartAppWithReadingProgress } from './appRestartPersistence';
 import { repairEditorTable } from './editorRepairTableCommand';
@@ -136,15 +137,6 @@ function createPaletteReviewActions(args: {
     gradeReviewCard: args.ws.gradeReviewCard,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     startReviewSession: args.ws.startReviewSession
-  };
-}
-
-function createPaletteHistoryActions(args: {
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
-  return {
-    redoWorkspaceAction: args.ws.redoWorkspaceAction,
-    undoWorkspaceAction: args.ws.undoWorkspaceAction
   };
 }
 

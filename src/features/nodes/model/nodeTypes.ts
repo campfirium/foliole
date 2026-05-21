@@ -1,5 +1,6 @@
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
 import type { VirtualNodeFilter } from '../../../../lib/core/nodes/virtualNodeFilter';
+import type { ReadingState } from '../../../../lib/core/review/readingState';
 
 export interface NodeReviewProfile {
   due: string;
@@ -21,7 +22,7 @@ export interface NodeReadingProfile {
   priority: number;
   readingPosition: number;
   repetitionCount: number;
-  state: 'active' | 'done' | 'dismissed';
+  state: ReadingState;
 }
 
 export interface PdfAnchorLocator {
@@ -82,6 +83,7 @@ export interface Node {
   priority?: number | null;
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
+  sequentialReadingEnabled?: boolean | null;
   specialKind?: NodeSpecialKind;
   title: string;
   isTitleManual?: boolean;

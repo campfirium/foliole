@@ -13,6 +13,7 @@ interface SyncNodeRow extends DatabaseRow {
   current_version_id: string | null;
   deleted_at: string | null;
   desired_retention: number | null;
+  enable_short_term: number | null;
   device_id: string | null;
   hide_title_heading: number;
   id: string;
@@ -25,6 +26,7 @@ interface SyncNodeRow extends DatabaseRow {
   position: number | null;
   priority: number | null;
   reveal: string | null;
+  sequential_reading_enabled: number | null;
   snapshot_json: string | null;
   title: string;
   updated_at: string;
@@ -86,6 +88,7 @@ function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
     created_at: row.created_at,
     deleted_at: row.deleted_at,
     desired_retention: row.desired_retention,
+    enable_short_term: row.enable_short_term === null ? null : row.enable_short_term === 1,
     hide_title_heading: row.hide_title_heading === 1,
     id: row.id,
     image_regions: row.image_regions,
@@ -96,6 +99,7 @@ function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
     position: row.position,
     priority: row.priority,
     reveal: row.reveal,
+    sequential_reading_enabled: row.sequential_reading_enabled === null ? null : row.sequential_reading_enabled === 1,
     title: row.title,
     updated_at: row.updated_at,
     virtual_filter: row.virtual_filter
@@ -135,6 +139,8 @@ const SYNC_NODE_SELECT_COLUMNS = `
   n.kind,
   n.priority,
   n.desired_retention,
+  n.enable_short_term,
+  n.sequential_reading_enabled,
   n.title,
   n.is_title_manual,
   n.hide_title_heading,

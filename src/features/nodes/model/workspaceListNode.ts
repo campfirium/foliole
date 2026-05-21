@@ -28,6 +28,7 @@ export interface WorkspaceListNode {
   createdAt: string;
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
+  sequentialReadingEnabled?: boolean | null;
   hasContent: boolean;
   hasReveal: boolean;
   id: string;
@@ -56,6 +57,7 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     createdAt: node.createdAt,
     desiredRetention: node.desiredRetention ?? null,
     enableShortTerm: node.enableShortTerm ?? null,
+    sequentialReadingEnabled: node.sequentialReadingEnabled ?? null,
     hasContent: hasNodeContent(node),
     hasReveal: hasNodeReveal(node),
     id: node.id,
@@ -94,6 +96,7 @@ function isWorkspaceListProjectionReusable(
     projectedNode.createdAt === sourceNode.createdAt &&
     projectedNode.desiredRetention === (sourceNode.desiredRetention ?? null) &&
     projectedNode.enableShortTerm === (sourceNode.enableShortTerm ?? null) &&
+    projectedNode.sequentialReadingEnabled === (sourceNode.sequentialReadingEnabled ?? null) &&
     projectedNode.hasContent === hasNodeContent(sourceNode) &&
     projectedNode.hasReveal === hasNodeReveal(sourceNode) &&
     projectedNode.id === sourceNode.id &&

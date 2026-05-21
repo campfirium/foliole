@@ -67,7 +67,7 @@ export function collectDanglingNoteAsteriskDecorationPlan(
   if (inCodeBlock) return { markRanges: [], replaceRanges: [] };
   const match = /^(\s*(?:>\s*)?)(\\?)\*注[：:]/u.exec(text);
   if (!match) return { markRanges: [], replaceRanges: [] };
-  const asteriskFrom = from + match[1].length + match[2].length;
+  const asteriskFrom = from + (match[1]?.length ?? 0) + (match[2]?.length ?? 0);
   return {
     markRanges: [],
     replaceRanges: [{ from: asteriskFrom, to: asteriskFrom + 1 }]

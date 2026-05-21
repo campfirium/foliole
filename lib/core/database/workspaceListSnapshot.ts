@@ -30,6 +30,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        n.priority,
        n.desired_retention,
        n.enable_short_term,
+       n.sequential_reading_enabled,
        n.title,
        n.is_title_manual,
        n.hide_title_heading,

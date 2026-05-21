@@ -30,10 +30,31 @@ function createWorkspaceNavigation() {
   };
 }
 
+function createWorkspaceEditorOperationState() {
+  return {
+    editorOperationHistory: { redoStack: [], undoStack: [] },
+    pushEditorOperationEntry: vi.fn(),
+    redoEditorOperation: vi.fn(),
+    undoEditorOperation: vi.fn()
+  };
+}
+
+function createWorkspaceLayoutState() {
+  return {
+    documentMaxWidth: 720,
+    isListCollapsed: false,
+    isRightSidebarCollapsed: false,
+    listWidth: 280,
+    rightSidebarWidth: 320
+  };
+}
+
 export function createWorkspaceState() {
   return {
     activeNodeId: 'node-1',
     appActionHistory: { redoStack: [], undoStack: [] },
+    ...createWorkspaceEditorOperationState(),
+    ...createWorkspaceLayoutState(),
     createChildNode: vi.fn(),
     createHighlightNodeFromSelection: vi.fn(),
     createImageClozeNodes: vi.fn(),
@@ -44,19 +65,16 @@ export function createWorkspaceState() {
     deferReviewItem: vi.fn(),
     deleteImageClozeRegion: vi.fn(),
     deleteNode: vi.fn(),
+    deleteEditorAnnotationNodes: vi.fn(),
     deleteNodePermanently: vi.fn(),
     dismissReviewItem: vi.fn(),
-    documentMaxWidth: 720,
     exitReviewSession: vi.fn(),
     goBack: vi.fn(),
     goForward: vi.fn(),
     goToParent: vi.fn(),
     gradeReviewCard: vi.fn(),
     isHydrated: true,
-    isListCollapsed: false,
-    isRightSidebarCollapsed: false,
     jumpToAncestorNode: vi.fn(),
-    listWidth: 280,
     moveNode: vi.fn(),
     moveNodes: vi.fn(),
     navigation: createWorkspaceNavigation(),
@@ -71,7 +89,7 @@ export function createWorkspaceState() {
     revealReviewAnswer: vi.fn(),
     reviewSession: createWorkspaceReviewSession(),
     reviewSessionMode: 'recommended' as const,
-    rightSidebarWidth: 320,
+    resumeReviewSession: vi.fn(),
     setReviewSessionMode: vi.fn(),
     setDocumentMaxWidth: vi.fn(),
     setListCollapsed: vi.fn(),

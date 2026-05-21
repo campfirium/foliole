@@ -1,11 +1,14 @@
-import type { NodeKind } from '../nodes/nodeKind.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
-import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
 import { deleteNonFolderOrderRows, filterFolderOrderIds } from './folderOrderRows.js';
+import type {
+  NodeAnchorLinkPayload,
+  NodeImageRegionGroupPayload,
+  UpsertNodeSnapshotInput
+} from './nodeMutationPayloads.js';
 import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
   createUpdateNodeAnchorLinkStatement,
@@ -24,79 +27,7 @@ import {
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 export type { RestoreNodesResult } from './nodeRestoreConflicts.js';
-
-interface NodeAnchorLinkPayload {
-  id: string;
-  kind: 'highlight' | 'cloze';
-  locator?: {
-    attachmentId?: string;
-    from?: number;
-    height?: number;
-    originalText?: string;
-    page?: number;
-    to?: number;
-    width?: number;
-    x: number;
-    y: number;
-  } | {
-    ranges: Array<{
-      from: number;
-      originalText: string;
-      to: number;
-    }>;
-  } | {
-    from: number;
-    originalText: string;
-    to: number;
-  };
-}
-
-interface NodeReadingPayload {
-  intervalDurationMs: number;
-  intervalGrowthFactor: number;
-  lastHandledAt: string;
-  nextAt: string;
-  priority: number;
-  readingPosition: number;
-  repetitionCount: number;
-  state: 'active' | 'done' | 'dismissed';
-}
-
-interface NodeImageRegionPayload {
-  id: string;
-  height: number;
-  width: number;
-  x: number;
-  y: number;
-}
-
-interface NodeImageRegionGroupPayload {
-  attachmentId: string;
-  regions: NodeImageRegionPayload[];
-}
-
-export interface UpsertNodeSnapshotInput {
-  nodeId: string;
-  deviceId?: string;
-  parentNodeId: string | null;
-  kind: NodeKind;
-  priority?: number | null;
-  desiredRetention?: number | null;
-  enableShortTerm?: boolean | null;
-  title: string;
-  isTitleManual: boolean;
-  hideTitleHeading?: boolean;
-  content: string;
-  openingText?: string | null;
-  virtualFilter?: VirtualNodeFilter | null;
-  reveal: string | null;
-  anchorLink: NodeAnchorLinkPayload | null;
-  imageRegions?: NodeImageRegionGroupPayload[] | null;
-  reading?: NodeReadingPayload | null;
-  position: number | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { UpsertNodeSnapshotInput } from './nodeMutationPayloads.js';
 
 export interface SoftDeleteNodesInput {
   nodeIds: string[];
@@ -156,6 +87,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       input.priority ?? null,
       input.desiredRetention ?? null,
       input.enableShortTerm == null ? null : input.enableShortTerm ? 1 : 0,
+      input.sequentialReadingEnabled == null ? null : input.sequentialReadingEnabled ? 1 : 0,
       input.title,
       input.isTitleManual ? 1 : 0,
       input.hideTitleHeading === true ? 1 : 0,

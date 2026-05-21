@@ -46,9 +46,10 @@ interface UseEditorContextCommandsParams {
     anchorId: string,
     anchorLink?: NodeAnchorLink
   ) => string | null;
-  deleteNodePermanently: (nodeId: string) => void;
+  deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  flushPendingEditorDraft: () => boolean;
   isTrashViewOpen: boolean;
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
@@ -92,14 +93,14 @@ function usePreservedSelectionPayload(args: {
   return preservedSelectionPayloadRef;
 }
 
-export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
-  const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
+function useEditorContextCommandSurfaces(
+  args: UseEditorContextCommandsParams,
+  setContextMenu: (value: EditorContextMenuState | null) => void
+) {
   const createImageClozeNodes = args.createImageClozeNodes ?? (() => []);
-  const { activeNodeId, editorRef } = args;
-  const preservedSelectionPayloadRef = usePreservedSelectionPayload({ activeNodeId, editorRef });
   useSelectionAnnotationToolbar({
-    activeNodeId,
-    editorRef,
+    activeNodeId: args.activeNodeId,
+    editorRef: args.editorRef,
     isTrashViewOpen: args.isTrashViewOpen,
     nodesById: args.nodesById,
     selectionToolbarEnabled: args.selectionToolbarEnabled ?? true,
@@ -107,13 +108,21 @@ export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
     trashedNodeIds: args.trashedNodeIds
   });
   useImageClozeEventBridge({
-    activeNodeId,
+    activeNodeId: args.activeNodeId,
     createImageClozeNodes,
     deleteImageClozeRegion: args.deleteImageClozeRegion,
-    editorRef,
+    editorRef: args.editorRef,
+    flushPendingEditorDraft: args.flushPendingEditorDraft,
     nodesById: args.nodesById,
     ...definedProps({ activeNode: args.activeNode })
   });
+}
+
+export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
+  const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
+  const { activeNodeId, editorRef } = args;
+  const preservedSelectionPayloadRef = usePreservedSelectionPayload({ activeNodeId, editorRef });
+  useEditorContextCommandSurfaces(args, setContextMenu);
   const closeContextMenu = () => setContextMenu(null);
   const syncActiveNodeContentFromEditor = createSyncActiveNodeContentFromEditor(activeNodeId, editorRef, args.updateNodeContent);
   const handleEditorContextMenu = createHandleEditorContextMenu({
@@ -131,6 +140,7 @@ export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
     createChildNode: args.createChildNode,
     createHighlightNodeFromSelection: args.createHighlightNodeFromSelection,
     createQANodeFromSelection: args.createQANodeFromSelection,
+    flushPendingEditorDraft: args.flushPendingEditorDraft,
     onExitImmersiveMode: args.onExitImmersiveMode,
     onSelectNode: args.onSelectNode,
     runSelectionCommand,
@@ -140,8 +150,9 @@ export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
     activeNodeId,
     closeContextMenu,
     contextMenu,
-    deleteNodePermanently: args.deleteNodePermanently,
+    deleteEditorAnnotationNodes: args.deleteEditorAnnotationNodes,
     editorRef,
+    flushPendingEditorDraft: args.flushPendingEditorDraft,
     handleEditorContextMenu,
     nodesById: args.nodesById,
     onSelectNode: args.onSelectNode,
@@ -157,8 +168,9 @@ function buildEditorCommandsResult(args: {
   activeNodeId: string | null;
   closeContextMenu: () => void;
   contextMenu: EditorContextMenuState | null;
-  deleteNodePermanently: (nodeId: string) => void;
+  deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  flushPendingEditorDraft: () => boolean;
   handleEditorContextMenu: ReturnType<typeof createHandleEditorContextMenu>;
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
@@ -194,7 +206,9 @@ function buildEditorCommandsResult(args: {
       const repaired = repairEditorTable({
         activeNodeId: args.activeNodeId,
         editorRef: args.editorRef,
-        selection: args.contextMenu?.kind === 'selection' ? args.contextMenu.tableRepairSelection : null,
+        ...definedProps({
+          selection: args.contextMenu?.kind === 'selection' ? args.contextMenu.tableRepairSelection : null
+        }),
         updateNodeContent: args.updateNodeContent
       });
       if (repaired) args.closeContextMenu();

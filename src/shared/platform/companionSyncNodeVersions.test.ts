@@ -46,7 +46,7 @@ it('opens the Android companion database before running the shared core', async 
   await expect(applyCompanionSyncNodeVersionsWithSharedCoreOnDevice([nodeVersion()], manager as never))
     .resolves.toEqual(['node-1']);
 
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 14, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 17, false);
   expect(connection.open).toHaveBeenCalled();
 });
 
@@ -86,7 +86,7 @@ it('recreates the Android companion database connection when the cached handle i
     .resolves.toEqual(['node-1']);
 
   expect(manager.checkConnectionsConsistency).toHaveBeenCalled();
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 14, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 17, false);
   expect(connection.open).toHaveBeenCalled();
 });
 
@@ -171,6 +171,8 @@ function installNodeApplySchema(database: Database.Database) {
       kind TEXT NOT NULL,
       priority INTEGER,
       desired_retention REAL,
+      enable_short_term INTEGER,
+      sequential_reading_enabled INTEGER,
       title TEXT NOT NULL,
       is_title_manual INTEGER NOT NULL DEFAULT 0,
       hide_title_heading INTEGER NOT NULL DEFAULT 0,
@@ -205,6 +207,18 @@ function installNodeApplySchema(database: Database.Database) {
       attachment_id TEXT NOT NULL,
       role TEXT NOT NULL,
       PRIMARY KEY (node_id, attachment_id, role)
+    );
+    CREATE TABLE search_index_invalidations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invalidation_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_error TEXT,
+      claimed_at TEXT,
+      completed_at TEXT
     );
   `);
   installContentBlobSchema(database);

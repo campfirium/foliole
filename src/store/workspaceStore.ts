@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { createEmptyEditorOperationHistory } from '../features/editor/model/editorOperationHistory';
 import { DEFAULT_REVIEW_SESSION_MODE } from '../features/review/model/reviewSessionMode';
 
 import { createEmptyWorkspaceActionHistory, createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import { loadWorkspaceLayoutPreferenceSnapshot } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE } from './workspaceNavigation';
 import { registerPendingNodeSyncRendererBoundary } from './workspaceRendererBoundaryPendingSync';
@@ -43,6 +45,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
   | 'activeNodeId'
   | 'appActionHistory'
+  | 'editorOperationHistory'
   | 'isHydrated'
   | 'workspaceHydrationError'
   | 'layout'
@@ -60,6 +63,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   return {
     ...createEmptyWorkspaceSnapshot(now, loadWorkspaceLayoutPreferenceSnapshot(defaultLayoutState)),
     appActionHistory: createEmptyWorkspaceActionHistory(),
+    editorOperationHistory: createEmptyEditorOperationHistory(),
     isHydrated: false,
     workspaceHydrationError: null,
     navigation: { ...INITIAL_WORKSPACE_NAVIGATION_STATE },
@@ -119,6 +123,7 @@ const workspaceStore = create<WorkspaceState>()(
       },
       ...createWorkspaceNavigationActions(boundaryAwareSet),
       ...createWorkspaceActionHistoryActions(boundaryAwareSet, get),
+      ...createWorkspaceEditorOperationHistoryActions(boundaryAwareSet, get),
       ...createWorkspaceNodeActions(boundaryAwareSet),
       ...createWorkspaceReviewActions(boundaryAwareSet, get)
     });

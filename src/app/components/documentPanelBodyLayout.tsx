@@ -55,6 +55,8 @@ export interface DocumentPanelBodyLayoutProps {
   onAnswerChange: (answer: string) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
+  onEditorUndo?: () => boolean;
+  onEditorRedo?: () => boolean;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
@@ -115,8 +117,10 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
           onPreviewNodeLink: props.onPreviewNodeLink,
           onPastedAnchors: props.onPastedTextAnchors,
           onReady: props.onEditorReady,
+          onRedo: props.onEditorRedo,
           onSetReadingPositionSelection: props.onSetReadingPositionSelection,
           onShouldSuppressSelectionRestore: props.onShouldSuppressSelectionRestore,
+          onUndo: props.onEditorUndo,
           readOnly: props.readOnly,
           readingRestoreCommandId: props.editorReadingRestoreCommandId,
           readingRestoreScrollTop: props.editorReadingRestoreScrollTop,

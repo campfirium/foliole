@@ -8,7 +8,8 @@ import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
 interface ExistingHighlightHandlerArgs {
   closeContextMenu: () => void;
   contextMenu: EditorContextMenuState | null;
-  deleteNodePermanently: (nodeId: string) => void;
+  deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
+  flushPendingEditorDraft: () => boolean;
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   selectionHandlers: ReturnType<typeof createSelectionHandlers>;
@@ -27,6 +28,7 @@ export function createExistingHighlightHandlers(args: ExistingHighlightHandlerAr
       if (!node) {
         return;
       }
+      args.flushPendingEditorDraft();
       args.updateNodeContent(existingHighlight.nodeId, appendHighlightCardNote({
         content: node.content,
         note,
@@ -38,7 +40,8 @@ export function createExistingHighlightHandlers(args: ExistingHighlightHandlerAr
       if (!existingHighlight) {
         return;
       }
-      args.deleteNodePermanently(existingHighlight.nodeId);
+      args.flushPendingEditorDraft();
+      args.deleteEditorAnnotationNodes([existingHighlight.nodeId]);
       args.closeContextMenu();
     },
     handleOpenExistingHighlight() {

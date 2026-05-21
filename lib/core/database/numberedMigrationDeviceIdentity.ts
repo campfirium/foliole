@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { tableExists } from './numberedMigrationHelpers.js';
 
 export function migrateDeviceIdSettingKey(sqlite: DatabaseMigrationTarget) {
   if (!tableExists(sqlite, 'settings')) return;
@@ -116,11 +117,4 @@ function parseDeviceId(value: string | null | undefined) {
   } catch {
     return value.trim() || null;
   }
-}
-
-function tableExists(sqlite: DatabaseMigrationTarget, tableName: string) {
-  const row = sqlite
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
-    .all(tableName)[0] as { name?: string } | undefined;
-  return row?.name === tableName;
 }

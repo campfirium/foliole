@@ -26,6 +26,7 @@ function createNodeRecord(overrides: Partial<NativeSyncNodeRecord> = {}): Native
       deleted_at: null,
       desired_retention: 0.8,
       enable_short_term: true,
+      sequential_reading_enabled: false,
       hide_title_heading: true,
       id: 'node-1',
       image_regions: null,
@@ -58,6 +59,7 @@ it('builds the canonical remote node upsert params', () => {
     2,
     0.8,
     1,
+    0,
     'Remote Node',
     1,
     1,
@@ -85,7 +87,7 @@ it('builds remote version upsert only for complete version metadata', () => {
     'phone',
     '2026-04-21T11:00:00.000Z',
     'hash-1',
-    expect.stringContaining('"enable_short_term":true')
+    expect.stringContaining('"sequential_reading_enabled":false')
   ]);
   expect(buildRemoteNodeVersionUpsert(createNodeRecord({ version_id: null }))).toBeNull();
 });

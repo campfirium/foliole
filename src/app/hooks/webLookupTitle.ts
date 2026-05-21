@@ -12,7 +12,7 @@ function collectNodePath(activeNodeId: string, nodesById: Record<string, WebLook
   let cursorId: string | null = activeNodeId;
   while (cursorId && !visited.has(cursorId)) {
     visited.add(cursorId);
-    const node = nodesById[cursorId];
+    const node: WebLookupTitleNode | undefined = nodesById[cursorId];
     if (!node) break;
     path.push(node);
     cursorId = node.parentNodeId;

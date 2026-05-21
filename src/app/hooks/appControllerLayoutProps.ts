@@ -1,4 +1,8 @@
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
+import type {
+  EditorOperationHistoryEntry,
+  EditorOperationHistoryState
+} from '../../features/editor/model/editorOperationHistory';
 import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
@@ -74,6 +78,7 @@ export interface BuildControllerLayoutPropsArgs {
     ) => string | null;
     createVirtualNode: () => string;
     createRootNode: (content?: string, kind?: NodeKind) => string;
+    deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
     exitReviewSession: () => void;
     gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;
     completeReviewItem: () => boolean;
@@ -99,6 +104,9 @@ export interface BuildControllerLayoutPropsArgs {
     setRightSidebarWidth: (width: number) => void;
     startReviewSession: (now?: string) => boolean;
     trashedNodeIds: string[];
+    pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
+    undoEditorOperation: () => boolean;
+    redoEditorOperation: () => boolean;
     updateNodeContent: (nodeId: string, content: string) => void;
     updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
     updateVirtualNodeFilter: (nodeId: string, value: string) => void;
@@ -107,6 +115,7 @@ export interface BuildControllerLayoutPropsArgs {
     updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
     updateNodeReveal: (nodeId: string, reveal: string) => void;
     isHydrated: boolean;
+    editorOperationHistory: EditorOperationHistoryState;
   };
   runImportDirectory: () => Promise<boolean>;
   runClipboardImport: () => Promise<boolean>;
@@ -130,6 +139,8 @@ function createLayoutHandlerArgs(
   return {
     onAnswerChange: createAnswerChangeHandler(args),
     onEditorChange: createEditorChangeHandler(args),
+    onEditorUndo: args.ws.undoEditorOperation,
+    onEditorRedo: args.ws.redoEditorOperation,
     onRegisterEditorDraftFlush: args.runtime.registerPendingEditorDraftFlush,
     onEnterPriorityQuickSet: args.priorityQuickSet.enter,
     onNodeContentChange: createNodeContentChangeHandler(args),

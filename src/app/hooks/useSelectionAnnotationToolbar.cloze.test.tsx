@@ -39,9 +39,10 @@ function buildHookArgs(overrides: Record<string, unknown> = {}) {
     createChildNode: vi.fn(() => 'child-note'),
     createHighlightNodeFromSelection: vi.fn(() => 'highlight-1'),
     createQANodeFromSelection: vi.fn(() => 'qa-1'),
-    deleteNodePermanently: vi.fn(),
+    deleteEditorAnnotationNodes: vi.fn(),
     deleteImageClozeRegion: vi.fn(),
     editorRef: { current: createEditorAdapter() },
+    flushPendingEditorDraft: vi.fn(() => false),
     isTrashViewOpen: false,
     nodesById: {
       'cloze-1': {

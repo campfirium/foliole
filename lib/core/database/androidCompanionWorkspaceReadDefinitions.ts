@@ -76,6 +76,7 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
         { outputKey: 'priority', rowKey: 'priority', type: 'long', omitWhenNull: true },
         { outputKey: 'desiredRetention', rowKey: 'desired_retention', type: 'double', omitWhenNull: true },
         { outputKey: 'enableShortTerm', rowKey: 'enable_short_term', type: 'booleanLong', omitWhenNull: true },
+        { outputKey: 'sequentialReadingEnabled', rowKey: 'sequential_reading_enabled', type: 'booleanLong', omitWhenNull: true },
         { outputKey: 'title', rowKey: 'title', type: 'title' },
         { outputKey: 'isTitleManual', rowKey: 'is_title_manual', type: 'booleanLong' },
         { outputKey: 'hideTitleHeading', rowKey: 'hide_title_heading', type: 'booleanLong' },
@@ -96,7 +97,7 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
       outputKey: 'reading',
       requiredRowKeys: ['last_handled_at', 'next_at', 'reading_state'],
       stateRowKey: 'reading_state',
-      validStates: ['active', 'done', 'dismissed'],
+      validStates: ['active', 'done', 'dismissed', 'locked'],
       fields: [
         { outputKey: 'intervalDurationMs', rowKey: 'interval_duration_ms', type: 'long', defaultValue: 0 },
         { outputKey: 'intervalGrowthFactor', rowKey: 'interval_growth_factor', type: 'double', defaultValue: 1 },

@@ -79,6 +79,7 @@ function ImageClozePromptSection({ editorAppearanceKey, node }: Pick<ImageClozeC
 }
 
 function ImageClozeAnswerSection({
+  editorAppearanceKey,
   node,
   onAnswerChange,
   showAnswer

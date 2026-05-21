@@ -1,3 +1,5 @@
+import type { ReadingState } from '../review/readingState.js';
+
 import type { DatabaseBindParams, DatabaseDriver, DatabaseRow } from './driver.js';
 import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
@@ -9,7 +11,7 @@ export interface NodeReadingSyncPayload {
   priority: number;
   readingPosition: number;
   repetitionCount: number;
-  state: 'active' | 'done' | 'dismissed';
+  state: ReadingState;
 }
 
 export interface WriteNodeReadingSyncInput {

@@ -79,7 +79,7 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
     private void createTables() {
         database.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', priority INTEGER, " +
-            "desired_retention REAL, title TEXT NOT NULL, is_title_manual INTEGER NOT NULL DEFAULT 0, " +
+            "desired_retention REAL, enable_short_term INTEGER, sequential_reading_enabled INTEGER, title TEXT NOT NULL, is_title_manual INTEGER NOT NULL DEFAULT 0, " +
             "hide_title_heading INTEGER NOT NULL DEFAULT 0, content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, " +
             "opening_text TEXT, virtual_filter TEXT, reveal TEXT, anchor_link TEXT, image_regions TEXT, " +
             "current_version_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");

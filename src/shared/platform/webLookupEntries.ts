@@ -179,6 +179,7 @@ export function moveWebLookupEntry(entryId: string, targetId: string) {
   if (from < 0 || to < 0 || from === to) return entries;
   const nextEntries = [...entries];
   const [entry] = nextEntries.splice(from, 1);
+  if (!entry) return entries;
   nextEntries.splice(to, 0, entry);
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.webLookupEntries, serializeEntries(nextEntries));
   return nextEntries;

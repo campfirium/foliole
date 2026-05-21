@@ -23,6 +23,7 @@ export function useImageClozeEventBridge(args: {
   ) => string[];
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  flushPendingEditorDraft: () => boolean;
   nodesById: Record<string, Node>;
 }) {
   useEffect(() => {
@@ -37,6 +38,7 @@ export function useImageClozeEventBridge(args: {
         detail.imageRange
       );
       if (sourcePayload) {
+        args.flushPendingEditorDraft();
         args.createImageClozeNodes(args.activeNodeId, detail.attachmentId, sourcePayload, detail.regions);
       }
     };
@@ -44,6 +46,7 @@ export function useImageClozeEventBridge(args: {
     const handleImageClozeDelete = (event: Event) => {
       const detail = (event as CustomEvent<ImageClozeDeleteEventDetail>).detail;
       if (args.activeNodeId && detail?.attachmentId && detail?.regionId) {
+        args.flushPendingEditorDraft();
         args.deleteImageClozeRegion(args.activeNodeId, detail.attachmentId, detail.regionId);
       }
     };

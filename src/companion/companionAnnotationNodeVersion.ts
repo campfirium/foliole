@@ -14,6 +14,7 @@ export function canonicalCompanionNodePayload(node: WorkspaceNodeSnapshot) {
     deleted_at: node.deletedAt ?? null,
     desired_retention: node.desiredRetention ?? null,
     enable_short_term: node.enableShortTerm ?? null,
+    sequential_reading_enabled: node.sequentialReadingEnabled ?? null,
     hide_title_heading: node.hideTitleHeading,
     id: node.id,
     image_regions: serialize(node.imageRegions),

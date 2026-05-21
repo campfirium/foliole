@@ -3,6 +3,7 @@ import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
+import { createRootNodeAction } from './workspaceRootNodeCreateAction';
 import {
   syncCreateNodeToRuntime,
   syncDeleteNodesPermanentlyToRuntime,
@@ -16,8 +17,7 @@ import { type WorkspaceState } from './workspaceStore';
 import { createUpdateNodeContentAction } from './workspaceStoreContentActions';
 import {
   createHighlightFromSelectionAction,
-  createQAFromSelectionAction,
-  createRootNodeAction
+  createQAFromSelectionAction
 } from './workspaceStoreCreateActions';
 import { createUpdateHighlightAnchorRangeAction } from './workspaceStoreHighlightRangeActions';
 import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';

@@ -35,6 +35,8 @@ function buildDocumentEditorProps(
     isPriorityQuickSetActive: props.isPriorityQuickSetActive,
     onAnswerChange: props.onAnswerChange,
     onEditorChange: props.onEditorChange,
+    onEditorUndo: props.onEditorUndo,
+    onEditorRedo: props.onEditorRedo,
     onEditorContextMenu: props.onEditorContextMenu,
     onEditorReady: props.onEditorReady,
     onRegisterEditorDraftFlush: props.onRegisterEditorDraftFlush,

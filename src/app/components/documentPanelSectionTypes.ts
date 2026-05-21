@@ -45,6 +45,8 @@ export interface DocumentPanelSectionProps {
   showDocumentOutline?: boolean;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
+  onEditorUndo?: () => boolean;
+  onEditorRedo?: () => boolean;
   onRegisterEditorDraftFlush?: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
   onNodePriorityChange?: (nodeId: string, priority: number | null) => void;
@@ -59,7 +61,7 @@ export interface DocumentPanelSectionProps {
   onCreateNote?: (note: string) => void;
   onDeleteExistingHighlight?: () => void;
   onOpenExistingHighlight?: () => void;
-  onRepairTable: () => boolean;
+  onRepairTable?: () => boolean;
   onAdjustExistingHighlightRange: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
