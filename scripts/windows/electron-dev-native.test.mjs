@@ -14,10 +14,11 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).toContain('process.env.FOLIOLE_SESSION_DATA_PATH = userDataPath');
   expect(runner).toContain("const localLibraryHome = 'D:\\\\X\\\\U\\\\Foliole'");
   expect(runner).toContain("const debugLibraryHome = path.join(userDataPath, 'native-debug-library')");
-  expect(runner).toContain('copyIfSourceIsNewer(sourceDatabasePath, targetDatabasePath)');
-  expect(runner).toContain('resolveDebugLibraryHome()');
+  expect(runner).toContain("process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY === '1'");
+  expect(runner).toContain('copyDatabaseIfSourceIsNewer(sourceDatabasePath, targetDatabasePath)');
+  expect(runner).toContain('resolveLibraryHome()');
   expect(runner).toContain('library-path-settings.json');
-  expect(runner).toContain('ensureLocalLibraryPathSettings(resolveDebugLibraryHome());');
+  expect(runner).toContain('ensureLocalLibraryPathSettings(resolveLibraryHome());');
   expect(runner).toContain("process.env.FOLIOLE_BOOT_SESSION ??= `windows-native-${randomUUID()}`");
   expect(runner).toContain("process.env.FOLIOLE_DISABLE_IN_APP_RELAUNCH ??= '1'");
   expect(runner).toContain('FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE');
