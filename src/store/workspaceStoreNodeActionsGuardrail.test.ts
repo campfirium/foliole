@@ -39,6 +39,7 @@ function createWorkspaceFixture(): WorkspaceState {
     updateNodePriority: () => undefined,
     updateNodeDesiredRetention: () => undefined,
     updateNodeShortTerm: () => undefined,
+    setNodeSequentialReading: () => false,
     dismissNode: () => false,
     undoWorkspaceAction: () => false,
     redoWorkspaceAction: () => false,

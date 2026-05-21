@@ -1,0 +1,38 @@
+import { expect, it } from 'vitest';
+
+import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
+
+function input(overrides: { sequentialReadingEnabled: boolean | null }) {
+  return {
+    anchorLink: null,
+    attachments: [],
+    content: 'Body',
+    createdAt: '2026-05-21T00:00:00.000Z',
+    deletedAt: null,
+    desiredRetention: null,
+    enableShortTerm: null,
+    hideTitleHeading: false,
+    id: 'node-1',
+    imageRegions: null,
+    isTitleManual: true,
+    kind: 'topic',
+    openingText: null,
+    parentId: null,
+    position: null,
+    priority: null,
+    reveal: null,
+    title: 'Node',
+    updatedAt: '2026-05-21T00:00:00.000Z',
+    virtualFilter: null,
+    ...overrides
+  };
+}
+
+it('includes sequential reading mode in node sync hashes', () => {
+  expect(computeNodeSyncHash(input({ sequentialReadingEnabled: true }))).not.toBe(
+    computeNodeSyncHash(input({ sequentialReadingEnabled: false }))
+  );
+  expect(computeNodeSyncHash(input({ sequentialReadingEnabled: null }))).not.toBe(
+    computeNodeSyncHash(input({ sequentialReadingEnabled: true }))
+  );
+});

@@ -15,6 +15,7 @@ import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
 import { CommandPalette } from './components/CommandPalette';
 import { CompanionPairingRequestsDialog } from './components/CompanionPairingRequestsDialog';
+import { EpubImportReleaseModeDialog } from './components/EpubImportReleaseModeDialog';
 import { GoToNodePalette } from './components/GoToNodePalette';
 import { SearchPalette } from './components/SearchPalette';
 import { SearchResultPreviewPanel } from './components/SearchResultPreviewPanel';
@@ -125,6 +126,7 @@ function AppOverlays({
   return (
     <>
       <CompanionPairingRequestsDialog />
+      <EpubImportReleaseModeDialog />
       <CommandPalette {...controller.paletteState} />
       <SearchPalette {...controller.searchState} />
       <GoToNodePalette {...controller.goToNodeState} />

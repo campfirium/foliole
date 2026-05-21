@@ -84,3 +84,10 @@ export function hasDismissEntireTopicTargets(nodeIds: string[], nodesById: Works
   const rootNodeId = nodeIds[0];
   return Boolean(rootNodeId && collectDismissEntireTopicTargets(rootNodeId, nodesById).length > 0);
 }
+
+export function canToggleSequentialReading(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
+  if (!node || node.kind !== 'topic' || node.specialKind || node.parentNodeId === null) {
+    return false;
+  }
+  return nodesById[node.parentNodeId]?.kind === 'folder';
+}

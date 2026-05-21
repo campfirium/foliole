@@ -48,6 +48,7 @@ interface NodeListTreeContentProps {
   rowSpacing: number;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
+  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean;
   showTitleSearch: boolean;
   showVirtualCreateAction?: boolean;
   state: NodeListState;

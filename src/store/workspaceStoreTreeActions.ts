@@ -1,7 +1,5 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
-import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
 import {
   isSameNodeOrder,
@@ -10,15 +8,11 @@ import {
   type NodeDropIntent
 } from './workspaceMoveNodes';
 import { canCreateChildUnderParent, canMoveRootsIntoTarget } from './workspaceNodeKindRules';
-import {
-  collectOrderedSubtreeIds,
-  insertNodeBlockAsFirstChild,
-  insertNodeBlockUnderParent
-} from './workspaceNodeTreeOrder';
-import { reconcileReviewSession } from './workspaceReviewSessionSync';
+import { collectOrderedSubtreeIds } from './workspaceNodeTreeOrder';
 import type { WorkspaceState } from './workspaceStore';
 import { collectMovedNodeBlock, collectMoveRootIds } from './workspaceStoreMoveHelpers';
-import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
+import { buildCreatedChildState } from './workspaceStoreTreeCreateChildState';
+import { applySequentialReadingMovedNodes } from './workspaceStoreTreeSequentialReading';
 
 type WorkspaceSet = (
   partial:
@@ -128,68 +122,6 @@ function createMoveNodesPatch(
   return buildMovedState(state, rootNodeIds, movedNodeIds, targetNodeId, intent);
 }
 
-function buildCreatedChildState(
-  state: WorkspaceState,
-  parentNodeId: string,
-  nodeId: string,
-  content: string,
-  kind: NodeKind,
-  timestamp: string,
-  specialKind?: NodeSnapshot['specialKind']
-) {
-  const untitledState = resolveCreatedNodeTitleState(
-    deriveNodeTitleFromContent(content),
-    parentNodeId,
-    state
-  );
-  const nextNode = {
-    id: nodeId,
-    parentNodeId,
-    kind,
-    ...(specialKind ? { specialKind } : {}),
-    title: untitledState.title,
-    hasContent: content.trim().length > 0,
-    hideTitleHeading: false,
-    content,
-    anchorLink: null,
-    hasReveal: false,
-    reveal: null,
-    review: null,
-    createdAt: timestamp,
-    updatedAt: timestamp
-  };
-  const nextNodeOrder =
-    parentNodeId === INBOX_NODE_ID
-      ? insertNodeBlockAsFirstChild(state.nodeOrder, [nodeId], parentNodeId, state.nodesById)
-      : insertNodeBlockUnderParent(state.nodeOrder, [nodeId], parentNodeId, state.nodesById);
-  const nextNodesById = {
-    ...state.nodesById,
-    [nodeId]: nextNode
-  };
-
-  return {
-    nextNode,
-    nextNodeOrder,
-    patch: {
-      activeNodeId: nodeId,
-      nodeOrder: nextNodeOrder,
-      nodesById: nextNodesById,
-      untitledSequenceByParent: untitledState.untitledSequenceByParent,
-      reviewSession: reconcileReviewSession(
-        {
-          ...state,
-          activeNodeId: nodeId,
-          nodeOrder: nextNodeOrder,
-          nodesById: nextNodesById,
-          untitledSequenceByParent: untitledState.untitledSequenceByParent
-        },
-        nodeId
-      )
-    }
-  };
-}
-
-
 export function createChildNodeAction(
   set: WorkspaceSet,
   onNodeCreated?: (node: NodeSnapshot) => void,
@@ -243,12 +175,13 @@ export function createMoveNodesAction(
       if (!patch) {
         return state;
       }
-      movedRootNodeSnapshots = rootNodeIds
-        .map((nodeId) => patch.nodesById[nodeId])
+      const sequentialState = applySequentialReadingMovedNodes({ patch, rootNodeIds, state });
+      movedRootNodeSnapshots = sequentialState.syncNodeIds
+        .map((nodeId) => sequentialState.patch.nodesById[nodeId])
         .filter((node): node is NodeSnapshot => Boolean(node));
-      nextNodeOrder = patch.nodeOrder;
+      nextNodeOrder = sequentialState.patch.nodeOrder;
       moved = true;
-      return patch;
+      return sequentialState.patch;
     });
     if (moved && movedRootNodeSnapshots.length > 0) {
       onNodesMoved?.(movedRootNodeSnapshots);

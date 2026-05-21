@@ -29,6 +29,7 @@ import {
   createUpdateNodeShortTermAction
 } from './workspaceStoreNodeSchedulerActions';
 import { createSetNodeViewStateAction } from './workspaceStoreNodeViewActions';
+import { createSetNodeSequentialReadingAction } from './workspaceStoreSequentialReadingActions';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
 import {
   createChildNodeAction,
@@ -58,6 +59,7 @@ type WorkspaceNodeActions = Pick<
   | 'moveNodes'
   | 'restoreNode'
   | 'relearnNode'
+  | 'setNodeSequentialReading'
   | 'setNodeViewState'
   | 'updateNodeDesiredRetention'
   | 'updateNodePriority'
@@ -158,6 +160,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateNodePriority: createUpdateNodePriorityAction(set),
     updateNodeDesiredRetention: createUpdateNodeDesiredRetentionAction(set),
     updateNodeShortTerm: createUpdateNodeShortTermAction(set),
+    setNodeSequentialReading: createSetNodeSequentialReadingAction(set),
     createRootNode: createRootNodeAction(set, runtimeHandlers),
     createChildNode: createChildNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
     createVirtualNode: createVirtualNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),

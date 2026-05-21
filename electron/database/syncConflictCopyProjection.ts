@@ -40,7 +40,7 @@ function buildSnapshot(args: {
     deleted_at: null,
     desired_retention: null,
     enable_short_term: null,
-    sequential_reading_enabled: null,
+    sequential_reading_enabled: args.record.snapshot.sequential_reading_enabled ?? null,
     hide_title_heading: args.record.snapshot.hide_title_heading ?? false,
     id: args.copyNodeId,
     image_regions: null,
@@ -73,7 +73,7 @@ function computeConflictCopyContentHash(args: {
     deletedAt: null,
     desiredRetention: null,
     enableShortTerm: null,
-    sequentialReadingEnabled: null,
+    sequentialReadingEnabled: args.snapshot.sequential_reading_enabled ?? null,
     hideTitleHeading: args.snapshot.hide_title_heading,
     id: args.copyNodeId,
     imageRegions: null,
@@ -107,7 +107,7 @@ function upsertConflictCopyNode(args: {
        id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, title, is_title_manual, hide_title_heading,
        content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
        current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, 'topic', NULL, NULL, NULL, NULL, ?, 1, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, ?, ?, 0, ?, ?, NULL)
+     ) VALUES (?, ?, 'topic', NULL, NULL, NULL, ?, ?, 1, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, ?, ?, 0, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
       kind = excluded.kind,
@@ -124,7 +124,22 @@ function upsertConflictCopyNode(args: {
        sync_dirty = 0,
        updated_at = excluded.updated_at,
        deleted_at = excluded.deleted_at`,
-    [args.copyNodeId, INBOX_NODE_ID, args.title, args.record.snapshot.hide_title_heading ? 1 : 0, args.content, args.bodyBlobHash, args.openingText, args.versionId, args.deviceId, args.timestamp, args.timestamp]
+    [
+      args.copyNodeId,
+      INBOX_NODE_ID,
+      args.record.snapshot.sequential_reading_enabled == null
+        ? null
+        : args.record.snapshot.sequential_reading_enabled ? 1 : 0,
+      args.title,
+      args.record.snapshot.hide_title_heading ? 1 : 0,
+      args.content,
+      args.bodyBlobHash,
+      args.openingText,
+      args.versionId,
+      args.deviceId,
+      args.timestamp,
+      args.timestamp
+    ]
   );
 }
 

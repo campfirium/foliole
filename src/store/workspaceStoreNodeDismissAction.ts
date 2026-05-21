@@ -10,6 +10,7 @@ import {
 } from './workspaceActionHistory';
 import { buildDismissedReadingProfile } from './workspaceReviewReading';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
+import { buildSequentialReadingDismissPatch } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
@@ -17,7 +18,7 @@ type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state
 export function createDismissNodeAction(set: WorkspaceSet): WorkspaceState['dismissNode'] {
   return (nodeId, now = new Date().toISOString()) => {
     let dismissed = false;
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
+    let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];
     set((state) => {
       const node = state.nodesById[nodeId];
       if (
@@ -44,25 +45,32 @@ export function createDismissNodeAction(set: WorkspaceSet): WorkspaceState['dism
         reading: afterReading,
         updatedAt: now
       };
-      nextNodeForSync = nextNode;
+      const nextNodesById = { ...state.nodesById, [nodeId]: nextNode };
+      const sequentialPatch = buildSequentialReadingDismissPatch({
+        defaultPriority,
+        dismissedNodeId: nodeId,
+        nodeOrder: state.nodeOrder,
+        nodesById: nextNodesById,
+        now
+      });
+      const finalNodesById = sequentialPatch?.nodesById ?? nextNodesById;
+      nextNodesForSync = [nextNode, ...(sequentialPatch?.changes ?? [])
+        .map((change) => finalNodesById[change.nodeId])
+        .filter((changedNode): changedNode is Node => Boolean(changedNode))];
       return {
         appActionHistory: pushWorkspaceUndoEntry(
           state.appActionHistory,
           createTopicDismissHistoryEntry({
             afterReading,
             beforeReading,
-            nodeId
+            nodeId,
+            ...(sequentialPatch?.changes.length ? { relatedReadings: sequentialPatch.changes } : {})
           })
         ),
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: nextNode
-        }
+        nodesById: finalNodesById
       };
     });
-    if (nextNodeForSync) {
-      syncNodeContentToRuntime(nextNodeForSync);
-    }
+    nextNodesForSync.forEach((node) => syncNodeContentToRuntime(node));
     return dismissed;
   };
 }
