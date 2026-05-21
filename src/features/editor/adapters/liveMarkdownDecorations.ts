@@ -14,6 +14,7 @@ import { collectMultilineLinkPresentationPlans } from '../model/markdownMultilin
 import { collectReadwiseOriginalFilePlaceholderRangesFromLines } from '../model/readwiseOriginalFilePlaceholder';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
+import { addCodeFenceSyntaxHighlightDecorations } from './liveMarkdownCodeFenceHighlight';
 import {
   collectCalloutPrefixRangeByLineFrom,
   collectCodeFenceProjection,
@@ -100,6 +101,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const startLine = view.state.doc.line(startLineNumber);
   const endLine = view.state.doc.line(endLineNumber);
+  const viewportRange = { from: startLine.from, to: endLine.to };
   const source = view.state.doc.toString();
   const markdownTree = folioleMarkdownParser.parse(source);
   const viewportLines = collectViewportLines(view, startLineNumber, endLineNumber);
@@ -117,10 +119,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
   const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
   const viewportTablePlans = collectViewportTablePlans({ endLine, source, startLine, view });
-  const readwiseOriginalFilePlaceholders = collectViewportReadwiseOriginalFilePlaceholders(view, startLineNumber, endLineNumber, {
-    from: startLine.from,
-    to: endLine.to
-  });
+  const readwiseOriginalFilePlaceholders = collectViewportReadwiseOriginalFilePlaceholders(view, startLineNumber, endLineNumber, viewportRange);
   const viewportPlans = collectPreviewViewportPlans({
     codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
     codeLineFroms: codeFenceProjection.codeLineFroms,
@@ -140,6 +139,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   addReadwiseOriginalFileDecorations(ranges, readwiseOriginalFilePlaceholders, context.nodeId);
   addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
   addForumTitleLinkDecorations(ranges, forumTitleLinks);
+  addCodeFenceSyntaxHighlightDecorations(ranges, source, codeFenceProjection.codeBlocks, viewportRange);
   addMultilineLinkDecorations(ranges, source, {
     links: inlineLinks,
     syntaxVisiblePosition: context.markdownSyntaxVisible ? context.activePosition : null
@@ -175,6 +175,10 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
   });
 
   addMultilineLinkDecorations(ranges, source, { links: inlineLinks, syntaxVisible: true });
+  addCodeFenceSyntaxHighlightDecorations(ranges, source, codeFenceProjection.codeBlocks, {
+    from: view.state.doc.line(startLineNumber).from,
+    to: view.state.doc.line(endLineNumber).to
+  });
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
     const calloutPrefixRange = calloutPrefixRangeByLineFrom.get(lineFrom);
