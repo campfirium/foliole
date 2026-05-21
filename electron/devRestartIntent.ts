@@ -1,17 +1,24 @@
 import path from 'node:path';
 
+import { writeDevRestartDeliveryMarker } from './devRestartDelivery.js';
 import {
   createNodeFileSystem,
   isMissingFileError,
   type RestartIntentFileSystem
 } from './devRestartIntentSupport.js';
-import { saveWindowStateNow } from './ipc/windowState.js';
-import { allowWindowCloseWithoutReadingProgressFlush, flushReadingProgressForWindows } from './readingProgressWindowFlush.js';
+import {
+  relaunchForDevRestartIntent,
+  type RestartIntentApp,
+  type RestartIntentWindow
+} from './devRestartRelaunch.js';
 
 export const DEV_RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 export const DEV_RESTART_INTENT_KIND = 'foliole.electron.dev.restart-intent.v1';
-export const DEV_RESTART_DELIVERY_FILE = '.windows-dev-restart-delivered.json';
-export const DEV_RESTART_DELIVERY_KIND = 'foliole.electron.dev.restart-delivered.v1';
+export {
+  DEV_RESTART_DELIVERY_FILE,
+  DEV_RESTART_DELIVERY_KIND,
+  resolveDevRestartDeliveryPath
+} from './devRestartDelivery.js';
 
 interface RestartIntent {
   head: string | null;
@@ -21,19 +28,6 @@ interface RestartIntent {
   requestedAt: string;
   requestedBy: string;
   target: string;
-}
-
-interface RestartIntentApp {
-  exit(code?: number): void;
-  relaunch(): void;
-}
-
-interface RestartIntentWindow {
-  isDestroyed?(): boolean;
-  webContents?: {
-    executeJavaScript: (code: string, userGesture?: boolean) => Promise<unknown>;
-    isDestroyed(): boolean;
-  };
 }
 
 interface RestartIntentLogger {
@@ -51,12 +45,12 @@ export function isDevRestartIntentEnabled(env: NodeJS.ProcessEnv = process.env) 
   return Boolean(env.ELECTRON_RENDERER_URL);
 }
 
-export function resolveDevRestartIntentPath(rootDir: string) {
-  return path.join(rootDir, DEV_RESTART_INTENT_FILE);
+export function isInAppRelaunchDisabled(env: NodeJS.ProcessEnv = process.env) {
+  return env.FOLIOLE_DISABLE_IN_APP_RELAUNCH === '1';
 }
 
-export function resolveDevRestartDeliveryPath(rootDir: string) {
-  return path.join(rootDir, DEV_RESTART_DELIVERY_FILE);
+export function resolveDevRestartIntentPath(rootDir: string) {
+  return path.join(rootDir, DEV_RESTART_INTENT_FILE);
 }
 
 export function parseDevRestartIntent(content: string): RestartIntent | null {
@@ -104,47 +98,6 @@ function readDevRestartIntent(fileSystem: RestartIntentFileSystem, intentPath: s
   }
 }
 
-function writeDevRestartDeliveryMarker(args: {
-  fileSystem: RestartIntentFileSystem;
-  intent: RestartIntent;
-  intentPath: string;
-  logger: RestartIntentLogger;
-}) {
-  try {
-    args.fileSystem.writeDeliveryFile(
-      resolveDevRestartDeliveryPath(path.dirname(args.intentPath)),
-      `${JSON.stringify(createDevRestartDeliveryPayload(args.intent), null, 2)}\n`
-    );
-  } catch (error) {
-    args.logger.error('[electron-main] failed to write dev restart delivery marker', {
-      error,
-      intentPath: args.intentPath,
-      nonce: args.intent.nonce
-    });
-  }
-}
-
-function createDevRestartDeliveryPayload(intent: RestartIntent) {
-  return {
-    deliveredAt: new Date().toISOString(),
-    head: intent.head,
-    kind: DEV_RESTART_DELIVERY_KIND,
-    nonce: intent.nonce,
-    reason: intent.reason,
-    requestedAt: intent.requestedAt,
-    requestedBy: intent.requestedBy,
-    target: intent.target
-  };
-}
-
-function applyRuntimeHeadForRelaunch(intent: RestartIntent) {
-  const nextHead = typeof intent.head === 'string' ? intent.head.trim() : '';
-  if (nextHead.length === 0) {
-    return;
-  }
-  process.env.FOLIOLE_RUNTIME_HEAD = nextHead;
-}
-
 async function consumeDevRestartIntent(args: {
   app: RestartIntentApp;
   content: string;
@@ -153,6 +106,7 @@ async function consumeDevRestartIntent(args: {
   getWindows: () => RestartIntentWindow[];
   intentPath: string;
   logger: RestartIntentLogger;
+  relaunchDisabled: boolean;
   relaunchRequested: boolean;
 }) {
   if (args.relaunchRequested) {
@@ -186,19 +140,19 @@ async function consumeDevRestartIntent(args: {
     requestedAt: intent.requestedAt,
     requestedBy: intent.requestedBy
   });
-  writeDevRestartDeliveryMarker({ fileSystem: args.fileSystem, intent, intentPath: args.intentPath, logger: args.logger });
-  applyRuntimeHeadForRelaunch(intent);
-  const windows = args.getWindows();
-  await flushReadingProgressForWindows(windows as never[]);
-  for (const window of windows) {
-    if (window.isDestroyed?.()) {
-      continue;
-    }
-    allowWindowCloseWithoutReadingProgressFlush(window as never);
-    saveWindowStateNow(window as never);
+  if (args.relaunchDisabled) {
+    args.logger.info('[electron-main] ignored dev restart intent because relaunch is shell-managed', {
+      intentPath: args.intentPath,
+      nonce: intent.nonce
+    });
+    return { consumedNonce: intent.nonce, relaunchRequested: false };
   }
-  args.app.relaunch();
-  args.app.exit(0);
+  writeDevRestartDeliveryMarker({ fileSystem: args.fileSystem, intent, intentPath: args.intentPath, logger: args.logger });
+  await relaunchForDevRestartIntent({
+    app: args.app,
+    getWindows: args.getWindows,
+    intent
+  });
   return { consumedNonce: intent.nonce, relaunchRequested: true };
 }
 
@@ -240,6 +194,7 @@ export function installDevRestartIntentWatcher(options: {
       getWindows: options.getWindows ?? (() => []),
       intentPath,
       logger,
+      relaunchDisabled: isInAppRelaunchDisabled(env),
       relaunchRequested
     }).then((next) => {
       consumedNonce = next.consumedNonce;

@@ -81,6 +81,15 @@ async function initializeRuntimeServices() {
       }));
     });
     await appendBootEvent('database_initialize_call_complete');
+    if (process.env.FOLIOLE_SKIP_STARTUP_NODE_SYNC_FLUSH === '1') {
+      await appendBootEvent('node_sync_flush_skipped', {
+        reason: 'startup-node-sync-flush-disabled'
+      });
+      await appendBootEvent('database_init_complete');
+      installAppMenu();
+      markDatabaseReady();
+      return;
+    }
     await appendBootEvent('node_sync_flush_start');
     flushAllDirtyNodeSyncVersions();
     await appendBootEvent('node_sync_flush_complete');

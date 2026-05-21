@@ -115,6 +115,10 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
     args: undefined;
     result: null;
   };
+  [NATIVE_COMMANDS.windowRestartDevApp]: {
+    args: undefined;
+    result: null;
+  };
   [NATIVE_COMMANDS.windowToggleDevTools]: {
     args: undefined;
     result: null;

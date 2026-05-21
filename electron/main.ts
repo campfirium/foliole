@@ -47,6 +47,7 @@ import {
   logWindowStateRestoreDecision
 } from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
+import { loadStartupWindowState } from './startupWindowState.js';
 import { bindWindowRuntimeDiagnostics, setStartupWindowPresentation } from './windowRuntimeDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
@@ -137,7 +138,7 @@ async function activateRendererInWindow(window: ElectronBrowserWindow) {
 
 async function createMainWindow(startupAppearance?: { backgroundColor: string } | null) {
   await appendBootEvent('main_window_create_start');
-  const restoredWindowState = await loadWindowState();
+  const restoredWindowState = await loadStartupWindowState({ appendBootEvent, loadWindowState });
   await appendBootEvent('window_state_loaded', restoredWindowState);
   logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
   const options = applyWindowStateToOptions(

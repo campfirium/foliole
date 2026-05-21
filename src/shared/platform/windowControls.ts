@@ -47,6 +47,7 @@ export async function onMainWindowResized(handler: () => void): Promise<WindowRe
 
 type WindowCommand =
   | typeof NATIVE_COMMANDS.windowMinimize
+  | typeof NATIVE_COMMANDS.windowRestartDevApp
   | typeof NATIVE_COMMANDS.windowRestartApp
   | typeof NATIVE_COMMANDS.windowToggleDevTools
   | typeof NATIVE_COMMANDS.windowToggleMaximize
@@ -74,6 +75,10 @@ export function toggleMainWindowDevTools() {
 
 export function restartMainWindowApp() {
   return invokeWindowCommand(NATIVE_COMMANDS.windowRestartApp);
+}
+
+export function restartMainWindowDevApp() {
+  return invokeWindowCommand(NATIVE_COMMANDS.windowRestartDevApp);
 }
 
 export function closeMainWindow() {

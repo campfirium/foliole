@@ -2,6 +2,7 @@ import { BrowserWindow, app, shell } from 'electron';
 
 import { normalizeOpenExternalUrl } from '../../lib/platform/externalUrl.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { requestDevShellRestart } from '../devShellRestartRequest.js';
 import { exportDiagnosticBundle } from '../diagnostics/diagnosticBundle.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
@@ -49,6 +50,19 @@ async function handleWindowCommand(request: InvokeRequest, context?: InvokeConte
     if (window) {
       await flushWindowReadingProgress(window);
       allowWindowCloseWithoutReadingProgressFlush(window);
+    }
+    app.relaunch();
+    app.exit(0);
+    return null;
+  }
+  if (request.command === NATIVE_COMMANDS.windowRestartDevApp) {
+    if (window) {
+      await flushWindowReadingProgress(window);
+      allowWindowCloseWithoutReadingProgressFlush(window);
+    }
+    if (requestDevShellRestart({ reason: 'in-app-dev-restart' })) {
+      app.exit(0);
+      return null;
     }
     app.relaunch();
     app.exit(0);

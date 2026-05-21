@@ -34,6 +34,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  delete process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK;
+  delete process.env.FOLIOLE_SKIP_STARTUP_SCHEMA_INIT;
+  delete process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE;
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
@@ -95,4 +98,37 @@ it('moves sqlite sidecar files into the pre-rebuild snapshot directory', async (
   expect(await fs.readFile(`${snapshot.snapshotPath}-shm`, 'utf8')).toBe('shm');
   expect(await fs.readFile(`${snapshot.snapshotPath}-journal`, 'utf8')).toBe('journal');
   await expect(fs.access(databasePath)).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+it('can skip startup integrity checks for native preview startup latency', () => {
+  process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK = '1';
+  const stages: string[] = [];
+
+  const connection = initializeDatabase((stage) => stages.push(stage));
+
+  expect(connection.sqlite.prepare('PRAGMA user_version').pluck().get()).toBe(DATABASE_SCHEMA_VERSION);
+  expect(stages).toContain('database_integrity_check_skipped');
+  expect(stages).not.toContain('database_integrity_check_start');
+});
+
+it('can skip startup WAL enable for native preview startup latency', () => {
+  process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE = '1';
+  const stages: string[] = [];
+
+  const connection = initializeDatabase((stage) => stages.push(stage));
+
+  expect(connection.sqlite.prepare('PRAGMA user_version').pluck().get()).toBe(DATABASE_SCHEMA_VERSION);
+  expect(stages).toContain('database_wal_enable_skipped');
+  expect(stages).toContain('database_schema_init_start');
+});
+
+it('can skip startup schema initialization for native preview startup latency', () => {
+  process.env.FOLIOLE_SKIP_STARTUP_SCHEMA_INIT = '1';
+  const stages: string[] = [];
+
+  const connection = initializeDatabase((stage) => stages.push(stage));
+
+  expect(connection.sqlite.prepare('PRAGMA user_version').pluck().get()).toBe(0);
+  expect(stages).toContain('database_schema_init_skipped');
+  expect(stages).not.toContain('database_schema_init_start');
 });

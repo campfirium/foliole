@@ -63,6 +63,7 @@ export const NATIVE_COMMANDS = {
   windowClose: 'window_close',
   windowIsMaximized: 'window_is_maximized',
   windowMinimize: 'window_minimize',
+  windowRestartDevApp: 'window_restart_dev_app',
   windowRestartApp: 'window_restart_app',
   windowToggleDevTools: 'window_toggle_dev_tools',
   windowToggleMaximize: 'window_toggle_maximize',

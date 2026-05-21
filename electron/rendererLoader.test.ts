@@ -87,7 +87,7 @@ it('injects startup tokens and a file base tag into packaged renderer html', () 
 
   const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/index.html', '--startup-document-bg:#1f211f;', 'dark');
 
-  expect(result).toContain('<base href="file:///app/dist/">');
+  expect(result).toMatch(/<base href="file:\/\/\/(?:[A-Z]:\/)?app\/dist\/">/);
   expect(result).toContain(':root{--startup-document-bg:#1f211f;}');
   expect(result).toContain('data-resolved-base-color="dark"');
   expect(result).not.toContain('/*STARTUP_INJECTED_CSS*/');
