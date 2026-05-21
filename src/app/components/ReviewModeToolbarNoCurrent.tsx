@@ -26,7 +26,7 @@ function isEditableOrInteractiveTarget(target: EventTarget | null) {
   );
 }
 
-function useContinueReadingSpaceShortcut(onContinueReading: () => void) {
+function useSpaceShortcut(action: () => void) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -43,11 +43,11 @@ function useContinueReadingSpaceShortcut(onContinueReading: () => void) {
         return;
       }
       event.preventDefault();
-      onContinueReading();
+      action();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onContinueReading]);
+  }, [action]);
 }
 
 function ReviewCompleteBar({
@@ -55,7 +55,7 @@ function ReviewCompleteBar({
   onContinueReading,
   style
 }: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onContinueReading' | 'style'>) {
-  useContinueReadingSpaceShortcut(onContinueReading);
+  useSpaceShortcut(onContinueReading);
 
   return (
     <ReviewActionBar
@@ -66,6 +66,26 @@ function ReviewCompleteBar({
       primary={<ContinueReadingAction onContinueReading={onContinueReading} />}
       progress={null}
       secondary={null}
+    />
+  );
+}
+
+function ReviewResumeBar({
+  className,
+  onResumeReviewItem,
+  showSummary,
+  style
+}: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onResumeReviewItem' | 'showSummary' | 'style'>) {
+  useSpaceShortcut(onResumeReviewItem);
+
+  return (
+    <ReviewActionBar
+      ariaLabel="Review mode toolbar"
+      {...definedProps({ className, style })}
+      mode="study"
+      primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
+      progress={null}
+      secondary={showSummary ? 'Study mode' : null}
     />
   );
 }
@@ -88,13 +108,10 @@ export function ReviewNoCurrentItemBar({
   }
 
   return (
-      <ReviewActionBar
-      ariaLabel="Review mode toolbar"
+    <ReviewResumeBar
+      onResumeReviewItem={onResumeReviewItem}
+      {...definedProps({ showSummary })}
       {...definedProps({ className, style })}
-      mode="study"
-      primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
-      progress={null}
-      secondary={showSummary ? 'Study mode' : null}
     />
   );
 }
