@@ -13,6 +13,7 @@ export function resolveWindowsNativePaths(repoRoot = WINDOWS_NATIVE_REPO_ROOT) {
     clientScript: path.join(repoRoot, 'scripts', 'windows', 'windows-client-native.mjs'),
     logDir: path.join(repoRoot, '.tmp', 'windows-native-client'),
     nativeAbiScript: path.join(repoRoot, 'scripts', 'windows', 'native-abi-preflight.ps1'),
+    nativeStartScript: path.join(repoRoot, 'scripts', 'windows', 'start-electron-dev-native.ps1'),
     reloadDeliveryFile: path.join(repoRoot, '.windows-dev-renderer-reload-delivered.json'),
     repoRoot,
     restartDeliveryFile: path.join(repoRoot, '.windows-dev-restart-delivered.json'),
