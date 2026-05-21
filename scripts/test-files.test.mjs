@@ -41,6 +41,7 @@ function runTestFiles(args, env = {}) {
 async function createFakeVitest(tempRoot) {
   const argsPath = path.join(tempRoot, 'vitest-args.json');
   const fakeVitestPath = path.join(tempRoot, 'fake-vitest.mjs');
+  const fakeVitestCommandPath = process.platform === 'win32' ? path.join(tempRoot, 'fake-vitest.cmd') : fakeVitestPath;
   await writeFile(
     fakeVitestPath,
     [
@@ -57,7 +58,10 @@ async function createFakeVitest(tempRoot) {
     ].join('\n')
   );
   await chmod(fakeVitestPath, 0o755);
-  return { argsPath, fakeVitestPath };
+  if (process.platform === 'win32') {
+    await writeFile(fakeVitestCommandPath, `@echo off\r\n"${process.execPath}" "${fakeVitestPath}" %*\r\n`, 'utf8');
+  }
+  return { argsPath, fakeVitestPath: fakeVitestCommandPath };
 }
 
 describe('test-files', () => {
@@ -89,6 +93,31 @@ describe('test-files', () => {
       expect(vitestArgs).toContain('src/app/components/WorkspaceTopicTreeRows.test.tsx');
       expect(vitestArgs).not.toContain('src/app');
       expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, tests 1/1 passed');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses real sqlite tests outside the Electron ABI runner', async () => {
+    const result = await runTestFiles(['src/shared/platform/companionSyncStateObjects.test.ts']);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('real sqlite tests must run through the Electron ABI runner');
+    expect(result.stderr).toContain('npm run test:sqlite:electron');
+  });
+
+  it('allows real sqlite tests when already running under Electron-as-Node', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'test-files-sqlite-'));
+    try {
+      const { argsPath, fakeVitestPath } = await createFakeVitest(tempRoot);
+      const result = await runTestFiles(['src/shared/platform/companionSyncStateObjects.test.ts'], {
+        ELECTRON_RUN_AS_NODE: '1',
+        VITEST_BIN: fakeVitestPath
+      });
+
+      expect(result.code).toBe(0);
+      const vitestArgs = JSON.parse(await readFile(argsPath, 'utf8'));
+      expect(vitestArgs).toContain('src/shared/platform/companionSyncStateObjects.test.ts');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

@@ -23,32 +23,21 @@ function Assert-NativeModulesLoadInElectron {
     throw "native module preflight failed: electron runtime not found"
   }
 
-  $previousRunAsNode = $env:ELECTRON_RUN_AS_NODE
-  $hadRunAsNode = Test-Path Env:ELECTRON_RUN_AS_NODE
+  $runnerPath = Join-Path $WorkDir "scripts\electron-sqlite-runner.mjs"
+  if (!(Test-Path -Path $runnerPath)) {
+    throw "native module preflight failed: Electron sqlite runner not found"
+  }
+
   $previousLocation = Get-Location
-  $preflightScript = Join-Path $env:TEMP "foliole-native-module-preflight.js"
-  $betterSqliteModulePath = (Join-Path $WorkDir "node_modules\better-sqlite3").Replace('\', '/')
-  Set-Content -Path $preflightScript -Value @"
-try {
-  require('$betterSqliteModulePath');
-} catch (error) {
-  console.error(error && (error.stack || error.message) ? (error.stack || error.message) : String(error));
-  process.exit(1);
-}
-"@ -Encoding UTF8
-  $env:ELECTRON_RUN_AS_NODE = "1"
+  $previousErrorActionPreference = $ErrorActionPreference
   try {
     Set-Location -Path $WorkDir
-    $output = & $electronPath $preflightScript 2>&1
+    $ErrorActionPreference = "Continue"
+    $output = & node $runnerPath --preflight 2>&1
     $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
   } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
     Set-Location -Path $previousLocation
-    Remove-Item -Path $preflightScript -Force -ErrorAction SilentlyContinue
-    if ($hadRunAsNode) {
-      $env:ELECTRON_RUN_AS_NODE = $previousRunAsNode
-    } else {
-      Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
-    }
   }
 
   if ($exitCode -ne 0) {

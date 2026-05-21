@@ -17,6 +17,7 @@ export function resolveWindowsNativePaths(repoRoot = WINDOWS_NATIVE_REPO_ROOT) {
     repoRoot,
     restartDeliveryFile: path.join(repoRoot, '.windows-dev-restart-delivered.json'),
     stateFile: path.join(repoRoot, '.windows-native-client-state.json'),
-    userDataPath: path.join(repoRoot, '.electron-user-data')
+    userDataPath: path.join(repoRoot, '.electron-user-data'),
+    windowVisibleFile: path.join(repoRoot, '.windows-native-window-visible.json')
   };
 }

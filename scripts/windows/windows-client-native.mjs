@@ -22,7 +22,8 @@ const {
   bridgeReadyFile,
   logDir,
   repoRoot,
-  stateFile
+  stateFile,
+  windowVisibleFile
 } = resolveWindowsNativePaths();
 const healthTimeoutMs = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '90000', 10);
 
@@ -37,7 +38,7 @@ function readClientState() {
 }
 
 function readReadyState() {
-  return readReadyStateFiles({ appReadyFile, bridgeReadyFile });
+  return readReadyStateFiles({ appReadyFile, bridgeReadyFile, windowVisibleFile });
 }
 
 async function currentHead() {
@@ -59,7 +60,7 @@ function printStatus() {
 }
 
 async function resetMarkers() {
-  await resetReadyMarkers({ appReadyFile, bridgeReadyFile });
+  await resetReadyMarkers({ appReadyFile, bridgeReadyFile, windowVisibleFile });
 }
 
 async function saveState(state) {

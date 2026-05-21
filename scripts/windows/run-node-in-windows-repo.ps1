@@ -28,7 +28,13 @@ function Test-IsBlockedNativeNodeScript {
     "scripts/backfill-node-opening-text.ts",
     "scripts/backfill-source-disposition-states.ts",
     "scripts/node-kind-report.ts",
-    "scripts/sqlite-maintenance.ts"
+    "scripts/sqlite-maintenance.ts",
+    "scripts/android/android-device-data-protection.mjs",
+    "scripts/android/android-preview-sync-state.mjs",
+    "scripts/android/android-reset-sync-data.mjs",
+    "scripts/android/android-sync-audit.mjs",
+    "scripts/android/android-sync-cleanup-device-private.mjs",
+    "scripts/android/android-sync-scenario-sampler.mjs"
   )
 
   return $blockedScripts -contains $normalized

@@ -1,0 +1,28 @@
+const controlledElectronSqliteTests = [
+  'electron/database/betterSqliteDbPort.conformance.test.ts',
+  'electron/database/companionSyncPushVerticalSlice.test.ts',
+  'electron/database/externalSearchCache.test.ts',
+  'electron/database/libraryDataMigration.test.ts',
+  'electron/database/migrate.internalSnapshots.test.ts',
+  'electron/database/syncPackBuilder.contract.test.ts',
+  'electron/database/syncPackNodeAttachments.test.ts',
+  'electron/sync/syncPackLearningDependencyApply.test.ts',
+  'electron/sync/syncPackNodeApplyExecutor.test.ts',
+  'scripts/android/android-reset-sync-data.test.mjs',
+  'scripts/android/android-sync-audit-core.test.mjs',
+  'scripts/android/android-sync-cleanup-device-private.test.mjs',
+  'scripts/sqlite-maintenance.test.mjs',
+  'src/shared/platform/companionSyncNodeVersions.sequentialReading.test.ts',
+  'src/shared/platform/companionSyncNodeVersions.test.ts',
+  'src/shared/platform/companionSyncReviewLogApply.test.ts',
+  'src/shared/platform/companionSyncStateObjects.test.ts'
+];
+
+const ordinaryNodeSqliteTextOnlyTests = [
+  'scripts/pre-commit-validation-native-sqlite.test.mjs'
+];
+
+export {
+  controlledElectronSqliteTests,
+  ordinaryNodeSqliteTextOnlyTests
+};

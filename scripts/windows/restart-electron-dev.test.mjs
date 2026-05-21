@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 const SCRIPT_PATH = path.resolve(process.cwd(), 'scripts/windows/restart-electron-dev.ps1');
 const NATIVE_ABI_PREFLIGHT_PATH = path.resolve(process.cwd(), 'scripts/windows/native-abi-preflight.ps1');
+const WINDOW_VISIBLE_HEALTH_PATH = path.resolve(process.cwd(), 'scripts/windows/native-window-visible-health.ps1');
 
 describe('restart-electron-dev script', () => {
   it('matches the nested electron main entry command line used by Windows dev runtime', async () => {
@@ -76,10 +77,28 @@ describe('restart-electron-dev script', () => {
   it('launches the dev shell without a foreground terminal window', async () => {
     const script = await readFile(SCRIPT_PATH, 'utf8');
 
-    expect(script).toContain('-ArgumentList "/d", "/c", $command');
+    expect(script).toContain('-FilePath $npmCmd');
+    expect(script).toContain('-ArgumentList "run", "electron:dev"');
     expect(script).toContain('-WindowStyle Hidden');
-    expect(script).toContain('set PATHEXT=.COM;.EXE;.BAT;.CMD;.PS1');
-    expect(script).toContain('electron:dev shell launched in hidden terminal');
+    expect(script).toContain('-RedirectStandardOutput $stdoutLog');
+    expect(script).toContain('-RedirectStandardError $stderrLog');
+    expect(script).toContain('$env:PATHEXT = ".COM;.EXE;.BAT;.CMD;.PS1"');
+    expect(script).toContain('Remove-Item Env:\\ELECTRON_RUN_AS_NODE');
+    expect(script).toContain('electron:dev launched without a foreground terminal');
+  });
+
+  it('requires a visible window marker before native preview reports ready', async () => {
+    const script = await readFile(SCRIPT_PATH, 'utf8');
+    const windowVisibleHealth = await readFile(WINDOW_VISIBLE_HEALTH_PATH, 'utf8');
+
+    expect(script).toContain('$WindowVisibleHealthScript = Join-Path $PSScriptRoot "native-window-visible-health.ps1"');
+    expect(script).toContain('. $WindowVisibleHealthScript');
+    expect(windowVisibleHealth).toContain('function Resolve-WindowVisibleMarkerPath');
+    expect(windowVisibleHealth).toContain('".windows-native-window-visible.json"');
+    expect(windowVisibleHealth).toContain('function Wait-WindowVisibleMarker');
+    expect(windowVisibleHealth).toContain('Test-RuntimeWindowVisible -WorkDir $WorkDir -RuntimePid $RuntimePid -ExpectedSession $ExpectedSession');
+    expect(windowVisibleHealth).toContain('return @{ ok = $false; reason = "window-visible-timeout" }');
+    expect(script).toContain('startup health check failed: $($windowVisible.reason)');
   });
 
   it('keeps stale-process cleanup scoped to the Electron dev loop', async () => {
@@ -98,12 +117,9 @@ describe('restart-electron-dev script', () => {
     expect(script).toContain('. $NativeAbiPreflightScript');
     expect(script).toContain('Assert-NativeModulesLoadInElectron -WorkDir $WorkDir');
     expect(preflight).toContain('function Assert-NativeModulesLoadInElectron');
-    expect(preflight).toContain("$env:ELECTRON_RUN_AS_NODE = \"1\"");
-    expect(preflight).toContain('foliole-native-module-preflight.js');
-    expect(preflight).toContain("Replace('\\', '/')");
-    expect(preflight).toContain('node_modules\\better-sqlite3');
-    expect(preflight).toContain("require('$betterSqliteModulePath');");
-    expect(preflight).toContain('& $electronPath $preflightScript');
+    expect(preflight).toContain('node_modules\\electron\\dist\\electron.exe');
+    expect(preflight).toContain('scripts\\electron-sqlite-runner.mjs');
+    expect(preflight).toContain('& node $runnerPath --preflight');
     expect(preflight).toContain('$exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }');
     expect(preflight).toContain('native module preflight failed: better-sqlite3 load failed');
     expect(preflight).toContain('restore better-sqlite3 for the Electron ABI');

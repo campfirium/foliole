@@ -4,7 +4,10 @@
 import { spawn } from 'node:child_process';
 import { statSync } from 'node:fs';
 
+import { controlledElectronSqliteTests } from './native-sqlite-test-policy.mjs';
+
 const TEST_FILE_PATTERN = /\.test\.(?:mjs|ts|tsx)$/;
+const ELECTRON_SQLITE_TESTS = new Set(controlledElectronSqliteTests);
 
 function printUsage() {
   console.error('Usage: npm run test:files -- <file.test.ts|file.test.tsx|file.test.mjs> [...]');
@@ -34,9 +37,22 @@ function validateFiles(files) {
   return true;
 }
 
+function validateElectronSqliteTests(files) {
+  const sqliteFiles = files.map((file) => file.replaceAll('\\', '/')).filter((file) => ELECTRON_SQLITE_TESTS.has(file));
+  if (sqliteFiles.length === 0 || process.env.ELECTRON_RUN_AS_NODE === '1') {
+    return true;
+  }
+  console.error([
+    '[test:files] real sqlite tests must run through the Electron ABI runner:',
+    '  npm run test:sqlite:electron -- <file.test.ts|file.test.mjs> [...]',
+    ...sqliteFiles.map((file) => `  ${file}`)
+  ].join('\n'));
+  return false;
+}
+
 async function main() {
   const files = process.argv.slice(2);
-  if (!validateFiles(files)) {
+  if (!validateFiles(files) || !validateElectronSqliteTests(files)) {
     process.exit(1);
   }
 

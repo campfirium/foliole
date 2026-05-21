@@ -81,3 +81,20 @@ it('writes renderer boot events and app ready marker', async () => {
     stage: 'app_ready'
   });
 });
+
+it('writes a window visible marker for native preview health checks', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-window-visible-'));
+  process.env.FOLIOLE_WORKDIR = repoRoot;
+  process.env.FOLIOLE_BOOT_SESSION = 'session-window';
+
+  await appendBootEvent('window_visible', { isVisible: true });
+
+  const paths = resolveBootArtifactPaths(repoRoot);
+  const marker = JSON.parse(fs.readFileSync(paths.windowVisibleMarkerPath, 'utf8'));
+  expect(marker).toMatchObject({
+    payload: { isVisible: true },
+    session: 'session-window',
+    source: 'main',
+    stage: 'window_visible'
+  });
+});

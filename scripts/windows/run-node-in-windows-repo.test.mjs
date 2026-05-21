@@ -15,6 +15,8 @@ describe('run-node-in-windows-repo script', () => {
     expect(script).toContain('scripts/backfill-source-disposition-states.ts');
     expect(script).toContain('scripts/node-kind-report.ts');
     expect(script).toContain('scripts/sqlite-maintenance.ts');
+    expect(script).toContain('scripts/android/android-device-data-protection.mjs');
+    expect(script).toContain('scripts/android/android-sync-audit.mjs');
     expect(script).toContain('refusing to run native sqlite script with plain Windows Node');
     expect(script.indexOf('Test-IsBlockedNativeNodeScript -CandidatePath $ScriptPath')).toBeLessThan(
       script.indexOf('Push-Location $WindowsWorkDir')
