@@ -2,6 +2,7 @@ import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
+import { createNewItemReviewProfiles } from './newItemReviewSlots';
 import {
   insertNodeBlockAsFirstChild,
   insertNodeBlockUnderParent
@@ -13,6 +14,34 @@ import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type NodeSnapshot = WorkspaceState['nodesById'][string];
 
+function createCreatedChildNode(args: {
+  content: string;
+  kind: NodeKind;
+  nodeId: string;
+  parentNodeId: string;
+  review: NodeSnapshot['review'];
+  specialKind?: NodeSnapshot['specialKind'];
+  timestamp: string;
+  title: string;
+}) {
+  return {
+    id: args.nodeId,
+    parentNodeId: args.parentNodeId,
+    kind: args.kind,
+    ...(args.specialKind ? { specialKind: args.specialKind } : {}),
+    title: args.title,
+    hasContent: args.content.trim().length > 0,
+    hideTitleHeading: false,
+    content: args.content,
+    anchorLink: null,
+    hasReveal: false,
+    reveal: null,
+    review: args.review,
+    createdAt: args.timestamp,
+    updatedAt: args.timestamp
+  };
+}
+
 export function buildCreatedChildState(
   state: WorkspaceState,
   parentNodeId: string,
@@ -23,22 +52,19 @@ export function buildCreatedChildState(
   specialKind?: NodeSnapshot['specialKind']
 ) {
   const untitledState = resolveCreatedNodeTitleState(deriveNodeTitleFromContent(content), parentNodeId, state);
-  const nextNode = {
-    id: nodeId,
-    parentNodeId,
-    kind,
-    ...(specialKind ? { specialKind } : {}),
-    title: untitledState.title,
-    hasContent: content.trim().length > 0,
-    hideTitleHeading: false,
+  const reviewProfiles = kind === 'item'
+    ? createNewItemReviewProfiles({ batchSize: 1, nodesById: state.nodesById, now: timestamp })
+    : [];
+  const nextNode = createCreatedChildNode({
     content,
-    anchorLink: null,
-    hasReveal: false,
-    reveal: null,
-    review: null,
-    createdAt: timestamp,
-    updatedAt: timestamp
-  };
+    kind,
+    nodeId,
+    parentNodeId,
+    review: reviewProfiles[0] ?? null,
+    ...(specialKind ? { specialKind } : {}),
+    timestamp,
+    title: untitledState.title
+  });
   const nextNodeOrder =
     parentNodeId === INBOX_NODE_ID
       ? insertNodeBlockAsFirstChild(state.nodeOrder, [nodeId], parentNodeId, state.nodesById)

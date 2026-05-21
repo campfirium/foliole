@@ -77,3 +77,39 @@ it('applies mobile snake_case learning payloads', async () => {
       state: 2
     });
 });
+
+it('does not let an initial review payload overwrite an already reviewed card', async () => {
+  insertNode('node-1');
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO node_review (
+       node_id, due, last_review_at, state, stability, difficulty,
+       elapsed_days, scheduled_days, reps, lapses
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['node-1', '2026-04-25T08:10:00.000Z', '2026-04-22T08:10:00.000Z', 2, 2.8, 3.4, 1, 3, 4, 0]
+  );
+
+  await applySyncObjectsAsync([{
+    content_hash: 'hash-review-initial',
+    deleted_at: null,
+    object_id: 'node-1',
+    object_type: 'node_review',
+    payload_json: JSON.stringify({
+      difficulty: 0,
+      due: '2026-05-22T00:00:00.000Z',
+      elapsed_days: 0,
+      lapses: 0,
+      last_review_at: null,
+      reps: 0,
+      scheduled_days: 0,
+      stability: 0,
+      state: 0
+    }),
+    updated_at: '2026-05-21T08:00:00.000Z'
+  }]);
+
+  expect(driver.queryOne<{ due: string; reps: number }>(
+    'SELECT due, reps FROM node_review WHERE node_id = ?',
+    ['node-1']
+  )).toEqual({ due: '2026-04-25T08:10:00.000Z', reps: 4 });
+});

@@ -67,7 +67,10 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
   loadReviewSchedulerSettings: vi.fn().mockReturnValue(defaultReviewSchedulerSettings),
   saveReviewSchedulerSettings: vi.fn().mockReturnValue(defaultReviewSchedulerSettings)
 }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./boot.js', () => ({
+  appendBootEvent: vi.fn(),
+  bootReport: vi.fn().mockResolvedValue(undefined)
+}));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn().mockReturnValue({ reviewed_at: '2026-03-04T00:00:00.000Z', card: {} }) }));
 vi.mock('../mirror/rebuildMirrorOutput.js', () => ({
   rebuildMirrorOutput: vi.fn()
@@ -111,6 +114,8 @@ it.each([
     kind,
     priority: null,
     desiredRetention: null,
+    enableShortTerm: null,
+    sequentialReadingEnabled: null,
     hideTitleHeading: false,
     title,
     isTitleManual: false,
@@ -120,10 +125,47 @@ it.each([
     anchorLink: null,
     imageRegions: null,
     reading: null,
+    review: null,
     position: 0,
     createdAt: '2026-03-06T00:00:00.000Z',
     updatedAt: '2026-03-06T00:00:00.000Z'
   });
+});
+
+it('persists review payloads on create_item commands', async () => {
+  const review = {
+    due: '2026-05-22T00:00:00.000Z',
+    lastReviewAt: null,
+    state: 0,
+    stability: 0,
+    difficulty: 0,
+    elapsedDays: 0,
+    scheduledDays: 0,
+    reps: 0,
+    lapses: 0
+  };
+
+  await expect(
+    handleInvokeRequest({
+      command: 'create_item',
+      args: {
+        nodeId: 'node-create-item',
+        parentNodeId: null,
+        kind: 'item',
+        title: 'Created item',
+        isTitleManual: false,
+        content: '',
+        reveal: 'Answer',
+        anchorLink: null,
+        review,
+        position: 0,
+        createdAt: '2026-03-06T00:00:00.000Z',
+        updatedAt: '2026-03-06T00:00:00.000Z'
+      }
+    })
+  ).resolves.toBeNull();
+
+  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({ review }));
 });
 
 it('rejects mismatched folder-topic-item creation payload kinds', async () => {

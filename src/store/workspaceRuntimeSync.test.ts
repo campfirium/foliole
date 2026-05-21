@@ -27,6 +27,8 @@ function createNodeFixture(): Node {
     kind: 'topic',
     priority: 0,
     desiredRetention: 0.81,
+    enableShortTerm: null,
+    sequentialReadingEnabled: null,
     title: 'Seed',
     isTitleManual: false,
     hideTitleHeading: true,
@@ -82,6 +84,8 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
     kind: 'topic',
     priority: 0,
     desiredRetention: 0.81,
+    enableShortTerm: null,
+    sequentialReadingEnabled: null,
     title: 'Seed',
     isTitleManual: false,
     hideTitleHeading: true,
@@ -108,6 +112,7 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
       repetitionCount: 0,
       state: 'dismissed'
     },
+    review: null,
     position: null,
     createdAt: '2026-03-06T00:00:00.000Z',
     updatedAt: '2026-03-06T00:00:01.000Z'

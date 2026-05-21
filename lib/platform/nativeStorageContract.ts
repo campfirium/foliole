@@ -181,6 +181,7 @@ export interface NativeNodeSnapshotArgs {
   anchorLink: NativeWorkspaceAnchorLink | null;
   imageRegions?: NativeWorkspaceImageRegionGroup[] | null;
   reading?: NativeWorkspaceReadingProfile | null;
+  review?: NativeWorkspaceReviewProfile | null;
   position: number | null;
   createdAt: string;
   updatedAt: string;

@@ -41,6 +41,10 @@ export async function applyNodeReviewObject(port: DbPort, record: SyncPackSyncOb
     return;
   }
   const payload = asObject(record);
+  const incomingReps = integer(payload.reps);
+  if (incomingReps === 0 && await hasReviewedNodeReview(port, record.object_id)) {
+    return false;
+  }
   await port.run(
     `INSERT INTO node_review (node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses) ` +
     `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET due = excluded.due, ` +
@@ -49,8 +53,16 @@ export async function applyNodeReviewObject(port: DbPort, record: SyncPackSyncOb
     `reps = excluded.reps, lapses = excluded.lapses`,
     [record.object_id, text(payload.due) ?? record.updated_at, text(payload.last_review_at), integer(payload.state),
       numberOrNull(payload.stability) ?? 0, numberOrNull(payload.difficulty) ?? 0, integer(payload.elapsed_days),
-      integer(payload.scheduled_days), integer(payload.reps), integer(payload.lapses)]
+      integer(payload.scheduled_days), incomingReps, integer(payload.lapses)]
   );
+}
+
+async function hasReviewedNodeReview(port: DbPort, nodeId: string) {
+  const existing = (await port.query<{ reps: number }>(
+    'SELECT reps FROM node_review WHERE node_id = ?',
+    [nodeId]
+  ))[0];
+  return (existing?.reps ?? 0) > 0;
 }
 
 async function applyReadingPosition(
