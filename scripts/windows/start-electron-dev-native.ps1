@@ -25,9 +25,10 @@ try {
   $env:FOLIOLE_BOOT_SESSION = $Session
   $env:FOLIOLE_RUNTIME_HEAD = $RuntimeHead
   $scriptPath = Join-Path $WorkDir "scripts\windows\electron-dev-native.mjs"
+  $launchCommand = '/d /c ""' + $NodePath + '" "' + $scriptPath + '""'
   $started = Start-Process `
-    -FilePath $NodePath `
-    -ArgumentList @($scriptPath) `
+    -FilePath "cmd.exe" `
+    -ArgumentList $launchCommand `
     -WorkingDirectory $WorkDir `
     -WindowStyle Hidden `
     -RedirectStandardOutput $StdoutLog `

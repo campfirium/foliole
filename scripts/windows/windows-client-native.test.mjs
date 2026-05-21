@@ -33,9 +33,9 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).toContain('closeClientLogStreams(logs)');
   expect(script).toContain('native dev runner start failed');
   expect(startScript).toContain('Start-Process');
-  expect(startScript).toContain('-FilePath $NodePath');
-  expect(startScript).toContain('-ArgumentList @($scriptPath)');
-  expect(startScript).not.toContain('/d /c');
+  expect(startScript).toContain('-FilePath "cmd.exe"');
+  expect(startScript).toContain('-ArgumentList $launchCommand');
+  expect(startScript).toContain('/d /c');
   expect(startScript).toContain('-RedirectStandardOutput $StdoutLog');
   expect(startScript).toContain('-RedirectStandardError $StderrLog');
   expect(startScript).toContain('$env:FOLIOLE_BOOT_SESSION = $Session');
