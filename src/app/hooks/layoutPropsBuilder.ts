@@ -123,15 +123,15 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     args.reviewSession,
     args.nodesById
   );
-  const reviewQueueVisibility = buildReviewQueueVisibility({
-    currentNodeId: args.reviewSession.currentNodeId,
-    nodesById: args.nodesById,
-    queueNodeIds: args.reviewSession.queueNodeIds,
-    reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings
-  });
   const reviewPanelQueueNodeIds = buildLiveReviewQueueOutput(args, args.nowIso, {
     pinnedNodeId: args.reviewSession.currentNodeId
   }).visibleNodeIds;
+  const reviewQueueVisibility = buildReviewQueueVisibility({
+    currentNodeId: args.reviewSession.currentNodeId,
+    nodesById: args.nodesById,
+    queueNodeIds: reviewPanelQueueNodeIds,
+    reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings
+  });
 
   const flatProps: WorkspaceLayoutFlatProps = {
     activeNodeId: args.activeNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
