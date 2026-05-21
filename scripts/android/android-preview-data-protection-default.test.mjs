@@ -54,6 +54,7 @@ describe('android-preview.sh data protection default', () => {
 
       const result = await runAndroidPreview(tempRoot, {
         ANDROID_DATA_PROTECTION_SCRIPT: failIfCalled,
+        ANDROID_PREVIEW_SYNC_STATE_CHECK: '0',
         WINDOWS_SYNC_SCRIPT: windowsSync,
         ANDROID_SYNC_SCRIPT: androidSync,
         ANDROID_EMULATOR_SCRIPT: emulator,

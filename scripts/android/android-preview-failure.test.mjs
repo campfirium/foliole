@@ -43,6 +43,16 @@ async function writeExecutable(rootDir, relativePath, content) {
   return fullPath;
 }
 
+async function writePassthroughSqliteRunner(rootDir) {
+  return writeExecutable(rootDir, 'electron-sqlite-runner.mjs', [
+    '#!/usr/bin/env node',
+    'import { spawnSync } from "node:child_process";',
+    'const [script, ...args] = process.argv.slice(2);',
+    'const result = spawnSync(process.execPath, [script, ...args], { stdio: "inherit" });',
+    'process.exit(result.status ?? 1);'
+  ].join('\n'));
+}
+
 describe('android-preview failure and protection paths', () => {
   it('backs up app data before deploy and checks it after deploy', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-data-'));
@@ -51,6 +61,7 @@ describe('android-preview failure and protection paths', () => {
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-ok\n');
       const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho emulator-ok\n');
       const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-ok\n');
+      const sqliteRunner = await writePassthroughSqliteRunner(tempRoot);
       const dataProtection = await writeExecutable(
         tempRoot,
         'data-protection.mjs',
@@ -60,6 +71,7 @@ describe('android-preview failure and protection paths', () => {
       const result = await runAndroidPreview(tempRoot, {
         ANDROID_DATA_PROTECTION: '1',
         ANDROID_DATA_PROTECTION_SCRIPT: dataProtection,
+        ELECTRON_SQLITE_RUNNER: sqliteRunner,
         ANDROID_DATA_PROTECTION_BACKUP_DIR: path.join(tempRoot, 'backups'),
         WINDOWS_SYNC_SCRIPT: windowsSync,
         ANDROID_SYNC_SCRIPT: androidSync,
@@ -89,6 +101,7 @@ describe('android-preview failure and protection paths', () => {
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-ok\n');
       const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho emulator-ok\n');
       const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-ok\n');
+      const sqliteRunner = await writePassthroughSqliteRunner(tempRoot);
       const dataProtection = await writeExecutable(
         tempRoot,
         'data-protection.mjs',
@@ -102,6 +115,7 @@ describe('android-preview failure and protection paths', () => {
       const result = await runAndroidPreview(tempRoot, {
         ANDROID_DATA_PROTECTION: '1',
         ANDROID_DATA_PROTECTION_SCRIPT: dataProtection,
+        ELECTRON_SQLITE_RUNNER: sqliteRunner,
         ANDROID_DATA_PROTECTION_BACKUP_DIR: path.join(tempRoot, 'backups'),
         WINDOWS_SYNC_SCRIPT: windowsSync,
         ANDROID_SYNC_SCRIPT: androidSync,
@@ -153,10 +167,11 @@ describe('android-preview failure and protection paths', () => {
 
   it('uses a kill-after timeout for hung preview subprocesses', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-kill-after-'));
+    const mockBinRelative = `.tmp/android-preview-timeout-bin-${Date.now()}`;
+    const mockBinDir = path.join(REPO_ROOT, mockBinRelative);
     try {
-      const mockBinDir = path.join(tempRoot, 'bin');
       await mkdir(mockBinDir);
-      await writeExecutable(tempRoot, 'bin/timeout', [
+      await writeExecutable(REPO_ROOT, `${mockBinRelative}/timeout`, [
         '#!/usr/bin/env bash',
         'echo timeout-args:$*',
         'exit 124'
@@ -164,7 +179,8 @@ describe('android-preview failure and protection paths', () => {
       const failIfCalled = await writeExecutable(tempRoot, 'fail-if-called.sh', '#!/usr/bin/env bash\necho should-not-run\nexit 64\n');
 
       const result = await runAndroidPreview(tempRoot, {
-        PATH: `${mockBinDir}${path.delimiter}${process.env.PATH}`,
+        PATH: `${mockBinRelative}:${process.env.PATH}`,
+        ANDROID_PREVIEW_TIMEOUT_COMMAND: `${mockBinRelative}/timeout`,
         WINDOWS_SYNC_SCRIPT: failIfCalled,
         ANDROID_SYNC_SCRIPT: failIfCalled,
         ANDROID_EMULATOR_SCRIPT: failIfCalled,
@@ -178,6 +194,7 @@ describe('android-preview failure and protection paths', () => {
       expect(result.stdout).toContain('timeout-args:--kill-after=3 600');
       expect(result.stdout).toContain('[android-preview] failed at: windows sync');
     } finally {
+      await rm(mockBinDir, { recursive: true, force: true });
       await rm(tempRoot, { recursive: true, force: true });
     }
   }, 15000);

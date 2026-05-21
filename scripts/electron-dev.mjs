@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import path from 'node:path';
 import process from 'node:process';
 
 import { createElectronLaunchEnv } from './electron-dev-env.mjs';
@@ -11,18 +12,42 @@ const VITE_PORT_MAX_ATTEMPTS = 8;
 function run(command, args, options = {}) {
   return spawn(command, args, {
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
+    windowsHide: true,
     ...options
   });
 }
 
 function createElectronArgs(entryPath) {
-  const args = ['electron'];
+  const args = [];
   if (process.env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION === '1') {
     args.push('--disable-gpu', '--disable-gpu-compositing', '--disable-gpu-sandbox');
   }
   args.push(entryPath);
   return args;
+}
+
+function resolveElectronCommand() {
+  if (process.platform === 'win32') {
+    return path.join('node_modules', 'electron', 'dist', 'electron.exe');
+  }
+  return path.join('node_modules', '.bin', 'electron');
+}
+
+function runNodeScript(args, options = {}) {
+  return run(process.execPath, args, options);
+}
+
+function waitForSuccessfulExit(child, label) {
+  return new Promise((resolve, reject) => {
+    child.on('exit', (code) => {
+      if (code === 0) {
+        resolve(undefined);
+        return;
+      }
+      reject(new Error(`${label} failed with code ${code ?? 'null'}`));
+    });
+  });
 }
 
 function wait(ms) {
@@ -59,7 +84,11 @@ async function startViteWithPortFallback() {
       return { viteUrl, viteProc: null };
     }
 
-    const viteProc = run('npm', ['run', 'dev'], {
+    await waitForSuccessfulExit(
+      runNodeScript(['--experimental-strip-types', 'scripts/generate-appearance-colors.ts']),
+      'appearance colors generation'
+    );
+    const viteProc = runNodeScript([path.join('node_modules', 'vite', 'bin', 'vite.js')], {
       env: {
         ...process.env,
         FOLIOLE_VITE_PORT: String(port)
@@ -86,22 +115,15 @@ async function startViteWithPortFallback() {
   throw new Error('vite dev server did not become ready');
 }
 
-const compile = run('npm', ['run', 'electron:compile']);
-await new Promise((resolve, reject) => {
-  compile.on('exit', (code) => {
-    if (code === 0) {
-      resolve(undefined);
-      return;
-    }
-    reject(new Error(`electron compile failed with code ${code ?? 'null'}`));
-  });
-});
+const compile = runNodeScript([path.join('node_modules', 'typescript', 'bin', 'tsc'), '-p', 'electron/tsconfig.json']);
+await waitForSuccessfulExit(compile, 'electron compile');
 
 const viteState = await startViteWithPortFallback();
 const vite = viteState.viteProc;
 
-const electron = run('npx', createElectronArgs('electron-dist/electron/main.js'), {
-  env: createElectronLaunchEnv(process.env, viteState.viteUrl)
+const electron = run(resolveElectronCommand(), createElectronArgs('electron-dist/electron/main.js'), {
+  env: createElectronLaunchEnv(process.env, viteState.viteUrl),
+  windowsHide: false
 });
 
 const shutdown = () => {

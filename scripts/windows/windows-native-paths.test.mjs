@@ -14,6 +14,7 @@ it('resolves Windows native runtime paths from the current checkout', () => {
   expect(paths.userDataPath).toBe(path.join(process.cwd(), '.electron-user-data'));
   expect(paths.appReadyFile).toBe(path.join(process.cwd(), '.windows-native-boot-ready.json'));
   expect(paths.bridgeReadyFile).toBe(path.join(process.cwd(), '.windows-native-bridge-ready.json'));
+  expect(paths.windowVisibleFile).toBe(path.join(process.cwd(), '.windows-native-window-visible.json'));
   expect(paths.clientScript).toBe(path.join(process.cwd(), 'scripts', 'windows', 'windows-client-native.mjs'));
   expect(paths.nativeAbiScript).toBe(path.join(process.cwd(), 'scripts', 'windows', 'native-abi-preflight.ps1'));
   expect(paths.restartDeliveryFile).toBe(path.join(process.cwd(), '.windows-dev-restart-delivered.json'));

@@ -10,6 +10,7 @@ import { startStartupWindowFrameCapture } from './startupWindowFrameCapture.js';
 
 const LOG_FILE_NAME = 'renderer-state.ndjson';
 const startupPresentationByWindow = new WeakMap<BrowserWindow, StartupWindowPresentation>();
+const STARTUP_SKELETON_PAINT_TIMEOUT_MS = 1500;
 
 export interface StartupWindowPresentation {
   isFullScreen: boolean;
@@ -106,7 +107,7 @@ export function setStartupWindowPresentation(window: BrowserWindow, presentation
 }
 
 async function waitForStartupSkeletonPaint(window: BrowserWindow) {
-  await window.webContents.executeJavaScript(
+  const waitForPaint = window.webContents.executeJavaScript(
     `(() => new Promise((resolve) => {
       const settle = () => {
         const skeleton = document.getElementById('boot-skeleton');
@@ -134,6 +135,12 @@ async function waitForStartupSkeletonPaint(window: BrowserWindow) {
     }))()`,
     true
   );
+  await Promise.race([
+    waitForPaint,
+    new Promise((_, reject) => {
+      globalThis.setTimeout(() => reject(new Error('startup skeleton paint timeout')), STARTUP_SKELETON_PAINT_TIMEOUT_MS);
+    })
+  ]);
 }
 
 export async function presentInitialRendererWindow(window: BrowserWindow) {
@@ -153,6 +160,10 @@ export async function presentInitialRendererWindow(window: BrowserWindow) {
   if (!window.isVisible()) {
     window.show();
   }
+  await appendBootEvent('window_visible', {
+    bounds: window.getBounds(),
+    isVisible: window.isVisible()
+  });
   startStartupWindowFrameCapture(window);
 }
 

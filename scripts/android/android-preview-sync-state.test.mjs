@@ -43,6 +43,16 @@ async function writeExecutable(rootDir, relativePath, content) {
   return fullPath;
 }
 
+async function writePassthroughSqliteRunner(rootDir) {
+  return writeExecutable(rootDir, 'electron-sqlite-runner.mjs', [
+    '#!/usr/bin/env node',
+    'import { spawnSync } from "node:child_process";',
+    'const [script, ...args] = process.argv.slice(2);',
+    'const result = spawnSync(process.execPath, [script, ...args], { stdio: "inherit" });',
+    'process.exit(result.status ?? 1);'
+  ].join('\n'));
+}
+
 describe('android-preview sync readiness check', () => {
   it('recognizes current and legacy native pairing preference keys', () => {
     expect(hasPairingCredentials('<string name="device_id">a</string><string name="device_secret">b</string>')).toBe(true);
@@ -57,6 +67,7 @@ describe('android-preview sync readiness check', () => {
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-ok\n');
       const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho emulator-ok\n');
       const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-ok\n');
+      const sqliteRunner = await writePassthroughSqliteRunner(tempRoot);
       const syncState = await writeExecutable(
         tempRoot,
         'sync-state.mjs',
@@ -69,6 +80,7 @@ describe('android-preview sync readiness check', () => {
         ANDROID_EMULATOR_SCRIPT: emulator,
         ANDROID_DEPLOY_SCRIPT: deploy,
         ANDROID_SYNC_STATE_SCRIPT: syncState,
+        ELECTRON_SQLITE_RUNNER: sqliteRunner,
         ANDROID_PREVIEW_AVD: 'Test_AVD',
         ANDROID_PREVIEW_SYNC_STATE_CHECK: '1',
         ANDROID_WINDOWS_MIRROR_DIR: path.join(tempRoot, 'android-preview-mirror')

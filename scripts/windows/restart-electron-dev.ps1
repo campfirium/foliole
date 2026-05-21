@@ -12,6 +12,8 @@ param(
 $ErrorActionPreference = "Stop"
 $NativeAbiPreflightScript = Join-Path $PSScriptRoot "native-abi-preflight.ps1"
 . $NativeAbiPreflightScript
+$WindowVisibleHealthScript = Join-Path $PSScriptRoot "native-window-visible-health.ps1"
+. $WindowVisibleHealthScript
 
 function Write-Info {
   param([string]$Message)
@@ -483,6 +485,20 @@ function Test-RuntimeTrusted {
     }
   }
 
+  $windowVisible = Test-RuntimeWindowVisible -WorkDir $WorkDir -RuntimePid $RuntimePid -ExpectedSession $ExpectedSession
+  if (-not $windowVisible.ok) {
+    return @{
+      ok = $false
+      reason = $windowVisible.reason
+      markerPid = $appReady.markerPid
+      markerSession = $appReady.markerSession
+      bridgeMarkerPid = $bridgeReady.bridgeMarkerPid
+      bridgeMarkerSession = $bridgeReady.bridgeMarkerSession
+      windowMarkerPid = $windowVisible.windowMarkerPid
+      windowMarkerSession = $windowVisible.windowMarkerSession
+    }
+  }
+
   $runtimeProcess = Get-ProcessById -ProcessId $RuntimePid
   if ($null -eq $runtimeProcess) {
     return @{
@@ -525,6 +541,8 @@ function Test-RuntimeTrusted {
     markerSession = $appReady.markerSession
     bridgeMarkerPid = $bridgeReady.bridgeMarkerPid
     bridgeMarkerSession = $bridgeReady.bridgeMarkerSession
+    windowMarkerPid = $windowVisible.windowMarkerPid
+    windowMarkerSession = $windowVisible.windowMarkerSession
     responding = $runtimeProcess.Responding
     windowHandle = $runtimeProcess.MainWindowHandle
   }
@@ -549,6 +567,12 @@ function Format-AppReadyDetails {
   }
   if ($ReadyState.ContainsKey('bridgeMarkerSession') -and -not [string]::IsNullOrWhiteSpace($ReadyState.bridgeMarkerSession)) {
     $details += " bridge_marker_session=$($ReadyState.bridgeMarkerSession)"
+  }
+  if ($ReadyState.ContainsKey('windowMarkerPid') -and $ReadyState.windowMarkerPid -gt 0) {
+    $details += " window_marker_pid=$($ReadyState.windowMarkerPid)"
+  }
+  if ($ReadyState.ContainsKey('windowMarkerSession') -and -not [string]::IsNullOrWhiteSpace($ReadyState.windowMarkerSession)) {
+    $details += " window_marker_session=$($ReadyState.windowMarkerSession)"
   }
   if ($ReadyState.ContainsKey('windowHandle')) {
     $details += " window_handle=$($ReadyState.windowHandle)"
@@ -801,17 +825,51 @@ function Start-ElectronShell {
   if ([string]::IsNullOrWhiteSpace($runtimeHeadValue)) {
     $runtimeHeadValue = ""
   }
-  $command = "cd /d `"$WorkDir`" && set PATH=$nodeDir;%PATH% && set PATHEXT=.COM;.EXE;.BAT;.CMD;.PS1 && set FOLIOLE_BOOT_SESSION=$bootSessionValue && set FOLIOLE_RUNTIME_HEAD=$runtimeHeadValue && set ELECTRON_RUN_AS_NODE= && call `"$npmCmd`" run electron:dev"
+  $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+  $stdoutLog = Join-Path $env:TEMP "foliole-electron-dev-shell-$stamp.out.log"
+  $stderrLog = Join-Path $env:TEMP "foliole-electron-dev-shell-$stamp.err.log"
+  $previousPath = $env:PATH
+  $previousPathExt = $env:PATHEXT
+  $previousBootSession = $env:FOLIOLE_BOOT_SESSION
+  $previousRuntimeHead = $env:FOLIOLE_RUNTIME_HEAD
+  $previousElectronRunAsNode = $env:ELECTRON_RUN_AS_NODE
+  try {
+    $env:PATH = "$nodeDir;$previousPath"
+    $env:PATHEXT = ".COM;.EXE;.BAT;.CMD;.PS1"
+    $env:FOLIOLE_BOOT_SESSION = $bootSessionValue
+    $env:FOLIOLE_RUNTIME_HEAD = $runtimeHeadValue
+    Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 
-  $proc = Start-Process `
-    -FilePath "cmd.exe" `
-    -ArgumentList "/d", "/c", $command `
-    -WorkingDirectory $WorkDir `
-    -WindowStyle Hidden `
-    -PassThru
+    $proc = Start-Process `
+      -FilePath $npmCmd `
+      -ArgumentList "run", "electron:dev" `
+      -WorkingDirectory $WorkDir `
+      -WindowStyle Hidden `
+      -RedirectStandardOutput $stdoutLog `
+      -RedirectStandardError $stderrLog `
+      -PassThru
+  } finally {
+    $env:PATH = $previousPath
+    $env:PATHEXT = $previousPathExt
+    if ($null -eq $previousBootSession) {
+      Remove-Item Env:\FOLIOLE_BOOT_SESSION -ErrorAction SilentlyContinue
+    } else {
+      $env:FOLIOLE_BOOT_SESSION = $previousBootSession
+    }
+    if ($null -eq $previousRuntimeHead) {
+      Remove-Item Env:\FOLIOLE_RUNTIME_HEAD -ErrorAction SilentlyContinue
+    } else {
+      $env:FOLIOLE_RUNTIME_HEAD = $previousRuntimeHead
+    }
+    if ($null -eq $previousElectronRunAsNode) {
+      Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+    } else {
+      $env:ELECTRON_RUN_AS_NODE = $previousElectronRunAsNode
+    }
+  }
 
   Save-TrackedPid -ProcessId $proc.Id
-  Write-Info "electron:dev shell launched in hidden terminal"
+  Write-Info "electron:dev launched without a foreground terminal"
   return $proc
 }
 
@@ -869,6 +927,10 @@ function Start-ElectronWithHealthCheck {
   $ready = Wait-AppReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
   if (-not $ready.ok) {
     throw "startup health check failed: $($ready.reason)"
+  }
+  $windowVisible = Wait-WindowVisibleMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
+  if (-not $windowVisible.ok) {
+    throw "startup health check failed: $($windowVisible.reason)"
   }
   $bridgeReady = Wait-BridgeReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
   if (-not $bridgeReady.ok) {
@@ -964,6 +1026,8 @@ function Reset-ReadyMarker {
   Remove-Item -Path $markerPath -Force -ErrorAction SilentlyContinue
   $bridgeMarkerPath = Resolve-BridgeReadyMarkerPath -WorkDir $WorkDir
   Remove-Item -Path $bridgeMarkerPath -Force -ErrorAction SilentlyContinue
+  $windowVisibleMarkerPath = Resolve-WindowVisibleMarkerPath -WorkDir $WorkDir
+  Remove-Item -Path $windowVisibleMarkerPath -Force -ErrorAction SilentlyContinue
 }
 
 function Wait-AppReadyMarker {
@@ -1110,6 +1174,10 @@ function Restart-ElectronRuntimeOnly {
   if (-not $ready.ok) {
     return @{ ok = $false; reason = $ready.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
+  $windowVisible = Wait-WindowVisibleMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
+  if (-not $windowVisible.ok) {
+    return @{ ok = $false; reason = $windowVisible.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
+  }
   $bridgeReady = Wait-BridgeReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
   if (-not $bridgeReady.ok) {
     return @{ ok = $false; reason = $bridgeReady.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
@@ -1177,6 +1245,10 @@ function Start-ElectronRuntimeOnly {
   $ready = Wait-AppReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
   if (-not $ready.ok) {
     return @{ ok = $false; reason = $ready.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
+  }
+  $windowVisible = Wait-WindowVisibleMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
+  if (-not $windowVisible.ok) {
+    return @{ ok = $false; reason = $windowVisible.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
   $bridgeReady = Wait-BridgeReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
   if (-not $bridgeReady.ok) {

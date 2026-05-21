@@ -48,6 +48,8 @@
 - 禁止在仓库脚本中新增 `powershell.exe -Command ...`、复杂 `cmd.exe /c ... && ...`、内联 `set VAR=... && npm ...`、或跨 PowerShell / cmd 多层嵌套命令；这些模式必须沉到受测 runner 文件中。
 - `scripts/pre-commit-validation.mjs` 会拦截新增或修改后的 `package.json` 与 `scripts/windows/**` 中的脆弱 Windows shell 内联命令；需要例外时，先补充明确的 runner、测试和本规则更新，不得只绕过 hook。
 - 遇到 `better-sqlite3` / native module 的 `NODE_MODULE_VERSION` mismatch 时，使用 `npm run electron:rebuild:native` 恢复 Electron ABI；不得使用普通 `npm rebuild better-sqlite3` 替代。
+- 根 `node_modules/better-sqlite3` 默认归 Electron ABI 所有；新增真实 sqlite 开发脚本不得用普通 Node 直接加载根 `better-sqlite3`，必须走受控 Electron ABI runner 或先在实施说明中登记例外。
+- `npm install` / `npm ci` 后默认重新校验 native ABI；若 Windows 预览或 Electron-as-Node runner 报 ABI mismatch，先运行 `npm run electron:rebuild:native`，不要让预览入口自动 rebuild 后继续伪装为成功。
 
 ## Validation
 

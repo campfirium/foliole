@@ -53,7 +53,7 @@ async function verifyNodeModules() {
 }
 
 async function verifyNativeAbi() {
-  await runChecked('powershell.exe', [
+  const preflightArgs = [
     '-NoProfile',
     '-NonInteractive',
     '-ExecutionPolicy',
@@ -63,7 +63,8 @@ async function verifyNativeAbi() {
     '-WorkDir',
     repoRoot,
     '-Run'
-  ], 'verify Electron native ABI', repoRoot);
+  ];
+  await runChecked('powershell.exe', preflightArgs, 'verify Electron native ABI', repoRoot);
 }
 
 async function runClientAction(action) {

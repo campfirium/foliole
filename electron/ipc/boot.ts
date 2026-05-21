@@ -7,8 +7,9 @@ import { resolveWindowsDiagnosticLogDir } from '../diagnostics/windowsDiagnostic
 const BOOT_EVENT_LOG = path.join('logs', 'windows', 'native-boot-events.ndjson');
 const READY_MARKER_FILE = '.windows-native-boot-ready.json';
 const BRIDGE_READY_MARKER_FILE = '.windows-native-bridge-ready.json';
+const WINDOW_VISIBLE_MARKER_FILE = '.windows-native-window-visible.json';
 type BootEventSource = 'main' | 'renderer';
-const WAITED_BOOT_EVENT_STAGES = new Set(['app_ready', 'bridge_ready']);
+const WAITED_BOOT_EVENT_STAGES = new Set(['app_ready', 'bridge_ready', 'window_visible']);
 
 let bootEventQueue: Promise<void> = Promise.resolve();
 
@@ -49,7 +50,8 @@ export function resolveBootArtifactPaths(repoRoot?: string) {
     bridgeReadyMarkerPath: path.join(markerRoot, BRIDGE_READY_MARKER_FILE),
     eventLogPath: path.join(logDir, path.basename(BOOT_EVENT_LOG)),
     readyMarkerPath: path.join(markerRoot, READY_MARKER_FILE),
-    repoRoot: markerRoot
+    repoRoot: markerRoot,
+    windowVisibleMarkerPath: path.join(markerRoot, WINDOW_VISIBLE_MARKER_FILE)
   };
 }
 
@@ -69,6 +71,9 @@ async function persistBootEvent(event: ReturnType<typeof createBootEvent>) {
   }
   if (event.stage === 'bridge_ready') {
     await writeJson(paths.bridgeReadyMarkerPath, event);
+  }
+  if (event.stage === 'window_visible') {
+    await writeJson(paths.windowVisibleMarkerPath, event);
   }
 }
 

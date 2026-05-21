@@ -34,6 +34,7 @@ function createWindowMock() {
     isDestroyed: vi.fn(() => false),
     isVisible: vi.fn(() => visible),
     maximize: vi.fn(),
+    getBounds: vi.fn(() => ({ height: 900, width: 1400, x: 0, y: 0 })),
     setFullScreen: vi.fn(),
     show: vi.fn(() => {
       visible = true;
@@ -70,6 +71,22 @@ describe('window runtime startup visibility', () => {
     expect(mocks.appendBootEvent).toHaveBeenCalledWith(
       'window_startup-skeleton-show',
       expect.objectContaining({ isMaximized: true })
+    );
+  });
+
+  it('shows the window when startup skeleton paint detection times out', async () => {
+    const window = createWindowMock();
+    window.webContents.executeJavaScript.mockImplementation(() => new Promise(() => undefined));
+    const { presentInitialRendererWindow } = await import('./windowRuntimeDiagnostics.js');
+
+    const presentPromise = presentInitialRendererWindow(window as never);
+    await vi.runAllTimersAsync();
+    await presentPromise;
+
+    expect(window.show).toHaveBeenCalledTimes(1);
+    expect(mocks.appendBootEvent).toHaveBeenCalledWith(
+      'window_visible',
+      expect.objectContaining({ isVisible: true })
     );
   });
 });
