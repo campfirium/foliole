@@ -8,7 +8,7 @@ import process from 'node:process';
 import { expect, it } from 'vitest';
 
 import { resolveWindowsClientAction } from './windows-client-native.mjs';
-import { readReadyState } from './windows-client-native-state.mjs';
+import { readReadyState, readReadyStateFromBootEvents } from './windows-client-native-state.mjs';
 
 it('defaults native Windows client actions to status', () => {
   expect(resolveWindowsClientAction(['node', 'script'])).toBe('status');
@@ -50,6 +50,7 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).not.toContain('requestControlledRuntimeRestart');
   expect(script).not.toContain('controlled restart timed out; runtime left for inspection');
   expect(script).toContain('startup health check failed: app-ready-timeout shell_pid=');
+  expect(script).toContain('ready ??= readReadyState()');
   expect(restartScript).not.toContain('forced-cleanup');
   expect(script).toContain('ready.appReady.head ?? state?.head');
   expect(script).toContain('await killPid(ready?.appReady.pid)');
@@ -164,6 +165,44 @@ it('accepts renderer and main-process markers for the same native session', asyn
     }), 'utf8');
 
     expect(readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFile })).toBeNull();
+  } finally {
+    main.kill();
+    await rm(tempDir, { force: true, recursive: true });
+  }
+});
+
+it('recovers trusted ready state from boot events when marker files are missing', async () => {
+  const tempDir = path.join(process.cwd(), '.tmp', `windows-client-native-events-test-${Date.now()}`);
+  const eventLogFile = path.join(tempDir, 'native-boot-events.ndjson');
+  const main = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], {
+    stdio: 'ignore',
+    windowsHide: true
+  });
+
+  await mkdir(tempDir, { recursive: true });
+  try {
+    const eventBase = { head: 'head-1', pid: main.pid, session: 'session-from-events', source: 'main' };
+    await writeFile(eventLogFile, [
+      JSON.stringify({
+        ...eventBase,
+        payload: { isVisible: true },
+        stage: 'window_visible'
+      }),
+      JSON.stringify({
+        ...eventBase,
+        payload: { bridgeAvailable: true },
+        source: 'renderer',
+        stage: 'bridge_ready'
+      }),
+      JSON.stringify({
+        ...eventBase,
+        payload: { readyState: 'complete' },
+        source: 'renderer',
+        stage: 'app_ready'
+      })
+    ].join('\n'), 'utf8');
+
+    expect(readReadyStateFromBootEvents(eventLogFile)?.appReady.session).toBe('session-from-events');
   } finally {
     main.kill();
     await rm(tempDir, { force: true, recursive: true });

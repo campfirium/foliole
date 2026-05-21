@@ -9,6 +9,7 @@ export function resolveWindowsNativePaths(repoRoot = WINDOWS_NATIVE_REPO_ROOT) {
   // Marker paths must stay aligned with the Electron main boot-report writer.
   return {
     appReadyFile: path.join(repoRoot, '.windows-native-boot-ready.json'),
+    bootEventLogFile: path.join(repoRoot, '.electron-user-data', 'logs', 'windows', 'native-boot-events.ndjson'),
     bridgeReadyFile: path.join(repoRoot, '.windows-native-bridge-ready.json'),
     clientScript: path.join(repoRoot, 'scripts', 'windows', 'windows-client-native.mjs'),
     logDir: path.join(repoRoot, '.tmp', 'windows-native-client'),
