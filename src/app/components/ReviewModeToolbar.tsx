@@ -93,6 +93,22 @@ function ReviewPausedSummary({ reviewCurrentTitle }: Pick<ReviewModeToolbarProps
   return title ? `Review paused · ${title}` : 'Review paused';
 }
 
+function ReviewSessionProgress({
+  reviewCompletedCount,
+  reviewQueueCount,
+  reviewSessionMode,
+  showProgress
+}: Pick<ReviewModeToolbarProps, 'reviewCompletedCount' | 'reviewQueueCount' | 'reviewSessionMode' | 'showProgress'>) {
+  if (!showProgress) return null;
+  return (
+    <ReviewToolbarProgressLine
+      completedCount={reviewCompletedCount}
+      queueCount={reviewQueueCount}
+      reviewSessionMode={reviewSessionMode}
+    />
+  );
+}
+
 function ActiveReviewActionBar({
   className, errorMessage, isAnswerRevealed, isCurrentItemGradable, isReviewEditing,
   isSubmitting, onCompleteReviewItem, onDeferReviewItem, onDismissReviewItem,
@@ -140,7 +156,7 @@ function ActiveReviewActionBar({
       primary={showActionFrame ? (
         <ReviewToolbarSessionActions actions={actions} onSetReviewSessionMode={onSetReviewSessionMode} reviewSessionMode={reviewSessionMode} />
       ) : actions}
-      progress={showProgress ? <ReviewToolbarProgressLine completedCount={reviewCompletedCount} queueCount={reviewQueueCount} /> : null}
+      progress={<ReviewSessionProgress reviewCompletedCount={reviewCompletedCount} reviewQueueCount={reviewQueueCount} reviewSessionMode={reviewSessionMode} showProgress={showProgress} />}
       reviewInputMode={isReviewEditing ? 'editing' : 'hotkeys'}
       reviewItemKind={isCurrentItemGradable ? 'fsrs' : 'reading'}
       secondary={!showSessionModeControl && showSummary ? `${Math.max(reviewQueueCount, 0)} left · ${Math.max(reviewCompletedCount, 0)} done` : null}
@@ -181,7 +197,7 @@ export function ReviewModeToolbar({
         {...definedProps({ className, style })}
         mode="study"
         primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
-        progress={showProgress ? <ReviewToolbarProgressLine completedCount={reviewCompletedCount} queueCount={reviewQueueCount} /> : null}
+        progress={<ReviewSessionProgress reviewCompletedCount={reviewCompletedCount} reviewQueueCount={reviewQueueCount} reviewSessionMode={reviewSessionMode} showProgress={showProgress} />}
         secondary={showSummary ? <ReviewPausedSummary reviewCurrentTitle={reviewCurrentTitle} /> : null}
       />
     );

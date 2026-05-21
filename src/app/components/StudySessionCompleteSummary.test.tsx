@@ -13,6 +13,7 @@ it('shows the completed review phase summary and continues reading', () => {
       readTopicCount={2}
       reviewElapsedMs={18 * 60 * 1000}
       reviewedItemCount={4}
+      reviewSessionMode="recommended"
       sessionStartedAt="2026-03-10T12:00:00.000Z"
     />
   );
@@ -29,4 +30,42 @@ it('shows the completed review phase summary and continues reading', () => {
   expect(screen.getByText('Created')).toBeInTheDocument();
   expect(screen.getByText('12')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
+});
+
+it('uses review-first completion copy without claiming every reading topic is done', () => {
+  render(
+    <StudySessionCompleteSummary
+      completedAt="2026-03-10T12:15:00.000Z"
+      createdItemCount={0}
+      createdTopicCount={0}
+      readingElapsedMs={0}
+      readTopicCount={0}
+      reviewElapsedMs={18 * 60 * 1000}
+      reviewedItemCount={4}
+      reviewSessionMode="review-first"
+      sessionStartedAt="2026-03-10T12:00:00.000Z"
+    />
+  );
+
+  expect(screen.getByText('Review items complete')).toBeInTheDocument();
+  expect(screen.queryByText('Reading session complete')).not.toBeInTheDocument();
+});
+
+it('uses reading session completion copy without claiming review items are done', () => {
+  render(
+    <StudySessionCompleteSummary
+      completedAt="2026-03-10T12:15:00.000Z"
+      createdItemCount={0}
+      createdTopicCount={0}
+      readingElapsedMs={34 * 60 * 1000}
+      readTopicCount={2}
+      reviewElapsedMs={0}
+      reviewedItemCount={0}
+      reviewSessionMode="reading-only"
+      sessionStartedAt="2026-03-10T12:00:00.000Z"
+    />
+  );
+
+  expect(screen.getByText('Reading session complete')).toBeInTheDocument();
+  expect(screen.queryByText('Review items complete')).not.toBeInTheDocument();
 });

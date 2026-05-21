@@ -13,16 +13,25 @@ function clampProgress(value: number) {
   return Math.min(Math.max(value, 0), 1);
 }
 
-function formatReviewProgressLabel(completed: number, remaining: number, total: number) {
-  return `Today's review: ${remaining} left · ${Math.min(completed, total)} done · ${total} total`;
+function formatReviewProgressLabel(mode: ReviewSessionMode, completed: number, remaining: number, total: number) {
+  const done = Math.min(completed, total);
+  if (mode === 'reading-only') {
+    return `Reading session: ${remaining} topics left · ${done} read · ${total} topics`;
+  }
+  if (mode === 'review-first') {
+    return `Review session: ${remaining} review items left · ${done} done · ${total} total`;
+  }
+  return `This session: ${remaining} left · ${done} done · ${total} total`;
 }
 
 export function ReviewToolbarProgressLine({
   completedCount,
-  queueCount
+  queueCount,
+  reviewSessionMode
 }: {
   completedCount: number;
   queueCount: number;
+  reviewSessionMode: ReviewSessionMode;
 }) {
   const completed = Math.max(completedCount, 0);
   const currentTotal = completed + Math.max(queueCount, 0);
@@ -34,7 +43,7 @@ export function ReviewToolbarProgressLine({
 
   const progress = clampProgress(completed / total);
   const progressPercent = `${progress * 100}%`;
-  const progressLabel = formatReviewProgressLabel(completed, Math.max(queueCount, 0), total);
+  const progressLabel = formatReviewProgressLabel(reviewSessionMode, completed, Math.max(queueCount, 0), total);
   const progressStyle = {
     '--review-sprout-position': `clamp(1.25rem, ${progressPercent}, calc(100% - 1.25rem))`
   } as CSSProperties;
