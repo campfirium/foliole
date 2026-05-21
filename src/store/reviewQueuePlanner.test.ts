@@ -27,8 +27,8 @@ it('assembles dedicated FSRS and reading queues, then mixes them at the spec 5:1
   const plan = buildReviewQueuePlan({ nodeOrder, nodesById, now, trashedNodeIds: [] });
 
   expect(plan.fsrsQueueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3', 'fsrs-4', 'fsrs-5', 'fsrs-6']);
-  expect(plan.readingQueueNodeIds).toEqual(['reading-1', 'reading-2']);
-  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3', 'fsrs-4', 'fsrs-5', 'reading-1', 'fsrs-6']);
+  expect(plan.readingQueueNodeIds).toEqual(['reading-2', 'reading-1']);
+  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3', 'fsrs-4', 'fsrs-5', 'reading-2', 'fsrs-6']);
   expect(plan.fsrsCandidateCount).toBe(6);
   expect(plan.readingCandidateCount).toBe(2);
   expect(plan.overflowCount).toBe(1);
@@ -64,7 +64,7 @@ it('removes the legacy daily cap but keeps the task queue item-centered', () => 
     'fsrs-8',
     'fsrs-9',
     'fsrs-10',
-    'reading-2',
+    'reading-3',
     'fsrs-11',
     'fsrs-12'
   ]);
@@ -106,33 +106,6 @@ it('does not pull the whole reading lane into a small item-centered task queue',
 
   expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3']);
   expect(plan.overflowCount).toBe(12);
-});
-
-it('source-interleaves due reading nodes by direct parent and planner order', () => {
-  const now = '2026-03-10T12:00:00.000Z';
-  const nodes = Array.from({ length: 12 }, (_, index) => ({
-    ...createReadingNode(`reading-${index + 1}`, '2026-03-02T08:00:00.000Z'),
-    parentNodeId: 'source-topic'
-  }));
-  const nodeOrder = nodes.map((node) => node.id);
-  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]));
-
-  const plan = buildReviewQueuePlan({ nodeOrder, nodesById, now, trashedNodeIds: [] });
-
-  expect(plan.readingQueueNodeIds).toEqual([
-    'reading-1',
-    'reading-8',
-    'reading-3',
-    'reading-10',
-    'reading-5',
-    'reading-12',
-    'reading-7',
-    'reading-2',
-    'reading-9',
-    'reading-4',
-    'reading-11',
-    'reading-6'
-  ]);
 });
 
 it('keeps scheduled reading inspection ordered by nextAt without source interleaving', () => {
@@ -242,14 +215,14 @@ it('replaces legacy due and createdAt ordering with inherited priority, FSRS ret
     'fsrs-6',
     'fsrs-high-r'
   ]);
-  expect(plan.readingQueueNodeIds).toEqual(['reading-early-nextAt', 'reading-late-nextAt']);
+  expect(plan.readingQueueNodeIds).toEqual(['reading-late-nextAt', 'reading-early-nextAt']);
   expect(plan.queueNodeIds).toEqual([
     'fsrs-absolute',
     'fsrs-low-r',
     'fsrs-4',
     'fsrs-5',
     'fsrs-6',
-    'reading-early-nextAt',
+    'reading-late-nextAt',
     'fsrs-high-r'
   ]);
   expect(plan.fsrsQueueNodeIds).not.toEqual([

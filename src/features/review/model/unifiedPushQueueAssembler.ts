@@ -1,3 +1,4 @@
+import { disperseReadingMaterial, type ReadingMaterialDispersionOptions } from './readingMaterialDispersion';
 import {
   compareReadingNextAtAscending,
   DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
@@ -15,10 +16,12 @@ export interface FsrsPushQueueEntry {
 }
 
 export interface ReadingPushQueueEntry {
+  dueAt?: string;
+  id: string;
+  intervalDurationMs?: number | null | undefined;
   priority: PushQueuePriority;
   nextAt: string;
-  sourceId?: string;
-  sourceOrder?: number;
+  pathNodeIds?: readonly string[];
 }
 
 export interface RouletteSelectionOptions {
@@ -26,9 +29,11 @@ export interface RouletteSelectionOptions {
   random?: () => number;
 }
 
-export type RegularPriorityBuckets<T> = Record<RegularPushQueuePriority, T[]>;
+export interface ReadingPushQueueOptions extends RouletteSelectionOptions {
+  materialDispersion?: ReadingMaterialDispersionOptions;
+}
 
-const SOURCE_INTERLEAVE_RATIO = 0.6180339887498949;
+export type RegularPriorityBuckets<T> = Record<RegularPushQueuePriority, T[]>;
 
 function createRegularPriorityBuckets<T>(): RegularPriorityBuckets<T> {
   return { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [] };
@@ -78,86 +83,6 @@ export function bucketFsrsPushQueueEntries<T extends FsrsPushQueueEntry>(entries
 
 export function bucketReadingPushQueueEntries<T extends ReadingPushQueueEntry>(entries: readonly T[]) {
   return bucketPriorityQueueEntries(entries, compareReadingNextAtAscending);
-}
-
-function greatestCommonDivisor(left: number, right: number) {
-  let a = Math.abs(left);
-  let b = Math.abs(right);
-  while (b !== 0) {
-    const next = a % b;
-    a = b;
-    b = next;
-  }
-  return a;
-}
-
-function resolveSourceInterleaveStride(length: number) {
-  if (length <= 2) {
-    return 1;
-  }
-
-  const target = Math.min(Math.max(Math.round(length * SOURCE_INTERLEAVE_RATIO), 1), length - 1);
-  for (let offset = 0; offset < length; offset += 1) {
-    const higher = target + offset;
-    if (higher < length && greatestCommonDivisor(higher, length) === 1) {
-      return higher;
-    }
-
-    const lower = target - offset;
-    if (lower > 0 && greatestCommonDivisor(lower, length) === 1) {
-      return lower;
-    }
-  }
-
-  return 1;
-}
-
-function interleaveSourceGroup<T>(entries: readonly T[]) {
-  if (entries.length <= 2) {
-    return [...entries];
-  }
-
-  const stride = resolveSourceInterleaveStride(entries.length);
-  const queue: T[] = [];
-  let index = 0;
-  for (let count = 0; count < entries.length; count += 1) {
-    const entry = entries[index];
-    if (entry !== undefined) {
-      queue.push(entry);
-    }
-    index = (index + stride) % entries.length;
-  }
-  return queue;
-}
-
-function interleaveReadingSourceGroups<T extends ReadingPushQueueEntry>(entries: readonly T[]) {
-  if (entries.length <= 2) {
-    return [...entries];
-  }
-  if (entries.some((entry) => !entry.sourceId || !Number.isFinite(entry.sourceOrder))) {
-    return [...entries];
-  }
-
-  const groups = new Map<string, { entries: Array<T & { sourceOrder: number }>; sourceRank: number }>();
-  entries.forEach((entry, index) => {
-    const sourceId = entry.sourceId as string;
-    const group = groups.get(sourceId) ?? { entries: [], sourceRank: index };
-    group.entries.push(entry as T & { sourceOrder: number });
-    groups.set(sourceId, group);
-  });
-
-  const positionedEntries = Array.from(groups.values()).flatMap((group) => {
-    const orderedEntries = [...group.entries].sort((left, right) => left.sourceOrder - right.sourceOrder);
-    return interleaveSourceGroup(orderedEntries).map((entry, index) => ({
-      entry,
-      position: ((index + 1) * entries.length) / (orderedEntries.length + 1),
-      sourceRank: group.sourceRank
-    }));
-  });
-
-  return positionedEntries
-    .sort((left, right) => left.position - right.position || left.sourceRank - right.sourceRank)
-    .map(({ entry }) => entry);
 }
 
 export function selectRouletteBucketPriority<T>(
@@ -216,11 +141,13 @@ export function assembleFsrsPushQueue<T extends FsrsPushQueueEntry>(
 
 export function assembleReadingPushQueue<T extends ReadingPushQueueEntry>(
   entries: readonly T[],
-  options: RouletteSelectionOptions = {}
+  options: ReadingPushQueueOptions = {}
 ) {
   const buckets = bucketReadingPushQueueEntries(entries);
-  REGULAR_PUSH_QUEUE_PRIORITIES.forEach((priority) => {
-    buckets.regular[priority] = interleaveReadingSourceGroups(buckets.regular[priority]);
-  });
+  if (options.materialDispersion) {
+    REGULAR_PUSH_QUEUE_PRIORITIES.forEach((priority) => {
+      buckets.regular[priority] = disperseReadingMaterial(buckets.regular[priority], options.materialDispersion!);
+    });
+  }
   return [...buckets.absolute, ...assembleRouletteBuckets(buckets.regular, options)];
 }

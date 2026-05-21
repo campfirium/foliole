@@ -49,7 +49,7 @@ it('replans the active session when the current mode is applied again after mix 
     expect(harness.getState().reviewSession).toMatchObject({
       currentNodeId: 'qa-1',
       isAnswerRevealed: false,
-      queueNodeIds: ['qa-1', 'reading-1', 'qa-2', 'reading-2', 'qa-3'],
+      queueNodeIds: ['qa-1', 'reading-1', 'qa-2', 'reading-outside', 'qa-3'],
       totalNodeCount: 5
     });
   } finally {
@@ -81,8 +81,8 @@ it('keeps review advancement scoped to the active session queue', () => {
   expect(actions.completeReviewItem(now)).toBe(true);
 
   expect(harness.getState().reviewSession).toMatchObject({
-    currentNodeId: 'reading-2',
-    queueNodeIds: ['reading-2', 'reading-outside'],
+    currentNodeId: 'reading-outside',
+    queueNodeIds: ['reading-outside', 'reading-2'],
     readTopicCount: 1,
     totalNodeCount: 2
   });
