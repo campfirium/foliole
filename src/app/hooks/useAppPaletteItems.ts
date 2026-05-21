@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import {
+  canApplyEditorOperationEntryForCurrentNode,
   getEditorOperationRedoTitle,
   getEditorOperationUndoTitle
 } from '../../features/editor/model/editorOperationHistory';
@@ -103,8 +104,8 @@ export function resolveEditorAwarePaletteHistoryOptions(args: {
   appActionHistory: Parameters<typeof getWorkspaceUndoTitle>[0];
   editorOperationHistory: Parameters<typeof getEditorOperationUndoTitle>[0];
 }) {
-  const canUndoEditorOperation = args.editorOperationHistory.undoStack.at(-1)?.nodeId === args.activeNodeId;
-  const canRedoEditorOperation = args.editorOperationHistory.redoStack.at(-1)?.nodeId === args.activeNodeId;
+  const canUndoEditorOperation = canApplyEditorOperationEntryForCurrentNode(args.editorOperationHistory.undoStack.at(-1), args.activeNodeId);
+  const canRedoEditorOperation = canApplyEditorOperationEntryForCurrentNode(args.editorOperationHistory.redoStack.at(-1), args.activeNodeId);
   return {
     canRedoWorkspaceAction: canRedoEditorOperation || args.appActionHistory.redoStack.length > 0,
     canUndoWorkspaceAction: canUndoEditorOperation || args.appActionHistory.undoStack.length > 0,

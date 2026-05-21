@@ -23,3 +23,22 @@ it('enables app undo for the current editor operation stack', () => {
   expect(options.canUndoWorkspaceAction).toBe(true);
   expect(options.undoWorkspaceActionTitle).toBe('Undo Create Annotation');
 });
+
+it('enables annotation redo even when focus moved away from the editor node', () => {
+  const options = resolveEditorAwarePaletteHistoryOptions({
+    activeNodeId: 'node-2',
+    appActionHistory: createEmptyWorkspaceActionHistory(),
+    editorOperationHistory: {
+      ...createEmptyEditorOperationHistory(),
+      redoStack: [{
+        annotations: [{ kind: 'highlight', nodeId: 'highlight-1', parentNodeId: 'node-1' }],
+        nodeId: 'node-1',
+        title: 'Create Annotation',
+        type: 'annotation.create'
+      }]
+    }
+  });
+
+  expect(options.canRedoWorkspaceAction).toBe(true);
+  expect(options.redoWorkspaceActionTitle).toBe('Redo Create Annotation');
+});

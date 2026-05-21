@@ -114,6 +114,28 @@ describe('editorOperationHistory scope guards', () => {
     expect(applyEntry).not.toHaveBeenCalled();
   });
 
+  it('allows annotation redo even when focus moved away from the editor node', () => {
+    const entry = createAnnotationEntry('node-1', 'annotation.create');
+    let history = pushEditorOperationEntry(createEmptyEditorOperationHistory(), entry);
+    history = applyEditorOperationHistory({
+      applyEntry: () => true,
+      currentNodeId: 'node-1',
+      history,
+      mode: 'undo'
+    }).history;
+    const applyEntry = vi.fn(() => true);
+
+    const result = applyEditorOperationHistory({
+      applyEntry,
+      currentNodeId: 'node-2',
+      history,
+      mode: 'redo'
+    });
+
+    expect(result.applied).toBe(true);
+    expect(applyEntry).toHaveBeenCalledWith(entry, 'redo');
+  });
+
   it('keeps a failed apply at the stack top', () => {
     const entry = createAnnotationEntry('node-1', 'annotation.delete');
     const history = pushEditorOperationEntry(createEmptyEditorOperationHistory(), entry);
