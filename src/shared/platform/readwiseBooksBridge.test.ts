@@ -3,7 +3,11 @@ import { afterEach, expect, it, vi } from 'vitest';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
 import { loadRuntimeReadwiseBooksInventoryResult } from './readwiseBooksInventoryLoadResult';
-import { loadRuntimeReadwiseBooksInventory, onRuntimeReadwiseBookEpubProgress } from './readwiseBooksRuntimeRepository';
+import {
+  loadRuntimeReadwiseBookEpub,
+  loadRuntimeReadwiseBooksInventory,
+  onRuntimeReadwiseBookEpubProgress
+} from './readwiseBooksRuntimeRepository';
 
 function createMockElectronApi(invoke: NativeInvoke) {
   return {
@@ -183,6 +187,24 @@ it('returns failed with the thrown message when readwise books inventory loading
       fallback: 'return_failed'
     })
   );
+});
+
+it('loads a Readwise book EPUB through the native command', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    book_key: 'book-a',
+    epub_path: '/tmp/Book A.epub',
+    status: 'selected',
+    title: 'Book A'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(loadRuntimeReadwiseBookEpub('node-book-a')).resolves.toEqual({
+    book_key: 'book-a',
+    epub_path: '/tmp/Book A.epub',
+    status: 'selected',
+    title: 'Book A'
+  });
+  expect(invoke).toHaveBeenCalledWith('load_readwise_book_epub', { node_id: 'node-book-a' });
 });
 
 it('normalizes readwise book epub progress events', () => {

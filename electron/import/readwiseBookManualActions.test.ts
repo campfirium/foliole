@@ -175,12 +175,13 @@ it('imports the selected EPUB into the current readwise book node and keeps that
   expect(importedNode?.title).toBe('Manual Book');
   expect(importedNode?.content).toContain('# Manual Book');
 
-  const chapters = reloadedBook?.generatedNodeId
-    ? (openDatabaseConnection().sqlite
-        .prepare('SELECT title FROM nodes WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC')
-        .all(reloadedBook.generatedNodeId) as Array<{ title: string }>).map((chapter) => chapter.title)
-    : [];
-  expect(chapters).toContain('Chapter 1');
+  const connection = openDatabaseConnection().sqlite;
+  const sourceReadingMode = reloadedBook?.generatedNodeId
+    ? connection
+        .prepare('SELECT sequential_reading_enabled FROM nodes WHERE id = ?')
+        .get(reloadedBook.generatedNodeId) as { sequential_reading_enabled: number } | undefined
+    : undefined;
+  expect(sourceReadingMode?.sequential_reading_enabled).toBeNull();
 });
 
 it('reopens the picker from the last selected EPUB folder after restart', async () => {

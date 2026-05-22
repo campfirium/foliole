@@ -20,6 +20,7 @@ interface PendingSelection extends EpubImportReleaseModeDialogSnapshot {
 }
 
 let currentSelection: PendingSelection | null = null;
+let currentSnapshot: EpubImportReleaseModeDialogSnapshot | null = null;
 const listeners = new Set<() => void>();
 
 function emitChange() {
@@ -29,14 +30,7 @@ function emitChange() {
 }
 
 function getSnapshot(): EpubImportReleaseModeDialogSnapshot | null {
-  return currentSelection
-    ? {
-        file: currentSelection.file,
-        hasHighlights: currentSelection.hasHighlights,
-        recommendedMode: currentSelection.recommendedMode,
-        selectedMode: currentSelection.selectedMode
-      }
-    : null;
+  return currentSnapshot;
 }
 
 function subscribe(listener: () => void) {
@@ -49,25 +43,63 @@ export function useEpubImportReleaseModeDialogSnapshot() {
 }
 
 export function requestEpubImportReleaseMode(file: RuntimeImportedTextFile) {
+  return requestEpubImportReleaseModeSnapshot({
+    file,
+    hasHighlights: detectEpubPreviewHighlights(file.content),
+    recommendedMode: resolveDefaultEpubReleaseMode(file.content)
+  });
+}
+
+export function requestReadwiseBookEpubImportReleaseMode(input: {
+  fileName: string;
+  hasHighlights: boolean;
+}) {
+  return requestEpubImportReleaseModeSnapshot({
+    file: {
+      content: '',
+      fileName: input.fileName,
+      filePath: '',
+      kind: 'epub'
+    },
+    hasHighlights: input.hasHighlights,
+    recommendedMode: input.hasHighlights ? 'free' : 'sequential'
+  });
+}
+
+function requestEpubImportReleaseModeSnapshot(input: {
+  file: RuntimeImportedTextFile;
+  hasHighlights: boolean;
+  recommendedMode: EpubImportReleaseMode;
+}) {
   if (currentSelection) {
     currentSelection.resolve(null);
   }
-  const recommendedMode = resolveDefaultEpubReleaseMode(file.content);
   return new Promise<EpubImportReleaseMode | null>((resolve) => {
     currentSelection = {
-      file,
-      hasHighlights: detectEpubPreviewHighlights(file.content),
-      recommendedMode,
+      file: input.file,
+      hasHighlights: input.hasHighlights,
+      recommendedMode: input.recommendedMode,
       resolve,
-      selectedMode: recommendedMode
+      selectedMode: input.recommendedMode
     };
+    currentSnapshot = toSnapshot(currentSelection);
     emitChange();
   });
+}
+
+function toSnapshot(selection: PendingSelection): EpubImportReleaseModeDialogSnapshot {
+  return {
+    file: selection.file,
+    hasHighlights: selection.hasHighlights,
+    recommendedMode: selection.recommendedMode,
+    selectedMode: selection.selectedMode
+  };
 }
 
 export function selectEpubImportReleaseMode(mode: EpubImportReleaseMode) {
   if (!currentSelection) return;
   currentSelection = { ...currentSelection, selectedMode: mode };
+  currentSnapshot = toSnapshot(currentSelection);
   emitChange();
 }
 
@@ -75,6 +107,7 @@ export function closeEpubImportReleaseModeDialog(mode: EpubImportReleaseMode | n
   const selection = currentSelection;
   if (!selection) return;
   currentSelection = null;
+  currentSnapshot = null;
   selection.resolve(mode);
   emitChange();
 }
