@@ -6,7 +6,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import { createElectronLaunchEnv } from './electron-dev-env.mjs';
-import { isViteServerReady } from './electron-dev-server.mjs';
+import { isViteServerReady, prewarmViteRendererEntries } from './electron-dev-server.mjs';
 
 const VITE_HOST = '127.0.0.1';
 const VITE_PORT_DEFAULT = 24600;
@@ -166,6 +166,13 @@ await waitForSuccessfulExit(compile, 'electron compile');
 
 const viteState = await startViteWithPortFallback();
 const vite = viteState.viteProc;
+const prewarmResults = await prewarmViteRendererEntries(viteState.viteUrl);
+const failedPrewarmResults = prewarmResults.filter((result) => !result.ok);
+if (failedPrewarmResults.length > 0) {
+  console.warn('[electron-dev] vite renderer prewarm incomplete', failedPrewarmResults);
+} else {
+  console.info('[electron-dev] vite renderer prewarm complete', prewarmResults);
+}
 
 let electron = launchElectron(viteState.viteUrl);
 logChildLifecycle(electron, 'electron');

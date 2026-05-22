@@ -75,6 +75,15 @@ async function runClientAction(action) {
   return { ...result, output };
 }
 
+async function runDirectRestart(reason) {
+  console.log('[windows-preview-native] selected action: direct-restart');
+  console.log(`[windows-preview-native] reason: ${reason}`);
+  const result = await runClientAction('restart');
+  if (result.code !== 0 || !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output)) {
+    throw new Error('direct restart failed');
+  }
+}
+
 async function readDeliveryPayload(filePath) {
   try {
     return JSON.parse(await fs.readFile(filePath, 'utf8'));
@@ -138,6 +147,12 @@ async function runIntent(action, currentHead, reason) {
   });
   console.log(`[windows-preview-native] ${label} intent requested nonce=${result.intent.nonce}`);
   if (!await waitForDelivery(deliveryPath, result.intent, label)) {
+    console.log(`[windows-preview-native] ${label} delivery timed out nonce=${result.intent.nonce}`);
+    if (action === 'restart-intent') {
+      console.log('[windows-preview-native] restart delivery missing after intent request; falling back to direct restart');
+      await runDirectRestart('restart delivery missing after intent request');
+      return;
+    }
     throw new Error(`${label} delivery timed out nonce=${result.intent.nonce}`);
   }
   if (action === 'renderer-reload-intent') {
@@ -147,7 +162,8 @@ async function runIntent(action, currentHead, reason) {
     return;
   }
   if (!await waitForTrustedRunning(`${label} status`, currentHead)) {
-    throw new Error(`${label} did not reach trusted running status`);
+    console.log('[windows-preview-native] restart markers missing after intent delivery; falling back to direct restart');
+    await runDirectRestart('restart markers missing after intent delivery');
   }
 }
 

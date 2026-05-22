@@ -28,6 +28,10 @@ const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:* http://127.0.0.1:*"
   )
   .replace(
+    "font-src 'self' data:",
+    "font-src 'self' data: http://localhost:* http://127.0.0.1:*"
+  )
+  .replace(
     "connect-src 'self' foliole-asset:",
     "connect-src 'self' foliole-asset: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*"
   );
