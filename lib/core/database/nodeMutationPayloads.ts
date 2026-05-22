@@ -1,6 +1,7 @@
 import type { NodeKind } from '../nodes/nodeKind.js';
 import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
+import type { FormulaStoredAnchorLocator } from './anchorLinkFormulaCodec.js';
 import type { NodeReadingPayload } from './nodeReadingPayload.js';
 
 export interface NodeReviewPayload {
@@ -28,7 +29,7 @@ export interface NodeAnchorLinkPayload {
     width?: number;
     x: number;
     y: number;
-  } | {
+  } | FormulaStoredAnchorLocator | {
     ranges: Array<{
       from: number;
       originalText: string;

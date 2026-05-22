@@ -1,3 +1,5 @@
+import { parseFormulaLocator, type FormulaStoredAnchorLocator } from '../../lib/core/database/anchorLinkFormulaCodec.js';
+
 import { parseAnchorLinkLocatorRects } from './anchorLinkLocatorRects.js';
 
 interface AnchorLinkPayload {
@@ -19,7 +21,7 @@ interface AnchorLinkPayload {
     width?: number;
     x: number;
     y: number;
-  } | {
+  } | FormulaStoredAnchorLocator | {
     ranges: Array<{
       from: number;
       originalText: string;
@@ -34,12 +36,18 @@ interface AnchorLinkPayload {
 
 interface RawAnchorLocator {
   attachmentId?: unknown;
+  display?: unknown;
+  fallbackRect?: unknown;
+  formulaSource?: unknown;
   from?: unknown;
   height?: unknown;
+  kind?: unknown;
+  occurrenceKey?: unknown;
   originalText?: unknown;
   page?: unknown;
   ranges?: unknown;
   rects?: unknown;
+  selection?: unknown;
   to?: unknown;
   width?: unknown;
   x?: unknown;
@@ -102,6 +110,14 @@ function parsePdfAnchorLocator(locator: RawAnchorLocator, field: string) {
   };
 }
 
+function parseFormulaAnchorLocator(locator: RawAnchorLocator, field: string) {
+  const formulaLocator = parseFormulaLocator(locator);
+  if (!formulaLocator) {
+    throw new Error(`invalid argument: ${field}.locator`);
+  }
+  return formulaLocator;
+}
+
 export function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
   if (value === null || value === undefined) return null;
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`invalid argument: ${field}`);
@@ -116,6 +132,7 @@ export function asAnchorLink(value: unknown, field: string): AnchorLinkPayload |
   if (typeof locator.from === 'number' || typeof locator.to === 'number' || typeof locator.originalText === 'string') {
     return { ...anchorLink, locator: parseTextAnchorLocator(locator, field) };
   }
+  if (locator.kind === 'formula-region') return { ...anchorLink, locator: parseFormulaAnchorLocator(locator, field) };
   if (typeof locator.x !== 'number' || !Number.isFinite(locator.x)) throw new Error(`invalid argument: ${field}.locator.x`);
   if (typeof locator.y !== 'number' || !Number.isFinite(locator.y)) throw new Error(`invalid argument: ${field}.locator.y`);
   return {

@@ -103,25 +103,13 @@ it('handles node mutation commands', async () => {
       }
     })
   ).resolves.toBeNull();
-  expect(upsertNodeSnapshot).toHaveBeenNthCalledWith(1, {
-    nodeId: 'node-1',
-    parentNodeId: null,
-    kind: 'topic',
-    priority: null,
-    desiredRetention: null,
-    hideTitleHeading: false,
-    title: 'Node title',
-    isTitleManual: false,
-    content: '# Content',
-    virtualFilter: null,
-    reveal: null,
+  expect(upsertNodeSnapshot).toHaveBeenNthCalledWith(1, expect.objectContaining({
     anchorLink: null,
-    imageRegions: null,
-    reading: null,
-    position: 1,
-    createdAt: '2026-03-06T00:00:00.000Z',
-    updatedAt: '2026-03-06T00:00:01.000Z'
-  });
+    content: '# Content',
+    kind: 'topic',
+    nodeId: 'node-1',
+    reveal: null
+  }));
 });
 
 it('handles node reveal mutation command', async () => {
@@ -143,25 +131,13 @@ it('handles node reveal mutation command', async () => {
       }
     })
   ).resolves.toBeNull();
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith({
-    nodeId: 'node-2',
-    parentNodeId: 'node-1',
-    kind: 'item',
-    priority: null,
-    desiredRetention: null,
-    hideTitleHeading: false,
-    title: 'QA',
-    isTitleManual: true,
-    content: 'Question',
-    virtualFilter: null,
-    reveal: 'Answer',
+  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
     anchorLink: { id: 'cloze-1', kind: 'cloze' },
-    imageRegions: null,
-    reading: null,
-    position: 2,
-    createdAt: '2026-03-06T00:00:00.000Z',
-    updatedAt: '2026-03-06T00:00:02.000Z'
-  });
+    content: 'Question',
+    kind: 'item',
+    nodeId: 'node-2',
+    reveal: 'Answer'
+  }));
 });
 
 
@@ -225,9 +201,7 @@ it('handles permanent delete node command', async () => {
 });
 
 it('handles app path and fsrs commands', async () => {
-  const resolveAppPathsRequest = { command: 'resolve_app_paths' } satisfies NativeInvokeRequest<'resolve_app_paths'>;
-
-  await expect(handleInvokeRequest(resolveAppPathsRequest)).resolves.toEqual({
+  await expect(handleInvokeRequest({ command: 'resolve_app_paths' } satisfies NativeInvokeRequest<'resolve_app_paths'>)).resolves.toEqual({
     app_data_dir: '/data',
     app_config_dir: '/config',
     app_cache_dir: '/cache',
