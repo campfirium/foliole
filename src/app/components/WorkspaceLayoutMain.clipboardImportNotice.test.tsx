@@ -48,6 +48,8 @@ vi.mock('./useImmersiveReadingMode', () => ({
   })
 }));
 
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
+
 import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
@@ -121,4 +123,17 @@ it('opens the imported clipboard topic from the success notice', async () => {
 
   expect(onCloseImportManagement).toHaveBeenCalledTimes(1);
   expect(onSelectNode).toHaveBeenCalledWith('node-imported');
+});
+
+it('shows app runtime notices inside the workspace surface', async () => {
+  render(<WorkspaceLayoutMain {...createProps({})} />);
+
+  showAppRuntimeNotice('Selected topic is not backed by an active keep import source.');
+
+  const notice = await screen.findByTestId('app-runtime-notice');
+  expect(notice).toHaveClass('left-1/2');
+  expect(notice).toHaveClass('top-1/2');
+  expect(notice).toHaveTextContent(
+    'Selected topic is not backed by an active keep import source.'
+  );
 });

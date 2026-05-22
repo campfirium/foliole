@@ -5,6 +5,7 @@ import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorE
 import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
@@ -62,7 +63,7 @@ function createMergeHighlightsIntoTopicCommand(args: {
     }
     const result = await mergeRuntimeReadwiseTopicHighlights(args.ws.activeNodeId);
     if (!result || result.status === 'error') {
-      window.alert('合并失败。');
+      showAppRuntimeNotice('Merge failed.');
       return false;
     }
     if (result.status === 'merged') {
@@ -84,7 +85,7 @@ function createReimportSelectedTopicCommand(args: {
     await args.runtime.flushPendingEditorDraftImmediately();
     const result = await devReimportSelectedTopic({ nodeId });
     if (result.status !== 'reimported') {
-      window.alert(result.detail);
+      showAppRuntimeNotice(result.detail);
       return false;
     }
     await useWorkspaceStore.persist.rehydrate();

@@ -1,4 +1,5 @@
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
+import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
 import { isHomeNode, isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -106,7 +107,7 @@ function createMergeHighlightsIntoTopicHandler(args: {
     }
     void mergeRuntimeReadwiseTopicHighlights(args.primaryTargetId).then((result) => {
       if (!result || result.status === 'error') {
-        window.alert('Merge failed.');
+        showAppRuntimeNotice('Merge failed.');
       }
     });
     args.closeContextMenu();

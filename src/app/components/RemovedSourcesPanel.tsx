@@ -10,6 +10,7 @@ import {
   type RuntimeRemovedSourceEntry
 } from '../../shared/platform/removedSourcesRuntimeRepository';
 import { AppEmptyState } from '../../shared/ui';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 import { setSelectedRemovedSource } from './removedSourceSelectionStore';
 import { RemovedSourceContextMenu, RemovedSourceRows, RemovedSourcesToolbar } from './RemovedSourcesPanelParts';
@@ -121,7 +122,7 @@ function useRemovedSourceContextMenu(args: {
     setContextMenu(null);
     void restoreRuntimeRemovedSource(entry).then((result) => {
       if (!result || result.status === 'failed') {
-        window.alert(result?.detail?.trim() || 'Re-import failed.');
+        showAppRuntimeNotice(result?.detail?.trim() || 'Re-import failed.');
         return;
       }
       setSelectedRemovedSource(null);
