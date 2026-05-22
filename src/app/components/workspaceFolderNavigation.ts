@@ -1,12 +1,16 @@
 import {
+  HOME_NODE_ID,
   INBOX_NODE_ID,
   TRASH_NODE_ID,
+  isHomeNode,
   isInboxNode,
   isTrashNode,
   isVirtualNode,
   isVirtualRootNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+
+export { collectTopicColumnNodeIds } from './workspaceTopicColumnNavigation';
 
 function createNavigationTrashNode(): WorkspaceListNode {
   const timestamp = new Date().toISOString();
@@ -35,42 +39,19 @@ function isVisibleFolderNode(
   return node.kind === 'folder' && !isVirtualRootNode(node) && !isVirtualNode(node);
 }
 
-function isVisibleTopicNode(
-  node: WorkspaceListNode | undefined,
-  trashedNodeIds: readonly string[]
+function resolveNavigationFolderParentId(
+  node: WorkspaceListNode,
+  folderNodeIds: ReadonlySet<string>,
+  hasHome: boolean
 ) {
-  if (!node || trashedNodeIds.includes(node.id)) {
-    return false;
+  if (!hasHome || isHomeNode(node) || isTrashNode(node)) {
+    return node.parentNodeId ?? null;
   }
-  return node.kind !== 'folder';
-}
-
-function buildVisibleChildMap(
-  nodeOrder: string[],
-  nodesById: WorkspaceListNodesById,
-  trashedNodeIds: readonly string[]
-) {
-  const visibleChildrenByParent = new Map<string | null, string[]>();
-
-  for (const nodeId of nodeOrder) {
-    if (trashedNodeIds.includes(nodeId)) {
-      continue;
-    }
-    const node = nodesById[nodeId];
-    if (!node) {
-      continue;
-    }
-
-    const parentId = node.parentNodeId ?? null;
-    const siblings = visibleChildrenByParent.get(parentId);
-    if (siblings) {
-      siblings.push(nodeId);
-      continue;
-    }
-    visibleChildrenByParent.set(parentId, [nodeId]);
+  if (isInboxNode(node)) {
+    return HOME_NODE_ID;
   }
-
-  return visibleChildrenByParent;
+  const parentId = node.parentNodeId ?? null;
+  return parentId && folderNodeIds.has(parentId) ? parentId : HOME_NODE_ID;
 }
 
 export function buildFolderNavigationNodeOrder(
@@ -81,10 +62,18 @@ export function buildFolderNavigationNodeOrder(
   const visibleFolderIds = nodeOrder.filter((nodeId) => isVisibleFolderNode(nodesById[nodeId], trashedNodeIds));
   const regularFolderIds = visibleFolderIds.filter((nodeId) => {
     const node = nodesById[nodeId];
-    return nodeId !== INBOX_NODE_ID && nodeId !== TRASH_NODE_ID && !isInboxNode(node) && !isTrashNode(node);
+    return (
+      nodeId !== HOME_NODE_ID &&
+      nodeId !== INBOX_NODE_ID &&
+      nodeId !== TRASH_NODE_ID &&
+      !isHomeNode(node) &&
+      !isInboxNode(node) &&
+      !isTrashNode(node)
+    );
   });
 
   return [
+    ...(isVisibleFolderNode(nodesById[HOME_NODE_ID], trashedNodeIds) ? [HOME_NODE_ID] : []),
     ...(isVisibleFolderNode(nodesById[INBOX_NODE_ID], trashedNodeIds) ? [INBOX_NODE_ID] : []),
     ...regularFolderIds,
     TRASH_NODE_ID
@@ -95,10 +84,15 @@ export function buildFolderNavigationNodesByIdFromOrder(
   folderNodeOrder: string[],
   nodesById: WorkspaceListNodesById
 ) {
-  const folderEntries: Array<[string, WorkspaceListNode | undefined]> = folderNodeOrder.map((nodeId) => [
-    nodeId,
-    nodeId === TRASH_NODE_ID ? createNavigationTrashNode() : nodesById[nodeId]
-  ]);
+  const hasHome = folderNodeOrder.includes(HOME_NODE_ID);
+  const folderNodeIds = new Set(folderNodeOrder);
+  const folderEntries: Array<[string, WorkspaceListNode | undefined]> = folderNodeOrder.map((nodeId) => {
+    const node = nodeId === TRASH_NODE_ID ? createNavigationTrashNode() : nodesById[nodeId];
+    if (!node || nodeId === TRASH_NODE_ID) {
+      return [nodeId, node];
+    }
+    return [nodeId, { ...node, parentNodeId: resolveNavigationFolderParentId(node, folderNodeIds, hasHome) }];
+  });
   return Object.fromEntries(
     folderEntries.filter((entry): entry is [string, WorkspaceListNode] => Boolean(entry[1]))
   );
@@ -144,8 +138,8 @@ export function resolveFocusedFolderNodeId(
     return activeFolderNodeId;
   }
 
-  if (isVisibleFolderNode(nodesById[INBOX_NODE_ID], trashedNodeIds)) {
-    return INBOX_NODE_ID;
+  if (isVisibleFolderNode(nodesById[HOME_NODE_ID], trashedNodeIds)) {
+    return HOME_NODE_ID;
   }
 
   return buildFolderNavigationNodeOrder(nodeOrder, nodesById, trashedNodeIds)[0] ?? null;
@@ -190,47 +184,6 @@ export function collectFolderColumnNodeIds(
     }
     return (nodesById[nodeId]?.parentNodeId ?? null) === folderNodeId;
   });
-}
-
-export function collectTopicColumnNodeIds(
-  folderNodeId: string | null,
-  nodeOrder: string[],
-  nodesById: WorkspaceListNodesById,
-  trashedNodeIds: readonly string[]
-) {
-  if (!folderNodeId) {
-    return [];
-  }
-
-  const visibleChildrenByParent = buildVisibleChildMap(nodeOrder, nodesById, trashedNodeIds);
-  const topicNodeIds: string[] = [];
-  const topicNodeIdSet = new Set<string>();
-  const directTopicRootIds = (visibleChildrenByParent.get(folderNodeId) ?? []).filter((nodeId) =>
-    isVisibleTopicNode(nodesById[nodeId], trashedNodeIds)
-  );
-  const queue = [...directTopicRootIds];
-  let queueIndex = 0;
-
-  while (queueIndex < queue.length) {
-    const currentNodeId = queue[queueIndex];
-    queueIndex += 1;
-    if (!currentNodeId) {
-      continue;
-    }
-
-    if (topicNodeIdSet.has(currentNodeId)) {
-      continue;
-    }
-
-    topicNodeIdSet.add(currentNodeId);
-    topicNodeIds.push(currentNodeId);
-    const childIds = (visibleChildrenByParent.get(currentNodeId) ?? []).filter((nodeId) =>
-      isVisibleTopicNode(nodesById[nodeId], trashedNodeIds)
-    );
-    queue.push(...childIds);
-  }
-
-  return nodeOrder.filter((nodeId) => topicNodeIdSet.has(nodeId));
 }
 
 export function buildTopicNavigationNodesById(

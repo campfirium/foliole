@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
 import { buildNodeTree, type NodeTreeRow } from '../model/nodeTree';
+import { HOME_NODE_ID } from '../model/specialNodes';
 import type { WorkspaceListNode } from '../model/workspaceListNode';
 
 import { resetNodeListCollapseSessionForTest } from './nodeListCollapseSession';
@@ -26,6 +27,7 @@ function createNode(
     kind: options?.kind ?? 'topic',
     parentNodeId,
     review: null,
+    ...(id === HOME_NODE_ID ? { specialKind: 'home' as const } : {}),
     title,
     updatedAt: '2026-02-25T00:00:00.000Z'
   };
@@ -34,6 +36,36 @@ function createNode(
 beforeEach(() => {
   window.localStorage.clear();
   resetNodeListCollapseSessionForTest();
+});
+
+it('keeps Home expanded and outside manual collapse state', () => {
+  const nodeOrder = [HOME_NODE_ID, 'folder', 'article'];
+  const nodesById: Record<string, WorkspaceListNode> = {
+    [HOME_NODE_ID]: createNode(HOME_NODE_ID, 'Home', null, { kind: 'folder' }),
+    folder: createNode('folder', 'Folder', HOME_NODE_ID, { kind: 'folder' }),
+    article: createNode('article', 'Article', 'folder')
+  };
+  const tree = buildNodeTree(nodeOrder, nodesById);
+  const emptyTrashRows: NodeTreeRow[] = [];
+
+  const { result } = renderHook(() =>
+    useCollapsedNodeState({
+      activeNodeId: HOME_NODE_ID,
+      nodesById,
+      noteParentById: tree.parentById,
+      noteRowsAll: tree.rows,
+      trashRowsAll: emptyTrashRows
+    })
+  );
+
+  act(() => {
+    result.current.toggleNoteCollapse(HOME_NODE_ID);
+    result.current.collapseAllNotes();
+  });
+
+  expect(result.current.collapsedNoteNodeIds.has(HOME_NODE_ID)).toBe(false);
+  expect(result.current.collapsedNoteNodeIds.has('folder')).toBe(true);
+  expect(loadManualCollapsedNoteNodeIds()).toEqual(['folder']);
 });
 
 it('keeps collapsible folders collapsed even when the active node is inside them', async () => {

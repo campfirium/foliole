@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from './nodeTypes';
 import {
   ensureInboxNodeInSnapshot,
+  HOME_NODE_ID,
   INBOX_NODE_ID,
+  isHomeNode,
   isInboxNode,
   isVirtualRootNode,
   VIRTUAL_ROOT_NODE_ID
@@ -35,10 +37,12 @@ describe('ensureInboxNodeInSnapshot', () => {
       trashedNodeIds: []
     });
 
-    expect(snapshot.nodeOrder).toEqual([INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'node-1']);
+    expect(snapshot.nodeOrder).toEqual([HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'node-1']);
     expect(snapshot.activeNodeId).toBe('node-1');
+    expect(isHomeNode(snapshot.nodesById[HOME_NODE_ID])).toBe(true);
     expect(isInboxNode(snapshot.nodesById[INBOX_NODE_ID])).toBe(true);
     expect(isVirtualRootNode(snapshot.nodesById[VIRTUAL_ROOT_NODE_ID])).toBe(true);
+    expect(snapshot.nodesById[HOME_NODE_ID]?.title).toBe('Home');
     expect(snapshot.nodesById[INBOX_NODE_ID]?.title).toBe('Inbox');
     expect(snapshot.nodesById[VIRTUAL_ROOT_NODE_ID]?.title).toBe('Virtual');
     expect(snapshot.trashedNodeIds).toEqual([]);

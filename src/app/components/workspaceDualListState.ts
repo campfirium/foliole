@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react';
 
-import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, TRASH_NODE_ID, isHomeNode } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 import {
@@ -73,6 +73,16 @@ function collectTopicColumnNodeIdsFromIndex(
   trashedNodeIds: readonly string[]
 ) {
   if (!folderNodeId) return [];
+  if (folderNodeId === HOME_NODE_ID || isHomeNode(nodesById[folderNodeId])) {
+    return index.visibleNodeIds.filter((nodeId) => {
+      if (!isVisibleTopicNode(nodeId, nodesById, trashedNodeIds)) {
+        return false;
+      }
+      const parentId = nodesById[nodeId]?.parentNodeId ?? null;
+      const parentNode = parentId ? nodesById[parentId] : null;
+      return !parentNode || parentNode.kind === 'folder';
+    });
+  }
   return (index.visibleChildrenByParent.get(folderNodeId) ?? []).filter((nodeId) =>
     isVisibleTopicNode(nodeId, nodesById, trashedNodeIds)
   );

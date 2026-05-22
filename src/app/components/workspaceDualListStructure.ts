@@ -1,6 +1,8 @@
 import {
+  HOME_NODE_ID,
   INBOX_NODE_ID,
   TRASH_NODE_ID,
+  isHomeNode,
   isInboxNode,
   isTrashNode,
   isVirtualNode,
@@ -43,14 +45,19 @@ function buildFolderNodeOrderFromIndex(
     const node = nodesById[nodeId];
     return (
       isVisibleFolderId(nodeId, nodesById) &&
+      nodeId !== HOME_NODE_ID &&
       nodeId !== INBOX_NODE_ID &&
       nodeId !== TRASH_NODE_ID &&
+      !isHomeNode(node) &&
       !isInboxNode(node) &&
       !isTrashNode(node)
     );
   });
 
   return [
+    ...(index.visibleNodeIdSet.has(HOME_NODE_ID) && isVisibleFolderId(HOME_NODE_ID, nodesById)
+      ? [HOME_NODE_ID]
+      : []),
     ...(index.visibleNodeIdSet.has(INBOX_NODE_ID) && isVisibleFolderId(INBOX_NODE_ID, nodesById)
       ? [INBOX_NODE_ID]
       : []),
@@ -79,6 +86,13 @@ function buildDirectNativeContentCountByFolderId(
   return countById;
 }
 
+function countHomeNativeContentNodes(
+  index: WorkspaceListChildrenIndex,
+  nodesById: WorkspaceListNodesById
+) {
+  return index.visibleNodeIds.filter((nodeId) => isNativeContentNode(nodeId, nodesById)).length;
+}
+
 function buildFolderTopicCountById(
   folderNodeOrder: string[],
   index: WorkspaceListChildrenIndex,
@@ -87,6 +101,9 @@ function buildFolderTopicCountById(
   trashedNodeIds: readonly string[]
 ) {
   const countById = buildDirectNativeContentCountByFolderId(folderNodeOrder, index, nodesById);
+  if (folderNodeOrder.includes(HOME_NODE_ID)) {
+    countById.set(HOME_NODE_ID, countHomeNativeContentNodes(index, nodesById));
+  }
   const trashCount = selectTrashRootIds(nodeOrder, nodesById, trashedNodeIds).length;
   countById.set(TRASH_NODE_ID, trashCount);
   return countById;

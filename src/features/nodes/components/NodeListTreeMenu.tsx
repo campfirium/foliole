@@ -1,17 +1,12 @@
-import {
-  canCreateChildNodeKind,
-  findFolderTopicItemCommandByAppCommandId,
-  resolveAllowedFolderTopicItemCommands
-} from '../../../../lib/core/nodes/folderTopicItemCommands';
-import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
-import { isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
+import { isHomeNode, isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
 import { canToggleSequentialReading, hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
 import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction, createToggleSequentialReadingAction } from './nodeListMenuActions';
+import { createCreateNodeHandler, resolveCreateCommands } from './NodeListTreeCreateMenu';
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { requestNodeRename } from './NodeTreeRowRename';
@@ -45,6 +40,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
   const isRootMenu = props.contextMenu.contextMenuMode === 'notes-root';
   const primaryTargetId = contextTargets[0] ?? null;
   const primaryTarget = primaryTargetId ? props.nodesById[primaryTargetId] : undefined;
+  const isHomeTarget = isHomeNode(primaryTarget);
   const isSingleNodeTarget = Boolean(primaryTarget && contextTargets.length === 1);
   const showNodeImportActions =
     Boolean(primaryTarget) &&
@@ -55,6 +51,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
 
   return {
     contextTargets,
+    isHomeTarget,
     isNotesMenu,
     isRootMenu,
     primaryTarget,
@@ -67,42 +64,6 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     showNodeImportActions,
     showRenameAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget),
     showVirtualCreateOnly: props.isVirtualViewOpen || (isSingleNodeTarget && isVirtualRootNode(primaryTarget))
-  };
-}
-
-function createCreateNodeHandler(
-  props: NodeListTreeMenuProps,
-  primaryTargetId: string | null,
-  isRootMenu: boolean,
-  showVirtualCreateOnly: boolean
-) {
-  return (commandId: string) => {
-    if (commandId === VIRTUAL_NODE_APP_COMMAND_ID) {
-      props.createVirtualNode();
-      props.contextMenu.closeContextMenu();
-      return;
-    }
-    const command = findFolderTopicItemCommandByAppCommandId(commandId);
-    if (!command) {
-      props.contextMenu.closeContextMenu();
-      return;
-    }
-    if (showVirtualCreateOnly) {
-      props.contextMenu.closeContextMenu();
-      return;
-    }
-    if (isRootMenu || !primaryTargetId) {
-      props.createGlobalNode('', command.kind);
-      props.contextMenu.closeContextMenu();
-      return;
-    }
-    const parentNode = props.nodesById[primaryTargetId];
-    if (!parentNode || !canCreateChildNodeKind(parentNode.kind ?? null, command.kind)) {
-      props.contextMenu.closeContextMenu();
-      return;
-    }
-    props.createChildNode(primaryTargetId, '', command.kind);
-    props.contextMenu.closeContextMenu();
   };
 }
 
@@ -152,13 +113,6 @@ function createMergeHighlightsIntoTopicHandler(args: {
   };
 }
 
-function resolveCreateCommands(menuState: ReturnType<typeof buildMenuState>) {
-  if (menuState.showVirtualCreateOnly || isVirtualNode(menuState.primaryTarget)) {
-    return [];
-  }
-  return resolveAllowedFolderTopicItemCommands(menuState.isRootMenu ? null : menuState.primaryTarget?.kind ?? null);
-}
-
 function buildNodeListContextMenuProps(
   props: NodeListTreeMenuProps,
   menuPosition: NonNullable<NodeListContextMenuController['menuPosition']>,
@@ -169,7 +123,7 @@ function buildNodeListContextMenuProps(
     isTrashMenu: props.contextMenu.contextMenuMode === 'trash',
     left: menuPosition.left,
     onClose: props.contextMenu.closeContextMenu,
-    onCreateCommand: createCreateNodeHandler(props, menuState.primaryTargetId, menuState.isRootMenu, menuState.showVirtualCreateOnly),
+    onCreateCommand: createCreateNodeHandler(props, menuState),
     onDeleteNode: () => (
       props.deleteNodes(sortNodeIdsByVisibleOrder(menuState.contextTargets, props.state.noteRowIds)),
       props.contextMenu.closeContextMenu()
@@ -211,7 +165,7 @@ function buildNodeListContextMenuProps(
     showRenameAction: menuState.showRenameAction,
     showReturnAction: menuState.isNotesMenu && hasReturnTargets(menuState.contextTargets, props.nodesById),
     showReviewSchedulingAction: menuState.showReviewSchedulingAction && Boolean(props.onOpenReviewScheduling),
-    showRootCreateOnly: menuState.isRootMenu || menuState.showVirtualCreateOnly,
+    showRootCreateOnly: menuState.isRootMenu || menuState.isHomeTarget || menuState.showVirtualCreateOnly,
     showSequentialReadingAction: menuState.isNotesMenu && menuState.showSequentialReadingAction,
     top: menuPosition.top
   };

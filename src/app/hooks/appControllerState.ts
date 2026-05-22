@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { isInboxNode } from '../../features/nodes/model/specialNodes';
+import { isHomeNode, isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
 
@@ -143,7 +143,7 @@ export function useWorkspaceControllerState(
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
   const study = useStudyMode({
-    activeNodeId: isInboxNode(activeNode) ? null : ws.activeNodeId,
+    activeNodeId: isHomeNode(activeNode) || isInboxNode(activeNode) ? null : ws.activeNodeId,
     isViewingTrashNode: runtime.isViewingTrashNode
   });
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);

@@ -43,3 +43,11 @@ it('allows folders to accept topics but not items to accept children', () => {
   expect(canNodeAcceptMovedNode(folder, topic)).toBe(true);
   expect(canNodeAcceptMovedNode(item, topic)).toBe(false);
 });
+
+it('blocks moving Home and dropping nodes into Home', () => {
+  const home = createNode({ id: 'special-home', title: 'Home', content: '', kind: 'folder', specialKind: 'home' });
+  const topic = createNode({ id: 'topic-1', title: 'Topic', content: 'Body', kind: 'topic' });
+
+  expect(canNodeBeMoved(home)).toBe(false);
+  expect(canNodeAcceptMovedNode(home, topic)).toBe(false);
+});
