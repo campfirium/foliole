@@ -131,7 +131,7 @@ it('normalizes scroll and selection before flushing on restart', async () => {
   });
 });
 
-it('preserves previously saved node positions when restarting from another node', async () => {
+it('only flushes the current node position when restarting from another node', async () => {
   const invoke = vi.fn(() => Promise.resolve(null));
   mocks.getRuntimeInvoke.mockReturnValue(invoke);
 
@@ -153,12 +153,6 @@ it('preserves previously saved node positions when restarting from another node'
   expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
     activeNodeId: 'node-2',
     nodeViewStates: [
-      {
-        nodeId: 'node-1',
-        scrollTop: 1200,
-        selectionFrom: 88,
-        selectionTo: 88
-      },
       {
         nodeId: 'node-2',
         scrollTop: 5400,
