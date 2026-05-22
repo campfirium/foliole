@@ -7,6 +7,7 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { throwIfKeepImportAborted } from './keepImportProgress.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
+import { refreshReadwiseBookPlaceholderNode } from './readwiseBookPlaceholderRefresh.js';
 import type { ReadwiseBooksInventory } from './readwiseBooksInventory.js';
 import { loadReadwiseBooksInventoryForPaths } from './readwiseBooksInventoryLoad.js';
 import { savePersistedReadwiseBooksInventory } from './readwiseBooksInventoryState.js';
@@ -67,6 +68,9 @@ function syncReadwiseBookPlaceholders(inventory: ReadwiseBooksInventory) {
   let createdCount = 0;
   const books = inventory.books.map((book) => {
     if (book.generatedNodeId) {
+      if (book.importStatus === 'pending') {
+        refreshReadwiseBookPlaceholderNode(book);
+      }
       return book;
     }
     createdCount += 1;
@@ -82,18 +86,19 @@ function syncReadwiseBookPlaceholders(inventory: ReadwiseBooksInventory) {
 export async function runReadwiseBooksSource(
   source: EnabledReadwiseBooksSource,
   readwiseConfig: ReadwiseReaderConfig,
-  signal?: AbortSignal
+  options?: { forceScan?: boolean; signal?: AbortSignal }
 ) {
-  throwIfKeepImportAborted(signal);
+  throwIfKeepImportAborted(options?.signal);
   const paths = {
     fullDocumentDirectoryPath: source.primaryPath,
     highlightDirectoryPath: source.highlightPath
   };
   const result = await loadReadwiseBooksInventoryForPaths({
+    ...(options?.forceScan === undefined ? {} : { forceScan: options.forceScan }),
     ...paths,
     readwiseConfig
   });
-  throwIfKeepImportAborted(signal);
+  throwIfKeepImportAborted(options?.signal);
   const synced = syncReadwiseBookPlaceholders(result.inventory);
   return {
     entryCount: synced.inventory.books.length,

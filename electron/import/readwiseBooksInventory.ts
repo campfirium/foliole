@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ImportSourceKind } from '../../lib/core/import/contract.js';
+import type { ImportSidecarHighlight } from '../../lib/core/import/controlledContext.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -29,7 +30,9 @@ export interface ReadwiseBookInventoryItem {
   epubStatus: ReadwiseBookEpubStatus;
   fullDocumentMarkdownPath: string | null;
   generatedNodeId: string | null;
+  highlightCount: number;
   highlightState: ReadwiseBookHighlightState | null;
+  highlights: ImportSidecarHighlight[];
   highlightMarkdownPath: string | null;
   highlightUnmatchedCount: number | null;
   importStatus: ReadwiseBookImportStatus;
@@ -147,13 +150,17 @@ function collectBooksByKey(
 
 async function resolveAnnotationStatus(bucket: ReadwiseBookSourceBucket, readwiseConfig: ReadwiseReaderConfig) {
   if (!bucket.highlightMarkdownPath) {
-    return 'no_highlights' as const;
+    return { annotationStatus: 'no_highlights' as const, highlights: [] };
   }
   try {
     const markdown = await fs.readFile(bucket.highlightMarkdownPath, 'utf8');
-    return extractReadwiseSidecarHighlights(markdown, readwiseConfig).length > 0 ? 'has_highlights' : 'no_highlights';
+    const highlights = extractReadwiseSidecarHighlights(markdown, readwiseConfig);
+    return {
+      annotationStatus: highlights.length > 0 ? 'has_highlights' as const : 'no_highlights' as const,
+      highlights
+    };
   } catch {
-    return 'no_highlights' as const;
+    return { annotationStatus: 'no_highlights' as const, highlights: [] };
   }
 }
 
@@ -182,7 +189,7 @@ export async function scanReadwiseBooksInventory(input: {
   const scannedInventory = {
     books: await Promise.all(
     collectBooksByKey(highlightSources, fullDocumentSources).map(async (bucket) => {
-      const annotationStatus = await resolveAnnotationStatus(bucket, input.readwiseConfig);
+      const { annotationStatus, highlights } = await resolveAnnotationStatus(bucket, input.readwiseConfig);
       const downloadUrl = await resolveDownloadUrl(bucket);
       const generatedNodeId = resolveGeneratedNodeId(bucket);
       const importStatus = resolveImportStatus(bucket);
@@ -196,7 +203,9 @@ export async function scanReadwiseBooksInventory(input: {
         epubStatus: bucket.epubPath ? 'received' : 'missing',
         fullDocumentMarkdownPath: bucket.fullDocumentMarkdownPath,
         generatedNodeId,
+        highlightCount: highlights.length,
         highlightState: resolveInitialReadwiseBookHighlightState({ annotationStatus }),
+        highlights,
         highlightMarkdownPath: bucket.highlightMarkdownPath,
         highlightUnmatchedCount: null,
         importStatus,

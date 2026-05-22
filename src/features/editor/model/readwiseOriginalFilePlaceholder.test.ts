@@ -53,3 +53,61 @@ describe('collectReadwiseOriginalFilePlaceholderRanges', () => {
     ]);
   });
 });
+
+describe('collectReadwiseOriginalFilePlaceholderRanges legacy book status', () => {
+  it('collects legacy pending book status blocks as EPUB original file placeholders', () => {
+    const source = [
+      '# 8个半月N1',
+      '',
+      '## Current status',
+      '- No highlights yet',
+      '- Original file missing',
+      '- Book import pending',
+      '',
+      '## Next actions',
+      '- Download original file*',
+      '- Load original file*',
+      '',
+      '*In progress. These actions will be connected in a later task.*'
+    ].join('\n');
+
+    expect(collectReadwiseOriginalFilePlaceholderRanges(source)).toEqual([
+      {
+        from: source.indexOf('## Current status'),
+        hiddenRanges: [
+          {
+            from: source.indexOf('- No highlights yet'),
+            to: source.indexOf('- No highlights yet') + '- No highlights yet'.length
+          },
+          {
+            from: source.indexOf('- Original file missing'),
+            to: source.indexOf('- Original file missing') + '- Original file missing'.length
+          },
+          {
+            from: source.indexOf('- Book import pending'),
+            to: source.indexOf('- Book import pending') + '- Book import pending'.length
+          },
+          {
+            from: source.indexOf('## Next actions'),
+            to: source.indexOf('## Next actions') + '## Next actions'.length
+          },
+          {
+            from: source.indexOf('- Download original file*'),
+            to: source.indexOf('- Download original file*') + '- Download original file*'.length
+          },
+          {
+            from: source.indexOf('- Load original file*'),
+            to: source.indexOf('- Load original file*') + '- Load original file*'.length
+          },
+          {
+            from: source.indexOf('*In progress.'),
+            to: source.length
+          }
+        ],
+        kind: 'EPUB',
+        sourceLabel: 'Readwise original file',
+        to: source.indexOf('## Current status') + '## Current status'.length
+      }
+    ]);
+  });
+});

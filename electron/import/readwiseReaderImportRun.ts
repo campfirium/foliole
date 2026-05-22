@@ -129,7 +129,9 @@ async function applyReadwiseBooksRun(
   accumulator: ReadwiseRunAccumulator
 ) {
   try {
-    const result = await runReadwiseBooksSource(source, accumulator.readwiseConfig, accumulator.signal);
+    const result = await runReadwiseBooksSource(source, accumulator.readwiseConfig, {
+      ...(accumulator.signal ? { signal: accumulator.signal } : {})
+    });
     accumulator.entryCount += result.entryCount;
     accumulator.importedCount += result.importedCount;
   } catch (error) {

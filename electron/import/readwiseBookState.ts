@@ -55,12 +55,14 @@ export function applyReadwiseBookPlacementState<T extends ReadwiseBookInventoryI
 export function resolveReadwiseBookHighlightProgress(
   book: ReadwiseBookInventoryItem,
   persistedBook?: ReadwiseBookInventoryItem
-): Pick<ReadwiseBookInventoryItem, 'highlightState' | 'highlightUnmatchedCount'> {
+): Pick<ReadwiseBookInventoryItem, 'highlightCount' | 'highlightState' | 'highlights' | 'highlightUnmatchedCount'> {
   if (book.annotationStatus !== 'has_highlights') {
-    return { highlightState: null, highlightUnmatchedCount: null };
+    return { highlightCount: 0, highlightState: null, highlights: [], highlightUnmatchedCount: null };
   }
   return {
+    highlightCount: book.highlightCount,
     highlightState: persistedBook?.highlightState ?? book.highlightState ?? 'pending',
+    highlights: book.highlights,
     highlightUnmatchedCount: persistedBook?.highlightUnmatchedCount ?? book.highlightUnmatchedCount ?? null
   };
 }
