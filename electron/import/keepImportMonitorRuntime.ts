@@ -10,6 +10,13 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
     logError(message, error) {
       console.error(message, error);
     },
+    logMissingDirectory(config, missingPaths) {
+      console.warn('[keep-import] source directories missing', {
+        missingPaths,
+        sourceId: config.sourceId,
+        sourceType: config.sourceType
+      });
+    },
     async runCycle(config) {
       await runKeepImportRule({
         directoryPath: config.directoryPath,
