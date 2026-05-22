@@ -216,6 +216,10 @@ function attachElectronExitHandler(child) {
     const request = consumeDevShellRestartRequest();
     if (request) {
       console.info(`[electron-dev] dev shell restart requested reason=${request.reason ?? 'unknown'}`);
+      if (request.shellAction === 'exit-shell') {
+        shutdown();
+        process.exit(code ?? 0);
+      }
       electron = launchElectron(viteState.viteUrl);
       logChildLifecycle(electron, 'electron');
       attachElectronExitHandler(electron);

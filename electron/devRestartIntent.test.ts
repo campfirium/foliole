@@ -172,13 +172,39 @@ describe('shell-managed dev restarts', () => {
     expect(shellRequest).toMatchObject({
       kind: 'foliole-dev-shell-restart',
       reason: 'Class B: working tree electron changes detected',
-      runtimeHead: 'abc123'
+      runtimeHead: 'abc123',
+      shellAction: 'restart-runtime'
     });
     expect(shellRequest.bootSession).toMatch(/^windows-native-relaunch-7-/);
     expect(harness.info).toHaveBeenCalledWith('[electron-main] ignored dev restart intent because relaunch is shell-managed', {
       intentPath: harness.intentPath,
       nonce: 7
     });
+
+    harness.watcher?.close();
+  });
+
+  it('passes full shell restart intent through to the dev shell request', async () => {
+    const requestFile = path.join(createTempDir(), 'shell-exit.json');
+    process.env.FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE = requestFile;
+    const harness = createWatcherHarness({
+      env: {
+        FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE: requestFile,
+        FOLIOLE_DISABLE_IN_APP_RELAUNCH: '1'
+      }
+    });
+
+    harness.setIntentContent(createIntentContent({ shellAction: 'exit-shell' }));
+    harness.triggerChange();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const shellRequest = JSON.parse(fs.readFileSync(requestFile, 'utf8'));
+    expect(shellRequest).toMatchObject({
+      kind: 'foliole-dev-shell-restart',
+      shellAction: 'exit-shell'
+    });
+    expect(harness.exit).toHaveBeenCalledWith(0);
 
     harness.watcher?.close();
   });

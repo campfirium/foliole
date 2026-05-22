@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } from './windows-client-native-logs.mjs';
+import { requestCooperativeFullRestart } from './windows-client-native-full-restart.mjs';
 import { killPid, runCapture } from './windows-client-native-process.mjs';
 import {
   readClientState as readClientStateFile,
@@ -24,6 +25,7 @@ const {
   logDir,
   nativeStartScript,
   repoRoot,
+  restartDeliveryFile,
   stateFile,
   windowVisibleFile
 } = resolveWindowsNativePaths();
@@ -168,6 +170,24 @@ async function stopClient({ print = true } = {}) {
 
 async function forceRestartClient(mode) {
   console.log(`[windows-restart-client] controlled-stop action=${mode}`);
+  if (mode === 'full-shell-restart') {
+    const started = await requestCooperativeFullRestart({
+      currentHead: await currentHead(),
+      readClientState,
+      removeClientState: () => removeClientState(stateFile),
+      resetMarkers,
+      restartDeliveryFile,
+      repoRoot,
+      startClient,
+      timeoutMs: 25000,
+      wait
+    });
+    if (started) {
+      console.log(`[windows-restart-client] status: RESTARTED mode=${mode} shell_pid=${started.state.shellPid} runtime_pid=${started.ready.windowVisible.pid}`);
+      return;
+    }
+    console.log('[windows-restart-client] cooperative full restart unavailable; falling back to process stop');
+  }
   await stopClient({ print: false });
   const started = await startClient({ print: false });
   console.log(`[windows-restart-client] status: RESTARTED mode=${mode} shell_pid=${started.state.shellPid} runtime_pid=${started.ready.windowVisible.pid}`);

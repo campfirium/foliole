@@ -8,6 +8,7 @@ interface DevShellRestartRequestArgs {
   requestFile?: string;
   reason: string;
   runtimeHead?: string | null;
+  shellAction?: 'exit-shell' | 'restart-runtime';
 }
 
 function resolveRequestFile(explicitPath?: string) {
@@ -30,6 +31,7 @@ export function requestDevShellRestart(args: DevShellRestartRequestArgs) {
         reason: args.reason,
         runtimeHead: args.runtimeHead ?? null,
         bootSession: args.bootSession ?? null,
+        shellAction: args.shellAction ?? 'restart-runtime',
         requestedAt
       },
       null,

@@ -14,6 +14,7 @@ export function createIntentContent(overrides: Partial<{
   nonce: number;
   reason: string;
   requestedAt: string;
+  shellAction: 'exit-shell' | 'restart-runtime';
 }> = {}) {
   return JSON.stringify({
     kind: DEV_RESTART_INTENT_KIND,
@@ -22,7 +23,8 @@ export function createIntentContent(overrides: Partial<{
     requestedAt: overrides.requestedAt ?? '2026-03-15T10:00:00.000Z',
     requestedBy: 'wsl-windows-preview',
     head: overrides.head ?? 'abc123',
-    reason: overrides.reason ?? 'Class B: working tree electron changes detected'
+    reason: overrides.reason ?? 'Class B: working tree electron changes detected',
+    shellAction: overrides.shellAction ?? 'restart-runtime'
   });
 }
 

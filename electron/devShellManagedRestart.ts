@@ -14,6 +14,7 @@ interface ShellManagedRestartIntent {
   reason: string;
   requestedAt: string;
   requestedBy: string;
+  shellAction: 'exit-shell' | 'restart-runtime';
   target: string;
 }
 
@@ -31,7 +32,12 @@ export async function requestShellManagedDevRestart(args: {
   logger: ShellManagedRestartLogger;
 }) {
   const bootSession = createDevRestartBootSession(args.intent);
-  if (!requestDevShellRestart({ bootSession, reason: args.intent.reason, runtimeHead: args.intent.head })) {
+  if (!requestDevShellRestart({
+    bootSession,
+    reason: args.intent.reason,
+    runtimeHead: args.intent.head,
+    shellAction: args.intent.shellAction
+  })) {
     args.logger.error('[electron-main] failed to request shell-managed dev restart', {
       intentPath: args.intentPath,
       nonce: args.intent.nonce

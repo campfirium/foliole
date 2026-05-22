@@ -37,7 +37,7 @@ export async function readRestartIntentNonce(filePath) {
   }
 }
 
-export function createRestartIntent({ head, nonce, reason, requestedAt, requestedBy }) {
+export function createRestartIntent({ head, nonce, reason, requestedAt, requestedBy, shellAction = 'restart-runtime' }) {
   return {
     kind: DEV_RESTART_INTENT_KIND,
     target: 'electron-dev',
@@ -45,7 +45,8 @@ export function createRestartIntent({ head, nonce, reason, requestedAt, requeste
     requestedAt,
     requestedBy,
     head: head || null,
-    reason
+    reason,
+    shellAction
   };
 }
 
@@ -53,7 +54,8 @@ export async function writeRestartIntent({
   head,
   reason,
   requestedBy = 'wsl-windows-preview',
-  rootDir
+  rootDir,
+  shellAction = 'restart-runtime'
 }) {
   if (!rootDir || rootDir.trim().length === 0) {
     throw new Error('restart intent root dir is required');
@@ -74,7 +76,8 @@ export async function writeRestartIntent({
     nonce,
     reason,
     requestedAt: new Date().toISOString(),
-    requestedBy
+    requestedBy,
+    shellAction
   });
   await writeFile(filePath, `${JSON.stringify(intent, null, 2)}\n`, 'utf8');
   return { filePath, intent };
