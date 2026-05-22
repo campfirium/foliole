@@ -20,6 +20,8 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).toContain("for (const suffix of ['-shm', '-wal'])");
   expect(runner).toContain('sidecarRemoveRetryMs');
   expect(runner).toContain("['EACCES', 'EBUSY', 'EPERM']");
+  expect(runner).toContain('skipped debug database refresh because sidecar is locked');
+  expect(runner).toContain('if (fs.existsSync(targetPath) && isSidecarLocked(error))');
   expect(runner).toContain('resolveLibraryHome()');
   expect(runner).toContain('library-path-settings.json');
   expect(runner).toContain('ensureLocalLibraryPathSettings(resolveLibraryHome());');

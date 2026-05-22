@@ -19,6 +19,10 @@ function isRetryableSidecarRemoveError(error) {
   return ['EACCES', 'EBUSY', 'EPERM'].includes(error?.code);
 }
 
+function isSidecarLocked(error) {
+  return isRetryableSidecarRemoveError(error);
+}
+
 function shouldUseDebugLibraryCopy() {
   return process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY !== '0';
 }
@@ -50,7 +54,15 @@ function copyDatabaseIfSourceIsNewer(sourcePath, targetPath) {
     return false;
   }
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-  removeTargetSqliteSidecars(targetPath);
+  try {
+    removeTargetSqliteSidecars(targetPath);
+  } catch (error) {
+    if (fs.existsSync(targetPath) && isSidecarLocked(error)) {
+      console.warn(`[electron-dev-native] skipped debug database refresh because sidecar is locked: ${error.message}`);
+      return false;
+    }
+    throw error;
+  }
   fs.copyFileSync(sourcePath, targetPath);
   fs.utimesSync(targetPath, sourceStat.atime, sourceStat.mtime);
   removeTargetSqliteSidecars(targetPath);

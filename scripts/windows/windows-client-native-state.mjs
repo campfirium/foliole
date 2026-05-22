@@ -69,12 +69,18 @@ function parseBootEvent(line) {
   }
 }
 
-export function readReadyStateFromBootEvents(eventLogFile) {
+export function readReadyStateFromBootEvents(eventLogFile, options = {}) {
+  if (Object.hasOwn(options, 'session') && !options.session) {
+    return null;
+  }
   const bySession = new Map();
   const lines = readBootEvents(eventLogFile);
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     const event = parseBootEvent(lines[index]);
     if (!event?.session || typeof event.stage !== 'string') {
+      continue;
+    }
+    if (options.session && event.session !== options.session) {
       continue;
     }
     const entry = bySession.get(event.session) ?? {};
