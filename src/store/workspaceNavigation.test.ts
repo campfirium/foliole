@@ -29,7 +29,7 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'parentNodeId'>
 }
 
 describe('resolveAncestorAnchorLink', () => {
-  it('returns the active node anchor when the target is an ancestor', () => {
+  it('returns the nearest descendant anchor when the target is an ancestor', () => {
     const nodesById: Record<string, Node> = {
       pdf: createNode({ id: 'pdf', parentNodeId: null }),
       chapter: createNode({ id: 'chapter', parentNodeId: 'pdf' }),
@@ -42,7 +42,7 @@ describe('resolveAncestorAnchorLink', () => {
     };
 
     expect(resolveAncestorAnchorLink('note', 'pdf', nodesById)).toEqual({
-      focusAnchor: null,
+      focusAnchor: { id: 'hl-1', kind: 'highlight', locator: { page: 7, x: 0.2, y: 0.6 } },
       isAncestor: true
     });
   });

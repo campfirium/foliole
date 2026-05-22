@@ -1,0 +1,32 @@
+/* global process */
+
+const DEFAULT_COMMAND_BUDGET_MS = { android: 4 * 60_000, windows: 4 * 60_000 };
+const DEFAULT_WINDOW_MS = { android: 0, windows: 3 * 60_000 };
+
+export function readDurationMs(env, key, defaultValue) {
+  const rawValue = env[key];
+  if (rawValue === undefined) {
+    return defaultValue;
+  }
+  const parsedValue = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    throw new Error(`${key} must be a non-negative integer`);
+  }
+  return parsedValue;
+}
+
+export function readWindowMs(target, env = process.env) {
+  return readDurationMs(
+    env,
+    `PREVIEW_DEDUPE_${target.toUpperCase()}_WINDOW_MS`,
+    readDurationMs(env, `PREVIEW_DEDUPE_${target.toUpperCase()}_COOLDOWN_MS`, DEFAULT_WINDOW_MS[target] ?? 0)
+  );
+}
+
+export function readTotalTimeoutMs(target, windowMs = readWindowMs(target), env = process.env) {
+  return readDurationMs(
+    env,
+    `PREVIEW_DEDUPE_${target.toUpperCase()}_TOTAL_TIMEOUT_MS`,
+    readDurationMs(env, 'PREVIEW_DEDUPE_TOTAL_TIMEOUT_MS', windowMs + (DEFAULT_COMMAND_BUDGET_MS[target] ?? 4 * 60_000))
+  );
+}
