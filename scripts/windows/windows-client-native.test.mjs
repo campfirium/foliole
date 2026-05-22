@@ -56,7 +56,10 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).toContain("mode: 'dev-shell-restart'");
   expect(script).toContain("mode: 'full-shell-restart'");
   expect(forceRestartScript).toContain('requestCooperativeFullRestart');
-  expect(forceRestartScript).toContain("cooperative full restart unavailable; falling back to process stop");
+  expect(forceRestartScript).toContain('writeRestartIntent');
+  expect(forceRestartScript).toContain('requestRuntimeRestartFallback');
+  expect(forceRestartScript).toContain("cooperative full restart unavailable; trying runtime restart fallback");
+  expect(forceRestartScript).toContain("runtime restart fallback unavailable; falling back to process stop");
   expect(forceRestartScript).toContain('acceptTrustedCurrentRuntime');
   expect(forceRestartScript).toContain('runtimeHead !== currentHeadValue');
   expect(fullRestartScript).toContain('if (!state?.shellPid && !state?.runtimePid)');
