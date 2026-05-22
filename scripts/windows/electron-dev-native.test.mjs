@@ -14,8 +14,10 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).toContain('process.env.FOLIOLE_SESSION_DATA_PATH = userDataPath');
   expect(runner).toContain("const localLibraryHome = 'D:\\\\X\\\\U\\\\Foliole'");
   expect(runner).toContain("const debugLibraryHome = path.join(userDataPath, 'native-debug-library')");
-  expect(runner).toContain("process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY === '1'");
+  expect(runner).toContain("process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY !== '0'");
   expect(runner).toContain('copyDatabaseIfSourceIsNewer(sourceDatabasePath, targetDatabasePath)');
+  expect(runner).toContain('removeTargetSqliteSidecars(targetPath);');
+  expect(runner).toContain("for (const suffix of ['-shm', '-wal'])");
   expect(runner).toContain('resolveLibraryHome()');
   expect(runner).toContain('library-path-settings.json');
   expect(runner).toContain('ensureLocalLibraryPathSettings(resolveLibraryHome());');

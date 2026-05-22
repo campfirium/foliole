@@ -11,7 +11,16 @@ const localLibraryHome = 'D:\\X\\U\\Foliole';
 const debugLibraryHome = path.join(userDataPath, 'native-debug-library');
 
 function shouldUseDebugLibraryCopy() {
-  return process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY === '1';
+  return process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY !== '0';
+}
+
+function removeTargetSqliteSidecars(targetPath) {
+  for (const suffix of ['-shm', '-wal']) {
+    const sidecarPath = `${targetPath}${suffix}`;
+    if (fs.existsSync(sidecarPath)) {
+      fs.rmSync(sidecarPath, { force: true });
+    }
+  }
 }
 
 function copyDatabaseIfSourceIsNewer(sourcePath, targetPath) {
@@ -24,8 +33,10 @@ function copyDatabaseIfSourceIsNewer(sourcePath, targetPath) {
     return false;
   }
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  removeTargetSqliteSidecars(targetPath);
   fs.copyFileSync(sourcePath, targetPath);
   fs.utimesSync(targetPath, sourceStat.atime, sourceStat.mtime);
+  removeTargetSqliteSidecars(targetPath);
   return true;
 }
 
