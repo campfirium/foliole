@@ -47,6 +47,7 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(processScript).toContain('child.stderr?.destroy()');
   expect(processScript).toContain('FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS');
   expect(script).toContain("await forceRestartClient('dev-shell-restart')");
+  expect(script.indexOf('await killPid(state?.runtimePid)')).toBeLessThan(script.indexOf('await killPid(state?.shellPid)'));
   expect(script).not.toContain('requestControlledRuntimeRestart');
   expect(script).not.toContain('controlled restart timed out; runtime left for inspection');
   expect(script).toContain('startup health check failed: app-ready-timeout shell_pid=');

@@ -146,10 +146,11 @@ describe('preview-dedupe batching', () => {
     }
   }, 10_000);
 
-  it('keeps failed windows preview requests waiting by default until a later preview succeeds', async () => {
+  it('keeps failed windows preview requests waiting when configured until a later preview succeeds', async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
+        PREVIEW_DEDUPE_WAIT_ON_FAILURE: '1',
         PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '180',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
@@ -179,6 +180,26 @@ describe('preview-dedupe batching', () => {
       await rm(repoRoot, { force: true, recursive: true });
     }
   }, 10_000);
+
+  it('returns failed windows preview requests by default without waiting for a later success', async () => {
+    const repoRoot = await createRepo();
+    try {
+      const env = {
+        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '180',
+        PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
+          'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
+      };
+
+      await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 2;\n', 'utf8');
+      const result = await runFailingDedupe(repoRoot, 'first', env);
+
+      expect(result.code).toBe(7);
+      expect(result.stdout).not.toContain('reason=waiting-for-success');
+      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\n');
+    } finally {
+      await rm(repoRoot, { force: true, recursive: true });
+    }
+  });
 
   it('does not run a second preview for the same hash while a preview is running', async () => {
     const repoRoot = await createRepo();

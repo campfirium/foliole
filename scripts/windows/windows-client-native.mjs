@@ -156,9 +156,9 @@ async function startClient({ print = true } = {}) {
 async function stopClient({ print = true } = {}) {
   const state = readClientState();
   const ready = readReadyState();
-  await killPid(state?.shellPid);
   await killPid(state?.runtimePid);
   await killPid(ready?.appReady.pid);
+  await killPid(state?.shellPid);
   await removeClientState(stateFile);
   await resetMarkers();
   if (print) {

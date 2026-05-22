@@ -122,7 +122,9 @@ describe('preview-dedupe status contract', () => {
     const runs = [];
     try {
       await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 2;\n', 'utf8');
-      const first = startDedupe(repoRoot, ['bash', '-c', 'echo fail >> runs.log; exit 7']);
+      const first = startDedupe(repoRoot, ['bash', '-c', 'echo fail >> runs.log; exit 7'], {
+        PREVIEW_DEDUPE_WAIT_ON_FAILURE: '1'
+      });
       runs.push(first);
       await waitForOutput(first.output, /reason=waiting-for-success/, 3_000);
       await delay(260);

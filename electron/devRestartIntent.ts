@@ -11,6 +11,7 @@ import {
   type RestartIntentApp,
   type RestartIntentWindow
 } from './devRestartRelaunch.js';
+import { requestShellManagedDevRestart } from './devShellManagedRestart.js';
 
 export const DEV_RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 export const DEV_RESTART_INTENT_KIND = 'foliole.electron.dev.restart-intent.v1';
@@ -141,9 +142,14 @@ async function consumeDevRestartIntent(args: {
     requestedBy: intent.requestedBy
   });
   if (args.relaunchDisabled) {
-    args.logger.info('[electron-main] ignored dev restart intent because relaunch is shell-managed', {
+    args.logger.info('[electron-main] ignored dev restart intent because relaunch is shell-managed', { intentPath: args.intentPath, nonce: intent.nonce });
+    await requestShellManagedDevRestart({
+      app: args.app,
+      fileSystem: args.fileSystem,
+      getWindows: args.getWindows,
+      intent,
       intentPath: args.intentPath,
-      nonce: intent.nonce
+      logger: args.logger
     });
     return { consumedNonce: intent.nonce, relaunchRequested: false };
   }

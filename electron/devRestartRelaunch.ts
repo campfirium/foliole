@@ -28,7 +28,7 @@ function applyRuntimeHeadForRelaunch(intent: RestartIntentForRelaunch) {
   process.env.FOLIOLE_RUNTIME_HEAD = nextHead;
 }
 
-async function prepareWindowsForRelaunch(windows: RestartIntentWindow[]) {
+export async function prepareWindowsForDevRestart(windows: RestartIntentWindow[]) {
   await flushReadingProgressForWindows(windows as never[]);
   for (const window of windows) {
     if (window.isDestroyed?.()) {
@@ -46,7 +46,7 @@ export async function relaunchForDevRestartIntent(args: {
 }) {
   applyRuntimeHeadForRelaunch(args.intent);
   const nextSession = applyBootSessionForRelaunch(args.intent);
-  await prepareWindowsForRelaunch(args.getWindows());
+  await prepareWindowsForDevRestart(args.getWindows());
   args.app.relaunch({ args: createRelaunchArgs(nextSession) });
   args.app.exit(0);
 }
