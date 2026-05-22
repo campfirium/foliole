@@ -12,3 +12,12 @@ it('includes desktop renderer entry files in the windows preview surface', () =>
     'src/startupViewMode.ts'
   ]));
 });
+
+it('includes Electron dev shell inputs in the windows preview surface', () => {
+  expect(TARGET_PATHS.windows).toEqual(expect.arrayContaining([
+    'scripts/electron-dev-env.mjs',
+    'scripts/electron-dev-server.mjs',
+    'scripts/electron-dev.mjs',
+    'scripts/windows/'
+  ]));
+});
