@@ -18,6 +18,7 @@ interface MirrorArticleRecord {
 }
 
 interface MirrorSyncOptions {
+  articleIds?: string[];
   taskContext?: DesktopTaskContext;
 }
 
@@ -122,12 +123,16 @@ async function removeObsoleteMirrorRecords(
   mode: MirrorSyncMode,
   mirrorRoot: string,
   recordsByArticleId: Map<string, MirrorArticleRecord>,
-  targetArticleIds: Set<string>
+  targetArticleIds: Set<string>,
+  selectedArticleIds?: Set<string>
 ) {
   if (mode === 'missing') {
     return;
   }
   for (const record of recordsByArticleId.values()) {
+    if (selectedArticleIds && !selectedArticleIds.has(record.articleId)) {
+      continue;
+    }
     if (targetArticleIds.has(record.articleId)) {
       continue;
     }
@@ -206,16 +211,18 @@ async function syncMirrorOutput(
   const targets = hydratedSnapshot ? collectArticleMirrorTargets(hydratedSnapshot, paths.mirror) : [];
   const recordsByArticleId = loadMirrorArticleRecords();
   const targetArticleIds = new Set(targets.map((target) => target.articleId));
+  const selectedArticleIds = options.articleIds?.length ? new Set(options.articleIds) : undefined;
+  const selectedTargets = selectedArticleIds ? targets.filter((target) => selectedArticleIds.has(target.articleId)) : targets;
 
   if (mode === 'full') {
     await prepareFullMirrorRebuild(paths.mirror);
   }
 
-  await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds);
+  await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds, selectedArticleIds);
 
-  await removeLegacyMirrorArtifacts(paths.mirror, targets.map((target) => target.targetPath));
+  await removeLegacyMirrorArtifacts(paths.mirror, selectedTargets.map((target) => target.targetPath));
 
-  const rebuiltArticleCount = await processMirrorTargets({ mode, options, paths, recordsByArticleId, targets, updatedAt });
+  const rebuiltArticleCount = await processMirrorTargets({ mode, options, paths, recordsByArticleId, targets: selectedTargets, updatedAt });
 
   return {
     queued_article_count: mode === 'full' ? targets.length : rebuiltArticleCount,
@@ -230,8 +237,8 @@ export function rebuildAllMirrorOutput() {
   return syncMirrorOutput('full');
 }
 
-export function syncIncrementalMirrorOutput() {
-  return syncMirrorOutput('incremental');
+export function syncIncrementalMirrorOutput(articleIds?: string[]) {
+  return syncMirrorOutput('incremental', articleIds?.length ? { articleIds } : {});
 }
 
 export function backfillMissingMirrorOutput(context?: DesktopTaskContext) {
