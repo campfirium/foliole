@@ -9,8 +9,8 @@ import { describe, expect, it } from 'vitest';
 import { readWindowMs, runScheduledPreview } from './preview-dedupe-scheduler.mjs';
 
 describe('preview-dedupe scheduler defaults', () => {
-  it('does not delay Windows previews by default after a successful run', () => {
-    expect(readWindowMs('windows', {})).toBe(0);
+  it('keeps the default Windows validation window after a successful run', () => {
+    expect(readWindowMs('windows', {})).toBe(3 * 60_000);
   });
 
   it('ignores a stored validation window when the window is disabled', async () => {
