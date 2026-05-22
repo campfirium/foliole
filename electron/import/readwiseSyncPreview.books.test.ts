@@ -21,6 +21,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDatabase } from '../database/migrate.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
+import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { loadPersistedReadwiseBooksInventory } from './readwiseBooksInventoryState.js';
 import { runReadwiseReaderImport } from './readwiseReaderImportRun.js';
 import { previewReadwiseReaderImport } from './readwiseSyncPreview.js';
@@ -66,6 +67,7 @@ function readActiveNodeTitles() {
 }
 
 function expectPendingBookInventory(paths: Awaited<ReturnType<typeof seedReadwiseSources>>) {
+  const placeholderNodeId = buildReadwiseBookPlaceholderNodeId('book placeholder');
   expect(
     loadPersistedReadwiseBooksInventory({
       fullDocumentDirectoryPath: paths.bookPrimaryPath,
@@ -76,7 +78,9 @@ function expectPendingBookInventory(paths: Awaited<ReturnType<typeof seedReadwis
       annotationStatus: 'has_highlights',
       bodyState: 'unloaded',
       bookKey: 'book placeholder',
+      generatedNodeId: placeholderNodeId,
       importStatus: 'pending',
+      nodeStatus: 'generated',
       title: 'Book Placeholder'
     })
   );
@@ -116,7 +120,7 @@ function saveReaderSettings(paths: Awaited<ReturnType<typeof seedReadwiseSources
   });
 }
 
-it('includes Readwise Books in Reader import without creating placeholder topics', async () => {
+it('creates Readwise Books placeholder topics during Reader import', async () => {
   const paths = await seedReadwiseSources();
   saveReaderSettings(paths);
 
@@ -147,6 +151,6 @@ it('includes Readwise Books in Reader import without creating placeholder topics
 
   const titles = readActiveNodeTitles();
   expect(titles).toContain('Highlighted');
-  expect(titles).not.toContain('Book Placeholder');
+  expect(titles).toContain('Book Placeholder');
   expectPendingBookInventory(paths);
 });
