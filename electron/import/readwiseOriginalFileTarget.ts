@@ -3,9 +3,9 @@ import path from 'node:path';
 
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 
+import { extractReadwiseDownloadUrl } from './readwiseBookFullDocumentMetadata.js';
 import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import {
-  extractReadwiseDownloadUrl,
   type ReadwiseBookInventoryItem,
   type ReadwiseBooksInventory
 } from './readwiseBooksInventory.js';

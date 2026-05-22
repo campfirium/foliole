@@ -7,6 +7,7 @@ import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwise
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
+import { resolveReadwiseBookFullDocumentMetadata } from './readwiseBookFullDocumentMetadata.js';
 import { resolveGeneratedNodeId, resolveImportStatus } from './readwiseBooksInventoryDatabase.js';
 import {
   createReadwiseBooksSourceSignature
@@ -36,7 +37,9 @@ export interface ReadwiseBookInventoryItem {
   highlightMarkdownPath: string | null;
   highlightUnmatchedCount: number | null;
   importStatus: ReadwiseBookImportStatus;
+  metadataFrontmatter: string;
   nodeStatus: ReadwiseBookNodeStatus;
+  summary: string | null;
   title: string;
 }
 
@@ -60,7 +63,6 @@ export interface ReadwiseBooksSourceSignature {
 }
 
 interface ReadwiseBookSourceBucket {
-  downloadUrl: string | null;
   epubPath: string | null;
   fullDocumentMarkdownPath: string | null;
   highlightMarkdownPath: string | null;
@@ -79,7 +81,6 @@ function createBookKey(sourceName: string) {
 
 function createBucket(sourceName: string): ReadwiseBookSourceBucket {
   return {
-    downloadUrl: null,
     epubPath: null,
     fullDocumentMarkdownPath: null,
     highlightMarkdownPath: null,
@@ -98,22 +99,6 @@ async function discoverSources(rootDir: string, supportedKinds: Array<'epub' | '
   } catch {
     return [];
   }
-}
-
-export function extractReadwiseDownloadUrl(markdown: string) {
-  const directDownloadMatch = /\[Download original file[^\]]*]\((https?:\/\/[^)\s]+)\)/i.exec(markdown);
-  if (directDownloadMatch?.[1]) {
-    return directDownloadMatch[1];
-  }
-  const documentRawContentMatch = /(https?:\/\/\S*\/document_raw_content\/\d+\S*)/i.exec(markdown);
-  if (documentRawContentMatch?.[1]) {
-    return documentRawContentMatch[1];
-  }
-  const metadataDownloadMatch =
-    /(?:^|\n)-?\s*(?:epub_download_url|download_url|epub_url|book_download_url|download url)\s*:\s*(https?:\/\/\S+)/i.exec(
-      markdown
-    );
-  return metadataDownloadMatch?.[1] ?? null;
 }
 
 function collectBooksByKey(
@@ -164,18 +149,6 @@ async function resolveAnnotationStatus(bucket: ReadwiseBookSourceBucket, readwis
   }
 }
 
-async function resolveDownloadUrl(bucket: ReadwiseBookSourceBucket) {
-  if (!bucket.fullDocumentMarkdownPath) {
-    return null;
-  }
-  try {
-    const markdown = await fs.readFile(bucket.fullDocumentMarkdownPath, 'utf8');
-    return extractReadwiseDownloadUrl(markdown);
-  } catch {
-    return null;
-  }
-}
-
 export async function scanReadwiseBooksInventory(input: {
   fullDocumentDirectoryPath: string;
   highlightDirectoryPath: string;
@@ -190,7 +163,7 @@ export async function scanReadwiseBooksInventory(input: {
     books: await Promise.all(
     collectBooksByKey(highlightSources, fullDocumentSources).map(async (bucket) => {
       const { annotationStatus, highlights } = await resolveAnnotationStatus(bucket, input.readwiseConfig);
-      const downloadUrl = await resolveDownloadUrl(bucket);
+      const fullDocumentMetadata = await resolveReadwiseBookFullDocumentMetadata(bucket.fullDocumentMarkdownPath);
       const generatedNodeId = resolveGeneratedNodeId(bucket);
       const importStatus = resolveImportStatus(bucket);
       const bodyState = resolveReadwiseBookBodyState(importStatus);
@@ -198,7 +171,7 @@ export async function scanReadwiseBooksInventory(input: {
         annotationStatus,
         bodyState,
         bookKey: bucket.key,
-        downloadUrl,
+        downloadUrl: fullDocumentMetadata.downloadUrl,
         epubPath: bucket.epubPath,
         epubStatus: bucket.epubPath ? 'received' : 'missing',
         fullDocumentMarkdownPath: bucket.fullDocumentMarkdownPath,
@@ -209,7 +182,9 @@ export async function scanReadwiseBooksInventory(input: {
         highlightMarkdownPath: bucket.highlightMarkdownPath,
         highlightUnmatchedCount: null,
         importStatus,
+        metadataFrontmatter: fullDocumentMetadata.metadataFrontmatter,
         nodeStatus: generatedNodeId ? 'generated' : 'missing',
+        summary: fullDocumentMetadata.summary,
         title: bucket.title
       } satisfies ReadwiseBookInventoryItem;
     })

@@ -49,15 +49,43 @@ function parseReadwiseMetadataSection(markdown: string) {
     });
 }
 
-function renderReadwiseFrontmatter(metadata: Array<{ key: string; value: string }>) {
-  if (metadata.length === 0) {
+function renderReadwiseFrontmatter(metadata: Array<{ key: string; value: string }>, options?: {
+  excludeKeys?: readonly string[];
+}) {
+  const excludedKeys = new Set(options?.excludeKeys ?? []);
+  const filteredMetadata = metadata.filter(({ key }) => !excludedKeys.has(key));
+  if (filteredMetadata.length === 0) {
     return '';
   }
-  return ['---', ...metadata.map(({ key, value }) => `${key}: ${value}`), '---'].join('\n');
+  return ['---', ...filteredMetadata.map(({ key, value }) => `${key}: ${value}`), '---'].join('\n');
 }
 
-export function extractReadwiseFullDocumentFrontmatter(markdown: string) {
-  return renderReadwiseFrontmatter(parseReadwiseMetadataSection(markdown));
+export function extractReadwiseFullDocumentFrontmatter(markdown: string, options?: {
+  excludeKeys?: readonly string[];
+}) {
+  return renderReadwiseFrontmatter(parseReadwiseMetadataSection(markdown), options);
+}
+
+export function extractReadwiseFullDocumentSummary(markdown: string) {
+  const normalized = normalizeLineEndings(markdown);
+  const lines = normalized.split('\n');
+  const startIndex = lines.findIndex((line) => /^## Metadata[^\n]*$/i.test(line.trim()));
+  if (startIndex < 0) {
+    return null;
+  }
+  const sectionLines = lines.slice(startIndex + 1);
+  const sectionEndIndex = sectionLines.findIndex((line) => /^##\s+/.test(line));
+  const metadataLines = sectionEndIndex >= 0 ? sectionLines.slice(0, sectionEndIndex) : sectionLines;
+  const summaryIndex = metadataLines.findIndex((line) => /^-?\s*summary\s*:/i.test(line.trim()));
+  if (summaryIndex < 0) {
+    return null;
+  }
+  const firstLine = metadataLines[summaryIndex]?.replace(/^-?\s*summary\s*:\s*/i, '') ?? '';
+  const continuationLines = metadataLines.slice(summaryIndex + 1);
+  const nextMetadataIndex = continuationLines.findIndex((line) => /^-?\s*[^:\n]+:\s*\S/.test(line.trim()));
+  const bodyLines = nextMetadataIndex >= 0 ? continuationLines.slice(0, nextMetadataIndex) : continuationLines;
+  const summary = [firstLine, ...bodyLines].join('\n').trim();
+  return summary || null;
 }
 
 export function extractReadwiseFullDocument(markdown: string) {
@@ -108,11 +136,13 @@ export function parseReadwiseFullDocumentImport(markdown: string) {
   const nodeTitle = extractReadwiseShellTitle(markdown);
   const titleHeading = nodeTitle ? `# ${nodeTitle}` : '';
   const frontmatter = extractReadwiseFullDocumentFrontmatter(markdown);
+  const summary = extractReadwiseFullDocumentSummary(markdown);
   const body = liftReadwiseFullDocumentBodyHeadings(extractReadwiseFullDocument(markdown));
   const header = [frontmatter, titleHeading].filter(Boolean).join('\n');
   const content = [header, body].filter(Boolean).join('\n\n');
   return {
     content,
-    nodeTitle
+    nodeTitle,
+    summary
   };
 }

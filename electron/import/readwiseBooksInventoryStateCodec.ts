@@ -40,7 +40,9 @@ function isBookInventoryItem(value: unknown): value is ReadwiseBookInventoryItem
       typeof candidate.highlightUnmatchedCount === 'number'
     ) &&
     typeof candidate.importStatus === 'string' &&
+    (candidate.metadataFrontmatter === undefined || typeof candidate.metadataFrontmatter === 'string') &&
     typeof candidate.nodeStatus === 'string' &&
+    (candidate.summary === undefined || candidate.summary === null || typeof candidate.summary === 'string') &&
     typeof candidate.title === 'string'
   );
 }
@@ -60,7 +62,9 @@ function normalizeBookInventoryItem(book: ReadwiseBookInventoryItem): ReadwiseBo
     highlightCount: book.highlightCount ?? highlights.length,
     highlightState: book.highlightState ?? (book.annotationStatus === 'has_highlights' ? 'pending' : null),
     highlights,
-    highlightUnmatchedCount: book.highlightUnmatchedCount ?? null
+    highlightUnmatchedCount: book.highlightUnmatchedCount ?? null,
+    metadataFrontmatter: book.metadataFrontmatter ?? '',
+    summary: book.summary ?? null
   };
 }
 

@@ -44,7 +44,9 @@ function isSameBookState(left: ReadwiseBookInventoryItem, right: ReadwiseBookInv
     left.highlightMarkdownPath === right.highlightMarkdownPath &&
     left.highlightUnmatchedCount === right.highlightUnmatchedCount &&
     left.importStatus === right.importStatus &&
+    left.metadataFrontmatter === right.metadataFrontmatter &&
     left.nodeStatus === right.nodeStatus &&
+    left.summary === right.summary &&
     left.title === right.title
   );
 }
