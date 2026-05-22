@@ -14,14 +14,28 @@ import {
 } from './readwiseBooksInventoryState.js';
 import { canRunReadwiseExternalSource } from './readwiseExternalSourceGuard.js';
 
+function hasPersistedHighlightPayload(inventory: ReadwiseBooksInventory | null) {
+  return inventory?.books.every((book) => (
+    Array.isArray(book.highlights) &&
+    typeof book.highlightCount === 'number' &&
+    book.highlightCount === book.highlights.length &&
+    (book.annotationStatus !== 'has_highlights' || book.highlights.length > 0)
+  )) ?? false;
+}
+
 export async function loadReadwiseBooksInventoryForPaths(input: {
+  forceScan?: boolean;
   fullDocumentDirectoryPath: string;
   highlightDirectoryPath: string;
   readwiseConfig: ReadwiseReaderConfig;
 }) {
   const previousInventory = loadPersistedReadwiseBooksInventory(input);
   const sourceSignature = await discoverReadwiseBooksSourceSignature(input);
-  if (areReadwiseBooksSourceSignaturesEqual(previousInventory?.sourceSignature, sourceSignature)) {
+  if (
+    !input.forceScan &&
+    hasPersistedHighlightPayload(previousInventory) &&
+    areReadwiseBooksSourceSignaturesEqual(previousInventory?.sourceSignature, sourceSignature)
+  ) {
     const inventory = refreshPersistedReadwiseBooksInventoryRuntimeState(previousInventory!, sourceSignature);
     savePersistedReadwiseBooksInventory(inventory);
     return { inventory, previousInventory, sourceChanged: false };

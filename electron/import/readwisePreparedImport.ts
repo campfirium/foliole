@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { appendFilePlaceholderHighlights } from '../../lib/core/import/filePlaceholderContent.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import { parseReadwiseFullDocumentImport } from '../../lib/core/import/readwiseFullDocumentParsing.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
@@ -131,10 +132,11 @@ export async function loadPreparedReadwiseImportRecord(
       fs.readFile(source.filePath, 'utf8')
     ]);
     const parsedFullDocument = parseReadwiseFullDocumentImport(fullDocumentMarkdown);
+    const highlightSidecar = extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig);
     return buildPreparedImportRecord(source, {
-      content: parsedFullDocument.content,
+      content: appendFilePlaceholderHighlights(parsedFullDocument.content, highlightSidecar),
       highlightPolicy: options.highlightPolicy,
-      highlightSidecar: extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig),
+      highlightSidecar,
       hideTitleHeadingOverride: false,
       importedAt: options.importedAt,
       nodeTitleOverride: parsedFullDocument.nodeTitle,

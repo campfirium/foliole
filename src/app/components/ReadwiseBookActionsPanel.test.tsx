@@ -24,6 +24,7 @@ vi.mock('../../shared/platform/readwiseBooksRuntimeRepository', () => ({
 
 import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 import { READWISE_ORIGINAL_FILE_LOADED_EVENT } from './readwiseBookActionState';
+import { ReadwiseBookDocumentGate } from './ReadwiseBookDocumentGate';
 
 function createPendingBook() {
   return {
@@ -78,6 +79,16 @@ describe('ReadwiseBookActionsPanel', () => {
     expect(screen.getByText('Editor body')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download original file' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Load original file' })).toBeInTheDocument();
+  });
+
+  it('keeps the document body visible for pending books', async () => {
+    render(
+      <ReadwiseBookDocumentGate activeContent="" activeNodeId="node-book-1">
+        <div>Book placeholder body</div>
+      </ReadwiseBookDocumentGate>
+    );
+
+    expect(await screen.findByText('Book placeholder body')).toBeInTheDocument();
   });
 
   it('runs download actions from the panel', async () => {

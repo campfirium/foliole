@@ -51,4 +51,30 @@ describe('live markdown Readwise original file rendering', () => {
 
     adapter.destroy();
   });
+
+  it('renders legacy pending Readwise Books status as an EPUB attachment', async () => {
+    const { adapter, host } = createAdapterHost([
+      '# 8个半月N1',
+      '',
+      '## Current status',
+      '- No highlights yet',
+      '- Original file missing',
+      '- Book import pending',
+      '',
+      '## Next actions',
+      '- Download original file*',
+      '- Load original file*',
+      '',
+      '*In progress. These actions will be connected in a later task.*'
+    ].join('\n'));
+
+    await waitFor(() => {
+      const attachment = host.querySelector('.cm-md-readwise-original-file');
+      expect(attachment).not.toBeNull();
+      expect(attachment?.textContent).toContain('Original file not imported · EPUB');
+      expect(host.textContent).not.toContain('Current status');
+    });
+
+    adapter.destroy();
+  });
 });

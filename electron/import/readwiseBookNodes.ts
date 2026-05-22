@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 
+import { appendFilePlaceholderHighlights } from '../../lib/core/import/filePlaceholderContent.js';
+
 import type { ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 
 function formatAnnotationStatus(status: ReadwiseBookInventoryItem['annotationStatus']) {
@@ -19,7 +21,22 @@ export function buildReadwiseBookPlaceholderNodeId(bookKey: string) {
   return `node-readwise-book-${digest}`;
 }
 
+function buildPendingReadwiseBookPlaceholderContent(book: ReadwiseBookInventoryItem) {
+  const lines = [
+    `# ${book.title}`,
+    '',
+    'Full text of this document omitted because this document is an EPUB'
+  ];
+  if (book.downloadUrl) {
+    lines.push('', `[Download original file ->](${book.downloadUrl})`);
+  }
+  return appendFilePlaceholderHighlights(lines.join('\n'), book.highlights);
+}
+
 export function buildReadwiseBookPlaceholderContent(book: ReadwiseBookInventoryItem) {
+  if (book.importStatus === 'pending') {
+    return buildPendingReadwiseBookPlaceholderContent(book);
+  }
   return [
     `# ${book.title}`,
     '',

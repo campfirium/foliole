@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { saveJsonSetting } from '../database/settingsStore.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
@@ -53,7 +54,7 @@ async function seedReadwiseSources() {
   await fs.writeFile(path.join(articleHighlightPath, 'Highlighted.md'), '# Highlighted\n\n## Highlights\nimportant sentence\n', 'utf8');
   await fs.writeFile(
     path.join(bookPrimaryPath, 'Book Placeholder.md'),
-    '# Book Placeholder\n\n## Full Document\nFull text omitted because this document is an EPUB.\n',
+    '# Book Placeholder\n\n## Metadata\n- Download URL: https://readwise.example.com/book-placeholder.epub\n\n## Full Document\nFull text omitted because this document is an EPUB.\n',
     'utf8'
   );
   await fs.writeFile(path.join(bookHighlightPath, 'Book Placeholder.md'), '# Book Placeholder\n\n## Highlights\nbook quote\n', 'utf8');
@@ -64,6 +65,51 @@ function readActiveNodeTitles() {
   return (openDatabaseConnection().sqlite
     .prepare(`SELECT title FROM nodes WHERE deleted_at IS NULL ORDER BY title ASC`)
     .all() as Array<{ title: string }>).map((row) => row.title);
+}
+
+function readNodeContent(nodeId: string) {
+  return (openDatabaseConnection().sqlite
+    .prepare('SELECT content FROM nodes WHERE id = ? AND deleted_at IS NULL')
+    .get(nodeId) as { content: string } | undefined)?.content ?? '';
+}
+
+function saveLegacyBooksInventory(paths: Awaited<ReturnType<typeof seedReadwiseSources>>) {
+  saveJsonSetting(
+    'readwise_books_inventory_state',
+    {
+      inventories: {
+        [`${paths.bookPrimaryPath}\u001f${paths.bookHighlightPath}`]: {
+          books: [
+            {
+              annotationStatus: 'has_highlights',
+              bodyState: 'unloaded',
+              bookKey: 'book placeholder',
+              downloadUrl: 'https://readwise.example.com/book-placeholder.epub',
+              epubPath: null,
+              epubStatus: 'missing',
+              fullDocumentMarkdownPath: path.join(paths.bookPrimaryPath, 'Book Placeholder.md'),
+              generatedNodeId: buildReadwiseBookPlaceholderNodeId('book placeholder'),
+              highlightMarkdownPath: path.join(paths.bookHighlightPath, 'Book Placeholder.md'),
+              highlightState: 'pending',
+              highlightUnmatchedCount: null,
+              importStatus: 'pending',
+              nodeStatus: 'generated',
+              title: 'Book Placeholder'
+            }
+          ],
+          fullDocumentDirectoryPath: paths.bookPrimaryPath,
+          highlightDirectoryPath: paths.bookHighlightPath,
+          scannedAt: '2026-05-20T00:00:00.000Z',
+          sourceSignature: loadPersistedReadwiseBooksInventory({
+            fullDocumentDirectoryPath: paths.bookPrimaryPath,
+            highlightDirectoryPath: paths.bookHighlightPath
+          })?.sourceSignature
+        }
+      },
+      version: 2
+    },
+    '2026-05-20T00:00:00.000Z'
+  );
 }
 
 function expectPendingBookInventory(paths: Awaited<ReturnType<typeof seedReadwiseSources>>) {
@@ -79,6 +125,8 @@ function expectPendingBookInventory(paths: Awaited<ReturnType<typeof seedReadwis
       bodyState: 'unloaded',
       bookKey: 'book placeholder',
       generatedNodeId: placeholderNodeId,
+      highlightCount: 1,
+      highlights: [{ note: null, text: 'book quote' }],
       importStatus: 'pending',
       nodeStatus: 'generated',
       title: 'Book Placeholder'
@@ -152,5 +200,26 @@ it('creates Readwise Books placeholder topics during Reader import', async () =>
   const titles = readActiveNodeTitles();
   expect(titles).toContain('Highlighted');
   expect(titles).toContain('Book Placeholder');
+  expectPendingBookInventory(paths);
+  const placeholderNodeId = buildReadwiseBookPlaceholderNodeId('book placeholder');
+  expect(readNodeContent(placeholderNodeId)).toContain('Full text of this document omitted because this document is an EPUB');
+  expect(readNodeContent(placeholderNodeId)).toContain('1 highlight');
+  expect(readNodeContent(placeholderNodeId)).toContain('book quote');
+  expect(readNodeContent(placeholderNodeId)).toContain('[Download original file');
+});
+
+it('rescans old Books inventories that did not persist highlight text', async () => {
+  const paths = await seedReadwiseSources();
+  saveReaderSettings(paths);
+  await runReadwiseReaderImport();
+  saveLegacyBooksInventory(paths);
+
+  await expect(runReadwiseReaderImport()).resolves.toMatchObject({
+    status: 'completed'
+  });
+
+  const placeholderNodeId = buildReadwiseBookPlaceholderNodeId('book placeholder');
+  expect(readNodeContent(placeholderNodeId)).toContain('1 highlight');
+  expect(readNodeContent(placeholderNodeId)).toContain('book quote');
   expectPendingBookInventory(paths);
 });

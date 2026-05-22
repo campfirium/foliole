@@ -23,6 +23,7 @@ function isBookInventoryItem(value: unknown): value is ReadwiseBookInventoryItem
     typeof candidate.epubStatus === 'string' &&
     (typeof candidate.fullDocumentMarkdownPath === 'string' || candidate.fullDocumentMarkdownPath === null) &&
     (typeof candidate.generatedNodeId === 'string' || candidate.generatedNodeId === null) &&
+    (candidate.highlightCount === undefined || typeof candidate.highlightCount === 'number') &&
     (
       candidate.highlightState === undefined ||
       candidate.highlightState === null ||
@@ -31,6 +32,7 @@ function isBookInventoryItem(value: unknown): value is ReadwiseBookInventoryItem
       candidate.highlightState === 'pending' ||
       candidate.highlightState === 'placed'
     ) &&
+    (candidate.highlights === undefined || Array.isArray(candidate.highlights)) &&
     (typeof candidate.highlightMarkdownPath === 'string' || candidate.highlightMarkdownPath === null) &&
     (
       candidate.highlightUnmatchedCount === undefined ||
@@ -44,10 +46,20 @@ function isBookInventoryItem(value: unknown): value is ReadwiseBookInventoryItem
 }
 
 function normalizeBookInventoryItem(book: ReadwiseBookInventoryItem): ReadwiseBookInventoryItem {
+  const highlights = Array.isArray(book.highlights)
+    ? book.highlights.filter((highlight) => (
+        highlight &&
+        typeof highlight === 'object' &&
+        typeof highlight.text === 'string' &&
+        (highlight.note === null || typeof highlight.note === 'string')
+      ))
+    : [];
   return {
     ...book,
     bodyState: book.bodyState ?? (book.importStatus === 'completed' ? 'loaded' : 'unloaded'),
+    highlightCount: book.highlightCount ?? highlights.length,
     highlightState: book.highlightState ?? (book.annotationStatus === 'has_highlights' ? 'pending' : null),
+    highlights,
     highlightUnmatchedCount: book.highlightUnmatchedCount ?? null
   };
 }
