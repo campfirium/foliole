@@ -19,7 +19,7 @@ function readWaitOnFailure(target, env = process.env) {
   if (env.PREVIEW_DEDUPE_WAIT_ON_FAILURE !== undefined) {
     return env.PREVIEW_DEDUPE_WAIT_ON_FAILURE === '1';
   }
-  return false;
+  return target === 'windows';
 }
 
 function canTakeOver(run, now) {
