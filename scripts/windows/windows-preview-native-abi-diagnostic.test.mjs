@@ -17,4 +17,13 @@ describe('windows native preview ABI diagnostics', () => {
     expect(script).not.toContain("npmRunCommand('electron:rebuild:native')");
     expect(script).not.toContain('verify restored Electron native ABI');
   });
+
+  it('falls back to direct restart when an old shell never delivers restart intent', async () => {
+    const script = await readFile(PREVIEW_SCRIPT, 'utf8');
+
+    expect(script).toContain('restart delivery missing after intent request; falling back to direct restart');
+    expect(script).toContain('restart markers missing after intent delivery; falling back to direct restart');
+    expect(script).toContain("runClientAction('restart')");
+    expect(script).toContain('selected action: direct-restart');
+  });
 });

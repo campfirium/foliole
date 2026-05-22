@@ -23,4 +23,6 @@ it('passes native GPU disable switches before the Electron app path', async () =
   expect(runner).toContain('shell: false');
   expect(runner).toContain('windowsHide: true');
   expect(runner).toContain('windowsHide: false');
+  expect(runner).toContain('prewarmViteRendererEntries(viteState.viteUrl)');
+  expect(runner).toContain('vite renderer prewarm complete');
 });
