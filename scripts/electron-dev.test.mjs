@@ -21,6 +21,7 @@ it('passes native GPU disable switches before the Electron app path', async () =
   expect(runner).toContain('dev shell restart requested');
   expect(runner).toContain('parsed.runtimeHead');
   expect(runner).toContain('parsed.bootSession');
+  expect(runner).toContain("request.shellAction === 'exit-shell'");
   expect(runner).toContain("path.join('node_modules', 'electron', 'dist', 'electron.exe')");
   expect(runner).toContain('shell: false');
   expect(runner).toContain('windowsHide: true');

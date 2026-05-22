@@ -41,7 +41,8 @@ describe('writeRestartIntent', () => {
         nonce: 2,
         head: 'head-2',
         requestedBy: 'wsl-windows-preview',
-        reason: 'Class B: runtime behind committed electron changes'
+        reason: 'Class B: runtime behind committed electron changes',
+        shellAction: 'restart-runtime'
       });
     } finally {
       await rm(rootDir, { recursive: true, force: true });
@@ -77,6 +78,24 @@ describe('writeRestartIntent', () => {
       });
 
       expect(result.intent.nonce).toBe(8);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it('can request a full shell exit intent', async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-restart-intent-'));
+    try {
+      const result = await writeRestartIntent({
+        head: 'head-1',
+        reason: 'full shell restart requested',
+        rootDir,
+        shellAction: 'exit-shell'
+      });
+
+      expect(result.intent).toMatchObject({
+        shellAction: 'exit-shell'
+      });
     } finally {
       await rm(rootDir, { recursive: true, force: true });
     }

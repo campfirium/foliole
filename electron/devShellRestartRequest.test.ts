@@ -38,6 +38,7 @@ it('writes a dev shell restart request when a request file is configured', () =>
     kind: 'foliole-dev-shell-restart',
     reason: 'test-restart',
     runtimeHead: null,
+    shellAction: 'restart-runtime',
     requestedAt: '2026-05-21T08:00:00.000Z'
   });
   expect(parsed.id).toEqual(expect.any(String));
@@ -51,14 +52,16 @@ it('includes runtime restart identity when provided', () => {
       bootSession: 'windows-native-relaunch-7-test',
       reason: 'test-restart',
       requestFile,
-      runtimeHead: 'abc123'
+      runtimeHead: 'abc123',
+      shellAction: 'exit-shell'
     })
   ).toBe(true);
 
   const parsed = JSON.parse(fs.readFileSync(requestFile, 'utf8'));
   expect(parsed).toMatchObject({
     bootSession: 'windows-native-relaunch-7-test',
-    runtimeHead: 'abc123'
+    runtimeHead: 'abc123',
+    shellAction: 'exit-shell'
   });
 });
 

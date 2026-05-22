@@ -28,6 +28,7 @@ interface RestartIntent {
   reason: string;
   requestedAt: string;
   requestedBy: string;
+  shellAction: 'exit-shell' | 'restart-runtime';
   target: string;
 }
 
@@ -80,6 +81,7 @@ export function parseDevRestartIntent(content: string): RestartIntent | null {
       reason: parsed.reason,
       requestedAt: parsed.requestedAt,
       requestedBy: parsed.requestedBy,
+      shellAction: parsed.shellAction === 'exit-shell' ? 'exit-shell' : 'restart-runtime',
       target: parsed.target
     };
   } catch {
