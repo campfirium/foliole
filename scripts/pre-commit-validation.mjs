@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { runWindowsLibraryPathPolicyGuard } from './pre-commit-windows-library-path-policy.mjs';
 import { resolveCriticalTestFiles } from './quality-critical-test-routes.mjs';
 
 const RUN_VITEST_WITH_SUMMARY_SCRIPT = fileURLToPath(new URL('./run-vitest-with-summary.mjs', import.meta.url));
@@ -215,6 +216,7 @@ function main() {
   runStagedCodeLint(files);
   runWindowsShellPolicyGuard(files);
   runNativeSqlitePolicyGuard(files);
+  runWindowsLibraryPathPolicyGuard(files, stagedAddedLines);
   runTestDriftGuard(files);
   runCriticalTests(files);
 }
