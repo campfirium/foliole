@@ -3,11 +3,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
-import {
-  listPendingNodeSyncSnapshots,
-  resolvePendingNodeSync,
-  stagePendingNodeSync
-} from './workspacePendingNodeSync';
+import { resolvePendingNodeSync, stagePendingNodeSync } from './workspacePendingNodeSync';
 import { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 import type {
   WorkspaceRuntimeNode,
@@ -204,15 +200,4 @@ export function saveWorkspaceNodeRevealSnapshot(args: {
   position?: number;
 }) {
   runNodeSnapshotSync({ ...args, action: 'sync_node_reveal', command: NATIVE_COMMANDS.updateNodeReveal });
-}
-
-export async function replayPendingWorkspaceNodeSync(): Promise<void> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return;
-  }
-  for (const pendingNode of listPendingNodeSyncSnapshots()) {
-    await runtimeInvoke(NATIVE_COMMANDS.updateNodeContent, pendingNode);
-    resolvePendingNodeSync(pendingNode.nodeId, pendingNode.updatedAt);
-  }
 }

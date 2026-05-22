@@ -6,9 +6,9 @@ import { isDesktopRuntime } from './runtime';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
 export { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
+export { replayPendingWorkspaceNodeSync } from './workspacePendingNodeReplay';
 export {
   createWorkspaceRuntimeNodeSnapshot,
-  replayPendingWorkspaceNodeSync,
   saveCreatedWorkspaceNodeSnapshot,
   saveWorkspaceNodeContentSnapshot,
   saveWorkspaceNodeContentSnapshotWithAnchors,
