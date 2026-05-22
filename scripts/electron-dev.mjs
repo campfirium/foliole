@@ -65,6 +65,12 @@ function consumeDevShellRestartRequest() {
     if (parsed?.kind !== 'foliole-dev-shell-restart') {
       return null;
     }
+    if (typeof parsed.runtimeHead === 'string' && parsed.runtimeHead.trim().length > 0) {
+      process.env.FOLIOLE_RUNTIME_HEAD = parsed.runtimeHead.trim();
+    }
+    if (typeof parsed.bootSession === 'string' && parsed.bootSession.trim().length > 0) {
+      process.env.FOLIOLE_BOOT_SESSION = parsed.bootSession.trim();
+    }
     return parsed;
   } catch (error) {
     console.error('[electron-dev] failed to consume dev shell restart request', error);
