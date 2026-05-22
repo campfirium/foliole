@@ -11,6 +11,7 @@ import { isViteServerReady, prewarmViteRendererEntries } from './electron-dev-se
 const VITE_HOST = '127.0.0.1';
 const VITE_PORT_DEFAULT = 24600;
 const VITE_PORT_MAX_ATTEMPTS = 8;
+const VITE_PREWARM_STARTUP_BUDGET_MS = 2500;
 const DEV_SHELL_RESTART_REQUEST_FILE = path.resolve('.foliole-dev-shell-restart-request.json');
 
 process.env.FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE ??= DEV_SHELL_RESTART_REQUEST_FILE;
@@ -101,6 +102,30 @@ function wait(ms) {
   });
 }
 
+function logPrewarmResults(prewarmResults) {
+  const failedPrewarmResults = prewarmResults.filter((result) => !result.ok);
+  if (failedPrewarmResults.length > 0) {
+    console.warn('[electron-dev] vite renderer prewarm incomplete', failedPrewarmResults);
+  } else {
+    console.info('[electron-dev] vite renderer prewarm complete', prewarmResults);
+  }
+}
+
+async function waitForPrewarmStartupBudget(prewarmPromise) {
+  const prewarmResults = await Promise.race([
+    prewarmPromise,
+    wait(VITE_PREWARM_STARTUP_BUDGET_MS).then(() => null)
+  ]);
+  if (prewarmResults) {
+    logPrewarmResults(prewarmResults);
+    return;
+  }
+  console.warn('[electron-dev] vite renderer prewarm still running; launching Electron');
+  prewarmPromise.then(logPrewarmResults).catch((error) => {
+    console.warn('[electron-dev] vite renderer prewarm failed after launch', error);
+  });
+}
+
 function resolveRequestedPort() {
   const raw = process.env.FOLIOLE_VITE_PORT;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
@@ -166,13 +191,7 @@ await waitForSuccessfulExit(compile, 'electron compile');
 
 const viteState = await startViteWithPortFallback();
 const vite = viteState.viteProc;
-const prewarmResults = await prewarmViteRendererEntries(viteState.viteUrl);
-const failedPrewarmResults = prewarmResults.filter((result) => !result.ok);
-if (failedPrewarmResults.length > 0) {
-  console.warn('[electron-dev] vite renderer prewarm incomplete', failedPrewarmResults);
-} else {
-  console.info('[electron-dev] vite renderer prewarm complete', prewarmResults);
-}
+await waitForPrewarmStartupBudget(prewarmViteRendererEntries(viteState.viteUrl));
 
 let electron = launchElectron(viteState.viteUrl);
 logChildLifecycle(electron, 'electron');
