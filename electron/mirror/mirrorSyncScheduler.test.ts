@@ -90,3 +90,18 @@ it('flushes automatic mirror updates through the same incremental path used by r
   await expect(fs.readFile(mirrorPath('Same Title.md'), 'utf8')).resolves.toContain('First body.');
   await expect(fs.readFile(mirrorPath(dedupedFileName!), 'utf8')).resolves.toContain('Second body updated.');
 });
+
+it('limits automatic mirror flushes to scheduled articles', async () => {
+  saveNode('node-first', null, 'First Title', 'First body.', '2026-03-30T00:00:00.000Z', 0);
+  saveNode('node-second', null, 'Second Title', 'Second body.', '2026-03-30T00:00:00.000Z', 1);
+  await rebuildMirrorOutput();
+  await fs.rm(mirrorPath('First Title.md'));
+
+  saveNode('node-second', null, 'Second Title', 'Second body updated.', '2030-03-30T00:00:00.000Z', 1);
+
+  scheduleMirrorSync(['node-second']);
+  await flushMirrorSync();
+
+  await expect(fs.access(mirrorPath('First Title.md'))).rejects.toThrow();
+  await expect(fs.readFile(mirrorPath('Second Title.md'), 'utf8')).resolves.toContain('Second body updated.');
+});

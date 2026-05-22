@@ -30,7 +30,7 @@ async function drainQueue() {
   }
 
   try {
-    await syncIncrementalMirrorOutput();
+    await syncIncrementalMirrorOutput([...articleIds]);
   } catch (error) {
     console.error('[mirror] incremental export failed', {
       articleIds: [...articleIds],
