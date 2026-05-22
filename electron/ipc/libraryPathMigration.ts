@@ -97,14 +97,41 @@ function shouldMoveDefaultScopedPath(currentValue: string | null, nextValue: str
   return currentValue === null && nextValue === null;
 }
 
+async function shouldAdoptExistingLibrary(args: {
+  confirmExistingLibraryHome?: boolean;
+  location: keyof LibraryPathOverrides;
+  nextPaths: ResolvedLibraryPaths;
+}) {
+  return (
+    args.confirmExistingLibraryHome === true &&
+    args.location === 'library_home' &&
+    (await pathExists(args.nextPaths.database_path))
+  );
+}
+
+async function assertExistingLibraryConfirmed(args: {
+  confirmExistingLibraryHome?: boolean;
+  location: keyof LibraryPathOverrides;
+  nextPaths: ResolvedLibraryPaths;
+}) {
+  if (
+    args.confirmExistingLibraryHome !== true &&
+    args.location === 'library_home' &&
+    (await pathExists(args.nextPaths.database_path))
+  ) {
+    throw new Error('existing_library_home_requires_confirmation');
+  }
+}
+
 export async function migrateLibraryPathChange(args: {
   currentOverrides: LibraryPathOverrides;
   currentPaths: ResolvedLibraryPaths;
+  confirmExistingLibraryHome?: boolean;
   location: keyof LibraryPathOverrides;
   nextOverrides: LibraryPathOverrides;
   nextPaths: ResolvedLibraryPaths;
 }) {
-  const { currentOverrides, currentPaths, location, nextOverrides, nextPaths } = args;
+  const { confirmExistingLibraryHome, currentOverrides, currentPaths, location, nextOverrides, nextPaths } = args;
 
   if (location === 'assets_dir') {
     if (isPathInside(currentPaths.assets_dir, nextPaths.assets_dir)) {
@@ -135,6 +162,11 @@ export async function migrateLibraryPathChange(args: {
   }
 
   closeDatabaseConnection();
+  await assertExistingLibraryConfirmed({ confirmExistingLibraryHome, location, nextPaths });
+  if (await shouldAdoptExistingLibrary({ confirmExistingLibraryHome, location, nextPaths })) {
+    return;
+  }
+
   await moveDirectoryContents(currentPaths.data_dir, nextPaths.data_dir);
 
   if (shouldMoveDefaultScopedPath(currentOverrides.assets_dir, nextOverrides.assets_dir)) {

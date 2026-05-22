@@ -24,7 +24,7 @@ function isSidecarLocked(error) {
 }
 
 function shouldUseDebugLibraryCopy() {
-  return process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY !== '0';
+  return process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY === '1';
 }
 
 function removeTargetSqliteSidecars(targetPath) {

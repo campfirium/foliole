@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { selectRuntimeFolder } from '../../../shared/platform/folderSelectionRuntimeRepository';
 import {
+  EXISTING_LIBRARY_HOME_CONFIRMATION_ERROR,
   loadRuntimeLibraryPathSettings,
   updateRuntimeLibraryPathSetting,
   type RuntimeLibraryPathLocation,
@@ -11,6 +12,8 @@ import {
 import { useMirrorRebuildState } from './useMirrorRebuildState';
 
 type LibraryPathErrorState = Record<RuntimeLibraryPathLocation, string | null>;
+
+const LIBRARY_HOME_SWITCH_CANCELLED_ERROR = 'library_home_switch_cancelled';
 
 function createEmptyErrors(): LibraryPathErrorState {
   return {
@@ -79,6 +82,41 @@ function clearLocationError(
   };
 }
 
+function isExistingLibraryHomeConfirmationError(error: unknown) {
+  return error instanceof Error && error.message.includes(EXISTING_LIBRARY_HOME_CONFIRMATION_ERROR);
+}
+
+function isLibraryHomeSwitchCancelledError(error: unknown) {
+  return error instanceof Error && error.message.includes(LIBRARY_HOME_SWITCH_CANCELLED_ERROR);
+}
+
+function confirmExistingLibraryHome(path: string) {
+  return window.confirm(
+    [
+      'Switch to this existing Library Home?',
+      '',
+      `Foliole found an existing database in ${path}.`,
+      'It will use that library without moving or overwriting the current one.'
+    ].join('\n')
+  );
+}
+
+async function updateSelectedRuntimeLibraryPath(location: RuntimeLibraryPathLocation, selectedPath: string) {
+  try {
+    return await updateRuntimeLibraryPathSetting(location, selectedPath);
+  } catch (error) {
+    if (location !== 'library_home' || !isExistingLibraryHomeConfirmationError(error)) {
+      throw error;
+    }
+    if (!confirmExistingLibraryHome(selectedPath)) {
+      throw new Error(LIBRARY_HOME_SWITCH_CANCELLED_ERROR);
+    }
+    return updateRuntimeLibraryPathSetting(location, selectedPath, {
+      confirmExistingLibraryHome: true
+    });
+  }
+}
+
 async function runLocationUpdate(args: {
   getErrorMessage: (location: RuntimeLibraryPathLocation) => string;
   location: RuntimeLibraryPathLocation;
@@ -96,6 +134,9 @@ async function runLocationUpdate(args: {
   try {
     args.setPaths(await args.performUpdate());
   } catch (error) {
+    if (isLibraryHomeSwitchCancelledError(error)) {
+      return;
+    }
     args.setErrors((current) => ({
       ...current,
       [args.location]: formatLocationError(args.getErrorMessage(args.location), error)
@@ -153,7 +194,7 @@ export function useLibraryPathSettings() {
       await runLocationUpdate({
         getErrorMessage: getChangeErrorMessage,
         location,
-        performUpdate: () => updateRuntimeLibraryPathSetting(location, selectedPath),
+        performUpdate: () => updateSelectedRuntimeLibraryPath(location, selectedPath),
         resetMirrorRebuildState: mirrorRebuildState.resetMirrorRebuildState,
         setErrors,
         setPaths,

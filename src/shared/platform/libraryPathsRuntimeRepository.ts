@@ -15,6 +15,12 @@ export interface RuntimeLibraryPaths {
   updatedAt: string;
 }
 
+export const EXISTING_LIBRARY_HOME_CONFIRMATION_ERROR = 'existing_library_home_requires_confirmation';
+
+export interface RuntimeLibraryPathUpdateOptions {
+  confirmExistingLibraryHome?: boolean;
+}
+
 export interface RuntimeMirrorAttachmentLinkRebuildResult {
   scannedDocumentCount: number;
   rewrittenDocumentCount: number;
@@ -144,7 +150,8 @@ export async function loadRuntimeLibraryPathSettings(): Promise<RuntimeLibraryPa
 
 export async function updateRuntimeLibraryPathSetting(
   location: RuntimeLibraryPathLocation,
-  nextPath: string | null
+  nextPath: string | null,
+  options: RuntimeLibraryPathUpdateOptions = {}
 ): Promise<RuntimeLibraryPaths> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -152,11 +159,15 @@ export async function updateRuntimeLibraryPathSetting(
   }
 
   try {
+    const args: Record<string, unknown> = {
+      location,
+      path: nextPath
+    };
+    if (options.confirmExistingLibraryHome === true) {
+      args.confirm_existing_library_home = true;
+    }
     const result = toRuntimeLibraryPaths(
-      await runtimeInvoke(NATIVE_COMMANDS.updateLibraryPathSetting, {
-        location,
-        path: nextPath
-      })
+      await runtimeInvoke(NATIVE_COMMANDS.updateLibraryPathSetting, args)
     );
     if (!result) {
       throw new Error('native library path payload invalid');

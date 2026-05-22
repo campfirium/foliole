@@ -129,6 +129,35 @@ it('moves data and default library folders when library home changes', async () 
   await expect(fs.readFile(path.join(nextLibraryHome, 'Mirror', 'entry.md'), 'utf8')).resolves.toBe('# entry');
 });
 
+it('requires confirmation before adopting an existing library home', async () => {
+  const initialPaths = await loadLibraryPathSettings();
+  initializeDatabase();
+  resetSeededWorkspace();
+  await fs.writeFile(path.join(initialPaths.assets_dir, 'debug-asset.png'), 'debug asset');
+
+  const existingLibraryHome = path.join(tempRoot, 'ExistingLibrary');
+  const existingDatabasePath = path.join(existingLibraryHome, 'Data', 'foliole.db');
+  await fs.mkdir(path.dirname(existingDatabasePath), { recursive: true });
+  await fs.writeFile(existingDatabasePath, 'existing library db');
+
+  await expect(updateLibraryPathSetting({ location: 'library_home', path: existingLibraryHome })).rejects.toThrow(
+    'existing_library_home_requires_confirmation'
+  );
+
+  await expect(
+    updateLibraryPathSetting({
+      confirm_existing_library_home: true,
+      location: 'library_home',
+      path: existingLibraryHome
+    })
+  ).resolves.toMatchObject({ database_path: existingDatabasePath, library_home: existingLibraryHome });
+
+  expect(resolveDatabasePath()).toBe(existingDatabasePath);
+  await expect(fs.readFile(existingDatabasePath, 'utf8')).resolves.toBe('existing library db');
+  await expect(fs.access(path.join(initialPaths.data_dir, 'foliole.db'))).resolves.toBeUndefined();
+  await expect(fs.readFile(path.join(initialPaths.assets_dir, 'debug-asset.png'), 'utf8')).resolves.toBe('debug asset');
+});
+
 it('keeps independently configured child folders in place when library home changes', async () => {
   const initialPaths = await loadLibraryPathSettings();
   initializeDatabase();
