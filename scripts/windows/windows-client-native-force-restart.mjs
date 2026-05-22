@@ -1,6 +1,28 @@
 /* global console */
 
+import { readFile } from 'node:fs/promises';
+
 import { requestCooperativeFullRestart } from './windows-client-native-full-restart.mjs';
+import { writeRestartIntent } from './write-restart-intent.mjs';
+
+async function readDeliveryNonce(filePath) {
+  try {
+    return JSON.parse(await readFile(filePath, 'utf8')).nonce;
+  } catch {
+    return null;
+  }
+}
+
+async function waitForRestartDelivery({ filePath, nonce, timeoutMs, wait }) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await readDeliveryNonce(filePath) === nonce) {
+      return true;
+    }
+    await wait(500);
+  }
+  return false;
+}
 
 async function acceptTrustedCurrentRuntime({
   currentHeadValue,
@@ -25,6 +47,41 @@ async function acceptTrustedCurrentRuntime({
   const recovered = readClientState();
   console.log(`[windows-restart-client] status: RESTARTED mode=${mode} shell_pid=${recovered?.shellPid ?? 'unknown'} runtime_pid=${ready.windowVisible.pid}`);
   return true;
+}
+
+async function requestRuntimeRestartFallback({
+  currentHeadValue,
+  mode,
+  readClientState,
+  readReadyState,
+  recoverClientStateFromReady,
+  repoRoot,
+  restartDeliveryFile,
+  saveState,
+  wait
+}) {
+  const result = await writeRestartIntent({
+    head: currentHeadValue,
+    reason: `${mode} fallback runtime restart`,
+    requestedBy: 'windows-native-client',
+    rootDir: repoRoot
+  });
+  if (!await waitForRestartDelivery({
+    filePath: restartDeliveryFile,
+    nonce: result.intent.nonce,
+    timeoutMs: 25000,
+    wait
+  })) {
+    return false;
+  }
+  return acceptTrustedCurrentRuntime({
+    currentHeadValue,
+    mode,
+    readClientState,
+    readReadyState,
+    recoverClientStateFromReady,
+    saveState
+  });
 }
 
 export async function forceRestartClient({
@@ -66,7 +123,21 @@ export async function forceRestartClient({
       console.log(`[windows-restart-client] status: RESTARTED mode=${mode} shell_pid=${started.state.shellPid} runtime_pid=${started.ready.windowVisible.pid}`);
       return;
     }
-    console.log('[windows-restart-client] cooperative full restart unavailable; falling back to process stop');
+    console.log('[windows-restart-client] cooperative full restart unavailable; trying runtime restart fallback');
+    if (await requestRuntimeRestartFallback({
+      currentHeadValue,
+      mode,
+      readClientState,
+      readReadyState,
+      recoverClientStateFromReady,
+      repoRoot,
+      restartDeliveryFile,
+      saveState,
+      wait
+    })) {
+      return;
+    }
+    console.log('[windows-restart-client] runtime restart fallback unavailable; falling back to process stop');
   }
   try {
     await stopClient({ print: false });
