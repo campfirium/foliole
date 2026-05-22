@@ -125,12 +125,19 @@ export function mergePendingNodeViewStates(
 }
 
 export function resolveNodeViewIdsToPersist(args: {
+  activeNodeIdToPersist?: string | null;
   captured: CapturedNodeViewState | null;
   includePendingNodeViewStates: boolean;
   pendingNodeViewById: PendingNodeViewStateMap;
 }) {
   const pendingNodeIds = args.includePendingNodeViewStates ? Object.keys(args.pendingNodeViewById) : [];
-  return args.captured ? Array.from(new Set([...pendingNodeIds, args.captured.nodeId])) : pendingNodeIds;
+  return Array.from(
+    new Set([
+      ...pendingNodeIds,
+      ...(args.captured ? [args.captured.nodeId] : []),
+      ...(args.activeNodeIdToPersist ? [args.activeNodeIdToPersist] : [])
+    ])
+  );
 }
 
 export function stagePendingNodeViewState(args: {

@@ -49,11 +49,30 @@ function registerNodeSwitchTests() {
     const view = render(<HookHarness {...buildPreviousNodeHarnessProps(setNodeViewState)} />);
 
     vi.clearAllMocks();
-    view.rerender(<HookHarness {...buildNodeSwitchHarnessProps(setNodeViewState)} />);
+    view.rerender(
+      <HookHarness
+        {...buildNodeSwitchHarnessProps(setNodeViewState)}
+        nodeViewById={{
+          'node-2': {
+            scrollTop: 24,
+            selection: { from: 2, to: 6 },
+            updatedAt: '2026-04-05T10:00:00.000Z'
+          }
+        }}
+      />
+    );
 
     expect(syncReadingProgressToRuntime).toHaveBeenLastCalledWith({
       activeNodeId: 'node-2',
-      nodeViewStates: [],
+      nodeViewStates: [
+        {
+          nodeId: 'node-2',
+          scrollTop: 24,
+          selectionFrom: 2,
+          selectionTo: 6,
+          updatedAt: '2026-04-05T10:00:00.000Z'
+        }
+      ],
       source: 'user-scroll',
       updatedAt: expect.any(String)
     });

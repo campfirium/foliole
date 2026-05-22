@@ -66,3 +66,39 @@ it('preserves per-node updated times during batch reading progress saves', () =>
     'node-2': { updatedAt: '2026-03-06T10:00:00.000Z' }
   });
 });
+
+it('keeps existing opened time when saving a newer reading position without a node timestamp', () => {
+  saveReadingProgress({
+    activeNodeId: 'node-1',
+    nodeViewStates: [
+      {
+        nodeId: 'node-1',
+        scrollTop: 10,
+        selectionFrom: null,
+        selectionTo: null,
+        updatedAt: '2026-03-06T09:00:00.000Z'
+      }
+    ],
+    updatedAt: '2026-03-06T09:00:00.000Z'
+  });
+
+  saveReadingProgress({
+    activeNodeId: 'node-1',
+    nodeViewStates: [
+      {
+        nodeId: 'node-1',
+        scrollTop: 240,
+        selectionFrom: 30,
+        selectionTo: 44
+      }
+    ],
+    updatedAt: '2026-03-06T11:00:00.000Z'
+  });
+
+  expect(loadReadingProgress().nodeViewStateById['node-1']).toMatchObject({
+    scrollTop: 240,
+    selectionFrom: 30,
+    selectionTo: 44,
+    updatedAt: '2026-03-06T09:00:00.000Z'
+  });
+});
