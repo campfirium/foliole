@@ -4,31 +4,12 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { appendPreviewEvent } from './preview-dedupe-event-log.mjs';
+import { completeTimedOutRun } from './preview-dedupe-scheduler-timeout.mjs';
 import { isPidAlive, withStateLock } from './preview-dedupe-state-store.mjs';
+import { readTotalTimeoutMs, readWindowMs } from './preview-dedupe-time-budget.mjs';
 import { createPreviewWaitAnnouncer } from './preview-dedupe-wait-status.mjs';
 
-const DEFAULT_WINDOW_MS = { android: 0, windows: 3 * 60_000 }, RESULT_POLL_MS = 200;
-const STATE_STALE_MS = 15 * 60_000;
-
-function readDurationMs(env, key, defaultValue) {
-  const rawValue = env[key];
-  if (rawValue === undefined) {
-    return defaultValue;
-  }
-  const parsedValue = Number.parseInt(rawValue, 10);
-  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
-    throw new Error(`${key} must be a non-negative integer`);
-  }
-  return parsedValue;
-}
-
-export function readWindowMs(target, env = process.env) {
-  return readDurationMs(
-    env,
-    `PREVIEW_DEDUPE_${target.toUpperCase()}_WINDOW_MS`,
-    readDurationMs(env, `PREVIEW_DEDUPE_${target.toUpperCase()}_COOLDOWN_MS`, DEFAULT_WINDOW_MS[target] ?? 0)
-  );
-}
+const RESULT_POLL_MS = 200, STATE_STALE_MS = 15 * 60_000;
 
 export function shouldForcePreview(env = process.env) {
   return env.PREVIEW_DEDUPE_FORCE === '1';
@@ -182,11 +163,28 @@ export async function runScheduledPreview({
   runPreview,
   waitAnnouncer = createPreviewWaitAnnouncer(),
   waitOnFailure = readWaitOnFailure(target),
-  windowMs = readWindowMs(target)
+  windowMs = readWindowMs(target),
+  totalTimeoutMs = readTotalTimeoutMs(target, windowMs)
 }) {
   const requestId = randomUUID();
+  const startedAt = Date.now();
   let assignedRunId = null;
   while (true) {
+    if (totalTimeoutMs > 0 && Date.now() - startedAt > totalTimeoutMs) {
+      const message = `preview timed out after ${totalTimeoutMs}ms before completion`;
+      await withStateLock({
+        runtimeDir,
+        target,
+        fn: (rawState) => {
+          const state = normalizeState(rawState);
+          completeTimedOutRun(state, assignedRunId, message);
+          return { state, value: null };
+        }
+      });
+      await appendPreviewEvent({ event: 'request-timeout', fields: { message, runId: assignedRunId }, runtimeDir, target });
+      console.error(`[${target}-preview] status: FAILED reason=${message}`);
+      return 1;
+    }
     const action = await withStateLock({
       runtimeDir,
       target,

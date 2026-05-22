@@ -56,14 +56,16 @@ export function resolveAncestorAnchorLink(
   }
 
   let cursorId: string | null = activeNodeId;
+  let nearestAnchor: Node['anchorLink'] = null;
   while (cursorId !== null) {
     const cursor: Node | undefined = nodesById[cursorId];
     if (!cursor) {
       return { focusAnchor: null, isAncestor: false };
     }
+    nearestAnchor = nearestAnchor ?? cursor.anchorLink ?? null;
     if (cursor.parentNodeId === ancestorNodeId) {
       return {
-        focusAnchor: activeNode.anchorLink ?? null,
+        focusAnchor: nearestAnchor,
         isAncestor: true
       };
     }

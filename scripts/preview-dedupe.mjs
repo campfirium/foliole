@@ -2,12 +2,13 @@
 /* global console, process */
 
 import { createHash } from 'node:crypto';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { runScheduledPreview, shouldForcePreview } from './preview-dedupe-scheduler.mjs';
+import { runPreviewCommand } from './preview-dedupe-command-runner.mjs';
 import { buildDiagnostics, formatDiagnosticsSummary } from './preview-dedupe-diagnostics.mjs';
 import { appendPreviewEvent } from './preview-dedupe-event-log.mjs';
 import { TARGET_PATHS } from './preview-dedupe-targets.mjs';
@@ -88,23 +89,6 @@ async function writeStoredHash(target, hash) {
   await writeFile(hashPath(target), `${hash}\n`, 'utf8');
 }
 
-function runCommand(command) {
-  return new Promise((resolve) => {
-    const child = spawn(command[0], command.slice(1), {
-      cwd: REPO_ROOT,
-      env: process.env,
-      stdio: 'inherit'
-    });
-    child.on('close', (code, signal) => {
-      if (signal) {
-        resolve(1);
-        return;
-      }
-      resolve(code ?? 1);
-    });
-  });
-}
-
 function runWindowsStatusCommand() {
   let command = ['bash', 'scripts/windows/windows-restart-client.sh'];
   if (process.env.PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND) {
@@ -179,7 +163,7 @@ async function runPreviewFlow({ command, requireActualPreview, target }) {
 
   await logEvent(target, 'real-preview-claimed', { currentHash, forced, requireActualPreview, storedHash: storedHash || null });
   console.log(`[${target}-preview] dedupe: claimed hash=${currentHash}`);
-  const exitCode = await runCommand(command);
+  const exitCode = await runPreviewCommand(command, target, REPO_ROOT);
   await logEvent(target, 'real-preview-finished', { currentHash, exitCode });
   if (exitCode === 0) {
     await writeStoredHash(target, currentHash);
