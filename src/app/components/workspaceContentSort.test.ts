@@ -52,6 +52,12 @@ it('persists the workspace content sort preference', () => {
   expect(loadWorkspaceContentSortPreference()).toEqual({ direction: 'asc', key: 'name' });
 });
 
+it('loads last opened as newest first even when an older preference stored ascending order', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceContentSort, JSON.stringify({ direction: 'asc', key: 'lastOpenedAt' }));
+
+  expect(loadWorkspaceContentSortPreference()).toEqual({ direction: 'desc', key: 'lastOpenedAt' });
+});
+
 it('migrates previous saved/import time sort keys to modified time', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceContentSort, JSON.stringify({ direction: 'desc', key: 'savedAt' }));
 

@@ -17,6 +17,7 @@ export interface NodeViewStateInput {
   scrollTop: number;
   selectionFrom: number | null;
   selectionTo: number | null;
+  updatedAt?: string | null;
 }
 
 export interface SaveReadingProgressInput {
@@ -133,7 +134,8 @@ function saveNodeViewStates(
   source: NodeViewStateWriteSource
 ) {
   for (const state of input.nodeViewStates) {
-    const incoming: PersistedNodeViewState = { ...state, source, updatedAt: input.updatedAt };
+    const updatedAt = state.updatedAt?.trim() || input.updatedAt;
+    const incoming: PersistedNodeViewState = { ...state, source, updatedAt };
     const existing = loadExistingNodeViewState(connection, deviceId, state.nodeId);
     if (!shouldWritePersistedNodeViewState(existing, incoming).shouldWrite) {
       continue;
@@ -145,9 +147,9 @@ function saveNodeViewStates(
       state.selectionFrom,
       state.selectionTo,
       source,
-      input.updatedAt
+      updatedAt
     ]);
-    writeNodeViewStateSync(connection, { ...state, source, updatedAt: input.updatedAt });
+    writeNodeViewStateSync(connection, { ...state, source, updatedAt });
   }
 }
 

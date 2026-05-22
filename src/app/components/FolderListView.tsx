@@ -126,18 +126,18 @@ function useResolvedFolderListState(props: FolderListViewProps) {
       props.trashedNodeIds
     ]
   );
-  const state = useFolderListViewState(
+  const state = useFolderListViewState({
+    controlledSearchQuery: props.searchQuery,
+    controlledSortDirection: props.sortDirection,
+    controlledSortKey: props.sortKey,
+    defaultSortKey: DEFAULT_FOLDER_LIST_SORT_KEY,
     listedNodes,
     nodeViewById,
-    props.searchQuery,
-    props.sortKey,
-    props.sortDirection,
-    props.onChangeSearchQuery,
-    props.onChangeSortKey,
-    props.onChangeSortDirection,
-    DEFAULT_FOLDER_LIST_SORT_KEY,
-    buildFolderListRebuildKey(props, listedNodes)
-  );
+    listRebuildKey: buildFolderListRebuildKey(props, listedNodes),
+    onChangeSearchQuery: props.onChangeSearchQuery,
+    onChangeSortDirection: props.onChangeSortDirection,
+    onChangeSortKey: props.onChangeSortKey
+  });
 
   return {
     nodeViewById,

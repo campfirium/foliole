@@ -6,7 +6,10 @@ export const FOLDER_LIST_SORT_OPTIONS: { key: FolderListSortKey; label: string }
   { key: 'dateImported', label: 'Date imported' }
 ];
 
-export function getFolderListSortOrderOptions(): { label: string; value: FolderListSortDirection }[] {
+export function getFolderListSortOrderOptions(sortKey?: FolderListSortKey): { label: string; value: FolderListSortDirection }[] {
+  if (sortKey === 'dateLastOpened') {
+    return [{ label: 'Recent -> Older', value: 'desc' }];
+  }
   return [
     { label: 'Recent -> Older', value: 'desc' },
     { label: 'Older -> Recent', value: 'asc' }

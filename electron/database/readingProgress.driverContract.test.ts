@@ -73,7 +73,7 @@ it('saves reading progress through prepared driver statements only', () => {
     updatedAt: '2026-03-14T00:00:00.000Z'
   });
 
-  expect(transactionSpy).toHaveBeenCalledTimes(3);
+  expect(transactionSpy).toHaveBeenCalledTimes(1);
   expect(prepare).toHaveBeenCalledTimes(2);
   expect(metaRun).toHaveBeenCalledWith(['active_node_id', 'node-2', '2026-03-14T00:00:00.000Z']);
   expect(nodeRun).toHaveBeenCalledWith([

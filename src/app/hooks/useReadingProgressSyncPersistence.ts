@@ -64,19 +64,24 @@ export function flushReadingProgressToRuntime(args: {
   pushDebugTrace('reading-progress.flush-runtime', {
     activeNodeId: resolved.resolvedActiveNodeId,
     capturedNodeId: resolved.captured?.nodeId ?? null,
-    nodeViewStateCount: Object.keys(resolved.mergedNodeViewById).length,
-    reason: args.captureNodeIdOverride === null ? 'node-switch' : 'periodic'
+    nodeViewStateCount: resolved.nodeViewIdsToPersist.length,
+    reason: args.captureNodeIdOverride === null ? 'active-node' : 'captured-node'
   });
   const signature = createReadingProgressSignature(
     resolved.resolvedActiveNodeId,
-    resolved.mergedNodeViewById
+    resolved.mergedNodeViewById,
+    resolved.nodeViewIdsToPersist
   );
   if (args.lastSyncedSignatureRef.current === signature) {
     return;
   }
   args.lastSyncedSignatureRef.current = signature;
   syncReadingProgressToRuntime(
-    createReadingProgressPayload(resolved.resolvedActiveNodeId, resolved.mergedNodeViewById)
+    createReadingProgressPayload(
+      resolved.resolvedActiveNodeId,
+      resolved.mergedNodeViewById,
+      resolved.nodeViewIdsToPersist
+    )
   );
 }
 
@@ -105,14 +110,20 @@ export async function flushReadingProgressBeforeClose(args: {
   pushDebugTrace('reading-progress.flush-before-close', {
     activeNodeId: resolved.resolvedActiveNodeId,
     capturedNodeId: resolved.captured?.nodeId ?? null,
-    nodeViewStateCount: Object.keys(resolved.mergedNodeViewById).length
+    nodeViewStateCount: resolved.nodeViewIdsToPersist.length
   });
   await saveWorkspaceReadingProgressNow(
-    createReadingProgressPayload(resolved.resolvedActiveNodeId, resolved.mergedNodeViewById, 'close-flush')
+    createReadingProgressPayload(
+      resolved.resolvedActiveNodeId,
+      resolved.mergedNodeViewById,
+      resolved.nodeViewIdsToPersist,
+      'close-flush'
+    )
   );
   args.lastSyncedSignatureRef.current = createReadingProgressSignature(
     resolved.resolvedActiveNodeId,
-    resolved.mergedNodeViewById
+    resolved.mergedNodeViewById,
+    resolved.nodeViewIdsToPersist
   );
   return true;
 }

@@ -19,11 +19,18 @@ export function useWorkspaceContentSort() {
 
   return {
     setSortDirection: (direction: WorkspaceContentSortDirection) =>
-      setSort((current) => ({ ...current, direction })),
+      setSort((current) => ({
+        ...current,
+        direction: current.key === 'lastOpenedAt' ? 'desc' : direction
+      })),
     setSortKey: (key: WorkspaceContentSortKey) => {
       setSortRefreshVersion((current) => current + 1);
       setSort((current) => ({
-        direction: current.key === key ? current.direction : resolveDefaultWorkspaceContentSortDirection(key),
+        direction: key === 'lastOpenedAt'
+          ? 'desc'
+          : current.key === key
+            ? current.direction
+            : resolveDefaultWorkspaceContentSortDirection(key),
         key
       }));
     },

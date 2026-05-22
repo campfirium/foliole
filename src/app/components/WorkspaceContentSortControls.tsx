@@ -26,6 +26,9 @@ function getOrderOptions(sortKey: WorkspaceContentSortKey): { label: string; val
       { label: 'Z -> A', value: 'desc' }
     ];
   }
+  if (sortKey === 'lastOpenedAt') {
+    return [{ label: 'Newest first', value: 'desc' }];
+  }
   return [
     { label: 'Newest first', value: 'desc' },
     { label: 'Oldest first', value: 'asc' }

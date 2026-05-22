@@ -57,6 +57,22 @@ function getRenderedEntryTitles() {
     .map((button) => button.getAttribute('aria-label')?.replace(/^Open\s+/, '') ?? '');
 }
 
+function renderDateSavedFolderList(folderNode: Node, children: Node[]) {
+  return (
+    <FolderListView
+      folderNodeId="folder-1"
+      nodeOrder={['folder-1', ...children.map((node) => node.id)]}
+      nodeViewById={{}}
+      nodesById={Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]))}
+      onChangeSortDirection={() => undefined}
+      onChangeSortKey={() => undefined}
+      onSelectNode={vi.fn<(nodeId: string) => void>()}
+      sortDirection="desc"
+      sortKey="dateSaved"
+    />
+  );
+}
+
 describe('FolderListView date sorting', () => {
   it('sorts entries by date modified by default', () => {
     renderFolderList([
@@ -127,7 +143,7 @@ describe('FolderListView last opened sorting', () => {
 });
 
 describe('FolderListView dynamic sorting', () => {
-  it('keeps the current dynamic sort order until the list is rebuilt', () => {
+  it('updates last opened order as nodes are opened', () => {
     const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
     const children = [
       createNode({ id: 'node-1', title: 'Opened first', updatedAt: '2026-04-03T09:00:00.000Z' }),
@@ -159,18 +175,33 @@ describe('FolderListView dynamic sorting', () => {
       'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-06T09:00:00.000Z' }
     }, 'dateLastOpened'));
 
-    expect(getRenderedEntryTitles()).toEqual(['Opened first', 'Opened later']);
-    expect(screen.getByTestId('folder-list-date-node-2')).toHaveTextContent('2026-04-06');
-
-    rerender(renderList({
-      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-05T09:00:00.000Z' },
-      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-06T09:00:00.000Z' }
-    }, 'dateImported'));
-    rerender(renderList({
-      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-05T09:00:00.000Z' },
-      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-06T09:00:00.000Z' }
-    }, 'dateLastOpened'));
-
     expect(getRenderedEntryTitles()).toEqual(['Opened later', 'Opened first']);
+    expect(screen.getByTestId('folder-list-date-node-2')).toHaveTextContent('2026-04-06');
+  });
+
+  it('keeps date saved sort order stable until the list is rebuilt', () => {
+    const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
+    const children = [
+      createNode({ id: 'node-1', title: 'Saved first', updatedAt: '2026-04-05T09:00:00.000Z' }),
+      createNode({ id: 'node-2', title: 'Saved later', updatedAt: '2026-04-04T09:00:00.000Z' })
+    ];
+    const { rerender } = render(renderDateSavedFolderList(folderNode, children));
+
+    expect(getRenderedEntryTitles()).toEqual(['Saved first', 'Saved later']);
+
+    rerender(renderDateSavedFolderList(folderNode, [
+      createNode({ id: 'node-1', title: 'Saved first', updatedAt: '2026-04-05T09:00:00.000Z' }),
+      createNode({ id: 'node-2', title: 'Saved later', updatedAt: '2026-04-06T09:00:00.000Z' })
+    ]));
+
+    expect(getRenderedEntryTitles()).toEqual(['Saved first', 'Saved later']);
+
+    rerender(renderDateSavedFolderList(folderNode, [
+      createNode({ id: 'node-1', title: 'Saved first', updatedAt: '2026-04-05T09:00:00.000Z' }),
+      createNode({ id: 'node-2', title: 'Saved later', updatedAt: '2026-04-06T09:00:00.000Z' }),
+      createNode({ id: 'node-3', title: 'New membership', updatedAt: '2026-04-07T09:00:00.000Z' })
+    ]));
+
+    expect(getRenderedEntryTitles()).toEqual(['New membership', 'Saved later', 'Saved first']);
   });
 });

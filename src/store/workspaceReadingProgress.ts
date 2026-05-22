@@ -143,18 +143,20 @@ export function toRuntimeNodeViewStates(nodeViewById: Record<string, NodeViewSta
     scrollTop: number;
     selectionFrom: number | null;
     selectionTo: number | null;
+    updatedAt?: string;
   }> = [];
 
   for (const [nodeId, viewState] of Object.entries(nodeViewById)) {
     if (!viewState) {
       continue;
     }
-    nodeViewStates.push({
+    const payload = {
       nodeId,
       scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
       selectionFrom: viewState.selection ? Math.max(0, Math.trunc(viewState.selection.from)) : null,
       selectionTo: viewState.selection ? Math.max(0, Math.trunc(viewState.selection.to)) : null
-    });
+    };
+    nodeViewStates.push(viewState.updatedAt?.trim() ? { ...payload, updatedAt: viewState.updatedAt } : payload);
   }
 
   return nodeViewStates;
