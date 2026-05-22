@@ -3,7 +3,7 @@ import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as R
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
-import { isInboxNode, isTrashNode, isVirtualRootNode } from '../model/specialNodes';
+import { isHomeNode, isInboxNode, isTrashNode, isVirtualRootNode } from '../model/specialNodes';
 import {
   isFsrsWorkspaceListNode,
   type WorkspaceListNodesById
@@ -62,9 +62,9 @@ function renderNodeListRow(
       hasChildren={props.isTrashViewOpen ? false : row.hasChildren}
       isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
       isBulkSelectionActive={props.selectedNodeIds.length > 1}
-      isCollapsed={props.isTrashViewOpen ? false : props.collapsedNodeIds.has(row.node.id)}
+      isCollapsed={props.isTrashViewOpen || rowModel.isHome ? false : props.collapsedNodeIds.has(row.node.id)}
       isDerived={rowModel.isDerivedNode}
-      isDragDisabled={props.isTrashViewOpen || rowModel.isDerivedNode || rowModel.isInbox || rowModel.isTrashRoot || rowModel.isVirtualRoot}
+      isDragDisabled={props.isTrashViewOpen || rowModel.isDerivedNode || rowModel.isHome || rowModel.isInbox || rowModel.isTrashRoot || rowModel.isVirtualRoot}
       isDropTarget={props.drag.dropTargetNodeId === row.node.id}
       isMuted={rowModel.shouldFadeWholeRow}
       mutedOpacity={rowModel.shouldFadeWholeRow ? getDismissedFadeOpacity(rowModel.leafIconKind) : 1}
@@ -85,7 +85,7 @@ function renderNodeListRow(
       onDragStart={props.drag.onDragStartNode}
       onDrop={props.drag.onDropOnNode}
       onKeyDown={onRowKeyDown}
-      {...(!rowModel.isInbox && !rowModel.isTrashRoot && !rowModel.isVirtualRoot ? { onRename: props.onRename } : {})}
+      {...(!rowModel.isHome && !rowModel.isInbox && !rowModel.isTrashRoot && !rowModel.isVirtualRoot ? { onRename: props.onRename } : {})}
       onSelect={onSelect}
       onToggleCollapse={props.onToggleCollapse}
     />
@@ -115,7 +115,7 @@ function shouldExpandFolderOnDragOver(row: NodeTreeRow, collapsedNodeIds: Readon
 }
 
 function shouldExpandFolder(row: NodeTreeRow, nodeId: string, collapsedNodeIds: ReadonlySet<string>) {
-  return row.hasChildren && row.node.kind === 'folder' && collapsedNodeIds.has(nodeId);
+  return !isHomeNode(row.node) && row.hasChildren && row.node.kind === 'folder' && collapsedNodeIds.has(nodeId);
 }
 
 function resolveNodeListRowCount(props: NodeListRowsProps, row: NodeTreeRow) {
@@ -124,6 +124,7 @@ function resolveNodeListRowCount(props: NodeListRowsProps, row: NodeTreeRow) {
 
 function resolveNodeListRowModel(props: NodeListRowsProps, row: NodeTreeRow) {
   const node = props.nodesById[row.node.id];
+  const isHome = isHomeNode(node);
   const isInbox = isInboxNode(node);
   const isTrashRoot = isTrashNode(node);
   const isVirtualRoot = isVirtualRootNode(node);
@@ -144,7 +145,7 @@ function resolveNodeListRowModel(props: NodeListRowsProps, row: NodeTreeRow) {
   const leafIconKind = resolveLeafIconKind(nodeIconKind);
   const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow(leafIconKind);
 
-  return { isDerivedNode, isInbox, isTrashRoot, isVirtualRoot, leafIconKind, nodeIconKind, nodeIconState, shouldFadeWholeRow };
+  return { isDerivedNode, isHome, isInbox, isTrashRoot, isVirtualRoot, leafIconKind, nodeIconKind, nodeIconState, shouldFadeWholeRow };
 }
 
 function resolveActiveRowIndex(rows: readonly NodeTreeRow[], activeNodeId: string | null) {

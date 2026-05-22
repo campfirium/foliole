@@ -1,7 +1,7 @@
 import { canNodeAcceptMovedNode } from './nodeMovementRules';
 import type { Node } from './nodeTypes';
 import { hasNodeContent } from './nodeTypes';
-import { isInboxNode, isVirtualNode, isVirtualRootNode } from './specialNodes';
+import { isHomeNode, isInboxNode, isVirtualNode, isVirtualRootNode } from './specialNodes';
 
 function isVisibleNode(
   nodeId: string,
@@ -40,6 +40,9 @@ export function canNodeAcceptMovedChildren(
   if (!node) {
     return false;
   }
+  if (isHomeNode(node)) {
+    return false;
+  }
   if (isVirtualRootNode(node)) {
     return movedNodeId ? canNodeAcceptMovedNode(node, nodesById[movedNodeId]) : false;
   }
@@ -59,7 +62,7 @@ export function isNodeContentLocked(
   hiddenNodeIds?: ReadonlySet<string>
 ) {
   const node = nodesById[nodeId];
-  if (!node || isInboxNode(node)) {
+  if (!node || isHomeNode(node) || isInboxNode(node)) {
     return false;
   }
   return isNodeContentEmpty(node) && hasChildNodes(nodeId, nodeOrder, nodesById, hiddenNodeIds);

@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
+import { isHomeNode, isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { NODE_TITLE_SLOT_PADDING_TOP, shouldReserveNodeTitleSlot } from '../../shared/lib/nodeTitleSlot';
 import { updateNodeImageState } from '../../shared/platform/performanceDiagnosticsProbe';
 import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
@@ -186,7 +186,7 @@ export function getDocumentPanelView(
         activeNode &&
           activeNode.kind === 'folder' &&
           !isVirtualNode(activeNode) &&
-          (props.editorNodeId === props.activeNodeId || isInboxNode(activeNode))
+          (props.editorNodeId === props.activeNodeId || isHomeNode(activeNode) || isInboxNode(activeNode))
     )
   };
 }

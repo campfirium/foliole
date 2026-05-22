@@ -1,6 +1,7 @@
 import { useEffect, useMemo, type Dispatch, type SetStateAction } from 'react';
 
 import type { NodeTreeRow } from '../model/nodeTree';
+import { isHomeNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import {
@@ -55,19 +56,23 @@ export function useCollapsedNodeState({
     collapsedNoteNodeIds: noteState.collapsedNoteNodeIds,
     collapsedTrashNodeIds,
     setCollapsedTrashNodeIdList,
-    expandNoteCollapse: (nodeId: string) =>
-      expandManualCollapseNode(
-        nodeId,
-        noteState.setManualCollapsedNoteNodeIdList,
-        noteState.setManualExpandedNoteNodeIdList
-      ),
+      expandNoteCollapse: (nodeId: string) =>
+      noteState.noteCollapsibleNodeIds.has(nodeId)
+        ? expandManualCollapseNode(
+            nodeId,
+            noteState.setManualCollapsedNoteNodeIdList,
+            noteState.setManualExpandedNoteNodeIdList
+          )
+        : undefined,
     toggleNoteCollapse: (nodeId: string) =>
-      toggleManualCollapseNode(
-        nodeId,
-        noteState.collapsedNoteNodeIds,
-        noteState.setManualCollapsedNoteNodeIdList,
-        noteState.setManualExpandedNoteNodeIdList
-      ),
+      noteState.noteCollapsibleNodeIds.has(nodeId)
+        ? toggleManualCollapseNode(
+            nodeId,
+            noteState.collapsedNoteNodeIds,
+            noteState.setManualCollapsedNoteNodeIdList,
+            noteState.setManualExpandedNoteNodeIdList
+          )
+        : undefined,
     collapseAllNotes: noteState.collapseAllNotes,
     expandAllNotes: noteState.expandAllNotes
   };
@@ -102,6 +107,7 @@ function useNoteCollapsedState({
   return {
     collapseAllNotes,
     hasCollapsibleNotes: noteCollapsibleNodeIds.size > 0,
+    noteCollapsibleNodeIds,
     collapsedNoteNodeIds,
     expandAllNotes,
     hasCollapsedNotes: checkHasCollapsedNotes(noteCollapsibleNodeIds, collapsedNoteNodeIds),
@@ -112,7 +118,7 @@ function useNoteCollapsedState({
 
 function useNoteCollapsibleNodeIds(noteRowsAll: NodeTreeRow[]) {
   return useMemo(
-    () => new Set(noteRowsAll.filter((row) => row.hasChildren).map((row) => row.node.id)),
+    () => new Set(noteRowsAll.filter((row) => row.hasChildren && !isHomeNode(row.node)).map((row) => row.node.id)),
     [noteRowsAll]
   );
 }
@@ -223,7 +229,9 @@ function mergeCollapsedNodeIds(
 ) {
   const next = new Set(autoCollapsedNodeIds);
   for (const nodeId of manualCollapsedNodeIdList) {
-    next.add(nodeId);
+    if (autoCollapsedNodeIds.has(nodeId)) {
+      next.add(nodeId);
+    }
   }
   for (const nodeId of manualExpandedNodeIdList) {
     next.delete(nodeId);

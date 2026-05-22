@@ -1,5 +1,5 @@
 import { canCreateChildNodeKind } from '../../lib/core/nodes/folderTopicItemCommands';
-import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 
 import { resolveNextParentNodeId, type NodeDropIntent } from './workspaceMoveNodes';
 import { isNodeInSubtree } from './workspaceNodeTreeOrder';
@@ -11,7 +11,13 @@ export function canCreateChildUnderParent(
   childKind: 'folder' | 'topic' | 'item'
 ) {
   const parentNode = state.nodesById[parentNodeId];
-  if (!parentNode || parentNodeId === VIRTUAL_ROOT_NODE_ID || parentNode.specialKind === 'virtual') {
+  if (
+    !parentNode ||
+    parentNodeId === HOME_NODE_ID ||
+    parentNodeId === VIRTUAL_ROOT_NODE_ID ||
+    parentNode.specialKind === 'home' ||
+    parentNode.specialKind === 'virtual'
+  ) {
     return false;
   }
   return canCreateChildNodeKind(parentNode.kind, childKind);
@@ -32,7 +38,7 @@ export function canMoveRootsIntoTarget(
   if (movingVirtualNode) {
     return nextParentNodeId === VIRTUAL_ROOT_NODE_ID;
   }
-  if (nextParentNodeId === VIRTUAL_ROOT_NODE_ID) {
+  if (nextParentNodeId === HOME_NODE_ID || nextParentNodeId === VIRTUAL_ROOT_NODE_ID) {
     return false;
   }
   if (nextParentNodeId === null) {

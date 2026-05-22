@@ -1,17 +1,18 @@
-import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
+import { isHomeNode, isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 import { createPdfHighlightHandler } from './appControllerPdfHighlight';
 
 export function resolveEditorBindingArgs(args: BuildControllerLayoutPropsArgs) {
   const isInboxActiveNode = !args.runtime.isViewingTrashNode && isInboxNode(args.activeNode);
+  const isHomeActiveNode = !args.runtime.isViewingTrashNode && isHomeNode(args.activeNode);
   const trashNodeId = args.selectedTrashNode?.id ?? null;
   return {
-    editorNodeId: args.runtime.isViewingTrashNode ? trashNodeId : isInboxActiveNode ? null : args.ws.activeNodeId,
+    editorNodeId: args.runtime.isViewingTrashNode ? trashNodeId : isHomeActiveNode || isInboxActiveNode ? null : args.ws.activeNodeId,
     editorNodeViewState:
       args.runtime.isViewingTrashNode
         ? (trashNodeId ? args.ws.nodeViewById[trashNodeId] : undefined)
-        : !isInboxActiveNode && args.ws.activeNodeId
+        : !isHomeActiveNode && !isInboxActiveNode && args.ws.activeNodeId
           ? args.ws.nodeViewById[args.ws.activeNodeId]
           : undefined
   };
