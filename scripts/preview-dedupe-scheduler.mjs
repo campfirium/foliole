@@ -42,7 +42,7 @@ function readWaitOnFailure(target, env = process.env) {
 }
 
 function canTakeOver(run, now) {
-  return run?.status === 'running' && now - Number(run.startedAt) > STATE_STALE_MS && !isPidAlive(run.driverPid);
+  return run?.status === 'running' && (!isPidAlive(run.driverPid) || now - Number(run.startedAt) > STATE_STALE_MS);
 }
 
 function createRun(requestId, now) {

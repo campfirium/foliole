@@ -1,6 +1,6 @@
-/* global console, process, setTimeout */
+/* global clearTimeout, console, process, setTimeout */
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -35,6 +35,18 @@ export function runCapture(command, args, options = {}) {
     let stdout = '';
     let stderr = '';
     let child;
+    let settled = false;
+    let timeout = null;
+    const finish = (result) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      resolve({ stderr, stdout, ...result });
+    };
     try {
       child = spawn(command, args, {
         cwd: options.cwd ?? process.cwd(),
@@ -43,7 +55,7 @@ export function runCapture(command, args, options = {}) {
         stdio: ['ignore', 'pipe', 'pipe']
       });
     } catch (error) {
-      resolve({ code: 1, error, stderr: error instanceof Error ? error.message : String(error), stdout });
+      finish({ code: 1, error, stderr: error instanceof Error ? error.message : String(error), stdout });
       return;
     }
     child.stdout.on('data', (chunk) => {
@@ -53,11 +65,25 @@ export function runCapture(command, args, options = {}) {
       stderr += String(chunk);
     });
     child.on('error', (error) => {
-      resolve({ code: 1, error, stderr, stdout });
+      finish({ code: 1, error, stderr, stdout });
     });
     child.on('exit', (code) => {
-      resolve({ code: code ?? 1, error: null, stderr, stdout });
+      finish({ code: code ?? 1, error: null, stderr, stdout });
     });
+    if (options.timeoutMs > 0) {
+      timeout = setTimeout(() => {
+        if (process.platform === 'win32' && child.pid) {
+          spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+        } else {
+          child.kill();
+        }
+        finish({
+          code: 1,
+          error: new Error(`${command} timed out after ${options.timeoutMs}ms`)
+        });
+      }, options.timeoutMs);
+      timeout.unref?.();
+    }
   });
 }
 

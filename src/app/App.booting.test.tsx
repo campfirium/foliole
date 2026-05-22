@@ -5,6 +5,11 @@ const useAppController = vi.fn();
 const ensureWorkspaceHydrated = vi.fn(() => Promise.resolve());
 const reportRuntimeAppReady = vi.fn();
 const reportRuntimeBootStage = vi.fn();
+const overlayMocks = vi.hoisted(() => ({
+  CommandPalette: vi.fn(() => <div>command-palette</div>),
+  GoToNodePalette: vi.fn(() => <div>go-to-node-palette</div>),
+  SearchPalette: vi.fn(() => <div>search-palette</div>)
+}));
 
 function setDocumentVisibility(visibilityState: DocumentVisibilityState) {
   Object.defineProperty(document, 'visibilityState', {
@@ -48,15 +53,15 @@ vi.mock('./components/WorkspaceLayout', () => ({
 }));
 
 vi.mock('./components/CommandPalette', () => ({
-  CommandPalette: () => null
+  CommandPalette: overlayMocks.CommandPalette
 }));
 
 vi.mock('./components/SearchPalette', () => ({
-  SearchPalette: () => null
+  SearchPalette: overlayMocks.SearchPalette
 }));
 
 vi.mock('./components/GoToNodePalette', () => ({
-  GoToNodePalette: () => null
+  GoToNodePalette: overlayMocks.GoToNodePalette
 }));
 
 vi.mock('../shared/platform/performanceDiagnosticsProbe', () => ({
@@ -74,23 +79,33 @@ function createLayoutProps(isWorkspaceHydrated = false) {
   };
 }
 
+function createClosedOverlayState() {
+  return {
+    goToNodeState: { isOpen: false },
+    moveToNodeState: { isOpen: false },
+    paletteState: { isOpen: false },
+    reviewSourceTopicDeleteDialog: { isOpen: false },
+    searchState: { isOpen: false }
+  };
+}
+
 beforeEach(() => {
   useAppController.mockReset();
   ensureWorkspaceHydrated.mockClear();
   reportRuntimeAppReady.mockClear();
   reportRuntimeBootStage.mockClear();
+  overlayMocks.CommandPalette.mockClear();
+  overlayMocks.GoToNodePalette.mockClear();
+  overlayMocks.SearchPalette.mockClear();
   document.body.dataset.bootSkeleton = '';
   setDocumentVisibility('visible');
 });
 
 it('renders the workspace chrome immediately without a boot-only shell', async () => {
   useAppController.mockReturnValue({
+    ...createClosedOverlayState(),
     hotkeySettings: {},
-    goToNodeState: {},
-    moveToNodeState: {},
-    layoutProps: createLayoutProps(),
-    paletteState: {},
-    searchState: {}
+    layoutProps: createLayoutProps()
   });
 
   const { App } = await import('./App');
@@ -104,16 +119,37 @@ it('renders the workspace chrome immediately without a boot-only shell', async (
     expect(ensureWorkspaceHydrated).toHaveBeenCalledTimes(1);
   });
   expect(reportRuntimeAppReady).not.toHaveBeenCalled();
+  expect(overlayMocks.CommandPalette).not.toHaveBeenCalled();
+  expect(overlayMocks.GoToNodePalette).not.toHaveBeenCalled();
+  expect(overlayMocks.SearchPalette).not.toHaveBeenCalled();
+});
+
+it('loads lazy command overlays only after the command entry opens', async () => {
+  useAppController.mockReturnValue({
+    ...createClosedOverlayState(),
+    hotkeySettings: {},
+    layoutProps: createLayoutProps(),
+    paletteState: { isOpen: true }
+  });
+
+  const { App } = await import('./App');
+
+  render(<App />);
+
+  expect(screen.getByText('workspace-layout')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByText('command-palette')).toBeInTheDocument();
+  });
+  expect(overlayMocks.CommandPalette).toHaveBeenCalledTimes(1);
+  expect(overlayMocks.GoToNodePalette).not.toHaveBeenCalled();
+  expect(overlayMocks.SearchPalette).not.toHaveBeenCalled();
 });
 
 it('reports app ready only after the hydrated workspace has painted', async () => {
   useAppController.mockReturnValue({
+    ...createClosedOverlayState(),
     hotkeySettings: {},
-    goToNodeState: {},
-    moveToNodeState: {},
-    layoutProps: createLayoutProps(true),
-    paletteState: {},
-    searchState: {}
+    layoutProps: createLayoutProps(true)
   });
 
   const { App } = await import('./App');
@@ -131,12 +167,9 @@ it('reports app ready only after the hydrated workspace has painted', async () =
 it('reports app ready without waiting for animation frames while the window is hidden', async () => {
   setDocumentVisibility('hidden');
   useAppController.mockReturnValue({
+    ...createClosedOverlayState(),
     hotkeySettings: {},
-    goToNodeState: {},
-    moveToNodeState: {},
-    layoutProps: createLayoutProps(true),
-    paletteState: {},
-    searchState: {}
+    layoutProps: createLayoutProps(true)
   });
 
   const { App } = await import('./App');

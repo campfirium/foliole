@@ -166,7 +166,7 @@ async function runPreviewFlow({ command, requireActualPreview, target }) {
   const storedHash = await readStoredHash(target);
   const forced = shouldForcePreview();
   await logEvent(target, 'hash-compared', { currentHash, forced, requireActualPreview, storedHash: storedHash || null });
-  if (!forced && storedHash === currentHash) {
+  if (!forced && !requireActualPreview && storedHash === currentHash) {
     if (canSkipCoveredPreview(target)) {
       await logEvent(target, 'real-preview-skipped', { action: 'skip-real-preview', currentHash, reason: 'covered-running-runtime' });
       console.log(`[${target}-preview] dedupe: covered hash=${currentHash} action=skip-real-preview`);

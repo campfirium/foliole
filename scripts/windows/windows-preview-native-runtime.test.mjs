@@ -1,3 +1,5 @@
+/* global process */
+
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -46,4 +48,13 @@ it('resolves files committed since a runtime head', async () => {
   } finally {
     await rm(repoRoot, { force: true, recursive: true });
   }
+});
+
+it('times out captured commands so preview control cannot hang forever', async () => {
+  const result = await runCapture(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], {
+    timeoutMs: 50
+  });
+
+  expect(result.code).toBe(1);
+  expect(result.error?.message).toContain('timed out after 50ms');
 });

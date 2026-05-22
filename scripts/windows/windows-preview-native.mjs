@@ -20,15 +20,10 @@ import {
 import { isBootEventAfterIntent, isMatchingPreviewDelivery, isTrustedRunningStatus, parseWindowsClientStatus, selectNativePreviewActionWithCommittedFiles } from './windows-preview-native-support.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
-const {
-  appReadyFile,
-  clientScript,
-  nativeAbiScript,
-  reloadDeliveryFile,
-  repoRoot,
-  restartDeliveryFile
-} = resolveWindowsNativePaths();
+const { appReadyFile, clientScript, nativeAbiScript, reloadDeliveryFile, repoRoot, restartDeliveryFile } =
+  resolveWindowsNativePaths();
 const PREVIEW_TIMEOUT_MS = Number.parseInt(process.env.WINDOWS_PREVIEW_TIMEOUT_MS ?? '25000', 10);
+const CLIENT_ACTION_TIMEOUT_MS = Number.parseInt(process.env.WINDOWS_CLIENT_ACTION_TIMEOUT_MS ?? '120000', 10);
 
 async function ensureFreshElectronDist() {
   const freshness = inspectElectronDistFreshness({ repoRoot });
@@ -67,7 +62,7 @@ async function verifyNativeAbi() {
 }
 
 async function runClientAction(action) {
-  const result = await runCapture(process.execPath, [clientScript, action]);
+  const result = await runCapture(process.execPath, [clientScript, action], { timeoutMs: CLIENT_ACTION_TIMEOUT_MS });
   const output = `${result.stdout}${result.stderr}`;
   if (output.trim()) {
     console.log(output.trim());
@@ -79,7 +74,11 @@ async function runDirectRestart(reason) {
   console.log('[windows-preview-native] selected action: direct-restart');
   console.log(`[windows-preview-native] reason: ${reason}`);
   const result = await runClientAction('restart');
-  if (result.code !== 0 || !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output)) {
+  if (
+    result.code !== 0 ||
+    !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output) ||
+    !await waitForTrustedRunning('direct restart status')
+  ) {
     throw new Error('direct restart failed');
   }
 }
@@ -189,7 +188,11 @@ async function applyAction(selection, currentHead, dryRun) {
   }
   const action = selection.action === 'fallback-start' ? 'start' : selection.action;
   const result = await runClientAction(action);
-  if (result.code !== 0 || !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output)) {
+  if (
+    result.code !== 0 ||
+    !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output) ||
+    !await waitForTrustedRunning(`${action} status`, currentHead)
+  ) {
     throw new Error(`${action} failed`);
   }
   return 'STARTED';
