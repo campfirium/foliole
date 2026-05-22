@@ -7,6 +7,11 @@ import {
 } from '../../features/editor/model/editorOperationHistory';
 import { canNodeAcceptMovedChildren } from '../../features/nodes/model/nodeContainers';
 import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
+import {
+  resolveReviewFirstChildNodeId,
+  resolveReviewSiblingNodeId,
+  resolveReviewSourceTopicNodeId
+} from '../../features/review/model/reviewGameNavigation';
 import { definedProps } from '../../shared/lib/definedProps';
 import { getWorkspaceRedoTitle, getWorkspaceUndoTitle } from '../../store/workspaceActionHistory';
 import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
@@ -124,6 +129,12 @@ function buildPaletteOptions(
   hasNavigableNodes: boolean
 ) {
   const canUseCurrentTopic = canMergeHighlightsIntoTopic(args);
+  const activeNodeId = args.activeNodeId;
+  const reviewNavigationSource = {
+    nodeOrder: args.ws.nodeOrder,
+    nodesById: args.ws.nodesById,
+    trashedNodeIds: args.ws.trashedNodeIds
+  };
   const historyOptions = resolveEditorAwarePaletteHistoryOptions({
     activeNodeId: args.activeNodeId,
     appActionHistory: args.ws.appActionHistory,
@@ -156,6 +167,13 @@ function buildPaletteOptions(
     canCompleteReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDeleteReviewItem: args.hasReviewCard,
+    canReviewNavigateParent: Boolean(args.isStudyMode && activeNodeId && args.ws.nodesById[activeNodeId]?.parentNodeId),
+    canReviewNavigateBack: args.isStudyMode && args.nav.canGoBack,
+    canReviewNavigateForward: args.isStudyMode && args.nav.canGoForward,
+    canReviewNavigateDown: Boolean(args.isStudyMode && activeNodeId && resolveReviewFirstChildNodeId(activeNodeId, reviewNavigationSource)),
+    canReviewNavigatePreviousSibling: Boolean(args.isStudyMode && activeNodeId && resolveReviewSiblingNodeId(activeNodeId, -1, reviewNavigationSource)),
+    canReviewNavigateNextSibling: Boolean(args.isStudyMode && activeNodeId && resolveReviewSiblingNodeId(activeNodeId, 1, reviewNavigationSource)),
+    canDeleteReviewSourceTopic: Boolean(args.isStudyMode && activeNodeId && resolveReviewSourceTopicNodeId(activeNodeId, reviewNavigationSource)),
     isImmersiveMode: args.isImmersiveMode,
     isDevReviewStatusBarPersistenceEnabled: args.study.isDevReviewStatusBarPersistenceEnabled,
     isReviewMode: args.isStudyMode

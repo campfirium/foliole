@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
-import { matchesShortcutSet } from '../../shared/commands/shortcuts';
+import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 
+import { tryRunDeleteSourceTopicShortcut, tryRunReviewNavigation, tryRunShortcut } from './reviewKeyboardNavigation';
 import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
 
 interface UseReviewKeyboardShortcutsArgs {
@@ -11,6 +12,10 @@ interface UseReviewKeyboardShortcutsArgs {
   isCommandPaletteOpen: boolean;
   isSearchPaletteOpen: boolean;
   isSettingsOpen: boolean;
+  activeNodeId: string | null;
+  nodeOrder: string[];
+  nodesById: Record<string, Node>;
+  trashedNodeIds: string[];
   reviewCurrentNodeId: string | null;
   isCurrentReviewItemVisible: boolean;
   isAnswerRevealed: boolean;
@@ -24,19 +29,33 @@ interface UseReviewKeyboardShortcutsArgs {
   readingReadShortcuts: CommandShortcutSet | undefined;
   readingDismissShortcuts: CommandShortcutSet | undefined;
   deleteCurrentItemShortcuts: CommandShortcutSet | undefined;
+  navigateParentShortcuts: CommandShortcutSet | undefined;
+  navigateBackShortcuts: CommandShortcutSet | undefined;
+  navigateForwardShortcuts: CommandShortcutSet | undefined;
+  navigateDownShortcuts: CommandShortcutSet | undefined;
+  navigatePreviousSiblingShortcuts: CommandShortcutSet | undefined;
+  navigateNextSiblingShortcuts: CommandShortcutSet | undefined;
+  deleteSourceTopicShortcuts: CommandShortcutSet | undefined;
+  isSourceTopicDeleteDialogOpen: boolean;
   completeReviewItem: () => boolean;
   deferReviewItem: () => boolean;
   deleteCurrentReviewItem: () => boolean;
+  deleteReviewSourceTopic: (nodeId: string) => boolean;
   dismissReviewItem: () => boolean;
+  goBack: () => void;
+  goForward: () => void;
+  goParent: () => void;
   resumeReviewItem: () => void;
   revealReviewAnswer: () => void;
+  selectNode: (nodeId: string) => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => Promise<boolean>;
 }
 
 export function useReviewKeyboardShortcuts(args: UseReviewKeyboardShortcutsArgs) {
   const [isReviewEditing, setIsReviewEditing] = useReviewEditingState(args.isStudyMode);
+  const lastChildByParentIdRef = useReviewParentReturnMemory(args.isStudyMode);
   useReviewEditingEscapeHandler(args, isReviewEditing, setIsReviewEditing);
-  useReviewHotkeyHandler(args, isReviewEditing, setIsReviewEditing);
+  useReviewHotkeyHandler(args, isReviewEditing, setIsReviewEditing, lastChildByParentIdRef);
   return isReviewEditing;
 }
 
@@ -59,6 +78,16 @@ function useReviewEditingState(isStudyMode: boolean) {
     };
   }, [isStudyMode]);
   return [isReviewEditing, setIsReviewEditing] as const;
+}
+
+function useReviewParentReturnMemory(isStudyMode: boolean) {
+  const ref = useRef<Record<string, string>>({});
+  useEffect(() => {
+    if (!isStudyMode) {
+      ref.current = {};
+    }
+  }, [isStudyMode]);
+  return ref;
 }
 
 function useReviewEditingEscapeHandler(
@@ -97,38 +126,27 @@ function useReviewEditingEscapeHandler(
 function useReviewHotkeyHandler(
   args: UseReviewKeyboardShortcutsArgs,
   isReviewEditing: boolean,
-  setIsReviewEditing: (value: boolean) => void
+  setIsReviewEditing: (value: boolean) => void,
+  lastChildByParentIdRef: MutableRefObject<Record<string, string>>
 ) {
   useEffect(
     () =>
-      onWindowKeydown((event) => handleReviewKeydown(event, args, isReviewEditing, setIsReviewEditing)),
-    [args, isReviewEditing, setIsReviewEditing]
+      onWindowKeydown((event) => handleReviewKeydown(event, args, isReviewEditing, setIsReviewEditing, lastChildByParentIdRef)),
+    [args, isReviewEditing, setIsReviewEditing, lastChildByParentIdRef]
   );
-}
-
-function tryRunShortcut(
-  event: KeyboardEvent,
-  shortcuts: CommandShortcutSet | undefined,
-  action: () => void | boolean
-) {
-  if (!matchesShortcutSet(event, shortcuts)) {
-    return false;
-  }
-  event.preventDefault();
-  action();
-  return true;
 }
 
 function handleReviewKeydown(
   event: KeyboardEvent,
   args: UseReviewKeyboardShortcutsArgs,
   isReviewEditing: boolean,
-  setIsReviewEditing: (value: boolean) => void
+  setIsReviewEditing: (value: boolean) => void,
+  lastChildByParentIdRef: MutableRefObject<Record<string, string>>
 ) {
   if (!args.isStudyMode || args.isCommandPaletteOpen || args.isSearchPaletteOpen || args.isSettingsOpen) {
     return;
   }
-  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.isComposing || event.repeat) {
+  if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.isComposing || event.repeat) {
     return;
   }
   const isTargetEditing = isEditableKeyboardTarget(event.target) || isEditableKeyboardTarget(document.activeElement) || isReviewEditing;
@@ -141,17 +159,35 @@ function handleReviewKeydown(
     event.preventDefault();
     return;
   }
-  if (isTargetEditing || !args.reviewCurrentNodeId || !args.isCurrentReviewItemVisible) {
-    if (!isTargetEditing && args.reviewCurrentNodeId && !args.isCurrentReviewItemVisible) {
-      if (tryRunShortcut(event, args.deleteCurrentItemShortcuts, args.deleteCurrentReviewItem)) {
-        return;
-      }
-      const resumeShortcuts = args.isCurrentItemGradable ? args.revealAnswerShortcuts : args.readingReadShortcuts;
-      tryRunShortcut(event, resumeShortcuts, args.resumeReviewItem);
-    }
+  if (isTargetEditing) {
     return;
   }
+  if (event.altKey) {
+    tryRunDeleteSourceTopicShortcut(event, args);
+    return;
+  }
+  if (tryRunReviewNavigation(event, args, lastChildByParentIdRef)) {
+    return;
+  }
+  if (!args.reviewCurrentNodeId || !args.isCurrentReviewItemVisible) {
+    handleHiddenReviewItemKeydown(event, args);
+    return;
+  }
+  handleVisibleReviewItemKeydown(event, args);
+}
 
+function handleHiddenReviewItemKeydown(event: KeyboardEvent, args: UseReviewKeyboardShortcutsArgs) {
+  if (!args.reviewCurrentNodeId || args.isCurrentReviewItemVisible) {
+    return;
+  }
+  if (tryRunShortcut(event, args.deleteCurrentItemShortcuts, args.deleteCurrentReviewItem)) {
+    return;
+  }
+  const resumeShortcuts = args.isCurrentItemGradable ? args.revealAnswerShortcuts : args.readingReadShortcuts;
+  tryRunShortcut(event, resumeShortcuts, args.resumeReviewItem);
+}
+
+function handleVisibleReviewItemKeydown(event: KeyboardEvent, args: UseReviewKeyboardShortcutsArgs) {
   if (tryRunShortcut(event, args.deleteCurrentItemShortcuts, args.deleteCurrentReviewItem)) {
     return;
   }

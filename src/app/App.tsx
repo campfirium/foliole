@@ -17,6 +17,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { CompanionPairingRequestsDialog } from './components/CompanionPairingRequestsDialog';
 import { EpubImportReleaseModeDialog } from './components/EpubImportReleaseModeDialog';
 import { GoToNodePalette } from './components/GoToNodePalette';
+import { ReviewSourceTopicDeleteDialog } from './components/ReviewSourceTopicDeleteDialog';
 import { SearchPalette } from './components/SearchPalette';
 import { SearchResultPreviewPanel } from './components/SearchResultPreviewPanel';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
@@ -139,6 +140,7 @@ function AppOverlays({
         onSelectNode={controller.moveToNodeState.onOpenNode}
         placeholder="Type a title..."
       />
+      <ReviewSourceTopicDeleteDialog {...controller.reviewSourceTopicDeleteDialog} />
       <SearchResultPreviewPanel
         nodesById={controller.layoutProps.nodeList.nodesById}
         onClose={onCloseSearchPreview}

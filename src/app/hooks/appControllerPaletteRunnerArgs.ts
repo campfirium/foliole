@@ -11,6 +11,7 @@ import { requestToggleDismissedTopicVisibility } from '../components/dismissedTo
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
+import { createPaletteReviewActions } from './appControllerPaletteReviewActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
@@ -112,34 +113,6 @@ function createRestartAppCommand(args: {
   };
 }
 
-function createDeleteCurrentReviewItemCommand(args: {
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
-  return () => {
-    const nodeId = args.ws.reviewSession.currentNodeId;
-    if (!nodeId) {
-      return false;
-    }
-    args.ws.deleteNode(nodeId);
-    return true;
-  };
-}
-
-function createPaletteReviewActions(args: {
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
-  return {
-    completeReviewItem: args.ws.completeReviewItem,
-    deferReviewItem: args.ws.deferReviewItem,
-    deleteCurrentReviewItem: createDeleteCurrentReviewItemCommand({ ws: args.ws }),
-    dismissReviewItem: args.ws.dismissReviewItem,
-    exitReviewSession: args.ws.exitReviewSession,
-    gradeReviewCard: args.ws.gradeReviewCard,
-    revealReviewAnswer: args.ws.revealReviewAnswer,
-    startReviewSession: args.ws.startReviewSession
-  };
-}
-
 function createPaletteNavigationActions(args: {
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
@@ -179,6 +152,7 @@ export function createPaletteRunnerArgs(args: {
   layoutProps: WorkspaceLayoutProps;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   paletteItems: CommandPaletteItem[];
+  requestDeleteSourceTopic: (nodeId: string) => boolean;
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
   trash: ReturnType<typeof useWorkspaceControllerState>['trash'];

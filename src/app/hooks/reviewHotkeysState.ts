@@ -24,7 +24,14 @@ export const REVIEW_SHORTCUT_COMMAND_IDS = [
   APP_COMMAND_IDS.readingReviewLater,
   APP_COMMAND_IDS.readingReviewRead,
   APP_COMMAND_IDS.readingReviewDismiss,
-  APP_COMMAND_IDS.deleteCurrentReviewItem
+  APP_COMMAND_IDS.deleteCurrentReviewItem,
+  APP_COMMAND_IDS.reviewNavigateParent,
+  APP_COMMAND_IDS.reviewNavigateBack,
+  APP_COMMAND_IDS.reviewNavigateForward,
+  APP_COMMAND_IDS.reviewNavigateDown,
+  APP_COMMAND_IDS.reviewNavigatePreviousSibling,
+  APP_COMMAND_IDS.reviewNavigateNextSibling,
+  APP_COMMAND_IDS.deleteReviewSourceTopic
 ] as const;
 
 export const DOCUMENT_SHORTCUT_COMMAND_IDS = [APP_COMMAND_IDS.findInTopic, APP_COMMAND_IDS.enterPriorityMode] as const;

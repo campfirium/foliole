@@ -4,6 +4,28 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
 import { runAppCommand } from './appCommands';
 
+function createReviewCommandActions() {
+  return {
+    revealReviewAnswer: () => undefined,
+    toggleReviewMode: () => undefined,
+    gradeReviewAgain: () => undefined,
+    gradeReviewHard: () => undefined,
+    gradeReviewGood: () => undefined,
+    gradeReviewEasy: () => undefined,
+    readingReviewLater: () => undefined,
+    readingReviewRead: () => undefined,
+    readingReviewDismiss: () => undefined,
+    deleteCurrentReviewItem: () => undefined,
+    reviewNavigateParent: () => undefined,
+    reviewNavigateBack: () => undefined,
+    reviewNavigateForward: () => undefined,
+    reviewNavigateDown: () => undefined,
+    reviewNavigatePreviousSibling: () => undefined,
+    reviewNavigateNextSibling: () => undefined,
+    deleteReviewSourceTopic: () => undefined
+  };
+}
+
 function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand>[1]> = {}) {
   return {
     undo: () => undefined,
@@ -41,19 +63,10 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openTrash: () => undefined,
     restartApp: () => undefined,
     toggleBaseColorMode: () => undefined,
-    revealReviewAnswer: () => undefined,
     startClipboardImport: () => undefined,
-    toggleReviewMode: () => undefined,
     toggleEditorDisplayMode: () => undefined,
     toggleList: () => undefined,
-    gradeReviewAgain: () => undefined,
-    gradeReviewHard: () => undefined,
-    gradeReviewGood: () => undefined,
-    gradeReviewEasy: () => undefined,
-    readingReviewLater: () => undefined,
-    readingReviewRead: () => undefined,
-    readingReviewDismiss: () => undefined,
-    deleteCurrentReviewItem: () => undefined,
+    ...createReviewCommandActions(),
     toggleDevTools: () => undefined,
     ...overrides
   };
@@ -124,4 +137,18 @@ it('runs repair table through the shared command handler', () => {
   expectCommandRuns(APP_COMMAND_IDS.repairTable, { repairTable });
 
   expect(repairTable).toHaveBeenCalledTimes(1);
+});
+
+it('runs review navigation commands through the shared command handler', () => {
+  const reviewNavigateParent = vi.fn();
+  const reviewNavigateNextSibling = vi.fn();
+  const deleteReviewSourceTopic = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.reviewNavigateParent, { reviewNavigateParent });
+  expectCommandRuns(APP_COMMAND_IDS.reviewNavigateNextSibling, { reviewNavigateNextSibling });
+  expectCommandRuns(APP_COMMAND_IDS.deleteReviewSourceTopic, { deleteReviewSourceTopic });
+
+  expect(reviewNavigateParent).toHaveBeenCalledTimes(1);
+  expect(reviewNavigateNextSibling).toHaveBeenCalledTimes(1);
+  expect(deleteReviewSourceTopic).toHaveBeenCalledTimes(1);
 });

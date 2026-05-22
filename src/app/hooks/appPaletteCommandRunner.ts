@@ -34,6 +34,7 @@ interface PaletteCommandRunnerArgs {
   toggleDevReviewStatusBarPersistence: () => void;
   completeReviewItem: () => boolean;
   deleteCurrentReviewItem: () => boolean;
+  deleteReviewSourceTopic: () => boolean;
   deferReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
   redoWorkspaceAction: () => boolean;
@@ -52,6 +53,10 @@ interface PaletteCommandRunnerArgs {
   paletteItems: CommandPaletteItem[];
   recordRecentCommand: (id: string) => void;
   revealReviewAnswer: () => void;
+  reviewNavigateDown: () => boolean;
+  reviewNavigateNextSibling: () => boolean;
+  reviewNavigateParent: () => boolean;
+  reviewNavigatePreviousSibling: () => boolean;
   setCommandPaletteOpen: (open: boolean) => void;
   setGoToNodePaletteOpen: (open: boolean) => void;
   setIsMoveToNodePaletteOpen: (open: boolean) => void;
@@ -81,6 +86,7 @@ function createPaletteSettingsActions(args: PaletteCommandRunnerArgs) {
 function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
   return {
     deleteCurrentReviewItem: () => args.deleteCurrentReviewItem(),
+    deleteReviewSourceTopic: () => args.deleteReviewSourceTopic(),
     gradeReviewAgain: () => args.gradeReviewCard(1),
     gradeReviewHard: () => args.gradeReviewCard(2),
     gradeReviewGood: () => args.gradeReviewCard(3),
@@ -89,6 +95,12 @@ function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggl
     readingReviewLater: () => args.deferReviewItem(),
     readingReviewRead: () => args.completeReviewItem(),
     revealReviewAnswer: args.revealReviewAnswer,
+    reviewNavigateBack: args.goBack,
+    reviewNavigateDown: args.reviewNavigateDown,
+    reviewNavigateForward: args.goForward,
+    reviewNavigateNextSibling: args.reviewNavigateNextSibling,
+    reviewNavigateParent: args.reviewNavigateParent,
+    reviewNavigatePreviousSibling: args.reviewNavigatePreviousSibling,
     toggleReviewMode
   };
 }

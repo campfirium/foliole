@@ -6,7 +6,8 @@ import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import { measureSelectionComputation } from './appControllerInstrumentation';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
-import { useReviewEditingState } from './appControllerReviewEditing';
+import { useAppControllerReviewEditing } from './appControllerReviewEditing';
+import { useReviewSourceTopicDeleteDialog } from './appControllerReviewSourceDelete';
 import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import type { AppControllerResult } from './appControllerTypes';
 import { countDueReviewNodes } from './layoutPropsBuilder';
@@ -79,6 +80,7 @@ function buildAppControllerResult(args: {
   auxiliaryState: ReturnType<typeof useControllerAuxiliaryState>;
   controller: ReturnType<typeof useWorkspaceControllerState>;
   layoutProps: WorkspaceLayoutProps;
+  reviewSourceTopicDeleteDialog: ReturnType<typeof useReviewSourceTopicDeleteDialog>;
 }): AppControllerResult {
   return {
     hotkeySettings: args.auxiliaryState.hotkeySettings,
@@ -87,6 +89,12 @@ function buildAppControllerResult(args: {
     layoutProps: args.layoutProps,
     onOpenCompanionSyncSettings: () => openCompanionSyncSettings(args.controller.runtime),
     paletteState: args.auxiliaryState.paletteState,
+    reviewSourceTopicDeleteDialog: {
+      isOpen: args.reviewSourceTopicDeleteDialog.isOpen,
+      nodeTitle: args.reviewSourceTopicDeleteDialog.nodeTitle,
+      onCancel: args.reviewSourceTopicDeleteDialog.onCancel,
+      onConfirm: args.reviewSourceTopicDeleteDialog.onConfirm
+    },
     searchState: args.auxiliaryState.searchState
   };
 }
@@ -155,14 +163,14 @@ export function useAppController(args: {
   useReviewQueueDocumentPrefetch(ws.reviewSession);
   const isCurrentReviewItemGradable = (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
   const resumeReviewItem = useResumeReviewItem({ controller, nowIso, reviewSettings, ws });
-  const isReviewEditing = useReviewEditingState({
+  const reviewSourceTopicDeleteDialog = useReviewSourceTopicDeleteDialog(ws);
+  const isReviewEditing = useAppControllerReviewEditing({
+    controller,
     hotkeys,
-    isExternalViewOpen: controller.externalView.isExternalViewOpen,
     isCurrentReviewItemGradable,
     isStudyMode,
-    isVirtualViewOpen: controller.virtualView.isVirtualViewOpen,
-    onResumeReviewItem: resumeReviewItem,
-    runtime: controller.runtime,
+    resumeReviewItem,
+    reviewSourceTopicDeleteDialog,
     ws
   });
   const { layoutProps, paletteItems } = useDerivedControllerState({
@@ -192,8 +200,9 @@ export function useAppController(args: {
     layoutProps,
     onOpenSearchPreview: args.onOpenSearchPreview,
     paletteItems,
+    requestDeleteSourceTopic: reviewSourceTopicDeleteDialog.requestDeleteSourceTopic,
     ws
   });
 
-  return buildAppControllerResult({ auxiliaryState, controller, layoutProps });
+  return buildAppControllerResult({ auxiliaryState, controller, layoutProps, reviewSourceTopicDeleteDialog });
 }
