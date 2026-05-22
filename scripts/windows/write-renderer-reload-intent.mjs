@@ -6,6 +6,7 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
 export const DEV_RENDERER_RELOAD_INTENT_FILE = '.windows-dev-renderer-reload-intent.json';
+export const DEV_RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
 export const DEV_RENDERER_RELOAD_INTENT_KIND = 'foliole.electron.dev.renderer-reload-intent.v1';
 
 export function resolveRendererReloadIntentPath(rootDir) {
@@ -62,8 +63,12 @@ export async function writeRendererReloadIntent({
   }
 
   const filePath = resolveRendererReloadIntentPath(rootDir);
+  const deliveryPath = path.join(rootDir, DEV_RENDERER_RELOAD_DELIVERY_FILE);
   await mkdir(rootDir, { recursive: true });
-  const nonce = (await readRendererReloadIntentNonce(filePath)) + 1;
+  const nonce = Math.max(
+    await readRendererReloadIntentNonce(filePath),
+    await readRendererReloadIntentNonce(deliveryPath)
+  ) + 1;
   const intent = createRendererReloadIntent({
     head,
     nonce,

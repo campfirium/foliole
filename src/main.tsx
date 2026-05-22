@@ -18,6 +18,7 @@ import { bootstrapApp } from './startupBootstrap';
 import { createStartupErrorActions, resolveStartupView } from './startupViewMode';
 
 const ROOT_ID = 'root';
+const STARTUP_RESOURCE_SAMPLE_LIMIT = 16;
 
 function renderStartupError(message: string) {
   const rootElement = document.getElementById(ROOT_ID);
@@ -103,14 +104,20 @@ function registerStartupWatchdog() {
 function reportPendingModuleImport(stage: string, startedAt: number) {
   reportRuntimeBootStage(stage, {
     durationMs: Math.round(performance.now() - startedAt),
-    resources: performance
-      .getEntriesByType('resource')
-      .slice(-12)
-      .map((entry) => ({
-        duration: Math.round(entry.duration),
-        name: entry.name
-      }))
+    resources: collectStartupResourceTimings()
   });
+}
+
+function collectStartupResourceTimings() {
+  return performance
+    .getEntriesByType('resource')
+    .map((entry) => ({
+      duration: Math.round(entry.duration),
+      name: entry.name,
+      startTime: Math.round(entry.startTime)
+    }))
+    .sort((left, right) => right.duration - left.duration)
+    .slice(0, STARTUP_RESOURCE_SAMPLE_LIMIT);
 }
 
 async function mountApp() {
@@ -126,6 +133,7 @@ async function mountApp() {
     href: window.location.href,
     readyState: document.readyState,
     nativeInvokeReady: isRuntimeInvokeAvailable(),
+    resources: collectStartupResourceTimings(),
     userAgent: navigator.userAgent
   };
   console.info('[startup] boot context', {

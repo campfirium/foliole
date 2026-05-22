@@ -6,6 +6,7 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
 export const DEV_RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
+export const DEV_RESTART_DELIVERY_FILE = '.windows-dev-restart-delivered.json';
 export const DEV_RESTART_INTENT_KIND = 'foliole.electron.dev.restart-intent.v1';
 
 export function resolveRestartIntentPath(rootDir) {
@@ -62,8 +63,12 @@ export async function writeRestartIntent({
   }
 
   const filePath = resolveRestartIntentPath(rootDir);
+  const deliveryPath = path.join(rootDir, DEV_RESTART_DELIVERY_FILE);
   await mkdir(rootDir, { recursive: true });
-  const nonce = (await readRestartIntentNonce(filePath)) + 1;
+  const nonce = Math.max(
+    await readRestartIntentNonce(filePath),
+    await readRestartIntentNonce(deliveryPath)
+  ) + 1;
   const intent = createRestartIntent({
     head,
     nonce,

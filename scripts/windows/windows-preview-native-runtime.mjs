@@ -2,6 +2,7 @@
 
 import { spawn } from 'node:child_process';
 import { execFile } from 'node:child_process';
+import path from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -12,11 +13,21 @@ export function wait(ms) {
   });
 }
 
-export function npmRunCommand(scriptName) {
-  if (process.env.npm_execpath) {
-    return { args: [process.env.npm_execpath, 'run', scriptName], command: process.execPath };
+export function createNpmCommand(args, env = process.env, platform = process.platform, nodePath = process.execPath) {
+  if (env.npm_execpath) {
+    return { args: [env.npm_execpath, ...args], command: nodePath };
   }
-  return { args: ['run', scriptName], command: process.platform === 'win32' ? 'npm.cmd' : 'npm' };
+  if (platform === 'win32') {
+    return {
+      args: [path.join(path.dirname(nodePath), 'node_modules', 'npm', 'bin', 'npm-cli.js'), ...args],
+      command: nodePath
+    };
+  }
+  return { args, command: 'npm' };
+}
+
+export function npmRunCommand(scriptName) {
+  return createNpmCommand(['run', scriptName]);
 }
 
 export function runCapture(command, args, options = {}) {

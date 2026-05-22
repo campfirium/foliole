@@ -7,6 +7,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEV_RESTART_DELIVERY_FILE,
   DEV_RESTART_INTENT_FILE,
   DEV_RESTART_INTENT_KIND,
   parseRestartIntentNonce,
@@ -59,6 +60,23 @@ describe('writeRestartIntent', () => {
       });
 
       expect(result.intent.nonce).toBe(1);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it('continues the nonce from the last delivered restart intent', async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-restart-intent-'));
+    try {
+      await writeFile(path.join(rootDir, DEV_RESTART_DELIVERY_FILE), JSON.stringify({ nonce: 7 }), 'utf8');
+
+      const result = await writeRestartIntent({
+        head: 'head-8',
+        reason: 'Class B: runtime behind committed electron changes',
+        rootDir
+      });
+
+      expect(result.intent.nonce).toBe(8);
     } finally {
       await rm(rootDir, { recursive: true, force: true });
     }
