@@ -10,46 +10,11 @@ import { fileURLToPath } from 'node:url';
 import { runScheduledPreview, shouldForcePreview } from './preview-dedupe-scheduler.mjs';
 import { buildDiagnostics, formatDiagnosticsSummary } from './preview-dedupe-diagnostics.mjs';
 import { appendPreviewEvent } from './preview-dedupe-event-log.mjs';
+import { TARGET_PATHS } from './preview-dedupe-targets.mjs';
 
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = path.resolve(process.env.PREVIEW_DEDUPE_REPO_ROOT ?? DEFAULT_REPO_ROOT);
 const VALID_TARGETS = new Set(['android', 'windows']);
-const TARGET_PATHS = {
-  android: [
-    'android/',
-    'scripts/preview-dedupe-scheduler.mjs',
-    'scripts/preview-dedupe-state-store.mjs',
-    'scripts/preview-dedupe-event-log.mjs',
-    'scripts/preview-dedupe.mjs',
-    'scripts/android/',
-    'src/companion/',
-    'src/shared/',
-    'src/features/',
-    'lib/',
-    'package.json',
-    'package-lock.json',
-    'capacitor.config.ts',
-    'vite.companion.config.ts'
-  ],
-  windows: [
-    'electron/',
-    'scripts/preview-dedupe-scheduler.mjs',
-    'scripts/preview-dedupe-state-store.mjs',
-    'scripts/preview-dedupe-event-log.mjs',
-    'scripts/preview-dedupe.mjs',
-    'scripts/windows/',
-    'src/app/',
-    'src/features/',
-    'src/shared/',
-    'src/store/',
-    'lib/',
-    'package.json',
-    'package-lock.json',
-    'index.html',
-    'vite.config.ts',
-    'playwright.desktop.config.ts'
-  ]
-};
 
 function parseArgs(argv) {
   const separatorIndex = argv.indexOf('--');
@@ -174,6 +139,10 @@ function canSkipCoveredPreview(target) {
   return isWindowsRuntimeRunning();
 }
 
+function previewStatus(target) {
+  return target === 'windows' ? 'STARTED' : 'SYNCED';
+}
+
 async function logDiagnostics(target, stage) {
   if (process.env.PREVIEW_DEDUPE_DIAGNOSTICS === '0') {
     return;
@@ -199,7 +168,7 @@ async function runPreviewFlow({ command, requireActualPreview, target }) {
     if (canSkipCoveredPreview(target)) {
       await logEvent(target, 'real-preview-skipped', { action: 'skip-real-preview', currentHash, reason: 'covered-running-runtime' });
       console.log(`[${target}-preview] dedupe: covered hash=${currentHash} action=skip-real-preview`);
-      console.log(`[${target}-preview] status: ${target === 'windows' ? 'STARTED' : 'SYNCED'}`);
+      console.log(`[${target}-preview] status: ${previewStatus(target)}`);
       return { exitCode: 0, hash: currentHash, previewed: target === 'windows' };
     }
     await logEvent(target, 'covered-runtime-stale', { currentHash, reason: 'covered-hash-runtime-not-running' });
@@ -212,6 +181,7 @@ async function runPreviewFlow({ command, requireActualPreview, target }) {
   await logEvent(target, 'real-preview-finished', { currentHash, exitCode });
   if (exitCode === 0) {
     await writeStoredHash(target, currentHash);
+    console.log(`[${target}-preview] status: ${previewStatus(target)}`);
   }
   return { exitCode, hash: currentHash, previewed: true };
 }

@@ -1,0 +1,40 @@
+export const TARGET_PATHS = {
+  android: [
+    'android/',
+    'scripts/preview-dedupe-scheduler.mjs',
+    'scripts/preview-dedupe-state-store.mjs',
+    'scripts/preview-dedupe-event-log.mjs',
+    'scripts/preview-dedupe-targets.mjs',
+    'scripts/preview-dedupe-wait-status.mjs',
+    'scripts/preview-dedupe.mjs',
+    'scripts/android/',
+    'src/companion/',
+    'src/shared/',
+    'src/features/',
+    'lib/',
+    'package.json',
+    'package-lock.json',
+    'capacitor.config.ts',
+    'vite.companion.config.ts'
+  ],
+  windows: [
+    'electron/',
+    'scripts/preview-dedupe-scheduler.mjs',
+    'scripts/preview-dedupe-state-store.mjs',
+    'scripts/preview-dedupe-event-log.mjs',
+    'scripts/preview-dedupe-targets.mjs',
+    'scripts/preview-dedupe-wait-status.mjs',
+    'scripts/preview-dedupe.mjs',
+    'scripts/windows/',
+    'src/app/',
+    'src/features/',
+    'src/shared/',
+    'src/store/',
+    'lib/',
+    'package.json',
+    'package-lock.json',
+    'index.html',
+    'vite.config.ts',
+    'playwright.desktop.config.ts'
+  ]
+};
