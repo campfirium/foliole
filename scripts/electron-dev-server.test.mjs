@@ -28,6 +28,7 @@ describe('prewarmViteRendererEntries', () => {
       VITE_RENDERER_PREWARM_PATHS.map((path) => `http://127.0.0.1:24600${path}`)
     );
     expect(results.every((result) => result.ok)).toBe(true);
+    expect(VITE_RENDERER_PREWARM_PATHS).toContain('/src/app/App.tsx');
   });
 
   it('reports failed prewarm requests without hiding the target path', async () => {

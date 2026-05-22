@@ -13,6 +13,7 @@ export async function isViteServerReady(viteUrl, fetchImpl = globalThis.fetch) {
 export const VITE_RENDERER_PREWARM_PATHS = [
   '/src/app/styles.css',
   '/src/main.tsx',
+  '/src/app/App.tsx',
   '/@vite/client',
   '/lib/platform/managedInbox.ts'
 ];
