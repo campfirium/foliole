@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NativeWorkspaceNodeSnapshot } from '../../lib/platform/nativeStorageContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
@@ -120,6 +120,12 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
 }
 
 describe('workspaceRuntimeSync node mutations', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.restoreAllMocks();
+    vi.mocked(getRuntimeInvoke).mockReset();
+  });
+
   it('stages node content updates into pending storage until runtime ack clears them', async () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);

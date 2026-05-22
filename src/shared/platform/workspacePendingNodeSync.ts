@@ -77,6 +77,10 @@ function toPendingWorkspaceNode(
   };
 }
 
+function hasMergeableParent(pendingNode: WorkspaceRuntimeNodeSnapshot, knownNodeIds: Set<string>) {
+  return !pendingNode.parentNodeId || knownNodeIds.has(pendingNode.parentNodeId);
+}
+
 export function stagePendingNodeSync(payload: WorkspaceRuntimeNodeSnapshot) {
   const snapshot = readPendingSnapshot();
   snapshot.nodesById[payload.nodeId] = payload;
@@ -122,8 +126,24 @@ export function mergePendingNodeSyncIntoSnapshot(
     return snapshot;
   }
   const nodesById = { ...snapshot.nodesById };
-  for (const pendingNode of pendingNodes) {
-    nodesById[pendingNode.nodeId] = toPendingWorkspaceNode(nodesById[pendingNode.nodeId], pendingNode);
+  const knownNodeIds = new Set(Object.keys(nodesById));
+  let remainingNodes = pendingNodes;
+  while (remainingNodes.length > 0) {
+    const blockedNodes: WorkspaceRuntimeNodeSnapshot[] = [];
+    let mergedCount = 0;
+    for (const pendingNode of remainingNodes) {
+      if (!hasMergeableParent(pendingNode, knownNodeIds)) {
+        blockedNodes.push(pendingNode);
+        continue;
+      }
+      nodesById[pendingNode.nodeId] = toPendingWorkspaceNode(nodesById[pendingNode.nodeId], pendingNode);
+      knownNodeIds.add(pendingNode.nodeId);
+      mergedCount += 1;
+    }
+    if (blockedNodes.length === 0 || mergedCount === 0) {
+      break;
+    }
+    remainingNodes = blockedNodes;
   }
   return {
     ...snapshot,
