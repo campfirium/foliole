@@ -1,6 +1,7 @@
 const controlledElectronSqliteTests = [
   'electron/database/betterSqliteDbPort.conformance.test.ts',
   'electron/database/companionSyncPushVerticalSlice.test.ts',
+  'electron/database/externalDocumentImportVisibility.test.ts',
   'electron/database/externalSearchCache.test.ts',
   'electron/database/libraryDataMigration.test.ts',
   'electron/database/migrate.internalSnapshots.test.ts',

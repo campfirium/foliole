@@ -102,24 +102,24 @@ describe('test-files', () => {
     const result = await runTestFiles(['src/shared/platform/companionSyncStateObjects.test.ts']);
 
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('real sqlite tests must run through the Electron ABI runner');
+    expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
     expect(result.stderr).toContain('npm run test:sqlite:electron');
   });
 
-  it('allows real sqlite tests when already running under Electron-as-Node', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'test-files-sqlite-'));
-    try {
-      const { argsPath, fakeVitestPath } = await createFakeVitest(tempRoot);
-      const result = await runTestFiles(['src/shared/platform/companionSyncStateObjects.test.ts'], {
-        ELECTRON_RUN_AS_NODE: '1',
-        VITEST_BIN: fakeVitestPath
-      });
+  it('refuses indirect database connection tests outside the Electron ABI runner', async () => {
+    const result = await runTestFiles(['electron/database/externalDocumentImportVisibility.test.ts']);
 
-      expect(result.code).toBe(0);
-      const vitestArgs = JSON.parse(await readFile(argsPath, 'utf8'));
-      expect(vitestArgs).toContain('src/shared/platform/companionSyncStateObjects.test.ts');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
+    expect(result.stderr).toContain('electron/database/externalDocumentImportVisibility.test.ts');
+  });
+
+  it('refuses spoofed Electron-as-Node environment under the ordinary Node ABI', async () => {
+    const result = await runTestFiles(['src/shared/platform/companionSyncStateObjects.test.ts'], {
+      ELECTRON_RUN_AS_NODE: '1'
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
   });
 });

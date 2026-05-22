@@ -2,12 +2,13 @@
 /* global console, process */
 
 import { spawn } from 'node:child_process';
-import { statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 
 import { controlledElectronSqliteTests } from './native-sqlite-test-policy.mjs';
 
 const TEST_FILE_PATTERN = /\.test\.(?:mjs|ts|tsx)$/;
 const ELECTRON_SQLITE_TESTS = new Set(controlledElectronSqliteTests);
+const DATABASE_CONNECTION_IMPORT_PATTERN = /\b(?:import\b[\s\S]*?\bfrom\s+|import\s*\()\s*['"](?:\.{1,2}\/(?:[\w.-]+\/)*connection|\.{1,2}\/database\/connection)\.js['"]/u;
 
 function printUsage() {
   console.error('Usage: npm run test:files -- <file.test.ts|file.test.tsx|file.test.mjs> [...]');
@@ -38,16 +39,35 @@ function validateFiles(files) {
 }
 
 function validateElectronSqliteTests(files) {
-  const sqliteFiles = files.map((file) => file.replaceAll('\\', '/')).filter((file) => ELECTRON_SQLITE_TESTS.has(file));
-  if (sqliteFiles.length === 0 || process.env.ELECTRON_RUN_AS_NODE === '1') {
+  const sqliteFiles = files
+    .map((file) => file.replaceAll('\\', '/'))
+    .filter((file) => ELECTRON_SQLITE_TESTS.has(file) || importsDatabaseConnection(file));
+  if (sqliteFiles.length === 0 || isElectronAbiRuntime()) {
     return true;
   }
   console.error([
-    '[test:files] real sqlite tests must run through the Electron ABI runner:',
+    '[test:files] real sqlite tests cannot run under the ordinary Node ABI.',
+    '[test:files] use the controlled Electron ABI runner:',
     '  npm run test:sqlite:electron -- <file.test.ts|file.test.mjs> [...]',
     ...sqliteFiles.map((file) => `  ${file}`)
   ].join('\n'));
   return false;
+}
+
+function isElectronAbiRuntime() {
+  return process.env.ELECTRON_RUN_AS_NODE === '1' && typeof process.versions.electron === 'string';
+}
+
+function importsDatabaseConnection(filePath) {
+  if (!normalizePath(filePath).startsWith('electron/')) {
+    return false;
+  }
+  const source = readFileSync(filePath, 'utf8');
+  return DATABASE_CONNECTION_IMPORT_PATTERN.test(source);
+}
+
+function normalizePath(filePath) {
+  return filePath.replaceAll('\\', '/');
 }
 
 async function main() {

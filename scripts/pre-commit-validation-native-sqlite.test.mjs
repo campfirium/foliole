@@ -77,6 +77,37 @@ describe('pre-commit native sqlite validation', () => {
     }
   });
 
+  it('blocks ordinary Node test scripts that target real sqlite tests', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
+      await writeFile(
+        path.join(repoDir, 'package.json'),
+        JSON.stringify({
+          scripts: {
+            'test:readwise:visibility': 'npm run test:files -- electron/database/externalDocumentImportVisibility.test.ts'
+          }
+        }),
+        'utf8'
+      );
+      await writeFile(
+        path.join(repoDir, 'electron', 'database', 'externalDocumentImportVisibility.test.ts'),
+        "import { openDatabaseConnection } from './connection.js';\nopenDatabaseConnection();\n",
+        'utf8'
+      );
+      await runCommand('git', ['add', 'package.json', 'electron/database/externalDocumentImportVisibility.test.ts'], repoDir);
+
+      const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
+
+      expect(result.code).not.toBe(0);
+      expect(result.stderr).toContain('native sqlite ABI policy violation');
+      expect(result.stderr).toContain('route real sqlite tests through npm run test:sqlite:electron');
+      expect(result.stderr).toContain('electron/database/externalDocumentImportVisibility.test.ts');
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
+
   it('ignores guard source and test fixtures that quote blocked sqlite examples', async () => {
     const repoDir = await createRepo();
     try {

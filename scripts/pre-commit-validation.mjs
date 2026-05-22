@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { runNativeSqlitePolicyGuard } from './pre-commit-native-sqlite-policy.mjs';
 import { runWindowsLibraryPathPolicyGuard } from './pre-commit-windows-library-path-policy.mjs';
 import { resolveCriticalTestFiles } from './quality-critical-test-routes.mjs';
 
@@ -38,30 +39,6 @@ const WINDOWS_SHELL_POLICY_PATTERNS = [
     reason: 'put complex cmd.exe /c logic in a checked-in .cmd/.mjs runner instead of an inline command string'
   }
 ];
-const NATIVE_SQLITE_POLICY_FILES = [
-  /^package\.json$/u,
-  /^scripts\/.*\.(?:cjs|js|mjs|ts)$/u
-];
-const NATIVE_SQLITE_POLICY_EXCLUDED_FILES = [
-  /^scripts\/pre-commit-validation\.mjs$/u,
-  /\.test\.(?:cjs|js|mjs|ts)$/u
-];
-
-const NATIVE_SQLITE_POLICY_PATTERNS = [
-  {
-    pattern: /\bnpm\s+rebuild\s+better-sqlite3\b/iu,
-    reason: 'use npm run electron:rebuild:native instead of plain npm rebuild better-sqlite3'
-  },
-  {
-    pattern: /\bnode(?:\s+--experimental-strip-types)?\s+scripts\/(?:(?:sqlite-maintenance|node-kind-report|backfill-node-opening-text|backfill-source-disposition-states)\.(?:cjs|js|mjs|ts)|android\/(?:android-device-data-protection|android-preview-sync-state|android-reset-sync-data|android-sync-audit|android-sync-cleanup-device-private|android-sync-scenario-sampler)\.mjs)\b/iu,
-    reason: 'route real sqlite maintenance scripts through the controlled Electron ABI runner'
-  },
-  {
-    pattern: /\b(?:import[\s\S]*?\sfrom\s*|require\s*\()\s*['"]better-sqlite3['"]/u,
-    reason: 'do not add new ordinary Node scripts that load root better-sqlite3 directly'
-  }
-];
-
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     encoding: 'utf8',
@@ -164,27 +141,8 @@ function runWindowsShellPolicyGuard(files) {
   ].join('\n'));
 }
 
-function runNativeSqlitePolicyGuard(files) {
-  const checkedFiles = files.filter((file) => (
-    NATIVE_SQLITE_POLICY_FILES.some((pattern) => pattern.test(file)) &&
-    !NATIVE_SQLITE_POLICY_EXCLUDED_FILES.some((pattern) => pattern.test(file))
-  ));
-  const violations = [];
-  for (const file of checkedFiles) {
-    const content = stagedAddedLines(file);
-    for (const { pattern, reason } of NATIVE_SQLITE_POLICY_PATTERNS) {
-      if (pattern.test(content)) {
-        violations.push(`${file}: ${reason}`);
-      }
-    }
-  }
-  if (violations.length === 0) {
-    return;
-  }
-  throw new Error([
-    'native sqlite ABI policy violation: keep root better-sqlite3 owned by the Electron ABI.',
-    ...violations
-  ].join('\n'));
+function stagedFileContent(file) {
+  return run('git', ['show', `:${file}`]);
 }
 
 function runCriticalTests(files) {
@@ -215,7 +173,7 @@ function main() {
   runAddedFileChecks(addedOrRenamedFiles);
   runStagedCodeLint(files);
   runWindowsShellPolicyGuard(files);
-  runNativeSqlitePolicyGuard(files);
+  runNativeSqlitePolicyGuard(files, stagedAddedLines, stagedFileContent);
   runWindowsLibraryPathPolicyGuard(files, stagedAddedLines);
   runTestDriftGuard(files);
   runCriticalTests(files);
