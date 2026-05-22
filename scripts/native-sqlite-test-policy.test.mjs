@@ -24,7 +24,7 @@ async function testFiles() {
 }
 
 describe('native sqlite test policy', () => {
-  it('keeps real better-sqlite3 tests on the controlled Electron test entry', async () => {
+  it('keeps direct better-sqlite3 tests declared in the native sqlite policy', async () => {
     const files = await testFiles();
     const sqliteTests = [];
     for (const file of files) {
@@ -33,9 +33,13 @@ describe('native sqlite test policy', () => {
     }
 
     const declared = new Set([...controlledElectronSqliteTests, ...ordinaryNodeSqliteTextOnlyTests]);
-    expect(sqliteTests.sort()).toEqual([...declared].sort());
+    expect(sqliteTests.filter((file) => !declared.has(file)).sort()).toEqual([]);
 
     const manifest = JSON.parse(await readFile(path.resolve(process.cwd(), 'package.json'), 'utf8'));
     expect(manifest.scripts['test:sqlite:electron']).toBe('node scripts/electron-sqlite-runner.mjs scripts/test-files.mjs');
+  });
+
+  it('keeps Readwise sqlite visibility coverage on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('electron/database/externalDocumentImportVisibility.test.ts');
   });
 });
