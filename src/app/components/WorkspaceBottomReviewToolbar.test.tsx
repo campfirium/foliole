@@ -152,6 +152,21 @@ it('hides the footer progress line after review completion', () => {
   expect(onContinueReading).toHaveBeenCalledTimes(1);
 });
 
+it('hides the footer progress line while handling pushed reading topics', () => {
+  render(
+    <WorkspaceBottomReviewToolbar
+      {...createProps({
+        isCurrentReviewItemGradable: false,
+        reviewCurrentTitle: 'Reading topic',
+        reviewQueueCount: 12
+      })}
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
+  expect(screen.queryByLabelText('This session: 12 left 路 0 done 路 12 total')).not.toBeInTheDocument();
+});
+
 it('treats external, trash, and virtual surfaces as paused review surfaces', () => {
   const onOpenNotesView = vi.fn();
   const onSelectNode = vi.fn();
