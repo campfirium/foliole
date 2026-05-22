@@ -166,7 +166,10 @@ it('routes readwise book manual actions through the native invoke handler', asyn
     url: 'https://example.com'
   });
   await expect(
-    handleInvokeRequest({ command: 'load_readwise_book_epub', args: { node_id: 'node-book-1' } })
+    handleInvokeRequest({
+      command: 'load_readwise_book_epub',
+      args: { node_id: 'node-book-1' }
+    })
   ).resolves.toEqual({
     book_key: 'book-1',
     epub_path: '/tmp/book.epub',

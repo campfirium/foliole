@@ -13,6 +13,7 @@ import {
   type RuntimeReadwiseBookInventoryItem
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { requestReadwiseBookEpubImportReleaseMode } from '../hooks/epubImportReleaseModeDialogStore';
 
 export const READWISE_ORIGINAL_FILE_LOADED_EVENT = 'foliole:readwise-original-file-loaded';
 
@@ -130,6 +131,15 @@ export function useReadwiseBookActions(activeNodeId: string | null) {
       setStatusMessage(formatLoadMessage(result, book));
       if (result?.status === 'selected') {
         await useWorkspaceStore.persist.rehydrate();
+        const mode = book
+          ? await requestReadwiseBookEpubImportReleaseMode({
+              fileName: `${book.title}.epub`,
+              hasHighlights: book.annotationStatus === 'has_highlights'
+            })
+          : null;
+        if (mode) {
+          useWorkspaceStore.getState().setNodeSequentialReading(activeNodeId, mode === 'sequential');
+        }
         window.dispatchEvent(
           new CustomEvent<ReadwiseOriginalFileLoadedEventDetail>(READWISE_ORIGINAL_FILE_LOADED_EVENT, {
             detail: { nodeId: activeNodeId }

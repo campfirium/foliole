@@ -22,6 +22,7 @@ vi.mock('../../shared/platform/readwiseBooksRuntimeRepository', () => ({
   openRuntimeReadwiseBookDownload
 }));
 
+import { EpubImportReleaseModeDialog } from './EpubImportReleaseModeDialog';
 import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 import { READWISE_ORIGINAL_FILE_LOADED_EVENT } from './readwiseBookActionState';
 import { ReadwiseBookDocumentGate } from './ReadwiseBookDocumentGate';
@@ -61,9 +62,19 @@ function seedDefaultRuntime() {
   onRuntimeReadwiseBookEpubProgress.mockReturnValue(() => undefined);
 }
 
+function renderActionsPanel() {
+  return render(
+    <>
+      <ReadwiseBookActionsPanel activeContent="" activeNodeId="node-book-1" />
+      <EpubImportReleaseModeDialog />
+    </>
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue();
+  vi.spyOn(useWorkspaceStore.getState(), 'setNodeSequentialReading').mockReturnValue(true);
   seedDefaultRuntime();
 });
 
@@ -103,13 +114,34 @@ describe('ReadwiseBookActionsPanel', () => {
     const loadedListener = vi.fn();
     window.addEventListener(READWISE_ORIGINAL_FILE_LOADED_EVENT, loadedListener);
 
-    render(<ReadwiseBookActionsPanel activeContent="" activeNodeId="node-book-1" />);
+    renderActionsPanel();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Load original file' }));
+    await waitFor(() => expect(loadRuntimeReadwiseBookEpub).toHaveBeenCalledWith('node-book-1'));
+    expect(await screen.findByRole('dialog', { name: 'Choose Reading Mode' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Free Reading/ }));
+
+    expect(useWorkspaceStore.persist.rehydrate).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(useWorkspaceStore.getState().setNodeSequentialReading).toHaveBeenCalledWith('node-book-1', false)
+    );
+    await waitFor(() => expect(loadedListener).toHaveBeenCalledTimes(1));
+    window.removeEventListener(READWISE_ORIGINAL_FILE_LOADED_EVENT, loadedListener);
+  });
+
+  it('does not ask for a reading mode when native loading is cancelled', async () => {
+    loadRuntimeReadwiseBookEpub.mockResolvedValue({
+      book_key: 'book-1',
+      epub_path: null,
+      status: 'cancelled',
+      title: 'Book One'
+    });
+    renderActionsPanel();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Load original file' }));
 
-    await waitFor(() => expect(loadRuntimeReadwiseBookEpub).toHaveBeenCalledWith('node-book-1'));
-    expect(useWorkspaceStore.persist.rehydrate).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(loadedListener).toHaveBeenCalledTimes(1));
-    window.removeEventListener(READWISE_ORIGINAL_FILE_LOADED_EVENT, loadedListener);
+    await waitFor(() => expect(screen.getByText('Load original file was cancelled.')).toBeInTheDocument());
+    expect(screen.queryByRole('dialog', { name: 'Choose Reading Mode' })).not.toBeInTheDocument();
+    expect(useWorkspaceStore.getState().setNodeSequentialReading).not.toHaveBeenCalled();
   });
 });
