@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 
 import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
 import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
@@ -13,13 +13,8 @@ import {
 } from '../shared/platform/runtimeBootTelemetry';
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
-import { CommandPalette } from './components/CommandPalette';
 import { CompanionPairingRequestsDialog } from './components/CompanionPairingRequestsDialog';
 import { EpubImportReleaseModeDialog } from './components/EpubImportReleaseModeDialog';
-import { GoToNodePalette } from './components/GoToNodePalette';
-import { ReviewSourceTopicDeleteDialog } from './components/ReviewSourceTopicDeleteDialog';
-import { SearchPalette } from './components/SearchPalette';
-import { SearchResultPreviewPanel } from './components/SearchResultPreviewPanel';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import type { WorkspaceSearchResult } from './components/workspaceSearch';
 import { useAppController } from './hooks/useAppController';
@@ -30,6 +25,24 @@ import {
 } from './hooks/useWorkspaceSyncAppliedRefresh';
 
 type AppController = ReturnType<typeof useAppController>;
+
+const CommandPalette = lazy(() =>
+  import('./components/CommandPalette').then((module) => ({ default: module.CommandPalette }))
+);
+const GoToNodePalette = lazy(() =>
+  import('./components/GoToNodePalette').then((module) => ({ default: module.GoToNodePalette }))
+);
+const ReviewSourceTopicDeleteDialog = lazy(() =>
+  import('./components/ReviewSourceTopicDeleteDialog').then((module) => ({
+    default: module.ReviewSourceTopicDeleteDialog
+  }))
+);
+const SearchPalette = lazy(() =>
+  import('./components/SearchPalette').then((module) => ({ default: module.SearchPalette }))
+);
+const SearchResultPreviewPanel = lazy(() =>
+  import('./components/SearchResultPreviewPanel').then((module) => ({ default: module.SearchResultPreviewPanel }))
+);
 
 function AppContent() {
   const [searchPreviewResult, setSearchPreviewResult] = useState<WorkspaceSearchResult | null>(null);
@@ -128,28 +141,36 @@ function AppOverlays({
     <>
       <CompanionPairingRequestsDialog />
       <EpubImportReleaseModeDialog />
-      <CommandPalette {...controller.paletteState} />
-      <SearchPalette {...controller.searchState} />
-      <GoToNodePalette {...controller.goToNodeState} />
-      <GoToNodePalette
-        {...controller.moveToNodeState}
-        dialogLabel="Move to"
-        emptyLabel="Search destinations"
-        inputLabel="Move to"
-        noResultsLabel="No matching destinations"
-        onSelectNode={controller.moveToNodeState.onOpenNode}
-        placeholder="Type a title..."
-      />
-      <ReviewSourceTopicDeleteDialog {...controller.reviewSourceTopicDeleteDialog} />
-      <SearchResultPreviewPanel
-        nodesById={controller.layoutProps.nodeList.nodesById}
-        onClose={onCloseSearchPreview}
-        onOpenResult={(result) => {
-          controller.searchState.onOpenResult(result);
-          onCloseSearchPreview();
-        }}
-        result={searchPreviewResult}
-      />
+      <Suspense fallback={null}>
+        {controller.paletteState.isOpen ? <CommandPalette {...controller.paletteState} /> : null}
+        {controller.searchState.isOpen ? <SearchPalette {...controller.searchState} /> : null}
+        {controller.goToNodeState.isOpen ? <GoToNodePalette {...controller.goToNodeState} /> : null}
+        {controller.moveToNodeState.isOpen ? (
+          <GoToNodePalette
+            {...controller.moveToNodeState}
+            dialogLabel="Move to"
+            emptyLabel="Search destinations"
+            inputLabel="Move to"
+            noResultsLabel="No matching destinations"
+            onSelectNode={controller.moveToNodeState.onOpenNode}
+            placeholder="Type a title..."
+          />
+        ) : null}
+        {controller.reviewSourceTopicDeleteDialog.isOpen ? (
+          <ReviewSourceTopicDeleteDialog {...controller.reviewSourceTopicDeleteDialog} />
+        ) : null}
+        {searchPreviewResult ? (
+          <SearchResultPreviewPanel
+            nodesById={controller.layoutProps.nodeList.nodesById}
+            onClose={onCloseSearchPreview}
+            onOpenResult={(result) => {
+              controller.searchState.onOpenResult(result);
+              onCloseSearchPreview();
+            }}
+            result={searchPreviewResult}
+          />
+        ) : null}
+      </Suspense>
     </>
   );
 }

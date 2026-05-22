@@ -26,4 +26,13 @@ describe('windows native preview ABI diagnostics', () => {
     expect(script).toContain("runClientAction('restart')");
     expect(script).toContain('selected action: direct-restart');
   });
+
+  it('bounds native client actions and verifies the final trusted runtime status', async () => {
+    const script = await readFile(PREVIEW_SCRIPT, 'utf8');
+
+    expect(script).toContain('WINDOWS_CLIENT_ACTION_TIMEOUT_MS');
+    expect(script).toContain('timeoutMs: CLIENT_ACTION_TIMEOUT_MS');
+    expect(script).toContain("waitForTrustedRunning(`${action} status`, currentHead)");
+    expect(script).toContain("waitForTrustedRunning('direct restart status')");
+  });
 });
