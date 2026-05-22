@@ -5,6 +5,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const LOCK_POLL_MS = 50;
+const STATE_WRITE_RETRY_MS = 5_000;
 const STATE_STALE_MS = 15 * 60_000;
 
 function statePath(runtimeDir, target) {
@@ -28,7 +29,27 @@ async function writeState(runtimeDir, target, state) {
   const finalPath = statePath(runtimeDir, target);
   const tempPath = `${finalPath}.${process.pid}.${Date.now()}.tmp`;
   await writeFile(tempPath, `${JSON.stringify(state)}\n`, 'utf8');
-  await rename(tempPath, finalPath);
+  await renameStateFile(tempPath, finalPath);
+}
+
+function isRetryableStateWriteError(error) {
+  return ['EACCES', 'EBUSY', 'EPERM'].includes(error?.code);
+}
+
+async function renameStateFile(tempPath, finalPath) {
+  const deadline = Date.now() + STATE_WRITE_RETRY_MS;
+  while (true) {
+    try {
+      await rename(tempPath, finalPath);
+      return;
+    } catch (error) {
+      if (!isRetryableStateWriteError(error) || Date.now() >= deadline) {
+        await rm(tempPath, { force: true });
+        throw error;
+      }
+      await delay(LOCK_POLL_MS);
+    }
+  }
 }
 
 export function isPidAlive(pid) {

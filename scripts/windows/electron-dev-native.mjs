@@ -9,6 +9,15 @@ import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 const { repoRoot, userDataPath } = resolveWindowsNativePaths();
 const localLibraryHome = 'D:\\X\\U\\Foliole';
 const debugLibraryHome = path.join(userDataPath, 'native-debug-library');
+const sidecarRemoveRetryMs = 5_000;
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function isRetryableSidecarRemoveError(error) {
+  return ['EACCES', 'EBUSY', 'EPERM'].includes(error?.code);
+}
 
 function shouldUseDebugLibraryCopy() {
   return process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY !== '0';
@@ -17,8 +26,16 @@ function shouldUseDebugLibraryCopy() {
 function removeTargetSqliteSidecars(targetPath) {
   for (const suffix of ['-shm', '-wal']) {
     const sidecarPath = `${targetPath}${suffix}`;
-    if (fs.existsSync(sidecarPath)) {
-      fs.rmSync(sidecarPath, { force: true });
+    const deadline = Date.now() + sidecarRemoveRetryMs;
+    while (fs.existsSync(sidecarPath)) {
+      try {
+        fs.rmSync(sidecarPath, { force: true });
+      } catch (error) {
+        if (!isRetryableSidecarRemoveError(error) || Date.now() >= deadline) {
+          throw error;
+        }
+        sleepSync(100);
+      }
     }
   }
 }
