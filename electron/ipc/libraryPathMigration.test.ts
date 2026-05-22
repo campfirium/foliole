@@ -143,6 +143,13 @@ it('requires confirmation before adopting an existing library home', async () =>
   await expect(updateLibraryPathSetting({ location: 'library_home', path: existingLibraryHome })).rejects.toThrow(
     'existing_library_home_requires_confirmation'
   );
+  await expect(
+    updateLibraryPathSetting({
+      confirm_existing_library_home: false,
+      location: 'library_home',
+      path: existingLibraryHome
+    })
+  ).rejects.toThrow('existing_library_home_requires_confirmation');
 
   await expect(
     updateLibraryPathSetting({

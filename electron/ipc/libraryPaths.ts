@@ -156,9 +156,9 @@ export async function updateLibraryPathSetting(
   const currentPaths = toNativeLibraryPaths(currentOverrides);
   const nextPaths = toNativeLibraryPaths(nextOverrides);
   await migrateLibraryPathChange({
-    confirmExistingLibraryHome: args.confirm_existing_library_home,
     currentOverrides,
     currentPaths,
+    ...(args.confirm_existing_library_home === true ? { confirmExistingLibraryHome: true } : {}),
     location,
     nextOverrides,
     nextPaths

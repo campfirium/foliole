@@ -98,7 +98,7 @@ function shouldMoveDefaultScopedPath(currentValue: string | null, nextValue: str
 }
 
 async function shouldAdoptExistingLibrary(args: {
-  confirmExistingLibraryHome?: boolean;
+  confirmExistingLibraryHome: boolean;
   location: keyof LibraryPathOverrides;
   nextPaths: ResolvedLibraryPaths;
 }) {
@@ -110,7 +110,7 @@ async function shouldAdoptExistingLibrary(args: {
 }
 
 async function assertExistingLibraryConfirmed(args: {
-  confirmExistingLibraryHome?: boolean;
+  confirmExistingLibraryHome: boolean;
   location: keyof LibraryPathOverrides;
   nextPaths: ResolvedLibraryPaths;
 }) {
@@ -132,6 +132,7 @@ export async function migrateLibraryPathChange(args: {
   nextPaths: ResolvedLibraryPaths;
 }) {
   const { confirmExistingLibraryHome, currentOverrides, currentPaths, location, nextOverrides, nextPaths } = args;
+  const shouldConfirmExistingLibraryHome = confirmExistingLibraryHome === true;
 
   if (location === 'assets_dir') {
     if (isPathInside(currentPaths.assets_dir, nextPaths.assets_dir)) {
@@ -162,8 +163,16 @@ export async function migrateLibraryPathChange(args: {
   }
 
   closeDatabaseConnection();
-  await assertExistingLibraryConfirmed({ confirmExistingLibraryHome, location, nextPaths });
-  if (await shouldAdoptExistingLibrary({ confirmExistingLibraryHome, location, nextPaths })) {
+  await assertExistingLibraryConfirmed({
+    confirmExistingLibraryHome: shouldConfirmExistingLibraryHome,
+    location,
+    nextPaths
+  });
+  if (await shouldAdoptExistingLibrary({
+    confirmExistingLibraryHome: shouldConfirmExistingLibraryHome,
+    location,
+    nextPaths
+  })) {
     return;
   }
 
