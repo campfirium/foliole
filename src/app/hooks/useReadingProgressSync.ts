@@ -4,6 +4,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState } from '../../store/workspaceStore';
 
+import { resolveReadingProgressState } from './readingProgressStateResolver';
 import type { ReadingPositionSyncState } from './useAppRuntime';
 import { useReadingProgressCaptureHooks } from './useReadingProgressCaptureHooks';
 import { useReadingProgressCloseFlushRegistration, useReadingProgressLifecycle } from './useReadingProgressSyncEffects';
@@ -13,9 +14,6 @@ import {
   type ReadingProgressPersistenceArgs
 } from './useReadingProgressSyncPersistence';
 import {
-  captureEditorNodeViewState,
-  mergePendingNodeViewStates,
-  resolveNodeViewIdsToPersist,
   type PendingNodeViewStateMap,
   type ReadingProgressCaptureMode,
   type ResolvedReadingProgressState
@@ -62,48 +60,20 @@ function useResolvedReadingProgressState(
       includePendingNodeViewStates = true,
       captureMode: ReadingProgressCaptureMode = 'snapshot'
     ): ResolvedReadingProgressState | null => {
-      if (!latest.isWorkspaceHydratedRef.current) {
-        return null;
-      }
-      const shouldCaptureEditorState = captureNodeIdOverride !== null;
-      const captureNodeId =
-        typeof captureNodeIdOverride === 'undefined'
-          ? latest.activeNodeIdRef.current
-          : captureNodeIdOverride;
-      const captured = shouldCaptureEditorState
-        ? captureEditorNodeViewState(
-            captureNodeId,
-            args.getReadingPositionSelection,
-            args.isImmersiveMode,
-            args.isViewingTrashNode,
-            args.editorRef,
-            captureMode
-          )
-        : null;
-      const mergedPendingNodeViewById = includePendingNodeViewStates
-        ? mergePendingNodeViewStates(
-            latest.nodeViewByIdRef.current,
-            latest.pendingNodeViewByIdRef.current
-          )
-        : latest.nodeViewByIdRef.current;
-      return {
-        captured,
-        mergedNodeViewById: captured
-          ? {
-              ...mergedPendingNodeViewById,
-              [captured.nodeId]: captured.viewState
-            }
-          : mergedPendingNodeViewById,
-        nodeViewIdsToPersist: resolveNodeViewIdsToPersist({
-          captured,
-          includePendingNodeViewStates,
-          pendingNodeViewById: latest.pendingNodeViewByIdRef.current
-        }),
-        resolvedActiveNodeId:
-          typeof activeNodeIdOverride === 'undefined'
-            ? latest.activeNodeIdRef.current
-            : activeNodeIdOverride
-      };
+      return resolveReadingProgressState({
+        activeNodeIdOverride,
+        activeNodeIdRef: latest.activeNodeIdRef,
+        captureMode,
+        captureNodeIdOverride,
+        editorRef: args.editorRef,
+        getReadingPositionSelection: args.getReadingPositionSelection,
+        includePendingNodeViewStates,
+        isImmersiveMode: args.isImmersiveMode,
+        isViewingTrashNode: args.isViewingTrashNode,
+        isWorkspaceHydratedRef: latest.isWorkspaceHydratedRef,
+        nodeViewByIdRef: latest.nodeViewByIdRef,
+        pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef
+      });
     },
     [args, latest]
   );

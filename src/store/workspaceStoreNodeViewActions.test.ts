@@ -64,3 +64,46 @@ it('does not update workspace state when node view payload is unchanged', () => 
   expect(harness.getState().nodeViewById).toBe(firstNodeViewById);
   expect(harness.set).toHaveBeenCalledTimes(2);
 });
+
+it('preserves last opened timestamp when saving reading position', () => {
+  const harness = createSetHarness(
+    createTestWorkspaceState({
+      ...createWorkspaceState(),
+      nodeViewById: {
+        'node-1': {
+          scrollTop: 20,
+          selection: { from: 3, to: 4 },
+          updatedAt: '2026-04-05T10:00:00.000Z'
+        }
+      }
+    })
+  );
+  const setNodeViewState = createSetNodeViewStateAction(harness.set);
+
+  setNodeViewState('node-1', {
+    scrollTop: 120,
+    selection: { from: 30, to: 40 }
+  });
+
+  expect(harness.getState().nodeViewById['node-1']).toEqual({
+    scrollTop: 120,
+    selection: { from: 30, to: 40 },
+    updatedAt: '2026-04-05T10:00:00.000Z'
+  });
+});
+
+it('does not create a last opened timestamp from reading position alone', () => {
+  const harness = createSetHarness(createWorkspaceState());
+  const setNodeViewState = createSetNodeViewStateAction(harness.set);
+
+  setNodeViewState('node-1', {
+    scrollTop: 120,
+    selection: null
+  });
+
+  expect(harness.getState().nodeViewById['node-1']).toEqual({
+    scrollTop: 120,
+    selection: null,
+    updatedAt: null
+  });
+});

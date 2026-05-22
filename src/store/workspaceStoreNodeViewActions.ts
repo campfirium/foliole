@@ -2,7 +2,10 @@ import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
-function normalizeNodeViewState(viewState: WorkspaceState['nodeViewById'][string]) {
+function normalizeNodeViewState(
+  viewState: WorkspaceState['nodeViewById'][string],
+  previousViewState: WorkspaceState['nodeViewById'][string]
+) {
   if (!viewState) {
     return null;
   }
@@ -17,7 +20,7 @@ function normalizeNodeViewState(viewState: WorkspaceState['nodeViewById'][string
     updatedAt:
       typeof viewState.updatedAt === 'string' && viewState.updatedAt.trim().length > 0
         ? viewState.updatedAt
-        : new Date().toISOString()
+        : previousViewState?.updatedAt ?? null
   };
 }
 
@@ -41,8 +44,9 @@ export function createSetNodeViewStateAction(set: WorkspaceSet): WorkspaceState[
       if (!state.nodesById[nodeId]) {
         return state;
       }
-      const normalizedViewState = normalizeNodeViewState(viewState);
-      if (!normalizedViewState || hasSameNodeViewState(state.nodeViewById[nodeId], normalizedViewState)) {
+      const previousViewState = state.nodeViewById[nodeId];
+      const normalizedViewState = normalizeNodeViewState(viewState, previousViewState);
+      if (!normalizedViewState || hasSameNodeViewState(previousViewState, normalizedViewState)) {
         return state;
       }
       return {

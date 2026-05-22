@@ -134,9 +134,12 @@ function saveNodeViewStates(
   source: NodeViewStateWriteSource
 ) {
   for (const state of input.nodeViewStates) {
-    const updatedAt = state.updatedAt?.trim() || input.updatedAt;
-    const incoming: PersistedNodeViewState = { ...state, source, updatedAt };
     const existing = loadExistingNodeViewState(connection, deviceId, state.nodeId);
+    const updatedAt = state.updatedAt?.trim() || existing?.updatedAt;
+    if (!updatedAt) {
+      continue;
+    }
+    const incoming: PersistedNodeViewState = { ...state, source, updatedAt };
     if (!shouldWritePersistedNodeViewState(existing, incoming).shouldWrite) {
       continue;
     }

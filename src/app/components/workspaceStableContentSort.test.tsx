@@ -6,6 +6,7 @@ import { useStableWorkspaceContentItems } from './workspaceStableContentSort';
 
 interface StableSortItem {
   id: string;
+  lastOpenedAt?: string;
   modifiedAt: string;
   title: string;
 }
@@ -89,6 +90,43 @@ function StableSortScopeHarness() {
   );
 }
 
+function LastOpenedStableSortHarness() {
+  const [items, setItems] = useState<StableSortItem[]>([
+    { id: 'old', lastOpenedAt: '2026-04-20T00:00:00.000Z', modifiedAt: '2026-04-20T00:00:00.000Z', title: 'Old' },
+    { id: 'new', lastOpenedAt: '2026-04-21T00:00:00.000Z', modifiedAt: '2026-04-21T00:00:00.000Z', title: 'New' }
+  ]);
+  const sortedItems = useStableWorkspaceContentItems({
+    getItemId: (item) => item.id,
+    items,
+    scopeKey: 'folder-a',
+    sort: { direction: 'desc', key: 'lastOpenedAt' },
+    sortItems: (currentItems) =>
+      [...currentItems].sort((left, right) => (right.lastOpenedAt ?? '').localeCompare(left.lastOpenedAt ?? ''))
+  });
+
+  return (
+    <>
+      <button
+        onClick={() =>
+          setItems((currentItems) =>
+            currentItems.map((item) =>
+              item.id === 'old' ? { ...item, lastOpenedAt: '2026-04-22T00:00:00.000Z' } : item
+            )
+          )
+        }
+        type="button"
+      >
+        Open old
+      </button>
+      <ol>
+        {sortedItems.map((item) => (
+          <li key={item.id}>{`${item.title}:${item.lastOpenedAt}`}</li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
 it('keeps dynamic workspace content order stable while item timestamps update', () => {
   render(<StableSortHarness />);
 
@@ -133,5 +171,21 @@ it('rebuilds dynamic order when switching back to a folder scope', () => {
   expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
     'Old:2026-04-22T00:00:00.000Z',
     'New:2026-04-21T00:00:00.000Z'
+  ]);
+});
+
+it('keeps current last opened list order stable while opened times update', () => {
+  render(<LastOpenedStableSortHarness />);
+
+  expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+    'New:2026-04-21T00:00:00.000Z',
+    'Old:2026-04-20T00:00:00.000Z'
+  ]);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open old' }));
+
+  expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+    'New:2026-04-21T00:00:00.000Z',
+    'Old:2026-04-22T00:00:00.000Z'
   ]);
 });

@@ -17,7 +17,7 @@ interface StableWorkspaceContentItemsArgs<T> {
 }
 
 function isDynamicWorkspaceContentSortKey(sort: WorkspaceContentSortState) {
-  return sort.key === 'modifiedAt' || sort.key === 'savedAt';
+  return sort.key === 'lastOpenedAt' || sort.key === 'modifiedAt' || sort.key === 'savedAt';
 }
 
 function resolveItemsBySnapshotOrder<T>(items: T[], orderedIds: string[], getItemId: (item: T) => string) {
