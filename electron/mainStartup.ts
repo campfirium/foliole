@@ -6,7 +6,7 @@ import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js'
 import { configureRemoteImagePipelineCacheRoot } from './attachments/remoteImagePipeline.js';
 import { registerRemoteImageProtocol } from './attachments/remoteImageProtocol.js';
 import { startDevScreenshotServer } from './devScreenshotServer.js';
-import { appendBootEvent } from './ipc/boot.js';
+import { appendBootEvent, waitForRendererAppReady } from './ipc/boot.js';
 import { resolveAppPaths } from './ipc/paths.js';
 import { startFollowupTasks } from './mainFollowupTasks.js';
 import type { StartupRendererView } from './rendererLoader.js';
@@ -72,6 +72,7 @@ export async function startInitialMainWindow(
     await startup.startCompanionSyncIfEnabled();
     await args.activateMainWindow(startup.mainWindow);
     await appendBootEvent('main_window_ready');
+    await waitForRendererAppReady();
     startFollowupTasks();
   } catch (error) {
     await startup.loadStartupErrorSurface({ error, moduleLabel: 'Startup services', window: startup.mainWindow });
