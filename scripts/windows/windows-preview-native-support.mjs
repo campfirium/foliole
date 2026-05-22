@@ -34,7 +34,7 @@ export function isBootEventAfterIntent(event, intent) {
 }
 
 export function isShellConfigFile(file) {
-  return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|package\.json|package-lock\.json)$/u.test(file);
+  return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|package\.json|package-lock\.json|scripts\/electron-dev(\.test)?\.mjs|scripts\/electron-dev-server(\.test)?\.mjs|scripts\/windows\/electron-dev-native(\.test)?\.mjs)$/u.test(file);
 }
 
 export function isRuntimeFile(file) {
