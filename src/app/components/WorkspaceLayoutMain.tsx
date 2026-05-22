@@ -17,6 +17,7 @@ import {
   loadWorkspaceRightPanelPreference,
   saveWorkspaceRightPanelPreference
 } from './workspaceRightPanelPreference';
+import { WorkspaceRuntimeNotice } from './WorkspaceRuntimeNotice';
 import {
   selectWorkspaceSettingsOverlayProps,
   WorkspaceSettingsOverlay
@@ -105,7 +106,6 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
     onSelectNode: navigation.onSelectNode
   });
   const workspaceGridStyle = buildWorkspaceGridStyle(layoutChrome);
-  const documentNodeId = trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId;
 
   useEffect(() => {
     saveWorkspaceRightPanelPreference(activeRightPanelId);
@@ -125,13 +125,14 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         onOpenNotesView={handleOpenNotesView}
         onOpenTrashView={handleOpenTrashView}
         onSelectRightPanel={handleSelectRightPanel}
-        documentNodeId={documentNodeId}
+        documentNodeId={trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId}
         onSelectNode={handleSelectNode}
         immersive={immersive}
         gridProps={gridProps}
         titleBarProps={props}
       />
       {renderClipboardImportNotice(clipboardImportNotice)}
+      <WorkspaceRuntimeNotice />
       <ImmersiveShortcutsOverlay visible={layoutChrome.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
       <ImportSourceWorkspace
         onOpenChange={(open) => (open ? imports.onOpenImportManagement() : imports.onCloseImportManagement())}

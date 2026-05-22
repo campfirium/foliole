@@ -112,6 +112,11 @@ export default [
           object: 'window',
           property: 'electronAPI',
           message: 'Use an existing shared platform bridge or adapter instead.'
+        },
+        {
+          object: 'window',
+          property: 'alert',
+          message: 'Use the app-owned notice, dialog, or panel surface instead of native browser alerts.'
         }
       ]
     }
