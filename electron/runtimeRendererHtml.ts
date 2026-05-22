@@ -32,17 +32,6 @@ function createDevRendererHtmlBaseTag(devUrl: string) {
   return `<base href="${href.toString()}">`;
 }
 
-function createDevReactPreambleScript(devUrl: string) {
-  const refreshUrl = new URL('/@react-refresh', devUrl).toString();
-  return `<script type="module">
-      import RefreshRuntime from ${JSON.stringify(refreshUrl)};
-      RefreshRuntime.injectIntoGlobalHook(window);
-      window.$RefreshReg$ = () => {};
-      window.$RefreshSig$ = () => (type) => type;
-      window.__vite_plugin_react_preamble_installed__ = true;
-    </script>`;
-}
-
 function normalizeDevUrl(devUrl: string | null) {
   return devUrl ? new URL(devUrl).toString() : null;
 }
@@ -89,11 +78,10 @@ export function injectDevRendererIntoHtml(
     `src="${devOrigin}/src/main.tsx"`
   );
   if (withStartupState.includes('<base href=')) {
-    return withStartupState.replace('</head>', `    ${createDevReactPreambleScript(normalizedDevUrl)}\n  </head>`);
+    return withStartupState;
   }
   return withStartupState
-    .replace('<head>', `<head>\n    ${createDevRendererHtmlBaseTag(normalizedDevUrl)}`)
-    .replace('</head>', `    ${createDevReactPreambleScript(normalizedDevUrl)}\n  </head>`);
+    .replace('<head>', `<head>\n    ${createDevRendererHtmlBaseTag(normalizedDevUrl)}`);
 }
 
 function writeRuntimeRendererHtml(runtimeIndexPath: string, html: string) {

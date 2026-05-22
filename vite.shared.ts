@@ -125,6 +125,7 @@ export function createSharedViteConfig(projectRoot: string) {
     },
     server: {
       cors: true,
+      hmr: false,
       host: '127.0.0.1',
       port: resolveDevPort(),
       strictPort: true,
