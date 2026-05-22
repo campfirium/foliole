@@ -5,8 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } from './windows-client-native-logs.mjs';
 import { requestCooperativeFullRestart } from './windows-client-native-full-restart.mjs';
-import { killPid, runCapture } from './windows-client-native-process.mjs';
+import { runCapture } from './windows-client-native-process.mjs';
 import { recoverClientStateFromReady } from './windows-client-native-recovered-state.mjs';
+import { removeShellRestartRequest } from './windows-client-native-shell-request.mjs';
+import { stopNativeClient } from './windows-client-native-stop.mjs';
 import {
   readClientState as readClientStateFile,
   readReadyStateFromBootEvents,
@@ -27,6 +29,7 @@ const {
   nativeStartScript,
   repoRoot,
   restartDeliveryFile,
+  shellRestartRequestFile,
   stateFile,
   windowVisibleFile
 } = resolveWindowsNativePaths();
@@ -97,9 +100,7 @@ async function resetMarkers() {
   await resetReadyMarkers({ appReadyFile, bridgeReadyFile, windowVisibleFile });
 }
 
-async function saveState(state) {
-  await saveClientState(stateFile, state);
-}
+const saveState = (state) => saveClientState(stateFile, state);
 
 async function waitForReady(session) {
   const deadline = Date.now() + healthTimeoutMs;
@@ -114,14 +115,17 @@ async function waitForReady(session) {
 }
 
 async function startClient({ print = true } = {}) {
+  const head = await currentHead();
   const existing = printStatus();
   if (existing.ok) {
-    return { alreadyRunning: true, ready: existing.ready, state: existing.state };
+    if (existing.ready.appReady.head === head) {
+      return { alreadyRunning: true, ready: existing.ready, state: existing.state };
+    }
+    await stopClient({ print: false });
   }
-
   await resetMarkers();
+  await removeShellRestartRequest(shellRestartRequestFile);
   const session = `windows-native-client-${Date.now()}`;
-  const head = await currentHead();
   const logs = await createClientLogStreams(logDir, session);
   closeClientLogStreams(logs);
   const shellPid = await startNativeDevRunner({ head, logs, session });
@@ -133,8 +137,7 @@ async function startClient({ print = true } = {}) {
     stderrLog: logs.stderrLog,
     stdoutLog: logs.stdoutLog
   });
-  let ready = await waitForReady(session);
-  ready ??= readReadyState();
+  const ready = await waitForReady(session);
   if (!ready) {
     printStartupLogTail(readClientState());
     await removeClientState(stateFile);
@@ -157,16 +160,13 @@ async function startClient({ print = true } = {}) {
 }
 
 async function stopClient({ print = true } = {}) {
-  const state = readClientState();
-  const ready = readReadyState();
-  await killPid(state?.runtimePid);
-  await killPid(ready?.appReady.pid);
-  await killPid(state?.shellPid);
-  await removeClientState(stateFile);
-  await resetMarkers();
-  if (print) {
-    console.log('[windows-restart-client] status: STOPPED');
-  }
+  await stopNativeClient({
+    print,
+    readClientState,
+    readReadyState,
+    removeClientState: () => removeClientState(stateFile),
+    resetMarkers
+  });
 }
 
 async function forceRestartClient(mode) {

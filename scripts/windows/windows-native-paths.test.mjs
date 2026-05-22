@@ -19,5 +19,6 @@ it('resolves Windows native runtime paths from the current checkout', () => {
   expect(paths.nativeAbiScript).toBe(path.join(process.cwd(), 'scripts', 'windows', 'native-abi-preflight.ps1'));
   expect(paths.nativeStartScript).toBe(path.join(process.cwd(), 'scripts', 'windows', 'start-electron-dev-native.ps1'));
   expect(paths.restartDeliveryFile).toBe(path.join(process.cwd(), '.windows-dev-restart-delivered.json'));
+  expect(paths.shellRestartRequestFile).toBe(path.join(process.cwd(), '.windows-dev-shell-restart-request.json'));
   expect(paths.reloadDeliveryFile).toBe(path.join(process.cwd(), '.windows-dev-renderer-reload-delivered.json'));
 });

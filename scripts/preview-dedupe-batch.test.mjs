@@ -7,7 +7,6 @@ import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-
 import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -201,7 +200,7 @@ describe('preview-dedupe batching', () => {
     }
   });
 
-  it('does not run a second preview for the same hash while a preview is running', async () => {
+  it('runs a queued preview request after the active driver finishes', async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -216,11 +215,10 @@ describe('preview-dedupe batching', () => {
       const second = runDedupe(repoRoot, 'second', env);
 
       const [firstResult, secondResult] = await Promise.all([first, second]);
-
       expect(firstResult.code).toBe(0);
       expect(secondResult.code).toBe(0);
-      expect(secondResult.stdout).toContain('[windows-preview] dedupe: covered hash=');
-      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\n');
+      expect(secondResult.stdout).toMatch(/requireActualPreview=true[\s\S]*\[windows-preview\] dedupe: claimed hash=/);
+      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\nsecond\n');
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
