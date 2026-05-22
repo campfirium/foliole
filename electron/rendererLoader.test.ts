@@ -74,7 +74,8 @@ it('injects startup tokens and an absolute Vite module entry into dev renderer h
   expect(result).toContain('<base href="http://127.0.0.1:24600/">');
   expect(result).toContain(':root{--startup-document-bg:#1f211f;}');
   expect(result).toContain('data-resolved-base-color="dark"');
-  expect(result).toContain('src="http://127.0.0.1:24600/src/main.tsx"');
+  expect(result).toContain("entry.type = 'module';");
+  expect(result).toContain('entry.src = "http://127.0.0.1:24600/src/main.tsx";');
   expect(result).not.toContain('__vite_plugin_react_preamble_installed__ = true');
   expect(result).not.toContain('/@react-refresh');
   expect(result).not.toContain('startupCss=');
@@ -128,7 +129,8 @@ it('loads the prebuilt dev renderer html without regenerating it on startup', as
     expect(prebuiltHtml).toContain('data-resolved-base-color="dark"');
     expect(prebuiltHtml).not.toContain('__vite_plugin_react_preamble_installed__ = true');
     expect(prebuiltHtml).not.toContain('/@react-refresh');
-    expect(prebuiltHtml).toContain('type="module" src="http://127.0.0.1:24600/src/main.tsx"');
+    expect(prebuiltHtml).toContain("entry.type = 'module';");
+    expect(prebuiltHtml).toContain('entry.src = "http://127.0.0.1:24600/src/main.tsx";');
     expect(prebuiltHtml).not.toContain('foliole-runtime-renderer');
     expect(prebuiltHtml).not.toContain('STARTUP_INJECTED_BOOT_SCRIPT');
   } finally {

@@ -1,8 +1,11 @@
 // @vitest-environment node
+import { EventEmitter } from 'node:events';
+
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   appendBootEvent: vi.fn(),
+  presentInitialRendererWindow: vi.fn(),
   registerAttachmentProtocol: vi.fn(),
   registerRemoteImageProtocol: vi.fn(),
   startDevScreenshotServer: vi.fn(),
@@ -20,7 +23,7 @@ vi.mock('./ipc/boot.js', () => ({
 }));
 vi.mock('./ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_cache_dir: 'cache' }) }));
 vi.mock('./mainFollowupTasks.js', () => ({ startFollowupTasks: mocks.startFollowupTasks }));
-vi.mock('./windowRuntimeDiagnostics.js', () => ({ presentInitialRendererWindow: vi.fn() }));
+vi.mock('./windowRuntimeDiagnostics.js', () => ({ presentInitialRendererWindow: mocks.presentInitialRendererWindow }));
 
 import { startInitialMainWindow } from './mainStartup.js';
 
@@ -52,6 +55,7 @@ const mainWindowArgs = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.appendBootEvent.mockResolvedValue(undefined);
+  mocks.presentInitialRendererWindow.mockResolvedValue(undefined);
   mocks.waitForRendererAppReady.mockResolvedValue(undefined);
   mainWindowArgs.activateMainWindow.mockResolvedValue(undefined);
   mainWindowArgs.loadMainWindow.mockResolvedValue(undefined);
@@ -68,6 +72,27 @@ it('waits for renderer app_ready before starting desktop followup tasks', async 
   expect(mocks.startFollowupTasks).not.toHaveBeenCalled();
 
   appReady.resolve();
+  await startupPromise;
+
+  expect(mocks.waitForRendererAppReady).toHaveBeenCalledTimes(1);
+  expect(mocks.startFollowupTasks).toHaveBeenCalledTimes(1);
+});
+
+it('presents the startup shell on dom-ready before the full renderer load completes', async () => {
+  const rendererLoad = createDeferred();
+  const mainWindow = { webContents: new EventEmitter() } as Parameters<typeof startInitialMainWindow>[1]['mainWindow'];
+  const startup = createStartupArgs({ mainWindow });
+  mainWindowArgs.loadMainWindow.mockReturnValueOnce(rendererLoad.promise);
+
+  const startupPromise = startInitialMainWindow(mainWindowArgs, startup);
+  await vi.waitFor(() => expect(mainWindowArgs.loadMainWindow).toHaveBeenCalledTimes(1));
+  mainWindow.webContents.emit('dom-ready');
+
+  await vi.waitFor(() => expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(mainWindow));
+  expect(mocks.appendBootEvent).toHaveBeenCalledWith('main_window_shell_ready');
+  expect(mocks.startFollowupTasks).not.toHaveBeenCalled();
+
+  rendererLoad.resolve();
   await startupPromise;
 
   expect(mocks.waitForRendererAppReady).toHaveBeenCalledTimes(1);

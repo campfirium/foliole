@@ -32,13 +32,38 @@ interface InitialMainWindowStartupArgs {
   startCompanionSyncIfEnabled: () => Promise<void>;
 }
 
+const STARTUP_SHELL_READY_TIMEOUT_MS = 2500;
+
+async function waitForRendererShellReady(window: BrowserWindow, rendererLoadPromise: Promise<void>) {
+  const webContents = window.webContents;
+  if (typeof webContents?.once !== 'function') {
+    await rendererLoadPromise.catch(() => undefined);
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      globalThis.clearTimeout(timeout);
+      webContents.off('dom-ready', finish);
+      resolve();
+    };
+    const timeout = globalThis.setTimeout(finish, STARTUP_SHELL_READY_TIMEOUT_MS);
+    webContents.once('dom-ready', finish);
+    void rendererLoadPromise.then(finish, finish);
+  });
+}
+
 async function loadWorkspaceShell(args: {
   loadMainWindow: MainWindowStartupArgs['loadMainWindow'];
   window: BrowserWindow;
 }) {
-  await args.loadMainWindow(args.window);
+  const rendererLoadPromise = args.loadMainWindow(args.window);
+  await waitForRendererShellReady(args.window, rendererLoadPromise);
   await appendBootEvent('main_window_shell_ready');
   await presentInitialRendererWindow(args.window);
+  await rendererLoadPromise;
 }
 
 export async function startInitialMainWindow(
