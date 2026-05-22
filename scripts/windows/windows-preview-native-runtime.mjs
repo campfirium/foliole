@@ -99,3 +99,20 @@ export async function resolveChangedFiles(repoRoot) {
   }
   return [...files].sort();
 }
+
+export async function resolveCommittedFilesSince(repoRoot, fromHead, toHead) {
+  if (!fromHead || !toHead || fromHead === toHead) {
+    return [];
+  }
+  try {
+    await execFileAsync('git', ['rev-parse', '--verify', `${fromHead}^{commit}`], { cwd: repoRoot });
+    const result = await execFileAsync('git', ['diff', '--name-only', `${fromHead}..${toHead}`], { cwd: repoRoot });
+    return result.stdout
+      .split(/\r?\n/u)
+      .filter(Boolean)
+      .map((file) => file.replaceAll('\\', '/'))
+      .sort();
+  } catch {
+    return null;
+  }
+}
