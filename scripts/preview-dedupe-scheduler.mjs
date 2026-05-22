@@ -5,6 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { appendPreviewEvent } from './preview-dedupe-event-log.mjs';
 import { isPidAlive, withStateLock } from './preview-dedupe-state-store.mjs';
+import { createPreviewWaitAnnouncer } from './preview-dedupe-wait-status.mjs';
 
 const DEFAULT_WINDOW_MS = { android: 0, windows: 3 * 60_000 };
 const RESULT_POLL_MS = 200;
@@ -179,12 +180,12 @@ export async function runScheduledPreview({
   runtimeDir,
   target,
   runPreview,
+  waitAnnouncer = createPreviewWaitAnnouncer(),
   waitOnFailure = readWaitOnFailure(target),
   windowMs = readWindowMs(target)
 }) {
   const requestId = randomUUID();
   let assignedRunId = null;
-  let announcedDeferredRunId = null;
   while (true) {
     const action = await withStateLock({
       runtimeDir,
@@ -203,12 +204,11 @@ export async function runScheduledPreview({
       return action.run.exitCode;
     }
     if (action.kind === 'wait') {
-      if (announcedDeferredRunId !== assignedRunId) {
+      if (waitAnnouncer.shouldAnnounce(action, assignedRunId)) {
         await appendPreviewEvent({ event: 'request-waiting', fields: action, runtimeDir, target });
         console.log(
           `[${target}-preview] request: accepted run=${assignedRunId} reason=${action.reason} remainingSec=${action.acceptingRemainingSec} activeRun=${action.activeRunId ?? 'none'} waiters=${action.waiters}`
         );
-        announcedDeferredRunId = assignedRunId;
       }
       await delay(RESULT_POLL_MS);
       continue;
