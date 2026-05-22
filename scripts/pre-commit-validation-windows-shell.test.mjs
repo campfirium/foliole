@@ -132,4 +132,33 @@ describe('pre-commit Windows shell validation', () => {
       await rm(repoDir, { recursive: true, force: true });
     }
   });
+
+  it('blocks Windows preview scripts that persist or default to a debug library copy', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'scripts', 'windows'), { recursive: true });
+      await writeFile(
+        path.join(repoDir, 'scripts', 'windows', 'electron-dev-native.mjs'),
+        [
+          "const debugLibraryHome = 'D:\\\\C\\\\foliole\\\\.electron-user-data\\\\native-debug-library';",
+          "const settingsPath = 'library-path-settings.json';",
+          "const shouldUseDebugCopy = process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY !== '0';",
+          'const settings = { library_home: debugLibraryHome };',
+          'console.log(settingsPath, shouldUseDebugCopy, settings);',
+          ''
+        ].join('\n'),
+        'utf8'
+      );
+      await runCommand('git', ['add', 'scripts/windows/electron-dev-native.mjs'], repoDir);
+
+      const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
+
+      expect(result.code).not.toBe(0);
+      expect(result.stderr).toContain('windows library path policy violation');
+      expect(result.stderr).toContain('do not make the native debug library copy the default');
+      expect(result.stderr).toContain('do not persist the native debug library as Library Home');
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
 });
