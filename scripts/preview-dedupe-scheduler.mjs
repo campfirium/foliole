@@ -7,8 +7,7 @@ import { appendPreviewEvent } from './preview-dedupe-event-log.mjs';
 import { isPidAlive, withStateLock } from './preview-dedupe-state-store.mjs';
 import { createPreviewWaitAnnouncer } from './preview-dedupe-wait-status.mjs';
 
-const DEFAULT_WINDOW_MS = { android: 0, windows: 3 * 60_000 };
-const RESULT_POLL_MS = 200;
+const DEFAULT_WINDOW_MS = { android: 0, windows: 0 }, RESULT_POLL_MS = 200;
 const STATE_STALE_MS = 15 * 60_000;
 
 function readDurationMs(env, key, defaultValue) {
@@ -145,8 +144,9 @@ function createWaitAction(state, runId, reason, now) {
   };
 }
 
-function chooseAction(state, requestId, assignedRunId) {
+function chooseAction(state, requestId, assignedRunId, windowMs) {
   const now = Date.now();
+  if (windowMs === 0) state.acceptingUntil = 0;
   if (canTakeOver(state.runs[state.activeRunId], now) || state.runs[state.activeRunId]?.status === 'completed') {
     state.activeRunId = null;
   }
@@ -192,7 +192,7 @@ export async function runScheduledPreview({
       target,
       fn: (rawState) => {
         const state = normalizeState(rawState);
-        const value = chooseAction(state, requestId, assignedRunId);
+        const value = chooseAction(state, requestId, assignedRunId, windowMs);
         return { state, value };
       }
     });
