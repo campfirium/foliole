@@ -91,6 +91,8 @@ export function selectWorkspaceBottomReviewToolbarProps(
 }
 
 function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbarProps) {
+  const showReviewProgressLine =
+    props.isCurrentReviewItemGradable && props.reviewStatus !== 'completed' && props.reviewStatus !== 'idle';
   return (
     <div
       className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-visible ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
@@ -129,13 +131,13 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
         reviewSessionMode={props.reviewSessionMode}
       />
       <div className="pointer-events-none relative z-workspace-overlay col-start-3 row-start-1 h-full max-[1080px]:col-start-1">
-        {props.reviewStatus === 'completed' || props.reviewStatus === 'idle' ? null : (
+        {showReviewProgressLine ? (
           <ReviewToolbarProgressLine
             completedCount={props.reviewCompletedCount}
             queueCount={props.reviewQueueCount}
             reviewSessionMode={props.reviewSessionMode}
           />
-        )}
+        ) : null}
       </div>
       {props.isImmersiveMode ? null : (
         <>
