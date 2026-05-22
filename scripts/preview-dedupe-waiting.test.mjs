@@ -59,8 +59,8 @@ describe('preview-dedupe waiting requests', () => {
     const repoRoot = await createRepo();
     try {
       const env = {
-        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '300',
-        PREVIEW_DEDUPE_WINDOWS_WINDOW_MS: '300',
+        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '3000',
+        PREVIEW_DEDUPE_WINDOWS_WINDOW_MS: '3000',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
       };
