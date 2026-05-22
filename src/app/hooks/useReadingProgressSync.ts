@@ -5,7 +5,8 @@ import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ReadingPositionSyncState } from './useAppRuntime';
-import { useDebouncedReadingProgressPersistence, useImmediateReadingProgressCapture, useReadingProgressCloseFlushRegistration, useReadingProgressLifecycle } from './useReadingProgressSyncEffects';
+import { useReadingProgressCaptureHooks } from './useReadingProgressCaptureHooks';
+import { useReadingProgressCloseFlushRegistration, useReadingProgressLifecycle } from './useReadingProgressSyncEffects';
 import {
   flushReadingProgressBeforeClose,
   flushReadingProgressToRuntime,
@@ -14,6 +15,7 @@ import {
 import {
   captureEditorNodeViewState,
   mergePendingNodeViewStates,
+  resolveNodeViewIdsToPersist,
   type PendingNodeViewStateMap,
   type ReadingProgressCaptureMode,
   type ResolvedReadingProgressState
@@ -47,10 +49,6 @@ function useLatestReadingProgressState(args: ReadingProgressSyncOptions) {
     nodeViewByIdRef,
     pendingNodeViewByIdRef
   };
-}
-
-function createReadingProgressOptions(args: ReadingProgressSyncOptions): ReadingProgressSyncOptions {
-  return args;
 }
 
 function useResolvedReadingProgressState(
@@ -96,6 +94,11 @@ function useResolvedReadingProgressState(
               [captured.nodeId]: captured.viewState
             }
           : mergedPendingNodeViewById,
+        nodeViewIdsToPersist: resolveNodeViewIdsToPersist({
+          captured,
+          includePendingNodeViewStates,
+          pendingNodeViewById: latest.pendingNodeViewByIdRef.current
+        }),
         resolvedActiveNodeId:
           typeof activeNodeIdOverride === 'undefined'
             ? latest.activeNodeIdRef.current
@@ -148,33 +151,6 @@ function useReadingProgressFlushCallbacks(args: {
   return { flushReadingProgress, flushReadingProgressImmediately };
 }
 
-function useReadingProgressCaptureHooks(args: {
-  activeNodeId: string | null;
-  editorRef: MutableRefObject<EditorAdapter | null>;
-  flushReadingProgress: (
-    activeNodeIdOverride?: string | null,
-    captureNodeIdOverride?: string | null,
-    captureMode?: ReadingProgressCaptureMode
-  ) => void;
-  getReadingPositionSelection?: () => { from: number; to: number } | null;
-  getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
-  isImmersiveMode: boolean;
-  isViewingTrashNode: boolean;
-  isWorkspaceHydrated: boolean;
-  nodeViewById: Record<string, NodeViewState | undefined>;
-  pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
-}) {
-  useImmediateReadingProgressCapture(args);
-  useDebouncedReadingProgressPersistence({
-    activeNodeId: args.activeNodeId,
-    editorRef: args.editorRef,
-    flushReadingProgress: () => args.flushReadingProgress(undefined, undefined, 'user-scroll'),
-    isViewingTrashNode: args.isViewingTrashNode,
-    isWorkspaceHydrated: args.isWorkspaceHydrated,
-    ...definedProps({ getReadingPositionSyncState: args.getReadingPositionSyncState })
-  });
-}
-
 export function useReadingProgressSync({
   activeNodeId,
   editorRef,
@@ -186,7 +162,7 @@ export function useReadingProgressSync({
   nodeViewById,
   setNodeViewState
 }: ReadingProgressSyncOptions) {
-  const options = createReadingProgressOptions({
+  const options = {
     activeNodeId,
     editorRef,
     isImmersiveMode,
@@ -198,7 +174,7 @@ export function useReadingProgressSync({
       getReadingPositionSelection,
       getReadingPositionSyncState
     })
-  });
+  };
   const latest = useLatestReadingProgressState(options);
   const resolveCapturedReadingProgress = useResolvedReadingProgressState(options, latest);
   const { flushReadingProgress, flushReadingProgressImmediately } = useReadingProgressFlushCallbacks({

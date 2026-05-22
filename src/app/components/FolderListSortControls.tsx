@@ -19,7 +19,7 @@ export function FolderListSortControls(props: {
   sortKey: FolderListSortKey;
 }) {
   const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Date modified';
-  const orderOptions = getFolderListSortOrderOptions();
+  const orderOptions = getFolderListSortOrderOptions(props.sortKey);
 
   return (
     <AppDropdownMenu>

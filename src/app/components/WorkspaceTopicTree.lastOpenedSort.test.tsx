@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it } from 'vitest';
 
@@ -45,6 +45,26 @@ function rowTitles() {
 function rowNodeIds() {
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   return within(itemColumn).getAllByRole('treeitem').map((row) => row.getAttribute('data-node-id'));
+}
+
+function StoreBackedLastOpenedHarness() {
+  const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
+  const nodesById = {
+    'article-a': createNode('article-a', 'Opened earlier'),
+    'article-b': createNode('article-b', 'Opened latest'),
+    'article-c': createNode('article-c', 'Newly opened')
+  };
+
+  return (
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId={activeNodeId}
+      itemIds={['article-a', 'article-b', 'article-c']}
+      nodesById={nodesById}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={(nodeId) => useWorkspaceStore.getState().openNode(nodeId)}
+    />
+  );
 }
 
 function chooseLastOpenedSort() {
@@ -150,39 +170,66 @@ beforeEach(() => {
   }));
 });
 
-it('refreshes the current folder list when last-opened sorting is selected again', () => {
+it('refreshes the current folder list when last-opened timestamps change', () => {
   render(<LastOpenedSortHarness />);
 
   chooseLastOpenedSort();
   expect(rowTitles()).toEqual(['Latest', 'Earlier']);
 
-  useWorkspaceStore.setState((state) => ({
-    ...state,
-    nodeViewById: {
-      ...state.nodeViewById,
-      'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' }
-    }
-  }));
-  expect(rowTitles()).toEqual(['Latest', 'Earlier']);
-
-  chooseLastOpenedSort();
+  act(() => {
+    useWorkspaceStore.setState((state) => ({
+      ...state,
+      nodeViewById: {
+        ...state.nodeViewById,
+        'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' }
+      }
+    }));
+  });
   expect(rowTitles()).toEqual(['Earlier', 'Latest']);
 });
 
-it('refreshes last-opened order after leaving and returning to a folder', () => {
+it('moves a newly opened topic to the top when selection writes through the workspace store', () => {
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    activeNodeId: 'article-a',
+    nodeOrder: ['article-a', 'article-b', 'article-c'],
+    nodeViewById: {
+      'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-01T09:00:00.000Z' },
+      'article-b': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' }
+    },
+    nodesById: {
+      'article-a': createNode('article-a', 'Opened earlier'),
+      'article-b': createNode('article-b', 'Opened latest'),
+      'article-c': createNode('article-c', 'Newly opened')
+    },
+    trashedNodeIds: []
+  }));
+  render(<StoreBackedLastOpenedHarness />);
+
+  chooseLastOpenedSort();
+  expect(rowTitles()).toEqual(['Opened latest', 'Opened earlier', 'Newly opened']);
+
+  fireEvent.click(screen.getByRole('treeitem', { name: /Newly opened/ }));
+
+  expect(rowTitles()).toEqual(['Newly opened', 'Opened latest', 'Opened earlier']);
+});
+
+it('keeps the refreshed last-opened order after leaving and returning to a folder', () => {
   render(<LastOpenedFolderSwitchHarness />);
 
   chooseLastOpenedSort();
   expect(rowTitles()).toEqual(['Latest', 'Earlier']);
 
-  useWorkspaceStore.setState((state) => ({
-    ...state,
-    nodeViewById: {
-      ...state.nodeViewById,
-      'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' }
-    }
-  }));
-  expect(rowTitles()).toEqual(['Latest', 'Earlier']);
+  act(() => {
+    useWorkspaceStore.setState((state) => ({
+      ...state,
+      nodeViewById: {
+        ...state.nodeViewById,
+        'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' }
+      }
+    }));
+  });
+  expect(rowTitles()).toEqual(['Earlier', 'Latest']);
 
   fireEvent.click(screen.getByRole('button', { name: 'Open folder B' }));
   expect(rowTitles()).toEqual(['Other folder']);

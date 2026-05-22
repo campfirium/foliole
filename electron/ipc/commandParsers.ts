@@ -1,7 +1,7 @@
 import { normalizeNodeViewStateWriteSource } from '../../lib/platform/persistedNodeViewState.js';
 
 import { parseNodeSnapshotArgs } from './commandParserNodeSnapshot.js';
-import { asNullableInteger, asString } from './commandParserPrimitives.js';
+import { asNullableInteger, asString, asTimestamp } from './commandParserPrimitives.js';
 
 export {
   asBoolean,
@@ -21,6 +21,7 @@ interface NodeViewStatePayload {
   scrollTop: number;
   selectionFrom: number | null;
   selectionTo: number | null;
+  updatedAt?: string | null;
 }
 
 function parseNodeViewStatePayload(value: unknown, field: string): NodeViewStatePayload {
@@ -32,7 +33,11 @@ function parseNodeViewStatePayload(value: unknown, field: string): NodeViewState
     nodeId: asString(payload.nodeId, `${field}.nodeId`),
     scrollTop: asNullableInteger(payload.scrollTop, `${field}.scrollTop`) ?? 0,
     selectionFrom: asNullableInteger(payload.selectionFrom, `${field}.selectionFrom`),
-    selectionTo: asNullableInteger(payload.selectionTo, `${field}.selectionTo`)
+    selectionTo: asNullableInteger(payload.selectionTo, `${field}.selectionTo`),
+    updatedAt:
+      payload.updatedAt === null || payload.updatedAt === undefined
+        ? null
+        : asTimestamp(payload.updatedAt, `${field}.updatedAt`)
   };
 }
 

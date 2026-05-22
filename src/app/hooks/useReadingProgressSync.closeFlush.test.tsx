@@ -34,16 +34,10 @@ function expectCurrentNodeCloseFlush(invoke: ReturnType<typeof vi.fn>) {
   });
 }
 
-function expectFullTableCloseFlush(invoke: ReturnType<typeof vi.fn>) {
+function expectCurrentNodeOnlyCloseFlush(invoke: ReturnType<typeof vi.fn>) {
   expect(invoke).toHaveBeenLastCalledWith('save_reading_progress', {
     activeNodeId: 'node-2',
     nodeViewStates: [
-      {
-        nodeId: 'node-1',
-        scrollTop: 1200,
-        selectionFrom: 88,
-        selectionTo: 88
-      },
       {
         nodeId: 'node-2',
         scrollTop: 5400,
@@ -59,14 +53,7 @@ function expectFullTableCloseFlush(invoke: ReturnType<typeof vi.fn>) {
 function expectStoredNodeCloseFlush(invoke: ReturnType<typeof vi.fn>) {
   expect(invoke).toHaveBeenLastCalledWith('save_reading_progress', {
     activeNodeId: 'node-2',
-    nodeViewStates: [
-      {
-        nodeId: 'node-2',
-        scrollTop: 5400,
-        selectionFrom: 48000,
-        selectionTo: 48000
-      }
-    ],
+    nodeViewStates: [],
     source: 'close-flush',
     updatedAt: expect.any(String)
   });
@@ -132,7 +119,7 @@ function registerCloseFlushTests() {
     expectCurrentNodeCloseFlush(invoke);
   });
 
-  it('flushes the full node position table through the before-close handler', async () => {
+  it('flushes only the current node position through the before-close handler', async () => {
     const invoke = vi.fn(() => Promise.resolve(null));
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     render(
@@ -152,7 +139,7 @@ function registerCloseFlushTests() {
     );
 
     await expect(window.__folioleFlushReadingProgressBeforeClose?.()).resolves.toBe(true);
-    expectFullTableCloseFlush(invoke);
+    expectCurrentNodeOnlyCloseFlush(invoke);
   });
 }
 
@@ -183,14 +170,7 @@ function registerRestoreGuardCloseFlushTests() {
     await expect(window.__folioleFlushReadingProgressBeforeClose?.()).resolves.toBe(true);
     expect(invoke).toHaveBeenLastCalledWith('save_reading_progress', {
       activeNodeId: 'node-2',
-      nodeViewStates: [
-        {
-          nodeId: 'node-2',
-          scrollTop: 5400,
-          selectionFrom: 48000,
-          selectionTo: 48000
-        }
-      ],
+      nodeViewStates: [],
       source: 'close-flush',
       updatedAt: expect.any(String)
     });

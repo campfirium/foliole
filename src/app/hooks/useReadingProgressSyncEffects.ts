@@ -8,11 +8,9 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import {
   captureEditorNodeViewState,
   stagePendingNodeViewState,
-  type PendingNodeViewStateMap,
-  type ReadingProgressCaptureMode
+  type PendingNodeViewStateMap
 } from './useReadingProgressSyncSupport';
 
-const READING_PROGRESS_SYNC_INTERVAL_MS = 1500;
 const READING_PROGRESS_DEBOUNCE_MS = 400;
 
 declare global {
@@ -23,11 +21,6 @@ declare global {
 
 interface ReadingProgressEffectsOptions {
   activeNodeId: string | null;
-  flushReadingProgress: (
-    activeNodeIdOverride?: string | null,
-    captureNodeIdOverride?: string | null,
-    captureMode?: ReadingProgressCaptureMode
-  ) => void;
   getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } | null } | null;
   isWorkspaceHydrated: boolean;
   lifecycleFlush: () => void;
@@ -56,25 +49,10 @@ function isReadingPositionRestoreActive(
 
 function useReadingProgressEffects({
   activeNodeId,
-  flushReadingProgress,
-  getReadingPositionSyncState,
   isWorkspaceHydrated,
   lifecycleFlush,
   syncActiveNodeReadingProgress
 }: ReadingProgressEffectsOptions) {
-  useEffect(() => {
-    if (!isWorkspaceHydrated) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      if (isReadingPositionRestoreActive(getReadingPositionSyncState)) {
-        return;
-      }
-      flushReadingProgress(undefined, null);
-    }, READING_PROGRESS_SYNC_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [flushReadingProgress, getReadingPositionSyncState, isWorkspaceHydrated]);
-
   useEffect(() => {
     if (!isWorkspaceHydrated) {
       return;
@@ -128,7 +106,6 @@ export function useReadingProgressLifecycle(args: {
 
   useReadingProgressEffects({
     activeNodeId: args.activeNodeId,
-    flushReadingProgress: args.flushReadingProgress,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     lifecycleFlush,
     syncActiveNodeReadingProgress: (activeNodeIdOverride) =>

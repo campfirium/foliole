@@ -5,7 +5,7 @@ import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules
 import type { NativeSchedulerCard } from './nativeContract.js';
 import type { NativeWorkspaceReadingProfile } from './nativeReadingContract.js';
 import type { NativeWorkspaceAnchorLink, NativeWorkspaceImageRegionGroup } from './nativeWorkspaceNodeContract.js';
-import type { NodeViewStateWriteSource } from './persistedNodeViewState.js';
+export type * from './nativeReadingProgressContract.js';
 
 export interface NativeWorkspaceReviewProfile {
   due: string;
@@ -190,28 +190,6 @@ export interface NativeNodeSnapshotArgs {
 export interface NativeNodeAnchorLocatorUpdateArgs {
   nodeId: string;
   anchorLink: NativeWorkspaceAnchorLink;
-  updatedAt: string;
-}
-
-export interface NativeReadingProgressNodeViewState {
-  nodeId: string;
-  scrollTop: number;
-  selectionFrom: number | null;
-  selectionTo: number | null;
-}
-
-export interface NativeReadingProgressSnapshot {
-  activeNodeId: string | null;
-  nodeViewStateById: Record<
-    string,
-    { scrollTop: number; selectionFrom: number | null; selectionTo: number | null; updatedAt: string }
-  >;
-}
-
-export interface NativeSaveReadingProgressArgs {
-  activeNodeId: string | null;
-  nodeViewStates: NativeReadingProgressNodeViewState[];
-  source?: NodeViewStateWriteSource;
   updatedAt: string;
 }
 

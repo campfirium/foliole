@@ -28,7 +28,10 @@ vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({}),
   saveAppSettingsState: vi.fn().mockResolvedValue(undefined)
 }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./boot.js', () => ({
+  appendBootEvent: vi.fn(),
+  bootReport: vi.fn().mockResolvedValue(undefined)
+}));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn() }));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
@@ -89,7 +92,8 @@ it('handles reading progress storage commands', async () => {
             nodeId: 'node-2',
             scrollTop: 24,
             selectionFrom: 2,
-            selectionTo: 6
+            selectionTo: 6,
+            updatedAt: '2026-03-06T09:30:00.000Z'
           }
         ],
         updatedAt: '2026-03-06T10:00:00.000Z'
@@ -104,7 +108,8 @@ it('handles reading progress storage commands', async () => {
         nodeId: 'node-2',
         scrollTop: 24,
         selectionFrom: 2,
-        selectionTo: 6
+        selectionTo: 6,
+        updatedAt: '2026-03-06T09:30:00.000Z'
       }
     ],
     source: 'user-scroll',

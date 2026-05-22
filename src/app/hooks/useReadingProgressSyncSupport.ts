@@ -15,6 +15,7 @@ export interface CapturedNodeViewState {
 export interface ResolvedReadingProgressState {
   captured: CapturedNodeViewState | null;
   mergedNodeViewById: Record<string, NodeViewState | undefined>;
+  nodeViewIdsToPersist: string[];
   resolvedActiveNodeId: string | null;
 }
 
@@ -49,11 +50,15 @@ export function isSameNodeViewState(left: NodeViewState | undefined, right: Node
 
 export function createReadingProgressSignature(
   activeNodeId: string | null,
-  nodeViewById: Record<string, NodeViewState | undefined>
+  nodeViewById: Record<string, NodeViewState | undefined>,
+  nodeViewIdsToPersist: string[] = Object.keys(nodeViewById)
 ): string {
+  const selectedNodeViewById = Object.fromEntries(
+    nodeViewIdsToPersist.map((nodeId) => [nodeId, nodeViewById[nodeId]])
+  );
   return JSON.stringify({
     activeNodeId,
-    nodeViewStates: toRuntimeNodeViewStates(nodeViewById)
+    nodeViewStates: toRuntimeNodeViewStates(selectedNodeViewById)
   });
 }
 
@@ -88,11 +93,15 @@ export function captureEditorNodeViewState(
 export function createReadingProgressPayload(
   activeNodeId: string | null,
   nodeViewById: Record<string, NodeViewState | undefined>,
+  nodeViewIdsToPersist: string[],
   source: NodeViewStateWriteSource = 'user-scroll'
 ) {
+  const selectedNodeViewById = Object.fromEntries(
+    nodeViewIdsToPersist.map((nodeId) => [nodeId, nodeViewById[nodeId]])
+  );
   return {
     activeNodeId,
-    nodeViewStates: toRuntimeNodeViewStates(nodeViewById),
+    nodeViewStates: toRuntimeNodeViewStates(selectedNodeViewById),
     source,
     updatedAt: new Date().toISOString()
   };
@@ -113,6 +122,15 @@ export function mergePendingNodeViewStates(
     mergedNodeViewById[nodeId] = viewState;
   }
   return mergedNodeViewById;
+}
+
+export function resolveNodeViewIdsToPersist(args: {
+  captured: CapturedNodeViewState | null;
+  includePendingNodeViewStates: boolean;
+  pendingNodeViewById: PendingNodeViewStateMap;
+}) {
+  const pendingNodeIds = args.includePendingNodeViewStates ? Object.keys(args.pendingNodeViewById) : [];
+  return args.captured ? Array.from(new Set([...pendingNodeIds, args.captured.nodeId])) : pendingNodeIds;
 }
 
 export function stagePendingNodeViewState(args: {

@@ -67,7 +67,7 @@ export function loadWorkspaceContentSortPreference(): WorkspaceContentSortState 
     const key = migrateWorkspaceContentSortKey(String(parsed.key));
     const direction = String(parsed.direction);
     if (key && isWorkspaceContentSortDirection(direction)) {
-      return { direction, key };
+      return { direction: key === 'lastOpenedAt' ? 'desc' : direction, key };
     }
   } catch {
     return DEFAULT_WORKSPACE_CONTENT_SORT;

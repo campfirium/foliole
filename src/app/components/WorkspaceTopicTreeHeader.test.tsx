@@ -91,6 +91,28 @@ it('keeps the top toolbar sort tooltip above the trigger', async () => {
   expect(tooltip.parentElement).not.toHaveAttribute('data-side', 'bottom');
 });
 
+it('keeps last opened order fixed to newest first', () => {
+  render(
+    <WorkspaceTopicTreeHeader
+      hasCollapsibleNodes
+      hasCollapsedNodes={false}
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
+      onCreateTopic={vi.fn()}
+      onSearchQueryChange={vi.fn()}
+      onToggleCollapseAll={vi.fn()}
+      searchQuery=""
+      sortDirection="asc"
+      sortKey="lastOpenedAt"
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Last opened' }), { key: 'ArrowDown' });
+
+  expect(screen.getByRole('menuitem', { name: 'Newest first' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Oldest first' })).toBeNull();
+});
+
 it('keeps the top toolbar focus tooltip above the trigger', async () => {
   render(
     <WorkspaceTopicTreeHeader

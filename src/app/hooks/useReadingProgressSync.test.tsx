@@ -53,14 +53,7 @@ function registerNodeSwitchTests() {
 
     expect(syncReadingProgressToRuntime).toHaveBeenLastCalledWith({
       activeNodeId: 'node-2',
-      nodeViewStates: [
-        {
-          nodeId: 'node-2',
-          scrollTop: 24,
-          selectionFrom: 2,
-          selectionTo: 6
-        }
-      ],
+      nodeViewStates: [],
       source: 'user-scroll',
       updatedAt: expect.any(String)
     });

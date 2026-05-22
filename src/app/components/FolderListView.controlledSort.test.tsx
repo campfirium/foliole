@@ -99,10 +99,10 @@ it('updates a controlled sort direction through the toolbar menu', () => {
   expect(getRenderedEntryTitles()).toEqual(['First imported', 'Last imported']);
 });
 
-it('refreshes last-opened order when the active sort option is selected again', () => {
+it('keeps last-opened order newest first even if controlled direction is ascending', () => {
   function ControlledFolderList() {
     const [sortKey, setSortKey] = useState<FolderListSortKey>('dateLastOpened');
-    const [sortDirection, setSortDirection] = useState<FolderListSortDirection>('desc');
+    const [sortDirection, setSortDirection] = useState<FolderListSortDirection>('asc');
     const [nodeViewById, setNodeViewById] = useState<Record<string, NodeViewState | undefined>>({
       'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-01T09:00:00.000Z' },
       'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' }
@@ -147,10 +147,9 @@ it('refreshes last-opened order when the active sort option is selected again', 
   expect(getRenderedEntryTitles()).toEqual(['Latest', 'Earlier']);
 
   fireEvent.click(screen.getByRole('button', { name: 'Simulate opened node' }));
-  expect(getRenderedEntryTitles()).toEqual(['Latest', 'Earlier']);
+  expect(getRenderedEntryTitles()).toEqual(['Earlier', 'Latest']);
 
   fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Last opened' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Last opened' }));
-
-  expect(getRenderedEntryTitles()).toEqual(['Earlier', 'Latest']);
+  expect(screen.getByRole('menuitem', { name: 'Recent -> Older' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Older -> Recent' })).toBeNull();
 });
