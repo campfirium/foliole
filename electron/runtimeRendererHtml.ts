@@ -40,6 +40,30 @@ function removeStartupBootScript(html: string) {
   return html.replace(/\s*<script>\s*\/\*STARTUP_INJECTED_BOOT_SCRIPT\*\/\s*<\/script>/, '');
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function createDevRendererEntryLoader(entryUrl: string) {
+  const encodedEntryUrl = JSON.stringify(entryUrl);
+  return `<script>
+      (() => {
+        const entry = document.createElement('script');
+        entry.type = 'module';
+        entry.src = ${encodedEntryUrl};
+        document.body.appendChild(entry);
+      })();
+    </script>`;
+}
+
+function replaceDevRendererEntryWithAsyncLoader(html: string, entryUrl: string) {
+  const escapedEntryUrl = escapeRegExp(entryUrl);
+  return html.replace(
+    new RegExp(`<script\\b([^>]*\\btype=["']module["'][^>]*\\bsrc=["']${escapedEntryUrl}["'][^>]*)><\\/script>`, 'u'),
+    createDevRendererEntryLoader(entryUrl)
+  );
+}
+
 function injectStartupDocumentState(html: string, themeSource: 'dark' | 'light') {
   return html.replace(
     /<html\b([^>]*)>/,
@@ -73,9 +97,13 @@ export function injectDevRendererIntoHtml(
 ) {
   const normalizedDevUrl = normalizeDevUrl(devUrl) ?? devUrl;
   const devOrigin = new URL(normalizedDevUrl).origin;
-  const withStartupState = injectStartupTokensIntoHtml(html, startupCss, themeSource).replace(
-    'src="/src/main.tsx"',
-    `src="${devOrigin}/src/main.tsx"`
+  const entryUrl = `${devOrigin}/src/main.tsx`;
+  const withStartupState = replaceDevRendererEntryWithAsyncLoader(
+    injectStartupTokensIntoHtml(html, startupCss, themeSource).replace(
+      'src="/src/main.tsx"',
+      `src="${entryUrl}"`
+    ),
+    entryUrl
   );
   if (withStartupState.includes('<base href=')) {
     return withStartupState;
