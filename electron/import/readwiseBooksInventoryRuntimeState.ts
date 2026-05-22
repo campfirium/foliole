@@ -1,3 +1,5 @@
+import { openDatabaseConnection } from '../database/connection.js';
+
 import type {
   ReadwiseBookInventoryItem,
   ReadwiseBooksInventory,
@@ -13,6 +15,17 @@ function resolveBookSourceName(book: ReadwiseBookInventoryItem) {
   return sourcePath ? sourcePath.split(/[\\/]/u).at(-1) ?? `${book.title}.md` : `${book.title}.md`;
 }
 
+function hasActiveNode(nodeId: string | null) {
+  if (!nodeId) {
+    return false;
+  }
+  const row = openDatabaseConnection().driver.queryOne<{ id: string }>(
+    'SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL',
+    [nodeId]
+  );
+  return Boolean(row?.id);
+}
+
 function refreshBookRuntimeState(book: ReadwiseBookInventoryItem) {
   const lookup = {
     epubPath: book.epubPath,
@@ -20,7 +33,8 @@ function refreshBookRuntimeState(book: ReadwiseBookInventoryItem) {
     highlightMarkdownPath: book.highlightMarkdownPath,
     sourceName: resolveBookSourceName(book)
   };
-  const generatedNodeId = resolveGeneratedNodeId(lookup);
+  const resolvedNodeId = resolveGeneratedNodeId(lookup);
+  const generatedNodeId = resolvedNodeId ?? (hasActiveNode(book.generatedNodeId) ? book.generatedNodeId : null);
   const nodeStatus = generatedNodeId ? 'generated' : 'missing';
   const sourceImportStatus = resolveImportStatus(lookup);
   const importStatus =
