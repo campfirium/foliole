@@ -29,9 +29,7 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
     ...createReadingNode('reading-1', now),
     reading: null
   };
-  const harness = createSetStateHarness(
-    createWorkspaceFixture([firstTimeReadingNode, createReadingNode('reading-2', now)])
-  );
+  const harness = createSetStateHarness(createWorkspaceFixture([firstTimeReadingNode]));
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
     grade: createSchedulerGradeMock(),
     preview: previewStub
@@ -50,7 +48,7 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
   expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({
     beforeReviewSession: {
       currentNodeId: 'reading-1',
-      queueNodeIds: ['reading-1', 'reading-2']
+      queueNodeIds: ['reading-1']
     },
     nodeId: 'reading-1',
     title: 'Dismiss Topic',
@@ -62,6 +60,28 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
       reading: expect.objectContaining({ state: 'dismissed' })
     })
   );
+});
+
+it('counts a dismissed reading topic as handled material', () => {
+  const startedAt = '2026-03-03T00:00:00.000Z';
+  const dismissedAt = '2026-03-03T00:02:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createReadingNode('reading-1', startedAt), createReadingNode('reading-2', startedAt)])
+  );
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
+    grade: createSchedulerGradeMock(),
+    preview: previewStub
+  });
+
+  actions.startReviewSession(startedAt);
+  const dismissedNodeId = harness.getState().reviewSession.currentNodeId;
+
+  expect(actions.dismissReviewItem(dismissedAt)).toBe(true);
+  expect(harness.getState().nodesById[dismissedNodeId ?? '']?.reading?.state).toBe('dismissed');
+  expect(harness.getState().reviewSession).toMatchObject({
+    readTopicCount: 1,
+    readingElapsedMs: 2 * 60 * 1000
+  });
 });
 
 it('restores the dismissed review item as the current review item when undoing', () => {
@@ -76,24 +96,26 @@ it('restores the dismissed review item as the current review item when undoing',
   const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
 
   actions.startReviewSession(now);
+  const currentNodeId = harness.getState().reviewSession.currentNodeId;
+  const nextNodeId = currentNodeId === 'reading-1' ? 'reading-2' : 'reading-1';
   expect(actions.dismissReviewItem(now)).toBe(true);
-  expect(harness.getState().reviewSession.currentNodeId).toBe('reading-2');
+  expect(harness.getState().reviewSession.currentNodeId).toBe(nextNodeId);
 
   expect(historyActions.undoWorkspaceAction('2026-03-04T00:00:00.000Z')).toBe(true);
 
-  expect(harness.getState().activeNodeId).toBe('reading-1');
+  expect(harness.getState().activeNodeId).toBe(currentNodeId);
   expect(harness.getState().reviewSession).toMatchObject({
-    currentNodeId: 'reading-1',
+    currentNodeId,
     isAnswerRevealed: false,
-    queueNodeIds: ['reading-1', 'reading-2']
+    queueNodeIds: expect.arrayContaining(['reading-1', 'reading-2'])
   });
 
   expect(historyActions.redoWorkspaceAction('2026-03-05T00:00:00.000Z')).toBe(true);
-  expect(harness.getState().activeNodeId).toBe('reading-2');
+  expect(harness.getState().activeNodeId).toBe(nextNodeId);
   expect(harness.getState().reviewSession).toMatchObject({
-    currentNodeId: 'reading-2',
+    currentNodeId: nextNodeId,
     isAnswerRevealed: false,
-    queueNodeIds: ['reading-2']
+    queueNodeIds: [nextNodeId]
   });
 });
 
@@ -108,9 +130,11 @@ it('does not dismiss the current review item while another topic is open', () =>
   });
 
   actions.startReviewSession(now);
-  harness.setState({ activeNodeId: 'reading-2' });
+  const currentNodeId = harness.getState().reviewSession.currentNodeId;
+  const otherNodeId = currentNodeId === 'reading-1' ? 'reading-2' : 'reading-1';
+  harness.setState({ activeNodeId: otherNodeId });
 
   expect(actions.dismissReviewItem(now)).toBe(false);
-  expect(harness.getState().nodesById['reading-1']?.reading?.state).toBe('active');
+  expect(harness.getState().nodesById[currentNodeId ?? '']?.reading?.state).toBe('active');
   expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
 });
