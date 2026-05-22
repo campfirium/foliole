@@ -88,6 +88,28 @@ it('updates the assets path through the native bridge', async () => {
   });
 });
 
+it('passes existing Library Home confirmation through the native bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    assets_dir: '/existing/Assets',
+    data_dir: '/existing/Data',
+    database_path: '/existing/Data/foliole.db',
+    inbox: '/existing/Inbox',
+    library_home: '/existing',
+    mirror: '/existing/Mirror',
+    updated_at: '2026-03-30T00:12:00.000Z'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(
+    updateRuntimeLibraryPathSetting('library_home', '/existing', { confirmExistingLibraryHome: true })
+  ).resolves.toMatchObject({ libraryHome: '/existing' });
+  expect(invoke).toHaveBeenCalledWith('update_library_path_setting', {
+    confirm_existing_library_home: true,
+    location: 'library_home',
+    path: '/existing'
+  });
+});
+
 it('rebuilds mirror attachment links through the native bridge', async () => {
   const invoke = vi.fn().mockResolvedValue({
     scanned_document_count: 2,

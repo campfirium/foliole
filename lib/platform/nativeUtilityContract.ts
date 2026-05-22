@@ -28,6 +28,7 @@ export interface NativeLibraryPaths {
 }
 
 export interface NativeUpdateLibraryPathSettingArgs {
+  confirm_existing_library_home?: boolean;
   location: NativeLibraryPathLocation;
   path: string | null;
 }

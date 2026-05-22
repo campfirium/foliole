@@ -20,7 +20,7 @@ import {
   saveReviewSchedulerSettings
 } from '../reviewSchedulerSettings.js';
 
-import { asLiteralUnion, asNullableString, asString } from './commandParsers.js';
+import { asBoolean, asLiteralUnion, asNullableString, asString } from './commandParsers.js';
 import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
@@ -58,6 +58,10 @@ export async function handleSettingsStorageCommand(
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
     const location = asLiteralUnion(args.location, LIBRARY_PATH_LOCATIONS, 'location');
     const result = await updateLibraryPathSetting({
+      confirm_existing_library_home:
+        args.confirm_existing_library_home === undefined
+          ? false
+          : asBoolean(args.confirm_existing_library_home, 'confirm_existing_library_home'),
       location,
       path: asNullableString(args.path, 'path')
     });
