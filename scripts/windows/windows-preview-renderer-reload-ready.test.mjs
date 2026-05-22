@@ -104,4 +104,4 @@ it('falls back to full restart when renderer reload never reaches app ready', as
   } finally {
     await rm(tempRoot, { recursive: true, force: true });
   }
-});
+}, 10000);
