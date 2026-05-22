@@ -71,11 +71,11 @@ it('renders enabled web lookup entries from the live selection payload', () => {
   );
 
   expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-    'Ask ChatGPT',
+    'Chat with ChatGPT',
     'Search with Google'
   ]);
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Chat with ChatGPT' }));
   expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Selected%20text%20that%20should%20be%20a%20highlight%EF%BC%88%E3%80%8AMy%20Topic%E3%80%8B%EF%BC%89');
   expect(onClose).toHaveBeenCalledTimes(1);
 });
@@ -101,7 +101,7 @@ it('keeps hidden web lookup entries out of the selection context menu', () => {
     />
   );
 
-  expect(screen.queryByRole('menuitem', { name: 'Ask ChatGPT' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Chat with ChatGPT' })).toBeNull();
   expect(screen.getByRole('menuitem', { name: 'Search with Google' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Search with DuckDuckGo' })).toBeInTheDocument();
 });
@@ -121,7 +121,7 @@ it('opens ChatGPT with topic text without reusing a preserved command selection 
     />
   );
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Chat with ChatGPT' }));
 
   expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Full%20topic%20text%EF%BC%88%E3%80%8AMy%20Topic%E3%80%8B%EF%BC%89');
   expect(screen.queryByRole('menuitem', { name: 'Search with Google' })).toBeNull();
@@ -145,7 +145,7 @@ it('copies a selected prompt above the measured ChatGPT URL boundary before open
     />
   );
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Chat with ChatGPT' }));
 
   expect(await screen.findByRole('status')).toHaveTextContent('Selection is too long to send this way');
   expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${longSelection}（《My Topic》）`);
@@ -173,7 +173,7 @@ it('copies topic text above the measured ChatGPT URL boundary and lets the user 
     />
   );
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Ask ChatGPT' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Chat with ChatGPT' }));
 
   expect(await screen.findByRole('status')).toHaveTextContent('Full topic is too long to send this way');
   expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${longDocument}（《My Topic》）`);
