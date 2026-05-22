@@ -63,7 +63,7 @@ export const BUILT_IN_WEB_LOOKUP_ENTRIES: WebLookupEntry[] = [
     enabled: true,
     id: 'chatgpt',
     kind: 'prompt',
-    label: 'Ask ChatGPT',
+    label: 'Chat with ChatGPT',
     urlTemplate: CHATGPT_DEFAULT_LINK
   },
   {

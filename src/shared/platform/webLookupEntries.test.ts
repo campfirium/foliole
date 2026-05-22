@@ -26,7 +26,7 @@ it('defaults to ChatGPT then Google while keeping DuckDuckGo hidden', () => {
     ['duckduckgo', false]
   ]);
   expect(getEnabledWebLookupEntries().map((entry) => entry.label)).toEqual([
-    'Ask ChatGPT',
+    'Chat with ChatGPT',
     'Search with Google'
   ]);
 });
@@ -77,12 +77,12 @@ it('resolves prompt actions from selection or current topic text', () => {
     titleText: 'My Topic'
   })).toEqual({
     kind: 'prompt',
-    label: 'Ask ChatGPT',
+    label: 'Chat with ChatGPT',
     url: 'https://chatgpt.com/?prompt=Selected%20text%EF%BC%88%E3%80%8AMy%20Topic%E3%80%8B%EF%BC%89'
   });
   expect(resolveWebLookupAction(chatgpt, { documentText: 'Full topic', selectionText: null, titleText: 'My Topic' })).toEqual({
     kind: 'prompt',
-    label: 'Ask ChatGPT',
+    label: 'Chat with ChatGPT',
     url: 'https://chatgpt.com/?prompt=Full%20topic%EF%BC%88%E3%80%8AMy%20Topic%E3%80%8B%EF%BC%89'
   });
   expect(resolveWebLookupAction(google, { documentText: 'Full topic', selectionText: null })).toBeNull();
@@ -98,7 +98,7 @@ it('sends long selected prompt text through the URL while measuring external lim
     titleText: 'My Topic'
   })).toEqual({
     kind: 'prompt',
-    label: 'Ask ChatGPT',
+    label: 'Chat with ChatGPT',
     url: `https://chatgpt.com/?prompt=${selectionText}%EF%BC%88%E3%80%8AMy%20Topic%E3%80%8B%EF%BC%89`
   });
 });
@@ -113,7 +113,7 @@ it('sends long current topic prompt text when no live selection is present', () 
     titleText: 'My Topic'
   })).toEqual({
     kind: 'prompt',
-    label: 'Ask ChatGPT',
+    label: 'Chat with ChatGPT',
     url: `https://chatgpt.com/?prompt=${documentText}%EF%BC%88%E3%80%8AMy%20Topic%E3%80%8B%EF%BC%89`
   });
 });
@@ -129,7 +129,7 @@ it('copies selected prompt text above the measured ChatGPT URL boundary', () => 
   })).toEqual({
     copyText: `${selectionText}（《My Topic》）`,
     kind: 'prompt',
-    label: 'Ask ChatGPT',
+    label: 'Chat with ChatGPT',
     overflowSource: 'selection',
     url: 'https://chatgpt.com/'
   });
@@ -146,7 +146,7 @@ it('copies current topic prompt text above the measured ChatGPT URL boundary', (
   })).toEqual({
     copyText: `${documentText}（《My Topic》）`,
     kind: 'prompt',
-    label: 'Ask ChatGPT',
+    label: 'Chat with ChatGPT',
     overflowSource: 'document',
     url: 'https://chatgpt.com/'
   });
@@ -168,7 +168,7 @@ it('migrates stored built-in labels that still match old defaults', () => {
   ]));
 
   expect(getWebLookupEntries().map((entry) => entry.label)).toEqual([
-    'Ask ChatGPT',
+    'Chat with ChatGPT',
     'Search with Google',
     'Search with DuckDuckGo'
   ]);
@@ -179,7 +179,7 @@ it('migrates the previous ChatGPT summarize label', () => {
     { id: 'chatgpt', label: 'Summarize with ChatGPT' }
   ]));
 
-  expect(getWebLookupEntries()[0]?.label).toBe('Ask ChatGPT');
+  expect(getWebLookupEntries()[0]?.label).toBe('Chat with ChatGPT');
 });
 
 it('moves entries and migrates the old ChatGPT default template', () => {
