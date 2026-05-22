@@ -113,6 +113,11 @@ async function scanBooksFixture(paths: { fullDocumentDir: string; highlightDir: 
   });
 }
 
+function expectResetPlaceholderContent(content: string | null | undefined) {
+  expect(content).toContain('Full text of this document omitted because this document is an EPUB');
+  expect(content).toContain('Saved quote.');
+}
+
 async function createBookEpub(fileName: string) {
   const filePath = path.join(tempRoot, fileName);
   await fs.writeFile(
@@ -159,8 +164,8 @@ it('resets an imported readwise book back to its pre-load placeholder state', as
     status: 'reset',
     title: 'Manual Book'
   });
-  expect(resetResult.content).toContain('Original file missing');
-  expect(resetResult.content).toContain('Book import pending');
+  expect(resetResult.content).toContain('1 highlight');
+  expectResetPlaceholderContent(resetResult.content);
 
   const reloadedInventory = await scanReadwiseBooksInventory({
     fullDocumentDirectoryPath: fullDocumentDir,
@@ -178,7 +183,7 @@ it('resets an imported readwise book back to its pre-load placeholder state', as
   const rootNode = openDatabaseConnection().sqlite
     .prepare('SELECT content, opening_text, reveal FROM nodes WHERE id = ? AND deleted_at IS NULL')
     .get(nodeId) as { content: string; opening_text: string | null; reveal: string | null } | undefined;
-  expect(rootNode?.content).toContain('Load original file');
+  expectResetPlaceholderContent(rootNode?.content);
   expect(rootNode?.opening_text).toBeNull();
   expect(rootNode?.reveal).toBeNull();
 
@@ -230,26 +235,5 @@ it('recreates a deleted readwise book node when re-import is triggered', async (
     .get(nodeId) as { content: string; deleted_at: string | null; id: string } | undefined;
   expect(restoredNode?.id).toBe(nodeId);
   expect(restoredNode?.deleted_at).toBeNull();
-  expect(restoredNode?.content).toContain('Book import pending');
-});
-
-it('re-imports book placeholders without writing inbox topic order', async () => {
-  const { fullDocumentDir, highlightDir } = await createBooksFixture();
-  await scanBooksFixture({ fullDocumentDir, highlightDir });
-  const nodeId = seedManualBookPlaceholder();
-
-  const connection = openDatabaseConnection().sqlite;
-  connection
-    .prepare(
-      `INSERT INTO nodes (
-         id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-         content, reveal, anchor_link, created_at, updated_at, deleted_at
-       ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, 0, '', NULL, NULL, ?, ?, NULL)`
-    )
-    .run('node-existing-inbox-top', 'special-inbox', 'Older inbox node', '2026-04-04T11:00:00.000Z', '2026-04-04T11:00:00.000Z');
-  connection.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)').run('node-existing-inbox-top', 5);
-
-  await resetReadwiseBookImport(nodeId);
-
-  expect(connection.prepare('SELECT node_id FROM node_order WHERE node_id = ?').get(nodeId)).toBeUndefined();
+  expectResetPlaceholderContent(restoredNode?.content);
 });

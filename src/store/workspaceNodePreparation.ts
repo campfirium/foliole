@@ -27,7 +27,7 @@ function mergePreparedNodeDocument(
 ) {
   useWorkspaceStore.setState((state) => {
     const nextNode = state.nodesById[nodeId];
-    if (!nextNode || isNodeDocumentLoaded(nextNode)) {
+    if (!nextNode || (!options.forceLoad && isNodeDocumentLoaded(nextNode))) {
       return state;
     }
 
@@ -53,7 +53,8 @@ function mergePreparedNodeDocument(
 function buildPreparedOpenState(
   state: WorkspaceState,
   nodeId: string,
-  document: WorkspaceNodeDocument | null
+  document: WorkspaceNodeDocument | null,
+  options: EnsureWorkspaceNodeDocumentReadyOptions
 ): WorkspaceState {
   const targetNode = state.nodesById[nodeId];
   if (!targetNode || state.trashedNodeIds.includes(nodeId)) {
@@ -61,7 +62,9 @@ function buildPreparedOpenState(
   }
 
   const mergedTargetNode =
-    document && !isNodeDocumentLoaded(targetNode) ? mergeWorkspaceNodeDocument(targetNode, document) : targetNode;
+    document && (options.forceLoad || !isNodeDocumentLoaded(targetNode))
+      ? mergeWorkspaceNodeDocument(targetNode, document)
+      : targetNode;
   const nextNodesById =
     mergedTargetNode === targetNode
       ? state.nodesById
@@ -70,8 +73,13 @@ function buildPreparedOpenState(
           [nodeId]: mergedTargetNode
         };
 
-  if (state.activeNodeId === nodeId && nextNodesById === state.nodesById) {
-    return state;
+  if (state.activeNodeId === nodeId) {
+    return nextNodesById === state.nodesById
+      ? state
+      : {
+          ...state,
+          nodesById: nextNodesById
+        };
   }
 
   markNodeSelectionApplied(nodeId, nextNodesById);
@@ -128,7 +136,7 @@ export async function openWorkspaceNodeWithPreparedDocument(
   if (options.shouldApply && !options.shouldApply()) {
     return null;
   }
-  useWorkspaceStore.setState((state) => buildPreparedOpenState(state, nodeId, document));
+  useWorkspaceStore.setState((state) => buildPreparedOpenState(state, nodeId, document, options));
   if (document) {
     writeCachedWorkspaceNodeDocument(nodeId, document);
     options.onDocumentMerged?.(document);

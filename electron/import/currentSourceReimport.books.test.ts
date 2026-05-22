@@ -21,6 +21,10 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+vi.mock('../sync/primaryDeviceState.js', () => ({
+  canDesktopRunExternalSources: vi.fn(() => true)
+}));
+
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { saveJsonSetting } from '../database/settingsStore.js';
@@ -47,6 +51,12 @@ function readNodeContent(nodeId: string) {
   return (openDatabaseConnection().sqlite
     .prepare('SELECT content FROM nodes WHERE id = ? AND deleted_at IS NULL')
     .get(nodeId) as { content: string } | undefined)?.content ?? '';
+}
+
+function readActiveChildNodeIds(nodeId: string) {
+  return (openDatabaseConnection().sqlite
+    .prepare('SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL ORDER BY id')
+    .all(nodeId) as Array<{ id: string }>).map((row) => row.id);
 }
 
 function writeLegacyPendingBookContent(nodeId: string) {
@@ -181,4 +191,27 @@ it('forces Books re-import to rebuild from source instead of cached inventory', 
   });
   expect(readNodeContent(nodeId)).toContain('fresh source quote');
   expect(readNodeContent(nodeId)).not.toContain('stale cached quote');
+});
+
+it('resets an already imported Books node before rebuilding its placeholder', async () => {
+  await prepareBooksSource();
+  await runReadwiseReaderImport();
+
+  const nodeId = buildReadwiseBookPlaceholderNodeId('book placeholder');
+  openDatabaseConnection().sqlite
+    .prepare(
+      `INSERT INTO nodes (
+         id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
+         content, reveal, anchor_link, created_at, updated_at, deleted_at
+       ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, 0, ?, NULL, NULL, ?, ?, NULL)`
+    )
+    .run('book-child-1', nodeId, 'Imported chapter', 'Imported chapter body', '2026-05-22T00:00:00.000Z', '2026-05-22T00:00:00.000Z');
+
+  await expect(reimportCurrentTopicSource(nodeId)).resolves.toMatchObject({
+    node_id: nodeId,
+    status: 'reimported'
+  });
+  expect(readActiveChildNodeIds(nodeId)).toEqual([]);
+  expect(readNodeContent(nodeId)).toContain('Full text of this document omitted because this document is an EPUB');
+  expect(readNodeContent(nodeId)).toContain('book quote');
 });
