@@ -55,6 +55,9 @@ it('matches renderer app_ready events written after the reload intent', () => {
 
 it('classifies native preview file groups', () => {
   expect(isShellConfigFile('vite.config.ts')).toBe(true);
+  expect(isShellConfigFile('scripts/electron-dev.mjs')).toBe(true);
+  expect(isShellConfigFile('scripts/electron-dev-server.mjs')).toBe(true);
+  expect(isShellConfigFile('scripts/windows/electron-dev-native.mjs')).toBe(true);
   expect(isRuntimeFile('electron/main.ts')).toBe(true);
   expect(isRuntimeFile('electron/main.test.ts')).toBe(false);
   expect(isRendererSourceFile('src/app/App.tsx')).toBe(true);
