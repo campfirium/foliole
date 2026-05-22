@@ -7,6 +7,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEV_RENDERER_RELOAD_DELIVERY_FILE,
   DEV_RENDERER_RELOAD_INTENT_FILE,
   DEV_RENDERER_RELOAD_INTENT_KIND,
   parseRendererReloadIntentNonce,
@@ -59,6 +60,23 @@ describe('writeRendererReloadIntent', () => {
       });
 
       expect(result.intent.nonce).toBe(1);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it('continues the nonce from the last delivered renderer reload intent', async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-reload-intent-'));
+    try {
+      await writeFile(path.join(rootDir, DEV_RENDERER_RELOAD_DELIVERY_FILE), JSON.stringify({ nonce: 7 }), 'utf8');
+
+      const result = await writeRendererReloadIntent({
+        head: 'head-8',
+        reason: 'Class A: renderer-only sync path',
+        rootDir
+      });
+
+      expect(result.intent.nonce).toBe(8);
     } finally {
       await rm(rootDir, { recursive: true, force: true });
     }

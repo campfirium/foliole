@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 
 import {
   isRendererSourceFile,
+  isMatchingPreviewDelivery,
   isRuntimeFile,
   isShellConfigFile,
   isTrustedRunningStatus,
@@ -32,6 +33,14 @@ it('requires the expected head for trusted running status when provided', () => 
   expect(isTrustedRunningStatus(status)).toBe(true);
   expect(isTrustedRunningStatus(status, { expectedHead: 'abc123' })).toBe(true);
   expect(isTrustedRunningStatus(status, { expectedHead: 'def456' })).toBe(false);
+});
+
+it('matches preview delivery to the current intent timestamp as well as nonce', () => {
+  const intent = { nonce: 1, requestedAt: '2026-05-22T04:20:00.000Z' };
+
+  expect(isMatchingPreviewDelivery({ nonce: 1, requestedAt: intent.requestedAt }, intent)).toBe(true);
+  expect(isMatchingPreviewDelivery({ nonce: 1, requestedAt: '2026-05-22T04:19:00.000Z' }, intent)).toBe(false);
+  expect(isMatchingPreviewDelivery({ nonce: 2, requestedAt: intent.requestedAt }, intent)).toBe(false);
 });
 
 it('classifies native preview file groups', () => {

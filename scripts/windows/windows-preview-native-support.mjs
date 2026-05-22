@@ -17,6 +17,13 @@ export function isTrustedRunningStatus(status, { expectedHead = '' } = {}) {
   return !expectedHead || status.head === expectedHead;
 }
 
+export function isMatchingPreviewDelivery(delivery, intent) {
+  return (
+    Number(delivery?.nonce) === intent.nonce &&
+    delivery?.requestedAt === intent.requestedAt
+  );
+}
+
 export function isShellConfigFile(file) {
   return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|package\.json|package-lock\.json)$/u.test(file);
 }

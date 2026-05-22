@@ -8,6 +8,7 @@ import { inspectElectronDistFreshness } from './check-electron-dist-fresh.mjs';
 import { writeRendererReloadIntent } from './write-renderer-reload-intent.mjs';
 import { writeRestartIntent } from './write-restart-intent.mjs';
 import {
+  createNpmCommand,
   npmRunCommand,
   resolveChangedFiles,
   resolveCurrentHead,
@@ -15,7 +16,7 @@ import {
   runChecked,
   wait
 } from './windows-preview-native-runtime.mjs';
-import { isTrustedRunningStatus, parseWindowsClientStatus, selectNativePreviewAction } from './windows-preview-native-support.mjs';
+import { isMatchingPreviewDelivery, isTrustedRunningStatus, parseWindowsClientStatus, selectNativePreviewAction } from './windows-preview-native-support.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 const {
@@ -39,12 +40,8 @@ async function ensureFreshElectronDist() {
 
 async function verifyNodeModules() {
   const args = ['ls', '--depth=0', '--json', '--silent'];
-  let result;
-  if (process.env.npm_execpath) {
-    result = await runCapture(process.execPath, [process.env.npm_execpath, ...args], { cwd: repoRoot });
-  } else {
-    result = await runCapture('npm', args, { cwd: repoRoot });
-  }
+  const command = createNpmCommand(args);
+  const result = await runCapture(command.command, command.args, { cwd: repoRoot });
   if (result.code !== 0) {
     const detail = `${result.stdout}${result.stderr}`.split(/\r?\n/u).slice(-80).join('\n');
     throw new Error(`node_modules check failed${detail ? `\n${detail}` : ''}`);
@@ -76,19 +73,19 @@ async function runClientAction(action) {
   return { ...result, output };
 }
 
-async function readDeliveryNonce(filePath) {
+async function readDeliveryPayload(filePath) {
   try {
-    return JSON.parse(await fs.readFile(filePath, 'utf8')).nonce;
+    return JSON.parse(await fs.readFile(filePath, 'utf8'));
   } catch {
     return null;
   }
 }
 
-async function waitForDelivery(filePath, nonce, label) {
+async function waitForDelivery(filePath, intent, label) {
   const deadline = Date.now() + PREVIEW_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    if (await readDeliveryNonce(filePath) === nonce) {
-      console.log(`[windows-preview-native] ${label} delivery acknowledged nonce=${nonce}`);
+    if (isMatchingPreviewDelivery(await readDeliveryPayload(filePath), intent)) {
+      console.log(`[windows-preview-native] ${label} delivery acknowledged nonce=${intent.nonce}`);
       return true;
     }
     await wait(500);
@@ -121,7 +118,7 @@ async function runIntent(action, currentHead, reason) {
     rootDir: repoRoot
   });
   console.log(`[windows-preview-native] ${label} intent requested nonce=${result.intent.nonce}`);
-  if (!await waitForDelivery(deliveryPath, result.intent.nonce, label)) {
+  if (!await waitForDelivery(deliveryPath, result.intent, label)) {
     throw new Error(`${label} delivery timed out nonce=${result.intent.nonce}`);
   }
   if (!await waitForTrustedRunning(`${label} status`, currentHead)) {
