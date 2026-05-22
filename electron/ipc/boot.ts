@@ -12,6 +12,8 @@ type BootEventSource = 'main' | 'renderer';
 const WAITED_BOOT_EVENT_STAGES = new Set(['app_ready', 'bridge_ready', 'window_visible']);
 
 let bootEventQueue: Promise<void> = Promise.resolve();
+let rendererAppReady = false;
+let rendererAppReadyWaiters: Array<() => void> = [];
 
 function resolveRepoRoot() {
   const envRoot = process.env.FOLIOLE_WORKDIR;
@@ -82,12 +84,25 @@ async function persistBootEvent(event: ReturnType<typeof createBootEvent>) {
   }
 }
 
+function notifyRendererAppReady(event: ReturnType<typeof createBootEvent>) {
+  if (event.stage !== 'app_ready' || event.source !== 'renderer') {
+    return;
+  }
+  rendererAppReady = true;
+  const waiters = rendererAppReadyWaiters;
+  rendererAppReadyWaiters = [];
+  waiters.forEach((resolve) => resolve());
+}
+
 function shouldWaitForBootEvent(stage: string) {
   return WAITED_BOOT_EVENT_STAGES.has(stage);
 }
 
 function appendQueuedBootEvent(event: ReturnType<typeof createBootEvent>, waitForWrite: boolean) {
-  const write = bootEventQueue.then(() => persistBootEvent(event));
+  const write = bootEventQueue.then(async () => {
+    await persistBootEvent(event);
+    notifyRendererAppReady(event);
+  });
   bootEventQueue = write.catch((error) => {
     appendMainProcessDiagnosticLog('boot_log_failed', {
       error,
@@ -107,4 +122,19 @@ export async function bootReport(stage: string, payload: unknown = null) {
 
 export async function flushBootEvents() {
   await bootEventQueue;
+}
+
+export function waitForRendererAppReady() {
+  if (rendererAppReady) {
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    rendererAppReadyWaiters.push(resolve);
+  });
+}
+
+export function resetBootEventStateForTests() {
+  bootEventQueue = Promise.resolve();
+  rendererAppReady = false;
+  rendererAppReadyWaiters = [];
 }

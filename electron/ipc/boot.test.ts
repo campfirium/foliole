@@ -16,7 +16,14 @@ vi.mock('../diagnostics/mainProcessDiagnostics.js', () => ({
   appendMainProcessDiagnosticLog: state.appendMainProcessDiagnosticLog
 }));
 
-import { appendBootEvent, bootReport, flushBootEvents, resolveBootArtifactPaths } from './boot.js';
+import {
+  appendBootEvent,
+  bootReport,
+  flushBootEvents,
+  resetBootEventStateForTests,
+  resolveBootArtifactPaths,
+  waitForRendererAppReady
+} from './boot.js';
 
 afterEach(() => {
   process.env.FOLIOLE_WORKDIR = state.originalWorkdir;
@@ -24,6 +31,7 @@ afterEach(() => {
   process.env.FOLIOLE_BOOT_SESSION = state.originalSession;
   process.argv = [...state.originalArgv];
   state.appendMainProcessDiagnosticLog.mockReset();
+  resetBootEventStateForTests();
 });
 
 it('writes main startup events and marks the source', async () => {
@@ -112,4 +120,34 @@ it('prefers explicit relaunch boot session args over stale environment session',
   const paths = resolveBootArtifactPaths(repoRoot);
   const marker = JSON.parse(fs.readFileSync(paths.readyMarkerPath, 'utf8'));
   expect(marker.session).toBe('new-session');
+});
+
+it('unlocks the renderer app ready gate after persisting a renderer app_ready marker', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-gate-'));
+  process.env.FOLIOLE_WORKDIR = repoRoot;
+
+  const wait = waitForRendererAppReady();
+  let resolved = false;
+  void wait.then(() => {
+    resolved = true;
+  });
+
+  await appendBootEvent('app_ready', { source: 'main-test' });
+  await flushBootEvents();
+  await Promise.resolve();
+  expect(resolved).toBe(false);
+
+  await bootReport('app_ready', { source: 'renderer-test' });
+  await wait;
+  expect(resolved).toBe(true);
+  expect(fs.existsSync(resolveBootArtifactPaths(repoRoot).readyMarkerPath)).toBe(true);
+});
+
+it('keeps renderer app ready as a sticky startup fact for later waiters', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-sticky-'));
+  process.env.FOLIOLE_WORKDIR = repoRoot;
+
+  await bootReport('app_ready', { source: 'renderer-early' });
+
+  await expect(waitForRendererAppReady()).resolves.toBeUndefined();
 });
