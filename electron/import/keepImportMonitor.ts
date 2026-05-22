@@ -2,24 +2,26 @@ import type { ImportManagerSettings } from '../../lib/core/import/importManagerS
 
 import { submitImportMonitorTask } from './importMonitorTaskScheduler.js';
 import { type KeepImportConfig, type KeepImportSourceConfig, resolveKeepImportConfigs } from './keepImportMonitorConfig.js';
+import {
+  closeKeepImportWatchers,
+  ensureKeepImportWatchers,
+  type KeepImportWatcherState
+} from './keepImportMonitorWatcher.js';
 import type { KeepImportWatchHandle } from './keepImportWatch.js';
 
 export interface KeepImportMonitorDeps {
   debounceMs: number;
   loadSettings(): ImportManagerSettings;
   logError(message: string, error: unknown): void;
+  logMissingDirectory?(config: KeepImportSourceConfig, missingPaths: string[]): void;
   runCycle(config: KeepImportConfig): Promise<void>;
   watch(rootPath: string, listener: () => void): KeepImportWatchHandle;
 }
 
-interface KeepImportSourceState {
+interface KeepImportSourceState extends KeepImportWatcherState {
   config: KeepImportSourceConfig;
   debounceTimer: ReturnType<typeof setTimeout> | null;
   hasCompletedRun: boolean;
-  dirtySinceLastRun: boolean;
-  importInFlight: boolean;
-  rerunRequested: boolean;
-  watchers: KeepImportWatchHandle[];
 }
 
 export interface KeepImportMonitor {
@@ -36,6 +38,7 @@ function createSourceState(config: KeepImportSourceConfig): KeepImportSourceStat
     dirtySinceLastRun: false,
     hasCompletedRun: false,
     importInFlight: false,
+    missingWatchPaths: [],
     rerunRequested: false,
     watchers: []
   };
@@ -47,31 +50,6 @@ function clearScheduledRun(state: KeepImportSourceState) {
   }
   clearTimeout(state.debounceTimer);
   state.debounceTimer = null;
-}
-
-function closeWatcher(state: KeepImportSourceState) {
-  state.watchers.forEach((watcher) => watcher.close());
-  state.watchers = [];
-}
-
-async function ensureWatcher(
-  deps: KeepImportMonitorDeps,
-  state: KeepImportSourceState,
-  scheduleRun: () => void
-) {
-  if (state.watchers.length > 0) {
-    return;
-  }
-  state.watchers = state.config.watchPaths.map((watchPath) =>
-    deps.watch(watchPath, () => {
-      state.dirtySinceLastRun = true;
-      if (state.importInFlight) {
-        state.rerunRequested = true;
-        return;
-      }
-      scheduleRun();
-    })
-  );
 }
 
 async function runImportCycle(
@@ -89,7 +67,9 @@ async function runImportCycle(
   }
   state.importInFlight = true;
   try {
-    await ensureWatcher(deps, state, scheduleRun);
+    if (!ensureKeepImportWatchers(deps, state, scheduleRun)) {
+      return;
+    }
     do {
       state.rerunRequested = false;
       await deps.runCycle(state.config);
@@ -147,7 +127,11 @@ function syncSourceState(input: {
   stopSource(state: KeepImportSourceState): void;
 }) {
   const existingState = input.sourceStateById.get(input.config.adapterConfigId);
-  if (existingState && isSameSourceConfig(existingState.config, input.config)) {
+  if (
+    existingState &&
+    isSameSourceConfig(existingState.config, input.config) &&
+    existingState.missingWatchPaths.length === 0
+  ) {
     return;
   }
   if (existingState) {
@@ -164,7 +148,7 @@ export function createKeepImportMonitor(deps: KeepImportMonitorDeps): KeepImport
 
   function stopSource(state: KeepImportSourceState) {
     clearScheduledRun(state);
-    closeWatcher(state);
+    closeKeepImportWatchers(state);
     state.rerunRequested = false;
   }
 
