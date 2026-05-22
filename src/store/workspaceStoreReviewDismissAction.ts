@@ -13,6 +13,7 @@ import {
   buildDismissedReadingProfile,
   completeReviewSession
 } from './workspaceReviewReading';
+import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { buildSequentialReadingDismissPatch } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
@@ -41,14 +42,22 @@ function buildNextDismissReviewSession(args: {
   });
   const nextNodeId = nextQueue.currentNodeId;
   const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
+  const readingElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
   return {
     nextNodeId,
     nextReviewSession: nextNodeId
       ? advanceReviewSession(args.snapshot.reviewSession, {
           nextNodeId,
-          queueNodeIds: nextQueue.taskNodeIds
+          queueNodeIds: nextQueue.taskNodeIds,
+          readingElapsedMsDelta,
+          readTopicDelta: 1
         })
-      : completeReviewSession(args.snapshot.reviewSession, { completedAt: args.now, continueNodeId })
+      : completeReviewSession(args.snapshot.reviewSession, {
+          completedAt: args.now,
+          continueNodeId,
+          readingElapsedMsDelta,
+          readTopicDelta: 1
+        })
   };
 }
 
