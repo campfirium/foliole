@@ -68,12 +68,14 @@ async function importSelectedReadwiseBookEpub(input: {
   epubPath: string;
   inventory: ReadwiseBooksInventory;
   onBeforeHighlightPlacement?: () => void;
+  sequentialReadingMode?: 'free' | 'sequential';
   targetNodeId: string;
 }) {
   saveRecentReadwiseBookEpubDirectory(input.epubPath);
   const imported = await importSelectedReadwiseOriginalFileIntoNode({
     filePath: input.epubPath,
     nodeId: input.targetNodeId,
+    ...(input.sequentialReadingMode ? { sequentialReadingMode: input.sequentialReadingMode } : {}),
     sourceIdentity: buildReadwiseBookEpubSourceIdentity(input.book.bookKey),
     title: input.book.title
   });
@@ -124,6 +126,7 @@ async function importReadwiseBookEpubWithProgress(input: {
   epubPath: string;
   inventory: ReadwiseBooksInventory;
   nodeId: string;
+  sequentialReadingMode?: 'free' | 'sequential';
   window: BrowserWindow | null;
 }) {
   publishReadwiseBookEpubProgress(input.window, {
@@ -136,6 +139,7 @@ async function importReadwiseBookEpubWithProgress(input: {
     book: input.book,
     epubPath: input.epubPath,
     inventory: input.inventory,
+    ...(input.sequentialReadingMode ? { sequentialReadingMode: input.sequentialReadingMode } : {}),
     targetNodeId: input.nodeId,
     onBeforeHighlightPlacement: () => {
       publishReadwiseBookEpubProgress(input.window, {
@@ -157,6 +161,7 @@ async function importReadwiseBookEpubWithProgress(input: {
 
 export async function loadReadwiseBookEpub(
   nodeId: string,
+  sequentialReadingMode?: 'free' | 'sequential',
   window: BrowserWindow | null = null
 ): Promise<NativeReadwiseBookEpubLoadResult> {
   const target = await loadReadwiseOriginalFileTarget(nodeId);
@@ -180,6 +185,7 @@ export async function loadReadwiseBookEpub(
             epubPath: selectedPath,
             inventory: target.inventory,
             nodeId,
+            ...(sequentialReadingMode ? { sequentialReadingMode } : {}),
             window
           })
         : null;
