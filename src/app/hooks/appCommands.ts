@@ -54,6 +54,13 @@ interface RunAppCommandActions {
   readingReviewRead: () => void;
   readingReviewDismiss: () => void;
   deleteCurrentReviewItem: () => boolean | void;
+  reviewNavigateParent: () => boolean | void;
+  reviewNavigateBack: () => boolean | void;
+  reviewNavigateForward: () => boolean | void;
+  reviewNavigateDown: () => boolean | void;
+  reviewNavigatePreviousSibling: () => boolean | void;
+  reviewNavigateNextSibling: () => boolean | void;
+  deleteReviewSourceTopic: () => boolean | void;
   toggleDevTools: () => void;
 }
 
@@ -81,8 +88,8 @@ export function runReviewModeToggle(isReviewMode: boolean, actions: ReviewModeTo
   actions.enterReviewMode();
 }
 
-export function runAppCommand(id: string, actions: RunAppCommandActions) {
-  const handlers: Record<string, () => CommandActionResult> = {
+function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<string, () => CommandActionResult> {
+  return {
     [APP_COMMAND_IDS.undo]: actions.undo,
     [APP_COMMAND_IDS.redo]: actions.redo,
     [APP_COMMAND_IDS.createFolder]: actions.createFolder,
@@ -112,7 +119,12 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.openSettings]: actions.openSettings,
     [APP_COMMAND_IDS.openReadwiseReaderSettings]: actions.openReadwiseReaderSettings,
     [APP_COMMAND_IDS.toggleBaseColorMode]: actions.toggleBaseColorMode,
-    [APP_COMMAND_IDS.closeSettings]: actions.closeSettings,
+    [APP_COMMAND_IDS.closeSettings]: actions.closeSettings
+  };
+}
+
+function createNavigationCommandHandlers(actions: RunAppCommandActions): Record<string, () => CommandActionResult> {
+  return {
     [APP_COMMAND_IDS.goBack]: actions.goBack,
     [APP_COMMAND_IDS.goForward]: actions.goForward,
     [APP_COMMAND_IDS.goToNode]: actions.goToNode,
@@ -121,7 +133,12 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.goParent]: actions.goParent,
     [APP_COMMAND_IDS.toggleImmersiveMode]: actions.toggleImmersiveMode,
     [APP_COMMAND_IDS.toggleDismissedTopicsVisibility]: actions.toggleDismissedTopicsVisibility,
-    [APP_COMMAND_IDS.toggleEditorDisplayMode]: actions.toggleEditorDisplayMode,
+    [APP_COMMAND_IDS.toggleEditorDisplayMode]: actions.toggleEditorDisplayMode
+  };
+}
+
+function createReviewCommandHandlers(actions: RunAppCommandActions): Record<string, () => CommandActionResult> {
+  return {
     [APP_COMMAND_IDS.startStudyMode]: actions.toggleReviewMode,
     [APP_COMMAND_IDS.revealReviewAnswer]: actions.revealReviewAnswer,
     [APP_COMMAND_IDS.gradeReviewAgain]: actions.gradeReviewAgain,
@@ -131,7 +148,22 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.readingReviewLater]: actions.readingReviewLater,
     [APP_COMMAND_IDS.readingReviewRead]: actions.readingReviewRead,
     [APP_COMMAND_IDS.readingReviewDismiss]: actions.readingReviewDismiss,
-    [APP_COMMAND_IDS.deleteCurrentReviewItem]: actions.deleteCurrentReviewItem
+    [APP_COMMAND_IDS.deleteCurrentReviewItem]: actions.deleteCurrentReviewItem,
+    [APP_COMMAND_IDS.reviewNavigateParent]: actions.reviewNavigateParent,
+    [APP_COMMAND_IDS.reviewNavigateBack]: actions.reviewNavigateBack,
+    [APP_COMMAND_IDS.reviewNavigateForward]: actions.reviewNavigateForward,
+    [APP_COMMAND_IDS.reviewNavigateDown]: actions.reviewNavigateDown,
+    [APP_COMMAND_IDS.reviewNavigatePreviousSibling]: actions.reviewNavigatePreviousSibling,
+    [APP_COMMAND_IDS.reviewNavigateNextSibling]: actions.reviewNavigateNextSibling,
+    [APP_COMMAND_IDS.deleteReviewSourceTopic]: actions.deleteReviewSourceTopic
+  };
+}
+
+export function runAppCommand(id: string, actions: RunAppCommandActions) {
+  const handlers: Record<string, () => CommandActionResult> = {
+    ...createWorkspaceCommandHandlers(actions),
+    ...createNavigationCommandHandlers(actions),
+    ...createReviewCommandHandlers(actions)
   };
 
   const handler = handlers[id];

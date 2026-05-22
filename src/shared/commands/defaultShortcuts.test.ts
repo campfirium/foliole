@@ -66,15 +66,32 @@ describe('default command shortcuts', () => {
     expect(matchesShortcutSet(keyEvent({ key: 'r', altKey: true }), shortcuts)).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: 'F1' }), shortcuts)).toBe(true);
   });
+});
 
-  it('registers reading review defaults on QWE with numeric fallbacks', () => {
-    expect(matchesShortcutSet(keyEvent({ key: 'q' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewLater])).toBe(true);
+describe('review default command shortcuts', () => {
+  it('registers reading review defaults without consuming QWE navigation keys', () => {
+    expect(matchesShortcutSet(keyEvent({ key: 'q' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewLater])).toBe(false);
     expect(matchesShortcutSet(keyEvent({ key: '1' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewLater])).toBe(true);
-    expect(matchesShortcutSet(keyEvent({ key: 'w' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewRead])).toBe(true);
+    expect(matchesShortcutSet(keyEvent({ key: 'w' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewRead])).toBe(false);
+    expect(matchesShortcutSet(keyEvent({ key: 'f' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewRead])).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: ' ' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewRead])).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: '3' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewRead])).toBe(true);
-    expect(matchesShortcutSet(keyEvent({ key: 'e' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewDismiss])).toBe(true);
+    expect(matchesShortcutSet(keyEvent({ key: 'e' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewDismiss])).toBe(false);
+    expect(matchesShortcutSet(keyEvent({ key: 'r' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewDismiss])).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: '4' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewDismiss])).toBe(true);
+  });
+
+  it('registers review game navigation defaults', () => {
+    const cases = [
+      ['w', APP_COMMAND_IDS.reviewNavigateParent],
+      ['a', APP_COMMAND_IDS.reviewNavigateBack],
+      ['s', APP_COMMAND_IDS.reviewNavigateDown],
+      ['d', APP_COMMAND_IDS.reviewNavigateForward],
+      ['q', APP_COMMAND_IDS.reviewNavigatePreviousSibling],
+      ['e', APP_COMMAND_IDS.reviewNavigateNextSibling]
+    ] as const;
+    expect(cases.every(([key, id]) => matchesShortcutSet(keyEvent({ key }), DEFAULT_APP_COMMAND_SHORTCUTS[id]))).toBe(true);
+    expect(matchesShortcutSet(keyEvent({ key: 't', altKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.deleteReviewSourceTopic])).toBe(true);
   });
 });
 
@@ -83,6 +100,7 @@ it('registers Space as the auxiliary shortcut for Good review grade', () => {
 
   expect(matchesShortcutSet(keyEvent({ key: '3' }), shortcuts)).toBe(true);
   expect(matchesShortcutSet(keyEvent({ key: ' ' }), shortcuts)).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: 'f' }), shortcuts)).toBe(true);
 });
 
 it('registers app undo and redo without editor-only modifiers', () => {

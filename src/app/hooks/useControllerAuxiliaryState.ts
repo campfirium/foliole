@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 
-import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
@@ -45,6 +44,7 @@ export function useControllerAuxiliaryState(args: {
   layoutProps: WorkspaceLayoutProps;
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
   paletteItems: CommandPaletteItem[];
+  requestDeleteSourceTopic: (nodeId: string) => boolean;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   const paletteState = buildControllerPaletteState({
@@ -54,6 +54,7 @@ export function useControllerAuxiliaryState(args: {
     layoutProps: args.layoutProps,
     nav: args.controller.nav,
     paletteItems: args.paletteItems,
+    requestDeleteSourceTopic: args.requestDeleteSourceTopic,
     runtime: args.controller.runtime,
     study: args.controller.study,
     trash: args.controller.trash,
@@ -92,9 +93,6 @@ export function useControllerAuxiliaryState(args: {
     moveToNodeState,
     paletteState,
     searchState,
-    hotkeySettings,
-    isCurrentReviewItemGradable: getReviewItemKind(
-      args.ws.reviewSession.currentNodeId ? args.ws.nodesById[args.ws.reviewSession.currentNodeId] : undefined
-    ) === 'fsrs'
+    hotkeySettings
   };
 }

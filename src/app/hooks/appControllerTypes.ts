@@ -1,6 +1,7 @@
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
+import type { ReviewSourceTopicDeleteDialogState } from './appControllerReviewSourceDelete';
 import type { AppGoToNodeState } from './appGoToNodeState';
 import type { AppHotkeySettings } from './appHotkeySettings';
 import type { AppSearchState } from './appSearchState';
@@ -20,5 +21,6 @@ export interface AppControllerResult {
   layoutProps: WorkspaceLayoutProps;
   onOpenCompanionSyncSettings: () => void;
   paletteState: AppPaletteState;
+  reviewSourceTopicDeleteDialog: Omit<ReviewSourceTopicDeleteDialogState, 'requestDeleteSourceTopic'>;
   searchState: AppSearchState;
 }

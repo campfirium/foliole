@@ -8,6 +8,13 @@ export interface ReviewPaletteCommandOptions {
   canCompleteReadingReview: boolean;
   canDismissReadingReview: boolean;
   canDeleteReviewItem: boolean;
+  canDeleteReviewSourceTopic?: boolean;
+  canReviewNavigateBack?: boolean;
+  canReviewNavigateDown?: boolean;
+  canReviewNavigateForward?: boolean;
+  canReviewNavigateNextSibling?: boolean;
+  canReviewNavigateParent?: boolean;
+  canReviewNavigatePreviousSibling?: boolean;
 }
 
 export const REVIEW_PALETTE_COMMANDS = [
@@ -20,7 +27,14 @@ export const REVIEW_PALETTE_COMMANDS = [
   { id: APP_COMMAND_IDS.readingReviewLater, title: 'Reading: Later', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewRead, title: 'Reading: Read', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewDismiss, title: 'Reading: Dismiss', section: 'Review', keywords: ['reading'] },
-  { id: APP_COMMAND_IDS.deleteCurrentReviewItem, title: 'Delete Current Review Item', section: 'Review', keywords: ['delete', 'trash'] }
+  { id: APP_COMMAND_IDS.deleteCurrentReviewItem, title: 'Delete Current Review Item', section: 'Review', keywords: ['delete', 'trash'] },
+  { id: APP_COMMAND_IDS.reviewNavigateParent, title: 'Review Navigation: Parent', section: 'Review', keywords: ['navigate'] },
+  { id: APP_COMMAND_IDS.reviewNavigateBack, title: 'Review Navigation: Back', section: 'Review', keywords: ['navigate'] },
+  { id: APP_COMMAND_IDS.reviewNavigateForward, title: 'Review Navigation: Forward', section: 'Review', keywords: ['navigate'] },
+  { id: APP_COMMAND_IDS.reviewNavigateDown, title: 'Review Navigation: Down', section: 'Review', keywords: ['navigate'] },
+  { id: APP_COMMAND_IDS.reviewNavigatePreviousSibling, title: 'Review Navigation: Previous Sibling', section: 'Review', keywords: ['navigate'] },
+  { id: APP_COMMAND_IDS.reviewNavigateNextSibling, title: 'Review Navigation: Next Sibling', section: 'Review', keywords: ['navigate'] },
+  { id: APP_COMMAND_IDS.deleteReviewSourceTopic, title: 'Delete Review Source Topic', section: 'Review', keywords: ['delete', 'trash', 'source'] }
 ];
 
 function isReviewGradeCommand(id: string) {
@@ -39,6 +53,13 @@ export function isReviewCommandEnabled(id: string, options: ReviewPaletteCommand
   if (id === APP_COMMAND_IDS.readingReviewRead) return options.canCompleteReadingReview;
   if (id === APP_COMMAND_IDS.readingReviewDismiss) return options.canDismissReadingReview;
   if (id === APP_COMMAND_IDS.deleteCurrentReviewItem) return options.canDeleteReviewItem;
+  if (id === APP_COMMAND_IDS.reviewNavigateParent) return options.canReviewNavigateParent ?? false;
+  if (id === APP_COMMAND_IDS.reviewNavigateBack) return options.canReviewNavigateBack ?? false;
+  if (id === APP_COMMAND_IDS.reviewNavigateForward) return options.canReviewNavigateForward ?? false;
+  if (id === APP_COMMAND_IDS.reviewNavigateDown) return options.canReviewNavigateDown ?? false;
+  if (id === APP_COMMAND_IDS.reviewNavigatePreviousSibling) return options.canReviewNavigatePreviousSibling ?? false;
+  if (id === APP_COMMAND_IDS.reviewNavigateNextSibling) return options.canReviewNavigateNextSibling ?? false;
+  if (id === APP_COMMAND_IDS.deleteReviewSourceTopic) return options.canDeleteReviewSourceTopic ?? false;
   if (isReviewGradeCommand(id)) return options.canGradeReview;
   return null;
 }
