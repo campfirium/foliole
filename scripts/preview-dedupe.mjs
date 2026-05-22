@@ -54,6 +54,8 @@ function listUntrackedFiles(target) {
 
 async function workspaceHash(target) {
   const hash = createHash('sha256');
+  hash.update('head-targets\0');
+  hash.update(runGitBuffer(['ls-tree', '-rz', '-r', 'HEAD', '--', ...TARGET_PATHS[target]]));
   hash.update('tracked-diff\0');
   hash.update(runGitBuffer(['diff', '--binary', 'HEAD', '--', ...TARGET_PATHS[target]]));
   for (const filePath of listUntrackedFiles(target)) {
