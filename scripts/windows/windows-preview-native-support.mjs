@@ -24,6 +24,15 @@ export function isMatchingPreviewDelivery(delivery, intent) {
   );
 }
 
+export function isBootEventAfterIntent(event, intent) {
+  if (event?.stage !== 'app_ready') {
+    return false;
+  }
+  const eventTime = Date.parse(event.timestamp ?? '');
+  const intentTime = Date.parse(intent.requestedAt ?? '');
+  return Number.isFinite(eventTime) && Number.isFinite(intentTime) && eventTime >= intentTime;
+}
+
 export function isShellConfigFile(file) {
   return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|package\.json|package-lock\.json)$/u.test(file);
 }
@@ -39,6 +48,9 @@ export function isRuntimeFile(file) {
 }
 
 export function isRendererSourceFile(file) {
+  if (/^src\/(global\.d\.ts|main\.tsx|startupBootstrap\.ts|startupViewMode\.ts)$/u.test(file)) {
+    return true;
+  }
   if (!/^(src\/app\/|src\/features\/|src\/shared\/|src\/store\/)/u.test(file)) {
     return false;
   }
@@ -50,17 +62,43 @@ function hasFile(files, predicate) {
 }
 
 export function selectNativePreviewAction({ changedFiles, currentHead, status }) {
+  return selectNativePreviewActionWithCommittedFiles({
+    changedFiles,
+    committedFilesSinceRuntime: [],
+    currentHead,
+    status
+  });
+}
+
+export function selectNativePreviewActionWithCommittedFiles({
+  changedFiles,
+  committedFilesSinceRuntime = [],
+  currentHead,
+  status
+}) {
   if (status.status === 'RUNNING' && status.trusted) {
     if (hasFile(changedFiles, isShellConfigFile)) {
       return { action: 'full-restart', reason: 'Class D: working tree shell/vite config changes detected' };
     }
+    if (committedFilesSinceRuntime === null && status.head && currentHead && status.head !== currentHead) {
+      return { action: 'full-restart', reason: 'Class D: runtime head cannot be compared to current checkout' };
+    }
+    if (hasFile(committedFilesSinceRuntime, isShellConfigFile)) {
+      return { action: 'full-restart', reason: 'Class D: runtime behind committed shell/vite config changes' };
+    }
     if (hasFile(changedFiles, isRuntimeFile)) {
-      return { action: 'full-restart', reason: 'Class B: working tree runtime changes detected' };
+      if (hasFile(changedFiles, isRendererSourceFile)) {
+        return { action: 'restart-intent', reason: 'Class B: working tree runtime and renderer changes detected' };
+      }
+      return { action: 'restart-intent', reason: 'Class B: working tree electron changes detected' };
     }
-    if (status.head && currentHead && status.head !== currentHead) {
-      return { action: 'full-restart', reason: 'Class B: runtime behind current checkout head' };
+    if (hasFile(committedFilesSinceRuntime, isRuntimeFile)) {
+      if (hasFile(changedFiles, isRendererSourceFile)) {
+        return { action: 'restart-intent', reason: 'Class B: runtime behind committed electron changes with renderer changes' };
+      }
+      return { action: 'restart-intent', reason: 'Class B: runtime behind committed electron changes' };
     }
-    if (hasFile(changedFiles, isRendererSourceFile)) {
+    if (hasFile(changedFiles, isRendererSourceFile) || hasFile(committedFilesSinceRuntime, isRendererSourceFile)) {
       return { action: 'renderer-reload-intent', reason: 'Class A: renderer source changes detected' };
     }
     return { action: 'sync-only', reason: 'Class A: no runtime changes detected' };

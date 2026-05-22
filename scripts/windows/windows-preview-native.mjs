@@ -11,15 +11,17 @@ import {
   createNpmCommand,
   npmRunCommand,
   resolveChangedFiles,
+  resolveCommittedFilesSince,
   resolveCurrentHead,
   runCapture,
   runChecked,
   wait
 } from './windows-preview-native-runtime.mjs';
-import { isMatchingPreviewDelivery, isTrustedRunningStatus, parseWindowsClientStatus, selectNativePreviewAction } from './windows-preview-native-support.mjs';
+import { isBootEventAfterIntent, isMatchingPreviewDelivery, isTrustedRunningStatus, parseWindowsClientStatus, selectNativePreviewActionWithCommittedFiles } from './windows-preview-native-support.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 const {
+  appReadyFile,
   clientScript,
   nativeAbiScript,
   reloadDeliveryFile,
@@ -107,6 +109,23 @@ async function waitForTrustedRunning(label, expectedHead = '') {
   return false;
 }
 
+async function waitForRendererReloadReady(intent) {
+  const deadline = Date.now() + PREVIEW_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const [appReady, status] = await Promise.all([
+      readDeliveryPayload(appReadyFile),
+      runCapture(process.execPath, [clientScript, 'status'])
+    ]);
+    const parsed = parseWindowsClientStatus(`${status.stdout}${status.stderr}`);
+    if (isBootEventAfterIntent(appReady, intent) && isTrustedRunningStatus(parsed)) {
+      console.log(`[windows-preview-native] renderer reload status: ${parsed.detail}`);
+      return true;
+    }
+    await wait(1000);
+  }
+  return false;
+}
+
 async function runIntent(action, currentHead, reason) {
   const writer = action === 'restart-intent' ? writeRestartIntent : writeRendererReloadIntent;
   const deliveryPath = action === 'restart-intent' ? restartDeliveryFile : reloadDeliveryFile;
@@ -120,6 +139,12 @@ async function runIntent(action, currentHead, reason) {
   console.log(`[windows-preview-native] ${label} intent requested nonce=${result.intent.nonce}`);
   if (!await waitForDelivery(deliveryPath, result.intent, label)) {
     throw new Error(`${label} delivery timed out nonce=${result.intent.nonce}`);
+  }
+  if (action === 'renderer-reload-intent') {
+    if (!await waitForRendererReloadReady(result.intent)) {
+      throw new Error(`${label} did not reach app_ready after reload`);
+    }
+    return;
   }
   if (!await waitForTrustedRunning(`${label} status`, currentHead)) {
     throw new Error(`${label} did not reach trusted running status`);
@@ -168,7 +193,13 @@ async function main() {
     runClientAction('status')
   ]);
   const status = parseWindowsClientStatus(statusResult.output);
-  const selection = selectNativePreviewAction({ changedFiles, currentHead, status });
+  const committedFilesSinceRuntime = await resolveCommittedFilesSince(repoRoot, status.head, currentHead);
+  const selection = selectNativePreviewActionWithCommittedFiles({
+    changedFiles,
+    committedFilesSinceRuntime,
+    currentHead,
+    status
+  });
   console.log('[windows-preview-native] step 4/4: apply update action');
   const finalStatus = await applyAction(selection, currentHead, dryRun);
   if (finalStatus === 'STARTED') {
