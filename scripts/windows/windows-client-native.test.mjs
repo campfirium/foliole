@@ -25,6 +25,7 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   const script = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native.mjs'), 'utf8');
   const processScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-process.mjs'), 'utf8');
   const recoveredStateScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-recovered-state.mjs'), 'utf8');
+  const forceRestartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-force-restart.mjs'), 'utf8');
   const fullRestartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-full-restart.mjs'), 'utf8');
   const restartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-restart.mjs'), 'utf8');
   const startScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-electron-dev-native.ps1'), 'utf8');
@@ -52,9 +53,12 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(processScript).toContain('child.stdout?.destroy()');
   expect(processScript).toContain('child.stderr?.destroy()');
   expect(processScript).toContain('FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS');
-  expect(script).toContain("await forceRestartClient('dev-shell-restart')");
-  expect(script).toContain('requestCooperativeFullRestart');
-  expect(script).toContain("cooperative full restart unavailable; falling back to process stop");
+  expect(script).toContain("mode: 'dev-shell-restart'");
+  expect(script).toContain("mode: 'full-shell-restart'");
+  expect(forceRestartScript).toContain('requestCooperativeFullRestart');
+  expect(forceRestartScript).toContain("cooperative full restart unavailable; falling back to process stop");
+  expect(forceRestartScript).toContain('acceptTrustedCurrentRuntime');
+  expect(forceRestartScript).toContain('runtimeHead !== currentHeadValue');
   expect(fullRestartScript).toContain('if (!state?.shellPid && !state?.runtimePid)');
   expect(fullRestartScript).toContain('if (shellPid && !await waitForProcessExit');
   expect(script).toContain('readClientState');
@@ -218,6 +222,10 @@ it('recovers trusted ready state from boot events when marker files are missing'
     ].join('\n'), 'utf8');
 
     expect(readReadyStateFromBootEvents(eventLogFile)?.appReady.session).toBe('session-from-events');
+    expect(readReadyStateFromBootEvents(eventLogFile, { session: 'session-from-events' })?.appReady.session)
+      .toBe('session-from-events');
+    expect(readReadyStateFromBootEvents(eventLogFile, { session: 'other-session' })).toBeNull();
+    expect(readReadyStateFromBootEvents(eventLogFile, { session: undefined })).toBeNull();
   } finally {
     main.kill();
     await rm(tempDir, { force: true, recursive: true });

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } from './windows-client-native-logs.mjs';
-import { requestCooperativeFullRestart } from './windows-client-native-full-restart.mjs';
+import { forceRestartClient } from './windows-client-native-force-restart.mjs';
 import { runCapture } from './windows-client-native-process.mjs';
 import { recoverClientStateFromReady } from './windows-client-native-recovered-state.mjs';
 import { removeShellRestartRequest } from './windows-client-native-shell-request.mjs';
@@ -46,8 +46,9 @@ function readClientState() {
 }
 
 function readReadyState() {
+  const state = readClientState();
   return readReadyStateFiles({ appReadyFile, bridgeReadyFile, windowVisibleFile }) ??
-    readReadyStateFromBootEvents(bootEventLogFile);
+    readReadyStateFromBootEvents(bootEventLogFile, { session: state?.session });
 }
 
 async function currentHead() {
@@ -169,34 +170,6 @@ async function stopClient({ print = true } = {}) {
   });
 }
 
-async function forceRestartClient(mode) {
-  console.log(`[windows-restart-client] controlled-stop action=${mode}`);
-  if (mode === 'full-shell-restart') {
-    const ready = readReadyState();
-    const state = readClientState();
-    await recoverClientStateFromReady({ currentHead, ready, saveState, state });
-    const started = await requestCooperativeFullRestart({
-      currentHead: await currentHead(),
-      readClientState,
-      removeClientState: () => removeClientState(stateFile),
-      resetMarkers,
-      restartDeliveryFile,
-      repoRoot,
-      startClient,
-      timeoutMs: 25000,
-      wait
-    });
-    if (started) {
-      console.log(`[windows-restart-client] status: RESTARTED mode=${mode} shell_pid=${started.state.shellPid} runtime_pid=${started.ready.windowVisible.pid}`);
-      return;
-    }
-    console.log('[windows-restart-client] cooperative full restart unavailable; falling back to process stop');
-  }
-  await stopClient({ print: false });
-  const started = await startClient({ print: false });
-  console.log(`[windows-restart-client] status: RESTARTED mode=${mode} shell_pid=${started.state.shellPid} runtime_pid=${started.ready.windowVisible.pid}`);
-}
-
 async function restartRuntimeClient() {
   const existing = printStatus();
   if (!existing.ok) {
@@ -205,7 +178,19 @@ async function restartRuntimeClient() {
     return;
   }
 
-  await forceRestartClient('dev-shell-restart');
+  await forceRestartClient({
+    currentHead,
+    mode: 'dev-shell-restart',
+    readClientState,
+    readReadyState,
+    recoverClientStateFromReady,
+    removeClientState: () => removeClientState(stateFile),
+    resetMarkers,
+    saveState,
+    startClient,
+    stopClient,
+    wait
+  });
 }
 
 export function resolveWindowsClientAction(argv) {
@@ -229,7 +214,21 @@ async function main() {
   } else if (action === 'restart') {
     await restartRuntimeClient();
   } else if (action === 'full-restart') {
-    await forceRestartClient('full-shell-restart');
+    await forceRestartClient({
+      currentHead,
+      mode: 'full-shell-restart',
+      readClientState,
+      readReadyState,
+      recoverClientStateFromReady,
+      removeClientState: () => removeClientState(stateFile),
+      repoRoot,
+      resetMarkers,
+      restartDeliveryFile,
+      saveState,
+      startClient,
+      stopClient,
+      wait
+    });
   }
 }
 
