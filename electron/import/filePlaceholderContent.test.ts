@@ -8,6 +8,10 @@ describe('file placeholder content', () => {
   it('appends highlight count and searchable highlights to PDF placeholders', () => {
     const content = appendFilePlaceholderHighlights(
       [
+        '---',
+        'summary: Short YAML summary.',
+        'url: https://example.com',
+        '---',
         '# PDF Topic',
         '',
         'Full text of this document omitted because this document is a PDF',
@@ -17,9 +21,12 @@ describe('file placeholder content', () => {
       [
         { note: null, text: 'First PDF highlight.' },
         { note: null, text: 'Second PDF highlight.\nwith continuation.' }
-      ]
+      ],
+      { summary: 'A readable summary for the placeholder.' }
     );
 
+    expect(content).toMatch(/^---\nurl: https:\/\/example\.com\n---/u);
+    expect(content).toContain('## Summary\nA readable summary for the placeholder.\n\n## Highlights');
     expect(content).toContain('## Highlights\n2 highlights');
     expect(content).toContain('- First PDF highlight.');
     expect(content).toContain('- Second PDF highlight.\n  with continuation.');

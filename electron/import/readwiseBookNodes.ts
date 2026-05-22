@@ -30,7 +30,8 @@ function buildPendingReadwiseBookPlaceholderContent(book: ReadwiseBookInventoryI
   if (book.downloadUrl) {
     lines.push('', `[Download original file ->](${book.downloadUrl})`);
   }
-  return appendFilePlaceholderHighlights(lines.join('\n'), book.highlights);
+  const content = [book.metadataFrontmatter, lines.join('\n')].filter(Boolean).join('\n');
+  return appendFilePlaceholderHighlights(content, book.highlights, { summary: book.summary });
 }
 
 export function buildReadwiseBookPlaceholderContent(book: ReadwiseBookInventoryItem) {

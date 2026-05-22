@@ -134,7 +134,9 @@ export async function loadPreparedReadwiseImportRecord(
     const parsedFullDocument = parseReadwiseFullDocumentImport(fullDocumentMarkdown);
     const highlightSidecar = extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig);
     return buildPreparedImportRecord(source, {
-      content: appendFilePlaceholderHighlights(parsedFullDocument.content, highlightSidecar),
+      content: appendFilePlaceholderHighlights(parsedFullDocument.content, highlightSidecar, {
+        summary: parsedFullDocument.summary
+      }),
       highlightPolicy: options.highlightPolicy,
       highlightSidecar,
       hideTitleHeadingOverride: false,
@@ -148,7 +150,9 @@ export async function loadPreparedReadwiseImportRecord(
     const fullDocumentMarkdown = await fs.readFile(source.filePath, 'utf8');
     const parsedFullDocument = parseReadwiseFullDocumentImport(fullDocumentMarkdown);
     return buildPreparedImportRecord(source, {
-      content: parsedFullDocument.content,
+      content: appendFilePlaceholderHighlights(parsedFullDocument.content, [], {
+        summary: parsedFullDocument.summary
+      }),
       highlightPolicy: options.highlightPolicy,
       hideTitleHeadingOverride: false,
       importedAt: options.importedAt,

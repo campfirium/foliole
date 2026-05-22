@@ -54,7 +54,17 @@ async function seedReadwiseSources() {
   await fs.writeFile(path.join(articleHighlightPath, 'Highlighted.md'), '# Highlighted\n\n## Highlights\nimportant sentence\n', 'utf8');
   await fs.writeFile(
     path.join(bookPrimaryPath, 'Book Placeholder.md'),
-    '# Book Placeholder\n\n## Metadata\n- Download URL: https://readwise.example.com/book-placeholder.epub\n\n## Full Document\nFull text omitted because this document is an EPUB.\n',
+    [
+      '# Book Placeholder',
+      '',
+      '## Metadata',
+      '- Author: Reader',
+      '- Summary: A short book summary.',
+      '- Download URL: https://readwise.example.com/book-placeholder.epub',
+      '',
+      '## Full Document',
+      'Full text omitted because this document is an EPUB.'
+    ].join('\n'),
     'utf8'
   );
   await fs.writeFile(path.join(bookHighlightPath, 'Book Placeholder.md'), '# Book Placeholder\n\n## Highlights\nbook quote\n', 'utf8');
@@ -203,6 +213,8 @@ it('creates Readwise Books placeholder topics during Reader import', async () =>
   expectPendingBookInventory(paths);
   const placeholderNodeId = buildReadwiseBookPlaceholderNodeId('book placeholder');
   expect(readNodeContent(placeholderNodeId)).toContain('Full text of this document omitted because this document is an EPUB');
+  expect(readNodeContent(placeholderNodeId)).toContain('author: Reader');
+  expect(readNodeContent(placeholderNodeId)).toContain('## Summary\nA short book summary.');
   expect(readNodeContent(placeholderNodeId)).toContain('1 highlight');
   expect(readNodeContent(placeholderNodeId)).toContain('book quote');
   expect(readNodeContent(placeholderNodeId)).toContain('[Download original file');

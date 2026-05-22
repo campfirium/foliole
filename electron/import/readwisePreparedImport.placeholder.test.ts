@@ -31,6 +31,10 @@ it('keeps sidecar highlights in file placeholder topic content', async () => {
     [
       '# PDF Topic',
       '',
+      '## Metadata',
+      '- Summary: PDF summary.',
+      '- URL: https://readwise.io/topic',
+      '',
       '## Full Document',
       'Full text of this document omitted because this document is a PDF',
       '',
@@ -55,6 +59,8 @@ it('keeps sidecar highlights in file placeholder topic content', async () => {
     }
   );
 
+  expect(prepared.content).toMatch(/^---\nurl: https:\/\/readwise\.io\/topic\n---/u);
+  expect(prepared.content).toContain('## Summary\nPDF summary.\n\n## Highlights');
   expect(prepared.content).toContain('## Highlights\n2 highlights');
   expect(prepared.content).toContain('First PDF highlight.');
   expect(prepared.content).toContain('Second PDF highlight.');

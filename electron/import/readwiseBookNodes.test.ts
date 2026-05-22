@@ -27,7 +27,9 @@ function createBook(overrides: Partial<ReadwiseBookInventoryItem> = {}): Readwis
     highlightMarkdownPath: '/Readwise/Books/Annotated Book.md',
     highlightUnmatchedCount: null,
     importStatus: 'pending',
+    metadataFrontmatter: '',
     nodeStatus: 'missing',
+    summary: null,
     title: 'Annotated Book',
     ...overrides
   };
@@ -42,15 +44,23 @@ it('builds stable readwise book placeholder ids for explicit book actions', () =
 
 it('builds pending book content as a Readwise original file placeholder', () => {
   const content = buildReadwiseBookPlaceholderContent(createBook({
-    downloadUrl: 'https://readwise.io/reader/document_raw_content/42'
+    downloadUrl: 'https://readwise.io/reader/document_raw_content/42',
+    metadataFrontmatter: ['---', 'author: Someone', '---'].join('\n'),
+    summary: 'This book explains what to do next.'
   }));
 
   expect(content).toBe([
+    '---',
+    'author: Someone',
+    '---',
     '# Annotated Book',
     '',
     'Full text of this document omitted because this document is an EPUB',
     '',
     '[Download original file ->](https://readwise.io/reader/document_raw_content/42)',
+    '',
+    '## Summary',
+    'This book explains what to do next.',
     '',
     '## Highlights',
     '2 highlights',
