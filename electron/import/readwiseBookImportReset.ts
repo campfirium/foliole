@@ -4,8 +4,13 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { deleteNodesPermanently, upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import {
+  createBlockedReadwiseBookResetResult,
+  createReadwiseBookNotFoundResetResult
+} from './readwiseBookImportResetResults.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import type { ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
+import type { ReadwiseBooksInventory } from './readwiseBooksInventory.js';
 import { loadReadwiseBooksInventory } from './readwiseBooksInventoryLoad.js';
 import {
   findPersistedReadwiseBookByNodeId,
@@ -30,15 +35,16 @@ interface ActiveNodeRow {
 
 async function loadBookByNodeId(nodeId: string) {
   const inventory = await loadReadwiseBooksInventory();
+  return loadBookByNodeIdFromInventory(nodeId, inventory) ?? findPersistedReadwiseBookByNodeId(nodeId) ?? { book: null, inventory };
+}
+
+function loadBookByNodeIdFromInventory(nodeId: string, inventory: ReadwiseBooksInventory) {
   const book =
     inventory.books.find(
       (candidate) =>
         candidate.generatedNodeId === nodeId || buildReadwiseBookPlaceholderNodeId(candidate.bookKey) === nodeId
     ) ?? null;
-  if (book) {
-    return { book, inventory };
-  }
-  return findPersistedReadwiseBookByNodeId(nodeId) ?? { book: null, inventory };
+  return book ? { book, inventory } : null;
 }
 
 function readActiveNode(nodeId: string) {
@@ -101,18 +107,6 @@ function buildResetBook(book: ReadwiseBookInventoryItem, nodeId: string) {
   } satisfies ReadwiseBookInventoryItem;
 }
 
-function createBookNotFoundResult(book?: ReadwiseBookInventoryItem | null): NativeReadwiseBookImportResetResult {
-  return {
-    book_key: book?.bookKey ?? null,
-    content: null,
-    node_id: null,
-    removed_node_ids: [],
-    status: 'book_not_found',
-    title: book?.title ?? null,
-    updated_at: null
-  };
-}
-
 function rebuildPlaceholderNode(book: ReadwiseBookInventoryItem, nodeId: string) {
   const updatedAt = new Date().toISOString();
   const resetBook = buildResetBook(book, nodeId);
@@ -166,21 +160,16 @@ function resetImportedTree(activeNode: ActiveNodeRow, book: ReadwiseBookInventor
   return { descendantNodeIds, placeholderContent, resetBook, updatedAt };
 }
 
-export async function resetReadwiseBookImport(nodeId: string): Promise<NativeReadwiseBookImportResetResult> {
-  const { book, inventory } = await loadBookByNodeId(nodeId);
+async function resetReadwiseBookImportTarget(
+  nodeId: string,
+  target: Awaited<ReturnType<typeof loadBookByNodeId>>
+): Promise<NativeReadwiseBookImportResetResult> {
+  const { book, inventory } = target;
   if (!book) {
-    return createBookNotFoundResult();
+    return createReadwiseBookNotFoundResetResult();
   }
   if (!canRunReadwiseExternalSource({ readwiseReaderEnabled: loadImportManagerSettings().readwiseReaderConfig.enabled })) {
-    return {
-      book_key: book.bookKey,
-      content: null,
-      node_id: book.generatedNodeId ?? null,
-      removed_node_ids: [],
-      status: 'blocked_secondary',
-      title: book.title,
-      updated_at: null
-    };
+    return createBlockedReadwiseBookResetResult(book);
   }
 
   const activeNode = readActiveNode(nodeId);
@@ -224,4 +213,15 @@ export async function resetReadwiseBookImport(nodeId: string): Promise<NativeRea
     title: resetBook.title,
     updated_at: updatedAt
   };
+}
+
+export async function resetReadwiseBookImportFromInventory(
+  nodeId: string,
+  inventory: ReadwiseBooksInventory
+): Promise<NativeReadwiseBookImportResetResult> {
+  return resetReadwiseBookImportTarget(nodeId, loadBookByNodeIdFromInventory(nodeId, inventory) ?? { book: null, inventory });
+}
+
+export async function resetReadwiseBookImport(nodeId: string): Promise<NativeReadwiseBookImportResetResult> {
+  return resetReadwiseBookImportTarget(nodeId, await loadBookByNodeId(nodeId));
 }

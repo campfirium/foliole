@@ -8,9 +8,11 @@ import { buildKeepImportSourceDescriptor, resolveKeepImportRuleConfig } from './
 import { loadPreparedKeepImportRecord, resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
 import { persistKeepImportState } from './keepImportServiceState.js';
 import { resolveKeepImportResultDetail, resolveKeepImportResultStatus } from './keepImportSourceUpdateState.js';
+import { resetReadwiseBookImportFromInventory } from './readwiseBookImportReset.js';
 import { refreshReadwiseBookPlaceholderNode } from './readwiseBookPlaceholderRefresh.js';
+import { loadReadwiseBooksInventoryForPaths } from './readwiseBooksInventoryLoad.js';
 import { findPersistedReadwiseBookByNodeId } from './readwiseBooksInventoryState.js';
-import { runReadwiseBooksSource, type EnabledReadwiseBooksSource } from './readwiseReaderBooksRun.js';
+import type { EnabledReadwiseBooksSource } from './readwiseReaderBooksRun.js';
 
 function isActiveReadwiseBooksSource(source: unknown): source is EnabledReadwiseBooksSource {
   const candidate = source as Partial<EnabledReadwiseBooksSource>;
@@ -45,10 +47,24 @@ async function reimportReadwiseBookSource(nodeId: string, reimportedAt: string) 
     };
   }
   try {
-    await runReadwiseBooksSource(source, settings.readwiseReaderConfig, { forceScan: true });
+    const { inventory } = await loadReadwiseBooksInventoryForPaths({
+      forceScan: true,
+      fullDocumentDirectoryPath: source.primaryPath,
+      highlightDirectoryPath: source.highlightPath,
+      readwiseConfig: settings.readwiseReaderConfig
+    });
+    const resetResult = await resetReadwiseBookImportFromInventory(nodeId, inventory);
+    if (resetResult.status !== 'reset' || !resetResult.node_id) {
+      return {
+        detail: resetResult.status === 'book_not_found' ? 'Readwise Books topic was not found in the source.' : 'Readwise Books topic reset failed.',
+        node_id: resetResult.node_id,
+        reimported_at: reimportedAt,
+        status: 'failed' as const
+      };
+    }
     return {
-      detail: 'Readwise Books source refreshed.',
-      node_id: nodeId,
+      detail: 'Readwise Books topic reset from source.',
+      node_id: resetResult.node_id,
       reimported_at: reimportedAt,
       status: 'reimported' as const
     };
