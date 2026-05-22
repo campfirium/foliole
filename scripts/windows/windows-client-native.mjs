@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } from './windows-client-native-logs.mjs';
 import { requestCooperativeFullRestart } from './windows-client-native-full-restart.mjs';
 import { killPid, runCapture } from './windows-client-native-process.mjs';
+import { recoverClientStateFromReady } from './windows-client-native-recovered-state.mjs';
 import {
   readClientState as readClientStateFile,
   readReadyStateFromBootEvents,
@@ -171,6 +172,9 @@ async function stopClient({ print = true } = {}) {
 async function forceRestartClient(mode) {
   console.log(`[windows-restart-client] controlled-stop action=${mode}`);
   if (mode === 'full-shell-restart') {
+    const ready = readReadyState();
+    const state = readClientState();
+    await recoverClientStateFromReady({ currentHead, ready, saveState, state });
     const started = await requestCooperativeFullRestart({
       currentHead: await currentHead(),
       readClientState,

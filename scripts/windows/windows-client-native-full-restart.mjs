@@ -34,7 +34,7 @@ async function waitForProcessExit({ pid, timeoutMs, wait }) {
 }
 
 async function waitForShellAndRuntimeExit({ runtimePid, shellPid, timeoutMs, wait }) {
-  if (!await waitForProcessExit({ pid: shellPid, timeoutMs, wait })) {
+  if (shellPid && !await waitForProcessExit({ pid: shellPid, timeoutMs, wait })) {
     return false;
   }
   if (!runtimePid) {
@@ -55,7 +55,7 @@ export async function requestCooperativeFullRestart({
   wait
 }) {
   const state = readClientState();
-  if (!state?.shellPid) {
+  if (!state?.shellPid && !state?.runtimePid) {
     return null;
   }
   const result = await writeRestartIntent({

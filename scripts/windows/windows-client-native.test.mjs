@@ -24,6 +24,8 @@ it('rejects unsupported native Windows client actions before process control', (
 it('starts the native dev runner through a Windows-owned process', async () => {
   const script = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native.mjs'), 'utf8');
   const processScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-process.mjs'), 'utf8');
+  const recoveredStateScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-recovered-state.mjs'), 'utf8');
+  const fullRestartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-full-restart.mjs'), 'utf8');
   const restartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-restart.mjs'), 'utf8');
   const startScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-electron-dev-native.ps1'), 'utf8');
 
@@ -49,13 +51,18 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).toContain("await forceRestartClient('dev-shell-restart')");
   expect(script).toContain('requestCooperativeFullRestart');
   expect(script).toContain("cooperative full restart unavailable; falling back to process stop");
+  expect(fullRestartScript).toContain('if (!state?.shellPid && !state?.runtimePid)');
+  expect(fullRestartScript).toContain('if (shellPid && !await waitForProcessExit');
   expect(script.indexOf('await killPid(state?.runtimePid)')).toBeLessThan(script.indexOf('await killPid(state?.shellPid)'));
   expect(script).not.toContain('requestControlledRuntimeRestart');
   expect(script).not.toContain('controlled restart timed out; runtime left for inspection');
   expect(script).toContain('startup health check failed: app-ready-timeout shell_pid=');
   expect(script).toContain('ready ??= readReadyState()');
   expect(restartScript).not.toContain('forced-cleanup');
-  expect(script).toContain('ready.appReady.head ?? state?.head');
+  expect(script).toContain('recoverClientStateFromReady');
+  expect(recoveredStateScript).toContain('ready.appReady.head ?? state?.head');
+  expect(recoveredStateScript).toContain('if (!ready || state?.runtimePid)');
+  expect(recoveredStateScript).toContain('runtimePid: ready.windowVisible.pid');
   expect(script).toContain('await killPid(ready?.appReady.pid)');
   expect(script).toContain('windowVisibleFile');
   expect(script).toContain('readReadyStateFiles({ appReadyFile, bridgeReadyFile, windowVisibleFile })');
