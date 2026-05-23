@@ -32,6 +32,7 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
       queueNodeIds: [INBOX_NODE_ID],
       totalNodeCount: 1
     },
+    reviewSessionMode: 'reading-only' as const,
     layout: {
       ...current.layout,
       documentMaxWidth: 920,
@@ -64,24 +65,8 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
     queueNodeIds: [INBOX_NODE_ID],
     totalNodeCount: 1
   });
-  expect(partialized).not.toHaveProperty('reviewSessionMode');
-  expect(merged?.reviewSessionMode).toBe('recommended');
+  expect(merged?.reviewSessionMode).toBe('reading-only');
   expect(merged?.nodesById[INBOX_NODE_ID]?.id).toBe(INBOX_NODE_ID);
-});
-
-it('does not hydrate legacy persisted temporary session mode', () => {
-  const current = createTestWorkspaceState();
-  const merged = createConfig().merge?.(
-    {
-      activeNodeId: INBOX_NODE_ID,
-      nodeOrder: current.nodeOrder,
-      nodesById: current.nodesById,
-      reviewSessionMode: 'reading-only'
-    },
-    current
-  );
-
-  expect(merged?.reviewSessionMode).toBe('recommended');
 });
 
 it.each([null, 'bad-payload', []])(

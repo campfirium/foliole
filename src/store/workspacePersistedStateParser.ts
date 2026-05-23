@@ -1,4 +1,5 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 
 import type {
   NodeViewState,
@@ -143,6 +144,12 @@ function parseReviewSession(value: unknown): ReviewSessionState | undefined {
   };
 }
 
+function parseReviewSessionMode(value: unknown): ReviewSessionMode | undefined {
+  return value === 'recommended' || value === 'review-first' || value === 'reading-only'
+    ? value
+    : undefined;
+}
+
 export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspacePersistedState> {
   if (!isPlainRecord(value)) {
     return {};
@@ -153,6 +160,7 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   const layout = parseLayout(value.layout);
   const nodeViewById = parseNodeViewById(value.nodeViewById);
   const reviewSession = parseReviewSession(value.reviewSession);
+  const reviewSessionMode = parseReviewSessionMode(value.reviewSessionMode);
   const trashedNodeDeletedAtById = parseStringValueRecord(value.trashedNodeDeletedAtById);
   const untitledSequenceByParent = parseNumberValueRecord(value.untitledSequenceByParent);
   return {
@@ -162,6 +170,7 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
     ...(nodeViewById ? { nodeViewById } : {}),
     ...(isStringArray(value.nodeOrder) ? { nodeOrder: value.nodeOrder } : {}),
     ...(reviewSession ? { reviewSession } : {}),
+    ...(reviewSessionMode ? { reviewSessionMode } : {}),
     ...(trashedNodeDeletedAtById ? { trashedNodeDeletedAtById } : {}),
     ...(isStringArray(value.trashedNodeIds) ? { trashedNodeIds: value.trashedNodeIds } : {}),
     ...(untitledSequenceByParent ? { untitledSequenceByParent } : {})
