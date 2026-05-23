@@ -13,6 +13,7 @@ function buildReviewShortcutBindings(shortcutMap: ReviewShortcutMap) {
     gradeHardShortcuts: shortcutMap[APP_COMMAND_IDS.gradeReviewHard],
     gradeGoodShortcuts: shortcutMap[APP_COMMAND_IDS.gradeReviewGood],
     gradeEasyShortcuts: shortcutMap[APP_COMMAND_IDS.gradeReviewEasy],
+    readingSoonShortcuts: shortcutMap[APP_COMMAND_IDS.readingReviewSoon],
     readingLaterShortcuts: shortcutMap[APP_COMMAND_IDS.readingReviewLater],
     readingReadShortcuts: shortcutMap[APP_COMMAND_IDS.readingReviewRead],
     readingDismissShortcuts: shortcutMap[APP_COMMAND_IDS.readingReviewDismiss],
@@ -79,6 +80,7 @@ export function useReviewEditingState(args: {
     resumeReviewItem: args.onResumeReviewItem,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     selectNode: args.nav.handleSelectNode,
+    soonReviewItem: args.ws.soonReviewItem,
     gradeReviewCard: args.ws.gradeReviewCard
   });
 }

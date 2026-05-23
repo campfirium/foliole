@@ -57,6 +57,7 @@ export function advanceReviewSession(
     readTopicDelta?: number;
     reviewElapsedMsDelta?: number;
     reviewedItemDelta?: number;
+    soonNodeIds?: string[];
     totalNodeCount?: number;
   }
 ): WorkspaceState['reviewSession'] {
@@ -66,6 +67,9 @@ export function advanceReviewSession(
     currentNodeId: args.nextNodeId,
     isAnswerRevealed: false,
     queueNodeIds: args.queueNodeIds,
+    ...(args.soonNodeIds ?? reviewSession.soonNodeIds
+      ? { soonNodeIds: args.soonNodeIds ?? reviewSession.soonNodeIds }
+      : {}),
     totalNodeCount: args.totalNodeCount ?? reviewSession.totalNodeCount
   }, args);
 }
@@ -87,7 +91,8 @@ export function completeReviewSession(
     continueNodeId: args.continueNodeId ?? reviewSession.continueNodeId ?? null,
     currentNodeId: null,
     isAnswerRevealed: false,
-    queueNodeIds: []
+    queueNodeIds: [],
+    soonNodeIds: []
   }, { ...args, handledAt: args.completedAt });
 }
 

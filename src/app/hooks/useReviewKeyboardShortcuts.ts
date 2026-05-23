@@ -25,6 +25,7 @@ interface UseReviewKeyboardShortcutsArgs {
   gradeHardShortcuts: CommandShortcutSet | undefined;
   gradeGoodShortcuts: CommandShortcutSet | undefined;
   gradeEasyShortcuts: CommandShortcutSet | undefined;
+  readingSoonShortcuts: CommandShortcutSet | undefined;
   readingLaterShortcuts: CommandShortcutSet | undefined;
   readingReadShortcuts: CommandShortcutSet | undefined;
   readingDismissShortcuts: CommandShortcutSet | undefined;
@@ -42,6 +43,7 @@ interface UseReviewKeyboardShortcutsArgs {
   deleteCurrentReviewItem: () => boolean;
   deleteReviewSourceTopic: (nodeId: string) => boolean;
   dismissReviewItem: () => boolean;
+  soonReviewItem: () => boolean;
   goBack: () => void;
   goForward: () => void;
   goParent: () => void;
@@ -193,6 +195,9 @@ function handleVisibleReviewItemKeydown(event: KeyboardEvent, args: UseReviewKey
   }
 
   if (!args.isCurrentItemGradable) {
+    if (tryRunShortcut(event, args.readingSoonShortcuts, args.soonReviewItem)) {
+      return;
+    }
     if (tryRunShortcut(event, args.readingLaterShortcuts, args.deferReviewItem)) {
       return;
     }

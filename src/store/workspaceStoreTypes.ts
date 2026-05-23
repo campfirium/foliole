@@ -66,6 +66,7 @@ export interface WorkspaceState {
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
   completeReviewItem: (now?: string) => boolean;
   deferReviewItem: () => boolean;
+  soonReviewItem: (now?: string) => boolean;
   dismissReviewItem: (now?: string) => boolean;
   exitReviewSession: () => void;
   deleteNode: (nodeId: string) => void;
@@ -117,7 +118,6 @@ export interface WorkspacePersistedState {
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   reviewSession: ReviewSessionState;
-  reviewSessionMode: ReviewSessionMode;
   trashedNodeDeletedAtById: Record<string, string | undefined>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
@@ -143,6 +143,7 @@ export interface ReviewSessionState {
   reviewElapsedMs?: number;
   reviewedItemCount?: number;
   sessionStartedAt?: string | null;
+  soonNodeIds?: string[];
   totalNodeCount: number;
 }
 

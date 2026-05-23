@@ -67,6 +67,7 @@ function createLayoutReviewData(args: BuildControllerLayoutPropsArgs) {
     completeReviewItem: args.ws.completeReviewItem,
     deferReviewItem: args.ws.deferReviewItem,
     dismissReviewItem: args.ws.dismissReviewItem,
+    soonReviewItem: args.ws.soonReviewItem,
     exitReviewSession: args.ws.exitReviewSession,
     exitStudyMode: args.exitStudyMode,
     nowIso: args.nowIso,

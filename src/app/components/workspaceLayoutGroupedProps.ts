@@ -121,6 +121,7 @@ export interface WorkspaceLayoutProps {
     | 'onCompleteReviewItem'
     | 'onDeferReviewItem'
     | 'onDismissReviewItem'
+    | 'onSoonReviewItem'
     | 'onContinueReading'
     | 'onResumeReviewItem'
     | 'onExitReviewMode'

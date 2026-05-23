@@ -29,6 +29,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canRevealAnswer: true,
     canToggleReviewMode: true,
     canGradeReview: true,
+    canSoonReadingReview: true,
     canDeferReadingReview: true,
     canCompleteReadingReview: true,
     canDismissReadingReview: true,

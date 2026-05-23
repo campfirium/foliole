@@ -4,6 +4,7 @@ export interface ReviewPaletteCommandOptions {
   canRevealAnswer: boolean;
   canToggleReviewMode: boolean;
   canGradeReview: boolean;
+  canSoonReadingReview: boolean;
   canDeferReadingReview: boolean;
   canCompleteReadingReview: boolean;
   canDismissReadingReview: boolean;
@@ -24,6 +25,7 @@ export const REVIEW_PALETTE_COMMANDS = [
   { id: APP_COMMAND_IDS.gradeReviewHard, title: 'Grade Review: Hard', section: 'Review', keywords: ['grade'] },
   { id: APP_COMMAND_IDS.gradeReviewGood, title: 'Grade Review: Good', section: 'Review', keywords: ['grade'] },
   { id: APP_COMMAND_IDS.gradeReviewEasy, title: 'Grade Review: Easy', section: 'Review', keywords: ['grade'] },
+  { id: APP_COMMAND_IDS.readingReviewSoon, title: 'Reading: Soon', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewLater, title: 'Reading: Later', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewRead, title: 'Reading: Read', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewDismiss, title: 'Reading: Dismiss', section: 'Review', keywords: ['reading'] },
@@ -49,6 +51,7 @@ function isReviewGradeCommand(id: string) {
 export function isReviewCommandEnabled(id: string, options: ReviewPaletteCommandOptions) {
   if (id === APP_COMMAND_IDS.startStudyMode) return options.canToggleReviewMode;
   if (id === APP_COMMAND_IDS.revealReviewAnswer) return options.canRevealAnswer;
+  if (id === APP_COMMAND_IDS.readingReviewSoon) return options.canSoonReadingReview;
   if (id === APP_COMMAND_IDS.readingReviewLater) return options.canDeferReadingReview;
   if (id === APP_COMMAND_IDS.readingReviewRead) return options.canCompleteReadingReview;
   if (id === APP_COMMAND_IDS.readingReviewDismiss) return options.canDismissReadingReview;

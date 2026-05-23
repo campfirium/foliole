@@ -2,12 +2,32 @@ import { Clock3, Sprout } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
-import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
+import {
+  AppDropdownMenu,
+  AppDropdownMenuContent,
+  AppDropdownMenuTrigger,
+  AppTooltip,
+  AppTooltipContent,
+  AppTooltipTrigger
+} from '../../shared/ui';
 
 import { ReviewSessionModeControl } from './ReviewSessionModeControl';
 
-const READING_TIME_PLACEHOLDER_LABEL = 'Reading time (coming soon)';
+const SESSION_SUMMARY_LABEL = 'Queue summary';
+export type ReviewToolbarSessionSummaryStatus = 'clear' | 'in-progress' | 'not-started';
+
+export interface ReviewToolbarSessionSummaryValues {
+  readingElapsedMs: number;
+  readTopicCount: number;
+  reviewElapsedMs: number;
+  reviewedItemCount: number;
+}
+
+export interface ReviewToolbarSessionSummary extends ReviewToolbarSessionSummaryValues {
+  status: ReviewToolbarSessionSummaryStatus;
+}
 
 function clampProgress(value: number) {
   return Math.min(Math.max(value, 0), 1);
@@ -71,44 +91,137 @@ export function ReviewToolbarProgressLine({
   );
 }
 
+export function ReviewSessionProgress({
+  reviewCompletedCount,
+  reviewQueueCount,
+  reviewSessionMode,
+  showProgress
+}: {
+  reviewCompletedCount: number;
+  reviewQueueCount: number;
+  reviewSessionMode: ReviewSessionMode;
+  showProgress?: boolean;
+}) {
+  if (!showProgress) return null;
+  return (
+    <ReviewToolbarProgressLine
+      completedCount={reviewCompletedCount}
+      queueCount={reviewQueueCount}
+      reviewSessionMode={reviewSessionMode}
+    />
+  );
+}
+
 export function ReviewToolbarSessionFrame({
   actions,
   className,
-  modeControl
+  modeControl,
+  summary
 }: {
   actions: ReactNode;
   className?: string;
   modeControl: ReactNode;
+  summary?: ReviewToolbarSessionSummary;
 }) {
   return (
     <div className={cn('grid grid-cols-[2rem_auto_2rem] items-center gap-2.5', className)}>
       <div className="flex min-w-0 justify-center">{modeControl}</div>
       <div className="flex min-w-0 items-center justify-center">{actions}</div>
-      <span
-        aria-label={READING_TIME_PLACEHOLDER_LABEL}
-        className="inline-flex size-8 items-center justify-center rounded-md text-foreground/38"
-        role="img"
-        title={READING_TIME_PLACEHOLDER_LABEL}
-      >
-        <Clock3 aria-hidden="true" className="size-4" strokeWidth={1.8} />
-      </span>
+      <div className="flex min-w-0 justify-center">
+        {summary ? <ReviewToolbarSessionSummaryMenu summary={summary} /> : null}
+      </div>
     </div>
   );
 }
 
 export function ReviewToolbarSessionActions({
   actions,
+  modeControl,
   onSetReviewSessionMode,
-  reviewSessionMode
+  reviewSessionMode,
+  summary
 }: {
   actions: ReactNode;
-  onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
-  reviewSessionMode: ReviewSessionMode;
+  modeControl?: ReactNode;
+  onSetReviewSessionMode?: (mode: ReviewSessionMode) => void;
+  reviewSessionMode?: ReviewSessionMode;
+  summary?: ReviewToolbarSessionSummary;
 }) {
+  const resolvedModeControl =
+    modeControl ??
+    (onSetReviewSessionMode && reviewSessionMode ? (
+      <ReviewSessionModeControl mode={reviewSessionMode} onChangeMode={onSetReviewSessionMode} />
+    ) : null);
+
   return (
     <ReviewToolbarSessionFrame
       actions={actions}
-      modeControl={<ReviewSessionModeControl mode={reviewSessionMode} onChangeMode={onSetReviewSessionMode} />}
+      modeControl={resolvedModeControl}
+      {...definedProps({ summary })}
     />
+  );
+}
+
+function formatElapsedMs(elapsedMs: number) {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return 'Just now';
+  const totalMinutes = Math.max(1, Math.round(elapsedMs / 60000));
+  if (totalMinutes < 60) return `${totalMinutes} min`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes ? `${hours} hr ${minutes} min` : `${hours} hr`;
+}
+
+function SummaryRow({ count, elapsedMs, label, unit }: { count: number; elapsedMs: number; label: string; unit: string }) {
+  if (count <= 0) return null;
+  return (
+    <div className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-4">
+      <span className="text-xs text-foreground/48">{label}</span>
+      <span className="text-right text-lg font-medium leading-none text-foreground/82">
+        {count}
+        <span className="ml-1.5 text-xs font-normal text-foreground/45">{count === 1 ? unit : `${unit}s`}</span>
+      </span>
+      <span className="min-w-16 text-right text-xs tabular-nums text-foreground/45">{formatElapsedMs(elapsedMs)}</span>
+    </div>
+  );
+}
+
+function getSummaryTitle(status: ReviewToolbarSessionSummaryStatus) {
+  if (status === 'clear') return 'Queue clear';
+  if (status === 'in-progress') return 'Queue in progress';
+  return 'Queue not started';
+}
+
+function QueueSummaryRows({ summary }: { summary: ReviewToolbarSessionSummary }) {
+  const hasRows = summary.reviewedItemCount > 0 || summary.readTopicCount > 0;
+  if (!hasRows) {
+    return <p className="text-xs text-foreground/45">No queue actions yet.</p>;
+  }
+  return (
+    <div className="space-y-3">
+      <SummaryRow count={summary.reviewedItemCount} elapsedMs={summary.reviewElapsedMs} label="Reviewed" unit="item" />
+      <SummaryRow count={summary.readTopicCount} elapsedMs={summary.readingElapsedMs} label="Read" unit="topic" />
+    </div>
+  );
+}
+
+function ReviewToolbarSessionSummaryMenu({ summary }: { summary: ReviewToolbarSessionSummary }) {
+  return (
+    <AppDropdownMenu>
+      <AppDropdownMenuTrigger asChild>
+        <button
+          aria-label={SESSION_SUMMARY_LABEL}
+          className="inline-flex size-8 items-center justify-center rounded-md text-foreground/38 outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground/65 focus-visible:ring-1 focus-visible:ring-border-strong"
+          type="button"
+        >
+          <Clock3 aria-hidden="true" className="size-4" strokeWidth={1.8} />
+        </button>
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent align="center" avoidCollisions={false} className="w-64 p-4" side="top" sideOffset={10}>
+        <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.02em] text-foreground/45">
+          {getSummaryTitle(summary.status)}
+        </div>
+        <QueueSummaryRows summary={summary} />
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
   );
 }

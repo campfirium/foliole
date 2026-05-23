@@ -22,11 +22,13 @@ export interface WorkspaceBottomReviewToolbarProps {
   reviewCurrentTitle: string | undefined;
   reviewDueCount: number;
   reviewQueueCount: number;
+  reviewSummary: WorkspaceLayoutProps['review']['reviewSummary'];
   reviewStatus: WorkspaceLayoutProps['review']['reviewStatus'];
   reviewSessionMode: ReviewSessionMode;
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
   onDismissReviewItem: () => boolean;
+  onSoonReviewItem: () => boolean;
   onContinueReading: () => void;
   onExitReviewMode: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
@@ -74,6 +76,7 @@ export function selectWorkspaceBottomReviewToolbarProps(
     onContinueReading: review.onContinueReading,
     onDeferReviewItem: review.onDeferReviewItem,
     onDismissReviewItem: review.onDismissReviewItem,
+    onSoonReviewItem: review.onSoonReviewItem,
     onExitReviewMode: review.onExitReviewMode,
     onGradeReview: review.onGradeReview,
     onRevealAnswer: review.onRevealAnswer,
@@ -85,6 +88,7 @@ export function selectWorkspaceBottomReviewToolbarProps(
     reviewCurrentTitle: getReviewCurrentTitle(props),
     reviewDueCount: review.reviewDueCount,
     reviewQueueCount: review.reviewQueueCount,
+    reviewSummary: review.reviewSummary,
     reviewStatus: review.reviewStatus,
     reviewSessionMode: review.reviewSessionMode
   };
@@ -118,11 +122,13 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
         reviewCurrentNodeId={props.reviewCurrentNodeId}
         reviewCurrentTitle={props.reviewCurrentTitle}
         reviewQueueCount={props.reviewQueueCount}
+        reviewSummary={props.reviewSummary}
         reviewStatus={props.reviewStatus}
         onCompleteReviewItem={props.onCompleteReviewItem}
         onContinueReading={props.onContinueReading}
         onDeferReviewItem={props.onDeferReviewItem}
         onDismissReviewItem={props.onDismissReviewItem}
+        onSoonReviewItem={props.onSoonReviewItem}
         onExitReviewMode={props.onExitReviewMode}
         onGrade={props.onGradeReview}
         onRevealAnswer={props.onRevealAnswer}

@@ -22,12 +22,24 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
     reviewCurrentTitle: 'Review topic',
     reviewDueCount: 2,
     reviewQueueCount: 2,
+    reviewSummary: {
+      completedAt: null,
+      continueNodeId: null,
+      createdItemCount: 0,
+      createdTopicCount: 0,
+      readingElapsedMs: 34 * 60 * 1000,
+      readTopicCount: 2,
+      reviewElapsedMs: 18 * 60 * 1000,
+      reviewedItemCount: 4,
+      sessionStartedAt: '2026-03-10T12:00:00.000Z'
+    },
     reviewStatus: 'awaiting-answer',
     reviewSessionMode: 'recommended',
     onCompleteReviewItem: vi.fn(() => true),
     onContinueReading: vi.fn(),
     onDeferReviewItem: vi.fn(() => true),
     onDismissReviewItem: vi.fn(() => true),
+    onSoonReviewItem: vi.fn(() => true),
     onExitReviewMode: vi.fn(),
     onGradeReview: vi.fn(async () => true),
     onRevealAnswer: vi.fn(),
@@ -50,7 +62,7 @@ it('keeps the review footer list summary when the left sidebar is expanded', () 
   render(<WorkspaceBottomReviewToolbar {...createProps()} />);
 
   expect(screen.queryByRole('button', { name: 'Change session mode' })).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('Reading time (coming soon)')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Flow queue: 2 left · 0 done · 2 total')).toBeInTheDocument();
   expect(screen.getByLabelText('Flow toolbar')).toHaveClass('col-start-3');
 });
@@ -72,7 +84,7 @@ it('keeps the session mode controls hidden while waiting to reveal an answer', (
   render(<WorkspaceBottomReviewToolbar {...createProps({ isListCollapsed: true })} />);
 
   expect(screen.queryByRole('button', { name: 'Change session mode' })).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('Reading time (coming soon)')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
   expect(screen.queryByText('2 left · 0 done')).not.toBeInTheDocument();
 });
 
@@ -80,7 +92,7 @@ it('shows session mode controls after an answer is revealed for grading', () => 
   render(<WorkspaceBottomReviewToolbar {...createProps({ isAnswerRevealed: true, reviewStatus: 'answer-revealed' })} />);
 
   expect(screen.getByRole('button', { name: 'Change session mode' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Reading time (coming soon)')).toBeInTheDocument();
+  expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Good' })).toBeInTheDocument();
 });
 
@@ -100,6 +112,9 @@ it('shows session mode choices and marks temporary mode in the real footer summa
   expect(screen.getByRole('menuitem', { name: /Review and reading/ })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: /Review first/ })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: /Reading only/ })).toBeInTheDocument();
+  expect(screen.queryByText('Flow mode')).not.toBeInTheDocument();
+  expect(screen.queryByText('Handle due review items before reading.')).not.toBeInTheDocument();
+  expect(screen.getByText('RECOMMENDED')).toBeInTheDocument();
   expect(screen.getByText('Temporary setting.')).toBeInTheDocument();
 
   await act(async () => {

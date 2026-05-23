@@ -35,28 +35,33 @@ function buildNextDismissReviewSession(args: {
   snapshot: WorkspaceState;
   state: WorkspaceState;
 }) {
+  const soonNodeIds = (args.snapshot.reviewSession.soonNodeIds ?? []).filter((nodeId) => nodeId !== args.currentNodeId);
   const nextQueue = buildCurrentReviewSessionQueueOutput(args.state, args.now, {
-    excludedNodeIds: [args.currentNodeId],
+    excludedNodeIds: [args.currentNodeId, ...soonNodeIds],
     nodesById: args.nextNodesById,
     releaseCurrentPin: true
   });
-  const nextNodeId = nextQueue.currentNodeId;
+  const nextNodeId = nextQueue.currentNodeId ?? soonNodeIds[0] ?? null;
+  const nextSoonNodeIds = nextQueue.currentNodeId ? soonNodeIds : soonNodeIds.slice(1);
   const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
   const readingElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
+  const readTopicDelta = args.snapshot.reviewSession.queueNodeIds.includes(args.currentNodeId) ? 1 : 0;
   return {
     nextNodeId,
     nextReviewSession: nextNodeId
       ? advanceReviewSession(args.snapshot.reviewSession, {
+          handledAt: args.now,
           nextNodeId,
-          queueNodeIds: nextQueue.taskNodeIds,
+          queueNodeIds: nextQueue.currentNodeId ? nextQueue.taskNodeIds : [],
           readingElapsedMsDelta,
-          readTopicDelta: 1
+          readTopicDelta,
+          soonNodeIds: nextSoonNodeIds
         })
       : completeReviewSession(args.snapshot.reviewSession, {
           completedAt: args.now,
           continueNodeId,
           readingElapsedMsDelta,
-          readTopicDelta: 1
+          readTopicDelta
         })
   };
 }

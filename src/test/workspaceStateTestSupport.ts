@@ -22,6 +22,7 @@ export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}
     dismissNode: vi.fn(() => false),
     setNodeSequentialReading: vi.fn(() => false),
     dismissReviewItem: vi.fn(() => false),
+    soonReviewItem: vi.fn(() => false),
     deleteEditorAnnotationNodes: vi.fn(),
     pushEditorOperationEntry: vi.fn(),
     undoWorkspaceAction: vi.fn(() => false),
