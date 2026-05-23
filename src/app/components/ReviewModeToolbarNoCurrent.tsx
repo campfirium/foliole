@@ -4,6 +4,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
 import { ContinueReadingAction, ResumeReviewAction } from './ReviewModeToolbarActions';
+import { ReviewToolbarSessionActions, type ReviewToolbarSessionSummary } from './ReviewToolbarSessionFrame';
 
 interface ReviewNoCurrentItemBarProps {
   className?: string;
@@ -11,6 +12,7 @@ interface ReviewNoCurrentItemBarProps {
   onResumeReviewItem: () => void;
   reviewCompletedCount: number;
   reviewQueueCount: number;
+  reviewSummary?: ReviewToolbarSessionSummary;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   showSummary?: boolean;
   style?: CSSProperties;
@@ -53,8 +55,9 @@ function useSpaceShortcut(action: () => void) {
 function ReviewCompleteBar({
   className,
   onContinueReading,
+  reviewSummary,
   style
-}: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onContinueReading' | 'style'>) {
+}: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onContinueReading' | 'reviewSummary' | 'style'>) {
   useSpaceShortcut(onContinueReading);
 
   return (
@@ -63,7 +66,13 @@ function ReviewCompleteBar({
       {...definedProps({ style })}
       mode="study"
       className={[className, 'pb-1'].filter(Boolean).join(' ')}
-      primary={<ContinueReadingAction onContinueReading={onContinueReading} />}
+      primary={
+        <ReviewToolbarSessionActions
+          actions={<ContinueReadingAction onContinueReading={onContinueReading} />}
+          modeControl={<span aria-hidden="true" className="size-8" />}
+          {...definedProps({ summary: reviewSummary })}
+        />
+      }
       progress={null}
       secondary={null}
     />
@@ -73,9 +82,10 @@ function ReviewCompleteBar({
 function ReviewResumeBar({
   className,
   onResumeReviewItem,
+  reviewSummary,
   showSummary,
   style
-}: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onResumeReviewItem' | 'showSummary' | 'style'>) {
+}: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onResumeReviewItem' | 'reviewSummary' | 'showSummary' | 'style'>) {
   useSpaceShortcut(onResumeReviewItem);
 
   return (
@@ -83,7 +93,13 @@ function ReviewResumeBar({
       ariaLabel="Flow toolbar"
       {...definedProps({ className, style })}
       mode="study"
-      primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
+      primary={
+        <ReviewToolbarSessionActions
+          actions={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
+          modeControl={<span aria-hidden="true" className="size-8" />}
+          {...definedProps({ summary: reviewSummary })}
+        />
+      }
       progress={null}
       secondary={showSummary ? 'Flow mode' : null}
     />
@@ -94,6 +110,7 @@ export function ReviewNoCurrentItemBar({
   className,
   onContinueReading,
   onResumeReviewItem,
+  reviewSummary,
   reviewStatus,
   showSummary,
   style
@@ -102,6 +119,7 @@ export function ReviewNoCurrentItemBar({
     return (
       <ReviewCompleteBar
         onContinueReading={onContinueReading}
+        {...definedProps({ reviewSummary })}
         {...definedProps({ className, style })}
       />
     );
@@ -110,6 +128,7 @@ export function ReviewNoCurrentItemBar({
   return (
     <ReviewResumeBar
       onResumeReviewItem={onResumeReviewItem}
+      {...definedProps({ reviewSummary })}
       {...definedProps({ showSummary })}
       {...definedProps({ className, style })}
     />

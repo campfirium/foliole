@@ -6,27 +6,32 @@ import {
   AppDropdownMenu,
   AppDropdownMenuContent,
   AppDropdownMenuItem,
+  AppDropdownMenuLabel,
   AppDropdownMenuTrigger
 } from '../../shared/ui';
 
 const SESSION_MODES: Array<{
   id: ReviewSessionMode;
   label: string;
+  note: string;
   Icon: typeof ListFilter;
 }> = [
   {
     id: 'recommended',
     label: 'Review and reading',
+    note: 'Mix review items with reading topics.',
     Icon: Route
   },
   {
     id: 'review-first',
     label: 'Review first',
+    note: 'Handle due review items before reading.',
     Icon: ListChecks
   },
   {
     id: 'reading-only',
     label: 'Reading only',
+    note: 'Use this session for reading topics.',
     Icon: BookOpenText
   }
 ];
@@ -42,7 +47,7 @@ function modeButtonClassName(isTemporaryMode: boolean) {
 
 function menuItemClassName(isSelected: boolean) {
   return [
-    'grid min-h-10 grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-center gap-2 rounded-md px-3 py-2',
+    'grid min-h-12 grid-cols-[1.25rem_minmax(0,1fr)_1.25rem] items-center gap-2.5 rounded-md px-3 py-2',
     isSelected ? 'bg-foreground/[0.055] text-foreground' : 'text-foreground/80'
   ].join(' ');
 }
@@ -71,7 +76,10 @@ export function ReviewSessionModeControl({
           <ActiveIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.9} />
         </button>
       </AppDropdownMenuTrigger>
-      <AppDropdownMenuContent align="start" className="w-80 max-w-[calc(100vw-2rem)] p-1" sideOffset={8}>
+      <AppDropdownMenuContent align="start" className="w-96 max-w-[calc(100vw-2rem)] p-1" sideOffset={8}>
+        <AppDropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-medium text-foreground/45">
+          Flow mode
+        </AppDropdownMenuLabel>
         {SESSION_MODES.map((item) => {
           const Icon = item.Icon;
           const isSelected = item.id === mode;
@@ -86,12 +94,8 @@ export function ReviewSessionModeControl({
             >
               <Icon aria-hidden="true" className="size-4 text-foreground/62" strokeWidth={1.9} />
               <span className="min-w-0">
-                <span className="flex min-w-0 items-baseline gap-2">
-                  <span className="truncate text-[13px] font-medium">{item.label}</span>
-                  {item.id === 'recommended' ? (
-                    <span className="shrink-0 text-[10px] font-medium text-foreground/38">RECOMMENDED</span>
-                  ) : null}
-                </span>
+                <span className="block truncate text-[13px] font-medium">{item.label}</span>
+                <span className="block truncate text-xs font-normal text-foreground/52">{item.note}</span>
               </span>
               {isSelected ? <Check aria-hidden="true" className="size-4 text-accent-strong" strokeWidth={2.1} /> : null}
             </AppDropdownMenuItem>
