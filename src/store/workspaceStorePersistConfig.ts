@@ -2,6 +2,7 @@ import { createJSONStorage, type PersistOptions } from 'zustand/middleware';
 
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 
+import { mergeHydratedNodesById } from './workspaceHydrateObjectMerge';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
@@ -23,6 +24,12 @@ function resolveMergedActiveNodeId(current: WorkspaceState, next: WorkspaceState
   return canKeepCurrentActiveNode(current, next) ? current.activeNodeId : next.activeNodeId;
 }
 
+function toPersistedReviewSession(reviewSession: WorkspaceState['reviewSession']) {
+  const persistedReviewSession = { ...reviewSession };
+  delete persistedReviewSession.soonNodeIds;
+  return persistedReviewSession;
+}
+
 function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedState {
   return {
     activeNodeId: state.activeNodeId,
@@ -34,8 +41,7 @@ function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedStat
       state.nodesById,
       collectRendererBoundaryKeepNodeIds(state, state)
     ),
-    reviewSession: state.reviewSession,
-    reviewSessionMode: state.reviewSessionMode,
+    reviewSession: toPersistedReviewSession(state.reviewSession),
     trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
     trashedNodeIds: state.trashedNodeIds,
     untitledSequenceByParent: state.untitledSequenceByParent
@@ -61,8 +67,10 @@ export function createWorkspaceStorePersistConfig(
           ...persisted.layout
         },
         nodeViewById: persisted.nodeViewById ?? current.nodeViewById,
+        nodesById: persisted.nodesById
+          ? mergeHydratedNodesById(current.nodesById, persisted.nodesById)
+          : current.nodesById,
         reviewSession: persisted.reviewSession ?? current.reviewSession,
-        reviewSessionMode: persisted.reviewSessionMode ?? current.reviewSessionMode,
         trashedNodeDeletedAtById: persisted.trashedNodeDeletedAtById ?? current.trashedNodeDeletedAtById,
         untitledSequenceByParent:
           persisted.untitledSequenceByParent ?? current.untitledSequenceByParent
