@@ -35,6 +35,10 @@ function runGradleCheck(cwd, args, env = {}) {
   });
 }
 
+function bashPath(windowsPath) {
+  return windowsPath.replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`).replace(/\\/g, '/');
+}
+
 async function writeExecutable(rootDir, relativePath, content) {
   const fullPath = path.join(rootDir, relativePath);
   await writeFile(fullPath, content, { encoding: 'utf8', mode: 0o755 });
@@ -43,7 +47,7 @@ async function writeExecutable(rootDir, relativePath, content) {
 
 describe('windows-gradle-check.sh', () => {
   it('runs Gradle checks in the dedicated Android preview workspace', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-gradle-check-'));
+    const tempRoot = await mkdtemp(path.join(REPO_ROOT, '.tmp', 'android-gradle-check-'));
     try {
       const mockBinDir = path.join(tempRoot, 'bin');
       const powershellArgsLog = path.join(tempRoot, 'powershell-args.log');
@@ -63,17 +67,18 @@ describe('windows-gradle-check.sh', () => {
       await chmod(path.join(mockBinDir, 'wslpath'), 0o755);
 
       const mirrorDir = path.join(tempRoot, 'android-preview-mirror');
+      const mirrorDirForBash = bashPath(mirrorDir);
       const result = await runGradleCheck(tempRoot, ['lint'], {
-        PATH: `${mockBinDir}:${process.env.PATH ?? ''}`,
+        PATH: `${bashPath(mockBinDir)}:/usr/bin:/bin:${process.env.PATH ?? ''}`,
         WINDOWS_SYNC_SCRIPT: path.join(tempRoot, 'windows-sync.sh'),
         WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-gradle-check.ps1'),
-        ANDROID_WINDOWS_MIRROR_DIR: mirrorDir,
+        ANDROID_WINDOWS_MIRROR_DIR: mirrorDirForBash,
         ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-test',
-        POWERSHELL_ARGS_LOG: powershellArgsLog
+        POWERSHELL_ARGS_LOG: bashPath(powershellArgsLog)
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain(`sync-target:${mirrorDir}`);
+      expect(result.stdout).toContain(`sync-target:${mirrorDirForBash}`);
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
       expect(args).toContain('-WindowsWorkDir');
       expect(args).toContain('C:\\dev\\foliole-test');
@@ -121,8 +126,8 @@ describe('windows-gradle-check.sh', () => {
         ANDROID_SKIP_WINDOWS_SYNC: '1',
         ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-test',
         FOLIOLE_ANDROID_ALLOW_DATA_DESTRUCTIVE_TEST: '1',
-        PATH: `${mockBinDir}:${process.env.PATH ?? ''}`,
-        POWERSHELL_ARGS_LOG: powershellArgsLog,
+        PATH: `${bashPath(mockBinDir)}:/usr/bin:/bin:${process.env.PATH ?? ''}`,
+        POWERSHELL_ARGS_LOG: bashPath(powershellArgsLog),
         WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-gradle-check.ps1')
       });
 
@@ -159,8 +164,8 @@ describe('windows-gradle-check.sh', () => {
         {
           ANDROID_SKIP_WINDOWS_SYNC: '1',
           FOLIOLE_ANDROID_ALLOW_DATA_DESTRUCTIVE_TEST: '1',
-          PATH: `${mockBinDir}:${process.env.PATH ?? ''}`,
-          POWERSHELL_ARGS_LOG: powershellArgsLog,
+          PATH: `${bashPath(mockBinDir)}:/usr/bin:/bin:${process.env.PATH ?? ''}`,
+          POWERSHELL_ARGS_LOG: bashPath(powershellArgsLog),
           WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-gradle-check.ps1')
         }
       );

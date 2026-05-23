@@ -113,7 +113,7 @@ describe('android-preview.sh', () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[android-preview] begin: windows-sync');
       expect(result.stdout).toContain('[android-preview] windows-sync timeout: 600s');
-      expect(result.stdout).toContain(`sync-target:${path.join(tempRoot, 'android-preview-mirror')}`);
+      expect(result.stdout).toMatch(/sync-target:.*android-preview-mirror/u);
       expect(result.stdout).toContain('preserve-android-generated:unset');
       expect(result.stdout).toContain('android-workdir:C:\\dev\\foliole-test');
       expect(result.stdout).toContain('deploy-workdir:C:\\dev\\foliole-test');
