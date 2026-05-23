@@ -89,6 +89,7 @@ function toReviewProfile(row: WorkspaceNodeRow) {
 
 export function buildWorkspaceListNodesById(rows: WorkspaceNodeRow[]) {
   const nodesById: Record<string, Record<string, unknown>> = {};
+  const trashedNodeDeletedAtById: Record<string, string> = {};
   const trashedNodeIds: string[] = [];
   const directOpeningById = new Map<string, string | null>();
   for (const row of rows) {
@@ -124,7 +125,8 @@ export function buildWorkspaceListNodesById(rows: WorkspaceNodeRow[]) {
     };
     if (row.deleted_at) {
       trashedNodeIds.push(row.id);
+      trashedNodeDeletedAtById[row.id] = row.deleted_at;
     }
   }
-  return { directOpeningById, nodesById, trashedNodeIds };
+  return { directOpeningById, nodesById, trashedNodeDeletedAtById, trashedNodeIds };
 }
