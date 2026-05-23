@@ -5,7 +5,6 @@ import { parseReviewGradeArgs, parseReviewPreviewArgs } from './commandParserRev
 import { asString } from './commandParsers.js';
 import type { InvokeRequest } from './contracts.js';
 import { reviewGrade, reviewPreview } from './review.js';
-import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 export async function handleReviewCommand(request: InvokeRequest) {
   const args = (request.args ?? {}) as Record<string, unknown>;
@@ -15,9 +14,7 @@ export async function handleReviewCommand(request: InvokeRequest) {
     return null;
   }
   if (request.command === NATIVE_COMMANDS.reviewGrade) {
-    const result = reviewGrade(parseReviewGradeArgs(args));
-    notifyWorkspaceContentChanged();
-    return result;
+    return reviewGrade(parseReviewGradeArgs(args));
   }
   if (request.command === NATIVE_COMMANDS.reviewPreview) {
     return reviewPreview(parseReviewPreviewArgs(args));
