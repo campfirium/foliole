@@ -92,16 +92,26 @@ export function resolveReadingNextAt(lastHandledAt: string, intervalDurationMs: 
   return new Date(lastHandledAtMs + intervalDurationMs).toISOString();
 }
 
-export function resolveNextReadingIntervalDurationMs(args: { repetitionCount: number; previousIntervalDurationMs?: number | null; priorityChain?: readonly unknown[]; initialIntervalMs?: number; range?: ReadingIntervalGrowthFactorRange }) {
+export function resolveNextReadingIntervalDurationMs(args: { growthFactorExponent?: number; minimumIntervalMs?: number; repetitionCount: number; previousIntervalDurationMs?: number | null; priorityChain?: readonly unknown[]; initialIntervalMs?: number; range?: ReadingIntervalGrowthFactorRange }) {
+  const minimumIntervalMs = Math.max(0, Math.round(args.minimumIntervalMs ?? 0));
   if (args.repetitionCount <= 0) {
-    return Math.round(args.initialIntervalMs ?? DEFAULT_UNIFIED_PUSH_QUEUE_RULES.readingInitialIntervalMs);
+    return Math.max(
+      minimumIntervalMs,
+      Math.round(args.initialIntervalMs ?? DEFAULT_UNIFIED_PUSH_QUEUE_RULES.readingInitialIntervalMs)
+    );
   }
-  if (!isFiniteNumber(args.previousIntervalDurationMs) || args.previousIntervalDurationMs <= 0) {
+  const previousIntervalDurationMs = isFiniteNumber(args.previousIntervalDurationMs) && args.previousIntervalDurationMs > 0
+    ? args.previousIntervalDurationMs
+    : args.initialIntervalMs;
+  if (!isFiniteNumber(previousIntervalDurationMs) || previousIntervalDurationMs <= 0) {
     throw new TypeError(`Invalid previous interval duration: ${args.previousIntervalDurationMs}`);
   }
+  const growthFactor = getReadingIntervalGrowthFactor(resolveInheritedRegularPushQueuePriority(args.priorityChain ?? [], 1), args.range);
   return Math.round(
-    args.previousIntervalDurationMs *
-      getReadingIntervalGrowthFactor(resolveInheritedRegularPushQueuePriority(args.priorityChain ?? [], 1), args.range)
+    Math.max(
+      minimumIntervalMs,
+      previousIntervalDurationMs * growthFactor ** (args.growthFactorExponent ?? 1)
+    )
   );
 }
 
@@ -120,7 +130,7 @@ export function buildReadingScheduleCoreFields(args: { intervalDurationMs: numbe
   };
 }
 
-export function advanceReadingScheduleCoreFields(args: { lastHandledAt: string; previousIntervalDurationMs?: number | null; previousRepetitionCount: number; priorityChain?: readonly unknown[]; initialIntervalMs?: number; range?: ReadingIntervalGrowthFactorRange }) {
+export function advanceReadingScheduleCoreFields(args: { growthFactorExponent?: number; lastHandledAt: string; minimumIntervalMs?: number; previousIntervalDurationMs?: number | null; previousRepetitionCount: number; priorityChain?: readonly unknown[]; initialIntervalMs?: number; range?: ReadingIntervalGrowthFactorRange }) {
   const previousRepetitionCount =
     isFiniteNumber(args.previousRepetitionCount) && args.previousRepetitionCount > 0
       ? Math.round(args.previousRepetitionCount)
@@ -128,7 +138,9 @@ export function advanceReadingScheduleCoreFields(args: { lastHandledAt: string; 
   return buildReadingScheduleCoreFields({
     intervalDurationMs: resolveNextReadingIntervalDurationMs({
       repetitionCount: previousRepetitionCount,
+      ...(args.growthFactorExponent !== undefined ? { growthFactorExponent: args.growthFactorExponent } : {}),
       ...(args.previousIntervalDurationMs !== undefined ? { previousIntervalDurationMs: args.previousIntervalDurationMs } : {}),
+      ...(args.minimumIntervalMs !== undefined ? { minimumIntervalMs: args.minimumIntervalMs } : {}),
       ...(args.priorityChain ? { priorityChain: args.priorityChain } : {}),
       ...(args.initialIntervalMs !== undefined ? { initialIntervalMs: args.initialIntervalMs } : {}),
       ...(args.range ? { range: args.range } : {})

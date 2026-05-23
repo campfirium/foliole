@@ -84,6 +84,7 @@ export interface BuildControllerLayoutPropsArgs {
     completeReviewItem: () => boolean;
     deferReviewItem: () => boolean;
     dismissReviewItem: () => boolean;
+    soonReviewItem: () => boolean;
     isListCollapsed: boolean;
     isRightSidebarCollapsed: boolean;
     listWidth: number;
@@ -181,6 +182,7 @@ function createLayoutHandlerArgs(
     completeReviewItem: () => args.ws.completeReviewItem(),
     deferReviewItem: () => args.ws.deferReviewItem(),
     dismissReviewItem: () => args.ws.dismissReviewItem(),
+    soonReviewItem: () => args.ws.soonReviewItem(),
     priorityQuickSetShortcutLabel: args.priorityQuickSet.shortcutLabel
   };
 }

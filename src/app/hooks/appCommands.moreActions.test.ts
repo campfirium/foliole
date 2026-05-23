@@ -12,6 +12,7 @@ function createReviewCommandActions() {
     gradeReviewHard: () => undefined,
     gradeReviewGood: () => undefined,
     gradeReviewEasy: () => undefined,
+    readingReviewSoon: () => undefined,
     readingReviewLater: () => undefined,
     readingReviewRead: () => undefined,
     readingReviewDismiss: () => undefined,

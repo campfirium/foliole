@@ -1,7 +1,10 @@
+import type { ReactNode } from 'react';
+
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 
 import { AppButton } from './Button';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
+import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from './Tooltip';
 
 function ReviewGradeButton(props: {
   buttonClassName?: string;
@@ -109,23 +112,49 @@ export function ReviewGradeActions({
 export function ReadingReviewActions({
   onCompleteReviewItem,
   onDeferReviewItem,
-  onDismissReviewItem
+  onDismissReviewItem,
+  onSoonReviewItem
 }: {
   onCompleteReviewItem: () => void;
   onDeferReviewItem: () => void;
   onDismissReviewItem: () => void;
+  onSoonReviewItem?: () => void;
 }) {
+  const actionButtonClassName = 'min-w-20 border-border px-4';
+  const wrapWithTooltip = (button: ReactNode, tooltip: string) => (
+    <AppTooltip>
+      <AppTooltipTrigger asChild>{button}</AppTooltipTrigger>
+      <AppTooltipContent>{tooltip}</AppTooltipContent>
+    </AppTooltip>
+  );
   return (
     <ToolbarActionGroup ariaLabel="Reading review actions" className="gap-2" data-review-toolbar-kind="reading">
-      <AppButton aria-label="Later" className="min-w-24 border-border px-4" onClick={onDeferReviewItem} size="md" variant="primary">
-        Later
-      </AppButton>
-      <AppButton aria-label="Read" className="min-w-24 border-border px-4" onClick={onCompleteReviewItem} size="md" variant="primary">
-        Read
-      </AppButton>
-      <AppButton aria-label="Dismiss" className="min-w-24 border-border px-4" onClick={onDismissReviewItem} size="md" variant="primary">
-        Dismiss
-      </AppButton>
+      {onSoonReviewItem
+        ? wrapWithTooltip(
+            <AppButton aria-label="Soon" className={actionButtonClassName} onClick={onSoonReviewItem} size="md" variant="primary">
+              Soon
+            </AppButton>,
+            'Appears again after this queue.'
+          )
+        : null}
+      {wrapWithTooltip(
+        <AppButton aria-label="Later" className={actionButtonClassName} onClick={onDeferReviewItem} size="md" variant="primary">
+          Later
+        </AppButton>,
+        'Appears again after a shorter interval.'
+      )}
+      {wrapWithTooltip(
+        <AppButton aria-label="Read" className={actionButtonClassName} onClick={onCompleteReviewItem} size="md" variant="primary">
+          Read
+        </AppButton>,
+        'Appears again after its normal interval.'
+      )}
+      {wrapWithTooltip(
+        <AppButton aria-label="Dismiss" className={actionButtonClassName} onClick={onDismissReviewItem} size="md" variant="primary">
+          Dismiss
+        </AppButton>,
+        'No longer appears.'
+      )}
     </ToolbarActionGroup>
   );
 }

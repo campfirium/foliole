@@ -37,6 +37,7 @@ interface PaletteCommandRunnerArgs {
   deleteReviewSourceTopic: () => boolean;
   deferReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
+  soonReviewItem: () => boolean;
   redoWorkspaceAction: () => boolean;
   isReviewMode: boolean;
   openImportManagement: () => void;
@@ -94,6 +95,7 @@ function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggl
     readingReviewDismiss: () => args.dismissReviewItem(),
     readingReviewLater: () => args.deferReviewItem(),
     readingReviewRead: () => args.completeReviewItem(),
+    readingReviewSoon: () => args.soonReviewItem(),
     revealReviewAnswer: args.revealReviewAnswer,
     reviewNavigateBack: args.goBack,
     reviewNavigateDown: args.reviewNavigateDown,

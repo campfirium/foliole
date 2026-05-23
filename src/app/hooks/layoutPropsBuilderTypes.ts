@@ -150,5 +150,6 @@ export interface BuildLayoutPropsArgs {
   completeReviewItem: () => boolean;
   deferReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
+  soonReviewItem: () => boolean;
   revealReviewAnswer: () => void;
 }

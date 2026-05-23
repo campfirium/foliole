@@ -5,9 +5,10 @@ import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
-import { FsrsRevealAction, ReadingReviewActions, ResumeReviewAction, ReviewGradeActions } from './ReviewModeToolbarActions';
+import { ResumeReviewAction } from './ReviewModeToolbarActions';
+import { ActiveReviewActionBar } from './ReviewModeToolbarActive';
 import { ReviewNoCurrentItemBar } from './ReviewModeToolbarNoCurrent';
-import { ReviewToolbarProgressLine, ReviewToolbarSessionActions } from './ReviewToolbarSessionFrame';
+import { ReviewSessionProgress, type ReviewToolbarSessionSummaryStatus, type ReviewToolbarSessionSummaryValues } from './ReviewToolbarSessionFrame';
 
 interface ReviewModeToolbarProps {
   className?: string;
@@ -22,12 +23,14 @@ interface ReviewModeToolbarProps {
   reviewCurrentNodeId: string | null;
   reviewCurrentTitle: string | undefined;
   reviewQueueCount: number;
+  reviewSummary?: ReviewToolbarSessionSummaryValues;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   reviewSessionMode: ReviewSessionMode;
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
   onDismissReviewItem: () => boolean;
+  onSoonReviewItem: () => boolean;
   onContinueReading: () => void;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
@@ -93,137 +96,92 @@ function ReviewPausedSummary({ reviewCurrentTitle }: Pick<ReviewModeToolbarProps
   return title ? `Review paused · ${title}` : 'Review paused';
 }
 
-function ReviewSessionProgress({
+function PausedReviewActionBar({
+  className,
+  onResumeReviewItem,
   reviewCompletedCount,
+  reviewCurrentTitle,
   reviewQueueCount,
   reviewSessionMode,
-  showProgress
-}: Pick<ReviewModeToolbarProps, 'reviewCompletedCount' | 'reviewQueueCount' | 'reviewSessionMode' | 'showProgress'>) {
-  if (!showProgress) return null;
-  return (
-    <ReviewToolbarProgressLine
-      completedCount={reviewCompletedCount}
-      queueCount={reviewQueueCount}
-      reviewSessionMode={reviewSessionMode}
-    />
-  );
-}
-
-function ActiveReviewActionBar({
-  className, errorMessage, isAnswerRevealed, isCurrentItemGradable, isReviewEditing,
-  isSubmitting, onCompleteReviewItem, onDeferReviewItem, onDismissReviewItem,
-  onRevealAnswer, onSetReviewSessionMode, retryGrade, reviewCompletedCount, reviewQueueCount,
-  reviewSessionMode,
-  showProgress = true, showSessionModeControl, showSummary, style, submitGrade
+  showProgress = true,
+  showSummary,
+  style
 }: Pick<
   ReviewModeToolbarProps,
   | 'className'
-  | 'isAnswerRevealed'
-  | 'isCurrentItemGradable'
-  | 'isReviewEditing'
-  | 'onCompleteReviewItem'
-  | 'onDeferReviewItem'
-  | 'onDismissReviewItem'
-  | 'onRevealAnswer'
-  | 'onSetReviewSessionMode'
+  | 'onResumeReviewItem'
   | 'reviewCompletedCount'
+  | 'reviewCurrentTitle'
   | 'reviewQueueCount'
   | 'reviewSessionMode'
-  | 'showSessionModeControl'
   | 'showProgress'
   | 'showSummary'
   | 'style'
-> & ReturnType<typeof useGradeFeedback>) {
-  const actions = !isCurrentItemGradable ? (
-    <ReadingReviewActions onCompleteReviewItem={onCompleteReviewItem} onDeferReviewItem={onDeferReviewItem} onDismissReviewItem={onDismissReviewItem} />
-  ) : !isAnswerRevealed ? (
-    <FsrsRevealAction onRevealAnswer={onRevealAnswer} />
-  ) : (
-    <ReviewGradeActions
-      errorMessage={errorMessage}
-      isSubmitting={isSubmitting}
-      {...definedProps({ onRetry: retryGrade })}
-      submitGrade={submitGrade}
-    />
-  );
-  const showActionFrame = showSessionModeControl && (!isCurrentItemGradable || isAnswerRevealed);
-
+>) {
   return (
     <ReviewActionBar
       ariaLabel="Flow toolbar"
       {...definedProps({ className, style })}
       mode="study"
-      primary={showActionFrame ? (
-        <ReviewToolbarSessionActions actions={actions} onSetReviewSessionMode={onSetReviewSessionMode} reviewSessionMode={reviewSessionMode} />
-      ) : actions}
+      primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
       progress={<ReviewSessionProgress reviewCompletedCount={reviewCompletedCount} reviewQueueCount={reviewQueueCount} reviewSessionMode={reviewSessionMode} showProgress={showProgress} />}
-      reviewInputMode={isReviewEditing ? 'editing' : 'hotkeys'}
-      reviewItemKind={isCurrentItemGradable ? 'fsrs' : 'reading'}
-      secondary={!showSessionModeControl && showSummary ? `${Math.max(reviewQueueCount, 0)} left · ${Math.max(reviewCompletedCount, 0)} done` : null}
+      secondary={showSummary ? <ReviewPausedSummary reviewCurrentTitle={reviewCurrentTitle} /> : null}
     />
   );
 }
 
-export function ReviewModeToolbar({
-  className, showSessionModeControl = false, showSummary = true, isStudyMode,
-  isAnswerRevealed, isCurrentItemGradable, isCurrentReviewItemVisible, isReviewEditing,
-  reviewCompletedCount, reviewCurrentNodeId, reviewQueueCount, onGrade,
-  onCompleteReviewItem, onDeferReviewItem, onDismissReviewItem, onRevealAnswer,
-  onContinueReading, onResumeReviewItem, onSetReviewSessionMode, reviewCurrentTitle, reviewSessionMode, reviewStatus,
-  showProgress = true, style
-}: ReviewModeToolbarProps) {
-  const { errorMessage, isSubmitting, retryGrade, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
+function withSummaryStatus(
+  summary: ReviewToolbarSessionSummaryValues | undefined,
+  status: ReviewToolbarSessionSummaryStatus
+) {
+  return summary ? { ...summary, status } : undefined;
+}
 
-  if (!isStudyMode) return null;
+export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
+  const toolbarProps = {
+    ...props,
+    showProgress: props.showProgress ?? true,
+    showSessionModeControl: props.showSessionModeControl ?? false,
+    showSummary: props.showSummary ?? true
+  };
+  const feedback = useGradeFeedback(
+    toolbarProps.onGrade,
+    toolbarProps.reviewCurrentNodeId,
+    toolbarProps.isAnswerRevealed
+  );
 
-  if (!reviewCurrentNodeId) {
+  if (!toolbarProps.isStudyMode) return null;
+
+  if (!toolbarProps.reviewCurrentNodeId) {
     return (
       <ReviewNoCurrentItemBar
-        {...definedProps({ className, style })}
-        onContinueReading={onContinueReading}
-        onResumeReviewItem={onResumeReviewItem}
-        reviewCompletedCount={reviewCompletedCount}
-        reviewQueueCount={reviewQueueCount}
-        reviewStatus={reviewStatus}
-        showSummary={showSummary}
+        {...definedProps({ className: toolbarProps.className, style: toolbarProps.style })}
+        onContinueReading={toolbarProps.onContinueReading}
+        onResumeReviewItem={toolbarProps.onResumeReviewItem}
+        reviewCompletedCount={toolbarProps.reviewCompletedCount}
+        reviewQueueCount={toolbarProps.reviewQueueCount}
+        reviewSummary={withSummaryStatus(
+          toolbarProps.reviewSummary,
+          toolbarProps.reviewStatus === 'completed' ? 'clear' : 'not-started'
+        )}
+        reviewStatus={toolbarProps.reviewStatus}
+        showSummary={toolbarProps.showSummary}
       />
     );
   }
 
-  if (!isCurrentReviewItemVisible) {
-    return (
-      <ReviewActionBar
-        ariaLabel="Flow toolbar"
-        {...definedProps({ className, style })}
-        mode="study"
-        primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
-        progress={<ReviewSessionProgress reviewCompletedCount={reviewCompletedCount} reviewQueueCount={reviewQueueCount} reviewSessionMode={reviewSessionMode} showProgress={showProgress} />}
-        secondary={showSummary ? <ReviewPausedSummary reviewCurrentTitle={reviewCurrentTitle} /> : null}
-      />
-    );
+  if (!toolbarProps.isCurrentReviewItemVisible) {
+    return <PausedReviewActionBar {...toolbarProps} />;
   }
 
   return (
     <ActiveReviewActionBar
-      errorMessage={errorMessage}
-      isAnswerRevealed={isAnswerRevealed}
-      isCurrentItemGradable={isCurrentItemGradable}
-      isReviewEditing={isReviewEditing}
-      isSubmitting={isSubmitting}
-      onCompleteReviewItem={onCompleteReviewItem}
-      onDeferReviewItem={onDeferReviewItem}
-      onDismissReviewItem={onDismissReviewItem}
-      onRevealAnswer={onRevealAnswer}
-      onSetReviewSessionMode={onSetReviewSessionMode}
-      retryGrade={retryGrade}
-      reviewCompletedCount={reviewCompletedCount}
-      reviewQueueCount={reviewQueueCount}
-      reviewSessionMode={reviewSessionMode}
-      showProgress={showProgress}
-      showSessionModeControl={showSessionModeControl}
-      showSummary={showSummary}
-      submitGrade={submitGrade}
-      {...definedProps({ className, style })}
+      {...toolbarProps}
+      errorMessage={feedback.errorMessage}
+      isSubmitting={feedback.isSubmitting}
+      reviewSummary={withSummaryStatus(toolbarProps.reviewSummary, 'in-progress')}
+      submitGrade={feedback.submitGrade}
+      {...definedProps({ retryGrade: feedback.retryGrade })}
     />
   );
 }

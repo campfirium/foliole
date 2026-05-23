@@ -203,6 +203,7 @@ export interface WorkspaceLayoutFlatProps {
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
   onDismissReviewItem: () => boolean;
+  onSoonReviewItem: () => boolean;
   onContinueReading: () => void;
   onResumeReviewItem: () => void;
   onExitReviewMode: () => void;

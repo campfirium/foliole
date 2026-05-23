@@ -16,6 +16,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       onContinueReading={vi.fn()}
       onDeferReviewItem={vi.fn(() => true)}
       onDismissReviewItem={vi.fn(() => true)}
+      onSoonReviewItem={vi.fn(() => true)}
       onExitReviewMode={vi.fn()}
       onGrade={vi.fn(async () => true)}
       onRevealAnswer={vi.fn()}
@@ -24,6 +25,12 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle={undefined}
       reviewQueueCount={3}
+      reviewSummary={{
+        readingElapsedMs: 34 * 60 * 1000,
+        readTopicCount: 2,
+        reviewElapsedMs: 18 * 60 * 1000,
+        reviewedItemCount: 4
+      }}
       reviewStatus="awaiting-answer"
       reviewSessionMode="recommended"
       {...overrides}
@@ -37,14 +44,19 @@ it('renders reading actions with session controls and hidden progress text', () 
   expect(document.querySelector('[data-review-item-kind="reading"]')).toBeInTheDocument();
   expect(screen.getByLabelText('Reading review actions')).toBeInTheDocument();
   expect(screen.getByLabelText('Change session mode')).toBeInTheDocument();
-  expect(screen.getByLabelText('Reading time (coming soon)')).toBeInTheDocument();
+  expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
   expect(screen.getByLabelText('Flow queue: 3 left · 0 done · 3 total')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Soon' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
   expect(screen.queryByText('3 left · 0 done')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByLabelText('Change session mode'));
-  expect(screen.getByText('Flow mode')).toBeInTheDocument();
+  expect(screen.queryByText('Flow mode')).not.toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: /Review and reading/ })).toBeInTheDocument();
+  expect(screen.getByText('RECOMMENDED')).toBeInTheDocument();
+  expect(screen.queryByText('Mix review items with reading topics.')).not.toBeInTheDocument();
 });
 
 it('keeps legacy summary text when session controls are not shown', () => {
@@ -60,7 +72,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
 
   expect(document.querySelector('[data-review-item-kind="fsrs"]')).toBeInTheDocument();
   expect(screen.queryByLabelText('Change session mode')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('Reading time (coming soon)')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
   });
@@ -79,6 +91,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       onContinueReading={vi.fn()}
       onDeferReviewItem={vi.fn(() => true)}
       onDismissReviewItem={vi.fn(() => true)}
+      onSoonReviewItem={vi.fn(() => true)}
       onExitReviewMode={vi.fn()}
       onGrade={onGrade}
       onRevealAnswer={onRevealAnswer}
@@ -87,6 +100,12 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle={undefined}
       reviewQueueCount={1}
+      reviewSummary={{
+        readingElapsedMs: 34 * 60 * 1000,
+        readTopicCount: 2,
+        reviewElapsedMs: 18 * 60 * 1000,
+        reviewedItemCount: 4
+      }}
       reviewStatus="answer-revealed"
       reviewSessionMode="recommended"
       showSessionModeControl
@@ -94,7 +113,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
   );
 
   expect(screen.getByLabelText('Change session mode')).toBeInTheDocument();
-  expect(screen.getByLabelText('Reading time (coming soon)')).toBeInTheDocument();
+  expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Good' }));
   });

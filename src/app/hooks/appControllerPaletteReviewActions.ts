@@ -74,6 +74,7 @@ export function createPaletteReviewActions(args: {
       nodeId: activeNodeId ? resolveReviewSiblingNodeId(activeNodeId, -1, navigationSource) : null
     }),
     revealReviewAnswer: args.ws.revealReviewAnswer,
+    soonReviewItem: args.ws.soonReviewItem,
     startReviewSession: args.ws.startReviewSession
   };
 }

@@ -21,6 +21,7 @@ export const REVIEW_SHORTCUT_COMMAND_IDS = [
   APP_COMMAND_IDS.gradeReviewHard,
   APP_COMMAND_IDS.gradeReviewGood,
   APP_COMMAND_IDS.gradeReviewEasy,
+  APP_COMMAND_IDS.readingReviewSoon,
   APP_COMMAND_IDS.readingReviewLater,
   APP_COMMAND_IDS.readingReviewRead,
   APP_COMMAND_IDS.readingReviewDismiss,

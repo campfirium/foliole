@@ -6,7 +6,7 @@ import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSche
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
-import { createCompleteReviewItemAction, createDeferReviewItemAction } from './workspaceStoreReadingReviewActions';
+import { createCompleteReviewItemAction, createDeferReviewItemAction, createSoonReviewItemAction } from './workspaceStoreReadingReviewActions';
 import { applyGradedReviewState, persistReviewGradeMutation } from './workspaceStoreReviewActionHelpers';
 import { createDismissReviewItemAction } from './workspaceStoreReviewDismissAction';
 import {
@@ -17,7 +17,7 @@ import {
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
-type WorkspaceReviewActions = Pick<WorkspaceState, 'completeReviewItem' | 'deferReviewItem' | 'dismissReviewItem' | 'exitReviewSession' | 'gradeReviewCard' | 'resumeReviewSession' | 'revealReviewAnswer' | 'setReviewSessionMode' | 'startReviewSession'>;
+type WorkspaceReviewActions = Pick<WorkspaceState, 'completeReviewItem' | 'deferReviewItem' | 'dismissReviewItem' | 'exitReviewSession' | 'gradeReviewCard' | 'resumeReviewSession' | 'revealReviewAnswer' | 'setReviewSessionMode' | 'soonReviewItem' | 'startReviewSession'>;
 function createRevealReviewAnswerAction(set: WorkspaceSet): WorkspaceReviewActions['revealReviewAnswer'] {
   return () => {
     set((state) => {
@@ -112,6 +112,7 @@ export function createWorkspaceReviewActions(
     gradeReviewCard: createGradeReviewCardAction(set, get, scheduler),
     completeReviewItem: createCompleteReviewItemAction(set, get),
     deferReviewItem: createDeferReviewItemAction(set, get),
+    soonReviewItem: createSoonReviewItemAction(set, get),
     dismissReviewItem: createDismissReviewItemAction(set, get),
     exitReviewSession: createExitReviewSessionAction(set)
   };

@@ -163,6 +163,7 @@ function buildPaletteOptions(
     canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
     canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode || args.reviewDueCount > 0,
     canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,
+    canSoonReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDeferReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canCompleteReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,

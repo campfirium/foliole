@@ -22,6 +22,7 @@ const REVIEW_SHORTCUT_DEFAULTS = {
   gradeHardShortcuts: { primary: { key: '2' } },
   gradeGoodShortcuts: { primary: { key: '3' } },
   gradeEasyShortcuts: { primary: { key: '4' } },
+  readingSoonShortcuts: { primary: { key: 'o' } },
   readingLaterShortcuts: { primary: { key: 'l' } },
   readingReadShortcuts: { primary: { key: 'r' } },
   readingDismissShortcuts: { primary: { key: 'd' } },
@@ -58,6 +59,7 @@ function ReviewShortcutHarness(
     deleteCurrentReviewItem: vi.fn(() => true),
     deleteReviewSourceTopic: vi.fn(() => true),
     dismissReviewItem: vi.fn(() => true),
+    soonReviewItem: vi.fn(() => true),
     goBack: vi.fn(),
     goForward: vi.fn(),
     goParent: vi.fn(),
@@ -131,6 +133,20 @@ it('runs review action shortcuts when the current review item is visible', () =>
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' }));
 
   expect(completeReviewItem).toHaveBeenCalledTimes(1);
+});
+
+it('runs the visible reading soon shortcut before later/read choices', () => {
+  const soonReviewItem = vi.fn(() => true);
+  render(
+    <ReviewShortcutHarness
+      isCurrentReviewItemVisible
+      soonReviewItem={soonReviewItem}
+    />
+  );
+
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'o' }));
+
+  expect(soonReviewItem).toHaveBeenCalledTimes(1);
 });
 
 it('deletes the visible review item with Delete', () => {

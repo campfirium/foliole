@@ -70,6 +70,7 @@ export function createWorkspaceState() {
     ...createWorkspaceCreationActions(),
     completeReviewItem: vi.fn(),
     deferReviewItem: vi.fn(),
+    soonReviewItem: vi.fn(),
     deleteImageClozeRegion: vi.fn(),
     deleteNode: vi.fn(),
     deleteEditorAnnotationNodes: vi.fn(),

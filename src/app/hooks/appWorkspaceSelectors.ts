@@ -24,6 +24,7 @@ export function useWorkspaceSelectors() {
       dismissReviewItem: state.dismissReviewItem,
       completeReviewItem: state.completeReviewItem,
       deferReviewItem: state.deferReviewItem,
+      soonReviewItem: state.soonReviewItem,
       goBack: state.goBack,
       goForward: state.goForward,
       goToParent: state.goToParent,

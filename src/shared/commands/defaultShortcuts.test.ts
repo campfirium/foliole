@@ -70,8 +70,10 @@ describe('default command shortcuts', () => {
 
 describe('review default command shortcuts', () => {
   it('registers reading review defaults without consuming QWE navigation keys', () => {
+    expect(matchesShortcutSet(keyEvent({ key: 'q' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewSoon])).toBe(false);
+    expect(matchesShortcutSet(keyEvent({ key: '1' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewSoon])).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: 'q' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewLater])).toBe(false);
-    expect(matchesShortcutSet(keyEvent({ key: '1' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewLater])).toBe(true);
+    expect(matchesShortcutSet(keyEvent({ key: '2' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewLater])).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: 'w' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewRead])).toBe(false);
     expect(matchesShortcutSet(keyEvent({ key: 'f' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewRead])).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: ' ' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.readingReviewRead])).toBe(true);
