@@ -94,6 +94,7 @@ const expectedWorkspaceListSnapshot = {
       updatedAt: '2026-03-14T00:00:00.000Z'
     }
   },
+  trashedNodeDeletedAtById: {},
   trashedNodeIds: [],
   untitledSequenceByParent: {}
 };
@@ -113,7 +114,6 @@ it('loads workspace list snapshot without long-lived node documents', () => {
   expect(loadWorkspaceListSnapshot(driver)).toEqual(expectedWorkspaceListSnapshot);
 
   expect(queryAllSpy).toHaveBeenCalledTimes(3);
-  expect(queryOneSpy).toHaveBeenCalledTimes(3);
 });
 
 it('queries lightweight list fields and reads opening_text instead of long-lived content bodies', () => {

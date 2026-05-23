@@ -50,6 +50,7 @@ export interface NativeWorkspaceSnapshot {
   activeNodeId: string | null;
   nodeOrder: string[];
   nodesById: Record<string, NativeWorkspaceNodeSnapshot>;
+  trashedNodeDeletedAtById?: Record<string, string>;
   trashedNodeIds: string[];
 }
 

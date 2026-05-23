@@ -147,7 +147,7 @@ export function loadWorkspaceListSnapshot(
   if (rows.length === 0) {
     return null;
   }
-  const { directOpeningById, nodesById, trashedNodeIds } = buildWorkspaceListNodesById(rows);
+  const { directOpeningById, nodesById, trashedNodeDeletedAtById, trashedNodeIds } = buildWorkspaceListNodesById(rows);
   const pdfOpeningById = options?.includePdfOpenings === false
     ? new Map<string, string>()
     : buildPdfOpeningById(queryPdfOpeningRows(driver), nodesById);
@@ -160,6 +160,7 @@ export function loadWorkspaceListSnapshot(
     capturedWorkspaceVersion: resolveCapturedWorkspaceVersion(rows),
     nodeOrder,
     nodesById,
+    trashedNodeDeletedAtById,
     trashedNodeIds,
     untitledSequenceByParent: loadUntitledSequenceByParent(driver)
   };

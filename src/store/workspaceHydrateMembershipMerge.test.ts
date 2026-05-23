@@ -80,6 +80,42 @@ it('keeps a renderer trash decision when an older runtime snapshot still shows t
   expect(merged.nodeOrder).not.toContain('node-trash');
 });
 
+it('keeps runtime-deleted nodes hidden when the snapshot carries their tombstone times', () => {
+  const node = createNode('node-runtime-trash', '2026-05-13T00:00:00.000Z');
+  const merged = mergeRuntimeSnapshot(
+    {},
+    {
+      activeNodeId: null,
+      capturedWorkspaceVersion: '2026-05-13T00:10:00.000Z',
+      nodeOrder: ['node-runtime-trash'],
+      nodesById: { 'node-runtime-trash': node },
+      trashedNodeDeletedAtById: { 'node-runtime-trash': '2026-05-13T00:09:00.000Z' },
+      trashedNodeIds: ['node-runtime-trash']
+    }
+  );
+
+  expect(merged.trashedNodeIds).toEqual(['node-runtime-trash']);
+  expect(merged.nodeOrder).not.toContain('node-runtime-trash');
+});
+
+it('does not trust runtime trash membership without a tombstone time', () => {
+  const node = createNode('node-runtime-visible', '2026-05-13T00:00:00.000Z');
+  const merged = mergeRuntimeSnapshot(
+    {},
+    {
+      activeNodeId: null,
+      capturedWorkspaceVersion: '2026-05-13T00:10:00.000Z',
+      nodeOrder: ['node-runtime-visible'],
+      nodesById: { 'node-runtime-visible': node },
+      trashedNodeDeletedAtById: {},
+      trashedNodeIds: ['node-runtime-visible']
+    }
+  );
+
+  expect(merged.trashedNodeIds).toEqual([]);
+  expect(merged.nodeOrder).toContain('node-runtime-visible');
+});
+
 it('allows a newer runtime snapshot to restore a previously trashed node', () => {
   const node = createNode('node-restore', '2026-05-13T00:00:00.000Z');
   const merged = mergeRuntimeSnapshot(

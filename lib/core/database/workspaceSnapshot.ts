@@ -17,6 +17,7 @@ export interface WorkspaceSnapshot {
   nodeOrder: string[];
   nodesById: Record<string, WorkspaceNodeSnapshot>;
   persistedNodeViewById?: Record<string, PersistedNodeViewState | undefined>;
+  trashedNodeDeletedAtById?: Record<string, string>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
 }
@@ -166,12 +167,14 @@ function buildSnapshotRows(
   orderedRows: NodeOrderRow[]
 ): WorkspaceSnapshot {
   const nodesById: Record<string, WorkspaceNodeSnapshot> = {};
+  const trashedNodeDeletedAtById: Record<string, string> = {};
   const trashedNodeIds: string[] = [];
 
   for (const row of rows) {
     nodesById[row.id] = buildWorkspaceSnapshotNode(row);
     if (row.deleted_at) {
       trashedNodeIds.push(row.id);
+      trashedNodeDeletedAtById[row.id] = row.deleted_at;
     }
   }
   attachWorkspaceNodeAttachments(driver, nodesById);
@@ -183,6 +186,7 @@ function buildSnapshotRows(
     nodeOrder,
     nodesById,
     ...(Object.keys(persistedNodeViewById).length > 0 ? { persistedNodeViewById } : {}),
+    trashedNodeDeletedAtById,
     trashedNodeIds,
     untitledSequenceByParent: {}
   };
