@@ -18,7 +18,7 @@ export interface ReviewPaletteCommandOptions {
 }
 
 export const REVIEW_PALETTE_COMMANDS = [
-  { id: APP_COMMAND_IDS.startStudyMode, title: 'Enter Review Mode', section: 'Review' },
+  { id: APP_COMMAND_IDS.startStudyMode, title: 'Toggle Flow Mode', section: 'Flow', keywords: ['flow', 'review', 'reading'] },
   { id: APP_COMMAND_IDS.revealReviewAnswer, title: 'Reveal Review Answer', section: 'Review' },
   { id: APP_COMMAND_IDS.gradeReviewAgain, title: 'Grade Review: Again', section: 'Review', keywords: ['grade'] },
   { id: APP_COMMAND_IDS.gradeReviewHard, title: 'Grade Review: Hard', section: 'Review', keywords: ['grade'] },

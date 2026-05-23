@@ -81,10 +81,10 @@ describe('buildAppPaletteItems', () => {
     expectCorePaletteEntries();
   });
 
-  it('shows review-mode command as exit when already in review mode', () => {
+  it('shows the Flow mode toggle command', () => {
     const items = buildAppPaletteItems(createPaletteOptions(true));
     const reviewModeItem = items.find((item) => item.id === APP_COMMAND_IDS.startStudyMode);
-    expect(reviewModeItem?.title).toBe('Exit Review Mode');
+    expect(reviewModeItem?.title).toBe('Toggle Flow Mode');
   });
 
   it('shows the light or dark mode toggle action', () => {

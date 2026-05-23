@@ -18,13 +18,13 @@ const SESSION_MODES: Array<{
 }> = [
   {
     id: 'recommended',
-    label: 'Recommended flow',
-    note: 'Reading and review items stay mixed at 1:5.',
+    label: 'Review and reading',
+    note: 'Mix review items with reading topics.',
     Icon: Route
   },
   {
     id: 'review-first',
-    label: 'Review items first',
+    label: 'Review first',
     note: 'Handle due review items before reading.',
     Icon: ListChecks
   },
@@ -78,7 +78,7 @@ export function ReviewSessionModeControl({
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="start" className="w-96 max-w-[calc(100vw-2rem)] p-1" sideOffset={8}>
         <AppDropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-medium text-foreground/45">
-          This session
+          Flow mode
         </AppDropdownMenuLabel>
         {SESSION_MODES.map((item) => {
           const Icon = item.Icon;
@@ -101,6 +101,7 @@ export function ReviewSessionModeControl({
             </AppDropdownMenuItem>
           );
         })}
+        <div className="px-3 pt-1 pb-2 text-xs text-foreground/45">Temporary setting.</div>
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );

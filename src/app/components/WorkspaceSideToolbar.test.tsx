@@ -65,7 +65,7 @@ it('runs the shared light and dark mode command from the rail theme button', () 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleBaseColorMode);
 });
 
-it('keeps the study button enabled when the current context cannot start study mode', () => {
+it('keeps the Flow button enabled when the current context cannot start Flow mode', () => {
   const onToggleReviewSession = vi.fn();
   render(
     <AppearanceSettingsProvider>
@@ -86,7 +86,7 @@ it('keeps the study button enabled when the current context cannot start study m
     </AppearanceSettingsProvider>
   );
 
-  const studyButton = screen.getByRole('button', { name: 'Study' });
+  const studyButton = screen.getByRole('button', { name: 'Enter Flow' });
   expect(studyButton).not.toBeDisabled();
 
   fireEvent.click(studyButton);

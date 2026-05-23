@@ -51,7 +51,7 @@ function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: Record<str
 }
 
 function resolveReviewTitleBarTitle(review: WorkspaceLayoutProps['review']) {
-  return review.isStudyMode && review.reviewStatus === 'completed' ? 'Review queue' : null;
+  return review.isStudyMode && review.reviewStatus === 'completed' ? 'Queue clear' : null;
 }
 
 export function WorkspaceMainTitleBar({

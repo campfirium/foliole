@@ -38,13 +38,13 @@ it('renders reading actions with session controls and hidden progress text', () 
   expect(screen.getByLabelText('Reading review actions')).toBeInTheDocument();
   expect(screen.getByLabelText('Change session mode')).toBeInTheDocument();
   expect(screen.getByLabelText('Reading time (coming soon)')).toBeInTheDocument();
-  expect(screen.getByLabelText('This session: 3 left · 0 done · 3 total')).toBeInTheDocument();
+  expect(screen.getByLabelText('Flow queue: 3 left · 0 done · 3 total')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
   expect(screen.queryByText('3 left · 0 done')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByLabelText('Change session mode'));
-  expect(screen.getByText('This session')).toBeInTheDocument();
+  expect(screen.getByText('Flow mode')).toBeInTheDocument();
 });
 
 it('keeps legacy summary text when session controls are not shown', () => {
@@ -150,8 +150,8 @@ it('shows completed without progress and continues reading when the review phase
     reviewStatus: 'completed'
   });
 
-  expect(screen.queryByText('Review complete')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('This session: 0 left · 3 done · 3 total')).not.toBeInTheDocument();
+  expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Flow queue: 0 left · 3 done · 3 total')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
   expect(onContinueReading).toHaveBeenCalledTimes(1);
@@ -180,7 +180,7 @@ it('uses topic units for reading-only progress', () => {
     showSessionModeControl: true
   });
 
-  expect(screen.getByLabelText('Reading session: 4 topics left · 2 read · 6 topics')).toBeInTheDocument();
+  expect(screen.getByLabelText('Reading flow: 4 topics left · 2 read · 6 topics')).toBeInTheDocument();
 });
 
 it('resumes from the queue when study mode has no current item but queued items exist', () => {
@@ -223,6 +223,6 @@ it('keeps an empty dev-restored status bar in idle study mode', () => {
     reviewStatus: 'idle'
   });
 
-  expect(screen.getByText('Study mode')).toBeInTheDocument();
-  expect(screen.queryByText('Review complete')).not.toBeInTheDocument();
+  expect(screen.getByText('Flow mode')).toBeInTheDocument();
+  expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
 });

@@ -50,15 +50,14 @@ function SettingsAction({ isSettingsOpen, onOpenSettings }: { isSettingsOpen: bo
   );
 }
 
-function StudyAction({
+function FlowAction({
   isStudyMode,
-  onToggleReviewSession,
-  reviewStatusText
+  onToggleReviewSession
 }: {
   isStudyMode: boolean;
   onToggleReviewSession: () => void;
-  reviewStatusText: string;
 }) {
+  const actionLabel = isStudyMode ? 'Leave Flow' : 'Enter Flow';
   return (
     <ToolbarActionGroup
       ariaLabel="Workspace study actions"
@@ -73,12 +72,12 @@ function StudyAction({
               className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
               data-active={isStudyMode}
               icon={<Route aria-hidden="true" size={16} strokeWidth={1.75} />}
-              label="Study"
+              label={actionLabel}
               onClick={onToggleReviewSession}
             />
           </span>
         </AppTooltipTrigger>
-        <AppTooltipContent>{reviewStatusText}</AppTooltipContent>
+        <AppTooltipContent>{actionLabel}</AppTooltipContent>
       </AppTooltip>
     </ToolbarActionGroup>
   );
@@ -123,7 +122,6 @@ function useWorkspaceRailToolbarState({
 function renderStudyDock(props: {
   isStudyMode: boolean;
   onToggleReviewSession: () => void;
-  reviewStatusText: string;
   showStudyDock: boolean;
 }) {
   if (!props.showStudyDock) {
@@ -140,10 +138,9 @@ function renderStudyDock(props: {
         />
       ) : null}
       <div className="flex h-[var(--workspace-bottom-toolbar-height)] w-full shrink-0 items-center justify-center">
-        <StudyAction
+        <FlowAction
           isStudyMode={props.isStudyMode}
           onToggleReviewSession={props.onToggleReviewSession}
-          reviewStatusText={props.reviewStatusText}
         />
       </div>
     </>
@@ -152,11 +149,6 @@ function renderStudyDock(props: {
 
 export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
   const state = useWorkspaceRailToolbarState(props);
-  const reviewStatusText = props.isStudyMode
-    ? `Reviewing (${Math.max(props.reviewDueCount, 0)} remaining)`
-    : props.reviewDueCount > 0
-      ? `Start review (${props.reviewDueCount} due)`
-      : 'Start review (no due cards)';
 
   return (
     <AppToolbar
@@ -187,7 +179,6 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
       {renderStudyDock({
         isStudyMode: props.isStudyMode,
         onToggleReviewSession: props.onToggleReviewSession,
-        reviewStatusText,
         showStudyDock: props.showStudyDock ?? true
       })}
       {state.contextMenuPosition ? (
@@ -210,21 +201,14 @@ export function WorkspaceStudyDockTrigger(props: {
   onToggleReviewSession: () => void;
   reviewDueCount: number;
 }) {
-  const reviewStatusText = props.isStudyMode
-    ? `Reviewing (${Math.max(props.reviewDueCount, 0)} remaining)`
-    : props.reviewDueCount > 0
-      ? `Start review (${props.reviewDueCount} due)`
-      : 'Start review (no due cards)';
-
   return (
     <div
       className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center"
       style={{ backgroundColor: 'var(--workspace-region-footer-rail-bg)' }}
     >
-      <StudyAction
+      <FlowAction
         isStudyMode={props.isStudyMode}
         onToggleReviewSession={props.onToggleReviewSession}
-        reviewStatusText={reviewStatusText}
       />
     </div>
   );

@@ -142,8 +142,8 @@ export function FsrsRevealAction({ onRevealAnswer }: { onRevealAnswer: () => voi
 
 export function ReviewCompleteAction({ onExitReviewMode }: { onExitReviewMode: () => void }) {
   return (
-    <AppButton aria-label="Review complete" className="min-w-32 px-5" onClick={onExitReviewMode} size="md" variant="subtle">
-      Review complete
+    <AppButton aria-label="Queue clear" className="min-w-32 px-5" onClick={onExitReviewMode} size="md" variant="subtle">
+      Queue clear
     </AppButton>
   );
 }

@@ -107,11 +107,11 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   ...REVIEW_PALETTE_COMMANDS
 ];
 
-function resolveCommandTitle(id: string, isReviewMode: boolean, title: string) {
+function resolveCommandTitle(id: string, title: string) {
   if (id !== APP_COMMAND_IDS.startStudyMode) {
     return title;
   }
-  return isReviewMode ? 'Exit Review Mode' : 'Enter Review Mode';
+  return 'Toggle Flow Mode';
 }
 
 function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, title: string) {
@@ -126,7 +126,7 @@ function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, t
   }
   const developerTitle = resolveDeveloperPaletteTitle(id, options);
   if (developerTitle) return developerTitle;
-  return resolveCommandTitle(id, options.isReviewMode, title);
+  return resolveCommandTitle(id, title);
 }
 
 function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
