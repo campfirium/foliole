@@ -55,7 +55,6 @@ function useSpaceShortcut(action: () => void) {
 function ReviewCompleteBar({
   className,
   onContinueReading,
-  reviewSummary,
   style
 }: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onContinueReading' | 'reviewSummary' | 'style'>) {
   useSpaceShortcut(onContinueReading);
@@ -70,7 +69,6 @@ function ReviewCompleteBar({
         <ReviewToolbarSessionActions
           actions={<ContinueReadingAction onContinueReading={onContinueReading} />}
           modeControl={<span aria-hidden="true" className="size-8" />}
-          {...definedProps({ summary: reviewSummary })}
         />
       }
       progress={null}
@@ -82,7 +80,6 @@ function ReviewCompleteBar({
 function ReviewResumeBar({
   className,
   onResumeReviewItem,
-  reviewSummary,
   showSummary,
   style
 }: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onResumeReviewItem' | 'reviewSummary' | 'showSummary' | 'style'>) {
@@ -97,7 +94,6 @@ function ReviewResumeBar({
         <ReviewToolbarSessionActions
           actions={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
           modeControl={<span aria-hidden="true" className="size-8" />}
-          {...definedProps({ summary: reviewSummary })}
         />
       }
       progress={null}
