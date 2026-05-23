@@ -80,18 +80,7 @@ run_timed_preview_step() {
 }
 
 normalize_host_path() {
-  local host_path="$1"
-  if [[ "${host_path}" =~ ^([A-Za-z]):[\\/] ]]; then
-    if command -v wslpath >/dev/null 2>&1; then
-      wslpath -u "${host_path}"
-    else
-      local drive="${BASH_REMATCH[1],,}"
-      host_path="/${drive}${host_path:2}"
-      echo "${host_path//\\//}"
-    fi
-    return
-  fi
-  echo "${host_path}"
+  android_windows_path_to_shell_path "$1"
 }
 
 ensure_host_dir() {
