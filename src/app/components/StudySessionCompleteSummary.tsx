@@ -55,9 +55,9 @@ function SummaryRow({
 }
 
 function getCompletionTitle(mode: ReviewSessionMode) {
-  if (mode === 'review-first') return 'Review items complete';
-  if (mode === 'reading-only') return 'Reading session complete';
-  return 'Session complete';
+  if (mode === 'review-first') return 'Review queue clear';
+  if (mode === 'reading-only') return 'Reading complete';
+  return 'Queue clear';
 }
 
 export function StudySessionCompleteSummary({

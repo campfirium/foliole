@@ -2,7 +2,7 @@ type ReviewStatus = 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed'
 
 function getReviewStatusLabel(status: ReviewStatus) {
   if (status === 'idle') {
-    return 'Study mode';
+    return 'Flow mode';
   }
   if (status === 'awaiting-answer') {
     return 'Awaiting answer';
@@ -10,7 +10,7 @@ function getReviewStatusLabel(status: ReviewStatus) {
   if (status === 'answer-revealed') {
     return 'Answer revealed';
   }
-  return 'Session complete';
+  return 'Queue clear';
 }
 
 export function WorkspaceListStudyStatusBar({
@@ -33,7 +33,7 @@ export function WorkspaceListStudyStatusBar({
   return (
     <div className="flex h-[var(--workspace-bottom-toolbar-height)] flex-none items-center border-t border-border bg-bg-panel px-4">
       <p className="truncate text-xs font-medium text-foreground/70">
-        Reviewing · {Math.max(reviewQueueCount, 0)} left · {Math.max(reviewCompletedCount, 0)} done · {getReviewStatusLabel(reviewStatus)}
+        Flow · {Math.max(reviewQueueCount, 0)} left · {Math.max(reviewCompletedCount, 0)} done · {getReviewStatusLabel(reviewStatus)}
         {' · '}
         {Math.max(reviewDueCount, 0)} due now
       </p>

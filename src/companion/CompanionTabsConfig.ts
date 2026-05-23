@@ -50,7 +50,7 @@ export type CompanionResolvedTab = {
 
 const PRIMARY_TABS: Record<CompanionPrimaryTabId, Omit<CompanionResolvedTab, 'id'>> = {
   browse: { action: 'recent', icon: BookOpenText, label: 'Browse', parentAction: 'recent' },
-  learn: { action: 'review', icon: GraduationCap, label: 'Learn', parentAction: 'review' },
+  learn: { action: 'review', icon: GraduationCap, label: 'Flow', parentAction: 'review' },
   search: { action: 'search', icon: Search, label: 'Search', parentAction: 'search' },
   settings: { action: 'more', icon: Settings, label: 'Settings', parentAction: 'more' }
 };

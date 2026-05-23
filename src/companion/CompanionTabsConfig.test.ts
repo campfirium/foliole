@@ -10,7 +10,7 @@ describe('CompanionTabsConfig', () => {
   it('resolves the default companion tabs in the current order', () => {
     expect(resolveCompanionTabs().map((tab) => tab.label)).toEqual([
       'Browse',
-      'Learn',
+      'Flow',
       'Search',
       'Settings'
     ]);

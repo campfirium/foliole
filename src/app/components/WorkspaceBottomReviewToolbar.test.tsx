@@ -43,7 +43,7 @@ it('collapses the review footer list summary with the left sidebar', () => {
 
   expect(screen.queryByText('2 left · 0 done')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Review mode toolbar')).toHaveClass('col-start-3');
+  expect(screen.getByLabelText('Flow toolbar')).toHaveClass('col-start-3');
 });
 
 it('keeps the review footer list summary when the left sidebar is expanded', () => {
@@ -51,8 +51,8 @@ it('keeps the review footer list summary when the left sidebar is expanded', () 
 
   expect(screen.queryByRole('button', { name: 'Change session mode' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Reading time (coming soon)')).not.toBeInTheDocument();
-  expect(screen.getByLabelText('This session: 2 left · 0 done · 2 total')).toBeInTheDocument();
-  expect(screen.getByLabelText('Review mode toolbar')).toHaveClass('col-start-3');
+  expect(screen.getByLabelText('Flow queue: 2 left · 0 done · 2 total')).toBeInTheDocument();
+  expect(screen.getByLabelText('Flow toolbar')).toHaveClass('col-start-3');
 });
 
 it('recalculates the progress total when the active review queue is replanned', () => {
@@ -60,12 +60,12 @@ it('recalculates the progress total when the active review queue is replanned', 
     <WorkspaceBottomReviewToolbar {...createProps({ reviewCompletedCount: 4, reviewQueueCount: 6 })} />
   );
 
-  expect(screen.getByLabelText('This session: 6 left · 4 done · 10 total')).toBeInTheDocument();
+  expect(screen.getByLabelText('Flow queue: 6 left · 4 done · 10 total')).toBeInTheDocument();
 
   rerender(<WorkspaceBottomReviewToolbar {...createProps({ reviewCompletedCount: 4, reviewQueueCount: 3 })} />);
 
-  expect(screen.getByLabelText('This session: 3 left · 4 done · 7 total')).toBeInTheDocument();
-  expect(screen.queryByLabelText('This session: 3 left · 4 done · 10 total')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Flow queue: 3 left · 4 done · 7 total')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Flow queue: 3 left · 4 done · 10 total')).not.toBeInTheDocument();
 });
 
 it('keeps the session mode controls hidden while waiting to reveal an answer', () => {
@@ -97,12 +97,13 @@ it('shows session mode choices and marks temporary mode in the real footer summa
     fireEvent.pointerDown(button, { button: 0, ctrlKey: false, pointerType: 'mouse' });
     fireEvent.click(button);
   });
-  expect(screen.getByRole('menuitem', { name: /Recommended flow/ })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: /Review items first/ })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: /Review and reading/ })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: /Review first/ })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: /Reading only/ })).toBeInTheDocument();
+  expect(screen.getByText('Temporary setting.')).toBeInTheDocument();
 
   await act(async () => {
-    fireEvent.click(screen.getByRole('menuitem', { name: /Review items first/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Review first/ }));
   });
   expect(onSetReviewSessionMode).toHaveBeenCalledWith('review-first');
   rerender(
@@ -110,9 +111,9 @@ it('shows session mode choices and marks temporary mode in the real footer summa
       {...createProps({ isAnswerRevealed: true, reviewSessionMode: 'review-first', reviewStatus: 'answer-revealed' })}
     />
   );
-  expect(screen.getByRole('button', { name: 'Session mode: Review items first' })).toBeInTheDocument();
-  expect(screen.queryByText('Review items first')).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Review session: 2 review items left · 0 done · 2 total')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Session mode: Review first' })).toBeInTheDocument();
+  expect(screen.queryByText('Review first')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Review queue: 2 review items left · 0 done · 2 total')).toBeInTheDocument();
 });
 
 it('replaces review actions with resume when the current review item is not visible', () => {
@@ -123,7 +124,7 @@ it('replaces review actions with resume when the current review item is not visi
     />
   );
 
-  expect(screen.getByLabelText('This session: 2 left · 0 done · 2 total')).toBeInTheDocument();
+  expect(screen.getByLabelText('Flow queue: 2 left · 0 done · 2 total')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
 
@@ -145,8 +146,8 @@ it('hides the footer progress line after review completion', () => {
     />
   );
 
-  expect(screen.queryByText('Review complete')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('This session: 0 left · 2 done · 2 total')).not.toBeInTheDocument();
+  expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Flow queue: 0 left · 2 done · 2 total')).not.toBeInTheDocument();
 
   screen.getByRole('button', { name: 'Continue reading' }).click();
   expect(onContinueReading).toHaveBeenCalledTimes(1);
@@ -164,7 +165,7 @@ it('hides the footer progress line while handling pushed reading topics', () => 
   );
 
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
-  expect(screen.queryByLabelText('This session: 12 left 路 0 done 路 12 total')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Flow queue: 12 left · 0 done · 12 total')).not.toBeInTheDocument();
 });
 
 it('treats external, trash, and virtual surfaces as paused review surfaces', () => {

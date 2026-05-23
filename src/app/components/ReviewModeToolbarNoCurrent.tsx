@@ -59,7 +59,7 @@ function ReviewCompleteBar({
 
   return (
     <ReviewActionBar
-      ariaLabel="Review mode toolbar"
+      ariaLabel="Flow toolbar"
       {...definedProps({ style })}
       mode="study"
       className={[className, 'pb-1'].filter(Boolean).join(' ')}
@@ -80,12 +80,12 @@ function ReviewResumeBar({
 
   return (
     <ReviewActionBar
-      ariaLabel="Review mode toolbar"
+      ariaLabel="Flow toolbar"
       {...definedProps({ className, style })}
       mode="study"
       primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
       progress={null}
-      secondary={showSummary ? 'Study mode' : null}
+      secondary={showSummary ? 'Flow mode' : null}
     />
   );
 }

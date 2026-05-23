@@ -18,7 +18,7 @@ it('shows the completed review phase summary and continues reading', () => {
     />
   );
 
-  expect(screen.getByText('Session complete')).toBeInTheDocument();
+  expect(screen.getByText('Queue clear')).toBeInTheDocument();
   expect(screen.getByText('Reviewed')).toBeInTheDocument();
   expect(screen.getByText('4')).toBeInTheDocument();
   expect(screen.getAllByText('items')).toHaveLength(2);
@@ -47,8 +47,8 @@ it('uses review-first completion copy without claiming every reading topic is do
     />
   );
 
-  expect(screen.getByText('Review items complete')).toBeInTheDocument();
-  expect(screen.queryByText('Reading session complete')).not.toBeInTheDocument();
+  expect(screen.getByText('Review queue clear')).toBeInTheDocument();
+  expect(screen.queryByText('Reading complete')).not.toBeInTheDocument();
 });
 
 it('uses reading session completion copy without claiming review items are done', () => {
@@ -66,6 +66,6 @@ it('uses reading session completion copy without claiming review items are done'
     />
   );
 
-  expect(screen.getByText('Reading session complete')).toBeInTheDocument();
-  expect(screen.queryByText('Review items complete')).not.toBeInTheDocument();
+  expect(screen.getByText('Reading complete')).toBeInTheDocument();
+  expect(screen.queryByText('Review queue clear')).not.toBeInTheDocument();
 });

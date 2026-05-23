@@ -150,7 +150,7 @@ function ActiveReviewActionBar({
 
   return (
     <ReviewActionBar
-      ariaLabel="Review mode toolbar"
+      ariaLabel="Flow toolbar"
       {...definedProps({ className, style })}
       mode="study"
       primary={showActionFrame ? (
@@ -193,7 +193,7 @@ export function ReviewModeToolbar({
   if (!isCurrentReviewItemVisible) {
     return (
       <ReviewActionBar
-        ariaLabel="Review mode toolbar"
+        ariaLabel="Flow toolbar"
         {...definedProps({ className, style })}
         mode="study"
         primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}

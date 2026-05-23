@@ -16,12 +16,12 @@ function clampProgress(value: number) {
 function formatReviewProgressLabel(mode: ReviewSessionMode, completed: number, remaining: number, total: number) {
   const done = Math.min(completed, total);
   if (mode === 'reading-only') {
-    return `Reading session: ${remaining} topics left · ${done} read · ${total} topics`;
+    return `Reading flow: ${remaining} topics left · ${done} read · ${total} topics`;
   }
   if (mode === 'review-first') {
-    return `Review session: ${remaining} review items left · ${done} done · ${total} total`;
+    return `Review queue: ${remaining} review items left · ${done} done · ${total} total`;
   }
-  return `This session: ${remaining} left · ${done} done · ${total} total`;
+  return `Flow queue: ${remaining} left · ${done} done · ${total} total`;
 }
 
 export function ReviewToolbarProgressLine({
