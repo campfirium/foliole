@@ -33,6 +33,7 @@ interface NodeListPanelProps {
   createVirtualNode: () => string;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
+  highlightedNodeId: string | null;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   moveNodes: (
@@ -115,6 +116,7 @@ function renderNodeTreeSection(
         activeNodeId={props.activeNodeId}
         collapsedNodeIds={props.activeCollapsedNodeIds}
         drag={drag}
+        highlightedNodeId={props.highlightedNodeId}
         isTrashViewOpen={props.isTrashViewOpen}
         isVirtualViewOpen={props.isVirtualViewOpen}
         nodesById={props.nodesById}

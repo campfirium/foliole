@@ -164,3 +164,33 @@ it('keeps collapse all effective even when the active node sits inside that bran
   expect(loadManualCollapsedNoteNodeIds()).toEqual(['folder', 'article']);
   expect(loadManualExpandedNoteNodeIds()).toEqual([]);
 });
+
+it('temporarily expands a forced folder branch without saving collapse overrides', async () => {
+  const nodeOrder = ['folder', 'child-folder', 'article'];
+  const nodesById: Record<string, WorkspaceListNode> = {
+    folder: createNode('folder', 'Folder', null, { kind: 'folder' }),
+    'child-folder': createNode('child-folder', 'Child Folder', 'folder', { kind: 'folder' }),
+    article: createNode('article', 'Article', 'child-folder')
+  };
+  const tree = buildNodeTree(nodeOrder, nodesById);
+  const emptyTrashRows: NodeTreeRow[] = [];
+
+  const { result } = renderHook(() =>
+    useCollapsedNodeState({
+      activeNodeId: HOME_NODE_ID,
+      forceExpandedNodeId: 'child-folder',
+      nodesById,
+      noteParentById: tree.parentById,
+      noteRowsAll: tree.rows,
+      trashRowsAll: emptyTrashRows
+    })
+  );
+
+  expect(result.current.collapsedNoteNodeIds.has('folder')).toBe(false);
+  expect(result.current.collapsedNoteNodeIds.has('child-folder')).toBe(false);
+
+  await waitFor(() => {
+    expect(loadManualCollapsedNoteNodeIds()).toEqual([]);
+    expect(loadManualExpandedNoteNodeIds()).toEqual([]);
+  });
+});

@@ -19,6 +19,7 @@ import {
 
 export interface WorkspaceDualListStateArgs {
   activeNodeId: string | null;
+  preferredFolderColumnId?: string | null;
   isTrashViewOpen: boolean;
   listNodesById: WorkspaceListNodesById;
   nodeOrder: string[];
@@ -31,28 +32,40 @@ interface WorkspaceDualListStructureCache {
 }
 
 function useActiveFolderColumns(args: WorkspaceDualListStateArgs) {
-  return useMemo(() => ({
-    activeFolderColumnId: args.isTrashViewOpen
-      ? TRASH_NODE_ID
-      : resolveActiveFolderColumnNodeId(
-          args.activeNodeId,
-          args.nodeOrder,
-          args.listNodesById,
-          args.trashedNodeIds
-        ),
-    activeFolderId: args.isTrashViewOpen
-      ? TRASH_NODE_ID
-      : resolveFocusedFolderNodeId(
-          args.activeNodeId,
+  return useMemo(() => {
+    const focusedFolderId = resolveFocusedFolderNodeId(
+      args.activeNodeId,
+      args.nodeOrder,
+      args.listNodesById,
+      args.trashedNodeIds
+    );
+    const resolvedColumnId = resolveActiveFolderColumnNodeId(
+      args.activeNodeId,
+      args.nodeOrder,
+      args.listNodesById,
+      args.trashedNodeIds
+    );
+    const preferredColumnId = args.preferredFolderColumnId
+      ? resolveActiveFolderColumnNodeId(
+          args.preferredFolderColumnId,
           args.nodeOrder,
           args.listNodesById,
           args.trashedNodeIds
         )
-  }), [
+      : null;
+    const activeFolderColumnId = preferredColumnId ?? resolvedColumnId;
+
+    return {
+      activeFolderColumnId: args.isTrashViewOpen ? TRASH_NODE_ID : activeFolderColumnId,
+      activeFolderId: args.isTrashViewOpen ? TRASH_NODE_ID : (activeFolderColumnId ?? focusedFolderId),
+      revealFolderId: args.isTrashViewOpen || focusedFolderId === activeFolderColumnId ? null : focusedFolderId
+    };
+  }, [
     args.activeNodeId,
     args.isTrashViewOpen,
     args.listNodesById,
     args.nodeOrder,
+    args.preferredFolderColumnId,
     args.trashedNodeIds
   ]);
 }
@@ -128,6 +141,7 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
       folderNodeOrder: structureData.folderNodeOrder,
       folderNodesById,
       folderTopicCountById: structureData.folderTopicCountById,
+      revealFolderId: activeColumns.revealFolderId,
       topicChildrenByParent: structureData.listIndex.visibleChildrenByParent,
       topicNodeOrder,
       topicNodesById: args.listNodesById
@@ -135,6 +149,7 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
   }, [
     activeFolderColumnId,
     activeFolderId,
+    activeColumns.revealFolderId,
     args.listNodesById,
     args.trashedNodeIds,
     folderNodesById,

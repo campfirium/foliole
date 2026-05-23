@@ -10,7 +10,6 @@ import {
 } from '../../features/nodes/model/specialNodes';
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { definedProps } from '../../shared/lib/definedProps';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
@@ -22,9 +21,10 @@ import { RemovedSourcesPanel } from './RemovedSourcesPanel';
 import { TrashResultListPanel } from './TrashResultListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import { renderExternalContentColumn } from './workspaceDualListExternalContent';
+import { WorkspaceDualListFolderColumn } from './WorkspaceDualListFolderColumn';
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
 import { useWorkspaceDualListState } from './workspaceDualListState';
-import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
+import { useWorkspaceDualListViewRoot } from './workspaceDualListViewRoot';
 import { useWorkspaceFolderWidthCssVar } from './workspaceFolderWidthCssVar';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -147,45 +147,12 @@ function renderVirtualContentColumn(
   );
 }
 
-function renderWorkspaceFolderColumn(
-  props: WorkspaceDualListContentProps,
-  dualListState: ReturnType<typeof useWorkspaceDualListState>,
-  virtualResultCountById: ReadonlyMap<string, number>
-) {
-  return (
-    <WorkspaceFolderColumn
-      activeFolderId={dualListState.activeFolderId}
-      externalEntriesByFolderId={props.externalEntriesByFolderId}
-      externalFolders={props.externalFolders}
-      externalSelection={props.externalSelection}
-      folderNodeOrder={dualListState.folderNodeOrder}
-      folderNodesById={dualListState.folderNodesById}
-      folderTopicCountById={dualListState.folderTopicCountById}
-      isExternalViewOpen={props.isExternalViewOpen}
-      isTrashViewOpen={props.isTrashViewOpen}
-      isVirtualViewOpen={props.isVirtualViewOpen}
-      nodeOrder={props.nodeOrder}
-      nodesById={props.listNodesById}
-      onOpenMoveToNode={props.onOpenMoveToNode}
-      onOpenNotesView={props.onOpenNotesView}
-      onOpenExternalSelection={props.onOpenExternalSelection}
-      onOpenTrashView={props.onOpenTrashView}
-      onSelectNode={props.onSelectNode}
-      onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
-      onSelectTrashNode={props.onSelectTrashNode}
-      selectedTrashNodeId={props.selectedTrashNodeId}
-      virtualResultCountById={virtualResultCountById}
-      {...definedProps({
-        activeVirtualNodeId: props.activeVirtualNodeId,
-        onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings,
-        onOpenVirtualView: props.onOpenVirtualView
-      })}
-    />
-  );
-}
-
 export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
-  const dualListState = useWorkspaceDualListState(props);
+  const viewRoot = useWorkspaceDualListViewRoot(props);
+  const dualListState = useWorkspaceDualListState({
+    ...props,
+    preferredFolderColumnId: viewRoot.preferredFolderColumnId
+  });
   const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
   const topicRootId = dualListState.activeFolderColumnId ?? dualListState.activeFolderId ?? null;
   const virtualResultIndex = useMemo(
@@ -207,7 +174,12 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         className="workspace-region-main-folder flex min-h-0 min-w-0 overflow-hidden"
         style={{ flex: `0 0 ${folderListResize.width}px` }}
       >
-        {renderWorkspaceFolderColumn(props, dualListState, virtualResultIndex.countById)}
+        <WorkspaceDualListFolderColumn
+          dualListState={dualListState}
+          onSelectFolderColumnNode={viewRoot.selectFolderColumnNode}
+          props={props}
+          virtualResultCountById={virtualResultIndex.countById}
+        />
       </div>
       <WorkspaceDualListSplitter
         isResizing={folderListResize.isResizing}
