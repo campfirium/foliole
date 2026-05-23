@@ -113,6 +113,7 @@ export interface WorkspaceState {
 
 export interface WorkspacePersistedState {
   activeNodeId: string | null;
+  capturedWorkspaceVersion?: string | null;
   layout: WorkspaceLayoutState;
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
