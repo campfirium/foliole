@@ -132,6 +132,13 @@ function resolveActiveNodeId(
   );
 }
 
+function resolveCapturedWorkspaceVersion(rows: WorkspaceNodeRow[]) {
+  return rows.reduce<string | null>(
+    (version, row) => (version === null || row.updated_at > version ? row.updated_at : version),
+    null
+  );
+}
+
 export function loadWorkspaceListSnapshot(
   driver: DatabaseDriver,
   options?: { includePdfOpenings?: boolean }
@@ -150,6 +157,7 @@ export function loadWorkspaceListSnapshot(
 
   return {
     activeNodeId,
+    capturedWorkspaceVersion: resolveCapturedWorkspaceVersion(rows),
     nodeOrder,
     nodesById,
     trashedNodeIds,

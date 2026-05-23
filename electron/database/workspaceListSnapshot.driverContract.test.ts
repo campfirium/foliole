@@ -66,6 +66,7 @@ const workspaceListRow = {
 
 const expectedWorkspaceListSnapshot = {
   activeNodeId: 'node-1',
+  capturedWorkspaceVersion: '2026-03-14T00:00:00.000Z',
   nodeOrder: ['node-1'],
   nodesById: {
     'node-1': {

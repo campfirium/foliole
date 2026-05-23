@@ -129,7 +129,7 @@ it('drops invalid node entries and does not activate missing nodes', () => {
   });
 
   expect(merged.activeNodeId).toBeNull();
-  expect(merged.nodeOrder).toContain('node-2');
+  expect(merged.nodeOrder).not.toContain('node-2');
   expect(merged.nodesById['node-2']!).toBeUndefined();
 });
 

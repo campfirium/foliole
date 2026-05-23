@@ -2,7 +2,7 @@ import { createJSONStorage, type PersistOptions } from 'zustand/middleware';
 
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 
-import { mergeHydratedNodesById } from './workspaceHydrateObjectMerge';
+import { mergeHydratedWorkspaceMembership } from './workspaceHydrateObjectMerge';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
@@ -61,17 +61,14 @@ export function createWorkspaceStorePersistConfig(
       const nextState = {
         ...current,
         ...persisted,
+        ...mergeHydratedWorkspaceMembership(current, persisted),
         isHydrated: current.isHydrated,
         layout: {
           ...current.layout,
           ...persisted.layout
         },
         nodeViewById: persisted.nodeViewById ?? current.nodeViewById,
-        nodesById: persisted.nodesById
-          ? mergeHydratedNodesById(current.nodesById, persisted.nodesById)
-          : current.nodesById,
         reviewSession: persisted.reviewSession ?? current.reviewSession,
-        trashedNodeDeletedAtById: persisted.trashedNodeDeletedAtById ?? current.trashedNodeDeletedAtById,
         untitledSequenceByParent:
           persisted.untitledSequenceByParent ?? current.untitledSequenceByParent
       };

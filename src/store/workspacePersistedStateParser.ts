@@ -153,10 +153,15 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   const layout = parseLayout(value.layout);
   const nodeViewById = parseNodeViewById(value.nodeViewById);
   const reviewSession = parseReviewSession(value.reviewSession);
+  const capturedWorkspaceVersion =
+    typeof value.capturedWorkspaceVersion === 'string' || value.capturedWorkspaceVersion === null
+      ? value.capturedWorkspaceVersion
+      : undefined;
   const trashedNodeDeletedAtById = parseStringValueRecord(value.trashedNodeDeletedAtById);
   const untitledSequenceByParent = parseNumberValueRecord(value.untitledSequenceByParent);
   return {
     ...(nodesById ? { nodesById } : {}),
+    ...(capturedWorkspaceVersion !== undefined ? { capturedWorkspaceVersion } : {}),
     ...(activeNodeId !== undefined ? { activeNodeId } : {}),
     ...(layout ? { layout } : {}),
     ...(nodeViewById ? { nodeViewById } : {}),
