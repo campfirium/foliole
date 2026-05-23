@@ -170,7 +170,7 @@ it('shows completed without progress and continues reading when the review phase
   });
 
   expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Flow queue: 0 left · 3 done · 3 total')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
@@ -217,7 +217,7 @@ it('resumes from the queue when study mode has no current item but queued items 
   fireEvent.click(screen.getByRole('button', { name: 'Resume review' }));
   expect(onResumeReviewItem).toHaveBeenCalledTimes(1);
   expect(onContinueReading).not.toHaveBeenCalled();
-  expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
 });
 
 it('resumes from the queue with Space when study mode has no current item but queued items exist', () => {
