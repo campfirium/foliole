@@ -35,16 +35,35 @@ function addSavedFormulaRegions(
     mask.dataset.mdFormulaRegionId = region.id;
     mask.dataset.mdFormulaRegionHidden = presentation?.hiddenRegionIds.includes(region.id) ? 'true' : 'false';
     mask.dataset.mdFormulaRegionOutlined = presentation?.outlinedRegionIds.includes(region.id) ? 'true' : 'false';
-    setRegionRectStyle(mask, measureFormulaRegion(wrapper, region.selection) ?? region.fallbackRect);
+    setRegionRectStyle(mask, measureFormulaRegion(wrapper, region.selection) ?? getWrapperRectFromVisualRect(wrapper, region.fallbackRect));
     overlay.append(mask);
   }
 }
 
 function measureFormulaRegion(wrapper: HTMLElement, selection: FormulaClozeEditorPresentation['regions'][number]['selection']) {
-  return measureFormulaDomSelectionDescriptor(wrapper, selection, (element) => {
+  const visualRoot = findFormulaVisualRoot(wrapper);
+  if (!visualRoot) return null;
+  const measured = measureFormulaDomSelectionDescriptor(visualRoot, selection, (element) => {
     const box = element.getBoundingClientRect();
     return { height: box.height, width: box.width, x: box.left, y: box.top };
   });
+  return measured ? getWrapperRectFromVisualRect(wrapper, measured) : null;
+}
+
+function findFormulaVisualRoot(wrapper: HTMLElement) {
+  return wrapper.querySelector<HTMLElement>('.katex-html') ?? wrapper.querySelector<HTMLElement>('.katex');
+}
+
+function isPointInsideElement(element: HTMLElement, point: { x: number; y: number }) {
+  const box = element.getBoundingClientRect();
+  return point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom;
+}
+
+function canStartFormulaSelection(wrapper: HTMLElement, event: PointerEvent) {
+  const visualRoot = findFormulaVisualRoot(wrapper);
+  if (!visualRoot) return false;
+  const target = event.target instanceof Node ? event.target : null;
+  return Boolean(target && visualRoot.contains(target) && isPointInsideElement(visualRoot, { x: event.clientX, y: event.clientY }));
 }
 
 function attachFormulaSelectionHandlers(wrapper: HTMLElement, overlay: HTMLElement, mathRange: MarkdownMathRange) {
@@ -52,22 +71,28 @@ function attachFormulaSelectionHandlers(wrapper: HTMLElement, overlay: HTMLEleme
   let draft: HTMLElement | null = null;
   wrapper.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
+    if (!canStartFormulaSelection(wrapper, event)) return;
     start = { x: event.clientX, y: event.clientY };
     draft = document.createElement('span');
     draft.className = 'cm-md-formula-cloze-draft';
     overlay.append(draft);
-    wrapper.setPointerCapture(event.pointerId);
+    wrapper.setPointerCapture?.(event.pointerId);
     event.preventDefault();
+    event.stopPropagation();
   });
   wrapper.addEventListener('pointermove', (event) => {
     if (!start || !draft) return;
     setDraftRectStyle(draft, wrapper.getBoundingClientRect(), start, { x: event.clientX, y: event.clientY });
+    event.preventDefault();
+    event.stopPropagation();
   });
   wrapper.addEventListener('pointerup', (event) => {
     if (!start || !draft) return;
     dispatchFormulaSelection(wrapper, draft, start, { x: event.clientX, y: event.clientY }, mathRange);
     draft = null;
     start = null;
+    event.preventDefault();
+    event.stopPropagation();
   });
 }
 
@@ -81,7 +106,10 @@ function dispatchFormulaSelection(
   setDraftRectStyle(draft, wrapper.getBoundingClientRect(), start, end);
   const selectionRect = toViewportRect(start, end);
   draft.remove();
-  const descriptor = createFormulaDomSelectionDescriptor(wrapper, selectionRect, (element) => {
+  if (selectionRect.width < 3 || selectionRect.height < 3) return;
+  const visualRoot = findFormulaVisualRoot(wrapper);
+  if (!visualRoot) return;
+  const descriptor = createFormulaDomSelectionDescriptor(visualRoot, selectionRect, (element) => {
     const box = element.getBoundingClientRect();
     return { height: box.height, width: box.width, x: box.left, y: box.top };
   });
@@ -106,6 +134,20 @@ function setRegionRectStyle(element: HTMLElement, rect: { height: number; width:
   element.style.top = `${rect.y * 100}%`;
   element.style.width = `${rect.width * 100}%`;
   element.style.height = `${rect.height * 100}%`;
+}
+
+function getWrapperRectFromVisualRect(wrapper: HTMLElement, rect: { height: number; width: number; x: number; y: number }) {
+  const visualRoot = findFormulaVisualRoot(wrapper);
+  if (!visualRoot) return rect;
+  const wrapperBox = wrapper.getBoundingClientRect();
+  const visualBox = visualRoot.getBoundingClientRect();
+  if (wrapperBox.width <= 0 || wrapperBox.height <= 0) return rect;
+  return {
+    height: rect.height * visualBox.height / wrapperBox.height,
+    width: rect.width * visualBox.width / wrapperBox.width,
+    x: (visualBox.left - wrapperBox.left + rect.x * visualBox.width) / wrapperBox.width,
+    y: (visualBox.top - wrapperBox.top + rect.y * visualBox.height) / wrapperBox.height
+  };
 }
 
 function setDraftRectStyle(

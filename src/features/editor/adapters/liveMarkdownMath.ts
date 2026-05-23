@@ -8,6 +8,7 @@ import { getFormulaClozeEditorPresentation, type FormulaClozeEditorPresentation 
 import type { MarkdownMathRange } from '../model/markdownMathExtension';
 
 import { configureFormulaOverlay } from './liveMarkdownFormulaOverlay';
+import { isEditedMathRange, setEditedMathRangeEffect, type EditedMathRange } from './liveMarkdownMathEditState';
 
 class MarkdownMathWidget extends WidgetType {
   readonly editorNodeId: string | null;
@@ -33,11 +34,11 @@ class MarkdownMathWidget extends WidgetType {
     );
   }
 
-  override ignoreEvent(event: Event) {
-    return !['click', 'mousedown', 'mousemove', 'mouseup', 'pointerdown', 'pointermove', 'pointerup'].includes(event.type);
+  override ignoreEvent() {
+    return true;
   }
 
-  override toDOM() {
+  override toDOM(view: EditorView) {
     const wrapper = document.createElement(this.mathRange.display === 'block' ? 'div' : 'span');
     wrapper.className = this.mathRange.display === 'block' ? 'cm-md-math-widget-block' : 'cm-md-math-widget-inline';
     wrapper.dataset.mdMathDisplay = this.mathRange.display;
@@ -45,7 +46,14 @@ class MarkdownMathWidget extends WidgetType {
     wrapper.dataset.mdMathPresentationVersion = String(this.presentationVersion);
     wrapper.dataset.mdMathTo = String(this.mathRange.to);
     wrapper.dataset.mdMathTex = this.mathRange.tex;
-    renderMath(wrapper, this.mathRange, getFormulaClozeEditorPresentation(this.editorNodeId));
+    renderMath(wrapper, this.mathRange, getFormulaClozeEditorPresentation(this.editorNodeId), () => {
+      view.dispatch({
+        effects: setEditedMathRangeEffect.of({ from: this.mathRange.from, to: this.mathRange.to }),
+        selection: { anchor: Math.min(this.mathRange.from + 1, this.mathRange.to) },
+        scrollIntoView: false
+      });
+      view.focus();
+    });
     return wrapper;
   }
 
@@ -63,10 +71,19 @@ class MarkdownMathWidget extends WidgetType {
   }
 }
 
+function preventPreviewCaretPlacement(wrapper: HTMLElement) {
+  wrapper.addEventListener('pointerdown', (event) => {
+    if (event.defaultPrevented) return;
+    if (event.target instanceof HTMLElement && event.target.closest('.cm-md-math-source-button')) return;
+    event.preventDefault();
+  });
+}
+
 function renderMath(
   wrapper: HTMLElement,
   mathRange: MarkdownMathRange,
-  presentation: FormulaClozeEditorPresentation | null
+  presentation: FormulaClozeEditorPresentation | null,
+  onEditSource: () => void
 ) {
   try {
     katex.render(mathRange.tex, wrapper, {
@@ -77,26 +94,42 @@ function renderMath(
       trust: false
     });
     configureFormulaOverlay(wrapper, mathRange, presentation);
+    preventPreviewCaretPlacement(wrapper);
+    wrapper.append(createFormulaSourceButton(onEditSource));
   } catch {
     wrapper.classList.add('cm-md-math-widget-error');
     wrapper.textContent = mathRange.source;
   }
 }
 
-function isActiveInsideMath(mathRange: MarkdownMathRange, activePosition: number | null) {
-  return activePosition !== null && activePosition >= mathRange.from && activePosition <= mathRange.to;
+function createFormulaSourceButton(onEditSource: () => void) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'cm-md-math-source-button';
+  button.ariaLabel = 'Edit formula source';
+  button.textContent = 'TeX';
+  button.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onEditSource();
+  });
+  return button;
 }
 
 export function addMathDecorations(
   ranges: Range<Decoration>[],
   mathRanges: ReadonlyArray<MarkdownMathRange>,
   view: EditorView,
-  activePosition: number | null,
+  editedMathRange: EditedMathRange | null,
   editorNodeId: string | null,
   presentationVersion: number
 ) {
   for (const mathRange of mathRanges) {
-    if (isActiveInsideMath(mathRange, activePosition)) continue;
+    if (isEditedMathRange(editedMathRange, mathRange.from, mathRange.to)) continue;
     if (mathRange.display === 'block') {
       addBlockMathDecorations(ranges, mathRange, view, editorNodeId, presentationVersion);
       continue;
@@ -128,6 +161,7 @@ function addBlockMathDecorations(
   );
   for (let lineNumber = openingLine.number + 1; lineNumber <= closingLine.number; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
+    ranges.push(Decoration.line({ attributes: { class: 'cm-line-math-source-hidden' } }).range(line.from));
     if (line.to > line.from) ranges.push(Decoration.replace({}).range(line.from, line.to));
   }
 }
