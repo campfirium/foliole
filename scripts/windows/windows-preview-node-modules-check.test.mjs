@@ -98,17 +98,28 @@ describe('windows preview node_modules check', () => {
     expect(result.stdout).toContain('do not run plain Node npm rebuild for better-sqlite3');
   });
 
-  it('stops before later preview actions when native ABI preflight fails', async () => {
-    const result = await runNodeModulesCheck({
-      WINDOWS_NATIVE_ABI_CHECK_COMMAND: 'echo ABI mismatch; exit 9',
-      WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true',
-      WINDOWS_WORKDIR: 'C:\\dev\\foliole'
-    });
+  it('repairs Electron native ABI and retries preflight before later preview actions', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-native-abi-'));
+    try {
+      const marker = path.join(tempRoot, 'repaired.flag');
+      const result = await runNodeModulesCheck({
+        ABI_MARKER: marker,
+        WINDOWS_NATIVE_ABI_CHECK_COMMAND:
+          'if [ -f "$ABI_MARKER" ]; then echo ABI ok; exit 0; fi; echo ABI mismatch; exit 9',
+        WINDOWS_NATIVE_ABI_REPAIR_COMMAND: 'echo repaired; touch "$ABI_MARKER"',
+        WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true',
+        WINDOWS_WORKDIR: 'C:\\dev\\foliole'
+      });
 
-    expect(result.code).toBe(1);
-    expect(result.stdout).toContain('windows node_modules check passed');
-    expect(result.stdout).toContain('windows native ABI preflight failed');
-    expect(result.stdout).toContain('restore better-sqlite3 for the Electron ABI');
-    expect(result.stdout).toContain('ABI mismatch');
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('windows node_modules check passed');
+      expect(result.stdout).toContain('windows native ABI preflight failed');
+      expect(result.stdout).toContain('restoring better-sqlite3 for the Electron ABI');
+      expect(result.stdout).toContain('ABI mismatch');
+      expect(result.stdout).toContain('repaired');
+      expect(result.stdout).toContain('windows native ABI preflight passed after repair');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
   });
 });
