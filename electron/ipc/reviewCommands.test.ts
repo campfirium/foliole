@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { handleInvokeRequest } from './commands.js';
 import { reviewGrade, reviewPreview } from './review.js';
+import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 vi.mock('electron', () => ({
   BrowserWindow: {
@@ -38,10 +39,13 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
   loadReviewSchedulerSettings: vi.fn(),
   saveReviewSchedulerSettings: vi.fn()
 }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn() }));
+vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn() }));
 vi.mock('./review.js', () => ({
   reviewGrade: vi.fn(),
   reviewPreview: vi.fn()
+}));
+vi.mock('./workspaceContentChangedEvents.js', () => ({
+  notifyWorkspaceContentChanged: vi.fn()
 }));
 
 beforeEach(() => {
@@ -107,4 +111,16 @@ it('rejects missing review request at the IPC boundary', async () => {
   );
 
   expect(reviewPreview).not.toHaveBeenCalled();
+});
+
+it('does not broadcast workspace content changed after review grading', async () => {
+  vi.mocked(reviewGrade).mockReturnValue({
+    card: reviewArgs().request.card,
+    reviewed_at: '2026-03-04T00:00:00.000Z'
+  });
+
+  await handleInvokeRequest({ command: 'review_grade', args: reviewArgs() });
+
+  expect(reviewGrade).toHaveBeenCalledTimes(1);
+  expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
 });
