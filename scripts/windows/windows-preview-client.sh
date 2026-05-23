@@ -144,7 +144,7 @@ verify_windows_native_abi() {
     exit_code=$?
   else
     output="$(
-      powershell.exe -NoProfile -NonInteractive -Command "\$ErrorActionPreference='Stop'; Set-Location -LiteralPath '${WINDOWS_WORKDIR}'; & '.\\${WINDOWS_NATIVE_ABI_PREFLIGHT_SCRIPT}' -WorkDir '${WINDOWS_WORKDIR}' -Run" 2>&1
+      powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${WINDOWS_NATIVE_ABI_PREFLIGHT_SCRIPT}" -WorkDir "${WINDOWS_WORKDIR}" -Run 2>&1
     )"
     exit_code=$?
   fi
@@ -155,7 +155,48 @@ verify_windows_native_abi() {
   fi
 
   echo "[windows-preview] windows native ABI preflight failed"
-  echo "[windows-preview] hint: restore better-sqlite3 for the Electron ABI in ${WINDOWS_WORKDIR}; do not run plain Node npm rebuild for this native module"
+  if [ -n "${output}" ]; then
+    printf '%s\n' "${output}" | tail -n 80
+  fi
+  echo "[windows-preview] restoring better-sqlite3 for the Electron ABI"
+  set +e
+  if [ -n "${WINDOWS_NATIVE_ABI_REPAIR_COMMAND:-}" ]; then
+    output="$(eval "${WINDOWS_NATIVE_ABI_REPAIR_COMMAND}" 2>&1)"
+    exit_code=$?
+  else
+    output="$(
+      powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${WINDOWS_NATIVE_ABI_REPAIR_SCRIPT}" -WorkDir "${WINDOWS_WORKDIR}" 2>&1
+    )"
+    exit_code=$?
+  fi
+  set -e
+  if [ "${exit_code}" -ne 0 ]; then
+    echo "[windows-preview] Electron native ABI repair failed"
+    if [ -n "${output}" ]; then
+      printf '%s\n' "${output}" | tail -n 80
+    fi
+    return 1
+  fi
+  if [ -n "${output}" ]; then
+    printf '%s\n' "${output}" | tail -n 80
+  fi
+
+  set +e
+  if [ -n "${WINDOWS_NATIVE_ABI_CHECK_COMMAND}" ]; then
+    output="$(eval "${WINDOWS_NATIVE_ABI_CHECK_COMMAND}" 2>&1)"
+    exit_code=$?
+  else
+    output="$(
+      powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${WINDOWS_NATIVE_ABI_PREFLIGHT_SCRIPT}" -WorkDir "${WINDOWS_WORKDIR}" -Run 2>&1
+    )"
+    exit_code=$?
+  fi
+  set -e
+  if [ "${exit_code}" -eq 0 ]; then
+    echo "[windows-preview] windows native ABI preflight passed after repair"
+    return 0
+  fi
+  echo "[windows-preview] windows native ABI preflight failed after repair"
   if [ -n "${output}" ]; then
     printf '%s\n' "${output}" | tail -n 80
   fi

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { inspectElectronDistFreshness } from './check-electron-dist-fresh.mjs';
 import { writeRendererReloadIntent } from './write-renderer-reload-intent.mjs';
 import { writeRestartIntent } from './write-restart-intent.mjs';
+import { ensureElectronNativeAbi } from './windows-native-abi-repair.mjs';
 import {
   createNpmCommand,
   npmRunCommand,
@@ -47,18 +48,7 @@ async function verifyNodeModules() {
 }
 
 async function verifyNativeAbi() {
-  const preflightArgs = [
-    '-NoProfile',
-    '-NonInteractive',
-    '-ExecutionPolicy',
-    'Bypass',
-    '-File',
-    nativeAbiScript,
-    '-WorkDir',
-    repoRoot,
-    '-Run'
-  ];
-  await runChecked('powershell.exe', preflightArgs, 'verify Electron native ABI', repoRoot);
+  await ensureElectronNativeAbi({ nativeAbiScript, repoRoot });
 }
 
 async function runClientAction(action) {
