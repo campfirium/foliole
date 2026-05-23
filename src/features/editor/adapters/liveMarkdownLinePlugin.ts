@@ -1,9 +1,10 @@
-import { type DecorationSet, type EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
 import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
-import { buildPreviewDecorationSet, buildSourceDecorationSet } from './liveMarkdownDecorations';
+import { buildPreviewAtomicRangeSet, buildPreviewDecorationSet, buildSourceDecorationSet } from './liveMarkdownDecorations';
+import { getEditedMathRange, isSameEditedMathRange } from './liveMarkdownMathEditState';
 import {
   activeNodeIdFacet,
   hideTitleHeadingFacet,
@@ -25,6 +26,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
   return buildPreviewDecorationSet(view, {
     activePosition: view.hasFocus ? view.state.selection.main.head : null,
     cursorLineNumber: getCursorLineNumber(view),
+    editedMathRange: getEditedMathRange(view.state),
     hideTitleHeading: view.state.facet(hideTitleHeadingFacet),
     imageClozePresentationVersion: view.state.facet(imageClozePresentationVersionFacet),
     markdownSyntaxVisible: getMarkdownSyntaxVisibility() === 'visible',
@@ -33,12 +35,18 @@ function buildLineDecorations(view: EditorView): DecorationSet {
   });
 }
 
+function buildAtomicRanges(view: EditorView): DecorationSet {
+  return buildPreviewAtomicRangeSet(view, getEditedMathRange(view.state));
+}
+
 export const markdownLinePlugin = ViewPlugin.fromClass(
   class {
+    atomicRanges: DecorationSet;
     decorations: DecorationSet;
     cursorLineNumber: number | null;
 
     constructor(view: EditorView) {
+      this.atomicRanges = buildAtomicRanges(view);
       this.cursorLineNumber = getCursorLineNumber(view);
       this.decorations = buildLineDecorations(view);
     }
@@ -51,19 +59,28 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
         update.state.facet(imageClozePresentationVersionFacet);
       const textAnchorDecorationsChanged =
         update.startState.facet(textAnchorDecorationsFacet) !== update.state.facet(textAnchorDecorationsFacet);
+      const editedMathRangeChanged = !isSameEditedMathRange(
+        getEditedMathRange(update.startState),
+        getEditedMathRange(update.state)
+      );
       const nextCursorLineNumber = getCursorLineNumber(update.view);
 
       if (
         shouldRefreshLineDecorations(update, this.cursorLineNumber, nextCursorLineNumber) ||
         nodeIdChanged ||
         imageClozePresentationChanged ||
-        textAnchorDecorationsChanged
+        textAnchorDecorationsChanged ||
+        editedMathRangeChanged
       ) {
+        this.atomicRanges = buildAtomicRanges(update.view);
         this.decorations = buildLineDecorations(update.view);
       }
 
       this.cursorLineNumber = nextCursorLineNumber;
     }
   },
-  { decorations: (value) => value.decorations }
+  {
+    decorations: (value) => value.decorations,
+    provide: (plugin) => EditorView.atomicRanges.of((view) => view.plugin(plugin)?.atomicRanges ?? Decoration.none)
+  }
 );

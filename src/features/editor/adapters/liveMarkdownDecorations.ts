@@ -1,6 +1,7 @@
 import { type Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, type EditorView } from '@codemirror/view';
 
+import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import { folioleMarkdownParser } from '../model/folioleMarkdownParser';
 import type { InlinePresentationPlan } from '../model/inlinePresentationPlans';
 import type { InlineTextDecorationPlan } from '../model/inlineTextDecorationPlans';
@@ -29,6 +30,8 @@ import {
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addForumTitleLinkDecorations } from './liveMarkdownForumTitleLinkDecorations';
 import { addMathDecorations } from './liveMarkdownMath';
+import type { EditedMathRange } from './liveMarkdownMathEditState';
+import { addEditedMathSourceDecorations } from './liveMarkdownMathSource';
 import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
 import { addPreviewViewportDecorations } from './liveMarkdownPreviewViewportDecorations';
 import {
@@ -44,6 +47,7 @@ import { resolveVisibleLineWindow } from './liveMarkdownViewport';
 interface DecorationBuildContext {
   activePosition: number | null;
   cursorLineNumber: number | null;
+  editedMathRange: EditedMathRange | null;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   markdownSyntaxVisible: boolean;
@@ -69,6 +73,16 @@ function addMultilineLinkDecorations(
   for (const inlinePlan of collectMultilineLinkPresentationPlans({ source, ...args })) {
     applyInlinePresentationPlan(ranges, inlinePlan);
   }
+}
+
+function addEditedMathSourceDecoration(
+  ranges: Range<Decoration>[],
+  view: EditorView,
+  mathRanges: ReturnType<typeof collectMarkdownMathRangesFromTree>,
+  editedMathRange: EditedMathRange | null
+) {
+  const mathRange = mathRanges.find((range) => editedMathRange?.from === range.from && editedMathRange.to === range.to);
+  if (mathRange) addEditedMathSourceDecorations(ranges, view.state.doc, mathRange);
 }
 
 function hideLinkReferenceDefinition(
@@ -142,7 +156,8 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   addReadwiseOriginalFileDecorations(ranges, readwiseOriginalFilePlaceholders, context.nodeId);
   addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
   addForumTitleLinkDecorations(ranges, forumTitleLinks);
-  addMathDecorations(ranges, mathRanges, view, context.activePosition, context.nodeId, context.imageClozePresentationVersion);
+  addMathDecorations(ranges, mathRanges, view, context.editedMathRange, context.nodeId, context.imageClozePresentationVersion);
+  addEditedMathSourceDecoration(ranges, view, mathRanges, context.editedMathRange);
   addCodeFenceSyntaxHighlightDecorations(ranges, source, codeFenceProjection.codeBlocks, viewportRange);
   addMultilineLinkDecorations(ranges, source, {
     links: inlineLinks,
@@ -157,6 +172,19 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     prefixRangesByLineFrom
   });
 
+  return Decoration.set(ranges, true);
+}
+
+export function buildPreviewAtomicRangeSet(view: EditorView, editedMathRange: EditedMathRange | null): DecorationSet {
+  const ranges: Range<Decoration>[] = [];
+  if (getEditorDisplayMode() === 'source') return Decoration.none;
+  const source = view.state.doc.toString();
+  const markdownTree = folioleMarkdownParser.parse(source);
+  const mathRanges = collectMarkdownMathRangesFromTree(markdownTree, source);
+  for (const mathRange of mathRanges) {
+    if (editedMathRange?.from === mathRange.from && editedMathRange.to === mathRange.to) continue;
+    ranges.push(Decoration.mark({}).range(mathRange.from, mathRange.to));
+  }
   return Decoration.set(ranges, true);
 }
 
