@@ -95,6 +95,30 @@ it('keeps bulk-selected rows in place without using the active button style', ()
   expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
 });
 
+it('uses a lighter location highlight without selecting the row', () => {
+  render(
+    <NodeTreeRow
+      depth={0}
+      hasChildren={false}
+      isActive={false}
+      isCollapsed={false}
+      isHighlighted
+      isSelected={false}
+      label="Containing folder"
+      nodeId="node-folder"
+      onSelect={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rowSpacing={0}
+    />
+  );
+
+  const row = screen.getByRole('treeitem', { name: 'Containing folder' });
+  expect(row).toHaveAttribute('aria-selected', 'false');
+  expect(row).toHaveAttribute('data-node-location-highlight', 'true');
+  expect(row.className).toContain('before:bg-foreground/[0.035]');
+  expect(row.className).not.toContain('after:bg-foreground/30');
+});
+
 it('selects a row without toggling collapse on plain row click', () => {
   const onSelect = vi.fn();
   const onToggleCollapse = vi.fn();

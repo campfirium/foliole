@@ -25,6 +25,7 @@ interface NodeListRowsProps {
   drag: ReturnType<typeof useNodeListDragController>;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
+  highlightedNodeId: string | null;
   nodesById: WorkspaceListNodesById;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onExpandCollapse: (nodeId: string) => void;
@@ -64,6 +65,7 @@ function renderNodeListRow(
       isBulkSelectionActive={props.selectedNodeIds.length > 1}
       isCollapsed={props.isTrashViewOpen || rowModel.isHome ? false : props.collapsedNodeIds.has(row.node.id)}
       isDerived={rowModel.isDerivedNode}
+      isHighlighted={!props.isTrashViewOpen && props.highlightedNodeId === row.node.id}
       isDragDisabled={props.isTrashViewOpen || rowModel.isDerivedNode || rowModel.isHome || rowModel.isInbox || rowModel.isTrashRoot || rowModel.isVirtualRoot}
       isDropTarget={props.drag.dropTargetNodeId === row.node.id}
       isMuted={rowModel.shouldFadeWholeRow}

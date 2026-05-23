@@ -15,6 +15,8 @@ import { useNodeListState, useNodeSelectionHandler } from './NodeListTreeState';
 export interface NodeListTreeProps {
   activeNodeId: string | null;
   bodyAppendContent?: ReactNode;
+  forceExpandedNodeId?: string | null;
+  highlightedNodeId?: string | null;
   rowCountByNodeId?: ReadonlyMap<string, number>;
   isSelectionScopeActive?: boolean;
   isTrashViewOpen: boolean;
@@ -152,17 +154,19 @@ function useNodeListTreeControllers(args: {
 
 export function useNodeListTreeModel({
   activeNodeId,
+  forceExpandedNodeId,
   isSelectionScopeActive = true,
   nodeOrder,
   nodesById,
   onSelectNode,
   onSelectTrashNode,
   selectedTrashNodeId
-}: Omit<NodeListTreeProps, 'isTrashViewOpen' | 'isVirtualViewOpen' | 'onOpenMoveToNode' | 'onOpenNotesView'>) {
+}: Omit<NodeListTreeProps, 'highlightedNodeId' | 'isTrashViewOpen' | 'isVirtualViewOpen' | 'onOpenMoveToNode' | 'onOpenNotesView'>) {
   const workspace = useNodeWorkspaceActions();
   const treeData = useNodeListTreeData(nodeOrder, nodesById, workspace.trashedNodeIds);
   const collapsedState = useCollapsedNodeState({
     activeNodeId,
+    forceExpandedNodeId,
     nodesById,
     noteParentById: treeData.noteParentById,
     noteRowsAll: treeData.noteRowsAll,

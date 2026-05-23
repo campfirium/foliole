@@ -21,6 +21,7 @@ interface NodeTreeRowProps {
   isBulkSelectionActive?: boolean;
   isCollapsed: boolean;
   isDerived?: boolean;
+  isHighlighted?: boolean;
   isMuted?: boolean;
   mutedOpacity?: number;
   nodeIconKind?: NodeTreeRowIconKind;
@@ -67,6 +68,7 @@ function renderNodeTreeRowButton(props: {
   isBulkSelectionActive: boolean;
   isCollapsed: boolean;
   isDerived: boolean;
+  isHighlighted: boolean;
   isMuted: boolean;
   mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
@@ -113,6 +115,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         isBulkSelectionActive: props.isBulkSelectionActive ?? false,
         isCollapsed: props.isCollapsed,
         isDerived: props.isDerived ?? false,
+        isHighlighted: props.isHighlighted ?? false,
         isMuted: props.isMuted ?? false,
         mutedOpacity: props.mutedOpacity ?? 1,
         nodeIconKind: props.nodeIconKind ?? 'reading',
@@ -148,6 +151,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.isBulkSelectionActive === next.isBulkSelectionActive &&
     previous.isCollapsed === next.isCollapsed &&
     previous.isDerived === next.isDerived &&
+    previous.isHighlighted === next.isHighlighted &&
     previous.isDragDisabled === next.isDragDisabled &&
     previous.isDropTarget === next.isDropTarget &&
     previous.ariaPosInSet === next.ariaPosInSet &&

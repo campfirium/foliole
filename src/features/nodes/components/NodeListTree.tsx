@@ -27,12 +27,13 @@ function useNodeListTreeView(args: {
   return { activeRows, collapsedNodeIds, rowSpacing };
 }
 
-function buildNodeListTreeContentProps(args: {
+interface NodeListTreeContentPropsArgs {
   activeNodeId: string | null;
   activeRows: ReturnType<typeof useNodeListTreeView>['activeRows'];
   bodyAppendContent?: NodeListTreeProps['bodyAppendContent'];
   collapsedNodeIds: ReturnType<typeof useNodeListTreeView>['collapsedNodeIds'];
   deleteFeedback: ReturnType<typeof useNodeBulkDeleteFeedback>;
+  highlightedNodeId?: string | null;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   model: ReturnType<typeof useNodeListTreeModel>;
@@ -46,7 +47,9 @@ function buildNodeListTreeContentProps(args: {
   selectedTrashNodeId: string | null;
   showVirtualCreateAction: boolean;
   showTitleSearch: boolean;
-}) {
+}
+
+function buildNodeListTreeContentProps(args: NodeListTreeContentPropsArgs) {
   return {
     activeCollapsedNodeIds: args.collapsedNodeIds,
     activeNodeId: args.activeNodeId,
@@ -61,6 +64,7 @@ function buildNodeListTreeContentProps(args: {
     deleteNodesPermanently: args.deleteFeedback.runDeleteNodesPermanently,
     deleteStatusLabel: args.deleteFeedback.deleteStatusLabel,
     dismissNode: args.model.dismissNode,
+    highlightedNodeId: args.highlightedNodeId ?? null,
     isTrashViewOpen: args.isTrashViewOpen,
     isVirtualViewOpen: args.isVirtualViewOpen,
     moveNodes: args.model.moveNodes,
@@ -107,6 +111,8 @@ function useNodeListTreeSelectionDiagnostics(args: {
 function NodeListTreeImpl({
   activeNodeId,
   bodyAppendContent,
+  forceExpandedNodeId,
+  highlightedNodeId,
   rowCountByNodeId,
   isSelectionScopeActive = true,
   isTrashViewOpen,
@@ -123,6 +129,7 @@ function NodeListTreeImpl({
 }: NodeListTreeProps) {
   const model = useNodeListTreeModel({
     activeNodeId,
+    forceExpandedNodeId,
     isSelectionScopeActive,
     nodeOrder,
     nodesById,
@@ -144,6 +151,7 @@ function NodeListTreeImpl({
     bodyAppendContent,
     collapsedNodeIds,
     deleteFeedback,
+    highlightedNodeId,
     isTrashViewOpen,
     isVirtualViewOpen,
     model,

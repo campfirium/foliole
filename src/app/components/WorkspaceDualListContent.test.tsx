@@ -1,13 +1,15 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import {
   resetExternalCollapsedRowIds,
   saveExternalCollapsedRowIds
 } from './externalLibraryCollapseSettings';
+import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 import { createWorkspaceContentNode, renderWorkspaceContent } from './WorkspaceDualListContent.testUtils';
 
 beforeEach(() => {
@@ -74,6 +76,45 @@ function createExternalEntry(args: {
   return { ...args, extension: 'md' as const, modifiedAt: '2026-04-21T00:00:00.000Z' };
 }
 
+function HomePinnedWorkspaceHarness() {
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(HOME_NODE_ID);
+  const nodesById = {
+    [HOME_NODE_ID]: createWorkspaceContentNode({ id: HOME_NODE_ID, kind: 'folder', specialKind: 'home', title: 'Home' }),
+    [INBOX_NODE_ID]: createWorkspaceContentNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
+    'folder-a': createWorkspaceContentNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+    'folder-child': createWorkspaceContentNode({ id: 'folder-child', kind: 'folder', parentNodeId: 'folder-a', title: 'Child Folder' }),
+    'topic-a': createWorkspaceContentNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-child', title: 'Topic A' })
+  };
+
+  return (
+    <WorkspaceDualListContent
+      activeNodeId={activeNodeId}
+      activeVirtualNodeId={null}
+      externalEntriesByFolderId={{}}
+      externalFolders={[]}
+      externalSelection={{ kind: 'root' }}
+      isExternalViewOpen={false}
+      isStudyMode={false}
+      isTrashViewOpen={false}
+      isVirtualViewOpen={false}
+      nodesById={nodesById}
+      listNodesById={nodesById}
+      nodeOrder={[HOME_NODE_ID, INBOX_NODE_ID, 'folder-a', 'folder-child', 'topic-a']}
+      onOpenMoveToNode={vi.fn()}
+      onOpenNotesView={vi.fn()}
+      onOpenExternalSelection={vi.fn()}
+      onOpenTrashView={vi.fn()}
+      onOpenVirtualView={vi.fn()}
+      onSelectNode={setActiveNodeId}
+      onSelectNodeInVirtualView={vi.fn()}
+      onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
+      selectedTrashNodeId={null}
+      trashedNodeIds={[]}
+    />
+  );
+}
+
 it('keeps the dual-column layout when opening trash search', () => {
   const trashNodesById = {
     [INBOX_NODE_ID]: createWorkspaceContentNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
@@ -103,6 +144,22 @@ it('keeps the dual-column layout when opening trash search', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Close title search' }));
   expect(screen.queryByRole('searchbox', { name: 'Search topic titles' })).toBeNull();
   expect(screen.getAllByRole('complementary', { name: 'Topic list panel' })).toHaveLength(2);
+});
+
+it('keeps Home selected and reveals the source folder when opening a Home topic', () => {
+  render(<HomePinnedWorkspaceHarness />);
+
+  const folderColumn = screen.getAllByRole('tree', { name: 'Topic list' })[0]!;
+  expect(within(folderColumn).getByRole('treeitem', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+  expect(within(folderColumn).queryByRole('treeitem', { name: 'Child Folder' })).toBeNull();
+
+  const contentColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+  fireEvent.click(within(contentColumn).getByRole('treeitem', { name: 'Topic A' }));
+
+  expect(within(folderColumn).getByRole('treeitem', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+  expect(within(folderColumn).getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('aria-expanded', 'true');
+  expect(within(folderColumn).getByRole('treeitem', { name: 'Child Folder' })).toHaveAttribute('data-node-location-highlight', 'true');
+  expect(within(contentColumn).getByRole('treeitem', { name: 'Topic A' })).toHaveAttribute('aria-current', 'page');
 });
 
 it('renders external folders in the left section and only documents in the right list', () => {

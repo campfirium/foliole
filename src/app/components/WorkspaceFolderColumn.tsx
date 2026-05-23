@@ -20,6 +20,8 @@ interface WorkspaceFolderColumnProps {
   isExternalViewOpen: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
+  forceExpandedFolderId?: string | null;
+  highlightedFolderId?: string | null;
   folderNodeOrder: string[];
   folderNodesById: WorkspaceListNodesById;
   folderTopicCountById: ReadonlyMap<string, number>;
@@ -49,6 +51,8 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
   return (
     <NodeListTree
       activeNodeId={getActiveFolderSelectionId(props)}
+      forceExpandedNodeId={props.forceExpandedFolderId ?? null}
+      highlightedNodeId={props.highlightedFolderId ?? null}
       isSelectionScopeActive={!props.isVirtualViewOpen && !props.isExternalViewOpen}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}

@@ -75,3 +75,28 @@ it('uses Home as the entity root without reparenting Inbox in source data', () =
     )
   ).toEqual(['topic-inbox', 'topic-a', 'topic-nested']);
 });
+
+it('keeps the Home column active while revealing the selected topic folder', () => {
+  const nodesById: WorkspaceListNodesById = {
+    [HOME_NODE_ID]: createNode({ id: HOME_NODE_ID, kind: 'folder', specialKind: 'home', title: 'Home' }),
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
+    'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+    'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-a', title: 'Topic A' })
+  };
+
+  const { result } = renderHook(() =>
+    useWorkspaceDualListState({
+      activeNodeId: 'topic-a',
+      preferredFolderColumnId: HOME_NODE_ID,
+      isTrashViewOpen: false,
+      listNodesById: nodesById,
+      nodeOrder: [HOME_NODE_ID, INBOX_NODE_ID, 'folder-a', 'topic-a'],
+      trashedNodeIds: []
+    })
+  );
+
+  expect(result.current.activeFolderColumnId).toBe(HOME_NODE_ID);
+  expect(result.current.activeFolderId).toBe(HOME_NODE_ID);
+  expect(result.current.revealFolderId).toBe('folder-a');
+  expect(result.current.topicNodeOrder).toEqual(['topic-a']);
+});

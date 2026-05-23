@@ -29,6 +29,7 @@ interface NodeListTreeContentProps {
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
   dismissNode: (nodeId: string, now?: string) => boolean;
+  highlightedNodeId: string | null;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   moveNodes: (
@@ -84,6 +85,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         createVirtualNode={props.createVirtualNode}
         deleteNodesPermanently={props.deleteNodesPermanently}
         deleteStatusLabel={props.deleteStatusLabel}
+        highlightedNodeId={props.highlightedNodeId}
         isTrashViewOpen={props.isTrashViewOpen}
         isVirtualViewOpen={props.isVirtualViewOpen}
         moveNodes={props.moveNodes}

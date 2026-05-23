@@ -22,6 +22,7 @@ export interface NodeTreeRowButtonProps {
   isBulkSelectionActive: boolean;
   isCollapsed: boolean;
   isDerived: boolean;
+  isHighlighted: boolean;
   isMuted: boolean;
   mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
@@ -49,6 +50,7 @@ export function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
     depth: props.depth,
     isBulkSelectionActive: props.isBulkSelectionActive,
     isDerived: props.isDerived,
+    isHighlighted: props.isHighlighted,
     isSelected: props.isSelected
   });
   const handlers = createNodeTreeRowButtonHandlers(
@@ -68,6 +70,7 @@ export function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
     isBulkSelectionActive: props.isBulkSelectionActive,
     isCollapsed: props.isCollapsed,
     isDerived: props.isDerived,
+    isHighlighted: props.isHighlighted,
     isMuted: props.isMuted,
     label: props.label,
     mutedOpacity: props.mutedOpacity,

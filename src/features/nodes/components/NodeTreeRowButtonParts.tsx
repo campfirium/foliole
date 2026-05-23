@@ -60,6 +60,26 @@ function renderRowCount(descendantCount: number) {
   );
 }
 
+function resolveNodeTreeRowDataAttributes(props: {
+  isBulkSelectionActive: boolean;
+  isDerived: boolean;
+  isHighlighted: boolean;
+  isMuted: boolean;
+  nodeId: string;
+  rowSpacing: number;
+  treeItemState: { 'aria-selected': boolean };
+}) {
+  return {
+    'data-node-bulk-selected': props.isBulkSelectionActive && props.treeItemState['aria-selected'] ? 'true' : undefined,
+    'data-node-derived': props.isDerived ? 'true' : 'false',
+    'data-node-emphasis': props.isDerived ? 'secondary' : 'primary',
+    'data-node-id': props.nodeId,
+    'data-node-location-highlight': props.isHighlighted ? 'true' : undefined,
+    'data-node-row-spacing': String(props.rowSpacing),
+    'data-node-visibility': props.isMuted ? 'muted' : 'normal'
+  };
+}
+
 export function renderNodeTreeRowContent(props: {
   descendantCount: number;
   isMuted: boolean;
@@ -127,6 +147,7 @@ export function renderNodeTreeRowButtonSurface(props: {
   isBulkSelectionActive: boolean;
   isCollapsed: boolean;
   isDerived: boolean;
+  isHighlighted: boolean;
   isMuted: boolean;
   label: string;
   nodeIconKind: NodeTreeRowIconKind;
@@ -154,12 +175,7 @@ export function renderNodeTreeRowButtonSurface(props: {
       aria-setsize={props.ariaSetSize}
       {...props.treeItemState}
       className={props.buttonClassName}
-      data-node-derived={props.isDerived ? 'true' : 'false'}
-      data-node-emphasis={props.isDerived ? 'secondary' : 'primary'}
-      data-node-id={props.nodeId}
-      data-node-bulk-selected={props.isBulkSelectionActive && props.treeItemState['aria-selected'] ? 'true' : undefined}
-      data-node-row-spacing={String(props.rowSpacing)}
-      data-node-visibility={props.isMuted ? 'muted' : 'normal'}
+      {...resolveNodeTreeRowDataAttributes(props)}
       id={`node-treeitem-${props.nodeId}`}
       onClick={props.handlers.onClick}
       onContextMenu={props.handlers.onContextMenu}
