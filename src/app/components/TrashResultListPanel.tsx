@@ -13,7 +13,6 @@ import { buildFlatNodeRows } from '../../features/nodes/model/nodeTree';
 import { filterTrashRootIdsByTitle, selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
-import { selectCanonicalWorkspaceMembershipView } from '../../store/workspaceCanonicalSelectors';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
@@ -30,7 +29,7 @@ interface TrashResultListPanelProps {
 
 function useTrashRows(props: TrashResultListPanelProps, searchQuery: string) {
   const contentSort = useWorkspaceContentSort();
-  const deletedAtById = useWorkspaceStore((state) => selectCanonicalWorkspaceMembershipView(state).trashedNodeDeletedAtById);
+  const deletedAtById = useWorkspaceStore((state) => state.trashedNodeDeletedAtById);
   const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['deletedAt', 'name']);
   const rows = useMemo(() => {
     const rootIds = selectTrashRootIds(props.nodeOrder, props.nodesById, props.trashedNodeIds);
