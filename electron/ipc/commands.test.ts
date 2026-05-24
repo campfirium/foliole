@@ -160,7 +160,7 @@ it('handles soft delete node command', async () => {
         deletedAt: '2026-03-06T00:00:00.000Z'
       }
     })
-  ).resolves.toBeNull();
+  ).resolves.toEqual({ deletedNodeIds: ['node-1', 'node-2'] });
 
   expect(softDeleteNodes).toHaveBeenCalledWith({
     nodeIds: ['node-1', 'node-2'],
@@ -192,7 +192,7 @@ it('handles permanent delete node command', async () => {
         nodeOrder: ['node-1', 'node-2']
       }
     })
-  ).resolves.toBeNull();
+  ).resolves.toEqual({ nodeOrder: ['node-1', 'node-2'], removedNodeIds: ['node-3'] });
 
   expect(deleteNodesPermanently).toHaveBeenCalledWith({
     nodeIds: ['node-3'],

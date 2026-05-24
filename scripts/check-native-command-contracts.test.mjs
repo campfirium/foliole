@@ -53,7 +53,9 @@ async function writeBaseFixture(repoRoot, overrides = {}) {
     'nativeExternalSearchCommandMap.ts',
     'nativeImportCommandMap.ts',
     'nativeReadwiseCommandMap.ts',
+    'nativeRemoteImageCommandMap.ts',
     'nativeSyncCommandMap.ts',
+    'nativeTrashCommandMap.ts',
     'nativeUtilityCommandMap.ts'
   ]) {
     await writeFixtureFile(repoRoot, `lib/platform/${file}`, '');

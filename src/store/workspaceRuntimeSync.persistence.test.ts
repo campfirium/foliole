@@ -19,11 +19,14 @@ function expectNoWorkspacePersist(invoke: ReturnType<typeof vi.fn>) {
 }
 
 describe('workspaceRuntimeSync persistence mutations', () => {
-  it('syncs soft delete mutations through soft_delete_nodes command', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
+  it('syncs soft delete mutations through soft_delete_nodes command', async () => {
+    const invoke = vi.fn().mockResolvedValue({ deletedNodeIds: ['node-1', 'node-2'] });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    syncSoftDeleteNodesToRuntime({ nodeIds: ['node-1', 'node-2'], deletedAt: '2026-03-06T00:00:00.000Z' });
+    await expect(syncSoftDeleteNodesToRuntime({
+      nodeIds: ['node-1', 'node-2'],
+      deletedAt: '2026-03-06T00:00:00.000Z'
+    })).resolves.toEqual({ deletedNodeIds: ['node-1', 'node-2'] });
 
     expect(invoke).toHaveBeenCalledWith('soft_delete_nodes', {
       nodeIds: ['node-1', 'node-2'],
@@ -59,11 +62,14 @@ describe('workspaceRuntimeSync persistence mutations', () => {
     expect(invoke).toHaveBeenCalledWith('restore_nodes', { nodeIds: ['node-1'] });
   });
 
-  it('syncs permanent delete mutations through delete_nodes_permanently command', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
+  it('syncs permanent delete mutations through delete_nodes_permanently command', async () => {
+    const invoke = vi.fn().mockResolvedValue({ nodeOrder: ['node-1', 'node-2'], removedNodeIds: ['node-3'] });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    syncDeleteNodesPermanentlyToRuntime({ nodeIds: ['node-3'], nodeOrder: ['node-1', 'node-2'] });
+    await expect(syncDeleteNodesPermanentlyToRuntime({
+      nodeIds: ['node-3'],
+      nodeOrder: ['node-1', 'node-2']
+    })).resolves.toEqual({ nodeOrder: ['node-1', 'node-2'], removedNodeIds: ['node-3'] });
 
     expect(invoke).toHaveBeenCalledWith('delete_nodes_permanently', {
       nodeIds: ['node-3'],
@@ -71,7 +77,9 @@ describe('workspaceRuntimeSync persistence mutations', () => {
     });
     expectNoWorkspacePersist(invoke);
   });
+});
 
+describe('workspaceRuntimeSync reading persistence mutations', () => {
   it('syncs reading progress through save_reading_progress command', () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);

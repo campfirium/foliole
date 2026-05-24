@@ -145,13 +145,16 @@ function buildDeleteNodePatch(args: {
   };
 }
 
-export function computeDeleteNodesMutation(state: WorkspaceState, nodeIds: string[]): DeleteNodeMutationResult | null {
+export function computeDeleteNodesMutation(
+  state: WorkspaceState,
+  nodeIds: string[],
+  deletedAt = new Date().toISOString()
+): DeleteNodeMutationResult | null {
   const targetNodeIds = collectRootDeleteTargets(state, nodeIds, false);
   if (targetNodeIds.length === 0) {
     return null;
   }
 
-  const deletedAt = new Date().toISOString();
   const nextNodesById = { ...state.nodesById };
   const parentNodesToSync = new Map<string, Node>();
   const deletedNodeIds = collectDeletedNodeIds(targetNodeIds, state.nodesById);

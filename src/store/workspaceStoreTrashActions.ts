@@ -5,9 +5,14 @@ import { createTopicDeleteHistoryPatch } from './workspaceDeleteActionHistory';
 import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
 import { findLiveImageClozeChildNodeIds } from './workspaceImageClozeRegionDeleteTargets';
 import type { WorkspaceState } from './workspaceStore';
-import { createRestoreNodeAction, type RestoreNodeRuntimeHandlers } from './workspaceStoreRestoreAction';
+import { createRestoreNodeAction } from './workspaceStoreRestoreAction';
 import { computeDeleteNodesMutation, computeDeleteNodesPermanentlyMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
 import { collectDeleteActionTargets } from './workspaceTrashMutationTargets';
+import {
+  commitPermanentDeleteMutation,
+  commitSoftDeleteMutation,
+  type TrashRuntimeHandlers
+} from './workspaceTrashRuntimeCommit';
 
 type WorkspaceSet = (
   partial:
@@ -26,50 +31,26 @@ type WorkspaceTrashActions = Pick<
   | 'deleteNodesPermanently'
 >;
 
-interface TrashRuntimeHandlers {
-  syncNodeContent: (node: WorkspaceState['nodesById'][string], position?: number) => void;
-  syncSoftDeleteNodes: (payload: { nodeIds: string[]; deletedAt: string }) => void;
-  syncRestoreNodes: RestoreNodeRuntimeHandlers['syncRestoreNodes'];
-  syncDeleteNodesPermanently: (payload: { nodeIds: string[]; nodeOrder: string[] }) => void;
-}
-
-function syncDeleteMutation(runtimeHandlers: TrashRuntimeHandlers, mutation: DeleteNodeMutationResult | null) {
-  if (!mutation || mutation.nodeIds.length === 0) {
-    return;
-  }
-  for (const parentNode of mutation.parentNodesToSync) {
-    runtimeHandlers.syncNodeContent(parentNode);
-  }
-  runtimeHandlers.syncSoftDeleteNodes({
-    nodeIds: mutation.nodeIds,
-    deletedAt: mutation.deletedAt
-  });
-}
-
-function syncPermanentDeleteMutation(runtimeHandlers: TrashRuntimeHandlers, mutation: DeleteNodeMutationResult | null) {
-  if (!mutation || mutation.nodeIds.length === 0 || !mutation.nodeOrder) {
-    return;
-  }
-  for (const parentNode of mutation.parentNodesToSync) {
-    runtimeHandlers.syncNodeContent(parentNode);
-  }
-  runtimeHandlers.syncDeleteNodesPermanently({
-    nodeIds: mutation.nodeIds,
-    nodeOrder: mutation.nodeOrder
-  });
-}
-
 function createDeleteNodesAction(
   set: WorkspaceSet,
   runtimeHandlers: TrashRuntimeHandlers
 ): WorkspaceTrashActions['deleteNodes'] {
-  return (nodeIds) => {
+  return async (nodeIds) => {
     let mutation: DeleteNodeMutationResult | null = null;
     set((state) => {
       mutation = computeDeleteNodesMutation(state, nodeIds);
-      return mutation ? createTopicDeleteHistoryPatch(state, mutation) : state;
+      return state;
     });
-    syncDeleteMutation(runtimeHandlers, mutation);
+    const pendingMutation = mutation as DeleteNodeMutationResult | null;
+    const deletedAt = pendingMutation?.deletedAt;
+    const result = await commitSoftDeleteMutation(runtimeHandlers, pendingMutation);
+    set((state) => {
+      if (!pendingMutation || !deletedAt || !result) {
+        return state;
+      }
+      const committedMutation = computeDeleteNodesMutation(state, result.deletedNodeIds, deletedAt);
+      return committedMutation ? createTopicDeleteHistoryPatch(state, committedMutation) : state;
+    });
   };
 }
 
@@ -108,11 +89,31 @@ function reconcileExplicitImageRegionRemoval(
   };
 }
 
+function createCommittedImageRegionDeletePatch(args: {
+  deletedAt: string;
+  deletedNodeIds: string[];
+  mutation: DeleteNodeMutationResult;
+  parentNodeId: string;
+  state: WorkspaceState;
+}) {
+  const committedMutation = args.deletedNodeIds.every((nodeId) => args.mutation.nodeIds.includes(nodeId))
+    ? args.mutation
+    : computeDeleteNodesMutation(args.state, args.deletedNodeIds, args.deletedAt);
+  if (!committedMutation) {
+    return args.state;
+  }
+  const entry = createEditorAnnotationDeleteEntry(args.state, committedMutation.nodeIds, args.parentNodeId);
+  return {
+    ...committedMutation.patch,
+    ...(entry ? { editorOperationHistory: pushEditorOperationEntry(args.state.editorOperationHistory, entry) } : {})
+  };
+}
+
 function createDeleteImageClozeRegionAction(
   set: WorkspaceSet,
   runtimeHandlers: TrashRuntimeHandlers
 ): WorkspaceTrashActions['deleteImageClozeRegion'] {
-  return (parentNodeId, attachmentId, regionId) => {
+  return async (parentNodeId, attachmentId, regionId) => {
     let mutation: DeleteNodeMutationResult | null = null;
     let updatedParentNode: WorkspaceState['nodesById'][string] | null = null;
 
@@ -123,15 +124,7 @@ function createDeleteImageClozeRegionAction(
         if (mutation) {
           mutation = reconcileExplicitImageRegionRemoval(mutation, parentNodeId, attachmentId, regionId);
         }
-        const entry = mutation ? createEditorAnnotationDeleteEntry(state, mutation.nodeIds, parentNodeId) : null;
-        return mutation
-          ? {
-              ...mutation.patch,
-              ...(entry
-                ? { editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, entry) }
-                : {})
-            }
-          : state;
+        return state;
       }
 
       const parentNode = state.nodesById[parentNodeId];
@@ -155,8 +148,22 @@ function createDeleteImageClozeRegionAction(
       };
     });
 
-    if (mutation) {
-      syncDeleteMutation(runtimeHandlers, mutation);
+    const pendingMutation = mutation as DeleteNodeMutationResult | null;
+    if (pendingMutation) {
+      const deletedAt = pendingMutation.deletedAt;
+      const result = await commitSoftDeleteMutation(runtimeHandlers, pendingMutation);
+      set((state) => {
+        if (!pendingMutation || !result) {
+          return state;
+        }
+        return createCommittedImageRegionDeletePatch({
+          deletedAt,
+          deletedNodeIds: result.deletedNodeIds,
+          mutation: pendingMutation,
+          parentNodeId,
+          state
+        });
+      });
       return;
     }
     if (updatedParentNode) {
@@ -169,13 +176,21 @@ function createDeleteNodesPermanentlyAction(
   set: WorkspaceSet,
   runtimeHandlers: TrashRuntimeHandlers
 ): WorkspaceTrashActions['deleteNodesPermanently'] {
-  return (nodeIds) => {
+  return async (nodeIds) => {
     let mutation: DeleteNodeMutationResult | null = null;
     set((state) => {
       mutation = computeDeleteNodesPermanentlyMutation(state, collectDeleteActionTargets(state, nodeIds));
-      return mutation ? mutation.patch : state;
+      return state;
     });
-    syncPermanentDeleteMutation(runtimeHandlers, mutation);
+    const result = await commitPermanentDeleteMutation(runtimeHandlers, mutation);
+    set((state) => {
+      const committedNodeIds = result?.removedNodeIds ?? [];
+      if (committedNodeIds.length === 0) {
+        return state;
+      }
+      const committedMutation = computeDeleteNodesPermanentlyMutation(state, committedNodeIds);
+      return committedMutation ? committedMutation.patch : state;
+    });
   };
 }
 

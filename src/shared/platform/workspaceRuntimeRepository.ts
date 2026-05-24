@@ -5,6 +5,12 @@ import { refreshRuntimeRemovedSources } from './removedSourcesRuntimeRepository'
 import { isDesktopRuntime } from './runtime';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
+import {
+  isDeleteNodesPermanentlyResult,
+  isRestoreNodesResult,
+  isSoftDeleteNodesResult,
+  logWorkspaceRuntimeMutationError
+} from './workspaceRuntimeMutationResults';
 export { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 export { replayPendingWorkspaceNodeSync } from './workspacePendingNodeReplay';
 export {
@@ -18,8 +24,10 @@ import type {
   WorkspaceReadingProgressSavePayload,
   WorkspaceReadingProgressSnapshot,
   WorkspaceRelearnNodePayload,
+  WorkspaceDeleteNodesPermanentlyResult,
   WorkspaceRestoreNodesResult,
   WorkspaceReviewGradeSyncPayload,
+  WorkspaceSoftDeleteNodesResult,
   WorkspaceRuntimeSnapshot
 } from './workspaceRuntimeTypes';
 
@@ -27,8 +35,6 @@ type FireAndForgetRuntimeCommand = Extract<
   NativeCommandName,
   | typeof NATIVE_COMMANDS.relearnNode
   | typeof NATIVE_COMMANDS.replaceNodeOrder
-  | typeof NATIVE_COMMANDS.softDeleteNodes
-  | typeof NATIVE_COMMANDS.deleteNodesPermanently
   | typeof NATIVE_COMMANDS.saveReadingProgress
 >;
 
@@ -125,19 +131,6 @@ export function saveWorkspaceRelearnNode(payload: WorkspaceRelearnNodePayload) {
   runFireAndForgetRuntimeSync(NATIVE_COMMANDS.relearnNode, payload, 'sync_relearn_node');
 }
 
-export function softDeleteWorkspaceNodes(payload: { nodeIds: string[]; deletedAt: string }) {
-  runFireAndForgetRuntimeSync(NATIVE_COMMANDS.softDeleteNodes, payload, 'sync_soft_delete_nodes');
-}
-
-function isRestoreNodesResult(value: unknown): value is WorkspaceRestoreNodesResult {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      Array.isArray((value as WorkspaceRestoreNodesResult).restoredNodeIds) &&
-      Array.isArray((value as WorkspaceRestoreNodesResult).skippedConflicts)
-  );
-}
-
 export async function restoreWorkspaceNodes(payload: { nodeIds: string[] }): Promise<WorkspaceRestoreNodesResult | undefined> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -147,24 +140,53 @@ export async function restoreWorkspaceNodes(payload: { nodeIds: string[] }): Pro
     const result = await runtimeInvoke(NATIVE_COMMANDS.restoreNodes, payload);
     return isRestoreNodesResult(result) ? result : undefined;
   } catch (error) {
-    logRuntimeError('runtime sync failed', {
-      area: 'native',
-      action: 'sync_restore_nodes',
-      command: NATIVE_COMMANDS.restoreNodes,
-      fallback: 'none',
-      error
-    });
+    logWorkspaceRuntimeMutationError('sync_restore_nodes', NATIVE_COMMANDS.restoreNodes, error);
     return undefined;
   }
 }
 
-export function deleteWorkspaceNodesPermanently(payload: { nodeIds: string[]; nodeOrder: string[] }) {
-  runFireAndForgetRuntimeSync(
-    NATIVE_COMMANDS.deleteNodesPermanently,
-    payload,
-    'sync_delete_nodes_permanently',
-    refreshRuntimeRemovedSources
-  );
+export async function softDeleteWorkspaceNodes(
+  payload: { nodeIds: string[]; deletedAt: string }
+): Promise<WorkspaceSoftDeleteNodesResult | undefined> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return undefined;
+  }
+  try {
+    const result = await runtimeInvoke(NATIVE_COMMANDS.softDeleteNodes, payload);
+    return isSoftDeleteNodesResult(result) ? result : undefined;
+  } catch (error) {
+    logWorkspaceRuntimeMutationError('sync_soft_delete_nodes', NATIVE_COMMANDS.softDeleteNodes, error);
+    return undefined;
+  }
+}
+
+export async function deleteWorkspaceNodesPermanently(
+  payload: { nodeIds: string[]; nodeOrder: string[] }
+): Promise<WorkspaceDeleteNodesPermanentlyResult | undefined> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return undefined;
+  }
+  try {
+    const result = await runtimeInvoke(NATIVE_COMMANDS.deleteNodesPermanently, payload);
+    if (isDeleteNodesPermanentlyResult(result)) {
+      await refreshRuntimeRemovedSources().catch((error) => {
+        logRuntimeError('runtime post-sync refresh failed', {
+          area: 'native',
+          action: 'sync_delete_nodes_permanently_post_refresh',
+          command: NATIVE_COMMANDS.deleteNodesPermanently,
+          fallback: 'keep_cached',
+          error
+        });
+      });
+      return result;
+    }
+    return undefined;
+  } catch (error) {
+    logWorkspaceRuntimeMutationError('sync_delete_nodes_permanently', NATIVE_COMMANDS.deleteNodesPermanently, error);
+    return undefined;
+  }
 }
 
 export function saveWorkspaceReadingProgress(payload: WorkspaceReadingProgressSavePayload) {

@@ -25,3 +25,12 @@ export interface NativeRestoreNodesResult {
     trashNodeId: string;
   }>;
 }
+
+export interface NativeSoftDeleteNodesResult {
+  deletedNodeIds: string[];
+}
+
+export interface NativeDeleteNodesPermanentlyResult {
+  nodeOrder: string[];
+  removedNodeIds: string[];
+}
