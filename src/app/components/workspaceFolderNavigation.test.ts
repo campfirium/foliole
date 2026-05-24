@@ -111,6 +111,44 @@ it('ignores trashed nodes when resolving the folder and topic columns', () => {
   expect(collectTopicColumnNodeIds('folder-case', nodeOrder, nodesById, ['topic-case-child'])).toEqual(['topic-case']);
 });
 
+it('uses lifecycle facts over stale trash projection in folder and topic columns', () => {
+  const nodeOrder = [INBOX_NODE_ID, 'folder-restored', 'topic-restored', 'topic-deleted'];
+  const nodesById: WorkspaceListNodesById = {
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
+    'folder-restored': {
+      ...createNode({ id: 'folder-restored', kind: 'folder', title: 'Restored' }),
+      deletedAt: null
+    } as NonNullable<WorkspaceListNodesById[string]>,
+    'topic-deleted': {
+      ...createNode({
+        id: 'topic-deleted',
+        kind: 'topic',
+        parentNodeId: 'folder-restored',
+        title: 'Deleted topic'
+      }),
+      deletedAt: '2026-05-24T00:00:00.000Z'
+    } as NonNullable<WorkspaceListNodesById[string]>,
+    'topic-restored': {
+      ...createNode({
+        id: 'topic-restored',
+        kind: 'topic',
+        parentNodeId: 'folder-restored',
+        title: 'Restored topic'
+      }),
+      deletedAt: null
+    } as NonNullable<WorkspaceListNodesById[string]>
+  };
+
+  expect(buildFolderNavigationNodeOrder(nodeOrder, nodesById, ['folder-restored', 'topic-restored'])).toEqual([
+    INBOX_NODE_ID,
+    'folder-restored',
+    TRASH_NODE_ID
+  ]);
+  expect(collectTopicColumnNodeIds('folder-restored', nodeOrder, nodesById, ['topic-restored'])).toEqual([
+    'topic-restored'
+  ]);
+});
+
 it('pins trash to the end of the folder navigation', () => {
   const nodeOrder = [INBOX_NODE_ID, 'folder-b', 'folder-a'];
   const nodesById: WorkspaceListNodesById = {

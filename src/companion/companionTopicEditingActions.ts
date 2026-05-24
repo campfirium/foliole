@@ -1,6 +1,7 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncObjects';
+import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
 
 import {
   canonicalCompanionNodePayload,
@@ -19,8 +20,7 @@ function isEditableTopic(snapshot: WorkspaceSnapshot, node: WorkspaceNodeSnapsho
   return Boolean(
     node &&
     node.kind === 'topic' &&
-    !node.deletedAt &&
-    !snapshot.trashedNodeIds.includes(node.id)
+    isCanonicalVisibleNodeId(snapshot, node.id)
   );
 }
 

@@ -1,26 +1,18 @@
+import { isCanonicalTrashedNodeId } from '../../../shared/workspaceCanonicalSelectors';
+
 import type { Node } from './nodeTypes';
 import type { WorkspaceListNode, WorkspaceListNodesById } from './workspaceListNode';
 
-type TrashNode = Pick<Node | WorkspaceListNode, 'id' | 'parentNodeId' | 'title'>;
+type TrashNode = Pick<Node | WorkspaceListNode, 'id' | 'parentNodeId' | 'title'> & {
+  deletedAt?: string | null;
+};
 
-function createTrashedNodeSet(trashedNodeIds: readonly string[]) {
-  return new Set(trashedNodeIds);
-}
-
-function resolveTrashRootIdFromSet(
+function isTrashedNode(
   nodeId: string,
   nodesById: Record<string, TrashNode | undefined>,
-  trashedNodeSet: ReadonlySet<string>
+  trashedNodeIds: readonly string[]
 ) {
-  if (!trashedNodeSet.has(nodeId)) return null;
-
-  let rootId = nodeId;
-  let current = nodesById[nodeId];
-  while (current?.parentNodeId && trashedNodeSet.has(current.parentNodeId)) {
-    rootId = current.parentNodeId;
-    current = nodesById[current.parentNodeId];
-  }
-  return rootId;
+  return isCanonicalTrashedNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, nodeId);
 }
 
 export function resolveTrashRootId(
@@ -28,7 +20,15 @@ export function resolveTrashRootId(
   nodesById: Record<string, TrashNode | undefined>,
   trashedNodeIds: readonly string[]
 ) {
-  return resolveTrashRootIdFromSet(nodeId, nodesById, createTrashedNodeSet(trashedNodeIds));
+  if (!isTrashedNode(nodeId, nodesById, trashedNodeIds)) return null;
+
+  let rootId = nodeId;
+  let current = nodesById[nodeId];
+  while (current?.parentNodeId && isTrashedNode(current.parentNodeId, nodesById, trashedNodeIds)) {
+    rootId = current.parentNodeId;
+    current = nodesById[current.parentNodeId];
+  }
+  return rootId;
 }
 
 export function selectTrashRootIds(
@@ -37,9 +37,8 @@ export function selectTrashRootIds(
   trashedNodeIds: readonly string[]
 ) {
   const rootIds = new Set<string>();
-  const trashedNodeSet = createTrashedNodeSet(trashedNodeIds);
   for (const nodeId of nodeOrder) {
-    if (resolveTrashRootIdFromSet(nodeId, nodesById, trashedNodeSet) === nodeId) {
+    if (resolveTrashRootId(nodeId, nodesById, trashedNodeIds) === nodeId) {
       rootIds.add(nodeId);
     }
   }
@@ -62,10 +61,9 @@ export function filterTrashRootIdsByTitle(
 
   const rootIdSet = new Set(rootIds);
   const matchingRootIds = new Set<string>();
-  const trashedNodeSet = createTrashedNodeSet(trashedNodeIds);
   for (const nodeId of nodeOrder) {
     if (!matchesQuery(nodesById[nodeId], normalizedQuery)) continue;
-    const rootId = resolveTrashRootIdFromSet(nodeId, nodesById, trashedNodeSet);
+    const rootId = resolveTrashRootId(nodeId, nodesById, trashedNodeIds);
     if (rootId && rootIdSet.has(rootId)) {
       matchingRootIds.add(rootId);
     }

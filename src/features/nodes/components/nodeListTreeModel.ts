@@ -1,16 +1,15 @@
 import type { ReactNode } from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 import { onWindowEscape } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
-import { buildNodeTree } from '../model/nodeTree';
-import { VIRTUAL_ROOT_NODE_ID, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
-import { selectTrashRootIds } from '../model/trashRootModel';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { useCollapsedNodeState } from './NodeListCollapseState';
+import { useNodeSelectionHandler } from './NodeListSelection';
+import { useNodeListTreeData, type NodeListTreeData } from './NodeListTreeData';
 import { useNodeCollapseControls, useNodeListContextMenu } from './NodeListTreeHooks';
-import { useNodeListState, useNodeSelectionHandler } from './NodeListTreeState';
+import { useNodeListState } from './NodeListTreeState';
 
 export interface NodeListTreeProps {
   activeNodeId: string | null;
@@ -36,16 +35,6 @@ export interface NodeListTreeRuntimeState {
   reviewSession: ReviewSessionState;
 }
 
-interface NodeListTreeData {
-  noteTreeBuildDurationMs: number;
-  noteParentById: Record<string, string | null>;
-  noteRowsAll: ReturnType<typeof buildNodeTree>['rows'];
-  trashTreeBuildDurationMs: number;
-  trashRowsAll: ReturnType<typeof buildNodeTree>['rows'];
-  virtualTreeBuildDurationMs: number;
-  virtualRowsAll: ReturnType<typeof buildNodeTree>['rows'];
-}
-
 function useNodeWorkspaceActions() {
   return {
     createChildNode: useWorkspaceStore((state) => state.createChildNode),
@@ -66,52 +55,6 @@ function useNodeWorkspaceActions() {
   };
 }
 
-function measureBuiltTree(nodeIds: string[], nodesById: WorkspaceListNodesById) {
-  const startedAt = performance.now();
-  const tree = buildNodeTree(nodeIds, nodesById);
-  return { durationMs: performance.now() - startedAt, tree };
-}
-
-function useNodeListTreeData(
-  nodeOrder: string[],
-  nodesById: WorkspaceListNodesById,
-  trashedNodeIds: string[]
-): NodeListTreeData {
-  const virtualNodeOrder = useMemo(
-    () =>
-      nodeOrder.filter(
-        (id) =>
-          id === VIRTUAL_ROOT_NODE_ID ||
-          (!trashedNodeIds.includes(id) && isVirtualNode(nodesById[id]))
-      ),
-    [nodeOrder, nodesById, trashedNodeIds]
-  );
-  const visibleNodeOrder = useMemo(
-    () =>
-      nodeOrder.filter(
-        (id) => !trashedNodeIds.includes(id) && !isVirtualRootNode(nodesById[id]) && !isVirtualNode(nodesById[id])
-      ),
-    [nodeOrder, nodesById, trashedNodeIds]
-  );
-  const trashedNodeOrder = useMemo(
-    () => selectTrashRootIds(nodeOrder, nodesById, trashedNodeIds),
-    [nodeOrder, nodesById, trashedNodeIds]
-  );
-  const noteTree = useMemo(() => measureBuiltTree(visibleNodeOrder, nodesById), [visibleNodeOrder, nodesById]);
-  const trashTree = useMemo(() => measureBuiltTree(trashedNodeOrder, nodesById), [trashedNodeOrder, nodesById]);
-  const virtualTree = useMemo(() => measureBuiltTree(virtualNodeOrder, nodesById), [virtualNodeOrder, nodesById]);
-
-  return {
-    noteParentById: noteTree.tree.parentById,
-    noteRowsAll: noteTree.tree.rows,
-    noteTreeBuildDurationMs: noteTree.durationMs,
-    trashRowsAll: trashTree.tree.rows,
-    trashTreeBuildDurationMs: trashTree.durationMs,
-    virtualRowsAll: virtualTree.tree.rows,
-    virtualTreeBuildDurationMs: virtualTree.durationMs
-  };
-}
-
 function useNodeListTreeControllers(args: {
   activeNodeId: string | null;
   collapsedState: ReturnType<typeof useCollapsedNodeState>;
@@ -122,15 +65,16 @@ function useNodeListTreeControllers(args: {
   selectedTrashNodeId: string | null;
   state: ReturnType<typeof useNodeListState>;
   trashedNodeIds: string[];
-  trashRowsAll: ReturnType<typeof buildNodeTree>['rows'];
+  trashRowsAll: NodeListTreeData['trashRowsAll'];
 }) {
-  const contextMenu = useNodeListContextMenu(args.state.selectedNodeIds, args.trashedNodeIds);
+  const contextMenu = useNodeListContextMenu(args.nodesById, args.state.selectedNodeIds, args.trashedNodeIds);
   const collapse = useNodeCollapseControls({
     collapseAllNotes: args.collapsedState.collapseAllNotes,
     expandNoteCollapse: args.collapsedState.expandNoteCollapse,
     expandAllNotes: args.collapsedState.expandAllNotes,
     hasCollapsibleNotes: args.collapsedState.hasCollapsibleNotes,
     hasCollapsedNotes: args.collapsedState.hasCollapsedNotes,
+    nodesById: args.nodesById,
     setCollapsedTrashNodeIdList: args.collapsedState.setCollapsedTrashNodeIdList,
     toggleNoteCollapse: args.collapsedState.toggleNoteCollapse,
     trashRowsAll: args.trashRowsAll,

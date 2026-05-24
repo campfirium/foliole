@@ -75,7 +75,7 @@ function normalizeNodesById<TNode extends WorkspaceSnapshotNodeContract>(
       continue;
     }
     const legacyDeletedAt = deletedAtById?.[nodeId];
-    normalizedNodesById[nodeId] = legacyDeletedAt && !hasDeletedFact(node)
+    normalizedNodesById[nodeId] = legacyDeletedAt && node.deletedAt === undefined
       ? { ...node, deletedAt: legacyDeletedAt }
       : node;
   }

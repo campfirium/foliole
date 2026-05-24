@@ -102,7 +102,7 @@ export function useWorkspaceTopicTreeInteraction(args: {
     virtualRows: [],
     virtualRowsAll: []
   }), [args.rowIds, selection]);
-  const contextMenu = useNodeListContextMenu(selection.selectedNodeIds, []);
+  const contextMenu = useNodeListContextMenu(args.nodesById, selection.selectedNodeIds, []);
   const drag = useWorkspaceTopicTreeDrag({
     itemIds: args.rowIds,
     moveNodes: actions.moveNodes,

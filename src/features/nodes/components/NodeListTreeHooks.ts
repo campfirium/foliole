@@ -7,7 +7,9 @@ import {
   type SetStateAction
 } from 'react';
 
+import { isCanonicalTrashedNodeId } from '../../../shared/workspaceCanonicalSelectors';
 import type { NodeTreeRow } from '../model/nodeTree';
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 type MenuMode = 'notes' | 'trash' | 'notes-root' | null;
 
@@ -28,6 +30,7 @@ function getMenuPosition(event: ReactMouseEvent<HTMLElement>) {
 }
 
 export function useNodeListContextMenu(
+  nodesById: WorkspaceListNodesById,
   selectedNodeIds: string[],
   trashedNodeIds: string[]
 ): NodeListContextMenuController {
@@ -44,9 +47,9 @@ export function useNodeListContextMenu(
   const openContextMenu = useCallback((nodeId: string, event: ReactMouseEvent<HTMLElement>) => {
     event.preventDefault();
     setContextNodeId(nodeId);
-    setContextMenuMode(trashedNodeIds.includes(nodeId) ? 'trash' : 'notes');
+    setContextMenuMode(isCanonicalTrashedNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, nodeId) ? 'trash' : 'notes');
     setMenuPosition(getMenuPosition(event));
-  }, [trashedNodeIds]);
+  }, [nodesById, trashedNodeIds]);
 
   const openRootContextMenu = useCallback((event: ReactMouseEvent<HTMLElement>) => {
     event.preventDefault();
@@ -59,10 +62,12 @@ export function useNodeListContextMenu(
     if (!contextNodeId) return [];
     const inTrashMenu = contextMenuMode === 'trash';
     const scoped = selectedNodeIds.filter((id) =>
-      inTrashMenu ? trashedNodeIds.includes(id) : !trashedNodeIds.includes(id)
+      inTrashMenu
+        ? isCanonicalTrashedNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, id)
+        : !isCanonicalTrashedNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, id)
     );
     return scoped.includes(contextNodeId) ? scoped : [contextNodeId];
-  }, [contextMenuMode, contextNodeId, selectedNodeIds, trashedNodeIds]);
+  }, [contextMenuMode, contextNodeId, nodesById, selectedNodeIds, trashedNodeIds]);
 
   return { closeContextMenu, contextMenuMode, getContextTargets, menuPosition, openContextMenu, openRootContextMenu };
 }
@@ -84,6 +89,7 @@ interface UseNodeCollapseControlsInput {
   expandNoteCollapse: (nodeId: string) => void;
   setCollapsedTrashNodeIdList: Dispatch<SetStateAction<string[]>>;
   toggleNoteCollapse: (nodeId: string) => void;
+  nodesById: WorkspaceListNodesById;
   trashRowsAll: NodeTreeRow[];
   trashedNodeIds: string[];
 }
@@ -96,6 +102,7 @@ export function useNodeCollapseControls({
   hasCollapsedNotes,
   setCollapsedTrashNodeIdList,
   toggleNoteCollapse,
+  nodesById,
   trashRowsAll,
   trashedNodeIds
 }: UseNodeCollapseControlsInput): NodeListCollapseController {
@@ -107,7 +114,7 @@ export function useNodeCollapseControls({
   }, [setCollapsedTrashNodeIdList, trashRowsAll]);
 
   const toggleCollapse = useCallback((nodeId: string) => {
-    if (!trashedNodeIds.includes(nodeId)) {
+    if (!isCanonicalTrashedNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, nodeId)) {
       toggleNoteCollapse(nodeId);
       return;
     }
@@ -115,7 +122,7 @@ export function useNodeCollapseControls({
     setCollapsedTrashNodeIdList((prev) =>
       prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]
     );
-  }, [setCollapsedTrashNodeIdList, toggleNoteCollapse, trashedNodeIds]);
+  }, [nodesById, setCollapsedTrashNodeIdList, toggleNoteCollapse, trashedNodeIds]);
 
   return { collapseAllNotes, expandAllNotes, expandNoteCollapse, hasCollapsibleNotes, hasCollapsedNotes, toggleCollapse };
 }

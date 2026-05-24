@@ -54,6 +54,24 @@ it('hoists legacy trash timestamp maps onto nodes before deriving trash membersh
   expect(snapshot.trashedNodeIds).toEqual(['legacy-trash']);
 });
 
+it('does not hoist legacy trash timestamps over restored lifecycle facts', () => {
+  const snapshot = normalizeWorkspaceSnapshot({
+    activeNodeId: 'restored-node',
+    nodeOrder: ['restored-node'],
+    nodesById: {
+      'restored-node': createNode('restored-node', { deletedAt: null })
+    },
+    trashedNodeDeletedAtById: {
+      'restored-node': '2026-05-24T00:02:00.000Z'
+    },
+    trashedNodeIds: ['restored-node']
+  });
+
+  expect(snapshot.nodesById['restored-node']?.deletedAt).toBeNull();
+  expect(snapshot.nodeOrder).toEqual(['restored-node']);
+  expect(snapshot.trashedNodeIds).toEqual([]);
+});
+
 it('keeps bare legacy trash ids as derived membership without overriding restored lifecycle facts', () => {
   const snapshot = normalizeWorkspaceSnapshot({
     activeNodeId: 'legacy-trash',
@@ -62,6 +80,7 @@ it('keeps bare legacy trash ids as derived membership without overriding restore
       'legacy-trash': createNode('legacy-trash'),
       'restored-node': createNode('restored-node', { deletedAt: null })
     },
+    trashedNodeDeletedAtById: {},
     trashedNodeIds: ['legacy-trash', 'restored-node']
   });
 

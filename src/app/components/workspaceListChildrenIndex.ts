@@ -1,4 +1,5 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { isCanonicalVisibleNodeId } from '../../shared/workspaceCanonicalSelectors';
 
 export interface WorkspaceListChildrenIndex {
   orderIndexById: Map<string, number>;
@@ -15,11 +16,11 @@ export function buildWorkspaceListChildrenIndex(
   const orderIndexById = new Map<string, number>();
   const visibleChildrenByParent = new Map<string | null, string[]>();
   const visibleNodeIds: string[] = [];
-  const trashedNodeIdSet = new Set(trashedNodeIds);
+  const canonicalSource = { nodeOrder, nodesById, trashedNodeIds };
 
   nodeOrder.forEach((nodeId, index) => {
     orderIndexById.set(nodeId, index);
-    if (trashedNodeIdSet.has(nodeId)) return;
+    if (!isCanonicalVisibleNodeId(canonicalSource, nodeId)) return;
     const node = nodesById[nodeId];
     if (!node) return;
 

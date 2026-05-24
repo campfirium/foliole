@@ -3,6 +3,7 @@ import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSna
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncObjects';
 import {
+  isCanonicalTrashedNodeId,
   selectCanonicalTrashedNodeDeletedAtById,
   selectCanonicalTrashedNodeIds,
   selectCanonicalVisibleNodeIds
@@ -53,12 +54,12 @@ async function buildRestoredNodeVersion(node: WorkspaceNodeSnapshot, deviceId: s
 export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeArgs) {
   const snapshot = args.snapshot ? normalizeWorkspaceSnapshot(args.snapshot) : null;
   const node = snapshot?.nodesById[args.nodeId];
-  if (!snapshot || !node || !snapshot.trashedNodeIds.includes(args.nodeId)) {
+  if (!snapshot || !node || !isCanonicalTrashedNodeId(snapshot, args.nodeId)) {
     return null;
   }
   const restoredAt = new Date().toISOString();
   const subtreeIds = collectNodeSubtreeIds(args.nodeId, snapshot.nodesById)
-    .filter((nodeId) => snapshot.trashedNodeIds.includes(nodeId));
+    .filter((nodeId) => isCanonicalTrashedNodeId(snapshot, nodeId));
   const restorableNodes = subtreeIds
     .map((nodeId) => snapshot.nodesById[nodeId])
     .filter((node): node is NonNullable<typeof node> => Boolean(node));
