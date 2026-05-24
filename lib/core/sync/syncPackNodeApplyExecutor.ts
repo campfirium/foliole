@@ -1,3 +1,5 @@
+import { CORE_INDEX_SCHEMA_STATEMENTS } from '../database/coreIndexSchemaStatements.js';
+
 import type { DbPort } from './dbPort.js';
 import {
   buildSyncPackNodeAttachmentDeleteSql,
@@ -50,7 +52,35 @@ async function applySyncPackNodeRowsWithDbPort(
   port: DbPort,
   options: SyncPackNodeApplyOptions = {}
 ) {
-  await port.run(buildSyncPackNodeUpsertSql(options));
+  await dropNodeIndexes(port);
+  try {
+    await port.run(buildSyncPackNodeUpsertSql(options));
+  } finally {
+    await createNodeIndexes(port);
+  }
+}
+
+const NODE_INDEX_NAMES = [
+  'idx_nodes_parent_id',
+  'idx_nodes_dirty_or_unversioned_updated',
+  'idx_nodes_deleted_at',
+  'idx_nodes_body_blob_hash'
+] as const;
+
+const NODE_INDEX_SCHEMA_STATEMENTS = CORE_INDEX_SCHEMA_STATEMENTS.filter((statement) => (
+  NODE_INDEX_NAMES.some((indexName) => statement.includes(indexName))
+));
+
+async function dropNodeIndexes(port: DbPort) {
+  for (const indexName of NODE_INDEX_NAMES) {
+    await port.run(`DROP INDEX IF EXISTS ${indexName}`);
+  }
+}
+
+async function createNodeIndexes(port: DbPort) {
+  for (const statement of NODE_INDEX_SCHEMA_STATEMENTS) {
+    await port.run(statement);
+  }
 }
 
 async function pruneLearningRowsWithoutActiveNodes(port: DbPort) {

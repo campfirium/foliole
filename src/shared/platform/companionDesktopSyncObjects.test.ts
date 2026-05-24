@@ -48,9 +48,12 @@ async function testNoLegacyJsonStreams() {
   expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-objects'), expect.any(Object));
 }
 
-async function testFailsWhenStageNeverReturns() {
+async function testWaitsForExclusiveStructureApplyAfterTimeout() {
   vi.useFakeTimers();
-  syncBridgeMock.applyCompanionDesktopSyncPack.mockReturnValue(new Promise(() => undefined));
+  let resolvePack: ((result: { applied_blob_count: number; applied_object_count: number; to_state_seq: number }) => void) | null = null;
+  syncBridgeMock.applyCompanionDesktopSyncPack.mockReturnValue(new Promise((resolve) => {
+    resolvePack = resolve;
+  }));
 
   const {
     COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS,
@@ -61,12 +64,17 @@ async function testFailsWhenStageNeverReturns() {
   sync.finally(() => {
     settled = true;
   }).catch(() => undefined);
-  const assertion = expect(sync).rejects.toThrow('Desktop sync timed out while applying the structure pack.');
-  await vi.advanceTimersByTimeAsync(COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS - 1);
-  expect(settled).toBe(false);
-  await vi.advanceTimersByTimeAsync(1);
+  await vi.advanceTimersByTimeAsync(COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS);
 
-  await assertion;
+  expect(settled).toBe(false);
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).not.toHaveBeenCalled();
+  resolvePack?.({
+    applied_blob_count: 2,
+    applied_object_count: 3,
+    to_state_seq: 8
+  });
+  await expect(sync).resolves.toMatchObject({ appliedPackObjectCount: 3 });
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8);
   vi.useRealTimers();
 }
 
@@ -129,7 +137,7 @@ describe('companion desktop sync objects', () => {
 
   it('does not run legacy JSON state, topic, or review streams on the normal pull path', testNoLegacyJsonStreams);
 
-  it('fails instead of staying in sync when a desktop sync stage never returns', testFailsWhenStageNeverReturns);
+  it('waits for exclusive structure apply work instead of racing failure writes', testWaitsForExclusiveStructureApplyAfterTimeout);
 
   it('keeps structure sync timeout below a minute', testStructureTimeoutStaysBelowMinute);
 
