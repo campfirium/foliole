@@ -31,7 +31,15 @@ export function NodeTreeRowExpandToggle(props: {
   onToggleCollapse: (nodeId: string) => void;
 }) {
   if (!props.hasChildren) {
-    return <span aria-hidden="true" className="mr-2 size-[1.125rem] flex-none" />;
+    return (
+      <span
+        aria-hidden="true"
+        className="pointer-events-none mr-2 flex size-[1.125rem] flex-none items-center justify-center opacity-15"
+        data-node-tree-chevron-placeholder="true"
+      >
+        <ChevronDownIcon className="-rotate-90" />
+      </span>
+    );
   }
   return (
     <span
