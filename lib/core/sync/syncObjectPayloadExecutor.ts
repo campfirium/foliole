@@ -187,11 +187,7 @@ async function applyViewStateObject(
   }
   const payload = asObject(record);
   if (key === 'active_node') {
-    await port.run(
-      `INSERT INTO workspace_meta (key, value, updated_at) VALUES ('active_node_id', ?, ?) ` +
-      `ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-      [text(payload.active_node_id) ?? '', record.updated_at]
-    );
+    await applyActiveNodeViewStateObject(port, record, text(payload.active_node_id));
   } else if (key.startsWith('node:')) {
     await port.run(
       `INSERT INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at) ` +
@@ -203,6 +199,27 @@ async function applyViewStateObject(
     );
   }
   return true;
+}
+
+async function applyActiveNodeViewStateObject(
+  port: DbPort,
+  record: SyncPackSyncObjectRecord,
+  activeNodeId: string | null
+) {
+  if (!activeNodeId) {
+    await port.run("DELETE FROM workspace_meta WHERE key = 'active_node_id'");
+    return;
+  }
+  const [node] = await port.query<{ id: string }>(
+    'SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL',
+    [activeNodeId]
+  );
+  if (!node) return;
+  await port.run(
+    `INSERT INTO workspace_meta (key, value, updated_at) VALUES ('active_node_id', ?, ?) ` +
+    `ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    [activeNodeId, record.updated_at]
+  );
 }
 
 function isLocalAndroidViewStateObject(objectId: string, deviceId?: string) {

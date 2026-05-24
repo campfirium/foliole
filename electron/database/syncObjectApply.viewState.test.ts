@@ -44,6 +44,14 @@ function insertNode(nodeId: string) {
   );
 }
 
+function insertDeletedNode(nodeId: string) {
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at, deleted_at)
+     VALUES (?, 'item', ?, '', ?, ?, ?)`,
+    [nodeId, nodeId, '2026-04-21T10:00:00.000Z', '2026-04-21T10:00:00.000Z', '2026-04-22T08:00:00.000Z']
+  );
+}
+
 it('applies legacy mobile view state payloads as user scroll source', async () => {
   insertNode('node-1');
 
@@ -95,6 +103,40 @@ it('marks sourced view state sync payloads as sync apply writes', async () => {
     'SELECT source FROM node_view_state WHERE node_id = ? AND device_id = ?',
     ['node-1', 'android-test']
   )).toEqual({ source: 'sync-apply' });
+});
+
+it('ignores active node view state for deleted or missing nodes', async () => {
+  insertNode('node-1');
+  insertDeletedNode('node-deleted');
+
+  await applySyncObjectsAsync([{
+    content_hash: 'hash-active-view',
+    deleted_at: null,
+    object_id: 'session_resume:android:phone:android-test:active_node',
+    object_type: 'view_state',
+    payload_json: JSON.stringify({ active_node_id: 'node-1' }),
+    updated_at: '2026-04-22T08:10:00.000Z'
+  }], { deviceId: 'android-test' });
+
+  await applySyncObjectsAsync([{
+    content_hash: 'hash-deleted-active-view',
+    deleted_at: null,
+    object_id: 'session_resume:android:phone:android-test:active_node',
+    object_type: 'view_state',
+    payload_json: JSON.stringify({ active_node_id: 'node-deleted' }),
+    updated_at: '2026-04-22T08:11:00.000Z'
+  }, {
+    content_hash: 'hash-missing-active-view',
+    deleted_at: null,
+    object_id: 'session_resume:android:phone:android-test:active_node',
+    object_type: 'view_state',
+    payload_json: JSON.stringify({ active_node_id: 'node-missing' }),
+    updated_at: '2026-04-22T08:12:00.000Z'
+  }], { deviceId: 'android-test' });
+
+  expect(openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM workspace_meta WHERE key = 'active_node_id'"
+  )).toEqual({ value: 'node-1' });
 });
 
 it('does not apply view state without the matching local Android device id', async () => {
