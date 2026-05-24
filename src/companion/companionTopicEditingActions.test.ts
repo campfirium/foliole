@@ -126,4 +126,24 @@ describe('companion topic editing action guards', () => {
     })).resolves.toBeNull();
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
   });
+
+  it('uses lifecycle facts instead of stale legacy trash projection', async () => {
+    const { persistCompanionTopicContent } = await import('./companionTopicEditingActions');
+
+    await expect(persistCompanionTopicContent({
+      content: 'Edited body',
+      deviceId: 'android-device',
+      nodeId: 'topic-1',
+      snapshot: {
+        ...createSnapshot(createNode({ deletedAt: null })),
+        trashedNodeIds: ['topic-1']
+      }
+    })).resolves.toMatchObject({ nodeId: 'topic-1' });
+    await expect(persistCompanionTopicContent({
+      content: 'Edited body',
+      deviceId: 'android-device',
+      nodeId: 'topic-1',
+      snapshot: createSnapshot(createNode({ deletedAt: '2026-05-24T00:00:00.000Z' }))
+    })).resolves.toBeNull();
+  });
 });

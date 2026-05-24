@@ -7,6 +7,7 @@ import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
 import {
   isCanonicalTrashedNodeId,
   isCanonicalVisibleNodeId,
+  selectCanonicalTrashedNodeIds,
   selectCanonicalVisibleNodeIds
 } from '../workspaceCanonicalSelectors';
 
@@ -72,7 +73,7 @@ function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: Com
       activeNodeId: node.id,
       nodesById: snapshot.nodesById,
       parentContent: node.content,
-      trashedNodeIds: snapshot.trashedNodeIds
+      trashedNodeIds: selectCanonicalTrashedNodeIds(snapshot)
     })
   };
 }

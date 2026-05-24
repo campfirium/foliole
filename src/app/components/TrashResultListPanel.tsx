@@ -121,7 +121,7 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
   const { contentSort, normalizedSort, rows } = useTrashRows(props, searchQuery);
   const listState = useNodeListState(null, true, props.nodeOrder, props.nodesById, props.selectedTrashNodeId, new Set());
   const selectedNodeIds = listState.selectedNodeIds.filter((nodeId) => props.trashedNodeIds.includes(nodeId));
-  const contextMenu = useNodeListContextMenu(selectedNodeIds, props.trashedNodeIds);
+  const contextMenu = useNodeListContextMenu(props.nodesById, selectedNodeIds, props.trashedNodeIds);
   const selectTrashNode = useNodeSelectionHandler({
     activeNodeId: null,
     isSelectionScopeActive: true,

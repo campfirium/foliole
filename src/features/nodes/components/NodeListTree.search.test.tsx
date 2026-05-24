@@ -28,12 +28,13 @@ function createNode(args: {
   };
 }
 
-function NodeListTreeSearchHarness() {
+function NodeListTreeSearchHarness({ forceActivePath = true }: { forceActivePath?: boolean }) {
   const [activeNodeId, setActiveNodeId] = useState<string | null>('article-a');
 
   return (
     <NodeListTree
       activeNodeId={activeNodeId}
+      forceExpandedNodeId={forceActivePath ? activeNodeId : null}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       nodeOrder={['folder-a', 'article-a', 'highlight-a', 'article-b']}
@@ -86,10 +87,12 @@ it('toggles between collapsing and expanding all node groups from the toolbar bu
     trashedNodeIds: []
   }));
 
-  render(<NodeListTreeSearchHarness />);
+  render(<NodeListTreeSearchHarness forceActivePath={false} />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
 
+  expect(within(listPanel).getByRole('button', { name: 'Expand all' })).toBeInTheDocument();
+  fireEvent.click(within(listPanel).getByRole('button', { name: 'Expand all' }));
   expect(within(listPanel).getByRole('button', { name: 'Collapse all' })).toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
 

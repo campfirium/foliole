@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 
 import { HOME_NODE_ID, TRASH_NODE_ID, isHomeNode } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { isCanonicalVisibleNodeId } from '../../shared/workspaceCanonicalSelectors';
 
 import {
   buildWorkspaceDualListStructureData,
@@ -76,7 +77,7 @@ function isVisibleTopicNode(
   trashedNodeIds: readonly string[]
 ) {
   const node = nodesById[nodeId];
-  return Boolean(node && !trashedNodeIds.includes(nodeId) && node.kind !== 'folder');
+  return Boolean(node && isCanonicalVisibleNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, nodeId) && node.kind !== 'folder');
 }
 
 function collectTopicColumnNodeIdsFromIndex(

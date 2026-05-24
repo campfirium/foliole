@@ -9,6 +9,7 @@ import {
   isVirtualRootNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { isCanonicalVisibleNodeId } from '../../shared/workspaceCanonicalSelectors';
 
 export { collectTopicColumnNodeIds } from './workspaceTopicColumnNavigation';
 
@@ -31,9 +32,10 @@ function createNavigationTrashNode(): WorkspaceListNode {
 
 function isVisibleFolderNode(
   node: WorkspaceListNode | undefined,
+  nodesById: WorkspaceListNodesById,
   trashedNodeIds: readonly string[]
 ) {
-  if (!node || trashedNodeIds.includes(node.id)) {
+  if (!node || !isCanonicalVisibleNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, node.id)) {
     return false;
   }
   return node.kind === 'folder' && !isVirtualRootNode(node) && !isVirtualNode(node);
@@ -59,7 +61,7 @@ export function buildFolderNavigationNodeOrder(
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: readonly string[]
 ) {
-  const visibleFolderIds = nodeOrder.filter((nodeId) => isVisibleFolderNode(nodesById[nodeId], trashedNodeIds));
+  const visibleFolderIds = nodeOrder.filter((nodeId) => isVisibleFolderNode(nodesById[nodeId], nodesById, trashedNodeIds));
   const regularFolderIds = visibleFolderIds.filter((nodeId) => {
     const node = nodesById[nodeId];
     return (
@@ -73,8 +75,8 @@ export function buildFolderNavigationNodeOrder(
   });
 
   return [
-    ...(isVisibleFolderNode(nodesById[HOME_NODE_ID], trashedNodeIds) ? [HOME_NODE_ID] : []),
-    ...(isVisibleFolderNode(nodesById[INBOX_NODE_ID], trashedNodeIds) ? [INBOX_NODE_ID] : []),
+    ...(isVisibleFolderNode(nodesById[HOME_NODE_ID], nodesById, trashedNodeIds) ? [HOME_NODE_ID] : []),
+    ...(isVisibleFolderNode(nodesById[INBOX_NODE_ID], nodesById, trashedNodeIds) ? [INBOX_NODE_ID] : []),
     ...regularFolderIds,
     TRASH_NODE_ID
   ];
@@ -118,7 +120,7 @@ export function resolveActiveFolderNodeId(
 
   while (currentNodeId) {
     const node = nodesById[currentNodeId];
-    if (isVisibleFolderNode(node, trashedNodeIds)) {
+    if (isVisibleFolderNode(node, nodesById, trashedNodeIds)) {
       return currentNodeId;
     }
     currentNodeId = node?.parentNodeId ?? null;
@@ -138,7 +140,7 @@ export function resolveFocusedFolderNodeId(
     return activeFolderNodeId;
   }
 
-  if (isVisibleFolderNode(nodesById[HOME_NODE_ID], trashedNodeIds)) {
+  if (isVisibleFolderNode(nodesById[HOME_NODE_ID], nodesById, trashedNodeIds)) {
     return HOME_NODE_ID;
   }
 
@@ -156,11 +158,11 @@ export function resolveActiveFolderColumnNodeId(
   }
 
   const activeNode = nodesById[activeNodeId];
-  if (!activeNode || trashedNodeIds.includes(activeNodeId)) {
+  if (!activeNode || !isCanonicalVisibleNodeId({ nodeOrder, nodesById, trashedNodeIds }, activeNodeId)) {
     return null;
   }
 
-  if (isVisibleFolderNode(activeNode, trashedNodeIds)) {
+  if (isVisibleFolderNode(activeNode, nodesById, trashedNodeIds)) {
     return activeNodeId;
   }
 
@@ -179,7 +181,7 @@ export function collectFolderColumnNodeIds(
   trashedNodeIds: readonly string[]
 ) {
   return nodeOrder.filter((nodeId) => {
-    if (trashedNodeIds.includes(nodeId)) {
+    if (!isCanonicalVisibleNodeId({ nodeOrder, nodesById, trashedNodeIds }, nodeId)) {
       return false;
     }
     return (nodesById[nodeId]?.parentNodeId ?? null) === folderNodeId;

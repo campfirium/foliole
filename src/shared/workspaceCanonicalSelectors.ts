@@ -4,13 +4,13 @@ export interface WorkspaceCanonicalNode {
 }
 
 export interface WorkspaceCanonicalSource<TNode extends WorkspaceCanonicalNode> {
-  nodeOrder: string[];
+  nodeOrder: readonly string[];
   nodesById: Record<string, TNode | undefined>;
   trashedNodeDeletedAtById?: Record<string, string | undefined>;
-  trashedNodeIds?: string[];
+  trashedNodeIds?: readonly string[];
 }
 
-function uniqueIds(ids: string[]) {
+function uniqueIds(ids: readonly string[]) {
   return [...new Set(ids)];
 }
 
@@ -55,6 +55,17 @@ export function isCanonicalTrashedNodeId<TNode extends WorkspaceCanonicalNode>(
   nodeId: string
 ) {
   return isCanonicallyDeleted(source, nodeId);
+}
+
+export function selectCanonicalNodeMembership<TNode extends WorkspaceCanonicalNode>(
+  source: WorkspaceCanonicalSource<TNode>,
+  nodeId: string
+) {
+  const isTrashed = isCanonicalTrashedNodeId(source, nodeId);
+  return {
+    isTrashed,
+    isVisible: Boolean(source.nodesById[nodeId] && !isTrashed)
+  };
 }
 
 export function selectCanonicalVisibleNodeIds<TNode extends WorkspaceCanonicalNode>(

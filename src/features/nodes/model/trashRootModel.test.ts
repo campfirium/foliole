@@ -31,6 +31,15 @@ describe('trash root model', () => {
     expect(selectTrashRootIds(nodeOrder, nodesById, ['topic', 'item', 'solo'])).toEqual(['topic', 'solo']);
   });
 
+  it('uses lifecycle facts over stale legacy trash membership', () => {
+    const restored = { ...createNode('restored', 'Restored'), deletedAt: null };
+    const deleted = { ...createNode('deleted', 'Deleted'), deletedAt: '2026-05-24T00:00:00.000Z' };
+    const source = { deleted, restored };
+
+    expect(selectTrashRootIds(['restored', 'deleted'], source, ['restored'])).toEqual(['deleted']);
+    expect(resolveTrashRootId('restored', source, ['restored'])).toBeNull();
+  });
+
   it('resolves non-root deleted nodes to the highest deleted ancestor', () => {
     expect(resolveTrashRootId('item', nodesById, ['folder', 'topic', 'item'])).toBe('folder');
     expect(resolveTrashRootId('item', nodesById, ['topic', 'item'])).toBe('topic');

@@ -79,4 +79,22 @@ describe('companion trash actions', () => {
       })
     ]);
   });
+
+  it('does not restore nodes whose lifecycle fact is already visible', async () => {
+    const { restoreCompanionTrashNode } = await import('./companionTrashActions');
+    const snapshot = createSnapshot();
+
+    await expect(restoreCompanionTrashNode({
+      deviceId: 'android-device',
+      nodeId: 'topic-1',
+      snapshot: {
+        ...snapshot,
+        nodesById: {
+          ...snapshot.nodesById,
+          'topic-1': createNode({ deletedAt: null, parentNodeId: 'folder-1' })
+        },
+        trashedNodeIds: ['topic-1']
+      }
+    })).resolves.toBeNull();
+  });
 });

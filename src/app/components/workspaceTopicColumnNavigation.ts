@@ -1,11 +1,13 @@
 import { HOME_NODE_ID, isHomeNode } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { isCanonicalVisibleNodeId } from '../../shared/workspaceCanonicalSelectors';
 
 function isVisibleTopicNode(
   node: WorkspaceListNode | undefined,
+  nodesById: WorkspaceListNodesById,
   trashedNodeIds: readonly string[]
 ) {
-  if (!node || trashedNodeIds.includes(node.id)) {
+  if (!node || !isCanonicalVisibleNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, node.id)) {
     return false;
   }
   return node.kind !== 'folder';
@@ -19,7 +21,7 @@ function buildVisibleChildMap(
   const visibleChildrenByParent = new Map<string | null, string[]>();
 
   for (const nodeId of nodeOrder) {
-    if (trashedNodeIds.includes(nodeId)) {
+    if (!isCanonicalVisibleNodeId({ nodeOrder, nodesById, trashedNodeIds }, nodeId)) {
       continue;
     }
     const node = nodesById[nodeId];
@@ -45,7 +47,7 @@ function collectHomeTopicColumnNodeIds(
   trashedNodeIds: readonly string[]
 ) {
   return nodeOrder.filter((nodeId) => {
-    if (!isVisibleTopicNode(nodesById[nodeId], trashedNodeIds)) {
+    if (!isVisibleTopicNode(nodesById[nodeId], nodesById, trashedNodeIds)) {
       return false;
     }
     const parentId = nodesById[nodeId]?.parentNodeId ?? null;
@@ -72,7 +74,7 @@ export function collectTopicColumnNodeIds(
   const topicNodeIds: string[] = [];
   const topicNodeIdSet = new Set<string>();
   const directTopicRootIds = (visibleChildrenByParent.get(folderNodeId) ?? []).filter((nodeId) =>
-    isVisibleTopicNode(nodesById[nodeId], trashedNodeIds)
+    isVisibleTopicNode(nodesById[nodeId], nodesById, trashedNodeIds)
   );
   const queue = [...directTopicRootIds];
   let queueIndex = 0;
@@ -87,7 +89,7 @@ export function collectTopicColumnNodeIds(
     topicNodeIdSet.add(currentNodeId);
     topicNodeIds.push(currentNodeId);
     const childIds = (visibleChildrenByParent.get(currentNodeId) ?? []).filter((nodeId) =>
-      isVisibleTopicNode(nodesById[nodeId], trashedNodeIds)
+      isVisibleTopicNode(nodesById[nodeId], nodesById, trashedNodeIds)
     );
     queue.push(...childIds);
   }
