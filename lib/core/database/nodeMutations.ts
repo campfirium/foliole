@@ -1,3 +1,4 @@
+import { stringifyManualChildOrder } from '../nodes/manualChildOrder.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
@@ -94,6 +95,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       input.desiredRetention ?? null,
       input.enableShortTerm == null ? null : input.enableShortTerm ? 1 : 0,
       input.sequentialReadingEnabled == null ? null : input.sequentialReadingEnabled ? 1 : 0,
+      input.kind === 'folder' ? stringifyManualChildOrder(input.manualChildOrder) : null,
       input.title,
       input.isTitleManual ? 1 : 0,
       input.hideTitleHeading === true ? 1 : 0,

@@ -21,6 +21,7 @@ interface WorkspaceTopicTreeLazyModelArgs {
   forceVisibleNodeId?: string | null;
   hideDismissedTopics?: boolean;
   itemIds: string[];
+  manualChildOrder?: readonly string[] | null;
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodesById: WorkspaceListNodesById;
   sortRefreshVersion?: number;
@@ -29,14 +30,16 @@ interface WorkspaceTopicTreeLazyModelArgs {
 
 export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModelArgs) {
   const [searchQuery, setSearchQuery] = useState('');
-  const contentSort = normalizeWorkspaceContentSort(args.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name']);
+  const contentSort = normalizeWorkspaceContentSort(args.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name', 'manual']);
+  const refreshKey = resolveTopicTreeSortRefreshKey(args, contentSort);
   const rootIds = useStableWorkspaceContentItems({
     getItemId: (nodeId) => nodeId,
     items: args.itemIds,
-    ...(args.sortRefreshVersion !== undefined ? { refreshKey: args.sortRefreshVersion } : {}),
+    refreshKey,
     scopeKey: `${args.activeFolderId}:root`,
     sort: contentSort,
-    sortItems: (ids) => sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeViewById)
+    sortItems: (ids) =>
+      sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeViewById, args.manualChildOrder)
   });
   const sortIds = useCallback(
     (parentId: string | null, ids: string[]) =>
@@ -81,6 +84,20 @@ export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModel
     setSearchQuery,
     sortedItemIds: rootIds
   };
+}
+
+function resolveTopicTreeSortRefreshKey(
+  args: WorkspaceTopicTreeLazyModelArgs,
+  sort: WorkspaceContentSortState
+) {
+  const baseKey = args.sortRefreshVersion ?? 0;
+  if (sort.key === 'lastOpenedAt') {
+    return `${baseKey}:${args.itemIds.map((nodeId) => args.nodeViewById[nodeId]?.updatedAt ?? '').join('\u0000')}`;
+  }
+  if (sort.key === 'modifiedAt') {
+    return `${baseKey}:${args.itemIds.map((nodeId) => args.nodesById[nodeId]?.updatedAt ?? '').join('\u0000')}`;
+  }
+  return baseKey;
 }
 
 function buildTopicCollapseArgs(args: {

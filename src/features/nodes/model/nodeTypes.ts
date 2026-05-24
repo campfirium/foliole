@@ -123,6 +123,7 @@ export interface Node {
   title: string;
   isTitleManual?: boolean;
   hideTitleHeading?: boolean;
+  manualChildOrder?: string[] | null;
   attachments?: NodeAttachment[];
   bodyBlobHash?: string | null;
   hasContent?: boolean;

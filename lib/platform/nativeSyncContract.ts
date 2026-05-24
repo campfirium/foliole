@@ -108,6 +108,7 @@ export interface NativeSyncNodeRecord {
     desired_retention: number | null;
     enable_short_term?: boolean | null;
     sequential_reading_enabled?: boolean | null;
+    manual_child_order?: string | null;
     hide_title_heading: boolean;
     id: string;
     image_regions: string | null;

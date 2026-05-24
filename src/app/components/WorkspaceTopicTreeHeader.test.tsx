@@ -113,6 +113,49 @@ it('keeps last opened order fixed to newest first', () => {
   expect(screen.queryByRole('menuitem', { name: 'Oldest first' })).toBeNull();
 });
 
+it('shows manual sorting in the current folder topic menu', () => {
+  render(
+    <WorkspaceTopicTreeHeader
+      hasCollapsibleNodes
+      hasCollapsedNodes={false}
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
+      onCreateTopic={vi.fn()}
+      onSearchQueryChange={vi.fn()}
+      onToggleCollapseAll={vi.fn()}
+      searchQuery=""
+      sortDirection="desc"
+      sortKey="modifiedAt"
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date modified' }), { key: 'ArrowDown' });
+
+  expect(screen.getByRole('menuitem', { name: 'Manual' })).toBeInTheDocument();
+});
+
+it('keeps manual order fixed to manual order', () => {
+  render(
+    <WorkspaceTopicTreeHeader
+      hasCollapsibleNodes
+      hasCollapsedNodes={false}
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
+      onCreateTopic={vi.fn()}
+      onSearchQueryChange={vi.fn()}
+      onToggleCollapseAll={vi.fn()}
+      searchQuery=""
+      sortDirection="asc"
+      sortKey="manual"
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Manual' }), { key: 'ArrowDown' });
+
+  expect(screen.getByRole('menuitem', { name: 'Manual order' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Newest first' })).toBeNull();
+});
+
 it('keeps the top toolbar focus tooltip above the trigger', async () => {
   render(
     <WorkspaceTopicTreeHeader

@@ -10,6 +10,7 @@ export interface WorkspaceNodeRow extends DatabaseRow {
   desired_retention: number | null;
   enable_short_term: number | null;
   sequential_reading_enabled: number | null;
+  manual_child_order: string | null;
   title: string;
   is_title_manual: number;
   hide_title_heading: number;

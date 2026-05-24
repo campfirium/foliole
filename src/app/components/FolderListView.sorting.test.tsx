@@ -10,6 +10,7 @@ import { FolderListView } from './FolderListView';
 
 function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node {
   return {
+    ...overrides,
     id: overrides.id,
     parentNodeId: overrides.parentNodeId === undefined ? 'folder-1' : overrides.parentNodeId,
     kind: overrides.kind ?? 'topic',
@@ -108,6 +109,53 @@ describe('FolderListView date sorting', () => {
     expect(screen.getByTestId('folder-list-date-node-5')).toHaveTextContent('2026-04-01');
   });
 
+});
+
+describe('FolderListView manual sorting', () => {
+  it('uses name order before a folder has a manual child order', () => {
+    renderFolderList(
+      [
+        createNode({ id: 'node-b', title: 'Beta' }),
+        createNode({ id: 'node-a', title: 'Alpha' }),
+        createNode({ id: 'node-c', title: 'Chapter 10' }),
+        createNode({ id: 'node-d', title: 'Chapter 2' })
+      ],
+      { sortDirection: 'asc', sortKey: 'manual' }
+    );
+
+    expect(getRenderedEntryTitles()).toEqual(['Alpha', 'Beta', 'Chapter 2', 'Chapter 10']);
+  });
+
+  it('uses folder manual child order and appends missing children by name', () => {
+    const children = [
+      createNode({ id: 'node-a', title: 'Alpha' }),
+      createNode({ id: 'node-b', title: 'Beta' }),
+      createNode({ id: 'node-c', title: 'Chapter 2' })
+    ];
+    const folderNode = createNode({
+      id: 'folder-1',
+      kind: 'folder',
+      manualChildOrder: ['node-b'],
+      parentNodeId: null,
+      title: 'Library root'
+    });
+    render(
+      <FolderListView
+        folderNodeId="folder-1"
+        nodeOrder={['folder-1', ...children.map((node) => node.id)]}
+        nodeViewById={{}}
+        nodesById={Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]))}
+        onChangeSortDirection={() => undefined}
+        onChangeSortKey={() => undefined}
+        onSelectNode={vi.fn<(nodeId: string) => void>()}
+        sortDirection="asc"
+        sortKey="manual"
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Sort list by Manual' })).toBeInTheDocument();
+    expect(getRenderedEntryTitles()).toEqual(['Beta', 'Alpha', 'Chapter 2']);
+  });
 });
 
 describe('FolderListView last opened sorting', () => {

@@ -1,3 +1,4 @@
+import { parseManualChildOrder } from '../nodes/manualChildOrder.js';
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
 import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { isReadingState, type ReadingState } from '../review/readingState.js';
@@ -41,6 +42,7 @@ export interface WorkspaceNodeSnapshot {
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
+  manualChildOrder?: string[] | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading: boolean;
@@ -75,6 +77,7 @@ export interface WorkspaceNodeRowShape {
   desired_retention: number | null;
   enable_short_term: number | null;
   sequential_reading_enabled: number | null;
+  manual_child_order: string | null;
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
@@ -180,6 +183,9 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
   }
   if (typeof row.sequential_reading_enabled === 'number') {
     node.sequentialReadingEnabled = row.sequential_reading_enabled === 1;
+  }
+  if (node.kind === 'folder') {
+    node.manualChildOrder = parseManualChildOrder(row.manual_child_order);
   }
   if (row.deleted_at) {
     node.deletedAt = row.deleted_at;

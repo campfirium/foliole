@@ -35,6 +35,7 @@ export interface WorkspaceTopicTreeProps {
   itemIds: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
+  onOpenPostponeTopicPanel?: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
 }
 
@@ -76,6 +77,7 @@ export function useWorkspaceTopicTreeInteraction(args: {
   activeNodeId: string | null;
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
+  onOpenPostponeTopicPanel?: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
   rowIds: string[];
 }) {
@@ -124,6 +126,7 @@ export function useWorkspaceTopicTreeInteraction(args: {
         handleSelectNode={selection.handleSelectNode}
         nodesById={args.nodesById}
         onOpenMoveToNode={args.onOpenMoveToNode}
+        {...definedProps({ onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel })}
         topicTreeState={topicTreeState}
       />
     )
@@ -144,6 +147,7 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     activeNodeId: props.activeNodeId,
     childrenByParent,
     itemIds: rootItemIds,
+    manualChildOrder: props.nodesById[props.activeFolderId]?.manualChildOrder ?? null,
     nodeViewById,
     nodesById: props.nodesById,
     sortRefreshVersion: contentSort.sortRefreshVersion,
@@ -177,6 +181,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     activeNodeId: focusedNodeId,
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,
+    ...definedProps({ onOpenPostponeTopicPanel: props.onOpenPostponeTopicPanel }),
     onSelectNode: props.onSelectNode,
     rowIds: visibleRows.map((row) => row.node.id)
   });

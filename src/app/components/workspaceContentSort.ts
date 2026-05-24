@@ -5,7 +5,7 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 
 import type { ExternalLibraryDocumentItem } from './externalLibraryBrowseModel';
 
-export type WorkspaceContentSortKey = 'deletedAt' | 'importedAt' | 'lastOpenedAt' | 'modifiedAt' | 'name' | 'savedAt';
+export type WorkspaceContentSortKey = 'deletedAt' | 'importedAt' | 'lastOpenedAt' | 'manual' | 'modifiedAt' | 'name' | 'savedAt';
 export type WorkspaceContentSortDirection = 'asc' | 'desc';
 
 export interface WorkspaceContentSortState {
@@ -41,7 +41,7 @@ function directionMultiplier(direction: WorkspaceContentSortDirection) {
 }
 
 export function resolveDefaultWorkspaceContentSortDirection(key: WorkspaceContentSortKey): WorkspaceContentSortDirection {
-  return key === 'name' ? 'asc' : 'desc';
+  return key === 'manual' || key === 'name' ? 'asc' : 'desc';
 }
 
 function isWorkspaceContentSortKey(value: string): value is WorkspaceContentSortKey {
@@ -49,6 +49,7 @@ function isWorkspaceContentSortKey(value: string): value is WorkspaceContentSort
     value === 'deletedAt' ||
     value === 'importedAt' ||
     value === 'lastOpenedAt' ||
+    value === 'manual' ||
     value === 'modifiedAt' ||
     value === 'name' ||
     value === 'savedAt'
@@ -67,7 +68,7 @@ export function loadWorkspaceContentSortPreference(): WorkspaceContentSortState 
     const key = migrateWorkspaceContentSortKey(String(parsed.key));
     const direction = String(parsed.direction);
     if (key && isWorkspaceContentSortDirection(direction)) {
-      return { direction: key === 'lastOpenedAt' ? 'desc' : direction, key };
+      return { direction: key === 'lastOpenedAt' ? 'desc' : key === 'manual' ? 'asc' : direction, key };
     }
   } catch {
     return DEFAULT_WORKSPACE_CONTENT_SORT;
