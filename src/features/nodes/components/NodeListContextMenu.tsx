@@ -1,7 +1,27 @@
+import {
+  ArchiveRestore,
+  BookOpenCheck,
+  CircleOff,
+  Clipboard,
+  GitMerge,
+  MoveRight,
+  Pencil,
+  SlidersHorizontal,
+  Trash2
+} from 'lucide-react';
+
 import type { FolderTopicItemCommandDefinition } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import type { VirtualNodeCommandDefinition } from '../../../../lib/core/nodes/virtualNodeCommands';
 
-import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '@/shared/ui';
+import {
+  DismissMenuIcon,
+  iconForCreateCommand,
+  NodeContextMenuItem,
+  NodeContextMenuSeparator,
+  RelearnMenuIcon
+} from './nodeListContextMenuPresentation';
+
+import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '@/shared/ui';
 
 interface NodeListContextMenuProps {
   createCommands: readonly (FolderTopicItemCommandDefinition | VirtualNodeCommandDefinition)[];
@@ -35,6 +55,11 @@ interface NodeListContextMenuProps {
   sequentialReadingEnabled?: boolean;
   top: number;
 }
+
+type NoteMenuItemsProps = Omit<
+  NodeListContextMenuProps,
+  'isTrashMenu' | 'left' | 'onClose' | 'onDeleteNodePermanently' | 'onRestoreNode' | 'top'
+>;
 
 function renderMenuItems(props: NodeListContextMenuProps) {
   if (props.isTrashMenu) {
@@ -84,6 +109,11 @@ export function NodeListContextMenu(props: NodeListContextMenuProps) {
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent
         align="start"
+        className={[
+          'min-w-[224px] rounded-lg border-[var(--app-floating-border-color)] p-2 shadow-popover',
+          'bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_82%,rgb(var(--color-background)))]',
+          '[--node-context-menu-item-hover-bg:color-mix(in_oklab,var(--app-floating-item-hover-bg)_52%,rgb(var(--color-foreground)/0.12))]'
+        ].join(' ')}
         onCloseAutoFocus={(event) => event.preventDefault()}
         onContextMenu={(event) => event.preventDefault()}
         sideOffset={0}
@@ -103,59 +133,88 @@ function TrashMenuItems({
 }) {
   return (
     <>
-      <AppDropdownMenuItem onSelect={onRestoreNode}>Restore</AppDropdownMenuItem>
-      <AppDropdownMenuItem onSelect={onDeleteNodePermanently}>Delete Permanently</AppDropdownMenuItem>
+      <NodeContextMenuItem icon={ArchiveRestore} onSelect={onRestoreNode}>Restore</NodeContextMenuItem>
+      <NodeContextMenuSeparator />
+      <NodeContextMenuItem icon={Trash2} onSelect={onDeleteNodePermanently} tone="destructive">Delete Permanently</NodeContextMenuItem>
     </>
   );
 }
 
-function NoteMenuItems({
-  createCommands,
-  onCreateCommand,
-  onDeleteNode,
-  onDismissEntireTopic,
-  onDismissNode,
-  onMergeHighlightsIntoTopic,
-  onMoveToNode,
-  onOpenReviewScheduling,
-  onPasteIntoNode,
-  onRenameNode,
-  onReturnNode,
-  onToggleSequentialReading,
-  showDeleteAction,
-  showDismissEntireTopicAction,
-  showDismissAction,
-  showMergeHighlightsIntoTopicAction,
-  showMoveToNodeAction,
-  showReviewSchedulingAction,
-  showPasteIntoNodeAction,
-  showRenameAction,
-  showRootCreateOnly,
-  showReturnAction,
-  showSequentialReadingAction,
-  sequentialReadingEnabled
-}: Omit<NodeListContextMenuProps, 'isTrashMenu' | 'left' | 'onClose' | 'onDeleteNodePermanently' | 'onRestoreNode' | 'top'>) {
+function shouldShowEditGroup(props: NoteMenuItemsProps) {
+  return !props.showRootCreateOnly && (
+    (props.showRenameAction && props.onRenameNode) ||
+    (props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic) ||
+    (props.showPasteIntoNodeAction && props.onPasteIntoNode) ||
+    (props.showMoveToNodeAction && props.onMoveToNode)
+  );
+}
+
+function shouldShowReviewGroup(props: NoteMenuItemsProps) {
+  return !props.showRootCreateOnly && (
+    (props.showReturnAction && props.onReturnNode) ||
+    (props.showReviewSchedulingAction && props.onOpenReviewScheduling) ||
+    (props.showDismissAction && props.onDismissNode) ||
+    (props.showDismissEntireTopicAction && props.onDismissEntireTopic) ||
+    (props.showSequentialReadingAction && props.onToggleSequentialReading)
+  );
+}
+
+function renderCreateItems(props: NoteMenuItemsProps) {
+  return props.createCommands.map((command) => (
+    <NodeContextMenuItem icon={iconForCreateCommand(command)} key={command.appCommandId} onSelect={() => props.onCreateCommand(command.appCommandId)}>
+      {command.listLabel}
+    </NodeContextMenuItem>
+  ));
+}
+
+function renderEditItems(props: NoteMenuItemsProps) {
+  if (props.showRootCreateOnly) return null;
   return (
     <>
-      {createCommands.map((command) => (
-        <AppDropdownMenuItem key={command.appCommandId} onSelect={() => onCreateCommand(command.appCommandId)}>
-          {command.listLabel}
-        </AppDropdownMenuItem>
-      ))}
-      {showRootCreateOnly ? null : showRenameAction && onRenameNode ? <AppDropdownMenuItem onSelect={onRenameNode}>Rename</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showReturnAction && onReturnNode ? <AppDropdownMenuItem onSelect={onReturnNode}>Relearn</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showDismissAction && onDismissNode ? <AppDropdownMenuItem onSelect={onDismissNode}>Dismiss</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showDismissEntireTopicAction && onDismissEntireTopic ? <AppDropdownMenuItem onSelect={onDismissEntireTopic}>Dismiss Entire Topic</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showSequentialReadingAction && onToggleSequentialReading ? (
-        <AppDropdownMenuItem onSelect={onToggleSequentialReading}>
-          {sequentialReadingEnabled ? 'Disable Sequential Reading' : 'Enable Sequential Reading'}
-        </AppDropdownMenuItem>
+      {props.showRenameAction && props.onRenameNode ? <NodeContextMenuItem icon={Pencil} onSelect={props.onRenameNode}>Rename</NodeContextMenuItem> : null}
+      {props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>Merge Highlights</NodeContextMenuItem> : null}
+      {props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem icon={Clipboard} onSelect={props.onPasteIntoNode}>Paste here</NodeContextMenuItem> : null}
+      {props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>Move to…</NodeContextMenuItem> : null}
+    </>
+  );
+}
+
+function renderReviewItems(props: NoteMenuItemsProps) {
+  if (props.showRootCreateOnly) return null;
+  return (
+    <>
+      {props.showReturnAction && props.onReturnNode ? <NodeContextMenuItem icon={RelearnMenuIcon} onSelect={props.onReturnNode}>Relearn</NodeContextMenuItem> : null}
+      {props.showReviewSchedulingAction && props.onOpenReviewScheduling ? <NodeContextMenuItem icon={SlidersHorizontal} onSelect={props.onOpenReviewScheduling}>Review options…</NodeContextMenuItem> : null}
+      {props.showDismissAction && props.onDismissNode ? <NodeContextMenuItem icon={DismissMenuIcon} onSelect={props.onDismissNode}>Dismiss</NodeContextMenuItem> : null}
+      {props.showDismissEntireTopicAction && props.onDismissEntireTopic ? <NodeContextMenuItem icon={CircleOff} onSelect={props.onDismissEntireTopic}>Dismiss Entire Topic</NodeContextMenuItem> : null}
+      {props.showSequentialReadingAction && props.onToggleSequentialReading ? (
+        <NodeContextMenuItem icon={BookOpenCheck} onSelect={props.onToggleSequentialReading}>
+          {props.sequentialReadingEnabled ? 'Disable Sequential Reading' : 'Enable Sequential Reading'}
+        </NodeContextMenuItem>
       ) : null}
-      {showRootCreateOnly ? null : showMergeHighlightsIntoTopicAction && onMergeHighlightsIntoTopic ? <AppDropdownMenuItem onSelect={onMergeHighlightsIntoTopic}>Merge Highlights</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showPasteIntoNodeAction && onPasteIntoNode ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showMoveToNodeAction && onMoveToNode ? <AppDropdownMenuItem onSelect={onMoveToNode}>Move to…</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showReviewSchedulingAction && onOpenReviewScheduling ? <AppDropdownMenuItem onSelect={onOpenReviewScheduling}>Review options…</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showDeleteAction ? <AppDropdownMenuItem onSelect={onDeleteNode}>Delete</AppDropdownMenuItem> : null}
+    </>
+  );
+}
+
+function renderDeleteItem(props: NoteMenuItemsProps) {
+  if (props.showRootCreateOnly || !props.showDeleteAction) return null;
+  return (
+    <>
+      <NodeContextMenuSeparator />
+      <NodeContextMenuItem icon={Trash2} onSelect={props.onDeleteNode} tone="destructive">Delete</NodeContextMenuItem>
+    </>
+  );
+}
+
+function NoteMenuItems(props: NoteMenuItemsProps) {
+  return (
+    <>
+      {renderCreateItems(props)}
+      {shouldShowEditGroup(props) ? <NodeContextMenuSeparator /> : null}
+      {renderEditItems(props)}
+      {shouldShowReviewGroup(props) ? <NodeContextMenuSeparator /> : null}
+      {renderReviewItems(props)}
+      {renderDeleteItem(props)}
     </>
   );
 }
