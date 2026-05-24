@@ -11,6 +11,17 @@ const RESOLVED_WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = `\0${WORKSPACE_CHANGE_TIME
 const WORKSPACE_TIMESTAMP_ROOTS = ['src', 'electron'];
 const WORKSPACE_TIMESTAMP_INCLUDE_EXTENSIONS = new Set(['.css', '.js', '.jsx', '.mjs', '.mts', '.scss', '.ts', '.tsx']);
 const RUNTIME_RENDERER_INDEX_WATCH_IGNORE = '**/.electron-user-data/runtime-renderer-index.html';
+const DESKTOP_RENDERER_WARMUP_FILES = [
+  './src/main.tsx',
+  './src/app/styles.css',
+  './src/startupBootstrap.ts',
+  './src/startupViewMode.ts',
+  './src/shared/platform/bridge.ts',
+  './src/shared/platform/appSettingsSync.ts',
+  './src/shared/platform/desktopDebugProbe.ts',
+  './src/shared/platform/rendererErrorDiagnostics.ts',
+  './src/app/App.tsx'
+];
 
 function resolveDevPort() {
   const raw = process.env.FOLIOLE_VITE_PORT;
@@ -129,6 +140,9 @@ export function createSharedViteConfig(projectRoot: string) {
       host: '127.0.0.1',
       port: resolveDevPort(),
       strictPort: true,
+      warmup: {
+        clientFiles: DESKTOP_RENDERER_WARMUP_FILES
+      },
       watch: {
         ignored: [RUNTIME_RENDERER_INDEX_WATCH_IGNORE]
       }
