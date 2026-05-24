@@ -123,7 +123,7 @@ it('dismisses an entire topic from the node menu without deleting it', () => {
   expect(useWorkspaceStore.getState().nodesById['node-child']).toBeDefined();
 });
 
-it('toggles sequential reading from source topic menus and confirms the release rule', () => {
+it('toggles sequential reading from source topic menus without confirmation and applies the release rule', () => {
   const firstTopic = createNode({
     id: 'node-first',
     kind: 'topic',
@@ -153,12 +153,13 @@ it('toggles sequential reading from source topic menus and confirms the release 
     }
   }));
   render(<App />);
-  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirmSpy = vi.spyOn(window, 'confirm');
+  confirmSpy.mockClear();
 
   openNodeMenu('Source topic');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Enable Sequential Reading' }));
 
-  expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Only after the earlier topic is Dismissed'));
+  expect(confirmSpy).not.toHaveBeenCalled();
   expect(useWorkspaceStore.getState().nodesById['node-source']?.sequentialReadingEnabled).toBe(true);
   expect(useWorkspaceStore.getState().nodesById['node-first']?.reading?.state).toBe('active');
   expect(useWorkspaceStore.getState().nodesById['node-second']?.reading?.state).toBe('locked');

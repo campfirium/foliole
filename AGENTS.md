@@ -45,6 +45,7 @@
 - 启动时只读 `AGENTS.md`。
 - 任务涉及 renderer UI 改动（`src/app/**`、`src/companion/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须先读取 `DESIGN.md`，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
 - 任务涉及 UI 文案、产品对象命名、空状态、按钮、菜单、队列与阅读单元称呼时，实施前必须读取 `.lab/specs/_product/terminology-and-copy.md`。
+- 新增或修改用户可见 UI 文案时，必须按 `.lab/specs/_product/terminology-and-copy.md` 的文案分层先区分用户效果、轻原理说明与内部语言；最终文案不得直接从变量名、数据库字段、IPC / action 名、队列流程动词或对话里的临时术语生成。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增、重写或审计 agent 规则时，按 `$agents-maintainer` 流程只审根与局部 `AGENTS.md`；不默认扫描其他项目文档。
 - 仅在判断验证、预览或停车策略时读取 `.lab/internal/runtime/windows-preview.flag`、`.lab/internal/runtime/android-preview.flag` 与 `.lab/internal/runtime/park.flag`。
