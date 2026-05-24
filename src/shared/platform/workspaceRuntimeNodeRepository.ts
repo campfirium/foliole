@@ -102,6 +102,7 @@ function handleNodeSnapshotSyncResult(
   );
 }
 
+
 function runNodeSnapshotSync(args: {
   action: string;
   command:
@@ -148,6 +149,7 @@ export function saveWorkspaceNodeContentSnapshot(args: {
 }) {
   runNodeSnapshotSync({ ...args, action: 'sync_node_content', command: NATIVE_COMMANDS.updateNodeContent });
 }
+
 
 export function saveWorkspaceNodeContentSnapshotWithAnchors(args: {
   affectedAnchorNodes: WorkspaceRuntimeNode[];

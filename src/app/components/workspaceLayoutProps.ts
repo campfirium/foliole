@@ -200,10 +200,10 @@ export interface WorkspaceLayoutFlatProps {
   onCloseSettings: () => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
-  onCompleteReviewItem: () => boolean;
-  onDeferReviewItem: () => boolean;
-  onDismissReviewItem: () => boolean;
-  onSoonReviewItem: () => boolean;
+  onCompleteReviewItem: () => Promise<boolean>;
+  onDeferReviewItem: () => Promise<boolean>;
+  onDismissReviewItem: () => Promise<boolean>;
+  onSoonReviewItem: () => Promise<boolean>;
   onContinueReading: () => void;
   onResumeReviewItem: () => void;
   onExitReviewMode: () => void;

@@ -14,6 +14,7 @@ import {
 } from '../../shared/ui';
 
 import { ReviewSessionModeControl } from './ReviewSessionModeControl';
+import { fallbackProgressCounts, formatReviewProgressLabel, type ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 
 const SESSION_SUMMARY_LABEL = 'Queue summary';
 export type ReviewToolbarSessionSummaryStatus = 'clear' | 'in-progress' | 'not-started';
@@ -33,23 +34,14 @@ function clampProgress(value: number) {
   return Math.min(Math.max(value, 0), 1);
 }
 
-function formatReviewProgressLabel(mode: ReviewSessionMode, completed: number, remaining: number, total: number) {
-  const done = Math.min(completed, total);
-  if (mode === 'reading-only') {
-    return `Reading flow: ${remaining} topics left · ${done} read · ${total} topics`;
-  }
-  if (mode === 'review-first') {
-    return `Review queue: ${remaining} review items left · ${done} done · ${total} total`;
-  }
-  return `Flow queue: ${remaining} left · ${done} done · ${total} total`;
-}
-
 export function ReviewToolbarProgressLine({
   completedCount,
+  progressCounts,
   queueCount,
   reviewSessionMode
 }: {
   completedCount: number;
+  progressCounts?: ReviewToolbarProgressCounts;
   queueCount: number;
   reviewSessionMode: ReviewSessionMode;
 }) {
@@ -63,7 +55,10 @@ export function ReviewToolbarProgressLine({
 
   const progress = clampProgress(completed / total);
   const progressPercent = `${progress * 100}%`;
-  const progressLabel = formatReviewProgressLabel(reviewSessionMode, completed, Math.max(queueCount, 0), total);
+  const progressLabel = formatReviewProgressLabel(
+    reviewSessionMode,
+    progressCounts ?? fallbackProgressCounts(reviewSessionMode, completed, Math.max(queueCount, 0))
+  );
   const progressStyle = {
     '--review-sprout-position': `clamp(1.25rem, ${progressPercent}, calc(100% - 1.25rem))`
   } as CSSProperties;
@@ -92,11 +87,13 @@ export function ReviewToolbarProgressLine({
 }
 
 export function ReviewSessionProgress({
+  progressCounts,
   reviewCompletedCount,
   reviewQueueCount,
   reviewSessionMode,
   showProgress
 }: {
+  progressCounts?: ReviewToolbarProgressCounts;
   reviewCompletedCount: number;
   reviewQueueCount: number;
   reviewSessionMode: ReviewSessionMode;
@@ -106,6 +103,7 @@ export function ReviewSessionProgress({
   return (
     <ReviewToolbarProgressLine
       completedCount={reviewCompletedCount}
+      {...definedProps({ progressCounts })}
       queueCount={reviewQueueCount}
       reviewSessionMode={reviewSessionMode}
     />
@@ -127,9 +125,7 @@ export function ReviewToolbarSessionFrame({
     <div className={cn('grid grid-cols-[2rem_auto_2rem] items-center gap-2.5', className)}>
       <div className="flex min-w-0 justify-center">{modeControl}</div>
       <div className="flex min-w-0 items-center justify-center">{actions}</div>
-      <div className="flex min-w-0 justify-center">
-        {summary ? <ReviewToolbarSessionSummaryMenu summary={summary} /> : null}
-      </div>
+      <div className="flex min-w-0 justify-center">{summary ? <ReviewToolbarSessionSummaryMenu summary={summary} /> : null}</div>
     </div>
   );
 }
@@ -153,13 +149,7 @@ export function ReviewToolbarSessionActions({
       <ReviewSessionModeControl mode={reviewSessionMode} onChangeMode={onSetReviewSessionMode} />
     ) : null);
 
-  return (
-    <ReviewToolbarSessionFrame
-      actions={actions}
-      modeControl={resolvedModeControl}
-      {...definedProps({ summary })}
-    />
-  );
+  return <ReviewToolbarSessionFrame actions={actions} modeControl={resolvedModeControl} {...definedProps({ summary })} />;
 }
 
 function formatElapsedMs(elapsedMs: number) {
@@ -217,9 +207,7 @@ function ReviewToolbarSessionSummaryMenu({ summary }: { summary: ReviewToolbarSe
         </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="center" avoidCollisions={false} className="w-64 p-4" side="top" sideOffset={10}>
-        <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.02em] text-foreground/45">
-          {getSummaryTitle(summary.status)}
-        </div>
+        <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.02em] text-foreground/45">{getSummaryTitle(summary.status)}</div>
         <QueueSummaryRows summary={summary} />
       </AppDropdownMenuContent>
     </AppDropdownMenu>

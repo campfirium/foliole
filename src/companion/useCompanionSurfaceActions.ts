@@ -61,9 +61,11 @@ function useCompanionReadingReviewActions(
 ) {
   const [isSubmittingReadingAction, setIsSubmittingReadingAction] = useState(false);
   const [readingError, setReadingError] = useState<string | null>(null);
+  const isSubmittingReadingActionRef = useRef(false);
 
   async function applyReadingAction(action: 'complete' | 'defer' | 'dismiss') {
-    if (!snapshot || !reviewSession.currentCard || reviewSession.currentCard.itemKind !== 'reading' || isSubmittingReadingAction) return;
+    if (!snapshot || !reviewSession.currentCard || reviewSession.currentCard.itemKind !== 'reading' || isSubmittingReadingActionRef.current) return;
+    isSubmittingReadingActionRef.current = true;
     setIsSubmittingReadingAction(true);
     setReadingError(null);
     try {
@@ -74,24 +76,26 @@ function useCompanionReadingReviewActions(
             ? deferCompanionReadingReview({ nodeId: reviewSession.currentCard.nodeId, snapshot })
             : dismissCompanionReadingReview({ nodeId: reviewSession.currentCard.nodeId, snapshot });
       if (!result) throw new Error('The current reading item is no longer available.');
-      await persistCompanionReviewSyncObject({
+      const persisted = await persistCompanionReviewSyncObject({
         itemKind: 'reading',
         nodeId: reviewSession.currentCard.nodeId,
         snapshot: result.snapshot
       });
+      if (!persisted) throw new Error('Failed to persist the reading item.');
       await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       floatingBar.revealBar();
     } catch (error) {
       setReadingError(error instanceof Error ? error.message : 'Failed to update the reading item.');
     } finally {
+      isSubmittingReadingActionRef.current = false;
       setIsSubmittingReadingAction(false);
     }
   }
 
   return {
-    handleCompleteReviewItem: () => void applyReadingAction('complete'),
-    handleDeferReviewItem: () => void applyReadingAction('defer'),
-    handleDismissReviewItem: () => void applyReadingAction('dismiss'),
+    handleCompleteReviewItem: () => applyReadingAction('complete'),
+    handleDeferReviewItem: () => applyReadingAction('defer'),
+    handleDismissReviewItem: () => applyReadingAction('dismiss'),
     isSubmittingReadingAction,
     readingError,
     setReadingError

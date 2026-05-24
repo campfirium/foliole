@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import type { ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, saveReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
@@ -10,6 +10,14 @@ import {
   createSetStateHarness,
   createWorkspaceFixture
 } from './workspaceStoreReviewActions.test-support';
+
+vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
+  return {
+    ...actual,
+    syncNodeContentToRuntimeNow: vi.fn(async () => true)
+  };
+});
 
 const schedulerStub: ReviewSchedulerAdapter = {
   grade: async () => {
@@ -57,7 +65,7 @@ it('replans the active session when the current mode is applied again after mix 
   }
 });
 
-it('keeps review advancement scoped to the active session queue', () => {
+it('keeps review advancement scoped to the active session queue', async () => {
   const now = '2026-03-10T12:00:00.000Z';
   const fixture = {
     ...createWorkspaceFixture([
@@ -78,7 +86,7 @@ it('keeps review advancement scoped to the active session queue', () => {
   const harness = createSetStateHarness(fixture);
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, schedulerStub);
 
-  expect(actions.completeReviewItem(now)).toBe(true);
+  await expect(actions.completeReviewItem(now)).resolves.toBe(true);
 
   expect(harness.getState().reviewSession).toMatchObject({
     currentNodeId: 'reading-outside',

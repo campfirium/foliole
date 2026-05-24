@@ -5,6 +5,7 @@ import {
   restoreWorkspaceNodes,
   saveCreatedWorkspaceNodeSnapshot,
   saveWorkspaceNodeContentSnapshot,
+  saveWorkspaceNodeContentSnapshotNow,
   saveWorkspaceNodeContentSnapshotWithAnchors,
   saveWorkspaceNodeOrder,
   saveWorkspaceNodeRevealSnapshot,
@@ -50,6 +51,10 @@ function createNodeSnapshotArgs(node: Node, position?: number) {
 
 export function syncNodeContentToRuntime(node: Node, position?: number) {
   saveWorkspaceNodeContentSnapshot(createNodeSnapshotArgs(node, position));
+}
+
+export async function syncNodeContentToRuntimeNow(node: Node, position?: number): Promise<boolean> {
+  return saveWorkspaceNodeContentSnapshotNow(createNodeSnapshotArgs(node, position));
 }
 
 export function syncNodeContentWithAnchorsToRuntime(parentNode: Node, affectedAnchorNodes: Node[], nodeOrder: string[]) {

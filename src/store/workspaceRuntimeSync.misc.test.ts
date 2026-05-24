@@ -3,7 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { isDesktopRuntime } from '../shared/platform/runtime';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
-import { syncNodeContentToRuntime, syncNodeOrderToRuntime, syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import {
+  syncNodeContentToRuntime,
+  syncNodeContentToRuntimeNow,
+  syncNodeOrderToRuntime,
+  syncReviewGradeToRuntime
+} from './workspaceRuntimeSync';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 vi.mock('../shared/platform/runtime', () => ({ isDesktopRuntime: vi.fn(() => false) }));
@@ -40,12 +45,33 @@ describe('workspaceRuntimeSync misc behavior', () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     syncNodeOrderToRuntime(['node-1', 'node-2']);
     await Promise.resolve();
+    await Promise.resolve();
     expect(error).toHaveBeenCalledWith('[native] runtime sync failed', expect.objectContaining({ action: 'sync_node_order' }));
   });
 
   it('skips sync when runtime invoke is unavailable', () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(null);
     expect(() => syncNodeContentToRuntime(createNodeFixture())).not.toThrow();
+  });
+
+  it('returns failure for awaited node content sync when runtime invoke is unavailable', async () => {
+    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+    await expect(syncNodeContentToRuntimeNow(createNodeFixture())).resolves.toBe(false);
+  });
+
+  it('awaits update_node_content for node content sync success', async () => {
+    const invoke = vi.fn().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+    await expect(syncNodeContentToRuntimeNow(createNodeFixture())).resolves.toBe(true);
+    expect(invoke).toHaveBeenCalledWith('update_node_content', expect.objectContaining({ nodeId: 'node-1' }));
+  });
+
+  it('returns failure when awaited node content sync throws', async () => {
+    const invoke = vi.fn().mockRejectedValue(new Error('failed'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+    await expect(syncNodeContentToRuntimeNow(createNodeFixture())).resolves.toBe(false);
+    expect(error).toHaveBeenCalledWith('[native] runtime sync failed', expect.objectContaining({ action: 'sync_node_content_now' }));
   });
 
   it('syncs review grade mutations through apply_review_grade command', async () => {

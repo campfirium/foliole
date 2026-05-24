@@ -1,7 +1,9 @@
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
+import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarProgressLine } from './ReviewToolbarSessionFrame';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
@@ -21,14 +23,15 @@ export interface WorkspaceBottomReviewToolbarProps {
   reviewCurrentNodeId: string | null;
   reviewCurrentTitle: string | undefined;
   reviewDueCount: number;
+  reviewProgressCounts?: ReviewToolbarProgressCounts;
   reviewQueueCount: number;
   reviewSummary: WorkspaceLayoutProps['review']['reviewSummary'];
   reviewStatus: WorkspaceLayoutProps['review']['reviewStatus'];
   reviewSessionMode: ReviewSessionMode;
-  onCompleteReviewItem: () => boolean;
-  onDeferReviewItem: () => boolean;
-  onDismissReviewItem: () => boolean;
-  onSoonReviewItem: () => boolean;
+  onCompleteReviewItem: () => Promise<boolean>;
+  onDeferReviewItem: () => Promise<boolean>;
+  onDismissReviewItem: () => Promise<boolean>;
+  onSoonReviewItem: () => Promise<boolean>;
   onContinueReading: () => void;
   onExitReviewMode: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
@@ -51,17 +54,70 @@ function getReviewCurrentTitle(source: WorkspaceBottomReviewToolbarSource) {
   return source.nodeList.nodesById[currentNodeId]?.title;
 }
 
-export function selectWorkspaceBottomReviewToolbarProps(
-  props: WorkspaceBottomReviewToolbarSource
-): WorkspaceBottomReviewToolbarProps {
+function getReviewProgressCounts(source: WorkspaceBottomReviewToolbarSource): ReviewToolbarProgressCounts {
+  const existingCounts = (source.review as Partial<WorkspaceBottomReviewToolbarProps>).reviewProgressCounts;
+  if (existingCounts) return existingCounts;
+
+  const queueNodeIds = (source.review as { reviewQueueNodeIds?: string[] }).reviewQueueNodeIds ?? [];
+  let queuedItemCount = 0;
+  let queuedTopicCount = 0;
+  for (const nodeId of queueNodeIds) {
+    const kind = source.nodeList.nodesById[nodeId]?.kind;
+    if (kind === 'item') queuedItemCount += 1;
+    if (kind === 'topic') queuedTopicCount += 1;
+  }
+  return {
+    completedItemCount: source.review.reviewSummary.reviewedItemCount,
+    completedTopicCount: source.review.reviewSummary.readTopicCount,
+    queuedItemCount,
+    queuedTopicCount
+  };
+}
+
+function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
+  return (
+    <ReviewModeToolbar
+      className="col-start-3 row-start-1 h-full bg-transparent px-6 max-[1080px]:col-start-1"
+      style={{ borderTopColor: 'transparent' }}
+      showProgress={false}
+      showSessionModeControl
+      showSummary={false}
+      isAnswerRevealed={props.isAnswerRevealed}
+      isCurrentItemGradable={props.isCurrentReviewItemGradable}
+      isCurrentReviewItemVisible={props.isCurrentReviewItemVisible}
+      isReviewEditing={props.isReviewEditing}
+      isStudyMode={props.isStudyMode}
+      reviewCompletedCount={props.reviewCompletedCount}
+      reviewCurrentNodeId={props.reviewCurrentNodeId}
+      reviewCurrentTitle={props.reviewCurrentTitle}
+      {...definedProps({ reviewProgressCounts: props.reviewProgressCounts })}
+      reviewQueueCount={props.reviewQueueCount}
+      reviewSummary={props.reviewSummary}
+      reviewStatus={props.reviewStatus}
+      onCompleteReviewItem={props.onCompleteReviewItem}
+      onContinueReading={props.onContinueReading}
+      onDeferReviewItem={props.onDeferReviewItem}
+      onDismissReviewItem={props.onDismissReviewItem}
+      onSoonReviewItem={props.onSoonReviewItem}
+      onExitReviewMode={props.onExitReviewMode}
+      onGrade={props.onGradeReview}
+      onRevealAnswer={props.onRevealAnswer}
+      onResumeReviewItem={props.onResumeReviewItem}
+      onSetReviewSessionMode={props.onSetReviewSessionMode}
+      reviewSessionMode={props.reviewSessionMode}
+    />
+  );
+}
+
+export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomReviewToolbarSource): WorkspaceBottomReviewToolbarProps {
   const { externalLibrary, layoutChrome, navigation, review, trash, virtualView } = props;
   const isCurrentReviewItemVisible = Boolean(
     review.reviewCurrentNodeId &&
-      navigation.activeNodeId === review.reviewCurrentNodeId &&
-      !externalLibrary.isExternalViewOpen &&
-      !trash.isViewingTrashNode &&
-      !trash.isTrashViewOpen &&
-      !virtualView.isVirtualViewOpen
+    navigation.activeNodeId === review.reviewCurrentNodeId &&
+    !externalLibrary.isExternalViewOpen &&
+    !trash.isViewingTrashNode &&
+    !trash.isTrashViewOpen &&
+    !virtualView.isVirtualViewOpen
   );
   return {
     canStartStudyMode: review.canStartStudyMode,
@@ -87,6 +143,7 @@ export function selectWorkspaceBottomReviewToolbarProps(
     reviewCurrentNodeId: review.reviewCurrentNodeId,
     reviewCurrentTitle: getReviewCurrentTitle(props),
     reviewDueCount: review.reviewDueCount,
+    reviewProgressCounts: getReviewProgressCounts(props),
     reviewQueueCount: review.reviewQueueCount,
     reviewSummary: review.reviewSummary,
     reviewStatus: review.reviewStatus,
@@ -95,8 +152,7 @@ export function selectWorkspaceBottomReviewToolbarProps(
 }
 
 function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbarProps) {
-  const showReviewProgressLine =
-    props.isCurrentReviewItemGradable && props.reviewStatus !== 'completed' && props.reviewStatus !== 'idle';
+  const showReviewProgressLine = props.isCurrentReviewItemGradable && props.reviewStatus !== 'completed' && props.reviewStatus !== 'idle';
   return (
     <div
       className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-visible ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
@@ -107,39 +163,12 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
           <div aria-hidden="true" className="bg-transparent max-[1080px]:hidden" />
         </>
       )}
-      <ReviewModeToolbar
-        className="col-start-3 row-start-1 h-full bg-transparent px-6 max-[1080px]:col-start-1"
-        style={{ borderTopColor: 'transparent' }}
-        showProgress={false}
-        showSessionModeControl
-        showSummary={false}
-        isAnswerRevealed={props.isAnswerRevealed}
-        isCurrentItemGradable={props.isCurrentReviewItemGradable}
-        isCurrentReviewItemVisible={props.isCurrentReviewItemVisible}
-        isReviewEditing={props.isReviewEditing}
-        isStudyMode={props.isStudyMode}
-        reviewCompletedCount={props.reviewCompletedCount}
-        reviewCurrentNodeId={props.reviewCurrentNodeId}
-        reviewCurrentTitle={props.reviewCurrentTitle}
-        reviewQueueCount={props.reviewQueueCount}
-        reviewSummary={props.reviewSummary}
-        reviewStatus={props.reviewStatus}
-        onCompleteReviewItem={props.onCompleteReviewItem}
-        onContinueReading={props.onContinueReading}
-        onDeferReviewItem={props.onDeferReviewItem}
-        onDismissReviewItem={props.onDismissReviewItem}
-        onSoonReviewItem={props.onSoonReviewItem}
-        onExitReviewMode={props.onExitReviewMode}
-        onGrade={props.onGradeReview}
-        onRevealAnswer={props.onRevealAnswer}
-        onResumeReviewItem={props.onResumeReviewItem}
-        onSetReviewSessionMode={props.onSetReviewSessionMode}
-        reviewSessionMode={props.reviewSessionMode}
-      />
+      <BottomReviewModeToolbar {...props} />
       <div className="pointer-events-none relative z-workspace-overlay col-start-3 row-start-1 h-full max-[1080px]:col-start-1">
         {showReviewProgressLine ? (
           <ReviewToolbarProgressLine
             completedCount={props.reviewCompletedCount}
+            {...definedProps({ progressCounts: props.reviewProgressCounts })}
             queueCount={props.reviewQueueCount}
             reviewSessionMode={props.reviewSessionMode}
           />
@@ -161,15 +190,9 @@ export function WorkspaceBottomReviewToolbar(props: WorkspaceBottomReviewToolbar
   }
 
   return (
-    <div
-      className={`${props.isImmersiveMode ? 'col-start-1' : 'col-span-2'} row-start-2 min-w-0`}
-    >
+    <div className={`${props.isImmersiveMode ? 'col-start-1' : 'col-span-2'} row-start-2 min-w-0`}>
       <div
-        className={`workspace-bottom-region-grid relative grid min-w-0 ${
-          props.isImmersiveMode
-            ? 'grid-cols-1'
-            : '[grid-template-columns:var(--workspace-rail-width)_minmax(0,1fr)]'
-        }`}
+        className={`workspace-bottom-region-grid relative grid min-w-0 ${props.isImmersiveMode ? 'grid-cols-1' : '[grid-template-columns:var(--workspace-rail-width)_minmax(0,1fr)]'}`}
       >
         {props.isImmersiveMode ? null : <WorkspaceSurfaceRowOverlay row="footer" />}
         {props.isImmersiveMode ? null : <WorkspaceFooterRowDividers isListCollapsed={props.isListCollapsed} />}

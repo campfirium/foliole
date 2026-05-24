@@ -147,9 +147,9 @@ export interface BuildLayoutPropsArgs {
   exitReviewSession: WorkspaceState['exitReviewSession'];
   exitStudyMode: () => void;
   updateGrade: (grade: ReviewGrade) => Promise<boolean>;
-  completeReviewItem: () => boolean;
-  deferReviewItem: () => boolean;
-  dismissReviewItem: () => boolean;
-  soonReviewItem: () => boolean;
+  completeReviewItem: () => Promise<boolean>;
+  deferReviewItem: () => Promise<boolean>;
+  dismissReviewItem: () => Promise<boolean>;
+  soonReviewItem: () => Promise<boolean>;
   revealReviewAnswer: () => void;
 }

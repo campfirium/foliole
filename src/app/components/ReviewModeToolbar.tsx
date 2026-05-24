@@ -8,7 +8,12 @@ import { ReviewActionBar } from '../../shared/ui';
 import { ResumeReviewAction } from './ReviewModeToolbarActions';
 import { ActiveReviewActionBar } from './ReviewModeToolbarActive';
 import { ReviewNoCurrentItemBar } from './ReviewModeToolbarNoCurrent';
-import { ReviewSessionProgress, type ReviewToolbarSessionSummaryStatus, type ReviewToolbarSessionSummaryValues } from './ReviewToolbarSessionFrame';
+import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
+import {
+  ReviewSessionProgress,
+  type ReviewToolbarSessionSummaryStatus,
+  type ReviewToolbarSessionSummaryValues
+} from './ReviewToolbarSessionFrame';
 
 interface ReviewModeToolbarProps {
   className?: string;
@@ -22,15 +27,16 @@ interface ReviewModeToolbarProps {
   reviewCompletedCount: number;
   reviewCurrentNodeId: string | null;
   reviewCurrentTitle: string | undefined;
+  reviewProgressCounts?: ReviewToolbarProgressCounts;
   reviewQueueCount: number;
   reviewSummary?: ReviewToolbarSessionSummaryValues;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   reviewSessionMode: ReviewSessionMode;
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
-  onCompleteReviewItem: () => boolean;
-  onDeferReviewItem: () => boolean;
-  onDismissReviewItem: () => boolean;
-  onSoonReviewItem: () => boolean;
+  onCompleteReviewItem: () => Promise<boolean>;
+  onDeferReviewItem: () => Promise<boolean>;
+  onDismissReviewItem: () => Promise<boolean>;
+  onSoonReviewItem: () => Promise<boolean>;
   onContinueReading: () => void;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
@@ -40,11 +46,7 @@ interface ReviewModeToolbarProps {
   style?: CSSProperties;
 }
 
-function useGradeFeedback(
-  onGrade: ReviewModeToolbarProps['onGrade'],
-  reviewCurrentNodeId: string | null,
-  isAnswerRevealed: boolean
-) {
+function useGradeFeedback(onGrade: ReviewModeToolbarProps['onGrade'], reviewCurrentNodeId: string | null, isAnswerRevealed: boolean) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [failedGrade, setFailedGrade] = useState<ReviewGrade | null>(null);
@@ -88,7 +90,12 @@ function useGradeFeedback(
     }
   }, [failedGrade, submitGrade]);
 
-  return { errorMessage, isSubmitting, retryGrade: failedGrade ? retryGrade : undefined, submitGrade };
+  return {
+    errorMessage,
+    isSubmitting,
+    retryGrade: failedGrade ? retryGrade : undefined,
+    submitGrade
+  };
 }
 
 function ReviewPausedSummary({ reviewCurrentTitle }: Pick<ReviewModeToolbarProps, 'reviewCurrentTitle'>) {
@@ -101,6 +108,7 @@ function PausedReviewActionBar({
   onResumeReviewItem,
   reviewCompletedCount,
   reviewCurrentTitle,
+  reviewProgressCounts,
   reviewQueueCount,
   reviewSessionMode,
   showProgress = true,
@@ -112,6 +120,7 @@ function PausedReviewActionBar({
   | 'onResumeReviewItem'
   | 'reviewCompletedCount'
   | 'reviewCurrentTitle'
+  | 'reviewProgressCounts'
   | 'reviewQueueCount'
   | 'reviewSessionMode'
   | 'showProgress'
@@ -124,17 +133,28 @@ function PausedReviewActionBar({
       {...definedProps({ className, style })}
       mode="study"
       primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
-      progress={<ReviewSessionProgress reviewCompletedCount={reviewCompletedCount} reviewQueueCount={reviewQueueCount} reviewSessionMode={reviewSessionMode} showProgress={showProgress} />}
+      progress={
+        <ReviewSessionProgress
+          {...definedProps({ progressCounts: reviewProgressCounts })}
+          reviewCompletedCount={reviewCompletedCount}
+          reviewQueueCount={reviewQueueCount}
+          reviewSessionMode={reviewSessionMode}
+          showProgress={showProgress}
+        />
+      }
       secondary={showSummary ? <ReviewPausedSummary reviewCurrentTitle={reviewCurrentTitle} /> : null}
     />
   );
 }
 
-function withSummaryStatus(
-  summary: ReviewToolbarSessionSummaryValues | undefined,
-  status: ReviewToolbarSessionSummaryStatus
-) {
+function withSummaryStatus(summary: ReviewToolbarSessionSummaryValues | undefined, status: ReviewToolbarSessionSummaryStatus) {
   return summary ? { ...summary, status } : undefined;
+}
+
+function omitReviewSummary<T extends { reviewSummary?: unknown }>(props: T) {
+  const { reviewSummary, ...rest } = props;
+  void reviewSummary;
+  return rest;
 }
 
 export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
@@ -144,11 +164,7 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
     showSessionModeControl: props.showSessionModeControl ?? false,
     showSummary: props.showSummary ?? true
   };
-  const feedback = useGradeFeedback(
-    toolbarProps.onGrade,
-    toolbarProps.reviewCurrentNodeId,
-    toolbarProps.isAnswerRevealed
-  );
+  const feedback = useGradeFeedback(toolbarProps.onGrade, toolbarProps.reviewCurrentNodeId, toolbarProps.isAnswerRevealed);
 
   if (!toolbarProps.isStudyMode) return null;
 
@@ -159,11 +175,11 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
         onContinueReading={toolbarProps.onContinueReading}
         onResumeReviewItem={toolbarProps.onResumeReviewItem}
         reviewCompletedCount={toolbarProps.reviewCompletedCount}
+        {...definedProps({ reviewProgressCounts: toolbarProps.reviewProgressCounts })}
         reviewQueueCount={toolbarProps.reviewQueueCount}
-        reviewSummary={withSummaryStatus(
-          toolbarProps.reviewSummary,
-          toolbarProps.reviewStatus === 'completed' ? 'clear' : 'not-started'
-        )}
+        {...definedProps({
+          reviewSummary: withSummaryStatus(toolbarProps.reviewSummary, toolbarProps.reviewStatus === 'completed' ? 'clear' : 'not-started')
+        })}
         reviewStatus={toolbarProps.reviewStatus}
         showSummary={toolbarProps.showSummary}
       />
@@ -174,13 +190,14 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
     return <PausedReviewActionBar {...toolbarProps} />;
   }
 
+  const activeToolbarProps = omitReviewSummary(toolbarProps);
   return (
     <ActiveReviewActionBar
-      {...toolbarProps}
+      {...activeToolbarProps}
       errorMessage={feedback.errorMessage}
       isSubmitting={feedback.isSubmitting}
-      reviewSummary={withSummaryStatus(toolbarProps.reviewSummary, 'in-progress')}
       submitGrade={feedback.submitGrade}
+      {...definedProps({ reviewSummary: withSummaryStatus(toolbarProps.reviewSummary, 'in-progress') })}
       {...definedProps({ retryGrade: feedback.retryGrade })}
     />
   );

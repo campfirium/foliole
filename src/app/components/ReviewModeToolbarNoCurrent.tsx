@@ -4,6 +4,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
 import { ContinueReadingAction, ResumeReviewAction } from './ReviewModeToolbarActions';
+import { QueueClearFlowControl } from './ReviewSessionModeControl';
 import { ReviewToolbarSessionActions, type ReviewToolbarSessionSummary } from './ReviewToolbarSessionFrame';
 
 interface ReviewNoCurrentItemBarProps {
@@ -68,7 +69,7 @@ function ReviewCompleteBar({
       primary={
         <ReviewToolbarSessionActions
           actions={<ContinueReadingAction onContinueReading={onContinueReading} />}
-          modeControl={<span aria-hidden="true" className="size-8" />}
+          modeControl={<QueueClearFlowControl />}
         />
       }
       progress={null}

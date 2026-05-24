@@ -168,7 +168,7 @@ describe('useCompanionArticleSurface fsrs sync', () => {
   });
 
   it('does not replace the companion snapshot when fsrs review persistence is unavailable', async () => {
-    syncObjectMock.saveCompanionSyncNodeReviewRecord.mockResolvedValueOnce(null);
+    syncObjectMock.saveCompanionSyncNodeReviewRecord.mockResolvedValueOnce(null as never);
     const workspaceSync = createWorkspaceSync();
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
 

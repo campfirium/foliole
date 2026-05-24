@@ -21,6 +21,7 @@ export {
   saveWorkspaceNodeContentSnapshotWithAnchors,
   saveWorkspaceNodeRevealSnapshot
 } from './workspaceRuntimeNodeRepository';
+export { saveWorkspaceNodeContentSnapshotNow } from './workspaceRuntimeNodeSnapshotNow';
 import type {
   WorkspaceReadingProgressSavePayload,
   WorkspaceReadingProgressSnapshot,

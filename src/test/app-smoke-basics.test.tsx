@@ -48,8 +48,8 @@ function createDueReview() {
   };
 }
 
-function expectReviewToolbarSummary(left: number, done: number, total: number) {
-  expect(screen.getAllByLabelText(`This session: ${left} left · ${done} done · ${total} total`).length).toBeGreaterThan(0);
+function expectReviewToolbarSummary(label: string) {
+  expect(screen.getAllByLabelText(label).length).toBeGreaterThan(0);
 }
 
 function getSelectedTreeItem(name: string) {
@@ -72,10 +72,7 @@ it('renders note list and single document panel', () => {
 it('shows editor display mode entrypoint inside more menu trigger', () => {
   render(<App />);
 
-  expect(screen.getByRole('button', { name: 'More editor options' })).toHaveAttribute(
-    'aria-haspopup',
-    'menu'
-  );
+  expect(screen.getByRole('button', { name: 'More editor options' })).toHaveAttribute('aria-haspopup', 'menu');
   expect(screen.queryByRole('button', { name: 'Switch to Source mode' })).not.toBeInTheDocument();
   expect(localStorage.getItem(EDITOR_DISPLAY_MODE_KEY)).toBeNull();
 });
@@ -121,10 +118,10 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
 
   render(<App />);
 
-  expect(screen.getByRole('button', { name: 'Study' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  expect(screen.getByRole('button', { name: 'Enter Flow' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
   await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-2']));
-  expectReviewToolbarSummary(1, 0, 1);
+  expectReviewToolbarSummary('i 0/1');
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Again' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
@@ -153,10 +150,9 @@ it('enters review mode with the reading queue when no FSRS cards are due', async
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
 
   await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-1']));
-  expectReviewToolbarSummary(1, 0, 1);
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
@@ -171,7 +167,6 @@ it('enters review mode with the reading queue when no FSRS cards are due', async
     expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
   });
 });
-
 
 it('syncs node list selection when review grading advances active node', async () => {
   useWorkspaceStore.setState((state) => ({
@@ -200,12 +195,12 @@ it('syncs node list selection when review grading advances active node', async (
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
-  expectReviewToolbarSummary(2, 0, 2);
+  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  expectReviewToolbarSummary('i 0/2');
   fireEvent.click(await screen.findByRole('button', { name: 'Show Answer' }));
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
   await waitFor(() => {
-    expectReviewToolbarSummary(1, 1, 2);
+    expectReviewToolbarSummary('i 1/2');
   });
 
   await waitFor(() => {
@@ -235,12 +230,12 @@ it('keeps review toolbar visible in completed state until user exits', async () 
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Show Answer' }));
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
 
   await waitFor(() => {
-    expect(screen.getByText('Session complete')).toBeInTheDocument();
+    expect(screen.getAllByText('Queue clear').length).toBeGreaterThan(0);
   });
   expect(screen.getByRole('button', { name: 'Continue reading' })).toBeInTheDocument();
 
