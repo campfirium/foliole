@@ -46,7 +46,7 @@ async function expectReadingReviewActionPersists() {
   const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
 
   await act(async () => {
-    await result.current.handleCompleteReviewItem();
+    await result.current.handleReadReviewTopic();
   });
 
   expect(workspaceSync.replaceSnapshot).toHaveBeenCalledWith(expect.any(Object), 'article-1');
@@ -194,11 +194,11 @@ describe('useCompanionArticleSurface reading review persistence', () => {
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
 
     await act(async () => {
-      await result.current.handleCompleteReviewItem();
+      await result.current.handleReadReviewTopic();
     });
 
     expect(workspaceSync.replaceSnapshot).not.toHaveBeenCalled();
-    expect(result.current.readingError).toBe('Failed to persist the reading item.');
+    expect(result.current.readingError).toBe('Failed to persist the reading topic.');
   });
 
   it('ignores duplicate reading review actions while persistence is in flight', async () => {
@@ -208,8 +208,8 @@ describe('useCompanionArticleSurface reading review persistence', () => {
     syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
 
     await act(async () => {
-      const first = result.current.handleCompleteReviewItem();
-      const second = result.current.handleCompleteReviewItem();
+      const first = result.current.handleReadReviewTopic();
+      const second = result.current.handleReadReviewTopic();
       await Promise.all([first, second]);
     });
 

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
-import { gradeCompanionReviewCard, resolveCompanionReviewSession } from './companionReviewSession';
+import { gradeCompanionReviewCard, postponeCompanionReviewTopic, resolveCompanionReviewSession } from './companionReviewSession';
 
 const schedulerGrade = vi.fn();
 
@@ -134,6 +134,23 @@ function createGradedCardResult() {
   };
 }
 
+function expectCompanionLaterUsesShortReadingInterval() {
+  const snapshot = createSnapshot();
+  snapshot.nodesById['topic-1'] = createDueReadingTopic();
+
+  const result = postponeCompanionReviewTopic({
+    nodeId: 'topic-1',
+    now: '2026-04-22T08:10:00.000Z',
+    snapshot
+  });
+
+  expect(result?.snapshot.nodesById['topic-1']?.reading).toMatchObject({
+    lastHandledAt: '2026-04-22T08:10:00.000Z',
+    nextAt: '2026-04-22T08:11:08.411Z',
+    repetitionCount: 2
+  });
+}
+
 describe('companionReviewSession', () => {
   beforeEach(() => {
     schedulerGrade.mockReset();
@@ -196,5 +213,9 @@ describe('companionReviewSession', () => {
 
     expect(session.queueNodeIds).toContain('topic-1');
     expect(session.scheduledReadingCount).toBe(1);
+  });
+
+  it('postpones companion reading topics with the same shorter Later interval as desktop', () => {
+    expectCompanionLaterUsesShortReadingInterval();
   });
 });

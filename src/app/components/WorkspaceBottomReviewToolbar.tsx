@@ -28,10 +28,10 @@ export interface WorkspaceBottomReviewToolbarProps {
   reviewSummary: WorkspaceLayoutProps['review']['reviewSummary'];
   reviewStatus: WorkspaceLayoutProps['review']['reviewStatus'];
   reviewSessionMode: ReviewSessionMode;
-  onCompleteReviewItem: () => Promise<boolean>;
-  onDeferReviewItem: () => Promise<boolean>;
-  onDismissReviewItem: () => Promise<boolean>;
-  onSoonReviewItem: () => Promise<boolean>;
+  onReadReviewTopic: () => Promise<boolean>;
+  onPostponeReviewTopic: () => Promise<boolean>;
+  onDismissReviewTopic: () => Promise<boolean>;
+  onRevisitReviewTopicSoon: () => Promise<boolean>;
   onContinueReading: () => void;
   onExitReviewMode: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
@@ -94,11 +94,11 @@ function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
       reviewQueueCount={props.reviewQueueCount}
       reviewSummary={props.reviewSummary}
       reviewStatus={props.reviewStatus}
-      onCompleteReviewItem={props.onCompleteReviewItem}
+      onReadReviewTopic={props.onReadReviewTopic}
       onContinueReading={props.onContinueReading}
-      onDeferReviewItem={props.onDeferReviewItem}
-      onDismissReviewItem={props.onDismissReviewItem}
-      onSoonReviewItem={props.onSoonReviewItem}
+      onPostponeReviewTopic={props.onPostponeReviewTopic}
+      onDismissReviewTopic={props.onDismissReviewTopic}
+      onRevisitReviewTopicSoon={props.onRevisitReviewTopicSoon}
       onExitReviewMode={props.onExitReviewMode}
       onGrade={props.onGradeReview}
       onRevealAnswer={props.onRevealAnswer}
@@ -128,11 +128,11 @@ export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomRe
     isListCollapsed: layoutChrome.isListCollapsed,
     isReviewEditing: review.isReviewEditing,
     isStudyMode: review.isStudyMode,
-    onCompleteReviewItem: review.onCompleteReviewItem,
+    onReadReviewTopic: review.onReadReviewTopic,
     onContinueReading: review.onContinueReading,
-    onDeferReviewItem: review.onDeferReviewItem,
-    onDismissReviewItem: review.onDismissReviewItem,
-    onSoonReviewItem: review.onSoonReviewItem,
+    onPostponeReviewTopic: review.onPostponeReviewTopic,
+    onDismissReviewTopic: review.onDismissReviewTopic,
+    onRevisitReviewTopicSoon: review.onRevisitReviewTopicSoon,
     onExitReviewMode: review.onExitReviewMode,
     onGradeReview: review.onGradeReview,
     onRevealAnswer: review.onRevealAnswer,

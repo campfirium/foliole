@@ -37,7 +37,7 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
 
   actions.startReviewSession(now);
 
-  await expect(actions.dismissReviewItem(now)).resolves.toBe(true);
+  await expect(actions.dismissReviewTopic(now)).resolves.toBe(true);
   expect(harness.getState().nodesById['reading-1']?.reading).toMatchObject({
     lastHandledAt: now,
     nextAt: now,
@@ -76,7 +76,7 @@ it('counts a dismissed reading topic as handled material', async () => {
   actions.startReviewSession(startedAt);
   const dismissedNodeId = harness.getState().reviewSession.currentNodeId;
 
-  await expect(actions.dismissReviewItem(dismissedAt)).resolves.toBe(true);
+  await expect(actions.dismissReviewTopic(dismissedAt)).resolves.toBe(true);
   expect(harness.getState().nodesById[dismissedNodeId ?? '']?.reading?.state).toBe('dismissed');
   expect(harness.getState().reviewSession).toMatchObject({
     readTopicCount: 1,
@@ -98,7 +98,7 @@ it('restores the dismissed review item as the current review item when undoing',
   actions.startReviewSession(now);
   const currentNodeId = harness.getState().reviewSession.currentNodeId;
   const nextNodeId = currentNodeId === 'reading-1' ? 'reading-2' : 'reading-1';
-  await expect(actions.dismissReviewItem(now)).resolves.toBe(true);
+  await expect(actions.dismissReviewTopic(now)).resolves.toBe(true);
   expect(harness.getState().reviewSession.currentNodeId).toBe(nextNodeId);
 
   expect(historyActions.undoWorkspaceAction('2026-03-04T00:00:00.000Z')).toBe(true);
@@ -134,7 +134,7 @@ it('does not dismiss the current review item while another topic is open', async
   const otherNodeId = currentNodeId === 'reading-1' ? 'reading-2' : 'reading-1';
   harness.setState({ activeNodeId: otherNodeId });
 
-  await expect(actions.dismissReviewItem(now)).resolves.toBe(false);
+  await expect(actions.dismissReviewTopic(now)).resolves.toBe(false);
   expect(harness.getState().nodesById[currentNodeId ?? '']?.reading?.state).toBe('active');
   expect(syncNodeContentToRuntimeNow).not.toHaveBeenCalled();
 });

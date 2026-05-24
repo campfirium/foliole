@@ -5,8 +5,8 @@ export interface ReviewPaletteCommandOptions {
   canToggleReviewMode: boolean;
   canGradeReview: boolean;
   canSoonReadingReview: boolean;
-  canDeferReadingReview: boolean;
-  canCompleteReadingReview: boolean;
+  canPostponeReviewTopic: boolean;
+  canReadReviewTopic: boolean;
   canDismissReadingReview: boolean;
   canDeleteReviewItem: boolean;
   canDeleteReviewSourceTopic?: boolean;
@@ -52,8 +52,8 @@ export function isReviewCommandEnabled(id: string, options: ReviewPaletteCommand
   if (id === APP_COMMAND_IDS.startStudyMode) return options.canToggleReviewMode;
   if (id === APP_COMMAND_IDS.revealReviewAnswer) return options.canRevealAnswer;
   if (id === APP_COMMAND_IDS.readingReviewSoon) return options.canSoonReadingReview;
-  if (id === APP_COMMAND_IDS.readingReviewLater) return options.canDeferReadingReview;
-  if (id === APP_COMMAND_IDS.readingReviewRead) return options.canCompleteReadingReview;
+  if (id === APP_COMMAND_IDS.readingReviewLater) return options.canPostponeReviewTopic;
+  if (id === APP_COMMAND_IDS.readingReviewRead) return options.canReadReviewTopic;
   if (id === APP_COMMAND_IDS.readingReviewDismiss) return options.canDismissReadingReview;
   if (id === APP_COMMAND_IDS.deleteCurrentReviewItem) return options.canDeleteReviewItem;
   if (id === APP_COMMAND_IDS.reviewNavigateParent) return options.canReviewNavigateParent ?? false;

@@ -81,10 +81,10 @@ export interface BuildControllerLayoutPropsArgs {
     deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
     exitReviewSession: () => void;
     gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;
-    completeReviewItem: () => Promise<boolean>;
-    deferReviewItem: () => Promise<boolean>;
-    dismissReviewItem: () => Promise<boolean>;
-    soonReviewItem: () => Promise<boolean>;
+    readReviewTopic: () => Promise<boolean>;
+    postponeReviewTopic: () => Promise<boolean>;
+    dismissReviewTopic: () => Promise<boolean>;
+    revisitReviewTopicSoon: () => Promise<boolean>;
     isListCollapsed: boolean;
     isRightSidebarCollapsed: boolean;
     listWidth: number;
@@ -179,10 +179,10 @@ function createLayoutHandlerArgs(
     onToggleImmersiveMode: () => args.runtime.setIsImmersiveMode((current) => !current),
     onToggleRightSidebarVisibility: createToggleRightSidebarVisibility(args),
     updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade),
-    completeReviewItem: () => args.ws.completeReviewItem(),
-    deferReviewItem: () => args.ws.deferReviewItem(),
-    dismissReviewItem: () => args.ws.dismissReviewItem(),
-    soonReviewItem: () => args.ws.soonReviewItem(),
+    readReviewTopic: () => args.ws.readReviewTopic(),
+    postponeReviewTopic: () => args.ws.postponeReviewTopic(),
+    dismissReviewTopic: () => args.ws.dismissReviewTopic(),
+    revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(),
     priorityQuickSetShortcutLabel: args.priorityQuickSet.shortcutLabel
   };
 }

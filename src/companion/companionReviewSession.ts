@@ -17,9 +17,9 @@ import {
 import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
 
 import {
-  completeCompanionReadingReview as completeCompanionReadingReviewBase,
-  deferCompanionReadingReview as deferCompanionReadingReviewBase,
-  dismissCompanionReadingReview as dismissCompanionReadingReviewBase
+  readCompanionReviewTopic as readCompanionReviewTopicBase,
+  postponeCompanionReviewTopic as postponeCompanionReviewTopicBase,
+  dismissCompanionReviewTopic as dismissCompanionReviewTopicBase
 } from './companionReadingReview';
 
 export interface CompanionReviewCard {
@@ -199,32 +199,32 @@ export async function gradeCompanionReviewCard(args: {
   };
 }
 
-export function completeCompanionReadingReview(args: {
+export function readCompanionReviewTopic(args: {
   nodeId: string;
   now?: string;
   snapshot: WorkspaceSnapshot;
 }) {
   const now = args.now ?? new Date().toISOString();
-  const nextSnapshot = completeCompanionReadingReviewBase({ ...args, now });
+  const nextSnapshot = readCompanionReviewTopicBase({ ...args, now });
   return nextSnapshot ? toCompanionReviewResult(nextSnapshot, now) : null;
 }
 
-export function deferCompanionReadingReview(args: {
+export function postponeCompanionReviewTopic(args: {
   nodeId: string;
   now?: string;
   snapshot: WorkspaceSnapshot;
 }) {
   const now = args.now ?? new Date().toISOString();
-  const nextSnapshot = deferCompanionReadingReviewBase({ ...args, now });
+  const nextSnapshot = postponeCompanionReviewTopicBase({ ...args, now });
   return nextSnapshot ? toCompanionReviewResult(nextSnapshot, now) : null;
 }
 
-export function dismissCompanionReadingReview(args: {
+export function dismissCompanionReviewTopic(args: {
   nodeId: string;
   now?: string;
   snapshot: WorkspaceSnapshot;
 }) {
   const now = args.now ?? new Date().toISOString();
-  const nextSnapshot = dismissCompanionReadingReviewBase({ ...args, now });
+  const nextSnapshot = dismissCompanionReviewTopicBase({ ...args, now });
   return nextSnapshot ? toCompanionReviewResult(nextSnapshot, now) : null;
 }

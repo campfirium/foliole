@@ -5,10 +5,10 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { type BuildAppPaletteItemsOptions, getAppPaletteCommands } from './appPaletteCommandCatalog';
 
 const enabledOptions: BuildAppPaletteItemsOptions = {
-  canCompleteReadingReview: true,
+  canReadReviewTopic: true,
   canSoonReadingReview: true,
   canDeleteReviewItem: true,
-  canDeferReadingReview: true,
+  canPostponeReviewTopic: true,
   canDismissReadingReview: true,
   canAnnotateSelection: true,
   canExportCurrentArticle: true,

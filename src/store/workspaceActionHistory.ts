@@ -21,7 +21,7 @@ export { cloneReadingProfile } from './workspaceActionHistoryReading';
 
 const ACTION_HISTORY_LIMIT = 50;
 const DISMISS_TOPIC_ACTION_TITLE = 'Dismiss Topic';
-export type WorkspaceTopicReadingActionTitle = 'Complete Topic' | 'Defer Topic' | 'Soon Topic' | typeof DISMISS_TOPIC_ACTION_TITLE;
+export type WorkspaceTopicReadingActionTitle = 'Read Topic' | 'Later Topic' | 'Soon Topic' | typeof DISMISS_TOPIC_ACTION_TITLE;
 
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)

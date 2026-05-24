@@ -8,9 +8,9 @@ function renderReviewBar(reviewCardKey: string) {
     <CompanionBottomReviewBar
       isAnswerRevealed={false}
       itemKind="reading"
-      onCompleteReviewItem={vi.fn()}
-      onDeferReviewItem={vi.fn()}
-      onDismissReviewItem={vi.fn()}
+      onReadReviewTopic={vi.fn()}
+      onPostponeReviewTopic={vi.fn()}
+      onDismissReviewTopic={vi.fn()}
       onGrade={vi.fn()}
       onRevealAnswer={vi.fn()}
       reviewCardKey={reviewCardKey}
@@ -31,9 +31,9 @@ describe('CompanionBottomReviewBar', () => {
       <CompanionBottomReviewBar
         isAnswerRevealed={false}
         itemKind="reading"
-        onCompleteReviewItem={vi.fn()}
-        onDeferReviewItem={vi.fn()}
-        onDismissReviewItem={vi.fn()}
+        onReadReviewTopic={vi.fn()}
+        onPostponeReviewTopic={vi.fn()}
+        onDismissReviewTopic={vi.fn()}
         onGrade={vi.fn()}
         onRevealAnswer={vi.fn()}
         reviewCardKey="reading:topic-2"

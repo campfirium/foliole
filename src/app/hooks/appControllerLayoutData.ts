@@ -64,10 +64,10 @@ function createLayoutViewState(args: BuildControllerLayoutPropsArgs) {
 
 function createLayoutReviewData(args: BuildControllerLayoutPropsArgs) {
   return {
-    completeReviewItem: args.ws.completeReviewItem,
-    deferReviewItem: args.ws.deferReviewItem,
-    dismissReviewItem: args.ws.dismissReviewItem,
-    soonReviewItem: args.ws.soonReviewItem,
+    readReviewTopic: args.ws.readReviewTopic,
+    postponeReviewTopic: args.ws.postponeReviewTopic,
+    dismissReviewTopic: args.ws.dismissReviewTopic,
+    revisitReviewTopicSoon: args.ws.revisitReviewTopicSoon,
     exitReviewSession: args.ws.exitReviewSession,
     exitStudyMode: args.exitStudyMode,
     nowIso: args.nowIso,

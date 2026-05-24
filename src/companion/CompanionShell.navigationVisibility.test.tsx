@@ -27,9 +27,9 @@ function mockBrowseSurface() {
   useCompanionArticleSurface.mockReturnValue({
     activeAction: 'recent',
     browsedFolder: null,
-    handleCompleteReviewItem: vi.fn(),
-    handleDeferReviewItem: vi.fn(),
-    handleDismissReviewItem: vi.fn(),
+    handleReadReviewTopic: vi.fn(),
+    handlePostponeReviewTopic: vi.fn(),
+    handleDismissReviewTopic: vi.fn(),
     handleGradeReview: vi.fn(),
     handleRevealAnswer: vi.fn(),
     handleSelectBrowseNode: vi.fn(),

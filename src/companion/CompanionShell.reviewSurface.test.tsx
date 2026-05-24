@@ -123,9 +123,9 @@ function reviewSurface(currentCard: Record<string, unknown> | null) {
   return {
     activeAction: 'review',
     browsedFolder: null,
-    handleCompleteReviewItem: vi.fn(),
-    handleDeferReviewItem: vi.fn(),
-    handleDismissReviewItem: vi.fn(),
+    handleReadReviewTopic: vi.fn(),
+    handlePostponeReviewTopic: vi.fn(),
+    handleDismissReviewTopic: vi.fn(),
     handleGradeReview: vi.fn(),
     handleSelectBrowseNode: vi.fn(),
     handleRevealAnswer: vi.fn(),

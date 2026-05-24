@@ -32,12 +32,12 @@ interface PaletteCommandRunnerArgs {
   reimportSelectedTopic: () => Promise<boolean>;
   resetImportData: () => Promise<boolean>;
   toggleDevReviewStatusBarPersistence: () => void;
-  completeReviewItem: () => Promise<boolean>;
+  readReviewTopic: () => Promise<boolean>;
   deleteCurrentReviewItem: () => boolean;
   deleteReviewSourceTopic: () => boolean;
-  deferReviewItem: () => Promise<boolean>;
-  dismissReviewItem: () => Promise<boolean>;
-  soonReviewItem: () => Promise<boolean>;
+  postponeReviewTopic: () => Promise<boolean>;
+  dismissReviewTopic: () => Promise<boolean>;
+  revisitReviewTopicSoon: () => Promise<boolean>;
   redoWorkspaceAction: () => boolean;
   isReviewMode: boolean;
   openImportManagement: () => void;
@@ -92,10 +92,10 @@ function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggl
     gradeReviewHard: () => args.gradeReviewCard(2),
     gradeReviewGood: () => args.gradeReviewCard(3),
     gradeReviewEasy: () => args.gradeReviewCard(4),
-    readingReviewDismiss: () => void args.dismissReviewItem(),
-    readingReviewLater: () => void args.deferReviewItem(),
-    readingReviewRead: () => void args.completeReviewItem(),
-    readingReviewSoon: () => void args.soonReviewItem(),
+    readingReviewDismiss: () => void args.dismissReviewTopic(),
+    readingReviewLater: () => void args.postponeReviewTopic(),
+    readingReviewRead: () => void args.readReviewTopic(),
+    readingReviewSoon: () => void args.revisitReviewTopicSoon(),
     revealReviewAnswer: args.revealReviewAnswer,
     reviewNavigateBack: args.goBack,
     reviewNavigateDown: args.reviewNavigateDown,

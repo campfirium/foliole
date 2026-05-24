@@ -120,11 +120,11 @@ function buildDismissReviewPatch(args: {
   };
 }
 
-export function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet) {
-  return createDismissReviewItemActionWithPending(set, get, new Set());
+export function createDismissReviewTopicAction(set: WorkspaceSet, get: WorkspaceGet) {
+  return createDismissReviewTopicActionWithPending(set, get, new Set());
 }
 
-export function createDismissReviewItemActionWithPending(
+export function createDismissReviewTopicActionWithPending(
   set: WorkspaceSet,
   get: WorkspaceGet,
   pendingNodeIds: ReadingReviewPendingNodeIds
@@ -161,7 +161,7 @@ export function createDismissReviewItemActionWithPending(
   };
 }
 
-export function createLegacyDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet) {
+export function createLegacyDismissReviewTopicAction(set: WorkspaceSet, get: WorkspaceGet) {
   return (now = new Date().toISOString()) => {
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
