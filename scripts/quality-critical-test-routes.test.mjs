@@ -20,6 +20,18 @@ describe('quality critical test routes', () => {
     ]);
   });
 
+  it('routes editor math theme changes to the live markdown theme contract', () => {
+    expect(resolveCriticalTestFiles(['src/features/editor/adapters/liveMarkdownMathTheme.ts'], existing)).toEqual([
+      'src/features/editor/adapters/liveMarkdownTheme.highlight-color.test.ts'
+    ]);
+  });
+
+  it('routes node-list collapse boundary changes to collapse behavior coverage', () => {
+    expect(resolveCriticalTestFiles(['src/features/nodes/components/nodeListTreeModel.ts'], existing)).toEqual([
+      'src/features/nodes/components/NodeListCollapseState.test.tsx'
+    ]);
+  });
+
   it('ignores unrelated local source changes', () => {
     expect(resolveCriticalTestFiles(['src/app/components/SearchPalette.tsx'], existing)).toEqual([]);
   });

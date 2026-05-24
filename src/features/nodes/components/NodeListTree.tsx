@@ -129,7 +129,7 @@ function NodeListTreeImpl({
 }: NodeListTreeProps) {
   const model = useNodeListTreeModel({
     activeNodeId,
-    forceExpandedNodeId,
+    forceExpandedNodeId: forceExpandedNodeId ?? null,
     isSelectionScopeActive,
     nodeOrder,
     nodesById,
@@ -151,7 +151,7 @@ function NodeListTreeImpl({
     bodyAppendContent,
     collapsedNodeIds,
     deleteFeedback,
-    highlightedNodeId,
+    highlightedNodeId: highlightedNodeId ?? null,
     isTrashViewOpen,
     isVirtualViewOpen,
     model,

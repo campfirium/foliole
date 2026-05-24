@@ -1,5 +1,5 @@
-import type { Range } from '@codemirror/state';
-import { Decoration, type Text } from '@codemirror/view';
+import type { Range, Text } from '@codemirror/state';
+import { Decoration } from '@codemirror/view';
 
 import type { MarkdownMathRange } from '../model/markdownMathExtension';
 

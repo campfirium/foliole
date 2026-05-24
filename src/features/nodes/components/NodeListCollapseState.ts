@@ -47,7 +47,7 @@ export function useCollapsedNodeState({
   trashRowsAll
 }: UseCollapsedNodeStateInput): CollapsedNodeState {
   const [collapsedTrashNodeIdList, setCollapsedTrashNodeIdList] = useSessionCollapsedTrashNodeIds();
-  const noteState = useNoteCollapsedState({ forceExpandedNodeId, noteParentById, noteRowsAll });
+  const noteState = useNoteCollapsedState({ forceExpandedNodeId: forceExpandedNodeId ?? null, noteParentById, noteRowsAll });
   const collapsedTrashNodeIds = useMemo(
     () => new Set(collapsedTrashNodeIdList),
     [collapsedTrashNodeIdList]
