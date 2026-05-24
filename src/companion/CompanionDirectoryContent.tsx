@@ -35,7 +35,7 @@ function DirectoryRow(props: {
   return (
     <button
       aria-label={`Open ${props.item.kind === 'folder' ? 'folder' : 'topic'} ${props.item.title}`}
-      className="flex min-h-14 w-full items-center justify-between gap-3 border-b border-companion-divider px-1 py-4 text-left transition-colors hover:bg-companion-subtle/60"
+      className="flex min-h-14 w-full items-center justify-between gap-3 border-b border-companion-divider px-1 py-4 text-left transition-colors hover:bg-companion-subtle/60 active:bg-companion-subtle/80"
       onClick={() => props.onSelectItem(props.item)}
       type="button"
     >

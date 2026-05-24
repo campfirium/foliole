@@ -121,6 +121,15 @@
   --app-settings-switch-off-bg: color-mix(in srgb, rgb(var(--color-foreground)) 18%, var(--workspace-region-main-document-bg) 82%);
   --app-settings-switch-on-bg: rgb(var(--app-accent-color-rgb) / 0.76);
   --app-settings-switch-knob-bg: var(--workspace-region-main-document-bg);
+  --companion-base: rgb(var(--color-canvas));
+  --companion-content: rgb(var(--color-canvas));
+  --companion-subtle: rgb(var(--color-bg-panel));
+  --companion-divider: color-mix(in oklab, rgb(var(--color-canvas)) 92%, rgb(var(--color-foreground)));
+  --companion-divider-strong: color-mix(in oklab, rgb(var(--color-canvas)) 86%, rgb(var(--color-foreground)));
+  --companion-accent: var(--app-accent-color);
+  --companion-accent-soft: rgb(var(--app-accent-color-rgb) / 0.14);
+  --companion-text-secondary: rgb(var(--color-muted-foreground));
+  --companion-text-tertiary: rgb(var(--color-muted-foreground) / 0.7);
   --pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-background)) 58%, rgb(var(--color-bg-panel)) 42%);
   --pdf-reading-inverted-page-color: color-mix(in srgb, rgb(var(--color-background)) 68%, rgb(var(--color-canvas)) 32%);
   --pdf-reading-warm-surface-color: color-mix(in srgb, rgb(var(--color-canvas)) 84%, rgb(var(--app-cloze-color-rgb)) 16%);
@@ -234,6 +243,65 @@
   }
 }
 
+@keyframes companion-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes companion-sheet-out {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+@keyframes companion-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes companion-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.companion-sheet[data-state='open'] {
+  animation: companion-sheet-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.companion-sheet[data-state='closed'] {
+  animation: companion-sheet-out 200ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.companion-sheet-overlay {
+  background-color: rgb(var(--color-foreground) / 0.32);
+}
+
+.companion-sheet-overlay[data-state='open'] {
+  animation: companion-overlay-in 220ms ease-out;
+}
+
+.companion-sheet-overlay[data-state='closed'] {
+  animation: companion-overlay-out 160ms ease-in;
+}
+
+@media (pointer: coarse) {
+  body {
+    line-height: 1.55;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+  body * {
+    scrollbar-width: none;
+  }
+  body *::-webkit-scrollbar {
+    display: none;
+    height: 0;
+    width: 0;
+  }
+  button {
+    touch-action: manipulation;
+  }
+}
+
 :root[data-resolved-base-color='dark'] {
   --color-canvas: 24 25 24;
   --color-background: 20 21 20;
@@ -298,6 +366,12 @@
   --app-settings-switch-off-bg: color-mix(in srgb, rgb(var(--color-foreground)) 18%, var(--workspace-region-main-document-bg) 82%);
   --app-settings-switch-on-bg: rgb(var(--app-accent-color-rgb) / 0.72);
   --app-settings-switch-knob-bg: rgb(var(--color-bg-elevated));
+  --companion-base: rgb(var(--color-canvas));
+  --companion-content: rgb(var(--color-bg-elevated));
+  --companion-subtle: rgb(var(--color-bg-panel));
+  --companion-divider: color-mix(in oklab, rgb(var(--color-canvas)) 88%, rgb(var(--color-foreground)));
+  --companion-divider-strong: color-mix(in oklab, rgb(var(--color-canvas)) 80%, rgb(var(--color-foreground)));
+  --companion-accent-soft: rgb(var(--app-accent-color-rgb) / 0.2);
   color-scheme: dark;
 }
 

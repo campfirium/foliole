@@ -40,7 +40,7 @@ export function CompanionTopBar(props: {
   }
 
   return (
-    <header className="sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-3 pt-4 backdrop-blur sm:-mx-7 sm:px-7">
+    <header className="sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-3 pt-[max(env(safe-area-inset-top),16px)] backdrop-blur sm:-mx-7 sm:px-7">
       {props.onBack ? (
         <div className={`flex min-h-10 items-center justify-between gap-3 ${hasTitleRow ? 'mb-3' : ''}`}>
           <button

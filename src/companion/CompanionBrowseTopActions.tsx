@@ -49,7 +49,7 @@ function MenuRow(props: {
   return (
     <button
       aria-disabled={props.disabled ? 'true' : undefined}
-      className="flex w-full items-center justify-between gap-4 border-b border-companion-divider px-1 py-4 text-left text-foreground"
+      className="flex w-full items-center justify-between gap-4 border-b border-companion-divider px-1 py-4 text-left text-foreground transition-colors active:bg-companion-subtle/80 disabled:active:bg-transparent"
       disabled={props.disabled}
       onClick={props.onSelect}
       type="button"
@@ -166,8 +166,9 @@ function CompanionBrowseMenuSheet(props: {
   return (
     <AppDialog onOpenChange={handleOpenChange} open={props.open}>
       <AppDialogPortal>
-        <AppDialogOverlay />
-        <AppDialogContent className="bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-xl border-x-0 border-b-0 px-6 pb-6 pt-5">
+        <AppDialogOverlay className="companion-sheet-overlay" />
+        <AppDialogContent className="companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-xl border-x-0 border-b-0 px-6 pt-3 pb-[max(env(safe-area-inset-bottom),24px)]">
+          <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
           <div className="mx-auto w-full max-w-[760px]">
             <BrowseMenuHeader onBack={() => setView('menu')} view={view} />
             <div className="border-t border-companion-divider">

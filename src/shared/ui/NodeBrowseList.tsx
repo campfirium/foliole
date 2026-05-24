@@ -48,7 +48,7 @@ export function NodeBrowseList(props: {
             className={`block w-full border-b px-1 py-4 text-left transition-colors ${
               item.nodeId === props.currentNodeId
                 ? 'border-companion-divider bg-companion-subtle'
-                : 'border-companion-divider bg-transparent hover:bg-companion-subtle/60'
+                : 'border-companion-divider bg-transparent hover:bg-companion-subtle/60 active:bg-companion-subtle/80'
             }`}
             onClick={() => props.onSelectNode(item.nodeId)}
             type="button"
