@@ -18,8 +18,6 @@ export function renderWorkspaceTopicTreeShell(args: {
   collapsibleNodeIds: string[];
   collapsedNodeIds: ReadonlySet<string>;
   contentSort: ReturnType<typeof useWorkspaceContentSort>;
-  emptyStateDescription?: string;
-  emptyStateTitle?: string;
   focusedNodeId: string | null;
   hasCollapsedNodes: boolean;
   interaction: ReturnType<typeof useWorkspaceTopicTreeInteraction>;
@@ -53,8 +51,6 @@ export function renderWorkspaceTopicTreeShell(args: {
         collapsedNodeIds: args.collapsedNodeIds,
         contextMenu: args.interaction.contextMenu,
         drag: args.interaction.drag,
-        emptyStateDescription: args.emptyStateDescription ?? 'Add a topic to get started.',
-        emptyStateTitle: args.emptyStateTitle ?? 'No topics in this folder',
         nodesById: args.nodesById,
         onRenameNode: args.interaction.updateNodeTitle,
         onSelectNode: args.interaction.handleSelectNode,

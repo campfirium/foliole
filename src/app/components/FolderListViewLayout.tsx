@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { AppEmptyState, AppInput } from '../../shared/ui';
+import { AppInput } from '../../shared/ui';
 
 import { FolderListSortControls } from './FolderListSortControls';
 
@@ -151,20 +151,14 @@ function FolderListSurface({
 }
 
 function FolderListBody({
-  currentEmptyState,
   filteredNodes,
   onRenderItem
 }: {
-  currentEmptyState: { description: string; title: string };
   filteredNodes: Node[];
   onRenderItem: (node: Node) => ReactNode;
 }) {
   if (filteredNodes.length === 0) {
-    return (
-      <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
-        <AppEmptyState description={currentEmptyState.description} title={currentEmptyState.title} />
-      </div>
-    );
+    return <div aria-hidden="true" className="min-h-[240px] flex-1" />;
   }
 
   return (
@@ -175,7 +169,6 @@ function FolderListBody({
 }
 
 export function FolderListViewLayout(props: {
-  currentEmptyState: { description: string; title: string };
   currentViewActions?: ReactNode;
   filteredNodes: Node[];
   folderTitle: string;
@@ -211,7 +204,6 @@ export function FolderListViewLayout(props: {
           />
         )}
         <FolderListBody
-          currentEmptyState={props.currentEmptyState}
           filteredNodes={props.filteredNodes}
           onRenderItem={props.onRenderItem}
         />

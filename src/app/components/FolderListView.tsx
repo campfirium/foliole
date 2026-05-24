@@ -60,11 +60,6 @@ interface RenderFolderListItemArgs {
   sortKey: FolderListSortKey;
 }
 
-const DEFAULT_EMPTY_STATE = {
-  description: 'Topics and folders will appear here after you add them to this folder.',
-  title: 'This folder is empty'
-} as const;
-
 function resolveFolderTitle(folderTitle: string | undefined, folderNodeId: string | undefined, nodesById: Record<string, Node>) {
   if (folderTitle && folderTitle.trim()) {
     return folderTitle;
@@ -73,20 +68,6 @@ function resolveFolderTitle(folderTitle: string | undefined, folderNodeId: strin
     return nodesById[folderNodeId]?.title || 'Folder';
   }
   return 'Folder';
-}
-
-function buildFolderListEmptyState(
-  resolvedEmptyState: FolderListViewProps['emptyState'],
-  searchQuery: string
-) {
-  if (searchQuery.trim()) {
-    return {
-      description: 'Try a different keyword for this folder.',
-      title: 'No matching content'
-    };
-  }
-
-  return resolvedEmptyState ?? DEFAULT_EMPTY_STATE;
 }
 
 function buildCurrentViewTopicSnapshots(filteredNodes: Node[]): CurrentViewTopicSnapshot[] {
@@ -125,7 +106,6 @@ function useResolvedFolderListState(props: FolderListViewProps) {
   const listedNodes = useMemo(
     () => resolveListedFolderNodes(props),
     [
-      props.emptyState,
       props.folderNodeId,
       props.nodeOrder,
       props.nodes,
@@ -154,13 +134,12 @@ function useResolvedFolderListState(props: FolderListViewProps) {
   return {
     nodeViewById,
     resolvedFolderTitle: resolveFolderTitle(props.folderTitle, props.folderNodeId, props.nodesById),
-    resolvedEmptyState: buildFolderListEmptyState(props.emptyState ?? DEFAULT_EMPTY_STATE, state.searchQuery),
     state
   };
 }
 
 export function FolderListView(props: FolderListViewProps) {
-  const { nodeViewById, resolvedEmptyState, resolvedFolderTitle, state } = useResolvedFolderListState(props);
+  const { nodeViewById, resolvedFolderTitle, state } = useResolvedFolderListState(props);
   const deleteNodes = useWorkspaceStore((storeState) => storeState.deleteNodes);
   const setFolderManualChildOrder = useWorkspaceStore((storeState) => storeState.setFolderManualChildOrder);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
@@ -172,7 +151,6 @@ export function FolderListView(props: FolderListViewProps) {
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
       <section aria-label={props.regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
-          currentEmptyState={resolvedEmptyState}
           currentViewActions={props.currentViewActions ?? currentViewActions}
           filteredNodes={state.filteredNodes}
           folderTitle={resolvedFolderTitle}
@@ -186,15 +164,15 @@ export function FolderListView(props: FolderListViewProps) {
             canManualDrag,
             childNodes: state.childNodes,
             draggedNodeId,
-            folderNodeId: props.folderNodeId,
             itemLayout: props.itemLayout ?? 'default',
             node,
             nodeViewById,
             nodesById: props.nodesById,
             onSelectNode: props.onSelectNode,
+            ...(props.folderNodeId ? { folderNodeId: props.folderNodeId } : {}),
             ...(props.onSelectNodePath ? { onSelectNodePath: props.onSelectNodePath } : {}),
             setDraggedNodeId,
-            setFolderManualChildOrder,
+            ...(setFolderManualChildOrder ? { setFolderManualChildOrder } : {}),
             sortKey: state.sortKey
           })}
           searchQuery={state.searchQuery}
