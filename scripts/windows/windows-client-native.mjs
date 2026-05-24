@@ -8,18 +8,20 @@ import { forceRestartClient } from './windows-client-native-force-restart.mjs';
 import { runCapture } from './windows-client-native-process.mjs';
 import { recoverClientStateFromReady } from './windows-client-native-recovered-state.mjs';
 import { removeShellRestartRequest } from './windows-client-native-shell-request.mjs';
+import { startNativeDevRunner } from './windows-client-native-start-runner.mjs';
 import { stopNativeClient } from './windows-client-native-stop.mjs';
+import { resolveWindowsClientAction } from './windows-client-native-actions.mjs';
 import {
   readClientState as readClientStateFile,
+  processAlive,
   readReadyStateFromBootEvents,
   readReadyState as readReadyStateFiles,
   removeClientState,
   resetReadyMarkers,
   saveClientState
 } from './windows-client-native-state.mjs';
+import { formatStartupHealthFailure, readStartupFailureFromBootEvents } from './windows-client-native-startup-failure.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
-
-export const WINDOWS_CLIENT_ACTIONS = new Set(['status', 'start', 'stop', 'restart', 'full-restart']);
 
 const {
   appReadyFile,
@@ -56,34 +58,6 @@ async function currentHead() {
   return result.code === 0 ? result.stdout.trim() : '';
 }
 
-async function startNativeDevRunner({ head, logs, session }) {
-  const result = await runCapture('powershell.exe', [
-    '-NoProfile',
-    '-ExecutionPolicy',
-    'Bypass',
-    '-File',
-    nativeStartScript,
-    '-NodePath',
-    process.execPath,
-    '-WorkDir',
-    repoRoot,
-    '-Session',
-    session,
-    '-RuntimeHead',
-    head,
-    '-StdoutLog',
-    logs.stdoutLog,
-    '-StderrLog',
-    logs.stderrLog
-  ], { cwd: repoRoot, timeoutMs: 30000 });
-  const shellPid = Number.parseInt(result.stdout.match(/shell_pid=(\d+)/u)?.[1] ?? '', 10);
-  if (result.code !== 0 || !Number.isInteger(shellPid)) {
-    const reason = result.stderr.trim() || result.stdout.trim() || result.error?.message || 'missing shell_pid';
-    throw new Error(`native dev runner start failed: ${reason}`);
-  }
-  return shellPid;
-}
-
 function printStatus() {
   const state = readClientState();
   const ready = readReadyState();
@@ -92,6 +66,10 @@ function printStatus() {
     const head = runtimeHead ? ` head=${runtimeHead}` : '';
     console.log(`[windows-restart-client] status: RUNNING trust=OK shell_pid=${state?.shellPid ?? 'unknown'} runtime_pid=${ready.windowVisible.pid}${head}`);
     return { ok: true, ready, state };
+  }
+  if (state?.shellPid) {
+    console.log(`[windows-restart-client] status: STOPPED trust=FAILED reason=no-runtime shell_pid=${state.shellPid}`);
+    return { ok: false, ready: null, state };
   }
   console.log('[windows-restart-client] status: STOPPED trust=FAILED reason=no-runtime');
   return { ok: false, ready: null, state };
@@ -103,12 +81,15 @@ async function resetMarkers() {
 
 const saveState = (state) => saveClientState(stateFile, state);
 
-async function waitForReady(session) {
+async function waitForReady(session, shellPid) {
   const deadline = Date.now() + healthTimeoutMs;
   while (Date.now() < deadline) {
     const ready = readReadyState();
     if (ready?.appReady.session === session) {
       return ready;
+    }
+    if (!processAlive(shellPid)) {
+      return null;
     }
     await wait(500);
   }
@@ -123,27 +104,43 @@ async function startClient({ print = true } = {}) {
       return { alreadyRunning: true, ready: existing.ready, state: existing.state };
     }
     await stopClient({ print: false });
+  } else {
+    await stopClient({ print: false });
   }
   await resetMarkers();
   await removeShellRestartRequest(shellRestartRequestFile);
   const session = `windows-native-client-${Date.now()}`;
   const logs = await createClientLogStreams(logDir, session);
   closeClientLogStreams(logs);
-  const shellPid = await startNativeDevRunner({ head, logs, session });
+  const shellPid = await startNativeDevRunner({ head, logs, nativeStartScript, repoRoot, session });
+  const startedAt = new Date().toISOString();
   await saveState({
     head,
     session,
     shellPid,
-    startedAt: new Date().toISOString(),
+    startedAt,
     stderrLog: logs.stderrLog,
     stdoutLog: logs.stdoutLog
   });
-  const ready = await waitForReady(session);
+  const ready = await waitForReady(session, shellPid);
   if (!ready) {
     printStartupLogTail(readClientState());
-    await removeClientState(stateFile);
+    const failureReason = formatStartupHealthFailure({
+      bootEvent: readStartupFailureFromBootEvents(bootEventLogFile, { session }),
+      stderrLog: logs.stderrLog
+    });
+    await saveState({
+      failedAt: new Date().toISOString(),
+      head,
+      lastError: failureReason,
+      session,
+      shellPid,
+      startedAt,
+      stderrLog: logs.stderrLog,
+      stdoutLog: logs.stdoutLog
+    });
     await resetMarkers();
-    throw new Error(`startup health check failed: app-ready-timeout shell_pid=${shellPid} left-for-inspection`);
+    throw new Error(`startup health check failed: ${failureReason} shell_pid=${shellPid} left-for-inspection`);
   }
   await saveState({
     head,
@@ -192,14 +189,6 @@ async function restartRuntimeClient() {
     stopClient,
     wait
   });
-}
-
-export function resolveWindowsClientAction(argv) {
-  const action = argv[2] ?? process.env.WINDOWS_CLIENT_ACTION ?? 'status';
-  if (!WINDOWS_CLIENT_ACTIONS.has(action)) {
-    throw new Error(`unsupported Windows client action: ${action}`);
-  }
-  return action;
 }
 
 async function main() {

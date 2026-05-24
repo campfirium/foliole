@@ -31,6 +31,26 @@ export async function listRepoElectronPids(repoRoot) {
     .filter((pid) => Number.isInteger(pid) && pid > 0);
 }
 
+async function isRepoDevShellPid(pid, repoRoot) {
+  if (process.platform !== 'win32' || !Number.isInteger(pid) || pid <= 0 || !repoRoot) {
+    return false;
+  }
+  const scriptPath = path.join(repoRoot, 'scripts', 'windows', 'electron-dev-native.mjs');
+  const scriptLiteral = scriptPath.replaceAll("'", "''");
+  const result = await runCapture('powershell.exe', [
+    '-NoProfile',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    `$process = Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}"; ` +
+      `$script = [System.IO.Path]::GetFullPath('${scriptLiteral}'); ` +
+      'if ($process -and $process.CommandLine -like "*$script*") { $process.ProcessId }'
+  ], {
+    timeoutMs: 10000
+  });
+  return result.code === 0 && result.stdout.split(/\s+/u).includes(String(pid));
+}
+
 export async function stopNativeClient({
   print,
   readClientState,
@@ -42,9 +62,13 @@ export async function stopNativeClient({
   const state = readClientState();
   const ready = readReadyState();
   const errors = [];
-  const pids = new Set([state?.runtimePid, ready?.appReady.pid, state?.shellPid]);
-  for (const pid of await listRepoElectronPids(repoRoot)) {
+  const repoElectronPids = await listRepoElectronPids(repoRoot);
+  const pids = new Set([ready?.appReady.pid]);
+  for (const pid of repoElectronPids) {
     pids.add(pid);
+  }
+  if (await isRepoDevShellPid(state?.shellPid, repoRoot)) {
+    pids.add(state.shellPid);
   }
   for (const pid of pids) {
     try {

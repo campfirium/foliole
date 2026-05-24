@@ -7,7 +7,7 @@ import process from 'node:process';
 
 import { expect, it } from 'vitest';
 
-import { resolveWindowsClientAction } from './windows-client-native.mjs';
+import { resolveWindowsClientAction } from './windows-client-native-actions.mjs';
 import { readReadyState, readReadyStateFromBootEvents } from './windows-client-native-state.mjs';
 
 it('defaults native Windows client actions to status', () => {
@@ -28,15 +28,17 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   const forceRestartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-force-restart.mjs'), 'utf8');
   const fullRestartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-full-restart.mjs'), 'utf8');
   const restartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-restart.mjs'), 'utf8');
+  const startRunnerScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-start-runner.mjs'), 'utf8');
   const startScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-electron-dev-native.ps1'), 'utf8');
 
-  expect(script).toContain("'powershell.exe'");
-  expect(script).toContain("'-File'");
+  expect(startRunnerScript).toContain("'powershell.exe'");
+  expect(startRunnerScript).toContain("'-File'");
   expect(script).toContain('nativeStartScript');
   expect(script).toContain('closeClientLogStreams(logs)');
-  expect(script).toContain('native dev runner start failed');
+  expect(startRunnerScript).toContain('native dev runner start failed');
   expect(script).toContain('if (existing.ready.appReady.head === head)');
   expect(script).toContain('await stopClient({ print: false })');
+  expect(script).toContain('} else {\n    await stopClient({ print: false });\n  }');
   expect(script).toContain('stopNativeClient');
   expect(script).toContain('removeShellRestartRequest(shellRestartRequestFile)');
   expect(startScript).toContain('Start-Process');
@@ -68,8 +70,11 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).toContain('readClientState');
   expect(script).not.toContain('requestControlledRuntimeRestart');
   expect(script).not.toContain('controlled restart timed out; runtime left for inspection');
-  expect(script).toContain('startup health check failed: app-ready-timeout shell_pid=');
-  expect(script).toContain('const ready = await waitForReady(session)');
+  expect(script).toContain('startup health check failed: ${failureReason} shell_pid=');
+  expect(script).toContain('const ready = await waitForReady(session, shellPid)');
+  expect(script).toContain('lastError: failureReason');
+  expect(script).toContain('startup health check failed: ${failureReason}');
+  expect(script).not.toContain('await removeClientState(stateFile);');
   expect(script).not.toContain('ready ??= readReadyState()');
   expect(restartScript).not.toContain('forced-cleanup');
   expect(script).toContain('recoverClientStateFromReady');

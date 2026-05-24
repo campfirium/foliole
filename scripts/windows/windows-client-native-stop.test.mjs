@@ -81,4 +81,41 @@ describe('native Windows client stop', () => {
       resetMarkers: vi.fn()
     })).rejects.toThrow('remaining electron pids=333');
   });
+
+  it('does not kill a stored shell pid when ownership cannot be proven', async () => {
+    runCapture
+      .mockResolvedValueOnce({ code: 0, stdout: '' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' });
+
+    await expect(stopNativeClient({
+      print: false,
+      readClientState: () => ({ shellPid: 222 }),
+      readReadyState: () => null,
+      removeClientState: vi.fn(),
+      repoRoot: 'D:\\C\\foliole',
+      resetMarkers: vi.fn()
+    })).resolves.toBeUndefined();
+
+    expect(killPid).not.toHaveBeenCalledWith(222);
+  });
+
+  it('kills a stored shell pid only when it belongs to the native dev runner', async () => {
+    runCapture
+      .mockResolvedValueOnce({ code: 0, stdout: '' })
+      .mockResolvedValueOnce({ code: 0, stdout: '222\r\n' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' });
+    killPid.mockResolvedValue(undefined);
+
+    await expect(stopNativeClient({
+      print: false,
+      readClientState: () => ({ shellPid: 222 }),
+      readReadyState: () => null,
+      removeClientState: vi.fn(),
+      repoRoot: 'D:\\C\\foliole',
+      resetMarkers: vi.fn()
+    })).resolves.toBeUndefined();
+
+    expect(killPid).toHaveBeenCalledWith(222);
+  });
 });
