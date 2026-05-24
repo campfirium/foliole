@@ -189,20 +189,22 @@ export function buildSequentialReadingDismissPatch(args: SequentialReadingArgs &
   const nextNodesById = { ...args.nodesById };
   const changes: SequentialReadingChange[] = [];
   const derivedNodeIds = collectSequentialDerivedTopicIds({ ...args, sourceNodeId });
-  const startIndex = derivedNodeIds.indexOf(args.dismissedNodeId) + 1;
-  for (const nodeId of derivedNodeIds.slice(Math.max(startIndex, 0))) {
-    if (nextNodesById[nodeId]?.reading?.state !== 'locked') {
+  let released = false;
+  for (const nodeId of derivedNodeIds) {
+    const node = nextNodesById[nodeId];
+    if (!node || isPreservedSequentialReadingState(node.reading)) {
       continue;
     }
+    const state = released ? 'locked' : 'active';
+    released = true;
     applyReadingState({
       changes,
       defaultPriority: args.defaultPriority,
       nextNodesById,
       nodeId,
       now: args.now,
-      state: 'active'
+      state
     });
-    break;
   }
   return changes.length === 0 ? null : { changes, nodesById: nextNodesById, sourceNodeId };
 }
