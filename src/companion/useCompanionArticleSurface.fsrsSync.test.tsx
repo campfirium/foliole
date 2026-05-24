@@ -166,4 +166,31 @@ describe('useCompanionArticleSurface fsrs sync', () => {
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord.mock.invocationCallOrder[0]!)
       .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]!);
   });
+
+  it('does not replace the companion snapshot when fsrs review persistence is unavailable', async () => {
+    syncObjectMock.saveCompanionSyncNodeReviewRecord.mockResolvedValueOnce(null);
+    const workspaceSync = createWorkspaceSync();
+    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+
+    await act(async () => {
+      await result.current.handleGradeReview(3);
+    });
+
+    expect(workspaceSync.replaceSnapshot).not.toHaveBeenCalled();
+    expect(result.current.reviewError).toBe('Failed to persist the review grade.');
+  });
+
+  it('ignores duplicate fsrs review submissions while persistence is in flight', async () => {
+    const workspaceSync = createWorkspaceSync();
+    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+
+    await act(async () => {
+      const first = result.current.handleGradeReview(3);
+      const second = result.current.handleGradeReview(3);
+      await Promise.all([first, second]);
+    });
+
+    expect(syncObjectMock.saveCompanionSyncNodeReviewRecord).toHaveBeenCalledTimes(1);
+    expect(workspaceSync.replaceSnapshot).toHaveBeenCalledTimes(1);
+  });
 });
