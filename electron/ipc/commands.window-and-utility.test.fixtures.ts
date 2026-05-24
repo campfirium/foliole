@@ -2,6 +2,7 @@ export const defaultReviewSchedulerSettings = {
   algorithm: 'ts-fsrs@4.3.0',
   desiredRetention: 0.9,
   maximumIntervalDays: 36500,
+  newDayStartsAtHour: 4,
   enableShortTerm: false,
   pushQueue: {
     defaultPriority: 5,

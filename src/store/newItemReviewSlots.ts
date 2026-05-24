@@ -1,4 +1,6 @@
+import { resolveScheduledDayStart } from '../../lib/core/review/reviewDayBoundary.js';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { createDefaultReviewProfile } from './workspaceSeed';
 
@@ -15,9 +17,13 @@ function toLocalDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function createFutureLocalDayStarts(now: Date) {
+function createFutureLocalDayStarts(now: Date, newDayStartsAtHour: number) {
   return Array.from({ length: NEW_ITEM_REVIEW_SLOT_DAY_COUNT }, (_, index) =>
-    new Date(now.getFullYear(), now.getMonth(), now.getDate() + index + 1)
+    resolveScheduledDayStart({
+      reviewedAt: now.toISOString(),
+      scheduledDays: index + 1,
+      newDayStartsAtHour
+    })
   );
 }
 
@@ -50,10 +56,13 @@ function selectLowestLoadDay(dayStarts: Date[], loadByDay: Map<string, number>) 
 
 export function allocateNewItemReviewDueDates(args: {
   batchSize: number;
+  newDayStartsAtHour?: number;
   nodes: Iterable<ReviewSlotNode | undefined>;
   now: string;
 }) {
-  const dayStarts = createFutureLocalDayStarts(new Date(args.now));
+  const newDayStartsAtHour =
+    args.newDayStartsAtHour ?? getCurrentReviewSchedulerSettings().newDayStartsAtHour;
+  const dayStarts = createFutureLocalDayStarts(new Date(args.now), newDayStartsAtHour);
   const loadByDay = initializeLoadByDay(dayStarts);
   countExistingReviewLoad(loadByDay, args.nodes);
 

@@ -160,6 +160,7 @@ export interface NativeReviewSchedulerSettings {
   algorithm: string;
   desiredRetention: number;
   maximumIntervalDays: number;
+  newDayStartsAtHour: number;
   enableShortTerm: boolean;
   pushQueue: UnifiedPushQueueRules;
   updatedAt: string;

@@ -55,6 +55,12 @@ function createSchedulerSettingActions(saveSettings: (patch: ReviewSchedulerSett
       }
       saveSettings({ maximumIntervalDays: Math.round(value) });
     },
+    onNewDayStartsAtHourChange: (value: number) => {
+      if (!Number.isFinite(value) || value < 0 || value > 23) {
+        return;
+      }
+      saveSettings({ newDayStartsAtHour: Math.round(value) });
+    },
     onEnableShortTermChange: (value: boolean) => {
       saveSettings({ enableShortTerm: value });
     }

@@ -1,4 +1,5 @@
 import { resolveNodeShortTermSetting } from '../../../../lib/core/review/nodeSettings.js';
+import { normalizeScheduledCardDue } from '../../../../lib/core/review/reviewDayBoundary.js';
 import type { SchedulerGradeInput } from '../../../../lib/core/review/types.js';
 import type { NodeReviewProfile } from '../../nodes/model/nodeTypes';
 
@@ -45,6 +46,7 @@ export interface SharedReviewGradeResult {
 export async function gradeSharedFsrsReviewNode(args: {
   getSchedulerVersion: ReviewSchedulerVersionResolver;
   grade: ReviewGrade;
+  newDayStartsAtHour: number;
   nodeId: string;
   nodesById: Record<string, ReviewGradeNode | undefined>;
   now: string;
@@ -62,8 +64,12 @@ export async function gradeSharedFsrsReviewNode(args: {
     grade: args.grade,
     now: args.now
   });
-  const cardAfter = gradeResult.card;
   const reviewedAt = gradeResult.reviewed_at;
+  const cardAfter = normalizeScheduledCardDue({
+    card: gradeResult.card,
+    reviewedAt,
+    newDayStartsAtHour: args.newDayStartsAtHour
+  });
   const schedulerVersion = args.getSchedulerVersion({ enableShortTerm });
   const nextReviewProfile = toNodeReviewProfile(cardAfter);
   return {

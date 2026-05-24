@@ -225,7 +225,7 @@ function expectNextQueueState(state: WorkspaceState) {
   expect(state.reviewSession.queueNodeIds).toEqual(['qa-2']);
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
   expect(state.nodesById['qa-1']?.review).toMatchObject({
-    due: '2026-03-10T00:00:00.000Z',
+    due: new Date(2026, 2, 10, 4).toISOString(),
     state: 1,
     lastReviewAt: '2026-03-03T00:00:00.000Z'
   });

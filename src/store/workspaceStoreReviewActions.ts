@@ -7,6 +7,7 @@ import {
   getReviewSchedulerVersion
 } from '../features/settings/model/reviewSchedulerSettings';
 
+import { isReviewProfileDue } from './reviewQueuePlannerTime';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
@@ -46,8 +47,11 @@ function isActionableSessionNode(node: WorkspaceState['nodesById'][string] | und
   const nowMs = parseTimestamp(now);
   if (nowMs === null) return true;
   if (isFsrsReviewItemNode(node)) {
-    const dueMs = parseTimestamp(node.review?.due ?? now);
-    return dueMs === null || dueMs <= nowMs;
+    try {
+      return isReviewProfileDue(node.review, now, getCurrentReviewSchedulerSettings().newDayStartsAtHour);
+    } catch {
+      return true;
+    }
   }
   if (isReadingReviewItemNode(node)) {
     const nextAtMs = parseTimestamp(node.reading?.nextAt ?? node.createdAt);
@@ -87,6 +91,7 @@ function createGradeReviewCardAction(set: WorkspaceSet, get: WorkspaceGet, sched
     const result = await gradeSharedFsrsReviewNode({
       getSchedulerVersion: (overrides) => getReviewSchedulerVersion(getCurrentReviewSchedulerSettings(), overrides),
       grade,
+      newDayStartsAtHour: getCurrentReviewSchedulerSettings().newDayStartsAtHour,
       nodeId: currentNodeId,
       nodesById: snapshot.nodesById,
       now,

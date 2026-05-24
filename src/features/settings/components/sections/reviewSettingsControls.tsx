@@ -75,6 +75,28 @@ export function DefaultPriorityControl(props: {
   );
 }
 
+export function NewDayStartControl(props: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+      <select
+        aria-label="New day starts at"
+        className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
+        onChange={(event) => props.onChange(Number(event.target.value))}
+        value={String(props.value)}
+      >
+        {Array.from({ length: 24 }, (_, hour) => (
+          <option key={hour} value={hour}>
+            {`${String(hour).padStart(2, '0')}:00`}
+          </option>
+        ))}
+      </select>
+    </SettingsControlSlot>
+  );
+}
+
 export function QueueMixRatioControl(props: {
   reading: number;
   fsrs: number;
