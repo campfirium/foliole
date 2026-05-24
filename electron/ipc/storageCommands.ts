@@ -1,122 +1,24 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resetImportData } from '../database/importMaintenance.js';
-import {
-  deleteNodesPermanently,
-  flushAllDirtyNodeSyncVersions,
-  replaceNodeOrder,
-  restoreNodes,
-  softDeleteNodes,
-  updateNodeAnchorLinks,
-  upsertNodeSnapshot
-} from '../database/nodeMutations.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
 import { reimportCurrentTopicSource } from '../import/currentSourceReimport.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
 import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
 import { restoreRemovedSource } from '../import/removedSourceRestore.js';
-import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
-import {
-  parseNodeAnchorLocatorUpdateArray,
-  asString,
-  asStringArray,
-  parseNodeCreationArgs,
-  parseNodeSnapshotArgs
-} from './commandParsers.js';
+import { asString } from './commandParsers.js';
 import { toNativeImportOverview } from './importOverviewPayload.js';
-import {
-  parseDeleteNodesPermanentlyArgs,
-  parseRestoreNodesArgs,
-  parseSoftDeleteNodesArgs
-} from './nodeCommandArgs.js';
 import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
 import { toNativePdfImportsInventory } from './pdfImportsInventoryPayload.js';
 import { toNativeReadwiseBooksInventory } from './readwiseBooksInventoryPayload.js';
 import { loadRemovedSources } from './removedSourcesPayload.js';
 import { handleStorageAttachmentCommand } from './storageAttachmentCommands.js';
-import {
-  handleSqliteMaintenanceCommand,
-  readObjectArg
-} from './storageCommandSupport.js';
+import { handleSqliteMaintenanceCommand } from './storageCommandSupport.js';
+import { handleNodeMutationCommand } from './storageNodeMutationCommands.js';
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
 import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
 import { handleSyncMutationCommand } from './storageSyncCommands.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
-
-function completeWorkspaceMutation(result: unknown = null) {
-  notifyWorkspaceContentChanged();
-  return result;
-}
-
-function handleSoftDeleteNodeCommand(args: Record<string, unknown>) {
-  const parsed = parseSoftDeleteNodesArgs(args);
-  softDeleteNodes(parsed);
-  scheduleMirrorSync(parsed.nodeIds);
-  return completeWorkspaceMutation({ deletedNodeIds: parsed.nodeIds });
-}
-
-function handlePermanentDeleteNodeCommand(args: Record<string, unknown>) {
-  const parsed = parseDeleteNodesPermanentlyArgs(args);
-  const affectedParentNodeIds = deleteNodesPermanently(parsed);
-  const removedNodeIds = parsed.nodeIds;
-  scheduleMirrorSync([...new Set([...removedNodeIds, ...affectedParentNodeIds])]);
-  return completeWorkspaceMutation({ nodeOrder: parsed.nodeOrder, removedNodeIds });
-}
-
-function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
-  if (command === NATIVE_COMMANDS.createFolder) {
-    const parsed = parseNodeCreationArgs(args, 'folder');
-    upsertNodeSnapshot(parsed);
-    scheduleMirrorSync([parsed.nodeId]);
-    return completeWorkspaceMutation();
-  }
-  if (command === NATIVE_COMMANDS.createTopic) {
-    const parsed = parseNodeCreationArgs(args, 'topic');
-    upsertNodeSnapshot(parsed);
-    scheduleMirrorSync([parsed.nodeId]);
-    return completeWorkspaceMutation();
-  }
-  if (command === NATIVE_COMMANDS.createItem) {
-    const parsed = parseNodeCreationArgs(args, 'item');
-    upsertNodeSnapshot(parsed);
-    scheduleMirrorSync([parsed.nodeId]);
-    return completeWorkspaceMutation();
-  }
-  if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
-    const parsed = parseNodeSnapshotArgs(args);
-    upsertNodeSnapshot(parsed);
-    scheduleMirrorSync([parsed.nodeId]);
-    return completeWorkspaceMutation();
-  }
-  if (command === NATIVE_COMMANDS.updateNodeContentWithAnchors) {
-    const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
-    const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
-    upsertNodeSnapshot(parent);
-    updateNodeAnchorLinks(affectedAnchors);
-    scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
-    return completeWorkspaceMutation();
-  }
-  if (command === NATIVE_COMMANDS.flushDirtyNodeSyncVersions) {
-    return flushAllDirtyNodeSyncVersions();
-  }
-  if (command === NATIVE_COMMANDS.replaceNodeOrder) {
-    replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));
-    return completeWorkspaceMutation();
-  }
-  if (command === NATIVE_COMMANDS.softDeleteNodes) {
-    return handleSoftDeleteNodeCommand(args);
-  }
-  if (command === NATIVE_COMMANDS.restoreNodes) {
-    const parsed = parseRestoreNodesArgs(args);
-    const result = restoreNodes(parsed);
-    scheduleMirrorSync(result.restoredNodeIds);
-    return completeWorkspaceMutation(result);
-  }
-  if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
-    return handlePermanentDeleteNodeCommand(args);
-  }
-  return undefined;
-}
 
 export async function handleStorageCommand(
   command: string,

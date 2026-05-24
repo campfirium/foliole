@@ -98,8 +98,8 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   workspaceOrderedNodeIds: {
     resultKey: 'nodes',
     sql:
-      'SELECT n.id FROM nodes n LEFT JOIN node_order no ON no.node_id = n.id AND n.kind = \'folder\' ' +
-      'ORDER BY CASE WHEN n.kind = \'folder\' THEN 0 ELSE 1 END, COALESCE(no.position, 2147483647) ASC, ' +
+      'SELECT n.id FROM nodes n LEFT JOIN node_order no ON no.node_id = n.id ' +
+      'ORDER BY COALESCE(no.position, 2147483647) ASC, ' +
       'n.updated_at DESC, n.created_at DESC, n.id ASC',
     columns: [{ key: 'id', source: 'id', type: 'string' }]
   },
@@ -121,8 +121,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'LEFT JOIN node_reading rd ON rd.node_id = n.id ' +
       'LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? ' +
       'LEFT JOIN node_review nr ON nr.node_id = n.id ' +
-      'ORDER BY CASE WHEN n.kind = \'folder\' THEN 0 ELSE 1 END, ' +
-      'COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), ' +
+      'ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), ' +
       'n.updated_at DESC, n.created_at DESC, n.id ASC',
     columns: [
       { key: 'id', source: 'id', type: 'string' },

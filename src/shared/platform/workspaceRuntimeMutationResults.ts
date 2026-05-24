@@ -3,6 +3,7 @@ import type { NativeCommandName } from '../../../lib/platform/nativeContract';
 import { logRuntimeError } from './runtimeLogging';
 import type {
   WorkspaceDeleteNodesPermanentlyResult,
+  WorkspaceMoveNodesResult,
   WorkspaceRestoreNodesResult,
   WorkspaceSoftDeleteNodesResult
 } from './workspaceRuntimeTypes';
@@ -30,6 +31,15 @@ export function isDeleteNodesPermanentlyResult(value: unknown): value is Workspa
       typeof value === 'object' &&
       Array.isArray((value as WorkspaceDeleteNodesPermanentlyResult).removedNodeIds) &&
       Array.isArray((value as WorkspaceDeleteNodesPermanentlyResult).nodeOrder)
+  );
+}
+
+export function isMoveNodesResult(value: unknown): value is WorkspaceMoveNodesResult {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      Array.isArray((value as WorkspaceMoveNodesResult).movedNodeIds) &&
+      Array.isArray((value as WorkspaceMoveNodesResult).nodeOrder)
   );
 }
 

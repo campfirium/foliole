@@ -22,6 +22,16 @@ type WorkspaceSet = (
 ) => void;
 
 type NodeSnapshot = WorkspaceState['nodesById'][string];
+type MoveNodesRuntimePayload = {
+  nodeOrder: string[];
+  nodes: Array<{
+    nodeId: string;
+    parentNodeId: string | null;
+    reading?: NodeSnapshot['reading'];
+    sequentialReadingEnabled?: boolean | null;
+    updatedAt: string;
+  }>;
+};
 
 function resolveMovableRootNodeIds(
   state: WorkspaceState,
@@ -158,47 +168,52 @@ export function createChildNodeAction(
 
 export function createMoveNodesAction(
   set: WorkspaceSet,
-  onNodesMoved?: (nodes: NodeSnapshot[]) => void,
-  onNodeOrderChanged?: (nodeOrder: string[]) => void
+  onNodesMoved?: (payload: MoveNodesRuntimePayload) => Promise<boolean>
 ): WorkspaceState['moveNodes'] {
-  return (nodeIds, targetNodeId, intent) => {
-    let moved = false;
-    let movedRootNodeSnapshots: NodeSnapshot[] = [];
-    let nextNodeOrder: string[] | null = null;
+  return async (nodeIds, targetNodeId, intent) => {
+    let patch: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'> | null = null;
+    let runtimePayload: MoveNodesRuntimePayload | null = null;
 
     set((state) => {
       const rootNodeIds = resolveMovableRootNodeIds(state, nodeIds, targetNodeId, intent);
       if (!rootNodeIds) {
         return state;
       }
-      const patch = createMoveNodesPatch(state, nodeIds, targetNodeId, intent);
-      if (!patch) {
+      const movePatch = createMoveNodesPatch(state, nodeIds, targetNodeId, intent);
+      if (!movePatch) {
         return state;
       }
-      const sequentialState = applySequentialReadingMovedNodes({ patch, rootNodeIds, state });
-      movedRootNodeSnapshots = sequentialState.syncNodeIds
-        .map((nodeId) => sequentialState.patch.nodesById[nodeId])
-        .filter((node): node is NodeSnapshot => Boolean(node));
-      nextNodeOrder = sequentialState.patch.nodeOrder;
-      moved = true;
-      return sequentialState.patch;
+      const sequentialState = applySequentialReadingMovedNodes({ patch: movePatch, rootNodeIds, state });
+      patch = sequentialState.patch;
+      runtimePayload = {
+        nodeOrder: sequentialState.patch.nodeOrder,
+        nodes: sequentialState.syncNodeIds
+          .map((nodeId) => sequentialState.patch.nodesById[nodeId])
+          .filter((node): node is NodeSnapshot => Boolean(node))
+          .map((node) => ({
+            nodeId: node.id,
+            parentNodeId: node.parentNodeId,
+            reading: node.reading ?? null,
+            sequentialReadingEnabled: node.sequentialReadingEnabled ?? null,
+            updatedAt: node.updatedAt
+          }))
+      };
+      return state;
     });
-    if (moved && movedRootNodeSnapshots.length > 0) {
-      onNodesMoved?.(movedRootNodeSnapshots);
-      if (movedRootNodeSnapshots.every((node) => node.kind === 'folder') && nextNodeOrder) {
-        onNodeOrderChanged?.(nextNodeOrder);
-      }
+
+    if (!patch || !runtimePayload || !(await onNodesMoved?.(runtimePayload))) {
+      return false;
     }
 
-    return moved;
+    set(patch);
+    return true;
   };
 }
 
 export function createMoveNodeAction(
   set: WorkspaceSet,
-  onNodesMoved?: (nodes: NodeSnapshot[]) => void,
-  onNodeOrderChanged?: (nodeOrder: string[]) => void
+  onNodesMoved?: (payload: MoveNodesRuntimePayload) => Promise<boolean>
 ): WorkspaceState['moveNode'] {
-  const moveNodes = createMoveNodesAction(set, onNodesMoved, onNodeOrderChanged);
+  const moveNodes = createMoveNodesAction(set, onNodesMoved);
   return (nodeId, nextParentNodeId) => moveNodes([nodeId], nextParentNodeId, 'child');
 }

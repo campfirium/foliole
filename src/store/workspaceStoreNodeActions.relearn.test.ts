@@ -78,8 +78,8 @@ function createWorkspaceFixture(): WorkspaceState {
     createQANodeFromSelection: () => null,
     createFormulaClozeNode: () => null,
     createImageClozeNodes: () => [],
-    moveNode: () => false,
-    moveNodes: () => false
+    moveNode: async () => false,
+    moveNodes: async () => false
   };
 }
 

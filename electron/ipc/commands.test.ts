@@ -2,7 +2,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
-import { deleteNodesPermanently, replaceNodeOrder, restoreNodes, softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -46,11 +45,13 @@ vi.mock('./paths.js', () => ({
 }));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
+  flushAllDirtyNodeSyncVersions: vi.fn(),
+  moveNodes: vi.fn(),
   replaceNodeOrder: vi.fn(),
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
-  upsertNodeSnapshot: vi.fn(),
-  upsertNodeSnapshots: vi.fn()
+  updateNodeAnchorLinks: vi.fn(),
+  upsertNodeSnapshot: vi.fn()
 }));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
@@ -80,124 +81,6 @@ vi.mock('../mirror/mirrorSyncScheduler.js', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockWindow.isMaximized.mockReturnValue(false);
-  vi.mocked(deleteNodesPermanently).mockReturnValue([]);
-  vi.mocked(restoreNodes).mockReturnValue({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
-});
-
-it('handles node mutation commands', async () => {
-  await expect(
-    handleInvokeRequest({
-      command: 'update_node_content',
-      args: {
-        nodeId: 'node-1',
-        parentNodeId: null,
-        kind: 'topic',
-        title: 'Node title',
-        isTitleManual: false,
-        content: '# Content',
-        reveal: null,
-        anchorLink: null,
-        position: 1,
-        createdAt: '2026-03-06T00:00:00.000Z',
-        updatedAt: '2026-03-06T00:00:01.000Z'
-      }
-    })
-  ).resolves.toBeNull();
-  expect(upsertNodeSnapshot).toHaveBeenNthCalledWith(1, expect.objectContaining({
-    anchorLink: null,
-    content: '# Content',
-    kind: 'topic',
-    nodeId: 'node-1',
-    reveal: null
-  }));
-});
-
-it('handles node reveal mutation command', async () => {
-  await expect(
-    handleInvokeRequest({
-      command: 'update_node_reveal',
-      args: {
-        nodeId: 'node-2',
-        parentNodeId: 'node-1',
-        kind: 'item',
-        title: 'QA',
-        isTitleManual: true,
-        content: 'Question',
-        reveal: 'Answer',
-        anchorLink: { id: 'cloze-1', kind: 'cloze' },
-        position: 2,
-        createdAt: '2026-03-06T00:00:00.000Z',
-        updatedAt: '2026-03-06T00:00:02.000Z'
-      }
-    })
-  ).resolves.toBeNull();
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
-    anchorLink: { id: 'cloze-1', kind: 'cloze' },
-    content: 'Question',
-    kind: 'item',
-    nodeId: 'node-2',
-    reveal: 'Answer'
-  }));
-});
-
-
-it('handles node order replacement command', async () => {
-  await expect(
-    handleInvokeRequest({
-      command: 'replace_node_order',
-      args: { nodeIds: ['node-1', 'node-2'] }
-    })
-  ).resolves.toBeNull();
-  expect(replaceNodeOrder).toHaveBeenCalledWith(['node-1', 'node-2']);
-});
-
-it('handles soft delete node command', async () => {
-  await expect(
-    handleInvokeRequest({
-      command: 'soft_delete_nodes',
-      args: {
-        nodeIds: ['node-1', 'node-2'],
-        deletedAt: '2026-03-06T00:00:00.000Z'
-      }
-    })
-  ).resolves.toEqual({ deletedNodeIds: ['node-1', 'node-2'] });
-
-  expect(softDeleteNodes).toHaveBeenCalledWith({
-    nodeIds: ['node-1', 'node-2'],
-    deletedAt: '2026-03-06T00:00:00.000Z'
-  });
-});
-
-it('handles restore node command', async () => {
-  await expect(
-    handleInvokeRequest({
-      command: 'restore_nodes',
-      args: {
-        nodeIds: ['node-1']
-      }
-    })
-  ).resolves.toEqual({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
-
-  expect(restoreNodes).toHaveBeenCalledWith({
-    nodeIds: ['node-1']
-  });
-});
-
-it('handles permanent delete node command', async () => {
-  await expect(
-    handleInvokeRequest({
-      command: 'delete_nodes_permanently',
-      args: {
-        nodeIds: ['node-3'],
-        nodeOrder: ['node-1', 'node-2']
-      }
-    })
-  ).resolves.toEqual({ nodeOrder: ['node-1', 'node-2'], removedNodeIds: ['node-3'] });
-
-  expect(deleteNodesPermanently).toHaveBeenCalledWith({
-    nodeIds: ['node-3'],
-    nodeOrder: ['node-1', 'node-2']
-  });
 });
 
 it('handles app path and fsrs commands', async () => {

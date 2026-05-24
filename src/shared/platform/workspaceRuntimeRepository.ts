@@ -7,6 +7,7 @@ import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
 import {
   isDeleteNodesPermanentlyResult,
+  isMoveNodesResult,
   isRestoreNodesResult,
   isSoftDeleteNodesResult,
   logWorkspaceRuntimeMutationError
@@ -25,6 +26,8 @@ import type {
   WorkspaceReadingProgressSnapshot,
   WorkspaceRelearnNodePayload,
   WorkspaceDeleteNodesPermanentlyResult,
+  WorkspaceMoveNodesPayload,
+  WorkspaceMoveNodesResult,
   WorkspaceRestoreNodesResult,
   WorkspaceReviewGradeSyncPayload,
   WorkspaceSoftDeleteNodesResult,
@@ -98,6 +101,20 @@ export async function loadReadingProgressFromRuntime(): Promise<WorkspaceReading
 
 export function saveWorkspaceNodeOrder(nodeOrder: string[]) {
   runFireAndForgetRuntimeSync(NATIVE_COMMANDS.replaceNodeOrder, { nodeIds: nodeOrder }, 'sync_node_order');
+}
+
+export async function moveWorkspaceNodes(payload: WorkspaceMoveNodesPayload): Promise<WorkspaceMoveNodesResult | undefined> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return undefined;
+  }
+  try {
+    const result = await runtimeInvoke(NATIVE_COMMANDS.moveNodes, payload);
+    return isMoveNodesResult(result) ? result : undefined;
+  } catch (error) {
+    logWorkspaceRuntimeMutationError('sync_move_nodes', NATIVE_COMMANDS.moveNodes, error);
+    return undefined;
+  }
 }
 
 export async function saveWorkspaceReviewGrade(payload: WorkspaceReviewGradeSyncPayload): Promise<void> {

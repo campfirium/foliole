@@ -64,7 +64,7 @@ export function loadNodeSyncVersionSource(nodeId: string) {
        reveal,
        anchor_link,
        image_regions,
-       CASE WHEN nodes.kind = 'folder' THEN node_order.position ELSE NULL END AS position,
+       node_order.position AS position,
        current_version_id,
        sync_dirty,
        created_at,

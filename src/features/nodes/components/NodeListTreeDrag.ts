@@ -21,7 +21,7 @@ type MoveIntent = NodeListDropIntent | 'root';
 interface UseNodeListDragControllerInput {
   disableRootDrop: boolean;
   isTrashViewOpen: boolean;
-  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean;
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => Promise<boolean>;
   nodesById: WorkspaceListNodesById;
   noteRowIds: string[];
   selectedNodeIds: string[];
@@ -59,7 +59,7 @@ function createInitialDragState(): DragState {
 function createNodeDropHandler(
   isTrashViewOpen: boolean,
   state: DragState,
-  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean,
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => Promise<boolean>,
   setState: (next: DragState) => void
 ) {
   return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
@@ -75,7 +75,7 @@ function createNodeDropHandler(
       return;
     }
 
-    moveNodes(sourceNodeIds, targetNodeId, state.dropIntent);
+    void moveNodes(sourceNodeIds, targetNodeId, state.dropIntent);
     clearNodeListDragSource();
     setState(createInitialDragState());
   };
@@ -85,7 +85,7 @@ function createRootDropHandler(
   disableRootDrop: boolean,
   nodesById: WorkspaceListNodesById,
   sourceNodeIds: string[],
-  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean,
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => Promise<boolean>,
   setState: (next: DragState) => void
 ) {
   return (event: ReactDragEvent<HTMLElement>) => {
@@ -99,7 +99,7 @@ function createRootDropHandler(
       setState(createInitialDragState());
       return;
     }
-    moveNodes(effectiveSourceNodeIds, null, 'root');
+    void moveNodes(effectiveSourceNodeIds, null, 'root');
     clearNodeListDragSource();
     setState(createInitialDragState());
   };

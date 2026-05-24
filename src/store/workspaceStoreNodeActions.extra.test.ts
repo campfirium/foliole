@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { syncNodeContentToRuntime, syncNodeContentWithAnchorsToRuntime, syncNodeOrderToRuntime } from './workspaceRuntimeSync';
+import { syncMoveNodesToRuntime, syncNodeContentToRuntime, syncNodeContentWithAnchorsToRuntime, syncNodeOrderToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -10,6 +10,7 @@ import {
 vi.mock('./workspaceRuntimeSync', () => ({
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
+  syncMoveNodesToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -120,23 +121,22 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
     );
   });
 
-  it('syncs moved root nodes through runtime command bridge', () => {
+  it('syncs moved root nodes through runtime command bridge', async () => {
+    vi.mocked(syncMoveNodesToRuntime).mockResolvedValue({ movedNodeIds: [], nodeOrder: [] });
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const firstFolderId = actions.createRootNode('Folder A', 'folder');
     const secondFolderId = actions.createRootNode('Folder B', 'folder');
 
     vi.clearAllMocks();
-    const moved = actions.moveNodes([secondFolderId], firstFolderId, 'before');
+    const moved = await actions.moveNodes([secondFolderId], firstFolderId, 'before');
 
     expect(moved).toBe(true);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeOrderToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: secondFolderId,
-        parentNodeId: null
-      })
-    );
+    expect(syncMoveNodesToRuntime).toHaveBeenCalledWith(expect.objectContaining({
+      nodeOrder: expect.arrayContaining([secondFolderId, firstFolderId]),
+      nodes: [expect.objectContaining({ nodeId: secondFolderId, parentNodeId: null })]
+    }));
+    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+    expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
   });
 });
