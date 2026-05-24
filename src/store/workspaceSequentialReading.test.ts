@@ -111,6 +111,25 @@ it('dismiss unlocks the next locked derived topic without changing dismissed or 
   expect(patch?.nodesById.last?.reading?.state).toBe('active');
 });
 
+it('dismiss reconverges sequential reading to one active derived topic', () => {
+  const tree = sourceTree({
+    first: { reading: reading('dismissed') },
+    nested: { reading: reading('active') },
+    last: { reading: reading('active') },
+    source: { sequentialReadingEnabled: true }
+  });
+  const patch = buildSequentialReadingDismissPatch({
+    defaultPriority: 5,
+    dismissedNodeId: 'first',
+    nodeOrder: tree.nodeOrder,
+    nodesById: tree.nodesById,
+    now: '2026-05-21T00:00:00.000Z'
+  });
+
+  expect(patch?.nodesById.nested?.reading?.state).toBe('active');
+  expect(patch?.nodesById.last?.reading?.state).toBe('locked');
+});
+
 it('keeps a new later derived topic locked but releases it when no active derived topic remains', () => {
   const activeTree = sourceTree({ source: { sequentialReadingEnabled: true } });
   const activePatch = buildSequentialReadingMaintenancePatch({
