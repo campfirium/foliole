@@ -1,9 +1,9 @@
-import { ArrowUpDown, Check } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
 
 import {
   AppDropdownMenu,
+  AppDropdownMenuCheckItem,
   AppDropdownMenuContent,
-  AppDropdownMenuItem,
   AppDropdownMenuLabel,
   AppDropdownMenuSeparator,
   AppDropdownMenuTrigger,
@@ -55,33 +55,27 @@ export function WorkspaceContentSortControls(props: {
       <AppDropdownMenu>
         <WorkspaceContentSortTrigger triggerLabel={triggerLabel} />
         <AppTooltipContent avoidCollisions={false} side="top">{tooltipLabel}</AppTooltipContent>
-        <AppDropdownMenuContent align="end" className="min-w-[220px] p-1" sideOffset={8}>
-          <AppDropdownMenuLabel className="px-3 pb-1 pt-2 text-xs font-medium text-foreground/45">
-            Sort by
-          </AppDropdownMenuLabel>
+        <AppDropdownMenuContent align="end" className="min-w-[220px]" sideOffset={8}>
+          <AppDropdownMenuLabel>Sort by</AppDropdownMenuLabel>
           {props.options.map((option) => (
-            <AppDropdownMenuItem
-              className="justify-between rounded-md px-3 font-medium"
+            <AppDropdownMenuCheckItem
+              checked={activeKey === option.key}
               key={option.key}
               onSelect={() => props.onChangeSortKey(option.key)}
             >
-              <span>{option.label}</span>
-              <Check aria-hidden="true" className={activeKey === option.key ? 'text-foreground' : 'invisible'} size={16} strokeWidth={1.9} />
-            </AppDropdownMenuItem>
+              {option.label}
+            </AppDropdownMenuCheckItem>
           ))}
-          <AppDropdownMenuSeparator className="my-1 h-px bg-border/10" />
-          <AppDropdownMenuLabel className="px-3 pb-1 pt-2 text-xs font-medium text-foreground/45">
-            Order
-          </AppDropdownMenuLabel>
+          <AppDropdownMenuSeparator />
+          <AppDropdownMenuLabel>Order</AppDropdownMenuLabel>
           {orderOptions.map((option) => (
-            <AppDropdownMenuItem
-              className="justify-between rounded-md px-3 font-medium"
+            <AppDropdownMenuCheckItem
+              checked={props.sortDirection === option.value}
               key={option.value}
               onSelect={() => props.onChangeSortDirection(option.value)}
             >
-              <span>{option.label}</span>
-              <Check aria-hidden="true" className={props.sortDirection === option.value ? 'text-foreground' : 'invisible'} size={16} strokeWidth={1.9} />
-            </AppDropdownMenuItem>
+              {option.label}
+            </AppDropdownMenuCheckItem>
           ))}
         </AppDropdownMenuContent>
       </AppDropdownMenu>
