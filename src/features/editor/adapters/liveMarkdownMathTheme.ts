@@ -17,7 +17,8 @@ export const liveMarkdownMathTheme = {
     display: 'flex',
     justifyContent: 'center',
     minHeight: 'calc((var(--content-panel-code-font-size, 0.86rem) * 1.75 + 0.2rem) * 3)',
-    padding: '0.7rem 0.65rem'
+    padding: '0.7rem 0.65rem',
+    textAlign: 'center'
   },
   '.cm-line.cm-line-math-block.cm-activeLine': { backgroundColor: 'rgb(var(--color-foreground) / 0.055)' },
   '.cm-md-math-widget-block .katex-display': { margin: 0 },

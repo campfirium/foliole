@@ -12,6 +12,14 @@ const BACKLINKS_CONTRACT_TESTS = [
   'src/app/components/WorkspaceRightSidebarBacklinksPanel.test.tsx'
 ];
 
+const EDITOR_MATH_CONTRACT_TESTS = [
+  'src/features/editor/adapters/liveMarkdownTheme.highlight-color.test.ts'
+];
+
+const NODE_LIST_COLLAPSE_CONTRACT_TESTS = [
+  'src/features/nodes/components/NodeListCollapseState.test.tsx'
+];
+
 export const CRITICAL_TEST_ROUTES = [
   {
     triggers: [
@@ -21,6 +29,21 @@ export const CRITICAL_TEST_ROUTES = [
       /^src\/features\/nodes\/model\/internalLinks\.ts$/u
     ],
     tests: BACKLINKS_CONTRACT_TESTS
+  },
+  {
+    triggers: [
+      /^src\/features\/editor\/adapters\/liveMarkdownMath(?:Source|Theme)\.ts$/u,
+      /^src\/features\/editor\/adapters\/liveMarkdownTheme\.ts$/u
+    ],
+    tests: EDITOR_MATH_CONTRACT_TESTS
+  },
+  {
+    triggers: [
+      /^src\/features\/nodes\/components\/NodeListCollapseState\.ts$/u,
+      /^src\/features\/nodes\/components\/NodeListTree\.tsx$/u,
+      /^src\/features\/nodes\/components\/nodeListTreeModel\.ts$/u
+    ],
+    tests: NODE_LIST_COLLAPSE_CONTRACT_TESTS
   }
 ];
 

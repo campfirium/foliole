@@ -166,7 +166,7 @@ export function useNodeListTreeModel({
   const treeData = useNodeListTreeData(nodeOrder, nodesById, workspace.trashedNodeIds);
   const collapsedState = useCollapsedNodeState({
     activeNodeId,
-    forceExpandedNodeId,
+    forceExpandedNodeId: forceExpandedNodeId ?? null,
     nodesById,
     noteParentById: treeData.noteParentById,
     noteRowsAll: treeData.noteRowsAll,
