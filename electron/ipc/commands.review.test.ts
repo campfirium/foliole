@@ -42,7 +42,7 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
   loadReviewSchedulerSettings: vi.fn(),
   saveReviewSchedulerSettings: vi.fn()
 }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn() }));
+vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn() }));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn() }));
 
 beforeEach(() => {
@@ -54,6 +54,7 @@ it('handles transactional review grade command', async () => {
     nodeId: 'node-2',
     grade: 3,
     reviewedAt: '2026-03-06T00:00:00.000Z',
+    schedulerVersion: 'ts-fsrs@4:short',
     cardBefore: {
       due: '2026-03-06T00:00:00.000Z',
       last_review: null,

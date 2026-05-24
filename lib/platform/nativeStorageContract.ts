@@ -198,6 +198,7 @@ export interface NativeApplyReviewGradeArgs {
   nodeId: string;
   grade: 1 | 2 | 3 | 4;
   reviewedAt: string;
+  schedulerVersion: string;
   cardBefore: NativeSchedulerCard;
   cardAfter: NativeSchedulerCard;
 }

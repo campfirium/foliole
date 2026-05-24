@@ -120,6 +120,7 @@ export function applySeedReviewGrade(nodeId: string) {
     nodeId,
     grade: 3,
     reviewedAt: '2026-03-06T00:00:00.000Z',
+    schedulerVersion: 'ts-fsrs@4:test-seed',
     cardBefore: {
       due: '2026-03-06T00:00:00.000Z',
       last_review: null,

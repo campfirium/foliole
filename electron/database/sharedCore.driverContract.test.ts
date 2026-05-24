@@ -29,6 +29,7 @@ const reviewMutationInput = {
   nodeId: 'node-1',
   grade: 3 as const,
   reviewedAt: '2026-03-14T00:00:00.000Z',
+  schedulerVersion: 'ts-fsrs@4:short',
   cardBefore: {
     due: '2026-03-14T00:00:00.000Z',
     last_review: null,
@@ -55,7 +56,6 @@ const reviewMutationInput = {
 
 const reviewMutationContext = {
   deviceId: 'desktop-local',
-  schedulerVersion: 'ts-fsrs@4',
   createId: vi.fn().mockReturnValueOnce('op-1').mockReturnValueOnce('log-1')
 };
 
@@ -126,7 +126,9 @@ function mockNodeSnapshotStatements() {
   const runs = createStatementRuns();
   prepareSpy.mockImplementation((sql) => ({
     sql,
-    run: resolveNodeSnapshotRunSpy(sql, runs),
+    run: sql.includes('search_index_invalidations')
+      ? vi.fn(() => ({ changes: 0, lastInsertRowid: 0 }))
+      : resolveNodeSnapshotRunSpy(sql, runs),
     get: vi.fn(),
     all: vi.fn()
   }));
@@ -138,6 +140,8 @@ function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRu
     'node-1',
     null,
     'item',
+    null,
+    null,
     null,
     null,
     'Node 1',
@@ -170,30 +174,17 @@ function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRu
   expect(runs.deleteReadingRun).not.toHaveBeenCalled();
 }
 
-function expectNodeSnapshotSearchSync(runs: ReturnType<typeof createStatementRuns>) {
-  expect(runs.insertSearchSeedRun).toHaveBeenCalledWith(['node-1']);
-  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_seed_ids'));
-  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_affected_ids'));
-  expect(executeSpy).toHaveBeenCalledWith('DELETE FROM temp_workspace_search_seed_ids');
-  expect(executeSpy).toHaveBeenCalledWith('DELETE FROM temp_workspace_search_affected_ids');
-  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT OR IGNORE INTO temp_workspace_search_affected_ids'));
-  expect(executeSpy).toHaveBeenCalledWith(
-    'DELETE FROM node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)'
-  );
-  expect(executeSpy).toHaveBeenCalledWith(
-    'DELETE FROM pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)'
-  );
-  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO node_search'));
-  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO pdf_search'));
+function expectNodeSnapshotSearchSync() {
   expect(prepareSpy.mock.calls.map(([sql]) => sql)).toEqual(
     expect.arrayContaining([
       expect.stringContaining('INSERT INTO nodes'),
       expect.stringContaining('INSERT INTO node_order'),
       expect.stringContaining('INSERT INTO node_reading'),
       expect.stringContaining('INSERT INTO node_reading_device_state'),
+      expect.stringContaining('UPDATE search_index_invalidations'),
+      expect.stringContaining('INSERT INTO search_index_invalidations'),
       'DELETE FROM node_reading WHERE node_id = ?',
       'DELETE FROM node_reading_device_state WHERE node_id = ?',
-      'INSERT OR IGNORE INTO temp_workspace_search_seed_ids (id) VALUES (?)'
     ])
   );
 }
@@ -204,11 +195,10 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
   upsertNodeSnapshot(driver, nodeSnapshotInput);
 
   expect(transactionSpy).toHaveBeenCalledTimes(1);
-  expect(prepareSpy).toHaveBeenCalledTimes(7);
+  expect(prepareSpy).toHaveBeenCalledTimes(9);
   expect(driver.queryOne).toHaveBeenCalledWith('SELECT node_id FROM node_reading WHERE node_id = ?', ['node-1']);
-  expect(driver.queryOne).toHaveBeenCalledWith('SELECT COUNT(*) AS count FROM temp_workspace_search_affected_ids');
   expectNodeSnapshotPersistence(runs);
-  expectNodeSnapshotSearchSync(runs);
+  expectNodeSnapshotSearchSync();
 });
 
 function mockReviewStatements() {
@@ -242,7 +232,7 @@ const expectedReviewLogParams = [
   'desktop-local',
   'node-1',
   3,
-  'ts-fsrs@4',
+  'ts-fsrs@4:short',
   '2026-03-14T00:00:00.000Z',
   '2026-03-14T00:00:00.000Z',
   0,

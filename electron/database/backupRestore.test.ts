@@ -122,6 +122,7 @@ function seedBackupBaseline() {
     nodeId: 'node-qa',
     grade: 3,
     reviewedAt: '2026-03-14T10:02:00.000Z',
+    schedulerVersion: 'ts-fsrs@4:backup',
     cardBefore: createSchedulerCard('2026-03-14T10:00:00.000Z'),
     cardAfter: {
       ...createSchedulerCard('2026-03-17T10:02:00.000Z'),
@@ -201,6 +202,7 @@ function applyFollowupReviewGrade() {
     nodeId: 'node-qa',
     grade: 1,
     reviewedAt: '2026-03-17T10:02:00.000Z',
+    schedulerVersion: 'ts-fsrs@4:followup',
     cardBefore: {
       ...createSchedulerCard('2026-03-17T10:02:00.000Z'),
       last_review: '2026-03-14T10:02:00.000Z',
