@@ -399,7 +399,7 @@ describe('quality-gate-fast.sh', () => {
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/FancyCard.tsx');
       expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
       expect(result.stdout).toContain(
-        'related test:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --no-file-parallelism src/app/components/FancyCard.test.tsx'
+        'related test:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app/components/FancyCard.test.tsx'
       );
       expect(result.stdout).not.toContain('repo lint should stay unused');
       expect(result.stdout).not.toContain('repo test should stay unused');

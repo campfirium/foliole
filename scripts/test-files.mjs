@@ -82,6 +82,7 @@ async function main() {
     '--',
     '--silent=passed-only',
     '--pool=threads',
+    '--maxWorkers=2',
     '--no-file-parallelism',
     ...files
   ];

@@ -26,6 +26,7 @@ const NATIVE_SQLITE_POLICY_PATTERNS = [
 ];
 const ORDINARY_NODE_TEST_ENTRY_PATTERN =
   /\b(?:(?:npm\s+run\s+test:files\s+--)|(?:node\s+scripts\/test-files\.mjs)|(?:node\s+scripts\/run-vitest-with-summary\.mjs\b)|(?:vitest\b))(?<args>[^\n]*)/giu;
+const ELECTRON_SQLITE_RUNNER_COMMAND_PATTERN = /\bnode\s+scripts\/electron-sqlite-runner\.mjs(?<args>[^\n]*)/giu;
 const TEST_FILE_ARG_PATTERN = /(?:^|\s)(?<file>[^\s"'`]+\.test\.(?:mjs|ts|tsx))(?=$|[\s"'`,}])/giu;
 const DATABASE_CONNECTION_IMPORT_PATTERN =
   /\b(?:import\b[\s\S]*?\bfrom\s+|import\s*\()\s*['"](?:\.{1,2}\/(?:[\w.-]+\/)*connection|\.{1,2}\/database\/connection)\.js['"]/u;
@@ -48,7 +49,8 @@ function fileImportsDatabaseConnection(file, readStagedFile) {
 
 function collectOrdinaryNodeSqliteTestTargets(content, readStagedFile) {
   const targets = [];
-  for (const command of content.matchAll(ORDINARY_NODE_TEST_ENTRY_PATTERN)) {
+  const ordinaryNodeContent = content.replace(ELECTRON_SQLITE_RUNNER_COMMAND_PATTERN, '');
+  for (const command of ordinaryNodeContent.matchAll(ORDINARY_NODE_TEST_ENTRY_PATTERN)) {
     const args = command.groups?.args ?? '';
     for (const match of args.matchAll(TEST_FILE_ARG_PATTERN)) {
       const file = normalizeRepoPath(match.groups?.file ?? '');

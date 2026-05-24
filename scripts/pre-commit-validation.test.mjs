@@ -132,7 +132,7 @@ describe('pre-commit validation', () => {
       expect(result.code, result.stderr).toBe(0);
       const calls = await readFile(path.join(repoDir, 'calls.log'), 'utf8');
       expect(calls).toContain(
-        'vitest:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/pre-commit-critical.json --silent=passed-only --pool=threads --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx'
+        'vitest:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/pre-commit-critical.json --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx'
       );
     } finally {
       await rm(repoDir, { recursive: true, force: true });
