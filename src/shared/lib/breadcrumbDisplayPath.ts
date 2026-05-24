@@ -73,13 +73,23 @@ function resolveTargetNodeId(
   isNestedUnderArticle: boolean,
   articleNodeId: string | null
 ) {
-  if (node.kind === 'folder') {
+  if (node.kind === 'folder' || node.kind === 'topic') {
     return node.id;
   }
   if (articleNodeId && isNestedUnderArticle) {
     return articleNodeId;
   }
   return node.id;
+}
+
+function resolveDisplayTitle(
+  node: BreadcrumbDisplayPathNode,
+  isNestedUnderArticle: boolean
+) {
+  if (node.kind === 'topic') {
+    return normalizeTitle(node.title);
+  }
+  return isNestedUnderArticle ? abbreviateTitle(node.title) : normalizeTitle(node.title);
 }
 
 export function buildBreadcrumbDisplayPath(
@@ -94,6 +104,6 @@ export function buildBreadcrumbDisplayPath(
   return ancestorPath.map((node, index) => ({
     id: node.id,
     targetNodeId: resolveTargetNodeId(node, index > articleIndex, articleNodeId),
-    title: articleIndex >= 0 && index > articleIndex ? abbreviateTitle(node.title) : normalizeTitle(node.title)
+    title: resolveDisplayTitle(node, articleIndex >= 0 && index > articleIndex)
   }));
 }

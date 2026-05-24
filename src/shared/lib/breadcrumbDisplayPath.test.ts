@@ -31,20 +31,20 @@ describe('buildBreadcrumbDisplayPath', () => {
     ]);
   });
 
-  it('abbreviates ancestor titles after the article node', () => {
+  it('keeps nested topic ancestors navigable and only folds derived item ancestors back to the article', () => {
     const nodesById = {
       folder: createNode('folder', 'Inbox', null, 'folder'),
       article: createNode('article', 'Article title', 'folder', 'topic'),
-      nestedTopic: createNode('nestedTopic', '标注节点标题', 'article', 'topic'),
-      nestedItem: createNode('nestedItem', '挖空卡片标题', 'nestedTopic', 'item'),
-      current: createNode('current', '当前节点', 'nestedItem', 'item')
+      chapter: createNode('chapter', 'Chapter section', 'article', 'topic'),
+      derivedItem: createNode('derivedItem', 'Derived card title', 'chapter', 'item'),
+      current: createNode('current', 'Current item', 'derivedItem', 'item')
     };
 
     expect(buildBreadcrumbDisplayPath('current', nodesById)).toEqual([
       { id: 'folder', targetNodeId: 'folder', title: 'Inbox' },
       { id: 'article', targetNodeId: 'article', title: 'Article title' },
-      { id: 'nestedTopic', targetNodeId: 'article', title: '标注...' },
-      { id: 'nestedItem', targetNodeId: 'article', title: '挖空...' }
+      { id: 'chapter', targetNodeId: 'chapter', title: 'Chapter section' },
+      { id: 'derivedItem', targetNodeId: 'article', title: 'De...' }
     ]);
   });
 });
