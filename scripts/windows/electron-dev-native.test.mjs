@@ -17,7 +17,7 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).toContain('ensureLocalLibraryPathSettings();');
   expect(runner).toContain('assertLocalDatabaseWritable();');
   expect(runner).toContain("fs.openSync(databasePath, 'r+')");
-  expect(runner).toContain('native preview database is not writable');
+  expect(runner).toContain('native preview process cannot open the live database for write');
   expect(runner).toContain('library_home: localLibraryHome');
   expect(runner).not.toContain('if (!fs.existsSync(databasePath))');
   expect(runner).not.toContain('native-debug-library');

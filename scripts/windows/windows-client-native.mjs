@@ -7,6 +7,7 @@ import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } fr
 import { forceRestartClient } from './windows-client-native-force-restart.mjs';
 import { runCapture } from './windows-client-native-process.mjs';
 import { recoverClientStateFromReady } from './windows-client-native-recovered-state.mjs';
+import { restartRuntimeClient } from './windows-client-native-runtime-restart.mjs';
 import { removeShellRestartRequest } from './windows-client-native-shell-request.mjs';
 import { startNativeDevRunner } from './windows-client-native-start-runner.mjs';
 import { stopNativeClient } from './windows-client-native-stop.mjs';
@@ -129,16 +130,20 @@ async function startClient({ print = true } = {}) {
       bootEvent: readStartupFailureFromBootEvents(bootEventLogFile, { session }),
       stderrLog: logs.stderrLog
     });
-    await saveState({
-      failedAt: new Date().toISOString(),
-      head,
-      lastError: failureReason,
-      session,
-      shellPid,
-      startedAt,
-      stderrLog: logs.stderrLog,
-      stdoutLog: logs.stdoutLog
-    });
+    if (processAlive(shellPid)) {
+      await saveState({
+        failedAt: new Date().toISOString(),
+        head,
+        lastError: failureReason,
+        session,
+        shellPid,
+        startedAt,
+        stderrLog: logs.stderrLog,
+        stdoutLog: logs.stdoutLog
+      });
+    } else {
+      await removeClientState(stateFile);
+    }
     await resetMarkers();
     throw new Error(`startup health check failed: ${failureReason} shell_pid=${shellPid} left-for-inspection`);
   }
@@ -168,21 +173,22 @@ async function stopClient({ print = true } = {}) {
   });
 }
 
-async function restartRuntimeClient() {
+async function restartClient() {
   const existing = printStatus();
   if (!existing.ok) {
     const started = await startClient({ print: false });
     console.log(`[windows-restart-client] status: STARTED shell_pid=${started.state.shellPid} runtime_pid=${started.ready.windowVisible.pid}`);
     return;
   }
-
-  await forceRestartClient({
+  await restartRuntimeClient({
     currentHead,
-    mode: 'dev-shell-restart',
+    healthTimeoutMs,
     readClientState,
     readReadyState,
     recoverClientStateFromReady,
     removeClientState: () => removeClientState(stateFile),
+    repoRoot,
+    restartDeliveryFile,
     resetMarkers,
     saveState,
     startClient,
@@ -202,7 +208,7 @@ async function main() {
   } else if (action === 'stop') {
     await stopClient();
   } else if (action === 'restart') {
-    await restartRuntimeClient();
+    await restartClient();
   } else if (action === 'full-restart') {
     await forceRestartClient({
       currentHead,
