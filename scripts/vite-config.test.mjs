@@ -16,4 +16,16 @@ describe('vite config', () => {
   it('keeps Electron dev renderer updates behind explicit preview reload intents', () => {
     expect(viteConfig.server?.hmr).toBe(false);
   });
+
+  it('warms the desktop renderer startup graph before Electron requests the first page', () => {
+    expect(viteConfig.server?.warmup?.clientFiles).toEqual(
+      expect.arrayContaining([
+        './src/main.tsx',
+        './src/app/styles.css',
+        './src/startupBootstrap.ts',
+        './src/shared/platform/bridge.ts',
+        './src/app/App.tsx'
+      ])
+    );
+  });
 });

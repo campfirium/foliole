@@ -27,7 +27,10 @@ it('passes native GPU disable switches before the Electron app path', async () =
   expect(runner).toContain('windowsHide: true');
   expect(runner).toContain('windowsHide: false');
   expect(runner).toContain('VITE_PREWARM_STARTUP_BUDGET_MS');
-  expect(runner).toContain('waitForPrewarmStartupBudget(prewarmViteRendererEntries(viteState.viteUrl))');
-  expect(runner).toContain('vite renderer prewarm complete');
-  expect(runner).toContain('vite renderer prewarm still running; launching Electron');
+  expect(runner).toContain('const prewarmAbortController = new AbortController();');
+  expect(runner).toContain('signal: prewarmAbortController.signal');
+  expect(runner).toContain('abortController: prewarmAbortController');
+  expect(runner).toContain('waitForPrewarmStartupBudget(');
+  expect(runner).toContain('startup timing electron_launch');
+  expect(runner).toContain('prewarmStatus=${prewarmStatus.status}');
 });

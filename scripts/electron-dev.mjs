@@ -1,4 +1,4 @@
-/* global console */
+/* global AbortController, console */
 
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -6,7 +6,11 @@ import path from 'node:path';
 import process from 'node:process';
 
 import { createElectronLaunchEnv } from './electron-dev-env.mjs';
-import { isViteServerReady, prewarmViteRendererEntries } from './electron-dev-server.mjs';
+import {
+  isViteServerReady,
+  prewarmViteRendererEntries,
+  waitForPrewarmStartupBudget
+} from './electron-dev-server.mjs';
 
 const VITE_HOST = '127.0.0.1';
 const VITE_PORT_DEFAULT = 24600;
@@ -108,30 +112,6 @@ function wait(ms) {
   });
 }
 
-function logPrewarmResults(prewarmResults) {
-  const failedPrewarmResults = prewarmResults.filter((result) => !result.ok);
-  if (failedPrewarmResults.length > 0) {
-    console.warn('[electron-dev] vite renderer prewarm incomplete', failedPrewarmResults);
-  } else {
-    console.info('[electron-dev] vite renderer prewarm complete', prewarmResults);
-  }
-}
-
-async function waitForPrewarmStartupBudget(prewarmPromise) {
-  const prewarmResults = await Promise.race([
-    prewarmPromise,
-    wait(VITE_PREWARM_STARTUP_BUDGET_MS).then(() => null)
-  ]);
-  if (prewarmResults) {
-    logPrewarmResults(prewarmResults);
-    return;
-  }
-  console.warn('[electron-dev] vite renderer prewarm still running; launching Electron');
-  prewarmPromise.then(logPrewarmResults).catch((error) => {
-    console.warn('[electron-dev] vite renderer prewarm failed after launch', error);
-  });
-}
-
 function resolveRequestedPort() {
   const raw = process.env.FOLIOLE_VITE_PORT;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
@@ -197,7 +177,17 @@ await waitForSuccessfulExit(compile, 'electron compile');
 
 const viteState = await startViteWithPortFallback();
 const vite = viteState.viteProc;
-await waitForPrewarmStartupBudget(prewarmViteRendererEntries(viteState.viteUrl));
+const prewarmAbortController = new AbortController();
+const prewarmStatus = await waitForPrewarmStartupBudget(
+  prewarmViteRendererEntries(viteState.viteUrl, globalThis.fetch, { signal: prewarmAbortController.signal }),
+  {
+    abortController: prewarmAbortController,
+    budgetMs: VITE_PREWARM_STARTUP_BUDGET_MS
+  }
+);
+console.info(
+  `[electron-dev] startup timing electron_launch prewarmStatus=${prewarmStatus.status} prewarmElapsedMs=${prewarmStatus.elapsedMs}`
+);
 
 let electron = launchElectron(viteState.viteUrl);
 logChildLifecycle(electron, 'electron');
