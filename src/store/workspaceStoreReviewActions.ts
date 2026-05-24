@@ -98,6 +98,7 @@ function createGradeReviewCardAction(set: WorkspaceSet, get: WorkspaceGet, sched
         currentNodeId,
         grade,
         reviewedAt: result.reviewedAt,
+        schedulerVersion: result.schedulerVersion,
         cardBefore: result.cardBefore,
         cardAfter: result.cardAfter
       });

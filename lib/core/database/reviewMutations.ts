@@ -17,13 +17,13 @@ export interface ApplyReviewGradeInput {
   nodeId: string;
   grade: 1 | 2 | 3 | 4;
   reviewedAt: string;
+  schedulerVersion: string;
   cardBefore: ReviewCardSnapshot;
   cardAfter: ReviewCardSnapshot;
 }
 
 export interface ReviewMutationContext {
   deviceId: string;
-  schedulerVersion: string;
   createId: () => string;
 }
 
@@ -88,7 +88,7 @@ function toReviewLogParams(input: ApplyReviewGradeInput, context: ReviewMutation
     context.deviceId,
     input.nodeId,
     input.grade,
-    context.schedulerVersion,
+    input.schedulerVersion,
     input.reviewedAt,
     input.cardBefore.due,
     input.cardBefore.stability,

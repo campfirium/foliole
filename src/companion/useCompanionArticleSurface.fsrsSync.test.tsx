@@ -161,7 +161,11 @@ describe('useCompanionArticleSurface fsrs sync', () => {
 
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord).toHaveBeenCalledWith(expect.objectContaining({
       nodeId: 'item-1',
-      reviewLog: expect.objectContaining({ grade: 3, reviewedAt: '2026-04-22T08:10:00.000Z' })
+      reviewLog: expect.objectContaining({
+        grade: 3,
+        reviewedAt: '2026-04-22T08:10:00.000Z',
+        schedulerVersion: 'ts-fsrs@4.3.0|dr=0.90|mi=36500|st=0|pqdp=5|pqpr=5.00|pqmx=1:5|pqii=86400000|pqgr=1.10-1.50'
+      })
     }));
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord.mock.invocationCallOrder[0]!)
       .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]!);

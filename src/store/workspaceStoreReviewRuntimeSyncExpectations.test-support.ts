@@ -6,6 +6,7 @@ const EXPECTED_REVIEW_RUNTIME_SYNC = {
   nodeId: 'qa-1',
   grade: 3,
   reviewedAt: '2026-03-03T00:00:00.000Z',
+  schedulerVersion: 'ts-fsrs@4.3.0|dr=0.90|mi=36500|st=0|pqdp=5|pqpr=5.00|pqmx=1:5|pqii=86400000|pqgr=1.10-1.50',
   cardBefore: {
     due: '2026-03-03T00:00:00.000Z',
     last_review: null,

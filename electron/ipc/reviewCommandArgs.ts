@@ -51,6 +51,7 @@ export function parseApplyReviewGradeArgs(args: Record<string, unknown>): ApplyR
     nodeId: asString(args.nodeId, 'nodeId'),
     grade: asIntegerInRange(args.grade, 'grade', 1, 4) as 1 | 2 | 3 | 4,
     reviewedAt: asString(args.reviewedAt, 'reviewedAt'),
+    schedulerVersion: asString(args.schedulerVersion, 'schedulerVersion'),
     cardBefore: asReviewCardSnapshot(args.cardBefore, 'cardBefore'),
     cardAfter: asReviewCardSnapshot(args.cardAfter, 'cardAfter')
   };

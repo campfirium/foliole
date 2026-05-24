@@ -17,6 +17,7 @@ const REVIEW_GRADE_PAYLOAD = {
   nodeId: 'node-qa',
   grade: 3 as const,
   reviewedAt: '2026-03-06T00:00:00.000Z',
+  schedulerVersion: 'ts-fsrs@4:short',
   cardBefore: { due: '2026-03-06T00:00:00.000Z', last_review: null, state: 0 as const, stability: 0, difficulty: 0, elapsed_days: 0, scheduled_days: 0, reps: 0, lapses: 0 },
   cardAfter: { due: '2026-03-09T00:00:00.000Z', last_review: '2026-03-06T00:00:00.000Z', state: 1 as const, stability: 1.4, difficulty: 2.2, elapsed_days: 1, scheduled_days: 3, reps: 1, lapses: 0 }
 };

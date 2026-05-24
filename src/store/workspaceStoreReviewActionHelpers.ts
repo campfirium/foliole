@@ -20,6 +20,7 @@ export async function persistReviewGradeMutation(args: {
   currentNodeId: string;
   grade: ReviewGrade;
   reviewedAt: string;
+  schedulerVersion: string;
   cardBefore: SchedulerCard;
   cardAfter: SchedulerCard;
 }): Promise<void> {
@@ -27,6 +28,7 @@ export async function persistReviewGradeMutation(args: {
     nodeId: args.currentNodeId,
     grade: args.grade,
     reviewedAt: args.reviewedAt,
+    schedulerVersion: args.schedulerVersion,
     cardBefore: args.cardBefore,
     cardAfter: args.cardAfter
   });
