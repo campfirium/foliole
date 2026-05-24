@@ -1,5 +1,9 @@
 import { pushEditorOperationEntry } from '../features/editor/model/editorOperationHistory';
-import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../features/formula-cloze/model/formulaCloze';
+import {
+  deriveFormulaClozeSelectionLabel,
+  type FormulaClozeCreatePayload,
+  type FormulaClozeSourcePayload
+} from '../features/formula-cloze/model/formulaCloze';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
@@ -48,7 +52,9 @@ function createFormulaClozeNode(args: {
   untitledSequenceByParent: Record<string, number>;
 }) {
   const nodeId = `node-${crypto.randomUUID()}`;
-  const title = deriveNodeTitleForCloze(args.sourcePayload.promptContent, args.sourcePayload.revealContent);
+  const title =
+    deriveFormulaClozeSelectionLabel(args.payload.selection) ||
+    deriveNodeTitleForCloze(args.sourcePayload.promptContent, args.sourcePayload.revealContent);
   const untitledState = resolveCreatedNodeTitleState(title, args.parentNodeId, {
     ...args.state,
     untitledSequenceByParent: args.untitledSequenceByParent

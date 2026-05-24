@@ -27,6 +27,16 @@ function shouldUseDebugLibraryCopy() {
   return process.env.FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY === '1';
 }
 
+function canOpenDatabaseForWrite(databasePath) {
+  try {
+    const handle = fs.openSync(databasePath, 'r+');
+    fs.closeSync(handle);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function removeTargetSqliteSidecars(targetPath) {
   for (const suffix of ['-shm', '-wal']) {
     const sidecarPath = `${targetPath}${suffix}`;
@@ -70,11 +80,11 @@ function copyDatabaseIfSourceIsNewer(sourcePath, targetPath) {
 }
 
 function resolveLibraryHome() {
-  if (!shouldUseDebugLibraryCopy()) {
+  const sourceDatabasePath = path.join(localLibraryHome, 'Data', 'foliole.db');
+  if (!shouldUseDebugLibraryCopy() && canOpenDatabaseForWrite(sourceDatabasePath)) {
     return localLibraryHome;
   }
 
-  const sourceDatabasePath = path.join(localLibraryHome, 'Data', 'foliole.db');
   const targetDatabasePath = path.join(debugLibraryHome, 'Data', 'foliole.db');
   if (copyDatabaseIfSourceIsNewer(sourceDatabasePath, targetDatabasePath)) {
     console.info(`[electron-dev-native] refreshed debug database copy: ${targetDatabasePath}`);

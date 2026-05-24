@@ -25,6 +25,15 @@ function unionRects(rects: readonly FormulaRegionRect[]): FormulaRegionRect {
   return { height: maxY - minY, width: maxX - minX, x: minX, y: minY };
 }
 
+function intersectRects(left: FormulaRegionRect, right: FormulaRegionRect): FormulaRegionRect | null {
+  const x = Math.max(left.x, right.x);
+  const y = Math.max(left.y, right.y);
+  const rightEdge = Math.min(left.x + left.width, right.x + right.width);
+  const bottomEdge = Math.min(left.y + left.height, right.y + right.height);
+  if (rightEdge <= x || bottomEdge <= y) return null;
+  return { height: bottomEdge - y, width: rightEdge - x, x, y };
+}
+
 function toRelativeRect(rect: FormulaRegionRect, rootRect: FormulaRegionRect): FormulaRegionRect {
   if (rootRect.width <= 0 || rootRect.height <= 0) return { height: 0, width: 0, x: 0, y: 0 };
   return {
@@ -115,10 +124,10 @@ export function createFormulaDomSelectionDescriptor(
   const visualRoot = resolveVisualRoot(root);
   const selected = listFormulaSelectionLeaves(root).filter((leaf) => intersects(getBox(leaf), selectionRect));
   if (selected.length === 0) return null;
-  const selectedRects = selected.map(getBox);
+  const fallbackRect = intersectRects(selectionRect, rootRect) ?? unionRects(selected.map(getBox));
   return {
     algorithm: ALGORITHM,
-    fallbackRect: toRelativeRect(unionRects(selectedRects), rootRect),
+    fallbackRect: toRelativeRect(fallbackRect, rootRect),
     leaves: selected.map((leaf) => createLeafDescriptor(visualRoot, leaf))
   };
 }

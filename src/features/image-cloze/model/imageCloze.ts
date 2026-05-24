@@ -1,6 +1,5 @@
 import { collectMarkdownImageReferences } from '../../../../lib/core/import/markdownImageReferences';
 import {
-  hasNodeContent,
   type ImageAnchorLocator,
   type Node,
   type NodeAnchorLink,
@@ -129,10 +128,6 @@ export function getImageClozeLocator(anchorLink: NodeAnchorLink | null | undefin
 
 export function isImageClozeNode(node: Node | null | undefined) {
   return Boolean(node && isImageClozeAnchorLink(node.anchorLink));
-}
-
-export function isLegacyImageClozeNode(node: Node | null | undefined) {
-  return Boolean(node && isImageClozeNode(node) && !hasNodeContent(node));
 }
 
 export function deriveImageClozeRegionsFromChildren(args: {

@@ -1,9 +1,6 @@
 import { FORMULA_CLOZE_CREATE_EVENT, type FormulaClozeCreateEventDetail } from '../../formula-cloze/model/formulaClozeEvents';
 import type { FormulaClozeEditorPresentation } from '../../formula-cloze/model/formulaClozePresentation';
-import {
-  createFormulaDomSelectionDescriptor,
-  measureFormulaDomSelectionDescriptor
-} from '../model/formulaDomSelection';
+import { createFormulaDomSelectionDescriptor } from '../model/formulaDomSelection';
 import type { MarkdownMathRange } from '../model/markdownMathExtension';
 
 export function configureFormulaOverlay(
@@ -16,7 +13,7 @@ export function configureFormulaOverlay(
   overlay.className = 'cm-md-formula-cloze-overlay';
   wrapper.append(overlay);
   addSavedFormulaRegions(wrapper, overlay, mathRange, presentation);
-  if (presentation?.canCreate) {
+  if (presentation?.canCreate !== false) {
     attachFormulaSelectionHandlers(wrapper, overlay, mathRange);
   }
 }
@@ -27,27 +24,58 @@ function addSavedFormulaRegions(
   mathRange: MarkdownMathRange,
   presentation: FormulaClozeEditorPresentation | null
 ) {
+  if (!presentation) return;
   const occurrenceKey = buildFormulaOccurrenceKey(mathRange);
-  for (const region of presentation?.regions ?? []) {
-    if (region.occurrenceKey !== occurrenceKey) continue;
+  for (const region of presentation.regions) {
+    if (!doesRegionMatchMathRange(region, mathRange, occurrenceKey, presentation)) continue;
     const mask = document.createElement('span');
     mask.className = 'cm-md-formula-cloze-region';
     mask.dataset.mdFormulaRegionId = region.id;
     mask.dataset.mdFormulaRegionHidden = presentation?.hiddenRegionIds.includes(region.id) ? 'true' : 'false';
     mask.dataset.mdFormulaRegionOutlined = presentation?.outlinedRegionIds.includes(region.id) ? 'true' : 'false';
-    setRegionRectStyle(mask, measureFormulaRegion(wrapper, region.selection) ?? getWrapperRectFromVisualRect(wrapper, region.fallbackRect));
+    const fallbackRect = getWrapperRectFromVisualRect(wrapper, region.fallbackRect);
+    setRegionRectStyle(mask, isUsableFormulaRect(fallbackRect) ? fallbackRect : region.fallbackRect);
     overlay.append(mask);
   }
 }
 
-function measureFormulaRegion(wrapper: HTMLElement, selection: FormulaClozeEditorPresentation['regions'][number]['selection']) {
-  const visualRoot = findFormulaVisualRoot(wrapper);
-  if (!visualRoot) return null;
-  const measured = measureFormulaDomSelectionDescriptor(visualRoot, selection, (element) => {
-    const box = element.getBoundingClientRect();
-    return { height: box.height, width: box.width, x: box.left, y: box.top };
-  });
-  return measured ? getWrapperRectFromVisualRect(wrapper, measured) : null;
+function isUsableFormulaRect(rect: { height: number; width: number; x: number; y: number } | null) {
+  return Boolean(
+    rect &&
+    Number.isFinite(rect.height) &&
+    Number.isFinite(rect.width) &&
+    Number.isFinite(rect.x) &&
+    Number.isFinite(rect.y) &&
+    rect.height > 0 &&
+    rect.width > 0
+  );
+}
+
+function doesRegionMatchMathRange(
+  region: FormulaClozeEditorPresentation['regions'][number],
+  mathRange: MarkdownMathRange,
+  occurrenceKey: string,
+  presentation: FormulaClozeEditorPresentation
+) {
+  if (region.occurrenceKey === occurrenceKey) return true;
+  return (
+    !presentation.canCreate &&
+    region.display === mathRange.display &&
+    getFormulaSourceTex(region.formulaSource) === normalizeFormulaText(mathRange.tex)
+  );
+}
+
+function getFormulaSourceTex(source: string) {
+  const trimmed = source.trim();
+  if (trimmed.startsWith('$$') && trimmed.endsWith('$$')) return normalizeFormulaText(trimmed.slice(2, -2));
+  if (trimmed.startsWith('\\[') && trimmed.endsWith('\\]')) return normalizeFormulaText(trimmed.slice(2, -2));
+  if (trimmed.startsWith('$') && trimmed.endsWith('$')) return normalizeFormulaText(trimmed.slice(1, -1));
+  if (trimmed.startsWith('\\(') && trimmed.endsWith('\\)')) return normalizeFormulaText(trimmed.slice(2, -2));
+  return normalizeFormulaText(trimmed);
+}
+
+function normalizeFormulaText(value: string) {
+  return value.replace(/\r\n/g, '\n').trim();
 }
 
 function findFormulaVisualRoot(wrapper: HTMLElement) {
@@ -60,16 +88,16 @@ function isPointInsideElement(element: HTMLElement, point: { x: number; y: numbe
 }
 
 function canStartFormulaSelection(wrapper: HTMLElement, event: PointerEvent) {
+  if (event.target instanceof HTMLElement && event.target.closest('.cm-md-math-source-button')) return false;
   const visualRoot = findFormulaVisualRoot(wrapper);
-  if (!visualRoot) return false;
-  const target = event.target instanceof Node ? event.target : null;
-  return Boolean(target && visualRoot.contains(target) && isPointInsideElement(visualRoot, { x: event.clientX, y: event.clientY }));
+  if (visualRoot && isPointInsideElement(visualRoot, { x: event.clientX, y: event.clientY })) return true;
+  return isPointInsideElement(wrapper, { x: event.clientX, y: event.clientY });
 }
 
 function attachFormulaSelectionHandlers(wrapper: HTMLElement, overlay: HTMLElement, mathRange: MarkdownMathRange) {
   let start: { x: number; y: number } | null = null;
   let draft: HTMLElement | null = null;
-  wrapper.addEventListener('pointerdown', (event) => {
+  const handlePointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
     if (!canStartFormulaSelection(wrapper, event)) return;
     start = { x: event.clientX, y: event.clientY };
@@ -79,21 +107,30 @@ function attachFormulaSelectionHandlers(wrapper: HTMLElement, overlay: HTMLEleme
     wrapper.setPointerCapture?.(event.pointerId);
     event.preventDefault();
     event.stopPropagation();
-  });
-  wrapper.addEventListener('pointermove', (event) => {
+  };
+  const handlePointerMove = (event: PointerEvent) => {
     if (!start || !draft) return;
     setDraftRectStyle(draft, wrapper.getBoundingClientRect(), start, { x: event.clientX, y: event.clientY });
     event.preventDefault();
     event.stopPropagation();
-  });
-  wrapper.addEventListener('pointerup', (event) => {
+  };
+  const handlePointerUp = (event: PointerEvent) => {
     if (!start || !draft) return;
     dispatchFormulaSelection(wrapper, draft, start, { x: event.clientX, y: event.clientY }, mathRange);
     draft = null;
     start = null;
     event.preventDefault();
     event.stopPropagation();
-  });
+  };
+  const resetDraft = () => {
+    draft?.remove();
+    draft = null;
+    start = null;
+  };
+  wrapper.addEventListener('pointerdown', handlePointerDown, { capture: true });
+  wrapper.addEventListener('pointermove', handlePointerMove, { capture: true });
+  wrapper.addEventListener('pointerup', handlePointerUp, { capture: true });
+  wrapper.addEventListener('pointercancel', resetDraft, { capture: true });
 }
 
 function dispatchFormulaSelection(

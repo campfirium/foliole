@@ -87,6 +87,21 @@ export async function killPid(pid, options = {}) {
     if (result.code === 0 || !processAlive(pid)) {
       return;
     }
+    const stopProcessResult = await runCapture('powershell.exe', [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      `Stop-Process -Id ${pid} -Force -ErrorAction Stop`
+    ], {
+      timeoutMs: options.timeoutMs ?? Number.parseInt(
+        process.env.FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS ?? String(DEFAULT_PROCESS_EXIT_TIMEOUT_MS),
+        10
+      )
+    });
+    if (stopProcessResult.code === 0 || !processAlive(pid)) {
+      return;
+    }
     throw new Error(`process tree terminate failed pid=${pid} ${result.stderr.trim() || result.stdout.trim()}`);
   }
   const timeoutMs = options.timeoutMs ?? Number.parseInt(

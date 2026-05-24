@@ -26,10 +26,6 @@ vi.mock('./DocumentPanelBody', () => ({
   DocumentPanelBody: () => <div data-testid="document-panel-body">Document body</div>
 }));
 
-vi.mock('../../features/image-cloze/components/ImageClozeCardView', () => ({
-  ImageClozeCardView: () => <div data-testid="image-cloze-card-view">Legacy image cloze</div>
-}));
-
 vi.mock('./ReadwiseBookActionsPanel', () => ({
   ReadwiseBookActionsPanel: () => null
 }));
@@ -72,34 +68,6 @@ it('renders image cloze items through the standard document body shell', () => {
   });
 
   expect(screen.getByTestId('document-panel-body')).toBeInTheDocument();
-});
-
-it('renders legacy empty-content image cloze items through the compatibility card view', () => {
-  renderSectionWithProps({
-    activeNodeId: 'node-1',
-    editorNodeId: 'node-1',
-    nodesById: {
-      'node-1': {
-        ...baseNode,
-        kind: 'item',
-        hasContent: false,
-        anchorLink: {
-          id: 'cloze-1',
-          kind: 'cloze',
-          locator: {
-            attachmentId: 'hash-1',
-            height: 0.2,
-            width: 0.3,
-            x: 0.1,
-            y: 0.2
-          }
-        },
-        reveal: 'Paris'
-      }
-    }
-  });
-
-  expect(screen.getByTestId('image-cloze-card-view')).toBeInTheDocument();
 });
 
 it('registers saved image regions for source nodes so the original image can show all cloze marks', () => {

@@ -75,6 +75,7 @@ it('creates a formula cloze child without storing formula regions as image attac
   const createdNode = useWorkspaceStore.getState().nodesById[createdId as string];
   expect(createdNode?.parentNodeId).toBe('node-1');
   expect(createdNode?.kind).toBe('item');
+  expect(createdNode?.title).toBe('E=mc2');
   expect(createdNode?.content).toBe('$E=mc^2$');
   expect(createdNode?.reveal).toBe('$E=mc^2$');
   expect(createdNode?.review).not.toBeNull();

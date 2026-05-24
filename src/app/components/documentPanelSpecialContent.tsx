@@ -1,7 +1,5 @@
 import type { ComponentProps, RefObject } from 'react';
 
-import { ImageClozeCardView } from '../../features/image-cloze/components/ImageClozeCardView';
-import { isLegacyImageClozeNode } from '../../features/image-cloze/model/imageCloze';
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
@@ -16,21 +14,6 @@ import { DocumentPanelTrashContent } from './DocumentPanelTrashContent';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import { VirtualDocumentSurface } from './VirtualDocumentSurface';
-
-function renderLegacyImageClozeContent(
-  activeNode: Node,
-  editorAppearanceKey: string,
-  onAnswerChange: (answer: string) => void,
-  pdfCache: JSX.Element,
-  showAnswer: boolean
-) {
-  return (
-    <>
-      {pdfCache}
-      <ImageClozeCardView editorAppearanceKey={editorAppearanceKey} node={activeNode} onAnswerChange={onAnswerChange} showAnswer={showAnswer} />
-    </>
-  );
-}
 
 export function resolveDocumentPanelContentBody(args: {
   activeNode: Node | undefined;
@@ -126,15 +109,6 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
   }
   if (args.isFolderListView && args.activeNodeId) {
     return renderFolderSpecialContent({ ...args, activeNodeId: args.activeNodeId });
-  }
-  if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {
-    return renderLegacyImageClozeContent(
-      args.activeNode,
-      args.bodyProps.editorAppearanceKey,
-      args.bodyProps.onAnswerChange,
-      args.pdfCache,
-      args.bodyProps.hasAnswerSection
-    );
   }
   return null;
 }
