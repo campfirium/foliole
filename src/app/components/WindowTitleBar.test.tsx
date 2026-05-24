@@ -29,7 +29,6 @@ function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>
       isRightSidebarCollapsed={false}
       isTrashViewOpen={false}
       listWidth={320}
-      onOpenNotesView={() => undefined}
       onOpenTrashView={() => undefined}
       onSelectRightPanel={() => undefined}
       onToggleListVisibility={() => undefined}
@@ -92,21 +91,19 @@ function expectExpandedRightAnchorLayout(container: HTMLElement) {
 }
 
 describe('WindowTitleBar', () => {
-  it('renders the change timestamp to the left of the right-side divider', () => {
+  it('keeps expanded left titlebar chrome to the sidebar toggle only', () => {
     const { container } = renderTitleBar();
 
     const leftZone = container.querySelector('.window-titlebar-left-zone[data-collapsed="false"]');
-    const actions = container.querySelector('.window-titlebar-leading-actions');
-    const timestamp = screen.getByLabelText('Current change timestamp');
+    const toggle = screen.getByRole('button', { name: 'Toggle left panel' });
 
     expect(leftZone).not.toBeNull();
-    expect(actions).not.toBeNull();
-    if (!leftZone || !actions) {
+    if (!leftZone) {
       throw new Error('expanded left titlebar zone should exist');
     }
-    expect(leftZone).toContainElement(timestamp);
-    expect(timestamp.textContent).toMatch(/^\d{4}$/);
-    expect(actions.compareDocumentPosition(timestamp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(leftZone).toContainElement(toggle);
+    expect(screen.queryByRole('button', { name: 'Notes' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Current change timestamp')).not.toBeInTheDocument();
   });
 
   it('triggers desktop window controls from titlebar buttons', () => {
@@ -179,10 +176,10 @@ describe('WindowTitleBar view switches', () => {
     expect(screen.queryByRole('button', { name: 'Trash' })).not.toBeInTheDocument();
   });
 
-  it('keeps notes as the only left-side view switch and does not add a trash button', () => {
+  it('does not render left-side view switches in the titlebar', () => {
     renderTitleBar();
 
-    expect(screen.getByRole('button', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Notes' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Virtual' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Trash' })).toBeNull();
   });
