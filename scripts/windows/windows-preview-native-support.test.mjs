@@ -58,6 +58,10 @@ it('classifies native preview file groups', () => {
   expect(isShellConfigFile('scripts/electron-dev.mjs')).toBe(true);
   expect(isShellConfigFile('scripts/electron-dev-server.mjs')).toBe(true);
   expect(isShellConfigFile('scripts/windows/electron-dev-native.mjs')).toBe(true);
+  expect(isShellConfigFile('scripts/windows/windows-client-native.mjs')).toBe(true);
+  expect(isShellConfigFile('scripts/windows/windows-client-native-stop.mjs')).toBe(true);
+  expect(isShellConfigFile('scripts/windows/windows-preview-native-support.mjs')).toBe(true);
+  expect(isShellConfigFile('scripts/windows/start-electron-dev-native.ps1')).toBe(true);
   expect(isRuntimeFile('electron/main.ts')).toBe(true);
   expect(isRuntimeFile('electron/main.test.ts')).toBe(false);
   expect(isRendererSourceFile('src/app/App.tsx')).toBe(true);
@@ -115,5 +119,15 @@ it('uses renderer reload for renderer-only changes on trusted clients', () => {
     status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
   })).toMatchObject({
     action: 'renderer-reload-intent'
+  });
+});
+
+it('full restarts when the native preview controller changes', () => {
+  expect(selectNativePreviewAction({
+    changedFiles: ['scripts/windows/windows-client-native-stop.mjs'],
+    currentHead: 'abc123',
+    status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
+  })).toMatchObject({
+    action: 'full-restart'
   });
 });

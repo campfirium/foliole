@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const killPid = vi.hoisted(() => vi.fn());
 const runCapture = vi.hoisted(() => vi.fn());
@@ -10,8 +10,13 @@ vi.mock('./windows-client-native-process.mjs', () => ({ killPid, runCapture }));
 const { stopNativeClient } = await import('./windows-client-native-stop.mjs');
 
 describe('native Windows client stop', () => {
-  it('continues cleanup when one process kill is denied but the runtime is gone', async () => {
+  beforeEach(() => {
+    killPid.mockReset();
+    runCapture.mockReset();
     runCapture.mockResolvedValue({ code: 0, stdout: '' });
+  });
+
+  it('continues cleanup when one process kill is denied but the runtime is gone', async () => {
     killPid
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('Access is denied'))
@@ -35,7 +40,6 @@ describe('native Windows client stop', () => {
   });
 
   it('fails when a trusted runtime remains after stop attempts', async () => {
-    runCapture.mockResolvedValue({ code: 0, stdout: '' });
     killPid.mockRejectedValue(new Error('Access is denied'));
     await expect(stopNativeClient({
       print: false,
@@ -49,6 +53,7 @@ describe('native Windows client stop', () => {
   it('cleans orphan Electron processes from the repo when markers are already gone', async () => {
     runCapture
       .mockResolvedValueOnce({ code: 0, stdout: '333\r\n444\r\n' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' })
       .mockResolvedValueOnce({ code: 0, stdout: '' });
     killPid.mockResolvedValue(undefined);
     const removeClientState = vi.fn();
@@ -70,7 +75,10 @@ describe('native Windows client stop', () => {
   });
 
   it('fails when repo Electron orphan processes remain after stop attempts', async () => {
-    runCapture.mockResolvedValue({ code: 0, stdout: '333\r\n' });
+    runCapture
+      .mockResolvedValueOnce({ code: 0, stdout: '333\r\n' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' })
+      .mockResolvedValueOnce({ code: 0, stdout: '333\r\n' });
     killPid.mockRejectedValue(new Error('Access is denied'));
     await expect(stopNativeClient({
       print: false,
@@ -103,6 +111,7 @@ describe('native Windows client stop', () => {
   it('kills a stored shell pid only when it belongs to the native dev runner', async () => {
     runCapture
       .mockResolvedValueOnce({ code: 0, stdout: '' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' })
       .mockResolvedValueOnce({ code: 0, stdout: '222\r\n' })
       .mockResolvedValueOnce({ code: 0, stdout: '' });
     killPid.mockResolvedValue(undefined);
@@ -117,5 +126,25 @@ describe('native Windows client stop', () => {
     })).resolves.toBeUndefined();
 
     expect(killPid).toHaveBeenCalledWith(222);
+  });
+
+  it('cleans orphan dev shell and Vite processes from the repo', async () => {
+    runCapture
+      .mockResolvedValueOnce({ code: 0, stdout: '' })
+      .mockResolvedValueOnce({ code: 0, stdout: '555\r\n666\r\n' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' });
+    killPid.mockResolvedValue(undefined);
+
+    await expect(stopNativeClient({
+      print: false,
+      readClientState: () => null,
+      readReadyState: () => null,
+      removeClientState: vi.fn(),
+      repoRoot: 'D:\\C\\foliole',
+      resetMarkers: vi.fn()
+    })).resolves.toBeUndefined();
+
+    expect(killPid).toHaveBeenCalledWith(555);
+    expect(killPid).toHaveBeenCalledWith(666);
   });
 });

@@ -29,7 +29,7 @@ function assertLocalDatabaseWritable() {
     handle = fs.openSync(databasePath, 'r+');
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`native preview database is not writable: ${databasePath}; close the process holding it before Windows native preview; detail=${detail}`);
+    throw new Error(`native preview process cannot open the live database for write from this launch context: ${databasePath}; detail=${detail}`);
   } finally {
     if (handle !== null) {
       fs.closeSync(handle);
