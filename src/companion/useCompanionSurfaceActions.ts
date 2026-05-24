@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { BottomBarGrade } from './CompanionFloatingBars';
 import {
@@ -23,25 +23,29 @@ function useCompanionReviewGradeAction(
 ) {
   const [isSubmittingGrade, setIsSubmittingGrade] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const isSubmittingGradeRef = useRef(false);
 
   async function handleGradeReview(grade: BottomBarGrade) {
-    if (!snapshot || !reviewSession.currentCard || isSubmittingGrade) return;
+    if (!snapshot || !reviewSession.currentCard || isSubmittingGradeRef.current) return;
+    isSubmittingGradeRef.current = true;
     setIsSubmittingGrade(true);
     setReviewError(null);
     try {
       const result = await gradeCompanionReviewCard({ grade, nodeId: reviewSession.currentCard.nodeId, snapshot });
       if (!result) throw new Error('The current item is no longer available.');
-      await persistCompanionReviewSyncObject({
+      const persisted = await persistCompanionReviewSyncObject({
         itemKind: 'fsrs',
         nodeId: reviewSession.currentCard.nodeId,
         reviewLog: result.reviewLog,
         snapshot: result.snapshot
       });
+      if (!persisted) throw new Error('Failed to persist the review grade.');
       await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       floatingBar.revealBar();
     } catch (error) {
       setReviewError(error instanceof Error ? error.message : 'Failed to apply the review grade.');
     } finally {
+      isSubmittingGradeRef.current = false;
       setIsSubmittingGrade(false);
     }
   }
