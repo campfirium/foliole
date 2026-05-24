@@ -36,8 +36,9 @@ export function CompanionCaptureSheet(props: {
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
       <AppDialogPortal>
-        <AppDialogOverlay />
-        <AppDialogContent className="bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-xl border-x-0 border-b-0 px-6 pb-6 pt-5">
+        <AppDialogOverlay className="companion-sheet-overlay" />
+        <AppDialogContent className="companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-xl border-x-0 border-b-0 px-6 pt-3 pb-[max(env(safe-area-inset-bottom),24px)]">
+          <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
           <div className="mx-auto w-full max-w-[760px]">
             <div className="mb-4 flex items-center justify-between">
               <AppDialogClose className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle">

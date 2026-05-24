@@ -11,7 +11,7 @@ function SettingsListItem(props: {
 }) {
   return (
     <button
-      className="flex w-full items-center justify-between gap-4 border-b border-companion-divider py-4 text-left transition hover:bg-bg-subtle/45"
+      className="flex w-full items-center justify-between gap-4 border-b border-companion-divider py-4 text-left transition hover:bg-companion-subtle/60 active:bg-companion-subtle/80"
       onClick={props.onClick}
       type="button"
     >

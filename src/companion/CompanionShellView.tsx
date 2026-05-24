@@ -10,7 +10,7 @@ function openCompanionSyncSettings(model: CompanionShellModel) {
 
 function renderCompanionMainContent(model: CompanionShellModel) {
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pb-24 pt-4 sm:px-7">
+    <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-7">
       <CompanionShellTopBar
         onOpenSyncSettings={() => openCompanionSyncSettings(model)}
         topBarProps={model.topBarProps}

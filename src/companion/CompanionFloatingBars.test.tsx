@@ -24,4 +24,18 @@ describe('CompanionBottomTabBar', () => {
     expect(screen.getByRole('button', { name: 'Browse' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Sync progress')).not.toBeInTheDocument();
   });
+
+  it('renders the active tab with the accent pill so the indicator wraps only the icon', () => {
+    renderBottomBar();
+
+    const activeTab = document.querySelector('button[aria-current="page"]');
+    expect(activeTab).not.toBeNull();
+    const pill = activeTab?.querySelector('span');
+    expect(pill?.className).toContain('bg-companion-accent-soft');
+    expect(pill?.className).toContain('rounded-full');
+
+    const inactiveTab = screen.getByRole('button', { name: 'Flow' });
+    const inactivePill = inactiveTab.querySelector('span');
+    expect(inactivePill?.className ?? '').not.toContain('bg-companion-accent-soft');
+  });
 });
