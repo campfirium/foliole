@@ -8,6 +8,7 @@ import { loadWorkspaceListSnapshot } from '../../lib/core/database/index.js';
 const workspaceListRow = {
   id: 'node-trash',
   parent_id: null,
+  kind: 'topic',
   priority: null,
   desired_retention: null,
   enable_short_term: null,
@@ -16,6 +17,7 @@ const workspaceListRow = {
   is_title_manual: 1,
   hide_title_heading: 0,
   virtual_filter: null,
+  body_blob_hash: null,
   opening_text: null,
   body_status: 'empty',
   has_content: 0,
@@ -62,7 +64,12 @@ it('carries deleted node timestamps for runtime trash hydration', () => {
   };
 
   expect(loadWorkspaceListSnapshot(driver)).toMatchObject({
-    nodeOrder: ['node-trash'],
+    nodeOrder: [],
+    nodesById: {
+      'node-trash': {
+        deletedAt: '2026-03-14T00:10:00.000Z'
+      }
+    },
     trashedNodeDeletedAtById: { 'node-trash': '2026-03-14T00:10:00.000Z' },
     trashedNodeIds: ['node-trash']
   });

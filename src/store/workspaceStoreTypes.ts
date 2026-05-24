@@ -119,6 +119,7 @@ export interface WorkspacePersistedState {
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   reviewSession: ReviewSessionState;
+  rendererBoundaryKeepNodeIds?: string[];
   trashedNodeDeletedAtById: Record<string, string | undefined>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;

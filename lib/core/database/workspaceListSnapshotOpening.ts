@@ -8,7 +8,7 @@ interface PdfOpeningRowLike {
   text: string;
 }
 
-type SnapshotNodeRecord = Record<string, unknown> & {
+type SnapshotNodeRecord = {
   kind?: unknown;
   openingText?: unknown;
   parentNodeId?: unknown;

@@ -5,6 +5,7 @@ import { isReadingState, type ReadingState } from '../review/readingState.js';
 import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver } from './driver.js';
 import { parseStoredImageRegions, type StoredImageRegionGroup } from './imageRegionCodec.js';
+import { resolveWorkspaceSnapshotActiveNodeId } from './workspaceSnapshotContract.js';
 
 interface WorkspaceReviewProfile {
   due: string;
@@ -180,6 +181,9 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
   if (typeof row.sequential_reading_enabled === 'number') {
     node.sequentialReadingEnabled = row.sequential_reading_enabled === 1;
   }
+  if (row.deleted_at) {
+    node.deletedAt = row.deleted_at;
+  }
   if (
     row.body_status === 'empty' ||
     row.body_status === 'failed' ||
@@ -215,10 +219,10 @@ export function resolveSnapshotActiveNodeId(
 ) {
   const row = driver.queryOne<{ value: string }>('SELECT value FROM workspace_meta WHERE key = ?', [activeNodeMetaKey]);
   const persistedActiveNodeId = row && row.value !== '' ? row.value : null;
-  const trashedNodeSet = new Set(trashedNodeIds);
-  return (
-    (persistedActiveNodeId && nodesById[persistedActiveNodeId] && !trashedNodeSet.has(persistedActiveNodeId)
-      ? persistedActiveNodeId
-      : null) ?? nodeOrder.find((nodeId) => !trashedNodeSet.has(nodeId)) ?? null
-  );
+  return resolveWorkspaceSnapshotActiveNodeId({
+    activeNodeId: persistedActiveNodeId,
+    nodeOrder,
+    nodesById,
+    trashedNodeIds
+  });
 }

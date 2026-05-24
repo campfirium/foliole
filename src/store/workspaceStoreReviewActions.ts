@@ -1,7 +1,11 @@
-import { resolveNodeShortTermSetting } from '../features/nodes/model/nodeReviewSettings';
 import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
-import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
+import type { ReviewGrade, ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
+import { gradeSharedFsrsReviewNode } from '../features/review/model/sharedReviewGradeService';
+import {
+  getCurrentReviewSchedulerSettings,
+  getReviewSchedulerVersion
+} from '../features/settings/model/reviewSchedulerSettings';
 
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
@@ -71,25 +75,36 @@ function createGradeReviewCardAction(set: WorkspaceSet, get: WorkspaceGet, sched
     if (snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isFsrsReviewItemNode(currentNode)) return false;
-    const cardBefore = toSchedulerCard(currentNode.review, now);
     if (!isActionableSessionNode(currentNode, now)) {
       skipStaleReviewCard({ currentNodeId, now, set, snapshot });
       return true;
     }
-    const enableShortTerm = resolveNodeShortTermSetting(currentNodeId, snapshot.nodesById).value;
-    const result = await scheduler.grade({ card: cardBefore, enableShortTerm, grade, now });
+    const result = await gradeSharedFsrsReviewNode({
+      getSchedulerVersion: (overrides) => getReviewSchedulerVersion(getCurrentReviewSchedulerSettings(), overrides),
+      grade,
+      nodeId: currentNodeId,
+      nodesById: snapshot.nodesById,
+      now,
+      scheduler
+    });
+    if (!result) return false;
     try {
-      await persistReviewGradeMutation({ currentNodeId, grade, reviewedAt: result.reviewed_at, cardBefore, cardAfter: result.card });
+      await persistReviewGradeMutation({
+        currentNodeId,
+        grade,
+        reviewedAt: result.reviewedAt,
+        cardBefore: result.cardBefore,
+        cardAfter: result.cardAfter
+      });
     } catch {
       return false;
     }
-    const nextReviewProfile = toNodeReviewProfile(result.card);
     applyGradedReviewState({
       set,
       snapshot,
       currentNodeId,
-      nextReviewProfile,
-      reviewedAt: result.reviewed_at,
+      nodePatch: result.nodePatch,
+      reviewedAt: result.reviewedAt,
       now
     });
 

@@ -1,3 +1,4 @@
+import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import type {
@@ -151,15 +152,18 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   const nodesById = parseNodesById(value.nodesById);
   const activeNodeId = parseActiveNodeId(value.activeNodeId, nodesById);
   const layout = parseLayout(value.layout);
-  const nodeViewById = parseNodeViewById(value.nodeViewById);
+  const nodeViewById = parseNodeViewById(value.nodeViewById ?? value.persistedNodeViewById);
   const reviewSession = parseReviewSession(value.reviewSession);
+  const rendererBoundaryKeepNodeIds = isStringArray(value.rendererBoundaryKeepNodeIds)
+    ? value.rendererBoundaryKeepNodeIds
+    : undefined;
   const capturedWorkspaceVersion =
     typeof value.capturedWorkspaceVersion === 'string' || value.capturedWorkspaceVersion === null
       ? value.capturedWorkspaceVersion
       : undefined;
   const trashedNodeDeletedAtById = parseStringValueRecord(value.trashedNodeDeletedAtById);
   const untitledSequenceByParent = parseNumberValueRecord(value.untitledSequenceByParent);
-  return {
+  const parsedState = {
     ...(nodesById ? { nodesById } : {}),
     ...(capturedWorkspaceVersion !== undefined ? { capturedWorkspaceVersion } : {}),
     ...(activeNodeId !== undefined ? { activeNodeId } : {}),
@@ -167,8 +171,22 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
     ...(nodeViewById ? { nodeViewById } : {}),
     ...(isStringArray(value.nodeOrder) ? { nodeOrder: value.nodeOrder } : {}),
     ...(reviewSession ? { reviewSession } : {}),
+    ...(rendererBoundaryKeepNodeIds ? { rendererBoundaryKeepNodeIds } : {}),
     ...(trashedNodeDeletedAtById ? { trashedNodeDeletedAtById } : {}),
     ...(isStringArray(value.trashedNodeIds) ? { trashedNodeIds: value.trashedNodeIds } : {}),
     ...(untitledSequenceByParent ? { untitledSequenceByParent } : {})
+  };
+  if (!parsedState.nodesById) {
+    return parsedState;
+  }
+  return {
+    ...parsedState,
+    ...normalizeWorkspaceSnapshot({
+      activeNodeId: parsedState.activeNodeId ?? null,
+      nodeOrder: parsedState.nodeOrder ?? [],
+      nodesById: parsedState.nodesById,
+      trashedNodeDeletedAtById: parsedState.trashedNodeDeletedAtById ?? {},
+      trashedNodeIds: parsedState.trashedNodeIds ?? []
+    })
   };
 }

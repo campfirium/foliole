@@ -1,3 +1,4 @@
+import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { Node, NodeReadingProfile, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStoreTypes';
@@ -34,16 +35,42 @@ function chooseReadingProfile(
   return isNewerTimestamp(current.lastHandledAt, next.lastHandledAt) ? current : next;
 }
 
+function chooseDeletedAt(current: Node | undefined, next: Node) {
+  if (next.deletedAt) {
+    if (!current?.deletedAt || timestampValue(next.deletedAt) >= timestampValue(current.deletedAt)) {
+      return next.deletedAt;
+    }
+    return current.deletedAt;
+  }
+  if (current?.deletedAt && timestampValue(next.updatedAt) <= timestampValue(current.deletedAt)) {
+    return current.deletedAt;
+  }
+  return undefined;
+}
+
+function mergeDeletedAt(node: Node, deletedAt: string | undefined): Node {
+  if (deletedAt) {
+    return { ...node, deletedAt };
+  }
+  const nextNode = { ...node };
+  delete nextNode.deletedAt;
+  return nextNode;
+}
+
+function withDeletedAt(node: Node, deletedAt: string | undefined): Node {
+  return deletedAt && !node.deletedAt ? { ...node, deletedAt } : node;
+}
+
 export function mergeHydratedNode(current: Node | undefined, next: Node) {
   if (!current) {
     return next;
   }
   const baseNode = isNewerTimestamp(current.updatedAt, next.updatedAt) ? current : next;
-  return {
+  return mergeDeletedAt({
     ...baseNode,
     reading: chooseReadingProfile(current.reading, next.reading),
     review: chooseReviewProfile(current.review, next.review)
-  };
+  }, chooseDeletedAt(current, next));
 }
 
 export function mergeHydratedNodesById(current: Record<string, Node>, next: Record<string, Node>) {
@@ -81,15 +108,18 @@ function buildMergedNodesById(
     const nextNode = nextNodesById[nodeId];
     const currentNode = current.nodesById[nodeId];
     if (nextNode) {
-      nodesById[nodeId] = mergeHydratedNode(currentNode, nextNode);
+      nodesById[nodeId] = mergeHydratedNode(
+        currentNode ? withDeletedAt(currentNode, current.trashedNodeDeletedAtById[nodeId]) : undefined,
+        withDeletedAt(nextNode, next.trashedNodeDeletedAtById?.[nodeId])
+      );
       continue;
     }
     if (currentNode && shouldKeepCurrentOnlyNode(
       currentNode,
-      current.trashedNodeDeletedAtById[nodeId],
+      currentNode.deletedAt ?? current.trashedNodeDeletedAtById[nodeId],
       snapshotVersion
     )) {
-      nodesById[nodeId] = currentNode;
+      nodesById[nodeId] = withDeletedAt(currentNode, current.trashedNodeDeletedAtById[nodeId]);
     }
   }
   return nodesById;
@@ -97,18 +127,21 @@ function buildMergedNodesById(
 
 function buildMergedTrash(args: {
   current: WorkspaceState;
-  next: Partial<WorkspacePersistedState>;
   nodesById: Record<string, Node>;
   snapshotVersion: string | null | undefined;
 }) {
-  const trashedNodeDeletedAtById = { ...(args.next.trashedNodeDeletedAtById ?? {}) };
   for (const [nodeId, deletedAt] of Object.entries(args.current.trashedNodeDeletedAtById)) {
     if (isAfterSnapshot(deletedAt, args.snapshotVersion) && args.nodesById[nodeId]) {
-      trashedNodeDeletedAtById[nodeId] = deletedAt;
+      args.nodesById[nodeId] = withDeletedAt(args.nodesById[nodeId], deletedAt);
     }
   }
-  const trashedNodeIds = uniqueNodeOrder(args.next.trashedNodeIds ?? [], args.current.trashedNodeIds)
-    .filter((nodeId) => Boolean(args.nodesById[nodeId] && trashedNodeDeletedAtById[nodeId]));
+  const trashedNodeDeletedAtById = Object.fromEntries(
+    Object.entries(args.nodesById)
+      .filter((entry): entry is [string, Node & { deletedAt: string }] => typeof entry[1].deletedAt === 'string')
+      .map(([nodeId, node]) => [nodeId, node.deletedAt])
+  );
+  const trashedNodeIds = uniqueNodeOrder(args.current.trashedNodeIds, Object.keys(trashedNodeDeletedAtById))
+    .filter((nodeId) => Boolean(args.nodesById[nodeId]?.deletedAt));
   return { trashedNodeDeletedAtById, trashedNodeIds };
 }
 
@@ -116,12 +149,19 @@ export function mergeHydratedWorkspaceMembership(
   current: WorkspaceState,
   next: Partial<WorkspacePersistedState>
 ) {
+  const normalizedNext = normalizeWorkspaceSnapshot({
+    activeNodeId: next.activeNodeId ?? null,
+    nodeOrder: next.nodeOrder ?? [],
+    nodesById: next.nodesById ?? {},
+    trashedNodeDeletedAtById: next.trashedNodeDeletedAtById ?? {},
+    trashedNodeIds: next.trashedNodeIds ?? []
+  });
   const snapshotVersion = next.capturedWorkspaceVersion;
-  const nodesById = buildMergedNodesById(current, next, snapshotVersion);
-  const trash = buildMergedTrash({ current, next, nodesById, snapshotVersion });
+  const nodesById = buildMergedNodesById(current, normalizedNext, snapshotVersion);
+  const trash = buildMergedTrash({ current, nodesById, snapshotVersion });
   const trashedNodeSet = new Set(trash.trashedNodeIds);
   const nodeOrder = uniqueNodeOrder(next.nodeOrder ?? [], current.nodeOrder)
-    .filter((nodeId) => Boolean(nodesById[nodeId] && !trashedNodeSet.has(nodeId)));
+    .filter((nodeId) => Boolean(nodesById[nodeId] && !nodesById[nodeId]?.deletedAt && !trashedNodeSet.has(nodeId)));
   return {
     nodeOrder,
     nodesById,

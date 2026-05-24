@@ -1,7 +1,12 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import {
+  listVisibleWorkspaceSnapshotNodeIds,
+  normalizeWorkspaceSnapshot
+} from '../../lib/core/database/workspaceSnapshotContract';
 import { getReviewItemKind, isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
-import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade } from '../features/review/model/reviewTypes';
+import type { ReviewGrade } from '../features/review/model/reviewTypes';
+import { gradeSharedFsrsReviewNode } from '../features/review/model/sharedReviewGradeService';
 import {
   getCurrentReviewSchedulerSettings,
   getReviewSchedulerVersion
@@ -71,10 +76,7 @@ function resolveScheduledReviewSummary(snapshot: WorkspaceSnapshot) {
   let scheduledFsrsCount = 0;
   let scheduledReadingCount = 0;
 
-  for (const nodeId of snapshot.nodeOrder) {
-    if (snapshot.trashedNodeIds.includes(nodeId)) {
-      continue;
-    }
+  for (const nodeId of listVisibleWorkspaceSnapshotNodeIds(snapshot)) {
     const node = snapshot.nodesById[nodeId];
     if (!node) {
       continue;
@@ -101,11 +103,16 @@ function resolveScheduledReviewSummary(snapshot: WorkspaceSnapshot) {
   };
 }
 
+function resolveCompanionQueueNodeIds(plan: ReturnType<typeof buildReviewQueuePlan>) {
+  return [...new Set([...plan.queueNodeIds, ...plan.readingQueueNodeIds])];
+}
+
 export function resolveCompanionReviewSession(
   snapshot: WorkspaceSnapshot | null,
   now = new Date().toISOString()
 ): CompanionReviewSession {
-  if (!snapshot) {
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot) {
     return {
       currentCard: null,
       nextFsrsDueAt: null,
@@ -118,19 +125,19 @@ export function resolveCompanionReviewSession(
   }
 
   const plan = buildReviewQueuePlan({
-    nodeOrder: snapshot.nodeOrder,
-    nodesById: snapshot.nodesById,
+    nodeOrder: listVisibleWorkspaceSnapshotNodeIds(normalizedSnapshot),
+    nodesById: normalizedSnapshot.nodesById,
     now,
-    trashedNodeIds: snapshot.trashedNodeIds
+    trashedNodeIds: normalizedSnapshot.trashedNodeIds
   });
-  const queueNodeIds = plan.queueNodeIds.filter((nodeId) => {
-    const node = snapshot.nodesById[nodeId];
+  const queueNodeIds = resolveCompanionQueueNodeIds(plan).filter((nodeId) => {
+    const node = normalizedSnapshot.nodesById[nodeId];
     return isFsrsReviewItemNode(node) || isReadingReviewItemNode(node);
   });
-  const scheduledSummary = resolveScheduledReviewSummary(snapshot);
+  const scheduledSummary = resolveScheduledReviewSummary(normalizedSnapshot);
 
   return {
-    currentCard: buildCurrentCard(snapshot, queueNodeIds),
+    currentCard: buildCurrentCard(normalizedSnapshot, queueNodeIds),
     nextFsrsDueAt: scheduledSummary.nextFsrsDueAt,
     nextReadingDueAt: scheduledSummary.nextReadingDueAt,
     queueNodeIds,
@@ -160,13 +167,17 @@ export async function gradeCompanionReviewCard(args: {
   }
 
   const scheduler = createReviewSchedulerAdapter();
-  const cardBefore = toSchedulerCard(node.review, now);
-  const result = await scheduler.grade({
-    card: cardBefore,
+  const result = await gradeSharedFsrsReviewNode({
+    getSchedulerVersion: (overrides) => getReviewSchedulerVersion(getCurrentReviewSchedulerSettings(), overrides),
     grade: args.grade,
-    now
+    nodeId: args.nodeId,
+    nodesById: args.snapshot.nodesById,
+    now,
+    scheduler
   });
-  const schedulerVersion = getReviewSchedulerVersion(getCurrentReviewSchedulerSettings());
+  if (!result) {
+    return null;
+  }
 
   const nextSnapshot: WorkspaceSnapshot = {
     ...args.snapshot,
@@ -174,25 +185,15 @@ export async function gradeCompanionReviewCard(args: {
       ...args.snapshot.nodesById,
       [args.nodeId]: {
         ...node,
-        review: {
-          ...toNodeReviewProfile(result.card),
-          lastReviewAt: result.reviewed_at
-        },
-        updatedAt: now
+        ...result.nodePatch
       }
     }
   };
 
   return {
     nextSession: resolveCompanionReviewSession(nextSnapshot, now),
-    reviewLog: {
-      cardAfter: result.card,
-      cardBefore,
-      grade: args.grade,
-      reviewedAt: result.reviewed_at,
-      schedulerVersion
-    },
-    reviewedAt: result.reviewed_at,
+    reviewLog: result.reviewLog,
+    reviewedAt: result.reviewedAt,
     snapshot: nextSnapshot
   };
 }

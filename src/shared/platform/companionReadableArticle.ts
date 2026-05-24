@@ -1,4 +1,8 @@
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
+import {
+  listVisibleWorkspaceSnapshotNodeIds,
+  normalizeWorkspaceSnapshot
+} from '../../../lib/core/database/workspaceSnapshotContract';
 import type { PersistedNodeViewState } from '../../../lib/platform/persistedNodeViewState';
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
@@ -87,56 +91,57 @@ export function resolveReadableCompanionArticleByNodeId(
   snapshot: WorkspaceSnapshot | null,
   nodeId: string | null
 ): CompanionReadableArticle | null {
-  if (!snapshot || !nodeId || snapshot.trashedNodeIds.includes(nodeId)) {
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot || !nodeId || normalizedSnapshot.trashedNodeIds.includes(nodeId)) {
     return null;
   }
-  const node = snapshot.nodesById[nodeId];
-  return node && hasReadableContent(node) ? buildReadableArticleFromSnapshot(snapshot, node) : null;
+  const node = normalizedSnapshot.nodesById[nodeId];
+  return node && hasReadableContent(node) ? buildReadableArticleFromSnapshot(normalizedSnapshot, node) : null;
 }
 
 export function resolveReadableCompanionTrashArticleByNodeId(
   snapshot: WorkspaceSnapshot | null,
   nodeId: string | null
 ): CompanionReadableArticle | null {
-  if (!snapshot || !nodeId || !snapshot.trashedNodeIds.includes(nodeId)) {
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot || !nodeId || !normalizedSnapshot.trashedNodeIds.includes(nodeId)) {
     return null;
   }
-  const node = snapshot.nodesById[nodeId];
-  return node && hasReadableContent(node) ? buildReadableArticleFromSnapshot(snapshot, node, true) : null;
+  const node = normalizedSnapshot.nodesById[nodeId];
+  return node && hasReadableContent(node) ? buildReadableArticleFromSnapshot(normalizedSnapshot, node, true) : null;
 }
 
 export function resolveReadableCompanionArticle(snapshot: WorkspaceSnapshot | null): CompanionReadableArticle | null {
-  if (!snapshot) {
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot) {
     return null;
   }
 
-  const activeReadableArticle = resolveReadableCompanionArticleByNodeId(snapshot, snapshot.activeNodeId);
+  const activeReadableArticle = resolveReadableCompanionArticleByNodeId(normalizedSnapshot, normalizedSnapshot.activeNodeId);
   if (activeReadableArticle) {
     return activeReadableArticle;
   }
 
-  for (const nodeId of snapshot.nodeOrder) {
-    if (snapshot.trashedNodeIds.includes(nodeId)) {
-      continue;
-    }
-    const node = snapshot.nodesById[nodeId];
+  for (const nodeId of listVisibleWorkspaceSnapshotNodeIds(normalizedSnapshot)) {
+    const node = normalizedSnapshot.nodesById[nodeId];
     if (!hasReadableContent(node)) {
       continue;
     }
-    return buildReadableArticleFromSnapshot(snapshot, node);
+    return buildReadableArticleFromSnapshot(normalizedSnapshot, node);
   }
 
   return null;
 }
 
 export function resolveCompanionBrowseExitNodeId(snapshot: WorkspaceSnapshot | null, nodeId: string | null) {
-  if (!snapshot || !nodeId || snapshot.trashedNodeIds.includes(nodeId)) {
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot || !nodeId || normalizedSnapshot.trashedNodeIds.includes(nodeId)) {
     return null;
   }
-  const node = snapshot.nodesById[nodeId];
+  const node = normalizedSnapshot.nodesById[nodeId];
   const parentNodeId = node?.parentNodeId ?? null;
-  if (!parentNodeId || snapshot.trashedNodeIds.includes(parentNodeId)) {
+  if (!parentNodeId || normalizedSnapshot.trashedNodeIds.includes(parentNodeId)) {
     return null;
   }
-  return snapshot.nodesById[parentNodeId]?.kind === 'folder' ? parentNodeId : null;
+  return normalizedSnapshot.nodesById[parentNodeId]?.kind === 'folder' ? parentNodeId : null;
 }

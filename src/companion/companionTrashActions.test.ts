@@ -35,8 +35,12 @@ function createSnapshot(): WorkspaceSnapshot {
   const topic = createNode({ id: 'topic-1', parentNodeId: 'folder-1' });
   return {
     activeNodeId: null,
-    nodeOrder: ['folder-1', 'topic-1'],
+    nodeOrder: [],
     nodesById: { 'folder-1': folder, 'topic-1': topic },
+    trashedNodeDeletedAtById: {
+      'folder-1': '2026-05-03T01:00:00.000Z',
+      'topic-1': '2026-05-03T01:00:00.000Z'
+    },
     trashedNodeIds: ['folder-1', 'topic-1'],
     untitledSequenceByParent: {}
   };
@@ -60,6 +64,8 @@ describe('companion trash actions', () => {
     });
 
     expect(result?.snapshot.trashedNodeIds).toEqual([]);
+    expect(result?.snapshot.nodeOrder).toEqual(['folder-1', 'topic-1']);
+    expect(result?.snapshot.trashedNodeDeletedAtById).toEqual({});
     expect(result?.snapshot.nodesById['folder-1']).toMatchObject({ deletedAt: null });
     expect(result?.snapshot.nodesById['topic-1']).toMatchObject({ deletedAt: null });
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([

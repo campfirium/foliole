@@ -104,6 +104,13 @@ export interface NodeAnchorLink {
 
 export type NodeSpecialKind = 'home' | 'inbox' | 'trash' | 'virtual-root' | 'virtual';
 
+export interface NodeAttachment {
+  attachmentId: string;
+  mimeType: string | null;
+  originalName: string | null;
+  role: string;
+}
+
 export interface Node {
   id: string;
   parentNodeId: string | null;
@@ -116,11 +123,14 @@ export interface Node {
   title: string;
   isTitleManual?: boolean;
   hideTitleHeading?: boolean;
+  attachments?: NodeAttachment[];
+  bodyBlobHash?: string | null;
   hasContent?: boolean;
   hasReveal?: boolean;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   openingText?: string | null;
   content: string;
+  currentVersionId?: string | null;
   virtualFilter?: VirtualNodeFilter | null;
   anchorLink?: NodeAnchorLink | null;
   imageRegions?: NodeImageRegionGroup[] | null;
@@ -128,6 +138,7 @@ export interface Node {
   reading?: NodeReadingProfile | null;
   review: NodeReviewProfile | null;
   createdAt: string;
+  deletedAt?: string | null;
   updatedAt: string;
 }
 
