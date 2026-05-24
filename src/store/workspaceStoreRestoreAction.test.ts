@@ -56,4 +56,17 @@ describe('createRestoreNodeAction conflict handling', () => {
     expect(harness.getState().trashedNodeIds).toEqual(['node-trash']);
     expect(harness.getState().trashedNodeDeletedAtById['node-trash']).toBe('2026-05-18T00:00:00.000Z');
   });
+
+  it('does not apply a restore patch without a runtime success result', async () => {
+    vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue(undefined);
+    const { actions, harness } = createTrashedDuplicateHarness();
+
+    const targetNodeId = await actions.restoreNode('node-trash');
+
+    expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: ['node-trash'] });
+    expect(targetNodeId).toBeNull();
+    expect(harness.getState().activeNodeId).toBe('node-1');
+    expect(harness.getState().trashedNodeIds).toEqual(['node-trash']);
+    expect(harness.getState().trashedNodeDeletedAtById['node-trash']).toBe('2026-05-18T00:00:00.000Z');
+  });
 });
