@@ -70,6 +70,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'workspaceSurfaceAutoOptionsDark',
   'workspaceSurfaceRandomHistoryDark',
   'workspaceSurfaceFavoritesDark',
+  'workspaceDividerOpacityPercent',
   'interfaceFontSize',
   'customInterfaceFont',
   'customMonospaceFont',

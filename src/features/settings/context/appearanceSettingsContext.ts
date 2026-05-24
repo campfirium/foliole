@@ -47,6 +47,7 @@ export interface AppearanceSettingsContextValue {
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
   uiFontPreset: InterfaceFontPreset;
+  workspaceDividerOpacityPercent: number;
   workspaceSurfaceAssignments: WorkspaceSurfaceAssignments;
   workspaceSurfacePalette: WorkspaceSurfacePalette;
   resetAccentColorPreset: () => void;
@@ -81,6 +82,7 @@ export interface AppearanceSettingsContextValue {
   setReadingLineHeight: (value: ReadingLineHeight) => void;
   setReadingParagraphSpacing: (value: ReadingParagraphSpacing) => void;
   setUiFontPreset: (value: InterfaceFontPreset) => void;
+  setWorkspaceDividerOpacityPercent: (value: number) => void;
   setWorkspaceSurfaceAssignments: (value: WorkspaceSurfaceAssignments) => void;
   setWorkspaceSurfacePalette: (value: WorkspaceSurfacePalette) => void;
   toggleBaseColorMode: () => void;

@@ -25,6 +25,11 @@ export function ReviewActionBar({
   secondary,
   style
 }: ReviewActionBarProps) {
+  const mergedStyle = {
+    ...style,
+    borderTopColor: 'rgb(var(--color-border) / var(--workspace-divider-opacity))'
+  } as CSSProperties;
+
   return (
     <div
       aria-label={ariaLabel}
@@ -33,7 +38,7 @@ export function ReviewActionBar({
       data-review-input-mode={reviewInputMode}
       data-review-item-kind={reviewItemKind}
       role="group"
-      style={style}
+      style={mergedStyle}
     >
       {progress}
       <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">

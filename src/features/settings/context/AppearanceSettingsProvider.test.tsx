@@ -21,6 +21,7 @@ function AppearanceHarness() {
       <div>{appearance.readingParagraphSpacing}</div>
       <div>{appearance.readingContentWidth}</div>
       <div>{appearance.selectionToolbarOpacityPercent}</div>
+      <div>{appearance.workspaceDividerOpacityPercent}</div>
       <button onClick={appearance.toggleEditorDisplayMode} type="button">
         Toggle mode
       </button>
@@ -51,6 +52,9 @@ function AppearanceHarness() {
       <button onClick={() => appearance.setSelectionToolbarOpacityPercent(42)} type="button">
         Set toolbar opacity
       </button>
+      <button onClick={() => appearance.setWorkspaceDividerOpacityPercent(18)} type="button">
+        Set divider opacity
+      </button>
       <button onClick={appearance.toggleBaseColorMode} type="button">
         Toggle light/dark
       </button>
@@ -70,6 +74,10 @@ function expectToolbarOpacity(value: string) {
   expect(document.documentElement.style.getPropertyValue('--app-selection-toolbar-opacity')).toBe(value);
 }
 
+function expectDividerOpacity(value: string) {
+  expect(document.documentElement.style.getPropertyValue('--workspace-divider-opacity')).toBe(value);
+}
+
 function applyAppearanceHarnessUpdates() {
   fireEvent.click(screen.getByRole('button', { name: 'Toggle mode' }));
   fireEvent.click(screen.getByRole('button', { name: 'Show syntax' }));
@@ -80,8 +88,21 @@ function applyAppearanceHarnessUpdates() {
   fireEvent.click(screen.getByRole('button', { name: 'Set paragraph spacing' }));
   fireEvent.click(screen.getByRole('button', { name: 'Set reading width' }));
   fireEvent.click(screen.getByRole('button', { name: 'Set toolbar opacity' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Set divider opacity' }));
   fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
   fireEvent.click(screen.getByRole('button', { name: 'Dim images' }));
+}
+
+function expectInitialAppliedAppearance() {
+  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
+  expect(document.documentElement.dataset.pdfReadingMode).toBe('inverted');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.65');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('0.75em');
+  expect(document.documentElement.style.getPropertyValue('--app-interface-font-family')).toBe('var(--font-family-interface)');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-font-family')).toBe('var(--font-family-text)');
+  expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('860px');
+  expectToolbarOpacity('1');
+  expectDividerOpacity('0');
 }
 
 it('hydrates saved appearance settings and persists updates through the shared provider', () => {
@@ -103,14 +124,7 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('1.65')).toBeInTheDocument();
   expect(screen.getByText('0.75')).toBeInTheDocument();
   expect(screen.getByText('860')).toBeInTheDocument();
-  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
-  expect(document.documentElement.dataset.pdfReadingMode).toBe('inverted');
-  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.65');
-  expect(document.documentElement.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('0.75em');
-  expect(document.documentElement.style.getPropertyValue('--app-interface-font-family')).toBe('var(--font-family-interface)');
-  expect(document.documentElement.style.getPropertyValue('--content-panel-font-family')).toBe('var(--font-family-text)');
-  expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('860px');
-  expectToolbarOpacity('1');
+  expectInitialAppliedAppearance();
   expect(document.body.dataset.bootSkeleton).toBeUndefined();
 
   applyAppearanceHarnessUpdates();
@@ -126,6 +140,7 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('1.25')).toBeInTheDocument();
   expect(screen.getByText('920')).toBeInTheDocument();
   expect(screen.getByText('42')).toBeInTheDocument();
+  expect(screen.getByText('18')).toBeInTheDocument();
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.editorDisplayMode)).toBe('preview');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.frontmatterDisplayMode)).toBe('full');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.frontmatterMetaFields)).toBe('aliases, source');
@@ -137,12 +152,14 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingParagraphSpacing)).toBe('1.25');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingContentWidth)).toBe('920');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionToolbarOpacityPercent)).toBe('42');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceDividerOpacityPercent)).toBe('18');
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('true');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.85');
   expect(document.documentElement.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('1.25em');
   expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('920px');
   expectToolbarOpacity('0.42');
+  expectDividerOpacity('0.18');
 
   fireEvent.click(screen.getByRole('button', { name: 'Reset frontmatter meta' }));
   expect(screen.getByText('author|byline, url|link|source|source_url')).toBeInTheDocument();

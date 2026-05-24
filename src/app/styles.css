@@ -33,6 +33,7 @@
   --color-bg-muted: rgb(var(--color-muted));
   --content-panel-text-color: var(--color-text-primary);
   --workspace-divider-mix-target: black;
+  --workspace-divider-opacity: 0;
   --workspace-divider-subtle-surface-weight: 92%;
   --workspace-divider-strong-surface-weight: 86%;
   --workspace-document-content-divider-surface-weight: 91%;
@@ -486,6 +487,7 @@ b {
   pointer-events: none;
   position: absolute;
   right: 0;
+  opacity: var(--workspace-divider-opacity);
   z-index: var(--z-local-feedback);
 }
 
@@ -582,6 +584,7 @@ b {
   position: absolute;
   right: 0;
   top: 0;
+  opacity: var(--workspace-divider-opacity);
   z-index: var(--z-local-overlay);
 }
 

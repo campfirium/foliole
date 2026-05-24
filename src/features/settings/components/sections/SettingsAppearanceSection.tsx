@@ -19,6 +19,7 @@ import {
   AppearanceReadingSection
 } from './SettingsAppearanceColorSections';
 import { SettingsAppearanceFontSection } from './SettingsAppearanceFontSection';
+import { WorkspaceDividerSettingsSection } from './WorkspaceDividerSettingsSection';
 import { WorkspaceSurfaceColorSection } from './WorkspaceSurfaceColorSection';
 
 function ensureAccentHex(value: string) {
@@ -118,6 +119,7 @@ export function SettingsAppearanceSection(props: { onEnterPreview: () => void })
     <>
       <AppearanceColorModeSection {...state} />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
+      <WorkspaceDividerSettingsSection />
       <AppearanceLearningColorSection
         appearance={state.appearance}
         safeAccentColor={state.safeAccentColor}

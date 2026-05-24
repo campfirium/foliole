@@ -21,7 +21,7 @@ function WorkspaceGridDivider({
     <div
       aria-hidden="true"
       className="pointer-events-none absolute z-local-overlay w-px -translate-x-1/2 max-[1080px]:hidden"
-      style={{ backgroundColor: getWorkspaceSurfaceDividerColor('main', column), bottom, left, top }}
+      style={{ backgroundColor: getWorkspaceSurfaceDividerColor('main', column), bottom, left, opacity: 'var(--workspace-divider-opacity)', top }}
     />
   );
 }
