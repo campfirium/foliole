@@ -64,10 +64,10 @@ export interface WorkspaceState {
   setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
-  completeReviewItem: (now?: string) => Promise<boolean>;
-  deferReviewItem: () => Promise<boolean>;
-  soonReviewItem: (now?: string) => Promise<boolean>;
-  dismissReviewItem: (now?: string) => Promise<boolean>;
+  readReviewTopic: (now?: string) => Promise<boolean>;
+  postponeReviewTopic: () => Promise<boolean>;
+  revisitReviewTopicSoon: (now?: string) => Promise<boolean>;
+  dismissReviewTopic: (now?: string) => Promise<boolean>;
   exitReviewSession: () => void;
   deleteNode: (nodeId: string) => void;
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;

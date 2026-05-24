@@ -16,12 +16,12 @@ export interface ActiveReviewActionBarProps {
   isCurrentItemGradable: boolean;
   isReviewEditing: boolean;
   isSubmitting: boolean;
-  onCompleteReviewItem: () => Promise<boolean>;
-  onDeferReviewItem: () => Promise<boolean>;
-  onDismissReviewItem: () => Promise<boolean>;
+  onReadReviewTopic: () => Promise<boolean>;
+  onPostponeReviewTopic: () => Promise<boolean>;
+  onDismissReviewTopic: () => Promise<boolean>;
   onRevealAnswer: () => void;
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
-  onSoonReviewItem: () => Promise<boolean>;
+  onRevisitReviewTopicSoon: () => Promise<boolean>;
   retryGrade?: () => Promise<void>;
   reviewCompletedCount: number;
   reviewProgressCounts?: ReviewToolbarProgressCounts;
@@ -56,21 +56,21 @@ function createActiveReviewActions(props: Pick<
   | 'isAnswerRevealed'
   | 'isCurrentItemGradable'
   | 'isSubmitting'
-  | 'onCompleteReviewItem'
-  | 'onDeferReviewItem'
-  | 'onDismissReviewItem'
+  | 'onReadReviewTopic'
+  | 'onPostponeReviewTopic'
+  | 'onDismissReviewTopic'
   | 'onRevealAnswer'
-  | 'onSoonReviewItem'
+  | 'onRevisitReviewTopicSoon'
   | 'retryGrade'
   | 'submitGrade'
 >) {
   if (!props.isCurrentItemGradable) {
     return (
       <ReadingReviewActions
-        onCompleteReviewItem={props.onCompleteReviewItem}
-        onDeferReviewItem={props.onDeferReviewItem}
-        onDismissReviewItem={props.onDismissReviewItem}
-        onSoonReviewItem={props.onSoonReviewItem}
+        onReadReviewTopic={props.onReadReviewTopic}
+        onPostponeReviewTopic={props.onPostponeReviewTopic}
+        onDismissReviewTopic={props.onDismissReviewTopic}
+        onRevisitReviewTopicSoon={props.onRevisitReviewTopicSoon}
       />
     );
   }
@@ -93,11 +93,11 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps) {
     isAnswerRevealed: props.isAnswerRevealed,
     isCurrentItemGradable: props.isCurrentItemGradable,
     isSubmitting: props.isSubmitting,
-    onCompleteReviewItem: props.onCompleteReviewItem,
-    onDeferReviewItem: props.onDeferReviewItem,
-    onDismissReviewItem: props.onDismissReviewItem,
+    onReadReviewTopic: props.onReadReviewTopic,
+    onPostponeReviewTopic: props.onPostponeReviewTopic,
+    onDismissReviewTopic: props.onDismissReviewTopic,
     onRevealAnswer: props.onRevealAnswer,
-    onSoonReviewItem: props.onSoonReviewItem,
+    onRevisitReviewTopicSoon: props.onRevisitReviewTopicSoon,
     ...definedProps({ retryGrade: props.retryGrade }),
     submitGrade: props.submitGrade
   });

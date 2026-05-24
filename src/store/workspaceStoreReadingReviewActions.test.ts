@@ -27,7 +27,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it('undoes a completed reading review item back to the previous session step', async () => {
+it('undoes a read reading topic back to the previous session step', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const firstDue = '2026-03-02T00:00:00.000Z';
   const harness = createSetStateHarness(
@@ -39,8 +39,8 @@ it('undoes a completed reading review item back to the previous session step', a
   const firstNodeId = harness.getState().reviewSession.currentNodeId!;
   const queueNodeIds = [...harness.getState().reviewSession.queueNodeIds];
 
-  await expect(actions.completeReviewItem(now)).resolves.toBe(true);
-  expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({ title: 'Complete Topic' });
+  await expect(actions.readReviewTopic(now)).resolves.toBe(true);
+  expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({ title: 'Read Topic' });
   expect(historyActions.undoWorkspaceAction('2026-03-04T00:00:00.000Z')).toBe(true);
 
   expect(harness.getState().activeNodeId).toBe(firstNodeId);
@@ -55,7 +55,7 @@ it('undoes a completed reading review item back to the previous session step', a
   });
 });
 
-it('records postponed reading review items as the latest undo step', async () => {
+it('records postponed reading topics as the latest undo step', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const firstDue = '2026-03-02T00:00:00.000Z';
   const harness = createSetStateHarness(
@@ -68,8 +68,8 @@ it('records postponed reading review items as the latest undo step', async () =>
   vi.useFakeTimers();
   vi.setSystemTime(new Date(now));
 
-  await expect(actions.deferReviewItem()).resolves.toBe(true);
-  expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({ title: 'Defer Topic' });
+  await expect(actions.postponeReviewTopic()).resolves.toBe(true);
+  expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({ title: 'Later Topic' });
   expect(historyActions.undoWorkspaceAction('2026-03-04T00:00:00.000Z')).toBe(true);
 
   expect(harness.getState().activeNodeId).toBe(firstNodeId);
@@ -90,8 +90,8 @@ it('replays soon reading topics after the current queue in click order without r
   const [firstNodeId, secondNodeId, thirdNodeId] = harness.getState().reviewSession.queueNodeIds as [string, string, string];
   const firstReadingBeforeSoon = harness.getState().nodesById[firstNodeId]?.reading;
 
-  await expect(actions.soonReviewItem(now)).resolves.toBe(true);
-  await expect(actions.soonReviewItem(now)).resolves.toBe(true);
+  await expect(actions.revisitReviewTopicSoon(now)).resolves.toBe(true);
+  await expect(actions.revisitReviewTopicSoon(now)).resolves.toBe(true);
 
   expect(harness.getState().reviewSession.currentNodeId).toBe(thirdNodeId);
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([thirdNodeId]);
@@ -101,17 +101,17 @@ it('replays soon reading topics after the current queue in click order without r
     repetitionCount: firstReadingBeforeSoon?.repetitionCount
   });
 
-  await expect(actions.completeReviewItem(now)).resolves.toBe(true);
+  await expect(actions.readReviewTopic(now)).resolves.toBe(true);
   expect(harness.getState().reviewSession.currentNodeId).toBe(firstNodeId);
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([]);
   expect(harness.getState().reviewSession.readTopicCount).toBe(3);
 
-  await expect(actions.completeReviewItem(now)).resolves.toBe(true);
+  await expect(actions.readReviewTopic(now)).resolves.toBe(true);
   expect(harness.getState().reviewSession.currentNodeId).toBe(secondNodeId);
   expect(harness.getState().reviewSession.readTopicCount).toBe(3);
 });
 
-it('completes reading items without showing grading and advances the queue', async () => {
+it('reads topics without showing grading and advances the queue', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(
     createWorkspaceFixture([createReadingNode('reading-1', '2026-03-02T00:00:00.000Z'), createReadingNode('reading-2', now)])
@@ -121,7 +121,7 @@ it('completes reading items without showing grading and advances the queue', asy
   expect(actions.startReviewSession(now)).toBe(true);
   const firstNodeId = harness.getState().reviewSession.currentNodeId!;
   const secondNodeId = harness.getState().reviewSession.queueNodeIds.find((nodeId) => nodeId !== firstNodeId)!;
-  await expect(actions.completeReviewItem(now)).resolves.toBe(true);
+  await expect(actions.readReviewTopic(now)).resolves.toBe(true);
 
   expect(harness.getState().activeNodeId).toBe(secondNodeId);
   expect(harness.getState().reviewSession.currentNodeId).toBe(secondNodeId);
@@ -143,7 +143,7 @@ it('does not advance reading items when persistence fails', async () => {
 
   actions.startReviewSession(now);
   const firstNodeId = harness.getState().reviewSession.currentNodeId!;
-  await expect(actions.completeReviewItem(now)).resolves.toBe(false);
+  await expect(actions.readReviewTopic(now)).resolves.toBe(false);
 
   expect(harness.getState().activeNodeId).toBe(firstNodeId);
   expect(harness.getState().reviewSession.currentNodeId).toBe(firstNodeId);
@@ -166,8 +166,8 @@ it('ignores duplicate reading actions while persistence is in flight', async () 
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade: createSchedulerGradeMock(), preview: previewStub });
 
   actions.startReviewSession(now);
-  const first = actions.completeReviewItem(now);
-  await expect(actions.completeReviewItem(now)).resolves.toBe(false);
+  const first = actions.readReviewTopic(now);
+  await expect(actions.readReviewTopic(now)).resolves.toBe(false);
   pendingPersist.release?.();
   await expect(first).resolves.toBe(true);
 
@@ -187,7 +187,7 @@ it('postpones reading items with a shorter interval and removes them from the cu
   const secondNodeId = harness.getState().reviewSession.queueNodeIds.find((nodeId) => nodeId !== firstNodeId)!;
   vi.useFakeTimers();
   vi.setSystemTime(new Date(now));
-  const deferred = await actions.deferReviewItem();
+  const deferred = await actions.postponeReviewTopic();
   vi.useRealTimers();
 
   expect(deferred).toBe(true);
@@ -202,7 +202,7 @@ it('postpones reading items with a shorter interval and removes them from the cu
   });
 });
 
-it('does not complete or postpone reading while another topic is open', async () => {
+it('does not read or postpone topics while another topic is open', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(
     createWorkspaceFixture([createReadingNode('reading-1', '2026-03-02T00:00:00.000Z'), createReadingNode('reading-2', now)])
@@ -214,8 +214,8 @@ it('does not complete or postpone reading while another topic is open', async ()
   const secondNodeId = harness.getState().reviewSession.queueNodeIds.find((nodeId) => nodeId !== firstNodeId)!;
   harness.setState({ activeNodeId: secondNodeId });
 
-  await expect(actions.completeReviewItem(now)).resolves.toBe(false);
-  await expect(actions.deferReviewItem()).resolves.toBe(false);
+  await expect(actions.readReviewTopic(now)).resolves.toBe(false);
+  await expect(actions.postponeReviewTopic()).resolves.toBe(false);
   expect(harness.getState().reviewSession.currentNodeId).toBe(firstNodeId);
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([firstNodeId, secondNodeId]);
 });
@@ -233,7 +233,7 @@ it('dismisses reading items and removes them from future queues', async () => {
   actions.startReviewSession(now);
   const firstNodeId = harness.getState().reviewSession.currentNodeId!;
   const secondNodeId = harness.getState().reviewSession.queueNodeIds.find((nodeId) => nodeId !== firstNodeId)!;
-  await expect(actions.dismissReviewItem(now)).resolves.toBe(true);
+  await expect(actions.dismissReviewTopic(now)).resolves.toBe(true);
 
   expect(harness.getState().activeNodeId).toBe(secondNodeId);
   expect(harness.getState().reviewSession.currentNodeId).toBe(secondNodeId);

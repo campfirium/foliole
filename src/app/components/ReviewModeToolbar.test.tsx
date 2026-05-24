@@ -14,11 +14,11 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       isReviewEditing={false}
       isStudyMode
       reviewCompletedCount={0}
-      onCompleteReviewItem={vi.fn(async () => true)}
+      onReadReviewTopic={vi.fn(async () => true)}
       onContinueReading={vi.fn()}
-      onDeferReviewItem={vi.fn(async () => true)}
-      onDismissReviewItem={vi.fn(async () => true)}
-      onSoonReviewItem={vi.fn(async () => true)}
+      onPostponeReviewTopic={vi.fn(async () => true)}
+      onDismissReviewTopic={vi.fn(async () => true)}
+      onRevisitReviewTopicSoon={vi.fn(async () => true)}
       onExitReviewMode={vi.fn()}
       onGrade={vi.fn(async () => true)}
       onRevealAnswer={vi.fn()}
@@ -90,11 +90,11 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       isReviewEditing={false}
       isStudyMode
       reviewCompletedCount={0}
-      onCompleteReviewItem={vi.fn(async () => true)}
+      onReadReviewTopic={vi.fn(async () => true)}
       onContinueReading={vi.fn()}
-      onDeferReviewItem={vi.fn(async () => true)}
-      onDismissReviewItem={vi.fn(async () => true)}
-      onSoonReviewItem={vi.fn(async () => true)}
+      onPostponeReviewTopic={vi.fn(async () => true)}
+      onDismissReviewTopic={vi.fn(async () => true)}
+      onRevisitReviewTopicSoon={vi.fn(async () => true)}
       onExitReviewMode={vi.fn()}
       onGrade={onGrade}
       onRevealAnswer={onRevealAnswer}

@@ -6,7 +6,7 @@ import { definedProps } from '../shared/lib/definedProps';
 import { buildNextReadingProfile, resolveReadingPriorityChain } from '../store/workspaceReviewReading';
 
 function buildNextReadingSnapshot(args: {
-  action: 'complete' | 'defer' | 'dismiss';
+  action: 'read' | 'later' | 'dismiss';
   nodeId: string;
   now: string;
   snapshot: WorkspaceSnapshot;
@@ -32,6 +32,7 @@ function buildNextReadingSnapshot(args: {
 
   const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
   const nextReading = advanceReadingScheduleCoreFields({
+    ...(args.action === 'later' ? { growthFactorExponent: 0.5 } : {}),
     lastHandledAt: args.now,
     previousRepetitionCount: node.reading?.repetitionCount ?? 0,
     priorityChain: resolveReadingPriorityChain({
@@ -58,33 +59,33 @@ function buildNextReadingSnapshot(args: {
   } satisfies WorkspaceSnapshot;
 }
 
-export function completeCompanionReadingReview(args: {
+export function readCompanionReviewTopic(args: {
   nodeId: string;
   now?: string;
   snapshot: WorkspaceSnapshot;
 }) {
   return buildNextReadingSnapshot({
-    action: 'complete',
+    action: 'read',
     nodeId: args.nodeId,
     now: args.now ?? new Date().toISOString(),
     snapshot: args.snapshot
   });
 }
 
-export function deferCompanionReadingReview(args: {
+export function postponeCompanionReviewTopic(args: {
   nodeId: string;
   now?: string;
   snapshot: WorkspaceSnapshot;
 }) {
   return buildNextReadingSnapshot({
-    action: 'defer',
+    action: 'later',
     nodeId: args.nodeId,
     now: args.now ?? new Date().toISOString(),
     snapshot: args.snapshot
   });
 }
 
-export function dismissCompanionReadingReview(args: {
+export function dismissCompanionReviewTopic(args: {
   nodeId: string;
   now?: string;
   snapshot: WorkspaceSnapshot;

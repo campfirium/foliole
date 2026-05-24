@@ -54,12 +54,12 @@ function ReviewShortcutHarness(
     isCurrentItemGradable: false,
     ...REVIEW_SHORTCUT_DEFAULTS,
     isSourceTopicDeleteDialogOpen: false,
-    completeReviewItem: vi.fn(async () => true),
-    deferReviewItem: vi.fn(async () => true),
+    readReviewTopic: vi.fn(async () => true),
+    postponeReviewTopic: vi.fn(async () => true),
     deleteCurrentReviewItem: vi.fn(() => true),
     deleteReviewSourceTopic: vi.fn(() => true),
-    dismissReviewItem: vi.fn(async () => true),
-    soonReviewItem: vi.fn(async () => true),
+    dismissReviewTopic: vi.fn(async () => true),
+    revisitReviewTopicSoon: vi.fn(async () => true),
     goBack: vi.fn(),
     goForward: vi.fn(),
     goParent: vi.fn(),
@@ -79,17 +79,17 @@ afterEach(() => {
 });
 
 it('ignores review action shortcuts while the current review item is not visible', () => {
-  const completeReviewItem = vi.fn(async () => true);
+  const readReviewTopic = vi.fn(async () => true);
   render(
     <ReviewShortcutHarness
-      completeReviewItem={completeReviewItem}
+      readReviewTopic={readReviewTopic}
       isCurrentReviewItemVisible={false}
     />
   );
 
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' }));
 
-  expect(completeReviewItem).not.toHaveBeenCalled();
+  expect(readReviewTopic).not.toHaveBeenCalled();
 });
 
 it('resumes the hidden review item with Space', () => {
@@ -122,31 +122,31 @@ it('deletes the hidden current review item with Delete', () => {
 });
 
 it('runs review action shortcuts when the current review item is visible', () => {
-  const completeReviewItem = vi.fn(async () => true);
+  const readReviewTopic = vi.fn(async () => true);
   render(
     <ReviewShortcutHarness
-      completeReviewItem={completeReviewItem}
+      readReviewTopic={readReviewTopic}
       isCurrentReviewItemVisible
     />
   );
 
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' }));
 
-  expect(completeReviewItem).toHaveBeenCalledTimes(1);
+  expect(readReviewTopic).toHaveBeenCalledTimes(1);
 });
 
 it('runs the visible reading soon shortcut before later/read choices', () => {
-  const soonReviewItem = vi.fn(async () => true);
+  const revisitReviewTopicSoon = vi.fn(async () => true);
   render(
     <ReviewShortcutHarness
       isCurrentReviewItemVisible
-      soonReviewItem={soonReviewItem}
+      revisitReviewTopicSoon={revisitReviewTopicSoon}
     />
   );
 
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'o' }));
 
-  expect(soonReviewItem).toHaveBeenCalledTimes(1);
+  expect(revisitReviewTopicSoon).toHaveBeenCalledTimes(1);
 });
 
 it('deletes the visible review item with Delete', () => {

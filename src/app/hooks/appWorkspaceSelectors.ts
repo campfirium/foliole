@@ -19,10 +19,10 @@ function selectWorkspaceCreationActions(state: WorkspaceState) {
 
 function selectWorkspaceReviewActions(state: WorkspaceState) {
   return {
-    dismissReviewItem: state.dismissReviewItem,
-    completeReviewItem: state.completeReviewItem,
-    deferReviewItem: state.deferReviewItem,
-    soonReviewItem: state.soonReviewItem,
+    dismissReviewTopic: state.dismissReviewTopic,
+    readReviewTopic: state.readReviewTopic,
+    postponeReviewTopic: state.postponeReviewTopic,
+    revisitReviewTopicSoon: state.revisitReviewTopicSoon,
     gradeReviewCard: state.gradeReviewCard,
     revealReviewAnswer: state.revealReviewAnswer,
     resumeReviewSession: state.resumeReviewSession,

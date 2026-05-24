@@ -2,9 +2,9 @@ import { useRef, useState } from 'react';
 
 import type { BottomBarGrade } from './CompanionFloatingBars';
 import {
-  completeCompanionReadingReview,
-  deferCompanionReadingReview,
-  dismissCompanionReadingReview,
+  readCompanionReviewTopic,
+  postponeCompanionReviewTopic,
+  dismissCompanionReviewTopic,
   gradeCompanionReviewCard,
   resolveCompanionReviewSession
 } from './companionReviewSession';
@@ -63,29 +63,29 @@ function useCompanionReadingReviewActions(
   const [readingError, setReadingError] = useState<string | null>(null);
   const isSubmittingReadingActionRef = useRef(false);
 
-  async function applyReadingAction(action: 'complete' | 'defer' | 'dismiss') {
+  async function applyReadingAction(action: 'read' | 'later' | 'dismiss') {
     if (!snapshot || !reviewSession.currentCard || reviewSession.currentCard.itemKind !== 'reading' || isSubmittingReadingActionRef.current) return;
     isSubmittingReadingActionRef.current = true;
     setIsSubmittingReadingAction(true);
     setReadingError(null);
     try {
       const result =
-        action === 'complete'
-          ? completeCompanionReadingReview({ nodeId: reviewSession.currentCard.nodeId, snapshot })
-          : action === 'defer'
-            ? deferCompanionReadingReview({ nodeId: reviewSession.currentCard.nodeId, snapshot })
-            : dismissCompanionReadingReview({ nodeId: reviewSession.currentCard.nodeId, snapshot });
-      if (!result) throw new Error('The current reading item is no longer available.');
+        action === 'read'
+          ? readCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot })
+          : action === 'later'
+            ? postponeCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot })
+            : dismissCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot });
+      if (!result) throw new Error('The current reading topic is no longer available.');
       const persisted = await persistCompanionReviewSyncObject({
         itemKind: 'reading',
         nodeId: reviewSession.currentCard.nodeId,
         snapshot: result.snapshot
       });
-      if (!persisted) throw new Error('Failed to persist the reading item.');
+      if (!persisted) throw new Error('Failed to persist the reading topic.');
       await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       floatingBar.revealBar();
     } catch (error) {
-      setReadingError(error instanceof Error ? error.message : 'Failed to update the reading item.');
+      setReadingError(error instanceof Error ? error.message : 'Failed to update the reading topic.');
     } finally {
       isSubmittingReadingActionRef.current = false;
       setIsSubmittingReadingAction(false);
@@ -93,9 +93,9 @@ function useCompanionReadingReviewActions(
   }
 
   return {
-    handleCompleteReviewItem: () => applyReadingAction('complete'),
-    handleDeferReviewItem: () => applyReadingAction('defer'),
-    handleDismissReviewItem: () => applyReadingAction('dismiss'),
+    handleReadReviewTopic: () => applyReadingAction('read'),
+    handlePostponeReviewTopic: () => applyReadingAction('later'),
+    handleDismissReviewTopic: () => applyReadingAction('dismiss'),
     isSubmittingReadingAction,
     readingError,
     setReadingError

@@ -62,8 +62,8 @@ export function useReviewEditingState(args: {
     isCurrentItemGradable: args.isCurrentReviewItemGradable,
     ...buildReviewShortcutBindings(args.hotkeys.shortcutMap),
     isSourceTopicDeleteDialogOpen: args.isSourceTopicDeleteDialogOpen,
-    completeReviewItem: args.ws.completeReviewItem,
-    deferReviewItem: args.ws.deferReviewItem,
+    readReviewTopic: args.ws.readReviewTopic,
+    postponeReviewTopic: args.ws.postponeReviewTopic,
     deleteCurrentReviewItem: () => {
       const nodeId = args.ws.reviewSession.currentNodeId;
       if (!nodeId) {
@@ -73,14 +73,14 @@ export function useReviewEditingState(args: {
       return true;
     },
     deleteReviewSourceTopic: args.onRequestDeleteSourceTopic,
-    dismissReviewItem: args.ws.dismissReviewItem,
+    dismissReviewTopic: args.ws.dismissReviewTopic,
     goBack: args.nav.handleGoBack,
     goForward: args.nav.handleGoForward,
     goParent: args.nav.handleGoParent,
     resumeReviewItem: args.onResumeReviewItem,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     selectNode: args.nav.handleSelectNode,
-    soonReviewItem: args.ws.soonReviewItem,
+    revisitReviewTopicSoon: args.ws.revisitReviewTopicSoon,
     gradeReviewCard: args.ws.gradeReviewCard
   });
 }

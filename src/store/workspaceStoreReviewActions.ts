@@ -11,13 +11,13 @@ import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 import {
-  createCompleteReviewItemActionWithPending,
-  createDeferReviewItemActionWithPending,
-  createSoonReviewItemAction,
+  createReadReviewTopicActionWithPending,
+  createPostponeReviewTopicActionWithPending,
+  createRevisitReviewTopicSoonAction,
   type ReadingReviewPendingNodeIds
 } from './workspaceStoreReadingReviewActions';
 import { applyGradedReviewState, persistReviewGradeMutation } from './workspaceStoreReviewActionHelpers';
-import { createDismissReviewItemActionWithPending } from './workspaceStoreReviewDismissAction';
+import { createDismissReviewTopicActionWithPending } from './workspaceStoreReviewDismissAction';
 import {
   createResumeReviewSessionAction,
   createSetReviewSessionModeAction,
@@ -26,7 +26,7 @@ import {
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
-type WorkspaceReviewActions = Pick<WorkspaceState, 'completeReviewItem' | 'deferReviewItem' | 'dismissReviewItem' | 'exitReviewSession' | 'gradeReviewCard' | 'resumeReviewSession' | 'revealReviewAnswer' | 'setReviewSessionMode' | 'soonReviewItem' | 'startReviewSession'>;
+type WorkspaceReviewActions = Pick<WorkspaceState, 'readReviewTopic' | 'postponeReviewTopic' | 'dismissReviewTopic' | 'exitReviewSession' | 'gradeReviewCard' | 'resumeReviewSession' | 'revealReviewAnswer' | 'setReviewSessionMode' | 'revisitReviewTopicSoon' | 'startReviewSession'>;
 function createRevealReviewAnswerAction(set: WorkspaceSet): WorkspaceReviewActions['revealReviewAnswer'] {
   return () => {
     set((state) => {
@@ -132,10 +132,10 @@ export function createWorkspaceReviewActions(
     setReviewSessionMode: createSetReviewSessionModeAction(set),
     revealReviewAnswer: createRevealReviewAnswerAction(set),
     gradeReviewCard: createGradeReviewCardAction(set, get, scheduler),
-    completeReviewItem: createCompleteReviewItemActionWithPending(set, get, readingPendingNodeIds),
-    deferReviewItem: createDeferReviewItemActionWithPending(set, get, readingPendingNodeIds),
-    soonReviewItem: createSoonReviewItemAction(set, get),
-    dismissReviewItem: createDismissReviewItemActionWithPending(set, get, readingPendingNodeIds),
+    readReviewTopic: createReadReviewTopicActionWithPending(set, get, readingPendingNodeIds),
+    postponeReviewTopic: createPostponeReviewTopicActionWithPending(set, get, readingPendingNodeIds),
+    revisitReviewTopicSoon: createRevisitReviewTopicSoonAction(set, get),
+    dismissReviewTopic: createDismissReviewTopicActionWithPending(set, get, readingPendingNodeIds),
     exitReviewSession: createExitReviewSessionAction(set)
   };
 }

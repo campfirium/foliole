@@ -44,14 +44,14 @@ export function createPaletteReviewActions(args: {
   };
   const activeNodeId = args.ws.activeNodeId;
   return {
-    completeReviewItem: args.ws.completeReviewItem,
-    deferReviewItem: args.ws.deferReviewItem,
+    readReviewTopic: args.ws.readReviewTopic,
+    postponeReviewTopic: args.ws.postponeReviewTopic,
     deleteCurrentReviewItem: createDeleteCurrentReviewItemCommand({ ws: args.ws }),
     deleteReviewSourceTopic: () => {
       const nodeId = activeNodeId ? resolveReviewSourceTopicNodeId(activeNodeId, navigationSource) : null;
       return nodeId ? args.requestDeleteSourceTopic(nodeId) : false;
     },
-    dismissReviewItem: args.ws.dismissReviewItem,
+    dismissReviewTopic: args.ws.dismissReviewTopic,
     exitReviewSession: args.ws.exitReviewSession,
     gradeReviewCard: args.ws.gradeReviewCard,
     reviewNavigateDown: createSelectReviewNodeCommand({
@@ -74,7 +74,7 @@ export function createPaletteReviewActions(args: {
       nodeId: activeNodeId ? resolveReviewSiblingNodeId(activeNodeId, -1, navigationSource) : null
     }),
     revealReviewAnswer: args.ws.revealReviewAnswer,
-    soonReviewItem: args.ws.soonReviewItem,
+    revisitReviewTopicSoon: args.ws.revisitReviewTopicSoon,
     startReviewSession: args.ws.startReviewSession
   };
 }

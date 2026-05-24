@@ -6,9 +6,9 @@ export function CompanionBottomReviewBar(props: {
   disabled?: boolean;
   isAnswerRevealed: boolean;
   itemKind: 'fsrs' | 'reading';
-  onCompleteReviewItem: () => void;
-  onDeferReviewItem: () => void;
-  onDismissReviewItem: () => void;
+  onReadReviewTopic: () => void;
+  onPostponeReviewTopic: () => void;
+  onDismissReviewTopic: () => void;
   onGrade: (grade: BottomBarGrade) => void;
   onRevealAnswer: () => void;
   reviewCardKey: string | null;
@@ -30,9 +30,9 @@ export function CompanionBottomReviewBar(props: {
           primary={
             props.itemKind === 'reading' ? (
               <ReadingReviewActions
-                onCompleteReviewItem={props.onCompleteReviewItem}
-                onDeferReviewItem={props.onDeferReviewItem}
-                onDismissReviewItem={props.onDismissReviewItem}
+                onReadReviewTopic={props.onReadReviewTopic}
+                onPostponeReviewTopic={props.onPostponeReviewTopic}
+                onDismissReviewTopic={props.onDismissReviewTopic}
               />
             ) : !props.isAnswerRevealed ? (
               <FsrsRevealAction onRevealAnswer={props.onRevealAnswer} />

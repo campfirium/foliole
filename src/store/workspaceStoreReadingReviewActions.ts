@@ -52,15 +52,15 @@ function buildNextReadingReviewState(args: {
   });
 }
 
-export function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['deferReviewItem'] {
-  return createDeferReviewItemActionWithPending(set, get, new Set());
+export function createPostponeReviewTopicAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['postponeReviewTopic'] {
+  return createPostponeReviewTopicActionWithPending(set, get, new Set());
 }
 
-export function createDeferReviewItemActionWithPending(
+export function createPostponeReviewTopicActionWithPending(
   set: WorkspaceSet,
   get: WorkspaceGet,
   pendingNodeIds: ReadingReviewPendingNodeIds
-): WorkspaceState['deferReviewItem'] {
+): WorkspaceState['postponeReviewTopic'] {
   return async () => {
     const now = new Date().toISOString();
     const snapshot = get();
@@ -76,20 +76,20 @@ export function createDeferReviewItemActionWithPending(
       pendingNodeIds,
       set,
       buildPatch: (state) =>
-        buildCompleteOrDeferReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Defer Topic' })
+        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Later Topic' })
     });
   };
 }
 
-export function createCompleteReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['completeReviewItem'] {
-  return createCompleteReviewItemActionWithPending(set, get, new Set());
+export function createReadReviewTopicAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['readReviewTopic'] {
+  return createReadReviewTopicActionWithPending(set, get, new Set());
 }
 
-export function createCompleteReviewItemActionWithPending(
+export function createReadReviewTopicActionWithPending(
   set: WorkspaceSet,
   get: WorkspaceGet,
   pendingNodeIds: ReadingReviewPendingNodeIds
-): WorkspaceState['completeReviewItem'] {
+): WorkspaceState['readReviewTopic'] {
   return async (now = new Date().toISOString()) => {
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
@@ -104,12 +104,12 @@ export function createCompleteReviewItemActionWithPending(
       pendingNodeIds,
       set,
       buildPatch: (state) =>
-        buildCompleteOrDeferReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Complete Topic' })
+        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Read Topic' })
     });
   };
 }
 
-export function createSoonReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['soonReviewItem'] {
+export function createRevisitReviewTopicSoonAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['revisitReviewTopicSoon'] {
   return async (now = new Date().toISOString()) => {
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
@@ -147,13 +147,13 @@ export function createSoonReviewItemAction(set: WorkspaceSet, get: WorkspaceGet)
   };
 }
 
-function buildCompleteOrDeferReadingReviewPatch(args: {
+function buildReadOrPostponeReadingReviewPatch(args: {
   currentNodeId: string;
   nextReading: ReturnType<typeof buildNextReadingReviewState>;
   now: string;
   snapshot: WorkspaceState;
   state: WorkspaceState;
-  title: 'Complete Topic' | 'Defer Topic';
+  title: 'Read Topic' | 'Later Topic';
 }): ReadingReviewPatchResult | null {
   const node = args.state.nodesById[args.currentNodeId];
   if (!node) return null;

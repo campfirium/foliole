@@ -55,9 +55,9 @@ function useCompanionInteractionState(
 ) {
   const {
     handleGradeReview,
-    handleCompleteReviewItem,
-    handleDeferReviewItem,
-    handleDismissReviewItem,
+    handleReadReviewTopic,
+    handlePostponeReviewTopic,
+    handleDismissReviewTopic,
     isSubmittingGrade,
     isSubmittingReadingAction,
     readingError,
@@ -91,9 +91,9 @@ function useCompanionInteractionState(
   }
 
   return {
-    handleCompleteReviewItem,
-    handleDeferReviewItem,
-    handleDismissReviewItem,
+    handleReadReviewTopic,
+    handlePostponeReviewTopic,
+    handleDismissReviewTopic,
     handleGradeReview,
     handleRevealAnswer,
     handleExitBrowseArticle,

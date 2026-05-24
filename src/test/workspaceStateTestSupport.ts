@@ -5,7 +5,7 @@ import { createInitialWorkspaceState, type WorkspaceState } from '../store/works
 export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}): WorkspaceState {
   return {
     ...createInitialWorkspaceState(),
-    completeReviewItem: vi.fn(async () => false),
+    readReviewTopic: vi.fn(async () => false),
     createChildNode: vi.fn(async () => 'node-child'),
     createFormulaClozeNode: vi.fn(async () => null),
     createHighlightNodeFromSelection: vi.fn(async () => 'node-highlight'),
@@ -13,7 +13,7 @@ export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}
     createQANodeFromSelection: vi.fn(async () => null),
     createRootNode: vi.fn(async () => 'node-root'),
     createVirtualNode: vi.fn(async () => 'node-virtual'),
-    deferReviewItem: vi.fn(async () => false),
+    postponeReviewTopic: vi.fn(async () => false),
     deleteImageClozeRegion: vi.fn(),
     deleteNode: vi.fn(),
     deleteNodePermanently: vi.fn(),
@@ -21,8 +21,8 @@ export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}
     deleteNodesPermanently: vi.fn(),
     dismissNode: vi.fn(() => false),
     setNodeSequentialReading: vi.fn(() => false),
-    dismissReviewItem: vi.fn(async () => false),
-    soonReviewItem: vi.fn(async () => false),
+    dismissReviewTopic: vi.fn(async () => false),
+    revisitReviewTopicSoon: vi.fn(async () => false),
     deleteEditorAnnotationNodes: vi.fn(),
     pushEditorOperationEntry: vi.fn(),
     undoWorkspaceAction: vi.fn(() => false),

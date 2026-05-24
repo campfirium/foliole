@@ -38,12 +38,12 @@ interface UseReviewKeyboardShortcutsArgs {
   navigateNextSiblingShortcuts: CommandShortcutSet | undefined;
   deleteSourceTopicShortcuts: CommandShortcutSet | undefined;
   isSourceTopicDeleteDialogOpen: boolean;
-  completeReviewItem: () => Promise<boolean>;
-  deferReviewItem: () => Promise<boolean>;
+  readReviewTopic: () => Promise<boolean>;
+  postponeReviewTopic: () => Promise<boolean>;
   deleteCurrentReviewItem: () => boolean;
   deleteReviewSourceTopic: (nodeId: string) => boolean;
-  dismissReviewItem: () => Promise<boolean>;
-  soonReviewItem: () => Promise<boolean>;
+  dismissReviewTopic: () => Promise<boolean>;
+  revisitReviewTopicSoon: () => Promise<boolean>;
   goBack: () => void;
   goForward: () => void;
   goParent: () => void;
@@ -195,16 +195,16 @@ function handleVisibleReviewItemKeydown(event: KeyboardEvent, args: UseReviewKey
   }
 
   if (!args.isCurrentItemGradable) {
-    if (tryRunShortcut(event, args.readingSoonShortcuts, () => void args.soonReviewItem())) {
+    if (tryRunShortcut(event, args.readingSoonShortcuts, () => void args.revisitReviewTopicSoon())) {
       return;
     }
-    if (tryRunShortcut(event, args.readingLaterShortcuts, () => void args.deferReviewItem())) {
+    if (tryRunShortcut(event, args.readingLaterShortcuts, () => void args.postponeReviewTopic())) {
       return;
     }
-    if (tryRunShortcut(event, args.readingReadShortcuts, () => void args.completeReviewItem())) {
+    if (tryRunShortcut(event, args.readingReadShortcuts, () => void args.readReviewTopic())) {
       return;
     }
-    tryRunShortcut(event, args.readingDismissShortcuts, () => void args.dismissReviewItem());
+    tryRunShortcut(event, args.readingDismissShortcuts, () => void args.dismissReviewTopic());
     return;
   }
 

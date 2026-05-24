@@ -8,9 +8,9 @@ import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 function createSurface() {
   return {
     activeAction: 'review',
-    handleCompleteReviewItem: vi.fn(),
-    handleDeferReviewItem: vi.fn(),
-    handleDismissReviewItem: vi.fn(),
+    handleReadReviewTopic: vi.fn(),
+    handlePostponeReviewTopic: vi.fn(),
+    handleDismissReviewTopic: vi.fn(),
     handleGradeReview: vi.fn(),
     handleRevealAnswer: vi.fn(),
     handleTabAction: vi.fn(),

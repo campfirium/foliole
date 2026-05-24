@@ -33,10 +33,10 @@ interface ReviewModeToolbarProps {
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   reviewSessionMode: ReviewSessionMode;
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
-  onCompleteReviewItem: () => Promise<boolean>;
-  onDeferReviewItem: () => Promise<boolean>;
-  onDismissReviewItem: () => Promise<boolean>;
-  onSoonReviewItem: () => Promise<boolean>;
+  onReadReviewTopic: () => Promise<boolean>;
+  onPostponeReviewTopic: () => Promise<boolean>;
+  onDismissReviewTopic: () => Promise<boolean>;
+  onRevisitReviewTopicSoon: () => Promise<boolean>;
   onContinueReading: () => void;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
