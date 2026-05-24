@@ -23,7 +23,7 @@ function SyncStatusCard(props: {
   title: string;
 }) {
   return (
-    <div className="rounded-3xl border border-border bg-canvas px-5 py-5 text-foreground">
+    <div className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5 text-foreground">
       <h3 className="text-lg font-semibold leading-tight">{props.title}</h3>
       {props.detail ? <div className="mt-3 text-sm leading-6 text-accent">{props.detail}</div> : null}
       {props.children ? <div className="mt-5">{props.children}</div> : null}
@@ -62,11 +62,11 @@ export function AwaitingApprovalState(props: {
           </span>
           <span>{isExpired ? 'Request expired. Tap Cancel and try again.' : `Waiting for approval... ${remainingSeconds}s left`}</span>
         </div>
-        <div aria-hidden className="h-1.5 w-full overflow-hidden rounded-full bg-bg-subtle">
-          <div className="h-full rounded-full bg-foreground transition-all duration-500 ease-linear" style={{ width: `${progressPct}%` }} />
+        <div aria-hidden className="h-1.5 w-full overflow-hidden rounded-full bg-companion-subtle">
+          <div className="h-full rounded-full bg-companion-accent transition-all duration-500 ease-linear" style={{ width: `${progressPct}%` }} />
         </div>
         <button
-          className="w-full rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition hover:bg-bg-subtle"
+          className="w-full rounded-2xl border border-companion-divider px-4 py-3 text-sm font-medium text-foreground transition active:bg-companion-subtle/80"
           onClick={props.onCancel}
           type="button"
         >

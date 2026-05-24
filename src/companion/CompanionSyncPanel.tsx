@@ -80,14 +80,14 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
       >
         {props.status === 'syncing' ? 'Syncing' : 'Sync'}
       </button>
-      <div className="rounded-2xl border border-border bg-bg-subtle px-4 py-3">
+      <div className="rounded-2xl border border-companion-divider bg-companion-subtle px-4 py-3">
         <div className="text-sm font-medium text-foreground">Device role</div>
         <div className="mt-1 text-sm text-companion-text-secondary">
           {isPrimary ? 'This device is the primary device.' : 'This device follows the current primary device.'}
         </div>
         {!isPrimary ? (
           <button
-            className="mt-3 w-full rounded-2xl border border-border-strong bg-bg-elevated px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-bg-subtle disabled:cursor-not-allowed disabled:opacity-45"
+            className="mt-3 w-full rounded-2xl border border-companion-divider bg-companion-content px-4 py-3 text-sm font-semibold text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
             disabled={props.status === 'syncing'}
             onClick={() => void props.onRequestPrimaryDeviceTakeover(props.endpointUrl)}
             type="button"

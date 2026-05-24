@@ -28,7 +28,7 @@ function SearchingDialogBody(props: {
           <span>Searching...</span>
         </div>
         <button
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-border-strong px-4 py-2 text-sm font-medium text-foreground transition hover:bg-bg-subtle"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80"
           onClick={props.onRefresh}
           type="button"
         >

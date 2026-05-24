@@ -39,7 +39,7 @@ function ClearAppDataDialog(props: {
               {props.isClearing ? 'Clearing...' : 'Clear App Data'}
             </button>
             <button
-              className="w-full rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition hover:bg-bg-subtle disabled:cursor-not-allowed disabled:opacity-45"
+              className="w-full rounded-2xl border border-companion-divider px-4 py-3 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
               disabled={props.isClearing}
               onClick={() => props.onOpenChange(false)}
               type="button"
@@ -72,7 +72,7 @@ export function CompanionStorageSettingsContent() {
 
   return (
     <section className="px-5 py-5">
-      <div className="rounded-3xl border border-border bg-canvas px-5 py-5">
+      <div className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
         <h3 className="text-base font-semibold text-foreground">App data</h3>
         <p className="mt-2 text-sm leading-6 text-companion-text-secondary">
           Clear Foliole data on this device and disconnect the current connection. Desktop and other devices are not deleted.

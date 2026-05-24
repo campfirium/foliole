@@ -12,7 +12,7 @@ export function CompanionSearchContent() {
         <span className="sr-only">Search topics</span>
         <input
           className={cn(
-            'h-12 w-full rounded-md border border-border bg-canvas px-4 text-base text-foreground transition placeholder:text-companion-text-secondary',
+            'h-12 w-full rounded-md border border-companion-divider bg-companion-content px-4 text-base text-foreground transition placeholder:text-companion-text-secondary',
             appInputBorderFocusVisibleClassName
           )}
           disabled
