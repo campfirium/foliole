@@ -72,7 +72,7 @@ it('still shows the normal document view for content nodes', async () => {
   });
 });
 
-it('shows an empty state for empty folders', () => {
+it('keeps empty folders quiet while preserving the folder list surface', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1'],
@@ -86,6 +86,6 @@ it('shows an empty state for empty folders', () => {
 
   expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
   expect(screen.getByTestId('folder-list-count')).toHaveTextContent('0');
-  expect(screen.getByText('This folder is empty')).toBeInTheDocument();
+  expect(screen.queryByText('This folder is empty')).not.toBeInTheDocument();
   expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
 });

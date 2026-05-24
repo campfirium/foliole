@@ -7,7 +7,7 @@ import { ensureWorkspaceHydrated } from '../../../store/workspaceStoreHydration'
 interface NodeListStateSurfaceProps {
   children: ReactNode;
   className?: string;
-  emptyState: {
+  emptyState?: {
     description: string;
     title: string;
   };
@@ -54,6 +54,10 @@ export function NodeListStateSurface({
         <AppLoadingState />
       </div>
     );
+  }
+
+  if (!emptyState) {
+    return <div aria-hidden="true" className={className} />;
   }
 
   return (

@@ -29,8 +29,6 @@ export interface WorkspaceTopicTreeProps {
   activeFolderId: string;
   activeNodeId: string | null;
   childrenByParent?: TopicChildrenByParent;
-  emptyStateDescription?: string;
-  emptyStateTitle?: string;
   forceVisibleNodeId?: string | null;
   itemIds: string[];
   nodesById: WorkspaceListNodesById;
@@ -213,10 +211,6 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     onToggleDismissedTopicsVisibility: dismissedTopicVisibility.toggleDismissedTopicsVisibility,
     setSearchQuery,
     viewHideDismissedTopics: dismissedTopicVisibility.viewHideDismissedTopics,
-    visibleRows,
-    ...(props.emptyStateDescription !== undefined
-      ? { emptyStateDescription: props.emptyStateDescription }
-      : {}),
-    ...(props.emptyStateTitle !== undefined ? { emptyStateTitle: props.emptyStateTitle } : {})
+    visibleRows
   });
 }

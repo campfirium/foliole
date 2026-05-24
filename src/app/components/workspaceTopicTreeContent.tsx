@@ -16,8 +16,6 @@ export function renderWorkspaceTopicTreeBody(args: {
   collapsedNodeIds: ReadonlySet<string>;
   contextMenu: NodeListContextMenuController;
   drag: ReturnType<typeof useNodeListDragController>;
-  emptyStateDescription: string;
-  emptyStateTitle: string;
   nodesById: WorkspaceListNodesById;
   onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
@@ -42,10 +40,6 @@ export function renderWorkspaceTopicTreeBody(args: {
     >
       <NodeListStateSurface
         className="flex min-h-full items-center justify-center px-3 py-6"
-        emptyState={{
-          description: args.emptyStateDescription,
-          title: args.emptyStateTitle
-        }}
         hasRows={args.visibleRows.length > 0}
       >
         <WorkspaceTopicTreeRows
