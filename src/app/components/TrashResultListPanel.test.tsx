@@ -101,6 +101,15 @@ it('defaults trash sorting to deleted time and orders roots by deletion time', (
   expect(rows[1]).toHaveTextContent('Folder A');
 });
 
+it('renders trash sorting without unstable store snapshot updates', () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  renderTrashPanel({ trashedNodeIds: ['folder', 'topic', 'item', 'solo'] });
+
+  expect(screen.getByRole('button', { name: 'Sort list by Deleted time' })).toBeInTheDocument();
+  expect(consoleError.mock.calls.join('\n')).not.toContain('getSnapshot should be cached');
+  consoleError.mockRestore();
+});
+
 it('moves trash row selection with arrow keys', () => {
   const onSelectTrashNode = vi.fn();
   renderTrashPanel({
