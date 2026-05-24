@@ -63,7 +63,7 @@ it('shows breadcrumb titles without kind labels', () => {
   expect(screen.queryByText('Topic')).not.toBeInTheDocument();
 });
 
-it('routes nested breadcrumb selections back to the article target', () => {
+it('routes nested topic breadcrumb selections to that topic', () => {
   const onSelectNode = vi.fn();
 
   render(
@@ -119,7 +119,7 @@ it('routes nested breadcrumb selections back to the article target', () => {
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Ne...' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Nested topic' }));
 
-  expect(onSelectNode).toHaveBeenCalledWith('topic-1');
+  expect(onSelectNode).toHaveBeenCalledWith('topic-2');
 });
