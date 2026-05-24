@@ -5,6 +5,7 @@ import path from 'node:path';
 import { app, safeStorage } from 'electron';
 
 const PAIRED_DEVICE_STORE_FILE = 'companion-paired-devices.bin';
+const CORRUPT_STORE_SUFFIX = '.corrupt-';
 
 export interface PairedCompanionDevice {
   client_address: string | null;
@@ -22,6 +23,17 @@ interface PairedDeviceStorePayload {
 let cachedStore: PairedDeviceStorePayload | null = null;
 let cachedStorePath: string | null = null;
 
+class PairedDeviceStoreUnreadableError extends Error {
+  constructor(
+    message: string,
+    override readonly cause: unknown,
+    readonly storePath: string
+  ) {
+    super(message);
+    this.name = 'PairedDeviceStoreUnreadableError';
+  }
+}
+
 function resolveStorePath() {
   return path.join(app.getPath('userData'), PAIRED_DEVICE_STORE_FILE);
 }
@@ -33,7 +45,7 @@ function ensureEncryptionAvailable() {
   throw new Error('Electron safeStorage is unavailable for companion pairing secrets.');
 }
 
-function readStore(): PairedDeviceStorePayload {
+function readStoreStrict(): PairedDeviceStorePayload {
   const storePath = resolveStorePath();
   if (cachedStore && cachedStorePath === storePath) {
     return cachedStore;
@@ -45,13 +57,51 @@ function readStore(): PairedDeviceStorePayload {
   }
   ensureEncryptionAvailable();
   const encrypted = fs.readFileSync(storePath);
-  const decrypted = safeStorage.decryptString(encrypted);
-  const parsed = JSON.parse(decrypted) as Partial<PairedDeviceStorePayload>;
+  const parsed = readEncryptedStorePayload(encrypted, storePath);
   cachedStore = {
     devices: Array.isArray(parsed.devices) ? parsed.devices.filter(isPairedDeviceRecord) : []
   };
   cachedStorePath = storePath;
   return cachedStore;
+}
+
+function readStoreForQuery(): PairedDeviceStorePayload {
+  try {
+    return readStoreStrict();
+  } catch (error) {
+    if (!(error instanceof PairedDeviceStoreUnreadableError)) {
+      throw error;
+    }
+    quarantineUnreadableStore(error.storePath, error.cause);
+    return { devices: [] };
+  }
+}
+
+function readEncryptedStorePayload(encrypted: Buffer, storePath: string): Partial<PairedDeviceStorePayload> {
+  try {
+    return JSON.parse(safeStorage.decryptString(encrypted)) as Partial<PairedDeviceStorePayload>;
+  } catch (error) {
+    cachedStore = null;
+    cachedStorePath = null;
+    throw new PairedDeviceStoreUnreadableError('Companion paired-device store is unreadable.', error, storePath);
+  }
+}
+
+function quarantineUnreadableStore(storePath: string, cause: unknown) {
+  const quarantinedPath = `${storePath}${CORRUPT_STORE_SUFFIX}${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  try {
+    fs.renameSync(storePath, quarantinedPath);
+    console.warn('[companion-sync] paired companion device cache is unreadable; quarantined stored pairings', {
+      cause,
+      quarantinedPath
+    });
+  } catch (error) {
+    console.warn('[companion-sync] paired companion device cache is unreadable and could not be quarantined', {
+      cause,
+      error,
+      storePath
+    });
+  }
 }
 
 function writeStore(payload: PairedDeviceStorePayload) {
@@ -81,11 +131,11 @@ function isPairedDeviceRecord(value: unknown): value is PairedCompanionDevice {
 }
 
 export function countPairedCompanionDevices() {
-  return dedupePairedDevices(readStore().devices).length;
+  return dedupePairedDevices(readStoreForQuery().devices).length;
 }
 
 export function loadPairedCompanionDevices() {
-  return dedupePairedDevices(readStore().devices).map((device) => ({
+  return dedupePairedDevices(readStoreForQuery().devices).map((device) => ({
     client_address: device.client_address ?? null,
     device_id: device.device_id,
     device_kind: device.device_kind,
@@ -99,7 +149,7 @@ export function loadPairedCompanionDevice(deviceId: string) {
   if (!normalizedDeviceId) {
     return null;
   }
-  return readStore().devices.find((device) => device.device_id === normalizedDeviceId) ?? null;
+  return readStoreForQuery().devices.find((device) => device.device_id === normalizedDeviceId) ?? null;
 }
 
 export function removePairedCompanionDevice(deviceId: string) {
@@ -107,7 +157,7 @@ export function removePairedCompanionDevice(deviceId: string) {
   if (!normalizedDeviceId) {
     return false;
   }
-  const store = readStore();
+  const store = readStoreStrict();
   const nextDevices = store.devices.filter((device) => device.device_id !== normalizedDeviceId);
   if (nextDevices.length === store.devices.length) {
     return false;
@@ -132,7 +182,7 @@ export function registerPairedCompanionDevice(args: {
     device_secret: randomBytes(32).toString('base64url'),
     paired_at: now
   };
-  const store = readStore();
+  const store = readStoreStrict();
   store.devices = store.devices.filter((device) => !isSamePairedDevice(device, next));
   store.devices.push(next);
   writeStore(store);
