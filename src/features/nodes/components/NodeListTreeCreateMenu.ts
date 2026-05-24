@@ -11,9 +11,9 @@ import type { NodeListContextMenuController } from './NodeListTreeHooks';
 
 interface NodeListCreateMenuProps {
   contextMenu: Pick<NodeListContextMenuController, 'closeContextMenu'>;
-  createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => string;
-  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
-  createVirtualNode: () => string;
+  createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
+  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
+  createVirtualNode: () => Promise<string | null>;
   nodesById: WorkspaceListNodesById;
 }
 

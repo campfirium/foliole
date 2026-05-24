@@ -20,7 +20,7 @@ export function useImageClozeEventBridge(args: {
     attachmentId: string,
     sourcePayload: ImageClozeSourcePayload,
     regions: ImageClozeDraftRegion[]
-  ) => string[];
+  ) => Promise<string[]> | string[];
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   flushPendingEditorDraft: () => boolean;

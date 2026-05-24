@@ -136,7 +136,7 @@ export function createHandleEditorContextMenu(args: {
 export function createSyncActiveNodeContentFromEditor(
   activeNodeId: string | null,
   editorRef: MutableRefObject<EditorAdapter | null>,
-  updateNodeContent: (nodeId: string, content: string) => void
+  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>
 ) {
   return () => {
     if (!activeNodeId || !editorRef.current) {

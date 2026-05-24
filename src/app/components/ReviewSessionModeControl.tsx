@@ -1,5 +1,5 @@
-import { BookOpen, BookOpenText, Check, ListChecks, ListFilter, Route } from 'lucide-react';
-import { useState } from 'react';
+import { BookOpenText, Check, ListChecks, ListFilter, Route } from 'lucide-react';
+import { useState, type SVGProps } from 'react';
 
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import {
@@ -117,12 +117,41 @@ export function QueueClearFlowControl() {
           title="Queue clear"
           type="button"
         >
-          <BookOpen aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.9} />
+          <PlanetIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.9} />
         </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="start" className="w-56 max-w-[calc(100vw-2rem)] p-3" sideOffset={8}>
         <p className="text-[13px] font-medium text-foreground/82">Queue clear. Flow on.</p>
       </AppDropdownMenuContent>
     </AppDropdownMenu>
+  );
+}
+
+function PlanetIcon({
+  className,
+  strokeWidth = 2,
+  ...svgProps
+}: {
+  className?: string;
+  strokeWidth?: number;
+} & SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      focusable="false"
+      height="24"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={strokeWidth}
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+      {...svgProps}
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M4.05 13c-1.7 1.8-2.5 3.5-1.8 4.5 1.1 1.9 6.4 1 11.8-2s8.9-7.1 7.7-9c-.6-1-2.4-1.2-4.7-.7" />
+    </svg>
   );
 }

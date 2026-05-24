@@ -3,7 +3,7 @@ import type { NativeExternalSearchCommandMap } from './nativeExternalSearchComma
 import type { NativeImportCommandMap } from './nativeImportCommandMap.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
 import type { NativeMoveCommandMap } from './nativeMoveCommandMap.js';
-import type { NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec } from './nativeNodeMutationContract.js';
+import type { NativeNodeCreationMutationSpec, NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec } from './nativeNodeMutationContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
 import type {
@@ -177,9 +177,9 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
     args: undefined;
     result: NativeResetImportDataResult;
   };
-  [NATIVE_COMMANDS.createFolder]: NativeNodeSnapshotMutationSpec;
-  [NATIVE_COMMANDS.createTopic]: NativeNodeSnapshotMutationSpec;
-  [NATIVE_COMMANDS.createItem]: NativeNodeSnapshotMutationSpec;
+  [NATIVE_COMMANDS.createFolder]: NativeNodeCreationMutationSpec;
+  [NATIVE_COMMANDS.createTopic]: NativeNodeCreationMutationSpec;
+  [NATIVE_COMMANDS.createItem]: NativeNodeCreationMutationSpec;
   [NATIVE_COMMANDS.updateNodeContent]: NativeNodeSnapshotMutationSpec;
   [NATIVE_COMMANDS.updateNodeContentWithAnchors]: NativeNodeSnapshotBatchMutationSpec;
   [NATIVE_COMMANDS.updateNodeReveal]: NativeNodeSnapshotMutationSpec;

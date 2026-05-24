@@ -5,6 +5,8 @@ import type {
   NativeDeleteNodesPermanentlyResult,
   NativeMoveNodesArgs,
   NativeMoveNodesResult,
+  NativeNodeCreationMutationArgs,
+  NativeNodeMutationPatchResult,
   NativeNodeSnapshotArgs,
   NativeReadingProgressSnapshot,
   NativeRelearnNodeArgs,
@@ -47,6 +49,8 @@ export interface WorkspaceRuntimeNodeDocument {
 }
 
 export type WorkspaceRuntimeNodeSnapshot = NativeNodeSnapshotArgs;
+export type WorkspaceCreateNodeMutationPayload = NativeNodeCreationMutationArgs;
+export type WorkspaceNodeMutationPatchResult = NativeNodeMutationPatchResult;
 export type WorkspaceRuntimeSnapshot = NativeWorkspaceSnapshot;
 export type WorkspaceMoveNodesPayload = NativeMoveNodesArgs;
 export type WorkspaceMoveNodesResult = NativeMoveNodesResult;

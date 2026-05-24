@@ -13,7 +13,7 @@ export {
   asStringArray,
   asTimestamp
 } from './commandParserPrimitives.js';
-export { parseNodeCreationArgs, parseNodeSnapshotArgs } from './commandParserNodeSnapshot.js';
+export { parseNodeCreationArgs, parseNodeCreationMutationArgs, parseNodeSnapshotArgs } from './commandParserNodeSnapshot.js';
 export { normalizeNodeViewStateWriteSource };
 
 interface NodeViewStatePayload {

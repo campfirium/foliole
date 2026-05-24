@@ -32,10 +32,10 @@ function createWorkspaceFixture(): WorkspaceState {
     setRightSidebarWidth: () => undefined,
     setRightSidebarCollapsed: () => undefined,
     setActiveNode: () => undefined,
-    updateNodeTitle: () => undefined,
-    updateNodeContent: () => undefined,
+    updateNodeTitle: async () => false,
+    updateNodeContent: async () => false,
     updateVirtualNodeFilter: () => undefined,
-    updateNodeReveal: () => undefined,
+    updateNodeReveal: async () => false,
     updateNodePriority: () => undefined,
     updateNodeDesiredRetention: () => undefined,
     updateNodeShortTerm: () => undefined,
@@ -64,13 +64,13 @@ function createWorkspaceFixture(): WorkspaceState {
     restoreNode: async () => null,
     deleteNodePermanently: () => undefined,
     deleteNodesPermanently: () => undefined,
-    createRootNode: () => 'unused',
-    createChildNode: () => 'unused',
-    createVirtualNode: () => 'unused',
-    createHighlightNodeFromSelection: () => null,
-    createQANodeFromSelection: () => null,
-    createFormulaClozeNode: () => null,
-    createImageClozeNodes: () => [],
+    createRootNode: async () => 'unused',
+    createChildNode: async () => 'unused',
+    createVirtualNode: async () => 'unused',
+    createHighlightNodeFromSelection: async () => null,
+    createQANodeFromSelection: async () => null,
+    createFormulaClozeNode: async () => null,
+    createImageClozeNodes: async () => [],
     moveNode: async () => false,
     moveNodes: async () => false
   };
@@ -96,8 +96,32 @@ function expectNoWorkspacePersist(invoke: ReturnType<typeof vi.fn>) {
   expect(getInvokedCommands(invoke)).not.toContain('save_workspace_state');
 }
 
-function createActionsHarness() {
+async function createActionsHarness() {
   const invoke = vi.fn().mockImplementation(async (command, args) => {
+    if (command === 'create_folder' || command === 'create_topic' || command === 'create_item') {
+      const payload = args as { activeNodeId?: string | null; nodeId: string; nodeOrder?: string[] };
+      return {
+        activeNodeId: payload.activeNodeId ?? payload.nodeId,
+        createdNodeIds: [payload.nodeId],
+        nodeOrder: payload.nodeOrder ?? [payload.nodeId],
+        nodes: [payload]
+      };
+    }
+    if (command === 'update_node_content' || command === 'update_node_reveal') {
+      const payload = args as { nodeId: string };
+      return {
+        nodes: [payload],
+        updatedNodeIds: [payload.nodeId]
+      };
+    }
+    if (command === 'update_node_content_with_anchors') {
+      const payload = args as { affectedAnchors?: unknown[]; parent: { nodeId: string } };
+      return {
+        anchorUpdates: payload.affectedAnchors ?? [],
+        nodes: [payload.parent],
+        updatedNodeIds: [payload.parent.nodeId]
+      };
+    }
     if (command === 'move_nodes') {
       return {
         movedNodeIds: (args as { nodes: Array<{ nodeId: string }> }).nodes.map((node) => node.nodeId),
@@ -109,7 +133,7 @@ function createActionsHarness() {
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
   const harness = createSetStateHarness(createWorkspaceFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
-  const seedNodeId = actions.createRootNode('');
+  const seedNodeId = (await actions.createRootNode(''))!;
   vi.clearAllMocks();
   return {
     actions,
@@ -120,41 +144,41 @@ function createActionsHarness() {
 }
 
 describe('workspace node actions runtime guardrail', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
   });
 
-  it('updateNodeContent uses update_node_content only and never save_workspace_state', () => {
-    const { actions, invoke, seedNodeId } = createActionsHarness();
+  it('updateNodeContent uses update_node_content only and never save_workspace_state', async () => {
+    const { actions, invoke, seedNodeId } = await createActionsHarness();
 
-    actions.updateNodeContent(seedNodeId, '# Updated title\n\nBody');
+    await actions.updateNodeContent(seedNodeId, '# Updated title\n\nBody');
 
-    expect(getInvokedCommands(invoke)).toEqual(['update_node_content']);
+    expect(getInvokedCommands(invoke)).toEqual(['update_node_content_with_anchors']);
     expectNoWorkspacePersist(invoke);
   });
 
-  it('createChildNode uses sqlite commands and never save_workspace_state', () => {
-    const { actions, invoke, seedNodeId } = createActionsHarness();
+  it('createChildNode uses sqlite commands and never save_workspace_state', async () => {
+    const { actions, invoke, seedNodeId } = await createActionsHarness();
 
-    actions.createChildNode(seedNodeId, 'Child body');
+    (await actions.createChildNode(seedNodeId, 'Child body'))!;
 
     expect(getInvokedCommands(invoke)).toEqual(['create_topic']);
     expectNoWorkspacePersist(invoke);
   });
 
-  it('createChildNode does not sync invalid folder creation under a topic', () => {
-    const { actions, invoke, seedNodeId } = createActionsHarness();
+  it('createChildNode does not sync invalid folder creation under a topic', async () => {
+    const { actions, invoke, seedNodeId } = await createActionsHarness();
 
-    actions.createChildNode(seedNodeId, '', 'folder');
+    (await actions.createChildNode(seedNodeId, '', 'folder'))!;
 
     expect(getInvokedCommands(invoke)).toEqual([]);
     expectNoWorkspacePersist(invoke);
   });
 
   it('moveNode uses sqlite commands and never save_workspace_state', async () => {
-    const { actions, invoke } = createActionsHarness();
-    const firstFolderId = actions.createRootNode('Folder A', 'folder');
-    const secondFolderId = actions.createRootNode('Folder B', 'folder');
+    const { actions, invoke } = await createActionsHarness();
+    const firstFolderId = (await actions.createRootNode('Folder A', 'folder'))!;
+    const secondFolderId = (await actions.createRootNode('Folder B', 'folder'))!;
 
     vi.clearAllMocks();
     await actions.moveNodes([secondFolderId], firstFolderId, 'before');
@@ -163,8 +187,8 @@ describe('workspace node actions runtime guardrail', () => {
     expectNoWorkspacePersist(invoke);
   });
 
-  it('updateNodeReveal uses update_node_reveal only and never save_workspace_state', () => {
-    const { actions, harness, invoke, seedNodeId } = createActionsHarness();
+  it('updateNodeReveal uses update_node_reveal only and never save_workspace_state', async () => {
+    const { actions, harness, invoke, seedNodeId } = await createActionsHarness();
     const node = harness.getState().nodesById[seedNodeId];
     if (!node) {
       throw new Error('missing seed node');
@@ -176,7 +200,7 @@ describe('workspace node actions runtime guardrail', () => {
       }
     });
 
-    actions.updateNodeReveal(seedNodeId, 'New reveal');
+    await actions.updateNodeReveal(seedNodeId, 'New reveal');
 
     expect(getInvokedCommands(invoke)).toEqual(['update_node_reveal']);
     expectNoWorkspacePersist(invoke);

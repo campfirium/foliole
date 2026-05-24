@@ -29,8 +29,8 @@ interface NodeListPanelProps {
   bodyAppendContent?: ReactNode;
   collapse: NodeListCollapseController;
   contextMenu: NodeListContextMenuController;
-  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
-  createVirtualNode: () => string;
+  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
+  createVirtualNode: () => Promise<string | null>;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
   highlightedNodeId: string | null;

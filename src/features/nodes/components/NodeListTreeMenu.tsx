@@ -14,9 +14,9 @@ import { requestNodeRename } from './NodeTreeRowRename';
 
 interface NodeListTreeMenuProps {
   contextMenu: NodeListContextMenuController;
-  createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => string;
-  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
-  createVirtualNode: () => string;
+  createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
+  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
+  createVirtualNode: () => Promise<string | null>;
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   dismissNode: (nodeId: string, now?: string) => boolean;

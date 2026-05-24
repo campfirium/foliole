@@ -5,17 +5,25 @@ import {
   type FormulaClozeSourcePayload
 } from '../features/formula-cloze/model/formulaCloze';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
+import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
 import { createImageClozeReviewProfile } from './workspaceImageClozeReview';
+import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import type { WorkspaceState } from './workspaceStore';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
 interface RuntimeSyncHandlers {
+  hasMutationRuntime: () => boolean;
   syncNodeContent: (node: WorkspaceNode) => void;
-  syncNodeCreation: (node: WorkspaceNode) => void;
+  syncNodeCreation: (
+    node: WorkspaceNode,
+    nodeOrder?: string[],
+    activeNodeId?: string | null,
+    position?: number
+  ) => Promise<WorkspaceNodeMutationPatchResult | null>;
 }
 
 type WorkspaceSet = (
@@ -91,16 +99,31 @@ function createFormulaClozeNode(args: {
   };
 }
 
-function syncCreatedFormulaClozeNode(
-  node: WorkspaceNode | null,
+async function applyCreatedFormulaClozeNode(
+  args: {
+  localPatch: Partial<WorkspaceState> | null;
+  node: WorkspaceNode | null;
   handlers: RuntimeSyncHandlers,
-  nextNodeOrder: string[] | null
-) {
-  if (!node || !nextNodeOrder) {
-    return [];
+  nextNodeOrder: string[] | null;
+  set: WorkspaceSet;
   }
-  handlers.syncNodeCreation(node);
-  return [node.id];
+) {
+  const { handlers, localPatch, nextNodeOrder, node, set } = args;
+  if (!node || !nextNodeOrder) {
+    return null;
+  }
+  const shouldUseLocalFallback = !handlers.hasMutationRuntime();
+  const result = await handlers.syncNodeCreation(node, nextNodeOrder, node.id, nextNodeOrder.indexOf(node.id));
+  let applied = false;
+  set((state) => {
+    const acceptedPatch = result
+      ? createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch)
+      : shouldUseLocalFallback ? localPatch : null;
+    if (!acceptedPatch) return state;
+    applied = true;
+    return acceptedPatch;
+  });
+  return applied ? node.id : null;
 }
 
 export function createFormulaClozeNodeAction(
@@ -108,7 +131,7 @@ export function createFormulaClozeNodeAction(
   handlers: RuntimeSyncHandlers,
   reconcileReviewSession: (state: WorkspaceState, activeNodeId?: string | null) => WorkspaceState['reviewSession']
 ): WorkspaceState['createFormulaClozeNode'] {
-  return (parentNodeId, payload, sourcePayload) => {
+  return async (parentNodeId, payload, sourcePayload) => {
     const normalizedPayload = normalizeFormulaPayload(payload);
     const normalizedSourcePayload = normalizeFormulaClozeSourcePayload(sourcePayload);
     if (!normalizedPayload || normalizedSourcePayload.revealContent.length === 0) {
@@ -117,6 +140,7 @@ export function createFormulaClozeNodeAction(
     const timestamp = new Date().toISOString();
     let createdNode: WorkspaceNode | null = null;
     let nextNodeOrder: string[] | null = null;
+    let localPatch: Partial<WorkspaceState> | null = null;
 
     set((state) => {
       const parentNode = state.nodesById[parentNodeId];
@@ -144,12 +168,19 @@ export function createFormulaClozeNodeAction(
         nodesById: nextNodesById,
         untitledSequenceByParent: nextNode.untitledSequenceByParent
       };
-      return {
+      localPatch = {
         ...nextState,
         reviewSession: reconcileReviewSession({ ...state, ...nextState })
       };
+      return state;
     });
 
-    return syncCreatedFormulaClozeNode(createdNode, handlers, nextNodeOrder)[0] ?? null;
+    return applyCreatedFormulaClozeNode({
+      handlers,
+      localPatch,
+      nextNodeOrder,
+      node: createdNode,
+      set
+    });
   };
 }

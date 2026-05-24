@@ -2,8 +2,10 @@ import { pushEditorOperationEntry } from '../features/editor/model/editorOperati
 import {
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
+import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
+import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import { createQANodeFromSelectionRecord } from './workspaceQANodeRecord';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -18,28 +20,50 @@ type WorkspaceSet = (
 ) => void;
 
 interface RuntimeSyncHandlers {
+  hasMutationRuntime: () => boolean;
   syncNodeContent: (node: WorkspaceState['nodesById'][string]) => void;
-  syncNodeCreation: (node: WorkspaceState['nodesById'][string]) => void;
+  syncNodeCreation: (
+    node: WorkspaceState['nodesById'][string],
+    nodeOrder?: string[],
+    activeNodeId?: string | null,
+    position?: number
+  ) => Promise<WorkspaceNodeMutationPatchResult | null>;
   syncNodeOrder: (nodeOrder: string[]) => void;
 }
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
-function syncCreatedNode(node: WorkspaceNode | null, nodeOrder: string[] | null, handlers: RuntimeSyncHandlers) {
+async function applyCreatedNode(args: {
+  handlers: RuntimeSyncHandlers;
+  localPatch: Partial<WorkspaceState> | null;
+  node: WorkspaceNode | null;
+  nodeId: string;
+  nodeOrder: string[] | null;
+  set: WorkspaceSet;
+}) {
+  const { handlers, localPatch, node, nodeId, nodeOrder, set } = args;
   if (!node || !nodeOrder) {
-    return;
+    return null;
   }
-  handlers.syncNodeContent(node);
-  if (node.kind === 'folder') {
-    handlers.syncNodeOrder(nodeOrder);
-  }
+  const shouldUseLocalFallback = !handlers.hasMutationRuntime();
+  const result = await handlers.syncNodeCreation(node, nodeOrder, nodeId, nodeOrder.indexOf(nodeId));
+  let applied = false;
+  set((state) => {
+    const acceptedPatch = result
+      ? createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch)
+      : shouldUseLocalFallback ? localPatch : null;
+    if (!acceptedPatch) return state;
+    applied = true;
+    return acceptedPatch;
+  });
+  return applied ? nodeId : null;
 }
 
 export function createHighlightFromSelectionAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
 ): WorkspaceState['createHighlightNodeFromSelection'] {
-  return (parentNodeId, content, anchorId, anchorLink, imageRegions) => {
+  return async (parentNodeId, content, anchorId, anchorLink, imageRegions) => {
     const normalizedContent = content.trim();
     if (!normalizedContent) {
       return null;
@@ -48,6 +72,7 @@ export function createHighlightFromSelectionAction(
     const childNodeId = `node-${crypto.randomUUID()}`, timestamp = new Date().toISOString();
     let createdNode: WorkspaceState['nodesById'][string] | null = null;
     let nextNodeOrder: string[] | null = null;
+    let localPatch: Partial<WorkspaceState> | null = null;
 
     set((state) => {
       const parentNode = state.nodesById[parentNodeId];
@@ -75,7 +100,7 @@ export function createHighlightFromSelectionAction(
         [childNodeId]: createdNode
       };
       const operationEntry = createEditorAnnotationCreateEntry([createdNode], parentNodeId, nextNodeOrder);
-      return {
+      localPatch = {
         ...(operationEntry
           ? { editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, operationEntry) }
           : {}),
@@ -87,11 +112,11 @@ export function createHighlightFromSelectionAction(
           nodeOrder: nextNodeOrder,
           nodesById: nextNodesById,
           untitledSequenceByParent: untitledState.untitledSequenceByParent
-        })
+          })
       };
+      return state;
     });
-    syncCreatedNode(createdNode, nextNodeOrder, handlers);
-    return childNodeId;
+    return applyCreatedNode({ handlers, localPatch, node: createdNode, nodeId: childNodeId, nodeOrder: nextNodeOrder, set });
   };
 }
 
@@ -99,7 +124,7 @@ export function createQAFromSelectionAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
 ): WorkspaceState['createQANodeFromSelection'] {
-  return (parentNodeId, promptContent, answerContent, anchorId, anchorLink) => {
+  return async (parentNodeId, promptContent, answerContent, anchorId, anchorLink) => {
     const normalizedPrompt = promptContent.trim();
     const normalizedAnswer = answerContent.trim();
     if (!normalizedPrompt || !normalizedAnswer) {
@@ -109,6 +134,7 @@ export function createQAFromSelectionAction(
     const childNodeId = `node-${crypto.randomUUID()}`, timestamp = new Date().toISOString();
     let createdNode: WorkspaceState['nodesById'][string] | null = null;
     let nextNodeOrder: string[] | null = null;
+    let localPatch: Partial<WorkspaceState> | null = null;
 
     set((state) => {
       const parentNode = state.nodesById[parentNodeId];
@@ -132,7 +158,7 @@ export function createQAFromSelectionAction(
         [childNodeId]: created.node
       };
       const operationEntry = createEditorAnnotationCreateEntry([created.node], parentNodeId, nextNodeOrder);
-      return {
+      localPatch = {
         ...(operationEntry
           ? { editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, operationEntry) }
           : {}),
@@ -144,12 +170,10 @@ export function createQAFromSelectionAction(
           nodeOrder: nextNodeOrder,
           nodesById: nextNodesById,
           untitledSequenceByParent: created.untitledSequenceByParent
-        })
+          })
       };
+      return state;
     });
-    if (createdNode) {
-      handlers.syncNodeContent(createdNode);
-    }
-    return childNodeId;
+    return applyCreatedNode({ handlers, localPatch, node: createdNode, nodeId: childNodeId, nodeOrder: nextNodeOrder, set });
   };
 }
