@@ -81,10 +81,10 @@ export interface BuildControllerLayoutPropsArgs {
     deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
     exitReviewSession: () => void;
     gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;
-    completeReviewItem: () => boolean;
-    deferReviewItem: () => boolean;
-    dismissReviewItem: () => boolean;
-    soonReviewItem: () => boolean;
+    completeReviewItem: () => Promise<boolean>;
+    deferReviewItem: () => Promise<boolean>;
+    dismissReviewItem: () => Promise<boolean>;
+    soonReviewItem: () => Promise<boolean>;
     isListCollapsed: boolean;
     isRightSidebarCollapsed: boolean;
     listWidth: number;

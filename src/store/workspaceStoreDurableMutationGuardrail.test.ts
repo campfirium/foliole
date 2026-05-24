@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { syncNodeContentToRuntime, syncRelearnNodeToRuntime, syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import {
+  syncNodeContentToRuntime,
+  syncNodeContentToRuntimeNow,
+  syncRelearnNodeToRuntime,
+  syncReviewGradeToRuntime
+} from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
@@ -17,6 +22,7 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   return {
     ...actual,
     syncNodeContentToRuntime: vi.fn(),
+    syncNodeContentToRuntimeNow: vi.fn(async () => true),
     syncRelearnNodeToRuntime: vi.fn(),
     syncReviewGradeToRuntime: vi.fn()
   };
@@ -71,7 +77,7 @@ describe('workspace durable reading review mutation guardrails', () => {
     vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
   });
 
-  it('requires runtime sync for reading complete and defer actions', () => {
+  it('requires runtime sync for reading complete and defer actions', async () => {
     const completeHarness = createSetStateHarness(
       createWorkspaceFixture([
         createReadingNode('reading-1', '2026-03-03T00:00:00.000Z'),
@@ -84,9 +90,10 @@ describe('workspace durable reading review mutation guardrails', () => {
     });
 
     completeActions.startReviewSession('2026-03-03T00:00:00.000Z');
-    expect(completeActions.completeReviewItem('2026-03-03T00:00:00.000Z')).toBe(true);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'reading-1', reading: expect.objectContaining({ state: 'active' }) })
+    const completedNodeId = completeHarness.getState().reviewSession.currentNodeId;
+    await expect(completeActions.completeReviewItem('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
+    expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
+      expect.objectContaining({ id: completedNodeId, reading: expect.objectContaining({ state: 'active' }) })
     );
 
     vi.clearAllMocks();
@@ -103,13 +110,14 @@ describe('workspace durable reading review mutation guardrails', () => {
     });
 
     deferActions.startReviewSession('2026-03-03T00:00:00.000Z');
-    expect(deferActions.deferReviewItem()).toBe(true);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'reading-1', reading: expect.objectContaining({ state: 'active' }) })
+    const deferredNodeId = deferHarness.getState().reviewSession.currentNodeId;
+    await expect(deferActions.deferReviewItem()).resolves.toBe(true);
+    expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
+      expect.objectContaining({ id: deferredNodeId, reading: expect.objectContaining({ state: 'active' }) })
     );
   });
 
-  it('requires runtime sync for reading dismiss inside review mode', () => {
+  it('requires runtime sync for reading dismiss inside review mode', async () => {
     const harness = createSetStateHarness(
       createWorkspaceFixture([
         createReadingNode('reading-1', '2026-03-03T00:00:00.000Z'),
@@ -122,9 +130,10 @@ describe('workspace durable reading review mutation guardrails', () => {
     });
 
     actions.startReviewSession('2026-03-03T00:00:00.000Z');
-    expect(actions.dismissReviewItem('2026-03-03T00:00:00.000Z')).toBe(true);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'reading-1', reading: expect.objectContaining({ state: 'dismissed' }) })
+    const dismissedNodeId = harness.getState().reviewSession.currentNodeId;
+    await expect(actions.dismissReviewItem('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
+    expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
+      expect.objectContaining({ id: dismissedNodeId, reading: expect.objectContaining({ state: 'dismissed' }) })
     );
   });
 });

@@ -54,12 +54,12 @@ function ReviewShortcutHarness(
     isCurrentItemGradable: false,
     ...REVIEW_SHORTCUT_DEFAULTS,
     isSourceTopicDeleteDialogOpen: false,
-    completeReviewItem: vi.fn(() => true),
-    deferReviewItem: vi.fn(() => true),
+    completeReviewItem: vi.fn(async () => true),
+    deferReviewItem: vi.fn(async () => true),
     deleteCurrentReviewItem: vi.fn(() => true),
     deleteReviewSourceTopic: vi.fn(() => true),
-    dismissReviewItem: vi.fn(() => true),
-    soonReviewItem: vi.fn(() => true),
+    dismissReviewItem: vi.fn(async () => true),
+    soonReviewItem: vi.fn(async () => true),
     goBack: vi.fn(),
     goForward: vi.fn(),
     goParent: vi.fn(),
@@ -79,7 +79,7 @@ afterEach(() => {
 });
 
 it('ignores review action shortcuts while the current review item is not visible', () => {
-  const completeReviewItem = vi.fn(() => true);
+  const completeReviewItem = vi.fn(async () => true);
   render(
     <ReviewShortcutHarness
       completeReviewItem={completeReviewItem}
@@ -122,7 +122,7 @@ it('deletes the hidden current review item with Delete', () => {
 });
 
 it('runs review action shortcuts when the current review item is visible', () => {
-  const completeReviewItem = vi.fn(() => true);
+  const completeReviewItem = vi.fn(async () => true);
   render(
     <ReviewShortcutHarness
       completeReviewItem={completeReviewItem}
@@ -136,7 +136,7 @@ it('runs review action shortcuts when the current review item is visible', () =>
 });
 
 it('runs the visible reading soon shortcut before later/read choices', () => {
-  const soonReviewItem = vi.fn(() => true);
+  const soonReviewItem = vi.fn(async () => true);
   render(
     <ReviewShortcutHarness
       isCurrentReviewItemVisible

@@ -16,6 +16,7 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   return {
     ...actual,
     syncNodeContentToRuntime: vi.fn(),
+    syncNodeContentToRuntimeNow: vi.fn(async () => true),
     syncReviewGradeToRuntime: vi.fn()
   };
 });
@@ -42,7 +43,7 @@ it('tracks review elapsed time separately from reading elapsed time', async () =
   expect(harness.getState().reviewSession.readingElapsedMs).toBe(0);
 });
 
-it('tracks reading elapsed time separately from review elapsed time', () => {
+it('tracks reading elapsed time separately from review elapsed time', async () => {
   const startedAt = '2026-03-03T12:00:00.000Z';
   const completedAt = '2026-03-03T12:34:00.000Z';
   const harness = createSetStateHarness(
@@ -54,7 +55,7 @@ it('tracks reading elapsed time separately from review elapsed time', () => {
   });
 
   actions.startReviewSession(startedAt);
-  expect(actions.completeReviewItem(completedAt)).toBe(true);
+  await expect(actions.completeReviewItem(completedAt)).resolves.toBe(true);
 
   expect(harness.getState().reviewSession.readingElapsedMs).toBe(34 * 60 * 1000);
   expect(harness.getState().reviewSession.reviewElapsedMs).toBe(0);

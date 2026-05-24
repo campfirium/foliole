@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
@@ -9,6 +9,14 @@ import {
   createWorkspaceFixture,
   previewStub
 } from './workspaceStoreReviewActions.test-support';
+
+vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
+  return {
+    ...actual,
+    syncNodeContentToRuntimeNow: vi.fn(async () => true)
+  };
+});
 
 it('shows a completed checkpoint after the last review card before reading topics', async () => {
   const now = '2026-03-03T00:00:00.000Z';
@@ -61,7 +69,7 @@ it('does not start review-first by falling back to due reading topics', () => {
   });
 });
 
-it('keeps a completed session checkpoint after reading the last topic', () => {
+it('keeps a completed session checkpoint after reading the last topic', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(createWorkspaceFixture([createReadingNode('reading-1', now)]));
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
@@ -70,7 +78,7 @@ it('keeps a completed session checkpoint after reading the last topic', () => {
   });
 
   actions.startReviewSession(now);
-  const completed = actions.completeReviewItem('2026-03-03T00:05:00.000Z');
+  const completed = await actions.completeReviewItem('2026-03-03T00:05:00.000Z');
 
   expect(completed).toBe(true);
   expect(harness.getState().reviewSession).toMatchObject({

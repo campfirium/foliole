@@ -1,4 +1,4 @@
-import { BookOpenText, Check, ListChecks, ListFilter, Route } from 'lucide-react';
+import { BookOpen, BookOpenText, Check, ListChecks, ListFilter, Route } from 'lucide-react';
 import { useState } from 'react';
 
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
@@ -66,6 +66,7 @@ export function ReviewSessionModeControl({
           aria-label={isTemporaryMode ? `Session mode: ${activeMode.label}` : 'Change session mode'}
           className={modeButtonClassName(isTemporaryMode)}
           onClick={() => setIsMenuOpen(true)}
+          title={isTemporaryMode ? `Session mode: ${activeMode.label}` : 'Change session mode'}
           type="button"
         >
           <ActiveIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.9} />
@@ -98,6 +99,29 @@ export function ReviewSessionModeControl({
           );
         })}
         <div className="px-3 pt-1 pb-2 text-xs text-foreground/45">Temporary setting.</div>
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
+  );
+}
+
+export function QueueClearFlowControl() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  return (
+    <AppDropdownMenu onOpenChange={setIsMenuOpen} open={isMenuOpen}>
+      <AppDropdownMenuTrigger asChild>
+        <button
+          aria-label="Queue clear"
+          className={modeButtonClassName(true)}
+          onClick={() => setIsMenuOpen(true)}
+          title="Queue clear"
+          type="button"
+        >
+          <BookOpen aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.9} />
+        </button>
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent align="start" className="w-56 max-w-[calc(100vw-2rem)] p-3" sideOffset={8}>
+        <p className="text-[13px] font-medium text-foreground/82">Queue clear. Flow on.</p>
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );

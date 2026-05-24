@@ -10,9 +10,14 @@ import {
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
-import { createCompleteReviewItemAction, createDeferReviewItemAction, createSoonReviewItemAction } from './workspaceStoreReadingReviewActions';
+import {
+  createCompleteReviewItemActionWithPending,
+  createDeferReviewItemActionWithPending,
+  createSoonReviewItemAction,
+  type ReadingReviewPendingNodeIds
+} from './workspaceStoreReadingReviewActions';
 import { applyGradedReviewState, persistReviewGradeMutation } from './workspaceStoreReviewActionHelpers';
-import { createDismissReviewItemAction } from './workspaceStoreReviewDismissAction';
+import { createDismissReviewItemActionWithPending } from './workspaceStoreReviewDismissAction';
 import {
   createResumeReviewSessionAction,
   createSetReviewSessionModeAction,
@@ -119,16 +124,17 @@ export function createWorkspaceReviewActions(
   get: WorkspaceGet,
   scheduler: ReviewSchedulerAdapter = createReviewSchedulerAdapter()
 ): WorkspaceReviewActions {
+  const readingPendingNodeIds: ReadingReviewPendingNodeIds = new Set();
   return {
     startReviewSession: createStartReviewSessionAction(set),
     resumeReviewSession: createResumeReviewSessionAction(set),
     setReviewSessionMode: createSetReviewSessionModeAction(set),
     revealReviewAnswer: createRevealReviewAnswerAction(set),
     gradeReviewCard: createGradeReviewCardAction(set, get, scheduler),
-    completeReviewItem: createCompleteReviewItemAction(set, get),
-    deferReviewItem: createDeferReviewItemAction(set, get),
+    completeReviewItem: createCompleteReviewItemActionWithPending(set, get, readingPendingNodeIds),
+    deferReviewItem: createDeferReviewItemActionWithPending(set, get, readingPendingNodeIds),
     soonReviewItem: createSoonReviewItemAction(set, get),
-    dismissReviewItem: createDismissReviewItemAction(set, get),
+    dismissReviewItem: createDismissReviewItemActionWithPending(set, get, readingPendingNodeIds),
     exitReviewSession: createExitReviewSessionAction(set)
   };
 }

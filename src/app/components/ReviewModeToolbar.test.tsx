@@ -3,6 +3,8 @@ import { expect, it, vi } from 'vitest';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 
+const progressCounts = (completedItemCount: number, completedTopicCount: number, queuedItemCount: number, queuedTopicCount: number) => ({ completedItemCount, completedTopicCount, queuedItemCount, queuedTopicCount });
+
 function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}) {
   return render(
     <ReviewModeToolbar
@@ -12,11 +14,11 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       isReviewEditing={false}
       isStudyMode
       reviewCompletedCount={0}
-      onCompleteReviewItem={vi.fn(() => true)}
+      onCompleteReviewItem={vi.fn(async () => true)}
       onContinueReading={vi.fn()}
-      onDeferReviewItem={vi.fn(() => true)}
-      onDismissReviewItem={vi.fn(() => true)}
-      onSoonReviewItem={vi.fn(() => true)}
+      onDeferReviewItem={vi.fn(async () => true)}
+      onDismissReviewItem={vi.fn(async () => true)}
+      onSoonReviewItem={vi.fn(async () => true)}
       onExitReviewMode={vi.fn()}
       onGrade={vi.fn(async () => true)}
       onRevealAnswer={vi.fn()}
@@ -24,6 +26,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       onSetReviewSessionMode={vi.fn()}
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle={undefined}
+      reviewProgressCounts={progressCounts(0, 0, 3, 0)}
       reviewQueueCount={3}
       reviewSummary={{
         readingElapsedMs: 34 * 60 * 1000,
@@ -45,7 +48,7 @@ it('renders reading actions with session controls and hidden progress text', () 
   expect(screen.getByLabelText('Reading review actions')).toBeInTheDocument();
   expect(screen.getByLabelText('Change session mode')).toBeInTheDocument();
   expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
-  expect(screen.getByLabelText('Flow queue: 3 left · 0 done · 3 total')).toBeInTheDocument();
+  expect(screen.getByLabelText('i 0/3')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Soon' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
@@ -87,11 +90,11 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       isReviewEditing={false}
       isStudyMode
       reviewCompletedCount={0}
-      onCompleteReviewItem={vi.fn(() => true)}
+      onCompleteReviewItem={vi.fn(async () => true)}
       onContinueReading={vi.fn()}
-      onDeferReviewItem={vi.fn(() => true)}
-      onDismissReviewItem={vi.fn(() => true)}
-      onSoonReviewItem={vi.fn(() => true)}
+      onDeferReviewItem={vi.fn(async () => true)}
+      onDismissReviewItem={vi.fn(async () => true)}
+      onSoonReviewItem={vi.fn(async () => true)}
       onExitReviewMode={vi.fn()}
       onGrade={onGrade}
       onRevealAnswer={onRevealAnswer}
@@ -169,9 +172,10 @@ it('shows completed without progress and continues reading when the review phase
     reviewStatus: 'completed'
   });
 
-  expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Queue clear' }));
+  expect(screen.getByText('Queue clear. Flow on.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('Flow queue: 0 left · 3 done · 3 total')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('i 3/3')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
   expect(onContinueReading).toHaveBeenCalledTimes(1);
@@ -195,12 +199,13 @@ it('continues reading with Space after the review phase is complete', () => {
 it('uses topic units for reading-only progress', () => {
   renderToolbar({
     reviewCompletedCount: 2,
+    reviewProgressCounts: progressCounts(0, 2, 0, 4),
     reviewQueueCount: 4,
     reviewSessionMode: 'reading-only',
     showSessionModeControl: true
   });
 
-  expect(screen.getByLabelText('Reading flow: 4 topics left · 2 read · 6 topics')).toBeInTheDocument();
+  expect(screen.getByLabelText('t 2/6')).toBeInTheDocument();
 });
 
 it('resumes from the queue when study mode has no current item but queued items exist', () => {

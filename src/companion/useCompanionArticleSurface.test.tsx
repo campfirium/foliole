@@ -22,7 +22,7 @@ const desktopSyncMock = vi.hoisted(() => ({
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectMock);
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => desktopSyncMock);
 
-async function expectReadingReviewActionPersists() {
+function createReadingArticleSnapshot() {
   const snapshot = createCompanionArticleSnapshot();
   snapshot.nodesById['article-1'] = {
     ...snapshot.nodesById['article-1']!,
@@ -37,6 +37,11 @@ async function expectReadingReviewActionPersists() {
       state: 'active'
     }
   };
+  return snapshot;
+}
+
+async function expectReadingReviewActionPersists() {
+  const snapshot = createReadingArticleSnapshot();
   const workspaceSync = createWorkspaceSync(snapshot);
   const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
 
@@ -57,6 +62,7 @@ describe('useCompanionArticleSurface', () => {
     vi.useRealTimers();
     syncObjectMock.saveCompanionSyncActiveViewState.mockClear();
     syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
+    syncObjectMock.saveCompanionSyncNodeReadingRecord.mockResolvedValue({ content_hash: 'hash-reading', object_id: 'article-1' });
     syncObjectMock.saveCompanionSyncNodeReviewRecord.mockClear();
     syncObjectMock.saveCompanionSyncNodeViewState.mockClear();
     desktopSyncMock.syncCompanionContentBlobFromDesktop.mockClear();
@@ -176,6 +182,39 @@ describe('useCompanionArticleSurface browse state', () => {
     expect(result.current.readableArticle).toBeNull();
   });
 
+});
+
+describe('useCompanionArticleSurface reading review persistence', () => {
   it('persists reading review actions as single-node companion updates', expectReadingReviewActionPersists);
+
+  it('does not replace the snapshot when reading review persistence fails', async () => {
+    syncObjectMock.saveCompanionSyncNodeReadingRecord.mockResolvedValueOnce(null as never);
+    const snapshot = createReadingArticleSnapshot();
+    const workspaceSync = createWorkspaceSync(snapshot);
+    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+
+    await act(async () => {
+      await result.current.handleCompleteReviewItem();
+    });
+
+    expect(workspaceSync.replaceSnapshot).not.toHaveBeenCalled();
+    expect(result.current.readingError).toBe('Failed to persist the reading item.');
+  });
+
+  it('ignores duplicate reading review actions while persistence is in flight', async () => {
+    const snapshot = createReadingArticleSnapshot();
+    const workspaceSync = createWorkspaceSync(snapshot);
+    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+    syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
+
+    await act(async () => {
+      const first = result.current.handleCompleteReviewItem();
+      const second = result.current.handleCompleteReviewItem();
+      await Promise.all([first, second]);
+    });
+
+    expect(syncObjectMock.saveCompanionSyncNodeReadingRecord).toHaveBeenCalledTimes(1);
+    expect(workspaceSync.replaceSnapshot).toHaveBeenCalledTimes(1);
+  });
 
 });

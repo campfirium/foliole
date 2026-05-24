@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
-import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
+import { syncNodeContentToRuntimeNow } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createReadingNode,
@@ -15,7 +15,7 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
   return {
     ...actual,
-    syncNodeContentToRuntime: vi.fn()
+    syncNodeContentToRuntimeNow: vi.fn(async () => true)
   };
 });
 
@@ -23,7 +23,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('creates a persisted reading profile when dismissing a first-time reading item', () => {
+it('creates a persisted reading profile when dismissing a first-time reading item', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const firstTimeReadingNode = {
     ...createReadingNode('reading-1', now),
@@ -37,7 +37,7 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
 
   actions.startReviewSession(now);
 
-  expect(actions.dismissReviewItem(now)).toBe(true);
+  await expect(actions.dismissReviewItem(now)).resolves.toBe(true);
   expect(harness.getState().nodesById['reading-1']?.reading).toMatchObject({
     lastHandledAt: now,
     nextAt: now,
@@ -54,7 +54,7 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
     title: 'Dismiss Topic',
     type: 'topic.dismiss'
   });
-  expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
+  expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
     expect.objectContaining({
       id: 'reading-1',
       reading: expect.objectContaining({ state: 'dismissed' })
@@ -62,7 +62,7 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
   );
 });
 
-it('counts a dismissed reading topic as handled material', () => {
+it('counts a dismissed reading topic as handled material', async () => {
   const startedAt = '2026-03-03T00:00:00.000Z';
   const dismissedAt = '2026-03-03T00:02:00.000Z';
   const harness = createSetStateHarness(
@@ -76,7 +76,7 @@ it('counts a dismissed reading topic as handled material', () => {
   actions.startReviewSession(startedAt);
   const dismissedNodeId = harness.getState().reviewSession.currentNodeId;
 
-  expect(actions.dismissReviewItem(dismissedAt)).toBe(true);
+  await expect(actions.dismissReviewItem(dismissedAt)).resolves.toBe(true);
   expect(harness.getState().nodesById[dismissedNodeId ?? '']?.reading?.state).toBe('dismissed');
   expect(harness.getState().reviewSession).toMatchObject({
     readTopicCount: 1,
@@ -84,7 +84,7 @@ it('counts a dismissed reading topic as handled material', () => {
   });
 });
 
-it('restores the dismissed review item as the current review item when undoing', () => {
+it('restores the dismissed review item as the current review item when undoing', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(
     createWorkspaceFixture([createReadingNode('reading-1', now), createReadingNode('reading-2', now)])
@@ -98,7 +98,7 @@ it('restores the dismissed review item as the current review item when undoing',
   actions.startReviewSession(now);
   const currentNodeId = harness.getState().reviewSession.currentNodeId;
   const nextNodeId = currentNodeId === 'reading-1' ? 'reading-2' : 'reading-1';
-  expect(actions.dismissReviewItem(now)).toBe(true);
+  await expect(actions.dismissReviewItem(now)).resolves.toBe(true);
   expect(harness.getState().reviewSession.currentNodeId).toBe(nextNodeId);
 
   expect(historyActions.undoWorkspaceAction('2026-03-04T00:00:00.000Z')).toBe(true);
@@ -119,7 +119,7 @@ it('restores the dismissed review item as the current review item when undoing',
   });
 });
 
-it('does not dismiss the current review item while another topic is open', () => {
+it('does not dismiss the current review item while another topic is open', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(
     createWorkspaceFixture([createReadingNode('reading-1', now), createReadingNode('reading-2', now)])
@@ -134,7 +134,7 @@ it('does not dismiss the current review item while another topic is open', () =>
   const otherNodeId = currentNodeId === 'reading-1' ? 'reading-2' : 'reading-1';
   harness.setState({ activeNodeId: otherNodeId });
 
-  expect(actions.dismissReviewItem(now)).toBe(false);
+  await expect(actions.dismissReviewItem(now)).resolves.toBe(false);
   expect(harness.getState().nodesById[currentNodeId ?? '']?.reading?.state).toBe('active');
-  expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+  expect(syncNodeContentToRuntimeNow).not.toHaveBeenCalled();
 });

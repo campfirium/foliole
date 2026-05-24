@@ -17,6 +17,10 @@ import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { buildSequentialReadingDismissPatch } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
+import {
+  persistReadingReviewNodes,
+  type ReadingReviewPendingNodeIds
+} from './workspaceStoreReadingReviewActions';
 
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
@@ -117,6 +121,47 @@ function buildDismissReviewPatch(args: {
 }
 
 export function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet) {
+  return createDismissReviewItemActionWithPending(set, get, new Set());
+}
+
+export function createDismissReviewItemActionWithPending(
+  set: WorkspaceSet,
+  get: WorkspaceGet,
+  pendingNodeIds: ReadingReviewPendingNodeIds
+) {
+  return async (now = new Date().toISOString()) => {
+    const snapshot = get();
+    const currentNodeId = snapshot.reviewSession.currentNodeId;
+    if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
+    const currentNode = snapshot.nodesById[currentNodeId];
+    if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
+    if (pendingNodeIds.has(currentNodeId)) return false;
+    const result = buildDismissReviewPatch({
+      currentNodeId,
+      now,
+      snapshot,
+      state: get()
+    });
+    pendingNodeIds.add(currentNodeId);
+    try {
+      if (!result || !(await persistReadingReviewNodes(result.nextNodesForSync))) {
+        return false;
+      }
+      set((state) => {
+        const node = state.nodesById[currentNodeId];
+        if (!node || state.reviewSession.currentNodeId !== currentNodeId || state.activeNodeId !== currentNodeId) {
+          return state;
+        }
+        return result?.patch ?? state;
+      });
+      return true;
+    } finally {
+      pendingNodeIds.delete(currentNodeId);
+    }
+  };
+}
+
+export function createLegacyDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet) {
   return (now = new Date().toISOString()) => {
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
