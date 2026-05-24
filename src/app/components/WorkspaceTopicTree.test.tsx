@@ -144,7 +144,7 @@ it('places title search in the item column and keeps matches visible while searc
   expect(within(itemColumn).getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
   expect(within(itemColumn).queryByRole('treeitem', { name: 'Hook Summary' })).not.toBeInTheDocument();
-  expect(within(itemColumn).getByText('1')).toBeInTheDocument();
+  expect(within(itemColumn).queryByText('1')).toBeNull();
   expect(within(itemColumn).getByRole('button', { name: 'Expand all topics' })).toBeInTheDocument();
   fireEvent.click(within(itemColumn).getByRole('button', { name: 'Expand all topics' }));
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
