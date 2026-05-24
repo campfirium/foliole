@@ -1,6 +1,5 @@
 import { HardDrive } from 'lucide-react';
 import { memo, useCallback, useEffect, useState, type CSSProperties } from 'react';
-import { workspaceChangeTimestamp } from 'virtual:workspace-change-timestamp';
 
 import { definedProps } from '../../shared/lib/definedProps';
 import { useRuntimeAvailability } from '../../shared/platform/runtimeAvailability';
@@ -16,7 +15,6 @@ import {
 import { WindowControlButtons } from './WindowControlButtons';
 import { WindowSidebarToggleButton } from './WindowSidebarToggleButton';
 import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
-import { WindowTitleBarViewButtons } from './WindowTitleBarViewButtons';
 import { WorkspaceSurfaceRowOverlay, WorkspaceTitlebarDividers } from './WorkspaceSurfaceRowOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
@@ -31,7 +29,6 @@ interface WindowTitleBarProps {
   listWidth: number;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onToggleRightSidebarVisibility: () => void;
-  onOpenNotesView: () => void;
   onOpenTrashView: () => void;
   onToggleListVisibility: () => void;
   rightSidebarWidth: number;
@@ -85,8 +82,6 @@ function useWindowControlState() {
 }
 function WindowLeadingActions({
   isListCollapsed,
-  isTrashViewOpen,
-  onOpenNotesView,
   onToggleListVisibility
 }: WindowTitleBarProps) {
   if (isListCollapsed) {
@@ -104,15 +99,6 @@ function WindowLeadingActions({
       <div className="window-titlebar-leading">
         <div className="window-titlebar-leading-primary">
           <WindowSidebarToggleButton active={!isListCollapsed} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
-        </div>
-        <div className="window-titlebar-leading-secondary">
-          <WindowTitleBarViewButtons
-            isTrashViewOpen={isTrashViewOpen}
-            onOpenNotesView={onOpenNotesView}
-          />
-          <span aria-label="Current change timestamp" className="window-titlebar-left-timestamp">
-            {workspaceChangeTimestamp}
-          </span>
         </div>
       </div>
     </div>

@@ -26,7 +26,6 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 interface WorkspaceSurfaceActionsSource {
   onCloseImportManagement: () => void;
-  onOpenNotesView: () => void;
   onOpenTrashView: () => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
 }
@@ -34,10 +33,6 @@ interface WorkspaceSurfaceActionsSource {
 type WorkspaceGridRenderSource = WorkspaceLayoutGridSource;
 
 function useWorkspaceSurfaceActions(props: WorkspaceSurfaceActionsSource) {
-  const handleOpenNotesView = useCallback(() => {
-    props.onCloseImportManagement();
-    props.onOpenNotesView();
-  }, [props.onCloseImportManagement, props.onOpenNotesView]);
   const handleOpenTrashView = useCallback(() => {
     props.onCloseImportManagement();
     props.onOpenTrashView();
@@ -47,7 +42,6 @@ function useWorkspaceSurfaceActions(props: WorkspaceSurfaceActionsSource) {
     props.onSelectNode(nodeId, focusAnchor);
   }, [props.onCloseImportManagement, props.onSelectNode]);
   return {
-    handleOpenNotesView,
     handleOpenTrashView,
     handleSelectNode
   };
@@ -81,7 +75,7 @@ function renderClipboardImportNotice(controller: ReturnType<typeof useClipboardI
 }
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
-  const { imports, layoutChrome, navigation, nodeList, settings, trash } = props;
+  const { imports, layoutChrome, navigation, settings, trash } = props;
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
     loadWorkspaceRightPanelPreference()
   );
@@ -99,9 +93,8 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
       onStartClipboardImport: clipboardImportNotice.startClipboardImport
     }
   }), [clipboardImportNotice.startClipboardImport, imports, props]);
-  const { handleOpenNotesView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions({
+  const { handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions({
     onCloseImportManagement: imports.onCloseImportManagement,
-    onOpenNotesView: nodeList.onOpenNotesView,
     onOpenTrashView: trash.onOpenTrashView,
     onSelectNode: navigation.onSelectNode
   });
@@ -122,7 +115,6 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
     <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
       <WorkspaceMainChrome
         activeRightPanelId={activeRightPanelId}
-        onOpenNotesView={handleOpenNotesView}
         onOpenTrashView={handleOpenTrashView}
         onSelectRightPanel={handleSelectRightPanel}
         documentNodeId={trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId}
@@ -171,7 +163,6 @@ function renderWorkspaceGrid(args: {
 function WorkspaceMainChrome({
   activeRightPanelId,
   documentNodeId,
-  onOpenNotesView,
   onOpenTrashView,
   onSelectNode,
   onSelectRightPanel,
@@ -181,7 +172,6 @@ function WorkspaceMainChrome({
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
-  onOpenNotesView: () => void;
   onOpenTrashView: () => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
@@ -193,7 +183,6 @@ function WorkspaceMainChrome({
     <>
       <WorkspaceMainTitleBar
         activeRightPanelId={activeRightPanelId}
-        onOpenNotesView={onOpenNotesView}
         onOpenTrashView={onOpenTrashView}
         onSelectRightPanel={onSelectRightPanel}
         props={titleBarProps}

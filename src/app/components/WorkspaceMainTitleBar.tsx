@@ -56,13 +56,11 @@ function resolveReviewTitleBarTitle(review: WorkspaceLayoutProps['review']) {
 
 export function WorkspaceMainTitleBar({
   activeRightPanelId,
-  onOpenNotesView,
   onOpenTrashView,
   onSelectRightPanel,
   props
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
-  onOpenNotesView: () => void;
   onOpenTrashView: () => void;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   props: WorkspaceTitleBarSource;
@@ -83,7 +81,6 @@ export function WorkspaceMainTitleBar({
       isRightSidebarCollapsed={layoutChrome.isRightSidebarCollapsed}
       isTrashViewOpen={trash.isTrashViewOpen}
       listWidth={layoutChrome.listWidth}
-      onOpenNotesView={onOpenNotesView}
       onOpenTrashView={onOpenTrashView}
       onSelectRightPanel={onSelectRightPanel}
       onToggleListVisibility={layoutChrome.onToggleListVisibility}
