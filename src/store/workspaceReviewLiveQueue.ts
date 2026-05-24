@@ -4,6 +4,7 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 import { definedProps } from '../shared/lib/definedProps';
 
 import { buildCachedReviewQueuePlan } from './reviewQueuePlannerCached';
+import { selectCanonicalReviewQueueSource } from './workspaceCanonicalSelectors';
 import type { WorkspaceState } from './workspaceStore';
 
 const EXTENSION_NODE_LIMIT = 20;
@@ -84,13 +85,18 @@ export function buildLiveReviewQueueOutput(
 ): ReviewLiveQueueOutput {
   const mode = overrides.mode ?? state.reviewSessionMode;
   const excludedNodeIds = new Set(overrides.excludedNodeIds ?? []);
-  const plan = buildCachedReviewQueuePlan({
-    mode,
+  const canonicalSource = selectCanonicalReviewQueueSource({
     nodeOrder: overrides.nodeOrder ?? state.nodeOrder,
     nodesById: overrides.nodesById ?? state.nodesById,
+    trashedNodeIds: state.trashedNodeIds
+  });
+  const plan = buildCachedReviewQueuePlan({
+    mode,
+    nodeOrder: canonicalSource.nodeOrder,
+    nodesById: canonicalSource.nodesById,
     now,
     pushQueueRules: getCurrentReviewSchedulerSettings().pushQueue,
-    trashedNodeIds: state.trashedNodeIds
+    trashedNodeIds: canonicalSource.trashedNodeIds
   });
   const taskNodeIds = excludeNodeIds(
     prioritizePinnedNode(resolveTaskNodeIds({

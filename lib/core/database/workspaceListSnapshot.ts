@@ -1,8 +1,16 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from './workspaceBodyStatus.js';
-import { buildWorkspaceListNodesById, type WorkspaceNodeRow } from './workspaceListSnapshotNodes.js';
+import {
+  buildWorkspaceListNodesById,
+  type WorkspaceListNodeSnapshot,
+  type WorkspaceNodeRow
+} from './workspaceListSnapshotNodes.js';
 import { applyResolvedOpenings, buildPdfOpeningById } from './workspaceListSnapshotOpening.js';
+import {
+  normalizeWorkspaceSnapshot,
+  resolveWorkspaceSnapshotActiveNodeId
+} from './workspaceSnapshotContract.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 interface NodeOrderRow extends DatabaseRow {
@@ -35,6 +43,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        n.is_title_manual,
        n.hide_title_heading,
        n.virtual_filter,
+       n.body_blob_hash,
        n.opening_text,
        ${WORKSPACE_BODY_STATUS_SQL} AS body_status,
        CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
@@ -104,7 +113,7 @@ function loadPersistedActiveNodeId(driver: DatabaseDriver) {
   return row && row.value !== '' ? row.value : null;
 }
 
-function buildNodeOrder(driver: DatabaseDriver, rows: WorkspaceNodeRow[], nodesById: Record<string, Record<string, unknown>>) {
+function buildNodeOrder(driver: DatabaseDriver, rows: WorkspaceNodeRow[], nodesById: Record<string, unknown>) {
   const nodeOrder = queryNodeOrderRows(driver)
     .map((row) => row.node_id)
     .filter((nodeId) => Boolean(nodesById[nodeId]));
@@ -120,16 +129,16 @@ function buildNodeOrder(driver: DatabaseDriver, rows: WorkspaceNodeRow[], nodesB
 function resolveActiveNodeId(
   driver: DatabaseDriver,
   nodeOrder: string[],
-  nodesById: Record<string, Record<string, unknown>>,
+  nodesById: Record<string, WorkspaceListNodeSnapshot>,
   trashedNodeIds: string[]
 ) {
-  const trashedNodeSet = new Set(trashedNodeIds);
   const persistedActiveNodeId = loadPersistedActiveNodeId(driver);
-  return (
-    (persistedActiveNodeId && nodesById[persistedActiveNodeId] && !trashedNodeSet.has(persistedActiveNodeId)
-      ? persistedActiveNodeId
-      : null) ?? nodeOrder.find((nodeId) => !trashedNodeSet.has(nodeId)) ?? null
-  );
+  return resolveWorkspaceSnapshotActiveNodeId({
+    activeNodeId: persistedActiveNodeId,
+    nodeOrder,
+    nodesById,
+    trashedNodeIds
+  });
 }
 
 function resolveCapturedWorkspaceVersion(rows: WorkspaceNodeRow[]) {
@@ -155,7 +164,7 @@ export function loadWorkspaceListSnapshot(
   applyResolvedOpenings({ directOpeningById, nodeOrder, nodesById, pdfOpeningById });
   const activeNodeId = resolveActiveNodeId(driver, nodeOrder, nodesById, trashedNodeIds);
 
-  return {
+  return normalizeWorkspaceSnapshot({
     activeNodeId,
     capturedWorkspaceVersion: resolveCapturedWorkspaceVersion(rows),
     nodeOrder,
@@ -163,5 +172,5 @@ export function loadWorkspaceListSnapshot(
     trashedNodeDeletedAtById,
     trashedNodeIds,
     untitledSequenceByParent: loadUntitledSequenceByParent(driver)
-  };
+  });
 }

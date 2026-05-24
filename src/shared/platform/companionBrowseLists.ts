@@ -1,4 +1,9 @@
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
+import {
+  listTrashedWorkspaceSnapshotNodeIds,
+  listVisibleWorkspaceSnapshotNodeIds,
+  normalizeWorkspaceSnapshot
+} from '../../../lib/core/database/workspaceSnapshotContract';
 import { resolveNodeOpeningText } from '../../../lib/core/nodes/nodeOpeningPreview';
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
@@ -85,15 +90,15 @@ export function resolveCompanionFolderViewByNodeId(
   sortKey: FolderListSortKey = DEFAULT_FOLDER_LIST_SORT_KEY,
   sortDirection: FolderListSortDirection = DEFAULT_FOLDER_LIST_SORT_DIRECTION
 ): CompanionFolderView | null {
-  if (!snapshot || !nodeId || snapshot.trashedNodeIds.includes(nodeId)) return null;
-  const folderNode = snapshot.nodesById[nodeId];
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot || !nodeId || normalizedSnapshot.trashedNodeIds.includes(nodeId)) return null;
+  const folderNode = normalizedSnapshot.nodesById[nodeId];
   if (!isActiveFolderNode(folderNode)) return null;
-  const childNodes = snapshot.nodeOrder
-    .filter((childNodeId) => !snapshot.trashedNodeIds.includes(childNodeId))
-    .map((childNodeId) => snapshot.nodesById[childNodeId])
+  const childNodes = listVisibleWorkspaceSnapshotNodeIds(normalizedSnapshot)
+    .map((childNodeId) => normalizedSnapshot.nodesById[childNodeId])
     .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === nodeId));
   return {
-    items: sortCompanionBrowseNodes(snapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
+    items: sortCompanionBrowseNodes(normalizedSnapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
     nodeId: folderNode.id,
     title: folderNode.title.trim() || 'Untitled'
   };
@@ -104,10 +109,10 @@ export function resolveCompanionRootDirectoryView(
   sortKey: FolderListSortKey = DEFAULT_FOLDER_LIST_SORT_KEY,
   sortDirection: FolderListSortDirection = DEFAULT_FOLDER_LIST_SORT_DIRECTION
 ): CompanionRootDirectoryView {
-  if (!snapshot) return { items: [] };
-  const rootNodes = snapshot.nodeOrder
-    .filter((nodeId) => !snapshot.trashedNodeIds.includes(nodeId))
-    .map((nodeId) => snapshot.nodesById[nodeId])
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot) return { items: [] };
+  const rootNodes = listVisibleWorkspaceSnapshotNodeIds(normalizedSnapshot)
+    .map((nodeId) => normalizedSnapshot.nodesById[nodeId])
     .filter((node): node is CompanionReadableNode => isRootFolderNode(node));
   void sortKey;
   void sortDirection;
@@ -119,13 +124,12 @@ export function resolveCompanionTrashView(
   sortKey: FolderListSortKey = DEFAULT_FOLDER_LIST_SORT_KEY,
   sortDirection: FolderListSortDirection = DEFAULT_FOLDER_LIST_SORT_DIRECTION
 ): CompanionTrashView {
-  if (!snapshot) return { items: [] };
-  const trashedNodeIds = new Set(snapshot.trashedNodeIds);
-  const trashNodes = snapshot.nodeOrder
-    .filter((nodeId) => trashedNodeIds.has(nodeId))
-    .map((nodeId) => snapshot.nodesById[nodeId])
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot) return { items: [] };
+  const trashNodes = listTrashedWorkspaceSnapshotNodeIds(normalizedSnapshot)
+    .map((nodeId) => normalizedSnapshot.nodesById[nodeId])
     .filter((node): node is CompanionReadableNode => Boolean(node));
-  return { items: sortCompanionBrowseNodes(snapshot, trashNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry) };
+  return { items: sortCompanionBrowseNodes(normalizedSnapshot, trashNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry) };
 }
 
 export function resolveCompanionTrashFolderViewByNodeId(
@@ -134,16 +138,15 @@ export function resolveCompanionTrashFolderViewByNodeId(
   sortKey: FolderListSortKey = DEFAULT_FOLDER_LIST_SORT_KEY,
   sortDirection: FolderListSortDirection = DEFAULT_FOLDER_LIST_SORT_DIRECTION
 ): CompanionFolderView | null {
-  if (!snapshot || !nodeId || !snapshot.trashedNodeIds.includes(nodeId)) return null;
-  const folderNode = snapshot.nodesById[nodeId];
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot || !nodeId || !normalizedSnapshot.trashedNodeIds.includes(nodeId)) return null;
+  const folderNode = normalizedSnapshot.nodesById[nodeId];
   if (!isActiveFolderNode(folderNode)) return null;
-  const trashedNodeIds = new Set(snapshot.trashedNodeIds);
-  const childNodes = snapshot.nodeOrder
-    .filter((childNodeId) => trashedNodeIds.has(childNodeId))
-    .map((childNodeId) => snapshot.nodesById[childNodeId])
+  const childNodes = listTrashedWorkspaceSnapshotNodeIds(normalizedSnapshot)
+    .map((childNodeId) => normalizedSnapshot.nodesById[childNodeId])
     .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === nodeId));
   return {
-    items: sortCompanionBrowseNodes(snapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
+    items: sortCompanionBrowseNodes(normalizedSnapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
     nodeId: folderNode.id,
     title: folderNode.title.trim() || 'Untitled'
   };
@@ -154,13 +157,13 @@ export function resolveCompanionRecentArticles(
   sortKey: FolderListSortKey = DEFAULT_FOLDER_LIST_SORT_KEY,
   sortDirection: FolderListSortDirection = DEFAULT_FOLDER_LIST_SORT_DIRECTION
 ): CompanionRecentArticle[] {
-  if (!snapshot) return [];
-  const articles = snapshot.nodeOrder
-    .filter((nodeId) => !snapshot.trashedNodeIds.includes(nodeId))
-    .map((nodeId) => snapshot.nodesById[nodeId])
-    .filter((node): node is CompanionReadableNode => Boolean(node && isCompanionArticleNode(snapshot, node)))
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  if (!normalizedSnapshot) return [];
+  const articles = listVisibleWorkspaceSnapshotNodeIds(normalizedSnapshot)
+    .map((nodeId) => normalizedSnapshot.nodesById[nodeId])
+    .filter((node): node is CompanionReadableNode => Boolean(node && isCompanionArticleNode(normalizedSnapshot, node)))
     .filter(hasReadableContent);
-  return sortCompanionBrowseNodes(snapshot, articles, sortKey, sortDirection).map((node) => {
+  return sortCompanionBrowseNodes(normalizedSnapshot, articles, sortKey, sortDirection).map((node) => {
     const bodyStatus = normalizeBodyStatus(node.bodyStatus);
     return {
       nodeId: node.id,

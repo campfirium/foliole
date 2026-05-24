@@ -1,5 +1,6 @@
 import { createJSONStorage, type PersistOptions } from 'zustand/middleware';
 
+import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/workspaceSnapshotContract';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 
 import { mergeHydratedWorkspaceMembership } from './workspaceHydrateObjectMerge';
@@ -12,12 +13,13 @@ import type { WorkspacePersistedState, WorkspaceState } from './workspaceStore';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 
 function canKeepCurrentActiveNode(current: WorkspaceState, next: WorkspaceState) {
-  return Boolean(
-    current.isHydrated &&
-      current.activeNodeId &&
-      next.nodesById[current.activeNodeId] &&
-      !next.trashedNodeIds.includes(current.activeNodeId)
-  );
+  return current.isHydrated &&
+    resolveWorkspaceSnapshotActiveNodeId({
+      activeNodeId: current.activeNodeId,
+      nodeOrder: next.nodeOrder,
+      nodesById: next.nodesById,
+      trashedNodeIds: next.trashedNodeIds
+    }) === current.activeNodeId;
 }
 
 function resolveMergedActiveNodeId(current: WorkspaceState, next: WorkspaceState) {
@@ -41,6 +43,7 @@ function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedStat
       state.nodesById,
       collectRendererBoundaryKeepNodeIds(state, state)
     ),
+    rendererBoundaryKeepNodeIds: state.rendererBoundaryKeepNodeIds,
     reviewSession: toPersistedReviewSession(state.reviewSession),
     trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
     trashedNodeIds: state.trashedNodeIds,
@@ -68,6 +71,7 @@ export function createWorkspaceStorePersistConfig(
           ...persisted.layout
         },
         nodeViewById: persisted.nodeViewById ?? current.nodeViewById,
+        rendererBoundaryKeepNodeIds: persisted.rendererBoundaryKeepNodeIds ?? current.rendererBoundaryKeepNodeIds,
         reviewSession: persisted.reviewSession ?? current.reviewSession,
         untitledSequenceByParent:
           persisted.untitledSequenceByParent ?? current.untitledSequenceByParent

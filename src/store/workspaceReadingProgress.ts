@@ -1,3 +1,5 @@
+import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/workspaceSnapshotContract';
+
 interface WorkspaceSnapshotLike {
   activeNodeId: string | null;
   nodeViewById?: Record<string, NodeViewState>;
@@ -123,16 +125,18 @@ export function mergeWorkspaceSnapshotWithReadingProgress(
   }
 
   const nodeViewById = toLocalNodeViewById(readingProgressSnapshot.nodeViewStateById);
-  const trashedNodeIds = new Set(snapshot.trashedNodeIds);
-  const canUseRuntimeActiveNode = Boolean(
-    readingProgressSnapshot.activeNodeId &&
-      snapshot.nodesById[readingProgressSnapshot.activeNodeId] &&
-      !trashedNodeIds.has(readingProgressSnapshot.activeNodeId)
-  );
+  const activeNodeId = readingProgressSnapshot.activeNodeId
+    ? resolveWorkspaceSnapshotActiveNodeId({
+        activeNodeId: readingProgressSnapshot.activeNodeId,
+        nodeOrder: snapshot.nodeOrder,
+        nodesById: snapshot.nodesById,
+        trashedNodeIds: snapshot.trashedNodeIds
+      })
+    : snapshot.activeNodeId;
 
   return {
     ...snapshot,
-    activeNodeId: canUseRuntimeActiveNode ? readingProgressSnapshot.activeNodeId : snapshot.activeNodeId,
+    activeNodeId,
     nodeViewById
   };
 }

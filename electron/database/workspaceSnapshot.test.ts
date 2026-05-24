@@ -94,11 +94,12 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
     'special-virtual-root',
     'starter-virtual-example',
     'starter-welcome',
-    'node-1',
     'node-2'
   ]);
   expect(snapshot?.trashedNodeIds).toEqual(['node-1']);
+  expect(snapshot?.trashedNodeDeletedAtById).toEqual({ 'node-1': '2026-03-06T00:10:00.000Z' });
   expect(snapshot?.activeNodeId).toBe('starter-welcome');
+  expect(snapshot?.nodesById['node-1']?.deletedAt).toBe('2026-03-06T00:10:00.000Z');
   expect(snapshot?.nodesById['node-2']?.content).toBe('');
   expect(snapshot?.untitledSequenceByParent).toEqual({});
 });

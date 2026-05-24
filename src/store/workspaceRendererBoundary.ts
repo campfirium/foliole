@@ -7,6 +7,7 @@ import {
   reconcileFocusedRendererBoundaryNodes
 } from './workspaceRendererBoundaryFocused';
 import { resolveNodeContentState, resolveNodeRevealState } from './workspaceRendererBoundaryState';
+import { hasMatchingBoundaryPreservedFields } from './workspaceSnapshotFieldManifest';
 export {
   getNodeDocumentStatus,
   isNodeDocumentLoaded,
@@ -68,24 +69,7 @@ function isBoundaryProjectionReusable(currentNode: Node | undefined, sourceNode:
   }
 
   return (
-    currentNode.id === sourceNode.id &&
-    currentNode.parentNodeId === sourceNode.parentNodeId &&
-    currentNode.kind === sourceNode.kind &&
-    currentNode.priority === sourceNode.priority &&
-    currentNode.desiredRetention === sourceNode.desiredRetention &&
-    currentNode.enableShortTerm === sourceNode.enableShortTerm &&
-    currentNode.specialKind === sourceNode.specialKind &&
-    currentNode.title === sourceNode.title &&
-    currentNode.isTitleManual === sourceNode.isTitleManual &&
-    currentNode.hideTitleHeading === sourceNode.hideTitleHeading &&
-    currentNode.bodyStatus === sourceNode.bodyStatus &&
-    currentNode.anchorLink === sourceNode.anchorLink &&
-    currentNode.imageRegions === sourceNode.imageRegions &&
-    currentNode.virtualFilter === sourceNode.virtualFilter &&
-    currentNode.reading === sourceNode.reading &&
-    currentNode.review === sourceNode.review &&
-    currentNode.createdAt === sourceNode.createdAt &&
-    currentNode.updatedAt === sourceNode.updatedAt &&
+    hasMatchingBoundaryPreservedFields(currentNode, sourceNode) &&
     currentNode.hasContent === resolveNodeContentState(sourceNode) &&
     currentNode.hasReveal === resolveNodeRevealState(sourceNode) &&
     currentNode.content === (keepDocument ? sourceNode.content : '') &&

@@ -1,4 +1,5 @@
-import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade } from '../features/review/model/reviewTypes';
+import type { ReviewGrade, SchedulerCard } from '../features/review/model/reviewTypes';
+import type { SharedReviewGradeResult } from '../features/review/model/sharedReviewGradeService';
 
 import {
   createTopicDismissHistoryEntry,
@@ -19,8 +20,8 @@ export async function persistReviewGradeMutation(args: {
   currentNodeId: string;
   grade: ReviewGrade;
   reviewedAt: string;
-  cardBefore: ReturnType<typeof toSchedulerCard>;
-  cardAfter: ReturnType<typeof toSchedulerCard>;
+  cardBefore: SchedulerCard;
+  cardAfter: SchedulerCard;
 }): Promise<void> {
   await syncReviewGradeToRuntime({
     nodeId: args.currentNodeId,
@@ -35,7 +36,7 @@ export function applyGradedReviewState(args: {
   set: WorkspaceSet;
   snapshot: WorkspaceState;
   currentNodeId: string;
-  nextReviewProfile: ReturnType<typeof toNodeReviewProfile>;
+  nodePatch: SharedReviewGradeResult['nodePatch'];
   reviewedAt: string;
   now: string;
 }) {
@@ -46,8 +47,7 @@ export function applyGradedReviewState(args: {
       ...state.nodesById,
       [args.currentNodeId]: {
         ...node,
-        review: { ...args.nextReviewProfile, lastReviewAt: args.reviewedAt },
-        updatedAt: args.now
+        ...args.nodePatch
       }
     };
     const nextQueue = buildCurrentReviewSessionQueueOutput(state, args.now, {

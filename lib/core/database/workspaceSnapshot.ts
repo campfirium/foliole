@@ -3,6 +3,7 @@ import type { PersistedNodeViewState } from '../../platform/persistedNodeViewSta
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
+import { normalizeWorkspaceSnapshot } from './workspaceSnapshotContract.js';
 import {
   buildOrderedNodeIds,
   buildWorkspaceSnapshotNode,
@@ -181,7 +182,7 @@ function buildSnapshotRows(
   const nodeOrder = buildOrderedNodeIds(rows, orderedRows, nodesById);
   const persistedNodeViewById = loadPersistedNodeViewById(driver);
 
-  return {
+  return normalizeWorkspaceSnapshot({
     activeNodeId: resolveSnapshotActiveNodeId(driver, nodeOrder, nodesById, trashedNodeIds, ACTIVE_NODE_META_KEY),
     nodeOrder,
     nodesById,
@@ -189,7 +190,7 @@ function buildSnapshotRows(
     trashedNodeDeletedAtById,
     trashedNodeIds,
     untitledSequenceByParent: {}
-  };
+  });
 }
 
 export function loadWorkspaceSnapshot(driver: DatabaseDriver, options: WorkspaceSnapshotLoadOptions = {}): WorkspaceSnapshot | null {
