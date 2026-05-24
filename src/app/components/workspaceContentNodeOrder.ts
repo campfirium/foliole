@@ -33,7 +33,8 @@ export function sortWorkspaceContentNodeIds(
   nodeIds: string[],
   nodesById: WorkspaceListNodesById,
   sort: WorkspaceContentSortState,
-  nodeViewById: Record<string, { updatedAt?: string | null } | undefined> = {}
+  nodeViewById: Record<string, { updatedAt?: string | null } | undefined> = {},
+  manualChildOrder?: readonly string[] | null
 ) {
   const knownIds = new Set(nodeIds.filter((nodeId) => Boolean(nodesById[nodeId])));
   const childrenByParent = new Map<string | null, string[]>();
@@ -51,7 +52,9 @@ export function sortWorkspaceContentNodeIds(
   });
 
   const sortIds = (ids: string[]) =>
-    [...ids].sort((leftId, rightId) => compareWorkspaceContentNodes(nodesById[leftId]!, nodesById[rightId]!, sort, nodeViewById));
+    sort.key === 'manual'
+      ? sortWorkspaceContentManualNodeIds(ids, nodesById, manualChildOrder)
+      : [...ids].sort((leftId, rightId) => compareWorkspaceContentNodes(nodesById[leftId]!, nodesById[rightId]!, sort, nodeViewById));
 
   const sortedIds: string[] = [];
   const walk = (parentId: string | null) => {
@@ -66,6 +69,24 @@ export function sortWorkspaceContentNodeIds(
   };
   walk(null);
   return sortedIds;
+}
+
+function sortWorkspaceContentManualNodeIds(
+  nodeIds: string[],
+  nodesById: WorkspaceListNodesById,
+  manualChildOrder?: readonly string[] | null
+) {
+  const remainingIds = new Set(nodeIds);
+  const orderedIds: string[] = [];
+  for (const nodeId of manualChildOrder ?? []) {
+    if (remainingIds.delete(nodeId)) {
+      orderedIds.push(nodeId);
+    }
+  }
+  const missingIds = [...remainingIds].sort((leftId, rightId) =>
+    compareWorkspaceContentNodes(nodesById[leftId]!, nodesById[rightId]!, { direction: 'asc', key: 'name' })
+  );
+  return [...orderedIds, ...missingIds];
 }
 
 export function sortWorkspaceContentChildNodeIds(

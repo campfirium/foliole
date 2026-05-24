@@ -23,6 +23,7 @@ export interface WorkspaceRuntimeNode {
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
+  manualChildOrder?: string[] | null;
   hideTitleHeading?: boolean;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   id: string;

@@ -99,6 +99,9 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     sequentialReadingEnabled: args.sequentialReadingEnabled === undefined || args.sequentialReadingEnabled === null
       ? null
       : asBoolean(args.sequentialReadingEnabled, 'sequentialReadingEnabled'),
+    manualChildOrder: args.manualChildOrder === undefined || args.manualChildOrder === null
+      ? null
+      : asStringArray(args.manualChildOrder, 'manualChildOrder'),
     title: asString(args.title, 'title'),
     isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
     hideTitleHeading: args.hideTitleHeading === undefined ? false : asBoolean(args.hideTitleHeading, 'hideTitleHeading'),

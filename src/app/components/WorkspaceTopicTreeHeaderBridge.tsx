@@ -21,7 +21,7 @@ interface WorkspaceTopicTreeHeaderBridgeProps {
 export function WorkspaceTopicTreeHeaderBridge(props: WorkspaceTopicTreeHeaderBridgeProps) {
   const contentSort = {
     ...props.contentSort,
-    sort: normalizeWorkspaceContentSort(props.contentSort.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name'])
+    sort: normalizeWorkspaceContentSort(props.contentSort.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name', 'manual'])
   };
   return (
     <WorkspaceTopicTreeHeader

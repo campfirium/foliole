@@ -2,14 +2,14 @@ import type { Node } from './nodeTypes';
 import { compareWorkspaceListNodeDateDesc } from './workspaceListNode';
 import { compareWorkspaceListNodeAuthor } from './workspaceListNodeMetadata';
 
-export type FolderListSortKey = 'dateImported' | 'dateLastOpened' | 'dateSaved';
+export type FolderListSortKey = 'dateImported' | 'dateLastOpened' | 'dateSaved' | 'manual' | 'name';
 export type FolderListSortDirection = 'desc' | 'asc';
 
 export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'dateSaved';
 export const DEFAULT_FOLDER_LIST_SORT_DIRECTION: FolderListSortDirection = 'desc';
 
-export function resolveDefaultFolderListSortDirection(): FolderListSortDirection {
-  return 'desc';
+export function resolveDefaultFolderListSortDirection(sortKey?: FolderListSortKey): FolderListSortDirection {
+  return sortKey === 'manual' || sortKey === 'name' ? 'asc' : 'desc';
 }
 
 function normalizeSortText(value: string) {
@@ -18,6 +18,14 @@ function normalizeSortText(value: string) {
 
 function compareText(left: string, right: string) {
   return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+function compareName(left: { node: Node; title: string }, right: { node: Node; title: string }, directionMultiplier: number) {
+  const titleResult = compareText(left.title, right.title) * directionMultiplier;
+  if (titleResult !== 0) {
+    return titleResult;
+  }
+  return left.node.id.localeCompare(right.node.id);
 }
 
 function resolveNodeLastOpenedTimestamp(nodeId: string, nodeViewById: Record<string, { updatedAt?: string | null } | undefined>) {
@@ -109,33 +117,43 @@ export function sortFolderListNodes(
   nodes: Node[],
   sortKey: FolderListSortKey,
   sortDirection: FolderListSortDirection,
-  nodeViewById: Record<string, { updatedAt?: string | null } | undefined>
+  nodeViewById: Record<string, { updatedAt?: string | null } | undefined>,
+  manualChildOrder?: readonly string[] | null
 ) {
-  const directionMultiplier = sortDirection === 'asc' ? -1 : 1;
+  const dateDirectionMultiplier = sortDirection === 'asc' ? -1 : 1;
+  const nameDirectionMultiplier = sortDirection === 'asc' ? 1 : -1;
+  const baseEntries = nodes.map((node, index) => ({
+    index,
+    node,
+    title: normalizeSortText(node.title)
+  }));
 
-  return nodes
-    .map((node, index) => ({
-      index,
-      node,
-      title: normalizeSortText(node.title)
-    }))
+  if (sortKey === 'manual') {
+    return sortManualFolderListNodes(baseEntries, manualChildOrder);
+  }
+
+  return baseEntries
     .sort((left, right) => {
+      if (sortKey === 'name') {
+        return compareName(left, right, nameDirectionMultiplier);
+      }
+
       if (sortKey === 'dateImported') {
-        const dateResult = compareImportedDate(left, right, directionMultiplier);
+        const dateResult = compareImportedDate(left, right, dateDirectionMultiplier);
         if (dateResult !== 0) {
           return dateResult;
         }
       }
 
       if (sortKey === 'dateSaved') {
-        const dateResult = compareSavedDate(left, right, directionMultiplier);
+        const dateResult = compareSavedDate(left, right, dateDirectionMultiplier);
         if (dateResult !== 0) {
           return dateResult;
         }
       }
 
       if (sortKey === 'dateLastOpened') {
-        const dateResult = compareLastOpened(left, right, directionMultiplier, nodeViewById);
+        const dateResult = compareLastOpened(left, right, dateDirectionMultiplier, nodeViewById);
         if (dateResult !== 0) {
           return dateResult;
         }
@@ -149,4 +167,26 @@ export function sortFolderListNodes(
       return left.index - right.index;
     })
     .map((entry) => entry.node);
+}
+
+function sortManualFolderListNodes(
+  entries: Array<{ index: number; node: Node; title: string }>,
+  manualChildOrder: readonly string[] | null | undefined
+) {
+  const entriesById = new Map<string, { index: number; node: Node; title: string }>();
+  for (const entry of entries) {
+    entriesById.set(entry.node.id, entry);
+  }
+  const orderedEntries: Array<{ index: number; node: Node; title: string }> = [];
+  for (const nodeId of manualChildOrder ?? []) {
+    const entry = entriesById.get(nodeId);
+    if (entry) {
+      orderedEntries.push(entry);
+    }
+  }
+  const orderedIdSet = new Set(orderedEntries.map((entry) => entry.node.id));
+  const remainingEntries = entries
+    .filter((entry) => !orderedIdSet.has(entry.node.id))
+    .sort((left, right) => compareName(left, right, 1));
+  return [...orderedEntries, ...remainingEntries].map((entry) => entry.node);
 }

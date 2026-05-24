@@ -74,6 +74,7 @@ function computeConflictCopyContentHash(args: {
     desiredRetention: null,
     enableShortTerm: null,
     sequentialReadingEnabled: args.snapshot.sequential_reading_enabled ?? null,
+    manualChildOrder: null,
     hideTitleHeading: args.snapshot.hide_title_heading,
     id: args.copyNodeId,
     imageRegions: null,

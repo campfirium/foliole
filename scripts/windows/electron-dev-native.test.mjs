@@ -31,7 +31,7 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).toContain("process.env.FOLIOLE_DISABLE_CHROMIUM_SANDBOX_FOR_DEBUG ??= '1'");
   expect(runner).toContain("process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK ??= '1'");
   expect(runner).toContain("process.env.FOLIOLE_SKIP_STARTUP_NODE_SYNC_FLUSH ??= '1'");
-  expect(runner).toContain("process.env.FOLIOLE_SKIP_STARTUP_SCHEMA_INIT ??= '1'");
+  expect(runner).not.toContain('FOLIOLE_SKIP_STARTUP_SCHEMA_INIT');
   expect(runner).toContain("process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE ??= '1'");
   expect(runner).toContain("process.env.FOLIOLE_SKIP_STARTUP_WINDOW_STATE ??= '1'");
   expect(runner).toContain("await import('../electron-dev.mjs');");

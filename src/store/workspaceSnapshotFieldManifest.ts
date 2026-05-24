@@ -8,6 +8,7 @@ export const WORKSPACE_NODE_BOUNDARY_PRESERVED_FIELDS = [
   'desiredRetention',
   'enableShortTerm',
   'sequentialReadingEnabled',
+  'manualChildOrder',
   'specialKind',
   'title',
   'isTitleManual',

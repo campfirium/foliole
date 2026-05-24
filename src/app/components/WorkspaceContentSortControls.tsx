@@ -29,6 +29,9 @@ function getOrderOptions(sortKey: WorkspaceContentSortKey): { label: string; val
   if (sortKey === 'lastOpenedAt') {
     return [{ label: 'Newest first', value: 'desc' }];
   }
+  if (sortKey === 'manual') {
+    return [{ label: 'Manual order', value: 'asc' }];
+  }
   return [
     { label: 'Newest first', value: 'desc' },
     { label: 'Oldest first', value: 'asc' }

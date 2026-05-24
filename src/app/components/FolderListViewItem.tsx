@@ -24,11 +24,35 @@ type FolderListItemProps = {
   onSelectNodePath?: (nodeId: string) => void;
   nodesById: Record<string, Node>;
   sortKey: FolderListSortKey;
+  draggable?: boolean;
+  onDragEnd?: () => void;
+  onDragOver?: () => void;
+  onDragStart?: () => void;
+  onDrop?: () => void;
 };
 
 function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: string; displayTitle: string; locationPath: string }) {
   return (
-    <li>
+    <li
+      draggable={props.draggable}
+      onDragEnd={props.onDragEnd}
+      onDragOver={(event) => {
+        if (!props.draggable) return;
+        event.preventDefault();
+        props.onDragOver?.();
+      }}
+      onDragStart={(event) => {
+        if (!props.draggable) return;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', props.node.id);
+        props.onDragStart?.();
+      }}
+      onDrop={(event) => {
+        if (!props.draggable) return;
+        event.preventDefault();
+        props.onDrop?.();
+      }}
+    >
       <div className="flex flex-col gap-2 py-5">
         <div className="flex items-start justify-between gap-4">
           <button
@@ -89,6 +113,11 @@ export function FolderListViewItem(props: FolderListItemProps) {
       onClick={() => props.onSelectNode(props.node.id)}
       summary={summary}
       title={displayTitle}
+      draggable={props.draggable}
+      onDragEnd={props.onDragEnd}
+      onDragOver={props.onDragOver}
+      onDragStart={props.onDragStart}
+      onDrop={props.onDrop}
     />
   );
 }

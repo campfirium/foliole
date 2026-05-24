@@ -1,10 +1,17 @@
 import { hasNodeContent, type Node, type NodeReadingProfile } from '../features/nodes/model/nodeTypes';
-import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import type { PushQueuePriority } from '../features/review/model/unifiedPushQueueRules';
 
 import { cloneReadingProfile } from './workspaceActionHistoryReading';
+import { collectFolderSequentialTopicIds } from './workspaceSequentialReadingSourceOrder';
+import {
+  isSequentialReadingSourceFolder,
+  isSequentialReadingSourceNode,
+  isSequentialReadingSourceTopic
+} from './workspaceSequentialReadingSources';
 import type { WorkspaceState } from './workspaceStore';
+
+export { isSequentialReadingSourceFolder, isSequentialReadingSourceTopic };
 
 export interface SequentialReadingChange {
   afterReading: NodeReadingProfile | null;
@@ -23,20 +30,6 @@ interface SequentialReadingPatch {
   changes: SequentialReadingChange[];
   nodesById: WorkspaceState['nodesById'];
   sourceNodeId: string;
-}
-
-function isFolderNode(node: Node | undefined) {
-  return node?.kind === 'folder';
-}
-
-export function isSequentialReadingSourceTopic(
-  node: Node | null | undefined,
-  nodesById: WorkspaceState['nodesById']
-) {
-  if (!node || node.kind !== 'topic' || isProtectedRootNode(node)) {
-    return false;
-  }
-  return isFolderNode(node.parentNodeId ? nodesById[node.parentNodeId] : undefined);
 }
 
 function isDescendantOfSource(
@@ -61,6 +54,13 @@ function collectSequentialDerivedTopicIds(args: {
   nodesById: WorkspaceState['nodesById'];
   sourceNodeId: string;
 }) {
+  const sourceNode = args.nodesById[args.sourceNodeId];
+  if (isSequentialReadingSourceFolder(sourceNode)) {
+    return collectFolderSequentialTopicIds({
+      nodesById: args.nodesById,
+      sourceNodeId: args.sourceNodeId
+    });
+  }
   return args.nodeOrder.filter((nodeId) => {
     const node = args.nodesById[nodeId];
     return Boolean(
@@ -127,7 +127,7 @@ export function buildSequentialReadingSourcePatch(args: SequentialReadingArgs & 
   sourceNodeId: string;
 }): SequentialReadingPatch | null {
   const sourceNode = args.nodesById[args.sourceNodeId];
-  if (!sourceNode || !isSequentialReadingSourceTopic(sourceNode, args.nodesById)) {
+  if (!sourceNode || !isSequentialReadingSourceNode(sourceNode, args.nodesById)) {
     return null;
   }
   const nextNodesById = { ...args.nodesById };
@@ -170,7 +170,7 @@ export function findEnabledSequentialReadingSourceId(
     if (!parent) {
       break;
     }
-    if (isSequentialReadingSourceTopic(parent, nodesById) && parent.sequentialReadingEnabled === true) {
+    if (isSequentialReadingSourceNode(parent, nodesById) && parent.sequentialReadingEnabled === true) {
       return parent.id;
     }
     visited.add(current.parentNodeId);
@@ -219,7 +219,7 @@ export function findSequentialReadingSourcesForNode(
     sources.add(enabledSourceId);
   }
   const node = nodesById[nodeId];
-  if (node && isSequentialReadingSourceTopic(node, nodesById) && node.sequentialReadingEnabled === true) {
+  if (node && isSequentialReadingSourceNode(node, nodesById) && node.sequentialReadingEnabled === true) {
     sources.add(nodeId);
   }
   return sources;

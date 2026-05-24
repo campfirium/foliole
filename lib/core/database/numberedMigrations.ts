@@ -195,6 +195,12 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     migrate: (sqlite) => {
       addColumnIfMissing(sqlite, 'nodes', 'sequential_reading_enabled', 'INTEGER');
     }
+  },
+  {
+    version: 45,
+    migrate: (sqlite) => {
+      addColumnIfMissing(sqlite, 'nodes', 'manual_child_order', 'TEXT');
+    }
   }
 ];
 

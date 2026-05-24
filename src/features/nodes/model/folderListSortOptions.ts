@@ -3,12 +3,23 @@ import type { FolderListSortDirection, FolderListSortKey } from './folderListOrd
 export const FOLDER_LIST_SORT_OPTIONS: { key: FolderListSortKey; label: string }[] = [
   { key: 'dateSaved', label: 'Date modified' },
   { key: 'dateLastOpened', label: 'Last opened' },
-  { key: 'dateImported', label: 'Date imported' }
+  { key: 'dateImported', label: 'Date imported' },
+  { key: 'name', label: 'Name' },
+  { key: 'manual', label: 'Manual' }
 ];
 
 export function getFolderListSortOrderOptions(sortKey?: FolderListSortKey): { label: string; value: FolderListSortDirection }[] {
   if (sortKey === 'dateLastOpened') {
     return [{ label: 'Recent -> Older', value: 'desc' }];
+  }
+  if (sortKey === 'manual') {
+    return [{ label: 'Manual order', value: 'asc' }];
+  }
+  if (sortKey === 'name') {
+    return [
+      { label: 'A -> Z', value: 'asc' },
+      { label: 'Z -> A', value: 'desc' }
+    ];
   }
   return [
     { label: 'Recent -> Older', value: 'desc' },

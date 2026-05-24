@@ -80,6 +80,7 @@ function upsertNodePackState(node: PdfReferenceNodeRow, bodyContent: string, ope
     desiredRetention: node.desired_retention,
     enableShortTerm: node.enable_short_term === null ? null : node.enable_short_term === 1,
     sequentialReadingEnabled: node.sequential_reading_enabled === null ? null : node.sequential_reading_enabled === 1,
+    manualChildOrder: null,
     hideTitleHeading: node.hide_title_heading === 1,
     id: node.id,
     imageRegions: node.image_regions,

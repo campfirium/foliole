@@ -86,7 +86,13 @@ export function hasDismissEntireTopicTargets(nodeIds: string[], nodesById: Works
 }
 
 export function canToggleSequentialReading(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
-  if (!node || node.kind !== 'topic' || node.specialKind || node.parentNodeId === null) {
+  if (!node || node.specialKind) {
+    return false;
+  }
+  if (node.kind === 'folder') {
+    return true;
+  }
+  if (node.kind !== 'topic' || node.parentNodeId === null) {
     return false;
   }
   return nodesById[node.parentNodeId]?.kind === 'folder';

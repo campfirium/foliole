@@ -27,6 +27,7 @@ export interface NativeWorkspaceNodeSnapshot {
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
+  manualChildOrder?: string[] | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading?: boolean;
@@ -174,6 +175,7 @@ export interface NativeNodeSnapshotArgs {
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
+  manualChildOrder?: string[] | null;
   title: string;
   isTitleManual: boolean;
   hideTitleHeading?: boolean;

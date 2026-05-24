@@ -35,6 +35,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   desired_retention: number | null;
   enable_short_term: number | null;
   sequential_reading_enabled: number | null;
+  manual_child_order: string | null;
   title: string;
   is_title_manual: number;
   hide_title_heading: number;
@@ -111,6 +112,7 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
        n.desired_retention,
        n.enable_short_term,
        n.sequential_reading_enabled,
+       n.manual_child_order,
        n.title,
        n.is_title_manual,
        n.hide_title_heading,

@@ -9,6 +9,7 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     desired_retention REAL,
     enable_short_term INTEGER,
     sequential_reading_enabled INTEGER,
+    manual_child_order TEXT,
     title TEXT NOT NULL,
     is_title_manual INTEGER NOT NULL DEFAULT 0,
     hide_title_heading INTEGER NOT NULL DEFAULT 0,

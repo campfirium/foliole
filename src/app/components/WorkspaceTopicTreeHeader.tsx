@@ -90,7 +90,8 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
           { key: 'modifiedAt', label: 'Date modified' },
           { key: 'lastOpenedAt', label: 'Last opened' },
           { key: 'importedAt', label: 'Date imported' },
-          { key: 'name', label: 'Name' }
+          { key: 'name', label: 'Name' },
+          { key: 'manual', label: 'Manual' }
         ]}
         sortDirection={props.sortDirection}
         sortKey={props.sortKey}

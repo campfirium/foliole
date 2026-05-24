@@ -7,6 +7,7 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import {
   buildSequentialReadingDismissPatch,
   buildSequentialReadingSourcePatch,
+  isSequentialReadingSourceFolder,
   isSequentialReadingSourceTopic
 } from './workspaceSequentialReading';
 import { buildSequentialReadingMaintenancePatch } from './workspaceSequentialReadingMaintenance';
@@ -174,4 +175,52 @@ it('does not treat derived topics as source topics and unlocks moved-out topics'
 
   expect(isSequentialReadingSourceTopic(previous.nodesById.first, previous.nodesById)).toBe(false);
   expect(patch?.nodesById.last?.reading?.state).toBe('active');
+});
+
+it('enables folder sources by releasing only the first direct readable topic in manual order', () => {
+  const tree = sourceTree({
+    folder: {
+      manualChildOrder: ['last', 'source', 'first'],
+      parentNodeId: INBOX_NODE_ID,
+      sequentialReadingEnabled: false
+    },
+    first: { parentNodeId: 'folder', reading: reading('active'), title: 'A first' },
+    last: { parentNodeId: 'folder', reading: reading('active'), title: 'B last' },
+    source: { parentNodeId: 'folder', reading: reading('active'), title: 'C source' }
+  });
+  const patch = buildSequentialReadingSourcePatch({
+    defaultPriority: 5,
+    enabled: true,
+    nodeOrder: tree.nodeOrder,
+    nodesById: tree.nodesById,
+    now: '2026-05-21T00:00:00.000Z',
+    sourceNodeId: 'folder'
+  });
+
+  expect(isSequentialReadingSourceFolder(tree.nodesById.folder)).toBe(true);
+  expect(patch?.nodesById.folder?.sequentialReadingEnabled).toBe(true);
+  expect(patch?.nodesById.last?.reading?.state).toBe('active');
+  expect(patch?.nodesById.first?.reading?.state).toBe('locked');
+  expect(patch?.nodesById.source?.reading?.state).toBe('locked');
+  expect(patch?.nodesById.nested?.reading?.state).toBe('locked');
+});
+
+it('folder source falls back to name order when no manual order exists', () => {
+  const tree = sourceTree({
+    folder: { parentNodeId: INBOX_NODE_ID, sequentialReadingEnabled: false },
+    first: { parentNodeId: 'folder', reading: reading('active'), title: 'B first' },
+    last: { parentNodeId: 'folder', reading: reading('active'), title: 'A last' },
+    source: { parentNodeId: 'folder', reading: reading('active'), title: 'C source' }
+  });
+  const patch = buildSequentialReadingSourcePatch({
+    defaultPriority: 5,
+    enabled: true,
+    nodeOrder: tree.nodeOrder,
+    nodesById: tree.nodesById,
+    now: '2026-05-21T00:00:00.000Z',
+    sourceNodeId: 'folder'
+  });
+
+  expect(patch?.nodesById.last?.reading?.state).toBe('active');
+  expect(patch?.nodesById.first?.reading?.state).toBe('locked');
 });

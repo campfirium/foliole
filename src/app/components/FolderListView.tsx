@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -9,6 +9,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
+import { moveNodeIdBefore, resolveFolderManualChildOrder, resolveListedFolderNodes } from './folderListManualOrdering';
 import { FolderListNavigationOverlay, type FolderListNavigationOverlayProps } from './FolderListNavigationOverlay';
 import { FolderListViewItem, type FolderListItemLayout } from './FolderListViewItem';
 import { FolderListViewLayout } from './FolderListViewLayout';
@@ -43,15 +44,20 @@ interface FolderListViewProps {
   trashedNodeIds?: string[];
 }
 
-function getDirectChildNodes(
-  folderNodeId: string,
-  nodeOrder: string[],
-  nodesById: Record<string, Node>,
-  trashedNodeIds: readonly string[]
-) {
-  return nodeOrder
-    .map((nodeId) => nodesById[nodeId])
-    .filter((node): node is Node => Boolean(node && node.parentNodeId === folderNodeId && !trashedNodeIds.includes(node.id)));
+interface RenderFolderListItemArgs {
+  canManualDrag: boolean;
+  draggedNodeId: string | null;
+  itemLayout: FolderListItemLayout;
+  node: Node;
+  nodeViewById: Record<string, NodeViewState | undefined>;
+  nodesById: Record<string, Node>;
+  onSelectNode: (nodeId: string) => void;
+  onSelectNodePath?: (nodeId: string) => void;
+  setDraggedNodeId: (nodeId: string | null) => void;
+  setFolderManualChildOrder?: (folderNodeId: string, childNodeIds: string[]) => void;
+  folderNodeId?: string;
+  childNodes: Node[];
+  sortKey: FolderListSortKey;
 }
 
 const DEFAULT_EMPTY_STATE = {
@@ -67,16 +73,6 @@ function resolveFolderTitle(folderTitle: string | undefined, folderNodeId: strin
     return nodesById[folderNodeId]?.title || 'Folder';
   }
   return 'Folder';
-}
-
-function resolveListedNodes(props: FolderListViewProps) {
-  if (props.nodes) {
-    return props.nodes;
-  }
-  if (!props.folderNodeId || !props.nodeOrder) {
-    return [];
-  }
-  return getDirectChildNodes(props.folderNodeId, props.nodeOrder, props.nodesById, props.trashedNodeIds ?? []);
 }
 
 function buildFolderListEmptyState(
@@ -110,11 +106,24 @@ function buildFolderListRebuildKey(props: FolderListViewProps, listedNodes: Node
   return `${scopeKey}\u0000${membershipKey}`;
 }
 
+function buildFolderListCurrentViewActions(props: FolderListViewProps, deleteNodes: (nodeIds: string[]) => void, filteredNodes: Node[]) {
+  if (!props.onOpenMoveToNode) return null;
+  return (
+    <WorkspaceTopicTreeCurrentViewActions
+      deleteNodes={deleteNodes}
+      nodesById={props.nodesById}
+      onOpenMoveToNode={props.onOpenMoveToNode}
+      topicSnapshots={buildCurrentViewTopicSnapshots(filteredNodes)}
+      trashedNodeIds={props.trashedNodeIds ?? []}
+    />
+  );
+}
+
 function useResolvedFolderListState(props: FolderListViewProps) {
   const storeNodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const nodeViewById = props.nodeViewById ?? storeNodeViewById;
   const listedNodes = useMemo(
-    () => resolveListedNodes(props),
+    () => resolveListedFolderNodes(props),
     [
       props.emptyState,
       props.folderNodeId,
@@ -134,6 +143,9 @@ function useResolvedFolderListState(props: FolderListViewProps) {
     listedNodes,
     nodeViewById,
     listRebuildKey: buildFolderListRebuildKey(props, listedNodes),
+    manualChildOrder: props.sortKey === 'manual'
+      ? listedNodes.map((node) => node.id)
+      : resolveFolderManualChildOrder(props),
     onChangeSearchQuery: props.onChangeSearchQuery,
     onChangeSortDirection: props.onChangeSortDirection,
     onChangeSortKey: props.onChangeSortKey
@@ -150,16 +162,11 @@ function useResolvedFolderListState(props: FolderListViewProps) {
 export function FolderListView(props: FolderListViewProps) {
   const { nodeViewById, resolvedEmptyState, resolvedFolderTitle, state } = useResolvedFolderListState(props);
   const deleteNodes = useWorkspaceStore((storeState) => storeState.deleteNodes);
+  const setFolderManualChildOrder = useWorkspaceStore((storeState) => storeState.setFolderManualChildOrder);
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const headerMode = props.showEmbeddedHeader === false ? 'hidden' : 'full';
-  const currentViewActions = props.onOpenMoveToNode ? (
-    <WorkspaceTopicTreeCurrentViewActions
-      deleteNodes={deleteNodes}
-      nodesById={props.nodesById}
-      onOpenMoveToNode={props.onOpenMoveToNode}
-      topicSnapshots={buildCurrentViewTopicSnapshots(state.filteredNodes)}
-      trashedNodeIds={props.trashedNodeIds ?? []}
-    />
-  ) : null;
+  const canManualDrag = Boolean(props.folderNodeId && state.sortKey === 'manual' && !state.searchQuery.trim());
+  const currentViewActions = buildFolderListCurrentViewActions(props, deleteNodes, state.filteredNodes);
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
@@ -175,21 +182,21 @@ export function FolderListView(props: FolderListViewProps) {
           onChangeSearchQuery={state.setSearchQuery}
           onChangeSortDirection={state.updateSortDirection}
           onChangeSortKey={state.updateSortKey}
-          onRenderItem={(node) => {
-            const nodeViewState = nodeViewById[node.id];
-            return (
-              <FolderListViewItem
-                itemLayout={props.itemLayout ?? 'default'}
-                key={node.id}
-                node={node}
-                {...(nodeViewState !== undefined ? { nodeViewState } : {})}
-                onSelectNode={props.onSelectNode}
-                {...(props.onSelectNodePath ? { onSelectNodePath: props.onSelectNodePath } : {})}
-                nodesById={props.nodesById}
-                sortKey={state.sortKey}
-              />
-            );
-          }}
+          onRenderItem={(node) => renderFolderListItem({
+            canManualDrag,
+            childNodes: state.childNodes,
+            draggedNodeId,
+            folderNodeId: props.folderNodeId,
+            itemLayout: props.itemLayout ?? 'default',
+            node,
+            nodeViewById,
+            nodesById: props.nodesById,
+            onSelectNode: props.onSelectNode,
+            ...(props.onSelectNodePath ? { onSelectNodePath: props.onSelectNodePath } : {}),
+            setDraggedNodeId,
+            setFolderManualChildOrder,
+            sortKey: state.sortKey
+          })}
           searchQuery={state.searchQuery}
           searchResultLabel={state.searchResultLabel}
           sortDirection={state.sortDirection}
@@ -197,5 +204,33 @@ export function FolderListView(props: FolderListViewProps) {
         />
       </section>
     </div>
+  );
+}
+
+function renderFolderListItem(args: RenderFolderListItemArgs) {
+  const nodeViewState = args.nodeViewById[args.node.id];
+  return (
+    <FolderListViewItem
+      draggable={args.canManualDrag}
+      itemLayout={args.itemLayout}
+      key={args.node.id}
+      node={args.node}
+      {...(nodeViewState !== undefined ? { nodeViewState } : {})}
+      onSelectNode={args.onSelectNode}
+      {...(args.onSelectNodePath ? { onSelectNodePath: args.onSelectNodePath } : {})}
+      nodesById={args.nodesById}
+      onDragEnd={() => args.setDraggedNodeId(null)}
+      onDragStart={() => args.setDraggedNodeId(args.node.id)}
+      onDrop={() => {
+        if (!args.folderNodeId || !args.draggedNodeId) return;
+        const currentOrder = args.childNodes.map((childNode) => childNode.id);
+        args.setFolderManualChildOrder?.(
+          args.folderNodeId,
+          moveNodeIdBefore(currentOrder, args.draggedNodeId, args.node.id)
+        );
+        args.setDraggedNodeId(null);
+      }}
+      sortKey={args.sortKey}
+    />
   );
 }
