@@ -48,6 +48,7 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(startScript).toContain('$env:FOLIOLE_BOOT_SESSION = $Session');
   expect(startScript).toContain('$env:FOLIOLE_RUNTIME_HEAD = $RuntimeHead');
   expect(processScript).toContain("runCapture('taskkill.exe', ['/PID', String(pid), '/T', '/F']");
+  expect(processScript).toContain('Stop-Process -Id ${pid} -Force -ErrorAction Stop');
   expect(processScript).toContain("process.kill(pid, 'SIGTERM')");
   expect(processScript).toContain('setTimeout(() => {');
   expect(processScript).toContain('child.stdout?.destroy()');

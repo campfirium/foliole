@@ -6,18 +6,18 @@ export const liveMarkdownMathTheme = {
     margin: 0,
     overflowX: 'auto',
     overflowY: 'hidden',
-    padding: '0.75rem 0',
+    padding: '1.5rem 0',
     position: 'relative',
     width: '100%'
   },
-  '.cm-line.cm-line-math-block.cm-paragraph-marker-line::before': { display: 'none' },
+  '.cm-line.cm-line-math-block::before': { content: 'none', display: 'none' },
   '.cm-line.cm-line-math-block': {
     alignItems: 'center',
     backgroundColor: 'rgb(var(--color-foreground) / 0.055)',
     display: 'flex',
     justifyContent: 'center',
     minHeight: 'calc((var(--content-panel-code-font-size, 0.86rem) * 1.75 + 0.2rem) * 3)',
-    padding: '0.35rem 0.65rem'
+    padding: '0.7rem 0.65rem'
   },
   '.cm-line.cm-line-math-block.cm-activeLine': { backgroundColor: 'rgb(var(--color-foreground) / 0.055)' },
   '.cm-md-math-widget-block .katex-display': { margin: 0 },
@@ -57,7 +57,7 @@ export const liveMarkdownMathTheme = {
     lineHeight: '1.75',
     padding: '0.1rem 0.65rem'
   },
-  '.cm-line.cm-line-math-source.cm-paragraph-marker-line::before': { display: 'none' },
+  '.cm-line.cm-line-math-source::before': { content: 'none', display: 'none' },
   '.cm-md-math-source-shell': {
     fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))',
     whiteSpace: 'pre-wrap'
@@ -78,13 +78,16 @@ export const liveMarkdownMathTheme = {
   '.cm-md-formula-cloze-region, .cm-md-formula-cloze-draft': {
     borderRadius: 'var(--editor-radius-sm)',
     boxSizing: 'border-box',
-    position: 'absolute'
+    position: 'absolute',
+    zIndex: 1
   },
   '.cm-md-formula-cloze-region[data-md-formula-region-hidden="true"]': {
-    backgroundColor: 'var(--app-cloze-surface-color)'
+    backgroundColor: 'color-mix(in srgb, rgb(var(--color-foreground)) 5.5%, rgb(var(--color-background)) 94.5%)',
+    border: '2px solid rgb(var(--color-border-subtle) / 0.92)'
   },
   '.cm-md-formula-cloze-region[data-md-formula-region-outlined="true"]': {
-    border: '1px solid color-mix(in srgb, var(--app-cloze-color) 72%, transparent)'
+    border: '2px dashed var(--app-accent-color)',
+    backgroundColor: 'transparent'
   },
   '.cm-md-formula-cloze-draft': {
     backgroundColor: 'color-mix(in srgb, var(--app-selection-surface-color) 42%, transparent)',

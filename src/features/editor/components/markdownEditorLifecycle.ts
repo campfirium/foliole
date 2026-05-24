@@ -110,6 +110,7 @@ export function useEditorAppearanceEffects(
 
     window.addEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
     window.addEventListener(FORMULA_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
+    adapterRef.current?.refreshImageClozePresentation();
     return () => {
       window.removeEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
       window.removeEventListener(FORMULA_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);

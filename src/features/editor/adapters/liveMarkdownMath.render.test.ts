@@ -2,12 +2,10 @@ import { EditorView } from '@codemirror/view';
 import { waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { FORMULA_CLOZE_CREATE_EVENT } from '../../formula-cloze/model/formulaClozeEvents';
 import {
   registerFormulaClozeEditorPresentation,
   unregisterFormulaClozeEditorPresentation
 } from '../../formula-cloze/model/formulaClozePresentation';
-import { listFormulaSelectionLeaves } from '../model/formulaDomSelection';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
@@ -16,22 +14,6 @@ function createAdapterHost(initialContent: string) {
   document.body.append(host);
   const adapter = new CodeMirrorEditorAdapter(host, { initialContent });
   return { adapter, host };
-}
-
-function mockRect(element: HTMLElement, rect: { height: number; width: number; x: number; y: number }) {
-  Object.defineProperty(element, 'getBoundingClientRect', {
-    configurable: true,
-    value: () => ({
-      bottom: rect.y + rect.height,
-      height: rect.height,
-      left: rect.x,
-      right: rect.x + rect.width,
-      top: rect.y,
-      width: rect.width,
-      x: rect.x,
-      y: rect.y
-    })
-  });
 }
 
 function dispatchPointerEvent(target: HTMLElement, type: string, point: { x: number; y: number }) {
@@ -173,9 +155,45 @@ async function expectSavedFormulaClozeRegions() {
       {
         display: 'inline',
         fallbackRect: { height: 0.4, width: 0.3, x: 0.1, y: 0.2 },
-        formulaSource: '$E=mc^2$',
+        formulaSource: '$ E=mc^2 $',
         id: 'formula-region-1',
         occurrenceKey: `inline:${from}:${to}:E=mc^2`,
+        selection: {
+          algorithm: 'katex-dom-leaf-v1',
+          fallbackRect: { height: 0.4, width: 0.3, x: 0.1, y: 0.2 },
+          leaves: [{ path: [0], structureFingerprint: 'mord', textFingerprint: 'E=mc2' }]
+        }
+      }
+    ]
+  });
+  adapter.refreshImageClozePresentation();
+
+  await waitFor(() => {
+    expect(host.querySelector('.cm-md-formula-cloze-region')).toHaveAttribute('data-md-formula-region-hidden', 'true');
+  });
+  expect(host.querySelector('.cm-md-formula-cloze-region')).toHaveStyle({
+    backgroundColor: 'color-mix(in srgb, rgb(var(--color-foreground)) 5.5%, rgb(var(--color-background)) 94.5%)'
+  });
+
+  adapter.destroy();
+}
+
+async function expectFocusedFormulaClozeRegionMatchesCopiedFormula() {
+  const content = '$E=mc^2$';
+  const { adapter, host } = createAdapterHost(content);
+  adapter.setNodeId('node-1');
+
+  registerFormulaClozeEditorPresentation('node-1', {
+    canCreate: false,
+    hiddenRegionIds: ['formula-region-1'],
+    outlinedRegionIds: [],
+    regions: [
+      {
+        display: 'inline',
+        fallbackRect: { height: 0.4, width: 0.3, x: 0.1, y: 0.2 },
+        formulaSource: '$E=mc^2$',
+        id: 'formula-region-1',
+        occurrenceKey: 'inline:7:15:E=mc^2',
         selection: {
           algorithm: 'katex-dom-leaf-v1',
           fallbackRect: { height: 0.4, width: 0.3, x: 0.1, y: 0.2 },
@@ -193,52 +211,6 @@ async function expectSavedFormulaClozeRegions() {
   adapter.destroy();
 }
 
-async function expectFormulaSelectionStartsFromVisualContent() {
-  const content = 'Before\n\n$$\n\\frac{a}{b}=c\n$$';
-  const { adapter, host } = createAdapterHost(content);
-  adapter.setNodeId('node-1');
-  registerFormulaClozeEditorPresentation('node-1', {
-    canCreate: true,
-    hiddenRegionIds: [],
-    outlinedRegionIds: [],
-    regions: []
-  });
-  adapter.refreshImageClozePresentation();
-
-  await waitFor(() => {
-    expect(host.querySelector('.cm-md-math-widget-block .katex-html')).not.toBeNull();
-  });
-
-  const wrapper = host.querySelector<HTMLElement>('.cm-md-math-widget-block')!;
-  const visualRoot = wrapper.querySelector<HTMLElement>('.katex-html')!;
-  mockRect(wrapper, { height: 200, width: 1000, x: 0, y: 0 });
-  mockRect(visualRoot, { height: 80, width: 200, x: 400, y: 60 });
-  for (const leaf of listFormulaSelectionLeaves(wrapper)) {
-    mockRect(leaf, { height: 24, width: 36, x: 420, y: 72 });
-  }
-
-  const created: Event[] = [];
-  const listener = (event: Event) => created.push(event);
-  window.addEventListener(FORMULA_CLOZE_CREATE_EVENT, listener);
-
-  dispatchPointerEvent(wrapper, 'pointerdown', { x: 40, y: 40 });
-  dispatchPointerEvent(wrapper, 'pointerup', { x: 120, y: 90 });
-  expect(created).toHaveLength(0);
-
-  dispatchPointerEvent(visualRoot, 'pointerdown', { x: 410, y: 64 });
-  dispatchPointerEvent(wrapper, 'pointerup', { x: 460, y: 100 });
-  expect(created).toHaveLength(1);
-  expect((created[0] as CustomEvent).detail.selection.fallbackRect).toEqual({
-    height: 0.3,
-    width: 0.18,
-    x: 0.1,
-    y: 0.15
-  });
-
-  window.removeEventListener(FORMULA_CLOZE_CREATE_EVENT, listener);
-  adapter.destroy();
-}
-
 describe('live Markdown math rendering', () => {
   afterEach(() => {
     document.body.innerHTML = '';
@@ -252,5 +224,5 @@ describe('live Markdown math rendering', () => {
   it('prevents rendered formula clicks from placing an editor caret', expectRenderedFormulaClickDoesNotPlaceCaret);
   it('does not remove a rendered formula from a collapsed cursor outside the formula', expectCollapsedDeleteOutsideFormulaDoesNotRemoveFormula);
   it('renders saved formula cloze presentation regions on matching formula occurrences', expectSavedFormulaClozeRegions);
-  it('starts visual formula cloze selection only from rendered KaTeX content', expectFormulaSelectionStartsFromVisualContent);
+  it('renders focused formula cloze regions after the formula is copied into the child node', expectFocusedFormulaClozeRegionMatchesCopiedFormula);
 });

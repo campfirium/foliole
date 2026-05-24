@@ -7,7 +7,6 @@ import { DocumentPanelBody } from './DocumentPanelBody';
 import { resolvePdfDocumentSurface } from './documentPanelPdfView';
 import { PdfDocumentSurfaceCache } from './PdfDocumentSurfaceCache';
 import type { collectPdfHighlightLocators } from './pdfHighlightLocators';
-import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 
 export function createDocumentPanelPdfCache(args: {
   activeNodeId: string | null;
@@ -23,22 +22,19 @@ export function createDocumentPanelPdfCache(args: {
       ? Object.fromEntries(args.pdfDocumentSurface.details.pdfPageDimensions.flatMap(getPersistedPageDimensionEntry))
       : {};
   return (
-    <>
-      <PdfDocumentSurfaceCache
-        activeNodeId={args.activeNodeId}
-        activePersistedPageCount={getActivePersistedPageCount(args.pdfDocumentSurface)}
-        activePersistedPageDimensions={activePersistedPageDimensions}
-        activePdfState={args.pdfDocumentSurface?.state ?? null}
-        activeSourceHint={args.pdfDocumentSurface?.sourceHint ?? null}
-        editorNodeId={args.bodyProps.editorNodeId}
-        editorNodeViewState={args.bodyProps.editorNodeViewState}
-        highlightLocators={args.pdfHighlightLocators}
-        onActiveCacheVisibilityChange={args.setIsActivePdfCachedVisible}
-        onCreatePdfHighlight={args.onCreatePdfHighlight}
-        onPersistPdfViewState={args.onPersistPdfViewState}
-      />
-      <ReadwiseBookActionsPanel activeNodeId={args.activeNodeId} />
-    </>
+    <PdfDocumentSurfaceCache
+      activeNodeId={args.activeNodeId}
+      activePersistedPageCount={getActivePersistedPageCount(args.pdfDocumentSurface)}
+      activePersistedPageDimensions={activePersistedPageDimensions}
+      activePdfState={args.pdfDocumentSurface?.state ?? null}
+      activeSourceHint={args.pdfDocumentSurface?.sourceHint ?? null}
+      editorNodeId={args.bodyProps.editorNodeId}
+      editorNodeViewState={args.bodyProps.editorNodeViewState}
+      highlightLocators={args.pdfHighlightLocators}
+      onActiveCacheVisibilityChange={args.setIsActivePdfCachedVisible}
+      onCreatePdfHighlight={args.onCreatePdfHighlight}
+      onPersistPdfViewState={args.onPersistPdfViewState}
+    />
   );
 }
 

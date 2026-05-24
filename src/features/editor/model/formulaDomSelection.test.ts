@@ -39,7 +39,7 @@ describe('formulaDomSelection', () => {
 
     expect(descriptor).toEqual(expect.objectContaining({
       algorithm: 'katex-dom-leaf-v1',
-      fallbackRect: { height: 0.32, width: 0.2, x: 0.1, y: 0.08 }
+      fallbackRect: { height: 0.4, width: 0.24, x: 0.08, y: 0.04 }
     }));
     expect(descriptor?.leaves.map((leaf) => leaf.textFingerprint)).toEqual(expect.arrayContaining(['x', '2']));
     expect(descriptor?.leaves.every((leaf) => leaf.path.length > 0)).toBe(true);

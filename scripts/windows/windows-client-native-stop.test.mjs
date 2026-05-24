@@ -3,13 +3,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const killPid = vi.hoisted(() => vi.fn());
+const runCapture = vi.hoisted(() => vi.fn());
 
-vi.mock('./windows-client-native-process.mjs', () => ({ killPid }));
+vi.mock('./windows-client-native-process.mjs', () => ({ killPid, runCapture }));
 
 const { stopNativeClient } = await import('./windows-client-native-stop.mjs');
 
 describe('native Windows client stop', () => {
   it('continues cleanup when one process kill is denied but the runtime is gone', async () => {
+    runCapture.mockResolvedValue({ code: 0, stdout: '' });
     killPid
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('Access is denied'))
@@ -33,6 +35,7 @@ describe('native Windows client stop', () => {
   });
 
   it('fails when a trusted runtime remains after stop attempts', async () => {
+    runCapture.mockResolvedValue({ code: 0, stdout: '' });
     killPid.mockRejectedValue(new Error('Access is denied'));
     await expect(stopNativeClient({
       print: false,
@@ -41,5 +44,41 @@ describe('native Windows client stop', () => {
       removeClientState: vi.fn(),
       resetMarkers: vi.fn()
     })).rejects.toThrow('client stop failed');
+  });
+
+  it('cleans orphan Electron processes from the repo when markers are already gone', async () => {
+    runCapture
+      .mockResolvedValueOnce({ code: 0, stdout: '333\r\n444\r\n' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' });
+    killPid.mockResolvedValue(undefined);
+    const removeClientState = vi.fn();
+    const resetMarkers = vi.fn();
+
+    await expect(stopNativeClient({
+      print: false,
+      readClientState: () => null,
+      readReadyState: () => null,
+      removeClientState,
+      repoRoot: 'D:\\C\\foliole',
+      resetMarkers
+    })).resolves.toBeUndefined();
+
+    expect(killPid).toHaveBeenCalledWith(333);
+    expect(killPid).toHaveBeenCalledWith(444);
+    expect(removeClientState).toHaveBeenCalledOnce();
+    expect(resetMarkers).toHaveBeenCalledOnce();
+  });
+
+  it('fails when repo Electron orphan processes remain after stop attempts', async () => {
+    runCapture.mockResolvedValue({ code: 0, stdout: '333\r\n' });
+    killPid.mockRejectedValue(new Error('Access is denied'));
+    await expect(stopNativeClient({
+      print: false,
+      readClientState: () => null,
+      readReadyState: () => null,
+      removeClientState: vi.fn(),
+      repoRoot: 'D:\\C\\foliole',
+      resetMarkers: vi.fn()
+    })).rejects.toThrow('remaining electron pids=333');
   });
 });

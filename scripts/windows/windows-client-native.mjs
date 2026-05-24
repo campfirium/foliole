@@ -166,6 +166,7 @@ async function stopClient({ print = true } = {}) {
     readClientState,
     readReadyState,
     removeClientState: () => removeClientState(stateFile),
+    repoRoot,
     resetMarkers
   });
 }

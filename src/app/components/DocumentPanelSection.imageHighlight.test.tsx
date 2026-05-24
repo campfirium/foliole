@@ -21,7 +21,6 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
 
 vi.mock('../../features/image-cloze/model/imageClozePresentation', () => imageClozePresentation);
 vi.mock('./DocumentPanelBody', () => ({ DocumentPanelBody: () => <div /> }));
-vi.mock('../../features/image-cloze/components/ImageClozeCardView', () => ({ ImageClozeCardView: () => <div /> }));
 vi.mock('./ReadwiseBookActionsPanel', () => ({ ReadwiseBookActionsPanel: () => null }));
 vi.mock('./useNodeSourceUpdatePreview', () => ({
   useNodeSourceUpdatePreview: () => ({ isLoading: false, value: null })

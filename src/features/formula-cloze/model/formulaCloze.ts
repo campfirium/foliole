@@ -40,7 +40,18 @@ export function isFormulaClozeNode(node: Node | null | undefined) {
   return Boolean(node && isFormulaClozeAnchorLink(node.anchorLink));
 }
 
-export function buildFormulaClozeSourcePayload(source: string, range: { from: number; to: number }): FormulaClozeSourcePayload | null {
+export function deriveFormulaClozeSelectionLabel(selection: FormulaDomSelectionDescriptor) {
+  return selection.leaves
+    .map((leaf) => leaf.textFingerprint.trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+}
+
+export function buildFormulaClozeSourcePayload(
+  source: string,
+  range: { from: number; to: number }
+): FormulaClozeSourcePayload | null {
   if (range.from < 0 || range.to <= range.from || range.to > source.length) {
     return null;
   }
