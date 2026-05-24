@@ -129,6 +129,16 @@ function previewStatus(target) {
   return target === 'windows' ? 'STARTED' : 'SYNCED';
 }
 
+function readWaitOnFailureForCommand(target, command) {
+  if (process.env.PREVIEW_DEDUPE_WAIT_ON_FAILURE !== undefined) {
+    return process.env.PREVIEW_DEDUPE_WAIT_ON_FAILURE === '1';
+  }
+  if (target === 'windows' && command.some((arg) => arg.endsWith('windows-preview-native.mjs'))) {
+    return false;
+  }
+  return target === 'windows';
+}
+
 async function logDiagnostics(target, stage) {
   if (process.env.PREVIEW_DEDUPE_DIAGNOSTICS === '0') {
     return;
@@ -183,7 +193,8 @@ async function main() {
   const exitCode = await runScheduledPreview({
     runPreview: ({ requireActualPreview }) => runPreviewFlow({ command, requireActualPreview, target }),
     runtimeDir: runtimeDir(),
-    target
+    target,
+    waitOnFailure: readWaitOnFailureForCommand(target, command)
   });
   await logDiagnostics(target, 'after');
   return exitCode;
