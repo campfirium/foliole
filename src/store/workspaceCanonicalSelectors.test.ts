@@ -1,6 +1,8 @@
 import { expect, it } from 'vitest';
 
 import {
+  isCanonicalTrashedNodeId,
+  isCanonicalVisibleNodeId,
   selectCanonicalReviewQueueSource,
   selectCanonicalTrashedNodeDeletedAtById,
   selectCanonicalTrashedNodeIds,
@@ -49,6 +51,23 @@ it('uses legacy trash ids only when the node has no lifecycle fact', () => {
   expect(selectCanonicalTrashedNodeDeletedAtById(source)).toEqual({
     'legacy-trash': '2026-05-24T00:00:00.000Z'
   });
+});
+
+it('treats bare legacy trash ids as membership input without inventing deletedAt', () => {
+  const source = {
+    nodeOrder: ['legacy-trash', 'restored'],
+    nodesById: {
+      'legacy-trash': node('legacy-trash'),
+      restored: node('restored', null)
+    },
+    trashedNodeIds: ['legacy-trash', 'restored']
+  };
+
+  expect(isCanonicalVisibleNodeId(source, 'restored')).toBe(true);
+  expect(isCanonicalTrashedNodeId(source, 'legacy-trash')).toBe(true);
+  expect(selectCanonicalVisibleNodeIds(source)).toEqual(['restored']);
+  expect(selectCanonicalTrashedNodeIds(source)).toEqual(['legacy-trash']);
+  expect(selectCanonicalTrashedNodeDeletedAtById(source)).toEqual({});
 });
 
 it('feeds review queue source with visible order only', () => {

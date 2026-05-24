@@ -146,6 +146,34 @@ it('advances review session when the current queued node is deleted', () => {
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
 });
 
+it('removes deleted queued nodes even when trash projection is stale', () => {
+  useWorkspaceStore.setState({
+    activeNodeId: 'reading-1',
+    nodeOrder: ['fsrs-1', 'reading-1'],
+    nodesById: {
+      'fsrs-1': {
+        ...createFsrsNode('fsrs-1'),
+        deletedAt: '2026-05-24T00:00:00.000Z'
+      },
+      'reading-1': createReadingNode('reading-1')
+    },
+    reviewSession: {
+      currentNodeId: 'fsrs-1',
+      isAnswerRevealed: true,
+      queueNodeIds: ['fsrs-1', 'reading-1'],
+      totalNodeCount: 2
+    },
+    trashedNodeIds: []
+  });
+
+  useWorkspaceStore.getState().setActiveNode('reading-1');
+
+  const state = useWorkspaceStore.getState();
+  expect(state.reviewSession.currentNodeId).toBe('reading-1');
+  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1']);
+  expect(state.reviewSession.isAnswerRevealed).toBe(false);
+});
+
 it('opens the next review node instead of the parent folder when deleting a nested current review node', () => {
   useWorkspaceStore.setState({
     activeNodeId: 'fsrs-1',

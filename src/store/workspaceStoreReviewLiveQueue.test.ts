@@ -50,6 +50,22 @@ it('keeps an actionable current pin at the front without trusting the old sessio
   expect(output.visibleNodeIds).toEqual(['qa-current', 'qa-first']);
 });
 
+it('excludes deleted nodes from the live queue when trash projection is stale', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const deletedNode = createQaNode('qa-deleted', '2026-03-01T00:00:00.000Z');
+  const state = {
+    ...createWorkspaceFixture([
+      { ...deletedNode, deletedAt: '2026-03-05T00:00:00.000Z' },
+      createQaNode('qa-live', '2026-03-01T00:00:00.000Z')
+    ]),
+    trashedNodeIds: []
+  };
+
+  const output = buildLiveReviewQueueOutput(state, now);
+
+  expect(output.visibleNodeIds).toEqual(['qa-live']);
+});
+
 it('resumes due cards from the live queue even when they are missing from the persisted session queue', () => {
   const now = '2026-03-10T12:00:00.000Z';
   const harness = createSetStateHarness({

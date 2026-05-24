@@ -1,12 +1,14 @@
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
-import {
-  listVisibleWorkspaceSnapshotNodeIds,
-  normalizeWorkspaceSnapshot
-} from '../../../lib/core/database/workspaceSnapshotContract';
+import { normalizeWorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshotContract';
 import type { PersistedNodeViewState } from '../../../lib/platform/persistedNodeViewState';
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
+import {
+  isCanonicalTrashedNodeId,
+  isCanonicalVisibleNodeId,
+  selectCanonicalVisibleNodeIds
+} from '../workspaceCanonicalSelectors';
 
 import { resolveCompanionArticleContentPaddingTop } from './companionReadableArticleTitleSlot';
 export type {
@@ -92,7 +94,7 @@ export function resolveReadableCompanionArticleByNodeId(
   nodeId: string | null
 ): CompanionReadableArticle | null {
   const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
-  if (!normalizedSnapshot || !nodeId || normalizedSnapshot.trashedNodeIds.includes(nodeId)) {
+  if (!normalizedSnapshot || !nodeId || !isCanonicalVisibleNodeId(normalizedSnapshot, nodeId)) {
     return null;
   }
   const node = normalizedSnapshot.nodesById[nodeId];
@@ -104,7 +106,7 @@ export function resolveReadableCompanionTrashArticleByNodeId(
   nodeId: string | null
 ): CompanionReadableArticle | null {
   const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
-  if (!normalizedSnapshot || !nodeId || !normalizedSnapshot.trashedNodeIds.includes(nodeId)) {
+  if (!normalizedSnapshot || !nodeId || !isCanonicalTrashedNodeId(normalizedSnapshot, nodeId)) {
     return null;
   }
   const node = normalizedSnapshot.nodesById[nodeId];
@@ -122,7 +124,7 @@ export function resolveReadableCompanionArticle(snapshot: WorkspaceSnapshot | nu
     return activeReadableArticle;
   }
 
-  for (const nodeId of listVisibleWorkspaceSnapshotNodeIds(normalizedSnapshot)) {
+  for (const nodeId of selectCanonicalVisibleNodeIds(normalizedSnapshot)) {
     const node = normalizedSnapshot.nodesById[nodeId];
     if (!hasReadableContent(node)) {
       continue;
@@ -135,12 +137,12 @@ export function resolveReadableCompanionArticle(snapshot: WorkspaceSnapshot | nu
 
 export function resolveCompanionBrowseExitNodeId(snapshot: WorkspaceSnapshot | null, nodeId: string | null) {
   const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
-  if (!normalizedSnapshot || !nodeId || normalizedSnapshot.trashedNodeIds.includes(nodeId)) {
+  if (!normalizedSnapshot || !nodeId || !isCanonicalVisibleNodeId(normalizedSnapshot, nodeId)) {
     return null;
   }
   const node = normalizedSnapshot.nodesById[nodeId];
   const parentNodeId = node?.parentNodeId ?? null;
-  if (!parentNodeId || normalizedSnapshot.trashedNodeIds.includes(parentNodeId)) {
+  if (!parentNodeId || isCanonicalTrashedNodeId(normalizedSnapshot, parentNodeId)) {
     return null;
   }
   return normalizedSnapshot.nodesById[parentNodeId]?.kind === 'folder' ? parentNodeId : null;

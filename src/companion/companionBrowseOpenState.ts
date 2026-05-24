@@ -1,5 +1,6 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { saveCompanionSyncNodeViewState } from '../shared/platform/companionSyncObjects';
+import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
 
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -28,7 +29,7 @@ export async function markCompanionNodeOpened(args: {
   snapshot: WorkspaceSnapshot | null;
   workspaceSync: CompanionWorkspaceSyncApi;
 }) {
-  if (!args.snapshot?.nodesById[args.nodeId] || args.snapshot.trashedNodeIds.includes(args.nodeId)) {
+  if (!args.snapshot || !isCanonicalVisibleNodeId(args.snapshot, args.nodeId)) {
     return;
   }
   const existing = args.snapshot.persistedNodeViewById?.[args.nodeId];

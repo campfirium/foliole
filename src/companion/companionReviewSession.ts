@@ -1,6 +1,5 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import {
-  listVisibleWorkspaceSnapshotNodeIds,
   normalizeWorkspaceSnapshot
 } from '../../lib/core/database/workspaceSnapshotContract';
 import { getReviewItemKind, isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
@@ -11,6 +10,10 @@ import {
   getCurrentReviewSchedulerSettings,
   getReviewSchedulerVersion
 } from '../features/settings/model/reviewSchedulerSettings';
+import {
+  selectCanonicalReviewQueueSource,
+  selectCanonicalVisibleNodeIds
+} from '../shared/workspaceCanonicalSelectors';
 import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
 
 import {
@@ -76,7 +79,7 @@ function resolveScheduledReviewSummary(snapshot: WorkspaceSnapshot) {
   let scheduledFsrsCount = 0;
   let scheduledReadingCount = 0;
 
-  for (const nodeId of listVisibleWorkspaceSnapshotNodeIds(snapshot)) {
+  for (const nodeId of selectCanonicalVisibleNodeIds(snapshot)) {
     const node = snapshot.nodesById[nodeId];
     if (!node) {
       continue;
@@ -125,10 +128,8 @@ export function resolveCompanionReviewSession(
   }
 
   const plan = buildReviewQueuePlan({
-    nodeOrder: listVisibleWorkspaceSnapshotNodeIds(normalizedSnapshot),
-    nodesById: normalizedSnapshot.nodesById,
+    ...selectCanonicalReviewQueueSource(normalizedSnapshot),
     now,
-    trashedNodeIds: normalizedSnapshot.trashedNodeIds
   });
   const queueNodeIds = resolveCompanionQueueNodeIds(plan).filter((nodeId) => {
     const node = normalizedSnapshot.nodesById[nodeId];

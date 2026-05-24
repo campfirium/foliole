@@ -1,3 +1,5 @@
+import { isCanonicalTrashedNodeId } from '../shared/workspaceCanonicalSelectors';
+
 import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -9,11 +11,12 @@ export function canRenderCompanionDirectoryArticle(args: {
 }) {
   const selectedNodeId = args.surface.selectedBrowseNodeId;
   const isTrashSelection = args.directorySelection.kind === 'trash' || args.directorySelection.kind === 'trashFolder';
+  const snapshot = args.workspaceSync.state.workspace_snapshot;
   return Boolean(
     args.surface.readableArticle &&
     selectedNodeId &&
     !args.surface.browsedFolder &&
-    (!isTrashSelection || args.workspaceSync.state.workspace_snapshot?.trashedNodeIds.includes(selectedNodeId))
+    (!isTrashSelection || (snapshot && isCanonicalTrashedNodeId(snapshot, selectedNodeId)))
   );
 }
 
