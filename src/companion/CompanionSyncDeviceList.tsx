@@ -22,7 +22,7 @@ function PairAction(props: {
 }) {
   return (
     <button
-      className="shrink-0 rounded-xl border border-border-strong px-4 py-2 text-sm font-medium text-foreground transition hover:bg-bg-subtle disabled:cursor-not-allowed disabled:opacity-45"
+      className="shrink-0 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
       disabled={props.disabled}
       onClick={props.onClick}
       type="button"

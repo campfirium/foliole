@@ -19,6 +19,12 @@ function expectStatusSlotInBackRow() {
 }
 
 describe('CompanionTopBar', () => {
+  it('starts without the elevated border so scroll triggers the transition', () => {
+    const { container } = render(<CompanionTopBar title="Browse" visible />);
+    const header = container.querySelector('header');
+    expect(header?.dataset.elevated).toBe('false');
+  });
+
   it('keeps sync status in the top-right back row on detail pages', expectStatusSlotInBackRow);
 
   it('keeps browse actions in the back row on nested browse pages', () => {

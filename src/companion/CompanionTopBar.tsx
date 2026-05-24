@@ -1,5 +1,5 @@
 import { ArrowLeft, type LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 type TopBarAction = {
   icon: LucideIcon;
@@ -21,6 +21,37 @@ function TopBarIconButton(props: TopBarAction) {
   );
 }
 
+function TopBarBackRow(props: {
+  backLabel?: string;
+  hasTitleRow: boolean;
+  onBack(): void;
+  rightSlot?: ReactNode;
+}) {
+  return (
+    <div className={`flex min-h-10 items-center justify-between gap-3 ${props.hasTitleRow ? 'mb-3' : ''}`}>
+      <button aria-label={props.backLabel ?? 'Back'} className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground" onClick={props.onBack} type="button">
+        <ArrowLeft className="h-6 w-6 shrink-0" />
+      </button>
+      {props.rightSlot ? <div className="flex shrink-0 items-center gap-1">{props.rightSlot}</div> : null}
+    </div>
+  );
+}
+
+function useScrollElevation() {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const header = ref.current;
+    if (!header) return;
+    const scroller = header.closest('[data-testid="companion-scroll-container"]');
+    if (!scroller) return;
+    const update = () => { header.dataset.elevated = String(scroller.scrollTop > 4); };
+    update();
+    scroller.addEventListener('scroll', update, { passive: true });
+    return () => scroller.removeEventListener('scroll', update);
+  }, []);
+  return ref;
+}
+
 export function CompanionTopBar(props: {
   backLabel?: string;
   leftAction?: TopBarAction;
@@ -31,6 +62,8 @@ export function CompanionTopBar(props: {
   title?: string;
   visible: boolean;
 }) {
+  const headerRef = useScrollElevation();
+
   const rightActionSlot = props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null);
   const rightSlotInBackRow = Boolean(props.onBack && (rightActionSlot || props.statusSlot));
   const hasTitleRow = Boolean(props.leftAction || (!rightSlotInBackRow && rightActionSlot) || (!props.onBack && props.statusSlot) || props.title);
@@ -40,24 +73,18 @@ export function CompanionTopBar(props: {
   }
 
   return (
-    <header className="sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-3 pt-[max(env(safe-area-inset-top),16px)] backdrop-blur sm:-mx-7 sm:px-7">
+    <header
+      className="sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-3 pt-[max(env(safe-area-inset-top),16px)] backdrop-blur data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider sm:-mx-7 sm:px-7"
+      data-elevated="false"
+      ref={headerRef}
+    >
       {props.onBack ? (
-        <div className={`flex min-h-10 items-center justify-between gap-3 ${hasTitleRow ? 'mb-3' : ''}`}>
-          <button
-            aria-label={props.backLabel ?? 'Back'}
-            className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground"
-            onClick={props.onBack}
-            type="button"
-          >
-            <ArrowLeft className="h-6 w-6 shrink-0" />
-          </button>
-          {rightSlotInBackRow ? (
-            <div className="flex shrink-0 items-center gap-1">
-              {props.statusSlot}
-              {rightActionSlot}
-            </div>
-          ) : null}
-        </div>
+        <TopBarBackRow
+          backLabel={props.backLabel}
+          hasTitleRow={hasTitleRow}
+          onBack={props.onBack}
+          rightSlot={rightSlotInBackRow ? <>{props.statusSlot}{rightActionSlot}</> : undefined}
+        />
       ) : null}
       {hasTitleRow ? (
         <div className="flex min-h-10 items-center justify-between gap-3">
