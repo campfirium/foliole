@@ -45,6 +45,16 @@ import {
   type WorkspaceSurfaceAssignments,
   type WorkspaceSurfacePalette
 } from './workspaceSurfaceSettings';
+export {
+  applyWorkspaceDividerOpacityPercent,
+  getWorkspaceDividerOpacityPercent,
+  normalizeWorkspaceDividerOpacityPercent,
+  setWorkspaceDividerOpacityPercent,
+  WORKSPACE_DIVIDER_OPACITY_PERCENT_DEFAULT,
+  WORKSPACE_DIVIDER_OPACITY_PERCENT_MAX,
+  WORKSPACE_DIVIDER_OPACITY_PERCENT_MIN,
+  WORKSPACE_DIVIDER_OPACITY_PERCENT_STEP
+} from './workspaceDividerSettings';
 export { applyAppearanceSettings } from './applyAppearanceSettings';
 export {
   type AccentColorPreset,

@@ -52,6 +52,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   workspaceSurfaceAutoOptionsDark: 'foliole-workspace-surface-auto-options-dark',
   workspaceSurfaceRandomHistoryDark: 'foliole-workspace-surface-random-history-dark',
   workspaceSurfaceFavoritesDark: 'foliole-workspace-surface-favorites-dark',
+  workspaceDividerOpacityPercent: 'foliole-workspace-divider-opacity-percent',
   interfaceFontSize: 'foliole-interface-font-size',
   customInterfaceFont: 'foliole-custom-interface-font-family',
   customMonospaceFont: 'foliole-custom-monospace-font-family',

@@ -21,6 +21,14 @@ function createReadingSettingsValue(state: AppearanceStateValues) {
   };
 }
 
+function createWorkspaceSettingsValue(state: AppearanceStateValues) {
+  return {
+    workspaceDividerOpacityPercent: state.workspaceDividerOpacityPercentState,
+    workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
+    workspaceSurfacePalette: state.workspaceSurfacePaletteState
+  };
+}
+
 export function useAppearanceSettingsValue(state: AppearanceStateValues): AppearanceSettingsContextValue {
   return useMemo(
     () => ({
@@ -48,8 +56,7 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       pdfReadingMode: state.pdfReadingModeState,
       ...createReadingSettingsValue(state),
       uiFontPreset: state.uiFontPresetState,
-      workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
-      workspaceSurfacePalette: state.workspaceSurfacePaletteState,
+      ...createWorkspaceSettingsValue(state),
       ...createAppearanceActions(state)
     }),
     [
@@ -77,6 +84,7 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       state.readingLineHeightState,
       state.readingParagraphSpacingState,
       state.uiFontPresetState,
+      state.workspaceDividerOpacityPercentState,
       state.workspaceSurfaceAssignmentsState,
       state.workspaceSurfacePaletteState
     ]);

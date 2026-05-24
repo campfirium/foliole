@@ -32,6 +32,7 @@ import {
   setFontColorPreset,
   setHighlightColorPreset,
   setSelectionColorPreset,
+  setWorkspaceDividerOpacityPercent,
   setWorkspaceSurfaceAssignments,
   setWorkspaceSurfacePalette
 } from '../model/appearanceSettings';
@@ -65,8 +66,10 @@ export type AppearanceState = {
   readingParagraphSpacingState: ReadingParagraphSpacing;
   readingContentWidthState: number;
   selectionColorPresetState: SelectionColorPreset;
-  selectionToolbarEnabledState: boolean; selectionToolbarOpacityPercentState: number;
+  selectionToolbarEnabledState: boolean;
+  selectionToolbarOpacityPercentState: number;
   uiFontPresetState: InterfaceFontPreset;
+  workspaceDividerOpacityPercentState: number;
   workspaceSurfaceAssignmentsState: AppearanceSettingsContextValue['workspaceSurfaceAssignments'];
   workspaceSurfacePaletteState: AppearanceSettingsContextValue['workspaceSurfacePalette'];
   setAccentColorPresetState: Setter<AccentColorPreset>;
@@ -91,8 +94,10 @@ export type AppearanceState = {
   setReadingLineHeightState: Setter<ReadingLineHeight>;
   setReadingParagraphSpacingState: Setter<ReadingParagraphSpacing>;
   setSelectionColorPresetState: Setter<SelectionColorPreset>;
-  setSelectionToolbarEnabledState: Setter<boolean>; setSelectionToolbarOpacityPercentState: Setter<number>;
+  setSelectionToolbarEnabledState: Setter<boolean>;
+  setSelectionToolbarOpacityPercentState: Setter<number>;
   setUiFontPresetState: Setter<InterfaceFontPreset>;
+  setWorkspaceDividerOpacityPercentState: Setter<number>;
   setWorkspaceSurfaceAssignmentsState: Setter<AppearanceSettingsContextValue['workspaceSurfaceAssignments']>;
   setWorkspaceSurfacePaletteState: Setter<AppearanceSettingsContextValue['workspaceSurfacePalette']>;
 };
@@ -124,6 +129,9 @@ function createWorkspaceSurfaceActions(state: AppearanceState) {
     setWorkspaceSurfaceAssignments: (value: typeof state.workspaceSurfaceAssignmentsState) => {
       setWorkspaceSurfaceAssignments(value, state.workspaceSurfacePaletteState.length, state.resolvedBaseColorModeState);
       state.setWorkspaceSurfaceAssignmentsState(value);
+    },
+    setWorkspaceDividerOpacityPercent: (value: number) => {
+      state.setWorkspaceDividerOpacityPercentState(setWorkspaceDividerOpacityPercent(value));
     },
     setWorkspaceSurfacePalette: (value: typeof state.workspaceSurfacePaletteState) => {
       const nextAssignments = clampAssignmentsToPalette(state, value);

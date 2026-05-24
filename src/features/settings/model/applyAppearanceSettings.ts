@@ -23,6 +23,7 @@ import {
   resolveUiFontFamily
 } from './appearanceTypography';
 import type { BaseColorMode, ResolvedBaseColorMode } from './baseColorMode';
+import { applyWorkspaceDividerOpacityPercent } from './workspaceDividerSettings';
 import {
   applyWorkspaceSurfaceSettings,
   type WorkspaceSurfaceAssignments,
@@ -49,6 +50,7 @@ interface ApplyAppearanceSettingsInput {
   resolvedBaseColor: ResolvedBaseColorMode;
   selectionColor: SelectionColorPreset;
   uiFont: InterfaceFontPreset;
+  workspaceDividerOpacityPercent: number;
   workspaceSurfaceAssignments: WorkspaceSurfaceAssignments;
   workspaceSurfacePalette: WorkspaceSurfacePalette;
 }
@@ -75,6 +77,7 @@ export function applyAppearanceSettings(settings: ApplyAppearanceSettingsInput) 
     assignments: settings.workspaceSurfaceAssignments,
     palette: settings.workspaceSurfacePalette
   });
+  applyWorkspaceDividerOpacityPercent(root, settings.workspaceDividerOpacityPercent);
   root.style.setProperty('--app-interface-font-family', resolveUiFontFamily());
   root.style.setProperty('--content-panel-font-family', resolveInterfaceFontFamily(settings.interfaceFont, sanitizeFontFamily(settings.customInterfaceFont)));
   root.style.setProperty('--content-panel-mono-font-family', resolveMonospaceFontFamily(settings.monospaceFont, sanitizeFontFamily(settings.customMonospaceFont)));

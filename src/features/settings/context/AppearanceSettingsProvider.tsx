@@ -18,6 +18,7 @@ import {
   getSelectionColorPreset,
   getMonospaceFontPreset,
   getUiFontPreset,
+  getWorkspaceDividerOpacityPercent,
   getWorkspaceSurfaceAssignments,
   getWorkspaceSurfacePalette
 } from '../model/appearanceSettings';
@@ -78,6 +79,8 @@ export function useAppearanceStateValues() {
   const [monospaceFontPresetState, setMonospaceFontPresetState] = useState(() => getMonospaceFontPreset());
   const [customMonospaceFontState, setCustomMonospaceFontState] = useState(() => getCustomMonospaceFont());
   const [interfaceFontSizeState, setInterfaceFontSizeState] = useState(() => getInterfaceFontSize());
+  const [workspaceDividerOpacityPercentState, setWorkspaceDividerOpacityPercentState] =
+    useState(() => getWorkspaceDividerOpacityPercent());
 
   return {
     ...modeScoped,
@@ -104,7 +107,9 @@ export function useAppearanceStateValues() {
     setPdfReadingModeState,
     setResolvedBaseColorModeState,
     setUiFontPresetState,
-    uiFontPresetState
+    setWorkspaceDividerOpacityPercentState,
+    uiFontPresetState,
+    workspaceDividerOpacityPercentState
   };
 }
 
@@ -177,6 +182,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       interfaceFontSize: state.interfaceFontSizeState,
       monospaceFont: state.monospaceFontPresetState,
       uiFont: state.uiFontPresetState,
+      workspaceDividerOpacityPercent: state.workspaceDividerOpacityPercentState,
       workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
       workspaceSurfacePalette: state.workspaceSurfacePaletteState
     });
@@ -202,6 +208,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
     state.selectionToolbarOpacityPercentState,
     state.resolvedBaseColorModeState,
     state.uiFontPresetState,
+    state.workspaceDividerOpacityPercentState,
     state.workspaceSurfaceAssignmentsState,
     state.workspaceSurfacePaletteState
   ]);
