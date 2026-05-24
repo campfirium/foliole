@@ -162,6 +162,7 @@ function runCriticalTests(files) {
     '--',
     '--silent=passed-only',
     '--pool=threads',
+    '--maxWorkers=2',
     '--no-file-parallelism',
     ...tests
   ]);

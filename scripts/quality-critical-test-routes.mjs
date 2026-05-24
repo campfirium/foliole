@@ -93,6 +93,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       '--',
       '--silent=passed-only',
       '--pool=threads',
+      '--maxWorkers=2',
       '--no-file-parallelism',
       ...tests
     ], { stdio: 'inherit' });

@@ -108,6 +108,35 @@ describe('pre-commit native sqlite validation', () => {
     }
   });
 
+  it('allows Electron ABI routed vitest scripts that target real sqlite tests', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
+      await writeFile(
+        path.join(repoDir, 'package.json'),
+        JSON.stringify({
+          scripts: {
+            'test:sqlite:visibility':
+              'node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/sqlite.json -- electron/database/externalDocumentImportVisibility.test.ts'
+          }
+        }),
+        'utf8'
+      );
+      await writeFile(
+        path.join(repoDir, 'electron', 'database', 'externalDocumentImportVisibility.test.ts'),
+        "import { openDatabaseConnection } from './connection.js';\nopenDatabaseConnection();\n",
+        'utf8'
+      );
+      await runCommand('git', ['add', 'package.json', 'electron/database/externalDocumentImportVisibility.test.ts'], repoDir);
+
+      const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
+
+      expect(result.code, result.stderr).toBe(0);
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
+
   it('ignores guard source and test fixtures that quote blocked sqlite examples', async () => {
     const repoDir = await createRepo();
     try {
