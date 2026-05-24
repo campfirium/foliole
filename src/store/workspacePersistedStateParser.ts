@@ -116,6 +116,25 @@ function parseNumberValueRecord(value: unknown) {
   return Object.fromEntries(entries);
 }
 
+function filterTrashIdsWithTombstones(
+  trashedNodeIds: string[] | undefined,
+  trashedNodeDeletedAtById: Record<string, string | undefined> | undefined
+) {
+  return trashedNodeIds?.filter((nodeId) => typeof trashedNodeDeletedAtById?.[nodeId] === 'string') ?? [];
+}
+
+function normalizeParsedWorkspaceSnapshot(
+  parsedState: Partial<WorkspacePersistedState> & { nodesById: Record<string, Node> }
+) {
+  return normalizeWorkspaceSnapshot({
+    activeNodeId: parsedState.activeNodeId ?? null,
+    nodeOrder: parsedState.nodeOrder ?? [],
+    nodesById: parsedState.nodesById,
+    trashedNodeDeletedAtById: parsedState.trashedNodeDeletedAtById ?? {},
+    trashedNodeIds: filterTrashIdsWithTombstones(parsedState.trashedNodeIds, parsedState.trashedNodeDeletedAtById)
+  });
+}
+
 function parseReviewSession(value: unknown): ReviewSessionState | undefined {
   if (!isPlainRecord(value)) {
     return undefined;
@@ -181,12 +200,9 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   }
   return {
     ...parsedState,
-    ...normalizeWorkspaceSnapshot({
-      activeNodeId: parsedState.activeNodeId ?? null,
-      nodeOrder: parsedState.nodeOrder ?? [],
-      nodesById: parsedState.nodesById,
-      trashedNodeDeletedAtById: parsedState.trashedNodeDeletedAtById ?? {},
-      trashedNodeIds: parsedState.trashedNodeIds ?? []
+    ...normalizeParsedWorkspaceSnapshot({
+      ...parsedState,
+      nodesById: parsedState.nodesById
     })
   };
 }

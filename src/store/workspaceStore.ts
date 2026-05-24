@@ -5,6 +5,7 @@ import { createEmptyEditorOperationHistory } from '../features/editor/model/edit
 import { DEFAULT_REVIEW_SESSION_MODE } from '../features/review/model/reviewSessionMode';
 
 import { createEmptyWorkspaceActionHistory, createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import { loadWorkspaceLayoutPreferenceSnapshot } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE } from './workspaceNavigation';
@@ -111,7 +112,7 @@ const workspaceStore = create<WorkspaceState>()(
       ...createWorkspaceLayoutActions(boundaryAwareSet, defaultLayoutState),
       setActiveNode: (nodeId) => {
         boundaryAwareSet((state) => {
-          if (!state.nodesById[nodeId] || state.trashedNodeIds.includes(nodeId)) {
+          if (!isCanonicalVisibleNodeId(state, nodeId)) {
             return state;
           }
           return {

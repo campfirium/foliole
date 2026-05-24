@@ -105,3 +105,20 @@ export function selectCanonicalReviewQueueSource<TNode extends WorkspaceCanonica
     trashedNodeIds: selectCanonicalTrashedNodeIds(source)
   };
 }
+
+export function selectCanonicalWorkspaceMembershipView<TNode extends WorkspaceCanonicalNode>(
+  source: WorkspaceCanonicalSource<TNode>
+) {
+  const nodeOrder = selectCanonicalVisibleNodeIds(source);
+  const trashedNodeIds = selectCanonicalTrashedNodeIds(source);
+  return {
+    nodeOrder,
+    reviewQueueSource: {
+      nodeOrder,
+      nodesById: source.nodesById as Record<string, TNode>,
+      trashedNodeIds
+    },
+    trashedNodeDeletedAtById: selectCanonicalTrashedNodeDeletedAtById(source),
+    trashedNodeIds
+  };
+}
