@@ -12,6 +12,7 @@ export {
 } from './Dialog';
 export {
   AppDropdownMenu,
+  AppDropdownMenuCheckItem,
   AppDropdownMenuContent,
   AppDropdownMenuItem,
   AppDropdownMenuLabel,

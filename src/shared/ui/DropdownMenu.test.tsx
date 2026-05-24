@@ -1,7 +1,16 @@
 import { createEvent, fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from './DropdownMenu';
+import {
+  AppDropdownMenu,
+  AppDropdownMenuCheckItem,
+  AppDropdownMenuContent,
+  AppDropdownMenuLabel,
+  AppDropdownMenuSeparator,
+  AppDropdownMenuTrigger,
+  AppSelectionDropdownMenu,
+  AppSelectionDropdownMenuItem
+} from './DropdownMenu';
 
 it('prevents selection-safe menu items from stealing focus on pointer down', () => {
   render(
@@ -75,4 +84,24 @@ it('renders menus above tooltip-level floating surfaces', () => {
 
   const menu = screen.getByRole('menu', { name: 'Selection commands' });
   expect(menu.className).toContain('z-dropdown');
+});
+
+it('uses shared dropdown styling for grouped checked menu items', () => {
+  render(
+    <AppDropdownMenu open>
+      <AppDropdownMenuTrigger>Sort</AppDropdownMenuTrigger>
+      <AppDropdownMenuContent>
+        <AppDropdownMenuLabel>Sort by</AppDropdownMenuLabel>
+        <AppDropdownMenuCheckItem checked>Date modified</AppDropdownMenuCheckItem>
+        <AppDropdownMenuSeparator />
+        <AppDropdownMenuCheckItem checked={false}>Name</AppDropdownMenuCheckItem>
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
+  );
+
+  const checkedItem = screen.getByRole('menuitem', { name: 'Date modified' });
+  expect(checkedItem).toHaveAttribute('aria-checked', 'true');
+  expect(checkedItem.className).toContain('data-[highlighted]:bg-[var(--app-floating-item-hover-bg)]');
+  expect(screen.getByText('Sort by').className).toContain('text-foreground/45');
+  expect(screen.getByRole('separator').className).toContain('var(--app-floating-divider-color)');
 });

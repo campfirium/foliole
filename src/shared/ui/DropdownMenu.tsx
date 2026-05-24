@@ -13,8 +13,6 @@ function AppDropdownMenu(props: React.ComponentPropsWithoutRef<typeof DropdownMe
 }
 const AppDropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 const AppDropdownMenuPortal = DropdownMenuPrimitive.Portal;
-const AppDropdownMenuLabel = DropdownMenuPrimitive.Label;
-const AppDropdownMenuSeparator = DropdownMenuPrimitive.Separator;
 
 interface AppSelectionDropdownMenuProps {
   children: ReactNode;
@@ -25,6 +23,9 @@ interface AppSelectionDropdownMenuProps {
 }
 
 type AppSelectionDropdownMenuItemProps = ButtonHTMLAttributes<HTMLButtonElement>;
+type AppDropdownMenuCheckItemProps = React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
+  checked: boolean;
+};
 
 function dropdownMenuContentClassName(className?: string) {
   return cn(
@@ -36,9 +37,19 @@ function dropdownMenuContentClassName(className?: string) {
 
 function dropdownMenuItemClassName(className?: string) {
   return cn(
-    'relative flex min-h-9 cursor-default select-none items-center px-3 text-sm font-semibold outline-none transition-colors focus:bg-[var(--app-selection-surface-color)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+    'relative flex min-h-8 cursor-default select-none items-center gap-2 rounded-md px-2 py-1 text-[13px] font-normal leading-5 text-foreground/78 outline-none transition-colors',
+    'focus:bg-[var(--app-floating-item-hover-bg)] focus:text-foreground data-[highlighted]:bg-[var(--app-floating-item-hover-bg)] data-[highlighted]:text-foreground',
+    'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
     className
   );
+}
+
+function dropdownMenuLabelClassName(className?: string) {
+  return cn('px-2 pb-1 pt-2 text-xs font-medium text-foreground/45', className);
+}
+
+function dropdownMenuSeparatorClassName(className?: string) {
+  return cn('mx-1 my-1.5 h-px bg-[var(--app-floating-divider-color)]', className);
 }
 
 const AppDropdownMenuContent = React.forwardRef<
@@ -67,6 +78,52 @@ const AppDropdownMenuItem = React.forwardRef<
   />
 ));
 AppDropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
+
+const AppDropdownMenuLabel = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Label>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Label>
+>(({ className, ...props }, ref) => (
+  <DropdownMenuPrimitive.Label
+    ref={ref}
+    className={dropdownMenuLabelClassName(className)}
+    {...props}
+  />
+));
+AppDropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName;
+
+const AppDropdownMenuSeparator = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Separator>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>
+>(({ className, ...props }, ref) => (
+  <DropdownMenuPrimitive.Separator
+    ref={ref}
+    className={dropdownMenuSeparatorClassName(className)}
+    {...props}
+  />
+));
+AppDropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName;
+
+function AppDropdownMenuCheckItem({
+  checked,
+  children,
+  className,
+  ...props
+}: AppDropdownMenuCheckItemProps) {
+  return (
+    <AppDropdownMenuItem
+      aria-checked={checked}
+      className={cn('justify-between', className)}
+      {...props}
+    >
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      <span aria-hidden="true" className={cn('flex h-5 w-5 shrink-0 items-center justify-center', checked ? 'text-foreground' : 'invisible')}>
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 16 16">
+          <path d="m3.2 8.5 3 3 6.4-6.4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3" />
+        </svg>
+      </span>
+    </AppDropdownMenuItem>
+  );
+}
 
 function preventFocusSteal(event: { preventDefault: () => void }) {
   event.preventDefault();
@@ -135,7 +192,7 @@ function AppSelectionDropdownMenuItem({
     <button
       className={cn(
         dropdownMenuItemClassName(className),
-        'w-full text-left hover:bg-[var(--app-selection-surface-color)] disabled:pointer-events-none disabled:opacity-45'
+        'w-full text-left hover:bg-[var(--app-selection-surface-color)] focus:bg-[var(--app-selection-surface-color)] disabled:pointer-events-none disabled:opacity-45'
       )}
       onMouseDown={(event) => {
         preventFocusSteal(event);
@@ -156,6 +213,7 @@ function AppSelectionDropdownMenuItem({
 
 export {
   AppDropdownMenu,
+  AppDropdownMenuCheckItem,
   AppDropdownMenuContent,
   AppDropdownMenuItem,
   AppDropdownMenuLabel,
