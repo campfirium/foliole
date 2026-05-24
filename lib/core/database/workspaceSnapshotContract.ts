@@ -50,6 +50,21 @@ function hasDeletedFact(node: WorkspaceSnapshotNodeContract | undefined): node i
   return typeof node?.deletedAt === 'string' && node.deletedAt.trim().length > 0;
 }
 
+function hasLifecycleFact(node: WorkspaceSnapshotNodeContract | undefined) {
+  return node?.deletedAt !== undefined;
+}
+
+function isTrashedSnapshotNode<TNode extends WorkspaceSnapshotNodeContract>(
+  nodeId: string,
+  node: TNode | undefined,
+  deletedAtById: Record<string, string | undefined>,
+  legacyTrashIds: Set<string>
+) {
+  if (!node) return false;
+  if (hasLifecycleFact(node)) return hasDeletedFact(node);
+  return Boolean(deletedAtById[nodeId] || legacyTrashIds.has(nodeId));
+}
+
 function normalizeNodesById<TNode extends WorkspaceSnapshotNodeContract>(
   nodesById: Record<string, TNode>,
   deletedAtById: Record<string, string | undefined> | undefined
@@ -86,15 +101,16 @@ export function normalizeWorkspaceSnapshot<
   TSnapshot extends WorkspaceSnapshotContract<TNode>
 >(snapshot: TSnapshot): TSnapshot {
   const nodesById = normalizeNodesById(snapshot.nodesById, snapshot.trashedNodeDeletedAtById);
+  const legacyTrashIds = new Set(snapshot.trashedNodeIds);
   const trashedNodeDeletedAtById = Object.fromEntries(
     Object.entries(nodesById)
       .filter((entry): entry is [string, TNode & { deletedAt: string }] => hasDeletedFact(entry[1]))
       .map(([nodeId, node]) => [nodeId, node.deletedAt])
   );
-  const trashedNodeIds = uniqueIds(snapshot.trashedNodeIds, Object.keys(trashedNodeDeletedAtById))
-    .filter((nodeId) => Boolean(nodesById[nodeId] && trashedNodeDeletedAtById[nodeId]));
+  const trashedNodeIds = uniqueIds(snapshot.trashedNodeIds, Object.keys(trashedNodeDeletedAtById), Object.keys(nodesById))
+    .filter((nodeId) => isTrashedSnapshotNode(nodeId, nodesById[nodeId], trashedNodeDeletedAtById, legacyTrashIds));
   const nodeOrder = uniqueIds(snapshot.nodeOrder, Object.keys(nodesById))
-    .filter((nodeId) => Boolean(nodesById[nodeId] && !trashedNodeDeletedAtById[nodeId]));
+    .filter((nodeId) => Boolean(nodesById[nodeId] && !isTrashedSnapshotNode(nodeId, nodesById[nodeId], trashedNodeDeletedAtById, legacyTrashIds)));
   const activeNodeId = resolveWorkspaceSnapshotActiveNodeId({
     activeNodeId: snapshot.activeNodeId,
     nodeOrder,

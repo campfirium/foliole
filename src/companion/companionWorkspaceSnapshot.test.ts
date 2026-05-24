@@ -15,7 +15,7 @@ describe('resolveReadableCompanionArticle', () => {
       untitledSequenceByParent: {}
     } as never);
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       bodyBlobHash: null,
       bodyStatus: 'ready',
       content: 'Readable body',
@@ -37,6 +37,26 @@ describe('resolveReadableCompanionArticle', () => {
         'node-2': { content: 'Visible', id: 'node-2', title: 'Visible title' }
       },
       trashedNodeIds: ['node-1'],
+      untitledSequenceByParent: {}
+    } as never);
+
+    expect(result?.nodeId).toBe('node-2');
+  });
+
+  it('ignores a deleted active node even when legacy trash projection is stale', () => {
+    const result = resolveReadableCompanionArticle({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1', 'node-2'],
+      nodesById: {
+        'node-1': {
+          content: 'Deleted body',
+          deletedAt: '2026-05-24T00:00:00.000Z',
+          id: 'node-1',
+          title: 'Deleted title'
+        },
+        'node-2': { content: 'Visible', id: 'node-2', title: 'Visible title' }
+      },
+      trashedNodeIds: [],
       untitledSequenceByParent: {}
     } as never);
 

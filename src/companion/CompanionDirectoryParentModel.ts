@@ -1,6 +1,7 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 import { resolveExternalEntryDirectoryPath } from '../shared/platform/externalLibraryBrowseModel';
+import { isCanonicalTrashedNodeId } from '../shared/workspaceCanonicalSelectors';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 
@@ -57,6 +58,6 @@ function resolveTrashParent(
   selection: Extract<CompanionDirectorySelection, { kind: 'trashFolder' }>
 ): CompanionDirectorySelection {
   const parentNodeId = snapshot?.nodesById[selection.nodeId]?.parentNodeId ?? null;
-  if (!parentNodeId || !snapshot?.trashedNodeIds.includes(parentNodeId)) return { kind: 'trash' };
+  if (!parentNodeId || !snapshot || !isCanonicalTrashedNodeId(snapshot, parentNodeId)) return { kind: 'trash' };
   return { kind: 'trashFolder', nodeId: parentNodeId };
 }

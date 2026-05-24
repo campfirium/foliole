@@ -1,3 +1,4 @@
+import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { createEmptyReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -6,7 +7,12 @@ interface ReconcileReviewSessionOptions {
 }
 
 function isVisibleQueuedNode(state: WorkspaceState, nodeId: string) {
-  return Boolean(state.nodesById[nodeId]) && !state.trashedNodeIds.includes(nodeId);
+  return isCanonicalVisibleNodeId({
+    nodeOrder: state.nodeOrder,
+    nodesById: state.nodesById,
+    trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
+    trashedNodeIds: state.trashedNodeIds
+  }, nodeId);
 }
 
 function placeActiveQueuedNodeFirst(queueNodeIds: string[], nextActiveNodeId: string | null) {

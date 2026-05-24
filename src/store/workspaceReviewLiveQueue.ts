@@ -8,7 +8,10 @@ import { selectCanonicalReviewQueueSource } from './workspaceCanonicalSelectors'
 import type { WorkspaceState } from './workspaceStore';
 
 const EXTENSION_NODE_LIMIT = 20;
-type ReviewLiveQueueState = Pick<WorkspaceState, 'nodeOrder' | 'nodesById' | 'reviewSession' | 'reviewSessionMode' | 'trashedNodeIds'>;
+type ReviewLiveQueueState = Pick<
+  WorkspaceState,
+  'nodeOrder' | 'nodesById' | 'reviewSession' | 'reviewSessionMode' | 'trashedNodeIds'
+> & Partial<Pick<WorkspaceState, 'trashedNodeDeletedAtById'>>;
 
 export interface ReviewLiveQueueOutput {
   currentNodeId: string | null;
@@ -88,6 +91,7 @@ export function buildLiveReviewQueueOutput(
   const canonicalSource = selectCanonicalReviewQueueSource({
     nodeOrder: overrides.nodeOrder ?? state.nodeOrder,
     nodesById: overrides.nodesById ?? state.nodesById,
+    ...definedProps({ trashedNodeDeletedAtById: state.trashedNodeDeletedAtById }),
     trashedNodeIds: state.trashedNodeIds
   });
   const plan = buildCachedReviewQueuePlan({

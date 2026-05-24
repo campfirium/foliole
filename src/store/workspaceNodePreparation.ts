@@ -1,5 +1,6 @@
 import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
 
+import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { pushNavigationHistory } from './workspaceNavigation';
 import { writeCachedWorkspaceNodeDocument } from './workspaceNodeDocumentCache';
 import { loadWorkspaceNodeDocument, shouldSkipNodeDocumentPreparation } from './workspaceNodeDocumentLoader';
@@ -57,7 +58,7 @@ function buildPreparedOpenState(
   options: EnsureWorkspaceNodeDocumentReadyOptions
 ): WorkspaceState {
   const targetNode = state.nodesById[nodeId];
-  if (!targetNode || state.trashedNodeIds.includes(nodeId)) {
+  if (!targetNode || !isWorkspaceNodeVisible(state, nodeId)) {
     return state;
   }
 
@@ -109,10 +110,22 @@ function buildPreparedOpenState(
   };
 }
 
+function isWorkspaceNodeVisible(state: WorkspaceState, nodeId: string) {
+  return isCanonicalVisibleNodeId({
+    nodeOrder: state.nodeOrder,
+    nodesById: state.nodesById,
+    trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
+    trashedNodeIds: state.trashedNodeIds
+  }, nodeId);
+}
+
 export async function ensureWorkspaceNodeDocumentReady(
   nodeId: string,
   options: EnsureWorkspaceNodeDocumentReadyOptions = {}
 ) {
+  if (!isWorkspaceNodeVisible(useWorkspaceStore.getState(), nodeId)) {
+    return null;
+  }
   if (!options.forceLoad && shouldSkipNodeDocumentPreparation(nodeId)) {
     return null;
   }
@@ -130,6 +143,9 @@ export async function openWorkspaceNodeWithPreparedDocument(
   nodeId: string,
   options: EnsureWorkspaceNodeDocumentReadyOptions = {}
 ) {
+  if (!isWorkspaceNodeVisible(useWorkspaceStore.getState(), nodeId)) {
+    return null;
+  }
   const document = !options.forceLoad && shouldSkipNodeDocumentPreparation(nodeId)
     ? options.preloadedDocument ?? null
     : await loadWorkspaceNodeDocument(nodeId, options);

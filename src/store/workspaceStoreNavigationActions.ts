@@ -1,5 +1,6 @@
 import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
 
+import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { pushNavigationHistory, resolveAncestorAnchorLink, type NodeNavigationResult } from './workspaceNavigation';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -21,7 +22,12 @@ interface WorkspaceNavigationActions {
 }
 
 function isAvailableNode(state: WorkspaceState, nodeId: string) {
-  return Boolean(state.nodesById[nodeId]) && !state.trashedNodeIds.includes(nodeId);
+  return isCanonicalVisibleNodeId({
+    nodeOrder: state.nodeOrder,
+    nodesById: state.nodesById,
+    trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
+    trashedNodeIds: state.trashedNodeIds
+  }, nodeId);
 }
 
 function buildNavigationNodeState(

@@ -54,6 +54,23 @@ it('hoists legacy trash timestamp maps onto nodes before deriving trash membersh
   expect(snapshot.trashedNodeIds).toEqual(['legacy-trash']);
 });
 
+it('keeps bare legacy trash ids as derived membership without overriding restored lifecycle facts', () => {
+  const snapshot = normalizeWorkspaceSnapshot({
+    activeNodeId: 'legacy-trash',
+    nodeOrder: ['legacy-trash', 'restored-node'],
+    nodesById: {
+      'legacy-trash': createNode('legacy-trash'),
+      'restored-node': createNode('restored-node', { deletedAt: null })
+    },
+    trashedNodeIds: ['legacy-trash', 'restored-node']
+  });
+
+  expect(snapshot.nodeOrder).toEqual(['restored-node']);
+  expect(snapshot.trashedNodeIds).toEqual(['legacy-trash']);
+  expect(snapshot.trashedNodeDeletedAtById).toEqual({});
+  expect(snapshot.activeNodeId).toBe('restored-node');
+});
+
 it('uses the same active resolver for persisted, runtime, and reading-progress callers', () => {
   expect(resolveWorkspaceSnapshotActiveNodeId({
     activeNodeId: 'missing-node',
