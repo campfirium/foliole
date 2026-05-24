@@ -7,7 +7,8 @@ import {
   selectCanonicalReviewQueueSource,
   selectCanonicalTrashedNodeDeletedAtById,
   selectCanonicalTrashedNodeIds,
-  selectCanonicalVisibleNodeIds
+  selectCanonicalVisibleNodeIds,
+  selectCanonicalWorkspaceMembershipView
 } from './workspaceCanonicalSelectors';
 
 function node(id: string, deletedAt?: string | null) {
@@ -119,5 +120,35 @@ it('feeds review queue source with visible order only', () => {
   expect(selectCanonicalReviewQueueSource(source)).toMatchObject({
     nodeOrder: ['visible-1'],
     trashedNodeIds: ['trash-1']
+  });
+});
+
+it('builds a single workspace membership view for store consumers', () => {
+  const source = {
+    nodeOrder: ['visible-1', 'deleted-1', 'restored-1', 'legacy-trash'],
+    nodesById: {
+      'deleted-1': node('deleted-1', '2026-05-24T00:00:00.000Z'),
+      'legacy-trash': node('legacy-trash'),
+      'restored-1': node('restored-1', null),
+      'visible-1': node('visible-1', null)
+    },
+    trashedNodeDeletedAtById: {
+      'legacy-trash': '2026-05-24T00:01:00.000Z',
+      'restored-1': '2026-05-24T00:02:00.000Z'
+    },
+    trashedNodeIds: ['restored-1', 'legacy-trash']
+  };
+
+  expect(selectCanonicalWorkspaceMembershipView(source)).toMatchObject({
+    nodeOrder: ['visible-1', 'restored-1'],
+    reviewQueueSource: {
+      nodeOrder: ['visible-1', 'restored-1'],
+      trashedNodeIds: ['legacy-trash', 'deleted-1']
+    },
+    trashedNodeDeletedAtById: {
+      'deleted-1': '2026-05-24T00:00:00.000Z',
+      'legacy-trash': '2026-05-24T00:01:00.000Z'
+    },
+    trashedNodeIds: ['legacy-trash', 'deleted-1']
   });
 });

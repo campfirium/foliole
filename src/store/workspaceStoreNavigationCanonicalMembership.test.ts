@@ -36,3 +36,32 @@ it('does not open a deleted node when trash projection is stale', () => {
   expect(useWorkspaceStore.getState().openNode('node-2')).toBeNull();
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
 });
+
+it('does not set a deleted active node when trash projection is stale', () => {
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
+
+  useWorkspaceStore.setState({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      'node-1': {
+        ...seedNode,
+        content: 'Visible body',
+        id: 'node-1',
+        title: 'Node 1'
+      },
+      'node-2': {
+        ...seedNode,
+        content: 'Deleted body',
+        deletedAt: '2026-05-24T00:00:00.000Z',
+        id: 'node-2',
+        title: 'Deleted node'
+      }
+    },
+    trashedNodeIds: []
+  });
+
+  useWorkspaceStore.getState().setActiveNode('node-2');
+
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+});
