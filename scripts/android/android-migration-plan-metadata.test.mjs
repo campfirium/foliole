@@ -8,6 +8,18 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const MIGRATION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-migration-schema.json');
+const DATABASE_HELPER = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionDatabaseHelper.java'
+);
 const DATABASE_MIGRATION = path.join(
   REPO_ROOT,
   'android',
@@ -48,6 +60,8 @@ const MIGRATION_RULES = path.join(
 describe('Android migration plan metadata', () => {
   it('generates versioned migration actions in the migration schema asset', async () => {
     const schema = JSON.parse(await readFile(MIGRATION_SCHEMA, 'utf8'));
+    const helperSource = await readFile(DATABASE_HELPER, 'utf8');
+    const databaseVersion = Number(helperSource.match(/DATABASE_VERSION = (\d+)/)?.[1]);
 
     expect(schema.actionTypes).toMatchObject({
       addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
@@ -68,6 +82,7 @@ describe('Android migration plan metadata', () => {
       tableName: 'tableName'
     });
     expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(databaseVersion).toBe(Math.max(...schema.plan.map((step) => step.beforeVersion)));
     expect(schema.repairRules.nodesSequentialReadingEnabled).toMatchObject({
       columnName: 'sequential_reading_enabled',
       statementName: 'nodesSequentialReadingEnabledColumn',
