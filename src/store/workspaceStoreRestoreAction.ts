@@ -13,7 +13,29 @@ type WorkspaceSet = (
 ) => void;
 
 export interface RestoreNodeRuntimeHandlers {
-  syncRestoreNodes: (payload: { nodeIds: string[] }) => Promise<WorkspaceRestoreNodesResult> | WorkspaceRestoreNodesResult | undefined;
+  syncRestoreNodes: (
+    payload: { nodeIds: string[] }
+  ) => Promise<WorkspaceRestoreNodesResult | undefined> | WorkspaceRestoreNodesResult | undefined;
+}
+
+export type RestoreNodeMutationEvent =
+  | {
+      kind: 'restore-nodes';
+      nodeIds: string[];
+      result: WorkspaceRestoreNodesResult;
+      status: 'committed';
+    }
+  | {
+      kind: 'restore-nodes';
+      nodeIds: string[];
+      reason: 'runtime-unavailable-or-failed';
+      status: 'failed';
+    };
+
+interface RestoreNodeMutationCommit {
+  event: Extract<RestoreNodeMutationEvent, { status: 'committed' }>;
+  patch: Partial<WorkspaceState>;
+  targetNodeId: string;
 }
 
 function resolveRestoreTargetNodeId(rootNodeId: string, result: WorkspaceRestoreNodesResult) {
@@ -45,6 +67,34 @@ function applyRestoreResult(
   };
 }
 
+function createRestoreFailureEvent(nodeIds: string[]): RestoreNodeMutationEvent {
+  return {
+    kind: 'restore-nodes',
+    nodeIds,
+    reason: 'runtime-unavailable-or-failed',
+    status: 'failed'
+  };
+}
+
+function createRestoreCommit(
+  state: WorkspaceState,
+  result: WorkspaceRestoreNodesResult,
+  rootNodeId: string,
+  nodeIds: string[]
+): RestoreNodeMutationCommit {
+  const targetNodeId = resolveRestoreTargetNodeId(rootNodeId, result);
+  return {
+    event: {
+      kind: 'restore-nodes',
+      nodeIds,
+      result,
+      status: 'committed'
+    },
+    patch: applyRestoreResult(state, result, targetNodeId),
+    targetNodeId
+  };
+}
+
 export function createRestoreNodeAction(
   set: WorkspaceSet,
   runtimeHandlers: RestoreNodeRuntimeHandlers
@@ -63,12 +113,18 @@ export function createRestoreNodeAction(
       return null;
     }
 
-    const restoreResult = await runtimeHandlers.syncRestoreNodes({ nodeIds: idsToRestoreForSync }) ?? {
-      restoredNodeIds: idsToRestoreForSync,
-      skippedConflicts: []
-    };
-    const targetNodeId = resolveRestoreTargetNodeId(rootNodeId, restoreResult);
-    set((state) => applyRestoreResult(state, restoreResult, targetNodeId));
+    const restoreRootNodeId = rootNodeId;
+    const restoreResult = await runtimeHandlers.syncRestoreNodes({ nodeIds: idsToRestoreForSync });
+    if (!restoreResult) {
+      void createRestoreFailureEvent(idsToRestoreForSync);
+      return null;
+    }
+    let targetNodeId: string | null = null;
+    set((state) => {
+      const commit = createRestoreCommit(state, restoreResult, restoreRootNodeId, idsToRestoreForSync);
+      targetNodeId = commit.targetNodeId;
+      return commit.patch;
+    });
     return targetNodeId;
   };
 }

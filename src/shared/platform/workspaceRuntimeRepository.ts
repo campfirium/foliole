@@ -129,10 +129,6 @@ export function softDeleteWorkspaceNodes(payload: { nodeIds: string[]; deletedAt
   runFireAndForgetRuntimeSync(NATIVE_COMMANDS.softDeleteNodes, payload, 'sync_soft_delete_nodes');
 }
 
-function createDefaultRestoreNodesResult(payload: { nodeIds: string[] }): WorkspaceRestoreNodesResult {
-  return { restoredNodeIds: payload.nodeIds, skippedConflicts: [] };
-}
-
 function isRestoreNodesResult(value: unknown): value is WorkspaceRestoreNodesResult {
   return Boolean(
     value &&
@@ -142,23 +138,23 @@ function isRestoreNodesResult(value: unknown): value is WorkspaceRestoreNodesRes
   );
 }
 
-export async function restoreWorkspaceNodes(payload: { nodeIds: string[] }): Promise<WorkspaceRestoreNodesResult> {
+export async function restoreWorkspaceNodes(payload: { nodeIds: string[] }): Promise<WorkspaceRestoreNodesResult | undefined> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
-    return createDefaultRestoreNodesResult(payload);
+    return undefined;
   }
   try {
     const result = await runtimeInvoke(NATIVE_COMMANDS.restoreNodes, payload);
-    return isRestoreNodesResult(result) ? result : createDefaultRestoreNodesResult(payload);
+    return isRestoreNodesResult(result) ? result : undefined;
   } catch (error) {
     logRuntimeError('runtime sync failed', {
       area: 'native',
       action: 'sync_restore_nodes',
       command: NATIVE_COMMANDS.restoreNodes,
-      fallback: 'apply_local_restore',
+      fallback: 'none',
       error
     });
-    return createDefaultRestoreNodesResult(payload);
+    return undefined;
   }
 }
 

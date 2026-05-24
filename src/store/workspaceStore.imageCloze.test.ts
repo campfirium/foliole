@@ -8,12 +8,21 @@ const nodeStorage = vi.hoisted(() => ({
   saveNode: vi.fn(),
   saveNodeOrder: vi.fn()
 }));
+const runtimeInvoke = vi.hoisted(() => vi.fn());
 
 vi.mock('../../lib/platform/storage', () => ({
   nodeStorage
 }));
 
+vi.mock('../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => runtimeInvoke)
+}));
+
 beforeEach(() => {
+  runtimeInvoke.mockReset();
+  runtimeInvoke.mockImplementation(async (command: string, payload?: { nodeIds?: string[] }) =>
+    command === 'restore_nodes' ? { restoredNodeIds: payload?.nodeIds ?? [], skippedConflicts: [] } : null
+  );
   useWorkspaceStore.persist.clearStorage();
   useWorkspaceStore.setState({
     activeNodeId: 'node-1',

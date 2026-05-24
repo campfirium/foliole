@@ -36,10 +36,27 @@ describe('workspaceRuntimeSync persistence mutations', () => {
     const invoke = vi.fn().mockResolvedValue({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    await syncRestoreNodesToRuntime({ nodeIds: ['node-1'] });
+    await expect(syncRestoreNodesToRuntime({ nodeIds: ['node-1'] })).resolves.toEqual({
+      restoredNodeIds: ['node-1'],
+      skippedConflicts: []
+    });
 
     expect(invoke).toHaveBeenCalledWith('restore_nodes', { nodeIds: ['node-1'] });
     expectNoWorkspacePersist(invoke);
+  });
+
+  it('does not synthesize a restore success result without runtime confirmation', async () => {
+    vi.mocked(getRuntimeInvoke).mockReturnValue(undefined);
+
+    await expect(syncRestoreNodesToRuntime({ nodeIds: ['node-1'] })).resolves.toBeUndefined();
+  });
+
+  it('does not synthesize a restore success result after runtime failure', async () => {
+    const invoke = vi.fn().mockRejectedValue(new Error('restore failed'));
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    await expect(syncRestoreNodesToRuntime({ nodeIds: ['node-1'] })).resolves.toBeUndefined();
+    expect(invoke).toHaveBeenCalledWith('restore_nodes', { nodeIds: ['node-1'] });
   });
 
   it('syncs permanent delete mutations through delete_nodes_permanently command', () => {

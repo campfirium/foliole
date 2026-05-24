@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
 import {
   syncDeleteNodesPermanentlyToRuntime,
@@ -120,6 +120,7 @@ describe('createWorkspaceNodeActions soft delete sync', () => {
 
     actions.deleteNode(nodeId);
     vi.clearAllMocks();
+    vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue({ restoredNodeIds: [nodeId], skippedConflicts: [] });
     await actions.restoreNode(nodeId);
 
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1);
@@ -141,6 +142,10 @@ describe('createWorkspaceNodeActions trash root normalization sync', () => {
 
     actions.deleteNode(parentNodeId);
     vi.clearAllMocks();
+    vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue({
+      restoredNodeIds: [parentNodeId, childNodeId],
+      skippedConflicts: []
+    });
     await actions.restoreNode(childNodeId);
 
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1);
@@ -169,6 +174,10 @@ describe('createWorkspaceNodeActions unresolved locator lifecycle sync', () => {
     expectParentDocumentUntouched(harness);
 
     vi.clearAllMocks();
+    vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue({
+      restoredNodeIds: ['node-highlight'],
+      skippedConflicts: []
+    });
     await actions.restoreNode('node-highlight');
 
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
@@ -187,7 +196,7 @@ describe('createWorkspaceNodeActions unresolved locator lifecycle sync', () => {
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
       nodeIds: ['node-highlight'],
-      nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
+      nodeOrder: [HOME_NODE_ID, INBOX_NODE_ID, 'special-virtual-root', 'node-1']
     });
     expectParentDocumentUntouched(harness);
     expect(harness.getState().nodesById['node-highlight']!).toBeUndefined();
@@ -210,7 +219,7 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
       nodeIds: [nodeId],
-      nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
+      nodeOrder: [INBOX_NODE_ID, HOME_NODE_ID, 'special-virtual-root', 'node-1']
     });
   });
 
@@ -227,7 +236,7 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
       nodeIds: expect.arrayContaining([parentNodeId, childNodeId]),
-      nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
+      nodeOrder: [HOME_NODE_ID, INBOX_NODE_ID, 'special-virtual-root', 'node-1']
     });
     expect(harness.getState().nodesById[parentNodeId]).toBeUndefined();
     expect(harness.getState().nodesById[childNodeId]).toBeUndefined();
@@ -245,7 +254,7 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
       nodeIds: expect.arrayContaining([firstNodeId, secondNodeId]),
-      nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
+      nodeOrder: [INBOX_NODE_ID, HOME_NODE_ID, 'special-virtual-root', 'node-1']
     });
   });
 

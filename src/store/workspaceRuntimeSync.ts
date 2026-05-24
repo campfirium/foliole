@@ -79,7 +79,7 @@ export function syncSoftDeleteNodesToRuntime(payload: { nodeIds: string[]; delet
   softDeleteWorkspaceNodes(payload);
 }
 
-export async function syncRestoreNodesToRuntime(payload: { nodeIds: string[] }): Promise<WorkspaceRestoreNodesResult> {
+export async function syncRestoreNodesToRuntime(payload: { nodeIds: string[] }): Promise<WorkspaceRestoreNodesResult | undefined> {
   return restoreWorkspaceNodes(payload);
 }
 
