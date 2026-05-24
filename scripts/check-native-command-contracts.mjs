@@ -10,6 +10,7 @@ const CONTRACT_FILES = [
   'lib/platform/nativeReadwiseCommandMap.ts',
   'lib/platform/nativeRemoteImageCommandMap.ts',
   'lib/platform/nativeSyncCommandMap.ts',
+  'lib/platform/nativeTrashCommandMap.ts',
   'lib/platform/nativeUtilityCommandMap.ts'
 ];
 const ELECTRON_HANDLER_FILES = [

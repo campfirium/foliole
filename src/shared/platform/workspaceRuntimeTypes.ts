@@ -2,11 +2,13 @@ import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { VirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
 import type {
   NativeApplyReviewGradeArgs,
+  NativeDeleteNodesPermanentlyResult,
   NativeNodeSnapshotArgs,
   NativeReadingProgressSnapshot,
   NativeRelearnNodeArgs,
   NativeRestoreNodesResult,
   NativeSaveReadingProgressArgs,
+  NativeSoftDeleteNodesResult,
   NativeWorkspaceSnapshot
 } from '../../../lib/platform/nativeContract';
 
@@ -46,6 +48,8 @@ export type WorkspaceRuntimeNodeSnapshot = NativeNodeSnapshotArgs;
 export type WorkspaceRuntimeSnapshot = NativeWorkspaceSnapshot;
 export type WorkspaceReadingProgressSnapshot = NativeReadingProgressSnapshot;
 export type WorkspaceRestoreNodesResult = NativeRestoreNodesResult;
+export type WorkspaceSoftDeleteNodesResult = NativeSoftDeleteNodesResult;
+export type WorkspaceDeleteNodesPermanentlyResult = NativeDeleteNodesPermanentlyResult;
 export type WorkspaceReadingProgressSavePayload = NativeSaveReadingProgressArgs;
 export type WorkspaceReviewGradeSyncPayload = NativeApplyReviewGradeArgs;
 export type WorkspaceRelearnNodePayload = NativeRelearnNodeArgs;

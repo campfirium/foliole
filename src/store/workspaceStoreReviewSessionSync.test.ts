@@ -1,4 +1,10 @@
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+const runtimeInvoke = vi.hoisted(() => vi.fn());
+
+vi.mock('../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => runtimeInvoke)
+}));
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
@@ -42,6 +48,10 @@ function createFsrsNode(id: string) {
 
 beforeEach(() => {
   localStorage.clear();
+  runtimeInvoke.mockReset();
+  runtimeInvoke.mockImplementation(async (command: string, payload?: { nodeIds?: string[] }) =>
+    command === 'soft_delete_nodes' ? { deletedNodeIds: payload?.nodeIds ?? [] } : null
+  );
   resetWorkspaceStore();
 });
 
@@ -119,7 +129,7 @@ it('promotes a navigated queued item so resume does not bounce back to the old q
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
 });
 
-it('advances review session when the current queued node is deleted', () => {
+it('advances review session when the current queued node is deleted', async () => {
   useWorkspaceStore.setState({
     activeNodeId: 'fsrs-1',
     nodeOrder: ['fsrs-1', 'reading-1'],
@@ -135,7 +145,7 @@ it('advances review session when the current queued node is deleted', () => {
     }
   });
 
-  useWorkspaceStore.getState().deleteNode('fsrs-1');
+  await useWorkspaceStore.getState().deleteNode('fsrs-1');
 
   const state = useWorkspaceStore.getState();
   expect(state.trashedNodeIds).toContain('fsrs-1');
@@ -174,7 +184,7 @@ it('removes deleted queued nodes even when trash projection is stale', () => {
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
 });
 
-it('opens the next review node instead of the parent folder when deleting a nested current review node', () => {
+it('opens the next review node instead of the parent folder when deleting a nested current review node', async () => {
   useWorkspaceStore.setState({
     activeNodeId: 'fsrs-1',
     nodeOrder: ['folder-1', 'fsrs-1', 'reading-1'],
@@ -203,7 +213,7 @@ it('opens the next review node instead of the parent folder when deleting a nest
     }
   });
 
-  useWorkspaceStore.getState().deleteNode('fsrs-1');
+  await useWorkspaceStore.getState().deleteNode('fsrs-1');
 
   const state = useWorkspaceStore.getState();
   expect(state.trashedNodeIds).toContain('fsrs-1');

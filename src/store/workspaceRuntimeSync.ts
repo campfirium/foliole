@@ -15,8 +15,10 @@ import {
 import type {
   WorkspaceReadingProgressSavePayload,
   WorkspaceRelearnNodePayload,
+  WorkspaceDeleteNodesPermanentlyResult,
   WorkspaceRestoreNodesResult,
   WorkspaceReviewGradeSyncPayload,
+  WorkspaceSoftDeleteNodesResult,
   WorkspaceRuntimeNode,
   WorkspaceRuntimeNodeDocument
 } from '../shared/platform/workspaceRuntimeTypes';
@@ -75,16 +77,20 @@ export function syncRelearnNodeToRuntime(payload: WorkspaceRelearnNodePayload) {
   saveWorkspaceRelearnNode(payload);
 }
 
-export function syncSoftDeleteNodesToRuntime(payload: { nodeIds: string[]; deletedAt: string }) {
-  softDeleteWorkspaceNodes(payload);
+export async function syncSoftDeleteNodesToRuntime(
+  payload: { nodeIds: string[]; deletedAt: string }
+): Promise<WorkspaceSoftDeleteNodesResult | undefined> {
+  return softDeleteWorkspaceNodes(payload);
 }
 
 export async function syncRestoreNodesToRuntime(payload: { nodeIds: string[] }): Promise<WorkspaceRestoreNodesResult | undefined> {
   return restoreWorkspaceNodes(payload);
 }
 
-export function syncDeleteNodesPermanentlyToRuntime(payload: { nodeIds: string[]; nodeOrder: string[] }) {
-  deleteWorkspaceNodesPermanently(payload);
+export async function syncDeleteNodesPermanentlyToRuntime(
+  payload: { nodeIds: string[]; nodeOrder: string[] }
+): Promise<WorkspaceDeleteNodesPermanentlyResult | undefined> {
+  return deleteWorkspaceNodesPermanently(payload);
 }
 
 export function syncReadingProgressToRuntime(payload: WorkspaceReadingProgressSavePayload) {

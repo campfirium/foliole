@@ -33,11 +33,13 @@ beforeEach(() => {
 });
 
 it('refreshes Removed sources after permanent delete sync completes', async () => {
-  mocks.runtimeInvoke.mockResolvedValue(null);
+  mocks.runtimeInvoke.mockResolvedValue({ nodeOrder: [], removedNodeIds: ['node-1'] });
   mocks.refreshRuntimeRemovedSources.mockResolvedValue({ entries: [], loadedAt: '2026-05-18T00:00:00.000Z' });
 
-  deleteWorkspaceNodesPermanently({ nodeIds: ['node-1'], nodeOrder: [] });
-  await vi.waitFor(() => expect(mocks.refreshRuntimeRemovedSources).toHaveBeenCalled());
+  await expect(deleteWorkspaceNodesPermanently({ nodeIds: ['node-1'], nodeOrder: [] })).resolves.toEqual({
+    nodeOrder: [],
+    removedNodeIds: ['node-1']
+  });
 
   expect(mocks.runtimeInvoke).toHaveBeenCalledWith(NATIVE_COMMANDS.deleteNodesPermanently, {
     nodeIds: ['node-1'],
@@ -47,10 +49,10 @@ it('refreshes Removed sources after permanent delete sync completes', async () =
 
 it('keeps permanent delete synced when Removed refresh fails', async () => {
   const refreshError = new Error('refresh failed');
-  mocks.runtimeInvoke.mockResolvedValue(null);
+  mocks.runtimeInvoke.mockResolvedValue({ nodeOrder: [], removedNodeIds: ['node-1'] });
   mocks.refreshRuntimeRemovedSources.mockRejectedValue(refreshError);
 
-  deleteWorkspaceNodesPermanently({ nodeIds: ['node-1'], nodeOrder: [] });
+  await deleteWorkspaceNodesPermanently({ nodeIds: ['node-1'], nodeOrder: [] });
 
   await vi.waitFor(() => {
     expect(mocks.logRuntimeError).toHaveBeenCalledWith('runtime post-sync refresh failed', {

@@ -2,7 +2,7 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
 import type { NativeImportCommandMap } from './nativeImportCommandMap.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
-import type { NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec, NativeRestoreNodesResult } from './nativeNodeMutationContract.js';
+import type { NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec } from './nativeNodeMutationContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
 import type {
@@ -18,12 +18,13 @@ import type {
   NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
 import type { NativeSyncCommandMap } from './nativeSyncCommandMap.js';
+import type { NativeTrashCommandMap } from './nativeTrashCommandMap.js';
 import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type { NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult, NativeSystemFontCatalog } from './nativeUtilityContract.js';
 export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeNodeMutationContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
 
-export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & {
+export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & NativeTrashCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;
@@ -191,18 +192,6 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
   };
   [NATIVE_COMMANDS.replaceNodeOrder]: {
     args: { nodeIds: string[] };
-    result: null;
-  };
-  [NATIVE_COMMANDS.softDeleteNodes]: {
-    args: { nodeIds: string[]; deletedAt: string };
-    result: null;
-  };
-  [NATIVE_COMMANDS.restoreNodes]: {
-    args: { nodeIds: string[] };
-    result: NativeRestoreNodesResult;
-  };
-  [NATIVE_COMMANDS.deleteNodesPermanently]: {
-    args: { nodeIds: string[]; nodeOrder: string[] };
     result: null;
   };
   [NATIVE_COMMANDS.applyReviewGrade]: {

@@ -48,6 +48,21 @@ function completeWorkspaceMutation(result: unknown = null) {
   return result;
 }
 
+function handleSoftDeleteNodeCommand(args: Record<string, unknown>) {
+  const parsed = parseSoftDeleteNodesArgs(args);
+  softDeleteNodes(parsed);
+  scheduleMirrorSync(parsed.nodeIds);
+  return completeWorkspaceMutation({ deletedNodeIds: parsed.nodeIds });
+}
+
+function handlePermanentDeleteNodeCommand(args: Record<string, unknown>) {
+  const parsed = parseDeleteNodesPermanentlyArgs(args);
+  const affectedParentNodeIds = deleteNodesPermanently(parsed);
+  const removedNodeIds = parsed.nodeIds;
+  scheduleMirrorSync([...new Set([...removedNodeIds, ...affectedParentNodeIds])]);
+  return completeWorkspaceMutation({ nodeOrder: parsed.nodeOrder, removedNodeIds });
+}
+
 function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createFolder) {
     const parsed = parseNodeCreationArgs(args, 'folder');
@@ -89,10 +104,7 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
     return completeWorkspaceMutation();
   }
   if (command === NATIVE_COMMANDS.softDeleteNodes) {
-    const parsed = parseSoftDeleteNodesArgs(args);
-    softDeleteNodes(parsed);
-    scheduleMirrorSync(parsed.nodeIds);
-    return completeWorkspaceMutation();
+    return handleSoftDeleteNodeCommand(args);
   }
   if (command === NATIVE_COMMANDS.restoreNodes) {
     const parsed = parseRestoreNodesArgs(args);
@@ -101,10 +113,7 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
     return completeWorkspaceMutation(result);
   }
   if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
-    const parsed = parseDeleteNodesPermanentlyArgs(args);
-    const affectedParentNodeIds = deleteNodesPermanently(parsed);
-    scheduleMirrorSync([...new Set([...parsed.nodeIds, ...affectedParentNodeIds])]);
-    return completeWorkspaceMutation();
+    return handlePermanentDeleteNodeCommand(args);
   }
   return undefined;
 }

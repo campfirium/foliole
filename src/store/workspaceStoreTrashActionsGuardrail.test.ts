@@ -94,13 +94,21 @@ function expectCommandsOnly(invoke: ReturnType<typeof vi.fn>, expected: string) 
   expect(commands).not.toContain('save_workspace_state');
 }
 
+function expectCommandsWithoutWorkspacePersist(invoke: ReturnType<typeof vi.fn>, expected: string[]) {
+  const commands = invoke.mock.calls.map((call) => call[0]);
+  expect(commands).toEqual(expected);
+  expect(commands).not.toContain('save_workspace_state');
+}
+
 describe('workspace trash runtime guardrail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('deleteNode uses soft_delete_nodes only and never save_workspace_state', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
+  it('deleteNode uses soft_delete_nodes only and never save_workspace_state', async () => {
+    const invoke = vi.fn(async (command: string, payload?: { nodeIds?: string[] }) =>
+      command === 'soft_delete_nodes' ? { deletedNodeIds: payload?.nodeIds ?? [] } : null
+    );
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
@@ -108,37 +116,45 @@ describe('workspace trash runtime guardrail', () => {
     const childNodeId = actions.createChildNode(seedNodeId, 'child');
 
     vi.clearAllMocks();
-    actions.deleteNode(childNodeId);
+    await actions.deleteNode(childNodeId);
 
     expectCommandsOnly(invoke, 'soft_delete_nodes');
   });
 
   it('restoreNode uses restore_nodes only and never save_workspace_state', async () => {
-    const invoke = vi.fn().mockResolvedValue(null);
+    const invoke = vi.fn(async (command: string, payload?: { nodeIds?: string[] }) =>
+      command === 'soft_delete_nodes'
+        ? { deletedNodeIds: payload?.nodeIds ?? [] }
+        : command === 'restore_nodes'
+          ? { restoredNodeIds: payload?.nodeIds ?? [], skippedConflicts: [] }
+          : null
+    );
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const seedNodeId = actions.createRootNode('');
     const childNodeId = actions.createChildNode(seedNodeId, 'child');
-    invoke.mockResolvedValue({ restoredNodeIds: [childNodeId], skippedConflicts: [] });
-
-    actions.deleteNode(childNodeId);
+    await actions.deleteNode(childNodeId);
     vi.clearAllMocks();
     await actions.restoreNode(childNodeId);
 
     expectCommandsOnly(invoke, 'restore_nodes');
   });
 
-  it('deleteNodePermanently uses delete_nodes_permanently only and never save_workspace_state', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
+  it('deleteNodePermanently uses delete_nodes_permanently only and never save_workspace_state', async () => {
+    const invoke = vi.fn(async (command: string, payload?: { nodeIds?: string[]; nodeOrder?: string[] }) =>
+      command === 'delete_nodes_permanently'
+        ? { nodeOrder: payload?.nodeOrder ?? [], removedNodeIds: payload?.nodeIds ?? [] }
+        : null
+    );
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const rootNodeId = actions.createRootNode('Root 2');
 
     vi.clearAllMocks();
-    actions.deleteNodePermanently(rootNodeId);
+    await actions.deleteNodePermanently(rootNodeId);
 
-    expectCommandsOnly(invoke, 'delete_nodes_permanently');
+    expectCommandsWithoutWorkspacePersist(invoke, ['delete_nodes_permanently', 'load_removed_sources']);
   });
 });
