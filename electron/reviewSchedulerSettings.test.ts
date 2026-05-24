@@ -45,6 +45,7 @@ it('persists normalized review scheduler settings into sqlite settings table', (
   const saved = saveReviewSchedulerSettings({
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
+    newDayStartsAtHour: 6,
     enableShortTerm: true,
     pushQueue: {
       priorityRatio: 7,
@@ -57,6 +58,7 @@ it('persists normalized review scheduler settings into sqlite settings table', (
     algorithm: DEFAULT_REVIEW_SCHEDULER_SETTINGS.algorithm,
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
+    newDayStartsAtHour: 6,
     enableShortTerm: true,
     pushQueue: {
       defaultPriority: 5,

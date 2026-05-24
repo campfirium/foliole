@@ -14,6 +14,7 @@ import { useReviewSchedulerSettings } from '../../context/ReviewSchedulerSetting
 
 import {
   DefaultPriorityControl,
+  NewDayStartControl,
   QueueMixRatioControl,
   ReadingGrowthFactorRangeControl,
   ReviewNumberInput
@@ -24,6 +25,7 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000;
 interface SettingsReviewSectionProps {
   desiredRetention: number;
   maximumIntervalDays: number;
+  newDayStartsAtHour: number;
   defaultPriority: number;
   priorityRatio: number;
   queueMixRatioReading: number;
@@ -33,6 +35,7 @@ interface SettingsReviewSectionProps {
   readingIntervalGrowthFactorMax: number;
   onDesiredRetentionChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
+  onNewDayStartsAtHourChange: (value: number) => void;
   onDefaultPriorityChange: (value: number) => void;
   onPriorityRatioChange: (value: number) => void;
   onQueueMixRatioReadingChange: (value: number) => void;
@@ -56,8 +59,10 @@ function SchedulerCoreRows(props: Pick<
   SettingsReviewSectionProps,
   | 'desiredRetention'
   | 'maximumIntervalDays'
+  | 'newDayStartsAtHour'
   | 'onDesiredRetentionChange'
   | 'onMaximumIntervalDaysChange'
+  | 'onNewDayStartsAtHourChange'
 >) {
   return (
     <>
@@ -89,6 +94,11 @@ function SchedulerCoreRows(props: Pick<
             <ReviewNumberInput ariaLabel="Maximum interval days" min={1} onChange={props.onMaximumIntervalDaysChange} step={1} value={props.maximumIntervalDays} />
           </SettingsControlSlot>
         }
+      />
+      <ReviewSettingRow
+        title="New day starts at"
+        description="Cards due on a day become available from this local time."
+        control={<NewDayStartControl onChange={props.onNewDayStartsAtHourChange} value={props.newDayStartsAtHour} />}
       />
     </>
   );
@@ -153,8 +163,10 @@ export function SettingsReviewSection() {
       <SchedulerCoreRows
         desiredRetention={reviewSchedulerSettings.desiredRetention}
         maximumIntervalDays={reviewSchedulerSettings.maximumIntervalDays}
+        newDayStartsAtHour={reviewSchedulerSettings.newDayStartsAtHour}
         onDesiredRetentionChange={reviewSettings.onDesiredRetentionChange}
         onMaximumIntervalDaysChange={reviewSettings.onMaximumIntervalDaysChange}
+        onNewDayStartsAtHourChange={reviewSettings.onNewDayStartsAtHourChange}
       />
       <PushQueueRows
         defaultPriority={reviewSchedulerSettings.pushQueue.defaultPriority}

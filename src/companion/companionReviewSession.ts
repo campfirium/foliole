@@ -171,6 +171,7 @@ export async function gradeCompanionReviewCard(args: {
   const result = await gradeSharedFsrsReviewNode({
     getSchedulerVersion: (overrides) => getReviewSchedulerVersion(getCurrentReviewSchedulerSettings(), overrides),
     grade: args.grade,
+    newDayStartsAtHour: getCurrentReviewSchedulerSettings().newDayStartsAtHour,
     nodeId: args.nodeId,
     nodesById: args.snapshot.nodesById,
     now,

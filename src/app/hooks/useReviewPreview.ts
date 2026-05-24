@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { normalizeScheduledCardDue } from '../../../lib/core/review/reviewDayBoundary.js';
 import { resolveNodeShortTermSetting } from '../../features/nodes/model/nodeReviewSettings';
 import type { NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
 import { createReviewSchedulerAdapter } from '../../features/review/model/reviewSchedulerFactory';
 import { toSchedulerCard, type SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
+import { getCurrentReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 
 interface UseReviewPreviewArgs {
   currentNodeId: string | null;
@@ -29,6 +31,27 @@ function buildCardSignature(reviewProfile: NodeReviewProfile | null) {
     reviewProfile.reps,
     reviewProfile.lapses
   ].join('|');
+}
+
+function normalizePreviewDue(result: SchedulerPreviewResult, newDayStartsAtHour: number): SchedulerPreviewResult {
+  return {
+    Again: {
+      ...result.Again,
+      card: normalizeScheduledCardDue({ card: result.Again.card, reviewedAt: result.Again.reviewed_at, newDayStartsAtHour })
+    },
+    Hard: {
+      ...result.Hard,
+      card: normalizeScheduledCardDue({ card: result.Hard.card, reviewedAt: result.Hard.reviewed_at, newDayStartsAtHour })
+    },
+    Good: {
+      ...result.Good,
+      card: normalizeScheduledCardDue({ card: result.Good.card, reviewedAt: result.Good.reviewed_at, newDayStartsAtHour })
+    },
+    Easy: {
+      ...result.Easy,
+      card: normalizeScheduledCardDue({ card: result.Easy.card, reviewedAt: result.Easy.reviewed_at, newDayStartsAtHour })
+    }
+  };
 }
 
 export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewResult | null {
@@ -61,7 +84,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
       .preview({ card, enableShortTerm, now })
       .then((result) => {
         if (isActive) {
-          setPreview(result);
+          setPreview(normalizePreviewDue(result, getCurrentReviewSchedulerSettings().newDayStartsAtHour));
         }
       })
       .catch(() => {

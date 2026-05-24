@@ -59,6 +59,7 @@ it('grades a FSRS node with inherited short-term settings and review log output'
   const result = await gradeSharedFsrsReviewNode({
     getSchedulerVersion: ({ enableShortTerm }) => `ts-fsrs@4:${enableShortTerm ? 'short' : 'default'}`,
     grade: 3,
+    newDayStartsAtHour: 4,
     nodeId: 'item-1',
     nodesById: {
       'folder-1': createFolderNode(),
@@ -71,15 +72,13 @@ it('grades a FSRS node with inherited short-term settings and review log output'
   expect(scheduler.grade).toHaveBeenCalledWith(expect.objectContaining({ enableShortTerm: true, grade: 3 }));
   expect(result).toMatchObject({
     cardBefore: { due: '2026-04-22T08:00:00.000Z', reps: 3 },
-    cardAfter: { due: '2026-04-25T08:10:00.000Z', reps: 4 },
+    cardAfter: { reps: 4 },
     nextReviewProfile: {
-      due: '2026-04-25T08:10:00.000Z',
       lastReviewAt: '2026-04-22T08:10:00.000Z',
       reps: 4
     },
     nodePatch: {
       review: {
-        due: '2026-04-25T08:10:00.000Z',
         lastReviewAt: '2026-04-22T08:10:00.000Z',
         reps: 4
       },
@@ -98,6 +97,7 @@ it('rejects non-FSRS nodes without calling the scheduler', async () => {
   const result = await gradeSharedFsrsReviewNode({
     getSchedulerVersion: () => 'ts-fsrs@4',
     grade: 3,
+    newDayStartsAtHour: 4,
     nodeId: 'topic-1',
     nodesById: {
       'topic-1': {
@@ -131,6 +131,7 @@ it('returns a host-neutral patch that desktop and companion can apply identicall
   const result = await gradeSharedFsrsReviewNode({
     getSchedulerVersion: () => 'ts-fsrs@4',
     grade: 3,
+    newDayStartsAtHour: 4,
     nodeId: 'item-1',
     nodesById: { 'item-1': node },
     now: '2026-04-22T08:10:00.000Z',
@@ -143,4 +144,22 @@ it('returns a host-neutral patch that desktop and companion can apply identicall
   expect(desktopNode.review).toEqual(companionNode.review);
   expect(desktopNode.updatedAt).toBe(companionNode.updatedAt);
   expect(result?.reviewLog.schedulerVersion).toBe('ts-fsrs@4');
+});
+
+it('uses the configured new day start for day-based due dates', async () => {
+  const scheduler = createScheduler();
+  const result = await gradeSharedFsrsReviewNode({
+    getSchedulerVersion: () => 'ts-fsrs@4',
+    grade: 3,
+    newDayStartsAtHour: 6,
+    nodeId: 'item-1',
+    nodesById: {
+      'folder-1': createFolderNode(),
+      'item-1': createReviewedItemNode()
+    },
+    now: '2026-04-22T08:10:00.000Z',
+    scheduler
+  });
+
+  expect(new Date(result?.nextReviewProfile.due ?? '').getHours()).toBe(6);
 });

@@ -19,8 +19,12 @@ function ReviewSchedulerHarness() {
     <>
       <div>{settings.reviewSchedulerSettings.desiredRetention.toFixed(2)}</div>
       <div>{settings.reviewSchedulerSettings.pushQueue.defaultPriority}</div>
+      <div>{settings.reviewSchedulerSettings.newDayStartsAtHour}</div>
       <button onClick={() => settings.onDesiredRetentionChange(0.82)} type="button">
         Change retention
+      </button>
+      <button onClick={() => settings.onNewDayStartsAtHourChange(6)} type="button">
+        Change day start
       </button>
       <button onClick={() => settings.onDefaultPriorityChange(4)} type="button">
         Change priority
@@ -38,14 +42,17 @@ it('hydrates saved review scheduler settings and persists updates through the sh
     .fn()
     .mockResolvedValueOnce({
       desiredRetention: 0.91,
+      newDayStartsAtHour: 5,
       pushQueue: { defaultPriority: 6 }
     })
     .mockResolvedValueOnce({
       desiredRetention: 0.82,
+      newDayStartsAtHour: 5,
       pushQueue: { defaultPriority: 6 }
     })
     .mockResolvedValueOnce({
       desiredRetention: 0.82,
+      newDayStartsAtHour: 6,
       pushQueue: { defaultPriority: 4 }
     });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
@@ -59,9 +66,11 @@ it('hydrates saved review scheduler settings and persists updates through the sh
   await waitFor(() => {
     expect(screen.getByText('0.91')).toBeInTheDocument();
     expect(screen.getByText('6')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Change retention' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Change day start' }));
   fireEvent.click(screen.getByRole('button', { name: 'Change priority' }));
 
   await waitFor(() => {
@@ -72,6 +81,7 @@ it('hydrates saved review scheduler settings and persists updates through the sh
   expect(invoke).toHaveBeenLastCalledWith('save_review_scheduler_settings', {
     settings: expect.objectContaining({
       desiredRetention: 0.82,
+      newDayStartsAtHour: 6,
       pushQueue: expect.objectContaining({
         defaultPriority: 4
       })

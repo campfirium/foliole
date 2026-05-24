@@ -15,7 +15,7 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 
 import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode';
 import { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths';
-import { parseReviewQueueTimestamp } from './reviewQueuePlannerTime';
+import { isReviewProfileDue, parseReviewQueueTimestamp } from './reviewQueuePlannerTime';
 
 export interface ReviewQueuePlan {
   fsrsCandidateCount: number;
@@ -65,7 +65,7 @@ function isDueFsrsNode(node: ReviewQueueNode | undefined, now: string): node is 
   if (!node || !isFsrsReviewItemNode(node)) {
     return false;
   }
-  return parseReviewQueueTimestamp(node.review?.due ?? now) <= parseReviewQueueTimestamp(now);
+  return isReviewProfileDue(node.review, now, getCurrentReviewSchedulerSettings().newDayStartsAtHour);
 }
 
 function isSchedulableFsrsNode(node: ReviewQueueNode | undefined): node is ReviewQueueNode {

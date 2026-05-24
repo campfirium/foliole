@@ -1,6 +1,10 @@
 import { generatorParameters } from 'ts-fsrs';
 
 import {
+  DEFAULT_NEW_DAY_STARTS_AT_HOUR,
+  normalizeNewDayStartsAtHour
+} from './reviewDayBoundary.js';
+import {
   DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   normalizeUnifiedPushQueueRules,
   type UnifiedPushQueueRules,
@@ -13,6 +17,7 @@ export interface ReviewSchedulerSettings {
   algorithm: string;
   desiredRetention: number;
   maximumIntervalDays: number;
+  newDayStartsAtHour: number;
   enableShortTerm: boolean;
   pushQueue: UnifiedPushQueueRules;
   updatedAt: string;
@@ -21,6 +26,7 @@ export interface ReviewSchedulerSettings {
 export interface ReviewSchedulerSettingsSavePatch {
   desiredRetention?: number;
   maximumIntervalDays?: number;
+  newDayStartsAtHour?: number;
   enableShortTerm?: boolean;
   pushQueue?: UnifiedPushQueueRulesPatch;
 }
@@ -42,6 +48,7 @@ export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
   algorithm: REVIEW_SCHEDULER_ALGORITHM,
   desiredRetention: 0.9,
   maximumIntervalDays: 36500,
+  newDayStartsAtHour: DEFAULT_NEW_DAY_STARTS_AT_HOUR,
   enableShortTerm: false,
   pushQueue: DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   updatedAt: '1970-01-01T00:00:00.000Z'
@@ -108,6 +115,7 @@ export function normalizeReviewSchedulerSettings(payload: unknown): ReviewSchedu
       value.maximumIntervalDays,
       DEFAULT_REVIEW_SCHEDULER_SETTINGS.maximumIntervalDays
     ),
+    newDayStartsAtHour: normalizeNewDayStartsAtHour(value.newDayStartsAtHour),
     enableShortTerm:
       typeof value.enableShortTerm === 'boolean'
         ? value.enableShortTerm
@@ -153,6 +161,7 @@ export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSet
     settings.algorithm,
     settings.desiredRetention.toFixed(2),
     settings.maximumIntervalDays,
+    settings.newDayStartsAtHour,
     settings.enableShortTerm ? '1' : '0',
     settings.pushQueue.defaultPriority,
     settings.pushQueue.priorityRatio.toFixed(2),
@@ -171,6 +180,7 @@ export function getReviewSchedulerVersion(
     settings.algorithm,
     `dr=${settings.desiredRetention.toFixed(2)}`,
     `mi=${settings.maximumIntervalDays}`,
+    `ds=${settings.newDayStartsAtHour}`,
     `st=${enableShortTerm ? '1' : '0'}`,
     `pqdp=${settings.pushQueue.defaultPriority}`,
     `pqpr=${settings.pushQueue.priorityRatio.toFixed(2)}`,
