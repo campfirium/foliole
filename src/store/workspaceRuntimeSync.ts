@@ -1,6 +1,7 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import {
   deleteWorkspaceNodesPermanently,
+  moveWorkspaceNodes,
   restoreWorkspaceNodes,
   saveCreatedWorkspaceNodeSnapshot,
   saveWorkspaceNodeContentSnapshot,
@@ -16,6 +17,8 @@ import type {
   WorkspaceReadingProgressSavePayload,
   WorkspaceRelearnNodePayload,
   WorkspaceDeleteNodesPermanentlyResult,
+  WorkspaceMoveNodesPayload,
+  WorkspaceMoveNodesResult,
   WorkspaceRestoreNodesResult,
   WorkspaceReviewGradeSyncPayload,
   WorkspaceSoftDeleteNodesResult,
@@ -67,6 +70,10 @@ export function syncNodeRevealToRuntime(node: Node, position?: number) {
 
 export function syncNodeOrderToRuntime(nodeOrder: string[]) {
   saveWorkspaceNodeOrder(nodeOrder);
+}
+
+export async function syncMoveNodesToRuntime(payload: WorkspaceMoveNodesPayload): Promise<WorkspaceMoveNodesResult | undefined> {
+  return moveWorkspaceNodes(payload);
 }
 
 export async function syncReviewGradeToRuntime(payload: WorkspaceReviewGradeSyncPayload): Promise<void> {

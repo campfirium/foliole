@@ -103,12 +103,12 @@ export interface WorkspaceState {
     payload: FormulaClozeCreatePayload,
     sourcePayload: FormulaClozeSourcePayload
   ) => string | null;
-  moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
+  moveNode: (nodeId: string, nextParentNodeId: string | null) => Promise<boolean>;
   moveNodes: (
     nodeIds: string[],
     targetNodeId: string | null,
     intent: 'before' | 'after' | 'child' | 'root'
-  ) => boolean;
+  ) => Promise<boolean>;
 }
 
 export interface WorkspacePersistedState {

@@ -111,6 +111,7 @@ export const NATIVE_COMMANDS = {
   updateNodeReveal: 'update_node_reveal',
   flushDirtyNodeSyncVersions: 'flush_dirty_node_sync_versions',
   relearnNode: 'relearn_node',
+  moveNodes: 'move_nodes',
   replaceNodeOrder: 'replace_node_order',
   softDeleteNodes: 'soft_delete_nodes',
   restoreNodes: 'restore_nodes',

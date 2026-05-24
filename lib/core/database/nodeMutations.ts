@@ -3,13 +3,12 @@ import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
-import { deleteNonFolderOrderRows, filterFolderOrderIds } from './folderOrderRows.js';
 import type {
   NodeAnchorLinkPayload,
   NodeImageRegionGroupPayload,
   UpsertNodeSnapshotInput
 } from './nodeMutationPayloads.js';
-import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
+import { ensureSpecialRootNodesForInput } from './nodeMutationSpecialRoots.js';
 import {
   createUpdateNodeAnchorLinkStatement,
   createUpsertNodeOrderStatement,
@@ -17,6 +16,7 @@ import {
   createUpsertNodeReadingStatement,
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
+import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
 import { writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
 import { resolveRestoreNodesResult, type RestoreNodesResult } from './nodeRestoreConflicts.js';
 import { createUpsertNodeReviewStatement } from './nodeReviewMutationStatements.js';
@@ -30,6 +30,9 @@ import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 export type { RestoreNodesResult } from './nodeRestoreConflicts.js';
 export type { UpsertNodeSnapshotInput } from './nodeMutationPayloads.js';
+export type { MoveNodePatchInput, MoveNodesInput, MoveNodesResult } from './nodeMoveMutations.js';
+export { moveNodes } from './nodeMoveMutations.js';
+export { replaceNodeOrder } from './nodeOrderMutations.js';
 
 export interface SoftDeleteNodesInput {
   nodeIds: string[];
@@ -125,24 +128,6 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
   });
 }
 
-export function replaceNodeOrder(driver: DatabaseDriver, nodeIds: string[]): void {
-  const deleteOrderStatement = driver.prepare('DELETE FROM node_order');
-  const insertOrderStatement = driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
-
-  driver.transaction(() => {
-    const folderNodeIds = filterFolderOrderIds(driver, nodeIds);
-    ensureSpecialRootNodesForOrder(driver, folderNodeIds);
-    deleteNonFolderOrderRows(driver);
-    deleteOrderStatement.run();
-    for (let index = 0; index < folderNodeIds.length; index += 1) {
-      const nodeId = folderNodeIds[index];
-      if (nodeId !== undefined) {
-        insertOrderStatement.run([nodeId, index]);
-      }
-    }
-  });
-}
-
 export function updateNodeAnchorLinks(driver: DatabaseDriver, inputs: UpdateNodeAnchorLinkInput[]): void {
   const updateNodeAnchorLinkStatement = createUpdateNodeAnchorLinkStatement(driver);
 
@@ -194,9 +179,6 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
   const deleteNodeOrderStatement = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
-  const clearOrderStatement = driver.prepare('DELETE FROM node_order');
-  const insertOrderStatement = driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
-
   driver.transaction(() => {
     for (const nodeId of input.nodeIds) {
       deleteReviewLogStatement.run([nodeId]);
@@ -208,15 +190,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     for (const nodeId of [...input.nodeIds].reverse()) {
       deleteNodeStatement.run([nodeId]);
     }
-    const folderNodeOrder = filterFolderOrderIds(driver, input.nodeOrder);
-    deleteNonFolderOrderRows(driver);
-    clearOrderStatement.run();
-    for (let index = 0; index < folderNodeOrder.length; index += 1) {
-      const nodeId = folderNodeOrder[index];
-      if (nodeId !== undefined) {
-        insertOrderStatement.run([nodeId, index]);
-      }
-    }
+    rewriteExistingNodeOrder(driver, input.nodeOrder);
     enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds(driver, input.nodeIds);
   });
 

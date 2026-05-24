@@ -7,6 +7,7 @@ import { createRootNodeAction } from './workspaceRootNodeCreateAction';
 import {
   syncCreateNodeToRuntime,
   syncDeleteNodesPermanentlyToRuntime,
+  syncMoveNodesToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime,
@@ -144,11 +145,8 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     syncNodeCreation: syncCreateNodeToRuntime,
     syncNodeOrder: syncNodeOrderToRuntime
   };
-  const syncMovedNodes = (nodes: WorkspaceState['nodesById'][string][]) => {
-    for (const node of nodes) {
-      syncNodeContentToRuntime(node);
-    }
-  };
+  const syncMovedNodes = async (payload: Parameters<typeof syncMoveNodesToRuntime>[0]) =>
+    Boolean(await syncMoveNodesToRuntime(payload));
   return {
     ...trashActions,
     setNodeViewState: createSetNodeViewStateAction(set),
@@ -171,7 +169,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     createImageClozeNodes: createImageClozeNodesAction(set, runtimeHandlers, reconcileReviewSession),
     createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers),
     deleteImageClozeRegion: trashActions.deleteImageClozeRegion,
-    moveNode: createMoveNodeAction(set, syncMovedNodes, syncNodeOrderToRuntime),
-    moveNodes: createMoveNodesAction(set, syncMovedNodes, syncNodeOrderToRuntime)
+    moveNode: createMoveNodeAction(set, syncMovedNodes),
+    moveNodes: createMoveNodesAction(set, syncMovedNodes)
   };
 }

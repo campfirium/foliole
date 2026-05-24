@@ -3,6 +3,8 @@ import type { VirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilte
 import type {
   NativeApplyReviewGradeArgs,
   NativeDeleteNodesPermanentlyResult,
+  NativeMoveNodesArgs,
+  NativeMoveNodesResult,
   NativeNodeSnapshotArgs,
   NativeReadingProgressSnapshot,
   NativeRelearnNodeArgs,
@@ -46,6 +48,8 @@ export interface WorkspaceRuntimeNodeDocument {
 
 export type WorkspaceRuntimeNodeSnapshot = NativeNodeSnapshotArgs;
 export type WorkspaceRuntimeSnapshot = NativeWorkspaceSnapshot;
+export type WorkspaceMoveNodesPayload = NativeMoveNodesArgs;
+export type WorkspaceMoveNodesResult = NativeMoveNodesResult;
 export type WorkspaceReadingProgressSnapshot = NativeReadingProgressSnapshot;
 export type WorkspaceRestoreNodesResult = NativeRestoreNodesResult;
 export type WorkspaceSoftDeleteNodesResult = NativeSoftDeleteNodesResult;

@@ -40,7 +40,7 @@ interface NodeListPanelProps {
     nodeIds: string[],
     targetNodeId: string | null,
     intent: 'before' | 'after' | 'child' | 'root'
-  ) => boolean;
+  ) => Promise<boolean>;
   nodesById: WorkspaceListNodesById;
   noteRowIds: string[];
   onOpenNotesView: () => void;

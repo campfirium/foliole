@@ -18,6 +18,24 @@ export type NativeNodeSnapshotBatchMutationSpec = {
   result: null;
 };
 
+export interface NativeMoveNodesArgs {
+  nodeOrder: string[];
+  nodes: NativeMoveNodePatch[];
+}
+
+export interface NativeMoveNodePatch {
+  nodeId: string;
+  parentNodeId: string | null;
+  reading?: NativeNodeSnapshotArgs['reading'];
+  sequentialReadingEnabled?: boolean | null;
+  updatedAt: string;
+}
+
+export interface NativeMoveNodesResult {
+  movedNodeIds: string[];
+  nodeOrder: string[];
+}
+
 export interface NativeRestoreNodesResult {
   restoredNodeIds: string[];
   skippedConflicts: Array<{

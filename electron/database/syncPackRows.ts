@@ -140,7 +140,7 @@ function loadNodeOrderRows(nodeIds: string[]) {
     `SELECT node_order.node_id, node_order.position
      FROM node_order
      JOIN nodes ON nodes.id = node_order.node_id
-     WHERE node_order.node_id IN (__IDS__) AND nodes.kind = 'folder'
+     WHERE node_order.node_id IN (__IDS__)
      ORDER BY node_order.position ASC, node_order.node_id ASC`,
     nodeIds
   );

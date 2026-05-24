@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeWorkspaceNodeSnapshot } from '../../lib/platform/nativeStorageContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
@@ -7,6 +7,7 @@ import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { mergePendingNodeSyncIntoSnapshot } from './workspacePendingNodeSync';
 import {
   syncCreateNodeToRuntime,
+  syncMoveNodesToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime
@@ -119,14 +120,13 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
   });
 }
 
-describe('workspaceRuntimeSync node mutations', () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-    vi.restoreAllMocks();
-    vi.mocked(getRuntimeInvoke).mockReset();
-  });
+beforeEach(() => {
+  window.localStorage.clear();
+  vi.restoreAllMocks();
+  vi.mocked(getRuntimeInvoke).mockReset();
+});
 
-  it('stages node content updates into pending storage until runtime ack clears them', async () => {
+it('stages node content updates into pending storage until runtime ack clears them', async () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
@@ -151,9 +151,9 @@ describe('workspaceRuntimeSync node mutations', () => {
       },
       trashedNodeIds: []
     })?.nodesById['node-1']?.reading).toBeNull();
-  });
+});
 
-  it('sends node content updates through update_node_content command', () => {
+it('sends node content updates through update_node_content command', () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
@@ -161,9 +161,9 @@ describe('workspaceRuntimeSync node mutations', () => {
 
     expectNodeMutationSync(invoke, 'update_node_content');
     expectNoWorkspacePersist(invoke);
-  });
+});
 
-  it('sends created nodes through kind-specific create command', () => {
+it('sends created nodes through kind-specific create command', () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
@@ -171,9 +171,9 @@ describe('workspaceRuntimeSync node mutations', () => {
 
     expect(invoke).toHaveBeenCalledWith('create_topic', expect.objectContaining({ kind: 'topic' }));
     expectNoWorkspacePersist(invoke);
-  });
+});
 
-  it('sends reveal updates through update_node_reveal command', () => {
+it('sends reveal updates through update_node_reveal command', () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
@@ -181,9 +181,9 @@ describe('workspaceRuntimeSync node mutations', () => {
 
     expectNodeMutationSync(invoke, 'update_node_reveal');
     expectNoWorkspacePersist(invoke);
-  });
+});
 
-  it('syncs full node order through replace_node_order command', () => {
+it('syncs full node order through replace_node_order command', () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
@@ -191,5 +191,32 @@ describe('workspaceRuntimeSync node mutations', () => {
 
     expect(invoke).toHaveBeenCalledWith('replace_node_order', { nodeIds: ['node-1', 'node-2'] });
     expectNoWorkspacePersist(invoke);
-  });
+});
+
+it('syncs move nodes through move_nodes command and returns the confirmed patch', async () => {
+    const invoke = vi.fn().mockResolvedValue({ movedNodeIds: ['node-1'], nodeOrder: ['node-2', 'node-1'] });
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    await expect(syncMoveNodesToRuntime({
+      nodeOrder: ['node-2', 'node-1'],
+      nodes: [{
+        nodeId: 'node-1',
+        parentNodeId: 'node-2',
+        reading: null,
+        sequentialReadingEnabled: null,
+        updatedAt: '2026-03-06T00:00:01.000Z'
+      }]
+    })).resolves.toEqual({ movedNodeIds: ['node-1'], nodeOrder: ['node-2', 'node-1'] });
+
+    expect(invoke).toHaveBeenCalledWith('move_nodes', {
+      nodeOrder: ['node-2', 'node-1'],
+      nodes: [{
+        nodeId: 'node-1',
+        parentNodeId: 'node-2',
+        reading: null,
+        sequentialReadingEnabled: null,
+        updatedAt: '2026-03-06T00:00:01.000Z'
+      }]
+    });
+    expectNoWorkspacePersist(invoke);
 });

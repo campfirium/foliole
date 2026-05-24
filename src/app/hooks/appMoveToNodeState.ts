@@ -93,7 +93,7 @@ export function buildControllerMoveToNodeState(args: {
     args.runtime.recentNodeIds,
     args.ws.trashedNodeIds,
     args.runtime.closeMoveToNodePalette,
-    (nodeId) => {
+    async (nodeId) => {
       const validSourceIds = collectValidMoveSourceSnapshots({
         activeNodeId: args.ws.activeNodeId,
         nodesById: args.ws.nodesById,
@@ -105,8 +105,9 @@ export function buildControllerMoveToNodeState(args: {
         return;
       }
       args.runtime.recordRecentNode(nodeId);
-      args.ws.moveNodes(validSourceIds, nodeId, 'child');
-      args.runtime.closeMoveToNodePalette();
+      if (await args.ws.moveNodes(validSourceIds, nodeId, 'child')) {
+        args.runtime.closeMoveToNodePalette();
+      }
     }
   );
 }

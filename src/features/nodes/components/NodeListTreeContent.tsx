@@ -36,7 +36,7 @@ interface NodeListTreeContentProps {
     nodeIds: string[],
     targetNodeId: string | null,
     intent: 'before' | 'after' | 'child' | 'root'
-  ) => boolean;
+  ) => Promise<boolean>;
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;

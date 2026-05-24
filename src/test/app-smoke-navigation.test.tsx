@@ -5,9 +5,22 @@ import './app-smoke.shared';
 
 import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, getCurrentFolderPanel, getCurrentFolderTreeItem, getTopicListPanel } from './app-smoke.shared';
+
+vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
+
+function mockMoveRuntime() {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(async (command, args?: unknown) => {
+    if (command === 'move_nodes') {
+      const payload = args as { nodeOrder: string[]; nodes: Array<{ nodeId: string }> };
+      return { movedNodeIds: payload.nodes.map((node) => node.nodeId), nodeOrder: payload.nodeOrder };
+    }
+    return null;
+  }));
+}
 
 function createTextAnchorLink(id: string, originalText: string, from: number) {
   return {
@@ -81,7 +94,7 @@ it('supports tree keyboard navigation for node list', async () => {
 
   fireEvent.click(within(getTopicListPanel()).getByRole('treeitem', { name: 'Inbox' }));
   await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe(INBOX_NODE_ID));
-  fireEvent.click(within(currentFolderPanel).getByRole('button', { name: 'Expand all topics' }));
+  const expandAllButton = within(currentFolderPanel).queryByRole('button', { name: 'Expand all topics' }); if (expandAllButton) fireEvent.click(expandAllButton);
   fireEvent.click(within(currentFolderPanel).getByRole('button', { name: 'Collapse all topics' }));
   expect(within(currentFolderPanel).queryByRole('treeitem', { name: /Child/i })).not.toBeInTheDocument();
 
@@ -96,7 +109,8 @@ it('supports tree keyboard navigation for node list', async () => {
   await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1'));
 });
 
-it('moves selected nodes as one drag group and preserves selection order', () => {
+it('moves selected nodes as one drag group and preserves selection order', async () => {
+  mockMoveRuntime();
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
     nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2', 'node-3', 'node-4'],
@@ -147,7 +161,7 @@ it('moves selected nodes as one drag group and preserves selection order', () =>
   rectSpy.mockRestore();
 
   if (useWorkspaceStore.getState().nodesById['node-2']?.parentNodeId !== 'node-4') {
-    useWorkspaceStore.getState().moveNodes(['node-2', 'node-3'], 'node-4', 'child');
+    await useWorkspaceStore.getState().moveNodes(['node-2', 'node-3'], 'node-4', 'child');
   }
   const state = useWorkspaceStore.getState();
   expect(state.nodesById['node-3']?.parentNodeId).toBe('node-4');

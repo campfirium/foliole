@@ -103,6 +103,7 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.updateNodeReveal,
   NATIVE_COMMANDS.flushDirtyNodeSyncVersions,
   NATIVE_COMMANDS.relearnNode,
+  NATIVE_COMMANDS.moveNodes,
   NATIVE_COMMANDS.replaceNodeOrder,
   NATIVE_COMMANDS.softDeleteNodes,
   NATIVE_COMMANDS.restoreNodes,

@@ -12,7 +12,7 @@ it('keeps move-to palette data empty while closed', () => {
     } as never,
     ws: {
       activeNodeId: 'node-1',
-      moveNode: () => true,
+      moveNode: async () => true,
       nodeOrder: ['node-1', 'node-2'],
       nodesById: {
         'node-1': {
@@ -47,9 +47,9 @@ it('keeps move-to palette data empty while closed', () => {
   expect(state.nodesById).toEqual({});
 });
 
-it('moves a frozen current-view source snapshot through the move-to palette', () => {
+it('moves a frozen current-view source snapshot through the move-to palette', async () => {
   const closeMoveToNodePalette = vi.fn();
-  const moveNodes = vi.fn();
+  const moveNodes = vi.fn().mockResolvedValue(true);
   const recordRecentNode = vi.fn();
   const state = buildControllerMoveToNodeState({
     runtime: {
@@ -90,7 +90,7 @@ it('moves a frozen current-view source snapshot through the move-to palette', ()
 
   expect(state.nodeOrder).toEqual(['folder-a', 'folder-b']);
 
-  state.onOpenNode('folder-b');
+  await state.onOpenNode('folder-b');
 
   expect(recordRecentNode).toHaveBeenCalledWith('folder-b');
   expect(moveNodes).toHaveBeenCalledWith(['topic-a', 'topic-b'], 'folder-b', 'child');

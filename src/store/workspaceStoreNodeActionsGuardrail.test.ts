@@ -71,8 +71,8 @@ function createWorkspaceFixture(): WorkspaceState {
     createQANodeFromSelection: () => null,
     createFormulaClozeNode: () => null,
     createImageClozeNodes: () => [],
-    moveNode: () => false,
-    moveNodes: () => false
+    moveNode: async () => false,
+    moveNodes: async () => false
   };
 }
 
@@ -97,7 +97,15 @@ function expectNoWorkspacePersist(invoke: ReturnType<typeof vi.fn>) {
 }
 
 function createActionsHarness() {
-  const invoke = vi.fn().mockResolvedValue(null);
+  const invoke = vi.fn().mockImplementation(async (command, args) => {
+    if (command === 'move_nodes') {
+      return {
+        movedNodeIds: (args as { nodes: Array<{ nodeId: string }> }).nodes.map((node) => node.nodeId),
+        nodeOrder: (args as { nodeOrder: string[] }).nodeOrder
+      };
+    }
+    return null;
+  });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
   const harness = createSetStateHarness(createWorkspaceFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
@@ -143,15 +151,15 @@ describe('workspace node actions runtime guardrail', () => {
     expectNoWorkspacePersist(invoke);
   });
 
-  it('moveNode uses sqlite commands and never save_workspace_state', () => {
+  it('moveNode uses sqlite commands and never save_workspace_state', async () => {
     const { actions, invoke } = createActionsHarness();
     const firstFolderId = actions.createRootNode('Folder A', 'folder');
     const secondFolderId = actions.createRootNode('Folder B', 'folder');
 
     vi.clearAllMocks();
-    actions.moveNodes([secondFolderId], firstFolderId, 'before');
+    await actions.moveNodes([secondFolderId], firstFolderId, 'before');
 
-    expect(getInvokedCommands(invoke)).toEqual(['update_node_content', 'replace_node_order']);
+    expect(getInvokedCommands(invoke)).toEqual(['move_nodes']);
     expectNoWorkspacePersist(invoke);
   });
 

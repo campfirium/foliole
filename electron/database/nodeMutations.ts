@@ -1,6 +1,7 @@
 import {
   clearNodeOrder as clearNodeOrderViaDriver,
   deleteNodesPermanently as deleteNodesPermanentlyViaDriver,
+  moveNodes as moveNodesViaDriver,
   replaceNodeOrder as replaceNodeOrderViaDriver,
   restoreNodes as restoreNodesViaDriver,
   softDeleteNodes as softDeleteNodesViaDriver,
@@ -9,6 +10,8 @@ import {
 } from '../../lib/core/database/nodeMutations.js';
 import type {
   DeleteNodesPermanentlyInput,
+  MoveNodesInput,
+  MoveNodesResult,
   RestoreNodesInput,
   RestoreNodesResult,
   SoftDeleteNodesInput,
@@ -29,6 +32,8 @@ import { withTransaction } from './transaction.js';
 
 export type {
   DeleteNodesPermanentlyInput,
+  MoveNodesInput,
+  MoveNodesResult,
   RestoreNodesInput,
   RestoreNodesResult,
   SoftDeleteNodesInput,
@@ -86,6 +91,27 @@ export function replaceNodeOrder(nodeIds: string[]): void {
         [deviceId, row.node_id]
       );
     }
+  });
+}
+
+export function moveNodes(input: MoveNodesInput): MoveNodesResult {
+  const connection = openDatabaseConnection();
+  const now = new Date().toISOString();
+  const deviceId = loadOrCreateDesktopDeviceId(now);
+  return withTransaction(connection.driver, () => {
+    const result = moveNodesViaDriver(connection.driver, {
+      nodeOrder: input.nodeOrder,
+      nodes: input.nodes.map((node) => ({ ...node, deviceId }))
+    });
+    for (const node of input.nodes) {
+      connection.driver.execute(
+        `UPDATE nodes
+         SET last_modified_by_device_id = ?, sync_dirty = 1
+         WHERE id = ?`,
+        [deviceId, node.nodeId]
+      );
+    }
+    return result;
   });
 }
 
