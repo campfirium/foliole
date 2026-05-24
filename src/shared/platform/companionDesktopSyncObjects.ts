@@ -95,15 +95,30 @@ async function withSyncStepTimeout<T>(
   key: CompanionSyncTimeoutKey,
   work: Promise<T>,
 ): Promise<T> {
-  const timeoutMs = companionSyncTimeoutOwnership(key).timeoutMs;
+  const ownership = companionSyncTimeoutOwnership(key);
+  const timeoutMs = ownership.timeoutMs;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  const timeout = new Promise<never>((_, reject) => {
+  const timeout = new Promise<'timeout'>((resolve) => {
     timeoutId = setTimeout(() => {
-      reject(createCompanionSyncTimeoutError(key));
+      resolve('timeout');
     }, timeoutMs);
   });
+  const wrappedWork = work.then(
+    (value) => ({ status: 'fulfilled' as const, value }),
+    (error) => ({ status: 'rejected' as const, error })
+  );
   try {
-    return await Promise.race([work, timeout]);
+    const result = await Promise.race([wrappedWork, timeout]);
+    if (result === 'timeout') {
+      if (!ownership.cancelsUnderlyingWork && !ownership.allowsNewRunBeforeUnderlyingWorkSettles) {
+        return await work;
+      }
+      throw createCompanionSyncTimeoutError(key);
+    }
+    if (result.status === 'rejected') {
+      throw result.error;
+    }
+    return result.value;
   } finally {
     if (timeoutId) {
       clearTimeout(timeoutId);
