@@ -10,6 +10,7 @@ import {
   asNullableInteger,
   asNullableString,
   asString,
+  asStringArray,
   asTimestamp,
   asVirtualNodeFilterValue
 } from './commandParserPrimitives.js';
@@ -123,4 +124,18 @@ export function parseNodeCreationArgs(
     throw new Error('invalid argument: kind');
   }
   return parsed;
+}
+
+export function parseNodeCreationMutationArgs(
+  args: Record<string, unknown>,
+  expectedKind: 'folder' | 'topic' | 'item'
+) {
+  return {
+    activeNodeId:
+      args.activeNodeId === null || args.activeNodeId === undefined
+        ? null
+        : asString(args.activeNodeId, 'activeNodeId'),
+    node: parseNodeCreationArgs(args, expectedKind),
+    nodeOrder: asStringArray(args.nodeOrder, 'nodeOrder')
+  };
 }

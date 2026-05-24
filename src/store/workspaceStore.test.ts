@@ -1,6 +1,13 @@
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
-import { INBOX_NODE_ID, isInboxNode, isVirtualRootNode, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
+import {
+  HOME_NODE_ID,
+  INBOX_NODE_ID,
+  isHomeNode,
+  isInboxNode,
+  isVirtualRootNode,
+  VIRTUAL_ROOT_NODE_ID
+} from '../features/nodes/model/specialNodes';
 import { NODE_TITLE_MAX_CHARS } from '../shared/config/nodeTitleConfig';
 
 import {
@@ -12,31 +19,42 @@ import {
 } from './workspaceStore';
 import { createClozeLocator, createHighlightLocator } from './workspaceStoreNodeActions.test-support';
 
-function resetWorkspaceStore() {
+vi.mock('../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => null)
+}));
+
+async function resetWorkspaceStore() {
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
-  useWorkspaceStore.getState().createRootNode('');
+  (await useWorkspaceStore.getState().createRootNode(''))!;
 }
 
 function getSeedNodeId() {
-  const seedNodeId = useWorkspaceStore
-    .getState()
-    .nodeOrder.find((nodeId) => nodeId !== INBOX_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID);
+  const state = useWorkspaceStore.getState();
+  const activeNode = state.activeNodeId ? state.nodesById[state.activeNodeId] : null;
+  const seedNodeId = activeNode && !activeNode.specialKind
+    ? state.activeNodeId
+    : state.nodeOrder.find((nodeId) => {
+      const node = state.nodesById[nodeId];
+      return node && !node.specialKind;
+    });
   if (!seedNodeId) {
     throw new Error('missing seed node');
   }
   return seedNodeId;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
-  resetWorkspaceStore();
+  delete window.electronAPI;
+  await resetWorkspaceStore();
 });
 
-it('creates an empty initial state with only special roots', () => {
+it('creates an empty initial state with only special roots', async () => {
   const initial = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
 
   expect(initial.activeNodeId).toBeNull();
-  expect(initial.nodeOrder).toEqual([INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID]);
+  expect(initial.nodeOrder).toEqual([HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID]);
+  expect(isHomeNode(initial.nodesById[HOME_NODE_ID])).toBe(true);
   expect(isInboxNode(initial.nodesById[INBOX_NODE_ID])).toBe(true);
   expect(isVirtualRootNode(initial.nodesById[VIRTUAL_ROOT_NODE_ID])).toBe(true);
   expect(initial.nodesById[INBOX_NODE_ID]?.parentNodeId).toBeNull();
@@ -49,46 +67,46 @@ it('creates an empty initial state with only special roots', () => {
   expect(initial.layout.isRightSidebarCollapsed).toBe(false);
 });
 
-it('updates node content and title', () => {
+it('updates node content and title', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'updated markdown');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'updated markdown');
 
   const node = useWorkspaceStore.getState().nodesById[seedNodeId];
   expect(node?.content).toBe('updated markdown');
   expect(node?.title).toBe('updated markdown');
 });
 
-it('updates reveal only for qa nodes', () => {
+it('updates reveal only for qa nodes', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore
+  await useWorkspaceStore
     .getState()
     .createQANodeFromSelection(seedNodeId, 'Prompt [...]', 'answer', 'cloze-1', createClozeLocator('cloze-1', 'answer'));
   const qaNodeId = useWorkspaceStore
     .getState()
-    .nodeOrder.find((nodeId) => nodeId !== seedNodeId && nodeId !== INBOX_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID);
+    .nodeOrder.find((nodeId) => useWorkspaceStore.getState().nodesById[nodeId]?.parentNodeId === seedNodeId);
 
   expect(qaNodeId).toBeTruthy();
   if (!qaNodeId) {
     throw new Error('expected QA node id');
   }
 
-  useWorkspaceStore.getState().updateNodeReveal(qaNodeId, 'updated answer');
-  useWorkspaceStore.getState().updateNodeReveal(seedNodeId, 'ignored');
+  await useWorkspaceStore.getState().updateNodeReveal(qaNodeId, 'updated answer');
+  await useWorkspaceStore.getState().updateNodeReveal(seedNodeId, 'ignored');
 
   expect(useWorkspaceStore.getState().nodesById[qaNodeId]?.reveal).toBe('updated answer');
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.reveal).toBeNull();
 });
 
-it('derives title from normalized markdown content', () => {
+it('derives title from normalized markdown content', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, '# New Title\n\nBody paragraph.');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, '# New Title\n\nBody paragraph.');
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('New Title');
 });
 
-it('keeps full normalized sentence in derived title', () => {
+it('keeps full normalized sentence in derived title', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore
+  await useWorkspaceStore
     .getState()
     .updateNodeContent(seedNodeId, 'First clause, second clause. Third sentence.');
 
@@ -97,71 +115,71 @@ it('keeps full normalized sentence in derived title', () => {
   );
 });
 
-it('derives title from plain markdown content without extra cleanup branches', () => {
+it('derives title from plain markdown content without extra cleanup branches', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore
+  await useWorkspaceStore
     .getState()
     .updateNodeContent(seedNodeId, '# Intro answer');
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Intro answer');
 });
 
-it('applies fixed title max length from config', () => {
+it('applies fixed title max length from config', async () => {
   const seedNodeId = getSeedNodeId();
   const longContent = `# ${'x'.repeat(NODE_TITLE_MAX_CHARS + 20)}`;
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, longContent);
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, longContent);
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe(
     'x'.repeat(NODE_TITLE_MAX_CHARS)
   );
 });
 
-it('uses Untitled when content has no usable text', () => {
+it('uses Untitled when content has no usable text', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, ' \n\t  ');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, ' \n\t  ');
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Untitled');
 });
 
-it('keeps manual title when content changes after rename', () => {
+it('keeps manual title when content changes after rename', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore.getState().updateNodeTitle(seedNodeId, 'Manual Title');
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, '# Auto Title\nBody');
+  await useWorkspaceStore.getState().updateNodeTitle(seedNodeId, 'Manual Title');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, '# Auto Title\nBody');
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Manual Title');
 });
 
-it('blocks content edits for empty container nodes after they gain child nodes', () => {
-  const parentId = useWorkspaceStore.getState().createRootNode('');
-  useWorkspaceStore.getState().createChildNode(parentId, 'Child body');
+it('blocks content edits for empty container nodes after they gain child nodes', async () => {
+  const parentId = (await useWorkspaceStore.getState().createRootNode(''))!;
+  (await useWorkspaceStore.getState().createChildNode(parentId, 'Child body'))!;
 
-  useWorkspaceStore.getState().updateNodeContent(parentId, 'Container text should stay blocked');
+  await useWorkspaceStore.getState().updateNodeContent(parentId, 'Container text should stay blocked');
 
   expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('');
 });
 
-it('keeps article parents editable after they gain child nodes', () => {
-  const parentId = useWorkspaceStore.getState().createRootNode('Parent article');
-  useWorkspaceStore.getState().createChildNode(parentId, 'Child body');
+it('keeps article parents editable after they gain child nodes', async () => {
+  const parentId = (await useWorkspaceStore.getState().createRootNode('Parent article'))!;
+  (await useWorkspaceStore.getState().createChildNode(parentId, 'Child body'))!;
 
-  useWorkspaceStore.getState().updateNodeContent(parentId, 'Parent article updated');
+  await useWorkspaceStore.getState().updateNodeContent(parentId, 'Parent article updated');
 
   expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('Parent article updated');
 });
 
-it('restores content editing after an empty container loses all child nodes', () => {
-  const parentId = useWorkspaceStore.getState().createRootNode('');
-  const childId = useWorkspaceStore.getState().createChildNode(parentId, 'Child body');
+it('restores content editing after an empty container loses all child nodes', async () => {
+  const parentId = (await useWorkspaceStore.getState().createRootNode(''))!;
+  const childId = (await useWorkspaceStore.getState().createChildNode(parentId, 'Child body'))!;
 
-  useWorkspaceStore.getState().deleteNode(childId);
-  useWorkspaceStore.getState().updateNodeContent(parentId, 'Recovered content');
+  await useWorkspaceStore.getState().deleteNode(childId);
+  await useWorkspaceStore.getState().updateNodeContent(parentId, 'Recovered content');
 
   expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('Recovered content');
 });
 
-it('creates QA node from selected content', () => {
+it('creates QA node from selected content', async () => {
   const seedNodeId = getSeedNodeId();
-  const createdId = useWorkspaceStore
+  const createdId = await useWorkspaceStore
     .getState()
     .createQANodeFromSelection(seedNodeId, 'What is [...]?', 'quoted text', 'cloze-2', createClozeLocator('cloze-2', 'quoted text'));
 
@@ -179,9 +197,9 @@ it('creates QA node from selected content', () => {
   expect(createdNode?.review).not.toBeNull();
 });
 
-it('creates highlight node from selected content', () => {
+it('creates highlight node from selected content', async () => {
   const seedNodeId = getSeedNodeId();
-  const createdId = useWorkspaceStore
+  const createdId = await useWorkspaceStore
     .getState()
     .createHighlightNodeFromSelection(seedNodeId, 'selected text', 'hl-1', createHighlightLocator('hl-1', 'selected text'));
 
@@ -199,8 +217,8 @@ it('creates highlight node from selected content', () => {
   expect(createdNode?.review).toBeNull();
 });
 
-it('creates global topics inside Inbox', () => {
-  const createdId = useWorkspaceStore.getState().createRootNode('Pasted content');
+it('creates global topics inside Inbox', async () => {
+  const createdId = (await useWorkspaceStore.getState().createRootNode('Pasted content'))!;
 
   expect(createdId).toBeTruthy();
   expect(useWorkspaceStore.getState().activeNodeId).toBe(createdId);
@@ -208,18 +226,18 @@ it('creates global topics inside Inbox', () => {
   expect(useWorkspaceStore.getState().nodesById[createdId]?.content).toBe('Pasted content');
 });
 
-it('creates empty global topics inside Inbox', () => {
-  const createdId = useWorkspaceStore.getState().createRootNode();
+it('creates empty global topics inside Inbox', async () => {
+  const createdId = (await useWorkspaceStore.getState().createRootNode())!;
 
   expect(useWorkspaceStore.getState().nodesById[createdId]?.parentNodeId).toBe(INBOX_NODE_ID);
   expect(useWorkspaceStore.getState().nodesById[createdId]?.content).toBe('');
   expect(useWorkspaceStore.getState().nodesById[createdId]?.title).toBe('Untitled 1');
 });
 
-it('keeps only folders as root nodes for explicit folder-topic-item kinds', () => {
-  const folderId = useWorkspaceStore.getState().createRootNode('', 'folder');
-  const topicId = useWorkspaceStore.getState().createRootNode('', 'topic');
-  const itemId = useWorkspaceStore.getState().createRootNode('', 'item');
+it('keeps only folders as root nodes for explicit folder-topic-item kinds', async () => {
+  const folderId = (await useWorkspaceStore.getState().createRootNode('', 'folder'))!;
+  const topicId = (await useWorkspaceStore.getState().createRootNode('', 'topic'))!;
+  const itemId = (await useWorkspaceStore.getState().createRootNode('', 'item'))!;
 
   expect(useWorkspaceStore.getState().nodesById[folderId]?.kind).toBe('folder');
   expect(useWorkspaceStore.getState().nodesById[folderId]?.parentNodeId).toBeNull();
@@ -229,19 +247,19 @@ it('keeps only folders as root nodes for explicit folder-topic-item kinds', () =
   expect(useWorkspaceStore.getState().nodesById[itemId]?.parentNodeId).toBe(INBOX_NODE_ID);
 });
 
-it('blocks creating folder children under topics', () => {
-  const topicId = useWorkspaceStore.getState().createRootNode('Topic', 'topic');
+it('blocks creating folder children under topics', async () => {
+  const topicId = (await useWorkspaceStore.getState().createRootNode('Topic', 'topic'))!;
   const beforeOrder = [...useWorkspaceStore.getState().nodeOrder];
 
-  const childId = useWorkspaceStore.getState().createChildNode(topicId, '', 'folder');
+  const childId = (await useWorkspaceStore.getState().createChildNode(topicId, '', 'folder'))!;
 
   expect(useWorkspaceStore.getState().nodesById[childId]).toBeUndefined();
   expect(useWorkspaceStore.getState().nodeOrder).toEqual(beforeOrder);
 });
 
-it('deletes node and switches active node', () => {
+it('deletes node and switches active node', async () => {
   const seedNodeId = getSeedNodeId();
-  const createdId = useWorkspaceStore
+  const createdId = await useWorkspaceStore
     .getState()
     .createHighlightNodeFromSelection(seedNodeId, 'selected text', 'hl-2', createHighlightLocator('hl-2', 'selected text'));
 
@@ -251,19 +269,19 @@ it('deletes node and switches active node', () => {
   }
 
   useWorkspaceStore.getState().setActiveNode(createdId);
-  useWorkspaceStore.getState().deleteNode(createdId);
+  await useWorkspaceStore.getState().deleteNode(createdId);
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toBeDefined();
   expect(useWorkspaceStore.getState().trashedNodeIds).toContain(createdId);
   expect(useWorkspaceStore.getState().activeNodeId).toBe(seedNodeId);
 });
 
-it('keeps parent content unchanged during soft delete', () => {
+it('keeps parent content unchanged during soft delete', async () => {
   const seedNodeId = getSeedNodeId();
   const parentContent = 'before answer and keep after';
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, parentContent);
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, parentContent);
 
-  const createdId = useWorkspaceStore
+  const createdId = await useWorkspaceStore
     .getState()
     .createQANodeFromSelection(seedNodeId, 'Prompt [...]', 'answer', '1', { id: '1', kind: 'cloze' });
   expect(createdId).toBeTruthy();
@@ -276,12 +294,12 @@ it('keeps parent content unchanged during soft delete', () => {
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.content).toBe(parentContent);
 });
 
-it('keeps parent content unchanged when deleting unlinked child node', () => {
+it('keeps parent content unchanged when deleting unlinked child node', async () => {
   const seedNodeId = getSeedNodeId();
   const parentContent = 'before text after';
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, parentContent);
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, parentContent);
 
-  const createdId = useWorkspaceStore
+  const createdId = await useWorkspaceStore
     .getState()
     .createHighlightNodeFromSelection(seedNodeId, 'text', 'hl-3', createHighlightLocator('hl-3', 'text'));
   expect(createdId).toBeTruthy();

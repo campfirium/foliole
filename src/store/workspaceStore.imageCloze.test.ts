@@ -18,15 +18,28 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn(() => runtimeInvoke)
 }));
 
-beforeEach(() => {
+beforeEach(async () => {
   runtimeInvoke.mockReset();
-  runtimeInvoke.mockImplementation(async (command: string, payload?: { nodeIds?: string[] }) =>
-    command === 'restore_nodes'
-      ? { restoredNodeIds: payload?.nodeIds ?? [], skippedConflicts: [] }
-      : command === 'soft_delete_nodes'
-        ? { deletedNodeIds: payload?.nodeIds ?? [] }
-        : null
-  );
+  runtimeInvoke.mockImplementation(async (command: string, payload?: { activeNodeId?: string | null; nodeId?: string; nodeIds?: string[]; nodeOrder?: string[] }) => {
+    if (command === 'create_item' && payload?.nodeId) {
+      return {
+        activeNodeId: payload.activeNodeId ?? payload.nodeId,
+        createdNodeIds: [payload.nodeId],
+        nodeOrder: payload.nodeOrder ?? [payload.nodeId],
+        nodes: [payload]
+      };
+    }
+    if (command === 'update_node_content' && payload?.nodeId) {
+      return { nodes: [payload], updatedNodeIds: [payload.nodeId] };
+    }
+    if (command === 'restore_nodes') {
+      return { restoredNodeIds: payload?.nodeIds ?? [], skippedConflicts: [] };
+    }
+    if (command === 'soft_delete_nodes') {
+      return { deletedNodeIds: payload?.nodeIds ?? [] };
+    }
+    return null;
+  });
   useWorkspaceStore.persist.clearStorage();
   useWorkspaceStore.setState({
     activeNodeId: 'node-1',
@@ -78,12 +91,12 @@ const IMAGE_CLOZE_REGIONS = [
   }
 ];
 
-function createImageClozeNodes() {
-  return useWorkspaceStore.getState().createImageClozeNodes('node-1', 'hash-1', IMAGE_CLOZE_SOURCE, [...IMAGE_CLOZE_REGIONS]);
+async function createImageClozeNodes() {
+  return await useWorkspaceStore.getState().createImageClozeNodes('node-1', 'hash-1', IMAGE_CLOZE_SOURCE, [...IMAGE_CLOZE_REGIONS]);
 }
 
-function createSingleImageClozeNode(region: (typeof IMAGE_CLOZE_REGIONS)[number]) {
-  return useWorkspaceStore.getState().createImageClozeNodes('node-1', 'hash-1', IMAGE_CLOZE_SOURCE, [{ ...region }]);
+async function createSingleImageClozeNode(region: (typeof IMAGE_CLOZE_REGIONS)[number]) {
+  return await useWorkspaceStore.getState().createImageClozeNodes('node-1', 'hash-1', IMAGE_CLOZE_SOURCE, [{ ...region }]);
 }
 
 function createThirdImageClozeRegion() {
@@ -186,15 +199,15 @@ function expectCreatedImageClozeNodes(createdIds: string[]) {
   expectImageRegionState('node-1');
 }
 
-it('creates image cloze item nodes with prompt context and reveal image content', () => {
-  const createdIds = createImageClozeNodes();
+it('creates image cloze item nodes with prompt context and reveal image content', async () => {
+  const createdIds = await createImageClozeNodes();
 
   expect(createdIds).toHaveLength(1);
   expectCreatedImageClozeNodes(createdIds as string[]);
 });
 
 it('removes the topic image region when the linked image cloze item is deleted and restores it from the child node', async () => {
-  const [createdId] = createImageClozeNodes();
+  const [createdId] = await createImageClozeNodes();
   expect(createdId).toBeTruthy();
 
   await useWorkspaceStore.getState().deleteNode(createdId as string);
@@ -207,7 +220,7 @@ it('removes the topic image region when the linked image cloze item is deleted a
 });
 
 it('soft deletes the linked image cloze item when deleting the region from the image surface', async () => {
-  const [createdId] = createImageClozeNodes();
+  const [createdId] = await createImageClozeNodes();
   expect(createdId).toBeTruthy();
 
   await useWorkspaceStore.getState().deleteImageClozeRegion('node-1', 'hash-1', 'region-1');
@@ -217,22 +230,14 @@ it('soft deletes the linked image cloze item when deleting the region from the i
 });
 
 it('does not resurrect a deleted image region when a new one is created later', async () => {
-  const [firstId] = createSingleImageClozeNode(IMAGE_CLOZE_REGIONS[0]!);
-  const [secondId] = createSingleImageClozeNode(IMAGE_CLOZE_REGIONS[1]!);
+  const [firstId] = await createSingleImageClozeNode(IMAGE_CLOZE_REGIONS[0]!);
+  const [secondId] = await createSingleImageClozeNode(IMAGE_CLOZE_REGIONS[1]!);
   expect(firstId).toBeTruthy();
   expect(secondId).toBeTruthy();
 
   await useWorkspaceStore.getState().deleteNode(firstId as string);
 
-  const [thirdId] = createSingleImageClozeNode({
-    answer: 'Bridge',
-    attachmentId: 'hash-1',
-    height: 0.1,
-    id: 'region-3',
-    width: 0.16,
-    x: 0.62,
-    y: 0.18
-  });
+  const [thirdId] = await createSingleImageClozeNode(createThirdImageClozeRegion());
 
   expect(thirdId).toBeTruthy();
   expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toEqual([
@@ -261,7 +266,7 @@ it('does not resurrect a deleted image region when a new one is created later', 
 it('deletes a legacy child with matching region shape even when the child id differs from the region id', async () => {
   seedLegacyMismatchedImageClozeChild();
   await useWorkspaceStore.getState().deleteImageClozeRegion('node-1', 'hash-1', 'region-legacy-ui');
-  createSingleImageClozeNode(createThirdImageClozeRegion());
+  await createSingleImageClozeNode(createThirdImageClozeRegion());
 
   expect(useWorkspaceStore.getState().trashedNodeIds).toContain('node-legacy');
   expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toEqual([

@@ -1,4 +1,3 @@
-import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
 
 import {
@@ -7,11 +6,10 @@ import {
   resolveNextParentNodeId,
   type NodeDropIntent
 } from './workspaceMoveNodes';
-import { canCreateChildUnderParent, canMoveRootsIntoTarget } from './workspaceNodeKindRules';
+import { canMoveRootsIntoTarget } from './workspaceNodeKindRules';
 import { collectOrderedSubtreeIds } from './workspaceNodeTreeOrder';
 import type { WorkspaceState } from './workspaceStore';
 import { collectMovedNodeBlock, collectMoveRootIds } from './workspaceStoreMoveHelpers';
-import { buildCreatedChildState } from './workspaceStoreTreeCreateChildState';
 import { applySequentialReadingMovedNodes } from './workspaceStoreTreeSequentialReading';
 
 type WorkspaceSet = (
@@ -130,40 +128,6 @@ function createMoveNodesPatch(
     return null;
   }
   return buildMovedState(state, rootNodeIds, movedNodeIds, targetNodeId, intent);
-}
-
-export function createChildNodeAction(
-  set: WorkspaceSet,
-  onNodeCreated?: (node: NodeSnapshot) => void,
-  onNodeOrderChanged?: (nodeOrder: string[]) => void
-): WorkspaceState['createChildNode'] {
-  return (parentNodeId, content = '', kind: NodeKind = 'topic') => {
-    const nodeId = `node-${crypto.randomUUID()}`;
-    const timestamp = new Date().toISOString();
-    let createdNode: NodeSnapshot | null = null;
-    let nextNodeOrder: string[] | null = null;
-
-    set((state) => {
-      if (!state.nodesById[parentNodeId] || state.trashedNodeIds.includes(parentNodeId)) {
-        return state;
-      }
-      if (!canCreateChildUnderParent(state, parentNodeId, kind)) {
-        return state;
-      }
-      const nextChildState = buildCreatedChildState(state, parentNodeId, nodeId, content, kind, timestamp);
-      createdNode = nextChildState.nextNode;
-      nextNodeOrder = nextChildState.nextNodeOrder;
-      return nextChildState.patch;
-    });
-    if (createdNode) {
-      onNodeCreated?.(createdNode);
-      if (kind === 'folder' && nextNodeOrder) {
-        onNodeOrderChanged?.(nextNodeOrder);
-      }
-    }
-
-    return nodeId;
-  };
 }
 
 export function createMoveNodesAction(

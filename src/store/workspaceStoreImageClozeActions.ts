@@ -1,6 +1,7 @@
 import { pushEditorOperationEntry } from '../features/editor/model/editorOperationHistory';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
+import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
 import {
@@ -10,12 +11,20 @@ import {
 } from './workspaceImageClozeCreationHelpers';
 import { createImageClozeReviewProfile } from './workspaceImageClozeReview';
 import type { WorkspaceState } from './workspaceStore';
+import { applyCreatedImageClozeNodes } from './workspaceStoreImageClozeRuntimeApply';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
 interface RuntimeSyncHandlers {
-  syncNodeContent: (node: WorkspaceNode) => void; syncNodeCreation: (node: WorkspaceNode) => void;
+  hasMutationRuntime: () => boolean;
+  syncNodeContent: (node: WorkspaceNode) => void;
+  syncNodeCreation: (
+    node: WorkspaceNode,
+    nodeOrder?: string[],
+    activeNodeId?: string | null,
+    position?: number
+  ) => Promise<WorkspaceNodeMutationPatchResult | null>;
 }
 
 type WorkspaceSet = (
@@ -35,9 +44,7 @@ function createImageClozeNode(
   untitledSequenceByParent: Record<string, number>
 ) {
   const primaryRegion = regions[0];
-  if (!primaryRegion) {
-    return null;
-  }
+  if (!primaryRegion) return null;
   const nodeId = `node-${crypto.randomUUID()}`;
   const title = deriveNodeTitleForCloze(sourcePayload.promptContent, sourcePayload.revealContent);
   const untitledState = resolveCreatedNodeTitleState(title, parentNodeId, {
@@ -117,24 +124,6 @@ function createImageClozeNodeBatch(args: {
   };
 }
 
-function syncCreatedImageClozeNodes(
-  createdNodes: WorkspaceNode[],
-  handlers: RuntimeSyncHandlers,
-  nextNodeOrder: string[] | null,
-  updatedParentNode: WorkspaceNode | null
-) {
-  if (!nextNodeOrder || createdNodes.length === 0) {
-    return [];
-  }
-  for (const node of createdNodes) {
-    handlers.syncNodeCreation(node);
-  }
-  if (updatedParentNode) {
-    handlers.syncNodeContent(updatedParentNode);
-  }
-  return createdNodes.map((node) => node.id);
-}
-
 function buildImageClozeStateUpdate(args: {
   normalizedAttachmentId: string;
   normalizedRegions: ImageClozeDraftRegion[];
@@ -198,19 +187,18 @@ export function createImageClozeNodesAction(
   handlers: RuntimeSyncHandlers,
   reconcileReviewSession: (state: WorkspaceState, activeNodeId?: string | null) => WorkspaceState['reviewSession']
 ): WorkspaceState['createImageClozeNodes'] {
-  return (parentNodeId, attachmentId, sourcePayload, regions) => {
+  return async (parentNodeId, attachmentId, sourcePayload, regions) => {
     const normalizedAttachmentId = attachmentId.trim();
     const normalizedRegions = normalizeImageClozeRegions(normalizedAttachmentId, regions);
     const normalizedSourcePayload = normalizeImageClozeSourcePayload(sourcePayload);
 
-    if (normalizedRegions.length === 0 || normalizedSourcePayload.revealContent.length === 0) {
-      return [];
-    }
+    if (normalizedRegions.length === 0 || normalizedSourcePayload.revealContent.length === 0) return [];
 
     const timestamp = new Date().toISOString();
     const createdNodes: WorkspaceNode[] = [];
     let updatedParentNode: WorkspaceNode | null = null;
     let nextNodeOrder: string[] | null = null;
+    let localPatch: Partial<WorkspaceState> | null = null;
 
     set((state) => {
       const nextResult = buildImageClozeStateUpdate({
@@ -228,9 +216,17 @@ export function createImageClozeNodesAction(
       createdNodes.push(...nextResult.createdNodes);
       updatedParentNode = nextResult.updatedParentNode;
       nextNodeOrder = nextResult.nextNodeOrder;
-      return nextResult.nextState;
+      localPatch = nextResult.nextState;
+      return state;
     });
 
-    return syncCreatedImageClozeNodes(createdNodes, handlers, nextNodeOrder, updatedParentNode);
+    return applyCreatedImageClozeNodes({
+      createdNodes,
+      handlers,
+      localPatch,
+      nextNodeOrder,
+      set,
+      updatedParentNode
+    });
   };
 }

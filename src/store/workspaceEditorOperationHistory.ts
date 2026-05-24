@@ -4,6 +4,7 @@ import {
   type EditorOperationHistoryEntry,
   type EditorTextEditOperationEntry
 } from '../features/editor/model/editorOperationHistory';
+import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 
 import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
@@ -92,6 +93,7 @@ function resolveTextEditApply(entry: EditorTextEditOperationEntry, mode: 'redo' 
 }
 
 function applyTextEditOperation(
+  set: WorkspaceSet,
   snapshot: WorkspaceState,
   entry: EditorTextEditOperationEntry,
   mode: 'redo' | 'undo'
@@ -101,7 +103,21 @@ function applyTextEditOperation(
   if (!node || snapshot.trashedNodeIds.includes(entry.nodeId) || node.content !== expectedContent) {
     return false;
   }
-  snapshot.updateNodeContent(entry.nodeId, nextContent);
+  const nextNode = {
+    ...node,
+    content: nextContent,
+    hasContent: nextContent.trim().length > 0,
+    hideTitleHeading: false,
+    title: node.isTitleManual ? node.title : deriveNodeTitleFromContent(nextContent),
+    updatedAt: new Date().toISOString()
+  };
+  set({
+    nodesById: {
+      ...snapshot.nodesById,
+      [entry.nodeId]: nextNode
+    }
+  });
+  syncNodeContentToRuntime(nextNode);
   return true;
 }
 
@@ -112,7 +128,7 @@ function applyEditorOperationEntry(
   mode: 'redo' | 'undo'
 ) {
   if (entry.type === 'text.edit') {
-    return applyTextEditOperation(snapshot, entry, mode);
+    return applyTextEditOperation(set, snapshot, entry, mode);
   }
   const nodeIds = entry.annotations.map((annotation) => annotation.nodeId);
   if (entry.type === 'annotation.create') {

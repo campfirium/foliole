@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { deleteNodesPermanently, moveNodes, replaceNodeOrder, restoreNodes, softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { deleteNodesPermanently, moveNodes, replaceNodeOrder, restoreNodes, softDeleteNodes, upsertNodeSnapshot, upsertNodeSnapshotWithOrder } from '../database/nodeMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -32,7 +32,8 @@ vi.mock('../database/nodeMutations.js', () => ({
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
   updateNodeAnchorLinks: vi.fn(),
-  upsertNodeSnapshot: vi.fn()
+  upsertNodeSnapshot: vi.fn(),
+  upsertNodeSnapshotWithOrder: vi.fn()
 }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({
   scheduleMirrorSync: vi.fn()
@@ -63,7 +64,13 @@ it('handles node mutation commands', async () => {
         updatedAt: '2026-03-06T00:00:01.000Z'
       }
     })
-  ).resolves.toBeNull();
+  ).resolves.toEqual({
+    nodes: [expect.objectContaining({
+      content: '# Content',
+      nodeId: 'node-1'
+    })],
+    updatedNodeIds: ['node-1']
+  });
   expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
     anchorLink: null,
     content: '# Content',
@@ -91,7 +98,13 @@ it('handles node reveal mutation command', async () => {
         updatedAt: '2026-03-06T00:00:02.000Z'
       }
     })
-  ).resolves.toBeNull();
+  ).resolves.toEqual({
+    nodes: [expect.objectContaining({
+      nodeId: 'node-2',
+      reveal: 'Answer'
+    })],
+    updatedNodeIds: ['node-2']
+  });
   expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
     anchorLink: { id: 'cloze-1', kind: 'cloze' },
     content: 'Question',
@@ -99,6 +112,38 @@ it('handles node reveal mutation command', async () => {
     nodeId: 'node-2',
     reveal: 'Answer'
   }));
+});
+
+it('handles create node mutation command with accepted order patch', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'create_topic',
+      args: {
+        activeNodeId: 'node-new',
+        nodeId: 'node-new',
+        nodeOrder: ['special-inbox', 'node-new'],
+        parentNodeId: 'special-inbox',
+        kind: 'topic',
+        title: 'New node',
+        isTitleManual: false,
+        content: 'New body',
+        reveal: null,
+        anchorLink: null,
+        position: 1,
+        createdAt: '2026-03-06T00:00:00.000Z',
+        updatedAt: '2026-03-06T00:00:01.000Z'
+      }
+    })
+  ).resolves.toEqual({
+    activeNodeId: 'node-new',
+    createdNodeIds: ['node-new'],
+    nodeOrder: ['special-inbox', 'node-new'],
+    nodes: [expect.objectContaining({ nodeId: 'node-new', title: 'New node' })]
+  });
+  expect(upsertNodeSnapshotWithOrder).toHaveBeenCalledWith(
+    expect.objectContaining({ nodeId: 'node-new' }),
+    ['special-inbox', 'node-new']
+  );
 });
 
 it('handles node order replacement command', async () => {

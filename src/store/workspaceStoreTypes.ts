@@ -42,11 +42,11 @@ export interface WorkspaceState {
   setRightSidebarWidth: (width: number) => void;
   setRightSidebarCollapsed: (collapsed: boolean) => void;
   setActiveNode: (nodeId: string) => void;
-  updateNodeTitle: (nodeId: string, title: string) => void;
-  updateNodeContent: (nodeId: string, content: string) => void;
+  updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
+  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
   updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   updateVirtualNodeFilter: (nodeId: string, value: string) => void;
-  updateNodeReveal: (nodeId: string, reveal: string) => void;
+  updateNodeReveal: (nodeId: string, reveal: string) => Promise<boolean>;
   updateNodePriority: (nodeId: string, priority: number | null) => void;
   updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
   updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
@@ -75,34 +75,34 @@ export interface WorkspaceState {
   restoreNode: (nodeId: string) => Promise<string | null>;
   deleteNodePermanently: (nodeId: string) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
-  createRootNode: (content?: string, kind?: NodeKind) => string;
-  createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
-  createVirtualNode: () => string;
+  createRootNode: (content?: string, kind?: NodeKind) => Promise<string | null>;
+  createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => Promise<string | null>;
+  createVirtualNode: () => Promise<string | null>;
   createHighlightNodeFromSelection: (
     parentNodeId: string,
     content: string,
     anchorId?: string,
     anchorLink?: NodeAnchorLink,
     imageRegions?: NodeImageRegionGroup[] | null
-  ) => string | null;
+  ) => Promise<string | null>;
   createQANodeFromSelection: (
     parentNodeId: string,
     promptContent: string,
     answerContent: string,
     anchorId?: string,
     anchorLink?: NodeAnchorLink
-  ) => string | null;
+  ) => Promise<string | null>;
   createImageClozeNodes: (
     parentNodeId: string,
     attachmentId: string,
     sourcePayload: ImageClozeSourcePayload,
     regions: ImageClozeDraftRegion[]
-  ) => string[];
+  ) => Promise<string[]>;
   createFormulaClozeNode: (
     parentNodeId: string,
     payload: FormulaClozeCreatePayload,
     sourcePayload: FormulaClozeSourcePayload
-  ) => string | null;
+  ) => Promise<string | null>;
   moveNode: (nodeId: string, nextParentNodeId: string | null) => Promise<boolean>;
   moveNodes: (
     nodeIds: string[],

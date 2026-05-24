@@ -22,35 +22,37 @@ import {
 } from './useEditorContextCommandHelpers';
 import { useEditorContextCommandSurfaces } from './useEditorContextCommandSurfaces';
 
+type MaybePromise<T> = T | Promise<T>;
+
 export interface UseEditorContextCommandsParams {
   activeNode?: Node;
   activeNodeId: string | null;
-  createChildNode: (parentNodeId: string, content?: string) => string;
+  createChildNode: (parentNodeId: string, content?: string) => MaybePromise<string | null>;
   createHighlightNodeFromSelection: (
     parentNodeId: string,
     selectionText: string,
     anchorId: string,
     anchorLink?: NodeAnchorLink,
     imageRegions?: import('../../features/nodes/model/nodeTypes').NodeImageRegionGroup[] | null
-  ) => string | null;
+  ) => MaybePromise<string | null>;
   createImageClozeNodes?: (
     parentNodeId: string,
     attachmentId: string,
     sourcePayload: ImageClozeSourcePayload,
     regions: ImageClozeDraftRegion[]
-  ) => string[];
+  ) => MaybePromise<string[]>;
   createFormulaClozeNode?: (
     parentNodeId: string,
     payload: FormulaClozeCreatePayload,
     sourcePayload: FormulaClozeSourcePayload
-  ) => string | null;
+  ) => MaybePromise<string | null>;
   createQANodeFromSelection: (
     parentNodeId: string,
     clozeContent: string,
     answer: string,
     anchorId: string,
     anchorLink?: NodeAnchorLink
-  ) => string | null;
+  ) => MaybePromise<string | null>;
   deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
@@ -61,7 +63,7 @@ export interface UseEditorContextCommandsParams {
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
   selectionToolbarEnabled?: boolean;
-  updateNodeContent: (nodeId: string, content: string) => void;
+  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }
 
 function usePreservedSelectionPayload(args: {
@@ -158,7 +160,7 @@ function buildEditorCommandsResult(args: {
   setContextMenu: (value: EditorContextMenuState | null) => void;
   trashedNodeIds: string[];
   syncActiveNodeContentFromEditor: () => void;
-  updateNodeContent: (nodeId: string, content: string) => void;
+  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }) {
   const imageHandlers = createImageCommandHandlers({
     closeContextMenu: args.closeContextMenu,

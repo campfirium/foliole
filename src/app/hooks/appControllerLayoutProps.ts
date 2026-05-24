@@ -68,16 +68,16 @@ export interface BuildControllerLayoutPropsArgs {
   virtualView: ReturnType<typeof useVirtualNodeView>;
   ws: {
     activeNodeId: string | null;
-    createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
+    createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => Promise<string | null>;
     createHighlightNodeFromSelection: (
       parentNodeId: string,
       content: string,
       anchorId?: string,
       anchorLink?: NodeAnchorLink,
       imageRegions?: NodeImageRegionGroup[] | null
-    ) => string | null;
-    createVirtualNode: () => string;
-    createRootNode: (content?: string, kind?: NodeKind) => string;
+    ) => Promise<string | null>;
+    createVirtualNode: () => Promise<string | null>;
+    createRootNode: (content?: string, kind?: NodeKind) => Promise<string | null>;
     deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
     exitReviewSession: () => void;
     gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;
@@ -108,13 +108,13 @@ export interface BuildControllerLayoutPropsArgs {
     pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
     undoEditorOperation: () => boolean;
     redoEditorOperation: () => boolean;
-    updateNodeContent: (nodeId: string, content: string) => void;
+    updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
     updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
     updateVirtualNodeFilter: (nodeId: string, value: string) => void;
     updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
     updateNodePriority: (nodeId: string, priority: number | null) => void;
     updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
-    updateNodeReveal: (nodeId: string, reveal: string) => void;
+    updateNodeReveal: (nodeId: string, reveal: string) => Promise<boolean>;
     isHydrated: boolean;
     editorOperationHistory: EditorOperationHistoryState;
   };

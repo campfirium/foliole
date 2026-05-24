@@ -24,7 +24,7 @@ export function repairEditorTable(args: {
   activeNodeId: string | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
   selection?: EditorSelection | null;
-  updateNodeContent: (nodeId: string, content: string) => void;
+  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }) {
   const editor = args.editorRef.current;
   const edit = resolveEditorRepairTableEdit(editor, args.selection);

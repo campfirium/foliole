@@ -7,14 +7,15 @@ import {
   restoreNodes,
   softDeleteNodes,
   updateNodeAnchorLinks,
-  upsertNodeSnapshot
+  upsertNodeSnapshot,
+  upsertNodeSnapshotWithOrder
 } from '../database/nodeMutations.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import {
   parseNodeAnchorLocatorUpdateArray,
   asStringArray,
-  parseNodeCreationArgs,
+  parseNodeCreationMutationArgs,
   parseNodeSnapshotArgs
 } from './commandParsers.js';
 import {
@@ -29,6 +30,36 @@ import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.j
 function completeWorkspaceMutation(result: unknown = null) {
   notifyWorkspaceContentChanged();
   return result;
+}
+
+function buildNodeMutationPatchResult(args: {
+  activeNodeId?: string | null;
+  anchorUpdates?: ReturnType<typeof parseNodeAnchorLocatorUpdateArray>;
+  createdNodeIds?: string[];
+  nodeOrder?: string[];
+  nodes: ReturnType<typeof parseNodeSnapshotArgs>[];
+  updatedNodeIds?: string[];
+}) {
+  return completeWorkspaceMutation({
+    ...(args.activeNodeId !== undefined ? { activeNodeId: args.activeNodeId } : {}),
+    ...(args.anchorUpdates ? { anchorUpdates: args.anchorUpdates } : {}),
+    ...(args.createdNodeIds ? { createdNodeIds: args.createdNodeIds } : {}),
+    ...(args.nodeOrder ? { nodeOrder: args.nodeOrder } : {}),
+    nodes: args.nodes,
+    ...(args.updatedNodeIds ? { updatedNodeIds: args.updatedNodeIds } : {})
+  });
+}
+
+function handleCreateNodeCommand(args: Record<string, unknown>, kind: 'folder' | 'topic' | 'item') {
+  const parsed = parseNodeCreationMutationArgs(args, kind);
+  upsertNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder);
+  scheduleMirrorSync([parsed.node.nodeId]);
+  return buildNodeMutationPatchResult({
+    activeNodeId: parsed.activeNodeId,
+    createdNodeIds: [parsed.node.nodeId],
+    nodeOrder: parsed.nodeOrder,
+    nodes: [parsed.node]
+  });
 }
 
 function handleSoftDeleteNodeCommand(args: Record<string, unknown>) {
@@ -48,28 +79,22 @@ function handlePermanentDeleteNodeCommand(args: Record<string, unknown>) {
 
 export function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createFolder) {
-    const parsed = parseNodeCreationArgs(args, 'folder');
-    upsertNodeSnapshot(parsed);
-    scheduleMirrorSync([parsed.nodeId]);
-    return completeWorkspaceMutation();
+    return handleCreateNodeCommand(args, 'folder');
   }
   if (command === NATIVE_COMMANDS.createTopic) {
-    const parsed = parseNodeCreationArgs(args, 'topic');
-    upsertNodeSnapshot(parsed);
-    scheduleMirrorSync([parsed.nodeId]);
-    return completeWorkspaceMutation();
+    return handleCreateNodeCommand(args, 'topic');
   }
   if (command === NATIVE_COMMANDS.createItem) {
-    const parsed = parseNodeCreationArgs(args, 'item');
-    upsertNodeSnapshot(parsed);
-    scheduleMirrorSync([parsed.nodeId]);
-    return completeWorkspaceMutation();
+    return handleCreateNodeCommand(args, 'item');
   }
   if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
     const parsed = parseNodeSnapshotArgs(args);
     upsertNodeSnapshot(parsed);
     scheduleMirrorSync([parsed.nodeId]);
-    return completeWorkspaceMutation();
+    return buildNodeMutationPatchResult({
+      nodes: [parsed],
+      updatedNodeIds: [parsed.nodeId]
+    });
   }
   if (command === NATIVE_COMMANDS.updateNodeContentWithAnchors) {
     const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
@@ -77,7 +102,11 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
     upsertNodeSnapshot(parent);
     updateNodeAnchorLinks(affectedAnchors);
     scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
-    return completeWorkspaceMutation();
+    return buildNodeMutationPatchResult({
+      anchorUpdates: affectedAnchors,
+      nodes: [parent],
+      updatedNodeIds: [parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]
+    });
   }
   if (command === NATIVE_COMMANDS.flushDirtyNodeSyncVersions) {
     return flushAllDirtyNodeSyncVersions();

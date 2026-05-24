@@ -1,16 +1,13 @@
-import { UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
-import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
-
-import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createRootNodeAction } from './workspaceRootNodeCreateAction';
 import {
   syncCreateNodeToRuntime,
+  syncCreateNodeMutationToRuntime,
   syncDeleteNodesPermanentlyToRuntime,
   syncMoveNodesToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
-  syncNodeRevealToRuntime,
+  hasWorkspaceNodeMutationRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
@@ -20,10 +17,12 @@ import {
   createHighlightFromSelectionAction,
   createQAFromSelectionAction
 } from './workspaceStoreCreateActions';
+import { createChildNodeAction } from './workspaceStoreCreateChildNodeAction';
 import { createFormulaClozeNodeAction } from './workspaceStoreFormulaClozeActions';
 import { createUpdateHighlightAnchorRangeAction } from './workspaceStoreHighlightRangeActions';
 import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';
 import { createDismissNodeAction } from './workspaceStoreNodeDismissAction';
+import { createUpdateNodeRevealAction, createUpdateNodeTitleAction } from './workspaceStoreNodeEditActions';
 import { createRelearnNodeAction } from './workspaceStoreNodeRelearnAction';
 import {
   createUpdateNodeDesiredRetentionAction,
@@ -34,7 +33,6 @@ import { createSetNodeViewStateAction } from './workspaceStoreNodeViewActions';
 import { createSetNodeSequentialReadingAction } from './workspaceStoreSequentialReadingActions';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
 import {
-  createChildNodeAction,
   createMoveNodeAction,
   createMoveNodesAction
 } from './workspaceStoreTreeActions';
@@ -74,62 +72,23 @@ type WorkspaceNodeActions = Pick<
   | 'updateNodeReveal'
 >;
 
-function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeTitle'] {
-  return (nodeId, title) => {
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
-    set((state) => {
-      const node = state.nodesById[nodeId];
-      if (!node || isProtectedRootNode(node)) {
-        return state;
+function createRuntimeHandlers() {
+  return {
+    hasMutationRuntime: hasWorkspaceNodeMutationRuntime,
+    syncNodeContent: syncNodeContentToRuntime,
+    syncNodeCreation: async (
+      node: WorkspaceState['nodesById'][string],
+      nodeOrder?: string[],
+      activeNodeId?: string | null,
+      position?: number
+    ) => {
+      if (!nodeOrder) {
+        syncCreateNodeToRuntime(node);
+        return null;
       }
-      const nextTitle = title.trim() || UNTITLED_NODE_TITLE;
-      const nextNode = {
-        ...node,
-        title: nextTitle,
-        isTitleManual: true,
-        updatedAt: new Date().toISOString()
-      };
-      nextNodeForSync = nextNode;
-      return {
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: nextNode
-        }
-      };
-    });
-    if (nextNodeForSync) {
-      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
-      syncNodeContentToRuntime(nextNodeForSync);
-    }
-  };
-}
-
-function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeReveal'] {
-  return (nodeId, reveal) => {
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
-    set((state) => {
-      const node = state.nodesById[nodeId];
-      if (!node || isProtectedRootNode(node) || node.reveal === null) {
-        return state;
-      }
-      const nextNode = {
-        ...node,
-        hasReveal: reveal !== null,
-        reveal,
-        updatedAt: new Date().toISOString()
-      };
-      nextNodeForSync = nextNode;
-      return {
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: nextNode
-        }
-      };
-    });
-    if (nextNodeForSync) {
-      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
-      syncNodeRevealToRuntime(nextNodeForSync);
-    }
+      return syncCreateNodeMutationToRuntime(node, nodeOrder, activeNodeId, position);
+    },
+    syncNodeOrder: syncNodeOrderToRuntime
   };
 }
 
@@ -140,11 +99,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     syncRestoreNodes: syncRestoreNodesToRuntime,
     syncDeleteNodesPermanently: syncDeleteNodesPermanentlyToRuntime
   });
-  const runtimeHandlers = {
-    syncNodeContent: syncNodeContentToRuntime,
-    syncNodeCreation: syncCreateNodeToRuntime,
-    syncNodeOrder: syncNodeOrderToRuntime
-  };
+  const runtimeHandlers = createRuntimeHandlers();
   const syncMovedNodes = async (payload: Parameters<typeof syncMoveNodesToRuntime>[0]) =>
     Boolean(await syncMoveNodesToRuntime(payload));
   return {
@@ -162,8 +117,18 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateNodeShortTerm: createUpdateNodeShortTermAction(set),
     setNodeSequentialReading: createSetNodeSequentialReadingAction(set),
     createRootNode: createRootNodeAction(set, runtimeHandlers),
-    createChildNode: createChildNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
-    createVirtualNode: createVirtualNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
+    createChildNode: createChildNodeAction(
+      set,
+      runtimeHandlers.syncNodeCreation,
+      syncNodeOrderToRuntime,
+      hasWorkspaceNodeMutationRuntime
+    ),
+    createVirtualNode: createVirtualNodeAction(
+      set,
+      runtimeHandlers.syncNodeCreation,
+      syncNodeOrderToRuntime,
+      hasWorkspaceNodeMutationRuntime
+    ),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
     createFormulaClozeNode: createFormulaClozeNodeAction(set, runtimeHandlers, reconcileReviewSession),
     createImageClozeNodes: createImageClozeNodesAction(set, runtimeHandlers, reconcileReviewSession),

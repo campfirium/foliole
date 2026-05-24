@@ -13,7 +13,7 @@ interface ExistingHighlightHandlerArgs {
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   selectionHandlers: ReturnType<typeof createSelectionHandlers>;
-  updateNodeContent: (nodeId: string, content: string) => void;
+  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }
 
 export function createExistingHighlightHandlers(args: ExistingHighlightHandlerArgs) {

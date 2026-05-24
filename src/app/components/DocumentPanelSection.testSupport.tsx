@@ -54,7 +54,7 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
 }));
 
 const nodeBacklinksBridgeMocks = vi.hoisted(() => ({
-  loadRuntimeNodeBacklinks: vi.fn(async () => null)
+  loadRuntimeNodeBacklinks: vi.fn(() => null)
 }));
 export const loadRuntimeNodeBacklinks = nodeBacklinksBridgeMocks.loadRuntimeNodeBacklinks;
 
@@ -63,7 +63,7 @@ vi.mock('../../shared/platform/nodeBacklinksRuntimeRepository', () => ({
 }));
 
 const workspaceNodePreparationMocks = vi.hoisted(() => ({
-  ensureWorkspaceNodeDocumentReady: vi.fn(async () => null)
+  ensureWorkspaceNodeDocumentReady: vi.fn(() => null)
 }));
 export const ensureWorkspaceNodeDocumentReady = workspaceNodePreparationMocks.ensureWorkspaceNodeDocumentReady;
 

@@ -22,9 +22,9 @@ interface NodeListTreeContentProps {
   bodyAppendContent?: ReactNode;
   collapse: NodeListCollapseController;
   contextMenu: NodeListContextMenuController;
-  createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => string;
-  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
-  createVirtualNode: () => string;
+  createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
+  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
+  createVirtualNode: () => Promise<string | null>;
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
@@ -56,7 +56,7 @@ interface NodeListTreeContentProps {
   trashedNodeIds: string[];
   updateNodePriority: (nodeId: string, priority: number | null) => void;
   updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
-  updateNodeTitle: (nodeId: string, title: string) => void;
+  updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
 }
 
 export function NodeListTreeContent(props: NodeListTreeContentProps) {

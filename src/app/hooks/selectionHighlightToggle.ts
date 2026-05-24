@@ -113,7 +113,7 @@ export function createAddNoteToSelectionHighlightFromPayloadHandler(args: {
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   trashedNodeIds: string[];
-  updateNodeContent: (nodeId: string, content: string) => void;
+  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }) {
   return (payload: SelectionCommandPayload, note = '') => {
     const existingHighlightMatch = resolveExistingHighlightMatch(

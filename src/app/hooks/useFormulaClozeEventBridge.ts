@@ -17,7 +17,7 @@ export function useFormulaClozeEventBridge(args: {
     parentNodeId: string,
     payload: FormulaClozeCreatePayload,
     sourcePayload: FormulaClozeSourcePayload
-  ) => string | null;
+  ) => Promise<string | null> | string | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
   flushPendingEditorDraft: () => boolean;
 }) {

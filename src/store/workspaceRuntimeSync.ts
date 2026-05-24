@@ -3,10 +3,13 @@ import {
   deleteWorkspaceNodesPermanently,
   moveWorkspaceNodes,
   restoreWorkspaceNodes,
+  saveCreatedWorkspaceNodeMutationSnapshot,
   saveCreatedWorkspaceNodeSnapshot,
   saveWorkspaceNodeContentSnapshot,
   saveWorkspaceNodeContentSnapshotNow,
   saveWorkspaceNodeContentSnapshotWithAnchors,
+  saveWorkspaceNodeContentMutationWithAnchors,
+  saveWorkspaceNodeMutationSnapshotNow,
   saveWorkspaceNodeOrder,
   saveWorkspaceNodeRevealSnapshot,
   saveWorkspaceReadingProgress,
@@ -14,6 +17,7 @@ import {
   saveWorkspaceReviewGrade,
   softDeleteWorkspaceNodes
 } from '../shared/platform/workspaceRuntimeRepository';
+import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 import type {
   WorkspaceReadingProgressSavePayload,
   WorkspaceRelearnNodePayload,
@@ -26,6 +30,7 @@ import type {
   WorkspaceRuntimeNode,
   WorkspaceRuntimeNodeDocument
 } from '../shared/platform/workspaceRuntimeTypes';
+import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 
@@ -53,6 +58,10 @@ export function syncNodeContentToRuntime(node: Node, position?: number) {
   saveWorkspaceNodeContentSnapshot(createNodeSnapshotArgs(node, position));
 }
 
+export function hasWorkspaceNodeMutationRuntime() {
+  return hasWorkspaceRuntimeRepository();
+}
+
 export async function syncNodeContentToRuntimeNow(node: Node, position?: number): Promise<boolean> {
   return saveWorkspaceNodeContentSnapshotNow(createNodeSnapshotArgs(node, position));
 }
@@ -65,12 +74,55 @@ export function syncNodeContentWithAnchorsToRuntime(parentNode: Node, affectedAn
   saveWorkspaceNodeContentSnapshotWithAnchors({ parentNode, affectedAnchorNodes, nodeOrder });
 }
 
+export async function syncNodeContentWithAnchorsMutationToRuntime(
+  parentNode: Node,
+  affectedAnchorNodes: Node[],
+  nodeOrder: string[]
+): Promise<WorkspaceNodeMutationPatchResult | null> {
+  return saveWorkspaceNodeContentMutationWithAnchors({ parentNode, affectedAnchorNodes, nodeOrder });
+}
+
 export function syncCreateNodeToRuntime(node: Node, position?: number) {
   saveCreatedWorkspaceNodeSnapshot(createNodeSnapshotArgs(node, position));
 }
 
+export async function syncCreateNodeMutationToRuntime(
+  node: Node,
+  nodeOrder: string[],
+  activeNodeId?: string | null,
+  position?: number
+): Promise<WorkspaceNodeMutationPatchResult | null> {
+  return saveCreatedWorkspaceNodeMutationSnapshot({
+    ...createNodeSnapshotArgs(node, position),
+    ...(activeNodeId !== undefined ? { activeNodeId } : {}),
+    nodeOrder
+  });
+}
+
 export function syncNodeRevealToRuntime(node: Node, position?: number) {
   saveWorkspaceNodeRevealSnapshot(createNodeSnapshotArgs(node, position));
+}
+
+export async function syncNodeContentMutationToRuntime(
+  node: Node,
+  position?: number
+): Promise<WorkspaceNodeMutationPatchResult | null> {
+  return saveWorkspaceNodeMutationSnapshotNow({
+    ...createNodeSnapshotArgs(node, position),
+    action: 'sync_node_content_mutation',
+    command: 'update_node_content'
+  });
+}
+
+export async function syncNodeRevealMutationToRuntime(
+  node: Node,
+  position?: number
+): Promise<WorkspaceNodeMutationPatchResult | null> {
+  return saveWorkspaceNodeMutationSnapshotNow({
+    ...createNodeSnapshotArgs(node, position),
+    action: 'sync_node_reveal_mutation',
+    command: 'update_node_reveal'
+  });
 }
 
 export function syncNodeOrderToRuntime(nodeOrder: string[]) {

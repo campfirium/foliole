@@ -4,6 +4,7 @@ import {
 } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
+import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
@@ -17,8 +18,9 @@ type WorkspaceSet = (
 ) => void;
 
 interface RuntimeSyncHandlers {
+  hasMutationRuntime: () => boolean;
   syncNodeContent: (node: WorkspaceNode) => void;
-  syncNodeCreation: (node: WorkspaceNode) => void;
+  syncNodeCreation: (node: WorkspaceNode, nodeOrder: string[], activeNodeId?: string | null, position?: number) => Promise<import('../shared/platform/workspaceRuntimeTypes').WorkspaceNodeMutationPatchResult | null>;
   syncNodeOrder: (nodeOrder: string[]) => void;
 }
 
@@ -64,11 +66,14 @@ export function createRootNodeAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
 ): WorkspaceState['createRootNode'] {
-  return (content = '', kind: NodeKind = 'topic') => {
+  return async (content = '', kind: NodeKind = 'topic') => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
     let createdNode: WorkspaceNode | null = null;
     let nextNodeOrder: string[] | null = null;
+    let localPatch: Partial<WorkspaceState> | null = null;
+    let shouldUseLocalFallback = false;
+    let applied = false;
 
     set((state) => {
       const parentNodeId = resolveRootCreationParentId(kind, state);
@@ -78,7 +83,7 @@ export function createRootNodeAction(
         : [...state.nodeOrder, nodeId];
       createdNode = created.node;
       const nextNodesById = { ...state.nodesById, [nodeId]: createdNode };
-      return {
+      localPatch = {
         activeNodeId: nodeId,
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
@@ -94,13 +99,24 @@ export function createRootNodeAction(
           nodeId
         )
       };
+      return state;
     });
+    shouldUseLocalFallback = !handlers.hasMutationRuntime();
     if (createdNode && nextNodeOrder) {
-      handlers.syncNodeCreation(createdNode);
-      if (kind === 'folder') {
-        handlers.syncNodeOrder(nextNodeOrder);
-      }
+      const acceptedOrder = [...nextNodeOrder] as string[];
+      const result = await handlers.syncNodeCreation(createdNode, acceptedOrder, nodeId, acceptedOrder.indexOf(nodeId));
+      set((state) => {
+        const acceptedPatch = result
+          ? createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch)
+          : shouldUseLocalFallback ? localPatch : null;
+        if (!acceptedPatch) return state;
+        applied = true;
+        return {
+          ...acceptedPatch,
+          reviewSession: reconcileReviewSession({ ...state, ...acceptedPatch }, nodeId)
+        };
+      });
     }
-    return nodeId;
+    return createdNode && applied ? nodeId : null;
   };
 }

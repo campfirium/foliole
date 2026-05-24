@@ -13,16 +13,18 @@ function createHighlightFactory(
     anchorId: string,
     anchorLink?: NodeAnchorLink,
     imageRegions?: NodeImageRegionGroup[] | null
-  ) => string | null
+  ) => Promise<string | null> | string | null
 ) {
-  return (payload: SelectionCommandPayload) =>
-    createHighlightNodeFromSelection(
+  return (payload: SelectionCommandPayload) => {
+    void createHighlightNodeFromSelection(
       payload.parentNodeId,
       payload.selectionText,
       payload.anchorId,
       createTextAnchorLink(payload, 'highlight'),
       payload.imageRegions
-    ) ?? null;
+    );
+    return null;
+  };
 }
 
 function createAnnotatedHighlightFactory(
@@ -32,16 +34,18 @@ function createAnnotatedHighlightFactory(
     anchorId: string,
     anchorLink?: NodeAnchorLink,
     imageRegions?: NodeImageRegionGroup[] | null
-  ) => string | null
+  ) => Promise<string | null> | string | null
 ) {
-  return (payload: SelectionCommandPayload, note: string) =>
-    createHighlightNodeFromSelection(
+  return (payload: SelectionCommandPayload, note: string) => {
+    void createHighlightNodeFromSelection(
       payload.parentNodeId,
       formatHighlightCardContent({ note, notePrefix: getHighlightAnnotationPrefix(), text: payload.selectionText }),
       payload.anchorId,
       createTextAnchorLink(payload, 'highlight'),
       payload.imageRegions
-    ) ?? null;
+    );
+    return null;
+  };
 }
 
 function createNoteFromPayloadHandler(args: {
@@ -60,7 +64,7 @@ function createClozeHandlers(args: {
     answer: string,
     anchorId: string,
     anchorLink?: NodeAnchorLink
-  ) => string | null;
+  ) => Promise<string | null> | string | null;
   flushPendingEditorDraft: () => boolean;
   runSelectionCommand: (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => void;
   runSelectionCommandFromPayloadHandler: (args: {
@@ -71,7 +75,7 @@ function createClozeHandlers(args: {
   }) => string | null;
 }) {
   const createClozeFromPayload = (payload: SelectionCommandPayload) => {
-    args.createQANodeFromSelection(
+    void args.createQANodeFromSelection(
       payload.parentNodeId,
       payload.clozeContent,
       payload.selectionText,
@@ -115,14 +119,14 @@ function createClozeHandlers(args: {
 }
 
 function createHighlightHandlers(args: {
-  createChildNode: (parentNodeId: string, content?: string) => string;
+  createChildNode: (parentNodeId: string, content?: string) => Promise<string | null> | string | null;
   createHighlightNodeFromSelection: (
     parentNodeId: string,
     selectionText: string,
     anchorId: string,
     anchorLink?: NodeAnchorLink,
     imageRegions?: NodeImageRegionGroup[] | null
-  ) => string | null;
+  ) => Promise<string | null> | string | null;
   flushPendingEditorDraft: () => boolean;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
@@ -168,21 +172,21 @@ function createHighlightHandlers(args: {
 }
 
 export function createSelectionHandlers(args: {
-  createChildNode: (parentNodeId: string, content?: string) => string;
+  createChildNode: (parentNodeId: string, content?: string) => Promise<string | null> | string | null;
   createHighlightNodeFromSelection: (
     parentNodeId: string,
     selectionText: string,
     anchorId: string,
     anchorLink?: NodeAnchorLink,
     imageRegions?: NodeImageRegionGroup[] | null
-  ) => string | null;
+  ) => Promise<string | null> | string | null;
   createQANodeFromSelection: (
     parentNodeId: string,
     clozeContent: string,
     answer: string,
     anchorId: string,
     anchorLink?: NodeAnchorLink
-  ) => string | null;
+  ) => Promise<string | null> | string | null;
   flushPendingEditorDraft: () => boolean;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;

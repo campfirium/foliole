@@ -55,6 +55,24 @@ export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
   }
 }
 
+export function upsertNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, nodeOrder: string[]): void {
+  const connection = openDatabaseConnection();
+  withTransaction(connection.driver, () => {
+    upsertNodeSnapshotViaDriver(connection.driver, {
+      ...input,
+      deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
+    });
+    replaceNodeOrderViaDriver(connection.driver, nodeOrder);
+  });
+  if ('reading' in input) {
+    if (input.reading?.state === 'dismissed') {
+      recordNodeSourceDisposition(input.nodeId, 'dismissed', input.updatedAt);
+    } else {
+      clearNodeSourceDisposition(input.nodeId);
+    }
+  }
+}
+
 export function upsertNodeSnapshots(inputs: UpsertNodeSnapshotInput[]): void {
   const connection = openDatabaseConnection();
   withTransaction(connection.driver, () => {

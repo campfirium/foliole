@@ -22,7 +22,7 @@ export function createSelectionAnnotationHandlers(args: {
   setContextMenu: (value: EditorContextMenuState | null) => void;
   trashedNodeIds: string[];
   syncActiveNodeContentFromEditor: () => void;
-  updateNodeContent: (nodeId: string, content: string) => void;
+  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }) {
   const handleToggleSelectionHighlightFromPayload = createToggleSelectionHighlightFromPayloadHandler({
     activeNodeId: args.activeNodeId,
