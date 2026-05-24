@@ -146,6 +146,7 @@ describe('createWorkspaceNodeActions root creation sync', () => {
 });
 
 it('treats a missing Inbox as a workspace invariant violation', async () => {
+  vi.clearAllMocks();
   const fixture = createWorkspaceNodeActionsFixture();
   const nodesById = { ...fixture.nodesById };
   delete nodesById[INBOX_NODE_ID];
