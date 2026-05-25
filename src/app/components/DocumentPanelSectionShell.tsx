@@ -37,6 +37,11 @@ interface DocumentPanelShellProps {
   showSourceUpdateAction: boolean;
 }
 
+function resolvePriorityQuickSetValue(props: DocumentPanelSectionProps) {
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
+  return activeNode?.priority ?? 5;
+}
+
 function renderDocumentPanelChrome(args: {
   backlinks: BacklinkItem[];
   folderListSortDirection: FolderListSortDirection;
@@ -71,6 +76,12 @@ function renderDocumentPanelChrome(args: {
       })}
       <DocumentPriorityQuickSetHint
         isActive={!args.isFolderListView && Boolean(args.props.isPriorityQuickSetActive)}
+        onPriorityChange={
+          args.props.activeNodeId && args.props.onNodePriorityChange
+            ? (priority) => args.props.onNodePriorityChange?.(args.props.activeNodeId!, priority)
+            : undefined
+        }
+        priority={resolvePriorityQuickSetValue(args.props)}
       />
       {renderDocumentSearchToolbar(
         args.props,

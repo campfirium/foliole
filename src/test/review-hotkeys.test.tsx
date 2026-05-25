@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
@@ -241,9 +241,16 @@ it('supports quick priority changes from the two-step shortcut', () => {
   render(<App />);
 
   fireEvent.keyDown(window, { key: 'm', ctrlKey: true });
-  expect(screen.getByText('Set priority')).toBeInTheDocument();
-  expect(screen.getByText('0-9 to set')).toBeInTheDocument();
-  expect(screen.getByText('Esc to cancel')).toBeInTheDocument();
+  const dialog = screen.getByRole('dialog', { name: 'Set priority' });
+  expect(within(dialog).getByText('Priority')).toBeInTheDocument();
+  expect(within(dialog).getByText('5')).toBeInTheDocument();
+  expect(within(dialog).getByText('9')).toBeInTheDocument();
+  expect(within(dialog).getByText('0-9')).toBeInTheDocument();
+  expect(within(dialog).getByText('apply instantly')).toBeInTheDocument();
+  expect(within(dialog).queryByText('Esc to cancel')).not.toBeInTheDocument();
+
+  fireEvent.change(within(dialog).getByRole('slider', { name: 'Priority' }), { target: { value: '7' } });
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.priority).toBe(7);
 
   fireEvent.keyDown(window, { key: '0' });
 

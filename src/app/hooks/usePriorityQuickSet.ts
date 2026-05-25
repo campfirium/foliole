@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatShortcutSetLabel, matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 import { definedProps } from '../../shared/lib/definedProps';
-import { onWindowKeydown } from '../../shared/platform/keyboard';
+import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 
 const QUICK_SET_TIMEOUT_MS = 4000;
 
@@ -69,6 +69,42 @@ interface UsePriorityQuickSetArgs {
   shortcuts?: CommandShortcutSet;
 }
 
+function usePriorityQuickSetListeners(args: {
+  activeNodeId: string | null;
+  armTimeout: () => void;
+  cancel: () => void;
+  canEnter: boolean;
+  enter: () => boolean;
+  isActive: boolean;
+  onPriorityChange: (nodeId: string, priority: number) => void;
+  shortcuts?: CommandShortcutSet;
+}) {
+  useEffect(() => {
+    if (!args.isActive) {
+      return undefined;
+    }
+    return onWindowEscape(args.cancel);
+  }, [args.cancel, args.isActive]);
+
+  useEffect(
+    () =>
+      onWindowKeydown((event) =>
+        handlePriorityQuickSetKeydown({
+          activeNodeId: args.activeNodeId,
+          armTimeout: args.armTimeout,
+          cancel: args.cancel,
+          canEnter: args.canEnter,
+          enter: args.enter,
+          event,
+          isActive: args.isActive,
+          onPriorityChange: args.onPriorityChange,
+          ...definedProps({ shortcuts: args.shortcuts })
+        })
+      ),
+    [args]
+  );
+}
+
 export function usePriorityQuickSet({
   activeNodeId,
   blocked,
@@ -114,23 +150,16 @@ export function usePriorityQuickSet({
 
   useEffect(() => clearTimer, [clearTimer]);
 
-  useEffect(
-    () =>
-      onWindowKeydown((event) =>
-        handlePriorityQuickSetKeydown({
-          activeNodeId,
-          armTimeout,
-          cancel,
-          canEnter,
-          enter,
-          event,
-          isActive,
-          onPriorityChange,
-          ...definedProps({ shortcuts })
-        })
-      ),
-    [activeNodeId, armTimeout, cancel, canEnter, enter, isActive, onPriorityChange, shortcuts]
-  );
+  usePriorityQuickSetListeners({
+    activeNodeId,
+    armTimeout,
+    cancel,
+    canEnter,
+    enter,
+    isActive,
+    onPriorityChange,
+    ...definedProps({ shortcuts })
+  });
 
   return { enter, isActive, shortcutLabel: shortcuts ? formatShortcutSetLabel(shortcuts) : '' };
 }

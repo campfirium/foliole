@@ -116,12 +116,7 @@ function useReviewEditingEscapeHandler(
       event.preventDefault();
       event.stopPropagation();
     };
-    window.addEventListener('keydown', handleEscape, true);
-    const unlistenFallback = onWindowEscape(handleEscape);
-    return () => {
-      window.removeEventListener('keydown', handleEscape, true);
-      unlistenFallback();
-    };
+    return onWindowEscape(handleEscape);
   }, [args.isCommandPaletteOpen, args.isSearchPaletteOpen, args.isSettingsOpen, args.isStudyMode, isReviewEditing, setIsReviewEditing]);
 }
 

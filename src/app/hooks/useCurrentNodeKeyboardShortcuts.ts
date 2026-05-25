@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
-import { onWindowKeydown } from '../../shared/platform/keyboard';
+import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
@@ -78,8 +78,7 @@ function useCurrentNodeEditingEscape(
       event.preventDefault();
       event.stopPropagation();
     };
-    window.addEventListener('keydown', handleEscape, true);
-    return () => window.removeEventListener('keydown', handleEscape, true);
+    return onWindowEscape(handleEscape);
   }, [blocked, isEditing, setIsEditing]);
 }
 

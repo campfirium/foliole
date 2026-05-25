@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { onWindowEscape } from '../../shared/platform/keyboard';
+
 import { usePriorityQuickSet } from './usePriorityQuickSet';
 
 function Harness({
@@ -54,4 +56,21 @@ it('cancels quick-set mode with escape', () => {
   fireEvent.keyDown(window, { key: 'Escape' });
 
   expect(screen.getByText('idle')).toBeInTheDocument();
+});
+
+it('keeps escape inside quick-set mode before older escape handlers', () => {
+  const outerEscape = vi.fn();
+  const unlistenOuterEscape = onWindowEscape(outerEscape);
+
+  render(<Harness />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'enter' }));
+  expect(screen.getByText('active')).toBeInTheDocument();
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+
+  expect(screen.getByText('idle')).toBeInTheDocument();
+  expect(outerEscape).not.toHaveBeenCalled();
+
+  unlistenOuterEscape();
 });
