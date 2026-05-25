@@ -34,8 +34,9 @@ vi.mock('../sync/primaryDeviceState.js', () => ({
 
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { listRemovedKeepImportItems } from '../database/keepImportItems.js';
 import { initializeDatabase } from '../database/migrate.js';
-import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
@@ -216,24 +217,27 @@ it('blocks readwise book import reset when this desktop is secondary', async () 
   expect(childNodes.length).toBeGreaterThan(0);
 });
 
-it('recreates a deleted readwise book node when re-import is triggered', async () => {
+it('does not recreate a deleted readwise book node when re-import is triggered', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
   await scanBooksFixture({ fullDocumentDir, highlightDir });
   const nodeId = seedManualBookPlaceholder();
 
-  openDatabaseConnection().sqlite.prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?').run('2026-04-04T11:00:00.000Z', nodeId);
+  softDeleteNodes({
+    deletedAt: '2026-04-04T11:00:00.000Z',
+    nodeIds: [nodeId]
+  });
 
   const resetResult = await resetReadwiseBookImport(nodeId);
   expect(resetResult).toMatchObject({
-    book_key: 'manual book',
-    node_id: nodeId,
-    status: 'reset'
+    node_id: null,
+    status: 'book_not_found'
   });
 
-  const restoredNode = openDatabaseConnection().sqlite
+  const deletedNode = openDatabaseConnection().sqlite
     .prepare('SELECT id, deleted_at, content FROM nodes WHERE id = ?')
     .get(nodeId) as { content: string; deleted_at: string | null; id: string } | undefined;
-  expect(restoredNode?.id).toBe(nodeId);
-  expect(restoredNode?.deleted_at).toBeNull();
-  expectResetPlaceholderContent(restoredNode?.content);
+  expect(deletedNode?.id).toBe(nodeId);
+  expect(deletedNode?.deleted_at).toBe('2026-04-04T11:00:00.000Z');
+  expect(deletedNode?.content).toBe('# Manual Book\n\nWaiting for EPUB.');
+  expect(listRemovedKeepImportItems()).toEqual([]);
 });
