@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 
-import { selectRuntimeFolder } from '../../../../shared/platform/folderSelectionRuntimeRepository';
 import { useRuntimeAvailability } from '../../../../shared/platform/runtimeAvailability';
 import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
 import {
@@ -11,14 +10,7 @@ import {
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
 import { useDefaultBackupPath, useInitialBackupData } from './backupSettingsSectionLoadHooks';
-import {
-  persistBackupSettings,
-  runCreateBackup,
-  runResetSourceDispositions,
-  runRestoreBackup,
-  runRestoreSourceDispositions,
-  updateDraftValue
-} from './backupSettingsSectionStateUtils';
+import { useBackupActionHandlers } from './useBackupSettingsSectionActions';
 
 function useBackupStateStore() {
   const [settings, setSettings] = useState<DatabaseBackupSettings | null>(null);
@@ -35,12 +27,14 @@ function useBackupStateStore() {
   const [statusMessage, setStatusMessage] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [loadErrorMessage, setLoadErrorMessage] = useState('');
+  const [extraPathErrorMessage, setExtraPathErrorMessage] = useState('');
   const [pathErrorMessage, setPathErrorMessage] = useState('');
 
   return {
     backups,
     draft,
     defaultBackupPath,
+    extraPathErrorMessage,
     isCreatingBackup,
     isLoadingBackups,
     isResettingSourceStates,
@@ -52,6 +46,7 @@ function useBackupStateStore() {
     setBackups,
     setDefaultBackupPath,
     setDraft,
+    setExtraPathErrorMessage,
     setIsCreatingBackup,
     setIsLoadingBackups,
     setIsResettingSourceStates,
@@ -68,77 +63,6 @@ function useBackupStateStore() {
     sourceDispositionSummary,
     sourceStateStatusMessage,
     statusMessage
-  };
-}
-
-async function updateBackupPath(args: {
-  draft: DatabaseBackupSettings;
-  saveDraft: (nextSettings: DatabaseBackupSettings, refreshBackups?: boolean) => void;
-  setPathErrorMessage: (value: string) => void;
-}) {
-  try {
-    const nextPath = await selectRuntimeFolder();
-    if (!nextPath) return;
-    args.setPathErrorMessage('');
-    args.saveDraft({ ...args.draft, backup_dir: nextPath }, true);
-  } catch {
-    args.setPathErrorMessage('Could not choose a new backup folder.');
-  }
-}
-
-function useBackupActionHandlers(args: {
-  draft: DatabaseBackupSettings | null;
-  refreshBackups: () => Promise<void>;
-  saveRequestIdRef: { current: number };
-  setDraft: (value: DatabaseBackupSettings) => void;
-  setIsCreatingBackup: (value: boolean) => void;
-  setIsSavingSettings: (value: boolean) => void;
-  setPathErrorMessage: (value: string) => void;
-  setRestoringPath: (value: string) => void;
-  setSettings: (value: DatabaseBackupSettings) => void;
-  setSourceDispositionSummary: (value: RuntimeSourceDispositionSummary) => void;
-  setIsResettingSourceStates: (value: boolean) => void;
-  setIsRestoringSourceStates: (value: boolean) => void;
-  setSourceStateStatusMessage: (value: string) => void;
-  setStatusMessage: (value: string) => void;
-}) {
-  const saveDraft = (nextSettings: DatabaseBackupSettings, refreshBackups = false) =>
-    void persistBackupSettings({
-      nextSettings,
-      refreshBackups,
-      refreshBackupsList: args.refreshBackups,
-      saveRequestIdRef: args.saveRequestIdRef,
-      setDraft: args.setDraft,
-      setIsSavingSettings: args.setIsSavingSettings,
-      setSettings: args.setSettings
-    });
-
-  const handleCreateBackup = () => void runCreateBackup(args.refreshBackups, args.setIsCreatingBackup, args.setStatusMessage);
-  const handleRestoreBackup = (entry: DatabaseBackupEntry) =>
-    void runRestoreBackup(entry, args.setRestoringPath, args.setStatusMessage);
-  const handleRestoreSourceDispositions = () => void runRestoreSourceDispositions(args);
-  const handleResetSourceDispositions = () => void runResetSourceDispositions(args);
-  const handleDraftField = (field: keyof DatabaseBackupSettings, value: string) => {
-    if (!args.draft) return;
-    saveDraft(updateDraftValue(args.draft, field, value));
-  };
-  const handleRestoreBackupPathDefault = () => {
-    if (!args.draft) return;
-    args.setPathErrorMessage('');
-    saveDraft({ ...args.draft, backup_dir: '' }, true);
-  };
-  const handleChangeBackupPath = async () => {
-    if (!args.draft) return;
-    await updateBackupPath({ draft: args.draft, saveDraft, setPathErrorMessage: args.setPathErrorMessage });
-  };
-  return {
-    handleChangeBackupPath,
-    handleCreateBackup,
-    handleDraftField,
-    handleRestoreBackup,
-    handleRestoreSourceDispositions,
-    handleResetSourceDispositions,
-    handleRestoreBackupPathDefault
   };
 }
 
@@ -165,6 +89,7 @@ export function useBackupSettingsSectionState() {
     refreshBackups: () => listDatabaseBackups().then(state.setBackups),
     saveRequestIdRef,
     setDraft: state.setDraft,
+    setExtraPathErrorMessage: state.setExtraPathErrorMessage,
     setIsCreatingBackup: state.setIsCreatingBackup,
     setIsSavingSettings: state.setIsSavingSettings,
     setPathErrorMessage: state.setPathErrorMessage,
@@ -182,6 +107,7 @@ export function useBackupSettingsSectionState() {
     ...actions,
     backups: state.backups,
     defaultBackupPath: state.defaultBackupPath,
+    extraPathErrorMessage: state.extraPathErrorMessage,
     isCreatingBackup: state.isCreatingBackup,
     isDesktopRuntime,
     isLoadingBackups: state.isLoadingBackups,

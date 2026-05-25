@@ -11,6 +11,7 @@ import {
   resolveManagedBackupDirectory
 } from './backupSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
 import { createInternalDatabaseSnapshot } from './internalSnapshots.js';
 import { initializeDatabase } from './migrate.js';
 import {
@@ -23,6 +24,10 @@ import {
 export interface CreateApplicationDatabaseBackupOptions {
   destinationPath?: string;
 }
+
+export type ApplicationDatabaseBackupResult = SqliteBackupResult & {
+  extraBackup: ExtraBackupCopyResult;
+};
 
 export interface RestoreApplicationDatabaseBackupOptions {
   sourcePath: string;
@@ -91,11 +96,19 @@ async function pruneBackupsNow(now = new Date()) {
 }
 
 async function createAutomaticBackupForFrequency(frequency: AutoFrequency, now: Date) {
+  const settings = loadBackupSettings();
+  const backupDirectory = resolveManagedBackupDirectory(settings);
   const connection = openDatabaseConnection();
-  await backupSqliteDatabase({
-    destinationPath: buildManagedBackupPath(`auto-${frequency}`, now),
+  const result = await backupSqliteDatabase({
+    destinationPath: buildManagedBackupPath(`auto-${frequency}`, now, backupDirectory),
     sourceDatabase: connection.sqlite,
     sourcePath: connection.dbPath
+  });
+  await copyExtraBackup({
+    extraBackupDir: settings.extra_backup_dir,
+    maxCount: settings.extra_backup_max_count,
+    primaryBackupDir: backupDirectory,
+    sourcePath: result.destinationPath
   });
 }
 
@@ -125,18 +138,28 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
 
 export async function createApplicationDatabaseBackup(
   options: CreateApplicationDatabaseBackupOptions = {}
-): Promise<SqliteBackupResult> {
+): Promise<ApplicationDatabaseBackupResult> {
   const connection = initializeDatabase();
   const now = new Date();
+  const settings = loadBackupSettings();
+  const backupDirectory = ensureManagedBackupDirectory(settings);
   const destinationPath =
-    options.destinationPath ?? buildManagedBackupPath('manual', now, ensureManagedBackupDirectory());
+    options.destinationPath ?? buildManagedBackupPath('manual', now, backupDirectory);
   const result = await backupSqliteDatabase({
     sourcePath: connection.dbPath,
     destinationPath,
     sourceDatabase: connection.sqlite
   });
+  const extraBackup = options.destinationPath
+    ? disabledExtraBackupResult()
+    : await copyExtraBackup({
+        extraBackupDir: settings.extra_backup_dir,
+        maxCount: settings.extra_backup_max_count,
+        primaryBackupDir: backupDirectory,
+        sourcePath: result.destinationPath
+      });
   await pruneBackupsNow(now);
-  return result;
+  return { ...result, extraBackup };
 }
 
 export async function restoreApplicationDatabaseBackup(

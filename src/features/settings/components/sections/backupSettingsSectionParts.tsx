@@ -80,22 +80,28 @@ function NumberRuleRow(props: {
 export function BackupPathRow(props: {
   backupPath: string;
   defaultBackupPath: string;
+  description?: string;
+  emptyLabel?: string;
   errorMessage: string;
   isDesktopRuntime: boolean;
+  pathButtonLabel?: string;
+  restoreLabel?: string;
+  title?: string;
   onChangePath: () => void;
   onRestoreDefault: () => void;
 }) {
   return (
-    <SettingsRow description="Backups, auto backups, and safety snapshots are all stored in this folder." title="Backup location">
+    <SettingsRow description={props.description ?? 'Backups, auto backups, and safety snapshots are all stored in this folder.'} title={props.title ?? 'Backup location'}>
       <SettingsControlSlot className={`${SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME} items-start max-[1080px]:flex-auto`}>
         <div className="flex max-w-full flex-col items-end gap-1.5 max-[1080px]:items-start">
           <ObjectConfigPathControl
             disabled={!props.isDesktopRuntime}
-            emptyLabel="Backups"
-            label="Change location"
+            emptyLabel={props.emptyLabel ?? 'Backups'}
+            label={props.pathButtonLabel ?? 'Change location'}
             onClick={props.onChangePath}
             onRestoreDefault={props.onRestoreDefault}
             path={props.backupPath}
+            restoreLabel={props.restoreLabel}
             tooltipPath={props.defaultBackupPath}
           />
           {props.errorMessage ? <p className="max-w-80 text-right text-sm text-error max-[1080px]:text-left">{props.errorMessage}</p> : null}
@@ -131,6 +137,34 @@ export function BackupRulesSection(props: {
           />
         </SettingsControlSlot>
       </SettingsRow>
+    </SettingsSection>
+  );
+}
+
+export function ExtraBackupCopySection(props: {
+  draft: DatabaseBackupSettings;
+  errorMessage: string;
+  isDesktopRuntime: boolean;
+  onChangeField: (field: keyof DatabaseBackupSettings, value: string) => void;
+  onChangePath: () => void;
+  onRestoreDefault: () => void;
+}) {
+  return (
+    <SettingsSection ariaLabel="Extra backup copy section" title="Extra backup copy">
+      <BackupPathRow
+        backupPath={props.draft.extra_backup_dir}
+        defaultBackupPath={props.draft.extra_backup_dir}
+        description="After the main backup is created, Foliole also copies it to this folder."
+        emptyLabel="Off"
+        errorMessage={props.errorMessage}
+        isDesktopRuntime={props.isDesktopRuntime}
+        pathButtonLabel="Change extra location"
+        restoreLabel="Turn off extra backup location"
+        title="Location"
+        onChangePath={props.onChangePath}
+        onRestoreDefault={props.onRestoreDefault}
+      />
+      <NumberRuleRow description="Keep the newest extra copies in this folder." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('extra_backup_max_count', value)} title="Extra backups kept" value={String(props.draft.extra_backup_max_count)} />
     </SettingsSection>
   );
 }

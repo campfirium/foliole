@@ -92,7 +92,40 @@ function normalizeSqliteBackupResult(value: unknown): RuntimeSqliteBackupResult 
   if (!sourcePath || !destinationPath || totalPages === null || remainingPages === null) {
     return null;
   }
-  return { sourcePath, destinationPath, totalPages, remainingPages };
+  return {
+    sourcePath,
+    destinationPath,
+    totalPages,
+    remainingPages,
+    extraBackup: normalizeExtraBackupResult(payload.extraBackup)
+  };
+}
+
+function normalizeExtraBackupResult(value: unknown): RuntimeSqliteBackupResult['extraBackup'] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { destinationPath: null, errorMessage: null, status: 'disabled' };
+  }
+  const payload = value as Record<string, unknown>;
+  const destinationPath = typeof payload.destinationPath === 'string' ? payload.destinationPath : null;
+  const errorMessage = typeof payload.errorMessage === 'string' ? payload.errorMessage : null;
+  if (payload.status === 'copied' && destinationPath) {
+    return { destinationPath, errorMessage: null, status: 'copied' };
+  }
+  if (payload.status === 'skipped_same_directory') {
+    return {
+      destinationPath: null,
+      errorMessage: errorMessage ?? 'Extra backup location matches the main backup location.',
+      status: 'skipped_same_directory'
+    };
+  }
+  if (payload.status === 'failed') {
+    return {
+      destinationPath: null,
+      errorMessage: errorMessage ?? 'Extra backup copy failed.',
+      status: 'failed'
+    };
+  }
+  return { destinationPath: null, errorMessage: null, status: 'disabled' };
 }
 
 function normalizeSqliteRestoreResult(value: unknown): RuntimeSqliteRestoreResult | null {

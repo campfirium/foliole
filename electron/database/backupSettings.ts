@@ -16,6 +16,8 @@ interface StoredBackupSettings {
   auto_monthly_months?: unknown;
   auto_weekly_weeks?: unknown;
   backup_dir?: unknown;
+  extra_backup_dir?: unknown;
+  extra_backup_max_count?: unknown;
   manual_max_count?: unknown;
   snapshot_max_count?: unknown;
   total_size_limit_bytes?: unknown;
@@ -28,6 +30,8 @@ export const DEFAULT_BACKUP_SETTINGS: NativeBackupSettings = {
   auto_monthly_months: 0,
   auto_weekly_weeks: 4,
   backup_dir: '',
+  extra_backup_dir: '',
+  extra_backup_max_count: 10,
   manual_max_count: 10,
   snapshot_max_count: 5,
   total_size_limit_bytes: 2 * GIGABYTE_BYTES,
@@ -82,6 +86,14 @@ export function normalizeBackupSettings(payload: unknown): NativeBackupSettings 
       DEFAULT_BACKUP_SETTINGS.auto_weekly_weeks
     ),
     backup_dir: normalizeLibraryPath(value.backup_dir) ?? '',
+    extra_backup_dir: normalizeLibraryPath(value.extra_backup_dir) ?? '',
+    extra_backup_max_count: Math.max(
+      1,
+      normalizePositiveInteger(
+        value.extra_backup_max_count,
+        DEFAULT_BACKUP_SETTINGS.extra_backup_max_count
+      )
+    ),
     manual_max_count: Math.max(
       1,
       normalizePositiveInteger(value.manual_max_count, DEFAULT_BACKUP_SETTINGS.manual_max_count)
