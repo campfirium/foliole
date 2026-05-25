@@ -26,6 +26,7 @@ export function WorkspaceTopicTreeMenu(props: {
     <>
       <NodeListTreeMenu
         contextMenu={props.contextMenu}
+        createMenuSurface="topics"
         createChildNode={props.actions.createChildNode}
         createGlobalNode={(content = '', kind = 'topic') => props.actions.createChildNode(props.activeFolderId, content, kind)}
         createVirtualNode={props.actions.createVirtualNode}
