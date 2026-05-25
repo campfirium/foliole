@@ -13,8 +13,9 @@ import { useEditorAdapter } from './markdownEditorAdapter';
 import { GestureTrailOverlay, buildGestureTrailPath } from './markdownEditorGestureTrail';
 import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
 import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
+import { handleMarkdownEditorKeyDownCapture, useReviewEditorEscapeBlur } from './markdownEditorReviewEscape';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
-import { handleEditorUndoRedoBeforeInput, handleEditorUndoRedoKeyDown } from './markdownEditorUndoRedoShortcut';
+import { handleEditorUndoRedoBeforeInput } from './markdownEditorUndoRedoShortcut';
 import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
 import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
@@ -156,6 +157,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.lineDiffDecorations
   );
   useEditorAppearanceEffects(adapterRef, props.hideTitleHeading ?? false, props.nodeId);
+  useReviewEditorEscapeBlur({ enabled: props.reviewCaretLineHighlight === true, rootRef });
   const surface = useMarkdownEditorSurfaceModel({
     adapterRef,
     bindings,
@@ -195,7 +197,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         onBeforeInputCapture={(event) => handleEditorUndoRedoBeforeInput(event, props)}
         onContextMenu={props.onContextMenu}
         onDoubleClick={props.onDoubleClick}
-        onKeyDownCapture={(event) => handleEditorUndoRedoKeyDown(event, props)}
+        onKeyDownCapture={(event) => handleMarkdownEditorKeyDownCapture(event, props)}
         readOnly={props.readOnly === true}
         reviewCaretLineHighlight={props.reviewCaretLineHighlight === true}
         rootRef={rootRef}

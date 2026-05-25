@@ -15,6 +15,7 @@ import {
 } from './searchPaletteShortcutsPreference';
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
+import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 interface SearchPaletteProps {
@@ -28,6 +29,7 @@ interface SearchPaletteProps {
 
 export function SearchPalette(props: SearchPaletteProps) {
   const focusTrap = useFloatingDialogFocusTrap(props.isOpen);
+  useFloatingPaletteEscape(props.isOpen, props.onClose);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const shortcuts = useSearchPaletteShortcuts();

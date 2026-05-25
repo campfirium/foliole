@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { CommandShortcutSet } from '../../shared/commands/types';
-import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
+import { onWindowKeydown } from '../../shared/platform/keyboard';
 
 import { tryRunDeleteSourceTopicShortcut, tryRunReviewNavigation, tryRunShortcut } from './reviewKeyboardNavigation';
-import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
+import { useReviewEditingEscapeHandler } from './useReviewEditingEscapeHandler';
+import { isEditableKeyboardTarget } from './workspaceKeyboardTarget';
 
 interface UseReviewKeyboardShortcutsArgs {
   isStudyMode: boolean;
@@ -54,21 +55,30 @@ interface UseReviewKeyboardShortcutsArgs {
 }
 
 export function useReviewKeyboardShortcuts(args: UseReviewKeyboardShortcutsArgs) {
-  const [isReviewEditing, setIsReviewEditing] = useReviewEditingState(args.isStudyMode);
+  const reviewEditingContextRef = useRef(false);
+  const [isReviewEditing, setIsReviewEditing] = useReviewEditingState(args.isStudyMode, reviewEditingContextRef);
   const lastChildByParentIdRef = useReviewParentReturnMemory(args.isStudyMode);
-  useReviewEditingEscapeHandler(args, isReviewEditing, setIsReviewEditing);
-  useReviewHotkeyHandler(args, isReviewEditing, setIsReviewEditing, lastChildByParentIdRef);
+  useReviewEditingEscapeHandler(args, reviewEditingContextRef, setIsReviewEditing);
+  useReviewHotkeyHandler(args, reviewEditingContextRef, lastChildByParentIdRef);
   return isReviewEditing;
 }
 
-function useReviewEditingState(isStudyMode: boolean) {
+function useReviewEditingState(isStudyMode: boolean, reviewEditingContextRef: MutableRefObject<boolean>) {
   const [isReviewEditing, setIsReviewEditing] = useState(false);
   useEffect(() => {
     if (!isStudyMode) {
+      reviewEditingContextRef.current = false;
       setIsReviewEditing(false);
       return;
     }
-    const syncEditingState = (target: EventTarget | null) => setIsReviewEditing(isEditableKeyboardTarget(target));
+    const syncEditingState = (target: EventTarget | null) => {
+      if (target instanceof HTMLElement && target.closest('[role="dialog"]')) {
+        return;
+      }
+      const nextIsEditing = isEditableKeyboardTarget(target);
+      reviewEditingContextRef.current = nextIsEditing;
+      setIsReviewEditing(nextIsEditing);
+    };
     syncEditingState(document.activeElement);
     const handleFocusIn = (event: FocusEvent) => syncEditingState(event.target);
     const handleFocus = (event: FocusEvent) => syncEditingState(event.target);
@@ -78,7 +88,7 @@ function useReviewEditingState(isStudyMode: boolean) {
       window.removeEventListener('focusin', handleFocusIn);
       window.removeEventListener('focus', handleFocus, true);
     };
-  }, [isStudyMode]);
+  }, [isStudyMode, reviewEditingContextRef]);
   return [isReviewEditing, setIsReviewEditing] as const;
 }
 
@@ -92,52 +102,22 @@ function useReviewParentReturnMemory(isStudyMode: boolean) {
   return ref;
 }
 
-function useReviewEditingEscapeHandler(
-  args: UseReviewKeyboardShortcutsArgs,
-  isReviewEditing: boolean,
-  setIsReviewEditing: (value: boolean) => void
-) {
-  useEffect(() => {
-    if (
-      !args.isStudyMode ||
-      !isReviewEditing ||
-      args.isCommandPaletteOpen ||
-      args.isSearchPaletteOpen ||
-      args.isSettingsOpen
-    ) {
-      return undefined;
-    }
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') {
-        return;
-      }
-      blurActiveKeyboardTarget();
-      setIsReviewEditing(false);
-      event.preventDefault();
-      event.stopPropagation();
-    };
-    return onWindowEscape(handleEscape);
-  }, [args.isCommandPaletteOpen, args.isSearchPaletteOpen, args.isSettingsOpen, args.isStudyMode, isReviewEditing, setIsReviewEditing]);
-}
-
 function useReviewHotkeyHandler(
   args: UseReviewKeyboardShortcutsArgs,
-  isReviewEditing: boolean,
-  setIsReviewEditing: (value: boolean) => void,
+  reviewEditingContextRef: MutableRefObject<boolean>,
   lastChildByParentIdRef: MutableRefObject<Record<string, string>>
 ) {
   useEffect(
     () =>
-      onWindowKeydown((event) => handleReviewKeydown(event, args, isReviewEditing, setIsReviewEditing, lastChildByParentIdRef)),
-    [args, isReviewEditing, setIsReviewEditing, lastChildByParentIdRef]
+      onWindowKeydown((event) => handleReviewKeydown(event, args, reviewEditingContextRef, lastChildByParentIdRef)),
+    [args, reviewEditingContextRef, lastChildByParentIdRef]
   );
 }
 
 function handleReviewKeydown(
   event: KeyboardEvent,
   args: UseReviewKeyboardShortcutsArgs,
-  isReviewEditing: boolean,
-  setIsReviewEditing: (value: boolean) => void,
+  reviewEditingContextRef: MutableRefObject<boolean>,
   lastChildByParentIdRef: MutableRefObject<Record<string, string>>
 ) {
   if (!args.isStudyMode || args.isCommandPaletteOpen || args.isSearchPaletteOpen || args.isSettingsOpen) {
@@ -146,16 +126,10 @@ function handleReviewKeydown(
   if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.isComposing || event.repeat) {
     return;
   }
-  const isTargetEditing = isEditableKeyboardTarget(event.target) || isEditableKeyboardTarget(document.activeElement) || isReviewEditing;
-  if (event.key === 'Escape') {
-    if (!isTargetEditing) {
-      return;
-    }
-    blurActiveKeyboardTarget();
-    setIsReviewEditing(false);
-    event.preventDefault();
-    return;
-  }
+  const isTargetEditing =
+    isEditableKeyboardTarget(event.target) ||
+    isEditableKeyboardTarget(document.activeElement) ||
+    reviewEditingContextRef.current;
   if (isTargetEditing) {
     return;
   }
@@ -180,8 +154,7 @@ function handleHiddenReviewItemKeydown(event: KeyboardEvent, args: UseReviewKeyb
   if (tryRunShortcut(event, args.deleteCurrentItemShortcuts, args.deleteCurrentReviewItem)) {
     return;
   }
-  const resumeShortcuts = args.isCurrentItemGradable ? args.revealAnswerShortcuts : args.readingReadShortcuts;
-  tryRunShortcut(event, resumeShortcuts, args.resumeReviewItem);
+  tryRunShortcut(event, args.readingReadShortcuts, args.resumeReviewItem);
 }
 
 function handleVisibleReviewItemKeydown(event: KeyboardEvent, args: UseReviewKeyboardShortcutsArgs) {

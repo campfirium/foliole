@@ -78,3 +78,20 @@ it('keeps tab focus inside the command palette dialog', async () => {
   fireEvent.keyDown(input, { key: 'Tab', shiftKey: true });
   expect(result).toHaveFocus();
 });
+
+it('closes from the shared Escape stack before editor Escape handlers', () => {
+  const onClose = vi.fn();
+  render(
+    <CommandPalette
+      isOpen
+      items={[]}
+      recentCommandIds={[]}
+      onClose={onClose}
+      onRunCommand={() => undefined}
+    />
+  );
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+
+  expect(onClose).toHaveBeenCalledTimes(1);
+});

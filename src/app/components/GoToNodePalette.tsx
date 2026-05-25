@@ -11,6 +11,7 @@ import {
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
+import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
 import { buildNodeSearchResults } from './workspaceNodeSearch';
 
 interface GoToNodePaletteProps {
@@ -46,6 +47,7 @@ export function GoToNodePalette({
 }: GoToNodePaletteProps) {
   const handleSelectNode = onSelectNode ?? onOpenNode;
   const focusTrap = useFloatingDialogFocusTrap(isOpen);
+  useFloatingPaletteEscape(isOpen, onClose);
   const { activeIndex, query, results, setActiveIndex, setQuery } = useGoToNodePaletteState({
     isOpen,
     nodeOrder,

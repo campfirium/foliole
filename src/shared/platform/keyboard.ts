@@ -1,6 +1,8 @@
+import { getElectronAPI, type NativeKeyboardInputPayload } from './electronApi';
+
 export type KeydownUnlisten = () => void;
 
-type KeydownHandler = (event: KeyboardEvent) => void;
+type KeydownHandler = (event: KeyboardEvent) => boolean | void;
 
 type KeydownEntry = {
   handler: KeydownHandler;
@@ -8,7 +10,11 @@ type KeydownEntry = {
 };
 
 let nextKeydownEntryId = 1;
+let isWindowEscapeListening = false;
 let isWindowKeydownListening = false;
+let lastDomEscapeAt = 0;
+let nativeEscapeFallbackId = 0;
+let unlistenNativeKeyboardInput: KeydownUnlisten | null = null;
 const keydownEntries: KeydownEntry[] = [];
 const escapeEntries: KeydownEntry[] = [];
 
@@ -20,31 +26,74 @@ function removeEntry(entries: KeydownEntry[], id: number) {
 }
 
 function stopWindowKeydownIfIdle() {
-  if (!isWindowKeydownListening || keydownEntries.length || escapeEntries.length || typeof window === 'undefined') {
+  if (typeof window === 'undefined') {
     return;
   }
-  window.removeEventListener('keydown', dispatchWindowKeydown);
-  isWindowKeydownListening = false;
+  if (isWindowKeydownListening && keydownEntries.length === 0) {
+    window.removeEventListener('keydown', dispatchWindowKeydown);
+    isWindowKeydownListening = false;
+  }
+  if (isWindowEscapeListening && escapeEntries.length === 0) {
+    window.removeEventListener('keydown', dispatchWindowEscapeCapture, true);
+    unlistenNativeKeyboardInput?.();
+    unlistenNativeKeyboardInput = null;
+    isWindowEscapeListening = false;
+  }
 }
 
 function consumeEscape(event: KeyboardEvent) {
-  const entry = escapeEntries[escapeEntries.length - 1];
-  if (!entry) {
-    return false;
+  for (let index = escapeEntries.length - 1; index >= 0; index -= 1) {
+    const entry = escapeEntries[index];
+    if (!entry || entry.handler(event) === false) {
+      continue;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    return true;
   }
-  entry.handler(event);
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
-  return true;
+  return false;
+}
+
+function createNativeEscapeEvent() {
+  return new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: 'Escape'
+  });
+}
+
+function dispatchNativeEscapeFallback(payload: NativeKeyboardInputPayload) {
+  if (payload.type !== 'keyDown' || payload.key !== 'Escape' || escapeEntries.length === 0) {
+    return;
+  }
+  const fallbackId = nativeEscapeFallbackId + 1;
+  nativeEscapeFallbackId = fallbackId;
+  const scheduledAt = Date.now();
+  window.setTimeout(() => {
+    if (nativeEscapeFallbackId !== fallbackId || lastDomEscapeAt >= scheduledAt) {
+      return;
+    }
+    consumeEscape(createNativeEscapeEvent());
+  }, 0);
 }
 
 function dispatchWindowKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && consumeEscape(event)) {
+  if (event.defaultPrevented) {
     return;
   }
   for (const entry of [...keydownEntries]) {
     entry.handler(event);
+  }
+}
+
+function dispatchWindowEscapeCapture(event: KeyboardEvent) {
+  if (event.defaultPrevented || event.key !== 'Escape') {
+    return;
+  }
+  lastDomEscapeAt = Date.now();
+  if (consumeEscape(event)) {
+    return;
   }
 }
 
@@ -56,6 +105,24 @@ function listenWindowKeydown() {
   isWindowKeydownListening = true;
 }
 
+function listenNativeKeyboardInput() {
+  if (unlistenNativeKeyboardInput || typeof window === 'undefined') {
+    return;
+  }
+  unlistenNativeKeyboardInput = getElectronAPI()?.onNativeKeyboardInput?.(dispatchNativeEscapeFallback) ?? null;
+}
+
+function listenWindowEscape() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  if (!isWindowEscapeListening) {
+    window.addEventListener('keydown', dispatchWindowEscapeCapture, true);
+    isWindowEscapeListening = true;
+  }
+  listenNativeKeyboardInput();
+}
+
 function registerWindowKeydown(entries: KeydownEntry[], handler: KeydownHandler): KeydownUnlisten {
   if (typeof window === 'undefined') {
     return () => {};
@@ -63,7 +130,11 @@ function registerWindowKeydown(entries: KeydownEntry[], handler: KeydownHandler)
   const id = nextKeydownEntryId;
   nextKeydownEntryId += 1;
   entries.push({ handler, id });
-  listenWindowKeydown();
+  if (entries === escapeEntries) {
+    listenWindowEscape();
+  } else {
+    listenWindowKeydown();
+  }
   return () => {
     removeEntry(entries, id);
     stopWindowKeydownIfIdle();
@@ -74,6 +145,6 @@ export function onWindowKeydown(handler: (event: KeyboardEvent) => void): Keydow
   return registerWindowKeydown(keydownEntries, handler);
 }
 
-export function onWindowEscape(handler: (event: KeyboardEvent) => void): KeydownUnlisten {
+export function onWindowEscape(handler: (event: KeyboardEvent) => boolean | void): KeydownUnlisten {
   return registerWindowKeydown(escapeEntries, handler);
 }
