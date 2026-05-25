@@ -35,6 +35,7 @@ function buildConstraintLines() {
     '- Stay within the task boundary and avoid unrelated refactors.',
     '- Run minimal relevant verification before finishing.',
     '- Treat failed verification or preview startup as unfinished work: inspect the output, fix the in-scope cause, rerun the narrow check, and only finish after it passes.',
+    '- When desktop lint and Windows preview are both required, run npm run validate:desktop:serial and keep that command alive until it exits instead of launching lint:desktop and windows:preview:native separately.',
     '- If a Windows preview is required, a normal final reply is only allowed after npm run windows:preview reaches [windows-preview] status: STARTED.',
     '- If preview-dedupe says a request is waiting, keep waiting for that same preview command to finish; do not stop the waiting process or report the wait as a final result.',
     '- If required preview is blocked by an out-of-scope existing red light, do not send a normal completion report or say the preview was not run; keep the task unfinished until a later successful preview can release it.',

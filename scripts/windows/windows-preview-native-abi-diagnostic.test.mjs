@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { formatPreviewActionFailure } from './windows-preview-native-failure.mjs';
+
 const PREVIEW_SCRIPT = path.resolve(process.cwd(), 'scripts/windows/windows-preview-native.mjs');
 const ABI_REPAIR_SCRIPT = path.resolve(process.cwd(), 'scripts/windows/windows-native-abi-repair.mjs');
 
@@ -35,7 +37,25 @@ describe('windows native preview ABI diagnostics', () => {
 
     expect(script).toContain('WINDOWS_CLIENT_ACTION_TIMEOUT_MS');
     expect(script).toContain('timeoutMs: CLIENT_ACTION_TIMEOUT_MS');
-    expect(script).toContain("waitForTrustedRunning(`${action} status`, currentHead)");
-    expect(script).toContain("waitForTrustedRunning('direct restart status')");
+    expect(script).toContain("waitForTrustedRunningResult(`${action} status`, currentHead)");
+    expect(script).toContain("waitForTrustedRunningResult('direct restart status')");
+  });
+
+  it('keeps client failure details in the native preview failure reason', () => {
+    const message = formatPreviewActionFailure(
+      'full-restart',
+      {
+        code: 1,
+        output: [
+          '[windows-client-native] action=full-restart',
+          '[windows-restart-client] status: RESTART_FAILED reason=startup health check failed: app-ready-timeout shell_pid=123 left-for-inspection'
+        ].join('\n')
+      },
+      { detail: 'status: STOPPED trust=FAILED reason=no-runtime shell_pid=123' }
+    );
+
+    expect(message).toContain('full-restart failed exitCode=1');
+    expect(message).toContain('latestStatus="status: STOPPED trust=FAILED reason=no-runtime shell_pid=123"');
+    expect(message).toContain('startup health check failed: app-ready-timeout');
   });
 });
