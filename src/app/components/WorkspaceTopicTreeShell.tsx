@@ -51,6 +51,7 @@ export function renderWorkspaceTopicTreeShell(args: {
         collapsedNodeIds: args.collapsedNodeIds,
         contextMenu: args.interaction.contextMenu,
         drag: args.interaction.drag,
+        isManualSort: args.contentSort.sort.key === 'manual',
         nodesById: args.nodesById,
         onRenameNode: args.interaction.updateNodeTitle,
         onSelectNode: args.interaction.handleSelectNode,

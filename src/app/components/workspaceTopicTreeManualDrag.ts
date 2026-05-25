@@ -16,6 +16,18 @@ export function canApplyWorkspaceTopicTreeManualDrag(args: {
   return args.sourceNodeIds.every((nodeId) => args.parentNodeIdById[nodeId] === args.activeFolderId);
 }
 
+export function canApplyWorkspaceTopicTreeStructuralDrag(args: {
+  derivedNodeIds: ReadonlySet<string>;
+  sourceNodeIds: readonly string[];
+  targetNodeId: string | null;
+  intent: WorkspaceTopicTreeManualMoveIntent;
+}) {
+  if (!args.targetNodeId || args.sourceNodeIds.some((nodeId) => args.derivedNodeIds.has(nodeId))) {
+    return false;
+  }
+  return args.intent !== 'child' || !args.derivedNodeIds.has(args.targetNodeId);
+}
+
 export function moveWorkspaceTopicTreeManualNodeIds(args: {
   currentOrder: readonly string[];
   sourceNodeIds: readonly string[];
@@ -47,11 +59,21 @@ export function createWorkspaceTopicTreeManualMove(args: {
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeManualMoveIntent) => Promise<boolean>;
   parentNodeIdById: Record<string, string | null | undefined>;
   setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[]) => boolean;
+  shouldAllowStructuralMove?: () => boolean;
+  derivedNodeIds?: ReadonlySet<string>;
 }) {
-  if (!args.isManualSort) {
-    return args.moveNodes;
-  }
   return async (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeManualMoveIntent) => {
+    if (args.shouldAllowStructuralMove?.() && canApplyWorkspaceTopicTreeStructuralDrag({
+      derivedNodeIds: args.derivedNodeIds ?? new Set<string>(),
+      intent,
+      sourceNodeIds: nodeIds,
+      targetNodeId
+    })) {
+      return args.moveNodes(nodeIds, targetNodeId, intent);
+    }
+    if (!args.isManualSort) {
+      return false;
+    }
     if (!canApplyWorkspaceTopicTreeManualDrag({
       activeFolderId: args.activeFolderId,
       sourceNodeIds: nodeIds,
@@ -59,7 +81,7 @@ export function createWorkspaceTopicTreeManualMove(args: {
       intent,
       parentNodeIdById: args.parentNodeIdById
     }) || !targetNodeId) {
-      return args.moveNodes(nodeIds, targetNodeId, intent);
+      return false;
     }
     return args.setFolderManualChildOrder?.(
       args.activeFolderId,
