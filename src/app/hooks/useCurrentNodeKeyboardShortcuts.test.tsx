@@ -156,3 +156,23 @@ it('keeps current node editing context while a transient panel blocks shortcuts'
 
   expect(document.activeElement).not.toBe(editor);
 });
+
+it('lets an already-mounted dialog handle Escape before current node editing state updates', () => {
+  const closeDialog = vi.fn();
+  const view = render(<HookHarness />);
+  const editor = screen.getByRole('textbox');
+
+  editor.focus();
+  fireEvent.focusIn(editor);
+  view.rerender(
+    <>
+      <HookHarness />
+      <div role="dialog">Command palette</div>
+    </>
+  );
+  window.addEventListener('keydown', closeDialog, { once: true });
+  fireEvent.keyDown(window, { key: 'Escape' });
+
+  expect(closeDialog).toHaveBeenCalledTimes(1);
+  expect(document.activeElement).toBe(editor);
+});

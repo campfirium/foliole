@@ -106,7 +106,7 @@ function useCurrentNodeEditingEscape(
     };
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      if (transientSurfaceOpen) return false;
+      if (transientSurfaceOpen || document.querySelector('[role="dialog"]')) return false;
       if (!editingContextRef.current && !isEditableKeyboardTarget(document.activeElement)) return false;
       exitEditing();
     };
