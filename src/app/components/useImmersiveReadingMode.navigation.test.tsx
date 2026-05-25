@@ -147,7 +147,7 @@ it('does not stall when moving backward and then forward again', () => {
   act(() => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
   });
 
   expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(1, { from: 7, to: 11 });

@@ -6,8 +6,8 @@ export interface ImmersiveReadingShortcut {
 
 export const IMMERSIVE_READING_SHORTCUTS: ImmersiveReadingShortcut[] = [
   { ariaKeyShortcuts: 'F11', key: 'F11', summary: 'Toggle immersive reading' },
-  { ariaKeyShortcuts: 'Space ArrowDown', key: 'Space / ArrowDown', summary: 'Select the next paragraph' },
-  { ariaKeyShortcuts: 'Shift+Space ArrowUp', key: 'Shift+Space / ArrowUp', summary: 'Select the previous paragraph' },
+  { ariaKeyShortcuts: 'ArrowDown', key: 'ArrowDown', summary: 'Select the next paragraph' },
+  { ariaKeyShortcuts: 'ArrowUp', key: 'ArrowUp', summary: 'Select the previous paragraph' },
   { ariaKeyShortcuts: 'H', key: 'H', summary: 'Highlight the current paragraph' },
   { ariaKeyShortcuts: 'N', key: 'N', summary: 'Create a note from the current paragraph' },
   { ariaKeyShortcuts: 'Enter', key: 'Enter', summary: 'Temporarily switch into editing' },

@@ -181,21 +181,6 @@ it('shows completed without progress and continues reading when the review phase
   expect(onContinueReading).toHaveBeenCalledTimes(1);
 });
 
-it('continues reading with Space after the review phase is complete', () => {
-  const onContinueReading = vi.fn();
-  renderToolbar({
-    onContinueReading,
-    reviewCompletedCount: 3,
-    reviewCurrentNodeId: null,
-    reviewQueueCount: 0,
-    reviewStatus: 'completed'
-  });
-
-  fireEvent.keyDown(window, { code: 'Space', key: ' ' });
-
-  expect(onContinueReading).toHaveBeenCalledTimes(1);
-});
-
 it('uses topic units for reading-only progress', () => {
   renderToolbar({
     reviewCompletedCount: 2,
@@ -225,7 +210,7 @@ it('resumes from the queue when study mode has no current item but queued items 
   expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
 });
 
-it('resumes from the queue with Space when study mode has no current item but queued items exist', () => {
+it('resumes from the queue with the Read shortcut while keeping Space free', () => {
   const onContinueReading = vi.fn();
   const onResumeReviewItem = vi.fn();
   renderToolbar({
@@ -237,7 +222,9 @@ it('resumes from the queue with Space when study mode has no current item but qu
   });
 
   fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+  expect(onResumeReviewItem).not.toHaveBeenCalled();
 
+  fireEvent.keyDown(window, { key: 'f' });
   expect(onResumeReviewItem).toHaveBeenCalledTimes(1);
   expect(onContinueReading).not.toHaveBeenCalled();
 });

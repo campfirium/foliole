@@ -126,30 +126,6 @@ function handleImmersiveReadingKey(args: {
     });
     return;
   }
-  if (args.event.key === ' ' && args.event.shiftKey) {
-    args.event.preventDefault();
-    selectParagraph({
-      getReadingSelection: args.getReadingSelection,
-      direction: 'backward',
-      markNextProgrammaticScroll: args.markNextProgrammaticScroll,
-      setReadingSelection: args.setReadingSelection,
-      props: args.props,
-      readableNodeIds: args.readableNodeIds
-    });
-    return;
-  }
-  if (args.event.key === ' ') {
-    args.event.preventDefault();
-    selectParagraph({
-      getReadingSelection: args.getReadingSelection,
-      direction: 'forward',
-      markNextProgrammaticScroll: args.markNextProgrammaticScroll,
-      setReadingSelection: args.setReadingSelection,
-      props: args.props,
-      readableNodeIds: args.readableNodeIds
-    });
-    return;
-  }
   if (args.event.key.toLowerCase() === 'h') {
     if (runImmersiveSelectionAction({ getReadingSelection: args.getReadingSelection, props: args.props, type: 'highlight' })) {
       args.event.preventDefault();
