@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { formatGateQueueMessage, withResourceGate } from './lib/resource-gate.mjs';
+import { normalizeSpawnCommand } from './lib/windows-spawn-command.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LOG_PREFIX = '[desktop-validation-serial]';
@@ -29,10 +30,9 @@ function resolveCommands() {
     return commands;
   }
 
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   return [
-    [npmCommand, 'run', 'lint:desktop'],
-    [npmCommand, 'run', 'windows:preview:native']
+    ['npm', 'run', 'lint:desktop'],
+    ['npm', 'run', 'windows:preview:native']
   ];
 }
 
@@ -56,7 +56,7 @@ function stopActiveChild(signal) {
 
 function runCommand(command, env) {
   return new Promise((resolve) => {
-    const [bin, ...args] = command;
+    const { args, bin } = normalizeSpawnCommand(command);
     const child = spawn(bin, args, {
       cwd: REPO_ROOT,
       env,
