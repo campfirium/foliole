@@ -128,7 +128,7 @@ it('updates moved subtree paths without rebuilding child content', () => {
   upsertSearchNode({ content: 'Old child marker', id: 'child', parentNodeId: 'article', title: 'Child' });
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   openDatabaseConnection().sqlite
-    .prepare("UPDATE nodes SET content = 'New child marker' WHERE id = 'child'")
+    .prepare("UPDATE nodes SET content = 'UnindexedFreshToken marker' WHERE id = 'child'")
     .run();
 
   upsertSearchNode({ content: 'Parent body', id: 'article', parentNodeId: 'folder-b', title: 'Article' });
@@ -143,7 +143,7 @@ it('updates moved subtree paths without rebuilding child content', () => {
       .prepare("SELECT content, path FROM node_search WHERE node_id = 'child'")
       .get()
   ).toEqual({ content: 'Old child marker', path: 'Folder B / Article' });
-  expect(searchWorkspace('New child marker')).toEqual([]);
+  expect(searchWorkspace('UnindexedFreshToken')).toEqual([]);
 });
 
 it('hides descendants immediately after ancestor delete and restores the subtree through the queue', () => {

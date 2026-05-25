@@ -73,6 +73,25 @@ function prepareSubtreeAffectedIds(driver: DatabaseDriver, rootIds: string[]) {
   return true;
 }
 
+export function deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {
+  const seedIds = toUniqueIds(rootIds);
+  if (seedIds.length === 0) return;
+  const placeholders = seedIds.map(() => '?').join(', ');
+  const affectedIdsSql = `WITH RECURSIVE node_descendants(id) AS (
+      SELECT id
+      FROM nodes
+      WHERE id IN (${placeholders})
+      UNION ALL
+      SELECT child.id
+      FROM nodes child
+      INNER JOIN node_descendants
+        ON child.parent_id = node_descendants.id
+    )
+    SELECT id FROM node_descendants`;
+  driver.execute(`DELETE FROM node_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
+  driver.execute(`DELETE FROM pdf_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
+}
+
 export function deleteWorkspaceSearchIndexForSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {
   if (!prepareSubtreeAffectedIds(driver, rootIds)) return;
   driver.execute('DELETE FROM node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)');

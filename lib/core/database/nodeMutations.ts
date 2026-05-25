@@ -27,6 +27,7 @@ import {
   enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds,
   enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds
 } from './searchIndexInvalidations.js';
+import { deleteWorkspaceSearchIndexForExistingSubtreeRootIds } from './workspaceSearchSubtreeIndex.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 export type { RestoreNodesResult } from './nodeRestoreConflicts.js';
@@ -182,6 +183,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   const deleteNodeOrderStatement = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   driver.transaction(() => {
+    deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
     for (const nodeId of input.nodeIds) {
       deleteReviewLogStatement.run([nodeId]);
       deleteNodeReviewStatement.run([nodeId]);
@@ -193,7 +195,6 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
       deleteNodeStatement.run([nodeId]);
     }
     rewriteExistingNodeOrder(driver, input.nodeOrder);
-    enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds(driver, input.nodeIds);
   });
 
   return [];

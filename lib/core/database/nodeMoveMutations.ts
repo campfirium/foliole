@@ -6,6 +6,7 @@ import {
 } from './nodeMutationStatements.js';
 import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
 import { type WriteNodeReadingSyncInput, writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
+import { enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds } from './searchIndexInvalidations.js';
 
 export interface MoveNodesInput {
   nodeOrder: string[];
@@ -26,6 +27,11 @@ export interface MoveNodePatchInput {
   updatedAt: string;
 }
 
+interface ExistingMoveParentRow {
+  [column: string]: unknown;
+  parent_id: string | null;
+}
+
 export function moveNodes(driver: DatabaseDriver, input: MoveNodesInput): MoveNodesResult {
   const updateNodeMoveStatement = driver.prepare(
     `UPDATE nodes
@@ -42,6 +48,7 @@ export function moveNodes(driver: DatabaseDriver, input: MoveNodesInput): MoveNo
   const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
 
   driver.transaction(() => {
+    const pathInvalidationNodeIds = readPathInvalidationNodeIds(driver, input.nodes);
     for (const node of input.nodes) {
       updateNodeMoveStatement.run([
         node.parentNodeId,
@@ -60,11 +67,23 @@ export function moveNodes(driver: DatabaseDriver, input: MoveNodesInput): MoveNo
       }
     }
     rewriteExistingNodeOrder(driver, input.nodeOrder);
+    enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver, pathInvalidationNodeIds);
   });
   return {
     movedNodeIds: input.nodes.map((node) => node.nodeId),
     nodeOrder: input.nodeOrder
   };
+}
+
+function readPathInvalidationNodeIds(driver: DatabaseDriver, nodes: MoveNodePatchInput[]) {
+  return nodes
+    .filter((node) => {
+      const existing = driver.queryOne<ExistingMoveParentRow>('SELECT parent_id FROM nodes WHERE id = ?', [
+        node.nodeId
+      ]);
+      return Boolean(existing && existing.parent_id !== node.parentNodeId);
+    })
+    .map((node) => node.nodeId);
 }
 
 function toReadingSyncInput(node: MoveNodePatchInput): WriteNodeReadingSyncInput {
