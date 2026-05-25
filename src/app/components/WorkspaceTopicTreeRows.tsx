@@ -104,6 +104,7 @@ function renderWorkspaceTopicTreeRow(
       nodeIconKind={rowModel.nodeIconKind}
       nodeIconState={rowModel.nodeIconState}
       showIcon
+      showLeafChevronPlaceholder={row.depth === 0 && !rowModel.isDerivedNode}
       rowSpacing={args.rowSpacing}
       {...definedProps({ onContextMenu: args.onContextMenu })}
       {...resolveWorkspaceTopicTreeRowDragProps(row.node.id, rowModel.isDerivedNode, args.drag)}

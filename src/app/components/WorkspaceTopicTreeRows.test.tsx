@@ -14,12 +14,13 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-function createRow(node: NonNullable<WorkspaceListNodesById[string]>): NodeTreeRow {
+function createRow(node: NonNullable<WorkspaceListNodesById[string]>, overrides: Partial<NodeTreeRow> = {}): NodeTreeRow {
   return {
     descendantCount: 0,
     depth: 0,
     hasChildren: false,
-    node
+    node,
+    ...overrides
   };
 }
 
@@ -52,6 +53,24 @@ function createTopicNode(index: number): WorkspaceListNode {
     title: `Topic ${index}`,
     updatedAt: '2026-05-02T00:00:00.000Z'
   };
+}
+
+function renderTopicRows(rows: NodeTreeRow[], nodesById: WorkspaceListNodesById) {
+  render(
+    <WorkspaceTopicTreeRows
+      activeNodeId={null}
+      collapsedNodeIds={new Set()}
+      drag={createDragMock()}
+      nodesById={nodesById}
+      onContextMenu={vi.fn()}
+      onRenameNode={vi.fn()}
+      onSelectNode={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rows={rows}
+      scrollContainerRef={createRef<HTMLDivElement>()}
+      selectedNodeIds={[]}
+    />
+  );
 }
 
 it('applies dismissed appearance to topic tree row text and icon', () => {
@@ -139,6 +158,28 @@ it('renders markdown-looking topic titles as plain list text', () => {
 
   expect(screen.getByRole('treeitem', { name: '煮饺子时中途要不要加凉水' })).toBeInTheDocument();
   expect(screen.queryByText('#煮饺子时中途要不要加凉水#')).not.toBeInTheDocument();
+});
+
+it('only shows the leaf chevron placeholder on first-level native topics', () => {
+  const root = createTopicNode(1);
+  const child = { ...createTopicNode(2), parentNodeId: root.id };
+  const derived = { ...createTopicNode(3), anchorLink: 'foliole://source/3' };
+  renderTopicRows(
+    [
+      createRow(root),
+      createRow(child, { depth: 1 }),
+      createRow(derived)
+    ],
+    {
+      [root.id]: root,
+      [child.id]: child,
+      [derived.id]: derived
+    }
+  );
+
+  expect(screen.getByRole('treeitem', { name: 'Topic 1' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).not.toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Topic 2' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Topic 3' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
 });
 
 it('keeps virtual row sizing aligned with folder tree row spacing', () => {
