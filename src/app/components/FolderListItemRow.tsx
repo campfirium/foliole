@@ -1,3 +1,5 @@
+import type { DragEvent as ReactDragEvent } from 'react';
+
 import { TruncatedTextTooltip } from '../../shared/ui';
 
 interface FolderListTextItemProps {
@@ -16,27 +18,37 @@ interface FolderListTextItemProps {
   onDrop?: (() => void) | undefined;
 }
 
+function resolveFolderListDragHandlers(props: FolderListTextItemProps) {
+  return {
+    draggable: props.draggable,
+    onDragEnd: props.onDragEnd,
+    onDragOver: (event: ReactDragEvent<HTMLElement>) => {
+      if (!props.draggable) return;
+      event.preventDefault();
+      event.stopPropagation();
+      props.onDragOver?.();
+    },
+    onDragStart: (event: ReactDragEvent<HTMLElement>) => {
+      if (!props.draggable) return;
+      event.stopPropagation();
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', props.nodeId);
+      props.onDragStart?.();
+    },
+    onDrop: (event: ReactDragEvent<HTMLElement>) => {
+      if (!props.draggable) return;
+      event.preventDefault();
+      event.stopPropagation();
+      props.onDrop?.();
+    }
+  };
+}
+
 export function FolderListTextItem(props: FolderListTextItemProps) {
+  const dragHandlers = resolveFolderListDragHandlers(props);
   return (
     <li
-      draggable={props.draggable}
-      onDragEnd={props.onDragEnd}
-      onDragOver={(event) => {
-        if (!props.draggable) return;
-        event.preventDefault();
-        props.onDragOver?.();
-      }}
-      onDragStart={(event) => {
-        if (!props.draggable) return;
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', props.nodeId);
-        props.onDragStart?.();
-      }}
-      onDrop={(event) => {
-        if (!props.draggable) return;
-        event.preventDefault();
-        props.onDrop?.();
-      }}
+      {...dragHandlers}
     >
       <button
         aria-label={props.ariaLabel}
@@ -45,6 +57,7 @@ export function FolderListTextItem(props: FolderListTextItemProps) {
             ? 'bg-[var(--app-surface-control-bg)]'
             : 'hover:bg-[var(--app-surface-control-hover-bg)] focus-visible:bg-[var(--app-surface-control-bg)]'
         }`}
+        {...dragHandlers}
         onClick={props.onClick}
         type="button"
       >

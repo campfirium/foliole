@@ -1,6 +1,5 @@
 import { useMemo, useRef } from 'react';
 
-import { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import type { NodeListState } from '../../features/nodes/components/NodeListTreeState';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -9,6 +8,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { useDismissedTopicVisibility } from './useDismissedTopicVisibility';
+import { useWorkspaceTopicTreeDrag } from './workspaceTopicTreeDrag';
 import {
   resolveWorkspaceTopicTreeFocusNodeId,
   useWorkspaceTopicTreeAutoScroll
@@ -48,37 +48,49 @@ export function useWorkspaceTopicTreeActions() {
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     returnNode: useWorkspaceStore((state) => state.relearnNode),
     setNodeSequentialReading: useWorkspaceStore((state) => state.setNodeSequentialReading),
+    setFolderManualChildOrder: useWorkspaceStore((state) => state.setFolderManualChildOrder),
     updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
     updateNodeShortTerm: useWorkspaceStore((state) => state.updateNodeShortTerm),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)
   };
 }
 
-function useWorkspaceTopicTreeDrag(args: {
-  itemIds: string[];
-  moveNodes: ReturnType<typeof useWorkspaceTopicTreeActions>['moveNodes'];
+function renderWorkspaceTopicTreeMenu(args: {
+  actions: ReturnType<typeof useWorkspaceTopicTreeActions>;
+  activeFolderId: string;
+  contextMenu: ReturnType<typeof useNodeListContextMenu>;
+  handleSelectNode: ReturnType<typeof useWorkspaceTopicTreeSelection>['handleSelectNode'];
   nodesById: WorkspaceListNodesById;
-  selectedNodeIds: string[];
+  onOpenMoveToNode: () => void;
+  onOpenPostponeTopicPanel?: (nodeId: string) => void;
+  topicTreeState: NodeListState;
 }) {
-  return useNodeListDragController({
-    disableRootDrop: true,
-    isTrashViewOpen: false,
-    moveNodes: args.moveNodes,
-    nodesById: args.nodesById,
-    noteRowIds: args.itemIds,
-    selectedNodeIds: args.selectedNodeIds
-  });
+  return (
+    <WorkspaceTopicTreeMenu
+      actions={args.actions}
+      activeFolderId={args.activeFolderId}
+      contextMenu={args.contextMenu}
+      handleSelectNode={args.handleSelectNode}
+      nodesById={args.nodesById}
+      onOpenMoveToNode={args.onOpenMoveToNode}
+      {...definedProps({ onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel })}
+      topicTreeState={args.topicTreeState}
+    />
+  );
 }
 
-export function useWorkspaceTopicTreeInteraction(args: {
+interface WorkspaceTopicTreeInteractionArgs {
   activeFolderId: string;
   activeNodeId: string | null;
+  isManualSort: boolean;
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onOpenPostponeTopicPanel?: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
   rowIds: string[];
-}) {
+}
+
+export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInteractionArgs) {
   const actions = useWorkspaceTopicTreeActions();
   const selection = useWorkspaceTopicTreeSelection({
     activeNodeId: args.activeNodeId,
@@ -104,10 +116,13 @@ export function useWorkspaceTopicTreeInteraction(args: {
   }), [args.rowIds, selection]);
   const contextMenu = useNodeListContextMenu(args.nodesById, selection.selectedNodeIds, []);
   const drag = useWorkspaceTopicTreeDrag({
+    activeFolderId: args.activeFolderId,
     itemIds: args.rowIds,
+    isManualSort: args.isManualSort,
     moveNodes: actions.moveNodes,
     nodesById: args.nodesById,
-    selectedNodeIds: selection.selectedNodeIds
+    selectedNodeIds: selection.selectedNodeIds,
+    ...definedProps({ setFolderManualChildOrder: actions.setFolderManualChildOrder })
   });
 
   return {
@@ -116,18 +131,16 @@ export function useWorkspaceTopicTreeInteraction(args: {
     drag,
     handleSelectNode: selection.handleSelectNode,
     topicTreeState,
-    topicTreeMenu: (
-      <WorkspaceTopicTreeMenu
-        actions={actions}
-        activeFolderId={args.activeFolderId}
-        contextMenu={contextMenu}
-        handleSelectNode={selection.handleSelectNode}
-        nodesById={args.nodesById}
-        onOpenMoveToNode={args.onOpenMoveToNode}
-        {...definedProps({ onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel })}
-        topicTreeState={topicTreeState}
-      />
-    )
+    topicTreeMenu: renderWorkspaceTopicTreeMenu({
+      actions,
+      activeFolderId: args.activeFolderId,
+      contextMenu,
+      handleSelectNode: selection.handleSelectNode,
+      nodesById: args.nodesById,
+      onOpenMoveToNode: args.onOpenMoveToNode,
+      ...definedProps({ onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel }),
+      topicTreeState
+    })
   };
 }
 
@@ -177,6 +190,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
   const interaction = useWorkspaceTopicTreeInteraction({
     activeFolderId: props.activeFolderId,
     activeNodeId: focusedNodeId,
+    isManualSort: contentSort.sort.key === 'manual',
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,
     ...definedProps({ onOpenPostponeTopicPanel: props.onOpenPostponeTopicPanel }),

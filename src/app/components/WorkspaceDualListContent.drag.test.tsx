@@ -9,6 +9,11 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 
+vi.mock('../../store/workspaceRuntimeSync', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../store/workspaceRuntimeSync')>()),
+  syncMoveNodesToRuntime: vi.fn(async (payload) => payload)
+}));
+
 function createNode(args: {
   id: string;
   kind: 'folder' | 'topic' | 'item';
@@ -159,7 +164,7 @@ beforeEach(() => {
   resetNodeListCollapseSessionForTest();
 });
 
-it('moves a current-folder topic when dropped onto a directory folder', () => {
+it('moves a current-folder topic when dropped onto a directory folder', async () => {
   renderWorkspaceContent();
   const transfer = createDragTransfer();
   const topicRow = screen.getByRole('treeitem', { name: 'Topic A' });
@@ -168,12 +173,17 @@ it('moves a current-folder topic when dropped onto a directory folder', () => {
 
   fireEvent.dragStart(topicRow, { dataTransfer: transfer });
   fireEvent.dragOver(targetFolderRow, { clientY: 50, dataTransfer: transfer });
+  await waitFor(() => {
+    expect(targetFolderRow.parentElement).toHaveClass('border');
+  });
   fireEvent.drop(targetFolderRow, { clientY: 50, dataTransfer: transfer });
 
-  expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-b');
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-b');
+  });
 });
 
-it('drops current-folder topics into directory folders even near row edges', () => {
+it('drops current-folder topics into directory folders even near row edges', async () => {
   renderWorkspaceContent();
   const transfer = createDragTransfer();
   const topicRow = screen.getByRole('treeitem', { name: 'Topic A' });
@@ -182,9 +192,14 @@ it('drops current-folder topics into directory folders even near row edges', () 
 
   fireEvent.dragStart(topicRow, { dataTransfer: transfer });
   fireEvent.dragOver(targetFolderRow, { clientY: 0, dataTransfer: transfer });
+  await waitFor(() => {
+    expect(targetFolderRow.parentElement).toHaveClass('border');
+  });
   fireEvent.drop(targetFolderRow, { clientY: 0, dataTransfer: transfer });
 
-  expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-b');
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-b');
+  });
 });
 
 it('does not offer the directory root as a drop target for current-folder topics', () => {
