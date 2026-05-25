@@ -46,6 +46,15 @@ describe('codex-task helpers', () => {
     expect(prompt).toContain('keep the task unfinished until a later successful preview can release it');
   });
 
+  it('tells spawned agents to avoid raw heavy validation commands', () => {
+    const prompt = buildPrompt('implement one task');
+
+    expect(prompt).toContain('Do not run raw validation tools such as npx eslint, npx vite build, npx playwright');
+    expect(prompt).toContain('Do not decompose npm run build');
+    expect(prompt).toContain('npm run lint:files -- <files>');
+    expect(prompt).toContain('npm run test:e2e:desktop -- <spec> <playwright args>');
+  });
+
   it('adds explicit commit-note skill trigger for commit-like requests', () => {
     const prompt = buildPrompt('执行提交指令');
 
