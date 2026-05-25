@@ -18,6 +18,7 @@ import {
   runChecked,
   wait
 } from './windows-preview-native-runtime.mjs';
+import { formatPreviewActionFailure } from './windows-preview-native-failure.mjs';
 import { isBootEventAfterIntent, isMatchingPreviewDelivery, isTrustedRunningStatus, parseWindowsClientStatus, selectNativePreviewActionWithCommittedFiles } from './windows-preview-native-support.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
@@ -64,12 +65,13 @@ async function runDirectRestart(reason) {
   console.log('[windows-preview-native] selected action: direct-restart');
   console.log(`[windows-preview-native] reason: ${reason}`);
   const result = await runClientAction('restart');
+  const trusted = await waitForTrustedRunningResult('direct restart status');
   if (
     result.code !== 0 ||
     !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output) ||
-    !await waitForTrustedRunning('direct restart status')
+    !trusted.ok
   ) {
-    throw new Error('direct restart failed');
+    throw new Error(formatPreviewActionFailure('direct restart', result, trusted));
   }
 }
 
@@ -93,18 +95,24 @@ async function waitForDelivery(filePath, intent, label) {
   return false;
 }
 
-async function waitForTrustedRunning(label, expectedHead = '') {
+async function waitForTrustedRunningResult(label, expectedHead = '') {
   const deadline = Date.now() + PREVIEW_TIMEOUT_MS;
+  let latestDetail = '';
   while (Date.now() < deadline) {
     const status = await runCapture(process.execPath, [clientScript, 'status']);
     const parsed = parseWindowsClientStatus(`${status.stdout}${status.stderr}`);
+    latestDetail = parsed.detail || `${status.stdout}${status.stderr}`.split(/\r?\n/u).filter(Boolean).slice(-5).join('\n');
     if (isTrustedRunningStatus(parsed, { expectedHead })) {
       console.log(`[windows-preview-native] ${label}: ${parsed.detail}`);
-      return true;
+      return { detail: parsed.detail, ok: true };
     }
     await wait(1000);
   }
-  return false;
+  return { detail: latestDetail, ok: false };
+}
+
+async function waitForTrustedRunning(label, expectedHead = '') {
+  return (await waitForTrustedRunningResult(label, expectedHead)).ok;
 }
 
 async function waitForRendererReloadReady(intent) {
@@ -178,12 +186,13 @@ async function applyAction(selection, currentHead, dryRun) {
   }
   const action = selection.action === 'fallback-start' ? 'start' : selection.action;
   const result = await runClientAction(action);
+  const trusted = await waitForTrustedRunningResult(`${action} status`, currentHead);
   if (
     result.code !== 0 ||
     !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output) ||
-    !await waitForTrustedRunning(`${action} status`, currentHead)
+    !trusted.ok
   ) {
-    throw new Error(`${action} failed`);
+    throw new Error(formatPreviewActionFailure(action, result, trusted));
   }
   return 'STARTED';
 }
