@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 
 import { definedProps } from '../../../shared/lib/definedProps';
 import type { WorkspaceListNode } from '../model/workspaceListNode';
@@ -38,14 +38,15 @@ function createNode(
     review: input.review ?? null,
     createdAt: '2026-03-29T00:00:00.000Z',
     updatedAt: '2026-03-29T00:00:00.000Z',
-    ...definedProps({ kind: input.kind })
+    ...definedProps({ kind: input.kind, specialKind: input.specialKind })
   };
 }
 
-describe('node list review actions', () => {
-  it('treats hasContent as the only content gate', () => {
-    expect(canReturnNode(createNode({ id: 'node-1', title: 'Atlas', hasContent: true, reading: null, hasReveal: true }))).toBe(true);
-    expect(canReturnNode(createNode({ id: 'node-2', title: 'Empty', hasContent: false, hasReveal: true }))).toBe(false);
+  it('allows relearn for ordinary learning nodes even before content or progress exists', () => {
+    expect(canReturnNode(createNode({ id: 'node-1', kind: 'topic', title: 'Atlas', hasContent: true, reading: null }))).toBe(true);
+    expect(canReturnNode(createNode({ id: 'node-2', kind: 'topic', title: 'Empty', hasContent: false }))).toBe(true);
+    expect(canReturnNode(createNode({ id: 'node-3', kind: 'folder', title: 'Folder', hasContent: false }))).toBe(false);
+    expect(canReturnNode(createNode({ id: 'node-4', kind: 'topic', title: 'Virtual', specialKind: 'virtual' }))).toBe(false);
   });
 
   it('allows dismiss only for reading items that still need handling', () => {
@@ -107,4 +108,3 @@ describe('node list review actions', () => {
     expect(hasDismissEntireTopicTargets(['root', 'folder'], nodesById)).toBe(false);
     expect(hasDismissEntireTopicTargets(['folder'], nodesById)).toBe(false);
   });
-});

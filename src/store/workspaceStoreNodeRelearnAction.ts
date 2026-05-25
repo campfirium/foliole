@@ -1,4 +1,4 @@
-import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
+import type { Node } from '../features/nodes/model/nodeTypes';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
@@ -14,13 +14,16 @@ export function createRelearnNodeAction(set: WorkspaceSet): WorkspaceState['rele
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || isProtectedRootNode(node) || !hasNodeContent(node)) {
+      if (!node || isProtectedRootNode(node) || node.specialKind) {
         return state;
       }
-      if (!isFsrsReviewItemNode(node) && !(isReadingReviewItemNode(node) && node.reading !== null)) {
+      if (!isFsrsReviewItemNode(node) && !isReadingReviewItemNode(node)) {
         return state;
       }
       relearned = true;
+      if (!node.review && !node.reading) {
+        return state;
+      }
       shouldSyncReviewReset = isFsrsReviewItemNode(node);
       const nextNode: Node = {
         ...node,
