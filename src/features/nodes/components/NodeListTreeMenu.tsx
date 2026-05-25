@@ -7,13 +7,14 @@ import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 import { NodeListContextMenu } from './NodeListContextMenu';
 import { canPostponeTopic, canToggleSequentialReading, hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
 import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction, createToggleSequentialReadingAction } from './nodeListMenuActions';
-import { createCreateNodeHandler, resolveCreateCommands } from './NodeListTreeCreateMenu';
+import { createCreateNodeHandler, resolveCreateCommands, type NodeListCreateMenuSurface } from './NodeListTreeCreateMenu';
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { requestNodeRename } from './NodeTreeRowRename';
 
 interface NodeListTreeMenuProps {
   contextMenu: NodeListContextMenuController;
+  createMenuSurface?: NodeListCreateMenuSurface;
   createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
   createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
   createVirtualNode: () => Promise<string | null>;
@@ -53,6 +54,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
 
   return {
     contextTargets,
+    createMenuSurface: props.createMenuSurface ?? 'folders',
     isHomeTarget,
     isNotesMenu,
     isRootMenu,
