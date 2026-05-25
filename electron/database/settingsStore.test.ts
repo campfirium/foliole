@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
+
 let mockedAppDataDir = '/tmp/foliole-settings-store-tests';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -116,4 +118,43 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   expect(changeCount.count).toBe(0);
   expect(localOnlyCount.count).toBe(0);
   expect(learnedSourcesCount.count).toBe(0);
+});
+
+it('stores full-text search index strategy inside the user-space app settings record', () => {
+  saveJsonSetting('device_id', 'device-test', '2026-03-06T00:00:00.000Z');
+  saveJsonSetting(
+    'app_settings',
+    { [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram' },
+    '2026-03-06T00:01:00.000Z'
+  );
+
+  const connection = openDatabaseConnection();
+  const settingRecord = connection.sqlite
+    .prepare(
+      `SELECT scope, platform, form_factor, device_id, value_json
+       FROM setting_records
+       WHERE key = ?`
+    )
+    .get('app_settings') as Record<string, unknown>;
+  const syncState = connection.sqlite
+    .prepare(
+      `SELECT object_id, object_type, sync_dirty
+       FROM sync_object_state
+       WHERE object_type = 'setting' AND object_id = ?`
+    )
+    .get('user_space:windows:desktop:*:app_settings') as Record<string, unknown>;
+  const parsedValue = JSON.parse(String(settingRecord.value_json)) as Record<string, unknown>;
+
+  expect(settingRecord).toMatchObject({
+    device_id: '*',
+    form_factor: 'desktop',
+    platform: 'windows',
+    scope: 'user_space'
+  });
+  expect(parsedValue[FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]).toBe('cjk-trigram');
+  expect(syncState).toMatchObject({
+    object_id: 'user_space:windows:desktop:*:app_settings',
+    object_type: 'setting',
+    sync_dirty: 1
+  });
 });

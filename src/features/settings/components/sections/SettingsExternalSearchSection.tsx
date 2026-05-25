@@ -1,10 +1,18 @@
 import { useState } from 'react';
 
+import {
+  FULL_TEXT_SEARCH_INDEX_STRATEGY_OPTIONS,
+  FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY,
+  normalizeFullTextSearchIndexStrategy,
+  type FullTextSearchIndexStrategy
+} from '../../../../../lib/core/database/fullTextSearchIndexStrategy';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import type {
   ExternalSourceSettingsFolder,
   ExternalSourceSettingsFolderPatch
 } from '../../../../shared/platform/externalSourceSettingsRepository';
 import { clearLinkPanelBrowsingData } from '../../../../shared/platform/linkPanelBrowsingData';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../../shared/platform/storage';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
@@ -16,6 +24,7 @@ import {
   settingsButtonClassName
 } from '../../../../shared/ui';
 
+import { SettingsSelectRow } from './settingsAppearanceControls';
 import { ExternalLibraryRow, ExternalLibraryTable } from './SettingsExternalSearchSectionParts';
 
 interface SettingsExternalSearchSectionProps {
@@ -76,6 +85,33 @@ function LinkPanelBrowsingDataRow(props: { isDesktopRuntime: boolean }) {
   );
 }
 
+function FullTextSearchIndexStrategyRow() {
+  const [strategy, setStrategy] = useState<FullTextSearchIndexStrategy>(() =>
+    normalizeFullTextSearchIndexStrategy(
+      getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.fullTextSearchIndexStrategy)
+    )
+  );
+  const handleChange = (value: string) => {
+    const nextStrategy = normalizeFullTextSearchIndexStrategy(value);
+    setStrategy(nextStrategy);
+    setWhitelistedLocalStorageItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY, nextStrategy);
+  };
+
+  return (
+    <SettingsSelectRow
+      ariaLabel="Search text strategy"
+      description="Choose how Foliole prepares topics and external sources for search. Changes apply when search indexes are rebuilt."
+      label="Full-text search index"
+      onChange={handleChange}
+      options={FULL_TEXT_SEARCH_INDEX_STRATEGY_OPTIONS.map((option) => ({
+        label: option.label,
+        value: option.value
+      }))}
+      value={strategy}
+    />
+  );
+}
+
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
   if (props.isLoading) {
     return (
@@ -95,6 +131,7 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
       description="Search, preview, and import content from folders that stay outside Foliole until you choose to bring them in."
       title="External sources"
     >
+      <FullTextSearchIndexStrategyRow />
       <div className="min-w-0 overflow-hidden">
         <ExternalLibraryTable
           folders={props.folders}

@@ -1,3 +1,4 @@
+import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../../lib/core/database/fullTextSearchIndexStrategy.js';
 import { MANAGED_INBOX_APP_SETTING_KEY } from '../../../lib/platform/managedInbox.js';
 
 export const APP_SETTINGS_STORAGE_KEYS = {
@@ -122,6 +123,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   commandRecents: 'foliole-command-recents',
   nodePaletteRecents: 'foliole-node-palette-recents',
   searchPaletteShortcutsCollapsed: 'foliole-search-palette-shortcuts-collapsed',
+  fullTextSearchIndexStrategy: FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY,
   commandShortcutOverrides: 'foliole-command-shortcut-overrides',
   webLookupEntries: 'foliole-web-lookup-entries',
   devReviewStatusBarPersistenceEnabled: 'foliole-dev-review-status-bar-persistence-enabled',

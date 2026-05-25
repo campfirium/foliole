@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../../lib/core/database/fullTextSearchIndexStrategy';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
 import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from './appSettingsState';
@@ -41,5 +42,17 @@ it('saves runtime app settings through the platform bridge', async () => {
   await expect(saveRuntimeAppSettingsState({ 'foliole-ui-font-preset': 'inter' })).resolves.toBe(true);
   expect(invoke).toHaveBeenCalledWith('save_app_settings_state', {
     settings: { 'foliole-ui-font-preset': 'inter' }
+  });
+});
+
+it('round-trips the full-text search index strategy through the platform bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue(null);
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(saveRuntimeAppSettingsState({
+    [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram'
+  })).resolves.toBe(true);
+  expect(invoke).toHaveBeenCalledWith('save_app_settings_state', {
+    settings: { [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram' }
   });
 });
