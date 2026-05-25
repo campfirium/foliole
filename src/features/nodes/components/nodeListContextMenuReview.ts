@@ -5,22 +5,12 @@ import {
   type WorkspaceListNodesById
 } from '../model/workspaceListNode';
 
-function hasReviewableContent(node: WorkspaceListNode | undefined) {
-  return Boolean(node?.hasContent);
-}
-
 export function canReturnNode(node: WorkspaceListNode | undefined) {
-  if (!hasReviewableContent(node)) {
-    return false;
-  }
-  if (!node) {
-    return false;
-  }
-  return isFsrsWorkspaceListNode(node) || (getWorkspaceListReviewItemKind(node) === 'reading' && node.reading !== null);
+  return canRelearnNode(node);
 }
 
 export function canDismissNode(node: WorkspaceListNode | undefined) {
-  if (!hasReviewableContent(node) || !node) {
+  if (!node?.hasContent) {
     return false;
   }
   if (getWorkspaceListReviewItemKind(node) !== 'reading') {
@@ -60,13 +50,13 @@ export function collectDismissEntireTopicTargets(rootNodeId: string, nodesById: 
 }
 
 export function canRelearnNode(node: WorkspaceListNode | undefined) {
-  if (!node || !node.hasContent) {
+  if (!node || node.specialKind) {
     return false;
   }
   if (isFsrsWorkspaceListNode(node)) {
     return true;
   }
-  return getWorkspaceListReviewItemKind(node) === 'reading' && node.reading !== null;
+  return getWorkspaceListReviewItemKind(node) === 'reading';
 }
 
 export function hasRelearnTargets(nodeIds: string[], nodesById: WorkspaceListNodesById) {

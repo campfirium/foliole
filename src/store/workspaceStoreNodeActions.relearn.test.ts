@@ -1,13 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
-import { syncRelearnNodeToRuntime } from './workspaceRuntimeSync';
-import type { WorkspaceState } from './workspaceStore';
-import { createInitialWorkspaceState } from './workspaceStore';
+import { syncNodeContentToRuntime, syncRelearnNodeToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import {
+  createWorkspaceNodeActionsFixture,
+  createWorkspaceNodeActionsSetStateHarness
+} from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  hasWorkspaceNodeMutationRuntime: vi.fn(() => false),
   syncCreateNodeToRuntime: vi.fn(),
+  syncCreateNodeMutationToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
+  syncMoveNodesToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -17,93 +22,14 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
-type WorkspaceSetInput =
-  | WorkspaceState
-  | Partial<WorkspaceState>
-  | ((snapshot: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>);
-
-function createWorkspaceFixture(): WorkspaceState {
-  const initial = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
-  return {
-    ...initial,
-    goBack: () => null,
-    goForward: () => null,
-    goToParent: () => null,
-    jumpToAncestorNode: () => null,
-    openNode: () => null,
-    resetLayout: () => undefined,
-    setNodeViewState: () => undefined,
-    setDocumentMaxWidth: () => undefined,
-    setListWidth: () => undefined,
-    setListCollapsed: () => undefined,
-    setRightSidebarWidth: () => undefined,
-    setRightSidebarCollapsed: () => undefined,
-    setActiveNode: () => undefined,
-    updateNodeTitle: () => undefined,
-    updateNodeContent: () => undefined,
-    updateVirtualNodeFilter: () => undefined,
-    updateNodeReveal: () => undefined,
-    updateNodePriority: () => undefined,
-    updateNodeDesiredRetention: () => undefined,
-    updateNodeShortTerm: () => undefined,
-    setNodeSequentialReading: () => false,
-    dismissNode: () => false,
-    undoWorkspaceAction: () => false,
-    redoWorkspaceAction: () => false,
-    pushEditorOperationEntry: () => undefined,
-    deleteEditorAnnotationNodes: () => undefined,
-    undoEditorOperation: () => false,
-    redoEditorOperation: () => false,
-    relearnNode: () => false,
-    startReviewSession: () => false,
-    resumeReviewSession: () => false,
-    setReviewSessionMode: () => undefined,
-    revealReviewAnswer: () => undefined,
-    gradeReviewCard: async () => false,
-    completeReviewItem: async () => false,
-    deferReviewItem: async () => false,
-    soonReviewItem: async () => false,
-    dismissReviewItem: async () => false,
-    exitReviewSession: () => undefined,
-    deleteNode: () => undefined,
-    deleteImageClozeRegion: () => undefined,
-    deleteNodes: () => undefined,
-    restoreNode: async () => null,
-    deleteNodePermanently: () => undefined,
-    deleteNodesPermanently: () => undefined,
-    createRootNode: () => 'unused',
-    createChildNode: () => 'unused',
-    createVirtualNode: () => 'unused',
-    createHighlightNodeFromSelection: () => null,
-    createQANodeFromSelection: () => null,
-    createFormulaClozeNode: () => null,
-    createImageClozeNodes: () => [],
-    moveNode: async () => false,
-    moveNodes: async () => false
-  };
-}
-
-function createSetStateHarness(initialState: WorkspaceState) {
-  let state = initialState;
-  const setState = (partial: WorkspaceSetInput) => {
-    const next = typeof partial === 'function' ? partial(state) : partial;
-    state = { ...state, ...next };
-  };
-  return {
-    setState,
-    getState: () => state
-  };
-}
-
-describe('createWorkspaceNodeActions relearn sync', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('resets item review cards to an uninitialized state and syncs runtime reset', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+  it('resets item review cards to an uninitialized state and syncs runtime reset', async () => {
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
-    const seedNodeId = actions.createRootNode('');
+    const seedNodeId = (await actions.createRootNode(''))!;
     const state = harness.getState();
     const node = state.nodesById[seedNodeId];
     if (!node) {
@@ -140,4 +66,32 @@ describe('createWorkspaceNodeActions relearn sync', () => {
     expect(harness.getState().nodesById[seedNodeId]?.review).toBeNull();
     expect(syncRelearnNodeToRuntime).toHaveBeenCalledWith({ nodeId: seedNodeId });
   });
-});
+
+  it('accepts ordinary empty topics without creating progress or sync work', () => {
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+    const before = harness.getState().nodesById['node-1'];
+    if (!before) {
+      throw new Error('missing seed node');
+    }
+    harness.setState({
+      nodesById: {
+        ...harness.getState().nodesById,
+        'node-1': {
+          ...before,
+          content: '',
+          hasContent: false,
+          reading: null,
+          review: null
+        }
+      }
+    });
+
+    const relearned = actions.relearnNode('node-1', '2026-03-18T00:00:00.000Z');
+
+    expect(relearned).toBe(true);
+    expect(harness.getState().nodesById['node-1']?.reading).toBeNull();
+    expect(harness.getState().nodesById['node-1']?.review).toBeNull();
+    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+    expect(syncRelearnNodeToRuntime).not.toHaveBeenCalled();
+  });
