@@ -83,6 +83,7 @@ function renderNodeListRow(
       onContextMenu={props.onContextMenu}
       onDragEnd={props.drag.onDragEnd}
       onDragEnter={props.drag.onDragEnterNode}
+      onDragLeave={props.drag.onDragLeaveNode}
       onDragOver={onDragOver}
       onDragStart={props.drag.onDragStartNode}
       onDrop={props.drag.onDropOnNode}

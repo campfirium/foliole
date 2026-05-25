@@ -93,6 +93,11 @@ function dispatchDropBefore(target: HTMLElement, dataTransfer: ReturnType<typeof
   fireEvent(target, event);
 }
 
+function dispatchDragLeave(target: HTMLElement, dataTransfer: ReturnType<typeof createDragTransfer>) {
+  const event = createEvent.dragLeave(target, { dataTransfer });
+  fireEvent(target, event);
+}
+
 function ManualTopicTreeHarness() {
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const itemIds = Object.values(nodesById)
@@ -188,4 +193,31 @@ it('writes manual topic order when dragging within the current folder', async ()
 
   await waitFor(() => expect(rowTitles()).toEqual(['Alpha', 'Beta']));
   expect(useWorkspaceStore.getState().nodesById['folder-a']?.manualChildOrder).toEqual(['topic-a', 'topic-b']);
+});
+
+it('clears the drop marker when a dragged topic leaves the target row', async () => {
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    nodesById: {
+      ...state.nodesById,
+      'folder-a': createFolder(['topic-b', 'topic-a']),
+      'topic-a': createTopic('topic-a', 'Alpha'),
+      'topic-b': createTopic('topic-b', 'Beta')
+    }
+  }));
+  render(<ManualTopicTreeHarness />);
+  chooseManualSort();
+  const transfer = createDragTransfer();
+  const targetFrame = mockRowFrame(screen.getByRole('treeitem', { name: 'Beta' }));
+
+  fireEvent.dragStart(screen.getByRole('treeitem', { name: 'Alpha' }), { dataTransfer: transfer });
+  dispatchDragOverBefore(targetFrame, transfer);
+  await waitFor(() => {
+    expect(screen.getByRole('treeitem', { name: 'Beta' }).parentElement).toHaveClass('border-t-2');
+  });
+  dispatchDragLeave(targetFrame, transfer);
+
+  await waitFor(() => {
+    expect(screen.getByRole('treeitem', { name: 'Beta' }).parentElement).not.toHaveClass('border-t-2');
+  });
 });
