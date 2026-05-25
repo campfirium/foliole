@@ -4,11 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const {
+  ensureWorkspaceNodeDocumentReady,
   loadRuntimeReadwiseBookEpub,
   loadRuntimeReadwiseBooksInventory,
   onRuntimeReadwiseBookEpubProgress,
   openRuntimeReadwiseBookDownload
 } = vi.hoisted(() => ({
+  ensureWorkspaceNodeDocumentReady: vi.fn(),
   loadRuntimeReadwiseBookEpub: vi.fn(),
   loadRuntimeReadwiseBooksInventory: vi.fn(),
   onRuntimeReadwiseBookEpubProgress: vi.fn(),
@@ -20,6 +22,9 @@ vi.mock('../../shared/platform/readwiseBooksRuntimeRepository', () => ({
   loadRuntimeReadwiseBooksInventory,
   onRuntimeReadwiseBookEpubProgress,
   openRuntimeReadwiseBookDownload
+}));
+vi.mock('../../store/workspaceNodePreparation', () => ({
+  ensureWorkspaceNodeDocumentReady
 }));
 
 import { EpubImportReleaseModeDialog } from './EpubImportReleaseModeDialog';
@@ -59,6 +64,7 @@ function seedDefaultRuntime() {
     status: 'selected',
     title: 'Book One'
   });
+  ensureWorkspaceNodeDocumentReady.mockResolvedValue(null);
   onRuntimeReadwiseBookEpubProgress.mockReturnValue(() => undefined);
 }
 
@@ -123,6 +129,9 @@ describe('ReadwiseBookActionsPanel', () => {
 
     expect(useWorkspaceStore.persist.rehydrate).toHaveBeenCalledTimes(1);
     await waitFor(() =>
+      expect(ensureWorkspaceNodeDocumentReady).toHaveBeenCalledWith('node-book-1', { forceLoad: true })
+    );
+    await waitFor(() =>
       expect(useWorkspaceStore.getState().setNodeSequentialReading).toHaveBeenCalledWith('node-book-1', false)
     );
     await waitFor(() => expect(loadedListener).toHaveBeenCalledTimes(1));
@@ -142,6 +151,7 @@ describe('ReadwiseBookActionsPanel', () => {
 
     await waitFor(() => expect(screen.getByText('Load original file was cancelled.')).toBeInTheDocument());
     expect(screen.queryByRole('dialog', { name: 'Choose Reading Mode' })).not.toBeInTheDocument();
+    expect(ensureWorkspaceNodeDocumentReady).not.toHaveBeenCalled();
     expect(useWorkspaceStore.getState().setNodeSequentialReading).not.toHaveBeenCalled();
   });
 });
