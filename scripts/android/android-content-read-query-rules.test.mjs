@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { ANDROID_COMPANION_CONTENT_READ_RULES } from '../../lib/core/database/androidCompanionResourceQueryDefinitions.ts';
+import { ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionDocumentResourceQueryDefinitions.ts';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
@@ -66,6 +67,14 @@ describe('Android content read query rules', () => {
         expect.objectContaining({ outputKey: 'excerpt', rowKey: 'excerpt', type: 'string' })
       ])
     );
+    expect(definitions.queries.externalDocumentSearch).toEqual(
+      ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS.externalDocumentSearch
+    );
+    expect(definitions.queries.externalDocumentSearch.sql).toContain('FROM external_documents');
+    expect(definitions.queries.externalDocumentSearch.sql).toContain('LEFT JOIN content_blobs');
+    expect(definitions.queries.externalDocumentSearch.sql).toContain('LEFT JOIN content_blob_data');
+    expect(definitions.queries.externalDocumentSearch.sql).not.toContain('external_search_documents');
+    expect(definitions.queries.externalDocumentSearch.sql).not.toContain('external_search_fts');
     expect(definitions.contentRead.readableArticle.articleFields).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ outputKey: 'node_id', rowKey: 'id', type: 'string' }),
