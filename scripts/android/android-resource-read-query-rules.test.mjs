@@ -99,6 +99,10 @@ describe('Android resource read query rules', () => {
       searchQueryName: 'pdfPageTextSearch',
       searchResultKey: 'results'
     });
+    expect(definitions.queries.pdfPageTextPages.sql).toContain('FROM pdf_page_text');
+    expect(definitions.queries.pdfPageTextPages.sql).not.toContain('pdf_search');
+    expect(definitions.queries.pdfPageTextSearch.sql).toContain('FROM pdf_page_text');
+    expect(definitions.queries.pdfPageTextSearch.sql).not.toContain('pdf_search');
   });
 
   it('keeps resource Java stores wired to generated read rules', async () => {

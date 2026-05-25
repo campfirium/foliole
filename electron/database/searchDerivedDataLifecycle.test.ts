@@ -153,6 +153,26 @@ it('removes stale search rows for soft-deleted and restored nodes when they are 
   expect(indexedPdfCount(['node-transient'])).toEqual({ count: 0 });
 });
 
+it('keeps PDF page text facts and sync state intact while soft delete only hides search', () => {
+  upsertSearchNode({ content: 'transient marker', id: 'node-soft-pdf', title: 'Soft PDF' });
+  linkReadyPdf('node-soft-pdf', 'pdf-soft', 'soft pdf marker');
+  processSearchQueue();
+  const beforeState = openDatabaseConnection().sqlite
+    .prepare("SELECT content_hash, deleted_at FROM sync_object_state WHERE object_type = 'pdf_page_text' AND object_id = 'pdf-soft:1'")
+    .get();
+
+  softDeleteNodes({ deletedAt: '2026-05-26T00:02:00.000Z', nodeIds: ['node-soft-pdf'] });
+  processSearchQueue();
+
+  expect(openDatabaseConnection().sqlite
+    .prepare("SELECT COUNT(*) AS count FROM pdf_page_text WHERE attachment_id = 'pdf-soft'")
+    .get()).toEqual({ count: 1 });
+  expect(openDatabaseConnection().sqlite
+    .prepare("SELECT content_hash, deleted_at FROM sync_object_state WHERE object_type = 'pdf_page_text' AND object_id = 'pdf-soft:1'")
+    .get()).toEqual(beforeState);
+  expect(indexedPdfCount(['node-soft-pdf'])).toEqual({ count: 0 });
+});
+
 it('keeps historical subtree delete invalidations harmless when their nodes are already missing', () => {
   const connection = openDatabaseConnection();
   connection.sqlite

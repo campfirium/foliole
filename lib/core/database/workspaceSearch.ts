@@ -163,6 +163,7 @@ export function searchWorkspace(driver: DatabaseDriver, query: string) {
           ...loadFtsPdfMatches(driver, queryPlan.literalQuery, queryPlan.normalizedQuery, 'literal', queryPlan.shortTerms),
           ...loadPairFtsWorkspaceMatches(driver, queryPlan),
           ...loadTermFtsWorkspaceMatches(driver, queryPlan),
+          ...loadFallbackPdfMatches(driver, queryPlan.normalizedQuery),
           ...loadCrossPagePdfMatches(driver, queryPlan.normalizedQuery, queryPlan.shortTerms),
           ...loadShortTermFallbackMatches(driver, queryPlan),
           ...loadAdvancedFtsWorkspaceMatches(driver, queryPlan)

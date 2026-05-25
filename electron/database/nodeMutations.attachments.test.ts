@@ -84,6 +84,9 @@ function readAttachmentCounts(attachmentId: string) {
     ).count,
     pdfIndexRows: (
       database.prepare('SELECT COUNT(*) AS count FROM pdf_page_text WHERE attachment_id = ?').get(attachmentId) as { count: number }
+    ).count,
+    pdfSearchRows: (
+      database.prepare('SELECT COUNT(*) AS count FROM pdf_search WHERE attachment_id = ?').get(attachmentId) as { count: number }
     ).count
   };
 }
@@ -106,7 +109,8 @@ it('keeps attachments intact after soft delete even when the deleted node was th
   expect(readAttachmentCounts('hash-image')).toEqual({
     attachmentRows: 1,
     linkRows: 1,
-    pdfIndexRows: 0
+    pdfIndexRows: 0,
+    pdfSearchRows: 0
   });
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 });
@@ -130,7 +134,8 @@ it('keeps shared inline images until the last body reference is permanently dele
   expect(readAttachmentCounts('hash-image')).toEqual({
     attachmentRows: 1,
     linkRows: 1,
-    pdfIndexRows: 0
+    pdfIndexRows: 0,
+    pdfSearchRows: 0
   });
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 
@@ -142,7 +147,8 @@ it('keeps shared inline images until the last body reference is permanently dele
   expect(readAttachmentCounts('hash-image')).toEqual({
     attachmentRows: 0,
     linkRows: 0,
-    pdfIndexRows: 0
+    pdfIndexRows: 0,
+    pdfSearchRows: 0
   });
   expect(openDatabaseConnection().driver.queryOne<{ deleted_at: string }>(
     `SELECT deleted_at
@@ -166,6 +172,15 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
   openDatabaseConnection().sqlite
     .prepare('INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height) VALUES (?, ?, ?, ?, ?)')
     .run('hash-pdf', 1, 'Page 1', 800, 1200);
+  openDatabaseConnection().sqlite
+    .prepare(
+      `INSERT INTO pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      'book.pdf', '', 'Page 1', 'node-pdf-a', 'hash-pdf', '1', '2026-04-18T08:00:00.000Z', '6',
+      'book.pdf', '', 'Page 1', 'node-pdf-b', 'hash-pdf', '1', '2026-04-18T08:00:00.000Z', '6'
+    );
 
   deleteNodesPermanently({
     nodeIds: ['node-pdf-a'],
@@ -175,7 +190,8 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
   expect(readAttachmentCounts('hash-pdf')).toEqual({
     attachmentRows: 1,
     linkRows: 1,
-    pdfIndexRows: 1
+    pdfIndexRows: 1,
+    pdfSearchRows: 1
   });
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 
@@ -187,7 +203,14 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
   expect(readAttachmentCounts('hash-pdf')).toEqual({
     attachmentRows: 0,
     linkRows: 0,
-    pdfIndexRows: 0
+    pdfIndexRows: 0,
+    pdfSearchRows: 0
   });
+  expect(openDatabaseConnection().driver.queryOne<{ deleted_at: string }>(
+    `SELECT deleted_at
+     FROM sync_object_state
+     WHERE object_type = 'pdf_page_text' AND object_id = ?`,
+    ['hash-pdf:1']
+  )).toEqual({ deleted_at: expect.any(String) });
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });

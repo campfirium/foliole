@@ -205,7 +205,11 @@ it('queues PDF search invalidation when page text becomes ready', () => {
   expect(pendingInvalidations()).toEqual([
     { invalidation_type: 'attachment_pdf', status: 'pending', target_id: 'pdf-1' }
   ]);
-  expect(searchWorkspace('Atlas')).toEqual([]);
+  expect(
+    openDatabaseConnection().sqlite
+      .prepare("SELECT COUNT(*) AS count FROM pdf_search WHERE attachment_id = 'pdf-1'")
+      .get()
+  ).toEqual({ count: 0 });
 
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   expect(searchWorkspace('Atlas')[0]).toMatchObject({
