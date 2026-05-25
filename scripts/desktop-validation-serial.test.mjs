@@ -22,10 +22,11 @@ function runSerial({ commands, runtimeDir, runLabel, extraEnv = {} }) {
 function serialProcess({ commands, runtimeDir, runLabel, extraEnv = {} }) {
   const child = spawn(process.execPath, [SERIAL_SCRIPT], {
     cwd: REPO_ROOT,
-    env: {
-      ...process.env,
-      DESKTOP_VALIDATION_SERIAL_COMMANDS_JSON: JSON.stringify(commands),
-      DESKTOP_VALIDATION_SERIAL_PROGRESS_MS: '50',
+      env: {
+        ...process.env,
+        DESKTOP_VALIDATION_SERIAL_COMMANDS_JSON: JSON.stringify(commands),
+        FOLIOLE_RESOURCE_GATE_HELD: '',
+        DESKTOP_VALIDATION_SERIAL_PROGRESS_MS: '50',
       DESKTOP_VALIDATION_SERIAL_POLL_MS: '25',
       DESKTOP_VALIDATION_SERIAL_RUNTIME_DIR: runtimeDir,
       SERIAL_TEST_RUN_LABEL: runLabel,
@@ -163,8 +164,16 @@ describe('desktop-validation-serial.mjs', () => {
     await withTempFixture(async ({ logFile, runtimeDir, stub }) => {
       await mkdir(runtimeDir, { recursive: true });
       await writeFile(
-        path.join(runtimeDir, 'desktop-validation-serial.lock'),
-        `${JSON.stringify({ command: 'validate:desktop:serial', pid: 99999999, startedAt: Date.now() })}\n`,
+        path.join(runtimeDir, 'resource-gate.node-heavy.lock'),
+        `${JSON.stringify({
+          className: 'preview',
+          command: 'validate:desktop:serial',
+          heartbeatAt: Date.now(),
+          pid: 99999999,
+          resource: 'node-heavy',
+          schemaVersion: 1,
+          startedAt: Date.now()
+        })}\n`,
         'utf8'
       );
 
@@ -189,7 +198,7 @@ describe('desktop-validation-serial.mjs', () => {
         runtimeDir
       });
 
-      await waitForFile(path.join(runtimeDir, 'desktop-validation-serial.lock'));
+      await waitForFile(path.join(runtimeDir, 'resource-gate.node-heavy.lock'));
       running.child.kill('SIGTERM');
       const result = await running.close;
       const next = await runSerial({
@@ -207,7 +216,7 @@ describe('desktop-validation-serial.mjs', () => {
   it('prints queue progress that does not trip Codex preview failure guards', () => {
     const message = formatQueueActiveMessage({ ageSeconds: 30, pid: 1234 });
 
-    expect(message).toContain('[desktop-validation-serial]');
+    expect(message).toContain('[validation-resource-gate]');
     expect(message).not.toMatch(/waiting|failed|not run/iu);
     expect(() => assertAgentCompletionMessage(message)).not.toThrow();
   });

@@ -1,37 +1,22 @@
 /* global process */
 
-import { open, mkdir, readFile, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
+import { formatGateQueueMessage, withResourceGate } from './lib/resource-gate.mjs';
+
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DEFAULT_POLL_MS = 1_000;
-const DEFAULT_PROGRESS_MS = 30_000;
-const LOCK_FILE_NAME = 'desktop-validation-serial.lock';
 const LOG_PREFIX = '[desktop-validation-serial]';
 let activeChild = null;
 
 export function formatQueueActiveMessage({ ageSeconds, pid }) {
-  return `${LOG_PREFIX} queue held by pid ${pid}; elapsed ${ageSeconds}s`;
-}
-
-export function isPidAlive(pid) {
-  try {
-    return Number.isInteger(pid) && pid > 0 && process.kill(pid, 0);
-  } catch {
-    return false;
-  }
-}
-
-function parsePositiveInt(value, fallback) {
-  const parsed = Number.parseInt(value ?? '', 10);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function resolveRuntimeDir() {
-  return process.env.DESKTOP_VALIDATION_SERIAL_RUNTIME_DIR ?? path.join(REPO_ROOT, '.lab', 'internal', 'runtime');
+  return formatGateQueueMessage({
+    className: 'preview',
+    holderPid: pid,
+    resource: 'preview',
+    seconds: ageSeconds
+  });
 }
 
 function resolveCommands() {
@@ -55,93 +40,6 @@ function isCommandTuple(command) {
   return Array.isArray(command) && command.length > 0 && command.every((part) => typeof part === 'string');
 }
 
-async function readLock(lockFile) {
-  try {
-    return JSON.parse(await readFile(lockFile, 'utf8'));
-  } catch {
-    return null;
-  }
-}
-
-async function tryAcquireLock(lockFile) {
-  let handle = null;
-  try {
-    await mkdir(path.dirname(lockFile), { recursive: true });
-    handle = await open(lockFile, 'wx');
-    await handle.writeFile(
-      `${JSON.stringify({ command: 'validate:desktop:serial', pid: process.pid, startedAt: Date.now() })}\n`,
-      'utf8'
-    );
-    return true;
-  } catch (error) {
-    if (error?.code !== 'EEXIST') {
-      throw error;
-    }
-    return false;
-  } finally {
-    await handle?.close();
-  }
-}
-
-async function removeDeadOwnerLock(lockFile) {
-  const lock = await readLock(lockFile);
-  if (!lock || !isPidAlive(Number(lock.pid))) {
-    await rm(lockFile, { force: true });
-    return true;
-  }
-  return false;
-}
-
-async function acquireSerialLock(lockFile) {
-  const pollMs = parsePositiveInt(process.env.DESKTOP_VALIDATION_SERIAL_POLL_MS, DEFAULT_POLL_MS);
-  const progressMs = parsePositiveInt(process.env.DESKTOP_VALIDATION_SERIAL_PROGRESS_MS, DEFAULT_PROGRESS_MS);
-  let lastProgressAt = 0;
-
-  while (!(await tryAcquireLock(lockFile))) {
-    if (await removeDeadOwnerLock(lockFile)) {
-      continue;
-    }
-    lastProgressAt = await printQueueProgress(lockFile, lastProgressAt, progressMs);
-    await delay(pollMs);
-  }
-}
-
-async function printQueueProgress(lockFile, lastProgressAt, progressMs) {
-  const now = Date.now();
-  if (now - lastProgressAt < progressMs) {
-    return lastProgressAt;
-  }
-
-  const lock = await readLock(lockFile);
-  if (lock?.pid) {
-    const ageSeconds = Math.max(0, Math.round((now - Number(lock.startedAt ?? now)) / 1000));
-    process.stdout.write(`${formatQueueActiveMessage({ ageSeconds, pid: lock.pid })}\n`);
-  }
-  return now;
-}
-
-async function releaseOwnLock(lockFile) {
-  const lock = await readLock(lockFile);
-  if (Number(lock?.pid) === process.pid) {
-    await rm(lockFile, { force: true });
-  }
-}
-
-function installSignalCleanup(lockFile) {
-  let exiting = false;
-  const cleanupThenExit = (code, signal) => {
-    if (exiting) {
-      return;
-    }
-    exiting = true;
-    stopActiveChild(signal)
-      .finally(() => releaseOwnLock(lockFile))
-      .finally(() => process.exit(code));
-  };
-  process.once('SIGINT', () => cleanupThenExit(130, 'SIGINT'));
-  process.once('SIGTERM', () => cleanupThenExit(143, 'SIGTERM'));
-}
-
 function stopActiveChild(signal) {
   if (!activeChild || activeChild.exitCode !== null || activeChild.signalCode !== null) {
     return Promise.resolve();
@@ -156,12 +54,12 @@ function stopActiveChild(signal) {
   });
 }
 
-function runCommand(command) {
+function runCommand(command, env) {
   return new Promise((resolve) => {
     const [bin, ...args] = command;
     const child = spawn(bin, args, {
       cwd: REPO_ROOT,
-      env: process.env,
+      env,
       stdio: 'inherit'
     });
     activeChild = child;
@@ -178,9 +76,9 @@ function runCommand(command) {
   });
 }
 
-async function runCommands(commands) {
+async function runCommands(commands, env) {
   for (const command of commands) {
-    const code = await runCommand(command);
+    const code = await runCommand(command, env);
     if (code !== 0) {
       return code;
     }
@@ -189,14 +87,13 @@ async function runCommands(commands) {
 }
 
 export async function runDesktopValidationSerial() {
-  const lockFile = path.join(resolveRuntimeDir(), LOCK_FILE_NAME);
-  installSignalCleanup(lockFile);
-  await acquireSerialLock(lockFile);
-  try {
-    return await runCommands(resolveCommands());
-  } finally {
-    await releaseOwnLock(lockFile);
-  }
+  return withResourceGate({
+    className: 'preview',
+    commandLabel: 'validate:desktop:serial',
+    fn: (env) => runCommands(resolveCommands(), env),
+    onSignal: stopActiveChild,
+    repoRoot: REPO_ROOT
+  });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
