@@ -8,7 +8,8 @@ import {
 import {
   BackupListSection,
   BackupPathRow,
-  BackupRulesSection
+  BackupRulesSection,
+  ExtraBackupCopySection
 } from './backupSettingsSectionParts';
 import { SourceDispositionStateRow } from './SourceDispositionStateRow';
 import { useBackupSettingsSectionState } from './useBackupSettingsSectionState';
@@ -22,10 +23,13 @@ function BackupLoadingState() {
       <SettingsSection ariaLabel="Source states loading section" title="Source states">
         <SettingsLoadingState />
       </SettingsSection>
-      <SettingsSection ariaLabel="Backup rules loading section" title="Backup rules">
+      <SettingsSection ariaLabel="Backup location loading section" title="Backup location">
         <SettingsLoadingState />
       </SettingsSection>
-      <SettingsSection ariaLabel="Backup location loading section" title="Backup location">
+      <SettingsSection ariaLabel="Extra backup copy loading section" title="Extra backup copy">
+        <SettingsLoadingState />
+      </SettingsSection>
+      <SettingsSection ariaLabel="Backup rules loading section" title="Backup rules">
         <SettingsLoadingState />
       </SettingsSection>
     </>
@@ -70,10 +74,11 @@ export function SettingsBackupsSection() {
           summary={state.sourceDispositionSummary}
         />
       </SettingsSection>
-      <BackupRulesSection draft={state.activeDraft} isDesktopRuntime={state.isDesktopRuntime} onChangeField={state.handleDraftField} />
       <SettingsSection ariaLabel="Backup location section" title="Backup location">
         <BackupPathRow backupPath={state.activeDraft.backup_dir || state.defaultBackupPath} defaultBackupPath={state.activeDraft.backup_dir || state.defaultBackupPath} errorMessage={state.pathErrorMessage} isDesktopRuntime={state.isDesktopRuntime} onChangePath={state.handleChangeBackupPath} onRestoreDefault={state.handleRestoreBackupPathDefault} />
       </SettingsSection>
+      <ExtraBackupCopySection draft={state.activeDraft} errorMessage={state.extraPathErrorMessage} isDesktopRuntime={state.isDesktopRuntime} onChangeField={state.handleDraftField} onChangePath={state.handleChangeExtraBackupPath} onRestoreDefault={state.handleRestoreExtraBackupPathDefault} />
+      <BackupRulesSection draft={state.activeDraft} isDesktopRuntime={state.isDesktopRuntime} onChangeField={state.handleDraftField} />
     </>
   );
 }

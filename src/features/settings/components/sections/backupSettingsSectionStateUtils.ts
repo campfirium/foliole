@@ -84,7 +84,24 @@ export async function runCreateBackup(
     return;
   }
   await refreshBackups();
-  setStatusMessage(`Backup created: ${getBackupFileName(result.value.destinationPath)}.`);
+  const backupName = getBackupFileName(result.value.destinationPath);
+  const extraStatus = result.value.extraBackup;
+  if (extraStatus.status === 'failed') {
+    setStatusMessage(`Backup created: ${backupName}. Extra copy failed: ${extraStatus.errorMessage}`);
+    setIsCreatingBackup(false);
+    return;
+  }
+  if (extraStatus.status === 'skipped_same_directory') {
+    setStatusMessage(`Backup created: ${backupName}. Extra copy skipped because it uses the main backup location.`);
+    setIsCreatingBackup(false);
+    return;
+  }
+  if (extraStatus.status === 'copied') {
+    setStatusMessage(`Backup created: ${backupName}. Extra copy created.`);
+    setIsCreatingBackup(false);
+    return;
+  }
+  setStatusMessage(`Backup created: ${backupName}.`);
   setIsCreatingBackup(false);
 }
 

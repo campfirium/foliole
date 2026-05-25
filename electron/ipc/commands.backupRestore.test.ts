@@ -12,6 +12,7 @@ const {
   createApplicationDatabaseBackup: vi.fn().mockResolvedValue({
     sourcePath: '/app/foliole.db',
     destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
+    extraBackup: { destinationPath: null, errorMessage: null, status: 'disabled' },
     totalPages: 3,
     remainingPages: 0
   }),
@@ -52,7 +53,10 @@ vi.mock('./paths.js', () => ({
   })
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./boot.js', () => ({
+  appendBootEvent: vi.fn(),
+  bootReport: vi.fn().mockResolvedValue(undefined)
+}));
 vi.mock('./review.js', () => ({
   reviewGrade: vi.fn(),
   reviewPreview: vi.fn()
@@ -76,6 +80,7 @@ it('dispatches sqlite backup command through invoke handler', async () => {
   ).resolves.toEqual({
     sourcePath: '/app/foliole.db',
     destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
+    extraBackup: { destinationPath: null, errorMessage: null, status: 'disabled' },
     totalPages: 3,
     remainingPages: 0
   });
@@ -92,6 +97,7 @@ it('dispatches sqlite backup command without destination path override', async (
   ).resolves.toEqual({
     sourcePath: '/app/foliole.db',
     destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
+    extraBackup: { destinationPath: null, errorMessage: null, status: 'disabled' },
     totalPages: 3,
     remainingPages: 0
   });

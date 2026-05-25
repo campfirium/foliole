@@ -34,30 +34,7 @@ import {
 } from '../../model/databaseBackupSettings';
 
 import { SettingsBackupsSection } from './SettingsBackupsSection';
-
-const defaultSettings = {
-  auto_daily_days: 7,
-  auto_hourly_hours: 24,
-  auto_monthly_months: 0,
-  auto_weekly_weeks: 4,
-  backup_dir: '/app/Backups',
-  manual_max_count: 10,
-  snapshot_max_count: 5,
-  total_size_limit_bytes: 2 * 1024 * 1024 * 1024,
-  updated_at: '2026-04-02T10:00:00.000Z'
-};
-
-const defaultBackups = [
-  {
-    autoFrequency: 'daily' as const,
-    fileName: 'auto-daily-2026-04-02_08-00-00-000.db',
-    filePath: '/app/Backups/auto-daily-2026-04-02_08-00-00-000.db',
-    kind: 'automatic' as const,
-    snapshotReason: null,
-    sizeBytes: 6 * 1024 * 1024,
-    updatedAt: '2026-04-02T08:00:00.000Z'
-  }
-];
+import { backupEntry, defaultBackups, defaultSettings } from './SettingsBackupsSection.testUtils';
 
 beforeEach(() => {
   vi.mocked(selectRuntimeFolder).mockReset();
@@ -79,6 +56,7 @@ beforeEach(() => {
     ok: true,
     value: {
       destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
+      extraBackup: { destinationPath: null, errorMessage: null, status: 'disabled' },
       remainingPages: 0,
       sourcePath: '/app/Data/foliole.db',
       totalPages: 12
@@ -105,6 +83,10 @@ it('shows backup settings and backup list in the backups section', async () => {
   expect(screen.getByRole('button', { name: 'Change location' })).toHaveTextContent('Backups');
   expect(screen.getByRole('button', { name: 'Change location' })).toHaveAttribute('title', '/app/Backups');
   expect(screen.getByRole('button', { name: 'Change location' }).closest('[data-settings-control-slot]')?.className).toContain('flex-[0_0_auto]');
+  expect(screen.getByRole('button', { name: 'Change extra location' })).toHaveTextContent('Off');
+  expect(screen.getByRole('heading', { name: 'Extra backup copy' })).toBeInTheDocument();
+  expect(screen.getByText('Location')).toBeInTheDocument();
+  expect(screen.getAllByDisplayValue('10')).toHaveLength(2);
   expect(screen.getByRole('button', { name: 'Create backup' }).className).not.toContain('min-w-[');
   expect(screen.getByDisplayValue('24').parentElement?.className).toContain('flex-[0_0_160px]');
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
@@ -166,35 +148,34 @@ it('changes backup location through folder picker and saves immediately', async 
   });
 });
 
+it('changes and turns off the extra backup location', async () => {
+  vi.mocked(selectRuntimeFolder).mockResolvedValue('/cloud/Foliole Backups');
+
+  render(<SettingsBackupsSection />);
+
+  await screen.findByDisplayValue('24');
+  fireEvent.click(screen.getByRole('button', { name: 'Change extra location' }));
+
+  await waitFor(() => {
+    expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ extra_backup_dir: '/cloud/Foliole Backups' })
+    );
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Turn off extra backup location' }));
+
+  await waitFor(() => {
+    expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ extra_backup_dir: '' })
+    );
+  });
+});
+
 it('shows only three backups by default and expands the rest on demand', async () => {
   vi.mocked(listDatabaseBackups).mockResolvedValue([
-    {
-      autoFrequency: null,
-      fileName: 'manual-2026-04-02_11-00-00-000.db',
-      filePath: '/app/Backups/manual-2026-04-02_11-00-00-000.db',
-      kind: 'manual' as const,
-      snapshotReason: null,
-      sizeBytes: 5 * 1024 * 1024,
-      updatedAt: '2026-04-02T11:00:00.000Z'
-    },
-    {
-      autoFrequency: null,
-      fileName: 'manual-2026-04-02_10-00-00-000.db',
-      filePath: '/app/Backups/manual-2026-04-02_10-00-00-000.db',
-      kind: 'manual' as const,
-      snapshotReason: null,
-      sizeBytes: 5 * 1024 * 1024,
-      updatedAt: '2026-04-02T10:00:00.000Z'
-    },
-    {
-      autoFrequency: null,
-      fileName: 'manual-2026-04-02_09-00-00-000.db',
-      filePath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
-      kind: 'manual' as const,
-      snapshotReason: null,
-      sizeBytes: 5 * 1024 * 1024,
-      updatedAt: '2026-04-02T09:00:00.000Z'
-    },
+    backupEntry('manual-2026-04-02_11-00-00-000.db', '2026-04-02T11:00:00.000Z'),
+    backupEntry('manual-2026-04-02_10-00-00-000.db', '2026-04-02T10:00:00.000Z'),
+    backupEntry('manual-2026-04-02_09-00-00-000.db', '2026-04-02T09:00:00.000Z'),
     ...defaultBackups
   ]);
 
@@ -214,15 +195,7 @@ it('creates a manual backup and refreshes the list', async () => {
   vi.mocked(listDatabaseBackups)
     .mockResolvedValueOnce(defaultBackups)
     .mockResolvedValueOnce([
-      {
-        autoFrequency: null,
-        fileName: 'manual-2026-04-02_09-00-00-000.db',
-        filePath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
-        kind: 'manual' as const,
-        snapshotReason: null,
-        sizeBytes: 5 * 1024 * 1024,
-        updatedAt: '2026-04-02T09:00:00.000Z'
-      }
+      backupEntry('manual-2026-04-02_09-00-00-000.db', '2026-04-02T09:00:00.000Z')
     ]);
 
   render(<SettingsBackupsSection />);
@@ -234,6 +207,30 @@ it('creates a manual backup and refreshes the list', async () => {
     expect(createDatabaseBackup).toHaveBeenCalledWith();
   });
   expect(screen.getByText('Backup created: manual-2026-04-02_09-00-00-000.db.')).toBeInTheDocument();
+});
+
+it('shows a warning when the extra backup copy fails after the main backup is created', async () => {
+  vi.mocked(createDatabaseBackup).mockResolvedValue({
+    ok: true,
+    value: {
+      destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
+      extraBackup: {
+        destinationPath: null,
+        errorMessage: 'Cloud folder unavailable.',
+        status: 'failed'
+      },
+      remainingPages: 0,
+      sourcePath: '/app/Data/foliole.db',
+      totalPages: 12
+    }
+  });
+
+  render(<SettingsBackupsSection />);
+
+  await screen.findByRole('button', { name: 'Create backup' });
+  fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
+
+  expect(await screen.findByText(/Extra copy failed: Cloud folder unavailable/)).toBeInTheDocument();
 });
 
 it('restores from a listed backup', async () => {

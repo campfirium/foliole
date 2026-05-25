@@ -37,6 +37,8 @@ beforeEach(() => {
     auto_monthly_months: 0,
     auto_weekly_weeks: 4,
     backup_dir: '/app/Backups',
+    extra_backup_dir: '',
+    extra_backup_max_count: 10,
     manual_max_count: 10,
     snapshot_max_count: 5,
     total_size_limit_bytes: 2 * 1024 * 1024 * 1024,

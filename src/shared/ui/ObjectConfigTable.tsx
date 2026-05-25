@@ -39,6 +39,7 @@ interface ObjectConfigPathButtonProps {
 
 interface ObjectConfigPathControlProps extends ObjectConfigPathButtonProps {
   onRestoreDefault: () => void;
+  restoreLabel?: string | undefined;
   restoreDisabled?: boolean;
 }
 
@@ -117,17 +118,18 @@ export function ObjectConfigPathButton({
 
 export function ObjectConfigPathControl({
   onRestoreDefault,
+  restoreLabel = 'Restore default',
   restoreDisabled,
   ...buttonProps
 }: ObjectConfigPathControlProps) {
   return (
     <div className={SETTINGS_PATH_CONTROL_CLASS_NAME} data-settings-path-control>
       <button
-        aria-label="Restore default"
+        aria-label={restoreLabel}
         className={settingsResetButtonClassName(SETTINGS_PATH_RESET_BUTTON_CLASS_NAME)}
         disabled={restoreDisabled ?? buttonProps.disabled}
         onClick={onRestoreDefault}
-        title="Restore default"
+        title={restoreLabel}
         type="button"
       >
         <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />

@@ -162,19 +162,44 @@ export interface NativeSqliteBackupResult {
   destinationPath: string;
   totalPages: number;
   remainingPages: number;
+  extraBackup: NativeExtraBackupResult;
 }
 
+export type NativeExtraBackupResult =
+  | {
+      status: 'disabled';
+      destinationPath: null;
+      errorMessage: null;
+    }
+  | {
+      status: 'copied';
+      destinationPath: string;
+      errorMessage: null;
+    }
+  | {
+      status: 'skipped_same_directory';
+      destinationPath: null;
+      errorMessage: string;
+    }
+  | {
+      status: 'failed';
+      destinationPath: null;
+      errorMessage: string;
+    };
 export interface NativeBackupSettings {
   auto_daily_days: number;
   auto_hourly_hours: number;
   auto_monthly_months: number;
   auto_weekly_weeks: number;
   backup_dir: string;
+  extra_backup_dir: string;
+  extra_backup_max_count: number;
   manual_max_count: number;
   snapshot_max_count: number;
   total_size_limit_bytes: number;
   updated_at: string;
 }
+
 
 export interface NativeSqliteBackupEntry {
   fileName: string;
