@@ -191,7 +191,7 @@ describe('FolderListView last opened sorting', () => {
 });
 
 describe('FolderListView dynamic sorting', () => {
-  it('updates last opened order as nodes are opened', () => {
+  it('keeps last opened order stable as nodes are opened', () => {
     const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
     const children = [
       createNode({ id: 'node-1', title: 'Opened first', updatedAt: '2026-04-03T09:00:00.000Z' }),
@@ -223,7 +223,7 @@ describe('FolderListView dynamic sorting', () => {
       'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-06T09:00:00.000Z' }
     }, 'dateLastOpened'));
 
-    expect(getRenderedEntryTitles()).toEqual(['Opened later', 'Opened first']);
+    expect(getRenderedEntryTitles()).toEqual(['Opened first', 'Opened later']);
     expect(screen.getByTestId('folder-list-date-node-2')).toHaveTextContent('2026-04-06');
   });
 

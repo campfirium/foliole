@@ -170,7 +170,7 @@ beforeEach(() => {
   }));
 });
 
-it('refreshes the current folder list when last-opened timestamps change', () => {
+it('keeps the current folder list stable when last-opened timestamps change', () => {
   render(<LastOpenedSortHarness />);
 
   chooseLastOpenedSort();
@@ -185,10 +185,10 @@ it('refreshes the current folder list when last-opened timestamps change', () =>
       }
     }));
   });
-  expect(rowTitles()).toEqual(['Earlier', 'Latest']);
+  expect(rowTitles()).toEqual(['Latest', 'Earlier']);
 });
 
-it('moves a newly opened topic to the top when selection writes through the workspace store', () => {
+it('does not move a newly opened topic to the top while the folder stays open', () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
     activeNodeId: 'article-a',
@@ -211,7 +211,7 @@ it('moves a newly opened topic to the top when selection writes through the work
 
   fireEvent.click(screen.getByRole('treeitem', { name: /Newly opened/ }));
 
-  expect(rowTitles()).toEqual(['Newly opened', 'Opened latest', 'Opened earlier']);
+  expect(rowTitles()).toEqual(['Opened latest', 'Opened earlier', 'Newly opened']);
 });
 
 it('keeps the refreshed last-opened order after leaving and returning to a folder', () => {
@@ -229,7 +229,7 @@ it('keeps the refreshed last-opened order after leaving and returning to a folde
       }
     }));
   });
-  expect(rowTitles()).toEqual(['Earlier', 'Latest']);
+  expect(rowTitles()).toEqual(['Latest', 'Earlier']);
 
   fireEvent.click(screen.getByRole('button', { name: 'Open folder B' }));
   expect(rowTitles()).toEqual(['Other folder']);

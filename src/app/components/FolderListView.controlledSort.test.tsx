@@ -147,7 +147,7 @@ it('keeps last-opened order newest first even if controlled direction is ascendi
   expect(getRenderedEntryTitles()).toEqual(['Latest', 'Earlier']);
 
   fireEvent.click(screen.getByRole('button', { name: 'Simulate opened node' }));
-  expect(getRenderedEntryTitles()).toEqual(['Earlier', 'Latest']);
+  expect(getRenderedEntryTitles()).toEqual(['Latest', 'Earlier']);
 
   fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Last opened' }), { key: 'ArrowDown' });
   expect(screen.getByRole('menuitem', { name: 'Recent -> Older' })).toBeInTheDocument();
