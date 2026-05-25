@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createDefaultImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const { loadImportSourceWorkspaceSettings, runReadwiseReaderImportInRuntime } = vi.hoisted(() => ({
   loadImportSourceWorkspaceSettings: vi.fn(),
@@ -52,6 +53,7 @@ afterEach(() => {
 });
 
 it('runs Readwise auto sync after the selected interval while the app is open', async () => {
+  const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue();
   renderHook(() => useReadwiseAutoSync());
 
   await act(async () => {
@@ -68,9 +70,11 @@ it('runs Readwise auto sync after the selected interval while the app is open', 
   expect(runReadwiseReaderImportInRuntime).toHaveBeenCalledWith(
     expect.objectContaining({ readwiseRootPath: '/Readwise' })
   );
+  expect(rehydrate).toHaveBeenCalledTimes(1);
 });
 
 it('keeps scheduling Readwise auto sync after a failed run', async () => {
+  const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue();
   runReadwiseReaderImportInRuntime.mockRejectedValueOnce(new Error('sync failed'));
   renderHook(() => useReadwiseAutoSync());
 
@@ -98,4 +102,5 @@ it('keeps scheduling Readwise auto sync after a failed run', async () => {
   });
 
   expect(runReadwiseReaderImportInRuntime).toHaveBeenCalledTimes(2);
+  expect(rehydrate).not.toHaveBeenCalled();
 });

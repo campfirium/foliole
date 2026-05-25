@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { NativeReadwiseImportRunResult } from '../../../lib/platform/nativeImportContract';
+import { refreshWorkspaceAfterReadwiseImport } from '../hooks/readwiseWorkspaceRefresh';
 
 import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
 import {
@@ -108,7 +109,9 @@ export function useReadwiseManualSync(input: {
       tone: 'normal'
     });
     try {
-      setStatus(formatSyncResult(await input.onRunSync(payload)));
+      const result = await input.onRunSync(payload);
+      await refreshWorkspaceAfterReadwiseImport(result);
+      setStatus(formatSyncResult(result));
     } catch (error) {
       setStatus({
         failedSources: [],

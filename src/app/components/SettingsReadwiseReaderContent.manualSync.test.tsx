@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeReadwiseImportRunResult } from '../../../lib/platform/nativeImportContract';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { createReadwiseImportSources } from './importSourceWorkspaceModel';
 import {
@@ -29,6 +30,7 @@ vi.mock('../../shared/platform/runtimeShellEvents', () => ({
 beforeEach(() => {
   inspectReadwiseReaderSetup.mockReset();
   onReadwiseReaderImportProgress.mockReset();
+  vi.restoreAllMocks();
 });
 
 type RunSync = (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
@@ -48,6 +50,7 @@ function renderManualSyncHarness(onRunSync: RunSync) {
 
 it('keeps manual Readwise sync status compact while running', async () => {
   const runResult = createDeferredReadwiseImportRunResult();
+  const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue();
   renderManualSyncHarness(() => runResult.promise);
 
   fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
@@ -62,6 +65,7 @@ it('keeps manual Readwise sync status compact while running', async () => {
   await waitFor(() => {
     expect(screen.getByText('Synced 1 Readwise source topic.')).toBeInTheDocument();
   });
+  expect(rehydrate).toHaveBeenCalledTimes(1);
 });
 
 it('shows failed Readwise source details after manual sync', async () => {
@@ -94,6 +98,7 @@ it('shows failed Readwise source details after manual sync', async () => {
 });
 
 it('does not present unchanged scanned Readwise sources as synced topics', async () => {
+  const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue();
   const onRunSync: RunSync = async () => ({
     completed_at: '2026-05-11T00:01:00.000Z',
     entry_count: 30,
@@ -111,4 +116,5 @@ it('does not present unchanged scanned Readwise sources as synced topics', async
     expect(screen.getByText('No new or changed Readwise sources.')).toBeInTheDocument();
   });
   expect(screen.queryByText('Synced 30 Readwise source topics.')).not.toBeInTheDocument();
+  expect(rehydrate).not.toHaveBeenCalled();
 });
