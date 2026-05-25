@@ -22,6 +22,14 @@ function isDesktopDebugProbeEnabled() {
   return process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE === '1' || Boolean(process.env.ELECTRON_RENDERER_URL);
 }
 
+function isWorkspaceDebugBridgeEnabled() {
+  if (process.env.FOLIOLE_ENABLE_WORKSPACE_DEBUG_BRIDGE === '1' && process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1') {
+    return true;
+  }
+  const workdir = process.env.FOLIOLE_WORKDIR;
+  return process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && Boolean(workdir) && workdir !== process.cwd?.();
+}
+
 function subscribe(channel, handler) {
   if (
     channel !== IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL &&
@@ -151,7 +159,8 @@ const electronApi = {
 if (isDesktopDebugProbeEnabled()) {
   electronApi.debug = {
     preloadPath,
-    runtimeHead: process.env.FOLIOLE_RUNTIME_HEAD ?? null
+    runtimeHead: process.env.FOLIOLE_RUNTIME_HEAD ?? null,
+    workspaceDebugBridge: isWorkspaceDebugBridgeEnabled()
   };
 }
 

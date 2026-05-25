@@ -249,6 +249,7 @@ const sanitizedCompletedReadwiseProgressPayload = {
     const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
     expect(electronApi.debug).toEqual({
       preloadPath: PRELOAD_PATH,
-      runtimeHead: 'head-123'
+      runtimeHead: 'head-123',
+      workspaceDebugBridge: false
     });
   });

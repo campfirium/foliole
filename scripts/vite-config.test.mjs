@@ -10,7 +10,7 @@ describe('vite config', () => {
   });
 
   it('does not reload the dev renderer when Electron rewrites its runtime startup html', () => {
-    expect(viteConfig.server?.watch?.ignored).toContain('**/.electron-user-data/runtime-renderer-index.html');
+    expect(viteConfig.server?.watch?.ignored).toContain('**/.tmp/electron-user-data/runtime-renderer-index.html');
   });
 
   it('keeps Electron dev renderer updates behind explicit preview reload intents', () => {

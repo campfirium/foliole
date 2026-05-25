@@ -10,11 +10,9 @@ const EXEMPT_ROOTS = new Set([
   'electron-dist',
   'logs',
   'node_modules',
-  'playwright-report',
   'ref',
   'release',
   'src-tauri',
-  'test-results',
   'trees'
 ]);
 const EXEMPT_PATTERNS = [/^\.tmp(?:$|[-_])/, /^_tmp(?:$|[-_])/, /^tmp(?:$|[-_])/];

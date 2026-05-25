@@ -32,18 +32,26 @@ async function createFixtureRoot() {
     'ios',
     'lib',
     'logs',
-    'playwright-report',
     'ref',
     'release',
     'scripts',
     'src',
     'src-tauri',
-    'test-results',
     'tests',
     'trees'
   ];
 
-  await Promise.all(directoryNames.map((name) => mkdir(path.join(fixtureRoot, name), { recursive: true })));
+  const unauthorizedDirectoryNames = [
+    'docs',
+    'playwright-report',
+    'test-results'
+  ];
+
+  await Promise.all(
+    [...directoryNames, ...unauthorizedDirectoryNames].map((name) =>
+      mkdir(path.join(fixtureRoot, name), { recursive: true })
+    )
+  );
   return fixtureRoot;
 }
 
@@ -74,7 +82,7 @@ describe('check-repository-root-boundary', () => {
 
     expect(cliResult.exitCode).toBe(1);
     expect(output).toContain('status: VIOLATION');
-    expect(output).toContain('unauthorized=docs');
+    expect(output).toContain('unauthorized=docs,playwright-report,test-results');
     expect(output).toContain('allowed=android,electron,ios,lib,scripts,src,tests,.claude,.git,.github,.githooks,.lab');
     expect(output).not.toContain('.tmp-fixture');
     expect(output).not.toContain('ref');

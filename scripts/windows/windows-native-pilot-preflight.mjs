@@ -113,9 +113,9 @@ export function resolvePilotPreflight(env = process.env, options = {}) {
       bridgeReadyFile: nativePaths.bridgeReadyFile,
       electronUserDataDir: nativePaths.userDataPath,
       gitBashPath,
-      homeDir: `${workdir}\\.home`,
+      homeDir: `${workdir}\\.tmp\\home`,
       logDir: nativePaths.logDir,
-      npmCacheDir: `${workdir}\\.npm-cache`,
+      npmCacheDir: `${workdir}\\.tmp\\npm-cache`,
       readyFile: nativePaths.appReadyFile,
       tempDir: `${workdir}\\.tmp`,
       workdir

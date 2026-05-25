@@ -11,7 +11,8 @@ function resolveTimeoutMs() {
 
 export default defineConfig({
   fullyParallel: false,
-  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report/render-diagnostics' }]],
+  outputDir: '.tmp/playwright-results/render-diagnostics',
+  reporter: [['list'], ['html', { open: 'never', outputFolder: '.tmp/playwright-report/render-diagnostics' }]],
   testDir: './tests/manual-render-diagnostics',
   timeout: resolveTimeoutMs(),
   use: {

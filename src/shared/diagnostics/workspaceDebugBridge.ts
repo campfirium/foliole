@@ -3,6 +3,7 @@ import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNode
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
 import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
+import { isWorkspaceDebugEnabledForRuntime } from './workspaceDebugBridgeGate';
 import { forceUpdateDebugNodeContent } from './workspaceDebugNodeContent';
 import { type DebugNodeSeed, persistSeedNodes } from './workspaceDebugSeedPersistence';
 import { type WorkspaceSyncDebugApi, createWorkspaceSyncDebugApi } from './workspaceSyncDebugBridge';
@@ -49,17 +50,17 @@ interface WorkspaceDebugApi {
   updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }
 
-type CombinedWorkspaceDebugApi = WorkspaceDebugApi & WorkspaceSyncDebugApi;
-type WorkspaceDebugWindow = Window & { electronAPI?: { debug?: unknown }; __folioleWorkspaceDebug?: WorkspaceDebugApi };
+type WorkspaceDebugWindow = Window & { electronAPI?: { debug?: { workspaceDebugBridge?: boolean } }; __folioleWorkspaceDebug?: WorkspaceDebugApi };
 
 function isWorkspaceDebugEnabled() {
-  if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
-    return true;
-  }
   if (typeof window === 'undefined') {
     return false;
   }
-  return Boolean((window as WorkspaceDebugWindow).electronAPI?.debug);
+  return isWorkspaceDebugEnabledForRuntime({
+    isDev: import.meta.env.DEV,
+    isTest: import.meta.env.MODE === 'test',
+    workspaceDebugBridge: (window as WorkspaceDebugWindow).electronAPI?.debug?.workspaceDebugBridge
+  });
 }
 
 function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode: Node): Record<string, Node> {
@@ -227,5 +228,5 @@ export function installWorkspaceDebugBridge() {
     return;
   }
 
-  targetWindow.__folioleWorkspaceDebug = createWorkspaceDebugApi() as CombinedWorkspaceDebugApi;
+  targetWindow.__folioleWorkspaceDebug = createWorkspaceDebugApi() as WorkspaceDebugApi & WorkspaceSyncDebugApi;
 }

@@ -11,8 +11,10 @@ import {
   verifyRendererReload,
   waitForReadyMarkers
 } from './electron-native-health-check-support.mjs';
+import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
+const nativePaths = resolveWindowsNativePaths(repoRoot);
 const VITE_HOST = '127.0.0.1';
 const VITE_PORT_DEFAULT = 24600;
 const VITE_PORT_MAX_ATTEMPTS = 8;
@@ -131,7 +133,7 @@ async function main() {
   const vite = await startVite();
   const session = `windows-native-health-${Date.now()}`;
   const electronPath = path.join(repoRoot, 'node_modules', 'electron', 'dist', 'electron.exe');
-  const userDataPath = path.join(repoRoot, '.electron-user-data');
+  const userDataPath = nativePaths.userDataPath;
   const env = {
     ...process.env,
     ELECTRON_RENDERER_URL: vite.viteUrl,
