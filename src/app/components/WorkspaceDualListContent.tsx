@@ -10,6 +10,7 @@ import {
 } from '../../features/nodes/model/specialNodes';
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
@@ -43,6 +44,7 @@ export interface WorkspaceDualListContentProps {
   nodesById: Record<string, Node>;
   nodeOrder: string[];
   onOpenMoveToNode: WorkspaceLayoutFlatProps['onOpenMoveToNode'];
+  onOpenPostponeTopicPanel?: WorkspaceLayoutFlatProps['onOpenPostponeTopicPanel'];
   onOpenNotesView: () => void;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings?: () => void;
@@ -114,6 +116,7 @@ function renderStandardContentColumn(
       itemIds={dualListState.topicNodeOrder}
       nodesById={dualListState.topicNodesById}
       onOpenMoveToNode={props.onOpenMoveToNode}
+      {...definedProps({ onOpenPostponeTopicPanel: props.onOpenPostponeTopicPanel })}
       onSelectNode={props.onSelectNode}
     />
   );

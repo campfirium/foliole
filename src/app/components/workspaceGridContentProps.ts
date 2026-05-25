@@ -96,6 +96,7 @@ function selectWorkspaceListAreaProps({
     nodesById: props.nodeList.nodesById,
     nodeOrder: props.nodeList.nodeOrder,
     onOpenMoveToNode: props.nodeList.onOpenMoveToNode,
+    onOpenPostponeTopicPanel: props.review.onOpenPostponeTopicPanel,
     onOpenNotesView: props.nodeList.onOpenNotesView,
     onOpenExternalSelection: props.externalLibrary.onOpenExternalSelection,
     onOpenExternalLibrarySettings: props.externalLibrary.onOpenExternalLibrarySettings,

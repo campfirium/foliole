@@ -186,6 +186,7 @@ export function createPaletteRunnerArgs(args: {
     onToggleListVisibility: args.layoutProps.layoutChrome.onToggleListVisibility,
     openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     openNotesView: args.layoutProps.nodeList.onOpenNotesView,
+    openPostponeTopicPanel: () => args.layoutProps.review.onOpenPostponeTopicPanel(),
     openReadwiseReaderSettings: () => openReadwiseReaderSettings(args.runtime),
     openTrashView: args.trash.openTrashView,
     paletteItems: args.paletteItems,

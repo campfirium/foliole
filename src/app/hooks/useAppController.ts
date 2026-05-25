@@ -21,6 +21,7 @@ import { useFormalImport } from './useFormalImport';
 import { useResumeReviewItem } from './useResumeReviewItem';
 import { useReviewQueueDocumentPrefetch } from './useReviewQueueDocumentPrefetch';
 import { useReviewSessionRuntime } from './useReviewSessionRuntime';
+import { useReviewTopicDelayPanel } from './useReviewTopicDelayPanel';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
 
 function useDerivedControllerState(args: {
@@ -35,6 +36,7 @@ function useDerivedControllerState(args: {
   isWorkspaceHydrated: boolean;
   nowIso: string;
   priorityQuickSet: ReturnType<typeof useControllerPriorityQuickSet>;
+  reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
   reviewPreview: ReturnType<typeof useReviewSessionRuntime>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
   resumeReviewItem: () => void;
@@ -65,6 +67,7 @@ function useDerivedControllerState(args: {
       isWorkspaceHydrated: args.isWorkspaceHydrated,
       nowIso: args.nowIso,
       priorityQuickSet: args.priorityQuickSet,
+      reviewTopicDelayPanel: args.reviewTopicDelayPanel,
       reviewDueCount,
       reviewPreview: args.reviewPreview,
       reviewSettings: args.reviewSettings,
@@ -81,6 +84,7 @@ function buildAppControllerResult(args: {
   controller: ReturnType<typeof useWorkspaceControllerState>;
   layoutProps: WorkspaceLayoutProps;
   reviewSourceTopicDeleteDialog: ReturnType<typeof useReviewSourceTopicDeleteDialog>;
+  reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
 }): AppControllerResult {
   return {
     hotkeySettings: args.auxiliaryState.hotkeySettings,
@@ -95,6 +99,7 @@ function buildAppControllerResult(args: {
       onCancel: args.reviewSourceTopicDeleteDialog.onCancel,
       onConfirm: args.reviewSourceTopicDeleteDialog.onConfirm
     },
+    reviewTopicDelayPanel: args.reviewTopicDelayPanel,
     searchState: args.auxiliaryState.searchState
   };
 }
@@ -108,6 +113,7 @@ function buildControllerLayoutState(args: {
   isWorkspaceHydrated: boolean;
   nowIso: string;
   priorityQuickSet: ReturnType<typeof useControllerPriorityQuickSet>;
+  reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useReviewSessionRuntime>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
@@ -127,6 +133,7 @@ function buildControllerLayoutState(args: {
     nav: args.controller.nav,
     nowIso: args.nowIso,
     priorityQuickSet: args.priorityQuickSet,
+    reviewTopicDelayPanel: args.reviewTopicDelayPanel,
     reviewDueCount: args.reviewDueCount,
     reviewPreview: args.reviewPreview,
     reviewSettings: args.reviewSettings,
@@ -145,6 +152,18 @@ function buildControllerLayoutState(args: {
   });
 }
 
+function useControllerQuickEntryState(args: {
+  controller: ReturnType<typeof useWorkspaceControllerState>;
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
+  isStudyMode: boolean;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  const priorityQuickSet = useControllerPriorityQuickSet({ hotkeys: args.hotkeys, runtime: args.controller.runtime, ws: args.ws });
+  const reviewTopicDelayPanel = useReviewTopicDelayPanel({ ws: args.ws });
+  useCurrentNodeKeyboardShortcuts({ controller: args.controller, isStudyMode: args.isStudyMode, ws: args.ws });
+  return { priorityQuickSet, reviewTopicDelayPanel };
+}
+
 export function useAppController(args: {
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
 }): AppControllerResult {
@@ -157,8 +176,7 @@ export function useAppController(args: {
   const formalImport = useFormalImport();
   const { exitStudyMode, isStudyMode, startStudyMode } = controller.study;
   const hotkeys = useCommandShortcutState(APP_SHORTCUT_COMMAND_IDS);
-  const priorityQuickSet = useControllerPriorityQuickSet({ hotkeys, runtime: controller.runtime, ws });
-  useCurrentNodeKeyboardShortcuts({ controller, isStudyMode, ws });
+  const { priorityQuickSet, reviewTopicDelayPanel } = useControllerQuickEntryState({ controller, hotkeys, isStudyMode, ws });
   const reviewPreview = useReviewSessionRuntime({ isStudyMode, nowIso, reviewSettings, ws });
   useReviewQueueDocumentPrefetch(ws.reviewSession);
   const isCurrentReviewItemGradable = (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
@@ -185,6 +203,7 @@ export function useAppController(args: {
     isWorkspaceHydrated,
     nowIso,
     priorityQuickSet,
+    reviewTopicDelayPanel,
     reviewPreview,
     reviewSettings,
     resumeReviewItem,
@@ -204,5 +223,5 @@ export function useAppController(args: {
     ws
   });
 
-  return buildAppControllerResult({ auxiliaryState, controller, layoutProps, reviewSourceTopicDeleteDialog });
+  return buildAppControllerResult({ auxiliaryState, controller, layoutProps, reviewSourceTopicDeleteDialog, reviewTopicDelayPanel });
 }

@@ -5,6 +5,7 @@ import type { ReviewSourceTopicDeleteDialogState } from './appControllerReviewSo
 import type { AppGoToNodeState } from './appGoToNodeState';
 import type { AppHotkeySettings } from './appHotkeySettings';
 import type { AppSearchState } from './appSearchState';
+import type { useReviewTopicDelayPanel } from './useReviewTopicDelayPanel';
 
 export interface AppPaletteState {
   isOpen: boolean;
@@ -22,5 +23,6 @@ export interface AppControllerResult {
   onOpenCompanionSyncSettings: () => void;
   paletteState: AppPaletteState;
   reviewSourceTopicDeleteDialog: Omit<ReviewSourceTopicDeleteDialogState, 'requestDeleteSourceTopic'>;
+  reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
   searchState: AppSearchState;
 }

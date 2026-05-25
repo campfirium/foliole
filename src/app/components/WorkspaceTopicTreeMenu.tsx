@@ -18,6 +18,7 @@ export function WorkspaceTopicTreeMenu(props: {
   handleSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: WorkspaceTopicTreeProps['onOpenMoveToNode'];
+  onOpenPostponeTopicPanel?: WorkspaceTopicTreeProps['onOpenPostponeTopicPanel'];
   topicTreeState: ReturnType<typeof useWorkspaceTopicTreeInteraction>['topicTreeState'];
 }) {
   const [reviewSchedulingNodeId, setReviewSchedulingNodeId] = useState<string | null>(null);
@@ -34,6 +35,7 @@ export function WorkspaceTopicTreeMenu(props: {
         isVirtualViewOpen={false}
         nodesById={props.nodesById}
         onOpenMoveToNode={props.onOpenMoveToNode}
+        {...(props.onOpenPostponeTopicPanel ? { onOpenPostponeTopic: props.onOpenPostponeTopicPanel } : {})}
         onOpenReviewScheduling={setReviewSchedulingNodeId}
         onSelect={props.handleSelectNode}
         restoreNode={props.actions.restoreNode}

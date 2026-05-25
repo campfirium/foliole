@@ -29,6 +29,10 @@ export function canDismissNode(node: WorkspaceListNode | undefined) {
   return node.reading?.state !== 'dismissed';
 }
 
+export function canPostponeTopic(node: WorkspaceListNode | undefined) {
+  return Boolean(node?.kind === 'topic' && node.reading?.state !== 'dismissed');
+}
+
 function collectDescendantIds(rootNodeId: string, nodesById: WorkspaceListNodesById) {
   const descendants: string[] = [];
   const pending = [rootNodeId];

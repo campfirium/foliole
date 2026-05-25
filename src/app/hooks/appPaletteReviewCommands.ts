@@ -6,6 +6,7 @@ export interface ReviewPaletteCommandOptions {
   canGradeReview: boolean;
   canSoonReadingReview: boolean;
   canPostponeReviewTopic: boolean;
+  canDelayReviewTopic?: boolean;
   canReadReviewTopic: boolean;
   canDismissReadingReview: boolean;
   canDeleteReviewItem: boolean;
@@ -27,6 +28,7 @@ export const REVIEW_PALETTE_COMMANDS = [
   { id: APP_COMMAND_IDS.gradeReviewEasy, title: 'Grade Review: Easy', section: 'Review', keywords: ['grade'] },
   { id: APP_COMMAND_IDS.readingReviewSoon, title: 'Reading: Soon', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewLater, title: 'Reading: Later', section: 'Review', keywords: ['reading'] },
+  { id: APP_COMMAND_IDS.readingReviewPostpone, title: 'Postpone Topic...', section: 'Review', keywords: ['reading', 'topic', 'delay'] },
   { id: APP_COMMAND_IDS.readingReviewRead, title: 'Reading: Read', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewDismiss, title: 'Reading: Dismiss', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.deleteCurrentReviewItem, title: 'Delete Current Review Item', section: 'Review', keywords: ['delete', 'trash'] },
@@ -53,6 +55,7 @@ export function isReviewCommandEnabled(id: string, options: ReviewPaletteCommand
   if (id === APP_COMMAND_IDS.revealReviewAnswer) return options.canRevealAnswer;
   if (id === APP_COMMAND_IDS.readingReviewSoon) return options.canSoonReadingReview;
   if (id === APP_COMMAND_IDS.readingReviewLater) return options.canPostponeReviewTopic;
+  if (id === APP_COMMAND_IDS.readingReviewPostpone) return options.canDelayReviewTopic ?? false;
   if (id === APP_COMMAND_IDS.readingReviewRead) return options.canReadReviewTopic;
   if (id === APP_COMMAND_IDS.readingReviewDismiss) return options.canDismissReadingReview;
   if (id === APP_COMMAND_IDS.deleteCurrentReviewItem) return options.canDeleteReviewItem;

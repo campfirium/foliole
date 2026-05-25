@@ -90,6 +90,7 @@ export interface BuildLayoutPropsArgs {
   onRegisterEditorDraftFlush: WorkspaceLayoutFlatProps['onRegisterEditorDraftFlush'];
   onPastedTextAnchors: WorkspaceLayoutFlatProps['onPastedTextAnchors'];
   onEnterPriorityQuickSet: WorkspaceLayoutFlatProps['onEnterPriorityQuickSet'];
+  onOpenPostponeTopicPanel: WorkspaceLayoutFlatProps['onOpenPostponeTopicPanel'];
   onNodeContentChange: WorkspaceLayoutFlatProps['onNodeContentChange'];
   setNodeViewState: WorkspaceLayoutFlatProps['setNodeViewState'];
   onEditorReady: WorkspaceLayoutFlatProps['onEditorReady'];

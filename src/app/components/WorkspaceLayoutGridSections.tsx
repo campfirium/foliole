@@ -29,6 +29,7 @@ export interface WorkspaceListAreaProps {
   nodesById: Record<string, Node>;
   nodeOrder: string[];
   onOpenMoveToNode: () => void;
+  onOpenPostponeTopicPanel?: (nodeId?: string | null) => boolean;
   onOpenNotesView: () => void;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings: () => void;
@@ -109,6 +110,7 @@ function renderWorkspaceListBody(
     | 'nodesById'
     | 'nodeOrder'
     | 'onOpenMoveToNode'
+    | 'onOpenPostponeTopicPanel'
     | 'onOpenNotesView'
     | 'onOpenExternalSelection'
     | 'onOpenExternalLibrarySettings'
@@ -147,6 +149,7 @@ function renderWorkspaceDualListBody(
     | 'nodesById'
     | 'nodeOrder'
     | 'onOpenMoveToNode'
+    | 'onOpenPostponeTopicPanel'
     | 'onOpenNotesView'
     | 'onOpenExternalSelection'
     | 'onOpenExternalLibrarySettings'
@@ -175,6 +178,7 @@ function renderWorkspaceDualListBody(
       nodesById={props.nodesById}
       nodeOrder={props.nodeOrder}
       onOpenMoveToNode={props.onOpenMoveToNode}
+      {...definedProps({ onOpenPostponeTopicPanel: props.onOpenPostponeTopicPanel })}
       onOpenNotesView={props.onOpenNotesView}
       onOpenExternalSelection={props.onOpenExternalSelection}
       onOpenExternalLibrarySettings={props.onOpenExternalLibrarySettings}

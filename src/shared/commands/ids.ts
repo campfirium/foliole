@@ -33,6 +33,7 @@ export const APP_COMMAND_IDS = {
   gradeReviewEasy: 'review.gradeEasy',
   readingReviewSoon: 'review.readingSoon',
   readingReviewLater: 'review.readingLater',
+  readingReviewPostpone: 'review.readingPostpone',
   readingReviewRead: 'review.readingRead',
   readingReviewDismiss: 'review.readingDismiss',
   deleteCurrentReviewItem: 'review.deleteCurrentItem',

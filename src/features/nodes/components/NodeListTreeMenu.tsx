@@ -5,7 +5,7 @@ import { isHomeNode, isProtectedRootNode, isVirtualNode, isVirtualRootNode } fro
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
-import { canToggleSequentialReading, hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
+import { canPostponeTopic, canToggleSequentialReading, hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
 import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction, createToggleSequentialReadingAction } from './nodeListMenuActions';
 import { createCreateNodeHandler, resolveCreateCommands } from './NodeListTreeCreateMenu';
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
@@ -23,6 +23,7 @@ interface NodeListTreeMenuProps {
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
+  onOpenPostponeTopic?: (nodeId: string) => void;
   onOpenReviewScheduling?: (nodeId: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   restoreNode: (nodeId: string) => void;
@@ -61,6 +62,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     showMergeHighlightsIntoTopicAction: showNodeImportActions,
     showMoveToNodeAction: isSingleNodeTarget && canNodeBeMoved(primaryTarget),
     showReviewSchedulingAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget) && !isVirtualRootNode(primaryTarget) && !isVirtualNode(primaryTarget),
+    showPostponeTopicAction: isSingleNodeTarget && canPostponeTopic(primaryTarget),
     showSequentialReadingAction: isSingleNodeTarget && canToggleSequentialReading(primaryTarget, props.nodesById),
     showNodeImportActions,
     showRenameAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget),
@@ -91,6 +93,18 @@ function createOpenReviewSchedulingHandler(
   return () => {
     if (primaryTargetId && props.onOpenReviewScheduling) {
       props.onOpenReviewScheduling(primaryTargetId);
+    }
+    props.contextMenu.closeContextMenu();
+  };
+}
+
+function createOpenPostponeTopicHandler(
+  props: NodeListTreeMenuProps,
+  primaryTargetId: string | null
+) {
+  return () => {
+    if (primaryTargetId && props.onOpenPostponeTopic) {
+      props.onOpenPostponeTopic(primaryTargetId);
     }
     props.contextMenu.closeContextMenu();
   };
@@ -143,6 +157,7 @@ function buildNodeListContextMenuProps(
     }),
     onMoveToNode: createMoveToNodeHandler(props, menuState.primaryTargetId),
     onOpenReviewScheduling: createOpenReviewSchedulingHandler(props, menuState.primaryTargetId),
+    onOpenPostponeTopic: createOpenPostponeTopicHandler(props, menuState.primaryTargetId),
     onPasteIntoNode: props.contextMenu.closeContextMenu,
     onRenameNode: () => (requestNodeRename(menuState.primaryTargetId), props.contextMenu.closeContextMenu()),
     onRestoreNode: () => (
@@ -166,6 +181,7 @@ function buildNodeListContextMenuProps(
     showRenameAction: menuState.showRenameAction,
     showReturnAction: menuState.isNotesMenu && hasReturnTargets(menuState.contextTargets, props.nodesById),
     showReviewSchedulingAction: menuState.showReviewSchedulingAction && Boolean(props.onOpenReviewScheduling),
+    showPostponeTopicAction: menuState.showPostponeTopicAction && Boolean(props.onOpenPostponeTopic),
     showRootCreateOnly: menuState.isRootMenu || menuState.isHomeTarget || menuState.showVirtualCreateOnly,
     showSequentialReadingAction: menuState.isNotesMenu && menuState.showSequentialReadingAction,
     top: menuPosition.top
