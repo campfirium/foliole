@@ -56,6 +56,7 @@ export function resolveWorkspaceTopicTreeRowDragProps(
     isDropTarget: drag.dropTargetNodeId === nodeId,
     onDragEnd: drag.onDragEnd,
     onDragEnter: drag.onDragEnterNode,
+    onDragLeave: drag.onDragLeaveNode,
     onDragOver: drag.onDragOverNode,
     onDragStart: drag.onDragStartNode,
     onDrop: drag.onDropOnNode

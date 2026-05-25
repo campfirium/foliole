@@ -43,6 +43,7 @@ interface NodeTreeRowProps {
   trailingLabelContent?: ReactNode;
   onDragEnd?: () => void;
   onDragEnter?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
+  onDragLeave?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragOver?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragStart?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDrop?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
@@ -105,6 +106,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
       nodeId={props.nodeId}
       {...(props.onDragEnd ? { onDragEnd: props.onDragEnd } : {})}
       {...(props.onDragEnter ? { onDragEnter: props.onDragEnter } : {})}
+      {...(props.onDragLeave ? { onDragLeave: props.onDragLeave } : {})}
       {...(props.onDragOver ? { onDragOver: props.onDragOver } : {})}
       {...(props.onDragStart ? { onDragStart: props.onDragStart } : {})}
       {...(props.onDrop ? { onDrop: props.onDrop } : {})}
@@ -173,6 +175,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.onContextMenu === next.onContextMenu &&
     previous.onDragEnd === next.onDragEnd &&
     previous.onDragEnter === next.onDragEnter &&
+    previous.onDragLeave === next.onDragLeave &&
     previous.onDragOver === next.onDragOver &&
     previous.onDragStart === next.onDragStart &&
     previous.onDrop === next.onDrop &&
