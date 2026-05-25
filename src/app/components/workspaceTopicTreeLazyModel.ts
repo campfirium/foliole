@@ -91,9 +91,6 @@ function resolveTopicTreeSortRefreshKey(
   sort: WorkspaceContentSortState
 ) {
   const baseKey = args.sortRefreshVersion ?? 0;
-  if (sort.key === 'lastOpenedAt') {
-    return `${baseKey}:${args.itemIds.map((nodeId) => args.nodeViewById[nodeId]?.updatedAt ?? '').join('\u0000')}`;
-  }
   if (sort.key === 'modifiedAt') {
     return `${baseKey}:${args.itemIds.map((nodeId) => args.nodesById[nodeId]?.updatedAt ?? '').join('\u0000')}`;
   }

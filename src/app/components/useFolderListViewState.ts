@@ -65,7 +65,7 @@ function filterFolderListNodes(nodes: Node[], searchQuery: string) {
 }
 
 function isDynamicFolderListSortKey(sortKey: FolderListSortKey) {
-  return sortKey === 'dateSaved';
+  return sortKey === 'dateLastOpened' || sortKey === 'dateSaved';
 }
 
 function buildListMembershipKey(nodes: Node[]) {
