@@ -40,6 +40,16 @@ describe('trash root model', () => {
     expect(resolveTrashRootId('restored', source, ['restored'])).toBeNull();
   });
 
+  it('selects deleted roots after workspace normalization removes them from node order', () => {
+    const deletedRoot = { ...createNode('deleted-root', 'Deleted root'), deletedAt: '2026-05-24T00:00:00.000Z' };
+    const deletedChild = { ...createNode('deleted-child', 'Deleted child', 'deleted-root'), deletedAt: '2026-05-24T00:00:00.000Z' };
+    const visible = createNode('visible', 'Visible');
+    const source = { 'deleted-child': deletedChild, 'deleted-root': deletedRoot, visible };
+
+    expect(selectTrashRootIds(['visible'], source, ['deleted-root', 'deleted-child'])).toEqual(['deleted-root']);
+    expect(filterTrashRootIdsByTitle(['deleted-root'], ['visible'], source, ['deleted-root', 'deleted-child'], 'child')).toEqual(['deleted-root']);
+  });
+
   it('resolves non-root deleted nodes to the highest deleted ancestor', () => {
     expect(resolveTrashRootId('item', nodesById, ['folder', 'topic', 'item'])).toBe('folder');
     expect(resolveTrashRootId('item', nodesById, ['topic', 'item'])).toBe('topic');
