@@ -1,6 +1,7 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import {
@@ -65,10 +66,12 @@ export function resolveReadingProgressState(args: {
       : mergedPendingNodeViewById,
     nodeViewIdsToPersist: resolveNodeViewIdsToPersist({
       activeNodeIdToPersist: resolveActiveNodeIdToPersist({
-        activeNodeIdOverride: args.activeNodeIdOverride,
-        captureNodeIdOverride: args.captureNodeIdOverride,
         includePendingNodeViewStates: args.includePendingNodeViewStates,
-        latestActiveNodeId: args.activeNodeIdRef.current
+        latestActiveNodeId: args.activeNodeIdRef.current,
+        ...definedProps({
+          activeNodeIdOverride: args.activeNodeIdOverride,
+          captureNodeIdOverride: args.captureNodeIdOverride
+        })
       }),
       captured,
       includePendingNodeViewStates: args.includePendingNodeViewStates,

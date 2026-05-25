@@ -1,3 +1,4 @@
+import { onWindowEscape } from '../../../shared/platform/keyboard';
 import { appFloatingSurfaceClassName } from '../../../shared/ui/FloatingSurface';
 
 interface RemoteImageFailureContextMenuOptions {
@@ -77,20 +78,17 @@ export function openRemoteImageFailureContextMenu(options: RemoteImageFailureCon
   }
   menu.append(...items);
 
-  const closeOnEscape = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') closeActiveRemoteImageFailureMenu();
-  };
   const disconnectObserver = new MutationObserver(() => {
     if (!options.anchor.isConnected) closeActiveRemoteImageFailureMenu();
   });
+  const unlistenEscape = onWindowEscape(closeActiveRemoteImageFailureMenu);
   closeActiveMenu = () => {
     overlay.remove();
     menu.remove();
-    window.removeEventListener('keydown', closeOnEscape);
+    unlistenEscape();
     disconnectObserver.disconnect();
   };
   document.body.append(overlay, menu);
   disconnectObserver.observe(document.body, { childList: true, subtree: true });
-  window.addEventListener('keydown', closeOnEscape);
   menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
 }

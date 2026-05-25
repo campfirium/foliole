@@ -20,8 +20,10 @@ it('renders shared control wrappers without Radix theme context', () => {
   );
 
   expect(screen.getByRole('button', { name: 'Save' }).tagName).toBe('BUTTON');
+  expect(screen.getByRole('button', { name: 'Topic row' }).className).toContain('focus:outline-none');
   expect(screen.getByRole('button', { name: 'Topic row' }).className).toContain('focus-visible:ring-ring');
-  expect(screen.getByRole('button', { name: 'Add item' }).tagName).toBe('BUTTON');
+  expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('focus:outline-none');
+  expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('focus-visible:ring-ring');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).tagName).toBe('H3');
   expect(screen.getByText('Panel body')).toBeInTheDocument();
   expect(screen.getByText('Ready').tagName).toBe('SPAN');

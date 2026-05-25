@@ -61,18 +61,20 @@ function useResolvedReadingProgressState(
       captureMode: ReadingProgressCaptureMode = 'snapshot'
     ): ResolvedReadingProgressState | null => {
       return resolveReadingProgressState({
-        activeNodeIdOverride,
         activeNodeIdRef: latest.activeNodeIdRef,
         captureMode,
-        captureNodeIdOverride,
         editorRef: args.editorRef,
-        getReadingPositionSelection: args.getReadingPositionSelection,
         includePendingNodeViewStates,
         isImmersiveMode: args.isImmersiveMode,
         isViewingTrashNode: args.isViewingTrashNode,
         isWorkspaceHydratedRef: latest.isWorkspaceHydratedRef,
         nodeViewByIdRef: latest.nodeViewByIdRef,
-        pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef
+        pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef,
+        ...definedProps({
+          activeNodeIdOverride,
+          captureNodeIdOverride,
+          getReadingPositionSelection: args.getReadingPositionSelection
+        })
       });
     },
     [args, latest]

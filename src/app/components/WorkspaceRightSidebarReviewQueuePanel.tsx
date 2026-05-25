@@ -108,7 +108,7 @@ function QueueRow(props: {
       <span className="text-right text-[11px] tabular-nums text-foreground/28">{props.index + 1}</span>
       <QueueKindIcon kind={kind} />
       <button
-        className="min-w-0 truncate text-left text-[13.5px] font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/35"
+        className="min-w-0 truncate text-left text-[13.5px] font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/35"
         onClick={() => props.onSelectNode(props.nodeId)}
         type="button"
       >

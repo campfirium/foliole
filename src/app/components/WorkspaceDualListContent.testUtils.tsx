@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { vi } from 'vitest';
 
+import type { NodeSpecialKind } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { definedProps } from '../../shared/lib/definedProps';
 
@@ -13,7 +14,7 @@ export function createWorkspaceContentNode(args: {
   parentNodeId?: string | null;
   title: string;
   content?: string;
-  specialKind?: 'inbox' | 'trash' | 'virtual-root' | 'virtual';
+  specialKind?: NodeSpecialKind;
   virtualFilter?: {
     conditions: Array<{ field: 'text'; operator: 'contains'; value: string }>;
     match: 'all';
