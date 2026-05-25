@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { withResourceGate } from './lib/resource-gate.mjs';
+import { normalizeSpawnCommand } from './lib/windows-spawn-command.mjs';
 
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = path.resolve(process.env.FOLIOLE_RESOURCE_GATE_REPO_ROOT ?? process.cwd() ?? DEFAULT_REPO_ROOT);
@@ -23,8 +24,7 @@ function parseArgs(argv) {
 
 function runCommand(command, env) {
   return new Promise((resolve) => {
-    const [rawBin, ...args] = command;
-    const bin = rawBin === 'npm' && process.platform === 'win32' ? 'npm.cmd' : rawBin;
+    const { args, bin } = normalizeSpawnCommand(command);
     const child = spawn(bin, args, {
       cwd: REPO_ROOT,
       env,
