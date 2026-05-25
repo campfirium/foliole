@@ -57,6 +57,7 @@ function createWorkspaceActionStubs() {
     gradeReviewCard: async () => false,
     readReviewTopic: async () => false,
     postponeReviewTopic: async () => false,
+    setReviewTopicDelay: async () => false,
     revisitReviewTopicSoon: async () => false,
     dismissReviewTopic: async () => false,
     exitReviewSession: () => undefined,

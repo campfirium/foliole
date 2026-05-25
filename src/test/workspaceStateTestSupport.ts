@@ -2,9 +2,8 @@ import { vi } from 'vitest';
 
 import { createInitialWorkspaceState, type WorkspaceState } from '../store/workspaceStore';
 
-export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}): WorkspaceState {
+function createTestWorkspaceActionMocks(): Partial<WorkspaceState> {
   return {
-    ...createInitialWorkspaceState(),
     readReviewTopic: vi.fn(async () => false),
     createChildNode: vi.fn(async () => 'node-child'),
     createFormulaClozeNode: vi.fn(async () => null),
@@ -14,6 +13,7 @@ export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}
     createRootNode: vi.fn(async () => 'node-root'),
     createVirtualNode: vi.fn(async () => 'node-virtual'),
     postponeReviewTopic: vi.fn(async () => false),
+    setReviewTopicDelay: vi.fn(async () => false),
     deleteImageClozeRegion: vi.fn(),
     deleteNode: vi.fn(),
     deleteNodePermanently: vi.fn(),
@@ -59,6 +59,13 @@ export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}
     updateNodeReveal: vi.fn(async () => false),
     updateNodeTitle: vi.fn(async () => false),
     updateVirtualNodeFilter: vi.fn(),
-    ...overrides
   };
+}
+
+export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}): WorkspaceState {
+  return {
+    ...createInitialWorkspaceState(),
+    ...createTestWorkspaceActionMocks(),
+    ...overrides
+  } as WorkspaceState;
 }

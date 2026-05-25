@@ -104,6 +104,13 @@ function canAnnotateSelection(args: {
   return args.ws.nodesById[args.activeNodeId]?.kind !== 'folder';
 }
 
+function canDelayReviewTopic(args: {
+  activeNodeId: string | null; isViewingTrashNode: boolean; ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
+}) {
+  const activeNode = args.activeNodeId ? args.ws.nodesById[args.activeNodeId] : null;
+  return Boolean(activeNode?.kind === 'topic' && args.activeNodeId && !args.isViewingTrashNode && !args.ws.trashedNodeIds.includes(args.activeNodeId) && activeNode.reading?.state !== 'dismissed');
+}
+
 export function resolveEditorAwarePaletteHistoryOptions(args: {
   activeNodeId: string | null;
   appActionHistory: Parameters<typeof getWorkspaceUndoTitle>[0];
@@ -165,6 +172,7 @@ function buildPaletteOptions(
     canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,
     canSoonReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canPostponeReviewTopic: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+    canDelayReviewTopic: canDelayReviewTopic(args),
     canReadReviewTopic: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDeleteReviewItem: args.hasReviewCard,

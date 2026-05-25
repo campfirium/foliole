@@ -22,6 +22,7 @@ function selectWorkspaceReviewActions(state: WorkspaceState) {
     dismissReviewTopic: state.dismissReviewTopic,
     readReviewTopic: state.readReviewTopic,
     postponeReviewTopic: state.postponeReviewTopic,
+    setReviewTopicDelay: state.setReviewTopicDelay,
     revisitReviewTopicSoon: state.revisitReviewTopicSoon,
     gradeReviewCard: state.gradeReviewCard,
     revealReviewAnswer: state.revealReviewAnswer,

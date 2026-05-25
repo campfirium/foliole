@@ -120,6 +120,7 @@ export interface WorkspaceLayoutProps {
     | 'onGradeReview'
     | 'onReadReviewTopic'
     | 'onPostponeReviewTopic'
+    | 'onOpenPostponeTopicPanel'
     | 'onDismissReviewTopic'
     | 'onRevisitReviewTopicSoon'
     | 'onContinueReading'

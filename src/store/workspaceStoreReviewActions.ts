@@ -24,10 +24,11 @@ import {
   createSetReviewSessionModeAction,
   createStartReviewSessionAction
 } from './workspaceStoreReviewSessionActions';
+import { createSetReviewTopicDelayActionWithPending } from './workspaceStoreTopicDelayAction';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
-type WorkspaceReviewActions = Pick<WorkspaceState, 'readReviewTopic' | 'postponeReviewTopic' | 'dismissReviewTopic' | 'exitReviewSession' | 'gradeReviewCard' | 'resumeReviewSession' | 'revealReviewAnswer' | 'setReviewSessionMode' | 'revisitReviewTopicSoon' | 'startReviewSession'>;
+type WorkspaceReviewActions = Pick<WorkspaceState, 'readReviewTopic' | 'postponeReviewTopic' | 'setReviewTopicDelay' | 'dismissReviewTopic' | 'exitReviewSession' | 'gradeReviewCard' | 'resumeReviewSession' | 'revealReviewAnswer' | 'setReviewSessionMode' | 'revisitReviewTopicSoon' | 'startReviewSession'>;
 function createRevealReviewAnswerAction(set: WorkspaceSet): WorkspaceReviewActions['revealReviewAnswer'] {
   return () => {
     set((state) => {
@@ -139,6 +140,7 @@ export function createWorkspaceReviewActions(
     gradeReviewCard: createGradeReviewCardAction(set, get, scheduler),
     readReviewTopic: createReadReviewTopicActionWithPending(set, get, readingPendingNodeIds),
     postponeReviewTopic: createPostponeReviewTopicActionWithPending(set, get, readingPendingNodeIds),
+    setReviewTopicDelay: createSetReviewTopicDelayActionWithPending(set, get, readingPendingNodeIds),
     revisitReviewTopicSoon: createRevisitReviewTopicSoonAction(set, get),
     dismissReviewTopic: createDismissReviewTopicActionWithPending(set, get, readingPendingNodeIds),
     exitReviewSession: createExitReviewSessionAction(set)

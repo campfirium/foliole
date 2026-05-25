@@ -1,6 +1,7 @@
 import {
   ArchiveRestore,
   BookOpenCheck,
+  CalendarClock,
   CircleOff,
   Clipboard,
   GitMerge,
@@ -36,6 +37,7 @@ interface NodeListContextMenuProps {
   onMergeHighlightsIntoTopic?: () => void;
   onMoveToNode?: () => void;
   onOpenReviewScheduling?: () => void;
+  onOpenPostponeTopic?: () => void;
   onPasteIntoNode?: () => void;
   onRenameNode?: () => void;
   onReturnNode?: () => void;
@@ -47,6 +49,7 @@ interface NodeListContextMenuProps {
   showMergeHighlightsIntoTopicAction?: boolean;
   showMoveToNodeAction?: boolean;
   showReviewSchedulingAction?: boolean;
+  showPostponeTopicAction?: boolean;
   showPasteIntoNodeAction?: boolean;
   showRenameAction?: boolean;
   showRootCreateOnly?: boolean;
@@ -75,6 +78,7 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       {...(props.onMergeHighlightsIntoTopic ? { onMergeHighlightsIntoTopic: props.onMergeHighlightsIntoTopic } : {})}
       {...(props.onMoveToNode ? { onMoveToNode: props.onMoveToNode } : {})}
       {...(props.onOpenReviewScheduling ? { onOpenReviewScheduling: props.onOpenReviewScheduling } : {})}
+      {...(props.onOpenPostponeTopic ? { onOpenPostponeTopic: props.onOpenPostponeTopic } : {})}
       {...(props.onPasteIntoNode ? { onPasteIntoNode: props.onPasteIntoNode } : {})}
       {...(props.onRenameNode ? { onRenameNode: props.onRenameNode } : {})}
       {...(props.onReturnNode ? { onReturnNode: props.onReturnNode } : {})}
@@ -84,6 +88,7 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       {...(props.showMergeHighlightsIntoTopicAction !== undefined ? { showMergeHighlightsIntoTopicAction: props.showMergeHighlightsIntoTopicAction } : {})}
       {...(props.showMoveToNodeAction !== undefined ? { showMoveToNodeAction: props.showMoveToNodeAction } : {})}
       {...(props.showReviewSchedulingAction !== undefined ? { showReviewSchedulingAction: props.showReviewSchedulingAction } : {})}
+      {...(props.showPostponeTopicAction !== undefined ? { showPostponeTopicAction: props.showPostponeTopicAction } : {})}
       {...(props.showPasteIntoNodeAction !== undefined ? { showPasteIntoNodeAction: props.showPasteIntoNodeAction } : {})}
       {...(props.showRenameAction !== undefined ? { showRenameAction: props.showRenameAction } : {})}
       {...(props.showRootCreateOnly !== undefined ? { showRootCreateOnly: props.showRootCreateOnly } : {})}
@@ -153,6 +158,7 @@ function shouldShowReviewGroup(props: NoteMenuItemsProps) {
   return !props.showRootCreateOnly && (
     (props.showReturnAction && props.onReturnNode) ||
     (props.showReviewSchedulingAction && props.onOpenReviewScheduling) ||
+    (props.showPostponeTopicAction && props.onOpenPostponeTopic) ||
     (props.showDismissAction && props.onDismissNode) ||
     (props.showDismissEntireTopicAction && props.onDismissEntireTopic) ||
     (props.showSequentialReadingAction && props.onToggleSequentialReading)
@@ -185,6 +191,7 @@ function renderReviewItems(props: NoteMenuItemsProps) {
     <>
       {props.showReturnAction && props.onReturnNode ? <NodeContextMenuItem icon={RelearnMenuIcon} onSelect={props.onReturnNode}>Relearn</NodeContextMenuItem> : null}
       {props.showReviewSchedulingAction && props.onOpenReviewScheduling ? <NodeContextMenuItem icon={SlidersHorizontal} onSelect={props.onOpenReviewScheduling}>Review options…</NodeContextMenuItem> : null}
+      {props.showPostponeTopicAction && props.onOpenPostponeTopic ? <NodeContextMenuItem icon={CalendarClock} onSelect={props.onOpenPostponeTopic}>Postpone Topic...</NodeContextMenuItem> : null}
       {props.showDismissAction && props.onDismissNode ? <NodeContextMenuItem icon={DismissMenuIcon} onSelect={props.onDismissNode}>Dismiss</NodeContextMenuItem> : null}
       {props.showDismissEntireTopicAction && props.onDismissEntireTopic ? <NodeContextMenuItem icon={CircleOff} onSelect={props.onDismissEntireTopic}>Dismiss Entire Topic</NodeContextMenuItem> : null}
       {props.showSequentialReadingAction && props.onToggleSequentialReading ? (

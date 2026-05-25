@@ -37,6 +37,11 @@ const ReviewSourceTopicDeleteDialog = lazy(() =>
     default: module.ReviewSourceTopicDeleteDialog
   }))
 );
+const ReviewTopicDelayPanel = lazy(() =>
+  import('./components/ReviewTopicDelayPanel').then((module) => ({
+    default: module.ReviewTopicDelayPanel
+  }))
+);
 const SearchPalette = lazy(() =>
   import('./components/SearchPalette').then((module) => ({ default: module.SearchPalette }))
 );
@@ -159,6 +164,7 @@ function AppOverlays({
         {controller.reviewSourceTopicDeleteDialog.isOpen ? (
           <ReviewSourceTopicDeleteDialog {...controller.reviewSourceTopicDeleteDialog} />
         ) : null}
+        {controller.reviewTopicDelayPanel?.isOpen ? <ReviewTopicDelayPanel {...controller.reviewTopicDelayPanel} /> : null}
         {searchPreviewResult ? (
           <SearchResultPreviewPanel
             nodesById={controller.layoutProps.nodeList.nodesById}

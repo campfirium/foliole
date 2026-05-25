@@ -52,6 +52,9 @@ export interface BuildControllerLayoutPropsArgs {
     isActive: boolean;
     shortcutLabel: string;
   };
+  reviewTopicDelayPanel: {
+    open: (nodeId?: string | null) => boolean;
+  };
   listResize: ReturnType<typeof useListResizer>;
   nav: ReturnType<typeof useWorkspaceNavigation>;
   nowIso: string;
@@ -83,6 +86,7 @@ export interface BuildControllerLayoutPropsArgs {
     gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;
     readReviewTopic: () => Promise<boolean>;
     postponeReviewTopic: () => Promise<boolean>;
+    setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string) => Promise<boolean>;
     dismissReviewTopic: () => Promise<boolean>;
     revisitReviewTopicSoon: () => Promise<boolean>;
     isListCollapsed: boolean;
@@ -144,6 +148,7 @@ function createLayoutHandlerArgs(
     onEditorRedo: args.ws.redoEditorOperation,
     onRegisterEditorDraftFlush: args.runtime.registerPendingEditorDraftFlush,
     onEnterPriorityQuickSet: args.priorityQuickSet.enter,
+    onOpenPostponeTopicPanel: args.reviewTopicDelayPanel.open,
     onNodeContentChange: createNodeContentChangeHandler(args),
     setNodeViewState: args.ws.setNodeViewState,
     onEditorReady: createEditorReadyHandler(args),
