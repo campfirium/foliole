@@ -5,6 +5,7 @@ import type { DiagnosticLogPayload } from './runtimeLogging';
 export interface ElectronDebugMetadata {
   preloadPath: string | null;
   runtimeHead: string | null;
+  workspaceDebugBridge?: boolean;
 }
 
 export interface NativeKeyboardInputPayload {

@@ -13,7 +13,8 @@ describe('windows-native-pilot-preflight', () => {
 
     expect(result.ok).toBe(true);
     expect(result.config.workdir).toBe(expectedWorkdir);
-    expect(result.config.homeDir).toBe(`${expectedWorkdir}\\.home`);
+    expect(result.config.homeDir).toBe(`${expectedWorkdir}\\.tmp\\home`);
+    expect(result.config.npmCacheDir).toBe(`${expectedWorkdir}\\.tmp\\npm-cache`);
     expect(result.config.readyFile).toBe(`${expectedWorkdir}\\.windows-native-boot-ready.json`);
     expect(result.config.bridgeReadyFile).toBe(`${expectedWorkdir}\\.windows-native-bridge-ready.json`);
     expect(result.config.logDir).toBe(`${expectedWorkdir}\\.tmp\\windows-native-client`);
