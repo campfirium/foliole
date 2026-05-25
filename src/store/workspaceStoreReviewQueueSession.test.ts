@@ -3,14 +3,10 @@ import { expect, it } from 'vitest';
 import type { Node, NodeReadingProfile, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
-import type { WorkspaceState } from './workspaceStore';
-import { createInitialWorkspaceState } from './workspaceStore';
+import { createInitialWorkspaceState, type WorkspaceState } from './workspaceStore';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 
-type WorkspaceSetInput =
-  | WorkspaceState
-  | Partial<WorkspaceState>
-  | ((snapshot: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>);
+type WorkspaceSetInput = WorkspaceState | Partial<WorkspaceState> | ((snapshot: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>);
 
 function createHistoryActionStubs() {
   return {
@@ -38,10 +34,10 @@ function createWorkspaceActionStubs() {
     setRightSidebarWidth: () => undefined,
     setRightSidebarCollapsed: () => undefined,
     setActiveNode: () => undefined,
-    updateNodeTitle: () => undefined,
-    updateNodeContent: () => undefined,
+    updateNodeTitle: async () => false,
+    updateNodeContent: async () => false,
     updateVirtualNodeFilter: () => undefined,
-    updateNodeReveal: () => undefined,
+    updateNodeReveal: async () => false,
     updateNodePriority: () => undefined,
     updateNodeDesiredRetention: () => undefined,
     updateNodeShortTerm: () => undefined,
@@ -54,10 +50,11 @@ function createWorkspaceActionStubs() {
     setReviewSessionMode: () => undefined,
     revealReviewAnswer: () => undefined,
     gradeReviewCard: async () => false,
-    completeReviewItem: async () => false,
-    deferReviewItem: async () => false,
-    soonReviewItem: async () => false,
-    dismissReviewItem: async () => false,
+    readReviewTopic: async () => false,
+    postponeReviewTopic: async () => false,
+    setReviewTopicDelay: async () => false,
+    revisitReviewTopicSoon: async () => false,
+    dismissReviewTopic: async () => false,
     exitReviewSession: () => undefined,
     deleteNode: () => undefined,
     deleteImageClozeRegion: () => undefined,
@@ -65,14 +62,15 @@ function createWorkspaceActionStubs() {
     restoreNode: async () => null,
     deleteNodePermanently: () => undefined,
     deleteNodesPermanently: () => undefined,
-    createRootNode: () => 'unused',
-    createChildNode: () => 'unused',
-    createVirtualNode: () => 'unused',
-    createHighlightNodeFromSelection: () => null,
-    createQANodeFromSelection: () => null,
-    createFormulaClozeNode: () => null,
-    createImageClozeNodes: () => [],
-    moveNode: async () => false, moveNodes: async () => false
+    createRootNode: async () => 'unused',
+    createChildNode: async () => 'unused',
+    createVirtualNode: async () => 'unused',
+    createHighlightNodeFromSelection: async () => null,
+    createQANodeFromSelection: async () => null,
+    createFormulaClozeNode: async () => null,
+    createImageClozeNodes: async () => [],
+    moveNode: async () => false,
+    moveNodes: async () => false
   };
 }
 

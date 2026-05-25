@@ -73,6 +73,7 @@ function findUnstableWorkspaceStoreSelectors(sourceFile: ts.SourceFile) {
       node.arguments.length > 0
     ) {
       const selector = node.arguments[0];
+      if (!selector) return;
       const selected = selectorReturnExpression(selector);
       if (selected && !isUseShallowWrapped(selector) && returnsDerivedSnapshot(selected)) {
         findings.push(describePosition(sourceFile, node));

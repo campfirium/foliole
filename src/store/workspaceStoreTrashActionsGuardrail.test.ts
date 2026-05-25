@@ -2,91 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
-import type { WorkspaceState } from './workspaceStore';
-import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import {
+  createWorkspaceNodeActionsFixture,
+  createWorkspaceNodeActionsSetStateHarness
+} from './workspaceStoreNodeActions.test-support';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
-
-type WorkspaceSetInput =
-  | WorkspaceState
-  | Partial<WorkspaceState>
-  | ((snapshot: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>);
-
-function createWorkspaceFixture(): WorkspaceState {
-  const initial = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
-  return {
-    ...initial,
-    goBack: () => null,
-    goForward: () => null,
-    goToParent: () => null,
-    jumpToAncestorNode: () => null,
-    openNode: () => null,
-    resetLayout: () => undefined,
-    setNodeViewState: () => undefined,
-    setDocumentMaxWidth: () => undefined,
-    setListWidth: () => undefined,
-    setListCollapsed: () => undefined,
-    setRightSidebarWidth: () => undefined,
-    setRightSidebarCollapsed: () => undefined,
-    setActiveNode: () => undefined,
-    updateNodeTitle: () => undefined,
-    updateNodeContent: () => undefined,
-    updateVirtualNodeFilter: () => undefined,
-    updateNodeReveal: () => undefined,
-    updateNodePriority: () => undefined,
-    updateNodeDesiredRetention: () => undefined,
-    updateNodeShortTerm: () => undefined,
-    setNodeSequentialReading: () => false,
-    dismissNode: () => false,
-    undoWorkspaceAction: () => false,
-    redoWorkspaceAction: () => false,
-    pushEditorOperationEntry: () => undefined,
-    deleteEditorAnnotationNodes: () => undefined,
-    undoEditorOperation: () => false,
-    redoEditorOperation: () => false,
-    relearnNode: () => false,
-    startReviewSession: () => false,
-    resumeReviewSession: () => false,
-    setReviewSessionMode: () => undefined,
-    revealReviewAnswer: () => undefined,
-    gradeReviewCard: async () => false,
-    completeReviewItem: async () => false,
-    deferReviewItem: async () => false,
-    soonReviewItem: async () => false,
-    dismissReviewItem: async () => false,
-    exitReviewSession: () => undefined,
-    deleteNode: () => undefined,
-    deleteImageClozeRegion: () => undefined,
-    deleteNodes: () => undefined,
-    restoreNode: async () => null,
-    deleteNodePermanently: () => undefined,
-    deleteNodesPermanently: () => undefined,
-    createRootNode: () => 'unused',
-    createChildNode: () => 'unused',
-    createVirtualNode: () => 'unused',
-    createHighlightNodeFromSelection: () => null,
-    createQANodeFromSelection: () => null,
-    createFormulaClozeNode: () => null,
-    createImageClozeNodes: () => [],
-    moveNode: async () => false,
-    moveNodes: async () => false
-  };
-}
-
-function createSetStateHarness(initialState: WorkspaceState) {
-  let state = initialState;
-  const setState = (partial: WorkspaceSetInput) => {
-    const next = typeof partial === 'function' ? partial(state) : partial;
-    state = { ...state, ...next };
-  };
-  return {
-    setState,
-    getState: () => state
-  };
-}
 
 function expectCommandsOnly(invoke: ReturnType<typeof vi.fn>, expected: string) {
   const commands = invoke.mock.calls.map((call) => call[0]);
@@ -100,20 +24,36 @@ function expectCommandsWithoutWorkspacePersist(invoke: ReturnType<typeof vi.fn>,
   expect(commands).not.toContain('save_workspace_state');
 }
 
+function createRuntimeInvoke(
+  handler: (command: string, payload?: Record<string, unknown>) => Promise<unknown> | unknown
+) {
+  return vi.fn(async (command: string, payload?: Record<string, unknown>) => {
+    if (command === 'create_folder' || command === 'create_topic' || command === 'create_item') {
+      return {
+        activeNodeId: (payload?.activeNodeId as string | null | undefined) ?? payload?.nodeId,
+        createdNodeIds: [payload?.nodeId],
+        nodeOrder: payload?.nodeOrder ?? [payload?.nodeId],
+        nodes: [payload]
+      };
+    }
+    return handler(command, payload);
+  });
+}
+
 describe('workspace trash runtime guardrail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('deleteNode uses soft_delete_nodes only and never save_workspace_state', async () => {
-    const invoke = vi.fn(async (command: string, payload?: { nodeIds?: string[] }) =>
+    const invoke = createRuntimeInvoke((command, payload?: { nodeIds?: string[] }) =>
       command === 'soft_delete_nodes' ? { deletedNodeIds: payload?.nodeIds ?? [] } : null
     );
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
-    const seedNodeId = actions.createRootNode('');
-    const childNodeId = actions.createChildNode(seedNodeId, 'child');
+    const seedNodeId = (await actions.createRootNode(''))!;
+    const childNodeId = (await actions.createChildNode(seedNodeId, 'child'))!;
 
     vi.clearAllMocks();
     await actions.deleteNode(childNodeId);
@@ -122,7 +62,7 @@ describe('workspace trash runtime guardrail', () => {
   });
 
   it('restoreNode uses restore_nodes only and never save_workspace_state', async () => {
-    const invoke = vi.fn(async (command: string, payload?: { nodeIds?: string[] }) =>
+    const invoke = createRuntimeInvoke((command, payload?: { nodeIds?: string[] }) =>
       command === 'soft_delete_nodes'
         ? { deletedNodeIds: payload?.nodeIds ?? [] }
         : command === 'restore_nodes'
@@ -130,10 +70,10 @@ describe('workspace trash runtime guardrail', () => {
           : null
     );
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
-    const seedNodeId = actions.createRootNode('');
-    const childNodeId = actions.createChildNode(seedNodeId, 'child');
+    const seedNodeId = (await actions.createRootNode(''))!;
+    const childNodeId = (await actions.createChildNode(seedNodeId, 'child'))!;
     await actions.deleteNode(childNodeId);
     vi.clearAllMocks();
     await actions.restoreNode(childNodeId);
@@ -142,15 +82,15 @@ describe('workspace trash runtime guardrail', () => {
   });
 
   it('deleteNodePermanently uses delete_nodes_permanently only and never save_workspace_state', async () => {
-    const invoke = vi.fn(async (command: string, payload?: { nodeIds?: string[]; nodeOrder?: string[] }) =>
+    const invoke = createRuntimeInvoke((command, payload?: { nodeIds?: string[]; nodeOrder?: string[] }) =>
       command === 'delete_nodes_permanently'
         ? { nodeOrder: payload?.nodeOrder ?? [], removedNodeIds: payload?.nodeIds ?? [] }
         : null
     );
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
-    const rootNodeId = actions.createRootNode('Root 2');
+    const rootNodeId = (await actions.createRootNode('Root 2'))!;
 
     vi.clearAllMocks();
     await actions.deleteNodePermanently(rootNodeId);

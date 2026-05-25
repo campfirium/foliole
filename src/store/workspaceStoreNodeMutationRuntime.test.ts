@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { definedProps } from '../shared/lib/definedProps';
 
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import {
@@ -57,9 +58,9 @@ describe('workspace node mutation runtime acceptance', () => {
   it('keeps local creation side effects when runtime accepts the created root node', async () => {
     vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
     vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder, activeNodeId) => ({
-      activeNodeId,
       createdNodeIds: [node.id],
       nodeOrder,
+      ...definedProps({ activeNodeId }),
       nodes: [{
         nodeId: node.id,
         parentNodeId: node.parentNodeId,
@@ -89,9 +90,9 @@ describe('workspace node mutation runtime acceptance', () => {
 it('keeps virtual node metadata when runtime accepts a newly created virtual node', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
   vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder, activeNodeId) => ({
-    activeNodeId,
     createdNodeIds: [node.id],
     nodeOrder,
+    ...definedProps({ activeNodeId }),
     nodes: [{
       nodeId: node.id,
       parentNodeId: node.parentNodeId,

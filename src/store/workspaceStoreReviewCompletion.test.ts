@@ -78,7 +78,7 @@ it('keeps a completed session checkpoint after reading the last topic', async ()
   });
 
   actions.startReviewSession(now);
-  const completed = await actions.completeReviewItem('2026-03-03T00:05:00.000Z');
+  const completed = await actions.readReviewTopic('2026-03-03T00:05:00.000Z');
 
   expect(completed).toBe(true);
   expect(harness.getState().reviewSession).toMatchObject({

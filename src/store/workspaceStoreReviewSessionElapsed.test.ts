@@ -55,7 +55,7 @@ it('tracks reading elapsed time separately from review elapsed time', async () =
   });
 
   actions.startReviewSession(startedAt);
-  await expect(actions.completeReviewItem(completedAt)).resolves.toBe(true);
+  await expect(actions.readReviewTopic(completedAt)).resolves.toBe(true);
 
   expect(harness.getState().reviewSession.readingElapsedMs).toBe(34 * 60 * 1000);
   expect(harness.getState().reviewSession.reviewElapsedMs).toBe(0);

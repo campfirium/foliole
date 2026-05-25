@@ -39,7 +39,7 @@ function shouldApplyNodePatch(current: Node | undefined, next: Node) {
 }
 
 export function createWorkspaceNodeMutationPatch(
-  state: WorkspaceState,
+  state: Pick<WorkspaceState, 'nodesById'>,
   result: WorkspaceNodeMutationPatchResult
 ): WorkspacePatch {
   const nextNodesById = { ...state.nodesById };

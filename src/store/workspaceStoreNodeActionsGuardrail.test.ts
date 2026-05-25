@@ -2,91 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
-import type { WorkspaceState } from './workspaceStore';
-import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import {
+  createWorkspaceNodeActionsFixture,
+  createWorkspaceNodeActionsSetStateHarness
+} from './workspaceStoreNodeActions.test-support';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
-
-type WorkspaceSetInput =
-  | WorkspaceState
-  | Partial<WorkspaceState>
-  | ((snapshot: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>);
-
-function createWorkspaceFixture(): WorkspaceState {
-  const initial = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
-  return {
-    ...initial,
-    goBack: () => null,
-    goForward: () => null,
-    goToParent: () => null,
-    jumpToAncestorNode: () => null,
-    openNode: () => null,
-    resetLayout: () => undefined,
-    setNodeViewState: () => undefined,
-    setDocumentMaxWidth: () => undefined,
-    setListWidth: () => undefined,
-    setListCollapsed: () => undefined,
-    setRightSidebarWidth: () => undefined,
-    setRightSidebarCollapsed: () => undefined,
-    setActiveNode: () => undefined,
-    updateNodeTitle: async () => false,
-    updateNodeContent: async () => false,
-    updateVirtualNodeFilter: () => undefined,
-    updateNodeReveal: async () => false,
-    updateNodePriority: () => undefined,
-    updateNodeDesiredRetention: () => undefined,
-    updateNodeShortTerm: () => undefined,
-    setNodeSequentialReading: () => false,
-    dismissNode: () => false,
-    undoWorkspaceAction: () => false,
-    redoWorkspaceAction: () => false,
-    pushEditorOperationEntry: () => undefined,
-    deleteEditorAnnotationNodes: () => undefined,
-    undoEditorOperation: () => false,
-    redoEditorOperation: () => false,
-    relearnNode: () => false,
-    startReviewSession: () => false,
-    resumeReviewSession: () => false,
-    setReviewSessionMode: () => undefined,
-    revealReviewAnswer: () => undefined,
-    gradeReviewCard: async () => false,
-    completeReviewItem: async () => false,
-    deferReviewItem: async () => false,
-    soonReviewItem: async () => false,
-    dismissReviewItem: async () => false,
-    exitReviewSession: () => undefined,
-    deleteNode: () => undefined,
-    deleteImageClozeRegion: () => undefined,
-    deleteNodes: () => undefined,
-    restoreNode: async () => null,
-    deleteNodePermanently: () => undefined,
-    deleteNodesPermanently: () => undefined,
-    createRootNode: async () => 'unused',
-    createChildNode: async () => 'unused',
-    createVirtualNode: async () => 'unused',
-    createHighlightNodeFromSelection: async () => null,
-    createQANodeFromSelection: async () => null,
-    createFormulaClozeNode: async () => null,
-    createImageClozeNodes: async () => [],
-    moveNode: async () => false,
-    moveNodes: async () => false
-  };
-}
-
-function createSetStateHarness(initialState: WorkspaceState) {
-  let state = initialState;
-  const setState = (partial: WorkspaceSetInput) => {
-    const next = typeof partial === 'function' ? partial(state) : partial;
-    state = { ...state, ...next };
-  };
-  return {
-    setState,
-    getState: () => state
-  };
-}
 
 function getInvokedCommands(invoke: ReturnType<typeof vi.fn>): string[] {
   return invoke.mock.calls.map((call) => call[0] as string);
@@ -131,7 +55,7 @@ async function createActionsHarness() {
     return null;
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-  const harness = createSetStateHarness(createWorkspaceFixture());
+  const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
   const seedNodeId = (await actions.createRootNode(''))!;
   vi.clearAllMocks();

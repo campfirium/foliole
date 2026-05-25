@@ -12,8 +12,11 @@ import {
 } from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  hasWorkspaceNodeMutationRuntime: vi.fn(() => false),
+  syncCreateNodeMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
+  syncNodeContentWithAnchorsMutationToRuntime: vi.fn(async () => null),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -35,7 +38,7 @@ describe('workspace trash mutation commit boundary', () => {
 
   it('does not apply soft delete patch when runtime fails', async () => {
     const { actions, harness } = createHarness();
-    const nodeId = actions.createRootNode('root 2');
+    const nodeId = (await actions.createRootNode('root 2'))!;
     vi.mocked(syncSoftDeleteNodesToRuntime).mockResolvedValue(undefined);
 
     await actions.deleteNode(nodeId);
@@ -46,7 +49,7 @@ describe('workspace trash mutation commit boundary', () => {
 
   it('removes a soft-deleted current review node only after runtime success', async () => {
     const { actions, harness } = createHarness();
-    const nodeId = actions.createRootNode('root 2');
+    const nodeId = (await actions.createRootNode('root 2'))!;
     harness.setState((state) => ({
       reviewSession: {
         ...state.reviewSession,
@@ -64,7 +67,7 @@ describe('workspace trash mutation commit boundary', () => {
 
   it('does not apply permanent delete patch when runtime fails', async () => {
     const { actions, harness } = createHarness();
-    const nodeId = actions.createRootNode('root 2');
+    const nodeId = (await actions.createRootNode('root 2'))!;
     vi.mocked(syncDeleteNodesPermanentlyToRuntime).mockResolvedValue(undefined);
 
     await actions.deleteNodePermanently(nodeId);
@@ -75,8 +78,8 @@ describe('workspace trash mutation commit boundary', () => {
 
   it('applies permanent delete from runtime returned ids', async () => {
     const { actions, harness } = createHarness();
-    const firstNodeId = actions.createRootNode('root 2');
-    const secondNodeId = actions.createRootNode('root 3');
+    const firstNodeId = (await actions.createRootNode('root 2'))!;
+    const secondNodeId = (await actions.createRootNode('root 3'))!;
     vi.mocked(syncDeleteNodesPermanentlyToRuntime).mockImplementation(async (payload) => ({
       nodeOrder: payload.nodeOrder,
       removedNodeIds: [secondNodeId]
@@ -90,7 +93,7 @@ describe('workspace trash mutation commit boundary', () => {
 
   it('keeps restore patch gated by runtime success', async () => {
     const { actions, harness } = createHarness();
-    const nodeId = actions.createRootNode('root 2');
+    const nodeId = (await actions.createRootNode('root 2'))!;
     vi.mocked(syncSoftDeleteNodesToRuntime).mockImplementation(async (payload) => ({ deletedNodeIds: payload.nodeIds }));
     await actions.deleteNode(nodeId);
     vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue(undefined);

@@ -4,9 +4,9 @@ import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/spe
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
-function resetWorkspaceStore() {
+async function resetWorkspaceStore() {
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
-  useWorkspaceStore.getState().createRootNode('');
+  await useWorkspaceStore.getState().createRootNode('');
 }
 
 function getSeedNodeId() {
@@ -19,14 +19,14 @@ function getSeedNodeId() {
   return seedNodeId;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
-  resetWorkspaceStore();
+  await resetWorkspaceStore();
 });
 
-it('keeps text locator on highlight nodes created from editor selections', () => {
+it('keeps text locator on highlight nodes created from editor selections', async () => {
   const seedNodeId = getSeedNodeId();
-  const createdId = useWorkspaceStore.getState().createHighlightNodeFromSelection(seedNodeId, 'selected text', 'hl-1', {
+  const createdId = await useWorkspaceStore.getState().createHighlightNodeFromSelection(seedNodeId, 'selected text', 'hl-1', {
     id: 'hl-1',
     kind: 'highlight',
     locator: {
@@ -48,9 +48,9 @@ it('keeps text locator on highlight nodes created from editor selections', () =>
   });
 });
 
-it('keeps text locator on cloze nodes created from editor selections', () => {
+it('keeps text locator on cloze nodes created from editor selections', async () => {
   const seedNodeId = getSeedNodeId();
-  const createdId = useWorkspaceStore.getState().createQANodeFromSelection(
+  const createdId = await useWorkspaceStore.getState().createQANodeFromSelection(
     seedNodeId,
     'What is [...]?',
     'selected text',
@@ -78,9 +78,9 @@ it('keeps text locator on cloze nodes created from editor selections', () => {
   });
 });
 
-it('keeps grouped text locators on multi-range cloze nodes created from editor selections', () => {
+it('keeps grouped text locators on multi-range cloze nodes created from editor selections', async () => {
   const seedNodeId = getSeedNodeId();
-  const createdId = useWorkspaceStore.getState().createQANodeFromSelection(
+  const createdId = await useWorkspaceStore.getState().createQANodeFromSelection(
     seedNodeId,
     '[...] Beta [...] Delta',
     'Alpha\nGamma',

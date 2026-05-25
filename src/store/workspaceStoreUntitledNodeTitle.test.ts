@@ -15,52 +15,52 @@ beforeEach(() => {
   resetWorkspaceStore();
 });
 
-it('increments Untitled titles for repeated empty root nodes', () => {
+it('increments Untitled titles for repeated empty root nodes', async () => {
   resetToEmptyWorkspace();
 
-  const firstId = useWorkspaceStore.getState().createRootNode();
-  const secondId = useWorkspaceStore.getState().createRootNode();
-  const thirdId = useWorkspaceStore.getState().createRootNode();
+  const firstId = (await useWorkspaceStore.getState().createRootNode())!;
+  const secondId = (await useWorkspaceStore.getState().createRootNode())!;
+  const thirdId = (await useWorkspaceStore.getState().createRootNode())!;
 
   expect(useWorkspaceStore.getState().nodesById[firstId]?.title).toBe('Untitled');
   expect(useWorkspaceStore.getState().nodesById[secondId]?.title).toBe('Untitled 1');
   expect(useWorkspaceStore.getState().nodesById[thirdId]?.title).toBe('Untitled 2');
 });
 
-it('keeps incrementing Untitled titles while the series still exists', () => {
+it('keeps incrementing Untitled titles while the series still exists', async () => {
   resetToEmptyWorkspace();
 
-  const firstId = useWorkspaceStore.getState().createRootNode();
-  const secondId = useWorkspaceStore.getState().createRootNode();
-  const thirdId = useWorkspaceStore.getState().createRootNode();
+  const firstId = (await useWorkspaceStore.getState().createRootNode())!;
+  const secondId = (await useWorkspaceStore.getState().createRootNode())!;
+  const thirdId = (await useWorkspaceStore.getState().createRootNode())!;
 
   useWorkspaceStore.getState().deleteNode(secondId);
   useWorkspaceStore.getState().deleteNode(thirdId);
 
-  const fourthId = useWorkspaceStore.getState().createRootNode();
+  const fourthId = (await useWorkspaceStore.getState().createRootNode())!;
 
   expect(useWorkspaceStore.getState().nodesById[firstId]?.title).toBe('Untitled');
   expect(useWorkspaceStore.getState().nodesById[fourthId]?.title).toBe('Untitled 3');
 });
 
-it('resets Untitled titles after the series is fully removed', () => {
+it('resets Untitled titles after the series is fully removed', async () => {
   resetToEmptyWorkspace();
 
-  const firstId = useWorkspaceStore.getState().createRootNode();
-  const secondId = useWorkspaceStore.getState().createRootNode();
+  const firstId = (await useWorkspaceStore.getState().createRootNode())!;
+  const secondId = (await useWorkspaceStore.getState().createRootNode())!;
 
   useWorkspaceStore.getState().deleteNode(firstId);
   useWorkspaceStore.getState().deleteNode(secondId);
 
-  const resetId = useWorkspaceStore.getState().createRootNode();
+  const resetId = (await useWorkspaceStore.getState().createRootNode())!;
 
   expect(useWorkspaceStore.getState().nodesById[resetId]?.title).toBe('Untitled');
 });
 
-it('increments Untitled titles per parent when creating empty child nodes', () => {
-  const parentId = useWorkspaceStore.getState().createRootNode('Parent');
-  const firstChildId = useWorkspaceStore.getState().createChildNode(parentId);
-  const secondChildId = useWorkspaceStore.getState().createChildNode(parentId);
+it('increments Untitled titles per parent when creating empty child nodes', async () => {
+  const parentId = (await useWorkspaceStore.getState().createRootNode('Parent'))!;
+  const firstChildId = (await useWorkspaceStore.getState().createChildNode(parentId))!;
+  const secondChildId = (await useWorkspaceStore.getState().createChildNode(parentId))!;
 
   expect(useWorkspaceStore.getState().nodesById[firstChildId]?.title).toBe('Untitled');
   expect(useWorkspaceStore.getState().nodesById[secondChildId]?.title).toBe('Untitled 1');

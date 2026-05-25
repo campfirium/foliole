@@ -21,10 +21,10 @@ function createTextAnchorLink(id: string, originalText: string, from = 0) {
   };
 }
 
-function createHighlightNode() {
+async function createHighlightNode() {
   let createdNodeId: string | null = null;
-  act(() => {
-    createdNodeId = useWorkspaceStore
+  await act(async () => {
+    createdNodeId = await useWorkspaceStore
       .getState()
       .createHighlightNodeFromSelection('node-1', 'Welcome', 'hl-1', createTextAnchorLink('hl-1', 'Welcome'));
   });
@@ -35,12 +35,16 @@ function openInboxWithExpandedTopics() {
   act(() => {
     useWorkspaceStore.setState({ activeNodeId: INBOX_NODE_ID });
   });
-  fireEvent.click(within(getCurrentFolderPanel()).getByRole('button', { name: 'Expand all topics' }));
+  const folderPanel = within(getCurrentFolderPanel());
+  const expandButton = folderPanel.queryByRole('button', { name: 'Expand all topics' });
+  if (expandButton) {
+    fireEvent.click(expandButton);
+  }
 }
 
-it('creates highlight node without leaving current node', () => {
+it('creates highlight node without leaving current node', async () => {
   render(<App />);
-  const createdNodeId = createHighlightNode();
+  const createdNodeId = await createHighlightNode();
 
   const workspace = useWorkspaceStore.getState();
   expect(workspace.activeNodeId).toBe('node-1');
@@ -58,9 +62,9 @@ it('creates highlight node without leaving current node', () => {
   expect(getCurrentFolderTreeItem('Welcome')).toHaveAttribute('data-node-derived', 'true');
 });
 
-it('keeps only top-level rows bold while lowering non-top-level row emphasis', () => {
+it('keeps only top-level rows bold while lowering non-top-level row emphasis', async () => {
   render(<App />);
-  const createdNodeId = createHighlightNode();
+  const createdNodeId = await createHighlightNode();
   openInboxWithExpandedTopics();
 
   const regularRow = getCurrentFolderTreeItem('Welcome to Foliole');

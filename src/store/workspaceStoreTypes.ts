@@ -51,6 +51,7 @@ export interface WorkspaceState {
   updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
   updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
   setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean;
+  setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[], now?: string) => boolean;
   dismissNode: (nodeId: string, now?: string) => boolean;
   undoWorkspaceAction: (now?: string) => boolean;
   redoWorkspaceAction: (now?: string) => boolean;
