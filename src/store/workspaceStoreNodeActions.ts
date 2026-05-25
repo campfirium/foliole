@@ -21,6 +21,7 @@ import { createChildNodeAction } from './workspaceStoreCreateChildNodeAction';
 import { createFormulaClozeNodeAction } from './workspaceStoreFormulaClozeActions';
 import { createUpdateHighlightAnchorRangeAction } from './workspaceStoreHighlightRangeActions';
 import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';
+import { createSetFolderManualChildOrderAction } from './workspaceStoreManualChildOrderActions';
 import { createDismissNodeAction } from './workspaceStoreNodeDismissAction';
 import { createUpdateNodeRevealAction, createUpdateNodeTitleAction } from './workspaceStoreNodeEditActions';
 import { createRelearnNodeAction } from './workspaceStoreNodeRelearnAction';
@@ -61,6 +62,7 @@ type WorkspaceNodeActions = Pick<
   | 'restoreNode'
   | 'relearnNode'
   | 'setNodeSequentialReading'
+  | 'setFolderManualChildOrder'
   | 'setNodeViewState'
   | 'updateNodeDesiredRetention'
   | 'updateNodePriority'
@@ -116,6 +118,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateNodeDesiredRetention: createUpdateNodeDesiredRetentionAction(set),
     updateNodeShortTerm: createUpdateNodeShortTermAction(set),
     setNodeSequentialReading: createSetNodeSequentialReadingAction(set),
+    setFolderManualChildOrder: createSetFolderManualChildOrderAction(set),
     createRootNode: createRootNodeAction(set, runtimeHandlers),
     createChildNode: createChildNodeAction(
       set,

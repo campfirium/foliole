@@ -1,45 +1,116 @@
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it } from 'vitest';
 
-import type { Node } from '../features/nodes/model/nodeTypes';
+import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 
-import { createSetFolderManualChildOrderAction } from './workspaceStoreManualChildOrderActions';
-import type { WorkspaceState } from './workspaceStoreTypes';
+import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
-vi.mock('./workspaceRuntimeSync', () => ({
-  syncNodeContentToRuntime: vi.fn()
-}));
+const now = '2026-05-25T08:00:00.000Z';
 
-function node(overrides: Partial<Node> & Pick<Node, 'id' | 'kind'>): Node {
+function reading(state: NodeReadingProfile['state']): NodeReadingProfile {
   return {
-    ...overrides,
-    content: '',
-    createdAt: '2026-05-21T00:00:00.000Z',
-    hideTitleHeading: false,
-    id: overrides.id,
-    kind: overrides.kind,
-    parentNodeId: null,
-    reveal: null,
-    review: null,
-    title: overrides.id,
-    updatedAt: '2026-05-21T00:00:00.000Z'
+    intervalDurationMs: 0,
+    intervalGrowthFactor: 1,
+    lastHandledAt: now,
+    nextAt: now,
+    priority: 5,
+    readingPosition: 0,
+    repetitionCount: 0,
+    state
   };
 }
 
-it('manual child order updates only the folder node', () => {
-  let state = {
-    nodesById: {
-      folder: node({ id: 'folder', kind: 'folder' }),
-      child: node({ id: 'child', kind: 'topic', parentNodeId: 'folder' })
-    }
-  } as unknown as WorkspaceState;
-  const set = (partial: WorkspaceState | Partial<WorkspaceState> | ((current: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => {
-    const patch = typeof partial === 'function' ? partial(state) : partial;
-    state = { ...state, ...patch };
+function topic(id: string, state: NodeReadingProfile['state']): Node {
+  return {
+    id,
+    parentNodeId: 'folder',
+    kind: 'topic',
+    title: id,
+    content: `# ${id}`,
+    hasContent: true,
+    reveal: null,
+    review: null,
+    reading: reading(state),
+    createdAt: now,
+    updatedAt: now
   };
-  const action = createSetFolderManualChildOrderAction(set);
+}
 
-  expect(action('folder', ['child'], '2026-05-22T00:00:00.000Z')).toBe(true);
-  expect(state.nodesById.folder?.manualChildOrder).toEqual(['child']);
-  expect(state.nodesById.folder?.updatedAt).toBe('2026-05-22T00:00:00.000Z');
-  expect(state.nodesById.child?.updatedAt).toBe('2026-05-21T00:00:00.000Z');
+function folder(manualChildOrder: string[]): Node {
+  return {
+    id: 'folder',
+    parentNodeId: null,
+    kind: 'folder',
+    sequentialReadingEnabled: true,
+    manualChildOrder,
+    title: 'Folder',
+    content: '',
+    hasContent: false,
+    reveal: null,
+    review: null,
+    reading: null,
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+beforeEach(() => {
+  useWorkspaceStore.setState({
+    ...createInitialWorkspaceState(new Date(now)),
+    activeNodeId: 'topic-a',
+    nodeOrder: ['folder', 'topic-a', 'topic-b', 'topic-c'],
+    nodesById: {
+      folder: folder(['topic-a', 'topic-b', 'topic-c']),
+      'topic-a': topic('topic-a', 'active'),
+      'topic-b': topic('topic-b', 'locked'),
+      'topic-c': topic('topic-c', 'dismissed')
+    },
+    reviewSession: {
+      currentNodeId: 'topic-a',
+      currentItemStartedAt: now,
+      isAnswerRevealed: true,
+      queueNodeIds: ['topic-a'],
+      sessionStartedAt: now,
+      totalNodeCount: 1
+    },
+    reviewSessionMode: 'reading-only'
+  });
+});
+
+it('releases the first non-dismissed topic and refreshes the current queue after sequential folder manual ordering changes', () => {
+  useWorkspaceStore.getState().setFolderManualChildOrder?.('folder', ['topic-c', 'topic-b', 'topic-a'], now);
+  const state = useWorkspaceStore.getState();
+
+  expect(state.nodesById['topic-c']?.reading?.state).toBe('dismissed');
+  expect(state.nodesById['topic-b']?.reading?.state).toBe('active');
+  expect(state.nodesById['topic-a']?.reading?.state).toBe('locked');
+  expect(state.activeNodeId).toBe('topic-b');
+  expect(state.reviewSession.currentNodeId).toBe('topic-b');
+  expect(state.reviewSession.queueNodeIds).toEqual(['topic-b']);
+  expect(state.reviewSession.isAnswerRevealed).toBe(false);
+});
+
+it('updates only the folder order when sequential reading is disabled', () => {
+  useWorkspaceStore.setState((state) => ({
+    nodesById: {
+      ...state.nodesById,
+      folder: {
+        ...state.nodesById.folder!,
+        sequentialReadingEnabled: false
+      }
+    },
+    reviewSession: {
+      currentNodeId: null,
+      isAnswerRevealed: false,
+      queueNodeIds: [],
+      totalNodeCount: 0
+    }
+  }));
+
+  useWorkspaceStore.getState().setFolderManualChildOrder?.('folder', ['topic-b', 'topic-a'], '2026-05-25T09:00:00.000Z');
+  const state = useWorkspaceStore.getState();
+
+  expect(state.nodesById.folder?.manualChildOrder).toEqual(['topic-b', 'topic-a']);
+  expect(state.nodesById.folder?.updatedAt).toBe('2026-05-25T09:00:00.000Z');
+  expect(state.nodesById['topic-a']?.reading?.state).toBe('active');
+  expect(state.nodesById['topic-b']?.reading?.state).toBe('locked');
 });
