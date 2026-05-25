@@ -31,13 +31,17 @@ export function resolveTrashRootId(
   return rootId;
 }
 
+function collectTrashCandidateIds(nodeOrder: readonly string[], trashedNodeIds: readonly string[]) {
+  return [...new Set([...nodeOrder, ...trashedNodeIds])];
+}
+
 export function selectTrashRootIds(
   nodeOrder: readonly string[],
   nodesById: Record<string, TrashNode | undefined>,
   trashedNodeIds: readonly string[]
 ) {
   const rootIds = new Set<string>();
-  for (const nodeId of nodeOrder) {
+  for (const nodeId of collectTrashCandidateIds(nodeOrder, trashedNodeIds)) {
     if (resolveTrashRootId(nodeId, nodesById, trashedNodeIds) === nodeId) {
       rootIds.add(nodeId);
     }
@@ -61,7 +65,7 @@ export function filterTrashRootIdsByTitle(
 
   const rootIdSet = new Set(rootIds);
   const matchingRootIds = new Set<string>();
-  for (const nodeId of nodeOrder) {
+  for (const nodeId of collectTrashCandidateIds(nodeOrder, trashedNodeIds)) {
     if (!matchesQuery(nodesById[nodeId], normalizedQuery)) continue;
     const rootId = resolveTrashRootId(nodeId, nodesById, trashedNodeIds);
     if (rootId && rootIdSet.has(rootId)) {
