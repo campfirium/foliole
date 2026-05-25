@@ -179,6 +179,25 @@ it('runs the visible reading soon shortcut before later/read choices', () => {
   expect(revisitReviewTopicSoon).toHaveBeenCalledTimes(1);
 });
 
+it('reveals a visible review card with F while Space and Enter stay free', () => {
+  const revealReviewAnswer = vi.fn();
+  render(
+    <ReviewShortcutHarness
+      isCurrentItemGradable
+      isCurrentReviewItemVisible
+      revealReviewAnswer={revealReviewAnswer}
+    />
+  );
+
+  fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+  fireEvent.keyDown(window, { key: 'Enter' });
+  expect(revealReviewAnswer).not.toHaveBeenCalled();
+
+  fireEvent.keyDown(window, { code: 'KeyF', key: 'f' });
+
+  expect(revealReviewAnswer).toHaveBeenCalledTimes(1);
+});
+
 it('deletes the visible review item with Delete', () => {
   const deleteCurrentReviewItem = vi.fn(() => true);
   render(

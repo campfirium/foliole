@@ -99,14 +99,16 @@ describe('review default command shortcuts', () => {
   });
 });
 
-it('keeps Space free while F acts as the primary shortcut for Good review grade', () => {
-  const shortcuts = DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.gradeReviewGood];
+it('keeps F as the primary review action while Space stays free', () => {
+  const revealShortcuts = DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.revealReviewAnswer];
+  const goodShortcuts = DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.gradeReviewGood];
 
-  expect(matchesShortcutSet(keyEvent({ key: 'f' }), shortcuts)).toBe(true);
-  expect(matchesShortcutSet(keyEvent({ key: '3' }), shortcuts)).toBe(true);
-  expect(matchesShortcutSet(keyEvent({ key: ' ' }), shortcuts)).toBe(false);
-  expect(matchesShortcutSet(keyEvent({ key: ' ' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.revealReviewAnswer])).toBe(false);
-  expect(matchesShortcutSet(keyEvent({ key: 'Enter' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.revealReviewAnswer])).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: 'f' }), revealShortcuts)).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: 'Enter' }), revealShortcuts)).toBe(false);
+  expect(matchesShortcutSet(keyEvent({ key: ' ' }), revealShortcuts)).toBe(false);
+  expect(matchesShortcutSet(keyEvent({ key: 'f' }), goodShortcuts)).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: '3' }), goodShortcuts)).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: ' ' }), goodShortcuts)).toBe(false);
 });
 
 it('registers app undo and redo without editor-only modifiers', () => {

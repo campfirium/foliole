@@ -16,7 +16,7 @@ const TEST_NODE = {
 } as const;
 
 const REVIEW_SHORTCUT_DEFAULTS = {
-  revealAnswerShortcuts: { primary: { key: ' ' } },
+  revealAnswerShortcuts: { primary: { key: 'f' } },
   gradeAgainShortcuts: { primary: { key: '1' } },
   gradeHardShortcuts: { primary: { key: '2' } },
   gradeGoodShortcuts: { primary: { key: '3' } },
@@ -28,7 +28,7 @@ const REVIEW_SHORTCUT_DEFAULTS = {
   deleteCurrentItemShortcuts: { primary: { key: 'Delete' } },
   navigateParentShortcuts: { primary: { key: 'w' } },
   navigateBackShortcuts: { primary: { key: 'a' } },
-  navigateForwardShortcuts: { primary: { key: 'f' } },
+  navigateForwardShortcuts: { primary: { key: 'd' } },
   navigateDownShortcuts: { primary: { key: 's' } },
   navigatePreviousSiblingShortcuts: { primary: { key: 'q' } },
   navigateNextSiblingShortcuts: { primary: { key: 'e' } },

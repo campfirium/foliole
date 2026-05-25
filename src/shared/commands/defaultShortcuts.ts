@@ -31,7 +31,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.toggleDevTools]: { primary: { key: 'i', ctrlKey: true, shiftKey: true }, secondary: { key: 'i', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.toggleList]: { primary: { key: 'l', ctrlKey: true, shiftKey: true }, secondary: { key: 'l', metaKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.startStudyMode]: { primary: { key: 'r', altKey: true }, secondary: { key: 'F1' } },
-  [APP_COMMAND_IDS.revealReviewAnswer]: { primary: { key: 'Enter' } },
+  [APP_COMMAND_IDS.revealReviewAnswer]: { primary: { key: 'f' } },
   [APP_COMMAND_IDS.gradeReviewAgain]: { primary: { key: '1' } },
   [APP_COMMAND_IDS.gradeReviewHard]: { primary: { key: '2' } },
   [APP_COMMAND_IDS.gradeReviewGood]: { primary: { key: 'f' }, secondary: { key: '3' } },
