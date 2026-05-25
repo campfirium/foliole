@@ -49,7 +49,7 @@ it('moves chapter intro content into the first child section when the chapter ha
     },
     {
       content: '',
-      degradedReason: null,
+      degradedReason: 'EPUB TOC fragment could not be matched: OPS/text/chapter-3.xhtml#s1',
       embeddedImages: [],
       key: 'toc-1',
       parentKey: 'chapter-3',
@@ -88,6 +88,79 @@ it('does not split chapter content when the toc chapter has no nested sections',
       key: 'chapter-1',
       parentKey: null,
       title: 'Chapter 1'
+    }
+  ]);
+});
+
+it('splits repeated same-file toc fragment entries into their matching markdown sections', () => {
+  const nodes = buildBookNodes({
+    chapters: [
+      {
+        content: '# Copyright\n\nLegal text.\n\n# Chapter 1\n\nIntro body.\n\n# Chapter 2\n\nSecond body.',
+        degradedReason: null,
+        embeddedImages: [],
+        href: 'OPS/book.xhtml',
+        key: 'book',
+        parentKey: null,
+        title: 'Copyright'
+      }
+    ],
+    toc: [
+      {
+        children: [],
+        href: 'OPS/book.xhtml#copyright',
+        title: 'Copyright'
+      },
+      {
+        children: [],
+        href: 'OPS/book.xhtml#chapter-1',
+        title: 'Chapter 1'
+      },
+      {
+        children: [],
+        href: 'OPS/book.xhtml#chapter-2',
+        title: 'Chapter 2'
+      }
+    ]
+  });
+
+  expect(nodes.map((node) => [node.key, node.title, node.content])).toEqual([
+    ['book::copyright', 'Copyright', '# Copyright\n\nLegal text.'],
+    ['book::chapter-1', 'Chapter 1', '# Chapter 1\n\nIntro body.'],
+    ['book::chapter-2', 'Chapter 2', '# Chapter 2\n\nSecond body.']
+  ]);
+});
+
+it('marks unresolved same-file toc fragments as degraded instead of silently importing empty sections', () => {
+  const nodes = buildBookNodes({
+    chapters: [
+      {
+        content: '# Real Chapter\n\nReadable body.',
+        degradedReason: null,
+        embeddedImages: [],
+        href: 'OPS/book.xhtml',
+        key: 'book',
+        parentKey: null,
+        title: 'Real Chapter'
+      }
+    ],
+    toc: [
+      {
+        children: [],
+        href: 'OPS/book.xhtml#missing-fragment',
+        title: 'Missing Chapter'
+      }
+    ]
+  });
+
+  expect(nodes).toEqual([
+    {
+      content: '',
+      degradedReason: 'EPUB TOC fragment could not be matched: OPS/book.xhtml#missing-fragment',
+      embeddedImages: [],
+      key: 'toc-1',
+      parentKey: null,
+      title: 'Missing Chapter'
     }
   ]);
 });

@@ -105,6 +105,6 @@ it('splits chapter intro content into the first child section when toc chapter a
   const sectionRows = readChildren(chapterRows[0]!.id);
   expect(sectionRows.map((node) => node.title).sort()).toEqual(['从流程开始', '最后创建', '越少越好']);
   expect(sectionRows.find((node) => node.title === '越少越好')?.content).toContain('告诉你一个秘密。');
-  expect(sectionRows.find((node) => node.title === '从流程开始')?.content).toBe('');
-  expect(sectionRows.find((node) => node.title === '最后创建')?.content).toBe('');
+  expect(sectionRows.find((node) => node.title === '从流程开始')?.content).toBe('## 从流程开始\n\nAlpha');
+  expect(sectionRows.find((node) => node.title === '最后创建')?.content).toBe('## 最后创建\n\nBeta');
 });
