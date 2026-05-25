@@ -35,6 +35,7 @@ export interface WorkspaceRightSidebarPanelProps {
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   outlineDocument?: WorkspaceRightSidebarOutlineDocument;
+  reviewActiveQueueNodeIds?: string[];
   reviewCurrentNodeId: string | null;
   reviewQueueNodeIds: string[];
   reviewSchedulerSettings: ReviewSchedulerSettings;
@@ -71,6 +72,7 @@ const SourceInfoSidebarPanel = memo(function SourceInfoSidebarPanel(props: {
 
 const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
   currentNodeId: string | null;
+  flowNodeIds: string[];
   nodesById: WorkspaceRightSidebarNodesById;
   onSelectNode: (nodeId: string) => void;
   queueNodeIds: string[];
@@ -80,8 +82,11 @@ const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
   if (previousProps.currentNodeId !== nextProps.currentNodeId) return false;
   if (previousProps.onSelectNode !== nextProps.onSelectNode) return false;
   if (previousProps.queueNodeIds.length !== nextProps.queueNodeIds.length) return false;
-  return previousProps.queueNodeIds.every((nodeId, index) => {
-    if (nodeId !== nextProps.queueNodeIds[index]) return false;
+  if (previousProps.flowNodeIds.length !== nextProps.flowNodeIds.length) return false;
+  const stableQueue = previousProps.queueNodeIds.every((nodeId, index) => nodeId === nextProps.queueNodeIds[index]);
+  if (!stableQueue) return false;
+  return previousProps.flowNodeIds.every((nodeId, index) => {
+    if (nodeId !== nextProps.flowNodeIds[index]) return false;
     const previousNode = previousProps.nodesById[nodeId];
     const nextNode = nextProps.nodesById[nodeId];
     return (
@@ -128,14 +133,15 @@ function renderBacklinksPanel(
 }
 
 function renderReviewQueuePanel(
-  props: Pick<WorkspaceRightSidebarPanelProps, 'reviewCurrentNodeId' | 'nodesById' | 'onSelectNode' | 'reviewQueueNodeIds'>
+  props: Pick<WorkspaceRightSidebarPanelProps, 'reviewActiveQueueNodeIds' | 'reviewCurrentNodeId' | 'nodesById' | 'onSelectNode' | 'reviewQueueNodeIds'>
 ) {
   return (
     <ReviewQueueSidebarPanel
       currentNodeId={props.reviewCurrentNodeId}
+      flowNodeIds={props.reviewQueueNodeIds}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNode}
-      queueNodeIds={props.reviewQueueNodeIds}
+      queueNodeIds={props.reviewActiveQueueNodeIds ?? props.reviewQueueNodeIds}
     />
   );
 }
