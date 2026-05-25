@@ -1,13 +1,13 @@
 import { useCallback, useMemo, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type RefObject, type SetStateAction } from 'react';
 
 import { NodeListStateSurface } from '../../features/nodes/components/NodeListStateSurface';
-import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { type NodeListContextMenuController } from '../../features/nodes/components/NodeListTreeHooks';
 import { useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
 import { buildNodeTree, buildVisibleNodeTreeRows, filterNodeTreeRowsByTitle } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 
+import type { WorkspaceTopicTreeDragController } from './workspaceTopicTreeDrag';
 import { WorkspaceTopicTreeRows } from './WorkspaceTopicTreeRows';
 import type { WorkspaceTopicTreeScrollPlacement } from './WorkspaceTopicTreeRows';
 
@@ -15,7 +15,8 @@ export function renderWorkspaceTopicTreeBody(args: {
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
   contextMenu: NodeListContextMenuController;
-  drag: ReturnType<typeof useNodeListDragController>;
+  drag: WorkspaceTopicTreeDragController;
+  isManualSort: boolean;
   nodesById: WorkspaceListNodesById;
   onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
@@ -46,6 +47,7 @@ export function renderWorkspaceTopicTreeBody(args: {
           activeNodeId={args.activeNodeId}
           collapsedNodeIds={args.collapsedNodeIds}
           drag={args.drag}
+          isManualSort={args.isManualSort}
           nodesById={args.nodesById}
           onContextMenu={args.contextMenu.openContextMenu}
           onRenameNode={args.onRenameNode}

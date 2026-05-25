@@ -1,31 +1,27 @@
-import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { useMemo, type ReactNode, type RefObject } from 'react';
 
 import {
   resolveNodeTreeRowVirtualSize
 } from '../../features/nodes/components/nodeListRowSpacingSettings';
-import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from '../../features/nodes/components/NodeTreeRow';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
-import { VirtualListSurface, type VirtualListRenderMeta } from '../../shared/ui';
+import { VirtualListSurface } from '../../shared/ui';
 
-import {
-  resolveWorkspaceTopicTreeRowDragProps,
-  resolveWorkspaceTopicTreeRowModel
-} from './workspaceTopicTreeRowModel';
+import type { WorkspaceTopicTreeDragController } from './workspaceTopicTreeDrag';
+import { WorkspaceTopicTreeRowItem } from './WorkspaceTopicTreeRowItem';
 import { useWorkspaceTopicTreeRowScrollLayout } from './workspaceTopicTreeScrollPadding';
-
-const TOPIC_TREE_VIRTUALIZATION_THRESHOLD = 20;
 
 export type WorkspaceTopicTreeScrollPlacement = 'comfort' | 'second-visible-row' | 'near-visible-row';
 
 interface WorkspaceTopicTreeRowsProps {
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
-  drag: ReturnType<typeof useNodeListDragController>;
+  drag: WorkspaceTopicTreeDragController;
+  isManualSort: boolean;
   nodesById: WorkspaceListNodesById;
   onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
   onRenameNode: (nodeId: string, title: string) => void;
@@ -66,62 +62,11 @@ function resolveScrollAnchorIndex(
   return null;
 }
 
-function renderWorkspaceTopicTreeRow(
-  row: NodeTreeRow,
-  args: {
-    activeNodeId: string | null;
-    collapsedNodeIds: ReadonlySet<string>;
-    drag: ReturnType<typeof useNodeListDragController>;
-    nodesById: WorkspaceListNodesById;
-    onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
-    onRenameNode: (nodeId: string, title: string) => void;
-    onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
-    onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
-    onToggleCollapse: (nodeId: string) => void;
-    rowSpacing: number;
-    selectedNodeIds: string[];
-    meta?: VirtualListRenderMeta;
-  }
-) {
-  const rowModel = resolveWorkspaceTopicTreeRowModel(row, args);
-
-  return (
-    <NodeTreeRowItem
-      descendantCount={row.descendantCount}
-      depth={row.depth}
-      hasChildren={row.hasChildren}
-      isActive={args.activeNodeId === row.node.id}
-      isBulkSelectionActive={args.selectedNodeIds.length > 1}
-      isCollapsed={args.collapsedNodeIds.has(row.node.id)}
-      isDerived={rowModel.isDerivedNode}
-      isMuted={rowModel.shouldFadeWholeRow}
-      mutedOpacity={rowModel.mutedOpacity}
-      isSelected={rowModel.isSelected}
-      key={row.node.id}
-      label={row.node.title}
-      nodeId={row.node.id}
-      {...(args.meta ? { ariaPosInSet: args.meta.ariaPosInSet, ariaSetSize: args.meta.ariaSetSize } : {})}
-      nodeIconKind={rowModel.nodeIconKind}
-      nodeIconState={rowModel.nodeIconState}
-      showIcon
-      showLeafChevronPlaceholder={row.depth === 0 && !rowModel.isDerivedNode}
-      rowSpacing={args.rowSpacing}
-      {...definedProps({ onContextMenu: args.onContextMenu })}
-      {...resolveWorkspaceTopicTreeRowDragProps(row.node.id, rowModel.isDerivedNode, args.drag)}
-      onKeyDown={args.onRowKeyDown}
-      onRename={args.onRenameNode}
-      onSelect={args.onSelectNode}
-      onToggleCollapse={args.onToggleCollapse}
-    />
-  );
-}
-
 function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps & {
   onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
   rowGap: number;
   rowSpacing: number;
 }) {
-  const scrollTargetNodeId = args.scrollTargetNodeId ?? args.activeNodeId;
   return (
     <VirtualListSurface
       autoScroll={args.scrollPlacement === 'second-visible-row' || args.scrollPlacement === 'near-visible-row'}
@@ -129,24 +74,26 @@ function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps &
       getItemKey={(row) => row.node.id}
       items={args.rows}
       renderItem={(row, meta) =>
-        renderWorkspaceTopicTreeRow(row, {
-          activeNodeId: args.activeNodeId,
-          collapsedNodeIds: args.collapsedNodeIds,
-          drag: args.drag,
-          meta,
-          nodesById: args.nodesById,
-          onContextMenu: args.onContextMenu,
-          onRenameNode: args.onRenameNode,
-          onRowKeyDown: args.onRowKeyDown,
-          onSelectNode: args.onSelectNode,
-          onToggleCollapse: args.onToggleCollapse,
-          rowSpacing: args.rowSpacing,
-          selectedNodeIds: args.selectedNodeIds
-        })}
-      scrollAnchorIndex={resolveScrollAnchorIndex(args.rows, scrollTargetNodeId, args.scrollPlacement)}
+        <WorkspaceTopicTreeRowItem
+          activeNodeId={args.activeNodeId}
+          collapsedNodeIds={args.collapsedNodeIds}
+          drag={args.drag}
+          isManualSort={args.isManualSort}
+          meta={meta}
+          nodesById={args.nodesById}
+          onContextMenu={args.onContextMenu}
+          onRenameNode={args.onRenameNode}
+          onRowKeyDown={args.onRowKeyDown}
+          onSelectNode={args.onSelectNode}
+          onToggleCollapse={args.onToggleCollapse}
+          row={row}
+          rowSpacing={args.rowSpacing}
+          selectedNodeIds={args.selectedNodeIds}
+        />}
+      scrollAnchorIndex={resolveScrollAnchorIndex(args.rows, args.scrollTargetNodeId ?? args.activeNodeId, args.scrollPlacement)}
       scrollElementRef={args.scrollContainerRef}
-      scrollToIndex={resolveActiveRowIndex(args.rows, scrollTargetNodeId)}
-      threshold={TOPIC_TREE_VIRTUALIZATION_THRESHOLD}
+      scrollToIndex={resolveActiveRowIndex(args.rows, args.scrollTargetNodeId ?? args.activeNodeId)}
+      threshold={20}
     />
   );
 }
@@ -176,6 +123,7 @@ export function WorkspaceTopicTreeRows({
   activeNodeId,
   collapsedNodeIds,
   drag,
+  isManualSort,
   nodesById,
   onContextMenu,
   onRenameNode,
@@ -214,6 +162,7 @@ export function WorkspaceTopicTreeRows({
         activeNodeId,
         collapsedNodeIds,
         drag,
+        isManualSort,
         nodesById,
         onContextMenu,
         onRenameNode,

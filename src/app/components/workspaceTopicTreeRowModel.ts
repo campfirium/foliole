@@ -2,11 +2,12 @@ import {
   getDismissedFadeOpacity,
   shouldFadeDismissedWholeRow
 } from '../../features/nodes/components/nodeIconAppearanceSettings';
-import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState } from '../../features/nodes/components/NodeTreeRowIconModel';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { isFsrsWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+
+import type { WorkspaceTopicTreeDragController } from './workspaceTopicTreeDrag';
 
 export function resolveWorkspaceTopicTreeRowModel(
   row: NodeTreeRow,
@@ -48,12 +49,20 @@ export function resolveWorkspaceTopicTreeRowModel(
 export function resolveWorkspaceTopicTreeRowDragProps(
   nodeId: string,
   isDerivedNode: boolean,
-  drag: ReturnType<typeof useNodeListDragController>
+  isManualSort: boolean,
+  isFolderNode: boolean,
+  drag: WorkspaceTopicTreeDragController
 ) {
+  const dropIntent = resolveWorkspaceTopicTreeRowDropIntent({
+    drag,
+    isFolderNode,
+    isManualSort,
+    nodeId
+  });
   return {
-    dropIntent: drag.dropTargetNodeId === nodeId ? drag.dropIntent : null,
+    dropIntent,
     isDragDisabled: isDerivedNode,
-    isDropTarget: drag.dropTargetNodeId === nodeId,
+    isDropTarget: dropIntent !== null,
     onDragEnd: drag.onDragEnd,
     onDragEnter: drag.onDragEnterNode,
     onDragLeave: drag.onDragLeaveNode,
@@ -61,4 +70,25 @@ export function resolveWorkspaceTopicTreeRowDragProps(
     onDragStart: drag.onDragStartNode,
     onDrop: drag.onDropOnNode
   };
+}
+
+function resolveWorkspaceTopicTreeRowDropIntent(args: {
+  drag: WorkspaceTopicTreeDragController;
+  isFolderNode: boolean;
+  isManualSort: boolean;
+  nodeId: string;
+}) {
+  if (args.drag.dropTargetNodeId !== args.nodeId) {
+    return null;
+  }
+  if (args.isFolderNode) {
+    return args.drag.dropIntent;
+  }
+  if (args.drag.isStructuralDragActive) {
+    return args.drag.dropIntent;
+  }
+  if (!args.isManualSort || args.drag.dropIntent === 'child') {
+    return null;
+  }
+  return args.drag.dropIntent;
 }
