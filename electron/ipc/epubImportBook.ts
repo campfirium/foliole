@@ -8,13 +8,22 @@ import { readEpubArchiveEntries } from './epubArchive.js';
 import { buildChapterMarkdown } from './epubChapterMarkdown.js';
 import { collectManagedEpubImages } from './epubEmbeddedImages.js';
 import { isCoverLikeChapter } from './epubImportChapterHeuristics.js';
+import { splitEpubChaptersByTocFragments } from './epubImportFragmentSections.js';
+import { diagnoseEpubImportHealth } from './epubImportHealth.js';
 import {
   buildCoverRootContentFromChapter,
   buildRootCoverFromImage,
-  type ManifestItem,
   type RootBookContent
 } from './epubImportRootContent.js';
 import { buildBookNodes, type RawBookNode } from './epubImportTree.js';
+import {
+  parseGuideCoverPaths,
+  parseManifest,
+  parseSpine,
+  readBookTitle,
+  readPackagePath,
+  type SpineItem
+} from './epubPackageDocument.js';
 import { readEpubToc } from './epubToc.js';
 import { type ImportSourceDescriptor } from './importSourcePipeline.js';
 
@@ -28,6 +37,7 @@ export interface RawEpubBook {
 
 interface SpineChapterNode extends RawBookNode {
   href: string;
+  rawHtml: string;
 }
 
 interface SpineChapterBuildResult {
@@ -39,18 +49,6 @@ function decodeText(bytes: Uint8Array) {
   return new TextDecoder('utf-8').decode(bytes);
 }
 
-function parseAttributes(fragment: string) {
-  const attributes: Record<string, string> = {};
-  for (const match of fragment.matchAll(/([:\w.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
-    const name = match[1];
-    if (!name) {
-      continue;
-    }
-    attributes[name.toLowerCase()] = match[2] ?? match[3] ?? '';
-  }
-  return attributes;
-}
-
 function readArchiveText(entries: Map<string, Uint8Array>, entryPath: string, message: string) {
   const bytes = entries.get(entryPath);
   if (!bytes) {
@@ -59,53 +57,9 @@ function readArchiveText(entries: Map<string, Uint8Array>, entryPath: string, me
   return decodeText(bytes);
 }
 
-function readPackagePath(containerXml: string) {
-  const match = containerXml.match(/<rootfile\b([^>]*)\/?>/i);
-  const fullPath = match?.[1] ? parseAttributes(match[1])['full-path'] : null;
-  if (!fullPath) {
-    throw new Error('EPUB import failed: missing package document path in META-INF/container.xml');
-  }
-  return fullPath.replace(/\\/g, '/');
-}
-
-function parseManifest(opfXml: string, opfDirectory: string) {
-  const manifest = new Map<string, ManifestItem>();
-  for (const match of opfXml.matchAll(/<item\b([^>]*)\/?>/gi)) {
-    const fragment = match[1];
-    if (!fragment) continue;
-    const attributes = parseAttributes(fragment);
-    if (!attributes.id || !attributes.href) continue;
-    manifest.set(attributes.id, {
-      href: path.posix.normalize(path.posix.join(opfDirectory, attributes.href.replace(/\\/g, '/'))),
-      mediaType: attributes['media-type'] ?? null,
-      properties: (attributes.properties ?? '')
-        .split(/\s+/)
-        .map((value) => value.trim())
-        .filter(Boolean)
-    });
-  }
-  return manifest;
-}
-
-function parseSpine(opfXml: string) {
-  return Array.from(opfXml.matchAll(/<itemref\b([^>]*)\/?>/gi))
-    .flatMap((match) => match[1] ? [parseAttributes(match[1])] : [])
-    .filter((attributes) => attributes.idref && attributes.linear !== 'no')
-    .map((attributes) => attributes.idref as string);
-}
-
-function parseGuideCoverPaths(opfXml: string, opfDirectory: string) {
-  return new Set(
-    Array.from(opfXml.matchAll(/<reference\b([^>]*)\/?>/gi))
-      .flatMap((match) => match[1] ? [parseAttributes(match[1])] : [])
-      .filter((attributes) => attributes.type?.toLowerCase() === 'cover' && attributes.href)
-      .map((attributes) => path.posix.normalize(path.posix.join(opfDirectory, attributes.href?.replace(/\\/g, '/') ?? '')))
-  );
-}
-
-function readBookTitle(opfXml: string, sourceName: string) {
-  const titleMatch = opfXml.match(/<(?:dc:title|title)\b[^>]*>([\s\S]*?)<\/(?:dc:title|title)>/i);
-  return titleMatch?.[1]?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || path.basename(sourceName, '.epub');
+function appendReason(current: string | null, next: string | null) {
+  if (!next) return current;
+  return current ? `${current}; ${next}` : next;
 }
 
 function buildDegradedChapterNode(input: {
@@ -121,6 +75,7 @@ function buildDegradedChapterNode(input: {
     href: input.href,
     key: `${input.index}-${input.href}`,
     parentKey: null,
+    rawHtml: '',
     title: input.fallbackTitle
   };
 }
@@ -178,6 +133,7 @@ function buildSpineChapterNode(input: {
       href: input.href,
       key: `${input.index}-${input.href}`,
       parentKey: null,
+      rawHtml: decodeText(htmlBytes),
       title: chapter.title
     },
     rootCover: null
@@ -188,23 +144,27 @@ function buildSpineChapterNodes(input: {
   entries: ReadonlyMap<string, Uint8Array>;
   guideCoverPaths: ReadonlySet<string>;
   manifest: ReturnType<typeof parseManifest>;
-  spine: string[];
+  spine: SpineItem[];
 }) {
-  return input.spine.reduce<{ chapters: SpineChapterNode[]; rootCover: RootBookContent | null }>((result, idref, index) => {
-    const item = input.manifest.get(idref);
+  return input.spine.reduce<{ chapters: SpineChapterNode[]; rootCover: RootBookContent | null }>((result, spineItem, index) => {
+    if (!spineItem.linear) {
+      return result;
+    }
+    const item = input.manifest.get(spineItem.idref);
     const fallbackTitle = `Chapter ${index + 1}`;
     if (!item) {
       result.chapters.push({
         content: buildRetainedDegradedImportContent({
-          reason: `EPUB chapter missing manifest entry: ${idref}`,
+          reason: `EPUB chapter missing manifest entry: ${spineItem.idref}`,
           sourceKind: 'epub',
           sourceName: fallbackTitle
         }),
-        degradedReason: `EPUB chapter missing manifest entry: ${idref}`,
+        degradedReason: `EPUB chapter missing manifest entry: ${spineItem.idref}`,
         embeddedImages: [],
-        href: `${idref}.xhtml`,
-        key: `${index}-${idref}`,
+        href: `${spineItem.idref}.xhtml`,
+        key: `${index}-${spineItem.idref}`,
         parentKey: null,
+        rawHtml: '',
         title: fallbackTitle
       });
       return result;
@@ -244,14 +204,22 @@ export async function readRawEpubBook(source: ImportSourceDescriptor): Promise<R
     throw new Error('EPUB import failed: package document does not declare any spine chapters');
   }
   const title = readBookTitle(opfXml, source.sourceName);
-  const builtSpine = buildSpineChapterNodes({ entries, guideCoverPaths, manifest, spine });
   const toc = readEpubToc({ entries, manifest, opfDirectory, opfXml });
+  const builtSpine = buildSpineChapterNodes({ entries, guideCoverPaths, manifest, spine });
+  const nonLinearHrefs = new Set(
+    spine.flatMap((item) => {
+      const href = !item.linear ? manifest.get(item.idref)?.href : null;
+      return href ? [href] : [];
+    })
+  );
+  const nodes = splitEpubChaptersByTocFragments({ chapters: builtSpine.chapters, entries, nonLinearHrefs, toc });
+  const healthReason = diagnoseEpubImportHealth(nodes);
   const rootCover = builtSpine.rootCover ?? buildRootCoverFromImage({ entries, manifest, opfXml });
 
   return {
-    nodes: buildBookNodes({ chapters: builtSpine.chapters, toc }),
+    nodes: buildBookNodes({ chapters: nodes, toc }),
     rootContent: rootCover?.content ?? '',
-    rootDegradedReason: rootCover?.degradedReason ?? null,
+    rootDegradedReason: appendReason(rootCover?.degradedReason ?? null, healthReason),
     rootEmbeddedImages: rootCover?.embeddedImages ?? [],
     title
   };
