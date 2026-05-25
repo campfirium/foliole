@@ -4,6 +4,7 @@ import { AppErrorState } from '../../shared/ui';
 
 interface WorkspaceRightSidebarReviewQueuePanelProps {
   currentNodeId: string | null;
+  flowNodeIds?: string[];
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   queueNodeIds: string[];
@@ -58,7 +59,7 @@ function getQueueItemTimeLabel(node: Node | undefined) {
 function QueueHeader({ fsrsCount, readingCount }: { fsrsCount: number; readingCount: number }) {
   return (
     <header className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-3">
-      <h2 className="m-0 text-[13px] font-medium uppercase tracking-[0.02em] text-foreground/55">Review</h2>
+      <h2 className="m-0 text-[13px] font-medium uppercase tracking-[0.02em] text-foreground/55">Flow</h2>
       <p className="whitespace-nowrap text-[12px] text-foreground/45">
         <span>{fsrsCount}</span> items · <span>{readingCount}</span> topics
       </p>
@@ -70,7 +71,7 @@ function EmptyQueueState() {
   return (
     <section className="min-h-0">
       <QueueHeader fsrsCount={0} readingCount={0} />
-      <p className="px-4 py-3 text-[13px] text-foreground/55">No review entries are available right now.</p>
+      <p className="px-4 py-3 text-[13px] text-foreground/55">No Flow topics are available right now.</p>
     </section>
   );
 }
@@ -90,48 +91,80 @@ function QueueKindIcon({ kind }: { kind: 'item' | 'topic' }) {
   );
 }
 
+function uniqueFlowExtensionNodeIds(flowNodeIds: string[], queueNodeIds: string[]) {
+  const queueNodeIdSet = new Set(queueNodeIds);
+  return flowNodeIds.filter((nodeId) => !queueNodeIdSet.has(nodeId));
+}
+
+function QueueRow(props: {
+  index: number;
+  node: Node;
+  nodeId: string;
+  onSelectNode: (nodeId: string) => void;
+}) {
+  const kind = isFsrsReviewItemNode(props.node) ? 'item' : 'topic';
+  return (
+    <li className="grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)_auto] items-center gap-2 px-4 py-1.5 hover:bg-foreground/[0.025]">
+      <span className="text-right text-[11px] tabular-nums text-foreground/28">{props.index + 1}</span>
+      <QueueKindIcon kind={kind} />
+      <button
+        className="min-w-0 truncate text-left text-[13.5px] font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/35"
+        onClick={() => props.onSelectNode(props.nodeId)}
+        type="button"
+      >
+        {getQueueItemTitle(props.node)}
+      </button>
+      <span className="whitespace-nowrap text-[11.5px] tabular-nums text-foreground/35">{getQueueItemTimeLabel(props.node)}</span>
+    </li>
+  );
+}
+
 export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
-  if (props.queueNodeIds.length === 0) {
+  const flowNodeIds = props.flowNodeIds ?? props.queueNodeIds;
+  if (flowNodeIds.length === 0) {
     return <EmptyQueueState />;
   }
 
-  const missingQueueNodeId = props.queueNodeIds.find((nodeId) => !props.nodesById[nodeId]);
+  const missingQueueNodeId = [...props.queueNodeIds, ...flowNodeIds].find((nodeId) => !props.nodesById[nodeId]);
   if (missingQueueNodeId) {
     return (
       <AppErrorState
-        description="Refresh the workspace before continuing review."
-        title="Review queue has an unavailable topic"
+        description="Refresh the workspace before continuing."
+        title="Flow has an unavailable topic"
       />
     );
   }
 
   const displayQueueNodeIds = buildDisplayQueueNodeIds(props.queueNodeIds, props.currentNodeId);
-  const fsrsCount = props.queueNodeIds.filter((nodeId) => isFsrsReviewItemNode(props.nodesById[nodeId])).length;
-  const readingCount = props.queueNodeIds.length - fsrsCount;
+  const extensionNodeIds = uniqueFlowExtensionNodeIds(flowNodeIds, props.queueNodeIds);
+  const fsrsCount = flowNodeIds.filter((nodeId) => isFsrsReviewItemNode(props.nodesById[nodeId])).length;
+  const readingCount = flowNodeIds.length - fsrsCount;
 
   return (
     <section className="flex min-h-0 flex-col">
       <QueueHeader fsrsCount={fsrsCount} readingCount={readingCount} />
-      <ol aria-label="Review queue items" className="min-h-0 flex-1 overflow-y-auto py-1">
-        {displayQueueNodeIds.map((nodeId, index) => {
-          const node = props.nodesById[nodeId];
-          const kind = isFsrsReviewItemNode(node) ? 'item' : 'topic';
-
-          return (
-            <li key={nodeId} className="grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)_auto] items-center gap-2 px-4 py-1.5 hover:bg-foreground/[0.025]">
-              <span className="text-right text-[11px] tabular-nums text-foreground/28">{index + 1}</span>
-              <QueueKindIcon kind={kind} />
-              <button
-                className="min-w-0 truncate text-left text-[13.5px] font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/35"
-                onClick={() => props.onSelectNode(nodeId)}
-                type="button"
-              >
-                {getQueueItemTitle(node)}
-              </button>
-              <span className="whitespace-nowrap text-[11.5px] tabular-nums text-foreground/35">{getQueueItemTimeLabel(node)}</span>
-            </li>
-          );
-        })}
+      <ol aria-label="Review flow items" className="min-h-0 flex-1 overflow-y-auto py-1">
+        {displayQueueNodeIds.map((nodeId, index) => (
+          <QueueRow
+            index={index}
+            key={nodeId}
+            node={props.nodesById[nodeId]!}
+            nodeId={nodeId}
+            onSelectNode={props.onSelectNode}
+          />
+        ))}
+        {displayQueueNodeIds.length > 0 && extensionNodeIds.length > 0 ? (
+          <li className="mx-4 my-1.5 h-px list-none bg-border/45" role="presentation" />
+        ) : null}
+        {extensionNodeIds.map((nodeId, index) => (
+          <QueueRow
+            index={displayQueueNodeIds.length + index}
+            key={nodeId}
+            node={props.nodesById[nodeId]!}
+            nodeId={nodeId}
+            onSelectNode={props.onSelectNode}
+          />
+        ))}
       </ol>
     </section>
   );

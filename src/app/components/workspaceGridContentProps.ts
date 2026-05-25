@@ -149,6 +149,7 @@ function selectWorkspaceRightSidebarProps({
     onRevealDocumentPosition: props.document.onRevealDocumentPosition,
     onSelectBreadcrumbNode: props.navigation.onSelectBreadcrumbNode,
     onSelectNode,
+    reviewActiveQueueNodeIds: props.review.reviewQueueNodeIds,
     reviewCurrentNodeId: props.review.reviewCurrentNodeId,
     reviewQueueNodeIds: props.review.reviewPanelQueueNodeIds,
     reviewSchedulerSettings: props.review.reviewSchedulerSettings,

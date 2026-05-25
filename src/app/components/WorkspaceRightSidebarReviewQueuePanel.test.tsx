@@ -56,7 +56,7 @@ it('shows the current actionable item first even when the whole queue starts wit
     />
   );
 
-  const items = within(screen.getByRole('list', { name: 'Review queue items' })).getAllByRole('listitem');
+  const items = within(screen.getByRole('list', { name: 'Review flow items' })).getAllByRole('listitem');
 
   expect(items[0]!).toHaveTextContent('1Reading Now');
   expect(items[1]!).toHaveTextContent('2Scheduled FSRS');
@@ -105,7 +105,7 @@ it('keeps the mixed queue cadence after the current reading item', () => {
     />
   );
 
-  const items = within(screen.getByRole('list', { name: 'Review queue items' })).getAllByRole('listitem');
+  const items = within(screen.getByRole('list', { name: 'Review flow items' })).getAllByRole('listitem');
 
   expect(items[0]!).toHaveTextContent('1Reading 1');
   expect(items[6]!).toHaveTextContent('7Reading 2');
@@ -121,7 +121,7 @@ it('shows an error when the review queue references an unavailable topic', () =>
     />
   );
 
-  expect(screen.getByRole('alert')).toHaveTextContent('Review queue has an unavailable topic');
+  expect(screen.getByRole('alert')).toHaveTextContent('Flow has an unavailable topic');
   expect(screen.queryByText('Missing topic')).not.toBeInTheDocument();
 });
 
@@ -142,4 +142,28 @@ it('opens the queued node from the title only', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Reading 1' }));
 
   expect(onSelectNode).toHaveBeenCalledWith('reading-1');
+});
+
+it('separates the active queue from later flow entries', () => {
+  render(
+    <WorkspaceRightSidebarReviewQueuePanel
+      currentNodeId="reading-1"
+      flowNodeIds={['reading-1', 'reading-2', 'reading-3']}
+      nodesById={{
+        'reading-1': createNode({ id: 'reading-1', title: 'Reading 1' }),
+        'reading-2': createNode({ id: 'reading-2', title: 'Reading 2' }),
+        'reading-3': createNode({ id: 'reading-3', title: 'Reading 3' })
+      }}
+      onSelectNode={() => undefined}
+      queueNodeIds={['reading-1']}
+    />
+  );
+
+  const items = within(screen.getByRole('list', { name: 'Review flow items' })).getAllByRole('listitem');
+
+  expect(screen.getByText('Flow')).toBeInTheDocument();
+  expect(screen.getByRole('presentation')).toHaveClass('bg-border/45');
+  expect(items[0]!).toHaveTextContent('1Reading 1');
+  expect(items[1]!).toHaveTextContent('2Reading 2');
+  expect(items[2]!).toHaveTextContent('3Reading 3');
 });
