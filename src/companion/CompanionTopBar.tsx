@@ -1,6 +1,8 @@
 import { ArrowLeft, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 
+import { definedProps } from '../shared/lib/definedProps';
+
 type TopBarAction = {
   icon: LucideIcon;
   label: string;
@@ -80,10 +82,12 @@ export function CompanionTopBar(props: {
     >
       {props.onBack ? (
         <TopBarBackRow
-          backLabel={props.backLabel}
           hasTitleRow={hasTitleRow}
           onBack={props.onBack}
-          rightSlot={rightSlotInBackRow ? <>{props.statusSlot}{rightActionSlot}</> : undefined}
+          {...definedProps({
+            backLabel: props.backLabel,
+            rightSlot: rightSlotInBackRow ? <>{props.statusSlot}{rightActionSlot}</> : undefined
+          })}
         />
       ) : null}
       {hasTitleRow ? (

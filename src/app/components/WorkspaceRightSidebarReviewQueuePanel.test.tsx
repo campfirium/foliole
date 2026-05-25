@@ -142,6 +142,8 @@ it('opens the queued node from the title only', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Reading 1' }));
 
   expect(onSelectNode).toHaveBeenCalledWith('reading-1');
+  expect(screen.getByRole('button', { name: 'Reading 1' }).className).toContain('focus:outline-none');
+  expect(screen.getByRole('button', { name: 'Reading 1' }).className).toContain('focus-visible:ring-1');
 });
 
 it('separates the active queue from later flow entries', () => {

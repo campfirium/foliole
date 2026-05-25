@@ -6,6 +6,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
 import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from './ReviewModeToolbarActions';
+import { QueueClearFlowControl } from './ReviewSessionModeControl';
 import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarProgressLine, ReviewToolbarSessionActions, type ReviewToolbarSessionSummary } from './ReviewToolbarSessionFrame';
 
@@ -103,6 +104,15 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps) {
   });
   if (!props.showSessionModeControl || (props.isCurrentItemGradable && !props.isAnswerRevealed)) {
     return actions;
+  }
+  if (!props.isCurrentItemGradable && (props.reviewProgressCounts?.queuedItemCount ?? 0) <= 0) {
+    return (
+      <ReviewToolbarSessionActions
+        actions={actions}
+        modeControl={<QueueClearFlowControl />}
+        {...definedProps({ summary: props.reviewSummary ? { ...props.reviewSummary, status: 'clear' as const } : undefined })}
+      />
+    );
   }
   return (
     <ReviewToolbarSessionActions

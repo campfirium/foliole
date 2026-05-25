@@ -40,6 +40,13 @@ function modeButtonClassName(isTemporaryMode: boolean) {
   ].join(' ');
 }
 
+function queueClearButtonClassName() {
+  return [
+    'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none',
+    'bg-transparent text-foreground/38 hover:bg-foreground/[0.045] hover:text-foreground/68 focus-visible:bg-foreground/[0.05] focus-visible:text-foreground/72'
+  ].join(' ');
+}
+
 function menuItemClassName(isSelected: boolean) {
   return [
     'grid min-h-10 grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-center gap-2 rounded-md px-3 py-2',
@@ -112,7 +119,7 @@ export function QueueClearFlowControl() {
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label="Queue clear"
-          className={modeButtonClassName(true)}
+          className={queueClearButtonClassName()}
           onClick={() => setIsMenuOpen(true)}
           title="Queue clear"
           type="button"
@@ -127,14 +134,7 @@ export function QueueClearFlowControl() {
   );
 }
 
-function PlanetIcon({
-  className,
-  strokeWidth = 2,
-  ...svgProps
-}: {
-  className?: string;
-  strokeWidth?: number;
-} & SVGProps<SVGSVGElement>) {
+function PlanetIcon({ className, strokeWidth = 2, ...svgProps }: SVGProps<SVGSVGElement>) {
   return (
     <svg
       className={className}
