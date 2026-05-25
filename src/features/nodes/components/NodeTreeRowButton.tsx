@@ -5,6 +5,8 @@ import type {
   ReactNode
 } from 'react';
 
+import { definedProps } from '../../../shared/lib/definedProps';
+
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import {
   createNodeTreeRowButtonHandlers,
@@ -28,6 +30,7 @@ export interface NodeTreeRowButtonProps {
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
   showIcon: boolean;
+  showLeafChevronPlaceholder: boolean;
   isSelected: boolean;
   label: string;
   nodeId: string;
@@ -79,9 +82,12 @@ export function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
     nodeId: props.nodeId,
     ...(props.ariaPosInSet !== undefined ? { ariaPosInSet: props.ariaPosInSet } : {}),
     ...(props.ariaSetSize !== undefined ? { ariaSetSize: props.ariaSetSize } : {}),
-    secondaryLabel: props.secondaryLabel,
-    trailingLabelContent: props.trailingLabelContent,
+    ...definedProps({
+      secondaryLabel: props.secondaryLabel,
+      trailingLabelContent: props.trailingLabelContent
+    }),
     showIcon: props.showIcon,
+    showLeafChevronPlaceholder: props.showLeafChevronPlaceholder,
     onToggleCollapse: props.onToggleCollapse,
     rename,
     rowSpacing: props.rowSpacing,

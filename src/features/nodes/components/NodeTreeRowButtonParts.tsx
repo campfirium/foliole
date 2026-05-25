@@ -160,6 +160,7 @@ export function renderNodeTreeRowButtonSurface(props: {
   secondaryLabel?: ReactNode;
   trailingLabelContent?: ReactNode;
   showIcon: boolean;
+  showLeafChevronPlaceholder: boolean;
   style: CSSProperties;
   treeItemState: { 'aria-selected': boolean };
   mutedOpacity: number;
@@ -203,6 +204,7 @@ function renderNodeTreeRowButtonBody(
         isCollapsed={props.isCollapsed}
         nodeId={props.nodeId}
         onToggleCollapse={props.onToggleCollapse}
+        showLeafPlaceholder={props.showLeafChevronPlaceholder}
       />
       {renderNodeTreeRowContent({
         descendantCount: props.descendantCount,

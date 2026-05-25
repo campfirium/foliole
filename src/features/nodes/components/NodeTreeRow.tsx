@@ -27,6 +27,7 @@ interface NodeTreeRowProps {
   nodeIconKind?: NodeTreeRowIconKind;
   nodeIconState?: NodeTreeRowIconState;
   showIcon?: boolean;
+  showLeafChevronPlaceholder?: boolean;
   isSelected: boolean;
   hasChildren: boolean;
   dragDisabledLabel?: string | null;
@@ -74,6 +75,7 @@ function renderNodeTreeRowButton(props: {
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
   showIcon: boolean;
+  showLeafChevronPlaceholder: boolean;
   isSelected: boolean;
   label: string;
   nodeId: string;
@@ -121,6 +123,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         nodeIconKind: props.nodeIconKind ?? 'reading',
         nodeIconState: props.nodeIconState ?? 'scheduled',
         showIcon: props.showIcon ?? true,
+        showLeafChevronPlaceholder: props.showLeafChevronPlaceholder ?? true,
         isSelected: props.isSelected,
         label: props.label,
         nodeId: props.nodeId,
@@ -163,6 +166,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.nodeIconKind === next.nodeIconKind &&
     previous.nodeIconState === next.nodeIconState &&
     previous.showIcon === next.showIcon &&
+    previous.showLeafChevronPlaceholder === next.showLeafChevronPlaceholder &&
     previous.rowSpacing === next.rowSpacing &&
     previous.secondaryLabel === next.secondaryLabel &&
     previous.trailingLabelContent === next.trailingLabelContent &&

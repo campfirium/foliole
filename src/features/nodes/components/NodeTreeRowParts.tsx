@@ -29,8 +29,12 @@ export function NodeTreeRowExpandToggle(props: {
   isCollapsed: boolean;
   nodeId: string;
   onToggleCollapse: (nodeId: string) => void;
+  showLeafPlaceholder: boolean;
 }) {
   if (!props.hasChildren) {
+    if (!props.showLeafPlaceholder) {
+      return <span aria-hidden="true" className="mr-2 size-[1.125rem] flex-none" />;
+    }
     return (
       <span
         aria-hidden="true"
