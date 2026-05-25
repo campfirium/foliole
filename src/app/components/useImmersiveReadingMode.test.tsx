@@ -128,13 +128,13 @@ function buildProps() {
   };
 }
 
-it('moves paragraph selection with space and opens the next readable note at the end', () => {
+it('moves paragraph selection with ArrowDown and opens the next readable note at the end', () => {
   const { onSelectNode, props } = buildProps();
   renderHook(() => useImmersiveReadingMode(props));
 
   act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
   });
 
   expect(onSelectNode).toHaveBeenCalledWith('node-2');
@@ -144,7 +144,7 @@ it('runs highlight toggle and note actions from the current paragraph selection'
   renderHook(() => useImmersiveReadingMode(props));
 
   act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
   });
@@ -184,7 +184,7 @@ it('selects the current paragraph before toggling highlight from a collapsed rea
     })
   );
 });
-it('shows a paragraph marker when moving with space', () => {
+it('shows a paragraph marker when moving with ArrowDown', () => {
   const { adapter, onRevealDocumentSelection, props } = buildProps();
   vi.mocked(adapter.getDocumentPositionAtViewportY)
     .mockReturnValueOnce(0)
@@ -193,7 +193,7 @@ it('shows a paragraph marker when moving with space', () => {
   vi.mocked(adapter.setParagraphMarker).mockClear();
 
   act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
   });
 
   expect(onRevealDocumentSelection).not.toHaveBeenCalled();

@@ -1,5 +1,9 @@
 import { useEffect, type CSSProperties } from 'react';
 
+import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { getCommandShortcutOverrides, resolveCommandShortcutMap } from '../../shared/commands/keymap';
+import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
@@ -29,7 +33,15 @@ function isEditableOrInteractiveTarget(target: EventTarget | null) {
   );
 }
 
-function useSpaceShortcut(action: () => void) {
+function getReadingReadShortcuts() {
+  return resolveCommandShortcutMap({
+    commandIds: [APP_COMMAND_IDS.readingReviewRead],
+    defaults: DEFAULT_APP_COMMAND_SHORTCUTS,
+    overrides: getCommandShortcutOverrides()
+  })[APP_COMMAND_IDS.readingReviewRead];
+}
+
+function useReadingReadShortcut(action: () => void) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -40,8 +52,8 @@ function useSpaceShortcut(action: () => void) {
         event.shiftKey ||
         event.isComposing ||
         event.repeat ||
-        (event.key !== ' ' && event.code !== 'Space') ||
-        isEditableOrInteractiveTarget(event.target)
+        isEditableOrInteractiveTarget(event.target) ||
+        !matchesShortcutSet(event, getReadingReadShortcuts())
       ) {
         return;
       }
@@ -58,7 +70,7 @@ function ReviewCompleteBar({
   onContinueReading,
   style
 }: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onContinueReading' | 'reviewSummary' | 'style'>) {
-  useSpaceShortcut(onContinueReading);
+  useReadingReadShortcut(onContinueReading);
 
   return (
     <ReviewActionBar
@@ -84,7 +96,7 @@ function ReviewResumeBar({
   showSummary,
   style
 }: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onResumeReviewItem' | 'reviewSummary' | 'showSummary' | 'style'>) {
-  useSpaceShortcut(onResumeReviewItem);
+  useReadingReadShortcut(onResumeReviewItem);
 
   return (
     <ReviewActionBar
