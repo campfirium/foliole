@@ -1,5 +1,5 @@
 param(
-  [string]$WorkDir = "C:\dev\foliole"
+  [string]$WorkDir = "D:\C\foliole"
 )
 
 $ErrorActionPreference = "Stop"

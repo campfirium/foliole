@@ -27,7 +27,7 @@ describe('playwright desktop harness', () => {
   it('defaults to the fixed windows mirror root instead of current working directory', () => {
     const appRoot = resolveDesktopAppRoot({});
 
-    expect(appRoot).toBe('/mnt/c/dev/foliole');
+    expect(appRoot).toBe('/mnt/d/C/foliole');
   });
 
   it('derives the mirror root from the configured windows workdir', () => {
@@ -109,11 +109,11 @@ describe('playwright desktop harness', () => {
   it('infers the electron executable from the app root when no override is provided', () => {
     expect(
       resolveElectronExecutablePath(
-        '/mnt/c/dev/foliole',
+        '/mnt/d/C/foliole',
         {},
-        (filePath) => filePath === '/mnt/c/dev/foliole/node_modules/electron/dist/electron.exe'
+        (filePath) => filePath === '/mnt/d/C/foliole/node_modules/electron/dist/electron.exe'
       )
-    ).toBe('/mnt/c/dev/foliole/node_modules/electron/dist/electron.exe');
+    ).toBe('/mnt/d/C/foliole/node_modules/electron/dist/electron.exe');
 
     expect(
       resolveElectronExecutablePath(

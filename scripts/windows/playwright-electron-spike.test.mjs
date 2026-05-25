@@ -18,7 +18,7 @@ describe('playwright electron spike', () => {
   it('uses the fixed windows mirror root by default', () => {
     const appRoot = resolveDefaultAppRoot({});
 
-    expect(appRoot).toBe('/mnt/c/dev/foliole');
+    expect(appRoot).toBe('/mnt/d/C/foliole');
   });
 
   it('resolves current build output paths in args launch mode', () => {

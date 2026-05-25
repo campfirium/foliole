@@ -3,14 +3,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-WINDOWS_MIRROR_DIR="${WINDOWS_MIRROR_DIR:-/mnt/c/dev/foliole}"
+WINDOWS_MIRROR_DIR="${WINDOWS_MIRROR_DIR:-/mnt/d/C/foliole}"
 WINDOWS_SYNC_CHANGE_LOG="${WINDOWS_SYNC_CHANGE_LOG:-}"
 WINDOWS_SYNC_INCLUDE_ELECTRON_DIST="${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST:-}"
 WINDOWS_SYNC_LOCK_FILE="${WINDOWS_SYNC_LOCK_FILE:-/tmp/foliole-windows-mirror.lock}"
+WINDOWS_SYNC_VERBOSE="${WINDOWS_SYNC_VERBOSE:-}"
 
 if [[ ! -d "${WINDOWS_MIRROR_DIR}" ]]; then
   echo "[windows-sync] mirror directory not found: ${WINDOWS_MIRROR_DIR}"
-  echo "[windows-sync] set WINDOWS_MIRROR_DIR or create C:\\dev\\foliole first."
+  echo "[windows-sync] set WINDOWS_MIRROR_DIR or create D:\\C\\foliole first."
   exit 1
 fi
 
@@ -35,7 +36,6 @@ RSYNC_ARGS=(
   -rlt
   --inplace
   --delete
-  --itemize-changes
   --no-perms
   --no-owner
   --no-group
@@ -75,6 +75,10 @@ RSYNC_ARGS=(
 
 if [[ -z "${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST}" ]]; then
   RSYNC_ARGS+=(--exclude "electron-dist/")
+fi
+
+if [[ -n "${WINDOWS_SYNC_VERBOSE}" || -n "${WINDOWS_SYNC_CHANGE_LOG}" ]]; then
+  RSYNC_ARGS+=(--itemize-changes)
 fi
 
 if [[ -n "${WINDOWS_SYNC_CHANGE_LOG}" ]]; then

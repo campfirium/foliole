@@ -1,5 +1,5 @@
 param(
-  [string]$WindowsWorkDir = "C:\dev\foliole",
+  [string]$WindowsWorkDir = "D:\C\foliole",
   [Parameter(Mandatory = $true)]
   [string]$ScriptPath,
   [string[]]$NodeArgs = @()

@@ -117,9 +117,12 @@ describe('restart-electron-dev script', () => {
     expect(script).toContain('. $NativeAbiPreflightScript');
     expect(script).toContain('Assert-NativeModulesLoadInElectron -WorkDir $WorkDir');
     expect(preflight).toContain('function Assert-NativeModulesLoadInElectron');
+    expect(preflight).toContain('function Resolve-NodeExecutable');
     expect(preflight).toContain('node_modules\\electron\\dist\\electron.exe');
     expect(preflight).toContain('scripts\\electron-sqlite-runner.mjs');
-    expect(preflight).toContain('& node $runnerPath --preflight');
+    expect(preflight).toContain('Join-Path (Split-Path -Parent $npmCommand.Source) "node.exe"');
+    expect(preflight).toContain('& $nodePath $runnerPath --preflight');
+    expect(preflight).not.toContain('npm.cmd exec');
     expect(preflight).toContain('$exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }');
     expect(preflight).toContain('native module preflight failed: better-sqlite3 load failed');
     expect(preflight).toContain('restore better-sqlite3 for the Electron ABI');

@@ -13,7 +13,7 @@ const FALLBACK = 2;
 function parseArgs(argv) {
   const options = {
     changedFiles: process.env.WINDOWS_PREVIEW_CHANGED_FILES ?? '',
-    mirrorDir: process.env.WINDOWS_MIRROR_DIR ?? '/mnt/c/dev/foliole',
+    mirrorDir: process.env.WINDOWS_MIRROR_DIR ?? '/mnt/d/C/foliole',
     repoRoot: process.env.ELECTRON_DIST_SYNC_REPO_ROOT ?? REPO_ROOT
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -99,7 +99,7 @@ function runRsync(options, files) {
 export function planElectronDistIncrementalSync(rawOptions = {}) {
   return createSyncPlan({
     changedFiles: rawOptions.changedFiles ?? '',
-    mirrorDir: rawOptions.mirrorDir ?? '/mnt/c/dev/foliole',
+    mirrorDir: rawOptions.mirrorDir ?? '/mnt/d/C/foliole',
     repoRoot: rawOptions.repoRoot ?? REPO_ROOT
   });
 }

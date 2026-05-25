@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-C:\\dev\\foliole}"
+WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-D:\\C\\foliole}"
 WINDOWS_CLIENT_ACTION="${WINDOWS_CLIENT_ACTION:-status}"
 
 PS_SCRIPT_WIN_PATH="$(wslpath -w "${SCRIPT_DIR}/restart-electron-dev.ps1")"

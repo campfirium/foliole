@@ -1,7 +1,7 @@
 param(
   [ValidateSet("status", "start", "stop", "restart", "full-restart")]
   [string]$Action = "status",
-  [string]$WindowsWorkDir = "C:\dev\foliole",
+  [string]$WindowsWorkDir = "D:\C\foliole",
   [string]$PidFile = "$env:TEMP\foliole-electron-dev.pid",
   [string]$RuntimePidFile = "$env:TEMP\foliole-electron-runtime.pid",
   [string]$RuntimeSessionFile = "$env:TEMP\foliole-electron-runtime-session.txt",

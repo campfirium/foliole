@@ -11,7 +11,7 @@ import {
 import { createDesktopIsolationContext } from './playwright-desktop-isolation.mjs';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
-const DEFAULT_WINDOWS_WORKDIR = 'C:\\dev\\foliole';
+const DEFAULT_WINDOWS_WORKDIR = 'D:\\C\\foliole';
 export const APP_READY_FLAG = '__FOLIOLE_APP_READY_REPORTED__';
 
 function resolveTimeoutMs(rawValue) {

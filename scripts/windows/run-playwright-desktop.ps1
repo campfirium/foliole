@@ -1,5 +1,5 @@
 param(
-  [string]$WindowsWorkDir = "C:\dev\foliole",
+  [string]$WindowsWorkDir = "D:\C\foliole",
   [string]$Config = "playwright.desktop.config.ts",
   [string]$BuildCommand = "npm.cmd run build",
   [string]$CompileCommand = "npm.cmd run electron:compile",

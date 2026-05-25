@@ -1,5 +1,5 @@
 param(
-  [string]$WorkDir = "C:\dev\foliole",
+  [string]$WorkDir = "D:\C\foliole",
   [switch]$Run
 )
 
@@ -13,6 +13,23 @@ function Format-PreflightDetail {
     return "unknown native module load failure"
   }
   return ($text -replace "\s+", " ").Trim()
+}
+
+function Resolve-NodeExecutable {
+  $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+  if ($null -ne $nodeCommand) {
+    return $nodeCommand.Source
+  }
+
+  $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+  if ($null -ne $npmCommand) {
+    $candidate = Join-Path (Split-Path -Parent $npmCommand.Source) "node.exe"
+    if (Test-Path -Path $candidate) {
+      return $candidate
+    }
+  }
+
+  throw "native module preflight failed: Windows node.exe not found"
 }
 
 function Assert-NativeModulesLoadInElectron {
@@ -30,10 +47,11 @@ function Assert-NativeModulesLoadInElectron {
 
   $previousLocation = Get-Location
   $previousErrorActionPreference = $ErrorActionPreference
+  $nodePath = Resolve-NodeExecutable
   try {
     Set-Location -Path $WorkDir
     $ErrorActionPreference = "Continue"
-    $output = & node $runnerPath --preflight 2>&1
+    $output = & $nodePath $runnerPath --preflight 2>&1
     $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
   } finally {
     $ErrorActionPreference = $previousErrorActionPreference
