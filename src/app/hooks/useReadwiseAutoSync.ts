@@ -11,6 +11,8 @@ import {
   loadImportSourceWorkspaceSettings
 } from '../components/importSourceWorkspaceSettings';
 
+import { refreshWorkspaceAfterReadwiseImport } from './readwiseWorkspaceRefresh';
+
 const SYNC_INTERVAL_MS: Record<ReadwiseSyncFrequency, number> = {
   daily: 24 * 60 * 60 * 1000,
   every_12_hours: 12 * 60 * 60 * 1000,
@@ -64,7 +66,7 @@ export function useReadwiseAutoSync() {
       try {
         settings = await loadImportSourceWorkspaceSettings();
         if (canRunReadwiseAutoSync(settings)) {
-          await runReadwiseReaderImportInRuntime(settings);
+          await refreshWorkspaceAfterReadwiseImport(await runReadwiseReaderImportInRuntime(settings));
         }
       } catch {
         // Auto sync should not stop future scheduled scans after one failed run.
