@@ -9,6 +9,7 @@ import {
   createReadwiseBookNotFoundResetResult
 } from './readwiseBookImportResetResults.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
+import { isRemovedReadwiseBookNode } from './readwiseBookRemovedSourceState.js';
 import type { ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 import type { ReadwiseBooksInventory } from './readwiseBooksInventory.js';
 import { loadReadwiseBooksInventory } from './readwiseBooksInventoryLoad.js';
@@ -23,6 +24,7 @@ const INBOX_NODE_ID = 'special-inbox';
 interface ActiveNodeRow {
   [column: string]: unknown;
   created_at: string;
+  deleted_at: string | null;
   desired_retention: number | null;
   hide_title_heading: number;
   id: string;
@@ -58,9 +60,10 @@ function readActiveNode(nodeId: string) {
               n.title,
               n.is_title_manual,
               n.hide_title_heading,
-              n.created_at
+              n.created_at,
+              n.deleted_at
        FROM nodes n
-       WHERE n.id = ? AND n.deleted_at IS NULL`,
+       WHERE n.id = ?`,
       [nodeId]
     ) ?? null
   );
@@ -173,8 +176,14 @@ async function resetReadwiseBookImportTarget(
   }
 
   const activeNode = readActiveNode(nodeId);
+  if (activeNode?.deleted_at) {
+    return createReadwiseBookNotFoundResetResult();
+  }
   if (!activeNode) {
     const restoredNodeId = book.generatedNodeId ?? nodeId;
+    if (isRemovedReadwiseBookNode(restoredNodeId)) {
+      return createReadwiseBookNotFoundResetResult();
+    }
     const { placeholderContent, resetBook, updatedAt } = rebuildPlaceholderNode(book, restoredNodeId);
     const updatedInventory = {
       ...inventory,
