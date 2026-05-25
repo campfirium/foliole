@@ -11,6 +11,22 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const LOG_PREFIX = '[desktop-validation-serial]';
 let activeChild = null;
 
+function isWslEnvironment(env = process.env) {
+  if (env.DESKTOP_VALIDATION_SERIAL_FORCE_WSL === '1') {
+    return true;
+  }
+  if (env.DESKTOP_VALIDATION_SERIAL_FORCE_WSL === '0') {
+    return false;
+  }
+  return Boolean(env.WSL_DISTRO_NAME || env.WSL_INTEROP);
+}
+
+export function resolveDefaultPreviewCommand(env = process.env) {
+  return isWslEnvironment(env)
+    ? ['npm', 'run', 'windows:preview']
+    : ['npm', 'run', 'windows:preview:native'];
+}
+
 export function formatQueueActiveMessage({ ageSeconds, pid }) {
   return formatGateQueueMessage({
     className: 'preview',
@@ -32,7 +48,7 @@ function resolveCommands() {
 
   return [
     ['npm', 'run', 'lint:desktop'],
-    ['npm', 'run', 'windows:preview:native']
+    resolveDefaultPreviewCommand()
   ];
 }
 

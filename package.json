@@ -19,7 +19,6 @@
     "deps:hardening:check": "bash scripts/npm-hardening-check.sh",
     "check:native-contracts": "node scripts/check-native-command-contracts.mjs",
     "check:layer-boundary": "node scripts/check-layer-dependency-boundary.mjs",
-    "check:pre-commit": "node scripts/pre-commit-validation.mjs",
     "check:affected": "node scripts/pre-push-affected-validation.mjs",
     "check:settings-classification": "node scripts/check-settings-classification.mjs",
     "check:reading-typography": "node scripts/check-reading-typography-tokens.mjs",

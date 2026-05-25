@@ -39,7 +39,7 @@ function buildConstraintLines() {
     '- Do not run raw validation tools such as npx eslint, npx vite build, npx playwright, vitest, tsc, or vite build; use npm scripts that already own the resource gate.',
     '- Do not decompose npm run build into appearance generation plus raw vite build; run npm run build for desktop build validation.',
     '- For narrow lint use npm run lint:files -- <files>; for narrow tests use npm run test:files -- <test files>; for desktop Playwright use npm run test:e2e:desktop -- <spec> <playwright args>.',
-    '- When desktop lint and Windows preview are both required, run npm run validate:desktop:serial and keep that command alive until it exits instead of launching lint:desktop and windows:preview:native separately.',
+    '- When desktop lint and Windows preview are both required, run npm run validate:desktop:serial and keep that command alive until it exits instead of launching lint:desktop and a Windows preview separately.',
     '- If a Windows preview is required, a normal final reply is only allowed after npm run windows:preview reaches [windows-preview] status: STARTED.',
     '- If preview-dedupe says a request is waiting, keep waiting for that same preview command to finish; do not stop the waiting process or report the wait as a final result.',
     '- If required preview is blocked by an out-of-scope existing red light, do not send a normal completion report or say the preview was not run; keep the task unfinished until a later successful preview can release it.',

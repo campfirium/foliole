@@ -30,5 +30,5 @@
 
 ## Validation
 
-- companion 改动默认先执行覆盖本轮能力闭环的最小验证，并在汇报前执行 `npm run android:preview`；只有当能力闭环触及移动共享 bridge、Capacitor / Android 宿主主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:full`。
-- 对话协作模式下，只要改动触及 `src/companion/**` 或移动共享 bridge，汇报前必须执行 `npm run android:preview`。
+- companion 改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及移动共享 bridge、Capacitor / Android 宿主主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:full`。
+- `npm run android:preview` 只按根 `AGENTS.md` 与 `android/AGENTS.md` 的 flag / 连续推进 / 阶段验收规则执行；本文件不单独强制 companion 改动必跑预览。

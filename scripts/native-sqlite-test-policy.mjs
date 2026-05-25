@@ -19,9 +19,7 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionSyncStateObjects.test.ts'
 ];
 
-const ordinaryNodeSqliteTextOnlyTests = [
-  'scripts/pre-commit-validation-native-sqlite.test.mjs'
-];
+const ordinaryNodeSqliteTextOnlyTests = [];
 
 export {
   controlledElectronSqliteTests,
