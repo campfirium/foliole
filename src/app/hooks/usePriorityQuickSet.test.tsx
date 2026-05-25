@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { onWindowEscape } from '../../shared/platform/keyboard';
@@ -45,6 +45,18 @@ it('enters quick-set mode from the configured shortcut and applies a digit', () 
   expect(onPriorityChange).toHaveBeenCalledWith('node-1', 0);
   expect(screen.getByText('idle')).toBeInTheDocument();
   expect(screen.getByText('Ctrl+M')).toBeInTheDocument();
+});
+
+it('enters quick-set mode when the editor has already handled Ctrl+M', () => {
+  render(<Harness />);
+  const event = new KeyboardEvent('keydown', { cancelable: true, ctrlKey: true, key: 'm' });
+
+  event.preventDefault();
+  act(() => {
+    window.dispatchEvent(event);
+  });
+
+  expect(screen.getByText('active')).toBeInTheDocument();
 });
 
 it('cancels quick-set mode with escape', () => {

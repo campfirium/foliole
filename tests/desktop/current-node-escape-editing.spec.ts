@@ -3,9 +3,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const NODE_ID = 'playwright-current-node-escape-topic';
-
-async function seedCurrentNodeWorkspace(desktopWindow: Page) {
+async function seedCurrentNodeWorkspace(desktopWindow: Page, nodeId: string) {
   await desktopWindow.evaluate(async (nodeId) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     await api?.seedNodes?.([
@@ -17,12 +15,13 @@ async function seedCurrentNodeWorkspace(desktopWindow: Page) {
       }
     ]);
     await api?.openNode?.(nodeId);
-  }, NODE_ID);
+  }, nodeId);
 }
 
 async function focusPromptEditor(desktopWindow: Page) {
-  const focused = await desktopWindow.evaluate(() => globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', 2, 2) ?? false);
-  expect(focused).toBe(true);
+  await expect
+    .poll(() => desktopWindow.evaluate(() => globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', 2, 2) ?? false))
+    .toBe(true);
 }
 
 async function sendNativeEscape(desktopApp: ElectronApplication) {
@@ -36,16 +35,17 @@ async function sendNativeEscape(desktopApp: ElectronApplication) {
   });
 }
 
-async function getNodeSnapshot(desktopWindow: Page) {
+async function getNodeSnapshot(desktopWindow: Page, nodeId: string) {
   return desktopWindow.evaluate((nodeId) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     return api?.getNode?.(nodeId) ?? null;
-  }, NODE_ID);
+  }, nodeId);
 }
 
 test('Escape leaves current node editing after command palette closes outside Flow', async ({ desktopApp, desktopWindow }) => {
+  const nodeId = 'playwright-current-node-escape-topic';
   await expectWorkspaceShell(desktopWindow);
-  await seedCurrentNodeWorkspace(desktopWindow);
+  await seedCurrentNodeWorkspace(desktopWindow, nodeId);
   await focusPromptEditor(desktopWindow);
 
   await desktopWindow.keyboard.press('Control+P');
@@ -54,12 +54,23 @@ test('Escape leaves current node editing after command palette closes outside Fl
   await expect(desktopWindow.getByRole('textbox', { name: 'Search commands' })).toBeHidden();
 
   await desktopWindow.keyboard.press('Delete');
-  await expect.poll(() => getNodeSnapshot(desktopWindow)).toMatchObject({ trashed: false });
+  await expect.poll(() => getNodeSnapshot(desktopWindow, nodeId)).toMatchObject({ trashed: false });
 
   await sendNativeEscape(desktopApp);
   await desktopWindow.keyboard.press('Delete');
 
-  await expect.poll(() => getNodeSnapshot(desktopWindow), {
+  await expect.poll(() => getNodeSnapshot(desktopWindow, nodeId), {
     message: 'waiting for Delete to work after native Escape leaves editing'
   }).toMatchObject({ trashed: true });
+});
+
+test('Ctrl+M opens priority quick set while editing outside Flow', async ({ desktopWindow }) => {
+  const nodeId = 'playwright-current-node-priority-topic';
+  await expectWorkspaceShell(desktopWindow);
+  await seedCurrentNodeWorkspace(desktopWindow, nodeId);
+  await focusPromptEditor(desktopWindow);
+
+  await desktopWindow.keyboard.press('Control+M');
+
+  await expect(desktopWindow.getByRole('dialog', { name: 'Set priority' })).toBeVisible();
 });

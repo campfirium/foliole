@@ -108,7 +108,7 @@ it('continues dispatching non-escape keys to ordinary window keydown handlers', 
   unlistenEscape();
 });
 
-it('ignores keydown events already handled by a component', () => {
+it('keeps default-prevented keydowns visible to ordinary handlers', () => {
   const escape = vi.fn();
   const plain = vi.fn();
   const unlistenEscape = onWindowEscape(escape);
@@ -118,7 +118,9 @@ it('ignores keydown events already handled by a component', () => {
   dispatchPreventedKeydown('a');
 
   expect(escape).not.toHaveBeenCalled();
-  expect(plain).not.toHaveBeenCalled();
+  expect(plain).toHaveBeenCalledTimes(2);
+  expect(plain.mock.calls[0]?.[0].defaultPrevented).toBe(true);
+  expect(plain.mock.calls[1]?.[0].defaultPrevented).toBe(true);
 
   unlistenPlain();
   unlistenEscape();

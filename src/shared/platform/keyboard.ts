@@ -79,9 +79,6 @@ function dispatchNativeEscapeFallback(payload: NativeKeyboardInputPayload) {
 }
 
 function dispatchWindowKeydown(event: KeyboardEvent) {
-  if (event.defaultPrevented) {
-    return;
-  }
   for (const entry of [...keydownEntries]) {
     entry.handler(event);
   }
