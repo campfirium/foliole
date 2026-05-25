@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { getTopicPostponeDelayOption, TOPIC_POSTPONE_DELAY_OPTIONS } from '../../../lib/core/review/topicPostponeDelay';
 import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
@@ -12,15 +12,24 @@ function isDigitKey(value: string) {
 }
 
 function useReviewTopicDelayPanelKeys(props: ReviewTopicDelayPanelProps) {
+  const isOpenRef = useRef(props.isOpen);
+  isOpenRef.current = props.isOpen;
   useEffect(() => {
     if (!props.isOpen) return;
+    const handleEscape = () => {
+      if (!isOpenRef.current) {
+        return false;
+      }
+      props.close();
+      return undefined;
+    };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isDigitKey(event.key)) {
         event.preventDefault();
         void props.submit(Number(event.key));
       }
     };
-    const unlistenEscape = onWindowEscape(props.close);
+    const unlistenEscape = onWindowEscape(handleEscape);
     const unlistenKeydown = onWindowKeydown(handleKeyDown);
     return () => {
       unlistenEscape();

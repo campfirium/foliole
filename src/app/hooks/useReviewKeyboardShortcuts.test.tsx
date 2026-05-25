@@ -1,77 +1,9 @@
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
+import { onWindowEscape } from '../../shared/platform/keyboard';
 
-const TEST_NODE = {
-  id: 'topic-1',
-  parentNodeId: null,
-  kind: 'topic',
-  title: 'Topic 1',
-  content: '',
-  reveal: null,
-  reading: null,
-  review: null,
-  createdAt: '2026-02-25T00:00:00.000Z',
-  updatedAt: '2026-02-25T00:00:00.000Z'
-} as const;
-
-const REVIEW_SHORTCUT_DEFAULTS = {
-  revealAnswerShortcuts: { primary: { key: ' ' } },
-  gradeAgainShortcuts: { primary: { key: '1' } },
-  gradeHardShortcuts: { primary: { key: '2' } },
-  gradeGoodShortcuts: { primary: { key: '3' } },
-  gradeEasyShortcuts: { primary: { key: '4' } },
-  readingSoonShortcuts: { primary: { key: 'o' } },
-  readingLaterShortcuts: { primary: { key: 'l' } },
-  readingReadShortcuts: { primary: { key: 'r' } },
-  readingDismissShortcuts: { primary: { key: 'd' } },
-  deleteCurrentItemShortcuts: { primary: { key: 'Delete' } },
-  navigateParentShortcuts: { primary: { key: 'w' } },
-  navigateBackShortcuts: { primary: { key: 'a' } },
-  navigateForwardShortcuts: { primary: { key: 'f' } },
-  navigateDownShortcuts: { primary: { key: 's' } },
-  navigatePreviousSiblingShortcuts: { primary: { key: 'q' } },
-  navigateNextSiblingShortcuts: { primary: { key: 'e' } },
-  deleteSourceTopicShortcuts: { primary: { key: 't', altKey: true } }
-} as const;
-
-function ReviewShortcutHarness(
-  overrides: Partial<Parameters<typeof useReviewKeyboardShortcuts>[0]>
-) {
-  const args: Parameters<typeof useReviewKeyboardShortcuts>[0] = {
-    isStudyMode: true,
-    isCommandPaletteOpen: false,
-    isSearchPaletteOpen: false,
-    isSettingsOpen: false,
-    activeNodeId: 'topic-1',
-    nodeOrder: ['topic-1'],
-    nodesById: { 'topic-1': TEST_NODE },
-    trashedNodeIds: [],
-    reviewCurrentNodeId: 'topic-1',
-    isCurrentReviewItemVisible: true,
-    isAnswerRevealed: false,
-    isCurrentItemGradable: false,
-    ...REVIEW_SHORTCUT_DEFAULTS,
-    isSourceTopicDeleteDialogOpen: false,
-    readReviewTopic: vi.fn(async () => true),
-    postponeReviewTopic: vi.fn(async () => true),
-    deleteCurrentReviewItem: vi.fn(() => true),
-    deleteReviewSourceTopic: vi.fn(() => true),
-    dismissReviewTopic: vi.fn(async () => true),
-    revisitReviewTopicSoon: vi.fn(async () => true),
-    goBack: vi.fn(),
-    goForward: vi.fn(),
-    goParent: vi.fn(),
-    resumeReviewItem: vi.fn(),
-    revealReviewAnswer: vi.fn(),
-    selectNode: vi.fn(),
-    gradeReviewCard: vi.fn(async () => true),
-    ...overrides
-  };
-  useReviewKeyboardShortcuts(args);
-  return null;
-}
+import { ReviewShortcutHarness } from './useReviewKeyboardShortcuts.testUtils';
 
 afterEach(() => {
   cleanup();
@@ -96,15 +28,113 @@ it('resumes the hidden review item with Space', () => {
   const resumeReviewItem = vi.fn();
   render(
     <ReviewShortcutHarness
+      isCurrentItemGradable
       isCurrentReviewItemVisible={false}
-      readingReadShortcuts={{ primary: { key: 'w' }, secondary: { key: ' ' } }}
+      readingReadShortcuts={{ primary: { key: ' ' } }}
+      revealAnswerShortcuts={{ primary: { key: 'x' } }}
       resumeReviewItem={resumeReviewItem}
     />
   );
 
-  fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+  const button = document.createElement('button');
+  button.textContent = 'Flow item';
+  document.body.append(button);
+  button.focus();
+  fireEvent.keyDown(button, { code: 'Space', key: ' ' });
 
   expect(resumeReviewItem).toHaveBeenCalledTimes(1);
+});
+
+it('leaves review editing when Escape starts from an editable target', () => {
+  const readReviewTopic = vi.fn(async () => true);
+  render(<ReviewShortcutHarness readReviewTopic={readReviewTopic} />);
+  const editable = document.createElement('div');
+  editable.setAttribute('contenteditable', 'true');
+  document.body.append(editable);
+  editable.focus();
+  fireEvent.focusIn(editable);
+
+  fireEvent.keyDown(editable, { key: 'Escape' });
+  fireEvent.keyDown(window, { key: 'r' });
+
+  expect(document.activeElement).not.toBe(editable);
+  expect(readReviewTopic).toHaveBeenCalledTimes(1);
+});
+
+it('lets an open Escape surface close before leaving review editing', () => {
+  const readReviewTopic = vi.fn(async () => true);
+  const closeSurface = vi.fn();
+  render(<ReviewShortcutHarness readReviewTopic={readReviewTopic} />);
+  const editable = document.createElement('div');
+  editable.setAttribute('contenteditable', 'true');
+  document.body.append(editable);
+  editable.focus();
+  fireEvent.focusIn(editable);
+  const unlistenSurface = onWindowEscape(closeSurface);
+
+  fireEvent.keyDown(editable, { key: 'Escape' });
+  expect(document.activeElement).toBe(editable);
+  fireEvent.keyDown(window, { key: 'r' });
+  expect(readReviewTopic).not.toHaveBeenCalled();
+  unlistenSurface();
+  fireEvent.keyDown(editable, { key: 'Escape' });
+  fireEvent.keyDown(window, { key: 'r' });
+
+  expect(closeSurface).toHaveBeenCalledTimes(1);
+  expect(readReviewTopic).toHaveBeenCalledTimes(1);
+});
+
+it('runs review shortcuts after focus moves from the editor to a panel button', () => {
+  const readReviewTopic = vi.fn(async () => true);
+  const closeSurface = vi.fn();
+  render(<ReviewShortcutHarness readReviewTopic={readReviewTopic} />);
+  const editable = document.createElement('div');
+  editable.setAttribute('contenteditable', 'true');
+  const panelButton = document.createElement('button');
+  panelButton.textContent = 'Flow item';
+  document.body.append(editable, panelButton);
+  editable.focus();
+  fireEvent.focusIn(editable);
+  panelButton.focus();
+  fireEvent.focusIn(panelButton);
+  const unlistenSurface = onWindowEscape(closeSurface);
+
+  fireEvent.keyDown(window, { key: 'r' });
+  fireEvent.keyDown(panelButton, { key: 'Escape' });
+  fireEvent.keyDown(window, { key: 'r' });
+  unlistenSurface();
+
+  expect(readReviewTopic).toHaveBeenCalledTimes(2);
+  expect(closeSurface).toHaveBeenCalledTimes(1);
+});
+
+it('keeps review editing available after a transient dialog closes', () => {
+  const readReviewTopic = vi.fn(async () => true);
+  const closeDialog = vi.fn();
+  render(<ReviewShortcutHarness readReviewTopic={readReviewTopic} />);
+  const editable = document.createElement('div');
+  editable.setAttribute('contenteditable', 'true');
+  const dialog = document.createElement('section');
+  dialog.setAttribute('role', 'dialog');
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  dialog.append(slider);
+  document.body.append(editable, dialog);
+  editable.focus();
+  fireEvent.focusIn(editable);
+  slider.focus();
+  fireEvent.focusIn(slider);
+  const unlistenDialog = onWindowEscape(closeDialog);
+
+  fireEvent.keyDown(slider, { key: 'Escape' });
+  unlistenDialog();
+  dialog.remove();
+  fireEvent.keyDown(window, { key: 'r' });
+  fireEvent.keyDown(window, { key: 'Escape' });
+  fireEvent.keyDown(window, { key: 'r' });
+
+  expect(closeDialog).toHaveBeenCalledTimes(1);
+  expect(readReviewTopic).toHaveBeenCalledTimes(1);
 });
 
 it('deletes the hidden current review item with Delete', () => {

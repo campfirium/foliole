@@ -13,6 +13,7 @@ import {
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
+import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
 
 const EMPTY_COMMAND_ITEMS: CommandPaletteItem[] = [];
 const EMPTY_RECENT_COMMAND_IDS: string[] = [];
@@ -157,6 +158,7 @@ export function CommandPalette({
   onRunCommand
 }: CommandPaletteProps) {
   const focusTrap = useFloatingDialogFocusTrap(isOpen);
+  useFloatingPaletteEscape(isOpen, onClose);
   const { activeIndex, activeItems, displaySections, query, setActiveIndex, setQuery } =
     useCommandPaletteState({
       isOpen,

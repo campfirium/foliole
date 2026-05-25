@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
 import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { onEditingEscapeNativeFallback } from './editingEscapeNativeFallback';
 import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
 
 export function useCurrentNodeKeyboardShortcuts(args: {
@@ -11,13 +12,16 @@ export function useCurrentNodeKeyboardShortcuts(args: {
   isStudyMode: boolean;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
-  const blocked = isCurrentNodeKeyboardBlocked(args);
-  const [isEditing, setIsEditing] = useCurrentNodeEditingState(blocked);
-  useCurrentNodeEditingEscape(blocked, isEditing, setIsEditing);
-  useCurrentNodeDeleteShortcut(args, blocked, isEditing);
+  const editingDisabled = isCurrentNodeEditingDisabled(args);
+  const transientSurfaceOpen = isCurrentNodeTransientSurfaceOpen(args.controller);
+  const shortcutsBlocked = isCurrentNodeKeyboardBlocked(args);
+  const editingContextRef = useRef(false);
+  const [isEditing, setIsEditing] = useCurrentNodeEditingState(editingDisabled, editingContextRef);
+  useCurrentNodeEditingEscape(editingDisabled, transientSurfaceOpen, editingContextRef, setIsEditing);
+  useCurrentNodeDeleteShortcut(args, shortcutsBlocked, isEditing);
 }
 
-function isCurrentNodeKeyboardBlocked(args: {
+function isCurrentNodeEditingDisabled(args: {
   controller: ReturnType<typeof useWorkspaceControllerState>;
   isStudyMode: boolean;
   ws: ReturnType<typeof useWorkspaceSelectors>;
@@ -25,12 +29,6 @@ function isCurrentNodeKeyboardBlocked(args: {
   const runtime = args.controller.runtime;
   return (
     args.isStudyMode ||
-    Boolean(args.controller.editorCtx.contextMenu) ||
-    runtime.isCommandPaletteOpen ||
-    runtime.isSearchPaletteOpen ||
-    runtime.isSettingsOpen ||
-    runtime.isGoToNodePaletteOpen ||
-    runtime.isMoveToNodePaletteOpen ||
     runtime.isViewingTrashNode ||
     args.controller.trash.isTrashViewOpen ||
     args.controller.virtualView.isVirtualViewOpen ||
@@ -39,14 +37,45 @@ function isCurrentNodeKeyboardBlocked(args: {
   );
 }
 
-function useCurrentNodeEditingState(blocked: boolean) {
+function isCurrentNodeKeyboardBlocked(args: {
+  controller: ReturnType<typeof useWorkspaceControllerState>;
+  isStudyMode: boolean;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return (
+    isCurrentNodeEditingDisabled(args) ||
+    isCurrentNodeTransientSurfaceOpen(args.controller)
+  );
+}
+
+function isCurrentNodeTransientSurfaceOpen(controller: ReturnType<typeof useWorkspaceControllerState>) {
+  const runtime = controller.runtime;
+  return (
+    Boolean(controller.editorCtx.contextMenu) ||
+    runtime.isCommandPaletteOpen ||
+    runtime.isSearchPaletteOpen ||
+    runtime.isSettingsOpen ||
+    runtime.isGoToNodePaletteOpen ||
+    runtime.isMoveToNodePaletteOpen
+  );
+}
+
+function useCurrentNodeEditingState(blocked: boolean, editingContextRef: MutableRefObject<boolean>) {
   const [isEditing, setIsEditing] = useState(false);
   useEffect(() => {
     if (blocked) {
+      editingContextRef.current = false;
       setIsEditing(false);
       return;
     }
-    const syncEditingState = (target: EventTarget | null) => setIsEditing(isEditableKeyboardTarget(target));
+    const syncEditingState = (target: EventTarget | null) => {
+      if (target instanceof HTMLElement && target.closest('[role="dialog"]')) {
+        return;
+      }
+      const nextIsEditing = isEditableKeyboardTarget(target);
+      editingContextRef.current = nextIsEditing;
+      setIsEditing(nextIsEditing);
+    };
     syncEditingState(document.activeElement);
     const handleFocusIn = (event: FocusEvent) => syncEditingState(event.target);
     const handleFocus = (event: FocusEvent) => syncEditingState(event.target);
@@ -56,30 +85,42 @@ function useCurrentNodeEditingState(blocked: boolean) {
       window.removeEventListener('focusin', handleFocusIn);
       window.removeEventListener('focus', handleFocus, true);
     };
-  }, [blocked]);
+  }, [blocked, editingContextRef]);
   return [isEditing, setIsEditing] as const;
 }
 
 function useCurrentNodeEditingEscape(
   blocked: boolean,
-  isEditing: boolean,
+  transientSurfaceOpen: boolean,
+  editingContextRef: MutableRefObject<boolean>,
   setIsEditing: (value: boolean) => void
 ) {
   useEffect(() => {
-    if (blocked || !isEditing) {
+    if (blocked) {
       return undefined;
     }
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') {
-        return;
-      }
+    const exitEditing = () => {
       blurActiveKeyboardTarget();
+      editingContextRef.current = false;
       setIsEditing(false);
-      event.preventDefault();
-      event.stopPropagation();
     };
-    return onWindowEscape(handleEscape);
-  }, [blocked, isEditing, setIsEditing]);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (transientSurfaceOpen) return false;
+      if (!editingContextRef.current && !isEditableKeyboardTarget(document.activeElement)) return false;
+      exitEditing();
+    };
+    const unlistenEscape = onWindowEscape(handleEscape);
+    const unlistenNativeFallback = onEditingEscapeNativeFallback({
+      exitEditing,
+      isDialogOpen: () => transientSurfaceOpen || Boolean(document.querySelector('[role="dialog"]')),
+      isEditing: () => editingContextRef.current || isEditableKeyboardTarget(document.activeElement)
+    });
+    return () => {
+      unlistenEscape();
+      unlistenNativeFallback();
+    };
+  }, [blocked, editingContextRef, setIsEditing, transientSurfaceOpen]);
 }
 
 function useCurrentNodeDeleteShortcut(

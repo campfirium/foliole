@@ -30,10 +30,15 @@ export function bindHotkeyRecorderInput(window: ElectronBrowserWindow) {
     isRecorderActive = false;
   });
   window.webContents.on('before-input-event', (event, input) => {
-    if (!isRecorderActive || input.type !== 'keyDown') {
+    if (input.type !== 'keyDown') {
       return;
     }
-    event.preventDefault();
+    if (!isRecorderActive && input.key !== 'Escape') {
+      return;
+    }
+    if (isRecorderActive) {
+      event.preventDefault();
+    }
     window.webContents.send(IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL, toNativeKeyboardInputEvent(input));
   });
 }

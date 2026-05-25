@@ -6,6 +6,7 @@ import { getCommandShortcutOverrides, resolveCommandShortcutMap } from '../../sh
 import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
+import { isEditableKeyboardTarget } from '../hooks/workspaceKeyboardTarget';
 
 import { ContinueReadingAction, ResumeReviewAction } from './ReviewModeToolbarActions';
 import { QueueClearFlowControl } from './ReviewSessionModeControl';
@@ -21,16 +22,6 @@ interface ReviewNoCurrentItemBarProps {
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   showSummary?: boolean;
   style?: CSSProperties;
-}
-
-function isEditableOrInteractiveTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  return Boolean(
-    target.isContentEditable ||
-      target.closest('button, a, input, textarea, select, [contenteditable="true"], [role="button"], [role="menuitem"]')
-  );
 }
 
 function getReadingReadShortcuts() {
@@ -52,7 +43,8 @@ function useReadingReadShortcut(action: () => void) {
         event.shiftKey ||
         event.isComposing ||
         event.repeat ||
-        isEditableOrInteractiveTarget(event.target) ||
+        isEditableKeyboardTarget(event.target) ||
+        isEditableKeyboardTarget(document.activeElement) ||
         !matchesShortcutSet(event, getReadingReadShortcuts())
       ) {
         return;
