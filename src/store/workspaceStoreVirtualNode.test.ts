@@ -13,8 +13,16 @@ beforeEach(() => {
   resetWorkspaceStore();
 });
 
-it('creates virtual nodes under the fixed virtual root', () => {
-  const createdId = useWorkspaceStore.getState().createVirtualNode();
+function expectCreatedNodeId(createdId: string | null): string {
+  expect(createdId).toBeTruthy();
+  if (!createdId) {
+    throw new Error('expected a virtual node');
+  }
+  return createdId;
+}
+
+it('creates virtual nodes under the fixed virtual root', async () => {
+  const createdId = expectCreatedNodeId(await useWorkspaceStore.getState().createVirtualNode());
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toMatchObject({
     kind: 'folder',
@@ -29,8 +37,8 @@ it('creates virtual nodes under the fixed virtual root', () => {
   });
 });
 
-it('keeps the virtual node title stable when saving a virtual filter', () => {
-  const createdId = useWorkspaceStore.getState().createVirtualNode();
+it('keeps the virtual node title stable when saving a virtual filter', async () => {
+  const createdId = expectCreatedNodeId(await useWorkspaceStore.getState().createVirtualNode());
   const initialTitle = useWorkspaceStore.getState().nodesById[createdId]?.title;
 
   useWorkspaceStore.getState().updateVirtualNodeFilter(createdId, 'reader');

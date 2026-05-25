@@ -24,7 +24,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
     vi.clearAllMocks();
   });
 
-  it('clears imported title-heading hiding after manual content edits', () => {
+  it('clears imported title-heading hiding after manual content edits', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const node = harness.getState().nodesById['node-1']!;
     if (!node) throw new Error('missing seed node');
@@ -36,7 +36,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
     });
     const actions = createWorkspaceNodeActions(harness.setState);
 
-    actions.updateNodeContent('node-1', '# Updated title\n\nBody');
+    await actions.updateNodeContent('node-1', '# Updated title\n\nBody');
 
     expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -49,7 +49,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
     );
   });
 
-  it('ignores content edits until the node document is fully loaded', () => {
+  it('ignores content edits until the node document is fully loaded', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const node = harness.getState().nodesById['node-1']!;
     if (!node) throw new Error('missing seed node');
@@ -67,7 +67,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
     });
     const actions = createWorkspaceNodeActions(harness.setState);
 
-    actions.updateNodeContent('node-1', 'Typed too early');
+    await actions.updateNodeContent('node-1', 'Typed too early');
 
     expect(harness.getState().nodesById['node-1']!).toMatchObject({
       content: '',
@@ -85,11 +85,11 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
     vi.clearAllMocks();
   });
 
-  it('syncs create qa nodes through runtime command bridge', () => {
+  it('syncs create qa nodes through runtime command bridge', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
-    const nodeId = actions.createQANodeFromSelection('node-1', 'Prompt', 'Answer', 'cloze-1', {
+    const nodeId = await actions.createQANodeFromSelection('node-1', 'Prompt', 'Answer', 'cloze-1', {
       id: 'cloze-1',
       kind: 'cloze',
       locator: {
@@ -125,8 +125,8 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
     vi.mocked(syncMoveNodesToRuntime).mockResolvedValue({ movedNodeIds: [], nodeOrder: [] });
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
-    const firstFolderId = actions.createRootNode('Folder A', 'folder');
-    const secondFolderId = actions.createRootNode('Folder B', 'folder');
+    const firstFolderId = (await actions.createRootNode('Folder A', 'folder'))!;
+    const secondFolderId = (await actions.createRootNode('Folder B', 'folder'))!;
 
     vi.clearAllMocks();
     const moved = await actions.moveNodes([secondFolderId], firstFolderId, 'before');

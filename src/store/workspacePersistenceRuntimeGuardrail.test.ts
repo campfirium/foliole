@@ -27,8 +27,8 @@ describe('workspace persistence runtime guardrail', () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    useWorkspaceStore.getState().updateNodeContent('node-1', 'Persisted markdown');
-    const createdNodeId = useWorkspaceStore.getState().createRootNode('Trash me');
+    await useWorkspaceStore.getState().updateNodeContent('node-1', 'Persisted markdown');
+    const createdNodeId = (await useWorkspaceStore.getState().createRootNode('Trash me'))!;
     useWorkspaceStore.getState().deleteNode(createdNodeId);
     await Promise.resolve();
 

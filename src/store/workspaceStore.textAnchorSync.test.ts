@@ -4,9 +4,9 @@ import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/spe
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
-function resetWorkspaceStore() {
+async function resetWorkspaceStore() {
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
-  useWorkspaceStore.getState().createRootNode('');
+  await useWorkspaceStore.getState().createRootNode('');
 }
 
 function getSeedNodeId() {
@@ -19,16 +19,16 @@ function getSeedNodeId() {
   return seedNodeId;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
-  resetWorkspaceStore();
+  await resetWorkspaceStore();
 });
 
-it('updates only the highlight locator after editing the parent content inside the anchored range', () => {
+it('updates only the highlight locator after editing the parent content inside the anchored range', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha Beta Gamma');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha Beta Gamma');
 
-  const createdId = useWorkspaceStore.getState().createHighlightNodeFromSelection(seedNodeId, 'Beta', 'hl-4', {
+  const createdId = await useWorkspaceStore.getState().createHighlightNodeFromSelection(seedNodeId, 'Beta', 'hl-4', {
     id: 'hl-4',
     kind: 'highlight',
     locator: {
@@ -42,7 +42,7 @@ it('updates only the highlight locator after editing the parent content inside t
     throw new Error('expected highlight node');
   }
 
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha Better Gamma');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha Better Gamma');
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toEqual(
     expect.objectContaining({
@@ -61,11 +61,11 @@ it('updates only the highlight locator after editing the parent content inside t
   );
 });
 
-it('keeps the child highlight as an unresolved zero-width anchor after deleting the anchored parent text', () => {
+it('keeps the child highlight as an unresolved zero-width anchor after deleting the anchored parent text', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha Beta Gamma');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha Beta Gamma');
 
-  const createdId = useWorkspaceStore.getState().createHighlightNodeFromSelection(seedNodeId, 'Beta', 'hl-5', {
+  const createdId = await useWorkspaceStore.getState().createHighlightNodeFromSelection(seedNodeId, 'Beta', 'hl-5', {
     id: 'hl-5',
     kind: 'highlight',
     locator: {
@@ -79,7 +79,7 @@ it('keeps the child highlight as an unresolved zero-width anchor after deleting 
     throw new Error('expected highlight node');
   }
 
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha  Gamma');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha  Gamma');
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toEqual(
     expect.objectContaining({
@@ -98,11 +98,11 @@ it('keeps the child highlight as an unresolved zero-width anchor after deleting 
   );
 });
 
-it('keeps the child cloze as an unresolved zero-width anchor after deleting the anchored parent text', () => {
+it('keeps the child cloze as an unresolved zero-width anchor after deleting the anchored parent text', async () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha Beta Gamma');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha Beta Gamma');
 
-  const createdId = useWorkspaceStore.getState().createQANodeFromSelection(
+  const createdId = await useWorkspaceStore.getState().createQANodeFromSelection(
     seedNodeId,
     'Alpha [...] Gamma',
     'Beta',
@@ -122,7 +122,7 @@ it('keeps the child cloze as an unresolved zero-width anchor after deleting the 
     throw new Error('expected cloze node');
   }
 
-  useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha  Gamma');
+  await useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha  Gamma');
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toEqual(
     expect.objectContaining({

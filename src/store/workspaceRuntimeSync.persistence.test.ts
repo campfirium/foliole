@@ -49,7 +49,7 @@ describe('workspaceRuntimeSync persistence mutations', () => {
   });
 
   it('does not synthesize a restore success result without runtime confirmation', async () => {
-    vi.mocked(getRuntimeInvoke).mockReturnValue(undefined);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
 
     await expect(syncRestoreNodesToRuntime({ nodeIds: ['node-1'] })).resolves.toBeUndefined();
   });

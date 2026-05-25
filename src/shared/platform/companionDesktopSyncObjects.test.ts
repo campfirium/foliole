@@ -50,9 +50,11 @@ async function testNoLegacyJsonStreams() {
 
 async function testWaitsForExclusiveStructureApplyAfterTimeout() {
   vi.useFakeTimers();
-  let resolvePack: ((result: { applied_blob_count: number; applied_object_count: number; to_state_seq: number }) => void) | null = null;
+  const resolvePackRef: {
+    current: ((result: { applied_blob_count: number; applied_object_count: number; to_state_seq: number }) => void) | null;
+  } = { current: null };
   syncBridgeMock.applyCompanionDesktopSyncPack.mockReturnValue(new Promise((resolve) => {
-    resolvePack = resolve;
+    resolvePackRef.current = resolve;
   }));
 
   const {
@@ -68,7 +70,11 @@ async function testWaitsForExclusiveStructureApplyAfterTimeout() {
 
   expect(settled).toBe(false);
   expect(syncBridgeMock.saveCompanionSyncPackCursor).not.toHaveBeenCalled();
-  resolvePack?.({
+  const resolvePack = resolvePackRef.current;
+  if (!resolvePack) {
+    throw new Error('Expected sync pack apply promise to be pending');
+  }
+  resolvePack({
     applied_blob_count: 2,
     applied_object_count: 3,
     to_state_seq: 8

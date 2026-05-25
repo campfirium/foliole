@@ -61,8 +61,8 @@ function createPayload(): FormulaClozeCreatePayload {
   };
 }
 
-it('creates a formula cloze child without storing formula regions as image attachment state', () => {
-  const createdId = useWorkspaceStore.getState().createFormulaClozeNode(
+it('creates a formula cloze child without storing formula regions as image attachment state', async () => {
+  const createdId = await useWorkspaceStore.getState().createFormulaClozeNode(
     'node-1',
     createPayload(),
     {
@@ -93,7 +93,7 @@ it('creates a formula cloze child without storing formula regions as image attac
   });
 });
 
-it('rejects a formula cloze without a reusable DOM selection', () => {
+it('rejects a formula cloze without a reusable DOM selection', async () => {
   const invalidPayload = {
     ...createPayload(),
     selection: {
@@ -102,7 +102,7 @@ it('rejects a formula cloze without a reusable DOM selection', () => {
     }
   };
 
-  const createdId = useWorkspaceStore.getState().createFormulaClozeNode(
+  const createdId = await useWorkspaceStore.getState().createFormulaClozeNode(
     'node-1',
     invalidPayload,
     { promptContent: '$E=mc^2$', revealContent: '$E=mc^2$' }

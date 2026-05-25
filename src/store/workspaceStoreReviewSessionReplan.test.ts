@@ -86,7 +86,7 @@ it('keeps review advancement scoped to the active session queue', async () => {
   const harness = createSetStateHarness(fixture);
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, schedulerStub);
 
-  await expect(actions.completeReviewItem(now)).resolves.toBe(true);
+  await expect(actions.readReviewTopic(now)).resolves.toBe(true);
 
   expect(harness.getState().reviewSession).toMatchObject({
     currentNodeId: 'reading-outside',

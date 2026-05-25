@@ -91,7 +91,7 @@ describe('workspace durable reading review mutation guardrails', () => {
 
     completeActions.startReviewSession('2026-03-03T00:00:00.000Z');
     const completedNodeId = completeHarness.getState().reviewSession.currentNodeId;
-    await expect(completeActions.completeReviewItem('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
+    await expect(completeActions.readReviewTopic('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
     expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
       expect.objectContaining({ id: completedNodeId, reading: expect.objectContaining({ state: 'active' }) })
     );
@@ -104,14 +104,14 @@ describe('workspace durable reading review mutation guardrails', () => {
         createReadingNode('reading-2', '2026-03-03T00:00:00.000Z')
       ])
     );
-    const deferActions = createWorkspaceReviewActions(deferHarness.setState, deferHarness.getState, {
+    const postponeReviewTopicActions = createWorkspaceReviewActions(deferHarness.setState, deferHarness.getState, {
       grade: createSchedulerGradeMock(),
       preview: previewStub
     });
 
-    deferActions.startReviewSession('2026-03-03T00:00:00.000Z');
+    postponeReviewTopicActions.startReviewSession('2026-03-03T00:00:00.000Z');
     const deferredNodeId = deferHarness.getState().reviewSession.currentNodeId;
-    await expect(deferActions.deferReviewItem()).resolves.toBe(true);
+    await expect(postponeReviewTopicActions.postponeReviewTopic()).resolves.toBe(true);
     expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
       expect.objectContaining({ id: deferredNodeId, reading: expect.objectContaining({ state: 'active' }) })
     );
@@ -131,7 +131,7 @@ describe('workspace durable reading review mutation guardrails', () => {
 
     actions.startReviewSession('2026-03-03T00:00:00.000Z');
     const dismissedNodeId = harness.getState().reviewSession.currentNodeId;
-    await expect(actions.dismissReviewItem('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
+    await expect(actions.dismissReviewTopic('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
     expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
       expect.objectContaining({ id: dismissedNodeId, reading: expect.objectContaining({ state: 'dismissed' }) })
     );
