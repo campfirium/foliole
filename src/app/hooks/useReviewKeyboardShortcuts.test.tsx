@@ -6,6 +6,7 @@ import { onWindowEscape } from '../../shared/platform/keyboard';
 import { ReviewShortcutHarness } from './useReviewKeyboardShortcuts.testUtils';
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   document.body.innerHTML = '';
 });

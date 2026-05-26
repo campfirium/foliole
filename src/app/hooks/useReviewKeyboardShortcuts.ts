@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { CommandShortcutSet } from '../../shared/commands/types';
@@ -6,6 +6,7 @@ import { onWindowKeydown } from '../../shared/platform/keyboard';
 
 import { tryRunDeleteSourceTopicShortcut, tryRunReviewNavigation, tryRunShortcut } from './reviewKeyboardNavigation';
 import { useReviewEditingEscapeHandler } from './useReviewEditingEscapeHandler';
+import { keepReviewNavigationInHotkeyMode, useReviewEditingState } from './useReviewNavigationHotkeyMode';
 import { isEditableKeyboardTarget } from './workspaceKeyboardTarget';
 
 interface UseReviewKeyboardShortcutsArgs {
@@ -56,40 +57,16 @@ interface UseReviewKeyboardShortcutsArgs {
 
 export function useReviewKeyboardShortcuts(args: UseReviewKeyboardShortcutsArgs) {
   const reviewEditingContextRef = useRef(false);
-  const [isReviewEditing, setIsReviewEditing] = useReviewEditingState(args.isStudyMode, reviewEditingContextRef);
+  const navigationHotkeyModeRef = useRef(false);
+  const [isReviewEditing, setIsReviewEditing] = useReviewEditingState({
+    isStudyMode: args.isStudyMode,
+    navigationHotkeyModeRef,
+    reviewEditingContextRef
+  });
   const lastChildByParentIdRef = useReviewParentReturnMemory(args.isStudyMode);
   useReviewEditingEscapeHandler(args, reviewEditingContextRef, setIsReviewEditing);
-  useReviewHotkeyHandler(args, reviewEditingContextRef, lastChildByParentIdRef);
+  useReviewHotkeyHandler(args, reviewEditingContextRef, navigationHotkeyModeRef, setIsReviewEditing, lastChildByParentIdRef);
   return isReviewEditing;
-}
-
-function useReviewEditingState(isStudyMode: boolean, reviewEditingContextRef: MutableRefObject<boolean>) {
-  const [isReviewEditing, setIsReviewEditing] = useState(false);
-  useEffect(() => {
-    if (!isStudyMode) {
-      reviewEditingContextRef.current = false;
-      setIsReviewEditing(false);
-      return;
-    }
-    const syncEditingState = (target: EventTarget | null) => {
-      if (target instanceof HTMLElement && target.closest('[role="dialog"]')) {
-        return;
-      }
-      const nextIsEditing = isEditableKeyboardTarget(target);
-      reviewEditingContextRef.current = nextIsEditing;
-      setIsReviewEditing(nextIsEditing);
-    };
-    syncEditingState(document.activeElement);
-    const handleFocusIn = (event: FocusEvent) => syncEditingState(event.target);
-    const handleFocus = (event: FocusEvent) => syncEditingState(event.target);
-    window.addEventListener('focusin', handleFocusIn);
-    window.addEventListener('focus', handleFocus, true);
-    return () => {
-      window.removeEventListener('focusin', handleFocusIn);
-      window.removeEventListener('focus', handleFocus, true);
-    };
-  }, [isStudyMode, reviewEditingContextRef]);
-  return [isReviewEditing, setIsReviewEditing] as const;
 }
 
 function useReviewParentReturnMemory(isStudyMode: boolean) {
@@ -105,12 +82,16 @@ function useReviewParentReturnMemory(isStudyMode: boolean) {
 function useReviewHotkeyHandler(
   args: UseReviewKeyboardShortcutsArgs,
   reviewEditingContextRef: MutableRefObject<boolean>,
+  navigationHotkeyModeRef: MutableRefObject<boolean>,
+  setIsReviewEditing: (value: boolean) => void,
   lastChildByParentIdRef: MutableRefObject<Record<string, string>>
 ) {
   useEffect(
     () =>
-      onWindowKeydown((event) => handleReviewKeydown(event, args, reviewEditingContextRef, lastChildByParentIdRef)),
-    [args, reviewEditingContextRef, lastChildByParentIdRef]
+      onWindowKeydown((event) =>
+        handleReviewKeydown(event, args, reviewEditingContextRef, navigationHotkeyModeRef, setIsReviewEditing, lastChildByParentIdRef)
+      ),
+    [args, reviewEditingContextRef, navigationHotkeyModeRef, setIsReviewEditing, lastChildByParentIdRef]
   );
 }
 
@@ -118,6 +99,8 @@ function handleReviewKeydown(
   event: KeyboardEvent,
   args: UseReviewKeyboardShortcutsArgs,
   reviewEditingContextRef: MutableRefObject<boolean>,
+  navigationHotkeyModeRef: MutableRefObject<boolean>,
+  setIsReviewEditing: (value: boolean) => void,
   lastChildByParentIdRef: MutableRefObject<Record<string, string>>
 ) {
   if (!args.isStudyMode || args.isCommandPaletteOpen || args.isSearchPaletteOpen || args.isSettingsOpen) {
@@ -138,6 +121,11 @@ function handleReviewKeydown(
     return;
   }
   if (tryRunReviewNavigation(event, args, lastChildByParentIdRef)) {
+    keepReviewNavigationInHotkeyMode({
+      navigationHotkeyModeRef,
+      reviewEditingContextRef,
+      setIsReviewEditing
+    });
     return;
   }
   if (!args.reviewCurrentNodeId || !args.isCurrentReviewItemVisible) {
@@ -146,7 +134,6 @@ function handleReviewKeydown(
   }
   handleVisibleReviewItemKeydown(event, args);
 }
-
 function handleHiddenReviewItemKeydown(event: KeyboardEvent, args: UseReviewKeyboardShortcutsArgs) {
   if (!args.reviewCurrentNodeId || args.isCurrentReviewItemVisible) {
     return;
