@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import type { BrowserWindowConstructorOptions, Session, WebContents } from 'electron';
 
 import { logMainProcessException } from './diagnostics/mainProcessDiagnostics.js';
@@ -11,6 +13,10 @@ import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './w
 
 const guardedEmbeddedLinkPanelSessions = new WeakSet<Session>();
 
+export function resolveMainWindowIconPath(preloadPath: string) {
+  return path.resolve(path.dirname(preloadPath), '..', 'build', 'icon.png');
+}
+
 export function createMainWindowOptions(preloadPath: string): BrowserWindowConstructorOptions {
   return {
     width: 1400,
@@ -20,6 +26,7 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
     frame: false,
     backgroundColor: '#ffffff',
     autoHideMenuBar: false,
+    icon: resolveMainWindowIconPath(preloadPath),
     show: false,
     webPreferences: {
       backgroundThrottling: false,

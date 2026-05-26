@@ -12,6 +12,7 @@
   "npmRebuild": true,
   "nativeRebuilder": "sequential",
   "files": [
+    "build/icon.png",
     "dist/**/*",
     "electron-dist/**/*",
     "package.json"
@@ -25,6 +26,7 @@
     }
   ],
   "win": {
+    "icon": "build/icon.ico",
     "target": ["nsis"],
     "requestedExecutionLevel": "asInvoker"
   },
@@ -32,6 +34,7 @@
     "perMachine": true
   },
   "linux": {
+    "icon": "build/icon.png",
     "target": ["AppImage"],
     "category": "Education"
   },

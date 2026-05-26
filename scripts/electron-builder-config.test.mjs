@@ -49,4 +49,12 @@ describe('electron-builder release packaging config', () => {
     expect(config.mac.category).toBe('public.app-category.education');
     expect(config.linux.category).toBe('Education');
   });
+
+  it('uses the branded app icon for packaged desktop targets', async () => {
+    const config = await readBuilderConfig();
+
+    expect(config.files).toContain('build/icon.png');
+    expect(config.win.icon).toBe('build/icon.ico');
+    expect(config.linux.icon).toBe('build/icon.png');
+  });
 });

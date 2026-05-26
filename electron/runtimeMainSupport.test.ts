@@ -3,11 +3,21 @@ import { expect, it, vi } from 'vitest';
 import {
   bindEmbeddedLinkPanelContents,
   createMainWindowOptions,
-  isAllowedEmbeddedLinkPanelUrl
+  isAllowedEmbeddedLinkPanelUrl,
+  resolveMainWindowIconPath
 } from './runtimeMainSupport.js';
 
 it('keeps the startup renderer unthrottled while the hidden window is loading', () => {
   expect(createMainWindowOptions('/tmp/preload.cjs').webPreferences?.backgroundThrottling).toBe(false);
+});
+
+it('uses the branded runtime window icon next to the electron preload source', () => {
+  expect(resolveMainWindowIconPath('/workspace/foliole/electron/preload.cjs')).toBe(
+    '/workspace/foliole/build/icon.png'
+  );
+  expect(createMainWindowOptions('/workspace/foliole/electron/preload.cjs').icon).toBe(
+    '/workspace/foliole/build/icon.png'
+  );
 });
 
 it('allows only http and https URLs for embedded link panel window opens', () => {
