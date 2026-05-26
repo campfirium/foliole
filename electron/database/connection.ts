@@ -5,13 +5,14 @@ import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { ensureLibraryPathLayout, loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
 import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 export const FOLIOLE_DB_FILE = 'foliole.db';
-export const FOLIOLE_SEARCH_DB_FILE = 'foliole-search.db';
+export const FOLIOLE_SEARCH_DB_FILE = 'foliole-index.db';
 
 export type SqliteDatabase = import('better-sqlite3').Database;
 
@@ -24,6 +25,7 @@ export interface DatabaseConnection {
 
 interface OpenDatabaseConnectionOptions {
   applyJournalMode?: boolean;
+  reportFileNameMigration?: (result: DatabaseFileNameMigrationResult) => void;
 }
 
 let cachedConnection: DatabaseConnection | null = null;
@@ -54,6 +56,9 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
   const dbPath = runtimeDataPaths.databasePath;
   const searchDbPath = resolveSearchDatabasePath(dbPath);
   ensureLibraryPathLayout(loadLibraryPathSettingsSync());
+  migrateDatabaseFileNames(path.dirname(dbPath)).forEach((result) => {
+    options.reportFileNameMigration?.(result);
+  });
 
   const sqlite = new BetterSqlite3(dbPath);
   if (applyJournalMode) {

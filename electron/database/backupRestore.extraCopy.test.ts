@@ -66,7 +66,7 @@ it('copies a manual backup into the extra backup location and prunes old extra c
   });
   expect(extraNames).toContain(path.basename(result.destinationPath));
   expect(extraNames).toContain('personal.txt');
-  expect(extraNames).not.toContain('external-search-cache.db');
+  expect(extraNames).not.toContain('foliole-external.db');
   expect(extraNames).not.toContain(path.basename(openDatabaseConnection().searchDbPath));
   expect(extraNames.filter((fileName) => fileName.endsWith('.db'))).toHaveLength(2);
   expect(extraNames).not.toContain('manual-2026-04-02_10-00-00-000.db');
@@ -109,7 +109,7 @@ it('copies automatic backups into the extra location without blocking primary re
   await reconcileAutomaticDatabaseBackups(new Date('2026-04-02T10:15:00.000Z'));
 
   await expect(fs.stat(path.join(extraDir, 'auto-daily-2026-04-02_10-15-00-000.db'))).resolves.toBeDefined();
-  await expect(fs.access(path.join(extraDir, 'external-search-cache.db'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(fs.access(path.join(extraDir, 'foliole-external.db'))).rejects.toMatchObject({ code: 'ENOENT' });
   await expect(fs.access(path.join(extraDir, path.basename(openDatabaseConnection().searchDbPath)))).rejects.toMatchObject({ code: 'ENOENT' });
   await expectBackupDirectoryExcludesSidecars(resolveManagedBackupDirectory(loadBackupSettings()));
 });
@@ -122,12 +122,12 @@ async function createBackupFixture(directoryPath: string, fileName: string, cont
 
 async function writeSidecarSentinels() {
   const connection = openDatabaseConnection();
-  await fs.writeFile(path.join(path.dirname(connection.dbPath), 'external-search-cache.db'), 'external sidecar sentinel');
+  await fs.writeFile(path.join(path.dirname(connection.dbPath), 'foliole-external.db'), 'external sidecar sentinel');
   await fs.appendFile(connection.searchDbPath, '');
 }
 
 async function expectBackupDirectoryExcludesSidecars(directoryPath: string) {
   const fileNames = await fs.readdir(directoryPath);
-  expect(fileNames).not.toContain('external-search-cache.db');
+  expect(fileNames).not.toContain('foliole-external.db');
   expect(fileNames).not.toContain(path.basename(openDatabaseConnection().searchDbPath));
 }

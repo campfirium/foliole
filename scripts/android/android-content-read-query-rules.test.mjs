@@ -14,6 +14,12 @@ const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 
 const EXTERNAL_DOCUMENT_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionExternalDocumentStore.java');
 const READABLE_ARTICLE_QUERY = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionReadableArticleQuery.java');
 const CONTENT_READ_RULES = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentReadQueryRules.java');
+const DESKTOP_PHYSICAL_DATABASE_FILE_NAMES = [
+  'external-search-cache.db',
+  'foliole-external.db',
+  'foliole-index.db',
+  'foliole-search.db'
+];
 
 describe('Android content read query rules', () => {
   it('generates external document and readable article read metadata', async () => {
@@ -75,8 +81,10 @@ describe('Android content read query rules', () => {
     expect(definitions.queries.externalDocumentSearch.sql).toContain('LEFT JOIN content_blob_data');
     expect(definitions.queries.externalDocumentSearch.sql).not.toContain('external_search_documents');
     expect(definitions.queries.externalDocumentSearch.sql).not.toContain('external_search_fts');
-    expect(JSON.stringify(definitions.contentRead)).not.toContain('external-search-cache.db');
-    expect(JSON.stringify(definitions.queries.externalDocumentSearch)).not.toContain('external-search-cache.db');
+    for (const fileName of DESKTOP_PHYSICAL_DATABASE_FILE_NAMES) {
+      expect(JSON.stringify(definitions.contentRead)).not.toContain(fileName);
+      expect(JSON.stringify(definitions.queries.externalDocumentSearch)).not.toContain(fileName);
+    }
     expect(definitions.contentRead.readableArticle.articleFields).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ outputKey: 'node_id', rowKey: 'id', type: 'string' }),

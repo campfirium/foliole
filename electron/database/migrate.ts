@@ -13,6 +13,7 @@ import {
   openDatabaseConnection,
   resolveDatabasePath
 } from './connection.js';
+import type { DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
 import {
   isDatabaseCorruptionError,
   moveDatabaseToPreRebuildSnapshot,
@@ -36,6 +37,16 @@ function shouldSkipStartupWalEnable() {
 
 function shouldSkipStartupSchemaInit() {
   return process.env.FOLIOLE_SKIP_STARTUP_SCHEMA_INIT === '1';
+}
+
+function reportDatabaseFileNameMigration(
+  reportStage: DatabaseInitStageReporter | undefined,
+  result: DatabaseFileNameMigrationResult
+) {
+  reportStage?.(`database_filename_migration_${result.status}`, {
+    legacyPath: result.legacyPath,
+    nextPath: result.nextPath
+  });
 }
 
 function verifyStartupDatabaseIntegrity(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter) {
@@ -84,7 +95,10 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_open_connection_start', {
       databasePath
     });
-    const connection = openDatabaseConnection({ applyJournalMode: false });
+    const connection = openDatabaseConnection({
+      applyJournalMode: false,
+      reportFileNameMigration: (result) => reportDatabaseFileNameMigration(reportStage, result)
+    });
     try {
       reportStage?.('database_open_connection_complete', {
         dbPath: connection.dbPath
@@ -114,7 +128,10 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_recovery_open_connection_start', {
       databasePath: resolveDatabasePath()
     });
-    const connection = openDatabaseConnection({ applyJournalMode: false });
+    const connection = openDatabaseConnection({
+      applyJournalMode: false,
+      reportFileNameMigration: (result) => reportDatabaseFileNameMigration(reportStage, result)
+    });
     reportStage?.('database_recovery_open_connection_complete', {
       dbPath: connection.dbPath
     });
@@ -147,7 +164,9 @@ function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: Da
   closeDatabaseConnection();
   const snapshot = moveDatabaseToPreRebuildSnapshot(databasePath);
   reportStage?.('database_legacy_rebuild_snapshot_created', snapshot);
-  const connection = openDatabaseConnection();
+  const connection = openDatabaseConnection({
+    reportFileNameMigration: (result) => reportDatabaseFileNameMigration(reportStage, result)
+  });
   reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
   const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
   reportStage?.('database_legacy_rebuild_schema_init_complete');

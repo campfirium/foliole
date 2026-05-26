@@ -47,7 +47,7 @@ afterEach(async () => {
 });
 
 function openCacheDb() {
-  return new BetterSqlite3(path.join(path.dirname(resolveDatabasePath()), 'external-search-cache.db'));
+  return new BetterSqlite3(path.join(path.dirname(resolveDatabasePath()), 'foliole-external.db'));
 }
 
 

@@ -10,8 +10,10 @@ type SqliteDatabase = import('better-sqlite3').Database;
 
 let cachedCacheDb: SqliteDatabase | null = null;
 
+export const FOLIOLE_EXTERNAL_DB_FILE = 'foliole-external.db';
+
 function resolveCacheDbPath() {
-  return path.join(path.dirname(resolveDatabasePath()), 'external-search-cache.db');
+  return path.join(path.dirname(resolveDatabasePath()), FOLIOLE_EXTERNAL_DB_FILE);
 }
 
 export function openExternalSearchCacheDatabase() {

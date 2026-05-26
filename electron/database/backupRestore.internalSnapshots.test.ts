@@ -45,7 +45,7 @@ it('creates a pre-restore snapshot in Backups and prunes older snapshot files', 
   const manualBackup = await createApplicationDatabaseBackup();
   const connection = openDatabaseConnection();
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(connection.dbPath);
-  await fs.writeFile(path.join(path.dirname(connection.dbPath), 'external-search-cache.db'), 'external sidecar sentinel');
+  await fs.writeFile(path.join(path.dirname(connection.dbPath), 'foliole-external.db'), 'external sidecar sentinel');
 
   await fs.mkdir(snapshotDirectory, { recursive: true });
   const staleSnapshotPaths: string[] = [];
@@ -66,7 +66,7 @@ it('creates a pre-restore snapshot in Backups and prunes older snapshot files', 
   const backupDirectoryNames = await fs.readdir(snapshotDirectory);
   expect(snapshotNames).toHaveLength(INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT);
   expect(snapshotNames.some((fileName) => fileName.startsWith('pre-restore-'))).toBe(true);
-  expect(backupDirectoryNames).not.toContain('external-search-cache.db');
+  expect(backupDirectoryNames).not.toContain('foliole-external.db');
   expect(backupDirectoryNames).not.toContain(path.basename(connection.searchDbPath));
   await expect(fs.access(staleSnapshotPaths[0] as string)).rejects.toMatchObject({ code: 'ENOENT' });
 });
