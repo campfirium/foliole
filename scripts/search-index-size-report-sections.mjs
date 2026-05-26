@@ -5,6 +5,7 @@ import {
   safeSection,
   tableExists
 } from './search-index-size-report-sql.mjs';
+export { readContentBlobStats } from './search-index-size-report-content-blobs.mjs';
 
 const TOP_DUPLICATE_LIMIT = 10;
 
@@ -172,47 +173,4 @@ export function readKeepImportCacheStats(db) {
       rowsWherePreviewIsPrefixOfContent: 0
     }
   );
-}
-
-export function readContentBlobStats(db) {
-  if (!tableExists(db, 'content_blob_data')) {
-    return { totalRows: 0, totalBytes: 0, referencedByNodes: 0, orphanRows: 0, orphanBytes: 0 };
-  }
-  const nodeRefsAvailable = tableExists(db, 'nodes');
-  return {
-    totalRows: getNumber(db, 'SELECT COUNT(*) FROM content_blob_data'),
-    totalBytes: getNumber(db, 'SELECT COALESCE(SUM(length(data)), 0) FROM content_blob_data'),
-    referencedByNodes: nodeRefsAvailable
-      ? getNumber(
-          db,
-          `
-      SELECT COUNT(DISTINCT cbd.hash)
-      FROM content_blob_data cbd
-      INNER JOIN nodes n ON n.body_blob_hash = cbd.hash
-    `
-        )
-      : 0,
-    orphanRows: nodeRefsAvailable
-      ? getNumber(
-          db,
-          `
-      SELECT COUNT(*)
-      FROM content_blob_data cbd
-      LEFT JOIN nodes n ON n.body_blob_hash = cbd.hash
-      WHERE n.id IS NULL
-    `
-        )
-      : 0,
-    orphanBytes: nodeRefsAvailable
-      ? getNumber(
-          db,
-          `
-      SELECT COALESCE(SUM(length(cbd.data)), 0)
-      FROM content_blob_data cbd
-      LEFT JOIN nodes n ON n.body_blob_hash = cbd.hash
-      WHERE n.id IS NULL
-    `
-        )
-      : 0
-  };
 }

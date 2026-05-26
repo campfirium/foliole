@@ -24,6 +24,12 @@ it('reports search index size drivers without reading document text', () => {
   const db = new DatabaseSync(dbPath);
   db.exec(`
     CREATE TABLE nodes (id TEXT PRIMARY KEY, body_blob_hash TEXT);
+    CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT);
+    CREATE TABLE content_blobs (
+      hash TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      stored_size_bytes INTEGER NOT NULL
+    );
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
     CREATE TABLE search_index_invalidations (
       id INTEGER PRIMARY KEY,
@@ -64,10 +70,44 @@ it('reports search index size drivers without reading document text', () => {
     'used body'
   );
   db.prepare('INSERT INTO content_blob_data (hash, data) VALUES (?, ?)').run(
-    'blob-orphan',
-    'orphan body'
+    'blob-external',
+    'external body'
+  );
+  db.prepare('INSERT INTO content_blob_data (hash, data) VALUES (?, ?)').run(
+    'blob-shared',
+    'shared body'
+  );
+  db.prepare('INSERT INTO content_blob_data (hash, data) VALUES (?, ?)').run(
+    'blob-unreferenced',
+    'unreferenced body'
+  );
+  db.prepare('INSERT INTO content_blob_data (hash, data) VALUES (?, ?)').run(
+    'blob-without-manifest',
+    'without manifest'
   );
   db.prepare('INSERT INTO nodes (id, body_blob_hash) VALUES (?, ?)').run('node-1', 'blob-used');
+  db.prepare('INSERT INTO nodes (id, body_blob_hash) VALUES (?, ?)').run('node-2', 'blob-shared');
+  db.prepare('INSERT INTO external_documents (document_id, body_blob_hash) VALUES (?, ?)').run(
+    'doc-1',
+    'blob-external'
+  );
+  db.prepare('INSERT INTO external_documents (document_id, body_blob_hash) VALUES (?, ?)').run(
+    'doc-2',
+    'blob-shared'
+  );
+  for (const [hash, size] of [
+    ['blob-used', 9],
+    ['blob-external', 13],
+    ['blob-shared', 11],
+    ['blob-unreferenced', 17],
+    ['blob-manifest-only', 19]
+  ]) {
+    db.prepare('INSERT INTO content_blobs (hash, kind, stored_size_bytes) VALUES (?, ?, ?)').run(
+      hash,
+      'text_body',
+      size
+    );
+  }
   db.prepare(
     'INSERT INTO search_index_invalidations (invalidation_type, target_id, status, created_at, updated_at, completed_at) VALUES (?, ?, ?, ?, ?, ?)'
   ).run(
@@ -113,10 +153,20 @@ it('reports search index size drivers without reading document text', () => {
     rowsWherePreviewIsPrefixOfContent: 0
   });
   expect(report.contentBlobData).toMatchObject({
-    totalRows: 2,
-    referencedByNodes: 1,
-    orphanRows: 1,
-    orphanBytes: 11
+    totalRows: 5,
+    totalBytes: 66,
+    referencedByNodes: 2,
+    referencedByNodeBytes: 20,
+    referencedByExternalDocuments: 2,
+    referencedByExternalDocumentBytes: 24,
+    knownOwnerRows: 3,
+    knownOwnerBytes: 33,
+    manifestCoveredRows: 4,
+    manifestCoveredBytes: 50,
+    manifestOnlyRows: 1,
+    manifestOnlyBytes: 19,
+    unreferencedByKnownOwnersRows: 2,
+    unreferencedByKnownOwnersBytes: 33
   });
   expect(JSON.stringify(report)).not.toContain('same body secret');
 });
