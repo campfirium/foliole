@@ -14,6 +14,7 @@ const SQLITE_SCRIPT_COMMANDS = [
   'oneoff:source-dispositions:backfill',
   'sqlite:backup',
   'sqlite:restore',
+  'sqlite:prune-search-invalidations',
   'oneoff:sqlite:node-kind-report',
   'android:reset-sync-data',
   'android:sync:audit',

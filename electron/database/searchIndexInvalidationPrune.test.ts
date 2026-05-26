@@ -17,7 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { pruneCompletedSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidationPruning.js';
+import {
+  countCompletedSearchIndexInvalidationsOlderThan,
+  pruneCompletedSearchIndexInvalidations,
+  readSearchIndexInvalidationRetentionStatusCounts
+} from '../../lib/core/database/searchIndexInvalidationPruning.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -51,6 +55,19 @@ it('prunes only completed invalidations older than the explicit ISO boundary', (
   insertInvalidation('pending', null);
   insertInvalidation('running', null);
   insertInvalidation('failed', null);
+
+  expect(
+    countCompletedSearchIndexInvalidationsOlderThan(
+      openDatabaseConnection().driver,
+      '2026-05-10T00:00:00.000Z'
+    )
+  ).toBe(1);
+
+  expect(readSearchIndexInvalidationRetentionStatusCounts(openDatabaseConnection().driver)).toEqual({
+    failedRows: 1,
+    pendingRows: 1,
+    runningRows: 1
+  });
 
   expect(
     pruneCompletedSearchIndexInvalidations(
