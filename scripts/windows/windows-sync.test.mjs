@@ -78,6 +78,13 @@ describe('windows-sync script', () => {
       expect(args).toContain('.claude/');
       expect(args).toContain('.windows-native-boot-ready.json');
       expect(args).toContain('.windows-native-bridge-ready.json');
+      expect(args).toContain('.windows-native-window-visible.json');
+      expect(args).toContain('.windows-native-client-state.json');
+      expect(args).toContain('.windows-dev-restart-intent.json');
+      expect(args).toContain('.windows-dev-restart-delivered.json');
+      expect(args).toContain('.windows-dev-renderer-reload-intent.json');
+      expect(args).toContain('.windows-dev-renderer-reload-delivered.json');
+      expect(args).toContain('.windows-dev-shell-restart-request.json');
       expect(args).toContain('trees/');
       expect(args).toContain('--inplace');
       expect(args).not.toContain('--itemize-changes');
