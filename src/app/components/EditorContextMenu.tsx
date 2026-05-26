@@ -1,4 +1,4 @@
-import { Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis } from 'lucide-react';
+import { Highlighter, MessageSquare, MoreHorizontal, SquaresSubtract } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -71,7 +71,7 @@ function ClozeToolbarButton(props: Pick<AnnotationToolbarProps, 'onCreateCloze' 
       label="Cloze"
       onClick={createClozeToolbarAction(props)}
     >
-      <RectangleEllipsis aria-hidden="true" size={19} strokeWidth={2} />
+      <SquaresSubtract aria-hidden="true" size={19} strokeWidth={2} />
     </AnnotationToolbarButton>
   );
 }
