@@ -1,7 +1,6 @@
 import { forgetting_curve } from 'ts-fsrs';
 
-import type { Node } from '../features/nodes/model/nodeTypes';
-import { hasNodeContent } from '../features/nodes/model/nodeTypes';
+import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode, isReadingReviewItemNode, type ReviewItemNodeLike } from '../features/review/model/reviewItemKind';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { toSchedulerCard } from '../features/review/model/reviewTypes';
@@ -13,6 +12,7 @@ import {
 } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
+import { createSeededRandom, hasShelvedAncestor } from './reviewQueuePlannerHelpers';
 import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode';
 import { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue, parseReviewQueueTimestamp } from './reviewQueuePlannerTime';
@@ -26,23 +26,17 @@ export interface ReviewQueuePlan {
   readingQueueNodeIds: string[];
 }
 
-export type ReviewQueueNode = ReviewItemNodeLike & Pick<Node, 'content' | 'createdAt' | 'hasContent' | 'id' | 'parentNodeId' | 'priority' | 'reading'>;
+export type ReviewQueueNode = ReviewItemNodeLike & Pick<Node, 'content' | 'createdAt' | 'hasContent' | 'id' | 'parentNodeId' | 'priority' | 'reading' | 'shelvedAt'>;
 
-function createSeededRandom(seedInput: string) {
-  let hash = 2166136261;
-  for (const character of seedInput) {
-    hash ^= character.charCodeAt(0);
-    hash = Math.imul(hash, 16777619);
-  }
-  let state = hash >>> 0;
-  return () => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return state / 2 ** 32;
-  };
-}
-
-function isQueueableReadingNode(node: ReviewQueueNode | undefined, now: string): node is ReviewQueueNode {
+function isQueueableReadingNode(
+  node: ReviewQueueNode | undefined,
+  nodesById: Record<string, ReviewQueueNode | undefined>,
+  now: string
+): node is ReviewQueueNode {
   if (!node || !isReadingReviewItemNode(node) || !hasNodeContent(node)) {
+    return false;
+  }
+  if (hasShelvedAncestor(node, nodesById)) {
     return false;
   }
   if (node.reading && node.reading.state !== 'active') {
@@ -51,8 +45,14 @@ function isQueueableReadingNode(node: ReviewQueueNode | undefined, now: string):
   return parseReviewQueueTimestamp(resolveReviewQueueReadingDueAt(node)) <= parseReviewQueueTimestamp(now);
 }
 
-function isSchedulableReadingNode(node: ReviewQueueNode | undefined): node is ReviewQueueNode {
+function isSchedulableReadingNode(
+  node: ReviewQueueNode | undefined,
+  nodesById: Record<string, ReviewQueueNode | undefined>
+): node is ReviewQueueNode {
   if (!node || !isReadingReviewItemNode(node) || !hasNodeContent(node)) {
+    return false;
+  }
+  if (hasShelvedAncestor(node, nodesById)) {
     return false;
   }
   if (node.reading && node.reading.state !== 'active') {
@@ -167,12 +167,16 @@ function collectReviewQueueCandidates(args: {
   args.nodeOrder.forEach((nodeId) => {
     if (args.trashedNodeIds.has(nodeId)) return;
     const node = args.nodesById[nodeId];
-    const isReadingCandidate = args.includeScheduled ? isSchedulableReadingNode(node) : isQueueableReadingNode(node, args.now);
+    const isReadingCandidate = args.includeScheduled
+      ? isSchedulableReadingNode(node, args.nodesById)
+      : isQueueableReadingNode(node, args.nodesById, args.now);
     if (node && isReadingCandidate) {
       readingCandidates.push(node);
       return;
     }
-    const isFsrsCandidate = args.includeScheduled ? isSchedulableFsrsNode(node) : isDueFsrsNode(node, args.now);
+    const isFsrsCandidate = args.includeScheduled
+      ? isSchedulableFsrsNode(node)
+      : isDueFsrsNode(node, args.now);
     if (node && isFsrsCandidate) fsrsCandidates.push(node);
   });
   return { fsrsCandidates, readingCandidates };

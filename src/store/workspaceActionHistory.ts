@@ -14,6 +14,10 @@ import {
   type WorkspaceTopicDeleteHistoryEntry
 } from './workspaceDeleteActionHistory';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
+import {
+  applyTopicShelveWorkspaceHistory,
+  type WorkspaceTopicShelveHistoryEntry
+} from './workspaceShelveActionHistory';
 import type { WorkspaceState } from './workspaceStore';
 import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
 
@@ -43,7 +47,7 @@ export interface WorkspaceTopicDismissHistoryEntry {
   type: 'topic.dismiss';
 }
 
-export type WorkspaceActionHistoryEntry = WorkspaceTopicDeleteHistoryEntry | WorkspaceTopicDismissHistoryEntry;
+export type WorkspaceActionHistoryEntry = WorkspaceTopicDeleteHistoryEntry | WorkspaceTopicDismissHistoryEntry | WorkspaceTopicShelveHistoryEntry;
 
 export interface WorkspaceActionHistoryState {
   redoStack: WorkspaceActionHistoryEntry[];
@@ -177,6 +181,9 @@ function createApplyWorkspaceHistoryAction(
     const entry = getTopEntry(snapshot.appActionHistory, mode);
     if (entry?.type === 'topic.delete') {
       return applyTopicDeleteWorkspaceHistory({ entry, mode, popInvalidTopEntry, set, updateHistoryAfterApply });
+    }
+    if (entry?.type === 'topic.shelve') {
+      return applyTopicShelveWorkspaceHistory({ entry, mode, now, popInvalidTopEntry, set, updateHistoryAfterApply });
     }
     const apply = resolveHistoryApply({ history: snapshot.appActionHistory, mode });
     if (!apply) {

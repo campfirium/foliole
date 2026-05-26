@@ -38,6 +38,7 @@ interface PaletteCommandRunnerArgs {
   deleteReviewSourceTopic: () => boolean;
   postponeReviewTopic: () => Promise<boolean>;
   openPostponeTopicPanel: () => void;
+  shelveReviewTopic?: () => Promise<boolean>;
   dismissReviewTopic: () => Promise<boolean>;
   revisitReviewTopicSoon: () => Promise<boolean>;
   redoWorkspaceAction: () => boolean;
@@ -102,6 +103,7 @@ function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggl
     readingReviewLater: () => void args.postponeReviewTopic(),
     readingReviewPostpone: args.openPostponeTopicPanel,
     readingReviewRead: () => void args.readReviewTopic(),
+    readingReviewShelve: () => void args.shelveReviewTopic?.(),
     readingReviewSoon: () => void args.revisitReviewTopicSoon(),
     revealReviewAnswer: args.revealReviewAnswer,
     reviewNavigateBack: args.goBack,

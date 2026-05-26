@@ -22,6 +22,7 @@ interface PdfReferenceNodeRow extends DatabaseRow {
   priority: number | null;
   reveal: string | null;
   sequential_reading_enabled: number | null;
+  shelved_at: string | null;
   title: string;
   virtual_filter: string | null;
 }
@@ -44,7 +45,7 @@ function listPdfReferenceNodes(attachmentId: string) {
   return openDatabaseConnection().driver.queryAll<PdfReferenceNodeRow>(
     `SELECT
        n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term,
-       n.sequential_reading_enabled, n.title, n.is_title_manual,
+       n.sequential_reading_enabled, n.shelved_at, n.title, n.is_title_manual,
        n.hide_title_heading, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.position,
        n.created_at, n.deleted_at
      FROM nodes n
@@ -80,6 +81,7 @@ function upsertNodePackState(node: PdfReferenceNodeRow, bodyContent: string, ope
     desiredRetention: node.desired_retention,
     enableShortTerm: node.enable_short_term === null ? null : node.enable_short_term === 1,
     sequentialReadingEnabled: node.sequential_reading_enabled === null ? null : node.sequential_reading_enabled === 1,
+    shelvedAt: node.shelved_at,
     manualChildOrder: null,
     hideTitleHeading: node.hide_title_heading === 1,
     id: node.id,

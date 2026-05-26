@@ -35,6 +35,7 @@ interface ReviewModeToolbarProps {
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
   onReadReviewTopic: () => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
+  onShelveReviewTopic?: () => Promise<boolean>;
   onDismissReviewTopic: () => Promise<boolean>;
   onRevisitReviewTopicSoon: () => Promise<boolean>;
   onContinueReading: () => void;

@@ -64,6 +64,7 @@ export interface UpsertNodeSnapshotInput {
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
+  shelvedAt?: string | null;
   manualChildOrder?: string[] | null;
   title: string;
   isTitleManual: boolean;

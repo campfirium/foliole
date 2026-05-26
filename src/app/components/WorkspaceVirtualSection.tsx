@@ -6,6 +6,7 @@ import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { buildNodeTree, buildVisibleNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import {
   VIRTUAL_ROOT_NODE_ID,
+  VIRTUAL_SHELVED_NODE_ID,
   VIRTUAL_REMOVED_NODE_ID,
   isVirtualNode,
   isVirtualRootNode
@@ -36,8 +37,10 @@ function toggleCollapsed(nodeId: string, setCollapsedIds: React.Dispatch<React.S
   });
 }
 
-function renderRemovedRow(
+function renderBuiltinVirtualRow(
   props: Pick<WorkspaceVirtualSectionProps, 'activeVirtualNodeId' | 'isVirtualViewOpen' | 'onOpenVirtualView'> & {
+    label: string;
+    nodeId: string;
     onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
     rowSpacing: number;
   }
@@ -46,16 +49,16 @@ function renderRemovedRow(
     <NodeTreeRow
       depth={1}
       hasChildren={false}
-      isActive={props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID}
+      isActive={props.isVirtualViewOpen && props.activeVirtualNodeId === props.nodeId}
       isCollapsed={false}
-      isSelected={props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID}
-      key={VIRTUAL_REMOVED_NODE_ID}
-      label="Removed"
-      nodeId={VIRTUAL_REMOVED_NODE_ID}
+      isSelected={props.isVirtualViewOpen && props.activeVirtualNodeId === props.nodeId}
+      key={props.nodeId}
+      label={props.label}
+      nodeId={props.nodeId}
       rowSpacing={props.rowSpacing}
       showIcon={false}
       onKeyDown={props.onRowKeyDown}
-      onSelect={() => props.onOpenVirtualView?.(VIRTUAL_REMOVED_NODE_ID)}
+      onSelect={() => props.onOpenVirtualView?.(props.nodeId)}
       onToggleCollapse={() => undefined}
     />
   );
@@ -95,7 +98,11 @@ function renderVirtualRows(args: {
       />
     );
     return isVirtualRoot && !isVirtualRootCollapsed
-      ? [virtualRow, renderRemovedRow({ ...args.props, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing })]
+      ? [
+          virtualRow,
+          renderBuiltinVirtualRow({ ...args.props, label: 'Shelved', nodeId: VIRTUAL_SHELVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing }),
+          renderBuiltinVirtualRow({ ...args.props, label: 'Removed', nodeId: VIRTUAL_REMOVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing })
+        ]
       : [virtualRow];
   });
 }
@@ -114,7 +121,11 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     () =>
       rows.flatMap((row) =>
         row.node.id === VIRTUAL_ROOT_NODE_ID && !collapsedIds.has(VIRTUAL_ROOT_NODE_ID)
-          ? [{ ...row, hasChildren: true }, { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }]
+          ? [
+              { ...row, hasChildren: true },
+              { depth: 1, hasChildren: false, id: VIRTUAL_SHELVED_NODE_ID },
+              { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }
+            ]
           : row.node.id === VIRTUAL_ROOT_NODE_ID
             ? [{ ...row, hasChildren: true }]
           : [row]
@@ -126,8 +137,8 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
       createNodeListRowKeydownHandler({
         collapsedNodeIds: collapsedIds,
         onSelect: (nodeId) => {
-          if (nodeId === VIRTUAL_REMOVED_NODE_ID) {
-            props.onOpenVirtualView?.(VIRTUAL_REMOVED_NODE_ID);
+          if (nodeId === VIRTUAL_REMOVED_NODE_ID || nodeId === VIRTUAL_SHELVED_NODE_ID) {
+            props.onOpenVirtualView?.(nodeId);
             return;
           }
           props.onOpenVirtualView?.(nodeId);

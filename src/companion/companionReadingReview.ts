@@ -5,8 +5,28 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 import { definedProps } from '../shared/lib/definedProps';
 import { buildNextReadingProfile, resolveReadingPriorityChain } from '../store/workspaceReviewReading';
 
+type ReadingReviewNode = WorkspaceSnapshot['nodesById'][string];
+
+function patchReadingReviewNode(args: {
+  node: ReadingReviewNode;
+  nodeId: string;
+  patch: Partial<ReadingReviewNode>;
+  snapshot: WorkspaceSnapshot;
+}) {
+  return {
+    ...args.snapshot,
+    nodesById: {
+      ...args.snapshot.nodesById,
+      [args.nodeId]: {
+        ...args.node,
+        ...args.patch
+      }
+    }
+  } satisfies WorkspaceSnapshot;
+}
+
 function buildNextReadingSnapshot(args: {
-  action: 'read' | 'later' | 'dismiss';
+  action: 'read' | 'later' | 'dismiss' | 'shelve';
   nodeId: string;
   now: string;
   snapshot: WorkspaceSnapshot;
@@ -17,17 +37,24 @@ function buildNextReadingSnapshot(args: {
   }
 
   if (args.action === 'dismiss') {
-    return {
-      ...args.snapshot,
-      nodesById: {
-        ...args.snapshot.nodesById,
-        [args.nodeId]: {
-          ...node,
-          reading: node.reading ? { ...node.reading, state: 'dismissed' } : node.reading,
-          updatedAt: args.now
-        }
-      }
-    } satisfies WorkspaceSnapshot;
+    return patchReadingReviewNode({
+      node,
+      nodeId: args.nodeId,
+      patch: { reading: node.reading ? { ...node.reading, state: 'dismissed' } : node.reading, updatedAt: args.now },
+      snapshot: args.snapshot
+    });
+  }
+
+  if (args.action === 'shelve') {
+    if (node.anchorLink || node.specialKind || node.shelvedAt || args.snapshot.trashedNodeIds.includes(node.id)) {
+      return null;
+    }
+    return patchReadingReviewNode({
+      node,
+      nodeId: args.nodeId,
+      patch: { shelvedAt: args.now, updatedAt: args.now },
+      snapshot: args.snapshot
+    });
   }
 
   const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
@@ -46,17 +73,12 @@ function buildNextReadingSnapshot(args: {
     ...definedProps({ previousIntervalDurationMs: node.reading?.intervalDurationMs })
   });
 
-  return {
-    ...args.snapshot,
-    nodesById: {
-      ...args.snapshot.nodesById,
-      [args.nodeId]: {
-        ...node,
-        reading: buildNextReadingProfile(nextReading, node.reading),
-        updatedAt: args.now
-      }
-    }
-  } satisfies WorkspaceSnapshot;
+  return patchReadingReviewNode({
+    node,
+    nodeId: args.nodeId,
+    patch: { reading: buildNextReadingProfile(nextReading, node.reading), updatedAt: args.now },
+    snapshot: args.snapshot
+  });
 }
 
 export function readCompanionReviewTopic(args: {
@@ -92,6 +114,19 @@ export function dismissCompanionReviewTopic(args: {
 }) {
   return buildNextReadingSnapshot({
     action: 'dismiss',
+    nodeId: args.nodeId,
+    now: args.now ?? new Date().toISOString(),
+    snapshot: args.snapshot
+  });
+}
+
+export function shelveCompanionReviewTopic(args: {
+  nodeId: string;
+  now?: string;
+  snapshot: WorkspaceSnapshot;
+}) {
+  return buildNextReadingSnapshot({
+    action: 'shelve',
     nodeId: args.nodeId,
     now: args.now ?? new Date().toISOString(),
     snapshot: args.snapshot

@@ -36,6 +36,7 @@ export function createWorkspaceRuntimeNodeSnapshot(
     desiredRetention: node.desiredRetention ?? null,
     enableShortTerm: node.enableShortTerm ?? null,
     sequentialReadingEnabled: node.sequentialReadingEnabled ?? null,
+    shelvedAt: node.shelvedAt ?? null,
     manualChildOrder: node.kind === 'folder' ? node.manualChildOrder ?? null : null,
     title: node.title,
     isTitleManual: Boolean(node.isTitleManual),

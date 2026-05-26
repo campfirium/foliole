@@ -77,6 +77,8 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
         { outputKey: 'desiredRetention', rowKey: 'desired_retention', type: 'double', omitWhenNull: true },
         { outputKey: 'enableShortTerm', rowKey: 'enable_short_term', type: 'booleanLong', omitWhenNull: true },
         { outputKey: 'sequentialReadingEnabled', rowKey: 'sequential_reading_enabled', type: 'booleanLong', omitWhenNull: true },
+        { outputKey: 'shelvedAt', rowKey: 'shelved_at', type: 'nullableString', omitWhenNull: true },
+        { outputKey: 'manualChildOrder', rowKey: 'manual_child_order', type: 'json', omitWhenNull: true },
         { outputKey: 'title', rowKey: 'title', type: 'title' },
         { outputKey: 'isTitleManual', rowKey: 'is_title_manual', type: 'booleanLong' },
         { outputKey: 'hideTitleHeading', rowKey: 'hide_title_heading', type: 'booleanLong' },

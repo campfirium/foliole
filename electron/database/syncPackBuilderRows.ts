@@ -81,11 +81,11 @@ function writeNodePackRows(db: import('better-sqlite3').Database, rows: LoadedSy
   copyRows({
     db,
     table: 'nodes',
-    columns: ['id', 'parent_id', 'kind', 'title', 'is_title_manual', 'hide_title_heading',
+    columns: ['id', 'parent_id', 'kind', 'title', 'is_title_manual', 'hide_title_heading', 'shelved_at',
       'body_blob_hash', 'opening_text', 'content', 'current_version_id', 'created_at', 'updated_at', 'deleted_at'],
     rows: rows.nodes,
     values: (row) => [row.id, row.parent_id, row.kind, row.title, row.is_title_manual,
-      row.hide_title_heading, row.body_blob_hash, row.opening_text, '', row.current_version_id,
+      row.hide_title_heading, row.shelved_at, row.body_blob_hash, row.opening_text, '', row.current_version_id,
       row.created_at, row.updated_at, row.deleted_at]
   });
   copyRows({

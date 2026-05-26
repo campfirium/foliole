@@ -1,6 +1,8 @@
 export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
   nodesEnableShortTermColumn: 'ALTER TABLE nodes ADD COLUMN enable_short_term INTEGER',
   nodesSequentialReadingEnabledColumn: 'ALTER TABLE nodes ADD COLUMN sequential_reading_enabled INTEGER',
+  nodesShelvedAtColumn: 'ALTER TABLE nodes ADD COLUMN shelved_at TEXT',
+  nodesManualChildOrderColumn: 'ALTER TABLE nodes ADD COLUMN manual_child_order TEXT',
   nodeViewStateSourceColumn: "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",
   syncObjectStateDropLegacyTable: 'DROP TABLE sync_object_state',
   syncObjectStateBaseContentHashColumn: 'ALTER TABLE sync_object_state ADD COLUMN base_content_hash TEXT',
@@ -27,6 +29,8 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
 export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   addNodesEnableShortTermIfMissing: 'addNodesEnableShortTermIfMissing',
   addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
+  addNodesShelvedAtIfMissing: 'addNodesShelvedAtIfMissing',
+  addNodesManualChildOrderIfMissing: 'addNodesManualChildOrderIfMissing',
   addNodeViewStateSourceIfMissing: 'addNodeViewStateSourceIfMissing',
   addSyncBaseContentHashIfMissing: 'addSyncBaseContentHashIfMissing',
   backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
@@ -132,6 +136,14 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
       { type: 'addNodesSequentialReadingEnabledIfMissing' }
     ],
     beforeVersion: 17
+  },
+  {
+    actions: [
+      { errorMessage: 'Failed to upgrade companion shelved topic schema.', type: 'installSchema' },
+      { type: 'addNodesManualChildOrderIfMissing' },
+      { type: 'addNodesShelvedAtIfMissing' }
+    ],
+    beforeVersion: 18
   }
 ] as const;
 
@@ -146,6 +158,18 @@ export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {
     columnName: 'sequential_reading_enabled',
     errorMessage: 'Failed to add node sequential reading column.',
     statementName: 'nodesSequentialReadingEnabledColumn',
+    tableName: 'nodes'
+  },
+  nodesShelvedAt: {
+    columnName: 'shelved_at',
+    errorMessage: 'Failed to add node shelved topic column.',
+    statementName: 'nodesShelvedAtColumn',
+    tableName: 'nodes'
+  },
+  nodesManualChildOrder: {
+    columnName: 'manual_child_order',
+    errorMessage: 'Failed to add node manual child order column.',
+    statementName: 'nodesManualChildOrderColumn',
     tableName: 'nodes'
   },
   nodeViewStateSource: {

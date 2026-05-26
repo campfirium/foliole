@@ -1,5 +1,6 @@
 import {
   ArchiveRestore,
+  BookMarked,
   BookOpenCheck,
   CalendarClock,
   CircleOff,
@@ -42,7 +43,9 @@ interface NodeListContextMenuProps {
   onRenameNode?: () => void;
   onReturnNode?: () => void;
   onRestoreNode: () => void;
+  onShelveTopic?: () => void;
   onToggleSequentialReading?: () => void;
+  onUnshelveTopic?: () => void;
   showDeleteAction?: boolean;
   showDismissEntireTopicAction?: boolean;
   showDismissAction?: boolean;
@@ -54,7 +57,9 @@ interface NodeListContextMenuProps {
   showRenameAction?: boolean;
   showRootCreateOnly?: boolean;
   showReturnAction?: boolean;
+  showShelveTopicAction?: boolean;
   showSequentialReadingAction?: boolean;
+  showUnshelveTopicAction?: boolean;
   sequentialReadingEnabled?: boolean;
   top: number;
 }
@@ -82,6 +87,7 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       {...(props.onPasteIntoNode ? { onPasteIntoNode: props.onPasteIntoNode } : {})}
       {...(props.onRenameNode ? { onRenameNode: props.onRenameNode } : {})}
       {...(props.onReturnNode ? { onReturnNode: props.onReturnNode } : {})}
+      {...(props.onShelveTopic ? { onShelveTopic: props.onShelveTopic } : {})}
       {...(props.showDeleteAction !== undefined ? { showDeleteAction: props.showDeleteAction } : {})}
       {...(props.showDismissEntireTopicAction !== undefined ? { showDismissEntireTopicAction: props.showDismissEntireTopicAction } : {})}
       {...(props.showDismissAction !== undefined ? { showDismissAction: props.showDismissAction } : {})}
@@ -93,8 +99,11 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       {...(props.showRenameAction !== undefined ? { showRenameAction: props.showRenameAction } : {})}
       {...(props.showRootCreateOnly !== undefined ? { showRootCreateOnly: props.showRootCreateOnly } : {})}
       {...(props.showReturnAction !== undefined ? { showReturnAction: props.showReturnAction } : {})}
+      {...(props.showShelveTopicAction !== undefined ? { showShelveTopicAction: props.showShelveTopicAction } : {})}
       {...(props.showSequentialReadingAction !== undefined ? { showSequentialReadingAction: props.showSequentialReadingAction } : {})}
+      {...(props.showUnshelveTopicAction !== undefined ? { showUnshelveTopicAction: props.showUnshelveTopicAction } : {})}
       {...(props.onToggleSequentialReading ? { onToggleSequentialReading: props.onToggleSequentialReading } : {})}
+      {...(props.onUnshelveTopic ? { onUnshelveTopic: props.onUnshelveTopic } : {})}
       {...(props.sequentialReadingEnabled !== undefined ? { sequentialReadingEnabled: props.sequentialReadingEnabled } : {})}
     />
   );
@@ -160,6 +169,8 @@ function shouldShowReviewGroup(props: NoteMenuItemsProps) {
     (props.showReviewSchedulingAction && props.onOpenReviewScheduling) ||
     (props.showPostponeTopicAction && props.onOpenPostponeTopic) ||
     (props.showDismissAction && props.onDismissNode) ||
+    (props.showShelveTopicAction && props.onShelveTopic) ||
+    (props.showUnshelveTopicAction && props.onUnshelveTopic) ||
     (props.showDismissEntireTopicAction && props.onDismissEntireTopic) ||
     (props.showSequentialReadingAction && props.onToggleSequentialReading)
   );
@@ -193,6 +204,9 @@ function renderReviewItems(props: NoteMenuItemsProps) {
       {props.showReviewSchedulingAction && props.onOpenReviewScheduling ? <NodeContextMenuItem icon={SlidersHorizontal} onSelect={props.onOpenReviewScheduling}>Review options…</NodeContextMenuItem> : null}
       {props.showPostponeTopicAction && props.onOpenPostponeTopic ? <NodeContextMenuItem icon={CalendarClock} onSelect={props.onOpenPostponeTopic}>Postpone Topic...</NodeContextMenuItem> : null}
       {props.showDismissAction && props.onDismissNode ? <NodeContextMenuItem icon={DismissMenuIcon} onSelect={props.onDismissNode}>Dismiss</NodeContextMenuItem> : null}
+      {(props.showShelveTopicAction && props.onShelveTopic) || (props.showUnshelveTopicAction && props.onUnshelveTopic) || (props.showDismissEntireTopicAction && props.onDismissEntireTopic) ? <NodeContextMenuSeparator /> : null}
+      {props.showShelveTopicAction && props.onShelveTopic ? <NodeContextMenuItem icon={BookMarked} onSelect={props.onShelveTopic}>Shelve entire topic</NodeContextMenuItem> : null}
+      {props.showUnshelveTopicAction && props.onUnshelveTopic ? <NodeContextMenuItem icon={BookMarked} onSelect={props.onUnshelveTopic}>Unshelve</NodeContextMenuItem> : null}
       {props.showDismissEntireTopicAction && props.onDismissEntireTopic ? <NodeContextMenuItem icon={CircleOff} onSelect={props.onDismissEntireTopic}>Dismiss Entire Topic</NodeContextMenuItem> : null}
       {props.showSequentialReadingAction && props.onToggleSequentialReading ? (
         <NodeContextMenuItem icon={BookOpenCheck} onSelect={props.onToggleSequentialReading}>

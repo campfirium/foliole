@@ -3,7 +3,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import {
   VIRTUAL_REMOVED_NODE_ID,
-  VIRTUAL_ROOT_NODE_ID
+  VIRTUAL_ROOT_NODE_ID,
+  VIRTUAL_SHELVED_NODE_ID
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 
@@ -33,7 +34,7 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-it('moves from the virtual root to the Removed row with arrow keys', () => {
+it('moves from the virtual root through built-in virtual rows with arrow keys', () => {
   const onOpenVirtualView = vi.fn();
   const root = createVirtualNode({
     id: VIRTUAL_ROOT_NODE_ID,
@@ -65,6 +66,8 @@ it('moves from the virtual root to the Removed row with arrow keys', () => {
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowDown' });
 
+  expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_SHELVED_NODE_ID);
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Shelved' }), { key: 'ArrowDown' });
   expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_REMOVED_NODE_ID);
 });
 
@@ -96,14 +99,12 @@ it('hides the Removed row when the virtual root is collapsed', () => {
     />
   );
 
-  expect(screen.queryByRole('treeitem', { name: 'Removed' })).toBeNull();
-
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
-
+  expect(screen.getByRole('treeitem', { name: 'Shelved' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Removed' })).toBeInTheDocument();
 
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowLeft' });
 
+  expect(screen.queryByRole('treeitem', { name: 'Shelved' })).toBeNull();
   expect(screen.queryByRole('treeitem', { name: 'Removed' })).toBeNull();
   expect(screen.queryByRole('treeitem', { name: 'Custom virtual' })).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'Virtual' })).toHaveAttribute('aria-expanded', 'false');

@@ -109,18 +109,36 @@ export function ReviewGradeActions({
   );
 }
 
+function ReadingReviewButton(props: {
+  className: string;
+  label: 'Soon' | 'Later' | 'Read' | 'Shelve' | 'Dismiss';
+  onClick: () => void;
+}) {
+  return (
+    <AppButton aria-label={props.label === 'Shelve' ? 'Shelve entire topic' : props.label} className={props.className} onClick={props.onClick} size="md" variant="primary">
+      {props.label}
+    </AppButton>
+  );
+}
+
 export function ReadingReviewActions({
+  actionButtonClassName,
+  groupClassName,
   onReadReviewTopic,
   onPostponeReviewTopic,
+  onShelveReviewTopic,
   onDismissReviewTopic,
   onRevisitReviewTopicSoon
 }: {
+  actionButtonClassName?: string;
+  groupClassName?: string;
   onReadReviewTopic: () => void;
   onPostponeReviewTopic: () => void;
+  onShelveReviewTopic?: () => void;
   onDismissReviewTopic: () => void;
   onRevisitReviewTopicSoon?: () => void;
 }) {
-  const actionButtonClassName = 'min-w-20 border-border px-4';
+  const buttonClassName = actionButtonClassName ?? 'min-w-20 border-border px-4';
   const wrapWithTooltip = (button: ReactNode, tooltip: string) => (
     <AppTooltip>
       <AppTooltipTrigger asChild>{button}</AppTooltipTrigger>
@@ -128,31 +146,29 @@ export function ReadingReviewActions({
     </AppTooltip>
   );
   return (
-    <ToolbarActionGroup ariaLabel="Reading review actions" className="gap-2" data-review-toolbar-kind="reading">
+    <ToolbarActionGroup ariaLabel="Reading review actions" className={groupClassName ?? 'gap-2'} data-review-toolbar-kind="reading">
       {onRevisitReviewTopicSoon
         ? wrapWithTooltip(
-            <AppButton aria-label="Soon" className={actionButtonClassName} onClick={onRevisitReviewTopicSoon} size="md" variant="primary">
-              Soon
-            </AppButton>,
+            <ReadingReviewButton className={buttonClassName} label="Soon" onClick={onRevisitReviewTopicSoon} />,
             'Appears again after this queue.'
           )
         : null}
       {wrapWithTooltip(
-        <AppButton aria-label="Later" className={actionButtonClassName} onClick={onPostponeReviewTopic} size="md" variant="primary">
-          Later
-        </AppButton>,
+        <ReadingReviewButton className={buttonClassName} label="Later" onClick={onPostponeReviewTopic} />,
         'Appears again after a shorter interval.'
       )}
       {wrapWithTooltip(
-        <AppButton aria-label="Read" className={actionButtonClassName} onClick={onReadReviewTopic} size="md" variant="primary">
-          Read
-        </AppButton>,
+        <ReadingReviewButton className={buttonClassName} label="Read" onClick={onReadReviewTopic} />,
         'Appears again after its normal interval.'
       )}
+      {onShelveReviewTopic
+        ? wrapWithTooltip(
+            <ReadingReviewButton className={buttonClassName} label="Shelve" onClick={onShelveReviewTopic} />,
+            'Set this topic aside.'
+          )
+        : null}
       {wrapWithTooltip(
-        <AppButton aria-label="Dismiss" className={actionButtonClassName} onClick={onDismissReviewTopic} size="md" variant="primary">
-          Dismiss
-        </AppButton>,
+        <ReadingReviewButton className={buttonClassName} label="Dismiss" onClick={onDismissReviewTopic} />,
         'No longer appears.'
       )}
     </ToolbarActionGroup>

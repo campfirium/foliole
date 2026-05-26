@@ -55,6 +55,28 @@ export function createDismissNodeAction(
   };
 }
 
+export function createShelveTopicAction(
+  rootNodeId: string | null,
+  shelveNode: (nodeId: string, now?: string) => boolean,
+  closeContextMenu: () => void
+) {
+  return () => {
+    if (rootNodeId) shelveNode(rootNodeId);
+    closeContextMenu();
+  };
+}
+
+export function createUnshelveTopicAction(
+  rootNodeId: string | null,
+  unshelveNode: (nodeId: string, now?: string) => boolean,
+  closeContextMenu: () => void
+) {
+  return () => {
+    if (rootNodeId) unshelveNode(rootNodeId);
+    closeContextMenu();
+  };
+}
+
 export function createToggleSequentialReadingAction(args: {
   closeContextMenu: () => void;
   nodesById: WorkspaceListNodesById;

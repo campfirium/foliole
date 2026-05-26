@@ -28,6 +28,7 @@ export const PACK_SCHEMA = [
     title TEXT NOT NULL,
     is_title_manual INTEGER NOT NULL DEFAULT 0,
     hide_title_heading INTEGER NOT NULL DEFAULT 0,
+    shelved_at TEXT,
     body_blob_hash TEXT,
     opening_text TEXT,
     content TEXT NOT NULL DEFAULT '',

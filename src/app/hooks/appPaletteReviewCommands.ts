@@ -8,6 +8,7 @@ export interface ReviewPaletteCommandOptions {
   canPostponeReviewTopic: boolean;
   canDelayReviewTopic?: boolean;
   canReadReviewTopic: boolean;
+  canShelveReadingReview?: boolean;
   canDismissReadingReview: boolean;
   canScrollReviewReading?: boolean;
   canDeleteReviewItem: boolean;
@@ -31,6 +32,7 @@ export const REVIEW_PALETTE_COMMANDS = [
   { id: APP_COMMAND_IDS.readingReviewLater, title: 'Reading: Later', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewPostpone, title: 'Postpone Topic...', section: 'Review', keywords: ['reading', 'topic', 'delay'] },
   { id: APP_COMMAND_IDS.readingReviewRead, title: 'Reading: Read', section: 'Review', keywords: ['reading'] },
+  { id: APP_COMMAND_IDS.readingReviewShelve, title: 'Shelve entire topic', section: 'Review', keywords: ['reading', 'topic'] },
   { id: APP_COMMAND_IDS.readingReviewDismiss, title: 'Reading: Dismiss', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.reviewScrollReadingDown, title: 'Scroll Reading Down', section: 'Review', keywords: ['reading', 'scroll'] },
   { id: APP_COMMAND_IDS.reviewScrollReadingUp, title: 'Scroll Reading Up', section: 'Review', keywords: ['reading', 'scroll'] },
@@ -60,6 +62,7 @@ export function isReviewCommandEnabled(id: string, options: ReviewPaletteCommand
   if (id === APP_COMMAND_IDS.readingReviewLater) return options.canPostponeReviewTopic;
   if (id === APP_COMMAND_IDS.readingReviewPostpone) return options.canDelayReviewTopic ?? false;
   if (id === APP_COMMAND_IDS.readingReviewRead) return options.canReadReviewTopic;
+  if (id === APP_COMMAND_IDS.readingReviewShelve) return options.canShelveReadingReview ?? false;
   if (id === APP_COMMAND_IDS.readingReviewDismiss) return options.canDismissReadingReview;
   if (id === APP_COMMAND_IDS.reviewScrollReadingDown || id === APP_COMMAND_IDS.reviewScrollReadingUp) return options.canScrollReviewReading ?? false;
   if (id === APP_COMMAND_IDS.deleteCurrentReviewItem) return options.canDeleteReviewItem;

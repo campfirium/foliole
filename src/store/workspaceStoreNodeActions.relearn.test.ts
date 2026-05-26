@@ -95,3 +95,33 @@ vi.mock('./workspaceRuntimeSync', () => ({
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
     expect(syncRelearnNodeToRuntime).not.toHaveBeenCalled();
   });
+
+  it('clears a shelved topic when relearning it', () => {
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+    const node = harness.getState().nodesById['node-1']!;
+    harness.setState({
+      nodesById: {
+        ...harness.getState().nodesById,
+        'node-1': {
+          ...node,
+          reading: {
+            intervalDurationMs: 0,
+            intervalGrowthFactor: 1,
+            lastHandledAt: '2026-03-10T00:00:00.000Z',
+            nextAt: '2026-03-10T00:00:00.000Z',
+            priority: 0,
+            readingPosition: 0,
+            repetitionCount: 0,
+            state: 'dismissed'
+          },
+          shelvedAt: '2026-05-01T00:00:00.000Z'
+        }
+      }
+    });
+
+    expect(actions.relearnNode('node-1', '2026-05-02T00:00:00.000Z')).toBe(true);
+
+    expect(harness.getState().nodesById['node-1']?.shelvedAt).toBeNull();
+    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(expect.objectContaining({ id: 'node-1', shelvedAt: null }));
+  });

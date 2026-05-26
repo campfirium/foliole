@@ -48,7 +48,9 @@ function useNodeWorkspaceActions() {
     reviewSession: useWorkspaceStore((state) => state.reviewSession),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     setNodeSequentialReading: useWorkspaceStore((state) => state.setNodeSequentialReading),
+    shelveNode: useWorkspaceStore((state) => state.shelveNode),
     trashedNodeIds: useWorkspaceStore((state) => state.trashedNodeIds),
+    unshelveNode: useWorkspaceStore((state) => state.unshelveNode),
     updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
     updateNodeShortTerm: useWorkspaceStore((state) => state.updateNodeShortTerm),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)
@@ -165,12 +167,14 @@ function buildNodeListTreeModelResult(
     returnNode: workspace.relearnNode,
     reviewSession: workspace.reviewSession,
     setNodeSequentialReading: workspace.setNodeSequentialReading,
+    shelveNode: workspace.shelveNode,
     state,
     trashedNodeIds: workspace.trashedNodeIds,
     trashTreeBuildDurationMs: treeData.trashTreeBuildDurationMs,
     updateNodePriority: workspace.updateNodePriority,
     updateNodeShortTerm: workspace.updateNodeShortTerm,
     updateNodeTitle: workspace.updateNodeTitle,
+    unshelveNode: workspace.unshelveNode,
     virtualTreeBuildDurationMs: treeData.virtualTreeBuildDurationMs
   };
 }

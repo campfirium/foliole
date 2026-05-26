@@ -42,7 +42,9 @@ export function WorkspaceTopicTreeMenu(props: {
         restoreNode={props.actions.restoreNode}
         returnNode={props.actions.returnNode}
         setNodeSequentialReading={props.actions.setNodeSequentialReading}
+        shelveNode={props.actions.shelveNode}
         state={props.topicTreeState}
+        unshelveNode={props.actions.unshelveNode}
       />
       <NodeReviewSchedulingDialog
         defaultPriority={getCurrentReviewSchedulerSettings().pushQueue.defaultPriority}

@@ -114,6 +114,7 @@ function createItemReviewSurface() {
     browsedFolder: null,
     handleReadReviewTopic: vi.fn(),
     handlePostponeReviewTopic: vi.fn(),
+    handleShelveReviewTopic: vi.fn(),
     handleDismissReviewTopic: vi.fn(),
     handleGradeReview: vi.fn(),
     handleSelectBrowseNode: vi.fn(),

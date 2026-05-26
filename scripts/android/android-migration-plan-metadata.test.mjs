@@ -64,7 +64,9 @@ describe('Android migration plan metadata', () => {
     const databaseVersion = Number(helperSource.match(/DATABASE_VERSION = (\d+)/)?.[1]);
 
     expect(schema.actionTypes).toMatchObject({
+      addNodesManualChildOrderIfMissing: 'addNodesManualChildOrderIfMissing',
       addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
+      addNodesShelvedAtIfMissing: 'addNodesShelvedAtIfMissing',
       installSchema: 'installSchema',
       migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
     });
@@ -81,11 +83,21 @@ describe('Android migration plan metadata', () => {
       statementName: 'statementName',
       tableName: 'tableName'
     });
-    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
     expect(databaseVersion).toBe(Math.max(...schema.plan.map((step) => step.beforeVersion)));
     expect(schema.repairRules.nodesSequentialReadingEnabled).toMatchObject({
       columnName: 'sequential_reading_enabled',
       statementName: 'nodesSequentialReadingEnabledColumn',
+      tableName: 'nodes'
+    });
+    expect(schema.repairRules.nodesShelvedAt).toMatchObject({
+      columnName: 'shelved_at',
+      statementName: 'nodesShelvedAtColumn',
+      tableName: 'nodes'
+    });
+    expect(schema.repairRules.nodesManualChildOrder).toMatchObject({
+      columnName: 'manual_child_order',
+      statementName: 'nodesManualChildOrderColumn',
       tableName: 'nodes'
     });
     expect(schema.repairRules.syncObjectStateSequence).toMatchObject({

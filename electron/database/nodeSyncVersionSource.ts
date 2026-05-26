@@ -13,6 +13,7 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow {
   desired_retention: number | null;
   enable_short_term: number | null;
   sequential_reading_enabled: number | null;
+  shelved_at: string | null;
   manual_child_order: string | null;
   hide_title_heading: number;
   id: string;
@@ -55,6 +56,7 @@ export function loadNodeSyncVersionSource(nodeId: string) {
        desired_retention,
        enable_short_term,
        sequential_reading_enabled,
+       shelved_at,
        manual_child_order,
        title,
        is_title_manual,
@@ -90,6 +92,7 @@ export function buildNodeSyncSnapshot(row: NodeSyncVersionSourceRow, nodeId: str
     desired_retention: row.desired_retention,
     enable_short_term: row.enable_short_term === null ? null : row.enable_short_term === 1,
     sequential_reading_enabled: row.sequential_reading_enabled === null ? null : row.sequential_reading_enabled === 1,
+    shelved_at: row.shelved_at,
     manual_child_order: row.manual_child_order,
     hide_title_heading: row.hide_title_heading === 1,
     id: row.id,
@@ -120,6 +123,7 @@ export function computeNodeSyncVersionHash(row: NodeSyncVersionSourceRow, nodeId
     desiredRetention: row.desired_retention,
     enableShortTerm: row.enable_short_term === null ? null : row.enable_short_term === 1,
     sequentialReadingEnabled: row.sequential_reading_enabled === null ? null : row.sequential_reading_enabled === 1,
+    shelvedAt: row.shelved_at,
     manualChildOrder: row.manual_child_order,
     hideTitleHeading: row.hide_title_heading === 1,
     id: row.id,

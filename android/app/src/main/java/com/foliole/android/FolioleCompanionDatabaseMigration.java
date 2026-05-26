@@ -70,6 +70,14 @@ final class FolioleCompanionDatabaseMigration {
             addNodesSequentialReadingEnabledIfMissing(context, database);
             return;
         }
+        if (actionType(context, "addNodesManualChildOrderIfMissing").equals(type)) {
+            addNodesManualChildOrderIfMissing(context, database);
+            return;
+        }
+        if (actionType(context, "addNodesShelvedAtIfMissing").equals(type)) {
+            addNodesShelvedAtIfMissing(context, database);
+            return;
+        }
         throw new IllegalStateException("Companion migration plan has unknown action: " + type);
     }
 
@@ -147,6 +155,14 @@ final class FolioleCompanionDatabaseMigration {
 
     private static void addNodesSequentialReadingEnabledIfMissing(Context context, SQLiteDatabase database) {
         addColumnIfMissing(context, database, "nodesSequentialReadingEnabled");
+    }
+
+    private static void addNodesManualChildOrderIfMissing(Context context, SQLiteDatabase database) {
+        addColumnIfMissing(context, database, "nodesManualChildOrder");
+    }
+
+    private static void addNodesShelvedAtIfMissing(Context context, SQLiteDatabase database) {
+        addColumnIfMissing(context, database, "nodesShelvedAt");
     }
 
     private static void addColumnIfMissing(Context context, SQLiteDatabase database, String groupName) {

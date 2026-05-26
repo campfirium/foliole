@@ -39,10 +39,10 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
     ? `(SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = incoming.id)`
     : 'current_version_id';
   return `INSERT OR REPLACE INTO main.nodes (` +
-    `id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, ` +
+    `id, parent_id, kind, title, is_title_manual, hide_title_heading, shelved_at, body_blob_hash, ` +
     `opening_text, content, current_version_id, created_at, updated_at, deleted_at) ` +
     `SELECT incoming.id, incoming.parent_id, incoming.kind, incoming.title, incoming.is_title_manual, ` +
-    `incoming.hide_title_heading, incoming.body_blob_hash, incoming.opening_text, incoming.content, ` +
+    `incoming.hide_title_heading, incoming.shelved_at, incoming.body_blob_hash, incoming.opening_text, incoming.content, ` +
     `${versionExpr}, incoming.created_at, incoming.updated_at, incoming.deleted_at FROM ${alias}.nodes incoming ` +
     `WHERE incoming.id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       incomingAlias: alias,

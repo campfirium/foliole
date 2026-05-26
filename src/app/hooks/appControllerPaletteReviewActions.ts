@@ -54,6 +54,7 @@ export function createPaletteReviewActions(args: {
       return nodeId ? args.requestDeleteSourceTopic(nodeId) : false;
     },
     dismissReviewTopic: args.ws.dismissReviewTopic,
+    shelveReviewTopic: args.ws.shelveReviewTopic,
     exitReviewSession: args.ws.exitReviewSession,
     gradeReviewCard: args.ws.gradeReviewCard,
     reviewNavigateDown: createSelectReviewNodeCommand({

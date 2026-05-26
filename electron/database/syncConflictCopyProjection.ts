@@ -41,6 +41,7 @@ function buildSnapshot(args: {
     desired_retention: null,
     enable_short_term: null,
     sequential_reading_enabled: args.record.snapshot.sequential_reading_enabled ?? null,
+    shelved_at: null,
     hide_title_heading: args.record.snapshot.hide_title_heading ?? false,
     id: args.copyNodeId,
     image_regions: null,
@@ -74,6 +75,7 @@ function computeConflictCopyContentHash(args: {
     desiredRetention: null,
     enableShortTerm: null,
     sequentialReadingEnabled: args.snapshot.sequential_reading_enabled ?? null,
+    shelvedAt: args.snapshot.shelved_at,
     manualChildOrder: null,
     hideTitleHeading: args.snapshot.hide_title_heading,
     id: args.copyNodeId,
@@ -105,15 +107,16 @@ function upsertConflictCopyNode(args: {
 }) {
   args.driver.execute(
     `INSERT INTO nodes (
-       id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, title, is_title_manual, hide_title_heading,
+       id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, title, is_title_manual, hide_title_heading,
        content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
        current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, 'topic', NULL, NULL, NULL, ?, ?, 1, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, ?, ?, 0, ?, ?, NULL)
+     ) VALUES (?, ?, 'topic', NULL, NULL, NULL, ?, NULL, ?, 1, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, ?, ?, 0, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
       kind = excluded.kind,
       enable_short_term = excluded.enable_short_term,
       sequential_reading_enabled = excluded.sequential_reading_enabled,
+      shelved_at = excluded.shelved_at,
       title = excluded.title,
        is_title_manual = excluded.is_title_manual,
        hide_title_heading = excluded.hide_title_heading,

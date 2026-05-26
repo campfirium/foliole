@@ -1,15 +1,10 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import {
-  normalizeWorkspaceSnapshot
-} from '../../lib/core/database/workspaceSnapshotContract';
+import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import { getReviewItemKind, isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { gradeSharedFsrsReviewNode } from '../features/review/model/sharedReviewGradeService';
-import {
-  getCurrentReviewSchedulerSettings,
-  getReviewSchedulerVersion
-} from '../features/settings/model/reviewSchedulerSettings';
+import { getCurrentReviewSchedulerSettings, getReviewSchedulerVersion } from '../features/settings/model/reviewSchedulerSettings';
 import {
   selectCanonicalReviewQueueSource,
   selectCanonicalVisibleNodeIds
@@ -19,7 +14,8 @@ import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
 import {
   readCompanionReviewTopic as readCompanionReviewTopicBase,
   postponeCompanionReviewTopic as postponeCompanionReviewTopicBase,
-  dismissCompanionReviewTopic as dismissCompanionReviewTopicBase
+  dismissCompanionReviewTopic as dismissCompanionReviewTopicBase,
+  shelveCompanionReviewTopic as shelveCompanionReviewTopicBase
 } from './companionReadingReview';
 
 export interface CompanionReviewCard {
@@ -155,6 +151,15 @@ function toCompanionReviewResult(snapshot: WorkspaceSnapshot, now: string) {
   };
 }
 
+function applyCompanionReadingReviewTopic(
+  action: (args: { nodeId: string; now: string; snapshot: WorkspaceSnapshot }) => WorkspaceSnapshot | null,
+  args: { nodeId: string; now?: string; snapshot: WorkspaceSnapshot }
+) {
+  const now = args.now ?? new Date().toISOString();
+  const nextSnapshot = action({ ...args, now });
+  return nextSnapshot ? toCompanionReviewResult(nextSnapshot, now) : null;
+}
+
 export async function gradeCompanionReviewCard(args: {
   grade: ReviewGrade;
   nodeId: string;
@@ -205,9 +210,7 @@ export function readCompanionReviewTopic(args: {
   now?: string;
   snapshot: WorkspaceSnapshot;
 }) {
-  const now = args.now ?? new Date().toISOString();
-  const nextSnapshot = readCompanionReviewTopicBase({ ...args, now });
-  return nextSnapshot ? toCompanionReviewResult(nextSnapshot, now) : null;
+  return applyCompanionReadingReviewTopic(readCompanionReviewTopicBase, args);
 }
 
 export function postponeCompanionReviewTopic(args: {
@@ -215,9 +218,7 @@ export function postponeCompanionReviewTopic(args: {
   now?: string;
   snapshot: WorkspaceSnapshot;
 }) {
-  const now = args.now ?? new Date().toISOString();
-  const nextSnapshot = postponeCompanionReviewTopicBase({ ...args, now });
-  return nextSnapshot ? toCompanionReviewResult(nextSnapshot, now) : null;
+  return applyCompanionReadingReviewTopic(postponeCompanionReviewTopicBase, args);
 }
 
 export function dismissCompanionReviewTopic(args: {
@@ -225,7 +226,13 @@ export function dismissCompanionReviewTopic(args: {
   now?: string;
   snapshot: WorkspaceSnapshot;
 }) {
-  const now = args.now ?? new Date().toISOString();
-  const nextSnapshot = dismissCompanionReviewTopicBase({ ...args, now });
-  return nextSnapshot ? toCompanionReviewResult(nextSnapshot, now) : null;
+  return applyCompanionReadingReviewTopic(dismissCompanionReviewTopicBase, args);
+}
+
+export function shelveCompanionReviewTopic(args: {
+  nodeId: string;
+  now?: string;
+  snapshot: WorkspaceSnapshot;
+}) {
+  return applyCompanionReadingReviewTopic(shelveCompanionReviewTopicBase, args);
 }

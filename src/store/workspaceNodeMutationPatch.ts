@@ -16,6 +16,7 @@ function nodeFromSnapshot(snapshot: NativeNodeSnapshotArgs, current?: Node): Nod
     desiredRetention: snapshot.desiredRetention ?? null,
     enableShortTerm: snapshot.enableShortTerm ?? null,
     sequentialReadingEnabled: snapshot.sequentialReadingEnabled ?? null,
+    shelvedAt: snapshot.shelvedAt ?? null,
     manualChildOrder: snapshot.kind === 'folder' ? snapshot.manualChildOrder ?? null : null,
     title: snapshot.title,
     isTitleManual: snapshot.isTitleManual,

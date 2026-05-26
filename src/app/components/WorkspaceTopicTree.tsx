@@ -49,6 +49,8 @@ export function useWorkspaceTopicTreeActions() {
     returnNode: useWorkspaceStore((state) => state.relearnNode),
     setNodeSequentialReading: useWorkspaceStore((state) => state.setNodeSequentialReading),
     setFolderManualChildOrder: useWorkspaceStore((state) => state.setFolderManualChildOrder),
+    shelveNode: useWorkspaceStore((state) => state.shelveNode),
+    unshelveNode: useWorkspaceStore((state) => state.unshelveNode),
     updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
     updateNodeShortTerm: useWorkspaceStore((state) => state.updateNodeShortTerm),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)

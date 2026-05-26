@@ -23,7 +23,9 @@ function noopProps() {
     onRenameNode: vi.fn(),
     onReturnNode: vi.fn(),
     onRestoreNode: vi.fn(),
+    onShelveTopic: vi.fn(),
     onToggleSequentialReading: vi.fn(),
+    onUnshelveTopic: vi.fn(),
     showDeleteAction: true,
     showDismissAction: true,
     showDismissEntireTopicAction: true,
@@ -32,6 +34,7 @@ function noopProps() {
     showPasteIntoNodeAction: true,
     showRenameAction: true,
     showReturnAction: true,
+    showShelveTopicAction: true,
     showReviewSchedulingAction: true,
     top: 32
   };
@@ -52,6 +55,7 @@ it('groups node context menu actions into create, edit, review, and destructive 
     'Relearn',
     'Review options…',
     'Dismiss',
+    'Shelve entire topic',
     'Dismiss Entire Topic',
     'Delete'
   ]);
@@ -61,7 +65,7 @@ it('renders compact icon menu items and keeps delete visually destructive', () =
   render(<NodeListContextMenu {...noopProps()} />);
 
   const menu = screen.getByRole('menu');
-  expect(within(menu).getAllByRole('separator')).toHaveLength(3);
+  expect(within(menu).getAllByRole('separator')).toHaveLength(4);
   expect(screen.getByRole('menuitem', { name: 'Rename' }).querySelector('svg')).not.toBeNull();
   expect(screen.getByRole('menuitem', { name: 'Delete' }).className).toContain('text-error/90');
 });

@@ -53,18 +53,7 @@ function useCompanionInteractionState(
   snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'],
   workspaceSync: CompanionWorkspaceSyncApi
 ) {
-  const {
-    handleGradeReview,
-    handleReadReviewTopic,
-    handlePostponeReviewTopic,
-    handleDismissReviewTopic,
-    isSubmittingGrade,
-    isSubmittingReadingAction,
-    readingError,
-    reviewError,
-    setReadingError,
-    setReviewError
-  } = useCompanionSurfaceActions({
+  const { setReadingError, setReviewError, ...reviewActions } = useCompanionSurfaceActions({
     floatingBar,
     reviewSession,
     snapshot,
@@ -91,20 +80,13 @@ function useCompanionInteractionState(
   }
 
   return {
-    handleReadReviewTopic,
-    handlePostponeReviewTopic,
-    handleDismissReviewTopic,
-    handleGradeReview,
+    ...reviewActions,
     handleRevealAnswer,
     handleExitBrowseArticle,
     handleSelectBrowseNode,
     handleSelectRecentArticle,
     handleTabAction,
-    isAnswerRevealed,
-    isSubmittingGrade,
-    isSubmittingReadingAction,
-    readingError,
-    reviewError
+    isAnswerRevealed
   };
 }
 

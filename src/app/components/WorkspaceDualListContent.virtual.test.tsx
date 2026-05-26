@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, VIRTUAL_SHELVED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -16,6 +16,8 @@ function createNode(args: {
   title: string;
   content?: string;
   specialKind?: 'inbox' | 'trash' | 'virtual-root' | 'virtual';
+  shelvedAt?: string | null;
+  anchorLink?: Node['anchorLink'];
   virtualFilter?: {
     conditions: Array<{ field: 'text'; operator: 'contains'; value: string }>;
     match: 'all';
@@ -24,7 +26,7 @@ function createNode(args: {
 }): Node & WorkspaceListNode {
   const kind = args.kind ?? (args.parentNodeId ? 'topic' : 'folder');
   return {
-    anchorLink: null,
+    anchorLink: args.anchorLink ?? null,
     createdAt: '2026-04-20T00:00:00.000Z',
     content: args.content ?? '',
     hasContent: kind !== 'folder',
@@ -38,6 +40,7 @@ function createNode(args: {
     title: args.title,
     updatedAt: '2026-04-20T00:00:00.000Z',
     ...definedProps({
+      shelvedAt: args.shelvedAt,
       specialKind: args.specialKind,
       virtualFilter: args.virtualFilter
     })
@@ -174,6 +177,55 @@ it('shows aggregate result items for the Virtual root even when list nodes are t
   expect(screen.getByRole('treeitem', { name: 'Alpha Topic Inbox' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Beta Topic Inbox' })).toBeInTheDocument();
   expect(screen.queryByText('No virtual folders yet')).toBeNull();
+});
+
+it('lists only directly shelved ordinary topics in the Shelved virtual view', () => {
+  render(
+    <WorkspaceDualListContent
+      activeNodeId={VIRTUAL_SHELVED_NODE_ID}
+      activeVirtualNodeId={VIRTUAL_SHELVED_NODE_ID}
+      externalEntriesByFolderId={{}}
+      externalFolders={[]}
+      externalSelection={{ kind: 'root' }}
+      isExternalViewOpen={false}
+      isStudyMode={false}
+      isTrashViewOpen={false}
+      isVirtualViewOpen
+      nodesById={{
+        [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
+        [VIRTUAL_ROOT_NODE_ID]: createNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
+        'shelved-topic': createNode({ id: 'shelved-topic', kind: 'topic', parentNodeId: INBOX_NODE_ID, shelvedAt: '2026-05-01T00:00:00.000Z', title: 'Shelved Topic' }),
+        'shelved-anchor': createNode({
+          id: 'shelved-anchor',
+          kind: 'topic',
+          parentNodeId: 'shelved-topic',
+          shelvedAt: '2026-05-01T00:00:00.000Z',
+          title: 'Shelved Anchor',
+          anchorLink: { id: 'a', kind: 'highlight' }
+        }),
+        'active-topic': createNode({ id: 'active-topic', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Active Topic' }),
+        'trashed-topic': createNode({ id: 'trashed-topic', kind: 'topic', parentNodeId: INBOX_NODE_ID, shelvedAt: '2026-05-01T00:00:00.000Z', title: 'Trashed Topic' })
+      }}
+      listNodesById={{}}
+      nodeOrder={[INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'shelved-topic', 'shelved-anchor', 'active-topic', 'trashed-topic']}
+      onOpenMoveToNode={vi.fn()}
+      onOpenNotesView={vi.fn()}
+      onOpenExternalSelection={vi.fn()}
+      onOpenTrashView={vi.fn()}
+      onOpenVirtualView={vi.fn()}
+      onSelectNode={vi.fn()}
+      onSelectNodeInVirtualView={vi.fn()}
+      onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null}
+      selectedTrashNodeId={null}
+      trashedNodeIds={['trashed-topic']}
+    />
+  );
+
+  expect(screen.getByRole('treeitem', { name: 'Shelved Topic Inbox' })).toBeInTheDocument();
+  expect(screen.queryByText('Shelved Anchor')).toBeNull();
+  expect(screen.queryByText('Active Topic')).toBeNull();
+  expect(screen.queryByText('Trashed Topic')).toBeNull();
 });
 
 it('opens virtual view when selecting a virtual folder from the lower section while it is inactive', () => {

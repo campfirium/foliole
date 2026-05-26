@@ -18,6 +18,7 @@ import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 
 import { buildAppPaletteItems } from './appCommands';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { canDelayReviewTopic, canShelveReviewTopic } from './appPaletteNodeActionGuards';
 import { useCommandShortcutState } from './reviewHotkeysState';
 
 function canNodeBeMoveTarget(args: {
@@ -104,13 +105,6 @@ function canAnnotateSelection(args: {
   return args.ws.nodesById[args.activeNodeId]?.kind !== 'folder';
 }
 
-function canDelayReviewTopic(args: {
-  activeNodeId: string | null; isViewingTrashNode: boolean; ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
-}) {
-  const activeNode = args.activeNodeId ? args.ws.nodesById[args.activeNodeId] : null;
-  return Boolean(activeNode?.kind === 'topic' && args.activeNodeId && !args.isViewingTrashNode && !args.ws.trashedNodeIds.includes(args.activeNodeId) && activeNode.reading?.state !== 'dismissed');
-}
-
 export function resolveEditorAwarePaletteHistoryOptions(args: {
   activeNodeId: string | null;
   appActionHistory: Parameters<typeof getWorkspaceUndoTitle>[0];
@@ -174,6 +168,7 @@ function buildPaletteOptions(
     canPostponeReviewTopic: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDelayReviewTopic: canDelayReviewTopic(args),
     canReadReviewTopic: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+    canShelveReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable && canShelveReviewTopic(args),
     canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canScrollReviewReading: args.isStudyMode && args.hasReviewCard,
     canDeleteReviewItem: args.hasReviewCard,

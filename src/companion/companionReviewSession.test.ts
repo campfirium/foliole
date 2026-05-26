@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
-import { gradeCompanionReviewCard, postponeCompanionReviewTopic, resolveCompanionReviewSession } from './companionReviewSession';
+import { gradeCompanionReviewCard, postponeCompanionReviewTopic, resolveCompanionReviewSession, shelveCompanionReviewTopic } from './companionReviewSession';
 
 const schedulerGrade = vi.fn();
 
@@ -183,7 +183,7 @@ describe('companionReviewSession', () => {
     expect(schedulerGrade).toHaveBeenCalled();
     expect(result?.snapshot.nodesById['item-1']).toMatchObject({
       review: {
-        due: '2026-04-25T08:10:00.000Z',
+        due: '2026-04-24T20:00:00.000Z',
         lastReviewAt: '2026-04-22T08:10:00.000Z',
         reps: 4
       }
@@ -196,15 +196,17 @@ describe('companionReviewSession', () => {
         stability: 2.1
       },
       cardAfter: {
-        due: '2026-04-25T08:10:00.000Z',
+        due: '2026-04-24T20:00:00.000Z',
         stability: 3.4
       },
       grade: 3,
       reviewedAt: '2026-04-22T08:10:00.000Z',
-      schedulerVersion: 'ts-fsrs@4.3.0|dr=0.90|mi=36500|st=0|pqdp=5|pqpr=5.00|pqmx=1:5|pqii=86400000|pqgr=1.10-1.50'
+      schedulerVersion: 'ts-fsrs@4.3.0|dr=0.90|mi=36500|ds=4|st=0|pqdp=5|pqpr=5.00|pqmx=1:5|pqii=86400000|pqgr=1.10-1.50'
     });
   });
+});
 
+describe('companion reading review session actions', () => {
   it('keeps due reading items in the unified companion review queue', () => {
     const snapshot = createSnapshot();
     snapshot.nodesById['topic-1'] = createDueReadingTopic();
@@ -217,5 +219,22 @@ describe('companionReviewSession', () => {
 
   it('postpones companion reading topics with the same shorter Later interval as desktop', () => {
     expectCompanionLaterUsesShortReadingInterval();
+  });
+
+  it('shelves companion reading topics without dismissing their reading state', () => {
+    const snapshot = createSnapshot();
+    snapshot.nodesById['topic-1'] = createDueReadingTopic();
+
+    const result = shelveCompanionReviewTopic({
+      nodeId: 'topic-1',
+      now: '2026-04-22T08:10:00.000Z',
+      snapshot
+    });
+
+    expect(result?.snapshot.nodesById['topic-1']).toMatchObject({
+      reading: expect.objectContaining({ state: 'active' }),
+      shelvedAt: '2026-04-22T08:10:00.000Z'
+    });
+    expect(result?.nextSession.queueNodeIds).not.toContain('topic-1');
   });
 });

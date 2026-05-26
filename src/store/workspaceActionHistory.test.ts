@@ -15,8 +15,11 @@ import {
 } from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  hasWorkspaceNodeMutationRuntime: vi.fn(() => false),
   syncCreateNodeToRuntime: vi.fn(),
+  syncCreateNodeMutationToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
+  syncMoveNodesToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -129,7 +132,7 @@ describe('workspace application delete action history', () => {
     vi.clearAllMocks();
   });
 
-  it('restores a deleted current review topic and session position when undoing Delete Topic', () => {
+  it('restores a deleted current review topic and session position when undoing Delete Topic', async () => {
     const harness = createHarness();
     const nodeActions = createWorkspaceNodeActions(harness.setState);
     const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
@@ -154,7 +157,8 @@ describe('workspace application delete action history', () => {
       }
     }));
 
-    nodeActions.deleteNode('node-1');
+    vi.mocked(syncSoftDeleteNodesToRuntime).mockImplementation(async (payload) => ({ deletedNodeIds: payload.nodeIds }));
+    await nodeActions.deleteNode('node-1');
 
     expect(harness.getState().activeNodeId).toBe('node-2');
     expect(harness.getState().reviewSession.currentNodeId).toBe('node-2');

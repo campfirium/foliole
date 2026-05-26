@@ -121,6 +121,7 @@ export interface WorkspaceLayoutProps {
     | 'onReadReviewTopic'
     | 'onPostponeReviewTopic'
     | 'onOpenPostponeTopicPanel'
+    | 'onShelveReviewTopic'
     | 'onDismissReviewTopic'
     | 'onRevisitReviewTopicSoon'
     | 'onContinueReading'

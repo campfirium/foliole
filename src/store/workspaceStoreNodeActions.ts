@@ -25,6 +25,7 @@ import { createSetFolderManualChildOrderAction } from './workspaceStoreManualChi
 import { createDismissNodeAction } from './workspaceStoreNodeDismissAction';
 import { createUpdateNodeRevealAction, createUpdateNodeTitleAction } from './workspaceStoreNodeEditActions';
 import { createRelearnNodeAction } from './workspaceStoreNodeRelearnAction';
+import { createShelveNodeAction, createUnshelveNodeAction } from './workspaceStoreNodeShelveAction';
 import {
   createUpdateNodeDesiredRetentionAction,
   createUpdateNodePriorityAction,
@@ -63,6 +64,8 @@ type WorkspaceNodeActions = Pick<
   | 'relearnNode'
   | 'setNodeSequentialReading'
   | 'setFolderManualChildOrder'
+  | 'shelveNode'
+  | 'unshelveNode'
   | 'setNodeViewState'
   | 'updateNodeDesiredRetention'
   | 'updateNodePriority'
@@ -113,6 +116,8 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateVirtualNodeFilter: createUpdateVirtualNodeFilterAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
     dismissNode: createDismissNodeAction(set),
+    shelveNode: createShelveNodeAction(set),
+    unshelveNode: createUnshelveNodeAction(set),
     relearnNode: createRelearnNodeAction(set),
     updateNodePriority: createUpdateNodePriorityAction(set),
     updateNodeDesiredRetention: createUpdateNodeDesiredRetentionAction(set),

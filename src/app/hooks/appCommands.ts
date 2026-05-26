@@ -56,6 +56,7 @@ interface RunAppCommandActions {
   readingReviewLater: () => void;
   readingReviewPostpone?: () => void;
   readingReviewRead: () => void;
+  readingReviewShelve?: () => void;
   readingReviewDismiss: () => void;
   reviewScrollReadingDown: () => boolean | void;
   reviewScrollReadingUp: () => boolean | void;
@@ -158,6 +159,7 @@ function createReviewCommandHandlers(actions: RunAppCommandActions): Record<stri
     [APP_COMMAND_IDS.readingReviewLater]: actions.readingReviewLater,
     [APP_COMMAND_IDS.readingReviewPostpone]: actions.readingReviewPostpone ?? (() => false),
     [APP_COMMAND_IDS.readingReviewRead]: actions.readingReviewRead,
+    [APP_COMMAND_IDS.readingReviewShelve]: actions.readingReviewShelve ?? (() => false),
     [APP_COMMAND_IDS.readingReviewDismiss]: actions.readingReviewDismiss,
     [APP_COMMAND_IDS.reviewScrollReadingDown]: actions.reviewScrollReadingDown,
     [APP_COMMAND_IDS.reviewScrollReadingUp]: actions.reviewScrollReadingUp,

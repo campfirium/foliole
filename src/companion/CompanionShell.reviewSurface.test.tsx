@@ -125,6 +125,7 @@ function reviewSurface(currentCard: Record<string, unknown> | null) {
     browsedFolder: null,
     handleReadReviewTopic: vi.fn(),
     handlePostponeReviewTopic: vi.fn(),
+    handleShelveReviewTopic: vi.fn(),
     handleDismissReviewTopic: vi.fn(),
     handleGradeReview: vi.fn(),
     handleSelectBrowseNode: vi.fn(),
@@ -175,6 +176,7 @@ describe('CompanionShell review surfaces', () => {
 
     expect(screen.getByLabelText('Later')).toBeInTheDocument();
     expect(screen.getByLabelText('Read')).toBeInTheDocument();
+    expect(screen.getByLabelText('Shelve entire topic')).toBeInTheDocument();
     expect(screen.getByLabelText('Dismiss')).toBeInTheDocument();
     expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
   });

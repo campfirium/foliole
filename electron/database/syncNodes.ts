@@ -15,6 +15,7 @@ interface SyncNodeRow extends DatabaseRow {
   desired_retention: number | null;
   enable_short_term: number | null;
   device_id: string | null;
+  shelved_at: string | null;
   manual_child_order: string | null;
   hide_title_heading: number;
   id: string;
@@ -90,6 +91,7 @@ function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
     deleted_at: row.deleted_at,
     desired_retention: row.desired_retention,
     enable_short_term: row.enable_short_term === null ? null : row.enable_short_term === 1,
+    shelved_at: row.shelved_at,
     manual_child_order: row.manual_child_order,
     hide_title_heading: row.hide_title_heading === 1,
     id: row.id,
@@ -143,6 +145,7 @@ const SYNC_NODE_SELECT_COLUMNS = `
   n.desired_retention,
   n.enable_short_term,
   n.sequential_reading_enabled,
+  n.shelved_at,
   n.manual_child_order,
   n.title,
   n.is_title_manual,

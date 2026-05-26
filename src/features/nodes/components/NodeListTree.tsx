@@ -81,13 +81,15 @@ function buildNodeListTreeContentProps(args: NodeListTreeContentPropsArgs) {
     selectedNodeIds: args.model.state.selectedNodeIds,
     selectedTrashNodeId: args.selectedTrashNodeId,
     setNodeSequentialReading: args.model.setNodeSequentialReading,
+    shelveNode: args.model.shelveNode,
     showVirtualCreateAction: args.showVirtualCreateAction,
     showTitleSearch: args.showTitleSearch,
     state: args.model.state,
     trashedNodeIds: args.model.trashedNodeIds,
     updateNodePriority: args.model.updateNodePriority,
     updateNodeShortTerm: args.model.updateNodeShortTerm,
-    updateNodeTitle: args.model.updateNodeTitle
+    updateNodeTitle: args.model.updateNodeTitle,
+    unshelveNode: args.model.unshelveNode
   };
 }
 

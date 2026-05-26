@@ -119,6 +119,7 @@ export interface Node {
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
+  shelvedAt?: string | null;
   specialKind?: NodeSpecialKind;
   title: string;
   isTitleManual?: boolean;

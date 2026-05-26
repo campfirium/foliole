@@ -8,10 +8,10 @@ export interface SyncNodeStatement {
 }
 
 export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
-  id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, manual_child_order, title, is_title_manual, hide_title_heading,
+  id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
   content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
   current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
   kind = excluded.kind,
@@ -19,6 +19,7 @@ ON CONFLICT(id) DO UPDATE SET
   desired_retention = excluded.desired_retention,
   enable_short_term = excluded.enable_short_term,
   sequential_reading_enabled = excluded.sequential_reading_enabled,
+  shelved_at = excluded.shelved_at,
   manual_child_order = excluded.manual_child_order,
   title = excluded.title,
   is_title_manual = excluded.is_title_manual,
@@ -74,6 +75,7 @@ export function buildRemoteNodeUpsert(record: NativeSyncNodeRecord, bodyBlobHash
       snapshot.desired_retention,
       snapshot.enable_short_term == null ? null : snapshot.enable_short_term ? 1 : 0,
       snapshot.sequential_reading_enabled == null ? null : snapshot.sequential_reading_enabled ? 1 : 0,
+      snapshot.shelved_at ?? null,
       snapshot.manual_child_order ?? null,
       snapshot.title,
       snapshot.is_title_manual ? 1 : 0,

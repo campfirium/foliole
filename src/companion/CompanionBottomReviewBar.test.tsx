@@ -10,6 +10,7 @@ function renderReviewBar(reviewCardKey: string) {
       itemKind="reading"
       onReadReviewTopic={vi.fn()}
       onPostponeReviewTopic={vi.fn()}
+      onShelveReviewTopic={vi.fn()}
       onDismissReviewTopic={vi.fn()}
       onGrade={vi.fn()}
       onRevealAnswer={vi.fn()}
@@ -33,6 +34,7 @@ describe('CompanionBottomReviewBar', () => {
         itemKind="reading"
         onReadReviewTopic={vi.fn()}
         onPostponeReviewTopic={vi.fn()}
+        onShelveReviewTopic={vi.fn()}
         onDismissReviewTopic={vi.fn()}
         onGrade={vi.fn()}
         onRevealAnswer={vi.fn()}
@@ -42,5 +44,11 @@ describe('CompanionBottomReviewBar', () => {
     );
 
     expect(document.activeElement).not.toBe(screen.getByLabelText('Dismiss'));
+  });
+
+  it('shows the companion shelve action for reading review topics', () => {
+    renderReviewBar('reading:topic-1');
+
+    expect(screen.getByLabelText('Shelve entire topic')).toBeInTheDocument();
   });
 });

@@ -118,7 +118,10 @@ function applyReadingState(args: {
   });
 }
 
-function isPreservedSequentialReadingState(reading: NodeReadingProfile | null | undefined) {
+function isUnavailableSequentialTopic(node: Node | undefined) {
+  if (!node) return true;
+  if (node.shelvedAt) return true;
+  const reading = node.reading;
   return reading?.state === 'dismissed' || reading?.state === 'done';
 }
 
@@ -142,7 +145,7 @@ export function buildSequentialReadingSourcePatch(args: SequentialReadingArgs & 
   let released = false;
   for (const nodeId of derivedNodeIds) {
     const node = nextNodesById[nodeId];
-    if (!node || isPreservedSequentialReadingState(node.reading)) {
+    if (isUnavailableSequentialTopic(node)) {
       continue;
     }
     const state = args.enabled ? (released ? 'locked' : 'active') : 'active';
@@ -192,7 +195,7 @@ export function buildSequentialReadingDismissPatch(args: SequentialReadingArgs &
   let released = false;
   for (const nodeId of derivedNodeIds) {
     const node = nextNodesById[nodeId];
-    if (!node || isPreservedSequentialReadingState(node.reading)) {
+    if (isUnavailableSequentialTopic(node)) {
       continue;
     }
     const state = released ? 'locked' : 'active';

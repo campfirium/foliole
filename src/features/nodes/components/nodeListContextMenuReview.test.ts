@@ -8,7 +8,9 @@ import {
   canRelearnNode,
   canReturnNode,
   collectDismissEntireTopicTargets,
-  hasDismissEntireTopicTargets
+  hasDismissEntireTopicTargets,
+  hasShelveTopicTarget,
+  hasUnshelveTopicTarget
 } from './nodeListContextMenuReview';
 
 function createReadingState(state: 'active' | 'done' | 'dismissed' = 'active') {
@@ -38,7 +40,7 @@ function createNode(
     review: input.review ?? null,
     createdAt: '2026-03-29T00:00:00.000Z',
     updatedAt: '2026-03-29T00:00:00.000Z',
-    ...definedProps({ kind: input.kind, specialKind: input.specialKind })
+    ...definedProps({ kind: input.kind, shelvedAt: input.shelvedAt, specialKind: input.specialKind })
   };
 }
 
@@ -107,4 +109,28 @@ function createNode(
 
     expect(hasDismissEntireTopicTargets(['root', 'folder'], nodesById)).toBe(false);
     expect(hasDismissEntireTopicTargets(['folder'], nodesById)).toBe(false);
+  });
+
+  it('shows shelve only for one ordinary native topic and unshelve only on the directly shelved topic', () => {
+    const nodesById = {
+      topic: createNode({ id: 'topic', kind: 'topic', title: 'Topic' }),
+      shelved: createNode({ id: 'shelved', kind: 'topic', shelvedAt: '2026-05-01T00:00:00.000Z', title: 'Shelved' }),
+      child: createNode({ id: 'child', kind: 'topic', parentNodeId: 'shelved', title: 'Child' }),
+      anchor: createNode({
+        id: 'anchor',
+        kind: 'topic',
+        title: 'Anchor',
+        anchorLink: { id: 'a', kind: 'highlight' }
+      }),
+      folder: createNode({ id: 'folder', kind: 'folder', title: 'Folder' }),
+      virtual: createNode({ id: 'virtual', kind: 'topic', specialKind: 'virtual', title: 'Virtual' })
+    };
+
+    expect(hasShelveTopicTarget(['topic'], nodesById)).toBe(true);
+    expect(hasUnshelveTopicTarget(['shelved'], nodesById)).toBe(true);
+    expect(hasUnshelveTopicTarget(['child'], nodesById)).toBe(false);
+    expect(hasShelveTopicTarget(['anchor'], nodesById)).toBe(false);
+    expect(hasShelveTopicTarget(['folder'], nodesById)).toBe(false);
+    expect(hasShelveTopicTarget(['virtual'], nodesById)).toBe(false);
+    expect(hasShelveTopicTarget(['topic', 'shelved'], nodesById)).toBe(false);
   });

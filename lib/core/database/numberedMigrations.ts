@@ -201,6 +201,12 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     migrate: (sqlite) => {
       addColumnIfMissing(sqlite, 'nodes', 'manual_child_order', 'TEXT');
     }
+  },
+  {
+    version: 46,
+    migrate: (sqlite) => {
+      addColumnIfMissing(sqlite, 'nodes', 'shelved_at', 'TEXT');
+    }
   }
 ];
 

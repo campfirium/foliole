@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 
-function input(overrides: { manualChildOrder?: string | null; sequentialReadingEnabled: boolean | null }) {
+function input(overrides: { manualChildOrder?: string | null; sequentialReadingEnabled: boolean | null; shelvedAt?: string | null }) {
   return {
     anchorLink: null,
     attachments: [],
@@ -12,6 +12,7 @@ function input(overrides: { manualChildOrder?: string | null; sequentialReadingE
     desiredRetention: null,
     enableShortTerm: null,
     manualChildOrder: null,
+    shelvedAt: null,
     hideTitleHeading: false,
     id: 'node-1',
     imageRegions: null,
@@ -35,6 +36,12 @@ it('includes sequential reading mode in node sync hashes', () => {
   );
   expect(computeNodeSyncHash(input({ sequentialReadingEnabled: null }))).not.toBe(
     computeNodeSyncHash(input({ sequentialReadingEnabled: true }))
+  );
+});
+
+it('includes shelved topic state in node sync hashes', () => {
+  expect(computeNodeSyncHash(input({ sequentialReadingEnabled: null, shelvedAt: '2026-05-01T00:00:00.000Z' }))).not.toBe(
+    computeNodeSyncHash(input({ sequentialReadingEnabled: null, shelvedAt: null }))
   );
 });
 

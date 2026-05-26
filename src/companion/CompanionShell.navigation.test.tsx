@@ -70,6 +70,7 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     browsedFolder: null,
     handleReadReviewTopic: vi.fn(),
     handlePostponeReviewTopic: vi.fn(),
+    handleShelveReviewTopic: vi.fn(),
     handleDismissReviewTopic: vi.fn(),
     handleGradeReview: vi.fn(),
     handleRevealAnswer: vi.fn(),

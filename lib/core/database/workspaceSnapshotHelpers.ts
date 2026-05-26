@@ -42,6 +42,7 @@ export interface WorkspaceNodeSnapshot {
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
+  shelvedAt?: string | null;
   manualChildOrder?: string[] | null;
   title: string;
   isTitleManual: boolean;
@@ -77,6 +78,7 @@ export interface WorkspaceNodeRowShape {
   desired_retention: number | null;
   enable_short_term: number | null;
   sequential_reading_enabled: number | null;
+  shelved_at: string | null;
   manual_child_order: string | null;
   hide_title_heading: number;
   id: string;
@@ -184,6 +186,7 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
   if (typeof row.sequential_reading_enabled === 'number') {
     node.sequentialReadingEnabled = row.sequential_reading_enabled === 1;
   }
+  node.shelvedAt = row.shelved_at ?? null;
   if (node.kind === 'folder') {
     node.manualChildOrder = parseManualChildOrder(row.manual_child_order);
   }

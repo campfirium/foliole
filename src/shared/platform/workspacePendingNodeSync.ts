@@ -63,6 +63,7 @@ function toPendingWorkspaceNode(
     desiredRetention: pendingNode.desiredRetention ?? null,
     enableShortTerm: pendingNode.enableShortTerm ?? null,
     sequentialReadingEnabled: pendingNode.sequentialReadingEnabled ?? null,
+    shelvedAt: pendingNode.shelvedAt ?? null,
     manualChildOrder: pendingNode.kind === 'folder' ? pendingNode.manualChildOrder ?? null : null,
     title: pendingNode.title,
     isTitleManual: pendingNode.isTitleManual,

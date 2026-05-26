@@ -62,6 +62,16 @@ describe('workspace durable node mutation guardrails', () => {
     );
   });
 
+  it('requires runtime sync for topic shelve from the node menu', () => {
+    const harness = createReadingHarness();
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    expect(actions.shelveNode('reading-1', '2026-03-18T00:00:00.000Z')).toBe(true);
+    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'reading-1', shelvedAt: '2026-03-18T00:00:00.000Z' })
+    );
+  });
+
   it('requires runtime sync for fsrs relearn reset', () => {
     const harness = createFsrsHarness();
     const actions = createWorkspaceNodeActions(harness.setState);
@@ -116,6 +126,13 @@ describe('workspace durable reading review mutation guardrails', () => {
       expect.objectContaining({ id: deferredNodeId, reading: expect.objectContaining({ state: 'active' }) })
     );
   });
+});
+
+describe('workspace durable reading review shelve and dismiss guardrails', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
+  });
 
   it('requires runtime sync for reading dismiss inside review mode', async () => {
     const harness = createSetStateHarness(
@@ -134,6 +151,26 @@ describe('workspace durable reading review mutation guardrails', () => {
     await expect(actions.dismissReviewTopic('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
     expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
       expect.objectContaining({ id: dismissedNodeId, reading: expect.objectContaining({ state: 'dismissed' }) })
+    );
+  });
+
+  it('requires runtime sync for reading shelve inside review mode', async () => {
+    const harness = createSetStateHarness(
+      createWorkspaceFixture([
+        createReadingNode('reading-1', '2026-03-03T00:00:00.000Z'),
+        createReadingNode('reading-2', '2026-03-03T00:00:00.000Z')
+      ])
+    );
+    const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
+      grade: createSchedulerGradeMock(),
+      preview: previewStub
+    });
+
+    actions.startReviewSession('2026-03-03T00:00:00.000Z');
+    const shelvedNodeId = harness.getState().reviewSession.currentNodeId;
+    await expect(actions.shelveReviewTopic('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
+    expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
+      expect.objectContaining({ id: shelvedNodeId, shelvedAt: '2026-03-03T00:00:00.000Z' })
     );
   });
 });

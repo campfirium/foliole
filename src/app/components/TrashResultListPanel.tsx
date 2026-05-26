@@ -108,7 +108,9 @@ function TrashContextMenu(props: {
       restoreNode={props.workspaceActions.restoreNode}
       returnNode={props.workspaceActions.returnNode}
       setNodeSequentialReading={props.workspaceActions.setNodeSequentialReading}
+      shelveNode={props.workspaceActions.shelveNode}
       state={props.listState}
+      unshelveNode={props.workspaceActions.unshelveNode}
     />
   );
 }
@@ -181,7 +183,9 @@ function useTrashWorkspaceActions() {
     dismissNode: useWorkspaceStore((state) => state.dismissNode),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     returnNode: useWorkspaceStore((state) => state.relearnNode),
-    setNodeSequentialReading: useWorkspaceStore((state) => state.setNodeSequentialReading)
+    setNodeSequentialReading: useWorkspaceStore((state) => state.setNodeSequentialReading),
+    shelveNode: useWorkspaceStore((state) => state.shelveNode),
+    unshelveNode: useWorkspaceStore((state) => state.unshelveNode)
   };
 }
 

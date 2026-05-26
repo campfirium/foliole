@@ -21,7 +21,7 @@ export function createRelearnNodeAction(set: WorkspaceSet): WorkspaceState['rele
         return state;
       }
       relearned = true;
-      if (!node.review && !node.reading) {
+      if (!node.review && !node.reading && !node.shelvedAt) {
         return state;
       }
       shouldSyncReviewReset = isFsrsReviewItemNode(node);
@@ -29,6 +29,7 @@ export function createRelearnNodeAction(set: WorkspaceSet): WorkspaceState['rele
         ...node,
         review: shouldSyncReviewReset ? null : node.review,
         reading: null,
+        shelvedAt: null,
         updatedAt: now
       };
       nextNodeForSync = nextNode;

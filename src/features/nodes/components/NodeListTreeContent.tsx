@@ -50,6 +50,7 @@ interface NodeListTreeContentProps {
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
   setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean;
+  shelveNode: (nodeId: string, now?: string) => boolean;
   showTitleSearch: boolean;
   showVirtualCreateAction?: boolean;
   state: NodeListState;
@@ -57,6 +58,7 @@ interface NodeListTreeContentProps {
   updateNodePriority: (nodeId: string, priority: number | null) => void;
   updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
   updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
+  unshelveNode: (nodeId: string, now?: string) => boolean;
 }
 
 export function NodeListTreeContent(props: NodeListTreeContentProps) {

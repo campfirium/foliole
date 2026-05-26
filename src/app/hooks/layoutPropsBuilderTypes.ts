@@ -150,6 +150,7 @@ export interface BuildLayoutPropsArgs {
   updateGrade: (grade: ReviewGrade) => Promise<boolean>;
   readReviewTopic: () => Promise<boolean>;
   postponeReviewTopic: () => Promise<boolean>;
+  shelveReviewTopic: () => Promise<boolean>;
   dismissReviewTopic: () => Promise<boolean>;
   revisitReviewTopicSoon: () => Promise<boolean>;
   revealReviewAnswer: () => void;

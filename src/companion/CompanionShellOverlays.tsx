@@ -38,6 +38,7 @@ export function CompanionShellOverlays(props: {
         itemKind={props.surface.reviewSession.currentCard?.itemKind ?? 'reading'}
         onReadReviewTopic={props.surface.handleReadReviewTopic}
         onPostponeReviewTopic={props.surface.handlePostponeReviewTopic}
+        onShelveReviewTopic={props.surface.handleShelveReviewTopic}
         onDismissReviewTopic={props.surface.handleDismissReviewTopic}
         onGrade={props.surface.handleGradeReview}
         onRevealAnswer={props.surface.handleRevealAnswer}

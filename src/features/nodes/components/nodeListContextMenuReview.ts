@@ -23,6 +23,14 @@ export function canPostponeTopic(node: WorkspaceListNode | undefined) {
   return Boolean(node?.kind === 'topic' && node.reading?.state !== 'dismissed');
 }
 
+export function canShelveTopic(node: WorkspaceListNode | undefined) {
+  return Boolean(node?.kind === 'topic' && !node.specialKind && !node.anchorLink && !node.shelvedAt);
+}
+
+export function canUnshelveTopic(node: WorkspaceListNode | undefined) {
+  return Boolean(node?.kind === 'topic' && !node.specialKind && !node.anchorLink && node.shelvedAt);
+}
+
 function collectDescendantIds(rootNodeId: string, nodesById: WorkspaceListNodesById) {
   const descendants: string[] = [];
   const pending = [rootNodeId];
@@ -77,6 +85,22 @@ export function hasDismissEntireTopicTargets(nodeIds: string[], nodesById: Works
   }
   const rootNodeId = nodeIds[0];
   return Boolean(rootNodeId && collectDismissEntireTopicTargets(rootNodeId, nodesById).length > 0);
+}
+
+export function hasShelveTopicTarget(nodeIds: string[], nodesById: WorkspaceListNodesById) {
+  if (nodeIds.length !== 1) {
+    return false;
+  }
+  const nodeId = nodeIds[0];
+  return nodeId !== undefined && canShelveTopic(nodesById[nodeId]);
+}
+
+export function hasUnshelveTopicTarget(nodeIds: string[], nodesById: WorkspaceListNodesById) {
+  if (nodeIds.length !== 1) {
+    return false;
+  }
+  const nodeId = nodeIds[0];
+  return nodeId !== undefined && canUnshelveTopic(nodesById[nodeId]);
 }
 
 export function canToggleSequentialReading(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
