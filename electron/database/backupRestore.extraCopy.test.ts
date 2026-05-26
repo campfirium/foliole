@@ -21,7 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { createApplicationDatabaseBackup, reconcileAutomaticDatabaseBackups } from './backupRestore.js';
 import { loadBackupSettings, normalizeBackupSettings, resolveManagedBackupDirectory, saveBackupSettings } from './backupSettings.js';
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
@@ -54,6 +54,7 @@ it('copies a manual backup into the extra backup location and prunes old extra c
   await createBackupFixture(extraDir, 'manual-2026-04-02_11-00-00-000.db', 'newer', '2026-04-02T11:00:00.000Z');
   await fs.writeFile(path.join(extraDir, 'personal.txt'), 'keep');
   saveBackupSettings({ extra_backup_dir: extraDir, extra_backup_max_count: 2 });
+  await writeSidecarSentinels();
 
   const result = await createApplicationDatabaseBackup();
   const extraNames = (await fs.readdir(extraDir)).sort();
@@ -65,8 +66,11 @@ it('copies a manual backup into the extra backup location and prunes old extra c
   });
   expect(extraNames).toContain(path.basename(result.destinationPath));
   expect(extraNames).toContain('personal.txt');
+  expect(extraNames).not.toContain('external-search-cache.db');
+  expect(extraNames).not.toContain(path.basename(openDatabaseConnection().searchDbPath));
   expect(extraNames.filter((fileName) => fileName.endsWith('.db'))).toHaveLength(2);
   expect(extraNames).not.toContain('manual-2026-04-02_10-00-00-000.db');
+  await expectBackupDirectoryExcludesSidecars(resolveManagedBackupDirectory(loadBackupSettings()));
 });
 
 it('keeps the main manual backup when the extra copy fails', async () => {
@@ -100,14 +104,30 @@ it('copies automatic backups into the extra location without blocking primary re
     auto_weekly_weeks: 0,
     extra_backup_dir: extraDir
   });
+  await writeSidecarSentinels();
 
   await reconcileAutomaticDatabaseBackups(new Date('2026-04-02T10:15:00.000Z'));
 
   await expect(fs.stat(path.join(extraDir, 'auto-daily-2026-04-02_10-15-00-000.db'))).resolves.toBeDefined();
+  await expect(fs.access(path.join(extraDir, 'external-search-cache.db'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(fs.access(path.join(extraDir, path.basename(openDatabaseConnection().searchDbPath)))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expectBackupDirectoryExcludesSidecars(resolveManagedBackupDirectory(loadBackupSettings()));
 });
 
 async function createBackupFixture(directoryPath: string, fileName: string, content: string, updatedAt: string) {
   const filePath = path.join(directoryPath, fileName);
   await fs.writeFile(filePath, content);
   await fs.utimes(filePath, new Date(updatedAt), new Date(updatedAt));
+}
+
+async function writeSidecarSentinels() {
+  const connection = openDatabaseConnection();
+  await fs.writeFile(path.join(path.dirname(connection.dbPath), 'external-search-cache.db'), 'external sidecar sentinel');
+  await fs.appendFile(connection.searchDbPath, '');
+}
+
+async function expectBackupDirectoryExcludesSidecars(directoryPath: string) {
+  const fileNames = await fs.readdir(directoryPath);
+  expect(fileNames).not.toContain('external-search-cache.db');
+  expect(fileNames).not.toContain(path.basename(openDatabaseConnection().searchDbPath));
 }

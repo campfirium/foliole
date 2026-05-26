@@ -21,10 +21,13 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { closeDatabaseConnection, openDatabaseConnection, resolveSearchDatabasePath } from './connection.js';
 import { initializeDatabase } from './migrate.js';
+import { upsertNodeSnapshot } from './nodeMutations.js';
 import { saveJsonSetting } from './settingsStore.js';
 import { backupSqliteDatabase } from './sqliteBackupRestore.js';
+import { searchWorkspace } from './workspaceSearch.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -162,6 +165,27 @@ it('keeps the internal search sidecar out of main database backups', async () =>
   }
 });
 
+it('rebuilds the internal search sidecar from restored main data when the sidecar file is missing', async () => {
+  seedSearchNode('restore-search-node', '# Restored\nunique restored needle');
+  const backup = await createApplicationDatabaseBackup();
+
+  seedSearchNode('restore-search-node', '# Mutated\nunique mutated needle');
+  await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
+
+  const searchDbPath = openDatabaseConnection().searchDbPath;
+  closeDatabaseConnection();
+  await fs.rm(searchDbPath, { force: true });
+
+  initializeDatabase();
+
+  expect(searchWorkspace('restored').find((result) => result.id === 'restore-search-node')).toMatchObject({
+    id: 'restore-search-node',
+    kind: 'node',
+    title: 'restore-search-node'
+  });
+  expect(searchWorkspace('mutated').find((result) => result.id === 'restore-search-node')).toBeUndefined();
+});
+
 function openDetachedSqlite(databasePath: string) {
   return new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
 }
@@ -171,4 +195,20 @@ function readLastRebuildStatus(sqlite: import('better-sqlite3').Database) {
     .prepare("SELECT value_json FROM search.search_metadata WHERE key = 'last_rebuild_status'")
     .get() as { value_json: string };
   return JSON.parse(row.value_json) as Record<string, unknown>;
+}
+
+function seedSearchNode(nodeId: string, content: string) {
+  upsertNodeSnapshot({
+    nodeId,
+    parentNodeId: null,
+    kind: 'topic',
+    title: nodeId,
+    isTitleManual: true,
+    content,
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-05-26T00:00:00.000Z',
+    updatedAt: '2026-05-26T00:00:00.000Z'
+  });
 }

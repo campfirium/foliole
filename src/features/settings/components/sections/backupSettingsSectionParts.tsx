@@ -122,7 +122,7 @@ export function BackupRulesSection(props: {
       <NumberRuleRow description="Keep 1 auto backup per day within this window." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_daily_days', value)} title="Daily window (days)" value={String(props.draft.auto_daily_days)} />
       <NumberRuleRow description="Keep 1 auto backup per week within this window." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_weekly_weeks', value)} title="Weekly window (weeks)" value={String(props.draft.auto_weekly_weeks)} />
       <NumberRuleRow description="Keep 1 auto backup per month within this window. Set to 0 to turn monthly backups off." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_monthly_months', value)} title="Monthly window (months)" value={String(props.draft.auto_monthly_months)} />
-      <NumberRuleRow description="Manual backups keep the newest entries only." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('manual_max_count', value)} title="Manual backups kept" value={String(props.draft.manual_max_count)} />
+      <NumberRuleRow description="Manual backups keep the newest backups only." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('manual_max_count', value)} title="Manual backups kept" value={String(props.draft.manual_max_count)} />
       <NumberRuleRow description="Safety snapshots are created before restore and upgrade." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('snapshot_max_count', value)} title="Safety snapshots kept" value={String(props.draft.snapshot_max_count)} />
       <SettingsRow description="When backups grow past this size, the oldest backup is deleted first." title="Total backup size limit (GB)">
         <SettingsControlSlot className={SETTINGS_INPUT_WIDTH_CLASS_NAME}>
@@ -185,6 +185,11 @@ export function BackupListSection(props: {
 
   return (
     <SettingsSection ariaLabel="Backup list section" title="Backups">
+      <SettingsRow
+        description="Backups protect Foliole topics, settings, and source mirror data. They do not restore external original files, recently opened external files, or rebuilt search data."
+        readonly
+        title="Backup scope"
+      />
       <SettingsRow description={props.statusMessage || undefined} title="Create backup">
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <button className={ACTION_BUTTON_CLASS_NAME} disabled={!props.isBackupActionsAvailable || props.isCreatingBackup || props.restoringPath.length > 0} onClick={props.createBackup} type="button">
