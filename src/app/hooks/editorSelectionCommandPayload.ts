@@ -3,6 +3,8 @@ import type { MutableRefObject } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { SelectionCommandPayload } from '../contextCommands';
 
+import { blurActiveKeyboardTarget } from './workspaceKeyboardTarget';
+
 export function runSelectionCommandFromPayload(args: {
   closeContextMenu?: () => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
@@ -17,6 +19,7 @@ export function runSelectionCommandFromPayload(args: {
   }
   args.flushPendingEditorDraft();
   const createdNodeId = args.onApplied(args.payload);
+  blurActiveKeyboardTarget();
   if (!args.keepOpen) {
     args.closeContextMenu?.();
   }

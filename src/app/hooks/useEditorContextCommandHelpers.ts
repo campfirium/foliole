@@ -17,6 +17,7 @@ import { resolveEditorRepairTableEdit, selectionFromRepairPayload } from './edit
 import { refreshSelectionHighlight } from './selectionHighlightRefresh';
 import type { LocatorHighlightMatch } from './selectionHighlightToggleSupport';
 import { resolveWebLookupTitle } from './webLookupTitle';
+import { blurActiveKeyboardTarget } from './workspaceKeyboardTarget';
 
 export interface SelectionContextMenuState extends WorkspaceEditorContextMenu {
   existingHighlight?: LocatorHighlightMatch;
@@ -73,6 +74,7 @@ export function createSelectionCommandRunner(
       return;
     }
     onApplied(payload);
+    blurActiveKeyboardTarget();
     closeContextMenu();
   };
 }

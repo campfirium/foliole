@@ -67,6 +67,34 @@ async function createActionsHarness() {
   };
 }
 
+async function runKeepsParentActiveForTextAnnotationChildrenCase() {
+  const { actions, harness, invoke, seedNodeId } = await createActionsHarness();
+
+  const highlightId = await actions.createHighlightNodeFromSelection(seedNodeId, 'Highlighted', 'hl-1', {
+    id: 'hl-1',
+    kind: 'highlight',
+    locator: { from: 0, originalText: 'Highlighted', to: 11 }
+  });
+  const clozeId = await actions.createQANodeFromSelection(seedNodeId, 'Question [...]', 'answer', 'cloze-1', {
+    id: 'cloze-1',
+    kind: 'cloze',
+    locator: { from: 12, originalText: 'answer', to: 18 }
+  });
+
+  expect(highlightId).toBeTruthy();
+  expect(clozeId).toBeTruthy();
+  expect(harness.getState().activeNodeId).toBe(seedNodeId);
+  expect(invoke).toHaveBeenNthCalledWith(1, 'create_topic', expect.objectContaining({
+    activeNodeId: seedNodeId,
+    nodeId: highlightId
+  }));
+  expect(invoke).toHaveBeenNthCalledWith(2, 'create_item', expect.objectContaining({
+    activeNodeId: seedNodeId,
+    nodeId: clozeId
+  }));
+  expectNoWorkspacePersist(invoke);
+}
+
 describe('workspace node actions runtime guardrail', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -89,6 +117,8 @@ describe('workspace node actions runtime guardrail', () => {
     expect(getInvokedCommands(invoke)).toEqual(['create_topic']);
     expectNoWorkspacePersist(invoke);
   });
+
+  it('keeps the parent active when creating text annotation children', runKeepsParentActiveForTextAnnotationChildrenCase);
 
   it('createChildNode does not sync invalid folder creation under a topic', async () => {
     const { actions, invoke, seedNodeId } = await createActionsHarness();

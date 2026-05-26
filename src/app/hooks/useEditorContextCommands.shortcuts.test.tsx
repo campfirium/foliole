@@ -1,7 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { useEditorContextCommands } from './useEditorContextCommands';
+
+afterEach(() => {
+  document.body.replaceChildren();
+});
 
 function createEditorAdapter(content = 'Alpha Beta') {
   return {
@@ -63,6 +67,53 @@ it('runs highlight and cloze commands from the live editor selection', () => {
 
   expect(createHighlightNodeFromSelection).toHaveBeenCalledWith('node-1', 'Alpha', expect.any(String), expect.objectContaining({ kind: 'highlight' }), null);
   expect(createQANodeFromSelection).toHaveBeenCalledWith('node-1', '[...] Beta', 'Alpha', expect.any(String), expect.objectContaining({ kind: 'cloze' }));
+});
+
+it('leaves editor focus after creating highlight or cloze annotations', () => {
+  const editorElement = document.createElement('div');
+  editorElement.contentEditable = 'true';
+  document.body.append(editorElement);
+  const createHighlightNodeFromSelection = vi.fn(() => 'highlight-1');
+  const createQANodeFromSelection = vi.fn(() => 'qa-1');
+  const { result } = renderHook(() =>
+    useEditorContextCommands(buildHookArgs({ createHighlightNodeFromSelection, createQANodeFromSelection }))
+  );
+
+  editorElement.focus();
+  act(() => result.current.handleCreateHighlight());
+  expect(document.activeElement).not.toBe(editorElement);
+
+  editorElement.focus();
+  act(() => result.current.handleCreateCloze());
+  expect(document.activeElement).not.toBe(editorElement);
+});
+
+it('leaves editor focus after creating annotations from a preserved payload', () => {
+  const editorElement = document.createElement('div');
+  editorElement.contentEditable = 'true';
+  document.body.append(editorElement);
+  const { result } = renderHook(() => useEditorContextCommands(buildHookArgs()));
+  const payload = {
+    anchorId: 'anchor-1',
+    clozeContent: '[...] Beta',
+    entries: [{
+      anchorId: 'anchor-1',
+      clozeContent: '[...] Beta',
+      locator: { from: 0, originalText: 'Alpha', to: 5 },
+      range: { from: 0, to: 5 },
+      selectionText: 'Alpha'
+    }],
+    parentNodeId: 'node-1',
+    selectionText: 'Alpha'
+  };
+
+  editorElement.focus();
+  act(() => result.current.handleCreateHighlightFromPayload(payload));
+  expect(document.activeElement).not.toBe(editorElement);
+
+  editorElement.focus();
+  act(() => result.current.handleCreateClozeFromPayload(payload));
+  expect(document.activeElement).not.toBe(editorElement);
 });
 
 it('opens the add-note panel from the live editor selection', () => {
