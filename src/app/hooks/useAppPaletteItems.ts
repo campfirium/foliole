@@ -175,6 +175,7 @@ function buildPaletteOptions(
     canDelayReviewTopic: canDelayReviewTopic(args),
     canReadReviewTopic: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+    canScrollReviewReading: args.isStudyMode && args.hasReviewCard,
     canDeleteReviewItem: args.hasReviewCard,
     canReviewNavigateParent: Boolean(args.isStudyMode && activeNodeId && args.ws.nodesById[activeNodeId]?.parentNodeId),
     canReviewNavigateBack: args.isStudyMode && args.nav.canGoBack,
@@ -195,7 +196,6 @@ export function useAppPaletteItems(args: {
   hasReviewCard: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isImmersiveMode: boolean;
-  resolvedBaseColorMode: 'dark' | 'light';
   isViewingTrashNode: boolean;
   isCurrentReviewItemGradable: boolean;
   isStudyMode: boolean;

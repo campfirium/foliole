@@ -7,7 +7,7 @@ import { onWindowKeydown } from '../../shared/platform/keyboard';
 import { tryRunDeleteSourceTopicShortcut, tryRunReviewNavigation, tryRunShortcut } from './reviewKeyboardNavigation';
 import { useReviewEditingEscapeHandler } from './useReviewEditingEscapeHandler';
 import { keepReviewNavigationInHotkeyMode, useReviewEditingState } from './useReviewNavigationHotkeyMode';
-import { isEditableKeyboardTarget } from './workspaceKeyboardTarget';
+import { isEditableKeyboardTarget, isSpaceReservedKeyboardTarget } from './workspaceKeyboardTarget';
 
 interface UseReviewKeyboardShortcutsArgs {
   isStudyMode: boolean;
@@ -31,6 +31,8 @@ interface UseReviewKeyboardShortcutsArgs {
   readingLaterShortcuts: CommandShortcutSet | undefined;
   readingReadShortcuts: CommandShortcutSet | undefined;
   readingDismissShortcuts: CommandShortcutSet | undefined;
+  scrollReadingDownShortcuts: CommandShortcutSet | undefined;
+  scrollReadingUpShortcuts: CommandShortcutSet | undefined;
   deleteCurrentItemShortcuts: CommandShortcutSet | undefined;
   navigateParentShortcuts: CommandShortcutSet | undefined;
   navigateBackShortcuts: CommandShortcutSet | undefined;
@@ -46,6 +48,8 @@ interface UseReviewKeyboardShortcutsArgs {
   deleteReviewSourceTopic: (nodeId: string) => boolean;
   dismissReviewTopic: () => Promise<boolean>;
   revisitReviewTopicSoon: () => Promise<boolean>;
+  scrollReviewReadingDown: () => boolean;
+  scrollReviewReadingUp: () => boolean;
   goBack: () => void;
   goForward: () => void;
   goParent: () => void;
@@ -109,6 +113,12 @@ function handleReviewKeydown(
   if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.isComposing || event.repeat) {
     return;
   }
+  if (
+    event.key === ' ' &&
+    (isSpaceReservedKeyboardTarget(event.target) || isSpaceReservedKeyboardTarget(document.activeElement))
+  ) {
+    return;
+  }
   const isTargetEditing =
     isEditableKeyboardTarget(event.target) ||
     isEditableKeyboardTarget(document.activeElement) ||
@@ -159,12 +169,18 @@ function handleVisibleReviewItemKeydown(event: KeyboardEvent, args: UseReviewKey
     if (tryRunShortcut(event, args.readingReadShortcuts, () => void args.readReviewTopic())) {
       return;
     }
-    tryRunShortcut(event, args.readingDismissShortcuts, () => void args.dismissReviewTopic());
+    if (tryRunShortcut(event, args.readingDismissShortcuts, () => void args.dismissReviewTopic())) {
+      return;
+    }
+    handleReviewReadingScrollKeydown(event, args);
     return;
   }
 
   if (!args.isAnswerRevealed) {
-    tryRunShortcut(event, args.revealAnswerShortcuts, args.revealReviewAnswer);
+    if (tryRunShortcut(event, args.revealAnswerShortcuts, args.revealReviewAnswer)) {
+      return;
+    }
+    handleReviewReadingScrollKeydown(event, args);
     return;
   }
 
@@ -177,5 +193,15 @@ function handleVisibleReviewItemKeydown(event: KeyboardEvent, args: UseReviewKey
   if (tryRunShortcut(event, args.gradeGoodShortcuts, () => void args.gradeReviewCard(3))) {
     return;
   }
-  tryRunShortcut(event, args.gradeEasyShortcuts, () => void args.gradeReviewCard(4));
+  if (tryRunShortcut(event, args.gradeEasyShortcuts, () => void args.gradeReviewCard(4))) {
+    return;
+  }
+  handleReviewReadingScrollKeydown(event, args);
+}
+
+function handleReviewReadingScrollKeydown(event: KeyboardEvent, args: UseReviewKeyboardShortcutsArgs) {
+  if (tryRunShortcut(event, args.scrollReadingUpShortcuts, args.scrollReviewReadingUp)) {
+    return;
+  }
+  tryRunShortcut(event, args.scrollReadingDownShortcuts, args.scrollReviewReadingDown);
 }

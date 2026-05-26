@@ -5,6 +5,7 @@ import {
 } from '../../features/review/model/reviewGameNavigation';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { scrollReviewReadingSurface } from './reviewReadingScrollCommand';
 
 function createDeleteCurrentReviewItemCommand(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
@@ -35,6 +36,7 @@ function createSelectReviewNodeCommand(args: {
 export function createPaletteReviewActions(args: {
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   requestDeleteSourceTopic: (nodeId: string) => boolean;
+  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   const navigationSource = {
@@ -73,6 +75,8 @@ export function createPaletteReviewActions(args: {
       nav: args.nav,
       nodeId: activeNodeId ? resolveReviewSiblingNodeId(activeNodeId, -1, navigationSource) : null
     }),
+    reviewScrollReadingDown: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'down'),
+    reviewScrollReadingUp: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'up'),
     revealReviewAnswer: args.ws.revealReviewAnswer,
     revisitReviewTopicSoon: args.ws.revisitReviewTopicSoon,
     startReviewSession: args.ws.startReviewSession

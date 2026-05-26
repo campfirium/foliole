@@ -9,6 +9,7 @@ export interface ReviewPaletteCommandOptions {
   canDelayReviewTopic?: boolean;
   canReadReviewTopic: boolean;
   canDismissReadingReview: boolean;
+  canScrollReviewReading?: boolean;
   canDeleteReviewItem: boolean;
   canDeleteReviewSourceTopic?: boolean;
   canReviewNavigateBack?: boolean;
@@ -31,6 +32,8 @@ export const REVIEW_PALETTE_COMMANDS = [
   { id: APP_COMMAND_IDS.readingReviewPostpone, title: 'Postpone Topic...', section: 'Review', keywords: ['reading', 'topic', 'delay'] },
   { id: APP_COMMAND_IDS.readingReviewRead, title: 'Reading: Read', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewDismiss, title: 'Reading: Dismiss', section: 'Review', keywords: ['reading'] },
+  { id: APP_COMMAND_IDS.reviewScrollReadingDown, title: 'Scroll Reading Down', section: 'Review', keywords: ['reading', 'scroll'] },
+  { id: APP_COMMAND_IDS.reviewScrollReadingUp, title: 'Scroll Reading Up', section: 'Review', keywords: ['reading', 'scroll'] },
   { id: APP_COMMAND_IDS.deleteCurrentReviewItem, title: 'Delete Current Review Item', section: 'Review', keywords: ['delete', 'trash'] },
   { id: APP_COMMAND_IDS.reviewNavigateParent, title: 'Review Navigation: Parent', section: 'Review', keywords: ['navigate'] },
   { id: APP_COMMAND_IDS.reviewNavigateBack, title: 'Review Navigation: Back', section: 'Review', keywords: ['navigate'] },
@@ -58,6 +61,7 @@ export function isReviewCommandEnabled(id: string, options: ReviewPaletteCommand
   if (id === APP_COMMAND_IDS.readingReviewPostpone) return options.canDelayReviewTopic ?? false;
   if (id === APP_COMMAND_IDS.readingReviewRead) return options.canReadReviewTopic;
   if (id === APP_COMMAND_IDS.readingReviewDismiss) return options.canDismissReadingReview;
+  if (id === APP_COMMAND_IDS.reviewScrollReadingDown || id === APP_COMMAND_IDS.reviewScrollReadingUp) return options.canScrollReviewReading ?? false;
   if (id === APP_COMMAND_IDS.deleteCurrentReviewItem) return options.canDeleteReviewItem;
   if (id === APP_COMMAND_IDS.reviewNavigateParent) return options.canReviewNavigateParent ?? false;
   if (id === APP_COMMAND_IDS.reviewNavigateBack) return options.canReviewNavigateBack ?? false;

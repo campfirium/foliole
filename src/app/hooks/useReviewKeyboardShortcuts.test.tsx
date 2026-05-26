@@ -40,8 +40,7 @@ it('resumes the hidden review item with Space', () => {
   const button = document.createElement('button');
   button.textContent = 'Flow item';
   document.body.append(button);
-  button.focus();
-  fireEvent.keyDown(button, { code: 'Space', key: ' ' });
+  fireEvent.keyDown(window, { code: 'Space', key: ' ' });
 
   expect(resumeReviewItem).toHaveBeenCalledTimes(1);
 });
@@ -182,17 +181,20 @@ it('runs the visible reading soon shortcut before later/read choices', () => {
 
 it('reveals a visible review card with F while Space and Enter stay free', () => {
   const revealReviewAnswer = vi.fn();
+  const scrollReviewReadingDown = vi.fn(() => true);
   render(
     <ReviewShortcutHarness
       isCurrentItemGradable
       isCurrentReviewItemVisible
       revealReviewAnswer={revealReviewAnswer}
+      scrollReviewReadingDown={scrollReviewReadingDown}
     />
   );
 
   fireEvent.keyDown(window, { code: 'Space', key: ' ' });
   fireEvent.keyDown(window, { key: 'Enter' });
   expect(revealReviewAnswer).not.toHaveBeenCalled();
+  expect(scrollReviewReadingDown).toHaveBeenCalledTimes(1);
 
   fireEvent.keyDown(window, { code: 'KeyF', key: 'f' });
 

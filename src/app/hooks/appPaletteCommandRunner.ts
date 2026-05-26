@@ -61,6 +61,8 @@ interface PaletteCommandRunnerArgs {
   reviewNavigateNextSibling: () => boolean;
   reviewNavigateParent: () => boolean;
   reviewNavigatePreviousSibling: () => boolean;
+  reviewScrollReadingDown: () => boolean;
+  reviewScrollReadingUp: () => boolean;
   setCommandPaletteOpen: (open: boolean) => void;
   setGoToNodePaletteOpen: (open: boolean) => void;
   setIsMoveToNodePaletteOpen: (open: boolean) => void;
@@ -108,6 +110,8 @@ function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggl
     reviewNavigateNextSibling: args.reviewNavigateNextSibling,
     reviewNavigateParent: args.reviewNavigateParent,
     reviewNavigatePreviousSibling: args.reviewNavigatePreviousSibling,
+    reviewScrollReadingDown: args.reviewScrollReadingDown,
+    reviewScrollReadingUp: args.reviewScrollReadingUp,
     toggleReviewMode
   };
 }

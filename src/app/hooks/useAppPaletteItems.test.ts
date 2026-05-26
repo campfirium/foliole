@@ -24,12 +24,12 @@ function createPaletteArgs(activeNodeId: string | null) {
     isStudyMode: false,
     isViewingTrashNode: false,
     nav: { canGoBack: false, canGoForward: false, canGoParent: false },
-    resolvedBaseColorMode: 'light' as const,
     reviewSession: { isAnswerRevealed: false },
     reviewDueCount: 0,
     study: { canStartStudyMode: false, isDevReviewStatusBarPersistenceEnabled: false },
     ws: {
       appActionHistory: initial.appActionHistory,
+      editorOperationHistory: initial.editorOperationHistory,
       nodeOrder: ['node-1'],
       nodesById: {
         'node-1': {

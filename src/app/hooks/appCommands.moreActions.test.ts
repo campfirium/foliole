@@ -16,6 +16,8 @@ function createReviewCommandActions() {
     readingReviewLater: () => undefined,
     readingReviewRead: () => undefined,
     readingReviewDismiss: () => undefined,
+    reviewScrollReadingDown: () => undefined,
+    reviewScrollReadingUp: () => undefined,
     deleteCurrentReviewItem: () => undefined,
     reviewNavigateParent: () => undefined,
     reviewNavigateBack: () => undefined,

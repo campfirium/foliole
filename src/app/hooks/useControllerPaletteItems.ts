@@ -21,7 +21,6 @@ export function useControllerPaletteItems(args: {
     hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
     hotkeys: args.hotkeys,
     isImmersiveMode: args.controller.runtime.isImmersiveMode,
-    resolvedBaseColorMode: args.appearance.resolvedBaseColorMode,
     isViewingTrashNode: args.controller.runtime.isViewingTrashNode,
     isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,
     isStudyMode: args.isStudyMode,

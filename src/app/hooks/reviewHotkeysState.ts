@@ -25,6 +25,8 @@ export const REVIEW_SHORTCUT_COMMAND_IDS = [
   APP_COMMAND_IDS.readingReviewLater,
   APP_COMMAND_IDS.readingReviewRead,
   APP_COMMAND_IDS.readingReviewDismiss,
+  APP_COMMAND_IDS.reviewScrollReadingDown,
+  APP_COMMAND_IDS.reviewScrollReadingUp,
   APP_COMMAND_IDS.deleteCurrentReviewItem,
   APP_COMMAND_IDS.reviewNavigateParent,
   APP_COMMAND_IDS.reviewNavigateBack,

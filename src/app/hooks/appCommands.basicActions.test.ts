@@ -16,6 +16,8 @@ function createReviewCommandActions() {
     readingReviewLater: () => undefined,
     readingReviewRead: () => undefined,
     readingReviewDismiss: () => undefined,
+    reviewScrollReadingDown: () => undefined,
+    reviewScrollReadingUp: () => undefined,
     deleteCurrentReviewItem: () => undefined,
     reviewNavigateParent: () => undefined,
     reviewNavigateBack: () => undefined,
@@ -144,13 +146,19 @@ it('runs repair table through the shared command handler', () => {
 it('runs review navigation commands through the shared command handler', () => {
   const reviewNavigateParent = vi.fn();
   const reviewNavigateNextSibling = vi.fn();
+  const reviewScrollReadingDown = vi.fn();
+  const reviewScrollReadingUp = vi.fn();
   const deleteReviewSourceTopic = vi.fn();
 
   expectCommandRuns(APP_COMMAND_IDS.reviewNavigateParent, { reviewNavigateParent });
   expectCommandRuns(APP_COMMAND_IDS.reviewNavigateNextSibling, { reviewNavigateNextSibling });
+  expectCommandRuns(APP_COMMAND_IDS.reviewScrollReadingDown, { reviewScrollReadingDown });
+  expectCommandRuns(APP_COMMAND_IDS.reviewScrollReadingUp, { reviewScrollReadingUp });
   expectCommandRuns(APP_COMMAND_IDS.deleteReviewSourceTopic, { deleteReviewSourceTopic });
 
   expect(reviewNavigateParent).toHaveBeenCalledTimes(1);
   expect(reviewNavigateNextSibling).toHaveBeenCalledTimes(1);
+  expect(reviewScrollReadingDown).toHaveBeenCalledTimes(1);
+  expect(reviewScrollReadingUp).toHaveBeenCalledTimes(1);
   expect(deleteReviewSourceTopic).toHaveBeenCalledTimes(1);
 });

@@ -2,6 +2,7 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { useCommandShortcutState } from './reviewHotkeysState';
+import { scrollReviewReadingSurface } from './reviewReadingScrollCommand';
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
 
 type ReviewShortcutMap = ReturnType<typeof useCommandShortcutState>['shortcutMap'];
@@ -17,6 +18,8 @@ function buildReviewShortcutBindings(shortcutMap: ReviewShortcutMap) {
     readingLaterShortcuts: shortcutMap[APP_COMMAND_IDS.readingReviewLater],
     readingReadShortcuts: shortcutMap[APP_COMMAND_IDS.readingReviewRead],
     readingDismissShortcuts: shortcutMap[APP_COMMAND_IDS.readingReviewDismiss],
+    scrollReadingDownShortcuts: shortcutMap[APP_COMMAND_IDS.reviewScrollReadingDown],
+    scrollReadingUpShortcuts: shortcutMap[APP_COMMAND_IDS.reviewScrollReadingUp],
     deleteCurrentItemShortcuts: shortcutMap[APP_COMMAND_IDS.deleteCurrentReviewItem],
     navigateParentShortcuts: shortcutMap[APP_COMMAND_IDS.reviewNavigateParent],
     navigateBackShortcuts: shortcutMap[APP_COMMAND_IDS.reviewNavigateBack],
@@ -74,6 +77,8 @@ export function useReviewEditingState(args: {
     },
     deleteReviewSourceTopic: args.onRequestDeleteSourceTopic,
     dismissReviewTopic: args.ws.dismissReviewTopic,
+    scrollReviewReadingDown: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'down'),
+    scrollReviewReadingUp: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'up'),
     goBack: args.nav.handleGoBack,
     goForward: args.nav.handleGoForward,
     goParent: args.nav.handleGoParent,
