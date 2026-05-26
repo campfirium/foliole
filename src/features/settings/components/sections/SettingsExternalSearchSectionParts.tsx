@@ -33,9 +33,9 @@ function statusTone(folder: ExternalSourceSettingsFolder) {
 
 function statusMeta(folder: ExternalSourceSettingsFolder) {
   if (folder.status === 'error') return folder.lastError ?? 'Index build failed.';
-  if (folder.status === 'ready') return `${folder.documentCount} files indexed`;
-  if (folder.status === 'indexing') return 'Updating in the background';
-  return 'Waiting for the next background update';
+  if (folder.status === 'ready') return `${folder.documentCount} files mirrored`;
+  if (folder.status === 'indexing') return 'Updating mirror in the background';
+  return 'Waiting for the next mirror update';
 }
 
 function excludedFoldersValue(folders: string[]) {
@@ -122,14 +122,14 @@ function ExternalLibraryRowActions(props: {
   return (
     <div className="flex items-center justify-end gap-1">
       <button
-        aria-label="Index folder"
+        aria-label="Update folder mirror"
         className={settingsButtonClassName('h-9 px-3')}
         disabled={props.disabled}
         onClick={() => props.onRebuildIndex(props.folderId)}
-        title="Rebuild this folder index"
+        title="Update this folder mirror"
         type="button"
       >
-        Index
+        Update
       </button>
       <button
         aria-label="Remove folder"

@@ -57,6 +57,26 @@ it('shows a progress row while external sources load', () => {
   expect(status).toHaveTextContent('');
 });
 
+it('describes external folders as mirrored sources', () => {
+  render(<SettingsExternalSearchSection {...baseProps} folders={[{
+    attachmentMode: 'document_relative_first_then_fixed_root',
+    attachmentRootPath: null,
+    createdAt: '2026-05-26T00:00:00.000Z',
+    documentCount: 3,
+    excludedDirs: [],
+    folderPath: 'D:\\Docs',
+    id: 'folder-1',
+    indexedAt: '2026-05-26T00:00:00.000Z',
+    lastError: null,
+    status: 'ready',
+    updatedAt: '2026-05-26T00:00:00.000Z'
+  }]} />);
+
+  expect(screen.getByText('Choose folders Foliole mirrors for browsing, search, and import. Original files stay outside Foliole.')).toBeInTheDocument();
+  expect(screen.getByTitle('3 files mirrored')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Update folder mirror' })).toBeInTheDocument();
+});
+
 it('shows a retryable alert when external sources fail to load', () => {
   render(<SettingsExternalSearchSection {...baseProps} error="Could not load the external library." />);
 

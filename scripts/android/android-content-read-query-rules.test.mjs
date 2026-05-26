@@ -75,6 +75,8 @@ describe('Android content read query rules', () => {
     expect(definitions.queries.externalDocumentSearch.sql).toContain('LEFT JOIN content_blob_data');
     expect(definitions.queries.externalDocumentSearch.sql).not.toContain('external_search_documents');
     expect(definitions.queries.externalDocumentSearch.sql).not.toContain('external_search_fts');
+    expect(JSON.stringify(definitions.contentRead)).not.toContain('external-search-cache.db');
+    expect(JSON.stringify(definitions.queries.externalDocumentSearch)).not.toContain('external-search-cache.db');
     expect(definitions.contentRead.readableArticle.articleFields).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ outputKey: 'node_id', rowKey: 'id', type: 'string' }),

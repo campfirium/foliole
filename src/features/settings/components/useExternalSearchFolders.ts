@@ -192,9 +192,9 @@ async function rebuildExternalSearchFolders(
     const rebuilt = await rebuildExternalSourceSettingsIndex(folderId);
     if (!rebuilt) return;
     setFolders(rebuilt);
-    setFeedback(folderId ? 'Folder index rebuilt.' : 'All external library indexes rebuilt.');
+    setFeedback(folderId ? 'Folder mirror updated.' : 'All external source mirrors updated.');
   } catch (nextError) {
-    setError(nextError instanceof Error ? nextError.message : 'Could not rebuild the external library index.');
+    setError(nextError instanceof Error ? nextError.message : 'Could not update the external source mirror.');
   } finally {
     setIsSaving(false);
   }

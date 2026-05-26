@@ -100,7 +100,7 @@ function FullTextSearchIndexStrategyRow() {
   return (
     <SettingsSelectRow
       ariaLabel="Search text strategy"
-      description="Choose how Foliole prepares topics and external sources for search. Changes apply when search indexes are rebuilt."
+      description="Choose how Foliole prepares topics and mirrored external sources for search. Changes apply when search indexes and external source mirrors are rebuilt."
       label="Full-text search index"
       onChange={handleChange}
       options={FULL_TEXT_SEARCH_INDEX_STRATEGY_OPTIONS.map((option) => ({
@@ -117,7 +117,7 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
     return (
       <SettingsSection
         ariaLabel="External sources section"
-        description="Search, preview, and import content from folders that stay outside Foliole until you choose to bring them in."
+        description="Choose folders Foliole mirrors for browsing, search, and import. Original files stay outside Foliole."
         title="External sources"
       >
         <SettingsLoadingState />
@@ -128,7 +128,7 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
   return (
     <SettingsSection
       ariaLabel="External sources section"
-      description="Search, preview, and import content from folders that stay outside Foliole until you choose to bring them in."
+      description="Choose folders Foliole mirrors for browsing, search, and import. Original files stay outside Foliole."
       title="External sources"
     >
       <FullTextSearchIndexStrategyRow />
