@@ -11,6 +11,16 @@ describe('run-node-in-windows-repo script', () => {
     const script = await readFile(SCRIPT_PATH, 'utf8');
 
     expect(script).toContain('function Test-IsBlockedNativeNodeScript');
+    expect(script).toContain('function Resolve-NodeExecutable');
+    expect(script).toContain('FOLIOLE_WINDOWS_NODE_EXE');
+    expect(script).toContain('node.exe not found; set FOLIOLE_WINDOWS_NODE_EXE');
+    expect(script).toContain('[string]$RuntimeHead = ""');
+    expect(script).toContain('$previousRuntimeHead = $env:FOLIOLE_RUNTIME_HEAD');
+    expect(script).toContain('$env:FOLIOLE_RUNTIME_HEAD = $RuntimeHead');
+    expect(script).toContain('function Invoke-NodeScript');
+    expect(script).toContain('-RedirectStandardOutput $stdoutLog');
+    expect(script).toContain('-RedirectStandardError $stderrLog');
+    expect(script).toContain('$script:NodeScriptExitCode = $process.ExitCode');
     expect(script).toContain('scripts/backfill-node-opening-text.ts');
     expect(script).toContain('scripts/backfill-source-disposition-states.ts');
     expect(script).toContain('scripts/node-kind-report.ts');
@@ -21,5 +31,9 @@ describe('run-node-in-windows-repo script', () => {
     expect(script.indexOf('Test-IsBlockedNativeNodeScript -CandidatePath $ScriptPath')).toBeLessThan(
       script.indexOf('Push-Location $WindowsWorkDir')
     );
+    expect(script).toContain('$nodePath = Resolve-NodeExecutable');
+    expect(script).toContain('Invoke-NodeScript -NodePath $nodePath -ResolvedScriptPath $resolvedScriptPath -Arguments $NodeArgs');
+    expect(script).toContain('exit $script:NodeScriptExitCode');
+    expect(script).toContain('Remove-Item Env:FOLIOLE_RUNTIME_HEAD');
   });
 });

@@ -90,3 +90,27 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).not.toContain('restart-electron-dev.ps1');
   expect(script).not.toContain('buildPowerShellArgs');
 });
+
+it('routes WSL preview client actions through the native client controller', async () => {
+  const script = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-restart-client.sh'), 'utf8');
+
+  expect(script).toContain('WINDOWS_CLIENT_ACTION="${WINDOWS_CLIENT_ACTION:-status}"');
+  expect(script).toContain('run-node-in-windows-repo.ps1');
+  expect(script).toContain('RUNTIME_HEAD="${FOLIOLE_RUNTIME_HEAD:-$(git rev-parse HEAD 2>/dev/null || true)}"');
+  expect(script).toContain('-WindowsWorkDir "${WINDOWS_WORKDIR}"');
+  expect(script).toContain('-ScriptPath "scripts/windows/windows-client-native.mjs"');
+  expect(script).toContain('-RuntimeHead "${RUNTIME_HEAD}"');
+  expect(script).toContain('-NodeArgs "${WINDOWS_CLIENT_ACTION}"');
+  expect(script).not.toContain('restart-electron-dev.ps1');
+  expect(script).not.toContain('npm run electron:dev');
+});
+
+it('uses the WSL supplied runtime head before falling back to mirror git', async () => {
+  const script = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native.mjs'), 'utf8');
+
+  expect(script).toContain('const envHead = process.env.FOLIOLE_RUNTIME_HEAD?.trim();');
+  expect(script).toContain('if (envHead) return envHead;');
+  expect(script.indexOf('if (envHead) return envHead;')).toBeLessThan(
+    script.indexOf("runCapture('git', ['rev-parse', 'HEAD']")
+  );
+});

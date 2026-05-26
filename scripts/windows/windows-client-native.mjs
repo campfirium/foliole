@@ -55,6 +55,8 @@ function readReadyState() {
 }
 
 async function currentHead() {
+  const envHead = process.env.FOLIOLE_RUNTIME_HEAD?.trim();
+  if (envHead) return envHead;
   const result = await runCapture('git', ['rev-parse', 'HEAD'], { cwd: repoRoot });
   return result.code === 0 ? result.stdout.trim() : '';
 }
