@@ -95,7 +95,7 @@ function applyAppearanceHarnessUpdates() {
 
 function expectInitialAppliedAppearance() {
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
-  expect(document.documentElement.dataset.pdfReadingMode).toBe('inverted');
+  expect(document.documentElement.dataset.pdfReadingMode).toBe('original');
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.65');
   expect(document.documentElement.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('0.75em');
   expect(document.documentElement.style.getPropertyValue('--app-interface-font-family')).toBe('var(--font-family-interface)');
@@ -163,6 +163,24 @@ it('hydrates saved appearance settings and persists updates through the shared p
 
   fireEvent.click(screen.getByRole('button', { name: 'Reset frontmatter meta' }));
   expect(screen.getByText('author|byline, url|link|source|source_url')).toBeInTheDocument();
+});
+
+it('keeps light mode PDFs original while preserving the dark mode PDF preference', () => {
+  render(
+    <AppearanceSettingsProvider>
+      <AppearanceHarness />
+    </AppearanceSettingsProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Warm PDF' }));
+
+  expect(screen.getByText('warm')).toBeInTheDocument();
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.pdfReadingMode)).toBe('warm');
+  expect(document.documentElement.dataset.pdfReadingMode).toBe('original');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
+  expect(screen.getByText('dark')).toBeInTheDocument();
+  expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
 });
 
 it('keeps the selected reading line height when the color mode changes', () => {

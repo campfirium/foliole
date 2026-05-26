@@ -16,7 +16,6 @@ interface PdfDocumentViewportContentBodyProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   isToolbarVisible: boolean;
   maxPage: number;
-  onPdfReadingModeChange: (value: 'original' | 'inverted' | 'warm') => void;
   onClearSearch: () => void;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
@@ -41,7 +40,6 @@ interface PdfDocumentViewportContentBodyProps {
   pageElementsRef: PdfPageElementsRef;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
-  pdfReadingMode: 'original' | 'inverted' | 'warm';
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
@@ -215,7 +213,6 @@ function renderViewportToolbar(props: PdfDocumentViewportContentBodyProps, displ
       displayPage={props.visiblePage}
       isVisible={props.isToolbarVisible}
       maxPage={props.maxPage}
-      onPdfReadingModeChange={props.onPdfReadingModeChange}
       onClearSearch={props.onClearSearch}
       onNextPage={props.onNextPage}
       onPageChange={props.onPageChange}
@@ -231,7 +228,6 @@ function renderViewportToolbar(props: PdfDocumentViewportContentBodyProps, displ
       onToolbarInteraction={props.onToolbarInteraction}
       onZoomIn={props.onZoomIn}
       onZoomOut={props.onZoomOut}
-      pdfReadingMode={props.pdfReadingMode}
       page={props.page}
       searchQuery={props.searchQuery}
       searchStatus={props.searchStatus}

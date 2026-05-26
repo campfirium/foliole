@@ -63,6 +63,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openSettings: () => undefined,
     openTrash: () => undefined,
     restartApp: () => undefined,
+    setPdfReadingMode: () => undefined,
     toggleBaseColorMode: () => undefined,
     startClipboardImport: () => undefined,
     toggleEditorDisplayMode: () => undefined,

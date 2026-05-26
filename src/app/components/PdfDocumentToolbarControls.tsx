@@ -1,7 +1,7 @@
 import { ArrowDownToLine, ArrowUpToLine, Search, X } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 
-import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger, AppIconButton, AppInput } from '../../shared/ui';
+import { AppIconButton, AppInput } from '../../shared/ui';
 
 export { PdfPageControls } from './PdfDocumentPageControls';
 import type { PdfSearchStatus } from './PdfDocumentSearch';
@@ -21,14 +21,12 @@ interface SearchControlsProps {
 }
 
 interface ZoomControlsProps {
-  onPdfReadingModeChange: (value: 'original' | 'inverted' | 'warm') => void;
   onRotateClockwise: () => void;
   onSetFitWidth: () => void;
   onSetZoom: (value: number) => void;
   onToolbarInteraction: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  pdfReadingMode: 'original' | 'inverted' | 'warm';
   zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }
@@ -74,72 +72,18 @@ function resolveSearchStatusLabel(status: PdfSearchStatus, indexingHint: string 
   return `${status.current} / ${status.total}`;
 }
 
-function PdfReadingModeLabel(props: { value: ZoomControlsProps['pdfReadingMode'] }) {
-  const labels = {
-    original: 'Original',
-    inverted: 'Inverted',
-    warm: 'Warm'
-  } as const;
-  return labels[props.value];
-}
-
-function PdfReadingModeControl(props: {
-  onChange: ZoomControlsProps['onPdfReadingModeChange'];
-  onToolbarInteraction: () => void;
-  value: ZoomControlsProps['pdfReadingMode'];
-}) {
-  const options = [
-    { label: 'Original', value: 'original' },
-    { label: 'Inverted', value: 'inverted' },
-    { label: 'Warm', value: 'warm' }
-  ] as const;
-
-  return (
-    <AppDropdownMenu>
-      <AppDropdownMenuTrigger asChild>
-        <button
-          aria-label="Set PDF reading mode"
-          className="inline-flex min-h-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-2 text-xs text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          type="button"
-        >
-          <PdfReadingModeLabel value={props.value} />
-        </button>
-      </AppDropdownMenuTrigger>
-      <AppDropdownMenuContent align="start" className="min-w-[132px] p-1" sideOffset={8}>
-        {options.map((option) => (
-          <AppDropdownMenuItem
-            key={option.value}
-            onSelect={() => {
-              props.onToolbarInteraction();
-              props.onChange(option.value);
-            }}
-          >
-            {option.label}
-          </AppDropdownMenuItem>
-        ))}
-      </AppDropdownMenuContent>
-    </AppDropdownMenu>
-  );
-}
-
 export function PdfZoomControls({
-  onPdfReadingModeChange,
   onRotateClockwise,
   onSetFitWidth,
   onSetZoom,
   onToolbarInteraction,
   onZoomIn,
   onZoomOut,
-  pdfReadingMode,
   zoomMode,
   zoom
 }: ZoomControlsProps) {
   return (
-    <div className="flex items-center gap-2">
-      <PdfReadingModeControl onChange={onPdfReadingModeChange} onToolbarInteraction={onToolbarInteraction} value={pdfReadingMode} />
-      <div className="h-5 w-px bg-border/40" />
-      <PdfZoomControlsInner onRotateClockwise={onRotateClockwise} onSetFitWidth={onSetFitWidth} onSetZoom={onSetZoom} onToolbarInteraction={onToolbarInteraction} onZoomIn={onZoomIn} onZoomOut={onZoomOut} zoom={zoom} zoomMode={zoomMode} />
-    </div>
+    <PdfZoomControlsInner onRotateClockwise={onRotateClockwise} onSetFitWidth={onSetFitWidth} onSetZoom={onSetZoom} onToolbarInteraction={onToolbarInteraction} onZoomIn={onZoomIn} onZoomOut={onZoomOut} zoom={zoom} zoomMode={zoomMode} />
   );
 }
 

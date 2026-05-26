@@ -115,6 +115,7 @@ export {
   getBaseColorMode,
   getDimImagesInDarkMode,
   getPdfReadingMode,
+  resolvePdfReadingModeForColorMode,
   setBaseColorMode,
   setDimImagesInDarkMode,
   setPdfReadingMode

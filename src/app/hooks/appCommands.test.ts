@@ -67,6 +67,9 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openImportManagement)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openReadwiseReaderSettings)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.setPdfDarkAppearanceOriginal)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.setPdfDarkAppearanceInverted)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.setPdfDarkAppearanceWarm)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe(true);

@@ -8,6 +8,7 @@ import {
   resolveDeveloperPaletteTitle
 } from './appPaletteDeveloperCommands';
 import { isReviewCommandEnabled, REVIEW_PALETTE_COMMANDS, type ReviewPaletteCommandOptions } from './appPaletteReviewCommands';
+import { SETTINGS_PALETTE_COMMANDS } from './appPaletteSettingsCommands';
 
 export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions {
   canRedoWorkspaceAction: boolean;
@@ -80,20 +81,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.restartApp, title: 'Restart App', section: 'Workspace', keywords: ['restart', 'relaunch'] },
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
   { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Developer', keywords: ['developer', 'inspect'] },
-  { id: APP_COMMAND_IDS.openSettings, title: 'Open Settings', section: 'Settings' },
-  {
-    id: APP_COMMAND_IDS.openReadwiseReaderSettings,
-    title: 'Open Readwise Reader Settings',
-    section: 'Settings',
-    keywords: ['settings', 'readwise', 'reader', 'import', 'library']
-  },
-  {
-    id: APP_COMMAND_IDS.toggleBaseColorMode,
-    title: 'Toggle Light/Dark Mode',
-    section: 'Settings',
-    keywords: ['appearance', 'theme', 'dark', 'light', 'color', 'mode']
-  },
-  { id: APP_COMMAND_IDS.closeSettings, title: 'Close Settings', section: 'Settings' },
+  ...SETTINGS_PALETTE_COMMANDS,
   { id: APP_COMMAND_IDS.goBack, title: 'Go Back', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goForward, title: 'Go Forward', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goToNode, title: 'Go to…', section: 'Navigation', keywords: ['search', 'open', 'node', 'jump', 'folder', 'topic', 'item'] },

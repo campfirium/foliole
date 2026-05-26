@@ -60,6 +60,7 @@ describe('getAppPaletteCommands', () => {
     expect(sectionFor(APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.repairTable)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.renameNode)).toBe('Workspace');
+    expect(sectionFor(APP_COMMAND_IDS.setPdfDarkAppearanceWarm)).toBe('Settings');
   });
 
   it('uses dynamic labels for the dev review status bar memory toggle', () => {

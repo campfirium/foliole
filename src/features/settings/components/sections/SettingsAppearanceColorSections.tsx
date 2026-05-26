@@ -41,8 +41,8 @@ function defaultModeColor(light: string, dark: string, appearance: AppearanceSet
 function AppearancePdfReadingModeRow(props: { appearance: AppearanceSettings }) {
   return (
     <SettingsSegmentedRow
-      description="Choose how PDF pages render in the reader. Original keeps the source page, inverted uses a softer dark reading preset, and warm keeps a paper-like tone."
-      label="PDF reading mode"
+      description="Choose how PDF pages appear when the app uses dark mode. Light mode always shows the original PDF."
+      label="PDF in dark mode"
       onChange={(value) => props.appearance.setPdfReadingMode(value as typeof props.appearance.pdfReadingMode)}
       options={[
         { label: 'Original', value: 'original' },

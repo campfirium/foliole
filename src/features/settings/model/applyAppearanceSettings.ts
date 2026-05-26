@@ -7,6 +7,7 @@ import {
   type SelectionColorPreset
 } from './appearanceColorSettings';
 import { clampFontSize, sanitizeFontFamily } from './appearanceFontSettings';
+import { resolvePdfReadingModeForColorMode } from './appearanceReadingModeSettings';
 import {
   type InterfaceFontPreset,
   type MonospaceFontPreset,
@@ -63,8 +64,8 @@ export function applyAppearanceSettings(settings: ApplyAppearanceSettingsInput) 
   const clampedFontSize = clampFontSize(settings.interfaceFontSize);
   root.dataset.baseColor = settings.baseColor;
   root.dataset.dimImagesInDarkMode = settings.dimImagesInDarkMode ? 'true' : 'false';
-  root.dataset.pdfReadingMode = settings.pdfReadingMode;
   root.dataset.resolvedBaseColor = settings.resolvedBaseColor;
+  root.dataset.pdfReadingMode = resolvePdfReadingModeForColorMode(settings.pdfReadingMode, settings.resolvedBaseColor);
   applyAppearanceColorSettings(root, {
     accentColor: settings.accentColor,
     clozeColor: settings.clozeColor,

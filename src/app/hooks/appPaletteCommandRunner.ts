@@ -1,3 +1,4 @@
+import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
 import { runAppCommand, runReviewModeToggle } from './appCommands';
@@ -48,6 +49,7 @@ interface PaletteCommandRunnerArgs {
   onToggleDismissedTopicsVisibility: () => void;
   onToggleListVisibility: () => void;
   onRestartApp: () => void;
+  onSetPdfReadingMode: (value: PdfReadingMode) => void;
   onToggleBaseColorMode: () => void;
   onToggleDevTools: () => void;
   openReadwiseReaderSettings: () => void;
@@ -81,6 +83,7 @@ function createPaletteSettingsActions(args: PaletteCommandRunnerArgs) {
       args.clearSettingsRequest();
       args.setSettingsOpen(true);
     },
+    setPdfReadingMode: args.onSetPdfReadingMode,
     toggleBaseColorMode: args.onToggleBaseColorMode
   };
 }

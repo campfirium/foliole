@@ -5,16 +5,13 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
 const appearanceMocks = vi.hoisted(() => ({
-  setDimImagesInDarkMode: vi.fn(),
-  setPdfReadingMode: vi.fn()
+  setDimImagesInDarkMode: vi.fn()
 }));
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
     dimImagesInDarkMode: false,
     editorDisplayMode: 'preview' as const,
-    pdfReadingMode: 'inverted' as const,
     setDimImagesInDarkMode: appearanceMocks.setDimImagesInDarkMode,
-    setPdfReadingMode: appearanceMocks.setPdfReadingMode,
     toggleEditorDisplayMode: vi.fn()
   })
 }));
@@ -118,7 +115,6 @@ function createPdfSourceDetails(overrides?: {
 }
 beforeEach(() => {
   appearanceMocks.setDimImagesInDarkMode.mockReset();
-  appearanceMocks.setPdfReadingMode.mockReset();
   useNodeSourceDetails.mockReturnValue({
     isLoading: false,
     value: null
@@ -265,10 +261,11 @@ it('lets the reader return to fit width with the toolbar button after the reader
   expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('100%');
 });
 
-it('shows the PDF reading mode control in the toolbar', async () => {
+it('keeps the PDF appearance control out of the toolbar', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
   renderSection();
 
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Set PDF reading mode' })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Set zoom level' })).toBeInTheDocument());
+  expect(screen.queryByRole('button', { name: 'Set PDF reading mode' })).toBeNull();
 });

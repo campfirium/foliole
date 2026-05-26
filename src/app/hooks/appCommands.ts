@@ -1,3 +1,4 @@
+import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
 import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -41,6 +42,7 @@ interface RunAppCommandActions {
   openSettings: () => void;
   openTrash: () => void;
   restartApp: () => void;
+  setPdfReadingMode: (value: PdfReadingMode) => void;
   toggleBaseColorMode: () => void;
   revealReviewAnswer: () => void;
   toggleReviewMode: () => void;
@@ -120,6 +122,9 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,
     [APP_COMMAND_IDS.openSettings]: actions.openSettings,
     [APP_COMMAND_IDS.openReadwiseReaderSettings]: actions.openReadwiseReaderSettings,
+    [APP_COMMAND_IDS.setPdfDarkAppearanceOriginal]: () => actions.setPdfReadingMode('original'),
+    [APP_COMMAND_IDS.setPdfDarkAppearanceInverted]: () => actions.setPdfReadingMode('inverted'),
+    [APP_COMMAND_IDS.setPdfDarkAppearanceWarm]: () => actions.setPdfReadingMode('warm'),
     [APP_COMMAND_IDS.toggleBaseColorMode]: actions.toggleBaseColorMode,
     [APP_COMMAND_IDS.closeSettings]: actions.closeSettings
   };

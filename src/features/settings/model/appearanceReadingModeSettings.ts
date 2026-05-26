@@ -8,7 +8,7 @@ import {
   PDF_READING_MODE_OPTIONS,
   type PdfReadingMode
 } from './appearanceSettingsOptions';
-import { type BaseColorMode, isBaseColorMode } from './baseColorMode';
+import { type BaseColorMode, isBaseColorMode, type ResolvedBaseColorMode } from './baseColorMode';
 
 const STORAGE_KEYS = {
   baseColor: APP_SETTINGS_STORAGE_KEYS.baseColor,
@@ -36,6 +36,13 @@ export function getPdfReadingMode(): PdfReadingMode {
 
 export function setPdfReadingMode(value: PdfReadingMode) {
   setWhitelistedLocalStorageItem(STORAGE_KEYS.pdfReadingMode, value);
+}
+
+export function resolvePdfReadingModeForColorMode(
+  pdfReadingMode: PdfReadingMode,
+  resolvedBaseColorMode: ResolvedBaseColorMode
+): PdfReadingMode {
+  return resolvedBaseColorMode === 'dark' ? pdfReadingMode : 'original';
 }
 
 export function getDimImagesInDarkMode() {

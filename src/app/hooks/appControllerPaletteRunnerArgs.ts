@@ -146,6 +146,16 @@ function createPaletteStudyActions(args: {
   };
 }
 
+function createPaletteAppearanceActions(args: {
+  appearance: ReturnType<typeof useAppearanceSettings>;
+}) {
+  return {
+    onSetPdfReadingMode: args.appearance.setPdfReadingMode,
+    onToggleBaseColorMode: args.appearance.toggleBaseColorMode,
+    onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode
+  };
+}
+
 export function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
@@ -178,10 +188,9 @@ export function createPaletteRunnerArgs(args: {
     importDirectory: args.formalImport.startImportDirectory,
     importSingleFile: args.formalImport.startImportFile,
     onRestartApp: createRestartAppCommand(args),
-    onToggleBaseColorMode: args.appearance.toggleBaseColorMode,
+    ...createPaletteAppearanceActions(args),
     ...createPaletteViewActions(),
     onToggleDevTools: toggleMainWindowDevTools,
-    onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode,
     onToggleImmersiveMode: args.layoutProps.layoutChrome.onToggleImmersiveMode,
     onToggleListVisibility: args.layoutProps.layoutChrome.onToggleListVisibility,
     openImportManagement: () => args.runtime.setIsImportManagementOpen(true),

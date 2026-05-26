@@ -88,7 +88,6 @@ function buildBaseToolbarHarnessProps() {
     onLoadError: () => undefined,
     onLoadSuccess: () => undefined,
     onRetryLoad: () => undefined,
-    onPdfReadingModeChange: () => undefined,
     onRotateClockwise: () => undefined,
     onSearchRequest: () => undefined,
     onSearchRequestHandled: () => undefined,
@@ -100,7 +99,6 @@ function buildBaseToolbarHarnessProps() {
       2: { height: 1131, width: 800 },
       3: { height: 1131, width: 800 }
     },
-    pdfReadingMode: 'original' as const,
     pdfSelectionLocator: undefined,
     pdfSource: '/tmp/sample.pdf',
     rotation: 0,

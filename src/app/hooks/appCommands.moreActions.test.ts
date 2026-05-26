@@ -63,6 +63,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openSettings: () => undefined,
     openTrash: () => undefined,
     restartApp: () => undefined,
+    setPdfReadingMode: () => undefined,
     toggleBaseColorMode: () => undefined,
     startClipboardImport: () => undefined,
     toggleEditorDisplayMode: () => undefined,
@@ -129,6 +130,18 @@ it('runs light and dark mode toggle through the shared command handler', () => {
   expectCommandRuns(APP_COMMAND_IDS.toggleBaseColorMode, { toggleBaseColorMode });
 
   expect(toggleBaseColorMode).toHaveBeenCalledTimes(1);
+});
+
+it('runs PDF dark appearance choices through the shared command handler', () => {
+  const setPdfReadingMode = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.setPdfDarkAppearanceOriginal, { setPdfReadingMode });
+  expectCommandRuns(APP_COMMAND_IDS.setPdfDarkAppearanceInverted, { setPdfReadingMode });
+  expectCommandRuns(APP_COMMAND_IDS.setPdfDarkAppearanceWarm, { setPdfReadingMode });
+
+  expect(setPdfReadingMode).toHaveBeenNthCalledWith(1, 'original');
+  expect(setPdfReadingMode).toHaveBeenNthCalledWith(2, 'inverted');
+  expect(setPdfReadingMode).toHaveBeenNthCalledWith(3, 'warm');
 });
 
 it('lets reset import data cancel without reporting success', () => {

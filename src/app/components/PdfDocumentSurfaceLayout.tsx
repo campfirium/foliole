@@ -16,7 +16,6 @@ interface PdfDocumentSurfaceLayoutProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   loadError: string | null;
   maxPage: number;
-  pdfReadingMode: 'original' | 'inverted' | 'warm';
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
   persistedPageCount: number | null;
@@ -46,7 +45,6 @@ interface PdfDocumentSurfaceLayoutProps {
   zoom: number;
   zoomIn: () => void;
   zoomOut: () => void;
-  setPdfReadingMode: (value: 'original' | 'inverted' | 'warm') => void;
 }
 
 function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelectionContextMenu'>) {
@@ -56,7 +54,6 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       highlightLocators={props.highlightLocators}
       loadError={props.loadError}
       maxPage={props.maxPage}
-      onPdfReadingModeChange={props.setPdfReadingMode}
       onClearSearch={() => props.setSearchQuery('')}
       onContextMenu={props.handleContextMenu}
       onLoadError={(message) => props.reportLoadError(message)}
@@ -81,7 +78,6 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       pageJumpRequest={props.pageJumpRequest}
       persistedPageCount={props.persistedPageCount}
       persistedPageDimensions={props.persistedPageDimensions}
-      pdfReadingMode={props.pdfReadingMode}
       pdfSelectionLocator={props.pdfSelectionLocator}
       pdfSource={props.pdfSource}
       rotation={props.rotation}

@@ -6,7 +6,6 @@ import 'react-pdf/dist/Page/TextLayer.css';
 import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import { configurePdfWorker } from '../../features/pdf/model/pdfWorker';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
-import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { markNodePositionReady } from '../../shared/platform/performanceDiagnosticsProbe';
 import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
@@ -125,7 +124,6 @@ export function PdfDocumentSurface({
   pdfIndexStatus,
   sourceHint
 }: PdfDocumentSurfaceProps) {
-  const appearance = useAppearanceSettings();
   const pdfSystem = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint, isVisible, persistedPageCount);
   const selectionState = usePdfSelectionContextMenu(onCreateHighlightFromSelection);
   const searchState = usePdfSearchControls();
@@ -136,7 +134,7 @@ export function PdfDocumentSurface({
     : null;
 
   const layoutProps = {
-    ...buildPdfSurfaceLayoutProps(nodeId, highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint, appearance, onOpenExternalLink),
+    ...buildPdfSurfaceLayoutProps(nodeId, highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint, onOpenExternalLink),
     persistedPageCount,
     persistedPageDimensions
   };
@@ -153,16 +151,13 @@ function buildPdfSurfaceLayoutProps(
   selectionState: ReturnType<typeof usePdfSelectionContextMenu>,
   searchState: ReturnType<typeof usePdfSearchControls>,
   searchIndexingHint: string | null,
-  appearance: ReturnType<typeof useAppearanceSettings>,
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void
 ): PdfSurfaceLayoutProps {
   return {
     ...resolvePdfSurfaceHandlers(nodeId, pdfSystem, selectionState, searchState, onOpenExternalLink),
     highlightLocators,
-    pdfReadingMode: appearance.pdfReadingMode ?? 'inverted',
     pdfSelectionContextMenu: renderPdfSelectionMenu(selectionState),
-    searchIndexingHint,
-    setPdfReadingMode: appearance.setPdfReadingMode ?? (() => undefined)
+    searchIndexingHint
   };
 }
 
