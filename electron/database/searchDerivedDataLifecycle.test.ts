@@ -85,14 +85,14 @@ function processSearchQueue() {
 function indexedNodeCount(nodeIds: string[]) {
   const placeholders = nodeIds.map(() => '?').join(', ');
   return openDatabaseConnection()
-    .sqlite.prepare(`SELECT COUNT(*) AS count FROM node_search WHERE node_id IN (${placeholders})`)
+    .sqlite.prepare(`SELECT COUNT(*) AS count FROM search.node_search WHERE node_id IN (${placeholders})`)
     .get(...nodeIds) as { count: number };
 }
 
 function indexedPdfCount(nodeIds: string[]) {
   const placeholders = nodeIds.map(() => '?').join(', ');
   return openDatabaseConnection()
-    .sqlite.prepare(`SELECT COUNT(*) AS count FROM pdf_search WHERE node_id IN (${placeholders})`)
+    .sqlite.prepare(`SELECT COUNT(*) AS count FROM search.pdf_search WHERE node_id IN (${placeholders})`)
     .get(...nodeIds) as { count: number };
 }
 
@@ -176,7 +176,7 @@ it('keeps PDF page text facts and sync state intact while soft delete only hides
 it('keeps historical subtree delete invalidations harmless when their nodes are already missing', () => {
   const connection = openDatabaseConnection();
   connection.sqlite
-    .prepare('INSERT INTO node_search (title, path, content, node_id, updated_at) VALUES (?, ?, ?, ?, ?)')
+    .prepare('INSERT INTO search.node_search (title, path, content, node_id, updated_at) VALUES (?, ?, ?, ?, ?)')
     .run('Missing', '', 'orphan marker', 'missing-node', '2026-05-26T00:00:00.000Z');
   connection.sqlite
     .prepare(
@@ -213,9 +213,9 @@ it('refreshes node and PDF search paths after moving a subtree to a new parent',
 
   processSearchQueue();
   expect(
-    openDatabaseConnection().sqlite.prepare("SELECT path FROM node_search WHERE node_id = 'child'").get()
+    openDatabaseConnection().sqlite.prepare("SELECT path FROM search.node_search WHERE node_id = 'child'").get()
   ).toEqual({ path: 'Folder B / Article' });
   expect(
-    openDatabaseConnection().sqlite.prepare("SELECT path FROM pdf_search WHERE node_id = 'child'").get()
+    openDatabaseConnection().sqlite.prepare("SELECT path FROM search.pdf_search WHERE node_id = 'child'").get()
   ).toEqual({ path: 'Folder B / Article' });
 });

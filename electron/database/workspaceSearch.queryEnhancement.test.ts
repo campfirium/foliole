@@ -5,7 +5,6 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
 let mockedAppDataDir = '/tmp/foliole-workspace-search-query-enhancement-tests';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -17,11 +16,13 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
 import { syncNodeSearchIndexForNodeIds, syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
+import { saveJsonSetting } from './settingsStore.js';
 import { searchWorkspace } from './workspaceSearch.js';
 import { insertPdfAttachment } from './workspaceSearchTestSupport.js';
 
@@ -30,6 +31,9 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-workspace-search-query-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  initializeDatabase();
+  saveJsonSetting('app_settings', { [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram' });
+  closeDatabaseConnection();
   initializeDatabase();
 });
 

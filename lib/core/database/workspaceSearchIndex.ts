@@ -22,7 +22,7 @@ const NODE_PATHS_CTE_SQL = `WITH RECURSIVE node_paths(node_id, path) AS (
   )`;
 
 const NODE_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
-  INSERT INTO node_search (title, path, content, node_id, updated_at)
+  INSERT INTO search.node_search (title, path, content, node_id, updated_at)
   SELECT trim(n.title), COALESCE(paths.path, ''), COALESCE(CAST(cbd.data AS TEXT), n.content), n.id, n.updated_at
   FROM nodes n
   LEFT JOIN node_paths paths
@@ -33,7 +33,7 @@ const NODE_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
     AND n.deleted_at IS NULL`;
 
 const PDF_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
-  INSERT INTO pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
+  INSERT INTO search.pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
   SELECT
     COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document'),
     COALESCE(paths.path, ''),
@@ -59,7 +59,7 @@ const PDF_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
     AND na.role = 'reference'`;
 
 const NODE_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
-  INSERT INTO node_search (title, path, content, node_id, updated_at)
+  INSERT INTO search.node_search (title, path, content, node_id, updated_at)
   SELECT trim(n.title), COALESCE(paths.path, ''), COALESCE(CAST(cbd.data AS TEXT), n.content), n.id, n.updated_at
   FROM nodes n
   LEFT JOIN node_paths paths
@@ -69,7 +69,7 @@ const NODE_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
   WHERE n.deleted_at IS NULL`;
 
 const PDF_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
-  INSERT INTO pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
+  INSERT INTO search.pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
   SELECT
     COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document'),
     COALESCE(paths.path, ''),
@@ -173,8 +173,8 @@ function prepareAffectedNodeIds(driver: DatabaseDriver, nodeIds: string[], optio
 }
 
 export function rebuildWorkspaceSearchIndexes(driver: DatabaseDriver) {
-  driver.execute('DELETE FROM node_search');
-  driver.execute('DELETE FROM pdf_search');
+  driver.execute('DELETE FROM search.node_search');
+  driver.execute('DELETE FROM search.pdf_search');
   driver.execute(NODE_SEARCH_REBUILD_SQL);
   driver.execute(PDF_SEARCH_REBUILD_SQL);
 }
@@ -185,7 +185,7 @@ export function syncNodeSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: s
   if (affected.expandedCount === 0) {
     return;
   }
-  driver.execute('DELETE FROM node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
+  driver.execute('DELETE FROM search.node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
@@ -196,7 +196,7 @@ export function syncPdfSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: st
   if (affected.expandedCount === 0) {
     return;
   }
-  driver.execute('DELETE FROM pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
+  driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute(PDF_SEARCH_INSERT_AFFECTED_SQL);
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
@@ -207,8 +207,8 @@ export function syncWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeI
   if (affected.expandedCount === 0) {
     return;
   }
-  driver.execute('DELETE FROM node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
-  driver.execute('DELETE FROM pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
+  driver.execute('DELETE FROM search.node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
+  driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
   driver.execute(PDF_SEARCH_INSERT_AFFECTED_SQL);
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);

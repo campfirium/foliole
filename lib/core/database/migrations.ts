@@ -2,7 +2,6 @@ import { readUserVersion, setUserVersion } from './databaseUserVersion.js';
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from './desktopFreshSchemaStatements.js';
 import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
 import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
-import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
 export const DATABASE_SCHEMA_VERSION = 45;
 
@@ -13,7 +12,6 @@ function createFreshSchema(sqlite: DatabaseMigrationTarget) {
   for (const statement of DESKTOP_FRESH_SCHEMA_STATEMENTS) {
     sqlite.exec(statement);
   }
-  migrateWorkspaceSearchIndexes(sqlite);
   setUserVersion(sqlite, DATABASE_SCHEMA_VERSION);
 }
 

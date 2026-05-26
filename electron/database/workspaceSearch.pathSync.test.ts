@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { processSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidations.js';
+
 let mockedAppDataDir = '/tmp/foliole-workspace-search-path-tests';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -17,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import { searchWorkspace } from './workspaceSearch.js';
@@ -58,6 +60,10 @@ function upsertSearchNode(input: {
   });
 }
 
+function processSearchQueue() {
+  processSearchIndexInvalidations(openDatabaseConnection().driver);
+}
+
 it('matches breadcrumb path segments from the sqlite FTS index', () => {
   upsertSearchNode({
     id: 'folder-parent',
@@ -73,6 +79,7 @@ it('matches breadcrumb path segments from the sqlite FTS index', () => {
     content: 'Roadmap draft and next actions.',
     updatedAt: '2026-03-04T00:00:00.000Z'
   });
+  processSearchQueue();
 
   const results = searchWorkspace('Shelf');
 
@@ -99,6 +106,7 @@ it('refreshes descendant path matches after a parent title change', () => {
     content: 'Ready for review.',
     updatedAt: '2026-03-07T00:00:00.000Z'
   });
+  processSearchQueue();
 
   expect(searchWorkspace('Inbox').find((result) => result.id === 'node-child')).toMatchObject({ id: 'node-child' });
 
@@ -109,6 +117,7 @@ it('refreshes descendant path matches after a parent title change', () => {
     content: '',
     updatedAt: '2026-03-08T00:00:00.000Z'
   });
+  processSearchQueue();
 
   expect(searchWorkspace('Inbox').find((result) => result.id === 'node-child')).toMatchObject({ id: 'node-child' });
   expect(searchWorkspace('Research').find((result) => result.id === 'node-child')).toMatchObject({ id: 'node-child' });

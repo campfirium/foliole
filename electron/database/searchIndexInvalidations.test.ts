@@ -140,7 +140,7 @@ it('updates moved subtree paths without rebuilding child content', () => {
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   expect(
     openDatabaseConnection().sqlite
-      .prepare("SELECT content, path FROM node_search WHERE node_id = 'child'")
+      .prepare("SELECT content, path FROM search.node_search WHERE node_id = 'child'")
       .get()
   ).toEqual({ content: 'Old child marker', path: 'Folder B / Article' });
   expect(searchWorkspace('UnindexedFreshToken')).toEqual([]);
@@ -163,7 +163,7 @@ it('hides descendants immediately after ancestor delete and restores the subtree
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   expect(
     openDatabaseConnection().sqlite
-      .prepare("SELECT COUNT(*) AS count FROM node_search WHERE node_id IN ('parent-delete', 'child-delete')")
+      .prepare("SELECT COUNT(*) AS count FROM search.node_search WHERE node_id IN ('parent-delete', 'child-delete')")
       .get()
   ).toEqual({ count: 0 });
 
@@ -207,7 +207,7 @@ it('queues PDF search invalidation when page text becomes ready', () => {
   ]);
   expect(
     openDatabaseConnection().sqlite
-      .prepare("SELECT COUNT(*) AS count FROM pdf_search WHERE attachment_id = 'pdf-1'")
+      .prepare("SELECT COUNT(*) AS count FROM search.pdf_search WHERE attachment_id = 'pdf-1'")
       .get()
   ).toEqual({ count: 0 });
 
@@ -222,7 +222,7 @@ it('queues PDF search invalidation when page text becomes ready', () => {
 it('marks failed invalidations retryable with attempt and error state', () => {
   const driver = openDatabaseConnection().driver;
   enqueueWorkspaceSearchInvalidationForNodeIds(driver, ['node-fail']);
-  driver.execute('DROP TABLE node_search');
+  driver.execute('DROP TABLE search.node_search');
 
   expect(processSearchIndexInvalidations(driver)).toEqual({ failed: 1, processed: 0 });
   expect(

@@ -90,7 +90,7 @@ it('indexes high-fanout child nodes with constant path CTE executions', () => {
   syncWorkspaceSearchIndexForNodeIds(connection.driver, childIds);
 
   expect(countPathCteExecutions(executeSpy)).toBe(2);
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_search').get()).toEqual({ count: 200 });
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM search.node_search').get()).toEqual({ count: 200 });
 });
 
 it('keeps batch node indexing equivalent for blobs, inline fallback, and deleted nodes', () => {
@@ -105,13 +105,13 @@ it('keeps batch node indexing equivalent for blobs, inline fallback, and deleted
     deletedAt: '2026-05-16T01:00:00.000Z'
   });
   connection.sqlite
-    .prepare('INSERT INTO node_search (title, path, content, node_id, updated_at) VALUES (?, ?, ?, ?, ?)')
+    .prepare('INSERT INTO search.node_search (title, path, content, node_id, updated_at) VALUES (?, ?, ?, ?, ?)')
     .run('Deleted Batch', '', 'stale atlas marker', 'node-deleted', '2026-05-16T00:00:00.000Z');
 
   syncNodeSearchIndexForNodeIds(connection.driver, ['node-blob', 'node-inline', 'node-deleted']);
 
   expect(searchWorkspace('atlas').map((result) => result.id)).toEqual(['node-blob', 'node-inline']);
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_search WHERE node_id = ?').get('node-deleted')).toEqual({
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM search.node_search WHERE node_id = ?').get('node-deleted')).toEqual({
     count: 0
   });
 });
@@ -135,5 +135,5 @@ it('batches attachment-triggered pdf search indexing through one path CTE', () =
   syncPdfSearchIndexForAttachmentIds(connection.driver, attachmentIds);
 
   expect(countPathCteExecutions(executeSpy)).toBe(1);
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM pdf_search').get()).toEqual({ count: 3 });
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM search.pdf_search').get()).toEqual({ count: 3 });
 });

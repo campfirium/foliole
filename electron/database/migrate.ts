@@ -5,6 +5,7 @@ import {
   isLegacyDatabaseRebuildRequiredError
 } from '../../lib/core/database/migrations.js';
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
+import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 
 import {
   closeDatabaseConnection,
@@ -70,7 +71,7 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
   }
   reportStage?.('database_schema_init_start');
   createPreMigrationSnapshotIfNeeded(connection);
-  const initializedConnection = initializeDatabaseConnection(connection);
+  const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
   reportStage?.('database_schema_init_complete');
   seedInitialWorkspace(initializedConnection);
   return initializedConnection;
@@ -122,7 +123,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_recovery_integrity_check_complete');
     enableDatabaseWriteAheadLog(connection);
     reportStage?.('database_recovery_schema_init_start');
-    const initializedConnection = initializeDatabaseConnection(connection);
+    const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
     reportStage?.('database_recovery_schema_init_complete');
     seedInitialWorkspace(initializedConnection);
     return initializedConnection;
@@ -148,7 +149,7 @@ function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: Da
   reportStage?.('database_legacy_rebuild_snapshot_created', snapshot);
   const connection = openDatabaseConnection();
   reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
-  const initializedConnection = initializeDatabaseConnection(connection);
+  const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
   reportStage?.('database_legacy_rebuild_schema_init_complete');
   seedInitialWorkspace(initializedConnection);
   return initializedConnection;

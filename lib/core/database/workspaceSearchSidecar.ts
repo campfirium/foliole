@@ -1,0 +1,122 @@
+import type { DatabaseDriver } from './driver.js';
+import {
+  DEFAULT_FULL_TEXT_SEARCH_INDEX_STRATEGY,
+  resolveFullTextSearchIndexStrategy,
+  type FullTextSearchTokenizer
+} from './fullTextSearchIndexStrategy.js';
+import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
+import { rebuildWorkspaceSearchIndexes } from './workspaceSearchIndex.js';
+
+const SEARCH_SIDECAR_SCHEMA_VERSION = 1;
+const APP_SETTINGS_KEY = 'app_settings';
+
+interface SearchMetadataRow {
+  value_json?: unknown;
+}
+
+interface AppSettingsRow {
+  value?: unknown;
+}
+
+interface WorkspaceSearchSidecarConnection extends DatabaseConnectionLike {
+  driver: DatabaseDriver;
+}
+
+function readJsonObject(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
+
+function readAppSettings(sqlite: DatabaseMigrationTarget) {
+  const row = sqlite.prepare('SELECT value FROM main.settings WHERE key = ?').all(APP_SETTINGS_KEY)[0] as AppSettingsRow | undefined;
+  return readJsonObject(row?.value);
+}
+
+function readSearchMetadata(sqlite: DatabaseMigrationTarget, key: string) {
+  const row = sqlite.prepare('SELECT value_json FROM search.search_metadata WHERE key = ?').all(key)[0] as SearchMetadataRow | undefined;
+  return readJsonObject(row?.value_json);
+}
+
+function writeSearchMetadata(sqlite: DatabaseMigrationTarget, key: string, value: Record<string, unknown>) {
+  sqlite.prepare(
+    `INSERT INTO search.search_metadata (key, value_json, updated_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET
+       value_json = excluded.value_json,
+       updated_at = excluded.updated_at`
+  ).run(key, JSON.stringify(value), new Date().toISOString());
+}
+
+function createSearchMetadataTable(sqlite: DatabaseMigrationTarget) {
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS search.search_metadata (
+    key TEXT PRIMARY KEY,
+    value_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+}
+
+function dropSearchIndexTables(sqlite: DatabaseMigrationTarget) {
+  sqlite.exec('DROP TABLE IF EXISTS search.node_search');
+  sqlite.exec('DROP TABLE IF EXISTS search.pdf_search');
+}
+
+function createSearchIndexTables(sqlite: DatabaseMigrationTarget, tokenizer: FullTextSearchTokenizer) {
+  sqlite.exec(`CREATE VIRTUAL TABLE search.node_search USING fts5(
+    title,
+    path,
+    content,
+    node_id UNINDEXED,
+    updated_at UNINDEXED,
+    tokenize = '${tokenizer}'
+  )`);
+  sqlite.exec(`CREATE VIRTUAL TABLE search.pdf_search USING fts5(
+    title,
+    path,
+    text,
+    node_id UNINDEXED,
+    attachment_id UNINDEXED,
+    page UNINDEXED,
+    updated_at UNINDEXED,
+    page_text_length UNINDEXED,
+    tokenize = '${tokenizer}'
+  )`);
+}
+
+function shouldRecreateSearchIndexes(sqlite: DatabaseMigrationTarget, tokenizer: FullTextSearchTokenizer) {
+  const metadata = readSearchMetadata(sqlite, 'schema');
+  return metadata?.schemaVersion !== SEARCH_SIDECAR_SCHEMA_VERSION || metadata?.tokenizer !== tokenizer;
+}
+
+export function initializeWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarConnection>(connection: T): T {
+  const resolution = resolveFullTextSearchIndexStrategy(readAppSettings(connection.sqlite));
+  createSearchMetadataTable(connection.sqlite);
+  if (shouldRecreateSearchIndexes(connection.sqlite, resolution.tokenizer)) {
+    dropSearchIndexTables(connection.sqlite);
+    createSearchIndexTables(connection.sqlite, resolution.tokenizer);
+    rebuildWorkspaceSearchIndexes(connection.driver);
+    writeSearchMetadata(connection.sqlite, 'schema', {
+      schemaVersion: SEARCH_SIDECAR_SCHEMA_VERSION,
+      strategy: resolution.strategy,
+      tokenizer: resolution.tokenizer
+    });
+  }
+  writeSearchMetadata(connection.sqlite, 'last_rebuild_status', {
+    status: 'ready',
+    strategy: resolution.strategy,
+    tokenizer: resolution.tokenizer
+  });
+  return connection;
+}
+
+export function defaultWorkspaceSearchSidecarMetadata() {
+  return {
+    schemaVersion: SEARCH_SIDECAR_SCHEMA_VERSION,
+    strategy: DEFAULT_FULL_TEXT_SEARCH_INDEX_STRATEGY,
+    tokenizer: 'unicode61' as const
+  };
+}

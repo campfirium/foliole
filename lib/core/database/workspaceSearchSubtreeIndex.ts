@@ -45,13 +45,13 @@ const INSERT_SUBTREE_AFFECTED_IDS_SQL = `WITH RECURSIVE node_descendants(id) AS 
   FROM node_descendants`;
 
 const UPDATE_NODE_SEARCH_PATH_SQL = `${NODE_PATHS_CTE_SQL}
-  UPDATE node_search
+  UPDATE search.node_search
   SET path = COALESCE((SELECT path FROM node_paths WHERE node_paths.node_id = node_search.node_id), '')
   WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)
     AND EXISTS (SELECT 1 FROM nodes WHERE nodes.id = node_search.node_id AND nodes.deleted_at IS NULL)`;
 
 const UPDATE_PDF_SEARCH_PATH_SQL = `${NODE_PATHS_CTE_SQL}
-  UPDATE pdf_search
+  UPDATE search.pdf_search
   SET path = COALESCE((SELECT path FROM node_paths WHERE node_paths.node_id = pdf_search.node_id), '')
   WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)
     AND EXISTS (SELECT 1 FROM nodes WHERE nodes.id = pdf_search.node_id AND nodes.deleted_at IS NULL)`;
@@ -88,14 +88,14 @@ export function deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver: Data
         ON child.parent_id = node_descendants.id
     )
     SELECT id FROM node_descendants`;
-  driver.execute(`DELETE FROM node_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
-  driver.execute(`DELETE FROM pdf_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
+  driver.execute(`DELETE FROM search.node_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
+  driver.execute(`DELETE FROM search.pdf_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
 }
 
 export function deleteWorkspaceSearchIndexForSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {
   if (!prepareSubtreeAffectedIds(driver, rootIds)) return;
-  driver.execute('DELETE FROM node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)');
-  driver.execute('DELETE FROM pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)');
+  driver.execute('DELETE FROM search.node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)');
+  driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)');
 }
 
 export function syncWorkspaceSearchPathForSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {

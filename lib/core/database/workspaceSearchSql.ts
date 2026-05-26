@@ -71,7 +71,7 @@ SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.
   LIMIT ?`;
 export const NODE_FTS_SQL = `${VISIBLE_NODES_CTE_SQL}
 SELECT node_search.node_id AS id, title, path, content, updated_at, bm25(node_search, 8.0, 2.0, 1.0) AS rank
-  FROM node_search
+  FROM search.node_search AS node_search
   INNER JOIN visible_nodes visible
     ON visible.id = node_search.node_id
   WHERE node_search MATCH ?
@@ -88,7 +88,7 @@ SELECT
   updated_at,
   page_text_length,
   bm25(pdf_search, 4.0, 2.0, 1.0) AS rank
-FROM pdf_search
+FROM search.pdf_search AS pdf_search
 INNER JOIN visible_nodes visible
   ON visible.id = pdf_search.node_id
 WHERE pdf_search MATCH ?

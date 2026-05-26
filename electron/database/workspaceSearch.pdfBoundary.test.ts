@@ -59,7 +59,7 @@ function seedPdfNode(input: { attachmentId: string; nodeId: string; pages: Array
   const insertPage = sqlite.prepare('INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)');
   input.pages.forEach(([page, text]) => insertPage.run(input.attachmentId, page, text));
   syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, [input.nodeId]);
-  sqlite.prepare('DELETE FROM pdf_search').run();
+  sqlite.prepare('DELETE FROM search.pdf_search').run();
 }
 
 it('falls back to PDF page text for long queries when the PDF FTS index is empty', () => {

@@ -86,7 +86,7 @@ function readAttachmentCounts(attachmentId: string) {
       database.prepare('SELECT COUNT(*) AS count FROM pdf_page_text WHERE attachment_id = ?').get(attachmentId) as { count: number }
     ).count,
     pdfSearchRows: (
-      database.prepare('SELECT COUNT(*) AS count FROM pdf_search WHERE attachment_id = ?').get(attachmentId) as { count: number }
+      database.prepare('SELECT COUNT(*) AS count FROM search.pdf_search WHERE attachment_id = ?').get(attachmentId) as { count: number }
     ).count
   };
 }
@@ -174,7 +174,7 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
     .run('hash-pdf', 1, 'Page 1', 800, 1200);
   openDatabaseConnection().sqlite
     .prepare(
-      `INSERT INTO pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
+      `INSERT INTO search.pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(

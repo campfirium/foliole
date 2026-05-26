@@ -60,11 +60,11 @@ it('refreshes PDF FTS rows after PDF page text invalidation is processed', () =>
   );
 
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT COUNT(*) AS count FROM pdf_search WHERE attachment_id = 'pdf-1'")
+    .prepare("SELECT COUNT(*) AS count FROM search.pdf_search WHERE attachment_id = 'pdf-1'")
     .get()).toEqual({ count: 0 });
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT text FROM pdf_search WHERE attachment_id = 'pdf-1' AND page = '1'")
+    .prepare("SELECT text FROM search.pdf_search WHERE attachment_id = 'pdf-1' AND page = '1'")
     .get()).toEqual({ text: 'Atlas appears in PDF text.' });
 
   savePdfPageTextRows(

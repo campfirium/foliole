@@ -70,7 +70,7 @@ function processSearchQueue() {
 function nodeSearchStats() {
   return openDatabaseConnection()
     .sqlite.prepare(
-      'SELECT COUNT(*) AS rows, COUNT(DISTINCT content) AS distinct_content FROM node_search'
+      'SELECT COUNT(*) AS rows, COUNT(DISTINCT content) AS distinct_content FROM search.node_search'
     )
     .get();
 }
@@ -150,4 +150,26 @@ it('keeps rebuild idempotent and indexes body blobs before inline content', () =
   expect(searchWorkspace('inline atlas remains searchable').map((result) => result.id)).toContain(
     'node-inline-contract'
   );
+});
+
+it('does not read stale internal FTS rows left in the main database', () => {
+  const connection = openDatabaseConnection();
+  upsertSearchNode({
+    id: 'node-main-stale',
+    title: 'Visible Node',
+    content: 'Visible content only.'
+  });
+  connection.sqlite.exec(`CREATE VIRTUAL TABLE main.node_search USING fts5(
+    title,
+    path,
+    content,
+    node_id UNINDEXED,
+    updated_at UNINDEXED,
+    tokenize = 'trigram'
+  )`);
+  connection.sqlite
+    .prepare('INSERT INTO main.node_search (title, path, content, node_id, updated_at) VALUES (?, ?, ?, ?, ?)')
+    .run('Visible Node', '', 'main-only stale marker', 'node-main-stale', '2026-05-25T00:00:00.000Z');
+
+  expect(searchWorkspace('main-only stale marker')).toEqual([]);
 });
