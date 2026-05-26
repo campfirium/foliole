@@ -8,7 +8,7 @@ import {
   readKeepImportCacheStats,
   readNodeSearchStats
 } from './search-index-size-report-sections.mjs';
-import { getNumber } from './search-index-size-report-sql.mjs';
+import { getNumber, tableExists } from './search-index-size-report-sql.mjs';
 
 function openReadOnlyDatabase(dbPath) {
   if (!existsSync(dbPath)) {
@@ -36,6 +36,9 @@ export function buildSearchIndexSizeReport(dbPath) {
   try {
     return {
       database: readDatabaseStats(db, dbPath),
+      internalSearchIndexLocation: tableExists(db, 'node_search') || tableExists(db, 'pdf_search')
+        ? 'main'
+        : 'sidecar',
       nodeSearch: readNodeSearchStats(db),
       ftsShadowTables: {
         nodeSearch: readFtsShadowStats(db, 'node_search'),

@@ -6,7 +6,7 @@ import type { SqliteDatabase } from './connection.js';
 
 export const INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT = 5;
 
-export type InternalDatabaseSnapshotReason = 'pre-migration' | 'pre-restore';
+export type InternalDatabaseSnapshotReason = 'pre-cleanup' | 'pre-migration' | 'pre-restore';
 
 export interface InternalDatabaseSnapshotResult {
   destinationPath: string;
@@ -61,7 +61,7 @@ export function pruneInternalDatabaseSnapshots(sourcePath: string, retentionLimi
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(sourcePath);
   const snapshotEntries = fs
     .readdirSync(snapshotDirectory)
-    .filter((fileName) => fileName.endsWith('.db') && /^pre-(?:migration|restore)-/.test(fileName))
+    .filter((fileName) => fileName.endsWith('.db') && /^pre-(?:cleanup|migration|restore)-/.test(fileName))
     .map((fileName) => {
       const filePath = path.join(snapshotDirectory, fileName);
       const stats = fs.statSync(filePath);

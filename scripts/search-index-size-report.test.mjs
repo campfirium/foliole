@@ -102,6 +102,7 @@ it('reports search index size drivers without reading document text', () => {
     duplicateNodeRows: 1,
     distinctContentCount: 2
   });
+  expect(report.internalSearchIndexLocation).toBe('main');
   expect(report.nodeSearch.topDuplicatedContent[0]).toEqual({ contentBytes: 16, copies: 2 });
   expect(report.searchIndexInvalidations.byStatus).toEqual([
     { status: 'completed', rows: 1 },
@@ -118,4 +119,16 @@ it('reports search index size drivers without reading document text', () => {
     orphanBytes: 11
   });
   expect(JSON.stringify(report)).not.toContain('same body secret');
+});
+
+it('marks internal search indexes as migrated when main FTS tables are gone', () => {
+  const dbPath = path.join(tempRoot, 'foliole.db');
+  const db = new DatabaseSync(dbPath);
+  db.exec('CREATE TABLE nodes (id TEXT PRIMARY KEY)');
+  db.close();
+
+  const report = buildSearchIndexSizeReport(dbPath);
+
+  expect(report.internalSearchIndexLocation).toBe('sidecar');
+  expect(report.nodeSearch.totalRows).toBe(0);
 });
