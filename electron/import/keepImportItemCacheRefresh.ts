@@ -1,4 +1,5 @@
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 import { rewriteExternalPreviewContent } from '../database/externalSearchPreviewContent.js';
 import { readKeepImportItemCache, upsertKeepImportItemCache } from '../database/keepImportItemCache.js';
@@ -49,6 +50,7 @@ export async function refreshKeepImportItemCache(
     return;
   }
   const prepared = await loadPreparedKeepImportRecord(config, source, refreshedAt);
+  const title = resolveCachedTitle(config, source, prepared);
   const previewContent = rewriteExternalPreviewContent(
     prepared.content,
     source.filePath,
@@ -56,12 +58,12 @@ export async function refreshKeepImportItemCache(
   );
   upsertKeepImportItemCache({
     content: previewContent,
-    contentPreview: previewContent,
+    contentPreview: resolveNodeOpeningText(prepared.content, title),
     refreshedAt,
     ruleId: config.ruleId,
     sourceMtimeMs: source.mtimeMs,
     sourcePath: source.sourceName,
     sourceSizeBytes: source.sizeBytes,
-    title: resolveCachedTitle(config, source, prepared)
+    title
   });
 }

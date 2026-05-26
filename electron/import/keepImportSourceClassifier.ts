@@ -1,5 +1,5 @@
 import { buildImportedHighlightPreviewFromMatches } from '../../lib/core/import/importedHighlightPreview.js';
-import { extractNodeOpeningPreview } from '../../lib/core/nodes/nodeOpeningPreview.js';
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeKeepImportContract.js';
 import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -17,11 +17,6 @@ export interface KeepImportPreviewEntry {
   highlightSamples: NativeKeepImportPreviewResult['entries'][number]['highlight_samples'];
   sourcePath: string;
   status: KeepImportPreviewStatus;
-}
-
-function resolveContentPreview(content: string, title: string) {
-  const preview = extractNodeOpeningPreview(content, title);
-  return preview === 'No opening yet.' ? null : preview;
 }
 
 export function isBlockedByDeletedNode(ruleId: string, sourcePath: string) {
@@ -67,7 +62,7 @@ export async function classifySource(
       sourceName: sourcePath
     });
     return {
-      contentPreview: resolveContentPreview(prepared.content, prepared.nodeTitle),
+      contentPreview: resolveNodeOpeningText(prepared.content, prepared.nodeTitle),
       detectedHighlightCount: highlightPreview.detectedHighlightCount,
       detail:
         deleted

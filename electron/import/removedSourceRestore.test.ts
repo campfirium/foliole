@@ -117,7 +117,7 @@ async function expectRemovedSourceUsesCachedContent(sourceDir: string) {
   expect((await loadRemovedSources()).entries).toEqual([
     expect.objectContaining({
       content: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
-      content_preview: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
+      content_preview: 'Fresh body',
       source_path: 'entry.md',
       title: 'Entry'
     })

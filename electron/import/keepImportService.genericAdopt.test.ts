@@ -106,6 +106,24 @@ it('adopts inline markdown highlights for generic merged keep imports', async ()
   ]);
 });
 
+it('stores a shortened derived cache preview beside the full import content', async () => {
+  const sourceDir = path.join(tempRoot, 'long-source');
+  const opening = Array.from({ length: 40 }, (_, index) => `Opening sentence ${index + 1}`).join(' ');
+  await fs.mkdir(sourceDir, { recursive: true });
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), `# Long Entry\n\n${opening}\n\nFinal paragraph kept in full content.`, 'utf8');
+
+  await runKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-103'));
+
+  const cacheRow = openDatabaseConnection().sqlite
+    .prepare(`SELECT content, content_preview FROM keep_import_item_cache WHERE rule_id = ? AND source_path = ?`)
+    .get('draft-import-source-103', 'entry.md') as { content: string; content_preview: string };
+
+  expect(cacheRow.content).toContain('Final paragraph kept in full content.');
+  expect(cacheRow.content_preview).toContain('Opening sentence 1');
+  expect(cacheRow.content_preview.length).toBeLessThan(cacheRow.content.length);
+  expect(cacheRow.content_preview).not.toBe(cacheRow.content);
+});
+
 it('fails fast for unsupported generic split keep imports', async () => {
   const sourceDir = path.join(tempRoot, 'split-source');
   await fs.mkdir(sourceDir, { recursive: true });
