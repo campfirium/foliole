@@ -8,6 +8,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
+import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 
 let mockedAppDataDir = '/tmp/foliole-workspace-search-sidecar-tests';
 
@@ -77,6 +78,71 @@ it('recreates sidecar indexes when the search tokenizer setting changes on start
   ).toEqual({ count: 0 });
 });
 
+it('rebuilds when metadata survives but sidecar FTS tables are missing', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.exec(`CREATE VIRTUAL TABLE main.node_search USING fts5(
+    title,
+    path,
+    content,
+    node_id UNINDEXED,
+    updated_at UNINDEXED,
+    tokenize = 'trigram'
+  )`);
+  connection.sqlite
+    .prepare('INSERT INTO main.node_search (title, path, content, node_id, updated_at) VALUES (?, ?, ?, ?, ?)')
+    .run('Old main', '', 'main stale marker', 'main-stale-node', '2026-05-26T00:00:00.000Z');
+  connection.sqlite.exec('DROP TABLE search.node_search');
+  closeDatabaseConnection();
+
+  initializeDatabase();
+  const nextConnection = openDatabaseConnection();
+
+  expect(
+    nextConnection.sqlite.prepare("SELECT name FROM search.sqlite_master WHERE type = 'table' AND name = 'node_search'").get()
+  ).toEqual({ name: 'node_search' });
+  expect(
+    nextConnection.sqlite.prepare("SELECT COUNT(*) AS count FROM search.node_search WHERE node_id = 'main-stale-node'").get()
+  ).toEqual({ count: 0 });
+});
+
+it('retries a previous failed rebuild instead of marking it ready without rebuilding', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite
+    .prepare(
+      `INSERT INTO search.search_metadata (key, value_json, updated_at)
+       VALUES ('last_rebuild_status', ?, '2026-05-26T00:00:00.000Z')
+       ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json`
+    )
+    .run(JSON.stringify({ status: 'failed', tokenizer: 'unicode61' }));
+  connection.sqlite.exec('DROP TABLE search.node_search');
+  closeDatabaseConnection();
+
+  initializeDatabase();
+  const nextConnection = openDatabaseConnection();
+
+  expect(
+    nextConnection.sqlite.prepare("SELECT name FROM search.sqlite_master WHERE type = 'table' AND name = 'node_search'").get()
+  ).toEqual({ name: 'node_search' });
+  expect(readLastRebuildStatus(nextConnection.sqlite)).toMatchObject({ status: 'ready' });
+});
+
+it('records failed status without rejecting the opened connection when sidecar rebuild fails after attach', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.exec('DROP TABLE search.node_search');
+
+  expect(() =>
+    initializeWorkspaceSearchSidecar(connection, {
+      rebuildWorkspaceSearchIndexes: () => {
+        throw new Error('sidecar rebuild boom');
+      }
+    })
+  ).not.toThrow();
+  expect(readLastRebuildStatus(connection.sqlite)).toMatchObject({
+    error: 'sidecar rebuild boom',
+    status: 'failed'
+  });
+});
+
 it('keeps the internal search sidecar out of main database backups', async () => {
   const connection = openDatabaseConnection();
   const backupPath = path.join(tempRoot, 'backup.db');
@@ -98,4 +164,11 @@ it('keeps the internal search sidecar out of main database backups', async () =>
 
 function openDetachedSqlite(databasePath: string) {
   return new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
+}
+
+function readLastRebuildStatus(sqlite: import('better-sqlite3').Database) {
+  const row = sqlite
+    .prepare("SELECT value_json FROM search.search_metadata WHERE key = 'last_rebuild_status'")
+    .get() as { value_json: string };
+  return JSON.parse(row.value_json) as Record<string, unknown>;
 }

@@ -22,6 +22,10 @@ interface WorkspaceSearchSidecarConnection extends DatabaseConnectionLike {
   driver: DatabaseDriver;
 }
 
+interface InitializeWorkspaceSearchSidecarOptions {
+  rebuildWorkspaceSearchIndexes?: (driver: DatabaseDriver) => void;
+}
+
 function readJsonObject(value: unknown): Record<string, unknown> | null {
   if (typeof value !== 'string') return null;
   try {
@@ -89,27 +93,72 @@ function createSearchIndexTables(sqlite: DatabaseMigrationTarget, tokenizer: Ful
 
 function shouldRecreateSearchIndexes(sqlite: DatabaseMigrationTarget, tokenizer: FullTextSearchTokenizer) {
   const metadata = readSearchMetadata(sqlite, 'schema');
-  return metadata?.schemaVersion !== SEARCH_SIDECAR_SCHEMA_VERSION || metadata?.tokenizer !== tokenizer;
+  return metadata?.schemaVersion !== SEARCH_SIDECAR_SCHEMA_VERSION || metadata?.tokenizer !== tokenizer || !hasSearchIndexTables(sqlite);
 }
 
-export function initializeWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarConnection>(connection: T): T {
+function hasSearchIndexTables(sqlite: DatabaseMigrationTarget) {
+  const rows = sqlite.prepare(
+    `SELECT name
+     FROM search.sqlite_master
+     WHERE type = 'table'
+       AND name IN ('node_search', 'pdf_search')`
+  ).all() as Array<{ name: string }>;
+  const names = new Set(rows.map((row) => row.name));
+  return names.has('node_search') && names.has('pdf_search');
+}
+
+function shouldRetryPreviousRebuild(sqlite: DatabaseMigrationTarget) {
+  const status = readSearchMetadata(sqlite, 'last_rebuild_status');
+  return status?.status === 'failed' || status?.status === 'rebuilding';
+}
+
+function toErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function tryWriteSearchMetadata(sqlite: DatabaseMigrationTarget, key: string, value: Record<string, unknown>) {
+  try {
+    writeSearchMetadata(sqlite, key, value);
+  } catch {
+    // Metadata is diagnostic; do not let a sidecar status write re-break startup.
+  }
+}
+
+export function initializeWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarConnection>(
+  connection: T,
+  options: InitializeWorkspaceSearchSidecarOptions = {}
+): T {
   const resolution = resolveFullTextSearchIndexStrategy(readAppSettings(connection.sqlite));
   createSearchMetadataTable(connection.sqlite);
-  if (shouldRecreateSearchIndexes(connection.sqlite, resolution.tokenizer)) {
-    dropSearchIndexTables(connection.sqlite);
-    createSearchIndexTables(connection.sqlite, resolution.tokenizer);
-    rebuildWorkspaceSearchIndexes(connection.driver);
-    writeSearchMetadata(connection.sqlite, 'schema', {
-      schemaVersion: SEARCH_SIDECAR_SCHEMA_VERSION,
+  if (shouldRecreateSearchIndexes(connection.sqlite, resolution.tokenizer) || shouldRetryPreviousRebuild(connection.sqlite)) {
+    writeSearchMetadata(connection.sqlite, 'last_rebuild_status', {
+      status: 'rebuilding',
       strategy: resolution.strategy,
       tokenizer: resolution.tokenizer
     });
+    try {
+      dropSearchIndexTables(connection.sqlite);
+      createSearchIndexTables(connection.sqlite, resolution.tokenizer);
+      (options.rebuildWorkspaceSearchIndexes ?? rebuildWorkspaceSearchIndexes)(connection.driver);
+      writeSearchMetadata(connection.sqlite, 'schema', {
+        schemaVersion: SEARCH_SIDECAR_SCHEMA_VERSION,
+        strategy: resolution.strategy,
+        tokenizer: resolution.tokenizer
+      });
+      writeSearchMetadata(connection.sqlite, 'last_rebuild_status', {
+        status: 'ready',
+        strategy: resolution.strategy,
+        tokenizer: resolution.tokenizer
+      });
+    } catch (error) {
+      tryWriteSearchMetadata(connection.sqlite, 'last_rebuild_status', {
+        error: toErrorMessage(error),
+        status: 'failed',
+        strategy: resolution.strategy,
+        tokenizer: resolution.tokenizer
+      });
+    }
   }
-  writeSearchMetadata(connection.sqlite, 'last_rebuild_status', {
-    status: 'ready',
-    strategy: resolution.strategy,
-    tokenizer: resolution.tokenizer
-  });
   return connection;
 }
 

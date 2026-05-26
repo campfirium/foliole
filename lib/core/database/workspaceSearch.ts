@@ -149,24 +149,38 @@ function loadShortTermFallbackMatches(driver: DatabaseDriver, queryPlan: FtsSear
   ];
 }
 
+function loadLiteralFtsWorkspaceMatches(driver: DatabaseDriver, queryPlan: FtsSearchQueryPlan) {
+  try {
+    return [
+      ...loadFtsNodeMatches(driver, queryPlan.literalQuery, queryPlan.normalizedQuery, 'literal', queryPlan.shortTerms),
+      ...loadFtsPdfMatches(driver, queryPlan.literalQuery, queryPlan.normalizedQuery, 'literal', queryPlan.shortTerms)
+    ];
+  } catch {
+    return null;
+  }
+}
+
 export function searchWorkspace(driver: DatabaseDriver, query: string) {
   const queryPlan = buildFtsSearchQueryPlan(query);
   const normalizedQuery = queryPlan.normalizedQuery;
   if (!normalizedQuery) {
     return [];
   }
-  const results =
-    normalizedQuery.length <= 2
-      ? [...loadFallbackNodeMatches(driver, normalizedQuery), ...loadFallbackPdfMatches(driver, normalizedQuery)]
-      : mergeRankedResults([
-          ...loadFtsNodeMatches(driver, queryPlan.literalQuery, queryPlan.normalizedQuery, 'literal', queryPlan.shortTerms),
-          ...loadFtsPdfMatches(driver, queryPlan.literalQuery, queryPlan.normalizedQuery, 'literal', queryPlan.shortTerms),
-          ...loadPairFtsWorkspaceMatches(driver, queryPlan),
-          ...loadTermFtsWorkspaceMatches(driver, queryPlan),
-          ...loadFallbackPdfMatches(driver, queryPlan.normalizedQuery),
-          ...loadCrossPagePdfMatches(driver, queryPlan.normalizedQuery, queryPlan.shortTerms),
-          ...loadShortTermFallbackMatches(driver, queryPlan),
-          ...loadAdvancedFtsWorkspaceMatches(driver, queryPlan)
-        ]).slice(0, MERGED_CANDIDATE_LIMIT);
+  if (normalizedQuery.length <= 2) {
+    return sortAndLimitResults(
+      [...loadFallbackNodeMatches(driver, normalizedQuery), ...loadFallbackPdfMatches(driver, normalizedQuery)],
+      MAX_RESULTS
+    );
+  }
+  const literalFtsMatches = loadLiteralFtsWorkspaceMatches(driver, queryPlan);
+  const results = mergeRankedResults([
+    ...(literalFtsMatches ?? loadFallbackNodeMatches(driver, normalizedQuery)),
+    ...loadPairFtsWorkspaceMatches(driver, queryPlan),
+    ...loadTermFtsWorkspaceMatches(driver, queryPlan),
+    ...loadFallbackPdfMatches(driver, queryPlan.normalizedQuery),
+    ...loadCrossPagePdfMatches(driver, queryPlan.normalizedQuery, queryPlan.shortTerms),
+    ...loadShortTermFallbackMatches(driver, queryPlan),
+    ...loadAdvancedFtsWorkspaceMatches(driver, queryPlan)
+  ]).slice(0, MERGED_CANDIDATE_LIMIT);
   return sortAndLimitResults(results, MAX_RESULTS);
 }
