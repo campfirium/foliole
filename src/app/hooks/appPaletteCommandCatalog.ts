@@ -82,6 +82,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
   { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Developer', keywords: ['developer', 'inspect'] },
   ...SETTINGS_PALETTE_COMMANDS,
+  { id: APP_COMMAND_IDS.openHelpSearch, title: 'DEV Open Help Search', section: 'Workspace', keywords: ['help', 'search', 'guide'] },
   { id: APP_COMMAND_IDS.goBack, title: 'Go Back', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goForward, title: 'Go Forward', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goToNode, title: 'Go to…', section: 'Navigation', keywords: ['search', 'open', 'node', 'jump', 'folder', 'topic', 'item'] },
@@ -124,7 +125,12 @@ function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOpti
   if (id === APP_COMMAND_IDS.redo) {
     return options.canRedoWorkspaceAction;
   }
-  if (id === APP_COMMAND_IDS.openTrash || id === APP_COMMAND_IDS.restartApp || id === APP_COMMAND_IDS.toggleList) {
+  if (
+    id === APP_COMMAND_IDS.openHelpSearch ||
+    id === APP_COMMAND_IDS.openTrash ||
+    id === APP_COMMAND_IDS.restartApp ||
+    id === APP_COMMAND_IDS.toggleList
+  ) {
     return true;
   }
   if (id === APP_COMMAND_IDS.renameNode) {

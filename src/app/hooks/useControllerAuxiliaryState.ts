@@ -35,6 +35,27 @@ function useAppCommandShortcuts(args: {
   });
 }
 
+function buildAuxiliarySearchState(args: {
+  controller: ReturnType<typeof useWorkspaceControllerState>;
+  layoutProps: WorkspaceLayoutProps;
+  onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return buildControllerSearchState({
+    externalLibrary: {
+      openExternalSelection: args.layoutProps.externalLibrary.onOpenExternalSelection
+    },
+    searchPreview: {
+      openSearchPreview: args.onOpenSearchPreview
+    },
+    nav: args.controller.nav,
+    runtime: args.controller.runtime,
+    trash: args.controller.trash,
+    virtualView: args.controller.virtualView,
+    ws: args.ws
+  });
+}
+
 export function useControllerAuxiliaryState(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   controller: ReturnType<typeof useWorkspaceControllerState>;
@@ -42,6 +63,7 @@ export function useControllerAuxiliaryState(args: {
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
+  onOpenHelpSearch: () => void;
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
   paletteItems: CommandPaletteItem[];
   requestDeleteSourceTopic: (nodeId: string) => boolean;
@@ -53,6 +75,7 @@ export function useControllerAuxiliaryState(args: {
     isStudyMode: args.isStudyMode,
     layoutProps: args.layoutProps,
     nav: args.controller.nav,
+    onOpenHelpSearch: args.onOpenHelpSearch,
     paletteItems: args.paletteItems,
     requestDeleteSourceTopic: args.requestDeleteSourceTopic,
     runtime: args.controller.runtime,
@@ -68,19 +91,7 @@ export function useControllerAuxiliaryState(args: {
     ws: args.ws
   });
   const moveToNodeState = buildControllerMoveToNodeState({ runtime: args.controller.runtime, ws: args.ws });
-  const searchState = buildControllerSearchState({
-    externalLibrary: {
-      openExternalSelection: args.layoutProps.externalLibrary.onOpenExternalSelection
-    },
-    searchPreview: {
-      openSearchPreview: args.onOpenSearchPreview
-    },
-    nav: args.controller.nav,
-    runtime: args.controller.runtime,
-    trash: args.controller.trash,
-    virtualView: args.controller.virtualView,
-    ws: args.ws
-  });
+  const searchState = buildAuxiliarySearchState(args);
 
   useAppCommandShortcuts({ controller: args.controller, hotkeys: args.hotkeys, paletteState });
   const hotkeySettings = useMemo(

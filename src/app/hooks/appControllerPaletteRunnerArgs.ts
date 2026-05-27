@@ -156,12 +156,34 @@ function createPaletteAppearanceActions(args: {
   };
 }
 
+function createPaletteRuntimeActions(args: {
+  layoutProps: WorkspaceLayoutProps;
+  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
+  trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
+}) {
+  return {
+    openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
+    openNotesView: args.layoutProps.nodeList.onOpenNotesView,
+    openPostponeTopicPanel: () => args.layoutProps.review.onOpenPostponeTopicPanel(),
+    openReadwiseReaderSettings: () => openReadwiseReaderSettings(args.runtime),
+    openTrashView: args.trash.openTrashView,
+    recordRecentCommand: args.runtime.recordRecentCommand,
+    setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,
+    setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
+    setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
+    setSettingsOpen: args.runtime.setIsSettingsOpen,
+    startClipboardImport: args.layoutProps.imports.onStartClipboardImport,
+    trashViewOpen: args.trash.isTrashViewOpen
+  };
+}
+
 export function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
+  onOpenHelpSearch: () => void;
   paletteItems: CommandPaletteItem[];
   requestDeleteSourceTopic: (nodeId: string) => boolean;
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
@@ -188,30 +210,20 @@ export function createPaletteRunnerArgs(args: {
     importDirectory: args.formalImport.startImportDirectory,
     importSingleFile: args.formalImport.startImportFile,
     onRestartApp: createRestartAppCommand(args),
+    onOpenHelpSearch: args.onOpenHelpSearch,
     ...createPaletteAppearanceActions(args),
     ...createPaletteViewActions(),
+    ...createPaletteRuntimeActions(args),
     onToggleDevTools: toggleMainWindowDevTools,
     onToggleImmersiveMode: args.layoutProps.layoutChrome.onToggleImmersiveMode,
     onToggleListVisibility: args.layoutProps.layoutChrome.onToggleListVisibility,
-    openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
-    openNotesView: args.layoutProps.nodeList.onOpenNotesView,
-    openPostponeTopicPanel: () => args.layoutProps.review.onOpenPostponeTopicPanel(),
-    openReadwiseReaderSettings: () => openReadwiseReaderSettings(args.runtime),
-    openTrashView: args.trash.openTrashView,
     paletteItems: args.paletteItems,
-    recordRecentCommand: args.runtime.recordRecentCommand,
     repairTable: () => repairEditorTable({
       activeNodeId: args.ws.activeNodeId,
       editorRef: args.runtime.editorRef,
       updateNodeContent: args.ws.updateNodeContent
     }),
     reimportSelectedTopic: createReimportSelectedTopicCommand(args),
-    resetImportData: args.formalImport.resetImportData,
-    setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,
-    setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
-    setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
-    setSettingsOpen: args.runtime.setIsSettingsOpen,
-    startClipboardImport: args.layoutProps.imports.onStartClipboardImport,
-    trashViewOpen: args.trash.isTrashViewOpen
+    resetImportData: args.formalImport.resetImportData
   };
 }

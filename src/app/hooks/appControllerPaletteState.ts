@@ -14,6 +14,7 @@ export function buildControllerPaletteState(args: {
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
+  onOpenHelpSearch: () => void;
   paletteItems: CommandPaletteItem[];
   requestDeleteSourceTopic: (nodeId: string) => boolean;
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];

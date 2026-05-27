@@ -1,28 +1,24 @@
-import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
-import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
+import { useControllerCoreState } from './appControllerCoreState';
 import { measureSelectionComputation } from './appControllerInstrumentation';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
-import { useAppControllerReviewEditing } from './appControllerReviewEditing';
-import { useReviewSourceTopicDeleteDialog } from './appControllerReviewSourceDelete';
-import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { buildAppControllerResult } from './appControllerResult';
+import { useControllerReviewEditingState } from './appControllerReviewEditingState';
+import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import type { AppControllerResult } from './appControllerTypes';
 import { countDueReviewNodes } from './layoutPropsBuilder';
-import { APP_SHORTCUT_COMMAND_IDS, useCommandShortcutState } from './reviewHotkeysState';
-import { openCompanionSyncSettings } from './settingsOverlayRequest';
+import { useCommandShortcutState } from './reviewHotkeysState';
 import { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import { useControllerPaletteItems } from './useControllerPaletteItems';
 import { useControllerPriorityQuickSet } from './useControllerPriorityQuickSet';
 import { useCurrentNodeKeyboardShortcuts } from './useCurrentNodeKeyboardShortcuts';
 import { useFormalImport } from './useFormalImport';
-import { useResumeReviewItem } from './useResumeReviewItem';
 import { useReviewQueueDocumentPrefetch } from './useReviewQueueDocumentPrefetch';
 import { useReviewSessionRuntime } from './useReviewSessionRuntime';
 import { useReviewTopicDelayPanel } from './useReviewTopicDelayPanel';
-import { useWorkspaceHydration } from './useWorkspaceHydration';
 
 function useDerivedControllerState(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
@@ -77,31 +73,6 @@ function useDerivedControllerState(args: {
     })
   );
   return { layoutProps, paletteItems };
-}
-
-function buildAppControllerResult(args: {
-  auxiliaryState: ReturnType<typeof useControllerAuxiliaryState>;
-  controller: ReturnType<typeof useWorkspaceControllerState>;
-  layoutProps: WorkspaceLayoutProps;
-  reviewSourceTopicDeleteDialog: ReturnType<typeof useReviewSourceTopicDeleteDialog>;
-  reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
-}): AppControllerResult {
-  return {
-    hotkeySettings: args.auxiliaryState.hotkeySettings,
-    goToNodeState: args.auxiliaryState.goToNodeState,
-    moveToNodeState: args.auxiliaryState.moveToNodeState,
-    layoutProps: args.layoutProps,
-    onOpenCompanionSyncSettings: () => openCompanionSyncSettings(args.controller.runtime),
-    paletteState: args.auxiliaryState.paletteState,
-    reviewSourceTopicDeleteDialog: {
-      isOpen: args.reviewSourceTopicDeleteDialog.isOpen,
-      nodeTitle: args.reviewSourceTopicDeleteDialog.nodeTitle,
-      onCancel: args.reviewSourceTopicDeleteDialog.onCancel,
-      onConfirm: args.reviewSourceTopicDeleteDialog.onConfirm
-    },
-    reviewTopicDelayPanel: args.reviewTopicDelayPanel,
-    searchState: args.auxiliaryState.searchState
-  };
 }
 
 function buildControllerLayoutState(args: {
@@ -164,31 +135,38 @@ function useControllerQuickEntryState(args: {
   return { priorityQuickSet, reviewTopicDelayPanel };
 }
 
+function useControllerAuxiliaryResult(args: {
+  appearance: ReturnType<typeof useAppearanceSettings>;
+  controller: ReturnType<typeof useWorkspaceControllerState>;
+  formalImport: ReturnType<typeof useFormalImport>;
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
+  isStudyMode: boolean;
+  layoutProps: ReturnType<typeof buildAppControllerLayoutProps>;
+  onOpenHelpSearch: () => void;
+  onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
+  paletteItems: ReturnType<typeof useControllerPaletteItems>;
+  requestDeleteSourceTopic: (nodeId: string) => boolean;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return useControllerAuxiliaryState(args);
+}
+
 export function useAppController(args: {
+  onOpenHelpSearch: () => void;
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
 }): AppControllerResult {
-  const ws = useWorkspaceSelectors();
-  const appearance = useAppearanceSettings();
-  const reviewSettings = useReviewSchedulerSettings();
-  const nowIso = useNowIso();
-  const isWorkspaceHydrated = useWorkspaceHydration();
-  const controller = useWorkspaceControllerState(ws, isWorkspaceHydrated);
-  const formalImport = useFormalImport();
-  const { exitStudyMode, isStudyMode, startStudyMode } = controller.study;
-  const hotkeys = useCommandShortcutState(APP_SHORTCUT_COMMAND_IDS);
+  const core = useControllerCoreState();
+  const { appearance, controller, formalImport, hotkeys, isWorkspaceHydrated, nowIso, reviewSettings, ws } = core;
+  const { exitStudyMode, isStudyMode, startStudyMode } = core.controller.study;
   const { priorityQuickSet, reviewTopicDelayPanel } = useControllerQuickEntryState({ controller, hotkeys, isStudyMode, ws });
   const reviewPreview = useReviewSessionRuntime({ isStudyMode, nowIso, reviewSettings, ws });
   useReviewQueueDocumentPrefetch(ws.reviewSession);
-  const isCurrentReviewItemGradable = (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
-  const resumeReviewItem = useResumeReviewItem({ controller, nowIso, reviewSettings, ws });
-  const reviewSourceTopicDeleteDialog = useReviewSourceTopicDeleteDialog(ws);
-  const isReviewEditing = useAppControllerReviewEditing({
+  const reviewEditing = useControllerReviewEditingState({
     controller,
     hotkeys,
-    isCurrentReviewItemGradable,
     isStudyMode,
-    resumeReviewItem,
-    reviewSourceTopicDeleteDialog,
+    nowIso,
+    reviewSettings,
     ws
   });
   const { layoutProps, paletteItems } = useDerivedControllerState({
@@ -197,8 +175,8 @@ export function useAppController(args: {
     exitStudyMode,
     formalImport,
     hotkeys,
-    isCurrentReviewItemGradable,
-    isReviewEditing,
+    isCurrentReviewItemGradable: reviewEditing.isCurrentReviewItemGradable,
+    isReviewEditing: reviewEditing.isReviewEditing,
     isStudyMode,
     isWorkspaceHydrated,
     nowIso,
@@ -206,22 +184,29 @@ export function useAppController(args: {
     reviewTopicDelayPanel,
     reviewPreview,
     reviewSettings,
-    resumeReviewItem,
+    resumeReviewItem: reviewEditing.resumeReviewItem,
     startStudyMode,
     ws
   });
-  const auxiliaryState = useControllerAuxiliaryState({
+  const auxiliaryState = useControllerAuxiliaryResult({
     appearance,
     controller,
     formalImport,
     hotkeys,
     isStudyMode,
     layoutProps,
+    onOpenHelpSearch: args.onOpenHelpSearch,
     onOpenSearchPreview: args.onOpenSearchPreview,
     paletteItems,
-    requestDeleteSourceTopic: reviewSourceTopicDeleteDialog.requestDeleteSourceTopic,
+    requestDeleteSourceTopic: reviewEditing.reviewSourceTopicDeleteDialog.requestDeleteSourceTopic,
     ws
   });
 
-  return buildAppControllerResult({ auxiliaryState, controller, layoutProps, reviewSourceTopicDeleteDialog, reviewTopicDelayPanel });
+  return buildAppControllerResult({
+    auxiliaryState,
+    controller,
+    layoutProps,
+    reviewSourceTopicDeleteDialog: reviewEditing.reviewSourceTopicDeleteDialog,
+    reviewTopicDelayPanel
+  });
 }

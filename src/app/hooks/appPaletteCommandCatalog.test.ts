@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { buildCommandMenuSections } from '../../shared/commands/menuModel';
 
 import { type BuildAppPaletteItemsOptions, getAppPaletteCommands } from './appPaletteCommandCatalog';
 
@@ -59,6 +60,7 @@ describe('getAppPaletteCommands', () => {
     expect(sectionFor(APP_COMMAND_IDS.exportCurrentArticle)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.repairTable)).toBe('Editor');
+    expect(sectionFor(APP_COMMAND_IDS.openHelpSearch)).toBe('Workspace');
     expect(sectionFor(APP_COMMAND_IDS.renameNode)).toBe('Workspace');
     expect(sectionFor(APP_COMMAND_IDS.setPdfDarkAppearanceWarm)).toBe('Settings');
   });
@@ -74,5 +76,17 @@ describe('getAppPaletteCommands', () => {
         (item) => item.id === APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence
       )?.title
     ).toBe('DEV Disable Review Status Bar Memory');
+  });
+
+  it('keeps help knowledge entries out of ordinary command results', () => {
+    const items = getAppPaletteCommands(enabledOptions);
+    const helpCommand = items.find((item) => item.id === APP_COMMAND_IDS.openHelpSearch);
+    const relearnResults = buildCommandMenuSections(items, [], 'relearn').flatMap((section) => section.items);
+    const priorityResults = buildCommandMenuSections(items, [], 'priority').flatMap((section) => section.items);
+
+    expect(helpCommand).toMatchObject({ enabled: true, title: 'DEV Open Help Search' });
+    expect(items.some((item) => item.id.startsWith('menuHelp.'))).toBe(false);
+    expect(relearnResults.map((item) => item.title)).not.toContain('Relearn');
+    expect(priorityResults.map((item) => item.title)).not.toContain('Relearn');
   });
 });

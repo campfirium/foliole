@@ -54,6 +54,7 @@ export const APP_COMMAND_IDS = {
   reimportSelectedTopic: 'dev.reimportSelectedTopic',
   toggleDevReviewStatusBarPersistence: 'dev.toggleReviewStatusBarPersistence',
   openNotes: 'workspace.openNotes',
+  openHelpSearch: 'workspace.openHelpSearch',
   openTrash: 'workspace.openTrash',
   createFolder: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createFolder,
   createTopic: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createTopic,

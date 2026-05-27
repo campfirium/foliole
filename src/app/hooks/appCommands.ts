@@ -38,6 +38,7 @@ interface RunAppCommandActions {
   toggleDevReviewStatusBarPersistence: () => void;
   startClipboardImport: () => void;
   openNotes: () => void;
+  openHelpSearch: () => void;
   openReadwiseReaderSettings: () => void;
   openSettings: () => void;
   openTrash: () => void;
@@ -110,6 +111,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence]: actions.toggleDevReviewStatusBarPersistence,
     [APP_COMMAND_IDS.reimportSelectedTopic]: actions.reimportSelectedTopic,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
+    [APP_COMMAND_IDS.openHelpSearch]: actions.openHelpSearch,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.exportCurrentArticle]: actions.exportCurrentArticle,
     [APP_COMMAND_IDS.enterPriorityMode]: actions.enterPriorityMode,

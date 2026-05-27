@@ -32,6 +32,9 @@ const CommandPalette = lazy(() =>
 const GoToNodePalette = lazy(() =>
   import('./components/GoToNodePalette').then((module) => ({ default: module.GoToNodePalette }))
 );
+const HelpSearch = lazy(() =>
+  import('./components/HelpSearch').then((module) => ({ default: module.HelpSearch }))
+);
 const ReviewSourceTopicDeleteDialog = lazy(() =>
   import('./components/ReviewSourceTopicDeleteDialog').then((module) => ({
     default: module.ReviewSourceTopicDeleteDialog
@@ -50,11 +53,13 @@ const SearchResultPreviewPanel = lazy(() =>
 );
 
 function AppContent() {
+  const [isHelpSearchOpen, setIsHelpSearchOpen] = useState(false);
   const [searchPreviewResult, setSearchPreviewResult] = useState<WorkspaceSearchResult | null>(null);
   const handleOpenSearchPreview = useCallback((result: WorkspaceSearchResult) => {
     setSearchPreviewResult(result);
   }, []);
   const controller = useAppController({
+    onOpenHelpSearch: () => setIsHelpSearchOpen(true),
     onOpenSearchPreview: handleOpenSearchPreview
   });
   useWorkspaceSyncAppliedRefresh();
@@ -81,6 +86,8 @@ function AppContent() {
         <WorkspaceLayout {...workspaceLayoutProps} />
         <AppOverlays
           controller={controller}
+          isHelpSearchOpen={isHelpSearchOpen}
+          onCloseHelpSearch={() => setIsHelpSearchOpen(false)}
           onCloseSearchPreview={() => setSearchPreviewResult(null)}
           searchPreviewResult={searchPreviewResult}
         />
@@ -135,10 +142,14 @@ function useReportAppReadyWhenHydrated(isWorkspaceHydrated?: boolean) {
 
 function AppOverlays({
   controller,
+  isHelpSearchOpen,
+  onCloseHelpSearch,
   onCloseSearchPreview,
   searchPreviewResult
 }: {
   controller: AppController;
+  isHelpSearchOpen: boolean;
+  onCloseHelpSearch: () => void;
   onCloseSearchPreview: () => void;
   searchPreviewResult: WorkspaceSearchResult | null;
 }) {
@@ -148,6 +159,12 @@ function AppOverlays({
       <EpubImportReleaseModeDialog />
       <Suspense fallback={null}>
         {controller.paletteState.isOpen ? <CommandPalette {...controller.paletteState} /> : null}
+        {isHelpSearchOpen ? (
+          <HelpSearch
+            isOpen={isHelpSearchOpen}
+            onClose={onCloseHelpSearch}
+          />
+        ) : null}
         {controller.searchState.isOpen ? <SearchPalette {...controller.searchState} /> : null}
         {controller.goToNodeState.isOpen ? <GoToNodePalette {...controller.goToNodeState} /> : null}
         {controller.moveToNodeState.isOpen ? (

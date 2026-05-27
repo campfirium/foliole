@@ -48,6 +48,7 @@ interface PaletteCommandRunnerArgs {
   onToggleImmersiveMode: () => void;
   onToggleDismissedTopicsVisibility: () => void;
   onToggleListVisibility: () => void;
+  onOpenHelpSearch: () => void;
   onRestartApp: () => void;
   onSetPdfReadingMode: (value: PdfReadingMode) => void;
   onToggleBaseColorMode: () => void;
@@ -162,6 +163,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     },
     toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,
     openNotes: args.closeTrashView,
+    openHelpSearch: args.onOpenHelpSearch,
     openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
     restartApp: args.onRestartApp,
     startClipboardImport: args.startClipboardImport,

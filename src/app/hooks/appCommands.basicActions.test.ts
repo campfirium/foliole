@@ -61,6 +61,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     resetImportData: () => undefined,
     toggleDevReviewStatusBarPersistence: () => undefined,
     openNotes: () => undefined,
+    openHelpSearch: () => undefined,
     openReadwiseReaderSettings: () => undefined,
     openSettings: () => undefined,
     openTrash: () => undefined,
@@ -101,6 +102,14 @@ it('runs toggle devtools through the shared command handler', () => {
   expect(toggleDevTools).toHaveBeenCalledTimes(1);
   expect(importSingleFile).not.toHaveBeenCalled();
   expect(importDirectory).not.toHaveBeenCalled();
+});
+
+it('runs open help search through the shared command handler', () => {
+  const openHelpSearch = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.openHelpSearch, { openHelpSearch });
+
+  expect(openHelpSearch).toHaveBeenCalledTimes(1);
 });
 
 it('runs the dev review status bar persistence toggle through the shared command handler', () => {

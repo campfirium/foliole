@@ -121,7 +121,7 @@ it('shows Relearn help after a long hover', () => {
   });
   const helpCard = screen.getByRole('tooltip');
   expect(helpCard).toHaveTextContent('Relearn');
-  expect(helpCard).toHaveTextContent('Reset this topic’s review progress and send it back into the review queue.');
+  expect(helpCard).toHaveTextContent("Reset this topic's review progress and send it back into the review queue.");
   expect(helpCard).toHaveTextContent('Use this when the topic should be studied again from the beginning.');
 });
 

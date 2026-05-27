@@ -61,6 +61,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     resetImportData: () => undefined,
     toggleDevReviewStatusBarPersistence: () => undefined,
     openNotes: () => undefined,
+    openHelpSearch: () => undefined,
     openReadwiseReaderSettings: () => undefined,
     openSettings: () => undefined,
     openTrash: () => undefined,
