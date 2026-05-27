@@ -19,6 +19,7 @@ type LayoutStateKeys =
   | 'onExitImmersiveMode'
   | 'onToggleImmersiveMode'
   | 'onToggleListVisibility'
+  | 'onToggleBothSidebarVisibility'
   | 'onToggleRightSidebarVisibility';
 
 export interface WorkspaceLayoutProps {

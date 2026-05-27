@@ -71,6 +71,8 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     startClipboardImport: () => undefined,
     toggleEditorDisplayMode: () => undefined,
     toggleList: () => undefined,
+    toggleRightSidebar: () => undefined,
+    toggleBothSidebars: () => undefined,
     ...createReviewCommandActions(),
     toggleDevTools: () => undefined,
     ...overrides
@@ -110,6 +112,20 @@ it('runs open help search through the shared command handler', () => {
   expectCommandRuns(APP_COMMAND_IDS.openHelpSearch, { openHelpSearch });
 
   expect(openHelpSearch).toHaveBeenCalledTimes(1);
+});
+
+it('runs sidebar visibility commands through the shared command handler', () => {
+  const toggleList = vi.fn();
+  const toggleRightSidebar = vi.fn();
+  const toggleBothSidebars = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.toggleList, { toggleList });
+  expectCommandRuns(APP_COMMAND_IDS.toggleRightSidebar, { toggleRightSidebar });
+  expectCommandRuns(APP_COMMAND_IDS.toggleBothSidebars, { toggleBothSidebars });
+
+  expect(toggleList).toHaveBeenCalledTimes(1);
+  expect(toggleRightSidebar).toHaveBeenCalledTimes(1);
+  expect(toggleBothSidebars).toHaveBeenCalledTimes(1);
 });
 
 it('runs the dev review status bar persistence toggle through the shared command handler', () => {

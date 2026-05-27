@@ -71,6 +71,8 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     startClipboardImport: () => undefined,
     toggleEditorDisplayMode: () => undefined,
     toggleList: () => undefined,
+    toggleRightSidebar: () => undefined,
+    toggleBothSidebars: () => undefined,
     ...createReviewCommandActions(),
     toggleDevTools: () => undefined,
     ...overrides

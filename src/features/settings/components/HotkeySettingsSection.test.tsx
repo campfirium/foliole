@@ -39,6 +39,15 @@ function createHotkeyItems(): HotkeySettingItem[] {
       secondaryShortcutLabel: '',
       shortcutSummaryLabel: '',
       isCustomized: false
+    },
+    {
+      commandId: 'workspace.toggleList',
+      title: 'Toggle Left Sidebar',
+      section: 'Workspace',
+      primaryShortcutLabel: '[',
+      secondaryShortcutLabel: 'Ctrl+Shift+L',
+      shortcutSummaryLabel: '[ / Ctrl+Shift+L / Cmd+Shift+L',
+      isCustomized: false
     }
   ];
 }
@@ -133,4 +142,13 @@ it('filters hotkeys by text, assignment state, and recorded search shortcut', as
   });
   expect(screen.getByText('Grade Review: Easy')).toBeInTheDocument();
   expect(screen.queryByText('Grade Review: Good')).not.toBeInTheDocument();
+});
+
+it('shows single-key bracket shortcuts as visible hotkey chips', () => {
+  renderHotkeyPanel();
+
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search hotkeys' }), { target: { value: '[' } });
+
+  expect(screen.getByText('Toggle Left Sidebar')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Shortcut for Toggle Left Sidebar' })).toHaveTextContent('[');
 });

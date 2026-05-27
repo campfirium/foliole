@@ -54,3 +54,21 @@ it('keeps the workspace stable when switching right panels after collapsing the 
   expect(screen.getByRole('button', { name: 'Review queue panel' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByRole('main', { name: 'Foliole workspace' })).toBeInTheDocument();
 });
+
+it('toggles sidebars from non-editing bracket shortcuts', () => {
+  render(<App />);
+
+  fireEvent.keyDown(window, { key: '[' });
+  expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(true);
+
+  fireEvent.keyDown(window, { key: ']' });
+  expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(true);
+
+  fireEvent.keyDown(window, { key: '\\' });
+  expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(false);
+  expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(false);
+
+  fireEvent.keyDown(window, { key: '\\' });
+  expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(true);
+  expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(true);
+});

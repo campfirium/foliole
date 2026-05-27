@@ -69,6 +69,8 @@ export const APP_COMMAND_IDS = {
   exportCurrentArticle: 'workspace.exportCurrentArticle',
   restartApp: 'workspace.restartApp',
   toggleList: 'workspace.toggleList',
+  toggleRightSidebar: 'workspace.toggleRightSidebar',
+  toggleBothSidebars: 'workspace.toggleBothSidebars',
   toggleDevTools: 'workspace.toggleDevTools'
 } as const;
 

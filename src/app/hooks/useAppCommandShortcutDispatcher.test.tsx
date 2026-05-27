@@ -29,7 +29,9 @@ function Harness({
       'app.redo': { primary: { ctrlKey: true, key: 'z', shiftKey: true }, tertiary: { ctrlKey: true, key: 'y' } },
       'workspace.createFolder': { primary: { ctrlKey: true, altKey: true, key: 'f' } },
       'editor.toggleDisplayMode': { primary: { ctrlKey: true, key: '\\' } },
-      'workspace.toggleList': { primary: { ctrlKey: true, key: 'l' } }
+      'workspace.toggleList': { primary: { ctrlKey: true, key: 'l' }, tertiary: { key: '[' } },
+      'workspace.toggleRightSidebar': { primary: { key: ']' } },
+      'workspace.toggleBothSidebars': { primary: { key: '\\' } }
     }
   });
   return <input aria-label="text input" />;
@@ -78,6 +80,47 @@ it('can dispatch newly routed create command shortcuts', () => {
 
   expect(event.defaultPrevented).toBe(true);
   expect(runCommand).toHaveBeenCalledWith('workspace.createFolder');
+});
+
+it('dispatches non-editing bracket sidebar shortcuts', () => {
+  const runCommand = vi.fn();
+  render(
+    <Harness
+      items={[
+        { enabled: true, id: 'workspace.toggleList', title: 'Toggle Left Sidebar' },
+        { enabled: true, id: 'workspace.toggleRightSidebar', title: 'Toggle Right Sidebar' },
+        { enabled: true, id: 'workspace.toggleBothSidebars', title: 'Toggle Both Sidebars' }
+      ]}
+      runCommand={runCommand}
+    />
+  );
+
+  expect(dispatchShortcut({ key: '[' }).defaultPrevented).toBe(true);
+  expect(dispatchShortcut({ key: ']' }).defaultPrevented).toBe(true);
+  expect(dispatchShortcut({ key: '\\' }).defaultPrevented).toBe(true);
+  expect(runCommand).toHaveBeenNthCalledWith(1, 'workspace.toggleList');
+  expect(runCommand).toHaveBeenNthCalledWith(2, 'workspace.toggleRightSidebar');
+  expect(runCommand).toHaveBeenNthCalledWith(3, 'workspace.toggleBothSidebars');
+});
+
+it('does not dispatch bracket sidebar shortcuts while editable text is focused', () => {
+  const runCommand = vi.fn();
+  render(
+    <Harness
+      items={[
+        { enabled: true, id: 'workspace.toggleList', title: 'Toggle Left Sidebar' },
+        { enabled: true, id: 'workspace.toggleRightSidebar', title: 'Toggle Right Sidebar' },
+        { enabled: true, id: 'workspace.toggleBothSidebars', title: 'Toggle Both Sidebars' }
+      ]}
+      runCommand={runCommand}
+    />
+  );
+  document.querySelector('input')!.focus();
+
+  expect(dispatchShortcut({ key: '[' }).defaultPrevented).toBe(false);
+  expect(dispatchShortcut({ key: ']' }).defaultPrevented).toBe(false);
+  expect(dispatchShortcut({ key: '\\' }).defaultPrevented).toBe(false);
+  expect(runCommand).not.toHaveBeenCalled();
 });
 
 it('dispatches app undo when no editable text is focused', () => {

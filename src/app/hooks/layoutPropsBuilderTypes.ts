@@ -128,6 +128,7 @@ export interface BuildLayoutPropsArgs {
   onSplitterKeyDown: WorkspaceLayoutFlatProps['onSplitterKeyDown'];
   onSplitterPointerDown: WorkspaceLayoutFlatProps['onSplitterPointerDown'];
   onToggleListVisibility: () => void;
+  onToggleBothSidebarVisibility: () => void;
   onToggleImmersiveMode: () => void;
   onToggleRightSidebarVisibility: () => void;
   onRunImportFile: WorkspaceLayoutFlatProps['onRunImportFile'];

@@ -29,7 +29,13 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.toggleEditorDisplayMode]: { primary: { key: '\\', ctrlKey: true }, secondary: { key: '\\', metaKey: true } },
   [APP_COMMAND_IDS.toggleImmersiveMode]: { primary: { key: 'F11' } },
   [APP_COMMAND_IDS.toggleDevTools]: { primary: { key: 'i', ctrlKey: true, shiftKey: true }, secondary: { key: 'i', metaKey: true, altKey: true } },
-  [APP_COMMAND_IDS.toggleList]: { primary: { key: 'l', ctrlKey: true, shiftKey: true }, secondary: { key: 'l', metaKey: true, shiftKey: true } },
+  [APP_COMMAND_IDS.toggleList]: {
+    primary: { key: '[' },
+    secondary: { key: 'l', ctrlKey: true, shiftKey: true },
+    tertiary: { key: 'l', metaKey: true, shiftKey: true }
+  },
+  [APP_COMMAND_IDS.toggleRightSidebar]: { primary: { key: ']' } },
+  [APP_COMMAND_IDS.toggleBothSidebars]: { primary: { key: '\\' } },
   [APP_COMMAND_IDS.startStudyMode]: { primary: { key: 'r', altKey: true }, secondary: { key: 'F1' } },
   [APP_COMMAND_IDS.revealReviewAnswer]: { primary: { key: 'f' } },
   [APP_COMMAND_IDS.gradeReviewAgain]: { primary: { key: '1' } },

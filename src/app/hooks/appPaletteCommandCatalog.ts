@@ -79,7 +79,9 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.addSelectionNote, title: 'Annotate Selection', section: 'Editor', keywords: ['highlight', 'selection', 'annotation'] },
   { id: APP_COMMAND_IDS.repairTable, title: 'Repair Table', section: 'Editor', keywords: ['markdown', 'table', 'repair'] },
   { id: APP_COMMAND_IDS.restartApp, title: 'Restart App', section: 'Workspace', keywords: ['restart', 'relaunch'] },
-  { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
+  { id: APP_COMMAND_IDS.toggleList, title: 'Toggle Left Sidebar', section: 'Workspace', keywords: ['sidebar', 'left'] },
+  { id: APP_COMMAND_IDS.toggleRightSidebar, title: 'Toggle Right Sidebar', section: 'Workspace', keywords: ['sidebar', 'right', 'inspector'] },
+  { id: APP_COMMAND_IDS.toggleBothSidebars, title: 'Toggle Both Sidebars', section: 'Workspace', keywords: ['sidebar', 'focus'] },
   { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Developer', keywords: ['developer', 'inspect'] },
   ...SETTINGS_PALETTE_COMMANDS,
   { id: APP_COMMAND_IDS.openHelpSearch, title: 'DEV Open Help Search', section: 'Workspace', keywords: ['help', 'search', 'guide'] },
@@ -129,7 +131,9 @@ function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOpti
     id === APP_COMMAND_IDS.openHelpSearch ||
     id === APP_COMMAND_IDS.openTrash ||
     id === APP_COMMAND_IDS.restartApp ||
-    id === APP_COMMAND_IDS.toggleList
+    id === APP_COMMAND_IDS.toggleList ||
+    id === APP_COMMAND_IDS.toggleRightSidebar ||
+    id === APP_COMMAND_IDS.toggleBothSidebars
   ) {
     return true;
   }

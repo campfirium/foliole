@@ -168,6 +168,7 @@ export interface WorkspaceLayoutFlatProps {
   onCloseImportManagement: () => void;
   onToggleImmersiveMode: () => void;
   onToggleListVisibility: () => void;
+  onToggleBothSidebarVisibility: () => void;
   onToggleRightSidebarVisibility: () => void;
   onRunImportFile: () => Promise<boolean>;
   onRunImportFolder: () => Promise<boolean>;

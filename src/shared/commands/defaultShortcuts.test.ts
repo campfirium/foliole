@@ -42,11 +42,18 @@ describe('default command shortcuts', () => {
     )).toBe(false);
   });
 
-  it('registers toggle list on Ctrl or Cmd Shift L', () => {
+  it('registers toggle list on left bracket with modifier fallbacks', () => {
     const shortcuts = DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.toggleList];
 
+    expect(matchesShortcutSet(keyEvent({ key: '[' }), shortcuts)).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: 'l', ctrlKey: true, shiftKey: true }), shortcuts)).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: 'l', metaKey: true, shiftKey: true }), shortcuts)).toBe(true);
+  });
+
+  it('registers bracket sidebar shortcuts', () => {
+    expect(matchesShortcutSet(keyEvent({ key: ']' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.toggleRightSidebar])).toBe(true);
+    expect(matchesShortcutSet(keyEvent({ key: '\\' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.toggleBothSidebars])).toBe(true);
+    expect(matchesShortcutSet(keyEvent({ key: '\\', ctrlKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.toggleBothSidebars])).toBe(false);
   });
 
   it('registers editor display mode on Ctrl or Cmd backslash', () => {

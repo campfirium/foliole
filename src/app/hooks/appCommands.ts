@@ -49,6 +49,8 @@ interface RunAppCommandActions {
   toggleReviewMode: () => void;
   toggleEditorDisplayMode: () => void;
   toggleList: () => void;
+  toggleRightSidebar: () => void;
+  toggleBothSidebars: () => void;
   gradeReviewAgain: () => void;
   gradeReviewHard: () => void;
   gradeReviewGood: () => void;
@@ -123,6 +125,8 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.repairTable]: actions.repairTable,
     [APP_COMMAND_IDS.restartApp]: actions.restartApp,
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,
+    [APP_COMMAND_IDS.toggleRightSidebar]: actions.toggleRightSidebar,
+    [APP_COMMAND_IDS.toggleBothSidebars]: actions.toggleBothSidebars,
     [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,
     [APP_COMMAND_IDS.openSettings]: actions.openSettings,
     [APP_COMMAND_IDS.openReadwiseReaderSettings]: actions.openReadwiseReaderSettings,

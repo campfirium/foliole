@@ -81,6 +81,33 @@ export function createToggleRightSidebarVisibility(args: BuildControllerLayoutPr
   };
 }
 
+export function createToggleBothSidebarVisibility(args: BuildControllerLayoutPropsArgs) {
+  return () => {
+    if (args.ws.isListCollapsed || args.ws.isRightSidebarCollapsed) {
+      if (args.ws.isListCollapsed) {
+        args.ws.setListWidth(
+          Math.max(LIST_WIDTH_DEFAULT, args.runtime.lastExpandedListWidthRef.current || args.ws.listWidth || LIST_WIDTH_DEFAULT)
+        );
+      }
+      if (args.ws.isRightSidebarCollapsed) {
+        args.ws.setRightSidebarWidth(
+          Math.max(
+            RIGHT_SIDEBAR_WIDTH_DEFAULT,
+            args.runtime.lastExpandedRightSidebarWidthRef.current ||
+              args.ws.rightSidebarWidth ||
+              RIGHT_SIDEBAR_WIDTH_DEFAULT
+          )
+        );
+      }
+      return;
+    }
+    args.runtime.lastExpandedListWidthRef.current = args.ws.listWidth;
+    args.runtime.lastExpandedRightSidebarWidthRef.current = args.ws.rightSidebarWidth;
+    args.ws.setListCollapsed(true);
+    args.ws.setRightSidebarCollapsed(true);
+  };
+}
+
 export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArgs) {
   return (anchor: Node['anchorLink']) => {
     if (!anchor || args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {

@@ -47,7 +47,9 @@ interface PaletteCommandRunnerArgs {
   onToggleEditorDisplayMode: () => void;
   onToggleImmersiveMode: () => void;
   onToggleDismissedTopicsVisibility: () => void;
+  onToggleBothSidebarVisibility: () => void;
   onToggleListVisibility: () => void;
+  onToggleRightSidebarVisibility: () => void;
   onOpenHelpSearch: () => void;
   onRestartApp: () => void;
   onSetPdfReadingMode: (value: PdfReadingMode) => void;
@@ -171,6 +173,8 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     toggleDismissedTopicsVisibility: args.onToggleDismissedTopicsVisibility,
     toggleImmersiveMode: args.onToggleImmersiveMode,
     toggleList: args.onToggleListVisibility,
+    toggleRightSidebar: args.onToggleRightSidebarVisibility,
+    toggleBothSidebars: args.onToggleBothSidebarVisibility,
     toggleDevTools: args.onToggleDevTools
   };
 }

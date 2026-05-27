@@ -216,7 +216,9 @@ export function createPaletteRunnerArgs(args: {
     ...createPaletteRuntimeActions(args),
     onToggleDevTools: toggleMainWindowDevTools,
     onToggleImmersiveMode: args.layoutProps.layoutChrome.onToggleImmersiveMode,
+    onToggleBothSidebarVisibility: args.layoutProps.layoutChrome.onToggleBothSidebarVisibility,
     onToggleListVisibility: args.layoutProps.layoutChrome.onToggleListVisibility,
+    onToggleRightSidebarVisibility: args.layoutProps.layoutChrome.onToggleRightSidebarVisibility,
     paletteItems: args.paletteItems,
     repairTable: () => repairEditorTable({
       activeNodeId: args.ws.activeNodeId,

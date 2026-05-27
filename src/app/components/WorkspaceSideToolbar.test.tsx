@@ -112,5 +112,5 @@ it('exposes shortcuts on visible rail command buttons', () => {
 
   renderToolbar(false);
 
-  expect(screen.getByRole('button', { name: 'Toggle List' })).toHaveAttribute('aria-keyshortcuts', 'Control+Shift+L Meta+Shift+L');
+  expect(screen.getByRole('button', { name: 'Toggle List' })).toHaveAttribute('aria-keyshortcuts', '[ Control+Shift+L Meta+Shift+L');
 });

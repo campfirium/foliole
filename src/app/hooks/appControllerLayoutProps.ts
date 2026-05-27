@@ -15,7 +15,7 @@ import { createLayoutDataArgs } from './appControllerLayoutData';
 import { createSelectTrashNodeHandler } from './appControllerNavHandlers';
 import { createPastedTextAnchorsHandler } from './appControllerPastedTextAnchors';
 import { createReadingPositionHandlers } from './appControllerReadingPosition';
-import { createPersistPdfViewState, createRevealAnchorInDocument, createRevealDocumentPosition, createRevealDocumentSelection, createResolveDocumentPositionAtViewportY, createToggleListVisibility, createToggleRightSidebarVisibility } from './appControllerRuntimeActions';
+import { createPersistPdfViewState, createRevealAnchorInDocument, createRevealDocumentPosition, createRevealDocumentSelection, createResolveDocumentPositionAtViewportY, createToggleBothSidebarVisibility, createToggleListVisibility, createToggleRightSidebarVisibility } from './appControllerRuntimeActions';
 import {
   createOpenExternalSelection,
   createOpenNotesView,
@@ -181,6 +181,7 @@ function createLayoutHandlerArgs(
     onSplitterKeyDown: args.listResize.handleSplitterKeyDown,
     onSplitterPointerDown: args.listResize.handleSplitterPointerDown,
     onToggleListVisibility: createToggleListVisibility(args),
+    onToggleBothSidebarVisibility: createToggleBothSidebarVisibility(args),
     onToggleImmersiveMode: () => args.runtime.setIsImmersiveMode((current) => !current),
     onToggleRightSidebarVisibility: createToggleRightSidebarVisibility(args),
     updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade),
