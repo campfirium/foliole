@@ -114,11 +114,14 @@ function handleImmersiveReadingKey(args: {
   readableNodeIds: string[];
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
 }) {
-  if (args.event.key === 'ArrowUp' || args.event.key === 'ArrowDown') {
+  const directionKey = args.event.key === 'ArrowUp' || (args.event.key === ' ' && args.event.shiftKey)
+    ? 'backward'
+    : args.event.key === 'ArrowDown' || args.event.key === ' ' ? 'forward' : null;
+  if (directionKey) {
     args.event.preventDefault();
     selectParagraph({
       getReadingSelection: args.getReadingSelection,
-      direction: args.event.key === 'ArrowUp' ? 'backward' : 'forward',
+      direction: directionKey,
       markNextProgrammaticScroll: args.markNextProgrammaticScroll,
       setReadingSelection: args.setReadingSelection,
       props: args.props,

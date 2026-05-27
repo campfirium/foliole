@@ -108,6 +108,20 @@ it('toggles the shortcuts overlay with question mark', () => {
   expect(result.current.isShortcutsOverlayOpen).toBe(true);
 });
 
+it('moves paragraph selection with Space and Shift+Space in non-editing reading mode', () => {
+  const { adapter, props } = buildProps();
+  renderHook(() => useImmersiveReadingMode(props));
+  vi.mocked(adapter.setParagraphMarker).mockClear();
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', shiftKey: true }));
+  });
+
+  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(1, { from: 7, to: 11 });
+  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(2, { from: 0, to: 5 });
+});
+
 it('exits immersive editing when Escape comes from the editor element', () => {
   const { props } = buildProps();
   const { result } = renderHook(() => useImmersiveReadingMode(props));

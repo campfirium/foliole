@@ -47,3 +47,22 @@ it('scrolls the visible reading topic with Space and Shift+Space from body focus
   expect(scrollReviewReadingDown).toHaveBeenCalledTimes(1);
   expect(scrollReviewReadingUp).toHaveBeenCalledTimes(1);
 });
+
+it('leaves Space to immersive reading while review mode stays active', () => {
+  const scrollReviewReadingDown = vi.fn(() => true);
+  const scrollReviewReadingUp = vi.fn(() => true);
+  render(
+    <ReviewShortcutHarness
+      isCurrentReviewItemVisible
+      isImmersiveMode
+      scrollReviewReadingDown={scrollReviewReadingDown}
+      scrollReviewReadingUp={scrollReviewReadingUp}
+    />
+  );
+
+  fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+  fireEvent.keyDown(window, { code: 'Space', key: ' ', shiftKey: true });
+
+  expect(scrollReviewReadingDown).not.toHaveBeenCalled();
+  expect(scrollReviewReadingUp).not.toHaveBeenCalled();
+});

@@ -46,6 +46,7 @@ export function useReviewEditingState(args: {
 }) {
   return useReviewKeyboardShortcuts({
     isStudyMode: args.isStudyMode,
+    isImmersiveMode: args.runtime.isImmersiveMode,
     isCommandPaletteOpen: args.runtime.isCommandPaletteOpen,
     isSearchPaletteOpen: args.runtime.isSearchPaletteOpen,
     isSettingsOpen: args.runtime.isSettingsOpen,

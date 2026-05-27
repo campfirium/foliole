@@ -42,6 +42,7 @@ export function ReviewShortcutHarness(
 ) {
   const args: Parameters<typeof useReviewKeyboardShortcuts>[0] = {
     isStudyMode: true,
+    isImmersiveMode: false,
     isCommandPaletteOpen: false,
     isSearchPaletteOpen: false,
     isSettingsOpen: false,

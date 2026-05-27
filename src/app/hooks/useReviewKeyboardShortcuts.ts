@@ -11,6 +11,7 @@ import { isEditableKeyboardTarget, isSpaceReservedKeyboardTarget } from './works
 
 interface UseReviewKeyboardShortcutsArgs {
   isStudyMode: boolean;
+  isImmersiveMode: boolean;
   isCommandPaletteOpen: boolean;
   isSearchPaletteOpen: boolean;
   isSettingsOpen: boolean;
@@ -108,6 +109,9 @@ function handleReviewKeydown(
   lastChildByParentIdRef: MutableRefObject<Record<string, string>>
 ) {
   if (!args.isStudyMode || args.isCommandPaletteOpen || args.isSearchPaletteOpen || args.isSettingsOpen) {
+    return;
+  }
+  if (args.isImmersiveMode && event.key === ' ') {
     return;
   }
   if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.isComposing || event.repeat) {
