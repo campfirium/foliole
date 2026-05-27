@@ -32,6 +32,7 @@ interface ReviewModeToolbarProps {
   reviewSummary?: ReviewToolbarSessionSummaryValues;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   reviewSessionMode: ReviewSessionMode;
+  surface?: 'panel' | 'overlay';
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
   onReadReviewTopic: () => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
@@ -113,6 +114,7 @@ function PausedReviewActionBar({
   reviewSessionMode,
   showProgress = true,
   showSummary,
+  surface,
   style
 }: Pick<
   ReviewModeToolbarProps,
@@ -125,6 +127,7 @@ function PausedReviewActionBar({
   | 'reviewSessionMode'
   | 'showProgress'
   | 'showSummary'
+  | 'surface'
   | 'style'
 >) {
   return (
@@ -143,6 +146,7 @@ function PausedReviewActionBar({
         />
       }
       secondary={showSummary ? <ReviewPausedSummary reviewCurrentTitle={reviewCurrentTitle} /> : null}
+      {...definedProps({ surface })}
     />
   );
 }
@@ -182,6 +186,7 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
         })}
         reviewStatus={toolbarProps.reviewStatus}
         showSummary={toolbarProps.showSummary}
+        {...definedProps({ surface: toolbarProps.surface })}
       />
     );
   }

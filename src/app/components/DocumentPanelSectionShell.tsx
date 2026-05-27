@@ -76,11 +76,9 @@ function renderDocumentPanelChrome(args: {
       })}
       <DocumentPriorityQuickSetHint
         isActive={!args.isFolderListView && Boolean(args.props.isPriorityQuickSetActive)}
-        onPriorityChange={
-          args.props.activeNodeId && args.props.onNodePriorityChange
-            ? (priority) => args.props.onNodePriorityChange?.(args.props.activeNodeId!, priority)
-            : undefined
-        }
+        {...(args.props.activeNodeId && args.props.onNodePriorityChange
+          ? { onPriorityChange: (priority: number) => args.props.onNodePriorityChange?.(args.props.activeNodeId!, priority) }
+          : {})}
         priority={resolvePriorityQuickSetValue(args.props)}
       />
       {renderDocumentSearchToolbar(

@@ -22,7 +22,7 @@ const {
   flushAllDirtyNodeSyncVersions
 } = vi.hoisted(() => ({
   defaultReviewSchedulerSettings: {
-    algorithm: 'ts-fsrs@4.3.0',
+    algorithm: 'ts-fsrs@5.4.0 using FSRS-6.0',
     desiredRetention: 0.9,
     maximumIntervalDays: 36500,
     enableShortTerm: false,

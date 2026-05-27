@@ -147,3 +147,26 @@ it('captures the viewport reading position and starts an applying lock when ente
   expect(beginApplyingReadingPosition).toHaveBeenCalledWith({ from: 7, to: 7 }, 'enter-immersive');
   expect(adapter.revealSelection).not.toHaveBeenCalled();
 });
+
+it('allows F11 to enter immersive reading while review mode is active', () => {
+  const { props } = buildProps();
+  props.isImmersiveMode = false;
+  props.isStudyMode = true;
+  renderHook(() => useImmersiveReadingMode(props));
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' }));
+  });
+
+  expect(props.onToggleImmersiveMode).toHaveBeenCalledTimes(1);
+  expect(props.onExitImmersiveMode).not.toHaveBeenCalled();
+});
+
+it('keeps immersive reading open after entering review mode', () => {
+  const { props } = buildProps();
+  props.isImmersiveMode = true;
+  props.isStudyMode = true;
+  renderHook(() => useImmersiveReadingMode(props));
+
+  expect(props.onExitImmersiveMode).not.toHaveBeenCalled();
+});

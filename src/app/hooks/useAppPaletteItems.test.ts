@@ -67,3 +67,16 @@ it('enables review mode from the directory list when due review items exist with
     enabled: true
   });
 });
+
+it('keeps immersive reading available while review mode is active', () => {
+  const { result } = renderHook(() =>
+    useAppPaletteItems({
+      ...createPaletteArgs('node-1'),
+      isStudyMode: true
+    } as unknown as Parameters<typeof useAppPaletteItems>[0])
+  );
+
+  expect(result.current.find((item) => item.id === APP_COMMAND_IDS.toggleImmersiveMode)).toMatchObject({
+    enabled: true
+  });
+});

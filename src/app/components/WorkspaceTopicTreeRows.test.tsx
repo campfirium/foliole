@@ -168,7 +168,7 @@ it('renders markdown-looking topic titles as plain list text', () => {
 it('only shows the leaf chevron placeholder on first-level native topics', () => {
   const root = createTopicNode(1);
   const child = { ...createTopicNode(2), parentNodeId: root.id };
-  const derived = { ...createTopicNode(3), anchorLink: 'foliole://source/3' };
+  const derived = { ...createTopicNode(3), anchorLink: { id: 'source-3', kind: 'highlight' as const } };
   renderTopicRows(
     [
       createRow(root),
@@ -203,7 +203,7 @@ it('keeps virtual row sizing aligned with folder tree row spacing', () => {
       onRenameNode={vi.fn()}
       onSelectNode={vi.fn()}
       onToggleCollapse={vi.fn()}
-      rows={nodes.map(createRow)}
+      rows={nodes.map((node) => createRow(node))}
       scrollContainerRef={createRef<HTMLDivElement>()}
       selectedNodeIds={[]}
     />

@@ -6,6 +6,18 @@ import { AppButton } from './Button';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
 import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from './Tooltip';
 
+export type ReviewActionSurface = 'panel' | 'overlay';
+
+function overlayDividerClass(surface: ReviewActionSurface) {
+  return surface === 'overlay' ? 'gap-0 [&>*+*]:border-l [&>*+*]:border-[rgb(var(--color-border)/0.8)]' : '';
+}
+
+function overlayButtonClass(surface: ReviewActionSurface) {
+  return surface === 'overlay'
+    ? 'min-w-20 border-0 bg-transparent px-5 text-foreground/82 hover:bg-transparent hover:text-foreground focus-visible:ring-1 focus-visible:ring-border-strong'
+    : undefined;
+}
+
 function ReviewGradeButton(props: {
   buttonClassName?: string;
   buttonVariant: 'ghost' | 'primary';
@@ -58,6 +70,7 @@ export function ReviewGradeActions({
   groupClassName,
   isSubmitting,
   onRetry,
+  surface = 'panel',
   submitGrade
 }: {
   buttonClassName?: string;
@@ -66,13 +79,15 @@ export function ReviewGradeActions({
   groupClassName?: string;
   isSubmitting: boolean;
   onRetry?: () => void;
+  surface?: ReviewActionSurface;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
+  const resolvedButtonClassName = buttonClassName ?? overlayButtonClass(surface);
   return (
     <div className="flex items-center gap-2">
-      <ToolbarActionGroup ariaLabel="Review grade actions" className={groupClassName ?? 'gap-2'}>
+      <ToolbarActionGroup ariaLabel="Review grade actions" className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`}>
         <ReviewGradeButton
-          {...(buttonClassName !== undefined ? { buttonClassName } : {})}
+          {...(resolvedButtonClassName !== undefined ? { buttonClassName: resolvedButtonClassName } : {})}
           buttonVariant={buttonVariant}
           disabled={isSubmitting}
           grade={1}
@@ -80,7 +95,7 @@ export function ReviewGradeActions({
           submitGrade={submitGrade}
         />
         <ReviewGradeButton
-          {...(buttonClassName !== undefined ? { buttonClassName } : {})}
+          {...(resolvedButtonClassName !== undefined ? { buttonClassName: resolvedButtonClassName } : {})}
           buttonVariant={buttonVariant}
           disabled={isSubmitting}
           grade={2}
@@ -88,7 +103,7 @@ export function ReviewGradeActions({
           submitGrade={submitGrade}
         />
         <ReviewGradeButton
-          {...(buttonClassName !== undefined ? { buttonClassName } : {})}
+          {...(resolvedButtonClassName !== undefined ? { buttonClassName: resolvedButtonClassName } : {})}
           buttonVariant={buttonVariant}
           disabled={isSubmitting}
           grade={3}
@@ -96,7 +111,7 @@ export function ReviewGradeActions({
           submitGrade={submitGrade}
         />
         <ReviewGradeButton
-          {...(buttonClassName !== undefined ? { buttonClassName } : {})}
+          {...(resolvedButtonClassName !== undefined ? { buttonClassName: resolvedButtonClassName } : {})}
           buttonVariant={buttonVariant}
           disabled={isSubmitting}
           grade={4}
@@ -127,7 +142,8 @@ export function ReadingReviewActions({
   onReadReviewTopic,
   onPostponeReviewTopic,
   onDismissReviewTopic,
-  onRevisitReviewTopicSoon
+  onRevisitReviewTopicSoon,
+  surface = 'panel'
 }: {
   actionButtonClassName?: string;
   groupClassName?: string;
@@ -135,6 +151,7 @@ export function ReadingReviewActions({
   onPostponeReviewTopic: () => void;
   onDismissReviewTopic: () => void;
   onRevisitReviewTopicSoon?: () => void;
+  surface?: ReviewActionSurface;
 }) {
   const buttonClassName = actionButtonClassName ?? 'min-w-20 border-border px-4';
   const wrapWithTooltip = (button: ReactNode, tooltip: string) => (
@@ -144,23 +161,23 @@ export function ReadingReviewActions({
     </AppTooltip>
   );
   return (
-    <ToolbarActionGroup ariaLabel="Reading review actions" className={groupClassName ?? 'gap-2'} data-review-toolbar-kind="reading">
+    <ToolbarActionGroup ariaLabel="Reading review actions" className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`} data-review-toolbar-kind="reading">
       {onRevisitReviewTopicSoon
         ? wrapWithTooltip(
-            <ReadingReviewButton className={buttonClassName} label="Soon" onClick={onRevisitReviewTopicSoon} />,
+            <ReadingReviewButton className={overlayButtonClass(surface) ?? buttonClassName} label="Soon" onClick={onRevisitReviewTopicSoon} />,
             'Appears again after this queue.'
           )
         : null}
       {wrapWithTooltip(
-        <ReadingReviewButton className={buttonClassName} label="Later" onClick={onPostponeReviewTopic} />,
+        <ReadingReviewButton className={overlayButtonClass(surface) ?? buttonClassName} label="Later" onClick={onPostponeReviewTopic} />,
         'Appears again after a shorter interval.'
       )}
       {wrapWithTooltip(
-        <ReadingReviewButton className={buttonClassName} label="Read" onClick={onReadReviewTopic} />,
+        <ReadingReviewButton className={overlayButtonClass(surface) ?? buttonClassName} label="Read" onClick={onReadReviewTopic} />,
         'Appears again after its normal interval.'
       )}
       {wrapWithTooltip(
-        <ReadingReviewButton className={buttonClassName} label="Dismiss" onClick={onDismissReviewTopic} />,
+        <ReadingReviewButton className={overlayButtonClass(surface) ?? buttonClassName} label="Dismiss" onClick={onDismissReviewTopic} />,
         'No longer appears.'
       )}
     </ToolbarActionGroup>

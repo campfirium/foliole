@@ -19,7 +19,7 @@ import {
 function useImmersiveLifecycleReset(
   props: Pick<
     ImmersiveReadingModeSource,
-    'activeNodeId' | 'editorAdapterRef' | 'isImmersiveMode' | 'isStudyMode' | 'onExitImmersiveMode'
+    'activeNodeId' | 'editorAdapterRef' | 'isImmersiveMode' | 'onExitImmersiveMode'
   >,
   setIsImmersiveEditing: (value: boolean) => void,
   setIsShortcutsOverlayOpen: (value: boolean) => void,
@@ -37,11 +37,6 @@ function useImmersiveLifecycleReset(
       setIsShortcutsOverlayOpen(false);
       return;
     }
-    if (props.isStudyMode) {
-      clearParagraphMarker(props.editorAdapterRef);
-      exitImmersiveModeRef.current();
-      return;
-    }
     clearParagraphMarker(props.editorAdapterRef);
     shouldSkipNextScrollSyncRef.current = false;
     setIsImmersiveEditing(false);
@@ -50,7 +45,6 @@ function useImmersiveLifecycleReset(
     props.activeNodeId,
     props.editorAdapterRef,
     props.isImmersiveMode,
-    props.isStudyMode,
     setIsImmersiveEditing,
     setIsShortcutsOverlayOpen,
     shouldSkipNextScrollSyncRef
@@ -107,18 +101,13 @@ function useImmersiveKeyboardHandler(args: {
   );
 }
 
-function useImmersiveReadingSelectionSyncState(props: ImmersiveReadingModeSource) {
-  return useReadingSelectionState(props);
-}
-
 function useImmersiveModeDependencies(props: ImmersiveReadingModeSource) {
-  const selectionState = useImmersiveReadingSelectionSyncState(props);
+  const selectionState = useReadingSelectionState(props);
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   return {
     ...selectionState,
     canToggleImmersiveMode:
-      Boolean(props.activeNodeId && activeNode && activeNode.kind !== 'folder' && !props.trashedNodeIds.includes(props.activeNodeId)) &&
-      !props.isStudyMode
+      Boolean(props.activeNodeId && activeNode && activeNode.kind !== 'folder' && !props.trashedNodeIds.includes(props.activeNodeId))
   };
 }
 

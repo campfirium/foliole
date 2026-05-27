@@ -56,7 +56,7 @@ export function createCreateNodeHandler(
       return;
     }
     const command = findFolderTopicItemCommandByAppCommandId(commandId);
-    if (!canCreateCommandInSurface(command, menuState.createMenuSurface) || menuState.showVirtualCreateOnly) {
+    if (!command || !canCreateCommandInSurface(command, menuState.createMenuSurface) || menuState.showVirtualCreateOnly) {
       props.contextMenu.closeContextMenu();
       return;
     }

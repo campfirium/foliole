@@ -1,4 +1,4 @@
-import { generatorParameters } from 'ts-fsrs';
+import { FSRSVersion, generatorParameters } from 'ts-fsrs';
 
 import {
   DEFAULT_NEW_DAY_STARTS_AT_HOUR,
@@ -11,7 +11,7 @@ import {
   type UnifiedPushQueueRulesPatch
 } from './unifiedPushQueueRules.js';
 
-const REVIEW_SCHEDULER_ALGORITHM = 'ts-fsrs@4.3.0';
+const REVIEW_SCHEDULER_ALGORITHM = `ts-fsrs@${FSRSVersion.replace(/^v/, '')}`;
 
 export interface ReviewSchedulerSettings {
   algorithm: string;

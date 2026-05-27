@@ -1,4 +1,4 @@
-import { forgetting_curve } from 'ts-fsrs';
+import { default_w, forgetting_curve } from 'ts-fsrs';
 
 import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode, isReadingReviewItemNode, type ReviewItemNodeLike } from '../features/review/model/reviewItemKind';
@@ -97,7 +97,7 @@ function resolveFsrsRetrievability(node: ReviewQueueNode, now: string) {
     return 0;
   }
   const elapsedDays = Math.max((parseReviewQueueTimestamp(now) - parseReviewQueueTimestamp(card.last_review)) / (24 * 60 * 60 * 1000), 0);
-  const retrievability = forgetting_curve(elapsedDays, card.stability);
+  const retrievability = forgetting_curve(default_w, elapsedDays, card.stability);
   return Number.isFinite(retrievability) ? retrievability : 0;
 }
 

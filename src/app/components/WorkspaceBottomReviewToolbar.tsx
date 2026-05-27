@@ -77,8 +77,7 @@ function getReviewProgressCounts(source: WorkspaceBottomReviewToolbarSource): Re
 function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
   return (
     <ReviewModeToolbar
-      className="col-start-3 row-start-1 h-full bg-transparent px-6 max-[1080px]:col-start-1"
-      style={{ borderTopColor: 'transparent' }}
+      className={`${props.isImmersiveMode ? 'col-start-1 pointer-events-auto' : 'col-start-3 bg-transparent'} row-start-1 h-full px-6 max-[1080px]:col-start-1`}
       showProgress={false}
       showSessionModeControl
       showSummary={false}
@@ -105,6 +104,7 @@ function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
       onResumeReviewItem={props.onResumeReviewItem}
       onSetReviewSessionMode={props.onSetReviewSessionMode}
       reviewSessionMode={props.reviewSessionMode}
+      surface={props.isImmersiveMode ? 'overlay' : 'panel'}
     />
   );
 }
@@ -190,9 +190,15 @@ export function WorkspaceBottomReviewToolbar(props: WorkspaceBottomReviewToolbar
   }
 
   return (
-    <div className={`${props.isImmersiveMode ? 'col-start-1' : 'col-span-2'} row-start-2 min-w-0`}>
+    <div
+      className={
+        props.isImmersiveMode
+          ? 'pointer-events-none absolute inset-x-0 bottom-5 z-workspace-overlay min-w-0'
+          : 'col-span-2 row-start-2 min-w-0'
+      }
+    >
       <div
-        className={`workspace-bottom-region-grid relative grid min-w-0 ${props.isImmersiveMode ? 'grid-cols-1' : '[grid-template-columns:var(--workspace-rail-width)_minmax(0,1fr)]'}`}
+        className={`${props.isImmersiveMode ? '' : 'workspace-bottom-region-grid'} relative grid min-w-0 ${props.isImmersiveMode ? 'grid-cols-1' : '[grid-template-columns:var(--workspace-rail-width)_minmax(0,1fr)]'}`}
       >
         {props.isImmersiveMode ? null : <WorkspaceSurfaceRowOverlay row="footer" />}
         {props.isImmersiveMode ? null : <WorkspaceFooterRowDividers isListCollapsed={props.isListCollapsed} />}

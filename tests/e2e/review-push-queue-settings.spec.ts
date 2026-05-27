@@ -4,7 +4,7 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const REVIEW_SETTINGS_STORAGE_KEY = 'foliole-mock-review-scheduler-settings';
 
 const DEFAULT_REVIEW_SCHEDULER_SETTINGS = {
-  algorithm: 'ts-fsrs@4.3.0',
+  algorithm: 'ts-fsrs@5.4.0 using FSRS-6.0',
   desiredRetention: 0.9,
   maximumIntervalDays: 36500,
   enableFuzz: false,

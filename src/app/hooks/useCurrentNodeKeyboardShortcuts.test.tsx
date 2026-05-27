@@ -38,10 +38,10 @@ function createController(overrides: Partial<ControllerStub> = {}): ControllerSt
   };
 }
 
-function createWorkspaceSelectors(deleteNode = vi.fn()) {
+function createWorkspaceSelectors(deleteNode?: (nodeId: string) => void) {
   return {
     activeNodeId: 'node-1',
-    deleteNode,
+    deleteNode: deleteNode ?? vi.fn(),
     nodesById: {
       'node-1': { id: 'node-1', kind: 'topic', parentNodeId: null, title: 'Node 1' }
     }
@@ -51,7 +51,7 @@ function createWorkspaceSelectors(deleteNode = vi.fn()) {
 function installNativeKeyboardBridge() {
   let handler: ((payload: NativeKeyboardInputPayload) => void) | null = null;
   window.electronAPI = {
-    onNativeKeyboardInput: (nextHandler) => {
+    onNativeKeyboardInput: (nextHandler: (payload: NativeKeyboardInputPayload) => void) => {
       handler = nextHandler;
       return () => {
         handler = null;

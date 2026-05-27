@@ -137,7 +137,7 @@ function seedQueryPlanRows(sqlite: ReturnType<typeof openDatabaseConnection>['sq
     `INSERT INTO review_log (
       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-    ) VALUES (?, ?, ?, ?, 3, 'ts-fsrs@4.3.0', ?, ?, 1, 1, ?, 2, 2)`
+    ) VALUES (?, ?, ?, ?, 3, 'ts-fsrs@5.4.0 using FSRS-6.0', ?, ?, 1, 1, ?, 2, 2)`
   );
 
   for (let index = 0; index < 60; index += 1) {

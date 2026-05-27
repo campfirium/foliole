@@ -121,7 +121,6 @@ function buildParentNodeIdById(nodesById: WorkspaceListNodesById) {
 function collectDerivedNodeIds(nodesById: WorkspaceListNodesById) {
   return new Set(
     Object.values(nodesById)
-      .filter((node) => Boolean(node?.anchorLink))
-      .map((node) => node.id)
+      .flatMap((node) => node?.anchorLink ? [node.id] : [])
   );
 }

@@ -114,15 +114,23 @@ export function ReviewToolbarSessionFrame({
   actions,
   className,
   modeControl,
+  surface = 'panel',
   summary
 }: {
   actions: ReactNode;
   className?: string;
   modeControl: ReactNode;
+  surface?: 'panel' | 'overlay';
   summary?: ReviewToolbarSessionSummary;
 }) {
   return (
-    <div className={cn('grid grid-cols-[2rem_auto_2rem] items-center gap-2.5', className)}>
+    <div
+      className={cn(
+        'grid grid-cols-[2rem_auto_2rem] items-center gap-2.5',
+        surface === 'overlay' && '[&>*+*]:border-l [&>*+*]:border-[rgb(var(--color-border)/0.8)] [&>*+*]:pl-2.5',
+        className
+      )}
+    >
       <div className="flex min-w-0 justify-center">{modeControl}</div>
       <div className="flex min-w-0 items-center justify-center">{actions}</div>
       <div className="flex min-w-0 justify-center">{summary ? <ReviewToolbarSessionSummaryMenu summary={summary} /> : null}</div>
@@ -135,12 +143,14 @@ export function ReviewToolbarSessionActions({
   modeControl,
   onSetReviewSessionMode,
   reviewSessionMode,
+  surface = 'panel',
   summary
 }: {
   actions: ReactNode;
   modeControl?: ReactNode;
   onSetReviewSessionMode?: (mode: ReviewSessionMode) => void;
   reviewSessionMode?: ReviewSessionMode;
+  surface?: 'panel' | 'overlay';
   summary?: ReviewToolbarSessionSummary;
 }) {
   const resolvedModeControl =
@@ -149,7 +159,7 @@ export function ReviewToolbarSessionActions({
       <ReviewSessionModeControl mode={reviewSessionMode} onChangeMode={onSetReviewSessionMode} />
     ) : null);
 
-  return <ReviewToolbarSessionFrame actions={actions} modeControl={resolvedModeControl} {...definedProps({ summary })} />;
+  return <ReviewToolbarSessionFrame actions={actions} modeControl={resolvedModeControl} surface={surface} {...definedProps({ summary })} />;
 }
 
 function formatElapsedMs(elapsedMs: number) {

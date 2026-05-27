@@ -32,6 +32,7 @@ export interface ActiveReviewActionBarProps {
   showProgress?: boolean;
   showSessionModeControl?: boolean;
   showSummary?: boolean;
+  surface?: 'panel' | 'overlay';
   style?: CSSProperties;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }
@@ -63,6 +64,7 @@ function createActiveReviewActions(props: Pick<
   | 'onRevealAnswer'
   | 'onRevisitReviewTopicSoon'
   | 'retryGrade'
+  | 'surface'
   | 'submitGrade'
 >) {
   if (!props.isCurrentItemGradable) {
@@ -72,6 +74,7 @@ function createActiveReviewActions(props: Pick<
         onPostponeReviewTopic={props.onPostponeReviewTopic}
         onDismissReviewTopic={props.onDismissReviewTopic}
         onRevisitReviewTopicSoon={props.onRevisitReviewTopicSoon}
+        {...definedProps({ surface: props.surface })}
       />
     );
   }
@@ -83,6 +86,7 @@ function createActiveReviewActions(props: Pick<
       errorMessage={props.errorMessage}
       isSubmitting={props.isSubmitting}
       {...definedProps({ onRetry: props.retryGrade })}
+      {...definedProps({ surface: props.surface })}
       submitGrade={props.submitGrade}
     />
   );
@@ -110,6 +114,7 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps) {
       <ReviewToolbarSessionActions
         actions={actions}
         modeControl={<QueueClearFlowControl />}
+        {...definedProps({ surface: props.surface })}
         {...definedProps({ summary: props.reviewSummary ? { ...props.reviewSummary, status: 'clear' as const } : undefined })}
       />
     );
@@ -119,6 +124,7 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps) {
       actions={actions}
       onSetReviewSessionMode={props.onSetReviewSessionMode}
       reviewSessionMode={props.reviewSessionMode}
+      {...definedProps({ surface: props.surface })}
       {...definedProps({ summary: props.reviewSummary })}
     />
   );
@@ -148,6 +154,7 @@ export function ActiveReviewActionBar(props: ActiveReviewActionBarProps) {
       reviewInputMode={props.isReviewEditing ? 'editing' : 'hotkeys'}
       reviewItemKind={props.isCurrentItemGradable ? 'fsrs' : 'reading'}
       secondary={createActiveReviewSecondary(props)}
+      {...definedProps({ surface: props.surface })}
     />
   );
 }

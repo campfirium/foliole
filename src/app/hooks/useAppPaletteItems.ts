@@ -84,10 +84,9 @@ function canReimportSelectedTopic(args: {
 
 function canToggleImmersiveMode(args: {
   activeNodeId: string | null;
-  isStudyMode: boolean;
   ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
 }) {
-  if (!args.activeNodeId || args.ws.trashedNodeIds.includes(args.activeNodeId) || args.isStudyMode) {
+  if (!args.activeNodeId || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
     return false;
   }
   const activeNode = args.ws.nodesById[args.activeNodeId];

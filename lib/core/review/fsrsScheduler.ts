@@ -35,6 +35,7 @@ interface FsrsCardSnapshot {
   difficulty: number;
   elapsed_days: number;
   scheduled_days: number;
+  learning_steps: number;
   reps: number;
   lapses: number;
 }
@@ -61,6 +62,7 @@ function toFsrsCard(card: SchedulerCard): FsrsCardSnapshot {
     difficulty: card.difficulty,
     elapsed_days: card.elapsed_days,
     scheduled_days: card.scheduled_days,
+    learning_steps: 0,
     reps: card.reps,
     lapses: card.lapses
   };

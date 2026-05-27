@@ -17,7 +17,7 @@ function installNativeKeyboardBridge() {
   let handler: ((payload: NativeKeyboardInputPayload) => void) | null = null;
   const unsubscribe = vi.fn();
   window.electronAPI = {
-    onNativeKeyboardInput: (nextHandler) => {
+    onNativeKeyboardInput: (nextHandler: (payload: NativeKeyboardInputPayload) => void) => {
       handler = nextHandler;
       return unsubscribe;
     }

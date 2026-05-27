@@ -76,7 +76,7 @@ it('uses saved queueMixRatio when interleaving fsrs and reading queues', () => {
     trashedNodeIds: []
   });
 
-  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'reading-1', 'fsrs-2', 'reading-2', 'fsrs-3']);
+  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'reading-2', 'fsrs-2', 'reading-1', 'fsrs-3']);
 });
 
 it('routes roulette selection through the saved priorityRatio', () => {

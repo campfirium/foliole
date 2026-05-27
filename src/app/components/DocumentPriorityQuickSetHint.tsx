@@ -64,7 +64,7 @@ export function DocumentPriorityQuickSetHint({ isActive, onPriorityChange, prior
           </div>
         </div>
 
-        <PriorityQuickSetSlider onPriorityChange={onPriorityChange} priority={priority} />
+        <PriorityQuickSetSlider {...(onPriorityChange ? { onPriorityChange } : {})} priority={priority} />
 
         <div className="flex items-center gap-2 text-xs text-foreground/62">
           <kbd className="rounded-md border border-border px-2 py-0.5 text-xs font-semibold">0-9</kbd>

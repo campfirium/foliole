@@ -2,13 +2,13 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { upsertNodeSnapshotWithOrder } from '../database/nodeMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
 const { defaultReviewSchedulerSettings, openExternal, syncAppMenuState } = vi.hoisted(() => ({
   defaultReviewSchedulerSettings: {
-    algorithm: 'ts-fsrs@4.3.0',
+    algorithm: 'ts-fsrs@5.4.0 using FSRS-6.0',
     desiredRetention: 0.9,
     maximumIntervalDays: 36500,
     enableShortTerm: false,
@@ -57,6 +57,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
   upsertNodeSnapshot: vi.fn(),
+  upsertNodeSnapshotWithOrder: vi.fn(),
   upsertNodeSnapshots: vi.fn()
 }));
 vi.mock('./storage.js', () => ({
@@ -101,35 +102,46 @@ it.each([
         content: '',
         reveal: null,
         anchorLink: null,
+        nodeOrder: [nodeId],
         position: 0,
         createdAt: '2026-03-06T00:00:00.000Z',
         updatedAt: '2026-03-06T00:00:00.000Z'
       }
     })
-  ).resolves.toBeNull();
-
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith({
-    nodeId,
-    parentNodeId: null,
-    kind,
-    priority: null,
-    desiredRetention: null,
-    enableShortTerm: null,
-    sequentialReadingEnabled: null,
-    hideTitleHeading: false,
-    title,
-    isTitleManual: false,
-    content: '',
-    virtualFilter: null,
-    reveal: null,
-    anchorLink: null,
-    imageRegions: null,
-    reading: null,
-    review: null,
-    position: 0,
-    createdAt: '2026-03-06T00:00:00.000Z',
-    updatedAt: '2026-03-06T00:00:00.000Z'
+  ).resolves.toEqual({
+    activeNodeId: null,
+    createdNodeIds: [nodeId],
+    nodeOrder: [nodeId],
+    nodes: [expect.objectContaining({ nodeId, title })]
   });
+
+  expect(upsertNodeSnapshotWithOrder).toHaveBeenCalledWith(
+    {
+      nodeId,
+      parentNodeId: null,
+      kind,
+      priority: null,
+      desiredRetention: null,
+      enableShortTerm: null,
+      sequentialReadingEnabled: null,
+      shelvedAt: null,
+      manualChildOrder: null,
+      hideTitleHeading: false,
+      title,
+      isTitleManual: false,
+      content: '',
+      virtualFilter: null,
+      reveal: null,
+      anchorLink: null,
+      imageRegions: null,
+      reading: null,
+      review: null,
+      position: 0,
+      createdAt: '2026-03-06T00:00:00.000Z',
+      updatedAt: '2026-03-06T00:00:00.000Z'
+    },
+    [nodeId]
+  );
 });
 
 it('persists review payloads on create_item commands', async () => {
@@ -158,14 +170,20 @@ it('persists review payloads on create_item commands', async () => {
         reveal: 'Answer',
         anchorLink: null,
         review,
+        nodeOrder: ['node-create-item'],
         position: 0,
         createdAt: '2026-03-06T00:00:00.000Z',
         updatedAt: '2026-03-06T00:00:00.000Z'
       }
     })
-  ).resolves.toBeNull();
+  ).resolves.toEqual({
+    activeNodeId: null,
+    createdNodeIds: ['node-create-item'],
+    nodeOrder: ['node-create-item'],
+    nodes: [expect.objectContaining({ nodeId: 'node-create-item', review })]
+  });
 
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({ review }));
+  expect(upsertNodeSnapshotWithOrder).toHaveBeenCalledWith(expect.objectContaining({ review }), ['node-create-item']);
 });
 
 it('rejects mismatched folder-topic-item creation payload kinds', async () => {

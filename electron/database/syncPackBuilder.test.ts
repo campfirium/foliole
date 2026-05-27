@@ -102,7 +102,7 @@ function expectNodePackRows(packPath: string) {
     syncObjects: [expect.objectContaining({
       object_id: 'user_space:windows:desktop:*:app_settings',
       object_type: 'setting',
-      payload_json: expect.stringContaining('theme')
+      payload_json: expect.stringMatching(/theme.*fullTextSearch\.indexStrategy/)
     })]
   });
 }

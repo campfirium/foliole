@@ -151,7 +151,7 @@ it('requests a fresh preview when scheduler setting signature changes', async ()
   vi.mocked(createReviewSchedulerAdapter).mockReturnValue(createAdapter(preview));
 
   const { rerender } = render(
-    <PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode previewSeed="ts-fsrs@4.3.0|0.90|36500|0|0" reviewProfile={BASE_PROFILE} />
+    <PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode previewSeed="ts-fsrs@5.4.0 using FSRS-6.0|0.90|36500|0|0" reviewProfile={BASE_PROFILE} />
   );
 
   await waitFor(() => {
@@ -159,7 +159,7 @@ it('requests a fresh preview when scheduler setting signature changes', async ()
   });
 
   rerender(
-    <PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode previewSeed="ts-fsrs@4.3.0|0.90|365|1|0" reviewProfile={BASE_PROFILE} />
+    <PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode previewSeed="ts-fsrs@5.4.0 using FSRS-6.0|0.90|365|1|0" reviewProfile={BASE_PROFILE} />
   );
 
   await waitFor(() => {

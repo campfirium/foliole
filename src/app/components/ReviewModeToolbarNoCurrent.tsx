@@ -21,6 +21,7 @@ interface ReviewNoCurrentItemBarProps {
   reviewSummary?: ReviewToolbarSessionSummary;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   showSummary?: boolean;
+  surface?: 'panel' | 'overlay';
   style?: CSSProperties;
 }
 
@@ -60,8 +61,9 @@ function useReadingReadShortcut(action: () => void) {
 function ReviewCompleteBar({
   className,
   onContinueReading,
+  surface,
   style
-}: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onContinueReading' | 'reviewSummary' | 'style'>) {
+}: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onContinueReading' | 'reviewSummary' | 'surface' | 'style'>) {
   useReadingReadShortcut(onContinueReading);
 
   return (
@@ -74,10 +76,12 @@ function ReviewCompleteBar({
         <ReviewToolbarSessionActions
           actions={<ContinueReadingAction onContinueReading={onContinueReading} />}
           modeControl={<QueueClearFlowControl />}
+          {...definedProps({ surface })}
         />
       }
       progress={null}
       secondary={null}
+      {...definedProps({ surface })}
     />
   );
 }
@@ -86,8 +90,9 @@ function ReviewResumeBar({
   className,
   onResumeReviewItem,
   showSummary,
+  surface,
   style
-}: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onResumeReviewItem' | 'reviewSummary' | 'showSummary' | 'style'>) {
+}: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onResumeReviewItem' | 'reviewSummary' | 'showSummary' | 'surface' | 'style'>) {
   useReadingReadShortcut(onResumeReviewItem);
 
   return (
@@ -99,10 +104,12 @@ function ReviewResumeBar({
         <ReviewToolbarSessionActions
           actions={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
           modeControl={<span aria-hidden="true" className="size-8" />}
+          {...definedProps({ surface })}
         />
       }
       progress={null}
       secondary={showSummary ? 'Flow mode' : null}
+      {...definedProps({ surface })}
     />
   );
 }
@@ -114,6 +121,7 @@ export function ReviewNoCurrentItemBar({
   reviewSummary,
   reviewStatus,
   showSummary,
+  surface,
   style
 }: ReviewNoCurrentItemBarProps) {
   if (reviewStatus === 'completed') {
@@ -122,6 +130,7 @@ export function ReviewNoCurrentItemBar({
         onContinueReading={onContinueReading}
         {...definedProps({ reviewSummary })}
         {...definedProps({ className, style })}
+        {...definedProps({ surface })}
       />
     );
   }
@@ -132,6 +141,7 @@ export function ReviewNoCurrentItemBar({
       {...definedProps({ reviewSummary })}
       {...definedProps({ showSummary })}
       {...definedProps({ className, style })}
+      {...definedProps({ surface })}
     />
   );
 }
