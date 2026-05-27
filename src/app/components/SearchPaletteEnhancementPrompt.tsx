@@ -131,11 +131,11 @@ function SearchEnhancementPromptContent(props: SearchEnhancementPromptContentPro
     <>
       <AppDialogTitle>Turn on search enhancement for languages without spaces?</AppDialogTitle>
       <AppDialogDescription className="mt-2">
-        This improves search for Chinese, Japanese, Korean, and other languages that are not separated by spaces. It uses more search index storage. You can change this later in Settings &gt; General.
+        This improves search for Chinese, Japanese, Korean, and other languages that are not separated by spaces. It uses more search data. You can change this later in Settings &gt; General.
       </AppDialogDescription>
       <div className="mt-5 flex justify-end gap-2">
         <AppButton onClick={props.onSkip} variant="ghost">
-          Skip
+          Not now
         </AppButton>
         <AppButton disabled={props.isUpdating} onClick={props.onTurnOn} variant="primary">
           {props.isUpdating ? 'Turning on...' : 'Turn on'}

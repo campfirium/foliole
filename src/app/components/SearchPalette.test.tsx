@@ -90,6 +90,18 @@ beforeEach(() => {
   window.localStorage.clear();
   vi.clearAllMocks();
 });
+
+it('keeps a silent result area before the user types', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed, 'true');
+  vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
+  const view = renderSearchPalette();
+
+  expect(screen.getByRole('textbox', { name: 'Search workspace' })).toHaveAttribute('placeholder', 'Search titles and content...');
+  expect(view.container.querySelector('[aria-hidden="true"].min-h-56')).toBeInTheDocument();
+  expect(screen.queryByText('Search topics and external sources')).not.toBeInTheDocument();
+  expect(screen.queryByText(/notes/i)).not.toBeInTheDocument();
+});
+
 it('renders search results as title context and path rows', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed, 'true');
   vi.mocked(getRuntimeInvoke).mockReturnValue(

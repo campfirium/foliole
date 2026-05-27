@@ -22,9 +22,11 @@ import {
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 export function SearchPaletteEmptyState({ query }: { query: string }) {
-  const label = query.trim() ? 'No matching results' : 'Search across notes and external folders';
+  const label = query.trim() ? 'No matching results' : null;
+  const className = appFloatingListClassName('min-h-56');
+  if (!label) return <div aria-hidden="true" className={className} />;
   return (
-    <ul className={appFloatingListClassName()}>
+    <ul className={className}>
       <li className={appFloatingEmptyStateClassName()}>{label}</li>
     </ul>
   );

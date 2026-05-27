@@ -33,7 +33,7 @@ it('offers search enhancement once and turns it on', async () => {
     name: 'Turn on search enhancement for languages without spaces?'
   })).toBeInTheDocument();
   expect(screen.getByText(/other languages that are not separated by spaces/)).toBeInTheDocument();
-  expect(screen.getByText(/uses more search index storage/i)).toBeInTheDocument();
+  expect(screen.getByText(/uses more search data/i)).toBeInTheDocument();
   expect(screen.getByText(/Settings > General/)).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Turn on' }));
@@ -54,7 +54,7 @@ it('offers search enhancement once and turns it on', async () => {
 it('dismisses the search enhancement prompt without turning it on', () => {
   render(<SearchPaletteEnhancementPrompt />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed)).toBe('true');
   expect(window.localStorage.getItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY)).toBeNull();
