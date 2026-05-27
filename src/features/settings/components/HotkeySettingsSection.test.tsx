@@ -46,7 +46,11 @@ function createHotkeyItems(): HotkeySettingItem[] {
       section: 'Workspace',
       primaryShortcutLabel: '[',
       secondaryShortcutLabel: 'Ctrl+Shift+L',
-      shortcutSummaryLabel: '[ / Ctrl+Shift+L / Cmd+Shift+L',
+      shortcutSummaryLabel: '[ / Ctrl+Shift+L',
+      shortcutDisplayEntries: [
+        { label: '[', slot: 'primary' },
+        { label: 'Ctrl+Shift+L', slot: 'secondary' }
+      ],
       isCustomized: false
     }
   ];
@@ -151,4 +155,34 @@ it('shows single-key bracket shortcuts as visible hotkey chips', () => {
 
   expect(screen.getByText('Toggle Left Sidebar')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Shortcut for Toggle Left Sidebar' })).toHaveTextContent('[');
+});
+
+it('filters hotkeys by the platform-specific display labels', () => {
+  renderHotkeyPanel();
+
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search hotkeys' }), { target: { value: 'cmd' } });
+
+  expect(screen.queryByText('Toggle Left Sidebar')).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search hotkeys' }), { target: { value: 'ctrl' } });
+
+  expect(screen.getByText('Toggle Left Sidebar')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Secondary shortcut for Toggle Left Sidebar' })).toHaveTextContent('Ctrl+Shift+L');
+});
+
+it('keeps platform-folded shortcuts in the visible list before any local edit', () => {
+  renderHotkeyPanel();
+
+  expect(screen.getByText('Toggle Left Sidebar')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Shortcut for Toggle Left Sidebar' })).toHaveTextContent('[');
+  expect(screen.getByRole('button', { name: 'Secondary shortcut for Toggle Left Sidebar' })).toHaveTextContent('Ctrl+Shift+L');
+  expect(screen.queryByText('Cmd+Shift+L')).not.toBeInTheDocument();
+});
+
+it('filters hotkeys across shortcut separator characters', () => {
+  renderHotkeyPanel();
+
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search hotkeys' }), { target: { value: 'ctrl shift l' } });
+
+  expect(screen.getByText('Toggle Left Sidebar')).toBeInTheDocument();
 });

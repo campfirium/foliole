@@ -23,7 +23,7 @@ describe('default command shortcuts', () => {
     expect(matchesShortcutSet(keyEvent({ key: 'i', metaKey: true, altKey: true }), shortcuts)).toBe(true);
   });
 
-  it('registers create commands without reusing the macOS DevTools shortcut', () => {
+  it('registers create commands with platform-paired modifiers without reusing the macOS DevTools shortcut', () => {
     expect(matchesShortcutSet(
       keyEvent({ key: 'f', ctrlKey: true, altKey: true }),
       DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.createFolder]
@@ -31,6 +31,10 @@ describe('default command shortcuts', () => {
     expect(matchesShortcutSet(
       keyEvent({ key: 't', metaKey: true, altKey: true }),
       DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.createTopic]
+    )).toBe(true);
+    expect(matchesShortcutSet(
+      keyEvent({ key: 'e', ctrlKey: true, altKey: true }),
+      DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.createItem]
     )).toBe(true);
     expect(matchesShortcutSet(
       keyEvent({ key: 'e', metaKey: true, altKey: true }),

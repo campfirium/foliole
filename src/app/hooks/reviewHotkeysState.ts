@@ -10,7 +10,8 @@ import {
   setCommandShortcutOverrides,
   type CommandShortcutOverrides
 } from '../../shared/commands/keymap';
-import { formatShortcutSetLabel, parseShortcutLabel } from '../../shared/commands/shortcuts';
+import { formatShortcutSetDisplayEntries, formatShortcutSetDisplayLabel } from '../../shared/commands/shortcutDisplay';
+import { parseShortcutLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -46,15 +47,19 @@ export function isReviewShortcutCommand(commandId: string) {
 }
 
 export function mapPaletteItemsToHotkeyItems(items: CommandPaletteItem[], overrides: CommandShortcutOverrides): HotkeySettingItem[] {
-  return items.map((item) => ({
-    commandId: item.id,
-    title: item.title,
-    primaryShortcutLabel: item.shortcuts?.primary ? buildShortcutOverrideLabel(item.shortcuts.primary) : '',
-    secondaryShortcutLabel: item.shortcuts?.secondary ? buildShortcutOverrideLabel(item.shortcuts.secondary) : '',
-    shortcutSummaryLabel: formatShortcutSetLabel(item.shortcuts),
-    isCustomized: Boolean(overrides[item.id]?.primary || overrides[item.id]?.secondary),
-    ...definedProps({ section: item.section })
-  }));
+  return items.map((item) => {
+    const shortcutDisplayEntries = formatShortcutSetDisplayEntries(item.shortcuts);
+    return {
+      commandId: item.id,
+      title: item.title,
+      primaryShortcutLabel: item.shortcuts?.primary ? buildShortcutOverrideLabel(item.shortcuts.primary) : '',
+      secondaryShortcutLabel: item.shortcuts?.secondary ? buildShortcutOverrideLabel(item.shortcuts.secondary) : '',
+      shortcutSummaryLabel: formatShortcutSetDisplayLabel(item.shortcuts),
+      shortcutDisplayEntries,
+      isCustomized: Boolean(overrides[item.id]?.primary || overrides[item.id]?.secondary),
+      ...definedProps({ section: item.section })
+    };
+  });
 }
 
 export function useCommandShortcutState(commandIds: readonly string[]) {

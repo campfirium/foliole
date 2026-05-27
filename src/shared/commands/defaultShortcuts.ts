@@ -20,7 +20,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.renameNode]: { primary: { key: 'F2' } },
   [APP_COMMAND_IDS.createFolder]: { primary: { key: 'f', ctrlKey: true, altKey: true }, secondary: { key: 'f', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.createTopic]: { primary: { key: 't', ctrlKey: true, altKey: true }, secondary: { key: 't', metaKey: true, altKey: true } },
-  [APP_COMMAND_IDS.createItem]: { primary: { key: 'i', ctrlKey: true, altKey: true }, secondary: { key: 'e', metaKey: true, altKey: true } },
+  [APP_COMMAND_IDS.createItem]: { primary: { key: 'e', ctrlKey: true, altKey: true }, secondary: { key: 'e', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.findInTopic]: { primary: { key: 'f', ctrlKey: true }, secondary: { key: 'f', metaKey: true } },
   [APP_COMMAND_IDS.createSelectionHighlight]: { primary: { key: 'z', altKey: true } },
   [APP_COMMAND_IDS.createSelectionCloze]: { primary: { key: 'x', altKey: true } },

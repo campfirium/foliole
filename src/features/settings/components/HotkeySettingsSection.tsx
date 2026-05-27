@@ -1,5 +1,5 @@
 import { CirclePlus, X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 
 import { cn } from '../../../shared/lib/utils';
 import {
@@ -86,10 +86,32 @@ function HotkeyChip(props: {
   );
 }
 
+function HotkeyDisplayChip(props: { label: string }) {
+  return (
+    <span className={settingsHotkeyChipClassName('assigned')}>
+      <span className="min-w-0 truncate">{props.label}</span>
+    </span>
+  );
+}
+
+function getDisplayEntries(item: HotkeySettingItem) {
+  if (item.shortcutDisplayEntries?.length) {
+    return item.shortcutDisplayEntries;
+  }
+  return [
+    item.primaryShortcutLabel ? { label: item.primaryShortcutLabel, slot: 'primary' as const } : null,
+    item.secondaryShortcutLabel ? { label: item.secondaryShortcutLabel, slot: 'secondary' as const } : null
+  ].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+}
+
 function HotkeyRow({ item, message, recordingSlot, onBeginRecording, onClearShortcut }: HotkeyRowProps) {
   const primaryLabel = item.primaryShortcutLabel;
   const secondaryLabel = item.secondaryShortcutLabel;
   const addSlot: HotkeySlot = primaryLabel ? 'secondary' : 'primary';
+  const displayEntries = [...getDisplayEntries(item)];
+  if (recordingSlot && !displayEntries.some((entry) => entry.slot === recordingSlot)) {
+    displayEntries.push({ label: '', slot: recordingSlot });
+  }
 
   return (
     <div className={settingsHotkeyRowClassName()} role="listitem">
@@ -100,29 +122,24 @@ function HotkeyRow({ item, message, recordingSlot, onBeginRecording, onClearShor
         </div>
       </div>
       <div className="flex min-w-0 items-center justify-end gap-1.5">
-        <HotkeyChip
-          ariaLabel={`Shortcut for ${item.title}`}
-          commandId={item.commandId}
-          isRecording={recordingSlot === 'primary'}
-          label={primaryLabel}
-          onBeginRecording={onBeginRecording}
-          onClearShortcut={onClearShortcut}
-          slot="primary"
-        />
-        {secondaryLabel || recordingSlot === 'secondary' ? (
-          <>
-            <span className="text-foreground/45">,</span>
-            <HotkeyChip
-              ariaLabel={`Secondary shortcut for ${item.title}`}
-              commandId={item.commandId}
-              isRecording={recordingSlot === 'secondary'}
-              label={secondaryLabel}
-              onBeginRecording={onBeginRecording}
-              onClearShortcut={onClearShortcut}
-              slot="secondary"
-            />
-          </>
-        ) : null}
+        {displayEntries.map((entry, index) => (
+          <Fragment key={`${entry.slot}-${entry.label}`}>
+            {index > 0 ? <span className="text-foreground/45">,</span> : null}
+            {entry.slot === 'primary' || entry.slot === 'secondary' ? (
+              <HotkeyChip
+                ariaLabel={`${entry.slot === 'primary' ? 'Shortcut' : 'Secondary shortcut'} for ${item.title}`}
+                commandId={item.commandId}
+                isRecording={recordingSlot === entry.slot}
+                label={entry.label}
+                onBeginRecording={onBeginRecording}
+                onClearShortcut={onClearShortcut}
+                slot={entry.slot}
+              />
+            ) : (
+              <HotkeyDisplayChip label={entry.label} />
+            )}
+          </Fragment>
+        ))}
         {!secondaryLabel ? (
           <button
             aria-label={`Add shortcut for ${item.title}`}
@@ -147,12 +164,17 @@ function HotkeyList(props: {
     <div aria-label="Command shortcut list" role="list">
       {props.items.map((item) => {
         const draft = props.model.draftById[item.commandId];
-        const displayItem = draft
+        const hasDraftChange = Boolean(draft && (draft.primary !== item.primaryShortcutLabel || draft.secondary !== item.secondaryShortcutLabel));
+        const displayItem = hasDraftChange
           ? {
             ...item,
-            primaryShortcutLabel: draft.primary,
-            secondaryShortcutLabel: draft.secondary,
-            shortcutSummaryLabel: joinShortcutLabels(draft.primary, draft.secondary)
+            primaryShortcutLabel: draft!.primary,
+            secondaryShortcutLabel: draft!.secondary,
+            shortcutSummaryLabel: joinShortcutLabels(draft!.primary, draft!.secondary),
+            shortcutDisplayEntries: [
+              draft!.primary ? { label: draft!.primary, slot: 'primary' as const } : null,
+              draft!.secondary ? { label: draft!.secondary, slot: 'secondary' as const } : null
+            ].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
           }
           : item;
         return (

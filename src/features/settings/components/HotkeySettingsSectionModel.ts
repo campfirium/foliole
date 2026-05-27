@@ -71,10 +71,12 @@ function hotkeyMatchesFilter(item: HotkeySettingItem, filterMode: HotkeyFilterMo
 function hotkeyMatchesQuery(item: HotkeySettingItem, query: string) {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return true;
-  return [item.title, item.commandId, item.section, item.shortcutSummaryLabel]
+  const haystack = [item.title, item.commandId, item.section, item.shortcutSummaryLabel]
     .join(' ')
     .toLowerCase()
-    .includes(normalizedQuery);
+    .replace(/[^a-z0-9]+/g, ' ');
+  const queryTokens = normalizedQuery.split(/[^a-z0-9]+/).filter(Boolean);
+  return queryTokens.every((token) => haystack.includes(token));
 }
 
 function useHotkeyDraftState(items: HotkeySettingItem[], recording: RecordingHotkey) {

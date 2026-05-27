@@ -1,3 +1,5 @@
+export type CommandShortcutSlot = 'primary' | 'secondary' | 'tertiary';
+
 export interface CommandShortcut {
   key: string;
   altKey?: boolean;

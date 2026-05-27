@@ -1,3 +1,5 @@
+import type { ShortcutDisplayEntry } from '../../../shared/commands/shortcutDisplay';
+
 export type HotkeyValidationStatus = 'applied' | 'blocked' | 'invalid';
 
 export interface HotkeySettingItem {
@@ -7,6 +9,7 @@ export interface HotkeySettingItem {
   primaryShortcutLabel: string;
   secondaryShortcutLabel: string;
   shortcutSummaryLabel: string;
+  shortcutDisplayEntries?: ShortcutDisplayEntry[];
   isCustomized: boolean;
   conflictSeverity?: 'warning' | 'error';
   conflictMessage?: string;
