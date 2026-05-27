@@ -56,6 +56,7 @@ it('handles node mutation commands', async () => {
         kind: 'topic',
         title: 'Node title',
         isTitleManual: false,
+        shelvedAt: '2026-05-27T00:00:00.000Z',
         content: '# Content',
         reveal: null,
         anchorLink: null,
@@ -76,7 +77,8 @@ it('handles node mutation commands', async () => {
     content: '# Content',
     kind: 'topic',
     nodeId: 'node-1',
-    reveal: null
+    reveal: null,
+    shelvedAt: '2026-05-27T00:00:00.000Z'
   }));
 });
 

@@ -30,7 +30,6 @@ export interface WorkspaceBottomReviewToolbarProps {
   reviewSessionMode: ReviewSessionMode;
   onReadReviewTopic: () => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
-  onShelveReviewTopic?: () => Promise<boolean>;
   onDismissReviewTopic: () => Promise<boolean>;
   onRevisitReviewTopicSoon: () => Promise<boolean>;
   onContinueReading: () => void;
@@ -98,7 +97,6 @@ function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
       onReadReviewTopic={props.onReadReviewTopic}
       onContinueReading={props.onContinueReading}
       onPostponeReviewTopic={props.onPostponeReviewTopic}
-      {...definedProps({ onShelveReviewTopic: props.onShelveReviewTopic })}
       onDismissReviewTopic={props.onDismissReviewTopic}
       onRevisitReviewTopicSoon={props.onRevisitReviewTopicSoon}
       onExitReviewMode={props.onExitReviewMode}
@@ -133,7 +131,6 @@ export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomRe
     onReadReviewTopic: review.onReadReviewTopic,
     onContinueReading: review.onContinueReading,
     onPostponeReviewTopic: review.onPostponeReviewTopic,
-    onShelveReviewTopic: review.onShelveReviewTopic,
     onDismissReviewTopic: review.onDismissReviewTopic,
     onRevisitReviewTopicSoon: review.onRevisitReviewTopicSoon,
     onExitReviewMode: review.onExitReviewMode,

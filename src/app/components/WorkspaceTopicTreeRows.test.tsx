@@ -32,6 +32,7 @@ function createDragMock(): WorkspaceTopicTreeDragController {
     isRootDropActive: false,
     onDragEnd: vi.fn(),
     onDragEnterNode: vi.fn(),
+    onDragLeaveNode: vi.fn(),
     onDragOverNode: vi.fn(),
     onDragOverRoot: vi.fn(),
     onDragStartNode: vi.fn(),

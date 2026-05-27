@@ -20,7 +20,6 @@ function selectWorkspaceCreationActions(state: WorkspaceState) {
 function selectWorkspaceReviewActions(state: WorkspaceState) {
   return {
     dismissReviewTopic: state.dismissReviewTopic,
-    shelveReviewTopic: state.shelveReviewTopic,
     readReviewTopic: state.readReviewTopic,
     postponeReviewTopic: state.postponeReviewTopic,
     setReviewTopicDelay: state.setReviewTopicDelay,

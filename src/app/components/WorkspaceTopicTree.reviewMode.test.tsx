@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -52,7 +52,7 @@ it('opens the active review item and its descendants in the item column', () => 
     })
   };
 
-  render(
+  const { rerender } = render(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="review-item"
@@ -69,6 +69,27 @@ it('opens the active review item and its descendants in the item column', () => 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Source Topic', expanded: true })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('treeitem', { name: 'Review Item', expanded: true })).toHaveAttribute('aria-current', 'page');
   expect(within(itemColumn).getByRole('treeitem', { name: 'Review Child' })).toBeInTheDocument();
+
+  const reviewItem = within(itemColumn).getByRole('treeitem', { name: 'Review Item', expanded: true });
+  fireEvent.click(reviewItem.querySelector('[data-node-tree-chevron="true"]') as HTMLElement);
+
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Review Item', expanded: false })).toHaveAttribute('aria-current', 'page');
+  expect(within(itemColumn).queryByRole('treeitem', { name: 'Review Child' })).toBeNull();
+
+  rerender(
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId="review-child"
+      forceVisibleNodeId="review-child"
+      itemIds={['source-topic', 'review-item', 'review-child']}
+      nodesById={nodesById}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Review Item', expanded: true })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Review Child' })).toHaveAttribute('aria-current', 'page');
 });
 
 it('positions the active review item as the second visible row when possible', async () => {

@@ -68,7 +68,6 @@ function createWorkspaceActionStubs() {
     postponeReviewTopic: async () => false,
     setReviewTopicDelay: async () => false,
     revisitReviewTopicSoon: async () => false,
-    shelveReviewTopic: async () => false,
     dismissReviewTopic: async () => false,
     exitReviewSession: () => undefined,
     deleteNode: () => undefined,

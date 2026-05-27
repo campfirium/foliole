@@ -154,25 +154,6 @@ describe('workspace durable reading review shelve and dismiss guardrails', () =>
     );
   });
 
-  it('requires runtime sync for reading shelve inside review mode', async () => {
-    const harness = createSetStateHarness(
-      createWorkspaceFixture([
-        createReadingNode('reading-1', '2026-03-03T00:00:00.000Z'),
-        createReadingNode('reading-2', '2026-03-03T00:00:00.000Z')
-      ])
-    );
-    const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
-      grade: createSchedulerGradeMock(),
-      preview: previewStub
-    });
-
-    actions.startReviewSession('2026-03-03T00:00:00.000Z');
-    const shelvedNodeId = harness.getState().reviewSession.currentNodeId;
-    await expect(actions.shelveReviewTopic('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
-    expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
-      expect.objectContaining({ id: shelvedNodeId, shelvedAt: '2026-03-03T00:00:00.000Z' })
-    );
-  });
 });
 
 describe('workspace durable fsrs review mutation guardrails', () => {

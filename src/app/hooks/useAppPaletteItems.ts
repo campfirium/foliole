@@ -18,7 +18,7 @@ import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 
 import { buildAppPaletteItems } from './appCommands';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
-import { canDelayReviewTopic, canShelveReviewTopic } from './appPaletteNodeActionGuards';
+import { canDelayReviewTopic } from './appPaletteNodeActionGuards';
 import { useCommandShortcutState } from './reviewHotkeysState';
 
 function canNodeBeMoveTarget(args: {
@@ -168,7 +168,6 @@ function buildPaletteOptions(
     canPostponeReviewTopic: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canDelayReviewTopic: canDelayReviewTopic(args),
     canReadReviewTopic: args.hasReviewCard && !args.isCurrentReviewItemGradable,
-    canShelveReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable && canShelveReviewTopic(args),
     canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canScrollReviewReading: args.isStudyMode && args.hasReviewCard,
     canDeleteReviewItem: args.hasReviewCard,

@@ -66,7 +66,6 @@ function createLayoutReviewData(args: BuildControllerLayoutPropsArgs) {
   return {
     readReviewTopic: args.ws.readReviewTopic,
     postponeReviewTopic: args.ws.postponeReviewTopic,
-    shelveReviewTopic: args.ws.shelveReviewTopic,
     dismissReviewTopic: args.ws.dismissReviewTopic,
     revisitReviewTopicSoon: args.ws.revisitReviewTopicSoon,
     exitReviewSession: args.ws.exitReviewSession,

@@ -23,12 +23,22 @@ export function canPostponeTopic(node: WorkspaceListNode | undefined) {
   return Boolean(node?.kind === 'topic' && node.reading?.state !== 'dismissed');
 }
 
-export function canShelveTopic(node: WorkspaceListNode | undefined) {
-  return Boolean(node?.kind === 'topic' && !node.specialKind && !node.anchorLink && !node.shelvedAt);
+function isNativeEntryTopic(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
+  if (!node || node.kind !== 'topic' || node.specialKind || node.anchorLink) {
+    return false;
+  }
+  if (!node.parentNodeId) {
+    return true;
+  }
+  return nodesById[node.parentNodeId]?.kind === 'folder';
 }
 
-export function canUnshelveTopic(node: WorkspaceListNode | undefined) {
-  return Boolean(node?.kind === 'topic' && !node.specialKind && !node.anchorLink && node.shelvedAt);
+export function canShelveTopic(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
+  return Boolean(isNativeEntryTopic(node, nodesById) && !node?.shelvedAt);
+}
+
+export function canUnshelveTopic(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
+  return Boolean(isNativeEntryTopic(node, nodesById) && node?.shelvedAt);
 }
 
 function collectDescendantIds(rootNodeId: string, nodesById: WorkspaceListNodesById) {
@@ -92,7 +102,7 @@ export function hasShelveTopicTarget(nodeIds: string[], nodesById: WorkspaceList
     return false;
   }
   const nodeId = nodeIds[0];
-  return nodeId !== undefined && canShelveTopic(nodesById[nodeId]);
+  return nodeId !== undefined && canShelveTopic(nodesById[nodeId], nodesById);
 }
 
 export function hasUnshelveTopicTarget(nodeIds: string[], nodesById: WorkspaceListNodesById) {
@@ -100,7 +110,7 @@ export function hasUnshelveTopicTarget(nodeIds: string[], nodesById: WorkspaceLi
     return false;
   }
   const nodeId = nodeIds[0];
-  return nodeId !== undefined && canUnshelveTopic(nodesById[nodeId]);
+  return nodeId !== undefined && canUnshelveTopic(nodesById[nodeId], nodesById);
 }
 
 export function canToggleSequentialReading(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {

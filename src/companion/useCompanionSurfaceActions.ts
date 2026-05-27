@@ -5,7 +5,6 @@ import {
   readCompanionReviewTopic,
   postponeCompanionReviewTopic,
   dismissCompanionReviewTopic,
-  shelveCompanionReviewTopic,
   gradeCompanionReviewCard,
   resolveCompanionReviewSession
 } from './companionReviewSession';
@@ -64,7 +63,7 @@ function useCompanionReadingReviewActions(
   const [readingError, setReadingError] = useState<string | null>(null);
   const isSubmittingReadingActionRef = useRef(false);
 
-  async function applyReadingAction(action: 'read' | 'later' | 'dismiss' | 'shelve') {
+  async function applyReadingAction(action: 'read' | 'later' | 'dismiss') {
     if (!snapshot || !reviewSession.currentCard || reviewSession.currentCard.itemKind !== 'reading' || isSubmittingReadingActionRef.current) return;
     isSubmittingReadingActionRef.current = true;
     setIsSubmittingReadingAction(true);
@@ -75,9 +74,7 @@ function useCompanionReadingReviewActions(
           ? readCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot })
           : action === 'later'
             ? postponeCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot })
-            : action === 'dismiss'
-              ? dismissCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot })
-              : shelveCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot });
+            : dismissCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot });
       if (!result) throw new Error('The current reading topic is no longer available.');
       const persisted = await persistCompanionReviewSyncObject({
         itemKind: 'reading',
@@ -98,7 +95,6 @@ function useCompanionReadingReviewActions(
   return {
     handleReadReviewTopic: () => applyReadingAction('read'),
     handlePostponeReviewTopic: () => applyReadingAction('later'),
-    handleShelveReviewTopic: () => applyReadingAction('shelve'),
     handleDismissReviewTopic: () => applyReadingAction('dismiss'),
     isSubmittingReadingAction,
     readingError,

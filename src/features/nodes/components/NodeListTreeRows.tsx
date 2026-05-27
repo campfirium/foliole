@@ -6,6 +6,7 @@ import type { NodeTreeRow } from '../model/nodeTree';
 import { isHomeNode, isInboxNode, isTrashNode, isVirtualRootNode } from '../model/specialNodes';
 import {
   isFsrsWorkspaceListNode,
+  isVisuallyInactiveWorkspaceListReadingTopic,
   type WorkspaceListNodesById
 } from '../model/workspaceListNode';
 
@@ -133,8 +134,9 @@ function resolveNodeListRowModel(props: NodeListRowsProps, row: NodeTreeRow) {
   const isVirtualRoot = isVirtualRootNode(node);
   const isDerivedNode = Boolean(node?.anchorLink);
   const isReviewCard = isFsrsWorkspaceListNode(node);
+  const isInactiveReadingTopic = isVisuallyInactiveWorkspaceListReadingTopic(node, props.nodesById);
   const nodeIconState = resolveNodeTreeRowIconState({
-    isDismissed: node?.reading?.state === 'dismissed',
+    isDismissed: isInactiveReadingTopic,
     hasEnteredSchedule: isReviewCard
       ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
       : (node?.reading?.repetitionCount ?? 0) > 0

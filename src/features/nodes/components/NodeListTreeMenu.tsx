@@ -143,7 +143,7 @@ function buildNodeListActionHandlers(
       props.dismissNode,
       props.contextMenu.closeContextMenu
     ),
-    onDismissNode: createDismissNodeAction(menuState.contextTargets, props.dismissNode, props.contextMenu.closeContextMenu),
+    onDismissNode: createDismissNodeAction(menuState.primaryTargetId, props.dismissNode, props.contextMenu.closeContextMenu),
     onMergeHighlightsIntoTopic: createMergeHighlightsIntoTopicHandler({
       closeContextMenu: props.contextMenu.closeContextMenu,
       primaryTargetId: menuState.primaryTargetId
@@ -169,7 +169,7 @@ function buildNodeListMenuVisibility(
 ) {
   return {
     showDeleteAction: menuState.showDeleteAction,
-    showDismissAction: menuState.isNotesMenu && hasDismissTargets(menuState.contextTargets, props.nodesById),
+    showDismissAction: menuState.isNotesMenu && hasDismissTargets(menuState.primaryTargetId ? [menuState.primaryTargetId] : [], props.nodesById),
     showDismissEntireTopicAction: menuState.isNotesMenu && hasDismissEntireTopicTargets(menuState.contextTargets, props.nodesById),
     showMergeHighlightsIntoTopicAction: menuState.showMergeHighlightsIntoTopicAction,
     showMoveToNodeAction: menuState.showMoveToNodeAction,

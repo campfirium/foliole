@@ -153,7 +153,6 @@ function createReviewEmptySurface() {
     handleGradeReview: vi.fn(),
     handleReadReviewTopic: vi.fn(),
     handlePostponeReviewTopic: vi.fn(),
-    handleShelveReviewTopic: vi.fn(),
     handleDismissReviewTopic: vi.fn(),
     handleSelectBrowseNode: vi.fn(),
     handleRevealAnswer: vi.fn(),

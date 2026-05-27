@@ -99,6 +99,7 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     sequentialReadingEnabled: args.sequentialReadingEnabled === undefined || args.sequentialReadingEnabled === null
       ? null
       : asBoolean(args.sequentialReadingEnabled, 'sequentialReadingEnabled'),
+    shelvedAt: asNullableString(args.shelvedAt, 'shelvedAt'),
     manualChildOrder: args.manualChildOrder === undefined || args.manualChildOrder === null
       ? null
       : asStringArray(args.manualChildOrder, 'manualChildOrder'),

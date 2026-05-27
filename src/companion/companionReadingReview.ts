@@ -26,7 +26,7 @@ function patchReadingReviewNode(args: {
 }
 
 function buildNextReadingSnapshot(args: {
-  action: 'read' | 'later' | 'dismiss' | 'shelve';
+  action: 'read' | 'later' | 'dismiss';
   nodeId: string;
   now: string;
   snapshot: WorkspaceSnapshot;
@@ -41,18 +41,6 @@ function buildNextReadingSnapshot(args: {
       node,
       nodeId: args.nodeId,
       patch: { reading: node.reading ? { ...node.reading, state: 'dismissed' } : node.reading, updatedAt: args.now },
-      snapshot: args.snapshot
-    });
-  }
-
-  if (args.action === 'shelve') {
-    if (node.anchorLink || node.specialKind || node.shelvedAt || args.snapshot.trashedNodeIds.includes(node.id)) {
-      return null;
-    }
-    return patchReadingReviewNode({
-      node,
-      nodeId: args.nodeId,
-      patch: { shelvedAt: args.now, updatedAt: args.now },
       snapshot: args.snapshot
     });
   }
@@ -114,19 +102,6 @@ export function dismissCompanionReviewTopic(args: {
 }) {
   return buildNextReadingSnapshot({
     action: 'dismiss',
-    nodeId: args.nodeId,
-    now: args.now ?? new Date().toISOString(),
-    snapshot: args.snapshot
-  });
-}
-
-export function shelveCompanionReviewTopic(args: {
-  nodeId: string;
-  now?: string;
-  snapshot: WorkspaceSnapshot;
-}) {
-  return buildNextReadingSnapshot({
-    action: 'shelve',
     nodeId: args.nodeId,
     now: args.now ?? new Date().toISOString(),
     snapshot: args.snapshot

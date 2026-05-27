@@ -45,12 +45,12 @@ export function createDismissEntireTopicAction(
 }
 
 export function createDismissNodeAction(
-  contextTargets: string[],
+  targetNodeId: string | null,
   dismissNode: (nodeId: string, now?: string) => boolean,
   closeContextMenu: () => void
 ) {
   return () => {
-    contextTargets.forEach((id) => dismissNode(id));
+    if (targetNodeId) dismissNode(targetNodeId);
     closeContextMenu();
   };
 }

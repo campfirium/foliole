@@ -71,7 +71,6 @@ export interface WorkspaceState {
   postponeReviewTopic: () => Promise<boolean>;
   setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string) => Promise<boolean>;
   revisitReviewTopicSoon: (now?: string) => Promise<boolean>;
-  shelveReviewTopic: (now?: string) => Promise<boolean>;
   dismissReviewTopic: (now?: string) => Promise<boolean>;
   exitReviewSession: () => void;
   deleteNode: (nodeId: string) => void;

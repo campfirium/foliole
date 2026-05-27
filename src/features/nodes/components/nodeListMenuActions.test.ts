@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
 
-import { createToggleSequentialReadingAction } from './nodeListMenuActions';
+import { createDismissNodeAction, createToggleSequentialReadingAction } from './nodeListMenuActions';
 
 const NOW = '2026-05-24T00:00:00.000Z';
 
@@ -39,5 +39,15 @@ it('enables sequential reading for an empty source topic without confirmation', 
 
   expect(confirmSpy).not.toHaveBeenCalled();
   expect(setNodeSequentialReading).toHaveBeenCalledWith('source', true);
+  expect(closeContextMenu).toHaveBeenCalledOnce();
+});
+
+it('dismisses only the current menu target', () => {
+  const closeContextMenu = vi.fn();
+  const dismissNode = vi.fn().mockReturnValue(true);
+
+  createDismissNodeAction('current-topic', dismissNode, closeContextMenu)();
+
+  expect(dismissNode).toHaveBeenCalledExactlyOnceWith('current-topic');
   expect(closeContextMenu).toHaveBeenCalledOnce();
 });

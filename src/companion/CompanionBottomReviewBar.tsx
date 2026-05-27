@@ -8,7 +8,6 @@ export function CompanionBottomReviewBar(props: {
   itemKind: 'fsrs' | 'reading';
   onReadReviewTopic: () => void;
   onPostponeReviewTopic: () => void;
-  onShelveReviewTopic: () => void;
   onDismissReviewTopic: () => void;
   onGrade: (grade: BottomBarGrade) => void;
   onRevealAnswer: () => void;
@@ -35,7 +34,6 @@ export function CompanionBottomReviewBar(props: {
                 groupClassName="w-full gap-2"
                 onReadReviewTopic={props.onReadReviewTopic}
                 onPostponeReviewTopic={props.onPostponeReviewTopic}
-                onShelveReviewTopic={props.onShelveReviewTopic}
                 onDismissReviewTopic={props.onDismissReviewTopic}
               />
             ) : !props.isAnswerRevealed ? (

@@ -4,6 +4,7 @@ interface TopicCollapseState {
   activeFolderId: string;
   activeNodeId: string | null;
   collapsedNodeIds: Set<string>;
+  forceVisibleNodeId: string | null;
 }
 
 function collectForcedOpenNodeIds(
@@ -70,10 +71,15 @@ export function useCollapsedTopicNodeIds(args: {
   forceVisibleNodeId?: string | null;
   parentIdByNodeId: ReadonlyMap<string, string | null>;
 }) {
+  const forceVisibleNodeId = args.forceVisibleNodeId ?? null;
   const [state, setState] = useState(() => ({
     activeFolderId: args.activeFolderId,
     activeNodeId: args.activeNodeId,
-    collapsedNodeIds: new Set(args.collapsibleNodeIds)
+    collapsedNodeIds: removeForcedOpenNodeIds(
+      new Set(args.collapsibleNodeIds),
+      collectForcedOpenNodeIds(forceVisibleNodeId, args.childrenByParent, args.parentIdByNodeId)
+    ),
+    forceVisibleNodeId
   }));
   const setCollapsedNodeIds = (value: Set<string> | ((current: Set<string>) => Set<string>)) =>
     updateCollapsedNodeIds(setState, value);
@@ -82,35 +88,41 @@ export function useCollapsedTopicNodeIds(args: {
     const next = {
       activeFolderId: args.activeFolderId,
       activeNodeId: args.activeNodeId,
-      collapsedNodeIds: new Set(args.collapsibleNodeIds)
+      collapsedNodeIds: removeForcedOpenNodeIds(
+        new Set(args.collapsibleNodeIds),
+        collectForcedOpenNodeIds(forceVisibleNodeId, args.childrenByParent, args.parentIdByNodeId)
+      ),
+      forceVisibleNodeId
     };
     setState(next);
     return {
-      collapsedNodeIds: removeForcedOpenNodeIds(
-        next.collapsedNodeIds,
-        collectForcedOpenNodeIds(args.forceVisibleNodeId, args.childrenByParent, args.parentIdByNodeId)
-      ),
+      collapsedNodeIds: next.collapsedNodeIds,
       setCollapsedNodeIds
     };
   }
 
-  if (state.activeNodeId !== args.activeNodeId) {
-    const next = { ...state, activeNodeId: args.activeNodeId };
+  if (state.activeNodeId !== args.activeNodeId || state.forceVisibleNodeId !== forceVisibleNodeId) {
+    const nextCollapsedNodeIds = state.forceVisibleNodeId === forceVisibleNodeId
+      ? state.collapsedNodeIds
+      : removeForcedOpenNodeIds(
+          state.collapsedNodeIds,
+          collectForcedOpenNodeIds(forceVisibleNodeId, args.childrenByParent, args.parentIdByNodeId)
+        );
+    const next = {
+      ...state,
+      activeNodeId: args.activeNodeId,
+      collapsedNodeIds: nextCollapsedNodeIds,
+      forceVisibleNodeId
+    };
     setState(next);
     return {
-      collapsedNodeIds: removeForcedOpenNodeIds(
-        next.collapsedNodeIds,
-        collectForcedOpenNodeIds(args.forceVisibleNodeId, args.childrenByParent, args.parentIdByNodeId)
-      ),
+      collapsedNodeIds: next.collapsedNodeIds,
       setCollapsedNodeIds
     };
   }
 
   return {
-    collapsedNodeIds: removeForcedOpenNodeIds(
-      state.collapsedNodeIds,
-      collectForcedOpenNodeIds(args.forceVisibleNodeId, args.childrenByParent, args.parentIdByNodeId)
-    ),
+    collapsedNodeIds: state.collapsedNodeIds,
     setCollapsedNodeIds
   };
 }

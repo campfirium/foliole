@@ -14,8 +14,7 @@ import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
 import {
   readCompanionReviewTopic as readCompanionReviewTopicBase,
   postponeCompanionReviewTopic as postponeCompanionReviewTopicBase,
-  dismissCompanionReviewTopic as dismissCompanionReviewTopicBase,
-  shelveCompanionReviewTopic as shelveCompanionReviewTopicBase
+  dismissCompanionReviewTopic as dismissCompanionReviewTopicBase
 } from './companionReadingReview';
 
 export interface CompanionReviewCard {
@@ -227,12 +226,4 @@ export function dismissCompanionReviewTopic(args: {
   snapshot: WorkspaceSnapshot;
 }) {
   return applyCompanionReadingReviewTopic(dismissCompanionReviewTopicBase, args);
-}
-
-export function shelveCompanionReviewTopic(args: {
-  nodeId: string;
-  now?: string;
-  snapshot: WorkspaceSnapshot;
-}) {
-  return applyCompanionReadingReviewTopic(shelveCompanionReviewTopicBase, args);
 }

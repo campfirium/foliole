@@ -18,8 +18,3 @@ export function canDelayReviewTopic(args: NodeActionGuardArgs) {
   const activeNode = getActiveTopic(args);
   return Boolean(activeNode && activeNode.reading?.state !== 'dismissed');
 }
-
-export function canShelveReviewTopic(args: NodeActionGuardArgs) {
-  const activeNode = getActiveTopic(args);
-  return Boolean(activeNode && !activeNode.anchorLink && !activeNode.specialKind && !activeNode.shelvedAt);
-}

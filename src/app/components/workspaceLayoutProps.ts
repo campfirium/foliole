@@ -203,7 +203,6 @@ export interface WorkspaceLayoutFlatProps {
   onReadReviewTopic: () => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
   onOpenPostponeTopicPanel: (nodeId?: string | null) => boolean;
-  onShelveReviewTopic: () => Promise<boolean>;
   onDismissReviewTopic: () => Promise<boolean>;
   onRevisitReviewTopicSoon: () => Promise<boolean>;
   onContinueReading: () => void;

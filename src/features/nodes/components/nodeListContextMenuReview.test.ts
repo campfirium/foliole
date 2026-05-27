@@ -113,7 +113,9 @@ function createNode(
 
   it('shows shelve only for one ordinary native topic and unshelve only on the directly shelved topic', () => {
     const nodesById = {
+      folderParent: createNode({ id: 'folderParent', kind: 'folder', title: 'Folder parent' }),
       topic: createNode({ id: 'topic', kind: 'topic', title: 'Topic' }),
+      folderChild: createNode({ id: 'folderChild', kind: 'topic', parentNodeId: 'folderParent', title: 'Folder child' }),
       shelved: createNode({ id: 'shelved', kind: 'topic', shelvedAt: '2026-05-01T00:00:00.000Z', title: 'Shelved' }),
       child: createNode({ id: 'child', kind: 'topic', parentNodeId: 'shelved', title: 'Child' }),
       anchor: createNode({
@@ -127,8 +129,10 @@ function createNode(
     };
 
     expect(hasShelveTopicTarget(['topic'], nodesById)).toBe(true);
+    expect(hasShelveTopicTarget(['folderChild'], nodesById)).toBe(true);
     expect(hasUnshelveTopicTarget(['shelved'], nodesById)).toBe(true);
     expect(hasUnshelveTopicTarget(['child'], nodesById)).toBe(false);
+    expect(hasShelveTopicTarget(['child'], nodesById)).toBe(false);
     expect(hasShelveTopicTarget(['anchor'], nodesById)).toBe(false);
     expect(hasShelveTopicTarget(['folder'], nodesById)).toBe(false);
     expect(hasShelveTopicTarget(['virtual'], nodesById)).toBe(false);

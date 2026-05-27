@@ -84,31 +84,6 @@ it('counts a dismissed reading topic as handled material', async () => {
   });
 });
 
-it('shelves a reading topic from review mode without dismissing it', async () => {
-  const now = '2026-03-03T00:00:00.000Z';
-  const harness = createSetStateHarness(
-    createWorkspaceFixture([createReadingNode('reading-1', now), createReadingNode('reading-2', now)])
-  );
-  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
-    grade: createSchedulerGradeMock(),
-    preview: previewStub
-  });
-
-  actions.startReviewSession(now);
-  const shelvedNodeId = harness.getState().reviewSession.currentNodeId!;
-  const nextNodeId = shelvedNodeId === 'reading-1' ? 'reading-2' : 'reading-1';
-
-  await expect(actions.shelveReviewTopic(now)).resolves.toBe(true);
-
-  expect(harness.getState().nodesById[shelvedNodeId]?.shelvedAt).toBe(now);
-  expect(harness.getState().nodesById[shelvedNodeId]?.reading?.state).toBe('active');
-  expect(harness.getState().reviewSession.currentNodeId).toBe(nextNodeId);
-  expect(harness.getState().reviewSession.readTopicCount).toBe(1);
-  expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
-    expect.objectContaining({ id: shelvedNodeId, shelvedAt: now })
-  );
-});
-
 it('restores the dismissed review item as the current review item when undoing', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(

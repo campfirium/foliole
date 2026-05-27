@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
-import { gradeCompanionReviewCard, postponeCompanionReviewTopic, resolveCompanionReviewSession, shelveCompanionReviewTopic } from './companionReviewSession';
+import { gradeCompanionReviewCard, postponeCompanionReviewTopic, resolveCompanionReviewSession } from './companionReviewSession';
 
 const schedulerGrade = vi.fn();
 
@@ -221,20 +221,4 @@ describe('companion reading review session actions', () => {
     expectCompanionLaterUsesShortReadingInterval();
   });
 
-  it('shelves companion reading topics without dismissing their reading state', () => {
-    const snapshot = createSnapshot();
-    snapshot.nodesById['topic-1'] = createDueReadingTopic();
-
-    const result = shelveCompanionReviewTopic({
-      nodeId: 'topic-1',
-      now: '2026-04-22T08:10:00.000Z',
-      snapshot
-    });
-
-    expect(result?.snapshot.nodesById['topic-1']).toMatchObject({
-      reading: expect.objectContaining({ state: 'active' }),
-      shelvedAt: '2026-04-22T08:10:00.000Z'
-    });
-    expect(result?.nextSession.queueNodeIds).not.toContain('topic-1');
-  });
 });

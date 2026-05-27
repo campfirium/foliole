@@ -8,6 +8,7 @@ import {
 } from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  hasWorkspaceNodeMutationRuntime: vi.fn(() => false),
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
@@ -18,11 +19,11 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
-describe('createWorkspaceNodeActions dismiss', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
+describe('createWorkspaceNodeActions dismiss', () => {
   it('marks pending reading nodes as dismissed from the node menu', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
@@ -64,13 +65,52 @@ describe('createWorkspaceNodeActions dismiss', () => {
       })
     );
   });
+
+});
+
+describe('createWorkspaceNodeActions dismiss descendants', () => {
+  it('does not dismiss descendant reading topics from the node menu', () => {
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+    const state = harness.getState();
+    const parent = state.nodesById['node-1']!;
+    harness.setState({
+      nodeOrder: [...state.nodeOrder, 'child-topic'],
+      nodesById: {
+        ...state.nodesById,
+        'node-1': {
+          ...parent,
+          kind: 'topic',
+          reveal: 'Answer'
+        },
+        'child-topic': {
+          ...parent,
+          id: 'child-topic',
+          parentNodeId: 'node-1',
+          title: 'Child topic',
+          reading: {
+            intervalDurationMs: 0,
+            intervalGrowthFactor: 1,
+            lastHandledAt: '2026-03-17T00:00:00.000Z',
+            nextAt: '2026-03-17T00:00:00.000Z',
+            priority: 0,
+            readingPosition: 0,
+            repetitionCount: 0,
+            state: 'active'
+          }
+        }
+      }
+    });
+
+    const dismissed = actions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
+
+    expect(dismissed).toBe(true);
+    expect(harness.getState().nodesById['node-1']?.reading?.state).toBe('dismissed');
+    expect(harness.getState().nodesById['child-topic']?.reading?.state).toBe('active');
+  });
 });
 
 describe('createWorkspaceNodeActions dismiss no-op', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it('does not record history when dismiss is already a no-op', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);

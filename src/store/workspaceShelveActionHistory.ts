@@ -102,8 +102,8 @@ export function applyTopicShelveWorkspaceHistory(args: {
     const expectedShelvedAt = args.mode === 'undo' ? args.entry.afterShelvedAt : args.entry.beforeShelvedAt;
     const nextShelvedAt = args.mode === 'undo' ? args.entry.beforeShelvedAt : args.entry.afterShelvedAt;
     const relatedReadings = (args.entry.relatedReadings ?? []).map((reading) => ({
-      expectedReading: args.mode === 'undo' ? reading.afterReading : reading.beforeReading,
-      nextReading: args.mode === 'undo' ? reading.beforeReading : reading.afterReading,
+      expectedReading: (args.mode === 'undo' ? reading.afterReading : reading.beforeReading) ?? null,
+      nextReading: (args.mode === 'undo' ? reading.beforeReading : reading.afterReading) ?? null,
       nodeId: reading.nodeId
     }));
     if (

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
-import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { isVisuallyInactiveWorkspaceListReadingTopic, type WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 export type TopicChildrenByParent = Map<string | null, string[]>;
 
@@ -93,7 +93,7 @@ function createRow(
 function collectRows(args: TopicRowsArgs) {
   const rows: NodeTreeRow[] = [];
   const countDescendantDerivedMaterials = createDerivedMaterialDescendantCounter(args.childrenByParent, args.nodesById);
-  const fullyDismissedBranchIds = args.reviewContextNodeIds
+  const fullyDismissedBranchIds = args.hideDismissedTopics
     ? collectFullyDismissedTopicBranchIds(args)
     : null;
   const walk = (parentId: string | null, ids: string[], depth: number) => {
@@ -146,8 +146,8 @@ interface TopicRowsArgs {
   sortIds: (parentId: string | null, ids: string[]) => string[];
 }
 
-function isDismissedTopic(nodeId: string, nodesById: WorkspaceListNodesById) {
-  return nodesById[nodeId]?.reading?.state === 'dismissed';
+function isInactiveReadingTopic(nodeId: string, nodesById: WorkspaceListNodesById) {
+  return isVisuallyInactiveWorkspaceListReadingTopic(nodesById[nodeId], nodesById);
 }
 
 function buildParentIdByNodeId(childrenByParent: TopicChildrenByParent) {
@@ -175,7 +175,7 @@ function collectReviewContextNodeIds(args: Pick<TopicRowsArgs, 'childrenByParent
 function collectFullyDismissedTopicBranchIds(args: Pick<TopicRowsArgs, 'childrenByParent' | 'nodesById' | 'rootIds'>) {
   const branchIds = new Set<string>();
   const visit = (nodeId: string): boolean => {
-    if (!isDismissedTopic(nodeId, args.nodesById)) return false;
+    if (!isInactiveReadingTopic(nodeId, args.nodesById)) return false;
     const childIds = getTopicChildren(nodeId, args.childrenByParent, args.nodesById);
     const childDismissedStates = childIds.map(visit);
     const allChildrenDismissed = childDismissedStates.every(Boolean);
@@ -196,7 +196,7 @@ function shouldCollectNode(
     if (!args.hideDismissedTopics) return true;
     return reviewContextNodeIds.has(nodeId) || !fullyDismissedBranchIds?.has(nodeId);
   }
-  return !args.hideDismissedTopics || !isDismissedTopic(nodeId, args.nodesById);
+  return !args.hideDismissedTopics || !fullyDismissedBranchIds?.has(nodeId);
 }
 
 export function useTopicRows(args: TopicRowsArgs) {

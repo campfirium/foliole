@@ -42,6 +42,8 @@ function createWorkspaceActionStubs() {
     updateNodeDesiredRetention: () => undefined,
     updateNodeShortTerm: () => undefined,
     setNodeSequentialReading: () => false,
+    shelveNode: () => false,
+    unshelveNode: () => false,
     dismissNode: () => false,
     ...createHistoryActionStubs(),
     relearnNode: () => false,

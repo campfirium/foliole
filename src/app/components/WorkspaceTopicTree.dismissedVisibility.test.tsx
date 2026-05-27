@@ -47,7 +47,7 @@ beforeEach(() => {
   }));
 });
 
-it('hides dismissed topic branches only after the view toggle is enabled', () => {
+it('hides fully dismissed topic branches and keeps active descendants after the view toggle is enabled', () => {
   const nodesById = {
     'dismissed-parent': createTopic({ id: 'dismissed-parent', readingState: 'dismissed', title: 'Dismissed Parent' }),
     'active-child': createTopic({
@@ -56,6 +56,13 @@ it('hides dismissed topic branches only after the view toggle is enabled', () =>
       readingState: 'active',
       title: 'Active Child'
     }),
+    'dismissed-branch': createTopic({ id: 'dismissed-branch', readingState: 'dismissed', title: 'Dismissed Branch' }),
+    'dismissed-child': createTopic({
+      id: 'dismissed-child',
+      parentNodeId: 'dismissed-branch',
+      readingState: 'dismissed',
+      title: 'Dismissed Child'
+    }),
     'active-topic': createTopic({ id: 'active-topic', readingState: 'active', title: 'Active Topic' })
   };
 
@@ -63,7 +70,7 @@ it('hides dismissed topic branches only after the view toggle is enabled', () =>
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="active-topic"
-      itemIds={['dismissed-parent', 'active-child', 'active-topic']}
+      itemIds={['dismissed-parent', 'active-child', 'dismissed-branch', 'dismissed-child', 'active-topic']}
       nodesById={nodesById}
       onOpenMoveToNode={() => undefined}
       onSelectNode={() => undefined}
@@ -72,12 +79,16 @@ it('hides dismissed topic branches only after the view toggle is enabled', () =>
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   expect(within(itemColumn).getByRole('treeitem', { name: 'Dismissed Parent' })).toBeInTheDocument();
+  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Expand all topics' }));
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Active Child' })).toBeInTheDocument();
 
   fireEvent.click(within(itemColumn).getByRole('button', { name: 'Focus active topics' }));
 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.viewHideDismissedTopics)).toBe('true');
-  expect(within(itemColumn).queryByRole('treeitem', { name: 'Dismissed Parent' })).toBeNull();
-  expect(within(itemColumn).queryByRole('treeitem', { name: 'Active Child' })).toBeNull();
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Dismissed Parent' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Active Child' })).toBeInTheDocument();
+  expect(within(itemColumn).queryByRole('treeitem', { name: 'Dismissed Branch' })).toBeNull();
+  expect(within(itemColumn).queryByRole('treeitem', { name: 'Dismissed Child' })).toBeNull();
   expect(within(itemColumn).getByRole('treeitem', { name: 'Active Topic' })).toBeInTheDocument();
 });
 

@@ -87,7 +87,6 @@ export interface BuildControllerLayoutPropsArgs {
     readReviewTopic: () => Promise<boolean>;
     postponeReviewTopic: () => Promise<boolean>;
     setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string) => Promise<boolean>;
-    shelveReviewTopic: () => Promise<boolean>;
     dismissReviewTopic: () => Promise<boolean>;
     revisitReviewTopicSoon: () => Promise<boolean>;
     isListCollapsed: boolean;
@@ -187,7 +186,6 @@ function createLayoutHandlerArgs(
     updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade),
     readReviewTopic: () => args.ws.readReviewTopic(),
     postponeReviewTopic: () => args.ws.postponeReviewTopic(),
-    shelveReviewTopic: () => args.ws.shelveReviewTopic(),
     dismissReviewTopic: () => args.ws.dismissReviewTopic(),
     revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(),
     priorityQuickSetShortcutLabel: args.priorityQuickSet.shortcutLabel

@@ -179,3 +179,33 @@ export function getWorkspaceListReviewItemKind(
 export function isFsrsWorkspaceListNode(node: WorkspaceListNode | null | undefined) {
   return getWorkspaceListReviewItemKind(node) === 'fsrs';
 }
+
+export function isInactiveWorkspaceListReadingTopic(node: WorkspaceListNode | null | undefined) {
+  return Boolean(node?.kind === 'topic' && (node.reading?.state === 'dismissed' || node.shelvedAt));
+}
+
+export function hasShelvedWorkspaceListTopicAncestor(
+  node: WorkspaceListNode | null | undefined,
+  nodesById: WorkspaceListNodesById
+) {
+  if (node?.kind !== 'topic') {
+    return false;
+  }
+  const visitedNodeIds = new Set<string>();
+  let currentNode: WorkspaceListNode | undefined = node;
+  while (currentNode && !visitedNodeIds.has(currentNode.id)) {
+    if (currentNode.kind === 'topic' && currentNode.shelvedAt) {
+      return true;
+    }
+    visitedNodeIds.add(currentNode.id);
+    currentNode = currentNode.parentNodeId ? nodesById[currentNode.parentNodeId] : undefined;
+  }
+  return false;
+}
+
+export function isVisuallyInactiveWorkspaceListReadingTopic(
+  node: WorkspaceListNode | null | undefined,
+  nodesById: WorkspaceListNodesById
+) {
+  return Boolean(node?.kind === 'topic' && (node.reading?.state === 'dismissed' || hasShelvedWorkspaceListTopicAncestor(node, nodesById)));
+}

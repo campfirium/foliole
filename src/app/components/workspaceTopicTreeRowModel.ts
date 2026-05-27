@@ -5,7 +5,7 @@ import {
 import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState } from '../../features/nodes/components/NodeTreeRowIconModel';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { isFsrsWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { isFsrsWorkspaceListNode, isVisuallyInactiveWorkspaceListReadingTopic } from '../../features/nodes/model/workspaceListNode';
 
 import type { WorkspaceTopicTreeDragController } from './workspaceTopicTreeDrag';
 
@@ -21,8 +21,9 @@ export function resolveWorkspaceTopicTreeRowModel(
   const isSelected = args.selectedNodeIds.includes(row.node.id);
   const isDerivedNode = Boolean(node?.anchorLink);
   const isReviewCard = isFsrsWorkspaceListNode(node);
+  const isInactiveReadingTopic = isVisuallyInactiveWorkspaceListReadingTopic(node, args.nodesById);
   const nodeIconState = resolveNodeTreeRowIconState({
-    isDismissed: node?.reading?.state === 'dismissed',
+    isDismissed: isInactiveReadingTopic,
     hasEnteredSchedule: isReviewCard
       ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
       : (node?.reading?.repetitionCount ?? 0) > 0

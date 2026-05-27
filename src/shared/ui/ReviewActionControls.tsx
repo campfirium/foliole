@@ -111,11 +111,11 @@ export function ReviewGradeActions({
 
 function ReadingReviewButton(props: {
   className: string;
-  label: 'Soon' | 'Later' | 'Read' | 'Shelve' | 'Dismiss';
+  label: 'Soon' | 'Later' | 'Read' | 'Dismiss';
   onClick: () => void;
 }) {
   return (
-    <AppButton aria-label={props.label === 'Shelve' ? 'Shelve entire topic' : props.label} className={props.className} onClick={props.onClick} size="md" variant="primary">
+    <AppButton aria-label={props.label} className={props.className} onClick={props.onClick} size="md" variant="primary">
       {props.label}
     </AppButton>
   );
@@ -126,7 +126,6 @@ export function ReadingReviewActions({
   groupClassName,
   onReadReviewTopic,
   onPostponeReviewTopic,
-  onShelveReviewTopic,
   onDismissReviewTopic,
   onRevisitReviewTopicSoon
 }: {
@@ -134,7 +133,6 @@ export function ReadingReviewActions({
   groupClassName?: string;
   onReadReviewTopic: () => void;
   onPostponeReviewTopic: () => void;
-  onShelveReviewTopic?: () => void;
   onDismissReviewTopic: () => void;
   onRevisitReviewTopicSoon?: () => void;
 }) {
@@ -161,12 +159,6 @@ export function ReadingReviewActions({
         <ReadingReviewButton className={buttonClassName} label="Read" onClick={onReadReviewTopic} />,
         'Appears again after its normal interval.'
       )}
-      {onShelveReviewTopic
-        ? wrapWithTooltip(
-            <ReadingReviewButton className={buttonClassName} label="Shelve" onClick={onShelveReviewTopic} />,
-            'Set this topic aside.'
-          )
-        : null}
       {wrapWithTooltip(
         <ReadingReviewButton className={buttonClassName} label="Dismiss" onClick={onDismissReviewTopic} />,
         'No longer appears.'

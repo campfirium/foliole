@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { createStartedReviewSession } from './workspaceReviewReading';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
@@ -92,6 +93,48 @@ function createSequentialHarness() {
   });
 }
 
+function createActiveReviewShelveHarness() {
+  const fixture = createWorkspaceNodeActionsFixture();
+  const seed = fixture.nodesById['node-1']!;
+  const source: Node = {
+    ...seed,
+    content: '# Source',
+    id: 'source',
+    parentNodeId: null,
+    reading: createReadingProfile(),
+    title: 'Source'
+  };
+  const child: Node = {
+    ...seed,
+    content: '# Child',
+    id: 'child',
+    parentNodeId: 'source',
+    reading: createReadingProfile(),
+    title: 'Child'
+  };
+  const other: Node = {
+    ...seed,
+    content: '# Other',
+    id: 'other',
+    parentNodeId: null,
+    reading: createReadingProfile(),
+    title: 'Other'
+  };
+  return createWorkspaceNodeActionsSetStateHarness({
+    ...fixture,
+    activeNodeId: 'child',
+    nodeOrder: ['source', 'child', 'other'],
+    nodesById: { source, child, other },
+    reviewSession: createStartedReviewSession({
+      continueNodeId: null,
+      currentNodeId: 'child',
+      queueNodeIds: ['child', 'other'],
+      sessionStartedAt: '2026-05-01T00:00:00.000Z',
+      totalNodeCount: 2
+    })
+  });
+}
+
 describe('workspace application shelve action history', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -136,5 +179,22 @@ describe('workspace application shelve action history', () => {
     expect(historyActions.redoWorkspaceAction('2026-05-03T00:00:00.000Z')).toBe(true);
     expect(harness.getState().nodesById['node-1']?.shelvedAt).toBe('2026-05-01T00:00:00.000Z');
     expect(harness.getState().nodesById['node-2']?.reading?.state).toBe('active');
+  });
+
+  it('removes children of a shelved topic from the active review session without counting them as read', () => {
+    const harness = createActiveReviewShelveHarness();
+    const nodeActions = createWorkspaceNodeActions(harness.setState);
+    const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+
+    expect(nodeActions.shelveNode('source', '2026-05-01T00:05:00.000Z')).toBe(true);
+    expect(harness.getState().nodesById.source?.shelvedAt).toBe('2026-05-01T00:05:00.000Z');
+    expect(harness.getState().reviewSession.currentNodeId).toBe('other');
+    expect(harness.getState().reviewSession.queueNodeIds).toEqual(['other']);
+    expect(harness.getState().reviewSession.readTopicCount).toBe(0);
+
+    expect(historyActions.undoWorkspaceAction('2026-05-01T00:06:00.000Z')).toBe(true);
+    expect(harness.getState().nodesById.source?.shelvedAt).toBeNull();
+    expect(harness.getState().reviewSession.currentNodeId).toBe('child');
+    expect(harness.getState().reviewSession.queueNodeIds).toEqual(['child', 'other']);
   });
 });

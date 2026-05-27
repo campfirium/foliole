@@ -19,7 +19,6 @@ export interface ActiveReviewActionBarProps {
   isSubmitting: boolean;
   onReadReviewTopic: () => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
-  onShelveReviewTopic?: () => Promise<boolean>;
   onDismissReviewTopic: () => Promise<boolean>;
   onRevealAnswer: () => void;
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
@@ -60,7 +59,6 @@ function createActiveReviewActions(props: Pick<
   | 'isSubmitting'
   | 'onReadReviewTopic'
   | 'onPostponeReviewTopic'
-  | 'onShelveReviewTopic'
   | 'onDismissReviewTopic'
   | 'onRevealAnswer'
   | 'onRevisitReviewTopicSoon'
@@ -72,7 +70,6 @@ function createActiveReviewActions(props: Pick<
       <ReadingReviewActions
         onReadReviewTopic={props.onReadReviewTopic}
         onPostponeReviewTopic={props.onPostponeReviewTopic}
-        {...definedProps({ onShelveReviewTopic: props.onShelveReviewTopic })}
         onDismissReviewTopic={props.onDismissReviewTopic}
         onRevisitReviewTopicSoon={props.onRevisitReviewTopicSoon}
       />
@@ -99,7 +96,6 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps) {
     isSubmitting: props.isSubmitting,
     onReadReviewTopic: props.onReadReviewTopic,
     onPostponeReviewTopic: props.onPostponeReviewTopic,
-    ...definedProps({ onShelveReviewTopic: props.onShelveReviewTopic }),
     onDismissReviewTopic: props.onDismissReviewTopic,
     onRevealAnswer: props.onRevealAnswer,
     onRevisitReviewTopicSoon: props.onRevisitReviewTopicSoon,
