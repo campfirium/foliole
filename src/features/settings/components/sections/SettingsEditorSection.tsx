@@ -19,18 +19,24 @@ import {
   getHighlightAnnotationPrefix,
   setHighlightAnnotationPrefix
 } from '../../../editor/model/highlightAnnotationPrefixSetting';
-import {
-  DEFAULT_LONG_CLOZE_FRONT_GUARD_MODE,
-  getLongClozeFrontGuardThreshold,
-  getLongClozeFrontGuardMode,
-  getLongClozeSelectionGuardMin,
-  setLongClozeFrontGuardMode,
-  setLongClozeFrontGuardThreshold,
-  setLongClozeSelectionGuardMin
-} from '../../../editor/model/longClozeFrontGuardSetting';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
+import { settingsSearchRowProps } from '../../model/settingsSearch';
+import { EDITOR_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
 
 import { SelectionToolbarSettingsRow } from './SelectionToolbarSettingsRow';
+import {
+  ClozeFrontLengthLimitRow,
+  ClozeSelectedTextLimitRow,
+  LongClozeFrontGuardRow
+} from './SettingsEditorClozeRows';
+
+const EDITOR_ROW = {
+  frontmatterMeta: EDITOR_SETTINGS_SEARCH_ROWS[3]!,
+  highlightAnnotationPrefix: EDITOR_SETTINGS_SEARCH_ROWS[2]!,
+  longClozeMistakeGuard: EDITOR_SETTINGS_SEARCH_ROWS[4]!,
+  saveRemoteImages: EDITOR_SETTINGS_SEARCH_ROWS[0]!,
+  showMarkdownSyntax: EDITOR_SETTINGS_SEARCH_ROWS[1]!
+};
 
 function HighlightAnnotationPrefixRow() {
   const [prefix, setPrefix] = useState(() => getHighlightAnnotationPrefix());
@@ -40,8 +46,9 @@ function HighlightAnnotationPrefixRow() {
 
   return (
     <SettingsRow
-      description="Inserted before annotation text when creating or adding a highlight annotation."
-      title="Highlight annotation prefix"
+      {...settingsSearchRowProps(EDITOR_ROW.highlightAnnotationPrefix)}
+      description={EDITOR_ROW.highlightAnnotationPrefix.description}
+      title={EDITOR_ROW.highlightAnnotationPrefix.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <div className="flex items-center gap-2">
@@ -67,72 +74,6 @@ function HighlightAnnotationPrefixRow() {
   );
 }
 
-function LongClozeFrontGuardRow() {
-  const [mode, setMode] = useState(() => getLongClozeFrontGuardMode());
-  return (
-    <SettingsRow
-      description="When both length checks are exceeded, ask first, create a highlight, or allow the cloze."
-      title="Long cloze mistake guard"
-    >
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <SettingsSegmentedControl
-          ariaLabel="Long cloze action"
-          onChange={(value) => setMode(setLongClozeFrontGuardMode(value))}
-          options={[
-            { label: 'Remind', value: DEFAULT_LONG_CLOZE_FRONT_GUARD_MODE },
-            { label: 'Convert', value: 'convert' },
-            { label: 'Off', value: 'off' }
-          ]}
-          value={mode}
-        />
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
-
-function ClozeSelectedTextLimitRow() {
-  const [selectionMin, setSelectionMin] = useState(() => getLongClozeSelectionGuardMin());
-  return (
-    <SettingsRow
-      description="Selections at or below this length create clozes normally. Use 0 to check every selection."
-      title="Only check when selected answer is longer than"
-    >
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <AppInput
-          aria-label="Cloze guard selected text limit"
-          className="h-9 w-28"
-          min={0}
-          onChange={(event) => setSelectionMin(setLongClozeSelectionGuardMin(event.target.value))}
-          type="number"
-          value={selectionMin}
-        />
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
-
-function ClozeFrontLengthLimitRow() {
-  const [frontMax, setFrontMax] = useState(() => getLongClozeFrontGuardThreshold());
-
-  return (
-    <SettingsRow
-      description="The front is the topic text after the selected answer is replaced with the cloze placeholder."
-      title="Then guard when generated card front is longer than"
-    >
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <AppInput
-          aria-label="Cloze guard front length limit"
-          className="h-9 w-28"
-          min={50}
-          onChange={(event) => setFrontMax(setLongClozeFrontGuardThreshold(event.target.value))}
-          type="number"
-          value={frontMax}
-        />
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
-
 function FrontmatterMetaFieldsRow() {
   const {
     frontmatterMetaFields,
@@ -142,8 +83,9 @@ function FrontmatterMetaFieldsRow() {
 
   return (
     <SettingsRow
+      {...settingsSearchRowProps(EDITOR_ROW.frontmatterMeta)}
       description="Fields shown under the title. Use commas for groups and | for aliases, such as author|byline, url|link|source."
-      title="Frontmatter meta"
+      title={EDITOR_ROW.frontmatterMeta.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <div className="flex items-center gap-2">
@@ -168,7 +110,7 @@ function FrontmatterMetaFieldsRow() {
   );
 }
 
-export function SettingsEditorSection() {
+function EditorLiveMarkdownSection() {
   const {
     autoLocalizeRemoteImages,
     markdownSyntaxVisibility,
@@ -177,47 +119,37 @@ export function SettingsEditorSection() {
   } = useAppearanceSettings();
 
   return (
+    <SettingsSection ariaLabel="Editor settings section" title="Live markdown">
+      <SettingsRow {...settingsSearchRowProps(EDITOR_ROW.saveRemoteImages)} description={EDITOR_ROW.saveRemoteImages.description} title={EDITOR_ROW.saveRemoteImages.title}>
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <button aria-checked={autoLocalizeRemoteImages} aria-label="Save remote images locally" className={settingsSwitchClassName(autoLocalizeRemoteImages)} onClick={() => setAutoLocalizeRemoteImages(!autoLocalizeRemoteImages)} role="switch" type="button">
+            <span aria-hidden="true" className={settingsSwitchKnobClassName(autoLocalizeRemoteImages)} />
+          </button>
+        </SettingsControlSlot>
+      </SettingsRow>
+      <SettingsRow {...settingsSearchRowProps(EDITOR_ROW.showMarkdownSyntax)} description={EDITOR_ROW.showMarkdownSyntax.description} title={EDITOR_ROW.showMarkdownSyntax.title}>
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <SettingsSegmentedControl
+            ariaLabel="Markdown syntax visibility"
+            onChange={(value) => setMarkdownSyntaxVisibility(value as typeof markdownSyntaxVisibility)}
+            options={[
+              { label: 'Hidden', value: 'hidden' },
+              { label: 'Active line', value: 'visible' }
+            ]}
+            value={markdownSyntaxVisibility}
+          />
+        </SettingsControlSlot>
+      </SettingsRow>
+      <SelectionToolbarSettingsRow />
+      <FrontmatterMetaFieldsRow />
+    </SettingsSection>
+  );
+}
+
+export function SettingsEditorSection() {
+  return (
     <>
-      <SettingsSection ariaLabel="Editor settings section" title="Live markdown">
-        <SettingsRow
-          description="Automatically copy remote pictures in topics into your local library so they stay available offline."
-          title="Save remote images locally"
-        >
-          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-            <button
-              aria-checked={autoLocalizeRemoteImages}
-              aria-label="Save remote images locally"
-              className={settingsSwitchClassName(autoLocalizeRemoteImages)}
-              onClick={() => setAutoLocalizeRemoteImages(!autoLocalizeRemoteImages)}
-              role="switch"
-              type="button"
-            >
-              <span
-                aria-hidden="true"
-                className={settingsSwitchKnobClassName(autoLocalizeRemoteImages)}
-              />
-            </button>
-          </SettingsControlSlot>
-        </SettingsRow>
-        <SettingsRow
-          description="Show markdown syntax markers on the active line, or keep them hidden everywhere."
-          title="Show markdown syntax markers"
-        >
-          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-            <SettingsSegmentedControl
-              ariaLabel="Markdown syntax visibility"
-              onChange={(value) => setMarkdownSyntaxVisibility(value as typeof markdownSyntaxVisibility)}
-              options={[
-                { label: 'Hidden', value: 'hidden' },
-                { label: 'Active line', value: 'visible' }
-              ]}
-              value={markdownSyntaxVisibility}
-            />
-          </SettingsControlSlot>
-        </SettingsRow>
-        <SelectionToolbarSettingsRow />
-        <FrontmatterMetaFieldsRow />
-      </SettingsSection>
+      <EditorLiveMarkdownSection />
       <SettingsSection ariaLabel="Cloze guard settings section" title="Cloze guard">
         <LongClozeFrontGuardRow />
         <ClozeSelectedTextLimitRow />

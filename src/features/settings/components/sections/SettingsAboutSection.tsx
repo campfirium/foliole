@@ -20,6 +20,16 @@ import {
   settingsSwitchKnobClassName,
   settingsValueBoxClassName
 } from '../../../../shared/ui';
+import {
+  settingsSearchRowProps,
+} from '../../model/settingsSearch';
+import { ABOUT_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
+
+const ABOUT_ROW = {
+  app: ABOUT_SETTINGS_SEARCH_ROWS[0]!,
+  diagnosticBundle: ABOUT_SETTINGS_SEARCH_ROWS[1]!,
+  searchEnhancement: ABOUT_SETTINGS_SEARCH_ROWS[2]!
+};
 
 function DiagnosticExportRow() {
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -51,7 +61,11 @@ function DiagnosticExportRow() {
   };
 
   return (
-    <SettingsRow description={description} title="Diagnostic bundle">
+    <SettingsRow
+      {...settingsSearchRowProps(ABOUT_ROW.diagnosticBundle)}
+      description={description}
+      title={ABOUT_ROW.diagnosticBundle.title}
+    >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <button
           aria-label="Export diagnostic bundle"
@@ -71,7 +85,12 @@ function ApplicationInfo() {
   return (
     <>
       <SettingsSection ariaLabel="About settings section">
-        <SettingsRow description="Reader-first outlining and review workflow built with Electron + React." readonly title="Foliole desktop">
+        <SettingsRow
+          {...settingsSearchRowProps(ABOUT_ROW.app)}
+          description={ABOUT_ROW.app.description}
+          readonly
+          title={ABOUT_ROW.app.title}
+        >
           <SettingsControlSlot>
             <span className={settingsValueBoxClassName('rounded-full px-2.5 py-1 text-[0.82rem]')}>
               v0.1.0
@@ -126,7 +145,8 @@ function SearchEnhancementRow() {
   return (
     <SettingsRow
       description={<SearchEnhancementDescription statusCopy={getSearchEnhancementStatusCopy(status, error)} />}
-      title="Search enhancement"
+      {...settingsSearchRowProps(ABOUT_ROW.searchEnhancement)}
+      title={ABOUT_ROW.searchEnhancement.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <button

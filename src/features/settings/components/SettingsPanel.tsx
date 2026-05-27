@@ -1,8 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { onWindowEscape, onWindowKeydown, type KeydownUnlisten } from '../../../shared/platform/keyboard';
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
-import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import {
   getSettingsCategoryOption,
@@ -12,12 +10,19 @@ import {
 } from '../model/settingsPanelOptions';
 
 import {
-  SettingsCategoryContent,
-  SettingsSidebar,
-  type SettingsCategoryContentProps
-} from './SettingsPanelSections';
+  SettingsPanelDialog,
+  type SettingsPanelCategoryProps
+} from './SettingsPanelDialog';
 import { useExternalSearchFolders } from './useExternalSearchFolders';
 import { useLibraryPathSettings } from './useLibraryPathSettings';
+import {
+  useSettingsPanelEscape,
+  useSettingsPreviewMode
+} from './useSettingsPanelChrome';
+import {
+  useSettingsSearchState,
+  useSettingsSearchTarget
+} from './useSettingsSearch';
 
 interface SettingsPanelProps {
   importCategoryContent?: ReactNode;
@@ -100,47 +105,6 @@ type SettingsPanelBodyProps = {
   title: string;
 };
 
-type SettingsPanelCategoryProps = Omit<
-  SettingsCategoryContentProps,
-  'hotkeyItems' | 'onHotkeyReset' | 'onHotkeyResetAll' | 'onHotkeyUpdate'
->;
-
-function useSettingsPreviewMode() {
-  const [isPreviewActive, setIsPreviewActive] = useState(false);
-
-  useEffect(() => {
-    if (!isPreviewActive) {
-      return undefined;
-    }
-    let unlistenKeydown: KeydownUnlisten = () => {};
-    const stopPreview = () => {
-      setIsPreviewActive(false);
-      unlistenKeydown();
-    };
-    unlistenKeydown = onWindowKeydown(stopPreview);
-    window.addEventListener('pointerdown', stopPreview, { once: true });
-    return () => {
-      unlistenKeydown();
-      window.removeEventListener('pointerdown', stopPreview);
-    };
-  }, [isPreviewActive]);
-
-  return { isPreviewActive, setIsPreviewActive };
-}
-
-function useSettingsPanelEscape(isPreviewActive: boolean, onClose: () => void) {
-  useEffect(
-    () =>
-      onWindowEscape(() => {
-        if (isPreviewActive) {
-          return false;
-        }
-        onClose();
-      }),
-    [isPreviewActive, onClose]
-  );
-}
-
 function createSettingsCategoryProps(
   props: SettingsPanelBodyProps,
   setIsPreviewActive: (value: boolean) => void
@@ -183,49 +147,32 @@ function createSettingsCategoryProps(
   };
 }
 
-function SettingsPanelDialog(props: {
-  categoryProps: SettingsPanelCategoryProps;
-  hotkeys: ReturnType<typeof useHotkeySettings>;
-  isPreviewActive: boolean;
-  onClose: () => void;
-  title: string;
-  description: string;
-  activeCategory: SettingsCategoryId;
-  setActiveCategory: (category: SettingsCategoryId) => void;
-}) {
-  return (
-    <AppDialog modal open onOpenChange={(open) => !open && props.onClose()}>
-      <AppDialogPortal>
-        <AppDialogOverlay aria-label="Settings" className={props.isPreviewActive ? 'bg-transparent' : undefined} onClick={props.isPreviewActive ? undefined : props.onClose} role="presentation" />
-        {props.isPreviewActive ? <div className="fixed inset-0 z-modal-overlay" /> : null}
-        <AppDialogContent aria-label="Settings dialog" aria-describedby={undefined} className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[300px_minmax(0,1fr)] overflow-hidden rounded-lg border-settings-outline bg-settings-shell shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}>
-          <SettingsSidebar activeCategory={props.activeCategory} setActiveCategory={props.setActiveCategory} />
-          <div className="app-scrollbar overflow-auto bg-settings-shell px-7 py-7">
-            <AppDialogTitle className="sr-only">Settings dialog</AppDialogTitle>
-            <h2 className="sr-only">{props.title}</h2>
-            <p className="sr-only">{props.description}</p>
-            <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} />
-          </div>
-        </AppDialogContent>
-      </AppDialogPortal>
-    </AppDialog>
-  );
-}
-
 function SettingsPanelBody(props: SettingsPanelBodyProps) {
   const hotkeys = useHotkeySettings();
   const preview = useSettingsPreviewMode();
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const searchQueryRef = useRef('');
+  const search = useSettingsSearchState(props.setActiveCategory);
+  searchQueryRef.current = search.query;
   const categoryProps = createSettingsCategoryProps(props, preview.setIsPreviewActive);
-  useSettingsPanelEscape(preview.isPreviewActive, props.onClose);
+  useSettingsPanelEscape(preview.isPreviewActive, searchQueryRef, props.onClose);
+  useSettingsSearchTarget(props.activeCategory, search.targetRowId, scrollContainerRef);
 
   return (
     <SettingsPanelDialog
       activeCategory={props.activeCategory}
+      activeResultIndex={search.activeResultIndex}
       categoryProps={categoryProps}
       description={props.description}
       hotkeys={hotkeys}
       isPreviewActive={preview.isPreviewActive}
+      onActiveResultIndexChange={search.setActiveResultIndex}
       onClose={props.onClose}
+      onSearchQueryChange={search.updateQuery}
+      onSearchResultSelect={search.selectResult}
+      scrollContainerRef={scrollContainerRef}
+      searchQuery={search.query}
+      searchResults={search.results}
       setActiveCategory={props.setActiveCategory}
       title={props.title}
     />

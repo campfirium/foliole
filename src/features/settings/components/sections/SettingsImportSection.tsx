@@ -9,8 +9,22 @@ import {
   SettingsSection,
   settingsButtonClassName
 } from '../../../../shared/ui';
+import {
+  settingsSearchRowProps,
+  type SettingsSearchRowMeta
+} from '../../model/settingsSearch';
+import { LIBRARY_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
 
 import type { LibraryPathLocation, SettingsImportSectionProps } from './settingsImportSectionTypes';
+
+const LIBRARY_ROW = {
+  assets: LIBRARY_SETTINGS_SEARCH_ROWS[1]!,
+  inbox: LIBRARY_SETTINGS_SEARCH_ROWS[2]!,
+  libraryHome: LIBRARY_SETTINGS_SEARCH_ROWS[0]!,
+  mirror: LIBRARY_SETTINGS_SEARCH_ROWS[3]!,
+  mirrorLinks: LIBRARY_SETTINGS_SEARCH_ROWS[5]!,
+  mirrorOutput: LIBRARY_SETTINGS_SEARCH_ROWS[4]!
+};
 
 function LibraryLocationRow(props: {
   children?: ReactNode;
@@ -21,11 +35,12 @@ function LibraryLocationRow(props: {
   onChangeLocation: (location: LibraryPathLocation) => void;
   onRestoreDefault: (location: LibraryPathLocation) => void;
   path: string;
+  searchRow: SettingsSearchRowMeta;
   title: string;
   location: LibraryPathLocation;
 }) {
   return (
-    <SettingsRow description={props.description} title={props.title}>
+    <SettingsRow {...settingsSearchRowProps(props.searchRow)} description={props.description} title={props.title}>
       <SettingsControlSlot className={`${SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME} flex-col items-end gap-2`}>
         <ObjectConfigPathControl
           disabled={!props.isDesktopRuntime || props.isPending}
@@ -60,7 +75,11 @@ function MirrorActionRow(props: {
   );
 
   return (
-    <SettingsRow description={description} title={props.title}>
+    <SettingsRow
+      {...settingsSearchRowProps(props.title === LIBRARY_ROW.mirrorOutput.title ? LIBRARY_ROW.mirrorOutput : LIBRARY_ROW.mirrorLinks)}
+      description={description}
+      title={props.title}
+    >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <button
           aria-label={props.ariaLabel}
@@ -97,6 +116,7 @@ function MirrorLocationRow(props: {
       onChangeLocation={props.onChangeLocation}
       onRestoreDefault={props.onRestoreDefault}
       path={props.mirrorPath}
+      searchRow={LIBRARY_ROW.mirror}
       title="Mirror"
     />
   );
@@ -110,18 +130,18 @@ function MirrorMaintenanceSection(props: SettingsImportSectionProps) {
         description="Daily output is incremental and normally needs no adjustment. Rebuild only for recovery or rule changes."
         disabled={!props.isDesktopRuntime || props.isRebuildingMirrorOutput || props.pendingLocation !== null}
         error={props.mirrorOutputRebuildError}
-        feedback={props.mirrorOutputRebuildFeedback}
-        onClick={props.onRebuildMirrorOutput}
-        title="Mirror output"
+      feedback={props.mirrorOutputRebuildFeedback}
+      onClick={props.onRebuildMirrorOutput}
+      title={LIBRARY_ROW.mirrorOutput.title}
       />
       <MirrorActionRow
         ariaLabel="Rebuild mirror links"
         description="Normally needs no adjustment. Rebuild links only after moving Mirror or Assets folders."
         disabled={!props.isDesktopRuntime || props.isRebuildingMirrorLinks || props.pendingLocation !== null}
         error={props.mirrorLinkRebuildError}
-        feedback={props.mirrorLinkRebuildFeedback}
-        onClick={props.onRebuildMirrorLinks}
-        title="Mirror links"
+      feedback={props.mirrorLinkRebuildFeedback}
+      onClick={props.onRebuildMirrorLinks}
+      title={LIBRARY_ROW.mirrorLinks.title}
       />
     </SettingsSection>
   );
@@ -147,7 +167,8 @@ function LibraryPathRows(props: SettingsImportSectionProps) {
         onChangeLocation={props.onChangeLocation}
         onRestoreDefault={props.onRestoreDefault}
         path={props.libraryHomePath}
-        title="Library Home"
+        searchRow={LIBRARY_ROW.libraryHome}
+        title={LIBRARY_ROW.libraryHome.title}
       />
       <LibraryLocationRow
         description="Folder for attachments and copied media. Move it when large files should live outside Library Home."
@@ -158,7 +179,8 @@ function LibraryPathRows(props: SettingsImportSectionProps) {
         onChangeLocation={props.onChangeLocation}
         onRestoreDefault={props.onRestoreDefault}
         path={props.assetsPath}
-        title="Assets"
+        searchRow={LIBRARY_ROW.assets}
+        title={LIBRARY_ROW.assets.title}
       />
       <LibraryLocationRow
         description="Drop folder for incoming files. Foliole absorbs files quickly, so it should stay close to empty instead of becoming a long-term content folder."
@@ -169,7 +191,8 @@ function LibraryPathRows(props: SettingsImportSectionProps) {
         onChangeLocation={props.onChangeLocation}
         onRestoreDefault={props.onRestoreDefault}
         path={props.inboxPath}
-        title="Inbox"
+        searchRow={LIBRARY_ROW.inbox}
+        title={LIBRARY_ROW.inbox.title}
       />
       {!props.isDesktopRuntime ? (
         <p className="text-sm text-foreground/60">Library folder settings are available in the desktop app.</p>
