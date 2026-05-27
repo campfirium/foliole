@@ -110,7 +110,7 @@ it('adds only newly anchored readwise highlights during keep import updates', as
   expect(parentRow.content).not.toContain('Missing new quote.');
 });
 
-it('flags source updates without rewriting the imported node when only the readwise highlight file changes', async () => {
+it('appends new readwise highlights without flagging source updates when only the highlight file changes', async () => {
   const fixture = await seedReadwiseArticleFixture(tempRoot);
   saveReadwiseKeepImportSettings(fixture);
   await runReadwiseKeepImport(fixture.fullDocumentDir);
@@ -126,15 +126,30 @@ it('flags source updates without rewriting the imported node when only the readw
       '# Sample Article',
       '',
       '## Highlights',
+      '## New highlights added May 27, 2026 at 11:20 AM',
+      '- After the quote. ([View Highlight](https://read.readwise.io/read/01new))',
+      '',
+      '## Old highlights',
       'This is the highlighted sentence. [...] (https://example.com)',
       '',
-      'Another matching excerpt. Tags: [[tag-a]] [[tag-b]]',
+      'Another matching excerpt.',
+      'Note: Keep import note',
+      'Tags: [[tag-a]] [[tag-b]]',
       '',
-      'After the quote.'
+      '## Document notes',
+      'This is not a highlight.'
     ].join('\n'),
     'utf8'
   );
-  await runReadwiseKeepImport(fixture.fullDocumentDir);
+  const fullDocumentPath = path.join(fixture.fullDocumentDir, 'Sample Article.md');
+  const fullDocumentStats = await fs.stat(fullDocumentPath);
+  await fs.utimes(fullDocumentPath, fullDocumentStats.atime, new Date(fullDocumentStats.mtimeMs + 1000));
+  const runEntries = await runKeepImportRule({
+    directoryPath: fixture.fullDocumentDir,
+    highlightPolicy: 'reference_only',
+    ruleId: 'draft-import-source-1',
+    sourceType: 'readwise'
+  });
 
   const { childRows, parentRow } = readImportedChildRows();
   const keepItem = openDatabaseConnection().sqlite
@@ -148,9 +163,17 @@ it('flags source updates without rewriting the imported node when only the readw
     .prepare(`SELECT COUNT(*) AS count FROM import_runs WHERE source_name = 'Sample Article.md'`)
     .get() as { count: number };
 
-  expect(childRows).toEqual(initialState.childRows);
-  expect(importCountAfter.count).toBe(importCountBefore.count);
-  expect(keepItem.has_source_update).toBe(1);
+  const appendedHighlight = childRows.find((row) => row.content === 'After the quote.');
+  expect(childRows).toHaveLength(initialState.childRows.length + 1);
+  expect(appendedHighlight?.anchor_link).toEqual(expect.stringContaining('imported-highlight'));
+  expect(childRows.some((row) => row.content === 'This is not a highlight.')).toBe(false);
+  expect(runEntries).toContainEqual(expect.objectContaining({
+    importStatus: 'imported',
+    previewStatus: 'updated',
+    sourcePath: 'Sample Article.md'
+  }));
+  expect(importCountAfter.count).toBe(importCountBefore.count + 1);
+  expect(keepItem.has_source_update).toBe(0);
   expect(parentRow.content).toBe(initialState.parentRow.content);
 });
 
@@ -194,6 +217,6 @@ it('keeps the same imported source after the readwise root folder moves', async 
 
   expect(secondSource.source_fingerprint).toBe(firstSource.source_fingerprint);
   expect(secondSource.latest_node_id).toBe(firstSource.latest_node_id);
-  expect(secondSource.source_locator).toBe(firstSource.source_locator);
+  expect(secondSource.source_locator).toBe(path.join(movedFixture.fullDocumentDir, 'Sample Article.md'));
   expect(sourceCount.count).toBe(1);
 });

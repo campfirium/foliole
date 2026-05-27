@@ -37,6 +37,31 @@ function escapeLinePrefixWhitespace(value: string) {
   return value.replace(/[ \t]+/g, '[ \\t]+');
 }
 
+function normalizeHeadingLine(value: string) {
+  return normalizeLineEndings(value).trim();
+}
+
+function matchesConfiguredHeading(line: string, heading: string) {
+  const normalizedLine = normalizeHeadingLine(line);
+  const normalizedHeading = normalizeHeadingLine(heading);
+  if (!normalizedHeading) {
+    return false;
+  }
+  return normalizedLine === normalizedHeading || normalizedLine.startsWith(`${normalizedHeading} `);
+}
+
+function matchesAnyConfiguredHeading(line: string, headings: string[]) {
+  return headings.some((heading) => matchesConfiguredHeading(line, heading));
+}
+
+function isHighlightGroupHeading(line: string, headings: string[]) {
+  if (!/^##\s+/u.test(line)) {
+    return false;
+  }
+  const normalizedLine = normalizeHeadingLine(line).replace(/^##\s+/, '').toLowerCase();
+  return matchesAnyConfiguredHeading(line, headings) || /\bhighlight(s)?\b/u.test(normalizedLine);
+}
+
 export function normalizeReadwiseText(value: string) {
   return compactWhitespace(stripMarkdown(normalizeLineEndings(value)));
 }
@@ -167,27 +192,26 @@ function tryReadwiseLinkFallbackBlocks(content: string) {
 
 export function extractReadwiseHighlightsSection(markdown: string, headings: string[]) {
   const normalized = normalizeLineEndings(markdown);
-  const headingMatches = headings
-    .filter((heading) => heading.trim().length > 0)
-    .map((heading) => {
-      const match = new RegExp(`^${escapeRegex(normalizeLineEndings(heading))}\\s*$`, 'im').exec(normalized);
-      return match?.index ?? Number.POSITIVE_INFINITY;
-    });
-  const headingIndex = Math.min(...headingMatches, Number.POSITIVE_INFINITY);
-  if (!Number.isFinite(headingIndex)) {
+  const headingMatches = [...normalized.matchAll(/^## .+$/gm)]
+    .filter((match) => isHighlightGroupHeading(match[0], headings));
+  const firstHeading = headingMatches[0];
+  if (!firstHeading || firstHeading.index === undefined) {
     return normalized.trim();
   }
-  const matchedHeading = headings.find((heading) => {
-    if (!heading.trim()) {
-      return false;
-    }
-    return new RegExp(`^${escapeRegex(normalizeLineEndings(heading))}\\s*$`, 'im').exec(normalized)?.index === headingIndex;
-  });
   const section = normalized
-    .slice(headingIndex + (matchedHeading ? normalizeLineEndings(matchedHeading).length : 0))
+    .slice(firstHeading.index + firstHeading[0].length)
     .replace(/^\n+/, '');
-  const nextHeadingIndex = section.search(/^## /m);
-  return (nextHeadingIndex >= 0 ? section.slice(0, nextHeadingIndex) : section).trim();
+  const nextHeadingIndex = section
+    .split('\n')
+    .findIndex((line) => /^## /u.test(line) && !isHighlightGroupHeading(line, headings));
+  const highlightSection = nextHeadingIndex >= 0
+    ? section.split('\n').slice(0, nextHeadingIndex).join('\n')
+    : section;
+  return highlightSection
+    .split('\n')
+    .filter((line) => !isHighlightGroupHeading(line, headings))
+    .join('\n')
+    .trim();
 }
 
 export { extractReadwiseFullDocument };

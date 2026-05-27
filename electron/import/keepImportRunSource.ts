@@ -10,6 +10,7 @@ import {
   shouldRunUnchangedReadwiseDestination
 } from './keepImportReadwiseDestination.js';
 import type { KeepImportRunEntry } from './keepImportReadwiseLogging.js';
+import { shouldDeferReadwiseToSourceUpdate } from './keepImportReadwiseSourceUpdate.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
 import { persistBlockedKeepImportState } from './keepImportServiceState.js';
 import { classifySource, isBlockedByDeletedNode } from './keepImportSourceClassifier.js';
@@ -104,7 +105,7 @@ async function runImportAttempt(
   previewStatus: KeepImportRunEntry['previewStatus']
 ): Promise<KeepImportRunEntry> {
   const result = await runKeepImportSourceImportAttempt(config, source, {
-    automaticDuplicateNoop: !options.forceTopicImport,
+    automaticDuplicateNoop: !options.forceTopicImport && !(config.sourceType === 'readwise' && previewStatus === 'updated'),
     clearSourceUpdateOnSuccess: Boolean(options.forceTopicImport),
     onProgress: options.onProgress
   });
@@ -163,10 +164,16 @@ export async function runSingleKeepImportSource(
       return readwiseResult;
     }
   }
-  if (preview.status === 'updated' && !options.forceTopicImport) {
+  const readwiseHighlightUpdate = config.sourceType === 'readwise' && preview.status === 'updated';
+  if (preview.status === 'updated' && !options.forceTopicImport && await shouldDeferReadwiseToSourceUpdate(config, source)) {
     return skipDetectedSourceUpdate(config, source, preview.status);
   }
-  return runImportAttempt(config, source, { ...options, notifyUpdate }, preview.status);
+  return runImportAttempt(
+    config,
+    source,
+    { ...options, forceTopicImport: options.forceTopicImport || readwiseHighlightUpdate, notifyUpdate },
+    preview.status
+  );
 }
 
 async function runReadwiseDestination(

@@ -10,7 +10,11 @@ import { refreshKeepImportItemCache } from './keepImportItemCacheRefresh.js';
 import { resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
 import { resolveReadwiseKeepImportDestination } from './keepImportReadwiseDestination.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
-import { hasHighlightSourceChanged, hasPrimarySourceChanged } from './keepImportSourceSignature.js';
+import {
+  hasHighlightSourceChanged,
+  hasPrimarySourceChanged,
+  type KeepImportSourceSignature
+} from './keepImportSourceSignature.js';
 
 function resolveLocalNodeState(existingItem: ReturnType<typeof readKeepImportItem>) {
   if (!existingItem?.last_node_id) {
@@ -21,6 +25,28 @@ function resolveLocalNodeState(existingItem: ReturnType<typeof readKeepImportIte
     return 'locally_deleted';
   }
   return 'active';
+}
+
+function resolveCatalogSignature(input: {
+  changed: boolean;
+  existingItem: ReturnType<typeof readKeepImportItem>;
+  sourceSignature: KeepImportSourceSignature;
+}) {
+  if (!input.existingItem || !input.changed) {
+    return input.sourceSignature;
+  }
+  return {
+    highlight: input.existingItem.highlight_source_mtime_ms === null || input.existingItem.highlight_source_size_bytes === null
+      ? null
+      : {
+          mtimeMs: input.existingItem.highlight_source_mtime_ms,
+          sizeBytes: input.existingItem.highlight_source_size_bytes
+        },
+    primary: {
+      mtimeMs: input.existingItem.source_mtime_ms,
+      sizeBytes: input.existingItem.source_size_bytes
+    }
+  };
 }
 
 export async function reconcileKeepImportCatalog(config: KeepImportRuleConfig, sources: DirectoryImportSourceDescriptor[]) {
@@ -36,14 +62,15 @@ export async function reconcileKeepImportCatalog(config: KeepImportRuleConfig, s
       await refreshKeepImportItemCache(config, source, seenAt);
     }
     const localNodeState = resolveLocalNodeState(existingItem);
-    const changed =
-      hasPrimarySourceChanged(existingItem, sourceSignature) ||
-      (config.sourceType === 'readwise' && hasHighlightSourceChanged(existingItem, sourceSignature));
+    const primaryChanged = hasPrimarySourceChanged(existingItem, sourceSignature);
+    const highlightChanged = config.sourceType === 'readwise' && hasHighlightSourceChanged(existingItem, sourceSignature);
+    const changed = primaryChanged || highlightChanged;
+    const catalogSignature = resolveCatalogSignature({ changed, existingItem, sourceSignature });
     upsertKeepImportItem({
       ...(existingItem?.first_seen_at ? { firstSeenAt: existingItem.first_seen_at } : {}),
-      hasSourceUpdate: Boolean(existingItem?.has_source_update) || (Boolean(existingItem) && changed),
-      highlightSourceMtimeMs: sourceSignature.highlight?.mtimeMs ?? null,
-      highlightSourceSizeBytes: sourceSignature.highlight?.sizeBytes ?? null,
+      hasSourceUpdate: Boolean(existingItem?.has_source_update) || (Boolean(existingItem) && primaryChanged),
+      highlightSourceMtimeMs: catalogSignature.highlight?.mtimeMs ?? null,
+      highlightSourceSizeBytes: catalogSignature.highlight?.sizeBytes ?? null,
       lastImportedAt: existingItem?.last_imported_at ?? null,
       lastNodeId: existingItem?.last_node_id ?? null,
       lastSeenAt: seenAt,
@@ -52,9 +79,9 @@ export async function reconcileKeepImportCatalog(config: KeepImportRuleConfig, s
         : existingItem?.last_status ?? 'discovered',
       localNodeState,
       ruleId: config.ruleId,
-      sourceMtimeMs: sourceSignature.primary.mtimeMs,
+      sourceMtimeMs: catalogSignature.primary.mtimeMs,
       sourcePath: source.sourceName,
-      sourceSizeBytes: sourceSignature.primary.sizeBytes,
+      sourceSizeBytes: catalogSignature.primary.sizeBytes,
       sourceState: 'present'
     });
   }
