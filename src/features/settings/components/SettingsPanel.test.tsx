@@ -75,7 +75,16 @@ it('groups settings sidebar entries by workspace, storage, and sources', async (
   expect(screen.getByText('Storage')).toBeInTheDocument();
   expect(screen.getByText('Sources')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
-  expect(labels.slice(0, 7)).toEqual(['General', 'Appearance', 'Editor', 'Review', 'Hotkeys', 'Mouse gestures', 'Action bar']);
+  expect(labels.slice(0, 8)).toEqual([
+    'General',
+    'Appearance',
+    'Editor',
+    'Right-click menu',
+    'Review',
+    'Hotkeys',
+    'Mouse gestures',
+    'Action bar'
+  ]);
   expect(labels).toContain('Library');
   expect(labels).toContain('Watched folders');
   expect(labels).toContain('Readwise Reader');
@@ -159,15 +168,13 @@ it('updates remaining review scheduler controls from review settings section', a
   fireEvent.change(screen.getByLabelText('Maximum interval days'), {
     target: { value: '365' }
   });
-  fireEvent.change(screen.getByLabelText('Short-term scheduling'), {
-    target: { value: 'on' }
+  fireEvent.change(screen.getByLabelText('New day starts at'), {
+    target: { value: '6' }
   });
 
   await waitFor(() => {
     expect(screen.getByLabelText('Maximum interval days')).toHaveValue(365);
-    expect(screen.queryByLabelText('Interval fuzz')).not.toBeInTheDocument();
-    expect(screen.queryByText('Spread same-day cards')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Short-term scheduling')).toHaveValue('on');
+    expect(screen.getByLabelText('New day starts at')).toHaveValue('6');
   });
 });
 

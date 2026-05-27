@@ -6,13 +6,12 @@ import type { SettingsSearchResult } from '../model/settingsSearch';
 
 import { cn } from '@/shared/lib/utils';
 import {
-  AppInput,
-  settingsButtonClassName,
-  settingsHotkeySearchFieldClassName
+  settingsFieldClassName
 } from '@/shared/ui';
 
 export interface SettingsSearchBoxProps {
   activeResultIndex: number;
+  className?: string;
   onActiveResultIndexChange: (index: number) => void;
   onQueryChange: (query: string) => void;
   onSelectResult: (result: SettingsSearchResult) => void;
@@ -30,7 +29,8 @@ function SettingsSearchResultButton(props: {
     <button
       aria-selected={props.active}
       className={cn(
-        settingsButtonClassName('h-auto w-full flex-col items-start gap-0 rounded-md border-transparent bg-transparent px-3 py-2 text-left'),
+        'flex w-full cursor-pointer flex-col items-start gap-0 rounded-md border border-transparent bg-transparent px-3 py-2 text-left text-foreground/72 transition-colors',
+        'hover:bg-settings-selected hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
         props.active && 'bg-settings-selected text-foreground'
       )}
       onClick={props.onSelect}
@@ -73,12 +73,14 @@ export function SettingsSearchBox(props: SettingsSearchBoxProps) {
   };
 
   return (
-    <div className="mb-5 px-1">
+    <div className={cn('mb-4', props.className)}>
       <div className="relative">
-        <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/42" />
-        <AppInput
+        <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground/38" />
+        <input
           aria-label="Search settings"
-          className={settingsHotkeySearchFieldClassName()}
+          className={settingsFieldClassName(
+            'h-8 rounded-md border-transparent bg-settings-control pl-8 pr-3 text-[0.92rem] text-foreground/82 placeholder:text-foreground/38 hover:border-settings-control-border hover:bg-settings-control-hover focus-visible:bg-settings-control-hover'
+          )}
           onChange={(event) => props.onQueryChange(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Search settings"

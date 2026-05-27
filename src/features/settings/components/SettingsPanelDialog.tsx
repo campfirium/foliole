@@ -9,6 +9,7 @@ import {
   SettingsCategoryContent,
   type SettingsCategoryContentProps
 } from './SettingsPanelSections';
+import { SettingsSearchBox } from './SettingsSearchBox';
 import { SettingsSidebar } from './SettingsSidebar';
 
 export type SettingsPanelCategoryProps = Omit<
@@ -41,7 +42,7 @@ export function SettingsPanelDialog(props: {
         <AppDialogContent
           aria-label="Settings dialog"
           aria-describedby={undefined}
-          className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[300px_minmax(0,1fr)] overflow-hidden rounded-lg border-settings-outline bg-settings-shell shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}
+          className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden rounded-lg border-settings-outline bg-settings-shell shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}
           onEscapeKeyDown={(event) => {
             if (props.searchQuery.trim().length > 0) {
               event.preventDefault();
@@ -50,18 +51,22 @@ export function SettingsPanelDialog(props: {
         >
           <SettingsSidebar
             activeCategory={props.activeCategory}
-            activeResultIndex={props.activeResultIndex}
-            query={props.searchQuery}
-            results={props.searchResults}
             setActiveCategory={props.setActiveCategory}
-            onActiveResultIndexChange={props.onActiveResultIndexChange}
-            onQueryChange={props.onSearchQueryChange}
-            onSelectResult={props.onSearchResultSelect}
           />
           <div className="app-scrollbar overflow-auto bg-settings-shell px-7 py-7" ref={props.scrollContainerRef}>
-            <AppDialogTitle className="sr-only">Settings dialog</AppDialogTitle>
-            <h2 className="sr-only">{props.title}</h2>
-            <p className="sr-only">{props.description}</p>
+            <div className="mb-6 border-b border-settings-divider/45 px-5 pb-5">
+              <SettingsSearchBox
+                activeResultIndex={props.activeResultIndex}
+                className="mb-5 max-w-[520px]"
+                onActiveResultIndexChange={props.onActiveResultIndexChange}
+                onQueryChange={props.onSearchQueryChange}
+                onSelectResult={props.onSearchResultSelect}
+                query={props.searchQuery}
+                results={props.searchResults}
+              />
+              <AppDialogTitle>{props.title}</AppDialogTitle>
+              <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{props.description}</p>
+            </div>
             <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} />
           </div>
         </AppDialogContent>

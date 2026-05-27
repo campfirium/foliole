@@ -3,41 +3,24 @@ import {
   SETTINGS_CATEGORY_GROUPS,
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
-import type { SettingsSearchResult } from '../model/settingsSearch';
-
-import { SettingsSearchBox } from './SettingsSearchBox';
 
 import { cn } from '@/shared/lib/utils';
 import { AppButton, AppPanel } from '@/shared/ui';
 
 export function SettingsSidebar(props: {
   activeCategory: SettingsCategoryId;
-  activeResultIndex: number;
-  onActiveResultIndexChange: (index: number) => void;
-  onQueryChange: (query: string) => void;
-  onSelectResult: (result: SettingsSearchResult) => void;
-  query: string;
-  results: SettingsSearchResult[];
   setActiveCategory: (category: SettingsCategoryId) => void;
 }) {
   return (
     <AppPanel
       as="aside"
       ariaLabel="Settings categories"
-      bodyClassName="px-4 pb-5 pt-6"
+      bodyClassName="px-4 pb-5 pt-5"
       className="border-r border-settings-divider"
       headerClassName="sr-only"
       surfaceClassName="bg-settings-sidebar"
       title={<span>Settings</span>}
     >
-      <SettingsSearchBox
-        activeResultIndex={props.activeResultIndex}
-        onActiveResultIndexChange={props.onActiveResultIndexChange}
-        onQueryChange={props.onQueryChange}
-        onSelectResult={props.onSelectResult}
-        query={props.query}
-        results={props.results}
-      />
       <nav aria-label="Settings navigation" className="flex flex-col gap-5">
         {SETTINGS_CATEGORY_GROUPS.map((group) => (
           <div className="space-y-1" key={group.label}>
