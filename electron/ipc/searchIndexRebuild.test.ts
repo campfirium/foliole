@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   markWorkspaceSearchSidecarRebuilding: vi.fn(),
   openDatabaseConnection: vi.fn(),
   readWorkspaceSearchSidecarRebuildStatus: vi.fn(),
+  rebuildExternalSearchCacheStrategy: vi.fn(),
   rebuildWorkspaceSearchSidecar: vi.fn(),
   send: vi.fn()
 }));
@@ -21,6 +22,10 @@ vi.mock('electron', () => ({
 
 vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: mocks.openDatabaseConnection
+}));
+
+vi.mock('../database/externalSearchCacheDatabase.js', () => ({
+  rebuildExternalSearchCacheStrategy: mocks.rebuildExternalSearchCacheStrategy
 }));
 
 vi.mock('../../lib/core/database/workspaceSearchSidecar.js', () => ({
@@ -48,6 +53,11 @@ beforeEach(() => {
     tokenizer: strategy === 'cjk-trigram' ? 'trigram' : 'unicode61'
   }));
   mocks.rebuildWorkspaceSearchSidecar.mockImplementation((_connection, { strategy }: { strategy: string }) => ({
+    status: 'ready',
+    strategy,
+    tokenizer: strategy === 'cjk-trigram' ? 'trigram' : 'unicode61'
+  }));
+  mocks.rebuildExternalSearchCacheStrategy.mockImplementation((strategy: string) => ({
     status: 'ready',
     strategy,
     tokenizer: strategy === 'cjk-trigram' ? 'trigram' : 'unicode61'
@@ -95,8 +105,27 @@ it('coalesces quick rebuild requests so only the last strategy is rebuilt', asyn
 
   expect(mocks.rebuildWorkspaceSearchSidecar).toHaveBeenCalledTimes(1);
   expect(mocks.rebuildWorkspaceSearchSidecar).toHaveBeenCalledWith(connection, { strategy: 'word-based' });
+  expect(mocks.rebuildExternalSearchCacheStrategy).toHaveBeenCalledWith('word-based');
   expect(mocks.send).toHaveBeenLastCalledWith('foliole:search-index-rebuild-status', {
     status: 'ready',
     strategy: 'word-based'
+  });
+});
+
+it('reports a failed rebuild when the external sidecar cannot rebuild', async () => {
+  mocks.rebuildExternalSearchCacheStrategy.mockReturnValue({
+    error: 'external boom',
+    status: 'failed',
+    strategy: 'cjk-trigram',
+    tokenizer: 'trigram'
+  });
+
+  requestSearchIndexRebuild('cjk-trigram');
+  await new Promise((resolve) => setImmediate(resolve));
+
+  expect(mocks.send).toHaveBeenLastCalledWith('foliole:search-index-rebuild-status', {
+    error: 'external boom',
+    status: 'failed',
+    strategy: 'cjk-trigram'
   });
 });

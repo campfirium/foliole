@@ -11,6 +11,7 @@ import {
   type WorkspaceSearchSidecarRebuildStatus
 } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { rebuildExternalSearchCacheStrategy } from '../database/externalSearchCacheDatabase.js';
 
 import {
   IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL,
@@ -52,6 +53,21 @@ function notifySearchIndexRebuildStatus(status: WorkspaceSearchSidecarRebuildSta
   }
 }
 
+function combineRebuildStatus(
+  workspaceStatus: WorkspaceSearchSidecarRebuildStatus,
+  externalStatus: WorkspaceSearchSidecarRebuildStatus
+): WorkspaceSearchSidecarRebuildStatus {
+  if (workspaceStatus.status === 'failed' || externalStatus.status === 'failed') {
+    return {
+      error: [workspaceStatus.error, externalStatus.error].filter(Boolean).join('; ') || 'Search index rebuild failed',
+      status: 'failed',
+      strategy: externalStatus.strategy,
+      tokenizer: externalStatus.tokenizer
+    };
+  }
+  return externalStatus.status === 'rebuilding' ? externalStatus : workspaceStatus;
+}
+
 function scheduleRebuildDrain() {
   if (scheduled) return;
   scheduled = true;
@@ -64,7 +80,10 @@ function drainRebuildQueue() {
   const strategy = pendingStrategy;
   pendingStrategy = null;
   activeStrategy = strategy;
-  const status = rebuildWorkspaceSearchSidecar(openDatabaseConnection(), { strategy });
+  const status = combineRebuildStatus(
+    rebuildWorkspaceSearchSidecar(openDatabaseConnection(), { strategy }),
+    rebuildExternalSearchCacheStrategy(strategy)
+  );
   notifySearchIndexRebuildStatus(status);
   activeStrategy = null;
   if (pendingStrategy) scheduleRebuildDrain();

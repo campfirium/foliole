@@ -1,7 +1,18 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import {
+  resolveFullTextSearchIndexStrategy,
+  type FullTextSearchIndexStrategy
+} from '../../lib/core/database/fullTextSearchIndexStrategy.js';
+
 import { resolveDatabasePath } from './connection.js';
+import {
+  createExternalSearchMetadataTable,
+  rebuildExternalSearchSidecar,
+  shouldInitializeExternalSearchSidecar
+} from './externalSearchSidecar.js';
+import { loadJsonSetting } from './settingsStore.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -11,13 +22,21 @@ type SqliteDatabase = import('better-sqlite3').Database;
 let cachedCacheDb: SqliteDatabase | null = null;
 
 export const FOLIOLE_EXTERNAL_DB_FILE = 'foliole-external.db';
+const APP_SETTINGS_KEY = 'app_settings';
 
 function resolveCacheDbPath() {
   return path.join(path.dirname(resolveDatabasePath()), FOLIOLE_EXTERNAL_DB_FILE);
 }
 
+function readExternalSearchIndexStrategy() {
+  return resolveFullTextSearchIndexStrategy(
+    loadJsonSetting(APP_SETTINGS_KEY) as Record<string, unknown> | null
+  ).strategy;
+}
+
 export function openExternalSearchCacheDatabase() {
   if (cachedCacheDb) {
+    ensureExternalSearchCacheStrategy(readExternalSearchIndexStrategy());
     return cachedCacheDb;
   }
   const dbPath = resolveCacheDbPath();
@@ -46,18 +65,21 @@ export function openExternalSearchCacheDatabase() {
   ensureExternalSearchDocumentColumn('missing_at', 'ALTER TABLE external_search_documents ADD COLUMN missing_at TEXT');
   cachedCacheDb.exec(`CREATE INDEX IF NOT EXISTS idx_external_search_documents_folder_id
     ON external_search_documents (folder_id)`);
-  cachedCacheDb.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS external_search_fts USING fts5(
-    title,
-    file_name,
-    relative_path,
-    content,
-    absolute_path UNINDEXED,
-    folder_id UNINDEXED,
-    folder_path UNINDEXED,
-    modified_at UNINDEXED,
-    tokenize = 'trigram'
-  )`);
+  createExternalSearchMetadataTable(cachedCacheDb);
+  ensureExternalSearchCacheStrategy(readExternalSearchIndexStrategy());
   return cachedCacheDb;
+}
+
+export function ensureExternalSearchCacheStrategy(strategy: FullTextSearchIndexStrategy) {
+  if (!cachedCacheDb) return;
+  createExternalSearchMetadataTable(cachedCacheDb);
+  if (shouldInitializeExternalSearchSidecar(cachedCacheDb, strategy)) {
+    rebuildExternalSearchSidecar(cachedCacheDb, { strategy });
+  }
+}
+
+export function rebuildExternalSearchCacheStrategy(strategy: FullTextSearchIndexStrategy) {
+  return rebuildExternalSearchSidecar(openExternalSearchCacheDatabase(), { strategy });
 }
 
 function ensureExternalSearchDocumentColumn(name: string, statement: string) {
