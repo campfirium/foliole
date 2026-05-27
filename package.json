@@ -73,6 +73,7 @@
     "sqlite:backup": "node scripts/electron-sqlite-runner.mjs scripts/sqlite-maintenance.ts backup",
     "sqlite:restore": "node scripts/electron-sqlite-runner.mjs scripts/sqlite-maintenance.ts restore",
     "sqlite:prune-search-invalidations": "node scripts/electron-sqlite-runner.mjs scripts/sqlite-maintenance.ts prune-search-invalidations",
+    "sqlite:cleanup-main-fts": "node scripts/electron-sqlite-runner.mjs scripts/sqlite-maintenance.ts cleanup-main-fts",
     "sqlite:search-index-report": "node --no-warnings scripts/search-index-size-report.mjs",
     "oneoff:sqlite:node-kind-report": "node scripts/electron-sqlite-runner.mjs scripts/node-kind-report.ts",
     "android:web:dev": "vite --config vite.companion.config.ts",

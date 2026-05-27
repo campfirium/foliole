@@ -15,6 +15,7 @@ export interface InternalDatabaseSnapshotResult {
 }
 
 export interface CreateInternalDatabaseSnapshotOptions {
+  destinationDirectory?: string;
   now?: Date;
   reason: InternalDatabaseSnapshotReason;
   retentionLimit?: number;
@@ -28,6 +29,7 @@ export function resolveInternalDatabaseSnapshotDirectory(sourcePath: string) {
 }
 
 export function createInternalDatabaseSnapshot({
+  destinationDirectory,
   now = new Date(),
   reason,
   retentionLimit = INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT,
@@ -35,15 +37,24 @@ export function createInternalDatabaseSnapshot({
   sourcePath
 }: CreateInternalDatabaseSnapshotOptions): InternalDatabaseSnapshotResult {
   const resolvedSourcePath = path.resolve(sourcePath);
+  const resolvedDestinationDirectory = destinationDirectory
+    ? path.resolve(destinationDirectory)
+    : resolveInternalDatabaseSnapshotDirectory(resolvedSourcePath);
   const destinationPath = path.join(
-    resolveInternalDatabaseSnapshotDirectory(resolvedSourcePath),
+    resolvedDestinationDirectory,
     `${reason}-${snapshotTimestamp(now)}.db`
   );
 
   try {
-    ensureManagedBackupDirectory();
+    if (destinationDirectory) {
+      fs.mkdirSync(resolvedDestinationDirectory, { recursive: true });
+    } else {
+      ensureManagedBackupDirectory();
+    }
     sourceDatabase.exec(`VACUUM INTO ${toSqliteStringLiteral(destinationPath)}`);
-    pruneInternalDatabaseSnapshots(resolvedSourcePath, retentionLimit);
+    if (!destinationDirectory) {
+      pruneInternalDatabaseSnapshots(resolvedSourcePath, retentionLimit);
+    }
   } catch (error) {
     throw new Error(
       `failed to create ${reason} snapshot at ${destinationPath}: ${formatErrorMessage(error)}`

@@ -13,16 +13,23 @@ import {
   readSearchIndexInvalidationRetentionStatusCounts
 } from '../lib/core/database/searchIndexInvalidationPruning.ts';
 
+import { runCleanupMainFts } from './sqlite-maintenance-cleanup-main-fts.ts';
+
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
-const BOOLEAN_FLAGS = new Set(['apply']);
+const BOOLEAN_FLAGS = new Set(['apply', 'i-understand-live-database', 'no-vacuum']);
 const DEFAULT_SEARCH_INVALIDATION_RETENTION_DAYS = 30;
 
 async function main() {
   const [command, ...argv] = process.argv.slice(2);
 
-  if (command !== 'backup' && command !== 'restore' && command !== 'prune-search-invalidations') {
+  if (
+    command !== 'backup' &&
+    command !== 'restore' &&
+    command !== 'prune-search-invalidations' &&
+    command !== 'cleanup-main-fts'
+  ) {
     printUsage();
     process.exitCode = 1;
     return;
@@ -38,6 +45,11 @@ async function main() {
 
   if (command === 'restore') {
     await runRestore(dbPath, flags);
+    return;
+  }
+
+  if (command === 'cleanup-main-fts') {
+    runCleanupMainFts(dbPath, flags);
     return;
   }
 
@@ -173,6 +185,7 @@ function printUsage() {
   console.error('  npm run sqlite:backup -- --db-path <db> [--destination-path <backup>]');
   console.error('  npm run sqlite:restore -- --db-path <db> --source-path <backup>');
   console.error('  npm run sqlite:prune-search-invalidations -- --db-path <db> [--retention-days <days> | --older-than-iso <iso>] [--apply]');
+  console.error('  npm run sqlite:cleanup-main-fts -- --db-path <db> [--apply] [--snapshot-dir <dir>] [--no-vacuum] [--i-understand-live-database]');
 }
 
 main().catch((error) => {
