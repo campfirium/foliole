@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { createStartedReviewSession } from './workspaceReviewReading';
 import { syncNodeContentToRuntimeNow } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
@@ -137,4 +138,50 @@ it('does not dismiss the current review item while another topic is open', async
   await expect(actions.dismissReviewTopic(now)).resolves.toBe(false);
   expect(harness.getState().nodesById[currentNodeId ?? '']?.reading?.state).toBe('active');
   expect(syncNodeContentToRuntimeNow).not.toHaveBeenCalled();
+});
+
+it('continues within the same sequential book after dismissing its cover topic', async () => {
+  const now = '2026-03-03T00:00:00.000Z';
+  const books = {
+    ...createReadingNode('books', now),
+    content: '',
+    kind: 'folder' as const,
+    reading: null,
+    sequentialReadingEnabled: true
+  };
+  const debugging = { ...createReadingNode('debugging', now), parentNodeId: 'books', title: 'Debugging' };
+  const copyright = {
+    ...createReadingNode('copyright', now),
+    parentNodeId: 'debugging',
+    title: 'Copyright'
+  };
+  const drucker = {
+    ...createReadingNode('drucker', now),
+    parentNodeId: 'books',
+    reading: { ...createReadingNode('drucker', now).reading!, state: 'locked' as const },
+    title: 'Drucker'
+  };
+  const harness = createSetStateHarness(createWorkspaceFixture([books, debugging, copyright, drucker]));
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
+    grade: createSchedulerGradeMock(),
+    preview: previewStub
+  });
+
+  harness.setState({
+    activeNodeId: 'debugging',
+    reviewSession: createStartedReviewSession({
+      continueNodeId: 'books',
+      currentNodeId: 'debugging',
+      queueNodeIds: ['debugging', 'copyright'],
+      sessionStartedAt: now,
+      totalNodeCount: 2
+    })
+  });
+  expect(harness.getState().reviewSession.currentNodeId).toBe('debugging');
+
+  await expect(actions.dismissReviewTopic(now)).resolves.toBe(true);
+
+  expect(harness.getState().reviewSession.currentNodeId).toBe('copyright');
+  expect(harness.getState().nodesById.drucker?.reading?.state).toBe('locked');
+  expect(harness.getState().appActionHistory.undoStack).toHaveLength(1);
 });

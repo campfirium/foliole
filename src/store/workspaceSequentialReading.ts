@@ -3,6 +3,10 @@ import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind
 import type { PushQueuePriority } from '../features/review/model/unifiedPushQueueRules';
 
 import { cloneReadingProfile } from './workspaceActionHistoryReading';
+import {
+  isUnavailableSequentialTopic,
+  unavailableFolderTopicOccupiesSlot
+} from './workspaceSequentialReadingSlotOccupancy';
 import { collectFolderSequentialTopicIds } from './workspaceSequentialReadingSourceOrder';
 import {
   isSequentialReadingSourceFolder,
@@ -118,13 +122,6 @@ function applyReadingState(args: {
   });
 }
 
-function isUnavailableSequentialTopic(node: Node | undefined) {
-  if (!node) return true;
-  if (node.shelvedAt) return true;
-  const reading = node.reading;
-  return reading?.state === 'dismissed' || reading?.state === 'done';
-}
-
 export function buildSequentialReadingSourcePatch(args: SequentialReadingArgs & {
   enabled: boolean;
   sourceNodeId: string;
@@ -146,6 +143,7 @@ export function buildSequentialReadingSourcePatch(args: SequentialReadingArgs & 
   for (const nodeId of derivedNodeIds) {
     const node = nextNodesById[nodeId];
     if (isUnavailableSequentialTopic(node)) {
+      released ||= args.enabled && unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });
       continue;
     }
     const state = args.enabled ? (released ? 'locked' : 'active') : 'active';
@@ -192,10 +190,12 @@ export function buildSequentialReadingDismissPatch(args: SequentialReadingArgs &
   const nextNodesById = { ...args.nodesById };
   const changes: SequentialReadingChange[] = [];
   const derivedNodeIds = collectSequentialDerivedTopicIds({ ...args, sourceNodeId });
+  const sourceNode = nextNodesById[sourceNodeId];
   let released = false;
   for (const nodeId of derivedNodeIds) {
     const node = nextNodesById[nodeId];
     if (isUnavailableSequentialTopic(node)) {
+      released ||= unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });
       continue;
     }
     const state = released ? 'locked' : 'active';

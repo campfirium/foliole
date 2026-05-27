@@ -1,5 +1,7 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 
+import { hasMatchingBoundaryPreservedFields } from './workspaceSnapshotFieldManifest';
+
 interface FocusedRendererBoundaryArgs {
   activeNodeId: string | null;
   currentKeepNodeIds: ReadonlySet<string>;
@@ -60,6 +62,7 @@ export function listDocumentWorksetNodeIds(
         return nextNode.content.length > 0 || nextNode.reveal !== null;
       }
       return (
+        !hasMatchingBoundaryPreservedFields(currentNode, nextNode) ||
         currentNode.content !== nextNode.content ||
         currentNode.reveal !== nextNode.reveal ||
         currentNode.hideTitleHeading !== nextNode.hideTitleHeading
