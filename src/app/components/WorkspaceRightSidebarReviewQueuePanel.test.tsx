@@ -50,14 +50,16 @@ it('shows the current actionable item first even when the whole queue starts wit
   render(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-now"
+      flowWindow={{ queueNodeIds: ['fsrs-later', 'reading-now'], readyNodeIds: [], upcomingNodeIds: [] }}
       nodesById={nodesById}
       onSelectNode={() => undefined}
-      queueNodeIds={['fsrs-later', 'reading-now']}
     />
   );
 
-  const items = within(screen.getByRole('list', { name: 'Review flow items' })).getAllByRole('listitem');
+  const items = within(screen.getByRole('list', { name: 'Flow items' })).getAllByRole('listitem');
 
+  expect(screen.queryByText('Queue')).not.toBeInTheDocument();
+  expect(screen.queryByText(/items ·/)).not.toBeInTheDocument();
   expect(items[0]!).toHaveTextContent('1Reading Now');
   expect(items[1]!).toHaveTextContent('2Scheduled FSRS');
   expect(screen.queryByText('Current')).not.toBeInTheDocument();
@@ -86,26 +88,30 @@ it('keeps the mixed queue cadence after the current reading item', () => {
   render(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-1"
+      flowWindow={{
+        queueNodeIds: [
+          'fsrs-1',
+          'fsrs-2',
+          'fsrs-3',
+          'fsrs-4',
+          'fsrs-5',
+          'reading-1',
+          'fsrs-6',
+          'fsrs-7',
+          'fsrs-8',
+          'fsrs-9',
+          'fsrs-10',
+          'reading-2'
+        ],
+        readyNodeIds: [],
+        upcomingNodeIds: []
+      }}
       nodesById={nodesById}
       onSelectNode={() => undefined}
-      queueNodeIds={[
-        'fsrs-1',
-        'fsrs-2',
-        'fsrs-3',
-        'fsrs-4',
-        'fsrs-5',
-        'reading-1',
-        'fsrs-6',
-        'fsrs-7',
-        'fsrs-8',
-        'fsrs-9',
-        'fsrs-10',
-        'reading-2'
-      ]}
     />
   );
 
-  const items = within(screen.getByRole('list', { name: 'Review flow items' })).getAllByRole('listitem');
+  const items = within(screen.getByRole('list', { name: 'Flow items' })).getAllByRole('listitem');
 
   expect(items[0]!).toHaveTextContent('1Reading 1');
   expect(items[6]!).toHaveTextContent('7Reading 2');
@@ -115,9 +121,9 @@ it('shows an error when the review queue references an unavailable topic', () =>
   render(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
+      flowWindow={{ queueNodeIds: ['missing-topic'], readyNodeIds: [], upcomingNodeIds: [] }}
       nodesById={{}}
       onSelectNode={() => undefined}
-      queueNodeIds={['missing-topic']}
     />
   );
 
@@ -131,11 +137,11 @@ it('opens the queued node from the title only', () => {
   render(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
+      flowWindow={{ queueNodeIds: ['reading-1'], readyNodeIds: [], upcomingNodeIds: [] }}
       nodesById={{
         'reading-1': createNode({ id: 'reading-1', title: 'Reading 1' })
       }}
       onSelectNode={onSelectNode}
-      queueNodeIds={['reading-1']}
     />
   );
 
@@ -146,26 +152,45 @@ it('opens the queued node from the title only', () => {
   expect(screen.getByRole('button', { name: 'Reading 1' }).className).toContain('focus-visible:ring-1');
 });
 
-it('separates the active queue from later flow entries', () => {
+it('separates queue, ready, and upcoming flow entries with dividers only', () => {
   render(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-1"
-      flowNodeIds={['reading-1', 'reading-2', 'reading-3']}
+      flowWindow={{ queueNodeIds: ['reading-1'], readyNodeIds: ['reading-2'], upcomingNodeIds: ['reading-3'] }}
       nodesById={{
         'reading-1': createNode({ id: 'reading-1', title: 'Reading 1' }),
         'reading-2': createNode({ id: 'reading-2', title: 'Reading 2' }),
         'reading-3': createNode({ id: 'reading-3', title: 'Reading 3' })
       }}
       onSelectNode={() => undefined}
-      queueNodeIds={['reading-1']}
     />
   );
 
-  const items = within(screen.getByRole('list', { name: 'Review flow items' })).getAllByRole('listitem');
+  const items = within(screen.getByRole('list', { name: 'Flow items' })).getAllByRole('listitem');
 
   expect(screen.getByText('Flow')).toBeInTheDocument();
-  expect(screen.getByRole('presentation')).toHaveClass('bg-border/45');
+  expect(screen.queryByText('Queue')).not.toBeInTheDocument();
+  expect(screen.queryByText('Ready now')).not.toBeInTheDocument();
+  expect(screen.queryByText('Upcoming')).not.toBeInTheDocument();
+  expect(screen.getAllByRole('presentation')).toHaveLength(2);
   expect(items[0]!).toHaveTextContent('1Reading 1');
   expect(items[1]!).toHaveTextContent('2Reading 2');
   expect(items[2]!).toHaveTextContent('3Reading 3');
+});
+
+it('shows upcoming topics without treating the flow as empty', () => {
+  render(
+    <WorkspaceRightSidebarReviewQueuePanel
+      currentNodeId={null}
+      flowWindow={{ queueNodeIds: [], readyNodeIds: [], upcomingNodeIds: ['reading-later'] }}
+      nodesById={{
+        'reading-later': createNode({ id: 'reading-later', title: 'Reading Later' })
+      }}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  expect(screen.queryByText('Upcoming')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reading Later' })).toBeInTheDocument();
+  expect(screen.queryByText('No Flow topics are available right now.')).not.toBeInTheDocument();
 });

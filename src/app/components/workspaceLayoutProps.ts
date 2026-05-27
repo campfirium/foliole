@@ -14,6 +14,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
+import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
@@ -83,6 +84,7 @@ export interface WorkspaceLayoutFlatProps {
   isCurrentReviewItemGradable: boolean;
   isReviewEditing: boolean;
   reviewCurrentNodeId: string | null;
+  reviewFlowWindow: ReviewFlowWindow;
   reviewPanelQueueNodeIds: string[];
   reviewQueueNodeIds: string[];
   reviewQueueVisibility: ReviewQueueVisibility | null;

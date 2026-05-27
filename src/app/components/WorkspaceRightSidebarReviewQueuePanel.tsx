@@ -1,13 +1,13 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
 import { AppErrorState } from '../../shared/ui';
+import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
 interface WorkspaceRightSidebarReviewQueuePanelProps {
   currentNodeId: string | null;
-  flowNodeIds?: string[];
+  flowWindow: ReviewFlowWindow;
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
-  queueNodeIds: string[];
 }
 
 function buildDisplayQueueNodeIds(queueNodeIds: string[], currentNodeId: string | null) {
@@ -56,13 +56,10 @@ function getQueueItemTimeLabel(node: Node | undefined) {
   return formatShortDateTime(node.reading?.nextAt ?? node.createdAt);
 }
 
-function QueueHeader({ fsrsCount, readingCount }: { fsrsCount: number; readingCount: number }) {
+function QueueHeader() {
   return (
-    <header className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-3">
+    <header className="px-4 pb-2 pt-3">
       <h2 className="m-0 text-[13px] font-medium uppercase tracking-[0.02em] text-foreground/55">Flow</h2>
-      <p className="whitespace-nowrap text-[12px] text-foreground/45">
-        <span>{fsrsCount}</span> items · <span>{readingCount}</span> topics
-      </p>
     </header>
   );
 }
@@ -70,7 +67,7 @@ function QueueHeader({ fsrsCount, readingCount }: { fsrsCount: number; readingCo
 function EmptyQueueState() {
   return (
     <section className="min-h-0">
-      <QueueHeader fsrsCount={0} readingCount={0} />
+      <QueueHeader />
       <p className="px-4 py-3 text-[13px] text-foreground/55">No Flow topics are available right now.</p>
     </section>
   );
@@ -89,11 +86,6 @@ function QueueKindIcon({ kind }: { kind: 'item' | 'topic' }) {
       <polygon points="8,2.2 13.1,5.1 13.1,10.9 8,13.8 2.9,10.9 2.9,5.1" stroke="currentColor" strokeWidth="1.25" />
     </svg>
   );
-}
-
-function uniqueFlowExtensionNodeIds(flowNodeIds: string[], queueNodeIds: string[]) {
-  const queueNodeIdSet = new Set(queueNodeIds);
-  return flowNodeIds.filter((nodeId) => !queueNodeIdSet.has(nodeId));
 }
 
 function QueueRow(props: {
@@ -119,13 +111,43 @@ function QueueRow(props: {
   );
 }
 
+function FlowSection(props: {
+  indexOffset: number;
+  nodeIds: string[];
+  nodesById: Record<string, Node>;
+  onSelectNode: (nodeId: string) => void;
+  showDivider: boolean;
+}) {
+  if (props.nodeIds.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      {props.showDivider ? <li className="mx-4 my-1.5 h-px list-none bg-border/45" role="presentation" /> : null}
+      {props.nodeIds.map((nodeId, index) => (
+        <QueueRow
+          index={props.indexOffset + index}
+          key={nodeId}
+          node={props.nodesById[nodeId]!}
+          nodeId={nodeId}
+          onSelectNode={props.onSelectNode}
+        />
+      ))}
+    </>
+  );
+}
+
+function collectFlowNodeIds(flowWindow: ReviewFlowWindow) {
+  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds, ...flowWindow.upcomingNodeIds];
+}
+
 export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
-  const flowNodeIds = props.flowNodeIds ?? props.queueNodeIds;
+  const flowNodeIds = collectFlowNodeIds(props.flowWindow);
   if (flowNodeIds.length === 0) {
     return <EmptyQueueState />;
   }
 
-  const missingQueueNodeId = [...props.queueNodeIds, ...flowNodeIds].find((nodeId) => !props.nodesById[nodeId]);
+  const missingQueueNodeId = flowNodeIds.find((nodeId) => !props.nodesById[nodeId]);
   if (missingQueueNodeId) {
     return (
       <AppErrorState
@@ -135,36 +157,35 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
     );
   }
 
-  const displayQueueNodeIds = buildDisplayQueueNodeIds(props.queueNodeIds, props.currentNodeId);
-  const extensionNodeIds = uniqueFlowExtensionNodeIds(flowNodeIds, props.queueNodeIds);
-  const fsrsCount = flowNodeIds.filter((nodeId) => isFsrsReviewItemNode(props.nodesById[nodeId])).length;
-  const readingCount = flowNodeIds.length - fsrsCount;
+  const displayQueueNodeIds = buildDisplayQueueNodeIds(props.flowWindow.queueNodeIds, props.currentNodeId);
+  const readyIndexOffset = displayQueueNodeIds.length;
+  const upcomingIndexOffset = readyIndexOffset + props.flowWindow.readyNodeIds.length;
 
   return (
     <section className="flex min-h-0 flex-col">
-      <QueueHeader fsrsCount={fsrsCount} readingCount={readingCount} />
-      <ol aria-label="Review flow items" className="min-h-0 flex-1 overflow-y-auto py-1">
-        {displayQueueNodeIds.map((nodeId, index) => (
-          <QueueRow
-            index={index}
-            key={nodeId}
-            node={props.nodesById[nodeId]!}
-            nodeId={nodeId}
-            onSelectNode={props.onSelectNode}
-          />
-        ))}
-        {displayQueueNodeIds.length > 0 && extensionNodeIds.length > 0 ? (
-          <li className="mx-4 my-1.5 h-px list-none bg-border/45" role="presentation" />
-        ) : null}
-        {extensionNodeIds.map((nodeId, index) => (
-          <QueueRow
-            index={displayQueueNodeIds.length + index}
-            key={nodeId}
-            node={props.nodesById[nodeId]!}
-            nodeId={nodeId}
-            onSelectNode={props.onSelectNode}
-          />
-        ))}
+      <QueueHeader />
+      <ol aria-label="Flow items" className="min-h-0 flex-1 overflow-y-auto py-1">
+        <FlowSection
+          indexOffset={0}
+          nodeIds={displayQueueNodeIds}
+          nodesById={props.nodesById}
+          onSelectNode={props.onSelectNode}
+          showDivider={false}
+        />
+        <FlowSection
+          indexOffset={readyIndexOffset}
+          nodeIds={props.flowWindow.readyNodeIds}
+          nodesById={props.nodesById}
+          onSelectNode={props.onSelectNode}
+          showDivider={displayQueueNodeIds.length > 0}
+        />
+        <FlowSection
+          indexOffset={upcomingIndexOffset}
+          nodeIds={props.flowWindow.upcomingNodeIds}
+          nodesById={props.nodesById}
+          onSelectNode={props.onSelectNode}
+          showDivider={displayQueueNodeIds.length + props.flowWindow.readyNodeIds.length > 0}
+        />
       </ol>
     </section>
   );

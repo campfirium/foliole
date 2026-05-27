@@ -2,6 +2,7 @@ import { memo } from 'react';
 
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
 import {
   isWorkspaceRightPanelAvailable,
@@ -37,6 +38,7 @@ export interface WorkspaceRightSidebarPanelProps {
   outlineDocument?: WorkspaceRightSidebarOutlineDocument;
   reviewActiveQueueNodeIds?: string[];
   reviewCurrentNodeId: string | null;
+  reviewFlowWindow?: ReviewFlowWindow;
   reviewQueueNodeIds: string[];
   reviewSchedulerSettings: ReviewSchedulerSettings;
   trashedNodeIds: string[];
@@ -72,21 +74,19 @@ const SourceInfoSidebarPanel = memo(function SourceInfoSidebarPanel(props: {
 
 const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
   currentNodeId: string | null;
-  flowNodeIds: string[];
+  flowWindow: ReviewFlowWindow;
   nodesById: WorkspaceRightSidebarNodesById;
   onSelectNode: (nodeId: string) => void;
-  queueNodeIds: string[];
 }) {
   return <WorkspaceRightSidebarReviewQueuePanel {...props} />;
 }, (previousProps, nextProps) => {
   if (previousProps.currentNodeId !== nextProps.currentNodeId) return false;
   if (previousProps.onSelectNode !== nextProps.onSelectNode) return false;
-  if (previousProps.queueNodeIds.length !== nextProps.queueNodeIds.length) return false;
-  if (previousProps.flowNodeIds.length !== nextProps.flowNodeIds.length) return false;
-  const stableQueue = previousProps.queueNodeIds.every((nodeId, index) => nodeId === nextProps.queueNodeIds[index]);
-  if (!stableQueue) return false;
-  return previousProps.flowNodeIds.every((nodeId, index) => {
-    if (nodeId !== nextProps.flowNodeIds[index]) return false;
+  const previousFlowNodeIds = collectFlowWindowNodeIds(previousProps.flowWindow);
+  const nextFlowNodeIds = collectFlowWindowNodeIds(nextProps.flowWindow);
+  if (previousFlowNodeIds.length !== nextFlowNodeIds.length) return false;
+  return previousFlowNodeIds.every((nodeId, index) => {
+    if (nodeId !== nextFlowNodeIds[index]) return false;
     const previousNode = previousProps.nodesById[nodeId];
     const nextNode = nextProps.nodesById[nodeId];
     return (
@@ -98,6 +98,10 @@ const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
     );
   });
 });
+
+function collectFlowWindowNodeIds(flowWindow: ReviewFlowWindow) {
+  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds, ...flowWindow.upcomingNodeIds];
+}
 
 function renderDevPanel(props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById' | 'reviewSchedulerSettings'>) {
   return (
@@ -133,15 +137,18 @@ function renderBacklinksPanel(
 }
 
 function renderReviewQueuePanel(
-  props: Pick<WorkspaceRightSidebarPanelProps, 'reviewActiveQueueNodeIds' | 'reviewCurrentNodeId' | 'nodesById' | 'onSelectNode' | 'reviewQueueNodeIds'>
+  props: Pick<WorkspaceRightSidebarPanelProps, 'reviewActiveQueueNodeIds' | 'reviewCurrentNodeId' | 'nodesById' | 'onSelectNode' | 'reviewFlowWindow' | 'reviewQueueNodeIds'>
 ) {
   return (
     <ReviewQueueSidebarPanel
       currentNodeId={props.reviewCurrentNodeId}
-      flowNodeIds={props.reviewQueueNodeIds}
+      flowWindow={props.reviewFlowWindow ?? {
+        queueNodeIds: props.reviewActiveQueueNodeIds ?? props.reviewQueueNodeIds,
+        readyNodeIds: [],
+        upcomingNodeIds: []
+      }}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNode}
-      queueNodeIds={props.reviewActiveQueueNodeIds ?? props.reviewQueueNodeIds}
     />
   );
 }

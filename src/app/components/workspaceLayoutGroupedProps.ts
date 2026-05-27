@@ -106,6 +106,7 @@ export interface WorkspaceLayoutProps {
     | 'isCurrentReviewItemGradable'
     | 'isReviewEditing'
     | 'reviewCurrentNodeId'
+    | 'reviewFlowWindow'
     | 'reviewPanelQueueNodeIds'
     | 'reviewQueueNodeIds'
     | 'reviewQueueVisibility'
