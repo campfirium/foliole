@@ -6,6 +6,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
+import { SearchPaletteEnhancementPrompt } from './SearchPaletteEnhancementPrompt';
 import { useExternalSectionStatus } from './searchPaletteExternalStatus';
 import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList } from './SearchPaletteResults';
 import { useOrderedSearchResults, useSearchResults } from './searchPaletteSearchState';
@@ -72,6 +73,7 @@ export function SearchPalette(props: SearchPaletteProps) {
           query={query}
           totalItems={results.length}
         />
+        <SearchPaletteEnhancementPrompt />
         <SearchPaletteBody
           activeIndex={activeIndex}
           externalSectionStatus={externalSectionStatus}

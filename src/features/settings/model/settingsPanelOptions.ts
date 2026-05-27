@@ -20,7 +20,7 @@ export type SettingsCategoryId =
   | 'hotkeys';
 
 export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCategoryId; label: string }> = [
-  { id: 'about', label: 'General', description: 'View version, diagnostics, and support tools.' },
+  { id: 'about', label: 'General', description: 'Adjust search behavior and view support tools.' },
   { id: 'appearance', label: 'Appearance', description: 'Adjust the look and density of the workspace.' },
   { id: 'editor', label: 'Editor', description: 'Configure editing and writing behavior.' },
   { id: 'web-lookup', label: 'Right-click menu', description: 'Configure external menu items for Topic text.' },

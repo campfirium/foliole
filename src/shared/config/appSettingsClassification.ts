@@ -29,6 +29,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'autoLocalizeRemoteImages',
   'remoteImageFailureHintDismissed',
   'readwiseOriginalFileTipDismissed',
+  'searchEnhancementPromptDismissed',
   'selectionToolbarEnabled',
   'selectionToolbarOpacityPercent',
   'editorDisplayMode',

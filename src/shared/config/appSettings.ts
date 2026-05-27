@@ -12,6 +12,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   autoLocalizeRemoteImages: 'foliole-auto-localize-remote-images',
   remoteImageFailureHintDismissed: 'foliole-remote-image-failure-hint-dismissed',
   readwiseOriginalFileTipDismissed: 'foliole-readwise-original-file-tip-dismissed',
+  searchEnhancementPromptDismissed: 'foliole-search-enhancement-prompt-dismissed',
   selectionToolbarEnabled: 'foliole-selection-toolbar-enabled',
   selectionToolbarOpacityPercent: 'foliole-selection-toolbar-opacity-percent',
   editorDisplayMode: 'foliole-editor-display-mode',

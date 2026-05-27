@@ -19,7 +19,7 @@ function SearchSettingsHarness() {
         <SettingsPanel
           {...createProps()}
           onClose={() => setIsOpen(false)}
-          requestedCategory="external-search"
+          requestedCategory="about"
         />
       ) : null}
     </>
@@ -31,15 +31,16 @@ beforeEach(() => {
   delete window.electronAPI;
 });
 
-it('persists the full-text search index strategy from settings', async () => {
+it('persists search enhancement from General settings', async () => {
   renderWithMouseGestureProvider(<SearchSettingsHarness />);
 
-  const strategySelect = await screen.findByLabelText('Search text strategy');
-  expect(strategySelect).toHaveValue('word-based');
+  const toggle = await screen.findByRole('switch', { name: 'Search enhancement' });
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect(screen.getByText('Adjust search behavior and view support tools.')).toBeInTheDocument();
+  expect(screen.getByText(/other languages that are not separated by spaces/)).toBeInTheDocument();
+  expect(screen.queryByText('Full-text search index')).not.toBeInTheDocument();
 
-  fireEvent.change(strategySelect, {
-    target: { value: 'cjk-trigram' }
-  });
+  fireEvent.click(toggle);
 
   await waitFor(() => {
     expect(window.localStorage.getItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY)).toBe('cjk-trigram');
@@ -48,5 +49,5 @@ it('persists the full-text search index strategy from settings', async () => {
   fireEvent.click(screen.getByLabelText('Settings'));
   fireEvent.click(screen.getByRole('button', { name: 'Reopen settings' }));
 
-  expect(await screen.findByLabelText('Search text strategy')).toHaveValue('cjk-trigram');
+  expect(await screen.findByRole('switch', { name: 'Search enhancement' })).toHaveAttribute('aria-checked', 'true');
 });

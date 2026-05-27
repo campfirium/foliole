@@ -2,11 +2,17 @@ import { useState } from 'react';
 
 import { exportDiagnosticBundle } from '../../../../shared/platform/diagnosticBundle';
 import {
+  isSearchEnhancementEnabled,
+  setSearchEnhancementEnabled
+} from '../../../../shared/platform/searchEnhancementSettings';
+import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
   settingsButtonClassName,
+  settingsSwitchClassName,
+  settingsSwitchKnobClassName,
   settingsValueBoxClassName
 } from '../../../../shared/ui';
 
@@ -58,16 +64,49 @@ function DiagnosticExportRow() {
 
 function ApplicationInfo() {
   return (
-    <SettingsSection ariaLabel="About settings section">
-      <SettingsRow description="Reader-first outlining and review workflow built with Electron + React." readonly title="Foliole desktop">
-        <SettingsControlSlot>
-          <span className={settingsValueBoxClassName('rounded-full px-2.5 py-1 text-[0.82rem]')}>
-            v0.1.0
-          </span>
-        </SettingsControlSlot>
-      </SettingsRow>
-      <DiagnosticExportRow />
-    </SettingsSection>
+    <>
+      <SettingsSection ariaLabel="About settings section">
+        <SettingsRow description="Reader-first outlining and review workflow built with Electron + React." readonly title="Foliole desktop">
+          <SettingsControlSlot>
+            <span className={settingsValueBoxClassName('rounded-full px-2.5 py-1 text-[0.82rem]')}>
+              v0.1.0
+            </span>
+          </SettingsControlSlot>
+        </SettingsRow>
+        <DiagnosticExportRow />
+      </SettingsSection>
+      <SettingsSection ariaLabel="General search settings section" title="Search">
+        <SearchEnhancementRow />
+      </SettingsSection>
+    </>
+  );
+}
+
+function SearchEnhancementRow() {
+  const [enabled, setEnabled] = useState(isSearchEnhancementEnabled);
+  const updateEnabled = (nextEnabled: boolean) => {
+    setSearchEnhancementEnabled(nextEnabled);
+    setEnabled(nextEnabled);
+  };
+
+  return (
+    <SettingsRow
+      description="Improves search for Chinese, Japanese, Korean, and other languages that are not separated by spaces. Uses more search index storage."
+      title="Search enhancement"
+    >
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <button
+          aria-checked={enabled}
+          aria-label="Search enhancement"
+          className={settingsSwitchClassName(enabled)}
+          onClick={() => updateEnabled(!enabled)}
+          role="switch"
+          type="button"
+        >
+          <span aria-hidden="true" className={settingsSwitchKnobClassName(enabled)} />
+        </button>
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }
 

@@ -77,6 +77,14 @@ it('describes external folders as mirrored sources', () => {
   expect(screen.getByRole('button', { name: 'Update folder mirror' })).toBeInTheDocument();
 });
 
+it('does not show global search enhancement controls in external sources', () => {
+  render(<SettingsExternalSearchSection {...baseProps} />);
+
+  expect(screen.queryByText('Search enhancement')).not.toBeInTheDocument();
+  expect(screen.queryByText('Full-text search index')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Search text strategy')).not.toBeInTheDocument();
+});
+
 it('shows a retryable alert when external sources fail to load', () => {
   render(<SettingsExternalSearchSection {...baseProps} error="Could not load the external library." />);
 

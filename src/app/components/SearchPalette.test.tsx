@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
@@ -7,14 +7,15 @@ vi.mock('../../shared/platform/runtimeInvoke', () => ({
 vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
   loadRuntimeNodeSourceDetails: vi.fn()
 }));
-vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
-  loadRuntimeExternalSearchFolders: vi.fn()
-}));
-
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
 import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+
+vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
+  loadRuntimeExternalSearchFolders: vi.fn()
+}));
 
 import { SearchPalette } from './SearchPalette';
 import { openImportedExternalResult } from './searchPaletteImportResult';
@@ -38,7 +39,7 @@ function createNodeResult() {
 }
 
 function renderSearchPalette() {
-  render(
+  return render(
     <SearchPalette
       isOpen
       nodeOrder={['node-1', 'node-2', 'node-3']}
@@ -84,7 +85,13 @@ function renderSearchPalette() {
     />
   );
 }
+
+beforeEach(() => {
+  window.localStorage.clear();
+  vi.clearAllMocks();
+});
 it('renders search results as title context and path rows', async () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed, 'true');
   vi.mocked(getRuntimeInvoke).mockReturnValue(
     vi.fn().mockResolvedValue(
       [
