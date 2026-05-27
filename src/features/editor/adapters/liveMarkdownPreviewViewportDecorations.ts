@@ -1,6 +1,7 @@
 import { type Range } from '@codemirror/state';
 import { Decoration } from '@codemirror/view';
 
+import { collectAiCitationMarkerMatches } from '../model/inlineMarkdownMatches';
 import type { InlinePresentationPlan } from '../model/inlinePresentationPlans';
 import type { InlineTextDecorationPlan } from '../model/inlineTextDecorationPlans';
 import type { ViewportPreviewLinePlan } from '../model/liveMarkdownViewportPlans';
@@ -11,7 +12,7 @@ import {
   collectPrefixRangesByLineFrom,
   collectViewportTablePlans
 } from './liveMarkdownDecorationCollections';
-import { addFootnoteDecorations } from './liveMarkdownFootnotes';
+import { addAiCitationMarkerDecorations, addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addImageDecorations } from './liveMarkdownInlineDecorations';
 import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
 import {
@@ -29,6 +30,7 @@ interface PreviewDecorationContext {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   markdownSyntaxVisible: boolean;
+  mermaidLineFroms?: ReadonlySet<number>;
   nodeId: string | null;
   onMissingAttachmentResource: Parameters<typeof addImageDecorations>[5];
   prefixRangesByLineFrom: ReturnType<typeof collectPrefixRangesByLineFrom>;
@@ -87,12 +89,14 @@ export function addPreviewViewportDecorations(
 ) {
   for (const { lineFrom, lineText, plan } of viewportPlans) {
     if (isPositionInsideInactiveTable(lineFrom, viewportTablePlans)) continue;
+    if (context.mermaidLineFroms?.has(lineFrom)) continue;
     if (plan.lineClass) addLine(ranges, lineFrom, plan.lineClass);
     if (context.hideLinkReferenceDefinition(ranges, lineFrom)) continue;
     addPreviewImageDecorations(ranges, plan, context);
     addPreviewPrefixDecorations(ranges, lineFrom, lineText, plan, context);
     addThematicBreakDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, plan.isThematicBreak);
     addCodeFenceDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, plan.isCodeFenceLine);
+    if (plan.imageVisible) addAiCitationMarkerDecorations(ranges, collectAiCitationMarkerMatches(lineFrom, lineText, []));
     addFootnoteDecorations(ranges, plan.footnoteMatches);
     if (!plan.showSyntaxOnLine) {
       for (const escapedRange of plan.escapedRanges) addReplace(ranges, escapedRange.from, escapedRange.to);

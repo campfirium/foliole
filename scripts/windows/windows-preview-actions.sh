@@ -169,6 +169,12 @@ run_full_restart() {
   if [ -n "${output}" ]; then
     echo "${output}"
   fi
+  local recovery_status=""
+  if recovery_status="$(probe_running_status_detail)"; then
+    echo "[windows-preview] full restart recovered via trusted running status: $(extract_status_detail "${recovery_status}")"
+    echo "[windows-preview] status: STARTED"
+    return 0
+  fi
   print_startup_failure_diagnostics
   return 1
 }

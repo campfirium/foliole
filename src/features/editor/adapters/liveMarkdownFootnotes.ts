@@ -2,7 +2,7 @@ import type { Range } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
 import { buildFootnotePresentation } from '../model/footnotePresentation';
-import type { FootnoteMatch } from '../model/inlineMarkdownMatches';
+import type { AiCitationMarkerMatch, FootnoteMatch } from '../model/inlineMarkdownMatches';
 export { collectFootnoteMatches } from '../model/inlineMarkdownMatches';
 
 class MarkdownFootnoteWidget extends WidgetType {
@@ -62,5 +62,11 @@ class MarkdownFootnoteWidget extends WidgetType {
 export function addFootnoteDecorations(ranges: Range<Decoration>[], footnotes: ReadonlyArray<FootnoteMatch>) {
   for (const footnote of footnotes) {
     ranges.push(Decoration.replace({ widget: new MarkdownFootnoteWidget(footnote), inclusive: false }).range(footnote.from, footnote.to));
+  }
+}
+
+export function addAiCitationMarkerDecorations(ranges: Range<Decoration>[], markers: ReadonlyArray<AiCitationMarkerMatch>) {
+  for (const marker of markers) {
+    ranges.push(Decoration.replace({ inclusive: false }).range(marker.from, marker.to));
   }
 }

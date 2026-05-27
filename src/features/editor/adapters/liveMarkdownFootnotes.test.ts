@@ -53,5 +53,15 @@ describe('live markdown footnote rendering', () => {
 
     adapter.destroy();
   });
-});
 
+  it('hides AI citation markers in preview without changing editor content', () => {
+    const { adapter, host } = createAdapterHost('Claim. citeturn13search0turn22search0 Next.');
+
+    expect(host.querySelector('.cm-md-ai-citation-marker')).toBeNull();
+    expect(host.textContent).not.toContain('turn13search0');
+    expect(host.textContent).not.toContain('ref');
+    expect(adapter.getContent()).toContain('turn13search0');
+
+    adapter.destroy();
+  });
+});

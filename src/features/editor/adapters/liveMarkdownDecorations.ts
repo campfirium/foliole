@@ -16,6 +16,7 @@ import { collectMultilineLinkPresentationPlans } from '../model/markdownMultilin
 import { collectReadwiseOriginalFilePlaceholderRangesFromLines } from '../model/readwiseOriginalFilePlaceholder';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
+import { addPreviewBlockDecorations, collectPreviewMermaidLineFroms } from './liveMarkdownBlockDecorations';
 import { addCodeFenceSyntaxHighlightDecorations } from './liveMarkdownCodeFenceHighlight';
 import {
   collectCalloutPrefixRangeByLineFrom,
@@ -29,7 +30,6 @@ import {
 } from './liveMarkdownDecorationCollections';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addForumTitleLinkDecorations } from './liveMarkdownForumTitleLinkDecorations';
-import { addMathDecorations } from './liveMarkdownMath';
 import type { EditedMathRange } from './liveMarkdownMathEditState';
 import { addEditedMathSourceDecorations } from './liveMarkdownMathSource';
 import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
@@ -156,7 +156,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   addReadwiseOriginalFileDecorations(ranges, readwiseOriginalFilePlaceholders, context.nodeId);
   addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
   addForumTitleLinkDecorations(ranges, forumTitleLinks);
-  addMathDecorations(ranges, mathRanges, view, context.editedMathRange, context.nodeId, context.imageClozePresentationVersion);
+  addPreviewBlockDecorations(ranges, { codeFenceProjection, context, mathRanges, source, view });
   addEditedMathSourceDecoration(ranges, view, mathRanges, context.editedMathRange);
   addCodeFenceSyntaxHighlightDecorations(ranges, source, codeFenceProjection.codeBlocks, viewportRange);
   addMultilineLinkDecorations(ranges, source, {
@@ -169,6 +169,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     calloutPrefixRangeByLineFrom,
     hideLinkReferenceDefinition: (targetRanges, lineFrom) =>
       hideLinkReferenceDefinition(targetRanges, lineFrom, linkReferenceRangeByLineFrom),
+    mermaidLineFroms: collectPreviewMermaidLineFroms(source, codeFenceProjection, view),
     prefixRangesByLineFrom
   });
 

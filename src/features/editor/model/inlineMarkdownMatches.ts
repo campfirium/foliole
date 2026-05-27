@@ -51,6 +51,10 @@ export interface FootnoteMatch extends RangeBounds {
   note: string | null;
 }
 
+export interface AiCitationMarkerMatch extends RangeBounds {
+  label: string;
+}
+
 function isWithinRanges(from: number, to: number, ranges: ReadonlyArray<RangeBounds>) {
   for (const range of ranges) {
     if (from < range.to && to > range.from) {
@@ -153,6 +157,23 @@ export function collectFootnoteMatches(
       note: match.note,
       to: match.to
     }));
+}
+
+export function collectAiCitationMarkerMatches(
+  from: number,
+  text: string,
+  preservedRanges: ReadonlyArray<RangeBounds>
+): AiCitationMarkerMatch[] {
+  const matches: AiCitationMarkerMatch[] = [];
+  const pattern = /cite[^]*/gu;
+  for (const match of text.matchAll(pattern)) {
+    const index = match.index ?? -1;
+    if (index < 0) continue;
+    const matchFrom = from + index;
+    const matchTo = matchFrom + match[0].length;
+    if (!isWithinRanges(matchFrom, matchTo, preservedRanges)) matches.push({ from: matchFrom, label: 'ref', to: matchTo });
+  }
+  return matches;
 }
 
 export function toRangeBounds(ranges: ReadonlyArray<SemanticRange>): RangeBounds[] {
