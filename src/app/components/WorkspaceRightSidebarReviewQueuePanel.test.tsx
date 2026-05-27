@@ -152,6 +152,42 @@ it('opens the queued node from the title only', () => {
   expect(screen.getByRole('button', { name: 'Reading 1' }).className).toContain('focus-visible:ring-1');
 });
 
+it('does not show due times in the flow list', () => {
+  render(
+    <WorkspaceRightSidebarReviewQueuePanel
+      currentNodeId={null}
+      flowWindow={{ queueNodeIds: ['reading-1', 'fsrs-1'], readyNodeIds: [], upcomingNodeIds: [] }}
+      nodesById={{
+        'reading-1': createNode({
+          id: 'reading-1',
+          reading: {
+            intervalDurationMs: 86_400_000,
+            intervalGrowthFactor: 1.2,
+            lastHandledAt: '2026-05-26T00:00:00.000Z',
+            nextAt: '2026-05-27T09:46:00.000Z',
+            readingPosition: 0,
+            repetitionCount: 1,
+            state: 'active'
+          } as never,
+          title: 'Reading 1'
+        }),
+        'fsrs-1': createNode({
+          id: 'fsrs-1',
+          kind: 'item',
+          review: { due: '2026-05-26T09:24:00.000Z', state: 2 } as never,
+          title: 'FSRS 1'
+        })
+      }}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  expect(screen.queryByText(/05\/27/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/05\/26/)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reading 1' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'FSRS 1' })).toBeInTheDocument();
+});
+
 it('separates queue, ready, and upcoming flow entries with dividers only', () => {
   render(
     <WorkspaceRightSidebarReviewQueuePanel

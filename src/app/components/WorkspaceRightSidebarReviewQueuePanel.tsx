@@ -29,33 +29,6 @@ function getQueueItemTitle(node: Node | undefined) {
   return 'Untitled topic';
 }
 
-function formatShortDateTime(value: string | null | undefined) {
-  if (!value) {
-    return 'Unknown';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString('zh-CN', {
-    hour12: false,
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-function getQueueItemTimeLabel(node: Node | undefined) {
-  if (!node) {
-    return 'Unknown';
-  }
-  if (isFsrsReviewItemNode(node)) {
-    return formatShortDateTime(node.review?.due);
-  }
-  return formatShortDateTime(node.reading?.nextAt ?? node.createdAt);
-}
-
 function QueueHeader() {
   return (
     <header className="px-4 pb-2 pt-3">
@@ -96,7 +69,7 @@ function QueueRow(props: {
 }) {
   const kind = isFsrsReviewItemNode(props.node) ? 'item' : 'topic';
   return (
-    <li className="grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)_auto] items-center gap-2 px-4 py-1.5 hover:bg-foreground/[0.025]">
+    <li className="grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)] items-center gap-2 px-4 py-1.5 hover:bg-foreground/[0.025]">
       <span className="text-right text-[11px] tabular-nums text-foreground/28">{props.index + 1}</span>
       <QueueKindIcon kind={kind} />
       <button
@@ -106,7 +79,6 @@ function QueueRow(props: {
       >
         {getQueueItemTitle(props.node)}
       </button>
-      <span className="whitespace-nowrap text-[11.5px] tabular-nums text-foreground/35">{getQueueItemTimeLabel(props.node)}</span>
     </li>
   );
 }
