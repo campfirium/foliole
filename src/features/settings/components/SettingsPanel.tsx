@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { onWindowKeydown, type KeydownUnlisten } from '../../../shared/platform/keyboard';
+import { onWindowEscape, onWindowKeydown, type KeydownUnlisten } from '../../../shared/platform/keyboard';
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
@@ -128,6 +128,19 @@ function useSettingsPreviewMode() {
   return { isPreviewActive, setIsPreviewActive };
 }
 
+function useSettingsPanelEscape(isPreviewActive: boolean, onClose: () => void) {
+  useEffect(
+    () =>
+      onWindowEscape(() => {
+        if (isPreviewActive) {
+          return false;
+        }
+        onClose();
+      }),
+    [isPreviewActive, onClose]
+  );
+}
+
 function createSettingsCategoryProps(
   props: SettingsPanelBodyProps,
   setIsPreviewActive: (value: boolean) => void
@@ -203,6 +216,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
   const hotkeys = useHotkeySettings();
   const preview = useSettingsPreviewMode();
   const categoryProps = createSettingsCategoryProps(props, preview.setIsPreviewActive);
+  useSettingsPanelEscape(preview.isPreviewActive, props.onClose);
 
   return (
     <SettingsPanelDialog
