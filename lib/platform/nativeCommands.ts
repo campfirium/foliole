@@ -89,6 +89,8 @@ export const NATIVE_COMMANDS = {
   recordSyncNodeConflicts: 'record_sync_node_conflicts',
   loadAppSettingsState: 'load_app_settings_state',
   saveAppSettingsState: 'save_app_settings_state',
+  loadSearchIndexRebuildStatus: 'load_search_index_rebuild_status',
+  rebuildSearchIndex: 'rebuild_search_index',
   loadSyncPeers: 'load_sync_peers',
   saveSyncPeers: 'save_sync_peers',
   saveImportManagerSettings: 'save_import_manager_settings',

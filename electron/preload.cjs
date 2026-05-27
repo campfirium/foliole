@@ -10,6 +10,7 @@ const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
 const IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-reader-import-progress';
+const IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL = 'foliole:search-index-rebuild-status';
 const IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL = 'foliole:workspace-content-changed';
 const IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL = 'foliole:workspace-sync-applied';
 const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
@@ -36,6 +37,7 @@ function subscribe(channel, handler) {
     channel !== IPC_MENU_EVENT_CHANNEL &&
     channel !== IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL &&
     channel !== IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL &&
+    channel !== IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL &&
     channel !== IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL &&
     channel !== IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL &&
     channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL &&
@@ -124,6 +126,22 @@ function subscribe(channel, handler) {
       });
       return;
     }
+    if (channel === IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL) {
+      const status = payload?.status;
+      const strategy = payload?.strategy;
+      if (
+        (status !== 'failed' && status !== 'ready' && status !== 'rebuilding') ||
+        (strategy !== 'cjk-trigram' && strategy !== 'word-based')
+      ) {
+        return;
+      }
+      handler({
+        error: typeof payload?.error === 'string' ? payload.error : undefined,
+        status,
+        strategy
+      });
+      return;
+    }
     if (channel === IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL) {
       handler({
         scope: payload?.scope === 'workspace' ? 'workspace' : ''
@@ -148,6 +166,7 @@ const electronApi = {
   onReadwiseBookEpubProgress: (handler) => subscribe(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, handler),
   onReadwiseReaderImportProgress: (handler) =>
     subscribe(IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL, handler),
+  onSearchIndexRebuildStatus: (handler) => subscribe(IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, handler),
   onWorkspaceContentChanged: (handler) => subscribe(IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, handler),
   onWorkspaceSyncApplied: (handler) => subscribe(IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, handler),
   onCompanionPairingRequestsChanged: (handler) => subscribe(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, handler),

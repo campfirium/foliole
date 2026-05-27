@@ -3,11 +3,13 @@ import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 export const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 export const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
 export const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
+export const IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL = 'foliole:external-document-file-opened';
 export const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 export const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 export const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
 export const IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-reader-import-progress';
 export const IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL = 'foliole:workspace-content-changed';
+export const IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL = 'foliole:search-index-rebuild-status';
 export const IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL = 'foliole:workspace-sync-applied';
 export const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
 export const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
@@ -47,4 +49,10 @@ export interface WorkspaceSyncAppliedEvent {
 
 export interface WorkspaceContentChangedEvent {
   scope: 'workspace';
+}
+
+export interface SearchIndexRebuildStatusEvent {
+  error?: string;
+  status: 'failed' | 'ready' | 'rebuilding';
+  strategy: 'cjk-trigram' | 'word-based';
 }

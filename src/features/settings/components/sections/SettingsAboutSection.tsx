@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { exportDiagnosticBundle } from '../../../../shared/platform/diagnosticBundle';
 import {
   isSearchEnhancementEnabled,
-  setSearchEnhancementEnabled
+  updateSearchEnhancementEnabled
 } from '../../../../shared/platform/searchEnhancementSettings';
+import {
+  loadSearchIndexRebuildStatus,
+  onSearchIndexRebuildStatus,
+  type SearchIndexRebuildStatus
+} from '../../../../shared/platform/searchIndexRebuildStatus';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
@@ -84,14 +89,43 @@ function ApplicationInfo() {
 
 function SearchEnhancementRow() {
   const [enabled, setEnabled] = useState(isSearchEnhancementEnabled);
-  const updateEnabled = (nextEnabled: boolean) => {
-    setSearchEnhancementEnabled(nextEnabled);
-    setEnabled(nextEnabled);
+  const [status, setStatus] = useState<SearchIndexRebuildStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void loadSearchIndexRebuildStatus().then((nextStatus) => {
+      if (active) setStatus(nextStatus);
+    });
+    const unsubscribe = onSearchIndexRebuildStatus((nextStatus) => {
+      setStatus(nextStatus);
+      setError(null);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const updateEnabled = async (nextEnabled: boolean) => {
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const nextStatus = await updateSearchEnhancementEnabled(nextEnabled);
+      setEnabled(nextEnabled);
+      setStatus(nextStatus);
+    } catch {
+      setEnabled(isSearchEnhancementEnabled());
+      setError(nextEnabled ? 'Could not enable enhanced search.' : 'Could not turn off enhanced search.');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
     <SettingsRow
-      description="Improves search for Chinese, Japanese, Korean, and other languages that are not separated by spaces. Uses more search index storage."
+      description={<SearchEnhancementDescription statusCopy={getSearchEnhancementStatusCopy(status, error)} />}
       title="Search enhancement"
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
@@ -99,7 +133,8 @@ function SearchEnhancementRow() {
           aria-checked={enabled}
           aria-label="Search enhancement"
           className={settingsSwitchClassName(enabled)}
-          onClick={() => updateEnabled(!enabled)}
+          disabled={isUpdating}
+          onClick={() => void updateEnabled(!enabled)}
           role="switch"
           type="button"
         >
@@ -108,6 +143,27 @@ function SearchEnhancementRow() {
       </SettingsControlSlot>
     </SettingsRow>
   );
+}
+
+function SearchEnhancementDescription(props: { statusCopy: string | null }) {
+  return (
+    <>
+      <span className="block">
+        Improves search for Chinese, Japanese, Korean, and other languages that are not separated by spaces. Uses more search data.
+      </span>
+      {props.statusCopy ? <span className="mt-1 block text-foreground/70">{props.statusCopy}</span> : null}
+    </>
+  );
+}
+
+function getSearchEnhancementStatusCopy(status: SearchIndexRebuildStatus | null, error: string | null) {
+  if (error) return error;
+  if (!status) return null;
+  if (status.status === 'rebuilding') return 'Preparing search...';
+  if (status.status === 'failed') return status.strategy === 'cjk-trigram'
+    ? 'Could not enable enhanced search.'
+    : 'Could not turn off enhanced search.';
+  return status.strategy === 'cjk-trigram' ? 'Enhanced search is ready.' : 'Search is ready.';
 }
 
 export function SettingsAboutSection() {

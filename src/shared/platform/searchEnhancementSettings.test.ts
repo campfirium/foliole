@@ -1,6 +1,7 @@
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../../lib/core/database/fullTextSearchIndexStrategy';
+import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 import {
@@ -9,12 +10,14 @@ import {
   isSearchEnhancementEnabled,
   isSearchEnhancementPromptDismissed,
   setSearchEnhancementEnabled,
-  shouldShowSearchEnhancementPrompt
+  shouldShowSearchEnhancementPrompt,
+  updateSearchEnhancementEnabled
 } from './searchEnhancementSettings';
 import { getLocalStorageWhitelist } from './storage';
 
 beforeEach(() => {
   window.localStorage.clear();
+  delete window.electronAPI;
 });
 
 it('stores search enhancement in the existing full-text search strategy setting', () => {
@@ -48,4 +51,31 @@ it('marks the prompt handled once search enhancement is already enabled', () => 
 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed)).toBe('true');
   expect(shouldShowSearchEnhancementPrompt()).toBe(false);
+});
+
+it('saves search enhancement before requesting a live rebuild', async () => {
+  const invokeMock = vi.fn(async (command: string) => {
+    if (command === 'save_app_settings_state') return null;
+    if (command === 'rebuild_search_index') {
+      return { status: 'rebuilding', strategy: 'cjk-trigram' };
+    }
+    return null;
+  });
+  const invoke = invokeMock as unknown as NativeInvoke;
+  window.electronAPI = {
+    invoke,
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
+
+  await expect(updateSearchEnhancementEnabled(true)).resolves.toEqual({
+    status: 'rebuilding',
+    strategy: 'cjk-trigram'
+  });
+  expect(invokeMock.mock.calls.at(-2)).toEqual([
+    'save_app_settings_state',
+    { settings: { [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram' } }
+  ]);
+  expect(invokeMock.mock.calls.at(-1)).toEqual(['rebuild_search_index', { strategy: 'cjk-trigram' }]);
 });

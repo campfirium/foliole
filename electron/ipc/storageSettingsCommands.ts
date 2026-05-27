@@ -23,6 +23,11 @@ import {
 import { asBoolean, asLiteralUnion, asNullableString, asString } from './commandParsers.js';
 import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
+import {
+  asFullTextSearchIndexStrategy,
+  loadSearchIndexRebuildStatus,
+  requestSearchIndexRebuild
+} from './searchIndexRebuild.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { readSettingsObject } from './storageCommandSupport.js';
 import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
@@ -42,6 +47,10 @@ export async function handleSettingsStorageCommand(
     await saveAppSettingsState(readSettingsObject(args.settings));
     await refreshManagedInboxMonitorFromSettings();
     return null;
+  }
+  if (command === NATIVE_COMMANDS.loadSearchIndexRebuildStatus) return loadSearchIndexRebuildStatus();
+  if (command === NATIVE_COMMANDS.rebuildSearchIndex) {
+    return requestSearchIndexRebuild(asFullTextSearchIndexStrategy(args.strategy));
   }
   if (command === NATIVE_COMMANDS.loadSyncPeers) return loadSyncPeers();
   if (command === NATIVE_COMMANDS.saveSyncPeers) {

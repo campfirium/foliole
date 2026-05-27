@@ -5,8 +5,12 @@ import {
   dismissSearchEnhancementPromptIfEnabled,
   isSearchEnhancementEnabled,
   isSearchEnhancementPromptDismissed,
-  setSearchEnhancementEnabled
+  updateSearchEnhancementEnabled
 } from '../../shared/platform/searchEnhancementSettings';
+import {
+  onSearchIndexRebuildStatus,
+  type SearchIndexRebuildStatus
+} from '../../shared/platform/searchIndexRebuildStatus';
 import {
   AppButton,
   AppDialog,
@@ -17,15 +21,17 @@ import {
   AppDialogTitle
 } from '../../shared/ui';
 
-type PromptState = 'hidden' | 'prompt' | 'restart';
+type PromptState = 'hidden' | 'prompt' | 'status';
 interface SearchEnhancementPromptContentProps {
   error: string | null;
+  isUpdating: boolean;
   onSkip: () => void;
   onTurnOn: () => void;
 }
 interface SearchEnhancementRestartContentProps {
   error: string | null;
   onDone: () => void;
+  status: SearchIndexRebuildStatus | null;
 }
 
 function initialPromptState(): PromptState {
@@ -38,6 +44,8 @@ function initialPromptState(): PromptState {
 export function SearchPaletteEnhancementPrompt() {
   const [state, setState] = useState<PromptState>(initialPromptState);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [status, setStatus] = useState<SearchIndexRebuildStatus | null>(null);
 
   useEffect(() => {
     try {
@@ -47,16 +55,22 @@ export function SearchPaletteEnhancementPrompt() {
     }
   }, []);
 
+  useEffect(() => onSearchIndexRebuildStatus(setStatus), []);
+
   if (state === 'hidden') return null;
 
-  const handleTurnOn = () => {
+  const handleTurnOn = async () => {
+    setIsUpdating(true);
     try {
-      setSearchEnhancementEnabled(true);
+      const nextStatus = await updateSearchEnhancementEnabled(true);
       dismissSearchEnhancementPrompt();
+      setStatus(nextStatus);
       setError(null);
-      setState('restart');
+      setState('status');
     } catch {
       setError('Search enhancement could not be turned on.');
+    } finally {
+      setIsUpdating(false);
     }
   };
   const handleSkip = () => {
@@ -79,14 +93,14 @@ export function SearchPaletteEnhancementPrompt() {
   };
 
   return (
-    <AppDialog open={state !== 'hidden'} onOpenChange={handleOpenChange}>
+    <AppDialog open onOpenChange={handleOpenChange}>
       <AppDialogPortal>
         <AppDialogOverlay />
         <AppDialogContent className="w-[min(440px,calc(100vw-32px))] p-5">
-          {state === 'restart' ? (
-            <SearchEnhancementRestartContent error={error} onDone={() => setState('hidden')} />
+          {state === 'status' ? (
+            <SearchEnhancementRestartContent error={error} onDone={() => setState('hidden')} status={status} />
           ) : (
-            <SearchEnhancementPromptContent error={error} onSkip={handleSkip} onTurnOn={handleTurnOn} />
+            <SearchEnhancementPromptContent error={error} isUpdating={isUpdating} onSkip={handleSkip} onTurnOn={() => void handleTurnOn()} />
           )}
         </AppDialogContent>
       </AppDialogPortal>
@@ -95,11 +109,12 @@ export function SearchPaletteEnhancementPrompt() {
 }
 
 function SearchEnhancementRestartContent(props: SearchEnhancementRestartContentProps) {
+  const message = getPromptStatusCopy(props.status);
   return (
     <>
       <AppDialogTitle>Search enhancement is on</AppDialogTitle>
       <AppDialogDescription className="mt-2">
-        Restart to rebuild existing search indexes.
+        {message}
       </AppDialogDescription>
       <div className="mt-5 flex justify-end">
         <AppButton onClick={props.onDone} variant="primary">
@@ -122,11 +137,17 @@ function SearchEnhancementPromptContent(props: SearchEnhancementPromptContentPro
         <AppButton onClick={props.onSkip} variant="ghost">
           Skip
         </AppButton>
-        <AppButton onClick={props.onTurnOn} variant="primary">
-          Turn on
+        <AppButton disabled={props.isUpdating} onClick={props.onTurnOn} variant="primary">
+          {props.isUpdating ? 'Turning on...' : 'Turn on'}
         </AppButton>
       </div>
       {props.error ? <p className="mt-3 text-sm text-error">{props.error}</p> : null}
     </>
   );
+}
+
+function getPromptStatusCopy(status: SearchIndexRebuildStatus | null) {
+  if (status?.status === 'ready') return 'Enhanced search is ready.';
+  if (status?.status === 'failed') return 'Could not prepare enhanced search.';
+  return 'Preparing enhanced search...';
 }

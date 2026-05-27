@@ -6,6 +6,7 @@ import type { NativeMoveCommandMap } from './nativeMoveCommandMap.js';
 import type { NativeNodeCreationMutationSpec, NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec } from './nativeNodeMutationContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
+import type { NativeSearchIndexCommandMap } from './nativeSearchIndexCommandMap.js';
 import type {
   NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
   NativeImportRemoteImageAttachmentArgs, NativeImportLocalImageAttachmentResult,
@@ -25,7 +26,7 @@ import type { NativeAttachmentResourceResolution, NativeResolvedAppPaths, Native
 export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeNodeMutationContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
 
-export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
+export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;

@@ -46,6 +46,12 @@ export interface WorkspaceContentChangedPayload {
   scope: 'workspace';
 }
 
+export interface SearchIndexRebuildStatusPayload {
+  error?: string;
+  status: 'failed' | 'ready' | 'rebuilding';
+  strategy: 'cjk-trigram' | 'word-based';
+}
+
 export interface ExternalDocumentFileOpenedPayload {
   absolutePath: string;
   folderId: string;
@@ -64,6 +70,7 @@ export interface ElectronAPI {
   onReadwiseReaderImportProgress?: (
     handler: (payload: ReadwiseReaderImportProgressPayload) => void
   ) => () => void;
+  onSearchIndexRebuildStatus?: (handler: (payload: SearchIndexRebuildStatusPayload) => void) => () => void;
   onWorkspaceContentChanged?: (handler: (payload: WorkspaceContentChangedPayload) => void) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;

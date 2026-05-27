@@ -1,0 +1,91 @@
+import { BrowserWindow } from 'electron';
+
+import {
+  FULL_TEXT_SEARCH_INDEX_STRATEGY_VALUES,
+  type FullTextSearchIndexStrategy
+} from '../../lib/core/database/fullTextSearchIndexStrategy.js';
+import {
+  markWorkspaceSearchSidecarRebuilding,
+  readWorkspaceSearchSidecarRebuildStatus,
+  rebuildWorkspaceSearchSidecar,
+  type WorkspaceSearchSidecarRebuildStatus
+} from '../../lib/core/database/workspaceSearchSidecar.js';
+import { openDatabaseConnection } from '../database/connection.js';
+
+import {
+  IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL,
+  type SearchIndexRebuildStatusEvent
+} from './contracts.js';
+
+let activeStrategy: FullTextSearchIndexStrategy | null = null;
+let pendingStrategy: FullTextSearchIndexStrategy | null = null;
+let scheduled = false;
+
+export function asFullTextSearchIndexStrategy(value: unknown): FullTextSearchIndexStrategy {
+  if (FULL_TEXT_SEARCH_INDEX_STRATEGY_VALUES.includes(value as FullTextSearchIndexStrategy)) {
+    return value as FullTextSearchIndexStrategy;
+  }
+  throw new Error('invalid search index strategy');
+}
+
+function toSearchIndexRebuildStatusEvent(
+  status: WorkspaceSearchSidecarRebuildStatus | null
+): SearchIndexRebuildStatusEvent | null {
+  if (!status) return null;
+  const event: SearchIndexRebuildStatusEvent = {
+    status: status.status,
+    strategy: status.strategy
+  };
+  if (status.error) {
+    event.error = status.error;
+  }
+  return event;
+}
+
+function notifySearchIndexRebuildStatus(status: WorkspaceSearchSidecarRebuildStatus | null) {
+  const payload = toSearchIndexRebuildStatusEvent(status);
+  if (!payload) return;
+  const windows = typeof BrowserWindow?.getAllWindows === 'function' ? BrowserWindow.getAllWindows() : [];
+  for (const window of windows) {
+    if (window.isDestroyed()) continue;
+    window.webContents.send(IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, payload);
+  }
+}
+
+function scheduleRebuildDrain() {
+  if (scheduled) return;
+  scheduled = true;
+  setImmediate(drainRebuildQueue);
+}
+
+function drainRebuildQueue() {
+  scheduled = false;
+  if (activeStrategy || !pendingStrategy) return;
+  const strategy = pendingStrategy;
+  pendingStrategy = null;
+  activeStrategy = strategy;
+  const status = rebuildWorkspaceSearchSidecar(openDatabaseConnection(), { strategy });
+  notifySearchIndexRebuildStatus(status);
+  activeStrategy = null;
+  if (pendingStrategy) scheduleRebuildDrain();
+}
+
+export function loadSearchIndexRebuildStatus(): SearchIndexRebuildStatusEvent | null {
+  return toSearchIndexRebuildStatusEvent(
+    readWorkspaceSearchSidecarRebuildStatus(openDatabaseConnection().sqlite)
+  );
+}
+
+export function requestSearchIndexRebuild(strategy: FullTextSearchIndexStrategy): SearchIndexRebuildStatusEvent {
+  pendingStrategy = strategy;
+  const status = markWorkspaceSearchSidecarRebuilding(openDatabaseConnection(), strategy);
+  notifySearchIndexRebuildStatus(status);
+  scheduleRebuildDrain();
+  return toSearchIndexRebuildStatusEvent(status) as SearchIndexRebuildStatusEvent;
+}
+
+export function resetSearchIndexRebuildRuntimeForTests() {
+  activeStrategy = null;
+  pendingStrategy = null;
+  scheduled = false;
+}

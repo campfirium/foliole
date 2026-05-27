@@ -81,6 +81,8 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.recordSyncNodeConflicts,
   NATIVE_COMMANDS.loadAppSettingsState,
   NATIVE_COMMANDS.saveAppSettingsState,
+  NATIVE_COMMANDS.loadSearchIndexRebuildStatus,
+  NATIVE_COMMANDS.rebuildSearchIndex,
   NATIVE_COMMANDS.loadSyncPeers,
   NATIVE_COMMANDS.saveSyncPeers,
   NATIVE_COMMANDS.saveImportManagerSettings,

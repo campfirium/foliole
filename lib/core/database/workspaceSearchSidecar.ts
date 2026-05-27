@@ -1,7 +1,10 @@
 import type { DatabaseDriver } from './driver.js';
 import {
   DEFAULT_FULL_TEXT_SEARCH_INDEX_STRATEGY,
+  FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY,
+  normalizeFullTextSearchIndexStrategy,
   resolveFullTextSearchIndexStrategy,
+  type FullTextSearchIndexStrategy,
   type FullTextSearchTokenizer
 } from './fullTextSearchIndexStrategy.js';
 import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
@@ -24,6 +27,18 @@ interface WorkspaceSearchSidecarConnection extends DatabaseConnectionLike {
 
 interface InitializeWorkspaceSearchSidecarOptions {
   rebuildWorkspaceSearchIndexes?: (driver: DatabaseDriver) => void;
+}
+
+export interface WorkspaceSearchSidecarRebuildStatus {
+  error?: string;
+  status: 'failed' | 'ready' | 'rebuilding';
+  strategy: FullTextSearchIndexStrategy;
+  tokenizer: FullTextSearchTokenizer;
+}
+
+interface WorkspaceSearchSidecarRebuildOptions {
+  rebuildWorkspaceSearchIndexes?: (driver: DatabaseDriver) => void;
+  strategy: FullTextSearchIndexStrategy;
 }
 
 function readJsonObject(value: unknown): Record<string, unknown> | null {
@@ -124,6 +139,83 @@ function tryWriteSearchMetadata(sqlite: DatabaseMigrationTarget, key: string, va
   }
 }
 
+function toRebuildStatus(value: Record<string, unknown> | null): WorkspaceSearchSidecarRebuildStatus | null {
+  if (value?.status !== 'failed' && value?.status !== 'ready' && value?.status !== 'rebuilding') return null;
+  const resolution = resolveFullTextSearchIndexStrategy({
+    [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: normalizeFullTextSearchIndexStrategy(value.strategy)
+  });
+  const status: WorkspaceSearchSidecarRebuildStatus = {
+    status: value.status,
+    strategy: resolution.strategy,
+    tokenizer: resolution.tokenizer
+  };
+  if (typeof value.error === 'string') {
+    status.error = value.error;
+  }
+  return status;
+}
+
+export function readWorkspaceSearchSidecarRebuildStatus(
+  sqlite: DatabaseMigrationTarget
+): WorkspaceSearchSidecarRebuildStatus | null {
+  createSearchMetadataTable(sqlite);
+  return toRebuildStatus(readSearchMetadata(sqlite, 'last_rebuild_status'));
+}
+
+export function markWorkspaceSearchSidecarRebuilding<T extends WorkspaceSearchSidecarConnection>(
+  connection: T,
+  strategy: FullTextSearchIndexStrategy
+): WorkspaceSearchSidecarRebuildStatus {
+  const resolution = resolveFullTextSearchIndexStrategy({
+    [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: strategy
+  });
+  const rebuildingStatus = {
+    status: 'rebuilding',
+    strategy: resolution.strategy,
+    tokenizer: resolution.tokenizer
+  } as const;
+  createSearchMetadataTable(connection.sqlite);
+  writeSearchMetadata(connection.sqlite, 'last_rebuild_status', rebuildingStatus);
+  return rebuildingStatus;
+}
+
+export function rebuildWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarConnection>(
+  connection: T,
+  options: WorkspaceSearchSidecarRebuildOptions
+): WorkspaceSearchSidecarRebuildStatus {
+  const resolution = resolveFullTextSearchIndexStrategy({
+    [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: options.strategy
+  });
+  createSearchMetadataTable(connection.sqlite);
+  markWorkspaceSearchSidecarRebuilding(connection, resolution.strategy);
+  try {
+    dropSearchIndexTables(connection.sqlite);
+    createSearchIndexTables(connection.sqlite, resolution.tokenizer);
+    (options.rebuildWorkspaceSearchIndexes ?? rebuildWorkspaceSearchIndexes)(connection.driver);
+    writeSearchMetadata(connection.sqlite, 'schema', {
+      schemaVersion: SEARCH_SIDECAR_SCHEMA_VERSION,
+      strategy: resolution.strategy,
+      tokenizer: resolution.tokenizer
+    });
+    const readyStatus = {
+      status: 'ready',
+      strategy: resolution.strategy,
+      tokenizer: resolution.tokenizer
+    } as const;
+    writeSearchMetadata(connection.sqlite, 'last_rebuild_status', readyStatus);
+    return readyStatus;
+  } catch (error) {
+    const failedStatus = {
+      error: toErrorMessage(error),
+      status: 'failed',
+      strategy: resolution.strategy,
+      tokenizer: resolution.tokenizer
+    } as const;
+    tryWriteSearchMetadata(connection.sqlite, 'last_rebuild_status', failedStatus);
+    return failedStatus;
+  }
+}
+
 export function initializeWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarConnection>(
   connection: T,
   options: InitializeWorkspaceSearchSidecarOptions = {}
@@ -131,33 +223,11 @@ export function initializeWorkspaceSearchSidecar<T extends WorkspaceSearchSideca
   const resolution = resolveFullTextSearchIndexStrategy(readAppSettings(connection.sqlite));
   createSearchMetadataTable(connection.sqlite);
   if (shouldRecreateSearchIndexes(connection.sqlite, resolution.tokenizer) || shouldRetryPreviousRebuild(connection.sqlite)) {
-    writeSearchMetadata(connection.sqlite, 'last_rebuild_status', {
-      status: 'rebuilding',
-      strategy: resolution.strategy,
-      tokenizer: resolution.tokenizer
-    });
-    try {
-      dropSearchIndexTables(connection.sqlite);
-      createSearchIndexTables(connection.sqlite, resolution.tokenizer);
-      (options.rebuildWorkspaceSearchIndexes ?? rebuildWorkspaceSearchIndexes)(connection.driver);
-      writeSearchMetadata(connection.sqlite, 'schema', {
-        schemaVersion: SEARCH_SIDECAR_SCHEMA_VERSION,
-        strategy: resolution.strategy,
-        tokenizer: resolution.tokenizer
-      });
-      writeSearchMetadata(connection.sqlite, 'last_rebuild_status', {
-        status: 'ready',
-        strategy: resolution.strategy,
-        tokenizer: resolution.tokenizer
-      });
-    } catch (error) {
-      tryWriteSearchMetadata(connection.sqlite, 'last_rebuild_status', {
-        error: toErrorMessage(error),
-        status: 'failed',
-        strategy: resolution.strategy,
-        tokenizer: resolution.tokenizer
-      });
+    const rebuildOptions: WorkspaceSearchSidecarRebuildOptions = { strategy: resolution.strategy };
+    if (options.rebuildWorkspaceSearchIndexes) {
+      rebuildOptions.rebuildWorkspaceSearchIndexes = options.rebuildWorkspaceSearchIndexes;
     }
+    rebuildWorkspaceSearchSidecar(connection, rebuildOptions);
   }
   return connection;
 }

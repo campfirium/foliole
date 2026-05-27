@@ -1,8 +1,9 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../../../lib/core/database/fullTextSearchIndexStrategy';
+import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
@@ -28,7 +29,21 @@ function SearchSettingsHarness() {
 
 beforeEach(() => {
   window.localStorage.clear();
-  delete window.electronAPI;
+  const invoke = vi.fn(async (command: string) => {
+    if (command === 'load_search_index_rebuild_status') return null;
+    if (command === 'save_app_settings_state') return null;
+    if (command === 'rebuild_search_index') {
+      return { status: 'rebuilding', strategy: 'cjk-trigram' };
+    }
+    return null;
+  }) as unknown as NativeInvoke;
+  window.electronAPI = {
+    invoke,
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onSearchIndexRebuildStatus: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
 });
 
 it('persists search enhancement from General settings', async () => {
