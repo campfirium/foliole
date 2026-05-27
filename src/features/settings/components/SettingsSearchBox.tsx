@@ -1,10 +1,11 @@
 import { Search } from 'lucide-react';
-import type { KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
 import { getSettingsCategoryOption } from '../model/settingsPanelOptions';
 import type { SettingsSearchResult } from '../model/settingsSearch';
 
 import { cn } from '@/shared/lib/utils';
+import { onWindowEscape } from '@/shared/platform/keyboard';
 import {
   settingsFieldClassName
 } from '@/shared/ui';
@@ -46,49 +47,16 @@ function SettingsSearchResultButton(props: {
   );
 }
 
-export function SettingsSearchBox(props: SettingsSearchBoxProps) {
-  const hasQuery = props.query.trim().length > 0;
-  const activeResult = props.results[props.activeResultIndex] ?? null;
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Escape' && hasQuery) {
-      event.stopPropagation();
-      props.onQueryChange('');
-      return;
-    }
-    if (!props.results.length) return;
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      props.onActiveResultIndexChange((props.activeResultIndex + 1) % props.results.length);
-      return;
-    }
-    if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      props.onActiveResultIndexChange((props.activeResultIndex - 1 + props.results.length) % props.results.length);
-      return;
-    }
-    if (event.key === 'Enter' && activeResult) {
-      event.preventDefault();
-      props.onSelectResult(activeResult);
-    }
-  };
-
+function SettingsSearchPopover(props: {
+  activeResultIndex: number;
+  hasQuery: boolean;
+  onSelectResult: (result: SettingsSearchResult) => void;
+  results: SettingsSearchResult[];
+}) {
   return (
-    <div className={cn('mb-4', props.className)}>
-      <div className="relative">
-        <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground/38" />
-        <input
-          aria-label="Search settings"
-          className={settingsFieldClassName(
-            'h-8 rounded-md border-transparent bg-settings-control pl-8 pr-3 text-[0.92rem] text-foreground/82 placeholder:text-foreground/38 hover:border-settings-control-border hover:bg-settings-control-hover focus-visible:bg-settings-control-hover'
-          )}
-          onChange={(event) => props.onQueryChange(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Search settings"
-          value={props.query}
-        />
-      </div>
-      {hasQuery ? (
-        <div aria-label="Settings search results" className="mt-2 space-y-1" role="listbox">
+    <div className="absolute right-0 top-10 z-10 w-full rounded-md border border-settings-outline bg-settings-shell p-2 shadow-settings">
+      {props.hasQuery ? (
+        <div aria-label="Settings search results" className="mt-2 max-h-[360px] space-y-1 overflow-auto" role="listbox">
           {props.results.length ? props.results.map((result, index) => (
             <SettingsSearchResultButton
               active={index === props.activeResultIndex}
@@ -102,6 +70,120 @@ export function SettingsSearchBox(props: SettingsSearchBoxProps) {
             </div>
           )}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+function useSettingsSearchOpenState(rootRef: RefObject<HTMLDivElement | null>) {
+  const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [isOpen, rootRef]);
+  return [isOpen, setIsOpen] as const;
+}
+
+function useSettingsSearchEscape(params: {
+  hasQuery: boolean;
+  isOpen: boolean;
+  onQueryChange: (query: string) => void;
+  setIsOpen: (isOpen: boolean) => void;
+}) {
+  useEffect(() => {
+    if (!params.isOpen) return undefined;
+    return onWindowEscape(() => {
+      if (params.hasQuery) params.onQueryChange('');
+      params.setIsOpen(false);
+    });
+  }, [params.hasQuery, params.isOpen, params.onQueryChange, params.setIsOpen]);
+}
+
+function useSettingsSearchHandlers(params: {
+  activeResultIndex: number;
+  hasQuery: boolean;
+  onActiveResultIndexChange: (index: number) => void;
+  onQueryChange: (query: string) => void;
+  onSelectResult: (result: SettingsSearchResult) => void;
+  results: SettingsSearchResult[];
+  setIsOpen: (isOpen: boolean) => void;
+}) {
+  const activeResult = params.results[params.activeResultIndex] ?? null;
+  const selectResult = (result: SettingsSearchResult) => {
+    params.onQueryChange('');
+    params.onSelectResult(result);
+    params.setIsOpen(false);
+  };
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      if (params.hasQuery) params.onQueryChange('');
+      params.setIsOpen(false);
+      return;
+    }
+    if (!params.results.length) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      params.onActiveResultIndexChange((params.activeResultIndex + 1) % params.results.length);
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      params.onActiveResultIndexChange((params.activeResultIndex - 1 + params.results.length) % params.results.length);
+      return;
+    }
+    if (event.key === 'Enter' && activeResult) {
+      event.preventDefault();
+      selectResult(activeResult);
+    }
+  };
+  return { handleKeyDown, selectResult };
+}
+
+export function SettingsSearchBox(props: SettingsSearchBoxProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [isOpen, setIsOpen] = useSettingsSearchOpenState(rootRef);
+  const hasQuery = props.query.trim().length > 0;
+  const { handleKeyDown, selectResult } = useSettingsSearchHandlers({ ...props, hasQuery, setIsOpen });
+  useSettingsSearchEscape({ hasQuery, isOpen, onQueryChange: props.onQueryChange, setIsOpen });
+  const handleInputPointerDown = (event: ReactMouseEvent<HTMLInputElement>) => {
+    event.stopPropagation();
+    setIsOpen(true);
+  };
+
+  return (
+    <div className={cn('relative w-72', props.className)} ref={rootRef}>
+      <div className="relative">
+        <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground/38" />
+        <input
+          aria-label="Search settings"
+          className={settingsFieldClassName(
+            'h-8 rounded-md border-transparent bg-settings-control pl-8 pr-3 text-[0.92rem] text-foreground/82 placeholder:text-foreground/38 hover:border-settings-control-border hover:bg-settings-control-hover focus-visible:bg-settings-control-hover'
+          )}
+          onChange={(event) => {
+            props.onQueryChange(event.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          onMouseDown={handleInputPointerDown}
+          placeholder="Search settings"
+          ref={inputRef}
+          value={props.query}
+        />
+      </div>
+      {isOpen ? (
+        <SettingsSearchPopover
+          activeResultIndex={props.activeResultIndex}
+          hasQuery={hasQuery}
+          onSelectResult={selectResult}
+          results={props.results}
+        />
       ) : null}
     </div>
   );

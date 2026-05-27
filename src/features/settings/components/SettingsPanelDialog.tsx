@@ -54,10 +54,10 @@ export function SettingsPanelDialog(props: {
             setActiveCategory={props.setActiveCategory}
           />
           <div className="app-scrollbar overflow-auto bg-settings-shell px-7 py-7" ref={props.scrollContainerRef}>
-            <div className="mb-6 border-b border-settings-divider/45 px-5 pb-5">
+            <div className="relative mb-6 border-b border-settings-divider/45 px-5 pb-5 pr-64">
               <SettingsSearchBox
                 activeResultIndex={props.activeResultIndex}
-                className="mb-5 max-w-[520px]"
+                className="absolute right-5 top-0"
                 onActiveResultIndexChange={props.onActiveResultIndexChange}
                 onQueryChange={props.onSearchQueryChange}
                 onSelectResult={props.onSearchResultSelect}

@@ -62,7 +62,7 @@ it('searches categories without mixing in menu help actions', () => {
   fireEvent.click(screen.getByRole('option', { name: /Appearance/ }));
   expect(screen.getByRole('button', { name: 'Appearance' })).toHaveAttribute('aria-current', 'page');
 
-  fireEvent.change(input, { target: { value: 'Relearn' } });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search settings' }), { target: { value: 'Relearn' } });
   expect(screen.getByText('No settings found.')).toBeInTheDocument();
 });
 
@@ -79,6 +79,23 @@ it('supports keyboard selection and clears query with Escape before closing sett
   fireEvent.keyDown(input, { key: 'Escape', bubbles: true });
   expect(input).toHaveValue('');
   expect(onClose).not.toHaveBeenCalled();
+});
+
+it('closes search results when clicking outside or pressing Escape', () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="about" />);
+  const input = screen.getByRole('textbox', { name: 'Search settings' });
+
+  fireEvent.change(input, { target: { value: 'Mirror' } });
+  expect(screen.getByRole('listbox', { name: 'Settings search results' })).toBeInTheDocument();
+
+  fireEvent.mouseDown(screen.getByRole('heading', { name: 'General' }));
+  expect(screen.queryByRole('listbox', { name: 'Settings search results' })).not.toBeInTheDocument();
+
+  fireEvent.focus(input);
+  fireEvent.change(input, { target: { value: 'Mirror' } });
+  fireEvent.keyDown(window, { key: 'Escape', bubbles: true });
+  expect(screen.queryByRole('listbox', { name: 'Settings search results' })).not.toBeInTheDocument();
+  expect(input).toHaveValue('');
 });
 
 it('keeps registered row anchors renderable in their categories', async () => {
