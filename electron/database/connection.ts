@@ -6,13 +6,11 @@ import { ensureLibraryPathLayout, loadLibraryPathSettingsSync } from '../ipc/lib
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
+import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
 import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
-
-export const FOLIOLE_DB_FILE = 'foliole.db';
-export const FOLIOLE_SEARCH_DB_FILE = 'foliole-index.db';
 
 export type SqliteDatabase = import('better-sqlite3').Database;
 
@@ -39,7 +37,7 @@ export function resolveDatabasePath(): string {
 }
 
 export function resolveSearchDatabasePath(databasePath = resolveDatabasePath()): string {
-  return path.join(path.dirname(databasePath), FOLIOLE_SEARCH_DB_FILE);
+  return resolveSearchDatabasePathFromDatabasePath(databasePath);
 }
 
 function attachSearchDatabase(sqlite: SqliteDatabase, searchDbPath: string) {

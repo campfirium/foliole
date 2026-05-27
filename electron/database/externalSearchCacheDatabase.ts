@@ -1,5 +1,4 @@
 import { createRequire } from 'node:module';
-import path from 'node:path';
 
 import {
   resolveFullTextSearchIndexStrategy,
@@ -7,6 +6,7 @@ import {
 } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
 
 import { resolveDatabasePath } from './connection.js';
+import { resolveExternalSearchDatabasePath } from './databaseFilePaths.js';
 import {
   createExternalSearchMetadataTable,
   rebuildExternalSearchSidecar,
@@ -21,12 +21,7 @@ type SqliteDatabase = import('better-sqlite3').Database;
 
 let cachedCacheDb: SqliteDatabase | null = null;
 
-export const FOLIOLE_EXTERNAL_DB_FILE = 'foliole-external.db';
 const APP_SETTINGS_KEY = 'app_settings';
-
-function resolveCacheDbPath() {
-  return path.join(path.dirname(resolveDatabasePath()), FOLIOLE_EXTERNAL_DB_FILE);
-}
 
 function readExternalSearchIndexStrategy() {
   return resolveFullTextSearchIndexStrategy(
@@ -39,7 +34,7 @@ export function openExternalSearchCacheDatabase() {
     ensureExternalSearchCacheStrategy(readExternalSearchIndexStrategy());
     return cachedCacheDb;
   }
-  const dbPath = resolveCacheDbPath();
+  const dbPath = resolveExternalSearchDatabasePath(resolveDatabasePath());
   cachedCacheDb = new BetterSqlite3(dbPath);
   cachedCacheDb.pragma('journal_mode = WAL');
   cachedCacheDb.exec(`CREATE TABLE IF NOT EXISTS external_search_documents (

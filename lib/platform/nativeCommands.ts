@@ -50,6 +50,7 @@ export const NATIVE_COMMANDS = {
   exportDiagnosticBundle: 'export_diagnostic_bundle',
   resolveAppPaths: 'resolve_app_paths',
   loadLibraryPathSettings: 'load_library_path_settings',
+  loadDatabaseMaintenanceStatus: 'load_database_maintenance_status',
   loadBackupSettings: 'load_backup_settings',
   rebuildMirrorOutput: 'rebuild_mirror_output',
   rebuildMirrorAttachmentLinks: 'rebuild_mirror_attachment_links',

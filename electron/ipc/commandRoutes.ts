@@ -53,6 +53,7 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.copyAttachmentImageToClipboard,
   NATIVE_COMMANDS.exportAttachmentImage,
   NATIVE_COMMANDS.loadLibraryPathSettings,
+  NATIVE_COMMANDS.loadDatabaseMaintenanceStatus,
   NATIVE_COMMANDS.loadBackupSettings,
   NATIVE_COMMANDS.rebuildMirrorOutput,
   NATIVE_COMMANDS.rebuildMirrorAttachmentLinks,

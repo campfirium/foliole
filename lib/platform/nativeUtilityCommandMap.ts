@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
+import type { NativeDatabaseMaintenanceStatus } from './nativeDatabaseMaintenanceContract.js';
 import type {
   NativeBackupSettings,
   NativeClearLinkPanelBrowsingDataResult,
@@ -53,6 +54,10 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.loadLibraryPathSettings]: {
     args: undefined;
     result: NativeLibraryPaths;
+  };
+  [NATIVE_COMMANDS.loadDatabaseMaintenanceStatus]: {
+    args: undefined;
+    result: NativeDatabaseMaintenanceStatus;
   };
   [NATIVE_COMMANDS.loadBackupSettings]: {
     args: undefined;

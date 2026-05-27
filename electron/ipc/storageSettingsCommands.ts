@@ -22,6 +22,7 @@ import {
 
 import { asBoolean, asLiteralUnion, asNullableString, asString } from './commandParsers.js';
 import { handleCompanionPairingCommand } from './companionPairingCommands.js';
+import { loadDatabaseMaintenanceStatus } from './databaseMaintenanceStatus.js';
 import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
 import {
   asFullTextSearchIndexStrategy,
@@ -57,6 +58,7 @@ export async function handleSettingsStorageCommand(
     return saveSyncPeers(Array.isArray(args.peers) ? (args.peers as Parameters<typeof saveSyncPeers>[0]) : []);
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
+  if (command === NATIVE_COMMANDS.loadDatabaseMaintenanceStatus) return loadDatabaseMaintenanceStatus();
   if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();
   if (command === NATIVE_COMMANDS.loadSourceDispositionSummary) return summarizeSourceDispositions();
   if (command === NATIVE_COMMANDS.restoreSourceDispositions) return restoreSourceDispositions();
