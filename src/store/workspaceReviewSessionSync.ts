@@ -2,10 +2,6 @@ import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { createEmptyReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 
-interface ReconcileReviewSessionOptions {
-  preferActiveQueuedNode?: boolean;
-}
-
 function isVisibleQueuedNode(state: WorkspaceState, nodeId: string) {
   return isCanonicalVisibleNodeId({
     nodeOrder: state.nodeOrder,
@@ -15,29 +11,19 @@ function isVisibleQueuedNode(state: WorkspaceState, nodeId: string) {
   }, nodeId);
 }
 
-function placeActiveQueuedNodeFirst(queueNodeIds: string[], nextActiveNodeId: string | null) {
-  if (!nextActiveNodeId || queueNodeIds[0] === nextActiveNodeId || !queueNodeIds.includes(nextActiveNodeId)) {
-    return queueNodeIds;
-  }
-  return [nextActiveNodeId, ...queueNodeIds.filter((nodeId) => nodeId !== nextActiveNodeId)];
-}
-
 export function reconcileReviewSession(
   state: WorkspaceState,
-  nextActiveNodeId: string | null = state.activeNodeId,
-  options: ReconcileReviewSessionOptions = {}
+  nextActiveNodeId: string | null = state.activeNodeId
 ): WorkspaceState['reviewSession'] {
-  const visibleQueuedNodeIds = state.reviewSession.queueNodeIds.filter((nodeId) =>
+  void nextActiveNodeId;
+  const queuedNodeIds = state.reviewSession.queueNodeIds.filter((nodeId) =>
     isVisibleQueuedNode(state, nodeId)
   );
-  const queuedNodeIds = options.preferActiveQueuedNode
-    ? placeActiveQueuedNodeFirst(visibleQueuedNodeIds, nextActiveNodeId)
-    : visibleQueuedNodeIds;
   if (queuedNodeIds.length === 0) {
     return createEmptyReviewSession();
   }
 
-  const removedQueueCount = state.reviewSession.queueNodeIds.length - visibleQueuedNodeIds.length;
+  const removedQueueCount = state.reviewSession.queueNodeIds.length - queuedNodeIds.length;
   const nextTotalNodeCount = Math.max(
     queuedNodeIds.length,
     state.reviewSession.totalNodeCount - removedQueueCount

@@ -6,6 +6,10 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import {
+  setDevReviewStatusBarOpen,
+  setDevReviewStatusBarPersistenceEnabled
+} from '../app/hooks/studyModeStatusBarPersistence';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
@@ -14,6 +18,13 @@ import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
 });
+
+vi.stubGlobal('ResizeObserver', class { disconnect() {} observe() {} unobserve() {} });
+
+function enablePersistedStudyMode() {
+  setDevReviewStatusBarPersistenceEnabled(true);
+  setDevReviewStatusBarOpen(true);
+}
 
 function mockDocumentLoad() {
   const invoke = vi.fn().mockImplementation((command: string, args?: { nodeId?: string }) => {
@@ -97,24 +108,24 @@ function seedReviewNavigationMismatch() {
   }));
 }
 
-it('keeps review toolbar in sync when navigation history jumps to another queued node during study', async () => {
+it('keeps review paused when navigation history jumps to another queued node during study', async () => {
   mockDocumentLoad();
   seedReviewNavigationMismatch();
+  enablePersistedStudyMode();
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
 
   await waitFor(() => {
-    expect(screen.getByLabelText('Review mode toolbar')).toHaveAttribute('data-review-item-kind', 'fsrs');
+    expect(screen.getByLabelText('Flow toolbar')).toHaveAttribute('data-review-item-kind', 'fsrs');
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
 
   await waitFor(() => {
-    expect(screen.getByLabelText('Review mode toolbar')).toHaveAttribute('data-review-item-kind', 'reading');
+    expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
   });
   expect(useWorkspaceStore.getState().activeNodeId).toBe('reading-1');
-  expect(useWorkspaceStore.getState().reviewSession.currentNodeId).toBe('reading-1');
-  expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['reading-1', 'fsrs-1']);
-  expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
+  expect(useWorkspaceStore.getState().reviewSession.currentNodeId).toBe('fsrs-1');
+  expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['fsrs-1', 'reading-1']);
+  expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument();
   expect(screen.getByTestId('editor-value')).toHaveValue('Read this first');
 }, 15000);

@@ -40,7 +40,7 @@ function buildNavigationNodeState(
     activeNodeId: nodeId,
     navigation,
     nodeViewById,
-    reviewSession: reconcileReviewSession(state, nodeId, { preferActiveQueuedNode: true })
+    reviewSession: reconcileReviewSession(state, nodeId)
   };
 }
 

@@ -95,14 +95,10 @@ function buildPreparedOpenState(
         }
       : { ...state.navigation, forwardStack: [] },
     nodesById: nextNodesById,
-    reviewSession: reconcileReviewSession(
-      {
-        ...state,
-        nodesById: nextNodesById
-      },
-      nodeId,
-      { preferActiveQueuedNode: true }
-    ),
+    reviewSession: reconcileReviewSession({
+      ...state,
+      nodesById: nextNodesById
+    }, nodeId),
     rendererBoundaryKeepNodeIds: [
       ...(state.activeNodeId ? [state.activeNodeId] : []),
       ...state.rendererBoundaryKeepNodeIds.filter((keepNodeId) => keepNodeId !== state.activeNodeId && keepNodeId !== nodeId)
