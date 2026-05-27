@@ -31,6 +31,7 @@ export {
   appInputFocusVisibleClassName
 } from './InputFocus';
 export { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
+export { MenuHelpTooltip, type MenuHelpTooltipCopy } from './MenuHelpTooltip';
 export { NodeBrowseList, type NodeBrowseListItem } from './NodeBrowseList';
 export {
   ObjectConfigHeader,

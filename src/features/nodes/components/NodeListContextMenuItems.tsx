@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import type { NodeListContextMenuProps } from './NodeListContextMenu';
+import { NODE_LIST_CONTEXT_MENU_HELP, resolveNodeListMenuHelp } from './nodeListContextMenuHelp';
 import {
   DismissMenuIcon,
   iconForCreateCommand,
@@ -20,6 +21,8 @@ import {
   NodeContextMenuSeparator,
   RelearnMenuIcon
 } from './nodeListContextMenuPresentation';
+
+import { useMenuHelpTooltipsEnabled } from '@/shared/platform/menuHelpTooltips';
 
 type NoteMenuItemsProps = Omit<
   NodeListContextMenuProps,
@@ -43,7 +46,7 @@ function TrashMenuItems({
 }
 
 function shouldShowEditGroup(props: NoteMenuItemsProps) {
-  return !props.showRootCreateOnly && (
+  return !props.showRootCreateOnly && Boolean(
     (props.showRenameAction && props.onRenameNode) ||
     (props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic) ||
     (props.showPasteIntoNodeAction && props.onPasteIntoNode) ||
@@ -52,7 +55,7 @@ function shouldShowEditGroup(props: NoteMenuItemsProps) {
 }
 
 function shouldShowReviewGroup(props: NoteMenuItemsProps) {
-  return !props.showRootCreateOnly && (
+  return !props.showRootCreateOnly && Boolean(
     (props.showReturnAction && props.onReturnNode) ||
     (props.showReviewSchedulingAction && props.onOpenReviewScheduling) ||
     (props.showPostponeTopicAction && props.onOpenPostponeTopic) ||
@@ -84,11 +87,12 @@ function renderEditItems(props: NoteMenuItemsProps) {
   );
 }
 
-function renderReviewItems(props: NoteMenuItemsProps) {
+function renderReviewItems(props: NoteMenuItemsProps, helpEnabled: boolean) {
   if (props.showRootCreateOnly) return null;
+  const relearnHelp = helpEnabled ? { help: resolveNodeListMenuHelp(NODE_LIST_CONTEXT_MENU_HELP.relearn) } : {};
   return (
     <>
-      {props.showReturnAction && props.onReturnNode ? <NodeContextMenuItem icon={RelearnMenuIcon} onSelect={props.onReturnNode}>Relearn</NodeContextMenuItem> : null}
+      {props.showReturnAction && props.onReturnNode ? <NodeContextMenuItem {...relearnHelp} icon={RelearnMenuIcon} onSelect={props.onReturnNode}>Relearn</NodeContextMenuItem> : null}
       {props.showReviewSchedulingAction && props.onOpenReviewScheduling ? <NodeContextMenuItem icon={SlidersHorizontal} onSelect={props.onOpenReviewScheduling}>Review options…</NodeContextMenuItem> : null}
       {props.showPostponeTopicAction && props.onOpenPostponeTopic ? <NodeContextMenuItem icon={CalendarClock} onSelect={props.onOpenPostponeTopic}>Postpone Topic...</NodeContextMenuItem> : null}
       {props.showDismissAction && props.onDismissNode ? <NodeContextMenuItem icon={DismissMenuIcon} onSelect={props.onDismissNode}>Dismiss</NodeContextMenuItem> : null}
@@ -116,6 +120,7 @@ function renderDeleteItem(props: NoteMenuItemsProps, hasPreviousGroup: boolean) 
 }
 
 function NoteMenuItems(props: NoteMenuItemsProps) {
+  const helpEnabled = useMenuHelpTooltipsEnabled();
   const hasCreateGroup = props.createCommands.length > 0;
   const hasEditGroup = shouldShowEditGroup(props);
   const hasReviewGroup = shouldShowReviewGroup(props);
@@ -127,7 +132,7 @@ function NoteMenuItems(props: NoteMenuItemsProps) {
       {hasCreateGroup && hasEditGroup ? <NodeContextMenuSeparator /> : null}
       {hasEditGroup ? renderEditItems(props) : null}
       {(hasCreateGroup || hasEditGroup) && hasReviewGroup ? <NodeContextMenuSeparator /> : null}
-      {hasReviewGroup ? renderReviewItems(props) : null}
+      {hasReviewGroup ? renderReviewItems(props, helpEnabled) : null}
       {renderDeleteItem(props, hasAnyPrimaryGroup)}
     </>
   );

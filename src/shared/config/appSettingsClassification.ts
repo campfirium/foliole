@@ -141,6 +141,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'commandRecents',
   'nodePaletteRecents',
   'searchPaletteShortcutsCollapsed',
+  'menuHelpTooltipsEnabled',
   'fullTextSearchIndexStrategy',
   'commandShortcutOverrides',
   'webLookupEntries',

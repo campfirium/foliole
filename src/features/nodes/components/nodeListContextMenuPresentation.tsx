@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 import type { FolderTopicItemCommandDefinition } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import type { VirtualNodeCommandDefinition } from '../../../../lib/core/nodes/virtualNodeCommands';
 
-import { AppDropdownMenuItem, AppDropdownMenuSeparator } from '@/shared/ui';
+import { AppDropdownMenuItem, AppDropdownMenuSeparator, MenuHelpTooltip, type MenuHelpTooltipCopy } from '@/shared/ui';
 
 export const nodeContextMenuSeparatorClassName = 'mx-1 my-1.5 h-px bg-[var(--app-floating-divider-color)]';
 
@@ -28,11 +28,13 @@ export function NodeContextMenuSeparator() {
 
 export function NodeContextMenuItem({
   children,
+  help,
   icon: Icon,
   onSelect,
   tone
 }: {
   children: ReactNode;
+  help?: MenuHelpTooltipCopy;
   icon: LucideIcon;
   onSelect: () => void;
   tone?: 'destructive';
@@ -42,7 +44,7 @@ export function NodeContextMenuItem({
       ? 'text-error/90 focus:text-error data-[highlighted]:text-error'
       : '';
   const iconDestructiveClassName = tone === 'destructive' ? 'text-error/75' : '';
-  return (
+  const item = (
     <AppDropdownMenuItem className={`${menuItemClassName} ${destructiveClassName}`} onSelect={onSelect}>
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
         <Icon className={`${menuIconClassName} ${iconDestructiveClassName}`} strokeWidth={1.75} />
@@ -50,6 +52,7 @@ export function NodeContextMenuItem({
       <span className="flex-1 truncate">{children}</span>
     </AppDropdownMenuItem>
   );
+  return help ? <MenuHelpTooltip help={help}>{item}</MenuHelpTooltip> : item;
 }
 
 export function iconForCreateCommand(command: FolderTopicItemCommandDefinition | VirtualNodeCommandDefinition) {

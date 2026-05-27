@@ -1,6 +1,15 @@
 import {
+  setMenuHelpTooltipsEnabled,
+  useMenuHelpTooltipsEnabled
+} from '../../../../shared/platform/menuHelpTooltips';
+import {
+  SettingsControlSlot,
   SettingsSection,
-  SettingsSegmentedRow
+  SettingsRow,
+  SettingsSegmentedRow,
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  settingsSwitchClassName,
+  settingsSwitchKnobClassName
 } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 import {
@@ -84,6 +93,34 @@ function AppearanceColorModeSection(props: ReturnType<typeof useAppearanceSectio
   );
 }
 
+function InterfaceBehaviorSection() {
+  const menuHelpEnabled = useMenuHelpTooltipsEnabled();
+  return (
+    <SettingsSection ariaLabel="Interface behavior settings section" title="Interface">
+      <SettingsRow
+        description="Pause on a menu action to see what it does, when context is available."
+        title="Menu hints on hover"
+      >
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <button
+            aria-checked={menuHelpEnabled}
+            aria-label="Menu hints on hover"
+            className={settingsSwitchClassName(menuHelpEnabled)}
+            onClick={() => setMenuHelpTooltipsEnabled(!menuHelpEnabled)}
+            role="switch"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              className={settingsSwitchKnobClassName(menuHelpEnabled)}
+            />
+          </button>
+        </SettingsControlSlot>
+      </SettingsRow>
+    </SettingsSection>
+  );
+}
+
 function AppearanceSupportingSections(props: ReturnType<typeof useAppearanceSectionState>) {
   const { appearance, fontOptions } = props;
 
@@ -128,6 +165,7 @@ export function SettingsAppearanceSection(props: { onEnterPreview: () => void })
         safeHighlightColor={state.safeHighlightColor}
         safeSelectionColor={state.safeSelectionColor}
       />
+      <InterfaceBehaviorSection />
       <AppearanceReadingSection appearance={state.appearance} />
       <AppearanceSupportingSections {...state} />
     </>

@@ -1,9 +1,18 @@
-import { render, screen, within } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
+
+beforeEach(() => {
+  window.localStorage.clear();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function noopProps() {
   return {
@@ -92,4 +101,55 @@ it('does not render a leading separator when create actions are hidden', () => {
     'Review options…',
     'Delete'
   ]);
+});
+
+it('shows Relearn help after a long hover', () => {
+  vi.useFakeTimers();
+  render(<NodeListContextMenu {...noopProps()} />);
+
+  const relearn = screen.getByRole('menuitem', { name: 'Relearn' });
+  fireEvent.pointerMove(relearn, { pointerType: 'mouse' });
+  fireEvent.pointerEnter(relearn, { pointerType: 'mouse' });
+
+  act(() => {
+    vi.advanceTimersByTime(999);
+  });
+  expect(screen.queryByRole('tooltip')).toBeNull();
+
+  act(() => {
+    vi.advanceTimersByTime(1);
+  });
+  const helpCard = screen.getByRole('tooltip');
+  expect(helpCard).toHaveTextContent('Relearn');
+  expect(helpCard).toHaveTextContent('Reset this topic’s review progress and send it back into the review queue.');
+  expect(helpCard).toHaveTextContent('Use this when the topic should be studied again from the beginning.');
+});
+
+it('does not show menu help when the setting is off', () => {
+  vi.useFakeTimers();
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.menuHelpTooltipsEnabled, 'false');
+  render(<NodeListContextMenu {...noopProps()} />);
+
+  const relearn = screen.getByRole('menuitem', { name: 'Relearn' });
+  fireEvent.pointerMove(relearn, { pointerType: 'mouse' });
+  fireEvent.pointerEnter(relearn, { pointerType: 'mouse' });
+
+  act(() => {
+    vi.advanceTimersByTime(1200);
+  });
+  expect(screen.queryByRole('tooltip')).toBeNull();
+});
+
+it('does not show menu help for actions without help copy', () => {
+  vi.useFakeTimers();
+  render(<NodeListContextMenu {...noopProps()} />);
+
+  const rename = screen.getByRole('menuitem', { name: 'Rename' });
+  fireEvent.pointerMove(rename, { pointerType: 'mouse' });
+  fireEvent.pointerEnter(rename, { pointerType: 'mouse' });
+
+  act(() => {
+    vi.advanceTimersByTime(1200);
+  });
+  expect(screen.queryByRole('tooltip')).toBeNull();
 });
