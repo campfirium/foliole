@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -45,6 +45,34 @@ it('shows only topic and item creation in the current folder context menu', () =
   expect(screen.queryByRole('menuitem', { name: 'Create Folder' })).toBeNull();
   expect(screen.getByRole('menuitem', { name: 'Create Topic' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Create Item' })).toBeInTheDocument();
+});
+
+it('creates a direct item with an editable answer from the folder context menu', async () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: INBOX_NODE_ID,
+    nodeOrder: [INBOX_NODE_ID, 'node-article'],
+    nodesById: {
+      ...state.nodesById,
+      'node-article': createNode({ id: 'node-article', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Article node', content: '# Article body' })
+    }
+  }));
+  render(<App />);
+
+  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('tree'), { clientX: 80, clientY: 160 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Create Item' }));
+
+  await waitFor(() => {
+    const activeNode = useWorkspaceStore.getState().activeNodeId
+      ? useWorkspaceStore.getState().nodesById[useWorkspaceStore.getState().activeNodeId!]
+      : null;
+    expect(activeNode).toMatchObject({
+      kind: 'item',
+      hasReveal: true,
+      reveal: '',
+      review: expect.objectContaining({ reps: 0, state: 0 })
+    });
+  });
+  expect(screen.getByTestId('answer-editor-value')).toBeInTheDocument();
 });
 
 it('shows neutral context labels instead of node wording', () => {

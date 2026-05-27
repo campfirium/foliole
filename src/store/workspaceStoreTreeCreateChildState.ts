@@ -34,8 +34,8 @@ function createCreatedChildNode(args: {
     hideTitleHeading: false,
     content: args.content,
     anchorLink: null,
-    hasReveal: false,
-    reveal: null,
+    hasReveal: args.kind === 'item',
+    reveal: args.kind === 'item' ? '' : null,
     review: args.review,
     createdAt: args.timestamp,
     updatedAt: args.timestamp

@@ -89,7 +89,12 @@ function getDocumentPanelState(
     : false;
   const shouldFitItemImages = shouldCheckItemImages && (hasPromptImage || hasAnswerImage);
 
-  const hasAnswerSection = Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && showAnswerSection);
+  const hasAnswerSection = Boolean(
+    !emptyState &&
+      showAnswerSection &&
+      activeNode?.kind === 'item' &&
+      activeNode.reveal !== null
+  );
   const shouldUseReaderEndCushion = !emptyState && !hasAnswerSection && editorDisplayMode === 'preview';
 
   return {

@@ -127,7 +127,7 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
   fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Again' })).toBeInTheDocument();
-  await waitFor(() => expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByLabelText('Answer section')).toBeInTheDocument());
 });
 
 it('enters review mode with the reading queue when no FSRS cards are due', async () => {

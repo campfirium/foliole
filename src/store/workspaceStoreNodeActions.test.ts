@@ -234,15 +234,18 @@ describe('createWorkspaceNodeActions create sync', () => {
     const childNode = harness.getState().nodesById[childNodeId];
 
     expect(childNode?.review).toEqual(expect.objectContaining({
-      due: new Date(2026, 4, 22).toISOString(),
+      due: new Date(2026, 4, 22, 4).toISOString(),
       lastReviewAt: null,
       reps: 0,
       state: 0
     }));
+    expect(childNode?.hasReveal).toBe(true);
+    expect(childNode?.reveal).toBe('');
     expect(syncCreateNodeMutationToRuntime).toHaveBeenCalledWith(expect.objectContaining({
       id: childNodeId,
       kind: 'item',
-      review: expect.objectContaining({ due: new Date(2026, 4, 22).toISOString() })
+      reveal: '',
+      review: expect.objectContaining({ due: new Date(2026, 4, 22, 4).toISOString() })
     }), expect.any(Array), childNodeId, expect.any(Number));
   });
 

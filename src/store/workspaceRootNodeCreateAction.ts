@@ -4,6 +4,7 @@ import {
 } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
+import { createNewItemReviewProfiles } from './newItemReviewSlots';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -45,6 +46,9 @@ function createRootNodeRecord(args: {
     args.parentNodeId,
     args.state
   );
+  const reviewProfiles = args.kind === 'item'
+    ? createNewItemReviewProfiles({ batchSize: 1, nodesById: args.state.nodesById, now: args.timestamp })
+    : [];
   const node: WorkspaceNode = {
     id: args.nodeId,
     parentNodeId: args.parentNodeId,
@@ -53,9 +57,9 @@ function createRootNodeRecord(args: {
     hasContent: args.content.trim().length > 0,
     content: args.content,
     anchorLink: null,
-    hasReveal: false,
-    reveal: null,
-    review: null,
+    hasReveal: args.kind === 'item',
+    reveal: args.kind === 'item' ? '' : null,
+    review: reviewProfiles[0] ?? null,
     createdAt: args.timestamp,
     updatedAt: args.timestamp
   };

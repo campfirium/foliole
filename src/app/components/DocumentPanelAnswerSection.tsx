@@ -25,7 +25,7 @@ export function DocumentPanelAnswerSection(props: DocumentPanelAnswerSectionProp
 
   return (
     <section
-      aria-label="Cloze answer section"
+      aria-label="Answer section"
       className={cn(
         'relative flex min-h-0 overflow-hidden',
         props.answerSectionMode === 'balanced' ? 'flex-1' : 'flex-[0_0_calc(30dvh+60px)]'
