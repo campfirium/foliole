@@ -69,3 +69,27 @@ it('renders compact icon menu items and keeps delete visually destructive', () =
   expect(screen.getByRole('menuitem', { name: 'Rename' }).querySelector('svg')).not.toBeNull();
   expect(screen.getByRole('menuitem', { name: 'Delete' }).className).toContain('text-error/90');
 });
+
+it('does not render a leading separator when create actions are hidden', () => {
+  render(
+    <NodeListContextMenu
+      {...noopProps()}
+      createCommands={[]}
+      showDismissAction={false}
+      showDismissEntireTopicAction={false}
+      showMergeHighlightsIntoTopicAction={false}
+      showMoveToNodeAction={false}
+      showPasteIntoNodeAction={false}
+      showShelveTopicAction={false}
+    />
+  );
+
+  const menu = screen.getByRole('menu');
+  expect(menu.firstElementChild).toHaveAttribute('role', 'menuitem');
+  expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+    'Rename',
+    'Relearn',
+    'Review options…',
+    'Delete'
+  ]);
+});
