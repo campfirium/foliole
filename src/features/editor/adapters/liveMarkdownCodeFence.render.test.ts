@@ -1,7 +1,8 @@
 import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { renderMermaid } = vi.hoisted(() => ({
+const { initializeMermaid, renderMermaid } = vi.hoisted(() => ({
+  initializeMermaid: vi.fn(),
   renderMermaid: vi.fn(async (id: string, source: string) => ({
     bindFunctions: undefined,
     svg: `<svg data-mermaid-id="${id}"><text>${source}</text></svg>`
@@ -10,13 +11,14 @@ const { renderMermaid } = vi.hoisted(() => ({
 
 vi.mock('mermaid', () => ({
   default: {
-    initialize: vi.fn(),
+    initialize: initializeMermaid,
     render: renderMermaid
   }
 }));
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { setEditorDisplayMode } from '../model/editorDisplayMode';
+import { MARKDOWN_MERMAID_PREVIEW_EVENT } from '../model/markdownMermaidPreview';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
@@ -28,12 +30,19 @@ function createAdapterHost(initialContent: string) {
 }
 
 beforeEach(() => {
+  initializeMermaid.mockClear();
+  renderMermaid.mockClear();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   setEditorDisplayMode('preview');
 });
 
 afterEach(() => {
   document.body.innerHTML = '';
+  document.documentElement.removeAttribute('data-resolved-base-color');
+  document.documentElement.style.removeProperty('--color-foreground');
+  document.documentElement.style.removeProperty('--color-bg-panel');
+  document.documentElement.style.removeProperty('--color-bg-elevated');
+  document.documentElement.style.removeProperty('--color-border-strong');
   setEditorDisplayMode('preview');
 });
 
@@ -70,8 +79,11 @@ describe('live markdown code fence highlighting', () => {
 
     adapter.destroy();
   });
+});
 
+describe('live markdown mermaid rendering', () => {
   it('renders mermaid fenced blocks as diagrams without changing editor content', async () => {
+    document.documentElement.style.setProperty('--color-foreground', '32 33 36');
     const initialContent = '```mermaid\ngantt\n  title Plan\n```\nAfter';
     const { adapter, host } = createAdapterHost(initialContent);
 
@@ -80,7 +92,57 @@ describe('live markdown code fence highlighting', () => {
     });
     expect(host.querySelector('.cm-md-mermaid-widget')?.textContent).toContain('gantt');
     expect(host.textContent).not.toContain('```mermaid');
+    expect(initializeMermaid).toHaveBeenCalledWith(
+      expect.objectContaining({
+        themeVariables: expect.objectContaining({
+          primaryTextColor: 'rgb(32, 33, 36)',
+          textColor: 'rgb(32, 33, 36)'
+        })
+      })
+    );
     expect(adapter.getContent()).toBe(initialContent);
+
+    adapter.destroy();
+  });
+});
+
+describe('live markdown mermaid preview action', () => {
+  it('opens mermaid preview through the shared table-style action', async () => {
+    const { adapter, host } = createAdapterHost('```mermaid\ngantt\n  title Plan\n```');
+    const previewHandler = vi.fn();
+    host.addEventListener(MARKDOWN_MERMAID_PREVIEW_EVENT, previewHandler);
+
+    await waitFor(() => {
+      expect(host.querySelector('.cm-md-mermaid-widget svg')).not.toBeNull();
+    });
+    expect(host.querySelector('.cm-md-mermaid-button')).toBeNull();
+    expect(host.textContent).not.toContain('Code');
+    (host.querySelector('.cm-md-mermaid-preview-button') as HTMLButtonElement | null)?.click();
+
+    expect(previewHandler).toHaveBeenCalledTimes(1);
+    expect((previewHandler.mock.calls[0]?.[0] as CustomEvent).detail).toMatchObject({ source: 'gantt\n  title Plan' });
+
+    adapter.destroy();
+  });
+});
+
+describe('live markdown imported mermaid rendering', () => {
+  it('reinitializes mermaid with dark theme colors when the app theme changes', async () => {
+    document.documentElement.dataset.resolvedBaseColor = 'dark';
+    document.documentElement.style.setProperty('--color-foreground', '232 230 223');
+    const { adapter, host } = createAdapterHost('```mermaid\nquadrantChart\n  title Map\n```');
+
+    await waitFor(() => {
+      expect(host.querySelector('.cm-md-mermaid-widget svg')).not.toBeNull();
+    });
+    expect(initializeMermaid).toHaveBeenCalledWith(
+      expect.objectContaining({
+        themeVariables: expect.objectContaining({
+          darkMode: true,
+          textColor: 'rgb(232, 230, 223)'
+        })
+      })
+    );
 
     adapter.destroy();
   });

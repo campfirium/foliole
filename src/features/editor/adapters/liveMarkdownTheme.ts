@@ -75,7 +75,6 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-document-section-divider': { padding: liveMarkdownSpacing.sectionDividerPadding },
   '.cm-md-inline-code': { backgroundColor: 'rgb(var(--color-foreground) / 0.08)', borderRadius: 'var(--editor-radius-md)', fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 var(--editor-space-xxs)' },
   ...liveMarkdownMathTheme,
-  ...liveMarkdownMermaidTheme,
   ...liveMarkdownCodeFenceTheme,
   '.cm-md-footnote-widget': { display: 'inline-block', lineHeight: '1', marginInline: liveMarkdownSpacing.footnoteMarkerInline, position: 'relative', verticalAlign: 'super' },
   '.cm-md-footnote-marker': {
@@ -166,6 +165,7 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-md-callout-title': { color: 'var(--app-accent-color)', fontWeight: '650' },
   ...liveMarkdownTableTheme,
+  ...liveMarkdownMermaidTheme,
   ...liveMarkdownImageTheme,
   '.cm-topic-search-match': {
     backgroundColor: 'color-mix(in srgb, var(--app-highlight-surface-color) 68%, transparent)',

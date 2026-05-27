@@ -17,9 +17,11 @@ import { handleMarkdownEditorKeyDownCapture, useReviewEditorEscapeBlur } from '.
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 import { handleEditorUndoRedoBeforeInput } from './markdownEditorUndoRedoShortcut';
 import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
+import { MarkdownMermaidPreviewDialog } from './MarkdownMermaidPreviewDialog';
 import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
 import { useMarkdownImagePreview } from './useMarkdownImagePreview';
+import { useMarkdownMermaidPreview } from './useMarkdownMermaidPreview';
 import { useMarkdownTablePreview } from './useMarkdownTablePreview';
 
 function MarkdownEditorSurface(args: {
@@ -140,6 +142,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.trailingDivider
   );
   const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
+  const { closePreview: closeMermaidPreview, previewMermaid } = useMarkdownMermaidPreview(hostRef);
   const { closePreview: closeTablePreview, previewTable } = useMarkdownTablePreview(hostRef);
   useEditorLayoutEffects(
     adapterRef,
@@ -175,11 +178,11 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     value: props.value
   });
 
-  return { closePreview, closeTablePreview, hostRef, previewImage, previewTable, rootRef, surface };
+  return { closeMermaidPreview, closePreview, closeTablePreview, hostRef, previewImage, previewMermaid, previewTable, rootRef, surface };
 }
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
-  const { closePreview, closeTablePreview, hostRef, previewImage, previewTable, rootRef, surface } = useMarkdownEditorModel(props);
+  const { closeMermaidPreview, closePreview, closeTablePreview, hostRef, previewImage, previewMermaid, previewTable, rootRef, surface } = useMarkdownEditorModel(props);
 
   return (
     <>
@@ -203,6 +206,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         rootRef={rootRef}
       />
       <MarkdownImagePreviewDialog image={previewImage} onOpenChange={(open) => !open && closePreview()} />
+      <MarkdownMermaidPreviewDialog diagram={previewMermaid} onOpenChange={(open) => !open && closeMermaidPreview()} />
       <MarkdownTablePreviewDialog table={previewTable} onOpenChange={(open) => !open && closeTablePreview()} />
     </>
   );

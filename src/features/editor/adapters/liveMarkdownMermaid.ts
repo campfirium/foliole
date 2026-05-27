@@ -1,35 +1,10 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, type EditorView, WidgetType } from '@codemirror/view';
-import mermaid from 'mermaid';
 
 import type { MarkdownCodeFenceBlock } from '../model/markdownCodeFenceProjection';
+import { dispatchMarkdownMermaidPreviewRequest } from '../model/markdownMermaidPreview';
 
-let isMermaidInitialized = false;
-
-function ensureMermaidInitialized() {
-  if (isMermaidInitialized) return;
-  mermaid.initialize({
-    htmlLabels: false,
-    securityLevel: 'strict',
-    startOnLoad: false,
-    theme: 'base',
-    themeVariables: {
-      background: 'transparent',
-      darkMode: true,
-      fontFamily: 'var(--content-panel-font-family, var(--font-family-sans))',
-      lineColor: 'var(--color-border-strong)',
-      mainBkg: 'transparent',
-      primaryBorderColor: 'var(--color-border-strong)',
-      primaryColor: 'transparent',
-      primaryTextColor: 'var(--color-text-primary)',
-      secondaryColor: 'transparent',
-      tertiaryColor: 'transparent',
-      textColor: 'var(--color-text-primary)',
-      titleColor: 'var(--color-text-primary)'
-    }
-  });
-  isMermaidInitialized = true;
-}
+import { renderMermaidSvg } from './liveMarkdownMermaidRenderer';
 
 function hashMermaidSource(source: string) {
   let hash = 0;
@@ -107,16 +82,51 @@ class MermaidDiagramWidget extends WidgetType {
     wrapper.className = 'cm-md-mermaid-widget';
     wrapper.dataset.mdMermaidHash = hashMermaidSource(this.source);
     wrapper.dataset.mdMermaidKind = resolveMermaidKind(this.source);
-    renderMermaidDiagram(wrapper, this.source);
+    const surface = createMermaidSurface(this.source);
+    wrapper.append(surface.root);
+    renderMermaidDiagram(surface.body, this.source);
     return wrapper;
   }
 }
 
+interface MermaidSurface {
+  body: HTMLElement;
+  root: HTMLElement;
+}
+
+function createMermaidPreviewButton(source: string) {
+  const button = document.createElement('button');
+  button.className = 'cm-md-table-preview-button cm-md-mermaid-preview-button';
+  button.setAttribute('aria-label', 'Open diagram preview');
+  button.title = 'Open diagram preview';
+  button.innerHTML =
+    '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M14 10l7-7"/><path d="M9 21H3v-6"/><path d="M10 14l-7 7"/></svg>';
+  button.type = 'button';
+  button.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dispatchMarkdownMermaidPreviewRequest(button, { source });
+  });
+  return button;
+}
+
+function createMermaidSurface(source: string): MermaidSurface {
+  const root = document.createElement('div');
+  root.className = 'cm-md-mermaid-surface';
+  const body = document.createElement('div');
+  body.className = 'cm-md-mermaid-body';
+  root.append(createMermaidPreviewButton(source), body);
+  return { body, root };
+}
+
 async function renderMermaidDiagram(wrapper: HTMLElement, source: string) {
   try {
-    ensureMermaidInitialized();
     const id = `foliole-mermaid-${hashMermaidSource(source)}-${Date.now().toString(36)}`;
-    const rendered = await mermaid.render(id, source);
+    const rendered = await renderMermaidSvg(id, source);
     if (!wrapper.isConnected) return;
     wrapper.innerHTML = rendered.svg;
     rendered.bindFunctions?.(wrapper);
