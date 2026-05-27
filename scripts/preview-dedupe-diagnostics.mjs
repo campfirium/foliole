@@ -5,9 +5,12 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { STATE_STALE_MS } from './preview-dedupe-scheduler.mjs';
+
 const DEFAULT_RUNTIME_DIR = '.lab/internal/runtime';
 const DEFAULT_TARGET = 'windows';
 const PROCESS_PATTERN = /preview-dedupe|windows-preview|android-preview|windows-restart-client|codex-task|codex exec/u;
+const WINDOWS_STATUS_SOURCE = 'official-windows-mirror:D:\\C\\foliole';
 
 function parseArgs(argv) {
   const options = {
@@ -136,12 +139,62 @@ export async function buildDiagnostics(options, now = Date.now()) {
   };
 }
 
-export function formatDiagnosticsSummary(diagnostics) {
-  const state = diagnostics.state;
-  const windowsLine = diagnostics.windowsStatus?.stdout
+function extractWindowsStatusLine(windowsStatus) {
+  return windowsStatus?.stdout
     ?.split('\n')
     .find((line) => line.includes('[windows-restart-client] status:'))
     ?.replace('[windows-restart-client] ', '') ?? null;
+}
+
+function classifyWindowsStatus(windowsStatus, windowsLine) {
+  if (!windowsStatus) {
+    return { nextAction: null, verdict: null };
+  }
+  if ((typeof windowsStatus.exitCode === 'number' && windowsStatus.exitCode !== 0) || !windowsLine) {
+    return {
+      nextAction: 'Inspect preview diagnostics; the official Windows mirror status source is unavailable.',
+      verdict: 'Official Windows mirror status is unavailable, so startup state is not confirmed.'
+    };
+  }
+  if (/\bRUNNING\b/u.test(windowsLine) && /\bresponding=False\b/u.test(windowsLine)) {
+    return {
+      nextAction: 'Run npm run windows:preview to re-check the official Windows client.',
+      verdict: 'Official Windows mirror client is running but not responding.'
+    };
+  }
+  if (/\bRUNNING\b/u.test(windowsLine) && /\btrust=OK\b/u.test(windowsLine)) {
+    return {
+      nextAction: 'No startup repair is needed; run npm run windows:preview after changes that need preview.',
+      verdict: 'Official Windows mirror client is running and trusted.'
+    };
+  }
+  if (/\bSTOPPED\b/u.test(windowsLine) && /\breason=no-runtime\b/u.test(windowsLine)) {
+    return {
+      nextAction: 'Run npm run windows:preview; it will sync, verify prerequisites, and use fallback-start.',
+      verdict: 'No trusted official Windows mirror client is running; this is no-runtime, not a confirmed code startup crash.'
+    };
+  }
+  return {
+    nextAction: 'Run npm run windows:preview to re-check the official Windows client.',
+    verdict: 'Official Windows mirror client is not trusted; startup failure is not yet classified.'
+  };
+}
+
+function summarizeStaleRuns(staleRunningRuns) {
+  const staleAgeSec = Math.ceil(STATE_STALE_MS / 1000);
+  const staleDeadCount = staleRunningRuns.filter((run) => run.driverPidAlive === false).length;
+  const staleAgedCount = staleRunningRuns.filter((run) => run.driverPidAlive === true && run.ageSec >= staleAgeSec).length;
+  const staleExplanation = staleDeadCount > 0
+    ? 'Dead stale preview records will not continue and do not block a new windows:preview.'
+    : null;
+  return { staleAgedCount, staleDeadCount, staleExplanation };
+}
+
+export function formatDiagnosticsSummary(diagnostics) {
+  const state = diagnostics.state;
+  const windowsLine = extractWindowsStatusLine(diagnostics.windowsStatus);
+  const windowsClassification = classifyWindowsStatus(diagnostics.windowsStatus, windowsLine);
+  const staleSummary = summarizeStaleRuns(state.staleRunningRuns);
   return {
     acceptingRemainingSec: state.acceptingRemainingSec,
     active: state.activeRun
@@ -156,9 +209,13 @@ export function formatDiagnosticsSummary(diagnostics) {
     hash: diagnostics.hash,
     next: state.nextRun ? { runId: state.nextRun.runId, status: state.nextRun.status, waiters: state.nextRun.waiters } : null,
     processCount: diagnostics.processSnapshot.length,
+    ...staleSummary,
     staleRunningCount: state.staleRunningRuns.length,
     target: diagnostics.target,
-    windowsStatus: windowsLine
+    windowsStatus: windowsLine,
+    windowsStatusNextAction: windowsClassification.nextAction,
+    windowsStatusSource: diagnostics.target === 'windows' ? WINDOWS_STATUS_SOURCE : null,
+    windowsStatusVerdict: windowsClassification.verdict
   };
 }
 
