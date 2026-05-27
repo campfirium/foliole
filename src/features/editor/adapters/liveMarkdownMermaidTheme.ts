@@ -33,6 +33,18 @@ export const liveMarkdownMermaidTheme = {
   '.cm-md-mermaid-preview-button': {
     zIndex: 'var(--z-local-overlay)'
   },
+  '.cm-md-mermaid-preview-button svg': {
+    fill: 'none',
+    height: '0.95rem',
+    maxWidth: 'none',
+    minWidth: '0',
+    pointerEvents: 'none',
+    stroke: 'currentColor',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    strokeWidth: '2',
+    width: '0.95rem'
+  },
   '.cm-md-mermaid-body': {
     boxSizing: 'border-box',
     minHeight: '10rem',
@@ -76,26 +88,26 @@ export const liveMarkdownMermaidTheme = {
   '.cm-md-mermaid-preview svg': {
     flex: '0 0 auto',
     display: 'block',
-    height: 'auto',
-    maxWidth: 'none',
-    width: '100%'
+    height: 'auto !important',
+    maxWidth: 'none !important',
+    width: '100% !important'
   },
   '.cm-md-mermaid-preview[data-md-mermaid-kind="quadrantchart"]': {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 'min(38rem, calc(100vh - 12rem))'
+    minHeight: 'min(76vh, calc(100vh - 10rem))'
   },
   '.cm-md-mermaid-preview[data-md-mermaid-kind="quadrantchart"] svg': {
-    maxWidth: 'min(100%, 62rem)',
-    width: 'min(100%, 62rem)'
+    maxWidth: 'none !important',
+    width: 'min(76vh, calc(100vw - 14rem), 80rem) !important'
   },
   '.cm-md-mermaid-preview[data-md-mermaid-kind="gantt"]': {
     justifyContent: 'flex-start',
     minWidth: 'min(92rem, calc(100vw - 12rem))'
   },
   '.cm-md-mermaid-preview[data-md-mermaid-kind="gantt"] svg': {
-    minWidth: '92rem',
-    width: '92rem'
+    minWidth: '92rem !important',
+    width: '92rem !important'
   },
   '.cm-md-mermaid-widget-error': {
     color: 'var(--color-text-secondary)',

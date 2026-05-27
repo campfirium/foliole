@@ -26,7 +26,20 @@ describe('MarkdownMermaidPreviewDialog', () => {
       expect(dialog.querySelector('.cm-md-mermaid-preview svg')).not.toBeNull();
     });
     expect(dialog.textContent).toContain('gantt');
+    expect(dialog.querySelector('[data-md-mermaid-kind="gantt"]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /code/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /close/i })).not.toBeInTheDocument();
+  });
+
+  it('centers non-gantt diagrams in the same preview shell', async () => {
+    render(<MarkdownMermaidPreviewDialog diagram={{ source: 'quadrantChart\n  title Positioning' }} onOpenChange={vi.fn()} />);
+
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => {
+      expect(dialog.querySelector('.cm-md-mermaid-preview svg')).not.toBeNull();
+    });
+    expect(dialog.querySelector('[data-md-mermaid-kind="quadrantchart"]')).not.toBeNull();
+    expect(dialog.querySelector('[data-md-mermaid-kind="quadrantchart"]')?.className).toContain('justify-center');
+    expect((dialog.querySelector('.cm-md-mermaid-preview svg') as SVGElement | null)?.style.width).toContain('76vh');
   });
 });
