@@ -69,8 +69,7 @@ function FlowAction({
         <AppTooltipTrigger asChild>
           <span className="inline-flex">
             <AppIconButton
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
-              data-active={isStudyMode}
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
               icon={<Route aria-hidden="true" size={16} strokeWidth={1.75} />}
               label={actionLabel}
               onClick={onToggleReviewSession}
@@ -162,14 +161,12 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
       <div className="flex min-h-0 flex-1 flex-col items-center">
         <RailActionGroup
           ariaLabel="Workspace top rail actions"
-          isImportManagementOpen={props.isImportManagementOpen}
           items={state.topItems}
           onRun={state.runRailCommand}
         />
         <div className="flex-1" />
         <RailActionGroup
           ariaLabel="Workspace bottom rail actions"
-          isImportManagementOpen={props.isImportManagementOpen}
           items={state.bottomItems}
           onRun={state.runRailCommand}
         />

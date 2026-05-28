@@ -20,7 +20,7 @@ export function WindowSidebarToggleButton({
     <button
       aria-label={label}
       className="window-titlebar-leading-button"
-      data-active={active}
+      aria-pressed={active}
       onClick={onClick}
       type="button"
     >

@@ -5,7 +5,7 @@ import {
   type WorkspaceRailItemConfig
 } from '../../features/settings/model/workspaceRailSettings';
 import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
-import { APP_COMMAND_IDS, type AppCommandId } from '../../shared/commands/ids';
+import type { AppCommandId } from '../../shared/commands/ids';
 import { formatAriaKeyShortcuts } from '../../shared/commands/shortcuts';
 import {
   AppSelectionDropdownMenu,
@@ -18,7 +18,7 @@ import {
 import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 
 const RAIL_BUTTON_CLASS_NAME =
-  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground';
+  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 
 export const WORKSPACE_RAIL_ICON_OPTIONS = LUCIDE_ICON_OPTIONS;
 
@@ -35,11 +35,9 @@ export function RailItemIcon({
 }
 
 function RailCommandButton({
-  isActive,
   item,
   onRun
 }: {
-  isActive: boolean;
   item: WorkspaceRailItemConfig;
   onRun: (commandId: string) => void;
 }) {
@@ -47,7 +45,6 @@ function RailCommandButton({
     <div className="flex h-[var(--workspace-top-toolbar-height)] items-center justify-center">
       <WorkspaceRailTooltipButton
         className={RAIL_BUTTON_CLASS_NAME}
-        data-active={isActive}
         icon={<RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />}
         label={getWorkspaceRailItemLabel(item)}
         onClick={() => onRun(item.commandId)}
@@ -60,8 +57,7 @@ function RailCommandButton({
 export function RailActionGroup({
   ariaLabel,
   items,
-  onRun,
-  isImportManagementOpen
+  onRun
 }: {
   ariaLabel: string;
   items: WorkspaceRailItemConfig[];
@@ -75,7 +71,6 @@ export function RailActionGroup({
     <ToolbarActionGroup ariaLabel={ariaLabel} className="w-full gap-0" fullWidth orientation="vertical">
       {items.map((item) => (
         <RailCommandButton
-          isActive={item.commandId === APP_COMMAND_IDS.openImportManagement && isImportManagementOpen}
           item={item}
           key={item.id}
           onRun={onRun}

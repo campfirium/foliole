@@ -1,4 +1,4 @@
-import { ChevronsDownUp, ChevronsUpDown, Focus, SquarePen } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, Focus, Scan, SquarePen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
@@ -108,8 +108,12 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
           <span className="inline-flex">
             <AppIconButton
               aria-pressed={props.viewHideDismissedTopics}
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground aria-pressed:bg-foreground/[0.08] aria-pressed:text-foreground"
-              icon={<Focus size={16} strokeWidth={1.9} />}
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground aria-pressed:text-foreground"
+              icon={
+                props.viewHideDismissedTopics
+                  ? <Focus size={16} strokeWidth={1.9} />
+                  : <Scan size={16} strokeWidth={1.9} />
+              }
               label={props.viewHideDismissedTopics ? 'Show all topics' : 'Focus active topics'}
               onClick={props.onToggleDismissedTopicsVisibility}
             />

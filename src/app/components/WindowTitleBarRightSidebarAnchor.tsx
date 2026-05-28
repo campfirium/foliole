@@ -20,13 +20,16 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
 const VISIBLE_PANEL_COUNT = 3;
+const RIGHT_PANEL_ACTION_BASE_CLASS = 'window-titlebar-leading-button relative';
+const RIGHT_PANEL_ACTION_ACTIVE_CLASS =
+  'after:absolute after:bottom-1 after:left-1 after:right-1 after:h-[2px] after:rounded-full after:bg-foreground/12';
 
 function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClick: () => void }) {
   return (
     <button
       aria-label="Toggle right sidebar"
       className="window-titlebar-leading-button"
-      data-active={active}
+      aria-pressed={active}
       onClick={onClick}
       type="button"
     >
@@ -48,8 +51,10 @@ function RightSidebarPanelButton(props: {
     <button
       aria-label={getWorkspaceRightPanelAriaLabel(props.panelId)}
       aria-pressed={props.active}
-      className="window-titlebar-leading-button"
-      data-active={props.active}
+      className={[
+        RIGHT_PANEL_ACTION_BASE_CLASS,
+        props.active ? RIGHT_PANEL_ACTION_ACTIVE_CLASS : ''
+      ].filter(Boolean).join(' ')}
       data-panel-id={props.panelId}
       draggable
       onClick={props.onClick}
@@ -147,8 +152,11 @@ function OverflowPanelMenu(args: {
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label="More right sidebar panels"
-          className="window-titlebar-leading-button"
-          data-active={isActive}
+          aria-pressed={isActive}
+          className={[
+            RIGHT_PANEL_ACTION_BASE_CLASS,
+            isActive ? RIGHT_PANEL_ACTION_ACTIVE_CLASS : ''
+          ].filter(Boolean).join(' ')}
           type="button"
         >
           <Grid2x2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
