@@ -22,7 +22,7 @@ export function WorkspaceDividerSettingsSection() {
   } = useAppearanceSettings();
 
   return (
-    <SettingsSection ariaLabel="Workspace divider settings" title="Dividers">
+    <SettingsSection ariaLabel="Workspace divider settings" title="Workspace dividers">
       <SettingsRow
         description="Set how strongly workspace separators appear."
         title="Divider opacity"

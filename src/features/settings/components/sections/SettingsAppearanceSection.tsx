@@ -24,8 +24,8 @@ import { useSettingsFontOptions } from '../useSettingsFontOptions';
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
 import { NodeListRowSpacingSection } from './NodeListRowSpacingSection';
 import {
-  AppearanceLearningColorSection,
-  AppearanceReadingSection
+  AppearanceDarkModeContentSection,
+  AppearanceReadingColorSection
 } from './SettingsAppearanceColorSections';
 import { SettingsAppearanceFontSection } from './SettingsAppearanceFontSection';
 import { WorkspaceDividerSettingsSection } from './WorkspaceDividerSettingsSection';
@@ -121,32 +121,34 @@ function InterfaceBehaviorSection() {
   );
 }
 
-function AppearanceSupportingSections(props: ReturnType<typeof useAppearanceSectionState>) {
+function AppearanceReadingTypographySection(props: ReturnType<typeof useAppearanceSectionState>) {
   const { appearance, fontOptions } = props;
 
   return (
-    <>
-      <NodeIconSettingsSection />
-      <NodeListRowSpacingSection />
-      <SettingsAppearanceFontSection
-        {...fontOptions}
-        interfaceFontSize={appearance.interfaceFontSize}
-        onInterfaceFontSelectionChange={(value) =>
-          value.startsWith('preset:')
-            ? appearance.setInterfaceFontPreset(value.slice('preset:'.length) as typeof appearance.interfaceFontPreset)
-            : value.startsWith('font:') &&
-              (appearance.setCustomInterfaceFont(value.slice('font:'.length)), appearance.setInterfaceFontPreset('custom'))
-        }
-        onInterfaceFontSizeChange={appearance.setInterfaceFontSize}
-        onInterfaceFontSizeReset={appearance.resetInterfaceFontSize}
-        onMonospaceFontSelectionChange={(value) =>
-          value.startsWith('mono-preset:')
-            ? appearance.setMonospaceFontPreset(value.slice('mono-preset:'.length) as typeof appearance.monospaceFontPreset)
-            : value.startsWith('mono-font:') &&
-              (appearance.setCustomMonospaceFont(value.slice('mono-font:'.length)), appearance.setMonospaceFontPreset('custom'))
-        }
-      />
-    </>
+    <SettingsAppearanceFontSection
+      {...fontOptions}
+      interfaceFontSize={appearance.interfaceFontSize}
+      onInterfaceFontSelectionChange={(value) =>
+        value.startsWith('preset:')
+          ? appearance.setInterfaceFontPreset(value.slice('preset:'.length) as typeof appearance.interfaceFontPreset)
+          : value.startsWith('font:') &&
+            (appearance.setCustomInterfaceFont(value.slice('font:'.length)), appearance.setInterfaceFontPreset('custom'))
+      }
+      onInterfaceFontSizeChange={appearance.setInterfaceFontSize}
+      onInterfaceFontSizeReset={appearance.resetInterfaceFontSize}
+      onMonospaceFontSelectionChange={(value) =>
+        value.startsWith('mono-preset:')
+          ? appearance.setMonospaceFontPreset(value.slice('mono-preset:'.length) as typeof appearance.monospaceFontPreset)
+          : value.startsWith('mono-font:') &&
+            (appearance.setCustomMonospaceFont(value.slice('mono-font:'.length)), appearance.setMonospaceFontPreset('custom'))
+      }
+      onReadingContentWidthChange={appearance.setReadingContentWidth}
+      onReadingLineHeightChange={appearance.setReadingLineHeight}
+      onReadingParagraphSpacingChange={appearance.setReadingParagraphSpacing}
+      readingContentWidth={appearance.readingContentWidth}
+      readingLineHeight={appearance.readingLineHeight}
+      readingParagraphSpacing={appearance.readingParagraphSpacing}
+    />
   );
 }
 
@@ -157,7 +159,8 @@ export function SettingsAppearanceSection(props: { onEnterPreview: () => void })
       <AppearanceColorModeSection {...state} />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <WorkspaceDividerSettingsSection />
-      <AppearanceLearningColorSection
+      <AppearanceReadingTypographySection {...state} />
+      <AppearanceReadingColorSection
         appearance={state.appearance}
         safeAccentColor={state.safeAccentColor}
         safeClozeColor={state.safeClozeColor}
@@ -165,9 +168,10 @@ export function SettingsAppearanceSection(props: { onEnterPreview: () => void })
         safeHighlightColor={state.safeHighlightColor}
         safeSelectionColor={state.safeSelectionColor}
       />
+      <NodeIconSettingsSection />
+      <NodeListRowSpacingSection />
+      <AppearanceDarkModeContentSection appearance={state.appearance} />
       <InterfaceBehaviorSection />
-      <AppearanceReadingSection appearance={state.appearance} />
-      <AppearanceSupportingSections {...state} />
     </>
   );
 }

@@ -21,9 +21,6 @@ import {
   DEFAULT_SELECTION_COLOR_PRESET
 } from '../../model/appearanceSettings';
 
-import { ReadingContentWidthRow } from './ReadingContentWidthRow';
-import { ReadingLineHeightRow } from './ReadingLineHeightRow';
-import { ReadingParagraphSpacingRow } from './ReadingParagraphSpacingRow';
 import {
   AccentColorRow,
   ClozeColorRow,
@@ -38,7 +35,7 @@ function defaultModeColor(light: string, dark: string, appearance: AppearanceSet
   return appearance.resolvedBaseColorMode === 'dark' ? dark : light;
 }
 
-function AppearancePdfReadingModeRow(props: { appearance: AppearanceSettings }) {
+export function AppearancePdfReadingModeRow(props: { appearance: AppearanceSettings }) {
   return (
     <SettingsSegmentedRow
       description="Choose how PDF pages appear when the app uses dark mode. Light mode always shows the original PDF."
@@ -54,7 +51,7 @@ function AppearancePdfReadingModeRow(props: { appearance: AppearanceSettings }) 
   );
 }
 
-function DimImagesInDarkModeRow(props: { appearance: AppearanceSettings }) {
+export function DimImagesInDarkModeRow(props: { appearance: AppearanceSettings }) {
   const { appearance } = props;
 
   return (
@@ -81,7 +78,7 @@ function DimImagesInDarkModeRow(props: { appearance: AppearanceSettings }) {
   );
 }
 
-export function AppearanceLearningColorSection(props: {
+export function AppearanceReadingColorSection(props: {
   appearance: AppearanceSettings;
   safeAccentColor: string;
   safeClozeColor: string;
@@ -90,18 +87,18 @@ export function AppearanceLearningColorSection(props: {
   safeSelectionColor: string;
 }) {
   return (
-    <SettingsSection ariaLabel="Appearance text colors section" title="Text colors">
-      <FontColorRow
-        defaultFontColor={defaultModeColor(DEFAULT_FONT_COLOR_PRESET, DEFAULT_DARK_FONT_COLOR_PRESET, props.appearance)}
-        onFontColorPresetReset={props.appearance.resetFontColorPreset}
-        safeFontColor={props.safeFontColor}
-        setFontColorPreset={(value) => props.appearance.setFontColorPreset(value as typeof props.appearance.fontColorPreset)}
-      />
+    <SettingsSection ariaLabel="Appearance reading colors section" title="Reading colors">
       <AccentColorRow
         defaultAccentColor={defaultModeColor(DEFAULT_ACCENT_COLOR_PRESET, DEFAULT_DARK_ACCENT_COLOR_PRESET, props.appearance)}
         onAccentColorPresetReset={props.appearance.resetAccentColorPreset}
         safeAccentColor={props.safeAccentColor}
         setAccentColorPreset={(value) => props.appearance.setAccentColorPreset(value as typeof props.appearance.accentColorPreset)}
+      />
+      <FontColorRow
+        defaultFontColor={defaultModeColor(DEFAULT_FONT_COLOR_PRESET, DEFAULT_DARK_FONT_COLOR_PRESET, props.appearance)}
+        onFontColorPresetReset={props.appearance.resetFontColorPreset}
+        safeFontColor={props.safeFontColor}
+        setFontColorPreset={(value) => props.appearance.setFontColorPreset(value as typeof props.appearance.fontColorPreset)}
       />
       <SelectionColorRow
         defaultSelectionColor={defaultModeColor(DEFAULT_SELECTION_COLOR_PRESET, DEFAULT_DARK_SELECTION_COLOR_PRESET, props.appearance)}
@@ -125,22 +122,10 @@ export function AppearanceLearningColorSection(props: {
   );
 }
 
-export function AppearanceReadingSection(props: { appearance: AppearanceSettings }) {
+export function AppearanceDarkModeContentSection(props: { appearance: AppearanceSettings }) {
   return (
-    <SettingsSection ariaLabel="Appearance reading section" title="Reading">
+    <SettingsSection ariaLabel="Appearance dark mode content section" title="Dark mode content">
       <AppearancePdfReadingModeRow appearance={props.appearance} />
-      <ReadingLineHeightRow
-        onReadingLineHeightChange={props.appearance.setReadingLineHeight}
-        readingLineHeight={props.appearance.readingLineHeight}
-      />
-      <ReadingParagraphSpacingRow
-        onReadingParagraphSpacingChange={props.appearance.setReadingParagraphSpacing}
-        readingParagraphSpacing={props.appearance.readingParagraphSpacing}
-      />
-      <ReadingContentWidthRow
-        onReadingContentWidthChange={props.appearance.setReadingContentWidth}
-        readingContentWidth={props.appearance.readingContentWidth}
-      />
       <DimImagesInDarkModeRow appearance={props.appearance} />
     </SettingsSection>
   );
