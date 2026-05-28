@@ -8,6 +8,7 @@ import { ToolbarActionGroup } from './ToolbarActionGroup';
 import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from './Tooltip';
 
 export type ReviewActionSurface = 'panel' | 'overlay';
+type ReviewActionItem = { key: string; node: ReactNode };
 
 function overlayDividerClass(surface: ReviewActionSurface) {
   return surface === 'overlay'
@@ -158,7 +159,7 @@ export function ReadingReviewActions({
       <AppTooltipContent>{tooltip}</AppTooltipContent>
     </AppTooltip>
   );
-  const readingActions = [
+  const maybeReadingActions: Array<ReviewActionItem | null> = [
     onRevisitReviewTopicSoon
       ? {
           key: 'soon',
@@ -177,7 +178,8 @@ export function ReadingReviewActions({
       key: 'dismiss',
       node: wrapWithTooltip(<ReadingReviewButton className={buttonClassName} label="Dismiss" onClick={onDismissReviewTopic} surface={surface} />, 'No longer appears.')
     }
-  ].filter((action): action is { key: string; node: ReactNode } => Boolean(action));
+  ];
+  const readingActions = maybeReadingActions.filter((action): action is ReviewActionItem => action !== null);
   return (
     <ToolbarActionGroup ariaLabel="Reading review actions" className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`} data-review-toolbar-kind="reading">
       {renderOverlayDividedActions(readingActions, surface)}

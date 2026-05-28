@@ -53,7 +53,7 @@ function createRunnerArgs(overrides: Record<string, unknown> = {}) {
     },
     ws: {},
     ...overrides
-  } as Parameters<typeof createPaletteRunnerArgs>[0];
+  } as unknown as Parameters<typeof createPaletteRunnerArgs>[0];
 }
 
 it('routes Import Files palette commands through the workspace activity request', () => {

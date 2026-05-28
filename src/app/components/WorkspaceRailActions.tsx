@@ -62,7 +62,6 @@ export function RailActionGroup({
   ariaLabel: string;
   items: WorkspaceRailItemConfig[];
   onRun: (commandId: string) => void;
-  isImportManagementOpen: boolean;
 }) {
   if (items.length === 0) {
     return null;
