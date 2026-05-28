@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
@@ -38,6 +38,19 @@ function openAppearance() {
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 }
 
+function openIconEditor() {
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+}
+
+function getMarkerRow(title: string) {
+  const row = screen
+    .getAllByText(title)
+    .map((element) => element.closest('[data-node-icon-settings-row]'))
+    .find(Boolean);
+  expect(row).not.toBeNull();
+  return row as HTMLElement;
+}
+
 function editSvg(label: string, value: string) {
   fireEvent.click(screen.getByRole('button', { name: label }));
   fireEvent.change(screen.getByLabelText('Search icons'), { target: { value: 'book open' } });
@@ -45,8 +58,14 @@ function editSvg(label: string, value: string) {
   fireEvent.click(screen.getByRole('button', { name: 'Done' }));
 }
 
-function editState(label: string) {
+function editStateSvg(label: string, value: string) {
   fireEvent.click(screen.getByRole('button', { name: label }));
+  fireEvent.change(screen.getByLabelText('SVG'), { target: { value } });
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+}
+
+function changeRange(rowTitle: string, label: string, value: string) {
+  fireEvent.change(within(getMarkerRow(rowTitle)).getByLabelText(label), { target: { value } });
 }
 
 function readJsonSetting(key: string) {
@@ -60,11 +79,9 @@ async function expectStoredNodeIconSettings() {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg)).toContain('<svg');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg)).toContain('<svg');
     expect(readJsonSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance)).toMatchObject({
-      effect: 'double-line',
       innerScale: 0.72,
       lineWidth: 1.8,
       outerScale: 1.2,
-      scale: 1.15,
       svg: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>'
     });
   });
@@ -79,23 +96,74 @@ async function expectNodeIconSettingsReset() {
 
 it('stores compact topic and item icon rows plus per-state topic and item icon styling', async () => {
   openAppearance();
-  editSvg('Edit Topic icon', '<svg viewBox="0 0 16 16"><path d="M2 12L14 4" fill="none" stroke="currentColor"/></svg>');
-  editSvg('Edit Item icon', '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>');
+  openIconEditor();
+  editSvg('Edit Topic icon shape', '<svg viewBox="0 0 16 16"><path d="M2 12L14 4" fill="none" stroke="currentColor"/></svg>');
+  fireEvent.click(screen.getByRole('tab', { name: 'Item' }));
+  editSvg('Edit Item icon shape', '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>');
 
-  editState('Edit Item scheduled');
-  fireEvent.change(screen.getByLabelText('Effect'), { target: { value: 'double-line' } });
-  fireEvent.change(screen.getByLabelText('Line width'), { target: { value: '1.8' } });
-  fireEvent.change(screen.getByLabelText('Scale'), { target: { value: '1.15' } });
-  fireEvent.change(screen.getByLabelText('Outer scale'), { target: { value: '1.2' } });
-  fireEvent.change(screen.getByLabelText('Inner scale'), { target: { value: '0.72' } });
-  fireEvent.change(screen.getByLabelText('SVG'), {
-    target: { value: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>' }
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  changeRange('Item scheduled', 'Line width', '1.8');
+  changeRange('Item scheduled', 'Outer scale', '1.2');
+  changeRange('Item scheduled', 'Inner scale', '0.72');
+  editStateSvg('Edit Item scheduled shape', '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>');
 
   await expectStoredNodeIconSettings();
   await expectNodeIconSettingsReset();
 }, 30000);
+
+it('uses compact icon defaults and closes nested icon editing before settings', () => {
+  const onClose = vi.fn();
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} onClose={onClose} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  openIconEditor();
+  const topicIconRow = within(getMarkerRow('Topic icon'));
+
+  expect(topicIconRow.getByLabelText('Line width')).toHaveValue('0.6');
+  expect(topicIconRow.getByLabelText('Scale')).toHaveValue('1.15');
+  expect(screen.getAllByText('#202124').length).toBeGreaterThan(0);
+  fireEvent.click(topicIconRow.getByRole('button', { name: 'Edit Topic icon shape' }));
+  expect(screen.getByLabelText('Search icons').className).toContain('focus-visible:ring-0');
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+
+  expect(screen.queryByRole('dialog', { name: 'Edit Topic icon' })).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Settings dialog')).toBeInTheDocument();
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+it('uses a switch for dismissed row fade and keeps fade off by default', () => {
+  openAppearance();
+  openIconEditor();
+  const dismissedRow = within(getMarkerRow('Topic dismissed'));
+
+  const mutedSwitch = dismissedRow.getByRole('switch', { name: 'Muted dismissed row' });
+  expect(mutedSwitch).toHaveAttribute('aria-checked', 'false');
+  expect(dismissedRow.queryByLabelText('Fade opacity')).not.toBeInTheDocument();
+});
+
+it('shows a compact tree preview for topic and item marker states', () => {
+  openAppearance();
+  openIconEditor();
+
+  expect(screen.getAllByText('Topic pending').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Item pending').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Topic scheduled').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Item scheduled').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Topic dismissed').length).toBeGreaterThan(0);
+  expect(screen.queryByText('Item dismissed')).not.toBeInTheDocument();
+});
+
+it('keeps the settings page compact until the icon editor is opened', () => {
+  openAppearance();
+
+  expect(screen.getByText('Navigation icons')).toBeInTheDocument();
+  expect(screen.getAllByRole('group', { name: /^(Topic|Item) (icon|pending|scheduled|dismissed)$/ })).toHaveLength(7);
+  expect(screen.queryByRole('group', { name: 'Item dismissed' })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Scale')).not.toBeInTheDocument();
+
+  openIconEditor();
+
+  expect(within(getMarkerRow('Topic icon')).getByLabelText('Scale')).toBeInTheDocument();
+});
 
 it('keeps base icon preview independent from state effects', () => {
   window.localStorage.setItem(

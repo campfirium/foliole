@@ -6,6 +6,8 @@ import {
   type KeydownUnlisten
 } from '../../../shared/platform/keyboard';
 
+const NESTED_SETTINGS_DIALOG_SELECTOR = '[data-settings-nested-dialog="true"]';
+
 export function useSettingsPreviewMode() {
   const [isPreviewActive, setIsPreviewActive] = useState(false);
 
@@ -35,6 +37,9 @@ export function useSettingsPanelEscape(
   useEffect(
     () =>
       onWindowEscape(() => {
+        if (document.querySelector(NESTED_SETTINGS_DIALOG_SELECTOR)) {
+          return false;
+        }
         if (searchQueryRef.current.trim().length > 0 || isPreviewActive) {
           return false;
         }

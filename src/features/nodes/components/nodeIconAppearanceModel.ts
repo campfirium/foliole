@@ -32,8 +32,8 @@ export interface NodeIconStateAppearance {
 
 export const DEFAULT_NODE_ICON_BASE_APPEARANCE: NodeIconBaseAppearance = {
   color: DEFAULT_NODE_ICON_COLOR,
-  lineWidth: 1.2,
-  scale: 1
+  lineWidth: 0.6,
+  scale: 1.15
 };
 
 export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, NodeIconStateAppearance> = {
@@ -44,12 +44,12 @@ export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, No
     fadeEnabled: false,
     fadeOpacity: 1,
     fadeWholeRow: false,
-    innerLineWidth: 1.2,
+    innerLineWidth: 0.6,
     innerScale: 0.78,
-    lineWidth: 1.2,
-    outerLineWidth: 1.2,
+    lineWidth: 0.6,
+    outerLineWidth: 0.6,
     outerScale: 1,
-    scale: 1,
+    scale: 1.15,
     svg: ''
   },
   scheduled: {
@@ -59,27 +59,27 @@ export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, No
     fadeEnabled: false,
     fadeOpacity: 1,
     fadeWholeRow: false,
-    innerLineWidth: 1.2,
+    innerLineWidth: 0.6,
     innerScale: 0.78,
-    lineWidth: 1.2,
-    outerLineWidth: 1.2,
+    lineWidth: 0.6,
+    outerLineWidth: 0.6,
     outerScale: 1.18,
-    scale: 1,
+    scale: 1.15,
     svg: ''
   },
   dismissed: {
     color: DEFAULT_NODE_ICON_COLOR,
     doubleLineDistance: 2,
     effect: 'none',
-    fadeEnabled: true,
-    fadeOpacity: 0.35,
-    fadeWholeRow: true,
-    innerLineWidth: 1.2,
+    fadeEnabled: false,
+    fadeOpacity: 1,
+    fadeWholeRow: false,
+    innerLineWidth: 0.6,
     innerScale: 0.78,
-    lineWidth: 1.2,
-    outerLineWidth: 1.2,
+    lineWidth: 0.6,
+    outerLineWidth: 0.6,
     outerScale: 1,
-    scale: 1,
+    scale: 1.15,
     svg: ''
   }
 };

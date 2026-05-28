@@ -21,14 +21,14 @@ export function IconGrid(props: {
   onSelect: (iconId: string) => void;
 }) {
   return (
-    <div className="mt-3 max-h-[420px] overflow-auto pr-2">
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(56px,1fr))] justify-items-center gap-2.5">
+    <div className="app-scrollbar mt-3 max-h-[320px] overflow-auto pr-2">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(52px,1fr))] justify-items-center gap-2">
         {props.icons.map((icon) => (
           <button
             aria-label={`Use ${icon.label} icon`}
-            className={`inline-flex aspect-square w-full max-w-16 items-center justify-center rounded-md border transition-colors ${
+            className={`inline-flex aspect-square w-full max-w-14 items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
               props.selectedIconId === icon.id
-                ? 'border-settings-outline bg-settings-selected text-foreground'
+                ? 'border-settings-control-border-hover bg-settings-control-active text-foreground/82'
                 : 'border-transparent bg-settings-control/45 text-foreground/70 hover:bg-settings-control-hover hover:text-foreground'
             }`}
             key={icon.id}
