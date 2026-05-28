@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
@@ -103,7 +103,7 @@ it('supports multi-select permanent delete inside trash', () => {
   }
 });
 
-it('relearns reading nodes from the node context menu', () => {
+it('relearns reading nodes from the node context menu', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
@@ -129,10 +129,11 @@ it('relearns reading nodes from the node context menu', () => {
   }));
 
   render(<App />);
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
   openCurrentFolderItemContextMenu('Reading node');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
+  fireEvent.click(within(await screen.findByRole('dialog', { name: 'Relearn this topic?' })).getByRole('button', { name: 'Relearn' }));
 
+  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-2']?.reading).toBeNull());
   const workspace = useWorkspaceStore.getState();
   expect(workspace.nodesById['node-2']?.reading).toBeNull();
   expect(
@@ -145,7 +146,7 @@ it('relearns reading nodes from the node context menu', () => {
   ).toContain('node-2');
 });
 
-it('relearns review cards from the node context menu after confirmation', () => {
+it('relearns review cards from the node context menu after confirmation', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
@@ -173,10 +174,11 @@ it('relearns review cards from the node context menu after confirmation', () => 
   }));
 
   render(<App />);
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
   openCurrentFolderItemContextMenu('Review node');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
+  fireEvent.click(within(await screen.findByRole('dialog', { name: 'Relearn this topic?' })).getByRole('button', { name: 'Relearn' }));
 
+  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-2']?.review).toBeNull());
   const workspace = useWorkspaceStore.getState();
   expect(workspace.nodesById['node-2']?.review).toBeNull();
   expect(

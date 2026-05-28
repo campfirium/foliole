@@ -2,6 +2,7 @@ import { createEvent, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { registerAppTextInputHandler } from '../../../shared/ui/appConfirmation';
 import { resetRemoteImageFailureHintDismissalForTests } from '../model/remoteImageFailureHintSetting';
 
 const bridgeMock = vi.hoisted(() => ({
@@ -22,6 +23,8 @@ vi.mock('../../../shared/platform/runtimeInvoke', () => ({
 vi.mock('../../../shared/platform/remoteImageSourceRecovery', () => bridgeMock);
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
+
+let unregisterTextInputHandler: (() => void) | null = null;
 
 function createAdapterHost(initialContent: string) {
   const host = document.createElement('div');
@@ -50,8 +53,15 @@ function clickStatusButton(host: HTMLElement, label: string) {
   button?.click();
 }
 
+function mockSourceWebsiteInput(value: string | null) {
+  unregisterTextInputHandler?.();
+  unregisterTextInputHandler = registerAppTextInputHandler(async () => value);
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
+  unregisterTextInputHandler?.();
+  unregisterTextInputHandler = null;
   bridgeMock.forgetRemoteImageLearnedSource.mockReset().mockResolvedValue(true);
   bridgeMock.loadRemoteImageSourceContext.mockReset().mockResolvedValue({
     imageHost: 'example.com',
@@ -66,13 +76,15 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  unregisterTextInputHandler?.();
+  unregisterTextInputHandler = null;
   document.body.innerHTML = '';
   window.localStorage.clear();
 });
 
 describe('live markdown remote image failure recovery menu', () => {
   it('opens a block failed image context menu and saves a source website for the current image', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValue('https://source.example/article?id=1');
+    mockSourceWebsiteInput('https://source.example/article?id=1');
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
     const parentContextMenu = vi.fn();
     host.addEventListener('contextmenu', parentContextMenu);
@@ -149,7 +161,7 @@ describe('live markdown remote image failure retry actions', () => {
   });
 
   it('keeps the failed placeholder stable when an invalid source website is dismissed', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValue('');
+    mockSourceWebsiteInput('');
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
 
     getRemoteImage(host)?.dispatchEvent(new Event('error'));
@@ -183,7 +195,7 @@ describe('live markdown remote image failure recovery hint', () => {
   });
 
   it('saves a source website from the visible recovery action', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValue('https://source.example/article');
+    mockSourceWebsiteInput('https://source.example/article');
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/one.png)');
 
     getRemoteImage(host)?.dispatchEvent(new Event('error'));

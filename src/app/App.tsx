@@ -7,10 +7,8 @@ import { ReviewSchedulerSettingsProvider } from '../features/settings/context/Re
 import { WorkspaceRailSettingsProvider } from '../features/settings/context/WorkspaceRailSettingsProvider';
 import { installWorkspaceDebugBridge } from '../shared/diagnostics/workspaceDebugBridge';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
-import {
-  reportRuntimeAppReady,
-  reportRuntimeBootStage
-} from '../shared/platform/runtimeBootTelemetry';
+import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
+import { AppConfirmationProvider } from '../shared/ui';
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
 import { CompanionPairingRequestsDialog } from './components/CompanionPairingRequestsDialog';
@@ -222,7 +220,9 @@ export function App() {
       <MouseGestureSettingsProvider>
         <ReviewSchedulerSettingsProvider>
           <WorkspaceRailSettingsProvider>
-            <AppContent />
+            <AppConfirmationProvider>
+              <AppContent />
+            </AppConfirmationProvider>
           </WorkspaceRailSettingsProvider>
         </ReviewSchedulerSettingsProvider>
       </MouseGestureSettingsProvider>

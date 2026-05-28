@@ -3,6 +3,7 @@ import {
   loadRemoteImageSourceContext,
   saveRemoteImageSourceWebsite
 } from '../../../shared/platform/remoteImageSourceRecovery';
+import { requestAppTextInput } from '../../../shared/ui';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 import {
@@ -27,10 +28,17 @@ export function createRemoteImageFailureStatus(options: RemoteImageFailureStatus
     })
     .catch(() => undefined);
   const provideSourceWebsite = () => {
-    const sourceWebsite = window.prompt('Source website');
-    if (!sourceWebsite?.trim()) return;
-    void saveRemoteImageSourceWebsite(options.imageMatch.source, sourceWebsite).then((saved) => {
-      if (saved) options.onRetry();
+    void requestAppTextInput({
+      confirmLabel: 'Save source',
+      description: 'Foliole will use this page to retry images from the same source.',
+      inputLabel: 'Source website',
+      placeholder: 'https://example.com/article',
+      title: 'Add source website'
+    }).then((sourceWebsite) => {
+      if (!sourceWebsite?.trim()) return;
+      void saveRemoteImageSourceWebsite(options.imageMatch.source, sourceWebsite).then((saved) => {
+        if (saved) options.onRetry();
+      });
     });
   };
   const forgetLearnedSource = () => {

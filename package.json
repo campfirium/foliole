@@ -22,6 +22,7 @@
     "check:affected": "node scripts/pre-push-affected-validation.mjs",
     "check:settings-classification": "node scripts/check-settings-classification.mjs",
     "check:reading-typography": "node scripts/check-reading-typography-tokens.mjs",
+    "native-dialog:guard": "node scripts/check-native-dialog-guard.mjs",
     "copy:guard": "node scripts/check-ui-copy-guard.mjs",
     "copy:guard:strict": "node scripts/check-ui-copy-guard.mjs --strict",
     "validate:desktop:serial": "node scripts/desktop-validation-serial.mjs",

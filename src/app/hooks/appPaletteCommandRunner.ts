@@ -1,5 +1,6 @@
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import { requestAppConfirmation } from '../../shared/ui';
 
 import { runAppCommand, runReviewModeToggle } from './appCommands';
 import { enterReviewModeSession, type StartStudyModeOptions } from './reviewModeSessionActions';
@@ -119,6 +120,18 @@ function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggl
   };
 }
 
+function runResetImportDataCommand(args: PaletteCommandRunnerArgs) {
+  void requestAppConfirmation({
+    confirmLabel: 'Reset',
+    description: 'Imported topics and import records will be removed. This cannot be undone.',
+    title: 'Reset imported topics?'
+  }).then((confirmed) => {
+    if (confirmed) {
+      void args.resetImportData();
+    }
+  });
+}
+
 function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
   return {
     ...createPaletteSettingsActions(args),
@@ -157,12 +170,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
       void args.reimportSelectedTopic();
     },
     openImportManagement: args.openImportManagement,
-    resetImportData: () => {
-      if (!window.confirm('Reset imported content and import records? This cannot be undone.')) {
-        return false;
-      }
-      void args.resetImportData();
-    },
+    resetImportData: () => runResetImportDataCommand(args),
     toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,
     openNotes: args.closeTrashView,
     openHelpSearch: args.onOpenHelpSearch,

@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
@@ -73,7 +73,7 @@ it('shows relearn actions for pending reading nodes and keeps the pending icon s
   );
 });
 
-it('returns dismissed reading nodes to pending from the node menu', () => {
+it('returns dismissed reading nodes to pending from the node menu', async () => {
   seedTopicInInbox({
     nodeId: 'node-dismissed',
     title: 'Dismissed note',
@@ -81,13 +81,13 @@ it('returns dismissed reading nodes to pending from the node menu', () => {
   });
 
   render(<App />);
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
 
   const panel = openNodeMenu('Dismissed note');
   expect(screen.queryByRole('menuitem', { name: 'Dismiss' })).toBeNull();
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
+  fireEvent.click(within(await screen.findByRole('dialog', { name: 'Relearn this topic?' })).getByRole('button', { name: 'Relearn' }));
 
-  expect(useWorkspaceStore.getState().nodesById['node-dismissed']?.reading).toBeNull();
+  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-dismissed']?.reading).toBeNull());
   expect(within(panel).getByRole('treeitem', { name: 'Dismissed note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-state',
     'pending'
@@ -153,13 +153,11 @@ it('toggles sequential reading from source topic menus without confirmation and 
     }
   }));
   render(<App />);
-  const confirmSpy = vi.spyOn(window, 'confirm');
-  confirmSpy.mockClear();
 
   openNodeMenu('Source topic');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Enable Sequential Reading' }));
 
-  expect(confirmSpy).not.toHaveBeenCalled();
+  expect(screen.queryByRole('dialog', { name: /Relearn/i })).toBeNull();
   expect(useWorkspaceStore.getState().nodesById['node-source']?.sequentialReadingEnabled).toBe(true);
   expect(useWorkspaceStore.getState().nodesById['node-first']?.reading?.state).toBe('active');
   expect(useWorkspaceStore.getState().nodesById['node-second']?.reading?.state).toBe('locked');

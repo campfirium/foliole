@@ -8,6 +8,7 @@ import {
   type RuntimeLibraryPathLocation,
   type RuntimeLibraryPaths
 } from '../../../shared/platform/libraryPathsRuntimeRepository';
+import { requestAppConfirmation } from '../../../shared/ui';
 
 import { useMirrorRebuildState } from './useMirrorRebuildState';
 
@@ -91,14 +92,14 @@ function isLibraryHomeSwitchCancelledError(error: unknown) {
 }
 
 function confirmExistingLibraryHome(path: string) {
-  return window.confirm(
-    [
-      'Switch to this existing Library Home?',
-      '',
+  return requestAppConfirmation({
+    confirmLabel: 'Use Library Home',
+    description: [
       `Foliole found an existing database in ${path}.`,
       'It will use that library without moving or overwriting the current one.'
-    ].join('\n')
-  );
+    ],
+    title: 'Use existing Library Home?'
+  });
 }
 
 async function updateSelectedRuntimeLibraryPath(location: RuntimeLibraryPathLocation, selectedPath: string) {
@@ -108,7 +109,7 @@ async function updateSelectedRuntimeLibraryPath(location: RuntimeLibraryPathLoca
     if (location !== 'library_home' || !isExistingLibraryHomeConfirmationError(error)) {
       throw error;
     }
-    if (!confirmExistingLibraryHome(selectedPath)) {
+    if (!(await confirmExistingLibraryHome(selectedPath))) {
       throw new Error(LIBRARY_HOME_SWITCH_CANCELLED_ERROR);
     }
     return updateRuntimeLibraryPathSetting(location, selectedPath, {

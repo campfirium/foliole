@@ -1,5 +1,12 @@
 export { AppBreadcrumb, type AppBreadcrumbItem } from './Breadcrumb';
 export { AppButton } from './Button';
+export { AppConfirmationProvider } from './AppConfirmationProvider';
+export {
+  requestAppConfirmation,
+  requestAppTextInput,
+  type AppConfirmationOptions,
+  type AppTextInputOptions
+} from './appConfirmation';
 export {
   AppDialog,
   AppDialogClose,

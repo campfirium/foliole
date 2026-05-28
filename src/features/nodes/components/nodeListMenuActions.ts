@@ -1,13 +1,17 @@
+import { requestAppConfirmation } from '../../../shared/ui';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { collectDismissEntireTopicTargets } from './nodeListContextMenuReview';
 
 export function confirmReturnNodeReset(targetCount: number) {
-  return window.confirm(
-    targetCount > 1
-      ? 'Reset review state and requeue the selected nodes?'
-      : 'Reset review state and requeue this node?'
-  );
+  return requestAppConfirmation({
+    confirmLabel: 'Relearn',
+    description:
+      targetCount > 1
+        ? 'This clears their current review progress and puts them back in the review queue.'
+        : 'This clears its current review progress and puts it back in the review queue.',
+    title: targetCount > 1 ? 'Relearn selected topics?' : 'Relearn this topic?'
+  });
 }
 
 export function createReturnNodeAction(
@@ -16,12 +20,14 @@ export function createReturnNodeAction(
   closeContextMenu: () => void
 ) {
   return () => {
-    if (!confirmReturnNodeReset(contextTargets.length)) {
+    void confirmReturnNodeReset(contextTargets.length).then((confirmed) => {
+      if (!confirmed) {
+        closeContextMenu();
+        return;
+      }
+      contextTargets.forEach((id) => returnNode(id));
       closeContextMenu();
-      return;
-    }
-    contextTargets.forEach((id) => returnNode(id));
-    closeContextMenu();
+    });
   };
 }
 

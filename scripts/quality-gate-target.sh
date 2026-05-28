@@ -177,10 +177,9 @@ run_gate_steps_parallel() {
   fi
 }
 
-run_copy_guard_if_present() {
-  if [[ -f "scripts/check-ui-copy-guard.mjs" ]]; then
-    run_quality_gate_script "${prefix}" "${pm}" "copy:guard"
-  fi
+run_renderer_guards_if_present() {
+  [[ ! -f "scripts/check-ui-copy-guard.mjs" ]] || run_quality_gate_script "${prefix}" "${pm}" "copy:guard"
+  [[ ! -f "scripts/check-native-dialog-guard.mjs" ]] || run_quality_gate_script "${prefix}" "${pm}" "native-dialog:guard"
 }
 
 if quality_gate_should_print_step; then
@@ -196,29 +195,29 @@ run_reading_typography_check_if_present
 
 case "${target}" in
   desktop)
-    run_copy_guard_if_present
+    run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
     run_gate_steps lint:desktop:full typecheck:desktop test:desktop test:quality build electron:compile
     run_workspace_boundary_check_if_present
     ;;
   android)
-    run_copy_guard_if_present
+    run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
     run_gate_steps check:android-boundary lint:android:full typecheck:android test:android test:quality android:sync android:host:lint android:host:test
     ;;
   android-device)
-    run_copy_guard_if_present
+    run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
     run_gate_steps check:android-boundary lint:android:full typecheck:android test:android test:quality android:sync android:host:lint android:host:test android:emulator android:host:device-test
     ;;
   shared)
-    run_copy_guard_if_present
+    run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
     run_gate_steps check:android-boundary lint:shared:full typecheck:shared test:shared test:quality build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
   full)
-    run_copy_guard_if_present
+    run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
     run_gate_steps check:android-boundary
     run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
@@ -227,7 +226,7 @@ case "${target}" in
     run_workspace_boundary_check_if_present
     ;;
   release)
-    run_copy_guard_if_present
+    run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
     run_gate_steps check:android-boundary
     run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
