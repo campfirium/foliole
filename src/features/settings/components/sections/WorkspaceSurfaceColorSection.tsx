@@ -1,29 +1,25 @@
-import { RotateCcw } from 'lucide-react';
 import { useEffect } from 'react';
 
 import {
   SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME,
   SettingsSection,
-  settingsButtonClassName,
-  settingsUtilityIconButtonClassName
+  settingsButtonClassName
 } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 import { type WorkspaceSurfaceRegionId } from '../../model/workspaceSurfaceSettings';
 
 import { WorkspaceSurfaceAutomaticPanel, WorkspaceSurfaceColorModePanel, WorkspaceSurfacePreferences } from './WorkspaceSurfaceColorModePanel';
-import { WorkspaceSurfaceColorPaletteStrip } from './WorkspaceSurfaceColorPaletteStrip';
 import {
   addCurrentWorkspaceSurfaceFavorite,
   applyAutoModeToWorkspace,
   applyGeneratedPaletteToWorkspace,
   createRandomWorkspaceSurfacePalettes,
-  openWorkspaceSurfaceColorEditor,
   removeWorkspaceSurfaceFavoriteEntry,
-  resetWorkspaceSurfaceFreePalette,
   resetWorkspaceSurfaceToDefault,
   useWorkspaceSurfaceEditor,
   useWorkspaceSurfacePainting
 } from './WorkspaceSurfaceColorSection.logic';
+import { WorkspaceSurfaceFreePalette } from './WorkspaceSurfaceFreePalette';
 import { WorkspaceSurfaceGrid } from './WorkspaceSurfaceGrid';
 import { WorkspaceSurfacePaletteEditor } from './WorkspaceSurfacePaletteEditor';
 
@@ -135,41 +131,6 @@ function WorkspaceSurfaceSideRail(props: {
         resolvedBaseColorMode={props.editor.mode}
       />
       <WorkspaceSurfaceFreePalette editor={props.editor} />
-    </div>
-  );
-}
-
-function WorkspaceSurfaceFreePalette(props: {
-  editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="space-y-0.5">
-        <div className="flex items-center gap-2">
-          <h4 className="text-sm font-medium text-foreground">Free palette</h4>
-          <button
-            aria-label="Reset free palette"
-            className={settingsUtilityIconButtonClassName(false, 'size-8 rounded-sm px-0')}
-            onClick={() => resetWorkspaceSurfaceFreePalette(props.editor)}
-            type="button"
-          >
-            <RotateCcw aria-hidden="true" className="text-current" size={18} strokeWidth={1.9} />
-          </button>
-        </div>
-        <p className="text-xs text-foreground/58">Manual mode: pick a swatch, then paint the preview.</p>
-      </div>
-      <WorkspaceSurfaceColorPaletteStrip
-        activeBrushIndex={props.editor.activeBrushIndex}
-        colors={props.editor.appearance.workspaceSurfacePalette}
-        onAddPaletteColor={() => {
-          const fallbackColor = props.editor.appearance.workspaceSurfacePalette[props.editor.activeBrushIndex] ?? '#d8d8d8';
-          props.editor.setGeneratedMode('manual');
-          props.editor.appearance.setWorkspaceSurfacePalette([...props.editor.appearance.workspaceSurfacePalette, fallbackColor]);
-          props.editor.setActiveBrushIndex(props.editor.appearance.workspaceSurfacePalette.length);
-        }}
-        onEditColor={(event, index) => openWorkspaceSurfaceColorEditor(props.editor, event, index)}
-        onSelectColor={(index) => props.editor.setActiveBrushIndex(index)}
-      />
     </div>
   );
 }
