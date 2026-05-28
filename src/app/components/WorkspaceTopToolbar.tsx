@@ -1,4 +1,4 @@
-import { Bug, FileSearch, FileText, Gauge, Highlighter, Link2, ListOrdered, PanelLeft, TableOfContents, Trash2 } from 'lucide-react';
+import { Bug, FileSearch, FileText, Gauge, Highlighter, Link2, PanelLeft, TableOfContents, Trash2, Waypoints } from 'lucide-react';
 
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
@@ -45,7 +45,7 @@ function renderInspectorActions(activeRightPanelId: WorkspaceRightPanelId, isRig
     <>
       <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
-        icon={<ListOrdered aria-hidden="true" size={16} strokeWidth={1.75} />}
+        icon={<Waypoints aria-hidden="true" size={16} strokeWidth={1.75} />}
         label="Review queue panel"
         onClick={() => onSelectRightPanel('review-queue')}
       />

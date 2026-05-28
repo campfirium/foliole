@@ -1,4 +1,4 @@
-import { Bug, FileSearch, Gauge, Highlighter, Link2, ListOrdered, TableOfContents } from 'lucide-react';
+import { Bug, FileSearch, Gauge, Highlighter, Link2, TableOfContents, Waypoints } from 'lucide-react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
@@ -13,7 +13,7 @@ export interface WorkspaceRightPanelDefinition {
 
 export const WORKSPACE_RIGHT_PANEL_DEFINITIONS: WorkspaceRightPanelDefinition[] = [
   {
-    icon: <ListOrdered aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
+    icon: <Waypoints aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
     menuLabel: 'Review queue',
     panelId: 'review-queue'
   },
