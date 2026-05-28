@@ -80,6 +80,24 @@ export const REVIEW_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
     description: 'How often a reading card is drawn against a review card.',
     id: 'review-reading-vs-review-mix',
     title: 'Reading vs review mix'
+  },
+  {
+    categoryId: 'review',
+    description: 'How strongly higher-priority topics are favored.',
+    id: 'review-priority-weight',
+    title: 'Priority weight'
+  },
+  {
+    categoryId: 'review',
+    description: 'Wait time after a reading card is handled before it can return to the reading queue.',
+    id: 'review-reading-initial-interval',
+    title: 'Reading initial interval'
+  },
+  {
+    categoryId: 'review',
+    description: 'How quickly the reading interval grows after each pass.',
+    id: 'review-reading-interval-growth',
+    title: 'Reading interval growth'
   }
 ];
 

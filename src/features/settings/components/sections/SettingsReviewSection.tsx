@@ -34,6 +34,9 @@ const REVIEW_ROW = {
   desiredRetention: REVIEW_SETTINGS_SEARCH_ROWS[0]!,
   maximumInterval: REVIEW_SETTINGS_SEARCH_ROWS[1]!,
   newDayStartsAt: REVIEW_SETTINGS_SEARCH_ROWS[2]!,
+  priorityWeight: REVIEW_SETTINGS_SEARCH_ROWS[5]!,
+  readingInitialInterval: REVIEW_SETTINGS_SEARCH_ROWS[6]!,
+  readingIntervalGrowth: REVIEW_SETTINGS_SEARCH_ROWS[7]!,
   readingVsReviewMix: REVIEW_SETTINGS_SEARCH_ROWS[4]!
 };
 
@@ -165,16 +168,19 @@ function PushQueueRows(props: Pick<
         control={<QueueMixRatioControl fsrs={props.queueMixRatioFsrs} onFsrsChange={props.onQueueMixRatioFsrsChange} onReadingChange={props.onQueueMixRatioReadingChange} reading={props.queueMixRatioReading} />}
       />
       <ReviewSettingRow
+        searchRow={REVIEW_ROW.priorityWeight}
         title="Priority weight"
         description="How strongly higher-priority topics are favored. The default 5 means a P1 topic is drawn five times as often as a P9 topic."
         control={<SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}><ReviewNumberInput ariaLabel="Priority weight" min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} /></SettingsControlSlot>}
       />
       <ReviewSettingRow
+        searchRow={REVIEW_ROW.readingInitialInterval}
         title="Reading initial interval"
         description="Wait time after a reading card is handled before it can return to the reading queue (in days)."
         control={<SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}><ReviewNumberInput ariaLabel="Reading initial interval days" min={0.01} onChange={props.onReadingInitialIntervalDaysChange} step={0.25} value={readingInitialIntervalDays} /></SettingsControlSlot>}
       />
       <ReviewSettingRow
+        searchRow={REVIEW_ROW.readingIntervalGrowth}
         title="Reading interval growth"
         description="How quickly the reading interval grows after each pass. The minimum applies to P1 topics, the maximum to P9, and intermediate priorities interpolate."
         control={<ReadingGrowthFactorRangeControl maxValue={props.readingIntervalGrowthFactorMax} minValue={props.readingIntervalGrowthFactorMin} onMaxChange={props.onReadingIntervalGrowthFactorMaxChange} onMinChange={props.onReadingIntervalGrowthFactorMinChange} />}

@@ -54,6 +54,20 @@ it('searches settings rows and jumps to the matching category row', async () => 
   expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
 });
 
+it('finds advanced review scheduler rows from settings search', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="about" />);
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search settings' }), {
+    target: { value: 'Priority weight' }
+  });
+  fireEvent.click(screen.getByRole('option', { name: /Priority weight/ }));
+
+  await waitFor(() => {
+    expect(document.querySelector('[data-settings-search-row-id="review-priority-weight"]')).not.toBeNull();
+  });
+  expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
+});
+
 it('searches categories without mixing in menu help actions', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
   const input = screen.getByRole('textbox', { name: 'Search settings' });
