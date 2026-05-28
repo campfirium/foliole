@@ -257,6 +257,10 @@
     --workspace-right-sidebar-current-width: 0px !important;
     --workspace-right-sidebar-splitter-width: 0px !important;
   }
+
+  .workspace-responsive-shell .window-titlebar-right-anchor-shell {
+    display: none !important;
+  }
 }
 
 @keyframes companion-sheet-in {
