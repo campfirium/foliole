@@ -64,6 +64,23 @@ describe('windows-deploy-app.sh', () => {
     expect(script).toContain('Write-InstallCache -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
   });
 
+  it('resolves Windows Node from node.exe or the npm.cmd sibling directory', async () => {
+    const script = await readFile(DEPLOY_PS_SCRIPT, 'utf8');
+
+    expect(script).toContain('Get-Command node.exe');
+    expect(script).toContain('Get-Command npm.cmd');
+    expect(script).toContain('Join-Path (Split-Path -Parent $npmCommand.Source) "node.exe"');
+  });
+
+  it('does not pipe adb executable calls through Out-Null', async () => {
+    const script = await readFile(DEPLOY_PS_SCRIPT, 'utf8');
+
+    expect(script).toContain('function Invoke-AdbCommand');
+    expect(script).toContain('Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null');
+    expect(script).toContain('function Test-LastCommandFailed');
+    expect(script).not.toContain('| Out-Null');
+  });
+
   it('refuses direct deploy without explicit data-risk confirmation', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-deploy-refuse-'));
     try {

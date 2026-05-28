@@ -14,25 +14,38 @@ describe('windows-run-emulator.ps1', () => {
     const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
 
     expect(script).toContain('function Get-OfflineEmulatorSerials');
-    expect(script).toContain('& $AdbPath reconnect offline');
-    expect(script).toContain('& $AdbPath -s $serial emu kill');
+    expect(script).toContain('Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("reconnect", "offline") *> $null');
+    expect(script).toContain('Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("-s", $serial, "emu", "kill") *> $null');
     expect(script).toContain('Repair-OfflineEmulators -AdbPath $adbPath');
+  });
+
+  it('captures adb stdout without console shell wrappers or Out-Null pipes', async () => {
+    const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
+
+    expect(script).toContain('function Invoke-AdbCommand');
+    expect(script).toContain('Start-Process -FilePath $AdbPath -ArgumentList $Arguments');
+    expect(script).toContain('Get-Content -Path $out');
+    expect(script).toContain('Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null');
+    expect(script).not.toContain('& cmd.exe');
+    expect(script).not.toContain('| Out-Null');
   });
 
   it('cold starts the AVD instead of loading a stale snapshot', async () => {
     const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
 
     expect(script).toContain('function Start-EmulatorProcess');
-    expect(script).toContain('-avd $quotedAvdName -no-snapshot-load -timezone $quotedTimezone');
+    expect(script).toContain('-ArgumentList @("-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone)');
     expect(script).toContain('Start-EmulatorProcess -EmulatorPath $emulatorPath -AvdName $AvdName -Timezone $Timezone');
   });
 
   it('detaches the emulator process from the preview process tree', async () => {
     const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
 
-    expect(script).toContain('$cmdPath = if ($env:ComSpec) { $env:ComSpec } else { "cmd.exe" }');
-    expect(script).toContain('start ""Foliole Android Emulator"" /min');
-    expect(script).toContain('Start-Process -FilePath $cmdPath -ArgumentList "/d", "/c", $launchCommand -WindowStyle Hidden');
+    expect(script).toContain('Start-Process `');
+    expect(script).toContain('-FilePath $EmulatorPath `');
+    expect(script).toContain('-ArgumentList @("-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone)');
+    expect(script).not.toContain('start ""Foliole Android Emulator"" /min');
+    expect(script).not.toContain('-FilePath $cmdPath');
   });
 
   it('passes an explicit zoneinfo timezone to the emulator', async () => {
@@ -40,7 +53,7 @@ describe('windows-run-emulator.ps1', () => {
 
     expect(script).toContain('[string]$Timezone = "Asia/Shanghai"');
     expect(script).toContain('Write-Info "timezone: $Timezone"');
-    expect(script).toContain('getprop persist.sys.timezone');
+    expect(script).toContain('"getprop", "persist.sys.timezone"');
     expect(script).toContain('restarting emulator with timezone: $Timezone');
   });
 });

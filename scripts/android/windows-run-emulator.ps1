@@ -11,6 +11,16 @@ function Write-Info {
   Write-Host "[android-emulator] $Message"
 }
 
+function Invoke-AdbCommand {
+  param([string]$AdbPath, [string[]]$Arguments)
+  $out = [System.IO.Path]::GetTempFileName(); $err = [System.IO.Path]::GetTempFileName()
+  try {
+    $process = Start-Process -FilePath $AdbPath -ArgumentList $Arguments -Wait -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
+    $global:LASTEXITCODE = $process.ExitCode
+    Get-Content -Path $out -ErrorAction SilentlyContinue
+  } finally { Remove-Item -Path $out, $err -ErrorAction SilentlyContinue }
+}
+
 function Resolve-SdkRoot {
   $candidates = @(
     $env:ANDROID_SDK_ROOT,
@@ -67,7 +77,7 @@ function Resolve-ToolPath {
 function Get-RunningEmulatorSerial {
   param([string]$AdbPath)
 
-  $deviceLines = (& $AdbPath devices 2>$null) | Select-Object -Skip 1
+  $deviceLines = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("devices")) | Select-Object -Skip 1
   foreach ($line in $deviceLines) {
     $trimmed = $line.Trim()
     if ([string]::IsNullOrWhiteSpace($trimmed)) {
@@ -88,7 +98,7 @@ function Get-OfflineEmulatorSerials {
   param([string]$AdbPath)
 
   $serials = @()
-  $deviceLines = (& $AdbPath devices 2>$null) | Select-Object -Skip 1
+  $deviceLines = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("devices")) | Select-Object -Skip 1
   foreach ($line in $deviceLines) {
     $trimmed = $line.Trim()
     if ([string]::IsNullOrWhiteSpace($trimmed)) {
@@ -108,7 +118,7 @@ function Get-RunningEmulatorSerialForAvd {
     [string]$AvdName
   )
 
-  $deviceLines = (& $AdbPath devices 2>$null) | Select-Object -Skip 1
+  $deviceLines = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("devices")) | Select-Object -Skip 1
   foreach ($line in $deviceLines) {
     $trimmed = $line.Trim()
     if ([string]::IsNullOrWhiteSpace($trimmed)) {
@@ -119,7 +129,7 @@ function Get-RunningEmulatorSerialForAvd {
       continue
     }
 
-    $candidateAvd = (& $AdbPath -s $parts[0] emu avd name 2>$null | Select-Object -First 1).Trim()
+    $candidateAvd = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("-s", $parts[0], "emu", "avd", "name") | Select-Object -First 1).Trim()
     if ($candidateAvd -eq $AvdName) {
       return $parts[0]
     }
@@ -138,13 +148,13 @@ function Repair-OfflineEmulators {
 
   Write-Info "offline adb transport detected: $($offlineSerials -join ', ')"
   Write-Info "reconnecting offline adb transports"
-  & $AdbPath reconnect offline | Out-Null
+  Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("reconnect", "offline") *> $null
   Start-Sleep -Seconds 5
 
   $offlineSerials = Get-OfflineEmulatorSerials -AdbPath $AdbPath
   foreach ($serial in $offlineSerials) {
     Write-Info "killing offline emulator transport: $serial"
-    & $AdbPath -s $serial emu kill | Out-Null
+    Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("-s", $serial, "emu", "kill") *> $null
   }
   if ($offlineSerials.Count -gt 0) {
     Start-Sleep -Seconds 5
@@ -165,7 +175,7 @@ function Wait-ForEmulatorReady {
       continue
     }
 
-    $bootCompleted = (& $AdbPath -s $serial shell getprop sys.boot_completed 2>$null | Select-Object -First 1).Trim()
+    $bootCompleted = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("-s", $serial, "shell", "getprop", "sys.boot_completed") | Select-Object -First 1).Trim()
     if ($bootCompleted -eq "1") {
       return $serial
     }
@@ -183,13 +193,9 @@ function Start-EmulatorProcess {
     [string]$Timezone
   )
 
-  $cmdPath = if ($env:ComSpec) { $env:ComSpec } else { "cmd.exe" }
-  $quotedEmulatorPath = '"' + ($EmulatorPath -replace '"', '""') + '"'
-  $quotedAvdName = '"' + ($AvdName -replace '"', '""') + '"'
-  $quotedTimezone = '"' + ($Timezone -replace '"', '""') + '"'
-  $launchCommand = "start ""Foliole Android Emulator"" /min $quotedEmulatorPath -avd $quotedAvdName -no-snapshot-load -timezone $quotedTimezone"
-
-  Start-Process -FilePath $cmdPath -ArgumentList "/d", "/c", $launchCommand -WindowStyle Hidden
+  Start-Process `
+    -FilePath $EmulatorPath `
+    -ArgumentList @("-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone)
 }
 
 if ([string]::IsNullOrWhiteSpace($AvdName)) {
@@ -221,16 +227,16 @@ Write-Info "avd: $AvdName"
 Write-Info "timezone: $Timezone"
 Write-Info "sdk: $sdkRoot"
 
-& $adbPath start-server | Out-Null
+Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null
 Repair-OfflineEmulators -AdbPath $adbPath
 $existingSerial = Get-RunningEmulatorSerialForAvd -AdbPath $adbPath -AvdName $AvdName
 
 if ($null -ne $existingSerial) {
-  $existingTimezone = (& $adbPath -s $existingSerial shell getprop persist.sys.timezone 2>$null | Select-Object -First 1).Trim()
+  $existingTimezone = (Invoke-AdbCommand -AdbPath $adbPath -Arguments @("-s", $existingSerial, "shell", "getprop", "persist.sys.timezone") | Select-Object -First 1).Trim()
   if ($existingTimezone -and $existingTimezone -ne $Timezone) {
     Write-Info "timezone mismatch: $existingTimezone"
     Write-Info "restarting emulator with timezone: $Timezone"
-    & $adbPath -s $existingSerial emu kill | Out-Null
+    Invoke-AdbCommand -AdbPath $adbPath -Arguments @("-s", $existingSerial, "emu", "kill") *> $null
     Start-Sleep -Seconds 5
     $existingSerial = $null
   }

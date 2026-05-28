@@ -17,9 +17,23 @@ function Write-Info {
   Write-Host "[android-deploy] $Message"
 }
 
+function Invoke-AdbCommand {
+  param([string]$AdbPath, [string[]]$Arguments)
+  $out = [System.IO.Path]::GetTempFileName(); $err = [System.IO.Path]::GetTempFileName()
+  try {
+    $process = Start-Process -FilePath $AdbPath -ArgumentList $Arguments -Wait -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
+    $global:LASTEXITCODE = $process.ExitCode
+    Get-Content -Path $out -ErrorAction SilentlyContinue
+  } finally { Remove-Item -Path $out, $err -ErrorAction SilentlyContinue }
+}
+
+function Test-LastCommandFailed {
+  return $null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0
+}
+
 function Get-InstalledVersionCode {
   param([string]$AdbPath, [string]$Serial, [string]$PackageName)
-  $output = (& $AdbPath -s $Serial shell dumpsys package $PackageName 2>$null) -join "`n"
+  $output = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("-s", $Serial, "shell", "dumpsys", "package", $PackageName)) -join "`n"
   $match = [regex]::Match($output, "versionCode=(\d+)")
   if (!$match.Success) {
     return ""
@@ -60,8 +74,11 @@ function Resolve-SdkRoot {
 }
 
 function Resolve-NodeExe {
+  $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+  $npmSiblingNode = if ($null -ne $npmCommand) { Join-Path (Split-Path -Parent $npmCommand.Source) "node.exe" } else { "" }
   $candidates = @(
-    (Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+    (Get-Command node.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+    $npmSiblingNode,
     "$env:ProgramFiles\nodejs\node.exe",
     "$env:LOCALAPPDATA\Programs\nodejs\node.exe"
   ) | Where-Object { $_ -and $_.Trim().Length -gt 0 }
@@ -82,7 +99,7 @@ function Invoke-GradleWrapper {
 
   $gradleCommand = "call .\gradlew.bat $TaskName"
   & cmd.exe /d /c $gradleCommand
-  if ($LASTEXITCODE -ne 0) {
+  if (Test-LastCommandFailed) {
     exit $LASTEXITCODE
   }
 }
@@ -90,7 +107,7 @@ function Invoke-GradleWrapper {
 function Stop-GradleWrapperDaemon {
   Write-Info "stopping Gradle daemon"
   & cmd.exe /d /c "call .\gradlew.bat --stop"
-  if ($LASTEXITCODE -ne 0) {
+  if (Test-LastCommandFailed) {
     Write-Info "Gradle daemon stop failed; continuing"
   }
 }
@@ -98,7 +115,7 @@ function Stop-GradleWrapperDaemon {
 function Get-RunningDeviceSerial {
   param([string]$AdbPath)
 
-  $deviceLines = (& $AdbPath devices 2>$null) | Select-Object -Skip 1
+  $deviceLines = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("devices")) | Select-Object -Skip 1
   foreach ($line in $deviceLines) {
     $trimmed = $line.Trim()
     if ([string]::IsNullOrWhiteSpace($trimmed)) {
@@ -129,7 +146,7 @@ function Wait-ForDeviceReady {
       continue
     }
 
-    $bootCompleted = (& $AdbPath -s $serial shell getprop sys.boot_completed 2>$null | Select-Object -First 1).Trim()
+    $bootCompleted = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("-s", $serial, "shell", "getprop", "sys.boot_completed") | Select-Object -First 1).Trim()
     if ($bootCompleted -eq "1") {
       return $serial
     }
@@ -170,7 +187,7 @@ if (!(Test-Path -Path $androidDir)) {
 }
 
 Write-Info "waiting for ready device"
-& $adbPath start-server | Out-Null
+Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null
 $serial = Wait-ForDeviceReady -AdbPath $adbPath -TimeoutSeconds $BootTimeoutSeconds
 if ($null -eq $serial) {
   throw "No ready Android device found within ${BootTimeoutSeconds}s."
@@ -201,21 +218,21 @@ if (Test-InstallCacheHit -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash
 
 if ($DevReverseSyncPort -gt 0) {
   Write-Info "configuring dev sync reverse: tcp:$DevReverseSyncPort"
-  & $adbPath -s $serial reverse "tcp:$DevReverseSyncPort" "tcp:$DevReverseSyncPort" | Out-Null
-  if ($LASTEXITCODE -ne 0) {
+  Invoke-AdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "reverse", "tcp:$DevReverseSyncPort", "tcp:$DevReverseSyncPort") *> $null
+  if (Test-LastCommandFailed) {
     Write-Info "dev sync reverse unavailable; continuing without reverse"
   }
 }
 
 Write-Info "launching activity: $MainActivity"
-& $adbPath -s $serial shell am start -n "$AppId/$MainActivity"
-if ($LASTEXITCODE -ne 0) {
+Invoke-AdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "shell", "am", "start", "-n", "$AppId/$MainActivity")
+if (Test-LastCommandFailed) {
   exit $LASTEXITCODE
 }
 
 Write-Info "verifying foreground activity"
 & $nodeExe $verifyScript --adb $adbPath --serial $serial --app-id $AppId --component "$AppId/$MainActivity" --timeout-seconds $LaunchTimeoutSeconds --stability-seconds $LaunchStabilitySeconds
-if ($LASTEXITCODE -ne 0) {
+if (Test-LastCommandFailed) {
   throw "Android app did not remain in the foreground after launch."
 }
 

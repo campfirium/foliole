@@ -59,6 +59,14 @@ describe('windows-cap-sync.sh', () => {
     expect(script).toContain('Write-CapSyncCache -InputHash $inputHash');
   });
 
+  it('does not treat a blank PowerShell last exit code as npm install failure', async () => {
+    const script = await readFile(CAP_SYNC_PS_SCRIPT, 'utf8');
+
+    expect(script).toContain('function Test-LastCommandFailed');
+    expect(script).toContain('return $null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0');
+    expect(script).not.toContain('if ($LASTEXITCODE -ne 0)');
+  });
+
   it('defaults sync and PowerShell calls to the dedicated Android workspace', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-cap-sync-default-workdir-'));
     try {
@@ -81,7 +89,7 @@ describe('windows-cap-sync.sh', () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('cap-sync-target:/c/dev/foliole-android-preview');
+      expect(result.stdout).toContain('cap-sync-target:/mnt/c/dev/foliole-android-preview');
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
       expect(args).toContain('-WindowStyle');
       expect(args).toContain('Hidden');

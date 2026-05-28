@@ -15,6 +15,10 @@ function Write-Info {
   Write-Host "[android-cap-sync] $Message"
 }
 
+function Test-LastCommandFailed {
+  return $null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0
+}
+
 $androidDir = Join-Path $WindowsWorkDir $AndroidHostDir
 if (!(Test-Path -Path $androidDir)) {
   throw "Android host not initialized: $androidDir. Create the Capacitor Android host first."
@@ -110,7 +114,7 @@ function Ensure-CapacitorCliAvailable {
 
   Write-Info "capacitor cli missing in windows mirror; running npm install"
   & $npmCmd.Source install
-  if ($LASTEXITCODE -ne 0) {
+  if (Test-LastCommandFailed) {
     throw "npm install failed in Windows mirror; cannot run Capacitor sync."
   }
 }
@@ -149,7 +153,7 @@ function Sync-WindowsMirrorDependencies {
 
   Write-Info "package manifest changed in windows mirror; running npm install"
   & $npmCmd.Source install
-  if ($LASTEXITCODE -ne 0) {
+  if (Test-LastCommandFailed) {
     throw "npm install failed in Windows mirror; cannot refresh dependencies for Capacitor sync."
   }
 
@@ -178,7 +182,7 @@ try {
   Write-Info "cache: MISS input=$inputHash"
   Write-Info "building companion web entry"
   & $npmCmd.Source run $AndroidWebBuildScript
-  if ($LASTEXITCODE -ne 0) {
+  if (Test-LastCommandFailed) {
     exit $LASTEXITCODE
   }
   $npxCmd = Get-Command npx.cmd -ErrorAction SilentlyContinue
@@ -186,7 +190,7 @@ try {
     throw "npx.cmd not found on Windows. Install Node.js on Windows first."
   }
   & $npxCmd.Source cap sync android
-  if ($LASTEXITCODE -ne 0) {
+  if (Test-LastCommandFailed) {
     exit $LASTEXITCODE
   }
   Write-CapSyncCache -InputHash $inputHash
