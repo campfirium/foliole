@@ -1,15 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { clearLinkPanelBrowsingData } from '../../../../shared/platform/linkPanelBrowsingData';
-
 import { SettingsExternalSearchSection } from './SettingsExternalSearchSection';
-
-vi.mock('../../../../shared/platform/linkPanelBrowsingData', () => ({
-  clearLinkPanelBrowsingData: vi.fn()
-}));
-
-const clearLinkPanelBrowsingDataMock = vi.mocked(clearLinkPanelBrowsingData);
 
 const baseProps = {
   error: null,
@@ -29,24 +21,13 @@ const baseProps = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  clearLinkPanelBrowsingDataMock.mockResolvedValue('cleared');
 });
 
-it('clears link panel browsing data from the external sources section', async () => {
+it('does not show link panel browsing data controls in external sources', () => {
   render(<SettingsExternalSearchSection {...baseProps} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Clear link panel browsing data' }));
-
-  await waitFor(() => {
-    expect(clearLinkPanelBrowsingDataMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Link panel browsing data cleared.')).toBeInTheDocument();
-  });
-});
-
-it('keeps the link panel browsing data action desktop-only', () => {
-  render(<SettingsExternalSearchSection {...baseProps} isDesktopRuntime={false} />);
-
-  expect(screen.getByRole('button', { name: 'Clear link panel browsing data' })).toBeDisabled();
+  expect(screen.queryByText('Link panel browsing data')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Clear link panel browsing data' })).not.toBeInTheDocument();
 });
 
 it('shows a progress row while external sources load', () => {
