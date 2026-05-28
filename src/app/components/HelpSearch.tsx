@@ -76,7 +76,7 @@ export function HelpSearch({ isOpen, onClose }: HelpSearchProps) {
           onQueryChange={state.setQuery}
           onRunActive={() => undefined}
           onSetActiveIndex={state.setActiveIndex}
-          placeholder="Search menu help..."
+          placeholder="Search action help..."
           query={state.query}
           totalItems={state.results.length}
         />
@@ -105,7 +105,7 @@ function HelpSearchResults({
   if (!results.length) {
     return (
       <ul className={appFloatingListClassName()}>
-        <li className={appFloatingEmptyStateClassName()}>{query.trim() ? 'No matching menu help' : 'Search menu help'}</li>
+        <li className={appFloatingEmptyStateClassName()}>{query.trim() ? 'No matching action help' : 'Search action help'}</li>
       </ul>
     );
   }

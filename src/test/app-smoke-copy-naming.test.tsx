@@ -91,8 +91,8 @@ it('shows neutral context labels instead of node wording', () => {
     clientY: 64
   });
 
-  expect(screen.getByRole('menuitem', { name: 'Merge Highlights' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Paste here' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Merge highlights' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Create topic from clipboard' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
   expect(screen.queryByRole('menuitem', { name: /Node/i })).toBeNull();
 });

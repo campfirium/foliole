@@ -19,7 +19,7 @@ beforeEach(() => {
 it('derives localStorage whitelist from settings classification', () => {
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.uiFont);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed);
-  expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.menuHelpTooltipsEnabled);
+  expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.actionHelpCardsEnabled);
   expect(getLocalStorageWhitelist()).not.toContain(APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncEnabled);
 });
 

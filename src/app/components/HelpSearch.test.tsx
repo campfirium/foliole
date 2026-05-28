@@ -12,18 +12,18 @@ it('shows the first help batch before searching', async () => {
   expect(screen.queryByRole('button', { name: /Topic Term/ })).not.toBeInTheDocument();
 });
 
-it('filters menu help results from menu help copy', () => {
+it('filters action help results from action help copy', () => {
   const onClose = vi.fn();
   render(<HelpSearch isOpen onClose={onClose} />);
 
   fireEvent.change(screen.getByRole('textbox', { name: 'Search help' }), { target: { value: 'study' } });
 
   expect(screen.getByRole('button', { name: /Relearn/ })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /Menu help tooltips/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Action help cards/ })).not.toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
 });
 
-it('does not navigate from menu help results and closes on Escape', () => {
+it('does not navigate from action help results and closes on Escape', () => {
   const onClose = vi.fn();
   render(<HelpSearch isOpen onClose={onClose} />);
 
@@ -42,5 +42,5 @@ it('shows an empty state when no help matches', () => {
 
   fireEvent.change(screen.getByRole('textbox', { name: 'Search help' }), { target: { value: 'zzzz' } });
 
-  expect(screen.getByText('No matching menu help')).toBeInTheDocument();
+  expect(screen.getByText('No matching action help')).toBeInTheDocument();
 });

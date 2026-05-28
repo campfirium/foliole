@@ -3,44 +3,67 @@ import { createPortal } from 'react-dom';
 
 import { cn } from '@/shared/lib/utils';
 
-interface MenuHelpTooltipProps {
+interface ActionHelpCardProps {
   children: ReactNode;
-  help: MenuHelpTooltipCopy;
+  help: ActionHelpCardCopy;
+  placement?: ActionHelpCardPlacement;
 }
 
 interface TooltipPosition {
-  side: 'left' | 'right';
+  side: 'above' | 'left' | 'right';
   x: number;
   y: number;
 }
 
-interface MenuHelpTooltipContentProps {
-  help: MenuHelpTooltipCopy;
+interface ActionHelpCardContentProps {
+  help: ActionHelpCardCopy;
   position: TooltipPosition;
 }
 
-export interface MenuHelpTooltipCopy {
+export interface ActionHelpCardCopy {
   body: string;
   detail?: string;
   title: string;
 }
 
-const MENU_HELP_TOOLTIP_DELAY_MS = 1000;
-const MENU_HELP_TOOLTIP_WIDTH = 248;
-const MENU_HELP_TOOLTIP_OFFSET = 24;
+export type ActionHelpCardPlacement = 'above' | 'side';
 
-function resolvePosition(element: HTMLElement): TooltipPosition {
+const ACTION_HELP_CARD_DELAY_MS = 1000;
+const ACTION_HELP_CARD_WIDTH = 248;
+const ACTION_HELP_CARD_OFFSET = 24;
+const ACTION_HELP_CARD_VIEWPORT_MARGIN = 16;
+
+function clampHorizontalCenter(x: number) {
+  const halfWidth = ACTION_HELP_CARD_WIDTH / 2;
+  const min = ACTION_HELP_CARD_VIEWPORT_MARGIN + halfWidth;
+  const max = window.innerWidth - ACTION_HELP_CARD_VIEWPORT_MARGIN - halfWidth;
+  return Math.min(Math.max(x, min), max);
+}
+
+function resolvePosition(element: HTMLElement, placement: ActionHelpCardPlacement): TooltipPosition {
   const rect = element.getBoundingClientRect();
-  const canFitRight = rect.right + MENU_HELP_TOOLTIP_WIDTH + MENU_HELP_TOOLTIP_OFFSET <= window.innerWidth;
-  const side = canFitRight || rect.left < MENU_HELP_TOOLTIP_WIDTH ? 'right' : 'left';
+  if (placement === 'above') {
+    return {
+      side: 'above',
+      x: clampHorizontalCenter(rect.left + rect.width / 2),
+      y: rect.top - ACTION_HELP_CARD_OFFSET
+    };
+  }
+  const canFitRight = rect.right + ACTION_HELP_CARD_WIDTH + ACTION_HELP_CARD_OFFSET <= window.innerWidth;
+  const side = canFitRight || rect.left < ACTION_HELP_CARD_WIDTH ? 'right' : 'left';
   return {
     side,
-    x: side === 'right' ? rect.right + MENU_HELP_TOOLTIP_OFFSET : rect.left - MENU_HELP_TOOLTIP_OFFSET,
+    x: side === 'right' ? rect.right + ACTION_HELP_CARD_OFFSET : rect.left - ACTION_HELP_CARD_OFFSET,
     y: rect.top + rect.height / 2
   };
 }
 
-function MenuHelpTooltipContent({ help, position }: MenuHelpTooltipContentProps) {
+function positionTransform(side: TooltipPosition['side']) {
+  if (side === 'above') return 'translate(-50%, -100%)';
+  return side === 'right' ? 'translateY(-50%)' : 'translate(-100%, -50%)';
+}
+
+function ActionHelpCardContent({ help, position }: ActionHelpCardContentProps) {
   return createPortal(
     <div
       className={cn(
@@ -53,8 +76,8 @@ function MenuHelpTooltipContent({ help, position }: MenuHelpTooltipContentProps)
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        transform: position.side === 'right' ? 'translateY(-50%)' : 'translate(-100%, -50%)',
-        width: `${MENU_HELP_TOOLTIP_WIDTH}px`
+        transform: positionTransform(position.side),
+        width: `${ACTION_HELP_CARD_WIDTH}px`
       }}
     >
       <h3 className="m-0 text-[14px] font-semibold leading-5 text-foreground/88">{help.title}</h3>
@@ -69,7 +92,7 @@ function MenuHelpTooltipContent({ help, position }: MenuHelpTooltipContentProps)
   );
 }
 
-function useMenuHelpTooltipPosition() {
+function useActionHelpCardPosition(placement: ActionHelpCardPlacement) {
   const triggerRef = useRef<HTMLElement | null>(null);
   const timerRef = useRef<number | null>(null);
   const [position, setPosition] = useState<TooltipPosition | null>(null);
@@ -86,9 +109,9 @@ function useMenuHelpTooltipPosition() {
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null;
       if (triggerRef.current) {
-        setPosition(resolvePosition(triggerRef.current));
+        setPosition(resolvePosition(triggerRef.current, placement));
       }
-    }, MENU_HELP_TOOLTIP_DELAY_MS);
+    }, ACTION_HELP_CARD_DELAY_MS);
   };
 
   useEffect(
@@ -103,8 +126,8 @@ function useMenuHelpTooltipPosition() {
   return { close, openAfterDelay, position, triggerRef };
 }
 
-export function MenuHelpTooltip({ children, help }: MenuHelpTooltipProps) {
-  const { close, openAfterDelay, position, triggerRef } = useMenuHelpTooltipPosition();
+export function ActionHelpCard({ children, help, placement = 'side' }: ActionHelpCardProps) {
+  const { close, openAfterDelay, position, triggerRef } = useActionHelpCardPosition(placement);
 
   return (
     <>
@@ -117,7 +140,7 @@ export function MenuHelpTooltip({ children, help }: MenuHelpTooltipProps) {
       >
         {children}
       </span>
-      {position && typeof document !== 'undefined' ? <MenuHelpTooltipContent help={help} position={position} /> : null}
+      {position && typeof document !== 'undefined' ? <ActionHelpCardContent help={help} position={position} /> : null}
     </>
   );
 }

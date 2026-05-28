@@ -1,10 +1,10 @@
 import { ClipboardPaste, RotateCcw } from 'lucide-react';
 import { type ReactNode } from 'react';
 
-import { useMenuHelpTooltipsEnabled } from '../../../../shared/platform/menuHelpTooltips';
+import { useActionHelpCardsEnabled } from '../../../../shared/platform/actionHelpCards';
 import {
-  MenuHelpTooltip,
-  type MenuHelpTooltipCopy,
+  ActionHelpCard,
+  type ActionHelpCardCopy,
   settingsUtilityIconButtonClassName
 } from '../../../../shared/ui';
 import { parseWorkspaceSurfacePaletteText } from '../../model/workspaceSurfacePaletteText';
@@ -31,7 +31,7 @@ const FREE_PALETTE_HELP = {
     body: 'Keep the first five free palette colors and move any extra assignments back into those slots.',
     title: 'Reset free palette'
   }
-} satisfies Record<string, MenuHelpTooltipCopy>;
+} satisfies Record<string, ActionHelpCardCopy>;
 
 function clampAssignments(assignments: WorkspaceSurfaceAssignments, maxIndex: number) {
   return Object.fromEntries(
@@ -53,12 +53,12 @@ async function readPaletteClipboardText() {
   }
 }
 
-function PaletteActionHelp(props: { children: ReactNode; help: MenuHelpTooltipCopy; showHelp: boolean }) {
-  return props.showHelp ? <MenuHelpTooltip help={props.help}>{props.children}</MenuHelpTooltip> : props.children;
+function PaletteActionHelp(props: { children: ReactNode; help: ActionHelpCardCopy; showHelp: boolean }) {
+  return props.showHelp ? <ActionHelpCard help={props.help}>{props.children}</ActionHelpCard> : props.children;
 }
 
 export function WorkspaceSurfaceFreePalette(props: WorkspaceSurfaceFreePaletteProps) {
-  const showHelp = useMenuHelpTooltipsEnabled();
+  const showHelp = useActionHelpCardsEnabled();
   const pastePalette = async () => {
     const text = await readPaletteClipboardText();
     const palette = text ? parseWorkspaceSurfacePaletteText(text) : null;

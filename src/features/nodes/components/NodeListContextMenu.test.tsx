@@ -49,7 +49,7 @@ function noopProps() {
   };
 }
 
-it('groups node context menu actions into create, edit, review, and destructive order', () => {
+it('groups node context actions into create, edit, review, and destructive order', () => {
   render(<NodeListContextMenu {...noopProps()} />);
 
   const labels = within(screen.getByRole('menu')).getAllByRole('menuitem').map((item) => item.textContent);
@@ -58,14 +58,14 @@ it('groups node context menu actions into create, edit, review, and destructive 
     'Create Topic',
     'Create Item',
     'Rename',
-    'Merge Highlights',
-    'Paste here',
+    'Merge highlights',
+    'Create topic from clipboard',
     'Move to…',
     'Relearn',
     'Review options…',
     'Dismiss',
     'Shelve entire topic',
-    'Dismiss Entire Topic',
+    'Dismiss topic',
     'Delete'
   ]);
 });
@@ -121,13 +121,28 @@ it('shows Relearn help after a long hover', () => {
   });
   const helpCard = screen.getByRole('tooltip');
   expect(helpCard).toHaveTextContent('Relearn');
-  expect(helpCard).toHaveTextContent("Reset this topic's review progress and send it back into the review queue.");
-  expect(helpCard).toHaveTextContent('Use this when the topic should be studied again from the beginning.');
+  expect(helpCard).toHaveTextContent("Clear this topic's learning progress.");
+  expect(helpCard).toHaveTextContent('It can be studied again from the beginning.');
 });
 
-it('does not show menu help when the setting is off', () => {
+it('shows action help for complex topic menu actions', () => {
   vi.useFakeTimers();
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.menuHelpTooltipsEnabled, 'false');
+  render(<NodeListContextMenu {...noopProps()} />);
+
+  const shelve = screen.getByRole('menuitem', { name: 'Shelve entire topic' });
+  fireEvent.pointerEnter(shelve, { pointerType: 'mouse' });
+
+  act(() => {
+    vi.advanceTimersByTime(1000);
+  });
+
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Shelve entire topic');
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Set this topic and its derived topics aside.');
+});
+
+it('does not show action help when the setting is off', () => {
+  vi.useFakeTimers();
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.actionHelpCardsEnabled, 'false');
   render(<NodeListContextMenu {...noopProps()} />);
 
   const relearn = screen.getByRole('menuitem', { name: 'Relearn' });
@@ -140,7 +155,7 @@ it('does not show menu help when the setting is off', () => {
   expect(screen.queryByRole('tooltip')).toBeNull();
 });
 
-it('does not show menu help for actions without help copy', () => {
+it('does not show action help for actions without help copy', () => {
   vi.useFakeTimers();
   render(<NodeListContextMenu {...noopProps()} />);
 

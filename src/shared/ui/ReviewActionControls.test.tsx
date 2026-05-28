@@ -1,7 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { ReadingReviewActions, ReviewGradeActions } from './ReviewActionControls';
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 it('renders companion-friendly grade buttons as a single shared row when requested', () => {
   const submitGrade = vi.fn(async () => undefined);
@@ -85,4 +89,51 @@ it('adds short overlay dividers between reading review actions only for overlay 
   expect(screen.getByRole('button', { name: 'Soon' }).className).toContain('border-0');
   expect(screen.getByRole('button', { name: 'Soon' })).toHaveStyle({ border: '0', borderRadius: '0' });
   expect(screen.getByRole('button', { name: 'Soon' })).not.toHaveAttribute('data-active');
+});
+
+it('shows action help cards for reading review actions when enabled', () => {
+  vi.useFakeTimers();
+  render(
+    <ReadingReviewActions
+      onDismissReviewTopic={vi.fn()}
+      onPostponeReviewTopic={vi.fn()}
+      onReadReviewTopic={vi.fn()}
+      onRevisitReviewTopicSoon={vi.fn()}
+      showActionHelp
+    />
+  );
+
+  const later = screen.getByRole('button', { name: 'Later' });
+  fireEvent.pointerEnter(later, { pointerType: 'mouse' });
+
+  act(() => {
+    vi.advanceTimersByTime(1000);
+  });
+
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Later');
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Appears again after a shorter interval.');
+  expect(screen.getByRole('tooltip')).toHaveStyle({ transform: 'translate(-50%, -100%)' });
+});
+
+it('shows action help cards for grade actions when enabled', () => {
+  vi.useFakeTimers();
+  render(
+    <ReviewGradeActions
+      errorMessage={null}
+      isSubmitting={false}
+      showActionHelp
+      submitGrade={vi.fn(async () => undefined)}
+    />
+  );
+
+  const hard = screen.getByRole('button', { name: 'Hard' });
+  fireEvent.pointerEnter(hard, { pointerType: 'mouse' });
+
+  act(() => {
+    vi.advanceTimersByTime(1000);
+  });
+
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Hard');
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Show this item again sooner than usual.');
+  expect(screen.getByRole('tooltip')).toHaveStyle({ transform: 'translate(-50%, -100%)' });
 });

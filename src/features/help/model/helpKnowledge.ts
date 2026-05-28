@@ -1,30 +1,35 @@
-import { NODE_LIST_CONTEXT_MENU_HELP, type NodeListMenuHelpCopy } from '../../nodes/components/nodeListContextMenuHelp';
+import { REVIEW_ACTION_HELP, type ReviewActionHelpCopy } from '../../../shared/ui/reviewActionHelp';
+import { NODE_LIST_CONTEXT_ACTION_HELP, type NodeListActionHelpCopy } from '../../nodes/components/nodeListContextActionHelp';
 
-export type HelpKnowledgeKind = 'menu';
+export type HelpKnowledgeKind = 'action';
+type HelpKnowledgeCopy = NodeListActionHelpCopy | ReviewActionHelpCopy;
 
 export interface HelpKnowledgeItem {
   body: string;
   detail?: string;
-  id: NodeListMenuHelpCopy['id'];
+  id: HelpKnowledgeCopy['id'];
   keywords: string[];
   kind: HelpKnowledgeKind;
   sourceLabel: string;
   title: string;
 }
 
-function toHelpKnowledgeItem(item: NodeListMenuHelpCopy): HelpKnowledgeItem {
+function toHelpKnowledgeItem(item: HelpKnowledgeCopy): HelpKnowledgeItem {
   return {
     body: item.body,
     ...(item.detail ? { detail: item.detail } : {}),
     id: item.id,
     keywords: item.keywords ?? [],
-    kind: 'menu',
+    kind: 'action',
     sourceLabel: item.sourceLabel,
     title: item.title
   };
 }
 
-export const HELP_KNOWLEDGE_ITEMS = Object.values(NODE_LIST_CONTEXT_MENU_HELP).map(toHelpKnowledgeItem);
+export const HELP_KNOWLEDGE_ITEMS = [
+  ...Object.values(REVIEW_ACTION_HELP),
+  ...Object.values(NODE_LIST_CONTEXT_ACTION_HELP)
+].map(toHelpKnowledgeItem);
 
 function normalizeQuery(value: string) {
   return value.trim().toLowerCase();

@@ -7,20 +7,22 @@ import {
 } from './helpKnowledge';
 
 describe('help knowledge', () => {
-  it('searches menu help titles, bodies, keywords, and source labels', () => {
-    expect(queryHelpKnowledge('relearn').map((item) => item.id)).toContain('menuHelp.nodeList.relearn');
-    expect(queryHelpKnowledge('topic list').map((item) => item.id)).toContain('menuHelp.nodeList.relearn');
-    expect(queryHelpKnowledge('study').map((item) => item.id)).toContain('menuHelp.nodeList.relearn');
+  it('searches action help titles, bodies, keywords, and source labels', () => {
+    expect(queryHelpKnowledge('relearn').map((item) => item.id)).toContain('actionHelp.nodeList.relearn');
+    expect(queryHelpKnowledge('topic list').map((item) => item.id)).toContain('actionHelp.nodeList.relearn');
+    expect(queryHelpKnowledge('study').map((item) => item.id)).toContain('actionHelp.nodeList.relearn');
+    expect(queryHelpKnowledge('obvious').map((item) => item.id)).toContain('actionHelp.review.easy');
+    expect(queryHelpKnowledge('clipboard').map((item) => item.id)).toContain('actionHelp.nodeList.pasteClipboardTopic');
   });
 
-  it('returns the menu help entries while the query is empty', () => {
+  it('returns the action help entries while the query is empty', () => {
     expect(queryHelpKnowledge('')).toHaveLength(HELP_KNOWLEDGE_ITEMS.length);
   });
 
-  it('uses the menu help id and copy for Relearn', () => {
-    expect(getHelpKnowledgeItem('menuHelp.nodeList.relearn')).toMatchObject({
-      body: "Reset this topic's review progress and send it back into the review queue.",
-      sourceLabel: 'Menu / Topic list',
+  it('uses the action help id and copy for Relearn', () => {
+    expect(getHelpKnowledgeItem('actionHelp.nodeList.relearn')).toMatchObject({
+      body: "Clear this topic's learning progress.",
+      sourceLabel: 'Topic list menu',
       title: 'Relearn'
     });
   });

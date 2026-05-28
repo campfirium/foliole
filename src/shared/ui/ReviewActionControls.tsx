@@ -2,19 +2,15 @@ import type { ReactNode } from 'react';
 
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 
+import { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
 import { AppButton } from './Button';
+import { REVIEW_GRADE_ACTION_HELP } from './reviewActionHelp';
+import { overlayDividerClass, type ReviewActionSurface } from './reviewActionLayout';
 import { renderOverlayDividedActions, ReviewOverlayActionButton } from './ReviewOverlayActionButton';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
-import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from './Tooltip';
 
-export type ReviewActionSurface = 'panel' | 'overlay';
-type ReviewActionItem = { key: string; node: ReactNode };
-
-function overlayDividerClass(surface: ReviewActionSurface) {
-  return surface === 'overlay'
-    ? 'gap-0 border-0 [&_button]:!rounded-none [&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!shadow-none'
-    : '';
-}
+export { ReadingReviewActions } from './ReadingReviewActions';
+export type { ReviewActionSurface } from './reviewActionLayout';
 
 const reviewGradeButtons = [
   { grade: 1, label: 'Again' },
@@ -80,6 +76,7 @@ export function ReviewGradeActions({
   groupClassName,
   isSubmitting,
   onRetry,
+  showActionHelp = false,
   surface = 'panel',
   submitGrade
 }: {
@@ -89,16 +86,23 @@ export function ReviewGradeActions({
   groupClassName?: string;
   isSubmitting: boolean;
   onRetry?: () => void;
+  showActionHelp?: boolean;
   surface?: ReviewActionSurface;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
+  const wrapWithHelpCard = (button: ReactNode, help: ActionHelpCardCopy) =>
+    showActionHelp ? (
+      <ActionHelpCard help={help} placement="above">
+        {button}
+      </ActionHelpCard>
+    ) : button;
   return (
     <div className="flex items-center gap-2">
       <ToolbarActionGroup ariaLabel="Review grade actions" className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`}>
         {renderOverlayDividedActions(
           reviewGradeButtons.map((gradeButton) => ({
             key: String(gradeButton.grade),
-            node: (
+            node: wrapWithHelpCard(
               <ReviewGradeButton
                 {...(buttonClassName !== undefined ? { buttonClassName } : {})}
                 buttonVariant={buttonVariant}
@@ -107,7 +111,8 @@ export function ReviewGradeActions({
                 label={gradeButton.label}
                 surface={surface}
                 submitGrade={submitGrade}
-              />
+              />,
+              REVIEW_GRADE_ACTION_HELP[gradeButton.label.toLowerCase() as keyof typeof REVIEW_GRADE_ACTION_HELP]
             )
           })),
           surface
@@ -115,75 +120,6 @@ export function ReviewGradeActions({
       </ToolbarActionGroup>
       <ReviewGradeErrorFeedback errorMessage={errorMessage} isSubmitting={isSubmitting} {...(onRetry ? { onRetry } : {})} />
     </div>
-  );
-}
-
-function ReadingReviewButton(props: {
-  className: string;
-  label: 'Soon' | 'Later' | 'Read' | 'Dismiss';
-  onClick: () => void;
-  surface: ReviewActionSurface;
-}) {
-  if (props.surface === 'overlay') {
-    return <ReviewOverlayActionButton label={props.label} onClick={props.onClick} />;
-  }
-
-  return (
-    <AppButton aria-label={props.label} className={props.className} onClick={props.onClick} size="md" variant="primary">
-      {props.label}
-    </AppButton>
-  );
-}
-
-export function ReadingReviewActions({
-  actionButtonClassName,
-  groupClassName,
-  onReadReviewTopic,
-  onPostponeReviewTopic,
-  onDismissReviewTopic,
-  onRevisitReviewTopicSoon,
-  surface = 'panel'
-}: {
-  actionButtonClassName?: string;
-  groupClassName?: string;
-  onReadReviewTopic: () => void;
-  onPostponeReviewTopic: () => void;
-  onDismissReviewTopic: () => void;
-  onRevisitReviewTopicSoon?: () => void;
-  surface?: ReviewActionSurface;
-}) {
-  const buttonClassName = actionButtonClassName ?? 'min-w-20 border-border px-4';
-  const wrapWithTooltip = (button: ReactNode, tooltip: string) => (
-    <AppTooltip>
-      <AppTooltipTrigger asChild>{button}</AppTooltipTrigger>
-      <AppTooltipContent>{tooltip}</AppTooltipContent>
-    </AppTooltip>
-  );
-  const maybeReadingActions: Array<ReviewActionItem | null> = [
-    onRevisitReviewTopicSoon
-      ? {
-          key: 'soon',
-          node: wrapWithTooltip(<ReadingReviewButton className={buttonClassName} label="Soon" onClick={onRevisitReviewTopicSoon} surface={surface} />, 'Appears again after this queue.')
-        }
-      : null,
-    {
-      key: 'later',
-      node: wrapWithTooltip(<ReadingReviewButton className={buttonClassName} label="Later" onClick={onPostponeReviewTopic} surface={surface} />, 'Appears again after a shorter interval.')
-    },
-    {
-      key: 'read',
-      node: wrapWithTooltip(<ReadingReviewButton className={buttonClassName} label="Read" onClick={onReadReviewTopic} surface={surface} />, 'Appears again after its normal interval.')
-    },
-    {
-      key: 'dismiss',
-      node: wrapWithTooltip(<ReadingReviewButton className={buttonClassName} label="Dismiss" onClick={onDismissReviewTopic} surface={surface} />, 'No longer appears.')
-    }
-  ];
-  const readingActions = maybeReadingActions.filter((action): action is ReviewActionItem => action !== null);
-  return (
-    <ToolbarActionGroup ariaLabel="Reading review actions" className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`} data-review-toolbar-kind="reading">
-      {renderOverlayDividedActions(readingActions, surface)}
-    </ToolbarActionGroup>
   );
 }
 

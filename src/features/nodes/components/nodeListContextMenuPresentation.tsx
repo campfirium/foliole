@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 import type { FolderTopicItemCommandDefinition } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import type { VirtualNodeCommandDefinition } from '../../../../lib/core/nodes/virtualNodeCommands';
 
-import { AppDropdownMenuItem, AppDropdownMenuSeparator, MenuHelpTooltip, type MenuHelpTooltipCopy } from '@/shared/ui';
+import { AppDropdownMenuItem, AppDropdownMenuSeparator, ActionHelpCard, type ActionHelpCardCopy } from '@/shared/ui';
 
 export const nodeContextMenuSeparatorClassName = 'mx-1 my-1.5 h-px bg-[var(--app-floating-divider-color)]';
 
@@ -34,7 +34,7 @@ export function NodeContextMenuItem({
   tone
 }: {
   children: ReactNode;
-  help?: MenuHelpTooltipCopy;
+  help?: ActionHelpCardCopy;
   icon: LucideIcon;
   onSelect: () => void;
   tone?: 'destructive';
@@ -52,7 +52,7 @@ export function NodeContextMenuItem({
       <span className="flex-1 truncate">{children}</span>
     </AppDropdownMenuItem>
   );
-  return help ? <MenuHelpTooltip help={help}>{item}</MenuHelpTooltip> : item;
+  return help ? <ActionHelpCard help={help}>{item}</ActionHelpCard> : item;
 }
 
 export function iconForCreateCommand(command: FolderTopicItemCommandDefinition | VirtualNodeCommandDefinition) {

@@ -1,7 +1,7 @@
 import {
-  setMenuHelpTooltipsEnabled,
-  useMenuHelpTooltipsEnabled
-} from '../../../../shared/platform/menuHelpTooltips';
+  setActionHelpCardsEnabled,
+  useActionHelpCardsEnabled
+} from '../../../../shared/platform/actionHelpCards';
 import {
   SettingsControlSlot,
   SettingsSection,
@@ -94,25 +94,25 @@ function AppearanceColorModeSection(props: ReturnType<typeof useAppearanceSectio
 }
 
 function InterfaceBehaviorSection() {
-  const menuHelpEnabled = useMenuHelpTooltipsEnabled();
+  const actionHelpEnabled = useActionHelpCardsEnabled();
   return (
     <SettingsSection ariaLabel="Interface behavior settings section" title="Interface">
       <SettingsRow
-        description="Pause on a menu action to see what it does, when context is available."
-        title="Menu hints on hover"
+        description="Pause on an action to see what it does, when context is available."
+        title="Action help on hover"
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <button
-            aria-checked={menuHelpEnabled}
-            aria-label="Menu hints on hover"
-            className={settingsSwitchClassName(menuHelpEnabled)}
-            onClick={() => setMenuHelpTooltipsEnabled(!menuHelpEnabled)}
+            aria-checked={actionHelpEnabled}
+            aria-label="Action help on hover"
+            className={settingsSwitchClassName(actionHelpEnabled)}
+            onClick={() => setActionHelpCardsEnabled(!actionHelpEnabled)}
             role="switch"
             type="button"
           >
             <span
               aria-hidden="true"
-              className={settingsSwitchKnobClassName(menuHelpEnabled)}
+              className={settingsSwitchKnobClassName(actionHelpEnabled)}
             />
           </button>
         </SettingsControlSlot>

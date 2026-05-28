@@ -68,7 +68,7 @@ it('finds advanced review scheduler rows from settings search', async () => {
   expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
 });
 
-it('searches categories without mixing in menu help actions', () => {
+it('searches categories without mixing in action help actions', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
   const input = screen.getByRole('textbox', { name: 'Search settings' });
 

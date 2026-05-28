@@ -29,7 +29,7 @@ export const REVIEW_PALETTE_COMMANDS = [
   { id: APP_COMMAND_IDS.gradeReviewEasy, title: 'Grade Review: Easy', section: 'Review', keywords: ['grade'] },
   { id: APP_COMMAND_IDS.readingReviewSoon, title: 'Reading: Soon', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewLater, title: 'Reading: Later', section: 'Review', keywords: ['reading'] },
-  { id: APP_COMMAND_IDS.readingReviewPostpone, title: 'Postpone Topic...', section: 'Review', keywords: ['reading', 'topic', 'delay'] },
+  { id: APP_COMMAND_IDS.readingReviewPostpone, title: 'Postpone topic...', section: 'Review', keywords: ['reading', 'topic', 'delay'] },
   { id: APP_COMMAND_IDS.readingReviewRead, title: 'Reading: Read', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.readingReviewDismiss, title: 'Reading: Dismiss', section: 'Review', keywords: ['reading'] },
   { id: APP_COMMAND_IDS.reviewScrollReadingDown, title: 'Scroll Reading Down', section: 'Review', keywords: ['reading', 'scroll'] },

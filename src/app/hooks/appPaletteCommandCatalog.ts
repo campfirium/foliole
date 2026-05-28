@@ -70,7 +70,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Editor', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
   {
     id: APP_COMMAND_IDS.mergeHighlightsIntoTopic,
-    title: 'Merge Highlights',
+    title: 'Merge highlights',
     section: 'Editor',
     keywords: ['merge', 'highlights', 'topic', 'append', 'file']
   },

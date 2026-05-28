@@ -114,9 +114,9 @@ it('dismisses an entire topic from the node menu without deleting it', () => {
 
   openNodeMenu('Long topic');
   const menuItems = screen.getAllByRole('menuitem').map((item) => item.textContent);
-  expect(menuItems.indexOf('Dismiss Entire Topic')).toBe(menuItems.indexOf('Dismiss') + 1);
+  expect(menuItems.indexOf('Dismiss topic')).toBeGreaterThan(menuItems.indexOf('Dismiss'));
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Dismiss Entire Topic' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Dismiss topic' }));
 
   expect(useWorkspaceStore.getState().nodesById['node-parent']?.reading?.state).toBe('dismissed');
   expect(useWorkspaceStore.getState().nodesById['node-child']?.reading?.state).toBe('dismissed');
@@ -234,7 +234,7 @@ it('shows merge import actions on ordinary article topics', () => {
   render(<App />);
 
   openNodeMenu('Source node');
-  expect(screen.getByRole('menuitem', { name: 'Merge Highlights' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Paste here' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Merge highlights' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Create topic from clipboard' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
 });

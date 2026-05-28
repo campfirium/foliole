@@ -12,8 +12,8 @@ import {
   Trash2
 } from 'lucide-react';
 
+import { NODE_LIST_CONTEXT_ACTION_HELP, resolveNodeListActionHelp } from './nodeListContextActionHelp';
 import type { NodeListContextMenuProps } from './NodeListContextMenu';
-import { NODE_LIST_CONTEXT_MENU_HELP, resolveNodeListMenuHelp } from './nodeListContextMenuHelp';
 import {
   DismissMenuIcon,
   iconForCreateCommand,
@@ -22,7 +22,7 @@ import {
   RelearnMenuIcon
 } from './nodeListContextMenuPresentation';
 
-import { useMenuHelpTooltipsEnabled } from '@/shared/platform/menuHelpTooltips';
+import { useActionHelpCardsEnabled } from '@/shared/platform/actionHelpCards';
 
 type NoteMenuItemsProps = Omit<
   NodeListContextMenuProps,
@@ -75,13 +75,15 @@ function renderCreateItems(props: NoteMenuItemsProps) {
   ));
 }
 
-function renderEditItems(props: NoteMenuItemsProps) {
+function renderEditItems(props: NoteMenuItemsProps, helpEnabled: boolean) {
   if (props.showRootCreateOnly) return null;
+  const helpProps = (copy: (typeof NODE_LIST_CONTEXT_ACTION_HELP)[keyof typeof NODE_LIST_CONTEXT_ACTION_HELP]) =>
+    helpEnabled ? { help: resolveNodeListActionHelp(copy) } : {};
   return (
     <>
       {props.showRenameAction && props.onRenameNode ? <NodeContextMenuItem icon={Pencil} onSelect={props.onRenameNode}>Rename</NodeContextMenuItem> : null}
-      {props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>Merge Highlights</NodeContextMenuItem> : null}
-      {props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem icon={Clipboard} onSelect={props.onPasteIntoNode}>Paste here</NodeContextMenuItem> : null}
+      {props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.mergeHighlights)} icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>Merge highlights</NodeContextMenuItem> : null}
+      {props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>Create topic from clipboard</NodeContextMenuItem> : null}
       {props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>Move to…</NodeContextMenuItem> : null}
     </>
   );
@@ -89,19 +91,25 @@ function renderEditItems(props: NoteMenuItemsProps) {
 
 function renderReviewItems(props: NoteMenuItemsProps, helpEnabled: boolean) {
   if (props.showRootCreateOnly) return null;
-  const relearnHelp = helpEnabled ? { help: resolveNodeListMenuHelp(NODE_LIST_CONTEXT_MENU_HELP.relearn) } : {};
+  const help = helpEnabled ? NODE_LIST_CONTEXT_ACTION_HELP : null;
+  const helpProps = (copy: (typeof NODE_LIST_CONTEXT_ACTION_HELP)[keyof typeof NODE_LIST_CONTEXT_ACTION_HELP]) =>
+    help ? { help: resolveNodeListActionHelp(copy) } : {};
   return (
     <>
-      {props.showReturnAction && props.onReturnNode ? <NodeContextMenuItem {...relearnHelp} icon={RelearnMenuIcon} onSelect={props.onReturnNode}>Relearn</NodeContextMenuItem> : null}
+      {props.showReturnAction && props.onReturnNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.relearn)} icon={RelearnMenuIcon} onSelect={props.onReturnNode}>Relearn</NodeContextMenuItem> : null}
       {props.showReviewSchedulingAction && props.onOpenReviewScheduling ? <NodeContextMenuItem icon={SlidersHorizontal} onSelect={props.onOpenReviewScheduling}>Review options…</NodeContextMenuItem> : null}
-      {props.showPostponeTopicAction && props.onOpenPostponeTopic ? <NodeContextMenuItem icon={CalendarClock} onSelect={props.onOpenPostponeTopic}>Postpone Topic...</NodeContextMenuItem> : null}
-      {props.showDismissAction && props.onDismissNode ? <NodeContextMenuItem icon={DismissMenuIcon} onSelect={props.onDismissNode}>Dismiss</NodeContextMenuItem> : null}
+      {props.showPostponeTopicAction && props.onOpenPostponeTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.postponeTopic)} icon={CalendarClock} onSelect={props.onOpenPostponeTopic}>Postpone topic...</NodeContextMenuItem> : null}
+      {props.showDismissAction && props.onDismissNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.dismiss)} icon={DismissMenuIcon} onSelect={props.onDismissNode}>Dismiss</NodeContextMenuItem> : null}
       {(props.showShelveTopicAction && props.onShelveTopic) || (props.showUnshelveTopicAction && props.onUnshelveTopic) || (props.showDismissEntireTopicAction && props.onDismissEntireTopic) ? <NodeContextMenuSeparator /> : null}
-      {props.showShelveTopicAction && props.onShelveTopic ? <NodeContextMenuItem icon={BookMarked} onSelect={props.onShelveTopic}>Shelve entire topic</NodeContextMenuItem> : null}
-      {props.showUnshelveTopicAction && props.onUnshelveTopic ? <NodeContextMenuItem icon={BookMarked} onSelect={props.onUnshelveTopic}>Unshelve</NodeContextMenuItem> : null}
-      {props.showDismissEntireTopicAction && props.onDismissEntireTopic ? <NodeContextMenuItem icon={CircleOff} onSelect={props.onDismissEntireTopic}>Dismiss Entire Topic</NodeContextMenuItem> : null}
+      {props.showShelveTopicAction && props.onShelveTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.shelveTopic)} icon={BookMarked} onSelect={props.onShelveTopic}>Shelve entire topic</NodeContextMenuItem> : null}
+      {props.showUnshelveTopicAction && props.onUnshelveTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.unshelveTopic)} icon={BookMarked} onSelect={props.onUnshelveTopic}>Unshelve</NodeContextMenuItem> : null}
+      {props.showDismissEntireTopicAction && props.onDismissEntireTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.dismissTopic)} icon={CircleOff} onSelect={props.onDismissEntireTopic}>Dismiss topic</NodeContextMenuItem> : null}
       {props.showSequentialReadingAction && props.onToggleSequentialReading ? (
-        <NodeContextMenuItem icon={BookOpenCheck} onSelect={props.onToggleSequentialReading}>
+        <NodeContextMenuItem
+          {...helpProps(props.sequentialReadingEnabled ? NODE_LIST_CONTEXT_ACTION_HELP.sequentialReadingDisable : NODE_LIST_CONTEXT_ACTION_HELP.sequentialReadingEnable)}
+          icon={BookOpenCheck}
+          onSelect={props.onToggleSequentialReading}
+        >
           {props.sequentialReadingEnabled ? 'Disable Sequential Reading' : 'Enable Sequential Reading'}
         </NodeContextMenuItem>
       ) : null}
@@ -120,7 +128,7 @@ function renderDeleteItem(props: NoteMenuItemsProps, hasPreviousGroup: boolean) 
 }
 
 function NoteMenuItems(props: NoteMenuItemsProps) {
-  const helpEnabled = useMenuHelpTooltipsEnabled();
+  const helpEnabled = useActionHelpCardsEnabled();
   const hasCreateGroup = props.createCommands.length > 0;
   const hasEditGroup = shouldShowEditGroup(props);
   const hasReviewGroup = shouldShowReviewGroup(props);
@@ -130,7 +138,7 @@ function NoteMenuItems(props: NoteMenuItemsProps) {
     <>
       {hasCreateGroup ? renderCreateItems(props) : null}
       {hasCreateGroup && hasEditGroup ? <NodeContextMenuSeparator /> : null}
-      {hasEditGroup ? renderEditItems(props) : null}
+      {hasEditGroup ? renderEditItems(props, helpEnabled) : null}
       {(hasCreateGroup || hasEditGroup) && hasReviewGroup ? <NodeContextMenuSeparator /> : null}
       {hasReviewGroup ? renderReviewItems(props, helpEnabled) : null}
       {renderDeleteItem(props, hasAnyPrimaryGroup)}

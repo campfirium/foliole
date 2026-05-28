@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useActionHelpCardsEnabled } from '../../shared/platform/actionHelpCards';
 import { ReviewActionBar } from '../../shared/ui';
 
 import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from './ReviewModeToolbarActions';
@@ -66,7 +67,7 @@ function createActiveReviewActions(props: Pick<
   | 'retryGrade'
   | 'surface'
   | 'submitGrade'
->) {
+> & { showActionHelp: boolean }) {
   if (!props.isCurrentItemGradable) {
     return (
       <ReadingReviewActions
@@ -74,6 +75,7 @@ function createActiveReviewActions(props: Pick<
         onPostponeReviewTopic={props.onPostponeReviewTopic}
         onDismissReviewTopic={props.onDismissReviewTopic}
         onRevisitReviewTopicSoon={props.onRevisitReviewTopicSoon}
+        showActionHelp={props.showActionHelp}
         {...definedProps({ surface: props.surface })}
       />
     );
@@ -86,13 +88,14 @@ function createActiveReviewActions(props: Pick<
       errorMessage={props.errorMessage}
       isSubmitting={props.isSubmitting}
       {...definedProps({ onRetry: props.retryGrade })}
+      showActionHelp={props.showActionHelp}
       {...definedProps({ surface: props.surface })}
       submitGrade={props.submitGrade}
     />
   );
 }
 
-function createActiveReviewPrimary(props: ActiveReviewActionBarProps) {
+function createActiveReviewPrimary(props: ActiveReviewActionBarProps, showActionHelp: boolean) {
   const actions = createActiveReviewActions({
     errorMessage: props.errorMessage,
     isAnswerRevealed: props.isAnswerRevealed,
@@ -104,6 +107,7 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps) {
     onRevealAnswer: props.onRevealAnswer,
     onRevisitReviewTopicSoon: props.onRevisitReviewTopicSoon,
     ...definedProps({ retryGrade: props.retryGrade }),
+    showActionHelp,
     ...definedProps({ surface: props.surface }),
     submitGrade: props.submitGrade
   });
@@ -137,12 +141,13 @@ function createActiveReviewSecondary(props: ActiveReviewActionBarProps) {
 }
 
 export function ActiveReviewActionBar(props: ActiveReviewActionBarProps) {
+  const showActionHelp = useActionHelpCardsEnabled();
   return (
     <ReviewActionBar
       ariaLabel="Flow toolbar"
       {...definedProps({ className: props.className, style: props.style })}
       mode="study"
-      primary={createActiveReviewPrimary(props)}
+      primary={createActiveReviewPrimary(props, showActionHelp)}
       progress={
         <ActiveReviewProgress
           reviewCompletedCount={props.reviewCompletedCount}

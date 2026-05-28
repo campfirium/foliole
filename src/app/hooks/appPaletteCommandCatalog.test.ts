@@ -86,7 +86,7 @@ describe('getAppPaletteCommands', () => {
     const priorityResults = buildCommandMenuSections(items, [], 'priority').flatMap((section) => section.items);
 
     expect(helpCommand).toMatchObject({ enabled: true, title: 'DEV Open Help Search' });
-    expect(items.some((item) => item.id.startsWith('menuHelp.'))).toBe(false);
+    expect(items.some((item) => item.id.startsWith('actionHelp.'))).toBe(false);
     expect(relearnResults.map((item) => item.title)).not.toContain('Relearn');
     expect(priorityResults.map((item) => item.title)).not.toContain('Relearn');
   });

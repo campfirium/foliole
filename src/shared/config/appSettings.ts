@@ -124,7 +124,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   commandRecents: 'foliole-command-recents',
   nodePaletteRecents: 'foliole-node-palette-recents',
   searchPaletteShortcutsCollapsed: 'foliole-search-palette-shortcuts-collapsed',
-  menuHelpTooltipsEnabled: 'foliole-menu-help-tooltips-enabled',
+  actionHelpCardsEnabled: 'foliole-menu-help-tooltips-enabled',
   fullTextSearchIndexStrategy: FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY,
   commandShortcutOverrides: 'foliole-command-shortcut-overrides',
   webLookupEntries: 'foliole-web-lookup-entries',

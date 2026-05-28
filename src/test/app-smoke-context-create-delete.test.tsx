@@ -199,8 +199,8 @@ it('marks in-progress import actions on ordinary node context menus', () => {
     clientY: 64
   });
 
-  expect(screen.getByRole('menuitem', { name: 'Merge Highlights' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Paste here' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Merge highlights' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Create topic from clipboard' })).toBeInTheDocument();
 });
 
 it('hides import actions on derived node context menus', async () => {
@@ -224,6 +224,6 @@ it('hides import actions on derived node context menus', async () => {
     clientY: 64
   });
 
-  expect(screen.queryByRole('menuitem', { name: 'Merge Highlights' })).toBeNull();
-  expect(screen.queryByRole('menuitem', { name: 'Paste here' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Merge highlights' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Create topic from clipboard' })).toBeNull();
 });
