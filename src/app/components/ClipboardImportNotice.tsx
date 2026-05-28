@@ -20,10 +20,12 @@ function renderIcon(tone: ClipboardImportNoticeTone) {
 export function ClipboardImportNotice({
   message,
   onOpen,
+  openLabel = 'Open imported topic',
   tone
 }: {
   message: string;
   onOpen?: () => void;
+  openLabel?: string;
   tone: ClipboardImportNoticeTone;
 }) {
   const content = (
@@ -48,7 +50,7 @@ export function ClipboardImportNotice({
     >
       {onOpen ? (
         <button
-          aria-label="Open imported clipboard topic"
+          aria-label={openLabel}
           className="group flex w-full items-start gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           onClick={onOpen}
           type="button"

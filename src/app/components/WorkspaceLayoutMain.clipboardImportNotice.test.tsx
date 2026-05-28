@@ -17,8 +17,11 @@ vi.mock('./WorkspaceMainTitleBar', () => ({
 }));
 
 vi.mock('./WorkspaceLayoutGrid', () => ({
-  WorkspaceLayoutGrid: (props: { props: { imports: { onStartClipboardImport: () => void } } }) => (
-    <button data-testid="workspace-grid" onClick={props.props.imports.onStartClipboardImport} type="button" />
+  WorkspaceLayoutGrid: (props: { props: { imports: { onRunImportFile: () => void; onStartClipboardImport: () => void } } }) => (
+    <>
+      <button data-testid="workspace-grid" onClick={props.props.imports.onStartClipboardImport} type="button" />
+      <button data-testid="workspace-file-import" onClick={props.props.imports.onRunImportFile} type="button" />
+    </>
   )
 }));
 
@@ -120,10 +123,28 @@ it('opens the imported clipboard topic from the success notice', async () => {
   await waitFor(() => {
     expect(screen.getByRole('status')).toHaveTextContent('Open topic');
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Open imported clipboard topic' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Open imported topic' }));
 
   expect(onCloseImportManagement).toHaveBeenCalledTimes(1);
   expect(onSelectNode).toHaveBeenCalledWith('node-imported');
+});
+
+it('shows progress while a selected file is importing', async () => {
+  const importResult = createDeferred<boolean>();
+  const onRunImportFile = vi.fn(() => importResult.promise);
+  getFormalImportLatestResult.mockReturnValue({ nodeId: 'node-imported', resultStatus: 'imported' });
+
+  render(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
+
+  fireEvent.click(screen.getByTestId('workspace-file-import'));
+  expect(await screen.findByRole('status')).toHaveTextContent('Importing file...');
+  expect(onRunImportFile).toHaveBeenCalledTimes(1);
+
+  importResult.resolve(true);
+
+  await waitFor(() => {
+    expect(screen.getByRole('status')).toHaveTextContent('File imported');
+  });
 });
 
 it('runs requested clipboard imports through the workspace notice controller', async () => {

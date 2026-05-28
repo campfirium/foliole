@@ -85,6 +85,20 @@ function useClipboardImportRequest(controller: ReturnType<typeof useClipboardImp
   }, [controller.startClipboardImport]);
 }
 
+function useWorkspaceImportNoticeController(imports: WorkspaceLayoutProps['imports'], navigation: WorkspaceLayoutProps['navigation']) {
+  const handleOpenClipboardImport = useCallback((nodeId: string) => {
+    imports.onCloseImportManagement();
+    navigation.onSelectNode(nodeId);
+  }, [imports.onCloseImportManagement, navigation.onSelectNode]);
+  const clipboardImportNotice = useClipboardImportNotice(
+    imports.onStartClipboardImport,
+    imports.onRunImportFile,
+    handleOpenClipboardImport
+  );
+  useClipboardImportRequest(clipboardImportNotice);
+  return clipboardImportNotice;
+}
+
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const { imports, layoutChrome, navigation, settings, trash } = props;
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
@@ -92,19 +106,15 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   );
   const immersiveSource = useMemo(() => selectImmersiveReadingModeSource(props), [props]);
   const immersive = useImmersiveReadingMode(immersiveSource);
-  const handleOpenClipboardImport = useCallback((nodeId: string) => {
-    imports.onCloseImportManagement();
-    navigation.onSelectNode(nodeId);
-  }, [imports.onCloseImportManagement, navigation.onSelectNode]);
-  const clipboardImportNotice = useClipboardImportNotice(imports.onStartClipboardImport, handleOpenClipboardImport);
-  useClipboardImportRequest(clipboardImportNotice);
+  const clipboardImportNotice = useWorkspaceImportNoticeController(imports, navigation);
   const gridProps = useMemo(() => ({
     ...props,
     imports: {
       ...imports,
+      onRunImportFile: clipboardImportNotice.startFileImport,
       onStartClipboardImport: clipboardImportNotice.startClipboardImport
     }
-  }), [clipboardImportNotice.startClipboardImport, imports, props]);
+  }), [clipboardImportNotice.startClipboardImport, clipboardImportNotice.startFileImport, imports, props]);
   const { handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions({
     onCloseImportManagement: imports.onCloseImportManagement,
     onOpenTrashView: trash.onOpenTrashView,

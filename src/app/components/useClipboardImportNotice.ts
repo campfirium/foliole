@@ -15,20 +15,29 @@ interface ClipboardImportNoticeState {
 }
 
 const NOTICE_TIMEOUT_MS = 3600;
+type ImportNoticeKind = 'clipboard' | 'file';
 
-function resolveClipboardImportNotice(id: number, imported: boolean): ClipboardImportNoticeState {
+const LOADING_MESSAGES: Record<ImportNoticeKind, string> = {
+  clipboard: 'Importing clipboard...',
+  file: 'Importing file...'
+};
+
+function resolveImportNotice(id: number, kind: ImportNoticeKind, imported: boolean): ClipboardImportNoticeState {
   const latestImport = imported ? getFormalImportLatestResult() : null;
   const didImport = imported && latestImport?.resultStatus !== 'failed';
   const nodeId = didImport ? latestImport?.nodeId ?? null : null;
   const failureMessage = didImport ? null : getFormalImportFailureMessage();
+  const importedMessage = kind === 'clipboard' ? 'Clipboard imported' : 'File imported';
+  const importedToInboxMessage = kind === 'clipboard' ? 'Clipboard imported to Inbox' : 'File imported to Inbox';
+  const emptyMessage = kind === 'clipboard' ? 'No supported clipboard content found' : 'No file imported';
 
   return {
     id,
     message: didImport
       ? nodeId
-        ? 'Clipboard imported'
-        : 'Clipboard imported to Inbox'
-      : (failureMessage ?? 'No supported clipboard content found'),
+        ? importedMessage
+        : importedToInboxMessage
+      : (failureMessage ?? emptyMessage),
     nodeId,
     tone: didImport ? 'success' : 'error'
   };
@@ -36,6 +45,7 @@ function resolveClipboardImportNotice(id: number, imported: boolean): ClipboardI
 
 export function useClipboardImportNotice(
   onStartClipboardImport: () => boolean | Promise<boolean>,
+  onStartFileImport: () => boolean | Promise<boolean>,
   onOpenImportedTopic: (nodeId: string) => void
 ) {
   const [notice, setNotice] = useState<ClipboardImportNoticeState | null>(null);
@@ -48,13 +58,23 @@ export function useClipboardImportNotice(
     return () => window.clearTimeout(timeout);
   }, [notice]);
 
-  const startClipboardImport = useCallback(async () => {
+  const startImport = useCallback(async (kind: ImportNoticeKind, runner: () => boolean | Promise<boolean>) => {
     const id = Date.now();
-    setNotice({ id, message: 'Importing clipboard...', nodeId: null, tone: 'loading' });
-    const imported = await onStartClipboardImport();
-    setNotice(resolveClipboardImportNotice(id, imported));
+    setNotice({ id, message: LOADING_MESSAGES[kind], nodeId: null, tone: 'loading' });
+    const imported = await runner();
+    setNotice(resolveImportNotice(id, kind, imported));
     return imported;
-  }, [onStartClipboardImport]);
+  }, []);
+
+  const startClipboardImport = useCallback(
+    () => startImport('clipboard', onStartClipboardImport),
+    [onStartClipboardImport, startImport]
+  );
+
+  const startFileImport = useCallback(
+    () => startImport('file', onStartFileImport),
+    [onStartFileImport, startImport]
+  );
 
   const openImportedTopic = useCallback(() => {
     if (!notice?.nodeId) {
@@ -64,5 +84,5 @@ export function useClipboardImportNotice(
     setNotice(null);
   }, [notice?.nodeId, onOpenImportedTopic]);
 
-  return { notice, openImportedTopic, startClipboardImport };
+  return { notice, openImportedTopic, startClipboardImport, startFileImport };
 }
