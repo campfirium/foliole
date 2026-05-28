@@ -12,6 +12,7 @@ const MAX_BOOT_EVENT_LOG_BYTES = 5 * 1024 * 1024;
 const COMPACTED_BOOT_EVENT_TAIL_BYTES = 512 * 1024;
 type BootEventSource = 'main' | 'renderer';
 const WAITED_BOOT_EVENT_STAGES = new Set(['app_ready', 'bridge_ready', 'window_visible']);
+const QUIET_BOOT_REPORT_STAGES = new Set(['desktop_task_progress']);
 
 let bootEventQueue: Promise<void> = Promise.resolve();
 let rendererAppReady = false;
@@ -97,14 +98,16 @@ export function resolveBootArtifactPaths(repoRoot?: string) {
 
 async function persistBootEvent(event: ReturnType<typeof createBootEvent>) {
   const paths = resolveBootArtifactPaths();
-  console.info('[boot-report]', {
-    eventLogPath: paths.eventLogPath,
-    pid: event.pid,
-    readyMarkerPath: paths.readyMarkerPath,
-    repoRoot: paths.repoRoot,
-    source: event.source,
-    stage: event.stage
-  });
+  if (!QUIET_BOOT_REPORT_STAGES.has(event.stage)) {
+    console.info('[boot-report]', {
+      eventLogPath: paths.eventLogPath,
+      pid: event.pid,
+      readyMarkerPath: paths.readyMarkerPath,
+      repoRoot: paths.repoRoot,
+      source: event.source,
+      stage: event.stage
+    });
+  }
   await appendJsonLine(paths.eventLogPath, event);
   if (event.stage === 'app_ready') {
     await writeJson(paths.readyMarkerPath, event);

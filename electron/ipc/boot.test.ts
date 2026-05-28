@@ -73,6 +73,29 @@ it('preserves non-marker boot event order through the async queue', async () => 
   expect(stages).toEqual(['stage_a', 'stage_b', 'stage_c']);
 });
 
+it('keeps high-frequency desktop task progress events out of console boot reports', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-quiet-progress-'));
+  process.env.FOLIOLE_WORKDIR = repoRoot;
+  const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+  try {
+    await appendBootEvent('desktop_task_progress', { completed: 25, total: 100 });
+    await flushBootEvents();
+
+    const paths = resolveBootArtifactPaths(repoRoot);
+    const rawLog = fs.readFileSync(paths.eventLogPath, 'utf8').trim().split('\n');
+    expect(rawLog).toHaveLength(1);
+    expect(JSON.parse(rawLog[0] ?? '{}')).toMatchObject({
+      payload: { completed: 25, total: 100 },
+      source: 'main',
+      stage: 'desktop_task_progress'
+    });
+    expect(info).not.toHaveBeenCalled();
+  } finally {
+    info.mockRestore();
+  }
+});
+
 it('compacts oversized boot event logs before appending new events', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-compact-'));
   process.env.FOLIOLE_WORKDIR = repoRoot;
