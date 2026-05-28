@@ -40,6 +40,7 @@ function runDedupe(repoRoot, label) {
         PREVIEW_DEDUPE_RUNTIME_DIR: '.lab/internal/runtime',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"',
+        PREVIEW_DEDUPE_WINDOWS_SETTLE_MS: '0',
         PREVIEW_DEDUPE_WINDOWS_WINDOW_MS: '0'
       }
     });

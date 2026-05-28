@@ -2,6 +2,7 @@ export const TARGET_PATHS = {
   android: [
     'android/',
     'scripts/preview-dedupe-scheduler.mjs',
+    'scripts/preview-dedupe-scheduler-state.mjs',
     'scripts/preview-dedupe-scheduler-timeout.mjs',
     'scripts/preview-dedupe-state-store.mjs',
     'scripts/preview-dedupe-event-log.mjs',
@@ -23,6 +24,7 @@ export const TARGET_PATHS = {
   windows: [
     'electron/',
     'scripts/preview-dedupe-scheduler.mjs',
+    'scripts/preview-dedupe-scheduler-state.mjs',
     'scripts/preview-dedupe-scheduler-timeout.mjs',
     'scripts/preview-dedupe-state-store.mjs',
     'scripts/preview-dedupe-event-log.mjs',

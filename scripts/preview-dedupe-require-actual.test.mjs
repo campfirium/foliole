@@ -40,6 +40,7 @@ function startDedupe(repoRoot, label, command) {
       PREVIEW_DEDUPE_WAIT_ANNOUNCE_MS: '40',
       PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
         'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"',
+      PREVIEW_DEDUPE_WINDOWS_SETTLE_MS: '0',
       PREVIEW_DEDUPE_WINDOWS_WINDOW_MS: '3000'
     }
   });

@@ -42,10 +42,10 @@ function runDedupe(repoRoot, target, command, env = {}) {
       cwd: repoRoot,
       env: {
         ...process.env,
-        PREVIEW_DEDUPE_ANDROID_COOLDOWN_MS: '0',
         PREVIEW_DEDUPE_REPO_ROOT: repoRoot,
         PREVIEW_DEDUPE_RUNTIME_DIR: '.lab/internal/runtime',
         PREVIEW_DEDUPE_WAIT_ON_FAILURE: '0',
+        PREVIEW_DEDUPE_WINDOWS_SETTLE_MS: '0',
         PREVIEW_DEDUPE_WINDOWS_WINDOW_MS: '0',
         ...env
       }

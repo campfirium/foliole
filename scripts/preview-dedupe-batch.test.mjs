@@ -39,6 +39,7 @@ async function createRepo() {
 
 function runDedupe(repoRoot, label, env, script = `echo ${label} >> runs.log && echo "[windows-preview] status: STARTED"`) {
   const previewEnv = {
+    PREVIEW_DEDUPE_WINDOWS_SETTLE_MS: env.PREVIEW_DEDUPE_WINDOWS_SETTLE_MS ?? '0',
     PREVIEW_DEDUPE_WINDOWS_WINDOW_MS:
       env.PREVIEW_DEDUPE_WINDOWS_WINDOW_MS ?? env.PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS ?? '0',
     ...env
@@ -83,7 +84,6 @@ describe('preview-dedupe batching', () => {
     const repoRoot = await createRepo();
     try {
       const env = {
-        PREVIEW_DEDUPE_LOCK_WAIT_MS: '5000',
         PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '1000',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
@@ -118,7 +118,6 @@ describe('preview-dedupe batching', () => {
     try {
       const env = {
         PREVIEW_DEDUPE_WAIT_ON_FAILURE: '0',
-        PREVIEW_DEDUPE_LOCK_WAIT_MS: '5000',
         PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '1000',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
@@ -184,6 +183,7 @@ describe('preview-dedupe batching', () => {
     const repoRoot = await createRepo();
     try {
       const env = {
+        PREVIEW_DEDUPE_WAIT_ON_FAILURE: '0',
         PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '180',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'

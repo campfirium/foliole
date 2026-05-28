@@ -12,5 +12,8 @@ export function completeTimedOutRun(state, runId, message) {
   if (state.activeRunId === runId) {
     state.activeRunId = null;
   }
+  if (state.nextRunId === runId) {
+    state.nextRunId = null;
+  }
   state.acceptingUntil = 0;
 }

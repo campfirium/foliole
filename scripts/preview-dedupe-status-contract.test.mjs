@@ -42,6 +42,7 @@ function startDedupe(repoRoot, command, env = {}, target = 'windows') {
       PREVIEW_DEDUPE_ANDROID_COOLDOWN_MS: '0',
       PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
         'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"',
+      PREVIEW_DEDUPE_WINDOWS_SETTLE_MS: '0',
       ...env
     }
   });

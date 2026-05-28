@@ -42,7 +42,13 @@ function runDedupe(repoRoot, label, env) {
       `echo ${label} >> runs.log && echo "[windows-preview] status: STARTED"`
     ], {
       cwd: repoRoot,
-      env: { ...process.env, PREVIEW_DEDUPE_REPO_ROOT: repoRoot, PREVIEW_DEDUPE_RUNTIME_DIR: '.lab/internal/runtime', ...env }
+      env: {
+        ...process.env,
+        PREVIEW_DEDUPE_REPO_ROOT: repoRoot,
+        PREVIEW_DEDUPE_RUNTIME_DIR: '.lab/internal/runtime',
+        PREVIEW_DEDUPE_WINDOWS_SETTLE_MS: '0',
+        ...env
+      }
     });
     let stdout = '';
     child.stdout.on('data', (chunk) => {

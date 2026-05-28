@@ -4,9 +4,10 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { appendPreviewEvent } from './preview-dedupe-event-log.mjs';
+import { completeRun, holdRunUntilSuccess, normalizeState, registerNextRun, startRun } from './preview-dedupe-scheduler-state.mjs';
 import { completeTimedOutRun } from './preview-dedupe-scheduler-timeout.mjs';
 import { isPidAlive, withStateLock } from './preview-dedupe-state-store.mjs';
-import { readTotalTimeoutMs, readWindowMs } from './preview-dedupe-time-budget.mjs';
+import { readMaxSettleMs, readSettleMs, readTotalTimeoutMs, readWindowMs } from './preview-dedupe-time-budget.mjs';
 import { createPreviewWaitAnnouncer } from './preview-dedupe-wait-status.mjs';
 
 const RESULT_POLL_MS = 200; export const STATE_STALE_MS = 15 * 60_000;
@@ -26,97 +27,10 @@ function canTakeOver(run, now) {
   return run?.status === 'running' && (!isPidAlive(run.driverPid) || now - Number(run.startedAt) > STATE_STALE_MS);
 }
 
-function createRun(requestId, now) {
-  return {
-    driverPid: process.pid,
-    driverRequestId: requestId,
-    runId: randomUUID(),
-    startedAt: now,
-    status: 'running',
-    waiters: [requestId]
-  };
-}
-
-function createPendingRun(requestId, now) {
-  return {
-    createdAt: now,
-    runId: randomUUID(),
-    status: 'pending',
-    waiters: [requestId]
-  };
-}
-
-function normalizeState(state) {
-  return {
-    acceptingUntil: Number(state.acceptingUntil) || 0,
-    activeRunId: state.activeRunId ?? null,
-    nextRunId: state.nextRunId ?? null,
-    runs: state.runs && typeof state.runs === 'object' ? state.runs : {}
-  };
-}
-
-function completeRun(state, runId, result, windowMs) {
-  const now = Date.now();
-  const completedRun = {
-    ...state.runs[runId],
-    completedAt: now,
-    exitCode: result.exitCode,
-    hash: result.hash,
-    previewed: result.previewed,
-    status: 'completed'
-  };
-  state.runs[runId] = completedRun;
-  if (result.exitCode === 0) {
-    for (const [waitingRunId, run] of Object.entries(state.runs)) {
-      if (run.status === 'waiting-success') {
-        state.runs[waitingRunId] = {
-          ...run,
-          completedAt: completedRun.completedAt,
-          exitCode: completedRun.exitCode,
-          hash: completedRun.hash,
-          previewed: completedRun.previewed,
-          runId: waitingRunId,
-          status: 'completed'
-        };
-      }
-    }
-  }
-  if (state.activeRunId === runId) {
-    state.activeRunId = null;
-  }
-  state.acceptingUntil = result.exitCode === 0 && result.previewed ? now + windowMs : 0;
-}
-
-function holdRunUntilSuccess(state, runId, result) {
-  const now = Date.now();
-  state.runs[runId] = {
-    ...state.runs[runId],
-    failedAt: now,
-    lastExitCode: result.exitCode,
-    lastHash: result.hash,
-    status: 'waiting-success'
-  };
-  if (state.activeRunId === runId) {
-    state.activeRunId = null;
-  }
-  state.acceptingUntil = 0;
-}
-
-function registerNextRun(state, requestId, now) {
-  if (!state.nextRunId) {
-    const run = createPendingRun(requestId, now);
-    state.nextRunId = run.runId;
-    state.runs[run.runId] = run;
-    return run.runId;
-  }
-  state.runs[state.nextRunId].waiters.push(requestId);
-  return state.nextRunId;
-}
-
-function createWaitAction(state, runId, reason, now) {
+function createWaitAction(state, runId, reason, now, waitUntil = state.acceptingUntil) {
   const waitingRun = state.runs[runId];
   return {
-    acceptingRemainingSec: Math.max(0, Math.ceil((state.acceptingUntil - now) / 1000)),
+    acceptingRemainingSec: Math.max(0, Math.ceil((waitUntil - now) / 1000)),
     activeRunId: state.activeRunId,
     kind: 'wait',
     reason,
@@ -125,7 +39,7 @@ function createWaitAction(state, runId, reason, now) {
   };
 }
 
-function chooseAction(state, requestId, assignedRunId, windowMs) {
+function chooseAction(state, requestId, assignedRunId, windowMs, settleMs, maxSettleMs) {
   const now = Date.now();
   if (windowMs === 0) state.acceptingUntil = 0;
   if (canTakeOver(state.runs[state.activeRunId], now) || state.runs[state.activeRunId]?.status === 'completed') {
@@ -141,20 +55,27 @@ function chooseAction(state, requestId, assignedRunId, windowMs) {
     return createWaitAction(state, assignedRunId ?? registerNextRun(state, requestId, now), 'active-run', now);
   }
   if (state.acceptingUntil > now) {
-    return createWaitAction(state, assignedRunId ?? registerNextRun(state, requestId, now), 'validation-window', now);
+    const runId = assignedRunId ?? registerNextRun(state, requestId, now, { requireActualPreview: false });
+    return createWaitAction(state, runId, 'validation-window', now);
   }
   state.acceptingUntil = 0;
   if (!assignedRunId && !state.nextRunId) {
-    const run = createRun(requestId, now);
-    state.runs[run.runId] = run;
-    state.activeRunId = run.runId;
+    if (settleMs > 0) {
+      const runId = registerNextRun(state, requestId, now, { maxSettleMs, notBeforeAt: now + settleMs, requireActualPreview: false });
+      const run = state.runs[runId];
+      return createWaitAction(state, run.runId, 'settle-window', now, run.notBeforeAt);
+    }
+    const run = startRun(state, requestId, now);
     return { kind: 'drive', requireActualPreview: false, runId: run.runId };
   }
-  const runId = assignedRunId ?? registerNextRun(state, requestId, now);
+  const runId = assignedRunId ?? registerNextRun(state, requestId, now, { maxSettleMs, notBeforeAt: now + settleMs });
+  if (Number(state.runs[runId]?.notBeforeAt) > now) {
+    return createWaitAction(state, runId, 'settle-window', now, Number(state.runs[runId].notBeforeAt));
+  }
   state.runs[runId] = { ...state.runs[runId], driverPid: process.pid, driverRequestId: requestId, startedAt: now, status: 'running' };
   state.activeRunId = runId;
   if (state.nextRunId === runId) state.nextRunId = null;
-  return { kind: 'drive', requireActualPreview: true, runId };
+  return { kind: 'drive', requireActualPreview: state.runs[runId].requireActualPreview ?? true, runId };
 }
 
 export async function runScheduledPreview({
@@ -163,8 +84,10 @@ export async function runScheduledPreview({
   runPreview,
   waitAnnouncer = createPreviewWaitAnnouncer(),
   waitOnFailure = readWaitOnFailure(target),
+  maxSettleMs = readMaxSettleMs(target),
+  settleMs = readSettleMs(target),
   windowMs = readWindowMs(target),
-  totalTimeoutMs = readTotalTimeoutMs(target, windowMs)
+  totalTimeoutMs = readTotalTimeoutMs(target, windowMs, process.env, maxSettleMs)
 }) {
   const requestId = randomUUID();
   const startedAt = Date.now();
@@ -190,7 +113,7 @@ export async function runScheduledPreview({
       target,
       fn: (rawState) => {
         const state = normalizeState(rawState);
-        const value = chooseAction(state, requestId, assignedRunId, windowMs);
+        const value = chooseAction(state, requestId, assignedRunId, windowMs, settleMs, maxSettleMs);
         return { state, value };
       }
     });

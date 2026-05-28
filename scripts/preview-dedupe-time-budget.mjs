@@ -1,6 +1,8 @@
 /* global process */
 
 const DEFAULT_COMMAND_BUDGET_MS = { android: 4 * 60_000, windows: 4 * 60_000 };
+const DEFAULT_MAX_SETTLE_MS = { android: 0, windows: 6 * 60_000 };
+const DEFAULT_SETTLE_MS = { android: 0, windows: 3 * 60_000 };
 const DEFAULT_WINDOW_MS = { android: 0, windows: 3 * 60_000 };
 
 export function readDurationMs(env, key, defaultValue) {
@@ -23,10 +25,26 @@ export function readWindowMs(target, env = process.env) {
   );
 }
 
-export function readTotalTimeoutMs(target, windowMs = readWindowMs(target), env = process.env) {
+export function readSettleMs(target, env = process.env) {
+  return readDurationMs(
+    env,
+    `PREVIEW_DEDUPE_${target.toUpperCase()}_SETTLE_MS`,
+    readDurationMs(env, 'PREVIEW_DEDUPE_SETTLE_MS', DEFAULT_SETTLE_MS[target] ?? 0)
+  );
+}
+
+export function readMaxSettleMs(target, env = process.env) {
+  return readDurationMs(
+    env,
+    `PREVIEW_DEDUPE_${target.toUpperCase()}_MAX_SETTLE_MS`,
+    readDurationMs(env, 'PREVIEW_DEDUPE_MAX_SETTLE_MS', DEFAULT_MAX_SETTLE_MS[target] ?? 0)
+  );
+}
+
+export function readTotalTimeoutMs(target, windowMs = readWindowMs(target), env = process.env, maxSettleMs = readMaxSettleMs(target, env)) {
   return readDurationMs(
     env,
     `PREVIEW_DEDUPE_${target.toUpperCase()}_TOTAL_TIMEOUT_MS`,
-    readDurationMs(env, 'PREVIEW_DEDUPE_TOTAL_TIMEOUT_MS', windowMs + (DEFAULT_COMMAND_BUDGET_MS[target] ?? 4 * 60_000))
+    readDurationMs(env, 'PREVIEW_DEDUPE_TOTAL_TIMEOUT_MS', maxSettleMs + windowMs + (DEFAULT_COMMAND_BUDGET_MS[target] ?? 4 * 60_000))
   );
 }
