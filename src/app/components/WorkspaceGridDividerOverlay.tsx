@@ -9,18 +9,20 @@ import {
 function WorkspaceGridDivider({
   bottom = '0',
   column,
+  hideBelowWorkspaceBreakpoint = true,
   left,
   top = '0'
 }: {
   bottom?: string;
   column: 'rail' | 'folder' | 'topic' | 'sidebar';
+  hideBelowWorkspaceBreakpoint?: boolean;
   left: string;
   top?: string;
 }) {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute z-local-overlay w-px -translate-x-1/2 max-[1080px]:hidden"
+      className={`pointer-events-none absolute z-local-overlay w-px -translate-x-1/2 ${hideBelowWorkspaceBreakpoint ? 'max-[1080px]:hidden' : ''}`}
       style={{ backgroundColor: getWorkspaceSurfaceDividerColor('main', column), bottom, left, opacity: 'var(--workspace-divider-opacity)', top }}
     />
   );
@@ -39,7 +41,11 @@ export function WorkspaceGridDividerOverlay({
 }: WorkspaceGridDividerOverlayProps) {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-local-overlay">
-      <WorkspaceGridDivider column="rail" left={WORKSPACE_RAIL_DIVIDER_LEFT} />
+      <WorkspaceGridDivider
+        column="rail"
+        hideBelowWorkspaceBreakpoint={false}
+        left={WORKSPACE_RAIL_DIVIDER_LEFT}
+      />
       {isListCollapsed ? null : (
         <>
           <WorkspaceGridDivider

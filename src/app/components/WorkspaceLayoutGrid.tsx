@@ -73,7 +73,7 @@ function WorkspaceLayoutGridShell({
 }) {
   return (
     <div
-      className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
+      className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden"
       style={{ gridTemplateColumns }}
     >
       {children}

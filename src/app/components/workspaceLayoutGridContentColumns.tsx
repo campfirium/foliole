@@ -40,10 +40,10 @@ function renderListColumns(
   args: Pick<WorkspaceGridColumnProps, 'isListCollapsed' | 'listAreaProps' | 'listSplitterProps'>
 ) {
   return [
-    <div aria-hidden={args.isListCollapsed} className="flex min-w-0 flex-col overflow-hidden" key="list">
+    <div aria-hidden={args.isListCollapsed} className="flex min-w-0 flex-col overflow-hidden max-[1080px]:hidden" key="list">
       <WorkspaceListArea {...args.listAreaProps} />
     </div>,
-    <div aria-hidden={args.isListCollapsed} className="flex min-w-0 overflow-visible" key="list-splitter">
+    <div aria-hidden={args.isListCollapsed} className="flex min-w-0 overflow-visible max-[1080px]:hidden" key="list-splitter">
       <WorkspaceListSplitter {...args.listSplitterProps} />
     </div>
   ];

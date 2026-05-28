@@ -112,7 +112,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   }, [layoutChrome.isRightSidebarCollapsed, layoutChrome.onToggleRightSidebarVisibility]);
 
   return (
-    <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
+    <main aria-label="Foliole workspace" className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
       <WorkspaceMainChrome
         activeRightPanelId={activeRightPanelId}
         onOpenTrashView={handleOpenTrashView}

@@ -209,7 +209,7 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
         <div className="window-titlebar-right-expanded-action">
           <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />
         </div>
-        <div className="window-titlebar-right-zone" hidden={isCollapsed}>
+        <div className="window-titlebar-right-zone max-[1279px]:hidden" hidden={isCollapsed}>
           {isCollapsed
             ? null
             : renderRightSidebarPanelActions({

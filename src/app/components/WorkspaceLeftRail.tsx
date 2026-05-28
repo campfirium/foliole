@@ -67,7 +67,7 @@ export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
   showStudyDock,
 }: WorkspaceLeftRailProps) {
   return (
-    <div className="workspace-region-main-rail h-full max-[1080px]:hidden">
+    <div className="workspace-region-main-rail h-full">
       <WorkspaceSideToolbar
         canStartStudyMode={canStartStudyMode}
         isImportManagementOpen={isImportManagementOpen}

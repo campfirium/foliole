@@ -19,6 +19,11 @@ vi.mock('./WorkspaceLeftRail', () => ({
   WorkspaceLeftRail: () => <div data-testid="left-rail">left</div>
 }));
 
+vi.mock('./WorkspaceBottomReviewToolbar', () => ({
+  selectWorkspaceBottomReviewToolbarProps: () => ({}),
+  WorkspaceBottomReviewToolbar: () => null
+}));
+
 vi.mock('./WorkspaceListSplitter', () => ({
   WorkspaceListSplitter: () => <div data-testid="list-splitter">splitter</div>
 }));

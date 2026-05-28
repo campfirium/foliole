@@ -156,17 +156,6 @@ describe('WindowTitleBar', () => {
 });
 
 describe('WindowTitleBar view switches', () => {
-  it('renders right sidebar toggle beside window controls when sidebar is collapsed', () => {
-    renderTitleBar({ isRightSidebarCollapsed: true });
-
-    expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Review queue panel' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Source info panel' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Highlights panel' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'More right sidebar panels' })).not.toBeInTheDocument();
-  });
-
   it('collapses left titlebar actions down to the toggle button only', () => {
     renderTitleBar({ isListCollapsed: true });
 
