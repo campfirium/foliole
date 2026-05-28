@@ -1,16 +1,15 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 
 import type { OutlineDisplayItem } from './DocumentOutlineLayerModel';
-import { resolvePanelScrollTop, resolvePanelSlack } from './DocumentOutlineLayerModel';
+import { resolvePanelScrollTop } from './DocumentOutlineLayerModel';
+
+const ACTIVE_SCROLL_MARGIN_PX = 24;
 
 export function useOutlinePanelPositioning(args: {
   activeIndex: number;
-  anchorY: number;
   isOpen: boolean;
   items: OutlineDisplayItem[];
 }) {
-  const [panelPaddingTop, setPanelPaddingTop] = useState(0);
-  const [panelPaddingBottom, setPanelPaddingBottom] = useState(0);
   const activeItemRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -20,17 +19,18 @@ export function useOutlinePanelPositioning(args: {
     }
 
     const activeTop = activeItemRef.current.offsetTop;
+    const activeBottom = activeTop + activeItemRef.current.offsetHeight;
     const panelHeight = panelRef.current.offsetHeight;
-    const scrollHeight = panelRef.current.scrollHeight;
-    const panelSlack = resolvePanelSlack(panelHeight);
-    setPanelPaddingTop(panelSlack);
-    setPanelPaddingBottom(panelSlack);
-    panelRef.current.scrollTop = resolvePanelScrollTop(args.anchorY, activeTop, panelHeight, scrollHeight);
-  }, [args.activeIndex, args.anchorY, args.isOpen, args.items]);
+    panelRef.current.scrollTop = resolvePanelScrollTop(
+      activeTop,
+      activeBottom,
+      panelRef.current.scrollTop,
+      panelHeight,
+      ACTIVE_SCROLL_MARGIN_PX
+    );
+  }, [args.activeIndex, args.isOpen, args.items]);
 
   return {
-    panelPaddingTop,
-    panelPaddingBottom,
     setActiveItemRef: (node: HTMLButtonElement | null) => {
       activeItemRef.current = node;
     },

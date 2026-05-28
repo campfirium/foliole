@@ -11,6 +11,7 @@ import {
   selectWorkspaceDocumentSurfaceProps
 } from './workspaceDocumentSurfaceProps';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
+import { resolveOutlineActivePosition, resolveShowDocumentOutline } from './workspaceGridContentModel';
 import { selectWorkspaceGridColumnProps } from './workspaceGridContentProps';
 import { renderWorkspaceGridColumns } from './workspaceLayoutGridContentColumns';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
@@ -90,7 +91,11 @@ function useWorkspaceGridDocumentSurfaceProps({
   onShouldSuppressSelectionRestore: () => boolean;
   props: WorkspaceGridContentSource;
 }) {
-  const showDocumentOutline = activeRightPanelId !== 'outline' || props.layoutChrome.isRightSidebarCollapsed;
+  const showDocumentOutline = resolveShowDocumentOutline({
+    activeRightPanelId,
+    isImmersiveMode: props.layoutChrome.isImmersiveMode,
+    isRightSidebarCollapsed: props.layoutChrome.isRightSidebarCollapsed
+  });
   return useMemo(
     () => ({
       ...selectWorkspaceDocumentSurfaceProps({
@@ -144,13 +149,6 @@ function useExternalPreviewController(props: WorkspaceGridContentSource) {
     () => ({ onEditorReady, outlineDocument, previewState }),
     [onEditorReady, outlineDocument, previewState]
   );
-}
-
-export function resolveOutlineActivePosition(args: {
-  editorSelection?: { from: number } | null;
-  readingSelection?: { from: number } | null;
-}) {
-  return args.readingSelection?.from ?? args.editorSelection?.from ?? 0;
 }
 
 function useProjectedListNodesById(nodesById: WorkspaceLayoutProps['nodeList']['nodesById']) {

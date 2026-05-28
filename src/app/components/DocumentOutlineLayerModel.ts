@@ -37,6 +37,10 @@ export function getOutlineLayerWidth(horizontalMetrics: OutlineHorizontalMetrics
   return Math.max(HOVER_ZONE_WIDTH_PX, horizontalMetrics.panelWidth + horizontalMetrics.panelRight + HOVER_ZONE_WIDTH_PX);
 }
 
+export function getOutlineClosedLayerWidth(documentMaxWidth: number) {
+  return `max(${HOVER_ZONE_WIDTH_PX}px, calc((100% - ${documentMaxWidth}px) / 2 + ${HOVER_ZONE_WIDTH_PX}px))`;
+}
+
 export function resolveDisplayItems(content: string): OutlineDisplayItem[] {
   const visibleItems = extractDocumentOutline(content).slice(1);
   const baseLevel = visibleItems.reduce((minLevel, item) => Math.min(minLevel, item.level), Number.POSITIVE_INFINITY);
@@ -61,11 +65,20 @@ export function resolveActiveIndex(items: OutlineDisplayItem[], anchorPosition: 
   return 0;
 }
 
-export function resolvePanelScrollTop(anchorY: number, activeTop: number, panelHeight: number, scrollHeight: number) {
-  const maxScrollTop = Math.max(0, scrollHeight - panelHeight);
-  return Math.max(0, Math.min(maxScrollTop, activeTop - anchorY));
-}
-
-export function resolvePanelSlack(panelHeight: number) {
-  return panelHeight;
+export function resolvePanelScrollTop(
+  activeTop: number,
+  activeBottom: number,
+  currentScrollTop: number,
+  panelHeight: number,
+  scrollMargin: number
+) {
+  const visibleTop = currentScrollTop + scrollMargin;
+  const visibleBottom = currentScrollTop + panelHeight - scrollMargin;
+  if (activeTop < visibleTop) {
+    return Math.max(0, activeTop - scrollMargin);
+  }
+  if (activeBottom > visibleBottom) {
+    return Math.max(0, activeBottom - panelHeight + scrollMargin);
+  }
+  return currentScrollTop;
 }

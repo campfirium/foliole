@@ -74,7 +74,7 @@ describe('DocumentOutlineLayer', () => {
     const hoverZone = screen.getByLabelText('Document outline hover zone');
     fireEvent.mouseEnter(hoverZone);
     advanceOutlineOpenDelay();
-    const listShell = screen.getByLabelText('Document outline entries').parentElement;
+    const listShell = screen.getByLabelText('Topic outline').parentElement;
     expect(listShell).toHaveAttribute('aria-hidden', 'false');
     fireEvent.mouseLeave(hoverZone);
 
@@ -105,7 +105,7 @@ describe('DocumentOutlineLayer content', () => {
     expect(screen.getByRole('button', { name: 'Deep dive' })).toBeInTheDocument();
   });
 
-  it('anchors the outline to the hover position on the right edge', () => {
+  it('keeps the outline at a fixed top offset on the right edge', () => {
     vi.useFakeTimers();
     renderOutline('# Article Title\n## Deep dive\n### Detail', 30);
 
@@ -118,7 +118,7 @@ describe('DocumentOutlineLayer content', () => {
     fireEvent.mouseEnter(hoverZone, { clientY: 360 });
     advanceOutlineOpenDelay();
 
-    expect(screen.getByLabelText('Document outline entries').parentElement).toHaveStyle({ top: '0px', bottom: '0px' });
+    expect(screen.getByLabelText('Topic outline').parentElement).toHaveStyle({ top: '96px', bottom: '56px' });
   });
 
   it('renders the visible top outline level in bold even when headings start deeper', () => {
@@ -142,16 +142,17 @@ describe('DocumentOutlineLayer hover guard', () => {
     fireEvent.mouseLeave(hoverZone);
     advanceOutlineOpenDelay();
 
-    expect(screen.getByLabelText('Document outline entries').parentElement).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByLabelText('Topic outline').parentElement).toHaveAttribute('aria-hidden', 'true');
   });
 });
 
 describe('DocumentOutlineLayer hover alignment', () => {
-  it('scrolls the matching heading to the hovered document height', () => {
-    expect(resolvePanelScrollTop(260, 420, 220, 900)).toBe(160);
+  it('keeps the active heading visible without moving the panel to the cursor height', () => {
+    expect(resolvePanelScrollTop(420, 452, 120, 220, 24)).toBe(256);
+    expect(resolvePanelScrollTop(150, 164, 120, 220, 24)).toBe(120);
   });
 
-  it('adds top slack so early headings can still land on the cursor height', () => {
+  it('scrolls the active heading into the fixed outline viewport', () => {
     vi.useFakeTimers();
     renderOutline('# Article Title\n## Deep dive\n### Detail', 11);
 
@@ -162,11 +163,7 @@ describe('DocumentOutlineLayer hover alignment', () => {
     });
     Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
       configurable: true,
-      get: () => 480
-    });
-    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
-      configurable: true,
-      get: () => 960
+      get: () => 220
     });
     Object.defineProperty(HTMLButtonElement.prototype, 'offsetTop', {
       configurable: true,
@@ -176,18 +173,23 @@ describe('DocumentOutlineLayer hover alignment', () => {
     fireEvent.mouseEnter(hoverZone, { clientY: 360 });
     advanceOutlineOpenDelay();
 
-    const entries = screen.getByLabelText('Document outline entries');
+    const entries = screen.getByLabelText('Topic outline');
     const panel = entries.parentElement as HTMLDivElement;
 
-    expect(entries).toHaveStyle({
-      paddingTop: '480px',
-      paddingBottom: '480px'
-    });
-    expect(panel.scrollTop).toBe(220);
+    expect(entries).toHaveClass('py-1');
+    expect(panel.scrollTop).toBe(504);
   });
 });
 
 describe('DocumentOutlineLayer gutter styling', () => {
+  it('keeps the closed hover zone aligned with the document right gutter', () => {
+    renderOutline('# Article Title\n## Deep dive', 11, 860);
+
+    expect(screen.getByLabelText('Document outline hover zone')).toHaveStyle({
+      width: 'max(72px, calc((100% - 860px) / 2 + 72px))'
+    });
+  });
+
   it('keeps outline content inside the gutter beside the document', () => {
     vi.useFakeTimers();
     renderOutline('# Article Title\n## Deep dive', 11, 860);
@@ -201,7 +203,7 @@ describe('DocumentOutlineLayer gutter styling', () => {
     fireEvent.mouseEnter(hoverZone);
     advanceOutlineOpenDelay();
 
-    expect(screen.getByLabelText('Document outline entries').parentElement).toHaveStyle({
+    expect(screen.getByLabelText('Topic outline').parentElement).toHaveStyle({
       right: '16.5px',
       width: '148.5px'
     });
@@ -224,7 +226,7 @@ describe('DocumentOutlineLayer gutter styling', () => {
     fireEvent.mouseEnter(screen.getByLabelText('Document outline hover zone'));
     advanceOutlineOpenDelay();
 
-    expect(screen.getByLabelText('Document outline entries').parentElement).toHaveClass('scrollbar-hidden', 'overflow-y-auto');
+    expect(screen.getByLabelText('Topic outline').parentElement).toHaveClass('scrollbar-hidden', 'overflow-y-auto');
   });
 
   it('removes default list indentation so the first item starts at the gutter edge', () => {
@@ -234,19 +236,16 @@ describe('DocumentOutlineLayer gutter styling', () => {
     fireEvent.mouseEnter(screen.getByLabelText('Document outline hover zone'));
     advanceOutlineOpenDelay();
 
-    expect(screen.getByLabelText('Document outline entries').querySelector('ol')).toHaveClass('m-0', 'list-none', 'p-0');
+    expect(screen.getByLabelText('Topic outline').querySelector('ol')).toHaveClass('m-0', 'list-none', 'p-0');
   });
 
-  it('adds bottom slack so late headings can still align to the cursor height', () => {
+  it('does not add cursor-alignment slack around the outline entries', () => {
     vi.useFakeTimers();
     renderOutline('# Article Title\n## Deep dive\n### Detail', 0);
 
     fireEvent.mouseEnter(screen.getByLabelText('Document outline hover zone'));
     advanceOutlineOpenDelay();
 
-    expect(screen.getByLabelText('Document outline entries')).toHaveStyle({
-      paddingTop: '480px',
-      paddingBottom: '480px'
-    });
+    expect(screen.getByLabelText('Topic outline')).toHaveClass('py-1');
   });
 });
