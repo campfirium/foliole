@@ -42,7 +42,7 @@ export function ReviewActionBar({
         'relative flex h-[var(--workspace-bottom-toolbar-height)] flex-none items-center px-4',
         surface === 'panel' && 'w-full border-t border-border bg-bg-elevated',
         surface === 'overlay' &&
-          'mx-auto w-fit max-w-[calc(100vw-3rem)] rounded-lg bg-[rgb(var(--color-bg-elevated)/0.6)] shadow-popover',
+          'mx-auto w-fit max-w-[calc(100vw-3rem)] rounded-lg border border-border/45 bg-bg-elevated shadow-control',
         className
       )}
       data-surface={surface}

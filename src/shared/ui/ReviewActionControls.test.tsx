@@ -56,8 +56,14 @@ it('adds short overlay dividers between grade actions only for overlay surface',
     />
   );
 
-  expect(screen.getByLabelText('Review grade actions').className).toContain('[&>*+*]:border-[rgb(var(--color-border)/0.8)]');
-    expect(screen.getByRole('button', { name: 'Again' }).className).toContain('border-0');
+  expect(screen.getByLabelText('Review grade actions').className).toContain('[&_button]:!border-0');
+  expect(screen.getByLabelText('Review grade actions').className).toContain('border-0');
+  expect(document.querySelectorAll('[data-review-overlay-divider]')).toHaveLength(3);
+  expect(document.querySelector('[data-review-overlay-divider]')).toHaveClass('h-4');
+  expect(screen.getByRole('button', { name: 'Again' }).className).toContain('rounded-none');
+  expect(screen.getByRole('button', { name: 'Again' }).className).toContain('border-0');
+  expect(screen.getByRole('button', { name: 'Again' })).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(screen.getByRole('button', { name: 'Again' })).not.toHaveAttribute('data-active');
 });
 
 it('adds short overlay dividers between reading review actions only for overlay surface', () => {
@@ -71,6 +77,12 @@ it('adds short overlay dividers between reading review actions only for overlay 
     />
   );
 
-  expect(screen.getByLabelText('Reading review actions').className).toContain('[&>*+*]:border-[rgb(var(--color-border)/0.8)]');
-    expect(screen.getByRole('button', { name: 'Soon' }).className).toContain('border-0');
+  expect(screen.getByLabelText('Reading review actions').className).toContain('[&_button]:!border-0');
+  expect(screen.getByLabelText('Reading review actions').className).toContain('border-0');
+  expect(document.querySelectorAll('[data-review-overlay-divider]')).toHaveLength(3);
+  expect(document.querySelector('[data-review-overlay-divider]')).toHaveClass('h-4');
+  expect(screen.getByRole('button', { name: 'Soon' }).className).toContain('rounded-none');
+  expect(screen.getByRole('button', { name: 'Soon' }).className).toContain('border-0');
+  expect(screen.getByRole('button', { name: 'Soon' })).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(screen.getByRole('button', { name: 'Soon' })).not.toHaveAttribute('data-active');
 });

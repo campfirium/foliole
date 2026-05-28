@@ -62,6 +62,15 @@ it('renders reading actions with session controls and hidden progress text', () 
   expect(screen.queryByText('Mix review items with reading topics.')).not.toBeInTheDocument();
 });
 
+it('passes overlay surface to reading actions inside session controls', () => {
+  renderToolbar({ showSessionModeControl: true, showSummary: false, surface: 'overlay' });
+
+  expect(screen.getByLabelText('Reading review actions').className).toContain('[&_button]:!border-0');
+  expect(document.querySelectorAll('[data-review-overlay-divider]')).toHaveLength(5);
+  expect(screen.getByRole('button', { name: 'Soon' })).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(screen.getByRole('button', { name: 'Soon' })).not.toHaveAttribute('data-active');
+});
+
 it('keeps legacy summary text when session controls are not shown', () => {
   renderToolbar();
 

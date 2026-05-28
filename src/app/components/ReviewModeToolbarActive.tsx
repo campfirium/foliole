@@ -104,6 +104,7 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps) {
     onRevealAnswer: props.onRevealAnswer,
     onRevisitReviewTopicSoon: props.onRevisitReviewTopicSoon,
     ...definedProps({ retryGrade: props.retryGrade }),
+    ...definedProps({ surface: props.surface }),
     submitGrade: props.submitGrade
   });
   if (!props.showSessionModeControl || (props.isCurrentItemGradable && !props.isAnswerRevealed)) {

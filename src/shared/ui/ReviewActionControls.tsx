@@ -3,20 +3,24 @@ import type { ReactNode } from 'react';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 
 import { AppButton } from './Button';
+import { renderOverlayDividedActions, ReviewOverlayActionButton } from './ReviewOverlayActionButton';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
 import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from './Tooltip';
 
 export type ReviewActionSurface = 'panel' | 'overlay';
 
 function overlayDividerClass(surface: ReviewActionSurface) {
-  return surface === 'overlay' ? 'gap-0 [&>*+*]:border-l [&>*+*]:border-[rgb(var(--color-border)/0.8)]' : '';
+  return surface === 'overlay'
+    ? 'gap-0 border-0 [&_button]:!rounded-none [&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!shadow-none'
+    : '';
 }
 
-function overlayButtonClass(surface: ReviewActionSurface) {
-  return surface === 'overlay'
-    ? 'min-w-20 border-0 bg-transparent px-5 text-foreground/82 hover:bg-transparent hover:text-foreground focus-visible:ring-1 focus-visible:ring-border-strong'
-    : undefined;
-}
+const reviewGradeButtons = [
+  { grade: 1, label: 'Again' },
+  { grade: 2, label: 'Hard' },
+  { grade: 3, label: 'Good' },
+  { grade: 4, label: 'Easy' }
+] as const satisfies ReadonlyArray<{ grade: ReviewGrade; label: 'Again' | 'Hard' | 'Good' | 'Easy' }>;
 
 function ReviewGradeButton(props: {
   buttonClassName?: string;
@@ -24,8 +28,13 @@ function ReviewGradeButton(props: {
   disabled: boolean;
   grade: ReviewGrade;
   label: 'Again' | 'Hard' | 'Good' | 'Easy';
+  surface: ReviewActionSurface;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
+  if (props.surface === 'overlay') {
+    return <ReviewOverlayActionButton disabled={props.disabled} label={props.label} onClick={() => void props.submitGrade(props.grade)} />;
+  }
+
   return (
     <AppButton
       aria-label={props.label}
@@ -82,42 +91,26 @@ export function ReviewGradeActions({
   surface?: ReviewActionSurface;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
-  const resolvedButtonClassName = buttonClassName ?? overlayButtonClass(surface);
   return (
     <div className="flex items-center gap-2">
       <ToolbarActionGroup ariaLabel="Review grade actions" className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`}>
-        <ReviewGradeButton
-          {...(resolvedButtonClassName !== undefined ? { buttonClassName: resolvedButtonClassName } : {})}
-          buttonVariant={buttonVariant}
-          disabled={isSubmitting}
-          grade={1}
-          label="Again"
-          submitGrade={submitGrade}
-        />
-        <ReviewGradeButton
-          {...(resolvedButtonClassName !== undefined ? { buttonClassName: resolvedButtonClassName } : {})}
-          buttonVariant={buttonVariant}
-          disabled={isSubmitting}
-          grade={2}
-          label="Hard"
-          submitGrade={submitGrade}
-        />
-        <ReviewGradeButton
-          {...(resolvedButtonClassName !== undefined ? { buttonClassName: resolvedButtonClassName } : {})}
-          buttonVariant={buttonVariant}
-          disabled={isSubmitting}
-          grade={3}
-          label="Good"
-          submitGrade={submitGrade}
-        />
-        <ReviewGradeButton
-          {...(resolvedButtonClassName !== undefined ? { buttonClassName: resolvedButtonClassName } : {})}
-          buttonVariant={buttonVariant}
-          disabled={isSubmitting}
-          grade={4}
-          label="Easy"
-          submitGrade={submitGrade}
-        />
+        {renderOverlayDividedActions(
+          reviewGradeButtons.map((gradeButton) => ({
+            key: String(gradeButton.grade),
+            node: (
+              <ReviewGradeButton
+                {...(buttonClassName !== undefined ? { buttonClassName } : {})}
+                buttonVariant={buttonVariant}
+                disabled={isSubmitting}
+                grade={gradeButton.grade}
+                label={gradeButton.label}
+                surface={surface}
+                submitGrade={submitGrade}
+              />
+            )
+          })),
+          surface
+        )}
       </ToolbarActionGroup>
       <ReviewGradeErrorFeedback errorMessage={errorMessage} isSubmitting={isSubmitting} {...(onRetry ? { onRetry } : {})} />
     </div>
@@ -128,7 +121,12 @@ function ReadingReviewButton(props: {
   className: string;
   label: 'Soon' | 'Later' | 'Read' | 'Dismiss';
   onClick: () => void;
+  surface: ReviewActionSurface;
 }) {
+  if (props.surface === 'overlay') {
+    return <ReviewOverlayActionButton label={props.label} onClick={props.onClick} />;
+  }
+
   return (
     <AppButton aria-label={props.label} className={props.className} onClick={props.onClick} size="md" variant="primary">
       {props.label}
@@ -160,26 +158,29 @@ export function ReadingReviewActions({
       <AppTooltipContent>{tooltip}</AppTooltipContent>
     </AppTooltip>
   );
+  const readingActions = [
+    onRevisitReviewTopicSoon
+      ? {
+          key: 'soon',
+          node: wrapWithTooltip(<ReadingReviewButton className={buttonClassName} label="Soon" onClick={onRevisitReviewTopicSoon} surface={surface} />, 'Appears again after this queue.')
+        }
+      : null,
+    {
+      key: 'later',
+      node: wrapWithTooltip(<ReadingReviewButton className={buttonClassName} label="Later" onClick={onPostponeReviewTopic} surface={surface} />, 'Appears again after a shorter interval.')
+    },
+    {
+      key: 'read',
+      node: wrapWithTooltip(<ReadingReviewButton className={buttonClassName} label="Read" onClick={onReadReviewTopic} surface={surface} />, 'Appears again after its normal interval.')
+    },
+    {
+      key: 'dismiss',
+      node: wrapWithTooltip(<ReadingReviewButton className={buttonClassName} label="Dismiss" onClick={onDismissReviewTopic} surface={surface} />, 'No longer appears.')
+    }
+  ].filter((action): action is { key: string; node: ReactNode } => Boolean(action));
   return (
     <ToolbarActionGroup ariaLabel="Reading review actions" className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`} data-review-toolbar-kind="reading">
-      {onRevisitReviewTopicSoon
-        ? wrapWithTooltip(
-            <ReadingReviewButton className={overlayButtonClass(surface) ?? buttonClassName} label="Soon" onClick={onRevisitReviewTopicSoon} />,
-            'Appears again after this queue.'
-          )
-        : null}
-      {wrapWithTooltip(
-        <ReadingReviewButton className={overlayButtonClass(surface) ?? buttonClassName} label="Later" onClick={onPostponeReviewTopic} />,
-        'Appears again after a shorter interval.'
-      )}
-      {wrapWithTooltip(
-        <ReadingReviewButton className={overlayButtonClass(surface) ?? buttonClassName} label="Read" onClick={onReadReviewTopic} />,
-        'Appears again after its normal interval.'
-      )}
-      {wrapWithTooltip(
-        <ReadingReviewButton className={overlayButtonClass(surface) ?? buttonClassName} label="Dismiss" onClick={onDismissReviewTopic} />,
-        'No longer appears.'
-      )}
+      {renderOverlayDividedActions(readingActions, surface)}
     </ToolbarActionGroup>
   );
 }

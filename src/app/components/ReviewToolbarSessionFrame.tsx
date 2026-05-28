@@ -12,6 +12,7 @@ import {
   AppTooltipContent,
   AppTooltipTrigger
 } from '../../shared/ui';
+import { ReviewOverlayDivider } from '../../shared/ui/ReviewOverlayActionButton';
 
 import { ReviewSessionModeControl } from './ReviewSessionModeControl';
 import { fallbackProgressCounts, formatReviewProgressLabel, type ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
@@ -123,11 +124,22 @@ export function ReviewToolbarSessionFrame({
   surface?: 'panel' | 'overlay';
   summary?: ReviewToolbarSessionSummary;
 }) {
+  if (surface === 'overlay') {
+    return (
+      <div className={cn('flex items-center gap-2.5', className)}>
+        <div className="flex min-w-0 justify-center">{modeControl}</div>
+        <ReviewOverlayDivider />
+        <div className="flex min-w-0 items-center justify-center">{actions}</div>
+        <ReviewOverlayDivider />
+        <div className="flex min-w-0 justify-center">{summary ? <ReviewToolbarSessionSummaryMenu summary={summary} /> : null}</div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
         'grid grid-cols-[2rem_auto_2rem] items-center gap-2.5',
-        surface === 'overlay' && '[&>*+*]:border-l [&>*+*]:border-[rgb(var(--color-border)/0.8)] [&>*+*]:pl-2.5',
         className
       )}
     >
