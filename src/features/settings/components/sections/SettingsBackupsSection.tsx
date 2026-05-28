@@ -20,7 +20,7 @@ function BackupLoadingState() {
       <SettingsSection ariaLabel="Backup list loading section" title="Backups">
         <SettingsLoadingState />
       </SettingsSection>
-      <SettingsSection ariaLabel="Source states loading section" title="Source states">
+      <SettingsSection ariaLabel="Source topic handling loading section" title="Source topic handling">
         <SettingsLoadingState />
       </SettingsSection>
       <SettingsSection ariaLabel="Backup location loading section" title="Backup location">
@@ -63,13 +63,15 @@ export function SettingsBackupsSection() {
   return (
     <>
       <BackupListSection backups={state.backups} createBackup={state.handleCreateBackup} isBackupActionsAvailable={state.isDesktopRuntime} isCreatingBackup={state.isCreatingBackup} isLoadingBackups={state.isLoadingBackups} restoringPath={state.restoringPath} restoreBackup={state.handleRestoreBackup} statusMessage={state.statusMessage} />
-      <SettingsSection ariaLabel="Source states section" title="Source states">
+      <SettingsSection ariaLabel="Source topic handling section" title="Source topic handling">
         <SourceDispositionStateRow
           isDesktopRuntime={state.isDesktopRuntime}
+          isExporting={state.isExportingSourceStates}
+          isImporting={state.isImportingSourceStates}
           isResetting={state.isResettingSourceStates}
-          isRestoring={state.isRestoringSourceStates}
+          onExport={state.handleExportSourceDispositions}
+          onImport={state.handleImportSourceDispositions}
           onReset={state.handleResetSourceDispositions}
-          onRestore={state.handleRestoreSourceDispositions}
           statusMessage={state.sourceStateStatusMessage}
           summary={state.sourceDispositionSummary}
         />

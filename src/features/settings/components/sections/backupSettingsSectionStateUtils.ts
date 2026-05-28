@@ -1,6 +1,8 @@
 import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
 import {
   createDatabaseBackup,
+  exportSourceDispositions,
+  importSourceDispositions,
   loadSourceDispositionSummary,
   reloadAfterDatabaseRestore,
   resetSourceDispositions,
@@ -135,14 +137,60 @@ export async function runRestoreSourceDispositions(args: {
   args.setIsRestoringSourceStates(true);
   const result = await restoreSourceDispositions();
   if (!result) {
-    args.setSourceStateStatusMessage('Source state restore is available in the desktop app.');
+    args.setSourceStateStatusMessage('Saved source topic handling is available in the desktop app.');
   } else if (result.ok && 'dismissedCount' in result.value) {
-    args.setSourceStateStatusMessage(`Restored ${result.value.dismissedCount} dismissed and ${result.value.trashedCount} deleted source states.`);
+    const total = result.value.dismissedCount + result.value.trashedCount;
+    args.setSourceStateStatusMessage(`Re-applied ${result.value.dismissedCount} dismissed and ${result.value.trashedCount} deleted source topic ${total === 1 ? 'state' : 'states'}.`);
   } else if (!result.ok) {
     args.setSourceStateStatusMessage(result.errorMessage);
   }
   args.setSourceDispositionSummary(await loadSourceDispositionSummary());
   args.setIsRestoringSourceStates(false);
+}
+
+export async function runExportSourceDispositions(args: {
+  setIsExportingSourceStates: (value: boolean) => void;
+  setSourceStateStatusMessage: (value: string) => void;
+}) {
+  args.setIsExportingSourceStates(true);
+  const result = await exportSourceDispositions();
+  if (!result) {
+    args.setSourceStateStatusMessage('Saved source topic handling export is available in the desktop app.');
+  } else if (result.ok && 'entryCount' in result.value) {
+    if (result.value.status === 'saved') {
+      args.setSourceStateStatusMessage(`Exported ${result.value.entryCount} saved source topic ${result.value.entryCount === 1 ? 'entry' : 'entries'}.`);
+    } else if (result.value.status === 'save_failed') {
+      args.setSourceStateStatusMessage('Could not export saved source topic handling.');
+    }
+  } else if (!result.ok) {
+    args.setSourceStateStatusMessage(result.errorMessage);
+  }
+  args.setIsExportingSourceStates(false);
+}
+
+export async function runImportSourceDispositions(args: {
+  setIsImportingSourceStates: (value: boolean) => void;
+  setSourceDispositionSummary: (value: RuntimeSourceDispositionSummary) => void;
+  setSourceStateStatusMessage: (value: string) => void;
+}) {
+  args.setIsImportingSourceStates(true);
+  const result = await importSourceDispositions();
+  if (!result) {
+    args.setSourceStateStatusMessage('Saved source topic handling import is available in the desktop app.');
+  } else if (result.ok && 'importedCount' in result.value) {
+    if (result.value.status === 'imported') {
+      args.setSourceDispositionSummary(result.value.summary);
+      const appliedCount = result.value.appliedDismissedCount + result.value.appliedDeletedCount;
+      args.setSourceStateStatusMessage(`Imported ${result.value.importedCount} saved source topic ${result.value.importedCount === 1 ? 'entry' : 'entries'} and applied ${appliedCount}.`);
+    } else if (result.value.status === 'invalid_file') {
+      args.setSourceStateStatusMessage('Could not import saved source topic handling from this file.');
+    } else if (result.value.status === 'read_failed') {
+      args.setSourceStateStatusMessage('Could not read the selected source topic handling file.');
+    }
+  } else if (!result.ok) {
+    args.setSourceStateStatusMessage(result.errorMessage);
+  }
+  args.setIsImportingSourceStates(false);
 }
 
 export async function runResetSourceDispositions(args: {
@@ -153,10 +201,10 @@ export async function runResetSourceDispositions(args: {
   args.setIsResettingSourceStates(true);
   const result = await resetSourceDispositions();
   if (!result) {
-    args.setSourceStateStatusMessage('Source state reset is available in the desktop app.');
+    args.setSourceStateStatusMessage('Saved source topic handling is available in the desktop app.');
   } else if (result.ok && 'recordCount' in result.value) {
     args.setSourceDispositionSummary(result.value);
-    args.setSourceStateStatusMessage('Source states reset.');
+    args.setSourceStateStatusMessage('Cleared saved source topic handling.');
   } else if (!result.ok) {
     args.setSourceStateStatusMessage(result.errorMessage);
     args.setSourceDispositionSummary(await loadSourceDispositionSummary());

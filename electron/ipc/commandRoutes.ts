@@ -96,6 +96,8 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.backupSqliteDatabase,
   NATIVE_COMMANDS.restoreSqliteDatabase,
   NATIVE_COMMANDS.loadSourceDispositionSummary,
+  NATIVE_COMMANDS.exportSourceDispositions,
+  NATIVE_COMMANDS.importSourceDispositions,
   NATIVE_COMMANDS.restoreSourceDispositions,
   NATIVE_COMMANDS.resetSourceDispositions,
   NATIVE_COMMANDS.createFolder,

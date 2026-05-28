@@ -1,6 +1,12 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeDatabaseMaintenanceStatus } from './nativeDatabaseMaintenanceContract.js';
 import type {
+  NativeExportSourceDispositionResult,
+  NativeImportSourceDispositionResult,
+  NativeSourceDispositionRestoreResult,
+  NativeSourceDispositionSummary
+} from './nativeSourceDispositionContract.js';
+import type {
   NativeBackupSettings,
   NativeClearLinkPanelBrowsingDataResult,
   NativeCopyAttachmentImageResult,
@@ -12,8 +18,6 @@ import type {
   NativeMirrorOutputRebuildResult,
   NativePerformanceMemorySnapshot,
   NativeReadingPositionTraceLogAppendArgs,
-  NativeSourceDispositionRestoreResult,
-  NativeSourceDispositionSummary,
   NativeSqliteBackupEntry,
   NativeSqliteBackupResult,
   NativeSqliteRestoreResult,
@@ -82,6 +86,14 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.loadSourceDispositionSummary]: {
     args: undefined;
     result: NativeSourceDispositionSummary;
+  };
+  [NATIVE_COMMANDS.exportSourceDispositions]: {
+    args: undefined;
+    result: NativeExportSourceDispositionResult;
+  };
+  [NATIVE_COMMANDS.importSourceDispositions]: {
+    args: undefined;
+    result: NativeImportSourceDispositionResult;
   };
   [NATIVE_COMMANDS.restoreSourceDispositions]: {
     args: undefined;

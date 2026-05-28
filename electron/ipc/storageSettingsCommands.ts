@@ -29,9 +29,19 @@ import {
   loadSearchIndexRebuildStatus,
   requestSearchIndexRebuild
 } from './searchIndexRebuild.js';
+import { exportSourceDispositions, importSourceDispositions } from './sourceDispositionFiles.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { readSettingsObject } from './storageCommandSupport.js';
 import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
+
+function handleSourceDispositionCommand(command: string, window: BrowserWindow | null) {
+  if (command === NATIVE_COMMANDS.loadSourceDispositionSummary) return summarizeSourceDispositions();
+  if (command === NATIVE_COMMANDS.exportSourceDispositions) return exportSourceDispositions(window);
+  if (command === NATIVE_COMMANDS.importSourceDispositions) return importSourceDispositions(window);
+  if (command === NATIVE_COMMANDS.restoreSourceDispositions) return restoreSourceDispositions();
+  if (command === NATIVE_COMMANDS.resetSourceDispositions) return resetSourceDispositions();
+  return undefined;
+}
 
 export async function handleSettingsStorageCommand(
   command: string,
@@ -60,9 +70,8 @@ export async function handleSettingsStorageCommand(
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
   if (command === NATIVE_COMMANDS.loadDatabaseMaintenanceStatus) return loadDatabaseMaintenanceStatus();
   if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();
-  if (command === NATIVE_COMMANDS.loadSourceDispositionSummary) return summarizeSourceDispositions();
-  if (command === NATIVE_COMMANDS.restoreSourceDispositions) return restoreSourceDispositions();
-  if (command === NATIVE_COMMANDS.resetSourceDispositions) return resetSourceDispositions();
+  const sourceDispositionResult = handleSourceDispositionCommand(command, window);
+  if (sourceDispositionResult !== undefined) return sourceDispositionResult;
   if (command === NATIVE_COMMANDS.rebuildMirrorOutput) return rebuildMirrorOutput();
   if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
   if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);

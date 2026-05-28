@@ -1,6 +1,8 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
   NativeBackupSettings,
+  NativeExportSourceDispositionResult,
+  NativeImportSourceDispositionResult,
   NativeSourceDispositionRestoreResult,
   NativeSourceDispositionSummary,
   NativeSqliteBackupResult,
@@ -10,6 +12,8 @@ import type {
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 export type RuntimeBackupSettings = NativeBackupSettings;
+export type RuntimeExportSourceDispositionResult = NativeExportSourceDispositionResult;
+export type RuntimeImportSourceDispositionResult = NativeImportSourceDispositionResult;
 export type RuntimeSourceDispositionRestoreResult = NativeSourceDispositionRestoreResult;
 export type RuntimeSourceDispositionSummary = NativeSourceDispositionSummary;
 export type RuntimeSqliteBackupResult = NativeSqliteBackupResult;
@@ -65,6 +69,22 @@ export async function loadSourceDispositionSummaryFromRuntime(): Promise<unknown
     return null;
   }
   return runtimeInvoke(NATIVE_COMMANDS.loadSourceDispositionSummary);
+}
+
+export async function exportSourceDispositionsInRuntime(): Promise<unknown | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  return runtimeInvoke(NATIVE_COMMANDS.exportSourceDispositions);
+}
+
+export async function importSourceDispositionsInRuntime(): Promise<unknown | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  return runtimeInvoke(NATIVE_COMMANDS.importSourceDispositions);
 }
 
 export async function restoreSourceDispositionsInRuntime(): Promise<unknown | null> {

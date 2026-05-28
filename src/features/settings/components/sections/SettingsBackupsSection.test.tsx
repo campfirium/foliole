@@ -13,6 +13,8 @@ vi.mock('../../model/databaseBackupSettings', () => ({
 vi.mock('../../model/databaseBackups', () => ({
   areDatabaseBackupActionsAvailable: vi.fn(),
   createDatabaseBackup: vi.fn(),
+  exportSourceDispositions: vi.fn(),
+  importSourceDispositions: vi.fn(),
   listDatabaseBackups: vi.fn(),
   loadSourceDispositionSummary: vi.fn(),
   reloadAfterDatabaseRestore: vi.fn(),
@@ -23,6 +25,8 @@ import { selectRuntimeFolder } from '../../../../shared/platform/folderSelection
 import {
   areDatabaseBackupActionsAvailable,
   createDatabaseBackup,
+  exportSourceDispositions,
+  importSourceDispositions,
   listDatabaseBackups,
   loadSourceDispositionSummary,
   reloadAfterDatabaseRestore,
@@ -42,6 +46,8 @@ beforeEach(() => {
   vi.mocked(saveDatabaseBackupSettings).mockReset();
   vi.mocked(areDatabaseBackupActionsAvailable).mockReset();
   vi.mocked(createDatabaseBackup).mockReset();
+  vi.mocked(exportSourceDispositions).mockReset();
+  vi.mocked(importSourceDispositions).mockReset();
   vi.mocked(listDatabaseBackups).mockReset();
   vi.mocked(loadSourceDispositionSummary).mockReset();
   vi.mocked(reloadAfterDatabaseRestore).mockReset();
@@ -51,6 +57,8 @@ beforeEach(() => {
   vi.mocked(loadDatabaseBackupSettings).mockResolvedValue(defaultSettings);
   vi.mocked(saveDatabaseBackupSettings).mockResolvedValue(defaultSettings);
   vi.mocked(listDatabaseBackups).mockResolvedValue(defaultBackups);
+  vi.mocked(exportSourceDispositions).mockResolvedValue({ ok: true, value: { entryCount: 2, path: '/out/handling.txt', status: 'saved' } });
+  vi.mocked(importSourceDispositions).mockResolvedValue({ ok: true, value: { appliedDeletedCount: 1, appliedDismissedCount: 1, importedCount: 2, status: 'imported', summary: { recordCount: 2, sizeBytes: 1536 } } });
   vi.mocked(loadSourceDispositionSummary).mockResolvedValue({ recordCount: 2, sizeBytes: 1536 });
   vi.mocked(createDatabaseBackup).mockResolvedValue({
     ok: true,
@@ -93,9 +101,9 @@ it('shows backup settings and backup list in the backups section', async () => {
   expect(screen.getByDisplayValue('24').parentElement?.className).toContain('flex-[0_0_160px]');
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
   expect(screen.getByText(/Auto backup · daily/)).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Source states' })).toBeInTheDocument();
-  expect(screen.getByText('Restore source states')).toBeInTheDocument();
-  expect(screen.getByText('2 records / 2 KB')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Source topic handling' })).toBeInTheDocument();
+  expect(screen.getByText('Saved source topic handling')).toBeInTheDocument();
+  expect(screen.getByText('2 entries / 2 KB')).toBeInTheDocument();
 });
 
 it('shows a retry action when backup settings fail to load', async () => {
@@ -185,7 +193,7 @@ it('shows only three backups by default and expands the rest on demand', async (
 
   await screen.findByRole('button', { name: 'Show 1 more' });
   expect(screen.queryByText('auto-daily-2026-04-02_08-00-00-000.db')).not.toBeInTheDocument();
-  expect(screen.getByText('More backups').compareDocumentPosition(screen.getByRole('heading', { name: 'Source states' }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(screen.getByText('More backups').compareDocumentPosition(screen.getByRole('heading', { name: 'Source topic handling' }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
   fireEvent.click(screen.getByRole('button', { name: 'Show 1 more' }));
 

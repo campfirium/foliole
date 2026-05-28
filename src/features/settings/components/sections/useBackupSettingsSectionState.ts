@@ -19,8 +19,9 @@ function useBackupStateStore() {
   const [defaultBackupPath, setDefaultBackupPath] = useState('Library Home/Backups');
   const [isLoadingBackups, setIsLoadingBackups] = useState(true);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [isExportingSourceStates, setIsExportingSourceStates] = useState(false);
+  const [isImportingSourceStates, setIsImportingSourceStates] = useState(false);
   const [isResettingSourceStates, setIsResettingSourceStates] = useState(false);
-  const [isRestoringSourceStates, setIsRestoringSourceStates] = useState(false);
   const [restoringPath, setRestoringPath] = useState('');
   const [sourceDispositionSummary, setSourceDispositionSummary] = useState<RuntimeSourceDispositionSummary>({ recordCount: 0, sizeBytes: 0 });
   const [sourceStateStatusMessage, setSourceStateStatusMessage] = useState('');
@@ -36,9 +37,10 @@ function useBackupStateStore() {
     defaultBackupPath,
     extraPathErrorMessage,
     isCreatingBackup,
+    isExportingSourceStates,
+    isImportingSourceStates,
     isLoadingBackups,
     isResettingSourceStates,
-    isRestoringSourceStates,
     isSavingSettings,
     loadErrorMessage,
     pathErrorMessage,
@@ -48,9 +50,10 @@ function useBackupStateStore() {
     setDraft,
     setExtraPathErrorMessage,
     setIsCreatingBackup,
+    setIsExportingSourceStates,
+    setIsImportingSourceStates,
     setIsLoadingBackups,
     setIsResettingSourceStates,
-    setIsRestoringSourceStates,
     setIsSavingSettings,
     setLoadErrorMessage,
     setPathErrorMessage,
@@ -91,13 +94,14 @@ export function useBackupSettingsSectionState() {
     setDraft: state.setDraft,
     setExtraPathErrorMessage: state.setExtraPathErrorMessage,
     setIsCreatingBackup: state.setIsCreatingBackup,
+    setIsExportingSourceStates: state.setIsExportingSourceStates,
+    setIsImportingSourceStates: state.setIsImportingSourceStates,
     setIsSavingSettings: state.setIsSavingSettings,
     setPathErrorMessage: state.setPathErrorMessage,
     setRestoringPath: state.setRestoringPath,
     setSettings: state.setSettings,
     setSourceDispositionSummary: state.setSourceDispositionSummary,
     setIsResettingSourceStates: state.setIsResettingSourceStates,
-    setIsRestoringSourceStates: state.setIsRestoringSourceStates,
     setSourceStateStatusMessage: state.setSourceStateStatusMessage,
     setStatusMessage: state.setStatusMessage
   });
@@ -110,9 +114,10 @@ export function useBackupSettingsSectionState() {
     extraPathErrorMessage: state.extraPathErrorMessage,
     isCreatingBackup: state.isCreatingBackup,
     isDesktopRuntime,
+    isExportingSourceStates: state.isExportingSourceStates,
+    isImportingSourceStates: state.isImportingSourceStates,
     isLoadingBackups: state.isLoadingBackups,
     isResettingSourceStates: state.isResettingSourceStates,
-    isRestoringSourceStates: state.isRestoringSourceStates,
     isSavingSettings: state.isSavingSettings,
     loadErrorMessage: state.loadErrorMessage,
     pathErrorMessage: state.pathErrorMessage,

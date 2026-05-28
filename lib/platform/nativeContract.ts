@@ -25,6 +25,7 @@ import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type { NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult, NativeSystemFontCatalog } from './nativeUtilityContract.js';
 export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeNodeMutationContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
+export type * from './nativeSourceDispositionContract.js';
 
 export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {

@@ -104,6 +104,8 @@ export const NATIVE_COMMANDS = {
   backupSqliteDatabase: 'backup_sqlite_database',
   restoreSqliteDatabase: 'restore_sqlite_database',
   loadSourceDispositionSummary: 'load_source_disposition_summary',
+  exportSourceDispositions: 'export_source_dispositions',
+  importSourceDispositions: 'import_source_dispositions',
   restoreSourceDispositions: 'restore_source_dispositions',
   resetSourceDispositions: 'reset_source_dispositions',
   createFolder: 'create_folder',

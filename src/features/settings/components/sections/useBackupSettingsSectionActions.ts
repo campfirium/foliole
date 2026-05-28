@@ -6,9 +6,10 @@ import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings'
 import {
   persistBackupSettings,
   runCreateBackup,
+  runExportSourceDispositions,
+  runImportSourceDispositions,
   runResetSourceDispositions,
   runRestoreBackup,
-  runRestoreSourceDispositions,
   updateDraftValue
 } from './backupSettingsSectionStateUtils';
 
@@ -26,8 +27,9 @@ interface BackupActionHandlerArgs {
   setRestoringPath: (value: string) => void;
   setSettings: (value: DatabaseBackupSettings) => void;
   setSourceDispositionSummary: (value: RuntimeSourceDispositionSummary) => void;
+  setIsExportingSourceStates: (value: boolean) => void;
+  setIsImportingSourceStates: (value: boolean) => void;
   setIsResettingSourceStates: (value: boolean) => void;
-  setIsRestoringSourceStates: (value: boolean) => void;
   setSourceStateStatusMessage: (value: string) => void;
   setStatusMessage: (value: string) => void;
 }
@@ -127,7 +129,8 @@ export function useBackupActionHandlers(args: BackupActionHandlerArgs) {
   const handleCreateBackup = () => void runCreateBackup(args.refreshBackups, args.setIsCreatingBackup, args.setStatusMessage);
   const handleRestoreBackup = (entry: DatabaseBackupEntry) =>
     void runRestoreBackup(entry, args.setRestoringPath, args.setStatusMessage);
-  const handleRestoreSourceDispositions = () => void runRestoreSourceDispositions(args);
+  const handleExportSourceDispositions = () => void runExportSourceDispositions(args);
+  const handleImportSourceDispositions = () => void runImportSourceDispositions(args);
   const handleResetSourceDispositions = () => void runResetSourceDispositions(args);
   const handleDraftField = (field: keyof DatabaseBackupSettings, value: string) => {
     if (!args.draft) return;
@@ -138,7 +141,8 @@ export function useBackupActionHandlers(args: BackupActionHandlerArgs) {
     handleCreateBackup,
     handleDraftField,
     handleRestoreBackup,
-    handleRestoreSourceDispositions,
+    handleExportSourceDispositions,
+    handleImportSourceDispositions,
     handleResetSourceDispositions,
   };
 }

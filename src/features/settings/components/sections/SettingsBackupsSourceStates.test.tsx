@@ -12,18 +12,20 @@ vi.mock('../../model/databaseBackupSettings', () => ({
 
 vi.mock('../../model/databaseBackups', () => ({
   areDatabaseBackupActionsAvailable: vi.fn(),
+  exportSourceDispositions: vi.fn(),
+  importSourceDispositions: vi.fn(),
   listDatabaseBackups: vi.fn(),
   loadSourceDispositionSummary: vi.fn(),
   resetSourceDispositions: vi.fn(),
-  restoreSourceDispositions: vi.fn()
 }));
 
 import {
   areDatabaseBackupActionsAvailable,
+  exportSourceDispositions,
+  importSourceDispositions,
   listDatabaseBackups,
   loadSourceDispositionSummary,
-  resetSourceDispositions,
-  restoreSourceDispositions
+  resetSourceDispositions
 } from '../../model/databaseBackups';
 import { loadDatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
@@ -46,27 +48,37 @@ beforeEach(() => {
   });
   vi.mocked(listDatabaseBackups).mockResolvedValue([]);
   vi.mocked(loadSourceDispositionSummary).mockResolvedValue({ recordCount: 2, sizeBytes: 1536 });
+  vi.mocked(exportSourceDispositions).mockResolvedValue({ ok: true, value: { entryCount: 2, path: '/out/handling.txt', status: 'saved' } });
+  vi.mocked(importSourceDispositions).mockResolvedValue({ ok: true, value: { appliedDeletedCount: 1, appliedDismissedCount: 2, importedCount: 3, status: 'imported', summary: { recordCount: 3, sizeBytes: 2048 } } });
   vi.mocked(resetSourceDispositions).mockResolvedValue({ ok: true, value: { recordCount: 0, sizeBytes: 0 } });
-  vi.mocked(restoreSourceDispositions).mockResolvedValue({ ok: true, value: { dismissedCount: 1, trashedCount: 1 } });
 });
 
-it('restores and resets saved source states from the backup row', async () => {
+it('imports, exports, and clears saved source topic handling from the backup row', async () => {
   render(<SettingsBackupsSection />);
 
-  await screen.findByRole('button', { name: 'Restore source states' });
-  expect(screen.getByRole('button', { name: 'Reset source states' }).compareDocumentPosition(screen.getByRole('button', { name: 'Restore source states' }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-  fireEvent.click(screen.getByRole('button', { name: 'Restore source states' }));
+  await screen.findByRole('button', { name: 'Import saved source topic handling' });
+  fireEvent.click(screen.getByRole('button', { name: 'Export saved source topic handling' }));
 
   await waitFor(() => {
-    expect(restoreSourceDispositions).toHaveBeenCalledWith();
+    expect(exportSourceDispositions).toHaveBeenCalledWith();
   });
-  expect(await screen.findByText('Restored 1 dismissed and 1 deleted source states.')).toBeInTheDocument();
+  expect(await screen.findByText('Exported 2 saved source topic entries.')).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Reset source states' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Import saved source topic handling' }));
+
+  await waitFor(() => {
+    expect(importSourceDispositions).toHaveBeenCalledWith();
+  });
+  expect(await screen.findByText('Imported 3 saved source topic entries and applied 3.')).toBeInTheDocument();
+  expect(screen.getByText('3 entries / 2 KB')).toBeInTheDocument();
+
+  expect(screen.queryByRole('button', { name: 'Re-apply saved source topic handling' })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Clear saved source topic handling' }));
 
   await waitFor(() => {
     expect(resetSourceDispositions).toHaveBeenCalledWith();
   });
-  expect(await screen.findByText('Source states reset.')).toBeInTheDocument();
-  expect(screen.getByText('0 records / 0 B')).toBeInTheDocument();
+  expect(await screen.findByText('Cleared saved source topic handling.')).toBeInTheDocument();
+  expect(screen.getByText('0 entries / 0 B')).toBeInTheDocument();
 });

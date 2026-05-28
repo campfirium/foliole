@@ -17,6 +17,17 @@ export interface SourceDispositionRestoreResult {
   trashedCount: number;
 }
 
+export interface SourceDispositionRecord extends DatabaseRow, SourceDispositionKey {
+  disposition: SourceDisposition;
+  updatedAt: string;
+}
+
+export interface SourceDispositionImportRecord {
+  disposition: SourceDisposition;
+  originalTitle: string;
+  sourceKind: SourceDispositionKey['sourceKind'];
+}
+
 export interface SourceDispositionKey {
   originalTitle: string;
   sourceKind: 'keep' | 'readwise';
@@ -76,6 +87,22 @@ function readSourceKeyForNode(driver: DatabaseDriver, nodeId: string) {
   return row ? toSourceDispositionKey(row) : null;
 }
 
+function readSourceKeysByTitle(driver: DatabaseDriver, record: SourceDispositionImportRecord) {
+  const readwiseRuleIds = readReadwiseRuleIds();
+  return driver.queryAll<SourceKeyRow>(
+    `SELECT item.rule_id, item.source_path, cache.title
+     FROM keep_import_items item
+     LEFT JOIN keep_import_item_cache cache
+       ON cache.rule_id = item.rule_id
+      AND cache.source_path = item.source_path
+     WHERE cache.title = ?`,
+    [record.originalTitle]
+  ).flatMap((row) => {
+    const key = toSourceDispositionKey(row, readwiseRuleIds);
+    return key && key.sourceKind === record.sourceKind ? [key] : [];
+  });
+}
+
 function runSourceDispositionUpsert(driver: DatabaseDriver, key: SourceDispositionKey, disposition: SourceDisposition, updatedAt: string) {
   driver.execute(
     `INSERT INTO source_disposition_states (source_kind, source_scope, original_title, disposition, updated_at)
@@ -122,6 +149,43 @@ export function summarizeSourceDispositions(): SourceDispositionSummary {
   return {
     recordCount: row?.record_count ?? 0,
     sizeBytes: row?.size_bytes ?? 0
+  };
+}
+
+export function listSourceDispositionRecords(): SourceDispositionRecord[] {
+  return openDatabaseConnection().driver.queryAll<SourceDispositionRecord>(
+    `SELECT source_kind AS sourceKind,
+            source_scope AS sourceScope,
+            original_title AS originalTitle,
+            disposition,
+            updated_at AS updatedAt
+     FROM source_disposition_states
+     ORDER BY source_kind ASC, source_scope ASC, original_title ASC`
+  );
+}
+
+export function mergeSourceDispositionRecords(records: SourceDispositionRecord[]) {
+  const driver = openDatabaseConnection().driver;
+  for (const record of records) {
+    runSourceDispositionUpsert(driver, record, record.disposition, record.updatedAt);
+  }
+  return summarizeSourceDispositions();
+}
+
+export function mergeImportedSourceDispositionRecords(records: SourceDispositionImportRecord[]) {
+  const driver = openDatabaseConnection().driver;
+  const updatedAt = new Date().toISOString();
+  let importedCount = 0;
+  for (const record of records) {
+    const keys = readSourceKeysByTitle(driver, record);
+    for (const key of keys) {
+      runSourceDispositionUpsert(driver, key, record.disposition, updatedAt);
+      importedCount += 1;
+    }
+  }
+  return {
+    importedCount,
+    summary: summarizeSourceDispositions()
   };
 }
 

@@ -7,6 +7,8 @@ import {
   type RuntimeSqliteRestoreResult
 } from '../../../shared/platform/settingsRuntimeRepository';
 export {
+  exportSourceDispositions,
+  importSourceDispositions,
   loadSourceDispositionSummary,
   resetSourceDispositions,
   restoreSourceDispositions
