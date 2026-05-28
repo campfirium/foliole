@@ -1,4 +1,4 @@
-import { ChevronsDownUp, ChevronsUpDown, FilePlus2, Focus } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, Focus, SquarePen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
@@ -123,7 +123,7 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
       </AppTooltip>
       <AppIconButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-        icon={<FilePlus2 size={16} strokeWidth={1.9} />}
+        icon={<SquarePen size={16} strokeWidth={1.9} />}
         label="Create topic"
         onClick={props.onCreateTopic}
       />

@@ -1,4 +1,4 @@
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowDownNarrowWide } from 'lucide-react';
 
 import {
   AppDropdownMenu,
@@ -95,7 +95,7 @@ function WorkspaceContentSortTrigger(props: { triggerLabel: string }) {
           className="inline-flex size-8 items-center justify-center rounded-md bg-transparent text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
           type="button"
         >
-          <ArrowUpDown aria-hidden="true" size={16} strokeWidth={1.9} />
+          <ArrowDownNarrowWide aria-hidden="true" size={16} strokeWidth={1.9} />
         </button>
       </AppDropdownMenuTrigger>
     </AppTooltipTrigger>
