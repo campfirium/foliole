@@ -146,6 +146,8 @@ it('opens the keep import preview dialog from the watch folders table', async ()
   expect(screen.queryByText('/demo/merged')).not.toBeInTheDocument();
   expect(screen.queryByText('Result preview')).not.toBeInTheDocument();
   expect(screen.getByText('Checked 1 full document file; 3 matched highlights.')).toBeInTheDocument();
-  expect(screen.getByText('second highlight')).toBeInTheDocument();
+  expect(screen.getByText('One sample highlight is shown below. Adjust the watch folder settings and preview again if it does not look right.')).toBeInTheDocument();
+  expect(screen.getByText('first highlight')).toBeInTheDocument();
+  expect(screen.queryByText('second highlight')).not.toBeInTheDocument();
   expect(screen.queryByText('third highlight')).not.toBeInTheDocument();
 });

@@ -43,16 +43,6 @@ export async function classifySource(
   const notImported = existingItem?.last_status === 'discovered' && !existingItem.last_node_id;
   const primaryChanged = hasPrimarySourceChanged(existingItem, sourceSignature);
   const highlightChanged = config.sourceType === 'readwise' ? hasHighlightSourceChanged(existingItem, sourceSignature) : false;
-  if (existingItem && !notImported && !deleted && !primaryChanged && !highlightChanged) {
-    return {
-      contentPreview: null,
-      detail: 'No file changes detected since the last keep scan.',
-      detectedHighlightCount: 0,
-      highlightSamples: [],
-      sourcePath,
-      status: 'unchanged'
-    };
-  }
   try {
     const prepared = await loadPreparedKeepImportRecord(config, source, new Date().toISOString());
     const highlightPreview = buildImportedHighlightPreviewFromMatches({
@@ -65,7 +55,9 @@ export async function classifySource(
       contentPreview: resolveNodeOpeningText(prepared.content, prepared.nodeTitle),
       detectedHighlightCount: highlightPreview.detectedHighlightCount,
       detail:
-        deleted
+        existingItem && !notImported && !deleted && !primaryChanged && !highlightChanged
+          ? 'This document is already imported and has no file changes.'
+          : deleted
           ? 'This source was deleted in Foliole and will stay blocked until you import it again manually.'
           : !existingItem || notImported
             ? 'New file will be imported when enabled.'
@@ -74,7 +66,14 @@ export async function classifySource(
               : 'Content file changed and will be refreshed when enabled.',
       highlightSamples: highlightPreview.samples,
       sourcePath,
-      status: deleted ? 'blocked_deleted' : !existingItem || notImported ? 'new' : 'updated'
+      status:
+        existingItem && !notImported && !deleted && !primaryChanged && !highlightChanged
+          ? 'unchanged'
+          : deleted
+            ? 'blocked_deleted'
+            : !existingItem || notImported
+              ? 'new'
+              : 'updated'
     };
   } catch (error) {
     return {

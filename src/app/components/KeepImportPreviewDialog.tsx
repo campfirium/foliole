@@ -3,7 +3,7 @@ import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPort
 
 import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
 
-const KEEP_PREVIEW_SAMPLE_LIMIT = 2;
+const KEEP_PREVIEW_SAMPLE_LIMIT = 1;
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
@@ -19,19 +19,19 @@ function formatPreviewResult(preview: KeepImportPreviewSummary) {
 }
 
 function formatPreviewGuidance(preview: KeepImportPreviewSummary) {
-  const visibleSampleCount = preview.samples.reduce(
-    (total, sample) => total + Math.min(sample.highlightSamples.length, KEEP_PREVIEW_SAMPLE_LIMIT),
-    0
-  );
-  const label = visibleSampleCount === 1 ? 'One sample highlight is' : `${visibleSampleCount} sample highlights are`;
-  return `${label} shown below. Adjust the watch folder settings and preview again if it does not look right.`;
+  if (!findPreviewSample(preview)) {
+    return preview.unchangedCount > 0
+      ? 'This document is already imported and has no new highlight samples to show.'
+      : 'No sample highlights are available for this preview.';
+  }
+  return 'One sample highlight is shown below. Adjust the watch folder settings and preview again if it does not look right.';
+}
+
+function findPreviewSample(preview: KeepImportPreviewSummary) {
+  return preview.samples.find((sample) => sample.highlightSamples.length > 0) ?? null;
 }
 
 function KeepImportPreviewEntry(props: { sample: KeepImportPreviewSummary['samples'][number] }) {
-  if (props.sample.highlightSamples.length === 0) {
-    return null;
-  }
-
   return (
     <section>
       <p className="mt-6 text-sm font-semibold leading-5 text-foreground">“{props.sample.sourcePath}”</p>
@@ -51,6 +51,7 @@ function KeepImportPreviewContent(props: { preview: KeepImportPreviewSummary | n
   if (!props.preview) {
     return <p className="text-sm text-foreground/60">No preview result available.</p>;
   }
+  const previewSample = findPreviewSample(props.preview);
 
   return (
     <>
@@ -59,9 +60,7 @@ function KeepImportPreviewContent(props: { preview: KeepImportPreviewSummary | n
         <p className="mt-1 text-sm leading-5 text-foreground/65">{formatPreviewGuidance(props.preview)}</p>
       </div>
       <div>
-        {props.preview.samples.map((sample) => (
-          <KeepImportPreviewEntry key={`${sample.status}-${sample.sourcePath}`} sample={sample} />
-        ))}
+        {previewSample ? <KeepImportPreviewEntry sample={previewSample} /> : null}
       </div>
     </>
   );

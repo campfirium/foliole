@@ -106,6 +106,32 @@ it('adopts inline markdown highlights for generic merged keep imports', async ()
   ]);
 });
 
+it('keeps preview samples available for already imported unchanged files', async () => {
+  const sourceDir = path.join(tempRoot, 'merged-source-repeat');
+  await fs.mkdir(sourceDir, { recursive: true });
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), 'Before ==important== after', 'utf8');
+
+  await runKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-104', 'adopt'));
+
+  const repeatedPreview = await previewKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-104', 'adopt'));
+  expect(repeatedPreview.entries).toEqual([
+    expect.objectContaining({
+      detail: 'This document is already imported and has no file changes.',
+      detected_highlight_count: 1,
+      highlight_samples: [
+        expect.objectContaining({
+          excerpt: 'Before important after',
+          highlightText: 'important',
+          matched: true,
+          sourceName: 'entry.md'
+        })
+      ],
+      source_path: 'entry.md',
+      status: 'unchanged'
+    })
+  ]);
+});
+
 it('stores a shortened derived cache preview beside the full import content', async () => {
   const sourceDir = path.join(tempRoot, 'long-source');
   const opening = Array.from({ length: 40 }, (_, index) => `Opening sentence ${index + 1}`).join(' ');

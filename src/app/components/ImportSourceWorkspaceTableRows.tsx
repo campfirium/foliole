@@ -78,6 +78,32 @@ function PreviewCell(props: {
   );
 }
 
+function HandlingCell(props: {
+  source: DraftImportSource;
+  onChangeAction: (sourceId: string, value: string) => void;
+}) {
+  return (
+    <div className="min-w-0">
+      <SourceSelect
+        ariaLabel={`Handling ${props.source.id}`}
+        onChange={(value) => props.onChangeAction(props.source.id, value)}
+        value={props.source.actionMode}
+      >
+        {importActionOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </SourceSelect>
+      {props.source.actionMode === 'delete' ? (
+        <p className="mt-1 text-xs leading-4 text-foreground/55">
+          Delete is not active for watch folders yet.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function SourceActions(props: {
   source: DraftImportSource;
   onDeleteSource: (sourceId: string) => void;
@@ -145,19 +171,9 @@ export function SourceRow({
         value={source.highlightMode}
       >
         <option value="merged">{formatHighlightModeLabel('merged')}</option>
-        <option value="split">{formatHighlightModeLabel('split')}</option>
-      </SourceSelect>
-      <SourceSelect
-        ariaLabel={`Handling ${source.id}`}
-        onChange={(value) => onChangeAction(source.id, value)}
-        value={source.actionMode}
-      >
-        {importActionOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </SourceSelect>
+          <option value="split">{formatHighlightModeLabel('split')}</option>
+        </SourceSelect>
+      <HandlingCell onChangeAction={onChangeAction} source={source} />
       <PreviewCell onDisableKeepImport={onDisableKeepImport} onPreviewKeepImport={onPreviewKeepImport} source={source} />
       <SourceActions onDeleteSource={onDeleteSource} source={source} />
     </div>
