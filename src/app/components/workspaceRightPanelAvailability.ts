@@ -51,8 +51,6 @@ export function isWorkspaceRightPanelAvailable(
   if (panelId === 'review-queue') {
     return true;
   }
-  if (context.kind === 'unsupported-topic') {
-    return panelId !== 'highlights';
-  }
+  if (context.kind === 'unsupported-topic') return panelId !== 'highlights';
   return context.kind === 'topic';
 }

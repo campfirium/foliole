@@ -42,9 +42,8 @@ it('keeps the right sidebar restore toggle when the sidebar is manually collapse
   renderTitleBar({ isRightSidebarCollapsed: true });
 
   expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Review queue panel' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Source info panel' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Flow panel' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Highlights panel' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Scheduling panel' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'More right sidebar panels' })).not.toBeInTheDocument();
 });

@@ -21,6 +21,7 @@ import {
   loadWorkspaceRightPanelPreference,
   saveWorkspaceRightPanelPreference
 } from './workspaceRightPanelPreference';
+import { subscribeWorkspaceRightPanelRequests } from './workspaceRightPanelRequests';
 import { WorkspaceRuntimeNotice } from './WorkspaceRuntimeNotice';
 import {
   selectWorkspaceSettingsOverlayProps,
@@ -142,6 +143,8 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
       layoutChrome.onToggleRightSidebarVisibility();
     }
   }, [layoutChrome.isRightSidebarCollapsed, layoutChrome.onToggleRightSidebarVisibility]);
+
+  useEffect(() => subscribeWorkspaceRightPanelRequests(handleSelectRightPanel), [handleSelectRightPanel]);
 
   return (
     <main aria-label="Foliole workspace" className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>

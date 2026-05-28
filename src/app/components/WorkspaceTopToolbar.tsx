@@ -1,8 +1,8 @@
-import { Bug, FileSearch, FileText, Gauge, Highlighter, Link2, PanelLeft, TableOfContents, Trash2, Waypoints } from 'lucide-react';
+import { CalendarClock, FileText, Highlighter, Link2, PanelLeft, TableOfContents, Trash2, Waypoints } from 'lucide-react';
 
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
-export type WorkspaceRightPanelId = 'review-queue' | 'source-info' | 'outline' | 'highlights' | 'backlinks' | 'performance' | 'dev';
+export type WorkspaceRightPanelId = 'review-queue' | 'outline' | 'highlights' | 'backlinks' | 'performance' | 'dev';
 
 const toolbarButtonClassName = 'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 const activeToolbarButtonClassName = `${toolbarButtonClassName} data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground`;
@@ -46,14 +46,8 @@ function renderInspectorActions(activeRightPanelId: WorkspaceRightPanelId, isRig
       <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
         icon={<Waypoints aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Review queue panel"
+        label="Flow panel"
         onClick={() => onSelectRightPanel('review-queue')}
-      />
-      <InspectorActionButton
-        active={!isRightSidebarCollapsed && activeRightPanelId === 'source-info'}
-        icon={<FileSearch aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Source info panel"
-        onClick={() => onSelectRightPanel('source-info')}
       />
       <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'outline'}
@@ -74,15 +68,9 @@ function renderInspectorActions(activeRightPanelId: WorkspaceRightPanelId, isRig
         onClick={() => onSelectRightPanel('backlinks')}
       />
       <InspectorActionButton
-        active={!isRightSidebarCollapsed && activeRightPanelId === 'performance'}
-        icon={<Gauge aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Performance panel"
-        onClick={() => onSelectRightPanel('performance')}
-      />
-      <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'dev'}
-        icon={<Bug aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Dev panel"
+        icon={<CalendarClock aria-hidden="true" size={16} strokeWidth={1.75} />}
+        label="Scheduling panel"
         onClick={() => onSelectRightPanel('dev')}
       />
     </>
@@ -111,7 +99,7 @@ export function WorkspaceTopToolbar({
           className={activeToolbarButtonClassName}
           data-active={!isTrashViewOpen}
           icon={<FileText aria-hidden="true" size={16} strokeWidth={1.75} />}
-          label="Open notes view"
+          label="Open topics view"
           onClick={onOpenNotesView}
         />
         <AppIconButton

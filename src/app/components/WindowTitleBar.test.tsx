@@ -178,11 +178,11 @@ describe('WindowTitleBar right sidebar anchor layout', () => {
   it('renders the expanded right sidebar toggle before the divider and the panel button inside the right zone', () => {
     const { container } = renderTitleBar({ isRightSidebarCollapsed: false });
     expectExpandedRightAnchorLayout(container);
-    expect(screen.getByRole('button', { name: 'Review queue panel' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Source info panel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Flow panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Outline panel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Highlights panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Scheduling panel' })).not.toBeInTheDocument();
   });
 
   it('uses the more menu as the visible active control for overflow panels', () => {
@@ -196,8 +196,8 @@ describe('WindowTitleBar right sidebar anchor layout', () => {
 
     openMoreRightPanelsMenu();
 
-    const devMenuItem = screen.getByRole('menuitem', { name: /Dev/ });
-    const reviewQueueMenuItem = screen.getByRole('menuitem', { name: /Review queue/ });
+    const devMenuItem = screen.getByRole('menuitem', { name: /Scheduling/ });
+    const reviewQueueMenuItem = screen.getByRole('menuitem', { name: /Flow/ });
 
     expect(devMenuItem.querySelector('svg')).not.toBeNull();
     expect(reviewQueueMenuItem.querySelector('svg')).not.toBeNull();
@@ -209,7 +209,7 @@ describe('WindowTitleBar right sidebar anchor sorting', () => {
   it('reorders visible panel buttons after drag sorting', () => {
     renderTitleBar({ activeRightPanelId: 'dev' });
 
-    const reviewButton = screen.getByRole('button', { name: 'Review queue panel' });
+    const reviewButton = screen.getByRole('button', { name: 'Flow panel' });
     const outlineButton = screen.getByRole('button', { name: 'Outline panel' });
     const transfer = createDragTransfer();
 
@@ -219,8 +219,8 @@ describe('WindowTitleBar right sidebar anchor sorting', () => {
 
     expect(getVisibleRightSidebarButtonLabels()).toEqual([
       'Outline panel',
-      'Review queue panel',
-      'Source info panel',
+      'Flow panel',
+      'Highlights panel',
       'More right sidebar panels'
     ]);
   });
@@ -230,18 +230,18 @@ describe('WindowTitleBar right sidebar anchor sorting', () => {
 
     openMoreRightPanelsMenu();
 
-    const devMenuItem = screen.getByRole('menuitem', { name: /Dev/ });
-    const sourceInfoMenuItem = screen.getByRole('menuitem', { name: /Source info/ });
+    const devMenuItem = screen.getByRole('menuitem', { name: /Scheduling/ });
+    const outlineMenuItem = screen.getByRole('menuitem', { name: /Outline/ });
     const transfer = createDragTransfer();
 
     fireEvent.dragStart(devMenuItem, { dataTransfer: transfer });
-    fireEvent.dragOver(sourceInfoMenuItem, { dataTransfer: transfer });
+    fireEvent.dragOver(outlineMenuItem, { dataTransfer: transfer });
     fireEvent.dragEnd(devMenuItem, { dataTransfer: transfer });
 
     expect(getVisibleRightSidebarButtonLabels()).toEqual([
-      'Review queue panel',
-      'Dev panel',
-      'Source info panel',
+      'Flow panel',
+      'Scheduling panel',
+      'Outline panel',
       'More right sidebar panels'
     ]);
   });

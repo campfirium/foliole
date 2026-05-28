@@ -23,6 +23,6 @@ it('falls back when the stored right sidebar panel is invalid', () => {
   expect(loadWorkspaceRightPanelPreference('review-queue')).toBe('review-queue');
 });
 
-it('defaults to source info for a fresh workspace', () => {
-  expect(loadWorkspaceRightPanelPreference()).toBe('source-info');
+it('defaults to Flow for a fresh workspace', () => {
+  expect(loadWorkspaceRightPanelPreference()).toBe('review-queue');
 });

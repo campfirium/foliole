@@ -95,7 +95,7 @@ it('exposes a load error without turning it into an empty source state', async (
 
   await waitFor(() => {
     expect(result.current).toEqual({
-      errorMessage: 'Source info could not be loaded.',
+      errorMessage: 'Source details could not be loaded.',
       isLoading: false,
       retry: expect.any(Function),
       value: null

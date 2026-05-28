@@ -6,10 +6,8 @@ it('normalizes persisted right panel order and fills missing panels', () => {
   expect(normalizeWorkspaceRightPanelOrder('highlights,review-queue')).toEqual([
     'highlights',
     'review-queue',
-    'source-info',
     'outline',
     'backlinks',
-    'performance',
     'dev'
   ]);
 });
@@ -17,9 +15,9 @@ it('normalizes persisted right panel order and fills missing panels', () => {
 it('moves a right panel before the drop target', () => {
   expect(
     moveWorkspaceRightPanel(
-      ['review-queue', 'source-info', 'highlights', 'backlinks', 'performance', 'dev'],
+      ['review-queue', 'outline', 'highlights', 'backlinks', 'dev'],
       'dev',
-      'source-info'
+      'outline'
     )
-  ).toEqual(['review-queue', 'dev', 'source-info', 'highlights', 'backlinks', 'performance']);
+  ).toEqual(['review-queue', 'dev', 'outline', 'highlights', 'backlinks']);
 });

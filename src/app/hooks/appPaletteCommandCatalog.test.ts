@@ -55,6 +55,7 @@ describe('getAppPaletteCommands', () => {
   it('keeps command palette sections aligned with the information architecture', () => {
     expect(sectionFor(APP_COMMAND_IDS.toggleDevTools)).toBe('Developer');
     expect(sectionFor(APP_COMMAND_IDS.reimportSelectedTopic)).toBe('Developer');
+    expect(sectionFor(APP_COMMAND_IDS.openPerformancePanel)).toBe('Developer');
     expect(sectionFor(APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence)).toBe('Developer');
     expect(sectionFor(APP_COMMAND_IDS.enterPriorityMode)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.exportCurrentArticle)).toBe('Editor');

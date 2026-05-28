@@ -1,4 +1,4 @@
-import { Bug, FileSearch, Gauge, Highlighter, Link2, TableOfContents, Waypoints } from 'lucide-react';
+import { CalendarClock, Gauge, Highlighter, Link2, TableOfContents, Waypoints } from 'lucide-react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
@@ -9,18 +9,14 @@ export interface WorkspaceRightPanelDefinition {
   icon: JSX.Element;
   menuLabel: string;
   panelId: WorkspaceRightPanelId;
+  visibleInTitlebar?: boolean;
 }
 
 export const WORKSPACE_RIGHT_PANEL_DEFINITIONS: WorkspaceRightPanelDefinition[] = [
   {
     icon: <Waypoints aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
-    menuLabel: 'Review queue',
+    menuLabel: 'Flow',
     panelId: 'review-queue'
-  },
-  {
-    icon: <FileSearch aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
-    menuLabel: 'Source info',
-    panelId: 'source-info'
   },
   {
     icon: <TableOfContents aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
@@ -40,14 +36,19 @@ export const WORKSPACE_RIGHT_PANEL_DEFINITIONS: WorkspaceRightPanelDefinition[] 
   {
     icon: <Gauge aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
     menuLabel: 'Performance',
-    panelId: 'performance'
+    panelId: 'performance',
+    visibleInTitlebar: false
   },
   {
-    icon: <Bug aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
-    menuLabel: 'Dev',
+    icon: <CalendarClock aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
+    menuLabel: 'Scheduling',
     panelId: 'dev'
   }
 ];
+
+export const WORKSPACE_VISIBLE_RIGHT_PANEL_IDS = WORKSPACE_RIGHT_PANEL_DEFINITIONS
+  .filter((item) => item.visibleInTitlebar !== false)
+  .map((item) => item.panelId);
 
 export function getWorkspaceRightPanelAriaLabel(panelId: WorkspaceRightPanelId) {
   return `${getWorkspaceRightPanelDefinition(panelId).menuLabel} panel`;

@@ -14,6 +14,12 @@ export const DEVELOPER_PALETTE_COMMANDS = [
     keywords: ['dev', 'debug', 'import', 'reimport', 'topic', 'removed']
   },
   {
+    id: APP_COMMAND_IDS.openPerformancePanel,
+    title: 'DEV Open Performance Panel',
+    section: 'Developer',
+    keywords: ['dev', 'debug', 'performance', 'timing', 'memory', 'cache']
+  },
+  {
     id: APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence,
     title: 'DEV Enable Review Status Bar Memory',
     section: 'Developer',
@@ -43,6 +49,9 @@ export function isDeveloperCommandEnabled(
   }
   if (id === APP_COMMAND_IDS.reimportSelectedTopic) {
     return options.canReimportSelectedTopic;
+  }
+  if (id === APP_COMMAND_IDS.openPerformancePanel) {
+    return true;
   }
   if (id === APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence) {
     return options.canToggleDevReviewStatusBarPersistence;

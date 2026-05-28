@@ -89,7 +89,7 @@ export function useNodeSourceDetails(nodeId: string | null) {
           if (isDisposed) {
             return;
           }
-          setState({ errorMessage: 'Source info could not be loaded.', isLoading: false, value: cachedValue });
+          setState({ errorMessage: 'Source details could not be loaded.', isLoading: false, value: cachedValue });
         });
 
     void refresh();

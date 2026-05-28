@@ -1,17 +1,17 @@
-import { RIGHT_PANEL_IDS } from './workspaceRightPanelPreference';
+import { VISIBLE_RIGHT_PANEL_IDS } from './workspaceRightPanelPreference';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export function normalizeWorkspaceRightPanelOrder(value: string | null) {
   if (!value) {
-    return [...RIGHT_PANEL_IDS];
+    return [...VISIBLE_RIGHT_PANEL_IDS];
   }
 
   const nextOrder = value
     .split(',')
     .map((item) => item.trim())
-    .filter((item): item is WorkspaceRightPanelId => RIGHT_PANEL_IDS.includes(item as WorkspaceRightPanelId));
+    .filter((item): item is WorkspaceRightPanelId => VISIBLE_RIGHT_PANEL_IDS.includes(item as WorkspaceRightPanelId));
 
-  for (const panelId of RIGHT_PANEL_IDS) {
+  for (const panelId of VISIBLE_RIGHT_PANEL_IDS) {
     if (!nextOrder.includes(panelId)) {
       nextOrder.push(panelId);
     }

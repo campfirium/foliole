@@ -11,6 +11,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
+import { requestWorkspaceRightPanelOpen } from '../components/workspaceRightPanelRequests';
 
 import { createPaletteReviewActions } from './appControllerPaletteReviewActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -165,6 +166,7 @@ function createPaletteRuntimeActions(args: {
   return {
     openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     openNotesView: args.layoutProps.nodeList.onOpenNotesView,
+    openPerformancePanel: () => requestWorkspaceRightPanelOpen('performance'),
     openPostponeTopicPanel: () => args.layoutProps.review.onOpenPostponeTopicPanel(),
     openReadwiseReaderSettings: () => openReadwiseReaderSettings(args.runtime),
     openTrashView: args.trash.openTrashView,

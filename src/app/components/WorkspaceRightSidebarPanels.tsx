@@ -14,7 +14,6 @@ import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHig
 import { WorkspaceRightSidebarOutlinePanel } from './WorkspaceRightSidebarOutlinePanel';
 import { WorkspaceRightSidebarPerformancePanel } from './WorkspaceRightSidebarPerformancePanel';
 import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
-import { WorkspaceRightSidebarSourcePanel } from './WorkspaceRightSidebarSourcePanel';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 type WorkspaceRightSidebarNodesById = Record<string, Node>;
@@ -55,22 +54,11 @@ export function renderWorkspaceRightSidebarPanel(props: WorkspaceRightSidebarPan
   }
   if (props.activePanelId === 'dev') return renderDevPanel(props);
   if (props.activePanelId === 'performance') return renderPerformancePanel(props);
-  if (props.activePanelId === 'source-info') return renderSourceInfoPanel(props);
   if (props.activePanelId === 'highlights') return renderHighlightsPanel(props);
   if (props.activePanelId === 'outline') return renderOutlinePanel(props);
   if (props.activePanelId === 'backlinks') return renderBacklinksPanel(props);
   return renderReviewQueuePanel(props);
 }
-
-const SourceInfoSidebarPanel = memo(function SourceInfoSidebarPanel(props: {
-  activeNodeId: string | null;
-  hasActiveNode: boolean;
-}) {
-  return <WorkspaceRightSidebarSourcePanel {...props} />;
-}, (previousProps, nextProps) =>
-  previousProps.activeNodeId === nextProps.activeNodeId &&
-  previousProps.hasActiveNode === nextProps.hasActiveNode
-);
 
 const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
   currentNodeId: string | null;
@@ -115,11 +103,6 @@ function renderDevPanel(props: Pick<WorkspaceRightSidebarPanelProps, 'activeNode
 
 function renderPerformancePanel(props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById'>) {
   return <WorkspaceRightSidebarPerformancePanel activeNodeId={props.activeNodeId} nodesById={props.nodesById} />;
-}
-
-function renderSourceInfoPanel(props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById'>) {
-  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
-  return <SourceInfoSidebarPanel activeNodeId={props.activeNodeId} hasActiveNode={Boolean(activeNode)} />;
 }
 
 function renderBacklinksPanel(

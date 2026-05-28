@@ -127,7 +127,7 @@ describe('WorkspaceLayoutGrid right sidebar wiring', () => {
     const props = buildProps(false);
     const { rerender } = render(
       <WorkspaceLayoutGrid
-        activeRightPanelId="source-info"
+        activeRightPanelId="review-queue"
         documentNodeId="node-1"
         isImmersiveEditing={false}
         onEnterImmersiveEdit={STABLE_NOOP}
@@ -193,7 +193,7 @@ function createGridSectionsMock() {
 function createGridElement(props: ReturnType<typeof buildProps>) {
   return (
     <WorkspaceLayoutGrid
-      activeRightPanelId="source-info"
+      activeRightPanelId="review-queue"
       documentNodeId="node-1"
       isImmersiveEditing={false}
       onEnterImmersiveEdit={STABLE_NOOP}

@@ -57,6 +57,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     importDirectory: () => undefined,
     importSingleFile: () => undefined,
     reimportSelectedTopic: () => undefined,
+    openPerformancePanel: () => undefined,
     openImportManagement: () => undefined,
     resetImportData: () => undefined,
     toggleDevReviewStatusBarPersistence: () => undefined,

@@ -1,17 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { requestWorkspaceRightPanelOpen } from '../app/components/workspaceRightPanelRequests';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
-
-function openRightPanelFromMenu(label: string) {
-  fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(label, 'i') }));
-}
 
 it('renders the standalone performance panel with timing, memory, and cache groups', async () => {
   useWorkspaceStore.setState((state) => ({
@@ -30,7 +26,7 @@ it('renders the standalone performance panel with timing, memory, and cache grou
 
   render(<App />);
 
-  openRightPanelFromMenu('Performance');
+  requestWorkspaceRightPanelOpen('performance');
 
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');

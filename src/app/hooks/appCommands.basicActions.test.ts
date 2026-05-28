@@ -57,6 +57,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     importDirectory: () => undefined,
     importSingleFile: () => undefined,
     reimportSelectedTopic: () => undefined,
+    openPerformancePanel: () => undefined,
     openImportManagement: () => undefined,
     resetImportData: () => undefined,
     toggleDevReviewStatusBarPersistence: () => undefined,
@@ -104,6 +105,14 @@ it('runs toggle devtools through the shared command handler', () => {
   expect(toggleDevTools).toHaveBeenCalledTimes(1);
   expect(importSingleFile).not.toHaveBeenCalled();
   expect(importDirectory).not.toHaveBeenCalled();
+});
+
+it('runs the developer performance panel command through the shared command handler', () => {
+  const openPerformancePanel = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.openPerformancePanel, { openPerformancePanel });
+
+  expect(openPerformancePanel).toHaveBeenCalledTimes(1);
 });
 
 it('runs open help search through the shared command handler', () => {

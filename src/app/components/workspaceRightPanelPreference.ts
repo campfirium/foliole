@@ -9,7 +9,6 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
   'review-queue',
-  'source-info',
   'outline',
   'highlights',
   'backlinks',
@@ -17,11 +16,19 @@ export const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
   'dev'
 ];
 
+export const VISIBLE_RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
+  'review-queue',
+  'outline',
+  'highlights',
+  'backlinks',
+  'dev'
+];
+
 function isWorkspaceRightPanelId(value: string | null): value is WorkspaceRightPanelId {
   return parseLiteralUnion(value, RIGHT_PANEL_IDS) !== null;
 }
 
-export function loadWorkspaceRightPanelPreference(fallback: WorkspaceRightPanelId = 'source-info') {
+export function loadWorkspaceRightPanelPreference(fallback: WorkspaceRightPanelId = 'review-queue') {
   const value = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarActivePanel);
   return isWorkspaceRightPanelId(value) ? value : fallback;
 }

@@ -52,6 +52,7 @@ export const APP_COMMAND_IDS = {
   openImportManagement: 'import.openManagement',
   resetImportData: 'dev.resetImportData',
   reimportSelectedTopic: 'dev.reimportSelectedTopic',
+  openPerformancePanel: 'dev.openPerformancePanel',
   toggleDevReviewStatusBarPersistence: 'dev.toggleReviewStatusBarPersistence',
   openNotes: 'workspace.openNotes',
   openHelpSearch: 'workspace.openHelpSearch',

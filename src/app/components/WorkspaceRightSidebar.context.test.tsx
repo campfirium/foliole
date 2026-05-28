@@ -142,6 +142,5 @@ it('keeps only outline and performance available for external documents', () => 
   expect(isWorkspaceRightPanelAvailable('outline', context)).toBe(true);
   expect(isWorkspaceRightPanelAvailable('performance', context)).toBe(true);
   expect(isWorkspaceRightPanelAvailable('highlights', context)).toBe(false);
-  expect(isWorkspaceRightPanelAvailable('source-info', context)).toBe(false);
   expect(isWorkspaceRightPanelAvailable('review-queue', context)).toBe(false);
 });

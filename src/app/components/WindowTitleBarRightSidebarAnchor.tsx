@@ -146,7 +146,7 @@ function OverflowPanelMenu(args: {
   orderedPanelIds: WorkspaceRightPanelId[];
 }) {
   const overflowPanelIds = args.orderedPanelIds.slice(VISIBLE_PANEL_COUNT);
-  const isActive = overflowPanelIds.includes(args.activeRightPanelId);
+  const isActive = overflowPanelIds.includes(args.activeRightPanelId) || !args.orderedPanelIds.includes(args.activeRightPanelId);
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>

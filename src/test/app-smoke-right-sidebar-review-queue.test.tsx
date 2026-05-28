@@ -59,10 +59,10 @@ it('renders the review queue panel with the active session queue', () => {
   }));
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Review queue panel' }));
-  const queueList = screen.getByRole('list', { name: 'Review flow items' });
+  fireEvent.click(screen.getByRole('button', { name: 'Flow panel' }));
+  const queueList = screen.getByRole('list', { name: 'Flow items' });
 
-  expect(screen.getByRole('button', { name: 'Review queue panel' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Flow panel' })).toHaveAttribute('aria-pressed', 'true');
   expect(within(queueList).getByText(/Review prompt$/)).toBeInTheDocument();
   expect(within(queueList).getByText(/Reading passage$/)).toBeInTheDocument();
 });
@@ -112,8 +112,8 @@ it('labels cloze review nodes as FSRS in the review queue panel', () => {
   }));
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Review queue panel' }));
-  const queueList = screen.getByRole('list', { name: 'Review flow items' });
+  fireEvent.click(screen.getByRole('button', { name: 'Flow panel' }));
+  const queueList = screen.getByRole('list', { name: 'Flow items' });
 
   expect(within(queueList).getByText(/Cloze prompt$/)).toBeInTheDocument();
 });
@@ -173,8 +173,8 @@ it('shows due extension entries beside the live task queue', () => {
   }));
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Review queue panel' }));
-  const queueList = screen.getByRole('list', { name: 'Review flow items' });
+  fireEvent.click(screen.getByRole('button', { name: 'Flow panel' }));
+  const queueList = screen.getByRole('list', { name: 'Flow items' });
 
   expect(within(queueList).getByText(/Scheduled review card$/)).toBeInTheDocument();
   expect(within(queueList).getByText(/Reading passage$/)).toBeInTheDocument();

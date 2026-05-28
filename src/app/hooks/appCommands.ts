@@ -34,6 +34,7 @@ interface RunAppCommandActions {
   toggleDismissedTopicsVisibility: () => void;
   importSingleFile: () => void | Promise<void>;
   reimportSelectedTopic: () => void | Promise<void>;
+  openPerformancePanel: () => void;
   resetImportData: () => boolean | void;
   toggleDevReviewStatusBarPersistence: () => void;
   startClipboardImport: () => void;
@@ -110,6 +111,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.clipboardImport]: actions.startClipboardImport,
     [APP_COMMAND_IDS.openImportManagement]: actions.openImportManagement,
     [APP_COMMAND_IDS.resetImportData]: actions.resetImportData,
+    [APP_COMMAND_IDS.openPerformancePanel]: actions.openPerformancePanel,
     [APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence]: actions.toggleDevReviewStatusBarPersistence,
     [APP_COMMAND_IDS.reimportSelectedTopic]: actions.reimportSelectedTopic,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,

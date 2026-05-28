@@ -44,6 +44,7 @@ interface PaletteCommandRunnerArgs {
   redoWorkspaceAction: () => boolean;
   isReviewMode: boolean;
   openImportManagement: () => void;
+  openPerformancePanel: () => void;
   openNotesView: () => void;
   onToggleEditorDisplayMode: () => void;
   onToggleImmersiveMode: () => void;
@@ -170,6 +171,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
       void args.reimportSelectedTopic();
     },
     openImportManagement: args.openImportManagement,
+    openPerformancePanel: args.openPerformancePanel,
     resetImportData: () => runResetImportDataCommand(args),
     toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,
     openNotes: args.closeTrashView,
