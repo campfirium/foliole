@@ -35,37 +35,37 @@ export type WorkspaceSurfaceAssignments = Record<WorkspaceSurfaceRegionId, numbe
 export type WorkspaceSurfaceColorMode = 'dark' | 'light';
 
 export const DEFAULT_WORKSPACE_SURFACE_PALETTE: WorkspaceSurfacePalette = [
+  '#b9b1a7',
+  '#e7e3dd',
+  '#f3eee8',
   '#ffffff',
-  '#fcfcfc',
-  '#f6f6f6',
-  '#f5f5f3',
-  '#ececea'
+  '#fbf9f7'
 ];
 
 export const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE: WorkspaceSurfacePalette = [
-  '#1f211f',
+  '#2b2f2a',
   '#252824',
   '#2b2f2a',
-  '#171817',
+  '#1f211f',
   '#30362f'
 ];
 
 export const DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS: WorkspaceSurfaceAssignments = {
-  'titlebar-rail': 1,
+  'titlebar-rail': 0,
   'titlebar-folder': 1,
-  'titlebar-topic': 1,
-  'titlebar-document': 1,
-  'titlebar-sidebar': 1,
-  'main-rail': 2,
-  'main-folder': 2,
+  'titlebar-topic': 2,
+  'titlebar-document': 3,
+  'titlebar-sidebar': 4,
+  'main-rail': 0,
+  'main-folder': 1,
   'main-topic': 2,
-  'main-document': 0,
-  'main-sidebar': 2,
-  'footer-rail': 1,
+  'main-document': 3,
+  'main-sidebar': 4,
+  'footer-rail': 0,
   'footer-folder': 1,
-  'footer-topic': 1,
-  'footer-document': 1,
-  'footer-sidebar': 1
+  'footer-topic': 2,
+  'footer-document': 3,
+  'footer-sidebar': 4
 };
 
 const STORAGE_KEYS = {

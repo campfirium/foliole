@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { buildWorkspaceSurfaceAutoColumnPalette } from '../model/workspaceSurfaceAutoPalette';
 import { parseWorkspaceSurfaceColor } from '../model/workspaceSurfaceColor';
+import { DEFAULT_WORKSPACE_SURFACE_PALETTE } from '../model/workspaceSurfaceSettings';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
@@ -103,7 +104,7 @@ it('applies auto palette options before writing into the free palette slots', as
   });
 }, 15_000);
 
-it('resets workspace surface settings back to the gray automatic default', async () => {
+it('resets workspace surface settings back to the product default theme', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -112,6 +113,7 @@ it('resets workspace surface settings back to the gray automatic default', async
   fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
 
   await waitFor(() => {
-    expect(screen.getByLabelText('Automatic workspace seed hex')).toHaveValue('#7a7a7a');
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    expect(palette).toEqual(DEFAULT_WORKSPACE_SURFACE_PALETTE);
   });
 });

@@ -10,9 +10,9 @@ const MIN_RIGHT_SIDEBAR_WIDTH = 240;
 const DEFAULT_LIGHT_SURFACES = {
   document: '#ffffff',
   divider: 'rgba(32, 33, 36, 0.18)',
-  list: '#f6f6f6',
-  sidebar: '#f6f6f6',
-  titlebar: '#fcfcfc'
+  list: '#f3eee8',
+  sidebar: '#fbf9f7',
+  titlebar: '#e7e3dd'
 };
 const DEFAULT_DARK_SURFACES = {
   document: '#1f211f',
@@ -45,19 +45,19 @@ const WORKSPACE_SURFACE_REGION_IDS = [
   'main-document',
   'main-sidebar'
 ] as const;
-const DEFAULT_LIGHT_WORKSPACE_SURFACE_PALETTE = ['#ffffff', '#fcfcfc', '#f6f6f6', '#f5f5f3', '#ececea'];
-const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE = ['#1f211f', '#252824', '#2b2f2a', '#171817', '#30362f'];
+const DEFAULT_LIGHT_WORKSPACE_SURFACE_PALETTE = ['#b9b1a7', '#e7e3dd', '#f3eee8', '#ffffff', '#fbf9f7'];
+const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE = ['#2b2f2a', '#252824', '#2b2f2a', '#1f211f', '#30362f'];
 const DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS = {
-  'titlebar-rail': 1,
+  'titlebar-rail': 0,
   'titlebar-folder': 1,
-  'titlebar-topic': 1,
-  'titlebar-document': 1,
-  'titlebar-sidebar': 1,
-  'main-rail': 2,
-  'main-folder': 2,
+  'titlebar-topic': 2,
+  'titlebar-document': 3,
+  'titlebar-sidebar': 4,
+  'main-rail': 0,
+  'main-folder': 1,
   'main-topic': 2,
-  'main-document': 0,
-  'main-sidebar': 2
+  'main-document': 3,
+  'main-sidebar': 4
 } as const;
 
 export interface StartupSkeletonLayout {

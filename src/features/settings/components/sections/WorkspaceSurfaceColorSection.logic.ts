@@ -11,10 +11,7 @@ import { createRandomWorkspaceSurfacePalettes as buildRandomWorkspaceSurfacePale
 import {
   type WorkspaceSurfaceColorValue
 } from '../../model/workspaceSurfaceColor';
-import { parseWorkspaceSurfaceColor } from '../../model/workspaceSurfaceColor';
 import {
-  DEFAULT_WORKSPACE_SURFACE_AUTO_SEED,
-  DEFAULT_DARK_WORKSPACE_SURFACE_AUTO_SEED,
   addWorkspaceSurfaceFavorite,
   getWorkspaceSurfaceAutoOptions,
   getWorkspaceSurfaceAutoSeed,
@@ -233,23 +230,8 @@ export function resetWorkspaceSurfaceFreePalette(editor: ReturnType<typeof useWo
 }
 
 export function resetWorkspaceSurfaceToDefault(editor: ReturnType<typeof useWorkspaceSurfaceEditor>) {
-  const defaultSeed = editor.mode === 'dark'
-    ? DEFAULT_DARK_WORKSPACE_SURFACE_AUTO_SEED
-    : DEFAULT_WORKSPACE_SURFACE_AUTO_SEED;
-  const seed = parseWorkspaceSurfaceColor(defaultSeed) ?? getWorkspaceSurfaceAutoSeed(defaultSeed, editor.mode);
-  const options = {
-    documentPureWhite: false,
-    folderTopicSharedTone: false
-  };
-  editor.setGeneratedMode('automatic');
-  editor.setAutoOptions(options);
-  editor.setAutoSeedColor(seed);
-  const palette = applyWorkspaceSurfaceAutoPalette(
-    editor.appearance.workspaceSurfacePalette,
-    buildWorkspaceSurfaceAutoColumnPalette(seed, options, undefined, editor.mode)
-  );
-  editor.appearance.setWorkspaceSurfacePalette(palette);
-  editor.appearance.setWorkspaceSurfaceAssignments(buildWorkspaceSurfaceAutoAssignments());
+  editor.setGeneratedMode('manual');
+  editor.appearance.resetWorkspaceSurfaceSettings();
   editor.setActiveBrushIndex(3);
 }
 

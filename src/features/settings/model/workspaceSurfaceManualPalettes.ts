@@ -6,6 +6,11 @@ export type WorkspaceSurfaceManualPaletteDefinition = {
 };
 
 export const WORKSPACE_SURFACE_MANUAL_PALETTES: readonly WorkspaceSurfaceManualPaletteDefinition[] = [
+  { family: 'foliole-default', id: 'foliole-default-greige-paper', tones: ['#b9b1a7', '#e7e3dd', '#f3eee8', '#fbfaf8', '#fbfaf7'], whiteDocumentTones: ['#b9b1a7', '#e7e3dd', '#f3eee8', '#ffffff', '#fbfaf7'] },
+  { family: 'foliole-warm-paper', id: 'foliole-warm-paper-trial', tones: ['#bfac9e', '#f0e9e2', '#f9f4f0', '#fbfaf8', '#fbf9f7'], whiteDocumentTones: ['#bfac9e', '#f0e9e2', '#f9f4f0', '#ffffff', '#fbf9f7'] },
+  { family: 'foliole-mist', id: 'foliole-mist-trial', tones: ['#ebe5df', '#f2efea', '#f7f5f2', '#fbfaf8', '#fbfaf8'], whiteDocumentTones: ['#ebe5df', '#f2efea', '#f7f5f2', '#ffffff', '#f7f5f2'] },
+  { family: 'foliole-paper', id: 'foliole-paper-trial', tones: ['#d8d3cc', '#f0eeeb', '#f7f5f2', '#fbfaf8', '#fbfaf8'], whiteDocumentTones: ['#d8d3cc', '#f0eeeb', '#f7f5f2', '#ffffff', '#fbfaf8'] },
+  { family: 'foliole-ash', id: 'foliole-ash-trial', tones: ['#b9afa6', '#e9e4de', '#f3eee8', '#fbfaf8', '#faf8f5'], whiteDocumentTones: ['#b9afa6', '#e9e4de', '#f3eee8', '#ffffff', '#faf8f5'] },
   { family: 'graphite', id: 'graphite-paper-deep', tones: ['#686868', '#c4c4c4', '#dddddd', '#f3f3f3', '#e7e7e7'], whiteDocumentTones: ['#747474', '#d0d0d0', '#e5e5e5', '#ffffff', '#f1f1f1'] },
   { family: 'graphite', id: 'graphite-paper-soft', tones: ['#7d7d7d', '#cdcdcd', '#e3e3e3', '#f5f5f5', '#ebebeb'], whiteDocumentTones: ['#878787', '#d8d8d8', '#e9e9e9', '#ffffff', '#f3f3f3'] },
   { family: 'warm-ash', id: 'warm-ash-linen', tones: ['#8f857c', '#d4ccc5', '#e7e0da', '#f5f1ed', '#ece8e4'], whiteDocumentTones: ['#9b9087', '#ddd6cf', '#ece6e0', '#ffffff', '#f4f2ef'] },
