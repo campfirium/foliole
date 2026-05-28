@@ -5,13 +5,13 @@ import {
   getFormalImportLatestResult
 } from '../hooks/useFormalImport';
 
-import type { ClipboardImportNoticeTone } from './ClipboardImportNotice';
+import type { WorkspaceActivityNoticeTone } from './WorkspaceActivityNotice';
 
-interface ClipboardImportNoticeState {
+interface WorkspaceActivityNoticeState {
   id: number;
   message: string;
   nodeId: string | null;
-  tone: ClipboardImportNoticeTone;
+  tone: WorkspaceActivityNoticeTone;
 }
 
 const NOTICE_TIMEOUT_MS = 3600;
@@ -22,7 +22,7 @@ const LOADING_MESSAGES: Record<ImportNoticeKind, string> = {
   file: 'Importing file...'
 };
 
-function resolveImportNotice(id: number, kind: ImportNoticeKind, imported: boolean): ClipboardImportNoticeState {
+function resolveImportNotice(id: number, kind: ImportNoticeKind, imported: boolean): WorkspaceActivityNoticeState {
   const latestImport = imported ? getFormalImportLatestResult() : null;
   const didImport = imported && latestImport?.resultStatus !== 'failed';
   const nodeId = didImport ? latestImport?.nodeId ?? null : null;
@@ -43,12 +43,12 @@ function resolveImportNotice(id: number, kind: ImportNoticeKind, imported: boole
   };
 }
 
-export function useClipboardImportNotice(
+export function useWorkspaceActivityNotice(
   onStartClipboardImport: () => boolean | Promise<boolean>,
   onStartFileImport: () => boolean | Promise<boolean>,
   onOpenImportedTopic: (nodeId: string) => void
 ) {
-  const [notice, setNotice] = useState<ClipboardImportNoticeState | null>(null);
+  const [notice, setNotice] = useState<WorkspaceActivityNoticeState | null>(null);
 
   useEffect(() => {
     if (!notice || notice.tone === 'loading') {

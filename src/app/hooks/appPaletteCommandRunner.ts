@@ -30,7 +30,7 @@ interface PaletteCommandRunnerArgs {
   goParent: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
   importDirectory: () => Promise<boolean>;
-  importSingleFile: () => Promise<boolean>;
+  importSingleFile: () => void;
   reimportSelectedTopic: () => Promise<boolean>;
   resetImportData: () => Promise<boolean>;
   toggleDevReviewStatusBarPersistence: () => void;

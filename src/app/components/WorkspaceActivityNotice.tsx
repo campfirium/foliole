@@ -2,12 +2,12 @@ import { ArrowUpRight, CheckCircle2, XCircle } from 'lucide-react';
 
 import { AppSpinner } from '../../shared/ui';
 
-export type ClipboardImportNoticeTone = 'loading' | 'success' | 'error';
+export type WorkspaceActivityNoticeTone = 'loading' | 'success' | 'error';
 
 const iconClassName = 'mt-0.5 shrink-0';
 const staticIconClassName = `${iconClassName} size-4`;
 
-function renderIcon(tone: ClipboardImportNoticeTone) {
+function renderIcon(tone: WorkspaceActivityNoticeTone) {
   if (tone === 'loading') {
     return <AppSpinner className={iconClassName} decorative size="sm" />;
   }
@@ -17,7 +17,7 @@ function renderIcon(tone: ClipboardImportNoticeTone) {
   return <XCircle aria-hidden="true" className={staticIconClassName} strokeWidth={1.75} />;
 }
 
-export function ClipboardImportNotice({
+export function WorkspaceActivityNotice({
   message,
   onOpen,
   openLabel = 'Open imported topic',
@@ -26,7 +26,7 @@ export function ClipboardImportNotice({
   message: string;
   onOpen?: () => void;
   openLabel?: string;
-  tone: ClipboardImportNoticeTone;
+  tone: WorkspaceActivityNoticeTone;
 }) {
   const content = (
     <>

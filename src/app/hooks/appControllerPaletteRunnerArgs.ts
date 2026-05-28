@@ -8,7 +8,6 @@ import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { requestClipboardImport } from '../components/clipboardImportRequest';
 import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
@@ -16,6 +15,7 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import { createPaletteReviewActions } from './appControllerPaletteReviewActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
+import { createPaletteImportActions } from './appPaletteImportActions';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
 import { restartAppWithReadingProgress } from './appRestartPersistence';
 import { repairEditorTable } from './editorRepairTableCommand';
@@ -173,7 +173,6 @@ function createPaletteRuntimeActions(args: {
     setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
     setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
     setSettingsOpen: args.runtime.setIsSettingsOpen,
-    startClipboardImport: requestClipboardImport,
     trashViewOpen: args.trash.isTrashViewOpen
   };
 }
@@ -208,8 +207,7 @@ export function createPaletteRunnerArgs(args: {
     findInTopic: requestDocumentTopicSearchOpen,
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
     ...createPaletteNavigationActions(args),
-    importDirectory: args.formalImport.startImportDirectory,
-    importSingleFile: args.formalImport.startImportFile,
+    ...createPaletteImportActions(args.formalImport),
     onRestartApp: createRestartAppCommand(args),
     onOpenHelpSearch: args.onOpenHelpSearch,
     ...createPaletteAppearanceActions(args),
@@ -226,7 +224,6 @@ export function createPaletteRunnerArgs(args: {
       editorRef: args.runtime.editorRef,
       updateNodeContent: args.ws.updateNodeContent
     }),
-    reimportSelectedTopic: createReimportSelectedTopicCommand(args),
-    resetImportData: args.formalImport.resetImportData
+    reimportSelectedTopic: createReimportSelectedTopicCommand(args)
   };
 }

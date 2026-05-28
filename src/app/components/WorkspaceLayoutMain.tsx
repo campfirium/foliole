@@ -4,13 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 
-import { ClipboardImportNotice } from './ClipboardImportNotice';
-import { CLIPBOARD_IMPORT_REQUEST_EVENT } from './clipboardImportRequest';
 import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
+import {
+  CLIPBOARD_IMPORT_REQUEST_EVENT,
+  FILE_IMPORT_REQUEST_EVENT
+} from './importActivityRequests';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
-import { useClipboardImportNotice } from './useClipboardImportNotice';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
+import { useWorkspaceActivityNotice } from './useWorkspaceActivityNotice';
+import { WorkspaceActivityNotice } from './WorkspaceActivityNotice';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
@@ -62,12 +65,12 @@ function buildWorkspaceGridStyle(layoutChrome: WorkspaceLayoutProps['layoutChrom
   } as CSSProperties;
 }
 
-function renderClipboardImportNotice(controller: ReturnType<typeof useClipboardImportNotice>) {
+function renderWorkspaceActivityNotice(controller: ReturnType<typeof useWorkspaceActivityNotice>) {
   if (!controller.notice) {
     return null;
   }
   return (
-    <ClipboardImportNotice
+    <WorkspaceActivityNotice
       message={controller.notice.message}
       tone={controller.notice.tone}
       {...definedProps({ onOpen: controller.notice.nodeId ? controller.openImportedTopic : undefined })}
@@ -75,14 +78,21 @@ function renderClipboardImportNotice(controller: ReturnType<typeof useClipboardI
   );
 }
 
-function useClipboardImportRequest(controller: ReturnType<typeof useClipboardImportNotice>) {
+function useWorkspaceImportRequests(controller: ReturnType<typeof useWorkspaceActivityNotice>) {
   useEffect(() => {
-    const handleRequest = () => {
+    const handleClipboardRequest = () => {
       void controller.startClipboardImport();
     };
-    window.addEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleRequest);
-    return () => window.removeEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleRequest);
-  }, [controller.startClipboardImport]);
+    const handleFileRequest = () => {
+      void controller.startFileImport();
+    };
+    window.addEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
+    window.addEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
+    return () => {
+      window.removeEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
+      window.removeEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
+    };
+  }, [controller.startClipboardImport, controller.startFileImport]);
 }
 
 function useWorkspaceImportNoticeController(imports: WorkspaceLayoutProps['imports'], navigation: WorkspaceLayoutProps['navigation']) {
@@ -90,12 +100,12 @@ function useWorkspaceImportNoticeController(imports: WorkspaceLayoutProps['impor
     imports.onCloseImportManagement();
     navigation.onSelectNode(nodeId);
   }, [imports.onCloseImportManagement, navigation.onSelectNode]);
-  const clipboardImportNotice = useClipboardImportNotice(
+  const clipboardImportNotice = useWorkspaceActivityNotice(
     imports.onStartClipboardImport,
     imports.onRunImportFile,
     handleOpenClipboardImport
   );
-  useClipboardImportRequest(clipboardImportNotice);
+  useWorkspaceImportRequests(clipboardImportNotice);
   return clipboardImportNotice;
 }
 
@@ -145,7 +155,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         gridProps={gridProps}
         titleBarProps={props}
       />
-      {renderClipboardImportNotice(clipboardImportNotice)}
+      {renderWorkspaceActivityNotice(clipboardImportNotice)}
       <WorkspaceRuntimeNotice />
       <ImmersiveShortcutsOverlay visible={layoutChrome.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
       <ImportSourceWorkspace

@@ -53,7 +53,10 @@ vi.mock('./useImmersiveReadingMode', () => ({
 
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
-import { requestClipboardImport } from './clipboardImportRequest';
+import {
+  requestClipboardImport,
+  requestFileImport
+} from './importActivityRequests';
 import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
@@ -161,6 +164,23 @@ it('runs requested clipboard imports through the workspace notice controller', a
 
   await waitFor(() => {
     expect(screen.getByRole('status')).toHaveTextContent('No supported clipboard content found');
+  });
+});
+
+it('runs requested file imports through the workspace notice controller', async () => {
+  const importResult = createDeferred<boolean>();
+  const onRunImportFile = vi.fn(() => importResult.promise);
+
+  render(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
+
+  requestFileImport();
+  expect(await screen.findByRole('status')).toHaveTextContent('Importing file...');
+  expect(onRunImportFile).toHaveBeenCalledTimes(1);
+
+  importResult.resolve(false);
+
+  await waitFor(() => {
+    expect(screen.getByRole('status')).toHaveTextContent('No file imported');
   });
 });
 
