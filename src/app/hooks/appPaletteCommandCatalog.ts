@@ -143,12 +143,12 @@ function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOpti
   return null;
 }
 
-function isImportCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+function isImportCommandEnabled(id: string) {
   if (id === APP_COMMAND_IDS.importSingleFile) {
-    return options.canImportFile;
+    return true;
   }
   if (id === APP_COMMAND_IDS.importFolder) {
-    return options.canImportFolder;
+    return true;
   }
   return null;
 }

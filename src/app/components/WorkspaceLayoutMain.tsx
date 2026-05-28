@@ -5,6 +5,7 @@ import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 
 import { ClipboardImportNotice } from './ClipboardImportNotice';
+import { CLIPBOARD_IMPORT_REQUEST_EVENT } from './clipboardImportRequest';
 import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
@@ -74,6 +75,16 @@ function renderClipboardImportNotice(controller: ReturnType<typeof useClipboardI
   );
 }
 
+function useClipboardImportRequest(controller: ReturnType<typeof useClipboardImportNotice>) {
+  useEffect(() => {
+    const handleRequest = () => {
+      void controller.startClipboardImport();
+    };
+    window.addEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleRequest);
+    return () => window.removeEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleRequest);
+  }, [controller.startClipboardImport]);
+}
+
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const { imports, layoutChrome, navigation, settings, trash } = props;
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
@@ -86,6 +97,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
     navigation.onSelectNode(nodeId);
   }, [imports.onCloseImportManagement, navigation.onSelectNode]);
   const clipboardImportNotice = useClipboardImportNotice(imports.onStartClipboardImport, handleOpenClipboardImport);
+  useClipboardImportRequest(clipboardImportNotice);
   const gridProps = useMemo(() => ({
     ...props,
     imports: {

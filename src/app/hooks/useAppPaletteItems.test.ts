@@ -80,3 +80,21 @@ it('keeps immersive reading available while review mode is active', () => {
     enabled: true
   });
 });
+
+it('keeps import commands enabled for the unified shortcut and menu command path', () => {
+  const { result } = renderHook(() =>
+    useAppPaletteItems({
+      ...createPaletteArgs('node-1'),
+      formalImportAvailable: false
+    } as unknown as Parameters<typeof useAppPaletteItems>[0])
+  );
+
+  expect(result.current.find((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toMatchObject({
+    enabled: true,
+    shortcuts: { primary: { ctrlKey: true, key: 'o' } }
+  });
+  expect(result.current.find((item) => item.id === APP_COMMAND_IDS.clipboardImport)).toMatchObject({
+    enabled: true,
+    shortcuts: { primary: { altKey: true, ctrlKey: true, key: 'v' } }
+  });
+});

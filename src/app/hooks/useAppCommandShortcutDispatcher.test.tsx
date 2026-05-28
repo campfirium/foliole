@@ -11,6 +11,12 @@ function dispatchShortcut(init: KeyboardEventInit) {
   return event;
 }
 
+function dispatchShortcutFrom(target: HTMLElement, init: KeyboardEventInit) {
+  const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+  target.dispatchEvent(event);
+  return event;
+}
+
 function Harness({
   isCommandSurfaceOpen = false,
   items,
@@ -27,6 +33,8 @@ function Harness({
     shortcutMap: {
       'app.undo': { primary: { ctrlKey: true, key: 'z' } },
       'app.redo': { primary: { ctrlKey: true, key: 'z', shiftKey: true }, tertiary: { ctrlKey: true, key: 'y' } },
+      'import.clipboard': { primary: { ctrlKey: true, altKey: true, key: 'v' } },
+      'import.singleFileToInbox': { primary: { ctrlKey: true, key: 'o' } },
       'workspace.createFolder': { primary: { ctrlKey: true, altKey: true, key: 'f' } },
       'editor.toggleDisplayMode': { primary: { ctrlKey: true, key: '\\' } },
       'workspace.toggleList': { primary: { ctrlKey: true, key: 'l' }, tertiary: { key: '[' } },
@@ -80,6 +88,27 @@ it('can dispatch newly routed create command shortcuts', () => {
 
   expect(event.defaultPrevented).toBe(true);
   expect(runCommand).toHaveBeenCalledWith('workspace.createFolder');
+});
+
+it('dispatches import shortcuts before an editor target can stop bubbling', () => {
+  const runCommand = vi.fn();
+  render(
+    <Harness
+      items={[
+        { enabled: true, id: 'import.singleFileToInbox', title: 'Import Files' },
+        { enabled: true, id: 'import.clipboard', title: 'Import Clipboard' }
+      ]}
+      runCommand={runCommand}
+    />
+  );
+  const input = document.querySelector('input')!;
+  input.addEventListener('keydown', (event) => event.stopPropagation());
+  input.focus();
+
+  expect(dispatchShortcutFrom(input, { ctrlKey: true, key: 'o' }).defaultPrevented).toBe(true);
+  expect(dispatchShortcutFrom(input, { ctrlKey: true, altKey: true, key: 'v' }).defaultPrevented).toBe(true);
+  expect(runCommand).toHaveBeenNthCalledWith(1, 'import.singleFileToInbox');
+  expect(runCommand).toHaveBeenNthCalledWith(2, 'import.clipboard');
 });
 
 it('dispatches non-editing bracket sidebar shortcuts', () => {

@@ -8,6 +8,7 @@ import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { requestClipboardImport } from '../components/clipboardImportRequest';
 import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
@@ -172,7 +173,7 @@ function createPaletteRuntimeActions(args: {
     setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
     setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
     setSettingsOpen: args.runtime.setIsSettingsOpen,
-    startClipboardImport: args.layoutProps.imports.onStartClipboardImport,
+    startClipboardImport: requestClipboardImport,
     trashViewOpen: args.trash.isTrashViewOpen
   };
 }

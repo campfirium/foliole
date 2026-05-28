@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { resolveCommandShortcutDispatch } from '../../shared/commands/shortcutDispatcher';
 import type { CommandPaletteItem, CommandShortcutSet } from '../../shared/commands/types';
-import { onWindowKeydown } from '../../shared/platform/keyboard';
+import { onWindowKeydownCapture } from '../../shared/platform/keyboard';
 
 import { DOCUMENT_SHORTCUT_COMMAND_IDS, REVIEW_SHORTCUT_COMMAND_IDS } from './reviewHotkeysState';
 
@@ -64,7 +64,7 @@ export function useAppCommandShortcutDispatcher(args: {
 }) {
   useEffect(
     () =>
-      onWindowKeydown((event) => {
+      onWindowKeydownCapture((event) => {
         if (shouldSkipCommandShortcut({ event, isCommandSurfaceOpen: args.isCommandSurfaceOpen })) {
           return;
         }

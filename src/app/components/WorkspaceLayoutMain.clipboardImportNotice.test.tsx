@@ -50,6 +50,7 @@ vi.mock('./useImmersiveReadingMode', () => ({
 
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
+import { requestClipboardImport } from './clipboardImportRequest';
 import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
@@ -123,6 +124,23 @@ it('opens the imported clipboard topic from the success notice', async () => {
 
   expect(onCloseImportManagement).toHaveBeenCalledTimes(1);
   expect(onSelectNode).toHaveBeenCalledWith('node-imported');
+});
+
+it('runs requested clipboard imports through the workspace notice controller', async () => {
+  const importResult = createDeferred<boolean>();
+  const onStartClipboardImport = vi.fn(() => importResult.promise);
+
+  render(<WorkspaceLayoutMain {...createProps({ onStartClipboardImport })} />);
+
+  requestClipboardImport();
+  expect(await screen.findByRole('status')).toHaveTextContent('Importing clipboard...');
+  expect(onStartClipboardImport).toHaveBeenCalledTimes(1);
+
+  importResult.resolve(false);
+
+  await waitFor(() => {
+    expect(screen.getByRole('status')).toHaveTextContent('No supported clipboard content found');
+  });
 });
 
 it('shows app runtime notices inside the workspace surface', async () => {

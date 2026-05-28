@@ -23,21 +23,17 @@ describe('default command shortcuts', () => {
     expect(matchesShortcutSet(keyEvent({ key: 'i', metaKey: true, altKey: true }), shortcuts)).toBe(true);
   });
 
-  it('registers create commands with platform-paired modifiers without reusing the macOS DevTools shortcut', () => {
+  it('registers create commands on the Windows default shortcut set', () => {
     expect(matchesShortcutSet(
       keyEvent({ key: 'f', ctrlKey: true, altKey: true }),
       DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.createFolder]
     )).toBe(true);
     expect(matchesShortcutSet(
-      keyEvent({ key: 't', metaKey: true, altKey: true }),
+      keyEvent({ key: 'n', ctrlKey: true }),
       DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.createTopic]
     )).toBe(true);
     expect(matchesShortcutSet(
-      keyEvent({ key: 'e', ctrlKey: true, altKey: true }),
-      DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.createItem]
-    )).toBe(true);
-    expect(matchesShortcutSet(
-      keyEvent({ key: 'e', metaKey: true, altKey: true }),
+      keyEvent({ key: 'n', ctrlKey: true, altKey: true }),
       DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.createItem]
     )).toBe(true);
     expect(matchesShortcutSet(
@@ -46,6 +42,19 @@ describe('default command shortcuts', () => {
     )).toBe(false);
   });
 
+  it('registers import commands on the Windows default shortcut set', () => {
+    expect(matchesShortcutSet(
+      keyEvent({ key: 'o', ctrlKey: true }),
+      DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.importSingleFile]
+    )).toBe(true);
+    expect(matchesShortcutSet(
+      keyEvent({ key: 'v', ctrlKey: true, altKey: true }),
+      DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.clipboardImport]
+    )).toBe(true);
+  });
+});
+
+describe('workspace default command shortcuts', () => {
   it('registers toggle list on left bracket with modifier fallbacks', () => {
     const shortcuts = DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.toggleList];
 
