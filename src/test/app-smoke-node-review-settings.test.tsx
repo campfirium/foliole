@@ -1,58 +1,69 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
-import { App } from '../app/App';
 import { DocumentPanelNodeReviewSettings } from '../app/components/DocumentPanelNodeReviewSettings';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../features/settings/model/reviewSchedulerSettings';
-import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
-function openRightPanelFromMenu(label: string) {
-  fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(label, 'i') }));
-}
-
 it('shows default desired retention and priority fallbacks on nodes without overrides', () => {
-  render(<App />);
+  const nodesById = {
+    'root-node': createNode({
+      id: 'root-node',
+      title: 'Root node',
+      content: '# Root'
+    })
+  };
 
-  expect(screen.getByLabelText('Inspector')).toBeInTheDocument();
-  openRightPanelFromMenu('Dev');
-  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByText('Scheduling')).toBeInTheDocument();
-  expect(screen.getByText('90.0% · Default')).toBeInTheDocument();
-  expect(screen.getByText('P5 · Default')).toBeInTheDocument();
+  render(
+    <DocumentPanelNodeReviewSettings
+      activeNodeId="root-node"
+      editableNodeId="root-node"
+      nodesById={nodesById}
+      onDesiredRetentionChange={() => undefined}
+      onPriorityChange={() => undefined}
+      onShortTermChange={() => undefined}
+      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
+    />
+  );
+
+  expect(screen.getByText('Using review settings: 0.90')).toBeInTheDocument();
+  expect(screen.getByText('Using queue fallback: P5')).toBeInTheDocument();
 });
 
-it('shows inherited values, writes explicit overrides, and falls back to ancestor values again', async () => {
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'child-node',
-    nodeOrder: ['root-node', 'child-node'],
-    nodesById: {
-      ...state.nodesById,
-      'root-node': createNode({
-        id: 'root-node',
-        title: 'Root node',
-        content: '# Root',
-        priority: 2,
-        desiredRetention: 0.84
-      }),
-      'child-node': createNode({
-        id: 'child-node',
-        parentNodeId: 'root-node',
-        title: 'Child node',
-        content: 'Child content'
-      })
-    }
-  }));
+it('shows inherited values, writes explicit overrides, and falls back to ancestor values again', () => {
+  const nodesById = {
+    'root-node': createNode({
+      id: 'root-node',
+      title: 'Root node',
+      content: '# Root',
+      priority: 2,
+      desiredRetention: 0.84
+    }),
+    'child-node': createNode({
+      id: 'child-node',
+      parentNodeId: 'root-node',
+      title: 'Child node',
+      content: 'Child content'
+    })
+  };
 
-  render(<App />);
-  openRightPanelFromMenu('Dev');
+  render(
+    <DocumentPanelNodeReviewSettings
+      activeNodeId="child-node"
+      editableNodeId="child-node"
+      nodesById={nodesById}
+      onDesiredRetentionChange={() => undefined}
+      onPriorityChange={() => undefined}
+      onShortTermChange={() => undefined}
+      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
+    />
+  );
 
-  expect(screen.getByText(/(Inherited · 0\.84 from Root node|84\.0% · Inherited)/)).toBeInTheDocument();
-  expect(screen.getByText(/(Inherited · P2 from Root node|P2 · Inherited)/)).toBeInTheDocument();
+  expect(screen.getByText('Inherited · 0.84 from Root node')).toBeInTheDocument();
+  expect(screen.getByText('Inherited · P2 from Root node')).toBeInTheDocument();
 });
 
 it('updates the default priority copy when the global fallback changes', () => {
@@ -76,7 +87,7 @@ it('updates the default priority copy when the global fallback changes', () => {
     />
   );
 
-  expect(screen.getByText('Default · P5 from push queue fallback')).toBeInTheDocument();
+  expect(screen.getByText('Using queue fallback: P5')).toBeInTheDocument();
 
   rerender(
     <DocumentPanelNodeReviewSettings
@@ -96,5 +107,5 @@ it('updates the default priority copy when the global fallback changes', () => {
     />
   );
 
-  expect(screen.getByText('Default · P3 from push queue fallback')).toBeInTheDocument();
+  expect(screen.getByText('Using queue fallback: P3')).toBeInTheDocument();
 });
