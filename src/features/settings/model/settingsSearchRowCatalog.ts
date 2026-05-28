@@ -9,9 +9,9 @@ export const ABOUT_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
   },
   {
     categoryId: 'about',
-    description: 'Create a local zip with logs and crash reports for support.',
-    id: 'about-diagnostic-bundle',
-    title: 'Diagnostic bundle'
+    description: 'Copy a small support report with recent errors and crash status. It does not include your library content.',
+    id: 'about-diagnostic-report',
+    title: 'Diagnostic report'
   },
   {
     categoryId: 'about',

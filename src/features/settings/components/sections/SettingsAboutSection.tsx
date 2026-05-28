@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { exportDiagnosticBundle } from '../../../../shared/platform/diagnosticBundle';
+import { copyDiagnosticReport } from '../../../../shared/platform/diagnosticBundle';
 import {
   isSearchEnhancementEnabled,
   updateSearchEnhancementEnabled
@@ -37,7 +37,7 @@ function DiagnosticExportRow() {
   const [isExporting, setIsExporting] = useState(false);
   const description = (
     <>
-      <span className="block">Create a local zip with logs and crash reports for support.</span>
+      <span className="block">Copy a small support report with recent errors and crash status.</span>
       {feedback ? <span className="mt-1 block text-foreground/70">{feedback}</span> : null}
       {error ? <span className="mt-1 block text-error">{error}</span> : null}
     </>
@@ -47,14 +47,15 @@ function DiagnosticExportRow() {
     setFeedback(null);
     setIsExporting(true);
     try {
-      const result = await exportDiagnosticBundle();
+      const result = await copyDiagnosticReport();
       if (result.status === 'unavailable') {
         setFeedback('Available in the desktop app.');
         return;
       }
-      setFeedback(`Diagnostic bundle exported with ${result.includedFileCount} files.`);
+      await navigator.clipboard.writeText(result.reportText);
+      setFeedback('Diagnostic report copied. It does not include your library content.');
     } catch {
-      setError('Diagnostic bundle could not be exported.');
+      setError('Diagnostic report could not be copied.');
     } finally {
       setIsExporting(false);
     }
@@ -68,13 +69,13 @@ function DiagnosticExportRow() {
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <button
-          aria-label="Export diagnostic bundle"
+          aria-label="Copy diagnostic report"
           className={settingsButtonClassName()}
           disabled={isExporting}
           onClick={() => void handleExport()}
           type="button"
         >
-          {isExporting ? 'Exporting...' : 'Export'}
+          {isExporting ? 'Copying...' : 'Copy report'}
         </button>
       </SettingsControlSlot>
     </SettingsRow>

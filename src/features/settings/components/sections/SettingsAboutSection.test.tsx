@@ -2,18 +2,22 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
-  exportDiagnosticBundle: vi.fn()
+  copyDiagnosticReport: vi.fn()
 }));
 
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
-import { exportDiagnosticBundle } from '../../../../shared/platform/diagnosticBundle';
+import { copyDiagnosticReport } from '../../../../shared/platform/diagnosticBundle';
 
 import { SettingsAboutSection } from './SettingsAboutSection';
 
 beforeEach(() => {
-  vi.mocked(exportDiagnosticBundle).mockReset();
+  vi.mocked(copyDiagnosticReport).mockReset();
   window.localStorage.clear();
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: vi.fn().mockResolvedValue(undefined) }
+  });
   const invoke = vi.fn(async (command: string) => {
     if (command === 'load_search_index_rebuild_status') return null;
     if (command === 'save_app_settings_state') return null;
@@ -31,19 +35,19 @@ beforeEach(() => {
   };
 });
 
-it('shows application info and diagnostic export in the about section', async () => {
-  vi.mocked(exportDiagnosticBundle).mockResolvedValue({
-    filePath: '/Desktop/foliole-diagnostics.zip',
-    includedFileCount: 3,
-    status: 'exported'
+it('shows application info and copies the diagnostic report in the about section', async () => {
+  vi.mocked(copyDiagnosticReport).mockResolvedValue({
+    reportText: '# Foliole Diagnostic Report',
+    status: 'generated'
   });
   render(<SettingsAboutSection />);
 
   expect(screen.getByText('Foliole desktop')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Export diagnostic bundle' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic report' }));
   await waitFor(() => {
-    expect(exportDiagnosticBundle).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Diagnostic bundle exported with 3 files.')).toBeInTheDocument();
+    expect(copyDiagnosticReport).toHaveBeenCalledTimes(1);
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('# Foliole Diagnostic Report');
+    expect(screen.getByText('Diagnostic report copied. It does not include your library content.')).toBeInTheDocument();
   });
   expect(screen.queryByText('/app/Backups')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Create backup' })).not.toBeInTheDocument();

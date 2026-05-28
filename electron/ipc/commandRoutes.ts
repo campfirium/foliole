@@ -121,7 +121,7 @@ const WINDOW_AND_UTILITY_COMMANDS = [
   NATIVE_COMMANDS.loadPerformanceMemorySnapshot,
   NATIVE_COMMANDS.openExternalUrl,
   NATIVE_COMMANDS.openLocalPath,
-  NATIVE_COMMANDS.exportDiagnosticBundle,
+  NATIVE_COMMANDS.copyDiagnosticReport,
   NATIVE_COMMANDS.resolveAppPaths,
   NATIVE_COMMANDS.clearLinkPanelBrowsingData,
   NATIVE_COMMANDS.syncAppMenuState,

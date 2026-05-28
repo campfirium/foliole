@@ -1,3 +1,7 @@
+import {
+  shouldWriteDesktopTaskProgressEvent,
+  type DesktopTaskProgressEventState
+} from './desktopTaskProgressEvents.js';
 import type {
   DesktopTaskContext,
   DesktopTaskDefinition,
@@ -10,6 +14,7 @@ interface QueuedDesktopTask {
   attempt: number;
   controller: AbortController;
   definition: DesktopTaskDefinition;
+  lastProgressEvent: DesktopTaskProgressEventState | null;
   promise: Promise<unknown>;
   reject: (error: unknown) => void;
   resolve: (value: unknown) => void;
@@ -42,6 +47,7 @@ function createDeferredTask(definition: DesktopTaskDefinition, sequence: number)
     attempt: 1,
     controller: new AbortController(),
     definition,
+    lastProgressEvent: null,
     promise,
     reject: rejectTask,
     resolve: resolveTask,
@@ -161,7 +167,15 @@ export class DesktopTaskScheduler {
         info: (message, payload) => console.info(message, payload)
       },
       progress: (progress) => {
-        void this.writeEvent('desktop_task_progress', task.definition, { ...progress });
+        const decision = shouldWriteDesktopTaskProgressEvent({
+          now: this.now(),
+          previous: task.lastProgressEvent,
+          progress: { ...progress }
+        });
+        if (decision.shouldWrite) {
+          task.lastProgressEvent = decision.nextState;
+          void this.writeEvent('desktop_task_progress', task.definition, { ...progress });
+        }
       },
       signal: task.controller.signal,
       yieldIfNeeded: async () => {

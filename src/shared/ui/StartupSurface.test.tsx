@@ -18,6 +18,7 @@ it('renders startup diagnostics and action buttons', () => {
   const rootElement = document.createElement('div');
   const retry = vi.fn();
   const openLogs = vi.fn();
+  const copyDiagnostics = vi.fn();
 
   renderStartupErrorView(
     rootElement,
@@ -27,6 +28,7 @@ it('renders startup diagnostics and action buttons', () => {
       moduleLabel: 'Database migration'
     },
     {
+      copyDiagnostics,
       openLogs,
       retry
     }
@@ -38,4 +40,7 @@ it('renders startup diagnostics and action buttons', () => {
   expect(retry).toHaveBeenCalledTimes(1);
   rootElement.querySelectorAll<HTMLButtonElement>('button')[1]?.click();
   expect(openLogs).toHaveBeenCalledTimes(1);
+  rootElement.querySelectorAll<HTMLButtonElement>('button')[2]?.click();
+  expect(copyDiagnostics).toHaveBeenCalledTimes(1);
+  expect(rootElement.textContent).toContain('Copy diagnostics');
 });

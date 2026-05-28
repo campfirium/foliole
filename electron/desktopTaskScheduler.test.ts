@@ -108,3 +108,22 @@ it('retries transient failures and classifies permanent failures', async () => {
   expect(events.map((event) => event.stage)).toContain('desktop_task_retrying');
   expect(events.map((event) => event.stage)).toContain('desktop_task_failed');
 });
+
+it('throttles high-frequency progress events', async () => {
+  const { events, scheduler } = createScheduler();
+
+  scheduler.submit(createTask(
+    'progress',
+    (context) => {
+      for (let completed = 1; completed <= 60; completed += 1) {
+        context.progress({ completed, total: 60, unit: 'row' });
+      }
+    },
+    'background'
+  ));
+  await waitForScheduler();
+
+  const progressEvents = events.filter((event) => event.stage === 'desktop_task_progress');
+  expect(progressEvents).toHaveLength(4);
+  expect(progressEvents.map((event) => (event.payload as { completed: number }).completed)).toEqual([1, 26, 51, 60]);
+});

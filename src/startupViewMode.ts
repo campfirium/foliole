@@ -1,6 +1,6 @@
 import { definedProps } from './shared/lib/definedProps';
 import { openLocalPath } from './shared/platform/bridge';
-import { exportDiagnosticBundle } from './shared/platform/diagnosticBundle';
+import { copyDiagnosticReport } from './shared/platform/diagnosticBundle';
 import { closeMainWindow, restartMainWindowApp } from './shared/platform/windowControls';
 import type { StartupErrorActions } from './shared/ui/StartupSurface';
 
@@ -37,7 +37,12 @@ export function createStartupErrorActions(args: {
   };
 
   return {
-    exportDiagnostics: () => runStartupAction('export_diagnostics', exportDiagnosticBundle),
+    copyDiagnostics: () => runStartupAction('copy_diagnostics', async () => {
+      const result = await copyDiagnosticReport();
+      if (result.status === 'generated') {
+        await navigator.clipboard.writeText(result.reportText);
+      }
+    }),
     exit: () => runStartupAction('exit', closeMainWindow),
     retry: () => runStartupAction('retry', restartMainWindowApp),
     ...definedProps({

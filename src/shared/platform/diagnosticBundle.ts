@@ -1,35 +1,31 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeExportDiagnosticBundleResult } from '../../../lib/platform/nativeUtilityContract';
+import type { NativeCopyDiagnosticReportResult } from '../../../lib/platform/nativeUtilityContract';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 
-export type ExportDiagnosticBundleResult =
+export type CopyDiagnosticReportResult =
   | {
-      filePath: string;
-      includedFileCount: number;
-      status: 'exported';
+      reportText: string;
+      status: 'generated';
     }
   | {
-      filePath: null;
-      includedFileCount: 0;
+      reportText: null;
       status: 'unavailable';
     };
 
-export async function exportDiagnosticBundle(): Promise<ExportDiagnosticBundleResult> {
+export async function copyDiagnosticReport(): Promise<CopyDiagnosticReportResult> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return {
-      filePath: null,
-      includedFileCount: 0,
+      reportText: null,
       status: 'unavailable'
     };
   }
   const result = await runtimeInvoke(
-    NATIVE_COMMANDS.exportDiagnosticBundle
-  ) as NativeExportDiagnosticBundleResult;
+    NATIVE_COMMANDS.copyDiagnosticReport
+  ) as NativeCopyDiagnosticReportResult;
   return {
-    filePath: result.file_path,
-    includedFileCount: result.included_file_count,
+    reportText: result.report_text,
     status: result.status
   };
 }

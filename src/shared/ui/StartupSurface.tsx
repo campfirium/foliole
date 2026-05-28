@@ -18,7 +18,7 @@ export interface StartupSurfaceModel {
 }
 
 export interface StartupErrorActions {
-  exportDiagnostics?: () => void;
+  copyDiagnostics?: () => void;
   exit?: () => void;
   openLogs?: () => void;
   retry?: () => void;
@@ -43,9 +43,7 @@ function resolveActionList(actions: StartupErrorActions): StartupSurfaceAction[]
   if (actions.openLogs) {
     actionList.push({ label: 'Open logs', onClick: actions.openLogs });
   }
-  if (actions.exportDiagnostics) {
-    actionList.push({ label: 'Export diagnostics', onClick: actions.exportDiagnostics });
-  }
+  if (actions.copyDiagnostics) actionList.push({ label: 'Copy diagnostics', onClick: actions.copyDiagnostics });
   if (actions.exit) {
     actionList.push({ label: 'Exit', onClick: actions.exit });
   }

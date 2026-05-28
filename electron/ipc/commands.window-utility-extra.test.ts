@@ -11,7 +11,7 @@ const {
   mockWindow,
   openExternal,
   openPath,
-  exportDiagnosticBundle,
+  copyDiagnosticReport,
   readFile,
   recordPreparedImportFailure,
   runPreparedImport,
@@ -57,10 +57,9 @@ const {
   },
   openExternal: vi.fn().mockResolvedValue(undefined),
   openPath: vi.fn().mockResolvedValue(''),
-  exportDiagnosticBundle: vi.fn().mockResolvedValue({
-    file_path: '/desktop/foliole-diagnostics.zip',
-    included_file_count: 2,
-    status: 'exported'
+  copyDiagnosticReport: vi.fn().mockResolvedValue({
+    report_text: '# Foliole Diagnostic Report',
+    status: 'generated'
   }),
   readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
   recordPreparedImportFailure: vi.fn(),
@@ -87,7 +86,7 @@ vi.mock('node:fs/promises', () => ({
   readFile
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState }));
-vi.mock('../diagnostics/diagnosticBundle.js', () => ({ exportDiagnosticBundle }));
+vi.mock('../diagnostics/diagnosticBundle.js', () => ({ copyDiagnosticReport }));
 vi.mock('../devShellRestartRequest.js', () => ({ requestDevShellRestart }));
 vi.mock('./paths.js', () => ({ resolveAppPaths: vi.fn().mockReturnValue({ app_cache_dir: '/cache', app_config_dir: '/config', app_data_dir: '/data', app_log_dir: '/log' }) }));
 vi.mock('../database/nodeMutations.js', () => ({
@@ -130,10 +129,9 @@ it('handles typed native utility commands', async () => {
     command: 'sync_app_menu_state',
     args: { enabledCommandIds: ['node.create'], shortcutAccelerators: [] }
   } satisfies NativeInvokeRequest<'sync_app_menu_state'>)).resolves.toBeNull();
-  await expect(handleInvokeRequest({ command: 'export_diagnostic_bundle' })).resolves.toEqual({
-    file_path: '/desktop/foliole-diagnostics.zip',
-    included_file_count: 2,
-    status: 'exported'
+  await expect(handleInvokeRequest({ command: 'copy_diagnostic_report' })).resolves.toEqual({
+    report_text: '# Foliole Diagnostic Report',
+    status: 'generated'
   });
   expect(openExternal).toHaveBeenCalledWith('https://example.com');
   expect(openPath).toHaveBeenCalledWith('/tmp/source.md');

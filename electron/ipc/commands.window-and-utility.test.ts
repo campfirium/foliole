@@ -13,7 +13,7 @@ const {
   mockWindow,
   openExternal,
   openPath,
-  exportDiagnosticBundle,
+  copyDiagnosticReport,
   readFile,
   recordPreparedImportFailure,
   runPreparedImport,
@@ -58,10 +58,9 @@ const {
   },
   openExternal: vi.fn().mockResolvedValue(undefined),
   openPath: vi.fn().mockResolvedValue(''),
-  exportDiagnosticBundle: vi.fn().mockResolvedValue({
-    file_path: '/desktop/foliole-diagnostics.zip',
-    included_file_count: 2,
-    status: 'exported'
+  copyDiagnosticReport: vi.fn().mockResolvedValue({
+    report_text: '# Foliole Diagnostic Report',
+    status: 'generated'
   }),
   readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
   recordPreparedImportFailure: vi.fn(),
@@ -87,7 +86,7 @@ vi.mock('node:fs/promises', () => ({
   readFile
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState }));
-vi.mock('../diagnostics/diagnosticBundle.js', () => ({ exportDiagnosticBundle }));
+vi.mock('../diagnostics/diagnosticBundle.js', () => ({ copyDiagnosticReport }));
 vi.mock('./paths.js', () => ({
   resolveAppPaths: vi.fn().mockReturnValue({
     app_data_dir: '/data',

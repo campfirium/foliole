@@ -4,7 +4,7 @@ import { createStartupErrorActions, resolveStartupView } from './startupViewMode
 
 const platformMocks = vi.hoisted(() => ({
   closeMainWindow: vi.fn(),
-  exportDiagnosticBundle: vi.fn(),
+  copyDiagnosticReport: vi.fn(),
   openLocalPath: vi.fn(),
   restartMainWindowApp: vi.fn()
 }));
@@ -14,7 +14,7 @@ vi.mock('./shared/platform/bridge', () => ({
 }));
 
 vi.mock('./shared/platform/diagnosticBundle', () => ({
-  exportDiagnosticBundle: platformMocks.exportDiagnosticBundle
+  copyDiagnosticReport: platformMocks.copyDiagnosticReport
 }));
 
 vi.mock('./shared/platform/windowControls', () => ({
@@ -38,8 +38,15 @@ it('parses startup error view parameters', () => {
 it('routes startup error actions through startup platform abilities', () => {
   platformMocks.restartMainWindowApp.mockResolvedValue(undefined);
   platformMocks.openLocalPath.mockResolvedValue(undefined);
-  platformMocks.exportDiagnosticBundle.mockResolvedValue({ status: 'exported' });
+  platformMocks.copyDiagnosticReport.mockResolvedValue({
+    reportText: '# Foliole Diagnostic Report',
+    status: 'generated'
+  });
   platformMocks.closeMainWindow.mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: vi.fn().mockResolvedValue(undefined) }
+  });
 
   const actions = createStartupErrorActions({
     logPath: '/logs',
@@ -48,11 +55,14 @@ it('routes startup error actions through startup platform abilities', () => {
 
   actions.retry?.();
   actions.openLogs?.();
-  actions.exportDiagnostics?.();
+  actions.copyDiagnostics?.();
   actions.exit?.();
 
-  expect(platformMocks.restartMainWindowApp).toHaveBeenCalledOnce();
-  expect(platformMocks.openLocalPath).toHaveBeenCalledWith('/logs');
-  expect(platformMocks.exportDiagnosticBundle).toHaveBeenCalledOnce();
-  expect(platformMocks.closeMainWindow).toHaveBeenCalledOnce();
+  return vi.waitFor(() => {
+    expect(platformMocks.restartMainWindowApp).toHaveBeenCalledOnce();
+    expect(platformMocks.openLocalPath).toHaveBeenCalledWith('/logs');
+    expect(platformMocks.copyDiagnosticReport).toHaveBeenCalledOnce();
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('# Foliole Diagnostic Report');
+    expect(platformMocks.closeMainWindow).toHaveBeenCalledOnce();
+  });
 });

@@ -73,6 +73,24 @@ it('preserves non-marker boot event order through the async queue', async () => 
   expect(stages).toEqual(['stage_a', 'stage_b', 'stage_c']);
 });
 
+it('compacts oversized boot event logs before appending new events', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-compact-'));
+  process.env.FOLIOLE_WORKDIR = repoRoot;
+  const paths = resolveBootArtifactPaths(repoRoot);
+  fs.mkdirSync(path.dirname(paths.eventLogPath), { recursive: true });
+  fs.writeFileSync(paths.eventLogPath, `${'x'.repeat(6 * 1024 * 1024)}\n${JSON.stringify({ stage: 'tail_event' })}\n`);
+
+  await appendBootEvent('stage_after_compact');
+  await flushBootEvents();
+
+  const rawLog = fs.readFileSync(paths.eventLogPath, 'utf8');
+  expect(rawLog.length).toBeLessThan(1024 * 1024);
+  const stages = rawLog.trim().split('\n').map((line) => JSON.parse(line) as { stage: string }).map((event) => event.stage);
+  expect(stages).toContain('boot_log_compacted');
+  expect(stages.at(-1)).toBe('stage_after_compact');
+});
+
+
 it('writes renderer boot events and app ready marker', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-renderer-'));
   process.env.FOLIOLE_WORKDIR = repoRoot;

@@ -8,34 +8,31 @@ const { getRuntimeInvoke } = vi.hoisted(() => ({
 
 vi.mock('./runtimeInvoke', () => ({ getRuntimeInvoke }));
 
-import { exportDiagnosticBundle } from './diagnosticBundle';
+import { copyDiagnosticReport } from './diagnosticBundle';
 
 beforeEach(() => {
   getRuntimeInvoke.mockReset();
 });
 
-it('exports a diagnostic bundle through the desktop runtime', async () => {
+it('loads a diagnostic report through the desktop runtime', async () => {
   const invoke = vi.fn().mockResolvedValue({
-    file_path: '/Desktop/foliole-diagnostics.zip',
-    included_file_count: 2,
-    status: 'exported'
+    report_text: '# Foliole Diagnostic Report',
+    status: 'generated'
   });
   getRuntimeInvoke.mockReturnValue(invoke);
 
-  await expect(exportDiagnosticBundle()).resolves.toEqual({
-    filePath: '/Desktop/foliole-diagnostics.zip',
-    includedFileCount: 2,
-    status: 'exported'
+  await expect(copyDiagnosticReport()).resolves.toEqual({
+    reportText: '# Foliole Diagnostic Report',
+    status: 'generated'
   });
-  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.exportDiagnosticBundle);
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.copyDiagnosticReport);
 });
 
 it('returns unavailable outside the desktop runtime', async () => {
   getRuntimeInvoke.mockReturnValue(null);
 
-  await expect(exportDiagnosticBundle()).resolves.toEqual({
-    filePath: null,
-    includedFileCount: 0,
+  await expect(copyDiagnosticReport()).resolves.toEqual({
+    reportText: null,
     status: 'unavailable'
   });
 });

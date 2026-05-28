@@ -105,10 +105,9 @@ export interface NativeClearLinkPanelBrowsingDataResult {
   status: 'cleared';
 }
 
-export interface NativeExportDiagnosticBundleResult {
-  file_path: string;
-  included_file_count: number;
-  status: 'exported';
+export interface NativeCopyDiagnosticReportResult {
+  report_text: string;
+  status: 'generated';
 }
 
 export interface NativeSystemFontCatalog {

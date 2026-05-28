@@ -8,6 +8,8 @@ const BOOT_EVENT_LOG = path.join('logs', 'windows', 'native-boot-events.ndjson')
 const READY_MARKER_FILE = '.windows-native-boot-ready.json';
 const BRIDGE_READY_MARKER_FILE = '.windows-native-bridge-ready.json';
 const WINDOW_VISIBLE_MARKER_FILE = '.windows-native-window-visible.json';
+const MAX_BOOT_EVENT_LOG_BYTES = 5 * 1024 * 1024;
+const COMPACTED_BOOT_EVENT_TAIL_BYTES = 512 * 1024;
 type BootEventSource = 'main' | 'renderer';
 const WAITED_BOOT_EVENT_STAGES = new Set(['app_ready', 'bridge_ready', 'window_visible']);
 
@@ -30,7 +32,38 @@ function resolveBootSession() {
 
 async function appendJsonLine(filePath: string, payload: unknown) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await compactJsonLineFileIfNeeded(filePath);
   await fs.appendFile(filePath, `${JSON.stringify(payload)}\n`, 'utf8');
+}
+
+async function compactJsonLineFileIfNeeded(filePath: string) {
+  const stat = await fs.stat(filePath).catch(() => null);
+  if (!stat || stat.size <= MAX_BOOT_EVENT_LOG_BYTES) return;
+  const length = Math.min(stat.size, COMPACTED_BOOT_EVENT_TAIL_BYTES);
+  const buffer = Buffer.alloc(length);
+  const handle = await fs.open(filePath, 'r');
+  try {
+    await handle.read(buffer, 0, length, stat.size - length);
+  } finally {
+    await handle.close();
+  }
+  const tail = buffer.toString('utf8');
+  const firstNewline = tail.indexOf('\n');
+  const compactedEvent = {
+    payload: {
+      keptTailBytes: length,
+      maxBytes: MAX_BOOT_EVENT_LOG_BYTES,
+      originalBytes: stat.size
+    },
+    source: 'main',
+    stage: 'boot_log_compacted',
+    timestamp: new Date().toISOString()
+  };
+  await fs.writeFile(
+    filePath,
+    `${JSON.stringify(compactedEvent)}\n${firstNewline >= 0 ? tail.slice(firstNewline + 1) : ''}`,
+    'utf8'
+  );
 }
 
 async function writeJson(filePath: string, payload: unknown) {
