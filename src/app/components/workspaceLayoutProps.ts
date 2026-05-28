@@ -172,7 +172,7 @@ export interface WorkspaceLayoutFlatProps {
   onToggleRightSidebarVisibility: () => void;
   onRunImportFile: () => Promise<boolean>;
   onRunImportFolder: () => Promise<boolean>;
-  onStartClipboardImport: () => boolean | Promise<boolean>;
+  onStartClipboardImport: (detail?: { targetParentNodeId?: string }) => boolean | Promise<boolean>;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;

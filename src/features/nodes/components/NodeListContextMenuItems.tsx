@@ -67,12 +67,20 @@ function shouldShowReviewGroup(props: NoteMenuItemsProps) {
   );
 }
 
-function renderCreateItems(props: NoteMenuItemsProps) {
-  return props.createCommands.map((command) => (
-    <NodeContextMenuItem icon={iconForCreateCommand(command)} key={command.appCommandId} onSelect={() => props.onCreateCommand(command.appCommandId)}>
-      {command.listLabel}
-    </NodeContextMenuItem>
-  ));
+function renderCreateItems(props: NoteMenuItemsProps, helpEnabled: boolean) {
+  const clipboardHelp = helpEnabled ? { help: resolveNodeListActionHelp(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic) } : {};
+  return (
+    <>
+      {props.createCommands.map((command) => (
+        <NodeContextMenuItem icon={iconForCreateCommand(command)} key={command.appCommandId} onSelect={() => props.onCreateCommand(command.appCommandId)}>
+          {command.listLabel}
+        </NodeContextMenuItem>
+      ))}
+      {props.showCreateTopicFromClipboardAction && props.onCreateTopicFromClipboard ? (
+        <NodeContextMenuItem {...clipboardHelp} icon={Clipboard} onSelect={props.onCreateTopicFromClipboard}>Paste as Topic</NodeContextMenuItem>
+      ) : null}
+    </>
+  );
 }
 
 function renderEditItems(props: NoteMenuItemsProps, helpEnabled: boolean) {
@@ -83,7 +91,7 @@ function renderEditItems(props: NoteMenuItemsProps, helpEnabled: boolean) {
     <>
       {props.showRenameAction && props.onRenameNode ? <NodeContextMenuItem icon={Pencil} onSelect={props.onRenameNode}>Rename</NodeContextMenuItem> : null}
       {props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.mergeHighlights)} icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>Merge highlights</NodeContextMenuItem> : null}
-      {props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>Create topic from clipboard</NodeContextMenuItem> : null}
+      {props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>Paste as Topic</NodeContextMenuItem> : null}
       {props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>Move to…</NodeContextMenuItem> : null}
     </>
   );
@@ -129,14 +137,14 @@ function renderDeleteItem(props: NoteMenuItemsProps, hasPreviousGroup: boolean) 
 
 function NoteMenuItems(props: NoteMenuItemsProps) {
   const helpEnabled = useActionHelpCardsEnabled();
-  const hasCreateGroup = props.createCommands.length > 0;
+  const hasCreateGroup = props.createCommands.length > 0 || Boolean(props.showCreateTopicFromClipboardAction && props.onCreateTopicFromClipboard);
   const hasEditGroup = shouldShowEditGroup(props);
   const hasReviewGroup = shouldShowReviewGroup(props);
   const hasAnyPrimaryGroup = hasCreateGroup || hasEditGroup || hasReviewGroup;
 
   return (
     <>
-      {hasCreateGroup ? renderCreateItems(props) : null}
+      {hasCreateGroup ? renderCreateItems(props, helpEnabled) : null}
       {hasCreateGroup && hasEditGroup ? <NodeContextMenuSeparator /> : null}
       {hasEditGroup ? renderEditItems(props, helpEnabled) : null}
       {(hasCreateGroup || hasEditGroup) && hasReviewGroup ? <NodeContextMenuSeparator /> : null}
@@ -153,6 +161,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
   return (
     <NoteMenuItems
       createCommands={props.createCommands}
+      {...(props.onCreateTopicFromClipboard ? { onCreateTopicFromClipboard: props.onCreateTopicFromClipboard } : {})}
       onCreateCommand={props.onCreateCommand}
       onDeleteNode={props.onDeleteNode}
       {...(props.onDismissEntireTopic ? { onDismissEntireTopic: props.onDismissEntireTopic } : {})}
@@ -166,6 +175,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
       {...(props.onReturnNode ? { onReturnNode: props.onReturnNode } : {})}
       {...(props.onShelveTopic ? { onShelveTopic: props.onShelveTopic } : {})}
       {...(props.showDeleteAction !== undefined ? { showDeleteAction: props.showDeleteAction } : {})}
+      {...(props.showCreateTopicFromClipboardAction !== undefined ? { showCreateTopicFromClipboardAction: props.showCreateTopicFromClipboardAction } : {})}
       {...(props.showDismissEntireTopicAction !== undefined ? { showDismissEntireTopicAction: props.showDismissEntireTopicAction } : {})}
       {...(props.showDismissAction !== undefined ? { showDismissAction: props.showDismissAction } : {})}
       {...(props.showMergeHighlightsIntoTopicAction !== undefined ? { showMergeHighlightsIntoTopicAction: props.showMergeHighlightsIntoTopicAction } : {})}

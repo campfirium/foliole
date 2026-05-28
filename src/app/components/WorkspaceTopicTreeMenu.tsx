@@ -7,6 +7,7 @@ import { NodeReviewSchedulingDialog } from '../../features/nodes/components/Node
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { getCurrentReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 
+import { requestClipboardImport } from './importActivityRequests';
 import type { useWorkspaceTopicTreeActions } from './WorkspaceTopicTree';
 import type { WorkspaceTopicTreeProps } from './WorkspaceTopicTree';
 import type { useWorkspaceTopicTreeInteraction } from './WorkspaceTopicTree';
@@ -35,6 +36,9 @@ export function WorkspaceTopicTreeMenu(props: {
         dismissNode={props.actions.dismissNode}
         isVirtualViewOpen={false}
         nodesById={props.nodesById}
+        onCreateTopicFromClipboard={(parentNodeId) =>
+          requestClipboardImport({ targetParentNodeId: parentNodeId ?? props.activeFolderId })
+        }
         onOpenMoveToNode={props.onOpenMoveToNode}
         {...(props.onOpenPostponeTopicPanel ? { onOpenPostponeTopic: props.onOpenPostponeTopicPanel } : {})}
         onOpenReviewScheduling={setReviewSchedulingNodeId}

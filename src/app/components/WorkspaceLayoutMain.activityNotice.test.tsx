@@ -167,6 +167,19 @@ it('runs requested clipboard imports through the workspace notice controller', a
   });
 });
 
+it('forwards clipboard import request targets to the workspace notice controller', async () => {
+  const importResult = createDeferred<boolean>();
+  const onStartClipboardImport = vi.fn(() => importResult.promise);
+
+  render(<WorkspaceLayoutMain {...createProps({ onStartClipboardImport })} />);
+
+  requestClipboardImport({ targetParentNodeId: 'node-target' });
+  expect(await screen.findByRole('status')).toHaveTextContent('Importing clipboard...');
+  expect(onStartClipboardImport).toHaveBeenCalledWith({ targetParentNodeId: 'node-target' });
+
+  importResult.resolve(false);
+});
+
 it('runs requested file imports through the workspace notice controller', async () => {
   const importResult = createDeferred<boolean>();
   const onRunImportFile = vi.fn(() => importResult.promise);

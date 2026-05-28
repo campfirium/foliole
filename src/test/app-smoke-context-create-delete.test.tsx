@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { CLIPBOARD_IMPORT_REQUEST_EVENT } from '../app/components/importActivityRequests';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
@@ -200,7 +201,28 @@ it('marks in-progress import actions on ordinary node context menus', () => {
   });
 
   expect(screen.getByRole('menuitem', { name: 'Merge highlights' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Create topic from clipboard' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Paste as Topic' })).toBeInTheDocument();
+});
+
+it('requests clipboard topic creation from the blank current-folder area', () => {
+  const requests: unknown[] = [];
+  const onRequest = (event: Event) => {
+    requests.push(event instanceof CustomEvent ? event.detail : null);
+  };
+  window.addEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, onRequest);
+  try {
+    render(<App />);
+
+    fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('tree'), {
+      clientX: 80,
+      clientY: 160
+    });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Paste as Topic' }));
+
+    expect(requests).toEqual([{ targetParentNodeId: INBOX_NODE_ID }]);
+  } finally {
+    window.removeEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, onRequest);
+  }
 });
 
 it('hides import actions on derived node context menus', async () => {
@@ -225,5 +247,5 @@ it('hides import actions on derived node context menus', async () => {
   });
 
   expect(screen.queryByRole('menuitem', { name: 'Merge highlights' })).toBeNull();
-  expect(screen.queryByRole('menuitem', { name: 'Create topic from clipboard' })).toBeNull();
+  expect(screen.getByRole('menuitem', { name: 'Paste as Topic' })).toBeInTheDocument();
 });

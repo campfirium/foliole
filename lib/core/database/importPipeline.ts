@@ -111,6 +111,7 @@ function resolvePreparedNodeId(input: {
     driver: input.driver,
     hideTitleHeading: input.prepared.hideTitleHeading,
     importedAt: input.baseRecord.importedAt,
+    ...(input.prepared.targetParentNodeId === undefined ? {} : { targetParentNodeId: input.prepared.targetParentNodeId }),
     title: input.prepared.nodeTitle
   });
 }

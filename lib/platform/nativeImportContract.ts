@@ -1,6 +1,5 @@
 import type { NativeImportHighlightPolicy } from './nativeKeepImportContract.js';
 
-export type { NativeImportHighlightPolicy } from './nativeKeepImportContract.js';
 export type NativeImportNodeTitleStrategy = 'file_name' | 'heading';
 
 export type NativeDirectoryImportSourceAdapter = 'external_directory' | 'foliole_managed_inbox_folder';
@@ -13,6 +12,7 @@ export interface NativeTextImportArgs {
   file_path?: string;
   highlight_policy?: NativeImportHighlightPolicy;
   sequential_reading_mode?: 'free' | 'sequential';
+  target_parent_node_id?: string;
   title_strategy?: NativeImportNodeTitleStrategy;
 }
 

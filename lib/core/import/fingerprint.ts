@@ -43,6 +43,7 @@ interface CreatePreparedDesktopTextImportInput {
   sourceLocator?: string;
   sourceProfile?: ImportSourceProfile;
   sourceTrackingMode?: ImportSourceTrackingMode;
+  targetParentNodeId?: string | null;
   titleStrategy?: ImportNodeTitleStrategy;
 }
 
@@ -199,6 +200,7 @@ export function createPreparedDesktopTextImport(
     sourceFingerprint: resolveSourceFingerprint(input),
     sourceKind: input.kind,
     sourceLocator: input.sourceLocator ?? input.filePath,
-    sourceName: input.fileName
+    sourceName: input.fileName,
+    ...(input.targetParentNodeId === undefined ? {} : { targetParentNodeId: input.targetParentNodeId })
   };
 }

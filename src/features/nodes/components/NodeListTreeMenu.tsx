@@ -25,6 +25,7 @@ interface NodeListTreeMenuProps {
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onOpenPostponeTopic?: (nodeId: string) => void;
+  onCreateTopicFromClipboard?: (parentNodeId: string | null) => void;
   onOpenReviewScheduling?: (nodeId: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   restoreNode: (nodeId: string) => void;
@@ -173,7 +174,7 @@ function buildNodeListMenuVisibility(
     showDismissEntireTopicAction: menuState.isNotesMenu && hasDismissEntireTopicTargets(menuState.contextTargets, props.nodesById),
     showMergeHighlightsIntoTopicAction: menuState.showMergeHighlightsIntoTopicAction,
     showMoveToNodeAction: menuState.showMoveToNodeAction,
-    showPasteIntoNodeAction: menuState.showNodeImportActions,
+    showCreateTopicFromClipboardAction: resolveCreateCommands(menuState).some((command) => command.kind === 'topic') && Boolean(props.onCreateTopicFromClipboard),
     showRenameAction: menuState.showRenameAction,
     showReturnAction: menuState.isNotesMenu && hasReturnTargets(menuState.contextTargets, props.nodesById),
     showShelveTopicAction: menuState.isNotesMenu && hasShelveTopicTarget(menuState.contextTargets, props.nodesById),
@@ -196,13 +197,19 @@ function buildNodeListContextMenuProps(
     left: menuPosition.left,
     onClose: props.contextMenu.closeContextMenu,
     onCreateCommand: createCreateNodeHandler(props, menuState),
+    onCreateTopicFromClipboard: () => {
+      const parentNodeId = menuState.isRootMenu || menuState.isHomeTarget || !menuState.primaryTargetId
+        ? null
+        : menuState.primaryTargetId;
+      props.onCreateTopicFromClipboard?.(parentNodeId);
+      props.contextMenu.closeContextMenu();
+    },
     onDeleteNode: () => (
       props.deleteNodes(sortNodeIdsByVisibleOrder(menuState.contextTargets, props.state.noteRowIds)),
       props.contextMenu.closeContextMenu()
     ),
     onDeleteNodePermanently: () => (props.deleteNodesPermanently(menuState.contextTargets), props.contextMenu.closeContextMenu()),
     ...buildNodeListActionHandlers(props, menuState),
-    onPasteIntoNode: props.contextMenu.closeContextMenu,
     onRenameNode: () => (requestNodeRename(menuState.primaryTargetId), props.contextMenu.closeContextMenu()),
     onRestoreNode: () => (
       menuState.contextTargets.forEach((id) => props.restoreNode(id)),

@@ -59,7 +59,7 @@ it('groups node context actions into create, edit, review, and destructive order
     'Create Item',
     'Rename',
     'Merge highlights',
-    'Create topic from clipboard',
+    'Paste as Topic',
     'Move to…',
     'Relearn',
     'Review options…',

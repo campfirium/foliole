@@ -17,6 +17,7 @@ export type ImportSequentialReadingMode = 'free' | 'sequential';
 export interface RuntimeTextImportOptions {
   filePath?: string;
   sequentialReadingMode?: ImportSequentialReadingMode;
+  targetParentNodeId?: string;
 }
 export type {
   RuntimeDirectoryImportEntry,
@@ -34,6 +35,7 @@ function toImportArgs(
     ...(options?.filePath ? { file_path: options.filePath } : {}),
     ...(highlightPolicy ? { highlight_policy: highlightPolicy } : {}),
     ...(options?.sequentialReadingMode ? { sequential_reading_mode: options.sequentialReadingMode } : {}),
+    ...(options?.targetParentNodeId ? { target_parent_node_id: options.targetParentNodeId } : {}),
     ...(titleStrategy ? { title_strategy: titleStrategy } : {})
   };
 }
@@ -113,7 +115,8 @@ export async function runRuntimeTextFileImport(
 
 export async function runRuntimeClipboardImport(
   highlightPolicy?: ImportHighlightPolicy,
-  titleStrategy?: ImportNodeTitleStrategy
+  titleStrategy?: ImportNodeTitleStrategy,
+  options?: Pick<RuntimeTextImportOptions, 'targetParentNodeId'>
 ): Promise<RuntimeTextImportResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -121,7 +124,7 @@ export async function runRuntimeClipboardImport(
   }
 
   try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.runClipboardImport, toImportArgs(highlightPolicy, titleStrategy));
+    const result = await runtimeInvoke(NATIVE_COMMANDS.runClipboardImport, toImportArgs(highlightPolicy, titleStrategy, options));
     if (result === null) {
       return null;
     }

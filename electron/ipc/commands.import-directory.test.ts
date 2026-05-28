@@ -49,7 +49,7 @@ vi.mock('./fonts.js', () => ({ listSystemFonts: vi.fn() }));
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
 vi.mock('./paths.js', () => ({ resolveAppPaths: vi.fn() }));
 vi.mock('./storageCommands.js', () => ({ handleStorageCommand: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn() }));
+vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn() }));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn(), reviewPreview: vi.fn() }));
 
 import { handleInvokeRequest } from './commands.js';
@@ -73,7 +73,7 @@ it('routes run_directory_import through the invoke handler', async () => {
 });
 
 it('routes run_clipboard_import through the invoke handler', async () => {
-  await expect(handleInvokeRequest({ command: 'run_clipboard_import', args: { highlight_policy: 'adopt' } })).resolves.toEqual({
+  await expect(handleInvokeRequest({ command: 'run_clipboard_import', args: { highlight_policy: 'adopt', target_parent_node_id: 'node-target' } })).resolves.toEqual({
     content_fingerprint: 'content-fingerprint',
     degraded_reason: null,
     duplicate_semantic: 'new',
@@ -89,5 +89,5 @@ it('routes run_clipboard_import through the invoke handler', async () => {
     source_name: 'Clipboard Text.txt'
   });
 
-  expect(runClipboardImport).toHaveBeenCalledWith({ highlight_policy: 'adopt' });
+  expect(runClipboardImport).toHaveBeenCalledWith({ highlight_policy: 'adopt', target_parent_node_id: 'node-target' });
 });

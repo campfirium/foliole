@@ -235,6 +235,6 @@ it('shows merge import actions on ordinary article topics', () => {
 
   openNodeMenu('Source node');
   expect(screen.getByRole('menuitem', { name: 'Merge highlights' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Create topic from clipboard' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Paste as Topic' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
 });

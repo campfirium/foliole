@@ -153,7 +153,19 @@ function useFormalImportBootstrap(isAvailable: boolean, hasLoadedOverview: boole
 }
 
 function useFormalImportActions() {
-  const startClipboardImport = useCallback(() => runImportFlow(runRuntimeClipboardImport, shouldRehydrateWorkspace, applyImportResultStatus), []);
+  const startClipboardImport = useCallback(
+    (detail?: { targetParentNodeId?: string }) =>
+      runImportFlow(
+        () => runRuntimeClipboardImport(
+          undefined,
+          undefined,
+          detail?.targetParentNodeId ? { targetParentNodeId: detail.targetParentNodeId } : undefined
+        ),
+        shouldRehydrateWorkspace,
+        applyImportResultStatus
+      ),
+    []
+  );
   const startImportFile = useCallback(() => runImportFlow(runFormalImportFileFlow, shouldRehydrateWorkspace, applyImportResultStatus), []);
   const startImportDirectory = useCallback(
     () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport),

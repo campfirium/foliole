@@ -6,10 +6,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 
 import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
-import {
-  CLIPBOARD_IMPORT_REQUEST_EVENT,
-  FILE_IMPORT_REQUEST_EVENT
-} from './importActivityRequests';
+import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { useWorkspaceActivityNotice } from './useWorkspaceActivityNotice';
@@ -81,8 +78,9 @@ function renderWorkspaceActivityNotice(controller: ReturnType<typeof useWorkspac
 
 function useWorkspaceImportRequests(controller: ReturnType<typeof useWorkspaceActivityNotice>) {
   useEffect(() => {
-    const handleClipboardRequest = () => {
-      void controller.startClipboardImport();
+    const handleClipboardRequest = (event: Event) => {
+      const detail = event instanceof CustomEvent ? event.detail as { targetParentNodeId?: string } | undefined : undefined;
+      void controller.startClipboardImport(detail);
     };
     const handleFileRequest = () => {
       void controller.startFileImport();

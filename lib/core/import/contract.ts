@@ -44,6 +44,7 @@ export interface PreparedImportRecord {
   localizedImageAttachmentIds?: string[];
   sourceProfile?: PreparedImportSourceProfile;
   sourceTrackingMode?: ImportSourceTrackingMode;
+  targetParentNodeId?: string | null;
 }
 
 export interface PersistedImportRecord {

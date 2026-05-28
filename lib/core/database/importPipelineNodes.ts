@@ -67,9 +67,13 @@ export function writeNewNode(input: {
   driver: DatabaseDriver;
   hideTitleHeading: boolean;
   importedAt: string;
+  targetParentNodeId?: string | null;
   title: string;
 }) {
-  ensureInboxNode(input.driver, input.importedAt);
+  const parentNodeId = input.targetParentNodeId || INBOX_NODE_ID;
+  if (parentNodeId === INBOX_NODE_ID) {
+    ensureInboxNode(input.driver, input.importedAt);
+  }
   const nodeId = `node-${randomUUID()}`;
   const resolvedTitle = resolveNextImportedTitle(input.driver, input.title);
   const openingText = resolveNodeOpeningText(input.content, resolvedTitle);
@@ -81,7 +85,7 @@ export function writeNewNode(input: {
      ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, ?, ?, ?, ?, NULL, NULL, ?, ?, NULL)`,
     [
       nodeId,
-      INBOX_NODE_ID,
+      parentNodeId,
       resolvedTitle,
       input.hideTitleHeading ? 1 : 0,
       input.content,

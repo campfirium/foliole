@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { runRuntimeDirectoryImport, runRuntimeTextFileImport } from './importExecutionRuntimeRepository';
+import { runRuntimeClipboardImport, runRuntimeDirectoryImport, runRuntimeTextFileImport } from './importExecutionRuntimeRepository';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
@@ -57,4 +57,27 @@ it('forwards title strategy to directory imports', async () => {
   await runRuntimeDirectoryImport('heading');
 
   expect(invoke).toHaveBeenCalledWith('run_directory_import', { title_strategy: 'heading' });
+});
+
+it('forwards target parent configuration to clipboard imports', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    content_fingerprint: 'content-fingerprint',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-1',
+    imported_at: '2026-03-22T10:00:00.000Z',
+    node_id: 'node-1',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint',
+    source_kind: 'text',
+    source_locator: 'clipboard://text/2026-03-22T10:00:00.000Z',
+    source_name: 'Clipboard Text.txt'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await runRuntimeClipboardImport(undefined, undefined, { targetParentNodeId: 'node-target' });
+
+  expect(invoke).toHaveBeenCalledWith('run_clipboard_import', { target_parent_node_id: 'node-target' });
 });

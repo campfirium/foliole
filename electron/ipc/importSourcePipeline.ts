@@ -94,6 +94,16 @@ export function resolveImportNodeTitleStrategy(args?: Pick<NativeTextImportArgs,
   return normalizeImportNodeTitleStrategy(args?.title_strategy);
 }
 
+export function resolveImportTargetParentNodeId(args?: Pick<NativeTextImportArgs, 'target_parent_node_id'>) {
+  const targetParentNodeId = args?.target_parent_node_id?.trim();
+  return targetParentNodeId || undefined;
+}
+
+export function importTargetParentNodeProps(args?: Pick<NativeTextImportArgs, 'target_parent_node_id'>) {
+  const targetParentNodeId = resolveImportTargetParentNodeId(args);
+  return targetParentNodeId ? { targetParentNodeId } : {};
+}
+
 export function toImportPayload(content: string, kind: ImportSourceKind, sourceName = 'Imported source') {
   const normalizedContent = stripUtf8Bom(content);
   if (kind === 'epub') {

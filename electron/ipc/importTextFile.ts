@@ -14,6 +14,7 @@ import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 import { loadEpubPreview, runEpubImport } from './epubImport.js';
 import {
   buildPreparedImportRecord,
+  importTargetParentNodeProps,
   loadPreparedImportRecord,
   resolveImportHighlightPolicy,
   resolveImportNodeTitleStrategy,
@@ -83,6 +84,7 @@ export async function runImportForFilePath(filePath: string, args?: NativeTextIm
           highlightPolicy,
           importedAt,
           sourceTrackingMode: 'untracked',
+          ...importTargetParentNodeProps(args),
           titleStrategy
         })
       )
@@ -96,6 +98,7 @@ export async function runImportForFilePath(filePath: string, args?: NativeTextIm
           highlightPolicy,
           importedAt,
           sourceTrackingMode: 'untracked',
+          ...importTargetParentNodeProps(args),
           titleStrategy
         }),
         failureReason

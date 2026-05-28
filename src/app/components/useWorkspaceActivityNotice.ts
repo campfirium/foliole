@@ -5,6 +5,7 @@ import {
   getFormalImportLatestResult
 } from '../hooks/useFormalImport';
 
+import type { ClipboardImportRequestDetail } from './importActivityRequests';
 import type { WorkspaceActivityNoticeTone } from './WorkspaceActivityNotice';
 
 interface WorkspaceActivityNoticeState {
@@ -44,7 +45,7 @@ function resolveImportNotice(id: number, kind: ImportNoticeKind, imported: boole
 }
 
 export function useWorkspaceActivityNotice(
-  onStartClipboardImport: () => boolean | Promise<boolean>,
+  onStartClipboardImport: (detail?: ClipboardImportRequestDetail) => boolean | Promise<boolean>,
   onStartFileImport: () => boolean | Promise<boolean>,
   onOpenImportedTopic: (nodeId: string) => void
 ) {
@@ -67,7 +68,7 @@ export function useWorkspaceActivityNotice(
   }, []);
 
   const startClipboardImport = useCallback(
-    () => startImport('clipboard', onStartClipboardImport),
+    (detail?: ClipboardImportRequestDetail) => startImport('clipboard', () => onStartClipboardImport(detail)),
     [onStartClipboardImport, startImport]
   );
 

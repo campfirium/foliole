@@ -27,6 +27,7 @@ export function buildPreparedImportRecord(
     sourceLocator?: string;
     sourceProfile?: ImportSourceProfile;
     sourceTrackingMode?: ImportSourceTrackingMode;
+    targetParentNodeId?: string | null;
     titleStrategy?: ImportNodeTitleStrategy;
   }
 ): PreparedImportRecord {
@@ -46,6 +47,7 @@ export function buildPreparedImportRecord(
     ...(input.sourceLocator === undefined ? {} : { sourceLocator: input.sourceLocator }),
     ...(input.sourceProfile === undefined ? {} : { sourceProfile: input.sourceProfile }),
     ...(input.sourceTrackingMode === undefined ? {} : { sourceTrackingMode: input.sourceTrackingMode }),
+    ...(input.targetParentNodeId === undefined ? {} : { targetParentNodeId: input.targetParentNodeId }),
     ...(input.titleStrategy === undefined ? {} : { titleStrategy: input.titleStrategy })
   });
 }
@@ -57,5 +59,6 @@ export interface LoadPreparedImportOptions {
   importedAt: string;
   sourceProfile?: ImportSourceProfile;
   sourceTrackingMode?: ImportSourceTrackingMode;
+  targetParentNodeId?: string | null;
   titleStrategy?: ImportNodeTitleStrategy;
 }

@@ -21,13 +21,7 @@ import {
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 
 import { collectClipboardFilePaths } from './clipboardFilePaths.js';
-import {
-  buildPreparedImportRecord,
-  resolveImportHighlightPolicy,
-  resolveImportKind,
-  resolveImportNodeTitleStrategy,
-  toImportPayload
-} from './importSourcePipeline.js';
+import { buildPreparedImportRecord, importTargetParentNodeProps, resolveImportHighlightPolicy, resolveImportKind, resolveImportNodeTitleStrategy, toImportPayload } from './importSourcePipeline.js';
 import { runImportForFilePath, toNativeTextImportResult } from './importTextFile.js';
 
 function createContentHash(bytes: Uint8Array) {
@@ -68,6 +62,7 @@ async function runLocalImageFileImport(filePath: string, args?: NativeTextImport
         highlightPolicy: resolveImportHighlightPolicy(args),
         importedAt,
         sourceTrackingMode: 'untracked',
+        ...importTargetParentNodeProps(args),
         titleStrategy: resolveImportNodeTitleStrategy(args)
       })
     )
@@ -136,6 +131,7 @@ async function runClipboardImageImport(args?: NativeTextImportArgs) {
           sourceIdentity: hash,
           sourceLocator: `clipboard://image/${hash}`,
           sourceTrackingMode: 'untracked',
+          ...importTargetParentNodeProps(args),
           titleStrategy: resolveImportNodeTitleStrategy(args)
         }
       )
@@ -176,6 +172,7 @@ function createClipboardTextPreparedRecord(input: {
       highlightPolicy: resolveImportHighlightPolicy(input.args),
       importedAt: input.importedAt,
       sourceTrackingMode: 'untracked',
+      ...importTargetParentNodeProps(input.args),
       titleStrategy: input.args?.title_strategy ? resolveImportNodeTitleStrategy(input.args) : 'heading'
     }
   );

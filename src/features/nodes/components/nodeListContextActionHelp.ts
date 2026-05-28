@@ -33,12 +33,12 @@ export const NODE_LIST_CONTEXT_ACTION_HELP = {
     title: 'Merge highlights'
   },
   pasteClipboardTopic: {
-    body: 'Turn the clipboard content into a new topic.',
-    detail: 'The new topic is created under the selected folder or topic.',
+    body: 'Create a new topic from clipboard content.',
+    detail: 'The new topic is created in the same place as Create Topic.',
     id: 'actionHelp.nodeList.pasteClipboardTopic',
     keywords: ['clipboard', 'create', 'paste'],
     sourceLabel: 'Topic list menu',
-    title: 'Create topic from clipboard'
+    title: 'Paste as Topic'
   },
   postponeTopic: {
     body: 'Show this topic on a later due date.',
