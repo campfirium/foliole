@@ -57,7 +57,7 @@ export function SettingsPanelDialog(props: {
             <div className="relative mb-6 border-b border-settings-divider/45 px-5 pb-5 pr-64">
               <SettingsSearchBox
                 activeResultIndex={props.activeResultIndex}
-                className="absolute right-5 top-0"
+                className="absolute right-0 top-0"
                 onActiveResultIndexChange={props.onActiveResultIndexChange}
                 onQueryChange={props.onSearchQueryChange}
                 onSelectResult={props.onSearchResultSelect}

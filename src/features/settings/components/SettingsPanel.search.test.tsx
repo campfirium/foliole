@@ -98,6 +98,15 @@ it('closes search results when clicking outside or pressing Escape', () => {
   expect(input).toHaveValue('');
 });
 
+it('aligns the settings search field to the header divider edge', () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="about" />);
+  const input = screen.getByRole('textbox', { name: 'Search settings' });
+  const searchRoot = input.parentElement?.parentElement;
+
+  expect(searchRoot).toHaveClass('right-0');
+  expect(searchRoot).not.toHaveClass('right-5');
+});
+
 it('keeps registered row anchors renderable in their categories', async () => {
   const categories = [...new Set(SETTINGS_SEARCH_ROWS.map((row) => row.categoryId))];
 
