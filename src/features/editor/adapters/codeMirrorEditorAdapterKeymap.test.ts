@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const mockKeymapOf = vi.hoisted(() => vi.fn((value) => value));
+const mockToggleComment = vi.hoisted(() => vi.fn());
 
 vi.mock('@codemirror/commands', () => ({
-  defaultKeymap: ['default-keymap']
+  defaultKeymap: [
+    { key: 'Mod-a', run: vi.fn() },
+    { key: 'Mod-/', run: mockToggleComment }
+  ],
+  toggleComment: mockToggleComment
 }));
 
 vi.mock('@codemirror/lang-markdown', () => ({
@@ -84,7 +89,29 @@ describe('CodeMirror editor keymap', () => {
       textAnchorDecorationsCompartment: createCompartment() as never
     });
 
-    expect(mockKeymapOf).toHaveBeenCalledWith(['default-keymap']);
+    expect(mockKeymapOf).toHaveBeenCalledWith([{ key: 'Mod-a', run: expect.any(Function) }]);
     expect(extensions).not.toContain('history-extension');
+  });
+
+  it('does not install CodeMirror comment toggling shortcut', () => {
+    createCodeMirrorEditorExtensions({
+      diffDecorationsCompartment: createCompartment() as never,
+      hideTitleHeading: false,
+      imageClozePresentationVersion: 0,
+      liveMarkdownCompartment: createCompartment() as never,
+      liveMarkdownStateCompartment: createCompartment() as never,
+      nodeId: 'node-1',
+      onCompositionEnd: vi.fn(),
+      onDocChanged: vi.fn(),
+      options: { initialContent: 'abc' },
+      paragraphMarkerCompartment: createCompartment() as never,
+      readOnlyCompartment: createCompartment() as never,
+      searchDecorationsCompartment: createCompartment() as never,
+      textAnchorDecorations: [],
+      textAnchorDecorationsCompartment: createCompartment() as never
+    });
+
+    const installedKeymap = mockKeymapOf.mock.calls.at(-1)?.[0] ?? [];
+    expect(installedKeymap).not.toContainEqual({ key: 'Mod-/', run: mockToggleComment });
   });
 });

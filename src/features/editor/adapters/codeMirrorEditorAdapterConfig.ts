@@ -1,4 +1,4 @@
-import { defaultKeymap } from '@codemirror/commands';
+import { defaultKeymap, toggleComment } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
@@ -17,6 +17,8 @@ import { createLiveMarkdownExtensions } from './liveMarkdown';
 import { createLiveMarkdownStateExtensions, trailingDividerFacet } from './liveMarkdownState';
 import { trailingDividerExtension } from './liveMarkdownTrailingDivider';
 import { markdownInputAssist } from './markdownInputAssist';
+
+const folioleDefaultKeymap = defaultKeymap.filter((binding) => binding.run !== toggleComment);
 
 export function createCodeMirrorEditorExtensions(args: {
   diffDecorationsCompartment: import('@codemirror/state').Compartment;
@@ -37,7 +39,7 @@ export function createCodeMirrorEditorExtensions(args: {
   return [
     markdown({ base: markdownLanguage, extensions: folioleMarkdownExtensions }),
     EditorState.allowMultipleSelections.of(true),
-    keymap.of(defaultKeymap),
+    keymap.of(folioleDefaultKeymap),
     args.readOnlyCompartment.of(createReadOnlyExtensions(args.options.readOnly === true)),
     EditorView.lineWrapping,
     highlightActiveLine(),
