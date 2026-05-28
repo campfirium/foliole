@@ -19,7 +19,13 @@ import {
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { EDITOR_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
 
-const LONG_CLOZE_MISTAKE_GUARD_ROW = EDITOR_SETTINGS_SEARCH_ROWS[4]!;
+function getEditorSettingsRow(id: string) {
+  const row = EDITOR_SETTINGS_SEARCH_ROWS.find((item) => item.id === id);
+  if (!row) throw new Error(`Missing editor settings search row: ${id}`);
+  return row;
+}
+
+const LONG_CLOZE_MISTAKE_GUARD_ROW = getEditorSettingsRow('editor-long-cloze-mistake-guard');
 
 export function LongClozeFrontGuardRow() {
   const [mode, setMode] = useState(() => getLongClozeFrontGuardMode());

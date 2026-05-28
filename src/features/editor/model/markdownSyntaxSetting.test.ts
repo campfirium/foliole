@@ -13,9 +13,10 @@ describe('markdownSyntaxSetting', () => {
     expect(getMarkdownSyntaxVisibility()).toBe(MARKDOWN_SYNTAX_VISIBILITY_DEFAULT);
   });
 
-  it('stores and loads valid values', () => {
+  it('keeps syntax markers hidden even when callers request the old visible mode', () => {
     setMarkdownSyntaxVisibility('visible');
-    expect(getMarkdownSyntaxVisibility()).toBe('visible');
+    expect(getMarkdownSyntaxVisibility()).toBe('hidden');
+    expect(localStorage.getItem(MARKDOWN_SYNTAX_VISIBILITY_KEY)).toBe('hidden');
 
     setMarkdownSyntaxVisibility('hidden');
     expect(getMarkdownSyntaxVisibility()).toBe('hidden');

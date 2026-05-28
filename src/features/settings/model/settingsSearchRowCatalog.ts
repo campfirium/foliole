@@ -32,13 +32,6 @@ export const EDITOR_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
   },
   {
     categoryId: 'editor',
-    description: 'Show markdown syntax markers on the active line, or keep them hidden everywhere.',
-    id: 'editor-show-markdown-syntax-markers',
-    searchTerms: ['markdown markers', 'syntax visibility'],
-    title: 'Show markdown syntax markers'
-  },
-  {
-    categoryId: 'editor',
     description: 'Inserted before annotation text when creating or adding a highlight annotation.',
     id: 'editor-highlight-annotation-prefix',
     title: 'Highlight annotation prefix'

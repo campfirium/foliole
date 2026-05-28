@@ -8,7 +8,6 @@ import {
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
-  SettingsSegmentedControl,
   settingsResetButtonClassName,
   settingsSwitchClassName,
   settingsSwitchKnobClassName
@@ -30,12 +29,16 @@ import {
   LongClozeFrontGuardRow
 } from './SettingsEditorClozeRows';
 
+function getEditorSettingsRow(id: string) {
+  const row = EDITOR_SETTINGS_SEARCH_ROWS.find((item) => item.id === id);
+  if (!row) throw new Error(`Missing editor settings search row: ${id}`);
+  return row;
+}
+
 const EDITOR_ROW = {
-  frontmatterMeta: EDITOR_SETTINGS_SEARCH_ROWS[3]!,
-  highlightAnnotationPrefix: EDITOR_SETTINGS_SEARCH_ROWS[2]!,
-  longClozeMistakeGuard: EDITOR_SETTINGS_SEARCH_ROWS[4]!,
-  saveRemoteImages: EDITOR_SETTINGS_SEARCH_ROWS[0]!,
-  showMarkdownSyntax: EDITOR_SETTINGS_SEARCH_ROWS[1]!
+  frontmatterMeta: getEditorSettingsRow('editor-frontmatter-meta'),
+  highlightAnnotationPrefix: getEditorSettingsRow('editor-highlight-annotation-prefix'),
+  saveRemoteImages: getEditorSettingsRow('editor-save-remote-images-locally')
 };
 
 function HighlightAnnotationPrefixRow() {
@@ -113,9 +116,7 @@ function FrontmatterMetaFieldsRow() {
 function EditorLiveMarkdownSection() {
   const {
     autoLocalizeRemoteImages,
-    markdownSyntaxVisibility,
     setAutoLocalizeRemoteImages,
-    setMarkdownSyntaxVisibility
   } = useAppearanceSettings();
 
   return (
@@ -125,19 +126,6 @@ function EditorLiveMarkdownSection() {
           <button aria-checked={autoLocalizeRemoteImages} aria-label="Save remote images locally" className={settingsSwitchClassName(autoLocalizeRemoteImages)} onClick={() => setAutoLocalizeRemoteImages(!autoLocalizeRemoteImages)} role="switch" type="button">
             <span aria-hidden="true" className={settingsSwitchKnobClassName(autoLocalizeRemoteImages)} />
           </button>
-        </SettingsControlSlot>
-      </SettingsRow>
-      <SettingsRow {...settingsSearchRowProps(EDITOR_ROW.showMarkdownSyntax)} description={EDITOR_ROW.showMarkdownSyntax.description} title={EDITOR_ROW.showMarkdownSyntax.title}>
-        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <SettingsSegmentedControl
-            ariaLabel="Markdown syntax visibility"
-            onChange={(value) => setMarkdownSyntaxVisibility(value as typeof markdownSyntaxVisibility)}
-            options={[
-              { label: 'Hidden', value: 'hidden' },
-              { label: 'Active line', value: 'visible' }
-            ]}
-            value={markdownSyntaxVisibility}
-          />
         </SettingsControlSlot>
       </SettingsRow>
       <SelectionToolbarSettingsRow />

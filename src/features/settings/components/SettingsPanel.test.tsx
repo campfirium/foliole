@@ -216,8 +216,6 @@ it('updates appearance settings from the dedicated sections and persists them', 
 
   fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
   expect(screen.getByRole('switch', { name: 'Save remote images locally' }).className).toContain('bg-settings-switch-on');
-  expect(screen.getByRole('radiogroup', { name: 'Markdown syntax visibility' }).className).toContain('bg-settings-control');
-  fireEvent.click(screen.getByRole('radio', { name: 'Active line' }));
   fireEvent.click(screen.getByLabelText('Save remote images locally'));
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   fireEvent.change(screen.getByLabelText('Accent color picker'), {
@@ -230,7 +228,6 @@ it('updates appearance settings from the dedicated sections and persists them', 
 
   await waitFor(() => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages)).toBe('false');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility)).toBe('visible');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.accentColor)).toBe('#3f8f68');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize)).toBe('22');
   });

@@ -60,6 +60,15 @@ it('edits the floating toolbar opacity and visibility from editor settings', () 
   expect(toggle).toHaveAttribute('aria-checked', 'false');
 });
 
+it('does not expose the retired markdown syntax marker setting', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'visible');
+
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
+
+  expect(screen.queryByText('Show markdown syntax markers')).not.toBeInTheDocument();
+  expect(screen.queryByRole('radiogroup', { name: 'Markdown syntax visibility' })).not.toBeInTheDocument();
+});
+
 it('edits the long cloze front guard mode from editor settings', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
 
