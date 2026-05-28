@@ -31,14 +31,22 @@ function HighlightedExcerpt(props: { excerpt: string; highlightText: string }) {
 
 export function ReadwisePreviewSampleList(props: {
   hasGap: boolean;
+  maxSamples?: number;
   samples: NativeReadwiseDetectionSample[];
+  showGap?: boolean;
+  showSourceName?: boolean;
   sourceName: string;
 }) {
+  const maxSamples = props.maxSamples ?? props.samples.length;
+  const visibleSamples = props.samples.slice(0, maxSamples);
+  const showSourceName = props.showSourceName ?? true;
+  const showGap = props.showGap ?? true;
+
   return (
     <section className="mt-3">
-      <p className="text-sm font-semibold text-foreground">{props.sourceName}</p>
+      {showSourceName ? <p className="text-sm font-semibold text-foreground">{props.sourceName}</p> : null}
       <div className="mt-3 space-y-3">
-        {props.samples.map((sample, index) => (
+        {visibleSamples.map((sample, index) => (
           <blockquote className="border-l border-border/80 pl-4" key={`${sample.sourceName}-${index}`}>
             <p className="text-sm leading-6 text-foreground/80">
               {sample.matched ? (
@@ -50,7 +58,7 @@ export function ReadwisePreviewSampleList(props: {
             {!sample.matched ? (
               <p className="mt-2 text-sm text-amber-700">This highlight was not found in the article body.</p>
             ) : null}
-            {props.hasGap && index === 1 ? <p className="pt-3 text-center text-sm text-foreground/45">...</p> : null}
+            {showGap && props.hasGap && index === 1 ? <p className="pt-3 text-center text-sm text-foreground/45">...</p> : null}
           </blockquote>
         ))}
       </div>

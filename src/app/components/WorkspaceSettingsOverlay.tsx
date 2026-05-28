@@ -1,6 +1,8 @@
 import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 
+import { useKeepPreviewDialog } from './importSourceWorkspaceDialogs';
+import { KeepImportPreviewDialog } from './KeepImportPreviewDialog';
 import { SettingsImportManagementContent } from './SettingsImportManagementContent';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 import { useImportSourceWorkspaceState } from './useImportSourceWorkspaceState';
@@ -16,6 +18,9 @@ interface WorkspaceSettingsOverlaySource {
   onCloseSettings: () => void;
   requestedSettingsCategory: SettingsCategoryId | null;
 }
+
+type ImportSettingsState = ReturnType<typeof useImportSourceWorkspaceState>;
+type KeepPreviewState = ReturnType<typeof useKeepPreviewDialog>;
 
 export function selectWorkspaceSettingsOverlayProps(
   props: WorkspaceSettingsOverlaySource
@@ -49,47 +54,78 @@ function WorkspaceSettingsOverlayContent({
   requestedCategory: SettingsCategoryId | null;
 }) {
   const importSettings = useImportSourceWorkspaceState();
+  const keepPreview = useKeepPreviewDialog({
+    handleConfirmKeepImport: importSettings.handleConfirmKeepImport,
+    handleDisableKeepImport: importSettings.handleDisableKeepImport,
+    handlePreviewKeepImport: importSettings.handlePreviewKeepImport,
+    readwiseSources: importSettings.readwiseSources,
+    sources: importSettings.sources
+  });
 
   return (
-    <SettingsPanel
-      importCategoryContent={
-        <SettingsImportManagementContent
-          onChange={importSettings.handleChangeSource}
-          onChangeAction={importSettings.handleChangeAction}
-          onChangeTitleStrategy={importSettings.handleChangeTitleStrategy}
-          onChooseHighlightFolder={(sourceId) =>
-            void importSettings.handleChooseFolder(sourceId, 'highlightPath')
-          }
-          onChoosePrimaryFolder={(sourceId) =>
-            void importSettings.handleChooseFolder(sourceId, 'primaryPath')
-          }
-          onCopySource={importSettings.handleCopySource}
-          onDeleteSource={importSettings.handleDeleteSource}
-          onDisableKeepImport={(sourceId) =>
-            importSettings.handleDisableKeepImport(sourceId, 'sources')
-          }
-          onPreviewKeepImport={(sourceId) =>
-            void importSettings.handlePreviewKeepImport(sourceId, 'sources')
-          }
-          sources={importSettings.sources}
-          titleStrategy={importSettings.titleStrategy}
+    <>
+      <SettingsPanel
+        importCategoryContent={<ImportCategoryContent importSettings={importSettings} keepPreview={keepPreview} />}
+        onClose={onClose}
+        readwiseReaderCategoryContent={<ReadwiseReaderCategoryContent importSettings={importSettings} />}
+        requestedCategory={requestedCategory}
+      />
+      {keepPreview.keepPreviewDialog ? (
+        <KeepImportPreviewDialog
+          onConfirm={keepPreview.handleConfirmKeepPreview}
+          onOpenChange={keepPreview.handleKeepPreviewOpenChange}
+          open={keepPreview.keepPreviewDialog.open}
+          preview={keepPreview.keepPreviewDialog.preview}
+          sourceLabel={keepPreview.previewSource?.primaryPath || 'Watch folder'}
         />
+      ) : null}
+    </>
+  );
+}
+
+function ImportCategoryContent(props: {
+  importSettings: ImportSettingsState;
+  keepPreview: KeepPreviewState;
+}) {
+  const { importSettings, keepPreview } = props;
+  return (
+    <SettingsImportManagementContent
+      onChange={importSettings.handleChangeSource}
+      onChangeAction={importSettings.handleChangeAction}
+      onChangeTitleStrategy={importSettings.handleChangeTitleStrategy}
+      onChooseHighlightFolder={(sourceId) =>
+        void importSettings.handleChooseFolder(sourceId, 'highlightPath')
       }
-      onClose={onClose}
-      readwiseReaderCategoryContent={
-        <SettingsReadwiseReaderContent
-          config={importSettings.readwiseReaderConfig}
-          onSave={importSettings.handleSaveReadwiseReaderSetup}
-          onCancelSync={importSettings.cancelReadwiseReaderImport}
-          onPreviewSync={importSettings.previewReadwiseReaderImport}
-          onPreviewCleanup={importSettings.previewReadwiseImportCleanup}
-          onRunCleanup={importSettings.runReadwiseImportCleanup}
-          onRunSync={importSettings.runReadwiseReaderImport}
-          readwiseRootPath={importSettings.readwiseRootPath}
-          readwiseSources={importSettings.readwiseSources}
-        />
+      onChoosePrimaryFolder={(sourceId) =>
+        void importSettings.handleChooseFolder(sourceId, 'primaryPath')
       }
-      requestedCategory={requestedCategory}
+      onCopySource={importSettings.handleCopySource}
+      onDeleteSource={importSettings.handleDeleteSource}
+      onDisableKeepImport={(sourceId) =>
+        importSettings.handleDisableKeepImport(sourceId, 'sources')
+      }
+      onPreviewKeepImport={(sourceId) =>
+        void keepPreview.handleOpenKeepPreview(sourceId, 'sources')
+      }
+      sources={importSettings.sources}
+      titleStrategy={importSettings.titleStrategy}
+    />
+  );
+}
+
+function ReadwiseReaderCategoryContent(props: { importSettings: ImportSettingsState }) {
+  const { importSettings } = props;
+  return (
+    <SettingsReadwiseReaderContent
+      config={importSettings.readwiseReaderConfig}
+      onSave={importSettings.handleSaveReadwiseReaderSetup}
+      onCancelSync={importSettings.cancelReadwiseReaderImport}
+      onPreviewSync={importSettings.previewReadwiseReaderImport}
+      onPreviewCleanup={importSettings.previewReadwiseImportCleanup}
+      onRunCleanup={importSettings.runReadwiseImportCleanup}
+      onRunSync={importSettings.runReadwiseReaderImport}
+      readwiseRootPath={importSettings.readwiseRootPath}
+      readwiseSources={importSettings.readwiseSources}
     />
   );
 }
