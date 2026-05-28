@@ -208,8 +208,8 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
       ) : null}
       {!confirmation && props.repairTableAvailable && entries.length > 0 ? <SelectionMenuSeparator /> : null}
       {!confirmation ? <WebLookupActionItems entries={entries} onSelect={(action) => void handleWebLookupClick(action)} /> : null}
+      {!confirmation && notice && entries.length > 0 ? <SelectionMenuSeparator /> : null}
       {!confirmation && notice ? <WebLookupNotice message={notice.message} tone={notice.tone} /> : null}
-      {!confirmation ? <SelectionMenuSeparator /> : null}
     </AppSelectionDropdownMenu>
   );
 }
