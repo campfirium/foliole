@@ -48,7 +48,7 @@
     "test:files": "node scripts/test-files.mjs",
     "test:sqlite:electron": "node scripts/electron-sqlite-runner.mjs scripts/test-files.mjs",
     "test:changed": "node scripts/run-vitest-with-summary.mjs .tmp/vitest/changed.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism --changed HEAD",
-    "check:android-boundary": "node scripts/run-vitest-with-summary.mjs .tmp/vitest/android-boundary.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism scripts/android/java-adapter-boundary.test.mjs scripts/android/java-sql-surface.test.mjs scripts/android/schema-inventory.test.mjs scripts/android/android-sync-*.test.mjs src/shared/platform/companionSqlBoundary.test.ts src/shared/platform/companionSyncWriterQueue.test.ts",
+    "check:android-boundary": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/android-boundary.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism scripts/android/java-adapter-boundary.test.mjs scripts/android/java-sql-surface.test.mjs scripts/android/schema-inventory.test.mjs scripts/android/android-sync-*.test.mjs src/shared/platform/companionSqlBoundary.test.ts src/shared/platform/companionSyncWriterQueue.test.ts",
     "windows:preview": "node scripts/preview-dedupe.mjs windows -- node scripts/with-resource-gate.mjs preview -- bash scripts/windows/windows-preview.sh",
     "preview:diag": "node scripts/preview-dedupe-diagnostics.mjs",
     "desktop:spike:electron": "node scripts/windows/playwright-electron-spike.mjs",
