@@ -45,7 +45,7 @@ it('renders the dev panel with resolved scheduling and raw node fields', () => {
 
   openRightPanelFromMenu('Dev');
 
-  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
+  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.queryByText('Reading position log')).not.toBeInTheDocument();
   expect(screen.getByText('Scheduling')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Review' })).toBeInTheDocument();

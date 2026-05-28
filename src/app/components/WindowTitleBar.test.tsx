@@ -188,7 +188,7 @@ describe('WindowTitleBar right sidebar anchor layout', () => {
   it('uses the more menu as the visible active control for overflow panels', () => {
     renderTitleBar({ activeRightPanelId: 'dev' });
 
-    expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
+    expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows every right sidebar panel in the more menu with icons', () => {

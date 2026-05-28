@@ -32,14 +32,13 @@ function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>
   );
 }
 
-it('keeps only the right sidebar toggle visible below the sidebar breakpoint', () => {
+it('hides the full right sidebar titlebar anchor below the sidebar breakpoint', () => {
   const { container } = renderTitleBar();
 
-  expect(container.querySelector('.window-titlebar-right-zone')).toHaveClass('max-[1279px]:hidden');
-  expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();
+  expect(container.querySelector('.window-titlebar-right-anchor-shell')).toHaveClass('max-[1279px]:hidden');
 });
 
-it('renders only the right sidebar toggle when the sidebar is manually collapsed', () => {
+it('keeps the right sidebar restore toggle when the sidebar is manually collapsed', () => {
   renderTitleBar({ isRightSidebarCollapsed: true });
 
   expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();

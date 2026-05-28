@@ -20,7 +20,7 @@ it('shows default desired retention and priority fallbacks on nodes without over
 
   expect(screen.getByLabelText('Inspector')).toBeInTheDocument();
   openRightPanelFromMenu('Dev');
-  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
+  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByText('Scheduling')).toBeInTheDocument();
   expect(screen.getByText('90.0% · Default')).toBeInTheDocument();
   expect(screen.getByText('P5 · Default')).toBeInTheDocument();

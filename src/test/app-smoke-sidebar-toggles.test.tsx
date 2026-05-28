@@ -42,7 +42,7 @@ it('keeps the workspace stable when switching right panels after collapsing the 
   expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(true);
 
   openRightPanelFromMenu('Highlights');
-  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
+  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle right sidebar' }));
   expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(true);

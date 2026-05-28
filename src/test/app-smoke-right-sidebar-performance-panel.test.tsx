@@ -33,7 +33,7 @@ it('renders the standalone performance panel with timing, memory, and cache grou
   openRightPanelFromMenu('Performance');
 
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
+    expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('heading', { name: 'Timing' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Memory' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Cache' })).toBeInTheDocument();

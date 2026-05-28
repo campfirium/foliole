@@ -131,6 +131,7 @@ export function WorkspaceTitlebarDividers({
       )}
       {isRightSidebarCollapsed ? null : (
         <WorkspaceSurfaceRowDivider
+          className="max-[1279px]:hidden"
           column="sidebar"
           left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT}
           row="titlebar"
