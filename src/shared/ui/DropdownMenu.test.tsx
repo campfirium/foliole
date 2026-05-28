@@ -84,6 +84,8 @@ it('renders menus above tooltip-level floating surfaces', () => {
 
   const menu = screen.getByRole('menu', { name: 'Selection commands' });
   expect(menu.className).toContain('z-dropdown');
+  expect(menu.className).toContain('shadow-popover');
+  expect(menu.className).toContain('bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_82%,rgb(var(--color-background)))]');
 });
 
 it('uses shared dropdown styling for grouped checked menu items', () => {

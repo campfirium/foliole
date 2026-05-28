@@ -168,7 +168,11 @@ function AppSelectionDropdownMenu({
       ) : null}
       <div
         aria-label="Selection commands"
-        className={cn(dropdownMenuContentClassName(), 'fixed')}
+        className={cn(
+          dropdownMenuContentClassName(),
+          'fixed p-2 shadow-popover',
+          'bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_82%,rgb(var(--color-background)))]'
+        )}
         onContextMenu={(event) => event.preventDefault()}
         ref={menuRef}
         role="menu"
