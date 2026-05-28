@@ -117,6 +117,7 @@ export function WorkspaceTitlebarDividers({
       />
       {isListCollapsed || !hasFolderTopicDivider ? null : (
         <WorkspaceSurfaceRowDivider
+          className="max-[1080px]:hidden"
           column="folder"
           left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT}
           row="titlebar"
@@ -124,6 +125,7 @@ export function WorkspaceTitlebarDividers({
       )}
       {isListCollapsed ? null : (
         <WorkspaceSurfaceRowDivider
+          className="max-[1080px]:hidden"
           column="topic"
           left={WORKSPACE_LIST_DIVIDER_LEFT}
           row="titlebar"

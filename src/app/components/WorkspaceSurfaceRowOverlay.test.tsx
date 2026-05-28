@@ -7,12 +7,14 @@ import {
   DEFAULT_WORKSPACE_SURFACE_PALETTE
 } from '../../features/settings/model/appearanceSettings';
 
-import { WorkspaceFooterRowDividers, WorkspaceSurfaceRowOverlay } from './WorkspaceSurfaceRowOverlay';
+import { WorkspaceFooterRowDividers, WorkspaceSurfaceRowOverlay, WorkspaceTitlebarDividers } from './WorkspaceSurfaceRowOverlay';
 
 function createAppearanceContext(): AppearanceSettingsContextValue {
   return {
     workspaceSurfaceAssignments: {
       ...DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS,
+      'titlebar-folder': 0,
+      'titlebar-topic': 1,
       'footer-folder': 0,
       'footer-topic': 1
     },
@@ -46,4 +48,18 @@ it('places the footer folder divider at the current list folder edge', () => {
   expect(container.firstElementChild).toHaveStyle({
     left: 'calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width)))'
   });
+});
+
+it('hides titlebar list dividers below the responsive list breakpoint', () => {
+  const { container } = render(
+    <AppearanceSettingsContext.Provider value={createAppearanceContext()}>
+      <WorkspaceTitlebarDividers isListCollapsed={false} isRightSidebarCollapsed />
+    </AppearanceSettingsContext.Provider>
+  );
+
+  const dividers = Array.from(container.children);
+  expect(dividers).toHaveLength(3);
+  expect(dividers[0]).not.toHaveClass('max-[1080px]:hidden');
+  expect(dividers[1]).toHaveClass('max-[1080px]:hidden');
+  expect(dividers[2]).toHaveClass('max-[1080px]:hidden');
 });

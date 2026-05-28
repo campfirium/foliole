@@ -249,6 +249,12 @@
     --workspace-titlebar-folder-column-width: 0px !important;
     --workspace-titlebar-list-current-width: 0px !important;
   }
+
+  .workspace-responsive-shell .window-titlebar {
+    --window-titlebar-left-width: var(--workspace-rail-width) !important;
+    --workspace-titlebar-folder-column-width: 0px !important;
+    --workspace-titlebar-list-current-width: 0px !important;
+  }
 }
 
 @media (max-width: 1279px) {
@@ -260,6 +266,11 @@
 
   .workspace-responsive-shell .window-titlebar-right-anchor-shell {
     display: none !important;
+  }
+
+  .workspace-responsive-shell .window-titlebar {
+    --window-titlebar-right-width: var(--window-titlebar-controls-width, 138px) !important;
+    --workspace-right-sidebar-current-width: 0px !important;
   }
 }
 
