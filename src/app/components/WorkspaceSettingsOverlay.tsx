@@ -1,5 +1,6 @@
 import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
+import { requestAppConfirmation } from '../../shared/ui';
 
 import { useKeepPreviewDialog } from './importSourceWorkspaceDialogs';
 import { KeepImportPreviewDialog } from './KeepImportPreviewDialog';
@@ -88,10 +89,29 @@ function ImportCategoryContent(props: {
   keepPreview: KeepPreviewState;
 }) {
   const { importSettings, keepPreview } = props;
+  async function handleChangeAction(sourceId: string, value: string) {
+    if (value !== 'delete') {
+      importSettings.handleChangeAction(sourceId, value);
+      return;
+    }
+    const confirmed = await requestAppConfirmation({
+      cancelLabel: 'Cancel',
+      confirmLabel: 'Enable',
+      description: [
+        'Source files in this watch folder will be moved to the system trash after they are successfully imported.'
+      ],
+      title: 'Confirm enabling'
+    });
+    if (confirmed) {
+      importSettings.handleChangeAction(sourceId, value);
+    }
+  }
   return (
     <SettingsImportManagementContent
       onChange={importSettings.handleChangeSource}
-      onChangeAction={importSettings.handleChangeAction}
+      onChangeAction={(sourceId, value) => {
+        void handleChangeAction(sourceId, value);
+      }}
       onChangeTitleStrategy={importSettings.handleChangeTitleStrategy}
       onChooseHighlightFolder={(sourceId) =>
         void importSettings.handleChooseFolder(sourceId, 'highlightPath')

@@ -95,11 +95,6 @@ function HandlingCell(props: {
           </option>
         ))}
       </SourceSelect>
-      {props.source.actionMode === 'delete' ? (
-        <p className="mt-1 text-xs leading-4 text-foreground/55">
-          Delete is not active for watch folders yet.
-        </p>
-      ) : null}
     </div>
   );
 }

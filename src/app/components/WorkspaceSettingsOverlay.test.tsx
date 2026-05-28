@@ -1,9 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 const workspaceSettingsOverlayMocks = vi.hoisted(() => ({
-  useImportSourceWorkspaceState: vi.fn(() => ({
+  requestAppConfirmation: vi.fn(),
+  useImportSourceWorkspaceState: vi.fn()
+}));
+
+function createDefaultOverlayImportSettings() {
+  return {
     cancelReadwiseReaderImport: () => undefined,
     handleChangeAction: () => undefined,
     handleChangeSource: () => undefined,
@@ -24,8 +29,8 @@ const workspaceSettingsOverlayMocks = vi.hoisted(() => ({
     runReadwiseReaderImport: async () => null,
     sources: [],
     titleStrategy: 'file_name'
-  }))
-}));
+  };
+}
 
 function createPreviewSummary() {
   return {
@@ -66,10 +71,13 @@ function createPreviewSummary() {
   };
 }
 
-function createOpenOverlayImportSettings(handlePreviewKeepImport: ReturnType<typeof vi.fn>) {
+function createOpenOverlayImportSettings(
+  handlePreviewKeepImport: ReturnType<typeof vi.fn>,
+  handleChangeAction = vi.fn()
+) {
   return {
     cancelReadwiseReaderImport: () => undefined,
-    handleChangeAction: () => undefined,
+    handleChangeAction,
     handleChangeSource: () => undefined,
     handleChangeTitleStrategy: () => undefined,
     handleChooseFolder: async () => null,
@@ -104,6 +112,14 @@ vi.mock('./useImportSourceWorkspaceState', () => ({
   useImportSourceWorkspaceState: workspaceSettingsOverlayMocks.useImportSourceWorkspaceState
 }));
 
+vi.mock('../../shared/ui', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../shared/ui')>();
+  return {
+    ...actual,
+    requestAppConfirmation: workspaceSettingsOverlayMocks.requestAppConfirmation
+  };
+});
+
 vi.mock('../../features/settings/components/SettingsPanel', () => ({
   SettingsPanel: (props: { importCategoryContent?: ReactNode }) => (
     <div data-testid="settings-panel">{props.importCategoryContent}</div>
@@ -111,6 +127,14 @@ vi.mock('../../features/settings/components/SettingsPanel', () => ({
 }));
 
 import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
+
+beforeEach(() => {
+  workspaceSettingsOverlayMocks.requestAppConfirmation.mockReset();
+  workspaceSettingsOverlayMocks.useImportSourceWorkspaceState.mockReset();
+  workspaceSettingsOverlayMocks.useImportSourceWorkspaceState.mockImplementation(
+    () => createDefaultOverlayImportSettings()
+  );
+});
 
 it('skips import settings state while the settings overlay is closed', () => {
   render(
@@ -150,4 +174,36 @@ it('opens the keep import preview dialog from the watch folders table', async ()
   expect(screen.getByText('first highlight')).toBeInTheDocument();
   expect(screen.queryByText('second highlight')).not.toBeInTheDocument();
   expect(screen.queryByText('third highlight')).not.toBeInTheDocument();
+});
+
+it('confirms before enabling delete handling for a watch folder', async () => {
+  const handleChangeAction = vi.fn();
+  workspaceSettingsOverlayMocks.requestAppConfirmation.mockResolvedValue(true);
+  workspaceSettingsOverlayMocks.useImportSourceWorkspaceState.mockReturnValue(
+    createOpenOverlayImportSettings(vi.fn(), handleChangeAction) as never
+  );
+
+  render(
+    <WorkspaceSettingsOverlay
+      isSettingsOpen
+      onClose={() => undefined}
+      requestedCategory={null}
+    />
+  );
+
+  fireEvent.change(screen.getByRole('combobox', { name: 'Handling source-1' }), {
+    target: { value: 'delete' }
+  });
+
+  await waitFor(() =>
+    expect(workspaceSettingsOverlayMocks.requestAppConfirmation).toHaveBeenCalledWith({
+      cancelLabel: 'Cancel',
+      confirmLabel: 'Enable',
+      description: [
+        'Source files in this watch folder will be moved to the system trash after they are successfully imported.'
+      ],
+      title: 'Confirm enabling'
+    })
+  );
+  expect(handleChangeAction).toHaveBeenCalledWith('source-1', 'delete');
 });

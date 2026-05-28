@@ -20,14 +20,6 @@ function createSplitSource() {
   };
 }
 
-function createDeleteSource() {
-  return {
-    ...createDraftImportSource(102),
-    actionMode: 'delete' as const,
-    primaryPath: '/library/delete-source'
-  };
-}
-
 function renderTable(sourceCount: number, onAddSource = vi.fn()) {
   return render(
     <ImportSourceTable
@@ -92,22 +84,4 @@ it('blocks preview for generic split sources until sidecar support exists', () =
   expect(previewButton).toBeDisabled();
   expect(previewButton).toHaveTextContent('Unavailable');
   expect(previewButton).toHaveAttribute('title', 'Generic split highlights are not available yet.');
-});
-
-it('warns that delete handling is not active for watch folders', () => {
-  render(
-    <ImportSourceTable
-      onAddSource={vi.fn()}
-      onChange={vi.fn()}
-      onChangeAction={vi.fn()}
-      onChooseHighlightFolder={vi.fn()}
-      onChoosePrimaryFolder={vi.fn()}
-      onDeleteSource={vi.fn()}
-      onDisableKeepImport={vi.fn()}
-      onPreviewKeepImport={vi.fn()}
-      sources={[createDeleteSource()]}
-    />
-  );
-
-  expect(screen.getByText('Delete is not active for watch folders yet.')).toBeInTheDocument();
 });
