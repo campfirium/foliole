@@ -94,6 +94,7 @@ function ReviewResumeBar({
   style
 }: Pick<ReviewNoCurrentItemBarProps, 'className' | 'onResumeReviewItem' | 'reviewSummary' | 'showSummary' | 'surface' | 'style'>) {
   useReadingReadShortcut(onResumeReviewItem);
+  const resumeAction = <ResumeReviewAction onResumeReviewItem={onResumeReviewItem} {...definedProps({ surface })} />;
 
   return (
     <ReviewActionBar
@@ -101,11 +102,15 @@ function ReviewResumeBar({
       {...definedProps({ className, style })}
       mode="study"
       primary={
-        <ReviewToolbarSessionActions
-          actions={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
-          modeControl={<span aria-hidden="true" className="size-8" />}
-          {...definedProps({ surface })}
-        />
+        surface === 'overlay' ? (
+          resumeAction
+        ) : (
+          <ReviewToolbarSessionActions
+            actions={resumeAction}
+            modeControl={<span aria-hidden="true" className="size-8" />}
+            {...definedProps({ surface })}
+          />
+        )
       }
       progress={null}
       secondary={showSummary ? 'Flow mode' : null}

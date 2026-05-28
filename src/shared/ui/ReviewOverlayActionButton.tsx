@@ -1,18 +1,19 @@
 import { Fragment, type ReactNode } from 'react';
 
-type OverlayReviewButtonLabel = 'Again' | 'Hard' | 'Good' | 'Easy' | 'Soon' | 'Later' | 'Read' | 'Dismiss';
+type OverlayReviewButtonLabel = 'Again' | 'Hard' | 'Good' | 'Easy' | 'Soon' | 'Later' | 'Read' | 'Dismiss' | 'Resume';
 
 const overlayButtonClass =
   'inline-flex min-h-9 min-w-20 shrink-0 appearance-none items-center justify-center rounded-none border-0 bg-transparent px-5 text-sm text-foreground/82 shadow-none transition-colors hover:bg-transparent hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong disabled:pointer-events-none disabled:opacity-45';
 
 export function ReviewOverlayActionButton(props: {
+  ariaLabel?: string;
   disabled?: boolean;
   label: OverlayReviewButtonLabel;
   onClick: () => void;
 }) {
   return (
     <button
-      aria-label={props.label}
+      aria-label={props.ariaLabel ?? props.label}
       className={overlayButtonClass}
       disabled={props.disabled}
       onClick={props.onClick}

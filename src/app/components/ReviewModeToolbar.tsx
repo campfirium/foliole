@@ -135,7 +135,7 @@ function PausedReviewActionBar({
       ariaLabel="Flow toolbar"
       {...definedProps({ className, style })}
       mode="study"
-      primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} />}
+      primary={<ResumeReviewAction onResumeReviewItem={onResumeReviewItem} {...definedProps({ surface })} />}
       progress={
         <ReviewSessionProgress
           {...definedProps({ progressCounts: reviewProgressCounts })}

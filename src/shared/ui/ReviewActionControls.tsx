@@ -205,7 +205,17 @@ export function ReviewCompleteAction({ onExitReviewMode }: { onExitReviewMode: (
   );
 }
 
-export function ResumeReviewAction({ onResumeReviewItem }: { onResumeReviewItem: () => void }) {
+export function ResumeReviewAction({
+  onResumeReviewItem,
+  surface = 'panel'
+}: {
+  onResumeReviewItem: () => void;
+  surface?: ReviewActionSurface;
+}) {
+  if (surface === 'overlay') {
+    return <ReviewOverlayActionButton ariaLabel="Resume review" label="Resume" onClick={onResumeReviewItem} />;
+  }
+
   return (
     <AppButton aria-label="Resume review" className="min-w-32 px-5" onClick={onResumeReviewItem} size="md" variant="primary">
       Resume
