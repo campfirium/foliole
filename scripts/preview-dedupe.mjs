@@ -37,18 +37,13 @@ function runGitBuffer(args) {
   return result.stdout;
 }
 
-function isTargetPath(target, filePath) {
-  return TARGET_PATHS[target]?.some((targetPath) => (targetPath.endsWith('/') ? filePath.startsWith(targetPath) : filePath === targetPath)) ?? true;
-}
-
 function listUntrackedFiles(target) {
   const runtimeRoot = runtimeDir();
-  const output = runGitBuffer(['ls-files', '--others', '--exclude-standard', '-z']);
+  const output = runGitBuffer(['ls-files', '--others', '--exclude-standard', '-z', '--', ...TARGET_PATHS[target]]);
   return output
     .toString('utf8')
     .split('\0')
     .filter(Boolean)
-    .filter((filePath) => isTargetPath(target, filePath))
     .filter((filePath) => !path.resolve(REPO_ROOT, filePath).startsWith(`${runtimeRoot}${path.sep}`))
     .sort();
 }

@@ -1,12 +1,12 @@
 /* global process */
 
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { createNpmCommand, resolveCommittedFilesSince, runCapture } from './windows-preview-native-runtime.mjs';
+import { createNpmCommand, resolveChangedFiles, resolveCommittedFilesSince, runCapture } from './windows-preview-native-runtime.mjs';
 
 it('runs npm through npm-cli.js on Windows without a shell', () => {
   expect(createNpmCommand(['ls'], {}, 'win32', 'C:\\Tools\\nodejs\\node.exe')).toEqual({
@@ -45,6 +45,29 @@ it('resolves files committed since a runtime head', async () => {
     const toHead = (await runCapture('git', ['rev-parse', 'HEAD'], { cwd: repoRoot })).stdout.trim();
 
     await expect(resolveCommittedFilesSince(repoRoot, fromHead, toHead)).resolves.toEqual(['b.txt']);
+  } finally {
+    await rm(repoRoot, { force: true, recursive: true });
+  }
+});
+
+it('limits changed files to selected target paths', async () => {
+  const repoRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-preview-runtime-'));
+  try {
+    await runCapture('git', ['init'], { cwd: repoRoot });
+    await runCapture('git', ['config', 'user.email', 'test@example.invalid'], { cwd: repoRoot });
+    await runCapture('git', ['config', 'user.name', 'Test'], { cwd: repoRoot });
+    await mkdir(path.join(repoRoot, 'src/app'), { recursive: true });
+    await mkdir(path.join(repoRoot, 'android'), { recursive: true });
+    await writeFile(path.join(repoRoot, 'src/app/App.tsx'), 'export const app = true;\n', 'utf8');
+    await writeFile(path.join(repoRoot, 'android/tracked.txt'), 'tracked\n', 'utf8');
+    await runCapture('git', ['add', 'src/app/App.tsx', 'android/tracked.txt'], { cwd: repoRoot });
+    await runCapture('git', ['commit', '-m', 'initial'], { cwd: repoRoot });
+
+    await writeFile(path.join(repoRoot, 'src/app/App.tsx'), 'export const app = false;\n', 'utf8');
+    await writeFile(path.join(repoRoot, 'android/tracked.txt'), 'changed\n', 'utf8');
+    await writeFile(path.join(repoRoot, 'android/new.txt'), 'new\n', 'utf8');
+
+    await expect(resolveChangedFiles(repoRoot, ['src/app/'])).resolves.toEqual(['src/app/App.tsx']);
   } finally {
     await rm(repoRoot, { force: true, recursive: true });
   }

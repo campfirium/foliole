@@ -12,9 +12,9 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LINT_CHANGED_SCRIPT = path.join(REPO_ROOT, 'scripts', 'lint-changed.sh');
 
-function runBash(args, cwd) {
+function runBash(args, cwd, env = process.env) {
   return new Promise((resolve) => {
-    const child = spawn('bash', args, { cwd, env: process.env });
+    const child = spawn('bash', args, { cwd, env });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (chunk) => {
@@ -65,6 +65,29 @@ describe('lint-changed.sh', () => {
 
       expect(result.code).toBe(0);
       expect(await readFile(marker, 'utf8')).toBe('--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/app/App.tsx\n');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts environment-provided lint targets before repository diff fallback', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
+    const marker = path.join(tempRoot, 'eslint.args');
+    try {
+      await writeExecutable(tempRoot, 'git', '#!/usr/bin/env bash\nexit 88\n');
+      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+
+      const env = {
+        ...process.env,
+        LINT_CHANGED_FILES: 'src/app/App.tsx\nREADME.md\nsrc/shared/platform/runtime.ts',
+        PATH: `${tempRoot}${path.delimiter}${process.env.PATH ?? ''}`
+      };
+      const result = await runBash([LINT_CHANGED_SCRIPT, '--scope', 'desktop'], tempRoot, env);
+
+      expect(result.code).toBe(0);
+      expect(await readFile(marker, 'utf8')).toBe(
+        '--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/app/App.tsx\nsrc/shared/platform/runtime.ts\n'
+      );
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

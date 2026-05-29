@@ -3,6 +3,11 @@ set -euo pipefail
 
 collect_changed_files() {
   local staged unstaged untracked
+  if [[ -n "${LINT_CHANGED_FILES:-}" ]]; then
+    printf '%s\n' "${LINT_CHANGED_FILES}" | grep -v '^\s*$' | sort -u || true
+    return 0
+  fi
+
   staged="$(git diff --cached --name-only --diff-filter=ACMR -- . 2>/dev/null || true)"
   unstaged="$(git diff --name-only --diff-filter=ACMR -- . 2>/dev/null || true)"
   untracked="$(git ls-files --others --exclude-standard -- . 2>/dev/null || true)"

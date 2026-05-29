@@ -18,8 +18,9 @@ export function createNpmCommand(args, env = process.env, platform = process.pla
     return { args: [env.npm_execpath, ...args], command: nodePath };
   }
   if (platform === 'win32') {
+    const windowsPath = path.win32;
     return {
-      args: [path.join(path.dirname(nodePath), 'node_modules', 'npm', 'bin', 'npm-cli.js'), ...args],
+      args: [windowsPath.join(windowsPath.dirname(nodePath), 'node_modules', 'npm', 'bin', 'npm-cli.js'), ...args],
       command: nodePath
     };
   }
@@ -110,11 +111,12 @@ export async function resolveCurrentHead(repoRoot) {
   }
 }
 
-export async function resolveChangedFiles(repoRoot) {
+export async function resolveChangedFiles(repoRoot, targetPaths = ['.']) {
+  const pathArgs = ['--', ...targetPaths];
   const commands = [
-    ['diff', '--name-only', '--diff-filter=ACMR'],
-    ['diff', '--name-only', '--diff-filter=ACMR', '--cached'],
-    ['ls-files', '--others', '--exclude-standard']
+    ['diff', '--name-only', '--diff-filter=ACMR', ...pathArgs],
+    ['diff', '--name-only', '--diff-filter=ACMR', '--cached', ...pathArgs],
+    ['ls-files', '--others', '--exclude-standard', ...pathArgs]
   ];
   const files = new Set();
   for (const args of commands) {
