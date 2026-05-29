@@ -114,4 +114,5 @@ describe('CodeMirror editor keymap', () => {
     const installedKeymap = mockKeymapOf.mock.calls.at(-1)?.[0] ?? [];
     expect(installedKeymap).not.toContainEqual({ key: 'Mod-/', run: mockToggleComment });
   });
+
 });

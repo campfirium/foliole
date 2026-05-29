@@ -4,12 +4,17 @@ import { EditorView } from '@codemirror/view';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
-import { createCodeMirrorEditorAdapterRuntime } from './codeMirrorEditorAdapterRuntime';
 import {
-  dispatchReadOnlyReconfigure,
-  RemoteImageLocalizationController,
-  type CodeMirrorEditorAdapterOptions
-} from './codeMirrorEditorAdapterSupport';
+  applyCodeMirrorTextAnchorDecorationsWithPreview,
+  replaceCodeMirrorRange,
+  setCodeMirrorContent,
+  setCodeMirrorDiffDecorations,
+  setCodeMirrorReadOnly,
+  setCodeMirrorSearchDecorations,
+  setCodeMirrorSelectionRanges
+} from './codeMirrorEditorAdapterActions';
+import { createCodeMirrorEditorAdapterRuntime } from './codeMirrorEditorAdapterRuntime';
+import { RemoteImageLocalizationController, type CodeMirrorEditorAdapterOptions } from './codeMirrorEditorAdapterSupport';
 import {
   isPositionNearViewportRatio,
   resolvePositionViewportTop,
@@ -18,18 +23,9 @@ import {
   resolveDocumentPositionAtViewportY,
   subscribeToEditorScroll
 } from './codeMirrorEditorAdapterView';
-import {
-  applyDiffDecorations,
-  applyExternalEditorContent,
-  applySearchDecorations,
-  replaceEditorRange
-} from './codeMirrorEditorMutations';
 import { clampEditorPosition } from './codeMirrorEditorPosition';
 import { getEditorLineBlockHeight, setEditorScrollTop } from './codeMirrorEditorViewport';
-import {
-  applyTextAnchorDecorationsWithHighlightPreview,
-  type HighlightRangePreview
-} from './codeMirrorHighlightRangePreview';
+import type { HighlightRangePreview } from './codeMirrorHighlightRangePreview';
 import { reconfigureCodeMirrorLiveMarkdown } from './codeMirrorLiveMarkdownReconfigure';
 import { applyParagraphMarkerState } from './codeMirrorParagraphMarkerState';
 import { resolvePositionClientRect } from './codeMirrorPositionClientRect';
@@ -39,7 +35,7 @@ import {
   revealEditorSelectionCentered,
   revealEditorSelectionNearest
 } from './codeMirrorSelectionActions';
-import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
+import { toEditorSelectionRanges } from './codeMirrorSelectionRanges';
 import { resolvePrimaryVisiblePosition } from './codeMirrorVisiblePosition';
 import {
   EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS,
@@ -131,38 +127,24 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
   getViewportRect() { return this.view.scrollDOM.getBoundingClientRect(); }
   setParagraphMarker(selection: EditorSelection | null) { applyParagraphMarkerState({ compartment: this.paragraphMarkerCompartment, selection, view: this.view }); }
-  revealPosition(position: number) {
-    const anchor = this.clampPosition(position);
-    revealEditorPosition(this.view, anchor);
-  }
+  revealPosition(position: number) { revealEditorPosition(this.view, this.clampPosition(position)); }
   setContent(content: string) {
-    const currentContent = this.getContent();
-    if (currentContent === content) {
-      return;
-    }
-    this.isApplyingExternalContent = true;
-    try {
-      applyExternalEditorContent({
-        content,
-        currentContent,
-        view: this.view
-      });
-    } finally {
-      this.isApplyingExternalContent = false;
-    }
+    setCodeMirrorContent({
+      content,
+      getContent: () => this.getContent(),
+      setApplyingExternalContent: (value) => { this.isApplyingExternalContent = value; },
+      view: this.view
+    });
   }
   setHideTitleHeading(hideTitleHeading: boolean) {
     this.hideTitleHeading = hideTitleHeading;
     this.reconfigureLiveMarkdown();
   }
   setReadOnly(readOnly: boolean) {
-    dispatchReadOnlyReconfigure({
-      compartment: this.readOnlyCompartment,
-      readOnly,
-      view: this.view
-    });
+    setCodeMirrorReadOnly(this.view, this.readOnlyCompartment, readOnly);
   }
   setNodeId(nodeId: string | null) {
+    this.externalChangeBuffer.flushNow();
     this.nodeId = nodeId;
     this.reconfigureLiveMarkdown();
     this.remoteImageLocalization.schedule();
@@ -181,7 +163,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.applyTextAnchorDecorationsWithPreview();
   }
   private applyTextAnchorDecorationsWithPreview() {
-    applyTextAnchorDecorationsWithHighlightPreview({
+    applyCodeMirrorTextAnchorDecorationsWithPreview({
       compartment: this.textAnchorDecorationsCompartment,
       preview: this.highlightRangePreview,
       textAnchorDecorations: this.textAnchorDecorations,
@@ -193,14 +175,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     return { from, to };
   }
   getSelectionRanges(): EditorSelection[] { return toEditorSelectionRanges(this.view.state.selection); }
-  setSelection(selection: EditorSelection) {
-    this.setSelectionRanges([selection]);
-  }
+  setSelection(selection: EditorSelection) { this.setSelectionRanges([selection]); }
   setSelectionRanges(selections: EditorSelection[]) {
-    this.view.dispatch({
-      selection: createCodeMirrorSelection(selections, (position) => this.clampPosition(position)),
-      scrollIntoView: false
-    });
+    setCodeMirrorSelectionRanges(this.view, selections, (position) => this.clampPosition(position));
   }
   revealSelection(selection: EditorSelection, options?: EditorRevealOptions) {
     revealEditorSelection(this.view, selection, (position) => this.clampPosition(position), undefined, options);
@@ -224,33 +201,15 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   getLineBlockHeight(lineNumber: number) { return getEditorLineBlockHeight(this.view, lineNumber); }
   setScrollTop(scrollTop: number) { setEditorScrollTop(this.view, scrollTop); }
   getScrollMetrics(): EditorScrollMetrics { return readEditorScrollMetrics(this.view); }
-  replaceSelection(content: string) {
-    const { from, to } = this.view.state.selection.main;
-    this.replaceRange(from, to, content);
-  }
+  replaceSelection(content: string) { const { from, to } = this.view.state.selection.main; this.replaceRange(from, to, content); }
   replaceRange(from: number, to: number, content: string) {
-    const clampedFrom = this.clampPosition(from);
-    const clampedTo = this.clampPosition(to);
-    replaceEditorRange({
-      content,
-      from: clampedFrom,
-      to: clampedTo,
-      view: this.view
-    });
+    replaceCodeMirrorRange({ content, from: this.clampPosition(from), to: this.clampPosition(to), view: this.view });
   }
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null) {
-    applyDiffDecorations({
-      compartment: this.diffDecorationsCompartment,
-      diffDecorations,
-      view: this.view
-    });
+    setCodeMirrorDiffDecorations({ compartment: this.diffDecorationsCompartment, diffDecorations, view: this.view });
   }
   setSearchDecorations(searchDecorations: EditorSearchDecorations | null) {
-    applySearchDecorations({
-      compartment: this.searchDecorationsCompartment,
-      searchDecorations,
-      view: this.view
-    });
+    setCodeMirrorSearchDecorations({ compartment: this.searchDecorationsCompartment, searchDecorations, view: this.view });
   }
   onContentChange(listener: (content: string, meta?: { nodeId: string | null }) => void) {
     this.onChange = listener;

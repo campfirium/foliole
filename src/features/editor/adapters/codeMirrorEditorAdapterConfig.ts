@@ -20,6 +20,19 @@ import { markdownInputAssist } from './markdownInputAssist';
 
 const folioleDefaultKeymap = defaultKeymap.filter((binding) => binding.run !== toggleComment);
 
+function createEditorUpdateListener(args: {
+  nodeId: string | null;
+  onDocChanged: (content: string, meta: EditorDocumentChangeMeta) => void;
+}) {
+  return EditorView.updateListener.of((update) => {
+    if (!update.docChanged) {
+      return;
+    }
+    const content = update.state.doc.toString();
+    args.onDocChanged(content, { isComposing: update.view.composing, nodeId: args.nodeId });
+  });
+}
+
 export function createCodeMirrorEditorExtensions(args: {
   diffDecorationsCompartment: import('@codemirror/state').Compartment;
   textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
@@ -70,12 +83,7 @@ export function createCodeMirrorEditorExtensions(args: {
         return false;
       }
     }),
-    EditorView.updateListener.of((update) => {
-      if (!update.docChanged) {
-        return;
-      }
-      args.onDocChanged(update.state.doc.toString(), { isComposing: update.view.composing, nodeId: args.nodeId });
-    })
+    createEditorUpdateListener(args)
   ];
 }
 

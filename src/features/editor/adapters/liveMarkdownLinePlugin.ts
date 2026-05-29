@@ -1,9 +1,11 @@
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
 import { getEditorDisplayMode } from '../model/editorDisplayMode';
+import { folioleMarkdownParser } from '../model/folioleMarkdownParser';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
-import { buildPreviewAtomicRangeSet, buildPreviewDecorationSet, buildSourceDecorationSet } from './liveMarkdownDecorations';
+import { buildPreviewAtomicRangeSet } from './liveMarkdownAtomicRanges';
+import { buildPreviewDecorationSet, buildSourceDecorationSet, type PreviewMarkdownParse } from './liveMarkdownDecorations';
 import { getEditedMathRange, isSameEditedMathRange } from './liveMarkdownMathEditState';
 import {
   activeNodeIdFacet,
@@ -20,10 +22,15 @@ function getCursorLineNumber(view: EditorView) {
   return view.state.doc.lineAt(cursor).number;
 }
 
-function buildLineDecorations(view: EditorView): DecorationSet {
+function parsePreviewMarkdown(view: EditorView): PreviewMarkdownParse {
+  const source = view.state.doc.toString();
+  return { markdownTree: folioleMarkdownParser.parse(source), source };
+}
+
+function buildLineDecorations(view: EditorView, parsedPreviewMarkdown: PreviewMarkdownParse): DecorationSet {
   if (getEditorDisplayMode() === 'source') return buildSourceDecorationSet(view);
 
-  return buildPreviewDecorationSet(view, {
+  return buildPreviewDecorationSet(view, parsedPreviewMarkdown, {
     activePosition: view.hasFocus ? view.state.selection.main.head : null,
     cursorLineNumber: getCursorLineNumber(view),
     editedMathRange: getEditedMathRange(view.state),
@@ -35,8 +42,12 @@ function buildLineDecorations(view: EditorView): DecorationSet {
   });
 }
 
-function buildAtomicRanges(view: EditorView): DecorationSet {
-  return buildPreviewAtomicRangeSet(view, getEditedMathRange(view.state));
+function buildAtomicRanges(view: EditorView, parsedPreviewMarkdown: PreviewMarkdownParse): DecorationSet {
+  return buildPreviewAtomicRangeSet(parsedPreviewMarkdown, getEditedMathRange(view.state));
+}
+
+export function shouldReparsePreviewMarkdown(update: Pick<ViewUpdate, 'docChanged'>) {
+  return update.docChanged;
 }
 
 export const markdownLinePlugin = ViewPlugin.fromClass(
@@ -44,11 +55,13 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
     atomicRanges: DecorationSet;
     decorations: DecorationSet;
     cursorLineNumber: number | null;
+    parsedPreviewMarkdown: PreviewMarkdownParse;
 
     constructor(view: EditorView) {
-      this.atomicRanges = buildAtomicRanges(view);
+      this.parsedPreviewMarkdown = parsePreviewMarkdown(view);
+      this.atomicRanges = buildAtomicRanges(view, this.parsedPreviewMarkdown);
       this.cursorLineNumber = getCursorLineNumber(view);
-      this.decorations = buildLineDecorations(view);
+      this.decorations = buildLineDecorations(view, this.parsedPreviewMarkdown);
     }
 
     update(update: ViewUpdate) {
@@ -72,8 +85,11 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
         textAnchorDecorationsChanged ||
         editedMathRangeChanged
       ) {
-        this.atomicRanges = buildAtomicRanges(update.view);
-        this.decorations = buildLineDecorations(update.view);
+        if (shouldReparsePreviewMarkdown(update)) {
+          this.parsedPreviewMarkdown = parsePreviewMarkdown(update.view);
+        }
+        this.atomicRanges = buildAtomicRanges(update.view, this.parsedPreviewMarkdown);
+        this.decorations = buildLineDecorations(update.view, this.parsedPreviewMarkdown);
       }
 
       this.cursorLineNumber = nextCursorLineNumber;

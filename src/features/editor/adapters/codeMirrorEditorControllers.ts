@@ -3,6 +3,8 @@ import {
   EditorExternalChangeBuffer
 } from './editorExternalChangeBuffer';
 
+export const EDITOR_EXTERNAL_CHANGE_FLUSH_DELAY_MS = 300;
+
 export function createCodeMirrorEditorControllers(args: {
   applyLocalizedContent: (localized: string) => void;
   getContent: () => string;
@@ -14,6 +16,7 @@ export function createCodeMirrorEditorControllers(args: {
     externalChangeBuffer: new EditorExternalChangeBuffer({
       getCurrentContent: args.getContent,
       getCurrentNodeId: args.getNodeId,
+      flushDelayMs: EDITOR_EXTERNAL_CHANGE_FLUSH_DELAY_MS,
       isApplyingExternalContent: args.isApplyingExternalContent,
       onFlush: args.onFlush
     }),

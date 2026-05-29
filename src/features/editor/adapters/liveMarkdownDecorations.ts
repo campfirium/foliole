@@ -1,7 +1,6 @@
 import { type Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, type EditorView } from '@codemirror/view';
 
-import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import { folioleMarkdownParser } from '../model/folioleMarkdownParser';
 import type { InlinePresentationPlan } from '../model/inlinePresentationPlans';
 import type { InlineTextDecorationPlan } from '../model/inlineTextDecorationPlans';
@@ -10,10 +9,13 @@ import { collectMarkdownForumTitleLinkRanges } from '../model/markdownForumTitle
 import { collectImageMatches } from '../model/markdownImageMatches';
 import { collectMarkdownInlineLinkRangesFromTree } from '../model/markdownInlineLinkProjection';
 import type { MarkdownInlineLinkRange } from '../model/markdownInlineProjectionTypes';
-import { collectMarkdownLinkReferencesFromTree, type MarkdownLinkReferenceRange } from '../model/markdownLinkReferences';
+import {
+  collectMarkdownLinkReferencesFromTree,
+  type MarkdownLinkReferenceRange,
+  type MarkdownSyntaxTree
+} from '../model/markdownLinkReferences';
 import { collectMarkdownMathRangesFromTree } from '../model/markdownMathRanges';
 import { collectMultilineLinkPresentationPlans } from '../model/markdownMultilineLinkPresentation';
-import { collectReadwiseOriginalFilePlaceholderRangesFromLines } from '../model/readwiseOriginalFilePlaceholder';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { addPreviewBlockDecorations, collectPreviewMermaidLineFroms } from './liveMarkdownBlockDecorations';
@@ -43,6 +45,10 @@ import { addReadwiseOriginalFileDecorations } from './liveMarkdownReadwiseOrigin
 import { addTableDecorations } from './liveMarkdownTables';
 import { addOrphanTableScaffoldDecorations } from './liveMarkdownTableScaffolds';
 import { resolveVisibleLineWindow } from './liveMarkdownViewport';
+import {
+  collectPreviewViewportContext,
+  collectViewportReadwiseOriginalFilePlaceholders
+} from './liveMarkdownViewportContext';
 
 interface DecorationBuildContext {
   activePosition: number | null;
@@ -53,6 +59,11 @@ interface DecorationBuildContext {
   markdownSyntaxVisible: boolean;
   nodeId: string | null;
   onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null;
+}
+
+export interface PreviewMarkdownParse {
+  markdownTree: MarkdownSyntaxTree;
+  source: string;
 }
 
 function applyInlineTextDecorationPlan(ranges: Range<Decoration>[], plan: InlineTextDecorationPlan) {
@@ -96,96 +107,84 @@ function hideLinkReferenceDefinition(
   return true;
 }
 
-function collectViewportReadwiseOriginalFilePlaceholders(
-  view: EditorView,
-  startLineNumber: number,
-  endLineNumber: number,
-  viewportRange: { from: number; to: number }
-) {
-  const readwiseStartLineNumber = Math.max(1, startLineNumber - 3);
-  const readwiseEndLineNumber = Math.min(view.state.doc.lines, endLineNumber + 3);
-  return collectReadwiseOriginalFilePlaceholderRangesFromLines(
-    collectViewportLines(view, readwiseStartLineNumber, readwiseEndLineNumber)
-  ).filter((range) =>
-    (range.to >= viewportRange.from && range.from <= viewportRange.to) ||
-    range.hiddenRanges.some((hiddenRange) => hiddenRange.to >= viewportRange.from && hiddenRange.from <= viewportRange.to)
-  );
-}
-
-export function buildPreviewDecorationSet(view: EditorView, context: DecorationBuildContext): DecorationSet {
-  const ranges: Range<Decoration>[] = [];
-  const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
-  const startLine = view.state.doc.line(startLineNumber);
-  const endLine = view.state.doc.line(endLineNumber);
-  const viewportRange = { from: startLine.from, to: endLine.to };
-  const source = view.state.doc.toString();
-  const markdownTree = folioleMarkdownParser.parse(source);
-  const viewportLines = collectViewportLines(view, startLineNumber, endLineNumber);
+function collectPreviewDecorationData(view: EditorView, parsed: PreviewMarkdownParse, context: DecorationBuildContext) {
+  const viewport = collectPreviewViewportContext(view);
+  const { markdownTree, source } = parsed;
   const codeFenceProjection = collectCodeFenceProjection(view);
   const linkReferences = collectMarkdownLinkReferencesFromTree(markdownTree, source);
   const documentImageMatches = collectImageMatches(0, source, linkReferences);
-  const inlineLinks = collectMarkdownInlineLinkRangesFromTree(markdownTree, source, 0, linkReferences);
-  const mathRanges = collectMarkdownMathRangesFromTree(markdownTree, source);
-  const forumTitleLinks = collectMarkdownForumTitleLinkRanges(source).filter(
-    (link) => !(codeFenceProjection.codeLineFroms.has(link.from) || codeFenceProjection.codeLineFroms.has(link.urlLineFrom))
-  );
   const linkReferenceRangeByLineFrom = collectLinkReferenceRangeByLineFrom(view);
-  const linkReferenceLineFroms = new Set(linkReferenceRangeByLineFrom.keys());
-  const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
-  const lineClassByFrom = collectLineClassByFrom(view);
-  const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
-  const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
-  const viewportTablePlans = collectViewportTablePlans({ endLine, source, startLine, view });
-  const readwiseOriginalFilePlaceholders = collectViewportReadwiseOriginalFilePlaceholders(view, startLineNumber, endLineNumber, viewportRange);
-  const viewportPlans = collectPreviewViewportPlans({
-    codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
-    codeLineFroms: codeFenceProjection.codeLineFroms,
-    cursorLineNumber: context.cursorLineNumber,
-    hideTitleHeading: context.hideTitleHeading,
-    lineClassByFrom,
-    linkReferenceLineFroms,
-    lines: viewportLines,
-    linkReferences,
-    markdownSyntaxVisible: context.markdownSyntaxVisible,
-    documentImageMatches,
-    startInCodeBlock: false,
-    thematicBreakLineFroms
+  const viewportTablePlans = collectViewportTablePlans({
+    endLine: viewport.endLine,
+    source,
+    startLine: viewport.startLine,
+    view
   });
+  return {
+    codeFenceProjection,
+    calloutPrefixRangeByLineFrom: collectCalloutPrefixRangeByLineFrom(view),
+    forumTitleLinks: collectMarkdownForumTitleLinkRanges(source).filter(
+      (link) => !(codeFenceProjection.codeLineFroms.has(link.from) || codeFenceProjection.codeLineFroms.has(link.urlLineFrom))
+    ),
+    inlineLinks: collectMarkdownInlineLinkRangesFromTree(markdownTree, source, 0, linkReferences),
+    linkReferenceRangeByLineFrom,
+    mathRanges: collectMarkdownMathRangesFromTree(markdownTree, source),
+    prefixRangesByLineFrom: collectPrefixRangesByLineFrom(view),
+    readwiseOriginalFilePlaceholders: collectViewportReadwiseOriginalFilePlaceholders(
+      view,
+      viewport.startLineNumber,
+      viewport.endLineNumber,
+      viewport.viewportRange
+    ),
+    source,
+    viewport,
+    viewportPlans: collectPreviewViewportPlans({
+      codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
+      codeLineFroms: codeFenceProjection.codeLineFroms,
+      cursorLineNumber: context.cursorLineNumber,
+      hideTitleHeading: context.hideTitleHeading,
+      lineClassByFrom: collectLineClassByFrom(view),
+      linkReferenceLineFroms: new Set(linkReferenceRangeByLineFrom.keys()),
+      lines: collectViewportLines(view, viewport.startLineNumber, viewport.endLineNumber),
+      linkReferences,
+      markdownSyntaxVisible: context.markdownSyntaxVisible,
+      documentImageMatches,
+      startInCodeBlock: false,
+      thematicBreakLineFroms: collectThematicBreakLineFroms(view)
+    }),
+    viewportTablePlans
+  };
+}
 
-  addTableDecorations(ranges, viewportTablePlans, view.state.doc);
-  addReadwiseOriginalFileDecorations(ranges, readwiseOriginalFilePlaceholders, context.nodeId);
-  addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
-  addForumTitleLinkDecorations(ranges, forumTitleLinks);
-  addPreviewBlockDecorations(ranges, { codeFenceProjection, context, mathRanges, source, view });
-  addEditedMathSourceDecoration(ranges, view, mathRanges, context.editedMathRange);
-  addCodeFenceSyntaxHighlightDecorations(ranges, source, codeFenceProjection.codeBlocks, viewportRange);
-  addMultilineLinkDecorations(ranges, source, {
-    links: inlineLinks,
+export function buildPreviewDecorationSet(
+  view: EditorView,
+  parsed: PreviewMarkdownParse,
+  context: DecorationBuildContext
+): DecorationSet {
+  const ranges: Range<Decoration>[] = [];
+  const data = collectPreviewDecorationData(view, parsed, context);
+
+  addTableDecorations(ranges, data.viewportTablePlans, view.state.doc);
+  addReadwiseOriginalFileDecorations(ranges, data.readwiseOriginalFilePlaceholders, context.nodeId);
+  addOrphanTableScaffoldDecorations(ranges, data.viewportPlans, data.viewportTablePlans);
+  addForumTitleLinkDecorations(ranges, data.forumTitleLinks);
+  addPreviewBlockDecorations(ranges, { codeFenceProjection: data.codeFenceProjection, context, mathRanges: data.mathRanges, source: data.source, view });
+  addEditedMathSourceDecoration(ranges, view, data.mathRanges, context.editedMathRange);
+  addCodeFenceSyntaxHighlightDecorations(ranges, data.source, data.codeFenceProjection.codeBlocks, data.viewport.viewportRange);
+  addMultilineLinkDecorations(ranges, data.source, {
+    links: data.inlineLinks,
     syntaxVisiblePosition: context.markdownSyntaxVisible ? context.activePosition : null
   });
 
-  addPreviewViewportDecorations(ranges, viewportPlans, viewportTablePlans, {
+  addPreviewViewportDecorations(ranges, data.viewportPlans, data.viewportTablePlans, {
     ...context,
-    calloutPrefixRangeByLineFrom,
+    calloutPrefixRangeByLineFrom: data.calloutPrefixRangeByLineFrom,
     hideLinkReferenceDefinition: (targetRanges, lineFrom) =>
-      hideLinkReferenceDefinition(targetRanges, lineFrom, linkReferenceRangeByLineFrom),
-    mermaidLineFroms: collectPreviewMermaidLineFroms(source, codeFenceProjection, view),
-    prefixRangesByLineFrom
+      hideLinkReferenceDefinition(targetRanges, lineFrom, data.linkReferenceRangeByLineFrom),
+    mermaidLineFroms: collectPreviewMermaidLineFroms(data.source, data.codeFenceProjection, view),
+    prefixRangesByLineFrom: data.prefixRangesByLineFrom
   });
 
-  return Decoration.set(ranges, true);
-}
-
-export function buildPreviewAtomicRangeSet(view: EditorView, editedMathRange: EditedMathRange | null): DecorationSet {
-  const ranges: Range<Decoration>[] = [];
-  if (getEditorDisplayMode() === 'source') return Decoration.none;
-  const source = view.state.doc.toString();
-  const markdownTree = folioleMarkdownParser.parse(source);
-  const mathRanges = collectMarkdownMathRangesFromTree(markdownTree, source);
-  for (const mathRange of mathRanges) {
-    if (editedMathRange?.from === mathRange.from && editedMathRange.to === mathRange.to) continue;
-    ranges.push(Decoration.mark({}).range(mathRange.from, mathRange.to));
-  }
   return Decoration.set(ranges, true);
 }
 

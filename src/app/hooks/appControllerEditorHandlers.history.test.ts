@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createEditorChangeHandler, createNodeContentChangeHandler } from './appControllerEditorHandlers';
+import {
+  createEditorChangeHandler,
+  createNodeContentChangeHandler
+} from './appControllerEditorHandlers';
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 
 function createNodesById() {
@@ -100,4 +103,5 @@ describe('app controller editor history handlers', () => {
     );
     expect(updateNodeContent).toHaveBeenCalledWith('node-1', 'Alpha Beta Gamma Delta');
   });
+
 });

@@ -15,6 +15,7 @@ export class EditorExternalChangeBuffer {
   constructor(private readonly args: EditorExternalChangeBufferArgs) {}
 
   destroy() {
+    this.flushNow();
     this.clearTimer();
   }
 
@@ -36,6 +37,11 @@ export class EditorExternalChangeBuffer {
       this.pendingChange = { ...this.pendingChange, content: this.args.getCurrentContent() };
     }
     this.scheduleFlush();
+  }
+
+  flushNow() {
+    this.clearTimer();
+    this.flush();
   }
 
   private scheduleFlush() {
