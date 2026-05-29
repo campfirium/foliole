@@ -23,6 +23,7 @@ const config = {
     '*.config.{js,ts}',
     'vite.shared.ts'
   ],
+  ignoreBinaries: ['python3'],
   ignoreDependencies: ['@capacitor/android', '@capacitor/core', 'prettier']
 };
 
