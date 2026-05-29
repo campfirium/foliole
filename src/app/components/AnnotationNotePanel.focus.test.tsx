@@ -15,7 +15,7 @@ it('keeps the annotation note textarea keyboard focus visible', () => {
     />
   );
 
-  const textarea = screen.getByPlaceholderText('Add a note...');
+  const textarea = screen.getByPlaceholderText('Add a comment...');
   expect(textarea.className).toContain('focus-visible:outline-none');
   expect(textarea.className).toContain('focus-visible:ring-1');
   expect(textarea.className).toContain('focus-visible:ring-ring');

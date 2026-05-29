@@ -73,7 +73,7 @@ it('renders selection annotation actions as a floating toolbar', () => {
 
   expect(screen.getByRole('toolbar')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Highlight' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Add Note' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add Comment' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Cloze' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
 });
@@ -159,8 +159,8 @@ it('saves add note text from the floating note panel', () => {
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
-  const noteInput = screen.getByPlaceholderText('Add a note...');
+  fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
+  const noteInput = screen.getByPlaceholderText('Add a comment...');
   expect(noteInput.closest('[data-annotation-toolbar="true"]')).toHaveStyle({ left: '48px', top: '96px' });
   fireEvent.change(noteInput, { target: { value: 'My note' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -183,7 +183,7 @@ it('renders existing highlight actions without cloze', () => {
   );
 
   expect(screen.getByRole('button', { name: 'Close Highlight' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Add Note' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add Comment' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Cloze' })).toBeNull();

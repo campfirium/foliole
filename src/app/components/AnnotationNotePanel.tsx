@@ -22,7 +22,7 @@ export function AnnotationNotePanel(props: {
           appInputFocusVisibleClassName
         )}
         onChange={(event) => props.onChange(event.target.value)}
-        placeholder="Add a note..."
+        placeholder="Add a comment..."
         value={props.draft}
       />
       <div className="mt-2 flex justify-end gap-2">

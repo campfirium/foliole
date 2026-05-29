@@ -119,7 +119,7 @@ it('deletes an existing highlight and closes immediately', () => {
 it('adds a note to an existing highlight', () => {
   const { onAddExistingHighlightNote, onClose } = renderExistingToolbar();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
   fireEvent.change(screen.getByPlaceholderText('Add annotation...'), {
     target: { value: 'Existing note' }
   });
@@ -134,9 +134,9 @@ it('saves a note annotation from the inline note panel', async () => {
   const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = resolve; }));
   const { onClose } = renderToolbar(onApply);
 
-  const addNoteButton = screen.getByRole('button', { name: 'Add Note' });
-  expect(fireEvent.pointerDown(addNoteButton)).toBe(true);
-  fireEvent.click(addNoteButton);
+  const addCommentButton = screen.getByRole('button', { name: 'Add Comment' });
+  expect(fireEvent.pointerDown(addCommentButton)).toBe(true);
+  fireEvent.click(addCommentButton);
   fireEvent.change(screen.getByPlaceholderText('Add annotation...'), {
     target: { value: 'Reader note' }
   });

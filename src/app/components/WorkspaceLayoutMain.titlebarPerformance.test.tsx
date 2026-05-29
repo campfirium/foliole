@@ -204,7 +204,7 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
 });
 
 describe('WorkspaceLayoutMain review title bar rendering', () => {
-  it('shows the review queue title after the study session is completed', () => {
+  it('shows the queue-clear title after the study session is completed', () => {
     render(
       <WorkspaceLayoutMain
         {...createProps({
@@ -214,7 +214,7 @@ describe('WorkspaceLayoutMain review title bar rendering', () => {
       />
     );
 
-    expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Review queue' }));
+    expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Queue clear' }));
   });
 });
 

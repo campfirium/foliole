@@ -82,7 +82,7 @@ function CompanionSelectionToolbarActions(props: {
           <Highlighter aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
-      <ToolbarButton label="Add Note" onClick={props.onAddNote}>
+      <ToolbarButton label="Add Comment" onClick={props.onAddNote}>
         <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton>
       {props.isExistingHighlight ? null : (

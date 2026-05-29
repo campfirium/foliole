@@ -53,7 +53,7 @@ export function ExistingHighlightToolbar(props: {
         <ExistingHighlightToolbarButton label="Close Highlight" onClick={props.onDeleteExistingHighlight}>
           <X aria-hidden="true" size={19} strokeWidth={2} />
         </ExistingHighlightToolbarButton>
-        <ExistingHighlightToolbarButton label="Add Note" onClick={() => setIsNoteOpen(true)}>
+        <ExistingHighlightToolbarButton label="Add Comment" onClick={() => setIsNoteOpen(true)}>
           <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
         </ExistingHighlightToolbarButton>
         <ExistingHighlightToolbarButton label="Open" onClick={props.onOpenExistingHighlight}>

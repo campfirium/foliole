@@ -51,7 +51,7 @@ it('keeps the selection note textarea keyboard focus visible', () => {
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
 
   expectInputFocusVisible(screen.getByPlaceholderText('Add annotation...'));
 });

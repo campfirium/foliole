@@ -174,7 +174,7 @@ describe('CompanionShell navigation', () => {
     await renderShellWithSurface(createSurface('recent'));
 
     expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Learn' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: 'Flow' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('button', { name: 'Browse' })).toHaveAttribute('aria-current', 'page');
     expectBrowseTopBarActions();
   });
@@ -183,7 +183,7 @@ describe('CompanionShell navigation', () => {
     const surface = createSurface('recent');
     await renderShellWithSurface(surface);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Flow' }));
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
 
