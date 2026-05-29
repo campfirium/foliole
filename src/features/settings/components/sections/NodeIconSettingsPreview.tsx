@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import { getNodeIconStateAppearance } from '../../../nodes/components/nodeIconAppearanceSettings';
 import { NodeTreeRowIcon } from '../../../nodes/components/NodeTreeRowIcon';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from '../../../nodes/components/NodeTreeRowIconModel';
@@ -7,7 +9,6 @@ import type { useNodeIconSettingsState } from './nodeIconSettingsState';
 type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 
 type PreviewRow = {
-  active?: boolean;
   child?: boolean;
   kind: EditableIconKind;
   state: NodeTreeRowIconState;
@@ -17,15 +18,15 @@ type PreviewRow = {
 const PREVIEW_ROWS: PreviewRow[] = [
   { kind: 'reading', state: 'pending', title: 'Topic pending' },
   { child: true, kind: 'review', state: 'pending', title: 'Item pending' },
-  { active: true, kind: 'reading', state: 'scheduled', title: 'Topic scheduled' },
+  { kind: 'reading', state: 'scheduled', title: 'Topic scheduled' },
   { child: true, kind: 'review', state: 'scheduled', title: 'Item scheduled' },
   { kind: 'reading', state: 'dismissed', title: 'Topic dismissed' }
 ];
 
 function resolvePreviewRowStyle(row: PreviewRow, state?: ReturnType<typeof useNodeIconSettingsState>) {
   const appearance = state?.stateStyles?.[row.state]?.[row.kind] ?? getNodeIconStateAppearance(row.state, row.kind);
-  if (row.state !== 'dismissed' || !appearance.fadeEnabled || !appearance.fadeWholeRow) return undefined;
-  return { opacity: appearance.fadeOpacity };
+  if (row.state !== 'dismissed' || !appearance.fadeEnabled) return undefined;
+  return { '--node-muted-opacity': appearance.fadeTextOpacity } as CSSProperties;
 }
 
 export function NodeIconSettingsPreview(props: { state?: ReturnType<typeof useNodeIconSettingsState> }) {
@@ -37,13 +38,13 @@ export function NodeIconSettingsPreview(props: { state?: ReturnType<typeof useNo
             className={[
               'grid min-h-7 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-sm px-2 text-sm leading-5',
               row.child ? 'ml-7' : '',
-              row.active ? 'bg-settings-selected text-foreground shadow-[inset_2px_0_0_rgb(var(--color-foreground)_/_0.32)]' : 'text-foreground/62'
+              row.state === 'dismissed' ? 'text-foreground/62' : 'text-foreground/72'
             ].join(' ')}
             key={`${row.kind}-${row.state}`}
             style={resolvePreviewRowStyle(row, props.state)}
           >
             <NodeTreeRowIcon kind={row.kind} state={row.state} />
-            <span className="truncate text-sm">{row.title}</span>
+            <span className="truncate text-sm" style={row.state === 'dismissed' ? { opacity: 'var(--node-muted-opacity, 1)' } : undefined}>{row.title}</span>
           </div>
         ))}
       </div>

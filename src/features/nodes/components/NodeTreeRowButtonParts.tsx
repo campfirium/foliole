@@ -32,7 +32,7 @@ function renderLabelCluster(props: {
   }
   return (
     <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
-      {renderNodeLabel(props.label, props.rename, 'block min-w-0 truncate')}
+      {renderNodeLabel(props.label, props.rename, 'node-tree-row-text block min-w-0 truncate')}
       {renderInlineTrailingContent(props.trailingLabelContent)}
     </span>
   );
@@ -54,7 +54,7 @@ function renderRowCount(descendantCount: number) {
     return null;
   }
   return (
-    <span aria-hidden="true" className="ml-auto flex-none tabular-nums text-[12px] leading-5 text-foreground/48">
+    <span aria-hidden="true" className="node-tree-row-text ml-auto flex-none tabular-nums text-[12px] leading-5 text-foreground/48">
       {descendantCount}
     </span>
   );
@@ -98,15 +98,15 @@ export function renderNodeTreeRowContent(props: {
     >
       <span className="flex min-w-0 w-full items-center gap-1.5 overflow-hidden">
         {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
-        {renderLabelCluster({
-          label: props.label,
-          rename: props.rename,
-          trailingLabelContent: props.trailingLabelContent
-        })}
+      {renderLabelCluster({
+        label: props.label,
+        rename: props.rename,
+        trailingLabelContent: props.trailingLabelContent
+      })}
         {renderRowCount(props.descendantCount)}
       </span>
       {props.secondaryLabel ? (
-        <span className="min-w-0 truncate text-xs text-foreground/55">{props.secondaryLabel}</span>
+        <span className="node-tree-row-text min-w-0 truncate text-xs text-foreground/55">{props.secondaryLabel}</span>
       ) : null}
     </span>
   );

@@ -10,7 +10,7 @@ import {
   type WorkspaceListNodesById
 } from '../model/workspaceListNode';
 
-import { getDismissedFadeOpacity, shouldFadeDismissedWholeRow } from './nodeIconAppearanceSettings';
+import { getDismissedFadeTextOpacity, shouldFadeDismissedRowText } from './nodeIconAppearanceSettings';
 import { resolveNodeListRowGap, resolveNodeTreeRowVirtualSize } from './nodeListRowSpacingSettings';
 import { NodeListStateSurface } from './NodeListStateSurface';
 import type { useNodeListDragController } from './NodeListTreeDrag';
@@ -72,7 +72,7 @@ function renderNodeListRow(
       isDragDisabled={props.isTrashViewOpen || rowModel.isDerivedNode || rowModel.isHome || rowModel.isInbox || rowModel.isTrashRoot || rowModel.isVirtualRoot}
       isDropTarget={props.drag.dropTargetNodeId === row.node.id}
       isMuted={rowModel.shouldFadeWholeRow}
-      mutedOpacity={rowModel.shouldFadeWholeRow ? getDismissedFadeOpacity(rowModel.leafIconKind) : 1}
+      mutedOpacity={rowModel.shouldFadeWholeRow ? getDismissedFadeTextOpacity(rowModel.leafIconKind) : 1}
       dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
       isSelected={props.selectedNodeIds.includes(row.node.id)}
       key={row.node.id}
@@ -150,7 +150,7 @@ function resolveNodeListRowModel(props: NodeListRowsProps, row: NodeTreeRow) {
     kind: node?.kind ?? 'topic'
   });
   const leafIconKind = resolveLeafIconKind(nodeIconKind);
-  const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow(leafIconKind);
+  const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedRowText(leafIconKind);
 
   return { isDerivedNode, isHome, isInbox, isTrashRoot, isVirtualRoot, leafIconKind, nodeIconKind, nodeIconState, shouldFadeWholeRow };
 }

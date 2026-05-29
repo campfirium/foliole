@@ -4,7 +4,7 @@ import { projectNodeListLabel } from '../model/nodeListLabelProjection';
 
 import { NodeRenameInput, type useRenameState } from './NodeTreeRowRename';
 
-export function renderNodeLabel(label: string, rename: ReturnType<typeof useRenameState>, className = 'block min-w-0 flex-1 truncate') {
+export function renderNodeLabel(label: string, rename: ReturnType<typeof useRenameState>, className = 'node-tree-row-text block min-w-0 flex-1 truncate') {
   if (rename.isRenaming) {
     return (
       <NodeRenameInput

@@ -1,48 +1,19 @@
 import { RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import {
-  settingsUtilityIconButtonClassName
-} from '../../../../shared/ui';
+import { settingsUtilityIconButtonClassName } from '../../../../shared/ui';
 import type { NodeIconStateAppearance } from '../../../nodes/components/nodeIconAppearanceSettings';
 import { NodeTreeRowIcon } from '../../../nodes/components/NodeTreeRowIcon';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from '../../../nodes/components/NodeTreeRowIconModel';
 
-import { ColorField, RangeField, SwitchField } from './nodeIconSettingFields';
+import { ColorField } from './nodeIconSettingFields';
 import type { NodeIconEditTarget } from './NodeIconSettingsDialog';
+import { ControlCell, ControlGrid, ControlHeader, NODE_ICON_SETTINGS_TABLE_CLASS } from './NodeIconSettingsRangeGrid';
+import { getBaseConfig } from './nodeIconSettingsRowConfig';
 import type { useNodeIconSettingsState } from './nodeIconSettingsState';
 
 type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 type NodeIconSettingsState = ReturnType<typeof useNodeIconSettingsState>;
-
-type BaseRowConfig = {
-  color: string;
-  lineWidth: number;
-  scale: number;
-  setColor: (value: string) => void;
-  setLineWidth: (value: number) => void;
-  setScale: (value: number) => void;
-};
-
-function getBaseConfig(state: NodeIconSettingsState, kind: EditableIconKind): BaseRowConfig {
-  return kind === 'reading'
-    ? {
-        color: state.topicColor,
-        lineWidth: state.topicLineWidth,
-        scale: state.topicScale,
-        setColor: state.setTopicColor,
-        setLineWidth: state.setTopicLineWidth,
-        setScale: state.setTopicScale
-      }
-    : {
-        color: state.itemColor,
-        lineWidth: state.itemLineWidth,
-        scale: state.itemScale,
-        setColor: state.setItemColor,
-        setLineWidth: state.setItemLineWidth,
-        setScale: state.setItemScale
-      };
-}
 
 function MarkerIconButton(props: {
   baseOnly?: boolean;
@@ -66,10 +37,9 @@ function ResetButton(props: { label: string; onClick: () => void }) {
   );
 }
 
-function RowShell(props: {
+function SettingRow(props: {
   children: ReactNode;
   color: string;
-  groupTitle: 'Topic' | 'Item';
   kind: EditableIconKind;
   onEditShape: () => void;
   onReset: () => void;
@@ -77,15 +47,21 @@ function RowShell(props: {
   setColor: (value: string) => void;
   title: string;
   baseOnly?: boolean;
+  description?: string;
 }) {
   return (
-    <section aria-label={`${props.groupTitle} ${props.title}`} className="relative px-5 py-3 before:absolute before:left-5 before:right-5 before:top-0 before:border-t before:border-settings-divider/65 first:before:hidden" data-node-icon-settings-row={`${props.groupTitle} ${props.title}`}>
-      <div className="grid min-h-8 grid-cols-[7.5rem_2rem_2.4rem_minmax(20rem,1fr)_2rem] items-start gap-3">
-        <h4 className="min-w-0 pt-1 text-[0.92rem] font-normal text-foreground/72">{props.title}</h4>
-        <MarkerIconButton {...(props.baseOnly !== undefined ? { baseOnly: props.baseOnly } : {})} kind={props.kind} label={`Edit ${props.groupTitle} ${props.title} shape`} onClick={props.onEditShape} state={props.previewState} />
-        <ColorField compact label={`Color for ${props.groupTitle} ${props.title}`} onChange={props.setColor} value={props.color} />
-        <div className="min-w-0">{props.children}</div>
-        <ResetButton label={`Reset ${props.groupTitle} ${props.title}`} onClick={props.onReset} />
+    <section aria-label={props.title} className="border-t border-settings-divider/65 px-4 py-2.5 first:border-t-0" data-node-icon-settings-row={props.title}>
+      <div className={`grid min-h-8 ${NODE_ICON_SETTINGS_TABLE_CLASS} items-start gap-3`}>
+        <MarkerIconButton {...(props.baseOnly !== undefined ? { baseOnly: props.baseOnly } : {})} kind={props.kind} label={`Edit ${props.title} shape`} onClick={props.onEditShape} state={props.previewState} />
+        <div className="min-w-0 pt-1">
+          <h4 className="truncate text-[0.92rem] font-normal text-foreground/74">{props.title}</h4>
+          {props.description ? <p className="truncate text-[0.72rem] leading-4 text-foreground/42">{props.description}</p> : null}
+        </div>
+        <ColorField compact label={`Color for ${props.title}`} onChange={props.setColor} value={props.color} />
+        <div className="col-span-2 min-w-0">{props.children}</div>
+        <div className="grid size-7 place-items-center">
+          <ResetButton label={`Reset ${props.title}`} onClick={props.onReset} />
+        </div>
       </div>
     </section>
   );
@@ -96,12 +72,14 @@ function PrimaryControls(props: {
   onLineWidthChange: (value: number) => void;
   onScaleChange: (value: number) => void;
   scale: number;
+  children?: ReactNode;
 }) {
   return (
-    <div className="grid w-[21rem] grid-cols-[9.5rem_9.5rem] items-start gap-5">
-      <RangeField label="Scale" max={1.8} min={0.45} onChange={props.onScaleChange} step={0.05} value={props.scale} />
-      <RangeField label="Stroke" max={2.4} min={0} onChange={props.onLineWidthChange} step={0.05} value={props.lineWidth} />
-    </div>
+    <ControlGrid>
+      <ControlCell label="Scale" max={1.8} min={0.45} onChange={props.onScaleChange} value={props.scale} />
+      <ControlCell label="Stroke" max={2.4} min={0} onChange={props.onLineWidthChange} value={props.lineWidth} />
+      {props.children}
+    </ControlGrid>
   );
 }
 
@@ -113,83 +91,138 @@ function DoubleLineControls(props: {
 }) {
   if (props.appearance.effect !== 'double-line') return null;
   return (
-    <div className="mt-2 grid w-[21rem] grid-cols-[9.5rem_9.5rem] items-start gap-5">
-      <RangeField label="Ring scale" max={1.8} min={0.45} onChange={(value) => props.state.setStateOuterScale(props.nodeState, props.kind, value)} step={0.05} value={props.appearance.outerScale} />
-      <RangeField label="Ring stroke" max={2.4} min={0} onChange={(value) => props.state.setStateOuterLineWidth(props.nodeState, props.kind, value)} step={0.05} value={props.appearance.outerLineWidth} />
-    </div>
+    <>
+      <ControlCell label="Ring scale" max={1.8} min={0.45} onChange={(value) => props.state.setStateOuterScale(props.nodeState, props.kind, value)} value={props.appearance.outerScale} />
+      <ControlCell label="Ring stroke" max={2.4} min={0} onChange={(value) => props.state.setStateOuterLineWidth(props.nodeState, props.kind, value)} value={props.appearance.outerLineWidth} />
+    </>
   );
 }
 
 function DismissedControls(props: { appearance: NodeIconStateAppearance; kind: EditableIconKind; state: NodeIconSettingsState }) {
   return (
-    <div className="mt-2 grid w-[21rem] grid-cols-[9.5rem_10rem] items-start gap-5">
-      <RangeField
-        label="Opacity"
+    <div className={`grid ${NODE_ICON_SETTINGS_TABLE_CLASS} items-start gap-3`}>
+      <span aria-hidden="true" className="inline-grid size-7 place-items-center text-foreground">
+        <NodeTreeRowIcon kind={props.kind} preview state="dismissed" />
+      </span>
+      <h4 className="min-w-0 truncate pt-1 text-[0.92rem] font-normal text-foreground/74">Topic dismissed</h4>
+      <span aria-hidden="true" />
+      <ControlCell
+        label="Icon opacity"
         max={1}
         min={0}
         onChange={(value) => {
           props.state.setDismissedFadeEnabled(props.kind, true);
           props.state.setDismissedFadeOpacity(props.kind, value);
         }}
-        step={0.05}
         value={props.appearance.fadeOpacity}
       />
-      <div className="flex min-h-8 w-40 items-center justify-end gap-3">
-        <SwitchField checked={props.appearance.fadeWholeRow} controlPosition="right" label="Apply to row" onChange={(value) => props.state.setDismissedFadeWholeRow(props.kind, value)} />
+      <ControlCell
+        label="Row opacity"
+        max={1}
+        min={0}
+        onChange={(value) => {
+          props.state.setDismissedFadeEnabled(props.kind, true);
+          props.state.setDismissedFadeTextOpacity(props.kind, value);
+        }}
+        value={props.appearance.fadeTextOpacity}
+      />
+      <div className="grid size-7 place-items-center">
+        <ResetButton label="Reset Topic dismissed opacity" onClick={() => props.state.resetStateAppearance('dismissed', props.kind)} />
       </div>
     </div>
   );
 }
 
-function getStateTitle(state: NodeTreeRowIconState) {
-  if (state === 'pending') return 'Pending';
-  if (state === 'scheduled') return 'Scheduled';
-  return 'Dismissed';
+function OpacityHeader() {
+  return (
+    <div aria-hidden="true" className={`grid ${NODE_ICON_SETTINGS_TABLE_CLASS} gap-3 pb-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-foreground/38`}>
+      <span />
+      <span>Opacity</span>
+      <span />
+      <span className="text-right">Icon</span>
+      <span className="text-right">Row</span>
+      <span className="text-center">Reset</span>
+    </div>
+  );
 }
 
-export function NodeIconSettingsRows(props: {
+function getStateTitle(kind: EditableIconKind, state: NodeTreeRowIconState) {
+  const prefix = kind === 'reading' ? 'Topic' : 'Item';
+  if (state === 'pending') return `${prefix} pending`;
+  if (state === 'scheduled') return `${prefix} scheduled`;
+  return `${prefix} dismissed`;
+}
+
+function getBaseTitle(kind: EditableIconKind) {
+  return kind === 'reading' ? 'Topic (base)' : 'Item (base)';
+}
+
+function BaseRow(props: {
   kind: EditableIconKind;
   onEdit: (target: NodeIconEditTarget) => void;
   onResetBase: (kind: EditableIconKind) => void;
   state: NodeIconSettingsState;
-  title: 'Topic' | 'Item';
 }) {
   const base = getBaseConfig(props.state, props.kind);
-  const states = props.kind === 'reading' ? (['pending', 'scheduled', 'dismissed'] as const) : (['pending', 'scheduled'] as const);
+  const title = getBaseTitle(props.kind);
   return (
-    <section aria-label={`${props.title} markers`} className="overflow-visible last:mt-5">
-      <h3 className="border-b border-settings-divider/65 px-5 pb-3 text-[0.95rem] font-semibold text-foreground">{props.title}</h3>
-      <div className="grid overflow-visible">
-        <RowShell baseOnly color={base.color} groupTitle={props.title} kind={props.kind} onEditShape={() => props.onEdit({ type: 'svg', kind: props.kind, title: `Edit ${props.title} Base marker` })} onReset={() => props.onResetBase(props.kind)} previewState="scheduled" setColor={base.setColor} title="Base">
-          <PrimaryControls lineWidth={base.lineWidth} onLineWidthChange={base.setLineWidth} onScaleChange={base.setScale} scale={base.scale} />
-        </RowShell>
-        {states.map((nodeState) => {
-          const appearance = props.state.stateStyles[nodeState][props.kind];
-          const title = getStateTitle(nodeState);
-          return (
-            <RowShell
-              color={appearance.color}
-              groupTitle={props.title}
-              kind={props.kind}
-              key={nodeState}
-              onEditShape={() => props.onEdit({ type: 'state', state: nodeState, kind: props.kind, title: `Edit ${props.title} ${title} marker` })}
-              onReset={() => props.state.resetStateAppearance(nodeState, props.kind)}
-              previewState={nodeState}
-              setColor={(value) => props.state.setStateColor(nodeState, props.kind, value)}
-              title={title}
-            >
-              <PrimaryControls
-                lineWidth={appearance.lineWidth}
-                onLineWidthChange={(value) => props.state.setStateLineWidth(nodeState, props.kind, value)}
-                onScaleChange={(value) => props.state.setStateScale(nodeState, props.kind, value)}
-                scale={appearance.scale}
-              />
-              <DoubleLineControls appearance={appearance} kind={props.kind} nodeState={nodeState} state={props.state} />
-              {nodeState === 'dismissed' ? <DismissedControls appearance={appearance} kind={props.kind} state={props.state} /> : null}
-            </RowShell>
-          );
-        })}
-      </div>
+    <SettingRow baseOnly color={base.color} kind={props.kind} onEditShape={() => props.onEdit({ type: 'svg', kind: props.kind, title: `Edit ${title} marker` })} onReset={() => props.onResetBase(props.kind)} previewState="scheduled" setColor={base.setColor} title={title}>
+      <PrimaryControls lineWidth={base.lineWidth} onLineWidthChange={base.setLineWidth} onScaleChange={base.setScale} scale={base.scale} />
+    </SettingRow>
+  );
+}
+
+function StateRow(props: {
+  kind: EditableIconKind;
+  nodeState: NodeTreeRowIconState;
+  onEdit: (target: NodeIconEditTarget) => void;
+  state: NodeIconSettingsState;
+}) {
+  const appearance = props.state.stateStyles[props.nodeState][props.kind];
+  const title = getStateTitle(props.kind, props.nodeState);
+  return (
+    <SettingRow
+      color={appearance.color}
+      kind={props.kind}
+      onEditShape={() => props.onEdit({ type: 'state', state: props.nodeState, kind: props.kind, title: `Edit ${title} marker` })}
+      onReset={() => props.state.resetStateAppearance(props.nodeState, props.kind)}
+      previewState={props.nodeState}
+      setColor={(value) => props.state.setStateColor(props.nodeState, props.kind, value)}
+      title={title}
+      {...(props.nodeState === 'scheduled' ? { description: 'Ring accent' } : {})}
+    >
+      <PrimaryControls
+        lineWidth={appearance.lineWidth}
+        onLineWidthChange={(value) => props.state.setStateLineWidth(props.nodeState, props.kind, value)}
+        onScaleChange={(value) => props.state.setStateScale(props.nodeState, props.kind, value)}
+        scale={appearance.scale}
+      >
+        <DoubleLineControls appearance={appearance} kind={props.kind} nodeState={props.nodeState} state={props.state} />
+      </PrimaryControls>
+    </SettingRow>
+  );
+}
+
+export function NodeIconSettingsRows(props: {
+  onEdit: (target: NodeIconEditTarget) => void;
+  onResetBase: (kind: EditableIconKind) => void;
+  state: NodeIconSettingsState;
+}) {
+  return (
+    <section aria-label="Navigation icon markers" className="w-fit overflow-visible bg-settings-group">
+      <ControlHeader />
+      <BaseRow kind="reading" onEdit={props.onEdit} onResetBase={props.onResetBase} state={props.state} />
+      {(['pending', 'scheduled', 'dismissed'] as const).map((nodeState) => (
+        <StateRow key={`reading-${nodeState}`} kind="reading" nodeState={nodeState} onEdit={props.onEdit} state={props.state} />
+      ))}
+      <BaseRow kind="review" onEdit={props.onEdit} onResetBase={props.onResetBase} state={props.state} />
+      {(['pending', 'scheduled'] as const).map((nodeState) => (
+        <StateRow key={`review-${nodeState}`} kind="review" nodeState={nodeState} onEdit={props.onEdit} state={props.state} />
+      ))}
+      <section aria-label="Opacity" className="border-t border-settings-divider/65 px-4 py-3">
+        <OpacityHeader />
+        <DismissedControls appearance={props.state.stateStyles.dismissed.reading} kind="reading" state={props.state} />
+      </section>
     </section>
   );
 }

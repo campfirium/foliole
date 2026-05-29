@@ -524,10 +524,6 @@ b {
   -webkit-text-fill-color: var(--app-text-selection-fg-color);
 }
 
-[role='treeitem'][data-node-visibility='muted'] {
-  opacity: var(--node-muted-opacity, 0.35);
-}
-
 [data-node-icon='leaf'] {
   color: color-mix(in srgb, var(--node-icon-custom-color, var(--node-icon-default-color)) 84%, rgb(var(--color-foreground)));
 }

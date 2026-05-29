@@ -99,6 +99,7 @@ export function NumberField(props: {
 
 export function RangeField(props: {
   disabled?: boolean;
+  compactLabel?: boolean;
   label: string;
   max: number;
   min: number;
@@ -117,17 +118,18 @@ export function RangeField(props: {
   };
   return (
     <div className="relative min-w-0 text-sm text-foreground/72" onBlur={handleBlur} onFocus={() => setExpanded(true)}>
-      <div className="grid min-h-8 w-[8.8rem] grid-cols-[5.2rem_3.2rem] items-center gap-1.5">
-        <span className="min-w-0 whitespace-nowrap text-foreground/66">{props.label}</span>
+      <div className={props.compactLabel ? 'grid min-h-8 w-[5.2rem] grid-cols-1 items-center' : 'grid min-h-8 w-[8.8rem] grid-cols-[5.2rem_3.2rem] items-center gap-1.5'}>
+        {props.compactLabel ? null : <span className="min-w-0 whitespace-nowrap text-foreground/66">{props.label}</span>}
         <input
           aria-label={props.label}
           className={settingsControlValueClassName('h-8 w-[3.2rem] rounded-sm border border-transparent bg-transparent px-1 text-right tabular-nums text-foreground/68 transition-colors hover:border-settings-control-border-hover hover:bg-settings-control-hover focus-visible:border-settings-control-border-hover focus-visible:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring')}
           disabled={props.disabled}
+          inputMode="decimal"
           max={props.max}
           min={props.min}
           onChange={(event) => handleNumberChange(event.target.value)}
           step={props.step}
-          type="number"
+          type="text"
           value={props.value.toFixed(2)}
         />
       </div>

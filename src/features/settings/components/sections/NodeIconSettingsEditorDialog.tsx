@@ -22,7 +22,7 @@ function EditorHeader(props: {
   onReset: () => void;
 }) {
   return (
-    <header className="flex min-h-14 items-center justify-between gap-4 bg-settings-control/45 px-6">
+    <header className="flex min-h-14 items-center justify-between gap-4 border-b border-settings-divider/65 bg-settings-group px-6">
       <div className="min-w-0">
         <AppDialogTitle>Navigation icons</AppDialogTitle>
       </div>
@@ -54,15 +54,14 @@ export function NodeIconSettingsEditorDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="grid max-h-[min(760px,calc(100dvh-36px))] w-[min(1040px,calc(100vw-36px))] max-w-none grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg border-settings-outline bg-settings-group p-0 shadow-settings"
+          className="grid max-h-[min(760px,calc(100dvh-36px))] w-fit max-w-[calc(100vw-36px)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg border-settings-outline bg-settings-group p-0 shadow-settings"
           data-settings-nested-dialog="true"
         >
           <EditorHeader onReset={props.state.handleReset} />
-          <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_16rem] max-[900px]:grid-cols-1">
-            <main className="min-h-0 overflow-visible px-8 py-6">
-              <div className="grid overflow-visible">
-                <NodeIconSettingsRows kind="reading" onEdit={props.onEditShape} onResetBase={props.onResetBase} state={props.state} title="Topic" />
-                <NodeIconSettingsRows kind="review" onEdit={props.onEditShape} onResetBase={props.onResetBase} state={props.state} title="Item" />
+          <div className="grid min-h-0 grid-cols-[minmax(0,max-content)_16rem] max-[900px]:grid-cols-1">
+            <main className="min-h-0 overflow-visible px-6 py-5">
+              <div className="grid w-fit overflow-visible">
+                <NodeIconSettingsRows onEdit={props.onEditShape} onResetBase={props.onResetBase} state={props.state} />
               </div>
             </main>
             <NodeIconSettingsPreview state={props.state} />

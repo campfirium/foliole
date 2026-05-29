@@ -53,11 +53,11 @@ function createGraphicProps(args: {
   };
 }
 
-function createIconStyle(stateAppearance: ReturnType<typeof getNodeIconStateAppearance>, preview: boolean) {
+function createIconStyle(stateAppearance: ReturnType<typeof getNodeIconStateAppearance>) {
   return {
     ...(stateAppearance.color === DEFAULT_NODE_ICON_COLOR ? {} : { ['--node-icon-custom-color' as const]: stateAppearance.color }),
     ['--node-icon-stroke-width' as const]: String(stateAppearance.lineWidth),
-    ...(stateAppearance.fadeEnabled && (preview || !stateAppearance.fadeWholeRow) ? { opacity: stateAppearance.fadeOpacity } : {})
+    ...(stateAppearance.fadeEnabled ? { opacity: stateAppearance.fadeOpacity } : {})
   };
 }
 
@@ -75,7 +75,7 @@ export function NodeTreeRowIcon({ baseOnly = false, kind, preview = false, state
   const fallbackShape = kind === 'review' ? 'diamond' : 'hexagon';
   const fallbackTransformMode = resolveNodeIconPresetTransformMode(kind, fallbackShape);
   const transformMode = customIcon.markup ? customIcon.transformMode : fallbackTransformMode;
-  const iconStyle = createIconStyle(stateAppearance, preview);
+  const iconStyle = createIconStyle(stateAppearance);
   const iconClassName = cn(
     'relative inline-flex flex-none items-center justify-center text-foreground/65',
     preview ? 'm-0 size-6' : 'mr-1 size-3.5'

@@ -101,14 +101,16 @@ function normalizeAppearanceOverride(
     return fallback;
   }
   try {
-    const parsed = JSON.parse(value) as Partial<Record<keyof NodeIconStateAppearance, unknown>>;
+    const parsed = JSON.parse(value) as Partial<Record<keyof NodeIconStateAppearance | 'fadeWholeRow', unknown>>;
+    const legacyWholeRow = typeof parsed.fadeWholeRow === 'boolean' ? parsed.fadeWholeRow : null;
+    const legacyTextOpacity = legacyWholeRow === false ? fallback.fadeTextOpacity : parsed.fadeOpacity;
     return {
       color: normalizeColor(typeof parsed.color === 'string' ? parsed.color : null, fallback.color),
       doubleLineDistance: normalizePositiveNumber(String(parsed.doubleLineDistance ?? ''), fallback.doubleLineDistance),
       effect: normalizeEffect(typeof parsed.effect === 'string' ? parsed.effect : null, fallback.effect),
       fadeEnabled: typeof parsed.fadeEnabled === 'boolean' ? parsed.fadeEnabled : fallback.fadeEnabled,
       fadeOpacity: normalizeOpacity(String(parsed.fadeOpacity ?? ''), fallback.fadeOpacity),
-      fadeWholeRow: typeof parsed.fadeWholeRow === 'boolean' ? parsed.fadeWholeRow : fallback.fadeWholeRow,
+      fadeTextOpacity: normalizeOpacity(String(parsed.fadeTextOpacity ?? legacyTextOpacity ?? ''), fallback.fadeTextOpacity),
       innerLineWidth: normalizeNonNegativeNumber(String(parsed.innerLineWidth ?? ''), fallback.innerLineWidth),
       innerScale: normalizePositiveNumber(String(parsed.innerScale ?? ''), fallback.innerScale),
       lineWidth: normalizeNonNegativeNumber(String(parsed.lineWidth ?? ''), fallback.lineWidth),
@@ -159,7 +161,7 @@ export function getNodeIconStateAppearance(
     effect: defaults.effect,
     fadeEnabled: defaults.fadeEnabled,
     fadeOpacity: defaults.fadeOpacity,
-    fadeWholeRow: defaults.fadeWholeRow,
+    fadeTextOpacity: defaults.fadeTextOpacity,
     innerLineWidth: defaults.innerLineWidth,
     innerScale: defaults.innerScale,
     lineWidth: defaults.lineWidth,
@@ -178,11 +180,15 @@ export function getNodeIconKindStateAppearanceStorageKey(
   return KIND_STORAGE_KEYS[state][kind];
 }
 
-export function shouldFadeDismissedWholeRow(kind?: EditableIconKind) {
+export function shouldFadeDismissedRowText(kind?: EditableIconKind) {
   const appearance = getNodeIconStateAppearance('dismissed', kind);
-  return appearance.fadeEnabled && appearance.fadeWholeRow;
+  return appearance.fadeEnabled;
 }
 
 export function getDismissedFadeOpacity(kind?: EditableIconKind) {
   return getNodeIconStateAppearance('dismissed', kind).fadeOpacity;
+}
+
+export function getDismissedFadeTextOpacity(kind?: EditableIconKind) {
+  return getNodeIconStateAppearance('dismissed', kind).fadeTextOpacity;
 }

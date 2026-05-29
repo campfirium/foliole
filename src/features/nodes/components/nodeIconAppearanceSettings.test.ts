@@ -7,14 +7,14 @@ import {
   DEFAULT_NODE_ICON_BASE_APPEARANCE,
   DEFAULT_NODE_ICON_STATE_APPEARANCE,
   getNodeIconStateAppearance,
-  shouldFadeDismissedWholeRow
+  shouldFadeDismissedRowText
 } from './nodeIconAppearanceSettings';
 
 beforeEach(() => {
   window.localStorage.clear();
 });
 
-it('reads dismissed fade by icon kind', () => {
+it('reads dismissed text fade by icon kind and keeps legacy row fade compatible', () => {
   window.localStorage.setItem(
     APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedItemAppearance,
     JSON.stringify({ fadeEnabled: true, fadeOpacity: 0.25, fadeWholeRow: true })
@@ -24,8 +24,9 @@ it('reads dismissed fade by icon kind', () => {
     JSON.stringify({ fadeEnabled: false, fadeWholeRow: false })
   );
 
-  expect(shouldFadeDismissedWholeRow('review')).toBe(true);
-  expect(shouldFadeDismissedWholeRow('reading')).toBe(false);
+  expect(shouldFadeDismissedRowText('review')).toBe(true);
+  expect(getNodeIconStateAppearance('dismissed', 'review').fadeTextOpacity).toBe(0.25);
+  expect(shouldFadeDismissedRowText('reading')).toBe(false);
 });
 
 it('derives default colors from the appearance foreground default', () => {

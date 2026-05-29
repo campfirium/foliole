@@ -86,7 +86,7 @@ async function expectStoredNodeIconSettings() {
 }
 
 async function expectNodeIconSettingsReset() {
-  fireEvent.click(screen.getByRole('button', { name: 'Reset Item Scheduled' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Reset Item scheduled' }));
   await waitFor(() => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance)).toBeNull();
   });
@@ -95,13 +95,13 @@ async function expectNodeIconSettingsReset() {
 it('stores compact topic and item icon rows plus per-state topic and item icon styling', async () => {
   openAppearance();
   openIconEditor();
-  editSvg('Edit Topic Base shape', '<svg viewBox="0 0 16 16"><path d="M2 12L14 4" fill="none" stroke="currentColor"/></svg>');
-  editSvg('Edit Item Base shape', '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>');
+  editSvg('Edit Topic (base) shape', '<svg viewBox="0 0 16 16"><path d="M2 12L14 4" fill="none" stroke="currentColor"/></svg>');
+  editSvg('Edit Item (base) shape', '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>');
 
-  changeRange('Item Scheduled', 'Stroke', '1.8');
-  changeRange('Item Scheduled', 'Ring scale', '1.2');
-  changeRange('Item Scheduled', 'Ring stroke', '1.4');
-  editStateSvg('Edit Item Scheduled shape', '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>');
+  changeRange('Item scheduled', 'Stroke', '1.8');
+  changeRange('Item scheduled', 'Ring scale', '1.2');
+  changeRange('Item scheduled', 'Ring stroke', '1.4');
+  editStateSvg('Edit Item scheduled shape', '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>');
 
   await expectStoredNodeIconSettings();
   await expectNodeIconSettingsReset();
@@ -112,34 +112,35 @@ it('uses compact icon defaults and closes nested icon editing before settings', 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} onClose={onClose} />);
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   openIconEditor();
-  const topicIconRow = within(getMarkerRow('Topic Base'));
+  const topicIconRow = within(getMarkerRow('Topic (base)'));
 
-  expect(topicIconRow.getByLabelText('Stroke')).toHaveValue(0.6);
-  expect(topicIconRow.getByLabelText('Scale')).toHaveValue(1.15);
+  expect(topicIconRow.getByLabelText('Stroke')).toHaveValue('0.60');
+  expect(topicIconRow.getByLabelText('Scale')).toHaveValue('1.15');
   expect(topicIconRow.queryByLabelText('Stroke slider')).not.toBeInTheDocument();
   fireEvent.focus(topicIconRow.getByLabelText('Stroke'));
   expect(topicIconRow.getByLabelText('Stroke slider')).toBeInTheDocument();
   expect(screen.queryByText('#202124')).not.toBeInTheDocument();
-  fireEvent.click(topicIconRow.getByRole('button', { name: 'Edit Topic Base shape' }));
+  fireEvent.click(topicIconRow.getByRole('button', { name: 'Edit Topic (base) shape' }));
   expect(screen.getByLabelText('Search icons').className).toContain('focus-visible:ring-0');
 
   fireEvent.keyDown(window, { key: 'Escape' });
 
-  expect(screen.queryByRole('dialog', { name: 'Edit Topic Base marker' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('dialog', { name: 'Edit Topic (base) marker' })).not.toBeInTheDocument();
   expect(screen.getByLabelText('Settings dialog')).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
 });
 
-it('uses a switch for dismissed row fade and keeps fade off by default', () => {
+it('uses separate dismissed icon and text opacity controls', () => {
   openAppearance();
   openIconEditor();
-  const dismissedRow = within(getMarkerRow('Topic Dismissed'));
+  const opacitySection = within(screen.getByLabelText('Opacity'));
 
-  expect(dismissedRow.getByLabelText('Opacity')).toHaveValue(1);
-  const applySwitch = dismissedRow.getByRole('switch', { name: 'Apply to row' });
-  expect(applySwitch).toHaveAttribute('aria-checked', 'true');
+  expect(opacitySection.getByLabelText('Icon opacity')).toHaveValue('0.30');
+  expect(opacitySection.getByLabelText('Row opacity')).toHaveValue('0.30');
+  expect(opacitySection.getByRole('button', { name: 'Reset Topic dismissed opacity' })).toBeInTheDocument();
+  expect(opacitySection.queryByRole('switch', { name: 'Apply to row' })).not.toBeInTheDocument();
 
-  expect(screen.queryByLabelText('Item Dismissed')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Item dismissed')).not.toBeInTheDocument();
 });
 
 it('renders the marker preview before editor state is available', () => {
@@ -154,13 +155,13 @@ it('shows marker rows for the active marker kind', () => {
 
   expect(screen.getByRole('dialog', { name: 'Navigation icons' })).toBeInTheDocument();
   expect(screen.queryByRole('tab', { name: 'Topics' })).not.toBeInTheDocument();
-  expect(getMarkerRow('Topic Pending')).toBeInTheDocument();
-  expect(getMarkerRow('Topic Scheduled')).toBeInTheDocument();
-  expect(getMarkerRow('Topic Dismissed')).toBeInTheDocument();
-  expect(getMarkerRow('Item Pending')).toBeInTheDocument();
-  expect(getMarkerRow('Item Scheduled')).toBeInTheDocument();
-  expect(screen.getByText('Item pending')).toBeInTheDocument();
-  expect(screen.queryByLabelText('Item Dismissed')).not.toBeInTheDocument();
+  expect(getMarkerRow('Topic pending')).toBeInTheDocument();
+  expect(getMarkerRow('Topic scheduled')).toBeInTheDocument();
+  expect(getMarkerRow('Topic dismissed')).toBeInTheDocument();
+  expect(getMarkerRow('Item pending')).toBeInTheDocument();
+  expect(getMarkerRow('Item scheduled')).toBeInTheDocument();
+  expect(screen.getAllByText('Item pending')).not.toHaveLength(0);
+  expect(screen.queryByLabelText('Item dismissed')).not.toBeInTheDocument();
 });
 
 it('keeps the settings page compact until the icon editor is opened', () => {
@@ -174,7 +175,7 @@ it('keeps the settings page compact until the icon editor is opened', () => {
 
   openIconEditor();
 
-  expect(within(getMarkerRow('Topic Base')).getByLabelText('Scale')).toBeInTheDocument();
+  expect(within(getMarkerRow('Topic (base)')).getByLabelText('Scale')).toBeInTheDocument();
 });
 
 it('keeps base icon preview independent from state effects', () => {

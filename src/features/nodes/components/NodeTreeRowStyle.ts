@@ -11,6 +11,7 @@ export function resolveNodeRowButtonClassName(args: {
     'gap-0 overflow-hidden pl-[calc(0.4rem+var(--node-depth,0)*1rem)] pr-[0.4rem] leading-5',
     'text-foreground',
     'font-normal',
+    '[&[data-node-visibility=muted]_.node-tree-row-text]:opacity-[var(--node-muted-opacity,1)]',
     args.isHighlighted &&
       "relative bg-transparent before:pointer-events-none before:absolute before:inset-x-0 before:bottom-0.5 before:top-0.5 before:rounded-md before:bg-foreground/[0.035] before:content-['']",
     args.isSelected &&

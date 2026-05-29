@@ -1,6 +1,6 @@
 import {
-  getDismissedFadeOpacity,
-  shouldFadeDismissedWholeRow
+  getDismissedFadeTextOpacity,
+  shouldFadeDismissedRowText
 } from '../../features/nodes/components/nodeIconAppearanceSettings';
 import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState } from '../../features/nodes/components/NodeTreeRowIconModel';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
@@ -35,15 +35,15 @@ export function resolveWorkspaceTopicTreeRowModel(
     kind: node?.kind ?? 'topic'
   });
   const leafIconKind = nodeIconKind === 'reading' || nodeIconKind === 'review' ? nodeIconKind : undefined;
-  const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow(leafIconKind);
+  const shouldFadeRowText = nodeIconState === 'dismissed' && shouldFadeDismissedRowText(leafIconKind);
 
   return {
     isDerivedNode,
     isSelected,
-    mutedOpacity: shouldFadeWholeRow ? getDismissedFadeOpacity(leafIconKind) : 1,
+    mutedOpacity: shouldFadeRowText ? getDismissedFadeTextOpacity(leafIconKind) : 1,
     nodeIconKind,
     nodeIconState,
-    shouldFadeWholeRow
+    shouldFadeWholeRow: shouldFadeRowText
   };
 }
 

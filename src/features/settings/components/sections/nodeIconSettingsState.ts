@@ -57,8 +57,8 @@ function createStateStyleActions(
     setDismissedFadeOpacity(kind: EditableIconKind, value: number) {
       updateStateStyle('dismissed', kind, 'fadeOpacity', value);
     },
-    setDismissedFadeWholeRow(kind: EditableIconKind, value: boolean) {
-      updateStateStyle('dismissed', kind, 'fadeWholeRow', value);
+    setDismissedFadeTextOpacity(kind: EditableIconKind, value: number) {
+      updateStateStyle('dismissed', kind, 'fadeTextOpacity', value);
     },
     resetStateAppearance(state: NodeTreeRowIconState, kind: EditableIconKind) {
       resetOne(state, kind);

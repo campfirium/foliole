@@ -79,7 +79,7 @@ function renderTopicRows(rows: NodeTreeRow[], nodesById: WorkspaceListNodesById)
 it('applies dismissed appearance to topic tree row text and icon', () => {
   window.localStorage.setItem(
     APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedTopicAppearance,
-    JSON.stringify({ fadeEnabled: true, fadeOpacity: 0.42, fadeWholeRow: true })
+    JSON.stringify({ fadeEnabled: true, fadeOpacity: 0.42, fadeTextOpacity: 0.31 })
   );
   const node: WorkspaceListNode = {
       anchorLink: null,
@@ -126,8 +126,8 @@ it('applies dismissed appearance to topic tree row text and icon', () => {
 
   const row = screen.getByRole('treeitem', { name: 'Dismissed topic' });
   expect(row).toHaveAttribute('data-node-visibility', 'muted');
-  expect(row).toHaveStyle({ '--node-muted-opacity': '0.42' });
-  expect(row.querySelector('[data-node-icon-state="dismissed"]')).not.toBeNull();
+  expect(row).toHaveStyle({ '--node-muted-opacity': '0.31' });
+  expect(row.querySelector('[data-node-icon-state="dismissed"]')).toHaveStyle({ opacity: '0.42' });
 });
 
 it('renders markdown-looking topic titles as plain list text', () => {
