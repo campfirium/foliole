@@ -1,9 +1,7 @@
 param(
   [string]$WindowsWorkDir = "C:\dev\foliole-android-preview",
   [string]$AndroidHostDir = "android",
-  [string]$AndroidWebBuildScript = "android:web:build",
   [string]$CapCliPackage = "@capacitor/cli",
-  [string]$CapCliVersion = "8.3.0",
   [ValidateSet("auto", "skip", "force")]
   [string]$DependencyRefresh = "auto"
 )
@@ -17,6 +15,54 @@ function Write-Info {
 
 function Test-LastCommandFailed {
   return $null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0
+}
+
+function Invoke-CmdTool {
+  param(
+    [string]$CommandPath,
+    [string[]]$Arguments,
+    [string]$FailureMessage
+  )
+  $toolDir = Split-Path -Parent $CommandPath
+  if ($env:Path -notlike "*$toolDir*") {
+    $env:Path = "$toolDir;$env:Path"
+  }
+  $out = [System.IO.Path]::GetTempFileName(); $err = [System.IO.Path]::GetTempFileName()
+  try {
+    $process = Start-Process `
+      -ArgumentList $Arguments `
+      -FilePath $CommandPath `
+      -PassThru `
+      -RedirectStandardError $err `
+      -RedirectStandardOutput $out `
+      -Wait `
+      -WindowStyle Hidden `
+      -WorkingDirectory $WindowsWorkDir
+    $out, $err | ForEach-Object { Get-Content -Path $_ -ErrorAction SilentlyContinue }
+    if ($process.ExitCode -ne 0) { throw $FailureMessage }
+  } finally { Remove-Item -Path $out, $err -ErrorAction SilentlyContinue }
+}
+
+function Invoke-NodeTool {
+  param(
+    [string[]]$Arguments,
+    [string]$FailureMessage
+  )
+  $nodeCmd = Get-Command node.exe -ErrorAction SilentlyContinue
+  if ($null -eq $nodeCmd) {
+    throw "node.exe not found on Windows. Install Node.js on Windows first."
+  }
+  Invoke-CmdTool -CommandPath $nodeCmd.Source -Arguments $Arguments -FailureMessage $FailureMessage
+}
+
+function Assert-FileExists {
+  param(
+    [string]$Path,
+    [string]$FailureMessage
+  )
+  if (!(Test-Path -Path $Path -PathType Leaf)) {
+    throw $FailureMessage
+  }
 }
 
 $androidDir = Join-Path $WindowsWorkDir $AndroidHostDir
@@ -113,10 +159,7 @@ function Ensure-CapacitorCliAvailable {
   }
 
   Write-Info "capacitor cli missing in windows mirror; running npm install"
-  & $npmCmd.Source install
-  if (Test-LastCommandFailed) {
-    throw "npm install failed in Windows mirror; cannot run Capacitor sync."
-  }
+  Invoke-CmdTool -CommandPath $npmCmd.Source -Arguments @("install") -FailureMessage "npm install failed in Windows mirror; cannot run Capacitor sync."
 }
 
 function Sync-WindowsMirrorDependencies {
@@ -152,10 +195,7 @@ function Sync-WindowsMirrorDependencies {
   }
 
   Write-Info "package manifest changed in windows mirror; running npm install"
-  & $npmCmd.Source install
-  if (Test-LastCommandFailed) {
-    throw "npm install failed in Windows mirror; cannot refresh dependencies for Capacitor sync."
-  }
+  Invoke-CmdTool -CommandPath $npmCmd.Source -Arguments @("install") -FailureMessage "npm install failed in Windows mirror; cannot refresh dependencies for Capacitor sync."
 
   if (!(Test-Path -Path $nodeModulesDir)) {
     throw "node_modules missing after npm install in Windows mirror."
@@ -169,10 +209,6 @@ try {
   Write-Info "workdir: $WindowsWorkDir"
   Ensure-CapacitorCliAvailable
   Sync-WindowsMirrorDependencies
-  $npmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
-  if ($null -eq $npmCmd) {
-    throw "npm.cmd not found on Windows. Install Node.js on Windows first."
-  }
   $inputHash = Get-CapSyncInputHash
   if (Test-CapSyncCacheHit -InputHash $inputHash) {
     Write-Info "cache: HIT input=$inputHash"
@@ -181,18 +217,27 @@ try {
   }
   Write-Info "cache: MISS input=$inputHash"
   Write-Info "building companion web entry"
-  & $npmCmd.Source run $AndroidWebBuildScript
-  if (Test-LastCommandFailed) {
-    exit $LASTEXITCODE
+  $webOutDir = Join-Path $WindowsWorkDir "dist\companion"
+  if (Test-Path -Path $webOutDir) {
+    Remove-Item -Path $webOutDir -Recurse -Force
   }
-  $npxCmd = Get-Command npx.cmd -ErrorAction SilentlyContinue
-  if ($null -eq $npxCmd) {
-    throw "npx.cmd not found on Windows. Install Node.js on Windows first."
+  Invoke-NodeTool -Arguments @("scripts\android\generate-companion-schema.mjs") -FailureMessage "Android companion schema generation failed."
+  Invoke-NodeTool -Arguments @("node_modules\vite\bin\vite.js", "build", "--config", "vite.companion.config.ts") -FailureMessage "Android companion web build failed."
+  Assert-FileExists `
+    -Path (Join-Path $WindowsWorkDir "dist\companion\index.html") `
+    -FailureMessage "Android companion web build did not produce dist\companion\index.html."
+  $capCliPath = Join-Path $WindowsWorkDir "node_modules\@capacitor\cli\bin\capacitor"
+  if (!(Test-Path -Path $capCliPath -PathType Leaf)) {
+    throw "Capacitor CLI missing in Windows mirror; cannot run Capacitor sync."
   }
-  & $npxCmd.Source cap sync android
-  if (Test-LastCommandFailed) {
-    exit $LASTEXITCODE
+  $androidPublicDir = Join-Path $WindowsWorkDir "android\app\src\main\assets\public"
+  if (Test-Path -Path $androidPublicDir) {
+    Remove-Item -Path $androidPublicDir -Recurse -Force
   }
+  Invoke-NodeTool -Arguments @($capCliPath, "sync", "android") -FailureMessage "Capacitor Android sync failed."
+  Assert-FileExists `
+    -Path (Join-Path $WindowsWorkDir "android\app\src\main\assets\public\index.html") `
+    -FailureMessage "Capacitor Android sync did not produce android app web assets."
   Write-CapSyncCache -InputHash $inputHash
   Write-Info "status: SYNCED"
 } finally {

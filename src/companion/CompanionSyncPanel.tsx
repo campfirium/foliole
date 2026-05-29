@@ -27,6 +27,7 @@ type CompanionSyncPanelProps = {
   onChangeHandoffReminderSettings(settings: CompanionHandoffReminderSettings): void;
   onClearError(): void;
   onCompletePairing(): Promise<unknown>;
+  onDisconnectPairing?: (() => Promise<unknown>) | undefined;
   onPull(endpointUrl: string): Promise<unknown>;
   onRemoveRememberedTarget(endpointUrl: string): Promise<unknown>;
   onRequestPrimaryDeviceTakeover(endpointUrl: string): Promise<unknown>;
@@ -54,7 +55,7 @@ function resolveDesktopDiscoveries(props: CompanionSyncPanelProps) {
   return props.desktopDiscoveries?.length ? props.desktopDiscoveries : props.desktopDiscovery ? [props.desktopDiscovery] : [];
 }
 
-function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onOpenSettingsPage' | 'onRequestPrimaryDeviceTakeover' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
+function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'onRequestPrimaryDeviceTakeover' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
   endpointUrl: string;
   onSync(): void;
 }) {
@@ -70,6 +71,7 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
         syncEvents={props.syncEvents}
         syncProgress={props.syncProgress}
         page={props.page}
+        onDisconnectPairing={props.onDisconnectPairing}
         onOpenPage={props.onOpenSettingsPage}
       />
       <button
@@ -100,7 +102,7 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
   );
 }
 
-function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onCancelPairing' | 'onOpenSettingsPage' | 'onRequestPrimaryDeviceTakeover' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
+function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onCancelPairing' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'onRequestPrimaryDeviceTakeover' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
   endpointUrl: string;
   isBusy: boolean;
   isDiscovering: boolean;
@@ -120,6 +122,7 @@ function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | '
         page={props.page}
         onSync={props.onSync}
         onRequestPrimaryDeviceTakeover={props.onRequestPrimaryDeviceTakeover}
+        onDisconnectPairing={props.onDisconnectPairing}
         onOpenSettingsPage={props.onOpenSettingsPage}
       />
     );
@@ -152,6 +155,11 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
     await props.onPull(endpointUrl);
   }
 
+  async function handleDisconnectPairing() {
+    props.onClearError();
+    await props.onDisconnectPairing?.();
+  }
+
   return (
     <section className="mb-8 px-5 py-5">
       <div className="flex flex-col gap-5">
@@ -160,6 +168,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
           endpointUrl={endpointUrl}
           isBusy={isBusy}
           isDiscovering={isDiscovering}
+          onDisconnectPairing={handleDisconnectPairing}
           onSync={() => void handleSync()}
           onTryAgain={() => void handleTryAgain()}
         />

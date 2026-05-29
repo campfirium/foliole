@@ -7,6 +7,7 @@ import type {
 import { resolveReadableCompanionArticle } from './companionReadableArticle';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
+  clearCompanionPairingCredentials,
   createSignedRequestHeaders,
   discoverCompanionDesktop,
   discoverCompanionDesktops,
@@ -43,6 +44,7 @@ export async function loadCompanionWorkspaceSyncState() {
 export {
   discoverCompanionDesktop,
   discoverCompanionDesktops,
+  clearCompanionPairingCredentials,
   loadCompanionDiscovery,
   loadCompanionPairingState,
   pairCompanionWithDesktop,

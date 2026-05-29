@@ -56,6 +56,8 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
     const run = await runCompanionSyncAsOwner(endpointUrl, async () => {
       args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
       args.setError(null);
+      const savedEndpointState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
+      args.setState({ ...savedEndpointState, workspace_snapshot: args.state.workspace_snapshot });
       const runId = createCompanionSyncRunId();
       const startedAt = new Date().toISOString();
       try {

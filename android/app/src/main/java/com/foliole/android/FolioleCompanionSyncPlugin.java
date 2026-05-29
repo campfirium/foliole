@@ -16,9 +16,10 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     }
 
     @PluginMethod
-    public void loadPairingState(PluginCall call) {
-        FolioleCompanionPairingPluginActions.loadPairingState(getContext(), call);
-    }
+    public void loadPairingState(PluginCall call) { FolioleCompanionPairingPluginActions.loadPairingState(getContext(), call); }
+
+    @PluginMethod
+    public void clearPairingCredentials(PluginCall call) { FolioleCompanionPairingPluginActions.clearPairingCredentials(getContext(), call); }
 
     @PluginMethod
     public void savePairingCredentials(PluginCall call) {

@@ -67,6 +67,29 @@ describe('windows-cap-sync.sh', () => {
     expect(script).not.toContain('if ($LASTEXITCODE -ne 0)');
   });
 
+  it('runs Windows cmd shims through Start-Process and verifies refreshed web assets', async () => {
+    const script = await readFile(CAP_SYNC_PS_SCRIPT, 'utf8');
+
+    expect(script).toContain('function Invoke-CmdTool');
+    expect(script).toContain('function Invoke-NodeTool');
+    expect(script).toContain('$env:Path = "$toolDir;$env:Path"');
+    expect(script).toContain('Start-Process');
+    expect(script).toContain('-ArgumentList $Arguments');
+    expect(script).toContain('-FilePath $CommandPath');
+    expect(script).toContain('-WorkingDirectory $WindowsWorkDir');
+    expect(script).toContain('-WindowStyle Hidden');
+    expect(script).not.toContain('-NoNewWindow');
+    expect(script).toContain('if ($process.ExitCode -ne 0)');
+    expect(script).toContain('Invoke-NodeTool -Arguments @("scripts\\android\\generate-companion-schema.mjs")');
+    expect(script).toContain('Invoke-NodeTool -Arguments @("node_modules\\vite\\bin\\vite.js", "build", "--config", "vite.companion.config.ts")');
+    expect(script).toContain('Invoke-NodeTool -Arguments @($capCliPath, "sync", "android")');
+    expect(script).toContain('function Assert-FileExists');
+    expect(script).toContain('Remove-Item -Path $webOutDir -Recurse -Force');
+    expect(script).toContain('Remove-Item -Path $androidPublicDir -Recurse -Force');
+    expect(script).toContain('Android companion web build did not produce dist\\companion\\index.html.');
+    expect(script).toContain('Capacitor Android sync did not produce android app web assets.');
+  });
+
   it('defaults sync and PowerShell calls to the dedicated Android workspace', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-cap-sync-default-workdir-'));
     try {

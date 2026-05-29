@@ -65,6 +65,7 @@ export interface CompanionWorkspaceSyncPlugin
   loadSyncReviewLogCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   loadSyncReviewLogPushCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   loadSyncReviewLog(args: { cursor: NativeSyncChangeCursor | null; limit?: number }): Promise<{ reviews: NativeSyncReviewLogRecord[] }>;
+  clearPairingCredentials(): Promise<NativeCompanionPairingState>;
   loadPairingState(): Promise<NativeCompanionPairingState>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
   loadWorkspaceSyncState(): Promise<NativeCompanionWorkspaceSyncState>;

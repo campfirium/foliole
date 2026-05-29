@@ -15,6 +15,15 @@ final class FolioleCompanionPairingPluginActions {
         }
     }
 
+    static void clearPairingCredentials(Context context, PluginCall call) {
+        try {
+            FolioleCompanionPairingStore.clearPairingCredentials(context);
+            call.resolve(FolioleCompanionPairingStore.loadPairingState(context));
+        } catch (Exception exception) {
+            call.reject("Failed to clear companion pairing credentials.", exception);
+        }
+    }
+
     static void savePairingCredentials(Context context, PluginCall call) {
         try {
             String deviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceIdCredentialRequestKey(context);

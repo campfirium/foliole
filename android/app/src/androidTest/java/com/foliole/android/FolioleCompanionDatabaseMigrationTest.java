@@ -48,6 +48,50 @@ public class FolioleCompanionDatabaseMigrationTest {
         }
     }
 
+    @Test
+    public void currentVersionRepairAddsMissingNodeColumns() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        SQLiteDatabase database = SQLiteDatabase.create(null);
+        try {
+            database.execSQL(
+                "CREATE TABLE nodes (" +
+                    "id TEXT PRIMARY KEY," +
+                    "parent_id TEXT," +
+                    "kind TEXT NOT NULL DEFAULT 'topic'," +
+                    "priority INTEGER," +
+                    "desired_retention REAL," +
+                    "title TEXT NOT NULL," +
+                    "is_title_manual INTEGER NOT NULL DEFAULT 0," +
+                    "hide_title_heading INTEGER NOT NULL DEFAULT 0," +
+                    "content TEXT NOT NULL DEFAULT ''," +
+                    "body_blob_hash TEXT," +
+                    "opening_text TEXT," +
+                    "virtual_filter TEXT," +
+                    "reveal TEXT," +
+                    "anchor_link TEXT," +
+                    "image_regions TEXT," +
+                    "position INTEGER," +
+                    "current_version_id TEXT," +
+                    "last_modified_by_device_id TEXT," +
+                    "sync_dirty INTEGER NOT NULL DEFAULT 0," +
+                    "created_at TEXT NOT NULL," +
+                    "updated_at TEXT NOT NULL," +
+                    "deleted_at TEXT" +
+                    ")"
+            );
+            database.execSQL("PRAGMA user_version = 18");
+
+            FolioleCompanionDatabaseMigration.repairCurrentSchema(context, database);
+
+            assertTrue(columnExists(database, "nodes", "enable_short_term"));
+            assertTrue(columnExists(database, "nodes", "sequential_reading_enabled"));
+            assertTrue(columnExists(database, "nodes", "manual_child_order"));
+            assertTrue(columnExists(database, "nodes", "shelved_at"));
+        } finally {
+            database.close();
+        }
+    }
+
     private static void createLegacySyncObjectState(SQLiteDatabase database) {
         database.execSQL(
             "CREATE TABLE sync_object_state (" +

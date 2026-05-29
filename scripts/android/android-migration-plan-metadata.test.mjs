@@ -44,6 +44,18 @@ const SCHEMA_INSTALLER = path.join(
   'android',
   'FolioleCompanionSchemaInstaller.java'
 );
+const SCHEMA_REPAIR = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionSchemaRepair.java'
+);
 const MIGRATION_RULES = path.join(
   REPO_ROOT,
   'android',
@@ -131,10 +143,18 @@ describe('Android migration plan metadata', () => {
   });
 
   it('keeps Android Java migration version orchestration driven by the generated plan', async () => {
+    const helperSource = await readFile(DATABASE_HELPER, 'utf8');
     const migrationSource = await readFile(DATABASE_MIGRATION, 'utf8');
+    const repairSource = await readFile(SCHEMA_REPAIR, 'utf8');
     const installerSource = await readFile(SCHEMA_INSTALLER, 'utf8');
     const rulesSource = await readFile(MIGRATION_RULES, 'utf8');
 
+    expect(helperSource).toContain('public void onOpen(SQLiteDatabase database)');
+    expect(helperSource).toContain('FolioleCompanionDatabaseMigration.repairCurrentSchema(context, database)');
+    expect(migrationSource).toContain('static void repairCurrentSchema(Context context, SQLiteDatabase database)');
+    expect(migrationSource).toContain('FolioleCompanionSchemaRepair.repairCurrentSchema(context, database)');
+    expect(repairSource).toContain('addNodesSequentialReadingEnabledIfMissing(context, database)');
+    expect(repairSource).toContain('FolioleCompanionMigrationRules.repairColumnName(context, groupName)');
     expect(installerSource).toContain('static JSONArray migrationPlan(Context context)');
     expect(rulesSource).toContain('section(context, "actionTypes")');
     expect(rulesSource).toContain('section(context, "actionKeys")');
@@ -148,8 +168,8 @@ describe('Android migration plan metadata', () => {
     expect(installerSource).not.toContain('optJSONArray("plan")');
     expect(migrationSource).toContain('FolioleCompanionSchemaInstaller.migrationPlan(context)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.actionType(context, key)');
-    expect(migrationSource).toContain('FolioleCompanionMigrationRules.repairStatementName(context, groupName)');
-    expect(migrationSource).toContain('FolioleCompanionMigrationRules.repairTableName(context, groupName)');
+    expect(repairSource).toContain('FolioleCompanionMigrationRules.repairStatementName(context, groupName)');
+    expect(repairSource).toContain('FolioleCompanionMigrationRules.repairTableName(context, groupName)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.stringValue');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.rowString(context, row, key)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.rowNullableString(context, row, key)');

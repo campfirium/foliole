@@ -89,6 +89,7 @@ export const CLASSIFICATIONS = {
     files: [
       'FolioleCompanionDatabaseMigration.java',
       'FolioleCompanionSchemaInstaller.java',
+      'FolioleCompanionSchemaRepair.java',
       'FolioleCompanionSqliteRuntime.java'
     ]
   },

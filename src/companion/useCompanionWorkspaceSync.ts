@@ -5,7 +5,10 @@ import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativ
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
-import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
+import {
+  clearCompanionPairingCredentials,
+  loadCompanionWorkspaceSyncState
+} from '../shared/platform/companionWorkspaceSync';
 
 import { mergeCompanionSyncProgressSession } from './companionSyncProgressSession';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
@@ -72,16 +75,31 @@ function useWorkspaceSyncBootstrap(
   }, [setReadableArticle, setSyncConflictCount, setState, setStatus]);
 }
 
+async function disconnectCompanionWorkspacePairing(args: {
+  refreshPairingState: () => Promise<unknown>;
+  saveEndpoint: (endpointUrl: string) => Promise<unknown>;
+}) {
+  await clearCompanionPairingCredentials();
+  const nextPairingState = await args.refreshPairingState();
+  await args.saveEndpoint('');
+  return nextPairingState;
+}
+
+function useMergedCompanionSyncProgress() {
+  const [syncProgress, setSyncProgress] = useState<CompanionDesktopSyncProgress | null>(null);
+  const setMergedSyncProgress = useCallback((progress: CompanionDesktopSyncProgress | null) => {
+    setSyncProgress((previous) => mergeCompanionSyncProgressSession(previous, progress));
+  }, []);
+  return [syncProgress, setMergedSyncProgress] as const;
+}
+
 export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {
   const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(EMPTY_SYNC_STATE);
   const [readableArticle, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
   const [syncConflictCount, setSyncConflictCount] = useState(0);
-  const [syncProgress, setSyncProgress] = useState<CompanionDesktopSyncProgress | null>(null);
+  const [syncProgress, setMergedSyncProgress] = useMergedCompanionSyncProgress();
   const [status, setStatus] = useState<CompanionWorkspaceSyncStatus>('loading');
   const [error, setError] = useState<string | null>(null);
-  const setMergedSyncProgress = useCallback((progress: CompanionDesktopSyncProgress | null) => {
-    setSyncProgress((previous) => mergeCompanionSyncProgressSession(previous, progress));
-  }, []);
 
   const snapshotActions = createWorkspaceSnapshotActions({
     setError,
@@ -102,6 +120,10 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     await pairing.refreshPairingState();
     return nextState;
   }, [pairing.refreshPairingState, snapshotActions]);
+  const disconnectPairing = useCallback(() => disconnectCompanionWorkspacePairing({
+    refreshPairingState: pairing.refreshPairingState,
+    saveEndpoint: snapshotActions.saveEndpoint
+  }), [pairing.refreshPairingState, snapshotActions.saveEndpoint]);
   useWorkspaceSyncBootstrap(setReadableArticle, setSyncConflictCount, setState, setStatus);
   useForegroundAutoSync(
     setError,
@@ -129,6 +151,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     replaceSnapshot: snapshotActions.replaceSnapshot,
     saveEndpoint: snapshotActions.saveEndpoint,
     saveSyncOnboardingStatus: snapshotActions.saveSyncOnboardingStatus,
-    ...pairing
+    ...pairing,
+    disconnectPairing
   };
 }

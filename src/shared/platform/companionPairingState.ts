@@ -41,6 +41,13 @@ export function readWebPairingState() {
   return normalizePairingState(readStoredWebPairingState());
 }
 
+export function clearWebPairingState() {
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(WEB_PAIRING_STATE_KEY);
+  }
+  return normalizePairingState(null);
+}
+
 export function writeWebPairingState(state: WebCompanionPairingState) {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(WEB_PAIRING_STATE_KEY, JSON.stringify(state));

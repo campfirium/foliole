@@ -90,6 +90,34 @@ it('loads reading and review state as state-only sync pack metadata', () => {
   });
 });
 
+it('includes node ancestors when packing a changed child node', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
+     VALUES
+       ('parent-1', NULL, 'folder', 'Parent', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z'),
+       ('child-1', 'parent-1', 'topic', 'Child', '', '2026-04-27T00:01:00.000Z', '2026-04-27T00:01:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES
+       ('node', 'parent-1', 1, 'parent-hash', 'desktop', '2026-04-27T00:00:00.000Z', 0),
+       ('node', 'child-1', 2, 'child-hash', 'desktop', '2026-04-27T00:01:00.000Z', 0)`
+  );
+
+  expect(loadPackRows(1, 2)).toMatchObject({
+    nodes: expect.arrayContaining([
+      expect.objectContaining({ id: 'parent-1' }),
+      expect.objectContaining({ id: 'child-1', parent_id: 'parent-1' })
+    ]),
+    stateRows: [
+      { object_id: 'parent-1', object_type: 'node', state_seq: 1 },
+      { object_id: 'child-1', object_type: 'node', state_seq: 2 }
+    ]
+  });
+});
+
 function insertNodeSyncState() {
   openDatabaseConnection().driver.execute(
     `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)

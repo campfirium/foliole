@@ -15,7 +15,7 @@ function Invoke-AdbCommand {
   param([string]$AdbPath, [string[]]$Arguments)
   $out = [System.IO.Path]::GetTempFileName(); $err = [System.IO.Path]::GetTempFileName()
   try {
-    $process = Start-Process -FilePath $AdbPath -ArgumentList $Arguments -Wait -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
+    $process = Start-Process -FilePath $AdbPath -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
     $global:LASTEXITCODE = $process.ExitCode
     Get-Content -Path $out -ErrorAction SilentlyContinue
   } finally { Remove-Item -Path $out, $err -ErrorAction SilentlyContinue }
@@ -186,18 +186,6 @@ function Wait-ForEmulatorReady {
   return $null
 }
 
-function Start-EmulatorProcess {
-  param(
-    [string]$EmulatorPath,
-    [string]$AvdName,
-    [string]$Timezone
-  )
-
-  Start-Process `
-    -FilePath $EmulatorPath `
-    -ArgumentList @("-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone)
-}
-
 if ([string]::IsNullOrWhiteSpace($AvdName)) {
   $AvdName = "Foliole_API_36"
 }
@@ -243,7 +231,10 @@ if ($null -ne $existingSerial) {
 }
 
 if ($null -eq $existingSerial) {
-  Start-EmulatorProcess -EmulatorPath $emulatorPath -AvdName $AvdName -Timezone $Timezone
+  Start-Process `
+    -FilePath $emulatorPath `
+    -ArgumentList @("-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone) `
+    -WindowStyle Minimized
   Write-Info "launch: requested"
 } else {
   Write-Info "launch: already running ($existingSerial)"

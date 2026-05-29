@@ -13,7 +13,11 @@ final class FolioleCompanionDatabaseMigration {
 
     static void create(Context context, SQLiteDatabase database) {
         installSchema(context, database, defaultMessage(context, "installSchemaErrorMessage"));
-        addSyncBaseContentHashIfMissing(context, database);
+        FolioleCompanionSchemaRepair.repairCurrentSchema(context, database);
+    }
+
+    static void repairCurrentSchema(Context context, SQLiteDatabase database) {
+        FolioleCompanionSchemaRepair.repairCurrentSchema(context, database);
     }
 
     static void upgrade(Context context, SQLiteDatabase database, int oldVersion) {
@@ -55,27 +59,27 @@ final class FolioleCompanionDatabaseMigration {
             return;
         }
         if (actionType(context, "addNodeViewStateSourceIfMissing").equals(type)) {
-            addNodeViewStateSourceIfMissing(context, database);
+            FolioleCompanionSchemaRepair.addNodeViewStateSourceIfMissing(context, database);
             return;
         }
         if (actionType(context, "addSyncBaseContentHashIfMissing").equals(type)) {
-            addSyncBaseContentHashIfMissing(context, database);
+            FolioleCompanionSchemaRepair.addSyncBaseContentHashIfMissing(context, database);
             return;
         }
         if (actionType(context, "addNodesEnableShortTermIfMissing").equals(type)) {
-            addNodesEnableShortTermIfMissing(context, database);
+            FolioleCompanionSchemaRepair.addNodesEnableShortTermIfMissing(context, database);
             return;
         }
         if (actionType(context, "addNodesSequentialReadingEnabledIfMissing").equals(type)) {
-            addNodesSequentialReadingEnabledIfMissing(context, database);
+            FolioleCompanionSchemaRepair.addNodesSequentialReadingEnabledIfMissing(context, database);
             return;
         }
         if (actionType(context, "addNodesManualChildOrderIfMissing").equals(type)) {
-            addNodesManualChildOrderIfMissing(context, database);
+            FolioleCompanionSchemaRepair.addNodesManualChildOrderIfMissing(context, database);
             return;
         }
         if (actionType(context, "addNodesShelvedAtIfMissing").equals(type)) {
-            addNodesShelvedAtIfMissing(context, database);
+            FolioleCompanionSchemaRepair.addNodesShelvedAtIfMissing(context, database);
             return;
         }
         throw new IllegalStateException("Companion migration plan has unknown action: " + type);
@@ -138,52 +142,6 @@ final class FolioleCompanionDatabaseMigration {
             });
         } catch (Exception exception) {
             throw new IllegalStateException(repairValue(context, "nextInsertErrorMessage"), exception);
-        }
-    }
-
-    private static void addSyncBaseContentHashIfMissing(Context context, SQLiteDatabase database) {
-        addColumnIfMissing(context, database, "syncBaseContentHash");
-    }
-
-    private static void addNodeViewStateSourceIfMissing(Context context, SQLiteDatabase database) {
-        addColumnIfMissing(context, database, "nodeViewStateSource");
-    }
-
-    private static void addNodesEnableShortTermIfMissing(Context context, SQLiteDatabase database) {
-        addColumnIfMissing(context, database, "nodesEnableShortTerm");
-    }
-
-    private static void addNodesSequentialReadingEnabledIfMissing(Context context, SQLiteDatabase database) {
-        addColumnIfMissing(context, database, "nodesSequentialReadingEnabled");
-    }
-
-    private static void addNodesManualChildOrderIfMissing(Context context, SQLiteDatabase database) {
-        addColumnIfMissing(context, database, "nodesManualChildOrder");
-    }
-
-    private static void addNodesShelvedAtIfMissing(Context context, SQLiteDatabase database) {
-        addColumnIfMissing(context, database, "nodesShelvedAt");
-    }
-
-    private static void addColumnIfMissing(Context context, SQLiteDatabase database, String groupName) {
-        try {
-            if (
-                FolioleCompanionSqliteRuntime.columnExists(
-                    database,
-                    FolioleCompanionMigrationRules.repairTableName(context, groupName),
-                    FolioleCompanionMigrationRules.repairColumnName(context, groupName)
-                )
-            ) {
-                return;
-            }
-            installMigrationStatement(
-                context,
-                database,
-                FolioleCompanionMigrationRules.repairStatementName(context, groupName),
-                FolioleCompanionMigrationRules.repairErrorMessage(context, groupName)
-            );
-        } catch (Exception exception) {
-            throw new IllegalStateException("Companion migration add-column repair rule is missing: " + groupName, exception);
         }
     }
 

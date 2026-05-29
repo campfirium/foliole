@@ -77,8 +77,17 @@ describe('windows-deploy-app.sh', () => {
 
     expect(script).toContain('function Invoke-AdbCommand');
     expect(script).toContain('Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null');
+    expect(script).toContain('-WindowStyle Hidden');
     expect(script).toContain('function Test-LastCommandFailed');
     expect(script).not.toContain('| Out-Null');
+  });
+
+  it('runs Gradle through a hidden cmd process', async () => {
+    const script = await readFile(DEPLOY_PS_SCRIPT, 'utf8');
+
+    expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden');
+    expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden');
+    expect(script).not.toContain('& cmd.exe /d /c');
   });
 
   it('refuses direct deploy without explicit data-risk confirmation', async () => {

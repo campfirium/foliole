@@ -24,6 +24,7 @@ describe('windows-run-emulator.ps1', () => {
 
     expect(script).toContain('function Invoke-AdbCommand');
     expect(script).toContain('Start-Process -FilePath $AdbPath -ArgumentList $Arguments');
+    expect(script).toContain('-WindowStyle Hidden');
     expect(script).toContain('Get-Content -Path $out');
     expect(script).toContain('Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null');
     expect(script).not.toContain('& cmd.exe');
@@ -33,17 +34,17 @@ describe('windows-run-emulator.ps1', () => {
   it('cold starts the AVD instead of loading a stale snapshot', async () => {
     const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
 
-    expect(script).toContain('function Start-EmulatorProcess');
     expect(script).toContain('-ArgumentList @("-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone)');
-    expect(script).toContain('Start-EmulatorProcess -EmulatorPath $emulatorPath -AvdName $AvdName -Timezone $Timezone');
+    expect(script).toContain('-FilePath $emulatorPath `');
   });
 
   it('detaches the emulator process from the preview process tree', async () => {
     const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
 
     expect(script).toContain('Start-Process `');
-    expect(script).toContain('-FilePath $EmulatorPath `');
+    expect(script).toContain('-FilePath $emulatorPath `');
     expect(script).toContain('-ArgumentList @("-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone)');
+    expect(script).toContain('-WindowStyle Minimized');
     expect(script).not.toContain('start ""Foliole Android Emulator"" /min');
     expect(script).not.toContain('-FilePath $cmdPath');
   });

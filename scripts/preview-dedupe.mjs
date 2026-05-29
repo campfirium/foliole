@@ -53,17 +53,40 @@ function listUntrackedFiles(target) {
     .sort();
 }
 
+function listTrackedChangedFiles(target) {
+  const output = runGitBuffer(['diff', '--name-only', '-z', 'HEAD', '--', ...TARGET_PATHS[target]]);
+  return output
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean)
+    .sort();
+}
+
+async function hashWorktreeFile(hash, filePath) {
+  hash.update(filePath);
+  hash.update('\0');
+  try {
+    hash.update(await readFile(path.join(REPO_ROOT, filePath)));
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw error;
+    }
+    hash.update('\0deleted\0');
+  }
+}
+
 async function workspaceHash(target) {
   const hash = createHash('sha256');
   hash.update('head-targets\0');
   hash.update(runGitBuffer(['ls-tree', '-rz', '-r', 'HEAD', '--', ...TARGET_PATHS[target]]));
   hash.update('tracked-diff\0');
-  hash.update(runGitBuffer(['diff', '--binary', 'HEAD', '--', ...TARGET_PATHS[target]]));
+  for (const filePath of listTrackedChangedFiles(target)) {
+    hash.update('\0tracked\0');
+    await hashWorktreeFile(hash, filePath);
+  }
   for (const filePath of listUntrackedFiles(target)) {
     hash.update('\0untracked\0');
-    hash.update(filePath);
-    hash.update('\0');
-    hash.update(await readFile(path.join(REPO_ROOT, filePath)));
+    await hashWorktreeFile(hash, filePath);
   }
   return hash.digest('hex');
 }

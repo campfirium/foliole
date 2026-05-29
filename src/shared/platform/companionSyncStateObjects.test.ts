@@ -33,6 +33,20 @@ it('applies state objects through the Capacitor DbPort adapter and shared core',
   });
 });
 
+it('unlinks nodes before applying an attachment tombstone', async () => {
+  db = new Database(':memory:');
+  db.pragma('foreign_keys = ON');
+  installStateObjectSchema(db);
+  installAttachmentSchema(db);
+
+  await expect(applyCompanionSyncObjectsWithSharedCore(createFakeCapacitorConnection(db) as never, [
+    attachmentTombstone()
+  ])).resolves.toEqual(['attachment:att-1']);
+
+  expect(db.prepare('SELECT COUNT(*) AS count FROM node_attachments').get() as unknown).toEqual({ count: 0 });
+  expect(db.prepare('SELECT COUNT(*) AS count FROM attachments').get() as unknown).toEqual({ count: 0 });
+});
+
 it('opens the Android companion database before applying state objects', async () => {
   db = new Database(':memory:');
   installStateObjectSchema(db);
@@ -65,6 +79,17 @@ function settingObject(): NativeSyncObjectRecord {
       value_json: '{"theme":"dark"}'
     }),
     updated_at: '2026-05-04T01:00:00.000Z'
+  };
+}
+
+function attachmentTombstone(): NativeSyncObjectRecord {
+  return {
+    content_hash: 'attachment-delete-hash-1',
+    deleted_at: '2026-05-04T02:00:00.000Z',
+    object_id: 'att-1',
+    object_type: 'attachment',
+    payload_json: null,
+    updated_at: '2026-05-04T02:00:00.000Z'
   };
 }
 
@@ -121,5 +146,40 @@ function installStateObjectSchema(database: Database.Database) {
       deleted_at TEXT,
       PRIMARY KEY (object_type, object_id)
     );
+  `);
+}
+
+function installAttachmentSchema(database: Database.Database) {
+  database.exec(`
+    CREATE TABLE nodes (
+      id TEXT PRIMARY KEY
+    );
+    CREATE TABLE attachments (
+      id TEXT PRIMARY KEY,
+      original_name TEXT,
+      mime_type TEXT,
+      size_bytes INTEGER,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE attachment_blobs (
+      attachment_id TEXT PRIMARY KEY REFERENCES attachments(id) ON DELETE CASCADE
+    );
+    CREATE TABLE pdf_page_text (
+      attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
+      page INTEGER NOT NULL,
+      text TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (attachment_id, page)
+    );
+    CREATE TABLE node_attachments (
+      node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+      attachment_id TEXT NOT NULL REFERENCES attachments(id),
+      role TEXT NOT NULL,
+      PRIMARY KEY (node_id, attachment_id, role)
+    );
+    INSERT INTO nodes (id) VALUES ('node-1');
+    INSERT INTO attachments (id, created_at) VALUES ('att-1', '2026-05-04T01:00:00.000Z');
+    INSERT INTO attachment_blobs (attachment_id) VALUES ('att-1');
+    INSERT INTO pdf_page_text (attachment_id, page, text) VALUES ('att-1', 1, 'PDF text');
+    INSERT INTO node_attachments (node_id, attachment_id, role) VALUES ('node-1', 'att-1', 'reference');
   `);
 }

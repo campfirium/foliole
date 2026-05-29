@@ -193,9 +193,10 @@ export function loadMaxStateSeq() {
 
 export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
   const changedStateRows = listChangedStateRows(fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
+  const changedNodeIds = idsForObjectTable(changedStateRows, 'nodes');
   const stateRows = mergeStateRows(changedStateRows, loadNodePreludeStateRows({
     isSyncStatePackRow,
-    nodeIds: learningNodeIds(changedStateRows),
+    nodeIds: [...changedNodeIds, ...learningNodeIds(changedStateRows)],
     placeholders,
     query: (sql, params) => openDatabaseConnection().driver.queryAll<RawSyncStatePackRow>(sql, params),
     toStateSeq

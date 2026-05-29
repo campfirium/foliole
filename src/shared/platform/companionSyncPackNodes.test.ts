@@ -58,7 +58,7 @@ it('loads and advances the pack cursor around the shared core apply', async () =
     saveCursor: vi.fn(async (cursor: number | null) => cursor)
   };
 
-  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({ from_state_seq: 2, to_state_seq: 5 }) }] });
+  mockPackApplyQueries(connection, { appliedCount: 2, fromStateSeq: 2, toStateSeq: 5 });
 
   await expect(applyCompanionSyncPackPathWithSharedCore({
     deviceId: 'android-device',
@@ -70,6 +70,28 @@ it('loads and advances the pack cursor around the shared core apply', async () =
 
   expect(cursorStore.loadCursor).toHaveBeenCalled();
   expect(cursorStore.saveCursor).toHaveBeenCalledWith(5);
+});
+
+it('does not advance the pack cursor when no objects were applied', async () => {
+  const connection = createFakeConnection();
+  const manager = {
+    createConnection: vi.fn(async () => connection),
+    isConnection: vi.fn(async () => ({ result: false })),
+    retrieveConnection: vi.fn()
+  };
+  const cursorStore = {
+    loadCursor: vi.fn(async () => 2),
+    saveCursor: vi.fn(async (cursor: number | null) => cursor)
+  };
+
+  mockPackApplyQueries(connection, { appliedCount: 0, fromStateSeq: 2, toStateSeq: 5 });
+
+  await expect(applyCompanionSyncPackPathWithSharedCore({
+    deviceId: 'android-device',
+    packPath: '/tmp/empty-apply-pack.db'
+  }, cursorStore, manager as never)).rejects.toThrow('sync_pack_applied_no_objects');
+
+  expect(cursorStore.saveCursor).not.toHaveBeenCalled();
 });
 
 it('retrieves an existing Android companion database connection before attaching a sync pack', async () => {
@@ -135,4 +157,22 @@ function createFakeConnection() {
     rollbackTransaction: vi.fn(),
     run: vi.fn(async () => ({ changes: { changes: 0 } }))
   };
+}
+
+function mockPackApplyQueries(
+  connection: ReturnType<typeof createFakeConnection>,
+  args: { appliedCount: number; fromStateSeq: number; toStateSeq: number }
+) {
+  connection.query.mockImplementation(async (sql: string) => {
+    if (sql.includes('pack_manifest')) {
+      return { values: [{ value: JSON.stringify({ from_state_seq: args.fromStateSeq, to_state_seq: args.toStateSeq }) }] };
+    }
+    if (sql.includes('COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq')) {
+      return { values: [{ next_state_seq: 1 }] };
+    }
+    if (sql.includes('COUNT(*) AS count')) {
+      return { values: [{ count: args.appliedCount }] };
+    }
+    return { values: [] };
+  });
 }

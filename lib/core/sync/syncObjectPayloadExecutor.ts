@@ -144,6 +144,7 @@ async function applyAttachmentObject(port: DbPort, record: SyncPackSyncObjectRec
   if (record.deleted_at) {
     await port.run('DELETE FROM pdf_page_text WHERE attachment_id = ?', [record.object_id]);
     await port.run('DELETE FROM attachment_blobs WHERE attachment_id = ?', [record.object_id]);
+    await port.run('DELETE FROM node_attachments WHERE attachment_id = ?', [record.object_id]);
     await port.run('DELETE FROM attachments WHERE id = ?', [record.object_id]);
     return;
   }

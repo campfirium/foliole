@@ -4,6 +4,7 @@ import {
   dropCompanionPairingPrivateKey
 } from './companionPairingEncryption';
 import {
+  clearWebPairingState,
   normalizePairingState,
   readStoredWebPairingState,
   readWebPairingState,
@@ -69,6 +70,13 @@ export async function loadCompanionPairingState() {
     return readWebPairingState();
   }
   return normalizePairingState(await FolioleCompanionSync.loadPairingState());
+}
+
+export async function clearCompanionPairingCredentials() {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return clearWebPairingState();
+  }
+  return normalizePairingState(await runCompanionSyncWriterTask(() => FolioleCompanionSync.clearPairingCredentials()));
 }
 
 export async function createSignedRequestHeaders(args: { bodyText?: string; method: string; pathWithQuery: string }) {

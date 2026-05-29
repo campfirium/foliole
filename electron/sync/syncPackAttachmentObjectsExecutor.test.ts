@@ -71,6 +71,7 @@ it('deletes attachment payload rows for tombstones', async () => {
   expect(runs).toEqual([
     'DELETE FROM pdf_page_text WHERE attachment_id = ?',
     'DELETE FROM attachment_blobs WHERE attachment_id = ?',
+    'DELETE FROM node_attachments WHERE attachment_id = ?',
     'DELETE FROM attachments WHERE id = ?'
   ]);
 });

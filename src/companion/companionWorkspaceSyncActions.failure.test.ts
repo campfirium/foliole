@@ -124,6 +124,7 @@ describe('companion workspace manual sync failures', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
+    workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValue(createSyncState());
   });
 
   it('records the real structure apply cause and leaves the manual sync idle', async () => {
@@ -163,6 +164,14 @@ describe('companion workspace manual sync failures', () => {
       status: 'failed'
     }));
   });
+});
+
+describe('companion workspace manual sync refresh', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
+    workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValue(createSyncState());
+  });
 
   it('refreshes the visible workspace snapshot after manual structure sync', async () => {
     const { actions, callbacks } = createActions();
@@ -184,4 +193,20 @@ describe('companion workspace manual sync failures', () => {
     }));
   });
 
+  it('persists the endpoint used for manual sync before pulling desktop data', async () => {
+    const { actions, callbacks } = createActions();
+    workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValueOnce(createSyncState({
+      endpoint_url: 'http://10.0.2.2:38641',
+      workspace_snapshot: null
+    }));
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValueOnce(createSyncResult());
+
+    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toEqual(createSyncState());
+
+    expect(workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint).toHaveBeenCalledWith('http://10.0.2.2:38641');
+    expect(callbacks.setState).toHaveBeenCalledWith(expect.objectContaining({
+      endpoint_url: 'http://10.0.2.2:38641',
+      workspace_snapshot: createSnapshot()
+    }));
+  });
 });

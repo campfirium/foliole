@@ -115,12 +115,27 @@ function ConnectionSummary(props: {
 
 function ConnectionPage(props: {
   endpointUrl: string;
+  isDisconnecting: boolean;
+  onDisconnectPairing(): void;
   pairingState: NativeCompanionPairingState;
 }) {
   return (
     <section className="border-t border-companion-divider">
       <SettingsRow label="Paired device" value={formatPairedDevice(props.pairingState)} />
       <SettingsRow label="Desktop address" value={props.endpointUrl} />
+      <div className="py-4">
+        <p className="text-xs leading-5 text-companion-text-secondary">
+          This stops sync with this desktop. Synced topics stay on this device.
+        </p>
+        <button
+          className="mt-3 w-full rounded-2xl border border-error px-4 py-3 text-sm font-semibold text-error transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={props.isDisconnecting}
+          onClick={props.onDisconnectPairing}
+          type="button"
+        >
+          {props.isDisconnecting ? 'Disconnecting' : 'Disconnect device'}
+        </button>
+      </div>
     </section>
   );
 }
@@ -134,13 +149,21 @@ export function CompanionSyncStatusDetails(props: {
   syncProgress: CompanionDesktopSyncProgress | null;
   status: 'idle' | 'loading' | 'syncing';
   page: CompanionSettingsPage;
+  onDisconnectPairing?: (() => void) | undefined;
   onOpenPage(page: CompanionSettingsPage): void;
 }) {
   if (props.page === 'syncActivity') {
     return <CompanionSyncActivityPage events={props.syncEvents} status={props.status} syncProgress={props.syncProgress} />;
   }
   if (props.page === 'syncConnection') {
-    return <ConnectionPage endpointUrl={props.endpointUrl} pairingState={props.pairingState} />;
+    return (
+      <ConnectionPage
+        endpointUrl={props.endpointUrl}
+        isDisconnecting={false}
+        pairingState={props.pairingState}
+        onDisconnectPairing={() => props.onDisconnectPairing?.()}
+      />
+    );
   }
 
   const lastSync = resolveLastSyncRow(props);

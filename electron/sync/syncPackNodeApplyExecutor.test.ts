@@ -60,7 +60,10 @@ it('applies nodes and node attachments from an attached sync pack', async () => 
     current_version_id: 'desktop#1',
     title: 'Packed Node'
   });
-  expect(connection.sqlite.prepare('SELECT node_id, position FROM node_order WHERE node_id = ?').get('node-1')).toBeUndefined();
+  expect(connection.sqlite.prepare('SELECT node_id, position FROM node_order WHERE node_id = ?').get('node-1')).toEqual({
+    node_id: 'node-1',
+    position: 5
+  });
   expect(connection.sqlite.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all()).toEqual([{
     attachment_id: 'att-1',
     node_id: 'node-1',

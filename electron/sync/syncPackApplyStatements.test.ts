@@ -67,6 +67,7 @@ it('builds node and attachment pack apply statements against an incoming alias',
     'FROM incoming.node_order incoming'
   );
   expect(buildSyncPackNodeOrderUpsertSql({ incomingAlias: 'incoming' })).toContain(
-    "INNER JOIN main.nodes node ON node.id = incoming.node_id AND node.kind = 'folder'"
+    'INNER JOIN main.nodes node ON node.id = incoming.node_id'
   );
+  expect(buildSyncPackNodeOrderUpsertSql({ incomingAlias: 'incoming' })).not.toContain('node.kind');
 });

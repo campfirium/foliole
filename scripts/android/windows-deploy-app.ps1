@@ -21,7 +21,7 @@ function Invoke-AdbCommand {
   param([string]$AdbPath, [string[]]$Arguments)
   $out = [System.IO.Path]::GetTempFileName(); $err = [System.IO.Path]::GetTempFileName()
   try {
-    $process = Start-Process -FilePath $AdbPath -ArgumentList $Arguments -Wait -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
+    $process = Start-Process -FilePath $AdbPath -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
     $global:LASTEXITCODE = $process.ExitCode
     Get-Content -Path $out -ErrorAction SilentlyContinue
   } finally { Remove-Item -Path $out, $err -ErrorAction SilentlyContinue }
@@ -98,7 +98,8 @@ function Invoke-GradleWrapper {
   )
 
   $gradleCommand = "call .\gradlew.bat $TaskName"
-  & cmd.exe /d /c $gradleCommand
+  $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden
+  $global:LASTEXITCODE = $process.ExitCode
   if (Test-LastCommandFailed) {
     exit $LASTEXITCODE
   }
@@ -106,7 +107,8 @@ function Invoke-GradleWrapper {
 
 function Stop-GradleWrapperDaemon {
   Write-Info "stopping Gradle daemon"
-  & cmd.exe /d /c "call .\gradlew.bat --stop"
+  $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden
+  $global:LASTEXITCODE = $process.ExitCode
   if (Test-LastCommandFailed) {
     Write-Info "Gradle daemon stop failed; continuing"
   }

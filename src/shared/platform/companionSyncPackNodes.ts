@@ -27,10 +27,20 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     deviceId: args.deviceId,
     packPath: args.packPath
   }, manager);
+  assertPackAppliedObjectsBeforeCursorAdvance(result, currentCursor ?? 0);
   if (result.to_state_seq > (currentCursor ?? 0)) {
     await cursorStore.saveCursor(result.to_state_seq);
   }
   return result;
+}
+
+function assertPackAppliedObjectsBeforeCursorAdvance(
+  result: NativeSyncPackApplyResult,
+  currentCursor: number
+) {
+  if (result.to_state_seq > currentCursor && result.applied_object_count === 0) {
+    throw new Error('sync_pack_applied_no_objects');
+  }
 }
 
 export async function applyCompanionSyncPackNodesWithSharedCore(

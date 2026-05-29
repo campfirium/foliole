@@ -33,6 +33,12 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     }
 
     @Override
+    public void onOpen(SQLiteDatabase database) {
+        super.onOpen(database);
+        FolioleCompanionDatabaseMigration.repairCurrentSchema(context, database);
+    }
+
+    @Override
     public void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
         if (oldVersion < 2) {
             onCreate(database);
