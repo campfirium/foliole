@@ -1,9 +1,11 @@
-import { Bonjour, type Service } from 'bonjour-service';
+import Bonjour from 'bonjour-service';
 
 export const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 
+type PublishedBonjourService = ReturnType<InstanceType<typeof Bonjour>['publish']>;
+
 let activeBonjour: InstanceType<typeof Bonjour> | null = null;
-let activeService: Service | null = null;
+let activeService: PublishedBonjourService | null = null;
 
 export interface CompanionMdnsAdvertisementInput {
   appVersion: string;
