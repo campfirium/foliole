@@ -1,4 +1,4 @@
-import { resolveArticleIdFromNodeId } from './exportArticleMirror.js';
+import * as articleMirror from './exportArticleMirror.js';
 import { syncIncrementalMirrorOutput } from './rebuildMirrorOutput.js';
 
 const DEBOUNCE_MS = 10_000;
@@ -6,7 +6,7 @@ const MAX_WAIT_MS = 60_000;
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
-let pendingArticleIds = new Set<string>();
+let pendingNodeIds = new Set<string>();
 let flushInFlight: Promise<void> | null = null;
 
 function clearTimers() {
@@ -21,9 +21,17 @@ function clearTimers() {
 }
 
 async function drainQueue() {
-  const articleIds = pendingArticleIds;
-  pendingArticleIds = new Set();
+  const nodeIds = pendingNodeIds;
+  pendingNodeIds = new Set();
   clearTimers();
+
+  const articleIds = new Set<string>();
+  for (const nodeId of nodeIds) {
+    const articleId = articleMirror.resolveArticleIdFromNodeId(nodeId);
+    if (articleId) {
+      articleIds.add(articleId);
+    }
+  }
 
   if (articleIds.size === 0) {
     return;
@@ -62,20 +70,17 @@ function scheduleFlush() {
 
 export function scheduleMirrorSync(nodeIds: string[]) {
   for (const nodeId of nodeIds) {
-    const articleId = resolveArticleIdFromNodeId(nodeId);
-    if (articleId) {
-      pendingArticleIds.add(articleId);
-    }
+    pendingNodeIds.add(nodeId);
   }
 
-  if (pendingArticleIds.size > 0) {
+  if (pendingNodeIds.size > 0) {
     scheduleFlush();
   }
 }
 
 export async function flushMirrorSync() {
   clearTimers();
-  if (pendingArticleIds.size === 0) {
+  if (pendingNodeIds.size === 0) {
     if (flushInFlight) {
       await flushInFlight;
     }
