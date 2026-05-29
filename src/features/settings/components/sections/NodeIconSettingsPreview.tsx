@@ -31,7 +31,7 @@ function resolvePreviewRowStyle(row: PreviewRow, state?: ReturnType<typeof useNo
 
 export function NodeIconSettingsPreview(props: { state?: ReturnType<typeof useNodeIconSettingsState> }) {
   return (
-    <aside className="border-l border-settings-divider/65 bg-settings-control/25 px-5 py-6 max-[900px]:hidden">
+    <aside className="bg-settings-control/25 px-5 py-6 max-[900px]:hidden">
       <div className="grid gap-0.5">
         {PREVIEW_ROWS.map((row) => (
           <div

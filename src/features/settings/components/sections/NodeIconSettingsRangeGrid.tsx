@@ -2,15 +2,15 @@ import type { ReactNode } from 'react';
 
 import { RangeField } from './nodeIconSettingFields';
 
-export const NODE_ICON_SETTINGS_TABLE_CLASS = 'grid-cols-[2rem_7.2rem_2.4rem_5.2rem_5.2rem_6.2rem]';
-export const NODE_ICON_SETTINGS_TABLE_GAP_CLASS = 'gap-x-2.5';
+export const NODE_ICON_SETTINGS_TABLE_CLASS = 'grid-cols-[2rem_10.4rem_3.6rem_5.2rem_5.2rem_4rem]';
+export const NODE_ICON_SETTINGS_TABLE_GAP_CLASS = 'gap-x-4';
 
 export function ControlHeader() {
   return (
     <div aria-hidden="true" className={`grid ${NODE_ICON_SETTINGS_TABLE_CLASS} ${NODE_ICON_SETTINGS_TABLE_GAP_CLASS} px-4 pb-1 pt-3 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-foreground/38`}>
       <span />
       <span>Icon</span>
-      <span>Color</span>
+      <span className="text-center">Color</span>
       <span className="text-right">Scale</span>
       <span className="text-right">Stroke</span>
       <span className="text-center">Reset</span>

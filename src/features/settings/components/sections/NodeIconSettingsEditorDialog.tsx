@@ -58,7 +58,7 @@ export function NodeIconSettingsEditorDialog(props: {
           data-settings-nested-dialog="true"
         >
           <EditorHeader onReset={props.state.handleReset} />
-          <div className="grid min-h-0 grid-cols-[minmax(0,max-content)_16rem] border-b border-settings-divider/65 max-[900px]:grid-cols-1">
+          <div className="grid min-h-0 grid-cols-[minmax(0,max-content)_16rem] gap-x-5 border-b border-settings-divider/65 max-[900px]:grid-cols-1">
             <main className="min-h-0 px-6 pb-3 pt-4">
               <div className="grid w-fit overflow-visible">
                 <NodeIconSettingsRows onEdit={props.onEditShape} onResetBase={props.onResetBase} state={props.state} />

@@ -86,7 +86,7 @@ async function expectStoredNodeIconSettings() {
 }
 
 async function expectNodeIconSettingsReset() {
-  fireEvent.click(screen.getByRole('button', { name: 'Reset Item scheduled' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Reset Item (scheduled)' }));
   await waitFor(() => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance)).toBeNull();
   });
@@ -98,10 +98,10 @@ it('stores compact topic and item icon rows plus per-state topic and item icon s
   editSvg('Edit Topic (base) shape', '<svg viewBox="0 0 16 16"><path d="M2 12L14 4" fill="none" stroke="currentColor"/></svg>');
   editSvg('Edit Item (base) shape', '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>');
 
-  changeRange('Item scheduled', 'Stroke', '1.8');
-  changeRange('Item scheduled', 'Inner ring scale', '1.2');
-  changeRange('Item scheduled', 'Inner ring stroke', '1.4');
-  editStateSvg('Edit Item scheduled shape', '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>');
+  changeRange('Item (scheduled)', 'Stroke', '1.8');
+  changeRange('Item (scheduled)', 'Inner ring scale', '1.2');
+  changeRange('Item (scheduled)', 'Inner ring stroke', '1.4');
+  editStateSvg('Edit Item (scheduled) shape', '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>');
 
   await expectStoredNodeIconSettings();
   await expectNodeIconSettingsReset();
@@ -133,7 +133,7 @@ it('uses compact icon defaults and closes nested icon editing before settings', 
 it('presents scheduled outline and inner ring controls as separate rows', () => {
   openAppearance();
   openIconEditor();
-  const topicScheduledRow = within(getMarkerRow('Topic scheduled'));
+  const topicScheduledRow = within(getMarkerRow('Topic (scheduled)'));
 
   expect(topicScheduledRow.getByLabelText('Scale')).toHaveValue('1.15');
   expect(topicScheduledRow.getByLabelText('Inner ring scale')).toHaveValue('0.70');
@@ -158,16 +158,16 @@ it('uses base as a batch reset for state icon scale and stroke', async () => {
   openAppearance();
   openIconEditor();
 
-  changeRange('Item pending', 'Scale', '1.3');
-  changeRange('Item pending', 'Stroke', '0.9');
+  changeRange('Item (pending)', 'Scale', '1.3');
+  changeRange('Item (pending)', 'Stroke', '0.9');
   changeRange('Item (base)', 'Scale', '1.1');
   changeRange('Item (base)', 'Stroke', '0.7');
 
   await waitFor(() => {
-    expect(within(getMarkerRow('Item pending')).getByLabelText('Scale')).toHaveValue('1.10');
-    expect(within(getMarkerRow('Item pending')).getByLabelText('Stroke')).toHaveValue('0.70');
-    expect(within(getMarkerRow('Item scheduled')).getByLabelText('Scale')).toHaveValue('1.10');
-    expect(within(getMarkerRow('Item scheduled')).getByLabelText('Stroke')).toHaveValue('0.70');
+    expect(within(getMarkerRow('Item (pending)')).getByLabelText('Scale')).toHaveValue('1.10');
+    expect(within(getMarkerRow('Item (pending)')).getByLabelText('Stroke')).toHaveValue('0.70');
+    expect(within(getMarkerRow('Item (scheduled)')).getByLabelText('Scale')).toHaveValue('1.10');
+    expect(within(getMarkerRow('Item (scheduled)')).getByLabelText('Stroke')).toHaveValue('0.70');
   });
 });
 
@@ -196,11 +196,11 @@ it('shows marker rows for the active marker kind', () => {
 
   expect(screen.getByRole('dialog', { name: 'Navigation icons' })).toBeInTheDocument();
   expect(screen.queryByRole('tab', { name: 'Topics' })).not.toBeInTheDocument();
-  expect(getMarkerRow('Topic pending')).toBeInTheDocument();
-  expect(getMarkerRow('Topic scheduled')).toBeInTheDocument();
-  expect(getMarkerRow('Topic dismissed')).toBeInTheDocument();
-  expect(getMarkerRow('Item pending')).toBeInTheDocument();
-  expect(getMarkerRow('Item scheduled')).toBeInTheDocument();
+  expect(getMarkerRow('Topic (pending)')).toBeInTheDocument();
+  expect(getMarkerRow('Topic (scheduled)')).toBeInTheDocument();
+  expect(getMarkerRow('Topic (dismissed)')).toBeInTheDocument();
+  expect(getMarkerRow('Item (pending)')).toBeInTheDocument();
+  expect(getMarkerRow('Item (scheduled)')).toBeInTheDocument();
   expect(screen.getAllByText('Item pending')).not.toHaveLength(0);
   expect(screen.queryByLabelText('Item dismissed')).not.toBeInTheDocument();
 });

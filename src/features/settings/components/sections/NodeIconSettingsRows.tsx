@@ -11,9 +11,9 @@ type NodeIconSettingsState = ReturnType<typeof useNodeIconSettingsState>;
 
 function getStateTitle(kind: EditableIconKind, state: NodeTreeRowIconState) {
   const prefix = kind === 'reading' ? 'Topic' : 'Item';
-  if (state === 'pending') return `${prefix} pending`;
-  if (state === 'scheduled') return `${prefix} scheduled`;
-  return `${prefix} dismissed`;
+  if (state === 'pending') return `${prefix} (pending)`;
+  if (state === 'scheduled') return `${prefix} (scheduled)`;
+  return `${prefix} (dismissed)`;
 }
 
 function getBaseTitle(kind: EditableIconKind) {
@@ -89,7 +89,7 @@ export function NodeIconSettingsRows(props: {
       {(['pending', 'scheduled'] as const).map((nodeState) => (
         <StateRow key={`review-${nodeState}`} kind="review" nodeState={nodeState} onEdit={props.onEdit} state={props.state} />
       ))}
-      <section aria-label="Opacity" className="px-4 py-3">
+      <section aria-label="Opacity" className="border-t border-settings-divider/65 px-4 py-3">
         <OpacityHeader />
         <DismissedControls appearance={props.state.stateStyles.dismissed.reading} kind="reading" state={props.state} />
       </section>
