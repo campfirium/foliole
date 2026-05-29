@@ -112,34 +112,58 @@ export interface UpsertNodeSnapshotOptions {
   searchInvalidation?: NodeSearchInvalidationOptions;
 }
 
+function createUpsertNodeSnapshotStatements(driver: DatabaseDriver) {
+  return {
+    deleteNodeReading: driver.prepare('DELETE FROM node_reading WHERE node_id = ?'),
+    deleteNodeReadingDeviceState: driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?'),
+    upsertNode: createUpsertNodeStatement(driver),
+    upsertNodeOrder: createUpsertNodeOrderStatement(driver),
+    upsertNodeReading: createUpsertNodeReadingStatement(driver),
+    upsertNodeReadingDeviceState: createUpsertNodeReadingDeviceStateStatement(driver),
+    upsertNodeReview: createUpsertNodeReviewStatement(driver)
+  };
+}
+
+let upsertNodeSnapshotStatementCache = new WeakMap<
+  DatabaseDriver,
+  ReturnType<typeof createUpsertNodeSnapshotStatements>
+>();
+
+export function resetUpsertNodeSnapshotStatementCacheForTests() {
+  upsertNodeSnapshotStatementCache = new WeakMap();
+}
+
+function getUpsertNodeSnapshotStatements(driver: DatabaseDriver) {
+  let statements = upsertNodeSnapshotStatementCache.get(driver);
+  if (!statements) {
+    statements = createUpsertNodeSnapshotStatements(driver);
+    upsertNodeSnapshotStatementCache.set(driver, statements);
+  }
+  return statements;
+}
+
 export function upsertNodeSnapshot(
   driver: DatabaseDriver,
   input: UpsertNodeSnapshotInput,
   options: UpsertNodeSnapshotOptions = {}
 ): void {
-  const upsertNodeStatement = createUpsertNodeStatement(driver);
-  const upsertNodeOrderStatement = createUpsertNodeOrderStatement(driver);
-  const upsertNodeReadingStatement = createUpsertNodeReadingStatement(driver);
-  const upsertNodeReadingDeviceStateStatement = createUpsertNodeReadingDeviceStateStatement(driver);
-  const upsertNodeReviewStatement = createUpsertNodeReviewStatement(driver);
-  const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
-  const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
+  const statements = getUpsertNodeSnapshotStatements(driver);
 
   driver.transaction(() => {
     const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input, options.searchInvalidation);
     ensureSpecialRootNodesForInput(driver, input);
     const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt);
-    runNodeTableUpsert(upsertNodeStatement.run, input, bodyBlobHash);
+    runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
     if (input.kind === 'folder' && typeof input.position === 'number') {
-      upsertNodeOrderStatement.run([input.nodeId, input.position]);
+      statements.upsertNodeOrder.run([input.nodeId, input.position]);
     }
     writeNodeReadingSnapshotWithSync(driver, input, {
-      deleteDeviceState: deleteNodeReadingDeviceStateStatement.run,
-      deleteReading: deleteNodeReadingStatement.run,
-      upsertDeviceState: upsertNodeReadingDeviceStateStatement.run,
-      upsertReading: upsertNodeReadingStatement.run
+      deleteDeviceState: statements.deleteNodeReadingDeviceState.run,
+      deleteReading: statements.deleteNodeReading.run,
+      upsertDeviceState: statements.upsertNodeReadingDeviceState.run,
+      upsertReading: statements.upsertNodeReading.run
     });
-    writeNodeReviewSnapshotWithSync(driver, input, upsertNodeReviewStatement.run);
+    writeNodeReviewSnapshotWithSync(driver, input, statements.upsertNodeReview.run);
     bumpUntitledSequenceByParent(driver, {
       parentNodeId: input.parentNodeId,
       title: input.title,
