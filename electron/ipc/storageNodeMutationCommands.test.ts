@@ -78,7 +78,6 @@ it('handles node mutation commands', async () => {
     kind: 'topic',
     nodeId: 'node-1',
     reveal: null,
-    searchIndexInvalidationDelayMs: 750,
     shelvedAt: '2026-05-27T00:00:00.000Z'
   }));
 });

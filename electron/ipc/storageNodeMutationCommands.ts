@@ -27,8 +27,6 @@ import {
 import { readObjectArg } from './storageCommandSupport.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
-const EDITOR_INPUT_SEARCH_INDEX_DELAY_MS = 750;
-
 function completeWorkspaceMutation(result: unknown = null) {
   notifyWorkspaceContentChanged();
   return result;
@@ -82,7 +80,7 @@ function handlePermanentDeleteNodeCommand(args: Record<string, unknown>) {
 function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>) {
   const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
   const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
-  upsertNodeSnapshot({ ...parent, searchIndexInvalidationDelayMs: EDITOR_INPUT_SEARCH_INDEX_DELAY_MS });
+  upsertNodeSnapshot(parent);
   updateNodeAnchorLinks(affectedAnchors);
   scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
   return buildNodeMutationPatchResult({
@@ -104,12 +102,7 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
   }
   if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
     const parsed = parseNodeSnapshotArgs(args);
-    upsertNodeSnapshot({
-      ...parsed,
-      ...(command === NATIVE_COMMANDS.updateNodeContent
-        ? { searchIndexInvalidationDelayMs: EDITOR_INPUT_SEARCH_INDEX_DELAY_MS }
-        : {})
-    });
+    upsertNodeSnapshot(parsed);
     scheduleMirrorSync([parsed.nodeId]);
     return buildNodeMutationPatchResult({
       nodes: [parsed],

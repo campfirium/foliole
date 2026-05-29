@@ -83,8 +83,7 @@ it('handles batched parent and text-anchor mutations in one command', async () =
 
   expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
     content: 'Alpha Better Gamma',
-    nodeId: 'node-parent',
-    searchIndexInvalidationDelayMs: 750
+    nodeId: 'node-parent'
   }));
   expect(updateNodeAnchorLinks).toHaveBeenCalledWith([
     expect.objectContaining({

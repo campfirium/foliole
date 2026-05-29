@@ -16,11 +16,9 @@ export function prepareNodeSearchInvalidationForUpsert(driver: DatabaseDriver, i
     input.nodeId
   ]);
   return () => {
-    const processingOptions =
-      input.searchIndexInvalidationDelayMs === undefined ? {} : { delayMs: input.searchIndexInvalidationDelayMs };
-    enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId], processingOptions);
+    enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId]);
     if (existingPathRow && (existingPathRow.parent_id !== input.parentNodeId || existingPathRow.title !== input.title)) {
-      enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver, [input.nodeId], processingOptions);
+      enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver, [input.nodeId]);
     }
   };
 }

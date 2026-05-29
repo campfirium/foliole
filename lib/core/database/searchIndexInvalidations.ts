@@ -1,8 +1,5 @@
 import type { DatabaseDriver } from './driver.js';
-import {
-  requestSearchIndexInvalidationProcessing,
-  type SearchIndexInvalidationProcessingOptions
-} from './searchIndexInvalidationRuntime.js';
+import { requestSearchIndexInvalidationProcessing } from './searchIndexInvalidationRuntime.js';
 import {
   syncPdfSearchIndexForAttachmentIds,
   syncPdfSearchIndexForNodeIds,
@@ -53,11 +50,7 @@ function toUniqueInputs(inputs: SearchIndexInvalidationInput[]) {
   });
 }
 
-export function enqueueSearchIndexInvalidations(
-  driver: DatabaseDriver,
-  inputs: SearchIndexInvalidationInput[],
-  processingOptions?: SearchIndexInvalidationProcessingOptions
-) {
+export function enqueueSearchIndexInvalidations(driver: DatabaseDriver, inputs: SearchIndexInvalidationInput[]) {
   const uniqueInputs = toUniqueInputs(inputs);
   if (uniqueInputs.length === 0) return;
   const timestamp = nowIso();
@@ -79,31 +72,15 @@ export function enqueueSearchIndexInvalidations(
       insert.run([input.type, input.targetId, timestamp, timestamp]);
     }
   }
-  requestSearchIndexInvalidationProcessing(processingOptions);
+  requestSearchIndexInvalidationProcessing();
 }
 
-export function enqueueWorkspaceSearchInvalidationForNodeIds(
-  driver: DatabaseDriver,
-  nodeIds: string[],
-  processingOptions?: SearchIndexInvalidationProcessingOptions
-) {
-  enqueueSearchIndexInvalidations(
-    driver,
-    nodeIds.map((targetId) => ({ targetId, type: 'node_workspace' })),
-    processingOptions
-  );
+export function enqueueWorkspaceSearchInvalidationForNodeIds(driver: DatabaseDriver, nodeIds: string[]) {
+  enqueueSearchIndexInvalidations(driver, nodeIds.map((targetId) => ({ targetId, type: 'node_workspace' })));
 }
 
-export function enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(
-  driver: DatabaseDriver,
-  nodeIds: string[],
-  processingOptions?: SearchIndexInvalidationProcessingOptions
-) {
-  enqueueSearchIndexInvalidations(
-    driver,
-    nodeIds.map((targetId) => ({ targetId, type: 'node_subtree_path' })),
-    processingOptions
-  );
+export function enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver: DatabaseDriver, nodeIds: string[]) {
+  enqueueSearchIndexInvalidations(driver, nodeIds.map((targetId) => ({ targetId, type: 'node_subtree_path' })));
 }
 
 export function enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds(driver: DatabaseDriver, nodeIds: string[]) {
