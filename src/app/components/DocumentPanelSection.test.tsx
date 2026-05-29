@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
@@ -13,6 +13,8 @@ import {
   renderSectionWithProps
 } from './DocumentPanelSection.testSupport';
 
+const READER_END_CUSHION_PADDING = 'clamp(calc(var(--workspace-bottom-toolbar-height) + 1.5rem), 36dvh, 26rem)';
+
 function expectDocumentBodyLayout(args: {
   editorContentPaddingBottom: string | undefined;
   fitBlockImagesToViewport: boolean;
@@ -21,9 +23,8 @@ function expectDocumentBodyLayout(args: {
     documentPanelBodyMock.mock.calls.some(([props]) =>
       props &&
       typeof props === 'object' &&
-      'fitBlockImagesToViewport' in props &&
       (props as { editorContentPaddingBottom?: string }).editorContentPaddingBottom === args.editorContentPaddingBottom &&
-      (props as { fitBlockImagesToViewport?: boolean }).fitBlockImagesToViewport === args.fitBlockImagesToViewport
+      ((props as { fitBlockImagesToViewport?: boolean }).fitBlockImagesToViewport ?? false) === args.fitBlockImagesToViewport
     )
   ).toBe(true);
 }
@@ -106,15 +107,17 @@ describe('DocumentPanelSection primary views', () => {
     expect(screen.getByText('Document body')).toBeInTheDocument();
   });
 
-  it('keeps topic documents renderable when backlinks exist', () => {
+  it('keeps topic documents renderable when backlinks exist', async () => {
     renderTopicBacklinksView();
 
     expect(screen.getByText('Document body')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open link references (1)' })).toBeInTheDocument();
-    expectDocumentBodyLayout({
-      editorContentPaddingBottom: undefined,
-      fitBlockImagesToViewport: false
-    });
+    await waitFor(() =>
+      expectDocumentBodyLayout({
+        editorContentPaddingBottom: READER_END_CUSHION_PADDING,
+        fitBlockImagesToViewport: false
+      })
+    );
   });
 
   it('refreshes backlinks without requiring a node switch when node content mutates in place', () => {
@@ -179,7 +182,7 @@ describe('DocumentPanelSection secondary views', () => {
 
 });
 
-it('shows the virtual node detail shell with clear empty states', () => {
+it('shows a lightweight saved search hint for virtual nodes', () => {
   renderSectionWithProps({
     activeNodeId: 'node-1',
     editorNodeId: 'node-1',
@@ -188,69 +191,10 @@ it('shows the virtual node detail shell with clear empty states', () => {
     }
   });
 
-  expect(screen.getByRole('region', { name: 'Virtual folder details' })).toBeInTheDocument();
-  expect(screen.getByText('Saved filter')).toBeInTheDocument();
-  expect(screen.getByText('Saved value: none')).toBeInTheDocument();
-  expect(screen.getByText('No saved filter yet')).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Virtual search details' })).toBeInTheDocument();
+  expect(screen.getByText('Saved search')).toBeInTheDocument();
+  expect(screen.getByText('Use the search field in the topic list to choose which topics appear here.')).toBeInTheDocument();
+  expect(screen.queryByText('Saved filter')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Save and run' })).toBeNull();
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
 });
-
-it('reuses the folder list module for virtual node results and opens the original article node', () => {
-  const onSelectNode = vi.fn();
-
-  renderSectionWithProps({
-    activeNodeId: 'node-1',
-    editorNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2', 'node-3'],
-    nodesById: {
-      'node-1': {
-        ...baseNode,
-        kind: 'folder',
-        specialKind: 'virtual',
-        title: 'Saved search',
-        virtualFilter: {
-          version: 1,
-          match: 'all',
-          conditions: [{ field: 'text', operator: 'contains', value: 'reader' }]
-        }
-      },
-      'node-2': {
-        ...baseNode,
-        id: 'node-2',
-        title: 'Reader article',
-        content: 'A reader note that should appear in the reused list.'
-      },
-      'node-3': {
-        ...baseNode,
-        id: 'node-3',
-        title: 'Another note',
-        content: 'No matching keyword here.'
-      }
-    },
-    onSelectNode
-  });
-
-  expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
-  expect(screen.getByTestId('folder-list-title-node-2')).toHaveTextContent('Reader article');
-  expect(screen.queryByTestId('folder-list-title-node-3')).not.toBeInTheDocument();
-
-});
-
-it('saves the virtual node keyword through the detail form', () => {
-  const onNodeContentChange = vi.fn();
-
-  renderSectionWithProps({
-    activeNodeId: 'node-1',
-    editorNodeId: 'node-1',
-    nodesById: {
-      'node-1': { ...baseNode, kind: 'folder', specialKind: 'virtual', title: 'Saved search' }
-    },
-    onNodeContentChange
-  });
-
-  fireEvent.change(screen.getByLabelText('Keyword'), { target: { value: 'reader' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Save and run' }));
-
-  expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'reader');
-});
-

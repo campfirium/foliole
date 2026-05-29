@@ -99,7 +99,6 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
         activeNode={args.activeNode}
         nodeOrder={args.nodeOrder}
         nodesById={args.nodesById}
-        onNodeContentChange={args.onNodeContentChange}
         onSelectNode={args.onSelectNodeInVirtualView}
         onSelectNodePath={args.onSelectNode}
         pdfCache={args.pdfCache}

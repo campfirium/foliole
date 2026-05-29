@@ -3,12 +3,6 @@ import { useMemo } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import {
-  VIRTUAL_ROOT_NODE_ID,
-  VIRTUAL_SHELVED_NODE_ID,
-  VIRTUAL_REMOVED_NODE_ID,
-  isVirtualNode
-} from '../../features/nodes/model/specialNodes';
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -19,14 +13,13 @@ import type {
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
-import { RemovedSourcesPanel } from './RemovedSourcesPanel';
 import { TrashResultListPanel } from './TrashResultListPanel';
-import { VirtualResultListPanel } from './VirtualResultListPanel';
 import { renderExternalContentColumn } from './workspaceDualListExternalContent';
 import { WorkspaceDualListFolderColumn } from './WorkspaceDualListFolderColumn';
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
 import { useWorkspaceDualListState } from './workspaceDualListState';
 import { useWorkspaceDualListViewRoot } from './workspaceDualListViewRoot';
+import { renderVirtualContentColumn } from './workspaceDualListVirtualContent';
 import { useWorkspaceFolderWidthCssVar } from './workspaceFolderWidthCssVar';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -57,35 +50,6 @@ export interface WorkspaceDualListContentProps {
   reviewCurrentNodeId: string | null;
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
-}
-
-function collectVirtualContentItemIds(
-  args: WorkspaceDualListContentProps,
-  virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>
-) {
-  const activeVirtualNodeId = args.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
-  if (activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
-    return virtualResultIndex.rootResultIds;
-  }
-  const activeVirtualNode = args.nodesById[activeVirtualNodeId];
-  if (!isVirtualNode(activeVirtualNode)) {
-    return [];
-  }
-  return virtualResultIndex.resultIdsByVirtualId.get(activeVirtualNodeId) ?? [];
-}
-
-function collectShelvedTopicIds(props: WorkspaceDualListContentProps) {
-  const trashedNodeIds = new Set(props.trashedNodeIds);
-  return props.nodeOrder.filter((nodeId) => {
-    const node = props.nodesById[nodeId];
-    return Boolean(
-      node?.shelvedAt &&
-        node.kind === 'topic' &&
-        !node.anchorLink &&
-        !node.specialKind &&
-        !trashedNodeIds.has(nodeId)
-    );
-  });
 }
 
 function renderSingleListFallback(props: WorkspaceDualListContentProps) {
@@ -133,40 +97,6 @@ function renderStandardContentColumn(
       onOpenMoveToNode={props.onOpenMoveToNode}
       {...definedProps({ onOpenPostponeTopicPanel: props.onOpenPostponeTopicPanel })}
       onSelectNode={props.onSelectNode}
-    />
-  );
-}
-
-function renderVirtualContentColumn(
-  props: WorkspaceDualListContentProps,
-  virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>
-) {
-  const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
-  if (activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID) {
-    return <RemovedSourcesPanel onSelectNode={props.onSelectNode} />;
-  }
-  const itemIds = activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID
-    ? collectShelvedTopicIds(props)
-    : collectVirtualContentItemIds(props, virtualResultIndex);
-  const items = itemIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));
-  const isShelvedView = activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
-
-  return (
-    <VirtualResultListPanel
-      activeNodeId={props.activeNodeId}
-      emptyState={{
-        description: isShelvedView
-          ? 'Shelved topics will appear here.'
-          : activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID
-            ? 'Right-click Virtual to create your first virtual folder.'
-            : 'No items match this virtual folder yet.',
-        title: isShelvedView
-          ? 'No shelved topics'
-          : activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID ? 'No virtual folders yet' : 'No items in this virtual folder'
-      }}
-      nodes={items}
-      nodesById={props.nodesById}
-      onSelectNode={props.onSelectNodeInVirtualView}
     />
   );
 }

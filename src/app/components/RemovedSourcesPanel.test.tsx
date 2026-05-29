@@ -96,7 +96,8 @@ it('uses the standard topic list surface for Removed sources', async () => {
   render(<RemovedSourcesPanel />);
 
   expect(await screen.findByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
+  expect(screen.getByText('Removed topics stay here while their source can still be re-imported.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Open title search' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Sort list by Date removed' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Readwise' })).toBeInTheDocument();
@@ -111,27 +112,9 @@ it('keeps the standard list surface blank while Removed sources load', () => {
   render(<RemovedSourcesPanel />);
 
   expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
+  expect(screen.getByText('Removed topics stay here while their source can still be re-imported.')).toBeInTheDocument();
   expect(screen.queryByText('Preparing Removed')).toBeNull();
   expect(screen.queryByText('No removed topics')).toBeNull();
-});
-
-it('filters Removed rows with the standard title search overlay', async () => {
-  mockRemovedSourcesLoad(
-    createRemovedSourcesResult([
-      createRemovedSource(),
-      createRemovedSource({ id: 'rule-1:/Readwise/Beta.md', sourcePath: '/Readwise/Beta.md', title: 'Beta Removed' })
-    ])
-  );
-
-  render(<RemovedSourcesPanel />);
-
-  expect(await screen.findByRole('treeitem', { name: 'Alpha Removed' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), { target: { value: 'Beta' } });
-
-  await waitFor(() => expect(screen.queryByRole('treeitem', { name: 'Alpha Removed' })).toBeNull());
-  expect(screen.getByRole('treeitem', { name: 'Beta Removed' })).toBeInTheDocument();
 });
 
 it('collapses and expands Removed source folders with the standard list control', async () => {

@@ -2,7 +2,6 @@ import { ChevronsDownUp, ChevronsUpDown, RefreshCw } from 'lucide-react';
 import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
-import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { resolveNodeTreeRowIconKind } from '../../features/nodes/components/NodeTreeRowIconModel';
@@ -25,22 +24,18 @@ import { WorkspaceContentSortControls } from './WorkspaceContentSortControls';
 export function RemovedSourcesToolbar(props: {
   hasCollapsibleNodes: boolean;
   hasCollapsedNodes: boolean;
-  isSearchOpen: boolean;
   loadEntries: () => Promise<void>;
   onChangeSortDirection: (sortDirection: WorkspaceContentSortDirection) => void;
   onChangeSortKey: (sortKey: WorkspaceContentSortKey) => void;
-  onCloseSearch: () => void;
-  onOpenSearch: () => void;
-  onSearchQueryChange: (value: string) => void;
   onToggleCollapseAll: () => void;
-  searchQuery: string;
   sortDirection: WorkspaceContentSortDirection;
   sortKey: WorkspaceContentSortKey;
 }) {
   return (
     <AppToolbar as="header" className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4">
-      {renderSearchLauncher(props.onOpenSearch)}
-      <span aria-hidden="true" className="min-w-0 flex-1" />
+      <p className="min-w-0 flex-1 truncate text-sm leading-6 text-foreground/62">
+        Removed topics stay here while their source can still be re-imported.
+      </p>
       <ToolbarActionGroup ariaLabel="Removed actions">
         <WorkspaceContentSortControls
           onChangeSortDirection={props.onChangeSortDirection}
@@ -66,13 +61,6 @@ export function RemovedSourcesToolbar(props: {
           onClick={props.loadEntries}
         />
       </ToolbarActionGroup>
-      {props.isSearchOpen ? (
-        <NodeListSearchOverlay
-          onChangeSearchQuery={props.onSearchQueryChange}
-          onClose={props.onCloseSearch}
-          searchQuery={props.searchQuery}
-        />
-      ) : null}
     </AppToolbar>
   );
 }

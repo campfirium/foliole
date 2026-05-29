@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 
-import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { VIRTUAL_REMOVED_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { getVirtualRootResultNodes } from '../../features/nodes/model/virtualNodeDetail';
+import { AppEmptyState } from '../../shared/ui';
 
 import { FolderListView } from './FolderListView';
 import { RemovedSourcesPanel } from './RemovedSourcesPanel';
@@ -12,7 +12,6 @@ interface VirtualDocumentSurfaceProps {
   activeNode: Node;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
-  onNodeContentChange: (nodeId: string, content: string) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodePath: (nodeId: string) => void;
   pdfCache: JSX.Element;
@@ -57,6 +56,17 @@ function VirtualRootAggregateView({
   );
 }
 
+function VirtualSavedSearchDocumentHint() {
+  return (
+    <section aria-label="Virtual search details" className="flex min-h-0 flex-1 items-center justify-center px-4 py-6">
+      <AppEmptyState
+        description="Use the search field in the topic list to choose which topics appear here."
+        title="Saved search"
+      />
+    </section>
+  );
+}
+
 export function VirtualDocumentSurface(props: VirtualDocumentSurfaceProps) {
   if (props.activeNode.id === VIRTUAL_REMOVED_NODE_ID) {
     return (
@@ -71,13 +81,7 @@ export function VirtualDocumentSurface(props: VirtualDocumentSurfaceProps) {
     return (
       <>
         {props.pdfCache}
-        <VirtualNodeDetailView
-          node={props.activeNode}
-          nodesById={props.nodesById}
-          onSelectNode={props.onSelectNode}
-          onSelectNodePath={props.onSelectNodePath}
-          onUpdateFilter={props.onNodeContentChange}
-        />
+        <VirtualSavedSearchDocumentHint />
       </>
     );
   }

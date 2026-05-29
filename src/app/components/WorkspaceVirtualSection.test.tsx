@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import {
@@ -7,6 +7,7 @@ import {
   VIRTUAL_SHELVED_NODE_ID
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
 
@@ -32,6 +33,7 @@ function createVirtualNode(args: {
 
 beforeEach(() => {
   window.localStorage.clear();
+  useWorkspaceStore.setState({ createVirtualNode: vi.fn(async () => 'virtual-new') });
 });
 
 it('moves from the virtual root through built-in virtual rows with arrow keys', () => {
@@ -145,4 +147,32 @@ it('shows virtual result counts without counting virtual child folders', () => {
   expect(screen.getByRole('treeitem', { name: 'Virtual' })).toHaveTextContent('3');
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
   expect(screen.getByRole('treeitem', { name: 'Custom virtual' })).toHaveTextContent('2');
+});
+
+it('creates and opens a saved search from the virtual root action', async () => {
+  const onOpenVirtualView = vi.fn();
+  const onSelectNodeInVirtualView = vi.fn();
+  const root = createVirtualNode({
+    id: VIRTUAL_ROOT_NODE_ID,
+    parentNodeId: null,
+    specialKind: 'virtual-root',
+    title: 'Virtual'
+  });
+
+  render(
+    <WorkspaceVirtualSection
+      activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
+      isVirtualViewOpen
+      nodeOrder={[VIRTUAL_ROOT_NODE_ID]}
+      nodesById={{ [VIRTUAL_ROOT_NODE_ID]: root }}
+      onOpenVirtualView={onOpenVirtualView}
+      onSelectNodeInVirtualView={onSelectNodeInVirtualView}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'New saved search' }));
+
+  expect(useWorkspaceStore.getState().createVirtualNode).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(onOpenVirtualView).toHaveBeenCalledWith('virtual-new'));
+  expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('virtual-new');
 });

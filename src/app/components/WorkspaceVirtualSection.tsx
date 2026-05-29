@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { Plus } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -12,6 +13,8 @@ import {
   isVirtualRootNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { AppIconButton } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { compareNaturalName } from './workspaceContentSort';
 
@@ -67,7 +70,7 @@ function renderBuiltinVirtualRow(
 function renderVirtualRows(args: {
   collapsedIds: Set<string>;
   onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
-  props: WorkspaceVirtualSectionProps;
+  props: WorkspaceVirtualSectionProps & { onAddVirtualNode: () => Promise<void> };
   rowSpacing: number;
   rows: ReturnType<typeof buildVisibleNodeTreeRows>;
   setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -97,19 +100,59 @@ function renderVirtualRows(args: {
         onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, args.setCollapsedIds)}
       />
     );
+    const renderedRow = isVirtualRoot
+      ? (
+          <div className="group/virtual-root relative" key={row.node.id}>
+            {virtualRow}
+            <AppIconButton
+              className="absolute right-2 top-1/2 size-7 -translate-y-1/2 text-foreground/55 opacity-0 transition-opacity hover:bg-foreground/[0.04] hover:text-foreground focus-visible:opacity-100 group-hover/virtual-root:opacity-100"
+              icon={<Plus size={15} strokeWidth={1.9} />}
+              label="New saved search"
+              onClick={(event) => {
+                event.stopPropagation();
+                void args.props.onAddVirtualNode();
+              }}
+            />
+          </div>
+        )
+      : virtualRow;
     return isVirtualRoot && !isVirtualRootCollapsed
       ? [
-          virtualRow,
+          renderedRow,
           renderBuiltinVirtualRow({ ...args.props, label: 'Shelved', nodeId: VIRTUAL_SHELVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing }),
           renderBuiltinVirtualRow({ ...args.props, label: 'Removed', nodeId: VIRTUAL_REMOVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing })
         ]
-      : [virtualRow];
+      : [renderedRow];
   });
+}
+
+function getVirtualKeyboardRows(
+  rows: ReturnType<typeof buildVisibleNodeTreeRows>,
+  collapsedIds: Set<string>
+) {
+  return rows.flatMap((row) =>
+    row.node.id === VIRTUAL_ROOT_NODE_ID && !collapsedIds.has(VIRTUAL_ROOT_NODE_ID)
+      ? [
+          { ...row, hasChildren: true },
+          { depth: 1, hasChildren: false, id: VIRTUAL_SHELVED_NODE_ID },
+          { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }
+        ]
+      : row.node.id === VIRTUAL_ROOT_NODE_ID
+        ? [{ ...row, hasChildren: true }]
+        : [row]
+  );
 }
 
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
+  const createVirtualNode = useWorkspaceStore((state) => state.createVirtualNode);
   const rowSpacing = getNodeListRowSpacing();
+  const onAddVirtualNode = useCallback(async () => {
+    const nodeId = await createVirtualNode();
+    if (!nodeId) return;
+    props.onOpenVirtualView?.(nodeId);
+    props.onSelectNodeInVirtualView(nodeId);
+  }, [createVirtualNode, props]);
   const rows = useMemo(() => {
     const virtualNodeIds = props.nodeOrder.filter((nodeId) => {
       const node = props.nodesById[nodeId];
@@ -117,21 +160,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, props.nodesById));
     return buildVisibleNodeTreeRows(buildNodeTree(virtualNodeIds, props.nodesById).rows, collapsedIds);
   }, [collapsedIds, props.nodeOrder, props.nodesById]);
-  const keyboardRows = useMemo(
-    () =>
-      rows.flatMap((row) =>
-        row.node.id === VIRTUAL_ROOT_NODE_ID && !collapsedIds.has(VIRTUAL_ROOT_NODE_ID)
-          ? [
-              { ...row, hasChildren: true },
-              { depth: 1, hasChildren: false, id: VIRTUAL_SHELVED_NODE_ID },
-              { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }
-            ]
-          : row.node.id === VIRTUAL_ROOT_NODE_ID
-            ? [{ ...row, hasChildren: true }]
-          : [row]
-      ),
-    [collapsedIds, rows]
-  );
+  const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds), [collapsedIds, rows]);
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({
@@ -158,7 +187,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     <div className="mt-1 flex min-w-0 flex-col">
       <div aria-hidden="true" className="mx-4 border-t border-border/15" />
       <section aria-label="Virtual folder tree" className="flex flex-col pt-1" role="tree">
-        {renderVirtualRows({ collapsedIds, onRowKeyDown, props, rowSpacing, rows, setCollapsedIds })}
+        {renderVirtualRows({ collapsedIds, onRowKeyDown, props: { ...props, onAddVirtualNode }, rowSpacing, rows, setCollapsedIds })}
       </section>
     </div>
   );
