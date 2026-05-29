@@ -81,6 +81,7 @@
     "android:schema:generate": "node scripts/android/generate-companion-schema.mjs",
     "android:web:build": "node scripts/with-resource-gate.mjs node-heavy -- npm run android:web:build:raw",
     "android:web:build:raw": "npm run android:schema:generate && vite build --config vite.companion.config.ts",
+    "android:icons:generate": "python3 scripts/android/generate-launcher-icons.py",
     "android:open": "bash scripts/android/windows-open.sh",
     "android:sync": "bash scripts/android/windows-cap-sync.sh",
     "android:reset-sync-data": "node scripts/electron-sqlite-runner.mjs scripts/android/android-reset-sync-data.mjs",
