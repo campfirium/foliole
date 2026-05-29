@@ -26,25 +26,26 @@ function resolveItemsBySnapshotOrder<T>(items: T[], orderedIds: string[], getIte
 }
 
 export function useStableWorkspaceContentItems<T>(args: StableWorkspaceContentItemsArgs<T>) {
+  const { getItemId, items, refreshKey, scopeKey, sort, sortItems } = args;
   const snapshotRef = useRef<StableContentSortSnapshot | null>(null);
-  const sortControlKey = `${args.sort.key}\u0000${args.sort.direction}`;
-  const membershipKey = useMemo(() => args.items.map(args.getItemId).join('\u0000'), [args.getItemId, args.items]);
-  const snapshotKey = `${args.scopeKey}\u0000${args.refreshKey ?? ''}\u0000${membershipKey}\u0000${sortControlKey}`;
+  const sortControlKey = `${sort.key}\u0000${sort.direction}`;
+  const membershipKey = useMemo(() => items.map(getItemId).join('\u0000'), [getItemId, items]);
+  const snapshotKey = `${scopeKey}\u0000${refreshKey ?? ''}\u0000${membershipKey}\u0000${sortControlKey}`;
 
   return useMemo(() => {
-    if (!isDynamicWorkspaceContentSortKey(args.sort)) {
-      return args.sortItems(args.items);
+    if (!isDynamicWorkspaceContentSortKey(sort)) {
+      return sortItems(items);
     }
 
     const snapshot = snapshotRef.current;
     if (!snapshot || snapshot.key !== snapshotKey) {
-      const sortedItems = args.sortItems(args.items);
+      const sortedItems = sortItems(items);
       snapshotRef.current = {
         key: snapshotKey,
-        orderedIds: sortedItems.map(args.getItemId)
+        orderedIds: sortedItems.map(getItemId)
       };
       return sortedItems;
     }
-    return resolveItemsBySnapshotOrder(args.items, snapshot.orderedIds, args.getItemId);
-  }, [args, membershipKey, snapshotKey, sortControlKey]);
+    return resolveItemsBySnapshotOrder(items, snapshot.orderedIds, getItemId);
+  }, [getItemId, items, membershipKey, snapshotKey, sort, sortControlKey, sortItems]);
 }

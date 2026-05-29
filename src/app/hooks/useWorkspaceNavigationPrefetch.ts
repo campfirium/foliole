@@ -46,10 +46,10 @@ function useNavigationAction(
       markRequested(targetNodeId);
     }
     flushPendingEditorDraft();
-    await flushPendingEditorDraftImmediately();
     prepareForNavigation(sourceNodeId);
     const result = action();
     finalize(result);
+    void flushPendingEditorDraftImmediately();
     if (targetNodeId) {
       void ensureNodeReady(targetNodeId);
     }
@@ -92,10 +92,10 @@ function useSelectNodeAction(
 
       markRequested(nodeId);
       flushPendingEditorDraft();
-      await flushPendingEditorDraftImmediately();
       prepareForNavigation();
       const result = action(nodeId);
       finalize(result ? { ...result, focusAnchor } : result);
+      void flushPendingEditorDraftImmediately();
       void ensureNodeReady(nodeId);
     },
     [

@@ -37,9 +37,11 @@ interface NodeListRowsProps {
   rowCountByNodeId?: ReadonlyMap<string, number> | undefined;
   rowSpacing: number;
   rows: NodeTreeRow[];
+  scrollTargetNodeId: string | null;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
+  virtualizeRows: boolean;
 }
 
 function renderNodeListRow(
@@ -153,8 +155,8 @@ function resolveNodeListRowModel(props: NodeListRowsProps, row: NodeTreeRow) {
   return { isDerivedNode, isHome, isInbox, isTrashRoot, isVirtualRoot, leafIconKind, nodeIconKind, nodeIconState, shouldFadeWholeRow };
 }
 
-function resolveActiveRowIndex(rows: readonly NodeTreeRow[], activeNodeId: string | null) {
-  return activeNodeId ? rows.findIndex((row) => row.node.id === activeNodeId) : null;
+function resolveActiveRowIndex(rows: readonly NodeTreeRow[], nodeId: string | null) {
+  return nodeId ? rows.findIndex((row) => row.node.id === nodeId) : null;
 }
 
 function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
@@ -211,13 +213,14 @@ export function NodeListRows(props: NodeListRowsProps) {
 
   return (
     <VirtualListSurface
-      autoScroll={false}
+      autoScroll={props.virtualizeRows}
+      enabled={props.virtualizeRows}
       estimateSize={(index) => resolveNodeTreeRowVirtualSize(props.rowSpacing, index === props.rows.length - 1 ? 0 : rowGap)}
       getItemKey={(row) => row.node.id}
       items={props.rows}
       renderItem={(row, meta) => renderNodeListRow(props, row, onRowKeyDown, meta)}
       scrollElementRef={props.scrollContainerRef}
-      scrollToIndex={resolveActiveRowIndex(props.rows, props.activeNodeId)}
+      scrollToIndex={resolveActiveRowIndex(props.rows, props.scrollTargetNodeId ?? props.activeNodeId)}
     />
   );
 }

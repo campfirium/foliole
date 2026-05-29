@@ -48,11 +48,12 @@ export function FolderListTextItem(props: FolderListTextItemProps) {
   const dragHandlers = resolveFolderListDragHandlers(props);
   return (
     <li
+      className="border-b border-[var(--workspace-region-main-document-content-divider)]"
       {...dragHandlers}
     >
       <button
         aria-label={props.ariaLabel}
-        className={`-mx-4 flex w-[calc(100%+2rem)] flex-col gap-3 rounded-md px-4 py-5 text-left transition-colors focus-visible:outline-none ${
+        className={`-mx-4 flex h-[188px] w-[calc(100%+2rem)] flex-col gap-3 overflow-hidden rounded-md px-4 py-5 text-left transition-colors focus-visible:outline-none ${
           props.active
             ? 'bg-[var(--app-surface-control-bg)]'
             : 'hover:bg-[var(--app-surface-control-hover-bg)] focus-visible:bg-[var(--app-surface-control-bg)]'
@@ -72,7 +73,7 @@ function FolderListTextItemBody(props: FolderListTextItemProps) {
     <>
       <div className="flex items-start justify-between gap-4">
         <TruncatedTextTooltip
-          className="line-clamp-2 block min-w-0 flex-1 break-words text-[17px] font-normal leading-7 text-foreground"
+          className="block min-w-0 flex-1 truncate text-[17px] font-normal leading-7 text-foreground"
           data-testid={`folder-list-title-${props.nodeId}`}
           text={props.title}
         >
@@ -87,7 +88,7 @@ function FolderListTextItemBody(props: FolderListTextItemProps) {
       </div>
       {props.summary !== undefined ? (
         <span
-          className="block min-h-14 line-clamp-2 text-[15px] leading-7 text-foreground/74"
+          className="line-clamp-4 block h-28 text-[15px] leading-7 text-foreground/74"
           data-testid={`folder-list-excerpt-${props.nodeId}`}
         >
           {props.summary}

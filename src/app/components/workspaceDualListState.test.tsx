@@ -36,10 +36,22 @@ const nodesById: WorkspaceListNodesById = {
 };
 
 it('keeps heavy column projections stable when selection stays in the same folder', () => {
+  let rejectUnrelatedAccess = false;
+  const unrelatedNode = createNode({ id: 'node-999', kind: 'topic', title: 'Unrelated' });
+  Object.defineProperty(unrelatedNode, 'parentNodeId', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (rejectUnrelatedAccess) {
+        throw new Error('unexpected structure rebuild during selection change');
+      }
+      return null;
+    }
+  });
   const baseProps = {
     isTrashViewOpen: false,
-    listNodesById: nodesById,
-    nodeOrder: [INBOX_NODE_ID, 'folder-a', 'topic-a', 'topic-b'],
+    listNodesById: { ...nodesById, 'node-999': unrelatedNode },
+    nodeOrder: [INBOX_NODE_ID, 'folder-a', 'topic-a', 'topic-b', 'node-999'],
     trashedNodeIds: []
   };
   const { result, rerender } = renderHook(
@@ -49,6 +61,7 @@ it('keeps heavy column projections stable when selection stays in the same folde
   );
   const first = result.current;
 
+  rejectUnrelatedAccess = true;
   rerender({ activeNodeId: 'topic-b' });
 
   expect(result.current.activeFolderColumnId).toBe('folder-a');

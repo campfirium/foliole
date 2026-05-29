@@ -1,10 +1,11 @@
 import { Search, X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { AppInput } from '../../shared/ui';
 
+import { FolderListBody } from './FolderListBody';
 import { FolderListSortControls } from './FolderListSortControls';
 
 function FolderListHeader({
@@ -150,24 +151,6 @@ function FolderListSurface({
   );
 }
 
-function FolderListBody({
-  filteredNodes,
-  onRenderItem
-}: {
-  filteredNodes: Node[];
-  onRenderItem: (node: Node) => ReactNode;
-}) {
-  if (filteredNodes.length === 0) {
-    return <div aria-hidden="true" className="min-h-[240px] flex-1" />;
-  }
-
-  return (
-    <ul aria-label="Folder contents" className="flex flex-col divide-y divide-[var(--workspace-region-main-document-content-divider)] border-b border-[var(--workspace-region-main-document-content-divider)]">
-      {filteredNodes.map((node) => onRenderItem(node))}
-    </ul>
-  );
-}
-
 export function FolderListViewLayout(props: {
   currentViewActions?: ReactNode;
   filteredNodes: Node[];
@@ -180,6 +163,7 @@ export function FolderListViewLayout(props: {
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
   onRenderItem: (node: Node) => ReactNode;
   searchQuery: string;
+  scrollElementRef: RefObject<HTMLDivElement | null>;
   headerMode: 'full' | 'search-only' | 'hidden';
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
@@ -206,6 +190,7 @@ export function FolderListViewLayout(props: {
         <FolderListBody
           filteredNodes={props.filteredNodes}
           onRenderItem={props.onRenderItem}
+          scrollElementRef={props.scrollElementRef}
         />
       </section>
     </FolderListSurface>

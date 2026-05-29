@@ -149,9 +149,9 @@ function expectPreparedNavigationEffects(args: {
   expect(args.callOrder).toEqual([
     'selection-requested',
     'flush-draft',
-    'flush-draft-immediately',
     'save-view',
     args.actionName,
+    'flush-draft-immediately',
     'load-started',
     'load-resolved',
     'load-merged'

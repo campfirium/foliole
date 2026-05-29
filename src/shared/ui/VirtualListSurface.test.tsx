@@ -45,12 +45,12 @@ it('keeps short lists non-virtualized', () => {
   expect(shouldVirtualizeList(100)).toBe(true);
 });
 
-it('renders only the visible window for long lists', () => {
+it('renders only the visible window for long lists', async () => {
   const items = Array.from({ length: 200 }, (_, index) => `Item ${index}`);
 
   render(<VirtualListHarness items={items} />);
 
-  expect(screen.getByText('Item 0')).toBeInTheDocument();
+  expect(await screen.findByText('Item 0')).toBeInTheDocument();
   expect(screen.queryByText('Item 199')).not.toBeInTheDocument();
   expect(screen.getAllByText(/Item /u).length).toBeLessThan(60);
   expect(screen.getByText('Item 0')).toHaveAttribute('aria-setsize', '200');

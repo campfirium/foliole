@@ -26,10 +26,10 @@ export function usePreparedOpenNodeAction(
     async (nodeId: string, focusAnchor: NodeNavigationResult['focusAnchor'] = null) => {
       markRequested(nodeId);
       flushPendingEditorDraft();
-      await flushPendingEditorDraftImmediately();
       prepareForNavigation();
       const result = action(nodeId);
       finalize(result ? { ...result, focusAnchor } : result);
+      void flushPendingEditorDraftImmediately();
 
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
       if (!targetNode || isNodeDocumentLoaded(targetNode) || !hasWorkspaceRuntimeRepository()) {
@@ -93,10 +93,10 @@ export function useBreadcrumbSelectionAction(
 
       markSelectionRequested(nodeId);
       flushPendingEditorDraft();
-      await flushPendingEditorDraftImmediately();
       prepareForNavigation(activeNodeId);
       const result = jumpToAncestorNode(nodeId) ?? openNode(nodeId);
       finalizeNavigation(result);
+      void flushPendingEditorDraftImmediately();
       void ensureNodeReady(nodeId);
     },
     [

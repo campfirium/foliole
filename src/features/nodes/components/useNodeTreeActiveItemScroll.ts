@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useLayoutEffect, type RefObject } from 'react';
 
 import {
   scrollActiveTreeItemIntoView,
@@ -15,11 +15,11 @@ export function useNodeTreeActiveItemScroll(args: {
   scrollContainerRef: RefObject<HTMLElement | null>;
   scopeKey?: unknown;
 }) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!args.activeNodeId || args.disabled) {
       return;
     }
-    const frame = window.requestAnimationFrame(() => {
+    const scrollTarget = () => {
       if (args.placement === 'second-visible-row') {
         scrollTreeItemToSecondVisibleRow(args.scrollContainerRef.current, args.activeNodeId);
         return;
@@ -29,7 +29,9 @@ export function useNodeTreeActiveItemScroll(args: {
         return;
       }
       scrollActiveTreeItemIntoView(args.scrollContainerRef.current, args.activeNodeId);
-    });
+    };
+    scrollTarget();
+    const frame = window.requestAnimationFrame(scrollTarget);
     return () => window.cancelAnimationFrame(frame);
   }, [args.activeNodeId, args.disabled, args.placement, args.scopeKey, args.scrollContainerRef]);
 }

@@ -45,8 +45,10 @@ interface NodeListTreeContentPropsArgs {
   rowSpacing: number;
   runtimeState: NodeListTreeRuntimeState;
   selectedTrashNodeId: string | null;
+  scrollTargetNodeId: string | null;
   showVirtualCreateAction: boolean;
   showTitleSearch: boolean;
+  virtualizeRows: boolean;
 }
 
 function buildNodeListTreeContentProps(args: NodeListTreeContentPropsArgs) {
@@ -78,6 +80,7 @@ function buildNodeListTreeContentProps(args: NodeListTreeContentPropsArgs) {
     reviewSession: args.runtimeState.reviewSession,
     rowCountByNodeId: args.rowCountByNodeId,
     rowSpacing: args.rowSpacing,
+    scrollTargetNodeId: args.scrollTargetNodeId,
     selectedNodeIds: args.model.state.selectedNodeIds,
     selectedTrashNodeId: args.selectedTrashNodeId,
     setNodeSequentialReading: args.model.setNodeSequentialReading,
@@ -89,7 +92,8 @@ function buildNodeListTreeContentProps(args: NodeListTreeContentPropsArgs) {
     updateNodePriority: args.model.updateNodePriority,
     updateNodeShortTerm: args.model.updateNodeShortTerm,
     updateNodeTitle: args.model.updateNodeTitle,
-    unshelveNode: args.model.unshelveNode
+    unshelveNode: args.model.unshelveNode,
+    virtualizeRows: args.virtualizeRows
   };
 }
 
@@ -110,65 +114,51 @@ function useNodeListTreeSelectionDiagnostics(args: {
   });
 }
 
-function NodeListTreeImpl({
-  activeNodeId,
-  bodyAppendContent,
-  forceExpandedNodeId,
-  highlightedNodeId,
-  rowCountByNodeId,
-  isSelectionScopeActive = true,
-  isTrashViewOpen,
-  isVirtualViewOpen,
-  nodeOrder,
-  nodesById,
-  onOpenMoveToNode,
-  onOpenNotesView,
-  onSelectNode,
-  onSelectTrashNode,
-  selectedTrashNodeId,
-  showVirtualCreateAction = true,
-  showTitleSearch = true
-}: NodeListTreeProps) {
+function usePreparedNodeListTreeContentProps(props: NodeListTreeProps) {
   const model = useNodeListTreeModel({
-    activeNodeId,
-    forceExpandedNodeId: forceExpandedNodeId ?? null,
-    isSelectionScopeActive,
-    nodeOrder,
-    nodesById,
-    onSelectNode,
-    onSelectTrashNode,
-    selectedTrashNodeId
+    activeNodeId: props.activeNodeId,
+    forceExpandedNodeId: props.forceExpandedNodeId ?? null,
+    isSelectionScopeActive: props.isSelectionScopeActive ?? true,
+    nodeOrder: props.nodeOrder,
+    nodesById: props.nodesById,
+    onSelectNode: props.onSelectNode,
+    onSelectTrashNode: props.onSelectTrashNode,
+    selectedTrashNodeId: props.selectedTrashNodeId
   });
-  const runtimeState: NodeListTreeRuntimeState = { reviewSession: model.reviewSession };
   const deleteFeedback = useNodeBulkDeleteFeedback(model.deleteNodes, model.deleteNodesPermanently);
   const { activeRows, collapsedNodeIds, rowSpacing } = useNodeListTreeView({
-    isTrashViewOpen,
-    isVirtualViewOpen,
+    isTrashViewOpen: props.isTrashViewOpen,
+    isVirtualViewOpen: props.isVirtualViewOpen,
     model
   });
-  useNodeListTreeSelectionDiagnostics({ activeNodeId, activeRowsLength: activeRows.length, model });
-  const contentProps = buildNodeListTreeContentProps({
-    activeNodeId,
+  useNodeListTreeSelectionDiagnostics({ activeNodeId: props.activeNodeId, activeRowsLength: activeRows.length, model });
+  return buildNodeListTreeContentProps({
+    activeNodeId: props.activeNodeId,
     activeRows,
-    bodyAppendContent,
+    bodyAppendContent: props.bodyAppendContent,
     collapsedNodeIds,
     deleteFeedback,
-    highlightedNodeId: highlightedNodeId ?? null,
-    isTrashViewOpen,
-    isVirtualViewOpen,
+    highlightedNodeId: props.highlightedNodeId ?? null,
+    isTrashViewOpen: props.isTrashViewOpen,
+    isVirtualViewOpen: props.isVirtualViewOpen,
     model,
-    nodeOrder,
-    nodesById,
-    onOpenMoveToNode,
-    onOpenNotesView,
+    nodeOrder: props.nodeOrder,
+    nodesById: props.nodesById,
+    onOpenMoveToNode: props.onOpenMoveToNode,
+    onOpenNotesView: props.onOpenNotesView,
     rowSpacing,
-    runtimeState,
-    rowCountByNodeId,
-    selectedTrashNodeId,
-    showVirtualCreateAction,
-    showTitleSearch
+    runtimeState: { reviewSession: model.reviewSession },
+    rowCountByNodeId: props.rowCountByNodeId,
+    scrollTargetNodeId: props.scrollTargetNodeId ?? null,
+    selectedTrashNodeId: props.selectedTrashNodeId,
+    showVirtualCreateAction: props.showVirtualCreateAction ?? true,
+    showTitleSearch: props.showTitleSearch ?? true,
+    virtualizeRows: props.virtualizeRows ?? true
   });
+}
 
+function NodeListTreeImpl(props: NodeListTreeProps) {
+  const contentProps = usePreparedNodeListTreeContentProps(props);
   return <NodeListTreeContent {...contentProps} />;
 }
 

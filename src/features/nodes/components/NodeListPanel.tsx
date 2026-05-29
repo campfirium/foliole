@@ -50,6 +50,7 @@ interface NodeListPanelProps {
   reviewSession: ReviewSessionState;
   rowCountByNodeId?: ReadonlyMap<string, number> | undefined;
   rowSpacing: number;
+  scrollTargetNodeId: string | null;
   searchQuery: string;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
@@ -57,6 +58,7 @@ interface NodeListPanelProps {
   showVirtualCreateAction: boolean;
   trashRowIds: string[];
   trashRowsLength: number;
+  virtualizeRows: boolean;
 }
 
 function renderRootDropHint(isRootDropActive: boolean) {
@@ -128,21 +130,23 @@ function renderNodeTreeSection(
         reviewSession={props.reviewSession}
         rowCountByNodeId={props.rowCountByNodeId}
         rowSpacing={props.rowSpacing}
+        scrollTargetNodeId={props.scrollTargetNodeId}
         rows={props.activeRows}
         scrollContainerRef={scrollContainerRef}
         selectedNodeIds={props.selectedNodeIds}
         selectedTrashNodeId={props.selectedTrashNodeId}
+        virtualizeRows={props.virtualizeRows}
       />
     </section>
   );
 }
 
 function useNodeListPanelEffects(
-  props: Pick<NodeListPanelProps, 'activeNodeId' | 'activeRows' | 'isTrashViewOpen' | 'isVirtualViewOpen'>,
+  props: Pick<NodeListPanelProps, 'activeNodeId' | 'activeRows' | 'isTrashViewOpen' | 'isVirtualViewOpen' | 'scrollTargetNodeId'>,
   scrollContainerRef: RefObject<HTMLDivElement | null>
 ) {
   useNodeTreeActiveItemScroll({
-    activeNodeId: props.activeNodeId,
+    activeNodeId: props.scrollTargetNodeId ?? props.activeNodeId,
     disabled: props.isTrashViewOpen,
     scopeKey: props.isVirtualViewOpen,
     scrollContainerRef

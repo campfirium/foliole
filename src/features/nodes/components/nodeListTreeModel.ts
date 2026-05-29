@@ -9,7 +9,7 @@ import { useCollapsedNodeState } from './NodeListCollapseState';
 import { useNodeSelectionHandler } from './NodeListSelection';
 import { useNodeListTreeData, type NodeListTreeData } from './NodeListTreeData';
 import { useNodeCollapseControls, useNodeListContextMenu } from './NodeListTreeHooks';
-import { useNodeListState } from './NodeListTreeState';
+import { useNodeListStateFromTreeData, type NodeListState } from './NodeListTreeState';
 
 export interface NodeListTreeProps {
   activeNodeId: string | null;
@@ -27,8 +27,10 @@ export interface NodeListTreeProps {
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
+  scrollTargetNodeId?: string | null;
   showVirtualCreateAction?: boolean;
   showTitleSearch?: boolean;
+  virtualizeRows?: boolean;
 }
 
 export interface NodeListTreeRuntimeState {
@@ -65,7 +67,7 @@ function useNodeListTreeControllers(args: {
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
-  state: ReturnType<typeof useNodeListState>;
+  state: NodeListState;
   trashedNodeIds: string[];
   trashRowsAll: NodeListTreeData['trashRowsAll'];
 }) {
@@ -118,14 +120,14 @@ export function useNodeListTreeModel({
     noteRowsAll: treeData.noteRowsAll,
     trashRowsAll: treeData.trashRowsAll
   });
-  const state = useNodeListState(
+  const state = useNodeListStateFromTreeData({
     activeNodeId,
+    collapsedNoteNodeIds: collapsedState.collapsedNoteNodeIds,
     isSelectionScopeActive,
-    nodeOrder,
     nodesById,
     selectedTrashNodeId,
-    collapsedState.collapsedNoteNodeIds
-  );
+    treeData
+  });
   const controllers = useNodeListTreeControllers({
     activeNodeId,
     collapsedState,
@@ -147,7 +149,7 @@ function buildNodeListTreeModelResult(
   treeData: NodeListTreeData,
   controllers: ReturnType<typeof useNodeListTreeControllers>,
   collapsedState: ReturnType<typeof useCollapsedNodeState>,
-  state: ReturnType<typeof useNodeListState>
+  state: NodeListState
 ) {
   return {
     collapse: controllers.collapse,

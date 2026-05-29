@@ -73,6 +73,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
       }}
       onSelectTrashNode={props.onSelectTrashNode}
       selectedTrashNodeId={props.selectedTrashNodeId}
+      scrollTargetNodeId={props.highlightedFolderId ?? getActiveFolderSelectionId(props)}
       showTitleSearch={false}
       bodyAppendContent={
         <>

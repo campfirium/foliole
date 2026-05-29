@@ -1,8 +1,7 @@
 import { useMemo, useRef } from 'react';
 
-import { HOME_NODE_ID, TRASH_NODE_ID, isHomeNode } from '../../features/nodes/model/specialNodes';
+import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { isCanonicalVisibleNodeId } from '../../shared/workspaceCanonicalSelectors';
 
 import {
   buildWorkspaceDualListStructureData,
@@ -14,9 +13,6 @@ import {
   resolveActiveFolderColumnNodeId,
   resolveFocusedFolderNodeId
 } from './workspaceFolderNavigation';
-import {
-  type WorkspaceListChildrenIndex
-} from './workspaceListChildrenIndex';
 
 export interface WorkspaceDualListStateArgs {
   activeNodeId: string | null;
@@ -29,7 +25,10 @@ export interface WorkspaceDualListStateArgs {
 
 interface WorkspaceDualListStructureCache {
   data: WorkspaceDualListStructureData;
+  listNodesById: WorkspaceDualListStateArgs['listNodesById'];
+  nodeOrder: WorkspaceDualListStateArgs['nodeOrder'];
   signature: string;
+  trashedNodeIds: WorkspaceDualListStateArgs['trashedNodeIds'];
 }
 
 function useActiveFolderColumns(args: WorkspaceDualListStateArgs) {
@@ -71,39 +70,16 @@ function useActiveFolderColumns(args: WorkspaceDualListStateArgs) {
   ]);
 }
 
-function isVisibleTopicNode(
-  nodeId: string,
-  nodesById: WorkspaceListNodesById,
-  trashedNodeIds: readonly string[]
-) {
-  const node = nodesById[nodeId];
-  return Boolean(node && isCanonicalVisibleNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, nodeId) && node.kind !== 'folder');
-}
-
-function collectTopicColumnNodeIdsFromIndex(
-  folderNodeId: string | null,
-  index: WorkspaceListChildrenIndex,
-  nodesById: WorkspaceListNodesById,
-  trashedNodeIds: readonly string[]
-) {
-  if (!folderNodeId) return [];
-  if (folderNodeId === HOME_NODE_ID || isHomeNode(nodesById[folderNodeId])) {
-    return index.visibleNodeIds.filter((nodeId) => {
-      if (!isVisibleTopicNode(nodeId, nodesById, trashedNodeIds)) {
-        return false;
-      }
-      const parentId = nodesById[nodeId]?.parentNodeId ?? null;
-      const parentNode = parentId ? nodesById[parentId] : null;
-      return !parentNode || parentNode.kind === 'folder';
-    });
-  }
-  return (index.visibleChildrenByParent.get(folderNodeId) ?? []).filter((nodeId) =>
-    isVisibleTopicNode(nodeId, nodesById, trashedNodeIds)
-  );
-}
-
 function useWorkspaceDualListStructureData(args: WorkspaceDualListStateArgs) {
   const cacheRef = useRef<WorkspaceDualListStructureCache | null>(null);
+  if (
+    cacheRef.current?.nodeOrder === args.nodeOrder &&
+    cacheRef.current.listNodesById === args.listNodesById &&
+    cacheRef.current.trashedNodeIds === args.trashedNodeIds
+  ) {
+    return cacheRef.current.data;
+  }
+
   const signature = buildWorkspaceListStructureSignature(
     args.nodeOrder,
     args.listNodesById,
@@ -115,7 +91,13 @@ function useWorkspaceDualListStructureData(args: WorkspaceDualListStateArgs) {
   }
 
   const data = buildWorkspaceDualListStructureData(args);
-  cacheRef.current = { data, signature };
+  cacheRef.current = {
+    data,
+    listNodesById: args.listNodesById,
+    nodeOrder: args.nodeOrder,
+    signature,
+    trashedNodeIds: args.trashedNodeIds
+  };
   return data;
 }
 
@@ -129,12 +111,9 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
   );
 
   return useMemo(() => {
-    const topicNodeOrder = collectTopicColumnNodeIdsFromIndex(
-      activeFolderColumnId,
-      structureData.listIndex,
-      args.listNodesById,
-      args.trashedNodeIds
-    );
+    const topicNodeOrder = activeFolderColumnId
+      ? (structureData.topicNodeOrderByFolderId.get(activeFolderColumnId) ?? [])
+      : [];
 
     return {
       activeFolderColumnId,
@@ -152,7 +131,6 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
     activeFolderId,
     activeColumns.revealFolderId,
     args.listNodesById,
-    args.trashedNodeIds,
     folderNodesById,
     structureData
   ]);

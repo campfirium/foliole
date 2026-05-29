@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { useStableWorkspaceContentItems } from './workspaceStableContentSort';
 
@@ -9,6 +9,42 @@ interface StableSortItem {
   lastOpenedAt?: string;
   modifiedAt: string;
   title: string;
+}
+
+const stableCacheItems: StableSortItem[] = [
+  { id: 'old', modifiedAt: '2026-04-20T00:00:00.000Z', title: 'Old' },
+  { id: 'new', modifiedAt: '2026-04-21T00:00:00.000Z', title: 'New' }
+];
+
+const stableCacheSort = { direction: 'desc', key: 'modifiedAt' } as const;
+
+function getStableSortItemId(item: StableSortItem) {
+  return item.id;
+}
+
+function StableCacheHitHarness(props: { sortItems: (items: StableSortItem[]) => StableSortItem[] }) {
+  const [count, setCount] = useState(0);
+  const sortedItems = useStableWorkspaceContentItems({
+    getItemId: getStableSortItemId,
+    items: stableCacheItems,
+    scopeKey: 'folder-a',
+    sort: stableCacheSort,
+    sortItems: props.sortItems
+  });
+
+  return (
+    <>
+      <button onClick={() => setCount((current) => current + 1)} type="button">
+        Rerender
+      </button>
+      <p>{count}</p>
+      <ol>
+        {sortedItems.map((item) => (
+          <li key={item.id}>{item.title}</li>
+        ))}
+      </ol>
+    </>
+  );
 }
 
 function StableSortHarness() {
@@ -141,6 +177,20 @@ it('keeps dynamic workspace content order stable while item timestamps update', 
     'New:2026-04-21T00:00:00.000Z',
     'Old:2026-04-22T00:00:00.000Z'
   ]);
+});
+
+it('reuses sorted content when only the parent rerenders', () => {
+  const sortItems = vi.fn((items: StableSortItem[]) =>
+    [...items].sort((left, right) => right.modifiedAt.localeCompare(left.modifiedAt))
+  );
+
+  render(<StableCacheHitHarness sortItems={sortItems} />);
+  expect(sortItems).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rerender' }));
+
+  expect(sortItems).toHaveBeenCalledTimes(1);
+  expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['New', 'Old']);
 });
 
 it('rebuilds dynamic workspace content order after changing folder scope', () => {

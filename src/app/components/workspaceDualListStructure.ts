@@ -26,6 +26,7 @@ export interface WorkspaceDualListStructureData {
   folderNodeOrder: string[];
   folderTopicCountById: Map<string, number>;
   listIndex: WorkspaceListChildrenIndex;
+  topicNodeOrderByFolderId: Map<string, string[]>;
 }
 
 function isVisibleFolderId(nodeId: string, nodesById: WorkspaceListNodesById) {
@@ -71,6 +72,11 @@ function isNativeContentNode(nodeId: string, nodesById: WorkspaceListNodesById) 
   return Boolean(node && node.kind !== 'folder' && !node.anchorLink);
 }
 
+function isTopicColumnNode(nodeId: string, nodesById: WorkspaceListNodesById) {
+  const node = nodesById[nodeId];
+  return Boolean(node && node.kind !== 'folder');
+}
+
 function buildDirectNativeContentCountByFolderId(
   folderNodeOrder: string[],
   index: WorkspaceListChildrenIndex,
@@ -91,6 +97,47 @@ function countHomeNativeContentNodes(
   nodesById: WorkspaceListNodesById
 ) {
   return index.visibleNodeIds.filter((nodeId) => isNativeContentNode(nodeId, nodesById)).length;
+}
+
+function collectHomeTopicColumnNodeIds(
+  index: WorkspaceListChildrenIndex,
+  nodesById: WorkspaceListNodesById
+) {
+  return index.visibleNodeIds.filter((nodeId) => {
+    if (!isTopicColumnNode(nodeId, nodesById)) return false;
+    const parentId = nodesById[nodeId]?.parentNodeId ?? null;
+    const parentNode = parentId ? nodesById[parentId] : null;
+    return !parentNode || parentNode.kind === 'folder';
+  });
+}
+
+function collectDirectTopicColumnNodeIds(
+  folderNodeId: string,
+  index: WorkspaceListChildrenIndex,
+  nodesById: WorkspaceListNodesById
+) {
+  return (index.visibleChildrenByParent.get(folderNodeId) ?? []).filter((nodeId) =>
+    isTopicColumnNode(nodeId, nodesById)
+  );
+}
+
+function buildTopicNodeOrderByFolderId(
+  folderNodeOrder: string[],
+  index: WorkspaceListChildrenIndex,
+  nodesById: WorkspaceListNodesById
+) {
+  const topicNodeOrderByFolderId = new Map<string, string[]>();
+  const homeTopicNodeOrder = collectHomeTopicColumnNodeIds(index, nodesById);
+  for (const folderId of folderNodeOrder) {
+    const folderNode = nodesById[folderId];
+    topicNodeOrderByFolderId.set(
+      folderId,
+      folderId === HOME_NODE_ID || isHomeNode(folderNode)
+        ? homeTopicNodeOrder
+        : collectDirectTopicColumnNodeIds(folderId, index, nodesById)
+    );
+  }
+  return topicNodeOrderByFolderId;
 }
 
 function buildFolderTopicCountById(
@@ -147,6 +194,11 @@ export function buildWorkspaceDualListStructureData(
       args.trashedNodeIds
     ),
     folderNodeOrder,
-    listIndex
+    listIndex,
+    topicNodeOrderByFolderId: buildTopicNodeOrderByFolderId(
+      folderNodeOrder,
+      listIndex,
+      args.listNodesById
+    )
   };
 }

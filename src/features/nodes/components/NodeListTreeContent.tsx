@@ -47,6 +47,7 @@ interface NodeListTreeContentProps {
   reviewSession: ReviewSessionState;
   rowCountByNodeId?: ReadonlyMap<string, number> | undefined;
   rowSpacing: number;
+  scrollTargetNodeId: string | null;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
   setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean;
@@ -59,6 +60,7 @@ interface NodeListTreeContentProps {
   updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
   updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
   unshelveNode: (nodeId: string, now?: string) => boolean;
+  virtualizeRows: boolean;
 }
 
 export function NodeListTreeContent(props: NodeListTreeContentProps) {
@@ -100,6 +102,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         reviewSession={props.reviewSession}
         rowCountByNodeId={props.rowCountByNodeId}
         rowSpacing={props.rowSpacing}
+        scrollTargetNodeId={props.scrollTargetNodeId}
         searchQuery={searchQuery}
         selectedNodeIds={props.selectedNodeIds}
         selectedTrashNodeId={props.selectedTrashNodeId}
@@ -107,6 +110,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         showVirtualCreateAction={props.showVirtualCreateAction ?? true}
         trashRowIds={props.state.trashRowIds}
         trashRowsLength={props.state.trashRows.length}
+        virtualizeRows={props.virtualizeRows}
       />
       <NodeListTreeMenu {...props} onOpenReviewScheduling={setReviewSchedulingNodeId} />
       <NodeReviewSchedulingDialog

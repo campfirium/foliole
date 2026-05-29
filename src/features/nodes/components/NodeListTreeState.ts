@@ -12,6 +12,7 @@ import { selectTrashRootIds } from '../model/trashRootModel';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { useNodeListSelection } from './NodeListSelection';
+import type { NodeListTreeData } from './NodeListTreeData';
 
 export { collectRangeNodeIds, useNodeSelectionHandler } from './NodeListSelection';
 export type { NodeSelectModifiers } from './NodeListSelection';
@@ -120,6 +121,47 @@ export function useNodeListState(
     trashRowsAll: trashTree.rows,
     virtualRows,
     virtualRowsAll: virtualTree.rows,
+    noteRowIds: noteRows.map((row) => row.node.id),
+    trashRowIds: trashRows.map((row) => row.node.id),
+    virtualRowIds: virtualRows.map((row) => row.node.id),
+    ...selectionState
+  };
+}
+
+export function useNodeListStateFromTreeData(args: {
+  activeNodeId: string | null;
+  collapsedNoteNodeIds: ReadonlySet<string>;
+  isSelectionScopeActive: boolean;
+  nodesById: WorkspaceListNodesById;
+  selectedTrashNodeId: string | null;
+  treeData: NodeListTreeData;
+}): NodeListState {
+  const trashedNodeIds = useWorkspaceStore((state) => state.trashedNodeIds);
+  const noteRows = useMemo(
+    () => buildVisibleNodeTreeRows(args.treeData.noteRowsAll, args.collapsedNoteNodeIds),
+    [args.treeData.noteRowsAll, args.collapsedNoteNodeIds]
+  );
+  const trashRows = useMemo(() => args.treeData.trashRowsAll, [args.treeData.trashRowsAll]);
+  const virtualRows = useMemo(
+    () => buildVisibleNodeTreeRows(args.treeData.virtualRowsAll, args.collapsedNoteNodeIds),
+    [args.treeData.virtualRowsAll, args.collapsedNoteNodeIds]
+  );
+  const selectionState = useNodeListSelection(
+    args.activeNodeId,
+    args.isSelectionScopeActive,
+    args.nodesById,
+    args.selectedTrashNodeId,
+    trashedNodeIds
+  );
+
+  return {
+    noteRows,
+    noteRowsAll: args.treeData.noteRowsAll,
+    noteParentById: args.treeData.noteParentById,
+    trashRows,
+    trashRowsAll: args.treeData.trashRowsAll,
+    virtualRows,
+    virtualRowsAll: args.treeData.virtualRowsAll,
     noteRowIds: noteRows.map((row) => row.node.id),
     trashRowIds: trashRows.map((row) => row.node.id),
     virtualRowIds: virtualRows.map((row) => row.node.id),

@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useRef, useState } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -143,12 +143,13 @@ export function FolderListView(props: FolderListViewProps) {
   const deleteNodes = useWorkspaceStore((storeState) => storeState.deleteNodes);
   const setFolderManualChildOrder = useWorkspaceStore((storeState) => storeState.setFolderManualChildOrder);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const scrollElementRef = useRef<HTMLDivElement | null>(null);
   const headerMode = props.showEmbeddedHeader === false ? 'hidden' : 'full';
   const canManualDrag = Boolean(props.folderNodeId && state.sortKey === 'manual' && !state.searchQuery.trim());
   const currentViewActions = buildFolderListCurrentViewActions(props, deleteNodes, state.filteredNodes);
 
   return (
-    <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
+    <div ref={scrollElementRef} className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
       <section aria-label={props.regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
           currentViewActions={props.currentViewActions ?? currentViewActions}
@@ -177,6 +178,7 @@ export function FolderListView(props: FolderListViewProps) {
           })}
           searchQuery={state.searchQuery}
           searchResultLabel={state.searchResultLabel}
+          scrollElementRef={scrollElementRef}
           sortDirection={state.sortDirection}
           sortKey={state.sortKey}
         />

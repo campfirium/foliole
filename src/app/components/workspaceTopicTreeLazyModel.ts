@@ -28,18 +28,26 @@ interface WorkspaceTopicTreeLazyModelArgs {
   sort: WorkspaceContentSortState;
 }
 
+function getStringItemId(nodeId: string) {
+  return nodeId;
+}
+
 export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModelArgs) {
   const [searchQuery, setSearchQuery] = useState('');
   const contentSort = normalizeWorkspaceContentSort(args.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name', 'manual']);
   const refreshKey = resolveTopicTreeSortRefreshKey(args, contentSort);
+  const sortRootIds = useCallback(
+    (ids: string[]) =>
+      sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeViewById, args.manualChildOrder),
+    [args.manualChildOrder, args.nodeViewById, args.nodesById, contentSort]
+  );
   const rootIds = useStableWorkspaceContentItems({
-    getItemId: (nodeId) => nodeId,
+    getItemId: getStringItemId,
     items: args.itemIds,
     refreshKey,
     scopeKey: `${args.activeFolderId}:root`,
     sort: contentSort,
-    sortItems: (ids) =>
-      sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeViewById, args.manualChildOrder)
+    sortItems: sortRootIds
   });
   const sortIds = useCallback(
     (parentId: string | null, ids: string[]) =>

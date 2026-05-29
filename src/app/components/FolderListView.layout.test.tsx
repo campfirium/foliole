@@ -44,12 +44,13 @@ it('keeps long titles, empty bodies, and long summaries clamped inside the row',
     />
   );
 
-  expect(screen.getByTestId('folder-list-title-node-4').className).toContain('line-clamp-2');
+  expect(screen.getByTestId('folder-list-title-node-4').className).toContain('truncate');
   expect(screen.getByTestId('folder-list-excerpt-node-4')).toHaveTextContent('');
-  expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('line-clamp-2');
-  expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('min-h-14');
-  expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('line-clamp-2');
-  expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('min-h-14');
+  expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('line-clamp-4');
+  expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('h-28');
+  expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('line-clamp-4');
+  expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('h-28');
+  expect(screen.getByRole('button', { name: /Open An extremely long title/u }).closest('li')?.className).toContain('border-b');
   expect(screen.queryByText('Topic')).not.toBeInTheDocument();
 });
 

@@ -2,7 +2,6 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
-import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import {
@@ -16,20 +15,14 @@ const {
   markNodeDocumentLoadStarted,
   markNodePositionRequested,
   markNodeSelectionApplied,
-  markNodeSelectionRequested,
-  requestPdfAnchorJump
+  markNodeSelectionRequested
 } = vi.hoisted(() => ({
   markNodeDocumentMerged: vi.fn(),
   markNodeDocumentLoadResolved: vi.fn(),
   markNodeDocumentLoadStarted: vi.fn(),
   markNodePositionRequested: vi.fn(),
   markNodeSelectionApplied: vi.fn(),
-  markNodeSelectionRequested: vi.fn(),
-  requestPdfAnchorJump: vi.fn()
-}));
-
-vi.mock('../../features/pdf/model/pdfSystemRegistry', () => ({
-  requestPdfAnchorJump
+  markNodeSelectionRequested: vi.fn()
 }));
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({
@@ -44,101 +37,6 @@ vi.mock('../../shared/platform/performanceDiagnosticsProbe', () => ({
   markNodeSelectionApplied,
   markNodeSelectionRequested
 }));
-
-async function runPdfBreadcrumbJumpTest() {
-  const saveActiveNodeView = vi.fn();
-  const flushPendingEditorDraft = vi.fn();
-  const flushPendingEditorDraftImmediately = vi.fn().mockResolvedValue(true);
-  const jumpToAncestorNode = vi.fn(() => ({
-    focusAnchor: {
-      id: 'pdf-hl-1',
-      kind: 'highlight' as const,
-      locator: { page: 5, x: 0.35, y: 0.7 }
-    },
-    nodeId: 'pdf-parent'
-  }));
-
-  const { result, rerender } = renderHook(
-    ({ activeNodeId }) =>
-      useWorkspaceNavigation({
-        activeNodeContent: '',
-        activeNodeId,
-        activeNodeParentId: null,
-        backStackSize: 0,
-        beginAnchorNavigationRestore: vi.fn(),
-        closeContextMenu: vi.fn(),
-        completeAnchorNavigationRestore: vi.fn(),
-        editorRef: { current: null },
-        flushPendingEditorDraft,
-        flushPendingEditorDraftImmediately,
-        forwardStackSize: 0,
-        goBack: vi.fn(() => null),
-        goForward: vi.fn(() => null),
-        goToParent: vi.fn(() => null),
-        jumpToAncestorNode,
-        nodesById: navigationTestNodes,
-        openNode: vi.fn(() => null),
-        saveActiveNodeView
-      }),
-    { initialProps: { activeNodeId: 'pdf-hl-child' } }
-  );
-
-  await act(async () => {
-    await result.current.handleSelectBreadcrumbNode('pdf-parent');
-    rerender({ activeNodeId: 'pdf-parent' });
-  });
-
-  expect(requestPdfAnchorJump).toHaveBeenCalledWith('pdf-parent', { page: 5, x: 0.35, y: 0.7 });
-}
-
-async function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
-  const saveActiveNodeView = vi.fn();
-  const flushPendingEditorDraft = vi.fn();
-  const flushPendingEditorDraftImmediately = vi.fn().mockResolvedValue(true);
-  const jumpToAncestorNode = vi.fn(() => ({
-    focusAnchor: {
-      id: 'pdf-hl-2',
-      kind: 'highlight' as const,
-      locator: { page: 9, x: 0.1, y: 0.25 }
-    },
-    nodeId: 'pdf-parent'
-  }));
-  const revealSelection = vi.fn();
-  const editorAdapter = createMockEditorAdapter({ revealSelection });
-
-  const { result, rerender } = renderHook(
-    ({ activeNodeId }) =>
-      useWorkspaceNavigation({
-        activeNodeContent: 'plain markdown',
-        activeNodeId,
-        activeNodeParentId: null,
-        backStackSize: 0,
-        beginAnchorNavigationRestore: vi.fn(),
-        closeContextMenu: vi.fn(),
-        completeAnchorNavigationRestore: vi.fn(),
-        editorRef: { current: editorAdapter },
-        flushPendingEditorDraft,
-        flushPendingEditorDraftImmediately,
-        forwardStackSize: 0,
-        goBack: vi.fn(() => null),
-        goForward: vi.fn(() => null),
-        goToParent: vi.fn(() => null),
-        jumpToAncestorNode,
-        nodesById: navigationTestNodes,
-        openNode: vi.fn(() => null),
-        saveActiveNodeView
-      }),
-    { initialProps: { activeNodeId: 'pdf-hl-child' } }
-  );
-
-  await act(async () => {
-    await result.current.handleSelectBreadcrumbNode('pdf-parent');
-    rerender({ activeNodeId: 'pdf-parent' });
-  });
-
-  expect(requestPdfAnchorJump).toHaveBeenCalledWith('pdf-parent', { page: 9, x: 0.1, y: 0.25 });
-  expect(revealSelection).not.toHaveBeenCalled();
-}
 
 async function runBreadcrumbSelectionOrderTest() {
   const callOrder: string[] = [];
@@ -187,7 +85,7 @@ async function runBreadcrumbSelectionOrderTest() {
     await result.current.handleSelectBreadcrumbNode('node-1');
   });
 
-  expect(callOrder).toEqual(['selection-requested', 'flush-draft', 'flush-draft-immediate', 'save-view', 'jump-node']);
+  expect(callOrder).toEqual(['selection-requested', 'flush-draft', 'save-view', 'jump-node', 'flush-draft-immediate']);
   expect(saveActiveNodeView).toHaveBeenCalledWith('node-2');
 }
 
@@ -238,7 +136,7 @@ async function runSavePositionBeforeNodeSelectionTest() {
     await result.current.handleSelectNode('node-2');
   });
 
-  expect(callOrder).toEqual(['selection-requested', 'flush-draft', 'flush-draft-immediate', 'save-view', 'open-node']);
+  expect(callOrder).toEqual(['selection-requested', 'flush-draft', 'save-view', 'open-node', 'flush-draft-immediate']);
   expect(markNodeSelectionRequested).toHaveBeenCalledWith('node-2', navigationTestNodes);
 }
 
@@ -247,14 +145,6 @@ describe('useWorkspaceNavigation', () => {
     vi.clearAllMocks();
     resetWorkspaceNavigationTestState();
     vi.mocked(getRuntimeInvoke).mockReturnValue(null);
-  });
-
-  it('requests a pdf anchor jump when breadcrumb navigation lands on a pdf parent node', async () => {
-    await runPdfBreadcrumbJumpTest();
-  });
-
-  it('still requests a pdf anchor jump when editor ref still exists', async () => {
-    await runPdfBreadcrumbJumpTestWhenEditorRefExists();
   });
 
   it('updates the breadcrumb target before saving the current node view', async () => {

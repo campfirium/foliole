@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { HOME_NODE_ID, isHomeNode } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -38,6 +38,25 @@ function isNodeWithinFolderRoot(
   return false;
 }
 
+function resolvePreferredFolderColumnId(args: {
+  activeNodeId: string | null;
+  isExternalViewOpen: boolean;
+  isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
+  listNodesById: WorkspaceListNodesById;
+  preferredFolderColumnId: string | null;
+}) {
+  if (args.isTrashViewOpen || args.isVirtualViewOpen || args.isExternalViewOpen) {
+    return args.preferredFolderColumnId;
+  }
+  if (isFolderNode(args.activeNodeId, args.listNodesById)) {
+    return args.activeNodeId;
+  }
+  return isNodeWithinFolderRoot(args.activeNodeId, args.preferredFolderColumnId, args.listNodesById)
+    ? args.preferredFolderColumnId
+    : null;
+}
+
 export function useWorkspaceDualListViewRoot(args: WorkspaceDualListViewRootArgs) {
   const [preferredFolderColumnId, setPreferredFolderColumnId] = useState<string | null>(null);
   const {
@@ -48,6 +67,25 @@ export function useWorkspaceDualListViewRoot(args: WorkspaceDualListViewRootArgs
     listNodesById,
     onSelectNode
   } = args;
+  const resolvedPreferredFolderColumnId = useMemo(
+    () =>
+      resolvePreferredFolderColumnId({
+        activeNodeId,
+        isExternalViewOpen,
+        isTrashViewOpen,
+        isVirtualViewOpen,
+        listNodesById,
+        preferredFolderColumnId
+      }),
+    [
+      activeNodeId,
+      isExternalViewOpen,
+      isTrashViewOpen,
+      isVirtualViewOpen,
+      listNodesById,
+      preferredFolderColumnId
+    ]
+  );
 
   useEffect(() => {
     if (isTrashViewOpen || isVirtualViewOpen || isExternalViewOpen) {
@@ -73,5 +111,5 @@ export function useWorkspaceDualListViewRoot(args: WorkspaceDualListViewRootArgs
     onSelectNode(nodeId);
   }, [onSelectNode]);
 
-  return { preferredFolderColumnId, selectFolderColumnNode };
+  return { preferredFolderColumnId: resolvedPreferredFolderColumnId, selectFolderColumnNode };
 }
