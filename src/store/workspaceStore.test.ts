@@ -67,13 +67,13 @@ it('creates an empty initial state with only special roots', async () => {
   expect(initial.layout.isRightSidebarCollapsed).toBe(false);
 });
 
-it('updates node content and title', async () => {
+it('updates node content without refreshing the automatic title while typing', async () => {
   const seedNodeId = getSeedNodeId();
   await useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'updated markdown');
 
   const node = useWorkspaceStore.getState().nodesById[seedNodeId];
   expect(node?.content).toBe('updated markdown');
-  expect(node?.title).toBe('updated markdown');
+  expect(node?.title).toBe('Untitled');
 });
 
 it('updates reveal only for qa nodes', async () => {
@@ -100,6 +100,7 @@ it('updates reveal only for qa nodes', async () => {
 it('derives title from normalized markdown content', async () => {
   const seedNodeId = getSeedNodeId();
   await useWorkspaceStore.getState().updateNodeContent(seedNodeId, '# New Title\n\nBody paragraph.');
+  await useWorkspaceStore.getState().updateNodeDerivedTitle(seedNodeId);
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('New Title');
 });
@@ -109,6 +110,7 @@ it('keeps full normalized sentence in derived title', async () => {
   await useWorkspaceStore
     .getState()
     .updateNodeContent(seedNodeId, 'First clause, second clause. Third sentence.');
+  await useWorkspaceStore.getState().updateNodeDerivedTitle(seedNodeId);
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe(
     'First clause, second clause. Third sentence.'
@@ -120,6 +122,7 @@ it('derives title from plain markdown content without extra cleanup branches', a
   await useWorkspaceStore
     .getState()
     .updateNodeContent(seedNodeId, '# Intro answer');
+  await useWorkspaceStore.getState().updateNodeDerivedTitle(seedNodeId);
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Intro answer');
 });
@@ -128,6 +131,7 @@ it('applies fixed title max length from config', async () => {
   const seedNodeId = getSeedNodeId();
   const longContent = `# ${'x'.repeat(NODE_TITLE_MAX_CHARS + 20)}`;
   await useWorkspaceStore.getState().updateNodeContent(seedNodeId, longContent);
+  await useWorkspaceStore.getState().updateNodeDerivedTitle(seedNodeId);
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe(
     'x'.repeat(NODE_TITLE_MAX_CHARS)

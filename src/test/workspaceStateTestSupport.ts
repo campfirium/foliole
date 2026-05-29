@@ -53,6 +53,7 @@ function createTestWorkspaceActionMocks(): Partial<WorkspaceState> {
     setRightSidebarWidth: vi.fn(),
     startReviewSession: vi.fn(() => false),
     updateNodeContent: vi.fn(async () => false),
+    updateNodeDerivedTitle: vi.fn(async () => false),
     updateNodeDesiredRetention: vi.fn(),
     updateNodePriority: vi.fn(),
     updateNodeShortTerm: vi.fn(),

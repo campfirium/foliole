@@ -55,6 +55,7 @@ function selectWorkspaceMutationActions(state: WorkspaceState) {
     redoEditorOperation: state.redoEditorOperation,
     setNodeViewState: state.setNodeViewState,
     updateNodeContent: state.updateNodeContent,
+    updateNodeDerivedTitle: state.updateNodeDerivedTitle,
     pushEditorOperationEntry: state.pushEditorOperationEntry,
     updateHighlightAnchorRange: state.updateHighlightAnchorRange ?? (() => false),
     updateVirtualNodeFilter: state.updateVirtualNodeFilter,

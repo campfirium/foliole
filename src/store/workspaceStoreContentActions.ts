@@ -1,4 +1,3 @@
-import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { isNodeContentLocked } from '../features/nodes/model/nodeContainers';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
@@ -65,7 +64,6 @@ export function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceState
         content,
         hasContent: content.trim().length > 0,
         hideTitleHeading: false,
-        title: node.isTitleManual ? node.title : deriveNodeTitleFromContent(content),
         updatedAt: timestamp
       };
       const locatorSync = syncTextAnchorLocatorsForParentContent({

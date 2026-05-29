@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { syncMoveNodesToRuntime, syncNodeContentToRuntime, syncNodeContentWithAnchorsToRuntime, syncNodeOrderToRuntime } from './workspaceRuntimeSync';
+import {
+  syncCreateNodeMutationToRuntime,
+  syncMoveNodesToRuntime,
+  syncNodeContentMutationToRuntime,
+  syncNodeContentToRuntime,
+  syncNodeContentWithAnchorsToRuntime,
+  syncNodeContentWithAnchorsMutationToRuntime,
+  syncNodeOrderToRuntime
+} from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -8,9 +16,13 @@ import {
 } from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  hasWorkspaceNodeMutationRuntime: vi.fn(() => false),
+  syncCreateNodeMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncMoveNodesToRuntime: vi.fn(),
+  syncNodeContentMutationToRuntime: vi.fn(async () => null),
+  syncNodeContentWithAnchorsMutationToRuntime: vi.fn(async () => null),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -19,11 +31,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
-describe('workspaceStoreNodeActions extra sync coverage', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
+function registerContentEditCoverage() {
   it('clears imported title-heading hiding after manual content edits', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const node = harness.getState().nodesById['node-1']!;
@@ -38,11 +46,11 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
 
     await actions.updateNodeContent('node-1', '# Updated title\n\nBody');
 
-    expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'node-1',
         hideTitleHeading: false,
-        title: 'Updated title'
+        title: 'Seed'
       }),
       [],
       expect.any(Array)
@@ -77,7 +85,35 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
     });
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
     expect(syncNodeContentWithAnchorsToRuntime).not.toHaveBeenCalled();
+    expect(syncNodeContentWithAnchorsMutationToRuntime).not.toHaveBeenCalled();
   });
+}
+
+function registerDerivedTitleCoverage() {
+  it('syncs automatic title derivation separately from content edits', async () => {
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    await actions.updateNodeDerivedTitle('node-1', '# Updated title\n\nBody');
+
+    expect(syncNodeContentMutationToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncNodeContentMutationToRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'node-1',
+        isTitleManual: false,
+        title: 'Updated title'
+      })
+    );
+  });
+}
+
+describe('workspaceStoreNodeActions extra sync coverage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  registerContentEditCoverage();
+  registerDerivedTitleCoverage();
 });
 
 describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
@@ -100,9 +136,9 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
     });
 
     expect(nodeId).not.toBeNull();
-    expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncCreateNodeMutationToRuntime).toHaveBeenCalledTimes(1);
     expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
+    expect(syncCreateNodeMutationToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: nodeId,
         parentNodeId: 'node-1',
@@ -117,7 +153,10 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
             to: 6
           }
         }
-      })
+      }),
+      expect.any(Array),
+      'node-1',
+      expect.any(Number)
     );
   });
 

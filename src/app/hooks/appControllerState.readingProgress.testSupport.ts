@@ -111,6 +111,7 @@ export function createWorkspaceState() {
     undoWorkspaceAction: vi.fn(),
     updateHighlightAnchorRange: vi.fn(() => false),
     updateNodeContent: vi.fn(),
+    updateNodeDerivedTitle: vi.fn(),
     updateNodeDesiredRetention: vi.fn(),
     updateNodePriority: vi.fn(),
     updateNodeShortTerm: vi.fn(),

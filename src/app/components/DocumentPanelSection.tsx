@@ -142,6 +142,7 @@ function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     committedContent: props.editorContent,
     nodeId: props.editorNodeId,
     onCommit: commitEditorContent,
+    ...(props.onFinalizeNodeTitle ? { onFinalizeNode: props.onFinalizeNodeTitle } : {}),
     ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
   });
   const handleEditorUndo = useCallback(() => {

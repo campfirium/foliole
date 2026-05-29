@@ -37,6 +37,7 @@ function buildDocumentEditorProps(
     onEditorChange: props.onEditorChange,
     onEditorUndo: props.onEditorUndo,
     onEditorRedo: props.onEditorRedo,
+    onFinalizeNodeTitle: props.onFinalizeNodeTitle,
     onEditorContextMenu: props.onEditorContextMenu,
     onEditorReady: props.onEditorReady,
     onRegisterEditorDraftFlush: props.onRegisterEditorDraftFlush,

@@ -43,6 +43,7 @@ export interface WorkspaceState {
   setRightSidebarCollapsed: (collapsed: boolean) => void;
   setActiveNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
+  updateNodeDerivedTitle: (nodeId: string, content?: string) => Promise<boolean>;
   updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
   updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   updateVirtualNodeFilter: (nodeId: string, value: string) => void;

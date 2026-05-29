@@ -1,4 +1,4 @@
-import { UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
+import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
@@ -30,6 +30,52 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
         ...node,
         title: title.trim() || UNTITLED_NODE_TITLE,
         isTitleManual: true,
+        updatedAt: new Date().toISOString()
+      };
+      nextNodeForSync = nextNode;
+      localPatch = {
+        nodesById: {
+          ...state.nodesById,
+          [nodeId]: nextNode
+        }
+      };
+      return state;
+    });
+    if (!nextNodeForSync) return false;
+    const shouldUseLocalFallback = !hasWorkspaceNodeMutationRuntime();
+    const result = await syncNodeContentMutationToRuntime(nextNodeForSync);
+    let applied = false;
+    set((state) => {
+      const acceptedPatch = result
+        ? createWorkspaceNodeMutationPatch(state, result)
+        : shouldUseLocalFallback ? localPatch : null;
+      if (!acceptedPatch) return state;
+      applied = true;
+      return acceptedPatch;
+    });
+    if (applied) {
+      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
+    }
+    return applied;
+  };
+}
+
+export function createUpdateNodeDerivedTitleAction(set: WorkspaceSet): WorkspaceState['updateNodeDerivedTitle'] {
+  return async (nodeId, content) => {
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
+    let localPatch: Partial<WorkspaceState> | null = null;
+    set((state) => {
+      const node = state.nodesById[nodeId];
+      if (!node || node.isTitleManual || isProtectedRootNode(node)) {
+        return state;
+      }
+      const nextTitle = deriveNodeTitleFromContent(content ?? node.content);
+      if (node.title === nextTitle) {
+        return state;
+      }
+      const nextNode = {
+        ...node,
+        title: nextTitle,
         updatedAt: new Date().toISOString()
       };
       nextNodeForSync = nextNode;

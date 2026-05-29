@@ -159,7 +159,7 @@ function expectFirstCreatedImageClozeNode(createdIds: string[]) {
   expect(firstNode?.review).not.toBeNull();
   expect(firstNode?.anchorLink?.kind).toBe('cloze');
   expect(firstNode?.anchorLink?.id).toBe('region-1');
-  expect(firstNode?.title).toBe('Before image Cover After image');
+  expect(firstNode?.title).toBe('Before image');
   expect(firstNode?.anchorLink?.locator).toMatchObject({
     attachmentId: 'hash-1',
     height: 0.15,

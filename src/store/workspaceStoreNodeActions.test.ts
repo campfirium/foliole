@@ -49,7 +49,7 @@ describe('createWorkspaceNodeActions content/title sync', () => {
       expect.objectContaining({
         id: 'node-1',
         content: '# Updated title\n\nBody',
-        title: 'Updated title'
+        title: 'Seed'
       }),
       [],
       expect.any(Array)

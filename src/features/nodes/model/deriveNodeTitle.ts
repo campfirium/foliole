@@ -25,14 +25,6 @@ function stripMarkdownInline(value: string) {
     .replace(/[*_~`]+/g, '');
 }
 
-function normalizeMarkdownContent(content: string) {
-  const normalized = content
-    .split(/\r?\n/)
-    .map((line) => stripMarkdownPrefixes(line))
-    .join(' ');
-  return stripMarkdownInline(normalized);
-}
-
 function pickHeadingTitle(content: string) {
   for (const line of content.split(/\r?\n/)) {
     const match = line.match(MARKDOWN_HEADING_PATTERN);
@@ -42,6 +34,16 @@ function pickHeadingTitle(content: string) {
     const headingText = sanitizeTitleCandidate(stripMarkdownInline(match[1] ?? ''));
     if (headingText) {
       return headingText;
+    }
+  }
+  return '';
+}
+
+function pickFirstTextTitle(content: string) {
+  for (const line of content.split(/\r?\n/)) {
+    const candidate = sanitizeTitleCandidate(stripMarkdownInline(stripMarkdownPrefixes(line)));
+    if (candidate) {
+      return candidate;
     }
   }
   return '';
@@ -64,7 +66,7 @@ export function deriveNodeTitleFromContent(content: string) {
   if (headingTitle) {
     return headingTitle;
   }
-  const candidate = sanitizeTitleCandidate(normalizeMarkdownContent(content));
+  const candidate = pickFirstTextTitle(content);
   return candidate || UNTITLED_NODE_TITLE;
 }
 

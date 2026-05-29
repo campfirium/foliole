@@ -8,6 +8,11 @@ describe('deriveNodeTitle', () => {
     expect(deriveNodeTitleFromContent('Before answer After')).toBe('Before answer After');
   });
 
+  it('keeps body edits from changing a fallback title', () => {
+    expect(deriveNodeTitleFromContent('Stable title\n\nBody typed later')).toBe('Stable title');
+    expect(deriveNodeTitleFromContent('\n\n- Stable list title\n\nBody typed later')).toBe('Stable list title');
+  });
+
   it('derives a cloze title from the prompt first and falls back to the answer', () => {
     expect(deriveNodeTitleForCloze('Prompt title', 'Answer title')).toBe('Prompt title');
     expect(deriveNodeTitleForCloze('', 'Answer title')).toBe('Answer title');

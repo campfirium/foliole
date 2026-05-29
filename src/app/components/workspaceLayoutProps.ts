@@ -126,6 +126,7 @@ export interface WorkspaceLayoutFlatProps {
   onEditorChange: (content: string) => void;
   onEditorUndo: () => boolean;
   onEditorRedo: () => boolean;
+  onFinalizeNodeTitle: (nodeId: string, content: string) => void;
   onRegisterEditorDraftFlush: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;

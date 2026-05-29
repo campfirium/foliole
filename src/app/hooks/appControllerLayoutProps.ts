@@ -113,6 +113,7 @@ export interface BuildControllerLayoutPropsArgs {
     undoEditorOperation: () => boolean;
     redoEditorOperation: () => boolean;
     updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
+    updateNodeDerivedTitle: (nodeId: string, content?: string) => Promise<boolean>;
     updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
     updateVirtualNodeFilter: (nodeId: string, value: string) => void;
     updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
@@ -146,6 +147,7 @@ function createLayoutHandlerArgs(
     onEditorChange: createEditorChangeHandler(args),
     onEditorUndo: args.ws.undoEditorOperation,
     onEditorRedo: args.ws.redoEditorOperation,
+    onFinalizeNodeTitle: args.ws.updateNodeDerivedTitle,
     onRegisterEditorDraftFlush: args.runtime.registerPendingEditorDraftFlush,
     onEnterPriorityQuickSet: args.priorityQuickSet.enter,
     onOpenPostponeTopicPanel: args.reviewTopicDelayPanel.open,

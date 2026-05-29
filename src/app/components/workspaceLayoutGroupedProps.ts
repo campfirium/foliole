@@ -51,6 +51,7 @@ export interface WorkspaceLayoutProps {
     | 'onEditorChange'
     | 'onEditorUndo'
     | 'onEditorRedo'
+    | 'onFinalizeNodeTitle'
     | 'onRegisterEditorDraftFlush'
     | 'onNodeContentChange'
     | 'setNodeViewState'

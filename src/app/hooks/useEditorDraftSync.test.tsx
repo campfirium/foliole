@@ -33,6 +33,7 @@ function registerDebouncePersistenceTest() {
 
     expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
   });
+
 }
 
 function registerCloseFlushTest() {
@@ -80,6 +81,7 @@ function registerCloseFlushTest() {
 
     expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha unmount draft');
   });
+
 }
 
 function registerNodeSwitchDisplayTest() {
@@ -157,6 +159,7 @@ function registerNodeSwitchCommitIsolationTest() {
     expect(alphaCommit).not.toHaveBeenCalledWith('node-1', 'Beta draft');
     expect(betaCommit).toHaveBeenCalledWith('node-2', 'Beta draft');
   });
+
 }
 
 function registerStaleNodeChangeTest() {
@@ -182,6 +185,7 @@ function registerStaleNodeChangeTest() {
     expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha late draft');
     expect(onCommit).not.toHaveBeenCalledWith('node-2', 'Alpha late draft');
   });
+
 }
 
 function registerCommittedContentRefreshTest() {

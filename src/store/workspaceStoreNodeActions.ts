@@ -23,14 +23,18 @@ import { createUpdateHighlightAnchorRangeAction } from './workspaceStoreHighligh
 import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';
 import { createSetFolderManualChildOrderAction } from './workspaceStoreManualChildOrderActions';
 import { createDismissNodeAction } from './workspaceStoreNodeDismissAction';
-import { createUpdateNodeRevealAction, createUpdateNodeTitleAction } from './workspaceStoreNodeEditActions';
+import {
+  createUpdateNodeDerivedTitleAction,
+  createUpdateNodeRevealAction,
+  createUpdateNodeTitleAction
+} from './workspaceStoreNodeEditActions';
 import { createRelearnNodeAction } from './workspaceStoreNodeRelearnAction';
-import { createShelveNodeAction, createUnshelveNodeAction } from './workspaceStoreNodeShelveAction';
 import {
   createUpdateNodeDesiredRetentionAction,
   createUpdateNodePriorityAction,
   createUpdateNodeShortTermAction
 } from './workspaceStoreNodeSchedulerActions';
+import { createShelveNodeAction, createUnshelveNodeAction } from './workspaceStoreNodeShelveAction';
 import { createSetNodeViewStateAction } from './workspaceStoreNodeViewActions';
 import { createSetNodeSequentialReadingAction } from './workspaceStoreSequentialReadingActions';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
@@ -71,6 +75,7 @@ type WorkspaceNodeActions = Pick<
   | 'updateNodePriority'
   | 'updateNodeShortTerm'
   | 'updateNodeTitle'
+  | 'updateNodeDerivedTitle'
   | 'updateNodeContent'
   | 'updateHighlightAnchorRange'
   | 'updateVirtualNodeFilter'
@@ -111,6 +116,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     ...trashActions,
     setNodeViewState: createSetNodeViewStateAction(set),
     updateNodeTitle: createUpdateNodeTitleAction(set),
+    updateNodeDerivedTitle: createUpdateNodeDerivedTitleAction(set),
     updateNodeContent: createUpdateNodeContentAction(set),
     updateHighlightAnchorRange: createUpdateHighlightAnchorRangeAction(set),
     updateVirtualNodeFilter: createUpdateVirtualNodeFilterAction(set),

@@ -25,22 +25,10 @@ function createSeedNode(): WorkspaceState['nodesById'][string] {
   };
 }
 
-function createWorkspaceActionStubs() {
+function createWorkspaceEditActionStubs() {
   return {
-    goBack: () => null,
-    goForward: () => null,
-    goToParent: () => null,
-    jumpToAncestorNode: () => null,
-    openNode: () => null,
-    resetLayout: () => undefined,
-    setNodeViewState: () => undefined,
-    setDocumentMaxWidth: () => undefined,
-    setListWidth: () => undefined,
-    setListCollapsed: () => undefined,
-    setRightSidebarWidth: () => undefined,
-    setRightSidebarCollapsed: () => undefined,
-    setActiveNode: () => undefined,
     updateNodeTitle: async () => false,
+    updateNodeDerivedTitle: async () => false,
     updateNodeContent: async () => false,
     updateHighlightAnchorRange: () => false,
     updateVirtualNodeFilter: () => undefined,
@@ -85,6 +73,25 @@ function createWorkspaceActionStubs() {
     createImageClozeNodes: async () => [],
     moveNode: async () => false,
     moveNodes: async () => false
+  };
+}
+
+function createWorkspaceActionStubs() {
+  return {
+    goBack: () => null,
+    goForward: () => null,
+    goToParent: () => null,
+    jumpToAncestorNode: () => null,
+    openNode: () => null,
+    resetLayout: () => undefined,
+    setNodeViewState: () => undefined,
+    setDocumentMaxWidth: () => undefined,
+    setListWidth: () => undefined,
+    setListCollapsed: () => undefined,
+    setRightSidebarWidth: () => undefined,
+    setRightSidebarCollapsed: () => undefined,
+    setActiveNode: () => undefined,
+    ...createWorkspaceEditActionStubs()
   };
 }
 

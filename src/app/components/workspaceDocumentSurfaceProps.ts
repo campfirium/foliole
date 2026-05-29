@@ -150,6 +150,7 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onEditorReady: props.document.onEditorReady,
     onEditorUndo: props.document.onEditorUndo,
     onEditorRedo: props.document.onEditorRedo,
+    onFinalizeNodeTitle: props.document.onFinalizeNodeTitle,
     onExportImage: props.editorCommands.onExportImage,
     onNodeContentChange: props.document.onNodeContentChange,
     onNodeDesiredRetentionChange: props.document.onNodeDesiredRetentionChange,
