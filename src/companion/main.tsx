@@ -6,7 +6,9 @@ import { installCompanionSyncInstrumentationProbe } from '../shared/platform/com
 import { StartupErrorBoundary } from '../shared/ui/StartupErrorBoundary';
 
 import { CompanionApp } from './CompanionApp';
+import { installCompanionWebViewCompatibilityPolyfills } from './companionWebViewCompatibility';
 
+installCompanionWebViewCompatibilityPolyfills();
 installCompanionSyncInstrumentationProbe();
 
 const rootElement = document.getElementById('root');

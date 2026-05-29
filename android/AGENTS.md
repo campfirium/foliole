@@ -17,6 +17,15 @@
 - Android 首轮交付优先验证存储、生命周期、同步入口与真实数据复习闭环；不得先扩展桌面级 UI 宽度或复杂编辑表面。
 - Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
 
+## Legacy E-Reader Compatibility
+
+- 低版本 Android 兼容目标限定为电子墨水屏 / 阅读器基础可用，不等同于支持所有旧手机或追求现代移动端完整视觉一致性。
+- Android 9 / WebView 74 这类旧阅读器环境必须优先保证启动、同步、目录、浏览、阅读、搜索与基础设置可用；白屏、崩溃、布局坍塌、核心点击目标不可用属于必须修复。
+- 旧阅读器兼容允许静态视觉降级；不得为低版本 Android 追求动效、复杂过渡、玻璃 / 模糊、动态色彩、精细阴影或高刷新视觉效果。
+- 兼容修复优先落在 companion 构建链、WebView runtime polyfill、Android 原生 API 版本边界或共享平台 adapter；禁止为旧 Android 复制一套业务 UI 或业务流程。
+- 面向旧 WebView 的 CSS / JS 兼容处理必须尽量保持单 APK、单 companion 代码路径；只有用户明确要求或发布策略明确分包时，才为旧 Android 单独打包。
+- 若 Android 9 兼容与现代桌面 / 移动视觉效果冲突，优先保留现代主路径，同时为阅读器提供不破坏核心阅读与同步路径的降级。
+
 ## Read Before Editing
 
 - 任务涉及 Capacitor 宿主、目录规划或 companion 接缝时，先读 `.lab/specs/architecture/multi-target-repo-layout-expectation.md`。

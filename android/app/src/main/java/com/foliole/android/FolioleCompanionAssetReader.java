@@ -4,7 +4,6 @@ import android.content.Context;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 final class FolioleCompanionAssetReader {
     private FolioleCompanionAssetReader() {}
@@ -17,7 +16,7 @@ final class FolioleCompanionAssetReader {
             while ((read = input.read(buffer)) != -1) {
                 output.write(buffer, 0, read);
             }
-            return output.toString(StandardCharsets.UTF_8);
+            return output.toString("UTF-8");
         }
     }
 }
