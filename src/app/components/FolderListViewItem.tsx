@@ -34,7 +34,7 @@ type FolderListItemProps = {
 function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: string; displayTitle: string; locationPath: string }) {
   return (
     <li
-      className="border-b border-[var(--workspace-region-main-document-content-divider)]"
+      className="list-none border-b border-[var(--workspace-region-main-document-content-divider)]"
       draggable={props.draggable}
       onDragEnd={props.onDragEnd}
       onDragOver={(event) => {

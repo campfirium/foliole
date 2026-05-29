@@ -48,7 +48,7 @@ export function FolderListTextItem(props: FolderListTextItemProps) {
   const dragHandlers = resolveFolderListDragHandlers(props);
   return (
     <li
-      className="border-b border-[var(--workspace-region-main-document-content-divider)]"
+      className="list-none border-b border-[var(--workspace-region-main-document-content-divider)]"
       {...dragHandlers}
     >
       <button

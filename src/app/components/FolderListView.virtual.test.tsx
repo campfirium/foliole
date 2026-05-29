@@ -43,4 +43,5 @@ it('virtualizes dense folder contents instead of mounting every row', () => {
 
   expect(screen.getByTestId('folder-list-count')).toHaveTextContent('160');
   expect(screen.queryAllByTestId(/folder-list-title-node-/).length).toBeLessThan(160);
+  expect(screen.getByRole('button', { name: 'Open Child topic 000' }).closest('li')).toHaveClass('list-none');
 });
