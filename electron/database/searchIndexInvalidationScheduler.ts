@@ -1,4 +1,7 @@
-import { setSearchIndexInvalidationScheduler } from '../../lib/core/database/searchIndexInvalidationRuntime.js';
+import {
+  setSearchIndexInvalidationScheduler,
+  type SearchIndexInvalidationProcessingOptions
+} from '../../lib/core/database/searchIndexInvalidationRuntime.js';
 import { processSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidations.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
@@ -7,6 +10,7 @@ import { openDatabaseConnection } from './connection.js';
 const BATCH_LIMIT = 500;
 
 let timer: ReturnType<typeof setTimeout> | null = null;
+let timerKind: 'deferred' | 'immediate' | null = null;
 let running = false;
 let stopped = true;
 
@@ -22,17 +26,26 @@ export function stopSearchIndexInvalidationScheduler() {
   if (timer) {
     clearTimeout(timer);
     timer = null;
+    timerKind = null;
   }
 }
 
-function scheduleSearchIndexInvalidationProcessing() {
-  if (stopped || timer || running) {
+function scheduleSearchIndexInvalidationProcessing(options?: SearchIndexInvalidationProcessingOptions) {
+  if (stopped || running) {
     return;
   }
+  const delayMs = Math.max(0, options?.delayMs ?? 0);
+  const nextKind = delayMs > 0 ? 'deferred' : 'immediate';
+  if (timer) {
+    if (timerKind === 'immediate' && nextKind === 'deferred') return;
+    clearTimeout(timer);
+  }
+  timerKind = nextKind;
   timer = setTimeout(() => {
     timer = null;
+    timerKind = null;
     void drainSearchIndexInvalidations();
-  }, 0);
+  }, delayMs);
 }
 
 async function drainSearchIndexInvalidations() {

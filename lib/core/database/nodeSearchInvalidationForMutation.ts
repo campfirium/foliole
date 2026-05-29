@@ -16,9 +16,11 @@ export function prepareNodeSearchInvalidationForUpsert(driver: DatabaseDriver, i
     input.nodeId
   ]);
   return () => {
-    enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId]);
+    const processingOptions =
+      input.searchIndexInvalidationDelayMs === undefined ? {} : { delayMs: input.searchIndexInvalidationDelayMs };
+    enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId], processingOptions);
     if (existingPathRow && (existingPathRow.parent_id !== input.parentNodeId || existingPathRow.title !== input.title)) {
-      enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver, [input.nodeId]);
+      enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver, [input.nodeId], processingOptions);
     }
   };
 }

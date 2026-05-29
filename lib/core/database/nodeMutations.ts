@@ -75,6 +75,38 @@ function resolveStoredOpeningText(input: Pick<UpsertNodeSnapshotInput, 'content'
   return resolveNodeOpeningText(input.content, input.title);
 }
 
+function runNodeTableUpsert(
+  run: ReturnType<typeof createUpsertNodeStatement>['run'],
+  input: UpsertNodeSnapshotInput,
+  bodyBlobHash: string | null
+) {
+  run([
+    input.nodeId,
+    input.parentNodeId,
+    input.kind,
+    input.priority ?? null,
+    input.desiredRetention ?? null,
+    input.enableShortTerm == null ? null : input.enableShortTerm ? 1 : 0,
+    input.sequentialReadingEnabled == null ? null : input.sequentialReadingEnabled ? 1 : 0,
+    input.shelvedAt ?? null,
+    input.kind === 'folder' ? stringifyManualChildOrder(input.manualChildOrder) : null,
+    input.title,
+    input.isTitleManual ? 1 : 0,
+    input.hideTitleHeading === true ? 1 : 0,
+    input.content,
+    bodyBlobHash,
+    resolveStoredOpeningText(input),
+    stringifyVirtualNodeFilter(input.virtualFilter ?? null),
+    input.reveal,
+    toAnchorLinkValue(input.anchorLink),
+    toImageRegionsValue(input.imageRegions),
+    null,
+    input.deviceId ?? null,
+    input.createdAt,
+    input.updatedAt
+  ]);
+}
+
 export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnapshotInput): void {
   const upsertNodeStatement = createUpsertNodeStatement(driver);
   const upsertNodeOrderStatement = createUpsertNodeOrderStatement(driver);
@@ -88,31 +120,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
     const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input);
     ensureSpecialRootNodesForInput(driver, input);
     const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt);
-    upsertNodeStatement.run([
-      input.nodeId,
-      input.parentNodeId,
-      input.kind,
-      input.priority ?? null,
-      input.desiredRetention ?? null,
-      input.enableShortTerm == null ? null : input.enableShortTerm ? 1 : 0,
-      input.sequentialReadingEnabled == null ? null : input.sequentialReadingEnabled ? 1 : 0,
-      input.shelvedAt ?? null,
-      input.kind === 'folder' ? stringifyManualChildOrder(input.manualChildOrder) : null,
-      input.title,
-      input.isTitleManual ? 1 : 0,
-      input.hideTitleHeading === true ? 1 : 0,
-      input.content,
-      bodyBlobHash,
-      resolveStoredOpeningText(input),
-      stringifyVirtualNodeFilter(input.virtualFilter ?? null),
-      input.reveal,
-      toAnchorLinkValue(input.anchorLink),
-      toImageRegionsValue(input.imageRegions),
-      null,
-      input.deviceId ?? null,
-      input.createdAt,
-      input.updatedAt
-    ]);
+    runNodeTableUpsert(upsertNodeStatement.run, input, bodyBlobHash);
     if (input.kind === 'folder' && typeof input.position === 'number') {
       upsertNodeOrderStatement.run([input.nodeId, input.position]);
     }

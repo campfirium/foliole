@@ -27,6 +27,8 @@ import {
 import { readObjectArg } from './storageCommandSupport.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
+const EDITOR_INPUT_SEARCH_INDEX_DELAY_MS = 750;
+
 function completeWorkspaceMutation(result: unknown = null) {
   notifyWorkspaceContentChanged();
   return result;
@@ -77,6 +79,19 @@ function handlePermanentDeleteNodeCommand(args: Record<string, unknown>) {
   return completeWorkspaceMutation({ nodeOrder: parsed.nodeOrder, removedNodeIds });
 }
 
+function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>) {
+  const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
+  const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
+  upsertNodeSnapshot({ ...parent, searchIndexInvalidationDelayMs: EDITOR_INPUT_SEARCH_INDEX_DELAY_MS });
+  updateNodeAnchorLinks(affectedAnchors);
+  scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
+  return buildNodeMutationPatchResult({
+    anchorUpdates: affectedAnchors,
+    nodes: [parent],
+    updatedNodeIds: [parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]
+  });
+}
+
 export function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createFolder) {
     return handleCreateNodeCommand(args, 'folder');
@@ -89,7 +104,12 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
   }
   if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
     const parsed = parseNodeSnapshotArgs(args);
-    upsertNodeSnapshot(parsed);
+    upsertNodeSnapshot({
+      ...parsed,
+      ...(command === NATIVE_COMMANDS.updateNodeContent
+        ? { searchIndexInvalidationDelayMs: EDITOR_INPUT_SEARCH_INDEX_DELAY_MS }
+        : {})
+    });
     scheduleMirrorSync([parsed.nodeId]);
     return buildNodeMutationPatchResult({
       nodes: [parsed],
@@ -97,16 +117,7 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
     });
   }
   if (command === NATIVE_COMMANDS.updateNodeContentWithAnchors) {
-    const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
-    const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
-    upsertNodeSnapshot(parent);
-    updateNodeAnchorLinks(affectedAnchors);
-    scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
-    return buildNodeMutationPatchResult({
-      anchorUpdates: affectedAnchors,
-      nodes: [parent],
-      updatedNodeIds: [parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]
-    });
+    return handleNodeContentWithAnchorsCommand(args);
   }
   if (command === NATIVE_COMMANDS.flushDirtyNodeSyncVersions) {
     return flushAllDirtyNodeSyncVersions();

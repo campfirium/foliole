@@ -57,6 +57,7 @@ export interface NodeImageRegionGroupPayload {
 
 export interface UpsertNodeSnapshotInput {
   nodeId: string;
+  searchIndexInvalidationDelayMs?: number;
   deviceId?: string;
   parentNodeId: string | null;
   kind: NodeKind;

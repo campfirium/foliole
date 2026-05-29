@@ -3,6 +3,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { updateNodeAnchorLinks, upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -74,9 +75,17 @@ it('handles batched parent and text-anchor mutations in one command', async () =
         }]
       }
     })
-  ).resolves.toBeNull();
+  ).resolves.toEqual({
+    anchorUpdates: [expect.objectContaining({ nodeId: 'node-child' })],
+    nodes: [expect.objectContaining({ nodeId: 'node-parent', content: 'Alpha Better Gamma' })],
+    updatedNodeIds: ['node-parent', 'node-child']
+  });
 
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({ nodeId: 'node-parent', content: 'Alpha Better Gamma' }));
+  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+    content: 'Alpha Better Gamma',
+    nodeId: 'node-parent',
+    searchIndexInvalidationDelayMs: 750
+  }));
   expect(updateNodeAnchorLinks).toHaveBeenCalledWith([
     expect.objectContaining({
       nodeId: 'node-child',
@@ -89,4 +98,5 @@ it('handles batched parent and text-anchor mutations in one command', async () =
       }]
     })
   ]);
+  expect(scheduleMirrorSync).toHaveBeenCalledWith(['node-parent', 'node-child']);
 });

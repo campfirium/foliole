@@ -86,6 +86,16 @@ function upsertSearchNode(input: { content: string; id: string; parentNodeId: st
   });
 }
 
+it('keeps delayed editor input in the durable search invalidation queue', () => {
+  const driver = openDatabaseConnection().driver;
+
+  enqueueWorkspaceSearchInvalidationForNodeIds(driver, ['node-delayed-input'], { delayMs: 750 });
+
+  expect(pendingInvalidations()).toEqual([
+    { invalidation_type: 'node_workspace', status: 'pending', target_id: 'node-delayed-input' }
+  ]);
+});
+
 it('queues ordinary node edits and searches them after the invalidation consumer runs', () => {
   upsertNodeSnapshot({
     nodeId: 'node-edit',
