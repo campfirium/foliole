@@ -7,13 +7,14 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const CHANGE_SELECTION_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-preview-change-selection.sh');
+const MTIME_CHANGES_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-preview-mtime-changes.sh');
 
 describe('windows-preview changed file collection', () => {
-  it('excludes deleted files from unstaged and staged git diffs', async () => {
-    const script = await readFile(CHANGE_SELECTION_SCRIPT, 'utf8');
+  it('uses the sync stamp mtime instead of git diff for preview change collection', async () => {
+    const script = await readFile(MTIME_CHANGES_SCRIPT, 'utf8');
 
-    expect(script).toContain('git diff --name-only --diff-filter=ACMR');
-    expect(script).toContain('git diff --name-only --diff-filter=ACMR --cached');
+    expect(script).toContain('WINDOWS_PREVIEW_SYNC_STAMP_FILE');
+    expect(script).toContain('-newer "${stamp_file}"');
+    expect(script).not.toContain('git diff --name-only --diff-filter=ACMR');
   });
 });

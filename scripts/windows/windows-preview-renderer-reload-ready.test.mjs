@@ -24,6 +24,7 @@ function runScript(env) {
         WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '2',
         WINDOWS_PREVIEW_TIMEOUT_START_SECONDS: '4',
         WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '4',
+        WINDOWS_STARTUP_DIAGNOSTICS_SCRIPT: path.join(os.tmpdir(), 'missing-windows-startup-diagnostics.mjs'),
         ...env
       }
     });
@@ -75,15 +76,40 @@ async function readActions(actionLog) {
   return (await readFile(actionLog, 'utf8')).split('\n').filter(Boolean);
 }
 
+function startRendererReloadDeliveryOnlyConsumer(rootDir) {
+  const script = `
+const fs = require('node:fs');
+const path = require('node:path');
+const rootDir = process.argv[1];
+const intentFile = path.join(rootDir, '.windows-dev-renderer-reload-intent.json');
+const deliveryFile = path.join(rootDir, '.windows-dev-renderer-reload-delivered.json');
+const start = Date.now();
+const timer = setInterval(() => {
+  if (!fs.existsSync(intentFile)) {
+    if (Date.now() - start > 5000) process.exit(0);
+    return;
+  }
+  const payload = JSON.parse(fs.readFileSync(intentFile, 'utf8'));
+  fs.unlinkSync(intentFile);
+  fs.writeFileSync(deliveryFile, JSON.stringify({
+    nonce: payload.nonce,
+    requestedAt: payload.requestedAt,
+    requestedBy: payload.requestedBy,
+    reason: payload.reason,
+    target: payload.target
+  }) + '\\n', 'utf8');
+  clearInterval(timer);
+  process.exit(0);
+}, 50);
+`;
+  return spawn(process.execPath, ['-e', script, rootDir], { cwd: REPO_ROOT, stdio: 'ignore' });
+}
+
 it('falls back to full restart when renderer reload never reaches app ready', async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-renderer-ready-'));
+  const consumer = startRendererReloadDeliveryOnlyConsumer(tempRoot);
   try {
     const { actionLog, clientScript, freshnessScript, syncScript } = await writeMockScripts(tempRoot);
-    await writeFile(
-      path.join(tempRoot, '.windows-dev-renderer-reload-delivered.json'),
-      JSON.stringify({ nonce: 1, requestedAt: '2026-05-17T00:00:00.000Z' }),
-      'utf8'
-    );
 
     const result = await runScript({
       ACTION_LOG: actionLog,
@@ -102,6 +128,7 @@ it('falls back to full restart when renderer reload never reaches app ready', as
     expect(result.stdout).toContain('status: STARTED');
     expect(await readActions(actionLog)).toEqual(['status', 'full-restart']);
   } finally {
+    consumer.kill('SIGTERM');
     await rm(tempRoot, { recursive: true, force: true });
   }
 }, 10000);

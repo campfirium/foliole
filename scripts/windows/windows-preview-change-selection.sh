@@ -124,18 +124,6 @@ has_renderer_source_changes() {
   return 1
 }
 
-resolve_changed_files() {
-  if [ -n "${WINDOWS_PREVIEW_CHANGED_FILES:-}" ]; then
-    printf '%s' "${WINDOWS_PREVIEW_CHANGED_FILES}"
-    return 0
-  fi
-  {
-    git diff --name-only --diff-filter=ACMR
-    git diff --name-only --diff-filter=ACMR --cached
-    git ls-files --others --exclude-standard
-  } | sort -u
-}
-
 select_update_action() {
   local changed_files="$1"
   local status_output=""

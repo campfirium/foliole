@@ -18,6 +18,7 @@ WINDOWS_NATIVE_ABI_PREFLIGHT_SCRIPT="${WINDOWS_NATIVE_ABI_PREFLIGHT_SCRIPT:-scri
 WINDOWS_NATIVE_ABI_REPAIR_SCRIPT="${WINDOWS_NATIVE_ABI_REPAIR_SCRIPT:-scripts/windows/electron-native-abi-repair.ps1}"
 WINDOWS_RESTART_INTENT_ROOT="${WINDOWS_RESTART_INTENT_ROOT:-}"
 WINDOWS_RENDERER_RELOAD_INTENT_ROOT="${WINDOWS_RENDERER_RELOAD_INTENT_ROOT:-}"
+WINDOWS_PREVIEW_SYNC_STAMP_FILE="${WINDOWS_PREVIEW_SYNC_STAMP_FILE:-.lab/internal/runtime/windows-sync.stamp}"
 WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-D:\\C\\foliole}"
 WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
 WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS:-${WINDOWS_PREVIEW_TIMEOUT_SECONDS}}"
@@ -32,6 +33,7 @@ cd "${REPO_ROOT}"
 
 source "${SCRIPT_DIR}/windows-preview-common.sh"
 source "${SCRIPT_DIR}/windows-preview-client.sh"
+source "${SCRIPT_DIR}/windows-preview-mtime-changes.sh"
 source "${SCRIPT_DIR}/windows-preview-change-selection.sh"
 source "${SCRIPT_DIR}/windows-preview-intent-paths.sh"
 source "${SCRIPT_DIR}/windows-preview-waits.sh"
@@ -50,12 +52,12 @@ if has_runtime_code_changes "${changed_files}"; then
   electron_dist_sync_exit=$?
   set -e
   if [ "${electron_dist_sync_exit}" -eq 0 ]; then
-    bash "${WINDOWS_SYNC_SCRIPT}"
+    WINDOWS_SYNC_CHANGED_FILES="${changed_files}" WINDOWS_SYNC_STAMP_FILE="${WINDOWS_PREVIEW_SYNC_STAMP_FILE}" bash "${WINDOWS_SYNC_SCRIPT}"
   else
-    WINDOWS_SYNC_INCLUDE_ELECTRON_DIST=1 bash "${WINDOWS_SYNC_SCRIPT}"
+    WINDOWS_SYNC_FORCE_FULL=1 WINDOWS_SYNC_INCLUDE_ELECTRON_DIST=1 WINDOWS_SYNC_STAMP_FILE="${WINDOWS_PREVIEW_SYNC_STAMP_FILE}" bash "${WINDOWS_SYNC_SCRIPT}"
   fi
 else
-  bash "${WINDOWS_SYNC_SCRIPT}"
+  WINDOWS_SYNC_CHANGED_FILES="${changed_files}" WINDOWS_SYNC_STAMP_FILE="${WINDOWS_PREVIEW_SYNC_STAMP_FILE}" bash "${WINDOWS_SYNC_SCRIPT}"
 fi
 
 echo "[windows-preview] step 3/4: verify windows node_modules"

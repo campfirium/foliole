@@ -45,4 +45,26 @@ describe('electron-dist-incremental-sync', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('ignores test-only runtime sources in mixed incremental plans', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-sync-'));
+    try {
+      await mkdir(path.join(tempRoot, 'electron-dist', 'electron'), { recursive: true });
+      await writeFile(path.join(tempRoot, 'electron-dist', 'electron', 'main.js'), 'export {};\n');
+      await writeFile(path.join(tempRoot, 'electron-dist', 'electron', 'main.test.js'), 'export {};\n');
+      const plan = planElectronDistIncrementalSync({
+        changedFiles: ['electron/main.ts', 'electron/main.test.ts'].join('\n'),
+        mirrorDir: tempRoot,
+        repoRoot: tempRoot
+      });
+
+      expect(plan).toEqual({
+        files: ['electron-dist/electron/main.js'],
+        reason: 'runtime-outputs',
+        status: 'sync'
+      });
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

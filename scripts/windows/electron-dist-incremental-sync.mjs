@@ -3,6 +3,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,7 +35,13 @@ function normalizePath(filePath) {
 function isRuntimeSource(filePath) {
   const normalized = normalizePath(filePath);
   if (!SOURCE_PREFIXES.some((prefix) => normalized.startsWith(prefix))) return false;
+  if (/\.(test|spec)\.ts$/.test(normalized)) return false;
   return normalized.endsWith('.ts');
+}
+
+function isRuntimeTestSource(filePath) {
+  const normalized = normalizePath(filePath);
+  return SOURCE_PREFIXES.some((prefix) => normalized.startsWith(prefix)) && /\.(test|spec)\.ts$/.test(normalized);
 }
 
 function isKnownRuntimePath(filePath) {
@@ -50,20 +57,35 @@ function resolveChangedFiles(options) {
   if (options.changedFiles.trim()) {
     return options.changedFiles.split(/\r?\n/).map((file) => file.trim()).filter(Boolean);
   }
-  const result = spawnSync('git', ['diff', '--name-only'], {
-    cwd: options.repoRoot,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || 'git diff --name-only failed');
+  const stampFile = process.env.WINDOWS_PREVIEW_SYNC_STAMP_FILE ?? '.lab/internal/runtime/windows-sync.stamp';
+  const stampPath = path.isAbsolute(stampFile) ? stampFile : path.join(options.repoRoot, stampFile);
+  const newestAllowedMtime = existsSync(stampPath) ? fs.statSync(stampPath).mtimeMs : 0;
+  return SOURCE_PREFIXES.flatMap((prefix) => collectRuntimeFiles(path.join(options.repoRoot, prefix), options.repoRoot, newestAllowedMtime));
+}
+
+function collectRuntimeFiles(rootPath, repoRoot, newestAllowedMtime) {
+  if (!existsSync(rootPath)) return [];
+  const files = [];
+  const pending = [rootPath];
+  while (pending.length > 0) {
+    const currentPath = pending.pop();
+    for (const entry of fs.readdirSync(currentPath, { withFileTypes: true })) {
+      const entryPath = path.join(currentPath, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(entryPath);
+        continue;
+      }
+      if (entry.isFile() && fs.statSync(entryPath).mtimeMs > newestAllowedMtime) {
+        files.push(normalizePath(path.relative(repoRoot, entryPath)));
+      }
+    }
   }
-  return result.stdout.split(/\r?\n/).map((file) => file.trim()).filter(Boolean);
+  return files;
 }
 
 function createSyncPlan(options) {
   const changedFiles = resolveChangedFiles(options);
-  const runtimeFiles = changedFiles.filter(isKnownRuntimePath);
+  const runtimeFiles = changedFiles.filter(isKnownRuntimePath).filter((file) => !isRuntimeTestSource(file));
   if (runtimeFiles.length === 0) {
     return { files: [], reason: 'no-runtime-files', status: 'skip' };
   }

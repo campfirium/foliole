@@ -16,7 +16,11 @@ function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [SYNC_SCRIPT], {
       cwd: REPO_ROOT,
-      env: { ...process.env, ...env }
+      env: {
+        ...process.env,
+        WINDOWS_SYNC_LOCK_FILE: path.join(os.tmpdir(), `foliole-windows-sync-test-${process.pid}.lock`),
+        ...env
+      }
     });
     let stdout = '';
     let stderr = '';
@@ -181,6 +185,55 @@ describe('windows-sync script', () => {
         .filter((entry) => entry.length > 0);
 
       expect(args).toContain('--itemize-changes');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('uses changed-files sync when a stamp and changed file list are available', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-sync-fast-'));
+    try {
+      const mirrorDir = path.join(tempRoot, 'mirror');
+      const mockBinDir = path.join(tempRoot, 'bin');
+      const argsLog = path.join(tempRoot, 'rsync-args.log');
+      const filesFromLog = path.join(tempRoot, 'files-from.log');
+      const mockRsync = path.join(mockBinDir, 'rsync');
+      const stampFile = path.join(tempRoot, 'sync.stamp');
+
+      await mkdir(mirrorDir, { recursive: true });
+      await mkdir(mockBinDir, { recursive: true });
+      await writeFile(stampFile, '', 'utf8');
+      await writeFile(
+        mockRsync,
+        [
+          '#!/usr/bin/env bash',
+          'set -euo pipefail',
+          'printf "%s\\n" "$@" > "${RSYNC_ARGS_LOG}"',
+          'for arg in "$@"; do',
+          '  if [[ "$arg" == --files-from=* ]]; then',
+          '    cat "${arg#--files-from=}" > "${FILES_FROM_LOG}"',
+          '  fi',
+          'done'
+        ].join('\n'),
+        'utf8'
+      );
+      await chmod(mockRsync, 0o755);
+
+      const result = await runScript({
+        FILES_FROM_LOG: filesFromLog,
+        PATH: `${mockBinDir}:${process.env.PATH ?? ''}`,
+        RSYNC_ARGS_LOG: argsLog,
+        WINDOWS_MIRROR_DIR: mirrorDir,
+        WINDOWS_SYNC_CHANGED_FILES: ['package.json', 'missing.txt'].join('\n'),
+        WINDOWS_SYNC_STAMP_FILE: stampFile
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('status: SYNCED mode=changed-files files=1');
+      expect(await readFile(filesFromLog, 'utf8')).toBe('package.json\n');
+      const args = await readFile(argsLog, 'utf8');
+      expect(args).toContain(`--files-from=`);
+      expect(args).not.toContain('--delete');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
