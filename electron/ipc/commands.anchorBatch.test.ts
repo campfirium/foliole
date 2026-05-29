@@ -3,6 +3,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { updateNodeAnchorLinks, upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import { handleInvokeRequest } from './commands.js';
@@ -24,6 +25,9 @@ vi.mock('../database/nodeMutations.js', () => ({
   softDeleteNodes: vi.fn(),
   upsertNodeSnapshot: vi.fn(),
   updateNodeAnchorLinks: vi.fn()
+}));
+vi.mock('../database/searchIndexInvalidationCoalescer.js', () => ({
+  enqueueCoalescedWorkspaceSearchInvalidation: vi.fn()
 }));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn(),
@@ -84,7 +88,8 @@ it('handles batched parent and text-anchor mutations in one command', async () =
   expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
     content: 'Alpha Better Gamma',
     nodeId: 'node-parent'
-  }));
+  }), { searchInvalidation: { workspaceInvalidation: 'defer' } });
+  expect(enqueueCoalescedWorkspaceSearchInvalidation).toHaveBeenCalledWith(['node-parent']);
   expect(updateNodeAnchorLinks).toHaveBeenCalledWith([
     expect.objectContaining({
       nodeId: 'node-child',

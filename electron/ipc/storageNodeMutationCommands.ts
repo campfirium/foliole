@@ -81,8 +81,9 @@ function handlePermanentDeleteNodeCommand(args: Record<string, unknown>) {
 function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>) {
   const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
   const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
-  upsertNodeSnapshot(parent);
+  upsertNodeSnapshot(parent, { searchInvalidation: { workspaceInvalidation: 'defer' } });
   updateNodeAnchorLinks(affectedAnchors);
+  enqueueCoalescedWorkspaceSearchInvalidation([parent.nodeId]);
   scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
   return buildNodeMutationPatchResult({
     anchorUpdates: affectedAnchors,
