@@ -1,5 +1,6 @@
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
 import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLogging';
 import {
@@ -176,7 +177,7 @@ async function loadRuntimeWorkspaceState(name: string) {
     loadReadingProgressForHydrate(name)
   ]);
   const normalizedSnapshot = snapshot
-    ? normalizeWorkspaceSnapshot(mergePendingNodeSyncIntoSnapshot(snapshot) ?? snapshot)
+    ? ensureInboxNodeInSnapshot(normalizeWorkspaceSnapshot(mergePendingNodeSyncIntoSnapshot(snapshot) ?? snapshot))
     : null;
   const mergedSnapshot = trimRuntimeWorkspaceSnapshot(
     mergeWorkspaceSnapshotWithReadingProgress(normalizedSnapshot, readingProgress)

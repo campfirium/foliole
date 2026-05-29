@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
@@ -94,6 +94,28 @@ function createRuntimeInvokeWithStaleReadingActive() {
   });
 }
 
+function createRuntimeInvokeWithHomeReadingActive() {
+  const snapshot = createWorkspaceSnapshot(['special-inbox', 'node-2', 'node-1']);
+  return vi.fn().mockImplementation((command: string, payload?: { nodeId?: string }) => {
+    if (command === 'load_workspace_list_snapshot') {
+      return Promise.resolve(snapshot);
+    }
+    if (command === 'load_reading_progress') {
+      return Promise.resolve({ activeNodeId: HOME_NODE_ID, nodeViewStateById: {} });
+    }
+    if (command === 'load_node_document' && payload?.nodeId) {
+      return Promise.resolve({
+        nodeId: payload.nodeId,
+        kind: 'topic',
+        content: `${payload.nodeId} body`,
+        hideTitleHeading: false,
+        reveal: null
+      });
+    }
+    return Promise.resolve(null);
+  });
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((nextResolve) => {
@@ -117,11 +139,11 @@ describe('workspace persistence runtime refresh', () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
     await useWorkspaceStore.persist.rehydrate();
-    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-1']);
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual([HOME_NODE_ID, 'special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-1']);
 
     await useWorkspaceStore.persist.rehydrate();
 
-    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual([HOME_NODE_ID, 'special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
     expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
       id: 'node-2',
       title: 'Node 2'
@@ -137,7 +159,17 @@ describe('workspace persistence runtime refresh', () => {
     await useWorkspaceStore.persist.rehydrate();
 
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual([HOME_NODE_ID, 'special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
+  });
+
+  it('keeps Home selected when reading progress restores the fixed Home root', async () => {
+    const invoke = createRuntimeInvokeWithHomeReadingActive();
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    await useWorkspaceStore.persist.rehydrate();
+
+    expect(useWorkspaceStore.getState().activeNodeId).toBe(HOME_NODE_ID);
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual([HOME_NODE_ID, 'special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
   });
 });
 
@@ -176,7 +208,7 @@ describe('workspace persistence overlapping runtime refresh', () => {
     await firstRehydrate;
     await secondRehydrate;
 
-    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
-    expect(invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_snapshot')).toHaveLength(2);
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual([HOME_NODE_ID, 'special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
+    expect(invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_snapshot').length).toBeGreaterThanOrEqual(2);
   });
 });

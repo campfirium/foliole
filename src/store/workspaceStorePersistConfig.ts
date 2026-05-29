@@ -13,12 +13,18 @@ import type { WorkspacePersistedState, WorkspaceState } from './workspaceStore';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 
 function canKeepCurrentActiveNode(current: WorkspaceState, next: WorkspaceState) {
+  const normalizedNext = ensureInboxNodeInSnapshot({
+    activeNodeId: next.activeNodeId,
+    nodeOrder: next.nodeOrder,
+    nodesById: next.nodesById,
+    trashedNodeIds: next.trashedNodeIds
+  });
   return current.isHydrated &&
     resolveWorkspaceSnapshotActiveNodeId({
       activeNodeId: current.activeNodeId,
-      nodeOrder: next.nodeOrder,
-      nodesById: next.nodesById,
-      trashedNodeIds: next.trashedNodeIds
+      nodeOrder: normalizedNext.nodeOrder,
+      nodesById: normalizedNext.nodesById,
+      trashedNodeIds: normalizedNext.trashedNodeIds
     }) === current.activeNodeId;
 }
 
