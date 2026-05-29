@@ -9,6 +9,7 @@ import {
 describe('CompanionTabsConfig', () => {
   it('resolves the default companion tabs in the current order', () => {
     expect(resolveCompanionTabs().map((tab) => tab.label)).toEqual([
+      'Directory',
       'Browse',
       'Flow',
       'Search',
@@ -26,6 +27,9 @@ describe('CompanionTabsConfig', () => {
       'syncConnection',
       'syncHandoff'
     ]);
-    expect(DEFAULT_COMPANION_TAB_CONFIG.shortcut.enabled).toBe(false);
+    expect(DEFAULT_COMPANION_TAB_CONFIG.shortcut).toEqual({
+      destinationId: 'directory',
+      enabled: true
+    });
   });
 });

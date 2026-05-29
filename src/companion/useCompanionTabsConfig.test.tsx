@@ -8,26 +8,23 @@ afterEach(() => {
 });
 
 describe('useCompanionTabsConfig', () => {
-  it('normalizes invalid stored config back to the default four tabs plus shortcut slot', () => {
-    expect(normalizeCompanionTabConfig({ orderedTabIds: ['browse'], shortcut: { destinationId: 'bad', enabled: true } })).toEqual({
-      orderedTabIds: ['browse', 'learn', 'search', 'settings', 'shortcut'],
+  it('normalizes stored config back to the default Directory-first tabs', () => {
+    expect(normalizeCompanionTabConfig()).toEqual({
+      orderedTabIds: ['shortcut', 'browse', 'learn', 'search', 'settings'],
       shortcut: { destinationId: 'directory', enabled: true }
     });
   });
 
-  it('persists shortcut tab settings locally', () => {
+  it('persists the default tab settings locally', () => {
     const { result } = renderHook(() => useCompanionTabsConfig());
 
     act(() => {
-      result.current.setConfig({
-        orderedTabIds: ['browse', 'learn', 'search', 'settings', 'shortcut'],
-        shortcut: { destinationId: 'sync', enabled: true }
-      });
+      result.current.setConfig();
     });
 
     expect(JSON.parse(window.localStorage.getItem('foliole-companion-tabs-config') ?? '{}')).toEqual({
-      orderedTabIds: ['browse', 'learn', 'search', 'settings', 'shortcut'],
-      shortcut: { destinationId: 'sync', enabled: true }
+      orderedTabIds: ['shortcut', 'browse', 'learn', 'search', 'settings'],
+      shortcut: { destinationId: 'directory', enabled: true }
     });
   });
 });

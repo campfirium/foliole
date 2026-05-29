@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 const useCompanionWorkspaceSync = vi.fn();
@@ -112,12 +112,14 @@ describe('CompanionShell secondary surfaces', () => {
   it('opens Browse directory and Capture from the top bar', async () => {
     await renderShellWithSurface(createSurface('recent'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Directory' }));
+    const bottomBar = screen.getByTestId('companion-bottom-tab-bar');
+    fireEvent.click(within(bottomBar).getByRole('button', { name: 'Directory' }));
     expect(screen.queryByRole('heading', { name: 'Directory' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open folder Trash' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Browse' })[0]!);
-    expect(screen.getByRole('button', { name: 'Browse' })).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(within(bottomBar).getByRole('button', { name: 'Browse' }));
+    expect(within(bottomBar).getByRole('button', { name: 'Browse' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('button', { name: 'Open folder Trash' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Capture' }));
     expectCaptureSheet();

@@ -20,7 +20,6 @@ import {
   createCompanionSelectionAnnotationHandler
 } from './companionSelectionAnnotationController';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
-import type { CompanionTabConfig } from './CompanionTabsConfig';
 import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
 import { createCompanionTrashRestoreHandler } from './companionTrashController';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
@@ -171,11 +170,8 @@ export function renderCompanionShellContent(props: {
   onChangeBrowseSortDirection?: (sortDirection: FolderListSortDirection) => void;
   onChangeBrowseSortKey?: (sortKey: FolderListSortKey) => void;
   onChangeDirectorySelection: (selection: CompanionDirectorySelection) => void;
-  companionTabConfig: CompanionTabConfig;
-  onCompanionTabConfigChange: (config: CompanionTabConfig) => void;
   onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   onOpenSyncSettings: () => void;
-  onOpenTabsSettings: () => void;
   onResetDirectorySelection: () => void;
   onSelectReviewBreadcrumbItem: (id: string) => void;
   reviewBreadcrumbItems: ReviewBreadcrumbItem[];

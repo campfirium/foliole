@@ -210,20 +210,18 @@ describe('CompanionShell review surfaces', () => {
     expect(settingsButtons.some((button) => button.getAttribute('aria-current') === 'page')).toBe(true);
   }, 10000);
 
-  it('opens Tabs settings and enables the fifth shortcut tab', async () => {
+  it('hides Tabs settings while showing Directory as the default first tab', async () => {
     const surface = { ...createReviewEmptySurface(), activeAction: 'more' };
     await renderShellWithSurface(surface);
 
-    fireEvent.click(screen.getByRole('button', { name: /Choose bottom tabs/ }));
-    fireEvent.change(screen.getByRole('combobox', { name: 'Shortcut tab target' }), { target: { value: 'directory' } });
-
+    expect(screen.queryByRole('button', { name: /Choose bottom tabs/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Directory' })).toBeInTheDocument();
-    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => screen.getByTestId('tab-slot-browse')) });
-    fireEvent.pointerDown(screen.getByTestId('tab-slot-shortcut-handle'), { clientX: 20, clientY: 120, pointerId: 1 });
-    fireEvent.pointerUp(screen.getByTestId('tab-slot-shortcut-handle'), { clientX: 20, clientY: 20, pointerId: 1 });
     fireEvent.click(screen.getByRole('button', { name: 'Directory' }));
     expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
-    expect(JSON.parse(window.localStorage.getItem('foliole-companion-tabs-config') ?? '{}').orderedTabIds[0]).toBe('shortcut');
+    expect(JSON.parse(window.localStorage.getItem('foliole-companion-tabs-config') ?? '{}')).toEqual({
+      orderedTabIds: ['shortcut', 'browse', 'learn', 'search', 'settings'],
+      shortcut: { destinationId: 'directory', enabled: true }
+    });
   });
 
 });

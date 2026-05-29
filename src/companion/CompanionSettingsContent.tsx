@@ -27,13 +27,11 @@ function SettingsListItem(props: {
 export function CompanionSettingsList(props: {
   onOpenStorage(): void;
   onOpenSync(): void;
-  onOpenTabs(): void;
 }) {
   return (
     <section className="px-1 py-4">
       <div>
         <SettingsListItem detail="Connect another device and bring your content here." onClick={props.onOpenSync} title="Sync" />
-        <SettingsListItem detail="Choose bottom tabs and shortcut target." onClick={props.onOpenTabs} title="Tabs" />
         <SettingsListItem detail="Device information will appear here." onClick={() => undefined} title="Device" />
         <SettingsListItem detail="Clear Foliole data on this device." onClick={props.onOpenStorage} title="Storage" />
         <SettingsListItem detail="Display preferences will appear here." onClick={() => undefined} title="Appearance" />

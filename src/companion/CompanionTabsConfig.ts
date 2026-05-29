@@ -73,10 +73,10 @@ export const COMPANION_SECONDARY_DESTINATIONS: CompanionSecondaryDestination[] =
 ];
 
 export const DEFAULT_COMPANION_TAB_CONFIG: CompanionTabConfig = {
-  orderedTabIds: ['browse', 'learn', 'search', 'settings', 'shortcut'],
+  orderedTabIds: ['shortcut', 'browse', 'learn', 'search', 'settings'],
   shortcut: {
     destinationId: 'directory',
-    enabled: false
+    enabled: true
   }
 };
 

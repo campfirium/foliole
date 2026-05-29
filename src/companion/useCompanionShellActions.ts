@@ -54,6 +54,19 @@ function useCompanionSecondaryDestinations(args: {
   return { activeSecondaryDestinationId, handleSecondaryDestination };
 }
 
+function handlePrimaryNavigationAction(args: {
+  action: CompanionTabAction;
+  setIsBrowseDirectoryOpen(open: boolean): void;
+  setIsOnlyReviewOpen(open: boolean): void;
+  setSettingsPage(page: CompanionSettingsPage): void;
+  surface: ReturnType<typeof useCompanionArticleSurface>;
+}) {
+  args.surface.handleTabAction(args.action);
+  if (args.action === 'recent') args.setIsBrowseDirectoryOpen(false);
+  if (args.action === 'review') args.setIsOnlyReviewOpen(false);
+  if (args.action === 'more') args.setSettingsPage('list');
+}
+
 export function useCompanionShellActions(args: {
   browseSortDirection: ReturnType<typeof useCompanionBrowseSortState>['browseSortDirection'];
   browseSortKey: ReturnType<typeof useCompanionBrowseSortState>['browseSortKey'];
@@ -100,7 +113,13 @@ export function useCompanionShellActions(args: {
     surface: args.surface
   });
   return {
-    handleNavigationAction: (action: CompanionTabAction) => args.surface.handleTabAction(action),
+    handleNavigationAction: (action: CompanionTabAction) => handlePrimaryNavigationAction({
+      action,
+      setIsBrowseDirectoryOpen: args.setIsBrowseDirectoryOpen,
+      setIsOnlyReviewOpen: args.setIsOnlyReviewOpen,
+      setSettingsPage: args.setSettingsPage,
+      surface: args.surface
+    }),
     secondaryDestinations,
     topBarProps
   };

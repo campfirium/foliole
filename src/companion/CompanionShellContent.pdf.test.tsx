@@ -132,10 +132,6 @@ function createWorkspaceSync(overrides: Record<string, unknown> = {}) {
 
 function renderSurfaceElement(surface: unknown, workspaceSync: unknown = createWorkspaceSync()) {
   return renderCompanionShellContent({
-    companionTabConfig: {
-      orderedTabIds: ['browse', 'learn', 'search', 'settings', 'shortcut'],
-      shortcut: { destinationId: 'directory', enabled: false }
-    },
     browseSortDirection: 'desc',
     browseSortKey: 'dateLastOpened',
     directorySelection: { kind: 'root' },
@@ -144,11 +140,9 @@ function renderSurfaceElement(surface: unknown, workspaceSync: unknown = createW
     isOnlyReviewOpen: false,
     onBackDirectorySelection: vi.fn(),
     onChangeDirectorySelection: vi.fn(),
-    onCompanionTabConfigChange: vi.fn(),
     onBackToSettingsList: vi.fn(),
     onOpenSyncSettingsPage: vi.fn(),
     onOpenSyncSettings: vi.fn(),
-    onOpenTabsSettings: vi.fn(),
     onResetDirectorySelection: vi.fn(),
     onSelectReviewBreadcrumbItem: vi.fn(),
     reviewBreadcrumbItems: [],
