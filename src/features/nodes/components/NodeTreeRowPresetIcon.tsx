@@ -17,8 +17,11 @@ export function resolveNodeIconPresetTransformMode(kind: NodeTreeRowIconKind, sh
   return kind === 'review' && shape === 'leaf' ? 'flip-x' : 'none';
 }
 
-function ShapePath(props: { shape: NodeIconShape; strokeWidth?: number }) {
-  const style = typeof props.strokeWidth === 'number' ? { strokeWidth: props.strokeWidth } : undefined;
+function ShapePath(props: { shape: NodeIconShape; strokeWidth?: number; fixedStroke?: boolean }) {
+  const style = {
+    ...(typeof props.strokeWidth === 'number' ? { strokeWidth: props.strokeWidth } : {}),
+    ...(props.fixedStroke ? { vectorEffect: 'non-scaling-stroke' } : {})
+  };
   switch (props.shape) {
     case 'circle':
       return <circle cx="8" cy="8" fill="none" r="4.7" style={style} />;
@@ -52,9 +55,7 @@ export function NodeTreeRowPresetIcon({
   shape
 }: NodeTreeRowPresetIconProps) {
   const resolvedInnerScale = innerScale ?? doubleLineScale(doubleLineDistance);
-  const resolvedOuterScale = scale * outerScale;
   const resolvedSingleScale = scale;
-  const resolvedDoubleInnerScale = scale * resolvedInnerScale;
   return (
     <svg
       aria-hidden="true"
@@ -67,16 +68,16 @@ export function NodeTreeRowPresetIcon({
     >
       {effect === 'double-line' ? null : (
         <g transform={`translate(8 8) scale(${resolvedSingleScale}) translate(-8 -8)`}>
-          <ShapePath shape={shape} />
+          <ShapePath fixedStroke shape={shape} />
         </g>
       )}
       {effect === 'double-line' ? (
         <>
-          <g data-node-icon-effect="double-line-outer" transform={`translate(8 8) scale(${resolvedOuterScale}) translate(-8 -8)`}>
-            <ShapePath shape={shape} {...(outerLineWidth !== undefined ? { strokeWidth: outerLineWidth } : {})} />
+          <g data-node-icon-effect="double-line-outer" transform={`translate(8 8) scale(${outerScale}) translate(-8 -8)`}>
+            <ShapePath fixedStroke shape={shape} {...(outerLineWidth !== undefined ? { strokeWidth: outerLineWidth } : {})} />
           </g>
-          <g data-node-icon-effect="double-line-inner" transform={`translate(8 8) scale(${resolvedDoubleInnerScale}) translate(-8 -8)`}>
-            <ShapePath shape={shape} {...(innerLineWidth !== undefined ? { strokeWidth: innerLineWidth } : {})} />
+          <g data-node-icon-effect="double-line-inner" transform={`translate(8 8) scale(${resolvedInnerScale}) translate(-8 -8)`}>
+            <ShapePath fixedStroke shape={shape} {...(innerLineWidth !== undefined ? { strokeWidth: innerLineWidth } : {})} />
           </g>
         </>
       ) : null}

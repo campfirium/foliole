@@ -10,20 +10,20 @@ import { runScheduledPreview } from './preview-dedupe-scheduler.mjs';
 import { readMaxSettleMs, readSettleMs, readTotalTimeoutMs, readWindowMs } from './preview-dedupe-time-budget.mjs';
 
 describe('preview-dedupe scheduler defaults', () => {
-  it('keeps the default Windows validation window after a successful run', () => {
-    expect(readWindowMs('windows', {})).toBe(3 * 60_000);
+  it('does not keep a default Windows validation window after a successful run', () => {
+    expect(readWindowMs('windows', {})).toBe(0);
   });
 
-  it('keeps a default Windows settle window before the first real preview', () => {
-    expect(readSettleMs('windows', {})).toBe(3 * 60_000);
+  it('does not wait in a default Windows settle window before the first real preview', () => {
+    expect(readSettleMs('windows', {})).toBe(0);
   });
 
-  it('caps the default Windows settle window extension', () => {
-    expect(readMaxSettleMs('windows', {})).toBe(6 * 60_000);
+  it('does not keep a default Windows settle window extension cap', () => {
+    expect(readMaxSettleMs('windows', {})).toBe(0);
   });
 
-  it('budgets the default Windows total timeout to include validation wait and preview execution', () => {
-    expect(readTotalTimeoutMs('windows', 3 * 60_000, {})).toBe(13 * 60_000);
+  it('budgets the default Windows total timeout to include preview execution', () => {
+    expect(readTotalTimeoutMs('windows', 0, {})).toBe(4 * 60_000);
   });
 
   it('ignores a stored validation window when the window is disabled', async () => {

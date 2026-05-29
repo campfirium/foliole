@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   DEFAULT_NODE_ICON_BASE_APPEARANCE
@@ -36,11 +36,19 @@ function resetEditTarget(state: ReturnType<typeof useNodeIconSettingsState>, tar
   state.setStateSvg(target.state, target.kind, '');
 }
 
-export function NodeIconSettingsSection() {
+export function NodeIconSettingsSection(props: {
+  onSettingsBackdropTransparentChange: (value: boolean) => void;
+}) {
+  const { onSettingsBackdropTransparentChange } = props;
   const state = useNodeIconSettingsState();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<NodeIconEditTarget | null>(null);
   const [iconQuery, setIconQuery] = useState('');
+
+  useEffect(() => {
+    onSettingsBackdropTransparentChange(editorOpen);
+    return () => onSettingsBackdropTransparentChange(false);
+  }, [editorOpen, onSettingsBackdropTransparentChange]);
 
   return (
     <section aria-label="Navigation icon settings section" className="mb-8 last:mb-0">

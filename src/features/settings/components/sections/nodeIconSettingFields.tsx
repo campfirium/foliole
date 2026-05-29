@@ -118,7 +118,7 @@ export function RangeField(props: {
   };
   return (
     <div className="relative min-w-0 text-sm text-foreground/72" onBlur={handleBlur} onFocus={() => setExpanded(true)}>
-      <div className={props.compactLabel ? 'grid min-h-8 w-[5.2rem] grid-cols-1 items-center' : 'grid min-h-8 w-[8.8rem] grid-cols-[5.2rem_3.2rem] items-center gap-1.5'}>
+      <div className={props.compactLabel ? 'grid min-h-8 w-[5.2rem] grid-cols-1 items-center justify-items-end' : 'grid min-h-8 w-[8.8rem] grid-cols-[5.2rem_3.2rem] items-center gap-1.5'}>
         {props.compactLabel ? null : <span className="min-w-0 whitespace-nowrap text-foreground/66">{props.label}</span>}
         <input
           aria-label={props.label}

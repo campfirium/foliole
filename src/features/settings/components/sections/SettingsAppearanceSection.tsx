@@ -152,7 +152,10 @@ function AppearanceReadingTypographySection(props: ReturnType<typeof useAppearan
   );
 }
 
-export function SettingsAppearanceSection(props: { onEnterPreview: () => void }) {
+export function SettingsAppearanceSection(props: {
+  onEnterPreview: () => void;
+  onSettingsBackdropTransparentChange: (value: boolean) => void;
+}) {
   const state = useAppearanceSectionState();
   return (
     <>
@@ -168,7 +171,7 @@ export function SettingsAppearanceSection(props: { onEnterPreview: () => void })
         safeHighlightColor={state.safeHighlightColor}
         safeSelectionColor={state.safeSelectionColor}
       />
-      <NodeIconSettingsSection />
+      <NodeIconSettingsSection onSettingsBackdropTransparentChange={props.onSettingsBackdropTransparentChange} />
       <NodeListRowSpacingSection />
       <AppearanceDarkModeContentSection appearance={state.appearance} />
       <InterfaceBehaviorSection />

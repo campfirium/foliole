@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
 
 import {
   getWhitelistedLocalStorageItem,
@@ -15,6 +15,7 @@ import type { NodeTreeRowIconKind, NodeTreeRowIconState } from '../../../nodes/c
 
 type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 type StateStyleMap = Record<NodeTreeRowIconState, Record<EditableIconKind, NodeIconStateAppearance>>;
+type StateStyleSetter = Dispatch<SetStateAction<StateStyleMap>>;
 
 function createInitialStateStyles(): StateStyleMap {
   return {
@@ -49,6 +50,49 @@ function saveStateKindAppearanceField<K extends keyof NodeIconStateAppearance>(
   setWhitelistedLocalStorageItem(key, JSON.stringify({ ...override, [field]: value }));
 }
 
+function saveStateKindAppearanceFields(
+  state: NodeTreeRowIconState,
+  kind: EditableIconKind,
+  fields: Partial<NodeIconStateAppearance>
+) {
+  const key = getNodeIconKindStateAppearanceStorageKey(state, kind);
+  let override: Partial<NodeIconStateAppearance> = {};
+  try {
+    override = JSON.parse(getWhitelistedLocalStorageItem(key) ?? '{}') as Partial<NodeIconStateAppearance>;
+  } catch {
+    override = {};
+  }
+  setWhitelistedLocalStorageItem(key, JSON.stringify({ ...override, ...fields }));
+}
+
+function applyBaseAppearanceToStates(
+  setStateStyles: StateStyleSetter,
+  kind: EditableIconKind,
+  fields: Pick<NodeIconStateAppearance, 'color' | 'lineWidth' | 'scale'>
+) {
+  setStateStyles((current) => {
+    const next = { ...current };
+    (['pending', 'scheduled', 'dismissed'] as const).forEach((state) => {
+      const nextAppearance = { ...current[state][kind], ...fields };
+      saveStateKindAppearanceFields(state, kind, fields);
+      next[state] = { ...next[state], [kind]: nextAppearance };
+    });
+    return next;
+  });
+}
+
+function clearStateSvgFromStates(setStateStyles: StateStyleSetter, kind: EditableIconKind) {
+  setStateStyles((current) => {
+    const next = { ...current };
+    (['pending', 'scheduled', 'dismissed'] as const).forEach((state) => {
+      const nextAppearance = { ...current[state][kind], svg: '' };
+      saveStateKindAppearanceField(state, kind, 'svg', '');
+      next[state] = { ...next[state], [kind]: nextAppearance };
+    });
+    return next;
+  });
+}
+
 export function useNodeIconStateAppearanceState() {
   const [stateStyles, setStateStyles] = useState<StateStyleMap>(createInitialStateStyles);
   const refreshInherited = useCallback((kind: EditableIconKind) => {
@@ -76,6 +120,12 @@ export function useNodeIconStateAppearanceState() {
   };
 
   return {
+    applyBaseAppearance(kind: EditableIconKind, fields: Pick<NodeIconStateAppearance, 'color' | 'lineWidth' | 'scale'>) {
+      applyBaseAppearanceToStates(setStateStyles, kind, fields);
+    },
+    clearStateSvg(kind: EditableIconKind) {
+      clearStateSvgFromStates(setStateStyles, kind);
+    },
     refreshInherited,
     resetOne(state: NodeTreeRowIconState, kind: EditableIconKind) {
       removeWhitelistedLocalStorageItem(getNodeIconKindStateAppearanceStorageKey(state, kind));

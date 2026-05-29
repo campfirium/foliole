@@ -13,6 +13,9 @@ import { useNodeIconStateAppearanceState } from './nodeIconStateAppearanceState'
 import { useStoredIconSetting, useStoredSvgSetting } from './nodeIconStoredSettingState';
 
 type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
+type BaseAppearanceController = ReturnType<typeof useNodeIconBaseAppearanceState>;
+type StoredStringController = ReturnType<typeof useStoredIconSetting>;
+type StateAppearanceController = ReturnType<typeof useNodeIconStateAppearanceState>;
 
 function createStateStyleActions(
   updateStateStyle: <K extends keyof NodeIconStateAppearance>(
@@ -66,6 +69,65 @@ function createStateStyleActions(
   };
 }
 
+function createBaseActions(args: {
+  itemAppearance: BaseAppearanceController;
+  itemIcon: StoredStringController;
+  itemSvg: StoredStringController;
+  stateState: StateAppearanceController;
+  topicAppearance: BaseAppearanceController;
+  topicIcon: StoredStringController;
+  topicSvg: StoredStringController;
+}) {
+  const applyTopicBase = (fields: Partial<typeof args.topicAppearance.appearance>) => {
+    args.stateState.applyBaseAppearance('reading', { ...args.topicAppearance.appearance, ...fields });
+  };
+  const applyItemBase = (fields: Partial<typeof args.itemAppearance.appearance>) => {
+    args.stateState.applyBaseAppearance('review', { ...args.itemAppearance.appearance, ...fields });
+  };
+  return {
+    setItemColor(value: string) {
+      args.itemAppearance.setColor(value);
+      applyItemBase({ color: value });
+    },
+    setItemIcon(value: string) {
+      args.itemIcon.set(value);
+      args.stateState.clearStateSvg('review');
+    },
+    setItemLineWidth(value: number) {
+      args.itemAppearance.setLineWidth(value);
+      applyItemBase({ lineWidth: value });
+    },
+    setItemScale(value: number) {
+      args.itemAppearance.setScale(value);
+      applyItemBase({ scale: value });
+    },
+    setItemSvg(value: string) {
+      args.itemSvg.set(value);
+      args.stateState.clearStateSvg('review');
+    },
+    setTopicColor(value: string) {
+      args.topicAppearance.setColor(value);
+      applyTopicBase({ color: value });
+    },
+    setTopicIcon(value: string) {
+      args.topicIcon.set(value);
+      args.stateState.clearStateSvg('reading');
+    },
+    setTopicLineWidth(value: number) {
+      args.topicAppearance.setLineWidth(value);
+      applyTopicBase({ lineWidth: value });
+    },
+    setTopicScale(value: number) {
+      args.topicAppearance.setScale(value);
+      applyTopicBase({ scale: value });
+    },
+    setTopicSvg(value: string) {
+      args.topicSvg.set(value);
+      args.stateState.clearStateSvg('reading');
+    }
+  };
+}
+
 export function useNodeIconSettingsState() {
   const topicSvg = useStoredSvgSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg);
   const itemSvg = useStoredSvgSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg);
@@ -99,16 +161,7 @@ export function useNodeIconSettingsState() {
     itemScale: itemAppearance.appearance.scale,
     itemSvg: itemSvg.value,
     itemColor: itemAppearance.appearance.color,
-    setItemColor: itemAppearance.setColor,
-    setItemIcon: itemIcon.set,
-    setItemLineWidth: itemAppearance.setLineWidth,
-    setItemScale: itemAppearance.setScale,
-    setItemSvg: itemSvg.set,
-    setTopicColor: topicAppearance.setColor,
-    setTopicIcon: topicIcon.set,
-    setTopicLineWidth: topicAppearance.setLineWidth,
-    setTopicScale: topicAppearance.setScale,
-    setTopicSvg: topicSvg.set,
+    ...createBaseActions({ itemAppearance, itemIcon, itemSvg, stateState: styleState, topicAppearance, topicIcon, topicSvg }),
     stateStyles: styleState.stateStyles,
     topicIcon: topicIcon.value,
     topicLineWidth: topicAppearance.appearance.lineWidth,

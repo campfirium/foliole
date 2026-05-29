@@ -1,9 +1,9 @@
 /* global process */
 
 const DEFAULT_COMMAND_BUDGET_MS = { android: 4 * 60_000, windows: 4 * 60_000 };
-const DEFAULT_MAX_SETTLE_MS = { android: 0, windows: 6 * 60_000 };
-const DEFAULT_SETTLE_MS = { android: 0, windows: 3 * 60_000 };
-const DEFAULT_WINDOW_MS = { android: 0, windows: 3 * 60_000 };
+const DEFAULT_MAX_SETTLE_MS = { android: 0, windows: 0 };
+const DEFAULT_SETTLE_MS = { android: 0, windows: 0 };
+const DEFAULT_WINDOW_MS = { android: 0, windows: 0 };
 
 export function readDurationMs(env, key, defaultValue) {
   const rawValue = env[key];

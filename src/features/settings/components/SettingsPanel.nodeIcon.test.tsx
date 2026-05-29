@@ -77,9 +77,9 @@ async function expectStoredNodeIconSettings() {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg)).toContain('<svg');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg)).toContain('<svg');
     expect(readJsonSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance)).toMatchObject({
+      innerLineWidth: 1.4,
+      innerScale: 1.2,
       lineWidth: 1.8,
-      outerLineWidth: 1.4,
-      outerScale: 1.2,
       svg: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>'
     });
   });
@@ -99,8 +99,8 @@ it('stores compact topic and item icon rows plus per-state topic and item icon s
   editSvg('Edit Item (base) shape', '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>');
 
   changeRange('Item scheduled', 'Stroke', '1.8');
-  changeRange('Item scheduled', 'Ring scale', '1.2');
-  changeRange('Item scheduled', 'Ring stroke', '1.4');
+  changeRange('Item scheduled', 'Inner ring scale', '1.2');
+  changeRange('Item scheduled', 'Inner ring stroke', '1.4');
   editStateSvg('Edit Item scheduled shape', '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>');
 
   await expectStoredNodeIconSettings();
@@ -128,6 +128,47 @@ it('uses compact icon defaults and closes nested icon editing before settings', 
   expect(screen.queryByRole('dialog', { name: 'Edit Topic (base) marker' })).not.toBeInTheDocument();
   expect(screen.getByLabelText('Settings dialog')).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
+});
+
+it('presents scheduled outline and inner ring controls as separate rows', () => {
+  openAppearance();
+  openIconEditor();
+  const topicScheduledRow = within(getMarkerRow('Topic scheduled'));
+
+  expect(topicScheduledRow.getByLabelText('Scale')).toHaveValue('1.15');
+  expect(topicScheduledRow.getByLabelText('Inner ring scale')).toHaveValue('0.78');
+  expect(topicScheduledRow.getByText('Inner ring')).toBeInTheDocument();
+  expect(topicScheduledRow.queryByText('Outer ring')).not.toBeInTheDocument();
+  expect(topicScheduledRow.queryByText('Ring accent')).not.toBeInTheDocument();
+});
+
+it('keeps the workspace backdrop clear while editing navigation icons', async () => {
+  openAppearance();
+  expect(screen.getByLabelText('Settings').className).not.toContain('bg-transparent');
+
+  openIconEditor();
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Settings').className).toContain('bg-transparent');
+  });
+  expect(document.querySelectorAll('.z-modal-overlay.bg-transparent')).toHaveLength(2);
+});
+
+it('uses base as a batch reset for state icon scale and stroke', async () => {
+  openAppearance();
+  openIconEditor();
+
+  changeRange('Item pending', 'Scale', '1.3');
+  changeRange('Item pending', 'Stroke', '0.9');
+  changeRange('Item (base)', 'Scale', '1.1');
+  changeRange('Item (base)', 'Stroke', '0.7');
+
+  await waitFor(() => {
+    expect(within(getMarkerRow('Item pending')).getByLabelText('Scale')).toHaveValue('1.10');
+    expect(within(getMarkerRow('Item pending')).getByLabelText('Stroke')).toHaveValue('0.70');
+    expect(within(getMarkerRow('Item scheduled')).getByLabelText('Scale')).toHaveValue('1.10');
+    expect(within(getMarkerRow('Item scheduled')).getByLabelText('Stroke')).toHaveValue('0.70');
+  });
 });
 
 it('uses separate dismissed icon and text opacity controls', () => {

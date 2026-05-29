@@ -35,6 +35,10 @@ function strokeWidthStyle(value: number, transform?: string): CSSProperties {
   return { '--node-icon-stroke-width': String(value), ...(transform ? { transform } : {}) } as CSSProperties;
 }
 
+function visualStrokeWidth(value: number, scale: number) {
+  return scale > 0 ? value / scale : value;
+}
+
 function iconTransformStyle(transformMode: IconTransformMode, scale: number): CSSProperties | undefined {
   const transforms = [];
   if (transformMode === 'flip-x') transforms.push('scaleX(-1)');
@@ -54,8 +58,8 @@ function DoubleLineCustomMarkup(props: {
 }) {
   return (
     <span className={cn(resolveCustomIconClassName(props.preview), 'relative')} style={iconTransformStyle(props.transformMode, 1)}>
-      <span className="absolute inset-0" dangerouslySetInnerHTML={{ __html: props.markup }} style={strokeWidthStyle(props.outerLineWidth, `scale(${props.outerScale})`)} />
-      <span aria-hidden="true" className="absolute inset-0" dangerouslySetInnerHTML={{ __html: props.markup }} style={strokeWidthStyle(props.innerLineWidth, `scale(${props.innerScale})`)} />
+      <span className="absolute inset-0" dangerouslySetInnerHTML={{ __html: props.markup }} style={strokeWidthStyle(visualStrokeWidth(props.outerLineWidth, props.outerScale), `scale(${props.outerScale})`)} />
+      <span aria-hidden="true" className="absolute inset-0" dangerouslySetInnerHTML={{ __html: props.markup }} style={strokeWidthStyle(visualStrokeWidth(props.innerLineWidth, props.innerScale), `scale(${props.innerScale})`)} />
     </span>
   );
 }
@@ -71,36 +75,34 @@ function DoubleLineLucideIcon(props: {
 }) {
   return (
     <span className={cn(resolveDefaultIconClassName(props.preview), 'relative inline-flex items-center justify-center')} style={iconTransformStyle(props.transformMode, 1)}>
-      <span className="absolute inset-0 inline-flex items-center justify-center" style={{ transform: `scale(${props.outerScale})` }}>
-        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={props.outerLineWidth} />
+      <span className="absolute inset-0 inline-flex items-center justify-center" style={strokeWidthStyle(visualStrokeWidth(props.outerLineWidth, props.outerScale), `scale(${props.outerScale})`)}>
+        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={visualStrokeWidth(props.outerLineWidth, props.outerScale)} />
       </span>
-      <span aria-hidden="true" className="absolute inset-0 inline-flex items-center justify-center" style={{ transform: `scale(${props.innerScale})` }}>
-        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={props.innerLineWidth} />
+      <span aria-hidden="true" className="absolute inset-0 inline-flex items-center justify-center" style={strokeWidthStyle(visualStrokeWidth(props.innerLineWidth, props.innerScale), `scale(${props.innerScale})`)}>
+        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={visualStrokeWidth(props.innerLineWidth, props.innerScale)} />
       </span>
     </span>
   );
 }
 
 export function NodeTreeRowIconGraphic(props: NodeTreeRowIconGraphicProps) {
-  const outerScale = props.scale * props.outerScale;
-  const innerScale = props.scale * props.innerScale;
   if (props.customMarkup) {
     if (props.effect === 'double-line') {
-      return <DoubleLineCustomMarkup innerLineWidth={props.innerLineWidth} innerScale={innerScale} markup={props.customMarkup} outerLineWidth={props.outerLineWidth} outerScale={outerScale} {...(props.preview !== undefined ? { preview: props.preview } : {})} transformMode={props.transformMode} />;
+      return <DoubleLineCustomMarkup innerLineWidth={props.innerLineWidth} innerScale={props.innerScale} markup={props.customMarkup} outerLineWidth={props.lineWidth} outerScale={props.scale} {...(props.preview !== undefined ? { preview: props.preview } : {})} transformMode={props.transformMode} />;
     }
     return (
-      <span className={resolveCustomIconClassName(props.preview)} style={iconTransformStyle(props.transformMode, props.scale)}>
+      <span className={resolveCustomIconClassName(props.preview)} style={strokeWidthStyle(visualStrokeWidth(props.lineWidth, props.scale), iconTransformStyle(props.transformMode, props.scale)?.transform)}>
         <span dangerouslySetInnerHTML={{ __html: props.customMarkup }} />
       </span>
     );
   }
   if (props.iconId) {
     if (props.effect === 'double-line') {
-      return <DoubleLineLucideIcon iconId={props.iconId} innerLineWidth={props.innerLineWidth} innerScale={innerScale} outerLineWidth={props.outerLineWidth} outerScale={outerScale} {...(props.preview !== undefined ? { preview: props.preview } : {})} transformMode={props.transformMode} />;
+      return <DoubleLineLucideIcon iconId={props.iconId} innerLineWidth={props.innerLineWidth} innerScale={props.innerScale} outerLineWidth={props.lineWidth} outerScale={props.scale} {...(props.preview !== undefined ? { preview: props.preview } : {})} transformMode={props.transformMode} />;
     }
     return (
-      <span className={resolveDefaultIconClassName(props.preview)} style={iconTransformStyle(props.transformMode, props.scale)}>
-        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={props.lineWidth} />
+      <span className={resolveDefaultIconClassName(props.preview)} style={strokeWidthStyle(visualStrokeWidth(props.lineWidth, props.scale), iconTransformStyle(props.transformMode, props.scale)?.transform)}>
+        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={visualStrokeWidth(props.lineWidth, props.scale)} />
       </span>
     );
   }
@@ -111,8 +113,8 @@ export function NodeTreeRowIconGraphic(props: NodeTreeRowIconGraphicProps) {
         effect={props.effect}
         innerLineWidth={props.innerLineWidth}
         innerScale={props.innerScale}
-        outerLineWidth={props.outerLineWidth}
-        outerScale={props.outerScale}
+        outerLineWidth={props.lineWidth}
+        outerScale={props.scale}
         {...(props.preview !== undefined ? { preview: props.preview } : {})}
         scale={props.scale}
         shape={props.fallbackShape}

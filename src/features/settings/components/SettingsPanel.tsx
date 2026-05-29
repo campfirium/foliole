@@ -107,6 +107,7 @@ type SettingsPanelBodyProps = {
 
 function createSettingsCategoryProps(
   props: SettingsPanelBodyProps,
+  setIsBackdropTransparent: (value: boolean) => void,
   setIsPreviewActive: (value: boolean) => void
 ): SettingsPanelCategoryProps {
   return {
@@ -143,18 +144,20 @@ function createSettingsCategoryProps(
     onUpdateExternalSearchFolder: props.onUpdateExternalSearchFolder,
     pendingLocation: props.pendingLocation,
     readwiseReaderCategoryContent: props.readwiseReaderCategoryContent,
-    onEnterPreview: () => setIsPreviewActive(true)
+    onEnterPreview: () => setIsPreviewActive(true),
+    onSettingsBackdropTransparentChange: setIsBackdropTransparent
   };
 }
 
 function SettingsPanelBody(props: SettingsPanelBodyProps) {
   const hotkeys = useHotkeySettings();
   const preview = useSettingsPreviewMode();
+  const [isBackdropTransparent, setIsBackdropTransparent] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const searchQueryRef = useRef('');
   const search = useSettingsSearchState(props.setActiveCategory);
   searchQueryRef.current = search.query;
-  const categoryProps = createSettingsCategoryProps(props, preview.setIsPreviewActive);
+  const categoryProps = createSettingsCategoryProps(props, setIsBackdropTransparent, preview.setIsPreviewActive);
   useSettingsPanelEscape(preview.isPreviewActive, searchQueryRef, props.onClose);
   useSettingsSearchTarget(props.activeCategory, search.targetRowId, scrollContainerRef);
 
@@ -165,6 +168,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       categoryProps={categoryProps}
       description={props.description}
       hotkeys={hotkeys}
+      isBackdropTransparent={isBackdropTransparent}
       isPreviewActive={preview.isPreviewActive}
       onActiveResultIndexChange={search.setActiveResultIndex}
       onClose={props.onClose}

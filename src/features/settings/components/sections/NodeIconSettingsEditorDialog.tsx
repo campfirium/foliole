@@ -51,15 +51,15 @@ export function NodeIconSettingsEditorDialog(props: {
   return (
     <AppDialog open onOpenChange={(open) => !open && props.onClose()}>
       <AppDialogPortal>
-        <AppDialogOverlay />
+        <AppDialogOverlay className="bg-transparent" />
         <AppDialogContent
           aria-describedby={undefined}
-          className="grid max-h-[min(760px,calc(100dvh-36px))] w-fit max-w-[calc(100vw-36px)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg border-settings-outline bg-settings-group p-0 shadow-settings"
+          className="grid max-h-[min(760px,calc(100dvh-36px))] w-fit max-w-[calc(100vw-36px)] grid-rows-[auto_minmax(0,auto)_auto] overflow-hidden rounded-lg border-settings-outline bg-settings-group p-0 shadow-settings"
           data-settings-nested-dialog="true"
         >
           <EditorHeader onReset={props.state.handleReset} />
-          <div className="grid min-h-0 grid-cols-[minmax(0,max-content)_16rem] max-[900px]:grid-cols-1">
-            <main className="min-h-0 overflow-visible px-6 py-5">
+          <div className="grid min-h-0 grid-cols-[minmax(0,max-content)_16rem] border-b border-settings-divider/65 max-[900px]:grid-cols-1">
+            <main className="min-h-0 px-6 pb-3 pt-4">
               <div className="grid w-fit overflow-visible">
                 <NodeIconSettingsRows onEdit={props.onEditShape} onResetBase={props.onResetBase} state={props.state} />
               </div>

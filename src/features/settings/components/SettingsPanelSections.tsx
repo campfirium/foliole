@@ -61,6 +61,7 @@ export interface SettingsCategoryContentProps {
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   onEnterPreview: () => void;
+  onSettingsBackdropTransparentChange: (value: boolean) => void;
 }
 
 function ReviewSettingsContent() {
@@ -150,7 +151,7 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     case 'web-lookup':
       return <SettingsWebLookupSection />;
     case 'appearance':
-      return <SettingsAppearanceSection onEnterPreview={props.onEnterPreview} />;
+      return <SettingsAppearanceSection onEnterPreview={props.onEnterPreview} onSettingsBackdropTransparentChange={props.onSettingsBackdropTransparentChange} />;
     case 'rail':
       return <SettingsRailSection actionItems={props.hotkeyItems} />;
     case 'mouse-gestures':
