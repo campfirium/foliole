@@ -54,18 +54,18 @@ export function NodeIconSettingsEditorDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="grid h-[min(800px,calc(100dvh-36px))] w-[min(1080px,calc(100vw-36px))] max-w-none grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg border-settings-outline bg-settings-group p-0 shadow-settings"
+          className="grid max-h-[min(760px,calc(100dvh-36px))] w-[min(1040px,calc(100vw-36px))] max-w-none grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg border-settings-outline bg-settings-group p-0 shadow-settings"
           data-settings-nested-dialog="true"
         >
           <EditorHeader onReset={props.state.handleReset} />
-          <div className="grid min-h-0 grid-cols-[minmax(0,44rem)_14rem] justify-center max-[900px]:grid-cols-1">
-            <main className="min-h-0 px-6 py-6">
-              <div className="grid gap-4 overflow-visible">
+          <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_16rem] max-[900px]:grid-cols-1">
+            <main className="min-h-0 overflow-visible px-8 py-6">
+              <div className="grid overflow-visible">
                 <NodeIconSettingsRows kind="reading" onEdit={props.onEditShape} onResetBase={props.onResetBase} state={props.state} title="Topic" />
                 <NodeIconSettingsRows kind="review" onEdit={props.onEditShape} onResetBase={props.onResetBase} state={props.state} title="Item" />
               </div>
             </main>
-            <NodeIconSettingsPreview />
+            <NodeIconSettingsPreview state={props.state} />
           </div>
           <footer className="flex justify-end bg-settings-control/45 px-6 py-3">
             <AppButton onClick={props.onClose} variant="primary">Done</AppButton>

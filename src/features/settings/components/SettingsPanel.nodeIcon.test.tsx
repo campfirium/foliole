@@ -5,6 +5,7 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { NodeTreeRowIcon } from '../../nodes/components/NodeTreeRowIcon';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
+import { NodeIconSettingsPreview } from './sections/NodeIconSettingsPreview';
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
@@ -139,6 +140,12 @@ it('uses a switch for dismissed row fade and keeps fade off by default', () => {
   expect(applySwitch).toHaveAttribute('aria-checked', 'true');
 
   expect(screen.queryByLabelText('Item Dismissed')).not.toBeInTheDocument();
+});
+
+it('renders the marker preview before editor state is available', () => {
+  render(<NodeIconSettingsPreview />);
+
+  expect(screen.getByText('Topic scheduled')).toBeInTheDocument();
 });
 
 it('shows marker rows for the active marker kind', () => {

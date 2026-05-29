@@ -14,9 +14,9 @@ import { NODE_ICON_EFFECT_OPTIONS, type NodeIconEffect } from '../../../nodes/co
 export function ColorField(props: { compact?: boolean; label: string; onChange: (value: string) => void; value: string }) {
   if (props.compact) {
     return (
-      <label className="inline-grid size-8 min-w-0 cursor-pointer place-items-center text-sm text-foreground/72">
-        <span className="relative size-6 shrink-0">
-          <span aria-hidden="true" className={settingsColorSwatchClassName('pointer-events-none absolute inset-0 !size-6 rounded-sm')} style={{ backgroundColor: props.value }} />
+      <label className="inline-grid size-7 min-w-0 cursor-pointer place-items-center text-sm text-foreground/72">
+        <span className="relative size-5 shrink-0">
+          <span aria-hidden="true" className={settingsColorSwatchClassName('pointer-events-none absolute inset-0 !size-5 rounded-sm')} style={{ backgroundColor: props.value }} />
           <input
             aria-label={props.label}
             className="absolute inset-0 cursor-pointer opacity-0"
@@ -117,11 +117,11 @@ export function RangeField(props: {
   };
   return (
     <div className="relative min-w-0 text-sm text-foreground/72" onBlur={handleBlur} onFocus={() => setExpanded(true)}>
-      <div className="grid min-h-8 w-36 grid-cols-[5.2rem_3.6rem] items-center gap-2">
+      <div className="grid min-h-8 w-[8.8rem] grid-cols-[5.2rem_3.2rem] items-center gap-1.5">
         <span className="min-w-0 whitespace-nowrap text-foreground/66">{props.label}</span>
         <input
           aria-label={props.label}
-          className={settingsControlValueClassName('h-8 w-[3.6rem] rounded-sm border border-transparent bg-transparent px-1 text-right tabular-nums text-foreground/68 transition-colors hover:border-settings-control-border-hover hover:bg-settings-control-hover focus-visible:border-settings-control-border-hover focus-visible:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring')}
+          className={settingsControlValueClassName('h-8 w-[3.2rem] rounded-sm border border-transparent bg-transparent px-1 text-right tabular-nums text-foreground/68 transition-colors hover:border-settings-control-border-hover hover:bg-settings-control-hover focus-visible:border-settings-control-border-hover focus-visible:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring')}
           disabled={props.disabled}
           max={props.max}
           min={props.min}
