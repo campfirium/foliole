@@ -76,7 +76,7 @@ export function CompanionTopBar(props: {
 
   return (
     <header
-      className="sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-3 pt-[max(env(safe-area-inset-top),16px)] backdrop-blur data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider sm:-mx-7 sm:px-7"
+      className="sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-3 pt-4 [margin-left:-1.5rem] [margin-right:-1.5rem] [padding-left:1.5rem] [padding-right:1.5rem] backdrop-blur supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),16px)] data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider sm:-mx-7 sm:px-7 sm:[margin-left:-1.75rem] sm:[margin-right:-1.75rem] sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]"
       data-elevated="false"
       ref={headerRef}
     >

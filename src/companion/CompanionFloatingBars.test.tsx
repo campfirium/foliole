@@ -40,4 +40,14 @@ describe('CompanionBottomTabBar', () => {
     const inactivePill = inactiveTab.querySelector('span');
     expect(inactivePill?.className ?? '').not.toContain('bg-companion-accent-soft');
   });
+
+  it('keeps a plain WebView fallback before safe-area and focus-visible enhancements', () => {
+    renderBottomBar();
+
+    const bottomBar = screen.getByTestId('companion-bottom-tab-bar');
+    expect(bottomBar.className).toContain('[height:3.75rem]');
+    expect(bottomBar.className).toContain('[bottom:0]');
+    expect(bottomBar.className).toContain('[padding-left:1rem]');
+    expect(screen.getByRole('button', { name: 'Settings' }).className).toContain('focus:outline-none');
+  });
 });

@@ -161,7 +161,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const reading = useImmersiveReadableArticleState(toolbar.closeSelectionToolbar);
   return (
     <section
-      className="fixed inset-0 z-surface-raised overflow-y-auto bg-companion-base px-6 pt-[max(env(safe-area-inset-top),24px)] pb-[max(env(safe-area-inset-bottom),80px)] text-foreground sm:px-7"
+      className="fixed inset-0 z-surface-raised overflow-y-auto bg-companion-base px-6 pt-6 pb-20 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),24px)] supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)] text-foreground sm:px-7"
       onClick={reading.handleSurfaceClick}
       onPointerDown={toolbar.closeSelectionToolbar}
       onPointerMove={toolbar.closeSelectionToolbar}
