@@ -11,6 +11,7 @@ import {
   writeWebPairingState
 } from './companionPairingState';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
+import { createCompanionUuid } from './companionUuid';
 import { discoverCompanionDesktop, discoverCompanionDesktops } from './companionWorkspaceDiscovery';
 import {
   DISCOVERY_ENDPOINT_PATH,
@@ -52,7 +53,7 @@ async function hmacSha256Hex(secret: string, text: string) {
 }
 
 function createNonce() {
-  return crypto.randomUUID();
+  return createCompanionUuid();
 }
 
 function buildCanonicalRequestPayload(args: {
@@ -138,7 +139,7 @@ export async function loadCompanionDiscovery(endpointUrl: string) {
 
 export async function requestCompanionPairing(args: RequestCompanionPairingArgs) {
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
-  const pairingKeyId = crypto.randomUUID();
+  const pairingKeyId = createCompanionUuid();
   const pairingPublicKey = await createCompanionPairingPublicKey(pairingKeyId);
   const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
     body: JSON.stringify({

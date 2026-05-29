@@ -1,27 +1,19 @@
 import { RefreshCw } from 'lucide-react';
 
-import {
-  AppDialog,
-  AppDialogContent,
-  AppDialogDescription,
-  AppDialogOverlay,
-  AppDialogPortal,
-  AppDialogTitle,
-  AppSpinner
-} from '../shared/ui';
+import { AppSpinner } from '../shared/ui';
 
 import { CompanionSyncDeviceList } from './CompanionSyncDeviceList';
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
-function SearchingDialogBody(props: {
+function SearchingDiscoveryContent(props: {
   onRefresh(): void;
 }) {
   return (
     <>
-      <AppDialogTitle>Looking for another device</AppDialogTitle>
-      <AppDialogDescription className="mt-2">
+      <h2 className="text-xl font-semibold leading-tight text-foreground">Looking for another device</h2>
+      <p className="mt-3 text-sm leading-6 text-accent">
         Keep both devices on the same Wi-Fi and open Device sync on the desktop.
-      </AppDialogDescription>
+      </p>
       <div className="mt-5 flex items-center justify-between gap-3">
         <div className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-accent">
           <AppSpinner decorative size="sm" />
@@ -40,7 +32,7 @@ function SearchingDialogBody(props: {
   );
 }
 
-function FoundDevicesDialogBody(props: {
+function FoundDevicesDiscoveryContent(props: {
   desktops: CompanionDesktopDiscovery[];
   disabled: boolean;
   isConnecting: boolean;
@@ -49,12 +41,12 @@ function FoundDevicesDialogBody(props: {
   const deviceCount = props.desktops.length;
   return (
     <>
-      <AppDialogTitle>
+      <h2 className="text-xl font-semibold leading-tight text-foreground">
         Found {deviceCount} {deviceCount === 1 ? 'device' : 'devices'}
-      </AppDialogTitle>
-      <AppDialogDescription className="mt-2">
+      </h2>
+      <p className="mt-3 text-sm leading-6 text-accent">
         Connect to this desktop to bring your topics onto this device.
-      </AppDialogDescription>
+      </p>
       <div className="mt-5">
         <CompanionSyncDeviceList
           desktops={props.desktops}
@@ -77,23 +69,19 @@ export function CompanionSyncDiscoveryDialog(props: {
   onRefresh(): void;
 }) {
   const isOpen = props.isSearching || props.desktops.length > 0;
+  if (!isOpen) return null;
   return (
-    <AppDialog open={isOpen}>
-      <AppDialogPortal>
-        <AppDialogOverlay />
-        <AppDialogContent className="w-[calc(100vw-3rem)] max-w-[420px] px-5 py-5">
-          {props.isSearching ? (
-            <SearchingDialogBody onRefresh={props.onRefresh} />
-          ) : (
-            <FoundDevicesDialogBody
-              desktops={props.desktops}
-              disabled={props.disabled}
-              isConnecting={props.isConnecting}
-              onPair={props.onPair}
-            />
-          )}
-        </AppDialogContent>
-      </AppDialogPortal>
-    </AppDialog>
+    <section className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
+      {props.isSearching ? (
+        <SearchingDiscoveryContent onRefresh={props.onRefresh} />
+      ) : (
+        <FoundDevicesDiscoveryContent
+          desktops={props.desktops}
+          disabled={props.disabled}
+          isConnecting={props.isConnecting}
+          onPair={props.onPair}
+        />
+      )}
+    </section>
   );
 }

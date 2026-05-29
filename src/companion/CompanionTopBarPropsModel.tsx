@@ -64,12 +64,15 @@ function resolveSettingsTopBar(
   onBackToSyncSettings: () => void
 ) {
   if (settingsPage === 'sync') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Device sync' };
+  if (settingsPage === 'device') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Device' };
   if (settingsPage === 'storage') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Storage' };
+  if (settingsPage === 'appearance') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Appearance' };
+  if (settingsPage === 'debug') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Debug' };
   if (settingsPage === 'tabs') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Tabs' };
   if (settingsPage === 'syncActivity') return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Activity' };
   if (settingsPage === 'syncConnection') return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Connection' };
   if (settingsPage === 'syncHandoff') return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Handoff reminders' };
-  return {};
+  return { title: 'Settings' };
 }
 
 function resolveBrowseTopBar(args: {

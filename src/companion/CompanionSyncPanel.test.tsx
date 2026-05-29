@@ -95,8 +95,8 @@ describe('CompanionSyncPanel pairing states', () => {
 
     render(<CompanionSyncPanel {...props} pairingStatus="checking-desktop" />);
 
-    expect(screen.getByRole('dialog', { name: 'Looking for another device' })).toBeInTheDocument();
-    expect(screen.getByText('Looking for another device')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Looking for another device' })).toBeInTheDocument();
     expect(screen.getByText(/open Device sync on the desktop/)).toBeInTheDocument();
     expect(screen.getByText('Searching...')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
@@ -129,8 +129,8 @@ describe('CompanionSyncPanel discovery list', () => {
 
     render(<CompanionSyncPanel {...props} />);
 
-    expect(screen.getByRole('dialog', { name: 'Found 1 device' })).toBeInTheDocument();
-    expect(screen.getByText('Found 1 device')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Found 1 device' })).toBeInTheDocument();
     expect(screen.getByText('Connect to this desktop to bring your topics onto this device.')).toBeInTheDocument();
     expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
@@ -197,8 +197,7 @@ describe('CompanionSyncPanel multiple discovery list', () => {
 
     render(<CompanionSyncPanel {...props} />);
 
-    expect(screen.getByRole('dialog', { name: 'Found 2 devices' })).toBeInTheDocument();
-    expect(screen.getByText('Found 2 devices')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Found 2 devices' })).toBeInTheDocument();
     expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
     expect(screen.getByText('V')).toBeInTheDocument();
     expect(screen.getByText('Studio')).toBeInTheDocument();

@@ -189,7 +189,7 @@ describe('CompanionShell review surfaces', () => {
       activeAction: 'more'
     });
 
-    expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Connect another device/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Device information/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Storage/ })).toBeInTheDocument();

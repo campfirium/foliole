@@ -6,7 +6,10 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 export type CompanionSettingsPage =
   | 'list'
   | 'sync'
+  | 'device'
   | 'storage'
+  | 'appearance'
+  | 'debug'
   | 'tabs'
   | 'syncActivity'
   | 'syncConnection'

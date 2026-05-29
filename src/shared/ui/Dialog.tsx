@@ -30,7 +30,7 @@ const AppDialogContent = React.forwardRef<
     ref={ref}
     className={cn(
       appFloatingSurfaceClassName('panel'),
-      'fixed left-1/2 top-1/2 z-modal -translate-x-1/2 -translate-y-1/2 text-foreground outline-none',
+      'fixed left-1/2 top-1/2 z-modal -translate-x-1/2 -translate-y-1/2 [transform:translate(-50%,-50%)] text-foreground outline-none',
       className
     )}
     {...props}

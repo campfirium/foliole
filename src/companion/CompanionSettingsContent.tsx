@@ -11,7 +11,7 @@ function SettingsListItem(props: {
 }) {
   return (
     <button
-      className="flex w-full items-center justify-between gap-4 border-b border-companion-divider py-4 text-left transition hover:bg-companion-subtle/60 active:bg-companion-subtle/80"
+      className="flex min-h-16 w-full items-center justify-between gap-4 border-b border-companion-divider py-4 text-left transition hover:bg-companion-subtle/60 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-companion-accent active:bg-companion-subtle/80"
       onClick={props.onClick}
       type="button"
     >
@@ -25,18 +25,33 @@ function SettingsListItem(props: {
 }
 
 export function CompanionSettingsList(props: {
+  onOpenAppearance(): void;
+  onOpenDebug(): void;
+  onOpenDevice(): void;
   onOpenStorage(): void;
   onOpenSync(): void;
 }) {
   return (
-    <section className="px-1 py-4">
+    <section className="px-1 pb-4">
       <div>
         <SettingsListItem detail="Connect another device and bring your content here." onClick={props.onOpenSync} title="Sync" />
-        <SettingsListItem detail="Device information will appear here." onClick={() => undefined} title="Device" />
+        <SettingsListItem detail="Device information will appear here." onClick={props.onOpenDevice} title="Device" />
         <SettingsListItem detail="Clear Foliole data on this device." onClick={props.onOpenStorage} title="Storage" />
-        <SettingsListItem detail="Display preferences will appear here." onClick={() => undefined} title="Appearance" />
-        <SettingsListItem detail="Diagnostics and development details will appear here." onClick={() => undefined} title="Debug" />
+        <SettingsListItem detail="Display preferences will appear here." onClick={props.onOpenAppearance} title="Appearance" />
+        <SettingsListItem detail="Diagnostics and development details will appear here." onClick={props.onOpenDebug} title="Debug" />
       </div>
+    </section>
+  );
+}
+
+export function CompanionPlaceholderSettingsContent(props: {
+  detail: string;
+  title: string;
+}) {
+  return (
+    <section className="px-1 py-4">
+      <h2 className="text-base font-semibold text-foreground">{props.title}</h2>
+      <p className="mt-3 text-sm leading-6 text-companion-text-secondary">{props.detail}</p>
     </section>
   );
 }

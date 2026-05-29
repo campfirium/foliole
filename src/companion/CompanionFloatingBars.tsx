@@ -22,14 +22,14 @@ function TabButton(props: {
     <button
       aria-current={props.active ? 'page' : undefined}
       aria-label={props.label}
-      className={`flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg text-xs font-medium transition-colors active:scale-[0.97] ${
+      className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg text-xs font-medium transition-colors [height:3rem] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent active:scale-[0.97] ${
         props.active ? 'text-foreground' : 'text-companion-text-secondary active:bg-companion-subtle/60'
       }`}
       onClick={props.onClick}
       type="button"
     >
       <span
-        className={`inline-flex h-7 w-14 items-center justify-center rounded-full transition-colors ${
+        className={`inline-flex items-center justify-center rounded-full transition-colors [height:1.5rem] [width:3rem] ${
           props.active ? 'bg-companion-accent-soft' : ''
         }`}
       >
@@ -54,10 +54,10 @@ export function CompanionBottomTabBar(props: {
 
   return (
     <footer
-      className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pt-2 pb-[max(env(safe-area-inset-bottom),20px)] shadow-panel"
+      className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pt-1 pb-2 [left:0] [right:0] [bottom:0] [height:3.75rem] [padding-top:0.25rem] [padding-bottom:0.5rem] [padding-left:1rem] [padding-right:1rem] shadow-panel"
       data-testid="companion-bottom-tab-bar"
     >
-      <div className="mx-auto flex w-full max-w-[760px] items-center gap-1">
+      <div className="mx-auto flex h-full w-full max-w-[760px] items-center gap-1">
         {renderTabButtons(resolveCompanionTabs(props.config), props)}
       </div>
     </footer>
