@@ -23,6 +23,7 @@ import { resolveRestoreNodesResult, type RestoreNodesResult } from './nodeRestor
 import { createUpsertNodeReviewStatement } from './nodeReviewMutationStatements.js';
 import { writeNodeReviewSnapshotWithSync } from './nodeReviewSyncState.js';
 import { prepareNodeSearchInvalidationForUpsert } from './nodeSearchInvalidationForMutation.js';
+import type { NodeSearchInvalidationOptions } from './nodeSearchInvalidationForMutation.js';
 import {
   enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds,
   enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds
@@ -107,7 +108,15 @@ function runNodeTableUpsert(
   ]);
 }
 
-export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnapshotInput): void {
+export interface UpsertNodeSnapshotOptions {
+  searchInvalidation?: NodeSearchInvalidationOptions;
+}
+
+export function upsertNodeSnapshot(
+  driver: DatabaseDriver,
+  input: UpsertNodeSnapshotInput,
+  options: UpsertNodeSnapshotOptions = {}
+): void {
   const upsertNodeStatement = createUpsertNodeStatement(driver);
   const upsertNodeOrderStatement = createUpsertNodeOrderStatement(driver);
   const upsertNodeReadingStatement = createUpsertNodeReadingStatement(driver);
@@ -117,7 +126,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
   const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
 
   driver.transaction(() => {
-    const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input);
+    const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input, options.searchInvalidation);
     ensureSpecialRootNodesForInput(driver, input);
     const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt);
     runNodeTableUpsert(upsertNodeStatement.run, input, bodyBlobHash);

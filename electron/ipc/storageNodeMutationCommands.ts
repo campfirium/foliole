@@ -10,6 +10,7 @@ import {
   upsertNodeSnapshot,
   upsertNodeSnapshotWithOrder
 } from '../database/nodeMutations.js';
+import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import {
@@ -102,7 +103,8 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
   }
   if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
     const parsed = parseNodeSnapshotArgs(args);
-    upsertNodeSnapshot(parsed);
+    upsertNodeSnapshot(parsed, { searchInvalidation: { workspaceInvalidation: 'defer' } });
+    enqueueCoalescedWorkspaceSearchInvalidation([parsed.nodeId]);
     scheduleMirrorSync([parsed.nodeId]);
     return buildNodeMutationPatchResult({
       nodes: [parsed],

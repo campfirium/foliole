@@ -2,6 +2,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { deleteNodesPermanently, moveNodes, replaceNodeOrder, restoreNodes, softDeleteNodes, upsertNodeSnapshot, upsertNodeSnapshotWithOrder } from '../database/nodeMutations.js';
+import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -34,6 +35,9 @@ vi.mock('../database/nodeMutations.js', () => ({
   updateNodeAnchorLinks: vi.fn(),
   upsertNodeSnapshot: vi.fn(),
   upsertNodeSnapshotWithOrder: vi.fn()
+}));
+vi.mock('../database/searchIndexInvalidationCoalescer.js', () => ({
+  enqueueCoalescedWorkspaceSearchInvalidation: vi.fn()
 }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({
   scheduleMirrorSync: vi.fn()
@@ -72,14 +76,18 @@ it('handles node mutation commands', async () => {
     })],
     updatedNodeIds: ['node-1']
   });
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
-    anchorLink: null,
-    content: '# Content',
-    kind: 'topic',
-    nodeId: 'node-1',
-    reveal: null,
-    shelvedAt: '2026-05-27T00:00:00.000Z'
-  }));
+  expect(upsertNodeSnapshot).toHaveBeenCalledWith(
+    expect.objectContaining({
+      anchorLink: null,
+      content: '# Content',
+      kind: 'topic',
+      nodeId: 'node-1',
+      reveal: null,
+      shelvedAt: '2026-05-27T00:00:00.000Z'
+    }),
+    { searchInvalidation: { workspaceInvalidation: 'defer' } }
+  );
+  expect(enqueueCoalescedWorkspaceSearchInvalidation).toHaveBeenCalledWith(['node-1']);
 });
 
 it('handles node reveal mutation command', async () => {
@@ -107,13 +115,17 @@ it('handles node reveal mutation command', async () => {
     })],
     updatedNodeIds: ['node-2']
   });
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
-    anchorLink: { id: 'cloze-1', kind: 'cloze' },
-    content: 'Question',
-    kind: 'item',
-    nodeId: 'node-2',
-    reveal: 'Answer'
-  }));
+  expect(upsertNodeSnapshot).toHaveBeenCalledWith(
+    expect.objectContaining({
+      anchorLink: { id: 'cloze-1', kind: 'cloze' },
+      content: 'Question',
+      kind: 'item',
+      nodeId: 'node-2',
+      reveal: 'Answer'
+    }),
+    { searchInvalidation: { workspaceInvalidation: 'defer' } }
+  );
+  expect(enqueueCoalescedWorkspaceSearchInvalidation).toHaveBeenCalledWith(['node-2']);
 });
 
 it('handles create node mutation command with accepted order patch', async () => {

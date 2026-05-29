@@ -11,12 +11,22 @@ interface ExistingNodePathRow {
   title: string;
 }
 
-export function prepareNodeSearchInvalidationForUpsert(driver: DatabaseDriver, input: UpsertNodeSnapshotInput) {
+export interface NodeSearchInvalidationOptions {
+  workspaceInvalidation?: 'defer' | 'enqueue';
+}
+
+export function prepareNodeSearchInvalidationForUpsert(
+  driver: DatabaseDriver,
+  input: UpsertNodeSnapshotInput,
+  options: NodeSearchInvalidationOptions = {}
+) {
   const existingPathRow = driver.queryOne<ExistingNodePathRow>('SELECT parent_id, title FROM nodes WHERE id = ?', [
     input.nodeId
   ]);
   return () => {
-    enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId]);
+    if (options.workspaceInvalidation !== 'defer') {
+      enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId]);
+    }
     if (existingPathRow && (existingPathRow.parent_id !== input.parentNodeId || existingPathRow.title !== input.title)) {
       enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver, [input.nodeId]);
     }

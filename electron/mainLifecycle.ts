@@ -4,6 +4,7 @@ import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } fr
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
 import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
+import { flushCoalescedWorkspaceSearchInvalidations } from './database/searchIndexInvalidationCoalescer.js';
 import { stopSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
@@ -53,6 +54,7 @@ function installBeforeQuitLifecycle() {
     devRestartIntentWatcher?.close();
     devRendererReloadIntentWatcher?.close();
     stopExternalSearchBackgroundRefresh();
+    flushCoalescedWorkspaceSearchInvalidations();
     stopSearchIndexInvalidationScheduler();
     stopManagedInboxMonitor();
     stopKeepImportMonitor();

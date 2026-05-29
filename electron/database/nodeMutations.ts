@@ -18,6 +18,7 @@ import type {
   UpdateNodeAnchorLinkInput,
   UpsertNodeSnapshotInput
 } from '../../lib/core/database/nodeMutations.js';
+import type { UpsertNodeSnapshotOptions } from '../../lib/core/database/nodeMutations.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -41,11 +42,11 @@ export type {
   UpsertNodeSnapshotInput
 };
 
-export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
+export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput, options: UpsertNodeSnapshotOptions = {}): void {
   upsertNodeSnapshotViaDriver(openDatabaseConnection().driver, {
     ...input,
     deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
-  });
+  }, options);
   if ('reading' in input) {
     if (input.reading?.state === 'dismissed') {
       recordNodeSourceDisposition(input.nodeId, 'dismissed', input.updatedAt);
