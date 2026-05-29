@@ -1,5 +1,3 @@
-import { Pencil } from 'lucide-react';
-
 import { settingsButtonClassName } from '../../../../shared/ui';
 import { NodeTreeRowIcon } from '../../../nodes/components/NodeTreeRowIcon';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from '../../../nodes/components/NodeTreeRowIconModel';
@@ -29,8 +27,7 @@ export function NodeIconSettingsOverview(props: { onEdit: () => void }) {
     <div className="grid gap-4 p-5">
       <div className="flex items-center justify-between gap-4">
         <h3 className="text-[0.95rem] font-semibold text-foreground">Navigation icons</h3>
-        <button className={settingsButtonClassName('gap-2')} onClick={props.onEdit} type="button">
-          <Pencil aria-hidden="true" size={16} strokeWidth={1.9} />
+        <button className={settingsButtonClassName()} onClick={props.onEdit} type="button">
           Edit
         </button>
       </div>

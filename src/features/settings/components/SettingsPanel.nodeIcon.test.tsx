@@ -156,6 +156,7 @@ it('keeps the settings page compact until the icon editor is opened', () => {
   openAppearance();
 
   expect(screen.getByText('Navigation icons')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Edit' }).querySelector('svg')).toBeNull();
   expect(screen.getAllByRole('group', { name: /^(Topic|Item) (icon|pending|scheduled|dismissed)$/ })).toHaveLength(7);
   expect(screen.queryByRole('group', { name: 'Item dismissed' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Scale')).not.toBeInTheDocument();
