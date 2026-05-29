@@ -15,6 +15,7 @@ const PATH_SUBDOMAINS = [
 ];
 
 const EXPLICIT_FILE_SUBDOMAINS = new Map([
+  ['src/shared/platform/actionHelpCards.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/appLifecycle.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/companionAttachmentResourceSyncPluginTypes.ts', 'companion-sync-writer'],
   ['src/shared/platform/companionContentBlobSyncPluginTypes.ts', 'companion-sync-writer'],
@@ -25,7 +26,17 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/companionSyncInstrumentationProbe.ts', 'companion-sync-pack-apply'],
   ['src/shared/platform/companionSyncObjects.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/companionSyncTimeoutOwnership.ts', 'companion-sync-transfer'],
-  ['src/shared/platform/companionWorkspaceSync.testSupport.ts', 'companion-runtime-plugin']
+  ['src/shared/platform/companionUuid.ts', 'companion-runtime-plugin'],
+  ['src/shared/platform/companionWorkspaceSync.testSupport.ts', 'companion-runtime-plugin'],
+  ['src/shared/platform/databaseMaintenanceStatusRuntimeRepository.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/readwiseOriginalFileWidgetEvents.ts', 'import-runtime'],
+  ['src/shared/platform/remoteImageSourceRecovery.ts', 'external-runtime'],
+  ['src/shared/platform/searchEnhancementSettings.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/searchIndexRebuildStatus.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/webLookupActionResolution.ts', 'external-runtime'],
+  ['src/shared/platform/webLookupEntries.ts', 'external-runtime'],
+  ['src/shared/platform/webLookupEntryDefaults.ts', 'external-runtime'],
+  ['src/shared/platform/webLookupTemplateResolution.ts', 'external-runtime']
 ]);
 
 const FILE_SUBDOMAIN_RULES = [

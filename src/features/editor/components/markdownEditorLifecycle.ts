@@ -92,7 +92,7 @@ export function useEditorAppearanceEffects(
   useLayoutEffect(() => {
     if (typeof adapterRef.current?.setNodeId === 'function') {
       adapterRef.current.setNodeId(nodeId);
-      adapterRef.current.refreshImageClozePresentation();
+      adapterRef.current.refreshImageClozePresentation?.();
     }
   }, [adapterRef, nodeId]);
 
@@ -105,12 +105,12 @@ export function useEditorAppearanceEffects(
       if (detail?.editorNodeId !== nodeId) {
         return;
       }
-      adapterRef.current?.refreshImageClozePresentation();
+      adapterRef.current?.refreshImageClozePresentation?.();
     };
 
     window.addEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
     window.addEventListener(FORMULA_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
-    adapterRef.current?.refreshImageClozePresentation();
+    adapterRef.current?.refreshImageClozePresentation?.();
     return () => {
       window.removeEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
       window.removeEventListener(FORMULA_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);

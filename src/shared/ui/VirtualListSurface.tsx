@@ -1,5 +1,5 @@
 import { defaultRangeExtractor, useVirtualizer, type Range, type VirtualItem, type Virtualizer } from '@tanstack/react-virtual';
-import { useCallback, useMemo, useEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { Fragment, useCallback, useMemo, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 
 const DEFAULT_VIRTUAL_LIST_THRESHOLD = 100;
 const DEFAULT_VIRTUAL_LIST_OVERSCAN = 8;
@@ -52,21 +52,26 @@ function renderStaticItems<TItem>(
   getItemKey: (item: TItem) => string,
   renderItem: (item: TItem, meta: VirtualListRenderMeta) => ReactNode
 ) {
-  return items.map((item, index) =>
-    renderItem(item, {
-      ariaPosInSet: index + 1,
-      ariaSetSize: items.length,
-      index,
-      virtualItem: {
-        end: 0,
-        index,
-        key: getItemKey(item),
-        lane: 0,
-        size: estimateSize(index),
-        start: 0
-      }
-    })
-  );
+  return items.map((item, index) => {
+    const key = getItemKey(item);
+    return (
+      <Fragment key={key}>
+        {renderItem(item, {
+          ariaPosInSet: index + 1,
+          ariaSetSize: items.length,
+          index,
+          virtualItem: {
+            end: 0,
+            index,
+            key,
+            lane: 0,
+            size: estimateSize(index),
+            start: 0
+          }
+        })}
+      </Fragment>
+    );
+  });
 }
 
 function renderVirtualItems<TItem>(

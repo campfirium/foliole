@@ -54,6 +54,24 @@ it('keeps long titles, empty bodies, and long summaries clamped inside the row',
   expect(screen.queryByText('Topic')).not.toBeInTheDocument();
 });
 
+it('reserves the current-view action slot when no action is available', () => {
+  render(
+    <FolderListView
+      folderNodeId="folder-1"
+      nodeOrder={['folder-1']}
+      nodesById={{
+        'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Virtual' })
+      }}
+      onChangeSortDirection={() => undefined}
+      onChangeSortKey={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  expect(screen.getByTestId('folder-list-action-placeholder')).toHaveAttribute('aria-hidden', 'true');
+  expect(screen.queryByRole('button', { name: 'Current view actions' })).not.toBeInTheDocument();
+});
+
 it('hides the embedded folder header when requested', () => {
   render(
     <FolderListView

@@ -1,30 +1,23 @@
-import { Search, X } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { AppInput } from '../../shared/ui';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import { FolderListBody } from './FolderListBody';
+import { FolderListHeaderSearchGroup } from './FolderListHeaderSearchGroup';
 import { FolderListSortControls } from './FolderListSortControls';
 
-function FolderListHeader({
-  currentViewActions,
-  folderTitle,
-  itemCountLabel,
-  onChangeSearchQuery,
-  onChangeSortDirection,
-  onChangeSortKey,
-  searchQuery,
-  searchResultLabel,
-  showCountAndTitle,
-  sortDirection,
-  sortKey
-}: {
+interface FolderListHeaderProps {
   currentViewActions?: ReactNode;
   folderTitle: string;
   itemCountLabel: string;
   searchQuery: string;
+  searchAction?: ReactNode;
+  searchAriaLabel?: string | undefined;
+  searchDescription?: string | undefined;
+  searchPlaceholder?: string | undefined;
+  searchReadOnly?: boolean;
   searchResultLabel: string | null;
   showCountAndTitle: boolean;
   sortDirection: FolderListSortDirection;
@@ -32,86 +25,39 @@ function FolderListHeader({
   onChangeSearchQuery: (value: string) => void;
   onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
-}) {
+}
+
+function FolderListHeader(props: FolderListHeaderProps) {
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-[var(--workspace-region-main-document-content-divider)] pb-3">
-      {showCountAndTitle ? (
+      {props.showCountAndTitle ? (
         <FolderListHeaderSummary
-          currentViewActions={currentViewActions}
-          folderTitle={folderTitle}
-          itemCountLabel={itemCountLabel}
+          currentViewActions={props.currentViewActions}
+          folderTitle={props.folderTitle}
+          itemCountLabel={props.itemCountLabel}
         />
       ) : null}
-      <div className="w-[248px] max-w-full max-[900px]:w-full max-[900px]:basis-full">
-        <FolderListSearchBox
-          onChangeSearchQuery={onChangeSearchQuery}
-          searchQuery={searchQuery}
-          searchResultLabel={searchResultLabel}
-        />
-      </div>
+      <FolderListHeaderSearchGroup
+        onChangeSearchQuery={props.onChangeSearchQuery}
+        {...definedProps({
+          searchAction: props.searchAction,
+          searchAriaLabel: props.searchAriaLabel,
+          searchDescription: props.searchDescription,
+          searchPlaceholder: props.searchPlaceholder,
+          searchReadOnly: props.searchReadOnly
+        })}
+        searchQuery={props.searchQuery}
+        searchResultLabel={props.searchResultLabel}
+      />
       <div className="ml-auto shrink-0">
         <FolderListSortControls
-          onChangeSortDirection={onChangeSortDirection}
-          onChangeSortKey={onChangeSortKey}
-          sortDirection={sortDirection}
-          sortKey={sortKey}
+          onChangeSortDirection={props.onChangeSortDirection}
+          onChangeSortKey={props.onChangeSortKey}
+          sortDirection={props.sortDirection}
+          sortKey={props.sortKey}
         />
       </div>
     </div>
-  );
-}
-
-export function FolderListSearchBox({
-  ariaLabel = 'Search folder contents',
-  onChangeSearchQuery,
-  placeholder = 'Search in this folder',
-  searchQuery,
-  searchResultLabel
-}: {
-  ariaLabel?: string;
-  placeholder?: string;
-  searchQuery: string;
-  searchResultLabel: string | null;
-  onChangeSearchQuery: (value: string) => void;
-}) {
-  return (
-    <div className="flex h-9 w-full items-center gap-2 rounded-lg border border-transparent bg-bg-subtle/70 px-3 transition-colors hover:border-border/10 hover:bg-bg-subtle focus-within:border-border/20 focus-within:bg-bg-subtle">
-      <Search aria-hidden="true" className="shrink-0 text-foreground/38" size={14} strokeWidth={1.8} />
-      <AppInput
-        aria-label={ariaLabel}
-        className="h-8 min-w-0 appearance-none !border-0 !bg-transparent px-0 text-sm shadow-none placeholder:text-foreground/38 hover:!bg-transparent focus-visible:!bg-transparent focus-visible:!ring-0 [&::-webkit-search-cancel-button]:appearance-none"
-        onChange={(event) => onChangeSearchQuery(event.target.value)}
-        placeholder={placeholder}
-        type="search"
-        value={searchQuery}
-      />
-      {searchResultLabel ? <FolderListSearchResultLabel searchResultLabel={searchResultLabel} /> : null}
-      {searchQuery ? <FolderListSearchClearButton onClear={() => onChangeSearchQuery('')} /> : null}
-    </div>
-  );
-}
-
-function FolderListSearchResultLabel({ searchResultLabel }: { searchResultLabel: string }) {
-  return (
-    <span
-      aria-label={`Folder search results ${searchResultLabel}`}
-      className="min-w-[4.5rem] shrink-0 text-right text-xs font-medium tabular-nums text-foreground/46"
-    >
-      {searchResultLabel}
-    </span>
-  );
-}
-
-function FolderListSearchClearButton({ onClear }: { onClear: () => void }) {
-  return (
-    <button
-      aria-label="Clear folder search"
-      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-foreground/46 transition-colors hover:bg-foreground/8 hover:text-foreground/68 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      onClick={onClear}
-      type="button"
-    >
-      <X aria-hidden="true" size={14} strokeWidth={2.2} />
-    </button>
   );
 }
 
@@ -127,7 +73,13 @@ function FolderListHeaderSummary({
   return (
     <div className="flex min-w-0 items-center gap-1">
       <h2 className="truncate text-[13px] font-medium text-foreground">{folderTitle}</h2>
-      {currentViewActions}
+      {currentViewActions ?? (
+        <span
+          aria-hidden="true"
+          className="size-6 shrink-0"
+          data-testid="folder-list-action-placeholder"
+        />
+      )}
       <p
         aria-label={`Folder result count ${itemCountLabel}`}
         className="shrink-0 text-sm font-medium text-foreground/58"
@@ -151,13 +103,50 @@ function FolderListSurface({
   );
 }
 
+function renderFolderListHeader(props: Parameters<typeof FolderListViewLayout>[0]) {
+  if (props.headerMode === 'hidden') {
+    return null;
+  }
+  return (
+    <FolderListHeader
+      currentViewActions={props.currentViewActions}
+      folderTitle={props.folderTitle}
+      itemCountLabel={props.itemCountLabel}
+      onChangeSearchQuery={props.onChangeSearchQuery}
+      onChangeSortDirection={props.onChangeSortDirection}
+      onChangeSortKey={props.onChangeSortKey}
+      {...definedProps({
+        searchAction: props.searchAction,
+        searchAriaLabel: props.searchAriaLabel,
+        searchDescription: props.searchDescription,
+        searchPlaceholder: props.searchPlaceholder,
+        searchReadOnly: props.searchReadOnly
+      })}
+      searchQuery={props.searchQuery}
+      searchResultLabel={props.searchResultLabel}
+      showCountAndTitle={props.headerMode === 'full'}
+      sortDirection={props.sortDirection}
+      sortKey={props.sortKey}
+    />
+  );
+}
+
 export function FolderListViewLayout(props: {
   currentViewActions?: ReactNode;
+  emptyState?: {
+    description: string;
+    title: string;
+  } | undefined;
   filteredNodes: Node[];
   folderTitle: string;
   itemCountLabel: string;
   navigationOverlay?: ReactNode;
   searchResultLabel: string | null;
+  searchAction?: ReactNode;
+  searchAriaLabel?: string | undefined;
+  searchDescription?: string | undefined;
+  searchPlaceholder?: string | undefined;
+  searchReadOnly?: boolean;
   onChangeSearchQuery: (value: string) => void;
   onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
@@ -172,22 +161,9 @@ export function FolderListViewLayout(props: {
     <FolderListSurface>
       <section aria-label="Folder list body" className="relative mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
         {props.navigationOverlay}
-        {props.headerMode === 'hidden' ? null : (
-          <FolderListHeader
-            currentViewActions={props.currentViewActions}
-            folderTitle={props.folderTitle}
-            itemCountLabel={props.itemCountLabel}
-            onChangeSearchQuery={props.onChangeSearchQuery}
-            onChangeSortDirection={props.onChangeSortDirection}
-            onChangeSortKey={props.onChangeSortKey}
-            searchQuery={props.searchQuery}
-            searchResultLabel={props.searchResultLabel}
-            showCountAndTitle={props.headerMode === 'full'}
-            sortDirection={props.sortDirection}
-            sortKey={props.sortKey}
-          />
-        )}
+        {renderFolderListHeader(props)}
         <FolderListBody
+          emptyState={props.emptyState}
           filteredNodes={props.filteredNodes}
           onRenderItem={props.onRenderItem}
           scrollElementRef={props.scrollElementRef}

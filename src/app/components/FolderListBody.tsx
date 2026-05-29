@@ -1,20 +1,32 @@
 import type { ReactNode, RefObject } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { VirtualListSurface } from '../../shared/ui';
+import { AppEmptyState, VirtualListSurface } from '../../shared/ui';
 
 const FOLDER_LIST_ROW_ESTIMATE_PX = 188;
 
 export function FolderListBody({
   filteredNodes,
+  emptyState,
   onRenderItem,
   scrollElementRef
 }: {
+  emptyState?: {
+    description: string;
+    title: string;
+  } | undefined;
   filteredNodes: Node[];
   onRenderItem: (node: Node) => ReactNode;
   scrollElementRef: RefObject<HTMLDivElement | null>;
 }) {
   if (filteredNodes.length === 0) {
+    if (emptyState) {
+      return (
+        <div className="flex min-h-[240px] flex-1 items-center justify-center">
+          <AppEmptyState description={emptyState.description} title={emptyState.title} />
+        </div>
+      );
+    }
     return <div aria-hidden="true" className="min-h-[240px] flex-1" />;
   }
 

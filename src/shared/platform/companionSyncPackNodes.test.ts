@@ -163,7 +163,10 @@ function createFakeConnection() {
     commitTransaction: vi.fn(),
     execute: vi.fn(async () => ({ changes: { changes: 0 } })),
     open: vi.fn(async () => undefined),
-    query: vi.fn(async (): Promise<{ values: Array<{ value: string }> }> => ({ values: [] })),
+    query: vi.fn(async (sql: string): Promise<{ values: Array<Record<string, unknown>> }> => {
+      void sql;
+      return { values: [] };
+    }),
     rollbackTransaction: vi.fn(),
     run: vi.fn(async () => ({ changes: { changes: 0 } }))
   };

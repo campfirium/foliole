@@ -1,6 +1,7 @@
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
@@ -58,7 +59,8 @@ export function renderDocumentPanelHeader(args: {
   showSourceUpdateAction: boolean;
 }) {
   const breadcrumb = resolveDocumentHeaderBreadcrumb(args.props);
-  if (args.isFolderListView) {
+  const activeNode = args.props.activeNodeId ? args.props.nodesById[args.props.activeNodeId] : undefined;
+  if (args.isFolderListView || isVirtualNode(activeNode) || isVirtualRootNode(activeNode)) {
     return null;
   }
 
@@ -83,6 +85,7 @@ export function renderDocumentPanelHeader(args: {
       onToggleSourceUpdatePanel={args.onToggleSourceUpdatePanel}
       priorityQuickSetShortcutLabel={args.props.priorityQuickSetShortcutLabel ?? ''}
       reviewSchedulerSettings={args.props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS}
+      showDocumentControls
       showSourceUpdateAction={args.showSourceUpdateAction}
     />
   );

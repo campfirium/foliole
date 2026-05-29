@@ -42,20 +42,26 @@ function collectShelvedTopicIds(props: WorkspaceDualListContentProps) {
 
 function resolveVirtualHeader(args: {
   activeVirtualNode: Node | undefined;
+  activeVirtualNodeId: string;
   isShelvedView: boolean;
 }) {
+  if (args.activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
+    return { kind: 'root' as const };
+  }
   if (isVirtualNode(args.activeVirtualNode)) {
     return {
       kind: 'user-search' as const,
       nodeId: args.activeVirtualNode.id,
-      query: getVirtualNodePrimaryKeyword(args.activeVirtualNode.virtualFilter)
+      query: getVirtualNodePrimaryKeyword(args.activeVirtualNode.virtualFilter),
+      title: args.activeVirtualNode.title
     };
   }
   return {
     kind: 'description' as const,
     text: args.isShelvedView
-      ? 'Shelved topics stay here until you return them to active reading.'
-      : 'Virtual combines results from saved searches below.'
+      ? 'Shelved topics stay here until restored.'
+      : '',
+    title: args.isShelvedView ? 'Shelved' : 'Virtual'
   };
 }
 
@@ -80,13 +86,18 @@ export function renderVirtualContentColumn(
         description: isShelvedView
           ? 'Shelved topics will appear here.'
           : activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID
-            ? 'Use the plus button on Virtual to create your first saved search.'
+            ? 'Try another topic search.'
             : 'No topics match this saved search yet.',
         title: isShelvedView
           ? 'No shelved topics'
-          : activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID ? 'No saved searches yet' : 'No matching topics'
+          : activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID ? 'No matching topics' : 'No matching topics'
       }}
-      header={resolveVirtualHeader({ activeVirtualNode: props.nodesById[activeVirtualNodeId], isShelvedView })}
+      header={resolveVirtualHeader({
+        activeVirtualNode: props.nodesById[activeVirtualNodeId],
+        activeVirtualNodeId,
+        isShelvedView
+      })}
+      nodeOrder={props.nodeOrder}
       nodes={items}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNodeInVirtualView}

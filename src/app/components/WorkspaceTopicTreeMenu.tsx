@@ -8,9 +8,9 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { getCurrentReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 
 import { requestClipboardImport } from './importActivityRequests';
-import type { useWorkspaceTopicTreeActions } from './WorkspaceTopicTree';
 import type { WorkspaceTopicTreeProps } from './WorkspaceTopicTree';
 import type { useWorkspaceTopicTreeInteraction } from './WorkspaceTopicTree';
+import type { useWorkspaceTopicTreeActions } from './workspaceTopicTreeActions';
 
 export function WorkspaceTopicTreeMenu(props: {
   actions: ReturnType<typeof useWorkspaceTopicTreeActions>;

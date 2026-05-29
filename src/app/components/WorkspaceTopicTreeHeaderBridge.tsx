@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 
+import { definedProps } from '../../shared/lib/definedProps';
 import type { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { normalizeWorkspaceContentSort } from './workspaceContentSort';
@@ -15,6 +16,7 @@ interface WorkspaceTopicTreeHeaderBridgeProps {
   searchQuery: string;
   setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
   setSearchQuery: (value: string) => void;
+  showCreateTopic?: boolean;
   viewHideDismissedTopics: boolean;
 }
 
@@ -36,6 +38,7 @@ export function WorkspaceTopicTreeHeaderBridge(props: WorkspaceTopicTreeHeaderBr
         props.setCollapsedNodeIds(props.hasCollapsedNodes ? new Set() : new Set(props.collapsibleNodeIds))
       }
       searchQuery={props.searchQuery}
+      {...definedProps({ showCreateTopic: props.showCreateTopic })}
       sortDirection={contentSort.sort.direction}
       sortKey={contentSort.sort.key}
       viewHideDismissedTopics={props.viewHideDismissedTopics}

@@ -17,6 +17,7 @@ interface WorkspaceTopicTreeHeaderProps {
   onSearchQueryChange: (searchQuery: string) => void;
   onToggleCollapseAll: () => void;
   searchQuery: string;
+  showCreateTopic?: boolean;
   viewHideDismissedTopics?: boolean;
   sortDirection: WorkspaceContentSortDirection;
   sortKey: WorkspaceContentSortKey;
@@ -32,6 +33,7 @@ export function WorkspaceTopicTreeHeader({
   onToggleCollapseAll,
   onSearchQueryChange,
   searchQuery,
+  showCreateTopic = true,
   sortDirection,
   sortKey,
   viewHideDismissedTopics = false
@@ -65,6 +67,7 @@ export function WorkspaceTopicTreeHeader({
         onCreateTopic={onCreateTopic}
         onToggleDismissedTopicsVisibility={onToggleDismissedTopicsVisibility}
         onToggleCollapseAll={onToggleCollapseAll}
+        showCreateTopic={showCreateTopic}
         sortDirection={sortDirection}
         sortKey={sortKey}
         viewHideDismissedTopics={viewHideDismissedTopics}
@@ -125,12 +128,14 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
             : 'Focus active topics by hiding dismissed branches.'}
         </AppTooltipContent>
       </AppTooltip>
-      <AppIconButton
-        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-        icon={<SquarePen size={16} strokeWidth={1.9} />}
-        label="Create topic"
-        onClick={props.onCreateTopic}
-      />
+      {props.showCreateTopic !== false ? (
+        <AppIconButton
+          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+          icon={<SquarePen size={16} strokeWidth={1.9} />}
+          label="Create topic"
+          onClick={props.onCreateTopic}
+        />
+      ) : null}
     </ToolbarActionGroup>
   );
 }

@@ -8,6 +8,7 @@ import { isDesktopRuntime } from './runtime';
 
 export type ManagedInboxUpdateUnlisten = (() => void) | null;
 export type ReadwiseReaderImportProgressUnlisten = (() => void) | null;
+export type { ReadwiseReaderImportProgressPayload };
 export type WorkspaceContentChangedUnlisten = (() => void) | null;
 export type WorkspaceSyncAppliedUnlisten = (() => void) | null;
 

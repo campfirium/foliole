@@ -8,6 +8,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { useDismissedTopicVisibility } from './useDismissedTopicVisibility';
+import { useWorkspaceTopicTreeActions } from './workspaceTopicTreeActions';
 import { useWorkspaceTopicTreeDrag } from './workspaceTopicTreeDrag';
 import {
   resolveWorkspaceTopicTreeFocusNodeId,
@@ -35,26 +36,7 @@ export interface WorkspaceTopicTreeProps {
   onOpenMoveToNode: () => void;
   onOpenPostponeTopicPanel?: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
-}
-
-export function useWorkspaceTopicTreeActions() {
-  return {
-    createChildNode: useWorkspaceStore((state) => state.createChildNode),
-    createVirtualNode: useWorkspaceStore((state) => state.createVirtualNode),
-    deleteNodes: useWorkspaceStore((state) => state.deleteNodes),
-    deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
-    dismissNode: useWorkspaceStore((state) => state.dismissNode),
-    moveNodes: useWorkspaceStore((state) => state.moveNodes),
-    restoreNode: useWorkspaceStore((state) => state.restoreNode),
-    returnNode: useWorkspaceStore((state) => state.relearnNode),
-    setNodeSequentialReading: useWorkspaceStore((state) => state.setNodeSequentialReading),
-    setFolderManualChildOrder: useWorkspaceStore((state) => state.setFolderManualChildOrder),
-    shelveNode: useWorkspaceStore((state) => state.shelveNode),
-    unshelveNode: useWorkspaceStore((state) => state.unshelveNode),
-    updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
-    updateNodeShortTerm: useWorkspaceStore((state) => state.updateNodeShortTerm),
-    updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)
-  };
+  showCreateTopic?: boolean;
 }
 
 function renderWorkspaceTopicTreeMenu(args: {
@@ -226,6 +208,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     setCollapsedNodeIds,
     onToggleDismissedTopicsVisibility: dismissedTopicVisibility.toggleDismissedTopicsVisibility,
     setSearchQuery,
+    ...definedProps({ showCreateTopic: props.showCreateTopic }),
     viewHideDismissedTopics: dismissedTopicVisibility.viewHideDismissedTopics,
     visibleRows
   });

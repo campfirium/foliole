@@ -1,4 +1,4 @@
-import type { ReadwiseReaderImportProgressPayload } from '../../shared/platform/electronApi';
+import type { ReadwiseReaderImportProgressPayload } from '../../shared/platform/runtimeShellEvents';
 
 export interface ReadwiseImportProgressView {
   message: string;

@@ -48,7 +48,6 @@ function createNode(args: {
 }
 
 function renderVirtualContentColumn() {
-  const onSelectNode = vi.fn();
   const onSelectNodeInVirtualView = vi.fn();
 
   render(
@@ -83,7 +82,7 @@ function renderVirtualContentColumn() {
       onOpenExternalSelection={vi.fn()}
       onOpenTrashView={vi.fn()}
       onOpenVirtualView={vi.fn()}
-      onSelectNode={onSelectNode}
+      onSelectNode={vi.fn()}
       onSelectNodeInVirtualView={onSelectNodeInVirtualView}
       onSelectTrashNode={vi.fn()}
       reviewCurrentNodeId={null}
@@ -92,13 +91,10 @@ function renderVirtualContentColumn() {
     />
   );
 
-  return { onSelectNode, onSelectNodeInVirtualView };
+  return { onSelectNodeInVirtualView };
 }
 
 function renderVirtualRootAggregate() {
-  const onSelectNode = vi.fn();
-  const onSelectNodeInVirtualView = vi.fn();
-
   render(
     <WorkspaceDualListContent
       activeNodeId={VIRTUAL_ROOT_NODE_ID}
@@ -138,8 +134,8 @@ function renderVirtualRootAggregate() {
       onOpenExternalSelection={vi.fn()}
       onOpenTrashView={vi.fn()}
       onOpenVirtualView={vi.fn()}
-      onSelectNode={onSelectNode}
-      onSelectNodeInVirtualView={onSelectNodeInVirtualView}
+      onSelectNode={vi.fn()}
+      onSelectNodeInVirtualView={vi.fn()}
       onSelectTrashNode={vi.fn()}
       reviewCurrentNodeId={null}
       selectedTrashNodeId={null}
@@ -147,7 +143,6 @@ function renderVirtualRootAggregate() {
     />
   );
 
-  return { onSelectNode, onSelectNodeInVirtualView };
 }
 
 beforeEach(() => {
@@ -162,20 +157,17 @@ it('routes an active virtual node into the right content column', () => {
 
   expect(screen.getAllByRole('complementary', { name: 'Topic list panel' })).toHaveLength(1);
   expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
-  expect(screen.getAllByRole('treeitem', { selected: true })).toHaveLength(1);
   expect(screen.getByRole('treeitem', { name: 'Saved Search' })).toHaveAttribute('aria-selected', 'true');
-  expect(screen.getByRole('treeitem', { name: 'Alpha Topic Inbox' })).toBeInTheDocument();
-  expect(screen.getAllByText('Inbox').length).toBeGreaterThan(0);
-
-  fireEvent.click(screen.getByRole('treeitem', { name: 'Alpha Topic Inbox' }));
+  expect(screen.getByRole('treeitem', { name: 'Alpha Topic' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Alpha Topic' }));
   expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('topic-a');
 });
 
 it('shows aggregate result items for the Virtual root even when list nodes are trimmed', () => {
   renderVirtualRootAggregate();
 
-  expect(screen.getByRole('treeitem', { name: 'Alpha Topic Inbox' })).toBeInTheDocument();
-  expect(screen.getByRole('treeitem', { name: 'Beta Topic Inbox' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Alpha Topic' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Beta Topic' })).toBeInTheDocument();
   expect(screen.queryByText('No virtual folders yet')).toBeNull();
 });
 
@@ -222,7 +214,7 @@ it('lists only directly shelved ordinary topics in the Shelved virtual view', ()
     />
   );
 
-  expect(screen.getByRole('treeitem', { name: 'Shelved Topic Inbox' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Shelved Topic' })).toBeInTheDocument();
   expect(screen.queryByText('Shelved Anchor')).toBeNull();
   expect(screen.queryByText('Active Topic')).toBeNull();
   expect(screen.queryByText('Trashed Topic')).toBeNull();

@@ -65,6 +65,7 @@ export function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createC
     clearError: vi.fn(),
     completePairing: vi.fn(),
     cancelPairing: vi.fn(),
+    disconnectPairing: vi.fn(),
     desktopDiscoveries: [],
     desktopDiscovery: null,
     error: null,

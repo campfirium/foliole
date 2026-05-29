@@ -1,12 +1,14 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { baseNode, renderSectionWithProps } from './DocumentPanelSection.testSupport';
 
-it('shows combined results when the Virtual root is open', () => {
-  const onSelectNode = vi.fn();
-  const onSelectNodeInVirtualView = vi.fn();
-
+function renderVirtualRootSection(args: {
+  onSelectNode: (nodeId: string) => void;
+  onSelectNodeInVirtualView: (nodeId: string) => void;
+}) {
   renderSectionWithProps({
     activeNodeId: 'special-virtual-root',
     editorNodeId: 'special-virtual-root',
@@ -45,20 +47,40 @@ it('shows combined results when the Virtual root is open', () => {
         content: 'No match here.'
       }
     },
-    onSelectNode,
-    onSelectNodeInVirtualView
+    onSelectNode: args.onSelectNode,
+    onSelectNodeInVirtualView: args.onSelectNodeInVirtualView
+  });
+}
+
+it('shows the Virtual root save search control in the document panel', async () => {
+  const onSelectNode = vi.fn();
+  const onSelectNodeInVirtualView = vi.fn();
+  useWorkspaceStore.setState({
+    createVirtualNode: vi.fn(async () => 'virtual-new'),
+    updateNodeTitle: vi.fn(async () => true),
+    updateVirtualNodeFilter: vi.fn()
   });
 
-  expect(screen.getByRole('region', { name: 'Virtual folder details' })).toBeInTheDocument();
-  expect(screen.getByText('Results')).toBeInTheDocument();
-  expect(screen.getByTestId('folder-list-title-node-2')).toHaveTextContent('Reader article');
-  expect(screen.queryByTestId('folder-list-title-node-3')).not.toBeInTheDocument();
+  renderVirtualRootSection({ onSelectNode, onSelectNodeInVirtualView });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Open Reader article' }));
+  expect(screen.queryByRole('region', { name: 'Virtual folder details' })).not.toBeInTheDocument();
+  expect(screen.queryByText('Results')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('folder-list-title-node-2')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Go back' })).not.toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
+  expect(screen.getByRole('searchbox', { name: 'Search topics to save as list' })).toHaveAttribute(
+    'placeholder',
+    'Search topics to save as list'
+  );
 
-  expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('node-2');
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics to save as list' }), {
+    target: { value: 'reader' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save search' }));
 
-  fireEvent.click(screen.getByRole('button', { name: 'Open real location for Reader article' }));
-
-  expect(onSelectNode).toHaveBeenCalledWith('node-2');
+  await waitFor(() => expect(useWorkspaceStore.getState().createVirtualNode).toHaveBeenCalled());
+  expect(useWorkspaceStore.getState().updateVirtualNodeFilter).toHaveBeenCalledWith('virtual-new', 'reader');
+  expect(useWorkspaceStore.getState().updateNodeTitle).toHaveBeenCalledWith('virtual-new', 'reader');
+  expect(onSelectNode).not.toHaveBeenCalled();
+  expect(onSelectNodeInVirtualView).not.toHaveBeenCalled();
 });

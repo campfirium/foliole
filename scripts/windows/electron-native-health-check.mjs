@@ -60,6 +60,15 @@ function resolveViteUrl(port) {
   return `http://${VITE_HOST}:${port}`;
 }
 
+export function resolveElectronExecutablePath(appRoot = repoRoot, platform = process.platform) {
+  const executable = platform === 'win32' ? 'electron.exe' : 'electron';
+  return path.join(appRoot, 'node_modules', 'electron', 'dist', executable);
+}
+
+export function canRunGuiHealth(env = process.env, platform = process.platform) {
+  return platform === 'win32' || Boolean(env.DISPLAY || env.WAYLAND_DISPLAY);
+}
+
 function candidateVitePorts() {
   const preferredPort = resolveRequestedPort();
   const ports = new Set([preferredPort]);
@@ -130,9 +139,14 @@ async function main() {
   await runChecked(compile.command, compile.args, 'compile electron', { shell: compile.shell });
   const rebuild = npmRunCommand('electron:rebuild:native');
   await runChecked(rebuild.command, rebuild.args, 'restore electron native ABI', { shell: rebuild.shell });
+  await runChecked(process.execPath, ['scripts/electron-sqlite-runner.mjs', '--preflight'], 'verify electron sqlite ABI');
+  if (!canRunGuiHealth()) {
+    console.log('[electron-native-health] status: ABI_READY gui=SKIPPED reason=headless-non-windows-host');
+    return;
+  }
   const vite = await startVite();
   const session = `windows-native-health-${Date.now()}`;
-  const electronPath = path.join(repoRoot, 'node_modules', 'electron', 'dist', 'electron.exe');
+  const electronPath = resolveElectronExecutablePath(repoRoot);
   const userDataPath = nativePaths.userDataPath;
   const env = {
     ...process.env,

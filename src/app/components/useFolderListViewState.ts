@@ -19,6 +19,7 @@ type UseFolderListViewStateArgs = {
   controlledSortDirection: FolderListSortDirection | undefined;
   controlledSortKey: FolderListSortKey | undefined;
   defaultSortKey: FolderListSortKey;
+  filterSearchResults?: boolean | undefined;
   listedNodes: Node[];
   listRebuildKey: string;
   manualChildOrder?: readonly string[] | null;
@@ -169,10 +170,14 @@ export function useFolderListViewState(args: UseFolderListViewStateArgs) {
   const sortKey = resolveControlledValue(args.controlledSortKey, uncontrolledSortKey);
   const sortDirection = resolveEffectiveSortDirection(sortKey, args.controlledSortDirection, uncontrolledSortDirection);
   const childNodes = useSortedFolderListNodes(args.listedNodes, args.nodeViewById, sortKey, sortDirection, `${args.listRebuildKey}\u0000${sortRefreshVersion}`, args.manualChildOrder);
-  const filteredNodes = useMemo(() => filterFolderListNodes(childNodes, searchQuery), [childNodes, searchQuery]);
+  const shouldFilterSearchResults = args.filterSearchResults !== false;
+  const filteredNodes = useMemo(
+    () => shouldFilterSearchResults ? filterFolderListNodes(childNodes, searchQuery) : childNodes,
+    [childNodes, searchQuery, shouldFilterSearchResults]
+  );
   const itemCount = childNodes.length;
   const itemCountLabel = formatItemCount(itemCount);
-  const searchResultLabel = searchQuery.trim() ? `${filteredNodes.length} / ${itemCount}` : null;
+  const searchResultLabel = shouldFilterSearchResults && searchQuery.trim() ? `${filteredNodes.length} / ${itemCount}` : null;
 
   return {
     childNodes,

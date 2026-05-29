@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react';
 import { useMemo } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
@@ -10,17 +9,15 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { TrashResultListPanel } from './TrashResultListPanel';
+import { WorkspaceCollectionSurface } from './WorkspaceCollectionSurface';
 import { renderExternalContentColumn } from './workspaceDualListExternalContent';
 import { WorkspaceDualListFolderColumn } from './WorkspaceDualListFolderColumn';
-import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
 import { useWorkspaceDualListState } from './workspaceDualListState';
 import { useWorkspaceDualListViewRoot } from './workspaceDualListViewRoot';
 import { renderVirtualContentColumn } from './workspaceDualListVirtualContent';
-import { useWorkspaceFolderWidthCssVar } from './workspaceFolderWidthCssVar';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
@@ -107,49 +104,35 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
     ...props,
     preferredFolderColumnId: viewRoot.preferredFolderColumnId
   });
-  const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
   const topicRootId = dualListState.activeFolderColumnId ?? dualListState.activeFolderId ?? null;
   const virtualResultIndex = useMemo(
     () => buildVirtualNodeResultIndex(props),
     [props.nodeOrder, props.nodesById, props.trashedNodeIds]
   );
-  useWorkspaceFolderWidthCssVar(folderListResize.width);
 
   if (!topicRootId && !props.isVirtualViewOpen && !props.isExternalViewOpen) {
     return renderSingleListFallback(props);
   }
 
   return (
-    <div
-      className="flex min-h-0 flex-1 overflow-hidden"
-      style={{ '--workspace-folder-column-width': `${folderListResize.width}px` } as CSSProperties}
-    >
-      <div
-        className="workspace-region-main-folder flex min-h-0 min-w-0 overflow-hidden"
-        style={{ flex: `0 0 ${folderListResize.width}px` }}
-      >
+    <WorkspaceCollectionSurface
+      folderColumn={
         <WorkspaceDualListFolderColumn
           dualListState={dualListState}
           onSelectFolderColumnNode={viewRoot.selectFolderColumnNode}
           props={props}
           virtualResultCountById={virtualResultIndex.countById}
         />
-      </div>
-      <WorkspaceDualListSplitter
-        isResizing={folderListResize.isResizing}
-        onKeyDown={folderListResize.handleKeyDown}
-        onPointerDown={folderListResize.handlePointerDown}
-        width={folderListResize.width}
-      />
-      <div className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        {props.isVirtualViewOpen
+      }
+      contentColumn={
+        props.isVirtualViewOpen
           ? renderVirtualContentColumn(props, virtualResultIndex)
           : props.isExternalViewOpen
             ? renderExternalContentColumn(props)
-          : topicRootId
-            ? renderStandardContentColumn(props, dualListState, topicRootId)
-            : renderSingleListFallback(props)}
-      </div>
-    </div>
+            : topicRootId
+              ? renderStandardContentColumn(props, dualListState, topicRootId)
+            : renderSingleListFallback(props)
+      }
+    />
   );
 }

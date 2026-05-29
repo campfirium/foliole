@@ -1,22 +1,20 @@
-import { Plus } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
-import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { buildNodeTree, buildVisibleNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import {
-  VIRTUAL_ROOT_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID,
   VIRTUAL_REMOVED_NODE_ID,
   isVirtualNode,
   isVirtualRootNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { AppIconButton } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { compareNaturalName } from './workspaceContentSort';
+import { compareVirtualNodeTitle } from './workspaceVirtualNodeSort';
+import { WorkspaceVirtualSavedSearchContextMenu } from './WorkspaceVirtualSavedSearchContextMenu';
+import { getVirtualKeyboardRows, renderVirtualRows, toggleCollapsed } from './WorkspaceVirtualSectionRows';
 
 interface WorkspaceVirtualSectionProps {
   activeVirtualNodeId?: string | null;
@@ -28,124 +26,45 @@ interface WorkspaceVirtualSectionProps {
   virtualResultCountById?: ReadonlyMap<string, number> | undefined;
 }
 
-function toggleCollapsed(nodeId: string, setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>) {
-  setCollapsedIds((current) => {
-    const next = new Set(current);
-    if (next.has(nodeId)) {
-      next.delete(nodeId);
-    } else {
-      next.add(nodeId);
-    }
-    return next;
-  });
-}
-
-function renderBuiltinVirtualRow(
-  props: Pick<WorkspaceVirtualSectionProps, 'activeVirtualNodeId' | 'isVirtualViewOpen' | 'onOpenVirtualView'> & {
-    label: string;
-    nodeId: string;
-    onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
-    rowSpacing: number;
+function selectVirtualKeyboardRow(nodeId: string, props: WorkspaceVirtualSectionProps) {
+  if (nodeId === VIRTUAL_REMOVED_NODE_ID || nodeId === VIRTUAL_SHELVED_NODE_ID) {
+    props.onOpenVirtualView?.(nodeId);
+    return;
   }
-) {
-  return (
-    <NodeTreeRow
-      depth={1}
-      hasChildren={false}
-      isActive={props.isVirtualViewOpen && props.activeVirtualNodeId === props.nodeId}
-      isCollapsed={false}
-      isSelected={props.isVirtualViewOpen && props.activeVirtualNodeId === props.nodeId}
-      key={props.nodeId}
-      label={props.label}
-      nodeId={props.nodeId}
-      rowSpacing={props.rowSpacing}
-      showIcon={false}
-      onKeyDown={props.onRowKeyDown}
-      onSelect={() => props.onOpenVirtualView?.(props.nodeId)}
-      onToggleCollapse={() => undefined}
-    />
-  );
+  props.onOpenVirtualView?.(nodeId);
+  props.onSelectNodeInVirtualView(nodeId);
 }
 
-function renderVirtualRows(args: {
-  collapsedIds: Set<string>;
-  onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
-  props: WorkspaceVirtualSectionProps & { onAddVirtualNode: () => Promise<void> };
-  rowSpacing: number;
-  rows: ReturnType<typeof buildVisibleNodeTreeRows>;
-  setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+function getContextMenuPosition(event: ReactMouseEvent<HTMLElement>) {
+  return {
+    left: Math.max(8, Math.min(event.clientX, window.innerWidth - 220)),
+    top: Math.max(8, Math.min(event.clientY, window.innerHeight - 72))
+  };
+}
+
+function renderSavedSearchContextMenu(args: {
+  contextMenu: { left: number; nodeId: string; top: number } | null;
+  deleteNode: (nodeId: string) => void;
+  setContextMenu: (value: { left: number; nodeId: string; top: number } | null) => void;
 }) {
-  return args.rows.flatMap((row) => {
-    const isSelected = args.props.isVirtualViewOpen && (args.props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID) === row.node.id;
-    const isVirtualRoot = row.node.id === VIRTUAL_ROOT_NODE_ID;
-    const isVirtualRootCollapsed = args.collapsedIds.has(VIRTUAL_ROOT_NODE_ID);
-    const virtualRow = (
-      <NodeTreeRow
-        depth={row.depth}
-        hasChildren={isVirtualRoot ? true : row.hasChildren}
-        isActive={isSelected}
-        isCollapsed={args.collapsedIds.has(row.node.id)}
-        isSelected={isSelected}
-        key={row.node.id}
-        label={row.node.title}
-        nodeId={row.node.id}
-        descendantCount={args.props.virtualResultCountById?.get(row.node.id) ?? 0}
-        rowSpacing={args.rowSpacing}
-        showIcon={false}
-        onKeyDown={args.onRowKeyDown}
-        onSelect={(nodeId) => {
-          args.props.onOpenVirtualView?.(nodeId);
-          args.props.onSelectNodeInVirtualView(nodeId);
-        }}
-        onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, args.setCollapsedIds)}
-      />
-    );
-    const renderedRow = isVirtualRoot
-      ? (
-          <div className="group/virtual-root relative" key={row.node.id}>
-            {virtualRow}
-            <AppIconButton
-              className="absolute right-2 top-1/2 size-7 -translate-y-1/2 text-foreground/55 opacity-0 transition-opacity hover:bg-foreground/[0.04] hover:text-foreground focus-visible:opacity-100 group-hover/virtual-root:opacity-100"
-              icon={<Plus size={15} strokeWidth={1.9} />}
-              label="New saved search"
-              onClick={(event) => {
-                event.stopPropagation();
-                void args.props.onAddVirtualNode();
-              }}
-            />
-          </div>
-        )
-      : virtualRow;
-    return isVirtualRoot && !isVirtualRootCollapsed
-      ? [
-          renderedRow,
-          renderBuiltinVirtualRow({ ...args.props, label: 'Shelved', nodeId: VIRTUAL_SHELVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing }),
-          renderBuiltinVirtualRow({ ...args.props, label: 'Removed', nodeId: VIRTUAL_REMOVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing })
-        ]
-      : [renderedRow];
-  });
-}
-
-function getVirtualKeyboardRows(
-  rows: ReturnType<typeof buildVisibleNodeTreeRows>,
-  collapsedIds: Set<string>
-) {
-  return rows.flatMap((row) =>
-    row.node.id === VIRTUAL_ROOT_NODE_ID && !collapsedIds.has(VIRTUAL_ROOT_NODE_ID)
-      ? [
-          { ...row, hasChildren: true },
-          { depth: 1, hasChildren: false, id: VIRTUAL_SHELVED_NODE_ID },
-          { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }
-        ]
-      : row.node.id === VIRTUAL_ROOT_NODE_ID
-        ? [{ ...row, hasChildren: true }]
-        : [row]
+  if (!args.contextMenu) return null;
+  return (
+    <WorkspaceVirtualSavedSearchContextMenu
+      left={args.contextMenu.left}
+      nodeId={args.contextMenu.nodeId}
+      onClose={() => args.setContextMenu(null)}
+      onDelete={args.deleteNode}
+      top={args.contextMenu.top}
+    />
   );
 }
 
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
+  const [contextMenu, setContextMenu] = useState<{ left: number; nodeId: string; top: number } | null>(null);
   const createVirtualNode = useWorkspaceStore((state) => state.createVirtualNode);
+  const deleteNode = useWorkspaceStore((state) => state.deleteNode);
+  const updateNodeTitle = useWorkspaceStore((state) => state.updateNodeTitle);
   const rowSpacing = getNodeListRowSpacing();
   const onAddVirtualNode = useCallback(async () => {
     const nodeId = await createVirtualNode();
@@ -165,40 +84,40 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     () =>
       createNodeListRowKeydownHandler({
         collapsedNodeIds: collapsedIds,
-        onSelect: (nodeId) => {
-          if (nodeId === VIRTUAL_REMOVED_NODE_ID || nodeId === VIRTUAL_SHELVED_NODE_ID) {
-            props.onOpenVirtualView?.(nodeId);
-            return;
-          }
-          props.onOpenVirtualView?.(nodeId);
-          props.onSelectNodeInVirtualView(nodeId);
-        },
+        onSelect: (nodeId) => selectVirtualKeyboardRow(nodeId, props),
         onToggleCollapse: (nodeId) => toggleCollapsed(nodeId, setCollapsedIds),
         rows: keyboardRows
       }),
     [collapsedIds, keyboardRows, props]
   );
 
-  if (rows.length === 0) {
-    return null;
-  }
+  if (rows.length === 0) return null;
 
   return (
     <div className="mt-1 flex min-w-0 flex-col">
       <div aria-hidden="true" className="mx-4 border-t border-border/15" />
       <section aria-label="Virtual folder tree" className="flex flex-col pt-1" role="tree">
-        {renderVirtualRows({ collapsedIds, onRowKeyDown, props: { ...props, onAddVirtualNode }, rowSpacing, rows, setCollapsedIds })}
+        {renderVirtualRows({
+          collapsedIds,
+          onRowKeyDown,
+          props: {
+            ...props,
+            onAddVirtualNode,
+            onContextMenuSavedSearch: (nodeId, event) => {
+              event.preventDefault();
+              setContextMenu({ nodeId, ...getContextMenuPosition(event) });
+            },
+            onDeleteVirtualNode: deleteNode,
+            onRenameVirtualNode: (nodeId, title) => {
+              void updateNodeTitle(nodeId, title);
+            }
+          },
+          rowSpacing,
+          rows,
+          setCollapsedIds
+        })}
+        {renderSavedSearchContextMenu({ contextMenu, deleteNode, setContextMenu })}
       </section>
     </div>
   );
-}
-
-function compareVirtualNodeTitle(
-  leftId: string,
-  rightId: string,
-  nodesById: WorkspaceListNodesById
-) {
-  if (leftId === VIRTUAL_ROOT_NODE_ID) return -1;
-  if (rightId === VIRTUAL_ROOT_NODE_ID) return 1;
-  return compareNaturalName(nodesById[leftId]?.title ?? '', nodesById[rightId]?.title ?? '');
 }

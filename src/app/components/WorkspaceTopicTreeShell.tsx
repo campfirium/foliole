@@ -29,6 +29,7 @@ export function renderWorkspaceTopicTreeShell(args: {
   onToggleDismissedTopicsVisibility: () => void;
   setSearchQuery: (value: string) => void;
   scrollTargetNodeId?: string | null;
+  showCreateTopic?: boolean;
   viewHideDismissedTopics: boolean;
   visibleRows: NodeTreeRow[];
 }) {
@@ -44,6 +45,7 @@ export function renderWorkspaceTopicTreeShell(args: {
         searchQuery={args.searchQuery}
         setCollapsedNodeIds={args.setCollapsedNodeIds}
         setSearchQuery={args.setSearchQuery}
+        {...definedProps({ showCreateTopic: args.showCreateTopic })}
         viewHideDismissedTopics={args.viewHideDismissedTopics}
       />
       {renderWorkspaceTopicTreeBody({

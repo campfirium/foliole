@@ -8,6 +8,7 @@ import {
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
+import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
 import { renderDocumentPanelHeader } from './DocumentPanelHeaderChrome';
@@ -108,7 +109,8 @@ function renderDocumentSearchToolbar(
 }
 
 function renderFolderNavigationOverlay(props: DocumentPanelSectionProps, visible: boolean) {
-  if (!visible || props.isImmersiveMode) {
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
+  if (!visible || props.isImmersiveMode || isVirtualNode(activeNode) || isVirtualRootNode(activeNode)) {
     return null;
   }
 

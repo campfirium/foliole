@@ -1,5 +1,4 @@
 // @vitest-environment node
-/* global process */
 
 import { mkdtemp, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';

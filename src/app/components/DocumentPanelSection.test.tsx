@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import {
   baseNode,
@@ -182,18 +183,32 @@ describe('DocumentPanelSection secondary views', () => {
 
 });
 
-it('shows a lightweight saved search hint for virtual nodes', () => {
+it('shows saved virtual searches as read-only lists without document controls', () => {
+  useWorkspaceStore.setState({ updateVirtualNodeFilter: vi.fn() });
   renderSectionWithProps({
     activeNodeId: 'node-1',
     editorNodeId: 'node-1',
     nodesById: {
-      'node-1': { ...baseNode, kind: 'folder', specialKind: 'virtual', title: 'Saved search' }
+      'node-1': {
+        ...baseNode,
+        kind: 'folder',
+        specialKind: 'virtual',
+        title: 'Saved search',
+        virtualFilter: { conditions: [{ field: 'text', operator: 'contains', value: 'alpha' }], match: 'all', version: 1 }
+      }
     }
   });
 
-  expect(screen.getByRole('region', { name: 'Virtual search details' })).toBeInTheDocument();
-  expect(screen.getByText('Saved search')).toBeInTheDocument();
-  expect(screen.getByText('Use the search field in the topic list to choose which topics appear here.')).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
+  expect(screen.queryByText('Search titles and topic text. Matching topics appear in the topic list.')).not.toBeInTheDocument();
+  expect(screen.getByRole('searchbox', { name: 'Search topics to save as list' })).toHaveAttribute('readonly');
+  expect(screen.getByRole('searchbox', { name: 'Search topics to save as list' })).toHaveValue('alpha');
+  expect(screen.queryByRole('button', { name: 'Clear folder search' })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics to save as list' }), { target: { value: 'beta' } });
+  expect(useWorkspaceStore.getState().updateVirtualNodeFilter).not.toHaveBeenCalled();
+  expect(screen.queryByRole('button', { name: /Priority P5/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'More editor options' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Go back' })).not.toBeInTheDocument();
   expect(screen.queryByText('Saved filter')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Save and run' })).toBeNull();
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();

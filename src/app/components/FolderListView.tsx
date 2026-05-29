@@ -6,6 +6,7 @@ import {
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
@@ -17,23 +18,27 @@ import { useFolderListViewState } from './useFolderListViewState';
 import { WorkspaceTopicTreeCurrentViewActions } from './WorkspaceTopicTreeCurrentViewActions';
 
 interface FolderListViewProps {
+  activeNodeId?: string | null | undefined;
   folderNodeId?: string;
-  folderTitle?: string;
+  folderTitle?: string | undefined;
   nodeOrder?: string[];
   nodes?: Node[];
   nodeViewById?: Record<string, NodeViewState | undefined>;
   nodesById: Record<string, Node>;
-  onChangeSearchQuery?: (searchQuery: string) => void;
+  onChangeSearchQuery?: ((searchQuery: string) => void) | undefined;
   onChangeSortDirection?: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey?: (sortKey: FolderListSortKey) => void;
   onOpenMoveToNode?: (sourceSnapshot?: CurrentViewTopicSnapshot[]) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodePath?: (nodeId: string) => void;
   searchQuery?: string;
-  emptyState?: {
-    description: string;
-    title: string;
-  };
+  searchAriaLabel?: string | undefined;
+  searchDescription?: string | undefined;
+  searchPlaceholder?: string | undefined;
+  searchReadOnly?: boolean;
+  searchAction?: ReactNode;
+  filterSearchResults?: boolean;
+  emptyState?: { description: string; title: string } | undefined;
   currentViewActions?: ReactNode;
   regionLabel?: string;
   showEmbeddedHeader?: boolean;
@@ -58,6 +63,7 @@ interface RenderFolderListItemArgs {
   folderNodeId?: string;
   childNodes: Node[];
   sortKey: FolderListSortKey;
+  activeNodeId?: string | null | undefined;
 }
 
 function resolveFolderTitle(folderTitle: string | undefined, folderNodeId: string | undefined, nodesById: Record<string, Node>) {
@@ -120,6 +126,7 @@ function useResolvedFolderListState(props: FolderListViewProps) {
     controlledSortDirection: props.sortDirection,
     controlledSortKey: props.sortKey,
     defaultSortKey: DEFAULT_FOLDER_LIST_SORT_KEY,
+    filterSearchResults: props.filterSearchResults,
     listedNodes,
     nodeViewById,
     listRebuildKey: buildFolderListRebuildKey(props, listedNodes),
@@ -153,6 +160,7 @@ export function FolderListView(props: FolderListViewProps) {
       <section aria-label={props.regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
           currentViewActions={props.currentViewActions ?? currentViewActions}
+          {...definedProps({ emptyState: props.emptyState })}
           filteredNodes={state.filteredNodes}
           folderTitle={resolvedFolderTitle}
           headerMode={headerMode}
@@ -162,6 +170,7 @@ export function FolderListView(props: FolderListViewProps) {
           onChangeSortDirection={state.updateSortDirection}
           onChangeSortKey={state.updateSortKey}
           onRenderItem={(node) => renderFolderListItem({
+            activeNodeId: props.activeNodeId,
             canManualDrag,
             childNodes: state.childNodes,
             draggedNodeId,
@@ -177,6 +186,13 @@ export function FolderListView(props: FolderListViewProps) {
             sortKey: state.sortKey
           })}
           searchQuery={state.searchQuery}
+          {...definedProps({
+            searchAction: props.searchAction,
+            searchAriaLabel: props.searchAriaLabel,
+            searchDescription: props.searchDescription,
+            searchPlaceholder: props.searchPlaceholder,
+            searchReadOnly: props.searchReadOnly
+          })}
           searchResultLabel={state.searchResultLabel}
           scrollElementRef={scrollElementRef}
           sortDirection={state.sortDirection}
@@ -191,6 +207,7 @@ function renderFolderListItem(args: RenderFolderListItemArgs) {
   const nodeViewState = args.nodeViewById[args.node.id];
   return (
     <FolderListViewItem
+      active={args.activeNodeId === args.node.id}
       draggable={args.canManualDrag}
       itemLayout={args.itemLayout}
       key={args.node.id}

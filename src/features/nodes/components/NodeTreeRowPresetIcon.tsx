@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import type { NodeIconShape } from './nodeIconAppearanceSettings';
 import type { NodeTreeRowIconKind } from './NodeTreeRowIconModel';
 
@@ -18,7 +20,7 @@ export function resolveNodeIconPresetTransformMode(kind: NodeTreeRowIconKind, sh
 }
 
 function ShapePath(props: { shape: NodeIconShape; strokeWidth?: number; fixedStroke?: boolean }) {
-  const style = {
+  const style: CSSProperties = {
     ...(typeof props.strokeWidth === 'number' ? { strokeWidth: props.strokeWidth } : {}),
     ...(props.fixedStroke ? { vectorEffect: 'non-scaling-stroke' } : {})
   };

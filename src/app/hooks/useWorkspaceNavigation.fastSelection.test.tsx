@@ -31,7 +31,7 @@ beforeEach(() => {
 describe('useWorkspaceNavigation fast selection', () => {
   it('selects the next node before the runtime dirty flush settles', async () => {
     const callOrder: string[] = [];
-    let resolveImmediateFlush: (() => void) | null = null;
+    const immediateFlush = { resolve: null as (() => void) | null };
     const openNode = vi.fn(() => {
       callOrder.push('open-node');
       return { focusAnchor: null, nodeId: 'node-2' };
@@ -52,7 +52,7 @@ describe('useWorkspaceNavigation fast selection', () => {
           () =>
             new Promise<boolean>((resolve) => {
               callOrder.push('flush-draft-immediate-start');
-              resolveImmediateFlush = () => resolve(true);
+              immediateFlush.resolve = () => resolve(true);
             })
         ),
         forwardStackSize: 0,
@@ -71,7 +71,8 @@ describe('useWorkspaceNavigation fast selection', () => {
     });
 
     expect(callOrder).toEqual(['flush-draft', 'save-view', 'open-node', 'flush-draft-immediate-start']);
-    expect(resolveImmediateFlush).toBeTypeOf('function');
+    expect(immediateFlush.resolve).toBeTypeOf('function');
+    const resolveImmediateFlush = immediateFlush.resolve;
     if (resolveImmediateFlush) {
       resolveImmediateFlush();
     }

@@ -1,4 +1,4 @@
-import { getElectronAPI } from '../../shared/platform/electronApi';
+import { onWindowEscape } from '../../shared/platform/keyboard';
 
 interface EditingEscapeNativeFallbackArgs {
   exitEditing: () => void;
@@ -7,15 +7,11 @@ interface EditingEscapeNativeFallbackArgs {
 }
 
 export function onEditingEscapeNativeFallback(args: EditingEscapeNativeFallbackArgs) {
-  const unsubscribe = getElectronAPI()?.onNativeKeyboardInput?.((payload) => {
-    if (payload.type !== 'keyDown' || payload.key !== 'Escape' || args.isDialogOpen()) {
-      return;
+  return onWindowEscape(() => {
+    if (args.isDialogOpen() || !args.isEditing()) {
+      return false;
     }
-    window.setTimeout(() => {
-      if (!args.isDialogOpen() && args.isEditing()) {
-        args.exitEditing();
-      }
-    }, 0);
+    args.exitEditing();
+    return true;
   });
-  return unsubscribe ?? (() => {});
 }

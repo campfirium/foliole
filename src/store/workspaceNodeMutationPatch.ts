@@ -1,12 +1,14 @@
-import type { NativeNodeSnapshotArgs } from '../../lib/platform/nativeContract';
 import type { Node, NodeAnchorLink } from '../features/nodes/model/nodeTypes';
-import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import type {
+  WorkspaceNodeMutationPatchResult,
+  WorkspaceRuntimeNodeSnapshot
+} from '../shared/platform/workspaceRuntimeTypes';
 
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspacePatch = Partial<Pick<WorkspaceState, 'activeNodeId' | 'nodeOrder' | 'nodesById'>>;
 
-function nodeFromSnapshot(snapshot: NativeNodeSnapshotArgs, current?: Node): Node {
+function nodeFromSnapshot(snapshot: WorkspaceRuntimeNodeSnapshot, current?: Node): Node {
   return {
     id: snapshot.nodeId,
     parentNodeId: snapshot.parentNodeId,

@@ -17,6 +17,7 @@ import { resolveFolderListLocationPath } from './folderListLocationPath';
 export type FolderListItemLayout = 'default' | 'virtual-result';
 
 type FolderListItemProps = {
+  active?: boolean | undefined;
   itemLayout: FolderListItemLayout;
   node: Node;
   nodeViewState?: NodeViewState;
@@ -107,6 +108,7 @@ export function FolderListViewItem(props: FolderListItemProps) {
 
   return (
     <FolderListTextItem
+      active={props.active}
       ariaLabel={`Open ${displayTitle}`}
       author={author}
       dateLabel={dateLabel}

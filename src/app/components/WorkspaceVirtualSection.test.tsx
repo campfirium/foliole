@@ -33,7 +33,11 @@ function createVirtualNode(args: {
 
 beforeEach(() => {
   window.localStorage.clear();
-  useWorkspaceStore.setState({ createVirtualNode: vi.fn(async () => 'virtual-new') });
+  useWorkspaceStore.setState({
+    createVirtualNode: vi.fn(async () => 'virtual-new'),
+    deleteNode: vi.fn(),
+    updateNodeTitle: vi.fn(async () => true)
+  });
 });
 
 it('moves from the virtual root through built-in virtual rows with arrow keys', () => {

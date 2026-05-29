@@ -29,11 +29,14 @@ async function createFixtureRoot() {
     'electron',
     'electron-dist',
     'android',
+    'assets',
+    'build',
     'ios',
     'lib',
     'logs',
     'ref',
     'release',
+    'public',
     'scripts',
     'src',
     'src-tauri',
@@ -83,7 +86,7 @@ describe('check-repository-root-boundary', () => {
     expect(cliResult.exitCode).toBe(1);
     expect(output).toContain('status: VIOLATION');
     expect(output).toContain('unauthorized=docs,playwright-report,test-results');
-    expect(output).toContain('allowed=android,electron,ios,lib,scripts,src,tests,.claude,.git,.github,.githooks,.lab');
+    expect(output).toContain('allowed=android,assets,build,electron,ios,lib,public,scripts,src,tests,.claude,.git,.github,.githooks,.lab');
     expect(output).not.toContain('.tmp-fixture');
     expect(output).not.toContain('ref');
     expect(output).not.toContain('src-tauri');

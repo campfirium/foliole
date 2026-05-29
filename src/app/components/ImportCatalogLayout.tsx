@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
 
-import { FolderListSearchBox } from './FolderListViewLayout';
+import { FolderListSearchBox } from './FolderListSearchBox';
 import { ImportCatalogSortControls, type ImportCatalogSortOption } from './ImportCatalogSortControls';
 
 export function ImportCatalogHeader(props: {

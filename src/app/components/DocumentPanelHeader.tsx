@@ -76,9 +76,10 @@ function renderHeaderActions(args: {
   isSourceUpdatePanelOpen: boolean;
   onToggleSourceUpdatePanel: () => void;
   showSourceUpdateAction: boolean;
+  showDocumentControls: boolean;
   toggleEditorDisplayMode: () => void;
 }) {
-  if (args.isFolderListView) {
+  if (args.isFolderListView || !args.showDocumentControls) {
     return null;
   }
 
@@ -123,6 +124,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
   toggleEditorDisplayMode: () => void;
 }) {
   const navigationProps = buildNavigationProps(args);
+  const showDocumentControls = args.showDocumentControls ?? true;
 
   return (
     <div className="relative flex min-w-0 flex-1 items-center">
@@ -134,7 +136,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
         isFolderListView={args.isFolderListView}
         nodesById={args.nodesById}
         onSelectBreadcrumbNode={args.onSelectBreadcrumbNode}
-        rightSlot={args.showDocumentControls === false ? null : (
+        rightSlot={!showDocumentControls ? null : (
           <>
             <DocumentPanelHeaderBacklinksMenu backlinks={args.backlinks} onSelectNode={args.onSelectBacklinkNode} />
             <DocumentPriorityControl
@@ -154,6 +156,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
           isFolderListView: args.isFolderListView,
           isSourceUpdatePanelOpen: args.isSourceUpdatePanelOpen,
           onToggleSourceUpdatePanel: args.onToggleSourceUpdatePanel,
+          showDocumentControls,
           showSourceUpdateAction: args.showSourceUpdateAction,
           toggleEditorDisplayMode: args.toggleEditorDisplayMode
         })}

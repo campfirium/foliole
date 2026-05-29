@@ -10,7 +10,7 @@ beforeEach(() => {
   useWorkspaceStore.setState({ updateVirtualNodeFilter: vi.fn() });
 });
 
-it('shows a persisted query field for user saved searches', () => {
+it('shows saved virtual results in the shared list column', () => {
   renderWorkspaceContent({
     activeNodeId: 'virtual-a',
     activeVirtualNodeId: 'virtual-a',
@@ -31,12 +31,17 @@ it('shows a persisted query field for user saved searches', () => {
     nodeOrder: [INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'virtual-a', 'topic-a']
   });
 
-  expect(screen.getByRole('searchbox', { name: 'Saved search query' })).toHaveValue('alpha');
-  expect(screen.queryByRole('button', { name: 'Open title search' })).toBeNull();
-  expect(screen.getByRole('treeitem', { name: 'Alpha Topic Inbox' })).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: 'Topic list panel' })).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
+  expect(screen.getAllByRole('heading', { level: 2, name: 'Topics' })).toHaveLength(1);
+  expect(screen.getByRole('heading', { level: 2, name: 'Current folder topics' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
+  expect(useWorkspaceStore.getState().updateVirtualNodeFilter).not.toHaveBeenCalled();
+  expect(screen.queryByRole('button', { name: 'Create topic' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Alpha Topic' })).toBeInTheDocument();
 });
 
-it('shows a fixed explanation instead of a query field for Shelved', () => {
+it('shows only result topics in the Shelved topic list column', () => {
   renderWorkspaceContent({
     activeNodeId: VIRTUAL_SHELVED_NODE_ID,
     activeVirtualNodeId: VIRTUAL_SHELVED_NODE_ID,
@@ -52,7 +57,8 @@ it('shows a fixed explanation instead of a query field for Shelved', () => {
     nodeOrder: [INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'shelved-topic']
   });
 
-  expect(screen.getByText('Shelved topics stay here until you return them to active reading.')).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: 'Topic list panel' })).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
   expect(screen.queryByRole('searchbox', { name: 'Saved search query' })).toBeNull();
-  expect(screen.getByRole('treeitem', { name: 'Shelved Topic Inbox' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Shelved Topic' })).toBeInTheDocument();
 });

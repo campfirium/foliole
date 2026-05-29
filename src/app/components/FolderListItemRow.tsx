@@ -3,7 +3,7 @@ import type { DragEvent as ReactDragEvent } from 'react';
 import { TruncatedTextTooltip } from '../../shared/ui';
 
 interface FolderListTextItemProps {
-  active?: boolean;
+  active?: boolean | undefined;
   ariaLabel: string;
   author?: string | null;
   dateLabel: string;

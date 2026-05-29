@@ -2,8 +2,10 @@ import { useState } from 'react';
 
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type { NativeReadwiseSyncPreviewResult } from '../../../lib/platform/nativeImportContract';
-import type { ReadwiseReaderImportProgressPayload } from '../../shared/platform/electronApi';
-import { onReadwiseReaderImportProgress } from '../../shared/platform/runtimeShellEvents';
+import {
+  onReadwiseReaderImportProgress,
+  type ReadwiseReaderImportProgressPayload
+} from '../../shared/platform/runtimeShellEvents';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';

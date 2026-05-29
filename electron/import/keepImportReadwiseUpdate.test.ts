@@ -51,7 +51,7 @@ afterEach(async () => {
 });
 
 async function runReadwiseKeepImport(fullDocumentDir: string) {
-  await runKeepImportRule({
+  return await runKeepImportRule({
     directoryPath: fullDocumentDir,
     highlightPolicy: 'reference_only',
     ruleId: 'draft-import-source-1',
@@ -144,12 +144,7 @@ it('appends new readwise highlights without flagging source updates when only th
   const fullDocumentPath = path.join(fixture.fullDocumentDir, 'Sample Article.md');
   const fullDocumentStats = await fs.stat(fullDocumentPath);
   await fs.utimes(fullDocumentPath, fullDocumentStats.atime, new Date(fullDocumentStats.mtimeMs + 1000));
-  const runEntries = await runKeepImportRule({
-    directoryPath: fixture.fullDocumentDir,
-    highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-1',
-    sourceType: 'readwise'
-  });
+  const runEntries = await runReadwiseKeepImport(fixture.fullDocumentDir);
 
   const { childRows, parentRow } = readImportedChildRows();
   const keepItem = openDatabaseConnection().sqlite

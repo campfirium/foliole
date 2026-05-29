@@ -9,7 +9,7 @@ function buildTopBarProps(settingsPage = 'list') {
     false,
     false,
     { kind: 'root' } as never,
-    'updatedAt',
+    'dateLastOpened',
     'desc',
     vi.fn(),
     vi.fn(),

@@ -2,6 +2,7 @@
 
 import { expect, it } from 'vitest';
 
+import { canRunGuiHealth, resolveElectronExecutablePath } from './electron-native-health-check.mjs';
 import { markerMatches, readyMarkersMatch } from './electron-native-health-check-support.mjs';
 import { createRendererReloadIntent } from './write-renderer-reload-intent.mjs';
 
@@ -39,4 +40,15 @@ it('uses the existing renderer reload intent contract', () => {
     nonce: 1,
     target: 'electron-dev-renderer'
   });
+});
+
+it('resolves the Electron executable for the current host platform', () => {
+  expect(resolveElectronExecutablePath('/repo', 'win32')).toBe('/repo/node_modules/electron/dist/electron.exe');
+  expect(resolveElectronExecutablePath('/repo', 'linux')).toBe('/repo/node_modules/electron/dist/electron');
+});
+
+it('keeps GUI health gated to Windows or display-capable hosts', () => {
+  expect(canRunGuiHealth({}, 'linux')).toBe(false);
+  expect(canRunGuiHealth({ DISPLAY: ':0' }, 'linux')).toBe(true);
+  expect(canRunGuiHealth({}, 'win32')).toBe(true);
 });

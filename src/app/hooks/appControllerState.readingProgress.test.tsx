@@ -68,6 +68,10 @@ vi.mock('./useAppRuntime', () => ({
   })
 }));
 
+vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
+  useAppearanceSettings: () => ({ selectionToolbarEnabled: false })
+}));
+
 vi.mock('./useEditorContextCommands', () => ({
   useEditorContextCommands: () => ({})
 }));

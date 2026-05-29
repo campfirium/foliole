@@ -2,13 +2,12 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 
-function createNode(id: string, title: string): Node {
+function createNode(id: string, title: string, content = ''): Node {
   return {
-    content: '',
+    content,
     createdAt: '2026-05-01T00:00:00.000Z',
     id,
     kind: 'topic',
@@ -22,11 +21,10 @@ function createNode(id: string, title: string): Node {
 
 beforeEach(() => {
   window.localStorage.clear();
-  useWorkspaceStore.setState({ updateVirtualNodeFilter: vi.fn() });
   vi.useRealTimers();
 });
 
-it('moves virtual result selection with arrow keys', () => {
+it('renders virtual root with the shared topic list surface', () => {
   const first = createNode('first', 'First result');
   const second = createNode('second', 'Second result');
   const onSelectNode = vi.fn();
@@ -35,53 +33,55 @@ it('moves virtual result selection with arrow keys', () => {
     <VirtualResultListPanel
       activeNodeId="first"
       emptyState={{ description: 'No results', title: 'Empty' }}
-      header={{ kind: 'description', text: 'Virtual combines saved search results.' }}
+      header={{ kind: 'root' }}
+      nodeOrder={['first', 'second']}
       nodes={[first, second]}
       nodesById={{ first, second }}
       onSelectNode={onSelectNode}
     />
   );
 
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: /First result/ }), { key: 'ArrowDown' });
+  expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Current folder topics' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Save search' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Create topic' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'First result' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), {
+    target: { value: 'second' }
+  });
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Second result' }));
 
   expect(onSelectNode).toHaveBeenCalledWith('second');
 });
 
-it('debounces saved search query updates', () => {
-  vi.useFakeTimers();
+it('filters saved virtual list results from the shared topic list header', () => {
   const first = createNode('first', 'First result');
+  const second = createNode('second', 'Second result');
 
   render(
     <VirtualResultListPanel
       activeNodeId={null}
       emptyState={{ description: 'No results', title: 'Empty' }}
-      header={{ kind: 'user-search', nodeId: 'virtual-a', query: '' }}
-      nodes={[first]}
-      nodesById={{ first }}
+      header={{ kind: 'user-search', nodeId: 'virtual-a', query: 'first', title: 'Saved Search' }}
+      nodeOrder={['first', 'second']}
+      nodes={[first, second]}
+      nodesById={{ first, second }}
       onSelectNode={vi.fn()}
     />
   );
 
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Saved search query' }), { target: { value: 'alpha' } });
+  expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Current folder topics' })).toBeInTheDocument();
 
-  expect(useWorkspaceStore.getState().updateVirtualNodeFilter).not.toHaveBeenCalled();
-  vi.advanceTimersByTime(299);
-  expect(useWorkspaceStore.getState().updateVirtualNodeFilter).not.toHaveBeenCalled();
-  vi.advanceTimersByTime(1);
-  expect(useWorkspaceStore.getState().updateVirtualNodeFilter).toHaveBeenCalledWith('virtual-a', 'alpha');
-});
+  fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), {
+    target: { value: 'second' }
+  });
 
-it('does not render the transient title search launcher', () => {
-  render(
-    <VirtualResultListPanel
-      activeNodeId={null}
-      emptyState={{ description: 'No results', title: 'Empty' }}
-      header={{ kind: 'user-search', nodeId: 'virtual-a', query: '' }}
-      nodes={[]}
-      nodesById={{}}
-      onSelectNode={vi.fn()}
-    />
-  );
-
-  expect(screen.queryByRole('button', { name: 'Open title search' })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: 'First result' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Second result' })).toBeInTheDocument();
 });

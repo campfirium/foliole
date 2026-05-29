@@ -41,7 +41,7 @@ describe('CompanionShellContent directory navigation', () => {
   it('keeps the directory root as a top-level directory surface', () => {
     const root = createTopBarProps({ directorySelection: { kind: 'root' } });
 
-    expect(root.onBack).toBeUndefined();
+    expect('onBack' in root ? root.onBack : undefined).toBeUndefined();
     expect('rightSlot' in root ? root.rightSlot : null).toBeTruthy();
   });
 
@@ -52,9 +52,12 @@ describe('CompanionShellContent directory navigation', () => {
       directorySelection: { folderId: 'external-1', kind: 'externalFolder' },
       onBackDirectorySelection
     });
-    nested.onBack?.();
+    const onBack = 'onBack' in nested && typeof nested.onBack === 'function' ? nested.onBack : undefined;
+    if (onBack) {
+      onBack();
+    }
 
-    expect(nested.backLabel).toBe('Back');
+    expect('backLabel' in nested ? nested.backLabel : undefined).toBe('Back');
     expect(onBackDirectorySelection).toHaveBeenCalledTimes(1);
   });
 });
