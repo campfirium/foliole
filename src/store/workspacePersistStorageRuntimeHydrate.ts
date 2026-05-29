@@ -63,13 +63,22 @@ async function loadReadingProgressForHydrate(name: string) {
 
 type RuntimeWorkspaceSnapshotLike = {
   activeNodeId: string | null;
-  nodeOrder: unknown;
+  nodeOrder: string[];
   nodesById: Record<string, Node>;
 };
 
 type RuntimeWorkspaceSnapshotInput = Omit<RuntimeWorkspaceSnapshotLike, 'nodesById'> & {
   nodesById: Record<string, unknown>;
 };
+
+type RuntimeWorkspaceSnapshotForNormalization = RuntimeWorkspaceSnapshotLike & {
+  trashedNodeDeletedAtById?: Record<string, string | undefined>;
+  trashedNodeIds: string[];
+};
+
+function toRuntimeWorkspaceSnapshotForNormalization(snapshot: unknown): RuntimeWorkspaceSnapshotForNormalization {
+  return snapshot as RuntimeWorkspaceSnapshotForNormalization;
+}
 
 async function hydrateActiveNodeDocument(name: string, snapshot: RuntimeWorkspaceSnapshotLike) {
   const activeNodeId = snapshot.activeNodeId;
@@ -177,7 +186,11 @@ async function loadRuntimeWorkspaceState(name: string) {
     loadReadingProgressForHydrate(name)
   ]);
   const normalizedSnapshot = snapshot
-    ? ensureInboxNodeInSnapshot(normalizeWorkspaceSnapshot(mergePendingNodeSyncIntoSnapshot(snapshot) ?? snapshot))
+    ? ensureInboxNodeInSnapshot(
+        normalizeWorkspaceSnapshot<Node, RuntimeWorkspaceSnapshotForNormalization>(
+          toRuntimeWorkspaceSnapshotForNormalization(mergePendingNodeSyncIntoSnapshot(snapshot) ?? snapshot)
+        )
+      )
     : null;
   const mergedSnapshot = trimRuntimeWorkspaceSnapshot(
     mergeWorkspaceSnapshotWithReadingProgress(normalizedSnapshot, readingProgress)

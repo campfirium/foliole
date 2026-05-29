@@ -25,7 +25,7 @@ describe('buildEditorDiffDecorations', () => {
   it('uses parser-backed markdown line classes for spacer profiles', () => {
     expect(buildLineClassProfiles(['# Title', '#tag/sample', '- [x] Done']).map((profile) => profile.className)).toEqual([
       'cm-line-h1',
-      null,
+      'cm-line-paragraph',
       'cm-line-list-unordered cm-line-task-list'
     ]);
   });
