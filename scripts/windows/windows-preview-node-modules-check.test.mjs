@@ -77,6 +77,7 @@ describe('windows preview node_modules check', () => {
       expect(result.stdout).toContain('windows node_modules check passed');
       expect(result.stdout).toContain('windows native ABI preflight passed');
       const command = await readFile(commandLog, 'utf8');
+      expect(command).toContain('-WindowStyle Hidden');
       expect(command).toContain("PATHEXT='.COM;.EXE;.BAT;.CMD;.PS1'");
       expect(command).toContain('npm.cmd ls --depth=0 --json --silent');
     } finally {

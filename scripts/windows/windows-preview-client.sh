@@ -117,7 +117,7 @@ verify_windows_node_modules() {
     exit_code=$?
   else
     output="$(
-      powershell.exe -NoProfile -NonInteractive -Command "\$ErrorActionPreference='Stop'; \$env:PATHEXT='.COM;.EXE;.BAT;.CMD;.PS1'; Set-Location -LiteralPath '${WINDOWS_WORKDIR}'; npm.cmd ls --depth=0 --json --silent | Out-Null; if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }" 2>&1
+      powershell.exe -NoProfile -WindowStyle Hidden -NonInteractive -Command "\$ErrorActionPreference='Stop'; \$env:PATHEXT='.COM;.EXE;.BAT;.CMD;.PS1'; Set-Location -LiteralPath '${WINDOWS_WORKDIR}'; npm.cmd ls --depth=0 --json --silent | Out-Null; if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }" 2>&1
     )"
     exit_code=$?
   fi
@@ -144,7 +144,7 @@ verify_windows_native_abi() {
     exit_code=$?
   else
     output="$(
-      powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${WINDOWS_NATIVE_ABI_PREFLIGHT_SCRIPT}" -WorkDir "${WINDOWS_WORKDIR}" -Run 2>&1
+      powershell.exe -NoProfile -WindowStyle Hidden -NonInteractive -ExecutionPolicy Bypass -File "${WINDOWS_NATIVE_ABI_PREFLIGHT_SCRIPT}" -WorkDir "${WINDOWS_WORKDIR}" -Run 2>&1
     )"
     exit_code=$?
   fi
@@ -165,7 +165,7 @@ verify_windows_native_abi() {
     exit_code=$?
   else
     output="$(
-      powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${WINDOWS_NATIVE_ABI_REPAIR_SCRIPT}" -WorkDir "${WINDOWS_WORKDIR}" 2>&1
+      powershell.exe -NoProfile -WindowStyle Hidden -NonInteractive -ExecutionPolicy Bypass -File "${WINDOWS_NATIVE_ABI_REPAIR_SCRIPT}" -WorkDir "${WINDOWS_WORKDIR}" 2>&1
     )"
     exit_code=$?
   fi
@@ -187,7 +187,7 @@ verify_windows_native_abi() {
     exit_code=$?
   else
     output="$(
-      powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${WINDOWS_NATIVE_ABI_PREFLIGHT_SCRIPT}" -WorkDir "${WINDOWS_WORKDIR}" -Run 2>&1
+      powershell.exe -NoProfile -WindowStyle Hidden -NonInteractive -ExecutionPolicy Bypass -File "${WINDOWS_NATIVE_ABI_PREFLIGHT_SCRIPT}" -WorkDir "${WINDOWS_WORKDIR}" -Run 2>&1
     )"
     exit_code=$?
   fi

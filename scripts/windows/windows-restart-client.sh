@@ -12,4 +12,4 @@ echo "[windows-restart-client] action=${WINDOWS_CLIENT_ACTION}"
 echo "[windows-restart-client] workdir=${WINDOWS_WORKDIR}"
 
 RUNTIME_HEAD="${FOLIOLE_RUNTIME_HEAD:-$(git rev-parse HEAD 2>/dev/null || true)}"
-powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${RUN_NODE_IN_WINDOWS_REPO}" -WindowsWorkDir "${WINDOWS_WORKDIR}" -ScriptPath "scripts/windows/windows-client-native.mjs" -RuntimeHead "${RUNTIME_HEAD}" -NodeArgs "${WINDOWS_CLIENT_ACTION}"
+powershell.exe -NoProfile -WindowStyle Hidden -NonInteractive -ExecutionPolicy Bypass -File "${RUN_NODE_IN_WINDOWS_REPO}" -WindowsWorkDir "${WINDOWS_WORKDIR}" -ScriptPath "scripts/windows/windows-client-native.mjs" -RuntimeHead "${RUNTIME_HEAD}" -NodeArgs "${WINDOWS_CLIENT_ACTION}"

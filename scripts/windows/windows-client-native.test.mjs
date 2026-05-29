@@ -97,6 +97,7 @@ it('routes WSL preview client actions through the native client controller', asy
   expect(script).toContain('WINDOWS_CLIENT_ACTION="${WINDOWS_CLIENT_ACTION:-status}"');
   expect(script).toContain('run-node-in-windows-repo.ps1');
   expect(script).toContain('RUNTIME_HEAD="${FOLIOLE_RUNTIME_HEAD:-$(git rev-parse HEAD 2>/dev/null || true)}"');
+  expect(script).toContain('-WindowStyle Hidden');
   expect(script).toContain('-WindowsWorkDir "${WINDOWS_WORKDIR}"');
   expect(script).toContain('-ScriptPath "scripts/windows/windows-client-native.mjs"');
   expect(script).toContain('-RuntimeHead "${RUNTIME_HEAD}"');

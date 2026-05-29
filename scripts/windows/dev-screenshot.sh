@@ -8,7 +8,7 @@ TARGET_FILE="$TARGET_DIR/latest.png"
 MIRROR_FILE="$WINDOWS_MIRROR_WSL/$TARGET_DIR/latest.png"
 
 if command -v powershell.exe >/dev/null 2>&1; then
-  powershell.exe -NoProfile -Command "\$ErrorActionPreference = 'Stop'; Invoke-WebRequest -UseBasicParsing -Method POST -Uri 'http://127.0.0.1:$PORT/dev/screenshot' | Out-Null"
+  powershell.exe -NoProfile -WindowStyle Hidden -Command "\$ErrorActionPreference = 'Stop'; Invoke-WebRequest -UseBasicParsing -Method POST -Uri 'http://127.0.0.1:$PORT/dev/screenshot' | Out-Null"
 elif command -v pwsh >/dev/null 2>&1; then
   pwsh -NoProfile -Command "\$ErrorActionPreference = 'Stop'; Invoke-WebRequest -UseBasicParsing -Method POST -Uri 'http://127.0.0.1:$PORT/dev/screenshot' | Out-Null"
 else
