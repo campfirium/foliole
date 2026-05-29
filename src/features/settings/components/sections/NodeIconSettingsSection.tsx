@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import {
-  DEFAULT_NODE_ICON_BASE_APPEARANCE
+  DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND
 } from '../../../nodes/components/nodeIconAppearanceSettings';
 import type { NodeTreeRowIconKind } from '../../../nodes/components/NodeTreeRowIconModel';
 
@@ -13,19 +13,20 @@ import { useNodeIconSettingsState } from './nodeIconSettingsState';
 type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 
 function resetBase(state: ReturnType<typeof useNodeIconSettingsState>, kind: EditableIconKind) {
+  const defaultAppearance = DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND[kind];
   if (kind === 'reading') {
     state.setTopicIcon('');
     state.setTopicSvg('');
-    state.setTopicColor(DEFAULT_NODE_ICON_BASE_APPEARANCE.color);
-    state.setTopicLineWidth(DEFAULT_NODE_ICON_BASE_APPEARANCE.lineWidth);
-    state.setTopicScale(DEFAULT_NODE_ICON_BASE_APPEARANCE.scale);
+    state.setTopicColor(defaultAppearance.color);
+    state.setTopicLineWidth(defaultAppearance.lineWidth);
+    state.setTopicScale(defaultAppearance.scale);
     return;
   }
   state.setItemIcon('');
   state.setItemSvg('');
-  state.setItemColor(DEFAULT_NODE_ICON_BASE_APPEARANCE.color);
-  state.setItemLineWidth(DEFAULT_NODE_ICON_BASE_APPEARANCE.lineWidth);
-  state.setItemScale(DEFAULT_NODE_ICON_BASE_APPEARANCE.scale);
+  state.setItemColor(defaultAppearance.color);
+  state.setItemLineWidth(defaultAppearance.lineWidth);
+  state.setItemScale(defaultAppearance.scale);
 }
 
 function resetEditTarget(state: ReturnType<typeof useNodeIconSettingsState>, target: NodeIconEditTarget) {

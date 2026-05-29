@@ -6,7 +6,7 @@ import {
   setWhitelistedLocalStorageItem
 } from '../../../../shared/platform/storage';
 import {
-  getDefaultNodeIconStateAppearance,
+  getDefaultNodeIconStateAppearanceForKind,
   getNodeIconKindStateAppearanceStorageKey,
   getNodeIconStateAppearance,
   type NodeIconStateAppearance
@@ -133,9 +133,18 @@ export function useNodeIconStateAppearanceState() {
     },
     reset() {
       setStateStyles({
-        pending: { reading: getDefaultNodeIconStateAppearance('pending'), review: getDefaultNodeIconStateAppearance('pending') },
-        scheduled: { reading: getDefaultNodeIconStateAppearance('scheduled'), review: getDefaultNodeIconStateAppearance('scheduled') },
-        dismissed: { reading: getDefaultNodeIconStateAppearance('dismissed'), review: getDefaultNodeIconStateAppearance('dismissed') }
+        pending: {
+          reading: getDefaultNodeIconStateAppearanceForKind('pending', 'reading'),
+          review: getDefaultNodeIconStateAppearanceForKind('pending', 'review')
+        },
+        scheduled: {
+          reading: getDefaultNodeIconStateAppearanceForKind('scheduled', 'reading'),
+          review: getDefaultNodeIconStateAppearanceForKind('scheduled', 'review')
+        },
+        dismissed: {
+          reading: getDefaultNodeIconStateAppearanceForKind('dismissed', 'reading'),
+          review: getDefaultNodeIconStateAppearanceForKind('dismissed', 'review')
+        }
       });
     },
     stateStyles,

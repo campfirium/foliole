@@ -6,7 +6,7 @@ import {
   setWhitelistedLocalStorageItem
 } from '../../../../shared/platform/storage';
 import {
-  DEFAULT_NODE_ICON_BASE_APPEARANCE,
+  DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND,
   getNodeIconBaseAppearance,
   type NodeIconBaseAppearance
 } from '../../../nodes/components/nodeIconAppearanceSettings';
@@ -20,8 +20,9 @@ const BASE_APPEARANCE_KEYS: Record<EditableIconKind, string> = {
 };
 
 function saveBaseAppearance(kind: EditableIconKind, appearance: NodeIconBaseAppearance) {
-  const isDefault = Object.keys(DEFAULT_NODE_ICON_BASE_APPEARANCE).every(
-    (key) => String(appearance[key as keyof NodeIconBaseAppearance]) === String(DEFAULT_NODE_ICON_BASE_APPEARANCE[key as keyof NodeIconBaseAppearance])
+  const defaultAppearance = DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND[kind];
+  const isDefault = Object.keys(defaultAppearance).every(
+    (key) => String(appearance[key as keyof NodeIconBaseAppearance]) === String(defaultAppearance[key as keyof NodeIconBaseAppearance])
   );
   if (isDefault) {
     removeWhitelistedLocalStorageItem(BASE_APPEARANCE_KEYS[kind]);
@@ -35,7 +36,7 @@ export function useNodeIconBaseAppearanceState(kind: EditableIconKind) {
   return {
     appearance,
     reset() {
-      setAppearance(DEFAULT_NODE_ICON_BASE_APPEARANCE);
+      setAppearance(DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND[kind]);
       removeWhitelistedLocalStorageItem(BASE_APPEARANCE_KEYS[kind]);
     },
     setColor(color: string) {

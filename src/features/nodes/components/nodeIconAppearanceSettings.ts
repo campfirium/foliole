@@ -4,7 +4,9 @@ import { getWhitelistedLocalStorageItem } from '../../../shared/platform/storage
 
 import {
   DEFAULT_NODE_ICON_BASE_APPEARANCE,
+  DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND,
   DEFAULT_NODE_ICON_STATE_APPEARANCE,
+  DEFAULT_NODE_ICON_STATE_APPEARANCE_BY_KIND,
   NODE_ICON_EFFECT_OPTIONS,
   type NodeIconBaseAppearance,
   type NodeIconEffect,
@@ -14,7 +16,9 @@ import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIco
 
 export {
   DEFAULT_NODE_ICON_BASE_APPEARANCE,
+  DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND,
   DEFAULT_NODE_ICON_STATE_APPEARANCE,
+  DEFAULT_NODE_ICON_STATE_APPEARANCE_BY_KIND,
   NODE_ICON_EFFECT_OPTIONS,
   NODE_ICON_SHAPE_OPTIONS
 } from './nodeIconAppearanceModel';
@@ -29,6 +33,13 @@ type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 
 export function getDefaultNodeIconStateAppearance(state: NodeTreeRowIconState): NodeIconStateAppearance {
   return DEFAULT_NODE_ICON_STATE_APPEARANCE[state];
+}
+
+export function getDefaultNodeIconStateAppearanceForKind(
+  state: NodeTreeRowIconState,
+  kind: EditableIconKind
+): NodeIconStateAppearance {
+  return DEFAULT_NODE_ICON_STATE_APPEARANCE_BY_KIND[state][kind];
 }
 
 const BASE_STORAGE_KEYS = {
@@ -124,22 +135,23 @@ function normalizeAppearanceOverride(
   }
 }
 
-function normalizeBaseAppearance(value: string | null): NodeIconBaseAppearance {
-  if (!value) return DEFAULT_NODE_ICON_BASE_APPEARANCE;
+function normalizeBaseAppearance(value: string | null, kind: EditableIconKind): NodeIconBaseAppearance {
+  const fallback = DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND[kind];
+  if (!value) return fallback;
   try {
     const parsed = JSON.parse(value) as Partial<Record<keyof NodeIconBaseAppearance, unknown>>;
     return {
-      color: normalizeColor(typeof parsed.color === 'string' ? parsed.color : null, DEFAULT_NODE_ICON_BASE_APPEARANCE.color),
-      lineWidth: normalizeNonNegativeNumber(String(parsed.lineWidth ?? ''), DEFAULT_NODE_ICON_BASE_APPEARANCE.lineWidth),
-      scale: normalizePositiveNumber(String(parsed.scale ?? ''), DEFAULT_NODE_ICON_BASE_APPEARANCE.scale)
+      color: normalizeColor(typeof parsed.color === 'string' ? parsed.color : null, fallback.color),
+      lineWidth: normalizeNonNegativeNumber(String(parsed.lineWidth ?? ''), fallback.lineWidth),
+      scale: normalizePositiveNumber(String(parsed.scale ?? ''), fallback.scale)
     };
   } catch {
-    return DEFAULT_NODE_ICON_BASE_APPEARANCE;
+    return fallback;
   }
 }
 
 export function getNodeIconBaseAppearance(kind: EditableIconKind): NodeIconBaseAppearance {
-  return normalizeBaseAppearance(getWhitelistedLocalStorageItem(BASE_STORAGE_KEYS[kind]));
+  return normalizeBaseAppearance(getWhitelistedLocalStorageItem(BASE_STORAGE_KEYS[kind]), kind);
 }
 
 export function getNodeIconStateAppearance(
@@ -148,11 +160,9 @@ export function getNodeIconStateAppearance(
 ): NodeIconStateAppearance {
   const base = kind ? getNodeIconBaseAppearance(kind) : DEFAULT_NODE_ICON_BASE_APPEARANCE;
   const defaults = {
-    ...getDefaultNodeIconStateAppearance(state),
+    ...(kind ? getDefaultNodeIconStateAppearanceForKind(state, kind) : getDefaultNodeIconStateAppearance(state)),
     color: base.color,
-    innerLineWidth: base.lineWidth,
     lineWidth: base.lineWidth,
-    outerLineWidth: base.lineWidth,
     scale: base.scale
   };
   const legacyAppearance = {

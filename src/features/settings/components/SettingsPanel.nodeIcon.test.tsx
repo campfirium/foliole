@@ -136,7 +136,7 @@ it('presents scheduled outline and inner ring controls as separate rows', () => 
   const topicScheduledRow = within(getMarkerRow('Topic scheduled'));
 
   expect(topicScheduledRow.getByLabelText('Scale')).toHaveValue('1.15');
-  expect(topicScheduledRow.getByLabelText('Inner ring scale')).toHaveValue('0.78');
+  expect(topicScheduledRow.getByLabelText('Inner ring scale')).toHaveValue('0.70');
   expect(topicScheduledRow.getByText('Inner ring')).toBeInTheDocument();
   expect(topicScheduledRow.queryByText('Outer ring')).not.toBeInTheDocument();
   expect(topicScheduledRow.queryByText('Ring accent')).not.toBeInTheDocument();
@@ -176,8 +176,8 @@ it('uses separate dismissed icon and text opacity controls', () => {
   openIconEditor();
   const opacitySection = within(screen.getByLabelText('Opacity'));
 
-  expect(opacitySection.getByLabelText('Icon opacity')).toHaveValue('0.30');
-  expect(opacitySection.getByLabelText('Row opacity')).toHaveValue('0.30');
+  expect(opacitySection.getByLabelText('Icon opacity')).toHaveValue('0.60');
+  expect(opacitySection.getByLabelText('Row opacity')).toHaveValue('0.60');
   expect(opacitySection.getByRole('button', { name: 'Reset Topic dismissed opacity' })).toBeInTheDocument();
   expect(opacitySection.queryByRole('switch', { name: 'Apply to row' })).not.toBeInTheDocument();
 
@@ -244,11 +244,11 @@ it('keeps base icon preview independent from state effects', () => {
   expect(basePreview.container.querySelector('[data-node-icon-effect="double-line"]')).toBeNull();
 });
 
-it('uses the theme-aware default color until the icon color is customized', () => {
+it('uses the saved icon default color until the icon color is customized', () => {
   const defaultPreview = render(<NodeTreeRowIcon kind="reading" preview state="pending" />);
   const defaultIcon = defaultPreview.container.querySelector<HTMLElement>('[data-node-icon="leaf"]');
   expect(defaultIcon).not.toBeNull();
-  expect(defaultIcon?.style.getPropertyValue('--node-icon-custom-color')).toBe('');
+  expect(defaultIcon?.style.getPropertyValue('--node-icon-custom-color')).toBe('#444444');
   defaultPreview.unmount();
 
   window.localStorage.setItem(
