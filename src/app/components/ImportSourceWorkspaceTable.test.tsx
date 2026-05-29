@@ -64,7 +64,7 @@ it('virtualizes large import source lists', () => {
   expect(screen.getByRole('button', { name: 'Add source' })).toBeEnabled();
 });
 
-it('blocks preview for generic split sources until sidecar support exists', () => {
+it('allows preview for generic split sources when both folders are selected', () => {
   render(
     <ImportSourceTable
       onAddSource={vi.fn()}
@@ -81,7 +81,7 @@ it('blocks preview for generic split sources until sidecar support exists', () =
 
   const previewButton = screen.getByRole('button', { name: 'Preview draft-import-source-101' });
 
-  expect(previewButton).toBeDisabled();
-  expect(previewButton).toHaveTextContent('Unavailable');
-  expect(previewButton).toHaveAttribute('title', 'Generic split highlights are not available yet.');
+  expect(previewButton).toBeEnabled();
+  expect(previewButton).toHaveTextContent('Preview');
+  expect(previewButton).toHaveAttribute('title', 'Needs preview');
 });

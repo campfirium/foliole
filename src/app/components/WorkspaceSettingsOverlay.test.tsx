@@ -35,37 +35,23 @@ function createDefaultOverlayImportSettings() {
 function createPreviewSummary() {
   return {
     blockedCount: 0,
-    discoveredCount: 1,
+    discoveredCount: 3,
     failedCount: 0,
     newCount: 1,
     previewedAt: '2026-05-28T00:00:00.000Z',
-    samples: [{
-      contentPreview: 'Preview body',
+    samples: ['first', 'second', 'third'].map((name) => ({
+      contentPreview: `${name} preview body`,
       detail: 'Ready',
-      detectedHighlightCount: 3,
-      highlightSamples: [
-        {
-          excerpt: 'Before first highlight after',
-          highlightText: 'first highlight',
-          matched: true,
-          sourceName: 'entry.md'
-        },
-        {
-          excerpt: 'Before second highlight after',
-          highlightText: 'second highlight',
-          matched: true,
-          sourceName: 'entry.md'
-        },
-        {
-          excerpt: 'Before third highlight after',
-          highlightText: 'third highlight',
-          matched: true,
-          sourceName: 'entry.md'
-        }
-      ],
-      sourcePath: 'entry.md',
-      status: 'new'
-    }],
+      detectedHighlightCount: 1,
+      highlightSamples: [{
+        excerpt: `Before ${name} highlight after`,
+        highlightText: `${name} highlight`,
+        matched: true,
+        sourceName: `${name}.md`
+      }],
+      sourcePath: `${name}.md`,
+      status: 'new' as const
+    })),
     unchangedCount: 0,
     updatedCount: 0
   };
@@ -169,11 +155,11 @@ it('opens the keep import preview dialog from the watch folders table', async ()
   expect(await screen.findByRole('dialog', { name: 'Import preview' })).toBeInTheDocument();
   expect(screen.queryByText('/demo/merged')).not.toBeInTheDocument();
   expect(screen.queryByText('Result preview')).not.toBeInTheDocument();
-  expect(screen.getByText('Checked 1 full document file; 3 matched highlights.')).toBeInTheDocument();
-  expect(screen.getByText('One sample highlight is shown below. Adjust the watch folder settings and preview again if it does not look right.')).toBeInTheDocument();
+  expect(screen.getByText('Checked 3 full document files; 3 matched highlights.')).toBeInTheDocument();
+  expect(screen.getByText('3 sample highlights shown below. Adjust the watch folder settings and preview again if they do not look right.')).toBeInTheDocument();
   expect(screen.getByText('first highlight')).toBeInTheDocument();
-  expect(screen.queryByText('second highlight')).not.toBeInTheDocument();
-  expect(screen.queryByText('third highlight')).not.toBeInTheDocument();
+  expect(screen.getByText('second highlight')).toBeInTheDocument();
+  expect(screen.getByText('third highlight')).toBeInTheDocument();
 });
 
 it('confirms before enabling delete handling for a watch folder', async () => {

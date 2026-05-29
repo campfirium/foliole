@@ -42,7 +42,7 @@ export async function classifySource(
   const existingItem = blockedState.existingItem;
   const notImported = existingItem?.last_status === 'discovered' && !existingItem.last_node_id;
   const primaryChanged = hasPrimarySourceChanged(existingItem, sourceSignature);
-  const highlightChanged = config.sourceType === 'readwise' ? hasHighlightSourceChanged(existingItem, sourceSignature) : false;
+  const highlightChanged = config.highlightMode === 'split' ? hasHighlightSourceChanged(existingItem, sourceSignature) : false;
   try {
     const prepared = await loadPreparedKeepImportRecord(config, source, new Date().toISOString());
     const highlightPreview = buildImportedHighlightPreviewFromMatches({

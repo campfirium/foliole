@@ -35,6 +35,7 @@ it('forwards keep preview mode details to the runtime import bridge', async () =
     directoryPath: '/tmp/inbox',
     highlightMode: 'merged',
     highlightPolicy: 'adopt',
+    highlightPath: '/tmp/highlights',
     ruleId: 'draft-import-source-101',
     sourceType: 'generic'
   });
@@ -43,6 +44,7 @@ it('forwards keep preview mode details to the runtime import bridge', async () =
     directory_path: '/tmp/inbox',
     highlight_mode: 'merged',
     highlight_policy: 'adopt',
+    highlight_path: '/tmp/highlights',
     rule_id: 'draft-import-source-101',
     source_type: 'generic'
   });

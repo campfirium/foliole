@@ -1,6 +1,10 @@
 import { readKeepImportItem } from '../database/keepImportItems.js';
 import { loadPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
+import {
+  loadPreparedGenericSplitImportRecord,
+  resolveGenericSplitSourceSignature
+} from './genericSplitPreparedImport.js';
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
 import { hasHighlightSourceChanged, hasPrimarySourceChanged } from './keepImportSourceSignature.js';
@@ -53,6 +57,14 @@ export async function loadPreparedKeepImportRecord(
       });
     }
   }
+  if (config.sourceType !== 'readwise' && config.highlightMode === 'split' && config.highlightDirectoryPath?.trim()) {
+    return loadPreparedGenericSplitImportRecord(source, {
+      highlightDirectoryPath: config.highlightDirectoryPath.trim(),
+      highlightPolicy: config.highlightPolicy,
+      importedAt,
+      titleStrategy: loadImportManagerSettings().titleStrategy
+    });
+  }
 
   return loadPreparedImportRecord(source, {
     highlightPolicy: config.highlightPolicy,
@@ -71,6 +83,11 @@ export async function resolveKeepImportSourceSignature(config: KeepImportRuleCon
         highlightDirectoryPath: readwiseSource.highlightPath.trim()
       });
     }
+  }
+  if (config.sourceType !== 'readwise' && config.highlightMode === 'split' && config.highlightDirectoryPath?.trim()) {
+    return resolveGenericSplitSourceSignature(source, {
+      highlightDirectoryPath: config.highlightDirectoryPath.trim()
+    });
   }
 
   return {

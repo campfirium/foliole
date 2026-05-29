@@ -64,3 +64,17 @@ describe('importedHighlightPreview', () => {
     });
   });
 });
+
+it('previews body context when locator text only contains the highlight', () => {
+  const result = buildImportedHighlightPreviewFromMatches({
+    content: 'Lead context before. Target highlighted words. Tail context after.',
+    matchedHighlights: [{ content: 'Target highlighted words', label: null, locatorText: 'Target highlighted words' }],
+    sourceName: 'Imported article'
+  });
+
+  expect(result.samples[0]).toMatchObject({
+    excerpt: 'Lead context before. Target highlighted words. Tail context after.',
+    highlightText: 'Target highlighted words',
+    matched: true
+  });
+});

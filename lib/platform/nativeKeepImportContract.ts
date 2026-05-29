@@ -6,6 +6,7 @@ export interface NativeKeepImportPreviewArgs {
   directory_path: string;
   highlight_mode?: 'merged' | 'split';
   highlight_policy?: NativeImportHighlightPolicy;
+  highlight_path?: string;
   rule_id: string;
   source_type?: 'generic' | 'readwise';
 }

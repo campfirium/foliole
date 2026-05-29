@@ -1,5 +1,5 @@
 import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
-import { GENERIC_SPLIT_UNSUPPORTED_MESSAGE } from '../../lib/core/import/unsupportedKeepImportRules.js';
+import type { ImportSourceAction } from '../../lib/core/import/importSourceActions.js';
 import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeKeepImportContract.js';
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
@@ -16,7 +16,9 @@ import { classifySource } from './keepImportSourceClassifier.js';
 import { discoverReadwiseImportSources } from './readwiseSourceDiscovery.js';
 
 export interface KeepImportRuleConfig {
+  actionMode?: ImportSourceAction;
   directoryPath: string;
+  highlightDirectoryPath?: string;
   highlightMode?: 'merged' | 'split';
   highlightPolicy: ImportHighlightPolicy;
   onProgress?: KeepImportProgressSink;
@@ -25,14 +27,7 @@ export interface KeepImportRuleConfig {
   sourceType?: 'generic' | 'readwise';
 }
 
-function assertSupportedKeepImportRule(config: KeepImportRuleConfig) {
-  if ((config.sourceType ?? 'generic') === 'generic' && config.highlightMode === 'split') {
-    throw new Error(GENERIC_SPLIT_UNSUPPORTED_MESSAGE);
-  }
-}
-
 export async function previewKeepImportRule(config: KeepImportRuleConfig): Promise<NativeKeepImportPreviewResult> {
-  assertSupportedKeepImportRule(config);
   const previewedAt = new Date().toISOString();
   const discoveredSources = await discoverKeepImportSources(config);
   const importableSources = (
@@ -53,7 +48,6 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
 }
 
 async function runKeepImportRuleNow(config: KeepImportRuleConfig) {
-  assertSupportedKeepImportRule(config);
   throwIfKeepImportAborted(config.signal);
   const discoveredSources = await discoverKeepImportSources(config);
   throwIfKeepImportAborted(config.signal);

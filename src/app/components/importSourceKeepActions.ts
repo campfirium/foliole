@@ -55,7 +55,11 @@ export function createKeepImportActions(settings: ImportManagerSettings, setSett
     },
     async handlePreviewKeepImport(sourceId: string, scope: 'readwiseSources' | 'sources') {
       const source = settings[scope].find((entry) => entry.id === sourceId);
-      if (!source?.primaryPath.trim() || isGenericSplitImportSourceUnsupported(source)) {
+      if (
+        !source?.primaryPath.trim() ||
+        (source.highlightMode === 'split' && !source.highlightPath.trim()) ||
+        isGenericSplitImportSourceUnsupported(source)
+      ) {
         return null;
       }
       const result = await previewRuntimeKeepImportRule({
@@ -63,6 +67,7 @@ export function createKeepImportActions(settings: ImportManagerSettings, setSett
         highlightMode: source.highlightMode,
         highlightPolicy:
           scope === 'sources' && source.highlightMode === 'merged' ? 'adopt' : 'reference_only',
+        highlightPath: source.highlightPath,
         ruleId: source.id,
         sourceType: scope === 'readwiseSources' ? 'readwise' : 'generic'
       });

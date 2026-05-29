@@ -14,6 +14,7 @@ import { shouldDeferReadwiseToSourceUpdate } from './keepImportReadwiseSourceUpd
 import type { KeepImportRuleConfig } from './keepImportService.js';
 import { persistBlockedKeepImportState } from './keepImportServiceState.js';
 import { classifySource, isBlockedByDeletedNode } from './keepImportSourceClassifier.js';
+import { applySuccessfulSourceHandling } from './keepImportSourceHandling.js';
 import { runKeepImportSourceImportAttempt } from './keepImportSourceImportAttempt.js';
 import { hasPrimarySourceChanged } from './keepImportSourceSignature.js';
 import { resolvePersistedSourceUpdateFlag } from './keepImportSourceUpdateState.js';
@@ -139,9 +140,10 @@ export async function runSingleKeepImportSource(
     preview.status === 'unchanged' &&
     !(await shouldRunUnchangedReadwiseDestination(config, source))
   ) {
+    const cleanupDetail = await applySuccessfulSourceHandling(config, source);
     notifyPendingSourceUpdate(config, source.sourceName);
     return createSkippedKeepImportEntry({
-      detail: preview.detail,
+      detail: cleanupDetail ?? preview.detail,
       failureReason: null,
       previewStatus: preview.status,
       sourcePath: source.sourceName

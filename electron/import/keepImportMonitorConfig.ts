@@ -6,8 +6,10 @@ import {
 import { isGenericSplitImportSourceUnsupported } from '../../lib/core/import/unsupportedKeepImportRules.js';
 
 export interface KeepImportConfig {
+  actionMode: ImportManagerSourceDraft['actionMode'];
   adapterConfigId: string;
   directoryPath: string;
+  highlightDirectoryPath?: string;
   highlightMode: ImportManagerSourceDraft['highlightMode'];
   highlightPolicy: ImportHighlightPolicy;
   sourceType: 'generic' | 'readwise';
@@ -38,13 +40,18 @@ function toKeepImportConfig(
   if (source.keepState !== 'enabled' || !directoryPath || isGenericSplitImportSourceUnsupported(source)) {
     return null;
   }
+  if (source.highlightMode === 'split' && !highlightPath) {
+    return null;
+  }
   const watchPaths = [directoryPath];
-  if (sourceType === 'readwise' && highlightPath && highlightPath !== directoryPath) {
+  if (source.highlightMode === 'split' && highlightPath && highlightPath !== directoryPath) {
     watchPaths.push(highlightPath);
   }
   return {
+    actionMode: source.actionMode,
     adapterConfigId: source.id,
     directoryPath,
+    ...(highlightPath ? { highlightDirectoryPath: highlightPath } : {}),
     highlightMode: source.highlightMode,
     highlightPolicy: resolveSourceHighlightPolicy(source, sourceType),
     sourceId: source.id,

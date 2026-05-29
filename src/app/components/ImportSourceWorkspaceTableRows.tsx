@@ -51,6 +51,7 @@ function PreviewCell(props: {
   onPreviewKeepImport: (sourceId: string) => void;
 }) {
   const unsupportedSplit = isGenericSplitImportSourceUnsupported(props.source);
+  const missingPath = !props.source.primaryPath.trim() || (props.source.highlightMode === 'split' && !props.source.highlightPath.trim());
   if (props.source.keepState === 'enabled') {
     return (
       <AppButton
@@ -68,7 +69,7 @@ function PreviewCell(props: {
     <AppButton
       aria-label={`Preview ${props.source.id}`}
       className="h-9 w-full min-w-0 px-2.5 text-sm"
-      disabled={!props.source.primaryPath.trim() || unsupportedSplit}
+      disabled={missingPath || unsupportedSplit}
       onClick={() => props.onPreviewKeepImport(props.source.id)}
       title={unsupportedSplit ? 'Generic split highlights are not available yet.' : formatKeepStateLabel(props.source.keepState)}
       variant="primary"

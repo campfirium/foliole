@@ -10,6 +10,7 @@ export async function previewRuntimeKeepImportRule(args: {
   directoryPath: string;
   highlightMode?: 'merged' | 'split';
   highlightPolicy?: 'adopt' | 'reference_only';
+  highlightPath?: string;
   ruleId: string;
   sourceType?: 'generic' | 'readwise';
 }): Promise<RuntimeKeepImportPreviewResult | null> {
@@ -24,6 +25,7 @@ export async function previewRuntimeKeepImportRule(args: {
         directory_path: args.directoryPath,
         highlight_mode: args.highlightMode,
         highlight_policy: args.highlightPolicy,
+        highlight_path: args.highlightPath,
         source_type: args.sourceType,
         rule_id: args.ruleId
       })

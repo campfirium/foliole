@@ -19,7 +19,9 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
     },
     async runCycle(config) {
       await runKeepImportRule({
+        actionMode: config.actionMode,
         directoryPath: config.directoryPath,
+        ...(config.highlightDirectoryPath ? { highlightDirectoryPath: config.highlightDirectoryPath } : {}),
         highlightMode: config.highlightMode,
         highlightPolicy: config.highlightPolicy,
         ruleId: config.adapterConfigId,

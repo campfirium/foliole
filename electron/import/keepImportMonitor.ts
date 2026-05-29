@@ -112,7 +112,9 @@ function startConfigRun(
 
 function isSameSourceConfig(left: KeepImportSourceConfig, right: KeepImportSourceConfig) {
   return (
+    left.actionMode === right.actionMode &&
     left.directoryPath === right.directoryPath &&
+    left.highlightDirectoryPath === right.highlightDirectoryPath &&
     left.highlightMode === right.highlightMode &&
     left.highlightPolicy === right.highlightPolicy &&
     left.watchPaths.join('\u001f') === right.watchPaths.join('\u001f')

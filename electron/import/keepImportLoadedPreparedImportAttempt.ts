@@ -12,6 +12,7 @@ import {
 } from './keepImportProgress.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
 import { persistKeepImportState } from './keepImportServiceState.js';
+import { applySuccessfulSourceHandling } from './keepImportSourceHandling.js';
 import {
   resolveKeepImportResultDetail,
   resolveKeepImportResultStatus
@@ -118,13 +119,14 @@ export async function runLoadedPreparedImportAttempt(input: {
     })
     : null;
   if (duplicateNoop) {
+    const cleanupDetail = await applySuccessfulSourceHandling(input.config, input.source);
     publishNoopHighlightProgress({
       highlightTotalCount,
       onProgress: input.onProgress,
       sourceName: input.source.sourceName
     });
     return {
-      detail: 'No content changes detected since the last import.',
+      detail: cleanupDetail ?? 'No content changes detected since the last import.',
       failureReason: null,
       importId: duplicateNoop.importId,
       importStatus: 'duplicate' as const,
@@ -140,8 +142,9 @@ export async function runLoadedPreparedImportAttempt(input: {
   });
   const importStatus = resolveKeepImportResultStatus(indexedRecord);
   persistKeepImportState(input.config, input.source, input.sourceSignature, indexedRecord, importStatus, input.hasSourceUpdate);
+  const cleanupDetail = await applySuccessfulSourceHandling(input.config, input.source);
   return {
-    detail: resolveKeepImportResultDetail(indexedRecord, importStatus),
+    detail: cleanupDetail ?? resolveKeepImportResultDetail(indexedRecord, importStatus),
     failureReason: indexedRecord.failureReason,
     importId: indexedRecord.importId,
     importStatus

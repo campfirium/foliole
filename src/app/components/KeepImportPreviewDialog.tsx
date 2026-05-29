@@ -1,9 +1,15 @@
 import type { KeepImportPreviewSummary } from '../../../lib/core/import/importManagerSettings';
+import type { NativeReadwiseDetectionSample } from '../../../lib/platform/nativeReadwiseContract';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
 import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
 
-const KEEP_PREVIEW_SAMPLE_LIMIT = 1;
+const KEEP_PREVIEW_SAMPLE_LIMIT = 3;
+
+interface KeepImportPreviewSampleGroup {
+  samples: NativeReadwiseDetectionSample[];
+  sourcePath: string;
+}
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
@@ -19,29 +25,42 @@ function formatPreviewResult(preview: KeepImportPreviewSummary) {
 }
 
 function formatPreviewGuidance(preview: KeepImportPreviewSummary) {
-  if (!findPreviewSample(preview)) {
+  const sampleCount = collectPreviewSampleGroups(preview).reduce((total, group) => total + group.samples.length, 0);
+  if (sampleCount === 0) {
     return preview.unchangedCount > 0
       ? 'This document is already imported and has no new highlight samples to show.'
       : 'No sample highlights are available for this preview.';
   }
-  return 'One sample highlight is shown below. Adjust the watch folder settings and preview again if it does not look right.';
+  return `${formatCount(sampleCount, 'sample highlight')} shown below. Adjust the watch folder settings and preview again if they do not look right.`;
 }
 
-function findPreviewSample(preview: KeepImportPreviewSummary) {
-  return preview.samples.find((sample) => sample.highlightSamples.length > 0) ?? null;
+function collectPreviewSampleGroups(preview: KeepImportPreviewSummary): KeepImportPreviewSampleGroup[] {
+  const groups: KeepImportPreviewSampleGroup[] = [];
+  let remaining = KEEP_PREVIEW_SAMPLE_LIMIT;
+  for (const sample of preview.samples) {
+    if (remaining <= 0) {
+      break;
+    }
+    const visibleSamples = sample.highlightSamples.slice(0, remaining);
+    if (visibleSamples.length === 0) {
+      continue;
+    }
+    groups.push({ samples: visibleSamples, sourcePath: sample.sourcePath });
+    remaining -= visibleSamples.length;
+  }
+  return groups;
 }
 
-function KeepImportPreviewEntry(props: { sample: KeepImportPreviewSummary['samples'][number] }) {
+function KeepImportPreviewEntry(props: { group: KeepImportPreviewSampleGroup }) {
   return (
     <section>
-      <p className="mt-6 text-sm font-semibold leading-5 text-foreground">“{props.sample.sourcePath}”</p>
+      <p className="mt-6 text-sm font-semibold leading-5 text-foreground">“{props.group.sourcePath}”</p>
       <ReadwisePreviewSampleList
         hasGap={false}
-        maxSamples={KEEP_PREVIEW_SAMPLE_LIMIT}
-        samples={props.sample.highlightSamples}
+        samples={props.group.samples}
         showGap={false}
         showSourceName={false}
-        sourceName={props.sample.sourcePath}
+        sourceName={props.group.sourcePath}
       />
     </section>
   );
@@ -51,7 +70,7 @@ function KeepImportPreviewContent(props: { preview: KeepImportPreviewSummary | n
   if (!props.preview) {
     return <p className="text-sm text-foreground/60">No preview result available.</p>;
   }
-  const previewSample = findPreviewSample(props.preview);
+  const previewSampleGroups = collectPreviewSampleGroups(props.preview);
 
   return (
     <>
@@ -60,7 +79,7 @@ function KeepImportPreviewContent(props: { preview: KeepImportPreviewSummary | n
         <p className="mt-1 text-sm leading-5 text-foreground/65">{formatPreviewGuidance(props.preview)}</p>
       </div>
       <div>
-        {previewSample ? <KeepImportPreviewEntry sample={previewSample} /> : null}
+        {previewSampleGroups.map((group) => <KeepImportPreviewEntry group={group} key={group.sourcePath} />)}
       </div>
     </>
   );

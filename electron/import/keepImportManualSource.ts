@@ -11,7 +11,10 @@ export function resolveKeepImportRuleConfig(ruleId: string): KeepImportRuleConfi
   const readwiseRule = settings.readwiseSources.find((entry) => entry.id === ruleId);
   if (readwiseRule?.primaryPath.trim()) {
     return {
+      actionMode: readwiseRule.actionMode,
       directoryPath: readwiseRule.primaryPath.trim(),
+      highlightDirectoryPath: readwiseRule.highlightPath.trim(),
+      highlightMode: readwiseRule.highlightMode,
       highlightPolicy: 'reference_only',
       ruleId,
       sourceType: 'readwise'
@@ -22,7 +25,10 @@ export function resolveKeepImportRuleConfig(ruleId: string): KeepImportRuleConfi
     return null;
   }
   return {
+    actionMode: genericRule.actionMode,
     directoryPath: genericRule.primaryPath.trim(),
+    highlightDirectoryPath: genericRule.highlightPath.trim(),
+    highlightMode: genericRule.highlightMode,
     highlightPolicy: genericRule.highlightMode === 'merged' ? 'adopt' : 'reference_only',
     ruleId,
     sourceType: 'generic'

@@ -92,6 +92,7 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
       directoryPath: asString(args.directory_path, 'directory_path'),
       highlightMode: resolveNativeHighlightMode(args.highlight_mode),
       highlightPolicy: resolveNativeHighlightPolicy(args.highlight_policy),
+      ...(typeof args.highlight_path === 'string' ? { highlightDirectoryPath: args.highlight_path } : {}),
       ruleId: asString(args.rule_id, 'rule_id'),
       sourceType: resolveKeepImportSourceType(args.source_type)
     });

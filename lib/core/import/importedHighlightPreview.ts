@@ -29,6 +29,10 @@ function findMatchIndex(text: string, highlightText: string) {
   return text.toLocaleLowerCase().indexOf(highlightText.toLocaleLowerCase());
 }
 
+function normalizePreviewMatchText(value: string) {
+  return value.replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+}
+
 function findParagraphMatch(content: string, highlightText: string) {
   return content
     .split(/\n{2,}/)
@@ -43,7 +47,11 @@ function buildMatchedExcerpt(input: {
 }) {
   const locator = input.locatorText?.trim();
   const locatorMatchIndex = locator ? findMatchIndex(locator, input.highlightText) : -1;
-  if (locator && locatorMatchIndex >= 0) {
+  if (
+    locator &&
+    locatorMatchIndex >= 0 &&
+    normalizePreviewMatchText(locator) !== normalizePreviewMatchText(input.highlightText)
+  ) {
     return truncateAroundMatch(locator, locatorMatchIndex, input.highlightText);
   }
   const paragraph = findParagraphMatch(input.content, input.highlightText);

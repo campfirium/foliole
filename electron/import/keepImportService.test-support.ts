@@ -14,9 +14,15 @@ export function mapChildRowsWithAnchorLink<T extends { anchor_link: string | nul
   }));
 }
 
-export function createGenericKeepImportConfig(directoryPath: string, ruleId: string, highlightPolicy: 'adopt' | 'reference_only' = 'reference_only') {
+export function createGenericKeepImportConfig(
+  directoryPath: string,
+  ruleId: string,
+  highlightPolicy: 'adopt' | 'reference_only' = 'reference_only',
+  highlightDirectoryPath?: string
+) {
   return {
     directoryPath,
+    ...(highlightDirectoryPath ? { highlightDirectoryPath, highlightMode: 'split' as const } : {}),
     highlightPolicy,
     ruleId
   } as const;
