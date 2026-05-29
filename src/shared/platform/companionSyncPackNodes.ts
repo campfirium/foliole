@@ -5,6 +5,7 @@ import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSync
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import {
+  closeCompanionDatabaseConnection,
   type CompanionSqliteConnectionManager,
   openCompanionDatabaseConnection
 } from './companionSyncNodeVersions';
@@ -69,6 +70,7 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
     }));
   } finally {
     await port.run(`DETACH DATABASE ${INCOMING_PACK_ALIAS}`);
+    await closeCompanionDatabaseConnection(manager, connection);
   }
 }
 

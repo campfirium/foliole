@@ -5,6 +5,7 @@ import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncCon
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import {
+  closeCompanionDatabaseConnection,
   type CompanionSqliteConnectionManager,
   openCompanionDatabaseConnection
 } from './companionSyncNodeVersions';
@@ -31,5 +32,9 @@ export async function applyCompanionSyncObjectsWithSharedCoreOnDevice(
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
-  return applyCompanionSyncObjectsWithSharedCore(connection, objects);
+  try {
+    return await applyCompanionSyncObjectsWithSharedCore(connection, objects);
+  } finally {
+    await closeCompanionDatabaseConnection(manager, connection);
+  }
 }

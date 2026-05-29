@@ -46,7 +46,7 @@ it('opens the Android companion database before running the shared core', async 
   await expect(applyCompanionSyncNodeVersionsWithSharedCoreOnDevice([nodeVersion()], manager as never))
     .resolves.toEqual(['node-1']);
 
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 17, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 18, false);
   expect(connection.open).toHaveBeenCalled();
 });
 
@@ -86,7 +86,7 @@ it('recreates the Android companion database connection when the cached handle i
     .resolves.toEqual(['node-1']);
 
   expect(manager.checkConnectionsConsistency).toHaveBeenCalled();
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 17, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 18, false);
   expect(connection.open).toHaveBeenCalled();
 });
 
@@ -133,6 +133,7 @@ function createFakeCapacitorConnection(database: Database.Database) {
     commitTransaction: async () => {
       database.exec('COMMIT');
     },
+    close: vi.fn(async () => undefined),
     execute: async (sql: string) => {
       database.exec(sql);
       const row = database.prepare('SELECT changes() AS count').get() as { count: number };
@@ -164,33 +165,8 @@ function isBufferJson(value: unknown): value is { data: number[]; type: 'Buffer'
 }
 
 function installNodeApplySchema(database: Database.Database) {
+  installNodeTable(database);
   database.exec(`
-    CREATE TABLE nodes (
-      id TEXT PRIMARY KEY,
-      parent_id TEXT,
-      kind TEXT NOT NULL,
-      priority INTEGER,
-      desired_retention REAL,
-      enable_short_term INTEGER,
-      sequential_reading_enabled INTEGER,
-      title TEXT NOT NULL,
-      is_title_manual INTEGER NOT NULL DEFAULT 0,
-      hide_title_heading INTEGER NOT NULL DEFAULT 0,
-      content TEXT NOT NULL DEFAULT '',
-      body_blob_hash TEXT,
-      opening_text TEXT,
-      virtual_filter TEXT,
-      reveal TEXT,
-      anchor_link TEXT,
-      image_regions TEXT,
-      position INTEGER,
-      current_version_id TEXT,
-      last_modified_by_device_id TEXT,
-      sync_dirty INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      deleted_at TEXT
-    );
     CREATE TABLE node_sync_versions (
       version_id TEXT PRIMARY KEY,
       object_id TEXT NOT NULL,
@@ -222,6 +198,39 @@ function installNodeApplySchema(database: Database.Database) {
     );
   `);
   installContentBlobSchema(database);
+}
+
+function installNodeTable(database: Database.Database) {
+  database.exec(`
+    CREATE TABLE nodes (
+      id TEXT PRIMARY KEY,
+      parent_id TEXT,
+      kind TEXT NOT NULL,
+      priority INTEGER,
+      desired_retention REAL,
+      enable_short_term INTEGER,
+      sequential_reading_enabled INTEGER,
+      shelved_at TEXT,
+      manual_child_order TEXT,
+      title TEXT NOT NULL,
+      is_title_manual INTEGER NOT NULL DEFAULT 0,
+      hide_title_heading INTEGER NOT NULL DEFAULT 0,
+      content TEXT NOT NULL DEFAULT '',
+      body_blob_hash TEXT,
+      opening_text TEXT,
+      virtual_filter TEXT,
+      reveal TEXT,
+      anchor_link TEXT,
+      image_regions TEXT,
+      position INTEGER,
+      current_version_id TEXT,
+      last_modified_by_device_id TEXT,
+      sync_dirty INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      deleted_at TEXT
+    );
+  `);
 }
 
 function installContentBlobSchema(database: Database.Database) {

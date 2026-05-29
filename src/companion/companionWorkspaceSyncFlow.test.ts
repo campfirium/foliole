@@ -66,6 +66,27 @@ async function testUsesRememberedSyncTarget() {
   }));
 }
 
+async function testRepairsStaleEmulatorEndpoint() {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockResolvedValueOnce('http://192.168.0.11:38641');
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(syncPlatformMock.saveCompanionWorkspaceSyncEndpoint).toHaveBeenCalledWith('http://192.168.0.11:38641');
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
+    'http://192.168.0.11:38641',
+    expect.objectContaining({ onStructureSynced: expect.any(Function) })
+  );
+}
+
 async function testRecordsStructureLagWithoutCompleting() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingStructureChangeCount: 4
@@ -159,6 +180,8 @@ describe('tryForegroundAutoSync', () => {
   it('uses stream sync directly without pulling the legacy workspace snapshot', testUsesStreamSyncDirectly);
 
   it('uses a remembered sync target when the active endpoint is missing', testUsesRememberedSyncTarget);
+
+  it('repairs a stale emulator endpoint before automatic sync', testRepairsStaleEmulatorEndpoint);
 
   it('records structure lag without marking the pass completed', testRecordsStructureLagWithoutCompleting);
 

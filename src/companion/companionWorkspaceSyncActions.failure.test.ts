@@ -17,6 +17,7 @@ const workspaceSyncMock = vi.hoisted(() => ({
   persistCompanionWorkspaceSnapshot: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
+  resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
@@ -124,6 +125,7 @@ describe('companion workspace manual sync failures', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
     workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValue(createSyncState());
   });
 
@@ -170,6 +172,7 @@ describe('companion workspace manual sync refresh', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
     workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValue(createSyncState());
   });
 
@@ -208,5 +211,23 @@ describe('companion workspace manual sync refresh', () => {
       endpoint_url: 'http://10.0.2.2:38641',
       workspace_snapshot: createSnapshot()
     }));
+  });
+
+  it('repairs a stale emulator endpoint before manual sync on a real device', async () => {
+    const { actions } = createActions();
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockResolvedValueOnce('http://192.168.0.11:38641');
+    workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValueOnce(createSyncState({
+      endpoint_url: 'http://192.168.0.11:38641',
+      remembered_targets: ['http://192.168.0.11:38641', 'http://10.0.2.2:38641']
+    }));
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValueOnce(createSyncResult());
+
+    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toEqual(createSyncState());
+
+    expect(workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint).toHaveBeenCalledWith('http://192.168.0.11:38641');
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
+      'http://192.168.0.11:38641',
+      expect.any(Object)
+    );
   });
 });

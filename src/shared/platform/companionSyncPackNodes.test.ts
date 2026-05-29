@@ -8,6 +8,7 @@ import {
 it('attaches a sync pack before applying pack nodes through the shared core', async () => {
   const connection = createFakeConnection();
   const manager = {
+    closeConnection: vi.fn(async () => undefined),
     createConnection: vi.fn(async () => connection),
     isConnection: vi.fn(async () => ({ result: false })),
     retrieveConnection: vi.fn()
@@ -43,12 +44,15 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
   expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
   expect(connection.execute).toHaveBeenLastCalledWith('DETACH DATABASE inc', false);
+  expect(connection.close).toHaveBeenCalledTimes(1);
+  expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
   expect(connection.execute).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO main.nodes'), false);
 });
 
 it('loads and advances the pack cursor around the shared core apply', async () => {
   const connection = createFakeConnection();
   const manager = {
+    closeConnection: vi.fn(async () => undefined),
     createConnection: vi.fn(async () => connection),
     isConnection: vi.fn(async () => ({ result: false })),
     retrieveConnection: vi.fn()
@@ -75,6 +79,7 @@ it('loads and advances the pack cursor around the shared core apply', async () =
 it('does not advance the pack cursor when no objects were applied', async () => {
   const connection = createFakeConnection();
   const manager = {
+    closeConnection: vi.fn(async () => undefined),
     createConnection: vi.fn(async () => connection),
     isConnection: vi.fn(async () => ({ result: false })),
     retrieveConnection: vi.fn()
@@ -97,6 +102,7 @@ it('does not advance the pack cursor when no objects were applied', async () => 
 it('retrieves an existing Android companion database connection before attaching a sync pack', async () => {
   const connection = createFakeConnection();
   const manager = {
+    closeConnection: vi.fn(async () => undefined),
     createConnection: vi.fn(async () => {
       throw new Error('CreateConnection: Connection foliole-companion already exists');
     }),
@@ -126,6 +132,7 @@ it('retrieves an existing Android companion database connection before attaching
 it('detaches the incoming pack when shared core apply fails', async () => {
   const connection = createFakeConnection();
   const manager = {
+    closeConnection: vi.fn(async () => undefined),
     createConnection: vi.fn(async () => connection),
     isConnection: vi.fn(async () => ({ result: false })),
     retrieveConnection: vi.fn()
@@ -145,11 +152,14 @@ it('detaches the incoming pack when shared core apply fails', async () => {
     false
   );
   expect(connection.execute).toHaveBeenLastCalledWith('DETACH DATABASE inc', false);
+  expect(connection.close).toHaveBeenCalledTimes(1);
+  expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
 });
 
 function createFakeConnection() {
   return {
     beginTransaction: vi.fn(),
+    close: vi.fn(async () => undefined),
     commitTransaction: vi.fn(),
     execute: vi.fn(async () => ({ changes: { changes: 0 } })),
     open: vi.fn(async () => undefined),

@@ -1,10 +1,13 @@
 package com.foliole.android;
 
 import android.content.Context;
+import android.os.Build;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
+
+import org.json.JSONArray;
 
 final class FolioleCompanionNetworkPluginActions {
     private FolioleCompanionNetworkPluginActions() {}
@@ -41,7 +44,9 @@ final class FolioleCompanionNetworkPluginActions {
         new Thread(() -> {
             try {
                 JSArray endpointUrls = new JSArray();
-                addEndpoint(context, endpointUrls, FolioleCompanionHostBridgeContractDefinitions.networkEmulatorHost(context));
+                if (isEmulator(context)) {
+                    addEndpoint(context, endpointUrls, FolioleCompanionHostBridgeContractDefinitions.networkEmulatorHost(context));
+                }
                 for (String endpointUrl : FolioleCompanionNsdDiscovery.discoverEndpointUrls(context)) {
                     endpointUrls.put(endpointUrl);
                 }
@@ -58,4 +63,14 @@ final class FolioleCompanionNetworkPluginActions {
         endpointUrls.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress));
     }
 
+    private static boolean isEmulator(Context context) throws Exception {
+        String model = Build.MODEL == null ? "" : Build.MODEL.trim().toLowerCase();
+        JSONArray emulatorTokens = FolioleCompanionHostBridgeContractDefinitions.bootstrapEmulatorModelTokens(context);
+        for (int index = 0; index < emulatorTokens.length(); index += 1) {
+            if (model.contains(emulatorTokens.getString(index))) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

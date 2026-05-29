@@ -38,6 +38,15 @@ abstract class FolioleCompanionDatabasePlugin extends Plugin {
         }
     }
 
+    protected void closeDatabaseHelperConnection() {
+        synchronized (databaseHelperLock) {
+            if (databaseHelper != null) {
+                databaseHelper.close();
+                databaseHelper = null;
+            }
+        }
+    }
+
     private static String formatPluginError(String errorMessage, Exception exception) {
         String detail = exception.getMessage();
         if (detail == null || detail.trim().isEmpty()) {
@@ -58,11 +67,6 @@ abstract class FolioleCompanionDatabasePlugin extends Plugin {
             databaseExecutor.shutdownNow();
             Thread.currentThread().interrupt();
         }
-        synchronized (databaseHelperLock) {
-            if (databaseHelper != null) {
-                databaseHelper.close();
-                databaseHelper = null;
-            }
-        }
+        closeDatabaseHelperConnection();
     }
 }

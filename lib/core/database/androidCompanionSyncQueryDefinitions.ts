@@ -93,7 +93,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
     resultKey: 'nodes',
     sql:
       "SELECT v.version_id, v.object_id, 'node' AS object_type, v.parent_version_id, v.device_id, " +
-      "v.created_at AS version_created_at, COALESCE(json_extract(v.snapshot_json, '$.updated_at'), v.created_at) AS updated_at, " +
+      'v.created_at AS version_created_at, n.updated_at AS updated_at, ' +
       'v.content_hash, v.snapshot_json AS snapshot FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id ' +
       "WHERE v.device_id = ? AND (? = '' OR ? = '' OR v.created_at > ? OR (v.created_at = ? AND v.version_id > ?)) " +
       "AND v.object_id NOT LIKE 'conflict-copy-%' " +

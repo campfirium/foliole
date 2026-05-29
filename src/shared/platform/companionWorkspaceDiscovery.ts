@@ -12,7 +12,6 @@ export type CompanionDiscoveryResult = {
 };
 
 const DEV_REVERSE_ENDPOINT = 'http://127.0.0.1:38641';
-const ANDROID_EMULATOR_ENDPOINT = 'http://10.0.2.2:38641';
 const DISCOVERY_TIMEOUT_MS = 1200;
 const DISCOVERY_BATCH_SIZE = 24;
 
@@ -32,9 +31,9 @@ async function loadNativeDiscoveryCandidateUrls(preferredEndpointUrl: string) {
   }
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
-    return uniqueEndpoints([preferredEndpointUrl, DEV_REVERSE_ENDPOINT, ANDROID_EMULATOR_ENDPOINT, ...(payload.endpoint_urls ?? [])]);
+    return uniqueEndpoints([preferredEndpointUrl, DEV_REVERSE_ENDPOINT, ...(payload.endpoint_urls ?? [])]);
   } catch {
-    return uniqueEndpoints([preferredEndpointUrl, DEV_REVERSE_ENDPOINT, ANDROID_EMULATOR_ENDPOINT]);
+    return uniqueEndpoints([preferredEndpointUrl, DEV_REVERSE_ENDPOINT]);
   }
 }
 

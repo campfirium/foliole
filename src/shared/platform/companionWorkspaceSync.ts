@@ -51,6 +51,24 @@ export {
   requestCompanionPairing
 };
 
+function isLocalDevelopmentEndpoint(endpointUrl: string) {
+  try {
+    const host = new URL(normalizeEndpointUrl(endpointUrl)).hostname;
+    return host === '10.0.2.2' || host === '127.0.0.1' || host === 'localhost';
+  } catch {
+    return false;
+  }
+}
+
+export async function resolveReachableCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
+  const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
+  if (!isNativeAndroidCompanionRuntime() || !isLocalDevelopmentEndpoint(normalizedEndpointUrl)) {
+    return normalizedEndpointUrl;
+  }
+  const discovered = await discoverCompanionDesktop(normalizedEndpointUrl).catch(() => null);
+  return discovered?.endpointUrl ?? normalizedEndpointUrl;
+}
+
 export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
   const normalizedEndpointUrl = endpointUrl.trim() ? normalizeEndpointUrl(endpointUrl) : null;
   if (!isNativeAndroidCompanionRuntime()) {

@@ -5,6 +5,7 @@ import type { NativeSyncReviewLogRecord } from '../../../lib/platform/nativeSync
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import {
+  closeCompanionDatabaseConnection,
   type CompanionSqliteConnectionManager,
   openCompanionDatabaseConnection
 } from './companionSyncNodeVersions';
@@ -31,5 +32,9 @@ export async function applyCompanionSyncReviewLogWithSharedCoreOnDevice(
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
-  return applyCompanionSyncReviewLogWithSharedCore(connection, reviews);
+  try {
+    return await applyCompanionSyncReviewLogWithSharedCore(connection, reviews);
+  } finally {
+    await closeCompanionDatabaseConnection(manager, connection);
+  }
 }

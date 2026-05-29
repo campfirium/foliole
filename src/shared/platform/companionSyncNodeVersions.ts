@@ -6,14 +6,16 @@ import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContr
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
+  FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 const COMPANION_DATABASE_NAME = 'foliole-companion';
-const COMPANION_DATABASE_VERSION = 17;
+const COMPANION_DATABASE_VERSION = 18;
 
 export interface CompanionSqliteConnectionManager {
   checkConnectionsConsistency?(): Promise<{ result?: boolean }>;
+  closeConnection?(database: string, readonly: boolean): Promise<void>;
   createConnection(
     database: string,
     encrypted: boolean,
@@ -23,6 +25,14 @@ export interface CompanionSqliteConnectionManager {
   ): Promise<SQLiteDBConnection>;
   isConnection(database: string, readonly: boolean): Promise<{ result?: boolean }>;
   retrieveConnection(database: string, readonly: boolean): Promise<SQLiteDBConnection>;
+}
+
+export async function closeCompanionDatabaseConnection(
+  manager: CompanionSqliteConnectionManager,
+  connection: SQLiteDBConnection
+) {
+  await connection.close();
+  await manager.closeConnection?.(COMPANION_DATABASE_NAME, false).catch(() => undefined);
 }
 
 export async function applyCompanionSyncNodeVersions(nodes: NativeSyncNodeRecord[]) {
@@ -49,16 +59,26 @@ export async function applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
-  return applyCompanionSyncNodeVersionsWithSharedCore(connection, nodes);
+  try {
+    return await applyCompanionSyncNodeVersionsWithSharedCore(connection, nodes);
+  } finally {
+    await closeCompanionDatabaseConnection(manager, connection);
+  }
 }
 
 export async function openCompanionDatabaseConnection(manager: CompanionSqliteConnectionManager) {
+  await releaseNativeDatabaseHelperConnection();
   const existing = await manager.isConnection(COMPANION_DATABASE_NAME, false).catch(() => ({ result: false }));
   const connection = existing.result
     ? await retrieveOrCreateCompanionConnection(manager)
     : await createOrRetrieveCompanionConnection(manager);
   await connection.open();
   return connection;
+}
+
+async function releaseNativeDatabaseHelperConnection() {
+  if (!isNativeAndroidCompanionRuntime()) return;
+  await FolioleCompanionSync.releaseDatabaseConnection();
 }
 
 async function retrieveOrCreateCompanionConnection(manager: CompanionSqliteConnectionManager) {

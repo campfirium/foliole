@@ -5,6 +5,7 @@ import { expect, it } from 'vitest';
 
 const ROOT = process.cwd();
 const ANDROID_MAIN_JAVA = 'android/app/src/main/java/com/foliole/android';
+const ANDROID_SYNC_QUERY_DEFINITIONS = 'lib/core/database/androidCompanionSyncQueryDefinitions.ts';
 const SYNC_PAYLOAD_QUERY_STORE = `${ANDROID_MAIN_JAVA}/FolioleCompanionSyncPayloadQueryStore.java`;
 const SYNC_PAYLOAD_QUERY_NAME_PATTERN =
   /\bsyncPayload(?:Attachment|ExternalDocument|ExternalFolder|ImportSource|NodeReading|NodeReview|PdfPageText|Setting|ViewActiveNode|ViewNodeState)\b/;
@@ -47,4 +48,10 @@ it('keeps desktop sync-pack apply out of Android production Java', () => {
   });
 
   expect(violations).toEqual([]);
+});
+
+it('keeps Android sync queries compatible with platform SQLite', () => {
+  const source = readFileSync(join(ROOT, ANDROID_SYNC_QUERY_DEFINITIONS), 'utf8');
+
+  expect(source).not.toContain('json_extract');
 });

@@ -32,6 +32,7 @@ export interface CompanionWorkspaceSyncPlugin
     method: string;
     url: string;
   }): Promise<{ body: string; status: number }>;
+  releaseDatabaseConnection(): Promise<Record<string, never>>;
   diagnoseSync(): Promise<SyncDiagnosticSnapshot>;
   loadSyncIndex(): Promise<{ entries: NativeSyncIndexEntry[] }>;
   loadSyncNodeConflicts(): Promise<{ conflicts: NativeSyncNodeConflictRecord[] }>;

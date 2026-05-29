@@ -46,7 +46,7 @@ it('opens the Android companion database before applying review log', async () =
   await expect(applyCompanionSyncReviewLogWithSharedCoreOnDevice([reviewLogRecord()], manager as never))
     .resolves.toEqual(['review-op-1']);
 
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 17, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 18, false);
   expect(connection.open).toHaveBeenCalled();
 });
 
@@ -76,6 +76,7 @@ function createFakeCapacitorConnection(database: Database.Database) {
     commitTransaction: async () => {
       database.exec('COMMIT');
     },
+    close: vi.fn(async () => undefined),
     execute: async (sql: string) => {
       database.exec(sql);
       const row = database.prepare('SELECT changes() AS count').get() as { count: number };

@@ -10,6 +10,7 @@ import {
   persistCompanionWorkspaceSnapshot,
   recordCompanionWorkspaceSyncEvent,
   removeCompanionWorkspaceSyncRememberedTarget,
+  resolveReachableCompanionWorkspaceSyncEndpoint,
   saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
@@ -50,19 +51,25 @@ async function refreshConflictAwareState(args: {
   return nextState;
 }
 
+async function saveResolvedSyncEndpoint(args: WorkspaceSnapshotActionArgs, endpointUrl: string) {
+  const syncEndpointUrl = await resolveReachableCompanionWorkspaceSyncEndpoint(endpointUrl);
+  const savedEndpointState = await saveCompanionWorkspaceSyncEndpoint(syncEndpointUrl);
+  args.setState({ ...savedEndpointState, workspace_snapshot: args.state.workspace_snapshot });
+  return syncEndpointUrl;
+}
+
 function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
   return async function pullFromDesktop(endpointUrl: string) {
     args.setStatus('syncing');
     const run = await runCompanionSyncAsOwner(endpointUrl, async () => {
       args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
       args.setError(null);
-      const savedEndpointState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
-      args.setState({ ...savedEndpointState, workspace_snapshot: args.state.workspace_snapshot });
+      const syncEndpointUrl = await saveResolvedSyncEndpoint(args, endpointUrl);
       const runId = createCompanionSyncRunId();
       const startedAt = new Date().toISOString();
       try {
         const startedState = await recordCompanionWorkspaceSyncEvent({
-          endpointUrl,
+          endpointUrl: syncEndpointUrl,
           kind: 'run_started',
           message: 'Sync started.',
           runId,
@@ -71,7 +78,7 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
         });
         args.setState({ ...startedState, workspace_snapshot: args.state.workspace_snapshot });
         const nextState = await syncCompanionDesktopStreams({
-          endpointUrl,
+          endpointUrl: syncEndpointUrl,
           runId,
           setReadableArticle: args.setReadableArticle,
           setSyncConflictCount: args.setSyncConflictCount,
@@ -88,7 +95,7 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
         args.setSyncProgress(null);
         args.setError(message);
         await recordCompanionManualSyncFailure({
-          endpointUrl,
+          endpointUrl: syncEndpointUrl,
           message,
           runId,
           setState: args.setState,

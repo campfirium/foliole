@@ -10,7 +10,9 @@ import {
 } from '../shared/platform/companionSyncActivityEvents';
 import {
   loadCompanionReadableArticle,
-  recordCompanionWorkspaceSyncEvent
+  recordCompanionWorkspaceSyncEvent,
+  resolveReachableCompanionWorkspaceSyncEndpoint,
+  saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
 import { loadCompanionStateAfterStructureSync } from './companionStructureSyncSnapshot';
@@ -174,8 +176,9 @@ export async function tryForegroundAutoSync(args: {
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   state: NativeCompanionWorkspaceSyncState;
 }): Promise<ForegroundAutoSyncOutcome> {
-  const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
-  if (!endpointUrl) return 'skipped';
+  const storedEndpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
+  if (!storedEndpointUrl) return 'skipped';
+  const endpointUrl = await resolveReachableCompanionWorkspaceSyncEndpoint(storedEndpointUrl);
   const run = await runCompanionSyncAsOwner(endpointUrl, async () => {
     const runId = createCompanionSyncRunId();
     const startedAt = new Date().toISOString();
@@ -183,6 +186,9 @@ export async function tryForegroundAutoSync(args: {
       args.setStatus('syncing');
       args.setError(null);
       args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
+      if (endpointUrl !== storedEndpointUrl) {
+        await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
+      }
       await recordCompanionWorkspaceSyncEvent({
         endpointUrl,
         kind: 'run_started',
