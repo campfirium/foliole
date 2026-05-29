@@ -157,13 +157,13 @@ export function SettingsSearchBox(props: SettingsSearchBoxProps) {
   };
 
   return (
-    <div className={cn('relative w-72', props.className)} ref={rootRef}>
+    <div className={cn('relative w-[min(300px,100%)]', props.className)} ref={rootRef}>
       <div className="relative">
         <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground/38" />
         <input
           aria-label="Search settings"
           className={settingsFieldClassName(
-            'h-8 rounded-md border-transparent bg-settings-control pl-8 pr-3 text-[0.92rem] text-foreground/82 placeholder:text-foreground/38 hover:border-settings-control-border hover:bg-settings-control-hover focus-visible:bg-settings-control-hover'
+            'h-8 rounded-md bg-settings-control pl-8 pr-3 text-[0.86rem] text-foreground/82 shadow-control placeholder:text-foreground/38 hover:bg-settings-control-hover focus-visible:bg-settings-control-hover'
           )}
           onChange={(event) => {
             props.onQueryChange(event.target.value);
@@ -172,7 +172,7 @@ export function SettingsSearchBox(props: SettingsSearchBoxProps) {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           onMouseDown={handleInputPointerDown}
-          placeholder="Search settings"
+          placeholder="Search all settings..."
           ref={inputRef}
           value={props.query}
         />

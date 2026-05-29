@@ -16,6 +16,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 
+import folioleAppIconUrl from '../../../../assets/brand/foliole-app-icon.png?url';
 import {
   getSettingsCategoryOption,
   SETTINGS_CATEGORY_GROUPS,
@@ -24,6 +25,8 @@ import {
 
 import { cn } from '@/shared/lib/utils';
 import { AppButton, AppPanel } from '@/shared/ui';
+
+const APP_VERSION_LABEL = 'v0.1.0';
 
 const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   about: Info,
@@ -50,11 +53,11 @@ export function SettingsSidebar(props: {
     <AppPanel
       as="aside"
       ariaLabel="Settings categories"
-      bodyClassName="px-4 pb-5 pt-4"
+      bodyClassName="px-4 pb-5 pt-3"
       className="border-r border-settings-divider"
-      headerClassName="sr-only"
+      headerClassName="min-h-[64px] border-b border-settings-divider/55 px-5 py-3"
       surfaceClassName="bg-settings-sidebar"
-      title={<span>Settings</span>}
+      title={<SettingsSidebarBrand />}
     >
       <nav aria-label="Settings navigation" className="flex flex-col gap-4">
         {SETTINGS_CATEGORY_GROUPS.map((group) => (
@@ -70,14 +73,36 @@ export function SettingsSidebar(props: {
   );
 }
 
+function SettingsSidebarBrand() {
+  return (
+    <div className="flex w-[220px] min-w-0 items-center gap-3">
+      <img
+        alt=""
+        aria-hidden="true"
+        className="size-8 shrink-0 object-contain"
+        src={folioleAppIconUrl}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[1.05rem] font-semibold leading-5 text-foreground">Foliole</div>
+      </div>
+      <span className="ml-auto shrink-0 rounded-md border border-settings-control-border bg-settings-control px-2 py-0.5 text-[0.72rem] font-medium leading-5 text-foreground/62">
+        {APP_VERSION_LABEL}
+      </span>
+    </div>
+  );
+}
+
 function SettingsSidebarGroup(props: {
   activeCategory: SettingsCategoryId;
   group: (typeof SETTINGS_CATEGORY_GROUPS)[number];
   setActiveCategory: (category: SettingsCategoryId) => void;
 }) {
   return (
-    <div className="border-t border-settings-divider/55 pt-4 first:border-t-0 first:pt-0">
-      <div className="mb-1 px-3 text-[0.72rem] font-semibold leading-5 text-foreground/55">{props.group.label}</div>
+    <div className="border-t border-settings-divider/65 pt-4 first:border-t-0 first:pt-0">
+      <div className="mb-1 flex items-center gap-2 px-3 text-[0.72rem] font-semibold uppercase leading-5 tracking-[0.12em] text-foreground/58">
+        <span>{props.group.label}</span>
+        <span aria-hidden="true" className="h-px min-w-6 flex-1 bg-settings-divider/55" />
+      </div>
       <div className="flex flex-col gap-0.5">
         {props.group.categoryIds.map((categoryId) => {
           const category = getSettingsCategoryOption(categoryId);

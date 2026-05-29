@@ -24,6 +24,10 @@ const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
     "base-uri 'self' http://localhost:* http://127.0.0.1:*"
   )
   .replace(
+    `img-src 'self' data: blob: file: foliole-asset: ${REMOTE_IMAGE_PROTOCOL_SOURCE}`,
+    `img-src 'self' data: blob: file: foliole-asset: ${REMOTE_IMAGE_PROTOCOL_SOURCE} http://localhost:* http://127.0.0.1:*`
+  )
+  .replace(
     "script-src 'self'",
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:* http://127.0.0.1:*"
   )

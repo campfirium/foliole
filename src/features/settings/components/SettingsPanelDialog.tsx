@@ -42,7 +42,7 @@ export function SettingsPanelDialog(props: {
         <AppDialogContent
           aria-label="Settings dialog"
           aria-describedby={undefined}
-          className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden rounded-lg border-settings-outline bg-settings-shell shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}
+          className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden rounded-lg border-settings-outline bg-settings-group shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}
           onEscapeKeyDown={(event) => {
             if (props.searchQuery.trim().length > 0) {
               event.preventDefault();
@@ -53,21 +53,24 @@ export function SettingsPanelDialog(props: {
             activeCategory={props.activeCategory}
             setActiveCategory={props.setActiveCategory}
           />
-          <div className="app-scrollbar overflow-auto bg-settings-shell px-7 py-7" ref={props.scrollContainerRef}>
-            <div className="relative mb-6 border-b border-settings-divider/45 px-5 pb-5 pr-64">
+          <div className="flex min-h-0 flex-col bg-settings-group">
+            <div className="flex min-h-[64px] items-center justify-end border-b border-settings-divider/55 px-7">
               <SettingsSearchBox
                 activeResultIndex={props.activeResultIndex}
-                className="absolute right-0 top-0"
                 onActiveResultIndexChange={props.onActiveResultIndexChange}
                 onQueryChange={props.onSearchQueryChange}
                 onSelectResult={props.onSearchResultSelect}
                 query={props.searchQuery}
                 results={props.searchResults}
               />
-              <AppDialogTitle>{props.title}</AppDialogTitle>
-              <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{props.description}</p>
             </div>
-            <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} />
+            <div className="app-scrollbar min-h-0 flex-1 overflow-auto px-7 py-7" ref={props.scrollContainerRef}>
+              <div className="mb-7 border-b border-settings-divider/55 px-5 pb-6">
+                <AppDialogTitle>{props.title}</AppDialogTitle>
+                <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{props.description}</p>
+              </div>
+              <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} />
+            </div>
           </div>
         </AppDialogContent>
       </AppDialogPortal>

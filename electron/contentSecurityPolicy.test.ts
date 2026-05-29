@@ -32,6 +32,7 @@ it('keeps vite dev server and websocket access only for localhost renderer URLs'
   expect(policy).toContain('http://127.0.0.1:*');
   expect(policy).toContain('ws://localhost:*');
   expect(policy).toContain('connect-src');
+  expect(policy).toContain("img-src 'self' data: blob: file: foliole-asset: foliole-remote-image: http://localhost:* http://127.0.0.1:*");
   expect(policy).toContain("font-src 'self' data: http://localhost:* http://127.0.0.1:*");
   expect(policy).toContain('foliole-asset:');
   expect(policy).toContain('foliole-remote-image:');
