@@ -72,6 +72,44 @@ describe('test-files', () => {
     expect(result.stderr).toContain('Usage: npm run test:files');
   });
 
+  it('waits for the node-heavy queue before validating files', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'test-files-gate-'));
+    try {
+      const runtimeDir = path.join(tempRoot, 'runtime');
+      await mkdir(runtimeDir, { recursive: true });
+      await writeFile(
+        path.join(runtimeDir, 'resource-gate.node-heavy.lock'),
+        `${JSON.stringify({
+          className: 'node-heavy',
+          command: 'existing validation',
+          heartbeatAt: Date.now(),
+          pid: process.pid,
+          resource: 'node-heavy',
+          schemaVersion: 1,
+          startedAt: Date.now()
+        })}\n`,
+        'utf8'
+      );
+      const resultPromise = runTestFiles([], {
+        FOLIOLE_RESOURCE_GATE_HELD: '',
+        FOLIOLE_RESOURCE_GATE_POLL_MS: '25',
+        FOLIOLE_RESOURCE_GATE_PROGRESS_MS: '20',
+        FOLIOLE_RESOURCE_GATE_RUNTIME_DIR: runtimeDir
+      });
+      const startedAt = Date.now();
+      globalThis.setTimeout(() => {
+        void rm(path.join(runtimeDir, 'resource-gate.node-heavy.lock'), { force: true });
+      }, 100);
+      const result = await resultPromise;
+
+      expect(result.code).toBe(1);
+      expect(Date.now() - startedAt).toBeGreaterThanOrEqual(75);
+      expect(result.stderr).toContain('Usage: npm run test:files');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('rejects directory arguments', async () => {
     const result = await runTestFiles(['src/app']);
 
