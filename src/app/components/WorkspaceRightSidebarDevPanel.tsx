@@ -86,7 +86,7 @@ function ReadingTopicContent({ data }: { data: SchedulingPanelData }) {
         <SchedulingInfoRow label="Priority" value={formatPriority(priority.value)} />
         <SchedulingInfoRow label="Priority ratio" value={formatNumber(data.priorityRatio)} />
         <SchedulingInfoRow label="Priority weight" value={formatPriorityWeight(priority.value, data.priorityRatio)} />
-        <SchedulingInfoRow label="Growth factor" value={formatNumber(node.reading?.intervalGrowthFactor ?? 1)} />
+        <SchedulingInfoRow label="Growth factor" value={formatNumber(data.readingGrowthFactor)} />
       </SchedulingSection>
       <ReadingProfileSection reading={node.reading} />
     </div>

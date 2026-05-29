@@ -7,7 +7,11 @@ import {
 } from '../../features/nodes/model/nodeReviewSettings';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../../features/review/model/reviewItemKind';
-import { getPriorityWeight, normalizeRegularPushQueuePriority } from '../../features/review/model/unifiedPushQueueRules';
+import {
+  getPriorityWeight,
+  getReadingIntervalGrowthFactor,
+  normalizeRegularPushQueuePriority
+} from '../../features/review/model/unifiedPushQueueRules';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { resolveReviewQueueReadingDueAt } from '../../store/reviewQueuePlannerReadingPaths';
 
@@ -19,6 +23,7 @@ export interface SchedulingPanelData {
   node: Node;
   priority: ResolvedNodeSetting<number>;
   priorityRatio: number;
+  readingGrowthFactor: number;
   retrievability: number | null;
 }
 
@@ -85,6 +90,11 @@ export function resolveSchedulingPanelData(args: {
   const node = args.nodesById[args.activeNodeId];
   if (!node) return null;
   const now = Date.now();
+  const priority = resolveNodePrioritySetting(
+    args.activeNodeId,
+    args.nodesById,
+    args.reviewSchedulerSettings.pushQueue.defaultPriority
+  );
   return {
     desiredRetention: resolveNodeDesiredRetentionSetting(
       args.activeNodeId,
@@ -95,12 +105,12 @@ export function resolveSchedulingPanelData(args: {
     kind: resolveKind(node),
     nextReadingAt: resolveReviewQueueReadingDueAt(node),
     node,
-    priority: resolveNodePrioritySetting(
-      args.activeNodeId,
-      args.nodesById,
-      args.reviewSchedulerSettings.pushQueue.defaultPriority
-    ),
+    priority,
     priorityRatio: args.reviewSchedulerSettings.pushQueue.priorityRatio,
+    readingGrowthFactor: getReadingIntervalGrowthFactor(
+      normalizeRegularPushQueuePriority(priority.value, 1),
+      args.reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange
+    ),
     retrievability: getFsrsRetrievability(node.review, now)
   };
 }
