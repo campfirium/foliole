@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { HOME_NODE_ID } from '../../features/nodes/model/specialNodes';
 
 import { FolderListView } from './FolderListView';
 
@@ -16,7 +17,9 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
     reveal: overrides.reveal ?? null,
     review: overrides.review ?? null,
     createdAt: overrides.createdAt ?? '2026-04-01T09:00:00.000Z',
-    updatedAt: overrides.updatedAt ?? '2026-04-02T10:30:00.000Z'
+    updatedAt: overrides.updatedAt ?? '2026-04-02T10:30:00.000Z',
+    ...(overrides.anchorLink !== undefined ? { anchorLink: overrides.anchorLink } : {}),
+    ...(overrides.deletedAt !== undefined ? { deletedAt: overrides.deletedAt } : {})
   };
 }
 
@@ -30,6 +33,46 @@ function renderFolderList(children: Node[]) {
       nodeOrder={['folder-1', ...children.map((node) => node.id)]}
       nodeViewById={{}}
       nodesById={nodesById}
+      onChangeSortDirection={() => undefined}
+      onChangeSortKey={() => undefined}
+      onSelectNode={vi.fn<(nodeId: string) => void>()}
+    />
+  );
+}
+
+function buildHomeFolderListNodes() {
+  const homeNode = createNode({
+    id: HOME_NODE_ID,
+    kind: 'folder',
+    parentNodeId: null,
+    title: 'Home'
+  });
+  const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
+  const rootTopic = createNode({ id: 'root-topic', parentNodeId: null, title: 'Root topic' });
+  const folderTopic = createNode({ id: 'folder-topic', parentNodeId: 'folder-1', title: 'Folder topic' });
+  const highlightNode = createNode({
+    id: 'highlight-1',
+    anchorLink: { id: 'anchor-1', kind: 'highlight' },
+    parentNodeId: 'folder-topic',
+    title: 'Highlight'
+  });
+  const deletedTopic = createNode({
+    id: 'deleted-topic',
+    deletedAt: '2026-04-03T10:30:00.000Z',
+    parentNodeId: null,
+    title: 'Deleted topic'
+  });
+  return [homeNode, folderNode, rootTopic, folderTopic, highlightNode, deletedTopic];
+}
+
+function renderHomeFolderList() {
+  const nodes = buildHomeFolderListNodes();
+  render(
+    <FolderListView
+      folderNodeId={HOME_NODE_ID}
+      nodeOrder={nodes.map((node) => node.id)}
+      nodeViewById={{}}
+      nodesById={Object.fromEntries(nodes.map((node) => [node.id, node]))}
       onChangeSortDirection={() => undefined}
       onChangeSortKey={() => undefined}
       onSelectNode={vi.fn<(nodeId: string) => void>()}
@@ -87,5 +130,16 @@ describe('FolderListView content', () => {
       '色氨酸 Cover Project helps make serotonin.'
     );
     expect(screen.queryByText(/##|\*\*|asset:\/\//)).not.toBeInTheDocument();
+  });
+
+  it('shows all visible content when Home is selected', () => {
+    renderHomeFolderList();
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByTestId('folder-list-count')).toHaveTextContent('2');
+    expect(screen.getByTestId('folder-list-title-root-topic')).toHaveTextContent('Root topic');
+    expect(screen.getByTestId('folder-list-title-folder-topic')).toHaveTextContent('Folder topic');
+    expect(screen.queryByTestId('folder-list-title-highlight-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('folder-list-title-deleted-topic')).not.toBeInTheDocument();
   });
 });

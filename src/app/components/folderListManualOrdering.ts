@@ -1,5 +1,7 @@
 import { sortFolderListNodes } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { HOME_NODE_ID, isHomeNode } from '../../features/nodes/model/specialNodes';
+import { isCanonicalVisibleNodeId } from '../../shared/workspaceCanonicalSelectors';
 
 interface FolderListOrderingProps {
   folderNodeId?: string;
@@ -21,8 +23,38 @@ function getDirectChildNodes(
     .filter((node): node is Node => Boolean(node && node.parentNodeId === folderNodeId && !trashedNodeIds.includes(node.id)));
 }
 
+function isHomeFolderNode(folderNodeId: string, nodesById: Record<string, Node>) {
+  return folderNodeId === HOME_NODE_ID || isHomeNode(nodesById[folderNodeId]);
+}
+
+function isHomeListContentNode(
+  nodeId: string,
+  nodeOrder: string[],
+  nodesById: Record<string, Node>,
+  trashedNodeIds: readonly string[]
+) {
+  const node = nodesById[nodeId];
+  return Boolean(
+    node &&
+      node.kind !== 'folder' &&
+      !node.anchorLink &&
+      isCanonicalVisibleNodeId({ nodeOrder, nodesById, trashedNodeIds }, nodeId)
+  );
+}
+
+function getHomeContentNodes(
+  nodeOrder: string[],
+  nodesById: Record<string, Node>,
+  trashedNodeIds: readonly string[]
+) {
+  return nodeOrder
+    .filter((nodeId) => isHomeListContentNode(nodeId, nodeOrder, nodesById, trashedNodeIds))
+    .map((nodeId) => nodesById[nodeId])
+    .filter((node): node is Node => Boolean(node));
+}
+
 export function resolveFolderManualChildOrder(props: Pick<FolderListOrderingProps, 'folderNodeId' | 'nodesById'>) {
-  if (!props.folderNodeId) {
+  if (!props.folderNodeId || isHomeFolderNode(props.folderNodeId, props.nodesById)) {
     return null;
   }
   return props.nodesById[props.folderNodeId]?.manualChildOrder ??
@@ -36,6 +68,9 @@ export function resolveListedFolderNodes(props: FolderListOrderingProps) {
   }
   if (!props.folderNodeId || !props.nodeOrder) {
     return [];
+  }
+  if (isHomeFolderNode(props.folderNodeId, props.nodesById)) {
+    return getHomeContentNodes(props.nodeOrder, props.nodesById, props.trashedNodeIds ?? []);
   }
   const childNodes = getDirectChildNodes(props.folderNodeId, props.nodeOrder, props.nodesById, props.trashedNodeIds ?? []);
   return props.sortKey === 'manual'
