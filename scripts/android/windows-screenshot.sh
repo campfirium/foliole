@@ -24,6 +24,7 @@ mkdir -p "${ANDROID_SCREENSHOT_DIR}"
 
 powershell.exe \
   -NoProfile \
+  -WindowStyle Hidden \
   -ExecutionPolicy Bypass \
   -File "$(android_shell_path_to_windows_path "${WINDOWS_SCRIPT_PATH}")" \
   -OutputDir "$(android_shell_path_to_windows_path "${ANDROID_SCREENSHOT_DIR}")"

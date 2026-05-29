@@ -74,6 +74,7 @@ fi
 
 POWERSHELL_ARGS=(
   -NoProfile
+  -WindowStyle Hidden
   -ExecutionPolicy Bypass
   -File "$(android_shell_path_to_windows_path "${WINDOWS_SCRIPT_PATH}")"
   -WindowsWorkDir "${ANDROID_WINDOWS_WORKDIR}"

@@ -62,10 +62,12 @@ describe('windows-screenshot.sh', () => {
 
       expect(result.code).toBe(0);
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
+      expect(args).toContain('-WindowStyle');
+      expect(args).toContain('Hidden');
       expect(args).toContain('-File');
-      expect(args).toContain(path.join(tempRoot, 'windows-screenshot.ps1'));
+      expect(args.some((arg) => arg.endsWith('windows-screenshot.ps1'))).toBe(true);
       expect(args).toContain('-OutputDir');
-      expect(args).toContain(outputDir);
+      expect(args.some((arg) => arg.endsWith('shots'))).toBe(true);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

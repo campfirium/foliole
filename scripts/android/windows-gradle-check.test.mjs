@@ -80,6 +80,8 @@ describe('windows-gradle-check.sh', () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain(`sync-target:${mirrorDirForBash}`);
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
+      expect(args).toContain('-WindowStyle');
+      expect(args).toContain('Hidden');
       expect(args).toContain('-WindowsWorkDir');
       expect(args).toContain('C:\\dev\\foliole-test');
       expect(args).toContain('-TaskName');
@@ -133,6 +135,8 @@ describe('windows-gradle-check.sh', () => {
 
       expect(result.code).toBe(0);
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
+      expect(args).toContain('-WindowStyle');
+      expect(args).toContain('Hidden');
       expect(args).toContain('connectedDebugAndroidTest');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
