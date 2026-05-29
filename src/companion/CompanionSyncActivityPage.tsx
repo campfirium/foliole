@@ -11,7 +11,17 @@ import { formatCompanionSyncProgressSummary } from './companionSyncProgressSumma
 import { formatClock } from './companionSyncStatusRows';
 
 function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
-  return formatSyncRunActivityMessage(event, laterEvents);
+  const message = formatSyncRunActivityMessage(event, laterEvents);
+  if (message.length > 180 || /\b(SQLITE_|while compiling|SELECT\s|json_extract)\b/i.test(message)) {
+    if (message.startsWith('Sync retrying; Android changes were not sent')) {
+      return 'Sync retrying; Android changes were not sent. Topic list confirmation is still pending.';
+    }
+    if (message.startsWith('Sync needs attention; Android changes were not sent')) {
+      return 'Sync needs attention; Android changes were not sent. Topic list confirmation is still pending.';
+    }
+    return 'Sync needs attention. Open desktop diagnostics for details.';
+  }
+  return message;
 }
 
 function isSupersededLegacyFailure(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {

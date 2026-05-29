@@ -116,6 +116,18 @@ describe('CompanionSyncStatusDetails activity', () => {
     expect(screen.queryByText(/Sync blocked/)).not.toBeInTheDocument();
   });
 
+  it('summarizes long SQL diagnostics in activity history', () => {
+    renderActivity([{
+      ...runFinishedEvent(),
+      id: 'diagnostic-retrying',
+      message: 'Android changes were not sent: Failed to load companion sync node versions. no such function: json_extract (code 1 SQLITE_ERROR); while compiling: SELECT v.version_id FROM node_sync_versions.',
+      result: 'retrying'
+    }]);
+
+    expect(screen.getByText('Sync retrying; Android changes were not sent. Topic list confirmation is still pending.')).toBeInTheDocument();
+    expect(screen.queryByText(/json_extract/)).not.toBeInTheDocument();
+  });
+
 });
 
 describe('CompanionSyncStatusDetails activity progress', () => {

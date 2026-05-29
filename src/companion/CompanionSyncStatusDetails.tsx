@@ -23,6 +23,12 @@ function formatDeviceName(pairingState: NativeCompanionPairingState) {
   return pairingState.device_name?.trim() || 'This device';
 }
 
+function formatDeviceId(deviceId: string | null) {
+  if (!deviceId) return 'Unavailable';
+  if (deviceId.length <= 18) return deviceId;
+  return `${deviceId.slice(0, 11)}...${deviceId.slice(-4)}`;
+}
+
 function SettingsRow(props: {
   detail?: string;
   label: string;
@@ -35,12 +41,16 @@ function SettingsRow(props: {
       ? 'text-companion-accent'
       : 'text-foreground';
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-companion-divider py-4 last:border-b-0">
-      <span>
-        <span className="block text-sm font-medium text-foreground">{props.label}</span>
-        {props.detail ? <span className="mt-1 block text-xs leading-5 text-companion-text-secondary">{props.detail}</span> : null}
-      </span>
-      <span className={`max-w-44 shrink-0 text-right text-sm font-medium ${valueClass}`}>{props.value}</span>
+    <div className="rounded-xl bg-companion-content px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-sm font-semibold leading-5 text-foreground">{props.label}</span>
+        <span className={`max-w-[52%] shrink-0 break-words text-right text-sm font-semibold leading-5 ${valueClass}`}>
+          {props.value}
+        </span>
+      </div>
+      {props.detail ? (
+        <span className="mt-2 block text-sm leading-6 text-companion-text-secondary">{props.detail}</span>
+      ) : null}
     </div>
   );
 }
@@ -57,18 +67,20 @@ function SettingsLinkRow(props: {
 }) {
   return (
     <button
-      className="flex w-full items-start justify-between gap-4 border-b border-companion-divider py-4 text-left"
+      className="w-full rounded-xl bg-companion-content px-4 py-3 text-left transition active:bg-companion-subtle/80"
       onClick={props.onClick}
       type="button"
     >
-      <span>
-        <span className="block text-sm font-medium text-foreground">{props.label}</span>
-        {props.detail ? <span className="mt-1 block text-xs leading-5 text-companion-text-secondary">{props.detail}</span> : null}
-      </span>
-      <span className="flex max-w-44 shrink-0 items-center gap-2 text-right text-sm font-medium text-foreground">
-        <span>{props.value}</span>
-        <span className="text-companion-text-secondary"><ChevronIcon /></span>
-      </span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-sm font-semibold leading-5 text-foreground">{props.label}</span>
+        <span className="flex max-w-[52%] shrink-0 items-center justify-end gap-1 text-right text-sm font-semibold leading-5 text-foreground">
+          <span className="min-w-0 break-words">{props.value}</span>
+          <span className="text-companion-text-secondary"><ChevronIcon /></span>
+        </span>
+      </div>
+      {props.detail ? (
+        <span className="mt-2 block text-sm leading-6 text-companion-text-secondary">{props.detail}</span>
+      ) : null}
     </button>
   );
 }
@@ -168,7 +180,7 @@ export function CompanionSyncStatusDetails(props: {
 
   const lastSync = resolveLastSyncRow(props);
   return (
-    <div className="border-t border-companion-divider">
+    <div className="space-y-3">
       <SettingsRow
         detail={lastSync.detail}
         label={lastSync.label}
@@ -190,7 +202,7 @@ export function CompanionSyncStatusDetails(props: {
       <SettingsRow
         detail="Device id currently responsible for sync authority."
         label="Current primary"
-        value={props.pairingState.primary_device_id ?? 'Unavailable'}
+        value={formatDeviceId(props.pairingState.primary_device_id)}
       />
       <ConnectionSummary
         pairingState={props.pairingState}

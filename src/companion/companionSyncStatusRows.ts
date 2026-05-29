@@ -21,8 +21,8 @@ export function resolveLastSyncRow(props: {
   const latestCompletedEvent = props.syncEvents.find((event) => event.status === 'completed' && isReportableSyncEvent(event)) ?? null;
   if (props.syncProgress) return progressRow(props.syncProgress);
   if (props.status === 'syncing') return defaultRow('Pulling changes now.', 'Syncing');
-  if (latestEvent?.status === 'failed') return defaultRow(latestEvent.message, 'Failed', 'error');
-  if (latestEvent?.status === 'skipped') return defaultRow(latestEvent.message, formatClock(latestEvent.occurred_at));
+  if (latestEvent?.status === 'failed') return defaultRow('Sync failed. Open Activity for details.', 'Failed', 'error');
+  if (latestEvent?.status === 'skipped') return defaultRow(formatStatusDetail(latestEvent.message), formatClock(latestEvent.occurred_at));
   return {
     detail: latestCompletedEvent ? formatLastSyncDetail(latestCompletedEvent) : 'No sync yet',
     label: 'Last sync',
@@ -50,9 +50,16 @@ function defaultRow(detail: string, value: string, valueTone: 'default' | 'error
   };
 }
 
+function formatStatusDetail(message: string) {
+  if (message.length > 140 || /\b(SQLITE_|while compiling|SELECT\s|json_extract)\b/i.test(message)) {
+    return 'Sync needs attention. Open Activity for details.';
+  }
+  return message;
+}
+
 function formatLastSyncDetail(event: NativeCompanionSyncEvent | null) {
   if (!event) {
     return 'No sync yet';
   }
-  return formatSyncResultMessage(event.message);
+  return formatStatusDetail(formatSyncResultMessage(event.message));
 }

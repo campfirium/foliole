@@ -58,21 +58,21 @@ function HandoffReminderSummary(props: {
   onOpen(): void;
 }) {
   return (
-    <section className="border-t border-companion-divider text-foreground">
+    <section className="text-foreground">
       <button
-        className="flex w-full items-center justify-between gap-4 border-b border-companion-divider py-4 text-left"
+        className="w-full rounded-xl bg-companion-content px-4 py-3 text-left transition active:bg-companion-subtle/80"
         onClick={props.onOpen}
         type="button"
       >
-        <span>
-          <span className="block text-sm font-medium text-foreground">Handoff reminders</span>
-          <span className="mt-1 block text-xs leading-5 text-companion-text-secondary">
-            Remind me when local changes are waiting.
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-sm font-semibold leading-5 text-foreground">Handoff reminders</span>
+          <span className="flex shrink-0 items-center gap-1 text-sm font-semibold leading-5 text-foreground">
+            <span>{props.isEnabled ? 'On' : 'Off'}</span>
+            <span className="text-companion-text-secondary"><ChevronIcon /></span>
           </span>
-        </span>
-        <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <span>{props.isEnabled ? 'On' : 'Off'}</span>
-          <span className="text-companion-text-secondary"><ChevronIcon /></span>
+        </div>
+        <span className="mt-2 block text-sm leading-6 text-companion-text-secondary">
+            Remind me when local changes are waiting.
         </span>
       </button>
     </section>

@@ -21,6 +21,23 @@ function testShowsPendingSyncConflicts() {
   expect(screen.getByText('2')).toBeInTheDocument();
 }
 
+function testKeepsConnectedSummaryReadableForSecondaryDevice() {
+  render(
+    <CompanionSyncPanel
+      {...createConnectedProps()}
+      pairingState={{
+        ...createConnectedProps().pairingState,
+        primary_device_id: 'device-33ea4460-7c28-44c1-82f6-35ea045d260e'
+      }}
+      status="syncing"
+    />
+  );
+
+  expect(screen.getAllByText('Device role')).toHaveLength(1);
+  expect(screen.getByText('device-33ea...260e')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Set as primary device' })).toBeDisabled();
+}
+
 function testSeparatesConnectionFromActivity() {
   const props = createConnectedProps();
   render(
@@ -34,6 +51,8 @@ function testSeparatesConnectionFromActivity() {
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
   expect(screen.getByText('Failed')).toBeInTheDocument();
+  expect(screen.getByText('Sync failed. Open Activity for details.')).toBeInTheDocument();
+  expect(screen.queryByText('Desktop sync timed out while fetching content blobs.')).not.toBeInTheDocument();
   expect(screen.queryByText('Synced')).not.toBeInTheDocument();
   screen.getByRole('button', { name: /Activity/ }).click();
   expect(props.onOpenSettingsPage).toHaveBeenCalledWith('syncActivity');
@@ -73,6 +92,14 @@ function testOlderFailuresAreNeutralAfterCompletedPass() {
   expect(screen.queryByText('No changes to sync.')).not.toBeInTheDocument();
 }
 
+function testActivityPageDoesNotShowSyncActions() {
+  render(<CompanionSyncPanel {...createConnectedProps()} page="syncActivity" />);
+
+  expect(screen.getByText('Completed')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Sync' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Set as primary device' })).not.toBeInTheDocument();
+}
+
 function testHealthyBacklogPassAvoidsStrictCompletion() {
   render(<CompanionSyncPanel {...createConnectedProps()} syncEvents={[backlogEvent()]} />);
 
@@ -80,6 +107,46 @@ function testHealthyBacklogPassAvoidsStrictCompletion() {
   expect(screen.getByText('Some topic bodies are still downloading.')).toBeInTheDocument();
   expect(screen.queryByText('No sync check yet')).not.toBeInTheDocument();
   expect(screen.queryByText('Finished automatic pass')).not.toBeInTheDocument();
+}
+
+function testHidesDiagnosticSkippedDetailsFromSummary() {
+  const diagnosticMessage = [
+    'Android changes were not sent: Failed to load companion sync node versions.',
+    'no such function: json_extract (code 1 SQLITE_ERROR); while compiling: SELECT v.version_id FROM node_sync_versions.'
+  ].join(' ');
+  render(
+    <CompanionSyncPanel
+      {...createConnectedProps()}
+      syncEvents={[{
+        endpoint_url: 'http://10.0.2.2:38641',
+        id: 'diagnostic-skipped-event',
+        message: diagnosticMessage,
+        occurred_at: '2026-05-29T05:22:00.000Z',
+        status: 'skipped'
+      }]}
+    />
+  );
+
+  expect(screen.getByText('Sync needs attention. Open Activity for details.')).toBeInTheDocument();
+  expect(screen.queryByText(/json_extract/)).not.toBeInTheDocument();
+}
+
+function testHidesDiagnosticCompletedDetailsFromSummary() {
+  render(
+    <CompanionSyncPanel
+      {...createConnectedProps()}
+      syncEvents={[{
+        endpoint_url: 'http://10.0.2.2:38641',
+        id: 'diagnostic-completed-event',
+        message: 'Android changes were not sent: Failed to load versions; while compiling: SELECT json_extract(snapshot_json).',
+        occurred_at: '2026-05-29T05:22:00.000Z',
+        status: 'completed'
+      }]}
+    />
+  );
+
+  expect(screen.getByText('Sync needs attention. Open Activity for details.')).toBeInTheDocument();
+  expect(screen.queryByText(/json_extract/)).not.toBeInTheDocument();
 }
 
 function testOlderFailuresAreNeutralAfterBacklogPass() {
@@ -161,10 +228,14 @@ function testShowsTransferProgressInLastSyncRow() {
 describe('CompanionSyncPanel connected state', () => {
   it('shows a paired state without setup controls', testShowsPairedState);
   it('shows pending sync conflicts when the local database has them', testShowsPendingSyncConflicts);
+  it('keeps secondary device status readable without duplicate role cards', testKeepsConnectedSummaryReadableForSecondaryDevice);
   it('separates the current connection state from older sync activity', testSeparatesConnectionFromActivity);
   it('does not call manual sync completion automatic', testManualPassIsNotAutomatic);
   it('shows older failures as neutral history after a later completed sync', testOlderFailuresAreNeutralAfterCompletedPass);
+  it('does not show sync actions on the activity page', testActivityPageDoesNotShowSyncActions);
   it('shows a healthy backlog sync pass without claiming strict completion', testHealthyBacklogPassAvoidsStrictCompletion);
+  it('hides diagnostic skipped details from the connected summary', testHidesDiagnosticSkippedDetailsFromSummary);
+  it('hides diagnostic completed details from the connected summary', testHidesDiagnosticCompletedDetailsFromSummary);
   it('shows older failures as neutral history after a later backlog sync pass', testOlderFailuresAreNeutralAfterBacklogPass);
   it('shows the current failure cause in activity', testCurrentFailureShowsCause);
   it('hides check-only completed passes from user-facing sync status', testHidesCheckOnlyCompletionWithoutTiming);

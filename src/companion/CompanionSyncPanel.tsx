@@ -74,30 +74,28 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
         onDisconnectPairing={props.onDisconnectPairing}
         onOpenPage={props.onOpenSettingsPage}
       />
-      <button
-        className="w-full rounded-2xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-        disabled={props.status === 'syncing'}
-        onClick={props.onSync}
-        type="button"
-      >
-        {props.status === 'syncing' ? 'Syncing' : 'Sync'}
-      </button>
-      <div className="rounded-2xl border border-companion-divider bg-companion-subtle px-4 py-3">
-        <div className="text-sm font-medium text-foreground">Device role</div>
-        <div className="mt-1 text-sm text-companion-text-secondary">
-          {isPrimary ? 'This device is the primary device.' : 'This device follows the current primary device.'}
-        </div>
-        {!isPrimary ? (
+      {props.page !== 'sync' ? null : (
+        <>
           <button
-            className="mt-3 w-full rounded-2xl border border-companion-divider bg-companion-content px-4 py-3 text-sm font-semibold text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
+            className="min-h-11 w-full rounded-xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-companion-divider-strong disabled:text-companion-text-secondary"
             disabled={props.status === 'syncing'}
-            onClick={() => void props.onRequestPrimaryDeviceTakeover(props.endpointUrl)}
+            onClick={props.onSync}
             type="button"
           >
-            Set as primary device
+            {props.status === 'syncing' ? 'Syncing' : 'Sync'}
           </button>
-        ) : null}
-      </div>
+          {!isPrimary ? (
+            <button
+              className="min-h-11 w-full rounded-xl border border-companion-divider bg-companion-content px-4 py-3 text-sm font-semibold text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={props.status === 'syncing'}
+              onClick={() => void props.onRequestPrimaryDeviceTakeover(props.endpointUrl)}
+              type="button"
+            >
+              Set as primary device
+            </button>
+          ) : null}
+        </>
+      )}
     </>
   );
 }
