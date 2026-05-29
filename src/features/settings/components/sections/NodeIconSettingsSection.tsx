@@ -38,7 +38,6 @@ function resetEditTarget(state: ReturnType<typeof useNodeIconSettingsState>, tar
 
 export function NodeIconSettingsSection() {
   const state = useNodeIconSettingsState();
-  const [activeKind, setActiveKind] = useState<EditableIconKind>('reading');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<NodeIconEditTarget | null>(null);
   const [iconQuery, setIconQuery] = useState('');
@@ -49,8 +48,6 @@ export function NodeIconSettingsSection() {
         <NodeIconSettingsOverview onEdit={() => setEditorOpen(true)} />
       </div>
       <NodeIconSettingsEditorDialog
-        activeKind={activeKind}
-        onActiveKindChange={setActiveKind}
         onClose={() => setEditorOpen(false)}
         onEditShape={setEditTarget}
         onResetBase={(kind) => resetBase(state, kind)}

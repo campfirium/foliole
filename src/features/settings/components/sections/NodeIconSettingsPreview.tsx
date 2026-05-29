@@ -21,14 +21,14 @@ const PREVIEW_ROWS: PreviewRow[] = [
 
 export function NodeIconSettingsPreview() {
   return (
-    <aside className="border-l border-settings-divider/55 bg-settings-shell/45 p-5 max-[1120px]:border-l-0 max-[1120px]:border-t">
-      <div className="overflow-hidden rounded-md border border-settings-control-border bg-settings-control/50">
+    <aside className="bg-settings-control/30 px-4 py-6 max-[900px]:hidden">
+      <div className="grid gap-1">
         {PREVIEW_ROWS.map((row) => (
           <div
             className={[
-              'grid min-h-14 grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-3 border-t border-settings-divider/45 px-3 first:border-t-0',
-              row.child ? 'pl-10' : '',
-              row.active ? 'bg-settings-control-active text-foreground shadow-[inset_3px_0_0_rgb(var(--app-accent-color-rgb))]' : 'text-foreground/68'
+              'grid min-h-9 grid-cols-[1.4rem_minmax(0,1fr)] items-center gap-2 rounded-sm px-2',
+              row.child ? 'pl-8' : '',
+              row.active ? 'bg-settings-selected text-foreground shadow-[inset_2px_0_0_rgb(var(--color-foreground)_/_0.32)]' : 'text-foreground/58'
             ].join(' ')}
             key={`${row.kind}-${row.state}`}
           >

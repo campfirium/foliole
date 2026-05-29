@@ -1,3 +1,5 @@
+import { useState, type FocusEvent } from 'react';
+
 import { parseLiteralUnion } from '../../../../shared/lib/parseLiteralUnion';
 import {
   settingsColorSwatchClassName,
@@ -9,7 +11,23 @@ import {
 } from '../../../../shared/ui';
 import { NODE_ICON_EFFECT_OPTIONS, type NodeIconEffect } from '../../../nodes/components/nodeIconAppearanceSettings';
 
-export function ColorField(props: { label: string; onChange: (value: string) => void; value: string }) {
+export function ColorField(props: { compact?: boolean; label: string; onChange: (value: string) => void; value: string }) {
+  if (props.compact) {
+    return (
+      <label className="inline-grid size-8 min-w-0 cursor-pointer place-items-center text-sm text-foreground/72">
+        <span className="relative size-6 shrink-0">
+          <span aria-hidden="true" className={settingsColorSwatchClassName('pointer-events-none absolute inset-0 !size-6 rounded-sm')} style={{ backgroundColor: props.value }} />
+          <input
+            aria-label={props.label}
+            className="absolute inset-0 cursor-pointer opacity-0"
+            onChange={(event) => props.onChange(event.target.value)}
+            type="color"
+            value={props.value}
+          />
+        </span>
+      </label>
+    );
+  }
   return (
     <label className="grid min-w-0 gap-1 text-sm text-foreground/72">
       <span>{props.label}</span>
@@ -88,41 +106,68 @@ export function RangeField(props: {
   step: number;
   value: number;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    setExpanded(false);
+  };
+  const handleNumberChange = (value: string) => {
+    if (value.trim() === '') return;
+    props.onChange(Number(value));
+  };
   return (
-    <label className="grid min-w-0 max-w-60 gap-1.5 text-sm text-foreground/72">
-      <span className="flex items-center justify-between gap-3">
-        <span>{props.label}</span>
-        <span className={settingsControlValueClassName('tabular-nums')}>{props.value.toFixed(2)}</span>
-      </span>
-      <input
-        aria-label={props.label}
-        className={settingsRangeClassName('w-full')}
-        disabled={props.disabled}
-        max={props.max}
-        min={props.min}
-        onChange={(event) => props.onChange(Number(event.target.value))}
-        step={props.step}
-        type="range"
-        value={props.value}
-      />
-    </label>
+    <div className="relative min-w-0 text-sm text-foreground/72" onBlur={handleBlur} onFocus={() => setExpanded(true)}>
+      <div className="grid min-h-8 w-36 grid-cols-[5.2rem_3.6rem] items-center gap-2">
+        <span className="min-w-0 whitespace-nowrap text-foreground/66">{props.label}</span>
+        <input
+          aria-label={props.label}
+          className={settingsControlValueClassName('h-8 w-[3.6rem] rounded-sm border border-transparent bg-transparent px-1 text-right tabular-nums text-foreground/68 transition-colors hover:border-settings-control-border-hover hover:bg-settings-control-hover focus-visible:border-settings-control-border-hover focus-visible:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring')}
+          disabled={props.disabled}
+          max={props.max}
+          min={props.min}
+          onChange={(event) => handleNumberChange(event.target.value)}
+          step={props.step}
+          type="number"
+          value={props.value.toFixed(2)}
+        />
+      </div>
+      {expanded ? (
+        <div className="absolute right-0 top-9 z-20 w-52 rounded-md border border-settings-outline bg-settings-shell px-3 py-2 shadow-settings">
+          <input
+            aria-label={`${props.label} slider`}
+            className={settingsRangeClassName('w-full')}
+            disabled={props.disabled}
+            max={props.max}
+            min={props.min}
+            onChange={(event) => props.onChange(Number(event.target.value))}
+            step={props.step}
+            type="range"
+            value={props.value}
+          />
+        </div>
+      ) : null}
+    </div>
   );
 }
 
-export function SwitchField(props: { checked: boolean; label: string; onChange: (checked: boolean) => void }) {
+export function SwitchField(props: { checked: boolean; label: string; onChange: (checked: boolean) => void; controlPosition?: 'left' | 'right' }) {
+  const control = (
+    <button
+      aria-checked={props.checked}
+      aria-label={props.label}
+      className={settingsSwitchClassName(props.checked)}
+      onClick={() => props.onChange(!props.checked)}
+      role="switch"
+      type="button"
+    >
+      <span aria-hidden="true" className={settingsSwitchKnobClassName(props.checked)} />
+    </button>
+  );
   return (
     <label className="inline-flex items-center gap-3 text-sm text-foreground/82">
-      <button
-        aria-checked={props.checked}
-        aria-label={props.label}
-        className={settingsSwitchClassName(props.checked)}
-        onClick={() => props.onChange(!props.checked)}
-        role="switch"
-        type="button"
-      >
-        <span aria-hidden="true" className={settingsSwitchKnobClassName(props.checked)} />
-      </button>
-      <span>{props.label}</span>
+      {props.controlPosition === 'right' ? null : control}
+      <span className="whitespace-nowrap">{props.label}</span>
+      {props.controlPosition === 'right' ? control : null}
     </label>
   );
 }
