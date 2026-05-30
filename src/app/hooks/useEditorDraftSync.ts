@@ -217,7 +217,7 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     setPendingTitleRefresh,
     timerRef
   });
-  const handleEditorInput = useEditorDraftInputHandler(nodeId);
+  const handleEditorInput = useEditorDraftInputHandler(nodeId, () => getPendingDraftCommit() && scheduleFlush());
 
   const editorContent = useMemo(
     () => (nodeId && draftState.nodeId === nodeId ? draftState.content : committedContent),

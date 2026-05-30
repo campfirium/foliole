@@ -34,6 +34,35 @@ function registerDebouncePersistenceTest() {
     expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
   });
 
+  it('defers pending draft flush while raw editor input keeps arriving', () => {
+    const onCommit = vi.fn();
+    const { result } = renderHook(() =>
+      useEditorDraftSync({
+        committedContent: 'Alpha body',
+        nodeId: 'node-1',
+        onCommit
+      })
+    );
+
+    act(() => {
+      result.current.handleEditorChange('Alpha body updated');
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(399);
+      result.current.handleEditorInput({ nodeId: 'node-1' });
+      vi.advanceTimersByTime(1);
+    });
+
+    expect(onCommit).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
+  });
+
 }
 
 function registerCloseFlushTest() {
