@@ -110,10 +110,12 @@ it('keeps the folder header search box on the toolbar row as width shrinks', () 
   const searchFieldFrame = searchBox.parentElement;
   const searchWidthSlot = searchFieldFrame?.parentElement;
   const searchGroup = searchWidthSlot?.parentElement;
-  const header = searchGroup?.parentElement;
+  const controlsGroup = screen.getByTestId('folder-list-header-controls');
 
-  expect(header?.className).toContain('flex-nowrap');
+  expect(controlsGroup.className).toContain('flex-nowrap');
+  expect(controlsGroup.className).toContain('min-w-0');
   expect(searchGroup?.className).toContain('min-w-0');
+  expect(searchGroup?.className).toContain('flex-[1_1_0]');
   expect(searchGroup?.className).not.toContain('basis-full');
   expect(searchWidthSlot?.className).toContain('flex-1');
   expect(searchWidthSlot?.className).not.toContain('shrink-0');

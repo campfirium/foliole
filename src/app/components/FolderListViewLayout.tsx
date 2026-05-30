@@ -29,7 +29,7 @@ interface FolderListHeaderProps {
 
 function FolderListHeader(props: FolderListHeaderProps) {
   return (
-    <div className="flex min-w-0 flex-nowrap items-center gap-3 border-b border-[var(--workspace-region-main-document-content-divider)] pb-3">
+    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--workspace-region-main-document-content-divider)] pb-3">
       {props.showCountAndTitle ? (
         <FolderListHeaderSummary
           currentViewActions={props.currentViewActions}
@@ -37,25 +37,27 @@ function FolderListHeader(props: FolderListHeaderProps) {
           itemCountLabel={props.itemCountLabel}
         />
       ) : null}
-      <FolderListHeaderSearchGroup
-        onChangeSearchQuery={props.onChangeSearchQuery}
-        {...definedProps({
-          searchAction: props.searchAction,
-          searchAriaLabel: props.searchAriaLabel,
-          searchDescription: props.searchDescription,
-          searchPlaceholder: props.searchPlaceholder,
-          searchReadOnly: props.searchReadOnly
-        })}
-        searchQuery={props.searchQuery}
-        searchResultLabel={props.searchResultLabel}
-      />
-      <div className="ml-auto shrink-0">
-        <FolderListSortControls
-          onChangeSortDirection={props.onChangeSortDirection}
-          onChangeSortKey={props.onChangeSortKey}
-          sortDirection={props.sortDirection}
-          sortKey={props.sortKey}
+      <div className="ml-auto flex min-w-0 flex-1 flex-nowrap items-center gap-3" data-testid="folder-list-header-controls">
+        <FolderListHeaderSearchGroup
+          onChangeSearchQuery={props.onChangeSearchQuery}
+          {...definedProps({
+            searchAction: props.searchAction,
+            searchAriaLabel: props.searchAriaLabel,
+            searchDescription: props.searchDescription,
+            searchPlaceholder: props.searchPlaceholder,
+            searchReadOnly: props.searchReadOnly
+          })}
+          searchQuery={props.searchQuery}
+          searchResultLabel={props.searchResultLabel}
         />
+        <div className="shrink-0">
+          <FolderListSortControls
+            onChangeSortDirection={props.onChangeSortDirection}
+            onChangeSortKey={props.onChangeSortKey}
+            sortDirection={props.sortDirection}
+            sortKey={props.sortKey}
+          />
+        </div>
       </div>
     </div>
   );

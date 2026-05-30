@@ -23,7 +23,7 @@ export function FolderListHeaderSearchGroup(props: {
   }
 
   return (
-    <div className="flex min-w-0 flex-[1_1_248px] items-center gap-2">
+    <div className="flex min-w-0 flex-[1_1_0] items-center gap-2">
       <div className="min-w-36 max-w-[248px] flex-1">
         <FolderListSearchBox
           onChangeSearchQuery={props.onChangeSearchQuery}
