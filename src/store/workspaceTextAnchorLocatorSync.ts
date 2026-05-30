@@ -11,6 +11,21 @@ import {
   type TextAnchorLocator
 } from '../features/nodes/model/nodeTypes';
 
+import {
+  readEditorInputDiagnosticTime
+} from './workspaceEditorInputDiagnostics';
+import {
+  createTextAnchorLocatorSyncDiagnosticStats,
+  finishTextAnchorLocatorSyncDiagnostics,
+  type TextAnchorLocatorSyncDiagnosticStats
+} from './workspaceTextAnchorLocatorSyncDiagnostics';
+
+type TextAnchorLocatorSyncState = {
+  nextNodesById: Record<string, Node>;
+  originalNodesById: Record<string, Node>;
+  updatedNodes: Node[];
+};
+
 function createLocatorValue(locators: TextAnchorLocator[]) {
   const [locator] = locators;
   return locators.length === 1 && locator ? locator : { ranges: locators };
@@ -37,11 +52,13 @@ function shouldSyncTextAnchorNode(node: Node, parentNodeId: string) {
 }
 
 function buildNextTextAnchorNode(args: {
+  diagnostics?: TextAnchorLocatorSyncDiagnosticStats;
   nextContent: string;
   node: Node;
   previousContent?: string;
   timestamp: string;
 }) {
+  const buildStartedAt = args.diagnostics ? readEditorInputDiagnosticTime() : 0;
   if (!args.node.anchorLink) {
     return null;
   }
@@ -49,18 +66,28 @@ function buildNextTextAnchorNode(args: {
   if (currentLocators.length === 0) {
     return null;
   }
-  const nextLocators = currentLocators.map((locator) =>
-    expandMarkdownImageTextLocator(
+  const nextLocators = currentLocators.map((locator) => {
+    const remapStartedAt = args.diagnostics ? readEditorInputDiagnosticTime() : 0;
+    const remappedLocator = remapTextAnchorLocator(args.nextContent, locator, args.previousContent);
+    if (args.diagnostics) {
+      args.diagnostics.remapMs += readEditorInputDiagnosticTime() - remapStartedAt;
+    }
+    return expandMarkdownImageTextLocator(
       args.nextContent,
-      remapTextAnchorLocator(args.nextContent, locator, args.previousContent),
+      remappedLocator,
       locator
-    )
-  );
+    );
+  });
+  const imageRegionStartedAt = args.diagnostics ? readEditorInputDiagnosticTime() : 0;
   const nextImageRegions = deriveMarkdownImageTextAnchorRegions({
     anchorId: args.node.anchorLink.id,
     content: args.nextContent,
     locators: nextLocators
   });
+  if (args.diagnostics) {
+    args.diagnostics.imageRegionMs += readEditorInputDiagnosticTime() - imageRegionStartedAt;
+    args.diagnostics.buildMs += readEditorInputDiagnosticTime() - buildStartedAt;
+  }
   if (areLocatorsEqual(currentLocators, nextLocators) && areImageRegionsEqual(args.node.imageRegions, nextImageRegions)) {
     return null;
   }
@@ -75,6 +102,54 @@ function buildNextTextAnchorNode(args: {
   } satisfies Node;
 }
 
+function readTextAnchorLocatorSyncNodes(args: {
+  diagnostics: TextAnchorLocatorSyncDiagnosticStats | null;
+  nodesById: Record<string, Node>;
+}) {
+  const objectValuesStartedAt = args.diagnostics ? readEditorInputDiagnosticTime() : 0;
+  const nodes = Object.values(args.nodesById);
+  if (args.diagnostics) {
+    args.diagnostics.objectValuesMs = readEditorInputDiagnosticTime() - objectValuesStartedAt;
+    args.diagnostics.scannedNodes = nodes.length;
+  }
+  return nodes;
+}
+
+function syncTextAnchorLocatorNode(args: {
+  diagnostics: TextAnchorLocatorSyncDiagnosticStats | null;
+  nextContent: string;
+  node: Node;
+  parentNodeId: string;
+  previousContent?: string;
+  state: TextAnchorLocatorSyncState;
+  timestamp: string;
+}) {
+  if (!shouldSyncTextAnchorNode(args.node, args.parentNodeId)) {
+    return;
+  }
+  if (args.diagnostics) {
+    args.diagnostics.candidateNodes += 1;
+  }
+  const nextNode = buildNextTextAnchorNode({
+    ...(args.diagnostics ? { diagnostics: args.diagnostics } : {}),
+    nextContent: args.nextContent,
+    node: args.node,
+    ...(args.previousContent !== undefined ? { previousContent: args.previousContent } : {}),
+    timestamp: args.timestamp
+  });
+  if (!nextNode) {
+    return;
+  }
+  if (args.state.nextNodesById === args.state.originalNodesById) {
+    args.state.nextNodesById = { ...args.state.originalNodesById };
+  }
+  args.state.nextNodesById[nextNode.id] = nextNode;
+  args.state.updatedNodes.push(nextNode);
+  if (args.diagnostics) {
+    args.diagnostics.updatedNodes += 1;
+  }
+}
+
 export function syncTextAnchorLocatorsForParentContent(args: {
   nextContent: string;
   nodesById: Record<string, Node>;
@@ -82,31 +157,28 @@ export function syncTextAnchorLocatorsForParentContent(args: {
   previousContent?: string;
   timestamp: string;
 }) {
-  const updatedNodes: Node[] = [];
-  let nextNodesById = args.nodesById;
-
-  Object.values(args.nodesById).forEach((node) => {
-    if (!shouldSyncTextAnchorNode(node, args.parentNodeId)) {
-      return;
-    }
-    const nextNode = buildNextTextAnchorNode({
+  const diagnostics = createTextAnchorLocatorSyncDiagnosticStats();
+  const syncState = {
+    nextNodesById: args.nodesById,
+    originalNodesById: args.nodesById,
+    updatedNodes: []
+  } satisfies TextAnchorLocatorSyncState;
+  readTextAnchorLocatorSyncNodes({ diagnostics, nodesById: args.nodesById }).forEach((node) => {
+    syncTextAnchorLocatorNode({
+      diagnostics,
       nextContent: args.nextContent,
       node,
+      parentNodeId: args.parentNodeId,
       ...(args.previousContent !== undefined ? { previousContent: args.previousContent } : {}),
+      state: syncState,
       timestamp: args.timestamp
     });
-    if (!nextNode) {
-      return;
-    }
-    if (nextNodesById === args.nodesById) {
-      nextNodesById = { ...args.nodesById };
-    }
-    nextNodesById[nextNode.id] = nextNode;
-    updatedNodes.push(nextNode);
   });
+  const syncDiagnostics = finishTextAnchorLocatorSyncDiagnostics(diagnostics);
 
   return {
-    nextNodesById,
-    updatedNodes
+    ...(syncDiagnostics ? { diagnostics: syncDiagnostics } : {}),
+    nextNodesById: syncState.nextNodesById,
+    updatedNodes: syncState.updatedNodes
   };
 }

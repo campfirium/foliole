@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import './app/styles.css';
+import { EditorInputDiagnosticsPanel } from './app/components/EditorInputDiagnosticsPanel';
 import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
 import {
   reportRuntimeAppReady,
@@ -167,6 +168,7 @@ async function mountApp() {
         }}
       >
         <App />
+        <EditorInputDiagnosticsPanel />
       </StartupErrorBoundary>
     </React.StrictMode>
   );
