@@ -96,7 +96,7 @@ export function renderNodeTreeRowContent(props: {
     <span
       className={resolveNodeRowContentClassName()}
     >
-      <span className="flex min-w-0 w-full items-center gap-1.5 overflow-hidden">
+      <span className="flex min-w-0 w-full items-center gap-[0.3125rem] overflow-hidden">
         {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
       {renderLabelCluster({
         label: props.label,

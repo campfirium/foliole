@@ -50,7 +50,7 @@ export function WorkspaceTopicTreeRowItem(props: {
       nodeIconKind={rowModel.nodeIconKind}
       nodeIconState={rowModel.nodeIconState}
       showIcon
-      showLeafChevronPlaceholder={props.row.depth === 0 && !rowModel.isDerivedNode}
+      showLeafChevronPlaceholder={false}
       rowSpacing={props.rowSpacing}
       {...definedProps({ onContextMenu: props.onContextMenu })}
       {...resolveWorkspaceTopicTreeRowDragProps(

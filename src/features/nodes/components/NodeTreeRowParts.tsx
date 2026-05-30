@@ -33,12 +33,12 @@ export function NodeTreeRowExpandToggle(props: {
 }) {
   if (!props.hasChildren) {
     if (!props.showLeafPlaceholder) {
-      return <span aria-hidden="true" className="mr-2 size-[1.125rem] flex-none" />;
+      return <span aria-hidden="true" className="mr-1.5 size-[1.125rem] flex-none" />;
     }
     return (
       <span
         aria-hidden="true"
-        className="pointer-events-none mr-2 flex size-[1.125rem] flex-none items-center justify-center opacity-15"
+        className="pointer-events-none mr-1.5 flex size-[1.125rem] flex-none items-center justify-center opacity-15"
         data-node-tree-chevron-placeholder="true"
       >
         <ChevronDownIcon className="-rotate-90" />
@@ -48,7 +48,7 @@ export function NodeTreeRowExpandToggle(props: {
   return (
     <span
       aria-hidden="true"
-      className="mr-2 flex size-[1.125rem] flex-none items-center justify-center opacity-70"
+      className="mr-1.5 flex size-[1.125rem] flex-none items-center justify-center opacity-55"
       data-node-tree-chevron="true"
       onClick={(event) => (event.stopPropagation(), props.onToggleCollapse(props.nodeId))}
     >
@@ -70,7 +70,7 @@ function ChevronDownIcon({ className }: { className?: string }) {
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="1.05"
+        strokeWidth="0.95"
       />
     </svg>
   );

@@ -165,26 +165,33 @@ it('renders markdown-looking topic titles as plain list text', () => {
   expect(screen.queryByText('#煮饺子时中途要不要加凉水#')).not.toBeInTheDocument();
 });
 
-it('only shows the leaf chevron placeholder on first-level native topics', () => {
+it('does not show chevron placeholders for topic rows without children', () => {
   const root = createTopicNode(1);
   const child = { ...createTopicNode(2), parentNodeId: root.id };
   const derived = { ...createTopicNode(3), anchorLink: { id: 'source-3', kind: 'highlight' as const } };
+  const parent = createTopicNode(4);
+  const nested = { ...createTopicNode(5), parentNodeId: parent.id };
   renderTopicRows(
     [
       createRow(root),
       createRow(child, { depth: 1 }),
-      createRow(derived)
+      createRow(derived),
+      createRow(parent, { hasChildren: true }),
+      createRow(nested, { depth: 1 })
     ],
     {
       [root.id]: root,
       [child.id]: child,
-      [derived.id]: derived
+      [derived.id]: derived,
+      [parent.id]: parent,
+      [nested.id]: nested
     }
   );
 
-  expect(screen.getByRole('treeitem', { name: 'Topic 1' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).not.toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Topic 1' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'Topic 2' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'Topic 3' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Topic 4' }).querySelector('[data-node-tree-chevron="true"]')).not.toBeNull();
 });
 
 it('keeps virtual row sizing aligned with folder tree row spacing', () => {
