@@ -68,6 +68,7 @@ export function NodeTreeRowIcon({ baseOnly = false, kind, preview = false, state
 
   const stateAppearance = resolveStateAppearance({ baseOnly, kind, state });
   const customIcon = resolveNodeTreeRowIconSource({
+    iconId: baseOnly ? '' : stateAppearance.iconId,
     kind,
     state,
     svg: baseOnly ? '' : stateAppearance.svg

@@ -19,24 +19,36 @@ export function IconGrid(props: {
   icons: typeof LUCIDE_ICON_OPTIONS;
   selectedIconId: string;
   onSelect: (iconId: string) => void;
+  compact?: boolean;
 }) {
+  const gridClassName = props.compact
+    ? 'grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] justify-items-center gap-1.5'
+    : 'grid grid-cols-[repeat(auto-fill,minmax(52px,1fr))] justify-items-center gap-2';
+  const buttonClassName = (selected: boolean) =>
+    props.compact
+      ? `inline-flex aspect-square w-full max-w-12 items-center justify-center rounded-md border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+          selected
+            ? 'bg-settings-control-hover text-foreground'
+            : 'bg-settings-control/35 text-foreground/66 hover:bg-settings-control-hover hover:text-foreground'
+        }`
+      : `inline-flex aspect-square w-full max-w-14 items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+          selected
+            ? 'border-settings-control-border-hover bg-settings-control-active text-foreground/82'
+            : 'border-transparent bg-settings-control/45 text-foreground/70 hover:bg-settings-control-hover hover:text-foreground'
+        }`;
   return (
-    <div className="app-scrollbar mt-3 max-h-[320px] overflow-auto pr-2">
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(52px,1fr))] justify-items-center gap-2">
+    <div className={`app-scrollbar mt-3 overflow-auto pr-2 ${props.compact ? 'max-h-[240px]' : 'max-h-[320px]'}`}>
+      <div className={gridClassName}>
         {props.icons.map((icon) => (
           <button
             aria-label={`Use ${icon.label} icon`}
-            className={`inline-flex aspect-square w-full max-w-14 items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-              props.selectedIconId === icon.id
-                ? 'border-settings-control-border-hover bg-settings-control-active text-foreground/82'
-                : 'border-transparent bg-settings-control/45 text-foreground/70 hover:bg-settings-control-hover hover:text-foreground'
-            }`}
+            className={buttonClassName(props.selectedIconId === icon.id)}
             key={icon.id}
             onClick={() => props.onSelect(icon.id)}
             title={icon.label}
             type="button"
           >
-            <LucideCatalogIcon iconId={icon.id} size={28} strokeWidth={1.85} />
+            <LucideCatalogIcon iconId={icon.id} size={props.compact ? 22 : 28} strokeWidth={1.85} />
           </button>
         ))}
       </div>

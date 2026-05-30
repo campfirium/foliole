@@ -1,4 +1,4 @@
-import { RotateCcw } from 'lucide-react';
+import { Pencil, RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { settingsUtilityIconButtonClassName } from '../../../../shared/ui';
@@ -21,8 +21,9 @@ function MarkerIconButton(props: {
   state: NodeTreeRowIconState;
 }) {
   return (
-    <button aria-label={props.label} className="inline-grid size-7 place-items-center rounded-sm text-foreground transition-colors hover:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={props.onClick} type="button">
+    <button aria-label={props.label} className="inline-flex h-8 w-12 items-center justify-center gap-1 rounded-sm bg-transparent text-foreground transition-colors hover:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={props.onClick} type="button">
       <NodeTreeRowIcon {...(props.baseOnly !== undefined ? { baseOnly: props.baseOnly } : {})} kind={props.kind} preview state={props.state} />
+      <Pencil aria-hidden="true" data-node-icon-edit-affordance="true" size={11} strokeWidth={2} />
     </button>
   );
 }

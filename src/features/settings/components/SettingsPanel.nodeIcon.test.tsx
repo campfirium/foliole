@@ -7,6 +7,7 @@ import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { NodeIconSettingsPreview } from './sections/NodeIconSettingsPreview';
 import { SettingsPanel } from './SettingsPanel';
+import { changeRange, getMarkerRow, readJsonSetting } from './SettingsPanel.nodeIcon.testSupport';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
 vi.mock('../model/systemFonts', () => ({
@@ -43,12 +44,6 @@ function openIconEditor() {
   fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
 }
 
-function getMarkerRow(title: string) {
-  const row = document.querySelector(`[data-node-icon-settings-row="${title}"]`);
-  expect(row).not.toBeNull();
-  return row as HTMLElement;
-}
-
 function editSvg(label: string, value: string) {
   fireEvent.click(screen.getByRole('button', { name: label }));
   fireEvent.change(screen.getByLabelText('Search icons'), { target: { value: 'book open' } });
@@ -58,18 +53,9 @@ function editSvg(label: string, value: string) {
 
 function editStateSvg(label: string, value: string) {
   fireEvent.click(screen.getByRole('button', { name: label }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use mocked icon' }));
   fireEvent.change(screen.getByLabelText('SVG'), { target: { value } });
   fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-}
-
-function changeRange(rowTitle: string, label: string, value: string) {
-  fireEvent.change(within(getMarkerRow(rowTitle)).getByLabelText(label), { target: { value } });
-}
-
-function readJsonSetting(key: string) {
-  const value = window.localStorage.getItem(key);
-  expect(value).toBeTruthy();
-  return JSON.parse(value ?? '{}') as Record<string, unknown>;
 }
 
 async function expectStoredNodeIconSettings() {
@@ -80,6 +66,7 @@ async function expectStoredNodeIconSettings() {
       innerLineWidth: 1.4,
       innerScale: 1.2,
       lineWidth: 1.8,
+      iconId: 'BookOpen',
       svg: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>'
     });
   });
@@ -89,6 +76,15 @@ async function expectNodeIconSettingsReset() {
   fireEvent.click(screen.getByRole('button', { name: 'Reset Item (scheduled)' }));
   await waitFor(() => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance)).toBeNull();
+  });
+}
+
+async function expectStateIconUsesBase() {
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Item (scheduled) shape' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use base' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  await waitFor(() => {
+    expect(readJsonSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance)).toMatchObject({ iconId: '', svg: '' });
   });
 }
 
@@ -104,6 +100,7 @@ it('stores compact topic and item icon rows plus per-state topic and item icon s
   editStateSvg('Edit Item (scheduled) shape', '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>');
 
   await expectStoredNodeIconSettings();
+  await expectStateIconUsesBase();
   await expectNodeIconSettingsReset();
 }, 30000);
 
@@ -120,6 +117,7 @@ it('uses compact icon defaults and closes nested icon editing before settings', 
   fireEvent.focus(topicIconRow.getByLabelText('Stroke'));
   expect(topicIconRow.getByLabelText('Stroke slider')).toBeInTheDocument();
   expect(screen.queryByText('#202124')).not.toBeInTheDocument();
+  expect(topicIconRow.getByRole('button', { name: 'Edit Topic (base) shape' }).querySelector('[data-node-icon-edit-affordance="true"]')).not.toBeNull();
   fireEvent.click(topicIconRow.getByRole('button', { name: 'Edit Topic (base) shape' }));
   expect(screen.getByLabelText('Search icons').className).toContain('focus-visible:ring-0');
 

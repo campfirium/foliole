@@ -34,6 +34,7 @@ function resetEditTarget(state: ReturnType<typeof useNodeIconSettingsState>, tar
     resetBase(state, target.kind);
     return;
   }
+  state.setStateIcon(target.state, target.kind, '');
   state.setStateSvg(target.state, target.kind, '');
 }
 
@@ -71,6 +72,7 @@ export function NodeIconSettingsSection(props: {
           setIconQuery('');
         }}
         onIconQueryChange={setIconQuery}
+        resetLabel={editTarget?.type === 'state' ? 'Use base' : 'Reset'}
         onReset={(target) => resetEditTarget(state, target)}
         state={state}
       />

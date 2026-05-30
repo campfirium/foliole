@@ -6,6 +6,7 @@ import { LucideCatalogIcon } from '../../../shared/ui';
 import { NodeTreeRowPresetIcon } from './NodeTreeRowPresetIcon';
 
 type IconTransformMode = 'none' | 'flip-x' | 'flip-y';
+const CUSTOM_LUCIDE_VISUAL_SCALE = 0.82;
 
 export interface NodeTreeRowIconGraphicProps {
   customMarkup: string;
@@ -47,6 +48,10 @@ function iconTransformStyle(transformMode: IconTransformMode, scale: number): CS
   return transforms.length > 0 ? { transform: transforms.join(' ') } : undefined;
 }
 
+function lucideIconTransformStyle(transformMode: IconTransformMode, scale: number) {
+  return iconTransformStyle(transformMode, scale * CUSTOM_LUCIDE_VISUAL_SCALE);
+}
+
 function DoubleLineCustomMarkup(props: {
   markup: string;
   innerLineWidth: number;
@@ -75,11 +80,11 @@ function DoubleLineLucideIcon(props: {
 }) {
   return (
     <span className={cn(resolveDefaultIconClassName(props.preview), 'relative inline-flex items-center justify-center')} style={iconTransformStyle(props.transformMode, 1)}>
-      <span className="absolute inset-0 inline-flex items-center justify-center" style={strokeWidthStyle(visualStrokeWidth(props.outerLineWidth, props.outerScale), `scale(${props.outerScale})`)}>
-        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={visualStrokeWidth(props.outerLineWidth, props.outerScale)} />
+      <span className="absolute inset-0 inline-flex items-center justify-center" style={strokeWidthStyle(visualStrokeWidth(props.outerLineWidth, props.outerScale * CUSTOM_LUCIDE_VISUAL_SCALE), `scale(${props.outerScale * CUSTOM_LUCIDE_VISUAL_SCALE})`)}>
+        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={visualStrokeWidth(props.outerLineWidth, props.outerScale * CUSTOM_LUCIDE_VISUAL_SCALE)} />
       </span>
-      <span aria-hidden="true" className="absolute inset-0 inline-flex items-center justify-center" style={strokeWidthStyle(visualStrokeWidth(props.innerLineWidth, props.innerScale), `scale(${props.innerScale})`)}>
-        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={visualStrokeWidth(props.innerLineWidth, props.innerScale)} />
+      <span aria-hidden="true" className="absolute inset-0 inline-flex items-center justify-center" style={strokeWidthStyle(visualStrokeWidth(props.innerLineWidth, props.innerScale * CUSTOM_LUCIDE_VISUAL_SCALE), `scale(${props.innerScale * CUSTOM_LUCIDE_VISUAL_SCALE})`)}>
+        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={visualStrokeWidth(props.innerLineWidth, props.innerScale * CUSTOM_LUCIDE_VISUAL_SCALE)} />
       </span>
     </span>
   );
@@ -101,8 +106,8 @@ export function NodeTreeRowIconGraphic(props: NodeTreeRowIconGraphicProps) {
       return <DoubleLineLucideIcon iconId={props.iconId} innerLineWidth={props.innerLineWidth} innerScale={props.innerScale} outerLineWidth={props.lineWidth} outerScale={props.scale} {...(props.preview !== undefined ? { preview: props.preview } : {})} transformMode={props.transformMode} />;
     }
     return (
-      <span className={resolveDefaultIconClassName(props.preview)} style={strokeWidthStyle(visualStrokeWidth(props.lineWidth, props.scale), iconTransformStyle(props.transformMode, props.scale)?.transform)}>
-        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={visualStrokeWidth(props.lineWidth, props.scale)} />
+      <span className={resolveDefaultIconClassName(props.preview)} style={strokeWidthStyle(visualStrokeWidth(props.lineWidth, props.scale * CUSTOM_LUCIDE_VISUAL_SCALE), lucideIconTransformStyle(props.transformMode, props.scale)?.transform)}>
+        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={visualStrokeWidth(props.lineWidth, props.scale * CUSTOM_LUCIDE_VISUAL_SCALE)} />
       </span>
     );
   }

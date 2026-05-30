@@ -9,12 +9,12 @@ import type { useNodeIconSettingsState } from './nodeIconSettingsState';
 import { IconGrid, matchesIconQuery } from './SettingsRailIconPicker';
 
 const SVG_PLACEHOLDER = 'Optional SVG. Empty uses the selected Lucide icon.';
-const STATE_SVG_PLACEHOLDER = 'Optional SVG. Empty uses the base icon.';
+const STATE_SVG_PLACEHOLDER = 'Optional SVG. Empty uses the selected Lucide icon or base icon.';
 
 const SEARCH_INPUT_CLASS_NAME =
   'h-9 text-sm focus-visible:border-settings-control-border-hover focus-visible:ring-0 focus-visible:ring-offset-0';
 const TEXTAREA_CLASS_NAME = settingsFieldClassName(
-  'min-h-[108px] resize-y rounded-md px-3 py-2 font-mono leading-6 placeholder:font-sans placeholder:text-foreground/42'
+  'min-h-[96px] resize-y rounded-md px-3 py-2 font-mono leading-6 placeholder:font-sans placeholder:text-foreground/42 focus-visible:ring-0 focus-visible:ring-offset-0'
 );
 
 type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
@@ -30,11 +30,12 @@ function SvgEditDialog(props: {
   onIconChange: (value: string) => void;
   onIconQueryChange: (value: string) => void;
   onSvgChange: (value: string) => void;
+  placeholder?: string;
   svgValue: string;
 }) {
   const filteredIcons = LUCIDE_ICON_OPTIONS.filter((icon) => matchesIconQuery([icon.id, icon.label], props.iconQuery));
   return (
-    <div className="grid min-h-0 gap-4">
+    <div className="grid min-h-0 gap-3">
       <div>
         <p className="mb-2 text-sm font-medium text-foreground">Lucide icon</p>
         <AppInput
@@ -45,6 +46,7 @@ function SvgEditDialog(props: {
           value={props.iconQuery}
         />
         <IconGrid
+          compact
           icons={filteredIcons}
           selectedIconId={props.iconId}
           onSelect={(iconId) => {
@@ -59,28 +61,12 @@ function SvgEditDialog(props: {
           aria-label="SVG"
           className={TEXTAREA_CLASS_NAME}
           onChange={(event) => props.onSvgChange(event.target.value)}
-          placeholder={SVG_PLACEHOLDER}
+          placeholder={props.placeholder ?? SVG_PLACEHOLDER}
           spellCheck={false}
           value={props.svgValue}
         />
       </label>
     </div>
-  );
-}
-
-function StateShapeDialog(props: { onSvgChange: (value: string) => void; svgValue: string }) {
-  return (
-    <label className="grid gap-2 text-sm font-medium text-foreground">
-      SVG
-      <textarea
-        aria-label="SVG"
-        className={TEXTAREA_CLASS_NAME}
-        onChange={(event) => props.onSvgChange(event.target.value)}
-        placeholder={STATE_SVG_PLACEHOLDER}
-        spellCheck={false}
-        value={props.svgValue}
-      />
-    </label>
   );
 }
 
@@ -103,8 +89,13 @@ export function NodeIconSettingsDialogBody(props: {
           svgValue={target.kind === 'reading' ? props.state.topicSvg : props.state.itemSvg}
         />
       ) : (
-        <StateShapeDialog
+        <SvgEditDialog
+          iconId={props.state.stateStyles[target.state][target.kind].iconId || (target.kind === 'reading' ? props.state.topicIcon : props.state.itemIcon)}
+          iconQuery={props.iconQuery}
+          onIconChange={(value) => props.state.setStateIcon(target.state, target.kind, value)}
+          onIconQueryChange={props.onIconQueryChange}
           onSvgChange={(value) => props.state.setStateSvg(target.state, target.kind, value)}
+          placeholder={STATE_SVG_PLACEHOLDER}
           svgValue={props.state.stateStyles[target.state][target.kind].svg}
         />
       )}

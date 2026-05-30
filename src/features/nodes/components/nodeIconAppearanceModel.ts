@@ -20,6 +20,7 @@ export interface NodeIconStateAppearance {
   fadeEnabled: boolean;
   fadeOpacity: number;
   fadeTextOpacity: number;
+  iconId: string;
   innerLineWidth: number;
   innerScale: number;
   lineWidth: number;
@@ -52,6 +53,7 @@ export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, No
     fadeEnabled: false,
     fadeOpacity: 1,
     fadeTextOpacity: 1,
+    iconId: '',
     innerLineWidth: 0.6,
     innerScale: 0.78,
     lineWidth: 0.6,
@@ -67,6 +69,7 @@ export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, No
     fadeEnabled: false,
     fadeOpacity: 1,
     fadeTextOpacity: 1,
+    iconId: '',
     innerLineWidth: 0.5,
     innerScale: 0.7,
     lineWidth: 0.6,
@@ -82,6 +85,7 @@ export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, No
     fadeEnabled: true,
     fadeOpacity: 0.6,
     fadeTextOpacity: 0.6,
+    iconId: '',
     innerLineWidth: 0.6,
     innerScale: 0.78,
     lineWidth: 0.6,

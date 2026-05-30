@@ -23,6 +23,7 @@ type NodeIconSettingsDialogProps = {
   iconQuery: string;
   onClose: () => void;
   onIconQueryChange: (value: string) => void;
+  resetLabel: string;
   onReset: (target: NodeIconEditTarget) => void;
   state: NodeIconSettingsDialogState;
 };
@@ -43,13 +44,13 @@ export function NodeIconSettingsDialog(props: NodeIconSettingsDialogProps) {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="grid max-h-[calc(100dvh-32px)] w-[min(720px,calc(100vw-32px))] gap-5 overflow-auto rounded-lg border-settings-outline bg-settings-shell p-5 shadow-settings"
+          className="grid max-h-[calc(100dvh-32px)] w-[min(640px,calc(100vw-32px))] gap-4 overflow-auto rounded-lg border-settings-outline bg-settings-shell p-5 shadow-settings"
           data-settings-nested-dialog="true"
         >
-          <AppDialogTitle>{target.title}</AppDialogTitle>
+          <AppDialogTitle className="text-[1.05rem]">{target.title}</AppDialogTitle>
           <NodeIconSettingsDialogBody {...props} target={target} />
           <footer className="flex justify-between border-t border-settings-divider/55 pt-4">
-            <AppButton onClick={() => props.onReset(target)}>Reset</AppButton>
+            <AppButton onClick={() => props.onReset(target)}>{props.resetLabel}</AppButton>
             <AppButton onClick={props.onClose} variant="primary">Done</AppButton>
           </footer>
         </AppDialogContent>

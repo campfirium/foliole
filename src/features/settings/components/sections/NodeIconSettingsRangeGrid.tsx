@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { RangeField } from './nodeIconSettingFields';
 
-export const NODE_ICON_SETTINGS_TABLE_CLASS = 'grid-cols-[2rem_10.4rem_3.6rem_5.2rem_5.2rem_4rem]';
+export const NODE_ICON_SETTINGS_TABLE_CLASS = 'grid-cols-[3.25rem_10.4rem_3.6rem_5.2rem_5.2rem_4rem]';
 export const NODE_ICON_SETTINGS_TABLE_GAP_CLASS = 'gap-x-4';
 
 export function ControlHeader() {

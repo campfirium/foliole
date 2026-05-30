@@ -190,6 +190,7 @@ export function resolveNodeTreeRowCustomIcon(args: {
 export function resolveNodeTreeRowIconSource(args: {
   kind: NodeTreeRowIconKind;
   state: NodeTreeRowIconState;
+  iconId?: string;
   svg?: string;
 }): NodeTreeRowCustomIconResult {
   const stateSvg = sanitizeSvgMarkup(args.svg ?? null);
@@ -205,6 +206,14 @@ export function resolveNodeTreeRowIconSource(args: {
         'data-node-custom-svg': 'true',
         'data-node-custom-slot': 'state'
       }),
+      slot: 'state',
+      transformMode: 'none'
+    };
+  }
+  if (args.iconId) {
+    return {
+      iconId: args.iconId,
+      markup: null,
       slot: 'state',
       transformMode: 'none'
     };

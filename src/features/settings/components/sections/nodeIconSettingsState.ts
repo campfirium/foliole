@@ -33,6 +33,9 @@ function createStateStyleActions(
     setStateEffect(state: NodeTreeRowIconState, kind: EditableIconKind, value: NodeIconEffect) {
       updateStateStyle(state, kind, 'effect', value);
     },
+    setStateIcon(state: NodeTreeRowIconState, kind: EditableIconKind, value: string) {
+      updateStateStyle(state, kind, 'iconId', value);
+    },
     setStateLineWidth(state: NodeTreeRowIconState, kind: EditableIconKind, value: number) {
       updateStateStyle(state, kind, 'lineWidth', value);
     },
@@ -91,7 +94,6 @@ function createBaseActions(args: {
     },
     setItemIcon(value: string) {
       args.itemIcon.set(value);
-      args.stateState.clearStateSvg('review');
     },
     setItemLineWidth(value: number) {
       args.itemAppearance.setLineWidth(value);
@@ -103,7 +105,6 @@ function createBaseActions(args: {
     },
     setItemSvg(value: string) {
       args.itemSvg.set(value);
-      args.stateState.clearStateSvg('review');
     },
     setTopicColor(value: string) {
       args.topicAppearance.setColor(value);
@@ -111,7 +112,6 @@ function createBaseActions(args: {
     },
     setTopicIcon(value: string) {
       args.topicIcon.set(value);
-      args.stateState.clearStateSvg('reading');
     },
     setTopicLineWidth(value: number) {
       args.topicAppearance.setLineWidth(value);
@@ -123,7 +123,6 @@ function createBaseActions(args: {
     },
     setTopicSvg(value: string) {
       args.topicSvg.set(value);
-      args.stateState.clearStateSvg('reading');
     }
   };
 }
