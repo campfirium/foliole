@@ -62,3 +62,36 @@ it('watches original and highlight folders for generic split keep imports', () =
     })
   ]);
 });
+
+it('keeps mirror output folders out of watched import configs', () => {
+  const settings = createDefaultImportManagerSettings();
+  settings.sources = [
+    {
+      actionMode: 'keep',
+      archivePath: '',
+      highlightMode: 'merged',
+      highlightPath: '',
+      id: 'mirror-source',
+      keepPreview: null,
+      keepState: 'enabled',
+      primaryPath: '/library/Mirror'
+    },
+    {
+      actionMode: 'keep',
+      archivePath: '',
+      highlightMode: 'merged',
+      highlightPath: '',
+      id: 'external-source',
+      keepPreview: null,
+      keepState: 'enabled',
+      primaryPath: '/library/External'
+    }
+  ];
+
+  expect(resolveKeepImportConfigs(settings, { unsafePathCandidates: [{ label: 'Mirror', path: '/library/Mirror' }] })).toEqual([
+    expect.objectContaining({
+      directoryPath: '/library/External',
+      sourceId: 'external-source'
+    })
+  ]);
+});

@@ -141,6 +141,31 @@ it('updates and persists a single library path override', async () => {
   await expect(fs.readFile(resolveLibraryPathSettingsFileForTest(), 'utf8')).resolves.toContain(mirrorPath);
 });
 
+it('rejects inbox and mirror locations that overlap', async () => {
+  const inboxPath = path.join(tempRoot, 'Capture');
+  const mirrorInsideInbox = path.join(inboxPath, 'Mirror');
+  await updateLibraryPathSetting({ location: 'inbox', path: inboxPath });
+
+  await expect(updateLibraryPathSetting({ location: 'mirror', path: mirrorInsideInbox })).rejects.toThrow(
+    'Inbox cannot overlap Mirror.'
+  );
+  await expect(updateLibraryPathSetting({ location: 'mirror', path: inboxPath })).rejects.toThrow(
+    'Inbox cannot overlap Mirror.'
+  );
+});
+
+it('rejects managed child folders that overlap assets or data', async () => {
+  const assetsPath = path.join(tempRoot, 'AttachmentVault');
+  await updateLibraryPathSetting({ location: 'assets_dir', path: assetsPath });
+
+  await expect(updateLibraryPathSetting({ location: 'inbox', path: path.join(assetsPath, 'Inbox') })).rejects.toThrow(
+    'Assets cannot overlap Inbox.'
+  );
+  await expect(updateLibraryPathSetting({ location: 'mirror', path: path.join(mockedDocumentsDir, 'Foliole', 'Data') })).rejects.toThrow(
+    'Data cannot overlap Mirror.'
+  );
+});
+
 it('rejects non-absolute library path updates', async () => {
   await expect(updateLibraryPathSetting({ location: 'inbox', path: 'relative/inbox' })).rejects.toThrow(
     'library path must be an absolute path: inbox'

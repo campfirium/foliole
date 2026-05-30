@@ -17,6 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { saveImportManagerSettings } from '../import/importManagerSettings.js';
+
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
@@ -86,4 +88,29 @@ it('writes an external folder tombstone when a folder is removed', () => {
     sync_dirty: 1
   });
   expect(state?.deleted_at).toBeTruthy();
+});
+
+it('rejects external folders that overlap managed or Readwise folders', () => {
+  const readwiseRoot = path.join(tempRoot, 'Readwise');
+  saveImportManagerSettings({ readwiseRootPath: readwiseRoot });
+
+  expect(() =>
+    saveExternalSearchFolders([{
+      attachment_mode: 'document_relative_first_then_fixed_root',
+      attachment_root_path: null,
+      excluded_dirs: [],
+      folder_path: path.join(readwiseRoot, 'Articles'),
+      id: 'folder-readwise'
+    }])
+  ).toThrow('Readwise Reader folder cannot overlap External source 1.');
+
+  expect(() =>
+    saveExternalSearchFolders([{
+      attachment_mode: 'document_relative_first_then_fixed_root',
+      attachment_root_path: null,
+      excluded_dirs: [],
+      folder_path: path.join(mockedAppDataDir, 'Foliole', 'Mirror'),
+      id: 'folder-mirror'
+    }])
+  ).toThrow('Mirror cannot overlap External source 1.');
 });

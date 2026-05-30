@@ -1,4 +1,5 @@
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
+import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import {
   markExternalDocumentsMissing,
@@ -27,7 +28,7 @@ type ExternalSearchRefreshOptions = { documentChunkSize?: number; taskContext?: 
 
 function resolveAutoExcludedPaths() {
   const readwiseRootPath = loadImportManagerSettings().readwiseRootPath.trim();
-  return readwiseRootPath ? [readwiseRootPath] : [];
+  return [readwiseRootPath, loadLibraryPathSettingsSync().mirror].filter((value) => value.trim().length > 0);
 }
 
 function readCachedFolderDocuments(db: SqliteDatabase, folderId: string) {

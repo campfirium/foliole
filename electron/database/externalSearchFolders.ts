@@ -1,6 +1,8 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
+import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
+import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -23,6 +25,14 @@ type SaveFolderInput = Pick<
   NativeExternalSearchFolder,
   'attachment_mode' | 'attachment_root_path' | 'excluded_dirs' | 'folder_path' | 'id'
 >;
+
+interface NormalizedExternalSearchFolder {
+  attachmentMode: 'document_relative_first_then_fixed_root';
+  attachmentRootPath: string | null;
+  excludedDirs: string[];
+  folderPath: string;
+  id: string;
+}
 
 function normalizeExcludedDirs(value: unknown) {
   if (!Array.isArray(value)) {
@@ -74,7 +84,7 @@ export function loadExternalSearchFolders() {
 }
 
 function normalizeFolders(folders: SaveFolderInput[]) {
-  return folders
+  const normalizedFolders = folders
     .map((folder) => ({
       attachmentMode: 'document_relative_first_then_fixed_root' as const,
       attachmentRootPath: folder.attachment_root_path?.trim() || null,
@@ -83,6 +93,18 @@ function normalizeFolders(folders: SaveFolderInput[]) {
       id: folder.id.trim()
     }))
     .filter((folder) => folder.id && folder.folderPath);
+  assertSafeExternalSearchFolders(normalizedFolders);
+  return normalizedFolders;
+}
+
+function assertSafeExternalSearchFolders(normalizedFolders: NormalizedExternalSearchFolder[]) {
+  assertNoUnsafePathOverlap([
+    ...loadManagedPathCandidates(),
+    ...normalizedFolders.map((folder, index) => ({
+      label: `External source ${index + 1}`,
+      path: folder.folderPath
+    }))
+  ]);
 }
 
 function upsertExternalSearchFolders(

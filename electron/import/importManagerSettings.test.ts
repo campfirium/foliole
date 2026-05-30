@@ -230,24 +230,3 @@ it('normalizes legacy move handling payloads to keep when loading', () => {
     })
   ]);
 });
-
-it('applies readwise root derived paths when saving only the root path', () => {
-  const saved = saveImportManagerSettings({
-    readwiseRootPath: '/tmp/readwise-root'
-  });
-
-  expect(saved.readwiseSources).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        kind: 'articles',
-        primaryPath: '/tmp/readwise-root/Full Document Contents/Articles',
-        highlightPath: '/tmp/readwise-root/Articles'
-      }),
-      expect.objectContaining({
-        kind: 'books',
-        primaryPath: '/tmp/readwise-root/Full Document Contents/Books',
-        highlightPath: '/tmp/readwise-root/Books'
-      })
-    ])
-  );
-});

@@ -96,7 +96,10 @@ beforeEach(async () => {
   runDirectoryImportBatch.mockClear();
   loadLibraryPathSettings.mockReset();
   loadLibraryPathSettingsSync.mockReset();
-  loadLibraryPathSettings.mockResolvedValue({ inbox: path.join(mockedAppDataDir, 'Inbox') });
+  loadLibraryPathSettings.mockResolvedValue({
+    inbox: path.join(mockedAppDataDir, 'Inbox'),
+    mirror: path.join(mockedAppDataDir, 'mirror')
+  });
   loadLibraryPathSettingsSync.mockReturnValue({
     assets_dir: path.join(mockedAppDataDir, 'assets'),
     attachments_dir: path.join(mockedAppDataDir, 'attachments'),
@@ -173,6 +176,29 @@ it('discovers only changed files on rerun for the same adapter config', async ()
       sources: [expect.objectContaining({ sourceName: 'b.md' })]
     })
   );
+});
+
+it('rejects watched folders that contain mirror output', async () => {
+  const root = path.join(tempRoot, 'library-with-mirror');
+  const mirrorPath = path.join(root, 'Mirror');
+  await fs.mkdir(mirrorPath, { recursive: true });
+  await fs.writeFile(path.join(root, 'source.md'), '# Source', 'utf8');
+  await fs.writeFile(path.join(mirrorPath, 'exported.md'), '# Exported', 'utf8');
+  loadLibraryPathSettings.mockResolvedValue({ inbox: path.join(mockedAppDataDir, 'Inbox'), mirror: mirrorPath });
+  loadLibraryPathSettingsSync.mockReturnValue({
+    assets_dir: path.join(mockedAppDataDir, 'assets'),
+    attachments_dir: path.join(mockedAppDataDir, 'attachments'),
+    data_dir: path.join(mockedAppDataDir, 'data'),
+    database_path: path.join(mockedAppDataDir, 'data', 'foliole.db'),
+    inbox: path.join(mockedAppDataDir, 'Inbox'),
+    library_home: path.join(mockedAppDataDir, 'library-home'),
+    mirror: mirrorPath
+  });
+
+  await expect(runWatchImportCycle([{ adapterConfigId: 'library', directoryPath: root }])).rejects.toThrow(
+    'Mirror cannot overlap Watched folder.'
+  );
+  expect(runDirectoryImportBatch).not.toHaveBeenCalled();
 });
 
 it('keeps failed sources pending so an unchanged rerun retries them', async () => {

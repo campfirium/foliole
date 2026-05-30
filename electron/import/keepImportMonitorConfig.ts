@@ -4,6 +4,7 @@ import {
   type ImportManagerSourceDraft
 } from '../../lib/core/import/importManagerSettings.js';
 import { isGenericSplitImportSourceUnsupported } from '../../lib/core/import/unsupportedKeepImportRules.js';
+import { doPathsOverlap, type SafetyPathCandidate } from '../libraryPathSafety.js';
 
 export interface KeepImportConfig {
   actionMode: ImportManagerSourceDraft['actionMode'];
@@ -33,7 +34,8 @@ function resolveSourceHighlightPolicy(source: ImportManagerSourceDraft, sourceTy
 
 function toKeepImportConfig(
   source: ImportManagerSourceDraft,
-  sourceType: 'generic' | 'readwise'
+  sourceType: 'generic' | 'readwise',
+  unsafePathCandidates: SafetyPathCandidate[] = []
 ): KeepImportSourceConfig | null {
   const directoryPath = normalizeKeepDirectoryPath(source.primaryPath);
   const highlightPath = normalizeKeepDirectoryPath(source.highlightPath);
@@ -46,6 +48,12 @@ function toKeepImportConfig(
   const watchPaths = [directoryPath];
   if (source.highlightMode === 'split' && highlightPath && highlightPath !== directoryPath) {
     watchPaths.push(highlightPath);
+  }
+  const protectedCandidates = sourceType === 'readwise'
+    ? unsafePathCandidates.filter((candidate) => candidate.label !== 'Readwise Reader folder')
+    : unsafePathCandidates;
+  if (protectedCandidates.some((candidate) => watchPaths.some((watchPath) => doPathsOverlap(watchPath, candidate.path)))) {
+    return null;
   }
   return {
     actionMode: source.actionMode,
@@ -60,13 +68,13 @@ function toKeepImportConfig(
   };
 }
 
-export function resolveKeepImportConfigs(settings: ImportManagerSettings): KeepImportSourceConfig[] {
+export function resolveKeepImportConfigs(settings: ImportManagerSettings, options: { unsafePathCandidates?: SafetyPathCandidate[] } = {}): KeepImportSourceConfig[] {
   return [
     ...settings.sources
-      .map((source) => toKeepImportConfig(source, 'generic'))
+      .map((source) => toKeepImportConfig(source, 'generic', options.unsafePathCandidates))
       .filter((config): config is KeepImportSourceConfig => config !== null),
     ...settings.readwiseSources
-      .map((source) => toKeepImportConfig(source, 'readwise'))
+      .map((source) => toKeepImportConfig(source, 'readwise', options.unsafePathCandidates))
       .filter((config): config is KeepImportSourceConfig => config !== null)
   ];
 }

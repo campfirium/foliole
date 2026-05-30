@@ -9,81 +9,21 @@ import { buildRetainedDegradedImportContent } from '../../lib/core/import/contro
 import { convertHtmlToMarkdownCompatible, formatHtmlConversionDegradedReason } from '../../lib/core/import/htmlToMarkdownCompatible.js';
 import { normalizeImportNodeTitleStrategy, type ImportNodeTitleStrategy } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeTextImportArgs } from '../../lib/platform/nativeContract.js';
-import { resolveLocalImageInboxImportMode, type LocalImageInboxImportMode } from '../import/localImageInboxSource.js';
 
 import { buildPreparedImportRecord, type LoadPreparedImportOptions } from './importPreparedRecord.js';
+export {
+  discoverDirectoryImportSources,
+  MANAGED_INBOX_SUPPORTED_KINDS,
+  resolveImportKind,
+  type DirectoryImportAdapterId,
+  type DirectoryImportSourceDescriptor,
+  type ImportSourceDescriptor
+} from './importSourceDiscovery.js';
+import { resolveImportKind, type ImportSourceDescriptor } from './importSourceDiscovery.js';
 export { buildPreparedImportRecord };
-
-export type DirectoryImportAdapterId = 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
-
-export interface ImportSourceDescriptor {
-  adapterId: DirectoryImportAdapterId | 'text_file';
-  filePath: string;
-  kind: ImportSourceKind;
-  sourceName: string;
-}
-
-export interface DirectoryImportSourceDescriptor extends ImportSourceDescriptor {
-  adapterId: DirectoryImportAdapterId;
-  importMode?: LocalImageInboxImportMode;
-  mtimeMs: number;
-  sizeBytes: number;
-}
-
-const HTML_EXTENSIONS = new Set(['.htm', '.html']);
-const MARKDOWN_EXTENSIONS = new Set(['.md', '.markdown']);
-const EPUB_EXTENSIONS = new Set(['.epub']);
-const PDF_EXTENSIONS = new Set(['.pdf']);
-const TEXT_EXTENSIONS = new Set(['.txt']);
-const SKIPPED_DIRECTORY_NAMES = new Set(['.git', '.obsidian', 'node_modules']);
-
-export const MANAGED_INBOX_SUPPORTED_KINDS: ImportSourceKind[] = ['epub', 'markdown', 'pdf', 'text'];
 
 function stripUtf8Bom(content: string) {
   return content.startsWith('\uFEFF') ? content.slice(1) : content;
-}
-
-function resolveDirectoryAdapter(
-  rootIsObsidianVault: boolean,
-  extension: string,
-  supportedKinds: ReadonlySet<ImportSourceKind>
-): DirectoryImportAdapterId | null {
-  if (EPUB_EXTENSIONS.has(extension) && supportedKinds.has('epub')) {
-    return 'text_directory';
-  }
-  if (PDF_EXTENSIONS.has(extension) && supportedKinds.has('pdf')) {
-    return 'text_directory';
-  }
-  if (HTML_EXTENSIONS.has(extension) && supportedKinds.has('html')) {
-    return 'html_directory';
-  }
-  if (MARKDOWN_EXTENSIONS.has(extension) && supportedKinds.has('markdown')) {
-    return rootIsObsidianVault ? 'obsidian_vault' : 'markdown_directory';
-  }
-  if (TEXT_EXTENSIONS.has(extension) && supportedKinds.has('text')) {
-    return 'text_directory';
-  }
-  return null;
-}
-
-export function resolveImportKind(filePath: string): ImportSourceKind {
-  const extension = path.extname(filePath).toLowerCase();
-  if (EPUB_EXTENSIONS.has(extension)) {
-    return 'epub';
-  }
-  if (PDF_EXTENSIONS.has(extension)) {
-    return 'pdf';
-  }
-  if (HTML_EXTENSIONS.has(extension)) {
-    return 'html';
-  }
-  if (TEXT_EXTENSIONS.has(extension)) {
-    return 'text';
-  }
-  if (MARKDOWN_EXTENSIONS.has(extension)) {
-    return 'markdown';
-  }
-  throw new Error(`unsupported import file extension: ${extension || '(none)'}`);
 }
 
 export function resolveImportHighlightPolicy(args?: Pick<NativeTextImportArgs, 'highlight_policy'>): ImportHighlightPolicy {
@@ -153,89 +93,4 @@ export function resolveSingleFileImportSource(filePath: string): ImportSourceDes
     kind: resolveImportKind(filePath),
     sourceName: path.basename(filePath)
   };
-}
-
-async function detectObsidianVaultRoot(rootDir: string) {
-  try {
-    return (await fs.stat(path.join(rootDir, '.obsidian'))).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-async function collectDirectorySources(
-  rootDir: string,
-  currentDir: string,
-  rootIsObsidianVault: boolean,
-  collected: DirectoryImportSourceDescriptor[],
-  supportedKinds: ReadonlySet<ImportSourceKind>,
-  includeLocalImages: boolean
-) {
-  const entries = await fs.readdir(currentDir, { withFileTypes: true });
-  const sortedEntries = [...entries].sort((left, right) => left.name.localeCompare(right.name));
-
-  for (const entry of sortedEntries) {
-    if (entry.isDirectory()) {
-      if (SKIPPED_DIRECTORY_NAMES.has(entry.name)) {
-        continue;
-      }
-      await collectDirectorySources(
-        rootDir,
-        path.join(currentDir, entry.name),
-        rootIsObsidianVault,
-        collected,
-        supportedKinds,
-        includeLocalImages
-      );
-      continue;
-    }
-    if (!entry.isFile()) {
-      continue;
-    }
-
-    const filePath = path.join(currentDir, entry.name);
-    const adapterId = resolveDirectoryAdapter(rootIsObsidianVault, path.extname(entry.name).toLowerCase(), supportedKinds);
-    const stats = await fs.stat(filePath);
-    if (!adapterId) {
-      const importMode = includeLocalImages ? resolveLocalImageInboxImportMode(filePath) : null;
-      if (!importMode) {
-        continue;
-      }
-      collected.push({
-        adapterId: 'markdown_directory',
-        filePath,
-        importMode,
-        kind: 'markdown',
-        mtimeMs: stats.mtimeMs,
-        sizeBytes: stats.size,
-        sourceName: path.relative(rootDir, filePath)
-      });
-      continue;
-    }
-    collected.push({
-      adapterId,
-      filePath,
-      kind: resolveImportKind(filePath),
-      mtimeMs: stats.mtimeMs,
-      sizeBytes: stats.size,
-      sourceName: path.relative(rootDir, filePath)
-    });
-  }
-}
-
-export async function discoverDirectoryImportSources(
-  rootDir: string,
-  options?: { includeLocalImages?: boolean; supportedKinds?: ImportSourceKind[] }
-) {
-  const collected: DirectoryImportSourceDescriptor[] = [];
-  const supportedKinds = new Set<ImportSourceKind>(options?.supportedKinds ?? ['html', 'markdown']);
-  await collectDirectorySources(
-    rootDir,
-    rootDir,
-    await detectObsidianVaultRoot(rootDir),
-    collected,
-    supportedKinds,
-    options?.includeLocalImages ?? false
-  );
-  return collected;
 }

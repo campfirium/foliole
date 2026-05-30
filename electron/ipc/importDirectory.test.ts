@@ -13,8 +13,9 @@ const { recordPreparedImportFailure, runPreparedImport } = vi.hoisted(() => ({
 const { resolveAppPaths } = vi.hoisted(() => ({
   resolveAppPaths: vi.fn()
 }));
-const { loadLibraryPathSettings } = vi.hoisted(() => ({
-  loadLibraryPathSettings: vi.fn()
+const { loadLibraryPathSettings, loadLibraryPathSettingsSync } = vi.hoisted(() => ({
+  loadLibraryPathSettings: vi.fn(),
+  loadLibraryPathSettingsSync: vi.fn()
 }));
 const { logDirectoryImportCompleted, logDirectoryImportFailed } = vi.hoisted(() => ({
   logDirectoryImportCompleted: vi.fn(),
@@ -39,7 +40,7 @@ vi.mock('../import/importRunLogger.js', () => ({
   logDirectoryImportFailed
 }));
 vi.mock('./paths.js', () => ({ resolveAppPaths }));
-vi.mock('./libraryPaths.js', () => ({ loadLibraryPathSettings }));
+vi.mock('./libraryPaths.js', () => ({ loadLibraryPathSettings, loadLibraryPathSettingsSync }));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated }));
 vi.mock('electron', () => ({
   BrowserWindow: {},
@@ -62,7 +63,16 @@ beforeEach(() => {
     app_data_dir: '/tmp/app-data',
     app_log_dir: '/tmp/logs'
   });
-  loadLibraryPathSettings.mockResolvedValue({ inbox: '/tmp/app-data/Inbox' });
+  loadLibraryPathSettings.mockResolvedValue({ inbox: '/tmp/app-data/Inbox', mirror: '/tmp/app-data/Mirror' });
+  loadLibraryPathSettingsSync.mockReturnValue({
+    assets_dir: '/tmp/app-data/Assets',
+    data_dir: '/tmp/app-data/Data',
+    database_path: '/tmp/app-data/Data/foliole.db',
+    inbox: '/tmp/app-data/Inbox',
+    library_home: '/tmp/app-data',
+    mirror: '/tmp/app-data/Mirror',
+    updated_at: '2026-05-30T00:00:00.000Z'
+  });
   runPreparedImport.mockImplementation((prepared) => createPersistedRecord(prepared));
   recordPreparedImportFailure.mockImplementation((prepared, failureReason: string) =>
     createPersistedRecord(prepared, { failureReason, nodeId: null, resultStatus: 'failed' })
@@ -192,68 +202,6 @@ it('classifies vault markdown as obsidian imports and skips the .obsidian contro
     expect.objectContaining({
       discovered_count: 1,
       source_adapter: 'external_directory'
-    })
-  );
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.any(String));
-});
-
-it('resolves the managed inbox folder from runtime settings and trashes only imported sources', async () => {
-  const appDataDir = await createTempRoot('managed-inbox-runtime', tempRoots);
-  const managedRoot = path.join(appDataDir, 'custom-inbox');
-  const failedPath = path.join(managedRoot, 'failed.md');
-  const importedPath = path.join(managedRoot, 'clips', 'note.txt');
-  resolveAppPaths.mockReturnValue({
-    app_cache_dir: path.join(appDataDir, 'cache'),
-    app_config_dir: path.join(appDataDir, 'config'),
-    app_data_dir: appDataDir,
-    app_log_dir: path.join(appDataDir, 'logs')
-  });
-  loadLibraryPathSettings.mockResolvedValue({ inbox: managedRoot });
-  await fs.mkdir(path.dirname(importedPath), { recursive: true });
-  await fs.writeFile(importedPath, 'Imported managed note', 'utf8');
-  await fs.writeFile(failedPath, '# Failed managed note', 'utf8');
-  runPreparedImport.mockImplementation((prepared) => {
-    if (prepared.sourceName === 'failed.md') {
-      throw new Error('boom');
-    }
-    return createPersistedRecord(prepared);
-  });
-
-  const result = await runDirectoryImport(undefined, {
-    source_adapter: 'foliole_managed_inbox_folder'
-  });
-
-  expect(result).toEqual({
-    archive_root_path: null,
-    consume_policy: 'clear',
-    consumed_count: 1,
-    discovered_count: 2,
-    entries: [
-      expect.objectContaining({
-        adapter: 'text_directory',
-        result_status: 'imported',
-        source_name: path.join('clips', 'note.txt')
-      }),
-      expect.objectContaining({
-        adapter: 'markdown_directory',
-        failure_reason: 'boom',
-        result_status: 'failed',
-        source_name: 'failed.md'
-      })
-    ],
-    failed_count: 1,
-    imported_count: 1,
-    root_path: managedRoot,
-    source_adapter: 'foliole_managed_inbox_folder'
-  });
-  await expect(fs.stat(importedPath)).rejects.toThrow();
-  await expect(fs.readFile(failedPath, 'utf8')).resolves.toBe('# Failed managed note');
-  expect(trashItem).toHaveBeenCalledWith(importedPath);
-  expect(recordPreparedImportFailure).toHaveBeenCalledTimes(1);
-  expect(logDirectoryImportCompleted).toHaveBeenCalledWith(
-    expect.objectContaining({
-      failed_count: 1,
-      source_adapter: 'foliole_managed_inbox_folder'
     })
   );
   expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.any(String));

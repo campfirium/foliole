@@ -13,6 +13,7 @@ import type {
   NativeLibraryPaths,
   NativeUpdateLibraryPathSettingArgs
 } from '../../lib/platform/nativeUtilityContract.js';
+import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 
 import { migrateLibraryPathChange } from './libraryPathMigration.js';
 import { resolveAppPaths } from './paths.js';
@@ -139,6 +140,15 @@ function normalizeUpdatedLibraryPath(args: NativeUpdateLibraryPathSettingArgs): 
   return normalizedPath;
 }
 
+function assertSafeLibraryPathLayout(paths: NativeLibraryPaths) {
+  assertNoUnsafePathOverlap([
+    { label: 'Assets', path: paths.assets_dir },
+    { label: 'Data', path: paths.data_dir },
+    { label: 'Inbox', path: paths.inbox },
+    { label: 'Mirror', path: paths.mirror }
+  ]);
+}
+
 export async function loadLibraryPathSettings(): Promise<NativeLibraryPaths> {
   return toNativeLibraryPaths(await loadStoredLibraryPathOverrides());
 }
@@ -155,6 +165,7 @@ export async function updateLibraryPathSetting(
   };
   const currentPaths = toNativeLibraryPaths(currentOverrides);
   const nextPaths = toNativeLibraryPaths(nextOverrides);
+  assertSafeLibraryPathLayout(nextPaths);
   await migrateLibraryPathChange({
     currentOverrides,
     currentPaths,

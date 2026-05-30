@@ -18,7 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection, resolveDatabasePath } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
 import {
   rebuildExternalSearchIndexes,
   refreshExternalSearchIndexes,
@@ -71,6 +71,27 @@ function readDocumentRow(absolutePath: string) {
   } finally {
     db.close();
   }
+}
+
+function seedExternalSearchFolder(folderPath: string, id: string) {
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO external_search_folders (
+      id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, document_count, indexed_at, last_error, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      folderPath,
+      'document_relative_first_then_fixed_root',
+      null,
+      '[]',
+      'idle',
+      0,
+      null,
+      null,
+      '2026-04-21T05:00:00.000Z',
+      '2026-04-21T05:00:00.000Z'
+    ]
+  );
 }
 
 it('refreshes external search indexes incrementally for added, changed, and deleted files', async () => {
@@ -207,4 +228,20 @@ it('returns browse entries ordered by relative path for a configured folder', as
       title: 'nested/beta'
     })
   ]);
+});
+
+it('keeps mirror output out of external search when scanning a parent folder', async () => {
+  const libraryRoot = path.join(tempRoot, 'library-with-mirror');
+  const mirrorRoot = path.join(mockedAppDataDir, 'Foliole', 'Mirror');
+  const sourcePath = path.join(libraryRoot, 'source.md');
+  const mirroredPath = path.join(mirrorRoot, 'exported.md');
+
+  await writeTextFile(sourcePath, 'ordinary source content', '2026-04-21T05:00:00.000Z');
+  await writeTextFile(mirroredPath, 'mirror export content', '2026-04-21T05:01:00.000Z');
+  seedExternalSearchFolder(tempRoot, 'folder-parent');
+
+  await rebuildExternalSearchIndexes();
+
+  expect(searchExternalDocuments('ordinary').map((item) => item.id)).toContain(sourcePath);
+  expect(searchExternalDocuments('mirror export')).toEqual([]);
 });

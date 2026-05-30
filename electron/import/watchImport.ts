@@ -17,6 +17,8 @@ import {
   resolveManagedInboxPaths
 } from '../ipc/managedInboxFolder.js';
 import { resolveAppPaths } from '../ipc/paths.js';
+import { assertMirrorSeparatedFromImportPath, assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
+import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { runDirectoryImportBatch } from './directoryImportBatch.js';
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -59,13 +61,31 @@ function isSourceChanged(source: DirectoryImportSourceDescriptor, previousEntry?
   return previousEntry.mtimeMs !== source.mtimeMs || previousEntry.sizeBytes !== source.sizeBytes;
 }
 
+function assertSafeWatchRoot(rootPath: string, sourceAdapter: NativeDirectoryImportSourceAdapter) {
+  const protectedCandidates = sourceAdapter === 'foliole_managed_inbox_folder'
+    ? loadManagedPathCandidates({ includeReadwise: false }).filter((candidate) => candidate.label !== 'Inbox')
+    : loadManagedPathCandidates();
+  assertNoUnsafePathOverlap([
+    ...protectedCandidates,
+    { label: sourceAdapter === 'foliole_managed_inbox_folder' ? 'Inbox' : 'Watched folder', path: rootPath }
+  ]);
+}
+
 async function resolveWatchImportRootPath(config: WatchImportAdapterConfig, sourceAdapter: NativeDirectoryImportSourceAdapter) {
   if (sourceAdapter === 'foliole_managed_inbox_folder') {
-    const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir, (await loadLibraryPathSettings()).inbox);
+    const libraryPaths = await loadLibraryPathSettings();
+    const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir, libraryPaths.inbox);
+    assertMirrorSeparatedFromImportPath({
+      importPath: managedPaths.rootPath,
+      label: 'Inbox',
+      mirrorPath: libraryPaths.mirror
+    });
+    assertSafeWatchRoot(managedPaths.rootPath, sourceAdapter);
     await ensureManagedInboxRoot(managedPaths.rootPath);
     return managedPaths.rootPath;
   }
   if (typeof config.directoryPath === 'string' && config.directoryPath.trim().length > 0) {
+    assertSafeWatchRoot(config.directoryPath, sourceAdapter);
     return config.directoryPath;
   }
   throw new Error(`watch import adapter requires directory_path: ${config.adapterConfigId}`);
@@ -100,11 +120,14 @@ async function runSingleWatchImport(config: WatchImportAdapterConfig): Promise<W
   const sourceAdapter = resolveDirectoryImportSourceAdapter(config.sourceAdapter);
   const consumePolicy = resolveDirectoryImportConsumePolicy(sourceAdapter, config.consumePolicy);
   const rootPath = await resolveWatchImportRootPath(config, sourceAdapter);
+  const libraryPaths = await loadLibraryPathSettings();
   const loadedCursor = loadWatchImportAdapterCursor(config.adapterConfigId);
   const previousCursor = loadedCursor?.rootPath === rootPath ? loadedCursor : null;
   const discoveredSources = await discoverDirectoryImportSources(
     rootPath,
-    sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS } : undefined
+    sourceAdapter === 'foliole_managed_inbox_folder'
+      ? { excludedPaths: [libraryPaths.mirror], supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS }
+      : { excludedPaths: [libraryPaths.mirror] }
   );
   const pendingSources = discoveredSources.filter((source) => isSourceChanged(source, previousCursor?.entries[source.sourceName]));
   const batchResult =

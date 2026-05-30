@@ -5,6 +5,8 @@ import { runDirectoryImportBatch } from '../import/directoryImportBatch.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 import { logDirectoryImportCompleted, logDirectoryImportFailed } from '../import/importRunLogger.js';
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
+import { assertMirrorSeparatedFromImportPath, assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
+import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import {
   MANAGED_INBOX_SUPPORTED_KINDS,
@@ -27,7 +29,13 @@ function resolveLatestImportId(result: NativeDirectoryImportResult) {
 }
 
 async function resolveManagedInboxRootPath() {
-  const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir, (await loadLibraryPathSettings()).inbox);
+  const libraryPaths = await loadLibraryPathSettings();
+  const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir, libraryPaths.inbox);
+  assertMirrorSeparatedFromImportPath({
+    importPath: managedPaths.rootPath,
+    label: 'Inbox',
+    mirrorPath: libraryPaths.mirror
+  });
   await ensureManagedInboxRoot(managedPaths.rootPath);
   return managedPaths.rootPath;
 }
@@ -55,6 +63,16 @@ async function selectImportDirectoryPath(window?: BrowserWindow | null, args?: N
   return selection.filePaths[0] ?? null;
 }
 
+function assertSafeDirectoryImportRoot(rootPath: string, sourceAdapter: ReturnType<typeof resolveDirectoryImportSourceAdapter>) {
+  const protectedCandidates = sourceAdapter === 'foliole_managed_inbox_folder'
+    ? loadManagedPathCandidates({ includeReadwise: false }).filter((candidate) => candidate.label !== 'Inbox')
+    : loadManagedPathCandidates();
+  assertNoUnsafePathOverlap([
+    ...protectedCandidates,
+    { label: sourceAdapter === 'foliole_managed_inbox_folder' ? 'Inbox' : 'Imported folder', path: rootPath }
+  ]);
+}
+
 export async function runDirectoryImport(
   window?: BrowserWindow | null,
   args?: NativeDirectoryImportArgs
@@ -66,14 +84,23 @@ export async function runDirectoryImport(
     if (!rootPath) {
       return null;
     }
+    assertSafeDirectoryImportRoot(rootPath, sourceAdapter);
 
     const highlightPolicy = resolveImportHighlightPolicy(args);
     const titleStrategy = args?.title_strategy ? resolveImportNodeTitleStrategy(args) : loadImportManagerSettings().titleStrategy;
+    const libraryPaths = await loadLibraryPathSettings();
+    if (sourceAdapter === 'foliole_managed_inbox_folder') {
+      assertMirrorSeparatedFromImportPath({
+        importPath: rootPath,
+        label: 'Inbox',
+        mirrorPath: libraryPaths.mirror
+      });
+    }
     const sources = await discoverDirectoryImportSources(
       rootPath,
       sourceAdapter === 'foliole_managed_inbox_folder'
-        ? { includeLocalImages: true, supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS }
-        : undefined
+        ? { excludedPaths: [libraryPaths.mirror], includeLocalImages: true, supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS }
+        : { excludedPaths: [libraryPaths.mirror] }
     );
     const result = await runDirectoryImportBatch({
       consumePolicy,
@@ -97,6 +124,13 @@ export async function runDirectoryImport(
 
 export async function runManagedInboxImport(rootPath: string) {
   try {
+    const libraryPaths = await loadLibraryPathSettings();
+    assertSafeDirectoryImportRoot(rootPath, 'foliole_managed_inbox_folder');
+    assertMirrorSeparatedFromImportPath({
+      importPath: rootPath,
+      label: 'Inbox',
+      mirrorPath: libraryPaths.mirror
+    });
     const titleStrategy = loadImportManagerSettings().titleStrategy;
     const result = await runDirectoryImportBatch({
       consumePolicy: 'clear',
@@ -104,6 +138,7 @@ export async function runManagedInboxImport(rootPath: string) {
       rootPath,
       sourceAdapter: 'foliole_managed_inbox_folder',
       sources: await discoverDirectoryImportSources(rootPath, {
+        excludedPaths: [libraryPaths.mirror],
         includeLocalImages: true,
         supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS
       }),

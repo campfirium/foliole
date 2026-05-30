@@ -1,4 +1,5 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
+import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { submitImportMonitorTask } from './importMonitorTaskScheduler.js';
 import { type KeepImportConfig, type KeepImportSourceConfig, resolveKeepImportConfigs } from './keepImportMonitorConfig.js';
@@ -159,7 +160,7 @@ export function createKeepImportMonitor(deps: KeepImportMonitorDeps): KeepImport
       return;
     }
 
-    const nextConfigs = resolveKeepImportConfigs(deps.loadSettings());
+    const nextConfigs = resolveKeepImportConfigs(deps.loadSettings(), { unsafePathCandidates: loadManagedPathCandidates() });
     const nextConfigIds = new Set(nextConfigs.map((config) => config.adapterConfigId));
 
     for (const [configId, state] of sourceStateById) {
