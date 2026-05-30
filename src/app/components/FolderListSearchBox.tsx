@@ -17,12 +17,13 @@ export function FolderListSearchBox({
   searchResultLabel: string | null;
   onChangeSearchQuery: (value: string) => void;
 }) {
+  const mutedSearchClassName = readOnly ? 'text-foreground/50 placeholder:text-foreground/30' : 'text-foreground placeholder:text-foreground/38';
   return (
     <div className="flex h-9 w-full items-center gap-2 rounded-lg border border-transparent bg-bg-subtle/70 px-3 transition-colors hover:border-border/10 hover:bg-bg-subtle focus-within:border-border/20 focus-within:bg-bg-subtle">
-      <Search aria-hidden="true" className="shrink-0 text-foreground/38" size={14} strokeWidth={1.8} />
+      <Search aria-hidden="true" className={`shrink-0 ${readOnly ? 'text-foreground/28' : 'text-foreground/38'}`} size={14} strokeWidth={1.8} />
       <AppInput
         aria-label={ariaLabel}
-        className="h-8 min-w-0 appearance-none !border-0 !bg-transparent px-0 text-sm shadow-none placeholder:text-foreground/38 hover:!bg-transparent focus-visible:!bg-transparent focus-visible:!ring-0 [&::-webkit-search-cancel-button]:appearance-none"
+        className={`h-8 min-w-0 appearance-none !border-0 !bg-transparent px-0 text-sm shadow-none hover:!bg-transparent focus-visible:!bg-transparent focus-visible:!ring-0 [&::-webkit-search-cancel-button]:appearance-none ${mutedSearchClassName}`}
         onChange={(event) => onChangeSearchQuery(event.target.value)}
         placeholder={placeholder}
         readOnly={readOnly}

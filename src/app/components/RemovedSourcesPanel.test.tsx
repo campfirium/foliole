@@ -96,7 +96,7 @@ it('uses the standard topic list surface for Removed sources', async () => {
   render(<RemovedSourcesPanel />);
 
   expect(await screen.findByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
-  expect(screen.getByText('Removed topics stay here while their source can still be re-imported.')).toBeInTheDocument();
+  expect(screen.getByText('List deleted topics with linked sources.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Open title search' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Sort list by Date removed' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
@@ -112,7 +112,7 @@ it('keeps the standard list surface blank while Removed sources load', () => {
   render(<RemovedSourcesPanel />);
 
   expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
-  expect(screen.getByText('Removed topics stay here while their source can still be re-imported.')).toBeInTheDocument();
+  expect(screen.getByText('List deleted topics with linked sources.')).toBeInTheDocument();
   expect(screen.queryByText('Preparing Removed')).toBeNull();
   expect(screen.queryByText('No removed topics')).toBeNull();
 });

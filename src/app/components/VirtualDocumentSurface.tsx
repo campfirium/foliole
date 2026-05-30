@@ -1,7 +1,13 @@
 import { useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { VIRTUAL_REMOVED_NODE_ID, VIRTUAL_ROOT_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import {
+  VIRTUAL_REMOVED_NODE_ID,
+  VIRTUAL_ROOT_NODE_ID,
+  VIRTUAL_SHELVED_NODE_ID,
+  isVirtualNode,
+  isVirtualRootNode
+} from '../../features/nodes/model/specialNodes';
 import {
   createVirtualNodeFilterFromKeyword,
   getOrderedVirtualNodeResultNodes,
@@ -11,7 +17,7 @@ import { AppButton } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
-import { RemovedSourcesPanel } from './RemovedSourcesPanel';
+import { collectRemovedTopicIds, collectShelvedTopicIds } from './workspaceVirtualContentModel';
 
 interface VirtualDocumentSurfaceProps {
   activeNode: Node;
@@ -115,12 +121,44 @@ function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfacePro
   );
 }
 
+export function VirtualBuiltInDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'onSelectNodePath' | 'trashedNodeIds'> & {
+  activeVirtualNodeId: string;
+}) {
+  const isShelved = props.activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
+  const nodeIds = isShelved ? collectShelvedTopicIds(props) : collectRemovedTopicIds(props);
+  const nodes = nodeIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));
+
+  return (
+    <FolderListView
+      emptyState={{
+        description: isShelved ? 'Shelved topics will appear here.' : 'Removed topics will appear here.',
+        title: isShelved ? 'No shelved topics' : 'No removed topics'
+      }}
+      filterSearchResults={false}
+      folderTitle={isShelved ? 'Shelved' : 'Removed'}
+      nodes={nodes}
+      nodesById={props.nodesById}
+      onSelectNode={props.onSelectNode}
+      onSelectNodePath={props.onSelectNodePath}
+      regionLabel={isShelved ? 'Shelved topics' : 'Removed topics'}
+      searchDescription={isShelved ? 'List topics that are shelved.' : 'List deleted topics with linked sources.'}
+    />
+  );
+}
+
 export function VirtualDocumentSurface(props: VirtualDocumentSurfaceProps) {
-  if (props.activeNode.id === VIRTUAL_REMOVED_NODE_ID) {
+  if (props.activeNode.id === VIRTUAL_SHELVED_NODE_ID || props.activeNode.id === VIRTUAL_REMOVED_NODE_ID) {
     return (
       <>
         {props.pdfCache}
-        <RemovedSourcesPanel onSelectNode={props.onSelectNode} />
+        <VirtualBuiltInDocumentSurface
+          activeVirtualNodeId={props.activeNode.id}
+          nodeOrder={props.nodeOrder}
+          nodesById={props.nodesById}
+          onSelectNode={props.onSelectNode}
+          onSelectNodePath={props.onSelectNodePath}
+          trashedNodeIds={props.trashedNodeIds}
+        />
       </>
     );
   }

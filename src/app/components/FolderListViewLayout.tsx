@@ -29,7 +29,7 @@ interface FolderListHeaderProps {
 
 function FolderListHeader(props: FolderListHeaderProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--workspace-region-main-document-content-divider)] pb-3">
+    <div className="flex min-w-0 flex-nowrap items-center gap-3 border-b border-[var(--workspace-region-main-document-content-divider)] pb-3">
       {props.showCountAndTitle ? (
         <FolderListHeaderSummary
           currentViewActions={props.currentViewActions}

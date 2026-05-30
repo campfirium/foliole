@@ -1,5 +1,4 @@
-import { Plus } from 'lucide-react';
-import type { Dispatch, MouseEvent as ReactMouseEvent, ReactNode, SetStateAction } from 'react';
+import type { Dispatch, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
 
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
@@ -11,13 +10,11 @@ import {
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { AppIconButton } from '../../shared/ui';
 
 interface WorkspaceVirtualRowsProps {
   activeVirtualNodeId?: string | null;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
-  onAddVirtualNode: () => Promise<void>;
   onContextMenuSavedSearch: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onDeleteVirtualNode: (nodeId: string) => void;
   onOpenVirtualView?: (nodeId?: string) => void;
@@ -65,27 +62,6 @@ function renderBuiltinVirtualRow(
   );
 }
 
-function renderVirtualRootRow(args: {
-  onAddVirtualNode: () => Promise<void>;
-  row: ReturnType<typeof buildVisibleNodeTreeRows>[number];
-  virtualRow: ReactNode;
-}) {
-  return (
-    <div className="group/virtual-root relative" key={args.row.node.id}>
-      {args.virtualRow}
-      <AppIconButton
-        className="absolute right-2 top-1/2 size-7 -translate-y-1/2 text-foreground/55 opacity-0 transition-opacity hover:bg-foreground/[0.04] hover:text-foreground focus-visible:opacity-100 group-hover/virtual-root:opacity-100"
-        icon={<Plus size={15} strokeWidth={1.9} />}
-        label="New saved search"
-        onClick={(event) => {
-          event.stopPropagation();
-          void args.onAddVirtualNode();
-        }}
-      />
-    </div>
-  );
-}
-
 export function renderVirtualRows(args: {
   collapsedIds: Set<string>;
   onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
@@ -105,12 +81,9 @@ function renderVirtualRow(args: Parameters<typeof renderVirtualRows>[0] & {
   const isVirtualRootCollapsed = args.collapsedIds.has(VIRTUAL_ROOT_NODE_ID);
   const isSavedSearch = isVirtualNode(args.row.node);
   const virtualRow = renderMainVirtualRow({ ...args, isSavedSearch, isSelected, isVirtualRoot });
-  const renderedRow = isVirtualRoot
-    ? renderVirtualRootRow({ onAddVirtualNode: args.props.onAddVirtualNode, row: args.row, virtualRow })
-    : virtualRow;
   return isVirtualRoot && !isVirtualRootCollapsed
-    ? [renderedRow, renderShelvedRow(args), renderRemovedRow(args)]
-    : [renderedRow];
+    ? [virtualRow, renderShelvedRow(args), renderRemovedRow(args)]
+    : [virtualRow];
 }
 
 function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
@@ -128,7 +101,7 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       key={args.row.node.id}
       label={args.row.node.title}
       nodeId={args.row.node.id}
-      descendantCount={args.props.virtualResultCountById?.get(args.row.node.id) ?? 0}
+      descendantCount={args.isVirtualRoot ? 0 : (args.props.virtualResultCountById?.get(args.row.node.id) ?? 0)}
       rowSpacing={args.rowSpacing}
       showIcon={false}
       {...(args.isSavedSearch ? { onRename: args.props.onRenameVirtualNode } : {})}

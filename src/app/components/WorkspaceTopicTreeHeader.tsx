@@ -10,6 +10,7 @@ import { WorkspaceContentSortControls } from './WorkspaceContentSortControls';
 interface WorkspaceTopicTreeHeaderProps {
   hasCollapsibleNodes: boolean;
   hasCollapsedNodes: boolean;
+  headerDescription?: string;
   onChangeSortDirection: (sortDirection: WorkspaceContentSortDirection) => void;
   onChangeSortKey: (sortKey: WorkspaceContentSortKey) => void;
   onCreateTopic: () => void;
@@ -26,6 +27,7 @@ interface WorkspaceTopicTreeHeaderProps {
 export function WorkspaceTopicTreeHeader({
   hasCollapsibleNodes,
   hasCollapsedNodes,
+  headerDescription,
   onChangeSortDirection,
   onChangeSortKey,
   onCreateTopic,
@@ -57,8 +59,10 @@ export function WorkspaceTopicTreeHeader({
       className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4"
     >
       <h2 className="sr-only">Current folder topics</h2>
-      {renderSearchLauncher(() => setIsSearchOpen(true))}
-      <span aria-hidden="true" className="min-w-0 flex-1" />
+      <WorkspaceTopicTreeHeaderLead
+        description={headerDescription}
+        onOpenSearch={() => setIsSearchOpen(true)}
+      />
       <WorkspaceTopicTreeHeaderActions
         hasCollapsibleNodes={hasCollapsibleNodes}
         hasCollapsedNodes={hasCollapsedNodes}
@@ -80,6 +84,28 @@ export function WorkspaceTopicTreeHeader({
         />
       ) : null}
     </AppToolbar>
+  );
+}
+
+function WorkspaceTopicTreeHeaderLead({
+  description,
+  onOpenSearch
+}: {
+  description?: string;
+  onOpenSearch: () => void;
+}) {
+  if (description) {
+    return (
+      <p className="min-w-0 flex-1 truncate text-sm leading-6 text-foreground/62">
+        {description}
+      </p>
+    );
+  }
+  return (
+    <>
+      {renderSearchLauncher(onOpenSearch)}
+      <span aria-hidden="true" className="min-w-0 flex-1" />
+    </>
   );
 }
 

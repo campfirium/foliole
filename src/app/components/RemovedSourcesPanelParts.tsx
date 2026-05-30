@@ -34,7 +34,7 @@ export function RemovedSourcesToolbar(props: {
   return (
     <AppToolbar as="header" className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4">
       <p className="min-w-0 flex-1 truncate text-sm leading-6 text-foreground/62">
-        Removed topics stay here while their source can still be re-imported.
+        List deleted topics with linked sources.
       </p>
       <ToolbarActionGroup ariaLabel="Removed actions">
         <WorkspaceContentSortControls

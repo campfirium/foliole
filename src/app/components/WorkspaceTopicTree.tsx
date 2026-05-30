@@ -31,6 +31,7 @@ export interface WorkspaceTopicTreeProps {
   activeNodeId: string | null;
   childrenByParent?: TopicChildrenByParent;
   forceVisibleNodeId?: string | null;
+  headerDescription?: string;
   itemIds: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
@@ -199,6 +200,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     contentSort,
     focusedNodeId,
     hasCollapsedNodes,
+    ...definedProps({ headerDescription: props.headerDescription }),
     interaction,
     nodesById: props.nodesById,
     scrollContainerRef,

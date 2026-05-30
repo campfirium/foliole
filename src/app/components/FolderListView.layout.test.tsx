@@ -91,3 +91,30 @@ it('hides the embedded folder header when requested', () => {
   expect(screen.queryByRole('searchbox', { name: 'Search folder contents' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 2, name: 'Library root' })).not.toBeInTheDocument();
 });
+
+it('keeps the folder header search box on the toolbar row as width shrinks', () => {
+  render(
+    <FolderListView
+      folderNodeId="folder-1"
+      nodeOrder={['folder-1']}
+      nodesById={{
+        'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' })
+      }}
+      onChangeSortDirection={() => undefined}
+      onChangeSortKey={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  const searchBox = screen.getByRole('searchbox', { name: 'Search folder contents' });
+  const searchFieldFrame = searchBox.parentElement;
+  const searchWidthSlot = searchFieldFrame?.parentElement;
+  const searchGroup = searchWidthSlot?.parentElement;
+  const header = searchGroup?.parentElement;
+
+  expect(header?.className).toContain('flex-nowrap');
+  expect(searchGroup?.className).toContain('min-w-0');
+  expect(searchGroup?.className).not.toContain('basis-full');
+  expect(searchWidthSlot?.className).toContain('flex-1');
+  expect(searchWidthSlot?.className).not.toContain('shrink-0');
+});

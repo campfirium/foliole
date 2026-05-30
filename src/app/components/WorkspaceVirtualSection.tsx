@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -62,16 +62,9 @@ function renderSavedSearchContextMenu(args: {
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const [contextMenu, setContextMenu] = useState<{ left: number; nodeId: string; top: number } | null>(null);
-  const createVirtualNode = useWorkspaceStore((state) => state.createVirtualNode);
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
   const updateNodeTitle = useWorkspaceStore((state) => state.updateNodeTitle);
   const rowSpacing = getNodeListRowSpacing();
-  const onAddVirtualNode = useCallback(async () => {
-    const nodeId = await createVirtualNode();
-    if (!nodeId) return;
-    props.onOpenVirtualView?.(nodeId);
-    props.onSelectNodeInVirtualView(nodeId);
-  }, [createVirtualNode, props]);
   const rows = useMemo(() => {
     const virtualNodeIds = props.nodeOrder.filter((nodeId) => {
       const node = props.nodesById[nodeId];
@@ -102,7 +95,6 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
           onRowKeyDown,
           props: {
             ...props,
-            onAddVirtualNode,
             onContextMenuSavedSearch: (nodeId, event) => {
               event.preventDefault();
               setContextMenu({ nodeId, ...getContextMenuPosition(event) });

@@ -85,3 +85,26 @@ it('filters saved virtual list results from the shared topic list header', () =>
   expect(screen.queryByRole('treeitem', { name: 'First result' })).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'Second result' })).toBeInTheDocument();
 });
+
+it('renders built-in virtual lists with the shared topic header', () => {
+  const first = createNode('first', 'First result');
+
+  render(
+    <VirtualResultListPanel
+      activeNodeId={null}
+      emptyState={{ description: 'No results', title: 'Empty' }}
+      header={{ kind: 'description', text: 'List deleted topics with linked sources.', title: 'Removed' }}
+      nodeOrder={['first']}
+      nodes={[first]}
+      nodesById={{ first }}
+      onSelectNode={vi.fn()}
+    />
+  );
+
+  expect(screen.queryByText('List deleted topics with linked sources.')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Focus active topics' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Create topic' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'First result' })).toBeInTheDocument();
+});

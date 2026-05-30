@@ -1,12 +1,19 @@
-import { VIRTUAL_REMOVED_NODE_ID } from '../../features/nodes/model/specialNodes';
+import {
+  VIRTUAL_REMOVED_NODE_ID,
+  VIRTUAL_ROOT_NODE_ID,
+  VIRTUAL_SHELVED_NODE_ID,
+  isVirtualNode
+} from '../../features/nodes/model/specialNodes';
+import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
 import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
-import { RemovedSourcePreviewSurface } from './RemovedSourcePreviewSurface';
+import { VirtualBuiltInDocumentSurface } from './VirtualDocumentSurface';
 import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
+import { resolveVirtualContentItemIds } from './workspaceVirtualContentModel';
 
 const EMPTY_EXTERNAL_PREVIEW_STATE: ExternalDocumentPreviewLoadState = {
   error: null,
@@ -15,8 +22,32 @@ const EMPTY_EXTERNAL_PREVIEW_STATE: ExternalDocumentPreviewLoadState = {
   retry: () => undefined
 };
 
+function resolveDocumentNodeId(props: WorkspaceDocumentSurfaceProps) {
+  if (!props.isVirtualViewOpen) {
+    return props.documentNodeId;
+  }
+  const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
+  if (
+    activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID ||
+    isVirtualNode(props.nodesById[activeVirtualNodeId])
+  ) {
+    return props.documentNodeId;
+  }
+  if (activeVirtualNodeId !== VIRTUAL_SHELVED_NODE_ID && activeVirtualNodeId !== VIRTUAL_REMOVED_NODE_ID) {
+    return props.documentNodeId;
+  }
+  const itemIds = resolveVirtualContentItemIds(
+    props,
+    buildVirtualNodeResultIndex(props)
+  );
+  return props.documentNodeId && itemIds.includes(props.documentNodeId)
+    ? props.documentNodeId
+    : null;
+}
+
 export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
   const { editorAppearanceKey, readingContentWidth } = useAppearanceSettings();
+  const documentNodeId = resolveDocumentNodeId(props);
   if (props.isExternalViewOpen) {
     return (
       <ExternalLibraryDocumentSurface
@@ -42,16 +73,18 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
     );
   }
 
-  if (props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID) {
+  if (
+    props.isVirtualViewOpen &&
+    (props.activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID || props.activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID)
+  ) {
     return (
-      <RemovedSourcePreviewSurface
-        canGoBack={props.canGoBack}
-        canGoForward={props.canGoForward}
-        documentMaxWidth={readingContentWidth}
-        editorAppearanceKey={editorAppearanceKey}
-        onGoBack={props.onGoBack}
-        onGoForward={props.onGoForward}
+      <VirtualBuiltInDocumentSurface
+        activeVirtualNodeId={props.activeVirtualNodeId}
+        nodeOrder={props.nodeOrder}
+        nodesById={props.nodesById}
         onSelectNode={props.onSelectNode}
+        onSelectNodePath={props.onSelectNode}
+        trashedNodeIds={props.trashedNodeIds}
       />
     );
   }
@@ -59,7 +92,7 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
   return (
     <DocumentPanelSection
       {...buildDocumentSectionProps(
-        props.documentNodeId,
+        documentNodeId,
         editorAppearanceKey,
         props.isImmersiveEditing,
         props.onShouldSuppressSelectionRestore,

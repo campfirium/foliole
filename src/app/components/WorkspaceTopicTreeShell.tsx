@@ -20,6 +20,7 @@ export function renderWorkspaceTopicTreeShell(args: {
   contentSort: ReturnType<typeof useWorkspaceContentSort>;
   focusedNodeId: string | null;
   hasCollapsedNodes: boolean;
+  headerDescription?: string;
   interaction: ReturnType<typeof useWorkspaceTopicTreeInteraction>;
   nodesById: WorkspaceListNodesById;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
@@ -40,6 +41,7 @@ export function renderWorkspaceTopicTreeShell(args: {
         collapsibleNodeIds={args.collapsibleNodeIds}
         contentSort={args.contentSort}
         hasCollapsedNodes={args.hasCollapsedNodes}
+        {...definedProps({ headerDescription: args.headerDescription })}
         onCreateTopic={(parentNodeId) => args.interaction.createChildNode(parentNodeId, '', 'topic')}
         onToggleDismissedTopicsVisibility={args.onToggleDismissedTopicsVisibility}
         searchQuery={args.searchQuery}

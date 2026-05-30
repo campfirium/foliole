@@ -202,6 +202,7 @@ it('shows saved virtual searches as read-only lists without document controls', 
   expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
   expect(screen.queryByText('Search titles and topic text. Matching topics appear in the topic list.')).not.toBeInTheDocument();
   expect(screen.getByRole('searchbox', { name: 'Search topics to save as list' })).toHaveAttribute('readonly');
+  expect(screen.getByRole('searchbox', { name: 'Search topics to save as list' })).toHaveClass('text-foreground/50');
   expect(screen.getByRole('searchbox', { name: 'Search topics to save as list' })).toHaveValue('alpha');
   expect(screen.queryByRole('button', { name: 'Clear folder search' })).not.toBeInTheDocument();
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics to save as list' }), { target: { value: 'beta' } });

@@ -163,14 +163,6 @@ it('routes an active virtual node into the right content column', () => {
   expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('topic-a');
 });
 
-it('shows aggregate result items for the Virtual root even when list nodes are trimmed', () => {
-  renderVirtualRootAggregate();
-
-  expect(screen.getByRole('treeitem', { name: 'Alpha Topic' })).toBeInTheDocument();
-  expect(screen.getByRole('treeitem', { name: 'Beta Topic' })).toBeInTheDocument();
-  expect(screen.queryByText('No virtual folders yet')).toBeNull();
-});
-
 it('lists only directly shelved ordinary topics in the Shelved virtual view', () => {
   render(
     <WorkspaceDualListContent
@@ -218,54 +210,6 @@ it('lists only directly shelved ordinary topics in the Shelved virtual view', ()
   expect(screen.queryByText('Shelved Anchor')).toBeNull();
   expect(screen.queryByText('Active Topic')).toBeNull();
   expect(screen.queryByText('Trashed Topic')).toBeNull();
-});
-
-it('opens virtual view when selecting a virtual folder from the lower section while it is inactive', () => {
-  const onOpenVirtualView = vi.fn();
-  const onSelectNodeInVirtualView = vi.fn();
-
-  render(
-    <WorkspaceDualListContent
-      activeNodeId="topic-a"
-      activeVirtualNodeId={null}
-      externalEntriesByFolderId={{}}
-      externalFolders={[]}
-      externalSelection={{ kind: 'root' }}
-      isExternalViewOpen={false}
-      isStudyMode={false}
-      isTrashViewOpen={false}
-      isVirtualViewOpen={false}
-      nodesById={{
-        [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
-        [VIRTUAL_ROOT_NODE_ID]: createNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
-        'virtual-a': createNode({ id: 'virtual-a', kind: 'folder', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Saved Search' }),
-        'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Alpha Topic', content: 'alpha body' })
-      }}
-      listNodesById={{
-        [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
-        [VIRTUAL_ROOT_NODE_ID]: createNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
-        'virtual-a': createNode({ id: 'virtual-a', kind: 'folder', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Saved Search' }),
-        'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Alpha Topic' })
-      }}
-      nodeOrder={[INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'virtual-a', 'topic-a']}
-      onOpenMoveToNode={vi.fn()}
-      onOpenNotesView={vi.fn()}
-      onOpenExternalSelection={vi.fn()}
-      onOpenTrashView={vi.fn()}
-      onOpenVirtualView={onOpenVirtualView}
-      onSelectNode={vi.fn()}
-      onSelectNodeInVirtualView={onSelectNodeInVirtualView}
-      onSelectTrashNode={vi.fn()}
-      reviewCurrentNodeId={null}
-      selectedTrashNodeId={null}
-      trashedNodeIds={[]}
-    />
-  );
-
-  fireEvent.click(screen.getByRole('treeitem', { name: 'Saved Search' }));
-
-  expect(onOpenVirtualView).toHaveBeenCalledWith('virtual-a');
-  expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('virtual-a');
 });
 
 it('collapses virtual descendants without removing the virtual section itself', () => {

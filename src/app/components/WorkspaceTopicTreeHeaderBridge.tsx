@@ -11,6 +11,7 @@ interface WorkspaceTopicTreeHeaderBridgeProps {
   collapsibleNodeIds: string[];
   contentSort: ReturnType<typeof useWorkspaceContentSort>;
   hasCollapsedNodes: boolean;
+  headerDescription?: string;
   onCreateTopic: (parentNodeId: string) => void;
   onToggleDismissedTopicsVisibility: () => void;
   searchQuery: string;
@@ -29,6 +30,7 @@ export function WorkspaceTopicTreeHeaderBridge(props: WorkspaceTopicTreeHeaderBr
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes={props.collapsibleNodeIds.length > 0}
       hasCollapsedNodes={props.hasCollapsedNodes}
+      {...definedProps({ headerDescription: props.headerDescription })}
       onChangeSortDirection={contentSort.setSortDirection}
       onChangeSortKey={contentSort.setSortKey}
       onCreateTopic={() => props.onCreateTopic(props.activeFolderId)}
