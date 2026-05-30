@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-fast.sh');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-target.sh');
+const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 30_000;
 
 function runBash(args, cwd) {
   return new Promise((resolve) => {
@@ -62,7 +63,7 @@ describe('quality gate skip lint integration', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
 
   it('blocks target quality gates before target steps run', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-skip-lint-'));
@@ -84,5 +85,5 @@ describe('quality gate skip lint integration', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
 });

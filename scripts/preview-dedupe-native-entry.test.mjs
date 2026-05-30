@@ -13,7 +13,7 @@ describe('windows native preview entry', () => {
     const packageJson = JSON.parse(await readFile(path.join(REPO_ROOT, 'package.json'), 'utf8'));
 
     expect(packageJson.scripts['windows:preview:native']).toBe(
-      'node scripts/preview-dedupe.mjs windows -- node scripts/windows/windows-preview-native.mjs'
+      'node scripts/preview-dedupe.mjs windows -- node scripts/with-resource-gate.mjs preview -- node scripts/windows/windows-preview-native.mjs'
     );
   });
 });

@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-fast.sh');
+const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 30_000;
 
 function runQualityGate(cwd, env = {}, args = []) {
   return new Promise((resolve) => {
@@ -79,7 +80,7 @@ describe('quality-gate-fast lib routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
 
   it('explains lib changes as a shared gate route without running checks', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));

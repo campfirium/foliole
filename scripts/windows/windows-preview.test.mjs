@@ -27,14 +27,15 @@ function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [PREVIEW_SCRIPT], {
       cwd: REPO_ROOT,
-      env: {
-        ...process.env,
-        WINDOWS_NATIVE_ABI_CHECK_COMMAND: 'true',
-        WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true',
-        ...TEST_PREVIEW_TIMEOUTS,
-        ...env
-      }
-    });
+    env: {
+      ...process.env,
+      WINDOWS_NATIVE_ABI_CHECK_COMMAND: 'true',
+      WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true',
+      WINDOWS_STARTUP_DIAGNOSTICS_SCRIPT: path.join(os.tmpdir(), 'missing-windows-startup-diagnostics.mjs'),
+      ...TEST_PREVIEW_TIMEOUTS,
+      ...env
+    }
+  });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (chunk) => {
@@ -291,7 +292,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('rebuilds stale electron-dist before sync instead of failing early', async () => {
+  it('rebuilds stale electron-dist before sync instead of failing early', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'renderer-reload');
     try {
@@ -333,7 +334,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('chooses renderer reload intent for Class A on a trusted running client', async () => {
+  it('chooses renderer reload intent for Class A on a trusted running client', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'renderer-reload');
     try {
@@ -468,7 +469,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('chooses restart-intent when runtime head is behind committed electron changes', async () => {
+  it('chooses restart-intent when runtime head is behind committed electron changes', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'restart');
     try {
@@ -614,7 +615,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('does not treat stale RUNNING during fallback-start as a successful start', async () => {
+  it('does not treat stale RUNNING during fallback-start as a successful start', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(

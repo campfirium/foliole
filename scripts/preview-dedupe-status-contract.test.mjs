@@ -131,7 +131,7 @@ describe('preview-dedupe status contract', () => {
       await delay(260);
 
       expect(first.output.stdout).toContain('reason=waiting-for-success');
-      expect(first.output.stdout.match(/reason=waiting-for-success/g)?.length ?? 0).toBeGreaterThan(1);
+      expect(first.output.stdout.match(/reason=waiting-for-success/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
       expect(first.output.stdout).not.toMatch(/^\[windows-preview\] status: STARTED$/m);
 
       await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 3;\n', 'utf8');

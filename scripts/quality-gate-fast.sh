@@ -44,8 +44,12 @@ run_changed_lint() {
   fi
 
   mapfile -t lint_array <<< "${lint_targets}"
-  if [[ -x "./node_modules/.bin/eslint" ]]; then
+  if [[ -f "scripts/with-resource-gate.mjs" && -f "node_modules/eslint/bin/eslint.js" ]]; then
     run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" node scripts/with-resource-gate.mjs node-heavy -- node node_modules/eslint/bin/eslint.js --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"
+    return 0
+  fi
+  if [[ -x "./node_modules/.bin/eslint" ]]; then
+    run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" ./node_modules/.bin/eslint --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"
     return 0
   fi
   if command -v npx >/dev/null 2>&1; then

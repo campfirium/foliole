@@ -3,7 +3,7 @@
 android_windows_path_to_shell_path() {
   local host_path="$1"
   if [[ "${host_path}" =~ ^([A-Za-z]):[\\/] ]]; then
-    if command -v wslpath >/dev/null 2>&1; then
+    if [[ "${ANDROID_WINDOWS_DISABLE_WSLPATH:-}" != "1" ]] && command -v wslpath >/dev/null 2>&1; then
       wslpath -u "${host_path}"
       return
     fi
@@ -24,7 +24,7 @@ android_shell_path_to_windows_path() {
     echo "${shell_path}"
     return
   fi
-  if command -v wslpath >/dev/null 2>&1; then
+  if [[ "${ANDROID_WINDOWS_DISABLE_WSLPATH:-}" != "1" ]] && command -v wslpath >/dev/null 2>&1; then
     wslpath -w "${shell_path}"
     return
   fi

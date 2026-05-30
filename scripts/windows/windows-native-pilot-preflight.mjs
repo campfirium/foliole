@@ -16,10 +16,11 @@ const DEFAULT_GIT_BASH_CANDIDATES = [
 ];
 
 export function normalizeWindowsPath(value) {
-  return String(value || '')
-    .trim()
-    .replaceAll('/', '\\')
-    .replace(/\\+$/u, '');
+  const trimmed = String(value || '').trim();
+  if (!/^[A-Za-z]:[\\/]/u.test(trimmed)) {
+    return trimmed;
+  }
+  return trimmed.replaceAll('/', '\\').replace(/\\+$/u, '');
 }
 
 function hasDriveRoot(value) {
@@ -41,7 +42,20 @@ export function isForbiddenWorkdir(value) {
 }
 
 export function findGitBashPath(candidates = DEFAULT_GIT_BASH_CANDIDATES) {
-  return candidates.map(normalizeWindowsPath).find((candidate) => candidate && fs.existsSync(candidate)) ?? '';
+  for (const candidate of candidates) {
+    const normalized = normalizeWindowsPath(candidate);
+    if (candidate && fs.existsSync(candidate)) {
+      return normalized;
+    }
+    if (normalized && fs.existsSync(normalized)) {
+      return normalized;
+    }
+  }
+  return '';
+}
+
+function joinWindowsPath(root, ...segments) {
+  return [normalizeWindowsPath(root), ...segments].filter(Boolean).join('\\');
 }
 
 function findPathGitBashCandidates(env = process.env) {
@@ -113,11 +127,11 @@ export function resolvePilotPreflight(env = process.env, options = {}) {
       bridgeReadyFile: nativePaths.bridgeReadyFile,
       electronUserDataDir: nativePaths.userDataPath,
       gitBashPath,
-      homeDir: `${workdir}\\.tmp\\home`,
+      homeDir: joinWindowsPath(workdir, '.tmp', 'home'),
       logDir: nativePaths.logDir,
-      npmCacheDir: `${workdir}\\.tmp\\npm-cache`,
+      npmCacheDir: joinWindowsPath(workdir, '.tmp', 'npm-cache'),
       readyFile: nativePaths.appReadyFile,
-      tempDir: `${workdir}\\.tmp`,
+      tempDir: joinWindowsPath(workdir, '.tmp'),
       workdir
     },
     errors,

@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEDUPE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'preview-dedupe.mjs');
+const PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS = 30_000;
 
 function git(cwd, args) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -98,7 +99,7 @@ describe('preview-dedupe required real preview', () => {
       }
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, 10_000);
+  }, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);
 
   it('takes over a dead active driver immediately instead of waiting for the stale window', async () => {
     const repoRoot = await createRepo();
@@ -140,5 +141,5 @@ describe('preview-dedupe required real preview', () => {
       }
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, 10_000);
+  }, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);
 });

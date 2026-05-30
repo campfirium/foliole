@@ -47,6 +47,7 @@ describe('android-windows-workdir.sh', () => {
       const binDir = path.join(tempRoot, 'bin');
       await mkdir(binDir);
       const result = await runWorkdirProbe(tempRoot, {
+        ANDROID_WINDOWS_DISABLE_WSLPATH: '1',
         PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
         ANDROID_WINDOWS_WORKDIR: 'D:\\C\\foliole-android-preview'
       });

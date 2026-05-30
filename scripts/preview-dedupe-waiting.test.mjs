@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEDUPE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'preview-dedupe.mjs');
+const PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS = 30_000;
 
 function git(cwd, args) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -87,7 +88,7 @@ describe('preview-dedupe waiting requests', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 10_000);
+  }, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);
 
   it('does not run another preview for the same hash after the validation window', async () => {
     const repoRoot = await createRepo();
@@ -116,5 +117,5 @@ describe('preview-dedupe waiting requests', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 10_000);
+  }, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);
 });

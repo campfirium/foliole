@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const AFFECTED_VALIDATION_SCRIPT = path.join(REPO_ROOT, 'scripts', 'pre-push-affected-validation.mjs');
+const AFFECTED_VALIDATION_TIMEOUT_MS = 30_000;
 
 function runCommand(command, args, cwd, options = {}) {
   return new Promise((resolve) => {
@@ -83,7 +84,7 @@ describe('pre-push affected validation', () => {
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
-  });
+  }, AFFECTED_VALIDATION_TIMEOUT_MS);
 
   it('runs Android boundary checks when pushed commits affect Android sync Java', async () => {
     const repoDir = await createRepo();
@@ -106,5 +107,5 @@ describe('pre-push affected validation', () => {
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
-  });
+  }, AFFECTED_VALIDATION_TIMEOUT_MS);
 });

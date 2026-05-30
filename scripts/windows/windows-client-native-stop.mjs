@@ -8,8 +8,8 @@ function escapePowerShellSingleQuoted(value) {
   return value.replaceAll("'", "''");
 }
 
-export async function listRepoElectronPids(repoRoot) {
-  if (process.platform !== 'win32' || !repoRoot) {
+export async function listRepoElectronPids(repoRoot, platform = process.platform) {
+  if (platform !== 'win32' || !repoRoot) {
     return [];
   }
   const electronPath = path.join(repoRoot, 'node_modules', 'electron', 'dist', 'electron.exe');
@@ -35,8 +35,8 @@ export async function listRepoElectronPids(repoRoot) {
     .filter((pid) => Number.isInteger(pid) && pid > 0);
 }
 
-export async function listRepoDevShellPids(repoRoot) {
-  if (process.platform !== 'win32' || !repoRoot) {
+export async function listRepoDevShellPids(repoRoot, platform = process.platform) {
+  if (platform !== 'win32' || !repoRoot) {
     return [];
   }
   const rootLiteral = escapePowerShellSingleQuoted(`${path.resolve(repoRoot)}${path.sep}`);
@@ -68,8 +68,8 @@ export async function listRepoDevShellPids(repoRoot) {
     .filter((pid) => Number.isInteger(pid) && pid > 0 && pid !== process.pid);
 }
 
-async function isRepoDevShellPid(pid, repoRoot) {
-  if (process.platform !== 'win32' || !Number.isInteger(pid) || pid <= 0 || !repoRoot) {
+async function isRepoDevShellPid(pid, repoRoot, platform = process.platform) {
+  if (platform !== 'win32' || !Number.isInteger(pid) || pid <= 0 || !repoRoot) {
     return false;
   }
   const scriptPath = path.join(repoRoot, 'scripts', 'windows', 'electron-dev-native.mjs');
@@ -90,6 +90,7 @@ async function isRepoDevShellPid(pid, repoRoot) {
 
 export async function stopNativeClient({
   print,
+  platform = process.platform,
   readClientState,
   readReadyState,
   removeClientState,
@@ -99,8 +100,8 @@ export async function stopNativeClient({
   const state = readClientState();
   const ready = readReadyState();
   const errors = [];
-  const repoElectronPids = await listRepoElectronPids(repoRoot);
-  const repoDevShellPids = await listRepoDevShellPids(repoRoot);
+  const repoElectronPids = await listRepoElectronPids(repoRoot, platform);
+  const repoDevShellPids = await listRepoDevShellPids(repoRoot, platform);
   const pids = new Set([ready?.appReady.pid]);
   for (const pid of repoElectronPids) {
     pids.add(pid);
@@ -108,7 +109,7 @@ export async function stopNativeClient({
   for (const pid of repoDevShellPids) {
     pids.add(pid);
   }
-  if (await isRepoDevShellPid(state?.shellPid, repoRoot)) {
+  if (await isRepoDevShellPid(state?.shellPid, repoRoot, platform)) {
     pids.add(state.shellPid);
   }
   for (const pid of pids) {
@@ -119,7 +120,7 @@ export async function stopNativeClient({
     }
   }
   const remainingReady = readReadyState();
-  const remainingRepoPids = await listRepoElectronPids(repoRoot);
+  const remainingRepoPids = await listRepoElectronPids(repoRoot, platform);
   if (remainingReady || remainingRepoPids.length > 0) {
     const remaining = remainingRepoPids.length > 0 ? `remaining electron pids=${remainingRepoPids.join(',')}` : 'runtime still running';
     throw new Error(`client stop failed: ${[...errors, remaining].filter(Boolean).join('; ')}`);

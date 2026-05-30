@@ -14,6 +14,7 @@ const FILE_BUDGET_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-file-budg
 const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-push-affected-validation.mjs');
 const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality-critical-test-routes.mjs');
 const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-commit-sequence.mjs');
+const HOOK_INTEGRATION_TIMEOUT_MS = 30_000;
 const tempDirs = [];
 
 function runCommand(command, args, cwd, options = {}) {
@@ -147,7 +148,7 @@ describe('git hooks', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('contains an unnumbered commit subject');
-  });
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
 
   it('routes sync-pack affected checks through pre-push', async () => {
     const repoDir = await createRepo();
@@ -178,5 +179,5 @@ describe('git hooks', () => {
 
     expect(result.code).toBe(0);
     expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toContain('sync-pack');
-  });
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
 });

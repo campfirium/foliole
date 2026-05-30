@@ -61,6 +61,7 @@ describe('native Windows client stop', () => {
 
     await expect(stopNativeClient({
       print: false,
+      platform: 'win32',
       readClientState: () => null,
       readReadyState: () => null,
       removeClientState,
@@ -82,6 +83,7 @@ describe('native Windows client stop', () => {
     killPid.mockRejectedValue(new Error('Access is denied'));
     await expect(stopNativeClient({
       print: false,
+      platform: 'win32',
       readClientState: () => null,
       readReadyState: () => null,
       removeClientState: vi.fn(),
@@ -98,6 +100,7 @@ describe('native Windows client stop', () => {
 
     await expect(stopNativeClient({
       print: false,
+      platform: 'win32',
       readClientState: () => ({ shellPid: 222 }),
       readReadyState: () => null,
       removeClientState: vi.fn(),
@@ -118,6 +121,7 @@ describe('native Windows client stop', () => {
 
     await expect(stopNativeClient({
       print: false,
+      platform: 'win32',
       readClientState: () => ({ shellPid: 222 }),
       readReadyState: () => null,
       removeClientState: vi.fn(),
@@ -137,6 +141,7 @@ describe('native Windows client stop', () => {
 
     await expect(stopNativeClient({
       print: false,
+      platform: 'win32',
       readClientState: () => null,
       readReadyState: () => null,
       removeClientState: vi.fn(),

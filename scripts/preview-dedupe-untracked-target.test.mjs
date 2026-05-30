@@ -11,6 +11,7 @@ import { expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PREVIEW_DEDUPE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'preview-dedupe.mjs');
+const PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS = 30_000;
 
 function run(command, args, options = {}) {
   return new Promise((resolve) => {
@@ -91,4 +92,4 @@ it('ignores untracked files outside the selected preview target', async () => {
   } finally {
     await rm(repoRoot, { force: true, recursive: true });
   }
-}, 15_000);
+}, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);

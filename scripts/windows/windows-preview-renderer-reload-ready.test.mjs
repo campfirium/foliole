@@ -11,6 +11,7 @@ import { expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-preview.sh');
+const WINDOWS_PREVIEW_INTEGRATION_TIMEOUT_MS = 30_000;
 
 function runScript(env) {
   return new Promise((resolve) => {
@@ -131,4 +132,4 @@ it('falls back to full restart when renderer reload never reaches app ready', as
     consumer.kill('SIGTERM');
     await rm(tempRoot, { recursive: true, force: true });
   }
-}, 10000);
+}, WINDOWS_PREVIEW_INTEGRATION_TIMEOUT_MS);

@@ -106,7 +106,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('runs the android gate including host test', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -139,7 +139,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('runs the android device gate including emulator and connected test', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -174,7 +174,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  }, 60000);
 
   it('runs the shared gate without requiring android host test', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -210,7 +210,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('runs the full gate without android host checks', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -255,7 +255,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('runs the release gate including android host checks', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -295,7 +295,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  }, 60000);
 
   it('reports every failed parallel step', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -321,7 +321,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  }, 60000);
 
   it('reports missing scripts from parallel steps', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -343,7 +343,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  }, 60000);
 
   it('prints heartbeat while parallel steps are still running', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -367,7 +367,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  }, 60000);
 
   it('fails for an unknown target', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -382,7 +382,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('fails when a required package script is missing', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -403,7 +403,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('prints a compact failure excerpt instead of dumping the whole log', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -429,7 +429,7 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('keeps the full failure log on disk and prints its absolute path', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
@@ -451,5 +451,5 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 });

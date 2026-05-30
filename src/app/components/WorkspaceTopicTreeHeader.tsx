@@ -60,7 +60,7 @@ export function WorkspaceTopicTreeHeader({
     >
       <h2 className="sr-only">Current folder topics</h2>
       <WorkspaceTopicTreeHeaderLead
-        description={headerDescription}
+        {...(headerDescription ? { description: headerDescription } : {})}
         onOpenSearch={() => setIsSearchOpen(true)}
       />
       <WorkspaceTopicTreeHeaderActions
