@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react';
 
 import { markSelectionComputationAt, recordComponentRender } from '../../../shared/platform/performanceDiagnosticsProbe';
+import {
+  isEditorInputDiagnosticEnabled,
+  logEditorInputDiagnostic
+} from '../../../store/workspaceEditorInputDiagnostics';
 
 interface SelectionMetricsArgs {
   activeNodeId: string | null;
@@ -13,9 +17,26 @@ interface SelectionMetricsArgs {
   virtualTreeBuildDurationMs: number;
 }
 
+function logNodeListTreeRenderDiagnostic(args: SelectionMetricsArgs) {
+  if (!isEditorInputDiagnosticEnabled()) {
+    return;
+  }
+  logEditorInputDiagnostic('node-list-tree-render', {
+    activeNodeId: args.activeNodeId,
+    activeRowsLength: args.activeRowsLength,
+    noteRowsAllLength: args.noteRowsAllLength,
+    noteTreeBuildDurationMs: args.noteTreeBuildDurationMs,
+    trashRowsAllLength: args.trashRowsAllLength,
+    trashTreeBuildDurationMs: args.trashTreeBuildDurationMs,
+    virtualRowsAllLength: args.virtualRowsAllLength,
+    virtualTreeBuildDurationMs: args.virtualTreeBuildDurationMs
+  });
+}
+
 export function useNodeListTreeSelectionMetrics(args: SelectionMetricsArgs) {
   const selectionStartedAtRef = useRef(0);
   recordComponentRender('nodeListTree');
+  logNodeListTreeRenderDiagnostic(args);
 
   useEffect(() => {
     selectionStartedAtRef.current = performance.now();

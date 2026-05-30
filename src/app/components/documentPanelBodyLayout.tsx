@@ -15,6 +15,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentOutlineLayer } from './DocumentOutlineLayer';
 import { DocumentPanelAnswerSection } from './DocumentPanelAnswerSection';
+import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
 export interface BlockImageMetrics {
   imageCount: number;
@@ -55,6 +56,7 @@ export interface DocumentPanelBodyLayoutProps {
   onAnswerChange: (answer: string) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
+  onEditorInput?: (meta: { nodeId: string | null }) => void;
   onEditorUndo?: () => boolean;
   onEditorRedo?: () => boolean;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -110,6 +112,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
           onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
           onContextMenu: props.onEditorContextMenu,
           onDoubleClick: props.onEditorDoubleClick,
+          onDocumentInput: props.onEditorInput,
           onFitBlockImageMetricsChange: props.onPromptImageMetricsChange,
           onImageLoadStateChange: props.onPromptImageLoadStateChange,
           onOpenExternalLink: props.onOpenExternalLink,
@@ -176,19 +179,23 @@ function DocumentSectionDivider(props: Pick<DocumentPanelBodyLayoutProps, 'docum
 }
 
 export function renderDocumentPanelBodyLayout(props: DocumentPanelBodyLayoutProps) {
-  return (
-    <div className="relative flex h-full min-h-0 w-full">
-      {renderDocumentOutline(props)}
-      <div className="document-panel-editor-stack flex h-full min-h-0 w-full flex-1 flex-col">
-        {renderDocumentBodyContent(props)}
-        {props.hasAnswerSection && !props.emptyState ? (
-          <>
-            <DocumentSectionDivider documentMaxWidth={props.documentMaxWidth} />
-            <DocumentPanelAnswerSection {...props} />
-          </>
-        ) : null}
+  return measureWorkspaceDiagnostic(
+    'document-panel-body-layout',
+    { editorContentLength: props.editorContent.length, hasAnswerSection: props.hasAnswerSection },
+    () => (
+      <div className="relative flex h-full min-h-0 w-full">
+        {renderDocumentOutline(props)}
+        <div className="document-panel-editor-stack flex h-full min-h-0 w-full flex-1 flex-col">
+          {renderDocumentBodyContent(props)}
+          {props.hasAnswerSection && !props.emptyState ? (
+            <>
+              <DocumentSectionDivider documentMaxWidth={props.documentMaxWidth} />
+              <DocumentPanelAnswerSection {...props} />
+            </>
+          ) : null}
+        </div>
       </div>
-    </div>
+    )
   );
 }
 

@@ -1,0 +1,38 @@
+import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
+import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
+import type { EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
+
+import type { MarkdownEditorProps } from './markdownEditorTypes';
+
+export function createMarkdownEditorAdapter(args: {
+  debugId: string | undefined;
+  hideTitleHeading: boolean;
+  host: HTMLDivElement;
+  initialContent: string;
+  onChange: MarkdownEditorProps['onChange'];
+  onDocumentInput: MarkdownEditorProps['onDocumentInput'];
+  onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'];
+  onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
+  onOpenNodeLink: ((title: string) => void) | undefined;
+  onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined;
+  onPastedAnchors: MarkdownEditorProps['onPastedAnchors'];
+  readOnly: boolean | undefined;
+  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
+  trailingDivider: boolean | undefined;
+}) {
+  return new CodeMirrorEditorAdapter(args.host, {
+    hideTitleHeading: args.hideTitleHeading,
+    initialContent: args.initialContent,
+    onChange: args.onChange,
+    ...(args.onDocumentInput ? { onDocumentInput: args.onDocumentInput } : {}),
+    ...(args.onMissingAttachmentResource ? { onMissingAttachmentResource: args.onMissingAttachmentResource } : {}),
+    ...(args.onOpenExternalLink ? { onOpenExternalLink: args.onOpenExternalLink } : {}),
+    ...(args.onOpenNodeLink ? { onOpenNodeLink: args.onOpenNodeLink } : {}),
+    ...(args.onPreviewNodeLink ? { onPreviewNodeLink: args.onPreviewNodeLink } : {}),
+    ...(args.onPastedAnchors ? { onPastedAnchors: args.onPastedAnchors } : {}),
+    ...(args.readOnly !== undefined ? { readOnly: args.readOnly } : {}),
+    textAnchorDecorations: args.textAnchorDecorations,
+    ...(args.trailingDivider !== undefined ? { trailingDivider: args.trailingDivider } : {})
+  });
+}

@@ -46,7 +46,7 @@ it('records recent native invoke history through runtime invoke wrapper', async 
 
   const runtimeInvoke = getRuntimeInvoke();
   expect(runtimeInvoke).not.toBeNull();
-  await expect(runtimeInvoke!('app_get_version')).resolves.toBe('0.1.0');
+  await expect(runtimeInvoke!('app_get_version', { verbose: true })).resolves.toBe('0.1.0');
   await expect(runtimeInvoke!('resolve_app_paths')).rejects.toThrow('bridge down');
 
   expect(readDesktopDebugProbe()).toEqual({
@@ -71,4 +71,5 @@ it('records recent native invoke history through runtime invoke wrapper', async 
     ],
     runtimeHead: 'head-1'
   });
+  expect(readDesktopDebugProbe()?.recentInvokes[1]).not.toHaveProperty('args');
 });

@@ -12,6 +12,16 @@ import type {
   WorkspaceRuntimeNode
 } from './workspaceRuntimeTypes';
 
+export type RuntimeNodeContentMutationDiagnostics = {
+  invokeMs?: number;
+  resultCheckMs?: number;
+  snapshotMs?: number;
+};
+
+function readNowMs() {
+  return typeof performance === 'undefined' ? Date.now() : performance.now();
+}
+
 function resolveCreateWorkspaceNodeCommand(kind: WorkspaceRuntimeNode['kind']) {
   if (kind === 'folder') return NATIVE_COMMANDS.createFolder;
   if (kind === 'topic') return NATIVE_COMMANDS.createTopic;
@@ -63,6 +73,8 @@ export async function saveCreatedWorkspaceNodeMutationSnapshot(args: {
 
 export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
   affectedAnchorNodes: WorkspaceRuntimeNode[];
+  diagnostics?: RuntimeNodeContentMutationDiagnostics;
+  diagnosticsEnabled?: boolean;
   nodeOrder: string[];
   parentNode: WorkspaceRuntimeNode;
 }): Promise<WorkspaceNodeMutationPatchResult | null> {
@@ -70,13 +82,27 @@ export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
   if (!runtimeInvoke) {
     return null;
   }
+  const snapshotStartedAt = args.diagnostics ? readNowMs() : 0;
   const parent = createWorkspaceRuntimeNodeSnapshot(args.parentNode, args.nodeOrder.indexOf(args.parentNode.id));
+  if (args.diagnostics) {
+    args.diagnostics.snapshotMs = readNowMs() - snapshotStartedAt;
+  }
   try {
+    const invokeStartedAt = args.diagnostics ? readNowMs() : 0;
     const result = await runtimeInvoke(NATIVE_COMMANDS.updateNodeContentWithAnchors, {
       parent,
-      affectedAnchors: args.affectedAnchorNodes.map(toNodeAnchorLocatorUpdatePayload)
+      affectedAnchors: args.affectedAnchorNodes.map(toNodeAnchorLocatorUpdatePayload),
+      ...(args.diagnosticsEnabled ? { diagnostics: true } : {})
     });
-    return isNodeMutationPatchResult(result) ? result : null;
+    if (args.diagnostics) {
+      args.diagnostics.invokeMs = readNowMs() - invokeStartedAt;
+    }
+    const resultCheckStartedAt = args.diagnostics ? readNowMs() : 0;
+    const checkedResult = isNodeMutationPatchResult(result) ? result : null;
+    if (args.diagnostics) {
+      args.diagnostics.resultCheckMs = readNowMs() - resultCheckStartedAt;
+    }
+    return checkedResult;
   } catch (error) {
     logRuntimeError('runtime sync failed', {
       area: 'native',

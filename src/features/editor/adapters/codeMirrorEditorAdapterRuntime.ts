@@ -75,7 +75,9 @@ function createEditorViewRuntime(
       if (!args.getOnChange() || args.isApplyingExternalContent()) {
         return;
       }
-      externalChangeBuffer.handleDocumentChange(content, { ...meta, nodeId: args.getNodeId() });
+      const inputMeta = { ...meta, nodeId: args.getNodeId() };
+      args.options.onDocumentInput?.(inputMeta);
+      externalChangeBuffer.handleDocumentChange(content, inputMeta);
     },
     options: args.options,
     paragraphMarkerCompartment: args.paragraphMarkerCompartment,

@@ -16,6 +16,7 @@ import {
   renderDocumentPanelBodyLayout,
   type BlockImageMetrics
 } from './documentPanelBodyLayout';
+import { startDocumentPanelDiagnostic } from './documentPanelSectionDiagnostic';
 import { useDocumentPanelBodyMetrics } from './useDocumentPanelBodyMetrics';
 
 interface DocumentPanelBodyProps {
@@ -51,6 +52,7 @@ interface DocumentPanelBodyProps {
   onAnswerImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
+  onEditorInput?: (meta: { nodeId: string | null }) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
@@ -78,6 +80,12 @@ export function DocumentPanelBody({
   showDocumentOutline = true,
   ...props
 }: DocumentPanelBodyProps) {
+  const finishDiagnostic = startDocumentPanelDiagnostic('document-panel-body-render', {
+    editorContentLength: props.editorContent.length,
+    editorNodeId: props.editorNodeId,
+    hasAnswerSection: props.hasAnswerSection,
+    textAnchorDecorations: props.textAnchorDecorations ?? null
+  });
   const {
     handleAnswerImageLoadStateChange,
     handlePromptImageLoadStateChange,
@@ -105,6 +113,9 @@ export function DocumentPanelBody({
     showDocumentOutline
   });
 
+  finishDiagnostic({
+    sharedBlockImageMaxHeight: props.fitBlockImagesToViewport ? sharedBlockImageMaxHeight ?? null : null
+  });
   return (
     <div
       className={cn('flex min-h-0 flex-1 pl-4 pr-0 pt-2 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0')}

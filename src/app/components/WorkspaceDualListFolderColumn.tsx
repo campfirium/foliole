@@ -3,6 +3,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import type { WorkspaceDualListContentProps } from './WorkspaceDualListContent';
 import type { useWorkspaceDualListState } from './workspaceDualListState';
 import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
+import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
 export function WorkspaceDualListFolderColumn({
   dualListState,
@@ -15,6 +16,13 @@ export function WorkspaceDualListFolderColumn({
   props: WorkspaceDualListContentProps;
   virtualResultCountById: ReadonlyMap<string, number>;
 }) {
+  useWorkspaceRenderDiagnostic('workspace-dual-list-folder-column-render', {
+    activeFolderId: dualListState.activeFolderId,
+    folderNodeOrder: dualListState.folderNodeOrder,
+    folderNodesById: dualListState.folderNodesById,
+    listNodesById: props.listNodesById,
+    virtualResultCountById
+  });
   return (
     <WorkspaceFolderColumn
       activeFolderId={dualListState.activeFolderId}

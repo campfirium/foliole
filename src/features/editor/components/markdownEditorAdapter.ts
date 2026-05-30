@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react';
+import { useLayoutEffect, useRef, type MutableRefObject } from 'react';
 
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/diagnostics/debugTrace';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
@@ -6,127 +6,19 @@ import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import { EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS, type EditorAdapter } from '../adapters/EditorAdapter';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
+import { createMarkdownEditorAdapter } from './markdownEditorAdapterFactory';
+import { useTextAnchorPresentationSync } from './markdownEditorTextAnchorSync';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 
 function resolveTextAnchorDecorations(textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations']) {
   return textAnchorDecorations ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
 }
 
-function areTextAnchorDecorationsEqual(
-  left: readonly import('../adapters/EditorAdapter').EditorTextAnchorDecoration[],
-  right: readonly import('../adapters/EditorAdapter').EditorTextAnchorDecoration[]
-) {
-  if (left === right) {
-    return true;
-  }
-  if (left.length !== right.length) {
-    return false;
-  }
-  for (let index = 0; index < left.length; index += 1) {
-    const leftDecoration = left[index];
-    const rightDecoration = right[index];
-    if (
-      !leftDecoration ||
-      !rightDecoration ||
-      leftDecoration.from !== rightDecoration.from ||
-      leftDecoration.to !== rightDecoration.to ||
-      leftDecoration.kind !== rightDecoration.kind
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function useTextAnchorPresentationSync(
-  adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
-  textAnchorDecorations: ReturnType<typeof resolveTextAnchorDecorations>,
-  value: string
-) {
-  const lastAppliedTextAnchorDecorationsRef = useRef(textAnchorDecorations);
-  const deferredApplyFrameRef = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      if (deferredApplyFrameRef.current !== null) {
-        cancelAnimationFrame(deferredApplyFrameRef.current);
-      }
-    },
-    []
-  );
-
-  useLayoutEffect(() => {
-    const adapter = adapterRef.current;
-    if (areTextAnchorDecorationsEqual(lastAppliedTextAnchorDecorationsRef.current, textAnchorDecorations)) {
-      return;
-    }
-    const applyTextAnchorDecorations = () => {
-      lastAppliedTextAnchorDecorationsRef.current = textAnchorDecorations;
-      adapterRef.current?.setTextAnchorDecorations?.(textAnchorDecorations);
-    };
-    if (!adapter || adapter.getContent() === value) {
-      if (deferredApplyFrameRef.current !== null) {
-        cancelAnimationFrame(deferredApplyFrameRef.current);
-        deferredApplyFrameRef.current = null;
-      }
-      applyTextAnchorDecorations();
-      return;
-    }
-    if (!areTextAnchorDecorationsEqual(lastAppliedTextAnchorDecorationsRef.current, EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS)) {
-      lastAppliedTextAnchorDecorationsRef.current = EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
-      adapter.setTextAnchorDecorations?.(EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS);
-    }
-    if (deferredApplyFrameRef.current !== null) {
-      cancelAnimationFrame(deferredApplyFrameRef.current);
-    }
-    deferredApplyFrameRef.current = requestAnimationFrame(() => {
-      deferredApplyFrameRef.current = null;
-      if (adapterRef.current?.getContent() !== value) {
-        return;
-      }
-      applyTextAnchorDecorations();
-    });
-  }, [adapterRef, textAnchorDecorations, value]);
-}
-
-function createEditorAdapter(args: {
-  debugId: string | undefined;
-  hideTitleHeading: boolean;
-  host: HTMLDivElement;
-  initialContent: string;
-  onChange: MarkdownEditorProps['onChange'];
-  onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'];
-  onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
-  onOpenNodeLink: ((title: string) => void) | undefined;
-  onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined;
-  onPastedAnchors: MarkdownEditorProps['onPastedAnchors'];
-  readOnly: boolean | undefined;
-  textAnchorDecorations: ReturnType<typeof resolveTextAnchorDecorations>;
-  trailingDivider: boolean | undefined;
-}) {
-  const adapter = new CodeMirrorEditorAdapter(args.host, {
-    hideTitleHeading: args.hideTitleHeading,
-    initialContent: args.initialContent,
-    onChange: args.onChange,
-    ...(args.onMissingAttachmentResource ? { onMissingAttachmentResource: args.onMissingAttachmentResource } : {}),
-    ...(args.onOpenExternalLink ? { onOpenExternalLink: args.onOpenExternalLink } : {}),
-    ...(args.onOpenNodeLink ? { onOpenNodeLink: args.onOpenNodeLink } : {}),
-    ...(args.onPreviewNodeLink ? { onPreviewNodeLink: args.onPreviewNodeLink } : {}),
-    ...(args.onPastedAnchors ? { onPastedAnchors: args.onPastedAnchors } : {}),
-    ...(args.readOnly !== undefined ? { readOnly: args.readOnly } : {}),
-    textAnchorDecorations: args.textAnchorDecorations,
-    ...(args.trailingDivider !== undefined ? { trailingDivider: args.trailingDivider } : {})
-  });
-  if (args.debugId) {
-    registerDebugEditorAdapter(args.debugId, adapter);
-  }
-  return adapter;
-}
-
 function useEditorAdapterInputs(args: {
   hideTitleHeading: boolean;
   initialValue: string;
   onChange: MarkdownEditorProps['onChange'];
+  onDocumentInput: MarkdownEditorProps['onDocumentInput'];
   onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'];
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
   onOpenNodeLink: ((title: string) => void) | undefined;
@@ -139,6 +31,7 @@ function useEditorAdapterInputs(args: {
 }) {
   const initialValueRef = useRef(args.initialValue);
   const onChangeRef = useRef(args.onChange);
+  const onDocumentInputRef = useRef(args.onDocumentInput);
   const onMissingAttachmentResourceRef = useRef(args.onMissingAttachmentResource);
   const onOpenExternalLinkRef = useRef(args.onOpenExternalLink);
   const onOpenNodeLinkRef = useRef(args.onOpenNodeLink);
@@ -152,6 +45,7 @@ function useEditorAdapterInputs(args: {
   const textAnchorDecorationsRef = useRef(resolvedTextAnchorDecorations);
 
   onChangeRef.current = args.onChange;
+  onDocumentInputRef.current = args.onDocumentInput;
   onMissingAttachmentResourceRef.current = args.onMissingAttachmentResource;
   initialValueRef.current = args.initialValue;
   onOpenExternalLinkRef.current = args.onOpenExternalLink;
@@ -168,6 +62,7 @@ function useEditorAdapterInputs(args: {
     hideTitleHeadingRef,
     initialValueRef,
     onChangeRef,
+    onDocumentInputRef,
     onMissingAttachmentResourceRef,
     onOpenExternalLinkRef,
     onOpenNodeLinkRef,
@@ -194,12 +89,13 @@ function useEditorAdapterLifecycle(args: {
       return;
     }
 
-    const adapter = createEditorAdapter({
+    const adapter = createMarkdownEditorAdapter({
       debugId,
       hideTitleHeading: inputs.hideTitleHeadingRef.current,
       host,
       initialContent: inputs.initialValueRef.current,
       onChange: (nextValue, meta) => inputs.onChangeRef.current(nextValue, meta),
+      onDocumentInput: (meta) => inputs.onDocumentInputRef.current?.(meta),
       onMissingAttachmentResource: (attachmentId) => inputs.onMissingAttachmentResourceRef.current?.(attachmentId),
       onOpenExternalLink: (href) => inputs.onOpenExternalLinkRef.current?.(href),
       onOpenNodeLink: (title) => inputs.onOpenNodeLinkRef.current?.(title),
@@ -210,6 +106,9 @@ function useEditorAdapterLifecycle(args: {
       trailingDivider: inputs.trailingDividerRef.current
     });
     adapterRef.current = adapter;
+    if (debugId) {
+      registerDebugEditorAdapter(debugId, adapter);
+    }
     inputs.onReadyRef.current?.(adapter);
 
     return () => {
@@ -227,6 +126,7 @@ export function useEditorAdapter(
   hostRef: MutableRefObject<HTMLDivElement | null>,
   debugId: string | undefined,
   onChange: MarkdownEditorProps['onChange'],
+  onDocumentInput: MarkdownEditorProps['onDocumentInput'],
   onReady: ((adapter: EditorAdapter | null) => void) | undefined,
   initialValue: string,
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'],
@@ -244,6 +144,7 @@ export function useEditorAdapter(
     hideTitleHeading,
     initialValue,
     onChange,
+    onDocumentInput,
     onMissingAttachmentResource,
     onOpenExternalLink,
     onOpenNodeLink,

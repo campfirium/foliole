@@ -112,8 +112,7 @@ function isWorkspaceListProjectionReusable(
     projectedNode.reading === (sourceNode.reading ?? null) &&
     projectedNode.review === sourceNode.review &&
     projectedNode.specialKind === sourceNode.specialKind &&
-    projectedNode.title === resolveWorkspaceListNodeTitle(sourceNode) &&
-    projectedNode.updatedAt === sourceNode.updatedAt
+    projectedNode.title === resolveWorkspaceListNodeTitle(sourceNode)
   );
 }
 

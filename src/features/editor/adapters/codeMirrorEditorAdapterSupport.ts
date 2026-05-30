@@ -17,6 +17,7 @@ export interface CodeMirrorEditorAdapterOptions {
   hideTitleHeading?: boolean;
   initialContent: string;
   onChange?: (content: string, meta?: EditorContentChangeMeta) => void;
+  onDocumentInput?: (meta: EditorDocumentChangeMeta) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onOpenNodeLink?: (title: string) => void;

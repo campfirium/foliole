@@ -5,6 +5,8 @@ import { collectBacklinks, type BacklinkItem } from '../../features/nodes/model/
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { loadRuntimeNodeBacklinks } from '../../shared/platform/nodeBacklinksRuntimeRepository';
 
+import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
+
 function collectLocalBacklinks(args: {
   nodeOrder: string[];
   nodesById: Record<string, Node>;
@@ -81,7 +83,14 @@ export function useNodeBacklinks(args: {
   trashedNodeIds: string[];
 }) {
   const localBacklinks = useMemo(
-    () => collectLocalBacklinks(args),
+    () => measureWorkspaceDiagnostic(
+      'node-backlinks-local-collect',
+      {
+        nodeCount: args.nodeOrder.length,
+        targetNodeId: args.targetNodeId
+      },
+      () => collectLocalBacklinks(args)
+    ),
     [args.nodeOrder, args.nodesById, args.targetNodeId, args.trashedNodeIds]
   );
   const [runtimeState, setRuntimeState] = useState<RuntimeBacklinksState>(EMPTY_RUNTIME_BACKLINKS_STATE);

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -18,6 +18,7 @@ import { WorkspaceDualListFolderColumn } from './WorkspaceDualListFolderColumn';
 import { useWorkspaceDualListState } from './workspaceDualListState';
 import { useWorkspaceDualListViewRoot } from './workspaceDualListViewRoot';
 import { renderVirtualContentColumn } from './workspaceDualListVirtualContent';
+import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
@@ -69,7 +70,8 @@ function renderSingleListFallback(props: WorkspaceDualListContentProps) {
 function renderStandardContentColumn(
   props: WorkspaceDualListContentProps,
   dualListState: ReturnType<typeof useWorkspaceDualListState>,
-  topicRootId: string
+  topicRootId: string,
+  topicCallbacks: ReturnType<typeof useWorkspaceTopicTreeCallbacks>
 ) {
   if (props.isTrashViewOpen) {
     return (
@@ -91,20 +93,48 @@ function renderStandardContentColumn(
       forceVisibleNodeId={props.isStudyMode ? props.reviewCurrentNodeId : null}
       itemIds={dualListState.topicNodeOrder}
       nodesById={dualListState.topicNodesById}
-      onOpenMoveToNode={props.onOpenMoveToNode}
-      {...definedProps({ onOpenPostponeTopicPanel: props.onOpenPostponeTopicPanel })}
-      onSelectNode={props.onSelectNode}
+      onOpenMoveToNode={topicCallbacks.onOpenMoveToNode}
+      {...definedProps({ onOpenPostponeTopicPanel: topicCallbacks.onOpenPostponeTopicPanel })}
+      onSelectNode={topicCallbacks.onSelectNode}
     />
   );
 }
 
+function useWorkspaceTopicTreeCallbacks(props: WorkspaceDualListContentProps) {
+  const propsRef = useRef(props);
+  propsRef.current = props;
+  const onOpenMoveToNode = useCallback(() => propsRef.current.onOpenMoveToNode(), []);
+  const onOpenPostponeTopicPanel = useCallback(
+    (nodeId: string) => propsRef.current.onOpenPostponeTopicPanel?.(nodeId),
+    []
+  );
+  const onSelectNode = useCallback((nodeId: string) => propsRef.current.onSelectNode(nodeId), []);
+  return useMemo(
+    () => ({
+      onOpenMoveToNode,
+      onOpenPostponeTopicPanel: props.onOpenPostponeTopicPanel ? onOpenPostponeTopicPanel : undefined,
+      onSelectNode
+    }),
+    [onOpenMoveToNode, onOpenPostponeTopicPanel, onSelectNode, props.onOpenPostponeTopicPanel]
+  );
+}
+
 export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
+  useWorkspaceRenderDiagnostic('workspace-dual-list-content-render', {
+    activeNodeId: props.activeNodeId,
+    listNodesById: props.listNodesById,
+    nodeOrder: props.nodeOrder,
+    nodesById: props.nodesById,
+    reviewCurrentNodeId: props.reviewCurrentNodeId,
+    trashedNodeIds: props.trashedNodeIds
+  });
   const viewRoot = useWorkspaceDualListViewRoot(props);
   const dualListState = useWorkspaceDualListState({
     ...props,
     preferredFolderColumnId: viewRoot.preferredFolderColumnId
   });
   const topicRootId = dualListState.activeFolderColumnId ?? dualListState.activeFolderId ?? null;
+  const topicCallbacks = useWorkspaceTopicTreeCallbacks(props);
   const virtualResultIndex = useMemo(
     () => buildVirtualNodeResultIndex(props),
     [props.nodeOrder, props.nodesById, props.trashedNodeIds]
@@ -127,10 +157,10 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
       contentColumn={
         props.isVirtualViewOpen
           ? renderVirtualContentColumn(props, virtualResultIndex)
-          : props.isExternalViewOpen
-            ? renderExternalContentColumn(props)
-            : topicRootId
-              ? renderStandardContentColumn(props, dualListState, topicRootId)
+            : props.isExternalViewOpen
+              ? renderExternalContentColumn(props)
+              : topicRootId
+              ? renderStandardContentColumn(props, dualListState, topicRootId, topicCallbacks)
             : renderSingleListFallback(props)
       }
     />

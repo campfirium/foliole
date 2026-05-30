@@ -14,6 +14,8 @@ import {
 } from '../../features/image-cloze/model/imageClozePresentation';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
+import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
+
 function registerParentImageClozePresentation(promptNodeId: string, parentRegions: ReturnType<typeof listImageClozePresentationRegions>) {
   if (parentRegions.length === 0) {
     return undefined;
@@ -80,30 +82,36 @@ export function useDocumentPanelImageClozePresentation(args: {
   trashedNodeIds: string[];
 }) {
   useLayoutEffect(() => {
-    if (!args.editorNodeId || !args.activeNode) {
-      return;
-    }
-    const promptNodeId = args.editorNodeId;
-    const answerNodeId = getImageClozeAnswerEditorNodeId(args.editorNodeId);
-    const parentRegions = listImageClozePresentationRegions(
-      mergeImageClozeRegionGroups(
-        resolveParentPresentationImageRegions(args.activeNode),
-        deriveImageClozeRegionsFromChildren({
-          nodeId: args.activeNode.id,
-          nodesById: args.nodesById,
-          trashedNodeIds: args.trashedNodeIds
-        })
-      )
-    );
+    return measureWorkspaceDiagnostic('document-panel-image-cloze-layout-effect', {
+      activeNodeId: args.activeNode?.id,
+      editorNodeId: args.editorNodeId,
+      nodeCount: Object.keys(args.nodesById).length
+    }, () => {
+      if (!args.editorNodeId || !args.activeNode) {
+        return undefined;
+      }
+      const promptNodeId = args.editorNodeId;
+      const answerNodeId = getImageClozeAnswerEditorNodeId(args.editorNodeId);
+      const parentRegions = listImageClozePresentationRegions(
+        mergeImageClozeRegionGroups(
+          resolveParentPresentationImageRegions(args.activeNode),
+          deriveImageClozeRegionsFromChildren({
+            nodeId: args.activeNode.id,
+            nodesById: args.nodesById,
+            trashedNodeIds: args.trashedNodeIds
+          })
+        )
+      );
 
-    if (!isImageClozeNode(args.activeNode)) {
-      return registerParentImageClozePresentation(promptNodeId, parentRegions);
-    }
+      if (!isImageClozeNode(args.activeNode)) {
+        return registerParentImageClozePresentation(promptNodeId, parentRegions);
+      }
 
-    const locator = getImageClozeLocator(args.activeNode.anchorLink);
-    if (!locator) {
-      return;
-    }
-    return registerFocusedImageClozePresentation(promptNodeId, answerNodeId, args.activeNode, locator);
+      const locator = getImageClozeLocator(args.activeNode.anchorLink);
+      if (!locator) {
+        return undefined;
+      }
+      return registerFocusedImageClozePresentation(promptNodeId, answerNodeId, args.activeNode, locator);
+    });
   }, [args.activeNode, args.editorNodeId, args.nodesById, args.trashedNodeIds]);
 }

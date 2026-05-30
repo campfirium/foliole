@@ -10,14 +10,14 @@ import {
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
-import { DocumentPanelDocumentStatusContent } from './DocumentPanelDocumentStatusContent';
-import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
+import { useDocumentPanelSectionDiagnostic } from './documentPanelSectionDiagnostic';
 import { getDocumentPanelView } from './documentPanelSectionModel';
 import { DocumentPanelSectionOverlays } from './DocumentPanelSectionOverlays';
 import { DocumentPanelSectionShell } from './DocumentPanelSectionShell';
 import {
   buildResolvedDocumentPanelProps,
   buildTopicBacklinks,
+  renderDocumentPanelEmptyContent,
   useDocumentPanelInteractions
 } from './documentPanelSectionSupport';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
@@ -102,16 +102,12 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     nodesById: props.nodesById,
     trashedNodeIds: props.trashedNodeIds
   });
-  const emptyContent = documentStatus === 'failed' || documentStatus === 'missing'
-    ? (
-        <DocumentPanelDocumentStatusContent
-          loadingLabel="Document progress"
-          onRetry={retryDocumentLoad}
-          retrying={isRetryingDocument}
-          status={documentStatus}
-        />
-      )
-    : loadingLabel ? <DocumentPanelLoadingContent loadingLabel={loadingLabel} /> : undefined;
+  const emptyContent = renderDocumentPanelEmptyContent({
+    documentStatus,
+    isRetryingDocument,
+    loadingLabel,
+    retryDocumentLoad
+  });
   useDocumentPanelPerformanceMarkers(props, Boolean(bodyProps.emptyState), isEditorDocumentLoaded);
   useDocumentPanelClozePresentations(activeNode, props);
 
@@ -158,15 +154,17 @@ function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
       ...props,
       editorContent: editorDraft.editorContent,
       onEditorChange: editorDraft.handleEditorChange,
+      onEditorInput: editorDraft.handleEditorInput,
       onEditorUndo: handleEditorUndo,
       onEditorRedo: handleEditorRedo
     }),
-    [editorDraft.editorContent, editorDraft.handleEditorChange, handleEditorRedo, handleEditorUndo, props]
+    [editorDraft.editorContent, editorDraft.handleEditorChange, editorDraft.handleEditorInput, handleEditorRedo, handleEditorUndo, props]
   );
 }
 
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
+  useDocumentPanelSectionDiagnostic(props);
   const draftProps = useDocumentPanelDraftProps(props);
   const model = useDocumentPanelSectionModel(draftProps);
   const interactions = useDocumentPanelInteractions(draftProps);

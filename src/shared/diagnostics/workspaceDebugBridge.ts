@@ -1,11 +1,11 @@
-import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
-import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
 import { isWorkspaceDebugEnabledForRuntime } from './workspaceDebugBridgeGate';
 import { forceUpdateDebugNodeContent } from './workspaceDebugNodeContent';
-import { type DebugNodeSeed, persistSeedNodes } from './workspaceDebugSeedPersistence';
+import { createSeedNodeDebugApi, type SeedNodeDebugApi } from './workspaceDebugSeedApi';
 import { type WorkspaceSyncDebugApi, createWorkspaceSyncDebugApi } from './workspaceSyncDebugBridge';
 
 interface WorkspaceDebugApi {
@@ -46,7 +46,7 @@ interface WorkspaceDebugApi {
   openNode: (nodeId: string) => Promise<boolean>;
   restoreNode: (nodeId: string) => Promise<boolean>;
   setNodeViewState: (args: { from: number; nodeId: string; scrollTop?: number; to: number }) => boolean;
-  seedNodes: (nodes: DebugNodeSeed[]) => Promise<void>;
+  seedNodes: SeedNodeDebugApi['seedNodes'];
   updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }
 
@@ -61,30 +61,6 @@ function isWorkspaceDebugEnabled() {
     isTest: import.meta.env.MODE === 'test',
     workspaceDebugBridge: (window as WorkspaceDebugWindow).electronAPI?.debug?.workspaceDebugBridge
   });
-}
-
-function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode: Node): Record<string, Node> {
-  return Object.fromEntries(
-    nodes.map((node, index) => [
-      node.id,
-      {
-        ...initialNode,
-        anchorLink: node.anchorLink ?? null,
-        bodyStatus: node.content.trim().length > 0 ? 'ready' : 'empty',
-        content: node.content,
-        createdAt,
-        hasContent: node.content.trim().length > 0,
-        hasReveal: node.reveal != null,
-        id: node.id,
-        imageRegions: node.imageRegions ?? null,
-        kind: node.kind ?? initialNode.kind,
-        parentNodeId: node.parentNodeId ?? null,
-        reveal: node.reveal ?? null,
-        title: node.title,
-        updatedAt: `2026-04-08T00:00:${String(index).padStart(2, '0')}.000Z`
-      }
-    ])
-  );
 }
 
 function getExistingNodeState(nodeId: string) {
@@ -182,28 +158,6 @@ function createNodeReadDebugApi(): Pick<
         selection: { from, to }
       });
       return true;
-    }
-  };
-}
-
-function createSeedNodeDebugApi(): Pick<WorkspaceDebugApi, 'seedNodes'> {
-  return {
-    seedNodes: async (nodes) => {
-      const initial = createInitialWorkspaceState(new Date('2026-04-08T00:00:00.000Z'));
-      const seededNodesById = buildSeededNodes(
-        nodes,
-        '2026-04-08T00:00:00.000Z',
-        initial.nodesById['node-1'] ?? Object.values(initial.nodesById)[0]!
-      );
-      useWorkspaceStore.setState({
-        ...initial,
-        activeNodeId: nodes[0]?.id ?? null,
-        isHydrated: true,
-        nodeOrder: nodes.map((node) => node.id),
-        nodesById: seededNodesById,
-        trashedNodeIds: []
-      });
-      await persistSeedNodes(nodes);
     }
   };
 }

@@ -5,6 +5,7 @@ import { cn } from '../../shared/lib/utils';
 import { InspectorSection } from '../../shared/ui';
 
 import { mayHaveOutline, resolveActiveIndex, resolveDisplayItems } from './DocumentOutlineLayerModel';
+import { measureWorkspaceDiagnostic, useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
 const OUTLINE_SCROLL_MARGIN_PX = 32;
 
@@ -44,6 +45,17 @@ function resolveOutlineTreeItems(items: ReturnType<typeof resolveDisplayItems>) 
     ...item,
     hasChildren: (items[index + 1]?.level ?? 0) > item.level
   }));
+}
+
+function useOutlineItems(content: string) {
+  return useMemo(
+    () => measureWorkspaceDiagnostic(
+      'workspace-outline-panel-build',
+      { contentLength: content.length },
+      () => (mayHaveOutline(content) ? resolveDisplayItems(content) : [])
+    ),
+    [content]
+  );
 }
 
 export function resolveOutlineActiveScrollTop(args: {
@@ -102,8 +114,12 @@ export function WorkspaceRightSidebarOutlinePanel({
   emptyDescription = 'This topic has no outline headings yet.',
   onRevealPosition
 }: WorkspaceRightSidebarOutlinePanelProps) {
+  useWorkspaceRenderDiagnostic('workspace-outline-panel-render', {
+    activePosition,
+    contentLength: content.length
+  });
   const activeItemRef = useRef<HTMLButtonElement | null>(null);
-  const outlineItems = useMemo(() => (mayHaveOutline(content) ? resolveDisplayItems(content) : []), [content]);
+  const outlineItems = useOutlineItems(content);
   const treeItems = useMemo(() => resolveOutlineTreeItems(outlineItems), [outlineItems]);
   const activeIndex = useMemo(() => resolveActiveIndex(outlineItems, activePosition), [activePosition, outlineItems]);
   const hasNestedLevels = useMemo(() => treeItems.some((item) => item.level > 1), [treeItems]);

@@ -25,6 +25,7 @@ export {
   saveCreatedWorkspaceNodeMutationSnapshot,
   saveWorkspaceNodeContentMutationWithAnchors
 } from './workspaceRuntimeNodeMutationsNow';
+export type { RuntimeNodeContentMutationDiagnostics } from './workspaceRuntimeNodeMutationsNow';
 export { saveWorkspaceNodeContentSnapshotNow } from './workspaceRuntimeNodeSnapshotNow';
 export { saveWorkspaceNodeMutationSnapshotNow } from './workspaceRuntimeNodeSnapshotNow';
 import type {

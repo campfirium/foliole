@@ -43,16 +43,19 @@ beforeEach(() => {
 });
 
 describe('workspace node mutation runtime acceptance', () => {
-  it('does not update renderer document cache when runtime rejects content mutation', async () => {
+  it('keeps editor content local when native persistence rejects content mutation', async () => {
     vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
     const applied = await actions.updateNodeContent('node-1', '# Runtime rejected');
 
-    expect(applied).toBe(false);
-    expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed');
-    expect(syncWorkspaceNodeDocumentCacheFromNode).not.toHaveBeenCalled();
+    expect(applied).toBe(true);
+    expect(harness.getState().nodesById['node-1']?.content).toBe('# Runtime rejected');
+    expect(syncWorkspaceNodeDocumentCacheFromNode).toHaveBeenCalledWith(expect.objectContaining({
+      content: '# Runtime rejected',
+      id: 'node-1'
+    }));
   });
 
   it('keeps local creation side effects when runtime accepts the created root node', async () => {

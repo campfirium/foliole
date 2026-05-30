@@ -1,3 +1,9 @@
+import {
+  isEditorInputDiagnosticEnabled,
+  logEditorInputDiagnostic,
+  readEditorInputDiagnosticTime
+} from '../../../store/workspaceEditorInputDiagnostics';
+
 import type { EditorDocumentChangeMeta } from './codeMirrorEditorAdapterSupport';
 
 export interface EditorExternalChangeBufferArgs {
@@ -9,7 +15,8 @@ export interface EditorExternalChangeBufferArgs {
 }
 
 export class EditorExternalChangeBuffer {
-  private pendingChange: { content: string; nodeId: string | null } | null = null;
+  private inputChangeSequence = 0;
+  private pendingChange: { changedAtMs: number; content: string; nodeId: string | null; sampleId: number } | null = null;
   private pendingTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly args: EditorExternalChangeBufferArgs) {}
@@ -20,7 +27,16 @@ export class EditorExternalChangeBuffer {
   }
 
   handleDocumentChange(content: string, meta: EditorDocumentChangeMeta) {
-    this.pendingChange = { content, nodeId: meta.nodeId };
+    const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
+    const changedAtMs = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
+    const sampleId = diagnosticsEnabled ? this.inputChangeSequence + 1 : 0;
+    if (diagnosticsEnabled) {
+      this.inputChangeSequence = sampleId;
+    }
+    this.pendingChange = { changedAtMs, content, nodeId: meta.nodeId, sampleId };
+    if (diagnosticsEnabled) {
+      this.logInputChange({ changedAtMs, contentLength: content.length, isComposing: meta.isComposing, nodeId: meta.nodeId, sampleId });
+    }
     if (meta.isComposing) {
       this.clearTimer();
       return;
@@ -67,6 +83,75 @@ export class EditorExternalChangeBuffer {
 
     const nextChange = this.pendingChange;
     this.pendingChange = null;
+    const flushStartedAt = readEditorInputDiagnosticTime();
     this.args.onFlush(nextChange.content, nextChange.nodeId);
+    this.logInputFlush(nextChange, flushStartedAt);
+  }
+
+  private logInputChange(args: {
+    changedAtMs: number;
+    contentLength: number;
+    isComposing: boolean;
+    nodeId: string | null;
+    sampleId: number;
+  }) {
+    if (!isEditorInputDiagnosticEnabled()) {
+      return;
+    }
+    logEditorInputDiagnostic('editor-input-change', {
+      contentLength: args.contentLength,
+      isComposing: args.isComposing,
+      nodeId: args.nodeId,
+      sampleId: args.sampleId
+    });
+    this.scheduleInputFrameDiagnostic(args);
+  }
+
+  private scheduleInputFrameDiagnostic(args: {
+    changedAtMs: number;
+    contentLength: number;
+    nodeId: string | null;
+    sampleId: number;
+  }) {
+    if (typeof requestAnimationFrame !== 'function') {
+      return;
+    }
+    let secondFrameHandle = 0;
+    requestAnimationFrame(() => {
+      const firstFrameAt = readEditorInputDiagnosticTime();
+      logEditorInputDiagnostic('editor-input-change-first-frame', {
+        contentLength: args.contentLength,
+        inputToFrameMs: firstFrameAt - args.changedAtMs,
+        nodeId: args.nodeId,
+        sampleId: args.sampleId
+      });
+      secondFrameHandle = requestAnimationFrame(() => {
+        const secondFrameAt = readEditorInputDiagnosticTime();
+        logEditorInputDiagnostic('editor-input-change-second-frame', {
+          contentLength: args.contentLength,
+          frameGapMs: secondFrameAt - firstFrameAt,
+          inputToSecondFrameMs: secondFrameAt - args.changedAtMs,
+          nodeId: args.nodeId,
+          sampleId: args.sampleId
+        });
+      });
+      void secondFrameHandle;
+    });
+  }
+
+  private logInputFlush(
+    change: { changedAtMs: number; content: string; nodeId: string | null; sampleId: number },
+    flushStartedAt: number
+  ) {
+    if (!isEditorInputDiagnosticEnabled()) {
+      return;
+    }
+    logEditorInputDiagnostic('editor-input-flush', {
+      contentLength: change.content.length,
+      inputToFlushMs: flushStartedAt - change.changedAtMs,
+      nodeId: change.nodeId,
+      sampleId: change.sampleId,
+      totalMs: readEditorInputDiagnosticTime() - flushStartedAt
+    });
   }
 }

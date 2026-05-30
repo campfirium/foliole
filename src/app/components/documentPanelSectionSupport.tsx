@@ -8,6 +8,8 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
+import { DocumentPanelDocumentStatusContent } from './DocumentPanelDocumentStatusContent';
+import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 
 export function buildResolvedDocumentPanelProps(props: DocumentPanelSectionProps) {
@@ -83,4 +85,23 @@ export function buildTopicBacklinks(args: {
     ...backlink,
     context: stripTargetTitleFromContext(backlink.context, activeNode.title)
   }));
+}
+
+export function renderDocumentPanelEmptyContent(args: {
+  documentStatus: string | undefined;
+  isRetryingDocument: boolean;
+  loadingLabel: string | undefined;
+  retryDocumentLoad: () => void;
+}) {
+  if (args.documentStatus === 'failed' || args.documentStatus === 'missing') {
+    return (
+      <DocumentPanelDocumentStatusContent
+        loadingLabel="Document progress"
+        onRetry={args.retryDocumentLoad}
+        retrying={args.isRetryingDocument}
+        status={args.documentStatus}
+      />
+    );
+  }
+  return args.loadingLabel ? <DocumentPanelLoadingContent loadingLabel={args.loadingLabel} /> : undefined;
 }

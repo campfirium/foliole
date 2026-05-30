@@ -1,6 +1,13 @@
+import { memo } from 'react';
+
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 import { AppPanel } from '../../shared/ui';
+import {
+  isEditorInputDiagnosticEnabled,
+  logEditorInputDiagnostic
+} from '../../store/workspaceEditorInputDiagnostics';
 
+import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
 import {
   renderWorkspaceRightSidebarPanel,
   type WorkspaceRightSidebarPanelProps
@@ -10,8 +17,55 @@ export interface WorkspaceRightSidebarProps extends Omit<WorkspaceRightSidebarPa
   outlineActivePosition?: number;
 }
 
-export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
+function areReviewQueueSidebarPropsEqual(previous: WorkspaceRightSidebarProps, next: WorkspaceRightSidebarProps) {
+  const changed = {
+    activeNodeId: previous.activeNodeId !== next.activeNodeId,
+    activePanelId: previous.activePanelId !== next.activePanelId,
+    reviewActiveQueueNodeIds: !areStringArraysEqual(previous.reviewActiveQueueNodeIds ?? [], next.reviewActiveQueueNodeIds ?? []),
+    reviewCurrentNodeId: previous.reviewCurrentNodeId !== next.reviewCurrentNodeId,
+    reviewFlowWindow: !areReviewFlowWindowsEqual(previous.reviewFlowWindow, next.reviewFlowWindow),
+    reviewQueueNodeIds: !areStringArraysEqual(previous.reviewQueueNodeIds, next.reviewQueueNodeIds)
+  };
+  if (isEditorInputDiagnosticEnabled()) {
+    logEditorInputDiagnostic('workspace-right-sidebar-memo-compare', changed);
+  }
+  return !Object.values(changed).some(Boolean);
+}
+
+function areStringArraysEqual(previous: readonly string[], next: readonly string[]) {
+  return previous.length === next.length && previous.every((value, index) => value === next[index]);
+}
+
+function areReviewFlowWindowsEqual(
+  previous: WorkspaceRightSidebarProps['reviewFlowWindow'],
+  next: WorkspaceRightSidebarProps['reviewFlowWindow']
+) {
+  if (!previous || !next) {
+    return previous === next;
+  }
+  return (
+    areStringArraysEqual(previous.queueNodeIds, next.queueNodeIds) &&
+    areStringArraysEqual(previous.readyNodeIds, next.readyNodeIds) &&
+    areStringArraysEqual(previous.upcomingNodeIds, next.upcomingNodeIds)
+  );
+}
+
+function areWorkspaceRightSidebarPropsEqual(previous: WorkspaceRightSidebarProps, next: WorkspaceRightSidebarProps) {
+  if (previous.activePanelId === 'review-queue' && next.activePanelId === 'review-queue') {
+    return areReviewQueueSidebarPropsEqual(previous, next);
+  }
+  return false;
+}
+
+export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
   recordComponentRender('rightSidebar');
+  useWorkspaceRenderDiagnostic('workspace-right-sidebar-render', {
+    activeNodeId: props.activeNodeId,
+    activePanelId: props.activePanelId,
+    nodeOrder: props.nodeOrder,
+    nodesById: props.nodesById,
+    outlineActivePosition: props.outlineActivePosition ?? 0
+  });
   const panelProps = {
     ...props,
     outlineActivePosition: props.outlineActivePosition ?? 0
@@ -28,4 +82,4 @@ export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
       {renderWorkspaceRightSidebarPanel(panelProps)}
     </AppPanel>
   );
-}
+}, areWorkspaceRightSidebarPropsEqual);

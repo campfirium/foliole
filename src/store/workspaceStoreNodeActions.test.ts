@@ -39,10 +39,12 @@ describe('createWorkspaceNodeActions content/title sync', () => {
   });
 
   it('syncs updateNodeContent through runtime command bridge', async () => {
+    vi.useFakeTimers();
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
     await actions.updateNodeContent('node-1', '# Updated title\n\nBody');
+    await vi.advanceTimersByTimeAsync(800);
 
     expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
     expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(

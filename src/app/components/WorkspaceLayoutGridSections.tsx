@@ -15,6 +15,7 @@ import type { StudySessionCompleteSummaryProps } from './StudySessionCompleteSum
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
+import { areWorkspaceListAreaPropsEqual } from './workspaceListAreaMemo';
 import { WorkspaceListEmptyState, WorkspaceListLoadingState } from './WorkspaceListStates';
 
 export interface WorkspaceListAreaProps {
@@ -91,7 +92,7 @@ export const WorkspaceListArea = memo(function WorkspaceListArea(props: Workspac
       })}
     </div>
   );
-});
+}, areWorkspaceListAreaPropsEqual);
 
 function renderWorkspaceListBody(
   props: Pick<

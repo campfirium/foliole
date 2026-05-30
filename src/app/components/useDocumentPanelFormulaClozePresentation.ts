@@ -13,6 +13,8 @@ import {
 } from '../../features/formula-cloze/model/formulaClozePresentation';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
+import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
+
 function registerParentFormulaPresentation(editorNodeId: string, activeNode: Node, nodesById: Record<string, Node>, trashedNodeIds: string[]) {
   const regions = deriveFormulaClozeRegionsFromChildren({ nodeId: activeNode.id, nodesById, trashedNodeIds });
   registerFormulaClozeEditorPresentation(editorNodeId, {
@@ -56,14 +58,20 @@ export function useDocumentPanelFormulaClozePresentation(args: {
   trashedNodeIds: string[];
 }) {
   useLayoutEffect(() => {
-    if (!args.editorNodeId || !args.activeNode) return undefined;
-    if (isFormulaClozeNode(args.activeNode)) {
-      return registerFocusedFormulaPresentation(
-        args.editorNodeId,
-        args.activeNode,
-        getFormulaClozeAnswerEditorNodeId(args.editorNodeId)
-      );
-    }
-    return registerParentFormulaPresentation(args.editorNodeId, args.activeNode, args.nodesById, args.trashedNodeIds);
+    return measureWorkspaceDiagnostic('document-panel-formula-cloze-layout-effect', {
+      activeNodeId: args.activeNode?.id,
+      editorNodeId: args.editorNodeId,
+      nodeCount: Object.keys(args.nodesById).length
+    }, () => {
+      if (!args.editorNodeId || !args.activeNode) return undefined;
+      if (isFormulaClozeNode(args.activeNode)) {
+        return registerFocusedFormulaPresentation(
+          args.editorNodeId,
+          args.activeNode,
+          getFormulaClozeAnswerEditorNodeId(args.editorNodeId)
+        );
+      }
+      return registerParentFormulaPresentation(args.editorNodeId, args.activeNode, args.nodesById, args.trashedNodeIds);
+    });
   }, [args.activeNode, args.editorNodeId, args.nodesById, args.trashedNodeIds]);
 }

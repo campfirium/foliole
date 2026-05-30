@@ -12,8 +12,9 @@ import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import { useEditorAdapter } from './markdownEditorAdapter';
 import { GestureTrailOverlay, buildGestureTrailPath } from './markdownEditorGestureTrail';
 import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
-import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
-import { handleMarkdownEditorKeyDownCapture, useReviewEditorEscapeBlur } from './markdownEditorReviewEscape';
+import { useMarkdownEditorPropsDiagnostic } from './markdownEditorInputDiagnostic';
+import { useMarkdownEditorModelEffects } from './markdownEditorModelEffects';
+import { handleMarkdownEditorKeyDownCapture } from './markdownEditorReviewEscape';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 import { handleEditorUndoRedoBeforeInput } from './markdownEditorUndoRedoShortcut';
 import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
@@ -129,6 +130,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     hostRef,
     props.debugId,
     props.onChange,
+    props.onDocumentInput,
     props.onReady,
     props.value,
     props.textAnchorDecorations,
@@ -144,23 +146,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
   const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
   const { closePreview: closeMermaidPreview, previewMermaid } = useMarkdownMermaidPreview(hostRef);
   const { closePreview: closeTablePreview, previewTable } = useMarkdownTablePreview(hostRef);
-  useEditorLayoutEffects(
-    adapterRef,
-    props.nodeId,
-    props.readingRestoreCommandId,
-    props.readingRestoreScrollTop,
-    props.readingSelection,
-    props.readingTargetViewportMode,
-    props.readingTargetViewportRatio,
-    props.onBeginApplyingReadingPosition,
-    props.onCompleteApplyingReadingPosition,
-    props.onSetReadingPositionSelection,
-    props.onShouldSuppressSelectionRestore,
-    props.value,
-    props.lineDiffDecorations
-  );
-  useEditorAppearanceEffects(adapterRef, props.hideTitleHeading ?? false, props.nodeId);
-  useReviewEditorEscapeBlur({ enabled: props.reviewCaretLineHighlight === true, rootRef });
+  useMarkdownEditorModelEffects({ adapterRef, props, rootRef });
   const surface = useMarkdownEditorSurfaceModel({
     adapterRef,
     bindings,
@@ -182,6 +168,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
 }
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
+  useMarkdownEditorPropsDiagnostic(props);
   const { closeMermaidPreview, closePreview, closeTablePreview, hostRef, previewImage, previewMermaid, previewTable, rootRef, surface } = useMarkdownEditorModel(props);
 
   return (

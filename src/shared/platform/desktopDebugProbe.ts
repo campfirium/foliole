@@ -89,6 +89,10 @@ function cloneArgs(args: unknown) {
   return cloneValue(args);
 }
 
+function cloneFailureArgs(args: unknown) {
+  return cloneArgs(args);
+}
+
 function getSnapshot(): DesktopDebugProbeSnapshot {
   return {
     bridgeAvailable: Boolean(getElectronAPI()),
@@ -126,10 +130,10 @@ export function recordDesktopDebugInvoke(entry: {
     return;
   }
   const nextEntry: DesktopDebugInvokeRecord = {
-    ...(cloneArgs(entry.args) !== undefined ? { args: cloneArgs(entry.args) } : {}),
     command: entry.command,
     durationMs: entry.durationMs,
     ...(entry.error !== undefined ? { error: toErrorDetails(entry.error) } : {}),
+    ...(entry.status === 'rejected' ? { args: cloneFailureArgs(entry.args) } : {}),
     status: entry.status,
     timestamp: new Date().toISOString()
   };
@@ -141,7 +145,7 @@ export function recordDesktopDebugInvokeFailure(entry: { args?: unknown; command
     return;
   }
   const nextEntry: DesktopDebugInvokeFailure = {
-    args: cloneArgs(entry.args),
+    args: cloneFailureArgs(entry.args),
     command: entry.command,
     error: toErrorDetails(entry.error),
     timestamp: new Date().toISOString()

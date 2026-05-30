@@ -12,66 +12,28 @@ import {
   type UpdateNodeContentLocalState,
   type UpdateNodeContentMetrics
 } from './workspaceNodeContentUpdateDiagnostics';
-import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
-import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
-import {
-  hasWorkspaceNodeMutationRuntime,
-  syncNodeContentWithAnchorsMutationToRuntime
-} from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
+import {
+  applyNodeContentLocalPatch,
+  scheduleNodeContentRuntimePersist
+} from './workspaceStoreContentRuntimePersist';
 import { syncTextAnchorLocatorsForParentContent } from './workspaceTextAnchorLocatorSync';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
-async function applyNodeContentRuntimePatch(args: {
-  diagnosticsEnabled: boolean;
-  localPatch: Partial<WorkspaceState> | null;
-  locatorUpdatedNodesForSync: WorkspaceState['nodesById'][string][];
-  metrics: UpdateNodeContentMetrics;
-  nextNodeForSync: WorkspaceState['nodesById'][string];
-  nodeOrderForSync: string[];
-  set: WorkspaceSet;
-}) {
-  const shouldUseLocalFallback = !hasWorkspaceNodeMutationRuntime();
-  const mutationStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-  const result = await syncNodeContentWithAnchorsMutationToRuntime(
-    args.nextNodeForSync,
-    args.locatorUpdatedNodesForSync,
-    args.nodeOrderForSync
-  );
-  args.metrics.runtimeMutationMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - mutationStartedAt : 0;
-  let applied = false;
-  const runtimeSetStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-  args.set((state) => {
-    const patchBuildStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-    const acceptedPatch = result
-      ? createWorkspaceNodeMutationPatch(state, result)
-      : shouldUseLocalFallback ? args.localPatch : null;
-    if (args.diagnosticsEnabled) {
-      args.metrics.patchBuildMs += readEditorInputDiagnosticTime() - patchBuildStartedAt;
-    }
-    if (!acceptedPatch) return state;
-    applied = true;
-    return acceptedPatch;
-  });
-  args.metrics.runtimeSetMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - runtimeSetStartedAt : 0;
-  if (applied) {
-    const cacheSyncStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-    syncWorkspaceNodeDocumentCacheFromNode(args.nextNodeForSync);
-    args.locatorUpdatedNodesForSync.forEach(syncWorkspaceNodeDocumentCacheFromNode);
-    args.metrics.runtimeCacheSyncMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - cacheSyncStartedAt : 0;
+function resolveNodeContentUpdateBlockReason(state: WorkspaceState, nodeId: string, node: WorkspaceNode) {
+  if (!isNodeDocumentLoaded(node)) {
+    return 'document-not-loaded';
   }
-  return applied;
-}
-
-function isNodeContentUpdateBlocked(state: WorkspaceState, nodeId: string, node: WorkspaceNode) {
-  return (
-    !isNodeDocumentLoaded(node) ||
-    isProtectedRootNode(node) ||
-    isNodeContentLocked(nodeId, state.nodeOrder, state.nodesById, new Set(state.trashedNodeIds))
-  );
+  if (isProtectedRootNode(node)) {
+    return 'protected-root-node';
+  }
+  if (isNodeContentLocked(nodeId, state.nodeOrder, state.nodesById, new Set(state.trashedNodeIds))) {
+    return 'content-locked';
+  }
+  return null;
 }
 
 function prepareNodeContentLocalState(args: {
@@ -84,8 +46,16 @@ function prepareNodeContentLocalState(args: {
 }) {
   const guardStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
   const node = args.state.nodesById[args.nodeId];
-  if (!node || isNodeContentUpdateBlocked(args.state, args.nodeId, node)) {
+  if (!node) {
     args.metrics.wasGuarded = true;
+    args.metrics.guardReason = 'node-missing';
+    args.metrics.guardMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - guardStartedAt : 0;
+    return args.state;
+  }
+  const blockReason = resolveNodeContentUpdateBlockReason(args.state, args.nodeId, node);
+  if (blockReason) {
+    args.metrics.wasGuarded = true;
+    args.metrics.guardReason = blockReason;
     args.metrics.guardMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - guardStartedAt : 0;
     return args.state;
   }
@@ -168,13 +138,13 @@ async function updateNodeContent(set: WorkspaceSet, nodeId: string, content: str
   const localState = collectUpdateNodeContentLocalState({ content, diagnosticsEnabled, metrics, nodeId, set });
   if (!localState.nextNodeForSync) {
     if (diagnosticsEnabled) {
-      logUpdateNodeContentDiagnostic({ applied: false, contentLength: content.length, localState, metrics });
+      logUpdateNodeContentDiagnostic({ applied: false, contentLength: content.length, localState, metrics, nodeId });
     }
     return false;
   }
   const nextNodeForSync = localState.nextNodeForSync;
   const runtimePatchStartedAt = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-  const applied = await applyNodeContentRuntimePatch({
+  const applied = applyNodeContentLocalPatch({
     ...localState,
     diagnosticsEnabled,
     metrics,
@@ -182,8 +152,21 @@ async function updateNodeContent(set: WorkspaceSet, nodeId: string, content: str
     set
   });
   metrics.runtimePatchMs = diagnosticsEnabled ? readEditorInputDiagnosticTime() - runtimePatchStartedAt : 0;
+  scheduleNodeContentRuntimePersist({
+    contentLength: content.length,
+    diagnosticsEnabled,
+    localState,
+    metrics,
+    nextNodeForSync
+  });
+  metrics.runtimeAwaitContinuationGapMs = diagnosticsEnabled
+    ? metrics.runtimePatchMs - metrics.runtimeApplyTotalMs
+    : 0;
+  metrics.rendererRuntimeGapMs = diagnosticsEnabled
+    ? metrics.runtimePatchMs - metrics.runtimeMutationMs - metrics.runtimeSetMs - metrics.runtimeCacheSyncMs
+    : 0;
   if (diagnosticsEnabled) {
-    logUpdateNodeContentDiagnostic({ applied, contentLength: content.length, localState, metrics });
+    logUpdateNodeContentDiagnostic({ applied, contentLength: content.length, localState, metrics, nodeId });
   }
   return applied;
 }

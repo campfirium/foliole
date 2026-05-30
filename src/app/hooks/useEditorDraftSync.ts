@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
 import type { EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
+import { deferNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
+import { useEditorDraftInputHandler } from './useEditorDraftInputHandler';
 import {
   clearDraftTimer,
   runPendingTitleRefresh,
@@ -82,6 +84,7 @@ function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
     if (sourceNodeId === args.nodeId) {
       args.setDraftState({ content, nodeId: sourceNodeId });
     }
+    deferNodeContentRuntimePersist(sourceNodeId);
     args.setPendingTitleRefresh({ content, nodeId: sourceNodeId });
     if (committedContent !== null && content === committedContent) {
       clearDraftTimer(args.timerRef);
@@ -214,6 +217,7 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     setPendingTitleRefresh,
     timerRef
   });
+  const handleEditorInput = useEditorDraftInputHandler(nodeId);
 
   const editorContent = useMemo(
     () => (nodeId && draftState.nodeId === nodeId ? draftState.content : committedContent),
@@ -231,5 +235,5 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     setDraftState
   });
 
-  return { editorContent, flushDraft: () => flushDraft(false).flushed, handleEditorChange };
+  return { editorContent, flushDraft: () => flushDraft(false).flushed, handleEditorChange, handleEditorInput };
 }

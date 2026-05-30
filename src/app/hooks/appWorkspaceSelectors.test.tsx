@@ -49,3 +49,33 @@ it('exposes canonical visible and trash membership to desktop consumers', () => 
   expect(result.current.nodeOrder).toEqual(['visible-1', 'restored-1']);
   expect(result.current.trashedNodeIds).toEqual(['deleted-1']);
 });
+
+it('keeps membership arrays stable when only node content changes', () => {
+  useWorkspaceStore.setState({
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      'node-1': createNode('node-1', { content: 'Before', hasContent: true }),
+      'node-2': createNode('node-2')
+    },
+    trashedNodeDeletedAtById: {},
+    trashedNodeIds: []
+  });
+
+  const { result } = renderHook(() => useWorkspaceSelectors());
+  const nodeOrder = result.current.nodeOrder;
+  const trashedNodeIds = result.current.trashedNodeIds;
+
+  useWorkspaceStore.setState((state) => ({
+    nodesById: {
+      ...state.nodesById,
+      'node-1': {
+        ...state.nodesById['node-1']!,
+        content: 'After',
+        updatedAt: '2026-05-24T00:03:00.000Z'
+      }
+    }
+  }));
+
+  expect(result.current.nodeOrder).toBe(nodeOrder);
+  expect(result.current.trashedNodeIds).toBe(trashedNodeIds);
+});

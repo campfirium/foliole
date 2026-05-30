@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { selectCanonicalWorkspaceMembershipView } from '../../store/workspaceCanonicalSelectors';
@@ -95,14 +95,65 @@ function omitLegacyTrashDeletedAtMap<T extends { trashedNodeDeletedAtById: unkno
   return rest;
 }
 
-export function useWorkspaceSelectors() {
-  const ws = useWorkspaceStore(useShallow(selectWorkspaceHookState));
-  const membership = useMemo(() => selectCanonicalWorkspaceMembershipView(ws), [
+type WorkspaceMembershipView = ReturnType<typeof selectCanonicalWorkspaceMembershipView>;
+
+function areStringArraysEqual(previous: readonly string[], next: readonly string[]) {
+  return previous.length === next.length && previous.every((value, index) => value === next[index]);
+}
+
+function areStringRecordsEqual(previous: Record<string, string>, next: Record<string, string>) {
+  const previousKeys = Object.keys(previous);
+  const nextKeys = Object.keys(next);
+  return (
+    previousKeys.length === nextKeys.length &&
+    previousKeys.every((key) => previous[key] === next[key])
+  );
+}
+
+function stabilizeWorkspaceMembershipView(
+  previous: WorkspaceMembershipView | null,
+  next: WorkspaceMembershipView
+): WorkspaceMembershipView {
+  if (!previous) {
+    return next;
+  }
+  const nodeOrder = areStringArraysEqual(previous.nodeOrder, next.nodeOrder) ? previous.nodeOrder : next.nodeOrder;
+  const trashedNodeIds = areStringArraysEqual(previous.trashedNodeIds, next.trashedNodeIds)
+    ? previous.trashedNodeIds
+    : next.trashedNodeIds;
+  return {
+    ...next,
+    nodeOrder,
+    reviewQueueSource: {
+      ...next.reviewQueueSource,
+      nodeOrder,
+      trashedNodeIds
+    },
+    trashedNodeDeletedAtById: areStringRecordsEqual(previous.trashedNodeDeletedAtById, next.trashedNodeDeletedAtById)
+      ? previous.trashedNodeDeletedAtById
+      : next.trashedNodeDeletedAtById,
+    trashedNodeIds
+  };
+}
+
+function useStableWorkspaceMembershipView(ws: ReturnType<typeof selectWorkspaceHookState>) {
+  const previousRef = useRef<WorkspaceMembershipView | null>(null);
+  return useMemo(() => {
+    const next = selectCanonicalWorkspaceMembershipView(ws);
+    const stable = stabilizeWorkspaceMembershipView(previousRef.current, next);
+    previousRef.current = stable;
+    return stable;
+  }, [
     ws.nodeOrder,
     ws.nodesById,
     ws.trashedNodeDeletedAtById,
     ws.trashedNodeIds
   ]);
+}
+
+export function useWorkspaceSelectors() {
+  const ws = useWorkspaceStore(useShallow(selectWorkspaceHookState));
+  const membership = useStableWorkspaceMembershipView(ws);
   const layout = useWorkspaceLayoutState();
   const publicWorkspaceState = omitLegacyTrashDeletedAtMap(ws);
   return {

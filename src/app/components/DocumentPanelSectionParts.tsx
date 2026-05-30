@@ -9,6 +9,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
+import { startDocumentPanelContentDiagnostic } from './documentPanelContentDiagnostic';
 import { createDocumentPanelPdfCache } from './documentPanelPdfCache';
 import { resolvePdfDocumentSurface } from './documentPanelPdfView';
 import { resolveDocumentPanelContentBody } from './documentPanelSpecialContent';
@@ -184,6 +185,7 @@ function buildDocumentPanelContentBodyArgs(
 }
 
 export function DocumentPanelContent(props: DocumentPanelContentProps) {
+  const finishDiagnostic = startDocumentPanelContentDiagnostic(props);
   const [isActivePdfCachedVisible, setIsActivePdfCachedVisible] = useState(false);
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const {
@@ -212,7 +214,7 @@ export function DocumentPanelContent(props: DocumentPanelContentProps) {
     setIsActivePdfCachedVisible
   });
 
-  return resolveDocumentPanelContentBody(
+  const content = resolveDocumentPanelContentBody(
     buildDocumentPanelContentBodyArgs(props, {
       activeNode,
       isActivePdfCachedVisible,
@@ -223,4 +225,6 @@ export function DocumentPanelContent(props: DocumentPanelContentProps) {
       shouldHideEditorBodyDuringSourceLoad
     })
   );
+  finishDiagnostic({ hasPdfSurface: Boolean(pdfDocumentSurface), shouldRenderEditorBody });
+  return content;
 }

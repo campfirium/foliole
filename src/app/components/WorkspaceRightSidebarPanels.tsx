@@ -4,6 +4,7 @@ import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes'
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
+import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
 import {
   isWorkspaceRightPanelAvailable,
   resolveWorkspaceRightPanelContext
@@ -44,20 +45,30 @@ export interface WorkspaceRightSidebarPanelProps {
 }
 
 export function renderWorkspaceRightSidebarPanel(props: WorkspaceRightSidebarPanelProps) {
-  const context = resolveWorkspaceRightPanelContext({
-    activeNodeId: props.activeNodeId,
-    hasExternalDocument: Boolean(props.outlineDocument),
-    nodesById: props.nodesById
-  });
-  if (!isWorkspaceRightPanelAvailable(props.activePanelId, context)) {
-    return null;
-  }
-  if (props.activePanelId === 'dev') return renderDevPanel(props);
-  if (props.activePanelId === 'performance') return renderPerformancePanel(props);
-  if (props.activePanelId === 'highlights') return renderHighlightsPanel(props);
-  if (props.activePanelId === 'outline') return renderOutlinePanel(props);
-  if (props.activePanelId === 'backlinks') return renderBacklinksPanel(props);
-  return renderReviewQueuePanel(props);
+  return measureWorkspaceDiagnostic(
+    'workspace-right-sidebar-panel-select',
+    {
+      activeNodeId: props.activeNodeId,
+      activePanelId: props.activePanelId,
+      nodeCount: Object.keys(props.nodesById).length
+    },
+    () => {
+      const context = resolveWorkspaceRightPanelContext({
+        activeNodeId: props.activeNodeId,
+        hasExternalDocument: Boolean(props.outlineDocument),
+        nodesById: props.nodesById
+      });
+      if (!isWorkspaceRightPanelAvailable(props.activePanelId, context)) {
+        return null;
+      }
+      if (props.activePanelId === 'dev') return renderDevPanel(props);
+      if (props.activePanelId === 'performance') return renderPerformancePanel(props);
+      if (props.activePanelId === 'highlights') return renderHighlightsPanel(props);
+      if (props.activePanelId === 'outline') return renderOutlinePanel(props);
+      if (props.activePanelId === 'backlinks') return renderBacklinksPanel(props);
+      return renderReviewQueuePanel(props);
+    }
+  );
 }
 
 const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {

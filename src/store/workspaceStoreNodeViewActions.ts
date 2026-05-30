@@ -1,3 +1,8 @@
+import {
+  isEditorInputDiagnosticEnabled,
+  logEditorInputDiagnostic,
+  readEditorInputDiagnosticTime
+} from './workspaceEditorInputDiagnostics';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
@@ -40,15 +45,23 @@ function hasSameNodeViewState(
 
 export function createSetNodeViewStateAction(set: WorkspaceSet): WorkspaceState['setNodeViewState'] {
   return (nodeId, viewState) => {
+    const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
+    const startedAt = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
+    let applied = false;
+    let reason = 'unchanged';
     set((state) => {
       if (!state.nodesById[nodeId]) {
+        reason = 'missing-node';
         return state;
       }
       const previousViewState = state.nodeViewById[nodeId];
       const normalizedViewState = normalizeNodeViewState(viewState, previousViewState);
       if (!normalizedViewState || hasSameNodeViewState(previousViewState, normalizedViewState)) {
+        reason = normalizedViewState ? 'unchanged' : 'empty';
         return state;
       }
+      applied = true;
+      reason = 'changed';
       return {
         nodeViewById: {
           ...state.nodeViewById,
@@ -56,5 +69,15 @@ export function createSetNodeViewStateAction(set: WorkspaceSet): WorkspaceState[
         }
       };
     });
+    if (diagnosticsEnabled) {
+      logEditorInputDiagnostic('node-view-state-set', {
+        applied,
+        nodeId,
+        reason,
+        selectionFrom: viewState?.selection?.from,
+        selectionTo: viewState?.selection?.to,
+        totalMs: readEditorInputDiagnosticTime() - startedAt
+      });
+    }
   };
 }

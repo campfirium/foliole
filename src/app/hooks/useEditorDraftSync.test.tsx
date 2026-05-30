@@ -152,7 +152,7 @@ function registerNodeSwitchCommitIsolationTest() {
     });
 
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(1200);
     });
 
     expect(alphaCommit).toHaveBeenCalledWith('node-1', 'Alpha draft');
@@ -179,7 +179,7 @@ function registerStaleNodeChangeTest() {
     expect(result.current.editorContent).toBe('Beta body');
 
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(1200);
     });
 
     expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha late draft');
@@ -205,7 +205,7 @@ function registerCommittedContentRefreshTest() {
     expect(result.current.editorContent).toBe('Alpha local draft');
 
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(1200);
     });
 
     expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha local draft');

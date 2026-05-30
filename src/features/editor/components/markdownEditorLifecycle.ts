@@ -4,6 +4,11 @@ import {
   markEditorContentSyncCompleted,
   markEditorContentSyncStarted
 } from '../../../shared/platform/performanceDiagnosticsProbe';
+import {
+  isEditorInputDiagnosticEnabled,
+  logEditorInputDiagnostic,
+  readEditorInputDiagnosticTime
+} from '../../../store/workspaceEditorInputDiagnostics';
 import { FORMULA_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../formula-cloze/model/formulaClozePresentation';
 import { IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../image-cloze/model/imageClozePresentation';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
@@ -23,12 +28,25 @@ function useEditorContentSync(
   lineDiffDecorations: EditorDiffDecorations | null | undefined
 ) {
   useLayoutEffect(() => {
+    const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
+    const startedAt = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
+    const adapter = adapterRef.current;
+    const previousContent = diagnosticsEnabled ? adapter?.getContent() ?? '' : '';
     if (nodeId) {
       markEditorContentSyncStarted(nodeId, `content:${value.length}`);
     }
-    adapterRef.current?.setContent(value);
+    adapter?.setContent(value);
     if (nodeId) {
       markEditorContentSyncCompleted(nodeId, `content:${value.length}`);
+    }
+    if (diagnosticsEnabled) {
+      logEditorInputDiagnostic('editor-content-sync', {
+        changed: previousContent !== value,
+        nodeId,
+        previousLength: previousContent.length,
+        totalMs: readEditorInputDiagnosticTime() - startedAt,
+        valueLength: value.length
+      });
     }
   }, [adapterRef, nodeId, value]);
 

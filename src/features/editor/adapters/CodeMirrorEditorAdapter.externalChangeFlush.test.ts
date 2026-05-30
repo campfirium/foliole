@@ -7,12 +7,14 @@ function createAdapter() {
   const host = document.createElement('div');
   document.body.append(host);
   const onChange = vi.fn();
+  const onDocumentInput = vi.fn();
   const adapter = new CodeMirrorEditorAdapter(host, {
     initialContent: 'old content',
-    onChange
+    onChange,
+    onDocumentInput
   });
   const view = (adapter as unknown as { view: EditorView }).view;
-  return { adapter, onChange, view };
+  return { adapter, onChange, onDocumentInput, view };
 }
 
 describe('CodeMirrorEditorAdapter external change flush boundaries', () => {
@@ -35,6 +37,22 @@ describe('CodeMirrorEditorAdapter external change flush boundaries', () => {
     expect(onChange).toHaveBeenCalledWith('old content draft', { nodeId: 'node-A' });
     vi.advanceTimersByTime(300);
     expect(onChange).toHaveBeenCalledTimes(1);
+    adapter.destroy();
+  });
+
+  it('reports raw document input before the buffered content flush', () => {
+    vi.useFakeTimers();
+    const { adapter, onChange, onDocumentInput, view } = createAdapter();
+    adapter.setNodeId('node-A');
+
+    view.dispatch({ changes: { from: 11, insert: ' draft' } });
+
+    expect(onDocumentInput).toHaveBeenCalledWith({ isComposing: false, nodeId: 'node-A' });
+    expect(onChange).not.toHaveBeenCalled();
+
+    vi.runAllTimers();
+
+    expect(onChange).toHaveBeenCalledWith('old content draft', { nodeId: 'node-A' });
     adapter.destroy();
   });
 });

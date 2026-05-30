@@ -18,6 +18,7 @@ import {
   softDeleteWorkspaceNodes
 } from '../shared/platform/workspaceRuntimeRepository';
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
+import type { RuntimeNodeContentMutationDiagnostics } from '../shared/platform/workspaceRuntimeRepository';
 import type {
   WorkspaceReadingProgressSavePayload,
   WorkspaceRelearnNodePayload,
@@ -77,9 +78,17 @@ export function syncNodeContentWithAnchorsToRuntime(parentNode: Node, affectedAn
 export async function syncNodeContentWithAnchorsMutationToRuntime(
   parentNode: Node,
   affectedAnchorNodes: Node[],
-  nodeOrder: string[]
+  nodeOrder: string[],
+  diagnosticsEnabled = false,
+  diagnostics?: RuntimeNodeContentMutationDiagnostics
 ): Promise<WorkspaceNodeMutationPatchResult | null> {
-  return saveWorkspaceNodeContentMutationWithAnchors({ parentNode, affectedAnchorNodes, nodeOrder });
+  return saveWorkspaceNodeContentMutationWithAnchors({
+    ...(diagnostics ? { diagnostics } : {}),
+    diagnosticsEnabled,
+    parentNode,
+    affectedAnchorNodes,
+    nodeOrder
+  });
 }
 
 export function syncCreateNodeToRuntime(node: Node, position?: number) {

@@ -11,8 +11,10 @@ import {
   selectWorkspaceDocumentSurfaceProps
 } from './workspaceDocumentSurfaceProps';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
+import { useWorkspaceGridContentDiagnostic } from './workspaceGridContentDiagnostic';
 import { resolveOutlineActivePosition, resolveShowDocumentOutline } from './workspaceGridContentModel';
 import { selectWorkspaceGridColumnProps } from './workspaceGridContentProps';
+import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
 import { renderWorkspaceGridColumns } from './workspaceLayoutGridContentColumns';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -36,6 +38,7 @@ export function WorkspaceGridContent({
   onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
   props: WorkspaceGridContentSource;
 }) {
+  const finishDiagnostic = useWorkspaceGridContentDiagnostic({ documentNodeId, props });
   const listNodesById = useProjectedListNodesById(props.nodeList.nodesById);
   const externalPreviewController = useExternalPreviewController(props);
   const documentSurfaceProps = useWorkspaceGridDocumentSurfaceProps({
@@ -52,6 +55,10 @@ export function WorkspaceGridContent({
     readingSelection: props.readingPosition.getReadingPositionSelection()
   });
 
+  finishDiagnostic({
+    hasExternalOutline: Boolean(externalPreviewController.outlineDocument),
+    listNodeCount: Object.keys(listNodesById).length
+  });
   return (
     <WorkspaceLayoutGridFrame
       isImmersiveMode={props.layoutChrome.isImmersiveMode}
@@ -154,9 +161,14 @@ function useExternalPreviewController(props: WorkspaceGridContentSource) {
 function useProjectedListNodesById(nodesById: WorkspaceLayoutProps['nodeList']['nodesById']) {
   const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
   return useMemo(() => {
-    const nextProjection = projectWorkspaceListNodesById(
-      nodesById,
-      previousListNodesByIdRef.current
+    const previousProjection = previousListNodesByIdRef.current;
+    const nextProjection = measureWorkspaceDiagnostic(
+      'workspace-grid-list-projection',
+      {
+        nodeCount: Object.keys(nodesById).length,
+        previousNodeCount: Object.keys(previousProjection).length
+      },
+      () => projectWorkspaceListNodesById(nodesById, previousProjection)
     );
     previousListNodesByIdRef.current = nextProjection;
     return nextProjection;

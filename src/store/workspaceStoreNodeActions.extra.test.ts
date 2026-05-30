@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   syncCreateNodeMutationToRuntime,
@@ -9,6 +9,7 @@ import {
   syncNodeContentWithAnchorsMutationToRuntime,
   syncNodeOrderToRuntime
 } from './workspaceRuntimeSync';
+import { deferNodeContentRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -33,6 +34,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
 
 function registerContentEditCoverage() {
   it('clears imported title-heading hiding after manual content edits', async () => {
+    vi.useFakeTimers();
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const node = harness.getState().nodesById['node-1']!;
     if (!node) throw new Error('missing seed node');
@@ -45,6 +47,7 @@ function registerContentEditCoverage() {
     const actions = createWorkspaceNodeActions(harness.setState);
 
     await actions.updateNodeContent('node-1', '# Updated title\n\nBody');
+    await vi.advanceTimersByTimeAsync(800);
 
     expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -114,6 +117,36 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
 
   registerContentEditCoverage();
   registerDerivedTitleCoverage();
+
+  it('defers pending content runtime persistence while the editor keeps changing', async () => {
+    vi.useFakeTimers();
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    await actions.updateNodeContent('node-1', 'First draft');
+    await vi.advanceTimersByTimeAsync(700);
+    deferNodeContentRuntimePersist('node-1');
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(syncNodeContentWithAnchorsMutationToRuntime).not.toHaveBeenCalled();
+
+    await actions.updateNodeContent('node-1', 'Latest draft');
+    await vi.advanceTimersByTimeAsync(800);
+
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'node-1',
+        content: 'Latest draft'
+      }),
+      [],
+      expect.any(Array)
+    );
+  });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {

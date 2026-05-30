@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { memo, useMemo, useRef } from 'react';
 
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import type { NodeListState } from '../../features/nodes/components/NodeListTreeState';
@@ -22,6 +22,7 @@ import {
   type TopicChildrenByParent
 } from './workspaceTopicTreeLazyRows';
 import { WorkspaceTopicTreeMenu } from './WorkspaceTopicTreeMenu';
+import { areWorkspaceTopicTreePropsEqual, useWorkspaceTopicTreeRenderDiagnostic } from './workspaceTopicTreeRenderDiagnostic';
 import { resolveWorkspaceTopicTreeReviewScroll } from './workspaceTopicTreeReviewScroll';
 import { useWorkspaceTopicTreeSelection } from './workspaceTopicTreeSelection';
 import { renderWorkspaceTopicTreeShell } from './WorkspaceTopicTreeShell';
@@ -154,9 +155,27 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
   return { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility };
 }
 
-export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
+function resolveWorkspaceTopicTreeScrollState(
+  props: WorkspaceTopicTreeProps,
+  focusedNodeId: string | null,
+  visibleRows: ReturnType<typeof useWorkspaceTopicTreeData>['lazyModel']['rows']
+) {
+  return {
+    focusedRowIndex: focusedNodeId ? visibleRows.findIndex((row) => row.node.id === focusedNodeId) : -1,
+    reviewScroll: resolveWorkspaceTopicTreeReviewScroll({
+      focusedNodeId,
+      forceVisibleNodeId: props.forceVisibleNodeId,
+      nodesById: props.nodesById,
+      rows: visibleRows
+    })
+  };
+}
+
+export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility } = useWorkspaceTopicTreeData(props);
+  const treeData = useWorkspaceTopicTreeData(props);
+  useWorkspaceTopicTreeRenderDiagnostic(props, treeData);
+  const { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility } = treeData;
   const { collapsedNodeIds, collapsibleNodeIds, rows: visibleRows, searchQuery, setCollapsedNodeIds, setSearchQuery } = lazyModel;
   const focusedNodeId = resolveWorkspaceTopicTreeFocusNodeId({
     activeNodeId: props.activeNodeId,
@@ -165,13 +184,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     rows: visibleRows
   });
   const hasCollapsedNodes = collapsibleNodeIds.length > 0 && collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId));
-  const focusedRowIndex = focusedNodeId ? visibleRows.findIndex((row) => row.node.id === focusedNodeId) : -1;
-  const reviewScroll = resolveWorkspaceTopicTreeReviewScroll({
-    focusedNodeId,
-    forceVisibleNodeId: props.forceVisibleNodeId,
-    nodesById: props.nodesById,
-    rows: visibleRows
-  });
+  const { focusedRowIndex, reviewScroll } = resolveWorkspaceTopicTreeScrollState(props, focusedNodeId, visibleRows);
   const interaction = useWorkspaceTopicTreeInteraction({
     activeFolderId: props.activeFolderId,
     activeNodeId: focusedNodeId,
@@ -214,4 +227,4 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     viewHideDismissedTopics: dismissedTopicVisibility.viewHideDismissedTopics,
     visibleRows
   });
-}
+}, areWorkspaceTopicTreePropsEqual);
