@@ -1,0 +1,29 @@
+title: "[Q&A] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask setup, workflow, and usage questions here. Include enough context for someone to understand your Foliole setup.
+  - type: input
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to do?
+      placeholder: I want to use Foliole to...
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Current setup
+      description: Share the relevant platform, source type, review state, sync setup, or steps you tried.
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What result were you hoping for?
+    validations:
+      required: false

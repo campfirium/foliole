@@ -1,0 +1,18 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Ideas and feature requests
+    url: https://github.com/campfirium/foliole/discussions/categories/ideas
+    about: Share new feature ideas, workflow gaps, and larger product changes.
+
+  - name: Q&A and setup help
+    url: https://github.com/campfirium/foliole/discussions/categories/q-a
+    about: Ask usage, setup, reading workflow, sync, or review questions.
+
+  - name: General discussion
+    url: https://github.com/campfirium/foliole/discussions/categories/general
+    about: Discuss incremental reading, local-first knowledge work, and Foliole workflows.
+
+  - name: Show and tell
+    url: https://github.com/campfirium/foliole/discussions/categories/show-and-tell
+    about: Share reading systems, review setups, screenshots, and workflow examples.

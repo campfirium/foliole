@@ -1,0 +1,29 @@
+title: "[Idea] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share Foliole feature ideas and workflow gaps here. If an idea already exists, add a thumbs-up reaction instead of posting "+1".
+  - type: input
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the reading, review, import, sync, or organization friction.
+      placeholder: When I use Foliole to..., I need...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What would you like Foliole to do?
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or references
+      description: Share comparable tools, screenshots, workflow notes, or sample data shape.
+    validations:
+      required: false

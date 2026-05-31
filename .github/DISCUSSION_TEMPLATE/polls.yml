@@ -1,0 +1,33 @@
+title: "[Poll] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use polls to compare Foliole workflow preferences, priorities, or product tradeoffs.
+  - type: input
+    id: question
+    attributes:
+      label: Poll question
+      description: What decision or preference should the poll clarify?
+      placeholder: Which workflow should Foliole optimize first?
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options
+      description: List the choices people should vote on.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Explain the tradeoff or background.
+    validations:
+      required: false

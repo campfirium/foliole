@@ -1,0 +1,29 @@
+title: "[Show and tell] "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share reading systems, review setups, dashboards, screenshots, and workflow examples built around Foliole.
+  - type: input
+    id: showcase
+    attributes:
+      label: What did you build?
+      description: Describe your Foliole setup or workflow.
+      placeholder: I built...
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: How it works
+      description: Share the reading flow, review loop, sync setup, source structure, or automation details.
+    validations:
+      required: false
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots, links, or snippets
+      description: Add images, short examples, or a demo link if you can share them.
+    validations:
+      required: false
