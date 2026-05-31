@@ -47,7 +47,7 @@ jobs:
             if ($existingDraft -ne "true") {
               throw "Release $tagName already exists and is not a draft."
             }
-            gh release delete $tagName --yes --cleanup-tag
+            gh release delete $tagName --yes
             if ($LASTEXITCODE -ne 0) {
               throw "Failed to replace existing draft release $tagName."
             }
