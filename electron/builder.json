@@ -12,6 +12,13 @@
   "electronLanguages": ["en-US", "zh-CN"],
   "npmRebuild": true,
   "nativeRebuilder": "sequential",
+  "publish": [
+    {
+      "provider": "github",
+      "private": true,
+      "releaseType": "draft"
+    }
+  ],
   "files": [
     "build/icon.png",
     "dist/**/*",

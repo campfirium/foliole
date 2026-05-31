@@ -10,6 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const builderConfigPath = resolve(__dirname, '../electron/builder.json');
 const installerNshPath = resolve(__dirname, '../build/installer.nsh');
 const packageJsonPath = resolve(__dirname, '../package.json');
+const releaseWorkflowPath = resolve(__dirname, '../.github/workflows/release-windows.yml');
 
 async function readBuilderConfig() {
   const source = await readFile(builderConfigPath, 'utf8');
@@ -23,6 +24,10 @@ async function readPackageJson() {
 
 async function readInstallerNsh() {
   return readFile(installerNshPath, 'utf8');
+}
+
+async function readReleaseWorkflow() {
+  return readFile(releaseWorkflowPath, 'utf8');
 }
 
 describe('electron-builder release packaging config', () => {
@@ -106,6 +111,29 @@ describe('electron-builder release packaging config', () => {
     expect(config.win.requestedExecutionLevel).toBe('asInvoker');
     expect(config.mac.category).toBe('public.app-category.education');
     expect(config.linux.category).toBe('Education');
+  });
+
+  it('publishes Windows release artifacts to a private GitHub draft release explicitly', async () => {
+    const [config, packageJson, workflow] = await Promise.all([
+      readBuilderConfig(),
+      readPackageJson(),
+      readReleaseWorkflow()
+    ]);
+
+    expect(config.publish).toEqual([
+      {
+        provider: 'github',
+        private: true,
+        releaseType: 'draft'
+      }
+    ]);
+    expect(packageJson.scripts['release:windows:github']).toBe(
+      'npm run build && npm run electron:compile && electron-builder --config electron/builder.json --win nsis --publish always'
+    );
+    expect(workflow).toContain('permissions:\n  contents: write');
+    expect(workflow).toContain('runs-on: windows-latest');
+    expect(workflow).toContain('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}');
+    expect(workflow).toContain('npm run release:windows:github');
   });
 
   it('uses the branded app icon for packaged desktop targets', async () => {
