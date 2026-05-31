@@ -3,6 +3,7 @@ import {
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { normalizePushQueuePriority } from '../features/review/model/unifiedPushQueueRules';
 
 import { createNewItemReviewProfiles } from './newItemReviewSlots';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
@@ -33,11 +34,16 @@ function resolveRootCreationParentId(kind: NodeKind, state: WorkspaceState) {
   return INBOX_NODE_ID;
 }
 
+function resolveCreationPriority(options: Parameters<WorkspaceState['createRootNode']>[2]) {
+  return options && 'priority' in options ? { priority: options.priority } : {};
+}
+
 function createRootNodeRecord(args: {
   content: string;
   kind: NodeKind;
   nodeId: string;
   parentNodeId: string | null;
+  priority?: number | null;
   state: WorkspaceState;
   timestamp: string;
 }) {
@@ -53,6 +59,9 @@ function createRootNodeRecord(args: {
     id: args.nodeId,
     parentNodeId: args.parentNodeId,
     kind: args.kind,
+    ...(args.priority !== undefined
+      ? { priority: args.priority === null ? null : normalizePushQueuePriority(args.priority) }
+      : {}),
     title: untitledState.title,
     hasContent: args.content.trim().length > 0,
     content: args.content,
@@ -70,7 +79,7 @@ export function createRootNodeAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
 ): WorkspaceState['createRootNode'] {
-  return async (content = '', kind: NodeKind = 'topic') => {
+  return async (content = '', kind: NodeKind = 'topic', options) => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
     let createdNode: WorkspaceNode | null = null;
@@ -81,7 +90,9 @@ export function createRootNodeAction(
 
     set((state) => {
       const parentNodeId = resolveRootCreationParentId(kind, state);
-      const created = createRootNodeRecord({ content, kind, nodeId, parentNodeId, state, timestamp });
+      const created = createRootNodeRecord({
+        content, kind, nodeId, parentNodeId, ...resolveCreationPriority(options), state, timestamp
+      });
       nextNodeOrder = parentNodeId === INBOX_NODE_ID
         ? [INBOX_NODE_ID, nodeId, ...state.nodeOrder.filter((id) => id !== INBOX_NODE_ID)]
         : [...state.nodeOrder, nodeId];

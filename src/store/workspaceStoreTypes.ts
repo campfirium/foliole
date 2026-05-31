@@ -80,8 +80,8 @@ export interface WorkspaceState {
   restoreNode: (nodeId: string) => Promise<string | null>;
   deleteNodePermanently: (nodeId: string) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
-  createRootNode: (content?: string, kind?: NodeKind) => Promise<string | null>;
-  createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => Promise<string | null>;
+  createRootNode: (content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions) => Promise<string | null>;
+  createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions) => Promise<string | null>;
   createVirtualNode: () => Promise<string | null>;
   createHighlightNodeFromSelection: (
     parentNodeId: string,
@@ -114,6 +114,10 @@ export interface WorkspaceState {
     targetNodeId: string | null,
     intent: 'before' | 'after' | 'child' | 'root'
   ) => Promise<boolean>;
+}
+
+export interface WorkspaceNodeCreationOptions {
+  priority?: number | null;
 }
 
 export interface WorkspacePersistedState {

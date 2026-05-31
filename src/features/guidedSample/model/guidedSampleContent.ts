@@ -75,6 +75,12 @@ missed / hard / remembered / easy.
 
 Shape the next review time, testing itself also strengthens memory.`
       },
+      { content: `# Rewrite: Clarify Understanding
+
+
+Rewrite an excerpt or test item.
+
+Create a clearer version that is easier to understand and remember.` },
       { content: `# Schedule: Show It at the Right Time
 
 
@@ -86,13 +92,7 @@ Help material show up again at the right time.` },
 
 Incremental reading helps reading actually finish.
 
-Foliole helps incremental reading flow smoothly.` },
-      { content: `# Rewrite: Clarify Understanding
-
-
-Rewrite an excerpt or test item.
-
-Create a clearer version that is easier to understand and remember.` }
+Foliole helps incremental reading flow smoothly.` }
     ]
   },
   'zh-CN': {
@@ -145,6 +145,12 @@ Create a clearer version that is easier to understand and remember.` }
 
 影响下次复习时间，检测本身也会强化记忆`
       },
+      { content: `# 改写：澄清理解
+
+
+对摘录或检测项进行改写
+
+让内容更清楚，也更容易记住` },
       { content: `# 调度：适时展现
 
 
@@ -156,13 +162,7 @@ Create a clearer version that is easier to understand and remember.` }
 
 渐进阅读，让阅读真正完成
 
-Foliole，让渐进阅读流畅发生` },
-      { content: `# 改写：澄清理解
-
-
-对摘录或检测项进行改写
-
-让内容更清楚，也更容易记住` }
+Foliole，让渐进阅读流畅发生` }
     ]
   }
 };

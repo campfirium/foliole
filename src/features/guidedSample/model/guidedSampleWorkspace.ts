@@ -11,6 +11,8 @@ import {
 } from './guidedSampleContent';
 import { resolveGuidedSampleLocale, type GuidedSampleLocale } from './guidedSampleLocale';
 
+const GUIDED_SAMPLE_PRIORITY = 0;
+
 export interface GuidedSampleCreationResult {
   locale: GuidedSampleLocale;
   queueNodeIds: string[];
@@ -143,7 +145,9 @@ export async function ensureGuidedSampleTopicTree(
     };
   }
   const content = getGuidedSampleContent(locale);
-  const createdRootNodeId = await beforeState.createRootNode(content.root.content, 'topic');
+  const createdRootNodeId = await beforeState.createRootNode(content.root.content, 'topic', {
+    priority: GUIDED_SAMPLE_PRIORITY
+  });
   const rootNodeId = await refreshCreatedRootNodeId(createdRootNodeId, getState, options);
   if (!rootNodeId) {
     return { locale, queueNodeIds: [], rootNodeId: null, wasCreated: false, wasWorkspaceEmpty };
@@ -151,7 +155,9 @@ export async function ensureGuidedSampleTopicTree(
 
   const topicAssets = [{ nodeId: rootNodeId, topic: content.root }];
   for (const childTopic of content.children) {
-    const createdChildNodeId = await getState().createChildNode(rootNodeId, childTopic.content, 'topic');
+    const createdChildNodeId = await getState().createChildNode(rootNodeId, childTopic.content, 'topic', {
+      priority: GUIDED_SAMPLE_PRIORITY
+    });
     const childNodeId = await refreshCreatedChildNodeId(
       createdChildNodeId,
       childTopic,

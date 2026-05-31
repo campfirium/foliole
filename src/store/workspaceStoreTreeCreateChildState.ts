@@ -1,6 +1,7 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { normalizePushQueuePriority } from '../features/review/model/unifiedPushQueueRules';
 
 import { createNewItemReviewProfiles } from './newItemReviewSlots';
 import {
@@ -19,6 +20,7 @@ function createCreatedChildNode(args: {
   kind: NodeKind;
   nodeId: string;
   parentNodeId: string;
+  priority?: number | null;
   review: NodeSnapshot['review'];
   specialKind?: NodeSnapshot['specialKind'];
   timestamp: string;
@@ -29,6 +31,9 @@ function createCreatedChildNode(args: {
     parentNodeId: args.parentNodeId,
     kind: args.kind,
     ...(args.specialKind ? { specialKind: args.specialKind } : {}),
+    ...(args.priority !== undefined
+      ? { priority: args.priority === null ? null : normalizePushQueuePriority(args.priority) }
+      : {}),
     title: args.title,
     hasContent: args.content.trim().length > 0,
     hideTitleHeading: false,
@@ -49,6 +54,7 @@ export function buildCreatedChildState(
   content: string,
   kind: NodeKind,
   timestamp: string,
+  priority?: number | null,
   specialKind?: NodeSnapshot['specialKind']
 ) {
   const untitledState = resolveCreatedNodeTitleState(deriveNodeTitleFromContent(content), parentNodeId, state);
@@ -60,6 +66,7 @@ export function buildCreatedChildState(
     kind,
     nodeId,
     parentNodeId,
+    ...(priority !== undefined ? { priority } : {}),
     review: reviewProfiles[0] ?? null,
     ...(specialKind ? { specialKind } : {}),
     timestamp,

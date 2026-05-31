@@ -40,13 +40,16 @@ describe('ensureGuidedSampleTopicTree', () => {
     expect(rootNode?.hasContent).toBe(true);
     expect(rootNode?.content).not.toContain(GUIDED_SAMPLE_MARKER);
     expect(directChildIds(result.rootNodeId ?? '')).toHaveLength(7);
+    expect(result.queueNodeIds.map((nodeId) => state.nodesById[nodeId]?.priority)).toEqual(Array(8).fill(0));
     expect(rootNode?.sequentialReadingEnabled).toBeUndefined();
     expect(importGuidedSampleTopicAssets).toHaveBeenCalledTimes(8);
     expect(result.queueNodeIds).toEqual([
       result.rootNodeId,
       ...directChildIds(result.rootNodeId ?? '')
     ]);
-    expect(buildLiveReviewQueueOutput(state, '2099-05-31T00:00:00.000Z').taskNodeIds).not.toEqual(result.queueNodeIds);
+    expect(buildLiveReviewQueueOutput(state, '2099-05-31T00:00:00.000Z').taskNodeIds).toEqual(result.queueNodeIds);
+    expect(state.nodesById[result.queueNodeIds[4] ?? '']?.title).toBe('检测：强化记忆');
+    expect(state.nodesById[result.queueNodeIds[5] ?? '']?.title).toBe('改写：澄清理解');
   });
 
   it('does not treat traditional Chinese as Chinese sample content', async () => {
@@ -132,6 +135,8 @@ describe('ensureGuidedSampleTopicTree runtime refresh', () => {
 
     expect(result.rootNodeId).toBe('runtime-root');
     expect(refreshWorkspaceState).toHaveBeenCalled();
+    expect(rendererState.createRootNode).toHaveBeenCalledWith(expect.any(String), 'topic', { priority: 0 });
+    expect(rendererState.createChildNode).toHaveBeenCalledWith('runtime-root', expect.any(String), 'topic', { priority: 0 });
     expect(rendererState.createChildNode).toHaveBeenCalledTimes(7);
   });
 });

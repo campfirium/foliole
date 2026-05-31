@@ -25,7 +25,7 @@ export function createChildNodeAction(
   onNodeOrderChanged?: (nodeOrder: string[]) => void,
   hasMutationRuntime: () => boolean = () => false
 ): WorkspaceState['createChildNode'] {
-  return async (parentNodeId, content = '', kind: NodeKind = 'topic') => {
+  return async (parentNodeId, content = '', kind: NodeKind = 'topic', options) => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
     let createdNode: NodeSnapshot | null = null;
@@ -35,7 +35,15 @@ export function createChildNodeAction(
     set((state) => {
       if (!state.nodesById[parentNodeId] || state.trashedNodeIds.includes(parentNodeId)) return state;
       if (!canCreateChildUnderParent(state, parentNodeId, kind)) return state;
-      const nextChildState = buildCreatedChildState(state, parentNodeId, nodeId, content, kind, timestamp);
+      const nextChildState = buildCreatedChildState(
+        state,
+        parentNodeId,
+        nodeId,
+        content,
+        kind,
+        timestamp,
+        options && 'priority' in options ? options.priority : undefined
+      );
       createdNode = nextChildState.nextNode;
       nextNodeOrder = nextChildState.nextNodeOrder;
       localPatch = nextChildState.patch;
