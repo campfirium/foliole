@@ -1,0 +1,51 @@
+name: Deploy Release Manifest
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - "releases/**"
+      - ".github/workflows/deploy-release-manifest.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-release-manifest
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Package release manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare static files
+        run: |
+          mkdir -p _site/releases
+          cp releases/update-manifest.json _site/releases/update-manifest.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy release manifest
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -9,7 +9,8 @@ import {
   getNextUpdateCheckDelayMs,
   normalizeUpdateManifest,
   readUpdateCheckState,
-  selectLatestPlatformRelease
+  selectLatestPlatformRelease,
+  subscribeUpdateCheckState
 } from './updateCheck';
 
 function createMockElectronApi(invoke: NativeInvoke) {
@@ -106,4 +107,18 @@ it('records failures with a shorter retry delay', async () => {
   expect(readUpdateCheckState().lastCheckStatus).toBe('failed');
   expect(getNextUpdateCheckDelayMs()).toBe(15 * 60 * 1000);
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState)).toContain('failed');
+});
+
+it('notifies subscribers when the persisted update state changes', async () => {
+  vi.mocked(fetch).mockResolvedValue({
+    json: async () => createManifest(),
+    ok: true
+  } as Response);
+  const subscriber = vi.fn();
+  const unsubscribe = subscribeUpdateCheckState(subscriber);
+
+  await checkForFolioleUpdates({ force: true });
+
+  expect(subscriber).toHaveBeenCalledTimes(1);
+  unsubscribe();
 });

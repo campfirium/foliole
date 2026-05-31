@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "channel": "beta",
+  "latest": "0.1.0",
+  "checkPolicy": {
+    "intervalMinutes": 1440,
+    "failureRetryMinutes": 15
+  },
+  "releases": [
+    {
+      "version": "0.1.0",
+      "date": "2026-05-31",
+      "platforms": ["windows"],
+      "severity": "normal",
+      "summary": "Private Windows installer test build.",
+      "url": "https://github.com/campfirium/foliole/releases/tag/v0.1.0"
+    }
+  ]
+}

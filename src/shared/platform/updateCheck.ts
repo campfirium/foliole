@@ -23,6 +23,7 @@ export {
   normalizeUpdateManifest,
   selectLatestPlatformRelease
 } from './updateCheckModel';
+export type { UpdateCheckState } from './updateCheckModel';
 
 const DEFAULT_MANIFEST_URL = 'https://campfirium.github.io/foliole/releases/update-manifest.json';
 
@@ -31,6 +32,8 @@ export interface UpdateCheckResult {
   state: UpdateCheckState;
   status: 'available' | 'current' | 'failed' | 'skipped';
 }
+
+const updateCheckStateSubscribers = new Set<() => void>();
 
 function getManifestUrl() {
   const configured = import.meta.env.VITE_FOLIOLE_UPDATE_MANIFEST_URL as string | undefined;
@@ -48,6 +51,14 @@ export function readUpdateCheckState(): UpdateCheckState {
 
 function writeUpdateCheckState(state: UpdateCheckState) {
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify(state));
+  updateCheckStateSubscribers.forEach((subscriber) => subscriber());
+}
+
+export function subscribeUpdateCheckState(subscriber: () => void) {
+  updateCheckStateSubscribers.add(subscriber);
+  return () => {
+    updateCheckStateSubscribers.delete(subscriber);
+  };
 }
 
 export function getNextUpdateCheckDelayMs(now = Date.now()) {
