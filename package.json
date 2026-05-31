@@ -62,7 +62,7 @@
     "windows:preview:native": "node scripts/preview-dedupe.mjs windows -- node scripts/with-resource-gate.mjs preview -- node scripts/windows/windows-preview-native.mjs",
     "electron:compile": "node scripts/with-resource-gate.mjs node-heavy -- npm run electron:compile:raw",
     "electron:compile:raw": "tsc -p electron/tsconfig.json",
-    "release:windows:github": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json --win nsis --publish always",
+    "release:windows:package": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json --win nsis --publish never",
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:dev:native": "node scripts/windows/electron-dev-native.mjs",
     "electron:native:health": "node scripts/windows/electron-native-health-check.mjs",

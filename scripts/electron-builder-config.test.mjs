@@ -113,27 +113,25 @@ describe('electron-builder release packaging config', () => {
     expect(config.linux.category).toBe('Education');
   });
 
-  it('publishes Windows release artifacts to a private GitHub draft release explicitly', async () => {
+  it('publishes only the Windows installer to the private GitHub draft release', async () => {
     const [config, packageJson, workflow] = await Promise.all([
       readBuilderConfig(),
       readPackageJson(),
       readReleaseWorkflow()
     ]);
 
-    expect(config.publish).toEqual([
-      {
-        provider: 'github',
-        private: true,
-        releaseType: 'draft'
-      }
-    ]);
-    expect(packageJson.scripts['release:windows:github']).toBe(
-      'npm run build && npm run electron:compile && electron-builder --config electron/builder.json --win nsis --publish always'
+    expect(config.publish).toBeUndefined();
+    expect(packageJson.scripts['release:windows:package']).toBe(
+      'npm run build && npm run electron:compile && electron-builder --config electron/builder.json --win nsis --publish never'
     );
     expect(workflow).toContain('permissions:\n  contents: write');
     expect(workflow).toContain('runs-on: windows-latest');
     expect(workflow).toContain('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}');
-    expect(workflow).toContain('npm run release:windows:github');
+    expect(workflow).toContain('npm run release:windows:package');
+    expect(workflow).toContain('gh release create $tagName $installer.FullName --draft');
+    expect(workflow).toContain('gh release delete $tagName --yes --cleanup-tag');
+    expect(workflow).not.toContain('release/*.blockmap');
+    expect(workflow).not.toContain('release/latest.yml');
   });
 
   it('uses the branded app icon for packaged desktop targets', async () => {
