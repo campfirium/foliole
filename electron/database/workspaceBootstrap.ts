@@ -3,12 +3,10 @@ import type { DatabaseConnection } from './connection.js';
 const INITIAL_INBOX_NODE_ID = 'special-inbox';
 const INITIAL_VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
 const INITIAL_ROOT_FOLDER_NODE_ID = 'starter-root-folder';
-const INITIAL_VIRTUAL_EXAMPLE_NODE_ID = 'starter-virtual-example';
 const INITIAL_WELCOME_NODE_ID = 'starter-welcome';
 const ACTIVE_NODE_META_KEY = 'active_node_id';
 
 const INITIAL_ROOT_FOLDER_TITLE = 'Untitled Folder';
-const INITIAL_VIRTUAL_EXAMPLE_TITLE = 'Example';
 const INITIAL_WELCOME_TITLE = 'Welcome to Foliole';
 const INITIAL_WELCOME_CONTENT = `# Welcome to Foliole
 
@@ -59,16 +57,6 @@ function insertWelcomeDocument(connection: DatabaseConnection, timestamp: string
   );
 }
 
-function insertVirtualExample(connection: DatabaseConnection, timestamp: string) {
-  connection.driver.execute(
-    `INSERT INTO nodes (
-       id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, opening_text, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
-     ) VALUES (?, 'special-virtual-root', 'folder', NULL, NULL, ?, 1, 0, '', NULL, '{"version":1,"match":"all","conditions":[]}', NULL, NULL, NULL, ?, ?, NULL)`,
-    [INITIAL_VIRTUAL_EXAMPLE_NODE_ID, INITIAL_VIRTUAL_EXAMPLE_TITLE, timestamp, timestamp]
-  );
-}
-
 function insertRootFolder(connection: DatabaseConnection, timestamp: string) {
   connection.driver.execute(
     `INSERT INTO nodes (
@@ -83,7 +71,6 @@ function insertInitialOrder(connection: DatabaseConnection) {
   connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_INBOX_NODE_ID, 0]);
   connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_ROOT_FOLDER_NODE_ID, 1]);
   connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_VIRTUAL_ROOT_NODE_ID, 2]);
-  connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_VIRTUAL_EXAMPLE_NODE_ID, 3]);
 }
 
 function setInitialActiveNode(connection: DatabaseConnection, timestamp: string) {
@@ -108,7 +95,6 @@ export function seedInitialWorkspace(connection: DatabaseConnection) {
     insertInboxRoot(transactionalConnection, timestamp);
     insertRootFolder(transactionalConnection, timestamp);
     insertVirtualRoot(transactionalConnection, timestamp);
-    insertVirtualExample(transactionalConnection, timestamp);
     insertWelcomeDocument(transactionalConnection, timestamp);
     insertInitialOrder(transactionalConnection);
     setInitialActiveNode(transactionalConnection, timestamp);

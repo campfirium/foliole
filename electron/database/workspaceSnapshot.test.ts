@@ -62,7 +62,6 @@ it('seeds the initial workspace when sqlite starts empty', () => {
     'special-inbox',
     'starter-root-folder',
     'special-virtual-root',
-    'starter-virtual-example',
     'starter-welcome'
   ]);
   expect(snapshot?.nodesById['special-inbox']?.title).toBe('Inbox');
@@ -70,8 +69,7 @@ it('seeds the initial workspace when sqlite starts empty', () => {
   expect(snapshot?.nodesById['starter-root-folder']?.title).toBe('Untitled Folder');
   expect(snapshot?.nodesById['special-virtual-root']?.parentNodeId).toBeNull();
   expect(snapshot?.nodesById['special-virtual-root']?.title).toBe('Virtual');
-  expect(snapshot?.nodesById['starter-virtual-example']?.parentNodeId).toBe('special-virtual-root');
-  expect(snapshot?.nodesById['starter-virtual-example']?.title).toBe('Example');
+  expect(snapshot?.nodesById['starter-virtual-example']).toBeUndefined();
   expect(snapshot?.nodesById['starter-welcome']?.parentNodeId).toBe('special-inbox');
   expect(snapshot?.nodesById['starter-welcome']?.title).toBe('Welcome to Foliole');
   expect(snapshot?.nodesById['starter-welcome']?.content).toContain('# Welcome to Foliole');
@@ -92,7 +90,6 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
     'special-inbox',
     'starter-root-folder',
     'special-virtual-root',
-    'starter-virtual-example',
     'starter-welcome',
     'node-2'
   ]);
