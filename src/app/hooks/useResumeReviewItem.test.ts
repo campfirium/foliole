@@ -1,9 +1,15 @@
-import { expect, it } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import type { ReviewSessionState } from '../../store/workspaceStore';
 
-import { resolveResumeReviewNodeId } from './useResumeReviewItem';
+import { RESUME_REVIEW_UNAVAILABLE_NOTICE, resolveResumeReviewNodeId, useResumeReviewItem } from './useResumeReviewItem';
+
+vi.mock('../../shared/ui/AppRuntimeNotice', () => ({
+  showAppRuntimeNotice: vi.fn()
+}));
 
 function createNodeRecord(nodeIds: string[]) {
   return Object.fromEntries(nodeIds.map((nodeId) => [nodeId, { id: nodeId } as Node]));
@@ -72,4 +78,37 @@ it('does not recover future fsrs cards that are absent from the true queue', () 
       trashedNodeIds: []
     })
   ).toBe('review-due');
+});
+
+it('shows a notice when resume has no available review item', () => {
+  const resumeReviewSession = vi.fn(() => false);
+  const { result } = renderHook(() =>
+    useResumeReviewItem({
+      controller: {
+        externalView: { closeExternalView: vi.fn() },
+        nav: { handleSelectNode: vi.fn() },
+        runtime: {
+          flushPendingEditorDraft: vi.fn(),
+          setIsViewingTrashNode: vi.fn()
+        },
+        trash: { closeTrashView: vi.fn() },
+        virtualView: { closeVirtualView: vi.fn() }
+      } as never,
+      nowIso: '2026-03-10T12:00:00.000Z',
+      reviewSettings: { reviewSchedulerSettings: { pushQueue: {} } } as never,
+      ws: {
+        nodeOrder: [],
+        nodesById: {},
+        resumeReviewSession,
+        reviewSession: createSession({ currentNodeId: null, queueNodeIds: [], totalNodeCount: 0 }),
+        reviewSessionMode: 'recommended',
+        trashedNodeIds: []
+      } as never
+    })
+  );
+
+  act(() => result.current());
+
+  expect(resumeReviewSession).not.toHaveBeenCalled();
+  expect(showAppRuntimeNotice).toHaveBeenCalledWith(RESUME_REVIEW_UNAVAILABLE_NOTICE);
 });

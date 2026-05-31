@@ -2,10 +2,13 @@ import { useCallback } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { buildCurrentReviewSessionQueueOutput } from '../../store/workspaceReviewLiveQueue';
 import type { ReviewSessionState } from '../../store/workspaceStore';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+
+export const RESUME_REVIEW_UNAVAILABLE_NOTICE = 'No review item is available to resume.';
 
 export function resolveResumeReviewNodeId(args: {
   nodesById: Record<string, Node>;
@@ -36,9 +39,11 @@ export function useResumeReviewItem(args: {
       trashedNodeIds: args.ws.trashedNodeIds
     });
     if (!nodeId) {
+      showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
       return;
     }
     if (!args.ws.resumeReviewSession(args.nowIso)) {
+      showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
       return;
     }
     args.controller.runtime.flushPendingEditorDraft();
