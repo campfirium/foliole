@@ -3,23 +3,15 @@ import { memo, useEffect, useState, type DragEvent as ReactDragEvent } from 'rea
 
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '../../shared/ui';
 
-import {
-  getWorkspaceRightPanelAriaLabel,
-  getWorkspaceRightPanelDefinition
-} from './workspaceRightPanelDefinitions';
-import {
-  moveWorkspaceRightPanel,
-  normalizeWorkspaceRightPanelOrder
-} from './workspaceRightPanelOrder';
-import {
-  loadWorkspaceRightPanelOrderPreference,
-  saveWorkspaceRightPanelOrderPreference
-} from './workspaceRightPanelPreference';
+import { resolveRightPanelAvailableWidthFromSidebarWidth, resolveVisibleRightPanelCount } from './windowTitleBarRightPanelVisibility';
+import { getWorkspaceRightPanelAriaLabel, getWorkspaceRightPanelDefinition } from './workspaceRightPanelDefinitions';
+import { moveWorkspaceRightPanel, normalizeWorkspaceRightPanelOrder } from './workspaceRightPanelOrder';
+import { loadWorkspaceRightPanelOrderPreference, saveWorkspaceRightPanelOrderPreference } from './workspaceRightPanelPreference';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
-const VISIBLE_PANEL_COUNT = 3;
+const MAX_VISIBLE_PANEL_COUNT = 3;
 const RIGHT_PANEL_ACTION_BASE_CLASS = 'window-titlebar-leading-button relative';
 const RIGHT_PANEL_ACTION_ACTIVE_CLASS =
   'after:absolute after:bottom-1 after:left-1 after:right-1 after:h-[2px] after:rounded-full after:bg-foreground/12';
@@ -74,6 +66,7 @@ interface WindowTitleBarRightSidebarAnchorProps {
   isRightSidebarCollapsed: boolean;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onToggleRightSidebarVisibility: () => void;
+  rightSidebarWidth: number;
 }
 
 function useWorkspaceRightPanelOrder() {
@@ -125,8 +118,9 @@ function renderVisiblePanelActions(args: {
   drag: ReturnType<typeof useWorkspaceRightPanelDrag>;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   orderedPanelIds: WorkspaceRightPanelId[];
+  visiblePanelCount: number;
 }) {
-  return args.orderedPanelIds.slice(0, VISIBLE_PANEL_COUNT).map((panelId) => (
+  return args.orderedPanelIds.slice(0, args.visiblePanelCount).map((panelId) => (
     <RightSidebarPanelButton
       key={panelId}
       active={args.activeRightPanelId === panelId}
@@ -144,8 +138,9 @@ function OverflowPanelMenu(args: {
   drag: ReturnType<typeof useWorkspaceRightPanelDrag>;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   orderedPanelIds: WorkspaceRightPanelId[];
+  visiblePanelCount: number;
 }) {
-  const overflowPanelIds = args.orderedPanelIds.slice(VISIBLE_PANEL_COUNT);
+  const overflowPanelIds = args.orderedPanelIds.slice(args.visiblePanelCount);
   const isActive = overflowPanelIds.includes(args.activeRightPanelId) || !args.orderedPanelIds.includes(args.activeRightPanelId);
   return (
     <AppDropdownMenu>
@@ -195,6 +190,7 @@ function renderRightSidebarPanelActions(args: {
   drag: ReturnType<typeof useWorkspaceRightPanelDrag>;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   orderedPanelIds: WorkspaceRightPanelId[];
+  visiblePanelCount: number;
 }) {
   return (
     <div className="window-titlebar-right-panel-actions">
@@ -210,6 +206,10 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
   const isCollapsed = props.isRightSidebarCollapsed;
   const orderState = useWorkspaceRightPanelOrder();
   const drag = useWorkspaceRightPanelDrag(orderState);
+  const visiblePanelCount = resolveVisibleRightPanelCount({
+    availableWidth: resolveRightPanelAvailableWidthFromSidebarWidth(props.rightSidebarWidth),
+    maxCount: MAX_VISIBLE_PANEL_COUNT
+  });
 
   return (
     <div className="window-titlebar-right-anchor-shell relative z-local-control max-[1279px]:hidden" data-collapsed={isCollapsed}>
@@ -224,7 +224,8 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
                 activeRightPanelId: props.activeRightPanelId,
                 drag,
                 onSelectRightPanel: props.onSelectRightPanel,
-                orderedPanelIds: orderState.orderedPanelIds
+                orderedPanelIds: orderState.orderedPanelIds,
+                visiblePanelCount
               })}
         </div>
       </div>

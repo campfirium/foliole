@@ -176,7 +176,7 @@ describe('WindowTitleBar view switches', () => {
 
 describe('WindowTitleBar right sidebar anchor layout', () => {
   it('renders the expanded right sidebar toggle before the divider and the panel button inside the right zone', () => {
-    const { container } = renderTitleBar({ isRightSidebarCollapsed: false });
+    const { container } = renderTitleBar({ isRightSidebarCollapsed: false, rightSidebarWidth: 340 });
     expectExpandedRightAnchorLayout(container);
     expect(screen.getByRole('button', { name: 'Flow panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Outline panel' })).toBeInTheDocument();
@@ -192,7 +192,7 @@ describe('WindowTitleBar right sidebar anchor layout', () => {
   });
 
   it('shows every right sidebar panel in the more menu with icons', () => {
-    renderTitleBar({ activeRightPanelId: 'dev' });
+    renderTitleBar({ activeRightPanelId: 'dev', rightSidebarWidth: 340 });
 
     openMoreRightPanelsMenu();
 
@@ -207,7 +207,7 @@ describe('WindowTitleBar right sidebar anchor layout', () => {
 
 describe('WindowTitleBar right sidebar anchor sorting', () => {
   it('reorders visible panel buttons after drag sorting', () => {
-    renderTitleBar({ activeRightPanelId: 'dev' });
+    renderTitleBar({ activeRightPanelId: 'dev', rightSidebarWidth: 340 });
 
     const reviewButton = screen.getByRole('button', { name: 'Flow panel' });
     const outlineButton = screen.getByRole('button', { name: 'Outline panel' });
@@ -226,7 +226,7 @@ describe('WindowTitleBar right sidebar anchor sorting', () => {
   });
 
   it('reorders overflow menu items and updates the visible button row', () => {
-    renderTitleBar({ activeRightPanelId: 'dev' });
+    renderTitleBar({ activeRightPanelId: 'dev', rightSidebarWidth: 340 });
 
     openMoreRightPanelsMenu();
 

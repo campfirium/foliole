@@ -857,12 +857,12 @@ b {
 .window-titlebar-right-content {
   align-self: stretch;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 32px minmax(0, 1fr);
   min-width: 0;
 }
 
 .window-titlebar-right-content[data-collapsed='true'] {
-  grid-template-columns: 40px;
+  grid-template-columns: 32px;
 }
 
 .window-titlebar-right-expanded-action {
@@ -877,7 +877,7 @@ b {
   align-items: center;
   display: inline-flex;
   gap: 6px;
-  padding-left: 8px;
+  padding-left: 6px;
 }
 
 .window-titlebar-button {

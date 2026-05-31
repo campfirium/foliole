@@ -14,11 +14,11 @@ import {
 
 import { WindowControlButtons } from './WindowControlButtons';
 import { WindowSidebarToggleButton } from './WindowSidebarToggleButton';
+import { WINDOW_TITLEBAR_CONTROLS_WIDTH, WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH } from './windowTitleBarLayout';
 import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
 import { WorkspaceSurfaceRowOverlay, WorkspaceTitlebarDividers } from './WorkspaceSurfaceRowOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-const WINDOW_CONTROLS_WIDTH = 138;
 interface WindowTitleBarProps {
   activeRightPanelId: WorkspaceRightPanelId;
   centerTitle: string | null;
@@ -127,9 +127,9 @@ function getWindowTitleBarStyle(props: WindowTitleBarProps): CSSProperties {
     '--window-titlebar-left-width': props.isListCollapsed
       ? 'var(--workspace-rail-width)'
       : `calc(var(--workspace-rail-width) + ${props.listWidth + 1}px)`,
-    '--window-titlebar-controls-width': `${WINDOW_CONTROLS_WIDTH}px`,
+    '--window-titlebar-controls-width': `${WINDOW_TITLEBAR_CONTROLS_WIDTH}px`,
     '--window-titlebar-right-width': props.isRightSidebarCollapsed
-      ? `${WINDOW_CONTROLS_WIDTH + 40}px`
+      ? `${WINDOW_TITLEBAR_CONTROLS_WIDTH + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH}px`
       : `${props.rightSidebarWidth}px`,
     '--workspace-list-width': `${props.listWidth}px`,
     '--workspace-titlebar-folder-column-width': props.isListCollapsed ? '0px' : 'var(--workspace-folder-column-width)',
@@ -188,6 +188,7 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
         onSelectRightPanel={props.onSelectRightPanel}
         onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
+        rightSidebarWidth={props.rightSidebarWidth}
       />
       <WindowControlButtons
         controlsEnabled={controlsEnabled}
