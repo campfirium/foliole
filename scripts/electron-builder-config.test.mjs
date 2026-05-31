@@ -128,7 +128,8 @@ describe('electron-builder release packaging config', () => {
     expect(workflow).toContain('runs-on: windows-latest');
     expect(workflow).toContain('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}');
     expect(workflow).toContain('npm run release:windows:package');
-    expect(workflow).toContain('gh release create $tagName $installer.FullName --draft');
+    expect(workflow).toContain('gh release create $tagName $installer.FullName $checksums.FullName --draft');
+    expect(workflow).toContain('--title $releaseTitle --notes $notes');
     expect(workflow).toContain('gh release delete $tagName --yes');
     expect(workflow).not.toContain('release/*.blockmap');
     expect(workflow).not.toContain('release/latest.yml');

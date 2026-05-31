@@ -2,7 +2,7 @@
 /* global console, process */
 
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -98,11 +98,21 @@ export function formatBytes(bytes) {
   return `${Math.round(bytes / 1024 / 1024)}MB`;
 }
 
-export function resolveReleaseArtifactPaths(rootDir = repoRoot) {
+export function readPackageVersion(rootDir = repoRoot) {
+  const packageJson = JSON.parse(readFileSync(resolve(rootDir, 'package.json'), 'utf8'));
+  return packageJson.version;
+}
+
+function resolveInstallerBaseName(packageVersion) {
+  return `Foliole Setup ${packageVersion}`;
+}
+
+export function resolveReleaseArtifactPaths(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
+  const installerBaseName = resolveInstallerBaseName(packageVersion);
   return [
     resolve(rootDir, 'release/win-unpacked'),
-    resolve(rootDir, 'release/Foliole Setup 0.1.0.exe'),
-    resolve(rootDir, 'release/Foliole Setup 0.1.0.exe.blockmap'),
+    resolve(rootDir, `release/${installerBaseName}.exe`),
+    resolve(rootDir, `release/${installerBaseName}.exe.blockmap`),
     resolve(rootDir, 'release/latest.yml'),
     resolve(rootDir, 'release/builder-debug.yml')
   ];
@@ -114,8 +124,8 @@ export function cleanReleaseArtifacts(rootDir = repoRoot) {
   }
 }
 
-export function collectArtifactSummary(rootDir = process.cwd()) {
-  const installerPath = resolve(rootDir, 'release/Foliole Setup 0.1.0.exe');
+export function collectArtifactSummary(rootDir = process.cwd(), packageVersion = readPackageVersion(rootDir)) {
+  const installerPath = resolve(rootDir, `release/${resolveInstallerBaseName(packageVersion)}.exe`);
   const unpackedPath = resolve(rootDir, 'release/win-unpacked');
   return {
     installer: existsSync(installerPath) ? formatBytes(statSync(installerPath).size) : 'missing',

@@ -6,6 +6,7 @@ import {
   createNativePackageSteps,
   createWslPackageSteps,
   formatBytes,
+  readPackageVersion,
   resolveReleaseArtifactPaths,
   resolvePackageMode
 } from './package-windows.mjs';
@@ -59,12 +60,16 @@ describe('windows package runner', () => {
   });
 
   it('cleans only known release artifacts before native packaging', () => {
-    expect(resolveReleaseArtifactPaths('/repo')).toEqual([
+    expect(resolveReleaseArtifactPaths('/repo', '9.8.7')).toEqual([
       '/repo/release/win-unpacked',
-      '/repo/release/Foliole Setup 0.1.0.exe',
-      '/repo/release/Foliole Setup 0.1.0.exe.blockmap',
+      '/repo/release/Foliole Setup 9.8.7.exe',
+      '/repo/release/Foliole Setup 9.8.7.exe.blockmap',
       '/repo/release/latest.yml',
       '/repo/release/builder-debug.yml'
     ]);
+  });
+
+  it('reads the package version used by release artifact names', () => {
+    expect(readPackageVersion()).toMatch(/^\d+\.\d+\.\d+/);
   });
 });
