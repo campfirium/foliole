@@ -10,6 +10,13 @@ import {
 } from '../../store/workspaceEditorInputDiagnostics';
 
 type CopyState = 'idle' | 'copied' | 'failed';
+type EditorInputDiagnosticsPanelGlobal = typeof globalThis & {
+  __FOLIOLE_EDITOR_INPUT_DIAG_PANEL?: boolean;
+};
+
+function isEditorInputDiagnosticsPanelEnabled() {
+  return (globalThis as EditorInputDiagnosticsPanelGlobal).__FOLIOLE_EDITOR_INPUT_DIAG_PANEL === true;
+}
 
 export function EditorInputDiagnosticsPanel() {
   const [isRecording, setIsRecording] = useState(isEditorInputDiagnosticEnabled);
@@ -44,7 +51,7 @@ export function EditorInputDiagnosticsPanel() {
     }
   }, [refresh]);
 
-  if (!import.meta.env.DEV) {
+  if (!import.meta.env.DEV || !isEditorInputDiagnosticsPanelEnabled()) {
     return null;
   }
 
