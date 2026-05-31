@@ -13,16 +13,16 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
-import { requestWorkspaceRightPanelOpen } from '../components/workspaceRightPanelRequests';
 
 import { createPaletteReviewActions } from './appControllerPaletteReviewActions';
+import { createPaletteRuntimeActions } from './appControllerPaletteRuntimeActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createPaletteImportActions } from './appPaletteImportActions';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
 import { restartAppWithReadingProgress } from './appRestartPersistence';
 import { repairEditorTable } from './editorRepairTableCommand';
-import { clearSettingsRequest, openReadwiseReaderSettings } from './settingsOverlayRequest';
+import { clearSettingsRequest } from './settingsOverlayRequest';
 import type { useFormalImport } from './useFormalImport';
 
 function createDirectNodeCommand(kind: 'folder' | 'topic' | 'item', args: {
@@ -167,27 +167,6 @@ function createPaletteAppearanceActions(args: {
     onSetPdfReadingMode: args.appearance.setPdfReadingMode,
     onToggleBaseColorMode: args.appearance.toggleBaseColorMode,
     onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode
-  };
-}
-
-function createPaletteRuntimeActions(args: {
-  layoutProps: WorkspaceLayoutProps;
-  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
-  trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
-}) {
-  return {
-    openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
-    openNotesView: args.layoutProps.nodeList.onOpenNotesView,
-    openPerformancePanel: () => requestWorkspaceRightPanelOpen('performance'),
-    openPostponeTopicPanel: () => args.layoutProps.review.onOpenPostponeTopicPanel(),
-    openReadwiseReaderSettings: () => openReadwiseReaderSettings(args.runtime),
-    openTrashView: args.trash.openTrashView,
-    recordRecentCommand: args.runtime.recordRecentCommand,
-    setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,
-    setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
-    setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
-    setSettingsOpen: args.runtime.setIsSettingsOpen,
-    trashViewOpen: args.trash.isTrashViewOpen
   };
 }
 

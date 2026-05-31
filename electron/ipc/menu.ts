@@ -56,24 +56,43 @@ function walkMenuItems(items: ElectronMenuItem[]) {
   }
 }
 
+function buildWorkspaceMenu(state: MenuState): MenuItemConstructorOptions {
+  return {
+    label: 'Workspace',
+    submenu: [
+      ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => commandItem(command.menuLabel, command.appCommandId, state)),
+      { type: 'separator' },
+      commandItem('Import Files…', 'import.singleFileToInbox', state),
+      commandItem('Import Folder…', 'import.folderToInbox', state),
+      commandItem('Import Clipboard', 'import.clipboard', state),
+      { type: 'separator' },
+      commandItem('Open Notes', 'workspace.openNotes', state),
+      commandItem('Open Guided Sample', 'workspace.openGuidedSample', state),
+      commandItem('Open Trash', 'workspace.openTrash', state),
+      { type: 'separator' },
+      commandItem('Toggle Left Panel', 'workspace.toggleList', state),
+      commandItem('Settings', 'workspace.openSettings', state)
+    ]
+  };
+}
+
+function buildHelpMenu(state: MenuState): MenuItemConstructorOptions {
+  return {
+    label: 'Help',
+    submenu: [
+      commandItem('Check for Updates', 'release.checkForUpdates', state),
+      commandItem('Open Releases', 'release.openLatestRelease', state),
+      { type: 'separator' },
+      commandItem('GitHub Repository', 'support.openRepository', state),
+      commandItem('Report an Issue', 'support.openIssues', state),
+      commandItem('Discussions', 'support.openDiscussions', state)
+    ]
+  };
+}
+
 function buildAppMenuTemplate(state: MenuState): MenuItemConstructorOptions[] {
   return [
-    {
-      label: 'Workspace',
-      submenu: [
-        ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => commandItem(command.menuLabel, command.appCommandId, state)),
-        { type: 'separator' },
-        commandItem('Import Files…', 'import.singleFileToInbox', state),
-        commandItem('Import Folder…', 'import.folderToInbox', state),
-        commandItem('Import Clipboard', 'import.clipboard', state),
-        { type: 'separator' },
-        commandItem('Open Notes', 'workspace.openNotes', state),
-        commandItem('Open Trash', 'workspace.openTrash', state),
-        { type: 'separator' },
-        commandItem('Toggle Left Panel', 'workspace.toggleList', state),
-        commandItem('Settings', 'workspace.openSettings', state)
-      ]
-    },
+    buildWorkspaceMenu(state),
     {
       label: 'Navigate',
       submenu: [
@@ -111,7 +130,8 @@ function buildAppMenuTemplate(state: MenuState): MenuItemConstructorOptions[] {
     {
       label: 'Developer',
       submenu: [commandItem('Toggle DevTools', 'workspace.toggleDevTools', state)]
-    }
+    },
+    buildHelpMenu(state)
   ];
 }
 

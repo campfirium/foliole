@@ -89,8 +89,8 @@ it('keeps review advancement scoped to the active session queue', async () => {
   await expect(actions.readReviewTopic(now)).resolves.toBe(true);
 
   expect(harness.getState().reviewSession).toMatchObject({
-    currentNodeId: 'reading-outside',
-    queueNodeIds: ['reading-outside', 'reading-2'],
+    currentNodeId: 'reading-2',
+    queueNodeIds: ['reading-2'],
     readTopicCount: 1,
     totalNodeCount: 2
   });

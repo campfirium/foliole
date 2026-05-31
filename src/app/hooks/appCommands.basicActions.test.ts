@@ -62,6 +62,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     resetImportData: () => undefined,
     toggleDevReviewStatusBarPersistence: () => undefined,
     openNotes: () => undefined,
+    openGuidedSample: () => undefined,
     openHelpSearch: () => undefined,
     checkForUpdates: () => undefined,
     openLatestRelease: () => undefined,
@@ -126,6 +127,14 @@ it('runs open help search through the shared command handler', () => {
   expectCommandRuns(APP_COMMAND_IDS.openHelpSearch, { openHelpSearch });
 
   expect(openHelpSearch).toHaveBeenCalledTimes(1);
+});
+
+it('runs open guided sample through the shared command handler', () => {
+  const openGuidedSample = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.openGuidedSample, { openGuidedSample });
+
+  expect(openGuidedSample).toHaveBeenCalledTimes(1);
 });
 
 it('runs sidebar visibility commands through the shared command handler', () => {

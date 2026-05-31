@@ -67,6 +67,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.openImportManagement, title: 'Open Import Management', section: 'Import', keywords: ['import', 'manage', 'removed'] },
   ...DEVELOPER_PALETTE_COMMANDS,
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
+  { id: APP_COMMAND_IDS.openGuidedSample, title: 'Open Guided Sample', section: 'Workspace', keywords: ['guide', 'sample', 'tutorial', 'start'] },
   { id: APP_COMMAND_IDS.renameNode, title: 'Rename', section: 'Workspace', keywords: ['rename', 'topic', 'folder'] },
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Editor', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
   {
@@ -131,6 +132,7 @@ function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOpti
   }
   if (
     id === APP_COMMAND_IDS.openHelpSearch ||
+    id === APP_COMMAND_IDS.openGuidedSample ||
     isHelpPaletteCommand(id) ||
     id === APP_COMMAND_IDS.openTrash ||
     id === APP_COMMAND_IDS.restartApp ||

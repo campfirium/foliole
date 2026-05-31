@@ -55,6 +55,7 @@ export const APP_COMMAND_IDS = {
   openPerformancePanel: 'dev.openPerformancePanel',
   toggleDevReviewStatusBarPersistence: 'dev.toggleReviewStatusBarPersistence',
   openNotes: 'workspace.openNotes',
+  openGuidedSample: 'workspace.openGuidedSample',
   openHelpSearch: 'workspace.openHelpSearch',
   checkForUpdates: 'release.checkForUpdates',
   openLatestRelease: 'release.openLatestRelease',

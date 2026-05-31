@@ -61,6 +61,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openImportManagement: () => undefined,
     resetImportData: () => undefined,
     toggleDevReviewStatusBarPersistence: () => undefined,
+    openGuidedSample: () => undefined,
     openNotes: () => undefined,
     openHelpSearch: () => undefined,
     checkForUpdates: () => undefined,

@@ -57,22 +57,17 @@ it('seeds the initial workspace when sqlite starts empty', () => {
   const snapshot = loadWorkspaceSnapshot({ includeBody: true });
 
   expect(snapshot).not.toBeNull();
-  expect(snapshot?.activeNodeId).toBe('starter-welcome');
+  expect(snapshot?.activeNodeId).toBe('special-inbox');
   expect(snapshot?.nodeOrder).toEqual([
     'special-inbox',
-    'starter-root-folder',
-    'special-virtual-root',
-    'starter-welcome'
+    'special-virtual-root'
   ]);
   expect(snapshot?.nodesById['special-inbox']?.title).toBe('Inbox');
-  expect(snapshot?.nodesById['starter-root-folder']?.parentNodeId).toBeNull();
-  expect(snapshot?.nodesById['starter-root-folder']?.title).toBe('Untitled Folder');
   expect(snapshot?.nodesById['special-virtual-root']?.parentNodeId).toBeNull();
   expect(snapshot?.nodesById['special-virtual-root']?.title).toBe('Virtual');
+  expect(snapshot?.nodesById['starter-root-folder']).toBeUndefined();
   expect(snapshot?.nodesById['starter-virtual-example']).toBeUndefined();
-  expect(snapshot?.nodesById['starter-welcome']?.parentNodeId).toBe('special-inbox');
-  expect(snapshot?.nodesById['starter-welcome']?.title).toBe('Welcome to Foliole');
-  expect(snapshot?.nodesById['starter-welcome']?.content).toContain('# Welcome to Foliole');
+  expect(snapshot?.nodesById['starter-welcome']).toBeUndefined();
 });
 
 it('loads workspace snapshot from sqlite without localStorage dependency', () => {
@@ -88,14 +83,12 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
   expect(snapshot).not.toBeNull();
   expect(snapshot?.nodeOrder).toEqual([
     'special-inbox',
-    'starter-root-folder',
     'special-virtual-root',
-    'starter-welcome',
     'node-2'
   ]);
   expect(snapshot?.trashedNodeIds).toEqual(['node-1']);
   expect(snapshot?.trashedNodeDeletedAtById).toEqual({ 'node-1': '2026-03-06T00:10:00.000Z' });
-  expect(snapshot?.activeNodeId).toBe('starter-welcome');
+  expect(snapshot?.activeNodeId).toBe('special-inbox');
   expect(snapshot?.nodesById['node-1']?.deletedAt).toBe('2026-03-06T00:10:00.000Z');
   expect(snapshot?.nodesById['node-2']?.content).toBe('');
   expect(snapshot?.untitledSequenceByParent).toEqual({});

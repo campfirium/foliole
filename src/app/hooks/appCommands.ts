@@ -39,6 +39,7 @@ interface RunAppCommandActions {
   toggleDevReviewStatusBarPersistence: () => void;
   startClipboardImport: () => void;
   openNotes: () => void;
+  openGuidedSample: () => void | Promise<void>;
   openHelpSearch: () => void;
   checkForUpdates: () => void | Promise<void>;
   openLatestRelease: () => void | Promise<void>;
@@ -120,6 +121,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence]: actions.toggleDevReviewStatusBarPersistence,
     [APP_COMMAND_IDS.reimportSelectedTopic]: actions.reimportSelectedTopic,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
+    [APP_COMMAND_IDS.openGuidedSample]: actions.openGuidedSample,
     [APP_COMMAND_IDS.openHelpSearch]: actions.openHelpSearch,
     [APP_COMMAND_IDS.checkForUpdates]: actions.checkForUpdates,
     [APP_COMMAND_IDS.openLatestRelease]: actions.openLatestRelease,

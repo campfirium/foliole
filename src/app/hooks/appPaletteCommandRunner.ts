@@ -46,6 +46,7 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
   isReviewMode: boolean;
   openImportManagement: () => void;
   openPerformancePanel: () => void;
+  openGuidedSample: () => Promise<boolean>;
   openNotesView: () => void;
   onToggleEditorDisplayMode: () => void;
   onToggleImmersiveMode: () => void;
@@ -175,9 +176,12 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     openPerformancePanel: args.openPerformancePanel,
     resetImportData: () => runResetImportDataCommand(args),
     toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,
+    openGuidedSample: () => {
+      void args.openGuidedSample();
+    },
     openNotes: args.closeTrashView,
-    ...createPaletteHelpCommandActions(args),
     openHelpSearch: args.onOpenHelpSearch,
+    ...createPaletteHelpCommandActions(args),
     openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
     restartApp: args.onRestartApp,
     startClipboardImport: args.startClipboardImport,

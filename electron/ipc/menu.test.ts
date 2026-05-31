@@ -78,6 +78,9 @@ describe('native app menu command state', () => {
     const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
     expect(findMenuItem(items, 'editor.toggleImmersiveMode')).toMatchObject({ accelerator: 'F11', enabled: true });
     expect(findMenuItem(items, 'nodes.enterPriorityMode')).toMatchObject({ accelerator: 'Control+M', enabled: true });
+    expect(findMenuItem(items, 'workspace.openGuidedSample')).toMatchObject({ enabled: false });
+    expect(findMenuItem(items, 'release.checkForUpdates')).toMatchObject({ enabled: false });
+    expect(findMenuItem(items, 'support.openIssues')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).not.toHaveProperty('accelerator');
   });
