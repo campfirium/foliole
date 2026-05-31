@@ -44,6 +44,39 @@ function runNodeModulesCheck(env) {
   });
 }
 
+function runNativePreflight(env) {
+  return new Promise((resolve) => {
+    const child = spawn(
+      'bash',
+      [
+        '-c',
+        [
+          'set -euo pipefail',
+          'source scripts/windows/windows-preview-common.sh',
+          'source scripts/windows/windows-preview-client.sh',
+          'source scripts/windows/windows-preview-preflight.sh',
+          'run_windows_native_preflight_if_needed'
+        ].join('\n')
+      ],
+      {
+        cwd: REPO_ROOT,
+        env: { ...process.env, ...env }
+      }
+    );
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('close', (code) => {
+      resolve({ code, stderr, stdout });
+    });
+  });
+}
+
 describe('windows preview node_modules check', () => {
   it('uses Windows npm.cmd with a PATHEXT that can resolve node.exe', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-node-modules-'));
@@ -119,6 +152,40 @@ describe('windows preview node_modules check', () => {
       expect(result.stdout).toContain('ABI mismatch');
       expect(result.stdout).toContain('repaired');
       expect(result.stdout).toContain('windows native ABI preflight passed after repair');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('skips dependency and native ABI checks when the dependency fingerprint is already trusted', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-native-preflight-'));
+    try {
+      const abiCheck = path.join(tempRoot, 'check-abi.sh');
+      const nodeModulesCheck = path.join(tempRoot, 'check-node-modules.sh');
+      const stampFile = path.join(tempRoot, 'preflight.json');
+      const abiCommand = `bash ${abiCheck}`;
+      const nodeModulesCommand = `bash ${nodeModulesCheck}`;
+      await writeFile(abiCheck, 'exit 0\n', 'utf8');
+      await writeFile(nodeModulesCheck, 'exit 0\n', 'utf8');
+      const seed = await runNativePreflight({
+        WINDOWS_NATIVE_ABI_CHECK_COMMAND: abiCommand,
+        WINDOWS_NATIVE_PREFLIGHT_STAMP_FILE: stampFile,
+        WINDOWS_NODE_MODULES_CHECK_COMMAND: nodeModulesCommand
+      });
+      expect(seed.code).toBe(0);
+      expect(seed.stdout).toContain('windows dependency/native preflight required');
+
+      await writeFile(abiCheck, 'echo should-not-run-abi; exit 9\n', 'utf8');
+      await writeFile(nodeModulesCheck, 'echo should-not-run-node-modules; exit 8\n', 'utf8');
+      const skipped = await runNativePreflight({
+        WINDOWS_NATIVE_ABI_CHECK_COMMAND: abiCommand,
+        WINDOWS_NATIVE_PREFLIGHT_STAMP_FILE: stampFile,
+        WINDOWS_NODE_MODULES_CHECK_COMMAND: nodeModulesCommand
+      });
+
+      expect(skipped.code).toBe(0);
+      expect(skipped.stdout).toContain('windows dependency/native preflight skipped');
+      expect(skipped.stdout).not.toContain('should-not-run');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

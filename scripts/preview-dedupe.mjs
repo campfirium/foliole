@@ -147,14 +147,11 @@ function previewStatus(target) {
   return target === 'windows' ? 'STARTED' : 'SYNCED';
 }
 
-function readWaitOnFailureForCommand(target, command) {
+function readWaitOnFailureForCommand() {
   if (process.env.PREVIEW_DEDUPE_WAIT_ON_FAILURE !== undefined) {
     return process.env.PREVIEW_DEDUPE_WAIT_ON_FAILURE === '1';
   }
-  if (target === 'windows' && command.some((arg) => arg.endsWith('windows-preview-native.mjs'))) {
-    return false;
-  }
-  return target === 'windows';
+  return false;
 }
 
 async function logDiagnostics(target, stage) {
@@ -212,7 +209,7 @@ async function main() {
     runPreview: ({ requireActualPreview }) => runPreviewFlow({ command, requireActualPreview, target }),
     runtimeDir: runtimeDir(),
     target,
-    waitOnFailure: readWaitOnFailureForCommand(target, command)
+    waitOnFailure: readWaitOnFailureForCommand()
   });
   await logDiagnostics(target, 'after');
   return exitCode;

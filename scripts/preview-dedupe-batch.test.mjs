@@ -183,7 +183,6 @@ describe('preview-dedupe batching', () => {
     const repoRoot = await createRepo();
     try {
       const env = {
-        PREVIEW_DEDUPE_WAIT_ON_FAILURE: '0',
         PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '180',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'

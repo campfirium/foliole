@@ -33,6 +33,7 @@ cd "${REPO_ROOT}"
 
 source "${SCRIPT_DIR}/windows-preview-common.sh"
 source "${SCRIPT_DIR}/windows-preview-client.sh"
+source "${SCRIPT_DIR}/windows-preview-preflight.sh"
 source "${SCRIPT_DIR}/windows-preview-mtime-changes.sh"
 source "${SCRIPT_DIR}/windows-preview-change-selection.sh"
 source "${SCRIPT_DIR}/windows-preview-intent-paths.sh"
@@ -61,8 +62,7 @@ else
 fi
 
 echo "[windows-preview] step 3/4: verify windows node_modules"
-verify_windows_node_modules
-verify_windows_native_abi
+run_windows_native_preflight_if_needed
 
 select_update_action "${changed_files}"
 

@@ -16,11 +16,11 @@ export function shouldForcePreview(env = process.env) {
   return env.PREVIEW_DEDUPE_FORCE === '1';
 }
 
-function readWaitOnFailure(target, env = process.env) {
+function readWaitOnFailure(env = process.env) {
   if (env.PREVIEW_DEDUPE_WAIT_ON_FAILURE !== undefined) {
     return env.PREVIEW_DEDUPE_WAIT_ON_FAILURE === '1';
   }
-  return target === 'windows';
+  return false;
 }
 
 function canTakeOver(run, now) {
@@ -83,7 +83,7 @@ export async function runScheduledPreview({
   target,
   runPreview,
   waitAnnouncer = createPreviewWaitAnnouncer(),
-  waitOnFailure = readWaitOnFailure(target),
+  waitOnFailure = readWaitOnFailure(),
   maxSettleMs = readMaxSettleMs(target),
   settleMs = readSettleMs(target),
   windowMs = readWindowMs(target),

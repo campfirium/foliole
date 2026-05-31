@@ -55,49 +55,6 @@ describe('preview-dedupe scheduler defaults', () => {
     }
   });
 
-  it('keeps a failed Windows preview request waiting until a later run succeeds', async () => {
-    const runtimeDir = await mkdtemp(path.join(os.tmpdir(), 'preview-scheduler-'));
-    try {
-      let runs = 0;
-      const waitAnnouncer = { shouldAnnounce: () => false };
-      const first = runScheduledPreview({
-        runtimeDir,
-        runPreview: async () => {
-          runs += 1;
-          return { exitCode: 1, hash: 'hash-failed', previewed: true };
-        },
-        target: 'windows',
-        settleMs: 0,
-        totalTimeoutMs: 2_000,
-        waitAnnouncer,
-        windowMs: 0
-      });
-
-      await delay(260);
-      const second = await runScheduledPreview({
-        runtimeDir,
-        runPreview: async () => {
-          runs += 1;
-          return { exitCode: 0, hash: 'hash-ok', previewed: true };
-        },
-        target: 'windows',
-        settleMs: 0,
-        totalTimeoutMs: 2_000,
-        waitAnnouncer,
-        windowMs: 0
-      });
-      const firstResult = await first;
-      const state = JSON.parse(await readFile(path.join(runtimeDir, 'windows-preview.state.json'), 'utf8'));
-
-      expect(second).toBe(0);
-      expect(firstResult).toBe(0);
-      expect(runs).toBe(2);
-      expect(Object.values(state.runs).filter((run) => run.status === 'completed')).toHaveLength(2);
-    } finally {
-      await rm(runtimeDir, { force: true, recursive: true });
-    }
-  });
-
   it('fails and completes the request when the validation wait exceeds the internal total timeout', async () => {
     const runtimeDir = await mkdtemp(path.join(os.tmpdir(), 'preview-scheduler-'));
     try {
