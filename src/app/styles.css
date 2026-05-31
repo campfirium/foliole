@@ -876,7 +876,7 @@ b {
 .window-titlebar-right-panel-actions {
   align-items: center;
   display: inline-flex;
-  gap: 6px;
+  gap: 0;
   padding-left: 6px;
 }
 

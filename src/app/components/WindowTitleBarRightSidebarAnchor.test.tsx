@@ -13,7 +13,7 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-it('keeps the more menu visible and drops panel buttons when the right titlebar is narrow', () => {
+it('keeps only the more menu visible when the right titlebar is below the sidebar minimum', () => {
   render(
     <WindowTitleBarRightSidebarAnchor
       activeRightPanelId="outline"
@@ -28,6 +28,23 @@ it('keeps the more menu visible and drops panel buttons when the right titlebar 
     'More right sidebar panels'
   ]);
   expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toBeInTheDocument();
+});
+
+it('shows the first panel button at the default right sidebar width', () => {
+  render(
+    <WindowTitleBarRightSidebarAnchor
+      activeRightPanelId="outline"
+      isRightSidebarCollapsed={false}
+      onSelectRightPanel={() => undefined}
+      onToggleRightSidebarVisibility={() => undefined}
+      rightSidebarWidth={250}
+    />
+  );
+
+  expect(getVisibleRightSidebarButtonLabels()).toEqual([
+    'Flow panel',
+    'More right sidebar panels'
+  ]);
 });
 
 it('adds panel buttons back when the right sidebar budget has room', () => {

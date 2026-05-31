@@ -73,6 +73,11 @@ it('updates right sidebar width from pointer drag on desktop', async () => {
   expect(screen.getByTestId('right-sidebar-width').textContent).toBe('400');
 
   act(() => {
+    pointerMove({ clientX: 1300 } as PointerEvent);
+  });
+  expect(screen.getByTestId('right-sidebar-width').textContent).toBe('250');
+
+  act(() => {
     pointerUp(new Event('pointerup'));
   });
   await waitFor(() => {

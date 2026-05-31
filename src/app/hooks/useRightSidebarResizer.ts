@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 
+import { clampRightSidebarWidth } from '../../store/workspaceLayoutConstraints';
+
 const DESKTOP_BREAKPOINT = 1280;
 const SPLITTER_KEYBOARD_STEP = 16;
 
@@ -21,11 +23,11 @@ function handleRightSidebarArrowResize(
 ) {
   if (event.key === 'ArrowLeft') {
     event.preventDefault();
-    setRightSidebarWidth(rightSidebarWidth + SPLITTER_KEYBOARD_STEP);
+    setRightSidebarWidth(clampRightSidebarWidth(rightSidebarWidth + SPLITTER_KEYBOARD_STEP));
   }
   if (event.key === 'ArrowRight') {
     event.preventDefault();
-    setRightSidebarWidth(rightSidebarWidth - SPLITTER_KEYBOARD_STEP);
+    setRightSidebarWidth(clampRightSidebarWidth(rightSidebarWidth - SPLITTER_KEYBOARD_STEP));
   }
 }
 
@@ -47,7 +49,7 @@ export function useRightSidebarResizer(
         return;
       }
       const delta = resizeStart.startX - event.clientX;
-      setRightSidebarWidth(Math.round(resizeStart.startWidth + delta));
+      setRightSidebarWidth(clampRightSidebarWidth(Math.round(resizeStart.startWidth + delta)));
     };
 
     const stopResize = () => {

@@ -4,6 +4,8 @@ import {
   setWhitelistedLocalStorageItem
 } from '../shared/platform/storage';
 
+import { clampRightSidebarWidth } from './workspaceLayoutConstraints';
+
 function readBooleanPreference(key: string, fallback: boolean) {
   const value = getWhitelistedLocalStorageItem(key);
   if (value === 'true') {
@@ -105,9 +107,9 @@ export function saveDocumentWidthPreference(value: number) {
 }
 
 export function loadRightSidebarWidthPreference(fallback: number) {
-  return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth, fallback);
+  return clampRightSidebarWidth(readNumberPreference(APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth, fallback));
 }
 
 export function saveRightSidebarWidthPreference(value: number) {
-  writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth, value);
+  writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth, clampRightSidebarWidth(value));
 }

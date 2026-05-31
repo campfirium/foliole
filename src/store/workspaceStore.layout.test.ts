@@ -36,6 +36,13 @@ it('updates layout widths and resets to defaults', () => {
   expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(false);
 });
 
+it('keeps the right sidebar wide enough for titlebar controls', () => {
+  useWorkspaceStore.getState().setRightSidebarWidth(180);
+
+  expect(useWorkspaceStore.getState().layout.rightSidebarWidth).toBe(250);
+  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth)).toBe('250');
+});
+
 it('hydrates sidebar collapsed flags from persisted app settings', () => {
   localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.listCollapsed, 'true');
   localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarCollapsed, 'true');

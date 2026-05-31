@@ -1,6 +1,7 @@
 import type { StoreApi } from 'zustand';
 
 import { normalizeWidth } from './workspaceHelpers';
+import { clampRightSidebarWidth } from './workspaceLayoutConstraints';
 import {
   saveDocumentWidthPreference,
   saveListCollapsedPreference,
@@ -19,13 +20,14 @@ function setLayoutWidth(
   if (!normalizedWidth) {
     return;
   }
+  const persistedWidth = key === 'rightSidebarWidth' ? clampRightSidebarWidth(normalizedWidth) : normalizedWidth;
   if (key === 'documentMaxWidth') {
-    saveDocumentWidthPreference(normalizedWidth);
+    saveDocumentWidthPreference(persistedWidth);
   } else if (key === 'listWidth') {
-    saveListWidthPreference(normalizedWidth);
+    saveListWidthPreference(persistedWidth);
     saveListCollapsedPreference(false);
   } else {
-    saveRightSidebarWidthPreference(normalizedWidth);
+    saveRightSidebarWidthPreference(persistedWidth);
     saveRightSidebarCollapsedPreference(false);
   }
   set((state) => ({
@@ -33,7 +35,7 @@ function setLayoutWidth(
       ...state.layout,
       ...(key === 'listWidth' ? { isListCollapsed: false } : {}),
       ...(key === 'rightSidebarWidth' ? { isRightSidebarCollapsed: false } : {}),
-      [key]: normalizedWidth
+      [key]: persistedWidth
     }
   }));
 }
