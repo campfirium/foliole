@@ -13,11 +13,15 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).toContain('process.env.FOLIOLE_USER_DATA_PATH = userDataPath');
   expect(runner).toContain('process.env.FOLIOLE_SESSION_DATA_PATH = userDataPath');
   expect(runner).toContain('process.env.FOLIOLE_WORKDIR ??= repoRoot');
-  expect(runner).toContain("const localLibraryHome = 'D:\\\\X\\\\U\\\\Foliole'");
+  expect(runner).toContain("const mainLibraryHome = 'D:\\\\X\\\\U\\\\Foliole'");
+  expect(runner).toContain("const sandboxLibraryHome = path.join(mainLibraryHome, 'PreviewSandbox')");
+  expect(runner).toContain("process.env.FOLIOLE_NATIVE_PREVIEW_SANDBOX === '1'");
+  expect(runner).toContain('resetSandboxState();');
   expect(runner).toContain('library-path-settings.json');
   expect(runner).toContain('ensureLocalLibraryPathSettings();');
   expect(runner).toContain('assertLocalDatabaseWritable();');
-  expect(runner).toContain("fs.openSync(databasePath, 'r+')");
+  expect(runner).toContain("fs.openSync(databasePath, useTemporaryLibrary ? 'a+' : 'r+')");
+  expect(runner).toContain("process.env.FOLIOLE_NATIVE_PREVIEW_TEMP_LIBRARY === '1'");
   expect(runner).toContain('native preview process cannot open the live database for write');
   expect(runner).toContain('library_home: localLibraryHome');
   expect(runner).not.toContain('if (!fs.existsSync(databasePath))');

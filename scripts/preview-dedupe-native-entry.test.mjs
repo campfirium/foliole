@@ -15,5 +15,8 @@ describe('windows native preview entry', () => {
     expect(packageJson.scripts['windows:preview:native']).toBe(
       'node scripts/preview-dedupe.mjs windows -- node scripts/with-resource-gate.mjs preview -- node scripts/windows/windows-preview-native.mjs'
     );
+    expect(packageJson.scripts['windows:preview:sandbox']).toBe(
+      'PREVIEW_DEDUPE_FORCE=1 PREVIEW_DEDUPE_WAIT_ON_FAILURE=0 PREVIEW_DEDUPE_RUNTIME_DIR=.lab/internal/runtime/windows-sandbox node scripts/preview-dedupe.mjs windows -- node scripts/with-resource-gate.mjs preview -- bash scripts/windows/windows-preview-sandbox.sh'
+    );
   });
 });
