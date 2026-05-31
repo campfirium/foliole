@@ -3,9 +3,10 @@ import type { SettingsSearchRowMeta } from './settingsSearch';
 export const ABOUT_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
   {
     categoryId: 'about',
-    description: 'Reader-first outlining and review workflow built with Electron + React.',
+    description: 'Current Foliole desktop version and update check.',
     id: 'about-foliole-desktop',
-    title: 'Foliole desktop'
+    searchTerms: ['check updates', 'release notes'],
+    title: 'Version'
   },
   {
     categoryId: 'about',
@@ -19,6 +20,13 @@ export const ABOUT_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
     id: 'about-search-enhancement',
     searchTerms: ['full text search', 'CJK search'],
     title: 'Search enhancement'
+  },
+  {
+    categoryId: 'about',
+    description: 'Open the GitHub repository, report an issue, or join discussions.',
+    id: 'about-community',
+    searchTerms: ['feedback', 'github', 'issue', 'discussion'],
+    title: 'Community'
   }
 ];
 

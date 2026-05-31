@@ -72,6 +72,11 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.setPdfDarkAppearanceWarm)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openPerformancePanel)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.checkForUpdates)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.openLatestRelease)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubRepository)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubIssues)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubDiscussions)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createSelectionHighlight)).toBe(true);

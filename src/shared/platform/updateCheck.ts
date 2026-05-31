@@ -1,0 +1,133 @@
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import packageJson from '../../../package.json';
+import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
+import { showAppRuntimeNotice } from '../ui/AppRuntimeNotice';
+
+import { openFolioleReleaseLink } from './releaseLinks';
+import { openExternalUrl } from './runtimeExternalNavigation';
+import { getRuntimeInvoke } from './runtimeInvoke';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
+import {
+  DEFAULT_UPDATE_STATE,
+  getUpdateCheckDelayMs,
+  normalizeUpdateManifest,
+  normalizeUpdateState,
+  selectLatestPlatformRelease,
+  shouldRunUpdateCheck,
+  type UpdateCheckState,
+  type UpdateRelease
+} from './updateCheckModel';
+
+export {
+  compareVersionStrings,
+  normalizeUpdateManifest,
+  selectLatestPlatformRelease
+} from './updateCheckModel';
+
+const DEFAULT_MANIFEST_URL = 'https://campfirium.github.io/foliole/releases/update-manifest.json';
+
+export interface UpdateCheckResult {
+  latestRelease: UpdateRelease | null;
+  state: UpdateCheckState;
+  status: 'available' | 'current' | 'failed' | 'skipped';
+}
+
+function getManifestUrl() {
+  const configured = import.meta.env.VITE_FOLIOLE_UPDATE_MANIFEST_URL as string | undefined;
+  return configured?.trim() || DEFAULT_MANIFEST_URL;
+}
+
+
+export function readUpdateCheckState(): UpdateCheckState {
+  try {
+    return normalizeUpdateState(JSON.parse(getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState) ?? 'null'));
+  } catch {
+    return DEFAULT_UPDATE_STATE;
+  }
+}
+
+function writeUpdateCheckState(state: UpdateCheckState) {
+  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify(state));
+}
+
+export function getNextUpdateCheckDelayMs(now = Date.now()) {
+  return getUpdateCheckDelayMs(readUpdateCheckState(), now);
+}
+
+async function loadCurrentAppVersion() {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return packageJson.version;
+  try {
+    return await runtimeInvoke(NATIVE_COMMANDS.appGetVersion);
+  } catch {
+    return packageJson.version;
+  }
+}
+
+function showUpdateCheckNotice(result: UpdateCheckResult, manual: boolean) {
+  if (result.status === 'available' && result.latestRelease) {
+    showAppRuntimeNotice(`Foliole ${result.latestRelease.version} is available. Open Releases to download.`, 'success');
+    return;
+  }
+  if (!manual) return;
+  if (result.status === 'current') {
+    showAppRuntimeNotice('Foliole is up to date.', 'success');
+    return;
+  }
+  if (result.status === 'failed') {
+    showAppRuntimeNotice('Could not check for updates.');
+  }
+}
+
+export async function checkForFolioleUpdates(options: { force?: boolean; notify?: boolean } = {}): Promise<UpdateCheckResult> {
+  const state = readUpdateCheckState();
+  const now = Date.now();
+  if (!shouldRunUpdateCheck(state, now, Boolean(options.force))) {
+    return { latestRelease: null, state, status: 'skipped' };
+  }
+
+  try {
+    const [currentVersion, response] = await Promise.all([
+      loadCurrentAppVersion(),
+      fetch(getManifestUrl(), { cache: 'no-store' })
+    ]);
+    if (!response.ok) throw new Error(`update manifest request failed: ${response.status}`);
+    const manifest = normalizeUpdateManifest(await response.json());
+    if (!manifest) throw new Error('update manifest payload invalid');
+    const latestRelease = selectLatestPlatformRelease(manifest, currentVersion);
+    const nextState: UpdateCheckState = {
+      cachedManifest: manifest,
+      dismissedVersion: state.dismissedVersion,
+      lastCheckedAt: new Date(now).toISOString(),
+      lastCheckStatus: latestRelease ? 'available' : 'current',
+      lastSeenVersion: latestRelease ? latestRelease.version : state.lastSeenVersion,
+      latestReleaseUrl: latestRelease?.url ?? null,
+      latestVersion: latestRelease?.version ?? null
+    };
+    writeUpdateCheckState(nextState);
+    const result: UpdateCheckResult = {
+      latestRelease,
+      state: nextState,
+      status: latestRelease ? 'available' : 'current'
+    };
+    if (options.notify && (options.force || latestRelease?.version !== state.lastSeenVersion)) {
+      showUpdateCheckNotice(result, Boolean(options.force));
+    }
+    return result;
+  } catch {
+    const nextState = {
+      ...state,
+      lastCheckedAt: new Date(now).toISOString(),
+      lastCheckStatus: 'failed' as const
+    };
+    writeUpdateCheckState(nextState);
+    const result: UpdateCheckResult = { latestRelease: null, state: nextState, status: 'failed' };
+    if (options.notify) showUpdateCheckNotice(result, Boolean(options.force));
+    return result;
+  }
+}
+
+export function openFolioleLatestRelease() {
+  const state = readUpdateCheckState();
+  return state.latestReleaseUrl ? openExternalUrl(state.latestReleaseUrl) : openFolioleReleaseLink('releases');
+}

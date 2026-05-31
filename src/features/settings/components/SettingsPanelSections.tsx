@@ -60,6 +60,7 @@ export interface SettingsCategoryContentProps {
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+  onRunSupportCommand?: ((commandId: string) => void) | undefined;
   onEnterPreview: () => void;
   onSettingsBackdropTransparentChange: (value: boolean) => void;
 }
@@ -129,7 +130,7 @@ function renderFallbackCategory(props: SettingsCategoryContentProps) {
     return <SettingsBackupsSection />;
   }
   if (props.activeCategory === 'about') {
-    return <SettingsAboutSection />;
+    return <SettingsAboutSection onRunSupportCommand={props.onRunSupportCommand} />;
   }
   if (props.activeCategory === 'companion-sync') {
     return <SettingsCompanionSyncSection />;

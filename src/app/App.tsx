@@ -17,10 +17,8 @@ import { WorkspaceLayout } from './components/WorkspaceLayout';
 import type { WorkspaceSearchResult } from './components/workspaceSearch';
 import { useAppController } from './hooks/useAppController';
 import { useReadwiseAutoSync } from './hooks/useReadwiseAutoSync';
-import {
-  useWorkspaceContentChangedRefresh,
-  useWorkspaceSyncAppliedRefresh
-} from './hooks/useWorkspaceSyncAppliedRefresh';
+import { useReleaseUpdateCheck } from './hooks/useReleaseUpdateCheck';
+import { useWorkspaceContentChangedRefresh, useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
 
 type AppController = ReturnType<typeof useAppController>;
 
@@ -63,6 +61,7 @@ function AppContent() {
   useWorkspaceSyncAppliedRefresh();
   useWorkspaceContentChangedRefresh();
   useReadwiseAutoSync();
+  useReleaseUpdateCheck();
 
   useEffect(() => {
     installWorkspaceDebugBridge();

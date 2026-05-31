@@ -27,6 +27,7 @@ import {
 interface SettingsPanelProps {
   importCategoryContent?: ReactNode;
   onClose: () => void;
+  onRunSupportCommand?: ((commandId: string) => void) | undefined;
   readwiseReaderCategoryContent?: ReactNode;
   requestedCategory?: SettingsCategoryId | null;
 }
@@ -95,6 +96,7 @@ type SettingsPanelBodyProps = {
   onRebuildExternalSearchIndex: (folderId?: string) => void;
   onRemoveExternalSearchFolder: (folderId: string) => void;
   onRetryLoadExternalSearchFolders: () => void;
+  onRunSupportCommand?: ((commandId: string) => void) | undefined;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
@@ -138,6 +140,7 @@ function createSettingsCategoryProps(
     onRebuildExternalSearchIndex: props.onRebuildExternalSearchIndex,
     onRemoveExternalSearchFolder: props.onRemoveExternalSearchFolder,
     onRetryLoadExternalSearchFolders: props.onRetryLoadExternalSearchFolders,
+    onRunSupportCommand: props.onRunSupportCommand,
     onRebuildMirrorLinks: props.onRebuildMirrorLinks,
     onRebuildMirrorOutput: props.onRebuildMirrorOutput,
     onRestoreDefault: props.onRestoreDefault,

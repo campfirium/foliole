@@ -6,6 +6,7 @@ vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
 }));
 
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
+import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { copyDiagnosticReport } from '../../../../shared/platform/diagnosticBundle';
 
@@ -42,8 +43,8 @@ it('shows application info and copies the diagnostic report in the about section
   });
   render(<SettingsAboutSection />);
 
-  expect(screen.getByText('Foliole desktop')).toBeInTheDocument();
-  expect(screen.getByText('v0.60')).toBeInTheDocument();
+  expect(screen.getByText('Version 0.60')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Check for Updates' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic report' }));
   await waitFor(() => {
     expect(copyDiagnosticReport).toHaveBeenCalledTimes(1);
@@ -54,14 +55,25 @@ it('shows application info and copies the diagnostic report in the about section
   expect(screen.queryByRole('button', { name: 'Create backup' })).not.toBeInTheDocument();
 });
 
+it('runs update and community commands from General settings', () => {
+  const onRunSupportCommand = vi.fn();
+  render(<SettingsAboutSection onRunSupportCommand={onRunSupportCommand} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Check for Updates' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Feedback' }));
+
+  expect(onRunSupportCommand).toHaveBeenNthCalledWith(1, APP_COMMAND_IDS.checkForUpdates);
+  expect(onRunSupportCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.openGitHubIssues);
+});
+
 it('shows the global search enhancement switch in General', async () => {
   render(<SettingsAboutSection />);
 
   const toggle = screen.getByRole('switch', { name: 'Search enhancement' });
-  const desktopTitle = screen.getByText('Foliole desktop');
+  const versionTitle = screen.getByText('Version 0.60');
   const searchTitle = screen.getByText('Search');
   expect(toggle).toHaveAttribute('aria-checked', 'false');
-  expect(desktopTitle.compareDocumentPosition(searchTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(versionTitle.compareDocumentPosition(searchTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByText(/other languages that are not separated by spaces/)).toBeInTheDocument();
   expect(screen.getByText(/Uses more search data/)).toBeInTheDocument();
 

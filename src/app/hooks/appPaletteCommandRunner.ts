@@ -3,9 +3,10 @@ import type { CommandPaletteItem } from '../../shared/commands/types';
 import { requestAppConfirmation } from '../../shared/ui';
 
 import { runAppCommand, runReviewModeToggle } from './appCommands';
+import { createPaletteHelpCommandActions, type PaletteHelpCommandRunnerArgs } from './appPaletteHelpCommandRunner';
 import { enterReviewModeSession, type StartStudyModeOptions } from './reviewModeSessionActions';
 
-interface PaletteCommandRunnerArgs {
+interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
   clearSettingsRequest: () => void;
   closeTrashView: () => void;
   createFolder: () => void;
@@ -175,6 +176,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     resetImportData: () => runResetImportDataCommand(args),
     toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,
     openNotes: args.closeTrashView,
+    ...createPaletteHelpCommandActions(args),
     openHelpSearch: args.onOpenHelpSearch,
     openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
     restartApp: args.onRestartApp,

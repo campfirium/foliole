@@ -145,6 +145,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'fullTextSearchIndexStrategy',
   'commandShortcutOverrides',
   'webLookupEntries',
+  'updateCheckState',
   'devReviewStatusBarPersistenceEnabled',
   'devReviewStatusBarOpen'
 ] as const satisfies readonly AppSettingsStorageName[];

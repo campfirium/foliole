@@ -128,6 +128,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   fullTextSearchIndexStrategy: FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY,
   commandShortcutOverrides: 'foliole-command-shortcut-overrides',
   webLookupEntries: 'foliole-web-lookup-entries',
+  updateCheckState: 'foliole-update-check-state',
   devReviewStatusBarPersistenceEnabled: 'foliole-dev-review-status-bar-persistence-enabled',
   devReviewStatusBarOpen: 'foliole-dev-review-status-bar-open',
   desktopDeviceSyncEnabled: 'foliole-desktop-device-sync-enabled'

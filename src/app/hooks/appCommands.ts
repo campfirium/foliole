@@ -40,6 +40,11 @@ interface RunAppCommandActions {
   startClipboardImport: () => void;
   openNotes: () => void;
   openHelpSearch: () => void;
+  checkForUpdates: () => void | Promise<void>;
+  openLatestRelease: () => void | Promise<void>;
+  openGitHubRepository: () => void | Promise<void>;
+  openGitHubIssues: () => void | Promise<void>;
+  openGitHubDiscussions: () => void | Promise<void>;
   openReadwiseReaderSettings: () => void;
   openSettings: () => void;
   openTrash: () => void;
@@ -116,6 +121,11 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.reimportSelectedTopic]: actions.reimportSelectedTopic,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openHelpSearch]: actions.openHelpSearch,
+    [APP_COMMAND_IDS.checkForUpdates]: actions.checkForUpdates,
+    [APP_COMMAND_IDS.openLatestRelease]: actions.openLatestRelease,
+    [APP_COMMAND_IDS.openGitHubRepository]: actions.openGitHubRepository,
+    [APP_COMMAND_IDS.openGitHubIssues]: actions.openGitHubIssues,
+    [APP_COMMAND_IDS.openGitHubDiscussions]: actions.openGitHubDiscussions,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.exportCurrentArticle]: actions.exportCurrentArticle,
     [APP_COMMAND_IDS.enterPriorityMode]: actions.enterPriorityMode,

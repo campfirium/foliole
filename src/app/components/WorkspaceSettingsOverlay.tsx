@@ -11,12 +11,14 @@ import { useImportSourceWorkspaceState } from './useImportSourceWorkspaceState';
 export interface WorkspaceSettingsOverlayProps {
   isSettingsOpen: boolean;
   onClose: () => void;
+  onRunSupportCommand?: ((commandId: string) => void) | undefined;
   requestedCategory: SettingsCategoryId | null;
 }
 
 interface WorkspaceSettingsOverlaySource {
   isSettingsOpen: boolean;
   onCloseSettings: () => void;
+  onRunRailAction?: ((commandId: string) => void) | undefined;
   requestedSettingsCategory: SettingsCategoryId | null;
 }
 
@@ -29,6 +31,7 @@ export function selectWorkspaceSettingsOverlayProps(
   return {
     isSettingsOpen: props.isSettingsOpen,
     onClose: props.onCloseSettings,
+    onRunSupportCommand: props.onRunRailAction,
     requestedCategory: props.requestedSettingsCategory
   };
 }
@@ -36,6 +39,7 @@ export function selectWorkspaceSettingsOverlayProps(
 export function WorkspaceSettingsOverlay({
   isSettingsOpen,
   onClose,
+  onRunSupportCommand,
   requestedCategory
 }: WorkspaceSettingsOverlayProps) {
   if (!isSettingsOpen) {
@@ -43,15 +47,17 @@ export function WorkspaceSettingsOverlay({
   }
 
   return (
-    <WorkspaceSettingsOverlayContent onClose={onClose} requestedCategory={requestedCategory} />
+    <WorkspaceSettingsOverlayContent onClose={onClose} onRunSupportCommand={onRunSupportCommand} requestedCategory={requestedCategory} />
   );
 }
 
 function WorkspaceSettingsOverlayContent({
   onClose,
+  onRunSupportCommand,
   requestedCategory
 }: {
   onClose: () => void;
+  onRunSupportCommand?: ((commandId: string) => void) | undefined;
   requestedCategory: SettingsCategoryId | null;
 }) {
   const importSettings = useImportSourceWorkspaceState();
@@ -68,6 +74,7 @@ function WorkspaceSettingsOverlayContent({
       <SettingsPanel
         importCategoryContent={<ImportCategoryContent importSettings={importSettings} keepPreview={keepPreview} />}
         onClose={onClose}
+        onRunSupportCommand={onRunSupportCommand}
         readwiseReaderCategoryContent={<ReadwiseReaderCategoryContent importSettings={importSettings} />}
         requestedCategory={requestedCategory}
       />

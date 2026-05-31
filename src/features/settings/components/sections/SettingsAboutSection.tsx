@@ -17,16 +17,14 @@ import {
   SettingsSection,
   settingsButtonClassName,
   settingsSwitchClassName,
-  settingsSwitchKnobClassName,
-  settingsValueBoxClassName
+  settingsSwitchKnobClassName
 } from '../../../../shared/ui';
-import {
-  settingsSearchRowProps,
-} from '../../model/settingsSearch';
+import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { ABOUT_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
 
+import { SettingsSupportSection } from './SettingsSupportSection';
+
 const ABOUT_ROW = {
-  app: ABOUT_SETTINGS_SEARCH_ROWS[0]!,
   diagnosticBundle: ABOUT_SETTINGS_SEARCH_ROWS[1]!,
   searchEnhancement: ABOUT_SETTINGS_SEARCH_ROWS[2]!
 };
@@ -82,22 +80,11 @@ function DiagnosticExportRow() {
   );
 }
 
-function ApplicationInfo() {
+function ApplicationInfo(props: { onRunSupportCommand?: ((commandId: string) => void) | undefined }) {
   return (
     <>
-      <SettingsSection ariaLabel="About settings section">
-        <SettingsRow
-          {...settingsSearchRowProps(ABOUT_ROW.app)}
-          description={ABOUT_ROW.app.description}
-          readonly
-          title={ABOUT_ROW.app.title}
-        >
-          <SettingsControlSlot>
-            <span className={settingsValueBoxClassName('rounded-full px-2.5 py-1 text-[0.82rem]')}>
-              v0.60
-            </span>
-          </SettingsControlSlot>
-        </SettingsRow>
+      <SettingsSupportSection onRunSupportCommand={props.onRunSupportCommand} />
+      <SettingsSection ariaLabel="Support tools settings section" title="Support tools">
         <DiagnosticExportRow />
       </SettingsSection>
       <SettingsSection ariaLabel="General search settings section" title="Search">
@@ -187,6 +174,6 @@ function getSearchEnhancementStatusCopy(status: SearchIndexRebuildStatus | null,
   return status.strategy === 'cjk-trigram' ? 'Enhanced search is ready.' : 'Search is ready.';
 }
 
-export function SettingsAboutSection() {
-  return <ApplicationInfo />;
+export function SettingsAboutSection(props: { onRunSupportCommand?: ((commandId: string) => void) | undefined }) {
+  return <ApplicationInfo {...props} />;
 }

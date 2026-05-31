@@ -4,6 +4,8 @@ import type { CommandPaletteItem } from '../../shared/commands/types';
 import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
 import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
+import { openFolioleReleaseLink } from '../../shared/platform/releaseLinks';
+import { checkForFolioleUpdates, openFolioleLatestRelease } from '../../shared/platform/updateCheck';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
@@ -136,6 +138,16 @@ function createPaletteViewActions() {
   };
 }
 
+function createPaletteReleaseActions() {
+  return {
+    checkForUpdates: () => checkForFolioleUpdates({ force: true, notify: true }).then(() => undefined),
+    openGitHubDiscussions: () => openFolioleReleaseLink('discussions'),
+    openGitHubIssues: () => openFolioleReleaseLink('issues'),
+    openGitHubRepository: () => openFolioleReleaseLink('repository'),
+    openLatestRelease: openFolioleLatestRelease
+  };
+}
+
 function createPaletteStudyActions(args: {
   isStudyMode: boolean;
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
@@ -214,6 +226,7 @@ export function createPaletteRunnerArgs(args: {
     onOpenHelpSearch: args.onOpenHelpSearch,
     ...createPaletteAppearanceActions(args),
     ...createPaletteViewActions(),
+    ...createPaletteReleaseActions(),
     ...createPaletteRuntimeActions(args),
     onToggleDevTools: toggleMainWindowDevTools,
     onToggleImmersiveMode: args.layoutProps.layoutChrome.onToggleImmersiveMode,
