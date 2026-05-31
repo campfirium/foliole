@@ -9,6 +9,7 @@ import {
   VIRTUAL_ROOT_NODE_ID
 } from '../features/nodes/model/specialNodes';
 import { NODE_TITLE_MAX_CHARS } from '../shared/config/nodeTitleConfig';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import {
   createInitialWorkspaceState,
@@ -46,6 +47,7 @@ function getSeedNodeId() {
 beforeEach(async () => {
   localStorage.clear();
   delete window.electronAPI;
+  vi.mocked(getRuntimeInvoke).mockReturnValue(null);
   await resetWorkspaceStore();
 });
 
@@ -153,13 +155,13 @@ it('keeps manual title when content changes after rename', async () => {
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Manual Title');
 });
 
-it('blocks content edits for empty container nodes after they gain child nodes', async () => {
+it('keeps empty parent topics editable after they gain child nodes', async () => {
   const parentId = (await useWorkspaceStore.getState().createRootNode(''))!;
   (await useWorkspaceStore.getState().createChildNode(parentId, 'Child body'))!;
 
-  await useWorkspaceStore.getState().updateNodeContent(parentId, 'Container text should stay blocked');
+  await useWorkspaceStore.getState().updateNodeContent(parentId, 'Parent topic content');
 
-  expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('');
+  expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('Parent topic content');
 });
 
 it('keeps article parents editable after they gain child nodes', async () => {
@@ -169,16 +171,6 @@ it('keeps article parents editable after they gain child nodes', async () => {
   await useWorkspaceStore.getState().updateNodeContent(parentId, 'Parent article updated');
 
   expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('Parent article updated');
-});
-
-it('restores content editing after an empty container loses all child nodes', async () => {
-  const parentId = (await useWorkspaceStore.getState().createRootNode(''))!;
-  const childId = (await useWorkspaceStore.getState().createChildNode(parentId, 'Child body'))!;
-
-  await useWorkspaceStore.getState().deleteNode(childId);
-  await useWorkspaceStore.getState().updateNodeContent(parentId, 'Recovered content');
-
-  expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('Recovered content');
 });
 
 it('creates QA node from selected content', async () => {
@@ -273,6 +265,9 @@ it('deletes node and switches active node', async () => {
   }
 
   useWorkspaceStore.getState().setActiveNode(createdId);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(async (_command, payload?: { nodeIds?: string[] }) => ({
+    deletedNodeIds: payload?.nodeIds ?? []
+  })));
   await useWorkspaceStore.getState().deleteNode(createdId);
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toBeDefined();

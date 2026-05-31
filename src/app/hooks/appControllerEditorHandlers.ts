@@ -1,5 +1,4 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { isNodeContentLocked } from '../../features/nodes/model/nodeContainers';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, isProtectedRootNode } from '../../features/nodes/model/specialNodes';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
@@ -30,8 +29,7 @@ function pushTextEditOperation(args: BuildControllerLayoutPropsArgs, nodeId: str
     isBlankTextEditAfterAnnotation(args, nodeId, content) ||
     args.ws.trashedNodeIds.includes(nodeId) ||
     !isNodeDocumentLoaded(node) ||
-    isProtectedRootNode(node) ||
-    isNodeContentLocked(nodeId, args.ws.nodeOrder, args.ws.nodesById, new Set(args.ws.trashedNodeIds))
+    isProtectedRootNode(node)
   ) {
     return;
   }

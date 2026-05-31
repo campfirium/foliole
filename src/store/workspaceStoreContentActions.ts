@@ -1,4 +1,3 @@
-import { isNodeContentLocked } from '../features/nodes/model/nodeContainers';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
 import {
@@ -29,9 +28,6 @@ function resolveNodeContentUpdateBlockReason(state: WorkspaceState, nodeId: stri
   }
   if (isProtectedRootNode(node)) {
     return 'protected-root-node';
-  }
-  if (isNodeContentLocked(nodeId, state.nodeOrder, state.nodesById, new Set(state.trashedNodeIds))) {
-    return 'content-locked';
   }
   return null;
 }
