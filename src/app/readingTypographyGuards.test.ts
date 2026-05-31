@@ -33,8 +33,8 @@ describe('reading typography guards', () => {
     const styles = readWorkspaceFile('src/app/styles.css');
 
     expect(theme).toContain("fontFamily: 'var(--content-panel-font-family, var(--font-family-sans))'");
-    expect(theme).toContain("lineHeight: 'var(--content-panel-line-height, 1.65)'");
+    expect(theme).toContain("lineHeight: 'var(--content-panel-line-height, 1.75)'");
     expect(theme).toContain("'.cm-line.cm-line-paragraph': { paddingBottom: 'var(--content-panel-paragraph-spacing, 0.75em)' }");
-    expect(styles).toContain('line-height: var(--content-panel-line-height, 1.65);');
+    expect(styles).toContain('line-height: var(--content-panel-line-height, 1.75);');
   });
 });

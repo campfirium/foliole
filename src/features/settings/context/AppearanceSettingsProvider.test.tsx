@@ -90,15 +90,15 @@ function applyAppearanceHarnessUpdates() {
 }
 
 function expectInitialAppliedAppearance() {
-  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
+  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('true');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('original');
-  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.65');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
   expect(document.documentElement.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('0.75em');
   expect(document.documentElement.style.getPropertyValue('--app-interface-font-family')).toBe('var(--font-family-interface)');
   expect(document.documentElement.style.getPropertyValue('--content-panel-font-family')).toBe('var(--font-family-text)');
   expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('860px');
   expectToolbarOpacity('1');
-  expectDividerOpacity('0');
+  expectDividerOpacity('1');
 }
 
 it('hydrates saved appearance settings and persists updates through the shared provider', () => {
@@ -115,9 +115,9 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('author|byline, url|link|source|source_url')).toBeInTheDocument();
   expect(screen.getByText('hidden')).toBeInTheDocument();
   expect(screen.getByText('light')).toBeInTheDocument();
-  expect(screen.getByText('dim-off')).toBeInTheDocument();
-  expect(screen.getByText('inverted')).toBeInTheDocument();
-  expect(screen.getByText('1.65')).toBeInTheDocument();
+  expect(screen.getByText('dim-on')).toBeInTheDocument();
+  expect(screen.getByText('warm')).toBeInTheDocument();
+  expect(screen.getByText('1.75')).toBeInTheDocument();
   expect(screen.getByText('0.75')).toBeInTheDocument();
   expect(screen.getByText('860')).toBeInTheDocument();
   expectInitialAppliedAppearance();
@@ -203,7 +203,7 @@ it('applies the same reading line height values after the color mode changes fir
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
   expect(screen.getByText('dark')).toBeInTheDocument();
-  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.65');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
 
   fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.85');

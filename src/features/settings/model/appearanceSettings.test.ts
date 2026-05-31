@@ -62,7 +62,7 @@ it('falls back to dedicated defaults for selection and cloze colors', () => {
 });
 
 it('stores reading line height and normalizes old preset values', () => {
-  expect(getReadingLineHeight()).toBe(1.65);
+  expect(getReadingLineHeight()).toBe(1.75);
 
   setReadingLineHeight(1.85);
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('1.85');
@@ -75,7 +75,7 @@ it('stores reading line height and normalizes old preset values', () => {
   expect(getReadingLineHeight()).toBe(1.85);
 
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight, 'bad');
-  expect(getReadingLineHeight()).toBe(1.65);
+  expect(getReadingLineHeight()).toBe(1.75);
 });
 
 it('stores paragraph spacing and ignores unknown values', () => {

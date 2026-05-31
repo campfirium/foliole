@@ -1,7 +1,7 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
-export const WORKSPACE_DIVIDER_OPACITY_PERCENT_DEFAULT = 0;
+export const WORKSPACE_DIVIDER_OPACITY_PERCENT_DEFAULT = 100;
 export const WORKSPACE_DIVIDER_OPACITY_PERCENT_MIN = 0;
 export const WORKSPACE_DIVIDER_OPACITY_PERCENT_MAX = 100;
 export const WORKSPACE_DIVIDER_OPACITY_PERCENT_STEP = 1;

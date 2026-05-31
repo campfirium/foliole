@@ -37,15 +37,15 @@ describe('applyReadingLineHeight', () => {
   it('applies a normalized theme-independent line height value', () => {
     const root = document.createElement('div');
 
-    applyReadingLineHeight(root, 1.65);
-    expect(root.style.getPropertyValue('--content-panel-line-height')).toBe('1.65');
+    applyReadingLineHeight(root, 1.75);
+    expect(root.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
   });
 
   it('clamps and snaps custom line height to the supported range', () => {
     expect(normalizeReadingLineHeight(1.333)).toBe(1.35);
     expect(normalizeReadingLineHeight(1.1)).toBe(1.3);
     expect(normalizeReadingLineHeight(2.2)).toBe(2);
-    expect(normalizeReadingLineHeight('bad')).toBe(1.65);
+    expect(normalizeReadingLineHeight('bad')).toBe(1.75);
   });
 });
 
