@@ -10,7 +10,6 @@ import { startStartupWindowFrameCapture } from './startupWindowFrameCapture.js';
 
 const LOG_FILE_NAME = 'renderer-state.ndjson';
 const startupPresentationByWindow = new WeakMap<BrowserWindow, StartupWindowPresentation>();
-const STARTUP_SKELETON_PAINT_TIMEOUT_MS = 1500;
 
 export interface StartupWindowPresentation {
   isFullScreen: boolean;
@@ -106,54 +105,12 @@ export function setStartupWindowPresentation(window: BrowserWindow, presentation
   startupPresentationByWindow.set(window, presentation);
 }
 
-async function waitForStartupSkeletonPaint(window: BrowserWindow) {
-  const waitForPaint = window.webContents.executeJavaScript(
-    `(() => new Promise((resolve) => {
-      const settle = () => {
-        const skeleton = document.getElementById('boot-skeleton');
-        if (!skeleton) {
-          resolve({ ready: false, reason: 'missing-skeleton' });
-          return;
-        }
-        const style = getComputedStyle(skeleton);
-        const rect = skeleton.getBoundingClientRect();
-        void skeleton.offsetHeight;
-        setTimeout(() => {
-          resolve({
-            display: style.display,
-            height: rect.height,
-            ready: style.display !== 'none' && rect.width > 0 && rect.height > 0,
-            width: rect.width
-          });
-        }, 50);
-      };
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', settle, { once: true });
-      } else {
-        settle();
-      }
-    }))()`,
-    true
-  );
-  await Promise.race([
-    waitForPaint,
-    new Promise((_, reject) => {
-      globalThis.setTimeout(() => reject(new Error('startup skeleton paint timeout')), STARTUP_SKELETON_PAINT_TIMEOUT_MS);
-    })
-  ]);
-}
-
 export async function presentInitialRendererWindow(window: BrowserWindow) {
   const presentation = startupPresentationByWindow.get(window) ?? {
     isFullScreen: false,
     isMaximized: false
   };
-  await waitForStartupSkeletonPaint(window).catch((error) => {
-    appendRuntimeEventLog('startup-skeleton-paint-wait-failed', {
-      message: error instanceof Error ? error.message : String(error)
-    });
-  });
-  appendRuntimeEventLog('startup-skeleton-show', {
+  appendRuntimeEventLog('initial-renderer-window-show', {
     isFullScreen: presentation.isFullScreen,
     isMaximized: presentation.isMaximized
   });

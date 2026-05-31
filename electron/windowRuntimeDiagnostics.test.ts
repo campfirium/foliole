@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 
 describe('window runtime startup visibility', () => {
-  it('only logs ready-to-show and waits for the startup skeleton paint before showing', async () => {
+  it('shows the initial renderer window without waiting for a startup skeleton', async () => {
     const window = createWindowMock();
     const { bindWindowRuntimeDiagnostics, presentInitialRendererWindow, setStartupWindowPresentation } = await import('./windowRuntimeDiagnostics.js');
 
@@ -61,29 +61,26 @@ describe('window runtime startup visibility', () => {
     window.emit('ready-to-show');
 
     expect(window.show).not.toHaveBeenCalled();
-    const presentPromise = presentInitialRendererWindow(window as never);
-    await vi.runAllTimersAsync();
-    await presentPromise;
+    await presentInitialRendererWindow(window as never);
 
-    expect(window.webContents.executeJavaScript).toHaveBeenCalledTimes(1);
+    expect(window.webContents.executeJavaScript).not.toHaveBeenCalled();
     expect(window.maximize).not.toHaveBeenCalled();
     expect(window.show).toHaveBeenCalledTimes(1);
     expect(mocks.appendBootEvent).toHaveBeenCalledWith(
-      'window_startup-skeleton-show',
+      'window_initial-renderer-window-show',
       expect.objectContaining({ isMaximized: true })
     );
   });
 
-  it('shows the window when startup skeleton paint detection times out', async () => {
+  it('keeps an already visible window visible', async () => {
     const window = createWindowMock();
-    window.webContents.executeJavaScript.mockImplementation(() => new Promise(() => undefined));
+    window.show();
+    vi.clearAllMocks();
     const { presentInitialRendererWindow } = await import('./windowRuntimeDiagnostics.js');
 
-    const presentPromise = presentInitialRendererWindow(window as never);
-    await vi.runAllTimersAsync();
-    await presentPromise;
+    await presentInitialRendererWindow(window as never);
 
-    expect(window.show).toHaveBeenCalledTimes(1);
+    expect(window.show).not.toHaveBeenCalled();
     expect(mocks.appendBootEvent).toHaveBeenCalledWith(
       'window_visible',
       expect.objectContaining({ isVisible: true })

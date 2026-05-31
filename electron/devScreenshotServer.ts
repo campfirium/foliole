@@ -38,16 +38,12 @@ async function captureWindowScreenshot(window: BrowserWindow, targetPath: string
 async function readWindowState(window: BrowserWindow) {
   return window.webContents.executeJavaScript(
     `(() => {
-      const skeleton = document.getElementById('boot-skeleton');
       const root = document.getElementById('root');
       return {
-        bodyBootSkeleton: document.body?.dataset.bootSkeleton ?? null,
         bodyTextSample: document.body?.innerText?.slice(0, 240) ?? '',
         href: window.location.href,
         readyState: document.readyState,
         rootChildCount: root?.childElementCount ?? null,
-        skeletonDisplay: skeleton ? getComputedStyle(skeleton).display : null,
-        skeletonPresent: Boolean(skeleton),
         visibilityState: document.visibilityState
       };
     })()`,

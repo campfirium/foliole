@@ -47,7 +47,6 @@ function renderStartupViewIfRequested() {
   }
   registerBootDiagnostics();
   reportRuntimeBootStage('startup_surface_render', { kind: startupView.kind });
-  document.body.dataset.bootSkeleton = 'hidden';
   renderStartupErrorView(
     rootElement,
     {

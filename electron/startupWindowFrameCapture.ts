@@ -27,7 +27,6 @@ async function captureStartupWindowFrame(window: BrowserWindow, captureDir: stri
   const statePath = path.join(captureDir, `frame-${String(index).padStart(3, '0')}.json`);
   const state = await window.webContents.executeJavaScript(
     `(() => {
-      const boot = document.getElementById('boot-skeleton');
       const root = document.getElementById('root');
       const readBg = (selector) => {
         const element = document.querySelector(selector);
@@ -35,18 +34,12 @@ async function captureStartupWindowFrame(window: BrowserWindow, captureDir: stri
       };
       return {
         bodyBg: getComputedStyle(document.body).backgroundColor,
-        bodyBootSkeleton: document.body?.dataset.bootSkeleton ?? null,
         bodyTextSample: document.body?.innerText?.slice(0, 220) ?? '',
-        bootDisplay: boot ? getComputedStyle(boot).display : null,
-        bootVisible: Boolean(boot && getComputedStyle(boot).display !== 'none'),
         bounds: { height: window.innerHeight, width: window.innerWidth },
         href: window.location.href,
         index: ${index},
         readyState: document.readyState,
         rootChildCount: root?.childElementCount ?? null,
-        startupDocumentBg: readBg('.startup-shell__document'),
-        startupFolderBg: readBg('.startup-shell__folder'),
-        startupTopicBg: readBg('.startup-shell__topic'),
         workspaceDocumentBg: readBg('.workspace-region-main-document'),
         workspaceSidebarBg: readBg('.workspace-region-main-sidebar')
       };

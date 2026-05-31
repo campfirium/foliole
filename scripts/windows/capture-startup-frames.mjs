@@ -89,22 +89,14 @@ async function sampleStartupState(page, index, screenshotPath) {
       }
       return record;
     });
-    const boot = document.getElementById('boot-skeleton');
     const root = document.getElementById('root');
-    const bootStyle = boot ? getComputedStyle(boot) : null;
     return {
       bodyBg: getComputedStyle(document.body).backgroundColor,
       bodyTextSample: document.body.innerText.slice(0, 160),
-      bootDisplay: bootStyle?.display ?? null,
-      bootVisible: Boolean(boot && bootStyle?.display !== 'none' && boot.getBoundingClientRect().width > 0),
-      dataset: { ...document.documentElement.dataset, bodyBootSkeleton: document.body.dataset.bootSkeleton ?? null },
+      dataset: { ...document.documentElement.dataset },
       href: location.href,
       rootVars: {
-        colorCanvas: readRootVar('--color-canvas'),
-        startupDocumentBg: readRootVar('--startup-document-bg'),
-        startupListBg: readRootVar('--startup-list-bg'),
-        startupSidebarBg: readRootVar('--startup-sidebar-bg'),
-        startupTitlebarBg: readRootVar('--startup-titlebar-bg')
+        colorCanvas: readRootVar('--color-canvas')
       },
       rootChildCount: root?.childElementCount ?? null,
       resources: performance.getEntriesByType('resource').map((entry) => ({
@@ -112,8 +104,6 @@ async function sampleStartupState(page, index, screenshotPath) {
         name: entry.name
       })).filter((entry) => entry.name.includes('foliole-runtime') || entry.name.includes('startup')),
       styleSheets,
-      startupDocumentBg: readBg('.startup-shell__document'),
-      startupListBg: readBg('.startup-shell__list'),
       workspaceDocumentBg: readBg('.workspace-region-main-document'),
       workspaceSidebarBg: readBg('.workspace-region-main-sidebar'),
       readyState: document.readyState
@@ -134,12 +124,8 @@ function getFrameSignature(record) {
     return `error:${state?.error ?? 'unknown'}`;
   }
   return [
-    `boot:${state.bootVisible}`,
-    `display:${state.bootDisplay}`,
     `root:${state.rootChildCount}`,
     `body:${state.bodyBg}`,
-    `doc:${state.startupDocumentBg}`,
-    `list:${state.startupListBg}`,
     `workspace:${state.workspaceDocumentBg}`,
     `ready:${state.readyState}`
   ].join('|');

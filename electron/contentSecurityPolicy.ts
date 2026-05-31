@@ -43,9 +43,6 @@ const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
 const installedSessions = new WeakSet<Session>();
 
 function isDevelopmentRendererUrl(url: string) {
-  if (process.env.ELECTRON_RENDERER_URL && url.startsWith('file:') && url.endsWith('/runtime-renderer-index.html')) {
-    return true;
-  }
   try {
     const parsed = new URL(url);
     return (

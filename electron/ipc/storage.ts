@@ -1,14 +1,8 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { app } from 'electron';
-
 import {
   getLocalStorageAppSettingsKeys,
   getRuntimeAppSettingsKeys
 } from '../../src/shared/config/appSettingsClassification.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
-import { writePrebuiltRendererHtmlForSettings } from '../runtimeRendererHtml.js';
 
 const APP_SETTINGS_KEY = 'app_settings';
 const RUNTIME_APP_SETTINGS_KEYS = new Set<string>(getRuntimeAppSettingsKeys());
@@ -16,11 +10,6 @@ const LOCAL_STORAGE_APP_SETTINGS_KEYS = new Set<string>(getLocalStorageAppSettin
 const RUNTIME_ONLY_APP_SETTINGS_KEYS = new Set<string>(
   getRuntimeAppSettingsKeys().filter((key) => !LOCAL_STORAGE_APP_SETTINGS_KEYS.has(key))
 );
-const currentRuntimeDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-
-function resolveRendererUrl() {
-  return process.env.ELECTRON_RENDERER_URL ?? null;
-}
 
 function normalizeAppSettingsPayload(payload: unknown): Record<string, string> {
   if (!payload || typeof payload !== 'object') {
@@ -59,9 +48,4 @@ export async function saveAppSettingsState(settings: Record<string, unknown>): P
     ...incomingSettings
   };
   saveJsonSetting(APP_SETTINGS_KEY, nextSettings);
-  try {
-    writePrebuiltRendererHtmlForSettings(currentRuntimeDir, nextSettings, resolveRendererUrl(), app.getPath('userData'));
-  } catch (error) {
-    console.warn('[electron-main] failed to prebuild startup renderer html', error);
-  }
 }
