@@ -15,15 +15,21 @@ interface CachedReviewQueuePlanArgs {
   trashedNodeIds: string[];
 }
 
-let lastArgs: CachedReviewQueuePlanArgs | null = null;
-let lastPlan: ReviewQueuePlan | null = null;
+const CACHE_LIMIT = 6;
+
+type CachedReviewQueuePlanEntry = {
+  args: CachedReviewQueuePlanArgs;
+  plan: ReviewQueuePlan;
+};
+
+const cachedPlans: CachedReviewQueuePlanEntry[] = [];
 
 function hasSameArgs(current: CachedReviewQueuePlanArgs, previous: CachedReviewQueuePlanArgs | null) {
   return Boolean(
     previous &&
-      previous.includeScheduled === current.includeScheduled &&
+      (previous.includeScheduled ?? false) === (current.includeScheduled ?? false) &&
       previous.limit === current.limit &&
-      previous.mode === current.mode &&
+      (previous.mode ?? 'recommended') === (current.mode ?? 'recommended') &&
       previous.nodeOrder === current.nodeOrder &&
       previous.nodesById === current.nodesById &&
       previous.now === current.now &&
@@ -33,12 +39,19 @@ function hasSameArgs(current: CachedReviewQueuePlanArgs, previous: CachedReviewQ
 }
 
 export function buildCachedReviewQueuePlan(args: CachedReviewQueuePlanArgs) {
-  if (lastPlan && hasSameArgs(args, lastArgs)) {
-    return lastPlan;
+  const cachedIndex = cachedPlans.findIndex((entry) => hasSameArgs(args, entry.args));
+  if (cachedIndex >= 0) {
+    const entry = cachedPlans[cachedIndex];
+    if (!entry) {
+      return buildReviewQueuePlan(args);
+    }
+    cachedPlans.splice(cachedIndex, 1);
+    cachedPlans.unshift(entry);
+    return entry.plan;
   }
 
   const nextPlan = buildReviewQueuePlan(args);
-  lastArgs = args;
-  lastPlan = nextPlan;
+  cachedPlans.unshift({ args, plan: nextPlan });
+  cachedPlans.splice(CACHE_LIMIT);
   return nextPlan;
 }

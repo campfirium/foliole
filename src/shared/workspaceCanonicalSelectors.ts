@@ -10,8 +10,26 @@ export interface WorkspaceCanonicalSource<TNode extends WorkspaceCanonicalNode> 
   trashedNodeIds?: readonly string[];
 }
 
+interface CachedReviewQueueSource {
+  nodeOrder: readonly string[];
+  nodesById: Record<string, WorkspaceCanonicalNode | undefined>;
+  result: {
+    nodeOrder: string[];
+    nodesById: Record<string, WorkspaceCanonicalNode>;
+    trashedNodeIds: string[];
+  };
+  trashedNodeDeletedAtById: Record<string, string | undefined> | undefined;
+  trashedNodeIds: readonly string[] | undefined;
+}
+
+let cachedReviewQueueSource: CachedReviewQueueSource | null = null;
+
 function uniqueIds(ids: readonly string[]) {
   return [...new Set(ids)];
+}
+
+function areStringArraysEqual(previous: readonly string[], next: readonly string[]) {
+  return previous.length === next.length && previous.every((value, index) => value === next[index]);
 }
 
 function hasDeletedAt(value: string | null | undefined) {
@@ -99,11 +117,38 @@ export function selectCanonicalTrashedNodeDeletedAtById<TNode extends WorkspaceC
 export function selectCanonicalReviewQueueSource<TNode extends WorkspaceCanonicalNode>(
   source: WorkspaceCanonicalSource<TNode>
 ) {
-  return {
-    nodeOrder: selectCanonicalVisibleNodeIds(source),
+  if (
+    cachedReviewQueueSource &&
+    cachedReviewQueueSource.nodeOrder === source.nodeOrder &&
+    cachedReviewQueueSource.nodesById === source.nodesById &&
+    cachedReviewQueueSource.trashedNodeDeletedAtById === source.trashedNodeDeletedAtById &&
+    cachedReviewQueueSource.trashedNodeIds === source.trashedNodeIds
+  ) {
+    return cachedReviewQueueSource.result as {
+      nodeOrder: string[];
+      nodesById: Record<string, TNode>;
+      trashedNodeIds: string[];
+    };
+  }
+  const visibleNodeIds = selectCanonicalVisibleNodeIds(source);
+  const trashedNodeIds = selectCanonicalTrashedNodeIds(source);
+  const result = {
+    nodeOrder: areStringArraysEqual(source.nodeOrder, visibleNodeIds)
+      ? (source.nodeOrder as string[])
+      : visibleNodeIds,
     nodesById: source.nodesById as Record<string, TNode>,
-    trashedNodeIds: selectCanonicalTrashedNodeIds(source)
+    trashedNodeIds: source.trashedNodeIds && areStringArraysEqual(source.trashedNodeIds, trashedNodeIds)
+      ? (source.trashedNodeIds as string[])
+      : trashedNodeIds
   };
+  cachedReviewQueueSource = {
+    nodeOrder: source.nodeOrder,
+    nodesById: source.nodesById,
+    result,
+    trashedNodeDeletedAtById: source.trashedNodeDeletedAtById,
+    trashedNodeIds: source.trashedNodeIds
+  };
+  return result;
 }
 
 export function selectCanonicalWorkspaceMembershipView<TNode extends WorkspaceCanonicalNode>(

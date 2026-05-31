@@ -123,6 +123,58 @@ it('feeds review queue source with visible order only', () => {
   });
 });
 
+it('reuses review queue source arrays for unchanged source references', () => {
+  const source = {
+    nodeOrder: ['visible-1', 'trash-1'],
+    nodesById: {
+      'trash-1': node('trash-1', '2026-05-24T00:00:00.000Z'),
+      'visible-1': node('visible-1', null)
+    },
+    trashedNodeIds: [] as string[]
+  };
+
+  const first = selectCanonicalReviewQueueSource(source);
+  const second = selectCanonicalReviewQueueSource(source);
+
+  expect(second.nodeOrder).toBe(first.nodeOrder);
+  expect(second.trashedNodeIds).toBe(first.trashedNodeIds);
+});
+
+it('keeps canonical input arrays when review queue source is already canonical', () => {
+  const nodeOrder = ['visible-1'];
+  const trashedNodeIds = ['trash-1'];
+  const source = {
+    nodeOrder,
+    nodesById: {
+      'trash-1': node('trash-1', '2026-05-24T00:00:00.000Z'),
+      'visible-1': node('visible-1', null)
+    },
+    trashedNodeIds
+  };
+
+  const reviewQueueSource = selectCanonicalReviewQueueSource(source);
+
+  expect(reviewQueueSource.nodeOrder).toBe(nodeOrder);
+  expect(reviewQueueSource.trashedNodeIds).toBe(trashedNodeIds);
+});
+
+it('refreshes review queue source arrays when source references change', () => {
+  const source = {
+    nodeOrder: ['visible-1', 'trash-1'],
+    nodesById: {
+      'trash-1': node('trash-1', '2026-05-24T00:00:00.000Z'),
+      'visible-1': node('visible-1', null)
+    },
+    trashedNodeIds: [] as string[]
+  };
+
+  const first = selectCanonicalReviewQueueSource(source);
+  const second = selectCanonicalReviewQueueSource({ ...source, nodeOrder: [...source.nodeOrder] });
+
+  expect(second.nodeOrder).toEqual(first.nodeOrder);
+  expect(second.nodeOrder).not.toBe(first.nodeOrder);
+});
+
 it('builds a single workspace membership view for store consumers', () => {
   const source = {
     nodeOrder: ['visible-1', 'deleted-1', 'restored-1', 'legacy-trash'],

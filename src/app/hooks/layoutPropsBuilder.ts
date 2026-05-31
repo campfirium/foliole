@@ -4,6 +4,11 @@ import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import type { UnifiedPushQueueRules } from '../../features/review/model/unifiedPushQueueRules';
 import { definedProps } from '../../shared/lib/definedProps';
 import { buildCachedReviewQueuePlan } from '../../store/reviewQueuePlannerCached';
+import {
+  isEditorInputDiagnosticEnabled,
+  logEditorInputDiagnostic,
+  readEditorInputDiagnosticTime
+} from '../../store/workspaceEditorInputDiagnostics';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { buildReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 import { buildLiveReviewQueueOutput } from '../../store/workspaceReviewLiveQueue';
@@ -32,6 +37,21 @@ export function countDueReviewNodes(
     trashedNodeIds,
     ...definedProps({ pushQueueRules })
   }).queueNodeIds.length;
+}
+
+function measureLayoutPropsStep<T>(args: BuildLayoutPropsArgs, step: string, compute: () => T) {
+  if (!isEditorInputDiagnosticEnabled()) {
+    return compute();
+  }
+  const startedAt = readEditorInputDiagnosticTime();
+  const result = compute();
+  logEditorInputDiagnostic('layout-props-step', {
+    activeNodeId: args.activeNodeId,
+    nodeCount: args.nodeOrder.length,
+    step,
+    totalMs: readEditorInputDiagnosticTime() - startedAt
+  });
+  return result;
 }
 
 function createSessionActions(args: BuildLayoutPropsArgs) {
@@ -120,20 +140,23 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
   const previewNodeId = args.isViewingTrashNode ? args.selectedTrashNodeId : args.activeNodeId;
   const previewNode = previewNodeId ? args.nodesById[previewNodeId] : undefined;
-  const { reviewCompletedCount, reviewQueueCount, reviewStatus, reviewSummary } = getReviewSessionSummary(
-    args.reviewSession,
-    args.nodesById
+  const { reviewCompletedCount, reviewQueueCount, reviewStatus, reviewSummary } = measureLayoutPropsStep(args, 'review_summary', () =>
+    getReviewSessionSummary(args.reviewSession, args.nodesById)
   );
-  const reviewPanelQueueNodeIds = buildLiveReviewQueueOutput(args, args.nowIso, {
+  const reviewPanelQueueNodeIds = measureLayoutPropsStep(args, 'review_panel_queue', () => buildLiveReviewQueueOutput(args, args.nowIso, {
     pinnedNodeId: args.reviewSession.currentNodeId
-  }).visibleNodeIds;
-  const reviewFlowWindow = buildReviewFlowWindow(args, args.nowIso, args.reviewSession.queueNodeIds);
-  const reviewQueueVisibility = buildReviewQueueVisibility({
-    currentNodeId: args.reviewSession.currentNodeId,
-    nodesById: args.nodesById,
-    queueNodeIds: reviewPanelQueueNodeIds,
-    reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings
-  });
+  }).visibleNodeIds);
+  const reviewFlowWindow = measureLayoutPropsStep(args, 'review_flow_window', () =>
+    buildReviewFlowWindow(args, args.nowIso, args.reviewSession.queueNodeIds)
+  );
+  const reviewQueueVisibility = measureLayoutPropsStep(args, 'review_queue_visibility', () =>
+    buildReviewQueueVisibility({
+      currentNodeId: args.reviewSession.currentNodeId,
+      nodesById: args.nodesById,
+      queueNodeIds: reviewPanelQueueNodeIds,
+      reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings
+    })
+  );
 
   const flatProps: WorkspaceLayoutFlatProps = {
     activeNodeId: args.activeNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
@@ -169,5 +192,5 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onRevealAnswer: args.revealReviewAnswer, onResumeReviewItem: args.onResumeReviewItem, onGradeReview: (grade) => args.updateGrade(grade), onReadReviewTopic: () => args.readReviewTopic(), onPostponeReviewTopic: () => args.postponeReviewTopic(), onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel, onDismissReviewTopic: () => args.dismissReviewTopic(), onRevisitReviewTopicSoon: () => args.revisitReviewTopicSoon(), onContinueReading: createContinueReadingAction(args), onExitReviewMode: sessionActions.onToggleReviewSession, onSetReviewSessionMode: args.setReviewSessionMode,
     reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, selectedTrashNodeId: args.selectedTrashNodeId
   };
-  return groupWorkspaceLayoutProps(flatProps);
+  return measureLayoutPropsStep(args, 'group_workspace_layout_props', () => groupWorkspaceLayoutProps(flatProps));
 }
