@@ -63,14 +63,14 @@ function QuickLinksBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
       title={ABOUT_ROW.community.title}
     >
       <SettingsControlSlot className="flex-wrap">
-        <SupportButton commandId={APP_COMMAND_IDS.openGitHubIssues} onRunSupportCommand={onRunSupportCommand}>
-          Feedback
-        </SupportButton>
         <SupportButton commandId={APP_COMMAND_IDS.openGitHubRepository} onRunSupportCommand={onRunSupportCommand}>
           GitHub
         </SupportButton>
         <SupportButton commandId={APP_COMMAND_IDS.openGitHubDiscussions} onRunSupportCommand={onRunSupportCommand}>
           Discussions
+        </SupportButton>
+        <SupportButton commandId={APP_COMMAND_IDS.openGitHubIssues} onRunSupportCommand={onRunSupportCommand}>
+          Feedback
         </SupportButton>
       </SettingsControlSlot>
     </SettingsRow>

@@ -23,7 +23,7 @@ export const ABOUT_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
   },
   {
     categoryId: 'about',
-    description: 'Open feedback, source code, and community discussions.',
+    description: 'Open source code, community discussions, and feedback.',
     id: 'about-community',
     searchTerms: ['feedback', 'github', 'issue', 'discussion'],
     title: 'Community'
