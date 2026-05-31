@@ -50,11 +50,18 @@ function buildHomeFolderListNodes() {
   const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
   const rootTopic = createNode({ id: 'root-topic', parentNodeId: null, title: 'Root topic' });
   const folderTopic = createNode({ id: 'folder-topic', parentNodeId: 'folder-1', title: 'Folder topic' });
+  const childTopic = createNode({ id: 'child-topic', parentNodeId: 'folder-topic', title: 'Child topic' });
   const highlightNode = createNode({
     id: 'highlight-1',
     anchorLink: { id: 'anchor-1', kind: 'highlight' },
     parentNodeId: 'folder-topic',
     title: 'Highlight'
+  });
+  const reviewItem = createNode({
+    id: 'review-item',
+    kind: 'item',
+    parentNodeId: 'folder-topic',
+    title: 'Review item'
   });
   const deletedTopic = createNode({
     id: 'deleted-topic',
@@ -62,7 +69,7 @@ function buildHomeFolderListNodes() {
     parentNodeId: null,
     title: 'Deleted topic'
   });
-  return [homeNode, folderNode, rootTopic, folderTopic, highlightNode, deletedTopic];
+  return [homeNode, folderNode, rootTopic, folderTopic, childTopic, highlightNode, reviewItem, deletedTopic];
 }
 
 function renderHomeFolderList() {
@@ -139,7 +146,9 @@ describe('FolderListView content', () => {
     expect(screen.getByTestId('folder-list-count')).toHaveTextContent('2');
     expect(screen.getByTestId('folder-list-title-root-topic')).toHaveTextContent('Root topic');
     expect(screen.getByTestId('folder-list-title-folder-topic')).toHaveTextContent('Folder topic');
+    expect(screen.queryByTestId('folder-list-title-child-topic')).not.toBeInTheDocument();
     expect(screen.queryByTestId('folder-list-title-highlight-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('folder-list-title-review-item')).not.toBeInTheDocument();
     expect(screen.queryByTestId('folder-list-title-deleted-topic')).not.toBeInTheDocument();
   });
 });

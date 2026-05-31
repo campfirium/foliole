@@ -34,10 +34,13 @@ function isHomeListContentNode(
   trashedNodeIds: readonly string[]
 ) {
   const node = nodesById[nodeId];
+  const parentNode = node?.parentNodeId ? nodesById[node.parentNodeId] : null;
   return Boolean(
     node &&
-      node.kind !== 'folder' &&
+      node.kind === 'topic' &&
       !node.anchorLink &&
+      parentNode?.kind !== 'topic' &&
+      parentNode?.kind !== 'item' &&
       isCanonicalVisibleNodeId({ nodeOrder, nodesById, trashedNodeIds }, nodeId)
   );
 }
