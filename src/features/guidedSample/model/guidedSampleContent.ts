@@ -90,9 +90,9 @@ Help material show up again at the right time.` },
       { content: `# Repeat: Internalize Knowledge
 
 
-Incremental reading helps reading actually finish.
+Incremental reading makes reading actually complete.
 
-Foliole helps incremental reading flow smoothly.` }
+Foliole makes incremental reading smooth.` }
     ]
   },
   'zh-CN': {
