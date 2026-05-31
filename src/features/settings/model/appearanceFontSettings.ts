@@ -96,6 +96,9 @@ export function setMonospaceFontPreset(value: MonospaceFontPreset) {
 
 export function getInterfaceFontSize() {
   const raw = getWhitelistedLocalStorageItem(FONT_STORAGE_KEYS.interfaceFontSize);
+  if (raw === null) {
+    return INTERFACE_FONT_SIZE_DEFAULT;
+  }
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? clampFontSize(parsed) : INTERFACE_FONT_SIZE_DEFAULT;
 }

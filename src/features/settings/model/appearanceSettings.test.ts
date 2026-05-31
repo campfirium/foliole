@@ -15,10 +15,12 @@ import {
   getCustomInterfaceFont,
   getCustomMonospaceFont,
   getCustomUiFont,
+  getInterfaceFontSize,
   getHighlightColorPreset,
   getReadingParagraphSpacing,
   getReadingLineHeight,
   getSelectionColorPreset,
+  setInterfaceFontSize,
   setCustomInterfaceFont,
   setCustomMonospaceFont,
   setCustomUiFont,
@@ -49,6 +51,15 @@ it('stores normalized font names for new custom selections', () => {
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.customUiFont)).toBe('UD Digi Kyokasho N');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.customInterfaceFont)).toBe('Microsoft YaHei UI');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.customMonospaceFont)).toBe('Consolas');
+});
+
+it('defaults content font size to the reading baseline while allowing compact manual values', () => {
+  window.localStorage.removeItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize);
+  expect(getInterfaceFontSize()).toBe(17);
+
+  setInterfaceFontSize(12);
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize)).toBe('12');
+  expect(getInterfaceFontSize()).toBe(12);
 });
 
 it('maps legacy green highlight default to the current text-color default', () => {
