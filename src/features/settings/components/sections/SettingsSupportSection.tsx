@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
+import { useAppVersion } from '../../../../shared/platform/appVersion';
 import {
   readUpdateCheckState,
   subscribeUpdateCheckState,
@@ -102,6 +103,7 @@ function SupportButton(props: {
 }
 
 function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
+  const appVersion = useAppVersion();
   const updateCheck = useUpdateCheckViewState();
   const status = updateCheck.status;
 
@@ -109,7 +111,7 @@ function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
     <SettingsRow
       {...settingsSearchRowProps(ABOUT_ROW.app)}
       description={getUpdateDescription(updateCheck.state, status)}
-      title="Version 0.60"
+      title={`Version ${appVersion}`}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <AppStatusBadge label={getUpdateStatusLabel(status)} tone={getUpdateStatusTone(status)} />

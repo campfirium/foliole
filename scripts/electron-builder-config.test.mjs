@@ -146,6 +146,7 @@ describe('electron-builder release packaging config', () => {
   it('uses a per-user assisted Windows installer with explicit shortcuts', async () => {
     const config = await readBuilderConfig();
 
+    expect(config.win.artifactName).toBe('${productName}-Setup-${version}-win-${arch}.${ext}');
     expect(config.nsis.oneClick).toBe(false);
     expect(config.nsis.allowToChangeInstallationDirectory).toBe(true);
     expect(config.nsis.perMachine).toBe(false);

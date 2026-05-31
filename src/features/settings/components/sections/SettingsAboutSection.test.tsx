@@ -43,7 +43,7 @@ it('shows application info and copies the diagnostic report in the about section
   });
   render(<SettingsAboutSection />);
 
-  expect(screen.getByText('Version 0.60')).toBeInTheDocument();
+  expect(screen.getByText('Version 0.6.1')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Check for Updates' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic report' }));
   await waitFor(() => {
@@ -89,7 +89,7 @@ it('shows the global search enhancement switch in General', async () => {
   render(<SettingsAboutSection />);
 
   const toggle = screen.getByRole('switch', { name: 'Search enhancement' });
-  const versionTitle = screen.getByText('Version 0.60');
+  const versionTitle = screen.getByText('Version 0.6.1');
   const searchTitle = screen.getByText('Search');
   expect(toggle).toHaveAttribute('aria-checked', 'false');
   expect(versionTitle.compareDocumentPosition(searchTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

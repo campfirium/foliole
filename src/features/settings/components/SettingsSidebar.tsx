@@ -24,9 +24,8 @@ import {
 } from '../model/settingsPanelOptions';
 
 import { cn } from '@/shared/lib/utils';
+import { useAppVersion } from '@/shared/platform/appVersion';
 import { AppButton, AppPanel } from '@/shared/ui';
-
-const APP_VERSION_LABEL = 'v0.60';
 
 const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   about: Info,
@@ -74,6 +73,8 @@ export function SettingsSidebar(props: {
 }
 
 function SettingsSidebarBrand() {
+  const appVersion = useAppVersion();
+
   return (
     <div className="flex w-[220px] min-w-0 items-center gap-3">
       <img
@@ -86,7 +87,7 @@ function SettingsSidebarBrand() {
         <div className="truncate text-[1.05rem] font-semibold leading-5 text-foreground">Foliole</div>
       </div>
       <span className="ml-auto shrink-0 rounded-md border border-settings-control-border bg-settings-control px-2 py-0.5 text-[0.72rem] font-medium leading-5 text-foreground/62">
-        {APP_VERSION_LABEL}
+        v{appVersion}
       </span>
     </div>
   );

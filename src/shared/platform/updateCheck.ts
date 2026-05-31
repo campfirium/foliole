@@ -1,11 +1,9 @@
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import packageJson from '../../../package.json';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import { showAppRuntimeNotice } from '../ui/AppRuntimeNotice';
 
+import { loadAppVersion } from './appVersion';
 import { openFolioleReleaseLink } from './releaseLinks';
 import { openExternalUrl } from './runtimeExternalNavigation';
-import { getRuntimeInvoke } from './runtimeInvoke';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
 import {
   DEFAULT_UPDATE_STATE,
@@ -65,16 +63,6 @@ export function getNextUpdateCheckDelayMs(now = Date.now()) {
   return getUpdateCheckDelayMs(readUpdateCheckState(), now);
 }
 
-async function loadCurrentAppVersion() {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) return packageJson.version;
-  try {
-    return await runtimeInvoke(NATIVE_COMMANDS.appGetVersion);
-  } catch {
-    return packageJson.version;
-  }
-}
-
 function showUpdateCheckNotice(result: UpdateCheckResult, manual: boolean) {
   if (result.status === 'available' && result.latestRelease) {
     showAppRuntimeNotice(`Foliole ${result.latestRelease.version} is available. Open Releases to download.`, 'success');
@@ -99,7 +87,7 @@ export async function checkForFolioleUpdates(options: { force?: boolean; notify?
 
   try {
     const [currentVersion, response] = await Promise.all([
-      loadCurrentAppVersion(),
+      loadAppVersion(),
       fetch(getManifestUrl(), { cache: 'no-store' })
     ]);
     if (!response.ok) throw new Error(`update manifest request failed: ${response.status}`);
