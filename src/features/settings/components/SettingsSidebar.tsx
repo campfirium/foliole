@@ -26,7 +26,7 @@ import {
 import { cn } from '@/shared/lib/utils';
 import { AppButton, AppPanel } from '@/shared/ui';
 
-const APP_VERSION_LABEL = 'v0.1.0';
+const APP_VERSION_LABEL = 'v0.60';
 
 const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   about: Info,

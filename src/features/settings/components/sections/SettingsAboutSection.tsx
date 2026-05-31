@@ -94,7 +94,7 @@ function ApplicationInfo() {
         >
           <SettingsControlSlot>
             <span className={settingsValueBoxClassName('rounded-full px-2.5 py-1 text-[0.82rem]')}>
-              v0.1.0
+              v0.60
             </span>
           </SettingsControlSlot>
         </SettingsRow>

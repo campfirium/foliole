@@ -43,6 +43,7 @@ it('shows application info and copies the diagnostic report in the about section
   render(<SettingsAboutSection />);
 
   expect(screen.getByText('Foliole desktop')).toBeInTheDocument();
+  expect(screen.getByText('v0.60')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic report' }));
   await waitFor(() => {
     expect(copyDiagnosticReport).toHaveBeenCalledTimes(1);
