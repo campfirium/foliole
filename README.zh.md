@@ -15,7 +15,7 @@ Android alpha 预计在 7 月左右发布。<br>
 macOS 和 iOS alpha 预计在 8 月左右发布。
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
+  <img src="assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
 </p>
 
 ## 设计原则
@@ -25,7 +25,7 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
 代码完全开源，任何人都可以审查实现、自行构建或参与改进。
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Open%20Source.png" alt="Foliole desktop interface preview." width="900">
+  <img src="assets/screenshots/Open%20Source.png" alt="Foliole desktop interface preview." width="900">
 </p>
 
 ### 数据开放
@@ -33,7 +33,7 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
 使用 SQLite 数据库并提供 Markdown 镜像，方便资料的读取、迁移和调用。
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Open%20Data.png" alt="Foliole document library and reading workspace." width="900">
+  <img src="assets/screenshots/Open%20Data.png" alt="Foliole document library and reading workspace." width="900">
 </p>
 
 ### 本地优先
@@ -41,7 +41,7 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
 没有账号和中心云同步系统。所有数据都保存在个人设备上；多设备之间通过局域网同步。
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Local%20First.png" alt="Foliole local reading workspace." width="900">
+  <img src="assets/screenshots/Local%20First.png" alt="Foliole local reading workspace." width="900">
 </p>
 
 ## 核心功能
@@ -51,7 +51,7 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
 践行 Piotr Woźniak 的渐进阅读理念，支持在深度阅读中无缝摘录、流畅挖空、持续重构。
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Native%20Incremental%20Reading.png" alt="Foliole reading pane with extracted notes." width="900">
+  <img src="assets/screenshots/Native%20Incremental%20Reading.png" alt="Foliole reading pane with extracted notes." width="900">
 </p>
 
 ### 集成 FSRS 调度
@@ -59,7 +59,7 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
 集成 FSRS（Free Spaced Repetition Scheduler），采用开源高效的复习调度算法。
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Integrated%20FSRS%20Scheduling.png" alt="Foliole scheduling panel in the desktop app." width="900">
+  <img src="assets/screenshots/Integrated%20FSRS%20Scheduling.png" alt="Foliole scheduling panel in the desktop app." width="900">
 </p>
 
 ### 汇聚阅读材料
@@ -67,7 +67,7 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
 可集中处理各种来源的阅读材料，无论是本地文件、网页文档，还是 Obsidian 管理的笔记、Readwise Reader 导出的材料。
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
+  <img src="assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
 </p>
 
 ### 索引外部文档
@@ -75,7 +75,7 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
 无需复制或移动原文件，即可索引电脑上的其他本地文件夹，建立可在各平台客户端查阅和调用的外部文档库。
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Index%20External%20Documents.png" alt="Foliole document navigation and indexed folders." width="900">
+  <img src="assets/screenshots/Index%20External%20Documents.png" alt="Foliole document navigation and indexed folders." width="900">
 </p>
 
 ### 支持复杂材料
@@ -83,7 +83,7 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
 支持 Markdown、PDF、EPUB 等文件格式，以及数学公式（LaTeX）、代码块等内容渲染。
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+  <img src="assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
 </p>
 
 ## 致谢

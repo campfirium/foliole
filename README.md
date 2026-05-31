@@ -15,7 +15,7 @@ Android alpha is expected around July.<br>
 macOS and iOS alpha builds are expected around August.
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
+  <img src="assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
 </p>
 
 ## Design Principles
@@ -25,7 +25,7 @@ macOS and iOS alpha builds are expected around August.
 The code is open source. Anyone can review the implementation, build it from source, or contribute improvements.
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Open%20Source.png" alt="Foliole desktop interface preview." width="900">
+  <img src="assets/screenshots/Open%20Source.png" alt="Foliole desktop interface preview." width="900">
 </p>
 
 ### Open Data
@@ -33,7 +33,7 @@ The code is open source. Anyone can review the implementation, build it from sou
 Uses a SQLite database and provides a Markdown mirror, making materials easier to read, migrate, and reuse.
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Open%20Data.png" alt="Foliole document library and reading workspace." width="900">
+  <img src="assets/screenshots/Open%20Data.png" alt="Foliole document library and reading workspace." width="900">
 </p>
 
 ### Local First
@@ -41,7 +41,7 @@ Uses a SQLite database and provides a Markdown mirror, making materials easier t
 No account system. No central cloud sync. All data stays on your personal devices; devices sync over the local network.
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Local%20First.png" alt="Foliole local reading workspace." width="900">
+  <img src="assets/screenshots/Local%20First.png" alt="Foliole local reading workspace." width="900">
 </p>
 
 ## Core Features
@@ -51,7 +51,7 @@ No account system. No central cloud sync. All data stays on your personal device
 Built around Piotr Woźniak’s incremental reading ideas, with a native workflow for extracting passages, creating cloze deletions, and refining materials without leaving the reading flow.
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Native%20Incremental%20Reading.png" alt="Foliole reading pane with extracted notes." width="900">
+  <img src="assets/screenshots/Native%20Incremental%20Reading.png" alt="Foliole reading pane with extracted notes." width="900">
 </p>
 
 ### Integrated FSRS Scheduling
@@ -59,7 +59,7 @@ Built around Piotr Woźniak’s incremental reading ideas, with a native workflo
 Integrates FSRS (Free Spaced Repetition Scheduler), an open and efficient review scheduling algorithm.
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Integrated%20FSRS%20Scheduling.png" alt="Foliole scheduling panel in the desktop app." width="900">
+  <img src="assets/screenshots/Integrated%20FSRS%20Scheduling.png" alt="Foliole scheduling panel in the desktop app." width="900">
 </p>
 
 ### Bring Reading Materials Together
@@ -67,7 +67,7 @@ Integrates FSRS (Free Spaced Repetition Scheduler), an open and efficient review
 Handles reading materials from different sources, whether local files, web documents, notes managed in Obsidian, or materials exported from Readwise Reader.
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
+  <img src="assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
 </p>
 
 ### Index External Documents
@@ -75,7 +75,7 @@ Handles reading materials from different sources, whether local files, web docum
 Indexes other local folders on your computer without copying or moving the original files, creating an external document library that can be searched, viewed, and used across supported clients.
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Index%20External%20Documents.png" alt="Foliole document navigation and indexed folders." width="900">
+  <img src="assets/screenshots/Index%20External%20Documents.png" alt="Foliole document navigation and indexed folders." width="900">
 </p>
 
 ### Complex Content Support
@@ -83,7 +83,7 @@ Indexes other local folders on your computer without copying or moving the origi
 Supports Markdown, PDF, EPUB, LaTeX math, code blocks, and other content rendering needs.
 
 <p align="center">
-  <img src="https://foliole.app/assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+  <img src="assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
 </p>
 
 ## Acknowledgements
