@@ -29,7 +29,7 @@ export async function handleStorageCommand(
   if (syncMutationResult !== undefined) {
     return syncMutationResult;
   }
-  const nodeMutationResult = await handleNodeMutationCommand(command, args);
+  const nodeMutationResult = await handleNodeMutationCommand(command, args, window);
   if (nodeMutationResult !== undefined) {
     return nodeMutationResult;
   }

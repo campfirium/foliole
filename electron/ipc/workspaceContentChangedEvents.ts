@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, type BrowserWindow as ElectronBrowserWindow } from 'electron';
 
 import {
   IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL,
@@ -9,10 +9,10 @@ const WORKSPACE_CONTENT_CHANGED_PAYLOAD: WorkspaceContentChangedEvent = {
   scope: 'workspace'
 };
 
-export function notifyWorkspaceContentChanged() {
+export function notifyWorkspaceContentChanged(excludedWindow: ElectronBrowserWindow | null = null) {
   const windows = typeof BrowserWindow?.getAllWindows === 'function' ? BrowserWindow.getAllWindows() : [];
   for (const window of windows) {
-    if (window.isDestroyed()) {
+    if (window === excludedWindow || window.isDestroyed()) {
       continue;
     }
     window.webContents.send(

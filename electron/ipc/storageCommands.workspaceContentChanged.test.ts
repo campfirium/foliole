@@ -17,6 +17,9 @@ const { resetImportData } = vi.hoisted(() => ({
 const { upsertNodeSnapshot } = vi.hoisted(() => ({
   upsertNodeSnapshot: vi.fn()
 }));
+const { upsertNodeSnapshotWithOrder } = vi.hoisted(() => ({
+  upsertNodeSnapshotWithOrder: vi.fn()
+}));
 
 vi.mock('../database/importMaintenance.js', () => ({ resetImportData }));
 vi.mock('../database/nodeMutations.js', () => ({
@@ -26,7 +29,8 @@ vi.mock('../database/nodeMutations.js', () => ({
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
   updateNodeAnchorLinks: vi.fn(),
-  upsertNodeSnapshot
+  upsertNodeSnapshot,
+  upsertNodeSnapshotWithOrder
 }));
 vi.mock('../database/workspaceSearch.js', () => ({ searchWorkspace: vi.fn() }));
 vi.mock('../import/currentSourceReimport.js', () => ({ reimportCurrentTopicSource }));
@@ -50,18 +54,22 @@ it('notifies workspace content changes after node mutation commands', async () =
     isTitleManual: true,
     kind: 'topic',
     nodeId: 'node-1',
+    nodeOrder: ['node-1'],
     parentNodeId: null,
     position: 0,
     reading: null,
     reveal: null,
     title: 'Topic',
     updatedAt: '2026-05-11T00:00:00.000Z'
-  })).resolves.toBeNull();
+  })).resolves.toMatchObject({
+    createdNodeIds: ['node-1'],
+    nodeOrder: ['node-1']
+  });
 
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+  expect(upsertNodeSnapshotWithOrder).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'topic',
     nodeId: 'node-1'
-  }));
+  }), ['node-1']);
   expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(1);
 });
 
