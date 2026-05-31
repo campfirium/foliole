@@ -12,6 +12,7 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
 
   expect(runner).toContain('process.env.FOLIOLE_USER_DATA_PATH = userDataPath');
   expect(runner).toContain('process.env.FOLIOLE_SESSION_DATA_PATH = userDataPath');
+  expect(runner).toContain('process.env.FOLIOLE_WORKDIR ??= repoRoot');
   expect(runner).toContain("const localLibraryHome = 'D:\\\\X\\\\U\\\\Foliole'");
   expect(runner).toContain('library-path-settings.json');
   expect(runner).toContain('ensureLocalLibraryPathSettings();');

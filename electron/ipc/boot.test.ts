@@ -22,6 +22,7 @@ import {
   flushBootEvents,
   resetBootEventStateForTests,
   resolveBootArtifactPaths,
+  shouldPersistReadyMarkers,
   waitForRendererAppReady
 } from './boot.js';
 
@@ -148,6 +149,12 @@ it('writes a window visible marker for native preview health checks', async () =
     source: 'main',
     stage: 'window_visible'
   });
+});
+
+it('does not persist native preview marker files in packaged runtime without an explicit workdir', () => {
+  delete process.env.FOLIOLE_WORKDIR;
+
+  expect(shouldPersistReadyMarkers()).toBe(false);
 });
 
 it('prefers explicit relaunch boot session args over stale environment session', async () => {

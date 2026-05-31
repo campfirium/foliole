@@ -26,6 +26,10 @@ function resolveRepoRoot() {
   return process.cwd();
 }
 
+export function shouldPersistReadyMarkers() {
+  return Boolean(process.env.FOLIOLE_WORKDIR?.trim());
+}
+
 function resolveBootSession() {
   const sessionArg = process.argv.find((arg) => arg.startsWith('--foliole-boot-session='));
   return sessionArg?.slice('--foliole-boot-session='.length) || process.env.FOLIOLE_BOOT_SESSION || null;
@@ -109,6 +113,9 @@ async function persistBootEvent(event: ReturnType<typeof createBootEvent>) {
     });
   }
   await appendJsonLine(paths.eventLogPath, event);
+  if (!shouldPersistReadyMarkers()) {
+    return;
+  }
   if (event.stage === 'app_ready') {
     await writeJson(paths.readyMarkerPath, event);
   }

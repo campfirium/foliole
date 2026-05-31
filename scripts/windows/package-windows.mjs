@@ -1,0 +1,145 @@
+#!/usr/bin/env node
+/* global console, process */
+
+import { spawn } from 'node:child_process';
+import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(__dirname, '../..');
+const WINDOWS_REPO_ROOT = 'D:\\C\\foliole';
+const WINDOWS_NODE_DIR = 'D:\\R\\nodejs';
+
+export function resolvePackageMode(argv = process.argv, platform = process.platform) {
+  return argv.includes('--native') || platform === 'win32' ? 'native' : 'wsl';
+}
+
+function createCmdStep(label, command) {
+  return {
+    args: ['/d', '/s', '/c', command],
+    command: 'cmd.exe',
+    label
+  };
+}
+
+export function createNativePackageSteps() {
+  return [
+    createCmdStep('renderer build', 'npm run build'),
+    createCmdStep('electron compile', 'npm run electron:compile'),
+    createCmdStep('electron-builder nsis', 'npm exec -- electron-builder --config electron/builder.json --win nsis')
+  ];
+}
+
+export function createWslPackageSteps(rootDir = repoRoot) {
+  return [
+    {
+      args: ['scripts/windows/windows-sync.sh'],
+      command: 'bash',
+      cwd: rootDir,
+      env: {
+        WINDOWS_SYNC_FORCE_FULL: '1',
+        WINDOWS_SYNC_INCLUDE_ELECTRON_DIST: '1'
+      },
+      label: 'sync Windows checkout'
+    },
+    {
+      args: [
+        '/d',
+        '/s',
+        '/c',
+        `cd /d ${WINDOWS_REPO_ROOT} && set "PATH=${WINDOWS_NODE_DIR};%PATH%" && npm run windows:package:native`
+      ],
+      command: 'cmd.exe',
+      cwd: '/mnt/c/Windows/System32',
+      label: 'run Windows-native package'
+    }
+  ];
+}
+
+function mergeEnv(extraEnv) {
+  return { ...process.env, ...(extraEnv ?? {}) };
+}
+
+function runStep(step) {
+  console.log(`[windows-package] step: ${step.label}`);
+  return new Promise((resolvePromise, reject) => {
+    const defaultCwd = resolvePackageMode() === 'native' ? repoRoot : process.cwd();
+    const child = spawn(step.command, step.args, {
+      cwd: step.cwd ?? defaultCwd,
+      env: mergeEnv(step.env),
+      stdio: 'inherit'
+    });
+    child.on('error', reject);
+    child.on('exit', (code) => {
+      if (code === 0) {
+        resolvePromise();
+        return;
+      }
+      reject(new Error(`${step.label} failed with exit code ${code ?? 'unknown'}`));
+    });
+  });
+}
+
+function directorySizeBytes(path) {
+  let total = 0;
+  for (const entry of readdirSync(path, { withFileTypes: true })) {
+    const childPath = resolve(path, entry.name);
+    if (entry.isDirectory()) {
+      total += directorySizeBytes(childPath);
+    } else if (entry.isFile()) {
+      total += statSync(childPath).size;
+    }
+  }
+  return total;
+}
+
+export function formatBytes(bytes) {
+  return `${Math.round(bytes / 1024 / 1024)}MB`;
+}
+
+export function resolveReleaseArtifactPaths(rootDir = repoRoot) {
+  return [
+    resolve(rootDir, 'release/win-unpacked'),
+    resolve(rootDir, 'release/Foliole Setup 0.1.0.exe'),
+    resolve(rootDir, 'release/Foliole Setup 0.1.0.exe.blockmap'),
+    resolve(rootDir, 'release/latest.yml'),
+    resolve(rootDir, 'release/builder-debug.yml')
+  ];
+}
+
+export function cleanReleaseArtifacts(rootDir = repoRoot) {
+  for (const artifactPath of resolveReleaseArtifactPaths(rootDir)) {
+    rmSync(artifactPath, { force: true, recursive: true });
+  }
+}
+
+export function collectArtifactSummary(rootDir = process.cwd()) {
+  const installerPath = resolve(rootDir, 'release/Foliole Setup 0.1.0.exe');
+  const unpackedPath = resolve(rootDir, 'release/win-unpacked');
+  return {
+    installer: existsSync(installerPath) ? formatBytes(statSync(installerPath).size) : 'missing',
+    unpacked: existsSync(unpackedPath) ? formatBytes(directorySizeBytes(unpackedPath)) : 'missing'
+  };
+}
+
+async function main() {
+  const mode = resolvePackageMode();
+  const steps = mode === 'native' ? createNativePackageSteps() : createWslPackageSteps();
+  console.log(`[windows-package] mode: ${mode}`);
+  if (mode === 'native') {
+    cleanReleaseArtifacts();
+  }
+  for (const step of steps) {
+    await runStep(step);
+  }
+  if (mode === 'native') {
+    const summary = collectArtifactSummary();
+    console.log(`[windows-package] artifact installer=${summary.installer} unpacked=${summary.unpacked}`);
+    console.log('[windows-package] status: PACKAGED');
+  }
+}
+
+if (process.argv[1] && process.argv[1].endsWith('package-windows.mjs')) {
+  await main();
+}

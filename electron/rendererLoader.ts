@@ -130,7 +130,7 @@ function resolveExistingRuntimeRendererIndex() {
 
 async function loadPackagedRenderer(window: BrowserWindow, runtimeDir: string) {
   const indexPath = resolveRendererFilePath(runtimeDir);
-  await window.loadFile(resolveExistingRuntimeRendererIndex() ?? indexPath);
+  await window.loadFile(indexPath);
 }
 
 async function loadDevRenderer(window: BrowserWindow, devUrl: string) {

@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const builderConfigPath = resolve(__dirname, '../electron/builder.json');
+const installerNshPath = resolve(__dirname, '../build/installer.nsh');
 const packageJsonPath = resolve(__dirname, '../package.json');
 
 async function readBuilderConfig() {
@@ -20,12 +21,69 @@ async function readPackageJson() {
   return JSON.parse(source);
 }
 
+async function readInstallerNsh() {
+  return readFile(installerNshPath, 'utf8');
+}
+
 describe('electron-builder release packaging config', () => {
   it('keeps better-sqlite3 native bindings outside the asar archive', async () => {
     const config = await readBuilderConfig();
 
     expect(config.asar).toBe(true);
-    expect(config.asarUnpack).toContain('**/node_modules/better-sqlite3/**');
+    expect(config.asarUnpack).toContain('**/node_modules/better-sqlite3/build/Release/*.node');
+  });
+
+  it('trims bundled desktop app content to runtime dependencies and selected Electron locales', async () => {
+    const config = await readBuilderConfig();
+
+    expect(config.electronLanguages).toEqual(['en-US', 'zh-CN']);
+    expect(config.files).toEqual(expect.arrayContaining([
+      '!node_modules/@capacitor/**',
+      '!node_modules/@capacitor-community/**',
+      '!node_modules/@mermaid-js/**',
+      '!node_modules/@rollup/**',
+      '!node_modules/@stencil/**',
+      '!node_modules/jeep-sqlite/**',
+      '!node_modules/lucide-react/**',
+      '!node_modules/mermaid/**',
+      '!node_modules/sql.js/**',
+      '!node_modules/better-sqlite3/deps/**',
+      '!node_modules/better-sqlite3/src/**',
+      '!node_modules/@codemirror/**',
+      '!node_modules/@lezer/**',
+      '!node_modules/@radix-ui/**',
+      '!node_modules/@tanstack/**',
+      '!node_modules/clsx/**',
+      '!node_modules/cytoscape/**',
+      '!node_modules/cytoscape-fcose/**',
+      '!node_modules/d3/**',
+      '!node_modules/dagre-d3-es/**',
+      '!node_modules/katex/**',
+      '!node_modules/react/**',
+      '!node_modules/react-dom/**',
+      '!node_modules/react-pdf/**',
+      '!node_modules/roughjs/**',
+      '!node_modules/tailwind-merge/**',
+      '!node_modules/zustand/**',
+      '!node_modules/pdfjs-dist/build/**',
+      '!node_modules/pdfjs-dist/legacy/**/*.map',
+      '!node_modules/pdfjs-dist/legacy/web/**',
+      '!node_modules/pdfjs-dist/web/**',
+      '!node_modules/pdfjs-dist/**/*.d.mts',
+      '!node_modules/vitest/**'
+    ]));
+    expect(config.files).not.toContain('!node_modules/@napi-rs/**');
+  });
+
+  it('keeps compiled test artifacts out of packaged Electron runtime files', async () => {
+    const config = await readBuilderConfig();
+
+    expect(config.files).toContain('electron/preload.cjs');
+    expect(config.files).toEqual(expect.arrayContaining([
+      '!electron-dist/**/*.test.js',
+      '!electron-dist/**/*.test.helpers.js',
+      '!electron-dist/**/*test-support.js'
+    ]));
   });
 
   it('rebuilds native modules during packaged builds', async () => {
@@ -56,5 +114,29 @@ describe('electron-builder release packaging config', () => {
     expect(config.files).toContain('build/icon.png');
     expect(config.win.icon).toBe('build/icon.ico');
     expect(config.linux.icon).toBe('build/icon.png');
+  });
+
+  it('uses a per-user assisted Windows installer with explicit shortcuts', async () => {
+    const config = await readBuilderConfig();
+
+    expect(config.nsis.oneClick).toBe(false);
+    expect(config.nsis.allowToChangeInstallationDirectory).toBe(true);
+    expect(config.nsis.perMachine).toBe(false);
+    expect(config.nsis.createStartMenuShortcut).toBe(true);
+    expect(config.nsis.createDesktopShortcut).toBe(true);
+    expect(config.nsis.shortcutName).toBe('Foliole');
+    expect(config.fileAssociations).toBeUndefined();
+  });
+
+  it('registers Markdown as a per-user open-with capability without taking over defaults', async () => {
+    const installer = await readInstallerNsh();
+
+    expect(installer).toContain('WriteRegNone HKCU "Software\\Classes\\.md\\OpenWithProgids" "Foliole.Markdown"');
+    expect(installer).toContain('WriteRegNone HKCU "Software\\Classes\\.markdown\\OpenWithProgids" "Foliole.Markdown"');
+    expect(installer).toContain('WriteRegStr HKCU "Software\\RegisteredApplications" "Foliole" "Software\\Foliole\\Capabilities"');
+    expect(installer).not.toContain('UserChoice');
+    expect(installer).not.toContain('System::Call');
+    expect(installer).not.toContain('WriteRegStr HKCU "Software\\Classes\\.md" ""');
+    expect(installer).not.toContain('WriteRegStr HKCU "Software\\Classes\\.markdown" ""');
   });
 });

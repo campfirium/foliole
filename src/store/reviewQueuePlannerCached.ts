@@ -41,11 +41,10 @@ function hasSameArgs(current: CachedReviewQueuePlanArgs, previous: CachedReviewQ
 export function buildCachedReviewQueuePlan(args: CachedReviewQueuePlanArgs) {
   const cachedIndex = cachedPlans.findIndex((entry) => hasSameArgs(args, entry.args));
   if (cachedIndex >= 0) {
-    const entry = cachedPlans[cachedIndex];
+    const [entry] = cachedPlans.splice(cachedIndex, 1);
     if (!entry) {
       return buildReviewQueuePlan(args);
     }
-    cachedPlans.splice(cachedIndex, 1);
     cachedPlans.unshift(entry);
     return entry.plan;
   }

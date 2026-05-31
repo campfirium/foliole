@@ -171,6 +171,28 @@ it('keeps dev startup on the single prebuilt renderer html when it exists', asyn
   }
 });
 
+it('ignores stale runtime renderer html in packaged startup', async () => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
+  tempRoots.push(tempRoot);
+  const runtimeDir = path.join(tempRoot, 'electron-dist', 'electron');
+  const packagedIndexPath = path.join(tempRoot, 'dist', 'index.html');
+  const runtimeHtmlDir = path.join(tempRoot, 'userData');
+  runtimeMocks.userDataPath = runtimeHtmlDir;
+  await fs.mkdir(path.dirname(packagedIndexPath), { recursive: true });
+  await fs.mkdir(runtimeHtmlDir, { recursive: true });
+  await fs.writeFile(packagedIndexPath, '<html><body>packaged</body></html>', 'utf8');
+  await fs.writeFile(
+    path.join(runtimeHtmlDir, 'runtime-renderer-index.html'),
+    '<html><head><base href="http://127.0.0.1:24600/"></head><body>stale dev shell</body></html>',
+    'utf8'
+  );
+  const window = { loadFile: vi.fn().mockResolvedValue(undefined) };
+
+  await loadRenderer(window as never, runtimeDir);
+
+  expect(window.loadFile).toHaveBeenCalledWith(packagedIndexPath);
+});
+
 it('overwrites the single prebuilt html when settings change', async () => {
   const originalUrl = process.env.ELECTRON_RENDERER_URL;
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));

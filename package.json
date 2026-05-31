@@ -68,6 +68,8 @@
     "electron:rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "dev:screenshot": "bash scripts/windows/dev-screenshot.sh",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
+    "windows:package": "node scripts/windows/package-windows.mjs",
+    "windows:package:native": "node scripts/windows/package-windows.mjs --native",
     "oneoff:workspace:migrate": "node scripts/migrate-workspace-data.mjs",
     "oneoff:workspace:backfill-opening-text": "node scripts/electron-sqlite-runner.mjs scripts/backfill-node-opening-text.ts",
     "oneoff:source-dispositions:backfill": "node scripts/electron-sqlite-runner.mjs scripts/backfill-source-disposition-states.ts",
