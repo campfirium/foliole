@@ -31,19 +31,6 @@ function resetSandboxState() {
   fs.rmSync(userDataPath, { force: true, recursive: true });
 }
 
-function ensureLocalLibraryPathSettings() {
-  const configDir = path.join(userDataPath, 'config');
-  const settingsPath = path.join(configDir, 'library-path-settings.json');
-  fs.mkdirSync(configDir, { recursive: true });
-  fs.writeFileSync(settingsPath, `${JSON.stringify({
-    assets_dir: null,
-    inbox: null,
-    library_home: localLibraryHome,
-    mirror: null,
-    updated_at: new Date().toISOString()
-  }, null, 2)}\n`, 'utf8');
-}
-
 function assertLocalDatabaseWritable() {
   const databasePath = path.join(localLibraryHome, 'Data', 'foliole.db');
   const useTemporaryLibrary = process.env.FOLIOLE_NATIVE_PREVIEW_TEMP_LIBRARY === '1';
@@ -66,6 +53,7 @@ function assertLocalDatabaseWritable() {
 resetSandboxState();
 process.env.FOLIOLE_USER_DATA_PATH = userDataPath;
 process.env.FOLIOLE_SESSION_DATA_PATH = userDataPath;
+process.env.FOLIOLE_LIBRARY_HOME = localLibraryHome;
 process.env.FOLIOLE_WORKDIR ??= repoRoot;
 process.env.FOLIOLE_BOOT_SESSION ??= `windows-native-${randomUUID()}`;
 process.env.FOLIOLE_DISABLE_IN_APP_RELAUNCH ??= '1';
@@ -76,7 +64,6 @@ process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_NODE_SYNC_FLUSH ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_WINDOW_STATE ??= '1';
-ensureLocalLibraryPathSettings();
 assertLocalDatabaseWritable();
 
 await import('../electron-dev.mjs');

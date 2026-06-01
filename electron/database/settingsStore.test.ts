@@ -158,3 +158,24 @@ it('stores full-text search index strategy inside the user-space app settings re
     sync_dirty: 1
   });
 });
+
+it('mirrors backup and library path settings as user-space setting records', () => {
+  saveJsonSetting('device_id', 'device-test', '2026-03-06T00:00:00.000Z');
+  saveJsonSetting('backup_settings', { auto_daily_days: 7 }, '2026-03-06T00:01:00.000Z');
+  saveJsonSetting('library_path_settings', { mirror: '/library/Mirror' }, '2026-03-06T00:02:00.000Z');
+
+  const connection = openDatabaseConnection();
+  const rows = connection.sqlite
+    .prepare(
+      `SELECT key, scope, device_id
+       FROM setting_records
+       WHERE key IN ('backup_settings', 'library_path_settings')
+       ORDER BY key`
+    )
+    .all() as Array<Record<string, unknown>>;
+
+  expect(rows).toEqual([
+    { device_id: '*', key: 'backup_settings', scope: 'user_space' },
+    { device_id: '*', key: 'library_path_settings', scope: 'user_space' }
+  ]);
+});

@@ -2,12 +2,12 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { ensureLibraryPathLayout, loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
+import { ensureLibraryPathLayout } from '../ipc/libraryPaths.js';
+import { resolveBootstrapLibraryPaths } from '../ipc/libraryPathBootstrap.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
 import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
-import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -29,7 +29,7 @@ interface OpenDatabaseConnectionOptions {
 let cachedConnection: DatabaseConnection | null = null;
 
 function resolveConfiguredDatabasePath(): string {
-  return resolveRuntimeDataPaths().databasePath;
+  return resolveBootstrapLibraryPaths().database_path;
 }
 
 export function resolveDatabasePath(): string {
@@ -50,10 +50,10 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
   }
 
   const { applyJournalMode = true } = options;
-  const runtimeDataPaths = resolveRuntimeDataPaths();
-  const dbPath = runtimeDataPaths.databasePath;
+  const libraryPaths = resolveBootstrapLibraryPaths();
+  const dbPath = libraryPaths.database_path;
   const searchDbPath = resolveSearchDatabasePath(dbPath);
-  ensureLibraryPathLayout(loadLibraryPathSettingsSync());
+  ensureLibraryPathLayout(libraryPaths);
   migrateDatabaseFileNames(path.dirname(dbPath)).forEach((result) => {
     options.reportFileNameMigration?.(result);
   });

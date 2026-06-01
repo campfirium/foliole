@@ -40,19 +40,8 @@ function createCaptureContext() {
   const databasePath = path.join(libraryHome, 'Data', 'foliole.db');
   const sourceDb = process.env.FOLIOLE_STARTUP_SOURCE_DB ?? 'D:\\X\\U\\Foliole\\Data\\foliole.db';
 
-  ensureDir(path.join(userDataPath, 'config'));
   ensureDir(sessionDataPath);
   ensureDir(path.dirname(databasePath));
-  fs.writeFileSync(
-    path.join(userDataPath, 'config', 'library-path-settings.json'),
-    JSON.stringify({
-      assets_dir: null,
-      inbox: null,
-      library_home: libraryHome,
-      mirror: null,
-      updated_at: new Date().toISOString()
-    }, null, 2)
-  );
 
   const copiedDatabase = copyIfExists(sourceDb, databasePath);
   copyIfExists(`${sourceDb}-wal`, `${databasePath}-wal`);
@@ -61,6 +50,7 @@ function createCaptureContext() {
   return {
     copiedDatabase,
     databasePath,
+    libraryHome,
     outputRoot,
     runtimeStateRoot,
     sessionDataPath,
@@ -171,6 +161,7 @@ async function main() {
       cleanup() {},
       env: {
         FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+        FOLIOLE_LIBRARY_HOME: capture.libraryHome,
         FOLIOLE_SESSION_DATA_PATH: capture.sessionDataPath,
         FOLIOLE_USER_DATA_PATH: capture.userDataPath,
         FOLIOLE_WORKDIR: capture.runtimeStateRoot

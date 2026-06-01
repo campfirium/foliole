@@ -46,6 +46,7 @@ it('pins userData and sessionData to the foliole root on win32', () => {
   const expectedRoot = path.join(appDataRoot, FOLIOLE_APP_NAME);
   expect(configured.userDataPath).toBe(expectedRoot);
   expect(configured.sessionDataPath).toBe(expectedRoot);
+  expect(configured.libraryHome).toBeNull();
   expect(setAppUserModelId).toHaveBeenCalledWith(FOLIOLE_APP_NAME);
   expect(mkdirSync).toHaveBeenCalledWith(expectedRoot, { recursive: true });
 });
@@ -73,15 +74,52 @@ it('honors test-specific userData and sessionData overrides', () => {
     }
   };
 
-  const configured = configureRuntimeAppIdentity(app, mkdirSync, 'linux', {
+  const env: NodeJS.ProcessEnv = {
     FOLIOLE_SESSION_DATA_PATH: '/tmp/foliole-test/session-data',
     FOLIOLE_USER_DATA_PATH: '/tmp/foliole-test/user-data'
-  });
+  };
+  const configured = configureRuntimeAppIdentity(app, mkdirSync, 'linux', env);
 
   expect(configured.userDataPath).toBe(path.resolve('/tmp/foliole-test/user-data'));
   expect(configured.sessionDataPath).toBe(path.resolve('/tmp/foliole-test/session-data'));
+  expect(configured.libraryHome).toBeNull();
   expect(mkdirSync).toHaveBeenCalledWith(path.resolve('/tmp/foliole-test/user-data'), { recursive: true });
   expect(mkdirSync).toHaveBeenCalledWith(path.resolve('/tmp/foliole-test/session-data'), { recursive: true });
+});
+
+it('honors the explicit library home launch argument before runtime settings load', () => {
+  const appDataRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Roaming');
+  let userDataPath = path.join(appDataRoot, 'Electron');
+  let sessionDataPath = path.join(appDataRoot, 'Electron');
+  const env: NodeJS.ProcessEnv = {};
+  const app = {
+    getName: () => FOLIOLE_APP_NAME,
+    getPath(name: 'appData' | 'sessionData' | 'userData') {
+      if (name === 'appData') {
+        return appDataRoot;
+      }
+      return name === 'userData' ? userDataPath : sessionDataPath;
+    },
+    setName: vi.fn(),
+    setPath(name: 'sessionData' | 'userData', value: string) {
+      if (name === 'userData') {
+        userDataPath = value;
+        return;
+      }
+      sessionDataPath = value;
+    }
+  };
+
+  const configured = configureRuntimeAppIdentity(
+    app,
+    vi.fn(),
+    'linux',
+    env,
+    ['electron', 'main.js', '--library-home', '/tmp/foliole-demo']
+  );
+
+  expect(configured.libraryHome).toBe(path.resolve('/tmp/foliole-demo'));
+  expect(env.FOLIOLE_LIBRARY_HOME).toBe(path.resolve('/tmp/foliole-demo'));
 });
 
 it('collects machine-checkable runtime diagnostics for the active startup context', () => {

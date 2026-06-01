@@ -88,8 +88,10 @@ function resolveDatabasePath(flags: Map<string, string>) {
 
   const userDataPath = resolveUserDataPath(flags);
   const documentsPath = resolveDocumentsPath(flags);
-  const settingsPath = path.join(userDataPath, 'config', 'library-path-settings.json');
-  const overrides = readStoredLibraryPathSettings(settingsPath);
+  const configPath = path.join(userDataPath, 'config');
+  const overrides =
+    readStoredLibraryPathSettings(path.join(configPath, 'current-library.json')) ??
+    readStoredLibraryPathSettings(path.join(configPath, 'library-path-settings.json'));
   const libraryHome = normalizeAbsolutePath(overrides?.library_home) ?? path.join(documentsPath, LIBRARY_HOME_DEFAULT_DIRNAME);
   return path.join(libraryHome, LIBRARY_DATA_DIRNAME, LIBRARY_DATABASE_FILENAME);
 }

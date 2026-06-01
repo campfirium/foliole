@@ -47,6 +47,7 @@ function createElectronArgs(entryPath) {
     args.push('--no-sandbox');
   }
   args.push(entryPath);
+  args.push(...process.argv.slice(2));
   return args;
 }
 

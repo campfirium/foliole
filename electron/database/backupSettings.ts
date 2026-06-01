@@ -4,9 +4,10 @@ import path from 'node:path';
 import { normalizeLibraryPath } from '../../lib/platform/libraryPaths.js';
 import type { NativeBackupSettings } from '../../lib/platform/nativeUtilityContract.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
-import { resolveAppPaths } from '../ipc/paths.js';
 
-const BACKUP_SETTINGS_FILE = 'backup-settings.json';
+import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
+
+const BACKUP_SETTINGS_KEY = 'backup_settings';
 const DEFAULT_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 const GIGABYTE_BYTES = 1024 * 1024 * 1024;
 
@@ -38,22 +39,8 @@ export const DEFAULT_BACKUP_SETTINGS: NativeBackupSettings = {
   updated_at: DEFAULT_UPDATED_AT
 };
 
-function resolveBackupSettingsFilePath() {
-  return path.join(resolveAppPaths().app_config_dir, BACKUP_SETTINGS_FILE);
-}
-
 function readStoredBackupSettings() {
-  const settingsPath = resolveBackupSettingsFilePath();
-  if (!fs.existsSync(settingsPath)) {
-    return null;
-  }
-  try {
-    const raw = fs.readFileSync(settingsPath, 'utf8');
-    const parsed = JSON.parse(raw) as StoredBackupSettings;
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  return loadJsonSetting(BACKUP_SETTINGS_KEY);
 }
 
 function normalizePositiveInteger(value: unknown, fallback: number) {
@@ -117,9 +104,7 @@ export function normalizeBackupSettings(payload: unknown): NativeBackupSettings 
 }
 
 function saveStoredBackupSettings(settings: NativeBackupSettings) {
-  const settingsPath = resolveBackupSettingsFilePath();
-  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  saveJsonSetting(BACKUP_SETTINGS_KEY, settings, settings.updated_at);
 }
 
 export function loadBackupSettings(): NativeBackupSettings {
@@ -152,6 +137,4 @@ export function ensureManagedBackupDirectory(settings = loadBackupSettings()) {
   return directoryPath;
 }
 
-export function resolveBackupSettingsFileForTest() {
-  return resolveBackupSettingsFilePath();
-}
+export const BACKUP_SETTINGS_STORAGE_KEY = BACKUP_SETTINGS_KEY;

@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 import {
   createEmptyLibraryPathOverrides,
@@ -13,13 +12,20 @@ import type {
   NativeLibraryPaths,
   NativeUpdateLibraryPathSettingArgs
 } from '../../lib/platform/nativeUtilityContract.js';
+import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 
+import {
+  readLegacyLibraryPathOverrides,
+  resolveBootstrapLibraryHome,
+  resolveBootstrapLibraryPaths,
+  resolveExplicitLibraryHome,
+  saveCurrentLibraryHome
+} from './libraryPathBootstrap.js';
 import { migrateLibraryPathChange } from './libraryPathMigration.js';
-import { resolveAppPaths } from './paths.js';
 import { loadAppSettingsState } from './storage.js';
 
-const LIBRARY_PATH_SETTINGS_FILE = 'library-path-settings.json';
+const LIBRARY_PATH_SETTINGS_KEY = 'library_path_settings';
 
 interface StoredLibraryPathSettings {
   assets_dir?: unknown;
@@ -52,10 +58,6 @@ function isStoredLibraryPathSettings(value: unknown): value is StoredLibraryPath
   );
 }
 
-function resolveLibraryPathSettingsFilePath() {
-  return path.join(resolveAppPaths().app_config_dir, LIBRARY_PATH_SETTINGS_FILE);
-}
-
 function normalizeStoredLibraryPathSettings(
   payload: StoredLibraryPathSettings | null,
   legacyManagedInboxPath?: string | null
@@ -64,7 +66,7 @@ function normalizeStoredLibraryPathSettings(
   return {
     assets_dir: normalizeLibraryPath(payload?.assets_dir),
     inbox: normalizeLibraryPath(payload?.inbox) ?? normalizeLibraryPath(legacyManagedInboxPath) ?? fallback.inbox,
-    library_home: normalizeLibraryPath(payload?.library_home),
+    library_home: null,
     mirror: normalizeLibraryPath(payload?.mirror),
     updated_at:
       typeof payload?.updated_at === 'string' && payload.updated_at.trim().length > 0
@@ -74,21 +76,12 @@ function normalizeStoredLibraryPathSettings(
 }
 
 function readStoredLibraryPathSettings() {
-  const settingsPath = resolveLibraryPathSettingsFilePath();
-  if (!fs.existsSync(settingsPath)) {
-    return null;
-  }
-  try {
-    const raw = fs.readFileSync(settingsPath, 'utf8');
-    const parsed: unknown = JSON.parse(raw);
-    return isStoredLibraryPathSettings(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  const parsed = loadJsonSetting(LIBRARY_PATH_SETTINGS_KEY);
+  return isStoredLibraryPathSettings(parsed) ? parsed : null;
 }
 
 async function loadStoredLibraryPathOverrides() {
-  const settings = readStoredLibraryPathSettings();
+  const settings = readStoredLibraryPathSettings() ?? readLegacyLibraryPathOverrides();
   const shouldReadLegacyInbox = !normalizeLibraryPath(settings?.inbox);
   const legacyManagedInboxPath = shouldReadLegacyInbox
     ? ((await loadAppSettingsState())[MANAGED_INBOX_APP_SETTING_KEY] ?? null)
@@ -97,22 +90,22 @@ async function loadStoredLibraryPathOverrides() {
 }
 
 function saveStoredLibraryPathOverrides(overrides: LibraryPathOverrides) {
-  const settingsPath = resolveLibraryPathSettingsFilePath();
-  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-  fs.writeFileSync(settingsPath, JSON.stringify(overrides, null, 2));
-}
-
-function resolveDocumentsPathFallback() {
-  const appPaths = resolveAppPaths();
-  return normalizeLibraryPath(appPaths.documents_dir) ?? appPaths.app_data_dir;
+  saveJsonSetting(LIBRARY_PATH_SETTINGS_KEY, overrides, overrides.updated_at);
 }
 
 function toNativeLibraryPaths(overrides: LibraryPathOverrides): NativeLibraryPaths {
-  return resolveLibraryPaths(resolveDocumentsPathFallback(), overrides);
+  const bootstrapLibraryHome = resolveBootstrapLibraryPaths().library_home;
+  return resolveLibraryPaths(bootstrapLibraryHome, {
+    ...overrides,
+    library_home: normalizeLibraryPath(overrides.library_home) ?? resolveBootstrapLibraryHome() ?? bootstrapLibraryHome
+  });
 }
 
 function loadStoredLibraryPathOverridesSync() {
-  return normalizeStoredLibraryPathSettings(readStoredLibraryPathSettings(), null);
+  return normalizeStoredLibraryPathSettings(
+    readStoredLibraryPathSettings() ?? readLegacyLibraryPathOverrides(),
+    null
+  );
 }
 
 export function loadLibraryPathSettingsSync(): NativeLibraryPaths {
@@ -156,29 +149,36 @@ export async function loadLibraryPathSettings(): Promise<NativeLibraryPaths> {
 export async function updateLibraryPathSetting(
   args: NativeUpdateLibraryPathSettingArgs
 ): Promise<NativeLibraryPaths> {
+  if (args.location !== 'library_home' && resolveExplicitLibraryHome()) {
+    throw new Error('library path overrides are disabled for explicit --library-home launches');
+  }
   const currentOverrides = await loadStoredLibraryPathOverrides();
   const location = args.location;
   const nextOverrides: LibraryPathOverrides = {
     ...currentOverrides,
-    [location]: normalizeUpdatedLibraryPath(args),
+    ...(location === 'library_home' ? {} : { [location]: normalizeUpdatedLibraryPath(args) }),
     updated_at: new Date().toISOString()
   };
+  const migrationNextOverrides =
+    location === 'library_home'
+      ? { ...nextOverrides, library_home: normalizeUpdatedLibraryPath(args) }
+      : nextOverrides;
   const currentPaths = toNativeLibraryPaths(currentOverrides);
-  const nextPaths = toNativeLibraryPaths(nextOverrides);
+  const nextPaths = toNativeLibraryPaths(migrationNextOverrides);
   assertSafeLibraryPathLayout(nextPaths);
   await migrateLibraryPathChange({
     currentOverrides,
     currentPaths,
     ...(args.confirm_existing_library_home === true ? { confirmExistingLibraryHome: true } : {}),
     location,
-    nextOverrides,
+    nextOverrides: migrationNextOverrides,
     nextPaths
   });
-  saveStoredLibraryPathOverrides(nextOverrides);
+  if (location === 'library_home') {
+    saveCurrentLibraryHome(nextPaths.library_home);
+  } else {
+    saveStoredLibraryPathOverrides(nextOverrides);
+  }
   ensureLibraryPathLayout(nextPaths);
   return nextPaths;
-}
-
-export function resolveLibraryPathSettingsFileForTest() {
-  return resolveLibraryPathSettingsFilePath();
 }

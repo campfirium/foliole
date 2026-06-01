@@ -17,13 +17,13 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).toContain("const sandboxLibraryHome = path.join(mainLibraryHome, 'PreviewSandbox')");
   expect(runner).toContain("process.env.FOLIOLE_NATIVE_PREVIEW_SANDBOX === '1'");
   expect(runner).toContain('resetSandboxState();');
-  expect(runner).toContain('library-path-settings.json');
-  expect(runner).toContain('ensureLocalLibraryPathSettings();');
+  expect(runner).toContain('process.env.FOLIOLE_LIBRARY_HOME = localLibraryHome');
+  expect(runner).not.toContain('library-path-settings.json');
+  expect(runner).not.toContain('ensureLocalLibraryPathSettings();');
   expect(runner).toContain('assertLocalDatabaseWritable();');
   expect(runner).toContain("fs.openSync(databasePath, useTemporaryLibrary ? 'a+' : 'r+')");
   expect(runner).toContain("process.env.FOLIOLE_NATIVE_PREVIEW_TEMP_LIBRARY === '1'");
   expect(runner).toContain('native preview process cannot open the live database for write');
-  expect(runner).toContain('library_home: localLibraryHome');
   expect(runner).not.toContain('if (!fs.existsSync(databasePath))');
   expect(runner).not.toContain('native-debug-library');
   expect(runner).not.toContain('FOLIOLE_USE_NATIVE_DEBUG_LIBRARY_COPY');

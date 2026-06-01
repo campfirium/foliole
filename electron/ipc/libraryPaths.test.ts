@@ -11,6 +11,10 @@ let mockedAppConfigDir = '/config';
 const { loadAppSettingsState } = vi.hoisted(() => ({
   loadAppSettingsState: vi.fn()
 }));
+const settingsStore = vi.hoisted(() => ({
+  loadJsonSetting: vi.fn(),
+  saveJsonSetting: vi.fn()
+}));
 
 vi.mock('./paths.js', () => ({
   resolveAppPaths: () => ({
@@ -22,11 +26,11 @@ vi.mock('./paths.js', () => ({
   })
 }));
 vi.mock('./storage.js', () => ({ loadAppSettingsState }));
+vi.mock('../database/settingsStore.js', () => settingsStore);
 
 import {
   loadLibraryPathSettings,
   loadLibraryPathSettingsSync,
-  resolveLibraryPathSettingsFileForTest,
   updateLibraryPathSetting
 } from './libraryPaths.js';
 
@@ -38,6 +42,12 @@ beforeEach(async () => {
   mockedAppConfigDir = path.join(tempRoot, 'config');
   loadAppSettingsState.mockReset();
   loadAppSettingsState.mockResolvedValue({});
+  settingsStore.loadJsonSetting.mockReset();
+  settingsStore.loadJsonSetting.mockReturnValue(null);
+  settingsStore.saveJsonSetting.mockReset();
+  settingsStore.saveJsonSetting.mockImplementation((_key, payload) => {
+    settingsStore.loadJsonSetting.mockReturnValue(payload);
+  });
 });
 
 afterEach(async () => {
@@ -45,7 +55,11 @@ afterEach(async () => {
 });
 
 async function writeStoredLibraryPathSettings(value: unknown) {
-  const settingsPath = resolveLibraryPathSettingsFileForTest();
+  settingsStore.loadJsonSetting.mockReturnValue(value);
+}
+
+async function writeLegacyLibraryPathSettings(value: unknown) {
+  const settingsPath = path.join(mockedAppConfigDir, 'library-path-settings.json');
   await fs.mkdir(path.dirname(settingsPath), { recursive: true });
   await fs.writeFile(settingsPath, JSON.stringify(value), 'utf8');
 }
@@ -83,6 +97,22 @@ it('falls back to the legacy managed inbox override before the new file is writt
   await expect(loadLibraryPathSettings()).resolves.toMatchObject({
     inbox: legacyInboxPath,
     library_home: path.join(mockedDocumentsDir, 'Foliole')
+  });
+});
+
+it('adopts the legacy library home file only as a read fallback', async () => {
+  const legacyLibraryHome = path.join(tempRoot, 'LegacyLibrary');
+  await writeLegacyLibraryPathSettings({
+    assets_dir: null,
+    inbox: null,
+    library_home: legacyLibraryHome,
+    mirror: null,
+    updated_at: '2026-05-13T00:00:00.000Z'
+  });
+
+  await expect(loadLibraryPathSettings()).resolves.toMatchObject({
+    data_dir: path.join(legacyLibraryHome, 'Data'),
+    library_home: legacyLibraryHome
   });
 });
 
@@ -138,7 +168,23 @@ it('updates and persists a single library path override', async () => {
     mirror: mirrorPath
   });
 
-  await expect(fs.readFile(resolveLibraryPathSettingsFileForTest(), 'utf8')).resolves.toContain(mirrorPath);
+  expect(settingsStore.saveJsonSetting).toHaveBeenCalledWith(
+    'library_path_settings',
+    expect.objectContaining({ mirror: mirrorPath }),
+    expect.any(String)
+  );
+});
+
+it('stores Library Home switches in the bootstrap pointer instead of runtime settings', async () => {
+  const nextLibraryHome = path.join(tempRoot, 'NextLibrary');
+
+  await updateLibraryPathSetting({ location: 'library_home', path: nextLibraryHome });
+
+  const pointer = JSON.parse(
+    await fs.readFile(path.join(mockedAppConfigDir, 'current-library.json'), 'utf8')
+  ) as Record<string, unknown>;
+  expect(pointer.library_home).toBe(nextLibraryHome);
+  expect(settingsStore.saveJsonSetting).not.toHaveBeenCalled();
 });
 
 it('rejects inbox and mirror locations that overlap', async () => {
