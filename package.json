@@ -160,7 +160,7 @@
     "lucide-react": "^0.577.0",
     "mermaid": "11.15.0",
     "parse5": "7.3.0",
-    "pdfjs-dist": "5.4.296",
+    "pdfjs-dist": "5.7.284",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-pdf": "10.4.1",
