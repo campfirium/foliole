@@ -9,7 +9,6 @@ function renderChrome() {
       onExit={vi.fn()}
       onOpenActions={vi.fn()}
       onOpenOutline={vi.fn()}
-      onOpenSheet={vi.fn()}
       title="Long reading title"
     />
   );
@@ -26,5 +25,13 @@ describe('ReadingChrome', () => {
     const bottomRow = screen.getByRole('button', { name: 'More reading actions' }).parentElement;
     expect(bottomRow?.className).toContain('gap-2');
     expect(bottomRow?.className).toContain('[&>*+*]:ml-2');
+  });
+
+  it('keeps secondary reading actions out of the narrow top chrome', () => {
+    renderChrome();
+
+    expect(screen.queryByRole('button', { name: 'Font' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Highlight' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Info' })).not.toBeInTheDocument();
   });
 });

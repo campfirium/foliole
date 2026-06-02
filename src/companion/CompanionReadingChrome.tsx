@@ -1,4 +1,4 @@
-import { EllipsisVertical, Highlighter, Info, ListTree, SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
+import { EllipsisVertical, ListTree, X, type LucideIcon } from 'lucide-react';
 
 import { companionFlexRowGap2ClassName } from './companionCssCompatibility';
 
@@ -27,7 +27,6 @@ export function ReadingChrome(props: {
   onExit(): void;
   onOpenActions(): void;
   onOpenOutline(): void;
-  onOpenSheet(sheet: 'font' | 'highlight' | 'info'): void;
   title: string;
 }) {
   return (
@@ -39,9 +38,6 @@ export function ReadingChrome(props: {
           <span className="min-w-0 flex-1 truncate text-center text-sm font-medium text-foreground">
             {props.title}
           </span>
-          <ReadingChromeButton icon={SlidersHorizontal} label="Font" onClick={() => props.onOpenSheet('font')} />
-          <ReadingChromeButton icon={Highlighter} label="Highlight" onClick={() => props.onOpenSheet('highlight')} />
-          <ReadingChromeButton icon={Info} label="Info" onClick={() => props.onOpenSheet('info')} />
         </div>
       </div>
       <div className={`fixed right-5 bottom-5 supports-[bottom:max(0px)]:bottom-[max(env(safe-area-inset-bottom),20px)] z-workspace-overlay flex items-center ${companionFlexRowGap2ClassName}`}>

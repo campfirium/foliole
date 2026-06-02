@@ -1,4 +1,4 @@
-import { RotateCcw, Search } from 'lucide-react';
+import { Highlighter, Info, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
@@ -39,9 +39,14 @@ function ReadingActionRow(props: {
 export function ReadingActionsSheet(props: {
   onFindInDocument(): void;
   onOpenChange(open: boolean): void;
+  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info'): void;
   onRestoreFromTrash?: () => void;
   open: boolean;
 }) {
+  const openReadingSheet = (sheet: 'font' | 'highlight' | 'info') => {
+    props.onOpenChange(false);
+    props.onOpenReadingSheet(sheet);
+  };
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Actions">
       <div className="border-t border-companion-divider">
@@ -49,6 +54,21 @@ export function ReadingActionsSheet(props: {
           icon={<Search aria-hidden="true" className="h-5 w-5" />}
           label="Find in document"
           onClick={props.onFindInDocument}
+        />
+        <ReadingActionRow
+          icon={<SlidersHorizontal aria-hidden="true" className="h-5 w-5" />}
+          label="Font"
+          onClick={() => openReadingSheet('font')}
+        />
+        <ReadingActionRow
+          icon={<Highlighter aria-hidden="true" className="h-5 w-5" />}
+          label="Highlight"
+          onClick={() => openReadingSheet('highlight')}
+        />
+        <ReadingActionRow
+          icon={<Info aria-hidden="true" className="h-5 w-5" />}
+          label="Info"
+          onClick={() => openReadingSheet('info')}
         />
         {props.onRestoreFromTrash ? (
           <ReadingActionRow

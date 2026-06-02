@@ -100,12 +100,12 @@ function ImmersiveChromeLayer(props: {
         onExit={props.onExit}
         onOpenActions={() => props.onOpenActions(true)}
         onOpenOutline={() => props.onOpenOutline(true)}
-        onOpenSheet={props.onOpenReadingSheet}
         title={props.readableArticle.title}
       />
       <ReadingActionsSheet
         onFindInDocument={props.onFindInDocument}
         onOpenChange={props.onOpenActions}
+        onOpenReadingSheet={props.onOpenReadingSheet}
         open={props.actionsOpen}
         {...definedProps({
           onRestoreFromTrash: props.readableArticle.isTrashed
