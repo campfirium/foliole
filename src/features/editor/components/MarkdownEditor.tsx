@@ -43,10 +43,11 @@ function MarkdownEditorSurface(args: {
   readOnly: boolean;
   reviewCaretLineHighlight: boolean;
   rootRef: MutableRefObject<HTMLDivElement | null>;
+  scrollContainer: NonNullable<MarkdownEditorProps['scrollContainer']>;
 }) {
   return (
     <div
-      className="relative h-full w-full overflow-hidden"
+      className={args.scrollContainer === 'outer' ? 'relative h-full w-full overflow-visible' : 'relative h-full w-full overflow-hidden'}
       onBeforeInputCapture={args.onBeforeInputCapture}
       onBlurCapture={args.onBlurCapture}
       onContextMenu={(event) => args.mouseGesture.handleContextMenu(event, args.onContextMenu)}
@@ -66,6 +67,7 @@ function MarkdownEditorSurface(args: {
         data-immersive-editing={args.immersiveEditing ? 'true' : 'false'}
         data-read-only={args.readOnly ? 'true' : 'false'}
         data-review-caret-line={args.reviewCaretLineHighlight ? 'true' : 'false'}
+        data-scroll-container={args.scrollContainer}
         ref={args.hostRef}
         style={args.editorStyle}
       />
@@ -191,6 +193,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         readOnly={props.readOnly === true}
         reviewCaretLineHighlight={props.reviewCaretLineHighlight === true}
         rootRef={rootRef}
+        scrollContainer={props.scrollContainer ?? 'editor'}
       />
       <MarkdownImagePreviewDialog image={previewImage} onOpenChange={(open) => !open && closePreview()} />
       <MarkdownMermaidPreviewDialog diagram={previewMermaid} onOpenChange={(open) => !open && closeMermaidPreview()} />

@@ -68,6 +68,7 @@ export function ReadableArticleDocument(props: {
   onSaveContent?: (nodeId: string, content: string) => Promise<void>;
   readableArticle: ReadableArticle;
   readingSelection?: EditorSelection | null;
+  scrollContainer?: 'editor' | 'outer';
   syncEndpointUrl?: string | null;
 }) {
   const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
@@ -114,7 +115,8 @@ export function ReadableArticleDocument(props: {
           nodeViewState: toEditorViewState(props.readableArticle),
           onChange: canEdit ? editorState.handleChange : undefined,
           onEditorReady: props.onEditorReady,
-          readingSelection: props.readingSelection
+          readingSelection: props.readingSelection,
+          scrollContainer: props.scrollContainer
         })}
       />
       {editorState.error ? <p className="mt-3 px-1 text-sm text-error">{editorState.error}</p> : null}

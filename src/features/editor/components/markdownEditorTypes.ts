@@ -64,6 +64,7 @@ export interface MarkdownEditorProps {
   onShouldSuppressSelectionRestore?: () => boolean;
   readOnly?: boolean;
   reviewCaretLineHighlight?: boolean;
+  scrollContainer?: 'editor' | 'outer';
   onSetReadingPositionSelection?: (selection: EditorSelection) => void;
   onUndo?: () => boolean;
   onKeyDownCapture?: (event: ReactKeyboardEvent<HTMLDivElement>) => void;

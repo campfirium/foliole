@@ -1,3 +1,5 @@
+. "$PSScriptRoot\windows-hash-helpers.ps1"
+
 function Get-InstallCachePath {
   param([string]$WindowsWorkDir)
   $cacheDir = Join-Path $WindowsWorkDir ".lab\internal\runtime"
@@ -11,7 +13,7 @@ function Get-ApkHash {
   if (!(Test-Path -Path $apkPath)) {
     return ""
   }
-  return (Get-FileHash -Algorithm SHA256 -Path $apkPath).Hash.ToLowerInvariant()
+  return Get-Sha256FileHash -Path $apkPath
 }
 
 function Get-WebAssetsHash {
@@ -25,7 +27,7 @@ function Get-WebAssetsHash {
     Sort-Object FullName |
     ForEach-Object {
       $relativePath = [System.IO.Path]::GetFullPath($_.FullName).Substring($basePath.Length).Replace('\', '/')
-      $hash = (Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash.ToLowerInvariant()
+      $hash = Get-Sha256FileHash -Path $_.FullName
       "$relativePath=$hash"
     }
   $bytes = [System.Text.Encoding]::UTF8.GetBytes(($lines -join "`n"))
@@ -62,7 +64,7 @@ function Get-NativeSourcesHash {
     Sort-Object FullName |
     ForEach-Object {
       $relativePath = [System.IO.Path]::GetFullPath($_.FullName).Substring($basePath.Length).Replace('\', '/')
-      $hash = (Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash.ToLowerInvariant()
+      $hash = Get-Sha256FileHash -Path $_.FullName
       "$relativePath=$hash"
     }
   $bytes = [System.Text.Encoding]::UTF8.GetBytes(($lines -join "`n"))

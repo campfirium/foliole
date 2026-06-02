@@ -18,10 +18,12 @@ const DIFF_REMOVED_SPACER_COLOR = 'var(--app-diff-removed-spacer-color)';
 
 export const liveMarkdownTheme = EditorView.theme({
   '&': { backgroundColor: 'transparent', height: '100%' },
+  '.markdown-editor-host[data-scroll-container="outer"] &': { height: 'auto', minHeight: '100%' },
   '.cm-scroller': {
     color: 'var(--content-panel-text-color, var(--color-text-primary))',
     lineHeight: 'var(--content-panel-line-height, 1.75)'
   },
+  '.markdown-editor-host[data-scroll-container="outer"] & .cm-scroller': { minHeight: '100%', overflow: 'visible' },
   '.cm-cursor, .cm-dropCursor': {
     borderLeftColor: 'var(--color-text-primary)'
   },

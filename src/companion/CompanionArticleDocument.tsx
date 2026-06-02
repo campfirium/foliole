@@ -24,6 +24,7 @@ export function CompanionArticleDocument(props: {
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   readingSelection?: EditorSelection | null;
   readingTargetViewportMode?: EditorViewportMode | null;
+  scrollContainer?: 'editor' | 'outer';
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
 }) {
   return (
@@ -45,6 +46,7 @@ export function CompanionArticleDocument(props: {
           onReady: props.onEditorReady,
           readingSelection: props.readingSelection,
           readingTargetViewportMode: props.readingTargetViewportMode,
+          scrollContainer: props.scrollContainer,
           textAnchorDecorations: props.textAnchorDecorations
         })}
       />

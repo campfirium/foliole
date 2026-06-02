@@ -7,6 +7,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\windows-hash-helpers.ps1"
 
 function Write-Info {
   param([string]$Message)
@@ -114,7 +115,7 @@ function Get-InputFiles {
 
 function Get-CapSyncInputHash {
   $lines = foreach ($file in Get-InputFiles) {
-    $hash = (Get-FileHash -Algorithm SHA256 -Path $file.FullName).Hash
+    $hash = Get-Sha256FileHash -Path $file.FullName
     "$(Get-RelativePath -Path $file.FullName)=$hash"
   }
   $payload = ($lines -join "`n")
