@@ -123,10 +123,10 @@ export function ReviewGradeActions({
   );
 }
 
-export function FsrsRevealAction({ onRevealAnswer }: { onRevealAnswer: () => void }) {
+export function FsrsRevealAction({ disabled = false, onRevealAnswer }: { disabled?: boolean; onRevealAnswer: () => void }) {
   return (
     <ToolbarActionGroup ariaLabel="Item reveal actions" className="gap-2" data-review-toolbar-kind="fsrs-prompt">
-      <AppButton aria-label="Show Answer" className="min-w-32 px-5" onClick={onRevealAnswer} size="md" variant="primary">
+      <AppButton aria-label="Show Answer" className="min-w-32 px-5" disabled={disabled} onClick={onRevealAnswer} size="md" variant="primary">
         Show Answer
       </AppButton>
     </ToolbarActionGroup>

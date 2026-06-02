@@ -34,6 +34,7 @@ export function CompanionShellOverlays(props: {
       <CompanionCaptureSheet onOpenChange={props.onCaptureSheetOpenChange} open={props.isCaptureSheetOpen} />
       <CompanionBottomReviewBar
         disabled={props.isBottomBarDisabled}
+        hasAnswer={Boolean(currentReviewCard?.reveal)}
         isAnswerRevealed={props.surface.isAnswerRevealed}
         itemKind={props.surface.reviewSession.currentCard?.itemKind ?? 'reading'}
         onReadReviewTopic={props.surface.handleReadReviewTopic}

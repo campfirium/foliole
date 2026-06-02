@@ -6,6 +6,7 @@ import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 function renderReviewBar(reviewCardKey: string) {
   return render(
     <CompanionBottomReviewBar
+      hasAnswer={true}
       isAnswerRevealed={false}
       itemKind="reading"
       onReadReviewTopic={vi.fn()}
@@ -29,6 +30,7 @@ describe('CompanionBottomReviewBar', () => {
 
     view.rerender(
       <CompanionBottomReviewBar
+        hasAnswer={true}
         isAnswerRevealed={false}
         itemKind="reading"
         onReadReviewTopic={vi.fn()}
@@ -42,5 +44,31 @@ describe('CompanionBottomReviewBar', () => {
     );
 
     expect(document.activeElement).not.toBe(screen.getByLabelText('Dismiss'));
+  });
+
+  it('keeps mobile action spacing independent of flex gap support', () => {
+    renderReviewBar('reading:topic-1');
+
+    expect(screen.getByRole('group', { name: 'Reading review actions' }).className).toContain('[&>*+*]:ml-2');
+  });
+
+  it('does not show grade actions before a synced answer exists', () => {
+    render(
+      <CompanionBottomReviewBar
+        hasAnswer={false}
+        isAnswerRevealed={true}
+        itemKind="fsrs"
+        onReadReviewTopic={vi.fn()}
+        onPostponeReviewTopic={vi.fn()}
+        onDismissReviewTopic={vi.fn()}
+        onGrade={vi.fn()}
+        onRevealAnswer={vi.fn()}
+        reviewCardKey="fsrs:item-1"
+        visible={true}
+      />
+    );
+
+    expect(screen.getByLabelText('Show Answer')).toBeDisabled();
+    expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
   });
 });

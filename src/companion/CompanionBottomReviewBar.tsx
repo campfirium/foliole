@@ -2,7 +2,10 @@ import { FsrsRevealAction, ReadingReviewActions, ReviewActionBar, ReviewGradeAct
 
 import type { BottomBarGrade } from './CompanionFloatingBars';
 
+const actionGroupClassName = 'w-full gap-2 [&>*+*]:ml-2';
+
 export function CompanionBottomReviewBar(props: {
+  hasAnswer: boolean;
   disabled?: boolean;
   isAnswerRevealed: boolean;
   itemKind: 'fsrs' | 'reading';
@@ -18,6 +21,7 @@ export function CompanionBottomReviewBar(props: {
   if (!props.visible) {
     return null;
   }
+  const canGradeFsrs = props.itemKind === 'fsrs' && props.hasAnswer && props.isAnswerRevealed;
 
   return (
     <footer className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pt-3 pb-5 [padding-left:1rem] [padding-right:1rem] supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),20px)] shadow-panel">
@@ -31,19 +35,19 @@ export function CompanionBottomReviewBar(props: {
             props.itemKind === 'reading' ? (
               <ReadingReviewActions
                 actionButtonClassName="min-w-0 flex-1 border-border px-2"
-                groupClassName="w-full gap-2"
+                groupClassName={actionGroupClassName}
                 onReadReviewTopic={props.onReadReviewTopic}
                 onPostponeReviewTopic={props.onPostponeReviewTopic}
                 onDismissReviewTopic={props.onDismissReviewTopic}
               />
-            ) : !props.isAnswerRevealed ? (
-              <FsrsRevealAction onRevealAnswer={props.onRevealAnswer} />
+            ) : !canGradeFsrs ? (
+              <FsrsRevealAction disabled={!props.hasAnswer} onRevealAnswer={props.onRevealAnswer} />
             ) : (
               <ReviewGradeActions
                 buttonClassName="min-w-0 flex-1 px-3"
                 buttonVariant="primary"
                 errorMessage={null}
-                groupClassName="w-full gap-2"
+                groupClassName={actionGroupClassName}
                 isSubmitting={Boolean(props.disabled)}
                 submitGrade={async (grade) => props.onGrade(grade as BottomBarGrade)}
               />
