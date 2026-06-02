@@ -10,14 +10,8 @@ import {
   getFolderListSortOrderOptions
 } from '../features/nodes/model/folderListSortOptions';
 import { definedProps } from '../shared/lib/definedProps';
-import {
-  AppDialog,
-  AppDialogClose,
-  AppDialogContent,
-  AppDialogOverlay,
-  AppDialogPortal,
-  AppDialogTitle
-} from '../shared/ui';
+
+import { CompanionBottomSheet } from './CompanionBottomSheet';
 
 function TopActionButton(props: {
   icon: LucideIcon;
@@ -70,9 +64,7 @@ function BrowseMenuHeader(props: {
   onBack(): void;
   view: BrowseMenuView;
 }) {
-  return (
-    <div className="mb-3 flex items-center justify-between">
-      {props.view === 'sort' ? (
+  return props.view === 'sort' ? (
         <button
           className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle"
           onClick={props.onBack}
@@ -80,13 +72,7 @@ function BrowseMenuHeader(props: {
         >
           Back
         </button>
-      ) : null}
-      <AppDialogTitle>{props.view === 'sort' ? 'Sort' : 'Browse menu'}</AppDialogTitle>
-      <AppDialogClose className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle">
-        Cancel
-      </AppDialogClose>
-    </div>
-  );
+      ) : null;
 }
 
 function BrowseMainMenu(props: {
@@ -164,37 +150,33 @@ function CompanionBrowseMenuSheet(props: {
   };
 
   return (
-    <AppDialog onOpenChange={handleOpenChange} open={props.open}>
-      <AppDialogPortal>
-        <AppDialogOverlay className="companion-sheet-overlay" />
-        <AppDialogContent className="companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 px-6 pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]">
-          <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
-          <div className="mx-auto w-full max-w-[760px]">
-            <BrowseMenuHeader onBack={() => setView('menu')} view={view} />
-            <div className="border-t border-companion-divider">
-              {view === 'menu' ? (
-                <BrowseMainMenu
-                  activeSortLabel={activeSortLabel}
-                  onOpenSort={() => setView('sort')}
-                  {...definedProps({
-                    onSync: props.onSync,
-                    syncDisabled: props.syncDisabled,
-                    syncStatus: props.syncStatus
-                  })}
-                />
-              ) : (
-                <BrowseSortMenu
-                  onChangeSortDirection={props.onChangeSortDirection}
-                  onChangeSortKey={props.onChangeSortKey}
-                  sortDirection={props.sortDirection}
-                  sortKey={props.sortKey}
-                />
-              )}
-            </div>
-          </div>
-        </AppDialogContent>
-      </AppDialogPortal>
-    </AppDialog>
+    <CompanionBottomSheet
+      leadingAction={<BrowseMenuHeader onBack={() => setView('menu')} view={view} />}
+      onOpenChange={handleOpenChange}
+      open={props.open}
+      title={view === 'sort' ? 'Sort' : 'Browse menu'}
+    >
+      <div className="border-t border-companion-divider">
+        {view === 'menu' ? (
+          <BrowseMainMenu
+            activeSortLabel={activeSortLabel}
+            onOpenSort={() => setView('sort')}
+            {...definedProps({
+              onSync: props.onSync,
+              syncDisabled: props.syncDisabled,
+              syncStatus: props.syncStatus
+            })}
+          />
+        ) : (
+          <BrowseSortMenu
+            onChangeSortDirection={props.onChangeSortDirection}
+            onChangeSortKey={props.onChangeSortKey}
+            sortDirection={props.sortDirection}
+            sortKey={props.sortKey}
+          />
+        )}
+      </div>
+    </CompanionBottomSheet>
   );
 }
 

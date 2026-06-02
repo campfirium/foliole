@@ -1,16 +1,10 @@
 import { RotateCcw, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { CompanionBottomSheet } from './CompanionBottomSheet';
+
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
-import {
-  AppDialog,
-  AppDialogClose,
-  AppDialogContent,
-  AppEmptyState,
-  AppDialogOverlay,
-  AppDialogPortal,
-  AppDialogTitle
-} from '@/shared/ui';
+import { AppEmptyState } from '@/shared/ui';
 
 export function ReadingBottomSheet(props: {
   children: ReactNode;
@@ -19,23 +13,9 @@ export function ReadingBottomSheet(props: {
   title: string;
 }) {
   return (
-    <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
-      <AppDialogPortal>
-        <AppDialogOverlay className="companion-sheet-overlay" />
-        <AppDialogContent className="companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 px-6 pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]">
-          <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
-          <div className="mx-auto w-full max-w-[760px]">
-            <div className="mb-3 flex items-center justify-between">
-              <AppDialogTitle>{props.title}</AppDialogTitle>
-              <AppDialogClose className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle">
-                Cancel
-              </AppDialogClose>
-            </div>
-            {props.children}
-          </div>
-        </AppDialogContent>
-      </AppDialogPortal>
-    </AppDialog>
+    <CompanionBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={props.title}>
+      {props.children}
+    </CompanionBottomSheet>
   );
 }
 
