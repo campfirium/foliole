@@ -4,3 +4,5 @@ export const companionFlexColumnGapHalfClassName = 'gap-0.5 [&>*+*]:mt-0.5';
 
 export const companionViewportHeightClassName = 'h-screen h-dvh';
 export const companionArticleMinHeightClassName = 'min-h-[calc(100vh-9rem)] min-h-[calc(100dvh-9rem)]';
+export const companionMainBottomInsetClassName = 'pb-16 [padding-bottom:4.5rem] supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(4.5rem+env(safe-area-inset-bottom))]';
+export const companionReviewBottomInsetClassName = 'pb-28 [padding-bottom:7rem] supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(7rem+env(safe-area-inset-bottom))]';

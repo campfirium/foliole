@@ -178,4 +178,22 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getByLabelText('Dismiss')).toBeInTheDocument();
     expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
   });
+
+  it('reserves review footer space separately from the normal bottom tabs', async () => {
+    await renderShellWithSurface(reviewSurface({
+      content: 'Readable topic body',
+      due: '2026-04-22T08:00:00.000Z',
+      itemKind: 'reading',
+      nodeId: 'topic-1',
+      queuePosition: 1,
+      remainingCount: 1,
+      reveal: null,
+      title: 'Readable article',
+      totalCount: 1
+    }));
+
+    const content = screen.getByTestId('companion-scroll-container').firstElementChild;
+    expect(content?.className).toContain('[padding-bottom:7rem]');
+    expect(content?.className).not.toContain('[padding-bottom:4.5rem]');
+  });
 });

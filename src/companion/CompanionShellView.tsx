@@ -1,4 +1,8 @@
-import { companionViewportHeightClassName } from './companionCssCompatibility';
+import {
+  companionMainBottomInsetClassName,
+  companionReviewBottomInsetClassName,
+  companionViewportHeightClassName
+} from './companionCssCompatibility';
 import type { CompanionShellModel } from './CompanionShell';
 import { renderCompanionShellContent } from './CompanionShellContent';
 import { CompanionShellOverlays } from './CompanionShellOverlays';
@@ -20,8 +24,11 @@ function getTopBarBackHandler(model: CompanionShellModel) {
 }
 
 function renderCompanionMainContent(model: CompanionShellModel) {
+  const bottomInsetClassName = model.isReviewTaskActive
+    ? companionReviewBottomInsetClassName
+    : companionMainBottomInsetClassName;
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pt-4 pb-16 [padding-left:1.5rem] [padding-right:1.5rem] [padding-bottom:4.5rem] supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(4.5rem+env(safe-area-inset-bottom))] sm:px-7 sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]">
+    <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pt-4 ${bottomInsetClassName} [padding-left:1.5rem] [padding-right:1.5rem] sm:px-7 sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]`}>
       <CompanionShellTopBar
         onOpenSyncSettings={() => openCompanionSyncSettings(model)}
         topBarProps={model.topBarProps}
