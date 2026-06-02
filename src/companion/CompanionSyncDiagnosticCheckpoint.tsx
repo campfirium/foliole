@@ -79,9 +79,9 @@ function latestEvent(events: SyncDiagnosticEvent[], status?: SyncDiagnosticEvent
 
 function MetricRow(props: { label: string; value: string; wrap?: boolean }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-companion-divider py-3 text-sm last:border-b-0">
-      <span className="shrink-0 text-companion-text-secondary">{props.label}</span>
-      <span className={`text-right font-medium text-foreground ${props.wrap ? 'min-w-0 break-words' : 'max-w-48 truncate'}`}>
+    <div className="grid grid-cols-1 gap-1 border-b border-companion-divider py-3 text-sm last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
+      <span className="min-w-0 break-words text-companion-text-secondary">{props.label}</span>
+      <span className={`min-w-0 font-medium text-foreground sm:text-right ${props.wrap ? 'break-words' : 'break-words sm:max-w-48'}`}>
         {props.value}
       </span>
     </div>

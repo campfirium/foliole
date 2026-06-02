@@ -39,7 +39,7 @@ function DirectoryRow(props: {
       onClick={() => props.onSelectItem(props.item)}
       type="button"
     >
-      <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">{props.item.title}</span>
+      <span className={`min-w-0 flex-1 text-base font-medium text-foreground ${props.item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{props.item.title}</span>
       <ChevronRight className="h-5 w-5 shrink-0 text-companion-text-tertiary" />
     </button>
   );

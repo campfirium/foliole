@@ -17,7 +17,7 @@ function SettingsListItem(props: {
     >
       <span className="min-w-0">
         <span className="block text-base font-medium text-foreground">{props.title}</span>
-        <span className="mt-1 block truncate text-sm text-companion-text-secondary">{props.detail}</span>
+        <span className="mt-1 block line-clamp-2 text-sm leading-5 text-companion-text-secondary">{props.detail}</span>
       </span>
       <span className="shrink-0 text-companion-text-secondary"><ChevronIcon /></span>
     </button>
