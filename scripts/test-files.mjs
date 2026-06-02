@@ -84,7 +84,7 @@ async function runTestFiles(env) {
     '--',
     '--silent=passed-only',
     '--pool=threads',
-    '--maxWorkers=2',
+    '--maxWorkers=1',
     '--no-file-parallelism',
     ...files
   ];

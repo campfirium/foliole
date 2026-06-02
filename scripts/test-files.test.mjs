@@ -129,6 +129,7 @@ describe('test-files', () => {
       expect(result.code).toBe(0);
       const vitestArgs = JSON.parse(await readFile(argsPath, 'utf8'));
       expect(vitestArgs).toContain('src/app/components/WorkspaceTopicTreeRows.test.tsx');
+      expect(vitestArgs).toContain('--maxWorkers=1');
       expect(vitestArgs).not.toContain('src/app');
       expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, tests 1/1 passed');
     } finally {
