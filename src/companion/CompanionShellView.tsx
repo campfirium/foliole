@@ -1,3 +1,4 @@
+import { companionViewportHeightClassName } from './companionCssCompatibility';
 import type { CompanionShellModel } from './CompanionShell';
 import { renderCompanionShellContent } from './CompanionShellContent';
 import { CompanionShellOverlays } from './CompanionShellOverlays';
@@ -56,9 +57,9 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
   const { model } = props;
   return (
     <>
-      <main className="h-screen h-dvh bg-companion-base text-foreground">
+      <main className={`${companionViewportHeightClassName} bg-companion-base text-foreground`}>
         <div
-          className="h-screen h-dvh overflow-y-auto"
+          className={`${companionViewportHeightClassName} overflow-y-auto`}
           data-testid="companion-scroll-container"
           onClick={model.handleContentTap}
           onScroll={model.handleContainerScroll}

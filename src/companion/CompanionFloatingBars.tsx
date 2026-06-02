@@ -1,6 +1,10 @@
 import type { LucideIcon } from 'lucide-react';
 
 import {
+  companionFlexColumnGapHalfClassName,
+  companionFlexRowGap1ClassName
+} from './companionCssCompatibility';
+import {
   resolveCompanionTabs,
   type CompanionResolvedTab,
   type CompanionSecondaryDestinationId,
@@ -22,7 +26,7 @@ function TabButton(props: {
     <button
       aria-current={props.active ? 'page' : undefined}
       aria-label={props.label}
-      className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg text-xs font-medium transition-colors [height:3rem] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent active:scale-[0.97] ${
+      className={`flex min-w-0 flex-1 flex-col items-center justify-center ${companionFlexColumnGapHalfClassName} rounded-lg text-xs font-medium transition-colors [height:3rem] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent active:scale-[0.97] ${
         props.active ? 'text-foreground' : 'text-companion-text-secondary active:bg-companion-subtle/60'
       }`}
       onClick={props.onClick}
@@ -57,7 +61,7 @@ export function CompanionBottomTabBar(props: {
       className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pt-1 pb-2 [left:0] [right:0] [bottom:0] [height:3.75rem] [padding-top:0.25rem] [padding-bottom:0.5rem] [padding-left:1rem] [padding-right:1rem] shadow-panel"
       data-testid="companion-bottom-tab-bar"
     >
-      <div className="mx-auto flex h-full w-full max-w-[760px] items-center gap-1">
+      <div className={`mx-auto flex h-full w-full max-w-[760px] items-center ${companionFlexRowGap1ClassName}`}>
         {renderTabButtons(resolveCompanionTabs(props.config), props)}
       </div>
     </footer>

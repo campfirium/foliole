@@ -1,5 +1,7 @@
 import { EllipsisVertical, Highlighter, Info, ListTree, SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
 
+import { companionFlexRowGap2ClassName } from './companionCssCompatibility';
+
 function ReadingChromeButton(props: {
   disabled?: boolean;
   icon: LucideIcon;
@@ -31,7 +33,7 @@ export function ReadingChrome(props: {
   return (
     <>
       <div className="fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 px-4 pb-3 pt-3 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),12px)] backdrop-blur">
-        <div className="mx-auto flex max-w-[760px] items-center gap-2">
+        <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
           <ReadingChromeButton icon={X} label="Exit" onClick={props.onExit} />
           <ReadingChromeButton icon={ListTree} label="Outline" onClick={props.onOpenOutline} />
           <span className="min-w-0 flex-1 truncate text-center text-sm font-medium text-foreground">
@@ -42,7 +44,7 @@ export function ReadingChrome(props: {
           <ReadingChromeButton icon={Info} label="Info" onClick={() => props.onOpenSheet('info')} />
         </div>
       </div>
-      <div className="fixed right-5 bottom-5 supports-[bottom:max(0px)]:bottom-[max(env(safe-area-inset-bottom),20px)] z-workspace-overlay flex items-center gap-2">
+      <div className={`fixed right-5 bottom-5 supports-[bottom:max(0px)]:bottom-[max(env(safe-area-inset-bottom),20px)] z-workspace-overlay flex items-center ${companionFlexRowGap2ClassName}`}>
         <ReadingChromeButton icon={EllipsisVertical} label="More reading actions" onClick={props.onOpenActions} />
       </div>
     </>

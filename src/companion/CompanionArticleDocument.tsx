@@ -8,8 +8,9 @@ import type {
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
 import type { EditorViewState } from '../features/editor/components/markdownEditorTypes';
 
+import { companionArticleMinHeightClassName } from './companionCssCompatibility';
+
 import { definedProps } from '@/shared/lib/definedProps';
-import { cn } from '@/shared/lib/utils';
 
 export function CompanionArticleDocument(props: {
   content: string;
@@ -27,8 +28,11 @@ export function CompanionArticleDocument(props: {
   scrollContainer?: 'editor' | 'outer';
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
 }) {
+  const sectionClassName = props.layout === 'review'
+    ? 'pt-1 min-h-0'
+    : `pt-1 ${companionArticleMinHeightClassName}`;
   return (
-    <section className={cn('pt-1', props.layout === 'review' ? 'min-h-0' : 'min-h-[calc(100dvh-9rem)]')}>
+    <section className={sectionClassName}>
       <MarkdownEditor
         blockImageWidthOverride="min(100%, 40rem)"
         className="h-full"

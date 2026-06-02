@@ -50,4 +50,16 @@ describe('CompanionBottomTabBar', () => {
     expect(bottomBar.className).toContain('[padding-left:1rem]');
     expect(screen.getByRole('button', { name: 'Settings' }).className).toContain('focus:outline-none');
   });
+
+  it('keeps tab spacing independent of flex gap support', () => {
+    renderBottomBar();
+
+    const bottomBarContent = screen.getByTestId('companion-bottom-tab-bar').firstElementChild;
+    expect(bottomBarContent?.className).toContain('gap-1');
+    expect(bottomBarContent?.className).toContain('[&>*+*]:ml-1');
+
+    const settingsTab = screen.getByRole('button', { name: 'Settings' });
+    expect(settingsTab.className).toContain('gap-0.5');
+    expect(settingsTab.className).toContain('[&>*+*]:mt-0.5');
+  });
 });

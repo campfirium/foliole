@@ -1,8 +1,9 @@
 import { FsrsRevealAction, ReadingReviewActions, ReviewActionBar, ReviewGradeActions } from '../shared/ui';
 
+import { companionFlexRowGap2ClassName } from './companionCssCompatibility';
 import type { BottomBarGrade } from './CompanionFloatingBars';
 
-const actionGroupClassName = 'w-full gap-2 [&>*+*]:ml-2';
+const actionGroupClassName = `w-full ${companionFlexRowGap2ClassName}`;
 
 export function CompanionBottomReviewBar(props: {
   hasAnswer: boolean;
