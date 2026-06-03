@@ -1,27 +1,51 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import type {
+  SyncDiagnosticHost,
+  SyncDiagnosticSnapshot
+} from '../../lib/platform/syncDiagnosticsContract';
+
 import { CompanionSettingsList } from './CompanionSettingsContent';
 import { CompanionSyncDiagnosticCheckpoint } from './CompanionSyncDiagnosticCheckpoint';
 import { DirtyObjectRows } from './CompanionSyncDiagnosticsRows';
 
 import { NodeBrowseList } from '@/shared/ui';
 
+function createSyncSnapshot(host: SyncDiagnosticHost): SyncDiagnosticSnapshot {
+  return {
+    collected_at: '2026-06-03T00:00:00.000Z',
+    connection: { endpoint_url: null, last_error: null, state: 'ready' },
+    content: { missing_content_blob_count: 0 },
+    events: [],
+    host,
+    identity: { app_version: null, device_id: host },
+    storage: {
+      active_node_count: 0,
+      content_blob_count: 0,
+      external_document_count: 0,
+      missing_node_state_count: 0,
+      missing_node_version_count: 0,
+      node_blob_references_missing_rows: 0
+    },
+    sync_state: {
+      local_dirty_count: 0,
+      max_state_seq: null,
+      pack_cursor: null,
+      state_counts: []
+    },
+    verdicts: []
+  };
+}
+
 function renderDiagnosticCheckpoint() {
   render(
     <CompanionSyncDiagnosticCheckpoint
       result={{
-        android: {
-          content: {},
-          events: [],
-          storage: {},
-          sync_state: {}
-        },
-        desktop: {
-          storage: {},
-          sync_state: {}
-        }
-      } as Parameters<typeof CompanionSyncDiagnosticCheckpoint>[0]['result']}
+        android: createSyncSnapshot('android'),
+        desktop: createSyncSnapshot('desktop'),
+        verdicts: []
+      }}
     />
   );
 }
@@ -56,7 +80,8 @@ describe('companion mobile text wrapping', () => {
           content_hash: 'abcdef1234567890',
           object_id: 'very-long-object-id-without-natural-breaks-1234567890',
           object_type: 'external_document_body',
-          state_seq: 42
+          state_seq: 42,
+          updated_at: '2026-06-03T00:00:00.000Z'
         }]}
       />
     );

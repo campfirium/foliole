@@ -8,6 +8,10 @@ export interface ElectronDebugMetadata {
   workspaceDebugBridge?: boolean;
 }
 
+export interface ElectronRuntimeConfig {
+  guidedSampleLocale: 'en-US' | 'zh-CN' | null;
+}
+
 export interface NativeKeyboardInputPayload {
   altKey: boolean;
   code: string;
@@ -76,6 +80,7 @@ export interface ElectronAPI {
   onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;
   onExternalDocumentFileOpened?: (handler: (payload: ExternalDocumentFileOpenedPayload) => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;
+  runtimeConfig?: ElectronRuntimeConfig;
   setNativeHotkeyRecordingActive?: (active: boolean) => void;
 }
 

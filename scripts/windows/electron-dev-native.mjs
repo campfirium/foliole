@@ -8,7 +8,7 @@ import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 const { repoRoot, userDataPath: defaultUserDataPath } = resolveWindowsNativePaths();
 const mainLibraryHome = 'D:\\X\\U\\Foliole';
-const sandboxLibraryHome = path.join(mainLibraryHome, 'PreviewSandbox');
+const sandboxLibraryHome = path.join(repoRoot, '.tmp', 'preview-sandbox-library');
 const isSandboxPreview = process.env.FOLIOLE_NATIVE_PREVIEW_SANDBOX === '1';
 const localLibraryHome = process.env.FOLIOLE_NATIVE_LIBRARY_HOME?.trim() ||
   (isSandboxPreview ? sandboxLibraryHome : mainLibraryHome);
@@ -54,6 +54,9 @@ resetSandboxState();
 process.env.FOLIOLE_USER_DATA_PATH = userDataPath;
 process.env.FOLIOLE_SESSION_DATA_PATH = userDataPath;
 process.env.FOLIOLE_LIBRARY_HOME = localLibraryHome;
+if (process.env.FOLIOLE_NATIVE_GUIDED_SAMPLE_LOCALE?.trim()) {
+  process.env.FOLIOLE_GUIDED_SAMPLE_LOCALE = process.env.FOLIOLE_NATIVE_GUIDED_SAMPLE_LOCALE.trim();
+}
 process.env.FOLIOLE_WORKDIR ??= repoRoot;
 process.env.FOLIOLE_BOOT_SESSION ??= `windows-native-${randomUUID()}`;
 process.env.FOLIOLE_DISABLE_IN_APP_RELAUNCH ??= '1';

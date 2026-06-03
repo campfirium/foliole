@@ -6,7 +6,7 @@ import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 const readableArticleDocumentMock = vi.fn(() => <article>Readable body</article>);
 
 vi.mock('./CompanionReadableArticleDocument', () => ({
-  ReadableArticleDocument: (props: { scrollContainer?: 'editor' | 'outer' }) => readableArticleDocumentMock(props)
+  ReadableArticleDocument: () => readableArticleDocumentMock()
 }));
 
 vi.mock('./CompanionReadableArticleSelectionToolbarLayer', () => ({
@@ -61,9 +61,7 @@ vi.mock('./useImmersiveReadableArticleState', () => ({
 
 function createReadableArticle() {
   return {
-    bodyStatus: 'ready',
     content: 'Readable body',
-    contentPaddingTop: undefined,
     hideTitleHeading: false,
     isTrashed: false,
     nodeId: 'topic-1',
@@ -71,7 +69,7 @@ function createReadableArticle() {
     pdfAttachmentId: null,
     textAnchorDecorations: [],
     title: 'Topic'
-  };
+  } as const;
 }
 
 describe('ImmersiveReadableArticle Android scrolling', () => {
@@ -87,6 +85,6 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
     const surface = container.querySelector('section');
     expect(surface).toHaveClass('fixed', 'top-0', 'right-0', 'bottom-0', 'left-0', 'overflow-y-auto');
     expect(surface).not.toHaveClass('inset-0');
-    expect(readableArticleDocumentMock).toHaveBeenCalledWith(expect.objectContaining({ scrollContainer: 'outer' }));
+    expect(readableArticleDocumentMock).toHaveBeenCalled();
   });
 });

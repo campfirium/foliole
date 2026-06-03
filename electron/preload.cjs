@@ -31,6 +31,11 @@ function isWorkspaceDebugBridgeEnabled() {
   return process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && Boolean(workdir) && workdir !== process.cwd?.();
 }
 
+function resolveGuidedSampleLocaleOverride() {
+  const value = process.env.FOLIOLE_GUIDED_SAMPLE_LOCALE?.trim();
+  return value === 'en-US' || value === 'zh-CN' ? value : null;
+}
+
 function subscribe(channel, handler) {
   if (
     channel !== IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL &&
@@ -172,6 +177,9 @@ const electronApi = {
   onCompanionPairingRequestsChanged: (handler) => subscribe(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, handler),
   onExternalDocumentFileOpened: (handler) => subscribe(IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, handler),
   onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler),
+  runtimeConfig: {
+    guidedSampleLocale: resolveGuidedSampleLocaleOverride()
+  },
   setNativeHotkeyRecordingActive: (active) => ipcRenderer.send(IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL, active === true)
 };
 

@@ -18,15 +18,19 @@ function createExistsSync(paths: string[]) {
 
 it('pins userData and sessionData to the foliole root on win32', () => {
   const appDataRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Roaming');
+  const tempRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Local', 'Temp');
   let userDataPath = path.join(appDataRoot, 'Electron');
   let sessionDataPath = path.join(appDataRoot, 'Electron');
   const setAppUserModelId = vi.fn();
   const mkdirSync = vi.fn();
   const app = {
     getName: () => FOLIOLE_APP_NAME,
-    getPath(name: 'appData' | 'sessionData' | 'userData') {
+    getPath(name: 'appData' | 'sessionData' | 'temp' | 'userData') {
       if (name === 'appData') {
         return appDataRoot;
+      }
+      if (name === 'temp') {
+        return tempRoot;
       }
       return name === 'userData' ? userDataPath : sessionDataPath;
     },
@@ -53,14 +57,18 @@ it('pins userData and sessionData to the foliole root on win32', () => {
 
 it('honors test-specific userData and sessionData overrides', () => {
   const appDataRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Roaming');
+  const tempRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Local', 'Temp');
   let userDataPath = path.join(appDataRoot, 'Electron');
   let sessionDataPath = path.join(appDataRoot, 'Electron');
   const mkdirSync = vi.fn();
   const app = {
     getName: () => FOLIOLE_APP_NAME,
-    getPath(name: 'appData' | 'sessionData' | 'userData') {
+    getPath(name: 'appData' | 'sessionData' | 'temp' | 'userData') {
       if (name === 'appData') {
         return appDataRoot;
+      }
+      if (name === 'temp') {
+        return tempRoot;
       }
       return name === 'userData' ? userDataPath : sessionDataPath;
     },
@@ -89,14 +97,18 @@ it('honors test-specific userData and sessionData overrides', () => {
 
 it('honors the explicit library home launch argument before runtime settings load', () => {
   const appDataRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Roaming');
+  const tempRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Local', 'Temp');
   let userDataPath = path.join(appDataRoot, 'Electron');
   let sessionDataPath = path.join(appDataRoot, 'Electron');
   const env: NodeJS.ProcessEnv = {};
   const app = {
     getName: () => FOLIOLE_APP_NAME,
-    getPath(name: 'appData' | 'sessionData' | 'userData') {
+    getPath(name: 'appData' | 'sessionData' | 'temp' | 'userData') {
       if (name === 'appData') {
         return appDataRoot;
+      }
+      if (name === 'temp') {
+        return tempRoot;
       }
       return name === 'userData' ? userDataPath : sessionDataPath;
     },
@@ -120,6 +132,79 @@ it('honors the explicit library home launch argument before runtime settings loa
 
   expect(configured.libraryHome).toBe(path.resolve('/tmp/foliole-demo'));
   expect(env.FOLIOLE_LIBRARY_HOME).toBe(path.resolve('/tmp/foliole-demo'));
+});
+
+it('turns a sample locale launch into a parallel temporary sample sandbox', () => {
+  const appDataRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Roaming');
+  const tempRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Local', 'Temp');
+  const sandboxRoot = path.join(tempRoot, FOLIOLE_APP_NAME, 'preview-sandbox');
+  let userDataPath = path.join(appDataRoot, 'Electron');
+  let sessionDataPath = path.join(appDataRoot, 'Electron');
+  const env: NodeJS.ProcessEnv = {};
+  const mkdirSync = vi.fn();
+  const rmSync = vi.fn();
+  const app = {
+    getName: () => FOLIOLE_APP_NAME,
+    getPath(name: 'appData' | 'sessionData' | 'temp' | 'userData') {
+      if (name === 'appData') {
+        return appDataRoot;
+      }
+      if (name === 'temp') {
+        return tempRoot;
+      }
+      return name === 'userData' ? userDataPath : sessionDataPath;
+    },
+    setName: vi.fn(),
+    setPath(name: 'sessionData' | 'userData', value: string) {
+      if (name === 'userData') {
+        userDataPath = value;
+        return;
+      }
+      sessionDataPath = value;
+    }
+  };
+
+  const configured = configureRuntimeAppIdentity(
+    app,
+    mkdirSync,
+    'win32',
+    env,
+    ['Foliole.exe', '--sample-locale=en-US'],
+    rmSync
+  );
+
+  expect(configured.previewSandbox).toBe(true);
+  expect(configured.userDataPath).toBe(path.join(sandboxRoot, 'user-data'));
+  expect(configured.sessionDataPath).toBe(path.join(sandboxRoot, 'user-data'));
+  expect(configured.libraryHome).toBe(path.join(sandboxRoot, 'library'));
+  expect(env.FOLIOLE_ALLOW_PARALLEL_INSTANCE).toBe('1');
+  expect(env.FOLIOLE_LIBRARY_HOME).toBe(path.join(sandboxRoot, 'library'));
+  expect(env.FOLIOLE_GUIDED_SAMPLE_LOCALE).toBe('en-US');
+  expect(rmSync).toHaveBeenCalledWith(path.join(sandboxRoot, 'library'), { force: true, recursive: true });
+  expect(rmSync).toHaveBeenCalledWith(path.join(sandboxRoot, 'user-data'), { force: true, recursive: true });
+  expect(mkdirSync).toHaveBeenCalledWith(path.join(sandboxRoot, 'library'), { recursive: true });
+});
+
+it('refuses to reset protected paths for preview sandbox launches', () => {
+  const appDataRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Roaming');
+  const env: NodeJS.ProcessEnv = {
+    FOLIOLE_PREVIEW_SANDBOX: '1',
+    FOLIOLE_USER_DATA_PATH: path.join(appDataRoot, FOLIOLE_APP_NAME)
+  };
+  const app = {
+    getName: () => FOLIOLE_APP_NAME,
+    getPath(name: 'appData' | 'sessionData' | 'temp' | 'userData') {
+      if (name === 'appData') return appDataRoot;
+      if (name === 'temp') return path.join('C:', 'Temp');
+      return path.join(appDataRoot, 'Electron');
+    },
+    setName: vi.fn(),
+    setPath: vi.fn()
+  };
+
+  expect(() =>
+    configureRuntimeAppIdentity(app, vi.fn(), 'win32', env, ['Foliole.exe'], vi.fn())
+  ).toThrow(/refusing preview sandbox reset/);
 });
 
 it('collects machine-checkable runtime diagnostics for the active startup context', () => {

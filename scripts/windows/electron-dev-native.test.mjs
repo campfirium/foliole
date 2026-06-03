@@ -14,10 +14,11 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).toContain('process.env.FOLIOLE_SESSION_DATA_PATH = userDataPath');
   expect(runner).toContain('process.env.FOLIOLE_WORKDIR ??= repoRoot');
   expect(runner).toContain("const mainLibraryHome = 'D:\\\\X\\\\U\\\\Foliole'");
-  expect(runner).toContain("const sandboxLibraryHome = path.join(mainLibraryHome, 'PreviewSandbox')");
+  expect(runner).toContain("const sandboxLibraryHome = path.join(repoRoot, '.tmp', 'preview-sandbox-library');");
   expect(runner).toContain("process.env.FOLIOLE_NATIVE_PREVIEW_SANDBOX === '1'");
   expect(runner).toContain('resetSandboxState();');
   expect(runner).toContain('process.env.FOLIOLE_LIBRARY_HOME = localLibraryHome');
+  expect(runner).toContain('process.env.FOLIOLE_GUIDED_SAMPLE_LOCALE = process.env.FOLIOLE_NATIVE_GUIDED_SAMPLE_LOCALE.trim();');
   expect(runner).not.toContain('library-path-settings.json');
   expect(runner).not.toContain('ensureLocalLibraryPathSettings();');
   expect(runner).toContain('assertLocalDatabaseWritable();');

@@ -1,3 +1,5 @@
+import { getElectronAPI } from '../../../shared/platform/electronApi';
+
 export type GuidedSampleLocale = 'en-US' | 'zh-CN';
 
 const SIMPLIFIED_CHINESE_LANGUAGE_TAGS = new Set(['zh-cn', 'zh-hans', 'zh-sg']);
@@ -12,6 +14,10 @@ export function isSimplifiedChineseLanguage(language: string) {
 }
 
 export function resolveGuidedSampleLocale(languages: readonly string[] = readNavigatorLanguages()): GuidedSampleLocale {
+  const localeOverride = getElectronAPI()?.runtimeConfig?.guidedSampleLocale;
+  if (localeOverride) {
+    return localeOverride;
+  }
   return languages.some(isSimplifiedChineseLanguage) ? 'zh-CN' : 'en-US';
 }
 

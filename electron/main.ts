@@ -60,7 +60,14 @@ if (process.env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION === '1') {
   app.disableHardwareAcceleration();
   console.info('[electron-main] hardware acceleration disabled for this session');
 }
-const configuredIdentity = configureRuntimeAppIdentity(app, fs.mkdirSync.bind(fs));
+const configuredIdentity = configureRuntimeAppIdentity(
+  app,
+  fs.mkdirSync.bind(fs),
+  process.platform,
+  process.env,
+  process.argv,
+  fs.rmSync.bind(fs)
+);
 const runtimeMode = resolveRuntimeMode();
 const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({
   appName: configuredIdentity.appName,
