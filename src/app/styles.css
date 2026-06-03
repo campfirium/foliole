@@ -146,6 +146,7 @@
   --workspace-folder-column-width: 200px;
   --workspace-topic-column-width: 100px;
   --document-content-inline-padding: 1.5rem;
+  --document-header-navigation-safe-inline-start: 5rem;
   --workspace-region-titlebar-rail-bg: rgb(var(--color-bg-subtle));
   --workspace-region-titlebar-folder-bg: rgb(var(--color-bg-subtle));
   --workspace-region-titlebar-topic-bg: rgb(var(--color-bg-subtle));

@@ -40,7 +40,7 @@ export function DocumentPanelHeaderCenter({
   return (
     <div className="min-w-0 flex-1">
       <div
-        className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-[var(--document-content-inline-padding)]"
+        className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-[var(--document-content-inline-padding)] max-[1080px]:pl-[max(var(--document-content-inline-padding),var(--document-header-navigation-safe-inline-start))]"
         data-testid="document-header-content-rail"
       >
         <NodeBreadcrumbs

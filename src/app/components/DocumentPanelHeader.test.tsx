@@ -125,6 +125,7 @@ it('keeps breadcrumb and priority controls on the document content rail', () => 
   expect(rail.closest('header')).toHaveClass('max-[1080px]:px-2');
   expect(rail).toHaveClass('max-w-[var(--document-max-width)]');
   expect(rail).toHaveClass('px-[var(--document-content-inline-padding)]');
+  expect(rail).toHaveClass('max-[1080px]:pl-[max(var(--document-content-inline-padding),var(--document-header-navigation-safe-inline-start))]');
   expect(rail).toContainElement(screen.getByRole('button', { name: 'Inbox' }));
   expect(rail).toContainElement(screen.getByRole('button', { name: /Priority P5 from the default fallback/i }));
 });
