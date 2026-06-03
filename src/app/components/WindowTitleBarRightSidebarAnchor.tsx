@@ -12,7 +12,7 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
 const MAX_VISIBLE_PANEL_COUNT = 3;
-const RIGHT_PANEL_ACTION_BASE_CLASS = 'window-titlebar-leading-button relative';
+const RIGHT_PANEL_ACTION_BASE_CLASS = 'window-titlebar-leading-button pointer-events-auto relative';
 const RIGHT_PANEL_ACTION_ACTIVE_CLASS =
   'after:absolute after:bottom-1 after:left-1 after:right-1 after:h-[2px] after:rounded-full after:bg-foreground/12';
 
@@ -20,7 +20,7 @@ function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClic
   return (
     <button
       aria-label="Toggle right sidebar"
-      className="window-titlebar-leading-button"
+      className="window-titlebar-leading-button pointer-events-auto"
       aria-pressed={active}
       onClick={onClick}
       type="button"
@@ -217,7 +217,7 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
         <div className="window-titlebar-right-expanded-action">
           <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />
         </div>
-        <div className="window-titlebar-right-zone max-[1279px]:hidden" hidden={isCollapsed}>
+        <div className="window-titlebar-right-zone max-[1279px]:hidden" hidden={isCollapsed} style={{ pointerEvents: 'none' }}>
           {isCollapsed
             ? null
             : renderRightSidebarPanelActions({
