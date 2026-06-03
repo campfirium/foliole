@@ -66,7 +66,15 @@ describe('android-preview.sh', () => {
       const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', [
         '#!/usr/bin/env bash',
         'echo sync-target:${WINDOWS_MIRROR_DIR}',
+        'echo sync-changed:${WINDOWS_SYNC_CHANGED_FILES}',
+        'echo sync-stamp:${WINDOWS_SYNC_STAMP_FILE}',
         'if [[ "${WINDOWS_MIRROR_DIR}" == "/mnt/c/dev/foliole" ]]; then exit 66; fi'
+      ].join('\n'));
+      const mtimeChanges = await writeExecutable(tempRoot, 'mtime-changes.sh', [
+        '#!/usr/bin/env bash',
+        'resolve_changed_files() {',
+        '  echo package.json',
+        '}'
       ].join('\n'));
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho android-workdir:${ANDROID_WINDOWS_WORKDIR}\n');
       const failIfCalled = await writeExecutable(tempRoot, 'fail-if-called.sh', '#!/usr/bin/env bash\nexit 64\n');
@@ -74,16 +82,20 @@ describe('android-preview.sh', () => {
       const result = await runAndroidPreview(tempRoot, {
         PATH: `${mockBinDir}${path.delimiter}${process.env.PATH}`,
         WINDOWS_SYNC_SCRIPT: windowsSync,
+        WINDOWS_MTIME_CHANGES_SCRIPT: mtimeChanges,
         ANDROID_SYNC_SCRIPT: androidSync,
         ANDROID_EMULATOR_SCRIPT: failIfCalled,
         ANDROID_DEPLOY_SCRIPT: failIfCalled,
         ANDROID_OPEN_SCRIPT: failIfCalled,
         ANDROID_PREVIEW_AVD: '',
-        ANDROID_PREVIEW_OPEN_STUDIO: '0'
+        ANDROID_PREVIEW_OPEN_STUDIO: '0',
+        ANDROID_PREVIEW_SYNC_STAMP_FILE: path.join(tempRoot, 'android-preview-sync.stamp')
       });
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('sync-target:/mnt/c/dev/foliole-android-preview');
+      expect(result.stdout).toContain('sync-changed:package.json');
+      expect(result.stdout).toContain(`sync-stamp:${path.join(tempRoot, 'android-preview-sync.stamp')}`);
       expect(result.stdout).toContain('android-workdir:C:\\dev\\foliole-android-preview');
       expect(result.stdout).not.toContain('sync-target:/mnt/c/dev/foliole\n');
     } finally {
