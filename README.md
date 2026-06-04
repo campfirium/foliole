@@ -18,6 +18,10 @@ macOS and iOS alpha builds are expected around August.
   <img src="assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
 </p>
 
+## Demo Clip
+
+[Watch the demo clip on YouTube](https://youtu.be/Cp-EaCVS-Ds)
+
 ## Design Principles
 
 ### Open Source

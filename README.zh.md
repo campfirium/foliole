@@ -18,6 +18,10 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
   <img src="assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
 </p>
 
+## 演示视频
+
+[在 YouTube 上观看演示视频](https://youtu.be/Cp-EaCVS-Ds)
+
 ## 设计原则
 
 ### 代码开源
