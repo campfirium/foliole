@@ -1,7 +1,7 @@
 /* global process */
 
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,9 +15,6 @@ function serialProcess({ commands, runtimeDir, runLabel, extraEnv = {} }) {
     env: {
       ...process.env,
       DESKTOP_VALIDATION_SERIAL_COMMANDS_JSON: JSON.stringify(commands),
-      FOLIOLE_RESOURCE_GATE_HELD: '',
-      DESKTOP_VALIDATION_SERIAL_PROGRESS_MS: '50',
-      DESKTOP_VALIDATION_SERIAL_POLL_MS: '25',
       DESKTOP_VALIDATION_SERIAL_RUNTIME_DIR: runtimeDir,
       SERIAL_TEST_RUN_LABEL: runLabel,
       ...extraEnv
@@ -81,37 +78,4 @@ function stubCommands(stub, lintMs = 50, previewMs = 50, lintCode = 0) {
   ];
 }
 
-async function writeDeadLock(runtimeDir) {
-  await mkdir(runtimeDir, { recursive: true });
-  await writeFile(
-    path.join(runtimeDir, 'resource-gate.node-heavy.lock'),
-    `${JSON.stringify({
-      className: 'preview',
-      command: 'validate:desktop:serial',
-      heartbeatAt: Date.now(),
-      pid: 99999999,
-      resource: 'node-heavy',
-      schemaVersion: 1,
-      startedAt: Date.now()
-    })}\n`,
-    'utf8'
-  );
-}
-
-async function waitForFile(filePath, timeoutMs = 1000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      await readFile(filePath, 'utf8');
-      return;
-    } catch (error) {
-      if (!('code' in error) || error.code !== 'ENOENT') {
-        throw error;
-      }
-    }
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 25));
-  }
-  throw new Error(`Timed out waiting for file: ${filePath}`);
-}
-
-export { runSerial, serialProcess, stubCommands, waitForFile, withTempFixture, writeDeadLock };
+export { runSerial, serialProcess, stubCommands, withTempFixture };

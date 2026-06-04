@@ -171,7 +171,7 @@ export async function runCodexTask(options) {
       detached: process.platform !== 'win32',
       env: {
         ...process.env,
-        PREVIEW_DEDUPE_WAIT_ON_FAILURE: process.env.PREVIEW_DEDUPE_WAIT_ON_FAILURE ?? '1'
+        PREVIEW_DEDUPE_WAIT_ON_FAILURE: process.env.PREVIEW_DEDUPE_WAIT_ON_FAILURE ?? '0'
       },
       stdio: ['pipe', 'inherit', 'inherit']
     });

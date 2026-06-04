@@ -5,8 +5,6 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { withResourceGate } from './lib/resource-gate.mjs';
-
 const DEFAULT_SLOW_LIMIT = 10;
 
 function parseArgs(argv) {
@@ -145,12 +143,7 @@ async function main() {
   mkdirSync(path.dirname(reportPath), { recursive: true });
   const args = ['run', '--reporter=dot', '--reporter=json', `--outputFile.json=${reportPath}`, ...vitestArgs];
   const vitestCommand = resolveVitestCommand();
-  const exitCode = await withResourceGate({
-    className: 'node-heavy',
-    commandLabel: 'run-vitest-with-summary',
-    fn: (env) => runVitest(vitestCommand, args, env),
-    repoRoot: process.cwd()
-  });
+  const exitCode = await runVitest(vitestCommand, args, process.env);
   printSummary(reportPath);
   process.exit(exitCode);
 }

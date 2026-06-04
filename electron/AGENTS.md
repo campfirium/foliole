@@ -9,7 +9,7 @@
 
 - 本项目默认桌面优先，不按纯 Web 方案优先。
 - 默认客户端视角就是 Windows 客户端；未特别说明时，运行态、预览验收、数据库核对与人工补数据都以 Windows 客户端为准，不以 WSL 内临时路径或其他本机副本为准。
-- WSL 主开发会话进入桌面日常开发或修改 `src/app/**`、`src/features/**`、`src/shared/**`、`src/store/**`、`electron/**`、`lib/core/**`、`lib/platform/**` 前，先执行 `npm run windows:sync:watch:ensure`，让常驻同步 watcher 负责把稳定批次推到 Windows mirror；该入口可重复调用，不要求用户手动管理。它是日常反馈链路，不是阶段验收预览。
+- WSL 主开发会话日常开发不自动启动 Windows mirror sync watcher，避免后台同步或 reload / restart intent 干扰正在观察的 Windows 客户端；只有用户明确要求持续同步时，才手动使用 `npm run windows:sync:watch:ensure`。
 - 默认主数据库固定视为 `D:\X\U\Foliole\Data\foliole.db`；在 WSL 内对应路径为 `/mnt/d/X/U/Foliole/Data/foliole.db`。未获用户明确批准前，不得自行改查其他数据库路径。
 - 诊断主数据库时必须先使用 `query-foliole-db` skill 的固定只读流程；不得先用 WSL `sqlite3`、WSL `better-sqlite3`、仓库 Node 依赖或直接打开 `/mnt/d/.../foliole.db` 查询正在运行的 Windows 活库，避免 WAL / SHM 跨宿主 I/O 误判。若固定流程覆盖不了，再走 Windows 侧只读 runtime 或停进程后的快照查询，并说明原因。
 - 系统能力优先经 Electron main process 暴露，再由 renderer 通过 bridge 调用；业务层不得散落 `ipcRenderer` 调用。
@@ -55,6 +55,6 @@
 ## Validation
 
 - 桌面相关改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared` 或 `npm run quality:full`；需要 Android 原生宿主一起验收时才升级到 `npm run quality:release`。
-- WSL 主开发会话的日常桌面反馈使用 `npm run windows:sync:watch:ensure`，不使用预览入口。执行 Windows 桌面预览时使用 `npm run windows:preview`；Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。两者只在根 `AGENTS.md` 的阶段验收 / 显式预览规则允许时执行。
+- WSL 主开发会话的日常桌面反馈不自动同步 Windows mirror；执行 Windows 桌面预览时使用 `npm run windows:preview`。Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。两者只在根 `AGENTS.md` 的阶段验收 / 显式预览规则允许时执行。
 - Electron Playwright、桌面自动化回归、性能诊断与时序采样默认一律走 Windows 侧现成脚本链路：`scripts/windows/windows-desktop-test.sh`、`scripts/windows/run-playwright-desktop.ps1` 与 `playwright.desktop.config.ts`；除非用户当次明确要求排查 WSL 本地运行时，否则不得把 WSL 内直接拉起的 Electron 当成默认诊断或验收入口。
 - `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。

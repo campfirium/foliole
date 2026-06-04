@@ -171,7 +171,7 @@ describe('quality-gate-lib.sh', () => {
     expect(result.stdout.trim()).toBe('fail-only');
   });
 
-  it('records failed tests and prints a targeted vitest rerun command', async () => {
+  it('records failed tests and prints the failed command rerun', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-lib-'));
     const failedSummary = path.join(tempRoot, 'test-run', 'failed.txt');
     try {
@@ -195,9 +195,9 @@ describe('quality-gate-lib.sh', () => {
       expect(result.stdout).toContain('exit=1');
       expect(result.stdout).toContain(`failed summary: ${failedSummary}`);
       expect(result.stdout).toContain(
-        'rerun: node scripts/run-vitest-with-summary.mjs .tmp/vitest/rerun.json -- --silent=passed-only --pool=threads --maxWorkers=1 --no-file-parallelism src/app/Foo.test.tsx'
+        'rerun: bash -lc echo\\ \\"FAIL\\ src/app/Foo.test.tsx\\"\\;\\ exit\\ 1'
       );
-      await expect(readFile(failedSummary, 'utf8')).resolves.toContain('failed-test=src/app/Foo.test.tsx');
+      await expect(readFile(failedSummary, 'utf8')).resolves.toContain('script=test:desktop');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

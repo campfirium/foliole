@@ -69,6 +69,9 @@ describe('quality gate failure summary', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('src/app/JsonPreferred.test.tsx');
+      expect(result.stdout).toContain(
+        'rerun: node scripts/run-vitest-with-summary.mjs .tmp/vitest/rerun.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app/JsonPreferred.test.tsx'
+      );
       const summary = await readFile(failedSummary, 'utf8');
       expect(summary).toContain('failed-test=src/app/JsonPreferred.test.tsx');
       expect(summary).not.toContain('failed-test=src/app/LogOnly.test.tsx');

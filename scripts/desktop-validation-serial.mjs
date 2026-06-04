@@ -4,7 +4,6 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { formatGateQueueMessage, withResourceGate } from './lib/resource-gate.mjs';
 import { normalizeSpawnCommand } from './lib/windows-spawn-command.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,15 +24,6 @@ export function resolveDefaultPreviewCommand(env = process.env) {
   return isWslEnvironment(env)
     ? ['npm', 'run', 'windows:preview']
     : ['npm', 'run', 'windows:preview:native'];
-}
-
-export function formatQueueActiveMessage({ ageSeconds, pid }) {
-  return formatGateQueueMessage({
-    className: 'preview',
-    holderPid: pid,
-    resource: 'preview',
-    seconds: ageSeconds
-  });
 }
 
 function resolveCommands() {
@@ -103,13 +93,7 @@ async function runCommands(commands, env) {
 }
 
 export async function runDesktopValidationSerial() {
-  return withResourceGate({
-    className: 'preview',
-    commandLabel: 'validate:desktop:serial',
-    fn: (env) => runCommands(resolveCommands(), env),
-    onSignal: stopActiveChild,
-    repoRoot: REPO_ROOT
-  });
+  return runCommands(resolveCommands(), process.env);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

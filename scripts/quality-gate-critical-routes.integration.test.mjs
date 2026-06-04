@@ -78,7 +78,7 @@ describe('quality gate critical routes integration', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: mid');
-      expect(result.stdout).toContain('critical test:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --maxWorkers=1 --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx');
+      expect(result.stdout).toContain('critical test:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx');
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/useNodeBacklinks.ts');
     } finally {
       await rm(root, { recursive: true, force: true });

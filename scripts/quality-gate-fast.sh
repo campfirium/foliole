@@ -44,8 +44,8 @@ run_changed_lint() {
   fi
 
   mapfile -t lint_array <<< "${lint_targets}"
-  if [[ -f "scripts/with-resource-gate.mjs" && -f "node_modules/eslint/bin/eslint.js" ]]; then
-    run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" node scripts/with-resource-gate.mjs node-heavy -- node node_modules/eslint/bin/eslint.js --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"
+  if [[ -f "node_modules/eslint/bin/eslint.js" ]]; then
+    run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" node node_modules/eslint/bin/eslint.js --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"
     return 0
   fi
   if [[ -x "./node_modules/.bin/eslint" ]]; then
@@ -140,7 +140,7 @@ run_related_tests_if_needed() {
     "quality-gate-fast" \
     "test" \
     "test (related)" \
-    node "${SCRIPT_DIR}/run-vitest-with-summary.mjs" .tmp/vitest/related.json -- --silent=passed-only --pool=threads --maxWorkers=1 --no-file-parallelism "${test_array[@]}"
+    node "${SCRIPT_DIR}/run-vitest-with-summary.mjs" .tmp/vitest/related.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism "${test_array[@]}"
 }
 
 run_critical_tests_if_needed() {

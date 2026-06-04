@@ -5,13 +5,9 @@ import { spawn } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 
 import { controlledElectronSqliteTests } from './native-sqlite-test-policy.mjs';
-import { withResourceGate } from './lib/resource-gate.mjs';
-
 const TEST_FILE_PATTERN = /\.test\.(?:mjs|ts|tsx)$/;
 const ELECTRON_SQLITE_TESTS = new Set(controlledElectronSqliteTests);
 const DATABASE_CONNECTION_IMPORT_PATTERN = /\b(?:import\b[\s\S]*?\bfrom\s+|import\s*\()\s*['"](?:\.{1,2}\/(?:[\w.-]+\/)*connection|\.{1,2}\/database\/connection)\.js['"]/u;
-let activeChild = null;
-
 function printUsage() {
   console.error('Usage: npm run test:files -- <file.test.ts|file.test.tsx|file.test.mjs> [...]');
 }
@@ -84,38 +80,21 @@ async function runTestFiles(env) {
     '--',
     '--silent=passed-only',
     '--pool=threads',
-    '--maxWorkers=1',
+    '--maxWorkers=2',
     '--no-file-parallelism',
     ...files
   ];
   const child = spawn(process.execPath, args, { env, stdio: 'inherit' });
-  activeChild = child;
   const exitCode = await new Promise((resolve) => {
     child.on('close', (code) => {
-      if (activeChild === child) {
-        activeChild = null;
-      }
       resolve(code ?? 1);
     });
   });
   return exitCode;
 }
 
-function stopActiveChild(signal) {
-  if (!activeChild || activeChild.exitCode !== null || activeChild.signalCode !== null) {
-    return;
-  }
-  activeChild.kill(signal);
-}
-
 async function main() {
-  return withResourceGate({
-    className: 'node-heavy',
-    commandLabel: 'test-files',
-    fn: runTestFiles,
-    onSignal: stopActiveChild,
-    repoRoot: process.cwd()
-  });
+  return runTestFiles(process.env);
 }
 
 main()

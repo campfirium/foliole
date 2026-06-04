@@ -14,22 +14,22 @@ async function readPackageScripts() {
 }
 
 describe('quality gate resource ownership', () => {
-  it('routes heavy build scripts through the node-heavy gate', async () => {
+  it('keeps default package scripts outside the resource gate', async () => {
     const scripts = await readPackageScripts();
     const testFilesScript = await readFile(path.join(REPO_ROOT, 'scripts', 'test-files.mjs'), 'utf8');
 
-    expect(scripts.build).toContain('with-resource-gate.mjs node-heavy');
-    expect(scripts['electron:compile']).toContain('with-resource-gate.mjs node-heavy');
-    expect(scripts['android:web:build']).toContain('with-resource-gate.mjs node-heavy');
-    expect(scripts['lint:files']).toContain('with-resource-gate.mjs node-heavy');
-    expect(testFilesScript).toContain('withResourceGate');
-    expect(testFilesScript).toContain("className: 'node-heavy'");
-    expect(scripts['test:e2e:desktop']).toContain('with-resource-gate.mjs preview');
+    expect(scripts.build).not.toContain('with-resource-gate.mjs');
+    expect(scripts['electron:compile']).not.toContain('with-resource-gate.mjs');
+    expect(scripts['android:web:build']).not.toContain('with-resource-gate.mjs');
+    expect(scripts['lint:files']).not.toContain('with-resource-gate.mjs');
+    expect(testFilesScript).not.toContain('withResourceGate');
+    expect(scripts['test:e2e:desktop']).not.toContain('with-resource-gate.mjs');
   });
 
-  it('keeps fast changed-file lint under the node-heavy gate', async () => {
+  it('runs fast changed-file lint without the resource gate', async () => {
     const script = await readFile(path.join(REPO_ROOT, 'scripts', 'quality-gate-fast.sh'), 'utf8');
 
-    expect(script).toContain('with-resource-gate.mjs node-heavy -- node node_modules/eslint/bin/eslint.js');
+    expect(script).toContain('node node_modules/eslint/bin/eslint.js --cache --cache-location .tmp/eslint-cache/changed/');
+    expect(script).not.toContain('with-resource-gate.mjs node-heavy -- node node_modules/eslint/bin/eslint.js');
   });
 });
