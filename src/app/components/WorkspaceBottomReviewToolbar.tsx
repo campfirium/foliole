@@ -77,7 +77,7 @@ function getReviewProgressCounts(source: WorkspaceBottomReviewToolbarSource): Re
 function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
   return (
     <ReviewModeToolbar
-      className={`${props.isImmersiveMode ? 'col-start-1 pointer-events-auto' : 'col-start-3 bg-transparent'} row-start-1 h-full px-6 max-[1080px]:col-start-1`}
+      className={`${props.isImmersiveMode ? 'col-start-1 pointer-events-auto' : 'col-start-3 bg-transparent pl-4 pr-0 max-[1080px]:pl-2'} row-start-1 h-full max-[1080px]:col-start-1`}
       showProgress={false}
       showSessionModeControl
       showSummary={false}

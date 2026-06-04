@@ -33,6 +33,12 @@ it('renders review action bar with primary, secondary, and status slots', () => 
   );
 
   expect(container.querySelector('[data-mode="study"]')).toBeInTheDocument();
+  expect(screen.getByLabelText('Review mode toolbar').querySelector('.max-w-\\[var\\(--document-max-width\\)\\]')).toBeInTheDocument();
+  expect(
+    screen.getByLabelText('Review mode toolbar').querySelector(
+      '.pl-\\[var\\(--document-content-inline-start-padding\\,var\\(--document-content-inline-padding\\)\\)\\]'
+    )
+  ).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
   expect(screen.getByText('Hotkeys enabled')).toBeInTheDocument();
 });

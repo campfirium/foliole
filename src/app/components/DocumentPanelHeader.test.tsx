@@ -1,9 +1,37 @@
 import { render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
+
+const documentHeaderNodes: Record<string, Node> = {
+  'topic-1': {
+    id: 'topic-1',
+    kind: 'topic',
+    title: 'Inbox',
+    parentNodeId: null,
+    content: '',
+    anchorLink: null,
+    reveal: null,
+    review: null,
+    createdAt: '',
+    updatedAt: ''
+  },
+  'node-1': {
+    id: 'node-1',
+    kind: 'item',
+    title: 'Prompt',
+    parentNodeId: 'topic-1',
+    content: '',
+    anchorLink: null,
+    reveal: '',
+    review: null,
+    createdAt: '',
+    updatedAt: ''
+  }
+};
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
@@ -24,32 +52,7 @@ it('shows the breadcrumb title without a kind label in the document header', () 
       folderListToolbar={null}
       isFolderListView={false}
       isSourceUpdatePanelOpen={false}
-      nodesById={{
-        'topic-1': {
-          id: 'topic-1',
-          kind: 'topic',
-          title: 'Inbox',
-          parentNodeId: null,
-          content: '',
-          anchorLink: null,
-          reveal: null,
-          review: null,
-          createdAt: '',
-          updatedAt: ''
-        },
-        'node-1': {
-          id: 'node-1',
-          kind: 'item',
-          title: 'Prompt',
-          parentNodeId: 'topic-1',
-          content: 'Q',
-          anchorLink: null,
-          reveal: 'A',
-          review: null,
-          createdAt: '',
-          updatedAt: ''
-        }
-      }}
+      nodesById={documentHeaderNodes}
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onGoParent={vi.fn()}
@@ -80,32 +83,7 @@ it('keeps breadcrumb and priority controls on the document content rail', () => 
       folderListToolbar={null}
       isFolderListView={false}
       isSourceUpdatePanelOpen={false}
-      nodesById={{
-        'topic-1': {
-          id: 'topic-1',
-          kind: 'topic',
-          title: 'Inbox',
-          parentNodeId: null,
-          content: '',
-          anchorLink: null,
-          reveal: null,
-          review: null,
-          createdAt: '',
-          updatedAt: ''
-        },
-        'node-1': {
-          id: 'node-1',
-          kind: 'item',
-          title: 'Prompt',
-          parentNodeId: 'topic-1',
-          content: '',
-          anchorLink: null,
-          reveal: '',
-          review: null,
-          createdAt: '',
-          updatedAt: ''
-        }
-      }}
+      nodesById={documentHeaderNodes}
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onGoParent={vi.fn()}
@@ -125,7 +103,9 @@ it('keeps breadcrumb and priority controls on the document content rail', () => 
   expect(rail.closest('header')).toHaveClass('max-[1080px]:px-2');
   expect(rail).toHaveClass('max-w-[var(--document-max-width)]');
   expect(rail).toHaveClass('px-[var(--document-content-inline-padding)]');
-  expect(rail).toHaveClass('max-[1080px]:pl-[max(var(--document-content-inline-padding),var(--document-header-navigation-safe-inline-start))]');
+  expect(rail).toHaveClass('[@container(max-width:1040px)]:grid-cols-[auto_minmax(0,1fr)_auto]');
+  expect(rail.parentElement).toHaveClass('[container-type:inline-size]');
+  expect(screen.getAllByLabelText('Document navigation actions')).toHaveLength(2);
   expect(rail).toContainElement(screen.getByRole('button', { name: 'Inbox' }));
   expect(rail).toContainElement(screen.getByRole('button', { name: /Priority P5 from the default fallback/i }));
 });

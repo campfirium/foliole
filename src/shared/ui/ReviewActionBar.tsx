@@ -39,10 +39,10 @@ export function ReviewActionBar({
     <div
       aria-label={ariaLabel}
       className={cn(
-        'relative flex h-[var(--workspace-bottom-toolbar-height)] flex-none items-center px-4',
+        'relative flex h-[var(--workspace-bottom-toolbar-height)] flex-none items-center',
         surface === 'panel' && 'w-full border-t border-border bg-bg-elevated',
         surface === 'overlay' &&
-          'mx-auto w-fit max-w-[calc(100vw-3rem)] rounded-lg border border-border/45 bg-bg-elevated shadow-control',
+          'mx-auto w-fit max-w-[calc(100vw-3rem)] rounded-lg border border-border/45 bg-bg-elevated px-4 shadow-control',
         className
       )}
       data-surface={surface}
@@ -56,7 +56,7 @@ export function ReviewActionBar({
       {surface === 'overlay' ? (
         <div className="flex items-center justify-center">{primary}</div>
       ) : (
-        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+        <div className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 pl-[var(--document-content-inline-start-padding,var(--document-content-inline-padding))] pr-[var(--document-content-inline-end-padding,var(--document-content-inline-padding))]">
           <div className="min-w-0 truncate text-[13px] font-medium text-muted-foreground">{secondary}</div>
           <div className="flex items-center justify-center">{primary}</div>
           <div aria-hidden="true" className="min-w-0" />

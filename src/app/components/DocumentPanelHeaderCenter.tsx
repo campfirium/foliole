@@ -10,6 +10,7 @@ import {
 
 interface DocumentPanelHeaderCenterProps {
   activeNodeId: string | null;
+  compactNavigationSlot?: ReactNode;
   isFolderListView: boolean;
   nodesById: Record<string, Node>;
   onSelectBreadcrumbNode: (nodeId: string) => void;
@@ -18,6 +19,7 @@ interface DocumentPanelHeaderCenterProps {
 
 export function DocumentPanelHeaderCenter({
   activeNodeId,
+  compactNavigationSlot,
   isFolderListView,
   nodesById,
   onSelectBreadcrumbNode,
@@ -38,11 +40,16 @@ export function DocumentPanelHeaderCenter({
   }
 
   return (
-    <div className="min-w-0 flex-1">
+    <div className="[container-type:inline-size] min-w-0 flex-1">
       <div
-        className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-[var(--document-content-inline-padding)] max-[1080px]:pl-[max(var(--document-content-inline-padding),var(--document-header-navigation-safe-inline-start))]"
+        className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-[var(--document-content-inline-padding)] [@container(max-width:1040px)]:grid-cols-[auto_minmax(0,1fr)_auto]"
         data-testid="document-header-content-rail"
       >
+        {compactNavigationSlot ? (
+          <div className="hidden shrink-0 items-center [@container(max-width:1040px)]:flex">
+            {compactNavigationSlot}
+          </div>
+        ) : null}
         <NodeBreadcrumbs
           activeNodeId={activeNodeId}
           nodesById={listNodesById}

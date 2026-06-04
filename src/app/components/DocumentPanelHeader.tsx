@@ -127,12 +127,13 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
   const showDocumentControls = args.showDocumentControls ?? true;
 
   return (
-    <div className="relative flex min-w-0 flex-1 items-center">
-      <div className="absolute left-0 top-1/2 flex min-w-0 -translate-y-1/2 items-center">
+    <div className="relative flex min-w-0 flex-1 items-center [container-type:inline-size]">
+      <div className="absolute left-0 top-1/2 flex min-w-0 -translate-y-1/2 items-center [@container(max-width:1040px)]:hidden">
         {!args.isFolderListView ? <DocumentPanelHeaderNavigation {...navigationProps} /> : null}
       </div>
       <DocumentPanelHeaderCenter
         activeNodeId={args.activeNodeId}
+        compactNavigationSlot={!args.isFolderListView ? <DocumentPanelHeaderNavigation {...navigationProps} /> : null}
         isFolderListView={args.isFolderListView}
         nodesById={args.nodesById}
         onSelectBreadcrumbNode={args.onSelectBreadcrumbNode}
