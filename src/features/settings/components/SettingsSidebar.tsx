@@ -99,10 +99,9 @@ function SettingsSidebarGroup(props: {
   setActiveCategory: (category: SettingsCategoryId) => void;
 }) {
   return (
-    <div className="border-t border-settings-divider/65 pt-4 first:border-t-0 first:pt-0">
+    <div className="relative pt-4 before:absolute before:left-3 before:right-3 before:top-0 before:border-t before:border-settings-divider/65 first:pt-0 first:before:hidden">
       <div className="mb-1 flex items-center gap-2 px-3 text-[0.72rem] font-semibold uppercase leading-5 tracking-[0.12em] text-foreground/58">
         <span>{props.group.label}</span>
-        <span aria-hidden="true" className="h-px min-w-6 flex-1 bg-settings-divider/55" />
       </div>
       <div className="flex flex-col gap-0.5">
         {props.group.categoryIds.map((categoryId) => {

@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 import { createDefaultReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { createReadwiseImportSources } from './importSourceWorkspaceModel';
@@ -52,14 +53,16 @@ function renderReadwiseSettingsHarness(input: { config?: ReadwiseReaderConfig } 
   const readwiseSources = createReadwiseImportSources('/Readwise');
 
   render(
-    <SettingsReadwiseReaderContent
-      config={config}
-      onPreviewSync={onPreviewSync}
-      onRunSync={onRunSync}
-      onSave={onSave}
-      readwiseRootPath="/Readwise"
-      readwiseSources={readwiseSources}
-    />
+    <LocalizationProvider>
+      <SettingsReadwiseReaderContent
+        config={config}
+        onPreviewSync={onPreviewSync}
+        onRunSync={onRunSync}
+        onSave={onSave}
+        readwiseRootPath="/Readwise"
+        readwiseSources={readwiseSources}
+      />
+    </LocalizationProvider>
   );
   return { onPreviewSync, onRunSync, onSave };
 }
@@ -120,6 +123,17 @@ it('checks Readwise setup inline and turns on the integration from the settings 
       .filter((source) => source.kind)
       .every((source) => source.keepState === 'enabled')
   ).toBe(true);
+});
+
+it('keeps the import preview divider aligned with settings rows', () => {
+  renderReadwiseSettingsHarness();
+
+  const previewSection = screen.getByText('Import preview').closest('section');
+
+  expect(previewSection?.className.split(' ')).not.toContain('border-b');
+  expect(previewSection?.className).toContain('after:left-5');
+  expect(previewSection?.className).toContain('after:right-5');
+  expect(previewSection?.className).toContain('after:border-b');
 });
 
 it('explains why Readwise import cannot turn on before import preview', async () => {

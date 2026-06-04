@@ -62,7 +62,7 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
           />
         </div>
         <div className="app-scrollbar min-h-0 flex-1 overflow-auto px-7 py-7" ref={props.scrollContainerRef}>
-          <div className="mb-7 border-b border-settings-divider/55 px-5 pb-6">
+          <div className="mb-7 px-5 pb-6">
             <AppDialogTitle>{props.title}</AppDialogTitle>
             <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{props.description}</p>
           </div>

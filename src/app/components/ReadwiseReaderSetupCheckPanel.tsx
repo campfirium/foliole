@@ -84,7 +84,7 @@ export function ReadwiseReaderSetupCheckPanel(props: {
   const buttonLabel = props.isChecking ? 'Previewing...' : 'Preview';
 
   return (
-    <section className="border-b border-settings-divider/55 bg-settings-group px-5 py-4">
+    <section className="relative bg-settings-group px-5 py-4 after:absolute after:bottom-0 after:left-5 after:right-5 after:border-b after:border-settings-divider/70">
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">

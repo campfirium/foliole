@@ -36,3 +36,22 @@ it('uses the unified settings shell surfaces for sidebar and content area', () =
   expect(screen.getByRole('button', { name: 'Appearance' }).className.split(' ')).not.toContain('bg-foreground');
   expect(screen.getByRole('button', { name: 'Backups' }).className).toContain('hover:bg-settings-selected');
 });
+
+it('keeps settings dividers aligned without title extension lines', () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="review" />);
+
+  const pageTitleShell = screen.getByRole('heading', { level: 2, name: 'Review' }).parentElement;
+  const sectionHeader = screen.getByRole('heading', { level: 3, name: 'Scheduler' }).parentElement?.parentElement;
+  const storageGroup = screen.getByText('Storage').parentElement?.parentElement;
+  const storageLabelRow = screen.getByText('Storage').parentElement;
+  const desiredRetentionRow = screen.getByRole('heading', { level: 4, name: 'Desired retention' }).parentElement?.parentElement;
+
+  expect(pageTitleShell?.className).not.toContain('border-b');
+  expect(sectionHeader?.className).not.toContain('border-b');
+  expect(storageGroup?.className).toContain('before:left-3');
+  expect(storageGroup?.className).toContain('before:right-3');
+  expect(storageGroup?.className.split(' ')).not.toContain('border-t');
+  expect(storageLabelRow?.querySelector('[aria-hidden="true"]')).toBeNull();
+  expect(desiredRetentionRow?.className).toContain('before:left-5');
+  expect(desiredRetentionRow?.className).toContain('before:right-5');
+});

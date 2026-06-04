@@ -9,7 +9,7 @@ export function settingsActionTableClassName(className?: string) {
 
 export function settingsActionTableHeaderClassName(columnsClassName: string, className?: string) {
   return cn(
-    'grid gap-3 border-b border-settings-divider px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/45',
+    'relative grid gap-3 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/45 after:absolute after:bottom-0 after:left-4 after:right-4 after:border-b after:border-settings-divider',
     columnsClassName,
     className
   );
