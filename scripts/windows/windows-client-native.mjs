@@ -36,7 +36,7 @@ const {
   stateFile,
   windowVisibleFile
 } = resolveWindowsNativePaths();
-const healthTimeoutMs = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '90000', 10);
+const healthTimeoutMs = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '180000', 10);
 
 function wait(ms) {
   return new Promise((resolve) => {

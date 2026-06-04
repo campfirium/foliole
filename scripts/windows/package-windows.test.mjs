@@ -1,13 +1,20 @@
 // @vitest-environment node
 
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
+  collectInstallerArtifactPaths,
   createNativePackageSteps,
   createWslPackageSteps,
   formatBytes,
   readPackageVersion,
   resolveReleaseArtifactPaths,
+  resolveInstallMode,
+  resolvePackagedInstallerPath,
   resolvePackageMode
 } from './package-windows.mjs';
 
@@ -16,6 +23,11 @@ describe('windows package runner', () => {
     expect(resolvePackageMode(['node', 'script'], 'win32')).toBe('native');
     expect(resolvePackageMode(['node', 'script', '--native'], 'linux')).toBe('native');
     expect(resolvePackageMode(['node', 'script'], 'linux')).toBe('wsl');
+  });
+
+  it('only installs when explicitly requested', () => {
+    expect(resolveInstallMode(['node', 'script'])).toBe(false);
+    expect(resolveInstallMode(['node', 'script', '--install'])).toBe(true);
   });
 
   it('runs the native package pipeline through npm and electron-builder', () => {
@@ -55,6 +67,12 @@ describe('windows package runner', () => {
     expect(steps[1].args.join(' ')).toContain('D:\\C\\foliole');
   });
 
+  it('passes the install flag through to the Windows-native package runner', () => {
+    const steps = createWslPackageSteps('/repo', true);
+
+    expect(steps[1].args.join(' ')).toContain('npm run windows:package:native -- --install');
+  });
+
   it('formats artifact sizes as whole megabytes', () => {
     expect(formatBytes(161578306)).toBe('154MB');
   });
@@ -67,6 +85,28 @@ describe('windows package runner', () => {
       '/repo/release/latest.yml',
       '/repo/release/builder-debug.yml'
     ]);
+  });
+
+  it('finds the current electron-builder Windows installer artifact', () => {
+    const root = mkdtempSync(join(tmpdir(), 'foliole-package-test-'));
+    try {
+      mkdirSync(join(root, 'release'));
+      writeFileSync(join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe'), '');
+      writeFileSync(join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap'), '');
+      writeFileSync(join(root, 'release', 'Other-Setup-9.8.7-win-x64.exe'), '');
+
+      expect(collectInstallerArtifactPaths(root, '9.8.7')).toEqual([
+        join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe')
+      ]);
+      expect(resolvePackagedInstallerPath(root, '9.8.7')).toBe(
+        join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe')
+      );
+      expect(resolveReleaseArtifactPaths(root, '9.8.7')).toContain(
+        join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap')
+      );
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
   });
 
   it('reads the package version used by release artifact names', () => {

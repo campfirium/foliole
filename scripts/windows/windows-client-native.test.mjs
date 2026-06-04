@@ -33,6 +33,7 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(startRunnerScript).toContain("'powershell.exe'");
   expect(startRunnerScript).toContain("'-File'");
   expect(script).toContain('nativeStartScript');
+  expect(script).toContain("FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '180000'");
   expect(script).toContain('closeClientLogStreams(logs)');
   expect(startRunnerScript).toContain('native dev runner start failed');
   expect(script).toContain('if (existing.ready.appReady.head === head)');
@@ -89,6 +90,15 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).not.toContain('.pipe(logs.');
   expect(script).not.toContain('restart-electron-dev.ps1');
   expect(script).not.toContain('buildPowerShellArgs');
+});
+
+it('routes the clickable Windows launcher through controlled client start by default', async () => {
+  const launcher = await readFile(path.resolve(process.cwd(), 'Start-Foliole.cmd'), 'utf8');
+
+  expect(launcher).toContain('if "%FOLIOLE_ACTION%"=="" set "FOLIOLE_ACTION=start"');
+  expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev" set "FOLIOLE_ACTION=start"');
+  expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev-direct"');
+  expect(launcher).toContain('npm run windows:client:native -- %FOLIOLE_ACTION%');
 });
 
 it('routes WSL preview client actions through the native client controller', async () => {

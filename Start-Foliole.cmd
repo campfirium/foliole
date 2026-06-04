@@ -4,9 +4,11 @@ setlocal
 cd /d "%~dp0"
 
 set "FOLIOLE_ACTION=%~1"
-if "%FOLIOLE_ACTION%"=="" set "FOLIOLE_ACTION=dev"
+if "%FOLIOLE_ACTION%"=="" set "FOLIOLE_ACTION=start"
 
-if /i "%FOLIOLE_ACTION%"=="dev" (
+if /i "%FOLIOLE_ACTION%"=="dev" set "FOLIOLE_ACTION=start"
+
+if /i "%FOLIOLE_ACTION%"=="dev-direct" (
   npm run electron:dev:native
 ) else (
   npm run windows:client:native -- %FOLIOLE_ACTION%

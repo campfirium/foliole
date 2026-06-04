@@ -15,6 +15,10 @@ export function resolvePackageMode(argv = process.argv, platform = process.platf
   return argv.includes('--native') || platform === 'win32' ? 'native' : 'wsl';
 }
 
+export function resolveInstallMode(argv = process.argv) {
+  return argv.includes('--install');
+}
+
 function createCmdStep(label, command) {
   return {
     args: ['/d', '/s', '/c', command],
@@ -31,7 +35,8 @@ export function createNativePackageSteps() {
   ];
 }
 
-export function createWslPackageSteps(rootDir = repoRoot) {
+export function createWslPackageSteps(rootDir = repoRoot, install = resolveInstallMode()) {
+  const installFlag = install ? ' -- --install' : '';
   return [
     {
       args: ['scripts/windows/windows-sync.sh'],
@@ -48,7 +53,7 @@ export function createWslPackageSteps(rootDir = repoRoot) {
         '/d',
         '/s',
         '/c',
-        `cd /d ${WINDOWS_REPO_ROOT} && set "PATH=${WINDOWS_NODE_DIR};%PATH%" && npm run windows:package:native`
+        `cd /d ${WINDOWS_REPO_ROOT} && set "PATH=${WINDOWS_NODE_DIR};%PATH%" && npm run windows:package:native${installFlag}`
       ],
       command: 'cmd.exe',
       cwd: '/mnt/c/Windows/System32',
@@ -107,12 +112,46 @@ function resolveInstallerBaseName(packageVersion) {
   return `Foliole Setup ${packageVersion}`;
 }
 
+function isInstallerArtifact(fileName, packageVersion) {
+  return (
+    fileName.endsWith('.exe') &&
+    fileName.includes('Foliole') &&
+    fileName.includes('Setup') &&
+    fileName.includes(packageVersion)
+  );
+}
+
+export function collectInstallerArtifactPaths(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
+  const releaseDir = resolve(rootDir, 'release');
+  if (!existsSync(releaseDir)) {
+    return [];
+  }
+  return readdirSync(releaseDir)
+    .filter((fileName) => isInstallerArtifact(fileName, packageVersion))
+    .sort()
+    .map((fileName) => resolve(releaseDir, fileName));
+}
+
+export function resolvePackagedInstallerPath(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
+  const candidates = collectInstallerArtifactPaths(rootDir, packageVersion);
+  if (candidates.length === 0) {
+    throw new Error(`No Foliole Windows installer found for version ${packageVersion}`);
+  }
+  return candidates
+    .map((candidate) => ({ path: candidate, mtimeMs: statSync(candidate).mtimeMs }))
+    .sort((left, right) => right.mtimeMs - left.mtimeMs)[0].path;
+}
+
 export function resolveReleaseArtifactPaths(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
   const installerBaseName = resolveInstallerBaseName(packageVersion);
+  const installerArtifacts = collectInstallerArtifactPaths(rootDir, packageVersion);
+  const installerBlockmaps = installerArtifacts.map((artifactPath) => `${artifactPath}.blockmap`);
   return [
     resolve(rootDir, 'release/win-unpacked'),
     resolve(rootDir, `release/${installerBaseName}.exe`),
     resolve(rootDir, `release/${installerBaseName}.exe.blockmap`),
+    ...installerArtifacts,
+    ...installerBlockmaps,
     resolve(rootDir, 'release/latest.yml'),
     resolve(rootDir, 'release/builder-debug.yml')
   ];
@@ -125,7 +164,8 @@ export function cleanReleaseArtifacts(rootDir = repoRoot) {
 }
 
 export function collectArtifactSummary(rootDir = process.cwd(), packageVersion = readPackageVersion(rootDir)) {
-  const installerPath = resolve(rootDir, `release/${resolveInstallerBaseName(packageVersion)}.exe`);
+  const installerPath = collectInstallerArtifactPaths(rootDir, packageVersion)[0] ??
+    resolve(rootDir, `release/${resolveInstallerBaseName(packageVersion)}.exe`);
   const unpackedPath = resolve(rootDir, 'release/win-unpacked');
   return {
     installer: existsSync(installerPath) ? formatBytes(statSync(installerPath).size) : 'missing',
@@ -133,10 +173,23 @@ export function collectArtifactSummary(rootDir = process.cwd(), packageVersion =
   };
 }
 
+export async function installPackagedApp(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
+  const installerPath = resolvePackagedInstallerPath(rootDir, packageVersion);
+  console.log(`[windows-package] installer: ${installerPath}`);
+  await runStep({
+    args: ['/S'],
+    command: installerPath,
+    cwd: resolve(rootDir, 'release'),
+    label: 'silent install'
+  });
+}
+
 async function main() {
   const mode = resolvePackageMode();
+  const install = resolveInstallMode();
   const steps = mode === 'native' ? createNativePackageSteps() : createWslPackageSteps();
   console.log(`[windows-package] mode: ${mode}`);
+  console.log(`[windows-package] install: ${install ? 'yes' : 'no'}`);
   if (mode === 'native') {
     cleanReleaseArtifacts();
   }
@@ -146,6 +199,9 @@ async function main() {
   if (mode === 'native') {
     const summary = collectArtifactSummary();
     console.log(`[windows-package] artifact installer=${summary.installer} unpacked=${summary.unpacked}`);
+    if (install) {
+      await installPackagedApp();
+    }
     console.log('[windows-package] status: PACKAGED');
   }
 }
