@@ -6,9 +6,13 @@ const { logRuntimeError } = vi.hoisted(() => ({
 
 vi.mock('./runtimeLogging', () => ({ logRuntimeError }));
 
-import { installRendererErrorDiagnostics } from './rendererErrorDiagnostics';
+import {
+  installRendererErrorDiagnostics,
+  resetRendererErrorDiagnosticsForTests
+} from './rendererErrorDiagnostics';
 
 afterEach(() => {
+  resetRendererErrorDiagnosticsForTests();
   logRuntimeError.mockReset();
 });
 
@@ -53,4 +57,36 @@ it('logs unhandled rejections through the renderer diagnostic channel', () => {
       stack: reason.stack
     }
   });
+});
+
+it('throttles repeated renderer errors with the same diagnostic action', () => {
+  let now = 1_000;
+  resetRendererErrorDiagnosticsForTests(() => now);
+  installRendererErrorDiagnostics();
+
+  window.dispatchEvent(new ErrorEvent('error', { message: 'first' }));
+  window.dispatchEvent(new ErrorEvent('error', { message: 'second' }));
+
+  expect(logRuntimeError).toHaveBeenCalledTimes(1);
+
+  now += 10_000;
+  window.dispatchEvent(new ErrorEvent('error', { message: 'third' }));
+
+  expect(logRuntimeError).toHaveBeenCalledTimes(2);
+});
+
+it('does not throttle different renderer diagnostic actions together', () => {
+  resetRendererErrorDiagnosticsForTests(() => 1_000);
+  installRendererErrorDiagnostics();
+
+  window.dispatchEvent(new ErrorEvent('error', { message: 'render failed' }));
+  const event = new Event('unhandledrejection') as PromiseRejectionEvent;
+  Object.defineProperty(event, 'reason', { value: new Error('promise failed') });
+  window.dispatchEvent(event);
+
+  expect(logRuntimeError).toHaveBeenCalledTimes(2);
+  expect(logRuntimeError.mock.calls.map(([message]) => message)).toEqual([
+    'window onerror',
+    'unhandled rejection'
+  ]);
 });

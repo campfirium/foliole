@@ -19,13 +19,27 @@ function serializeErrorLike(value: unknown): Record<string, unknown> {
   };
 }
 
+function readErrorName(value: unknown) {
+  return value instanceof Error ? value.name : undefined;
+}
+
 function serializeMainDiagnosticPayload(payload: MainDiagnosticPayload) {
-  return Object.fromEntries(
-    Object.entries(payload).map(([key, value]) => [
-      key,
-      key === 'error' ? serializeErrorLike(value) : value
-    ])
-  );
+  const serialized: Record<string, unknown> = {};
+  Object.entries(payload).forEach(([key, value]) => {
+    if (key !== 'error') {
+      serialized[key] = value;
+      return;
+    }
+    const error = serializeErrorLike(value);
+    serialized.error = error;
+    if (typeof error.message === 'string' && serialized.message === undefined) {
+      serialized.message = error.message;
+    }
+    if (typeof error.name === 'string' && serialized.name === undefined) {
+      serialized.name = error.name;
+    }
+  });
+  return serialized;
 }
 
 export function appendMainProcessDiagnosticLog(
@@ -46,6 +60,22 @@ export function appendMainProcessDiagnosticLog(
 export function logMainProcessException(event: string, error: unknown) {
   appendMainProcessDiagnosticLog(event, {
     error
+  });
+}
+
+export function logMainProcessOperationFailure(
+  operation: string,
+  payload: MainDiagnosticPayload,
+  error: unknown,
+  safeMessage = 'Operation failed'
+) {
+  appendMainProcessDiagnosticLog('operation_failed', {
+    action: operation,
+    message: safeMessage,
+    ...(readErrorName(error) ? { name: readErrorName(error) } : {}),
+    operation,
+    status: 'failed',
+    ...payload
   });
 }
 

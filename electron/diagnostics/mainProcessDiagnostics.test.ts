@@ -12,7 +12,11 @@ const { resolveAppPaths } = vi.hoisted(() => ({
 
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths }));
 
-import { logMainProcessException, startLocalCrashReporter } from './mainProcessDiagnostics.js';
+import {
+  logMainProcessException,
+  logMainProcessOperationFailure,
+  startLocalCrashReporter
+} from './mainProcessDiagnostics.js';
 
 afterEach(() => {
   resolveAppPaths.mockReset();
@@ -56,8 +60,49 @@ it('writes main process exceptions into the runtime NDJSON log', async () => {
       error: {
         message: 'sqlite exploded',
         name: 'Error'
-      }
+      },
+      message: 'sqlite exploded',
+      name: 'Error'
     },
     source: 'electron.main'
   });
+});
+
+it('writes operation failures without embedding the raw error stack', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-operation-diagnostics-'));
+  const logDir = path.join(tempRoot, 'logs');
+  resolveAppPaths.mockReturnValue({
+    app_log_dir: logDir
+  });
+
+  logMainProcessOperationFailure(
+    'import_file',
+    { source_kind: 'markdown' },
+    new Error('Cannot import /Users/alice/private/book.md'),
+    'Import failed'
+  );
+
+  await vi.waitFor(() => {
+    const files = fs.readdirSync(logDir);
+    expect(files.some((file) => /^runtime-\d{4}-\d{2}-\d{2}\.ndjson$/.test(file))).toBe(true);
+  });
+
+  const fileName = fs.readdirSync(logDir).find((file) => file.startsWith('runtime-')) as string;
+  const recordText = fs.readFileSync(path.join(logDir, fileName), 'utf8').trim();
+
+  expect(JSON.parse(recordText)).toMatchObject({
+    event: 'operation_failed',
+    level: 'error',
+    payload: {
+      action: 'import_file',
+      message: 'Import failed',
+      name: 'Error',
+      operation: 'import_file',
+      source_kind: 'markdown',
+      status: 'failed'
+    },
+    source: 'electron.main'
+  });
+  expect(recordText).not.toContain('/Users/alice/private/book.md');
+  expect(recordText).not.toContain('stack');
 });

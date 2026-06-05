@@ -9,6 +9,7 @@ import type {
   NativeTextImportResult
 } from '../../lib/platform/nativeContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
+import { logMainProcessOperationFailure } from '../diagnostics/mainProcessDiagnostics.js';
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 
 import { loadEpubPreview, runEpubImport } from './epubImport.js';
@@ -91,6 +92,7 @@ export async function runImportForFilePath(filePath: string, args?: NativeTextIm
     );
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
+    logMainProcessOperationFailure('import_file', { source_kind: source.kind }, error, 'Import failed');
     return toNativeTextImportResult(
       recordPreparedImportFailure(
         buildPreparedImportRecord(source, {

@@ -34,7 +34,17 @@ const MAX_TAIL_BYTES = 128 * 1024;
 const MAX_RECENT_ERRORS = 8;
 const MAX_BOOT_EVENTS = 8;
 const NOISE_BOOT_STAGES = new Set(['app_responsive', 'desktop_task_progress']);
-const SAFE_PAYLOAD_KEYS = ['code', 'message', 'name', 'reason', 'stage', 'status'] as const;
+const SAFE_PAYLOAD_KEYS = [
+  'action',
+  'code',
+  'message',
+  'name',
+  'operation',
+  'reason',
+  'source_kind',
+  'stage',
+  'status'
+] as const;
 
 function formatBytes(sizeBytes: number) {
   if (sizeBytes >= 1024 * 1024) return `${(sizeBytes / 1024 / 1024).toFixed(1)} MB`;
