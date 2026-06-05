@@ -110,7 +110,7 @@ function FlowSection(props: {
 }
 
 function collectFlowNodeIds(flowWindow: ReviewFlowWindow) {
-  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds, ...flowWindow.upcomingNodeIds];
+  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds];
 }
 
 export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
@@ -131,7 +131,6 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
 
   const displayQueueNodeIds = buildDisplayQueueNodeIds(props.flowWindow.queueNodeIds, props.currentNodeId);
   const readyIndexOffset = displayQueueNodeIds.length;
-  const upcomingIndexOffset = readyIndexOffset + props.flowWindow.readyNodeIds.length;
 
   return (
     <section className="flex min-h-0 flex-col">
@@ -150,13 +149,6 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
           nodesById={props.nodesById}
           onSelectNode={props.onSelectNode}
           showDivider={displayQueueNodeIds.length > 0}
-        />
-        <FlowSection
-          indexOffset={upcomingIndexOffset}
-          nodeIds={props.flowWindow.upcomingNodeIds}
-          nodesById={props.nodesById}
-          onSelectNode={props.onSelectNode}
-          showDivider={displayQueueNodeIds.length + props.flowWindow.readyNodeIds.length > 0}
         />
       </ol>
     </section>

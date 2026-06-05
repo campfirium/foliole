@@ -99,7 +99,7 @@ const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
 });
 
 function collectFlowWindowNodeIds(flowWindow: ReviewFlowWindow) {
-  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds, ...flowWindow.upcomingNodeIds];
+  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds];
 }
 
 function renderDevPanel(props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById' | 'reviewSchedulerSettings'>) {

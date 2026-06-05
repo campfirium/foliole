@@ -8,7 +8,7 @@ import {
   createWorkspaceFixture
 } from './workspaceStoreReviewActions.test-support';
 
-it('builds a display-only flow window without moving future topics into queue', () => {
+it('builds a display-only flow window without showing future topics', () => {
   const now = '2026-03-10T12:00:00.000Z';
   const queueNodeIds = ['qa-queue'];
   const state = {
@@ -31,11 +31,11 @@ it('builds a display-only flow window without moving future topics into queue', 
 
   expect(flowWindow.queueNodeIds).toEqual(['qa-queue']);
   expect(flowWindow.readyNodeIds).toEqual(['qa-ready', 'reading-ready']);
-  expect(flowWindow.upcomingNodeIds).toEqual(['reading-upcoming']);
+  expect(flowWindow.upcomingNodeIds).toEqual([]);
   expect(liveQueue.taskNodeIds).not.toContain('reading-upcoming');
 });
 
-it('limits upcoming flow entries without limiting ready entries', () => {
+it('does not limit ready entries after removing future flow entries', () => {
   const now = '2026-03-10T12:00:00.000Z';
   const readyNodes = Array.from({ length: 22 }, (_, index) =>
     createReadingNode(`reading-ready-${index + 1}`, '2026-03-09T00:00:00.000Z')
@@ -48,6 +48,5 @@ it('limits upcoming flow entries without limiting ready entries', () => {
   const flowWindow = buildReviewFlowWindow(state, now, []);
 
   expect(flowWindow.readyNodeIds).toHaveLength(22);
-  expect(flowWindow.upcomingNodeIds).toHaveLength(20);
-  expect(flowWindow.upcomingNodeIds[0]).toBe('reading-upcoming-1');
+  expect(flowWindow.upcomingNodeIds).toEqual([]);
 });

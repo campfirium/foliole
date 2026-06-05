@@ -7,8 +7,6 @@ import { buildCachedReviewQueuePlan } from './reviewQueuePlannerCached';
 import { selectCanonicalReviewQueueSource } from './workspaceCanonicalSelectors';
 import type { WorkspaceState } from './workspaceStore';
 
-const UPCOMING_FLOW_NODE_LIMIT = 20;
-
 type ReviewFlowWindowState = Pick<
   WorkspaceState,
   'nodeOrder' | 'nodesById' | 'reviewSessionMode' | 'trashedNodeIds'
@@ -67,11 +65,7 @@ export function buildReviewFlowWindow(
     trashedNodeIds: canonicalSource.trashedNodeIds
   };
   const readyPlan = buildCachedReviewQueuePlan(baseArgs);
-  const scheduledPlan = buildCachedReviewQueuePlan({ ...baseArgs, includeScheduled: true });
   const queueNodeIdSet = new Set(queueNodeIds);
   const readyNodeIds = excludeKnownNodeIds(collectPlanNodeIds(readyPlan), queueNodeIdSet);
-  const knownNodeIds = new Set([...queueNodeIds, ...readyNodeIds]);
-  const upcomingNodeIds = excludeKnownNodeIds(collectPlanNodeIds(scheduledPlan), knownNodeIds)
-    .slice(0, UPCOMING_FLOW_NODE_LIMIT);
-  return { queueNodeIds, readyNodeIds, upcomingNodeIds };
+  return { queueNodeIds, readyNodeIds, upcomingNodeIds: [] };
 }

@@ -188,15 +188,14 @@ it('does not show due times in the flow list', () => {
   expect(screen.getByRole('button', { name: 'FSRS 1' })).toBeInTheDocument();
 });
 
-it('separates queue, ready, and upcoming flow entries with dividers only', () => {
+it('separates queue and ready flow entries with dividers only', () => {
   render(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-1"
-      flowWindow={{ queueNodeIds: ['reading-1'], readyNodeIds: ['reading-2'], upcomingNodeIds: ['reading-3'] }}
+      flowWindow={{ queueNodeIds: ['reading-1'], readyNodeIds: ['reading-2'], upcomingNodeIds: [] }}
       nodesById={{
         'reading-1': createNode({ id: 'reading-1', title: 'Reading 1' }),
-        'reading-2': createNode({ id: 'reading-2', title: 'Reading 2' }),
-        'reading-3': createNode({ id: 'reading-3', title: 'Reading 3' })
+        'reading-2': createNode({ id: 'reading-2', title: 'Reading 2' })
       }}
       onSelectNode={() => undefined}
     />
@@ -208,13 +207,12 @@ it('separates queue, ready, and upcoming flow entries with dividers only', () =>
   expect(screen.queryByText('Queue')).not.toBeInTheDocument();
   expect(screen.queryByText('Ready now')).not.toBeInTheDocument();
   expect(screen.queryByText('Upcoming')).not.toBeInTheDocument();
-  expect(screen.getAllByRole('presentation')).toHaveLength(2);
+  expect(screen.getAllByRole('presentation')).toHaveLength(1);
   expect(items[0]!).toHaveTextContent('1Reading 1');
   expect(items[1]!).toHaveTextContent('2Reading 2');
-  expect(items[2]!).toHaveTextContent('3Reading 3');
 });
 
-it('shows upcoming topics without treating the flow as empty', () => {
+it('treats future-only flow content as empty', () => {
   render(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
@@ -227,6 +225,6 @@ it('shows upcoming topics without treating the flow as empty', () => {
   );
 
   expect(screen.queryByText('Upcoming')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Reading Later' })).toBeInTheDocument();
-  expect(screen.queryByText('No Flow topics are available right now.')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Reading Later' })).not.toBeInTheDocument();
+  expect(screen.getByText('No Flow topics are available right now.')).toBeInTheDocument();
 });
