@@ -141,6 +141,29 @@ it('shows action help for complex topic menu actions', () => {
   expect(screen.getByRole('tooltip')).toHaveTextContent('Set this topic and its derived topics aside.');
 });
 
+it('describes sequential reading without release or material terms', () => {
+  vi.useFakeTimers();
+  renderWithLocalization(
+    <NodeListContextMenu
+      {...noopProps()}
+      sequentialReadingEnabled={false}
+      showSequentialReadingAction
+    />
+  );
+
+  const sequentialReading = screen.getByRole('menuitem', { name: 'Enable Sequential Reading' });
+  fireEvent.pointerEnter(sequentialReading, { pointerType: 'mouse' });
+
+  act(() => {
+    vi.advanceTimersByTime(1000);
+  });
+
+  const tooltip = screen.getByRole('tooltip');
+  expect(tooltip).toHaveTextContent('Show contained topics one at a time, in order.');
+  expect(tooltip).toHaveTextContent('The next topic appears after the previous one is dismissed or shelved.');
+  expect(tooltip).not.toHaveTextContent(/release|material|current/i);
+});
+
 it('does not show action help when the setting is off', () => {
   vi.useFakeTimers();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.actionHelpCardsEnabled, 'false');

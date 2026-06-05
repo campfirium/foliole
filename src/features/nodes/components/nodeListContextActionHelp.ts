@@ -57,16 +57,16 @@ export const NODE_LIST_CONTEXT_ACTION_HELP = {
     title: 'Relearn'
   },
   sequentialReadingDisable: {
-    body: 'Stop releasing topics under this material one by one.',
-    detail: 'Locked topics become available independently again.',
+    body: 'Stop showing related topics in order.',
+    detail: 'Locked topics become directly readable again.',
     id: 'actionHelp.nodeList.sequentialReadingDisable',
     keywords: ['book', 'order', 'sequence'],
     sourceLabel: 'Topic list menu',
     title: 'Disable sequential reading'
   },
   sequentialReadingEnable: {
-    body: 'Release topics under this material one by one.',
-    detail: 'Only one topic is active at a time; the next one is released after the current topic is dismissed or shelved.',
+    body: 'Show contained topics one at a time, in order.',
+    detail: 'The next topic appears after the previous one is dismissed or shelved.',
     id: 'actionHelp.nodeList.sequentialReadingEnable',
     keywords: ['book', 'order', 'sequence'],
     sourceLabel: 'Topic list menu',

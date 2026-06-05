@@ -44,23 +44,23 @@ export const REVIEW_GRADE_ACTION_HELP = {
 export const READING_REVIEW_ACTION_HELP = {
   soon: {
     body: 'Appears again after this queue.',
-    detail: 'Use this when you want another pass soon.',
+    detail: 'Use this when you are not reading it now and want to read it after the queue.',
     id: 'actionHelp.review.soon',
     keywords: ['soon', 'queue', 'topic'],
     sourceLabel: 'Flow action bar',
     title: 'Soon'
   },
   later: {
-    body: 'Appears again after a shorter interval.',
-    detail: 'Use this when it still matters, but not right now.',
+    body: 'Appears again before its regular interval.',
+    detail: 'Use this when you are not reading it now and want to read it after a shorter interval.',
     id: 'actionHelp.review.later',
     keywords: ['later', 'topic'],
     sourceLabel: 'Flow action bar',
     title: 'Later'
   },
   read: {
-    body: 'Appears again after its normal interval.',
-    detail: 'Use this when the topic has had enough attention for now.',
+    body: 'Appears again after its regular interval.',
+    detail: 'Use this after reading part of it when you want to continue after the regular interval.',
     id: 'actionHelp.review.read',
     keywords: ['read', 'topic'],
     sourceLabel: 'Flow action bar',
@@ -68,7 +68,7 @@ export const READING_REVIEW_ACTION_HELP = {
   },
   dismiss: {
     body: 'No longer appears automatically.',
-    detail: 'The topic is kept in Foliole and can still be opened manually.',
+    detail: 'You can still open it manually when needed.',
     id: 'actionHelp.review.dismiss',
     keywords: ['dismiss', 'topic'],
     sourceLabel: 'Flow action bar',

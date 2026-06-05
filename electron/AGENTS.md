@@ -54,6 +54,6 @@
 ## Validation
 
 - 桌面相关改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared` 或 `npm run quality:full`；需要 Android 原生宿主一起验收时才升级到 `npm run quality:release`。
-- WSL 主开发会话执行 Windows 桌面预览时使用 `npm run windows:preview`；Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。两者都只在根 `AGENTS.md` 的连续推进 / 阶段验收规则允许，且 `.lab/internal/runtime/windows-preview.flag` 为 `ON`、用户当次明确要求 Windows 预览、或用户当次要求阶段验收时执行。
+- WSL 主开发会话执行 Windows 桌面预览时使用 `npm run windows:preview`；Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。根 `AGENTS.md` 决定是否需要预览：非连续推进且本轮改动存在用户可见预览验收面时，只要 `.lab/internal/runtime/windows-preview.flag` 为 `ON` 或用户当次明确要求 Windows 预览，相关验证通过后就必须执行；阶段验收即使 flag 为 `OFF` 也必须执行；连续推进期间除非用户当次明确要求，否则不自动执行。
 - Electron Playwright、桌面自动化回归、性能诊断与时序采样默认一律走 Windows 侧现成脚本链路：`scripts/windows/windows-desktop-test.sh`、`scripts/windows/run-playwright-desktop.ps1` 与 `playwright.desktop.config.ts`；除非用户当次明确要求排查 WSL 本地运行时，否则不得把 WSL 内直接拉起的 Electron 当成默认诊断或验收入口。
 - `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。
