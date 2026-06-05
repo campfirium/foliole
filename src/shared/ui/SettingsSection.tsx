@@ -25,7 +25,7 @@ export function SettingsSection({
     <section
       aria-label={ariaLabel}
       className={cn(
-        'relative mb-8 before:absolute before:-top-4 before:left-5 before:right-5 before:hidden before:border-t before:border-settings-divider/55 first:before:hidden last:mb-0 [&+&]:before:block',
+        'relative mb-8 pt-7 before:absolute before:left-5 before:right-5 before:top-0 before:border-t before:border-settings-divider/70 first:pt-0 first:before:hidden last:mb-0',
         className
       )}
     >
