@@ -1,17 +1,17 @@
 <p align="center">
   <sub>
     <a href="https://github.com/campfirium/foliole/blob/dev/README.md">English</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.de.md">Deutsch</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.es.md">Español</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.fr.md">Français</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.it.md">Italiano</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.ja.md">日本語</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.ko.md">한국어</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.pl.md">Polski</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.pt.md">Português</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.ru.md">Русский</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.zh.md">简体中文</a> ·
-    <a href="https://github.com/campfirium/foliole/blob/dev/README.zh-Hant.md">繁體中文</a>
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.de.md">Deutsch</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.es.md">Español</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.fr.md">Français</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.it.md">Italiano</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.ja.md">日本語</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.ko.md">한국어</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.pl.md">Polski</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.pt.md">Português</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.ru.md">Русский</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.zh.md">简体中文</a> ·
+    <a href="https://github.com/campfirium/foliole/blob/dev/docs/i18n/README.zh-Hant.md">繁體中文</a>
   </sub>
 </p>
 
