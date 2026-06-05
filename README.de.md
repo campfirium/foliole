@@ -17,34 +17,34 @@
 
 # Foliole
 
-Make reading actually complete.<br>
-An approachable incremental reading app.
+Lesen wirklich abschließen.<br>
+Eine zugängliche App für inkrementelles Lesen.
 
-Windows alpha is open for testing.<br>
-Android alpha is expected around July.<br>
-macOS and iOS alpha builds are expected around August.
+Die Windows-Alpha ist zum Testen geöffnet.<br>
+Die Android-Alpha wird etwa im Juli erwartet.<br>
+Alpha-Builds für macOS und iOS werden etwa im August erwartet.
 
 <p align="center">
   <img src="assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
 </p>
 
-## Demo Clip
+## Demo-Clip
 
-[Watch the demo clip on YouTube](https://youtu.be/Cp-EaCVS-Ds)
+[Demo-Clip auf YouTube ansehen](https://youtu.be/Cp-EaCVS-Ds)
 
-## Design Principles
+## Designprinzipien
 
 ### Open Source
 
-The code is open source. Anyone can review the implementation, build it from source, or contribute improvements.
+Der Code ist quelloffen. Jede Person kann die Implementierung prüfen, Foliole aus dem Quellcode bauen oder Verbesserungen beitragen.
 
 <p align="center">
   <img src="assets/screenshots/Open%20Source.png" alt="Foliole desktop interface preview." width="900">
 </p>
 
-### Open Data
+### Offene Daten
 
-Uses a SQLite database and provides a Markdown mirror, making materials easier to read, migrate, and reuse.
+Foliole nutzt eine SQLite-Datenbank und stellt einen Markdown-Spiegel bereit, damit Materialien leichter gelesen, migriert und weiterverwendet werden können.
 
 <p align="center">
   <img src="assets/screenshots/Open%20Data.png" alt="Foliole document library and reading workspace." width="900">
@@ -52,59 +52,59 @@ Uses a SQLite database and provides a Markdown mirror, making materials easier t
 
 ### Local First
 
-No account system. No central cloud sync. All data stays on your personal devices; devices sync over the local network.
+Kein Kontosystem. Keine zentrale Cloud-Synchronisierung. Alle Daten bleiben auf deinen persönlichen Geräten; Geräte synchronisieren sich über das lokale Netzwerk.
 
 <p align="center">
   <img src="assets/screenshots/Local%20First.png" alt="Foliole local reading workspace." width="900">
 </p>
 
-## Core Features
+## Kernfunktionen
 
-### Native Incremental Reading
+### Natives inkrementelles Lesen
 
-Built around Piotr Woźniak’s incremental reading ideas, with a native workflow for extracting passages, creating cloze deletions, and refining materials without leaving the reading flow.
+Foliole baut auf Piotr Woźniaks Ideen zum inkrementellen Lesen auf, mit einem nativen Workflow zum Extrahieren von Passagen, Erstellen von Cloze-Deletions und fortlaufenden Überarbeiten von Materialien, ohne den Lesefluss zu verlassen.
 
 <p align="center">
   <img src="assets/screenshots/Native%20Incremental%20Reading.png" alt="Foliole reading pane with extracted notes." width="900">
 </p>
 
-### Integrated FSRS Scheduling
+### Integrierte FSRS-Planung
 
-Integrates FSRS (Free Spaced Repetition Scheduler), an open and efficient review scheduling algorithm.
+Foliole integriert FSRS (Free Spaced Repetition Scheduler), einen offenen und effizienten Algorithmus für Wiederholungsplanung.
 
 <p align="center">
   <img src="assets/screenshots/Integrated%20FSRS%20Scheduling.png" alt="Foliole scheduling panel in the desktop app." width="900">
 </p>
 
-### Bring Reading Materials Together
+### Lesematerialien zusammenführen
 
-Handles reading materials from different sources, whether local files, web documents, notes managed in Obsidian, or materials exported from Readwise Reader.
+Foliole verarbeitet Lesematerialien aus unterschiedlichen Quellen zentral, ob lokale Dateien, Webdokumente, in Obsidian verwaltete Notizen oder aus Readwise Reader exportierte Materialien.
 
 <p align="center">
   <img src="assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
 </p>
 
-### Index External Documents
+### Externe Dokumente indexieren
 
-Indexes other local folders on your computer without copying or moving the original files, creating an external document library that can be searched, viewed, and used across supported clients.
+Foliole indexiert andere lokale Ordner auf deinem Computer, ohne Originaldateien zu kopieren oder zu verschieben. So entsteht eine externe Dokumentbibliothek, die durchsucht, angezeigt und auf unterstützten Clients genutzt werden kann.
 
 <p align="center">
   <img src="assets/screenshots/Index%20External%20Documents.png" alt="Foliole document navigation and indexed folders." width="900">
 </p>
 
-### Complex Content Support
+### Unterstützung für komplexe Inhalte
 
-Supports Markdown, PDF, EPUB, LaTeX math, code blocks, and other content rendering needs.
+Foliole unterstützt Markdown, PDF, EPUB, LaTeX-Formeln, Codeblöcke und weitere Anforderungen an die Inhaltsdarstellung.
 
 <p align="center">
   <img src="assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
 </p>
 
-## Acknowledgements
+## Danksagung
 
-Special thanks to Piotr Woźniak and Jarrett Ye. Without SuperMemo, incremental reading, and FSRS, Foliole would not exist.
+Besonderer Dank gilt Piotr Woźniak und Jarrett Ye. Ohne SuperMemo, inkrementelles Lesen und FSRS gäbe es Foliole nicht.
 
-Many thanks to the following open-source projects and components:
+Vielen Dank auch an die folgenden Open-Source-Projekte und Komponenten:
 
 - better-sqlite3
 - Capacitor
