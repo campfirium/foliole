@@ -1,6 +1,6 @@
 import { useEffect, type CSSProperties } from 'react';
 
-import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
+import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { getCommandShortcutOverrides, resolveCommandShortcutMap } from '../../shared/commands/keymap';
 import { matchesShortcutSet } from '../../shared/commands/shortcuts';
@@ -28,7 +28,7 @@ interface ReviewNoCurrentItemBarProps {
 function getReadingReadShortcuts() {
   return resolveCommandShortcutMap({
     commandIds: [APP_COMMAND_IDS.readingReviewRead],
-    defaults: DEFAULT_APP_COMMAND_SHORTCUTS,
+    defaults: getPlatformDefaultCommandShortcuts(),
     overrides: getCommandShortcutOverrides()
   })[APP_COMMAND_IDS.readingReviewRead];
 }

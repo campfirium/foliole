@@ -1,12 +1,39 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_APP_COMMAND_SHORTCUTS } from './defaultShortcuts';
+import { DEFAULT_APP_COMMAND_SHORTCUTS, getPlatformDefaultCommandShortcuts } from './defaultShortcuts';
 import { APP_COMMAND_IDS } from './ids';
 import { matchesShortcutSet } from './shortcuts';
 
 function keyEvent(init: KeyboardEventInit) {
   return new KeyboardEvent('keydown', init);
 }
+
+it('uses Cmd for Ctrl-only default shortcuts on macOS', () => {
+  const macShortcuts = getPlatformDefaultCommandShortcuts('MacIntel');
+
+  expect(matchesShortcutSet(
+    keyEvent({ key: 'n', metaKey: true }),
+    macShortcuts[APP_COMMAND_IDS.createTopic]
+  )).toBe(true);
+  expect(matchesShortcutSet(
+    keyEvent({ key: 'n', ctrlKey: true }),
+    macShortcuts[APP_COMMAND_IDS.createTopic]
+  )).toBe(false);
+  expect(matchesShortcutSet(
+    keyEvent({ key: 'o', metaKey: true }),
+    macShortcuts[APP_COMMAND_IDS.importSingleFile]
+  )).toBe(true);
+});
+
+it('deduplicates existing Ctrl and Cmd default pairs on macOS', () => {
+  const macShortcuts = getPlatformDefaultCommandShortcuts('MacIntel');
+
+  expect(macShortcuts[APP_COMMAND_IDS.undo]).toEqual({ primary: { key: 'z', metaKey: true } });
+  expect(macShortcuts[APP_COMMAND_IDS.redo]).toEqual({
+    primary: { key: 'z', metaKey: true, shiftKey: true },
+    tertiary: { key: 'y', metaKey: true }
+  });
+});
 
 describe('default command shortcuts', () => {
   it('keeps priority mode available on Windows and macOS modifiers', () => {

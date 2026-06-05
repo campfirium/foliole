@@ -1,5 +1,5 @@
 import { APP_COMMAND_IDS, type AppCommandId } from './ids';
-import type { CommandShortcutSet } from './types';
+import type { CommandShortcut, CommandShortcutSet } from './types';
 
 export type DefaultCommandShortcuts = Partial<Record<AppCommandId, CommandShortcutSet>>;
 
@@ -60,3 +60,58 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.reviewNavigateNextSibling]: { primary: { key: 'e' } },
   [APP_COMMAND_IDS.deleteReviewSourceTopic]: { primary: { key: 't', altKey: true } }
 };
+
+const SHORTCUT_SET_SLOTS = ['primary', 'secondary', 'tertiary'] as const;
+
+function resolvePlatformText() {
+  if (typeof navigator === 'undefined') {
+    return '';
+  }
+  return `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
+}
+
+function isMacPlatform(platform = resolvePlatformText()) {
+  return platform.toLowerCase().includes('mac');
+}
+
+function getPlatformShortcut(shortcut: CommandShortcut, platform?: string): CommandShortcut {
+  if (!isMacPlatform(platform) || !shortcut.ctrlKey || shortcut.metaKey) {
+    return shortcut;
+  }
+  const platformShortcut = { ...shortcut, metaKey: true };
+  delete platformShortcut.ctrlKey;
+  return platformShortcut;
+}
+
+function getShortcutSignature(shortcut: CommandShortcut) {
+  return [
+    `m:${shortcut.metaKey ? 1 : 0}`,
+    `c:${shortcut.ctrlKey ? 1 : 0}`,
+    `a:${shortcut.altKey ? 1 : 0}`,
+    `s:${shortcut.shiftKey ? 1 : 0}`,
+    `k:${shortcut.key}`
+  ].join('|');
+}
+
+export function getPlatformDefaultCommandShortcuts(platform?: string): DefaultCommandShortcuts {
+  const resolved: DefaultCommandShortcuts = {};
+  for (const [commandId, shortcuts] of Object.entries(DEFAULT_APP_COMMAND_SHORTCUTS)) {
+    const nextSet: CommandShortcutSet = {};
+    const seen = new Set<string>();
+    for (const slot of SHORTCUT_SET_SLOTS) {
+      const shortcut = shortcuts?.[slot];
+      if (!shortcut) {
+        continue;
+      }
+      const platformShortcut = getPlatformShortcut(shortcut, platform);
+      const signature = getShortcutSignature(platformShortcut);
+      if (seen.has(signature)) {
+        continue;
+      }
+      seen.add(signature);
+      nextSet[slot] = platformShortcut;
+    }
+    resolved[commandId as AppCommandId] = nextSet;
+  }
+  return resolved;
+}

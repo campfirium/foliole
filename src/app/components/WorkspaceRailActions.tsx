@@ -4,7 +4,7 @@ import {
   getWorkspaceRailItemLabel,
   type WorkspaceRailItemConfig
 } from '../../features/settings/model/workspaceRailSettings';
-import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
+import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import type { AppCommandId } from '../../shared/commands/ids';
 import { formatAriaKeyShortcuts } from '../../shared/commands/shortcuts';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -20,6 +20,7 @@ import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 
 const RAIL_BUTTON_CLASS_NAME =
   'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
+const PLATFORM_DEFAULT_APP_COMMAND_SHORTCUTS = getPlatformDefaultCommandShortcuts();
 
 export const WORKSPACE_RAIL_ICON_OPTIONS = LUCIDE_ICON_OPTIONS;
 
@@ -49,7 +50,7 @@ function RailCommandButton({
         icon={<RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />}
         label={getWorkspaceRailItemLabel(item)}
         onClick={() => onRun(item.commandId)}
-        aria-keyshortcuts={formatAriaKeyShortcuts(DEFAULT_APP_COMMAND_SHORTCUTS[item.commandId as AppCommandId])}
+        aria-keyshortcuts={formatAriaKeyShortcuts(PLATFORM_DEFAULT_APP_COMMAND_SHORTCUTS[item.commandId as AppCommandId])}
       />
     </div>
   );

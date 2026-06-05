@@ -1,5 +1,5 @@
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
-import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
+import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -87,10 +87,11 @@ interface ReviewModeToggleActions {
 type CommandActionResult = boolean | void | Promise<void>;
 
 export function buildAppPaletteItems(options: BuildAppPaletteItemsOptions): CommandPaletteItem[] {
+  const defaultShortcuts = getPlatformDefaultCommandShortcuts();
   return getAppPaletteCommands(options).map((command) => ({
     ...command,
     ...definedProps({
-      shortcuts: DEFAULT_APP_COMMAND_SHORTCUTS[command.id as keyof typeof DEFAULT_APP_COMMAND_SHORTCUTS]
+      shortcuts: defaultShortcuts[command.id as keyof typeof defaultShortcuts]
     })
   }));
 }

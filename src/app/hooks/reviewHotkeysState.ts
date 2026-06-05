@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
-import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
+import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import {
   buildShortcutOverrideLabel,
@@ -64,6 +64,7 @@ export function mapPaletteItemsToHotkeyItems(items: CommandPaletteItem[], overri
 
 export function useCommandShortcutState(commandIds: readonly string[]) {
   const [overrides, setOverrides] = useState<CommandShortcutOverrides>(() => getCommandShortcutOverrides());
+  const defaultShortcuts = useMemo(() => getPlatformDefaultCommandShortcuts(), []);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
@@ -76,8 +77,8 @@ export function useCommandShortcutState(commandIds: readonly string[]) {
   }, []);
 
   const shortcutMap = useMemo(
-    () => resolveCommandShortcutMap({ commandIds: [...commandIds], defaults: DEFAULT_APP_COMMAND_SHORTCUTS, overrides }),
-    [commandIds, overrides]
+    () => resolveCommandShortcutMap({ commandIds: [...commandIds], defaults: defaultShortcuts, overrides }),
+    [commandIds, defaultShortcuts, overrides]
   );
 
   const updateShortcut = useCallback((commandId: string, slot: 'primary' | 'secondary', nextLabel: string): HotkeyUpdateResult => {
