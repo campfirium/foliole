@@ -97,6 +97,14 @@ it('updates settings navigation and search results when the app language changes
     expect(document.querySelector('[data-settings-search-row-id="review-desired-retention"]')).not.toBeNull();
   });
   expect(screen.getByRole('button', { name: '复习' })).toHaveAttribute('aria-current', 'page');
+
+  fireEvent.click(screen.getByRole('button', { name: '鼠标手势' }));
+  expect(screen.getAllByText('生效区域').length).toBeGreaterThan(0);
+  expect(screen.getByText('线条颜色')).toBeInTheDocument();
+  expect(screen.getByText('方向阈值（px）')).toBeInTheDocument();
+  expect(screen.queryByText('Active area')).not.toBeInTheDocument();
+  expect(screen.queryByText('Line color')).not.toBeInTheDocument();
+  expect(screen.queryByText('Direction threshold (px)')).not.toBeInTheDocument();
 });
 
 it('supports keyboard selection and clears query with Escape before closing settings', () => {

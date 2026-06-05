@@ -19,18 +19,12 @@ import {
 } from '../../../editor/model/editorMouseGestureSettings';
 import { useMouseGestureSettings } from '../../context/MouseGestureSettingsProvider';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
-import {
-  MOUSE_GESTURE_SETTINGS_SEARCH_ROWS
-} from '../../model/settingsSearchRowCatalog';
+import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 import {
   MouseGestureThresholdsSection,
   MouseGestureTrailSection
 } from './SettingsMouseGestureAdvancedSections';
-
-const MOUSE_GESTURE_ROW = {
-  activeArea: MOUSE_GESTURE_SETTINGS_SEARCH_ROWS[0]!
-};
 
 const GESTURE_ROWS: Array<{
   gestureId: EditorMouseGestureId;
@@ -69,16 +63,17 @@ function GestureIcon({ gestureId }: { gestureId: EditorMouseGestureId }) {
 
 function MouseGestureAreaSection() {
   const t = useTranslation();
+  const activeAreaRow = useLocalizedSettingsSearchRow('mouse-gestures-active-area');
   return (
     <SettingsSection
       ariaLabel={t('settings.mouseGestures.area.sectionAria')}
       title={t('settings.mouseGestures.area.title')}
     >
       <SettingsRow
-        {...settingsSearchRowProps(MOUSE_GESTURE_ROW.activeArea)}
-        description={MOUSE_GESTURE_ROW.activeArea.description}
+        {...settingsSearchRowProps(activeAreaRow)}
+        description={activeAreaRow.description}
         readonly
-        title={MOUSE_GESTURE_ROW.activeArea.title}
+        title={activeAreaRow.title}
       >
         <SettingsControlSlot>
           <div className={settingsValueBoxClassName('w-full text-foreground')}>

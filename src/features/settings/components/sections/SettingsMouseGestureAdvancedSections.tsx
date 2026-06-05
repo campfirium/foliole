@@ -14,13 +14,7 @@ import {
 import { DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS } from '../../../editor/model/editorMouseGestureSettings';
 import { useMouseGestureSettings } from '../../context/MouseGestureSettingsProvider';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
-import { MOUSE_GESTURE_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
-
-const MOUSE_GESTURE_ROW = {
-  directionThreshold: MOUSE_GESTURE_SETTINGS_SEARCH_ROWS[3]!,
-  lineColor: MOUSE_GESTURE_SETTINGS_SEARCH_ROWS[1]!,
-  lineWidth: MOUSE_GESTURE_SETTINGS_SEARCH_ROWS[2]!
-};
+import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 function NumberField(props: {
   ariaLabel: string;
@@ -53,10 +47,12 @@ export function MouseGestureTrailSection(props: {
 }) {
   const { settings } = useMouseGestureSettings();
   const t = useTranslation();
+  const lineColorRow = useLocalizedSettingsSearchRow('mouse-gestures-line-color');
+  const lineWidthRow = useLocalizedSettingsSearchRow('mouse-gestures-line-width');
 
   return (
     <SettingsSection ariaLabel={t('settings.mouseGestures.trail.sectionAria')} title={t('settings.mouseGestures.trail.title')}>
-      <SettingsRow {...settingsSearchRowProps(MOUSE_GESTURE_ROW.lineColor)} description={MOUSE_GESTURE_ROW.lineColor.description} title={MOUSE_GESTURE_ROW.lineColor.title}>
+      <SettingsRow {...settingsSearchRowProps(lineColorRow)} description={lineColorRow.description} title={lineColorRow.title}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <button
             aria-label={t('settings.mouseGestures.trail.resetColor')}
@@ -74,7 +70,7 @@ export function MouseGestureTrailSection(props: {
           <input aria-label={t('settings.mouseGestures.trail.colorHexAria')} className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} text-right tabular-nums`)} onChange={(event) => props.onTrailColorChange(event.target.value)} spellCheck={false} value={settings.trailColor.toUpperCase()} />
         </SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow {...settingsSearchRowProps(MOUSE_GESTURE_ROW.lineWidth)} description={MOUSE_GESTURE_ROW.lineWidth.description} title={MOUSE_GESTURE_ROW.lineWidth.title}>
+      <SettingsRow {...settingsSearchRowProps(lineWidthRow)} description={lineWidthRow.description} title={lineWidthRow.title}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <NumberField ariaLabel={t('settings.mouseGestures.trail.lineWidthAria')} max={12} min={1} onChange={props.onTrailLineWidthChange} step={0.25} value={settings.trailLineWidth} />
         </SettingsControlSlot>
@@ -94,10 +90,11 @@ export function MouseGestureThresholdsSection(props: {
 }) {
   const { settings } = useMouseGestureSettings();
   const t = useTranslation();
+  const directionThresholdRow = useLocalizedSettingsSearchRow('mouse-gestures-direction-threshold');
 
   return (
     <SettingsSection ariaLabel={t('settings.mouseGestures.thresholds.sectionAria')} title={t('settings.mouseGestures.thresholds.title')}>
-      <SettingsRow {...settingsSearchRowProps(MOUSE_GESTURE_ROW.directionThreshold)} description={MOUSE_GESTURE_ROW.directionThreshold.description} title={MOUSE_GESTURE_ROW.directionThreshold.title}>
+      <SettingsRow {...settingsSearchRowProps(directionThresholdRow)} description={directionThresholdRow.description} title={directionThresholdRow.title}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <NumberField ariaLabel={t('settings.mouseGestures.thresholds.directionAria')} max={48} min={8} onChange={props.onSegmentThresholdChange} step={1} value={settings.segmentThresholdPx} />
         </SettingsControlSlot>
