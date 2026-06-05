@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { HOME_NODE_ID } from '../features/nodes/model/specialNodes';
 import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
@@ -161,7 +162,7 @@ describe('workspacePersistStorage runtime fallback', () => {
     expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot', { includePdfOpenings: false });
   });
 
-  it('keeps workspace snapshot active node when reading progress active node is invalid', async () => {
+  it('falls back to the Home node when reading progress active node is invalid', async () => {
     const invoke = createSnapshotInvoke(
       {
         activeNodeId: 'missing-node',
@@ -181,8 +182,9 @@ describe('workspacePersistStorage runtime fallback', () => {
 
     const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
 
-    expect(value).toContain('"activeNodeId":"node-2"');
-    expect(value).toContain('"node-2":{"id":"node-2","content":"Node 2 content"');
+    expect(value).toContain(`"activeNodeId":"${HOME_NODE_ID}"`);
+    expect(value).toContain(`"${HOME_NODE_ID}":{"id":"${HOME_NODE_ID}"`);
+    expect(value).toContain('"content":"Node 2 content"');
   });
 });
 

@@ -2,8 +2,8 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { ensureLibraryPathLayout } from '../ipc/libraryPaths.js';
 import { resolveBootstrapLibraryPaths } from '../ipc/libraryPathBootstrap.js';
+import { ensureLibraryPathLayout } from '../ipc/libraryPaths.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';

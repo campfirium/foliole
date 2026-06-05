@@ -74,14 +74,22 @@ vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn(),
   saveImportManagerSettings: vi.fn()
 }));
-vi.mock('../import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: vi.fn() }));
+vi.mock('../import/keepImportMonitor.js', () => ({
+  createKeepImportMonitor: vi.fn(() => ({
+    isSnapshotFresh: vi.fn(() => false),
+    refreshFromSettings: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn()
+  })),
+  refreshKeepImportMonitorFromSettings: vi.fn()
+}));
 vi.mock('../import/managedInboxMonitor.js', () => ({ refreshManagedInboxMonitorFromSettings: vi.fn() }));
 vi.mock('../import/nodeSourceUpdatePreview.js', () => ({ loadNodeSourceUpdatePreview: vi.fn() }));
 vi.mock('../reviewSchedulerSettings.js', () => ({
   loadReviewSchedulerSettings: vi.fn(),
   saveReviewSchedulerSettings: vi.fn()
 }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn() }));
+vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn() }));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn(), reviewPreview: vi.fn() }));
 vi.mock('./storage.js', () => ({ loadAppSettingsState: vi.fn(), saveAppSettingsState: vi.fn() }));
 vi.mock('../import/keepImportService.js', () => ({ previewKeepImportRule: vi.fn() }));

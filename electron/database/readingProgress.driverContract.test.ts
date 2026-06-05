@@ -67,7 +67,8 @@ it('saves reading progress through prepared driver statements only', () => {
         nodeId: 'node-1',
         scrollTop: 124,
         selectionFrom: 10,
-        selectionTo: 18
+        selectionTo: 18,
+        updatedAt: '2026-03-14T00:00:00.000Z'
       }
     ],
     updatedAt: '2026-03-14T00:00:00.000Z'

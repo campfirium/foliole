@@ -26,7 +26,7 @@ export function resolveReviewQueueReadingDueAt(node: ReviewQueueNode) {
 
 export function resolveReviewQueueReadingAvailableAt(node: ReviewQueueNode, newDayStartsAtHour = getCurrentReviewSchedulerSettings().newDayStartsAtHour) {
   return resolveReadingAvailableAt({
-    lastHandledAt: node.reading?.lastHandledAt,
+    ...(node.reading?.lastHandledAt === undefined ? {} : { lastHandledAt: node.reading.lastHandledAt }),
     newDayStartsAtHour,
     nextAt: resolveReviewQueueReadingDueAt(node)
   });

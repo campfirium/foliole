@@ -141,9 +141,7 @@ function expectBrowseTopBarActions() {
 }
 
 async function expectReadingDocumentSearch(surface: ReturnType<typeof createReadableSurface>) {
-  fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
-  expect(screen.getByRole('dialog', { name: 'Actions' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Find in document' }));
+  openReadingAction('Find in document');
   expect(screen.getByRole('dialog', { name: 'Find in document' })).toBeInTheDocument();
   fireEvent.change(screen.getByRole('textbox', { name: 'Find in document' }), {
     target: { value: 'Readable' }
@@ -155,6 +153,12 @@ async function expectReadingDocumentSearch(surface: ReturnType<typeof createRead
     matches: [{ from: 2, to: 10 }, { from: 20, to: 28 }]
   });
   expect(surface.handleTabAction).not.toHaveBeenCalledWith('search');
+}
+
+function openReadingAction(name: 'Find in document' | 'Font' | 'Highlight' | 'Info') {
+  fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
+  expect(screen.getByRole('dialog', { name: 'Actions' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name }));
 }
 
 describe('CompanionShell navigation', () => {
@@ -211,15 +215,15 @@ describe('CompanionShell navigation', () => {
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-from', '2');
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-to', '18');
     expect(screen.getByText('Readable article')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Font' }));
+    openReadingAction('Font');
     expect(screen.getByRole('dialog', { name: 'Font' })).toBeInTheDocument();
     expect(screen.getByText('Reading font controls are not available on Android yet.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+    openReadingAction('Highlight');
     expect(screen.getByRole('dialog', { name: 'Highlight' })).toBeInTheDocument();
     expect(screen.getByText('Highlight tools are not available on Android yet.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Info' }));
+    openReadingAction('Info');
     expect(screen.getByRole('dialog', { name: 'Info' })).toBeInTheDocument();
     expect(screen.getByText('PDF and text')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));

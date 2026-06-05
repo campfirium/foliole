@@ -10,6 +10,7 @@ const PACKAGE_PATH = path.resolve(process.cwd(), 'package.json');
 const RUNNER_PREFIX = 'node scripts/electron-sqlite-runner.mjs ';
 
 const SQLITE_SCRIPT_COMMANDS = [
+  'test:changed',
   'oneoff:workspace:backfill-opening-text',
   'oneoff:source-dispositions:backfill',
   'sqlite:backup',
@@ -22,7 +23,7 @@ const SQLITE_SCRIPT_COMMANDS = [
 ];
 
 describe('electron sqlite runner package scripts', () => {
-  it('routes real sqlite maintenance commands through the Electron ABI runner', async () => {
+  it('routes sqlite-sensitive package scripts through the Electron ABI runner', async () => {
     const manifest = JSON.parse(await readFile(PACKAGE_PATH, 'utf8'));
 
     for (const commandName of SQLITE_SCRIPT_COMMANDS) {

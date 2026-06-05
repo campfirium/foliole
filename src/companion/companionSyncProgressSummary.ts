@@ -69,6 +69,14 @@ function formatElapsedTime(elapsedMs: number | undefined) {
   return `${minutes}m ${seconds % 60}s`;
 }
 
+function fallbackT(t: Translate, key: Parameters<Translate>[0], values?: Parameters<Translate>[1]) {
+  try {
+    return t(key, values);
+  } catch {
+    return null;
+  }
+}
+
 function formatContentBreakdown(progress: CompanionDesktopSyncProgress, t: Translate) {
   const breakdown = progress.contentBreakdown;
   if (progress.phase !== 'content' || !breakdown) return null;

@@ -87,6 +87,7 @@ const expectedWorkspaceListSnapshot = {
       anchorLink: null,
       reading: null,
       review: null,
+      shelvedAt: null,
       createdAt: '2026-03-14T00:00:00.000Z',
       updatedAt: '2026-03-14T00:00:00.000Z'
     }

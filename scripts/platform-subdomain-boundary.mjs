@@ -16,6 +16,7 @@ const PATH_SUBDOMAINS = [
 
 const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/actionHelpCards.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/appVersion.ts', 'runtime-core'],
   ['src/shared/platform/appLifecycle.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/companionAttachmentResourceSyncPluginTypes.ts', 'companion-sync-writer'],
   ['src/shared/platform/companionContentBlobSyncPluginTypes.ts', 'companion-sync-writer'],
@@ -30,9 +31,13 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/companionWorkspaceSync.testSupport.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/databaseMaintenanceStatusRuntimeRepository.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/readwiseOriginalFileWidgetEvents.ts', 'import-runtime'],
+  ['src/shared/platform/releaseLinks.ts', 'runtime-core'],
   ['src/shared/platform/remoteImageSourceRecovery.ts', 'external-runtime'],
+  ['src/shared/platform/runtimeConfig.ts', 'runtime-core'],
   ['src/shared/platform/searchEnhancementSettings.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/searchIndexRebuildStatus.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/updateCheck.ts', 'runtime-core'],
+  ['src/shared/platform/updateCheckModel.ts', 'runtime-core'],
   ['src/shared/platform/webLookupActionResolution.ts', 'external-runtime'],
   ['src/shared/platform/webLookupEntries.ts', 'external-runtime'],
   ['src/shared/platform/webLookupEntryDefaults.ts', 'external-runtime'],

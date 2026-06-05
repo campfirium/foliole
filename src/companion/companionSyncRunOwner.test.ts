@@ -14,6 +14,7 @@ const workspaceSyncMock = vi.hoisted(() => ({
   persistCompanionWorkspaceSnapshot: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
+  resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
@@ -123,6 +124,7 @@ describe('companion sync run owner', () => {
     vi.resetAllMocks();
     workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(syncState());
     workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(syncState());
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
   });
 
   it('lets manual sync wait for an active auto run without writing activity', async () => {

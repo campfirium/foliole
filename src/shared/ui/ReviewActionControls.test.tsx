@@ -113,7 +113,7 @@ it('shows action help cards for reading review actions when enabled', () => {
   });
 
   expect(screen.getByRole('tooltip')).toHaveTextContent('Later');
-  expect(screen.getByRole('tooltip')).toHaveTextContent('Appears again after a shorter interval.');
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Appears again before its regular interval.');
   expect(screen.getByRole('tooltip')).toHaveStyle({ transform: 'translate(-50%, -100%)' });
 });
 

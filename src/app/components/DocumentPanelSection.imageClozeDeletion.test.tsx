@@ -1,8 +1,10 @@
-import { act, render } from '@testing-library/react';
+import { act } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { expect, it, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 
@@ -120,7 +122,7 @@ it('re-registers the topic image presentation without the deleted child region',
   imageClozePresentation.registerImageClozeEditorPresentation.mockClear();
   imageClozePresentation.unregisterImageClozeEditorPresentation.mockClear();
 
-  const { rerender } = render(<DocumentPanelSection {...buildProps([])} />);
+  const { rerender } = renderWithLocalization(<DocumentPanelSection {...buildProps([])} />);
   act(() => {
     rerender(<DocumentPanelSection {...buildProps(['node-2'])} />);
   });

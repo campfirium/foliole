@@ -7,6 +7,14 @@ import {
   type ImportManagerSettings
 } from '../../lib/core/import/importManagerSettings.js';
 
+vi.mock('electron', () => ({
+  app: { getPath: vi.fn(() => '/tmp/foliole-user-data') }
+}));
+
+vi.mock('../managedPathSafety.js', () => ({
+  loadManagedPathCandidates: vi.fn(() => [])
+}));
+
 import { createKeepImportMonitor } from './keepImportMonitor.js';
 import { KeepImportWatchMissingDirectoryError } from './keepImportWatch.js';
 

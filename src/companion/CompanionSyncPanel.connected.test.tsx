@@ -51,7 +51,7 @@ function testSeparatesConnectionFromActivity() {
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
   expect(screen.getByText('Failed')).toBeInTheDocument();
-  expect(screen.getByText('Sync failed. Open Activity for details.')).toBeInTheDocument();
+  expect(screen.getByText('Sync needs attention. Open Activity for details.')).toBeInTheDocument();
   expect(screen.queryByText('Desktop sync timed out while fetching content blobs.')).not.toBeInTheDocument();
   expect(screen.queryByText('Synced')).not.toBeInTheDocument();
   screen.getByRole('button', { name: /Activity/ }).click();

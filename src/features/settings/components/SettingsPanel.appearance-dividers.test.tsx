@@ -16,7 +16,7 @@ it('edits workspace divider opacity from appearance settings', () => {
 
   const opacity = screen.getByLabelText('Workspace divider opacity');
 
-  expect(opacity).toHaveValue('0');
+  expect(opacity).toHaveValue('100');
 
   fireEvent.change(opacity, { target: { value: '24' } });
 

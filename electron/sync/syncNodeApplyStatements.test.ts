@@ -62,6 +62,7 @@ it('builds the canonical remote node upsert params', () => {
     1,
     0,
     null,
+    null,
     'Remote Node',
     1,
     1,

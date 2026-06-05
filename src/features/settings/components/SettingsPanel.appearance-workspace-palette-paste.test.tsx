@@ -49,7 +49,7 @@ it('pastes five hex colors into the free workspace palette', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   fireEvent.click(screen.getByRole('button', { name: 'Add palette color' }));
   fireEvent.click(screen.getByRole('button', { name: 'Palette color 6' }));
-  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main doc' }));
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main document' }));
   fireEvent.click(screen.getByRole('button', { name: 'Paste free palette' }));
 
   await waitFor(() => {

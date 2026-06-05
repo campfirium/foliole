@@ -43,7 +43,7 @@ it('keeps incrementing Untitled titles while the series still exists', async () 
   expect(useWorkspaceStore.getState().nodesById[fourthId]?.title).toBe('Untitled 3');
 });
 
-it('resets Untitled titles after the series is fully removed', async () => {
+it('keeps Untitled titles monotonic after the visible series is removed', async () => {
   resetToEmptyWorkspace();
 
   const firstId = (await useWorkspaceStore.getState().createRootNode())!;
@@ -54,7 +54,7 @@ it('resets Untitled titles after the series is fully removed', async () => {
 
   const resetId = (await useWorkspaceStore.getState().createRootNode())!;
 
-  expect(useWorkspaceStore.getState().nodesById[resetId]?.title).toBe('Untitled');
+  expect(useWorkspaceStore.getState().nodesById[resetId]?.title).toBe('Untitled 2');
 });
 
 it('increments Untitled titles per parent when creating empty child nodes', async () => {

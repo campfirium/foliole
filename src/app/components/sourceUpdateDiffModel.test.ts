@@ -19,7 +19,7 @@ describe('buildSourceUpdateDiffModel', () => {
     expect(model.updated.decorations.lineDecorations).toEqual([]);
     expect(model.current.decorations.spacerDecorations).toEqual([]);
     expect(model.updated.decorations.spacerDecorations).toEqual([
-      { beforeLineNumber: 3, kind: 'removed', lines: [{ className: null, lineNumber: 3, text: 'left only' }] }
+      { beforeLineNumber: 3, kind: 'removed', lines: [{ className: 'cm-line-paragraph', lineNumber: 3, text: 'left only' }] }
     ]);
   });
 
@@ -30,7 +30,7 @@ describe('buildSourceUpdateDiffModel', () => {
     expect(model.updated.decorations.lineDecorations).toEqual([]);
     expect(model.current.decorations.spacerDecorations).toEqual([]);
     expect(model.updated.decorations.spacerDecorations).toEqual([
-      { beforeLineNumber: 3, kind: 'removed', lines: [{ className: null, lineNumber: 3, text: 'beta' }] }
+      { beforeLineNumber: 3, kind: 'removed', lines: [{ className: 'cm-line-paragraph', lineNumber: 3, text: 'beta' }] }
     ]);
   });
 
@@ -51,8 +51,8 @@ describe('buildSourceUpdateDiffModel', () => {
         beforeLineNumber: 2,
         kind: 'added',
         lines: [
-          { className: null, lineNumber: 2, text: '123' },
-          { className: null, lineNumber: 3, text: '123' }
+          { className: 'cm-line-paragraph', lineNumber: 2, text: '123' },
+          { className: 'cm-line-paragraph', lineNumber: 3, text: '123' }
         ]
       }
     ]);

@@ -132,6 +132,35 @@ function createFloatingBar() {
   };
 }
 
+function expectFsrsReviewRecordSaved() {
+  expect(syncObjectMock.saveCompanionSyncNodeReviewRecord).toHaveBeenCalledWith(expect.objectContaining({
+    nodeId: 'item-1',
+    review: expect.objectContaining({
+      difficulty: 3.8,
+      due: '2026-04-24T20:00:00.000Z',
+      lastReviewAt: '2026-04-22T08:10:00.000Z',
+      scheduledDays: 3
+    }),
+    reviewLog: expect.objectContaining({
+      cardAfter: expect.objectContaining({
+        difficulty: 3.8,
+        due: '2026-04-24T20:00:00.000Z',
+        last_review: '2026-04-22T08:10:00.000Z',
+        scheduled_days: 3
+      }),
+      cardBefore: expect.objectContaining({
+        difficulty: 4.2,
+        due: '2026-04-22T08:00:00.000Z',
+        last_review: '2026-04-20T08:00:00.000Z',
+        scheduled_days: 2
+      }),
+      grade: 3,
+      reviewedAt: '2026-04-22T08:10:00.000Z',
+      schedulerVersion: 'ts-fsrs@5.4.1 using FSRS-6.0|dr=0.90|mi=36500|ds=4|st=0|pqdp=5|pqpr=5.00|pqmx=1:5|pqii=86400000|pqgr=1.10-1.50'
+    })
+  }));
+}
+
 describe('useCompanionArticleSurface fsrs sync', () => {
   beforeEach(() => {
     schedulerGrade.mockReset();
@@ -160,14 +189,7 @@ describe('useCompanionArticleSurface fsrs sync', () => {
       await result.current.handleGradeReview(3);
     });
 
-    expect(syncObjectMock.saveCompanionSyncNodeReviewRecord).toHaveBeenCalledWith(expect.objectContaining({
-      nodeId: 'item-1',
-      reviewLog: expect.objectContaining({
-        grade: 3,
-        reviewedAt: '2026-04-22T08:10:00.000Z',
-        schedulerVersion: 'ts-fsrs@5.4.0 using FSRS-6.0|dr=0.90|mi=36500|ds=4|st=0|pqdp=5|pqpr=5.00|pqmx=1:5|pqii=86400000|pqgr=1.10-1.50'
-      })
-    }));
+    expectFsrsReviewRecordSaved();
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord.mock.invocationCallOrder[0]!)
       .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]!);
   });

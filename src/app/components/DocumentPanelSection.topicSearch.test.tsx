@@ -41,7 +41,12 @@ async function createTopicSearchSession() {
     onRevealDocumentSelection: revealSelection
   });
   const bodyProps = documentPanelBodyMock.mock.calls.at(-1)?.[0];
-  bodyProps?.onEditorReady?.({ revealSelectionCentered, restoreSelection, setSearchDecorations } as never);
+  bodyProps?.onEditorReady?.({
+    onScroll: vi.fn(() => () => undefined),
+    revealSelectionCentered,
+    restoreSelection,
+    setSearchDecorations
+  } as never);
 
   return {
     input: await openTopicSearchInput(),

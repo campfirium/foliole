@@ -1,6 +1,10 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { syncNodeContentToRuntime, syncNodeContentWithAnchorsToRuntime, syncNodeOrderToRuntime } from './workspaceRuntimeSync';
+import {
+  syncCreateNodeMutationToRuntime,
+  syncNodeContentWithAnchorsMutationToRuntime,
+  syncNodeOrderToRuntime
+} from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -8,8 +12,11 @@ import {
 } from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  hasWorkspaceNodeMutationRuntime: vi.fn(() => false),
+  syncCreateNodeMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
+  syncNodeContentWithAnchorsMutationToRuntime: vi.fn(async () => null),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -20,6 +27,10 @@ vi.mock('./workspaceRuntimeSync', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 function createParentEditedFixture(content: string) {
@@ -114,11 +125,11 @@ function createHarnessWithActions(content: string) {
   return { actions, fixture, harness };
 }
 
-function runCreateHighlightLocatorCase() {
+async function runCreateHighlightLocatorCase() {
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
 
-  const nodeId = actions.createHighlightNodeFromSelection('node-1', 'Highlighted', 'hl-1', {
+  const nodeId = await actions.createHighlightNodeFromSelection('node-1', 'Highlighted', 'hl-1', {
     id: 'hl-1',
     kind: 'highlight',
     locator: {
@@ -129,9 +140,9 @@ function runCreateHighlightLocatorCase() {
   });
 
   expect(nodeId).not.toBeNull();
-  expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncCreateNodeMutationToRuntime).toHaveBeenCalledTimes(1);
   expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
-  expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
+  expect(syncCreateNodeMutationToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({
       id: nodeId,
       parentNodeId: 'node-1',
@@ -145,16 +156,21 @@ function runCreateHighlightLocatorCase() {
           to: 21
         }
       }
-    })
+    }),
+    expect.any(Array),
+    'node-1',
+    expect.any(Number)
   );
 }
 
-function runParentShiftLocatorCase() {
+async function runParentShiftLocatorCase() {
+  vi.useFakeTimers();
   const { actions, fixture, harness } = createHarnessWithActions('Alpha Beta Gamma');
   fixture.nodeOrder = [...fixture.nodeOrder, 'node-2'];
   fixture.nodesById['node-2']! = createHighlightChildNode('node-2');
 
-  actions.updateNodeContent('node-1', 'Start Alpha Beta Gamma');
+  await actions.updateNodeContent('node-1', 'Start Alpha Beta Gamma');
+  await vi.advanceTimersByTimeAsync(800);
 
   expect(harness.getState().nodesById['node-2']!).toEqual(
     expect.objectContaining({
@@ -167,8 +183,8 @@ function runParentShiftLocatorCase() {
       }
     })
   );
-  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledTimes(1);
-  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
+  expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({ id: 'node-1', content: 'Start Alpha Beta Gamma' }),
     [expect.objectContaining({
       id: 'node-2',
@@ -178,16 +194,18 @@ function runParentShiftLocatorCase() {
   );
 }
 
-function runRefreshedChildPayloadsCase() {
+async function runRefreshedChildPayloadsCase() {
+  vi.useFakeTimers();
   const { actions, fixture } = createHarnessWithActions('Alpha Beta Gamma');
   fixture.nodeOrder = [...fixture.nodeOrder, 'node-highlight', 'node-cloze'];
   fixture.nodesById['node-highlight'] = createHighlightChildNode('node-highlight');
   fixture.nodesById['node-cloze'] = createClozeChildNode();
 
-  actions.updateNodeContent('node-1', 'Alpha Better Gamma');
+  await actions.updateNodeContent('node-1', 'Alpha Better Gamma');
+  await vi.advanceTimersByTimeAsync(800);
 
-  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledTimes(1);
-  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
+  expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({ id: 'node-1', content: 'Alpha Better Gamma' }),
     [
       expect.objectContaining({
@@ -208,15 +226,17 @@ function runRefreshedChildPayloadsCase() {
   );
 }
 
-function runDeletedAnchorTextNoSyncCase() {
+async function runDeletedAnchorTextNoSyncCase() {
+  vi.useFakeTimers();
   const { actions, fixture } = createHarnessWithActions('Alpha Beta Gamma');
   fixture.nodeOrder = [...fixture.nodeOrder, 'node-highlight'];
   fixture.nodesById['node-highlight']! = createHighlightChildNode('node-highlight');
 
-  actions.updateNodeContent('node-1', 'Alpha  Gamma');
+  await actions.updateNodeContent('node-1', 'Alpha  Gamma');
+  await vi.advanceTimersByTimeAsync(800);
 
-  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledTimes(1);
-  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
+  expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({ id: 'node-1', content: 'Alpha  Gamma' }),
     [expect.objectContaining({
       id: 'node-highlight',

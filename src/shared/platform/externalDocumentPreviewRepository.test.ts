@@ -39,6 +39,8 @@ it('loads external document previews through the native external search command'
     folderId: 'folder-1',
     folderPath: '/library',
     importedNodeId: null,
+    isPresent: undefined,
+    lastOpenedAt: null,
     relativePath: 'topic.md'
   });
 });

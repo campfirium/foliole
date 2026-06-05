@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
@@ -144,6 +144,6 @@ it('ignores an active node id that is absent from the persisted nodes', () => {
     current
   );
 
-  expect(merged?.activeNodeId).toBeNull();
+  expect(merged?.activeNodeId).toBe(HOME_NODE_ID);
   expect(merged?.nodesById[INBOX_NODE_ID]?.id).toBe(INBOX_NODE_ID);
 });

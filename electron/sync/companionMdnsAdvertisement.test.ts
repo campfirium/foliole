@@ -18,7 +18,8 @@ vi.mock('bonjour-service', () => {
     }
   }
   return {
-    Bonjour: MockBonjour
+    Bonjour: MockBonjour,
+    default: MockBonjour
   };
 });
 

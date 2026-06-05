@@ -33,7 +33,7 @@ describe('workspace renderer boundary runtime confirmation', () => {
     resetWorkspaceStore();
   });
 
-  it('drops inactive node documents after runtime confirmation clears the pending edit', async () => {
+  it('keeps inactive local edits when runtime mutation has not confirmed them', async () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(null));
 
     useWorkspaceStore.setState({
@@ -59,7 +59,7 @@ describe('workspace renderer boundary runtime confirmation', () => {
     await Promise.resolve();
 
     expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
-      content: '',
+      content: 'Locally edited body',
       hasContent: true,
       reveal: null,
       hasReveal: false

@@ -1,4 +1,4 @@
-import { getElectronAPI } from '../../../shared/platform/electronApi';
+import { getGuidedSampleLocaleOverride } from '../../../shared/platform/runtimeConfig';
 
 export type GuidedSampleLocale = 'en-US' | 'zh-CN';
 
@@ -14,7 +14,7 @@ export function isSimplifiedChineseLanguage(language: string) {
 }
 
 export function resolveGuidedSampleLocale(languages: readonly string[] = readNavigatorLanguages()): GuidedSampleLocale {
-  const localeOverride = getElectronAPI()?.runtimeConfig?.guidedSampleLocale;
+  const localeOverride = getGuidedSampleLocaleOverride();
   if (localeOverride) {
     return localeOverride;
   }

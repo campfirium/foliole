@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react';
-import { useLayoutEffect, useMemo, useRef, type RefObject } from 'react';
+import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -125,7 +125,7 @@ function OutlineEmptyState(props: {
 
 function OutlineItemsNav(props: {
   activeIndex: number;
-  activeItemRef: RefObject<HTMLButtonElement | null>;
+  activeItemRef: MutableRefObject<HTMLButtonElement | null>;
   hasNestedLevels: boolean;
   onRevealPosition: (position: number) => void;
   treeItems: ReturnType<typeof resolveOutlineTreeItems>;
@@ -145,7 +145,9 @@ function OutlineItemsNav(props: {
                 getOutlineItemTone(item.level, index === props.activeIndex)
               )}
               onClick={() => props.onRevealPosition(item.from)}
-              ref={index === props.activeIndex ? props.activeItemRef : undefined}
+              ref={(element) => {
+                if (index === props.activeIndex) props.activeItemRef.current = element;
+              }}
               style={{ paddingLeft: props.hasNestedLevels ? `${0.45 + (item.level - 1) * 1.15}rem` : '0.75rem' }}
               type="button"
             >
@@ -187,7 +189,12 @@ export function WorkspaceRightSidebarOutlinePanel({
   }, [activeIndex]);
 
   if (outlineItems.length === 0) {
-    return <OutlineEmptyState emptyDescription={emptyDescription} emptyDescriptionKind={emptyDescriptionKind} />;
+    return (
+      <OutlineEmptyState
+        {...(emptyDescription === undefined ? {} : { emptyDescription })}
+        emptyDescriptionKind={emptyDescriptionKind}
+      />
+    );
   }
 
   return (

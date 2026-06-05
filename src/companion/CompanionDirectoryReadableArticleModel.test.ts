@@ -6,6 +6,7 @@ import {
 } from './CompanionDirectoryReadableArticleModel';
 
 function createArgs(selectedBrowseNodeId: string, trashedNodeIds: string[]) {
+  const nodeIds = Array.from(new Set([selectedBrowseNodeId, ...trashedNodeIds]));
   return {
     directorySelection: { kind: 'trash' as const },
     surface: {
@@ -16,6 +17,8 @@ function createArgs(selectedBrowseNodeId: string, trashedNodeIds: string[]) {
     workspaceSync: {
       state: {
         workspace_snapshot: {
+          nodeOrder: nodeIds,
+          nodesById: Object.fromEntries(nodeIds.map((id) => [id, { id }])),
           trashedNodeIds
         }
       }

@@ -9,7 +9,7 @@ if [[ ! -f "package.json" ]]; then
   exit 1
 fi
 
-target="${1:-}"; usage="Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release> [--fail-fast]"
+target="${1:-}"; usage="Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release|release-core|release-android-host> [--fail-fast]"
 QUALITY_GATE_COLLECT_FAILURES=1
 case "${2:-}" in
   --fail-fast) QUALITY_GATE_COLLECT_FAILURES=0 ;;
@@ -182,6 +182,15 @@ run_renderer_guards_if_present() {
   [[ ! -f "scripts/check-native-dialog-guard.mjs" ]] || run_quality_gate_script "${prefix}" "${pm}" "native-dialog:guard"
 }
 
+run_full_gate_steps() {
+  run_renderer_guards_if_present
+  run_repository_root_boundary_check_if_present
+  run_gate_steps check:android-boundary
+  run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
+  run_gate_steps test:desktop test:android test:shared test:sync-pack test:quality
+  run_gate_steps_parallel build electron:compile android:web:build
+  run_workspace_boundary_check_if_present
+}
 if quality_gate_should_print_step; then
   echo "[${prefix}] detected package manager: ${pm}"
 fi
@@ -216,28 +225,19 @@ case "${target}" in
     run_gate_steps check:android-boundary lint:shared:full typecheck:shared test:shared test:quality build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
-  full)
-    run_renderer_guards_if_present
-    run_repository_root_boundary_check_if_present
-    run_gate_steps check:android-boundary
-    run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
-    run_gate_steps test:desktop test:android test:shared test:sync-pack test:quality
-    run_gate_steps_parallel build electron:compile android:web:build
-    run_workspace_boundary_check_if_present
+  full|release-core)
+    run_full_gate_steps
     ;;
   release)
-    run_renderer_guards_if_present
-    run_repository_root_boundary_check_if_present
-    run_gate_steps check:android-boundary
-    run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
-    run_gate_steps test:desktop test:android test:shared test:sync-pack test:quality
-    run_gate_steps_parallel build electron:compile android:web:build
+    run_full_gate_steps
     run_gate_steps android:sync android:host:lint android:host:test
-    run_workspace_boundary_check_if_present
+    ;;
+  release-android-host)
+    run_gate_steps android:sync android:host:lint android:host:test
     ;;
   *)
     echo "[quality-gate-target] unknown target: ${target}"
-    echo "Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release>"
+    echo "${usage}"
     exit 1
     ;;
 esac

@@ -4,7 +4,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isHomeNode, isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { NODE_TITLE_SLOT_PADDING_TOP, shouldReserveNodeTitleSlot } from '../../shared/lib/nodeTitleSlot';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
-import { translate } from '../../shared/localization/translations';
+import { translate, type TranslationKey } from '../../shared/localization/translations';
 import { updateNodeImageState } from '../../shared/platform/performanceDiagnosticsProbe';
 import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
@@ -16,7 +16,18 @@ export { hasVisibleTitleHeading } from '../../shared/lib/nodeTitleSlot';
 const READER_END_CUSHION_PADDING = 'clamp(calc(var(--workspace-bottom-toolbar-height) + 1.5rem), 36dvh, 26rem)';
 const translateEn: Translate = (key, params) => translate('en', key, params);
 
-function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNode: Node | undefined) {
+interface DocumentEmptyStateKeys {
+  descriptionKey: TranslationKey;
+  titleKey: TranslationKey;
+}
+
+interface DocumentStartupState {
+  documentStatus?: ReturnType<typeof getNodeDocumentStatus>;
+  emptyState?: DocumentEmptyStateKeys;
+  loadingLabel?: string;
+}
+
+function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNode: Node | undefined): DocumentStartupState {
   if (props.isWorkspaceHydrated === false) {
     return {
       loadingLabel: 'Document progress',
@@ -68,9 +79,7 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
   }
 
   return {
-    documentStatus,
-    loadingLabel: undefined,
-    emptyState: undefined
+    documentStatus
   };
 }
 

@@ -18,7 +18,9 @@ it('finds an existing cloze at the editor cursor position', () => {
   } as unknown as Record<string, Node>;
 
   expect(findTextAnchorAtPosition('node-1', nodesById, 6, [])).toEqual({
+    canAdjustRange: true,
     kind: 'cloze',
+    locator: { from: 6, originalText: 'Beta', to: 10 },
     nodeId: 'cloze-1',
     originalText: 'Beta'
   });

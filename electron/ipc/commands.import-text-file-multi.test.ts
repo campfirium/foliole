@@ -44,7 +44,7 @@ vi.mock('../database/importPipeline.js', () => ({
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
 vi.mock('./paths.js', () => ({ resolveAppPaths: vi.fn() }));
 vi.mock('./storageCommands.js', () => ({ handleStorageCommand: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./review.js', () => ({
   reviewGrade: vi.fn(),
   reviewPreview: vi.fn()

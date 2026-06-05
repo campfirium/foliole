@@ -86,11 +86,11 @@ describe('check-repository-root-boundary', () => {
     expect(cliResult.exitCode).toBe(1);
     expect(output).toContain('status: VIOLATION');
     expect(output).toContain('unauthorized=docs,playwright-report,test-results');
-    expect(output).toContain('allowed=android,assets,build,electron,ios,lib,public,scripts,src,tests,.claude,.git,.github,.githooks,.lab');
+    expect(output).toContain('allowed=android,assets,build,electron,ios,lib,public,releases,scripts,src,tests,.agents,.claude,.git,.github,.githooks,.lab');
     expect(output).not.toContain('.tmp-fixture');
     expect(output).not.toContain('ref');
     expect(output).not.toContain('src-tauri');
-    expect(output).not.toContain('release');
+    expect(output).not.toContain('unauthorized=release');
     expect(output).not.toContain('trees');
   });
 });

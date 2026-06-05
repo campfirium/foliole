@@ -25,7 +25,7 @@ it('uses the unified settings shell surfaces for sidebar and content area', () =
   expect(dialog.className).toContain('shadow-settings');
   expect(dialog.className).toContain('rounded-lg');
   expect(within(sidebar).getByText('Foliole')).toBeVisible();
-  expect(within(sidebar).getByText('v0.6.1')).toBeVisible();
+  expect(within(sidebar).getByText('v0.6.2')).toBeVisible();
   expect(sidebar.querySelector('img[src*="foliole-app-icon"]')).not.toBeNull();
   expect(within(sidebar).queryByRole('textbox', { name: 'Search settings' })).not.toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'Search settings' })).toBeVisible();
@@ -42,8 +42,7 @@ it('keeps settings dividers aligned without title extension lines', () => {
 
   const pageTitleShell = screen.getByRole('heading', { level: 2, name: 'Review' }).parentElement;
   const sectionHeader = screen.getByRole('heading', { level: 3, name: 'Scheduler' }).parentElement?.parentElement;
-  const storageGroup = screen.getByText('Storage').parentElement?.parentElement;
-  const storageLabelRow = screen.getByText('Storage').parentElement;
+  const storageGroup = screen.getByText('Storage').parentElement?.parentElement?.parentElement;
   const desiredRetentionRow = screen.getByRole('heading', { level: 4, name: 'Desired retention' }).parentElement?.parentElement;
 
   expect(pageTitleShell?.className).not.toContain('border-b');
@@ -51,7 +50,6 @@ it('keeps settings dividers aligned without title extension lines', () => {
   expect(storageGroup?.className).toContain('before:left-3');
   expect(storageGroup?.className).toContain('before:right-3');
   expect(storageGroup?.className.split(' ')).not.toContain('border-t');
-  expect(storageLabelRow?.querySelector('[aria-hidden="true"]')).toBeNull();
   expect(desiredRetentionRow?.className).toContain('before:left-5');
   expect(desiredRetentionRow?.className).toContain('before:right-5');
 });

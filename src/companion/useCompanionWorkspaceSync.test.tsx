@@ -60,7 +60,8 @@ const syncObjectsMock = vi.hoisted(() => ({
 const workspaceSyncMock = vi.hoisted(() => ({
   loadCompanionReadableArticle: vi.fn<() => Promise<CompanionReadableArticle | null>>(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
-  recordCompanionWorkspaceSyncEvent: vi.fn()
+  recordCompanionWorkspaceSyncEvent: vi.fn(),
+  resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl)
 }));
 
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
@@ -73,6 +74,7 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   persistCompanionWorkspaceSnapshot: vi.fn(),
   recordCompanionWorkspaceSyncEvent: workspaceSyncMock.recordCompanionWorkspaceSyncEvent,
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
+  resolveReachableCompanionWorkspaceSyncEndpoint: workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint,
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
@@ -113,6 +115,7 @@ function resetCompanionWorkspaceSyncMocks() {
   workspaceSyncMock.recordCompanionWorkspaceSyncEvent
     .mockResolvedValueOnce(createSyncState(null))
     .mockResolvedValueOnce(createSyncState(createSnapshot()));
+  workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl) => endpointUrl);
   workspaceSyncMock.loadCompanionReadableArticle.mockResolvedValue({
     content: '# Synced topic\n\nBody',
     hideTitleHeading: false,

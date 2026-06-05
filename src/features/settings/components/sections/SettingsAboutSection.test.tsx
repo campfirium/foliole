@@ -5,6 +5,7 @@ vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
   copyDiagnosticReport: vi.fn()
 }));
 
+import { NATIVE_COMMANDS } from '../../../../../lib/platform/nativeCommands';
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
@@ -46,7 +47,7 @@ it('shows application info and copies the diagnostic report in the about section
   });
   renderWithLocalization(<SettingsAboutSection />);
 
-  expect(screen.getByText('Version 0.6.1')).toBeInTheDocument();
+  expect(screen.getByText('Version 0.6.2')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Check for Updates' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic report' }));
   await waitFor(() => {
@@ -91,43 +92,10 @@ it('shows the latest available release in About settings', () => {
   expect(screen.getByText('Foliole 0.1.1 is available.')).toBeInTheDocument();
 });
 
-it('shows skipped release notes for the available update in About settings', () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
-    cachedManifest: {
-      releases: [
-        { date: '2026-06-01', platforms: ['windows'], url: 'https://example.com/062', version: '0.6.2' },
-        { date: '2026-06-02', platforms: ['windows'], url: 'https://example.com/063', version: '0.6.3' }
-      ],
-      schemaVersion: 1
-    },
-    cachedReleaseNotes: {
-      en: {
-        '0.6.2': { notes: ['Review changes are easier to inspect.'], summary: 'Review improvements.' },
-        '0.6.3': { notes: ['Update checks show skipped versions.'] }
-      },
-      'zh-Hans': {
-        '0.6.2': { notes: ['更容易查看复习变化。'], summary: '复习体验改进。' },
-        '0.6.3': { notes: ['检查更新时会显示跳过的版本。'] }
-      }
-    },
-    dismissedVersion: null,
-    lastCheckedAt: '2026-06-02T00:00:00.000Z',
-    lastCheckStatus: 'available',
-    lastSeenVersion: '0.6.3',
-    latestReleaseUrl: 'https://example.com/063',
-    latestVersion: '0.6.3'
-  }));
-
-  renderWithLocalization(<SettingsAboutSection />);
-
-  expect(screen.getByText('Included updates')).toBeInTheDocument();
-  expect(screen.getByText('Version 0.6.2')).toBeInTheDocument();
-  expect(screen.getByText('Review changes are easier to inspect.')).toBeInTheDocument();
-  expect(screen.getByText('Update checks show skipped versions.')).toBeInTheDocument();
-});
-
-it('shows skipped release notes in Simplified Chinese', () => {
-  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
+it('shows release notes for the available update in About settings', async () => {
+  window.electronAPI!.invoke = vi.fn(async (command: string) =>
+    command === NATIVE_COMMANDS.appGetVersion ? '0.6.1' : null
+  ) as unknown as NativeInvoke;
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: {
       releases: [
@@ -137,10 +105,26 @@ it('shows skipped release notes in Simplified Chinese', () => {
     },
     cachedReleaseNotes: {
       en: {
-        '0.6.2': { notes: ['Review changes are easier to inspect.'] }
+        '0.6.2': {
+          notes: [
+            'Initial Simplified Chinese interface support is now available.',
+            'Inbox folder import now supports HTML files.',
+            'About settings can now show the changes included in available updates.',
+            'Reading material due dates now follow the learning day instead of a specific clock time.',
+            'The Flow panel no longer shows material that is not due yet.'
+          ]
+        }
       },
       'zh-Hans': {
-        '0.6.2': { notes: ['更容易查看复习变化。'], summary: '复习体验改进。' }
+        '0.6.2': {
+          notes: [
+            '已加入初步的简体中文界面支持。',
+            'Inbox 文件夹导入现在支持 HTML 格式。',
+            '关于设置现在会显示可用更新包含的变化。',
+            '阅读材料的到期时间现在按学习日计算，不再卡在具体时刻。',
+            'Flow 面板中不再出现未到期的材料。'
+          ]
+        }
       }
     },
     dismissedVersion: null,
@@ -153,10 +137,54 @@ it('shows skipped release notes in Simplified Chinese', () => {
 
   renderWithLocalization(<SettingsAboutSection />);
 
-  expect(screen.getByText('将获得的更新')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText('Included updates')).toBeInTheDocument());
+  expect(screen.getByText('Version 0.6.2')).toBeInTheDocument();
+  expect(screen.getByText('Initial Simplified Chinese interface support is now available.')).toBeInTheDocument();
+  expect(screen.getByText('About settings can now show the changes included in available updates.')).toBeInTheDocument();
+  expect(screen.getByText('The Flow panel no longer shows material that is not due yet.')).toBeInTheDocument();
+  expect(screen.queryByText('Review improvements.')).not.toBeInTheDocument();
+});
+
+it('shows release notes in Simplified Chinese', async () => {
+  window.electronAPI!.invoke = vi.fn(async (command: string) =>
+    command === NATIVE_COMMANDS.appGetVersion ? '0.6.1' : null
+  ) as unknown as NativeInvoke;
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
+    cachedManifest: {
+      releases: [
+        { date: '2026-06-01', platforms: ['windows'], url: 'https://example.com/062', version: '0.6.2' }
+      ],
+      schemaVersion: 1
+    },
+    cachedReleaseNotes: {
+      en: {
+        '0.6.2': { notes: ['Initial Simplified Chinese interface support is now available.'] }
+      },
+      'zh-Hans': {
+        '0.6.2': {
+          notes: [
+            '已加入初步的简体中文界面支持。',
+            '关于设置现在会显示可用更新包含的变化。'
+          ]
+        }
+      }
+    },
+    dismissedVersion: null,
+    lastCheckedAt: '2026-06-01T00:00:00.000Z',
+    lastCheckStatus: 'available',
+    lastSeenVersion: '0.6.2',
+    latestReleaseUrl: 'https://example.com/062',
+    latestVersion: '0.6.2'
+  }));
+
+  renderWithLocalization(<SettingsAboutSection />);
+
+  await waitFor(() => expect(screen.getByText('将获得的更新')).toBeInTheDocument());
   expect(screen.getByText('版本 0.6.2')).toBeInTheDocument();
-  expect(screen.getByText('更容易查看复习变化。')).toBeInTheDocument();
-  expect(screen.queryByText('Review changes are easier to inspect.')).not.toBeInTheDocument();
+  expect(screen.getByText('已加入初步的简体中文界面支持。')).toBeInTheDocument();
+  expect(screen.getByText('关于设置现在会显示可用更新包含的变化。')).toBeInTheDocument();
+  expect(screen.queryByText('Initial Simplified Chinese interface support is now available.')).not.toBeInTheDocument();
 });
 
 it('shows About sections in application, support, and community order', () => {

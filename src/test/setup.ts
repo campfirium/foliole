@@ -1,5 +1,29 @@
 import '@testing-library/jest-dom/vitest';
 
+import { createElement, type ComponentType, type ReactNode } from 'react';
+import { vi } from 'vitest';
+
+import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
+
+vi.mock('@testing-library/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@testing-library/react')>();
+
+  return {
+    ...actual,
+    render(ui: Parameters<typeof actual.render>[0], options?: Parameters<typeof actual.render>[1]) {
+      const OriginalWrapper = options?.wrapper as ComponentType<{ children: ReactNode }> | undefined;
+      const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(
+          LocalizationProvider,
+          null,
+          OriginalWrapper ? createElement(OriginalWrapper, null, children) : children
+        );
+
+      return actual.render(ui, { ...options, wrapper });
+    }
+  };
+});
+
 if (!globalThis.DOMMatrix) {
   globalThis.DOMMatrix = class DOMMatrix {
     a = 1;

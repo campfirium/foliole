@@ -9,12 +9,16 @@ const MAX_ORDERED_FRAGMENTS = 128;
 const MIN_FRAGMENT_LENGTH = 4;
 const MAX_MARKDOWN_LINK_LABEL_LENGTH = 200;
 const MAX_MARKDOWN_LINK_DESTINATION_LENGTH = 500;
+const MARKDOWN_IMAGE_PATTERN = new RegExp(
+  `!\\[[^\\]]{0,${MAX_MARKDOWN_LINK_LABEL_LENGTH}}]\\([^\\)\\n]{1,${MAX_MARKDOWN_LINK_DESTINATION_LENGTH}}\\)`,
+  'g'
+);
 
 function stripQuoteMarkdown(value: string) {
   return value
     .replace(/\\([\\`*_{}[\]()#+.!<>|-])/g, '$1')
     .replace(/<([^>\s]+)>/g, ' $1 ')
-    .replace(/!\[[^\]]*]\([^)]+\)/g, (match) => ` ${match} `)
+    .replace(MARKDOWN_IMAGE_PATTERN, ' ')
     .replace(/\[\[([^\]|]+)\|([^\]]+)]]/g, '$2')
     .replace(/\[\[([^\]]+)]]/g, '$1')
     .replace(/(?<!!)\[]\([^)]+\)/g, ' ')

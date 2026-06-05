@@ -98,7 +98,7 @@ describe('CompanionApp bootstrap states', () => {
     render(<CompanionApp />);
 
     expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByLabelText('Learn')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Connect another device/ })).toBeInTheDocument();
   });
 

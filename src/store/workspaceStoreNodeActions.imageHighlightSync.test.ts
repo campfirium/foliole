@@ -1,6 +1,6 @@
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
-import { syncNodeContentWithAnchorsToRuntime } from './workspaceRuntimeSync';
+import { syncNodeContentWithAnchorsMutationToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -8,8 +8,11 @@ import {
 } from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  hasWorkspaceNodeMutationRuntime: vi.fn(() => false),
+  syncCreateNodeMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
+  syncNodeContentWithAnchorsMutationToRuntime: vi.fn(async () => null),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -18,7 +21,12 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
-it('keeps imported image highlights as image regions when parent image markdown is localized', () => {
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+it('keeps imported image highlights as image regions when parent image markdown is localized', async () => {
+  vi.useFakeTimers();
   const remoteImage = '![](https://tvax2.sinaimg.cn/large/66fd066bgy1hwdjok6tdfj20zk0qoqoq.jpg)';
   const localImage = '![](asset://7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec.jpg)';
   const fixture = createWorkspaceNodeActionsFixture();
@@ -49,7 +57,8 @@ it('keeps imported image highlights as image regions when parent image markdown 
   const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
   const actions = createWorkspaceNodeActions(harness.setState);
 
-  actions.updateNodeContent('node-1', `Lead\n\n${localImage}`);
+  await actions.updateNodeContent('node-1', `Lead\n\n${localImage}`);
+  await vi.advanceTimersByTimeAsync(800);
 
   expect(harness.getState().nodesById['node-image-highlight']).toEqual(
     expect.objectContaining({
@@ -62,7 +71,7 @@ it('keeps imported image highlights as image regions when parent image markdown 
       }]
     })
   );
-  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
+  expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({ id: 'node-1', content: `Lead\n\n${localImage}` }),
     [expect.objectContaining({
       id: 'node-image-highlight',

@@ -49,9 +49,7 @@ function tryConsumeMarkdownLink(raw: string, index: number, state: { normalized:
     return 0;
   }
   if (isImage) {
-    for (let cursor = index; cursor <= linkEnd; cursor += 1) {
-      appendNormalizedCharacter(state, raw[cursor] ?? '', cursor);
-    }
+    appendCompactWhitespace(state, index);
   } else {
     for (let cursor = labelStart; cursor < labelEnd; cursor += 1) {
       appendNormalizedCharacter(state, raw[cursor] ?? '', cursor);

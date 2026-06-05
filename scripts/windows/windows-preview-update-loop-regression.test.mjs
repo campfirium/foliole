@@ -1,8 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import os from 'node:os';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +12,7 @@ import { startIntentConsumer } from './windows-preview-regression-test-support.m
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-preview.sh');
+const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp-tests');
 const RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
 const TEST_PREVIEW_TIMEOUTS = {
   WINDOWS_PREVIEW_TIMEOUT_SECONDS: '2',
@@ -94,7 +94,8 @@ async function readRendererReloadDelivery(rootDir) {
 
 describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
   it('requests renderer reload intent for Class A after sync', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-regression-'));
+    await mkdir(TEMP_ROOT_BASE, { recursive: true });
+    const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'windows-preview-regression-'));
     const consumer = startIntentConsumer(tempRoot, 'renderer-reload', REPO_ROOT);
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
@@ -137,7 +138,8 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
   });
 
   it('classifies mixed renderer and electron changes as a runtime restart intent', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-regression-'));
+    await mkdir(TEMP_ROOT_BASE, { recursive: true });
+    const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'windows-preview-regression-'));
     const consumer = startIntentConsumer(tempRoot, 'restart', REPO_ROOT);
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
@@ -175,7 +177,8 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
   });
 
   it('chooses fallback-start when the client is stopped even with electron changes', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-regression-'));
+    await mkdir(TEMP_ROOT_BASE, { recursive: true });
+    const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'windows-preview-regression-'));
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,

@@ -7,7 +7,7 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { SettingsImportManagementContent } from './SettingsImportManagementContent';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 
-it('shows linked folders directly in settings', () => {
+it('shows watched folders directly in settings', () => {
   const settings = createDefaultImportManagerSettings();
 
   renderWithLocalization(
@@ -26,8 +26,8 @@ it('shows linked folders directly in settings', () => {
     />
   );
 
-  expect(screen.getByText('Linked folders')).toBeInTheDocument();
-  expect(screen.getByRole('table', { name: 'Linked folders' })).toBeInTheDocument();
+  expect(screen.getByText('Watched folders')).toBeInTheDocument();
+  expect(screen.getByRole('table', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByText('Original')).toBeInTheDocument();
   expect(screen.getByText('Highlight')).toBeInTheDocument();
   expect(screen.getByText('Handling')).toBeInTheDocument();

@@ -278,20 +278,43 @@ describe('quality-gate-target.sh', () => {
       const result = await runTargetGate(tempRoot, 'release');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('release lint ok');
-      expect(result.stdout).toContain('release desktop typecheck ok');
-      expect(result.stdout).toContain('release android typecheck ok');
-      expect(result.stdout).toContain('release deduped test ok');
-      expect(result.stdout).toContain('release build ok');
+      const fullGateMessages = [
+        'release lint ok', 'release desktop typecheck ok', 'release android typecheck ok', 'release deduped test ok',
+        'release build ok', 'release electron compile ok', 'release android web build ok'
+      ];
+      const androidHostMessages = ['release android sync ok', 'release android host lint ok', 'release android host test ok'];
+      for (const message of fullGateMessages) {
+        expect(result.stdout).toContain(message);
+      }
       expect(result.stdout).toContain('[quality-gate:release] running in parallel: build electron:compile android:web:build');
-      expect(result.stdout).toContain('release electron compile ok');
-      expect(result.stdout).toContain('release android web build ok');
-      expect(result.stdout).toContain('release android sync ok');
-      expect(result.stdout).toContain('release android host lint ok');
-      expect(result.stdout).toContain('release android host test ok');
+      for (const message of androidHostMessages) {
+        expect(result.stdout).toContain(message);
+      }
       expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('workspace boundary ok');
       expect(result.stdout).toContain('[quality-gate:release] all checks passed.');
+
+      const releaseCoreResult = await runTargetGate(tempRoot, 'release-core');
+
+      expect(releaseCoreResult.code).toBe(0);
+      for (const message of fullGateMessages) {
+        expect(releaseCoreResult.stdout).toContain(message);
+      }
+      for (const message of androidHostMessages) {
+        expect(releaseCoreResult.stdout).not.toContain(message);
+      }
+      expect(releaseCoreResult.stdout).toContain('[quality-gate:release-core] all checks passed.');
+
+      const releaseAndroidHostResult = await runTargetGate(tempRoot, 'release-android-host');
+
+      expect(releaseAndroidHostResult.code).toBe(0);
+      for (const message of androidHostMessages) {
+        expect(releaseAndroidHostResult.stdout).toContain(message);
+      }
+      for (const message of fullGateMessages) {
+        expect(releaseAndroidHostResult.stdout).not.toContain(message);
+      }
+      expect(releaseAndroidHostResult.stdout).toContain('[quality-gate:release-android-host] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -378,7 +401,9 @@ describe('quality-gate-target.sh', () => {
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('[quality-gate-target] unknown target: unknown-target');
-      expect(result.stdout).toContain('Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release>');
+      expect(result.stdout).toContain(
+        'Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release|release-core|release-android-host>'
+      );
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

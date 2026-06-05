@@ -11,6 +11,8 @@ import {
 } from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  hasWorkspaceNodeMutationRuntime: vi.fn(() => false),
+  syncCreateNodeMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),

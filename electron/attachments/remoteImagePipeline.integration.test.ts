@@ -14,6 +14,7 @@ const { importImageAttachmentBytes, resolveImageMimeType, normalizeImageFileName
 }));
 
 vi.mock('electron', () => ({
+  app: { getPath: vi.fn(() => '/tmp/foliole-user-data') },
   protocol: {
     handle,
     registerSchemesAsPrivileged
@@ -24,6 +25,10 @@ vi.mock('./importImageAttachmentBytes.js', () => ({
   importImageAttachmentBytes,
   normalizeImageFileName,
   resolveImageMimeType
+}));
+
+vi.mock('./remoteImageSourceContext.js', () => ({
+  resolveRemoteImageSourceContext: vi.fn(() => ({ sourceOrigin: null }))
 }));
 
 import { buildRemoteImageRenderUrl } from '../../lib/platform/remoteImageProtocolUrl.js';

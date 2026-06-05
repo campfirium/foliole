@@ -1,4 +1,13 @@
 {
+  "0.6.2": {
+    "notes": [
+      "Initial Simplified Chinese interface support is now available.",
+      "Inbox folder import now supports HTML files.",
+      "About settings can now show the changes included in available updates.",
+      "Reading material due dates now follow the learning day instead of a specific clock time.",
+      "The Flow panel no longer shows material that is not due yet."
+    ]
+  },
   "0.6.1": {
     "summary": "Initial Windows alpha for local reading and review.",
     "notes": [

@@ -182,13 +182,13 @@ it('reorders a persisted reading queue by material source before resuming', () =
 
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([
     'a-1',
+    'b-4',
+    'b-3',
+    'b-2',
     'b-1',
     'a-6',
-    'b-4',
     'a-5',
-    'b-3',
     'a-4',
-    'b-2',
     'a-3',
     'a-2'
   ]);

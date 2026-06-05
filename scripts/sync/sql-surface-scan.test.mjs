@@ -2,7 +2,6 @@
 /* global process */
 
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCAN_SCRIPT = path.join(REPO_ROOT, 'scripts/sync/sql-surface-scan.mjs');
+const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp-tests');
 
 function runScan(rootDir) {
   return new Promise((resolve) => {
@@ -55,7 +55,8 @@ async function writeFixture(rootDir, source) {
 
 describe('sql-surface-scan', () => {
   it('reports iosRuntime as a non-blocking directed gap outside iOS scope', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'sql-surface-scan-'));
+    await mkdir(TEMP_ROOT_BASE, { recursive: true });
+    const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'sql-surface-scan-'));
     try {
       await writeFixture(tempRoot, completeSqlSurface());
 
@@ -72,7 +73,8 @@ describe('sql-surface-scan', () => {
   });
 
   it('fails when iosRuntime markers make the iOS SQL surface in scope', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'sql-surface-scan-'));
+    await mkdir(TEMP_ROOT_BASE, { recursive: true });
+    const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'sql-surface-scan-'));
     try {
       await writeFixture(tempRoot, completeSqlSurface('const capability = "iosRuntime";'));
 

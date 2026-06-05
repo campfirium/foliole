@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 
@@ -23,7 +24,7 @@ vi.mock('../../features/nodes/components/NodeBreadcrumbs', () => ({
 it('routes breadcrumb clicks to onSelectBreadcrumbNode', () => {
   const onSelectBreadcrumbNode = vi.fn();
 
-  render(
+  renderWithLocalization(
     <DocumentPanelHeader
       activeNodeId="node-1"
       backlinks={[]}

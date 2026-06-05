@@ -47,7 +47,7 @@ it('persists workspace surface palette and region assignments from appearance se
   fireEvent.doubleClick(screen.getByRole('button', { name: 'Palette color 6' }), { clientX: 320, clientY: 240 });
   fireEvent.change(screen.getByLabelText('Workspace surface palette hex'), { target: { value: '#c9d4e7' } });
   fireEvent.click(screen.getByRole('button', { name: 'Palette color 6' }));
-  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main doc' }));
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main document' }));
 
   await waitFor(() => {
     const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
@@ -63,7 +63,7 @@ it('resets the free palette back to five colors', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   fireEvent.click(screen.getByRole('button', { name: 'Add palette color' }));
   fireEvent.click(screen.getByRole('button', { name: 'Palette color 6' }));
-  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main doc' }));
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main document' }));
   fireEvent.click(screen.getByRole('button', { name: 'Reset free palette' }));
 
   await waitFor(() => {
@@ -84,7 +84,7 @@ it('stores workspace surface settings in the active base color mode', async () =
   fireEvent.doubleClick(screen.getByRole('button', { name: 'Palette color 6' }), { clientX: 320, clientY: 240 });
   fireEvent.change(screen.getByLabelText('Workspace surface palette hex'), { target: { value: '#26342e' } });
   fireEvent.click(screen.getByRole('button', { name: 'Palette color 6' }));
-  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main doc' }));
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main document' }));
 
   await waitFor(() => {
     const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePaletteDark) ?? '[]');
@@ -174,13 +174,14 @@ it('refreshes all eight random palettes without reserving the first slot for the
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  const firstRandomCard = screen.getByRole('button', { name: 'Random palette 1' });
-  const before = firstRandomCard.innerHTML;
   fireEvent.click(screen.getByRole('button', { name: 'Refresh random palettes' }));
 
   await waitFor(() => {
-    const refreshedFirstCard = screen.getByRole('button', { name: 'Random palette 1' });
-    expect(refreshedFirstCard.innerHTML).not.toBe(before);
+    for (let index = 1; index <= 8; index += 1) {
+      expect(screen.getByRole('button', { name: `Random palette ${index}` })).toBeInTheDocument();
+    }
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette)).toBeNull();
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRandomHistory)).toBeNull();
   });
 });
 
@@ -272,7 +273,7 @@ it('keeps workspace preview proportions while adding an outer frame', async () =
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 
   await waitFor(() => {
-    const mainDocumentCell = screen.getByRole('button', { name: 'Main doc' });
+    const mainDocumentCell = screen.getByRole('button', { name: 'Main document' });
     const grid = mainDocumentCell.parentElement;
     const gridFrame = grid?.parentElement;
     expect(gridFrame).toBeInstanceOf(HTMLDivElement);

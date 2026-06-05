@@ -14,10 +14,15 @@ import {
 
 const invoke = vi.fn();
 const getElectronAPI = vi.fn();
+const getRuntimeInvoke = vi.fn();
 const isDesktopRuntime = vi.fn();
 
 vi.mock('./electronApi', () => ({
   getElectronAPI: () => getElectronAPI()
+}));
+
+vi.mock('./runtimeInvoke', () => ({
+  getRuntimeInvoke: () => getRuntimeInvoke()
 }));
 
 vi.mock('./runtime', () => ({
@@ -27,20 +32,23 @@ vi.mock('./runtime', () => ({
 beforeEach(() => {
   invoke.mockReset();
   getElectronAPI.mockReset();
+  getRuntimeInvoke.mockReset();
   isDesktopRuntime.mockReset();
 });
 
 it('reports unavailable controls outside desktop runtime', async () => {
   isDesktopRuntime.mockReturnValue(false);
   getElectronAPI.mockReturnValue(null);
+  getRuntimeInvoke.mockReturnValue(null);
 
   expect(isWindowControlsAvailable()).toBe(false);
   await expect(queryMainWindowMaximized()).resolves.toBe(false);
 });
 
-it('uses invoke fallback when windowControls is missing', async () => {
+it('uses runtime invoke for window commands and electron bridge for resize events', async () => {
   isDesktopRuntime.mockReturnValue(true);
   invoke.mockResolvedValueOnce(true).mockResolvedValue(null);
+  getRuntimeInvoke.mockReturnValue(invoke);
   const onWindowResized = vi.fn().mockReturnValue(() => undefined);
   getElectronAPI.mockReturnValue({ invoke, onManagedInboxUpdated: vi.fn(), onNativeMenuCommand: vi.fn(), onWindowResized });
 
@@ -64,9 +72,10 @@ it('uses invoke fallback when windowControls is missing', async () => {
   expect(onWindowResized).toHaveBeenCalledTimes(1);
 });
 
-it('uses typed invoke for window commands when desktop bridge is available', async () => {
+it('uses runtime invoke for window commands when desktop bridge is available', async () => {
   isDesktopRuntime.mockReturnValue(true);
   invoke.mockResolvedValueOnce(false).mockResolvedValue(null);
+  getRuntimeInvoke.mockReturnValue(invoke);
   getElectronAPI.mockReturnValue({
     invoke,
     onManagedInboxUpdated: vi.fn(),

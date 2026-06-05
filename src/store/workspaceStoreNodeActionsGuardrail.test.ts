@@ -101,12 +101,18 @@ describe('workspace node actions runtime guardrail', () => {
   });
 
   it('updateNodeContent uses update_node_content only and never save_workspace_state', async () => {
-    const { actions, invoke, seedNodeId } = await createActionsHarness();
+    vi.useFakeTimers();
+    try {
+      const { actions, invoke, seedNodeId } = await createActionsHarness();
 
-    await actions.updateNodeContent(seedNodeId, '# Updated title\n\nBody');
+      await actions.updateNodeContent(seedNodeId, '# Updated title\n\nBody');
+      await vi.advanceTimersByTimeAsync(800);
 
-    expect(getInvokedCommands(invoke)).toEqual(['update_node_content_with_anchors']);
-    expectNoWorkspacePersist(invoke);
+      expect(getInvokedCommands(invoke)).toEqual(['update_node_content_with_anchors']);
+      expectNoWorkspacePersist(invoke);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('createChildNode uses sqlite commands and never save_workspace_state', async () => {

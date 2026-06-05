@@ -46,20 +46,6 @@ function isCommandTuple(command) {
   return Array.isArray(command) && command.length > 0 && command.every((part) => typeof part === 'string');
 }
 
-function stopActiveChild(signal) {
-  if (!activeChild || activeChild.exitCode !== null || activeChild.signalCode !== null) {
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => {
-    const timer = globalThis.setTimeout(resolve, 1_000);
-    activeChild.once('close', () => {
-      globalThis.clearTimeout(timer);
-      resolve();
-    });
-    activeChild.kill(signal);
-  });
-}
-
 function runCommand(command, env) {
   return new Promise((resolve) => {
     const { args, bin } = normalizeSpawnCommand(command);
