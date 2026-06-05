@@ -49,7 +49,6 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createFolder)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createTopic)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createItem)).toBe(true);
-  expect(items.some((item) => item.id === APP_COMMAND_IDS.createVirtualNode)).toBe(true);
   expect(items.find((item) => item.id === APP_COMMAND_IDS.undo)).toMatchObject({ enabled: false, title: 'Undo' });
   expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)).toMatchObject({ enabled: false, title: 'Redo' });
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
@@ -64,7 +63,6 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
-  expect(items.some((item) => item.id === APP_COMMAND_IDS.openImportManagement)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openReadwiseReaderSettings)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.setPdfDarkAppearanceOriginal)).toBe(true);

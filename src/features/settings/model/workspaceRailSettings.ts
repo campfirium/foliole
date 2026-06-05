@@ -64,6 +64,7 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
 ];
 
 const WORKSPACE_RAIL_SECTIONS: WorkspaceRailSection[] = ['top', 'bottom', 'fixed'];
+const RETIRED_IMPORT_MANAGEMENT_COMMAND_ID = 'import.openManagement';
 
 export const WORKSPACE_RAIL_COMMAND_LABELS: Record<string, string> = {
   [APP_COMMAND_IDS.importSingleFile]: 'Import',
@@ -89,7 +90,7 @@ function isWorkspaceRailSection(value: string): value is WorkspaceRailSection {
 }
 
 function isRetiredRailCommand(commandId: string) {
-  return commandId === APP_COMMAND_IDS.openImportManagement;
+  return commandId === RETIRED_IMPORT_MANAGEMENT_COMMAND_ID;
 }
 
 function isValidPersistedItem(item: WorkspaceRailItemConfig) {

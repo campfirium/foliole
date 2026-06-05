@@ -14,7 +14,6 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
   createSelectionCloze: () => void;
   createSelectionHighlight: () => void;
   createTopic: () => void;
-  createVirtualNode: () => void;
   addSelectionNote: () => void;
   repairTable: () => boolean;
   enterPriorityMode: () => void;
@@ -44,7 +43,6 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
   revisitReviewTopicSoon: () => Promise<boolean>;
   redoWorkspaceAction: () => boolean;
   isReviewMode: boolean;
-  openImportManagement: () => void;
   openPerformancePanel: () => void;
   openGuidedSample: () => Promise<boolean>;
   openNotesView: () => void;
@@ -146,7 +144,6 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     createSelectionCloze: args.createSelectionCloze,
     createSelectionHighlight: args.createSelectionHighlight,
     createTopic: args.createTopic,
-    createVirtualNode: args.createVirtualNode,
     addSelectionNote: args.addSelectionNote,
     repairTable: args.repairTable,
     enterPriorityMode: args.enterPriorityMode,
@@ -172,7 +169,6 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     reimportSelectedTopic: () => {
       void args.reimportSelectedTopic();
     },
-    openImportManagement: args.openImportManagement,
     openPerformancePanel: args.openPerformancePanel,
     resetImportData: () => runResetImportDataCommand(args),
     toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,

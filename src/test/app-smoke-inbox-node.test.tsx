@@ -145,8 +145,8 @@ it('keeps virtual folders out of the main tree and shows a separate lower Virtua
   fireEvent.click(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual' }));
 
   expect(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual' })).toBeInTheDocument();
-  expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Create Virtual Folder' })).not.toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Create Folder' })).not.toBeInTheDocument();
 });
 
 it('shows import and clipboard import actions in the left toolbar without Watch Manager', () => {

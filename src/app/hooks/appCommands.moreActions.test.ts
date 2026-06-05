@@ -39,7 +39,6 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     createSelectionCloze: () => undefined,
     createSelectionHighlight: () => undefined,
     createTopic: () => undefined,
-    createVirtualNode: () => undefined,
     addSelectionNote: () => undefined,
     repairTable: () => undefined,
     enterPriorityMode: () => undefined,
@@ -58,7 +57,6 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     importSingleFile: () => undefined,
     reimportSelectedTopic: () => undefined,
     openPerformancePanel: () => undefined,
-    openImportManagement: () => undefined,
     resetImportData: () => undefined,
     toggleDevReviewStatusBarPersistence: () => undefined,
     openGuidedSample: () => undefined,
@@ -97,14 +95,6 @@ it('runs create topic through the shared command handler', () => {
   expectCommandRuns(APP_COMMAND_IDS.createTopic, { createTopic });
 
   expect(createTopic).toHaveBeenCalledTimes(1);
-});
-
-it('runs create virtual node through the shared command handler', () => {
-  const createVirtualNode = vi.fn();
-
-  expectCommandRuns(APP_COMMAND_IDS.createVirtualNode, { createVirtualNode });
-
-  expect(createVirtualNode).toHaveBeenCalledTimes(1);
 });
 
 it('runs restart app through the shared command handler', () => {

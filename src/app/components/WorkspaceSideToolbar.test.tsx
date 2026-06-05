@@ -12,11 +12,9 @@ function toolbar(isStudyMode: boolean, onRunRailAction = vi.fn(), canStartStudyM
   return (
     <WorkspaceSideToolbar
       canStartStudyMode={canStartStudyMode}
-      isImportManagementOpen={false}
       isSettingsOpen={false}
       isStudyMode={isStudyMode}
       reviewDueCount={3}
-      onOpenImportManagement={vi.fn()}
       onOpenSettings={vi.fn()}
       onRunRailAction={onRunRailAction}
       onStartClipboardImport={vi.fn()}
@@ -73,11 +71,9 @@ it('keeps the Flow button enabled when the current context cannot start Flow mod
       <WorkspaceRailSettingsProvider>
         <WorkspaceSideToolbar
           canStartStudyMode={false}
-          isImportManagementOpen={false}
           isSettingsOpen={false}
           isStudyMode={false}
           reviewDueCount={0}
-          onOpenImportManagement={vi.fn()}
           onOpenSettings={vi.fn()}
           onStartClipboardImport={vi.fn()}
           onStartImport={vi.fn()}

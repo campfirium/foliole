@@ -49,7 +49,6 @@ describe('getAppPaletteCommands', () => {
   it('assigns creation commands to the Create section', () => {
     expect(sectionFor(APP_COMMAND_IDS.createTopic)).toBe('Create');
     expect(sectionFor(APP_COMMAND_IDS.createFolder)).toBe('Create');
-    expect(sectionFor(APP_COMMAND_IDS.createVirtualNode)).toBe('Create');
   });
 
   it('keeps command palette sections aligned with the information architecture', () => {

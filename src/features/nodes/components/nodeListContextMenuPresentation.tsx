@@ -9,7 +9,6 @@ import {
 import type { ReactNode } from 'react';
 
 import type { FolderTopicItemCommandDefinition } from '../../../../lib/core/nodes/folderTopicItemCommands';
-import type { VirtualNodeCommandDefinition } from '../../../../lib/core/nodes/virtualNodeCommands';
 
 import { AppDropdownMenuItem, AppDropdownMenuSeparator, ActionHelpCard, type ActionHelpCardCopy } from '@/shared/ui';
 
@@ -55,7 +54,7 @@ export function NodeContextMenuItem({
   return help ? <ActionHelpCard help={help}>{item}</ActionHelpCard> : item;
 }
 
-export function iconForCreateCommand(command: FolderTopicItemCommandDefinition | VirtualNodeCommandDefinition) {
+export function iconForCreateCommand(command: FolderTopicItemCommandDefinition) {
   if ('kind' in command && command.kind === 'folder') return FolderPlus;
   if ('kind' in command && command.kind === 'item') return ListPlus;
   return FilePlus2;

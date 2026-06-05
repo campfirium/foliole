@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { useRef, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
 import { findFolderTopicItemCommandByAppCommandId } from '../../../../lib/core/nodes/folderTopicItemCommands';
-import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
@@ -189,10 +188,6 @@ export function NodeListPanel(props: NodeListPanelProps) {
         isVirtualViewOpen={props.isVirtualViewOpen}
         showVirtualCreateAction={props.showVirtualCreateAction}
         onCreateCommand={(commandId) => {
-          if (commandId === VIRTUAL_NODE_APP_COMMAND_ID) {
-            props.createVirtualNode();
-            return;
-          }
           const command = findFolderTopicItemCommandByAppCommandId(commandId);
           if (command) {
             props.createGlobalNode('', command.kind);

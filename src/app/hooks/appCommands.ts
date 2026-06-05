@@ -14,7 +14,6 @@ interface RunAppCommandActions {
   createFolder: () => void;
   createItem: () => void;
   createTopic: () => void;
-  createVirtualNode: () => void;
   enterPriorityMode: () => void;
   exportCurrentArticle: () => void | Promise<void>;
   findInTopic: () => void;
@@ -23,7 +22,6 @@ interface RunAppCommandActions {
   createSelectionCloze: () => void;
   addSelectionNote: () => void;
   repairTable: () => boolean | void;
-  openImportManagement: () => void;
   goBack: () => void;
   goForward: () => void;
   goToNode: () => void;
@@ -112,11 +110,9 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.createFolder]: actions.createFolder,
     [APP_COMMAND_IDS.createTopic]: actions.createTopic,
     [APP_COMMAND_IDS.createItem]: actions.createItem,
-    [APP_COMMAND_IDS.createVirtualNode]: actions.createVirtualNode,
     [APP_COMMAND_IDS.importSingleFile]: actions.importSingleFile,
     [APP_COMMAND_IDS.importFolder]: actions.importDirectory,
     [APP_COMMAND_IDS.clipboardImport]: actions.startClipboardImport,
-    [APP_COMMAND_IDS.openImportManagement]: actions.openImportManagement,
     [APP_COMMAND_IDS.resetImportData]: actions.resetImportData,
     [APP_COMMAND_IDS.openPerformancePanel]: actions.openPerformancePanel,
     [APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence]: actions.toggleDevReviewStatusBarPersistence,

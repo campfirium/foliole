@@ -1,5 +1,4 @@
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../lib/core/nodes/folderTopicItemCommands';
-import { VIRTUAL_NODE_COMMAND } from '../../../lib/core/nodes/virtualNodeCommands';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
 import { DEVELOPER_PALETTE_COMMANDS } from './appPaletteDeveloperCommands';
@@ -21,18 +20,11 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     section: 'Create',
     title: command.paletteTitle
   })),
-  {
-    id: VIRTUAL_NODE_COMMAND.appCommandId,
-    keywords: ['create', 'virtual', 'saved', 'view'],
-    section: 'Create',
-    title: VIRTUAL_NODE_COMMAND.paletteTitle
-  },
   { id: APP_COMMAND_IDS.undo, title: 'Undo', section: 'Workspace', keywords: ['undo', 'history'] },
   { id: APP_COMMAND_IDS.redo, title: 'Redo', section: 'Workspace', keywords: ['redo', 'history'] },
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
-  { id: APP_COMMAND_IDS.openImportManagement, title: 'Open Import Management', section: 'Import', keywords: ['import', 'manage', 'removed'] },
   ...DEVELOPER_PALETTE_COMMANDS,
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
   { id: APP_COMMAND_IDS.openGuidedSample, title: 'Open Guided Sample', section: 'Workspace', keywords: ['guide', 'sample', 'tutorial', 'start'] },

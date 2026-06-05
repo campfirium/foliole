@@ -7,10 +7,8 @@ import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
 export interface WorkspaceLeftRailProps {
   canStartStudyMode: boolean;
-  isImportManagementOpen: boolean;
   isSettingsOpen: boolean;
   isStudyMode: boolean;
-  onOpenImportManagement: () => void;
   onOpenSettings: () => void;
   onRunRailAction?: (commandId: string) => void;
   onStartClipboardImport: () => void;
@@ -36,10 +34,8 @@ export function selectWorkspaceLeftRailProps({
   const { imports, review, settings } = props;
   return {
     canStartStudyMode: review.canStartStudyMode,
-    isImportManagementOpen: imports.isImportManagementOpen,
     isSettingsOpen: settings.isSettingsOpen,
     isStudyMode: review.isStudyMode,
-    onOpenImportManagement: imports.onOpenImportManagement,
     onOpenSettings: settings.onOpenSettings,
     onStartClipboardImport: onStartClipboardImport ?? imports.onStartClipboardImport,
     onStartImport: onStartImport ?? (() => void imports.onRunImportFile()),
@@ -54,10 +50,8 @@ export function selectWorkspaceLeftRailProps({
 
 export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
   canStartStudyMode,
-  isImportManagementOpen,
   isSettingsOpen,
   isStudyMode,
-  onOpenImportManagement,
   onOpenSettings,
   onRunRailAction,
   onStartClipboardImport,
@@ -70,11 +64,9 @@ export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
     <div className="workspace-region-main-rail h-full">
       <WorkspaceSideToolbar
         canStartStudyMode={canStartStudyMode}
-        isImportManagementOpen={isImportManagementOpen}
         isSettingsOpen={isSettingsOpen}
         isStudyMode={isStudyMode}
         reviewDueCount={reviewDueCount}
-        onOpenImportManagement={onOpenImportManagement}
         onOpenSettings={onOpenSettings}
         onStartClipboardImport={onStartClipboardImport}
         onStartImport={onStartImport}

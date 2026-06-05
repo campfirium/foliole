@@ -3,7 +3,6 @@ import {
   findFolderTopicItemCommandByAppCommandId,
   resolveAllowedFolderTopicItemCommands
 } from '../../../../lib/core/nodes/folderTopicItemCommands';
-import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
 import { isVirtualNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
@@ -50,11 +49,6 @@ export function createCreateNodeHandler(
   menuState: NodeListCreateMenuState
 ) {
   return (commandId: string) => {
-    if (commandId === VIRTUAL_NODE_APP_COMMAND_ID) {
-      props.createVirtualNode();
-      props.contextMenu.closeContextMenu();
-      return;
-    }
     const command = findFolderTopicItemCommandByAppCommandId(commandId);
     if (!command || !canCreateCommandInSurface(command, menuState.createMenuSurface) || menuState.showVirtualCreateOnly) {
       props.contextMenu.closeContextMenu();

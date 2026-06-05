@@ -18,7 +18,6 @@ export function createPaletteRuntimeActions(args: {
       useWorkspaceStore.getState().startReviewSession,
       args.layoutProps.review.onStartStudyMode
     ),
-    openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     openNotesView: args.layoutProps.nodeList.onOpenNotesView,
     openPerformancePanel: () => requestWorkspaceRightPanelOpen('performance'),
     openPostponeTopicPanel: () => args.layoutProps.review.onOpenPostponeTopicPanel(),

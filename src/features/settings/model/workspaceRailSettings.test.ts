@@ -78,7 +78,7 @@ it('drops retired import management items from persisted rail settings', () => {
     ...DEFAULT_WORKSPACE_RAIL_ITEMS,
     {
       id: 'system.import-management',
-      commandId: APP_COMMAND_IDS.openImportManagement,
+      commandId: 'import.openManagement',
       section: 'top',
       order: 2,
       visible: true,

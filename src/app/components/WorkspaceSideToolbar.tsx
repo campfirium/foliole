@@ -19,14 +19,12 @@ import { WorkspaceThemeModeAction } from './WorkspaceThemeModeAction';
 
 interface WorkspaceSideToolbarProps {
   canStartStudyMode: boolean;
-  isImportManagementOpen: boolean;
   isStudyMode: boolean;
   isSettingsOpen: boolean;
   reviewDueCount: number;
   showStudyDock?: boolean;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
-  onOpenImportManagement: () => void;
   onOpenSettings: () => void;
   onRunRailAction?: (commandId: string) => void;
   onToggleReviewSession: () => void;
@@ -86,14 +84,13 @@ function FlowAction({
 }
 
 function useWorkspaceRailToolbarState({
-  onOpenImportManagement,
   onOpenSettings,
   onRunRailAction,
   onStartClipboardImport,
   onStartImport
 }: Pick<
   WorkspaceSideToolbarProps,
-  'onOpenImportManagement' | 'onOpenSettings' | 'onRunRailAction' | 'onStartClipboardImport' | 'onStartImport'
+  'onOpenSettings' | 'onRunRailAction' | 'onStartClipboardImport' | 'onStartImport'
 >) {
   const rail = useWorkspaceRailSettings();
   const [contextMenuPosition, setContextMenuPosition] = useState<{ left: number; top: number } | null>(null);
@@ -105,8 +102,6 @@ function useWorkspaceRailToolbarState({
       onStartImport();
     } else if (commandId === APP_COMMAND_IDS.clipboardImport) {
       onStartClipboardImport();
-    } else if (commandId === APP_COMMAND_IDS.openImportManagement) {
-      onOpenImportManagement();
     } else {
       onRunRailAction?.(commandId);
     }
