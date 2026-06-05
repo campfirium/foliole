@@ -10,6 +10,7 @@ import {
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
 
+import { SettingsExternalFoldersEnabledSwitch } from './sections/SettingsExternalFoldersEnabledSwitch';
 import {
   SettingsPanelDialog,
   type SettingsPanelCategoryProps
@@ -172,6 +173,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       activeResultIndex={search.activeResultIndex}
       categoryProps={categoryProps}
       description={props.description}
+      headerActions={props.activeCategory === 'external-search' ? <SettingsExternalFoldersEnabledSwitch /> : undefined}
       hotkeys={hotkeys}
       isBackdropTransparent={isBackdropTransparent}
       isPreviewActive={preview.isPreviewActive}

@@ -1,4 +1,4 @@
-import type { Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
@@ -31,6 +31,7 @@ type SettingsPanelDialogProps = {
   categoryProps: SettingsPanelCategoryProps;
   description: string;
   hotkeys: ReturnType<typeof useHotkeySettings>;
+  headerActions?: ReactNode;
   isBackdropTransparent: boolean;
   isPreviewActive: boolean;
   onActiveResultIndexChange: (index: number) => void;
@@ -66,7 +67,10 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
         </div>
         <div className="app-scrollbar min-h-0 flex-1 overflow-auto px-7 py-7" ref={props.scrollContainerRef}>
           <div className="mb-7 px-5 pb-6">
-            <AppDialogTitle>{props.title}</AppDialogTitle>
+            <div className="flex items-start justify-between gap-4">
+              <AppDialogTitle>{props.title}</AppDialogTitle>
+              {props.headerActions ? <div className="shrink-0 pt-1">{props.headerActions}</div> : null}
+            </div>
             <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{props.description}</p>
           </div>
           <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} />

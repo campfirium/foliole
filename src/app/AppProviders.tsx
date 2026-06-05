@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
+import { ExternalFoldersSettingsProvider } from '../features/settings/context/ExternalFoldersSettingsProvider';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 import { WorkspaceRailSettingsProvider } from '../features/settings/context/WorkspaceRailSettingsProvider';
@@ -11,13 +12,15 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <LocalizationProvider>
       <AppearanceSettingsProvider>
-        <MouseGestureSettingsProvider>
-          <ReviewSchedulerSettingsProvider>
-            <WorkspaceRailSettingsProvider>
-              <AppConfirmationProvider>{children}</AppConfirmationProvider>
-            </WorkspaceRailSettingsProvider>
-          </ReviewSchedulerSettingsProvider>
-        </MouseGestureSettingsProvider>
+        <ExternalFoldersSettingsProvider>
+          <MouseGestureSettingsProvider>
+            <ReviewSchedulerSettingsProvider>
+              <WorkspaceRailSettingsProvider>
+                <AppConfirmationProvider>{children}</AppConfirmationProvider>
+              </WorkspaceRailSettingsProvider>
+            </ReviewSchedulerSettingsProvider>
+          </MouseGestureSettingsProvider>
+        </ExternalFoldersSettingsProvider>
       </AppearanceSettingsProvider>
     </LocalizationProvider>
   );

@@ -133,3 +133,21 @@ it('places the external folder icon after the label and keeps the count separate
   expect(row).toHaveTextContent('1');
   expect(row.querySelector('[aria-label="External folder"]')).toBeInTheDocument();
 });
+
+it('hides the external folder section when external folders are disabled', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled, 'false');
+
+  renderWithLocalization(
+    <ExternalLibrarySection
+      entriesByFolderId={{}}
+      folders={[externalFolder('folder-1', '/library/1act')]}
+      isExternalViewOpen={false}
+      onOpenExternalLibrarySettings={vi.fn()}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ kind: 'root' }}
+    />
+  );
+
+  expect(screen.queryByRole('treeitem', { name: 'External' })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: /1act/i })).toBeNull();
+});

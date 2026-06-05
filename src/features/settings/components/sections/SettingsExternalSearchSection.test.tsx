@@ -1,6 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 
 import { SettingsExternalSearchSection } from './SettingsExternalSearchSection';
@@ -22,6 +23,7 @@ const baseProps = {
 };
 
 beforeEach(() => {
+  window.localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -77,4 +79,28 @@ it('shows a retryable alert when external sources fail to load', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
   expect(baseProps.onRetryLoad).toHaveBeenCalledTimes(1);
+});
+
+it('disables external folder controls without saving folder changes when turned off', () => {
+  const onUpdateFolder = vi.fn();
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled, 'false');
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[{
+    attachmentMode: 'document_relative_first_then_fixed_root',
+    attachmentRootPath: null,
+    createdAt: '2026-05-26T00:00:00.000Z',
+    documentCount: 3,
+    excludedDirs: [],
+    folderPath: 'D:\\Docs',
+    id: 'folder-1',
+    indexedAt: '2026-05-26T00:00:00.000Z',
+    lastError: null,
+    status: 'ready',
+    updatedAt: '2026-05-26T00:00:00.000Z'
+  }]} onUpdateFolder={onUpdateFolder} />);
+
+  expect(screen.getByRole('button', { name: 'Choose folder' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Update folder mirror' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Remove folder' })).toBeDisabled();
+  expect(screen.getByLabelText('Excluded folder names for D:\\Docs')).toBeDisabled();
+  expect(onUpdateFolder).not.toHaveBeenCalled();
 });

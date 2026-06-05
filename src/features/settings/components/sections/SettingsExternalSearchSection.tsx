@@ -9,6 +9,7 @@ import {
   SettingsSection,
   SettingsStateAction
 } from '../../../../shared/ui';
+import { useExternalFoldersSettings } from '../../context/ExternalFoldersSettingsProvider';
 
 import { ExternalLibraryRow, ExternalLibraryTable } from './SettingsExternalSearchSectionParts';
 
@@ -30,6 +31,7 @@ interface SettingsExternalSearchSectionProps {
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
   const t = useTranslation();
+  const externalFoldersSettings = useExternalFoldersSettings();
 
   if (props.isLoading) {
     return (
@@ -53,12 +55,14 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
         <ExternalLibraryTable
           folders={props.folders}
           isDesktopRuntime={props.isDesktopRuntime}
+          isEnabled={externalFoldersSettings.externalFoldersEnabled}
           isSaving={props.isSaving}
           onAddFolder={props.onAddFolder}
         >
           {props.folders.map((folder) => (
             <ExternalLibraryRow
               folder={folder}
+              isEnabled={externalFoldersSettings.externalFoldersEnabled}
               isSaving={props.isSaving}
               key={folder.id}
               onChooseAttachmentRoot={props.onChooseAttachmentRoot}

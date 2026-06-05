@@ -48,6 +48,7 @@ function ExternalLibraryPathButton(props: {
 }
 
 function ExternalLibraryExcludedInput(props: {
+  disabled: boolean;
   folder: ExternalSourceSettingsFolder;
   onUpdateFolder: ExternalLibraryFolderUpdate;
 }) {
@@ -57,6 +58,7 @@ function ExternalLibraryExcludedInput(props: {
     <input
       aria-label={t('settings.externalSources.excludedForAria', { path: props.folder.folderPath })}
       className={settingsFieldClassName()}
+      disabled={props.disabled}
       onChange={(event) =>
         props.onUpdateFolder(props.folder.id, {
           excludedDirs: event.target.value
@@ -161,10 +163,12 @@ export function ExternalLibraryTable(props: {
   children: ReactNode;
   folders: ExternalSourceSettingsFolder[];
   isDesktopRuntime: boolean;
+  isEnabled: boolean;
   isSaving: boolean;
   onAddFolder: () => void;
 }) {
   const t = useTranslation();
+  const disabled = props.isSaving || !props.isEnabled;
 
   return (
     <div className={settingsActionTableClassName()} role="table" aria-label={t('settings.externalSources.tableAria')}>
@@ -174,9 +178,9 @@ export function ExternalLibraryTable(props: {
           {props.folders.length > 0 ? (
             props.children
           ) : (
-            <ExternalLibraryDraftRow disabled={props.isSaving} onAddFolder={props.onAddFolder} />
+            <ExternalLibraryDraftRow disabled={disabled} onAddFolder={props.onAddFolder} />
           )}
-          <ExternalLibraryAddRow disabled={props.isSaving} onAddFolder={props.onAddFolder} />
+          <ExternalLibraryAddRow disabled={disabled} onAddFolder={props.onAddFolder} />
         </>
       ) : (
         <UnavailableState />
@@ -187,6 +191,7 @@ export function ExternalLibraryTable(props: {
 
 export function ExternalLibraryRow(props: {
   folder: ExternalSourceSettingsFolder;
+  isEnabled: boolean;
   isSaving: boolean;
   onChooseAttachmentRoot: (folderId: string) => void;
   onChooseFolder: (folderId: string) => void;
@@ -195,27 +200,28 @@ export function ExternalLibraryRow(props: {
   onUpdateFolder: ExternalLibraryFolderUpdate;
 }) {
   const t = useTranslation();
+  const disabled = props.isSaving || !props.isEnabled;
 
   return (
     <div className={settingsActionTableRowClassName(EXTERNAL_LIBRARY_COLUMNS)}>
       <ExternalLibraryPathButton
-        disabled={props.isSaving}
+        disabled={disabled}
         emptyLabel={t('settings.externalSources.chooseFolder')}
         label={t('settings.externalSources.chooseFolder')}
         onClick={() => void props.onChooseFolder(props.folder.id)}
         path={props.folder.folderPath}
       />
       <ExternalLibraryPathButton
-        disabled={props.isSaving}
+        disabled={disabled}
         emptyLabel={t('settings.externalSources.chooseFolder')}
         label={t('settings.externalSources.chooseAttachmentFolder')}
         onClick={() => void props.onChooseAttachmentRoot(props.folder.id)}
         path={props.folder.attachmentRootPath ?? ''}
       />
-      <ExternalLibraryExcludedInput folder={props.folder} onUpdateFolder={props.onUpdateFolder} />
+      <ExternalLibraryExcludedInput disabled={disabled} folder={props.folder} onUpdateFolder={props.onUpdateFolder} />
       <ExternalLibraryStatus folder={props.folder} />
       <ExternalLibraryRowActions
-        disabled={props.isSaving}
+        disabled={disabled}
         folderId={props.folder.id}
         onRebuildIndex={props.onRebuildIndex}
         onRemoveFolder={props.onRemoveFolder}

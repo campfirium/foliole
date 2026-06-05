@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
+import { useExternalFoldersSettings } from '../../features/settings/context/ExternalFoldersSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
@@ -50,6 +51,7 @@ function toggleCollapsed(nextId: string, setCollapsedIds: React.Dispatch<React.S
 
 export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
   const t = useTranslation();
+  const { externalFoldersEnabled } = useExternalFoldersSettings();
   const rowSpacing = getNodeListRowSpacing();
   const [folderOrder, setFolderOrder] = useState<ExternalLibraryFolderOrderItem[]>(loadExternalLibraryFolderOrder);
   const orderedFolders = useMemo(() => sortExternalLibraryFolders(props.folders, folderOrder), [folderOrder, props.folders]);
@@ -57,6 +59,10 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
   const rows = useExternalTreeRows({ ...props, folders: orderedFolders }, collapsedIds);
   const onRowKeyDown = useExternalRowKeyDown(collapsedIds, rows, props.onOpenExternalSelection, setCollapsedIds);
   const drag = useExternalFolderDrag(orderedFolders, setFolderOrder);
+
+  if (!externalFoldersEnabled) {
+    return null;
+  }
 
   return (
     <div className="mt-1 flex min-w-0 flex-col">
