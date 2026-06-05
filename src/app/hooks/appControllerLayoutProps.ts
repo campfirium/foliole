@@ -125,7 +125,7 @@ export interface BuildControllerLayoutPropsArgs {
   };
   runImportDirectory: () => Promise<boolean>;
   runClipboardImport: () => Promise<boolean>;
-  runImportFile: () => Promise<boolean>;
+  runImportFile: (options?: { onImportStarted?: () => void }) => Promise<boolean>;
 }
 
 export function buildAppControllerLayoutProps(args: BuildControllerLayoutPropsArgs) {

@@ -58,7 +58,7 @@ function resolveImportNotice(id: number, kind: ImportNoticeKind, imported: boole
 
 export function useWorkspaceActivityNotice(
   onStartClipboardImport: (detail?: ClipboardImportRequestDetail) => boolean | Promise<boolean>,
-  onStartFileImport: () => boolean | Promise<boolean>,
+  onStartFileImport: (options?: { onImportStarted?: () => void }) => boolean | Promise<boolean>,
   onOpenImportedTopic: (nodeId: string) => void
 ) {
   const t = useTranslation();
@@ -86,8 +86,21 @@ export function useWorkspaceActivityNotice(
   );
 
   const startFileImport = useCallback(
-    () => startImport('file', onStartFileImport),
-    [onStartFileImport, startImport]
+    async () => {
+      const id = Date.now();
+      let didStartImport = false;
+      const imported = await onStartFileImport({
+        onImportStarted: () => {
+          didStartImport = true;
+          setNotice({ id, message: formatLoadingMessage('file', t), nodeId: null, tone: 'loading' });
+        }
+      });
+      if (didStartImport || imported) {
+        setNotice(resolveImportNotice(id, 'file', imported, t));
+      }
+      return imported;
+    },
+    [onStartFileImport, t]
   );
 
   const openImportedTopic = useCallback(() => {

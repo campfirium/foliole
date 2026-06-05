@@ -3,18 +3,20 @@ import { useCallback, useEffect } from 'react';
 import { hasAppRuntimeCommandRepository } from '../../shared/platform/appRuntimeCommandRepository';
 import {
   runRuntimeClipboardImport,
-  runRuntimeDirectoryImport,
-  type RuntimeDirectoryImportResult,
-  type RuntimeTextImportResult
+  runRuntimeDirectoryImport
 } from '../../shared/platform/importExecutionRuntimeRepository';
 import { loadRuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { runFormalImportFileFlow } from './formalImportFileFlow';
+import { runFormalImportFileFlow, type FormalImportFileFlowOptions } from './formalImportFileFlow';
+import {
+  runImportFlow,
+  shouldRehydrateDirectoryImport,
+  shouldRehydrateWorkspace
+} from './formalImportFlowRunner';
 import { runResetImportDataFlow } from './formalImportReset';
 import {
-  applyCancelledImportStatus,
   applyImportFailureStatus,
   applyImportResultStatus,
   DEFAULT_IMPORT_OVERVIEW,
@@ -57,14 +59,6 @@ async function refreshFormalImportOverview(triggerImportId?: string) {
     overview,
     status: buildStatusFromOverview(overview)
   });
-}
-
-function shouldRehydrateWorkspace(result: RuntimeTextImportResult) {
-  return result.resultStatus === 'imported' && result.duplicateSemantic !== 'duplicate';
-}
-
-function shouldRehydrateDirectoryImport(result: RuntimeDirectoryImportResult) {
-  return result.entries.some((entry) => shouldRehydrateWorkspace(entry));
 }
 
 export function resetFormalImportState() {
@@ -162,13 +156,23 @@ function useFormalImportActions() {
           detail?.targetParentNodeId ? { targetParentNodeId: detail.targetParentNodeId } : undefined
         ),
         shouldRehydrateWorkspace,
+        refreshFormalImportOverview,
         applyImportResultStatus
       ),
     []
   );
-  const startImportFile = useCallback(() => runImportFlow(runFormalImportFileFlow, shouldRehydrateWorkspace, applyImportResultStatus), []);
+  const startImportFile = useCallback(
+    (options?: FormalImportFileFlowOptions) =>
+      runImportFlow(
+        () => runFormalImportFileFlow(options),
+        shouldRehydrateWorkspace,
+        refreshFormalImportOverview,
+        applyImportResultStatus
+      ),
+    []
+  );
   const startImportDirectory = useCallback(
-    () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport),
+    () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport, refreshFormalImportOverview),
     []
   );
   const resetImportData = useCallback(
@@ -192,36 +196,6 @@ function useFormalImportActions() {
     []
   );
   return { resetImportData, startClipboardImport, startImportDirectory, startImportFile };
-}
-
-async function runImportFlow<Result extends RuntimeTextImportResult | RuntimeDirectoryImportResult>(
-  runner: () => Promise<Result | null>,
-  shouldRehydrate: (result: Result) => boolean,
-  applyResultStatus?: (result: Result) => void
-) {
-  if (useFormalImportState.getState().isImporting) {
-    return false;
-  }
-  useFormalImportState.setState({ isImporting: true });
-  try {
-    const importResult = await runner();
-    if (!importResult) {
-      applyCancelledImportStatus();
-      return false;
-    }
-    if (shouldRehydrate(importResult) || applyResultStatus) {
-      await useWorkspaceStore.persist.rehydrate();
-    }
-    if (applyResultStatus) {
-      applyResultStatus(importResult);
-    }
-    await refreshFormalImportOverview();
-    useFormalImportState.setState({ isImporting: false });
-    return true;
-  } catch (error) {
-    applyImportFailureStatus(error instanceof Error ? error.message : 'Unknown import failure');
-    return false;
-  }
 }
 
 export function useFormalImport() {

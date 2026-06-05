@@ -8,6 +8,10 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { requestEpubImportReleaseMode } from './epubImportReleaseModeDialogStore';
 
+export interface FormalImportFileFlowOptions {
+  onImportStarted?: () => void;
+}
+
 async function applyPostImportEpubReadingMode(file: RuntimeImportedTextFile, result: RuntimeTextImportResult) {
   if (!result.nodeId || result.resultStatus === 'failed') {
     return;
@@ -20,11 +24,12 @@ async function applyPostImportEpubReadingMode(file: RuntimeImportedTextFile, res
   useWorkspaceStore.getState().setNodeSequentialReading(result.nodeId, mode === 'sequential');
 }
 
-export async function runFormalImportFileFlow(): Promise<RuntimeTextImportResult | null> {
+export async function runFormalImportFileFlow(options: FormalImportFileFlowOptions = {}): Promise<RuntimeTextImportResult | null> {
   const selectedFile = await selectRuntimeImportTextFile();
   if (!selectedFile) {
     return null;
   }
+  options.onImportStarted?.();
   if (selectedFile.kind !== 'epub') {
     return runRuntimeTextFileImport(undefined, undefined, { filePath: selectedFile.filePath });
   }

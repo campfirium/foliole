@@ -54,6 +54,26 @@ it('imports the selected non-EPUB file without opening the release mode dialog',
   });
 });
 
+it('notifies import start only after a file is selected', async () => {
+  const onImportStarted = vi.fn();
+  selectRuntimeImportTextFile.mockResolvedValue(null);
+
+  await runFormalImportFileFlow({ onImportStarted });
+
+  expect(onImportStarted).not.toHaveBeenCalled();
+
+  selectRuntimeImportTextFile.mockResolvedValue({
+    content: '# Note',
+    fileName: 'note.md',
+    filePath: '/tmp/note.md',
+    kind: 'markdown'
+  });
+
+  await runFormalImportFileFlow({ onImportStarted });
+
+  expect(onImportStarted).toHaveBeenCalledTimes(1);
+});
+
 it('imports the selected EPUB before asking for a post-import reading mode', async () => {
   const selectedFile = {
     content: '# Book',

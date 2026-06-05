@@ -135,7 +135,10 @@ it('opens the imported clipboard topic from the success notice', async () => {
 
 it('shows progress while a selected file is importing', async () => {
   const importResult = createDeferred<boolean>();
-  const onRunImportFile = vi.fn(() => importResult.promise);
+  const onRunImportFile = vi.fn((options?: { onImportStarted?: () => void }) => {
+    options?.onImportStarted?.();
+    return importResult.promise;
+  });
   getFormalImportLatestResult.mockReturnValue({ nodeId: 'node-imported', resultStatus: 'imported' });
 
   renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
@@ -181,9 +184,25 @@ it('forwards clipboard import request targets to the workspace notice controller
   importResult.resolve(false);
 });
 
-it('runs requested file imports through the workspace notice controller', async () => {
+it('does not show file import progress when file selection is cancelled', async () => {
+  const onRunImportFile = vi.fn(async () => false);
+
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
+
+  requestFileImport();
+
+  await waitFor(() => {
+    expect(onRunImportFile).toHaveBeenCalledTimes(1);
+  });
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+});
+
+it('shows an empty file import notice after a selected file imports no topic', async () => {
   const importResult = createDeferred<boolean>();
-  const onRunImportFile = vi.fn(() => importResult.promise);
+  const onRunImportFile = vi.fn((options?: { onImportStarted?: () => void }) => {
+    options?.onImportStarted?.();
+    return importResult.promise;
+  });
 
   renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
 
