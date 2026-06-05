@@ -28,7 +28,7 @@ const PDF_EXTENSIONS = new Set(['.pdf']);
 const TEXT_EXTENSIONS = new Set(['.txt']);
 const SKIPPED_DIRECTORY_NAMES = new Set(['.git', '.obsidian', 'node_modules']);
 
-export const MANAGED_INBOX_SUPPORTED_KINDS: ImportSourceKind[] = ['epub', 'markdown', 'pdf', 'text'];
+export const MANAGED_INBOX_SUPPORTED_KINDS: ImportSourceKind[] = ['epub', 'html', 'markdown', 'pdf', 'text'];
 
 function resolveDirectoryAdapter(
   rootIsObsidianVault: boolean,

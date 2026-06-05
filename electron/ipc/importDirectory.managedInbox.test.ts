@@ -59,7 +59,7 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
   const appDataDir = await createTempRoot('managed-inbox-runtime', tempRoots);
   const managedRoot = path.join(appDataDir, 'custom-inbox');
   const failedPath = path.join(managedRoot, 'failed.md');
-  const importedPath = path.join(managedRoot, 'clips', 'note.txt');
+  const importedPath = path.join(managedRoot, 'clips', 'saved-page.html');
   resolveAppPaths.mockReturnValue({
     app_cache_dir: path.join(appDataDir, 'cache'),
     app_config_dir: path.join(appDataDir, 'config'),
@@ -77,7 +77,7 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
     updated_at: '2026-05-30T00:00:00.000Z'
   });
   await fs.mkdir(path.dirname(importedPath), { recursive: true });
-  await fs.writeFile(importedPath, 'Imported managed note', 'utf8');
+  await fs.writeFile(importedPath, '<html><body><h1>Imported managed page</h1></body></html>', 'utf8');
   await fs.writeFile(failedPath, '# Failed managed note', 'utf8');
   runPreparedImport.mockImplementation((prepared) => {
     if (prepared.sourceName === 'failed.md') throw new Error('boom');
@@ -87,6 +87,15 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
   const result = await runDirectoryImport(undefined, { source_adapter: 'foliole_managed_inbox_folder' });
 
   expect(result).toEqual(expect.objectContaining({ consumed_count: 1, discovered_count: 2, failed_count: 1 }));
+  expect(result.entries).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        result_status: 'imported',
+        source_kind: 'html',
+        source_name: path.join('clips', 'saved-page.html')
+      })
+    ])
+  );
   await expect(fs.stat(importedPath)).rejects.toThrow();
   await expect(fs.readFile(failedPath, 'utf8')).resolves.toBe('# Failed managed note');
   expect(trashItem).toHaveBeenCalledWith(importedPath);
