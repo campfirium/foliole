@@ -61,6 +61,23 @@ it('leaves review editing when Escape starts from an editable target', () => {
   expect(readReviewTopic).toHaveBeenCalledTimes(1);
 });
 
+it('leaves review editing after an editor Escape handler only blurs the editable target', async () => {
+  const readReviewTopic = vi.fn(async () => true);
+  render(<ReviewShortcutHarness readReviewTopic={readReviewTopic} />);
+  const editable = document.createElement('div');
+  editable.setAttribute('contenteditable', 'true');
+  document.body.append(editable);
+  editable.focus();
+  fireEvent.focusIn(editable);
+
+  editable.blur();
+  fireEvent.blur(editable);
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+  fireEvent.keyDown(window, { key: 'r' });
+
+  expect(readReviewTopic).toHaveBeenCalledTimes(1);
+});
+
 it('lets an open Escape surface close before leaving review editing', () => {
   const readReviewTopic = vi.fn(async () => true);
   const closeSurface = vi.fn();

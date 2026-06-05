@@ -101,6 +101,21 @@ it('leaves current node editing with DOM Escape outside review mode', () => {
   expect(document.activeElement).not.toBe(editor);
 });
 
+it('leaves current node editing after an editor Escape handler only blurs the editable target', async () => {
+  const deleteNode = vi.fn();
+  render(<HookHarness deleteNode={deleteNode} />);
+  const editor = screen.getByRole('textbox');
+
+  editor.focus();
+  fireEvent.focusIn(editor);
+  editor.blur();
+  fireEvent.blur(editor);
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+  fireEvent.keyDown(window, { key: 'Delete' });
+
+  expect(deleteNode).toHaveBeenCalledWith('node-1');
+});
+
 it('keeps current node editing context through a dialog and native Escape clears it outside review mode', async () => {
   const dispatchNativeKeyboard = installNativeKeyboardBridge();
   vi.useFakeTimers();

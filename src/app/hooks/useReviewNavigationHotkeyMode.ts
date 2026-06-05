@@ -33,13 +33,20 @@ export function useReviewEditingState(args: {
     syncEditingState(document.activeElement);
     const handleFocusIn = (event: FocusEvent) => syncEditingState(event.target);
     const handleFocus = (event: FocusEvent) => syncEditingState(event.target);
+    const handleFocusOut = () => {
+      window.setTimeout(() => syncEditingState(document.activeElement), 0);
+    };
     window.addEventListener('pointerdown', handlePointerDown, true);
     window.addEventListener('focusin', handleFocusIn);
     window.addEventListener('focus', handleFocus, true);
+    window.addEventListener('focusout', handleFocusOut);
+    window.addEventListener('blur', handleFocusOut, true);
     return () => {
       window.removeEventListener('pointerdown', handlePointerDown, true);
       window.removeEventListener('focusin', handleFocusIn);
       window.removeEventListener('focus', handleFocus, true);
+      window.removeEventListener('focusout', handleFocusOut);
+      window.removeEventListener('blur', handleFocusOut, true);
     };
   }, [args]);
   return [isReviewEditing, setIsReviewEditing] as const;
