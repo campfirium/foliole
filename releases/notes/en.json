@@ -1,0 +1,10 @@
+{
+  "0.6.1": {
+    "summary": "Initial Windows alpha for local reading and review.",
+    "notes": [
+      "Use the Windows desktop app with local topic storage.",
+      "Import, organize, read, and review topics in one workspace.",
+      "Check for updates from the About settings section."
+    ]
+  }
+}

@@ -24,6 +24,8 @@ import {
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
+import { SettingsUpdateReleaseNotes } from './SettingsUpdateReleaseNotes';
+
 interface SettingsSupportSectionProps {
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
 }
@@ -118,25 +120,28 @@ function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
   const status = updateCheck.status;
 
   return (
-    <SettingsRow
-      {...settingsSearchRowProps(appRow)}
-      description={getUpdateDescription(updateCheck.state, status, t)}
-      title={t('settings.about.versionTitle', { version: appVersion })}
-    >
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <AppStatusBadge label={getUpdateStatusLabel(status, t)} tone={getUpdateStatusTone(status)} />
-        <SupportButton commandId={APP_COMMAND_IDS.openLatestRelease} onRunSupportCommand={onRunSupportCommand}>
-          {t('settings.about.openReleases')}
-        </SupportButton>
-        <SupportButton
-          commandId={APP_COMMAND_IDS.checkForUpdates}
-          onRunStart={() => updateCheck.setIsChecking(true)}
-          onRunSupportCommand={onRunSupportCommand}
-        >
-          {t('settings.about.checkForUpdates')}
-        </SupportButton>
-      </SettingsControlSlot>
-    </SettingsRow>
+    <>
+      <SettingsRow
+        {...settingsSearchRowProps(appRow)}
+        description={getUpdateDescription(updateCheck.state, status, t)}
+        title={t('settings.about.versionTitle', { version: appVersion })}
+      >
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <AppStatusBadge label={getUpdateStatusLabel(status, t)} tone={getUpdateStatusTone(status)} />
+          <SupportButton commandId={APP_COMMAND_IDS.openLatestRelease} onRunSupportCommand={onRunSupportCommand}>
+            {t('settings.about.openReleases')}
+          </SupportButton>
+          <SupportButton
+            commandId={APP_COMMAND_IDS.checkForUpdates}
+            onRunStart={() => updateCheck.setIsChecking(true)}
+            onRunSupportCommand={onRunSupportCommand}
+          >
+            {t('settings.about.checkForUpdates')}
+          </SupportButton>
+        </SettingsControlSlot>
+      </SettingsRow>
+      <SettingsUpdateReleaseNotes currentVersion={appVersion} state={updateCheck.state} />
+    </>
   );
 }
 

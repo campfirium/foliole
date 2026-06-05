@@ -8,6 +8,7 @@ const MIN_FAILURE_RETRY_MINUTES = 5;
 const MAX_FAILURE_RETRY_MINUTES = 24 * 60;
 
 type CheckStatus = 'available' | 'current' | 'failed' | 'idle';
+type UpdateNotesLocale = 'en' | 'zh-Hans';
 
 interface UpdateCheckPolicy {
   failureRetryMinutes?: number;
@@ -31,8 +32,17 @@ export interface UpdateManifest {
   schemaVersion: number;
 }
 
+export interface UpdateReleaseNotes {
+  notes: string[];
+  summary?: string;
+}
+
+export type UpdateReleaseNotesCatalog = Record<string, UpdateReleaseNotes>;
+export type UpdateReleaseNotesByLocale = Partial<Record<UpdateNotesLocale, UpdateReleaseNotesCatalog>>;
+
 export interface UpdateCheckState {
   cachedManifest: UpdateManifest | null;
+  cachedReleaseNotes: UpdateReleaseNotesByLocale | null;
   dismissedVersion: string | null;
   lastCheckedAt: string | null;
   lastCheckStatus: CheckStatus;
@@ -43,6 +53,7 @@ export interface UpdateCheckState {
 
 export const DEFAULT_UPDATE_STATE: UpdateCheckState = {
   cachedManifest: null,
+  cachedReleaseNotes: null,
   dismissedVersion: null,
   lastCheckedAt: null,
   lastCheckStatus: 'idle',
@@ -85,6 +96,38 @@ function normalizeRelease(value: unknown): UpdateRelease | null {
   };
 }
 
+function normalizeReleaseNotes(value: unknown): UpdateReleaseNotes | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  const notes = Array.isArray(raw.notes) ? raw.notes.filter((item): item is string => typeof item === 'string') : [];
+  if (!notes.length && typeof raw.summary !== 'string') return null;
+  return {
+    notes,
+    ...(typeof raw.summary === 'string' ? { summary: raw.summary } : {})
+  };
+}
+
+export function normalizeReleaseNotesCatalog(value: unknown): UpdateReleaseNotesCatalog | null {
+  if (!value || typeof value !== 'object') return null;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .map(([version, notes]) => [version, normalizeReleaseNotes(notes)] as const)
+    .filter((entry): entry is readonly [string, UpdateReleaseNotes] => Boolean(entry[1]));
+  if (!entries.length) return null;
+  return Object.fromEntries(entries);
+}
+
+function normalizeReleaseNotesByLocale(value: unknown): UpdateReleaseNotesByLocale | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  const en = normalizeReleaseNotesCatalog(raw.en);
+  const zhHans = normalizeReleaseNotesCatalog(raw['zh-Hans']);
+  if (!en && !zhHans) return null;
+  return {
+    ...(en ? { en } : {}),
+    ...(zhHans ? { 'zh-Hans': zhHans } : {})
+  };
+}
+
 export function normalizeUpdateManifest(value: unknown): UpdateManifest | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
@@ -105,6 +148,7 @@ export function normalizeUpdateState(value: unknown): UpdateCheckState {
   const raw = value as Record<string, unknown>;
   return {
     cachedManifest: normalizeUpdateManifest(raw.cachedManifest),
+    cachedReleaseNotes: normalizeReleaseNotesByLocale(raw.cachedReleaseNotes),
     dismissedVersion: typeof raw.dismissedVersion === 'string' ? raw.dismissedVersion : null,
     lastCheckedAt: typeof raw.lastCheckedAt === 'string' ? raw.lastCheckedAt : null,
     lastCheckStatus:
@@ -136,6 +180,17 @@ export function selectLatestPlatformRelease(manifest: UpdateManifest, currentVer
   return manifest.releases
     .filter((release) => release.platforms.includes(WINDOWS_PLATFORM_ID) && compareVersionStrings(release.version, currentVersion) > 0)
     .sort((left, right) => compareVersionStrings(right.version, left.version))[0] ?? null;
+}
+
+export function selectSkippedPlatformReleases(manifest: UpdateManifest | null, currentVersion: string | null, latestVersion: string | null) {
+  if (!manifest || !currentVersion || !latestVersion) return [];
+  return manifest.releases
+    .filter((release) =>
+      release.platforms.includes(WINDOWS_PLATFORM_ID)
+        && compareVersionStrings(release.version, currentVersion) > 0
+        && compareVersionStrings(release.version, latestVersion) <= 0
+    )
+    .sort((left, right) => compareVersionStrings(left.version, right.version));
 }
 
 function resolvePolicy(manifest: UpdateManifest | null, failed: boolean) {

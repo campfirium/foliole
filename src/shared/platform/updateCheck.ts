@@ -8,22 +8,27 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 import {
   DEFAULT_UPDATE_STATE,
   getUpdateCheckDelayMs,
+  normalizeReleaseNotesCatalog,
   normalizeUpdateManifest,
   normalizeUpdateState,
   selectLatestPlatformRelease,
   shouldRunUpdateCheck,
   type UpdateCheckState,
+  type UpdateReleaseNotesByLocale,
   type UpdateRelease
 } from './updateCheckModel';
 
 export {
   compareVersionStrings,
+  normalizeReleaseNotesCatalog,
   normalizeUpdateManifest,
-  selectLatestPlatformRelease
+  selectLatestPlatformRelease,
+  selectSkippedPlatformReleases
 } from './updateCheckModel';
-export type { UpdateCheckState } from './updateCheckModel';
+export type { UpdateCheckState, UpdateReleaseNotes } from './updateCheckModel';
 
 const DEFAULT_MANIFEST_URL = 'https://campfirium.github.io/foliole/releases/update-manifest.json';
+const UPDATE_NOTES_LOCALES = ['en', 'zh-Hans'] as const;
 
 export interface UpdateCheckResult {
   latestRelease: UpdateRelease | null;
@@ -36,6 +41,25 @@ const updateCheckStateSubscribers = new Set<() => void>();
 function getManifestUrl() {
   const configured = import.meta.env.VITE_FOLIOLE_UPDATE_MANIFEST_URL as string | undefined;
   return configured?.trim() || DEFAULT_MANIFEST_URL;
+}
+
+function getNotesUrl(manifestUrl: string, locale: (typeof UPDATE_NOTES_LOCALES)[number]) {
+  return new URL(`notes/${locale}.json`, manifestUrl).toString();
+}
+
+async function fetchReleaseNotes(manifestUrl: string): Promise<UpdateReleaseNotesByLocale | null> {
+  const entries = await Promise.all(UPDATE_NOTES_LOCALES.map(async (locale) => {
+    try {
+      const response = await fetch(getNotesUrl(manifestUrl, locale), { cache: 'no-store' });
+      if (!response.ok) return null;
+      const catalog = normalizeReleaseNotesCatalog(await response.json());
+      return catalog ? [locale, catalog] as const : null;
+    } catch {
+      return null;
+    }
+  }));
+  const releaseNotes = Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)));
+  return Object.keys(releaseNotes).length ? releaseNotes : null;
 }
 
 
@@ -86,15 +110,18 @@ export async function checkForFolioleUpdates(options: { force?: boolean; notify?
   }
 
   try {
+    const manifestUrl = getManifestUrl();
     const [currentVersion, response] = await Promise.all([
       loadAppVersion(),
-      fetch(getManifestUrl(), { cache: 'no-store' })
+      fetch(manifestUrl, { cache: 'no-store' })
     ]);
     if (!response.ok) throw new Error(`update manifest request failed: ${response.status}`);
     const manifest = normalizeUpdateManifest(await response.json());
     if (!manifest) throw new Error('update manifest payload invalid');
     const latestRelease = selectLatestPlatformRelease(manifest, currentVersion);
+    const cachedReleaseNotes = latestRelease ? await fetchReleaseNotes(manifestUrl) : state.cachedReleaseNotes;
     const nextState: UpdateCheckState = {
+      cachedReleaseNotes,
       cachedManifest: manifest,
       dismissedVersion: state.dismissedVersion,
       lastCheckedAt: new Date(now).toISOString(),
