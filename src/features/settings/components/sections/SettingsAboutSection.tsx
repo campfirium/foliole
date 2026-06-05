@@ -10,19 +10,16 @@ import {
   settingsButtonClassName
 } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
-import { ABOUT_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
+import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 import {
   SettingsAppSection,
   SettingsCommunitySection
 } from './SettingsSupportSection';
 
-const ABOUT_ROW = {
-  diagnosticBundle: ABOUT_SETTINGS_SEARCH_ROWS[1]!
-};
-
 function DiagnosticExportRow() {
   const t = useTranslation();
+  const diagnosticBundleRow = useLocalizedSettingsSearchRow('about-diagnostic-report');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -54,9 +51,9 @@ function DiagnosticExportRow() {
 
   return (
     <SettingsRow
-      {...settingsSearchRowProps(ABOUT_ROW.diagnosticBundle)}
+      {...settingsSearchRowProps(diagnosticBundleRow)}
       description={description}
-      title={ABOUT_ROW.diagnosticBundle.title}
+      title={diagnosticBundleRow.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <button

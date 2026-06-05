@@ -98,7 +98,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.about.checkForUpdates': 'Check for Updates',
   'settings.about.discussions': 'Discussions',
   'settings.about.feedback': 'Feedback',
-  'settings.about.youtubeInProgress': 'YouTube (in progress)',
+  'settings.about.issues': 'Issues',
   'settings.search.language.title': 'App language',
   'settings.search.language.description': 'Choose the language used by Foliole interface text.',
   'settings.search.language.terms': 'locale|translation|simplified chinese',

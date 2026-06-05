@@ -1,4 +1,9 @@
-import { useEffect, useState } from 'react';
+import {
+  Github,
+  Youtube,
+  type LucideIcon
+} from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
@@ -17,12 +22,7 @@ import {
   settingsButtonClassName
 } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
-import { ABOUT_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
-
-const ABOUT_ROW = {
-  app: ABOUT_SETTINGS_SEARCH_ROWS[0]!,
-  community: ABOUT_SETTINGS_SEARCH_ROWS[2]!
-};
+import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 interface SettingsSupportSectionProps {
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
@@ -84,15 +84,19 @@ function useUpdateCheckViewState() {
 }
 
 function SupportButton(props: {
-  children: string;
+  ariaLabel?: string | undefined;
+  children: ReactNode;
   className?: string;
   commandId: string;
+  icon?: LucideIcon | undefined;
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   onRunStart?: (() => void) | undefined;
 }) {
+  const Icon = props.icon;
   return (
     <button
-      className={settingsButtonClassName(props.className)}
+      aria-label={props.ariaLabel}
+      className={settingsButtonClassName(`gap-2 ${props.className ?? ''}`)}
       disabled={!props.onRunSupportCommand}
       onClick={() => {
         props.onRunStart?.();
@@ -100,6 +104,7 @@ function SupportButton(props: {
       }}
       type="button"
     >
+      {Icon ? <Icon aria-hidden="true" className="size-4 shrink-0 text-settings-icon-active" strokeWidth={1.8} /> : null}
       {props.children}
     </button>
   );
@@ -107,13 +112,14 @@ function SupportButton(props: {
 
 function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
   const t = useTranslation();
+  const appRow = useLocalizedSettingsSearchRow('about-foliole-desktop');
   const appVersion = useAppVersion();
   const updateCheck = useUpdateCheckViewState();
   const status = updateCheck.status;
 
   return (
     <SettingsRow
-      {...settingsSearchRowProps(ABOUT_ROW.app)}
+      {...settingsSearchRowProps(appRow)}
       description={getUpdateDescription(updateCheck.state, status, t)}
       title={t('settings.about.versionTitle', { version: appVersion })}
     >
@@ -136,24 +142,29 @@ function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
 
 function QuickLinksBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
   const t = useTranslation();
+  const communityRow = useLocalizedSettingsSearchRow('about-community');
   return (
     <SettingsRow
-      {...settingsSearchRowProps(ABOUT_ROW.community)}
-      description={ABOUT_ROW.community.description}
-      title={ABOUT_ROW.community.title}
+      {...settingsSearchRowProps(communityRow)}
+      description={communityRow.description}
+      title={communityRow.title}
     >
       <SettingsControlSlot className="flex-wrap">
-        <SupportButton commandId={APP_COMMAND_IDS.openGitHubRepository} onRunSupportCommand={onRunSupportCommand}>
+        <SupportButton commandId={APP_COMMAND_IDS.openGitHubRepository} icon={Github} onRunSupportCommand={onRunSupportCommand}>
           GitHub
         </SupportButton>
-        <SupportButton commandId={APP_COMMAND_IDS.openGitHubDiscussions} onRunSupportCommand={onRunSupportCommand}>
+        <SupportButton commandId={APP_COMMAND_IDS.openGitHubDiscussions} icon={Github} onRunSupportCommand={onRunSupportCommand}>
           {t('settings.about.discussions')}
         </SupportButton>
-        <SupportButton commandId={APP_COMMAND_IDS.openGitHubIssues} onRunSupportCommand={onRunSupportCommand}>
-          {t('settings.about.feedback')}
+        <SupportButton commandId={APP_COMMAND_IDS.openGitHubIssues} icon={Github} onRunSupportCommand={onRunSupportCommand}>
+          {t('settings.about.issues')}
         </SupportButton>
-        <SupportButton commandId={APP_COMMAND_IDS.openYouTubePlaylist} onRunSupportCommand={onRunSupportCommand}>
-          {t('settings.about.youtubeInProgress')}
+        <SupportButton
+          commandId={APP_COMMAND_IDS.openYouTubePlaylist}
+          icon={Youtube}
+          onRunSupportCommand={onRunSupportCommand}
+        >
+          YouTube
         </SupportButton>
       </SettingsControlSlot>
     </SettingsRow>

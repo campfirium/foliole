@@ -8,6 +8,7 @@ vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
+import { APP_LANGUAGE_STORAGE_KEY } from '../../../../shared/localization/appLanguage';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import { copyDiagnosticReport } from '../../../../shared/platform/diagnosticBundle';
 
@@ -62,8 +63,8 @@ it('runs update and community commands from About settings', () => {
   renderWithLocalization(<SettingsAboutSection onRunSupportCommand={onRunSupportCommand} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Check for Updates' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Feedback' }));
-  fireEvent.click(screen.getByRole('button', { name: 'YouTube (in progress)' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Issues' }));
+  fireEvent.click(screen.getByRole('button', { name: 'YouTube' }));
 
   expect(screen.getByText('Checking')).toBeInTheDocument();
   expect(screen.getByText('Checking for updates...')).toBeInTheDocument();
@@ -115,4 +116,23 @@ it('shows the global search enhancement switch in General', async () => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.fullTextSearchIndexStrategy)).toBe('cjk-trigram');
   });
   expect(screen.getByText('Preparing search...')).toBeInTheDocument();
+});
+
+it('localizes About and General settings rows in Simplified Chinese', () => {
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
+
+  renderWithLocalization(
+    <>
+      <SettingsAboutSection />
+      <SettingsGeneralSection />
+    </>
+  );
+
+  expect(screen.getByText('诊断报告')).toBeInTheDocument();
+  expect(screen.getByText('打开源代码、社区讨论、反馈和视频更新入口。')).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: '搜索增强' })).toBeInTheDocument();
+  expect(screen.getByText('改进中文、日文、韩文以及其他不按空格分词语言的搜索，会使用更多搜索数据。')).toBeInTheDocument();
+  expect(screen.queryByText('Diagnostic report')).not.toBeInTheDocument();
+  expect(screen.queryByText('Community', { selector: 'h3' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('switch', { name: 'Search enhancement' })).not.toBeInTheDocument();
 });

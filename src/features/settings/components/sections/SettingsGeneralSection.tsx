@@ -19,11 +19,7 @@ import {
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
-import { GENERAL_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
-
-const GENERAL_ROW = {
-  searchEnhancement: GENERAL_SETTINGS_SEARCH_ROWS[0]!
-};
+import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 type Translate = ReturnType<typeof useTranslation>;
 
@@ -55,6 +51,7 @@ function SearchEnhancementDescription(props: { statusCopy: string | null }) {
 
 function SearchEnhancementRow() {
   const t = useTranslation();
+  const searchEnhancementRow = useLocalizedSettingsSearchRow('general-search-enhancement');
   const [enabled, setEnabled] = useState(isSearchEnhancementEnabled);
   const [status, setStatus] = useState<SearchIndexRebuildStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,8 +90,8 @@ function SearchEnhancementRow() {
   return (
     <SettingsRow
       description={<SearchEnhancementDescription statusCopy={getSearchEnhancementStatusCopy(status, error, t)} />}
-      {...settingsSearchRowProps(GENERAL_ROW.searchEnhancement)}
-      title={GENERAL_ROW.searchEnhancement.title}
+      {...settingsSearchRowProps(searchEnhancementRow)}
+      title={searchEnhancementRow.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <button

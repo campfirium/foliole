@@ -79,14 +79,4 @@ export function createSettingsSearchRows(t: Translate): SettingsSearchRowMeta[] 
 
 const ENGLISH_SETTINGS_SEARCH_ROWS = createSettingsSearchRows((key) => EN_TRANSLATIONS[key]);
 
-function rowsForCategory(categoryId: SettingsCategoryId) {
-  return ENGLISH_SETTINGS_SEARCH_ROWS.filter((rowMeta) => rowMeta.categoryId === categoryId);
-}
-
-export const ABOUT_SETTINGS_SEARCH_ROWS = rowsForCategory('about');
-export const GENERAL_SETTINGS_SEARCH_ROWS = rowsForCategory('general');
-export const EDITOR_SETTINGS_SEARCH_ROWS = rowsForCategory('editor');
-export const REVIEW_SETTINGS_SEARCH_ROWS = rowsForCategory('review');
-export const MOUSE_GESTURE_SETTINGS_SEARCH_ROWS = rowsForCategory('mouse-gestures');
-export const LIBRARY_SETTINGS_SEARCH_ROWS = rowsForCategory('library');
 export const SETTINGS_SEARCH_ROWS = ENGLISH_SETTINGS_SEARCH_ROWS;
