@@ -92,7 +92,9 @@ afterEach(() => {
 
 it('loads the static workspace shell before runtime services and activates React after services are ready', async () => {
   const window = {
-    isDestroyed: vi.fn(() => false)
+    isDestroyed: vi.fn(() => false),
+    isVisible: vi.fn(() => true),
+    show: vi.fn()
   };
   const activateMainWindow = vi.fn().mockResolvedValue(undefined);
   const createMainWindow = vi.fn().mockResolvedValue(window);

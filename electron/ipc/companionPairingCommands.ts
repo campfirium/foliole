@@ -1,6 +1,7 @@
 import { app } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { resolveFolioleAppVersion } from '../appVersion.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { commitPrimaryDeviceToPeer } from '../database/primaryDeviceCommit.js';
 import {
@@ -71,7 +72,7 @@ export function handleCompanionPairingCommand(command: string, args: Record<stri
   if (command === NATIVE_COMMANDS.enableCompanionSync) {
     setDesktopCompanionSyncEnabled(true);
     return ensureLanWorkspaceSyncServer({
-      appVersion: app.getVersion(),
+      appVersion: resolveFolioleAppVersion(app),
       peerId: loadOrCreateDesktopDeviceId()
     }).then(() => buildDesktopCompanionPairingOverview());
   }

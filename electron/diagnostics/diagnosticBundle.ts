@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { App } from 'electron';
 
 import type { NativeCopyDiagnosticReportResult } from '../../lib/platform/nativeUtilityContract.js';
+import { resolveFolioleAppVersion } from '../appVersion.js';
 
 interface FileSummary {
   name: string;
@@ -173,7 +174,7 @@ export async function copyDiagnosticReport(args: {
     '# Foliole Diagnostic Report',
     '',
     `Created at: ${new Date().toISOString()}`,
-    `App version: ${args.app.getVersion()}`,
+    `App version: ${resolveFolioleAppVersion(args.app)}`,
     `Platform: ${process.platform} ${os.release()}`,
     `Electron: ${process.versions.electron ?? 'unknown'}`,
     '',

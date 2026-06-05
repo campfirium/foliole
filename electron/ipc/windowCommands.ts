@@ -2,6 +2,7 @@ import { BrowserWindow, app, shell } from 'electron';
 
 import { normalizeOpenExternalUrl } from '../../lib/platform/externalUrl.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { resolveFolioleAppVersion } from '../appVersion.js';
 import { requestDevShellRestart } from '../devShellRestartRequest.js';
 import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
@@ -139,7 +140,7 @@ function handleUtilityCommand(request: InvokeRequest) {
     return null;
   }
   if (request.command === NATIVE_COMMANDS.appGetVersion) {
-    return app.getVersion();
+    return resolveFolioleAppVersion(app);
   }
   return undefined;
 }

@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 
+import { resolveFolioleAppVersion } from './appVersion.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
@@ -156,7 +157,7 @@ async function startCompanionSyncIfEnabled() {
   if (!isDesktopCompanionSyncEnabled()) {
     return;
   }
-  await ensureLanWorkspaceSyncServer({ appVersion: app.getVersion(), peerId: loadOrCreateDesktopDeviceId() });
+  await ensureLanWorkspaceSyncServer({ appVersion: resolveFolioleAppVersion(app), peerId: loadOrCreateDesktopDeviceId() });
 }
 
 function installPairingFocusHandler() {
