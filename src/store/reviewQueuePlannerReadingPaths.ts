@@ -1,3 +1,6 @@
+import { resolveReadingAvailableAt } from '../../lib/core/review/reviewDayBoundary.js';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+
 import type { ReviewQueueNode } from './reviewQueuePlanner';
 
 export function resolveReviewQueueNodePathNodeIds(
@@ -19,4 +22,12 @@ export function resolveReviewQueueNodePathNodeIds(
 
 export function resolveReviewQueueReadingDueAt(node: ReviewQueueNode) {
   return node.reading?.nextAt ?? node.createdAt;
+}
+
+export function resolveReviewQueueReadingAvailableAt(node: ReviewQueueNode, newDayStartsAtHour = getCurrentReviewSchedulerSettings().newDayStartsAtHour) {
+  return resolveReadingAvailableAt({
+    lastHandledAt: node.reading?.lastHandledAt,
+    newDayStartsAtHour,
+    nextAt: resolveReviewQueueReadingDueAt(node)
+  });
 }

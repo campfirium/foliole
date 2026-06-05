@@ -7,6 +7,7 @@ import {
   getReviewSchedulerVersion
 } from '../features/settings/model/reviewSchedulerSettings';
 
+import { resolveReviewQueueReadingAvailableAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue } from './reviewQueuePlannerTime';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
@@ -55,8 +56,8 @@ function isActionableSessionNode(node: WorkspaceState['nodesById'][string] | und
     }
   }
   if (isReadingReviewItemNode(node)) {
-    const nextAtMs = parseTimestamp(node.reading?.nextAt ?? node.createdAt);
-    return nextAtMs === null || nextAtMs <= nowMs;
+    const availableAtMs = parseTimestamp(resolveReviewQueueReadingAvailableAt(node));
+    return availableAtMs === null || availableAtMs <= nowMs;
   }
   return false;
 }

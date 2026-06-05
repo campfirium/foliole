@@ -61,3 +61,26 @@ export function resolveStoredReviewDueAt(args: {
   const hour = normalizeNewDayStartsAtHour(args.newDayStartsAtHour);
   return new Date(due.getFullYear(), due.getMonth(), due.getDate(), hour).toISOString();
 }
+
+function parseValidDate(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function resolveReadingAvailableAt(args: {
+  lastHandledAt?: string | null;
+  newDayStartsAtHour: number;
+  nextAt: string;
+}) {
+  const nextAt = new Date(args.nextAt);
+  if (Number.isNaN(nextAt.getTime())) {
+    return args.nextAt;
+  }
+  const anchor = parseValidDate(args.lastHandledAt) ?? nextAt;
+  const anchorDayStart = resolveCurrentDayStart(anchor, args.newDayStartsAtHour);
+  const nextDayStart = resolveCurrentDayStart(nextAt, args.newDayStartsAtHour);
+  return nextDayStart.getTime() > anchorDayStart.getTime()
+    ? nextDayStart.toISOString()
+    : args.nextAt;
+}

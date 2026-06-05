@@ -62,6 +62,30 @@ it('keeps reading nextAt order when source interleaving metadata is absent', () 
   expect(queue.map((item) => item.id)).toEqual(['reading-2', 'reading-3', 'reading-1']);
 });
 
+it('lets material pressure use dueAt while reading buckets keep nextAt for raw ordering', () => {
+  const queue = assembleReadingPushQueue(
+    [
+      {
+        dueAt: '2026-03-16T04:00:00.000Z',
+        id: 'cross-day',
+        intervalDurationMs: 24 * 60 * 60 * 1000,
+        priority: 4,
+        nextAt: '2026-03-16T21:00:00.000Z'
+      },
+      {
+        dueAt: '2026-03-16T09:00:00.000Z',
+        id: 'same-day',
+        intervalDurationMs: 24 * 60 * 60 * 1000,
+        priority: 4,
+        nextAt: '2026-03-16T09:00:00.000Z'
+      }
+    ],
+    { materialDispersion: { batchSize: 1, now: '2026-03-16T12:00:00.000Z' } }
+  );
+
+  expect(queue.map((item) => item.id)).toEqual(['cross-day', 'same-day']);
+});
+
 it('uses material path dispersion inside a reading pressure window', () => {
   const queue = assembleReadingPushQueue(
     Array.from({ length: 12 }, (_, index) => ({

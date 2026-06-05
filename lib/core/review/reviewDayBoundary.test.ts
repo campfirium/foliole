@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 
 import {
   normalizeNewDayStartsAtHour,
+  resolveReadingAvailableAt,
   normalizeScheduledCardDue,
   resolveScheduledDayStart,
   resolveStoredReviewDueAt
@@ -67,4 +68,35 @@ it('interprets stored day-based due timestamps at the configured start time', ()
   });
 
   expect(new Date(dueAt).getHours()).toBe(4);
+});
+
+it('keeps same-day reading availability at the exact nextAt timestamp', () => {
+  const nextAt = new Date(2026, 2, 16, 10, 45, 30).toISOString();
+
+  expect(resolveReadingAvailableAt({
+    lastHandledAt: new Date(2026, 2, 16, 9, 15, 30).toISOString(),
+    newDayStartsAtHour: 4,
+    nextAt
+  })).toBe(nextAt);
+});
+
+it('moves cross-day reading availability to the target learning day start', () => {
+  const availableAt = resolveReadingAvailableAt({
+    lastHandledAt: new Date(2026, 2, 16, 21).toISOString(),
+    newDayStartsAtHour: 4,
+    nextAt: new Date(2026, 2, 17, 21).toISOString()
+  });
+
+  expect(new Date(availableAt).getHours()).toBe(4);
+  expect(new Date(availableAt).getDate()).toBe(17);
+});
+
+it('keeps reading availability exact when the last handled anchor is missing', () => {
+  const nextAt = new Date(2026, 2, 17, 21).toISOString();
+
+  expect(resolveReadingAvailableAt({
+    lastHandledAt: null,
+    newDayStartsAtHour: 4,
+    nextAt
+  })).toBe(nextAt);
 });

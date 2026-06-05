@@ -14,7 +14,7 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 
 import { createSeededRandom, hasShelvedAncestor } from './reviewQueuePlannerHelpers';
 import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode';
-import { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths';
+import { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingAvailableAt, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue, parseReviewQueueTimestamp } from './reviewQueuePlannerTime';
 
 export interface ReviewQueuePlan {
@@ -42,7 +42,7 @@ function isQueueableReadingNode(
   if (node.reading && node.reading.state !== 'active') {
     return false;
   }
-  return parseReviewQueueTimestamp(resolveReviewQueueReadingDueAt(node)) <= parseReviewQueueTimestamp(now);
+  return parseReviewQueueTimestamp(resolveReviewQueueReadingAvailableAt(node)) <= parseReviewQueueTimestamp(now);
 }
 
 function isSchedulableReadingNode(
@@ -130,12 +130,12 @@ function resolveReadingQueueNodeIds(args: {
   const random = createSeededRandom(`reading|${args.nodeOrder.join('|')}`);
   return assembleReadingPushQueue(
     args.candidates.map((node) => {
-      const dueAt = resolveReviewQueueReadingDueAt(node);
+      const nextAt = resolveReviewQueueReadingDueAt(node);
       return {
-        dueAt,
+        dueAt: resolveReviewQueueReadingAvailableAt(node),
         id: node.id,
         intervalDurationMs: node.reading?.intervalDurationMs,
-        nextAt: dueAt,
+        nextAt,
         pathNodeIds: resolveReviewQueueNodePathNodeIds(node, args.nodesById),
         priority: resolveNodePriority(node, args.nodesById, args.pushQueueRules.defaultPriority),
       };
