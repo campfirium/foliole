@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { useLocalization, useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   isSearchEnhancementEnabled,
   updateSearchEnhancementEnabled
@@ -20,6 +20,8 @@ import {
 } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
+
+import { SettingsSelectRow } from './settingsAppearanceControls';
 
 type Translate = ReturnType<typeof useTranslation>;
 
@@ -110,11 +112,36 @@ function SearchEnhancementRow() {
   );
 }
 
+function LanguageSection() {
+  const { locale, setLocale } = useLocalization();
+  const t = useTranslation();
+  return (
+    <SettingsSection ariaLabel={t('settings.general.language.section')} title={t('settings.general.language.section')}>
+      <div {...settingsSearchRowProps({ categoryId: 'general', id: 'general-app-language', title: '', description: '' })}>
+        <SettingsSelectRow
+          ariaLabel={t('settings.general.language.aria')}
+          description={t('settings.general.language.description')}
+          label={t('settings.general.language.row')}
+          onChange={(value) => setLocale(value === 'zh-Hans' ? 'zh-Hans' : 'en')}
+          options={[
+            { label: t('language.en'), value: 'en' },
+            { label: t('language.zhHans'), value: 'zh-Hans' }
+          ]}
+          value={locale}
+        />
+      </div>
+    </SettingsSection>
+  );
+}
+
 export function SettingsGeneralSection() {
   const t = useTranslation();
   return (
-    <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>
-      <SearchEnhancementRow />
-    </SettingsSection>
+    <>
+      <LanguageSection />
+      <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>
+        <SearchEnhancementRow />
+      </SettingsSection>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { useLocalization, useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   setActionHelpCardsEnabled,
   useActionHelpCardsEnabled
@@ -20,7 +20,6 @@ import {
   DEFAULT_HIGHLIGHT_COLOR_PRESET,
   DEFAULT_SELECTION_COLOR_PRESET
 } from '../../model/appearanceSettings';
-import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useSettingsFontOptions } from '../useSettingsFontOptions';
 
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
@@ -29,7 +28,6 @@ import {
   AppearanceDarkModeContentSection,
   AppearanceReadingColorSection
 } from './SettingsAppearanceColorSections';
-import { SettingsSelectRow } from './settingsAppearanceControls';
 import { SettingsAppearanceFontSection } from './SettingsAppearanceFontSection';
 import { WorkspaceDividerSettingsSection } from './WorkspaceDividerSettingsSection';
 import { WorkspaceSurfaceColorSection } from './WorkspaceSurfaceColorSection';
@@ -126,28 +124,6 @@ function InterfaceBehaviorSection() {
   );
 }
 
-function AppearanceLanguageSection() {
-  const { locale, setLocale } = useLocalization();
-  const t = useTranslation();
-  return (
-    <SettingsSection ariaLabel={t('settings.appearance.language.section')} title={t('settings.appearance.language.section')}>
-      <div {...settingsSearchRowProps({ categoryId: 'appearance', id: 'appearance-app-language', title: '', description: '' })}>
-        <SettingsSelectRow
-          ariaLabel={t('settings.appearance.language.aria')}
-          description={t('settings.appearance.language.description')}
-          label={t('settings.appearance.language.row')}
-          onChange={(value) => setLocale(value === 'zh-Hans' ? 'zh-Hans' : 'en')}
-          options={[
-            { label: t('language.en'), value: 'en' },
-            { label: t('language.zhHans'), value: 'zh-Hans' }
-          ]}
-          value={locale}
-        />
-      </div>
-    </SettingsSection>
-  );
-}
-
 function AppearanceReadingTypographySection(props: ReturnType<typeof useAppearanceSectionState>) {
   const { appearance, fontOptions } = props;
 
@@ -186,7 +162,6 @@ export function SettingsAppearanceSection(props: {
   const state = useAppearanceSectionState();
   return (
     <>
-      <AppearanceLanguageSection />
       <AppearanceColorModeSection {...state} />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <WorkspaceDividerSettingsSection />

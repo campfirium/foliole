@@ -81,11 +81,11 @@ it('searches categories without mixing in action help actions', () => {
 });
 
 it('updates settings navigation and search results when the app language changes', async () => {
-  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="appearance" />);
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="general" />);
 
   fireEvent.change(screen.getByLabelText('App language'), { target: { value: 'zh-Hans' } });
 
-  expect(screen.getByRole('heading', { name: '外观' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '通用' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '关于' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '通用' })).toBeInTheDocument();
 
