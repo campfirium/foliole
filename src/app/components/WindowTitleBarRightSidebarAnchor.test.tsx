@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
 
@@ -14,7 +16,7 @@ afterEach(() => {
 });
 
 it('keeps only the more menu visible when the right titlebar is below the sidebar minimum', () => {
-  const { container } = render(
+  const { container } = renderWithLocalization(
     <WindowTitleBarRightSidebarAnchor
       activeRightPanelId="outline"
       isRightSidebarCollapsed={false}
@@ -34,7 +36,7 @@ it('keeps only the more menu visible when the right titlebar is below the sideba
 });
 
 it('shows the first panel button at the default right sidebar width', () => {
-  render(
+  renderWithLocalization(
     <WindowTitleBarRightSidebarAnchor
       activeRightPanelId="outline"
       isRightSidebarCollapsed={false}
@@ -51,7 +53,7 @@ it('shows the first panel button at the default right sidebar width', () => {
 });
 
 it('adds panel buttons back when the right sidebar budget has room', () => {
-  render(
+  renderWithLocalization(
     <WindowTitleBarRightSidebarAnchor
       activeRightPanelId="outline"
       isRightSidebarCollapsed={false}
@@ -67,4 +69,25 @@ it('adds panel buttons back when the right sidebar budget has room', () => {
     'Highlights panel',
     'More right sidebar panels'
   ]);
+});
+
+it('removes the more menu when every visible panel button fits', () => {
+  renderWithLocalization(
+    <WindowTitleBarRightSidebarAnchor
+      activeRightPanelId="outline"
+      isRightSidebarCollapsed={false}
+      onSelectRightPanel={() => undefined}
+      onToggleRightSidebarVisibility={() => undefined}
+      rightSidebarWidth={345}
+    />
+  );
+
+  expect(getVisibleRightSidebarButtonLabels()).toEqual([
+    'Flow panel',
+    'Outline panel',
+    'Highlights panel',
+    'Backlinks panel',
+    'Scheduling panel'
+  ]);
+  expect(screen.queryByRole('button', { name: 'More right sidebar panels' })).not.toBeInTheDocument();
 });

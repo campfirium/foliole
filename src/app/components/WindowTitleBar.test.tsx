@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,10 +18,12 @@ vi.mock('../../shared/platform/windowControls', () => ({
   toggleMainWindowMaximize: () => toggleMainWindowMaximize()
 }));
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
+
 import { WindowTitleBar } from './WindowTitleBar';
 
 function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>> = {}) {
-  return render(
+  return renderWithLocalization(
     <WindowTitleBar
       activeRightPanelId="dev"
       centerTitle={null}
@@ -58,6 +60,7 @@ function getVisibleRightSidebarButtonLabels() {
 }
 
 beforeEach(() => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 830 });
   window.localStorage.clear();
   closeMainWindow.mockClear();
   isWindowControlsAvailable.mockReset();

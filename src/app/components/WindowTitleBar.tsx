@@ -2,6 +2,7 @@ import { HardDrive } from 'lucide-react';
 import { memo, useCallback, useEffect, useState, type CSSProperties } from 'react';
 
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useRuntimeAvailability } from '../../shared/platform/runtimeAvailability';
 import {
   closeMainWindow,
@@ -80,15 +81,17 @@ function useWindowControlState() {
     syncMaximizedState
   };
 }
+
 function WindowLeadingActions({
   isListCollapsed,
   onToggleListVisibility
 }: WindowTitleBarProps) {
+  const t = useTranslation();
   if (isListCollapsed) {
     return (
       <div className="window-titlebar-left-zone relative z-local-control" data-collapsed="true">
         <div className="window-titlebar-collapsed-left-action">
-          <WindowSidebarToggleButton active={false} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
+          <WindowSidebarToggleButton active={false} label={t('desktop.workspace.toggleLeftPanel')} onClick={onToggleListVisibility} side="left" />
         </div>
       </div>
     );
@@ -98,7 +101,7 @@ function WindowLeadingActions({
     <div className="window-titlebar-left-zone relative z-local-control" data-collapsed="false">
       <div className="window-titlebar-leading">
         <div className="window-titlebar-leading-primary">
-          <WindowSidebarToggleButton active={!isListCollapsed} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
+          <WindowSidebarToggleButton active={!isListCollapsed} label={t('desktop.workspace.toggleLeftPanel')} onClick={onToggleListVisibility} side="left" />
         </div>
       </div>
     </div>

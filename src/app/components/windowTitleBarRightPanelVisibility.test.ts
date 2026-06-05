@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveRightPanelAvailableWidthFromSidebarWidth, resolveVisibleRightPanelCount } from './windowTitleBarRightPanelVisibility';
+import {
+  resolveRightPanelAvailableWidthFromSidebarWidth,
+  resolveRightSidebarWidthForPanelRow,
+  resolveVisibleRightPanelCount
+} from './windowTitleBarRightPanelVisibility';
 
 describe('resolveVisibleRightPanelCount', () => {
   it('shows the first panel button as soon as the compact row can fit it beside the more menu', () => {
-    expect(resolveVisibleRightPanelCount({ availableWidth: 69, maxCount: 3 })).toBe(0);
-    expect(resolveVisibleRightPanelCount({ availableWidth: 70, maxCount: 3 })).toBe(1);
+    expect(resolveVisibleRightPanelCount({ availableWidth: 69, panelCount: 5 })).toBe(0);
+    expect(resolveVisibleRightPanelCount({ availableWidth: 70, panelCount: 5 })).toBe(1);
   });
 
-  it('caps the visible panel buttons after the titlebar maximum', () => {
-    expect(resolveVisibleRightPanelCount({ availableWidth: 102, maxCount: 3 })).toBe(2);
-    expect(resolveVisibleRightPanelCount({ availableWidth: 134, maxCount: 3 })).toBe(3);
+  it('keeps the more menu only while the panel row still overflows', () => {
+    expect(resolveVisibleRightPanelCount({ availableWidth: 134, panelCount: 5 })).toBe(3);
+    expect(resolveVisibleRightPanelCount({ availableWidth: 165, panelCount: 5 })).toBe(3);
+    expect(resolveVisibleRightPanelCount({ availableWidth: 166, panelCount: 5 })).toBe(5);
   });
 });
 
@@ -22,5 +27,11 @@ describe('resolveRightPanelAvailableWidthFromSidebarWidth', () => {
 
   it('never returns a negative budget', () => {
     expect(resolveRightPanelAvailableWidthFromSidebarWidth(120)).toBe(0);
+  });
+});
+
+describe('resolveRightSidebarWidthForPanelRow', () => {
+  it('returns the right titlebar width needed to show every common panel without the more menu', () => {
+    expect(resolveRightSidebarWidthForPanelRow(5)).toBe(345);
   });
 });
