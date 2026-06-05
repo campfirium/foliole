@@ -114,7 +114,8 @@ it('dismisses an entire topic from the node menu without deleting it', () => {
 
   openNodeMenu('Long topic');
   const menuItems = screen.getAllByRole('menuitem').map((item) => item.textContent);
-  expect(menuItems.indexOf('Dismiss topic')).toBeGreaterThan(menuItems.indexOf('Dismiss'));
+  expect(menuItems).toContain('Dismiss topic');
+  expect(menuItems).not.toContain('Dismiss');
 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Dismiss topic' }));
 

@@ -168,10 +168,11 @@ function buildNodeListMenuVisibility(
   props: NodeListTreeMenuProps,
   menuState: ReturnType<typeof buildMenuState>
 ) {
+  const showDismissEntireTopicAction = menuState.isNotesMenu && hasDismissEntireTopicTargets(menuState.contextTargets, props.nodesById);
   return {
     showDeleteAction: menuState.showDeleteAction,
-    showDismissAction: menuState.isNotesMenu && hasDismissTargets(menuState.primaryTargetId ? [menuState.primaryTargetId] : [], props.nodesById),
-    showDismissEntireTopicAction: menuState.isNotesMenu && hasDismissEntireTopicTargets(menuState.contextTargets, props.nodesById),
+    showDismissAction: menuState.isNotesMenu && !showDismissEntireTopicAction && hasDismissTargets(menuState.primaryTargetId ? [menuState.primaryTargetId] : [], props.nodesById),
+    showDismissEntireTopicAction,
     showMergeHighlightsIntoTopicAction: menuState.showMergeHighlightsIntoTopicAction,
     showMoveToNodeAction: menuState.showMoveToNodeAction,
     showCreateTopicFromClipboardAction: resolveCreateCommands(menuState).some((command) => command.kind === 'topic') && Boolean(props.onCreateTopicFromClipboard),
