@@ -93,7 +93,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.about.update.idle': '未检查',
   'settings.about.update.description.checking': '正在检查更新...',
   'settings.about.update.description.available': 'Foliole {version} 已可用。',
-  'settings.about.update.description.current': 'Foliole 已是最新版本。',
+  'settings.about.update.description.current': '当前 Foliole 桌面端版本。',
   'settings.about.update.description.failed': '无法检查更新。',
   'settings.about.update.description.idle': '当前 Foliole 桌面端版本。',
   'settings.about.openReleases': '打开发布页',

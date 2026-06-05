@@ -91,7 +91,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.about.update.idle': 'Not checked',
   'settings.about.update.description.checking': 'Checking for updates...',
   'settings.about.update.description.available': 'Foliole {version} is available.',
-  'settings.about.update.description.current': 'Foliole is up to date.',
+  'settings.about.update.description.current': 'Current Foliole desktop version.',
   'settings.about.update.description.failed': 'Could not check for updates.',
   'settings.about.update.description.idle': 'Current Foliole desktop version.',
   'settings.about.openReleases': 'Open releases',
