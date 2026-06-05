@@ -24,7 +24,7 @@ export const EN_COMPANION_SYNC_TRANSLATIONS = {
   'companion.sync.disconnect.progress': 'Disconnecting',
   'companion.sync.issuesToResolve': 'Issues to resolve',
   'companion.sync.deviceRole': 'Device role',
-  'companion.sync.deviceRole.detail': 'External sources follow the current primary device.',
+  'companion.sync.deviceRole.detail': 'External folders follow the current primary device.',
   'companion.sync.primaryDevice': 'Primary device',
   'companion.sync.secondaryDevice': 'Secondary device',
   'companion.sync.currentPrimary': 'Current primary',

@@ -111,7 +111,7 @@ it('shows the default inbox path and lets the user choose a custom location thro
 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Storage' }));
 
   await waitFor(() => {
     expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Inbox')).toBeInTheDocument();
@@ -134,7 +134,7 @@ it('restores the default inbox path through the runtime bridge', async () => {
 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Storage' }));
 
   await waitFor(() => {
     expect(screen.getByTitle('D:\\Capture\\Inbox')).toBeInTheDocument();
@@ -148,39 +148,38 @@ it('restores the default inbox path through the runtime bridge', async () => {
   expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenCalledWith('inbox', null);
 });
 
-it('shows Library Home, Assets, Inbox, and Mirror without exposing internal data folders', async () => {
+it('shows Main folder, Attachments folder, Inbox folder, and Mirror folder without exposing internal data folders', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Storage' }));
 
   await waitFor(() => {
-    expect(screen.getByText('Library Home')).toBeInTheDocument();
-    expect(screen.getAllByText('Assets').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Inbox').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Mirror').length).toBeGreaterThan(0);
+    expect(screen.getByText('Main folder')).toBeInTheDocument();
+    expect(screen.getAllByText('Attachments folder').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Inbox folder').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Mirror folder').length).toBeGreaterThan(0);
   });
 
-  expect(screen.getByText(/drop folder for incoming files/i)).toBeInTheDocument();
-  expect(screen.getByText(/should stay close to empty/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/normally needs no adjustment/i)).toHaveLength(2);
-  expect(screen.getByText(/one .md file per topic/i)).toBeInTheDocument();
+  expect(screen.getByText(/Stores the database and app data/i)).toBeInTheDocument();
+  expect(screen.getByText(/Files placed here are imported as internal documents/i)).toBeInTheDocument();
+  expect(screen.getByText(/Use after recovery or mirror rule changes/i)).toBeInTheDocument();
+  expect(screen.getByText(/Use after moving the mirror folder/i)).toBeInTheDocument();
   expect(screen.getByText('Mirror maintenance')).toBeInTheDocument();
-  expect(screen.getByText(/daily output is incremental/i)).toBeInTheDocument();
-  expect(screen.getByText(/folder for attachments and copied media/i)).toBeInTheDocument();
+  expect(screen.getByText(/Stores images, PDFs, EPUBs/i)).toBeInTheDocument();
   expect(screen.queryByText('Database location')).not.toBeInTheDocument();
-  expect(screen.queryByText('Data location')).not.toBeInTheDocument();
+  expect(screen.queryByText('Data subfolder')).not.toBeInTheDocument();
 });
 
 it('shows separate mirror output rebuild feedback from mirror link rebuild', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Storage' }));
 
   await waitFor(() => {
     expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Mirror')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror output' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror' }));
 
   await waitFor(() => {
     expect(screen.getByText(/rebuilt 2 mirror article files from 2 queued articles/i)).toBeInTheDocument();
@@ -189,7 +188,7 @@ it('shows separate mirror output rebuild feedback from mirror link rebuild', asy
   expect(mockedRebuildRuntimeMirrorAttachmentLinks).not.toHaveBeenCalled();
 });
 
-it('updates Library Home, Assets, and Mirror through the same runtime interface', async () => {
+it('updates Main folder, Attachments folder, and Mirror folder through the same runtime interface', async () => {
   mockedSelectRuntimeFolder
     .mockResolvedValueOnce('E:\\LibraryRoot')
     .mockResolvedValueOnce('G:\\AttachmentVault')
@@ -197,7 +196,7 @@ it('updates Library Home, Assets, and Mirror through the same runtime interface'
 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Storage' }));
 
   await waitFor(() => {
     expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole')).toBeInTheDocument();
@@ -235,7 +234,7 @@ it('restores the default assets path through the runtime bridge', async () => {
 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Storage' }));
 
   await waitFor(() => {
     expect(screen.getByTitle('G:\\AttachmentVault')).toBeInTheDocument();
@@ -252,13 +251,13 @@ it('restores the default assets path through the runtime bridge', async () => {
 it('runs the explicit mirror link rebuild flow from settings', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Storage' }));
 
   await waitFor(() => {
     expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Mirror')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror links' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Repair mirror links' }));
 
   await waitFor(() => {
     expect(screen.getByText('Rebuilt 3 mirror attachment links across 2 documents.')).toBeInTheDocument();

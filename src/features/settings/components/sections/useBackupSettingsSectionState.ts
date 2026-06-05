@@ -16,7 +16,7 @@ function useBackupStateStore() {
   const [settings, setSettings] = useState<DatabaseBackupSettings | null>(null);
   const [draft, setDraft] = useState<DatabaseBackupSettings | null>(null);
   const [backups, setBackups] = useState<DatabaseBackupEntry[]>([]);
-  const [defaultBackupPath, setDefaultBackupPath] = useState('Library Home/Backups');
+  const [defaultBackupPath, setDefaultBackupPath] = useState('Main folder/Backups');
   const [isLoadingBackups, setIsLoadingBackups] = useState(true);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [isExportingSourceStates, setIsExportingSourceStates] = useState(false);

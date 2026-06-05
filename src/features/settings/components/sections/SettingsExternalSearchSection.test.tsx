@@ -69,10 +69,10 @@ it('does not show global search enhancement controls in external sources', () =>
 });
 
 it('shows a retryable alert when external sources fail to load', () => {
-  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} error="Could not load the external library." />);
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} error="Could not load external folders." />);
 
-  expect(screen.getByRole('alert')).toHaveTextContent('Could not load the external library.');
-  expect(screen.getByRole('alert')).toHaveTextContent('External sources unavailable');
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not load external folders.');
+  expect(screen.getByRole('alert')).toHaveTextContent('External folders unavailable');
 
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 

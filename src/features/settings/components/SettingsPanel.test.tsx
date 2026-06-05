@@ -61,7 +61,7 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
 
-it('groups settings sidebar entries by workspace, storage, and sources', async () => {
+it('groups settings sidebar entries by workspace, data, and sources', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="library" />);
 
   const buttons = screen.getAllByRole('button');
@@ -69,7 +69,7 @@ it('groups settings sidebar entries by workspace, storage, and sources', async (
 
   expect(screen.getByText('General')).toBeInTheDocument();
   expect(screen.getByText('Workspace')).toBeInTheDocument();
-  expect(screen.getByText('Storage')).toBeInTheDocument();
+  expect(screen.getByText('Data')).toBeInTheDocument();
   expect(screen.getByText('Sources')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
   expect(labels.slice(0, 9)).toEqual([
@@ -83,19 +83,19 @@ it('groups settings sidebar entries by workspace, storage, and sources', async (
     'Mouse gestures',
     'Action bar'
   ]);
-  expect(labels).toContain('Library');
+  expect(labels).toContain('Storage');
   expect(labels).toContain('Watched folders');
   expect(labels).toContain('Readwise Reader');
-  expect(labels).toContain('External sources');
+  expect(labels).toContain('External folders');
   expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('General'));
   expect(labels.indexOf('Hotkeys')).toBeGreaterThan(labels.indexOf('Review'));
   expect(labels.indexOf('General')).toBeGreaterThan(labels.indexOf('About'));
-  expect(labels.indexOf('Library')).toBeGreaterThan(labels.indexOf('Action bar'));
-  expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Library'));
+  expect(labels.indexOf('Storage')).toBeGreaterThan(labels.indexOf('Action bar'));
+  expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Storage'));
   expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
   expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Backups'));
-  expect(labels.indexOf('External sources')).toBeGreaterThan(labels.indexOf('Watched folders'));
-  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External sources'));
+  expect(labels.indexOf('External folders')).toBeGreaterThan(labels.indexOf('Watched folders'));
+  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External folders'));
   expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
 });

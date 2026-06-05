@@ -15,6 +15,7 @@ import type { SettingsImportSectionProps } from './settingsImportSectionTypes';
 
 function MirrorActionRow(props: {
   ariaLabel: string;
+  actionLabel: string;
   description: ReactNode;
   disabled: boolean;
   error: string | null;
@@ -23,7 +24,6 @@ function MirrorActionRow(props: {
   searchRow: SettingsSearchRowMeta;
   title: string;
 }) {
-  const t = useTranslation();
   const description = (
     <>
       <span className="block">{props.description}</span>
@@ -46,7 +46,7 @@ function MirrorActionRow(props: {
           onClick={props.onClick}
           type="button"
         >
-          {t('settings.library.rebuild')}
+          {props.actionLabel}
         </button>
       </SettingsControlSlot>
     </SettingsRow>
@@ -61,6 +61,7 @@ function MirrorMaintenanceSection(props: SettingsImportSectionProps) {
     <SettingsSection ariaLabel={t('settings.library.mirrorMaintenance.sectionAria')} title={t('settings.library.mirrorMaintenance.title')}>
       <MirrorActionRow
         ariaLabel={t('settings.library.mirrorOutput.aria')}
+        actionLabel={t('settings.library.mirrorOutput.action')}
         description={t('settings.library.mirrorOutput.description')}
         disabled={!props.isDesktopRuntime || props.isRebuildingMirrorOutput || props.pendingLocation !== null}
         error={props.mirrorOutputRebuildError}
@@ -71,6 +72,7 @@ function MirrorMaintenanceSection(props: SettingsImportSectionProps) {
       />
       <MirrorActionRow
         ariaLabel={t('settings.library.mirrorLinks.aria')}
+        actionLabel={t('settings.library.mirrorLinks.action')}
         description={t('settings.library.mirrorLinks.description')}
         disabled={!props.isDesktopRuntime || props.isRebuildingMirrorLinks || props.pendingLocation !== null}
         error={props.mirrorLinkRebuildError}

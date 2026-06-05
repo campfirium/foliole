@@ -54,3 +54,10 @@ it('marks library path and mirror rebuild errors as alerts', () => {
     'Could not rebuild mirror output.'
   ]);
 });
+
+it('uses separate action labels for mirror rebuild and link repair', () => {
+  renderWithLocalization(<SettingsImportSection {...baseProps} />);
+
+  expect(screen.getByRole('button', { name: 'Rebuild mirror' })).toHaveTextContent('Rebuild');
+  expect(screen.getByRole('button', { name: 'Repair mirror links' })).toHaveTextContent('Repair');
+});

@@ -56,7 +56,7 @@ beforeEach(() => {
   mockedUpdateRuntimeLibraryPathSetting.mockReset();
 });
 
-it('confirms before switching to an existing Library Home database', async () => {
+it('confirms before switching to an existing library database', async () => {
   mockedUpdateRuntimeLibraryPathSetting
     .mockRejectedValueOnce(new Error(EXISTING_LIBRARY_HOME_CONFIRMATION_ERROR))
     .mockResolvedValueOnce({
@@ -71,9 +71,9 @@ it('confirms before switching to an existing Library Home database', async () =>
   act(() => {
     changePromise = result.current.onChangeLocation('library_home');
   });
-  const dialog = await screen.findByRole('dialog', { name: 'Use existing Library Home?' });
+  const dialog = await screen.findByRole('dialog', { name: 'Use this existing library?' });
   expect(within(dialog).getByText('Foliole found an existing database in D:\\X\\U\\Foliole.')).toBeInTheDocument();
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Use Library Home' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Use this library' }));
   await act(async () => {
     await changePromise;
   });
@@ -84,7 +84,7 @@ it('confirms before switching to an existing Library Home database', async () =>
   });
 });
 
-it('leaves Library Home unchanged when existing library confirmation is canceled', async () => {
+it('leaves the data location unchanged when existing library confirmation is canceled', async () => {
   mockedUpdateRuntimeLibraryPathSetting.mockRejectedValueOnce(new Error(EXISTING_LIBRARY_HOME_CONFIRMATION_ERROR));
 
   const { result } = renderHook(() => useLibraryPathSettings(), { wrapper: ConfirmationWrapper });
@@ -94,7 +94,7 @@ it('leaves Library Home unchanged when existing library confirmation is canceled
   act(() => {
     changePromise = result.current.onChangeLocation('library_home');
   });
-  fireEvent.click(within(await screen.findByRole('dialog', { name: 'Use existing Library Home?' })).getByRole('button', { name: 'Cancel' }));
+  fireEvent.click(within(await screen.findByRole('dialog', { name: 'Use this existing library?' })).getByRole('button', { name: 'Cancel' }));
   await act(async () => {
     await changePromise;
   });
