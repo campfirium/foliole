@@ -7,12 +7,14 @@ describe('createElectronLaunchEnv', () => {
     const env = createElectronLaunchEnv(
       {
         PATH: '/tmp/bin',
-        ELECTRON_RUN_AS_NODE: '1'
+        ELECTRON_RUN_AS_NODE: '1',
+        FOLIOLE_SKIP_STARTUP_WINDOW_STATE: '1'
       },
       'http://127.0.0.1:4600'
     );
 
     expect(env.ELECTRON_RUN_AS_NODE).toBeUndefined();
+    expect(env.FOLIOLE_SKIP_STARTUP_WINDOW_STATE).toBeUndefined();
     expect(env.ELECTRON_RENDERER_URL).toBe('http://127.0.0.1:4600');
     expect(env.PATH).toBe('/tmp/bin');
   });

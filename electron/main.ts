@@ -153,19 +153,6 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
     restoredWindowState,
     screen.getAllDisplays().map((display) => display.workArea)
   );
-  if (restoredWindowState?.isMaximized === true) {
-    const restoredBounds = {
-      height: options.height ?? 900,
-      width: options.width ?? 1400,
-      x: options.x ?? 0,
-      y: options.y ?? 0
-    };
-    const workArea = screen.getDisplayMatching(restoredBounds).workArea;
-    options.x = workArea.x;
-    options.y = workArea.y;
-    options.width = workArea.width;
-    options.height = workArea.height;
-  }
   if (startupAppearance?.backgroundColor) {
     options.backgroundColor = startupAppearance.backgroundColor;
   }

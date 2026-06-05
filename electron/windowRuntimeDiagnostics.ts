@@ -114,6 +114,11 @@ export async function presentInitialRendererWindow(window: BrowserWindow) {
     isFullScreen: presentation.isFullScreen,
     isMaximized: presentation.isMaximized
   });
+  if (presentation.isFullScreen && !window.isFullScreen()) {
+    window.setFullScreen(true);
+  } else if (presentation.isMaximized && !window.isMaximized()) {
+    window.maximize();
+  }
   if (!window.isVisible()) {
     window.show();
   }

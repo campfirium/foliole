@@ -18,7 +18,7 @@ describe('startup window state', () => {
     expect(appendBootEvent).not.toHaveBeenCalled();
   });
 
-  it('lets native preview create the window without blocking on database-backed bounds', async () => {
+  it('honors an explicit startup window state skip flag', async () => {
     const appendBootEvent = vi.fn(() => Promise.resolve());
     const loadWindowState = vi.fn(() => Promise.resolve(null));
 

@@ -9,5 +9,6 @@ export function createElectronLaunchEnv(baseEnv, rendererUrl) {
     NODE_ENV: 'development'
   };
   delete nextEnv.ELECTRON_RUN_AS_NODE;
+  delete nextEnv.FOLIOLE_SKIP_STARTUP_WINDOW_STATE;
   return nextEnv;
 }

@@ -28,14 +28,22 @@ function createWindowMock() {
     getURL: ReturnType<typeof vi.fn>;
   };
   let visible = false;
+  let fullScreen = false;
+  let maximized = false;
   webContents.executeJavaScript = vi.fn().mockResolvedValue(true);
   webContents.getURL = vi.fn(() => 'http://127.0.0.1:24600/');
   return Object.assign(windowEmitter, {
     isDestroyed: vi.fn(() => false),
+    isFullScreen: vi.fn(() => fullScreen),
+    isMaximized: vi.fn(() => maximized),
     isVisible: vi.fn(() => visible),
-    maximize: vi.fn(),
+    maximize: vi.fn(() => {
+      maximized = true;
+    }),
     getBounds: vi.fn(() => ({ height: 900, width: 1400, x: 0, y: 0 })),
-    setFullScreen: vi.fn(),
+    setFullScreen: vi.fn((next: boolean) => {
+      fullScreen = next;
+    }),
     show: vi.fn(() => {
       visible = true;
     }),
@@ -64,12 +72,27 @@ describe('window runtime startup visibility', () => {
     await presentInitialRendererWindow(window as never);
 
     expect(window.webContents.executeJavaScript).not.toHaveBeenCalled();
-    expect(window.maximize).not.toHaveBeenCalled();
+    expect(window.maximize).toHaveBeenCalledTimes(1);
     expect(window.show).toHaveBeenCalledTimes(1);
     expect(mocks.appendBootEvent).toHaveBeenCalledWith(
       'window_initial-renderer-window-show',
       expect.objectContaining({ isMaximized: true })
     );
+  });
+
+  it('restores fullscreen before the initial renderer window is shown', async () => {
+    const window = createWindowMock();
+    const { presentInitialRendererWindow, setStartupWindowPresentation } = await import('./windowRuntimeDiagnostics.js');
+
+    setStartupWindowPresentation(window as never, {
+      isFullScreen: true,
+      isMaximized: false
+    });
+    await presentInitialRendererWindow(window as never);
+
+    expect(window.setFullScreen).toHaveBeenCalledWith(true);
+    expect(window.maximize).not.toHaveBeenCalled();
+    expect(window.show).toHaveBeenCalledTimes(1);
   });
 
   it('keeps an already visible window visible', async () => {

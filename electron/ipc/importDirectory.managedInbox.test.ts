@@ -85,6 +85,9 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
   });
 
   const result = await runDirectoryImport(undefined, { source_adapter: 'foliole_managed_inbox_folder' });
+  if (!result) {
+    throw new Error('expected managed inbox import result');
+  }
 
   expect(result).toEqual(expect.objectContaining({ consumed_count: 1, discovered_count: 2, failed_count: 1 }));
   expect(result.entries).toEqual(

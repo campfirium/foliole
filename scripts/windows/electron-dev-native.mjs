@@ -66,7 +66,6 @@ process.env.FOLIOLE_DISABLE_CHROMIUM_SANDBOX_FOR_DEBUG ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_NODE_SYNC_FLUSH ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE ??= '1';
-process.env.FOLIOLE_SKIP_STARTUP_WINDOW_STATE ??= '1';
 assertLocalDatabaseWritable();
 
 await import('../electron-dev.mjs');
