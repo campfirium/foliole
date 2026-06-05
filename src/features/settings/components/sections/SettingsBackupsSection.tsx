@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SettingsErrorState,
   SettingsLoadingState,
@@ -15,21 +16,23 @@ import { SourceDispositionStateRow } from './SourceDispositionStateRow';
 import { useBackupSettingsSectionState } from './useBackupSettingsSectionState';
 
 function BackupLoadingState() {
+  const t = useTranslation();
+
   return (
     <>
-      <SettingsSection ariaLabel="Backup list loading section" title="Backups">
+      <SettingsSection ariaLabel={t('settings.backups.list.loadingAria')} title={t('settings.backups.title')}>
         <SettingsLoadingState />
       </SettingsSection>
-      <SettingsSection ariaLabel="Source topic handling loading section" title="Source topic handling">
+      <SettingsSection ariaLabel={t('settings.backups.sourceHandling.loadingAria')} title={t('settings.backups.sourceHandling.title')}>
         <SettingsLoadingState />
       </SettingsSection>
-      <SettingsSection ariaLabel="Backup location loading section" title="Backup location">
+      <SettingsSection ariaLabel={t('settings.backups.location.loadingAria')} title={t('settings.backups.location.title')}>
         <SettingsLoadingState />
       </SettingsSection>
-      <SettingsSection ariaLabel="Extra backup copy loading section" title="Extra backup copy">
+      <SettingsSection ariaLabel={t('settings.backups.extra.loadingAria')} title={t('settings.backups.extra.title')}>
         <SettingsLoadingState />
       </SettingsSection>
-      <SettingsSection ariaLabel="Backup rules loading section" title="Backup rules">
+      <SettingsSection ariaLabel={t('settings.backups.rules.loadingAria')} title={t('settings.backups.rules.title')}>
         <SettingsLoadingState />
       </SettingsSection>
     </>
@@ -40,12 +43,14 @@ function BackupLoadErrorState(props: {
   errorMessage: string;
   onRetry: () => void;
 }) {
+  const t = useTranslation();
+
   return (
-    <SettingsSection ariaLabel="Backup settings error section" title="Backups">
+    <SettingsSection ariaLabel={t('settings.backups.error.sectionAria')} title={t('settings.backups.title')}>
       <SettingsErrorState
-        action={<SettingsStateAction label="Retry" onClick={props.onRetry} />}
+        action={<SettingsStateAction label={t('settings.backups.error.retry')} onClick={props.onRetry} />}
         description={props.errorMessage}
-        title="Backup settings unavailable"
+        title={t('settings.backups.error.unavailable')}
       />
     </SettingsSection>
   );
@@ -53,6 +58,8 @@ function BackupLoadErrorState(props: {
 
 export function SettingsBackupsSection() {
   const state = useBackupSettingsSectionState();
+  const t = useTranslation();
+
   if (!state.activeDraft) {
     if (state.loadErrorMessage) {
       return <BackupLoadErrorState errorMessage={state.loadErrorMessage} onRetry={state.retryInitialLoad} />;
@@ -63,7 +70,7 @@ export function SettingsBackupsSection() {
   return (
     <>
       <BackupListSection backups={state.backups} createBackup={state.handleCreateBackup} isBackupActionsAvailable={state.isDesktopRuntime} isCreatingBackup={state.isCreatingBackup} isLoadingBackups={state.isLoadingBackups} restoringPath={state.restoringPath} restoreBackup={state.handleRestoreBackup} statusMessage={state.statusMessage} />
-      <SettingsSection ariaLabel="Source topic handling section" title="Source topic handling">
+      <SettingsSection ariaLabel={t('settings.backups.sourceHandling.sectionAria')} title={t('settings.backups.sourceHandling.title')}>
         <SourceDispositionStateRow
           isDesktopRuntime={state.isDesktopRuntime}
           isExporting={state.isExportingSourceStates}
@@ -76,7 +83,7 @@ export function SettingsBackupsSection() {
           summary={state.sourceDispositionSummary}
         />
       </SettingsSection>
-      <SettingsSection ariaLabel="Backup location section" title="Backup location">
+      <SettingsSection ariaLabel={t('settings.backups.location.sectionAria')} title={t('settings.backups.location.title')}>
         <BackupPathRow backupPath={state.activeDraft.backup_dir || state.defaultBackupPath} defaultBackupPath={state.activeDraft.backup_dir || state.defaultBackupPath} errorMessage={state.pathErrorMessage} isDesktopRuntime={state.isDesktopRuntime} onChangePath={state.handleChangeBackupPath} onRestoreDefault={state.handleRestoreBackupPathDefault} />
       </SettingsSection>
       <ExtraBackupCopySection draft={state.activeDraft} errorMessage={state.extraPathErrorMessage} isDesktopRuntime={state.isDesktopRuntime} onChangeField={state.handleDraftField} onChangePath={state.handleChangeExtraBackupPath} onRestoreDefault={state.handleRestoreExtraBackupPathDefault} />

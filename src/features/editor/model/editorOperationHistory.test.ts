@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { translate } from '../../../shared/localization/translations';
+
 import {
   applyEditorOperationHistory,
   createEmptyEditorOperationHistory,
@@ -8,6 +10,8 @@ import {
   pushEditorOperationEntry,
   type EditorOperationHistoryEntry
 } from './editorOperationHistory';
+
+const t = translate.bind(null, 'en');
 
 function createTextEntry(
   nodeId: string,
@@ -185,7 +189,7 @@ describe('editorOperationHistory metadata', () => {
       createAnnotationEntry('node-1', 'annotation.delete')
     );
 
-    expect(getEditorOperationUndoTitle(history)).toBe('Undo Delete Annotation');
+    expect(getEditorOperationUndoTitle(history, t)).toBe('Undo Delete Annotation');
 
     history = applyEditorOperationHistory({
       applyEntry: () => true,
@@ -194,8 +198,8 @@ describe('editorOperationHistory metadata', () => {
       mode: 'undo'
     }).history;
 
-    expect(getEditorOperationUndoTitle(history)).toBe('Undo');
-    expect(getEditorOperationRedoTitle(history)).toBe('Redo Delete Annotation');
+    expect(getEditorOperationUndoTitle(history, t)).toBe('Undo');
+    expect(getEditorOperationRedoTitle(history, t)).toBe('Redo Delete Annotation');
   });
 
   it('trims the undo stack to the configured limit', () => {

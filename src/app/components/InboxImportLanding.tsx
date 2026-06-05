@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useFormalImport } from '../hooks/useFormalImport';
 
 import { ImportCatalogLayout } from './ImportCatalogLayout';
-import { IMPORT_CATALOG_SORT_OPTIONS, parseImportCatalogSortKey, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
+import { getImportCatalogSortOptions, parseImportCatalogSortKey, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
 import { matchesImportSearch } from './importManagementSearch';
 import {
   collectRecentInboxEntries,
@@ -36,7 +37,6 @@ function filterRecentRuns(query: string, nodesById: Record<string, Node>, runs: 
   );
 }
 
-const inboxSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
 type InboxSortKey = ImportCatalogSortKey;
 
 function formatCountLabel(filteredCount: number, totalCount: number) {
@@ -109,24 +109,26 @@ export function InboxImportLanding({
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
 }) {
+  const t = useTranslation();
   const state = useInboxCatalogState(nodesById);
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
       <ImportCatalogLayout
+        catalogAriaLabel={t('desktop.importOverview.inbox.aria')}
         countLabel={state.countLabel}
-        emptyState={{ description: 'No imported Inbox topics or recent runs yet.', title: 'Inbox imports are empty' }}
+        emptyState={{ description: t('desktop.importOverview.inbox.empty.description'), title: t('desktop.importOverview.inbox.empty.title') }}
         hasItems={state.visibleItems.length > 0}
         onChangeQuery={state.setQuery}
         onChangeSortDirection={state.setSortDirection}
         onChangeSortKey={(value) => state.setSortKey(parseImportCatalogSortKey(value) ?? state.sortKey)}
         query={state.query}
-        searchLabel="Search Inbox history"
-        searchPlaceholder="Search Inbox history"
+        searchLabel={t('desktop.importOverview.inbox.search')}
+        searchPlaceholder={t('desktop.importOverview.inbox.search')}
         sortDirection={state.sortDirection}
         sortKey={state.sortKey}
-        sortOptions={[...inboxSortOptions]}
-        title="Inbox History"
+        sortOptions={getImportCatalogSortOptions(t)}
+        title={t('desktop.importOverview.inboxHistory')}
       >
         {state.visibleItems.map((item) =>
           item.kind === 'linked' ? (
@@ -136,7 +138,9 @@ export function InboxImportLanding({
           )
         )}
       </ImportCatalogLayout>
-      <p className="sr-only">{state.totalLinkedNodes} linked topics · {state.recentRunCount} recent runs</p>
+      <p className="sr-only">
+        {t('desktop.importOverview.inbox.screenReaderSummary', { linkedCount: state.totalLinkedNodes, runCount: state.recentRunCount })}
+      </p>
     </div>
   );
 }

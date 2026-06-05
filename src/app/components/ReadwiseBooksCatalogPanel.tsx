@@ -1,4 +1,5 @@
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -9,6 +10,7 @@ import type { ImportInventoryCatalogState } from './ImportInventoryState';
 
 export function ReadwiseBooksCatalogPanel(props: {
   books: RuntimeReadwiseBooksInventory['books'];
+  catalogAriaLabel: string;
   countLabel: string;
   disabledState?: ImportInventoryCatalogState;
   errorState?: ImportInventoryCatalogState & { onRetry: () => void };
@@ -26,13 +28,15 @@ export function ReadwiseBooksCatalogPanel(props: {
   sortKey: string;
   sortOptions: ImportCatalogSortOption[];
 }) {
+  const t = useTranslation();
   return (
     <ImportCatalogLayout
+      catalogAriaLabel={props.catalogAriaLabel}
       countLabel={props.countLabel}
       {...definedProps({
         disabledState: props.disabledState
       })}
-      emptyState={{ description: 'No books discovered yet.', title: 'Readwise Books is empty' }}
+      emptyState={{ description: t('desktop.readwiseBooks.empty.description'), title: t('desktop.readwiseBooks.empty.title') }}
       {...definedProps({
         errorState: props.errorState
       })}
@@ -42,12 +46,12 @@ export function ReadwiseBooksCatalogPanel(props: {
       onChangeSortDirection={props.onChangeSortDirection}
       onChangeSortKey={props.onChangeSortKey}
       query={props.query}
-      searchLabel="Search imported books"
-      searchPlaceholder="Search in this folder"
+      searchLabel={t('desktop.readwiseBooks.search.label')}
+      searchPlaceholder={t('desktop.readwiseBooks.search.placeholder')}
       sortDirection={props.sortDirection}
       sortKey={props.sortKey}
       sortOptions={props.sortOptions}
-      title="Readwise Books"
+      title={t('desktop.readwiseBooks.title')}
     >
       {props.books.map((book) => (
         <ReadwiseBookInventoryItem

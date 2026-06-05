@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
 import { renderMermaidSvg } from '../adapters/liveMarkdownMermaidRenderer';
 import type { MarkdownMermaidPreviewRequest } from '../model/markdownMermaidPreview';
@@ -63,6 +64,7 @@ function MarkdownMermaidPreviewBody(props: { source: string }) {
 }
 
 export function MarkdownMermaidPreviewDialog(props: MarkdownMermaidPreviewDialogProps) {
+  const t = useTranslation();
   const diagramKind = props.diagram ? resolveMermaidKind(props.diagram.source) : 'diagram';
   const shellClassName = [
     'relative max-h-[88vh] w-[min(1500px,calc(100vw-7rem))] overflow-auto rounded-md border border-border bg-canvas p-10 shadow-popover',
@@ -77,7 +79,7 @@ export function MarkdownMermaidPreviewDialog(props: MarkdownMermaidPreviewDialog
           aria-describedby={undefined}
           className="left-1/2 top-1/2 z-preview-dialog max-w-none -translate-x-1/2 -translate-y-1/2 overflow-visible border-transparent bg-transparent p-0 shadow-none"
         >
-          <AppDialogTitle className="sr-only">Diagram preview</AppDialogTitle>
+          <AppDialogTitle className="sr-only">{t('desktop.editorPreview.diagramTitle')}</AppDialogTitle>
           <div className={shellClassName} data-md-mermaid-kind={diagramKind}>
             {props.diagram ? <MarkdownMermaidPreviewBody source={props.diagram.source} /> : null}
           </div>

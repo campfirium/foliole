@@ -4,6 +4,8 @@ import type { PersistedNodeViewState } from '../../../lib/platform/persistedNode
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
+import { getStoredAppLocale } from '../localization/appLanguage';
+import { translate } from '../localization/translations';
 import {
   isCanonicalTrashedNodeId,
   isCanonicalVisibleNodeId,
@@ -87,7 +89,7 @@ export function resolveCompanionArticleTitle(node: CompanionReadableNode) {
   if (headingTitle) {
     return headingTitle;
   }
-  return node.title.trim() || 'Untitled';
+  return node.title.trim() || resolveCompanionUntitledLabel();
 }
 
 export function resolveReadableCompanionArticleByNodeId(
@@ -147,4 +149,7 @@ export function resolveCompanionBrowseExitNodeId(snapshot: WorkspaceSnapshot | n
     return null;
   }
   return normalizedSnapshot.nodesById[parentNodeId]?.kind === 'folder' ? parentNodeId : null;
+}
+export function resolveCompanionUntitledLabel() {
+  return translate(getStoredAppLocale(), 'desktop.search.context.untitled');
 }

@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -79,7 +79,7 @@ it('offers permanent delete for the current trash directory list', () => {
   expect(deleteNodesPermanently).toHaveBeenCalledWith(['folder']);
 });
 
-it('shows a Trash breadcrumb and Restore action for a selected deleted topic', () => {
+it('shows a Trash breadcrumb and Restore action for a selected deleted topic', async () => {
   const restoreNode = vi.fn();
   const onSelectNode = vi.fn();
   useWorkspaceStore.setState((state) => ({ ...state, restoreNode }));
@@ -105,5 +105,5 @@ it('shows a Trash breadcrumb and Restore action for a selected deleted topic', (
 
   fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
   expect(restoreNode).toHaveBeenCalledWith('topic');
-  expect(onSelectNode).toHaveBeenCalledWith('topic');
+  await waitFor(() => expect(onSelectNode).toHaveBeenCalledWith('topic'));
 });

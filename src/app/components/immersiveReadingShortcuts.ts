@@ -1,18 +1,26 @@
 export interface ImmersiveReadingShortcut {
   ariaKeyShortcuts: string;
   key: string;
-  summary: string;
+  summaryKey:
+    | 'desktop.immersiveShortcuts.toggle'
+    | 'desktop.immersiveShortcuts.nextParagraph'
+    | 'desktop.immersiveShortcuts.previousParagraph'
+    | 'desktop.immersiveShortcuts.highlightParagraph'
+    | 'desktop.immersiveShortcuts.createNote'
+    | 'desktop.immersiveShortcuts.editTemporarily'
+    | 'desktop.immersiveShortcuts.toggleList'
+    | 'desktop.immersiveShortcuts.exit';
 }
 
 export const IMMERSIVE_READING_SHORTCUTS: ImmersiveReadingShortcut[] = [
-  { ariaKeyShortcuts: 'F11', key: 'F11', summary: 'Toggle immersive reading' },
-  { ariaKeyShortcuts: 'Space', key: 'Space', summary: 'Select the next paragraph' },
-  { ariaKeyShortcuts: 'Shift+Space', key: 'Shift+Space', summary: 'Select the previous paragraph' },
-  { ariaKeyShortcuts: 'ArrowDown', key: 'ArrowDown', summary: 'Select the next paragraph' },
-  { ariaKeyShortcuts: 'ArrowUp', key: 'ArrowUp', summary: 'Select the previous paragraph' },
-  { ariaKeyShortcuts: 'H', key: 'H', summary: 'Highlight the current paragraph' },
-  { ariaKeyShortcuts: 'N', key: 'N', summary: 'Create a note from the current paragraph' },
-  { ariaKeyShortcuts: 'Enter', key: 'Enter', summary: 'Temporarily switch into editing' },
-  { ariaKeyShortcuts: '?', key: '?', summary: 'Show or hide this shortcut list' },
-  { ariaKeyShortcuts: 'Escape', key: 'Esc', summary: 'Leave editing or exit immersive reading' }
+  { ariaKeyShortcuts: 'F11', key: 'F11', summaryKey: 'desktop.immersiveShortcuts.toggle' },
+  { ariaKeyShortcuts: 'Space', key: 'Space', summaryKey: 'desktop.immersiveShortcuts.nextParagraph' },
+  { ariaKeyShortcuts: 'Shift+Space', key: 'Shift+Space', summaryKey: 'desktop.immersiveShortcuts.previousParagraph' },
+  { ariaKeyShortcuts: 'ArrowDown', key: 'ArrowDown', summaryKey: 'desktop.immersiveShortcuts.nextParagraph' },
+  { ariaKeyShortcuts: 'ArrowUp', key: 'ArrowUp', summaryKey: 'desktop.immersiveShortcuts.previousParagraph' },
+  { ariaKeyShortcuts: 'H', key: 'H', summaryKey: 'desktop.immersiveShortcuts.highlightParagraph' },
+  { ariaKeyShortcuts: 'N', key: 'N', summaryKey: 'desktop.immersiveShortcuts.createNote' },
+  { ariaKeyShortcuts: 'Enter', key: 'Enter', summaryKey: 'desktop.immersiveShortcuts.editTemporarily' },
+  { ariaKeyShortcuts: '?', key: '?', summaryKey: 'desktop.immersiveShortcuts.toggleList' },
+  { ariaKeyShortcuts: 'Escape', key: 'Esc', summaryKey: 'desktop.immersiveShortcuts.exit' }
 ];

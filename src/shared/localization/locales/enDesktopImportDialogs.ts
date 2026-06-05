@@ -1,0 +1,21 @@
+export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
+  'desktop.epubImport.mode.title': 'Choose reading mode',
+  'desktop.epubImport.mode.description': 'You can change this later from the Topic context menu.',
+  'desktop.epubImport.mode.aria': 'EPUB reading mode',
+  'desktop.epubImport.mode.sequential.label': 'Sequential reading',
+  'desktop.epubImport.mode.sequential.suitability': 'Suited to new content',
+  'desktop.epubImport.mode.sequential.description': 'Read in order. The next chapter enters the Review queue after the current chapter is dismissed.',
+  'desktop.epubImport.mode.free.label': 'Free reading',
+  'desktop.epubImport.mode.free.suitability': 'Suited to existing content',
+  'desktop.epubImport.mode.free.description': 'Keep every chapter available so they can enter the Review queue without chapter-order locks.',
+  'desktop.readwise.importDialog.blockedTitle': 'Preview the import first',
+  'desktop.readwise.importDialog.ok': 'OK',
+  'desktop.readwise.importDialog.title': 'Readwise import',
+  'desktop.readwise.importDialog.previewTitle': 'Readwise import preview',
+  'desktop.readwise.importDialog.preparing': 'Preparing preview...',
+  'desktop.readwise.importDialog.cancel': 'Cancel',
+  'desktop.readwise.importDialog.cancelling': 'Cancelling',
+  'desktop.readwise.importDialog.import': 'Import',
+  'desktop.readwise.importDialog.importing': 'Importing',
+  'desktop.readwise.previewSample.highlightMissing': 'This highlight was not found in the source topic.'
+} as const;

@@ -97,7 +97,7 @@ describe('documentPanelSectionModel', () => {
     const source = getDocumentPanelView(buildProps({ nodesById: { 'node-1': loadedNode } }), 'source', 860).bodyProps;
     expect(source.editorContentPaddingBottom).toBeUndefined();
 
-    const answerNode: Node = { ...loadedNode, reveal: 'Back' };
+    const answerNode: Node = { ...loadedNode, kind: 'item', reveal: 'Back' };
     const withAnswer = getDocumentPanelView(
       buildProps({
         nodesById: { 'node-1': answerNode },

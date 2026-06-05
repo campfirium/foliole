@@ -20,7 +20,7 @@ function SearchSettingsHarness() {
         <SettingsPanel
           {...createProps()}
           onClose={() => setIsOpen(false)}
-          requestedCategory="about"
+          requestedCategory="general"
         />
       ) : null}
     </>
@@ -51,7 +51,7 @@ it('persists search enhancement from General settings', async () => {
 
   const toggle = await screen.findByRole('switch', { name: 'Search enhancement' });
   expect(toggle).toHaveAttribute('aria-checked', 'false');
-  expect(screen.getByText('Adjust search behavior and view support tools.')).toBeInTheDocument();
+  expect(screen.getByText('Adjust general workspace behavior.')).toBeInTheDocument();
   expect(screen.getByText(/other languages that are not separated by spaces/)).toBeInTheDocument();
   expect(screen.queryByText('Full-text search index')).not.toBeInTheDocument();
 

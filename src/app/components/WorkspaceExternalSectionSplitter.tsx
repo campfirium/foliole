@@ -1,6 +1,7 @@
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 interface WorkspaceExternalSectionSplitterProps {
   height: number;
@@ -15,9 +16,10 @@ export function WorkspaceExternalSectionSplitter({
   onKeyDown,
   onPointerDown
 }: WorkspaceExternalSectionSplitterProps) {
+  const t = useTranslation();
   return (
     <div
-      aria-label="Resize external section"
+      aria-label={t('desktop.workspace.resizeExternalSection')}
       aria-orientation="horizontal"
       aria-valuenow={Math.round(height)}
       className="group relative h-1 shrink-0 bg-transparent"

@@ -1,14 +1,17 @@
+import { useTranslation } from '../shared/localization/LocalizationProvider';
+import type { TranslationKey } from '../shared/localization/translations';
+
 import type { CompanionHandoffReminderSettings, HandoffReminderDelay } from './companionHandoffReminderSettings';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
-const SHORT_DELAY_OPTIONS: Array<{ label: string; value: HandoffReminderDelay }> = [
-  { label: 'Off', value: 'off' },
-  { label: '2 minutes', value: '2' },
-  { label: '5 minutes', value: '5' },
-  { label: '15 minutes', value: '15' },
-  { label: '30 minutes', value: '30' },
-  { label: '1 hour', value: '60' },
-  { label: '3 hours', value: '180' }
+const SHORT_DELAY_OPTIONS: Array<{ labelKey: TranslationKey; value: HandoffReminderDelay }> = [
+  { labelKey: 'companion.sync.handoff.off', value: 'off' },
+  { labelKey: 'companion.sync.handoff.delay.2', value: '2' },
+  { labelKey: 'companion.sync.handoff.delay.5', value: '5' },
+  { labelKey: 'companion.sync.handoff.delay.15', value: '15' },
+  { labelKey: 'companion.sync.handoff.delay.30', value: '30' },
+  { labelKey: 'companion.sync.handoff.delay.60', value: '60' },
+  { labelKey: 'companion.sync.handoff.delay.180', value: '180' }
 ];
 
 function SettingsSelect(props: {
@@ -35,9 +38,10 @@ function HandoffReminderSwitch(props: {
   isEnabled: boolean;
   onToggle(): void;
 }) {
+  const t = useTranslation();
   return (
     <button
-      aria-label="Handoff reminders"
+      aria-label={t('companion.sync.handoff.title')}
       aria-checked={props.isEnabled}
       className={`flex h-7 w-12 shrink-0 items-center rounded-full px-1 transition ${props.isEnabled ? 'justify-end bg-companion-accent' : 'justify-start bg-companion-divider-strong'}`}
       onClick={props.onToggle}
@@ -57,6 +61,7 @@ function HandoffReminderSummary(props: {
   isEnabled: boolean;
   onOpen(): void;
 }) {
+  const t = useTranslation();
   return (
     <section className="text-foreground">
       <button
@@ -65,14 +70,14 @@ function HandoffReminderSummary(props: {
         type="button"
       >
         <div className="flex items-start justify-between gap-3">
-          <span className="text-sm font-semibold leading-5 text-foreground">Handoff reminders</span>
+          <span className="text-sm font-semibold leading-5 text-foreground">{t('companion.sync.handoff.title')}</span>
           <span className="flex shrink-0 items-center gap-1 text-sm font-semibold leading-5 text-foreground">
-            <span>{props.isEnabled ? 'On' : 'Off'}</span>
+            <span>{props.isEnabled ? t('companion.sync.handoff.on') : t('companion.sync.handoff.off')}</span>
             <span className="text-companion-text-secondary"><ChevronIcon /></span>
           </span>
         </div>
         <span className="mt-2 block text-sm leading-6 text-companion-text-secondary">
-            Remind me when local changes are waiting.
+          {t('companion.sync.handoff.description')}
         </span>
       </button>
     </section>
@@ -85,33 +90,34 @@ function HandoffReminderDetail(props: {
   settings: CompanionHandoffReminderSettings;
   toggleEnabled(enabled: boolean): void;
 }) {
+  const t = useTranslation();
   return (
     <section className="border-t border-companion-divider text-foreground">
       <div className="flex items-center justify-between gap-4 border-b border-companion-divider py-4">
         <span>
-          <span className="block text-sm font-medium text-foreground">Enable reminders</span>
+          <span className="block text-sm font-medium text-foreground">{t('companion.sync.handoff.enable')}</span>
           <span className="mt-1 block text-xs leading-5 text-companion-text-secondary">
-            Remind me when local changes are waiting.
+            {t('companion.sync.handoff.description')}
           </span>
         </span>
         <HandoffReminderSwitch isEnabled={props.isEnabled} onToggle={() => props.toggleEnabled(!props.isEnabled)} />
       </div>
       <div className="border-b border-companion-divider py-4">
         <SettingsSelect
-          label="Short reminder"
+          label={t('companion.sync.handoff.short')}
           onChange={(shortDelay) => props.onChange({ ...props.settings, shortDelay: shortDelay as HandoffReminderDelay })}
           value={props.settings.shortDelay}
         >
           {SHORT_DELAY_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+            <option key={option.value} value={option.value}>{t(option.labelKey)}</option>
           ))}
         </SettingsSelect>
         <SettingsSelect
-          label="Daily reminder"
+          label={t('companion.sync.handoff.daily')}
           onChange={(fixedTime) => props.onChange({ ...props.settings, fixedTime: fixedTime || null })}
           value={props.settings.fixedTime ?? ''}
         >
-          <option value="">Off</option>
+          <option value="">{t('companion.sync.handoff.off')}</option>
           <option value="18:00">18:00</option>
           <option value="21:00">21:00</option>
           <option value="22:30">22:30</option>

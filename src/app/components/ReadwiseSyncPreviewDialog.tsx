@@ -4,6 +4,7 @@ import type {
   NativeReadwiseImportRunProgressEvent,
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeImportContract';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
@@ -19,7 +20,7 @@ import { ReadwisePreviewList, ReadwisePreviewSummary } from './ReadwiseSyncPrevi
 
 const ReadwiseBlockedPreviewDialog = forwardRef<
   HTMLDivElement,
-  { notice: string; onCancel: () => void }
+  { notice: string; onCancel: () => void; t: Translate }
 >((props, ref) => (
   <AppDialogContent
     aria-describedby={undefined}
@@ -27,11 +28,11 @@ const ReadwiseBlockedPreviewDialog = forwardRef<
     ref={ref}
   >
     <div className="space-y-5 px-5 py-5">
-      <AppDialogTitle className="text-base font-semibold">Preview the import first</AppDialogTitle>
+      <AppDialogTitle className="text-base font-semibold">{props.t('desktop.readwise.importDialog.blockedTitle')}</AppDialogTitle>
       <p className="text-sm leading-5 text-foreground/70">{props.notice}</p>
       <div className="flex justify-end">
         <AppButton onClick={props.onCancel} variant="primary">
-          OK
+          {props.t('desktop.readwise.importDialog.ok')}
         </AppButton>
       </div>
     </div>
@@ -50,6 +51,7 @@ const ReadwiseImportPreviewDialog = forwardRef<
     onStart: () => void;
     progress: NativeReadwiseImportRunProgressEvent | null;
     preview: NativeReadwiseSyncPreviewResult | null;
+    t: Translate;
   }
 >((props, ref) => (
   <AppDialogContent
@@ -59,12 +61,12 @@ const ReadwiseImportPreviewDialog = forwardRef<
   >
     <div className="border-b border-border/65 px-5 py-4">
       <AppDialogTitle className="text-base font-semibold">
-        {props.isStarting ? 'Readwise import' : 'Readwise import preview'}
+        {props.isStarting ? props.t('desktop.readwise.importDialog.title') : props.t('desktop.readwise.importDialog.previewTitle')}
       </AppDialogTitle>
     </div>
     <div className="space-y-4 px-5 py-5">
       {props.isPreviewing ? (
-        <p className="text-sm text-foreground/65">Preparing preview...</p>
+        <p className="text-sm text-foreground/65">{props.t('desktop.readwise.importDialog.preparing')}</p>
       ) : null}
       {props.preview ? <ReadwisePreviewSummary preview={props.preview} /> : null}
       <ReadwisePreviewList entries={props.preview?.entries ?? []} />
@@ -80,14 +82,14 @@ const ReadwiseImportPreviewDialog = forwardRef<
         onClick={props.onCancel}
         variant={props.isStarting ? 'primary' : 'ghost'}
       >
-        {props.isCancelling ? 'Cancelling' : 'Cancel'}
+        {props.isCancelling ? props.t('desktop.readwise.importDialog.cancelling') : props.t('desktop.readwise.importDialog.cancel')}
       </AppButton>
       <AppButton
         disabled={props.isStarting || !props.preview}
         onClick={props.onStart}
         variant="primary"
       >
-        {props.isStarting ? 'Importing' : 'Import'}
+        {props.isStarting ? props.t('desktop.readwise.importDialog.importing') : props.t('desktop.readwise.importDialog.import')}
       </AppButton>
     </div>
   </AppDialogContent>
@@ -106,12 +108,13 @@ export function ReadwiseSyncPreviewDialog(props: {
   progress: NativeReadwiseImportRunProgressEvent | null;
   preview: NativeReadwiseSyncPreviewResult | null;
 }) {
+  const t = useTranslation();
   return (
     <AppDialog onOpenChange={(open) => (!open ? props.onCancel() : undefined)} open={props.open}>
       <AppDialogPortal>
         <AppDialogOverlay />
         {props.notice ? (
-          <ReadwiseBlockedPreviewDialog notice={props.notice} onCancel={props.onCancel} />
+          <ReadwiseBlockedPreviewDialog notice={props.notice} onCancel={props.onCancel} t={t} />
         ) : (
           <ReadwiseImportPreviewDialog
             error={props.error}
@@ -122,6 +125,7 @@ export function ReadwiseSyncPreviewDialog(props: {
             onStart={props.onStart}
             progress={props.progress}
             preview={props.preview}
+            t={t}
           />
         )}
       </AppDialogPortal>

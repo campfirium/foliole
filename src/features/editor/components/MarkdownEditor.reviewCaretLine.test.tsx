@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 
 vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
@@ -24,14 +25,16 @@ import { MarkdownEditor } from './MarkdownEditor';
 
 function renderEditor(reviewCaretLineHighlight: boolean) {
   return render(
-    <MouseGestureSettingsProvider>
-      <MarkdownEditor
-        nodeId="node-1"
-        onChange={vi.fn()}
-        reviewCaretLineHighlight={reviewCaretLineHighlight}
-        value="Alpha"
-      />
-    </MouseGestureSettingsProvider>
+    <LocalizationProvider>
+      <MouseGestureSettingsProvider>
+        <MarkdownEditor
+          nodeId="node-1"
+          onChange={vi.fn()}
+          reviewCaretLineHighlight={reviewCaretLineHighlight}
+          value="Alpha"
+        />
+      </MouseGestureSettingsProvider>
+    </LocalizationProvider>
   );
 }
 
@@ -42,14 +45,16 @@ describe('MarkdownEditor review caret-line hint', () => {
     expect(view.container.querySelector('.markdown-editor-host')).toHaveAttribute('data-review-caret-line', 'true');
 
     view.rerender(
-      <MouseGestureSettingsProvider>
-        <MarkdownEditor
-          nodeId="node-1"
-          onChange={vi.fn()}
-          reviewCaretLineHighlight={false}
-          value="Alpha"
-        />
-      </MouseGestureSettingsProvider>
+      <LocalizationProvider>
+        <MouseGestureSettingsProvider>
+          <MarkdownEditor
+            nodeId="node-1"
+            onChange={vi.fn()}
+            reviewCaretLineHighlight={false}
+            value="Alpha"
+          />
+        </MouseGestureSettingsProvider>
+      </LocalizationProvider>
     );
 
     expect(view.container.querySelector('.markdown-editor-host')).toHaveAttribute('data-review-caret-line', 'false');

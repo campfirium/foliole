@@ -2,6 +2,7 @@ import { BookOpenText, Check, ListChecks, ListFilter, Route } from 'lucide-react
 import { useState, type SVGProps } from 'react';
 
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
@@ -11,25 +12,29 @@ import {
 
 const SESSION_MODES: Array<{
   id: ReviewSessionMode;
-  label: string;
   Icon: typeof ListFilter;
 }> = [
   {
     id: 'recommended',
-    label: 'Review and reading',
     Icon: Route
   },
   {
     id: 'review-first',
-    label: 'Review first',
     Icon: ListChecks
   },
   {
     id: 'reading-only',
-    label: 'Reading only',
     Icon: BookOpenText
   }
 ];
+
+type ReviewSessionTranslate = ReturnType<typeof useTranslation>;
+
+function getSessionModeLabel(mode: ReviewSessionMode, t: ReviewSessionTranslate) {
+  if (mode === 'review-first') return t('desktop.reviewSession.mode.reviewFirst');
+  if (mode === 'reading-only') return t('desktop.reviewSession.mode.readingOnly');
+  return t('desktop.reviewSession.mode.recommended');
+}
 
 function modeButtonClassName(isTemporaryMode: boolean) {
   return [
@@ -61,19 +66,21 @@ export function ReviewSessionModeControl({
   mode: ReviewSessionMode;
   onChangeMode: (mode: ReviewSessionMode) => void;
 }) {
+  const t = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const activeMode = SESSION_MODES.find((item) => item.id === mode) ?? SESSION_MODES[0]!;
   const isTemporaryMode = activeMode.id !== 'recommended';
   const ActiveIcon = activeMode.Icon;
+  const activeLabel = getSessionModeLabel(activeMode.id, t);
 
   return (
     <AppDropdownMenu onOpenChange={setIsMenuOpen} open={isMenuOpen}>
       <AppDropdownMenuTrigger asChild>
         <button
-          aria-label={isTemporaryMode ? `Session mode: ${activeMode.label}` : 'Change session mode'}
+          aria-label={isTemporaryMode ? t('desktop.reviewSession.mode.current', { mode: activeLabel }) : t('desktop.reviewSession.mode.change')}
           className={modeButtonClassName(isTemporaryMode)}
           onClick={() => setIsMenuOpen(true)}
-          title={isTemporaryMode ? `Session mode: ${activeMode.label}` : 'Change session mode'}
+          title={isTemporaryMode ? t('desktop.reviewSession.mode.current', { mode: activeLabel }) : t('desktop.reviewSession.mode.change')}
           type="button"
         >
           <ActiveIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.9} />
@@ -83,6 +90,7 @@ export function ReviewSessionModeControl({
         {SESSION_MODES.map((item) => {
           const Icon = item.Icon;
           const isSelected = item.id === mode;
+          const itemLabel = getSessionModeLabel(item.id, t);
           return (
             <AppDropdownMenuItem
               className={menuItemClassName(isSelected)}
@@ -95,9 +103,9 @@ export function ReviewSessionModeControl({
               <Icon aria-hidden="true" className="size-4 text-foreground/62" strokeWidth={1.9} />
               <span className="min-w-0">
                 <span className="flex min-w-0 items-baseline gap-2">
-                  <span className="truncate text-[13px] font-medium">{item.label}</span>
+                  <span className="truncate text-[13px] font-medium">{itemLabel}</span>
                   {item.id === 'recommended' ? (
-                    <span className="shrink-0 text-[10px] font-medium text-foreground/38">RECOMMENDED</span>
+                    <span className="shrink-0 text-[10px] font-medium text-foreground/38">{t('desktop.reviewSession.mode.recommendedBadge')}</span>
                   ) : null}
                 </span>
               </span>
@@ -105,30 +113,31 @@ export function ReviewSessionModeControl({
             </AppDropdownMenuItem>
           );
         })}
-        <div className="px-3 pt-1 pb-2 text-xs text-foreground/45">Temporary setting.</div>
+        <div className="px-3 pt-1 pb-2 text-xs text-foreground/45">{t('desktop.reviewSession.mode.temporary')}</div>
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );
 }
 
 export function QueueClearFlowControl() {
+  const t = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <AppDropdownMenu onOpenChange={setIsMenuOpen} open={isMenuOpen}>
       <AppDropdownMenuTrigger asChild>
         <button
-          aria-label="Queue clear"
+          aria-label={t('desktop.reviewSession.summary.clear')}
           className={queueClearButtonClassName()}
           onClick={() => setIsMenuOpen(true)}
-          title="Queue clear"
+          title={t('desktop.reviewSession.summary.clear')}
           type="button"
         >
           <PlanetIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.9} />
         </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="start" className="w-56 max-w-[calc(100vw-2rem)] p-3" sideOffset={8}>
-        <p className="text-[13px] font-medium text-foreground/82">Queue clear. Flow on.</p>
+        <p className="text-[13px] font-medium text-foreground/82">{t('desktop.reviewSession.queueClear.description')}</p>
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );

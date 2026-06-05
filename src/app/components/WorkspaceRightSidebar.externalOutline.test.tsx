@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
 
@@ -35,7 +36,7 @@ function renderOutlineSidebar(args: {
     title: 'Internal'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebar
       activeNodeId="node-1"
       activePanelId="outline"

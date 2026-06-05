@@ -1,3 +1,5 @@
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 export type RequestEditorMeasure = (() => void) | null;
@@ -13,7 +15,8 @@ export function createMarkdownImageElement(args: {
   source: string;
 }) {
   const image = document.createElement('img');
-  image.alt = args.alt || 'Markdown image';
+  const locale = getStoredAppLocale();
+  image.alt = args.alt || translate(locale, 'desktop.editor.image.altFallback');
   image.loading = 'lazy';
   image.referrerPolicy = 'no-referrer';
   image.decoding = 'async';
@@ -35,7 +38,7 @@ export function createMarkdownImageElement(args: {
   }
   if (args.linkHref) {
     image.dataset.mdLinkUrl = args.linkHref;
-    image.title = 'Ctrl-click to open in browser';
+    image.title = translate(locale, 'desktop.editor.openInBrowserHint');
   }
   if (args.deferSource) {
     queueMicrotask(() => {

@@ -1,8 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, it } from 'vitest';
 
 import { NodeListTree } from '../features/nodes/components/NodeListTree';
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 function createNode(args: {
@@ -51,7 +52,7 @@ it('does not show ordinary structure icons in the node list', () => {
     trashedNodeIds: []
   }));
 
-  render(<NodeListTreeHarness />);
+  renderWithLocalization(<NodeListTreeHarness />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   const folderRow = within(listPanel).getByRole('treeitem', { name: 'Folder A' });

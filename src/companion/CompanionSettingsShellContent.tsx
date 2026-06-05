@@ -1,3 +1,5 @@
+import { useTranslation } from '../shared/localization/LocalizationProvider';
+
 import {
   CompanionPlaceholderSettingsContent,
   CompanionSettingsDetail,
@@ -10,35 +12,39 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 
-function resolvePlaceholderTitle(title: string) {
-  if (title === 'Device') return 'Device information';
-  if (title === 'Appearance') return 'Display preferences';
-  return 'Diagnostics';
+function resolvePlaceholderTitle(page: CompanionSettingsPage, t: ReturnType<typeof useTranslation>) {
+  if (page === 'device') return t('companion.settings.device.placeholderTitle');
+  if (page === 'appearance') return t('companion.settings.appearance.placeholderTitle');
+  return t('companion.settings.debug.placeholderTitle');
 }
 
 function renderPlaceholderSettingsDetail(props: {
   detail: string;
   onBack: () => void;
   page: CompanionSettingsPage;
+  placeholderTitle: string;
   title: string;
 }) {
   return (
     <CompanionSettingsDetail onBack={props.onBack} page={props.page} title={props.title}>
       <CompanionPlaceholderSettingsContent
         detail={props.detail}
-        title={resolvePlaceholderTitle(props.title)}
+        title={props.placeholderTitle}
       />
     </CompanionSettingsDetail>
   );
 }
 
-export function renderCompanionSettingsContent(props: {
+type CompanionSettingsContentProps = {
   onBackToSettingsList: () => void;
   onOpenSyncSettings: () => void;
   onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   settingsPage: CompanionSettingsPage;
   workspaceSync: WorkspaceSync;
-}) {
+};
+
+function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
+  const t = useTranslation();
   if (props.settingsPage === 'list') {
     return (
       <CompanionSettingsList
@@ -52,37 +58,40 @@ export function renderCompanionSettingsContent(props: {
   }
   if (props.settingsPage === 'storage') {
     return (
-      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="storage" title="Storage">
+      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="storage" title={t('companion.settings.storage.title')}>
         <CompanionStorageSettingsContent />
       </CompanionSettingsDetail>
     );
   }
   if (props.settingsPage === 'device') {
     return renderPlaceholderSettingsDetail({
-      detail: 'Device information will appear here.',
+      detail: t('companion.settings.device.detail'),
       onBack: props.onBackToSettingsList,
       page: 'device',
-      title: 'Device'
+      placeholderTitle: resolvePlaceholderTitle('device', t),
+      title: t('companion.settings.device.title')
     });
   }
   if (props.settingsPage === 'appearance') {
     return renderPlaceholderSettingsDetail({
-      detail: 'Display preferences will appear here.',
+      detail: t('companion.settings.appearance.detail'),
       onBack: props.onBackToSettingsList,
       page: 'appearance',
-      title: 'Appearance'
+      placeholderTitle: resolvePlaceholderTitle('appearance', t),
+      title: t('companion.settings.appearance.title')
     });
   }
   if (props.settingsPage === 'debug') {
     return renderPlaceholderSettingsDetail({
-      detail: 'Diagnostics and development details will appear here.',
+      detail: t('companion.settings.debug.detail'),
       onBack: props.onBackToSettingsList,
       page: 'debug',
-      title: 'Debug'
+      placeholderTitle: resolvePlaceholderTitle('debug', t),
+      title: t('companion.settings.debug.title')
     });
   }
   return (
-    <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="sync" title="Device sync">
+    <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="sync" title={t('companion.sync.deviceSync')}>
       <CompanionSyncContent
         page={props.settingsPage}
         workspaceSync={props.workspaceSync}
@@ -90,4 +99,8 @@ export function renderCompanionSettingsContent(props: {
       />
     </CompanionSettingsDetail>
   );
+}
+
+export function renderCompanionSettingsContent(props: CompanionSettingsContentProps) {
+  return <CompanionSettingsContentSurface {...props} />;
 }

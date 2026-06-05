@@ -46,6 +46,7 @@ interface RunAppCommandActions {
   openGitHubRepository: () => void | Promise<void>;
   openGitHubIssues: () => void | Promise<void>;
   openGitHubDiscussions: () => void | Promise<void>;
+  openYouTubePlaylist: () => void | Promise<void>;
   openReadwiseReaderSettings: () => void;
   openSettings: () => void;
   openTrash: () => void;
@@ -128,6 +129,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.openGitHubRepository]: actions.openGitHubRepository,
     [APP_COMMAND_IDS.openGitHubIssues]: actions.openGitHubIssues,
     [APP_COMMAND_IDS.openGitHubDiscussions]: actions.openGitHubDiscussions,
+    [APP_COMMAND_IDS.openYouTubePlaylist]: actions.openYouTubePlaylist,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.exportCurrentArticle]: actions.exportCurrentArticle,
     [APP_COMMAND_IDS.enterPriorityMode]: actions.enterPriorityMode,

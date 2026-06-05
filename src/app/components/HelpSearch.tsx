@@ -4,6 +4,7 @@ import {
   queryHelpKnowledge,
   type HelpKnowledgeItem
 } from '../../features/help/model/helpKnowledge';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   appFloatingEmptyStateClassName,
   appFloatingItemClassName,
@@ -12,6 +13,7 @@ import {
   appFloatingOverlayClassName,
   appFloatingSurfaceClassName
 } from '../../shared/ui';
+import { localizeActionHelpCopy } from '../../shared/ui/actionHelpLocalization';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
@@ -56,6 +58,7 @@ function useHelpSearchState(isOpen: boolean): HelpSearchState {
 }
 
 export function HelpSearch({ isOpen, onClose }: HelpSearchProps) {
+  const t = useTranslation();
   const focusTrap = useFloatingDialogFocusTrap(isOpen);
   useFloatingPaletteEscape(isOpen, onClose);
   const state = useHelpSearchState(isOpen);
@@ -63,7 +66,7 @@ export function HelpSearch({ isOpen, onClose }: HelpSearchProps) {
     return null;
   }
   return (
-    <div aria-label="Help Search" aria-modal="true" className={appFloatingOverlayClassName()} onClick={onClose} role="dialog">
+    <div aria-label={t('desktop.helpSearch.title')} aria-modal="true" className={appFloatingOverlayClassName()} onClick={onClose} role="dialog">
       <div
         className={appFloatingSurfaceClassName('panel', 'w-full max-w-2xl overflow-hidden')}
         onClick={(event) => event.stopPropagation()}
@@ -71,12 +74,12 @@ export function HelpSearch({ isOpen, onClose }: HelpSearchProps) {
         ref={focusTrap.containerRef}
       >
         <FloatingPaletteInput
-          inputLabel="Search help"
+          inputLabel={t('desktop.helpSearch.input')}
           onClose={onClose}
           onQueryChange={state.setQuery}
           onRunActive={() => undefined}
           onSetActiveIndex={state.setActiveIndex}
-          placeholder="Search action help..."
+          placeholder={t('desktop.helpSearch.placeholder')}
           query={state.query}
           totalItems={state.results.length}
         />
@@ -102,33 +105,37 @@ function HelpSearchResults({
   results: HelpKnowledgeItem[];
   setActiveIndex: (update: (current: number) => number) => void;
 }) {
+  const t = useTranslation();
   if (!results.length) {
     return (
       <ul className={appFloatingListClassName()}>
-        <li className={appFloatingEmptyStateClassName()}>{query.trim() ? 'No matching action help' : 'Search action help'}</li>
+        <li className={appFloatingEmptyStateClassName()}>{query.trim() ? t('desktop.helpSearch.empty.noMatches') : t('desktop.helpSearch.empty.prompt')}</li>
       </ul>
     );
   }
   return (
-    <ul aria-label="Help results" className={appFloatingListClassName()}>
-      {results.map((item, index) => (
-        <li key={item.id}>
-          <button
-            className={appFloatingItemClassName('flex flex-col gap-1')}
-            data-active={index === activeIndex}
-            onClick={() => {
-              setActiveIndex(() => index);
-            }}
-            type="button"
-          >
-            <span className="flex items-center gap-2">
-              <span className="truncate text-sm font-medium text-foreground">{item.title}</span>
-              <span className={appFloatingMetaBadgeClassName()}>{item.sourceLabel}</span>
-            </span>
-            <span className="line-clamp-1 text-xs text-foreground/60">{item.body}</span>
-          </button>
-        </li>
-      ))}
+    <ul aria-label={t('desktop.helpSearch.results')} className={appFloatingListClassName()}>
+      {results.map((item, index) => {
+        const copy = localizeActionHelpCopy(t, item);
+        return (
+          <li key={item.id}>
+            <button
+              className={appFloatingItemClassName('flex flex-col gap-1')}
+              data-active={index === activeIndex}
+              onClick={() => {
+                setActiveIndex(() => index);
+              }}
+              type="button"
+            >
+              <span className="flex items-center gap-2">
+                <span className="truncate text-sm font-medium text-foreground">{copy.title}</span>
+                <span className={appFloatingMetaBadgeClassName()}>{copy.sourceLabel}</span>
+              </span>
+              <span className="line-clamp-1 text-xs text-foreground/60">{copy.body}</span>
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }

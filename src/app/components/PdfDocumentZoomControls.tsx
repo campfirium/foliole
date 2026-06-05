@@ -1,6 +1,7 @@
 import { ArrowLeftRight, RotateCwSquare, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton } from '../../shared/ui';
 
 const PDF_ZOOM_OPTIONS = [100, 125, 150, 175, 200];
@@ -25,6 +26,7 @@ function createToolbarAction(handler: () => void, onToolbarInteraction: () => vo
 
 function PdfZoomValueButton(props: {
   isMenuOpen: boolean;
+  label: string;
   onToolbarInteraction: () => void;
   setIsMenuOpen: (value: boolean | ((current: boolean) => boolean)) => void;
   zoom: number;
@@ -33,7 +35,7 @@ function PdfZoomValueButton(props: {
     <button
       aria-expanded={props.isMenuOpen}
       aria-haspopup="menu"
-      aria-label="Set zoom level"
+      aria-label={props.label}
       className="inline-flex min-h-8 min-w-14 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-2 text-xs text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       onClick={() => {
         props.onToolbarInteraction();
@@ -80,6 +82,7 @@ function PdfZoomMenu(props: {
 }
 
 export function PdfZoomControls(props: ZoomControlsProps) {
+  const t = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -99,9 +102,10 @@ export function PdfZoomControls(props: ZoomControlsProps) {
 
   return (
     <div className="relative flex items-center gap-1" ref={menuRef}>
-      <AppIconButton className="size-8" icon={<ZoomOut aria-hidden="true" size={15} strokeWidth={2.1} />} label="Zoom out" onClick={createToolbarAction(props.onZoomOut, props.onToolbarInteraction)} />
+      <AppIconButton className="size-8" icon={<ZoomOut aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.zoom.out')} onClick={createToolbarAction(props.onZoomOut, props.onToolbarInteraction)} />
       <PdfZoomValueButton
         isMenuOpen={isMenuOpen}
+        label={t('desktop.pdf.zoom.set')}
         onToolbarInteraction={props.onToolbarInteraction}
         setIsMenuOpen={setIsMenuOpen}
         zoom={props.zoom}
@@ -112,13 +116,13 @@ export function PdfZoomControls(props: ZoomControlsProps) {
         onToolbarInteraction={props.onToolbarInteraction}
         setIsMenuOpen={setIsMenuOpen}
       />
-      <AppIconButton className="size-8" icon={<ZoomIn aria-hidden="true" size={15} strokeWidth={2.1} />} label="Zoom in" onClick={createToolbarAction(props.onZoomIn, props.onToolbarInteraction)} />
-      <AppIconButton className="size-8" icon={<ArrowLeftRight aria-hidden="true" size={15} strokeWidth={2.1} />} label="Fit width" onClick={createToolbarAction(props.onSetFitWidth, props.onToolbarInteraction)} />
+      <AppIconButton className="size-8" icon={<ZoomIn aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.zoom.in')} onClick={createToolbarAction(props.onZoomIn, props.onToolbarInteraction)} />
+      <AppIconButton className="size-8" icon={<ArrowLeftRight aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.zoom.fitWidth')} onClick={createToolbarAction(props.onSetFitWidth, props.onToolbarInteraction)} />
       <div className="h-5 w-px bg-border/40" />
       <AppIconButton
         className="size-8"
         icon={<RotateCwSquare aria-hidden="true" size={15} strokeWidth={2.1} />}
-        label="Rotate page clockwise"
+        label={t('desktop.pdf.zoom.rotateClockwise')}
         onClick={createToolbarAction(props.onRotateClockwise, props.onToolbarInteraction)}
       />
     </div>

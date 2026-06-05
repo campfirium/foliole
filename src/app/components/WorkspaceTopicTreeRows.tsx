@@ -9,6 +9,7 @@ import { NodeTreeRow as NodeTreeRowItem } from '../../features/nodes/components/
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { VirtualListSurface } from '../../shared/ui';
 
 import type { WorkspaceTopicTreeDragController } from './workspaceTopicTreeDrag';
@@ -99,6 +100,7 @@ function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps &
 }
 
 function renderWorkspaceTopicTreeRowsSection(args: {
+  ariaLabel: string;
   children: ReactNode;
   rowGap: number;
   rowSpacing: number;
@@ -107,7 +109,7 @@ function renderWorkspaceTopicTreeRowsSection(args: {
 }) {
   return (
     <section
-      aria-label="Topic list"
+      aria-label={args.ariaLabel}
       className="flex flex-1 flex-col"
       data-node-list-row-gap={String(args.rowGap)}
       data-node-list-row-spacing={String(args.rowSpacing)}
@@ -135,6 +137,7 @@ export function WorkspaceTopicTreeRows({
   scrollTargetNodeId,
   selectedNodeIds
 }: WorkspaceTopicTreeRowsProps) {
+  const t = useTranslation();
   const { rowGap, rowSpacing, scrollPaddingBottom, scrollPaddingTop } = useWorkspaceTopicTreeRowScrollLayout({
     activeNodeId,
     rows,
@@ -154,6 +157,7 @@ export function WorkspaceTopicTreeRows({
   );
 
   return renderWorkspaceTopicTreeRowsSection({
+    ariaLabel: t('desktop.workspace.topicList'),
     rowGap,
     rowSpacing,
     scrollPaddingBottom,

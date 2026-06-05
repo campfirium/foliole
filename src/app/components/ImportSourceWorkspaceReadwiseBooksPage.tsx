@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { loadRuntimeReadwiseBooksInventoryResult } from '../../shared/platform/readwiseBooksInventoryLoadResult';
-import {
-  resetRuntimeReadwiseBookImport,
-  type RuntimeReadwiseBooksInventory
-} from '../../shared/platform/readwiseBooksRuntimeRepository';
+import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { IMPORT_CATALOG_SORT_OPTIONS, parseImportCatalogSortKey, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
+import { getImportCatalogSortOptions, parseImportCatalogSortKey, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
 import { createImportInventoryErrorState, createImportInventoryUnavailableState, type ImportInventoryLoadIssue } from './ImportInventoryState';
 import { matchesImportSearch } from './importManagementSearch';
-import { applyResetReadwiseBookImportToWorkspace, selectReadwiseBookNode } from './importSourceWorkspaceReadwiseBooks';
+import { useReadwiseBookActions } from './ImportSourceWorkspaceReadwiseBooksActions';
 import { ReadwiseBooksCatalogPanel } from './ReadwiseBooksCatalogPanel';
 
 function useReadwiseBooksInventoryState(enabled: boolean) {
@@ -53,26 +51,6 @@ function useReadwiseBooksInventoryState(enabled: boolean) {
   return { booksInventory, isLoading, loadIssue, refreshBooksInventory };
 }
 
-async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
-  const result = await resetRuntimeReadwiseBookImport(input.nodeId);
-  if (result?.status === 'blocked_secondary') {
-    throw new Error('Readwise actions run on the current primary device.');
-  }
-  if (!result || result.status !== 'reset' || !result.node_id || result.content === null || !result.updated_at) {
-    throw new Error(`Could not import ${input.title}.`);
-  }
-
-  applyResetReadwiseBookImportToWorkspace({
-    content: result.content,
-    node_id: result.node_id,
-    removed_node_ids: result.removed_node_ids,
-    title: result.title ?? input.title,
-    updated_at: result.updated_at
-  });
-  return result.node_id;
-}
-
-export const readwiseSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
 type ReadwiseSortKey = ImportCatalogSortKey;
 
 export function filterBooksInventory(query: string, booksInventory: RuntimeReadwiseBooksInventory | null) {
@@ -144,40 +122,6 @@ function useReadwiseBookCatalogState(
   };
 }
 
-function useReadwiseBookActions(props: {
-  onOpenChange: (open: boolean) => void;
-  onSelectNode?: (nodeId: string) => void;
-  refreshBooksInventory: () => Promise<void>;
-}) {
-  const [resettingNodeId, setResettingNodeId] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState('');
-  const handleOpenBookNode = useCallback(
-    (nodeId: string) => {
-      selectReadwiseBookNode(nodeId, props.onSelectNode);
-      props.onOpenChange(false);
-    },
-    [props.onOpenChange, props.onSelectNode]
-  );
-  const handleReimportBook = useCallback(
-    async (input: { nodeId: string; title: string }) => {
-      setResettingNodeId(input.nodeId);
-      try {
-        const nodeId = await runReadwiseBookReset(input);
-        setActionMessage('');
-        handleOpenBookNode(nodeId);
-      } catch {
-        setActionMessage(`Could not import ${input.title}.`);
-      } finally {
-        setResettingNodeId(null);
-        await props.refreshBooksInventory();
-      }
-    },
-    [handleOpenBookNode, props.refreshBooksInventory]
-  );
-
-  return { actionMessage, handleOpenBookNode, handleReimportBook, resettingNodeId };
-}
-
 export function ImportSourceWorkspaceReadwiseBooksPage({
   open,
   onOpenChange,
@@ -187,11 +131,12 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
   onOpenChange: (open: boolean) => void;
   onSelectNode?: (nodeId: string) => void;
 }) {
+  const t = useTranslation();
   const { booksInventory, isLoading, loadIssue, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const catalog = useReadwiseBookCatalogState(booksInventory, nodeViewById);
-  const actions = useReadwiseBookActions({ onOpenChange, ...(onSelectNode ? { onSelectNode } : {}), refreshBooksInventory });
+  const actions = useReadwiseBookActions({ onOpenChange, ...(onSelectNode ? { onSelectNode } : {}), refreshBooksInventory, t });
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
@@ -199,9 +144,23 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
         <ReadwiseBooksCatalogPanel
           books={catalog.filteredBooks}
           countLabel={catalog.countLabel}
-          {...(loadIssue?.kind === 'unavailable' ? { disabledState: createImportInventoryUnavailableState('Readwise Books') } : {})}
+          catalogAriaLabel={t('desktop.importOverview.books.aria')}
+          {...(loadIssue?.kind === 'unavailable'
+            ? {
+                disabledState: createImportInventoryUnavailableState({
+                  description: t('desktop.importCatalog.unavailable.description', { catalogName: t('desktop.importInventory.readwise.catalogName') }),
+                  title: t('desktop.importCatalog.unavailable.title')
+                })
+              }
+            : {})}
           {...(loadIssue?.kind === 'failed'
-            ? { errorState: createImportInventoryErrorState({ catalogName: 'Readwise Books', issue: loadIssue, onRetry: refreshBooksInventory }) }
+            ? {
+                errorState: createImportInventoryErrorState({
+                  issue: loadIssue,
+                  onRetry: refreshBooksInventory,
+                  title: t('desktop.importCatalog.error.title', { catalogName: t('desktop.importInventory.readwise.catalogName') })
+                })
+              }
             : {})}
           isLoading={isLoading}
           nodesById={nodesById}
@@ -215,7 +174,7 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
           scannedAt={(booksInventory?.scannedAt ?? '').replace('T', ' ').slice(0, 16)}
           sortDirection={catalog.sortDirection}
           sortKey={catalog.sortKey}
-          sortOptions={[...readwiseSortOptions]}
+          sortOptions={getImportCatalogSortOptions(t)}
         />
         <p aria-live="polite" className="px-1 text-xs text-foreground/65">
           {actions.actionMessage}

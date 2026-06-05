@@ -1,6 +1,8 @@
 import { ArrowDownToLine, ArrowUpToLine, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 
+import { useTranslation } from '../shared/localization/LocalizationProvider';
+
 import { ReadingBottomSheet } from './CompanionReadingSheets';
 
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
@@ -64,11 +66,12 @@ function DocumentSearchControls(props: {
   onStep(direction: 1 | -1): void;
   query: string;
 }) {
+  const t = useTranslation();
   return (
     <div className="flex items-center gap-2 rounded-md border border-companion-divider bg-companion-content px-2">
       <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-companion-text-secondary" />
       <AppInput
-        aria-label="Find in document"
+        aria-label={t('companion.reading.find')}
         className="h-10 min-w-0 flex-1 border-transparent bg-transparent px-1 text-sm focus-visible:ring-0"
         onChange={(event) => props.onQueryChange(event.target.value)}
         onKeyDown={(event) => {
@@ -77,18 +80,19 @@ function DocumentSearchControls(props: {
             props.onStep(event.shiftKey ? -1 : 1);
           }
         }}
-        placeholder="Search this document"
+        placeholder={t('companion.search.documentPlaceholder')}
         ref={props.inputRef}
         value={props.query}
       />
-      <AppIconButton className="size-9" disabled={!props.hasMatches} icon={<ArrowUpToLine aria-hidden="true" size={16} />} label="Previous match" onClick={() => props.onStep(-1)} />
-      <AppIconButton className="size-9" disabled={!props.hasMatches} icon={<ArrowDownToLine aria-hidden="true" size={16} />} label="Next match" onClick={() => props.onStep(1)} />
-      <AppIconButton className="size-9" icon={<X aria-hidden="true" size={16} />} label="Close document search" onClick={props.onClose} />
+      <AppIconButton className="size-9" disabled={!props.hasMatches} icon={<ArrowUpToLine aria-hidden="true" size={16} />} label={t('companion.search.previousMatch')} onClick={() => props.onStep(-1)} />
+      <AppIconButton className="size-9" disabled={!props.hasMatches} icon={<ArrowDownToLine aria-hidden="true" size={16} />} label={t('companion.search.nextMatch')} onClick={() => props.onStep(1)} />
+      <AppIconButton className="size-9" icon={<X aria-hidden="true" size={16} />} label={t('companion.search.closeDocumentSearch')} onClick={props.onClose} />
     </div>
   );
 }
 
 export function CompanionDocumentSearchSheet(props: CompanionDocumentSearchSheetProps) {
+  const t = useTranslation();
   const state = useCompanionDocumentSearchState(props);
   const hasMatches = state.matches.length > 0;
   const statusLabel = resolveTopicSearchStatusLabel(state.query, state.currentIndex, state.matches.length);
@@ -101,7 +105,7 @@ export function CompanionDocumentSearchSheet(props: CompanionDocumentSearchSheet
   }
 
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Find in document">
+    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.find')}>
       <div className="border-t border-companion-divider pt-4">
         <DocumentSearchControls
           inputRef={state.inputRef}

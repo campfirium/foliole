@@ -1,5 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { useTranslation } from '../localization/LocalizationProvider';
+
 import {
   type AppConfirmationOptions,
   type AppTextInputOptions,
@@ -118,6 +120,7 @@ function AppDialogBody(props: {
   onClose: (confirmed: boolean) => void;
   onUpdateInputValue: (value: string) => void;
 }) {
+  const t = useTranslation();
   return (
     <>
       {props.description.length > 0 ? (
@@ -136,10 +139,10 @@ function AppDialogBody(props: {
       />
       <div className="mt-5 flex justify-end gap-2">
         <AppButton onClick={() => props.onClose(false)}>
-          {props.activeDialog?.options.cancelLabel ?? 'Cancel'}
+          {props.activeDialog?.options.cancelLabel ?? t('shared.confirm.cancel')}
         </AppButton>
         <AppButton onClick={() => props.onClose(true)} variant="primary">
-          {props.activeDialog?.options.confirmLabel ?? 'Confirm'}
+          {props.activeDialog?.options.confirmLabel ?? t('shared.confirm.confirm')}
         </AppButton>
       </div>
     </>

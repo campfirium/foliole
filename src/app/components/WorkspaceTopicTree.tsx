@@ -4,6 +4,7 @@ import { useNodeListContextMenu } from '../../features/nodes/components/NodeList
 import type { NodeListState } from '../../features/nodes/components/NodeListTreeState';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
@@ -21,7 +22,7 @@ import {
   buildTopicChildrenByParent,
   type TopicChildrenByParent
 } from './workspaceTopicTreeLazyRows';
-import { WorkspaceTopicTreeMenu } from './WorkspaceTopicTreeMenu';
+import { renderWorkspaceTopicTreeMenu } from './workspaceTopicTreeMenuRender';
 import { areWorkspaceTopicTreePropsEqual, useWorkspaceTopicTreeRenderDiagnostic } from './workspaceTopicTreeRenderDiagnostic';
 import { resolveWorkspaceTopicTreeReviewScroll } from './workspaceTopicTreeReviewScroll';
 import { useWorkspaceTopicTreeSelection } from './workspaceTopicTreeSelection';
@@ -39,30 +40,6 @@ export interface WorkspaceTopicTreeProps {
   onOpenPostponeTopicPanel?: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
   showCreateTopic?: boolean;
-}
-
-function renderWorkspaceTopicTreeMenu(args: {
-  actions: ReturnType<typeof useWorkspaceTopicTreeActions>;
-  activeFolderId: string;
-  contextMenu: ReturnType<typeof useNodeListContextMenu>;
-  handleSelectNode: ReturnType<typeof useWorkspaceTopicTreeSelection>['handleSelectNode'];
-  nodesById: WorkspaceListNodesById;
-  onOpenMoveToNode: () => void;
-  onOpenPostponeTopicPanel?: (nodeId: string) => void;
-  topicTreeState: NodeListState;
-}) {
-  return (
-    <WorkspaceTopicTreeMenu
-      actions={args.actions}
-      activeFolderId={args.activeFolderId}
-      contextMenu={args.contextMenu}
-      handleSelectNode={args.handleSelectNode}
-      nodesById={args.nodesById}
-      onOpenMoveToNode={args.onOpenMoveToNode}
-      {...definedProps({ onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel })}
-      topicTreeState={args.topicTreeState}
-    />
-  );
 }
 
 interface WorkspaceTopicTreeInteractionArgs {
@@ -172,6 +149,7 @@ function resolveWorkspaceTopicTreeScrollState(
 }
 
 export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
+  const t = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const treeData = useWorkspaceTopicTreeData(props);
   useWorkspaceTopicTreeRenderDiagnostic(props, treeData);
@@ -223,6 +201,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     setCollapsedNodeIds,
     onToggleDismissedTopicsVisibility: dismissedTopicVisibility.toggleDismissedTopicsVisibility,
     setSearchQuery,
+    t,
     ...definedProps({ showCreateTopic: props.showCreateTopic }),
     viewHideDismissedTopics: dismissedTopicVisibility.viewHideDismissedTopics,
     visibleRows

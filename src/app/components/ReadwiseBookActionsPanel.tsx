@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton } from '../../shared/ui';
 
 import { isReadwiseOriginalFileLoaded, useReadwiseBookActions } from './readwiseBookActionState';
@@ -14,19 +15,20 @@ function OriginalFileActionPanel(props: {
   showLoadProgress: boolean;
   statusMessage: string;
 }) {
+  const t = useTranslation();
   return (
     <div className="px-4 pt-4">
       <div className="mx-auto flex w-full flex-col gap-3 rounded-xl border border-border bg-bg-panel px-4 py-4 [width:min(100%,var(--document-max-width))]">
         <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-semibold text-foreground">Original file</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('desktop.readwise.original.title')}</h3>
           <p className="text-[13px] text-foreground/60">{props.helperText}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <AppButton disabled={props.isBusy} onClick={() => void props.runDownload()} size="sm" variant="primary">
-            {props.pendingAction === 'download' ? 'Opening...' : 'Download original file'}
+            {props.pendingAction === 'download' ? t('desktop.readwise.original.opening') : t('desktop.readwise.original.download')}
           </AppButton>
           <AppButton disabled={props.isBusy} onClick={() => void props.runLoad()} size="sm" variant="ghost">
-            {props.pendingAction === 'load' ? 'Preparing...' : 'Load original file'}
+            {props.pendingAction === 'load' ? t('desktop.readwise.original.preparing') : t('desktop.readwise.original.load')}
           </AppButton>
         </div>
         {props.showLoadProgress ? <OriginalFileLoadProgress detail={props.loadProgress.detail} progress={props.loadProgress.progress} /> : null}
@@ -61,6 +63,7 @@ export function ReadwiseBookActionsPanel({
   activeNodeId: string | null;
   children?: ReactNode;
 }) {
+  const t = useTranslation();
   const { book, isLoading, loadProgress, pendingAction, runDownload, runLoad, statusMessage } =
     useReadwiseBookActions(activeNodeId);
 
@@ -69,9 +72,9 @@ export function ReadwiseBookActionsPanel({
       return '';
     }
     return isReadwiseOriginalFileLoaded(book)
-      ? 'Original file loaded. The PDF reader will open from the linked file.'
-      : 'No original file has been loaded for this topic yet.';
-  }, [book]);
+      ? t('desktop.readwise.original.loaded')
+      : t('desktop.readwise.original.empty');
+  }, [book, t]);
 
   if (!book && isLoading) {
     return <>{children ?? null}</>;

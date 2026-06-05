@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
@@ -130,6 +131,7 @@ function SourceUpdatePanelDialog(props: {
   updatedEditor: EditorAdapter | null;
   updatedMeasuredHighlights: EditorDiffDecorations | null;
 }) {
+  const t = useTranslation();
   return (
     <AppDialog onOpenChange={props.panelProps.onOpenChange} open={props.panelProps.open}>
       <AppDialogPortal>
@@ -139,9 +141,9 @@ function SourceUpdatePanelDialog(props: {
           className="left-1/2 top-1/2 h-[min(820px,calc(100vh-88px))] w-[min(1520px,calc(100vw-72px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-border/35 bg-bg-panel p-0"
         >
           <section className="flex h-full min-h-0 flex-col overflow-hidden">
-            <AppDialogTitle className="sr-only">Source update panel</AppDialogTitle>
+            <AppDialogTitle className="sr-only">{t('desktop.sourceUpdate.dialogTitle')}</AppDialogTitle>
             <header className="flex h-12 flex-none items-center justify-end border-b border-border px-4">
-              <AppButton aria-label="Close source update panel" className="size-8 px-0" onClick={() => props.panelProps.onOpenChange(false)} variant="ghost">
+              <AppButton aria-label={t('desktop.sourceUpdate.close')} className="size-8 px-0" onClick={() => props.panelProps.onOpenChange(false)} variant="ghost">
                 <X aria-hidden="true" size={15} strokeWidth={1.9} />
               </AppButton>
             </header>

@@ -1,6 +1,7 @@
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 export interface WorkspaceListSplitterProps {
   isCollapsed: boolean;
@@ -19,9 +20,10 @@ export function WorkspaceListSplitter({
   onSplitterKeyDown,
   onSplitterPointerDown
 }: WorkspaceListSplitterProps) {
+  const t = useTranslation();
   return (
     <div
-      aria-label="Resize topic list"
+      aria-label={t('desktop.workspace.resizeTopicList')}
       aria-orientation="vertical"
       aria-valuenow={Math.round(listWidth)}
       className={cn('group relative z-surface self-stretch bg-transparent max-[1080px]:hidden', isCollapsed && 'pointer-events-none opacity-0')}

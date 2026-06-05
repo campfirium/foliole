@@ -1,4 +1,5 @@
 import { parseLiteralUnion } from '../../shared/lib/parseLiteralUnion';
+import type { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ImportCatalogSortOption } from './ImportCatalogSortControls';
@@ -8,6 +9,31 @@ export const IMPORT_CATALOG_SORT_OPTIONS: ImportCatalogSortOption[] = [
   { ascLabel: 'Older -> Recent', descLabel: 'Recent -> Older', key: 'dateImported', label: 'Date imported' },
   { ascLabel: 'A -> Z', descLabel: 'Z -> A', key: 'title', label: 'Title' }
 ];
+
+type ImportCatalogTranslate = ReturnType<typeof useTranslation>;
+
+export function getImportCatalogSortOptions(t: ImportCatalogTranslate): ImportCatalogSortOption[] {
+  return [
+    {
+      ascLabel: t('desktop.importCatalog.sort.olderRecent'),
+      descLabel: t('desktop.importCatalog.sort.recentOlder'),
+      key: 'dateLastOpened',
+      label: t('desktop.importCatalog.sort.lastOpened')
+    },
+    {
+      ascLabel: t('desktop.importCatalog.sort.olderRecent'),
+      descLabel: t('desktop.importCatalog.sort.recentOlder'),
+      key: 'dateImported',
+      label: t('desktop.importCatalog.sort.dateImported')
+    },
+    {
+      ascLabel: t('desktop.importCatalog.sort.az'),
+      descLabel: t('desktop.importCatalog.sort.za'),
+      key: 'title',
+      label: t('desktop.importCatalog.sort.title')
+    }
+  ];
+}
 
 export type ImportCatalogSortKey = 'dateImported' | 'dateLastOpened' | 'title';
 const IMPORT_CATALOG_SORT_KEYS: ImportCatalogSortKey[] = ['dateImported', 'dateLastOpened', 'title'];

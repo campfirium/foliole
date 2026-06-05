@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 const { documentRenderSpy } = vi.hoisted(() => ({
   documentRenderSpy: vi.fn()
@@ -89,7 +91,7 @@ describe('PdfDocumentViewport error state', () => {
   it('shows an alert error state with retry action', () => {
     const onRetry = vi.fn();
 
-    render(<PdfDocumentErrorState loadError="Failed to fetch PDF." onRetry={onRetry} />);
+    renderWithLocalization(<PdfDocumentErrorState loadError="Failed to fetch PDF." onRetry={onRetry} />);
 
     expect(screen.getByRole('alert')).toHaveTextContent('PDF preview unavailable');
     expect(screen.getByRole('alert')).toHaveTextContent('Failed to fetch PDF.');
@@ -101,7 +103,7 @@ describe('PdfDocumentViewport error state', () => {
   it('remounts the PDF document after retry clears the load error', async () => {
     documentRenderSpy.mockClear();
 
-    render(<RetryableErrorViewport />);
+    renderWithLocalization(<RetryableErrorViewport />);
 
     expect(screen.getByRole('alert')).toHaveTextContent('Failed to fetch PDF.');
     expect(documentRenderSpy).not.toHaveBeenCalled();

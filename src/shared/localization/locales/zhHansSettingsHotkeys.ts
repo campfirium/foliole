@@ -1,0 +1,26 @@
+import type { TranslationKey } from '../translations';
+
+export const ZH_HANS_SETTINGS_HOTKEYS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.hotkeys.filter.all': '全部',
+  'settings.hotkeys.filter.assigned': '已设置',
+  'settings.hotkeys.filter.customized': '我设置的',
+  'settings.hotkeys.filter.unassigned': '未设置',
+  'settings.hotkeys.filter.aria': '筛选快捷键：{label}',
+  'settings.hotkeys.search.title': '搜索快捷键',
+  'settings.hotkeys.search.count': '显示 {count} 个快捷键。',
+  'settings.hotkeys.search.input': '搜索快捷键',
+  'settings.hotkeys.search.recordingPlaceholder': '按下快捷键...',
+  'settings.hotkeys.search.placeholder': '筛选...',
+  'settings.hotkeys.searchByHotkey': '按快捷键搜索',
+  'settings.hotkeys.recording': '按下快捷键...',
+  'settings.hotkeys.blank': '空',
+  'settings.hotkeys.clearShortcut': '清除{label}',
+  'settings.hotkeys.primaryShortcutFor': '{title} 的快捷键',
+  'settings.hotkeys.secondaryShortcutFor': '{title} 的备用快捷键',
+  'settings.hotkeys.addShortcut': '为 {title} 添加快捷键',
+  'settings.hotkeys.otherSection': '其他',
+  'settings.hotkeys.commandList': '命令快捷键列表',
+  'settings.hotkeys.empty': '没有匹配的快捷键。',
+  'settings.hotkeys.sectionAria': '快捷键设置区域',
+  'settings.hotkeys.invalidShortcut': '快捷键无效。'
+};

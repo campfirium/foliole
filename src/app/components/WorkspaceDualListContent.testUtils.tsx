@@ -1,10 +1,10 @@
-import { render } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { vi } from 'vitest';
 
 import type { NodeSpecialKind } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 
@@ -50,7 +50,7 @@ const simpleNodesById = {
 export function renderWorkspaceContent(
   overrides: Partial<ComponentProps<typeof WorkspaceDualListContent>> = {}
 ) {
-  render(
+  renderWithLocalization(
     <WorkspaceDualListContent
       activeNodeId={null}
       activeVirtualNodeId={null}

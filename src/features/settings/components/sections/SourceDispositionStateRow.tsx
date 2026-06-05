@@ -1,5 +1,6 @@
 import { Download, Trash2, Upload } from 'lucide-react';
 
+import { useTranslation, type Translate } from '../../../../shared/localization/LocalizationProvider';
 import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
 import {
   AppTooltip,
@@ -19,12 +20,15 @@ function formatDispositionSize(sizeBytes: number) {
   return `${Math.max(1, Math.round(sizeBytes / (1024 * 1024)))} MB`;
 }
 
-function renderSourceStateDescription(statusMessage: string, summary: RuntimeSourceDispositionSummary) {
-  const meta = `${summary.recordCount.toLocaleString()} entries / ${formatDispositionSize(summary.sizeBytes)}`;
+function renderSourceStateDescription(statusMessage: string, summary: RuntimeSourceDispositionSummary, t: Translate) {
+  const meta = t('settings.backups.sourceHandling.meta', {
+    count: summary.recordCount.toLocaleString(),
+    size: formatDispositionSize(summary.sizeBytes)
+  });
   if (!statusMessage) {
     return (
       <>
-        <span className="block">Keeps dismissed and deleted states for source topics from watched folders and Readwise Reader sources, so reconnecting or resyncing those sources does not bring handled topics back as active.</span>
+        <span className="block">{t('settings.backups.sourceHandling.description')}</span>
         <span className="mt-2 block text-foreground/58">{meta}</span>
       </>
     );
@@ -74,17 +78,18 @@ export function SourceDispositionStateRow(props: {
   statusMessage: string;
   summary: RuntimeSourceDispositionSummary;
 }) {
+  const t = useTranslation();
   const isBusy = props.isExporting || props.isImporting || props.isResetting;
   const hasEntries = props.summary.recordCount > 0;
   const isEntryActionDisabled = !props.isDesktopRuntime || isBusy || !hasEntries;
   const isImportDisabled = !props.isDesktopRuntime || isBusy;
   return (
-    <SettingsRow description={renderSourceStateDescription(props.statusMessage, props.summary)} title="Saved source topic handling">
+    <SettingsRow description={renderSourceStateDescription(props.statusMessage, props.summary, t)} title={t('settings.backups.sourceHandling.savedTitle')}>
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <div className="flex flex-nowrap items-center justify-end gap-2 max-[1080px]:justify-start">
-          <SourceHandlingIconButton disabled={isImportDisabled} icon={Download} label="Import saved source topic handling" loadingLabel={props.isImporting ? 'Importing…' : undefined} onClick={props.onImport} tooltip="Import saved source topic handling" />
-          <SourceHandlingIconButton disabled={isEntryActionDisabled} icon={Upload} label="Export saved source topic handling" loadingLabel={props.isExporting ? 'Exporting…' : undefined} onClick={props.onExport} tooltip="Export saved source topic handling" />
-          <SourceHandlingIconButton disabled={isEntryActionDisabled} icon={Trash2} label="Clear saved source topic handling" loadingLabel={props.isResetting ? 'Clearing…' : undefined} onClick={props.onReset} tooltip="Clear saved handling" />
+          <SourceHandlingIconButton disabled={isImportDisabled} icon={Download} label={t('settings.backups.sourceHandling.import')} loadingLabel={props.isImporting ? t('settings.backups.sourceHandling.importing') : undefined} onClick={props.onImport} tooltip={t('settings.backups.sourceHandling.import')} />
+          <SourceHandlingIconButton disabled={isEntryActionDisabled} icon={Upload} label={t('settings.backups.sourceHandling.export')} loadingLabel={props.isExporting ? t('settings.backups.sourceHandling.exporting') : undefined} onClick={props.onExport} tooltip={t('settings.backups.sourceHandling.export')} />
+          <SourceHandlingIconButton disabled={isEntryActionDisabled} icon={Trash2} label={t('settings.backups.sourceHandling.clear')} loadingLabel={props.isResetting ? t('settings.backups.sourceHandling.clearing') : undefined} onClick={props.onReset} tooltip={t('settings.backups.sourceHandling.clearShort')} />
         </div>
       </SettingsControlSlot>
     </SettingsRow>

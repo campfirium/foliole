@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 const menuModelMocks = vi.hoisted(() => ({
@@ -13,10 +13,12 @@ vi.mock('../../shared/commands/menuModel', () => ({
   buildCommandMenuSections: menuModelMocks.buildCommandMenuSections
 }));
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
+
 import { CommandPalette } from './CommandPalette';
 
 it('skips menu section building while the command palette is closed', () => {
-  render(
+  renderWithLocalization(
     <CommandPalette
       isOpen={false}
       items={[
@@ -52,7 +54,7 @@ it('keeps tab focus inside the command palette dialog', async () => {
     }
   ]);
 
-  render(
+  renderWithLocalization(
     <CommandPalette
       isOpen
       items={[{ enabled: true, id: 'open-topic', title: 'Open topic' }]}
@@ -81,7 +83,7 @@ it('keeps tab focus inside the command palette dialog', async () => {
 
 it('closes from the shared Escape stack before editor Escape handlers', () => {
   const onClose = vi.fn();
-  render(
+  renderWithLocalization(
     <CommandPalette
       isOpen
       items={[]}

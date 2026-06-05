@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { FolderListView } from './FolderListView';
 
@@ -30,7 +31,7 @@ it('virtualizes dense folder contents instead of mounting every row', () => {
   );
   const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
 
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1', ...children.map((node) => node.id)]}

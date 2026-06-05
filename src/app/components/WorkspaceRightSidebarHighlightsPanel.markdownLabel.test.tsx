@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
 
@@ -43,7 +44,7 @@ it('renders imported multiline markdown highlight labels without dangling strong
     }
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}
@@ -83,7 +84,7 @@ it('renders markdown escaped punctuation as readable sidebar text', () => {
     }
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}
@@ -123,7 +124,7 @@ it('renders empty-alt image highlight labels without exposing the asset URL', ()
     }
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}

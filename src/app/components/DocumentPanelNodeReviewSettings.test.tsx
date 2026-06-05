@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentPanelNodeReviewSettings } from './DocumentPanelNodeReviewSettings';
 
@@ -10,7 +11,7 @@ it('renders node review settings inside the shared inspector section', () => {
   const onPriorityChange = vi.fn();
   const onShortTermChange = vi.fn();
 
-  render(
+  renderWithLocalization(
     <DocumentPanelNodeReviewSettings
       activeNodeId="node-1"
       editableNodeId="node-1"

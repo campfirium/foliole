@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { createRef } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import type { WorkspaceTopicTreeDragController } from './workspaceTopicTreeDrag';
 import { WorkspaceTopicTreeRows } from './WorkspaceTopicTreeRows';
@@ -75,7 +76,7 @@ function createItemNode(id: string, title: string, parentNodeId: string): Worksp
 }
 
 function renderTopicRows(rows: NodeTreeRow[], nodesById: WorkspaceListNodesById) {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeRows
       activeNodeId={null}
       collapsedNodeIds={new Set()}

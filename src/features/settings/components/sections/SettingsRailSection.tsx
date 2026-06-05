@@ -2,6 +2,9 @@ import { GripVertical, RotateCcw, Trash2 } from 'lucide-react';
 import { useState, type DragEvent } from 'react';
 
 import { RailItemIcon } from '../../../../app/components/WorkspaceRailActions';
+import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import type { TranslationKey } from '../../../../shared/localization/translations';
 import {
   AppIconButton,
   SettingsRow,
@@ -23,11 +26,29 @@ import { AddRailActionRow } from './SettingsRailAddActionRow';
 
 type ManagerSection = Exclude<WorkspaceRailSection, 'fixed'>;
 
-function RailVisibilitySwitch({ item, onToggle }: { item: WorkspaceRailItemConfig; onToggle: (visible: boolean) => void }) {
+const RAIL_COMMAND_LABEL_KEYS: Partial<Record<string, TranslationKey>> = {
+  [APP_COMMAND_IDS.importSingleFile]: 'settings.rail.item.import',
+  [APP_COMMAND_IDS.clipboardImport]: 'settings.rail.item.importClipboard',
+  [APP_COMMAND_IDS.startStudyMode]: 'settings.rail.item.study',
+  [APP_COMMAND_IDS.openSettings]: 'settings.rail.item.settings'
+};
+
+type Translate = ReturnType<typeof useTranslation>;
+
+function getTranslatedRailItemLabel(t: Translate, item: WorkspaceRailItemConfig) {
+  if (item.labelOverride) {
+    return item.labelOverride;
+  }
+  const key = RAIL_COMMAND_LABEL_KEYS[item.commandId];
+  return key ? t(key) : getWorkspaceRailItemLabel(item);
+}
+
+function RailVisibilitySwitch({ item, label, onToggle }: { item: WorkspaceRailItemConfig; label: string; onToggle: (visible: boolean) => void }) {
+  const t = useTranslation();
   return (
     <button
       aria-checked={item.visible}
-      aria-label={`Show ${getWorkspaceRailItemLabel(item)}`}
+      aria-label={t('settings.rail.show', { label })}
       className={settingsSwitchClassName(item.visible)}
       onClick={() => onToggle(!item.visible)}
       role="switch"
@@ -40,17 +61,20 @@ function RailVisibilitySwitch({ item, onToggle }: { item: WorkspaceRailItemConfi
 
 function RailManagerRow({
   item,
+  label,
   onDropItem,
   onDragStart,
   onRemove,
   onToggle
 }: {
   item: WorkspaceRailItemConfig;
+  label: string;
   onDropItem: (item: WorkspaceRailItemConfig, droppedItemId?: string) => void;
   onDragStart: (itemId: string) => void;
   onRemove: (itemId: string) => void;
   onToggle: (itemId: string, visible: boolean) => void;
 }) {
+  const t = useTranslation();
   return (
     <SettingsRow
       className="min-h-[56px] items-center py-2.5 pl-20"
@@ -62,7 +86,7 @@ function RailManagerRow({
         onDragStart(item.id);
       }}
       onDrop={(event: DragEvent<HTMLDivElement>) => onDropItem(item, event.dataTransfer.getData('text/plain'))}
-      title={getWorkspaceRailItemLabel(item)}
+      title={label}
     >
       <div className="absolute left-5 top-1/2 -translate-y-1/2 cursor-grab text-settings-icon active:cursor-grabbing">
         <GripVertical aria-hidden="true" size={16} />
@@ -73,7 +97,7 @@ function RailManagerRow({
       <div className="flex flex-[0_0_auto] items-center justify-end gap-2">
         {item.source === 'user' ? (
           <button
-            aria-label={`Remove ${getWorkspaceRailItemLabel(item)}`}
+            aria-label={t('settings.rail.remove', { label })}
             className="inline-flex size-8 items-center justify-center rounded-md text-foreground/45 transition-colors hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             onClick={() => onRemove(item.id)}
             type="button"
@@ -81,7 +105,7 @@ function RailManagerRow({
             <Trash2 aria-hidden="true" size={15} />
           </button>
         ) : null}
-        <RailVisibilitySwitch item={item} onToggle={(visible) => onToggle(item.id, visible)} />
+        <RailVisibilitySwitch item={item} label={label} onToggle={(visible) => onToggle(item.id, visible)} />
       </div>
     </SettingsRow>
   );
@@ -98,7 +122,7 @@ function RailSectionDivider({
 }) {
   return (
     <div
-      aria-label={`${label} action bar section`}
+      aria-label={label}
       className="relative min-h-10 px-5"
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => onDropDivider(section, event.dataTransfer.getData('text/plain'))}
@@ -117,9 +141,10 @@ function RailDropPlaceholder({
 }: {
   onDrop: (itemId: string) => void;
 }) {
+  const t = useTranslation();
   return (
     <div
-      aria-label="Drop action at the bottom"
+      aria-label={t('settings.rail.dropBottom')}
       className="mx-5 my-2 min-h-11"
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => onDrop(event.dataTransfer.getData('text/plain'))}
@@ -136,7 +161,35 @@ function RailPlainDivider() {
   );
 }
 
+function RailManagerRows({
+  items,
+  onDragStart,
+  onDropItem,
+  onRemove,
+  onToggle
+}: {
+  items: WorkspaceRailItemConfig[];
+  onDragStart: (itemId: string) => void;
+  onDropItem: (item: WorkspaceRailItemConfig, droppedItemId?: string) => void;
+  onRemove: (itemId: string) => void;
+  onToggle: (itemId: string, visible: boolean) => void;
+}) {
+  const t = useTranslation();
+  return items.map((item) => (
+    <RailManagerRow
+      item={item}
+      key={item.id}
+      label={getTranslatedRailItemLabel(t, item)}
+      onDragStart={onDragStart}
+      onDropItem={onDropItem}
+      onRemove={onRemove}
+      onToggle={onToggle}
+    />
+  ));
+}
+
 export function SettingsRailSection({ actionItems }: { actionItems: HotkeySettingItem[] }) {
+  const t = useTranslation();
   const rail = useWorkspaceRailSettings();
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const topItems = getWorkspaceRailSectionItems(rail.items, 'top');
@@ -162,35 +215,17 @@ export function SettingsRailSection({ actionItems }: { actionItems: HotkeySettin
         <AppIconButton
           className={settingsResetButtonClassName()}
           icon={<RotateCcw aria-hidden="true" size={16} />}
-          label="Restore default action bar"
+          label={t('settings.rail.reset')}
           onClick={rail.onResetRail}
         />
       }
-      ariaLabel="Action bar settings section"
-      title="Action bar"
+      ariaLabel={t('settings.rail.section.aria')}
+      title={t('settings.rail.title')}
     >
-      <RailSectionDivider label="Top" section="top" onDropDivider={(section, itemId) => moveDraggedItem(section, 0, itemId)} />
-      {topItems.map((item) => (
-        <RailManagerRow
-          item={item}
-          key={item.id}
-          onDragStart={setDraggedItemId}
-          onDropItem={dropOnItem}
-          onRemove={rail.onRemoveRailItem}
-          onToggle={rail.onToggleRailItem}
-        />
-      ))}
-      <RailSectionDivider label="Bottom" section="bottom" onDropDivider={(section, itemId) => moveDraggedItem(section, 0, itemId)} />
-      {bottomItems.map((item) => (
-        <RailManagerRow
-          item={item}
-          key={item.id}
-          onDragStart={setDraggedItemId}
-          onDropItem={dropOnItem}
-          onRemove={rail.onRemoveRailItem}
-          onToggle={rail.onToggleRailItem}
-        />
-      ))}
+      <RailSectionDivider label={t('settings.rail.area.top')} section="top" onDropDivider={(section, itemId) => moveDraggedItem(section, 0, itemId)} />
+      <RailManagerRows items={topItems} onDragStart={setDraggedItemId} onDropItem={dropOnItem} onRemove={rail.onRemoveRailItem} onToggle={rail.onToggleRailItem} />
+      <RailSectionDivider label={t('settings.rail.area.bottom')} section="bottom" onDropDivider={(section, itemId) => moveDraggedItem(section, 0, itemId)} />
+      <RailManagerRows items={bottomItems} onDragStart={setDraggedItemId} onDropItem={dropOnItem} onRemove={rail.onRemoveRailItem} onToggle={rail.onToggleRailItem} />
       <RailDropPlaceholder onDrop={(itemId) => moveDraggedItem('bottom', bottomItems.length, itemId)} />
       <RailPlainDivider />
       <AddRailActionRow actionItems={actionItems} currentCommandIds={currentCommandIds} onAdd={rail.onAddRailItem} />

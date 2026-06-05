@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
-import {
-  startRuntimeHotkeyRecording,
-  type RuntimeKeyboardInputPayload
-} from '../../../shared/platform/nativeHotkeyRecordingRuntime';
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import { startRuntimeHotkeyRecording } from '../../../shared/platform/nativeHotkeyRecordingRuntime';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
+
+import { nativeInputToShortcutLabel } from './hotkeyShortcutLabel';
 
 export type HotkeySlot = 'primary' | 'secondary';
 export type HotkeyFilterMode = 'all' | 'assigned' | 'customized' | 'unassigned';
@@ -20,33 +20,8 @@ type NativeCaptureArgs = {
   setQueryFromHotkeyRef: MutableRefObject<(nextLabel: string) => void>;
 };
 
-export const HOTKEY_FILTER_OPTIONS: Array<{ label: string; value: HotkeyFilterMode }> = [
-  { label: 'All', value: 'all' },
-  { label: 'Assigned', value: 'assigned' },
-  { label: 'Assigned by me', value: 'customized' },
-  { label: 'Unassigned', value: 'unassigned' }
-];
-
 export function joinShortcutLabels(primary: string, secondary: string) {
   return [primary, secondary].map((value) => value.trim()).filter(Boolean).join(', ');
-}
-
-function formatShortcutKey(value: string) {
-  if (value === ' ') return 'Space';
-  return value.length === 1 ? value.toUpperCase() : value;
-}
-
-function nativeInputToShortcutLabel(input: RuntimeKeyboardInputPayload) {
-  if (['Control', 'Shift', 'Alt', 'Meta'].includes(input.key)) {
-    return '';
-  }
-  const parts: string[] = [];
-  if (input.metaKey) parts.push('Cmd');
-  if (input.controlKey) parts.push('Ctrl');
-  if (input.altKey) parts.push('Alt');
-  if (input.shiftKey) parts.push('Shift');
-  parts.push(formatShortcutKey(input.key));
-  return parts.join('+');
 }
 
 function createDraftById(items: HotkeySettingItem[]) {
@@ -141,6 +116,7 @@ function useFilteredHotkeyItems(items: HotkeySettingItem[], filterMode: HotkeyFi
 }
 
 function useHotkeyRecordingActions(args: {
+  invalidShortcutMessage: string;
   onUpdate: (commandId: string, slot: HotkeySlot, nextLabel: string) => HotkeyUpdateResult;
   pendingRecordedIdsRef: MutableRefObject<Set<string>>;
   setDraftById: Dispatch<SetStateAction<DraftById>>;
@@ -164,7 +140,7 @@ function useHotkeyRecordingActions(args: {
   const recordShortcut = useCallback((commandId: string, slot: HotkeySlot, nextLabel: string) => {
     const result = args.onUpdate(commandId, slot, nextLabel);
     if (result.status !== 'applied') {
-      args.setMessageById((current) => ({ ...current, [commandId]: result.message ?? 'Shortcut is invalid.' }));
+      args.setMessageById((current) => ({ ...current, [commandId]: result.message ?? args.invalidShortcutMessage }));
       return;
     }
     const normalized = result.normalizedShortcutLabel ?? nextLabel;
@@ -193,6 +169,7 @@ export function useHotkeySectionModel(
   items: HotkeySettingItem[],
   onUpdate: (commandId: string, slot: HotkeySlot, nextLabel: string) => HotkeyUpdateResult
 ) {
+  const t = useTranslation();
   const [query, setQuery] = useState('');
   const [filterMode, setFilterMode] = useState<HotkeyFilterMode>('all');
   const [recording, setRecording] = useState<RecordingHotkey>(null);
@@ -200,6 +177,7 @@ export function useHotkeySectionModel(
   const draftState = useHotkeyDraftState(items, recording);
   const filteredItems = useFilteredHotkeyItems(items, filterMode, query);
   const actions = useHotkeyRecordingActions({
+    invalidShortcutMessage: t('settings.hotkeys.invalidShortcut'),
     onUpdate,
     pendingRecordedIdsRef: draftState.pendingRecordedIdsRef,
     setDraftById: draftState.setDraftById,

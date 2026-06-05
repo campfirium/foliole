@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ExternalDocumentPreviewPanel } from './ExternalDocumentPreviewPanel';
@@ -70,7 +71,7 @@ it('renders the external document preview panel as a floating window for a reque
   });
   const onOpenInExternalLibrary = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalDocumentPreviewPanel
       onClose={vi.fn()}
       onOpenImportedNode={vi.fn()}
@@ -106,7 +107,7 @@ it('renders the external document preview panel as a floating window for a reque
 it('shows a loading state while the floating external preview is loading', () => {
   loadRuntimeExternalSearchPreview.mockReturnValueOnce(new Promise(() => undefined));
 
-  render(
+  renderWithLocalization(
     <ExternalDocumentPreviewPanel
       onClose={vi.fn()}
       onOpenImportedNode={vi.fn()}
@@ -135,7 +136,7 @@ it('shows an alert and retries when the floating external preview fails', async 
       relativePath: 'topic.md'
     });
 
-  render(
+  renderWithLocalization(
     <ExternalDocumentPreviewPanel
       onClose={vi.fn()}
       onOpenImportedNode={vi.fn()}
@@ -168,7 +169,7 @@ it('toggles the preview window into fullscreen mode', async () => {
     relativePath: 'topic.md'
   });
 
-  render(
+  renderWithLocalization(
     <ExternalDocumentPreviewPanel
       onClose={vi.fn()}
       onOpenImportedNode={vi.fn()}
@@ -207,7 +208,7 @@ it('imports the floating external preview and opens the imported topic', async (
   });
   const onOpenImportedNode = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalDocumentPreviewPanel
       onClose={vi.fn()}
       onOpenImportedNode={onOpenImportedNode}

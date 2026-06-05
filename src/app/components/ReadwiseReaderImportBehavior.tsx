@@ -3,6 +3,7 @@ import type {
   ReadwiseReaderConfig,
   ReadwiseWithoutHighlightsDestination
 } from '../../../lib/core/import/readwiseReaderSettings';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
@@ -10,36 +11,44 @@ import {
   SettingsSegmentedControl
 } from '../../shared/ui';
 
-const WITH_HIGHLIGHTS_OPTIONS: Array<{ label: string; value: ReadwiseImportDestination }> = [
-  { label: 'Inbox', value: 'inbox' },
-  { label: 'External', value: 'external' }
-];
+type Translate = ReturnType<typeof useTranslation>;
 
-const WITHOUT_HIGHLIGHTS_OPTIONS: Array<{
+function getWithHighlightsOptions(t: Translate): Array<{ label: string; value: ReadwiseImportDestination }> {
+  return [
+    { label: t('desktop.readwise.destination.inbox'), value: 'inbox' },
+    { label: t('desktop.readwise.destination.external'), value: 'external' }
+  ];
+}
+
+function getWithoutHighlightsOptions(t: Translate): Array<{
   label: string;
   value: ReadwiseWithoutHighlightsDestination;
-}> = [...WITH_HIGHLIGHTS_OPTIONS, { label: 'Off', value: 'off' }];
+}> {
+  return [...getWithHighlightsOptions(t), { label: t('desktop.readwise.destination.off'), value: 'off' }];
+}
 
 export function ReadwiseReaderImportBehavior(props: {
   config: ReadwiseReaderConfig;
   onChange: (field: keyof ReadwiseReaderConfig, value: string) => void;
 }) {
+  const t = useTranslation();
+
   return (
     <>
       <ReadwiseBehaviorRow
-        ariaLabel="With highlights destination"
-        description="Source topics with parsed Readwise highlights go to this destination."
+        ariaLabel={t('desktop.readwise.behavior.withHighlights.aria')}
+        description={t('desktop.readwise.behavior.withHighlights.description')}
         onChange={(value) => props.onChange('withHighlightsDestination', value)}
-        options={WITH_HIGHLIGHTS_OPTIONS}
-        title="With highlights"
+        options={getWithHighlightsOptions(t)}
+        title={t('desktop.readwise.behavior.withHighlights.title')}
         value={props.config.withHighlightsDestination}
       />
       <ReadwiseBehaviorRow
-        ariaLabel="Without highlights destination"
-        description="Source topics without parsed highlights can still be imported, indexed externally, or skipped."
+        ariaLabel={t('desktop.readwise.behavior.withoutHighlights.aria')}
+        description={t('desktop.readwise.behavior.withoutHighlights.description')}
         onChange={(value) => props.onChange('withoutHighlightsDestination', value)}
-        options={WITHOUT_HIGHLIGHTS_OPTIONS}
-        title="Without highlights"
+        options={getWithoutHighlightsOptions(t)}
+        title={t('desktop.readwise.behavior.withoutHighlights.title')}
         value={props.config.withoutHighlightsDestination}
       />
     </>

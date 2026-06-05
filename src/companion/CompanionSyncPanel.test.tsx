@@ -1,5 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 
@@ -55,7 +57,7 @@ describe('CompanionSyncPanel', () => {
   it('shows only troubleshooting and retry before a device is found', async () => {
     const props = createProps();
 
-    render(<CompanionSyncPanel {...props} />);
+    renderWithLocalization(<CompanionSyncPanel {...props} />);
 
     expect(screen.queryByText('Handoff reminders')).not.toBeInTheDocument();
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
@@ -78,7 +80,7 @@ describe('CompanionSyncPanel', () => {
       pairingState: { ...createProps().pairingState, is_paired: true }
     };
 
-    render(<CompanionSyncPanel {...props} />);
+    renderWithLocalization(<CompanionSyncPanel {...props} />);
     fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
 
     await waitFor(() => {
@@ -93,7 +95,7 @@ describe('CompanionSyncPanel pairing states', () => {
   it('shows searching inside the connection dialog while discovery is running', async () => {
     const props = createProps();
 
-    render(<CompanionSyncPanel {...props} pairingStatus="checking-desktop" />);
+    renderWithLocalization(<CompanionSyncPanel {...props} pairingStatus="checking-desktop" />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Looking for another device' })).toBeInTheDocument();
@@ -127,7 +129,7 @@ describe('CompanionSyncPanel discovery list', () => {
       ]
     };
 
-    render(<CompanionSyncPanel {...props} />);
+    renderWithLocalization(<CompanionSyncPanel {...props} />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Found 1 device' })).toBeInTheDocument();
@@ -163,7 +165,7 @@ describe('CompanionSyncPanel discovery list', () => {
       pairingStatus: 'requesting-pair' as const
     };
 
-    render(<CompanionSyncPanel {...props} />);
+    renderWithLocalization(<CompanionSyncPanel {...props} />);
 
     expect(screen.getByRole('button', { name: 'Connecting...' })).toBeDisabled();
   });
@@ -195,7 +197,7 @@ describe('CompanionSyncPanel multiple discovery list', () => {
       ]
     };
 
-    render(<CompanionSyncPanel {...props} />);
+    renderWithLocalization(<CompanionSyncPanel {...props} />);
 
     expect(screen.getByRole('heading', { name: 'Found 2 devices' })).toBeInTheDocument();
     expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
@@ -222,7 +224,7 @@ describe('CompanionSyncPanel approval states', () => {
       pairingStatus: 'awaiting-approval' as const
     };
 
-    render(<CompanionSyncPanel {...props} />);
+    renderWithLocalization(<CompanionSyncPanel {...props} />);
 
     expect(screen.getByText(/Asking the desktop to allow this device/i)).toBeInTheDocument();
     expect(screen.getByText(/Waiting for approval\.\.\./i)).toBeInTheDocument();
@@ -243,7 +245,7 @@ describe('CompanionSyncPanel approval states', () => {
       pairingStatus: 'awaiting-approval' as const
     };
 
-    render(<CompanionSyncPanel {...props} />);
+    renderWithLocalization(<CompanionSyncPanel {...props} />);
 
     expect(screen.getByText(/Request expired/i)).toBeInTheDocument();
   });

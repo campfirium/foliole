@@ -3,6 +3,7 @@ import type { ReactNode, RefObject } from 'react';
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 
 import { FolderListBody } from './FolderListBody';
 import { FolderListHeaderSearchGroup } from './FolderListHeaderSearchGroup';
@@ -12,6 +13,7 @@ interface FolderListHeaderProps {
   currentViewActions?: ReactNode;
   folderTitle: string;
   itemCountLabel: string;
+  t: Translate;
   searchQuery: string;
   searchAction?: ReactNode;
   searchAriaLabel?: string | undefined;
@@ -35,6 +37,7 @@ function FolderListHeader(props: FolderListHeaderProps) {
           currentViewActions={props.currentViewActions}
           folderTitle={props.folderTitle}
           itemCountLabel={props.itemCountLabel}
+          t={props.t}
         />
       ) : null}
       <div className="ml-auto flex min-w-0 flex-1 flex-nowrap items-center gap-3" data-testid="folder-list-header-controls">
@@ -66,11 +69,13 @@ function FolderListHeader(props: FolderListHeaderProps) {
 function FolderListHeaderSummary({
   currentViewActions,
   folderTitle,
-  itemCountLabel
+  itemCountLabel,
+  t
 }: {
   currentViewActions?: ReactNode;
   folderTitle: string;
   itemCountLabel: string;
+  t: Translate;
 }) {
   return (
     <div className="flex min-w-0 items-center gap-1">
@@ -83,7 +88,7 @@ function FolderListHeaderSummary({
         />
       )}
       <p
-        aria-label={`Folder result count ${itemCountLabel}`}
+        aria-label={t('desktop.folderList.resultCount', { label: itemCountLabel })}
         className="shrink-0 text-sm font-medium text-foreground/58"
         data-testid="folder-list-count"
       >
@@ -129,6 +134,7 @@ function renderFolderListHeader(props: Parameters<typeof FolderListViewLayout>[0
       showCountAndTitle={props.headerMode === 'full'}
       sortDirection={props.sortDirection}
       sortKey={props.sortKey}
+      t={props.t}
     />
   );
 }
@@ -142,6 +148,7 @@ export function FolderListViewLayout(props: {
   filteredNodes: Node[];
   folderTitle: string;
   itemCountLabel: string;
+  t: Translate;
   navigationOverlay?: ReactNode;
   searchResultLabel: string | null;
   searchAction?: ReactNode;
@@ -161,7 +168,7 @@ export function FolderListViewLayout(props: {
 }) {
   return (
     <FolderListSurface>
-      <section aria-label="Folder list body" className="relative mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
+      <section aria-label={props.t('desktop.folderList.body')} className="relative mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
         {props.navigationOverlay}
         {renderFolderListHeader(props)}
         <FolderListBody

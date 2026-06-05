@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { TrashResultListPanel } from './TrashResultListPanel';
@@ -42,7 +43,7 @@ function renderTrashPanel(args: {
     trashedNodeDeletedAtById: args.trashedNodeDeletedAtById ?? {},
     trashedNodeIds: args.trashedNodeIds
   }));
-  render(
+  renderWithLocalization(
     <TrashResultListPanel
       nodeOrder={['folder', 'topic', 'item', 'solo']}
       nodesById={nodesById}

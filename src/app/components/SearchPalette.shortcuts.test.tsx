@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({
@@ -12,6 +12,7 @@ vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
 }));
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
 import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
@@ -30,7 +31,7 @@ const node = {
 };
 
 function renderPalette(isOpen = true) {
-  return render(
+  return renderWithLocalization(
     <SearchPalette
       isOpen={isOpen}
       nodeOrder={['node-2']}
@@ -44,6 +45,7 @@ function renderPalette(isOpen = true) {
 
 beforeEach(() => {
   window.localStorage.clear();
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed, 'true');
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue([]));
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);

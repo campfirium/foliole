@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, VIRTUAL_SHELVED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
@@ -50,7 +51,7 @@ function createNode(args: {
 function renderVirtualContentColumn() {
   const onSelectNodeInVirtualView = vi.fn();
 
-  render(
+  renderWithLocalization(
     <WorkspaceDualListContent
       activeNodeId="virtual-a"
       activeVirtualNodeId="virtual-a"
@@ -95,7 +96,7 @@ function renderVirtualContentColumn() {
 }
 
 function renderVirtualRootAggregate() {
-  render(
+  renderWithLocalization(
     <WorkspaceDualListContent
       activeNodeId={VIRTUAL_ROOT_NODE_ID}
       activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
@@ -164,7 +165,7 @@ it('routes an active virtual node into the right content column', () => {
 });
 
 it('lists only directly shelved ordinary topics in the Shelved virtual view', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceDualListContent
       activeNodeId={VIRTUAL_SHELVED_NODE_ID}
       activeVirtualNodeId={VIRTUAL_SHELVED_NODE_ID}

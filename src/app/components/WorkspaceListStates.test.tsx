@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 import { ensureWorkspaceHydrated } from '../../store/workspaceStoreHydration';
 
@@ -19,7 +20,7 @@ beforeEach(() => {
 });
 
 it('shows a progress state while the workspace list hydrates', () => {
-  render(<WorkspaceListLoadingState />);
+  renderWithLocalization(<WorkspaceListLoadingState />);
 
   expect(screen.getByLabelText('Workspace list progress')).toHaveAttribute('aria-busy', 'true');
   expect(screen.queryByText('Preparing workspace')).toBeNull();
@@ -30,7 +31,7 @@ it('shows a retryable error when workspace hydration fails', async () => {
     workspaceHydrationError: 'Could not load the workspace.'
   });
 
-  render(<WorkspaceListLoadingState />);
+  renderWithLocalization(<WorkspaceListLoadingState />);
 
   expect(screen.getByRole('alert')).toHaveTextContent('Could not load the workspace.');
 

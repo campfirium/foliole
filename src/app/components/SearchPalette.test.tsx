@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({
@@ -8,6 +8,7 @@ vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
   loadRuntimeNodeSourceDetails: vi.fn()
 }));
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
 import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
@@ -39,7 +40,7 @@ function createNodeResult() {
 }
 
 function renderSearchPalette() {
-  return render(
+  return renderWithLocalization(
     <SearchPalette
       isOpen
       nodeOrder={['node-1', 'node-2', 'node-3']}
@@ -88,11 +89,11 @@ function renderSearchPalette() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed, 'true');
   vi.clearAllMocks();
 });
 
 it('keeps a silent result area before the user types', () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed, 'true');
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
   const view = renderSearchPalette();
 
@@ -103,7 +104,6 @@ it('keeps a silent result area before the user types', () => {
 });
 
 it('renders search results as title context and path rows', async () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed, 'true');
   vi.mocked(getRuntimeInvoke).mockReturnValue(
     vi.fn().mockResolvedValue(
       [

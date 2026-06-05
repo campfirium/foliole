@@ -4,6 +4,8 @@ import type { Range } from '@codemirror/state';
 import { Decoration, type EditorView, WidgetType } from '@codemirror/view';
 import katex from 'katex';
 
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import { getFormulaClozeEditorPresentation, type FormulaClozeEditorPresentation } from '../../formula-cloze/model/formulaClozePresentation';
 import type { MarkdownMathRange } from '../model/markdownMathExtension';
 
@@ -106,7 +108,7 @@ function createFormulaSourceButton(onEditSource: () => void) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'cm-md-math-source-button';
-  button.ariaLabel = 'Edit formula source';
+  button.ariaLabel = translate(getStoredAppLocale(), 'desktop.editor.formula.editSource');
   button.textContent = 'TeX';
   button.addEventListener('pointerdown', (event) => {
     event.preventDefault();

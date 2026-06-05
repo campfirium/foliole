@@ -1,3 +1,4 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
@@ -17,21 +18,23 @@ interface ReviewSourceTopicDeleteDialogProps {
 }
 
 export function ReviewSourceTopicDeleteDialog(props: ReviewSourceTopicDeleteDialogProps) {
+  const t = useTranslation();
+  const title = props.nodeTitle?.trim() || t('desktop.deleteSourceTopic.fallback');
   return (
     <AppDialog open={props.isOpen} onOpenChange={(open) => (!open ? props.onCancel() : undefined)}>
       <AppDialogPortal>
         <AppDialogOverlay />
         <AppDialogContent className="w-[min(420px,calc(100vw-32px))] p-5">
-          <AppDialogTitle>Delete source topic?</AppDialogTitle>
+          <AppDialogTitle>{t('desktop.deleteSourceTopic.title')}</AppDialogTitle>
           <AppDialogDescription className="mt-2">
-            {`This will move ${props.nodeTitle?.trim() || 'the source topic'} and its related items to Trash.`}
+            {t('desktop.deleteSourceTopic.description', { title })}
           </AppDialogDescription>
           <div className="mt-5 flex justify-end gap-2">
             <AppDialogClose asChild>
-              <AppButton variant="ghost">Cancel</AppButton>
+              <AppButton variant="ghost">{t('common.cancel')}</AppButton>
             </AppDialogClose>
             <AppButton variant="primary" onClick={props.onConfirm}>
-              Delete source topic
+              {t('desktop.deleteSourceTopic.confirm')}
             </AppButton>
           </div>
         </AppDialogContent>

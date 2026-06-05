@@ -1,4 +1,5 @@
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isFullSyncCompletedEvent } from '../shared/platform/companionSyncEventSemantics';
 
@@ -7,24 +8,38 @@ import { CompanionSyncActivityPage } from './CompanionSyncActivityPage';
 import { formatClock, resolveLastSyncRow } from './companionSyncStatusRows';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
-function formatDeviceKind(deviceKind: string | null) {
+type Translate = ReturnType<typeof useTranslation>;
+type SyncStatusDetailsProps = {
+  endpointUrl: string;
+  lastSyncedAt: string | null;
+  pairingState: NativeCompanionPairingState;
+  syncConflictCount: number;
+  syncEvents: NativeCompanionSyncEvent[];
+  syncProgress: CompanionDesktopSyncProgress | null;
+  status: 'idle' | 'loading' | 'syncing';
+  page: CompanionSettingsPage;
+  onDisconnectPairing?: (() => void) | undefined;
+  onOpenPage(page: CompanionSettingsPage): void;
+};
+
+function formatDeviceKind(deviceKind: string | null, t: Translate) {
   if (deviceKind === 'android-capacitor' || deviceKind === 'android') {
     return 'Android';
   }
-  return deviceKind ?? 'Device';
+  return deviceKind ?? t('companion.sync.deviceFallback');
 }
 
-function formatPairedDevice(pairingState: NativeCompanionPairingState) {
-  const name = pairingState.device_name?.trim() || 'This device';
-  return `${name} (${formatDeviceKind(pairingState.device_kind)})`;
+function formatPairedDevice(pairingState: NativeCompanionPairingState, t: Translate) {
+  const name = pairingState.device_name?.trim() || t('companion.sync.thisDevice');
+  return `${name} (${formatDeviceKind(pairingState.device_kind, t)})`;
 }
 
-function formatDeviceName(pairingState: NativeCompanionPairingState) {
-  return pairingState.device_name?.trim() || 'This device';
+function formatDeviceName(pairingState: NativeCompanionPairingState, t: Translate) {
+  return pairingState.device_name?.trim() || t('companion.sync.thisDevice');
 }
 
-function formatDeviceId(deviceId: string | null) {
-  if (!deviceId) return 'Unavailable';
+function formatDeviceId(deviceId: string | null, t: Translate) {
+  if (!deviceId) return t('companion.sync.unavailable');
   if (deviceId.length <= 18) return deviceId;
   return `${deviceId.slice(0, 11)}...${deviceId.slice(-4)}`;
 }
@@ -85,29 +100,30 @@ function SettingsLinkRow(props: {
   );
 }
 
-function formatEventStatus(event: NativeCompanionSyncEvent) {
+function formatEventStatus(event: NativeCompanionSyncEvent, t: Translate) {
   if (event.status === 'completed') {
-    return isFullSyncCompletedEvent(event) ? 'Synced' : 'Checked';
+    return isFullSyncCompletedEvent(event) ? t('companion.sync.synced') : t('companion.sync.checked');
   }
   if (event.status === 'failed') {
-    return 'Failed';
+    return t('companion.sync.failed');
   }
   if (event.status === 'skipped') {
-    return 'Checked';
+    return t('companion.sync.checked');
   }
-  return 'Started';
+  return t('companion.sync.started');
 }
 
 function SyncActivitySummary(props: {
   events: NativeCompanionSyncEvent[];
   onOpen(): void;
 }) {
+  const t = useTranslation();
   const latestEvent = props.events.find(isReportableSyncEvent) ?? null;
   const summary = latestEvent
-    ? `${formatEventStatus(latestEvent)} ${formatClock(latestEvent.occurred_at)}`
-    : 'No activity';
+    ? `${formatEventStatus(latestEvent, t)} ${formatClock(latestEvent.occurred_at, t)}`
+    : t('companion.sync.noActivity');
   return (
-    <SettingsLinkRow detail="Sync history" label="Activity" onClick={props.onOpen} value={summary} />
+    <SettingsLinkRow detail={t('companion.sync.activity.detail')} label={t('companion.sync.activity.row')} onClick={props.onOpen} value={summary} />
   );
 }
 
@@ -115,12 +131,13 @@ function ConnectionSummary(props: {
   onOpen(): void;
   pairingState: NativeCompanionPairingState;
 }) {
+  const t = useTranslation();
   return (
     <SettingsLinkRow
-      detail="Paired desktop details"
-      label="Connection"
+      detail={t('companion.sync.connection.detail')}
+      label={t('companion.sync.connection.row')}
       onClick={props.onOpen}
-      value={formatDeviceName(props.pairingState)}
+      value={formatDeviceName(props.pairingState, t)}
     />
   );
 }
@@ -131,13 +148,14 @@ function ConnectionPage(props: {
   onDisconnectPairing(): void;
   pairingState: NativeCompanionPairingState;
 }) {
+  const t = useTranslation();
   return (
     <section className="border-t border-companion-divider">
-      <SettingsRow label="Paired device" value={formatPairedDevice(props.pairingState)} />
-      <SettingsRow label="Desktop address" value={props.endpointUrl} />
+      <SettingsRow label={t('companion.sync.pairedDevice')} value={formatPairedDevice(props.pairingState, t)} />
+      <SettingsRow label={t('companion.sync.desktopAddress')} value={props.endpointUrl} />
       <div className="py-4">
         <p className="text-xs leading-5 text-companion-text-secondary">
-          This stops sync with this desktop. Synced topics stay on this device.
+          {t('companion.sync.disconnect.description')}
         </p>
         <button
           className="mt-3 w-full rounded-2xl border border-error px-4 py-3 text-sm font-semibold text-error transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
@@ -145,25 +163,51 @@ function ConnectionPage(props: {
           onClick={props.onDisconnectPairing}
           type="button"
         >
-          {props.isDisconnecting ? 'Disconnecting' : 'Disconnect device'}
+          {props.isDisconnecting ? t('companion.sync.disconnect.progress') : t('companion.sync.disconnect.button')}
         </button>
       </div>
     </section>
   );
 }
 
-export function CompanionSyncStatusDetails(props: {
-  endpointUrl: string;
-  lastSyncedAt: string | null;
-  pairingState: NativeCompanionPairingState;
-  syncConflictCount: number;
-  syncEvents: NativeCompanionSyncEvent[];
-  syncProgress: CompanionDesktopSyncProgress | null;
-  status: 'idle' | 'loading' | 'syncing';
-  page: CompanionSettingsPage;
-  onDisconnectPairing?: (() => void) | undefined;
-  onOpenPage(page: CompanionSettingsPage): void;
-}) {
+function SyncOverview(props: SyncStatusDetailsProps) {
+  const t = useTranslation();
+  const lastSync = resolveLastSyncRow({ ...props, t });
+  return (
+    <div className="space-y-3">
+      <SettingsRow
+        detail={lastSync.detail}
+        label={lastSync.label}
+        value={lastSync.value}
+        valueTone={lastSync.valueTone}
+      />
+      {props.syncConflictCount > 0 ? (
+        <SettingsRow label={t('companion.sync.issuesToResolve')} value={`${props.syncConflictCount}`} valueTone="error" />
+      ) : null}
+      <SettingsRow
+        detail={t('companion.sync.deviceRole.detail')}
+        label={t('companion.sync.deviceRole')}
+        value={
+          props.pairingState.device_id && props.pairingState.primary_device_id === props.pairingState.device_id
+            ? t('companion.sync.primaryDevice')
+            : t('companion.sync.secondaryDevice')
+        }
+      />
+      <SettingsRow
+        detail={t('companion.sync.currentPrimary.detail')}
+        label={t('companion.sync.currentPrimary')}
+        value={formatDeviceId(props.pairingState.primary_device_id, t)}
+      />
+      <ConnectionSummary
+        pairingState={props.pairingState}
+        onOpen={() => props.onOpenPage('syncConnection')}
+      />
+      <SyncActivitySummary events={props.syncEvents} onOpen={() => props.onOpenPage('syncActivity')} />
+    </div>
+  );
+}
+
+export function CompanionSyncStatusDetails(props: SyncStatusDetailsProps) {
   if (props.page === 'syncActivity') {
     return <CompanionSyncActivityPage events={props.syncEvents} status={props.status} syncProgress={props.syncProgress} />;
   }
@@ -178,37 +222,5 @@ export function CompanionSyncStatusDetails(props: {
     );
   }
 
-  const lastSync = resolveLastSyncRow(props);
-  return (
-    <div className="space-y-3">
-      <SettingsRow
-        detail={lastSync.detail}
-        label={lastSync.label}
-        value={lastSync.value}
-        valueTone={lastSync.valueTone}
-      />
-      {props.syncConflictCount > 0 ? (
-        <SettingsRow label="Issues to resolve" value={`${props.syncConflictCount}`} valueTone="error" />
-      ) : null}
-      <SettingsRow
-        detail="External sources follow the current primary device."
-        label="Device role"
-        value={
-          props.pairingState.device_id && props.pairingState.primary_device_id === props.pairingState.device_id
-            ? 'Primary device'
-            : 'Secondary device'
-        }
-      />
-      <SettingsRow
-        detail="Device id currently responsible for sync authority."
-        label="Current primary"
-        value={formatDeviceId(props.pairingState.primary_device_id)}
-      />
-      <ConnectionSummary
-        pairingState={props.pairingState}
-        onOpen={() => props.onOpenPage('syncConnection')}
-      />
-      <SyncActivitySummary events={props.syncEvents} onOpen={() => props.onOpenPage('syncActivity')} />
-    </div>
-  );
+  return <SyncOverview {...props} />;
 }

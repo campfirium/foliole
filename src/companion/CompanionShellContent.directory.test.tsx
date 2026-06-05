@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { translate } from '../shared/localization/translations';
+
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
 
 function createSurface() {
@@ -10,10 +12,11 @@ function createSurface() {
 }
 
 function createTopBarProps(args: {
-  directorySelection: Parameters<typeof resolveCompanionTopBarProps>[4];
+  directorySelection: Parameters<typeof resolveCompanionTopBarProps>[5];
   onBackDirectorySelection?: () => void;
 }) {
   return resolveCompanionTopBarProps(
+    (key, params) => translate('en', key, params),
     createSurface(),
     'list',
     true,

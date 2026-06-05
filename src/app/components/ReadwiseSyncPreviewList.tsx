@@ -3,30 +3,32 @@ import type {
   NativeReadwiseSyncPreviewEntry,
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeImportContract';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { openLocalPath } from '../../shared/platform/runtimeExternalNavigation';
 
 function isWritablePreviewEntry(entry: NativeReadwiseSyncPreviewEntry) {
   return entry.destination !== 'off' && (entry.status === 'new' || entry.status === 'updated');
 }
 
-function formatSpecialCounts(entries: NativeReadwiseSyncPreviewEntry[]) {
+function formatSpecialCounts(entries: NativeReadwiseSyncPreviewEntry[], t: Translate) {
   const highlightOnlyCount = entries.filter((entry) => entry.highlight_status === 'highlight_only').length;
   const unparsedCount = entries.filter((entry) => entry.highlight_status === 'unparsed').length;
   const parts = [
-    highlightOnlyCount > 0 ? `${highlightOnlyCount} highlight-only` : null,
-    unparsedCount > 0 ? `${unparsedCount} unparsed` : null
+    highlightOnlyCount > 0 ? t('desktop.readwise.preview.highlightOnly', { count: highlightOnlyCount }) : null,
+    unparsedCount > 0 ? t('desktop.readwise.preview.unparsed', { count: unparsedCount }) : null
   ].filter((part): part is string => Boolean(part));
   return parts.length ? ` (${parts.join(', ')})` : '';
 }
 
-function formatDestinationSummary(entries: NativeReadwiseSyncPreviewEntry[], label: string) {
-  return entries.length > 0 ? `${entries.length} ${label}${formatSpecialCounts(entries)}` : null;
+function formatDestinationSummary(entries: NativeReadwiseSyncPreviewEntry[], key: 'desktop.readwise.preview.readyImport' | 'desktop.readwise.preview.readyExternal', t: Translate) {
+  return entries.length > 0 ? `${t(key, { count: entries.length })}${formatSpecialCounts(entries, t)}` : null;
 }
 
 export function ReadwisePreviewSummary({ preview }: { preview: NativeReadwiseSyncPreviewResult }) {
+  const t = useTranslation();
   if (preview.total_count === 0) {
     return (
-      <p className="text-sm text-foreground/65">No Readwise source topics are ready to import.</p>
+      <p className="text-sm text-foreground/65">{t('desktop.readwise.preview.empty')}</p>
     );
   }
   const writableEntries = preview.entries.filter(isWritablePreviewEntry);
@@ -34,11 +36,11 @@ export function ReadwisePreviewSummary({ preview }: { preview: NativeReadwiseSyn
   const externalEntries = writableEntries.filter((entry) => entry.destination === 'external');
   const skippedCount = preview.entries.filter((entry) => entry.destination === 'off').length;
   const statusParts = [
-    formatDestinationSummary(inboxEntries, 'ready to import'),
-    formatDestinationSummary(externalEntries, 'ready for external library'),
-    skippedCount > 0 ? `${skippedCount} skipped` : null,
-    preview.active_count > 0 ? `${preview.active_count} already in Foliole` : null,
-    preview.failed_count > 0 ? `${preview.failed_count} failed` : null
+    formatDestinationSummary(inboxEntries, 'desktop.readwise.preview.readyImport', t),
+    formatDestinationSummary(externalEntries, 'desktop.readwise.preview.readyExternal', t),
+    skippedCount > 0 ? t('desktop.readwise.preview.skipped', { count: skippedCount }) : null,
+    preview.active_count > 0 ? t('desktop.readwise.preview.active', { count: preview.active_count }) : null,
+    preview.failed_count > 0 ? t('desktop.readwise.preview.failed', { count: preview.failed_count }) : null
   ].filter((part): part is string => Boolean(part));
 
   return (
@@ -48,22 +50,22 @@ export function ReadwisePreviewSummary({ preview }: { preview: NativeReadwiseSyn
   );
 }
 
-const DESTINATION_LABELS: Record<NativeReadwiseSyncPreviewDestination, string> = {
-  external: 'External',
-  inbox: 'Inbox',
-  off: 'Off'
+const DESTINATION_LABEL_KEYS: Record<NativeReadwiseSyncPreviewDestination, 'desktop.readwise.preview.destination.external' | 'desktop.readwise.preview.destination.inbox' | 'desktop.readwise.preview.destination.off'> = {
+  external: 'desktop.readwise.preview.destination.external',
+  inbox: 'desktop.readwise.preview.destination.inbox',
+  off: 'desktop.readwise.preview.destination.off'
 };
 
-function resolveEntryStatusLabel(entry: NativeReadwiseSyncPreviewEntry) {
-  if (entry.status === 'unchanged') return 'Synced';
-  if (entry.status === 'failed') return 'Failed';
-  return DESTINATION_LABELS[entry.destination];
+function resolveEntryStatusLabel(entry: NativeReadwiseSyncPreviewEntry, t: Translate) {
+  if (entry.status === 'unchanged') return t('desktop.readwise.preview.status.synced');
+  if (entry.status === 'failed') return t('desktop.readwise.preview.status.failed');
+  return t(DESTINATION_LABEL_KEYS[entry.destination]);
 }
 
-function resolveHighlightStatusLabel(entry: NativeReadwiseSyncPreviewEntry) {
-  if (entry.highlight_status === 'highlight_only') return 'Highlight-only';
-  if (entry.highlight_status === 'unparsed') return 'Unparsed';
-  return entry.highlight_type === 'with_highlights' ? 'With highlights' : 'Without highlights';
+function resolveHighlightStatusLabel(entry: NativeReadwiseSyncPreviewEntry, t: Translate) {
+  if (entry.highlight_status === 'highlight_only') return t('desktop.readwise.preview.highlightStatus.highlightOnly');
+  if (entry.highlight_status === 'unparsed') return t('desktop.readwise.preview.highlightStatus.unparsed');
+  return entry.highlight_type === 'with_highlights' ? t('desktop.readwise.preview.highlightStatus.withHighlights') : t('desktop.readwise.preview.highlightStatus.withoutHighlights');
 }
 
 function ReadwisePreviewSourceName({ entry }: { entry: NativeReadwiseSyncPreviewEntry }) {
@@ -93,6 +95,7 @@ function sortPreviewEntries(entries: NativeReadwiseSyncPreviewEntry[]) {
 }
 
 export function ReadwisePreviewList({ entries }: { entries: NativeReadwiseSyncPreviewEntry[] }) {
+  const t = useTranslation();
   if (entries.length === 0) return null;
   return (
     <div className="max-h-[320px] overflow-auto rounded-md border border-border/65">
@@ -102,9 +105,9 @@ export function ReadwisePreviewList({ entries }: { entries: NativeReadwiseSyncPr
           key={`${entry.source_kind}:${entry.source_path}`}
         >
           <ReadwisePreviewSourceName entry={entry} />
-          <div className="text-foreground/60">{resolveHighlightStatusLabel(entry)}</div>
+          <div className="text-foreground/60">{resolveHighlightStatusLabel(entry, t)}</div>
           <div className="text-right font-medium text-foreground/72">
-            {resolveEntryStatusLabel(entry)}
+            {resolveEntryStatusLabel(entry, t)}
           </div>
         </div>
       ))}

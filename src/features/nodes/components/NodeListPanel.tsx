@@ -3,6 +3,7 @@ import { useRef, type MouseEvent as ReactMouseEvent, type RefObject } from 'reac
 
 import { findFolderTopicItemCommandByAppCommandId } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -61,7 +62,7 @@ interface NodeListPanelProps {
   virtualizeRows: boolean;
 }
 
-function renderRootDropHint(isRootDropActive: boolean) {
+function renderRootDropHint(isRootDropActive: boolean, label: string) {
   if (!isRootDropActive) {
     return null;
   }
@@ -70,7 +71,7 @@ function renderRootDropHint(isRootDropActive: boolean) {
       aria-hidden="true"
       className="rounded border border-dashed border-border-strong bg-foreground/[0.04] px-3 py-2 text-xs text-foreground/70"
     >
-      Drop to move topic to root
+      {label}
     </div>
   );
 }
@@ -86,7 +87,9 @@ function resolveNodeListPanelSurfaceClassName(isTrashViewOpen: boolean) {
 function renderNodeTreeSection(
   props: NodeListPanelProps,
   drag: ReturnType<typeof useNodeListDragController>,
-  scrollContainerRef: RefObject<HTMLDivElement | null>
+  scrollContainerRef: RefObject<HTMLDivElement | null>,
+  treeLabel: string,
+  rootDropLabel: string
 ) {
   const handleBlankAreaContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (props.isTrashViewOpen) {
@@ -102,7 +105,7 @@ function renderNodeTreeSection(
   return (
     <section
       aria-multiselectable="true"
-      aria-label={props.isTrashViewOpen ? 'Trash topics' : 'Topic list'}
+      aria-label={treeLabel}
       className={resolveNodeTreeSectionClassName(Boolean(props.bodyAppendContent))}
       data-node-list-row-gap={String(resolveNodeListRowGap(props.rowSpacing))}
       data-node-list-row-spacing={String(props.rowSpacing)}
@@ -113,7 +116,7 @@ function renderNodeTreeSection(
       onDragOver={(event) => event.target === event.currentTarget && drag.onDragOverRoot(event)}
       onDrop={(event) => event.target === event.currentTarget && drag.onDropRoot(event)}
     >
-      {renderRootDropHint(drag.isRootDropActive)}
+      {renderRootDropHint(drag.isRootDropActive, rootDropLabel)}
       <NodeListRows
         activeNodeId={props.activeNodeId}
         collapsedNodeIds={props.activeCollapsedNodeIds}
@@ -162,6 +165,7 @@ function useNodeListPanelEffects(
 }
 
 export function NodeListPanel(props: NodeListPanelProps) {
+  const t = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const drag = useNodeListDragController({
     disableRootDrop: props.isTrashViewOpen || props.isVirtualViewOpen,
@@ -175,7 +179,7 @@ export function NodeListPanel(props: NodeListPanelProps) {
 
   return (
     <aside
-      aria-label="Topic list panel"
+      aria-label={t('desktop.workspaceList.topicPanel')}
       className={`${resolveNodeListPanelSurfaceClassName(props.isTrashViewOpen)} flex min-h-0 min-w-0 flex-1 flex-col text-foreground`}
     >
       <NodeListHeader
@@ -207,7 +211,13 @@ export function NodeListPanel(props: NodeListPanelProps) {
       <div className="relative min-h-0 flex-1">
         {renderDeleteStatusOverlay(props.deleteStatusLabel)}
         <div className={getNodeListScrollContainerClassName(props.isVirtualViewOpen)} ref={scrollContainerRef}>
-          {renderNodeTreeSection(props, drag, scrollContainerRef)}
+          {renderNodeTreeSection(
+            props,
+            drag,
+            scrollContainerRef,
+            props.isTrashViewOpen ? t('desktop.nodeList.trash.topics') : t('desktop.nodeList.tree.topicList'),
+            t('desktop.nodeList.dropRoot')
+          )}
           {props.bodyAppendContent}
         </div>
       </div>

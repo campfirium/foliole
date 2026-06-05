@@ -1,10 +1,15 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
-import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
+import {
+  createExternalPreviewState,
+  externalDocumentSurfaceEntries,
+  externalDocumentSurfaceFolders
+} from './ExternalLibraryDocumentSurface.testSupport';
 
 const importExternalDocument = vi.fn();
 
@@ -27,84 +32,29 @@ vi.mock('./ExternalLibraryPreviewSurface', () => ({
   )
 }));
 
-const folders = [
-  {
-    attachmentMode: 'document_relative_first_then_fixed_root' as const,
-    attachmentRootPath: null,
-    createdAt: '2026-04-21T00:00:00.000Z',
-    documentCount: 2,
-    excludedDirs: [],
-    folderPath: '/library/test 6',
-    id: 'folder-1',
-    indexedAt: '2026-04-21T00:00:00.000Z',
-    lastError: null,
-    status: 'ready' as const,
-    updatedAt: '2026-04-21T00:00:00.000Z'
-  }
-];
-
-const entriesByFolderId = {
-  'folder-1': [
-    {
-      absolutePath: '/library/test 6/one.md',
-      extension: 'md' as const,
-      fileName: 'one.md',
-      folderId: 'folder-1',
-      folderPath: '/library/test 6',
-      modifiedAt: '2026-04-19T00:00:00.000Z',
-      openingText: 'First opening preview from cache.',
-      relativePath: 'one.md',
-      title: 'First title'
-    },
-    {
-      absolutePath: '/library/test 6/two.md',
-      extension: 'md' as const,
-      fileName: 'two.md',
-      folderId: 'folder-1',
-      folderPath: '/library/test 6',
-      modifiedAt: '2026-04-17T00:00:00.000Z',
-      openingText: 'Second opening preview from cache.',
-      relativePath: 'two.md',
-      title: 'Second title'
-    }
-  ]
-};
-
 beforeEach(() => {
   importExternalDocument.mockReset();
 });
-
-function createPreviewState(
-  overrides: Partial<ExternalDocumentPreviewLoadState> = {}
-): ExternalDocumentPreviewLoadState {
-  return {
-    error: null,
-    isLoading: false,
-    preview: null,
-    retry: vi.fn(),
-    ...overrides
-  };
-}
 
 it('renders the external folder contents in the center document area using the folder list view', () => {
   const onOpenSelection = vi.fn();
   const onGoBack = vi.fn();
   const onGoForward = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalLibraryDocumentSurface
       canGoBack
       canGoForward
       documentMaxWidth={760}
       editorAppearanceKey="preview"
-      entriesByFolderId={entriesByFolderId}
-      folders={folders}
+      entriesByFolderId={externalDocumentSurfaceEntries}
+      folders={externalDocumentSurfaceFolders}
       onGoBack={onGoBack}
       onGoForward={onGoForward}
       onOpenImportedNode={vi.fn()}
       onOpenSelection={onOpenSelection}
       onPreviewEditorReady={vi.fn()}
-      previewState={createPreviewState()}
+      previewState={createExternalPreviewState()}
       selection={{ folderId: 'folder-1', kind: 'folder' }}
     />
   );
@@ -130,20 +80,20 @@ it('renders the external folder contents in the center document area using the f
 });
 
 it('shows a loading state while an external library document is loading', () => {
-  render(
+  renderWithLocalization(
     <ExternalLibraryDocumentSurface
       canGoBack={false}
       canGoForward={false}
       documentMaxWidth={760}
       editorAppearanceKey="preview"
-      entriesByFolderId={entriesByFolderId}
-      folders={folders}
+      entriesByFolderId={externalDocumentSurfaceEntries}
+      folders={externalDocumentSurfaceFolders}
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onOpenImportedNode={vi.fn()}
       onOpenSelection={vi.fn()}
       onPreviewEditorReady={vi.fn()}
-      previewState={createPreviewState({ isLoading: true })}
+      previewState={createExternalPreviewState({ isLoading: true })}
       selection={{
         absolutePath: '/library/test 6/one.md',
         folderId: 'folder-1',
@@ -159,20 +109,20 @@ it('shows a loading state while an external library document is loading', () => 
 it('shows an alert and retries when an external library document fails to load', async () => {
   const retry = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalLibraryDocumentSurface
       canGoBack={false}
       canGoForward={false}
       documentMaxWidth={760}
       editorAppearanceKey="preview"
-      entriesByFolderId={entriesByFolderId}
-      folders={folders}
+      entriesByFolderId={externalDocumentSurfaceEntries}
+      folders={externalDocumentSurfaceFolders}
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onOpenImportedNode={vi.fn()}
       onOpenSelection={vi.fn()}
       onPreviewEditorReady={vi.fn()}
-      previewState={createPreviewState({ error: 'External document missing.', retry })}
+      previewState={createExternalPreviewState({ error: 'External document missing.', retry })}
       selection={{
         absolutePath: '/library/test 6/one.md',
         folderId: 'folder-1',
@@ -197,20 +147,20 @@ it('imports the external library preview and opens the imported topic', async ()
   });
   const onOpenImportedNode = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalLibraryDocumentSurface
       canGoBack={false}
       canGoForward={false}
       documentMaxWidth={760}
       editorAppearanceKey="preview"
-      entriesByFolderId={entriesByFolderId}
-      folders={folders}
+      entriesByFolderId={externalDocumentSurfaceEntries}
+      folders={externalDocumentSurfaceFolders}
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onOpenImportedNode={onOpenImportedNode}
       onOpenSelection={vi.fn()}
       onPreviewEditorReady={vi.fn()}
-      previewState={createPreviewState({
+      previewState={createExternalPreviewState({
         preview: {
           absolutePath: '/library/test 6/one.md',
           content: '# One',

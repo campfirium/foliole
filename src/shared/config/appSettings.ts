@@ -18,6 +18,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   editorDisplayMode: 'foliole-editor-display-mode',
   settingsActiveCategory: 'foliole-settings-active-category',
   workspaceRailItems: 'foliole-workspace-rail-items',
+  appLanguage: 'foliole-app-language',
   uiFont: 'foliole-ui-font-preset',
   customUiFont: 'foliole-custom-ui-font-family',
   interfaceFont: 'foliole-interface-font-preset',

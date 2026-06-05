@@ -1,5 +1,7 @@
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppSpinner } from '../shared/ui';
 
+import { UNKNOWN_DESKTOP_HOST, UNKNOWN_DESKTOP_PLATFORM } from './companionWorkspacePairingModel';
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
 function formatEndpoint(endpointUrl: string) {
@@ -11,8 +13,12 @@ function formatEndpoint(endpointUrl: string) {
   }
 }
 
-function resolveDeviceTitle(desktop: CompanionDesktopDiscovery) {
-  return desktop.hostName !== 'Unknown host' ? desktop.hostName : desktop.desktopDeviceName;
+function resolveDeviceTitle(desktop: CompanionDesktopDiscovery, unknownHost: string) {
+  return desktop.hostName !== UNKNOWN_DESKTOP_HOST ? desktop.hostName : desktop.desktopDeviceName || unknownHost;
+}
+
+function resolveDesktopPlatform(desktop: CompanionDesktopDiscovery, desktopFallback: string) {
+  return desktop.desktopPlatform !== UNKNOWN_DESKTOP_PLATFORM ? desktop.desktopPlatform : desktopFallback;
 }
 
 function PairAction(props: {
@@ -20,6 +26,7 @@ function PairAction(props: {
   isConnecting: boolean;
   onClick(): void;
 }) {
+  const t = useTranslation();
   return (
     <button
       className="shrink-0 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
@@ -30,9 +37,9 @@ function PairAction(props: {
       {props.isConnecting ? (
         <>
           <AppSpinner decorative size="sm" />
-          Connecting...
+          {t('companion.sync.discovery.connecting')}
         </>
-      ) : 'Connect'}
+      ) : t('companion.sync.discovery.connect')}
     </button>
   );
 }
@@ -43,14 +50,16 @@ function DeviceRow(props: {
   isConnecting: boolean;
   onPair(endpointUrl: string): void;
 }) {
-  const deviceTitle = resolveDeviceTitle(props.desktop);
+  const t = useTranslation();
+  const deviceTitle = resolveDeviceTitle(props.desktop, t('companion.sync.discovery.unknownHost'));
+  const desktopPlatform = resolveDesktopPlatform(props.desktop, t('companion.sync.discovery.desktopFallback'));
   const endpointLabel = formatEndpoint(props.desktop.endpointUrl);
   return (
     <div className="px-1 py-2">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-base font-semibold leading-tight text-foreground">
-            {deviceTitle} <span className="font-medium text-accent">({props.desktop.desktopPlatform})</span>
+            {deviceTitle} <span className="font-medium text-accent">({desktopPlatform})</span>
           </p>
           <p className="mt-1 truncate text-xs text-accent">{endpointLabel}</p>
         </div>
@@ -71,12 +80,14 @@ export function CompanionSyncDeviceList(props: {
   onPair(endpointUrl: string): void;
   showHeading?: boolean;
 }) {
+  const t = useTranslation();
   const deviceCount = props.desktops.length;
+  const unit = t(deviceCount === 1 ? 'companion.sync.discovery.device' : 'companion.sync.discovery.devices');
   return (
     <div>
       {props.showHeading === false ? null : (
         <h2 className="text-xl font-semibold leading-tight text-foreground">
-          Found {deviceCount} {deviceCount === 1 ? 'device' : 'devices'}
+          {t('companion.sync.discovery.found', { count: deviceCount, unit })}
         </h2>
       )}
       <div className={props.showHeading === false ? 'flex flex-col gap-2' : 'mt-3 flex flex-col gap-2'}>

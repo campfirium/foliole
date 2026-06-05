@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -18,6 +18,8 @@ vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
 vi.mock('../../shared/platform/removedSourcesRuntimeRepository', () => ({
   loadRuntimeRemovedSources: mocks.loadRuntimeRemovedSources
 }));
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { SearchPalette } from './SearchPalette';
 import { buildRemovedWorkspaceSearchResults } from './workspaceSearch';
@@ -39,7 +41,8 @@ function createRemovedSource() {
 }
 
 function renderSearchPalette() {
-  render(
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
+  renderWithLocalization(
     <SearchPalette
       isOpen
       nodeOrder={['root']}

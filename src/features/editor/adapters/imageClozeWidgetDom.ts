@@ -1,3 +1,5 @@
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import { dispatchMarkdownImagePreviewRequest } from '../model/markdownImagePreview';
 
@@ -20,11 +22,12 @@ function hasWholeImageHighlight(presentation: ImageClozeEditorPresentation | nul
 }
 
 function createImagePreviewTrigger(args: { alt: string; presentation: ImageClozeEditorPresentation | null; source: string }) {
+  const label = translate(getStoredAppLocale(), 'desktop.editorPreview.openImage');
   const button = document.createElement('button');
   button.className =
     'cm-md-image-preview-trigger absolute right-2 top-2 z-surface inline-flex size-8 cursor-pointer items-center justify-center rounded-md border border-border/60 bg-bg-elevated/90 p-0 text-foreground shadow-panel transition-opacity hover:bg-bg-elevated focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
   button.type = 'button';
-  button.setAttribute('aria-label', 'Open image preview');
+  button.setAttribute('aria-label', label);
   button.innerHTML =
     '<svg viewBox="0 0 16 16" aria-hidden="true" class="cm-md-image-icon"><path d="M3.75 6V3.75H6M10 3.75h2.25V6M12.25 10v2.25H10M6 12.25H3.75V10M3.75 3.75l3 3M12.25 3.75l-3 3M12.25 12.25l-3-3M3.75 12.25l3-3"></path></svg>';
   button.addEventListener('pointerdown', (event) => {

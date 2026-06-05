@@ -186,8 +186,8 @@ function renderOutlinePanel(
     <WorkspaceRightSidebarOutlinePanel
       activePosition={outlineDocument?.activePosition ?? props.outlineActivePosition}
       content={outlineDocument?.content ?? activeNode?.content ?? ''}
+      {...(outlineDocument ? { emptyDescriptionKind: 'document' as const } : {})}
       onRevealPosition={outlineDocument?.onRevealPosition ?? props.onRevealDocumentPosition ?? (() => undefined)}
-      {...(outlineDocument ? { emptyDescription: 'This document has no outline headings yet.' } : {})}
     />
   );
 }

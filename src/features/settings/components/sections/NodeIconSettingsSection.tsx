@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND
 } from '../../../nodes/components/nodeIconAppearanceSettings';
@@ -42,6 +43,7 @@ export function NodeIconSettingsSection(props: {
   onSettingsBackdropTransparentChange: (value: boolean) => void;
 }) {
   const { onSettingsBackdropTransparentChange } = props;
+  const t = useTranslation();
   const state = useNodeIconSettingsState();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<NodeIconEditTarget | null>(null);
@@ -53,7 +55,7 @@ export function NodeIconSettingsSection(props: {
   }, [editorOpen, onSettingsBackdropTransparentChange]);
 
   return (
-    <section aria-label="Navigation icon settings section" className="mb-8 last:mb-0">
+    <section aria-label={t('settings.icons.node.sectionAria')} className="mb-8 last:mb-0">
       <div className="overflow-hidden rounded-md bg-settings-group">
         <NodeIconSettingsOverview onEdit={() => setEditorOpen(true)} />
       </div>
@@ -72,7 +74,7 @@ export function NodeIconSettingsSection(props: {
           setIconQuery('');
         }}
         onIconQueryChange={setIconQuery}
-        resetLabel={editTarget?.type === 'state' ? 'Use base' : 'Reset'}
+        resetLabel={editTarget?.type === 'state' ? t('settings.icons.useBase') : t('settings.icons.reset')}
         onReset={(target) => resetEditTarget(state, target)}
         state={state}
       />

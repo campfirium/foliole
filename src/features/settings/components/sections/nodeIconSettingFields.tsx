@@ -1,6 +1,7 @@
 import { useState, type FocusEvent } from 'react';
 
 import { parseLiteralUnion } from '../../../../shared/lib/parseLiteralUnion';
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   settingsColorSwatchClassName,
   settingsControlValueClassName,
@@ -54,6 +55,7 @@ export function EffectSelect(props: {
   onChange: (value: NodeIconEffect) => void;
   value: NodeIconEffect;
 }) {
+  const t = useTranslation();
   return (
     <label className={props.compact ? 'grid min-w-0 max-w-full gap-1 text-sm text-foreground/72' : 'grid min-w-0 max-w-full gap-1 text-sm text-foreground/72'}>
       <span>{props.label}</span>
@@ -65,7 +67,7 @@ export function EffectSelect(props: {
       >
         {NODE_ICON_EFFECT_OPTIONS.map((effect) => (
           <option key={effect} value={effect}>
-            {effect === 'none' ? 'None' : 'Double line'}
+            {t(effect === 'none' ? 'settings.icons.node.effect.none' : 'settings.icons.node.effect.doubleLine')}
           </option>
         ))}
       </select>

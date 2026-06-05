@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { createRef } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -6,6 +6,7 @@ import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import type { WorkspaceTopicTreeDragController } from './workspaceTopicTreeDrag';
 import { WorkspaceTopicTreeRows } from './WorkspaceTopicTreeRows';
@@ -58,7 +59,7 @@ function createTopicNode(index: number): WorkspaceListNode {
 }
 
 function renderTopicRows(rows: NodeTreeRow[], nodesById: WorkspaceListNodesById) {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeRows
       activeNodeId={null}
       collapsedNodeIds={new Set()}
@@ -107,7 +108,7 @@ it('applies dismissed appearance to topic tree row text and icon', () => {
     'node-1': node
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeRows
       activeNodeId={null}
       collapsedNodeIds={new Set()}
@@ -144,7 +145,7 @@ it('renders markdown-looking topic titles as plain list text', () => {
     title: '#煮饺子时中途要不要加凉水#',
     updatedAt: '2026-05-02T00:00:00.000Z'
   };
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeRows
       activeNodeId={null}
       collapsedNodeIds={new Set()}
@@ -199,7 +200,7 @@ it('keeps virtual row sizing aligned with folder tree row spacing', () => {
   const nodes = Array.from({ length: 20 }, (_, index) => createTopicNode(index));
   const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node])) as WorkspaceListNodesById;
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeRows
       activeNodeId={null}
       collapsedNodeIds={new Set()}

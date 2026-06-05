@@ -1,6 +1,8 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, type EditorView, WidgetType } from '@codemirror/view';
 
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import type { MarkdownCodeFenceBlock } from '../model/markdownCodeFenceProjection';
 import { dispatchMarkdownMermaidPreviewRequest } from '../model/markdownMermaidPreview';
 
@@ -95,10 +97,11 @@ interface MermaidSurface {
 }
 
 function createMermaidPreviewButton(source: string) {
+  const label = translate(getStoredAppLocale(), 'desktop.editorPreview.openDiagram');
   const button = document.createElement('button');
   button.className = 'cm-md-table-preview-button cm-md-mermaid-preview-button';
-  button.setAttribute('aria-label', 'Open diagram preview');
-  button.title = 'Open diagram preview';
+  button.setAttribute('aria-label', label);
+  button.title = label;
   button.innerHTML =
     '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M14 10l7-7"/><path d="M9 21H3v-6"/><path d="M10 14l-7 7"/></svg>';
   button.type = 'button';

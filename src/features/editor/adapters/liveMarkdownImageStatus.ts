@@ -1,3 +1,5 @@
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 export interface MarkdownImageStatusActions {
@@ -23,7 +25,7 @@ export function createImageStatusElement(
   }
 
   if (display === 'inline') {
-    element.textContent = 'image unavailable';
+    element.textContent = t('desktop.imageStatus.unavailable.inline');
     return element;
   }
   if (actions.onContextMenu) {
@@ -49,7 +51,7 @@ function createFrame(sourceLabel: string | null, actions: MarkdownImageStatusAct
   copy.className = 'cm-md-image-status-frame-copy';
   const caption = document.createElement('span');
   caption.className = 'cm-md-image-status-frame-caption';
-  caption.textContent = 'Image unavailable';
+  caption.textContent = t('desktop.imageStatus.unavailable.caption');
   copy.append(caption);
   if (sourceLabel) {
     const source = document.createElement('span');
@@ -70,13 +72,13 @@ function createToolbar(actions: MarkdownImageStatusActions) {
   const toolbar = document.createElement('span');
   toolbar.className = 'cm-md-image-status-toolbar';
   if (actions.canRetryFromSource && actions.onRetry) {
-    toolbar.append(createToolbarIconButton('Retry', 'retry', actions.onRetry));
+    toolbar.append(createToolbarIconButton(t('desktop.imageStatus.retry'), 'retry', actions.onRetry));
   }
   if (actions.onProvideSourceWebsite) {
-    toolbar.append(createToolbarIconButton('Add source', 'source', actions.onProvideSourceWebsite));
+    toolbar.append(createToolbarIconButton(t('desktop.imageStatus.addSource'), 'source', actions.onProvideSourceWebsite));
   }
   if (actions.onRemoveImage) {
-    toolbar.append(createToolbarIconButton('Remove', 'remove', actions.onRemoveImage));
+    toolbar.append(createToolbarIconButton(t('desktop.imageStatus.remove'), 'remove', actions.onRemoveImage));
   }
   return toolbar;
 }
@@ -85,13 +87,17 @@ function createToolbarIconButton(label: string, icon: 'remove' | 'retry' | 'sour
   const action = document.createElement('button');
   action.ariaLabel = label;
   action.className = 'cm-md-image-status-toolbar-button';
-  action.title = label === 'Add source'
-    ? 'Provide the website this image came from to retry with a referrer.'
+  action.title = icon === 'source'
+    ? t('desktop.imageStatus.addSourceHelp')
     : label;
   action.type = 'button';
   action.innerHTML = createIconSvg(icon);
   action.addEventListener('click', onClick);
   return action;
+}
+
+function t(key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) {
+  return translate(getStoredAppLocale(), key, params);
 }
 
 function createIconSvg(icon: 'remove' | 'retry' | 'source') {

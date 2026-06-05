@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { StudySessionCompleteSummary } from './StudySessionCompleteSummary';
 
 it('shows the completed review phase summary and continues reading', () => {
-  render(
+  renderWithLocalization(
     <StudySessionCompleteSummary
       completedAt="2026-03-10T12:15:00.000Z"
       createdItemCount={12}
@@ -33,7 +35,7 @@ it('shows the completed review phase summary and continues reading', () => {
 });
 
 it('uses review-first completion copy without claiming every reading topic is done', () => {
-  render(
+  renderWithLocalization(
     <StudySessionCompleteSummary
       completedAt="2026-03-10T12:15:00.000Z"
       createdItemCount={0}
@@ -52,7 +54,7 @@ it('uses review-first completion copy without claiming every reading topic is do
 });
 
 it('uses reading session completion copy without claiming review items are done', () => {
-  render(
+  renderWithLocalization(
     <StudySessionCompleteSummary
       completedAt="2026-03-10T12:15:00.000Z"
       createdItemCount={0}

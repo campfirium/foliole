@@ -1,12 +1,14 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentOutlineLayer } from './DocumentOutlineLayer';
 import { resolvePanelScrollTop } from './DocumentOutlineLayerModel';
 import * as outlineModel from './DocumentOutlineLayerModel';
 
 function renderOutline(content: string, anchorPosition = 0, documentMaxWidth = 860) {
-  return render(
+  return renderWithLocalization(
     <DocumentOutlineLayer
       content={content}
       documentMaxWidth={documentMaxWidth}
@@ -36,7 +38,7 @@ describe('DocumentOutlineLayer', () => {
   it('reveals outline on hover and navigates to the selected heading', () => {
     vi.useFakeTimers();
     const onRevealPosition = vi.fn();
-    render(
+    renderWithLocalization(
       <DocumentOutlineLayer
         content={'# Intro\n## Deep dive'}
         documentMaxWidth={860}

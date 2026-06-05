@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { onWindowEscape } from '../../../../shared/platform/keyboard';
 import { appFloatingSurfaceClassName, settingsColorSwatchClassName, settingsPaletteButtonClassName, settingsUtilityIconButtonClassName } from '../../../../shared/ui';
 
@@ -34,7 +35,8 @@ function PaletteStrip(props: { palette: string[] }) {
 }
 
 function FavoritesEmptyState() {
-  return <div className="py-6 text-center text-sm text-foreground/52">No saved themes yet.</div>;
+  const t = useTranslation();
+  return <div className="py-6 text-center text-sm text-foreground/52">{t('settings.appearance.surface.emptyCollection')}</div>;
 }
 
 function FavoritePaletteCard(props: {
@@ -44,10 +46,11 @@ function FavoritePaletteCard(props: {
   onRemoveFavorite: (palette: string[]) => void;
   palette: string[];
 }) {
+  const t = useTranslation();
   return (
     <div className="group flex items-center gap-1">
       <button
-        aria-label={`Apply favorite theme ${props.index + 1}`}
+        aria-label={t('settings.appearance.surface.applyFavorite', { index: props.index + 1 })}
         className={settingsPaletteButtonClassName(isSamePalette(props.palette, props.currentPalette))}
         onClick={() => props.onApplyFavorite(props.palette)}
         type="button"
@@ -55,7 +58,7 @@ function FavoritePaletteCard(props: {
         <PaletteStrip palette={props.palette} />
       </button>
       <button
-        aria-label={`Remove favorite theme ${props.index + 1}`}
+        aria-label={t('settings.appearance.surface.removeFavoriteByIndex', { index: props.index + 1 })}
         className={settingsUtilityIconButtonClassName(false, 'size-7 rounded-sm px-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100')}
         onClick={(event) => {
           event.stopPropagation();
@@ -133,6 +136,7 @@ export function WorkspaceSurfaceThemeFavoritesPopover(props: {
   position: ThemeFavoritesPopoverPosition;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
+  const t = useTranslation();
   const panelRef = useRef<HTMLDivElement | null>(null);
   useThemeFavoritesPopoverFocus({ panelRef, triggerRef: props.triggerRef });
   useThemeFavoritesPopoverDismiss({ onClose: props.onClose, panelRef, triggerRef: props.triggerRef });
@@ -143,7 +147,7 @@ export function WorkspaceSurfaceThemeFavoritesPopover(props: {
 
   return createPortal(
     <div
-      aria-label="Theme collection panel"
+      aria-label={t('settings.appearance.surface.collectionPanel')}
       className={cn(appFloatingSurfaceClassName('panel'), 'fixed z-panel-popover p-4 pointer-events-auto')}
       ref={panelRef}
       role="dialog"

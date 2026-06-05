@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton, AppErrorState, AppLoadingState, InspectorSection } from '../../shared/ui';
 
 import { NodeBacklinksList } from './NodeBacklinksList';
@@ -13,20 +14,23 @@ interface WorkspaceRightSidebarBacklinksPanelProps {
 }
 
 function EmptyBacklinksState({ description }: { description: string }) {
-  return <InspectorSection description={description} title="Backlinks" />;
+  const t = useTranslation();
+  return <InspectorSection description={description} title={t('desktop.backlinks.title')} />;
 }
 
 function BacklinksErrorState({ onRetry }: { onRetry: () => void }) {
+  const t = useTranslation();
   return (
     <AppErrorState
-      action={<AppButton onClick={onRetry}>Retry</AppButton>}
-      description="Refresh backlinks for this topic."
-      title="Backlinks could not be loaded"
+      action={<AppButton onClick={onRetry}>{t('desktop.backlinks.retry')}</AppButton>}
+      description={t('desktop.backlinks.error.description')}
+      title={t('desktop.backlinks.error.title')}
     />
   );
 }
 
 export function WorkspaceRightSidebarBacklinksPanel(props: WorkspaceRightSidebarBacklinksPanelProps) {
+  const t = useTranslation();
   const node = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
   const backlinks = useNodeBacklinks({
     targetNodeId: node?.id ?? null,
@@ -36,11 +40,11 @@ export function WorkspaceRightSidebarBacklinksPanel(props: WorkspaceRightSidebar
   });
 
   if (!props.activeNodeId) {
-    return <EmptyBacklinksState description="Select a topic to inspect which topics point back to it." />;
+    return <EmptyBacklinksState description={t('desktop.backlinks.empty.selectTopic')} />;
   }
 
   if (!node) {
-    return <AppErrorState description="The selected topic is no longer available." title="Topic unavailable" />;
+    return <AppErrorState description={t('desktop.backlinks.topicUnavailable.description')} title={t('desktop.backlinks.topicUnavailable.title')} />;
   }
 
   if (backlinks.errorMessage && backlinks.value.length === 0) {
@@ -54,10 +58,10 @@ export function WorkspaceRightSidebarBacklinksPanel(props: WorkspaceRightSidebar
   return (
     <div className="flex min-h-0 flex-col gap-3">
       {backlinks.errorMessage ? <BacklinksErrorState onRetry={backlinks.retry} /> : null}
-      <InspectorSection description={`Found ${backlinks.value.length} topics that mention this topic.`} title="Backlinks">
+      <InspectorSection description={t('desktop.backlinks.found', { count: backlinks.value.length })} title={t('desktop.backlinks.title')}>
         <NodeBacklinksList
           backlinks={backlinks.value}
-          emptyLabel="No topics link back to this topic yet."
+          emptyLabel={t('desktop.backlinks.empty.list')}
           onSelectNode={props.onSelectNode}
         />
       </InspectorSection>

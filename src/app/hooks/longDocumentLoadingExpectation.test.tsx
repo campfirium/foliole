@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
+import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { workspacePersistStorage } from '../../store/workspacePersistStorage';
 import { readWorkspaceNodesFromPayload } from '../../store/workspacePersistStorage.test-support';
@@ -150,7 +151,11 @@ async function expectTrimmedNode(nodeId: string) {
 
 function renderEditor(ui: React.ReactElement) {
   return render(ui, {
-    wrapper: ({ children }) => <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+    wrapper: ({ children }) => (
+      <LocalizationProvider>
+        <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+      </LocalizationProvider>
+    )
   });
 }
 

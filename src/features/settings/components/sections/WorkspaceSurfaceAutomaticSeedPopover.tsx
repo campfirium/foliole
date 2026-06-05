@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { onWindowEscape } from '../../../../shared/platform/keyboard';
 import {
   settingsColorSwatchClassName,
@@ -84,6 +85,7 @@ export function WorkspaceSurfaceAutomaticSeedPopover(props: {
   options: WorkspaceSurfaceAutoPaletteOptions;
   resolvedBaseColorMode: WorkspaceSurfaceAutoPaletteMode;
 }) {
+  const t = useTranslation();
   const { draft, open, setDraft, setOpen } = useAutomaticSeedPopoverState(props.color);
   const { panelRef, triggerRef } = useAutomaticSeedDialogFocus(open);
   const { activeDisplayHex, activeSignature } = useAutomaticSeedActiveState(props);
@@ -100,7 +102,7 @@ export function WorkspaceSurfaceAutomaticSeedPopover(props: {
     <div className="relative" data-auto-seed-popover>
       <div className="flex items-center gap-2">
         <button
-          aria-label="Automatic workspace seed color"
+          aria-label={t('settings.appearance.surface.autoSeedColor')}
           className={settingsColorSwatchClassName('size-8 shrink-0')}
           onClick={() => setOpen((value) => !value)}
           ref={triggerRef}
@@ -109,7 +111,7 @@ export function WorkspaceSurfaceAutomaticSeedPopover(props: {
         />
         <label className="shrink-0 text-sm text-foreground/72">
           <input
-            aria-label="Automatic workspace seed hex"
+            aria-label={t('settings.appearance.surface.autoSeedHex')}
             className={settingsFieldClassName('w-24')}
             onChange={(event) => applyHex(event.target.value)}
             spellCheck={false}

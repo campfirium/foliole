@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
 
@@ -77,7 +78,7 @@ it('renders locator-backed highlight child nodes and emits selected node id', ()
     selectedText: 'Second marked text'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-1"
       nodeOrder={['node-1', 'node-2', 'node-3']}
@@ -98,7 +99,7 @@ it('renders locator-backed highlight child nodes and emits selected node id', ()
 });
 
 it('shows an empty state when no locator-backed highlight nodes exist', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-1"
       nodeOrder={['node-1']}
@@ -133,7 +134,7 @@ it('includes locator-backed highlights from nested descendants in tree order', (
     selectedText: 'B sibling highlight'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-1"
       nodeOrder={['node-1', 'node-chapter', 'node-hl-b', 'node-hl-a']}
@@ -185,7 +186,7 @@ it('keeps repeated locator-backed highlight text as separate items', () => {
     }
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-1"
       nodeOrder={['node-1', 'node-hl-a', 'node-hl-b']}
@@ -212,7 +213,7 @@ it('excludes cloze child nodes from the sidebar list', () => {
     selectedText: 'answer'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-1"
       nodeOrder={['node-1', 'node-cloze']}

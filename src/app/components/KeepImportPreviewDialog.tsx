@@ -1,5 +1,6 @@
 import type { KeepImportPreviewSummary } from '../../../lib/core/import/importManagerSettings';
 import type { NativeReadwiseDetectionSample } from '../../../lib/platform/nativeReadwiseContract';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
 import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
@@ -11,27 +12,28 @@ interface KeepImportPreviewSampleGroup {
   sourcePath: string;
 }
 
-function formatCount(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
-
 function countMatchedHighlights(preview: KeepImportPreviewSummary) {
   return preview.samples.reduce((total, sample) => total + sample.detectedHighlightCount, 0);
 }
 
-function formatPreviewResult(preview: KeepImportPreviewSummary) {
+function formatPreviewResult(preview: KeepImportPreviewSummary, t: Translate) {
   const matchedHighlightCount = countMatchedHighlights(preview);
-  return `Checked ${formatCount(preview.discoveredCount, 'full document file')}; ${formatCount(matchedHighlightCount, 'matched highlight')}.`;
+  const documentLabel = t(preview.discoveredCount === 1 ? 'desktop.keepImport.preview.document.one' : 'desktop.keepImport.preview.document.many', { count: preview.discoveredCount });
+  const highlightLabel = t(matchedHighlightCount === 1 ? 'desktop.keepImport.preview.highlight.one' : 'desktop.keepImport.preview.highlight.many', { count: matchedHighlightCount });
+  return t('desktop.keepImport.preview.result', {
+    documentLabel,
+    highlightLabel
+  });
 }
 
-function formatPreviewGuidance(preview: KeepImportPreviewSummary) {
+function formatPreviewGuidance(preview: KeepImportPreviewSummary, t: Translate) {
   const sampleCount = collectPreviewSampleGroups(preview).reduce((total, group) => total + group.samples.length, 0);
   if (sampleCount === 0) {
     return preview.unchangedCount > 0
-      ? 'This document is already imported and has no new highlight samples to show.'
-      : 'No sample highlights are available for this preview.';
+      ? t('desktop.keepImport.preview.alreadyImported')
+      : t('desktop.keepImport.preview.noSamples');
   }
-  return `${formatCount(sampleCount, 'sample highlight')} shown below. Adjust the watch folder settings and preview again if they do not look right.`;
+  return t('desktop.keepImport.preview.guidance', { count: sampleCount });
 }
 
 function collectPreviewSampleGroups(preview: KeepImportPreviewSummary): KeepImportPreviewSampleGroup[] {
@@ -67,16 +69,17 @@ function KeepImportPreviewEntry(props: { group: KeepImportPreviewSampleGroup }) 
 }
 
 function KeepImportPreviewContent(props: { preview: KeepImportPreviewSummary | null }) {
+  const t = useTranslation();
   if (!props.preview) {
-    return <p className="text-sm text-foreground/60">No preview result available.</p>;
+    return <p className="text-sm text-foreground/60">{t('desktop.keepImport.preview.empty')}</p>;
   }
   const previewSampleGroups = collectPreviewSampleGroups(props.preview);
 
   return (
     <>
       <div>
-        <p className="text-sm font-semibold leading-5 text-foreground">{formatPreviewResult(props.preview)}</p>
-        <p className="mt-1 text-sm leading-5 text-foreground/65">{formatPreviewGuidance(props.preview)}</p>
+        <p className="text-sm font-semibold leading-5 text-foreground">{formatPreviewResult(props.preview, t)}</p>
+        <p className="mt-1 text-sm leading-5 text-foreground/65">{formatPreviewGuidance(props.preview, t)}</p>
       </div>
       <div>
         {previewSampleGroups.map((group) => <KeepImportPreviewEntry group={group} key={group.sourcePath} />)}
@@ -92,6 +95,7 @@ export function KeepImportPreviewDialog(props: {
   preview: KeepImportPreviewSummary | null;
   sourceLabel: string;
 }) {
+  const t = useTranslation();
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
       <AppDialogPortal>
@@ -100,11 +104,11 @@ export function KeepImportPreviewDialog(props: {
           aria-describedby={undefined}
           className="left-1/2 top-1/2 w-[min(860px,calc(100vw-64px))] -translate-x-1/2 -translate-y-1/2 rounded-xl border-border/35 bg-bg-elevated p-0"
         >
-          <section aria-label="Keep import preview" className="flex flex-col">
+          <section aria-label={t('desktop.keepImport.preview.aria')} className="flex flex-col">
             <header className="px-8 pb-2 pt-7">
-              <AppDialogTitle className="text-lg font-normal">Import preview</AppDialogTitle>
+              <AppDialogTitle className="text-lg font-normal">{t('desktop.keepImport.preview.title')}</AppDialogTitle>
               <p className="mt-2 text-sm leading-5 text-foreground/65">
-                Preview what this watch folder will bring into Foliole.
+                {t('desktop.keepImport.preview.description')}
               </p>
             </header>
             <div className="px-8 py-4">
@@ -112,10 +116,10 @@ export function KeepImportPreviewDialog(props: {
             </div>
             <footer className="flex items-center justify-end gap-2 px-8 pb-6 pt-2">
               <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">
-                Not now
+                {t('desktop.keepImport.preview.notNow')}
               </AppButton>
               <AppButton disabled={!props.preview} onClick={props.onConfirm} variant="primary">
-                Enable
+                {t('desktop.keepImport.preview.enable')}
               </AppButton>
             </footer>
           </section>

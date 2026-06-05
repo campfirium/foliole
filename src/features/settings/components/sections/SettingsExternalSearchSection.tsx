@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import type {
   ExternalSourceSettingsFolder,
   ExternalSourceSettingsFolderPatch
@@ -28,12 +29,14 @@ interface SettingsExternalSearchSectionProps {
 }
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
+  const t = useTranslation();
+
   if (props.isLoading) {
     return (
       <SettingsSection
-        ariaLabel="External sources section"
-        description="Choose folders Foliole mirrors for browsing, search, and import. Original files stay outside Foliole."
-        title="External sources"
+        ariaLabel={t('settings.externalSources.sectionAria')}
+        description={t('settings.externalSources.description')}
+        title={t('settings.externalSources.title')}
       >
         <SettingsLoadingState />
       </SettingsSection>
@@ -42,9 +45,9 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
 
   return (
     <SettingsSection
-      ariaLabel="External sources section"
-      description="Choose folders Foliole mirrors for browsing, search, and import. Original files stay outside Foliole."
-      title="External sources"
+      ariaLabel={t('settings.externalSources.sectionAria')}
+      description={t('settings.externalSources.description')}
+      title={t('settings.externalSources.title')}
     >
       <div className="min-w-0 overflow-hidden">
         <ExternalLibraryTable
@@ -69,9 +72,9 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
       </div>
       {props.error ? (
         <SettingsErrorState
-          action={<SettingsStateAction label="Retry" onClick={props.onRetryLoad} />}
+          action={<SettingsStateAction label={t('settings.externalSources.retry')} onClick={props.onRetryLoad} />}
           description={props.error}
-          title="External sources unavailable"
+          title={t('settings.externalSources.unavailable')}
         />
       ) : null}
     </SettingsSection>

@@ -1,5 +1,6 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { AppButton, AppStatusBadge } from '../../shared/ui';
 
@@ -7,18 +8,22 @@ import { ImportCatalogListItem } from './ImportCatalogListItem';
 import { renderImportDate, renderImportMeta, renderImportOpening, renderImportTitle } from './ImportNodeListBits';
 import { buildImportNodePresentation } from './importNodePresentation';
 
-function formatReadwiseAnnotationStatus(annotationStatus: RuntimeReadwiseBooksInventory['books'][number]['annotationStatus']) {
-  return annotationStatus === 'has_highlights' ? 'Has highlights' : 'No highlights';
+type ImportInventoryTranslate = ReturnType<typeof useTranslation>;
+
+function formatReadwiseAnnotationStatus(annotationStatus: RuntimeReadwiseBooksInventory['books'][number]['annotationStatus'], t: ImportInventoryTranslate) {
+  return annotationStatus === 'has_highlights'
+    ? t('desktop.importInventory.readwise.hasHighlights')
+    : t('desktop.importInventory.readwise.noHighlights');
 }
 
-function formatReadwiseImportStatus(book: RuntimeReadwiseBooksInventory['books'][number]) {
+function formatReadwiseImportStatus(book: RuntimeReadwiseBooksInventory['books'][number], t: ImportInventoryTranslate) {
   if (book.importStatus === 'completed' && book.nodeStatus === 'generated') {
-    return 'Loaded';
+    return t('desktop.importInventory.status.loaded');
   }
   if (book.nodeStatus !== 'generated' && book.generatedNodeId) {
-    return 'Deleted';
+    return t('desktop.importInventory.status.deleted');
   }
-  return 'Not loaded';
+  return t('desktop.importInventory.status.notLoaded');
 }
 
 function resolveReadwiseAnnotationTone(annotationStatus: RuntimeReadwiseBooksInventory['books'][number]['annotationStatus']) {
@@ -35,15 +40,17 @@ function resolveReadwiseImportTone(book: RuntimeReadwiseBooksInventory['books'][
   return 'neutral' as const;
 }
 
-function getReadwiseBookOpening(book: RuntimeReadwiseBooksInventory['books'][number]) {
-  const annotationCopy = book.annotationStatus === 'has_highlights' ? 'Highlights available.' : 'No highlights found yet.';
+function getReadwiseBookOpening(book: RuntimeReadwiseBooksInventory['books'][number], t: ImportInventoryTranslate) {
+  const annotationCopy = book.annotationStatus === 'has_highlights'
+    ? t('desktop.importInventory.readwise.highlightsAvailable')
+    : t('desktop.importInventory.readwise.noHighlightsFound');
   if (book.importStatus === 'completed' && book.nodeStatus === 'generated') {
-    return `${annotationCopy} Imported node is ready to open.`;
+    return t('desktop.importInventory.readwise.ready', { annotation: annotationCopy });
   }
   if (book.generatedNodeId && book.nodeStatus !== 'generated') {
-    return `${annotationCopy} The previously imported node is no longer available.`;
+    return t('desktop.importInventory.readwise.deleted', { annotation: annotationCopy });
   }
-  return `${annotationCopy} This book has not been imported into a node yet.`;
+  return t('desktop.importInventory.readwise.notImported', { annotation: annotationCopy });
 }
 
 function renderReadwiseBookTitle(input: {
@@ -71,22 +78,23 @@ function renderReadwiseBookActions(input: {
   generatedNodeId: string | null;
   isResetting: boolean;
   onResetBookImport?: (input: { nodeId: string; title: string }) => void;
+  t: ImportInventoryTranslate;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap gap-2">
         <AppStatusBadge
-          label={formatReadwiseAnnotationStatus(input.book.annotationStatus)}
+          label={formatReadwiseAnnotationStatus(input.book.annotationStatus, input.t)}
           tone={resolveReadwiseAnnotationTone(input.book.annotationStatus)}
         />
-        <AppStatusBadge label={formatReadwiseImportStatus(input.book)} tone={resolveReadwiseImportTone(input.book)} />
+        <AppStatusBadge label={formatReadwiseImportStatus(input.book, input.t)} tone={resolveReadwiseImportTone(input.book)} />
       </div>
       <AppButton
         disabled={!input.generatedNodeId || input.isResetting}
         onClick={() => input.generatedNodeId && input.onResetBookImport?.({ nodeId: input.generatedNodeId, title: input.book.title })}
         variant="ghost"
       >
-        {input.isResetting ? 'Importing…' : 'Import'}
+        {input.isResetting ? input.t('desktop.importInventory.readwise.importing') : input.t('desktop.importInventory.readwise.import')}
       </AppButton>
     </div>
   );
@@ -107,11 +115,12 @@ export function ReadwiseBookInventoryItem({
   scannedAt: string;
   resettingNodeId?: string | null;
 }) {
+  const t = useTranslation();
   const generatedNodeId = book.generatedNodeId;
   const isResetting = resettingNodeId === generatedNodeId;
   const presentation = buildImportNodePresentation({
     fallbackDate: scannedAt,
-    fallbackOpening: getReadwiseBookOpening(book),
+    fallbackOpening: getReadwiseBookOpening(book, t),
     fallbackPath: book.bookKey,
     fallbackTitle: book.title,
     fallbackType: 'book',
@@ -131,12 +140,13 @@ export function ReadwiseBookInventoryItem({
         book,
         generatedNodeId,
         isResetting,
+        t,
         ...definedProps({ onResetBookImport })
       })}
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(title)}
-      trailing={renderImportDate(presentation.date, 'Date imported')}
+      trailing={renderImportDate(presentation.date, t('desktop.importOverview.dateImported'))}
     />
   );
 }

@@ -1,13 +1,16 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
+
 import type { ReviewQueueVisibility } from './reviewQueueVisibility';
 
 export function ReviewQueueVisibilityText({ visibility }: { visibility: ReviewQueueVisibility }) {
+  const t = useTranslation();
   return (
-    <div aria-label="Review queue visibility" className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[11px] text-foreground/60">
-      <span>{visibility.currentQueueLabel} live</span>
-      <span>Review items {visibility.fsrsQueueCount}</span>
-      <span>Reading {visibility.readingQueueCount}</span>
+    <div aria-label={t('desktop.reviewQueue.visibility')} className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[11px] text-foreground/60">
+      <span>{t('desktop.reviewQueue.live', { label: visibility.currentQueueLabel })}</span>
+      <span>{t('desktop.reviewQueue.reviewItems', { count: visibility.fsrsQueueCount })}</span>
+      <span>{t('desktop.reviewQueue.reading', { count: visibility.readingQueueCount })}</span>
       <span>
-        Mix {visibility.queueMixRatioReading}:{visibility.queueMixRatioFsrs}
+        {t('desktop.reviewQueue.mix', { fsrs: visibility.queueMixRatioFsrs, reading: visibility.queueMixRatioReading })}
       </span>
     </div>
   );

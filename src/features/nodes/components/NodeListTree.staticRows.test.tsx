@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
 
@@ -32,7 +33,7 @@ it('renders every row immediately when virtualization is disabled', () => {
   const nodeOrder = Array.from({ length: 120 }, (_, index) => `folder-${index}`);
   const nodesById = Object.fromEntries(nodeOrder.map((nodeId) => [nodeId, createNode(nodeId)])) as WorkspaceListNodesById;
 
-  const { container } = render(
+  const { container } = renderWithLocalization(
     <NodeListTree
       activeNodeId={null}
       isTrashViewOpen={false}

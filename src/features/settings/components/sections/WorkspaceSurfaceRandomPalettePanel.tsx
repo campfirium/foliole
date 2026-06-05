@@ -1,5 +1,6 @@
 import { RefreshCw } from 'lucide-react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { settingsColorSwatchClassName, settingsPaletteButtonClassName, settingsUtilityIconButtonClassName } from '../../../../shared/ui';
 
 function RandomPaletteCard(props: {
@@ -33,12 +34,13 @@ export function WorkspaceSurfaceRandomPalettePanel(props: {
   onRefresh: () => void;
   randomPalettes: string[][];
 }) {
+  const t = useTranslation();
   return (
-    <div aria-label="Random mode panel" className="space-y-2">
+    <div aria-label={t('settings.appearance.surface.randomPanel')} className="space-y-2">
       <div className="flex items-center gap-2">
-        <h4 className="text-sm font-medium text-foreground">Random</h4>
+        <h4 className="text-sm font-medium text-foreground">{t('settings.appearance.surface.random')}</h4>
         <button
-          aria-label="Refresh random palettes"
+          aria-label={t('settings.appearance.surface.randomRefresh')}
           className={settingsUtilityIconButtonClassName(false, 'size-8 rounded-sm px-0')}
           onClick={props.onRefresh}
           type="button"
@@ -49,7 +51,7 @@ export function WorkspaceSurfaceRandomPalettePanel(props: {
       <div className="grid w-max grid-cols-3 gap-2.5">
         {props.randomPalettes.map((palette, paletteIndex) => (
           <RandomPaletteCard
-            ariaLabel={`Random palette ${paletteIndex + 1}`}
+            ariaLabel={t('settings.appearance.surface.randomPalette', { index: paletteIndex + 1 })}
             key={`${paletteIndex}-${palette.join('-')}`}
             onClick={() => props.onApplyPalette(palette)}
             palette={palette}

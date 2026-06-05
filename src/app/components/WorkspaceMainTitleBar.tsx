@@ -1,5 +1,6 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLibraryBrowseEntry } from '../../shared/platform/externalLibraryBrowseRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
@@ -26,7 +27,7 @@ function resolveExternalTitleBarTitle(props: {
   return entry?.title.trim() || entry?.fileName.trim() || selection.absolutePath.split(/[\\/]/).at(-1) || 'External document';
 }
 
-function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: Record<string, Node>) {
+function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: Record<string, Node>, t: Translate) {
   if (!nodeId) {
     return null;
   }
@@ -36,7 +37,7 @@ function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: Record<str
     return null;
   }
   if (cursor.kind === 'folder') {
-    return cursor.title.trim() || 'Untitled';
+    return cursor.title.trim() || t('desktop.search.context.untitled');
   }
 
   while (cursor?.parentNodeId) {
@@ -47,7 +48,7 @@ function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: Record<str
     cursor = parent;
   }
 
-  return cursor?.title.trim() || 'Untitled';
+  return cursor?.title.trim() || t('desktop.search.context.untitled');
 }
 
 function resolveReviewTitleBarTitle(review: WorkspaceLayoutProps['review']) {
@@ -65,6 +66,7 @@ export function WorkspaceMainTitleBar({
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   props: WorkspaceTitleBarSource;
 }) {
+  const t = useTranslation();
   const { externalLibrary, layoutChrome, navigation, nodeList, review, trash } = props;
   if (layoutChrome.isImmersiveMode) {
     return null;
@@ -75,7 +77,8 @@ export function WorkspaceMainTitleBar({
       activeRightPanelId={activeRightPanelId}
       centerTitle={externalTitle ?? resolveReviewTitleBarTitle(review) ?? resolveWindowTitleBarTitle(
         trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId,
-        nodeList.nodesById
+        nodeList.nodesById,
+        t
       )}
       isListCollapsed={layoutChrome.isListCollapsed}
       isRightSidebarCollapsed={layoutChrome.isRightSidebarCollapsed}

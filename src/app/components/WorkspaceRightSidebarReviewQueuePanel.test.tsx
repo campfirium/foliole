@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
 
@@ -47,7 +48,7 @@ it('shows the current actionable item first even when the whole queue starts wit
     })
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-now"
       flowWindow={{ queueNodeIds: ['fsrs-later', 'reading-now'], readyNodeIds: [], upcomingNodeIds: [] }}
@@ -85,7 +86,7 @@ it('keeps the mixed queue cadence after the current reading item', () => {
     })
   ]);
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-1"
       flowWindow={{
@@ -118,7 +119,7 @@ it('keeps the mixed queue cadence after the current reading item', () => {
 });
 
 it('shows an error when the review queue references an unavailable topic', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
       flowWindow={{ queueNodeIds: ['missing-topic'], readyNodeIds: [], upcomingNodeIds: [] }}
@@ -134,7 +135,7 @@ it('shows an error when the review queue references an unavailable topic', () =>
 it('opens the queued node from the title only', () => {
   const onSelectNode = vi.fn();
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
       flowWindow={{ queueNodeIds: ['reading-1'], readyNodeIds: [], upcomingNodeIds: [] }}
@@ -153,7 +154,7 @@ it('opens the queued node from the title only', () => {
 });
 
 it('does not show due times in the flow list', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
       flowWindow={{ queueNodeIds: ['reading-1', 'fsrs-1'], readyNodeIds: [], upcomingNodeIds: [] }}
@@ -189,7 +190,7 @@ it('does not show due times in the flow list', () => {
 });
 
 it('separates queue and ready flow entries with dividers only', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-1"
       flowWindow={{ queueNodeIds: ['reading-1'], readyNodeIds: ['reading-2'], upcomingNodeIds: [] }}
@@ -213,7 +214,7 @@ it('separates queue and ready flow entries with dividers only', () => {
 });
 
 it('treats future-only flow content as empty', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
       flowWindow={{ queueNodeIds: [], readyNodeIds: [], upcomingNodeIds: ['reading-later'] }}

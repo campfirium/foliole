@@ -1,6 +1,7 @@
 import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   AppInput,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -20,7 +21,7 @@ import {
 } from '../../../editor/model/highlightAnnotationPrefixSetting';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
-import { EDITOR_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
+import { createSettingsSearchRows } from '../../model/settingsSearchRowCatalog';
 
 import { SelectionToolbarSettingsRow } from './SelectionToolbarSettingsRow';
 import {
@@ -29,19 +30,16 @@ import {
   LongClozeFrontGuardRow
 } from './SettingsEditorClozeRows';
 
-function getEditorSettingsRow(id: string) {
-  const row = EDITOR_SETTINGS_SEARCH_ROWS.find((item) => item.id === id);
+function useEditorSettingsRow(id: string) {
+  const t = useTranslation();
+  const row = createSettingsSearchRows(t).find((item) => item.id === id);
   if (!row) throw new Error(`Missing editor settings search row: ${id}`);
   return row;
 }
 
-const EDITOR_ROW = {
-  frontmatterMeta: getEditorSettingsRow('editor-frontmatter-meta'),
-  highlightAnnotationPrefix: getEditorSettingsRow('editor-highlight-annotation-prefix'),
-  saveRemoteImages: getEditorSettingsRow('editor-save-remote-images-locally')
-};
-
 function HighlightAnnotationPrefixRow() {
+  const t = useTranslation();
+  const row = useEditorSettingsRow('editor-highlight-annotation-prefix');
   const [prefix, setPrefix] = useState(() => getHighlightAnnotationPrefix());
   const updatePrefix = (value: string) => {
     setPrefix(setHighlightAnnotationPrefix(value));
@@ -49,14 +47,14 @@ function HighlightAnnotationPrefixRow() {
 
   return (
     <SettingsRow
-      {...settingsSearchRowProps(EDITOR_ROW.highlightAnnotationPrefix)}
-      description={EDITOR_ROW.highlightAnnotationPrefix.description}
-      title={EDITOR_ROW.highlightAnnotationPrefix.title}
+      {...settingsSearchRowProps(row)}
+      description={row.description}
+      title={row.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <div className="flex items-center gap-2">
           <button
-            aria-label="Reset highlight annotation prefix"
+            aria-label={t('settings.editor.highlightPrefix.reset')}
             className={settingsResetButtonClassName('disabled:cursor-default disabled:opacity-45')}
             disabled={prefix === DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX}
             onClick={() => updatePrefix(DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX)}
@@ -65,7 +63,7 @@ function HighlightAnnotationPrefixRow() {
             <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
           </button>
           <AppInput
-            aria-label="Highlight annotation prefix"
+            aria-label={row.title}
             className={SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME}
             maxLength={24}
             onChange={(event) => updatePrefix(event.target.value)}
@@ -78,6 +76,8 @@ function HighlightAnnotationPrefixRow() {
 }
 
 function FrontmatterMetaFieldsRow() {
+  const t = useTranslation();
+  const row = useEditorSettingsRow('editor-frontmatter-meta');
   const {
     frontmatterMetaFields,
     resetFrontmatterMetaFields,
@@ -86,14 +86,14 @@ function FrontmatterMetaFieldsRow() {
 
   return (
     <SettingsRow
-      {...settingsSearchRowProps(EDITOR_ROW.frontmatterMeta)}
-      description="Fields shown under the title. Use commas for groups and | for aliases, such as author|byline, url|link|source."
-      title={EDITOR_ROW.frontmatterMeta.title}
+      {...settingsSearchRowProps(row)}
+      description={t('settings.editor.frontmatter.description')}
+      title={row.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <div className="flex items-center gap-2">
           <button
-            aria-label="Reset frontmatter meta fields"
+            aria-label={t('settings.editor.frontmatter.reset')}
             className={settingsResetButtonClassName('disabled:cursor-default disabled:opacity-45')}
             disabled={frontmatterMetaFields === FRONTMATTER_META_FIELDS_DEFAULT}
             onClick={resetFrontmatterMetaFields}
@@ -102,7 +102,7 @@ function FrontmatterMetaFieldsRow() {
             <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
           </button>
           <AppInput
-            aria-label="Frontmatter meta fields"
+            aria-label={t('settings.editor.frontmatter.aria')}
             className="h-9 w-[22rem]"
             onChange={(event) => setFrontmatterMetaFields(event.target.value)}
             value={frontmatterMetaFields}
@@ -114,16 +114,18 @@ function FrontmatterMetaFieldsRow() {
 }
 
 function EditorLiveMarkdownSection() {
+  const t = useTranslation();
+  const saveRemoteImagesRow = useEditorSettingsRow('editor-save-remote-images-locally');
   const {
     autoLocalizeRemoteImages,
     setAutoLocalizeRemoteImages,
   } = useAppearanceSettings();
 
   return (
-    <SettingsSection ariaLabel="Editor settings section" title="Live markdown">
-      <SettingsRow {...settingsSearchRowProps(EDITOR_ROW.saveRemoteImages)} description={EDITOR_ROW.saveRemoteImages.description} title={EDITOR_ROW.saveRemoteImages.title}>
+    <SettingsSection ariaLabel={t('settings.editor.liveMarkdown.aria')} title={t('settings.editor.liveMarkdown.section')}>
+      <SettingsRow {...settingsSearchRowProps(saveRemoteImagesRow)} description={saveRemoteImagesRow.description} title={saveRemoteImagesRow.title}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <button aria-checked={autoLocalizeRemoteImages} aria-label="Save remote images locally" className={settingsSwitchClassName(autoLocalizeRemoteImages)} onClick={() => setAutoLocalizeRemoteImages(!autoLocalizeRemoteImages)} role="switch" type="button">
+          <button aria-checked={autoLocalizeRemoteImages} aria-label={saveRemoteImagesRow.title} className={settingsSwitchClassName(autoLocalizeRemoteImages)} onClick={() => setAutoLocalizeRemoteImages(!autoLocalizeRemoteImages)} role="switch" type="button">
             <span aria-hidden="true" className={settingsSwitchKnobClassName(autoLocalizeRemoteImages)} />
           </button>
         </SettingsControlSlot>
@@ -135,15 +137,16 @@ function EditorLiveMarkdownSection() {
 }
 
 export function SettingsEditorSection() {
+  const t = useTranslation();
   return (
     <>
       <EditorLiveMarkdownSection />
-      <SettingsSection ariaLabel="Cloze guard settings section" title="Cloze guard">
+      <SettingsSection ariaLabel={t('settings.editor.clozeGuard.aria')} title={t('settings.editor.clozeGuard.section')}>
         <LongClozeFrontGuardRow />
         <ClozeSelectedTextLimitRow />
         <ClozeFrontLengthLimitRow />
       </SettingsSection>
-      <SettingsSection ariaLabel="Annotation settings section" title="Annotations">
+      <SettingsSection ariaLabel={t('settings.editor.annotation.aria')} title={t('settings.editor.annotation.section')}>
         <HighlightAnnotationPrefixRow />
       </SettingsSection>
     </>

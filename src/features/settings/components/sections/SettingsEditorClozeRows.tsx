@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   AppInput,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -17,32 +18,33 @@ import {
   setLongClozeSelectionGuardMin
 } from '../../../editor/model/longClozeFrontGuardSetting';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
-import { EDITOR_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
+import { createSettingsSearchRows } from '../../model/settingsSearchRowCatalog';
 
-function getEditorSettingsRow(id: string) {
-  const row = EDITOR_SETTINGS_SEARCH_ROWS.find((item) => item.id === id);
+function useEditorSettingsRow(id: string) {
+  const t = useTranslation();
+  const row = createSettingsSearchRows(t).find((item) => item.id === id);
   if (!row) throw new Error(`Missing editor settings search row: ${id}`);
   return row;
 }
 
-const LONG_CLOZE_MISTAKE_GUARD_ROW = getEditorSettingsRow('editor-long-cloze-mistake-guard');
-
 export function LongClozeFrontGuardRow() {
+  const t = useTranslation();
+  const row = useEditorSettingsRow('editor-long-cloze-mistake-guard');
   const [mode, setMode] = useState(() => getLongClozeFrontGuardMode());
   return (
     <SettingsRow
-      {...settingsSearchRowProps(LONG_CLOZE_MISTAKE_GUARD_ROW)}
-      description={LONG_CLOZE_MISTAKE_GUARD_ROW.description}
-      title={LONG_CLOZE_MISTAKE_GUARD_ROW.title}
+      {...settingsSearchRowProps(row)}
+      description={row.description}
+      title={row.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <SettingsSegmentedControl
-          ariaLabel="Long cloze action"
+          ariaLabel={t('settings.editor.clozeGuard.actionAria')}
           onChange={(value) => setMode(setLongClozeFrontGuardMode(value))}
           options={[
-            { label: 'Remind', value: DEFAULT_LONG_CLOZE_FRONT_GUARD_MODE },
-            { label: 'Convert', value: 'convert' },
-            { label: 'Off', value: 'off' }
+            { label: t('settings.editor.clozeGuard.remind'), value: DEFAULT_LONG_CLOZE_FRONT_GUARD_MODE },
+            { label: t('settings.editor.clozeGuard.convert'), value: 'convert' },
+            { label: t('settings.editor.clozeGuard.off'), value: 'off' }
           ]}
           value={mode}
         />
@@ -52,15 +54,16 @@ export function LongClozeFrontGuardRow() {
 }
 
 export function ClozeSelectedTextLimitRow() {
+  const t = useTranslation();
   const [selectionMin, setSelectionMin] = useState(() => getLongClozeSelectionGuardMin());
   return (
     <SettingsRow
-      description="Selections at or below this length create clozes normally. Use 0 to check every selection."
-      title="Only check when selected answer is longer than"
+      description={t('settings.editor.clozeGuard.selectionDescription')}
+      title={t('settings.editor.clozeGuard.selectionTitle')}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <AppInput
-          aria-label="Cloze guard selected text limit"
+          aria-label={t('settings.editor.clozeGuard.selectionAria')}
           className="h-9 w-28"
           min={0}
           onChange={(event) => setSelectionMin(setLongClozeSelectionGuardMin(event.target.value))}
@@ -73,15 +76,16 @@ export function ClozeSelectedTextLimitRow() {
 }
 
 export function ClozeFrontLengthLimitRow() {
+  const t = useTranslation();
   const [frontMax, setFrontMax] = useState(() => getLongClozeFrontGuardThreshold());
   return (
     <SettingsRow
-      description="The front is the topic text after the selected answer is replaced with the cloze placeholder."
-      title="Then guard when generated card front is longer than"
+      description={t('settings.editor.clozeGuard.frontDescription')}
+      title={t('settings.editor.clozeGuard.frontTitle')}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <AppInput
-          aria-label="Cloze guard front length limit"
+          aria-label={t('settings.editor.clozeGuard.frontAria')}
           className="h-9 w-28"
           min={50}
           onChange={(event) => setFrontMax(setLongClozeFrontGuardThreshold(event.target.value))}

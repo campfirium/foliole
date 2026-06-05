@@ -7,12 +7,14 @@ import {
 } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
-import { moveNodeIdBefore, resolveFolderManualChildOrder, resolveListedFolderNodes } from './folderListManualOrdering';
+import { renderFolderListItem } from './folderListItemRender';
+import { resolveFolderManualChildOrder, resolveListedFolderNodes } from './folderListManualOrdering';
 import { FolderListNavigationOverlay, type FolderListNavigationOverlayProps } from './FolderListNavigationOverlay';
-import { FolderListViewItem, type FolderListItemLayout } from './FolderListViewItem';
+import type { FolderListItemLayout } from './FolderListViewItem';
 import { FolderListViewLayout } from './FolderListViewLayout';
 import { useFolderListViewState } from './useFolderListViewState';
 import { WorkspaceTopicTreeCurrentViewActions } from './WorkspaceTopicTreeCurrentViewActions';
@@ -47,23 +49,6 @@ interface FolderListViewProps {
   sortDirection?: FolderListSortDirection;
   sortKey?: FolderListSortKey;
   trashedNodeIds?: string[];
-}
-
-interface RenderFolderListItemArgs {
-  canManualDrag: boolean;
-  draggedNodeId: string | null;
-  itemLayout: FolderListItemLayout;
-  node: Node;
-  nodeViewById: Record<string, NodeViewState | undefined>;
-  nodesById: Record<string, Node>;
-  onSelectNode: (nodeId: string) => void;
-  onSelectNodePath?: (nodeId: string) => void;
-  setDraggedNodeId: (nodeId: string | null) => void;
-  setFolderManualChildOrder?: (folderNodeId: string, childNodeIds: string[]) => void;
-  folderNodeId?: string;
-  childNodes: Node[];
-  sortKey: FolderListSortKey;
-  activeNodeId?: string | null | undefined;
 }
 
 function resolveFolderTitle(folderTitle: string | undefined, folderNodeId: string | undefined, nodesById: Record<string, Node>) {
@@ -146,6 +131,7 @@ function useResolvedFolderListState(props: FolderListViewProps) {
 }
 
 export function FolderListView(props: FolderListViewProps) {
+  const t = useTranslation();
   const { nodeViewById, resolvedFolderTitle, state } = useResolvedFolderListState(props);
   const deleteNodes = useWorkspaceStore((storeState) => storeState.deleteNodes);
   const setFolderManualChildOrder = useWorkspaceStore((storeState) => storeState.setFolderManualChildOrder);
@@ -157,7 +143,7 @@ export function FolderListView(props: FolderListViewProps) {
 
   return (
     <div ref={scrollElementRef} className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
-      <section aria-label={props.regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
+      <section aria-label={props.regionLabel ?? t('desktop.folderList.view')} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
           currentViewActions={props.currentViewActions ?? currentViewActions}
           {...definedProps({ emptyState: props.emptyState })}
@@ -197,37 +183,9 @@ export function FolderListView(props: FolderListViewProps) {
           scrollElementRef={scrollElementRef}
           sortDirection={state.sortDirection}
           sortKey={state.sortKey}
+          t={t}
         />
       </section>
     </div>
-  );
-}
-
-function renderFolderListItem(args: RenderFolderListItemArgs) {
-  const nodeViewState = args.nodeViewById[args.node.id];
-  return (
-    <FolderListViewItem
-      active={args.activeNodeId === args.node.id}
-      draggable={args.canManualDrag}
-      itemLayout={args.itemLayout}
-      key={args.node.id}
-      node={args.node}
-      {...(nodeViewState !== undefined ? { nodeViewState } : {})}
-      onSelectNode={args.onSelectNode}
-      {...(args.onSelectNodePath ? { onSelectNodePath: args.onSelectNodePath } : {})}
-      nodesById={args.nodesById}
-      onDragEnd={() => args.setDraggedNodeId(null)}
-      onDragStart={() => args.setDraggedNodeId(args.node.id)}
-      onDrop={() => {
-        if (!args.folderNodeId || !args.draggedNodeId) return;
-        const currentOrder = args.childNodes.map((childNode) => childNode.id);
-        args.setFolderManualChildOrder?.(
-          args.folderNodeId,
-          moveNodeIdBefore(currentOrder, args.draggedNodeId, args.node.id)
-        );
-        args.setDraggedNodeId(null);
-      }}
-      sortKey={args.sortKey}
-    />
   );
 }

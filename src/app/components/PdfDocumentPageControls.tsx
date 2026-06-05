@@ -1,6 +1,7 @@
 import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react';
 import { useEffect, useState, type KeyboardEvent } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton, AppInput } from '../../shared/ui';
 
 interface PageControlsProps {
@@ -35,15 +36,17 @@ function PdfPageButtons({ canGoNext, canGoPrevious, onNextPage, onPreviousPage, 
   onPreviousPage: () => void;
   onToolbarInteraction: () => void;
 }) {
+  const t = useTranslation();
   return (
     <div className="flex items-center gap-1">
-      <AppIconButton className="size-8" disabled={!canGoPrevious} icon={<ArrowUpToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label="Previous page" onClick={createToolbarAction(onPreviousPage, onToolbarInteraction)} />
-      <AppIconButton className="size-8" disabled={!canGoNext} icon={<ArrowDownToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label="Next page" onClick={createToolbarAction(onNextPage, onToolbarInteraction)} />
+      <AppIconButton className="size-8" disabled={!canGoPrevious} icon={<ArrowUpToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.page.previous')} onClick={createToolbarAction(onPreviousPage, onToolbarInteraction)} />
+      <AppIconButton className="size-8" disabled={!canGoNext} icon={<ArrowDownToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.page.next')} onClick={createToolbarAction(onNextPage, onToolbarInteraction)} />
     </div>
   );
 }
 
 export function PdfPageControls({ displayPage, maxPage, onNextPage, onPageChange, onPreviousPage, onToolbarInteraction }: PageControlsProps) {
+  const t = useTranslation();
   const { pageInputValue, handlePageInputBlur, handlePageInputChange, handlePageInputFocus, handlePageInputKeyDown } = usePdfPageInputState({
     displayPage,
     maxPage,
@@ -57,10 +60,10 @@ export function PdfPageControls({ displayPage, maxPage, onNextPage, onPageChange
   return (
     <div className="flex items-center gap-2">
       <label className="sr-only" htmlFor="pdf-page-input">
-        PDF page
+        {t('desktop.pdf.page.input')}
       </label>
       <AppInput
-        aria-label="PDF page"
+        aria-label={t('desktop.pdf.page.input')}
         className="h-8 w-14 appearance-none border-transparent bg-transparent px-2 text-center text-sm focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         id="pdf-page-input"
         inputMode="numeric"

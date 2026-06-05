@@ -1,4 +1,5 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type { TranslationKey } from '../shared/localization/translations';
 import {
   type CompanionFolderListEntry,
   resolveCompanionFolderViewByNodeId,
@@ -30,7 +31,7 @@ export type CompanionDirectorySelection =
 export interface DirectorySection {
   id: 'internal' | 'virtual' | 'external' | 'current' | 'trash';
   items: DirectoryListItem[];
-  title?: string;
+  titleKey?: TranslationKey;
 }
 
 export type DirectoryListItem =
@@ -190,10 +191,10 @@ export function resolveDirectorySections(args: {
   const externalFolders = [...args.directory.folders]
     .map(toExternalFolderItem);
   const sections: DirectorySection[] = [
-    { id: 'internal', items: [...inboxItems, ...internalItems], title: 'Workspace' },
-    { id: 'external', items: externalFolders, title: 'External' },
-    { id: 'virtual', items: virtualItems, title: 'Virtual' },
-    { id: 'trash', items: [toTrashRootItem()], title: 'Trash' }
+    { id: 'internal', items: [...inboxItems, ...internalItems], titleKey: 'companion.directory.section.workspace' },
+    { id: 'external', items: externalFolders, titleKey: 'companion.directory.section.external' },
+    { id: 'virtual', items: virtualItems, titleKey: 'companion.directory.section.virtual' },
+    { id: 'trash', items: [toTrashRootItem()], titleKey: 'companion.directory.section.trash' }
   ];
   return sections.filter((section) => section.items.length > 0);
 }

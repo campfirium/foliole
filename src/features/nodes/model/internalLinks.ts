@@ -1,3 +1,6 @@
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
+
 import type { Node } from './nodeTypes';
 
 const WIKI_LINK_PATTERN = /(?<!!)\[\[([^\]\n]+)\]\]/g;
@@ -17,6 +20,10 @@ export interface BacklinkItem {
 
 function normalizeTitle(value: string) {
   return value.trim().toLocaleLowerCase();
+}
+
+function untitledLabel() {
+  return translate(getStoredAppLocale(), 'desktop.search.context.untitled');
 }
 
 function normalizeContextLine(line: string) {
@@ -112,8 +119,8 @@ export function collectBacklinks(args: {
     }
     backlinks.push({
       sourceNodeId: node.id,
-      sourceTitle: node.title.trim() || 'Untitled',
-      context: buildBacklinkContext(node.content, firstMatch.from) || node.title.trim() || 'Untitled',
+      sourceTitle: node.title.trim() || untitledLabel(),
+      context: buildBacklinkContext(node.content, firstMatch.from) || node.title.trim() || untitledLabel(),
       matchCount: matchedLinks.length
     });
   }

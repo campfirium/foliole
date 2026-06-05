@@ -5,6 +5,8 @@ import { createReviewSchedulerAdapter } from '../features/review/model/reviewSch
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { gradeSharedFsrsReviewNode } from '../features/review/model/sharedReviewGradeService';
 import { getCurrentReviewSchedulerSettings, getReviewSchedulerVersion } from '../features/settings/model/reviewSchedulerSettings';
+import { getStoredAppLocale } from '../shared/localization/appLanguage';
+import { translate } from '../shared/localization/translations';
 import {
   selectCanonicalReviewQueueSource,
   selectCanonicalVisibleNodeIds
@@ -42,7 +44,7 @@ export interface CompanionReviewSession {
 
 function normalizeTitle(title: string) {
   const trimmed = title.trim();
-  return trimmed || 'Untitled';
+  return trimmed || translate(getStoredAppLocale(), 'desktop.search.context.untitled');
 }
 
 function buildCurrentCard(snapshot: WorkspaceSnapshot, queueNodeIds: string[]) {

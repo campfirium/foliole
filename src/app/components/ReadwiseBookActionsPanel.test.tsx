@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const {
@@ -69,7 +70,7 @@ function seedDefaultRuntime() {
 }
 
 function renderActionsPanel() {
-  return render(
+  return renderWithLocalization(
     <>
       <ReadwiseBookActionsPanel activeContent="" activeNodeId="node-book-1" />
       <EpubImportReleaseModeDialog />
@@ -86,7 +87,7 @@ beforeEach(() => {
 
 describe('ReadwiseBookActionsPanel', () => {
   it('renders the original file panel while the file has not been loaded', async () => {
-    render(
+    renderWithLocalization(
       <ReadwiseBookActionsPanel activeContent="" activeNodeId="node-book-1">
         <div>Editor body</div>
       </ReadwiseBookActionsPanel>
@@ -99,7 +100,7 @@ describe('ReadwiseBookActionsPanel', () => {
   });
 
   it('keeps the document body visible for pending books', async () => {
-    render(
+    renderWithLocalization(
       <ReadwiseBookDocumentGate activeContent="" activeNodeId="node-book-1">
         <div>Book placeholder body</div>
       </ReadwiseBookDocumentGate>
@@ -109,7 +110,7 @@ describe('ReadwiseBookActionsPanel', () => {
   });
 
   it('runs download actions from the panel', async () => {
-    render(<ReadwiseBookActionsPanel activeContent="" activeNodeId="node-book-1" />);
+    renderWithLocalization(<ReadwiseBookActionsPanel activeContent="" activeNodeId="node-book-1" />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Download original file' }));
 
@@ -124,8 +125,8 @@ describe('ReadwiseBookActionsPanel', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Load original file' }));
     await waitFor(() => expect(loadRuntimeReadwiseBookEpub).toHaveBeenCalledWith('node-book-1'));
-    expect(await screen.findByRole('dialog', { name: 'Choose Reading Mode' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Free Reading/ }));
+    expect(await screen.findByRole('dialog', { name: 'Choose reading mode' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Free reading/ }));
 
     expect(useWorkspaceStore.persist.rehydrate).toHaveBeenCalledTimes(1);
     await waitFor(() =>
@@ -150,7 +151,7 @@ describe('ReadwiseBookActionsPanel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Load original file' }));
 
     await waitFor(() => expect(screen.getByText('Load original file was cancelled.')).toBeInTheDocument());
-    expect(screen.queryByRole('dialog', { name: 'Choose Reading Mode' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Choose reading mode' })).not.toBeInTheDocument();
     expect(ensureWorkspaceNodeDocumentReady).not.toHaveBeenCalled();
     expect(useWorkspaceStore.getState().setNodeSequentialReading).not.toHaveBeenCalled();
   });

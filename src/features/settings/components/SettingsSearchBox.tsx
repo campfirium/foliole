@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { getSettingsCategoryOption } from '../model/settingsPanelOptions';
 import type { SettingsSearchResult } from '../model/settingsSearch';
 
@@ -16,6 +17,7 @@ export interface SettingsSearchBoxProps {
   onActiveResultIndexChange: (index: number) => void;
   onQueryChange: (query: string) => void;
   onSelectResult: (result: SettingsSearchResult) => void;
+  placeholder: string;
   query: string;
   results: SettingsSearchResult[];
 }
@@ -25,7 +27,8 @@ function SettingsSearchResultButton(props: {
   onSelect: () => void;
   result: SettingsSearchResult;
 }) {
-  const category = getSettingsCategoryOption(props.result.categoryId);
+  const t = useTranslation();
+  const category = getSettingsCategoryOption(props.result.categoryId, t);
   return (
     <button
       aria-selected={props.active}
@@ -40,7 +43,7 @@ function SettingsSearchResultButton(props: {
     >
       <span className="w-full truncate text-sm font-medium">{props.result.title}</span>
       <span className="mt-0.5 w-full truncate text-xs text-foreground/55">
-        {category?.label ?? 'Settings'}
+        {category?.label ?? t('settings.title')}
         {props.result.description ? ` · ${props.result.description}` : ''}
       </span>
     </button>
@@ -53,10 +56,11 @@ function SettingsSearchPopover(props: {
   onSelectResult: (result: SettingsSearchResult) => void;
   results: SettingsSearchResult[];
 }) {
+  const t = useTranslation();
   return (
     <div className="absolute right-0 top-10 z-10 w-full rounded-md border border-settings-outline bg-settings-shell p-2 shadow-settings">
       {props.hasQuery ? (
-        <div aria-label="Settings search results" className="mt-2 max-h-[360px] space-y-1 overflow-auto" role="listbox">
+        <div aria-label={t('settings.search.results.aria')} className="mt-2 max-h-[360px] space-y-1 overflow-auto" role="listbox">
           {props.results.length ? props.results.map((result, index) => (
             <SettingsSearchResultButton
               active={index === props.activeResultIndex}
@@ -66,7 +70,7 @@ function SettingsSearchPopover(props: {
             />
           )) : (
             <div className="rounded-md px-3 py-2 text-sm text-foreground/55">
-              No settings found.
+              {t('settings.search.empty')}
             </div>
           )}
         </div>
@@ -145,6 +149,7 @@ function useSettingsSearchHandlers(params: {
 }
 
 export function SettingsSearchBox(props: SettingsSearchBoxProps) {
+  const t = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isOpen, setIsOpen] = useSettingsSearchOpenState(rootRef);
@@ -164,7 +169,7 @@ export function SettingsSearchBox(props: SettingsSearchBoxProps) {
           className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground/30 opacity-60 transition-opacity group-hover:opacity-80 group-focus-within:opacity-100"
         />
         <input
-          aria-label="Search settings"
+          aria-label={props.placeholder}
           className={settingsFieldClassName(
             'h-8 rounded-md border-border/35 bg-settings-control pl-8 pr-3 text-[0.86rem] text-foreground/82 opacity-60 shadow-none transition-[background-color,border-color,opacity] placeholder:text-foreground/38 hover:border-border/45 hover:bg-settings-control-hover hover:opacity-80 focus:border-border/55 focus:opacity-100 focus-visible:border-border/55 focus-visible:bg-settings-control-hover focus-visible:ring-border/45'
           )}
@@ -175,7 +180,7 @@ export function SettingsSearchBox(props: SettingsSearchBoxProps) {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           onMouseDown={handleInputPointerDown}
-          placeholder="Search all settings..."
+          placeholder={t('settings.search.inputPlaceholder')}
           ref={inputRef}
           value={props.query}
         />

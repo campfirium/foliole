@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { onWindowEscape } from '../../../../shared/platform/keyboard';
 import { appFloatingSurfaceClassName } from '../../../../shared/ui';
 import {
@@ -69,6 +70,7 @@ function WorkspaceSurfaceColorEditorBody(props: {
   onCommit: (color: WorkspaceSurfaceColorValue) => void;
   position: { x: number; y: number };
 }) {
+  const t = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [resolvedPosition, setResolvedPosition] = useState(() =>
     clampPopupPosition(props.position, { height: 280, width: 280 }, props.bounds)
@@ -88,7 +90,7 @@ function WorkspaceSurfaceColorEditorBody(props: {
 
   return (
     <div
-      aria-label="Workspace surface color editor"
+      aria-label={t('settings.appearance.surface.colorEditor.dialog')}
       className={cn(appFloatingSurfaceClassName('popover'), 'absolute z-popover-elevated w-[280px] rounded-md p-3 shadow-panel')}
       data-workspace-color-editor
       ref={containerRef}

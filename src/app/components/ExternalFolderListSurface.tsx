@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
@@ -62,6 +63,7 @@ export function ExternalFolderListSurface(args: {
   selectedFolder: ExternalLibraryFolder | null;
   selection: Extract<ExternalLibrarySelection, { kind: 'folder' | 'directory' }>;
 }) {
+  const t = useTranslation();
   function handleSelectDocument(absolutePath: string) {
     args.onOpenSelection({
       absolutePath,
@@ -71,16 +73,16 @@ export function ExternalFolderListSurface(args: {
   }
 
   return (
-    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
+    <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
       <FolderListView
         emptyState={{
           description:
             args.selection.kind === 'folder'
-              ? 'No documents are available in the selected external folder.'
-              : 'No documents are available in the selected directory.',
-          title: 'No documents'
+              ? t('desktop.externalLibrary.folderEmpty.description')
+              : t('desktop.externalLibrary.directoryEmpty.description'),
+          title: t('desktop.externalLibrary.empty.title')
         }}
-        folderTitle={resolveExternalSurfaceTitle(args.selection, args.selectedFolder)}
+        folderTitle={resolveExternalSurfaceTitle(args.selection, args.selectedFolder, t)}
         navigationOverlay={{
           canGoBack: args.canGoBack,
           canGoForward: args.canGoForward,
@@ -90,7 +92,7 @@ export function ExternalFolderListSurface(args: {
         nodes={args.documentNodes}
         nodesById={args.documentNodesById}
         onSelectNode={handleSelectDocument}
-        regionLabel="Folder list view"
+        regionLabel={t('desktop.externalLibrary.folderListView')}
       />
     </section>
   );

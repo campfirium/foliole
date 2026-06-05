@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { HOME_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { FolderListView } from './FolderListView';
 
@@ -27,7 +28,7 @@ function renderFolderList(children: Node[]) {
   const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
   const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
 
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1', ...children.map((node) => node.id)]}
@@ -74,7 +75,7 @@ function buildHomeFolderListNodes() {
 
 function renderHomeFolderList() {
   const nodes = buildHomeFolderListNodes();
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId={HOME_NODE_ID}
       nodeOrder={nodes.map((node) => node.id)}

@@ -1,3 +1,4 @@
+import { useTranslation, type Translate } from '../../../../shared/localization/LocalizationProvider';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from '../../../nodes/components/NodeTreeRowIconModel';
 
 import type { NodeIconEditTarget } from './NodeIconSettingsDialog';
@@ -9,15 +10,22 @@ import type { useNodeIconSettingsState } from './nodeIconSettingsState';
 type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 type NodeIconSettingsState = ReturnType<typeof useNodeIconSettingsState>;
 
-function getStateTitle(kind: EditableIconKind, state: NodeTreeRowIconState) {
-  const prefix = kind === 'reading' ? 'Topic' : 'Item';
-  if (state === 'pending') return `${prefix} (pending)`;
-  if (state === 'scheduled') return `${prefix} (scheduled)`;
-  return `${prefix} (dismissed)`;
+function getKindLabel(t: Translate, kind: EditableIconKind) {
+  return t(kind === 'reading' ? 'settings.icons.node.topic' : 'settings.icons.node.item');
 }
 
-function getBaseTitle(kind: EditableIconKind) {
-  return kind === 'reading' ? 'Topic (base)' : 'Item (base)';
+function getStateLabel(t: Translate, state: NodeTreeRowIconState) {
+  if (state === 'pending') return t('settings.icons.node.pending');
+  if (state === 'scheduled') return t('settings.icons.node.scheduled');
+  return t('settings.icons.node.dismissed');
+}
+
+function getStateTitle(t: Translate, kind: EditableIconKind, state: NodeTreeRowIconState) {
+  return t('settings.icons.node.stateTitle', { kind: getKindLabel(t, kind), state: getStateLabel(t, state) });
+}
+
+function getBaseTitle(t: Translate, kind: EditableIconKind) {
+  return t('settings.icons.node.baseTitle', { kind: getKindLabel(t, kind) });
 }
 
 function BaseRow(props: {
@@ -27,9 +35,10 @@ function BaseRow(props: {
   state: NodeIconSettingsState;
 }) {
   const base = getBaseConfig(props.state, props.kind);
-  const title = getBaseTitle(props.kind);
+  const t = useTranslation();
+  const title = getBaseTitle(t, props.kind);
   return (
-    <SettingRow baseOnly color={base.color} kind={props.kind} onEditShape={() => props.onEdit({ type: 'svg', kind: props.kind, title: `Edit ${title} marker` })} onReset={() => props.onResetBase(props.kind)} previewState="scheduled" setColor={base.setColor} title={title}>
+    <SettingRow baseOnly color={base.color} kind={props.kind} onEditShape={() => props.onEdit({ type: 'svg', kind: props.kind, title: t('settings.icons.node.editMarker', { title }) })} onReset={() => props.onResetBase(props.kind)} previewState="scheduled" setColor={base.setColor} title={title}>
       <PrimaryControls lineWidth={base.lineWidth} onLineWidthChange={base.setLineWidth} onScaleChange={base.setScale} scale={base.scale} />
     </SettingRow>
   );
@@ -42,12 +51,13 @@ function StateRow(props: {
   state: NodeIconSettingsState;
 }) {
   const appearance = props.state.stateStyles[props.nodeState][props.kind];
-  const title = getStateTitle(props.kind, props.nodeState);
+  const t = useTranslation();
+  const title = getStateTitle(t, props.kind, props.nodeState);
   return (
     <SettingRow
       color={appearance.color}
       kind={props.kind}
-      onEditShape={() => props.onEdit({ type: 'state', state: props.nodeState, kind: props.kind, title: `Edit ${title} marker` })}
+      onEditShape={() => props.onEdit({ type: 'state', state: props.nodeState, kind: props.kind, title: t('settings.icons.node.editMarker', { title }) })}
       onReset={() => props.state.resetStateAppearance(props.nodeState, props.kind)}
       previewState={props.nodeState}
       setColor={(value) => props.state.setStateColor(props.nodeState, props.kind, value)}
@@ -59,7 +69,7 @@ function StateRow(props: {
                 <DoubleLineControls appearance={appearance} kind={props.kind} nodeState={props.nodeState} state={props.state} />
               </ControlGrid>
             ),
-            secondaryLabel: 'Inner ring'
+            secondaryLabel: t('settings.icons.node.innerRing')
           }
         : {})}
     >
@@ -78,8 +88,9 @@ export function NodeIconSettingsRows(props: {
   onResetBase: (kind: EditableIconKind) => void;
   state: NodeIconSettingsState;
 }) {
+  const t = useTranslation();
   return (
-    <section aria-label="Navigation icon markers" className="w-fit overflow-visible bg-settings-group">
+    <section aria-label={t('settings.icons.node.markersAria')} className="w-fit overflow-visible bg-settings-group">
       <ControlHeader />
       <BaseRow kind="reading" onEdit={props.onEdit} onResetBase={props.onResetBase} state={props.state} />
       {(['pending', 'scheduled', 'dismissed'] as const).map((nodeState) => (
@@ -89,7 +100,7 @@ export function NodeIconSettingsRows(props: {
       {(['pending', 'scheduled'] as const).map((nodeState) => (
         <StateRow key={`review-${nodeState}`} kind="review" nodeState={nodeState} onEdit={props.onEdit} state={props.state} />
       ))}
-      <section aria-label="Opacity" className="border-t border-settings-divider/65 px-4 py-3">
+      <section aria-label={t('settings.icons.node.opacityAria')} className="border-t border-settings-divider/65 px-4 py-3">
         <OpacityHeader />
         <DismissedControls appearance={props.state.stateStyles.dismissed.reading} kind="reading" state={props.state} />
       </section>

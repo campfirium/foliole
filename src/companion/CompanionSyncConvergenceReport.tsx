@@ -1,13 +1,14 @@
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type {
   SyncConvergenceCheck,
   SyncConvergenceReport
 } from '../shared/platform/companionSyncConvergence';
 
-function statusLabel(status: SyncConvergenceReport['status']) {
-  if (status === 'converged') return 'Up to date';
-  if (status === 'pending') return 'Still syncing';
-  if (status === 'system_fault') return 'System issue';
-  return 'Unknown';
+function statusLabel(status: SyncConvergenceReport['status'], t: ReturnType<typeof useTranslation>) {
+  if (status === 'converged') return t('companion.sync.check.upToDate');
+  if (status === 'pending') return t('companion.sync.check.stillSyncing');
+  if (status === 'system_fault') return t('companion.sync.check.systemIssue');
+  return t('companion.sync.check.unknown');
 }
 
 function severityClass(severity: SyncConvergenceCheck['severity']) {
@@ -18,11 +19,12 @@ function severityClass(severity: SyncConvergenceCheck['severity']) {
 }
 
 export function CompanionSyncConvergenceReport(props: { report: SyncConvergenceReport }) {
+  const t = useTranslation();
   return (
     <section>
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-foreground">Sync check</h3>
-        <span className="text-xs font-medium text-companion-text-secondary">{statusLabel(props.report.status)}</span>
+        <h3 className="text-sm font-semibold text-foreground">{t('companion.sync.check.title')}</h3>
+        <span className="text-xs font-medium text-companion-text-secondary">{statusLabel(props.report.status, t)}</span>
       </div>
       <div className="mt-2 border-t border-companion-divider">
         {props.report.checks.map((check) => (

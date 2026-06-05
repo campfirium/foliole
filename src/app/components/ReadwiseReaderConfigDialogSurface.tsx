@@ -1,3 +1,4 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
@@ -22,12 +23,14 @@ function ReadwiseConfigDialogHeader(props: {
   integrationEnabled: boolean;
   onChangeIntegration: () => void;
 }) {
+  const t = useTranslation();
+
   return (
     <header className="flex items-start justify-between gap-4 border-b border-border/70 px-5 pb-4 pt-5">
       <div className="min-w-0">
-        <AppDialogTitle className="text-base font-semibold">Readwise Reader Import</AppDialogTitle>
+        <AppDialogTitle className="text-base font-semibold">{t('desktop.readwise.import.title')}</AppDialogTitle>
         <p className="mt-1 text-sm text-foreground/65">
-          Choose the folders, run a check, then turn this on.
+          {t('desktop.readwise.dialog.description')}
         </p>
       </div>
       <ReadwiseIntegrationSwitch
@@ -44,6 +47,8 @@ function ReadwiseConfigDialogBody(props: {
   draft: ReturnType<typeof useReadwiseSetupDraft>;
   onCheck: () => void;
 }) {
+  const t = useTranslation();
+
   return (
     <div className="min-h-0 flex-1 overflow-auto">
       <ReadwiseReaderSetupCheckPanel
@@ -54,7 +59,7 @@ function ReadwiseConfigDialogBody(props: {
         result={props.draft.previewResult}
       />
       <div className="py-5">
-        <SettingsSection ariaLabel="Readwise Reader sync">
+        <SettingsSection ariaLabel={t('desktop.readwise.section.sync.aria')}>
           <ReadwiseReaderSyncRow
             config={props.draft.draftConfig}
             disabled
@@ -62,13 +67,13 @@ function ReadwiseConfigDialogBody(props: {
             onSync={() => undefined}
           />
         </SettingsSection>
-        <SettingsSection ariaLabel="Readwise Reader import behavior" title="Import behavior">
+        <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
           <ReadwiseReaderImportBehavior
             config={props.draft.draftConfig}
             onChange={props.draft.updateConfig}
           />
         </SettingsSection>
-        <SettingsSection ariaLabel="Readwise Reader import settings" title="Import settings">
+        <SettingsSection ariaLabel={t('desktop.readwise.section.settings.aria')} title={t('desktop.readwise.section.settings.title')}>
           <ReadwiseDirectorySection
             onChooseFolder={props.draft.chooseFolder}
             onChooseRootFolder={props.draft.chooseRootFolder}
@@ -94,6 +99,8 @@ export function ReadwiseConfigDialogSurface(props: {
   onChangeIntegration: () => void;
   onCheck: () => void;
 }) {
+  const t = useTranslation();
+
   return (
     <AppDialog onOpenChange={props.onCancel} open>
       <AppDialogPortal>
@@ -115,7 +122,7 @@ export function ReadwiseConfigDialogSurface(props: {
             />
             <footer className="flex items-center justify-between gap-3 border-t border-border/70 px-5 py-4">
               <AppButton onClick={props.onCancel} variant="ghost">
-                Cancel
+                {t('desktop.readwise.cancel')}
               </AppButton>
             </footer>
           </section>

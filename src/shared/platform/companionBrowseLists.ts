@@ -15,7 +15,7 @@ import {
 } from '../workspaceCanonicalSelectors';
 
 import { sortCompanionBrowseNodes } from './companionBrowseOrdering';
-import { resolveCompanionArticleTitle } from './companionReadableArticle';
+import { resolveCompanionArticleTitle, resolveCompanionUntitledLabel } from './companionReadableArticle';
 import { isCompanionArticleNode } from './companionReadableArticleTitleSlot';
 
 type CompanionReadableNode = WorkspaceSnapshot['nodesById'][string];
@@ -82,7 +82,7 @@ function buildCompanionFolderListEntry(node: CompanionReadableNode): CompanionFo
     kind: node.kind,
     nodeId: node.id,
     preview: node.kind === 'folder' ? null : resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
-    title: node.kind === 'topic' ? resolveCompanionArticleTitle(node) : node.title.trim() || 'Untitled'
+    title: node.kind === 'topic' ? resolveCompanionArticleTitle(node) : node.title.trim() || resolveCompanionUntitledLabel()
   };
 }
 
@@ -102,7 +102,7 @@ export function resolveCompanionFolderViewByNodeId(
   return {
     items: sortCompanionBrowseNodes(normalizedSnapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
     nodeId: folderNode.id,
-    title: folderNode.title.trim() || 'Untitled'
+    title: folderNode.title.trim() || resolveCompanionUntitledLabel()
   };
 }
 
@@ -150,7 +150,7 @@ export function resolveCompanionTrashFolderViewByNodeId(
   return {
     items: sortCompanionBrowseNodes(normalizedSnapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
     nodeId: folderNode.id,
-    title: folderNode.title.trim() || 'Untitled'
+    title: folderNode.title.trim() || resolveCompanionUntitledLabel()
   };
 }
 

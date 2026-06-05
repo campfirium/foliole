@@ -2,6 +2,7 @@ import { ArrowLeft, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 
 import { definedProps } from '../shared/lib/definedProps';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 type TopBarAction = {
   icon: LucideIcon;
@@ -29,9 +30,10 @@ function TopBarBackRow(props: {
   onBack(): void;
   rightSlot?: ReactNode;
 }) {
+  const t = useTranslation();
   return (
     <div className={`flex min-h-10 items-center justify-between gap-3 ${props.hasTitleRow ? 'mb-3' : ''}`}>
-      <button aria-label={props.backLabel ?? 'Back'} className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground" onClick={props.onBack} type="button">
+      <button aria-label={props.backLabel ?? t('companion.back')} className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground" onClick={props.onBack} type="button">
         <ArrowLeft className="h-6 w-6 shrink-0" />
       </button>
       {props.rightSlot ? <div className="flex shrink-0 items-center gap-1">{props.rightSlot}</div> : null}

@@ -6,6 +6,7 @@ import type {
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeImportContract';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -65,13 +66,15 @@ function ReadwiseSetupSection(props: {
   syncDisabled: boolean;
   syncIsRunning: boolean;
 }) {
+  const t = useTranslation();
+
   return (
     <div className="space-y-6">
       <SettingsSection
         actions={<ReadwiseSetupActions {...props} />}
-        ariaLabel="Readwise Reader import setup"
-        description="Readwise Reader for Obsidian folder import."
-        title="Readwise Reader Import"
+        ariaLabel={t('desktop.readwise.import.title')}
+        description={t('desktop.readwise.import.description')}
+        title={t('desktop.readwise.import.title')}
       >
         <ReadwiseReaderSetupCheckPanel
           canCheck={props.canPreview}
@@ -97,16 +100,20 @@ function ReadwiseSetupSection(props: {
 }
 
 function ReadwiseBehaviorSection({ draft }: { draft: ReadwiseSetupDraft }) {
+  const t = useTranslation();
+
   return (
-    <SettingsSection ariaLabel="Readwise Reader import behavior" title="Import behavior">
+    <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
       <ReadwiseReaderImportBehavior config={draft.draftConfig} onChange={draft.updateConfig} />
     </SettingsSection>
   );
 }
 
 function ReadwiseImportSettingsSection({ draft }: { draft: ReadwiseSetupDraft }) {
+  const t = useTranslation();
+
   return (
-    <SettingsSection ariaLabel="Readwise Reader import settings" title="Import settings">
+    <SettingsSection ariaLabel={t('desktop.readwise.section.settings.aria')} title={t('desktop.readwise.section.settings.title')}>
       <ReadwiseDirectorySection
         onChooseFolder={draft.chooseFolder}
         onChooseRootFolder={draft.chooseRootFolder}
@@ -119,14 +126,16 @@ function ReadwiseImportSettingsSection({ draft }: { draft: ReadwiseSetupDraft })
 }
 
 function ReadwiseCleanupRow(props: { disabled: boolean; onCleanup: () => void }) {
+  const t = useTranslation();
+
   return (
     <SettingsRow
-      description="Remove unchanged Readwise imports and keep changed topics in Foliole."
-      title="Clean up imports"
+      description={t('desktop.readwise.cleanup.description')}
+      title={t('desktop.readwise.cleanup.title')}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <AppButton disabled={props.disabled} onClick={props.onCleanup} size="sm" variant="primary">
-          Clean up...
+          {t('desktop.readwise.cleanup.action')}
         </AppButton>
       </SettingsControlSlot>
     </SettingsRow>

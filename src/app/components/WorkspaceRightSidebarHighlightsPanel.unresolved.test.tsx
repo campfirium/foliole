@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
 
@@ -42,7 +43,7 @@ it('keeps unresolved text locator highlights visible in the sidebar list', () =>
     }
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}
@@ -79,7 +80,7 @@ it('keeps resolved text locator highlights visible in the sidebar list', () => {
     }
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}
@@ -117,7 +118,7 @@ it('keeps text locator highlights visible when the parent document body is not l
     }
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}
@@ -155,7 +156,7 @@ it('keeps unresolved text locator clozes visible in the sidebar list', () => {
     }
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-cloze']}
@@ -192,7 +193,7 @@ it('keeps pdf locator highlights visible in the sidebar list', () => {
     }
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}

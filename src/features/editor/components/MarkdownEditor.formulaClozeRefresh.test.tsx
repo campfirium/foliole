@@ -1,6 +1,7 @@
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { registerFormulaClozeEditorPresentation, unregisterFormulaClozeEditorPresentation } from '../../formula-cloze/model/formulaClozePresentation';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 
@@ -41,7 +42,11 @@ import { MarkdownEditor } from './MarkdownEditor';
 
 function renderEditor() {
   return render(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="$E=mc^2$" />, {
-    wrapper: ({ children }) => <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+    wrapper: ({ children }) => (
+      <LocalizationProvider>
+        <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+      </LocalizationProvider>
+    )
   });
 }
 

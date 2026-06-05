@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   addWebLookupEntry,
   getWebLookupEntries,
@@ -35,6 +36,8 @@ function MenuItemRow(props: {
   onRemove: (entryId: string) => void;
   onUpdate: (entryId: string, patch: Partial<Pick<WebLookupEntry, 'enabled' | 'label' | 'urlTemplate'>>) => void;
 }) {
+  const t = useTranslation();
+
   return (
     <div
       className={settingsActionTableRowClassName(
@@ -53,13 +56,13 @@ function MenuItemRow(props: {
     >
       <DragHandle entry={props.entry} onDragEnd={props.onDragEnd} onDragStart={props.onDragStart} />
       <input
-        aria-label={`${props.entry.label} menu label`}
+        aria-label={t('settings.webLookup.menuLabelAria', { label: props.entry.label })}
         className={settingsFieldClassName()}
         onChange={(event) => props.onUpdate(props.entry.id, { label: event.target.value })}
         value={props.entry.label}
       />
       <input
-        aria-label={`${props.entry.label} link`}
+        aria-label={t('settings.webLookup.linkAria', { label: props.entry.label })}
         className={settingsFieldClassName('font-mono text-[0.82rem]')}
         onChange={(event) => props.onUpdate(props.entry.id, { urlTemplate: event.target.value })}
         spellCheck={false}
@@ -79,6 +82,7 @@ function MenuItemRow(props: {
 }
 
 export function SettingsWebLookupSection() {
+  const t = useTranslation();
   const [entries, setEntries] = useState(() => getWebLookupEntries());
   const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
   const [dragTargetEntryId, setDragTargetEntryId] = useState<string | null>(null);
@@ -106,11 +110,11 @@ export function SettingsWebLookupSection() {
 
   return (
     <SettingsSection
-      ariaLabel="Right-click menu items settings section"
-      description="Configure each menu label and link. Use {selection} for the current text and {title} for the current topic title."
-      title="Right-click menu items"
+      ariaLabel={t('settings.webLookup.sectionAria')}
+      description={t('settings.webLookup.description')}
+      title={t('settings.webLookup.title')}
     >
-      <div className={settingsActionTableClassName()} role="table" aria-label="Right-click menu items">
+      <div className={settingsActionTableClassName()} role="table" aria-label={t('settings.webLookup.tableAria')}>
         <MenuItemHeader />
         {entries.map((entry) => (
           <MenuItemRow

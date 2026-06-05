@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
 import { buildFootnotePresentation } from '../model/footnotePresentation';
 import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
@@ -202,6 +203,7 @@ function renderFootnoteInlineContent(label: string, note: string | null, key: nu
 }
 
 export function MarkdownTablePreviewDialog(props: MarkdownTablePreviewDialogProps) {
+  const t = useTranslation();
   const columnCount = Math.max(props.table?.table.columnCount ?? 1, 1);
   const panelStyle = props.table ? resolvePreviewWidthStyle(props.table, columnCount) : undefined;
 
@@ -213,7 +215,7 @@ export function MarkdownTablePreviewDialog(props: MarkdownTablePreviewDialogProp
           aria-describedby={undefined}
           className="left-1/2 top-1/2 z-preview-dialog max-w-none -translate-x-1/2 -translate-y-1/2 overflow-visible border-transparent bg-transparent p-0 shadow-none"
         >
-          <AppDialogTitle className="sr-only">Table preview</AppDialogTitle>
+          <AppDialogTitle className="sr-only">{t('desktop.editorPreview.tableTitle')}</AppDialogTitle>
           <div
             className="relative max-h-[88vh] overflow-hidden rounded-md border border-border bg-canvas shadow-popover"
             style={panelStyle}

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({
@@ -11,6 +11,7 @@ vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
   loadRuntimeExternalSearchFolders: vi.fn()
 }));
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
 import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
@@ -35,6 +36,7 @@ const nodesById = Object.fromEntries(
 );
 
 beforeEach(() => {
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
 });
@@ -43,7 +45,7 @@ it('scrolls the active search result into view when keyboard navigation changes 
   const scrollIntoView = vi.fn();
   Element.prototype.scrollIntoView = scrollIntoView;
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(createResults()));
-  render(
+  renderWithLocalization(
     <SearchPalette
       isOpen
       nodeOrder={Object.keys(nodesById)}

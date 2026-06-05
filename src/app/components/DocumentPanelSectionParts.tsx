@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
@@ -149,6 +150,7 @@ function buildDocumentPanelContentBodyArgs(
     pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
     pdfHighlightLocators: PdfHighlightLocator[];
     shouldHideEditorBodyDuringSourceLoad: boolean;
+    t: Translate;
   }
 ) {
   return {
@@ -180,11 +182,13 @@ function buildDocumentPanelContentBodyArgs(
     pdfCache: derived.pdfCache,
     pdfDocumentSurface: derived.pdfDocumentSurface,
     pdfHighlightLocators: derived.pdfHighlightLocators,
+    t: derived.t,
     shouldHideEditorBodyDuringSourceLoad: derived.shouldHideEditorBodyDuringSourceLoad
   };
 }
 
 export function DocumentPanelContent(props: DocumentPanelContentProps) {
+  const t = useTranslation();
   const finishDiagnostic = startDocumentPanelContentDiagnostic(props);
   const [isActivePdfCachedVisible, setIsActivePdfCachedVisible] = useState(false);
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
@@ -222,6 +226,7 @@ export function DocumentPanelContent(props: DocumentPanelContentProps) {
       pdfCache,
       pdfDocumentSurface,
       pdfHighlightLocators,
+      t,
       shouldHideEditorBodyDuringSourceLoad
     })
   );

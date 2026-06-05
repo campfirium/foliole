@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, it, expect, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { EditorContextMenu } from './EditorContextMenu';
 
@@ -44,7 +45,7 @@ beforeEach(() => {
 });
 
 it('keeps annotation actions out of the image context menu', () => {
-  render(
+  renderWithLocalization(
     <EditorContextMenu
       kind="image"
       left={16}
@@ -59,7 +60,7 @@ it('keeps annotation actions out of the image context menu', () => {
 });
 
 it('renders selection annotation actions as a floating toolbar', () => {
-  render(
+  renderWithLocalization(
     <EditorContextMenu
       kind="selection"
       left={16}
@@ -84,7 +85,7 @@ it('shows an app panel before creating a long cloze front', () => {
   const onCreateClozeFromPayload = vi.fn();
   const onCreateHighlightFromPayload = vi.fn();
 
-  render(
+  renderWithLocalization(
     <EditorContextMenu
       kind="selection"
       left={16}
@@ -123,7 +124,7 @@ it('converts a long cloze front from the floating toolbar when conversion mode i
   const onCreateHighlightFromPayload = vi.fn();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.longClozeFrontGuardMode, 'convert');
 
-  render(
+  renderWithLocalization(
     <EditorContextMenu
       kind="selection"
       left={16}
@@ -147,7 +148,7 @@ it('converts a long cloze front from the floating toolbar when conversion mode i
 it('saves add note text from the floating note panel', () => {
   const onCreateNote = vi.fn();
   const onClose = vi.fn();
-  render(
+  renderWithLocalization(
     <EditorContextMenu
       kind="selection"
       left={16}
@@ -172,7 +173,7 @@ it('saves add note text from the floating note panel', () => {
 it('renders existing highlight actions without cloze', () => {
   const onDeleteExistingHighlight = vi.fn();
   const onOpenExistingHighlight = vi.fn();
-  render(
+  renderWithLocalization(
     <EditorContextMenu
       kind="selection"
       left={16}

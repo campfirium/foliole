@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
 import { AppStatusBadge } from '../../shared/ui';
 
@@ -9,14 +10,16 @@ import {
 } from './importNodePresentation';
 export { ReadwiseBookInventoryItem } from './ReadwiseBookInventoryItem';
 
-function formatPdfLoadedStatus(item: RuntimePdfImportsInventory['items'][number]) {
+type ImportInventoryTranslate = ReturnType<typeof useTranslation>;
+
+function formatPdfLoadedStatus(item: RuntimePdfImportsInventory['items'][number], t: ImportInventoryTranslate) {
   if (item.nodeStatus === 'generated') {
-    return 'Loaded';
+    return t('desktop.importInventory.status.loaded');
   }
   if (item.nodeStatus === 'deleted') {
-    return 'Deleted';
+    return t('desktop.importInventory.status.deleted');
   }
-  return 'Not loaded';
+  return t('desktop.importInventory.status.notLoaded');
 }
 
 function resolvePdfLoadedTone(item: RuntimePdfImportsInventory['items'][number]) {
@@ -29,20 +32,20 @@ function resolvePdfLoadedTone(item: RuntimePdfImportsInventory['items'][number])
   return 'neutral' as const;
 }
 
-function formatPdfRetrievalStatus(item: RuntimePdfImportsInventory['items'][number]) {
+function formatPdfRetrievalStatus(item: RuntimePdfImportsInventory['items'][number], t: ImportInventoryTranslate) {
   if (item.pdfIndexStatus === 'ready') {
-    return 'Indexed';
+    return t('desktop.importInventory.status.indexed');
   }
   if (item.pdfIndexStatus === 'indexing' || item.pdfIndexStatus === 'pending') {
-    return 'Indexing';
+    return t('desktop.importInventory.status.indexing');
   }
   if (item.pdfIndexStatus === 'failed') {
-    return 'Index failed';
+    return t('desktop.importInventory.status.indexFailed');
   }
   if (item.nodeStatus === 'generated') {
-    return 'Pending index';
+    return t('desktop.importInventory.status.pendingIndex');
   }
-  return 'Not indexed';
+  return t('desktop.importInventory.status.notIndexed');
 }
 
 function resolvePdfRetrievalTone(item: RuntimePdfImportsInventory['items'][number]) {
@@ -61,20 +64,20 @@ function resolvePdfRetrievalTone(item: RuntimePdfImportsInventory['items'][numbe
   return 'neutral' as const;
 }
 
-function getPdfOpening(item: RuntimePdfImportsInventory['items'][number]) {
+function getPdfOpening(item: RuntimePdfImportsInventory['items'][number], t: ImportInventoryTranslate) {
   if (item.nodeStatus === 'generated' && item.pdfIndexStatus === 'ready') {
-    return 'Imported node is available and the PDF index is ready.';
+    return t('desktop.importInventory.pdf.ready');
   }
   if (item.nodeStatus === 'generated') {
-    return 'Imported node is available. The PDF index is still catching up.';
+    return t('desktop.importInventory.pdf.catchingUp');
   }
   if (item.nodeStatus === 'deleted') {
-    return 'This file was imported before, but the generated node was removed.';
+    return t('desktop.importInventory.pdf.deleted');
   }
   if (item.pdfIndexStatus === 'failed') {
-    return 'The latest import did not finish indexing successfully.';
+    return t('desktop.importInventory.pdf.failed');
   }
-  return 'This file has been discovered, but no imported node is ready yet.';
+  return t('desktop.importInventory.pdf.notReady');
 }
 
 export function PdfInventoryItem({
@@ -86,9 +89,10 @@ export function PdfInventoryItem({
   importedAt: string;
   nodesById?: Record<string, Node>;
 }) {
+  const t = useTranslation();
   const presentation = buildImportNodePresentation({
     fallbackDate: importedAt,
-    fallbackOpening: getPdfOpening(item),
+    fallbackOpening: getPdfOpening(item, t),
     fallbackPath: item.sourceLocator,
     fallbackTitle: item.sourceName,
     fallbackType: 'pdf',
@@ -100,14 +104,14 @@ export function PdfInventoryItem({
     <ImportCatalogListItem
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <AppStatusBadge label={formatPdfLoadedStatus(item)} tone={resolvePdfLoadedTone(item)} />
-          <AppStatusBadge label={formatPdfRetrievalStatus(item)} tone={resolvePdfRetrievalTone(item)} />
+          <AppStatusBadge label={formatPdfLoadedStatus(item, t)} tone={resolvePdfLoadedTone(item)} />
+          <AppStatusBadge label={formatPdfRetrievalStatus(item, t)} tone={resolvePdfRetrievalTone(item)} />
         </div>
       }
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(presentation.title)}
-      trailing={renderImportDate(presentation.date, 'Date imported')}
+      trailing={renderImportDate(presentation.date, t('desktop.importOverview.dateImported'))}
     />
   );
 }

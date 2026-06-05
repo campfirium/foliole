@@ -9,6 +9,7 @@ import {
 } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
 import { renderDocumentPanelHeader } from './DocumentPanelHeaderChrome';
@@ -189,13 +190,14 @@ export function DocumentPanelSectionShell({
   props,
   showSourceUpdateAction
 }: DocumentPanelShellProps) {
+  const t = useTranslation();
   const [folderListSortKey, setFolderListSortKey] = useState<FolderListSortKey>(DEFAULT_FOLDER_LIST_SORT_KEY);
   const [folderListSortDirection, setFolderListSortDirection] = useState<FolderListSortDirection>(
     DEFAULT_FOLDER_LIST_SORT_DIRECTION
   );
 
   return (
-    <section aria-label="Document panel" className="workspace-region-main-document relative flex h-full min-h-0 flex-1 flex-col text-foreground">
+    <section aria-label={t('desktop.document.panel')} className="workspace-region-main-document relative flex h-full min-h-0 flex-1 flex-col text-foreground">
       {renderFolderNavigationOverlay(props, isFolderListView)}
       {renderDocumentPanelChrome({
         backlinks,

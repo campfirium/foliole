@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import type { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -6,29 +7,30 @@ import {
 } from '../../../../shared/ui';
 
 type CompanionSyncOverview = ReturnType<typeof useDesktopCompanionPairingRequests>['overview'];
+type Translate = ReturnType<typeof useTranslation>;
 const SET_DESKTOP_PRIMARY_ACTION_ID = 'set-desktop-primary-device';
 
-function formatPrimaryDeviceRole(role: CompanionSyncOverview['primary_device_state']['local_role']) {
-  if (role === 'primary') return 'Primary device';
-  if (role === 'secondary') return 'Secondary device';
-  return 'Role unavailable';
+function formatPrimaryDeviceRole(role: CompanionSyncOverview['primary_device_state']['local_role'], t: Translate) {
+  if (role === 'primary') return t('settings.companionSync.primary.role.primary');
+  if (role === 'secondary') return t('settings.companionSync.primary.role.secondary');
+  return t('settings.companionSync.primary.role.unavailable');
 }
 
-function formatPrimaryDeviceDetail(state: CompanionSyncOverview['primary_device_state']) {
+function formatPrimaryDeviceDetail(state: CompanionSyncOverview['primary_device_state'], t: Translate) {
   if (state.local_role === 'primary' && state.source === 'self-unpaired') {
-    return 'This desktop runs local sync and external sources until another device is paired.';
+    return t('settings.companionSync.primary.detail.selfUnpaired');
   }
   if (state.local_role === 'primary') {
-    return 'This desktop runs sync and external sources for paired devices.';
+    return t('settings.companionSync.primary.detail.primary');
   }
   if (state.local_role === 'secondary') {
-    return 'This device follows the current primary device.';
+    return t('settings.companionSync.primary.detail.secondary');
   }
-  return 'Primary device status is not available from the current sync state.';
+  return t('settings.companionSync.primary.detail.unavailable');
 }
 
-function formatShortDeviceId(deviceId: string | null) {
-  if (!deviceId) return 'Unavailable';
+function formatShortDeviceId(deviceId: string | null, t: Translate) {
+  if (!deviceId) return t('settings.companionSync.primary.unavailable');
   return deviceId.length > 18 ? `${deviceId.slice(0, 10)}...${deviceId.slice(-6)}` : deviceId;
 }
 
@@ -42,14 +44,15 @@ export function SettingsCompanionSyncPrimaryRows(props: {
   overview: CompanionSyncOverview;
   pendingActionId: string | null;
 }) {
+  const t = useTranslation();
   const isSecondary = props.overview.primary_device_state.local_role === 'secondary';
   const isSettingPrimary = props.pendingActionId === SET_DESKTOP_PRIMARY_ACTION_ID;
   return (
     <>
-      <SettingsRow description={formatPrimaryDeviceDetail(props.overview.primary_device_state)} title="Device role">
+      <SettingsRow description={formatPrimaryDeviceDetail(props.overview.primary_device_state, t)} title={t('settings.companionSync.primary.role.title')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <div className="flex items-center gap-3">
-            <ValueText>{formatPrimaryDeviceRole(props.overview.primary_device_state.local_role)}</ValueText>
+            <ValueText>{formatPrimaryDeviceRole(props.overview.primary_device_state.local_role, t)}</ValueText>
             {isSecondary ? (
               <button
                 className="text-sm font-medium text-foreground underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-45"
@@ -57,15 +60,15 @@ export function SettingsCompanionSyncPrimaryRows(props: {
                 onClick={props.onSetDesktopAsPrimary}
                 type="button"
               >
-                {isSettingPrimary ? 'Setting...' : 'Set as primary device'}
+                {isSettingPrimary ? t('settings.companionSync.primary.setPending') : t('settings.companionSync.primary.setAction')}
               </button>
             ) : null}
           </div>
         </SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow description="Device id used for sync authority and external source ownership." title="Current primary">
+      <SettingsRow description={t('settings.companionSync.primary.current.description')} title={t('settings.companionSync.primary.current.title')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <ValueText>{formatShortDeviceId(props.overview.primary_device_state.primary_device_id)}</ValueText>
+          <ValueText>{formatShortDeviceId(props.overview.primary_device_state.primary_device_id, t)}</ValueText>
         </SettingsControlSlot>
       </SettingsRow>
     </>

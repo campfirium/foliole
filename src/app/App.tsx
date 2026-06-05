@@ -1,16 +1,13 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 
-import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
 import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
-import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
-import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
-import { WorkspaceRailSettingsProvider } from '../features/settings/context/WorkspaceRailSettingsProvider';
 import { installWorkspaceDebugBridge } from '../shared/diagnostics/workspaceDebugBridge';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
-import { AppConfirmationProvider } from '../shared/ui';
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
+import { AppProviders } from './AppProviders';
 import { CompanionPairingRequestsDialog } from './components/CompanionPairingRequestsDialog';
 import { EpubImportReleaseModeDialog } from './components/EpubImportReleaseModeDialog';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
@@ -150,6 +147,8 @@ function AppOverlays({
   onCloseSearchPreview: () => void;
   searchPreviewResult: WorkspaceSearchResult | null;
 }) {
+  const t = useTranslation();
+
   return (
     <>
       <CompanionPairingRequestsDialog />
@@ -167,12 +166,12 @@ function AppOverlays({
         {controller.moveToNodeState.isOpen ? (
           <GoToNodePalette
             {...controller.moveToNodeState}
-            dialogLabel="Move to"
-            emptyLabel="Search destinations"
-            inputLabel="Move to"
-            noResultsLabel="No matching destinations"
+            dialogLabel={t('desktop.palette.move.dialog')}
+            emptyLabel={t('desktop.palette.move.empty')}
+            inputLabel={t('desktop.palette.move.input')}
+            noResultsLabel={t('desktop.palette.move.noResults')}
             onSelectNode={controller.moveToNodeState.onOpenNode}
-            placeholder="Type a title..."
+            placeholder={t('desktop.palette.node.placeholder')}
           />
         ) : null}
         {controller.reviewSourceTopicDeleteDialog.isOpen ? (
@@ -215,16 +214,8 @@ export function App() {
   }, []);
 
   return (
-    <AppearanceSettingsProvider>
-      <MouseGestureSettingsProvider>
-        <ReviewSchedulerSettingsProvider>
-          <WorkspaceRailSettingsProvider>
-            <AppConfirmationProvider>
-              <AppContent />
-            </AppConfirmationProvider>
-          </WorkspaceRailSettingsProvider>
-        </ReviewSchedulerSettingsProvider>
-      </MouseGestureSettingsProvider>
-    </AppearanceSettingsProvider>
+    <AppProviders>
+      <AppContent />
+    </AppProviders>
   );
 }

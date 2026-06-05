@@ -1,6 +1,8 @@
 import { createEvent, fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../localization/testLocalization';
+
 import {
   AppDropdownMenu,
   AppDropdownMenuCheckItem,
@@ -13,7 +15,7 @@ import {
 } from './DropdownMenu';
 
 it('prevents selection-safe menu items from stealing focus on pointer down', () => {
-  render(
+  renderWithLocalization(
     <AppSelectionDropdownMenu left={40} onClose={() => undefined} top={56}>
       <AppSelectionDropdownMenuItem>Highlight</AppSelectionDropdownMenuItem>
     </AppSelectionDropdownMenu>
@@ -32,7 +34,7 @@ it('prevents selection-safe menu items from stealing focus on pointer down', () 
 it('closes selection-safe menu on escape', () => {
   const onClose = vi.fn();
 
-  render(
+  renderWithLocalization(
     <AppSelectionDropdownMenu left={40} onClose={onClose} top={56}>
       <AppSelectionDropdownMenuItem>Highlight</AppSelectionDropdownMenuItem>
     </AppSelectionDropdownMenu>
@@ -46,7 +48,7 @@ it('lets passthrough selection menus close without stealing the outside pointer 
   const onClose = vi.fn();
   const onPointerDown = vi.fn();
 
-  render(
+  renderWithLocalization(
     <>
       <button onPointerDown={onPointerDown} type="button">Editor target</button>
       <AppSelectionDropdownMenu left={40} onClose={onClose} outsidePointerMode="passthrough" top={56}>
@@ -64,7 +66,7 @@ it('lets passthrough selection menus close without stealing the outside pointer 
 });
 
 it('uses the shared selection surface color token for hover and focus states', () => {
-  render(
+  renderWithLocalization(
     <AppSelectionDropdownMenu left={40} onClose={() => undefined} top={56}>
       <AppSelectionDropdownMenuItem>Highlight</AppSelectionDropdownMenuItem>
     </AppSelectionDropdownMenu>
@@ -76,7 +78,7 @@ it('uses the shared selection surface color token for hover and focus states', (
 });
 
 it('renders menus above tooltip-level floating surfaces', () => {
-  render(
+  renderWithLocalization(
     <AppSelectionDropdownMenu left={40} onClose={() => undefined} top={56}>
       <AppSelectionDropdownMenuItem>Highlight</AppSelectionDropdownMenuItem>
     </AppSelectionDropdownMenu>

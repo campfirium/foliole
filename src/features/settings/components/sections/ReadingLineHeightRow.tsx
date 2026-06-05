@@ -1,5 +1,6 @@
 import { RotateCcw } from 'lucide-react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_RANGE_WIDTH_CLASS_NAME,
@@ -21,11 +22,13 @@ export function ReadingLineHeightRow(props: {
   onReadingLineHeightChange: (value: number) => void;
   readingLineHeight: number;
 }) {
+  const t = useTranslation();
+
   return (
-    <SettingsRow description="Set the line height for topic reading across languages." title="Line height">
+    <SettingsRow description={t('settings.appearance.lineHeight.description')} title={t('settings.appearance.lineHeight.title')}>
       <SettingsControlSlot className={SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
         <button
-          aria-label="Reset line height"
+          aria-label={t('settings.appearance.lineHeight.reset')}
           className={settingsResetButtonClassName()}
           disabled={props.readingLineHeight === DEFAULT_READING_LINE_HEIGHT}
           onClick={() => props.onReadingLineHeightChange(DEFAULT_READING_LINE_HEIGHT)}
@@ -34,7 +37,7 @@ export function ReadingLineHeightRow(props: {
           <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
         </button>
         <input
-          aria-label="Line height"
+          aria-label={t('settings.appearance.lineHeight.title')}
           className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)}
           max={READING_LINE_HEIGHT_MAX}
           min={READING_LINE_HEIGHT_MIN}

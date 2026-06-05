@@ -4,6 +4,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
@@ -202,8 +203,9 @@ export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
   documentSurfaceProps: WorkspaceDocumentSurfaceProps;
   studySessionCompleteSummaryProps: StudySessionCompleteSummaryProps | null;
 }) {
+  const t = useTranslation();
   return (
-    <section aria-label="Document and review area" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
+    <section aria-label={t('desktop.workspace.documentAndReviewArea')} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
       {studySessionCompleteSummaryProps ? (
         <StudySessionCompleteSummary {...studySessionCompleteSummaryProps} />
       ) : (

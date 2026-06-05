@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
 import { AppListSectionHeader, AppListSurface } from '../../shared/ui';
 
@@ -15,19 +16,20 @@ export function PdfImportsInventorySection({
   inventory: RuntimePdfImportsInventory | null;
   nodesById?: Record<string, Node>;
 }) {
+  const t = useTranslation();
   const items = inventory?.items ?? [];
   const description = inventory
-    ? `${items.length} pdf files · scanned ${formatImportTime(inventory.scannedAt)}`
-    : 'PDF imports inventory is not available yet.';
+    ? t('desktop.importOverview.pdfInventory.description', { count: items.length, time: formatImportTime(inventory.scannedAt) })
+    : t('desktop.importOverview.pdfInventory.unavailable');
 
   return (
     <AppListSurface
-      ariaLabel="PDF inventory"
+      ariaLabel={t('desktop.importOverview.pdfInventory.aria')}
       className="border-0 bg-transparent"
-      emptyState={{ description: 'No PDF imports discovered yet.', title: 'PDF inventory is empty' }}
+      emptyState={{ description: t('desktop.importOverview.pdfInventory.empty.description'), title: t('desktop.importOverview.pdfInventory.empty.title') }}
       headerSeparated={false}
       header={
-        <AppListSectionHeader countLabel={`${items.length} items`} description={description} title="PDF inventory" />
+        <AppListSectionHeader countLabel={t('desktop.importOverview.count.items', { count: items.length })} description={description} title={t('desktop.importOverview.pdfInventory.title')} />
       }
       isEmpty={items.length === 0}
     >

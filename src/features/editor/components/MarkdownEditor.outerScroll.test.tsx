@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 
 vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
@@ -24,9 +25,11 @@ import { MarkdownEditor } from './MarkdownEditor';
 
 function renderEditor() {
   return render(
-    <MouseGestureSettingsProvider>
-      <MarkdownEditor nodeId="node-1" onChange={vi.fn()} scrollContainer="outer" value="Readable body" />
-    </MouseGestureSettingsProvider>
+    <LocalizationProvider>
+      <MouseGestureSettingsProvider>
+        <MarkdownEditor nodeId="node-1" onChange={vi.fn()} scrollContainer="outer" value="Readable body" />
+      </MouseGestureSettingsProvider>
+    </LocalizationProvider>
   );
 }
 

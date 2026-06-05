@@ -1,3 +1,4 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
 
 const RESTORE_ACTION_CLASS_NAME =
@@ -6,7 +7,7 @@ const RESTORE_ACTION_CLASS_NAME =
 export function DocumentRestoreAction({
   ariaLabel,
   disabled = false,
-  label = 'Restore',
+  label,
   onRestore
 }: {
   ariaLabel?: string;
@@ -14,7 +15,9 @@ export function DocumentRestoreAction({
   label?: string;
   onRestore: () => void;
 }) {
-  const resolvedAriaLabel = ariaLabel ?? label;
+  const t = useTranslation();
+  const resolvedLabel = label ?? t('desktop.documentRestore.action');
+  const resolvedAriaLabel = ariaLabel ?? resolvedLabel;
   return (
     <div className="pointer-events-none absolute inset-x-0 top-5 z-local-overlay overflow-visible">
       <div className="mx-auto flex w-full max-w-[var(--document-max-width)] justify-end px-[var(--document-content-inline-padding)]">
@@ -27,7 +30,7 @@ export function DocumentRestoreAction({
               onClick={onRestore}
               type="button"
             >
-              {label}
+              {resolvedLabel}
             </button>
           </AppTooltipTrigger>
           <AppTooltipContent side="left">{resolvedAriaLabel}</AppTooltipContent>

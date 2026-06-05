@@ -1,9 +1,11 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { translate } from '../../shared/localization/translations';
 
 type WebLookupTitleNode = Pick<Node, 'id' | 'kind' | 'parentNodeId' | 'title'>;
 
 function normalizeTitle(title: string) {
-  return title.trim() || 'Untitled';
+  return title.trim() || translate(getStoredAppLocale(), 'desktop.search.context.untitled');
 }
 
 function collectNodePath(activeNodeId: string, nodesById: Record<string, WebLookupTitleNode | undefined>) {

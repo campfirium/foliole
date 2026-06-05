@@ -1,4 +1,5 @@
 import type { NativeReadwiseDetectionSample } from '../../../lib/platform/nativeReadwiseContract';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 function splitExcerpt(excerpt: string, highlightText: string) {
   if (!excerpt || !highlightText) {
@@ -37,6 +38,7 @@ export function ReadwisePreviewSampleList(props: {
   showSourceName?: boolean;
   sourceName: string;
 }) {
+  const t = useTranslation();
   const maxSamples = props.maxSamples ?? props.samples.length;
   const visibleSamples = props.samples.slice(0, maxSamples);
   const showSourceName = props.showSourceName ?? true;
@@ -56,7 +58,7 @@ export function ReadwisePreviewSampleList(props: {
               )}
             </p>
             {!sample.matched ? (
-              <p className="mt-2 text-sm text-amber-700">This highlight was not found in the article body.</p>
+              <p className="mt-2 text-sm text-amber-700">{t('desktop.readwise.previewSample.highlightMissing')}</p>
             ) : null}
             {showGap && props.hasGap && index === 1 ? <p className="pt-3 text-center text-sm text-foreground/45">...</p> : null}
           </blockquote>

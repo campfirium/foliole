@@ -1,6 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import React from 'react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
 
@@ -40,7 +42,7 @@ vi.mock('./LinkPanelStack', () => ({
 }));
 
 it('opens the link panel when an external document preview link is clicked', () => {
-  render(
+  renderWithLocalization(
     <ExternalLibraryPreviewSurface
       canGoBack={false}
       canGoForward={false}
@@ -103,7 +105,7 @@ it('remounts the external library preview editor when editor appearance changes'
     onPreviewEditorReady: vi.fn(),
     preview
   };
-  const { rerender } = render(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="preview" />);
+  const { rerender } = renderWithLocalization(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="preview" />);
 
   expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
 

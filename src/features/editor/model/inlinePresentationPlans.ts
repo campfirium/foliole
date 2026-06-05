@@ -1,3 +1,6 @@
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
+
 import type { AutolinkMatch, EmbedMatch, InlineCodeMatch, InlineLinkMatch, WikiLinkMatch } from './inlineMarkdownMatches';
 import type { SemanticRange } from './inlineSemanticMarks';
 import { isSafeMarkdownLinkHref } from './markdownLinkSafety';
@@ -15,7 +18,7 @@ export interface InlinePresentationPlan {
 export function createExternalLinkPresentationAttributes(href: string) {
   return {
     'data-md-link-url': href,
-    title: 'Ctrl-click to open in browser'
+    title: translate(getStoredAppLocale(), 'desktop.editor.openInBrowserHint')
   };
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { useAppVersion } from '../../../../shared/platform/appVersion';
 import {
   readUpdateCheckState,
@@ -20,7 +21,7 @@ import { ABOUT_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog
 
 const ABOUT_ROW = {
   app: ABOUT_SETTINGS_SEARCH_ROWS[0]!,
-  community: ABOUT_SETTINGS_SEARCH_ROWS[3]!
+  community: ABOUT_SETTINGS_SEARCH_ROWS[2]!
 };
 
 interface SettingsSupportSectionProps {
@@ -37,12 +38,14 @@ function getUpdateViewStatus(state: UpdateCheckState, isChecking: boolean): Upda
   return 'idle';
 }
 
-function getUpdateStatusLabel(status: UpdateViewStatus) {
-  if (status === 'checking') return 'Checking';
-  if (status === 'available') return 'Update available';
-  if (status === 'current') return 'Up to date';
-  if (status === 'failed') return 'Check failed';
-  return 'Not checked';
+type Translate = ReturnType<typeof useTranslation>;
+
+function getUpdateStatusLabel(status: UpdateViewStatus, t: Translate) {
+  if (status === 'checking') return t('settings.about.update.checking');
+  if (status === 'available') return t('settings.about.update.available');
+  if (status === 'current') return t('settings.about.update.current');
+  if (status === 'failed') return t('settings.about.update.failed');
+  return t('settings.about.update.idle');
 }
 
 function getUpdateStatusTone(status: UpdateViewStatus) {
@@ -52,12 +55,12 @@ function getUpdateStatusTone(status: UpdateViewStatus) {
   return 'neutral';
 }
 
-function getUpdateDescription(state: UpdateCheckState, status: UpdateViewStatus) {
-  if (status === 'checking') return 'Checking for updates...';
-  if (status === 'available') return `Foliole ${state.latestVersion} is available.`;
-  if (status === 'current') return 'Foliole is up to date.';
-  if (status === 'failed') return 'Could not check for updates.';
-  return 'Current Foliole desktop version.';
+function getUpdateDescription(state: UpdateCheckState, status: UpdateViewStatus, t: Translate) {
+  if (status === 'checking') return t('settings.about.update.description.checking');
+  if (status === 'available') return t('settings.about.update.description.available', { version: state.latestVersion ?? '' });
+  if (status === 'current') return t('settings.about.update.description.current');
+  if (status === 'failed') return t('settings.about.update.description.failed');
+  return t('settings.about.update.description.idle');
 }
 
 function useUpdateCheckViewState() {
@@ -103,6 +106,7 @@ function SupportButton(props: {
 }
 
 function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
+  const t = useTranslation();
   const appVersion = useAppVersion();
   const updateCheck = useUpdateCheckViewState();
   const status = updateCheck.status;
@@ -110,20 +114,20 @@ function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
   return (
     <SettingsRow
       {...settingsSearchRowProps(ABOUT_ROW.app)}
-      description={getUpdateDescription(updateCheck.state, status)}
-      title={`Version ${appVersion}`}
+      description={getUpdateDescription(updateCheck.state, status, t)}
+      title={t('settings.about.versionTitle', { version: appVersion })}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <AppStatusBadge label={getUpdateStatusLabel(status)} tone={getUpdateStatusTone(status)} />
+        <AppStatusBadge label={getUpdateStatusLabel(status, t)} tone={getUpdateStatusTone(status)} />
         <SupportButton commandId={APP_COMMAND_IDS.openLatestRelease} onRunSupportCommand={onRunSupportCommand}>
-          Open releases
+          {t('settings.about.openReleases')}
         </SupportButton>
         <SupportButton
           commandId={APP_COMMAND_IDS.checkForUpdates}
           onRunStart={() => updateCheck.setIsChecking(true)}
           onRunSupportCommand={onRunSupportCommand}
         >
-          Check for Updates
+          {t('settings.about.checkForUpdates')}
         </SupportButton>
       </SettingsControlSlot>
     </SettingsRow>
@@ -131,6 +135,7 @@ function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
 }
 
 function QuickLinksBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
+  const t = useTranslation();
   return (
     <SettingsRow
       {...settingsSearchRowProps(ABOUT_ROW.community)}
@@ -142,20 +147,32 @@ function QuickLinksBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
           GitHub
         </SupportButton>
         <SupportButton commandId={APP_COMMAND_IDS.openGitHubDiscussions} onRunSupportCommand={onRunSupportCommand}>
-          Discussions
+          {t('settings.about.discussions')}
         </SupportButton>
         <SupportButton commandId={APP_COMMAND_IDS.openGitHubIssues} onRunSupportCommand={onRunSupportCommand}>
-          Feedback
+          {t('settings.about.feedback')}
+        </SupportButton>
+        <SupportButton commandId={APP_COMMAND_IDS.openYouTubePlaylist} onRunSupportCommand={onRunSupportCommand}>
+          {t('settings.about.youtubeInProgress')}
         </SupportButton>
       </SettingsControlSlot>
     </SettingsRow>
   );
 }
 
-export function SettingsSupportSection({ onRunSupportCommand }: SettingsSupportSectionProps) {
+export function SettingsAppSection({ onRunSupportCommand }: SettingsSupportSectionProps) {
+  const t = useTranslation();
   return (
-    <SettingsSection ariaLabel="About settings section">
+    <SettingsSection ariaLabel={t('settings.about.app.aria')} title={t('settings.about.app.section')}>
       <VersionBlock onRunSupportCommand={onRunSupportCommand} />
+    </SettingsSection>
+  );
+}
+
+export function SettingsCommunitySection({ onRunSupportCommand }: SettingsSupportSectionProps) {
+  const t = useTranslation();
+  return (
+    <SettingsSection ariaLabel={t('settings.about.community.aria')} title={t('settings.about.community.section')}>
       <QuickLinksBlock onRunSupportCommand={onRunSupportCommand} />
     </SettingsSection>
   );

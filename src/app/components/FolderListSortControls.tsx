@@ -3,6 +3,7 @@ import {
   FOLDER_LIST_SORT_OPTIONS,
   getFolderListSortOrderOptions
 } from '../../features/nodes/model/folderListSortOptions';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppDropdownMenu,
   AppDropdownMenuCheckItem,
@@ -18,14 +19,17 @@ export function FolderListSortControls(props: {
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
-  const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Date modified';
+  const t = useTranslation();
+  const activeOption = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey);
+  const activeLabel = activeOption ? translateSortLabel(activeOption.label, t) : t('desktop.sort.fallback.dateImported');
   const orderOptions = getFolderListSortOrderOptions(props.sortKey);
+  const triggerLabel = t('desktop.sort.listBy', { label: activeLabel });
 
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
         <button
-          aria-label={`Sort list by ${activeLabel}`}
+          aria-label={triggerLabel}
           className="inline-flex h-8 items-center gap-2 bg-transparent px-0 text-sm font-medium text-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
           type="button"
         >
@@ -35,30 +39,46 @@ export function FolderListSortControls(props: {
         </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" className="min-w-[240px]" sideOffset={8}>
-        <AppDropdownMenuLabel>Sort by</AppDropdownMenuLabel>
+        <AppDropdownMenuLabel>{t('desktop.sort.sortBy')}</AppDropdownMenuLabel>
         {FOLDER_LIST_SORT_OPTIONS.map((option) => (
           <AppDropdownMenuCheckItem
             checked={props.sortKey === option.key}
             key={option.key}
             onSelect={() => props.onChangeSortKey(option.key)}
           >
-            {option.label}
+            {translateSortLabel(option.label, t)}
           </AppDropdownMenuCheckItem>
         ))}
         <AppDropdownMenuSeparator />
-        <AppDropdownMenuLabel>Order</AppDropdownMenuLabel>
+        <AppDropdownMenuLabel>{t('desktop.sort.order')}</AppDropdownMenuLabel>
         {orderOptions.map((option) => (
           <AppDropdownMenuCheckItem
             checked={props.sortDirection === option.value}
             key={option.value}
             onSelect={() => props.onChangeSortDirection(option.value)}
           >
-            {option.label}
+            {translateSortOrderLabel(option.label, t)}
           </AppDropdownMenuCheckItem>
         ))}
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );
+}
+
+function translateSortLabel(label: string, t: ReturnType<typeof useTranslation>) {
+  if (label === 'Date imported') return t('desktop.sort.fallback.dateImported');
+  if (label === 'Last opened') return t('desktop.sort.key.lastOpened');
+  if (label === 'Name') return t('desktop.sort.key.name');
+  if (label === 'Manual') return t('desktop.sort.key.manual');
+  return t('desktop.sort.key.dateModified');
+}
+
+function translateSortOrderLabel(label: string, t: ReturnType<typeof useTranslation>) {
+  if (label === 'A -> Z') return t('desktop.sort.order.az');
+  if (label === 'Z -> A') return t('desktop.sort.order.za');
+  if (label === 'Manual order') return t('desktop.sort.order.manual');
+  if (label === 'Older -> Recent') return t('desktop.sort.order.oldest');
+  return t('desktop.sort.order.newest');
 }
 
 function SortIcon() {

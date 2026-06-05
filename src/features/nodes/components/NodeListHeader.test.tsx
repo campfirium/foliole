@@ -1,12 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 
 import { NodeListHeader } from './NodeListHeader';
 
 it('renders node list actions inside the shared toolbar group', () => {
   const onCreateCommand = vi.fn();
 
-  render(
+  renderWithLocalization(
     <NodeListHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -34,7 +36,7 @@ it('renders node list actions inside the shared toolbar group', () => {
 });
 
 it('can hide title search when used as a grouping column header', () => {
-  render(
+  renderWithLocalization(
     <NodeListHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -55,7 +57,7 @@ it('can hide title search when used as a grouping column header', () => {
 });
 
 it('keeps the shared header height in the virtual section when actions are present', () => {
-  render(
+  renderWithLocalization(
     <NodeListHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -75,7 +77,7 @@ it('keeps the shared header height in the virtual section when actions are prese
 });
 
 it('does not render an empty header shell for the virtual section', () => {
-  render(
+  renderWithLocalization(
     <NodeListHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -97,7 +99,7 @@ it('does not render an empty header shell for the virtual section', () => {
 });
 
 it('switches the toolbar toggle label when the list has collapsed nodes', () => {
-  render(
+  renderWithLocalization(
     <NodeListHeader
       hasCollapsibleNodes
       hasCollapsedNodes
@@ -118,7 +120,7 @@ it('switches the toolbar toggle label when the list has collapsed nodes', () => 
 });
 
 it('disables the toggle when no nodes can be collapsed', () => {
-  render(
+  renderWithLocalization(
     <NodeListHeader
       hasCollapsibleNodes={false}
       hasCollapsedNodes={false}

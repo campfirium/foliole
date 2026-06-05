@@ -5,6 +5,7 @@ import type {
   FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
 import { definedProps } from '../shared/lib/definedProps';
+import type { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
@@ -12,8 +13,10 @@ import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
+type Translate = ReturnType<typeof useTranslation>;
 
 export function resolveCompanionTopBarProps(
+  t: Translate,
   surface: Surface,
   settingsPage: CompanionSettingsPage,
   isBrowseDirectoryOpen: boolean,
@@ -36,7 +39,7 @@ export function resolveCompanionTopBarProps(
   onBackDirectorySelection: () => void
 ) {
   if (surface.activeAction === 'more') {
-    return resolveSettingsTopBar(settingsPage, onBackToSettingsList, onBackToSyncSettings);
+    return resolveSettingsTopBar(t, settingsPage, onBackToSettingsList, onBackToSyncSettings);
   }
   if (surface.activeAction === 'recent') {
     return resolveBrowseTopBar({
@@ -51,28 +54,30 @@ export function resolveCompanionTopBarProps(
       onOpenBrowseDirectory,
       onSyncBrowse,
       syncDisabled,
-      syncStatus
+      syncStatus,
+      t
     });
   }
   if (surface.activeAction === 'search') return {};
-  return resolveReviewTopBar(isOnlyReviewOpen, onCloseOnlyReview, onExitReview, onOpenOnlyReview);
+  return resolveReviewTopBar(t, isOnlyReviewOpen, onCloseOnlyReview, onExitReview, onOpenOnlyReview);
 }
 
 function resolveSettingsTopBar(
+  t: Translate,
   settingsPage: CompanionSettingsPage,
   onBackToSettingsList: () => void,
   onBackToSyncSettings: () => void
 ) {
-  if (settingsPage === 'sync') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Device sync' };
-  if (settingsPage === 'device') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Device' };
-  if (settingsPage === 'storage') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Storage' };
-  if (settingsPage === 'appearance') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Appearance' };
-  if (settingsPage === 'debug') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Debug' };
-  if (settingsPage === 'tabs') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Tabs' };
-  if (settingsPage === 'syncActivity') return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Activity' };
-  if (settingsPage === 'syncConnection') return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Connection' };
-  if (settingsPage === 'syncHandoff') return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Handoff reminders' };
-  return { title: 'Settings' };
+  if (settingsPage === 'sync') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.sync.deviceSync') };
+  if (settingsPage === 'device') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.device.title') };
+  if (settingsPage === 'storage') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.storage.title') };
+  if (settingsPage === 'appearance') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.appearance.title') };
+  if (settingsPage === 'debug') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.debug.title') };
+  if (settingsPage === 'tabs') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.tabs.title') };
+  if (settingsPage === 'syncActivity') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.activity.title') };
+  if (settingsPage === 'syncConnection') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.connection.title') };
+  if (settingsPage === 'syncHandoff') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.handoff.title') };
+  return { title: t('companion.settings.title') };
 }
 
 function resolveBrowseTopBar(args: {
@@ -88,6 +93,7 @@ function resolveBrowseTopBar(args: {
   onSyncBrowse: (() => void) | undefined;
   syncDisabled: boolean;
   syncStatus: string | undefined;
+  t: Translate;
 }) {
   const rightSlot = (
     <CompanionBrowseTopActions
@@ -106,25 +112,26 @@ function resolveBrowseTopBar(args: {
   if (args.isBrowseDirectoryOpen) {
     return args.directorySelection.kind === 'root'
       ? { rightSlot }
-      : { backLabel: 'Back', onBack: args.onBackDirectorySelection, rightSlot };
+      : { backLabel: args.t('companion.back'), onBack: args.onBackDirectorySelection, rightSlot };
   }
   return {
-    leftAction: { icon: FolderTree, label: 'Directory', onClick: args.onOpenBrowseDirectory },
+    leftAction: { icon: FolderTree, label: args.t('companion.browse.directory'), onClick: args.onOpenBrowseDirectory },
     rightSlot
   };
 }
 
 function resolveReviewTopBar(
+  t: Translate,
   isOnlyReviewOpen: boolean,
   onCloseOnlyReview: () => void,
   onExitReview: () => void,
   onOpenOnlyReview: () => void
 ) {
   if (isOnlyReviewOpen) {
-    return { backLabel: 'Learn', onBack: onCloseOnlyReview, title: 'Only Review' };
+    return { backLabel: t('companion.review.learn'), onBack: onCloseOnlyReview, title: t('companion.review.onlyReview') };
   }
   return {
-    leftAction: { icon: X, label: 'Exit', onClick: onExitReview },
-    rightAction: { icon: ListFilter, label: 'Only Review', onClick: onOpenOnlyReview }
+    leftAction: { icon: X, label: t('companion.review.exit'), onClick: onExitReview },
+    rightAction: { icon: ListFilter, label: t('companion.review.onlyReview'), onClick: onOpenOnlyReview }
   };
 }

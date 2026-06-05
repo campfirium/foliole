@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import type { TranslationKey } from '../../../shared/localization/translations';
 import { getWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 import type { InterfaceFontPreset, MonospaceFontPreset } from './appearanceSettings';
@@ -9,6 +10,7 @@ export type SettingsCategoryId =
   | 'companion-sync'
   | 'editor'
   | 'external-search'
+  | 'general'
   | 'mouse-gestures'
   | 'rail'
   | 'web-lookup'
@@ -19,37 +21,61 @@ export type SettingsCategoryId =
   | 'review'
   | 'hotkeys';
 
-export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCategoryId; label: string }> = [
-  { id: 'about', label: 'General', description: 'Adjust search behavior and view support tools.' },
-  { id: 'appearance', label: 'Appearance', description: 'Adjust the look and density of the workspace.' },
-  { id: 'editor', label: 'Editor', description: 'Configure editing and writing behavior.' },
-  { id: 'web-lookup', label: 'Right-click menu', description: 'Configure external menu items for Topic text.' },
-  { id: 'review', label: 'Review', description: 'Tune the scheduler and review queue.' },
-  { id: 'rail', label: 'Action bar', description: 'Choose which workspace actions are shown.' },
-  { id: 'hotkeys', label: 'Hotkeys', description: 'Customize keyboard shortcuts.' },
-  { id: 'mouse-gestures', label: 'Mouse gestures', description: 'Configure mouse gestures and feedback.' },
-  { id: 'library', label: 'Library', description: 'Set library, assets, inbox, and mirror folders.' },
-  { id: 'companion-sync', label: 'Sync', description: 'Pair other devices and manage local sync.' },
-  { id: 'backups', label: 'Backups', description: 'Manage backup location and retention.' },
-  { id: 'import', label: 'Watched folders', description: 'Configure folders watched for import.' },
-  { id: 'external-search', label: 'External sources', description: 'Search and import from external folders.' },
-  { id: 'readwise-reader', label: 'Readwise Reader', description: 'Configure Readwise Reader import.' }
+type Translate = (key: TranslationKey) => string;
+
+const SETTINGS_CATEGORY_DEFINITIONS: Array<{
+  descriptionKey: TranslationKey;
+  id: SettingsCategoryId;
+  labelKey: TranslationKey;
+}> = [
+  { id: 'about', labelKey: 'settings.category.about.label', descriptionKey: 'settings.category.about.description' },
+  { id: 'general', labelKey: 'settings.category.general.label', descriptionKey: 'settings.category.general.description' },
+  { id: 'appearance', labelKey: 'settings.category.appearance.label', descriptionKey: 'settings.category.appearance.description' },
+  { id: 'editor', labelKey: 'settings.category.editor.label', descriptionKey: 'settings.category.editor.description' },
+  { id: 'web-lookup', labelKey: 'settings.category.webLookup.label', descriptionKey: 'settings.category.webLookup.description' },
+  { id: 'review', labelKey: 'settings.category.review.label', descriptionKey: 'settings.category.review.description' },
+  { id: 'rail', labelKey: 'settings.category.rail.label', descriptionKey: 'settings.category.rail.description' },
+  { id: 'hotkeys', labelKey: 'settings.category.hotkeys.label', descriptionKey: 'settings.category.hotkeys.description' },
+  { id: 'mouse-gestures', labelKey: 'settings.category.mouseGestures.label', descriptionKey: 'settings.category.mouseGestures.description' },
+  { id: 'library', labelKey: 'settings.category.library.label', descriptionKey: 'settings.category.library.description' },
+  { id: 'companion-sync', labelKey: 'settings.category.companionSync.label', descriptionKey: 'settings.category.companionSync.description' },
+  { id: 'backups', labelKey: 'settings.category.backups.label', descriptionKey: 'settings.category.backups.description' },
+  { id: 'import', labelKey: 'settings.category.import.label', descriptionKey: 'settings.category.import.description' },
+  { id: 'external-search', labelKey: 'settings.category.externalSearch.label', descriptionKey: 'settings.category.externalSearch.description' },
+  { id: 'readwise-reader', labelKey: 'settings.category.readwiseReader.label', descriptionKey: 'settings.category.readwiseReader.description' }
 ];
 
-export const SETTINGS_CATEGORY_GROUPS: Array<{ categoryIds: SettingsCategoryId[]; label: string }> = [
+export type SettingsCategoryOption = { description: string; id: SettingsCategoryId; label: string };
+
+export function getSettingsCategories(t: Translate): SettingsCategoryOption[] {
+  return SETTINGS_CATEGORY_DEFINITIONS.map((category) => ({
+    description: t(category.descriptionKey),
+    id: category.id,
+    label: t(category.labelKey)
+  }));
+}
+
+export const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategoryId[]; labelKey: TranslationKey }> = [
   {
-    label: 'Workspace',
-    categoryIds: ['about', 'appearance', 'editor', 'web-lookup', 'review', 'hotkeys', 'mouse-gestures', 'rail']
+    labelKey: 'settings.group.workspace',
+    categoryIds: ['about', 'general', 'appearance', 'editor', 'web-lookup', 'review', 'hotkeys', 'mouse-gestures', 'rail']
   },
   {
-    label: 'Storage',
+    labelKey: 'settings.group.storage',
     categoryIds: ['library', 'companion-sync', 'backups']
   },
   {
-    label: 'Sources',
+    labelKey: 'settings.group.sources',
     categoryIds: ['import', 'external-search', 'readwise-reader']
   }
 ];
+
+export function getSettingsCategoryGroups(t: Translate) {
+  return SETTINGS_CATEGORY_GROUP_DEFINITIONS.map((group) => ({
+    categoryIds: group.categoryIds,
+    label: t(group.labelKey)
+  }));
+}
 
 export const SETTINGS_CATEGORY_STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.settingsActiveCategory;
 
@@ -69,11 +95,11 @@ export const MONOSPACE_PRESET_OPTION_VALUES: MonospaceFontPreset[] = [
 ];
 
 export function isSettingsCategoryId(value: string): value is SettingsCategoryId {
-  return SETTINGS_CATEGORIES.some((category) => category.id === value);
+  return SETTINGS_CATEGORY_DEFINITIONS.some((category) => category.id === value);
 }
 
-export function getSettingsCategoryOption(id: SettingsCategoryId) {
-  return SETTINGS_CATEGORIES.find((category) => category.id === id);
+export function getSettingsCategoryOption(id: SettingsCategoryId, t: Translate) {
+  return getSettingsCategories(t).find((category) => category.id === id);
 }
 
 export function getInitialSettingsCategory(): SettingsCategoryId {
@@ -81,23 +107,23 @@ export function getInitialSettingsCategory(): SettingsCategoryId {
   return raw && isSettingsCategoryId(raw) ? raw : 'editor';
 }
 
-export function presetLabel(preset: InterfaceFontPreset) {
+export function presetLabel(preset: InterfaceFontPreset, t?: Translate) {
   switch (preset) {
     case 'default':
-      return 'Default';
+      return t ? t('settings.appearance.fontPreset.default') : 'Default';
     case 'system':
-      return 'System UI';
+      return t ? t('settings.appearance.fontPreset.system') : 'System UI';
     case 'serif':
-      return 'Serif';
+      return t ? t('settings.appearance.fontPreset.serif') : 'Serif';
     default:
-      return 'Custom';
+      return t ? t('settings.appearance.fontPreset.custom') : 'Custom';
   }
 }
 
-export function monospacePresetLabel(preset: MonospaceFontPreset) {
+export function monospacePresetLabel(preset: MonospaceFontPreset, t?: Translate) {
   switch (preset) {
     case 'default':
-      return 'Default';
+      return t ? t('settings.appearance.fontPreset.default') : 'Default';
     case 'jetbrains':
       return 'JetBrains Mono';
     case 'cascadia':
@@ -109,6 +135,6 @@ export function monospacePresetLabel(preset: MonospaceFontPreset) {
     case 'sarasa':
       return 'Sarasa Mono';
     default:
-      return 'Custom';
+      return t ? t('settings.appearance.fontPreset.custom') : 'Custom';
   }
 }

@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
@@ -82,7 +84,7 @@ function createPdfSourceDetails(overrides?: { isLoading?: boolean }) {
 it('keeps the visible page number stable until the next-page scroll actually settles', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
-  render(<DocumentPanelSection {...defaultProps} />);
+  renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
 
   await waitFor(() => {
     expect(screen.getByTestId('pdf-document-toolbar')).toBeInTheDocument();
@@ -95,7 +97,7 @@ it('keeps the visible page number stable until the next-page scroll actually set
 it('keeps the pdf reading container visible while a linked pdf node source is refreshing', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails({ isLoading: true }) as never);
 
-  render(<DocumentPanelSection {...defaultProps} />);
+  renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
 
   await waitFor(() => {
     expect(screen.getAllByTestId('pdf-document-page-shell')).toHaveLength(9);
@@ -107,7 +109,7 @@ it('keeps the pdf reading container visible while a linked pdf node source is re
 it('reserves shells for every pdf page while only rendering the nearby canvases', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
-  render(<DocumentPanelSection {...defaultProps} />);
+  renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
 
   await waitFor(() => {
     expect(screen.getAllByTestId('pdf-document-page-shell')).toHaveLength(9);

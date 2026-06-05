@@ -2,6 +2,7 @@ import type {
   FolderListSortDirection,
   FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
@@ -14,7 +15,7 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 
-function resolveBrowseSyncProps(workspaceSync: WorkspaceSync) {
+function resolveBrowseSyncProps(workspaceSync: WorkspaceSync, t: ReturnType<typeof useTranslation>) {
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state);
   return {
     onSync: endpointUrl
@@ -23,7 +24,7 @@ function resolveBrowseSyncProps(workspaceSync: WorkspaceSync) {
         }
       : undefined,
     syncDisabled: !endpointUrl || workspaceSync.status === 'syncing',
-    syncStatus: workspaceSync.status === 'syncing' ? 'Syncing' : endpointUrl ? undefined : 'Not connected'
+    syncStatus: workspaceSync.status === 'syncing' ? t('companion.browse.syncing') : endpointUrl ? undefined : t('companion.browse.notConnected')
   };
 }
 
@@ -45,6 +46,7 @@ export function useCompanionTopBarProps(args: {
   surface: ReturnType<typeof useCompanionArticleSurface>;
   workspaceSync: WorkspaceSync;
 }) {
+  const t = useTranslation();
   const backDirectorySelection = () => {
     const parentSelection = resolveDirectoryParentSelection({
       directory: args.externalDirectory,
@@ -53,9 +55,10 @@ export function useCompanionTopBarProps(args: {
     });
     if (parentSelection) args.resetDirectorySelection(parentSelection);
   };
-  const browseSync = resolveBrowseSyncProps(args.workspaceSync);
+  const browseSync = resolveBrowseSyncProps(args.workspaceSync, t);
 
   return resolveCompanionTopBarProps(
+    t,
     args.surface,
     args.settingsPage,
     args.isBrowseDirectoryOpen,

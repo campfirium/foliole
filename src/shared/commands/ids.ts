@@ -62,6 +62,7 @@ export const APP_COMMAND_IDS = {
   openGitHubRepository: 'support.openRepository',
   openGitHubIssues: 'support.openIssues',
   openGitHubDiscussions: 'support.openDiscussions',
+  openYouTubePlaylist: 'support.openYouTubePlaylist',
   openTrash: 'workspace.openTrash',
   createFolder: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createFolder,
   createTopic: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createTopic,

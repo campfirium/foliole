@@ -1,6 +1,7 @@
 import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import type { PdfSearchRequest, PdfSearchStatus, PdfSearchTarget } from './PdfDocumentSearch';
 import { PdfDocumentViewport } from './PdfDocumentViewport';
@@ -94,9 +95,10 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
 }
 
 export function PdfDocumentSurfaceLayout(props: PdfDocumentSurfaceLayoutProps) {
+  const t = useTranslation();
   return (
     <section
-      aria-label="PDF reader panel"
+      aria-label={t('desktop.pdf.readerPanel')}
       className="pdf-document-surface workspace-region-main-document relative flex min-h-0 flex-1 flex-col"
       data-testid="pdf-document-surface"
       onClickCapture={props.handleExternalLinkClick}

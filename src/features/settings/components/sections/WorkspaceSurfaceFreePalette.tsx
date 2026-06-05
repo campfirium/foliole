@@ -1,6 +1,8 @@
 import { ClipboardPaste, RotateCcw } from 'lucide-react';
 import { type ReactNode } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import type { TranslationKey } from '../../../../shared/localization/translations';
 import { useActionHelpCardsEnabled } from '../../../../shared/platform/actionHelpCards';
 import {
   ActionHelpCard,
@@ -20,18 +22,6 @@ import {
 type WorkspaceSurfaceFreePaletteProps = {
   editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
 };
-
-const FREE_PALETTE_HELP = {
-  paste: {
-    body: 'Paste five comma-separated hex colors into the free palette.',
-    detail: 'Example: #ffffff, #fcfcfc, #f6f6f6, #f5f5f3, #ececea',
-    title: 'Paste free palette'
-  },
-  reset: {
-    body: 'Keep the first five free palette colors and move any extra assignments back into those slots.',
-    title: 'Reset free palette'
-  }
-} satisfies Record<string, ActionHelpCardCopy>;
 
 function clampAssignments(assignments: WorkspaceSurfaceAssignments, maxIndex: number) {
   return Object.fromEntries(
@@ -57,40 +47,66 @@ function PaletteActionHelp(props: { children: ReactNode; help: ActionHelpCardCop
   return props.showHelp ? <ActionHelpCard help={props.help}>{props.children}</ActionHelpCard> : props.children;
 }
 
-export function WorkspaceSurfaceFreePalette(props: WorkspaceSurfaceFreePaletteProps) {
-  const showHelp = useActionHelpCardsEnabled();
-  const pastePalette = async () => {
-    const text = await readPaletteClipboardText();
-    const palette = text ? parseWorkspaceSurfacePaletteText(text) : null;
-    if (!palette) {
-      return;
+type Translate = (key: TranslationKey) => string;
+
+function buildFreePaletteHelp(t: Translate) {
+  return {
+    paste: {
+      body: t('settings.appearance.surface.freePalette.pasteHelp.body'),
+      detail: t('settings.appearance.surface.freePalette.pasteHelp.detail'),
+      title: t('settings.appearance.surface.freePalette.paste')
+    },
+    reset: {
+      body: t('settings.appearance.surface.freePalette.resetHelp.body'),
+      title: t('settings.appearance.surface.freePalette.reset')
     }
-    props.editor.setGeneratedMode('manual');
-    props.editor.appearance.setWorkspaceSurfacePalette(palette);
-    props.editor.appearance.setWorkspaceSurfaceAssignments(
-      clampAssignments(props.editor.appearance.workspaceSurfaceAssignments, palette.length - 1)
-    );
-    props.editor.setActiveBrushIndex(Math.min(props.editor.activeBrushIndex, palette.length - 1));
-  };
+  } satisfies Record<string, ActionHelpCardCopy>;
+}
+
+async function pasteWorkspaceSurfacePalette(editor: WorkspaceSurfaceFreePaletteProps['editor']) {
+  const text = await readPaletteClipboardText();
+  const palette = text ? parseWorkspaceSurfacePaletteText(text) : null;
+  if (!palette) {
+    return;
+  }
+  editor.setGeneratedMode('manual');
+  editor.appearance.setWorkspaceSurfacePalette(palette);
+  editor.appearance.setWorkspaceSurfaceAssignments(
+    clampAssignments(editor.appearance.workspaceSurfaceAssignments, palette.length - 1)
+  );
+  editor.setActiveBrushIndex(Math.min(editor.activeBrushIndex, palette.length - 1));
+}
+
+function addWorkspaceSurfacePaletteColor(editor: WorkspaceSurfaceFreePaletteProps['editor']) {
+  const fallbackColor = editor.appearance.workspaceSurfacePalette[editor.activeBrushIndex] ?? '#d8d8d8';
+  editor.setGeneratedMode('manual');
+  editor.appearance.setWorkspaceSurfacePalette([...editor.appearance.workspaceSurfacePalette, fallbackColor]);
+  editor.setActiveBrushIndex(editor.appearance.workspaceSurfacePalette.length);
+}
+
+export function WorkspaceSurfaceFreePalette(props: WorkspaceSurfaceFreePaletteProps) {
+  const t = useTranslation();
+  const showHelp = useActionHelpCardsEnabled();
+  const freePaletteHelp = buildFreePaletteHelp(t);
 
   return (
     <div className="space-y-2">
       <div className="space-y-0.5">
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-medium text-foreground">Free palette</h4>
-          <PaletteActionHelp help={FREE_PALETTE_HELP.paste} showHelp={showHelp}>
+          <h4 className="text-sm font-medium text-foreground">{t('settings.appearance.surface.freePalette.title')}</h4>
+          <PaletteActionHelp help={freePaletteHelp.paste} showHelp={showHelp}>
             <button
-              aria-label="Paste free palette"
+              aria-label={t('settings.appearance.surface.freePalette.paste')}
               className={settingsUtilityIconButtonClassName(false, 'size-8 rounded-sm px-0')}
-              onClick={() => void pastePalette()}
+              onClick={() => void pasteWorkspaceSurfacePalette(props.editor)}
               type="button"
             >
               <ClipboardPaste aria-hidden="true" className="text-current" size={18} strokeWidth={1.9} />
             </button>
           </PaletteActionHelp>
-          <PaletteActionHelp help={FREE_PALETTE_HELP.reset} showHelp={showHelp}>
+          <PaletteActionHelp help={freePaletteHelp.reset} showHelp={showHelp}>
             <button
-              aria-label="Reset free palette"
+              aria-label={t('settings.appearance.surface.freePalette.reset')}
               className={settingsUtilityIconButtonClassName(false, 'size-8 rounded-sm px-0')}
               onClick={() => resetWorkspaceSurfaceFreePalette(props.editor)}
               type="button"
@@ -99,17 +115,12 @@ export function WorkspaceSurfaceFreePalette(props: WorkspaceSurfaceFreePalettePr
             </button>
           </PaletteActionHelp>
         </div>
-        <p className="text-xs text-foreground/58">Manual mode: pick a swatch, then paint the preview.</p>
+        <p className="text-xs text-foreground/58">{t('settings.appearance.surface.freePalette.description')}</p>
       </div>
       <WorkspaceSurfaceColorPaletteStrip
         activeBrushIndex={props.editor.activeBrushIndex}
         colors={props.editor.appearance.workspaceSurfacePalette}
-        onAddPaletteColor={() => {
-          const fallbackColor = props.editor.appearance.workspaceSurfacePalette[props.editor.activeBrushIndex] ?? '#d8d8d8';
-          props.editor.setGeneratedMode('manual');
-          props.editor.appearance.setWorkspaceSurfacePalette([...props.editor.appearance.workspaceSurfacePalette, fallbackColor]);
-          props.editor.setActiveBrushIndex(props.editor.appearance.workspaceSurfacePalette.length);
-        }}
+        onAddPaletteColor={() => addWorkspaceSurfacePaletteColor(props.editor)}
         onEditColor={(event, index) => openWorkspaceSurfaceColorEditor(props.editor, event, index)}
         onSelectColor={(index) => props.editor.setActiveBrushIndex(index)}
       />

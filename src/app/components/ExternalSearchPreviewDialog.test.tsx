@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ExternalSearchPreviewDialog } from './ExternalSearchPreviewDialog';
 
@@ -45,7 +47,7 @@ beforeEach(() => {
 it('shows a progress state while the external search preview loads', () => {
   loadRuntimeExternalSearchPreview.mockReturnValueOnce(new Promise(() => undefined));
 
-  render(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
+  renderWithLocalization(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
 
   expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
 });
@@ -63,7 +65,7 @@ it('shows a retryable error when the external search preview fails', async () =>
       relativePath: 'topic.md'
     });
 
-  render(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
+  renderWithLocalization(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Preview failed.');
 
@@ -85,7 +87,7 @@ it('remounts the external search preview editor when editor appearance changes',
     relativePath: 'topic.md'
   });
 
-  const { rerender } = render(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
+  const { rerender } = renderWithLocalization(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={vi.fn()} onOpenChange={vi.fn()} />);
   await screen.findByText('# Preview');
   expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.objectContaining({ nodeId: null, readOnly: true }));
   expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
@@ -113,7 +115,7 @@ it('imports the loaded external preview through the external document import abi
   });
   const onImportComplete = vi.fn();
 
-  render(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={onImportComplete} onOpenChange={vi.fn()} />);
+  renderWithLocalization(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={onImportComplete} onOpenChange={vi.fn()} />);
 
   await screen.findByText('# Preview');
   fireEvent.click(screen.getByRole('button', { name: 'Import' }));

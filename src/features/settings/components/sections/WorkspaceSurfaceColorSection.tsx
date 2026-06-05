@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME,
   SettingsSection,
@@ -42,6 +43,7 @@ function WorkspaceSurfaceColorSectionBody(props: {
   paintRegion: (regionId: WorkspaceSurfaceRegionId) => void;
   painting: ReturnType<typeof useWorkspaceSurfacePainting>;
 }) {
+  const t = useTranslation();
   useEffect(() => {
     if (props.editor.generatedMode === 'automatic') {
       applyAutoModeToWorkspace(props.editor);
@@ -55,9 +57,9 @@ function WorkspaceSurfaceColorSectionBody(props: {
   return (
     <SettingsSection
       actions={<WorkspaceSurfaceSectionActions editor={props.editor} onEnterPreview={props.onEnterPreview} />}
-      ariaLabel="Workspace surface color section"
-      description="Paint the real workspace shell using the same rough proportions as the desktop client."
-      title="Workspace surface colors"
+      ariaLabel={t('settings.appearance.surface.section.aria')}
+      description={t('settings.appearance.surface.section.description')}
+      title={t('settings.appearance.surface.section.title')}
     >
       <WorkspaceSurfaceSectionContent editor={props.editor} paintRegion={props.paintRegion} painting={props.painting} />
     </SettingsSection>
@@ -68,10 +70,11 @@ function WorkspaceSurfaceSectionActions(props: {
   editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
   onEnterPreview: () => void;
 }) {
+  const t = useTranslation();
   return (
     <div className="flex items-center gap-2">
-      <button className={settingsButtonClassName()} onClick={props.onEnterPreview} type="button">Preview</button>
-      <button className={settingsButtonClassName()} onClick={() => resetWorkspaceSurfaceToDefault(props.editor)} type="button">Reset</button>
+      <button className={settingsButtonClassName()} onClick={props.onEnterPreview} type="button">{t('settings.appearance.surface.preview')}</button>
+      <button className={settingsButtonClassName()} onClick={() => resetWorkspaceSurfaceToDefault(props.editor)} type="button">{t('settings.appearance.surface.reset')}</button>
     </div>
   );
 }

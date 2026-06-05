@@ -12,6 +12,9 @@ import {
   Trash2
 } from 'lucide-react';
 
+import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import { useTranslation, type Translate } from '../../../shared/localization/LocalizationProvider';
+
 import { NODE_LIST_CONTEXT_ACTION_HELP, resolveNodeListActionHelp } from './nodeListContextActionHelp';
 import type { NodeListContextMenuProps } from './NodeListContextMenu';
 import {
@@ -36,11 +39,12 @@ function TrashMenuItems({
   onDeleteNodePermanently: () => void;
   onRestoreNode: () => void;
 }) {
+  const t = useTranslation();
   return (
     <>
-      <NodeContextMenuItem icon={ArchiveRestore} onSelect={onRestoreNode}>Restore</NodeContextMenuItem>
+      <NodeContextMenuItem icon={ArchiveRestore} onSelect={onRestoreNode}>{t('desktop.nodeList.menu.restore')}</NodeContextMenuItem>
       <NodeContextMenuSeparator />
-      <NodeContextMenuItem icon={Trash2} onSelect={onDeleteNodePermanently} tone="destructive">Delete Permanently</NodeContextMenuItem>
+      <NodeContextMenuItem icon={Trash2} onSelect={onDeleteNodePermanently} tone="destructive">{t('desktop.nodeList.menu.deletePermanently')}</NodeContextMenuItem>
     </>
   );
 }
@@ -67,75 +71,83 @@ function shouldShowReviewGroup(props: NoteMenuItemsProps) {
   );
 }
 
-function renderCreateItems(props: NoteMenuItemsProps, helpEnabled: boolean) {
+function createCommandLabel(t: Translate, command: NoteMenuItemsProps['createCommands'][number]) {
+  if (command.appCommandId === FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createFolder) return t('desktop.nodeList.createFolder');
+  if (command.appCommandId === FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createTopic) return t('desktop.nodeList.createTopic');
+  if (command.appCommandId === FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createItem) return t('desktop.nodeList.createItem');
+  return command.listLabel;
+}
+
+function renderCreateItems(t: Translate, props: NoteMenuItemsProps, helpEnabled: boolean) {
   const clipboardHelp = helpEnabled ? { help: resolveNodeListActionHelp(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic) } : {};
   return (
     <>
       {props.createCommands.map((command) => (
         <NodeContextMenuItem icon={iconForCreateCommand(command)} key={command.appCommandId} onSelect={() => props.onCreateCommand(command.appCommandId)}>
-          {command.listLabel}
+          {createCommandLabel(t, command)}
         </NodeContextMenuItem>
       ))}
       {props.showCreateTopicFromClipboardAction && props.onCreateTopicFromClipboard ? (
-        <NodeContextMenuItem {...clipboardHelp} icon={Clipboard} onSelect={props.onCreateTopicFromClipboard}>Paste as Topic</NodeContextMenuItem>
+        <NodeContextMenuItem {...clipboardHelp} icon={Clipboard} onSelect={props.onCreateTopicFromClipboard}>{t('desktop.nodeList.menu.pasteAsTopic')}</NodeContextMenuItem>
       ) : null}
     </>
   );
 }
 
-function renderEditItems(props: NoteMenuItemsProps, helpEnabled: boolean) {
+function renderEditItems(t: Translate, props: NoteMenuItemsProps, helpEnabled: boolean) {
   if (props.showRootCreateOnly) return null;
   const helpProps = (copy: (typeof NODE_LIST_CONTEXT_ACTION_HELP)[keyof typeof NODE_LIST_CONTEXT_ACTION_HELP]) =>
     helpEnabled ? { help: resolveNodeListActionHelp(copy) } : {};
   return (
     <>
-      {props.showRenameAction && props.onRenameNode ? <NodeContextMenuItem icon={Pencil} onSelect={props.onRenameNode}>Rename</NodeContextMenuItem> : null}
-      {props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.mergeHighlights)} icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>Merge highlights</NodeContextMenuItem> : null}
-      {props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>Paste as Topic</NodeContextMenuItem> : null}
-      {props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>Move to…</NodeContextMenuItem> : null}
+      {props.showRenameAction && props.onRenameNode ? <NodeContextMenuItem icon={Pencil} onSelect={props.onRenameNode}>{t('desktop.nodeList.menu.rename')}</NodeContextMenuItem> : null}
+      {props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.mergeHighlights)} icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>{t('desktop.nodeList.menu.mergeHighlights')}</NodeContextMenuItem> : null}
+      {props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>{t('desktop.nodeList.menu.pasteAsTopic')}</NodeContextMenuItem> : null}
+      {props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>{t('desktop.nodeList.menu.moveTo')}</NodeContextMenuItem> : null}
     </>
   );
 }
 
-function renderReviewItems(props: NoteMenuItemsProps, helpEnabled: boolean) {
+function renderReviewItems(t: Translate, props: NoteMenuItemsProps, helpEnabled: boolean) {
   if (props.showRootCreateOnly) return null;
   const help = helpEnabled ? NODE_LIST_CONTEXT_ACTION_HELP : null;
   const helpProps = (copy: (typeof NODE_LIST_CONTEXT_ACTION_HELP)[keyof typeof NODE_LIST_CONTEXT_ACTION_HELP]) =>
     help ? { help: resolveNodeListActionHelp(copy) } : {};
   return (
     <>
-      {props.showReturnAction && props.onReturnNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.relearn)} icon={RelearnMenuIcon} onSelect={props.onReturnNode}>Relearn</NodeContextMenuItem> : null}
-      {props.showReviewSchedulingAction && props.onOpenReviewScheduling ? <NodeContextMenuItem icon={SlidersHorizontal} onSelect={props.onOpenReviewScheduling}>Review options…</NodeContextMenuItem> : null}
-      {props.showPostponeTopicAction && props.onOpenPostponeTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.postponeTopic)} icon={CalendarClock} onSelect={props.onOpenPostponeTopic}>Postpone topic...</NodeContextMenuItem> : null}
-      {props.showDismissAction && props.onDismissNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.dismiss)} icon={DismissMenuIcon} onSelect={props.onDismissNode}>Dismiss</NodeContextMenuItem> : null}
+      {props.showReturnAction && props.onReturnNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.relearn)} icon={RelearnMenuIcon} onSelect={props.onReturnNode}>{t('desktop.nodeList.menu.relearn')}</NodeContextMenuItem> : null}
+      {props.showReviewSchedulingAction && props.onOpenReviewScheduling ? <NodeContextMenuItem icon={SlidersHorizontal} onSelect={props.onOpenReviewScheduling}>{t('desktop.nodeList.menu.reviewOptions')}</NodeContextMenuItem> : null}
+      {props.showPostponeTopicAction && props.onOpenPostponeTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.postponeTopic)} icon={CalendarClock} onSelect={props.onOpenPostponeTopic}>{t('desktop.nodeList.menu.postponeTopic')}</NodeContextMenuItem> : null}
+      {props.showDismissAction && props.onDismissNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.dismiss)} icon={DismissMenuIcon} onSelect={props.onDismissNode}>{t('desktop.nodeList.menu.dismiss')}</NodeContextMenuItem> : null}
       {(props.showShelveTopicAction && props.onShelveTopic) || (props.showUnshelveTopicAction && props.onUnshelveTopic) || (props.showDismissEntireTopicAction && props.onDismissEntireTopic) ? <NodeContextMenuSeparator /> : null}
-      {props.showShelveTopicAction && props.onShelveTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.shelveTopic)} icon={BookMarked} onSelect={props.onShelveTopic}>Shelve entire topic</NodeContextMenuItem> : null}
-      {props.showUnshelveTopicAction && props.onUnshelveTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.unshelveTopic)} icon={BookMarked} onSelect={props.onUnshelveTopic}>Unshelve</NodeContextMenuItem> : null}
-      {props.showDismissEntireTopicAction && props.onDismissEntireTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.dismissTopic)} icon={CircleOff} onSelect={props.onDismissEntireTopic}>Dismiss topic</NodeContextMenuItem> : null}
+      {props.showShelveTopicAction && props.onShelveTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.shelveTopic)} icon={BookMarked} onSelect={props.onShelveTopic}>{t('desktop.nodeList.menu.shelveTopic')}</NodeContextMenuItem> : null}
+      {props.showUnshelveTopicAction && props.onUnshelveTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.unshelveTopic)} icon={BookMarked} onSelect={props.onUnshelveTopic}>{t('desktop.nodeList.menu.unshelveTopic')}</NodeContextMenuItem> : null}
+      {props.showDismissEntireTopicAction && props.onDismissEntireTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.dismissTopic)} icon={CircleOff} onSelect={props.onDismissEntireTopic}>{t('desktop.nodeList.menu.dismissTopic')}</NodeContextMenuItem> : null}
       {props.showSequentialReadingAction && props.onToggleSequentialReading ? (
         <NodeContextMenuItem
           {...helpProps(props.sequentialReadingEnabled ? NODE_LIST_CONTEXT_ACTION_HELP.sequentialReadingDisable : NODE_LIST_CONTEXT_ACTION_HELP.sequentialReadingEnable)}
           icon={BookOpenCheck}
           onSelect={props.onToggleSequentialReading}
         >
-          {props.sequentialReadingEnabled ? 'Disable Sequential Reading' : 'Enable Sequential Reading'}
+          {props.sequentialReadingEnabled ? t('desktop.nodeList.menu.disableSequentialReading') : t('desktop.nodeList.menu.enableSequentialReading')}
         </NodeContextMenuItem>
       ) : null}
     </>
   );
 }
 
-function renderDeleteItem(props: NoteMenuItemsProps, hasPreviousGroup: boolean) {
+function renderDeleteItem(t: Translate, props: NoteMenuItemsProps, hasPreviousGroup: boolean) {
   if (props.showRootCreateOnly || !props.showDeleteAction) return null;
   return (
     <>
       {hasPreviousGroup ? <NodeContextMenuSeparator /> : null}
-      <NodeContextMenuItem icon={Trash2} onSelect={props.onDeleteNode} tone="destructive">Delete</NodeContextMenuItem>
+      <NodeContextMenuItem icon={Trash2} onSelect={props.onDeleteNode} tone="destructive">{t('desktop.nodeList.menu.delete')}</NodeContextMenuItem>
     </>
   );
 }
 
 function NoteMenuItems(props: NoteMenuItemsProps) {
+  const t = useTranslation();
   const helpEnabled = useActionHelpCardsEnabled();
   const hasCreateGroup = props.createCommands.length > 0 || Boolean(props.showCreateTopicFromClipboardAction && props.onCreateTopicFromClipboard);
   const hasEditGroup = shouldShowEditGroup(props);
@@ -144,12 +156,12 @@ function NoteMenuItems(props: NoteMenuItemsProps) {
 
   return (
     <>
-      {hasCreateGroup ? renderCreateItems(props, helpEnabled) : null}
+      {hasCreateGroup ? renderCreateItems(t, props, helpEnabled) : null}
       {hasCreateGroup && hasEditGroup ? <NodeContextMenuSeparator /> : null}
-      {hasEditGroup ? renderEditItems(props, helpEnabled) : null}
+      {hasEditGroup ? renderEditItems(t, props, helpEnabled) : null}
       {(hasCreateGroup || hasEditGroup) && hasReviewGroup ? <NodeContextMenuSeparator /> : null}
-      {hasReviewGroup ? renderReviewItems(props, helpEnabled) : null}
-      {renderDeleteItem(props, hasAnyPrimaryGroup)}
+      {hasReviewGroup ? renderReviewItems(t, props, helpEnabled) : null}
+      {renderDeleteItem(t, props, hasAnyPrimaryGroup)}
     </>
   );
 }

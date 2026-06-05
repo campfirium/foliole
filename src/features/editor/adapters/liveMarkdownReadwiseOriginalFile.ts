@@ -1,6 +1,8 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import { dispatchReadwiseOriginalFileWidgetAction } from '../../../shared/platform/readwiseOriginalFileWidgetEvents';
 import type { ReadwiseOriginalFilePlaceholderRange } from '../model/readwiseOriginalFilePlaceholder';
 
@@ -56,6 +58,7 @@ function createReadwiseOriginalFileElement(placeholder: ReadwiseOriginalFilePlac
 }
 
 function createFrame(placeholder: ReadwiseOriginalFilePlaceholderRange, nodeId: string | null) {
+  const locale = getStoredAppLocale();
   const frame = document.createElement('span');
   frame.className = 'cm-md-image-status-frame';
   const glyph = document.createElement('span');
@@ -66,7 +69,7 @@ function createFrame(placeholder: ReadwiseOriginalFilePlaceholderRange, nodeId: 
   copy.className = 'cm-md-image-status-frame-copy';
   const caption = document.createElement('span');
   caption.className = 'cm-md-image-status-frame-caption';
-  caption.textContent = `Original file not imported · ${placeholder.kind}`;
+  caption.textContent = translate(locale, 'desktop.readwise.original.missingCaption', { kind: placeholder.kind });
   const source = document.createElement('span');
   source.className = 'cm-md-image-status-frame-source';
   source.textContent = placeholder.sourceLabel;
@@ -74,7 +77,7 @@ function createFrame(placeholder: ReadwiseOriginalFilePlaceholderRange, nodeId: 
   const detail = document.createElement('span');
   detail.className = 'cm-md-readwise-original-file-detail';
   detail.hidden = true;
-  detail.textContent = 'Download opens Readwise in your default browser. After saving the file, use Load here.';
+  detail.textContent = translate(locale, 'desktop.readwise.original.helpDetail');
   copy.append(caption, source, detail);
   frame.append(glyph, copy, createToolbar(nodeId, detail));
   return frame;
@@ -85,8 +88,8 @@ function createToolbar(nodeId: string | null, detail: HTMLElement) {
   toolbar.className = 'cm-md-image-status-toolbar cm-md-readwise-original-file-toolbar';
   toolbar.append(
     createHelpButton(detail),
-    createActionButton('Download original file', DOWNLOAD_ICON_SVG, 'download', nodeId),
-    createActionButton('Load original file', LOAD_ICON_SVG, 'load', nodeId)
+    createActionButton(t('desktop.readwise.original.download'), DOWNLOAD_ICON_SVG, 'download', nodeId),
+    createActionButton(t('desktop.readwise.original.load'), LOAD_ICON_SVG, 'load', nodeId)
   );
   return toolbar;
 }
@@ -107,11 +110,12 @@ function createActionButton(label: string, iconSvg: string, action: 'download' |
 }
 
 function createHelpButton(detail: HTMLElement) {
+  const label = t('desktop.readwise.original.help');
   const button = document.createElement('button');
   button.className = 'cm-md-image-status-toolbar-button cm-md-readwise-original-file-action';
   button.type = 'button';
-  button.title = 'Original file help';
-  button.setAttribute('aria-label', 'Original file help');
+  button.title = label;
+  button.setAttribute('aria-label', label);
   button.setAttribute('aria-expanded', 'false');
   button.innerHTML = HELP_ICON_SVG;
   button.addEventListener('click', (event) => {
@@ -122,6 +126,10 @@ function createHelpButton(detail: HTMLElement) {
     button.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
   });
   return button;
+}
+
+function t(key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) {
+  return translate(getStoredAppLocale(), key, params);
 }
 
 const BOOK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/><path d="M6 8h2"/><path d="M6 12h2"/><path d="M16 8h2"/><path d="M16 12h2"/></svg>';

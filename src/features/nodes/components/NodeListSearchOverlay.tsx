@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppIconButton, AppInput } from '../../../shared/ui';
 
 function SearchTitlesIcon() {
@@ -19,15 +20,21 @@ function CloseSearchIcon() {
   );
 }
 
-export function renderSearchLauncher(onOpen: () => void) {
+function SearchLauncher({ onOpen }: { onOpen: () => void }) {
+  const t = useTranslation();
+
   return (
     <AppIconButton
       className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
       icon={<SearchTitlesIcon />}
-      label="Open title search"
+      label={t('desktop.nodeSearch.open')}
       onClick={onOpen}
     />
   );
+}
+
+export function renderSearchLauncher(onOpen: () => void) {
+  return <SearchLauncher onOpen={onOpen} />;
 }
 
 export function NodeListSearchOverlay(props: {
@@ -36,6 +43,7 @@ export function NodeListSearchOverlay(props: {
   searchQuery: string;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const t = useTranslation();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -44,14 +52,14 @@ export function NodeListSearchOverlay(props: {
 
   return (
     <div
-      aria-label="Topic title search"
+      aria-label={t('desktop.nodeSearch.region')}
       className="absolute inset-y-1 left-2 right-2 z-surface-overlay flex max-w-full items-center gap-2 overflow-hidden rounded-md border border-border bg-[var(--app-surface-control-bg)] px-2 shadow-none"
       role="search"
     >
       <SearchTitlesIcon />
       <AppInput
         ref={inputRef}
-        aria-label="Search topic titles"
+        aria-label={t('desktop.nodeSearch.input')}
         className="h-8 min-w-0 border-0 bg-transparent px-0 text-[14px] focus-visible:ring-0"
         onChange={(event) => props.onChangeSearchQuery(event.currentTarget.value)}
         onKeyDown={(event) => {
@@ -60,14 +68,14 @@ export function NodeListSearchOverlay(props: {
             props.onClose();
           }
         }}
-        placeholder="Search titles"
+        placeholder={t('desktop.nodeSearch.placeholder')}
         type="search"
         value={props.searchQuery}
       />
       <AppIconButton
         className="size-8 text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground"
         icon={<CloseSearchIcon />}
-        label="Close title search"
+        label={t('desktop.nodeSearch.close')}
         onClick={props.onClose}
       />
     </div>

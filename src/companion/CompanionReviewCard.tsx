@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 
 import { definedProps } from '../shared/lib/definedProps';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import type { CompanionReviewBreadcrumbItem } from './companionReviewBreadcrumbs';
@@ -10,12 +11,13 @@ function ReviewBreadcrumb(props: {
   items: CompanionReviewBreadcrumbItem[];
   onSelectItem?: (id: string) => void;
 }) {
+  const t = useTranslation();
   if (props.items.length === 0) {
     return null;
   }
 
   return (
-    <nav aria-label="Review breadcrumb" className="mb-4 px-6">
+    <nav aria-label={t('companion.review.breadcrumb')} className="mb-4 px-6">
       <div className="line-clamp-2 text-[12px] leading-5 text-companion-text-secondary">
         {props.items.map((item, index) => (
           <Fragment key={item.id}>
@@ -55,8 +57,9 @@ export function CompanionReviewCard(props: {
   card: CompanionReviewCardModel;
   onSelectBreadcrumbItem?: (id: string) => void;
 }) {
+  const t = useTranslation();
   return (
-    <section aria-label="Review card" className="bg-companion-content pb-4">
+    <section aria-label={t('companion.review.card')} className="bg-companion-content pb-4">
       <ReviewBreadcrumb items={props.breadcrumbItems ?? []} {...definedProps({ onSelectItem: props.onSelectBreadcrumbItem })} />
       <div className="pt-1">
         <CompanionArticleDocument

@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 const mocks = vi.hoisted(() => ({
   markdownEditorMounted: vi.fn(),
@@ -57,7 +59,7 @@ it('renders Removed selection as an external-document style preview with Re-impo
   mocks.restoreRuntimeRemovedSource.mockResolvedValue({ node_id: 'topic-new', status: 'restored' });
   setSelectedRemovedSource(entry);
 
-  render(
+  renderWithLocalization(
     <RemovedSourcePreviewSurface
       canGoBack={false}
       canGoForward={false}
@@ -84,7 +86,7 @@ it('remounts the removed preview editor when editor appearance changes', () => {
   const entry = createRemovedSource();
   setSelectedRemovedSource(entry);
 
-  const { rerender } = render(
+  const { rerender } = renderWithLocalization(
     <RemovedSourcePreviewSurface
       canGoBack={false}
       canGoForward={false}

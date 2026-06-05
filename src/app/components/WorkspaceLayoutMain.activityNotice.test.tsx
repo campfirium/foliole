@@ -1,5 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ComponentProps } from 'react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const { getFormalImportFailureMessage, getFormalImportLatestResult } = vi.hoisted(() => ({
@@ -61,6 +60,8 @@ import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 
+import { renderWithLocalization } from '@/shared/localization/testLocalization';
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((nextResolve) => {
@@ -99,7 +100,7 @@ function createProps(overrides: Partial<WorkspaceLayoutFlatProps>) {
     trashedNodeIds: [],
     ...overrides
   } as WorkspaceLayoutFlatProps;
-  return groupWorkspaceLayoutProps(flatProps) as ComponentProps<typeof WorkspaceLayoutMain>;
+  return groupWorkspaceLayoutProps(flatProps) as Parameters<typeof WorkspaceLayoutMain>[0];
 }
 
 beforeEach(() => {
@@ -116,7 +117,7 @@ it('opens the imported clipboard topic from the success notice', async () => {
   const onStartClipboardImport = vi.fn(() => importResult.promise);
   getFormalImportLatestResult.mockReturnValue({ nodeId: 'node-imported', resultStatus: 'imported' });
 
-  render(<WorkspaceLayoutMain {...createProps({ onCloseImportManagement, onSelectNode, onStartClipboardImport })} />);
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onCloseImportManagement, onSelectNode, onStartClipboardImport })} />);
 
   fireEvent.click(screen.getByTestId('workspace-grid'));
   expect(await screen.findByRole('status')).toHaveTextContent('Importing clipboard...');
@@ -137,7 +138,7 @@ it('shows progress while a selected file is importing', async () => {
   const onRunImportFile = vi.fn(() => importResult.promise);
   getFormalImportLatestResult.mockReturnValue({ nodeId: 'node-imported', resultStatus: 'imported' });
 
-  render(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
 
   fireEvent.click(screen.getByTestId('workspace-file-import'));
   expect(await screen.findByRole('status')).toHaveTextContent('Importing file...');
@@ -154,7 +155,7 @@ it('runs requested clipboard imports through the workspace notice controller', a
   const importResult = createDeferred<boolean>();
   const onStartClipboardImport = vi.fn(() => importResult.promise);
 
-  render(<WorkspaceLayoutMain {...createProps({ onStartClipboardImport })} />);
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onStartClipboardImport })} />);
 
   requestClipboardImport();
   expect(await screen.findByRole('status')).toHaveTextContent('Importing clipboard...');
@@ -171,7 +172,7 @@ it('forwards clipboard import request targets to the workspace notice controller
   const importResult = createDeferred<boolean>();
   const onStartClipboardImport = vi.fn(() => importResult.promise);
 
-  render(<WorkspaceLayoutMain {...createProps({ onStartClipboardImport })} />);
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onStartClipboardImport })} />);
 
   requestClipboardImport({ targetParentNodeId: 'node-target' });
   expect(await screen.findByRole('status')).toHaveTextContent('Importing clipboard...');
@@ -184,7 +185,7 @@ it('runs requested file imports through the workspace notice controller', async 
   const importResult = createDeferred<boolean>();
   const onRunImportFile = vi.fn(() => importResult.promise);
 
-  render(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
 
   requestFileImport();
   expect(await screen.findByRole('status')).toHaveTextContent('Importing file...');
@@ -198,7 +199,7 @@ it('runs requested file imports through the workspace notice controller', async 
 });
 
 it('shows app runtime notices inside the workspace surface', async () => {
-  render(<WorkspaceLayoutMain {...createProps({})} />);
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({})} />);
 
   showAppRuntimeNotice('Selected topic is not backed by an active keep import source.');
 

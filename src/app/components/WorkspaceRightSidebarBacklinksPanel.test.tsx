@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarBacklinksPanel } from './WorkspaceRightSidebarBacklinksPanel';
 
@@ -44,7 +45,7 @@ function createPanelNodes() {
 }
 
 function renderPanelWithNodes(activeNodeId: string | null, nodesById: Record<string, Node>, nodeOrder = ['target', 'source']) {
-  return render(
+  return renderWithLocalization(
     <StrictMode>
       <WorkspaceRightSidebarBacklinksPanel
         activeNodeId={activeNodeId}

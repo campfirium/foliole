@@ -1,33 +1,34 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
-import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
-import { AppButton, AppListSectionHeader, AppListSurface, AppStatusBadge } from '../../shared/ui';
+import { AppButton, AppStatusBadge } from '../../shared/ui';
 
 import { ImportCatalogListItem } from './ImportCatalogListItem';
-import { ReadwiseBookInventoryItem } from './ImportInventoryListItems';
 import { renderImportDate, renderImportMeta, renderImportOpening, renderImportTitle } from './ImportNodeListBits';
 import {
   buildImportNodePresentation
 } from './importNodePresentation';
 
-function formatImportTime(timestamp: string) {
+export function formatImportTime(timestamp: string) {
   return timestamp.replace('T', ' ').slice(0, 16);
 }
 
-function formatImportOutcome(entry: RuntimeTextImportResult) {
+type ImportTranslate = ReturnType<typeof useTranslation>;
+
+function formatImportOutcome(entry: RuntimeTextImportResult, t: ImportTranslate) {
   if (entry.resultStatus === 'failed') {
-    return `Failed ${entry.sourceName}`;
+    return t('desktop.importOverview.outcome.failed', { name: entry.sourceName });
   }
   if (entry.resultStatus === 'degraded') {
-    return `Degraded ${entry.sourceName}`;
+    return t('desktop.importOverview.outcome.degraded', { name: entry.sourceName });
   }
   if (entry.duplicateSemantic === 'duplicate') {
-    return `Reused ${entry.sourceName}`;
+    return t('desktop.importOverview.outcome.reused', { name: entry.sourceName });
   }
   if (entry.duplicateSemantic === 'updated') {
-    return `Updated ${entry.sourceName}`;
+    return t('desktop.importOverview.outcome.updated', { name: entry.sourceName });
   }
-  return `Imported ${entry.sourceName}`;
+  return t('desktop.importOverview.outcome.imported', { name: entry.sourceName });
 }
 
 function resolveTone(entry: RuntimeTextImportResult) {
@@ -40,12 +41,12 @@ function resolveTone(entry: RuntimeTextImportResult) {
   return 'info' as const;
 }
 
-function resolveDetail(entry: RuntimeTextImportResult) {
+function resolveDetail(entry: RuntimeTextImportResult, t: ImportTranslate) {
   if (entry.resultStatus === 'failed') {
-    return entry.failureReason ?? 'Unknown import failure';
+    return entry.failureReason ?? t('desktop.importOverview.unknownFailure');
   }
   if (entry.resultStatus === 'degraded') {
-    return entry.degradedReason ?? 'Import degraded';
+    return entry.degradedReason ?? t('desktop.importOverview.importDegraded');
   }
   return `${entry.sourceKind} · ${entry.sourceLocator}`;
 }
@@ -65,6 +66,7 @@ function renderImportActions(input: {
   canOpenNode?: boolean;
   nodeId?: string | null;
   onOpenNode: (nodeId: string) => void;
+  openTopicLabel: string;
   status: RuntimeTextImportResult['resultStatus'];
   tone: ReturnType<typeof resolveTone>;
 }) {
@@ -77,19 +79,19 @@ function renderImportActions(input: {
       </div>
       {openNodeId ? (
         <AppButton onClick={() => input.onOpenNode(openNodeId)} variant="ghost">
-          Open topic
+          {input.openTopicLabel}
         </AppButton>
       ) : null}
     </div>
   );
 }
 
-function buildRunPresentation(entry: RuntimeTextImportResult, nodesById: Record<string, Node>) {
+function buildRunPresentation(entry: RuntimeTextImportResult, nodesById: Record<string, Node>, t: ImportTranslate) {
   return buildImportNodePresentation({
     fallbackDate: formatImportTime(entry.importedAt),
-    fallbackOpening: resolveDetail(entry),
+    fallbackOpening: resolveDetail(entry, t),
     fallbackPath: entry.sourceLocator,
-    fallbackTitle: entry.resultStatus === 'failed' ? formatImportOutcome(entry) : entry.sourceName,
+    fallbackTitle: entry.resultStatus === 'failed' ? formatImportOutcome(entry, t) : entry.sourceName,
     fallbackType: entry.sourceKind,
     nodeId: entry.nodeId,
     nodesById
@@ -105,19 +107,27 @@ export function InboxImportedNodeRow({
   nodesById: Record<string, Node>;
   onOpenNode: (nodeId: string) => void;
 }) {
+  const t = useTranslation();
   if (!entry.nodeId || !nodesById[entry.nodeId]) {
     return null;
   }
 
-  const presentation = buildRunPresentation(entry, nodesById);
+  const presentation = buildRunPresentation(entry, nodesById, t);
 
   return (
     <ImportCatalogListItem
-      actions={renderImportActions({ canOpenNode: true, nodeId: entry.nodeId, onOpenNode, status: entry.resultStatus, tone: resolveTone(entry) })}
+      actions={renderImportActions({
+        canOpenNode: true,
+        nodeId: entry.nodeId,
+        onOpenNode,
+        openTopicLabel: t('desktop.importOverview.openTopic'),
+        status: entry.resultStatus,
+        tone: resolveTone(entry)
+      })}
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(presentation.title)}
-      trailing={renderImportDate(presentation.date, 'Date imported')}
+      trailing={renderImportDate(presentation.date, t('desktop.importOverview.dateImported'))}
     />
   );
 }
@@ -131,101 +141,24 @@ export function InboxRecentRunRow({
   nodesById: Record<string, Node>;
   onOpenNode: (nodeId: string) => void;
 }) {
+  const t = useTranslation();
   const canOpenNode = Boolean(entry.nodeId && nodesById[entry.nodeId]);
-  const presentation = buildRunPresentation(entry, nodesById);
+  const presentation = buildRunPresentation(entry, nodesById, t);
 
   return (
     <ImportCatalogListItem
-      actions={renderImportActions({ canOpenNode, nodeId: entry.nodeId, onOpenNode, status: entry.resultStatus, tone: resolveTone(entry) })}
+      actions={renderImportActions({
+        canOpenNode,
+        nodeId: entry.nodeId,
+        onOpenNode,
+        openTopicLabel: t('desktop.importOverview.openTopic'),
+        status: entry.resultStatus,
+        tone: resolveTone(entry)
+      })}
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(presentation.title)}
-      trailing={renderImportDate(presentation.date, 'Date imported')}
+      trailing={renderImportDate(presentation.date, t('desktop.importOverview.dateImported'))}
     />
-  );
-}
-
-export function ReadwiseBooksInventorySection({
-  inventory,
-  nodesById,
-  onOpenBookNode,
-  onResetBookImport,
-  resettingNodeId
-}: {
-  inventory: RuntimeReadwiseBooksInventory | null;
-  nodesById?: Record<string, Node>;
-  onOpenBookNode?: (nodeId: string) => void;
-  onResetBookImport?: (input: { nodeId: string; title: string }) => void;
-  resettingNodeId?: string | null;
-}) {
-  const books = inventory?.books ?? [];
-  const description = inventory
-    ? `${books.length} books · scanned ${formatImportTime(inventory.scannedAt)}`
-    : 'Shared books list is not available yet.';
-
-  return (
-    <AppListSurface
-      ariaLabel="Books inventory"
-      className="border-0 bg-transparent"
-      emptyState={{ description: 'No books discovered yet.', title: 'Books inventory is empty' }}
-      headerSeparated={false}
-      header={
-        <AppListSectionHeader countLabel={`${books.length} items`} description={description} title="Books inventory" />
-      }
-      isEmpty={books.length === 0}
-    >
-      <ul className="flex flex-col">
-        {books.map((book) => (
-          <ReadwiseBookInventoryItem
-            book={book}
-            key={book.bookKey}
-            {...(nodesById ? { nodesById } : {})}
-            {...(onOpenBookNode ? { onOpenBookNode } : {})}
-            {...(onResetBookImport ? { onResetBookImport } : {})}
-            scannedAt={formatImportTime(inventory?.scannedAt ?? '')}
-            {...(resettingNodeId !== undefined ? { resettingNodeId } : {})}
-          />
-        ))}
-      </ul>
-    </AppListSurface>
-  );
-}
-
-export function InboxImportsSection({
-  entries,
-  nodesById,
-  onOpenNode
-}: {
-  entries: RuntimeTextImportResult[];
-  nodesById: Record<string, Node>;
-  onOpenNode: (nodeId: string) => void;
-}) {
-  const recentNodes = collectRecentInboxEntries(entries);
-  const itemCount = recentNodes.length + entries.length;
-
-  return (
-    <AppListSurface
-      ariaLabel="Inbox imports list"
-      className="border-0 bg-transparent"
-      emptyState={{ description: 'No imported Inbox topics or recent runs yet.', title: 'Inbox imports are empty' }}
-      headerSeparated={false}
-      header={
-        <AppListSectionHeader
-          countLabel={`${itemCount} items`}
-          description="Imported topics and recent outcomes stay together here so the latest inbox activity reads as one continuous list."
-          title="Inbox imports"
-        />
-      }
-      isEmpty={itemCount === 0}
-    >
-      <ul className="flex flex-col gap-3 px-1 py-1">
-        {recentNodes.map((entry) => (
-          <InboxImportedNodeRow entry={entry} key={`linked-${entry.importId}`} nodesById={nodesById} onOpenNode={onOpenNode} />
-        ))}
-        {entries.map((entry) => (
-          <InboxRecentRunRow entry={entry} key={`run-${entry.importId}`} nodesById={nodesById} onOpenNode={onOpenNode} />
-        ))}
-      </ul>
-    </AppListSurface>
   );
 }

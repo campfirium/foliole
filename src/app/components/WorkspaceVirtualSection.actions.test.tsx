@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
@@ -40,7 +41,7 @@ function renderSavedSearchTree() {
     specialKind: 'virtual',
     title: 'Custom virtual'
   });
-  render(
+  renderWithLocalization(
     <WorkspaceVirtualSection
       activeVirtualNodeId="virtual-custom"
       isVirtualViewOpen

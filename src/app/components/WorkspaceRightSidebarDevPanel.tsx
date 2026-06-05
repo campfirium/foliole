@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { Node, NodeReadingProfile } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 
 import {
   formatDateTime,
@@ -39,34 +40,36 @@ function SchedulingSection({ children, title }: { children: ReactNode; title: st
   );
 }
 
-function ReadingProfileSection({ reading }: { reading: NodeReadingProfile | null | undefined }) {
+type SchedulingTranslate = Translate;
+
+function ReadingProfileSection({ reading, t }: { reading: NodeReadingProfile | null | undefined; t: SchedulingTranslate }) {
   if (!reading) {
     return (
-      <SchedulingSection title="History">
-        <SchedulingInfoRow label="Last handled" value="None" />
-        <SchedulingInfoRow label="Read count" value="0" />
+      <SchedulingSection title={t('desktop.diagnostics.scheduling.history')}>
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.lastHandled')} value={t('desktop.diagnostics.scheduling.none')} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.readCount')} value="0" />
       </SchedulingSection>
     );
   }
 
   return (
-    <SchedulingSection title="History">
-      <SchedulingInfoRow label="Last handled" value={formatDateTime(reading.lastHandledAt)} />
-      <SchedulingInfoRow label="Read count" value={String(reading.repetitionCount)} />
+    <SchedulingSection title={t('desktop.diagnostics.scheduling.history')}>
+      <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.lastHandled')} value={formatDateTime(reading.lastHandledAt)} />
+      <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.readCount')} value={String(reading.repetitionCount)} />
     </SchedulingSection>
   );
 }
 
-function EmptyDevPanelState() {
+function EmptyDevPanelState({ t }: { t: SchedulingTranslate }) {
   return (
     <section className="py-3">
-      <h3 className="text-sm font-semibold text-foreground">Scheduling</h3>
-      <p className="mt-1 text-sm text-foreground/65">Select a topic to inspect its scheduling state.</p>
+      <h3 className="text-sm font-semibold text-foreground">{t('desktop.diagnostics.scheduling.title')}</h3>
+      <p className="mt-1 text-sm text-foreground/65">{t('desktop.diagnostics.scheduling.empty')}</p>
     </section>
   );
 }
 
-function ReadingTopicContent({ data }: { data: SchedulingPanelData }) {
+function ReadingTopicContent({ data, t }: { data: SchedulingPanelData; t: SchedulingTranslate }) {
   const { node, priority } = data;
   const currentInterval = node.reading?.intervalDurationMs ?? data.initialReadingIntervalMs;
   const previousInterval = node.reading && node.reading.repetitionCount > 1
@@ -75,82 +78,83 @@ function ReadingTopicContent({ data }: { data: SchedulingPanelData }) {
 
   return (
     <div className="flex min-h-0 flex-col">
-      <SchedulingHeader subtitle="Topic" />
-      <SchedulingSection title="Schedule">
-        <SchedulingInfoRow label="Next scheduled" value={formatDateTime(data.nextReadingAt)} />
-        <SchedulingInfoRow label="Initial interval" value={formatDurationMs(data.initialReadingIntervalMs)} />
-        <SchedulingInfoRow label="Current interval" value={formatDurationMs(currentInterval)} />
-        <SchedulingInfoRow label="Previous interval" value={previousInterval ? formatDurationMs(previousInterval) : 'None'} />
+      <SchedulingHeader subtitle={t('desktop.diagnostics.scheduling.topic')} t={t} />
+      <SchedulingSection title={t('desktop.diagnostics.scheduling.schedule')}>
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.nextScheduled')} value={formatDateTime(data.nextReadingAt)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.initialInterval')} value={formatDurationMs(data.initialReadingIntervalMs)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.currentInterval')} value={formatDurationMs(currentInterval)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.previousInterval')} value={previousInterval ? formatDurationMs(previousInterval) : t('desktop.diagnostics.scheduling.none')} />
       </SchedulingSection>
-      <SchedulingSection title="Decision parameters">
-        <SchedulingInfoRow label="Priority" value={formatPriority(priority.value)} />
-        <SchedulingInfoRow label="Priority ratio" value={formatNumber(data.priorityRatio)} />
-        <SchedulingInfoRow label="Priority weight" value={formatPriorityWeight(priority.value, data.priorityRatio)} />
-        <SchedulingInfoRow label="Growth factor" value={formatNumber(data.readingGrowthFactor)} />
+      <SchedulingSection title={t('desktop.diagnostics.scheduling.decisionParameters')}>
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priority')} value={formatPriority(priority.value)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityRatio')} value={formatNumber(data.priorityRatio)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityWeight')} value={formatPriorityWeight(priority.value, data.priorityRatio)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.growthFactor')} value={formatNumber(data.readingGrowthFactor)} />
       </SchedulingSection>
-      <ReadingProfileSection reading={node.reading} />
+      <ReadingProfileSection reading={node.reading} t={t} />
     </div>
   );
 }
 
-function SchedulingHeader({ subtitle }: { subtitle: string }) {
+function SchedulingHeader({ subtitle, t }: { subtitle: string; t: SchedulingTranslate }) {
   return (
     <section className="pb-3">
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-foreground">Scheduling</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t('desktop.diagnostics.scheduling.title')}</h3>
         <p className="mt-1 text-sm text-foreground/65">{subtitle}</p>
       </div>
     </section>
   );
 }
 
-function ReviewItemContent({ data }: { data: SchedulingPanelData }) {
+function ReviewItemContent({ data, t }: { data: SchedulingPanelData; t: SchedulingTranslate }) {
   const { desiredRetention, node, priority, retrievability } = data;
   const nextDue = node.review?.due ?? '';
 
   return (
     <div className="flex min-h-0 flex-col">
-      <SchedulingHeader subtitle="Item" />
+      <SchedulingHeader subtitle={t('desktop.diagnostics.scheduling.item')} t={t} />
 
-      <SchedulingSection title="Schedule">
-        <SchedulingInfoRow label="Next due" value={nextDue ? formatDateTime(nextDue) : 'Not scheduled'} />
-        <SchedulingInfoRow label="Last review" value={formatDateTime(node.review?.lastReviewAt)} />
-        <SchedulingInfoRow label="Scheduled interval" value={node.review ? formatDurationDays(node.review.scheduledDays) : '0 d'} />
+      <SchedulingSection title={t('desktop.diagnostics.scheduling.schedule')}>
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.nextDue')} value={nextDue ? formatDateTime(nextDue) : t('desktop.diagnostics.scheduling.notScheduled')} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.lastReview')} value={formatDateTime(node.review?.lastReviewAt)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.scheduledInterval')} value={node.review ? formatDurationDays(node.review.scheduledDays) : '0 d'} />
       </SchedulingSection>
 
-      <SchedulingSection title="Decision parameters">
-        <SchedulingInfoRow label="Priority" value={formatPriority(priority.value)} />
-        <SchedulingInfoRow label="Priority ratio" value={formatNumber(data.priorityRatio)} />
-        <SchedulingInfoRow label="Priority weight" value={formatPriorityWeight(priority.value, data.priorityRatio)} />
-        <SchedulingInfoRow label="Retention" value={formatPercent(desiredRetention.value)} />
-        <SchedulingInfoRow label="Retrievability" value={retrievability == null ? 'Not available' : formatPercent(retrievability)} />
-        <SchedulingInfoRow label="Elapsed" value={node.review ? formatDurationDays(node.review.elapsedDays) : '0 d'} />
-        <SchedulingInfoRow label="Stability" value={node.review ? formatDurationDays(node.review.stability) : '0 d'} />
-        <SchedulingInfoRow label="Difficulty" value={node.review ? formatNumber(node.review.difficulty) : '0'} />
+      <SchedulingSection title={t('desktop.diagnostics.scheduling.decisionParameters')}>
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priority')} value={formatPriority(priority.value)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityRatio')} value={formatNumber(data.priorityRatio)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityWeight')} value={formatPriorityWeight(priority.value, data.priorityRatio)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.retention')} value={formatPercent(desiredRetention.value)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.retrievability')} value={retrievability == null ? t('desktop.diagnostics.scheduling.notAvailable') : formatPercent(retrievability)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.elapsed')} value={node.review ? formatDurationDays(node.review.elapsedDays) : '0 d'} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.stability')} value={node.review ? formatDurationDays(node.review.stability) : '0 d'} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.difficulty')} value={node.review ? formatNumber(node.review.difficulty) : '0'} />
       </SchedulingSection>
 
-      <SchedulingSection title="History">
-        <SchedulingInfoRow label="Review count" value={String(node.review?.reps ?? 0)} />
-        <SchedulingInfoRow label="Lapses" value={String(node.review?.lapses ?? 0)} />
-        <SchedulingInfoRow label="Last review" value={formatDateTime(node.review?.lastReviewAt)} />
+      <SchedulingSection title={t('desktop.diagnostics.scheduling.history')}>
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.reviewCount')} value={String(node.review?.reps ?? 0)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.lapses')} value={String(node.review?.lapses ?? 0)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.lastReview')} value={formatDateTime(node.review?.lastReviewAt)} />
       </SchedulingSection>
     </div>
   );
 }
 
-function DevPanelContent({ data }: { data: SchedulingPanelData }) {
+function DevPanelContent({ data, t }: { data: SchedulingPanelData; t: SchedulingTranslate }) {
   if (data.kind === 'topic') {
-    return <ReadingTopicContent data={data} />;
+    return <ReadingTopicContent data={data} t={t} />;
   }
   if (data.kind === 'item') {
-    return <ReviewItemContent data={data} />;
+    return <ReviewItemContent data={data} t={t} />;
   }
-  return <EmptyDevPanelState />;
+  return <EmptyDevPanelState t={t} />;
 }
 
 export function WorkspaceRightSidebarDevPanel(props: WorkspaceRightSidebarDevPanelProps) {
+  const t = useTranslation();
   if (!props.activeNodeId) {
-    return <EmptyDevPanelState />;
+    return <EmptyDevPanelState t={t} />;
   }
 
   const data = resolveSchedulingPanelData({
@@ -162,5 +166,5 @@ export function WorkspaceRightSidebarDevPanel(props: WorkspaceRightSidebarDevPan
     return null;
   }
 
-  return <DevPanelContent data={data} />;
+  return <DevPanelContent data={data} t={t} />;
 }

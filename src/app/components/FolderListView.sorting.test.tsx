@@ -1,9 +1,10 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
@@ -35,7 +36,7 @@ function renderFolderList(
   const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
   const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
 
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1', ...children.map((node) => node.id)]}
@@ -139,7 +140,7 @@ describe('FolderListView manual sorting', () => {
       parentNodeId: null,
       title: 'Library root'
     });
-    render(
+    renderWithLocalization(
       <FolderListView
         folderNodeId="folder-1"
         nodeOrder={['folder-1', ...children.map((node) => node.id)]}
@@ -211,7 +212,7 @@ describe('FolderListView dynamic sorting', () => {
         sortKey={sortKey}
       />
     );
-    const { rerender } = render(renderList({
+    const { rerender } = renderWithLocalization(renderList({
       'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-05T09:00:00.000Z' },
       'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-04T09:00:00.000Z' }
     }, 'dateLastOpened'));
@@ -233,7 +234,7 @@ describe('FolderListView dynamic sorting', () => {
       createNode({ id: 'node-1', title: 'Saved first', updatedAt: '2026-04-05T09:00:00.000Z' }),
       createNode({ id: 'node-2', title: 'Saved later', updatedAt: '2026-04-04T09:00:00.000Z' })
     ];
-    const { rerender } = render(renderDateSavedFolderList(folderNode, children));
+    const { rerender } = renderWithLocalization(renderDateSavedFolderList(folderNode, children));
 
     expect(getRenderedEntryTitles()).toEqual(['Saved first', 'Saved later']);
 

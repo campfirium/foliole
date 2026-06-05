@@ -1,5 +1,6 @@
-import { render } from '@testing-library/react';
 import type { ComponentProps } from 'react';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 
@@ -17,7 +18,7 @@ export const baseNode = {
 };
 
 export function renderSectionWithProps(overrides: Partial<ComponentProps<typeof DocumentPanelSection>>) {
-  return render(
+  return renderWithLocalization(
     <DocumentPanelSection
       activeNodeId="node-1"
       canGoBack

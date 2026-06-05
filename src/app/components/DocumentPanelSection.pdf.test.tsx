@@ -1,9 +1,12 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ComponentProps } from 'react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
-import { DocumentPanelSection } from './DocumentPanelSection';
+import {
+  createPdfSourceDetails,
+  defaultImportSource,
+  renderSection
+} from './DocumentPanelSection.pdf.testSupport';
 const appearanceMocks = vi.hoisted(() => ({
   setDimImagesInDarkMode: vi.fn()
 }));
@@ -31,88 +34,6 @@ const { useNodeSourceDetails } = vi.hoisted(() => ({ useNodeSourceDetails: vi.fn
 vi.mock('./useNodeSourceDetails', () => ({
   useNodeSourceDetails
 }));
-const baseNode = {
-  id: 'node-1',
-  kind: 'topic' as const,
-  title: 'Node 1',
-  parentNodeId: null,
-  content: '',
-  anchorLink: null,
-  reveal: '',
-  review: null,
-  createdAt: '',
-  updatedAt: ''
-};
-const defaultImportSource = {
-  firstImportedAt: '2026-04-04T14:00:00.000Z',
-  lastContentFingerprint: 'fingerprint-1',
-  lastImportedAt: '2026-04-04T14:00:00.000Z',
-  latestNodeId: 'node-1',
-  provider: 'desktop_text_file',
-  sourceFingerprint: 'source-1',
-  sourceKind: 'pdf',
-  sourceLocator: '/tmp/sample.pdf',
-  sourceName: 'sample.pdf'
-};
-const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
-  activeNodeId: 'node-1',
-  canGoBack: true,
-  canGoForward: true,
-  canGoParent: false,
-  contextMenu: null,
-  editableNodeId: 'node-1',
-  editorAppearanceKey: 'appearance-1',
-  editorContent: '# Node 1',
-  isEditorReadOnly: false,
-  editorNodeId: 'node-1',
-  nodeOrder: ['node-1'],
-  trashedNodeIds: [],
-  nodesById: { 'node-1': baseNode },
-  onAnswerChange: () => undefined,
-  onCloseContextMenu: () => undefined,
-  onCopyImage: () => undefined,
-  onCreateCloze: () => undefined,
-  onCreateHighlight: () => undefined,
-  onCreatePdfHighlight: () => false,
-  onAdjustExistingHighlightRange: () => true,
-  onCutImage: () => undefined,
-  onDeleteImage: () => undefined,
-  onEditorChange: () => undefined,
-  onNodeContentChange: () => undefined,
-  onEditorContextMenu: () => undefined,
-  onEditorReady: () => undefined,
-  onExportImage: () => undefined,
-  onGoBack: () => undefined,
-  onGoForward: () => undefined,
-  onGoParent: () => undefined,
-  onPersistPdfViewState: () => undefined,
-  onResolveDocumentPositionAtViewportY: () => null,
-  onRevealDocumentPosition: () => undefined,
-  onRevealDocumentSelection: () => undefined,
-  onSelectBreadcrumbNode: () => undefined,
-  onSelectNode: () => undefined,
-  showAnswerSection: false
-};
-function renderSection(overrides: Partial<ComponentProps<typeof DocumentPanelSection>> = {}) {
-  return render(<DocumentPanelSection {...defaultProps} {...overrides} />);
-}
-function createPdfSourceDetails(overrides?: {
-  importSource?: Record<string, unknown> | null;
-  isLoading?: boolean;
-  keepImportItem?: Record<string, unknown> | null;
-}) {
-  return {
-    isLoading: overrides?.isLoading ?? false,
-    value: {
-      importRuns: [],
-      importSource: overrides?.importSource === undefined ? defaultImportSource : overrides.importSource,
-      inheritedFromParent: false,
-      keepImportItem: overrides?.keepImportItem ?? null,
-      pdfPageDimensions: [],
-      sourceNodeId: 'node-1'
-    }
-  };
-}
 beforeEach(() => {
   appearanceMocks.setDimImagesInDarkMode.mockReset();
   useNodeSourceDetails.mockReturnValue({

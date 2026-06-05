@@ -1,5 +1,6 @@
 import { CalendarClock, FileText, Highlighter, Link2, PanelLeft, TableOfContents, Trash2, Waypoints } from 'lucide-react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
 export type WorkspaceRightPanelId = 'review-queue' | 'outline' | 'highlights' | 'backlinks' | 'performance' | 'dev';
@@ -40,37 +41,42 @@ function InspectorActionButton({
   );
 }
 
-function renderInspectorActions(activeRightPanelId: WorkspaceRightPanelId, isRightSidebarCollapsed: boolean, onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void) {
+function renderInspectorActions(
+  activeRightPanelId: WorkspaceRightPanelId,
+  isRightSidebarCollapsed: boolean,
+  onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void,
+  t: ReturnType<typeof useTranslation>
+) {
   return (
     <>
       <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
         icon={<Waypoints aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Flow panel"
+        label={t('desktop.toolbar.panel.flow')}
         onClick={() => onSelectRightPanel('review-queue')}
       />
       <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'outline'}
         icon={<TableOfContents aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Outline panel"
+        label={t('desktop.toolbar.panel.outline')}
         onClick={() => onSelectRightPanel('outline')}
       />
       <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'highlights'}
         icon={<Highlighter aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Highlights panel"
+        label={t('desktop.toolbar.panel.highlights')}
         onClick={() => onSelectRightPanel('highlights')}
       />
       <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'backlinks'}
         icon={<Link2 aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Backlinks panel"
+        label={t('desktop.toolbar.panel.backlinks')}
         onClick={() => onSelectRightPanel('backlinks')}
       />
       <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'dev'}
         icon={<CalendarClock aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Scheduling panel"
+        label={t('desktop.toolbar.panel.scheduling')}
         onClick={() => onSelectRightPanel('dev')}
       />
     </>
@@ -86,33 +92,34 @@ export function WorkspaceTopToolbar({
   onSelectRightPanel,
   onToggleListVisibility
 }: WorkspaceTopToolbarProps) {
+  const t = useTranslation();
   return (
-    <AppToolbar aria-label="Workspace top toolbar" className="workspace-toolbar-surface min-h-[40px] border-b border-divider bg-bg-subtle px-3">
-      <ToolbarActionGroup ariaLabel="Workspace primary navigation actions">
+    <AppToolbar aria-label={t('desktop.toolbar.workspace')} className="workspace-toolbar-surface min-h-[40px] border-b border-divider bg-bg-subtle px-3">
+      <ToolbarActionGroup ariaLabel={t('desktop.toolbar.primaryNavigation')}>
         <AppIconButton
           className={toolbarButtonClassName}
           icon={<PanelLeft aria-hidden="true" size={16} strokeWidth={1.75} />}
-          label="Toggle topic list"
+          label={t('desktop.toolbar.toggleTopicList')}
           onClick={onToggleListVisibility}
         />
         <AppIconButton
           className={activeToolbarButtonClassName}
           data-active={!isTrashViewOpen}
           icon={<FileText aria-hidden="true" size={16} strokeWidth={1.75} />}
-          label="Open topics view"
+          label={t('desktop.toolbar.openTopicsView')}
           onClick={onOpenNotesView}
         />
         <AppIconButton
           className={activeToolbarButtonClassName}
           data-active={isTrashViewOpen}
           icon={<Trash2 aria-hidden="true" size={16} strokeWidth={1.75} />}
-          label="Open trash view"
+          label={t('desktop.toolbar.openTrashView')}
           onClick={onOpenTrashView}
         />
       </ToolbarActionGroup>
       <div className="flex-1" />
-      <ToolbarActionGroup ariaLabel="Workspace inspector actions">
-        {renderInspectorActions(activeRightPanelId, isRightSidebarCollapsed, onSelectRightPanel)}
+      <ToolbarActionGroup ariaLabel={t('desktop.toolbar.inspector')}>
+        {renderInspectorActions(activeRightPanelId, isRightSidebarCollapsed, onSelectRightPanel, t)}
       </ToolbarActionGroup>
     </AppToolbar>
   );

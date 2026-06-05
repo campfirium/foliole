@@ -1,6 +1,7 @@
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 export interface WorkspaceRightSidebarSplitterProps {
   isCollapsed: boolean;
@@ -19,9 +20,10 @@ export function WorkspaceRightSidebarSplitter({
   onRightSidebarSplitterPointerDown,
   rightSidebarWidth
 }: WorkspaceRightSidebarSplitterProps) {
+  const t = useTranslation();
   return (
     <div
-      aria-label="Resize inspector sidebar"
+      aria-label={t('desktop.workspace.resizeInspectorSidebar')}
       aria-orientation="vertical"
       aria-valuenow={Math.round(rightSidebarWidth)}
       className={cn('group relative z-surface self-stretch bg-transparent max-xl:hidden', isCollapsed && 'pointer-events-none opacity-0')}

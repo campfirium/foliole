@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import type { TranslationKey } from '../shared/localization/translations';
+
 export type CompanionTabAction = 'review' | 'recent' | 'search' | 'more';
 export type CompanionPrimaryTabId = 'browse' | 'learn' | 'search' | 'settings';
 export type CompanionSecondaryDestinationId =
@@ -27,7 +29,7 @@ export type CompanionTabSlotId = CompanionPrimaryTabId | 'shortcut';
 export type CompanionSecondaryDestination = {
   icon: LucideIcon;
   id: CompanionSecondaryDestinationId;
-  label: string;
+  labelKey: TranslationKey;
   parentTab: CompanionPrimaryTabId;
 };
 
@@ -44,15 +46,15 @@ export type CompanionResolvedTab = {
   destinationId?: CompanionSecondaryDestinationId;
   icon: LucideIcon;
   id: CompanionTabSlotId;
-  label: string;
+  labelKey: TranslationKey;
   parentAction: CompanionTabAction;
 };
 
 const PRIMARY_TABS: Record<CompanionPrimaryTabId, Omit<CompanionResolvedTab, 'id'>> = {
-  browse: { action: 'recent', icon: BookOpenText, label: 'Browse', parentAction: 'recent' },
-  learn: { action: 'review', icon: GraduationCap, label: 'Flow', parentAction: 'review' },
-  search: { action: 'search', icon: Search, label: 'Search', parentAction: 'search' },
-  settings: { action: 'more', icon: Settings, label: 'Settings', parentAction: 'more' }
+  browse: { action: 'recent', icon: BookOpenText, labelKey: 'companion.tabs.browse', parentAction: 'recent' },
+  learn: { action: 'review', icon: GraduationCap, labelKey: 'companion.tabs.learn', parentAction: 'review' },
+  search: { action: 'search', icon: Search, labelKey: 'companion.tabs.search', parentAction: 'search' },
+  settings: { action: 'more', icon: Settings, labelKey: 'companion.tabs.settings', parentAction: 'more' }
 };
 
 const PRIMARY_ACTION_BY_TAB_ID: Record<CompanionPrimaryTabId, CompanionTabAction> = {
@@ -63,13 +65,13 @@ const PRIMARY_ACTION_BY_TAB_ID: Record<CompanionPrimaryTabId, CompanionTabAction
 };
 
 export const COMPANION_SECONDARY_DESTINATIONS: CompanionSecondaryDestination[] = [
-  { icon: FolderTree, id: 'directory', label: 'Directory', parentTab: 'browse' },
-  { icon: ListFilter, id: 'onlyReview', label: 'Only Review', parentTab: 'learn' },
-  { icon: Settings, id: 'sync', label: 'Sync', parentTab: 'settings' },
-  { icon: SlidersHorizontal, id: 'tabs', label: 'Tabs', parentTab: 'settings' },
-  { icon: Activity, id: 'syncActivity', label: 'Sync Activity', parentTab: 'settings' },
-  { icon: Unplug, id: 'syncConnection', label: 'Sync Connection', parentTab: 'settings' },
-  { icon: Activity, id: 'syncHandoff', label: 'Handoff reminders', parentTab: 'settings' }
+  { icon: FolderTree, id: 'directory', labelKey: 'companion.tabs.shortcut.directory', parentTab: 'browse' },
+  { icon: ListFilter, id: 'onlyReview', labelKey: 'companion.tabs.shortcut.onlyReview', parentTab: 'learn' },
+  { icon: Settings, id: 'sync', labelKey: 'companion.tabs.shortcut.sync', parentTab: 'settings' },
+  { icon: SlidersHorizontal, id: 'tabs', labelKey: 'companion.tabs.shortcut.tabs', parentTab: 'settings' },
+  { icon: Activity, id: 'syncActivity', labelKey: 'companion.tabs.shortcut.syncActivity', parentTab: 'settings' },
+  { icon: Unplug, id: 'syncConnection', labelKey: 'companion.tabs.shortcut.syncConnection', parentTab: 'settings' },
+  { icon: Activity, id: 'syncHandoff', labelKey: 'companion.tabs.shortcut.syncHandoff', parentTab: 'settings' }
 ];
 
 export const DEFAULT_COMPANION_TAB_CONFIG: CompanionTabConfig = {
@@ -95,7 +97,7 @@ export function resolveCompanionTabs(config: CompanionTabConfig = DEFAULT_COMPAN
         destinationId: destination.id,
         icon: destination.icon,
         id: 'shortcut',
-        label: destination.label,
+        labelKey: destination.labelKey,
         parentAction: PRIMARY_ACTION_BY_TAB_ID[destination.parentTab]
       });
       continue;

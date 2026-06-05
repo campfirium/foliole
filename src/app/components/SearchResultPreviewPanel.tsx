@@ -5,6 +5,7 @@ import type { RefObject } from 'react';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import { AppButton, AppErrorState, AppIconButton, AppLoadingState, appFloatingSurfaceClassName } from '../../shared/ui';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
@@ -111,8 +112,9 @@ function SearchResultPreviewWindow(props: {
   overlayRef: RefObject<HTMLDivElement>;
   result: WorkspaceSearchResult;
 }) {
+  const t = useTranslation();
   return (
-    <div aria-label="Search result preview" className="pointer-events-none fixed inset-0 z-workspace-overlay bg-[var(--app-floating-overlay-bg)]" ref={props.overlayRef} role="dialog">
+    <div aria-label={t('desktop.searchPreview.dialog')} className="pointer-events-none fixed inset-0 z-workspace-overlay bg-[var(--app-floating-overlay-bg)]" ref={props.overlayRef} role="dialog">
       <section className={appFloatingSurfaceClassName('panel', 'pointer-events-auto absolute flex flex-col overflow-hidden')} style={props.frame.panelStyle}>
         <SearchResultPreviewHeader
           frame={props.frame}
@@ -133,6 +135,7 @@ function SearchResultPreviewHeader(props: {
   onOpen: () => void;
   title: string;
 }) {
+  const t = useTranslation();
   return (
     <header
       className="flex cursor-move items-start justify-between gap-3 border-b border-[var(--app-floating-divider-color)] px-4 py-3"
@@ -143,16 +146,16 @@ function SearchResultPreviewHeader(props: {
     >
       <div className="min-w-0">
         <div className="truncate text-sm font-semibold text-foreground">{props.title}</div>
-        <div className="mt-1 text-xs text-foreground/55">Search preview</div>
+        <div className="mt-1 text-xs text-foreground/55">{t('desktop.searchPreview.subtitle')}</div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <AppButton onClick={props.onOpen} size="sm">Open</AppButton>
+        <AppButton onClick={props.onOpen} size="sm">{t('desktop.searchPreview.open')}</AppButton>
         <AppIconButton
           icon={props.frame.isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-          label={props.frame.isFullscreen ? 'Restore preview window' : 'Full screen preview'}
+          label={props.frame.isFullscreen ? t('desktop.searchPreview.restoreWindow') : t('desktop.searchPreview.fullScreen')}
           onClick={props.frame.onToggleFullscreen}
         />
-        <AppIconButton icon={<X className="size-4" />} label="Close preview" onClick={props.onClose} />
+        <AppIconButton icon={<X className="size-4" />} label={t('desktop.searchPreview.close')} onClick={props.onClose} />
       </div>
     </header>
   );
@@ -178,13 +181,14 @@ function SearchResultPreviewBody(props: {
   isLoading: boolean;
   result: WorkspaceSearchResult;
 }) {
+  const t = useTranslation();
   return (
     <div className="min-h-0 flex-1 bg-canvas">
       {props.isLoading ? (
         <div className="flex h-full items-center justify-center px-6"><AppLoadingState /></div>
       ) : props.error ? (
         <div className="flex h-full items-center justify-center px-6">
-          <AppErrorState title="Preview unavailable" description={props.error} />
+          <AppErrorState title={t('desktop.searchPreview.unavailable')} description={props.error} />
         </div>
       ) : (
         <MarkdownEditor

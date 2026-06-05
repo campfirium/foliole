@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({
@@ -14,6 +14,7 @@ vi.mock('../../shared/platform/externalLibraryBrowseRepository', () => ({
   loadExternalLibraryFolders: vi.fn()
 }));
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { loadExternalLibraryFolders } from '../../shared/platform/externalLibraryBrowseRepository';
 import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
@@ -41,10 +42,11 @@ function createExternalResult(): WorkspaceSearchResult {
 }
 
 function renderExternalSearchPalette(onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void) {
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue([createExternalResult()]));
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   vi.mocked(loadExternalLibraryFolders).mockResolvedValue([]);
-  render(
+  renderWithLocalization(
     <SearchPalette
       isOpen
       nodeOrder={[]}

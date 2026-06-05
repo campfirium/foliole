@@ -1,5 +1,6 @@
 import { memo } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 import { AppPanel } from '../../shared/ui';
 import {
@@ -57,6 +58,7 @@ function areWorkspaceRightSidebarPropsEqual(previous: WorkspaceRightSidebarProps
 }
 
 export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
+  const t = useTranslation();
   recordComponentRender('rightSidebar');
   useWorkspaceRenderDiagnostic('workspace-right-sidebar-render', {
     activeNodeId: props.activeNodeId,
@@ -71,7 +73,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
   };
   return (
     <AppPanel
-      aria-label="Inspector"
+      aria-label={t('desktop.workspace.inspector')}
       as="aside"
       bodyClassName="app-scrollbar overflow-y-auto px-3 py-3"
       className="workspace-region-main-sidebar hidden min-h-0 h-full flex-col overflow-hidden text-foreground xl:flex"

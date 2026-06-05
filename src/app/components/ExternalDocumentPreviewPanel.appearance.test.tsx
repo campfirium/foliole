@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import React from 'react';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ExternalDocumentPreviewPanel } from './ExternalDocumentPreviewPanel';
 
@@ -67,7 +69,7 @@ it('remounts the floating external preview editor when editor appearance changes
     request: { absolutePath: '/library/topic.md', folderId: 'folder-1' }
   };
 
-  const { rerender } = render(<ExternalDocumentPreviewPanel {...props} />);
+  const { rerender } = renderWithLocalization(<ExternalDocumentPreviewPanel {...props} />);
   await screen.findByText('# Topic');
   expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
 

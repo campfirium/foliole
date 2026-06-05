@@ -8,20 +8,20 @@ export type ImportInventoryCatalogState = {
 };
 
 export function createImportInventoryErrorState(input: {
-  catalogName: string;
   issue: Extract<ImportInventoryLoadIssue, { kind: 'failed' }>;
   onRetry: () => void;
+  title: string;
 }) {
   return {
     description: input.issue.message,
     onRetry: input.onRetry,
-    title: `Failed to load ${input.catalogName}`
+    title: input.title
   };
 }
 
-export function createImportInventoryUnavailableState(catalogName: string): ImportInventoryCatalogState {
+export function createImportInventoryUnavailableState(input: { description: string; title: string }): ImportInventoryCatalogState {
   return {
-    description: `Open Foliole in the desktop app to load ${catalogName}.`,
-    title: 'Available in the desktop app'
+    description: input.description,
+    title: input.title
   };
 }

@@ -10,8 +10,13 @@ import {
   getFolderListSortOrderOptions
 } from '../features/nodes/model/folderListSortOptions';
 import { definedProps } from '../shared/lib/definedProps';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
+import {
+  COMPANION_SORT_LABEL_KEYS,
+  translateCompanionSortOrderLabel
+} from './companionBrowseSortLabels';
 
 function TopActionButton(props: {
   icon: LucideIcon;
@@ -64,13 +69,14 @@ function BrowseMenuHeader(props: {
   onBack(): void;
   view: BrowseMenuView;
 }) {
+  const t = useTranslation();
   return props.view === 'sort' ? (
         <button
           className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle"
           onClick={props.onBack}
           type="button"
         >
-          Back
+          {t('companion.back')}
         </button>
       ) : null;
 }
@@ -82,18 +88,19 @@ function BrowseMainMenu(props: {
   syncDisabled?: boolean;
   syncStatus?: string;
 }) {
+  const t = useTranslation();
   return (
     <>
       <MenuRow
-        label="Sync"
+        label={t('companion.settings.sync.title')}
         {...definedProps({
           disabled: props.syncDisabled,
           onSelect: props.onSync,
           status: props.syncStatus
         })}
       />
-      <MenuRow label="Sort" onSelect={props.onOpenSort} status={props.activeSortLabel} trailingIcon={ChevronRight} />
-      <MenuRow disabled label="Theme" status="Not available yet" />
+      <MenuRow label={t('companion.browse.sort')} onSelect={props.onOpenSort} status={props.activeSortLabel} trailingIcon={ChevronRight} />
+      <MenuRow disabled label={t('companion.browse.theme')} status={t('companion.browse.themeUnavailable')} />
     </>
   );
 }
@@ -104,24 +111,25 @@ function BrowseSortMenu(props: {
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
+  const t = useTranslation();
   const orderOptions = getFolderListSortOrderOptions();
   return (
     <>
-      <div className="px-1 pt-4 pb-1 text-xs font-medium text-companion-text-tertiary">Order by</div>
+      <div className="px-1 pt-4 pb-1 text-xs font-medium text-companion-text-tertiary">{t('companion.browse.orderBy')}</div>
       {orderOptions.map((option) => (
         <MenuRow
           active={props.sortDirection === option.value}
           key={option.value}
-          label={option.label}
+          label={translateCompanionSortOrderLabel(option.label, t)}
           onSelect={() => props.onChangeSortDirection(option.value)}
         />
       ))}
-      <div className="px-1 pt-4 pb-1 text-xs font-medium text-companion-text-tertiary">Sort by</div>
+      <div className="px-1 pt-4 pb-1 text-xs font-medium text-companion-text-tertiary">{t('companion.browse.sortBy')}</div>
       {FOLDER_LIST_SORT_OPTIONS.map((option) => (
         <MenuRow
           active={props.sortKey === option.key}
           key={option.key}
-          label={option.label}
+          label={t(COMPANION_SORT_LABEL_KEYS[option.key])}
           onSelect={() => props.onChangeSortKey(option.key)}
         />
       ))}
@@ -140,8 +148,9 @@ function CompanionBrowseMenuSheet(props: {
   syncDisabled?: boolean;
   syncStatus?: string;
 }) {
+  const t = useTranslation();
   const [view, setView] = useState<BrowseMenuView>('menu');
-  const activeSortLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Last opened';
+  const activeSortLabel = t(COMPANION_SORT_LABEL_KEYS[props.sortKey]);
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setView('menu');
@@ -154,7 +163,7 @@ function CompanionBrowseMenuSheet(props: {
       leadingAction={<BrowseMenuHeader onBack={() => setView('menu')} view={view} />}
       onOpenChange={handleOpenChange}
       open={props.open}
-      title={view === 'sort' ? 'Sort' : 'Browse menu'}
+      title={view === 'sort' ? t('companion.browse.sort') : t('companion.browse.menu')}
     >
       <div className="border-t border-companion-divider">
         {view === 'menu' ? (
@@ -190,12 +199,13 @@ export function CompanionBrowseTopActions(props: {
   syncDisabled?: boolean;
   syncStatus?: string;
 }) {
+  const t = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <div className="flex items-center gap-1">
-      <TopActionButton icon={ClipboardPlus} label="Capture" onClick={props.onOpenCapture} />
-      <TopActionButton icon={MoreHorizontal} label="More" onClick={() => setIsMenuOpen(true)} />
+      <TopActionButton icon={ClipboardPlus} label={t('companion.capture.title')} onClick={props.onOpenCapture} />
+      <TopActionButton icon={MoreHorizontal} label={t('companion.browse.more')} onClick={() => setIsMenuOpen(true)} />
       <CompanionBrowseMenuSheet
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}

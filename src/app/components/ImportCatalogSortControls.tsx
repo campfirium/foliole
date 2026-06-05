@@ -1,3 +1,4 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppDropdownMenu,
   AppDropdownMenuCheckItem,
@@ -21,18 +22,19 @@ export function ImportCatalogSortControls(props: {
   sortDirection: 'asc' | 'desc';
   sortKey: string;
 }) {
+  const t = useTranslation();
   const activeOption = props.options.find((option) => option.key === props.sortKey) ?? props.options[0];
-  const activeLabel = activeOption?.label ?? 'Date imported';
+  const activeLabel = activeOption?.label ?? t('desktop.importCatalog.sort.dateImported');
   const orderOptions = [
-    { label: activeOption?.descLabel ?? 'Recent -> Older', value: 'desc' as const },
-    { label: activeOption?.ascLabel ?? 'Older -> Recent', value: 'asc' as const }
+    { label: activeOption?.descLabel ?? t('desktop.importCatalog.sort.recentOlder'), value: 'desc' as const },
+    { label: activeOption?.ascLabel ?? t('desktop.importCatalog.sort.olderRecent'), value: 'asc' as const }
   ];
 
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
         <button
-          aria-label={`Sort imports by ${activeLabel}`}
+          aria-label={t('desktop.importCatalog.sort.aria', { label: activeLabel })}
           className="inline-flex h-8 items-center gap-2 bg-transparent px-0 text-sm font-medium text-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
           type="button"
         >
@@ -61,9 +63,10 @@ function ImportCatalogSortMenu(props: {
   sortDirection: 'asc' | 'desc';
   sortKey: string;
 }) {
+  const t = useTranslation();
   return (
     <AppDropdownMenuContent align="end" className="z-dropdown min-w-[240px]" sideOffset={8}>
-      <AppDropdownMenuLabel>Sort by</AppDropdownMenuLabel>
+      <AppDropdownMenuLabel>{t('desktop.importCatalog.sort.by')}</AppDropdownMenuLabel>
       {props.options.map((option) => (
         <AppDropdownMenuCheckItem
           checked={props.sortKey === option.key}
@@ -74,7 +77,7 @@ function ImportCatalogSortMenu(props: {
         </AppDropdownMenuCheckItem>
       ))}
       <AppDropdownMenuSeparator />
-      <AppDropdownMenuLabel>Order</AppDropdownMenuLabel>
+      <AppDropdownMenuLabel>{t('desktop.importCatalog.sort.order')}</AppDropdownMenuLabel>
       {props.orderOptions.map((option) => (
         <AppDropdownMenuCheckItem
           checked={props.sortDirection === option.value}

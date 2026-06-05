@@ -7,6 +7,7 @@ import {
 import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
 import type { AppCommandId } from '../../shared/commands/ids';
 import { formatAriaKeyShortcuts } from '../../shared/commands/shortcuts';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppSelectionDropdownMenu,
   AppSelectionDropdownMenuItem,
@@ -94,6 +95,7 @@ export function WorkspaceRailContextMenu({
   items: WorkspaceRailItemConfig[];
   top: number;
 }) {
+  const t = useTranslation();
   const switchableItems = items.filter((item) => item.source === 'system' && !item.locked);
   return (
     <AppSelectionDropdownMenu left={left} onClose={onClose} top={top}>
@@ -112,7 +114,7 @@ export function WorkspaceRailContextMenu({
       ))}
       <AppSelectionDropdownMenuItem className="gap-3" onClick={onCustomize}>
         <Settings aria-hidden="true" size={16} strokeWidth={1.75} />
-        <span>Customize action bar</span>
+        <span>{t('desktop.rail.customizeActionBar')}</span>
       </AppSelectionDropdownMenuItem>
     </AppSelectionDropdownMenu>
   );

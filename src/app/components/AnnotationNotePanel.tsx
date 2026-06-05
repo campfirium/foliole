@@ -1,4 +1,5 @@
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton, appFloatingSurfaceClassName, appInputFocusVisibleClassName } from '../../shared/ui';
 
 export function AnnotationNotePanel(props: {
@@ -9,6 +10,7 @@ export function AnnotationNotePanel(props: {
   onSave: () => void;
   top: number;
 }) {
+  const t = useTranslation();
   return (
     <div
       className={cn(appFloatingSurfaceClassName('popover'), 'fixed z-floating w-60 rounded-md p-2')}
@@ -22,12 +24,12 @@ export function AnnotationNotePanel(props: {
           appInputFocusVisibleClassName
         )}
         onChange={(event) => props.onChange(event.target.value)}
-        placeholder="Add a comment..."
+        placeholder={t('desktop.annotation.comment.placeholder')}
         value={props.draft}
       />
       <div className="mt-2 flex justify-end gap-2">
-        <AppButton onClick={props.onCancel} size="sm" variant="ghost">Cancel</AppButton>
-        <AppButton disabled={!props.draft.trim()} onClick={props.onSave} size="sm">Save</AppButton>
+        <AppButton onClick={props.onCancel} size="sm" variant="ghost">{t('desktop.annotation.cancel')}</AppButton>
+        <AppButton disabled={!props.draft.trim()} onClick={props.onSave} size="sm">{t('desktop.annotation.save')}</AppButton>
       </div>
     </div>
   );

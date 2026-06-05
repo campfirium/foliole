@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
 
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import {
   getCachedRuntimeRemovedSources,
   loadRuntimeRemovedSources,
@@ -22,7 +23,7 @@ import {
   type WorkspaceContentSortState
 } from './workspaceContentSort';
 
-function useRemovedSources() {
+function useRemovedSources(t: Translate) {
   const snapshot = useSyncExternalStore(
     subscribeRuntimeRemovedSources,
     getCachedRuntimeRemovedSources,
@@ -35,15 +36,15 @@ function useRemovedSources() {
     try {
       await refreshRuntimeRemovedSources();
     } catch {
-      setErrorMessage('Removed imports could not be loaded.');
+      setErrorMessage(t('desktop.removed.loadFailed'));
     }
   }
 
   useEffect(() => {
     if (!snapshot.loadedAt) {
-      void loadRuntimeRemovedSources().catch(() => setErrorMessage('Removed imports could not be loaded.'));
+      void loadRuntimeRemovedSources().catch(() => setErrorMessage(t('desktop.removed.loadFailed')));
     }
-  }, []);
+  }, [snapshot.loadedAt, t]);
 
   return { entries: snapshot.entries, errorMessage, hasLoaded: Boolean(snapshot.loadedAt), loadEntries };
 }
@@ -105,6 +106,7 @@ function getMenuPosition(event: ReactMouseEvent<HTMLElement>) {
 function useRemovedSourceContextMenu(args: {
   loadEntries: () => Promise<void>;
   onSelectNode?: (nodeId: string) => void;
+  t: Translate;
 }) {
   const [contextMenu, setContextMenu] = useState<{ entry: RuntimeRemovedSourceEntry; left: number; top: number } | null>(null);
 
@@ -112,7 +114,7 @@ function useRemovedSourceContextMenu(args: {
     setContextMenu(null);
     void restoreRuntimeRemovedSource(entry).then((result) => {
       if (!result || result.status === 'failed') {
-        showAppRuntimeNotice(result?.detail?.trim() || 'Re-import failed.');
+        showAppRuntimeNotice(result?.detail?.trim() || args.t('desktop.removed.importFailed'));
         return;
       }
       setSelectedRemovedSource(null);
@@ -132,13 +134,14 @@ function renderRemovedSourcesBody(args: {
   onSelect: (entry: RuntimeRemovedSourceEntry) => void;
   onToggleCollapse: (nodeId: string) => void;
   selectedId: string | null;
+  t: Translate;
   tree: ReturnType<typeof buildRemovedSourcesTree>;
   visibleRows: ReturnType<typeof getVisibleRemovedSourceRows>;
 }) {
   if (args.errorMessage) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-6">
-        <AppEmptyState description="Refresh Removed to try loading the source list again." title={args.errorMessage} />
+        <AppEmptyState description={args.t('desktop.removed.loadRetry')} title={args.errorMessage} />
       </div>
     );
   }
@@ -161,17 +164,18 @@ function renderRemovedSourcesBody(args: {
 }
 
 export function RemovedSourcesPanel(props: { onSelectNode?: (nodeId: string) => void }) {
-  const { entries, errorMessage, hasLoaded, loadEntries } = useRemovedSources();
+  const t = useTranslation();
+  const { entries, errorMessage, hasLoaded, loadEntries } = useRemovedSources(t);
   const removedSort = useRemovedSort();
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
-  const contextMenu = useRemovedSourceContextMenu({ loadEntries, ...definedProps({ onSelectNode: props.onSelectNode }) });
+  const contextMenu = useRemovedSourceContextMenu({ loadEntries, t, ...definedProps({ onSelectNode: props.onSelectNode }) });
   const selection = useSelectedRemovedEntry(entries);
   const tree = useMemo(() => buildRemovedSourcesTree(entries, removedSort.sort), [entries, removedSort.sort]);
   const visibleRows = useMemo(() => getVisibleRemovedSourceRows(tree.rows, collapsedNodeIds), [collapsedNodeIds, tree.rows]);
   const hasCollapsedNodes = tree.collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId));
 
   return (
-    <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
+    <aside aria-label={t('desktop.removed.region')} className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
       <RemovedSourcesToolbar
         hasCollapsibleNodes={tree.collapsibleNodeIds.length > 0}
         hasCollapsedNodes={hasCollapsedNodes}
@@ -193,6 +197,7 @@ export function RemovedSourcesPanel(props: { onSelectNode?: (nodeId: string) => 
         onSelect: (entry) => selection.setSelectedId(entry.id),
         onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, setCollapsedNodeIds),
         selectedId: selection.selectedEntry?.id ?? null,
+        t,
         tree,
         visibleRows
       })}

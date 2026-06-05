@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 import type { WorkspaceListNode } from '../model/workspaceListNode';
 
 import { NodeReviewSchedulingDialog } from './NodeReviewSchedulingDialog';
@@ -73,7 +74,7 @@ it('commits priority changes when the dialog closes', () => {
   const onPriorityChange = vi.fn();
   const onShortTermChange = vi.fn();
 
-  render(
+  renderWithLocalization(
     <NodeReviewSchedulingDialog
       defaultPriority={5}
       node={node}

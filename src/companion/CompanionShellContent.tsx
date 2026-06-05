@@ -4,6 +4,7 @@ import {
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
@@ -74,11 +75,12 @@ function renderReadableArticle(props: {
 }
 
 function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync }) {
+  const t = useTranslation();
   if (props.surface.browsedFolder) {
     return (
       <NodeBrowseList
         currentNodeId={props.surface.selectedBrowseNodeId}
-        emptyLabel="This folder does not have any synced topics or folders yet."
+        emptyLabel={t('companion.directory.emptyShell')}
         items={props.surface.browsedFolder.items}
         onSelectNode={props.surface.handleSelectBrowseNode}
       />

@@ -1,6 +1,7 @@
 import { Pipette } from 'lucide-react';
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { settingsButtonClassName, settingsColorSwatchClassName } from '../../../../shared/ui';
 import { formatWorkspaceSurfaceColorCss, formatWorkspaceSurfaceColorHex, parseWorkspaceSurfaceColor, type WorkspaceSurfaceColorValue, workspaceSurfaceColorFromHsv, workspaceSurfaceColorToHsv } from '../../model/workspaceSurfaceColor';
 
@@ -48,11 +49,12 @@ function WorkspaceSurfaceColorArea(props: {
   color: WorkspaceSurfaceColorValue;
   onColorChange: (color: WorkspaceSurfaceColorValue) => void;
 }) {
+  const t = useTranslation();
   const hsv = workspaceSurfaceColorToHsv(props.color);
   const hueColor = workspaceSurfaceColorFromHsv({ a: 1, h: hsv.h, s: 100, v: 100 });
   return (
     <div
-      aria-label="Workspace surface color area"
+      aria-label={t('settings.appearance.surface.colorPicker.area')}
       className="relative h-48"
       onPointerDown={(event) => {
         trackSquare(event, (next) => {
@@ -75,16 +77,17 @@ function WorkspaceSurfaceColorSliderSection(props: {
   onAlphaChange: (alphaPercent: number) => void;
   onColorChange: (color: WorkspaceSurfaceColorValue) => void;
 }) {
+  const t = useTranslation();
   const hsv = workspaceSurfaceColorToHsv(props.color);
   return (
     <div className="space-y-3 p-3">
       <div className="flex items-center gap-3">
-        <button aria-label="Open native workspace surface color picker" className={settingsButtonClassName('size-10 px-0 text-foreground/78')} onClick={() => props.nativeInputRef.current?.click()} type="button">
+        <button aria-label={t('settings.appearance.surface.colorPicker.nativeOpen')} className={settingsButtonClassName('size-10 px-0 text-foreground/78')} onClick={() => props.nativeInputRef.current?.click()} type="button">
           <Pipette className="h-5 w-5" strokeWidth={2.1} />
         </button>
         <div className={settingsColorSwatchClassName('size-12 rounded-full')} style={{ backgroundColor: formatWorkspaceSurfaceColorCss(props.color) }} />
         <div
-          aria-label="Workspace surface hue slider"
+          aria-label={t('settings.appearance.surface.colorPicker.hueSlider')}
           className="relative h-6 flex-1 rounded-md"
           onPointerDown={(event) => {
             trackSlider(event, (percent) => {
@@ -98,7 +101,7 @@ function WorkspaceSurfaceColorSliderSection(props: {
         </div>
       </div>
       <div
-        aria-label="Workspace surface alpha slider"
+        aria-label={t('settings.appearance.surface.colorPicker.alphaSlider')}
         className="relative h-5 rounded-md bg-[linear-gradient(45deg,rgb(var(--color-foreground)_/_0.08)_25%,transparent_25%,transparent_50%,rgb(var(--color-foreground)_/_0.08)_50%,rgb(var(--color-foreground)_/_0.08)_75%,transparent_75%,transparent_100%)] bg-[length:16px_16px]"
         onPointerDown={(event) => trackSlider(event, (percent) => props.onAlphaChange(Math.round(percent)))}
         role="presentation"
@@ -115,6 +118,7 @@ export function WorkspaceSurfaceColorPickerPanel(props: {
   onAlphaChange: (alphaPercent: number) => void;
   onColorChange: (color: WorkspaceSurfaceColorValue) => void;
 }) {
+  const t = useTranslation();
   const nativeInputRef = useRef<HTMLInputElement | null>(null);
 
   return (
@@ -122,7 +126,7 @@ export function WorkspaceSurfaceColorPickerPanel(props: {
       <WorkspaceSurfaceColorArea color={props.color} onColorChange={props.onColorChange} />
       <WorkspaceSurfaceColorSliderSection color={props.color} nativeInputRef={nativeInputRef} onAlphaChange={props.onAlphaChange} onColorChange={props.onColorChange} />
       <input
-        aria-label="Workspace surface native color picker"
+        aria-label={t('settings.appearance.surface.colorPicker.native')}
         className="sr-only"
         onChange={(event) => {
           const parsed = parseWorkspaceSurfaceColor(event.target.value);

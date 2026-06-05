@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 
@@ -42,7 +44,7 @@ function createCard() {
 
 describe('CompanionReviewCard', () => {
   it('renders only the reading body for review content', () => {
-    render(
+    renderWithLocalization(
       <CompanionReviewCard
         breadcrumbItems={[
           { id: 'folder-1', label: 'Projects', targetNodeId: 'folder-1' },
@@ -64,7 +66,7 @@ describe('CompanionReviewCard', () => {
   });
 
   it('renders the answer section only when reveal content exists', () => {
-    render(<CompanionReviewAnswer card={createCard()} />);
+    renderWithLocalization(<CompanionReviewAnswer card={createCard()} />);
 
     expect(screen.queryByText('Answer')).not.toBeInTheDocument();
     expect(screen.getByRole('separator')).toHaveClass('mx-6');

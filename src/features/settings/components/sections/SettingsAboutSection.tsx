@@ -1,41 +1,34 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { copyDiagnosticReport } from '../../../../shared/platform/diagnosticBundle';
-import {
-  isSearchEnhancementEnabled,
-  updateSearchEnhancementEnabled
-} from '../../../../shared/platform/searchEnhancementSettings';
-import {
-  loadSearchIndexRebuildStatus,
-  onSearchIndexRebuildStatus,
-  type SearchIndexRebuildStatus
-} from '../../../../shared/platform/searchIndexRebuildStatus';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
-  settingsButtonClassName,
-  settingsSwitchClassName,
-  settingsSwitchKnobClassName
+  settingsButtonClassName
 } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { ABOUT_SETTINGS_SEARCH_ROWS } from '../../model/settingsSearchRowCatalog';
 
-import { SettingsSupportSection } from './SettingsSupportSection';
+import {
+  SettingsAppSection,
+  SettingsCommunitySection
+} from './SettingsSupportSection';
 
 const ABOUT_ROW = {
-  diagnosticBundle: ABOUT_SETTINGS_SEARCH_ROWS[1]!,
-  searchEnhancement: ABOUT_SETTINGS_SEARCH_ROWS[2]!
+  diagnosticBundle: ABOUT_SETTINGS_SEARCH_ROWS[1]!
 };
 
 function DiagnosticExportRow() {
+  const t = useTranslation();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const description = (
     <>
-      <span className="block">Copy a small support report with recent errors and crash status.</span>
+      <span className="block">{t('settings.about.diagnostic.description')}</span>
       {feedback ? <span className="mt-1 block text-foreground/70">{feedback}</span> : null}
       {error ? <span className="mt-1 block text-error">{error}</span> : null}
     </>
@@ -47,13 +40,13 @@ function DiagnosticExportRow() {
     try {
       const result = await copyDiagnosticReport();
       if (result.status === 'unavailable') {
-        setFeedback('Available in the desktop app.');
+        setFeedback(t('settings.about.diagnostic.desktopOnly'));
         return;
       }
       await navigator.clipboard.writeText(result.reportText);
-      setFeedback('Diagnostic report copied. It does not include your library content.');
+      setFeedback(t('settings.about.diagnostic.copied'));
     } catch {
-      setError('Diagnostic report could not be copied.');
+      setError(t('settings.about.diagnostic.copyFailed'));
     } finally {
       setIsExporting(false);
     }
@@ -67,13 +60,13 @@ function DiagnosticExportRow() {
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <button
-          aria-label="Copy diagnostic report"
+          aria-label={t('settings.about.diagnostic.copy')}
           className={settingsButtonClassName()}
           disabled={isExporting}
           onClick={() => void handleExport()}
           type="button"
         >
-          {isExporting ? 'Copying...' : 'Copy report'}
+          {isExporting ? t('settings.about.diagnostic.copying') : t('settings.about.diagnostic.copyButton')}
         </button>
       </SettingsControlSlot>
     </SettingsRow>
@@ -81,97 +74,16 @@ function DiagnosticExportRow() {
 }
 
 function ApplicationInfo(props: { onRunSupportCommand?: ((commandId: string) => void) | undefined }) {
+  const t = useTranslation();
   return (
     <>
-      <SettingsSupportSection onRunSupportCommand={props.onRunSupportCommand} />
-      <SettingsSection ariaLabel="Support tools settings section" title="Support tools">
+      <SettingsAppSection onRunSupportCommand={props.onRunSupportCommand} />
+      <SettingsSection ariaLabel={t('settings.about.support.aria')} title={t('settings.about.support.section')}>
         <DiagnosticExportRow />
       </SettingsSection>
-      <SettingsSection ariaLabel="General search settings section" title="Search">
-        <SearchEnhancementRow />
-      </SettingsSection>
+      <SettingsCommunitySection onRunSupportCommand={props.onRunSupportCommand} />
     </>
   );
-}
-
-function SearchEnhancementRow() {
-  const [enabled, setEnabled] = useState(isSearchEnhancementEnabled);
-  const [status, setStatus] = useState<SearchIndexRebuildStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    void loadSearchIndexRebuildStatus().then((nextStatus) => {
-      if (active) setStatus(nextStatus);
-    });
-    const unsubscribe = onSearchIndexRebuildStatus((nextStatus) => {
-      setStatus(nextStatus);
-      setError(null);
-    });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
-
-  const updateEnabled = async (nextEnabled: boolean) => {
-    setIsUpdating(true);
-    setError(null);
-    try {
-      const nextStatus = await updateSearchEnhancementEnabled(nextEnabled);
-      setEnabled(nextEnabled);
-      setStatus(nextStatus);
-    } catch {
-      setEnabled(isSearchEnhancementEnabled());
-      setError(nextEnabled ? 'Could not enable enhanced search.' : 'Could not turn off enhanced search.');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  return (
-    <SettingsRow
-      description={<SearchEnhancementDescription statusCopy={getSearchEnhancementStatusCopy(status, error)} />}
-      {...settingsSearchRowProps(ABOUT_ROW.searchEnhancement)}
-      title={ABOUT_ROW.searchEnhancement.title}
-    >
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <button
-          aria-checked={enabled}
-          aria-label="Search enhancement"
-          className={settingsSwitchClassName(enabled)}
-          disabled={isUpdating}
-          onClick={() => void updateEnabled(!enabled)}
-          role="switch"
-          type="button"
-        >
-          <span aria-hidden="true" className={settingsSwitchKnobClassName(enabled)} />
-        </button>
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
-
-function SearchEnhancementDescription(props: { statusCopy: string | null }) {
-  return (
-    <>
-      <span className="block">
-        Improves search for Chinese, Japanese, Korean, and other languages that are not separated by spaces. Uses more search data.
-      </span>
-      {props.statusCopy ? <span className="mt-1 block text-foreground/70">{props.statusCopy}</span> : null}
-    </>
-  );
-}
-
-function getSearchEnhancementStatusCopy(status: SearchIndexRebuildStatus | null, error: string | null) {
-  if (error) return error;
-  if (!status) return null;
-  if (status.status === 'rebuilding') return 'Preparing search...';
-  if (status.status === 'failed') return status.strategy === 'cjk-trigram'
-    ? 'Could not enable enhanced search.'
-    : 'Could not turn off enhanced search.';
-  return status.strategy === 'cjk-trigram' ? 'Enhanced search is ready.' : 'Search is ready.';
 }
 
 export function SettingsAboutSection(props: { onRunSupportCommand?: ((commandId: string) => void) | undefined }) {

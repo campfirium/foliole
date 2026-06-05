@@ -1,3 +1,5 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
+
 interface DocumentPriorityQuickSetHintProps {
   isActive: boolean;
   onPriorityChange?: (priority: number) => void;
@@ -12,6 +14,7 @@ function normalizePriority(value: number) {
 }
 
 function PriorityQuickSetSlider(props: Pick<DocumentPriorityQuickSetHintProps, 'onPriorityChange' | 'priority'>) {
+  const t = useTranslation();
   const priority = normalizePriority(props.priority);
   const progress = `${(priority / 9) * 100}%`;
   return (
@@ -25,7 +28,7 @@ function PriorityQuickSetSlider(props: Pick<DocumentPriorityQuickSetHintProps, '
           style={{ left: progress }}
         />
         <input
-          aria-label="Priority"
+          aria-label={t('desktop.priorityQuickSet.slider')}
           className="pointer-events-auto absolute inset-0 h-6 w-full cursor-pointer opacity-0"
           max={9}
           min={0}
@@ -40,6 +43,7 @@ function PriorityQuickSetSlider(props: Pick<DocumentPriorityQuickSetHintProps, '
 }
 
 export function DocumentPriorityQuickSetHint({ isActive, onPriorityChange, priority }: DocumentPriorityQuickSetHintProps) {
+  const t = useTranslation();
   if (!isActive) {
     return null;
   }
@@ -47,7 +51,7 @@ export function DocumentPriorityQuickSetHint({ isActive, onPriorityChange, prior
   return (
     <div className="pointer-events-none fixed inset-0 z-command-palette flex items-center justify-center px-4" role="presentation">
       <section
-        aria-label="Set priority"
+        aria-label={t('desktop.priorityQuickSet.dialog')}
         aria-live="polite"
         className="grid w-full max-w-sm gap-5 rounded-lg border border-[var(--app-floating-border-color)] bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_82%,rgb(var(--color-background)))] px-5 py-4 text-foreground/72 shadow-popover"
         role="dialog"
@@ -55,7 +59,7 @@ export function DocumentPriorityQuickSetHint({ isActive, onPriorityChange, prior
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/50">
             <span className="size-2 rounded-full bg-foreground/32" aria-hidden="true" />
-            Priority
+            {t('desktop.priorityQuickSet.title')}
           </div>
           <div className="flex items-baseline gap-2 text-sm font-semibold tabular-nums">
             <span className="text-foreground/82">{normalizePriority(priority)}</span>
@@ -68,7 +72,7 @@ export function DocumentPriorityQuickSetHint({ isActive, onPriorityChange, prior
 
         <div className="flex items-center gap-2 text-xs text-foreground/62">
           <kbd className="rounded-md border border-border px-2 py-0.5 text-xs font-semibold">0-9</kbd>
-          <span>apply instantly</span>
+          <span>{t('desktop.priorityQuickSet.keyboardHint')}</span>
         </div>
       </section>
     </div>

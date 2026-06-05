@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
@@ -106,7 +107,7 @@ async function renderShellWithSurface(surface: Record<string, unknown>) {
   mockWorkspaceSync();
   useCompanionArticleSurface.mockReturnValue(surface);
   const { CompanionShell } = await import('./CompanionShell');
-  render(
+  renderWithLocalization(
     <CompanionShell
       bootstrapState={{
         booted_at: '2026-04-22T09:05:00.000Z',

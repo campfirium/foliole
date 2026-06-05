@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type RefObject } from 'react';
 
-import type { SettingsCategoryId } from '../model/settingsPanelOptions';
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import { getSettingsCategories, type SettingsCategoryId } from '../model/settingsPanelOptions';
 import {
   querySettingsSearch,
   type SettingsSearchResult
 } from '../model/settingsSearch';
-import { SETTINGS_SEARCH_ROWS } from '../model/settingsSearchRowCatalog';
+import { createSettingsSearchRows } from '../model/settingsSearchRowCatalog';
 
 const SETTINGS_SEARCH_HIGHLIGHT_CLASSES = [
   'bg-[rgb(var(--app-accent-color-rgb)_/_0.12)]',
@@ -15,10 +16,13 @@ const SETTINGS_SEARCH_HIGHLIGHT_CLASSES = [
 ];
 
 export function useSettingsSearchState(setActiveCategory: (category: SettingsCategoryId) => void) {
+  const t = useTranslation();
   const [query, setQuery] = useState('');
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const [targetRowId, setTargetRowId] = useState<string | null>(null);
-  const results = useMemo(() => querySettingsSearch(SETTINGS_SEARCH_ROWS, query), [query]);
+  const categories = useMemo(() => getSettingsCategories(t), [t]);
+  const rows = useMemo(() => createSettingsSearchRows(t), [t]);
+  const results = useMemo(() => querySettingsSearch(categories, rows, query), [categories, query, rows]);
 
   useEffect(() => setActiveResultIndex(0), [query]);
 

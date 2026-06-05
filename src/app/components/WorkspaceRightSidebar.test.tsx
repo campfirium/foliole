@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
 
@@ -63,7 +64,7 @@ it('opens pdf highlight parent through unified node selection when parent is not
     title: 'Highlight'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebar
       activeNodeId="node-root"
       activePanelId="highlights"
@@ -116,7 +117,7 @@ it('opens parent node with text highlight focus when highlight parent is not act
     title: 'Highlight'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebar
       activeNodeId="node-root"
       activePanelId="highlights"
@@ -164,7 +165,7 @@ it('routes current-parent pdf highlights through unified node selection without 
     title: 'Highlight'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebar
       activeNodeId="node-parent"
       activePanelId="highlights"
@@ -211,7 +212,7 @@ it('routes current-parent text highlights through unified node selection without
     title: 'Highlight'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebar
       activeNodeId="node-parent"
       activePanelId="highlights"
@@ -249,7 +250,7 @@ it('renders the outline panel from active topic headings', () => {
     title: 'Topic'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebar
       activeNodeId="node-topic"
       activePanelId="outline"

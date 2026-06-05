@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
@@ -29,6 +30,7 @@ interface SearchPaletteProps {
 }
 
 export function SearchPalette(props: SearchPaletteProps) {
+  const t = useTranslation();
   const focusTrap = useFloatingDialogFocusTrap(props.isOpen);
   useFloatingPaletteEscape(props.isOpen, props.onClose);
   const [query, setQuery] = useState('');
@@ -51,7 +53,7 @@ export function SearchPalette(props: SearchPaletteProps) {
 
   return (
     <div
-      aria-label="Workspace search"
+      aria-label={t('desktop.search.dialog')}
       aria-modal="true"
       className={appFloatingOverlayClassName()}
       onClick={props.onClose}
@@ -64,12 +66,12 @@ export function SearchPalette(props: SearchPaletteProps) {
         ref={focusTrap.containerRef}
       >
         <FloatingPaletteInput
-          inputLabel="Search workspace"
+          inputLabel={t('desktop.search.input')}
           onClose={props.onClose}
           onQueryChange={setQuery}
           onRunActive={openActiveNode}
           onSetActiveIndex={setActiveIndex}
-          placeholder="Search titles and content..."
+          placeholder={t('desktop.search.placeholder')}
           query={query}
           totalItems={results.length}
         />
@@ -162,19 +164,20 @@ function SearchPaletteShortcutsFooter(props: {
   collapsed: boolean;
   onToggle: () => void;
 }) {
+  const t = useTranslation();
   return (
     <footer className="relative flex min-h-11 items-center justify-center px-12 py-2.5 text-[11px] text-foreground/45">
       {props.collapsed ? (
         null
       ) : (
         <span className="flex min-w-0 flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-center">
-          <ShortcutHint keys={['Enter']} label="Open" />
-          <ShortcutHint keys={['Shift', 'Enter']} label="Preview" />
-          <ShortcutHint keys={['Shift', 'Click']} label="Preview" />
+          <ShortcutHint keys={['Enter']} label={t('desktop.search.shortcuts.open')} />
+          <ShortcutHint keys={['Shift', 'Enter']} label={t('desktop.search.shortcuts.preview')} />
+          <ShortcutHint keys={['Shift', 'Click']} label={t('desktop.search.shortcuts.preview')} />
         </span>
       )}
       <button
-        aria-label={props.collapsed ? 'Show search shortcuts' : 'Collapse search shortcuts'}
+        aria-label={props.collapsed ? t('desktop.search.shortcuts.show') : t('desktop.search.shortcuts.collapse')}
         className="absolute right-5 top-1/2 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-foreground/32 transition-colors hover:text-foreground/58 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         onClick={props.onToggle}
         type="button"

@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WebLookupSelectionMenu } from './WebLookupSelectionMenu';
 
@@ -15,7 +16,7 @@ it('does not render a trailing separator for a single web lookup action', () => 
     { id: 'duckduckgo', enabled: false }
   ]));
 
-  render(
+  renderWithLocalization(
     <WebLookupSelectionMenu
       documentText="Full topic text"
       left={16}

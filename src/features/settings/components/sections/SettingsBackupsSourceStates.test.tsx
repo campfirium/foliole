@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../../../shared/platform/folderSelectionRuntimeRepository', () => ({
@@ -19,6 +19,7 @@ vi.mock('../../model/databaseBackups', () => ({
   resetSourceDispositions: vi.fn(),
 }));
 
+import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import {
   areDatabaseBackupActionsAvailable,
   exportSourceDispositions,
@@ -54,7 +55,7 @@ beforeEach(() => {
 });
 
 it('imports, exports, and clears saved source topic handling from the backup row', async () => {
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   await screen.findByRole('button', { name: 'Import saved source topic handling' });
   fireEvent.click(screen.getByRole('button', { name: 'Export saved source topic handling' }));

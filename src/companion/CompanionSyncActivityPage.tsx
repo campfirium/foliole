@@ -1,4 +1,5 @@
 import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { inferSyncRunResult } from '../shared/platform/companionSyncActivityEvents';
 import { AppEmptyState } from '../shared/ui';
@@ -10,16 +11,18 @@ import {
 import { formatCompanionSyncProgressSummary } from './companionSyncProgressSummary';
 import { formatClock } from './companionSyncStatusRows';
 
-function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
-  const message = formatSyncRunActivityMessage(event, laterEvents);
+type Translate = ReturnType<typeof useTranslation>;
+
+function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[], t: Translate) {
+  const message = formatSyncRunActivityMessage(event, laterEvents, t);
   if (message.length > 180 || /\b(SQLITE_|while compiling|SELECT\s|json_extract)\b/i.test(message)) {
     if (message.startsWith('Sync retrying; Android changes were not sent')) {
-      return 'Sync retrying; Android changes were not sent. Topic list confirmation is still pending.';
+      return t('companion.sync.attention.retryingPending');
     }
     if (message.startsWith('Sync needs attention; Android changes were not sent')) {
-      return 'Sync needs attention; Android changes were not sent. Topic list confirmation is still pending.';
+      return t('companion.sync.attention.needsPending');
     }
-    return 'Sync needs attention. Open desktop diagnostics for details.';
+    return t('companion.sync.attention.desktopDiagnostics');
   }
   return message;
 }
@@ -64,19 +67,20 @@ function isDedupedAttentionResult(result: ReturnType<typeof inferSyncRunResult>)
   return result === 'blocked' || result === 'retrying' || result === 'system_fault' || result === 'waiting';
 }
 
-function formatCurrentActivityMessage(progress: CompanionDesktopSyncProgress | null) {
-  if (!progress) return 'Syncing; waiting for the next progress update.';
-  const summary = formatCompanionSyncProgressSummary(progress);
+function formatCurrentActivityMessage(progress: CompanionDesktopSyncProgress | null, t: Translate) {
+  if (!progress) return t('companion.sync.activity.waitingProgress');
+  const summary = formatCompanionSyncProgressSummary(progress, t);
   return [summary.title, summary.status, summary.detail].filter(Boolean).join('; ');
 }
 
 function CurrentSyncSection(props: { message: string | null }) {
+  const t = useTranslation();
   if (!props.message) return null;
   return (
     <div className="border-b border-companion-divider py-4">
-      <div className="mb-2 text-xs font-medium text-companion-text-secondary">Current sync</div>
+      <div className="mb-2 text-xs font-medium text-companion-text-secondary">{t('companion.sync.activity.current')}</div>
       <div className="grid grid-cols-[4.5rem_1fr] gap-3 text-sm leading-5">
-        <span className="text-xs text-companion-text-secondary">Now</span>
+        <span className="text-xs text-companion-text-secondary">{t('companion.sync.activity.now')}</span>
         <span className="text-foreground">{props.message}</span>
       </div>
     </div>
@@ -84,14 +88,15 @@ function CurrentSyncSection(props: { message: string | null }) {
 }
 
 function CompletedActivitySection(props: { currentMessage: string | null; events: NativeCompanionSyncEvent[] }) {
+  const t = useTranslation();
   if (props.events.length === 0) {
     return (
       <div className={props.currentMessage ? 'py-4' : 'border-b border-companion-divider py-4'}>
-        <div className="mb-2 text-xs font-medium text-companion-text-secondary">Completed</div>
+        <div className="mb-2 text-xs font-medium text-companion-text-secondary">{t('companion.sync.activity.completed')}</div>
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
-          description="Completed sync runs will appear here after this device syncs."
-          title="No completed sync activity yet"
+          description={t('companion.sync.activity.empty.description')}
+          title={t('companion.sync.activity.empty.title')}
         />
       </div>
     );
@@ -100,15 +105,15 @@ function CompletedActivitySection(props: { currentMessage: string | null; events
   const groupedEvents = groupActivityEvents(visibleEvents);
   return (
     <div className={props.currentMessage ? 'pt-4' : ''}>
-      <div className="mb-1 text-xs font-medium text-companion-text-secondary">Completed</div>
+      <div className="mb-1 text-xs font-medium text-companion-text-secondary">{t('companion.sync.activity.completed')}</div>
       {groupedEvents.map((group) => (
         <div key={group.key}>
           {group.label ? <div className="pt-4 text-xs font-medium text-companion-text-secondary">{group.label}</div> : null}
           {group.events.map(({ event, index }) => (
             <div className="grid grid-cols-[3.75rem_1fr] gap-3 border-b border-companion-divider py-3 text-sm leading-5" key={event.id}>
-              <span className="text-xs text-companion-text-secondary">{formatClock(event.occurred_at)}</span>
+              <span className="text-xs text-companion-text-secondary">{formatClock(event.occurred_at, t)}</span>
               <span className={statusClass(event, visibleEvents.slice(0, index))}>
-                {formatActivityMessage(event, visibleEvents.slice(0, index))}
+                {formatActivityMessage(event, visibleEvents.slice(0, index), t)}
               </span>
             </div>
           ))}
@@ -158,9 +163,10 @@ export function CompanionSyncActivityPage(props: {
   status: 'idle' | 'loading' | 'syncing';
   syncProgress: CompanionDesktopSyncProgress | null;
 }) {
+  const t = useTranslation();
   const visibleEvents = visibleActivityEvents(props.events);
   const currentMessage = props.status === 'syncing'
-    ? formatCurrentActivityMessage(props.syncProgress)
+    ? formatCurrentActivityMessage(props.syncProgress, t)
     : null;
   return (
     <section className="border-t border-companion-divider">

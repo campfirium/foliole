@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -52,7 +53,7 @@ it('opens the active review item and its descendants in the item column', () => 
     })
   };
 
-  const { rerender } = render(
+  const { rerender } = renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="review-item"
@@ -98,7 +99,7 @@ it('positions the active review item as the second visible row when possible', a
     'review-item': createNode({ id: 'review-item', title: 'Review Item' })
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="review-item"
@@ -134,7 +135,7 @@ it('uses the source topic as the second-row review anchor for nearby derived ite
     })
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="review-item"
@@ -169,7 +170,7 @@ it('uses the parent topic as the second-row review anchor for plain child items'
     })
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="review-item"
@@ -204,7 +205,7 @@ it('reserves the first visual row when the source topic is the first list item',
     })
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="review-item"

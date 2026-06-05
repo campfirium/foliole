@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 
 import { SettingsExternalSearchSection } from './SettingsExternalSearchSection';
 
@@ -24,14 +26,14 @@ beforeEach(() => {
 });
 
 it('does not show link panel browsing data controls in external sources', () => {
-  render(<SettingsExternalSearchSection {...baseProps} />);
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} />);
 
   expect(screen.queryByText('Link panel browsing data')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Clear link panel browsing data' })).not.toBeInTheDocument();
 });
 
 it('shows a progress row while external sources load', () => {
-  render(<SettingsExternalSearchSection {...baseProps} isLoading />);
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} isLoading />);
 
   const status = screen.getByRole('status');
   expect(status).toHaveAttribute('aria-busy', 'true');
@@ -39,7 +41,7 @@ it('shows a progress row while external sources load', () => {
 });
 
 it('describes external folders as mirrored sources', () => {
-  render(<SettingsExternalSearchSection {...baseProps} folders={[{
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[{
     attachmentMode: 'document_relative_first_then_fixed_root',
     attachmentRootPath: null,
     createdAt: '2026-05-26T00:00:00.000Z',
@@ -59,7 +61,7 @@ it('describes external folders as mirrored sources', () => {
 });
 
 it('does not show global search enhancement controls in external sources', () => {
-  render(<SettingsExternalSearchSection {...baseProps} />);
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} />);
 
   expect(screen.queryByText('Search enhancement')).not.toBeInTheDocument();
   expect(screen.queryByText('Full-text search index')).not.toBeInTheDocument();
@@ -67,7 +69,7 @@ it('does not show global search enhancement controls in external sources', () =>
 });
 
 it('shows a retryable alert when external sources fail to load', () => {
-  render(<SettingsExternalSearchSection {...baseProps} error="Could not load the external library." />);
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} error="Could not load the external library." />);
 
   expect(screen.getByRole('alert')).toHaveTextContent('Could not load the external library.');
   expect(screen.getByRole('alert')).toHaveTextContent('External sources unavailable');

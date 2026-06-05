@@ -1,3 +1,4 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppEmptyState, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import type { ResolvedNodeLinkPreview } from './useNodeLinkHoverPreview';
@@ -30,27 +31,29 @@ function resolvePanelStyle(preview: ResolvedNodeLinkPreview) {
 }
 
 function PreviewBody({ preview }: { preview: ResolvedNodeLinkPreview }) {
+  const t = useTranslation();
+
   if (preview.status === 'missing') {
     return (
       <AppEmptyState
-        description="No matching topic is available for this internal link."
-        title="Linked topic not found"
+        description={t('desktop.linkPreview.missing.description')}
+        title={t('desktop.linkPreview.missing.title')}
       />
     );
   }
   if (preview.status === 'loading') {
     return (
       <AppEmptyState
-        description="Preparing the linked topic content for hover preview."
-        title="Preparing linked topic"
+        description={t('desktop.linkPreview.loading.description')}
+        title={t('desktop.linkPreview.loading.title')}
       />
     );
   }
   if (!preview.content.trim()) {
     return (
       <AppEmptyState
-        description="This linked topic is empty."
-        title="Empty linked topic"
+        description={t('desktop.linkPreview.empty.description')}
+        title={t('desktop.linkPreview.empty.title')}
       />
     );
   }
@@ -64,6 +67,8 @@ function PreviewBody({ preview }: { preview: ResolvedNodeLinkPreview }) {
 }
 
 export function NodeLinkHoverPreviewPanel(props: NodeLinkHoverPreviewPanelProps) {
+  const t = useTranslation();
+
   if (!props.preview) {
     return null;
   }
@@ -73,14 +78,14 @@ export function NodeLinkHoverPreviewPanel(props: NodeLinkHoverPreviewPanelProps)
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-workspace-overlay">
       <section
-        aria-label="Linked topic preview"
+        aria-label={t('desktop.linkPreview.region')}
         className={appFloatingSurfaceClassName('panel', 'absolute flex flex-col overflow-hidden')}
         style={panelStyle}
       >
         <header className="border-b border-border bg-bg-panel px-4 py-3">
           <div className="truncate text-sm font-semibold text-foreground">{props.preview.title}</div>
           {props.preview.targetNodeId ? (
-            <div className="mt-1 text-xs text-foreground/60">Previewing linked topic content</div>
+            <div className="mt-1 text-xs text-foreground/60">{t('desktop.linkPreview.subtitle')}</div>
           ) : null}
         </header>
         <div className="min-h-0 flex-1 bg-canvas">

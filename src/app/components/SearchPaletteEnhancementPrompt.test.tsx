@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../../lib/core/database/fullTextSearchIndexStrategy';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { SearchPaletteEnhancementPrompt } from './SearchPaletteEnhancementPrompt';
 
@@ -27,7 +28,7 @@ beforeEach(() => {
 });
 
 it('offers search enhancement once and turns it on', async () => {
-  const view = render(<SearchPaletteEnhancementPrompt />);
+  const view = renderWithLocalization(<SearchPaletteEnhancementPrompt />);
 
   expect(screen.getByRole('dialog', {
     name: 'Turn on search enhancement for languages without spaces?'
@@ -46,13 +47,13 @@ it('offers search enhancement once and turns it on', async () => {
   expect(screen.getByText('Preparing enhanced search...')).toBeInTheDocument();
 
   view.unmount();
-  render(<SearchPaletteEnhancementPrompt />);
+  renderWithLocalization(<SearchPaletteEnhancementPrompt />);
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
 it('dismisses the search enhancement prompt without turning it on', () => {
-  render(<SearchPaletteEnhancementPrompt />);
+  renderWithLocalization(<SearchPaletteEnhancementPrompt />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
 
@@ -64,7 +65,7 @@ it('dismisses the search enhancement prompt without turning it on', () => {
 it('does not prompt when search enhancement is already on and records the prompt as handled', async () => {
   window.localStorage.setItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY, 'cjk-trigram');
 
-  render(<SearchPaletteEnhancementPrompt />);
+  renderWithLocalization(<SearchPaletteEnhancementPrompt />);
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   await waitFor(() => {
@@ -76,7 +77,7 @@ it('keeps the search enhancement prompt visible when local settings cannot be wr
   const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
     throw new Error('storage unavailable');
   });
-  render(<SearchPaletteEnhancementPrompt />);
+  renderWithLocalization(<SearchPaletteEnhancementPrompt />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Turn on' }));
 

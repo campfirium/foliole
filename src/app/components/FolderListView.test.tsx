@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
@@ -36,7 +37,7 @@ function renderFolderList(
   const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
   const onSelectNode = options?.onSelectNode ?? vi.fn<(nodeId: string) => void>();
 
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1', ...children.map((node) => node.id)]}
@@ -163,7 +164,7 @@ describe('FolderListView interactions', () => {
     });
     const nodesById = Object.fromEntries([folderNode, childFolder, articleNode].map((node) => [node.id, node]));
 
-    render(
+    renderWithLocalization(
       <FolderListView
         itemLayout="virtual-result"
         nodes={[articleNode]}

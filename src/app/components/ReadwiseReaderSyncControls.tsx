@@ -1,4 +1,5 @@
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -9,13 +10,6 @@ import {
 } from '../../shared/ui';
 
 import type { ReadwiseManualSyncStatus } from './useReadwiseManualSync';
-
-const SYNC_FREQUENCY_OPTIONS = [
-  { label: 'Every 1 hour', value: 'hourly' },
-  { label: 'Every 12 hours', value: 'every_12_hours' },
-  { label: 'Every 24 hours', value: 'daily' },
-  { label: 'Every week', value: 'weekly' }
-];
 
 function ReadwiseSyncStatusMessage(props: { status: ReadwiseManualSyncStatus }) {
   if (!props.status.message) {
@@ -53,30 +47,37 @@ export function ReadwiseReaderSyncRow(props: {
   onSync: () => void;
   status?: ReadwiseManualSyncStatus;
 }) {
+  const t = useTranslation();
+  const syncFrequencyOptions = [
+    { label: t('desktop.readwise.sync.frequency.hourly'), value: 'hourly' },
+    { label: t('desktop.readwise.sync.frequency.every12Hours'), value: 'every_12_hours' },
+    { label: t('desktop.readwise.sync.frequency.daily'), value: 'daily' },
+    { label: t('desktop.readwise.sync.frequency.weekly'), value: 'weekly' }
+  ];
   const description = (
     <>
-      Automatically scan while Foliole is open, or start a scan with the current settings.
+      {t('desktop.readwise.sync.description')}
       {props.status ? <ReadwiseSyncStatusMessage status={props.status} /> : null}
     </>
   );
 
   return (
-    <SettingsRow description={description} title="Sync">
+    <SettingsRow description={description} title={t('desktop.readwise.sync.title')}>
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <select
-          aria-label="Sync frequency"
+          aria-label={t('desktop.readwise.sync.frequency.aria')}
           className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
           onChange={(event) => props.onChange('syncFrequency', event.target.value)}
           value={props.config.syncFrequency}
         >
-          {SYNC_FREQUENCY_OPTIONS.map((option) => (
+          {syncFrequencyOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
         <AppButton disabled={props.disabled} onClick={props.onSync} size="sm" variant="primary">
-          {props.isSyncing ? 'Syncing...' : 'Sync'}
+          {props.isSyncing ? t('desktop.readwise.sync.running') : t('desktop.readwise.sync.action')}
         </AppButton>
       </SettingsControlSlot>
     </SettingsRow>

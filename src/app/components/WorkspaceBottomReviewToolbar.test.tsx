@@ -1,5 +1,7 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { selectWorkspaceBottomReviewToolbarProps, WorkspaceBottomReviewToolbar, type WorkspaceBottomReviewToolbarProps } from './WorkspaceBottomReviewToolbar';
 
@@ -50,7 +52,7 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
 }
 
 it('collapses the review footer list summary with the left sidebar', () => {
-  render(<WorkspaceBottomReviewToolbar {...createProps({ isListCollapsed: true })} />);
+  renderWithLocalization(<WorkspaceBottomReviewToolbar {...createProps({ isListCollapsed: true })} />);
 
   expect(screen.queryByText('2 left · 0 done')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
@@ -58,7 +60,7 @@ it('collapses the review footer list summary with the left sidebar', () => {
 });
 
 it('keeps the review footer list summary when the left sidebar is expanded', () => {
-  render(<WorkspaceBottomReviewToolbar {...createProps()} />);
+  renderWithLocalization(<WorkspaceBottomReviewToolbar {...createProps()} />);
 
   expect(screen.queryByRole('button', { name: 'Change session mode' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
@@ -67,7 +69,7 @@ it('keeps the review footer list summary when the left sidebar is expanded', () 
 });
 
 it('recalculates the progress total when the active review queue is replanned', () => {
-  const { rerender } = render(
+  const { rerender } = renderWithLocalization(
     <WorkspaceBottomReviewToolbar
       {...createProps({
         reviewCompletedCount: 4,
@@ -94,7 +96,7 @@ it('recalculates the progress total when the active review queue is replanned', 
 });
 
 it('keeps the session mode controls hidden while waiting to reveal an answer', () => {
-  render(<WorkspaceBottomReviewToolbar {...createProps({ isListCollapsed: true })} />);
+  renderWithLocalization(<WorkspaceBottomReviewToolbar {...createProps({ isListCollapsed: true })} />);
 
   expect(screen.queryByRole('button', { name: 'Change session mode' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
@@ -102,7 +104,7 @@ it('keeps the session mode controls hidden while waiting to reveal an answer', (
 });
 
 it('shows session mode controls after an answer is revealed for grading', () => {
-  render(<WorkspaceBottomReviewToolbar {...createProps({ isAnswerRevealed: true, reviewStatus: 'answer-revealed' })} />);
+  renderWithLocalization(<WorkspaceBottomReviewToolbar {...createProps({ isAnswerRevealed: true, reviewStatus: 'answer-revealed' })} />);
 
   expect(screen.getByRole('button', { name: 'Change session mode' })).toBeInTheDocument();
   expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
@@ -111,7 +113,7 @@ it('shows session mode controls after an answer is revealed for grading', () => 
 
 it('shows session mode choices and marks temporary mode in the real footer summary', async () => {
   const onSetReviewSessionMode = vi.fn();
-  const { rerender } = render(
+  const { rerender } = renderWithLocalization(
     <WorkspaceBottomReviewToolbar
       {...createProps({
         isAnswerRevealed: true,
@@ -154,7 +156,7 @@ it('shows session mode choices and marks temporary mode in the real footer summa
 
 it('replaces review actions with resume when the current review item is not visible', () => {
   const onResumeReviewItem = vi.fn();
-  render(<WorkspaceBottomReviewToolbar {...createProps({ isCurrentReviewItemVisible: false, onResumeReviewItem })} />);
+  renderWithLocalization(<WorkspaceBottomReviewToolbar {...createProps({ isCurrentReviewItemVisible: false, onResumeReviewItem })} />);
 
   expect(screen.getByLabelText('i 0/2')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
@@ -166,7 +168,7 @@ it('replaces review actions with resume when the current review item is not visi
 
 it('hides the footer progress line after review completion', () => {
   const onContinueReading = vi.fn();
-  render(
+  renderWithLocalization(
     <WorkspaceBottomReviewToolbar
       {...createProps({
         onContinueReading,
@@ -186,7 +188,7 @@ it('hides the footer progress line after review completion', () => {
 });
 
 it('hides the footer progress line while handling pushed reading topics', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceBottomReviewToolbar
       {...createProps({
         isCurrentReviewItemGradable: false,

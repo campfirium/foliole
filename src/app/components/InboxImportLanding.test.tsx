@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { InboxImportLanding } from './InboxImportLanding';
 
@@ -96,7 +97,7 @@ beforeEach(() => {
 });
 
 it('keeps Inbox history focused on a single continuous imports list', () => {
-  render(<InboxImportLanding nodesById={{}} onSelectNode={() => undefined} />);
+  renderWithLocalization(<InboxImportLanding nodesById={{}} onSelectNode={() => undefined} />);
 
   expect(screen.getByRole('heading', { level: 2, name: 'Inbox History' })).toBeInTheDocument();
   expect(screen.getByRole('searchbox', { name: 'Search Inbox history' })).toBeInTheDocument();
@@ -129,9 +130,9 @@ it('shows recent inbox items and lets the user open linked topics from both list
     }
   });
 
-  render(<InboxImportLanding nodesById={LINKED_NODES} onSelectNode={onSelectNode} />);
+  renderWithLocalization(<InboxImportLanding nodesById={LINKED_NODES} onSelectNode={onSelectNode} />);
 
-  expect(screen.getByText(/linked topics/)).toHaveTextContent('1 linked topics · 3 recent runs');
+  expect(screen.getByText(/linked topics/)).toHaveTextContent('1 linked topics - 3 recent runs');
   expect(screen.getByText('4')).toBeInTheDocument();
   expect(screen.getAllByText('Essay node')).toHaveLength(3);
   expect(screen.getAllByText('markdown · /imports/essay.md')).toHaveLength(2);
@@ -169,11 +170,11 @@ it('filters inbox imports through the shared search field', () => {
     }
   });
 
-  render(<InboxImportLanding nodesById={LINKED_NODES} onSelectNode={() => undefined} />);
+  renderWithLocalization(<InboxImportLanding nodesById={LINKED_NODES} onSelectNode={() => undefined} />);
 
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search Inbox history' }), { target: { value: 'failure' } });
 
-  expect(screen.getByText(/linked topics/)).toHaveTextContent('0 linked topics · 1 recent runs');
+  expect(screen.getByText(/linked topics/)).toHaveTextContent('0 linked topics - 1 recent runs');
   expect(screen.queryByText('Essay node')).not.toBeInTheDocument();
   expect(screen.getByText('Failed failure.pdf')).toBeInTheDocument();
 });

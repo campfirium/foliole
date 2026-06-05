@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
 
 import { FolderListSearchBox } from './FolderListSearchBox';
@@ -48,6 +49,7 @@ export function ImportCatalogHeader(props: {
 }
 
 export function ImportCatalogLayout(props: {
+  catalogAriaLabel?: string;
   children: ReactNode;
   countLabel: string;
   disabledState?: { description: string; title: string };
@@ -67,10 +69,11 @@ export function ImportCatalogLayout(props: {
   sortOptions: ImportCatalogSortOption[];
   title: string;
 }) {
-  const body = renderImportCatalogBody(props);
+  const t = useTranslation();
+  const body = renderImportCatalogBody(props, t('desktop.importCatalog.retry'));
 
   return (
-    <section aria-label={`${props.title} catalog`} className="mx-auto flex min-h-0 w-full max-w-[var(--document-max-width)] flex-1 flex-col">
+    <section aria-label={props.catalogAriaLabel ?? `${props.title} catalog`} className="mx-auto flex min-h-0 w-full max-w-[var(--document-max-width)] flex-1 flex-col">
       <ImportCatalogHeader
         countLabel={props.countLabel}
         onChangeQuery={props.onChangeQuery}
@@ -90,7 +93,7 @@ export function ImportCatalogLayout(props: {
   );
 }
 
-function renderImportCatalogBody(props: Parameters<typeof ImportCatalogLayout>[0]) {
+function renderImportCatalogBody(props: Parameters<typeof ImportCatalogLayout>[0], retryLabel: string) {
   if (props.isLoading) {
     return (
       <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
@@ -104,7 +107,7 @@ function renderImportCatalogBody(props: Parameters<typeof ImportCatalogLayout>[0
         <AppErrorState
           action={
             <AppButton onClick={props.errorState.onRetry} variant="primary">
-              Retry
+              {retryLabel}
             </AppButton>
           }
           description={props.errorState.description}

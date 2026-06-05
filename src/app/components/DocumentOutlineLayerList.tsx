@@ -1,4 +1,5 @@
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import type { OutlineDisplayItem, OutlineHorizontalMetrics } from './DocumentOutlineLayerModel';
 
@@ -54,6 +55,7 @@ export function OutlineList({
   panelRef: (node: HTMLDivElement | null) => void;
   setActiveItemRef: (node: HTMLButtonElement | null) => void;
 }) {
+  const t = useTranslation();
   return (
     <div
       aria-hidden={!isOpen}
@@ -70,7 +72,7 @@ export function OutlineList({
         width: `${horizontalMetrics.panelWidth}px`
       }}
     >
-      <nav aria-label="Topic outline" className="py-1">
+      <nav aria-label={t('desktop.document.outline')} className="py-1">
         <ol className="m-0 list-none space-y-1 p-0">
           {items.map((item, index) => (
             <li key={`${item.from}-${item.text}`}>

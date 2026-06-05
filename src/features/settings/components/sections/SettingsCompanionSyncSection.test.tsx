@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import type { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
 
 import { SettingsCompanionSyncSection } from './SettingsCompanionSyncSection';
@@ -56,7 +57,7 @@ beforeEach(() => {
 });
 
 it('shows the current primary device role in sync settings', () => {
-  render(<SettingsCompanionSyncSection />);
+  renderWithLocalization(<SettingsCompanionSyncSection />);
 
   expect(screen.getByText('Device role')).toBeInTheDocument();
   expect(screen.getByText('Primary device')).toBeInTheDocument();
@@ -80,7 +81,7 @@ it('lets a secondary desktop become the primary device from sync settings', asyn
     setDesktopAsPrimaryDevice
   }));
 
-  render(<SettingsCompanionSyncSection />);
+  renderWithLocalization(<SettingsCompanionSyncSection />);
   fireEvent.click(screen.getByRole('button', { name: 'Set as primary device' }));
 
   expect(setDesktopAsPrimaryDevice).toHaveBeenCalledTimes(1);
@@ -89,7 +90,7 @@ it('lets a secondary desktop become the primary device from sync settings', asyn
 it('announces connected devices progress through the settings state surface', () => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({ isLoading: true }));
 
-  render(<SettingsCompanionSyncSection />);
+  renderWithLocalization(<SettingsCompanionSyncSection />);
 
   const status = screen.getByRole('status');
   expect(status).toHaveAttribute('aria-busy', 'true');
@@ -107,7 +108,7 @@ it('shows sync server errors through the settings state surface', () => {
     }
   }));
 
-  render(<SettingsCompanionSyncSection />);
+  renderWithLocalization(<SettingsCompanionSyncSection />);
 
   expect(screen.getByRole('alert')).toHaveTextContent('Desktop sync unavailable');
   expect(screen.getByRole('alert')).toHaveTextContent('Could not open sync. Port unavailable.');
@@ -118,7 +119,7 @@ it('shows pairing state errors through the settings state surface', () => {
     error: 'Could not refresh paired devices.'
   }));
 
-  render(<SettingsCompanionSyncSection />);
+  renderWithLocalization(<SettingsCompanionSyncSection />);
 
   expect(screen.getByRole('alert')).toHaveTextContent('Sync devices unavailable');
   expect(screen.getByRole('alert')).toHaveTextContent('Could not refresh paired devices.');

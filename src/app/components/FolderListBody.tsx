@@ -1,6 +1,7 @@
 import type { ReactNode, RefObject } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppEmptyState, VirtualListSurface } from '../../shared/ui';
 
 const FOLDER_LIST_ROW_ESTIMATE_PX = 188;
@@ -19,6 +20,7 @@ export function FolderListBody({
   onRenderItem: (node: Node) => ReactNode;
   scrollElementRef: RefObject<HTMLDivElement | null>;
 }) {
+  const t = useTranslation();
   if (filteredNodes.length === 0) {
     if (emptyState) {
       return (
@@ -32,14 +34,14 @@ export function FolderListBody({
 
   if (filteredNodes.length < 100) {
     return (
-      <ul aria-label="Folder contents" className="flex flex-col">
+      <ul aria-label={t('desktop.workspace.folderContents')} className="flex flex-col">
         {filteredNodes.map((node) => onRenderItem(node))}
       </ul>
     );
   }
 
   return (
-    <div aria-label="Folder contents" role="list">
+    <div aria-label={t('desktop.workspace.folderContents')} role="list">
       <VirtualListSurface
         estimateSize={() => FOLDER_LIST_ROW_ESTIMATE_PX}
         getItemKey={(node) => node.id}

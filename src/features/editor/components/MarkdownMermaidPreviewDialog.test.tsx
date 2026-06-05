@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 const { renderMermaid } = vi.hoisted(() => ({
@@ -15,11 +15,13 @@ vi.mock('mermaid', () => ({
   }
 }));
 
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
+
 import { MarkdownMermaidPreviewDialog } from './MarkdownMermaidPreviewDialog';
 
 describe('MarkdownMermaidPreviewDialog', () => {
   it('renders diagram preview in the shared centered preview dialog', async () => {
-    render(<MarkdownMermaidPreviewDialog diagram={{ source: 'gantt\n  title Plan' }} onOpenChange={vi.fn()} />);
+    renderWithLocalization(<MarkdownMermaidPreviewDialog diagram={{ source: 'gantt\n  title Plan' }} onOpenChange={vi.fn()} />);
 
     const dialog = await screen.findByRole('dialog');
     await waitFor(() => {
@@ -32,7 +34,7 @@ describe('MarkdownMermaidPreviewDialog', () => {
   });
 
   it('centers non-gantt diagrams in the same preview shell', async () => {
-    render(<MarkdownMermaidPreviewDialog diagram={{ source: 'quadrantChart\n  title Positioning' }} onOpenChange={vi.fn()} />);
+    renderWithLocalization(<MarkdownMermaidPreviewDialog diagram={{ source: 'quadrantChart\n  title Positioning' }} onOpenChange={vi.fn()} />);
 
     const dialog = await screen.findByRole('dialog');
     await waitFor(() => {

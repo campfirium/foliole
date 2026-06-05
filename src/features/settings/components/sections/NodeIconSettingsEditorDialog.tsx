@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { onWindowEscape } from '../../../../shared/platform/keyboard';
 import {
   AppButton,
@@ -21,13 +22,14 @@ type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 function EditorHeader(props: {
   onReset: () => void;
 }) {
+  const t = useTranslation();
   return (
     <header className="flex min-h-14 items-center justify-between gap-4 border-b border-settings-divider/65 bg-settings-group px-6">
       <div className="min-w-0">
-        <AppDialogTitle>Navigation icons</AppDialogTitle>
+        <AppDialogTitle>{t('settings.icons.node.title')}</AppDialogTitle>
       </div>
       <button className="text-sm text-foreground/68 transition-colors hover:text-foreground" onClick={props.onReset} type="button">
-        Reset all
+        {t('settings.icons.resetAll')}
       </button>
     </header>
   );
@@ -40,6 +42,7 @@ export function NodeIconSettingsEditorDialog(props: {
   open: boolean;
   state: ReturnType<typeof useNodeIconSettingsState>;
 }) {
+  const t = useTranslation();
   useEffect(() => {
     if (!props.open) return undefined;
     return onWindowEscape(() => {
@@ -67,7 +70,7 @@ export function NodeIconSettingsEditorDialog(props: {
             <NodeIconSettingsPreview state={props.state} />
           </div>
           <footer className="flex justify-end bg-settings-control/45 px-6 py-3">
-            <AppButton onClick={props.onClose} variant="primary">Done</AppButton>
+            <AppButton onClick={props.onClose} variant="primary">{t('settings.icons.done')}</AppButton>
           </footer>
         </AppDialogContent>
       </AppDialogPortal>

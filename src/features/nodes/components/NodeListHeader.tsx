@@ -2,6 +2,7 @@ import { ChevronsDownUp, ChevronsUpDown, FolderPlus, Trash2 } from 'lucide-react
 import { useEffect, useState } from 'react';
 
 import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import { useTranslation, type Translate } from '../../../shared/localization/LocalizationProvider';
 import {
   AppIconButton,
   AppToolbar,
@@ -27,6 +28,7 @@ interface NodeListHeaderProps {
 }
 
 function renderNodeListActions(
+  t: Translate,
   hasCollapsibleNodes: boolean,
   hasCollapsedNodes: boolean,
   onCreateCommand: (commandId: string) => void,
@@ -44,30 +46,30 @@ function renderNodeListActions(
           )
         }
         disabled={!hasCollapsibleNodes}
-        label={hasCollapsedNodes ? 'Expand all' : 'Collapse all'}
+        label={hasCollapsedNodes ? t('desktop.nodeList.expandAll') : t('desktop.nodeList.collapseAll')}
         onClick={onToggleCollapseAll}
       />
       <AppIconButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
         icon={<FolderPlus size={16} strokeWidth={1.9} />}
-        label="Create folder"
+        label={t('desktop.nodeList.createFolder')}
         onClick={() => onCreateCommand(FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createFolder)}
       />
     </>
   );
 }
 
-function renderTrashActions(onEmptyTrash: () => void, trashCount: number) {
+function renderTrashActions(t: Translate, onEmptyTrash: () => void, trashCount: number) {
   return (
     <>
-      <button aria-label="Create" className="sr-only" type="button">
-        Create
+      <button aria-label={t('desktop.nodeList.create')} className="sr-only" type="button">
+        {t('desktop.nodeList.create')}
       </button>
       <AppIconButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
         disabled={trashCount === 0}
         icon={<Trash2 size={16} strokeWidth={1.9} />}
-        label="Empty trash"
+        label={t('desktop.nodeList.emptyTrash')}
         onClick={onEmptyTrash}
       />
     </>
@@ -100,23 +102,25 @@ function renderNodeListHeaderShell(args: {
   showVirtualCreateAction: boolean;
   trashCount: number;
 }) {
+  const t = useTranslation();
   return (
     <AppToolbar
       as="header"
       className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 overflow-hidden px-4"
     >
-      <h2 className="sr-only">Topics</h2>
+      <h2 className="sr-only">{t('desktop.nodeList.title')}</h2>
       <button className="sr-only" onClick={args.onOpenNotesView} type="button">
-        Topics
+        {t('desktop.nodeList.title')}
       </button>
       {args.showTitleSearch && !args.isVirtualViewOpen ? renderSearchLauncher(args.onOpenSearch) : <span aria-hidden="true" className="size-8" />}
       <span aria-hidden="true" className="min-w-0 flex-1" />
-      <ToolbarActionGroup ariaLabel={args.isTrashViewOpen ? 'Trash actions' : args.isVirtualViewOpen ? 'Virtual folder actions' : 'Topic list actions'}>
+      <ToolbarActionGroup ariaLabel={args.isTrashViewOpen ? t('desktop.nodeList.actions.trash') : args.isVirtualViewOpen ? t('desktop.nodeList.actions.virtualFolder') : t('desktop.nodeList.actions.topicList')}>
         {args.isTrashViewOpen
-          ? renderTrashActions(args.onEmptyTrash, args.trashCount)
+          ? renderTrashActions(t, args.onEmptyTrash, args.trashCount)
           : args.isVirtualViewOpen
             ? null
             : renderNodeListActions(
+                t,
                 args.hasCollapsibleNodes,
                 args.hasCollapsedNodes,
                 args.onCreateCommand,

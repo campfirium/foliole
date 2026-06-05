@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+import { useTranslation } from '../localization/LocalizationProvider';
+import type { TranslationKey } from '../localization/translations';
 
 import { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
 import { AppButton } from './Button';
@@ -13,18 +15,18 @@ export { ReadingReviewActions } from './ReadingReviewActions';
 export type { ReviewActionSurface } from './reviewActionLayout';
 
 const reviewGradeButtons = [
-  { grade: 1, label: 'Again' },
-  { grade: 2, label: 'Hard' },
-  { grade: 3, label: 'Good' },
-  { grade: 4, label: 'Easy' }
-] as const satisfies ReadonlyArray<{ grade: ReviewGrade; label: 'Again' | 'Hard' | 'Good' | 'Easy' }>;
+  { grade: 1, helpKey: 'again', labelKey: 'desktop.reviewActions.grade.again' },
+  { grade: 2, helpKey: 'hard', labelKey: 'desktop.reviewActions.grade.hard' },
+  { grade: 3, helpKey: 'good', labelKey: 'desktop.reviewActions.grade.good' },
+  { grade: 4, helpKey: 'easy', labelKey: 'desktop.reviewActions.grade.easy' }
+] as const satisfies ReadonlyArray<{ grade: ReviewGrade; helpKey: keyof typeof REVIEW_GRADE_ACTION_HELP; labelKey: TranslationKey }>;
 
 function ReviewGradeButton(props: {
   buttonClassName?: string;
   buttonVariant: 'ghost' | 'primary';
   disabled: boolean;
   grade: ReviewGrade;
-  label: 'Again' | 'Hard' | 'Good' | 'Easy';
+  label: string;
   surface: ReviewActionSurface;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
@@ -51,6 +53,8 @@ function ReviewGradeErrorFeedback(props: {
   isSubmitting: boolean;
   onRetry?: () => void;
 }) {
+  const t = useTranslation();
+
   if (!props.errorMessage) {
     return null;
   }
@@ -62,7 +66,7 @@ function ReviewGradeErrorFeedback(props: {
       </p>
       {props.onRetry ? (
         <AppButton disabled={props.isSubmitting} onClick={props.onRetry} size="sm" variant="ghost">
-          Retry
+          {t('desktop.reviewActions.retry')}
         </AppButton>
       ) : null}
     </div>
@@ -90,6 +94,7 @@ export function ReviewGradeActions({
   surface?: ReviewActionSurface;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
+  const t = useTranslation();
   const wrapWithHelpCard = (button: ReactNode, help: ActionHelpCardCopy) =>
     showActionHelp ? (
       <ActionHelpCard help={help} placement="above">
@@ -98,7 +103,7 @@ export function ReviewGradeActions({
     ) : button;
   return (
     <div className="flex items-center gap-2">
-      <ToolbarActionGroup ariaLabel="Review grade actions" className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`}>
+      <ToolbarActionGroup ariaLabel={t('desktop.reviewActions.grade.group')} className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`}>
         {renderOverlayDividedActions(
           reviewGradeButtons.map((gradeButton) => ({
             key: String(gradeButton.grade),
@@ -108,11 +113,11 @@ export function ReviewGradeActions({
                 buttonVariant={buttonVariant}
                 disabled={isSubmitting}
                 grade={gradeButton.grade}
-                label={gradeButton.label}
+                label={t(gradeButton.labelKey)}
                 surface={surface}
                 submitGrade={submitGrade}
               />,
-              REVIEW_GRADE_ACTION_HELP[gradeButton.label.toLowerCase() as keyof typeof REVIEW_GRADE_ACTION_HELP]
+              REVIEW_GRADE_ACTION_HELP[gradeButton.helpKey]
             )
           })),
           surface
@@ -124,19 +129,23 @@ export function ReviewGradeActions({
 }
 
 export function FsrsRevealAction({ disabled = false, onRevealAnswer }: { disabled?: boolean; onRevealAnswer: () => void }) {
+  const t = useTranslation();
+
   return (
-    <ToolbarActionGroup ariaLabel="Item reveal actions" className="gap-2" data-review-toolbar-kind="fsrs-prompt">
-      <AppButton aria-label="Show Answer" className="min-w-32 px-5" disabled={disabled} onClick={onRevealAnswer} size="md" variant="primary">
-        Show Answer
+    <ToolbarActionGroup ariaLabel={t('desktop.reviewActions.reveal.group')} className="gap-2" data-review-toolbar-kind="fsrs-prompt">
+      <AppButton aria-label={t('desktop.reviewActions.showAnswer')} className="min-w-32 px-5" disabled={disabled} onClick={onRevealAnswer} size="md" variant="primary">
+        {t('desktop.reviewActions.showAnswer')}
       </AppButton>
     </ToolbarActionGroup>
   );
 }
 
 export function ReviewCompleteAction({ onExitReviewMode }: { onExitReviewMode: () => void }) {
+  const t = useTranslation();
+
   return (
-    <AppButton aria-label="Queue clear" className="min-w-32 px-5" onClick={onExitReviewMode} size="md" variant="subtle">
-      Queue clear
+    <AppButton aria-label={t('desktop.reviewActions.queueClear')} className="min-w-32 px-5" onClick={onExitReviewMode} size="md" variant="subtle">
+      {t('desktop.reviewActions.queueClear')}
     </AppButton>
   );
 }
@@ -148,21 +157,25 @@ export function ResumeReviewAction({
   onResumeReviewItem: () => void;
   surface?: ReviewActionSurface;
 }) {
+  const t = useTranslation();
+
   if (surface === 'overlay') {
-    return <ReviewOverlayActionButton ariaLabel="Resume review" label="Resume" onClick={onResumeReviewItem} />;
+    return <ReviewOverlayActionButton ariaLabel={t('desktop.reviewActions.resumeReview')} label={t('desktop.reviewActions.resume')} onClick={onResumeReviewItem} />;
   }
 
   return (
-    <AppButton aria-label="Resume review" className="min-w-32 px-5" onClick={onResumeReviewItem} size="md" variant="primary">
-      Resume
+    <AppButton aria-label={t('desktop.reviewActions.resumeReview')} className="min-w-32 px-5" onClick={onResumeReviewItem} size="md" variant="primary">
+      {t('desktop.reviewActions.resume')}
     </AppButton>
   );
 }
 
 export function ContinueReadingAction({ onContinueReading }: { onContinueReading: () => void }) {
+  const t = useTranslation();
+
   return (
-    <AppButton aria-label="Continue reading" className="min-w-40 px-5" onClick={onContinueReading} size="md" variant="ghost">
-      Continue reading
+    <AppButton aria-label={t('desktop.reviewActions.continueReading')} className="min-w-40 px-5" onClick={onContinueReading} size="md" variant="ghost">
+      {t('desktop.reviewActions.continueReading')}
     </AppButton>
   );
 }

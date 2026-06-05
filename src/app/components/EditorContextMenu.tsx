@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 
 import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem, appFloatingSurfaceClassName } from '../../shared/ui';
 import { resolveLongClozeGuardAction } from '../hooks/editorClozeGuardrail';
 
@@ -175,13 +176,14 @@ function AnnotationToolbar(props: AnnotationToolbarProps) {
 }
 
 export function EditorContextMenu(props: EditorContextMenuProps) {
+  const t = useTranslation();
   if (props.kind === 'image') {
     return (
       <AppSelectionDropdownMenu left={props.left} onClose={props.onClose} top={props.top}>
-        <AppSelectionDropdownMenuItem onClick={props.onCopyImage}>Copy image</AppSelectionDropdownMenuItem>
-        <AppSelectionDropdownMenuItem onClick={props.onCutImage}>Cut image</AppSelectionDropdownMenuItem>
-        <AppSelectionDropdownMenuItem onClick={props.onExportImage}>Export image</AppSelectionDropdownMenuItem>
-        <AppSelectionDropdownMenuItem onClick={props.onDeleteImage}>Delete image</AppSelectionDropdownMenuItem>
+        <AppSelectionDropdownMenuItem onClick={props.onCopyImage}>{t('desktop.editor.imageMenu.copy')}</AppSelectionDropdownMenuItem>
+        <AppSelectionDropdownMenuItem onClick={props.onCutImage}>{t('desktop.editor.imageMenu.cut')}</AppSelectionDropdownMenuItem>
+        <AppSelectionDropdownMenuItem onClick={props.onExportImage}>{t('desktop.editor.imageMenu.export')}</AppSelectionDropdownMenuItem>
+        <AppSelectionDropdownMenuItem onClick={props.onDeleteImage}>{t('desktop.editor.imageMenu.delete')}</AppSelectionDropdownMenuItem>
       </AppSelectionDropdownMenu>
     );
   }

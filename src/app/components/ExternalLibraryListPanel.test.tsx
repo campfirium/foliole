@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import type { ElectronAPI } from '../../shared/platform/electronApi';
 
 import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
@@ -55,7 +56,7 @@ beforeEach(() => {
 });
 
 it('reuses the compact item row style for external library items without dates or opening previews', () => {
-  render(
+  renderWithLocalization(
     <ExternalLibraryListPanel
       entriesByFolderId={entriesByFolderId}
       folders={folders}
@@ -71,7 +72,7 @@ it('reuses the compact item row style for external library items without dates o
 });
 
 it('offers last opened sorting for external documents', () => {
-  render(
+  renderWithLocalization(
     <ExternalLibraryListPanel
       entriesByFolderId={entriesByFolderId}
       folders={folders}
@@ -89,7 +90,7 @@ it('refreshes the selected external folder from the document list toolbar', () =
   const invoke = vi.fn(async () => folders);
   window.electronAPI = { invoke } as unknown as ElectronAPI;
 
-  render(
+  renderWithLocalization(
     <ExternalLibraryListPanel
       entriesByFolderId={entriesByFolderId}
       folders={folders}
@@ -104,7 +105,7 @@ it('refreshes the selected external folder from the document list toolbar', () =
 });
 
 it('shows a loading state while the selected external folder entries are not loaded yet', () => {
-  render(
+  renderWithLocalization(
     <ExternalLibraryListPanel
       entriesByFolderId={{}}
       folders={folders}
@@ -118,7 +119,7 @@ it('shows a loading state while the selected external folder entries are not loa
 });
 
 it('shows the empty state only after the selected external folder entries load empty', () => {
-  render(
+  renderWithLocalization(
     <ExternalLibraryListPanel
       entriesByFolderId={{ 'folder-1': [] }}
       folders={folders}
@@ -134,7 +135,7 @@ it('shows the empty state only after the selected external folder entries load e
 it('opens the selected document in the external workspace surface', () => {
   const onOpenExternalSelection = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalLibraryListPanel
       entriesByFolderId={entriesByFolderId}
       folders={folders}
@@ -156,7 +157,7 @@ it('opens imported external documents in the external workspace surface', () => 
   const onOpenExternalSelection = vi.fn();
   const onSelectNode = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalLibraryListPanel
       entriesByFolderId={{
         'folder-1': [
@@ -186,7 +187,7 @@ it('opens imported external documents in the external workspace surface', () => 
 it('moves external document selection with arrow keys', () => {
   const onOpenExternalSelection = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalLibraryListPanel
       entriesByFolderId={entriesByFolderId}
       folders={folders}

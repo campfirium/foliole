@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
+
 import { OutlineList } from './DocumentOutlineLayerList';
 import {
   getOutlineClosedLayerWidth,
@@ -90,7 +92,7 @@ export function DocumentOutlineLayer({
   onRevealPosition,
   onResolveDocumentPositionAtViewportY
 }: DocumentOutlineLayerProps) {
-  const [outlineItems, setOutlineItems] = useState<OutlineDisplayItem[] | null>(null);
+  const t = useTranslation(), [outlineItems, setOutlineItems] = useState<OutlineDisplayItem[] | null>(null);
   const hasOutlineCandidate = useMemo(() => mayHaveOutline(content), [content]);
   const resolveOutlineItems = useCallback(() => {
     if (outlineItems !== null) {
@@ -122,7 +124,7 @@ export function DocumentOutlineLayer({
 
   return (
     <div
-      aria-label="Document outline hover zone"
+      aria-label={t('desktop.document.outlineHoverZone')}
       className="pointer-events-auto absolute inset-y-0 right-0 z-surface-overlay"
       onMouseEnter={(event) => {
         openOutline(event.clientY);

@@ -1,3 +1,4 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
 interface WorkspaceToolbarProps {
@@ -19,33 +20,34 @@ export function WorkspaceToolbar({
   onGoForward,
   onGoParent
 }: WorkspaceToolbarProps) {
+  const t = useTranslation();
   const dividerLeft = `calc(${listWidth}px + 14px)`;
 
   return (
     <AppToolbar
-      aria-label="Workspace toolbar"
+      aria-label={t('desktop.workspace.toolbar')}
       className="workspace-toolbar-surface relative flex min-h-[44px] flex-none items-center border-b border-divider bg-bg-subtle px-3"
     >
-      <ToolbarActionGroup ariaLabel="Navigation toolbar actions" className="gap-1">
+      <ToolbarActionGroup ariaLabel={t('desktop.navigation.toolbarActions')} className="gap-1">
         <AppIconButton
           className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           disabled={!canGoBack}
           icon="←"
-          label="Go back"
+          label={t('desktop.navigation.back')}
           onClick={onGoBack}
         />
         <AppIconButton
           className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           disabled={!canGoForward}
           icon="→"
-          label="Go forward"
+          label={t('desktop.navigation.forward')}
           onClick={onGoForward}
         />
         <AppIconButton
           className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           disabled={!canGoParent}
           icon="↑"
-          label="Go to parent"
+          label={t('desktop.navigation.parent')}
           onClick={onGoParent}
         />
       </ToolbarActionGroup>

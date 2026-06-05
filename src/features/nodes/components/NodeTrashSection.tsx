@@ -1,5 +1,6 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
+import { useTranslation, type Translate } from '../../../shared/localization/LocalizationProvider';
 import { AppButton } from '../../../shared/ui';
 import type { NodeTreeRow as NodeTreeRowModel } from '../model/nodeTree';
 
@@ -21,20 +22,22 @@ interface NodeTrashSectionProps {
 
 function EmptyTrashButton({
   disabled,
-  onEmptyTrash
+  onEmptyTrash,
+  t
 }: {
   disabled: boolean;
   onEmptyTrash: () => void;
+  t: Translate;
 }) {
   return (
     <AppButton
-      aria-label="Empty"
+      aria-label={t('desktop.nodeList.empty')}
       disabled={disabled}
       onClick={(event) => (event.stopPropagation(), onEmptyTrash())}
       size="sm"
       variant="subtle"
     >
-      Empty
+      {t('desktop.nodeList.empty')}
     </AppButton>
   );
 }
@@ -47,20 +50,21 @@ export function NodeTrashSection({
   rows,
   selectedNodeIds
 }: NodeTrashSectionProps) {
+  const t = useTranslation();
   const rowSpacing = getNodeListRowSpacing();
 
   return (
     <section
-      aria-label="Trash section"
+      aria-label={t('desktop.nodeList.trashSection')}
       className="-mx-4 mt-auto flex flex-none flex-col data-[open=true]:mt-0"
       data-open={isOpen}
     >
       {isOpen ? (
         <div className="flex min-h-[48px] items-center justify-between px-4 pt-2">
           <span className="text-sm font-semibold uppercase tracking-[0.06em] text-foreground/70">
-            Trash
+            {t('desktop.nodeList.trash')}
           </span>
-          <EmptyTrashButton disabled={rows.length === 0} onEmptyTrash={onEmptyTrash} />
+          <EmptyTrashButton disabled={rows.length === 0} onEmptyTrash={onEmptyTrash} t={t} />
         </div>
       ) : null}
       <div

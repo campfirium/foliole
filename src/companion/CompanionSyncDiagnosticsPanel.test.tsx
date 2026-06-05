@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const diagnosticsMock = vi.hoisted(() => ({
@@ -16,6 +16,8 @@ vi.mock('../shared/platform/companionSyncConvergence', async (importOriginal) =>
   ...(await importOriginal<typeof import('../shared/platform/companionSyncConvergence')>()),
   runSyncConvergenceCheck: convergenceMock.runSyncConvergenceCheck
 }));
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionSyncDiagnosticsPanel } from './CompanionSyncDiagnosticsPanel';
 import {
@@ -183,7 +185,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
   });
 
   it('runs diagnostics on demand and shows checkpoint evidence', async () => {
-    render(<CompanionSyncDiagnosticsPanel endpointUrl="http://10.0.2.2:38641" />);
+    renderWithLocalization(<CompanionSyncDiagnosticsPanel endpointUrl="http://10.0.2.2:38641" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Run sync diagnostic' }));
 
@@ -198,7 +200,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
   });
 
   it('runs convergence check on demand and shows invariant failures', async () => {
-    render(<CompanionSyncDiagnosticsPanel endpointUrl="http://10.0.2.2:38641" />);
+    renderWithLocalization(<CompanionSyncDiagnosticsPanel endpointUrl="http://10.0.2.2:38641" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Run convergence check' }));
 
@@ -222,7 +224,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
         }]
       }
     });
-    render(<CompanionSyncDiagnosticsPanel endpointUrl="http://10.0.2.2:38641" />);
+    renderWithLocalization(<CompanionSyncDiagnosticsPanel endpointUrl="http://10.0.2.2:38641" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Run sync diagnostic' }));
 

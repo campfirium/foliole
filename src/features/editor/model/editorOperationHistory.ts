@@ -1,3 +1,5 @@
+import type { Translate } from '../../../shared/localization/LocalizationProvider';
+
 const DEFAULT_EDITOR_OPERATION_HISTORY_LIMIT = 50;
 
 export interface EditorOperationSelectionSnapshot {
@@ -95,14 +97,20 @@ export function canApplyEditorOperationEntryForCurrentNode(
   return entry.type === 'text.edit' ? entry.nodeId === currentNodeId : true;
 }
 
-export function getEditorOperationUndoTitle(history: EditorOperationHistoryState) {
-  const entry = getEditorOperationTopEntry(history, 'undo');
-  return entry ? `Undo ${entry.title}` : 'Undo';
+function getEditorOperationTitle(entry: EditorOperationHistoryEntry, t: Translate) {
+  if (entry.type === 'text.edit') return t('desktop.command.editorOperation.editText');
+  if (entry.type === 'annotation.create') return t('desktop.command.editorOperation.createAnnotation');
+  return t('desktop.command.editorOperation.deleteAnnotation');
 }
 
-export function getEditorOperationRedoTitle(history: EditorOperationHistoryState) {
+export function getEditorOperationUndoTitle(history: EditorOperationHistoryState, t: Translate) {
+  const entry = getEditorOperationTopEntry(history, 'undo');
+  return entry ? t('desktop.command.undoOperation', { operation: getEditorOperationTitle(entry, t) }) : t('desktop.command.undo');
+}
+
+export function getEditorOperationRedoTitle(history: EditorOperationHistoryState, t: Translate) {
   const entry = getEditorOperationTopEntry(history, 'redo');
-  return entry ? `Redo ${entry.title}` : 'Redo';
+  return entry ? t('desktop.command.redoOperation', { operation: getEditorOperationTitle(entry, t) }) : t('desktop.command.redo');
 }
 
 function getEditorOperationTopEntry(history: EditorOperationHistoryState, mode: 'redo' | 'undo') {

@@ -13,6 +13,7 @@ import {
   getOrderedVirtualNodeResultNodes,
   getVirtualNodePrimaryKeyword
 } from '../../features/nodes/model/virtualNodeDetail';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -29,13 +30,12 @@ interface VirtualDocumentSurfaceProps {
   trashedNodeIds: string[];
 }
 
-const VIRTUAL_ROOT_SEARCH_PLACEHOLDER = 'Search topics to save as list';
-
 function filterVisibleVirtualResults(nodes: Node[], trashedNodeIds: string[]) {
   return nodes.filter((node) => !trashedNodeIds.includes(node.id));
 }
 
 function VirtualRootDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'onSelectNodePath' | 'trashedNodeIds'>) {
+  const t = useTranslation();
   const [query, setQuery] = useState('');
   const createVirtualNode = useWorkspaceStore((state) => state.createVirtualNode);
   const updateNodeTitle = useWorkspaceStore((state) => state.updateNodeTitle);
@@ -55,19 +55,19 @@ function VirtualRootDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'no
 
   return (
     <FolderListView
-      emptyState={trimmedQuery ? { description: 'Try another topic search.', title: 'No matching topics' } : undefined}
+      emptyState={trimmedQuery ? { description: t('desktop.virtualSearch.empty.description'), title: t('desktop.virtualSearch.empty.title') } : undefined}
       filterSearchResults={false}
-      folderTitle="Virtual"
+      folderTitle={t('desktop.virtualSearch.title')}
       nodeOrder={resultNodes.map((node) => node.id)}
       nodes={resultNodes}
       nodesById={props.nodesById}
       onChangeSearchQuery={setQuery}
       onSelectNode={props.onSelectNode}
       onSelectNodePath={props.onSelectNodePath}
-      regionLabel="Virtual search"
+      regionLabel={t('desktop.virtualSearch.region')}
       searchAction={(
         <AppButton
-          aria-label="Save search"
+          aria-label={t('desktop.virtualSearch.save.aria')}
           disabled={!trimmedQuery}
           onClick={async () => {
             if (!trimmedQuery) return;
@@ -80,17 +80,18 @@ function VirtualRootDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'no
           size="sm"
           variant="primary"
         >
-          Save
+          {t('desktop.virtualSearch.save')}
         </AppButton>
       )}
-      searchAriaLabel="Search topics to save as list"
-      searchPlaceholder={VIRTUAL_ROOT_SEARCH_PLACEHOLDER}
+      searchAriaLabel={t('desktop.virtualSearch.placeholder')}
+      searchPlaceholder={t('desktop.virtualSearch.placeholder')}
       searchQuery={query}
     />
   );
 }
 
 function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'activeNode' | 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'onSelectNodePath' | 'trashedNodeIds'>) {
+  const t = useTranslation();
   const query = getVirtualNodePrimaryKeyword(props.activeNode.virtualFilter);
   const resultNodes = filterVisibleVirtualResults(
     getOrderedVirtualNodeResultNodes(
@@ -104,17 +105,17 @@ function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfacePro
 
   return (
     <FolderListView
-      emptyState={{ description: 'No topics match this saved search yet.', title: 'No matching topics' }}
+      emptyState={{ description: t('desktop.virtualSearch.saved.empty.description'), title: t('desktop.virtualSearch.empty.title') }}
       filterSearchResults={false}
-      folderTitle={props.activeNode.title || 'Virtual'}
+      folderTitle={props.activeNode.title || t('desktop.virtualSearch.title')}
       nodeOrder={resultNodes.map((node) => node.id)}
       nodes={resultNodes}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNode}
       onSelectNodePath={props.onSelectNodePath}
-      regionLabel="Virtual search"
-      searchAriaLabel="Search topics to save as list"
-      searchPlaceholder={VIRTUAL_ROOT_SEARCH_PLACEHOLDER}
+      regionLabel={t('desktop.virtualSearch.region')}
+      searchAriaLabel={t('desktop.virtualSearch.placeholder')}
+      searchPlaceholder={t('desktop.virtualSearch.placeholder')}
       searchReadOnly
       searchQuery={query}
     />
@@ -124,6 +125,7 @@ function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfacePro
 export function VirtualBuiltInDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'onSelectNodePath' | 'trashedNodeIds'> & {
   activeVirtualNodeId: string;
 }) {
+  const t = useTranslation();
   const isShelved = props.activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
   const nodeIds = isShelved ? collectShelvedTopicIds(props) : collectRemovedTopicIds(props);
   const nodes = nodeIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));
@@ -131,17 +133,17 @@ export function VirtualBuiltInDocumentSurface(props: Pick<VirtualDocumentSurface
   return (
     <FolderListView
       emptyState={{
-        description: isShelved ? 'Shelved topics will appear here.' : 'Removed topics will appear here.',
-        title: isShelved ? 'No shelved topics' : 'No removed topics'
+        description: isShelved ? t('desktop.virtualSearch.shelved.empty.description') : t('desktop.virtualSearch.removed.empty.description'),
+        title: isShelved ? t('desktop.virtualSearch.shelved.empty.title') : t('desktop.virtualSearch.removed.empty.title')
       }}
       filterSearchResults={false}
-      folderTitle={isShelved ? 'Shelved' : 'Removed'}
+      folderTitle={isShelved ? t('desktop.virtualSearch.shelved.title') : t('desktop.virtualSearch.removed.title')}
       nodes={nodes}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNode}
       onSelectNodePath={props.onSelectNodePath}
-      regionLabel={isShelved ? 'Shelved topics' : 'Removed topics'}
-      searchDescription={isShelved ? 'List topics that are shelved.' : 'List deleted topics with linked sources.'}
+      regionLabel={isShelved ? t('desktop.virtualSearch.shelved.region') : t('desktop.virtualSearch.removed.region')}
+      searchDescription={isShelved ? t('desktop.virtualSearch.shelved.description') : t('desktop.virtualSearch.removed.description')}
     />
   );
 }

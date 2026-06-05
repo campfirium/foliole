@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ComponentProps } from 'react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 const { windowTitleBarRender, workspaceLayoutGridRender } = vi.hoisted(() => ({
   windowTitleBarRender: vi.fn(),
@@ -85,12 +85,6 @@ function createDeferred<T>() {
 }
 
 function createProps(overrides: Partial<WorkspaceLayoutFlatProps> = {}) {
-  const onCloseImportManagement = vi.fn();
-  const onOpenNotesView = vi.fn();
-  const onOpenVirtualView = vi.fn();
-  const onOpenTrashView = vi.fn();
-  const onSelectNode = vi.fn();
-  const onToggleRightSidebarVisibility = vi.fn();
   const flatProps = {
     activeNodeId: 'node-1',
     editorContent: 'Version 1',
@@ -109,22 +103,22 @@ function createProps(overrides: Partial<WorkspaceLayoutFlatProps> = {}) {
     nodesById: {
       'node-1': createNode({ id: 'node-1', kind: 'topic', parentNodeId: null, title: 'Node 1' })
     },
-    onCloseImportManagement,
+    onCloseImportManagement: vi.fn(),
     onOpenImportManagement: vi.fn(),
-    onOpenNotesView,
-    onOpenTrashView,
-    onOpenVirtualView,
+    onOpenNotesView: vi.fn(),
+    onOpenTrashView: vi.fn(),
+    onOpenVirtualView: vi.fn(),
     onRunImportFile: vi.fn(async () => true),
-    onSelectNode,
+    onSelectNode: vi.fn(),
     onStartClipboardImport: vi.fn(),
     onToggleListVisibility: vi.fn(),
-    onToggleRightSidebarVisibility,
+    onToggleRightSidebarVisibility: vi.fn(),
     rightSidebarWidth: 320,
     selectedTrashNodeId: null,
     shouldSuppressNavigationSelectionRestore: () => false,
     ...overrides
   } as WorkspaceLayoutFlatProps;
-  return groupWorkspaceLayoutProps(flatProps) as ComponentProps<typeof WorkspaceLayoutMain>;
+  return groupWorkspaceLayoutProps(flatProps) as Parameters<typeof WorkspaceLayoutMain>[0];
 }
 
 beforeEach(() => {
@@ -135,7 +129,7 @@ beforeEach(() => {
 describe('WorkspaceLayoutMain title bar rendering', () => {
   it('keeps the title bar steady when only document content changes', () => {
     const props = createProps();
-    const { rerender } = render(<WorkspaceLayoutMain {...props} />);
+    const { rerender } = renderWithLocalization(<WorkspaceLayoutMain {...props} />);
 
     expect(windowTitleBarRender).toHaveBeenCalledTimes(1);
 
@@ -152,7 +146,7 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
   it('shows transient feedback while importing clipboard content', async () => {
     const importResult = createDeferred<boolean>();
     const onStartClipboardImport = vi.fn(() => importResult.promise);
-    render(<WorkspaceLayoutMain {...createProps({ onStartClipboardImport })} />);
+    renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onStartClipboardImport })} />);
 
     fireEvent.click(screen.getByTestId('workspace-grid'));
 
@@ -165,7 +159,7 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
   });
 
   it('forwards the top-level article title when a derived node is selected', () => {
-    render(
+    renderWithLocalization(
       <WorkspaceLayoutMain
         {...createProps({
           activeNodeId: 'node-child',
@@ -182,7 +176,7 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
   });
 
   it('forwards the folder title when a folder is selected', () => {
-    render(
+    renderWithLocalization(
       <WorkspaceLayoutMain
         {...createProps({
           activeNodeId: 'folder-1',
@@ -197,7 +191,7 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
   });
 
   it('does not render an extra full-height divider over the list splitter', () => {
-    const { container } = render(<WorkspaceLayoutMain {...createProps()} />);
+    const { container } = renderWithLocalization(<WorkspaceLayoutMain {...createProps()} />);
 
     expect(container.querySelector('.pointer-events-none.absolute.inset-y-0.z-10.w-px.bg-divider')).toBeNull();
   });
@@ -205,7 +199,7 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
 
 describe('WorkspaceLayoutMain review title bar rendering', () => {
   it('shows the queue-clear title after the study session is completed', () => {
-    render(
+    renderWithLocalization(
       <WorkspaceLayoutMain
         {...createProps({
           isStudyMode: true,
@@ -220,7 +214,7 @@ describe('WorkspaceLayoutMain review title bar rendering', () => {
 
 describe('WorkspaceLayoutMain external title bar rendering', () => {
   it('forwards the external document title and marker when an external document is selected', () => {
-    render(
+    renderWithLocalization(
       <WorkspaceLayoutMain
         {...createProps({
           activeNodeId: null,

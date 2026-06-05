@@ -14,6 +14,7 @@ import {
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton, AppInput } from '../../shared/ui';
 import { useCommandShortcutState } from '../hooks/reviewHotkeysState';
 
@@ -185,7 +186,13 @@ function useFocusTopicSearchInput(focusRequestId: number, inputRef: RefObject<HT
 }
 
 function TopicSearchPanel(state: TopicSearchState) {
-  const statusLabel = resolveTopicSearchStatusLabel(state.query, state.currentIndex, state.matchCount);
+  const t = useTranslation();
+  const statusLabel = resolveTopicSearchStatusLabel(
+    state.query,
+    state.currentIndex,
+    state.matchCount,
+    t('desktop.topicSearch.noMatches')
+  );
   const handleToolbarMouseDown = (event: ReactMouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
@@ -195,18 +202,18 @@ function TopicSearchPanel(state: TopicSearchState) {
         <div className="flex items-center gap-1">
           <Search aria-hidden="true" className="ml-1 text-foreground/55" size={15} strokeWidth={2.1} />
           <AppInput
-            aria-label="Topic search"
+            aria-label={t('desktop.topicSearch.input')}
             className="h-8 w-40 border-transparent bg-transparent px-2 text-xs focus-visible:ring-0"
             onChange={(event) => state.setQuery(event.target.value)}
             onKeyDown={(event) => handleSearchInputKeyDown(event, state.hasMatches, () => state.step(1), () => state.step(-1), state.close)}
-            placeholder="Search topic…"
+            placeholder={t('desktop.topicSearch.placeholder')}
             ref={state.inputRef}
             type="text"
             value={state.query}
           />
-          <AppIconButton className="size-8" disabled={!state.hasMatches} icon={<ArrowUpToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label="Previous match" onClick={() => state.step(-1)} onMouseDown={handleToolbarMouseDown} />
-          <AppIconButton className="size-8" disabled={!state.hasMatches} icon={<ArrowDownToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label="Next match" onClick={() => state.step(1)} onMouseDown={handleToolbarMouseDown} />
-          <AppIconButton className="size-8" icon={<X aria-hidden="true" size={15} strokeWidth={2.1} />} label="Close topic search" onClick={state.close} onMouseDown={handleToolbarMouseDown} />
+          <AppIconButton className="size-8" disabled={!state.hasMatches} icon={<ArrowUpToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.topicSearch.previous')} onClick={() => state.step(-1)} onMouseDown={handleToolbarMouseDown} />
+          <AppIconButton className="size-8" disabled={!state.hasMatches} icon={<ArrowDownToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.topicSearch.next')} onClick={() => state.step(1)} onMouseDown={handleToolbarMouseDown} />
+          <AppIconButton className="size-8" icon={<X aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.topicSearch.close')} onClick={state.close} onMouseDown={handleToolbarMouseDown} />
         </div>
         <p aria-live="polite" className="min-w-16 text-center text-xs text-foreground/70" data-testid="topic-search-status">
           {statusLabel}

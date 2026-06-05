@@ -4,6 +4,7 @@ import type { MutableRefObject, PointerEvent as ReactPointerEvent } from 'react'
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
@@ -71,17 +72,18 @@ function PreviewWindow(args: {
   preview: ExternalDocumentPreview | null;
   request: ExternalDocumentPreviewRequest;
 }) {
+  const t = useTranslation();
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
 
   return (
-    <div aria-label="External document preview panel" className="pointer-events-none fixed inset-0 z-workspace-overlay" ref={args.overlayRef}>
+    <div aria-label={t('desktop.externalLibrary.preview.panel')} className="pointer-events-none fixed inset-0 z-workspace-overlay" ref={args.overlayRef}>
       <section
         className={appFloatingSurfaceClassName('panel', 'pointer-events-auto absolute flex flex-col overflow-hidden')}
         style={args.frame.panelStyle}
       >
         <PreviewHeader
-          fileLabel={args.preview?.fileName ?? args.request.absolutePath.split('/').at(-1) ?? 'External document'}
+          fileLabel={args.preview?.fileName ?? args.request.absolutePath.split('/').at(-1) ?? t('desktop.externalLibrary.preview.documentFallback')}
           isFullscreen={args.frame.isFullscreen}
           isImporting={args.isImporting}
           pathLabel={args.preview?.relativePath ?? args.request.absolutePath}
@@ -139,6 +141,7 @@ function PreviewHeader(args: {
   pathLabel: string;
   ready: boolean;
 }) {
+  const t = useTranslation();
   return (
     <header
       className="flex cursor-move items-start justify-between gap-3 border-b border-border bg-bg-panel px-4 py-3"
@@ -155,17 +158,17 @@ function PreviewHeader(args: {
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <AppButton disabled={args.isImporting || !args.ready} onClick={args.onImport} size="sm">
-          Import
+          {t('desktop.externalLibrary.preview.import')}
         </AppButton>
         <AppButton disabled={!args.ready} onClick={args.onOpenInExternalLibrary} size="sm" variant="ghost">
-          Open in External library
+          {t('desktop.externalLibrary.preview.openInLibrary')}
         </AppButton>
         <AppIconButton
           icon={args.isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-          label={args.isFullscreen ? 'Restore preview window' : 'Full screen preview'}
+          label={args.isFullscreen ? t('desktop.externalLibrary.preview.restore') : t('desktop.externalLibrary.preview.fullscreen')}
           onClick={args.onToggleFullscreen}
         />
-        <AppIconButton icon={<X className="size-4" />} label="Close preview" onClick={args.onClose} />
+        <AppIconButton icon={<X className="size-4" />} label={t('desktop.externalLibrary.preview.close')} onClick={args.onClose} />
       </div>
     </header>
   );
@@ -179,6 +182,7 @@ function PreviewBody(args: {
   onRetry: () => void;
   preview: ExternalDocumentPreview | null;
 }) {
+  const t = useTranslation();
   if (args.isLoading) {
     return (
       <div className="flex h-full items-center justify-center px-6">
@@ -193,11 +197,11 @@ function PreviewBody(args: {
         <AppErrorState
           action={
             <AppButton onClick={args.onRetry} size="sm">
-              Retry
+              {t('desktop.externalLibrary.retry')}
             </AppButton>
           }
           description={args.error}
-          title="External preview unavailable"
+          title={t('desktop.externalLibrary.previewUnavailable')}
         />
       </div>
     );

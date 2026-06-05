@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import type { RuntimeRemovedSourceEntry } from '../../shared/platform/removedSourcesRuntimeRepository';
 
 const mocks = vi.hoisted(() => ({
@@ -93,7 +94,7 @@ function createRemovedSourcesResult(entries: RuntimeRemovedSourceEntry[]) {
 it('uses the standard topic list surface for Removed sources', async () => {
   mockRemovedSourcesLoad(createRemovedSourcesResult([createRemovedSource()]));
 
-  render(<RemovedSourcesPanel />);
+  renderWithLocalization(<RemovedSourcesPanel />);
 
   expect(await screen.findByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
   expect(screen.getByText('List deleted topics with linked sources.')).toBeInTheDocument();
@@ -109,7 +110,7 @@ it('uses the standard topic list surface for Removed sources', async () => {
 it('keeps the standard list surface blank while Removed sources load', () => {
   mocks.loadRuntimeRemovedSources.mockReturnValue(new Promise(() => undefined));
 
-  render(<RemovedSourcesPanel />);
+  renderWithLocalization(<RemovedSourcesPanel />);
 
   expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
   expect(screen.getByText('List deleted topics with linked sources.')).toBeInTheDocument();
@@ -125,7 +126,7 @@ it('collapses and expands Removed source folders with the standard list control'
     ])
   );
 
-  render(<RemovedSourcesPanel />);
+  renderWithLocalization(<RemovedSourcesPanel />);
 
   expect(await screen.findByRole('treeitem', { name: 'Alpha Removed' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Collapse all topics' }));
@@ -148,7 +149,7 @@ it('imports a Removed source from the row context menu', async () => {
     status: 'restored'
   });
 
-  render(<RemovedSourcesPanel onSelectNode={onSelectNode} />);
+  renderWithLocalization(<RemovedSourcesPanel onSelectNode={onSelectNode} />);
 
   fireEvent.contextMenu(await screen.findByRole('treeitem', { name: 'Alpha Removed' }), {
     clientX: 160,

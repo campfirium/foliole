@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import {
   appFloatingEmptyStateClassName,
@@ -22,7 +23,8 @@ import {
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 export function SearchPaletteEmptyState({ query }: { query: string }) {
-  const label = query.trim() ? 'No matching results' : null;
+  const t = useTranslation();
+  const label = query.trim() ? t('desktop.search.noMatches') : null;
   const className = appFloatingListClassName('min-h-56');
   if (!label) return <div aria-hidden="true" className={className} />;
   return (
@@ -33,9 +35,10 @@ export function SearchPaletteEmptyState({ query }: { query: string }) {
 }
 
 export function SearchPaletteErrorState() {
+  const t = useTranslation();
   return (
     <ul className={appFloatingListClassName()}>
-      <li className={appFloatingEmptyStateClassName()}>Search is unavailable. Try again in a moment.</li>
+      <li className={appFloatingEmptyStateClassName()}>{t('desktop.search.unavailable')}</li>
     </ul>
   );
 }
@@ -50,6 +53,7 @@ export function SearchPaletteList(props: {
   results: WorkspaceSearchResult[];
   sourceDetailsByNodeId: Record<string, RuntimeNodeSourceDetails | null | undefined>;
 }) {
+  const t = useTranslation();
   const listRef = useRef<HTMLUListElement | null>(null);
   useEffect(() => {
     const activeRow = listRef.current?.querySelector('[data-search-result-active="true"]');
@@ -60,7 +64,7 @@ export function SearchPaletteList(props: {
 
   return (
     <ul
-      aria-label="Workspace search results"
+      aria-label={t('desktop.search.results.aria')}
       className={appFloatingListClassName()}
       ref={listRef}
       onWheel={(event) => {
@@ -141,9 +145,10 @@ function SearchPaletteSectionHeader(props: {
   externalSectionStatus: string | null;
   kind: WorkspaceSearchResult['kind'];
 }) {
+  const t = useTranslation();
   return (
     <div className={appFloatingSectionHeaderClassName('flex items-center justify-between gap-3')}>
-      <span>{props.kind === 'external' ? 'External folders' : props.kind === 'removed' ? 'Removed' : 'Foliole content'}</span>
+      <span>{props.kind === 'external' ? t('desktop.search.section.externalFolders') : props.kind === 'removed' ? t('desktop.search.section.removed') : t('desktop.search.section.folioleContent')}</span>
       {props.kind === 'external' && props.externalSectionStatus ? (
         <span className={appFloatingMetaBadgeClassName('normal-case tracking-normal')}>
           {props.externalSectionStatus}
@@ -158,16 +163,18 @@ function SearchPaletteResultMeta(props: {
   nodesById: WorkspaceListNodesById;
   sourceDetails: RuntimeNodeSourceDetails | null | undefined;
 }) {
+  const t = useTranslation();
+  const pathLabel = resolveSearchResultPathLabel(props.item, props.nodesById, t) ?? t('desktop.search.context.topLevel');
   return (
     <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-[11px] text-foreground/45">
       <span className="min-w-0 truncate opacity-85">
-        {resolveSearchResultPathLabel(props.item, props.nodesById)}
+        {pathLabel}
       </span>
       <span className="flex shrink-0 items-center gap-1">
         {props.item.kind === 'external'
           ? renderSearchResultMetaBadge(resolveExternalFolderLabel(props.item))
           : null}
-        {renderSearchResultMetaBadge(resolveSearchResultNodeBadge(props.item, props.nodesById))}
+        {renderSearchResultMetaBadge(resolveSearchResultNodeBadge(props.item, props.nodesById, t))}
         {renderSearchResultSourceLabel(props.sourceDetails)}
       </span>
     </span>

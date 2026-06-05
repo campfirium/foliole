@@ -1,26 +1,35 @@
-function formatHighlightTrend(currentHighlightCount: number, updatedHighlightCount: number) {
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
+
+type Translate = ReturnType<typeof useTranslation>;
+
+function formatHighlightTrend(t: Translate, currentHighlightCount: number, updatedHighlightCount: number) {
   if (currentHighlightCount === updatedHighlightCount) {
-    return `Highlights stay at ${updatedHighlightCount}`;
+    return t('desktop.sourceUpdate.summary.highlightsStay', { count: updatedHighlightCount });
   }
   if (updatedHighlightCount > currentHighlightCount) {
-    return `Highlights grow from ${currentHighlightCount} to ${updatedHighlightCount}`;
+    return t('desktop.sourceUpdate.summary.highlightsGrow', { current: currentHighlightCount, updated: updatedHighlightCount });
   }
-  return `Highlights shrink from ${currentHighlightCount} to ${updatedHighlightCount}`;
+  return t('desktop.sourceUpdate.summary.highlightsShrink', { current: currentHighlightCount, updated: updatedHighlightCount });
+}
+
+function formatHighlightCount(t: Translate, count: number) {
+  return t(count === 1 ? 'desktop.sourceUpdate.summary.highlightCount.one' : 'desktop.sourceUpdate.summary.highlightCount.many', { count });
 }
 
 export function SourceUpdateSummaryBar(props: {
   currentHighlightCount: number;
   updatedHighlightCount: number;
 }) {
+  const t = useTranslation();
   return (
     <section className="grid grid-cols-2 gap-3 border-b border-border px-4 py-3">
       <div className="rounded-md bg-bg-elevated px-3 py-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Current</p>
-        <p className="mt-1 text-sm font-medium text-foreground">{props.currentHighlightCount} highlights</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">{t('desktop.sourceUpdate.summary.current')}</p>
+        <p className="mt-1 text-sm font-medium text-foreground">{formatHighlightCount(t, props.currentHighlightCount)}</p>
       </div>
       <div className="rounded-md bg-bg-elevated px-3 py-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Incoming</p>
-        <p className="mt-1 text-sm font-medium text-foreground">{formatHighlightTrend(props.currentHighlightCount, props.updatedHighlightCount)}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">{t('desktop.sourceUpdate.summary.incoming')}</p>
+        <p className="mt-1 text-sm font-medium text-foreground">{formatHighlightTrend(t, props.currentHighlightCount, props.updatedHighlightCount)}</p>
       </div>
     </section>
   );

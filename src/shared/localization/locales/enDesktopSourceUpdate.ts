@@ -1,0 +1,21 @@
+export const EN_DESKTOP_SOURCE_UPDATE_TRANSLATIONS = {
+  'desktop.sourceUpdate.dialogTitle': 'Source update panel',
+  'desktop.sourceUpdate.close': 'Close source update panel',
+  'desktop.sourceUpdate.current.title': 'Current',
+  'desktop.sourceUpdate.current.description': 'This side keeps the same reading and editing feel as the main document, stays vertically synced with the updated source, and leaves aligned gaps where the source has extra lines.',
+  'desktop.sourceUpdate.updated.title': 'Updated Source',
+  'desktop.sourceUpdate.updated.description': 'This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines.',
+  'desktop.sourceUpdate.summary.current': 'Current',
+  'desktop.sourceUpdate.summary.incoming': 'Incoming',
+  'desktop.sourceUpdate.summary.highlightCount.one': '{count} highlight',
+  'desktop.sourceUpdate.summary.highlightCount.many': '{count} highlights',
+  'desktop.sourceUpdate.summary.highlightsStay': 'Highlights stay at {count}',
+  'desktop.sourceUpdate.summary.highlightsGrow': 'Highlights grow from {current} to {updated}',
+  'desktop.sourceUpdate.summary.highlightsShrink': 'Highlights shrink from {current} to {updated}',
+  'desktop.sourceUpdate.overview.aria': 'Comparison overview ruler',
+  'desktop.sourceUpdate.overview.previous': 'Jump to previous diff',
+  'desktop.sourceUpdate.overview.next': 'Jump to next diff',
+  'desktop.sourceUpdate.overview.marker.currentOnly': 'Jump to lines only in current draft around row {row}',
+  'desktop.sourceUpdate.overview.marker.updatedOnly': 'Jump to lines only in updated source around row {row}',
+  'desktop.sourceUpdate.overview.marker.changed': 'Jump to changed lines around row {row}'
+} as const;

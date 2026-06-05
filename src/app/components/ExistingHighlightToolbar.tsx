@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { AnnotationNotePanel } from './AnnotationNotePanel';
@@ -34,6 +35,7 @@ export function ExistingHighlightToolbar(props: {
   onOpenExistingHighlight: () => void;
   top: number;
 }) {
+  const t = useTranslation();
   const [noteDraft, setNoteDraft] = useState('');
   const [isNoteOpen, setIsNoteOpen] = useState(false);
 
@@ -50,16 +52,16 @@ export function ExistingHighlightToolbar(props: {
       style={{ left: props.left, top: props.top }}
     >
       <div className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar" style={{ opacity: 'var(--app-selection-toolbar-opacity)' }}>
-        <ExistingHighlightToolbarButton label="Close Highlight" onClick={props.onDeleteExistingHighlight}>
+        <ExistingHighlightToolbarButton label={t('desktop.highlightToolbar.close')} onClick={props.onDeleteExistingHighlight}>
           <X aria-hidden="true" size={19} strokeWidth={2} />
         </ExistingHighlightToolbarButton>
-        <ExistingHighlightToolbarButton label="Add Comment" onClick={() => setIsNoteOpen(true)}>
+        <ExistingHighlightToolbarButton label={t('desktop.highlightToolbar.addComment')} onClick={() => setIsNoteOpen(true)}>
           <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
         </ExistingHighlightToolbarButton>
-        <ExistingHighlightToolbarButton label="Open" onClick={props.onOpenExistingHighlight}>
+        <ExistingHighlightToolbarButton label={t('desktop.highlightToolbar.open')} onClick={props.onOpenExistingHighlight}>
           <CornerDownRight aria-hidden="true" size={19} strokeWidth={2} />
         </ExistingHighlightToolbarButton>
-        <ExistingHighlightToolbarButton label="More" onClick={() => undefined}>
+        <ExistingHighlightToolbarButton label={t('desktop.highlightToolbar.more')} onClick={() => undefined}>
           <MoreHorizontal aria-hidden="true" size={19} strokeWidth={2} />
         </ExistingHighlightToolbarButton>
       </div>

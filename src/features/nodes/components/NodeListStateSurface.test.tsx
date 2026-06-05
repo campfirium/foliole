@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../../store/workspaceStore';
 import { ensureWorkspaceHydrated } from '../../../store/workspaceStoreHydration';
 
@@ -20,7 +21,7 @@ beforeEach(() => {
 });
 
 function renderListStateSurface(hasRows: boolean) {
-  render(
+  renderWithLocalization(
     <NodeListStateSurface
       emptyState={{ description: 'Add a topic to get started.', title: 'No topics in this folder' }}
       hasRows={hasRows}

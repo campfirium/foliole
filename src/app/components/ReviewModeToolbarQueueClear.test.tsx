@@ -1,10 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 
 it('shows queue clear controls while continuing reading after review items are done', () => {
-  render(
+  renderWithLocalization(
     <ReviewModeToolbar
       isAnswerRevealed={false}
       isCurrentItemGradable={false}

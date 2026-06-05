@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
 
@@ -63,7 +64,7 @@ it('does not aggregate highlights when the active node is a highlight node', () 
     selectedText: 'answer'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-highlight"
       nodeOrder={['node-parent', 'node-highlight']}

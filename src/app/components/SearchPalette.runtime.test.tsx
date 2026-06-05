@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
@@ -8,6 +8,7 @@ vi.mock('../../shared/platform/removedSourcesRuntimeRepository', () => ({
   loadRuntimeRemovedSources: vi.fn().mockResolvedValue({ entries: [], loadedAt: '2026-05-13T00:00:00.000Z' })
 }));
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
@@ -21,12 +22,13 @@ function createDeferred<T>() {
 }
 
 it('waits for a typing pause before running workspace search', async () => {
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   vi.useFakeTimers();
   try {
     const runtimeInvoke = vi.fn().mockResolvedValue([]);
     vi.mocked(getRuntimeInvoke).mockReturnValue(runtimeInvoke);
 
-    render(
+    renderWithLocalization(
       <SearchPalette
         isOpen
         nodeOrder={['root']}
@@ -56,6 +58,7 @@ it('waits for a typing pause before running workspace search', async () => {
 });
 
 it('clears stale runtime results immediately when the query changes', async () => {
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   const firstSearch = createDeferred<WorkspaceSearchResult[]>();
   const secondSearch = createDeferred<WorkspaceSearchResult[]>();
   vi.mocked(getRuntimeInvoke).mockReturnValue(
@@ -66,7 +69,7 @@ it('clears stale runtime results immediately when the query changes', async () =
     })
   );
 
-  render(
+  renderWithLocalization(
     <SearchPalette
       isOpen
       nodeOrder={['root']}
@@ -90,9 +93,10 @@ it('clears stale runtime results immediately when the query changes', async () =
 });
 
 it('shows a search error instead of an empty result when runtime search fails', async () => {
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockRejectedValue(new Error('search failed')));
 
-  render(
+  renderWithLocalization(
     <SearchPalette
       isOpen
       nodeOrder={['root']}

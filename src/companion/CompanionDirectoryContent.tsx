@@ -7,6 +7,7 @@ import type {
   FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
 import { definedProps } from '../shared/lib/definedProps';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionRootDirectoryView,
@@ -32,14 +33,18 @@ function DirectoryRow(props: {
   item: DirectoryListItem;
   onSelectItem(item: DirectoryListItem): void;
 }) {
+  const t = useTranslation();
+  const title = props.item.source === 'trashRoot' ? t(props.item.titleKey) : props.item.title;
   return (
     <button
-      aria-label={`Open ${props.item.kind === 'folder' ? 'folder' : 'topic'} ${props.item.title}`}
+      aria-label={t(props.item.kind === 'folder' ? 'companion.directory.openFolder' : 'companion.directory.openTopic', {
+        title
+      })}
       className="flex min-h-14 w-full items-center justify-between gap-3 border-b border-companion-divider px-1 py-4 text-left transition-colors hover:bg-companion-subtle/60 active:bg-companion-subtle/80"
       onClick={() => props.onSelectItem(props.item)}
       type="button"
     >
-      <span className={`min-w-0 flex-1 text-base font-medium text-foreground ${props.item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{props.item.title}</span>
+      <span className={`min-w-0 flex-1 text-base font-medium text-foreground ${props.item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{title}</span>
       <ChevronRight className="h-5 w-5 shrink-0 text-companion-text-tertiary" />
     </button>
   );
@@ -50,12 +55,13 @@ function DirectoryList(props: {
   onSelectItem(item: DirectoryListItem): void;
   sections: DirectorySection[];
 }) {
+  const t = useTranslation();
   if (props.sections.length === 0) {
     return (
       <div className="border-t border-companion-divider px-1 py-6">
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
-          description="Add a topic or folder from desktop to see it here."
+          description={t('companion.directory.emptyDescription')}
           title={props.emptyLabel}
         />
       </div>
@@ -66,9 +72,9 @@ function DirectoryList(props: {
     <div className="space-y-4">
       {props.sections.map((section, index) => (
         <section className={index === 0 ? '' : 'border-t border-companion-divider'} key={section.id}>
-          {section.title ? (
+          {section.titleKey ? (
             <h2 className={`px-1 pb-1 text-xs font-medium text-companion-text-tertiary ${index === 0 ? '' : 'pt-4'}`}>
-              {section.title}
+              {t(section.titleKey)}
             </h2>
           ) : null}
           {section.items.map((item) => (
@@ -133,6 +139,7 @@ export function CompanionDirectoryContent(props: {
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
+  const t = useTranslation();
   const directory = useCompanionExternalDirectory();
   const externalDocument = useCompanionExternalDocument(props.selection);
   const { folderView, sections, virtualView } = useCompanionDirectorySections({
@@ -167,7 +174,7 @@ export function CompanionDirectoryContent(props: {
   return (
     <section className="px-1 py-4">
       <DirectoryList
-        emptyLabel={folderView || virtualView ? 'This folder is empty' : 'This folder is empty'}
+        emptyLabel={folderView || virtualView ? t('companion.directory.emptyFolder') : t('companion.directory.emptyFolder')}
         onSelectItem={handleSelectItem}
         sections={sections}
       />

@@ -1,14 +1,18 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
 
 import { ImportCatalogHeader } from './ImportCatalogLayout';
+import { getImportCatalogSortOptions } from './importCatalogOrdering';
 import { createImportInventoryErrorState, createImportInventoryUnavailableState } from './ImportInventoryState';
 import { ImportOverviewContent } from './ImportOverviewContent';
-import { overviewSortOptions, useImportOverviewState } from './importOverviewState';
+import { useImportOverviewState } from './importOverviewState';
 
 function ImportOverviewBody(props: {
   onOpenNode: (nodeId: string) => void;
   state: ReturnType<typeof useImportOverviewState>;
 }) {
+  const t = useTranslation();
+
   if (props.state.isLoading) {
     return (
       <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
@@ -25,7 +29,7 @@ function ImportOverviewBody(props: {
   if (props.state.totalVisibleCount === 0) {
     return (
       <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
-        <AppEmptyState description="No recent import runs yet." title="Recent imports are empty" />
+        <AppEmptyState description={t('desktop.importOverview.empty.description')} title={t('desktop.importOverview.empty.title')} />
       </div>
     );
   }
@@ -46,20 +50,22 @@ function ImportOverviewBody(props: {
 }
 
 function ImportOverviewErrorState(props: { state: ReturnType<typeof useImportOverviewState> }) {
+  const t = useTranslation();
+
   if (props.state.loadIssue?.kind !== 'failed') {
     return null;
   }
   const errorState = createImportInventoryErrorState({
-    catalogName: 'recent imports',
     issue: props.state.loadIssue,
-    onRetry: props.state.refresh
+    onRetry: props.state.refresh,
+    title: t('desktop.importCatalog.error.title', { catalogName: t('desktop.importOverview.catalogName') })
   });
   return (
     <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
       <AppErrorState
         action={
           <AppButton onClick={props.state.refresh} variant="primary">
-            Retry
+            {t('desktop.importOverview.retry')}
           </AppButton>
         }
         description={errorState.description}
@@ -70,7 +76,11 @@ function ImportOverviewErrorState(props: { state: ReturnType<typeof useImportOve
 }
 
 function ImportOverviewUnavailableState() {
-  const disabledState = createImportInventoryUnavailableState('recent imports');
+  const t = useTranslation();
+  const disabledState = createImportInventoryUnavailableState({
+    description: t('desktop.importCatalog.unavailable.description', { catalogName: t('desktop.importOverview.catalogName') }),
+    title: t('desktop.importCatalog.unavailable.title')
+  });
   return (
     <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
       <AppEmptyState description={disabledState.description} title={disabledState.title} />
@@ -87,11 +97,12 @@ export function ImportOverviewPage({
   onOpenChange: (open: boolean) => void;
   onSelectNode?: (nodeId: string) => void;
 }) {
+  const t = useTranslation();
   const state = useImportOverviewState({ onOpenChange, ...(onSelectNode ? { onSelectNode } : {}), open });
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
-      <section aria-label="Recent Imports catalog" className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
+      <section aria-label={t('desktop.importOverview.catalog')} className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
         <ImportCatalogHeader
           countLabel={String(state.totalVisibleCount)}
           onChangeQuery={state.setQuery}
@@ -99,12 +110,12 @@ export function ImportOverviewPage({
           onChangeSortKey={(value) => state.setSortKey(value as typeof state.sortKey)}
           query={state.query}
           searchResultLabel={state.query.trim() ? String(state.totalVisibleCount) : null}
-          searchLabel="Search recent imports"
-          searchPlaceholder="Search recent imports"
+          searchLabel={t('desktop.importOverview.search')}
+          searchPlaceholder={t('desktop.importOverview.search')}
           sortDirection={state.sortDirection}
           sortKey={state.sortKey}
-          sortOptions={overviewSortOptions}
-          title="Recent Imports"
+          sortOptions={getImportCatalogSortOptions(t)}
+          title={t('desktop.importOverview.title')}
         />
         <ImportOverviewBody onOpenNode={onSelectNode ?? (() => undefined)} state={state} />
         <p aria-live="polite" className="px-1 pt-3 text-xs text-foreground/65">

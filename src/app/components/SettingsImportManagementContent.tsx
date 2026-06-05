@@ -1,5 +1,6 @@
 import type { ImportNodeTitleStrategy } from '../../../lib/core/import/importedNodeTitle';
 import { parseLiteralUnion } from '../../shared/lib/parseLiteralUnion';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/ui';
 
 import type { DraftImportSource, DraftImportSourceField } from './importSourceWorkspaceModel';
@@ -12,26 +13,27 @@ function TitleStrategySection(props: {
   onChange: (value: ImportNodeTitleStrategy) => void;
   titleStrategy: ImportNodeTitleStrategy;
 }) {
+  const t = useTranslation();
   return (
     <SettingsSection
-      ariaLabel="Import title settings"
+      ariaLabel={t('settings.import.title.sectionAria')}
       className="mb-6"
-      description="Imported topics keep the original body unchanged. This only decides which value becomes the topic title."
-      title="Imported title"
+      description={t('settings.import.title.description')}
+      title={t('settings.import.title.sectionTitle')}
     >
       <SettingsRow
-        description="File name is the safer default. Unique level-one heading only applies when the document has exactly one `#` heading."
-        title="Title source"
+        description={t('settings.import.title.sourceDescription')}
+        title={t('settings.import.title.source')}
       >
         <SettingsControlSlot>
           <select
-            aria-label="Imported title source"
+            aria-label={t('settings.import.title.sourceAria')}
             className={importSourceSelectClassName}
             onChange={(event) => props.onChange(parseLiteralUnion(event.target.value, IMPORT_NODE_TITLE_STRATEGIES) ?? props.titleStrategy)}
             value={props.titleStrategy}
           >
-            <option value="file_name">File name first</option>
-            <option value="heading">Unique level-one heading first</option>
+            <option value="file_name">{t('settings.import.title.fileNameFirst')}</option>
+            <option value="heading">{t('settings.import.title.headingFirst')}</option>
           </select>
         </SettingsControlSlot>
       </SettingsRow>
@@ -53,14 +55,15 @@ export function SettingsImportManagementContent(props: {
   titleStrategy: ImportNodeTitleStrategy;
 }) {
   const lastSource = props.sources.at(-1);
+  const t = useTranslation();
 
   return (
     <div className="space-y-6">
       <TitleStrategySection onChange={props.onChangeTitleStrategy} titleStrategy={props.titleStrategy} />
       <SettingsSection
-        ariaLabel="Watch folders"
-        description="Restore and adjust the long-running import folders directly here."
-        title="Watch folders"
+        ariaLabel={t('settings.import.linkedFolders.aria')}
+        description={t('settings.import.linkedFolders.description')}
+        title={t('settings.import.linkedFolders.title')}
       >
         <div className="min-w-0 overflow-hidden">
           <ImportSourceTable

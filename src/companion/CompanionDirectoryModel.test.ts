@@ -24,7 +24,7 @@ const snapshot = {
 function sectionTitles(sections: ReturnType<typeof resolveDirectorySections>) {
   return sections.map((section) => ({
     id: section.id,
-    title: section.title,
+    titleKey: section.titleKey,
     titles: section.items.map((item) => item.title)
   }));
 }
@@ -75,10 +75,10 @@ describe('CompanionDirectoryModel', () => {
     const sections = resolveSections({ kind: 'root' });
 
     expect(sectionTitles(sections)).toEqual([
-      { id: 'internal', title: 'Workspace', titles: ['Inbox', '1Untitled Folder'] },
-      { id: 'external', title: 'External', titles: ['2think', '1act'] },
-      { id: 'virtual', title: 'Virtual', titles: ['Virtual'] },
-      { id: 'trash', title: 'Trash', titles: ['Trash'] }
+      { id: 'internal', titleKey: 'companion.directory.section.workspace', titles: ['Inbox', '1Untitled Folder'] },
+      { id: 'external', titleKey: 'companion.directory.section.external', titles: ['2think', '1act'] },
+      { id: 'virtual', titleKey: 'companion.directory.section.virtual', titles: ['Virtual'] },
+      { id: 'trash', titleKey: 'companion.directory.section.trash', titles: [''] }
     ]);
   });
 

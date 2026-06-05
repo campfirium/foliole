@@ -1,5 +1,4 @@
-import { useRef, useState } from 'react';
-import type { ComponentProps, MouseEvent as ReactMouseEvent } from 'react';
+import type { ComponentProps } from 'react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -8,14 +7,12 @@ import { configurePdfWorker } from '../../features/pdf/model/pdfWorker';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { markNodePositionReady } from '../../shared/platform/performanceDiagnosticsProbe';
-import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
-import { normalizeContextMenuPosition } from '../contextCommands';
 
 import { PdfDocumentSurfaceLayout } from './PdfDocumentSurfaceLayout';
 import { resolvePdfExternalHref } from './pdfExternalLinkTarget';
 import type { PdfPageDimensions } from './pdfPageDimensions';
-import { resolveContextMenuSelection, useTrackPdfSelection, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
+import { PdfSelectionContextMenu, usePdfSelectionContextMenu } from './PdfSelectionContextMenu';
 import { useRegisterPdfSurface } from './pdfSurfaceRegistration';
 import { usePdfSearchControls } from './pdfSurfaceSearchControls';
 
@@ -36,80 +33,6 @@ interface PdfDocumentSurfaceProps {
 }
 
 type PdfSurfaceLayoutProps = ComponentProps<typeof PdfDocumentSurfaceLayout>;
-
-function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionText: string, locator: PdfAnchorLocator) => boolean) {
-  const [selectionMenuState, setSelectionMenuState] = useState<{
-    left: number;
-    top: number;
-    selectionText: string;
-    locator: PdfAnchorLocator;
-  } | null>(null);
-  const [selectionOverlayLocator, setSelectionOverlayLocator] = useState<PdfAnchorLocator | undefined>(undefined);
-  const surfaceRef = useRef<HTMLElement | null>(null);
-  const preservedSelectionRef = useRef<PdfSelectionSnapshot | null>(null);
-  useTrackPdfSelection(surfaceRef, preservedSelectionRef);
-
-  const handleContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
-    const fallbackSelection = resolveContextMenuSelection(surfaceRef.current, preservedSelectionRef.current);
-    if (!fallbackSelection?.selectionText) {
-      setSelectionMenuState(null);
-      setSelectionOverlayLocator(undefined);
-      return;
-    }
-    event.preventDefault();
-    const position = normalizeContextMenuPosition(event.clientX, event.clientY);
-    setSelectionMenuState({
-      left: position.left,
-      locator: fallbackSelection.locator,
-      top: position.top,
-      selectionText: fallbackSelection.selectionText
-    });
-    setSelectionOverlayLocator(fallbackSelection.locator);
-  };
-
-  const closeSelectionMenu = () => {
-    setSelectionMenuState(null);
-    setSelectionOverlayLocator(undefined);
-  };
-
-  const handleCreateHighlight = () => {
-    if (!selectionMenuState?.selectionText) {
-      closeSelectionMenu();
-      return;
-    }
-    onCreateHighlightFromSelection?.(selectionMenuState.selectionText, selectionMenuState.locator);
-    closeSelectionMenu();
-  };
-
-  return {
-    closeSelectionMenu,
-    handleContextMenu,
-    handleCreateHighlight,
-    selectionOverlayLocator,
-    selectionMenuState,
-    surfaceRef
-  };
-}
-
-function PdfSelectionContextMenu({
-  onClose,
-  onCreateHighlight,
-  state
-}: {
-  onClose: () => void;
-  onCreateHighlight: () => void;
-  state: { left: number; top: number } | null;
-}) {
-  if (!state) {
-    return null;
-  }
-
-  return (
-    <AppSelectionDropdownMenu left={state.left} onClose={onClose} top={state.top}>
-      <AppSelectionDropdownMenuItem onClick={onCreateHighlight}>Highlight</AppSelectionDropdownMenuItem>
-    </AppSelectionDropdownMenu>
-  );
-}
 
 export function PdfDocumentSurface({
   highlightLocators,

@@ -2,6 +2,7 @@ import { ArrowDownLeft } from 'lucide-react';
 import { useState } from 'react';
 
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '../../shared/ui';
 
 import { NodeBacklinksList } from './NodeBacklinksList';
@@ -12,6 +13,7 @@ interface DocumentPanelHeaderBacklinksMenuProps {
 }
 
 export function DocumentPanelHeaderBacklinksMenu(props: DocumentPanelHeaderBacklinksMenuProps) {
+  const t = useTranslation();
   const [open, setOpen] = useState(false);
 
   if (props.backlinks.length === 0) {
@@ -22,7 +24,7 @@ export function DocumentPanelHeaderBacklinksMenu(props: DocumentPanelHeaderBackl
     <AppDropdownMenu onOpenChange={setOpen} open={open}>
       <AppDropdownMenuTrigger asChild>
         <button
-          aria-label={`Open link references (${props.backlinks.length})`}
+          aria-label={t('desktop.links.openReferences', { count: props.backlinks.length })}
           className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-[max(var(--radius-1),var(--radius-full))] border border-transparent bg-transparent px-1.5 text-sm font-normal leading-none text-foreground/58 transition-colors hover:bg-foreground/[0.03] hover:text-foreground/78 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[state=open]:bg-foreground/[0.04] data-[state=open]:text-foreground/82"
           type="button"
         >
@@ -35,14 +37,14 @@ export function DocumentPanelHeaderBacklinksMenu(props: DocumentPanelHeaderBackl
         className="w-[min(36rem,calc(100vw-3rem))] border-transparent bg-bg-elevated p-0 shadow-none"
         sideOffset={8}
       >
-        <section aria-label="Link references" className="flex max-h-[min(70vh,42rem)] min-h-0 flex-col">
+        <section aria-label={t('desktop.links.references')} className="flex max-h-[min(70vh,42rem)] min-h-0 flex-col">
           <div className="px-4 pb-1 pt-3 text-[12px] font-medium tracking-[0.01em] text-foreground/48">
-            Link references
+            {t('desktop.links.references')}
           </div>
           <div className="min-h-0 overflow-y-auto px-4 pb-3 pt-1">
             <NodeBacklinksList
               backlinks={props.backlinks}
-              emptyLabel="No notes link back to this note yet."
+              emptyLabel={t('desktop.backlinks.empty.list')}
               onSelectNode={(nodeId) => {
                 setOpen(false);
                 props.onSelectNode(nodeId);

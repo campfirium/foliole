@@ -5,6 +5,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
 
@@ -31,11 +32,12 @@ export function ExternalLibraryPreviewSurface(args: {
   onPreviewEditorReady: (adapter: EditorAdapter | null) => void;
   preview: ExternalDocumentPreview;
 }) {
+  const t = useTranslation();
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
 
   return (
-    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col" style={toDocumentWidthStyle(args.documentMaxWidth)}>
+    <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col" style={toDocumentWidthStyle(args.documentMaxWidth)}>
       <ExternalPreviewHeader
         canGoBack={args.canGoBack}
         canGoForward={args.canGoForward}
@@ -79,13 +81,14 @@ export function ExternalLibraryPreviewSurface(args: {
 }
 
 function ExternalArchivedNotice(args: { isPresent?: boolean | undefined }) {
+  const t = useTranslation();
   if (args.isPresent !== false) {
     return null;
   }
   return (
     <div className="mx-auto mb-2 w-full max-w-[var(--document-max-width)] px-[var(--document-content-inline-padding)]">
       <div className="rounded-md border border-border/70 bg-panel px-3 py-2 text-sm text-foreground/70">
-        Original file is unavailable. Foliole is showing the recently opened version.
+        {t('desktop.externalLibrary.preview.archivedNotice')}
       </div>
     </div>
   );
@@ -142,15 +145,17 @@ function ExternalImportAction(args: {
   onHandleImport: () => void;
   onOpenImportedNodeId: (nodeId: string) => void;
 }) {
+  const t = useTranslation();
   const isImported = Boolean(args.importedNodeId);
-  const label = isImported ? 'Imported' : 'Import';
+  const label = isImported ? t('desktop.externalLibrary.preview.imported') : t('desktop.externalLibrary.preview.import');
+  const actionLabel = isImported ? t('desktop.externalLibrary.preview.openImported') : t('desktop.externalLibrary.preview.importToFoliole');
   return (
     <div className="pointer-events-none absolute inset-x-0 top-5 z-local-overlay overflow-visible">
       <div className="mx-auto flex w-full max-w-[var(--document-max-width)] justify-end px-[var(--document-content-inline-padding)]">
         <AppTooltip>
           <AppTooltipTrigger asChild>
             <button
-              aria-label={isImported ? 'Open imported Topic' : 'Import to Foliole'}
+              aria-label={actionLabel}
               className="pointer-events-auto inline-flex h-10 min-w-20 translate-x-[calc(100%+theme(spacing.3))] items-center justify-center rounded-md border border-transparent bg-[var(--app-accent-color)] px-4 text-sm font-medium text-accent-foreground shadow-control transition-colors hover:bg-[rgb(var(--app-accent-color-rgb)/0.88)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45 max-[1280px]:translate-x-0"
               disabled={args.isImporting}
               onClick={() => {
@@ -165,7 +170,7 @@ function ExternalImportAction(args: {
               {label}
             </button>
           </AppTooltipTrigger>
-          <AppTooltipContent side="left">{isImported ? 'Open imported Topic' : 'Import to Foliole'}</AppTooltipContent>
+          <AppTooltipContent side="left">{actionLabel}</AppTooltipContent>
         </AppTooltip>
       </div>
     </div>

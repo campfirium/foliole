@@ -1,11 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 
 describe('CompanionBottomSheet', () => {
   it('keeps mobile sheets bounded and internally scrollable', () => {
-    render(
+    renderWithLocalization(
       <CompanionBottomSheet onOpenChange={vi.fn()} open title="Sheet">
         <div>Sheet body</div>
       </CompanionBottomSheet>

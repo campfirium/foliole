@@ -1,6 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 
 const mockSetContent = vi.fn();
@@ -40,7 +41,11 @@ import { MarkdownEditor } from './MarkdownEditor';
 
 function renderWithProvider(ui: React.ReactElement) {
   return render(ui, {
-    wrapper: ({ children }) => <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+    wrapper: ({ children }) => (
+      <LocalizationProvider>
+        <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+      </LocalizationProvider>
+    )
   });
 }
 

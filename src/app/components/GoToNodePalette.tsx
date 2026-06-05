@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   appFloatingEmptyStateClassName,
   appFloatingItemClassName,
@@ -31,20 +32,21 @@ interface GoToNodePaletteProps {
 }
 
 export function GoToNodePalette({
-  dialogLabel = 'Go to',
-  emptyLabel = 'Search folders, topics, and items',
+  dialogLabel,
+  emptyLabel,
   isOpen,
-  inputLabel = 'Go to',
+  inputLabel,
   nodeOrder,
   nodesById,
   onClose,
   onOpenNode,
   onSelectNode,
-  noResultsLabel = 'No matching results',
-  placeholder = 'Type a title...',
+  noResultsLabel,
+  placeholder,
   recentNodeIds,
   trashedNodeIds
 }: GoToNodePaletteProps) {
+  const t = useTranslation();
   const handleSelectNode = onSelectNode ?? onOpenNode;
   const focusTrap = useFloatingDialogFocusTrap(isOpen);
   useFloatingPaletteEscape(isOpen, onClose);
@@ -68,14 +70,14 @@ export function GoToNodePalette({
 
   return renderGoToNodeDialog({
     activeIndex,
-    dialogLabel,
-    emptyLabel,
+    dialogLabel: dialogLabel ?? t('desktop.palette.node.dialog'),
+    emptyLabel: emptyLabel ?? t('desktop.palette.node.empty'),
     ...(handleSelectNode ? { handleSelectNode } : {}),
-    inputLabel,
-    noResultsLabel,
+    inputLabel: inputLabel ?? t('desktop.palette.node.input'),
+    noResultsLabel: noResultsLabel ?? t('desktop.palette.node.noResults'),
     onClose,
     openActiveNode,
-    placeholder,
+    placeholder: placeholder ?? t('desktop.palette.node.placeholder'),
     query,
     results,
     focusTrap,
@@ -193,6 +195,8 @@ function GoToNodeResults({
   query: string;
   results: ReturnType<typeof buildNodeSearchResults>;
 }) {
+  const t = useTranslation();
+
   if (!results.length) {
     return (
       <ul className={appFloatingListClassName()}>
@@ -203,7 +207,7 @@ function GoToNodeResults({
     );
   }
   return (
-    <ul aria-label="Search results" className={appFloatingListClassName()}>
+    <ul aria-label={t('desktop.palette.node.results')} className={appFloatingListClassName()}>
       {results.map((item, index) => (
         <li key={item.id}>
           <button

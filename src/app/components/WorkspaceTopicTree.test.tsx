@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it } from 'vitest';
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import {
   markNodeSelectionRequested,
   readPerformanceDiagnosticsProbe,
@@ -136,7 +137,7 @@ beforeEach(() => {
 });
 
 it('places title search in the item column and keeps matches visible while searching', () => {
-  render(<WorkspaceTopicTreeHarness />);
+  renderWithLocalization(<WorkspaceTopicTreeHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
 
@@ -163,7 +164,7 @@ it('places title search in the item column and keeps matches visible while searc
 });
 
 it('opens a collapsed parent row without expanding its children', () => {
-  render(<WorkspaceTopicTreeHarness />);
+  renderWithLocalization(<WorkspaceTopicTreeHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
 
@@ -176,7 +177,7 @@ it('opens a collapsed parent row without expanding its children', () => {
 });
 
 it('shows every ctrl-selected current-folder topic as selected', () => {
-  render(<WorkspaceTopicTreeHarness />);
+  renderWithLocalization(<WorkspaceTopicTreeHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   fireEvent.click(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' }), { ctrlKey: true });
@@ -189,7 +190,7 @@ it('shows every ctrl-selected current-folder topic as selected', () => {
 });
 
 it('keeps an expanded branch open when selecting another current-folder topic', () => {
-  render(<WorkspaceTopicTreeHarness />);
+  renderWithLocalization(<WorkspaceTopicTreeHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   const reactNotesRow = within(itemColumn).getByRole('treeitem', { name: 'React Notes', expanded: false });
@@ -204,7 +205,7 @@ it('keeps an expanded branch open when selecting another current-folder topic', 
 });
 
 it('selects shift ranges by the sorted visible order in the item column', () => {
-  render(<WorkspaceTopicTreeSortedSelectionHarness />);
+  renderWithLocalization(<WorkspaceTopicTreeSortedSelectionHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   fireEvent.click(within(itemColumn).getByRole('treeitem', { name: 'Omega Notes' }), { shiftKey: true });
@@ -218,7 +219,7 @@ it('selects shift ranges by the sorted visible order in the item column', () => 
 });
 
 it('collapses a newly opened folder by default', () => {
-  render(<WorkspaceTopicTreeCollapseHarness />);
+  renderWithLocalization(<WorkspaceTopicTreeCollapseHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
 
@@ -239,7 +240,7 @@ it('does not mount collapsed topic descendants during the first folder render', 
   };
   markNodeSelectionRequested('topic-active', nodesById);
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="topic-active"

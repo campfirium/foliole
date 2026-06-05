@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
@@ -24,11 +25,6 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
 
-const TRASH_EMPTY_STATE = {
-  description: 'Deleted topics and folders will appear here.',
-  title: 'This folder is empty'
-} as const;
-
 function collectTrashFolderNodes(args: {
   folderNodeId: string | null;
   nodeOrder: string[];
@@ -47,8 +43,10 @@ function collectTrashFolderNodes(args: {
     .filter((node): node is Node => Boolean(node && node.parentNodeId === args.folderNodeId && trashedNodeIdSet.has(node.id)));
 }
 
-function formatTrashCount(count: number) {
-  return `${count} ${count === 1 ? 'topic or folder' : 'topics and folders'}`;
+function formatTrashCount(count: number, t: Translate) {
+  return t(count === 1 ? 'desktop.nodeList.trash.count.one' : 'desktop.nodeList.trash.count.many', {
+    count: count.toLocaleString()
+  });
 }
 
 function TrashCurrentViewActions({
@@ -60,6 +58,7 @@ function TrashCurrentViewActions({
   nodesById: Record<string, Node>;
   trashedNodeIds: string[];
 }) {
+  const t = useTranslation();
   const deleteNodesPermanently = useWorkspaceStore((state) => state.deleteNodesPermanently);
   const [deleteSnapshot, setDeleteSnapshot] = useState<Node[] | null>(null);
 
@@ -70,19 +69,19 @@ function TrashCurrentViewActions({
           <AppIconButton
             className="size-6 text-foreground/54 hover:bg-foreground/[0.04] hover:text-foreground"
             icon={<ChevronDown size={15} strokeWidth={2} />}
-            label="Current trash view actions"
+            label={t('desktop.nodeList.trash.currentViewActions')}
           />
         </AppDropdownMenuTrigger>
         <AppDropdownMenuContent align="start" className="min-w-[204px]">
           <AppDropdownMenuLabel className="px-3 pb-1.5 pt-2">
-            <span className="block text-xs font-medium text-foreground/72">Current view</span>
+            <span className="block text-xs font-medium text-foreground/72">{t('desktop.nodeList.trash.currentView')}</span>
             <span className="block pt-0.5 text-xs font-normal tabular-nums text-foreground/52">
-              {formatTrashCount(nodes.length)}
+              {formatTrashCount(nodes.length, t)}
             </span>
           </AppDropdownMenuLabel>
           <AppDropdownMenuItem className="gap-2" disabled={nodes.length === 0} onSelect={() => setDeleteSnapshot(nodes)}>
             <Trash2 size={15} strokeWidth={1.8} />
-            <span>Delete permanently...</span>
+            <span>{t('desktop.nodeList.trash.deletePermanentlyEllipsis')}</span>
           </AppDropdownMenuItem>
         </AppDropdownMenuContent>
       </AppDropdownMenu>
@@ -112,19 +111,21 @@ function TrashCurrentViewDeleteDialog({
   onOpenChange: (open: boolean) => void;
   trashedNodeIds: string[];
 }) {
+  const t = useTranslation();
   const nodeCount = deleteSnapshot?.length ?? 0;
+  const countLabel = formatTrashCount(nodeCount, t);
   return (
     <AppDialog open={Boolean(deleteSnapshot)} onOpenChange={onOpenChange}>
       <AppDialogPortal>
         <AppDialogOverlay />
         <AppDialogContent className="w-[min(420px,calc(100vw-32px))] p-5">
-          <AppDialogTitle>Delete permanently?</AppDialogTitle>
+          <AppDialogTitle>{t('desktop.nodeList.trash.deleteDialog.title')}</AppDialogTitle>
           <AppDialogDescription className="mt-2">
-            {`This will permanently delete ${formatTrashCount(nodeCount)} from Trash.`}
+            {t('desktop.nodeList.trash.deleteDialog.description', { countLabel })}
           </AppDialogDescription>
           <div className="mt-5 flex justify-end gap-2">
             <AppDialogClose asChild>
-              <AppButton variant="ghost">Cancel</AppButton>
+              <AppButton variant="ghost">{t('desktop.nodeList.trash.deleteDialog.cancel')}</AppButton>
             </AppDialogClose>
             <AppButton
               variant="primary"
@@ -139,7 +140,7 @@ function TrashCurrentViewDeleteDialog({
                 onOpenChange(false);
               }}
             >
-              Delete permanently
+              {t('desktop.nodeList.trash.deleteDialog.confirm')}
             </AppButton>
           </div>
         </AppDialogContent>
@@ -173,6 +174,7 @@ export function DocumentPanelTrashContent({
   pdfCache: JSX.Element;
   trashedNodeIds: string[];
 }) {
+  const t = useTranslation();
   const listedNodes = collectTrashFolderNodes({ folderNodeId, nodeOrder, nodesById, trashedNodeIds });
 
   return (
@@ -180,14 +182,17 @@ export function DocumentPanelTrashContent({
       {pdfCache}
       <FolderListView
         currentViewActions={<TrashCurrentViewActions nodes={listedNodes} nodesById={nodesById} trashedNodeIds={trashedNodeIds} />}
-        emptyState={TRASH_EMPTY_STATE}
+        emptyState={{
+          description: t('desktop.nodeList.trash.emptyFolder.description'),
+          title: t('desktop.nodeList.trash.emptyFolder.title')
+        }}
         folderTitle={folderTitle}
         nodes={listedNodes}
         nodesById={nodesById}
         onChangeSortDirection={onChangeFolderListSortDirection}
         onChangeSortKey={onChangeFolderListSortKey}
         onSelectNode={onSelectTrashNode}
-        regionLabel="Trash folder list"
+        regionLabel={t('desktop.nodeList.trash.folderList')}
         sortDirection={folderListSortDirection}
         sortKey={folderListSortKey}
       />

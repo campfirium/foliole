@@ -1,6 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 import type { EditorScrollEvent } from '../adapters/EditorAdapter';
 
@@ -47,7 +48,11 @@ import { MarkdownEditor } from './MarkdownEditor';
 
 function renderEditor(ui: React.ReactElement) {
   return render(ui, {
-    wrapper: ({ children }) => <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+    wrapper: ({ children }) => (
+      <LocalizationProvider>
+        <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+      </LocalizationProvider>
+    )
   });
 }
 

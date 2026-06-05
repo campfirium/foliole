@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
@@ -36,7 +37,7 @@ function renderFolderListActions(onOpenMoveToNode = vi.fn()) {
     })
   ];
 
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-a"
       nodeOrder={nodes.map((node) => node.id)}

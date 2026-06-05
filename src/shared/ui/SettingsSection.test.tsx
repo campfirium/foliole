@@ -4,12 +4,13 @@ import { expect, it } from 'vitest';
 import { SettingsSection } from './SettingsSection';
 
 it('renders title, description, and actions in the header', () => {
-  render(
+  const { container } = render(
     <SettingsSection actions={<button type="button">Reset all</button>} description="Section copy." title="Hotkeys">
       <div data-testid="body">body</div>
     </SettingsSection>
   );
 
+  expect(container.querySelector('section')?.className).toContain('[&+&]:before:block');
   expect(screen.getByRole('heading', { level: 3, name: 'Hotkeys' })).toBeInTheDocument();
   expect(screen.getByText('Section copy.')).toBeInTheDocument();
   expect(screen.getByText('Section copy.').className).toContain('text-muted-foreground');

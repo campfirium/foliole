@@ -144,7 +144,8 @@ function createPaletteReleaseActions() {
     openGitHubDiscussions: () => openFolioleReleaseLink('discussions'),
     openGitHubIssues: () => openFolioleReleaseLink('issues'),
     openGitHubRepository: () => openFolioleReleaseLink('repository'),
-    openLatestRelease: openFolioleLatestRelease
+    openLatestRelease: openFolioleLatestRelease,
+    openYouTubePlaylist: () => openFolioleReleaseLink('youtubePlaylist')
   };
 }
 

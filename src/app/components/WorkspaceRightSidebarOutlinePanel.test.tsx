@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import {
   resolveOutlineActiveScrollTop,
@@ -7,7 +9,7 @@ import {
 } from './WorkspaceRightSidebarOutlinePanel';
 
 function renderOutline(content: string) {
-  return render(
+  return renderWithLocalization(
     <WorkspaceRightSidebarOutlinePanel
       activePosition={content.length}
       content={content}

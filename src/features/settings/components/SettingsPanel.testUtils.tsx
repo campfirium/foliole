@@ -2,6 +2,7 @@ import { fireEvent, render, screen, type RenderOptions } from '@testing-library/
 import type { ReactElement } from 'react';
 import { vi } from 'vitest';
 
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { AppearanceSettingsProvider } from '../context/AppearanceSettingsProvider';
 import type { HotkeySettingsContextValue } from '../context/hotkeySettingsContext';
 import { HotkeySettingsProvider } from '../context/HotkeySettingsProvider';
@@ -44,13 +45,15 @@ export function renderWithMouseGestureProvider(
   delete renderOptions.hotkeySettings;
   return render(ui, {
     wrapper: ({ children }) => (
-      <AppearanceSettingsProvider>
-        <MouseGestureSettingsProvider>
-          <ReviewSchedulerSettingsProvider>
-            <HotkeySettingsProvider {...hotkeySettings}>{children}</HotkeySettingsProvider>
-          </ReviewSchedulerSettingsProvider>
-        </MouseGestureSettingsProvider>
-      </AppearanceSettingsProvider>
+      <LocalizationProvider>
+        <AppearanceSettingsProvider>
+          <MouseGestureSettingsProvider>
+            <ReviewSchedulerSettingsProvider>
+              <HotkeySettingsProvider {...hotkeySettings}>{children}</HotkeySettingsProvider>
+            </ReviewSchedulerSettingsProvider>
+          </MouseGestureSettingsProvider>
+        </AppearanceSettingsProvider>
+      </LocalizationProvider>
     ),
     ...renderOptions
   });

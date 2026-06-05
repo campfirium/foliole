@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../../shared/ui';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { ensureWorkspaceHydrated } from '../../../store/workspaceStoreHydration';
@@ -26,6 +27,7 @@ export function NodeListStateSurface({
   emptyState,
   hasRows
 }: NodeListStateSurfaceProps) {
+  const t = useTranslation();
   const loadState = useNodeListLoadState();
 
   if (hasRows) {
@@ -38,11 +40,11 @@ export function NodeListStateSurface({
         <AppErrorState
           action={
             <AppButton onClick={() => void ensureWorkspaceHydrated()} size="sm">
-              Retry
+              {t('desktop.nodeList.retry')}
             </AppButton>
           }
           description={loadState.errorMessage}
-          title="Workspace unavailable"
+          title={t('desktop.nodeList.workspaceUnavailable')}
         />
       </div>
     );

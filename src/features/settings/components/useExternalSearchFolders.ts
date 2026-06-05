@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
   createDraftExternalSourceFolder,
   loadExternalSourceSettingsFolders,
@@ -11,6 +12,7 @@ import {
 } from '../../../shared/platform/externalSourceSettingsRepository';
 
 export function useExternalSearchFolders() {
+  const t = useTranslation();
   const [folders, setFolders] = useState<ExternalSourceSettingsFolder[]>([]);
   const [isDesktopRuntime, setIsDesktopRuntime] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,8 +22,8 @@ export function useExternalSearchFolders() {
   const [loadKey, setLoadKey] = useState(0);
   const lastSavedSnapshotRef = useRef('[]');
 
-  useLoadExternalSearchFolders(loadKey, setError, setFolders, setIsDesktopRuntime, setIsLoading, lastSavedSnapshotRef);
-  usePersistExternalSearchFolders(folders, isDesktopRuntime, lastSavedSnapshotRef, setError, setFeedback, setFolders, setIsSaving);
+  useLoadExternalSearchFolders(loadKey, setError, setFolders, setIsDesktopRuntime, setIsLoading, lastSavedSnapshotRef, t);
+  usePersistExternalSearchFolders(folders, isDesktopRuntime, lastSavedSnapshotRef, setError, setFeedback, setFolders, setIsSaving, t);
 
   function updateFolder(folderId: string, update: (current: ExternalSourceSettingsFolder) => ExternalSourceSettingsFolder) {
     setFolders((current) => current.map((folder) => (folder.id === folderId ? update(folder) : folder)));
@@ -38,7 +40,7 @@ export function useExternalSearchFolders() {
     onChooseExternalAttachmentRoot: (folderId: string) => void chooseExternalAttachmentRoot(folderId, updateFolder),
     onChooseExternalSearchFolder: (folderId: string) => void chooseExternalSearchFolder(folderId, updateFolder),
     onRebuildExternalSearchIndex: (folderId?: string) =>
-      void rebuildExternalSearchFolders(folderId, setError, setFeedback, setFolders, setIsSaving),
+      void rebuildExternalSearchFolders(folderId, setError, setFeedback, setFolders, setIsSaving, t),
     onRemoveExternalSearchFolder: (folderId: string) => setFolders((current) => current.filter((folder) => folder.id !== folderId)),
     onRetryLoadExternalSearchFolders: () => setLoadKey((value) => value + 1),
     onUpdateExternalSearchFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) =>
@@ -55,7 +57,8 @@ function useLoadExternalSearchFolders(
   setFolders: (value: ExternalSourceSettingsFolder[]) => void,
   setIsDesktopRuntime: (value: boolean) => void,
   setIsLoading: (value: boolean) => void,
-  lastSavedSnapshotRef: { current: string }
+  lastSavedSnapshotRef: { current: string },
+  t: ReturnType<typeof useTranslation>
 ) {
   useEffect(() => {
     let alive = true;
@@ -70,7 +73,7 @@ function useLoadExternalSearchFolders(
       })
       .catch((nextError) => {
         if (!alive) return;
-        setError(nextError instanceof Error ? nextError.message : 'Could not load the external library.');
+        setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.load'));
       })
       .finally(() => {
         if (alive) {
@@ -80,7 +83,7 @@ function useLoadExternalSearchFolders(
     return () => {
       alive = false;
     };
-  }, [lastSavedSnapshotRef, loadKey, setError, setFolders, setIsDesktopRuntime, setIsLoading]);
+  }, [lastSavedSnapshotRef, loadKey, setError, setFolders, setIsDesktopRuntime, setIsLoading, t]);
 }
 
 function usePersistExternalSearchFolders(
@@ -90,7 +93,8 @@ function usePersistExternalSearchFolders(
   setError: (value: string | null) => void,
   setFeedback: (value: string | null) => void,
   setFolders: (value: ExternalSourceSettingsFolder[]) => void,
-  setIsSaving: (value: boolean) => void
+  setIsSaving: (value: boolean) => void,
+  t: ReturnType<typeof useTranslation>
 ) {
   useEffect(() => {
     if (!isDesktopRuntime) return;
@@ -104,11 +108,12 @@ function usePersistExternalSearchFolders(
         setError,
         setFeedback,
         setFolders,
-        setIsSaving
+        setIsSaving,
+        t
       );
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [folders, isDesktopRuntime, lastSavedSnapshotRef, setError, setFeedback, setFolders, setIsSaving]);
+  }, [folders, isDesktopRuntime, lastSavedSnapshotRef, setError, setFeedback, setFolders, setIsSaving, t]);
 }
 
 async function addExternalSearchFolder(
@@ -148,7 +153,8 @@ async function persistExternalSearchFolders(
   setError: (value: string | null) => void,
   setFeedback: (value: string | null) => void,
   setFolders: (value: ExternalSourceSettingsFolder[]) => void,
-  setIsSaving: (value: boolean) => void
+  setIsSaving: (value: boolean) => void,
+  t: ReturnType<typeof useTranslation>
 ) {
   setIsSaving(true);
   setError(null);
@@ -158,9 +164,9 @@ async function persistExternalSearchFolders(
     const rebuilt = await rebuildExternalSourceSettingsIndex();
     lastSavedSnapshotRef.current = nextSnapshot;
     setFolders(rebuilt ?? saved);
-    setFeedback('External library settings saved.');
+    setFeedback(t('settings.externalSources.feedback.saved'));
   } catch (nextError) {
-    setError(nextError instanceof Error ? nextError.message : 'Could not save external library settings.');
+    setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.save'));
   } finally {
     setIsSaving(false);
   }
@@ -183,7 +189,8 @@ async function rebuildExternalSearchFolders(
   setError: (value: string | null) => void,
   setFeedback: (value: string | null) => void,
   setFolders: (value: ExternalSourceSettingsFolder[]) => void,
-  setIsSaving: (value: boolean) => void
+  setIsSaving: (value: boolean) => void,
+  t: ReturnType<typeof useTranslation>
 ) {
   setIsSaving(true);
   setFeedback(null);
@@ -192,9 +199,9 @@ async function rebuildExternalSearchFolders(
     const rebuilt = await rebuildExternalSourceSettingsIndex(folderId);
     if (!rebuilt) return;
     setFolders(rebuilt);
-    setFeedback(folderId ? 'Folder mirror updated.' : 'All external source mirrors updated.');
+    setFeedback(folderId ? t('settings.externalSources.feedback.folderMirrorUpdated') : t('settings.externalSources.feedback.allMirrorsUpdated'));
   } catch (nextError) {
-    setError(nextError instanceof Error ? nextError.message : 'Could not update the external source mirror.');
+    setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.updateMirror'));
   } finally {
     setIsSaving(false);
   }

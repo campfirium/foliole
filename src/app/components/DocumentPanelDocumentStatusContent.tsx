@@ -1,3 +1,4 @@
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { AppButton, AppErrorState } from '../../shared/ui';
 import type { WorkspaceNodeDocumentStatus } from '../../store/workspaceRendererBoundary';
 
@@ -8,6 +9,7 @@ export function DocumentPanelDocumentStatusContent(props: {
   onRetry: () => void;
   retrying: boolean;
   status: WorkspaceNodeDocumentStatus;
+  t: Translate;
 }) {
   if (props.retrying || props.status === 'fetching') {
     return <DocumentPanelLoadingContent loadingLabel={props.loadingLabel} />;
@@ -16,13 +18,13 @@ export function DocumentPanelDocumentStatusContent(props: {
     <AppErrorState
       action={
         <AppButton disabled={props.retrying} onClick={props.onRetry} size="sm" variant="primary">
-          Retry
+          {props.t('desktop.document.retry')}
         </AppButton>
       }
       description={props.status === 'missing'
-        ? 'This topic body has not reached this device yet.'
-        : 'The topic body could not be loaded.'}
-      title="Topic body unavailable"
+        ? props.t('desktop.document.bodyUnavailable.missingDescription')
+        : props.t('desktop.document.bodyUnavailable.failedDescription')}
+      title={props.t('desktop.document.bodyUnavailable.title')}
     />
   );
 }

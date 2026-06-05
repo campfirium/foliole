@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useMemo } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   AppIconButton,
   AppInput,
@@ -21,6 +22,7 @@ export function IconGrid(props: {
   onSelect: (iconId: string) => void;
   compact?: boolean;
 }) {
+  const t = useTranslation();
   const gridClassName = props.compact
     ? 'grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] justify-items-center gap-1.5'
     : 'grid grid-cols-[repeat(auto-fill,minmax(52px,1fr))] justify-items-center gap-2';
@@ -41,7 +43,7 @@ export function IconGrid(props: {
       <div className={gridClassName}>
         {props.icons.map((icon) => (
           <button
-            aria-label={`Use ${icon.label} icon`}
+            aria-label={t('settings.icons.picker.useIcon', { label: icon.label })}
             className={buttonClassName(props.selectedIconId === icon.id)}
             key={icon.id}
             onClick={() => props.onSelect(icon.id)}
@@ -52,7 +54,7 @@ export function IconGrid(props: {
           </button>
         ))}
       </div>
-      {!props.icons.length ? <p className="px-3 py-3 text-sm text-foreground/60">No matching icons.</p> : null}
+      {!props.icons.length ? <p className="px-3 py-3 text-sm text-foreground/60">{t('settings.icons.picker.noMatching')}</p> : null}
     </div>
   );
 }
@@ -65,6 +67,7 @@ export function IconPicker(props: {
   onQueryChange: (query: string) => void;
   onSelect: (iconId: string) => void;
 }) {
+  const t = useTranslation();
   const filteredIcons = useMemo(
     () => LUCIDE_ICON_OPTIONS.filter((icon) => matchesIconQuery([icon.id, icon.label], props.query)),
     [props.query]
@@ -75,17 +78,17 @@ export function IconPicker(props: {
         <AppIconButton
           className={settingsResetButtonClassName('size-8')}
           icon={<ArrowLeft aria-hidden="true" size={15} />}
-          label="Choose another action"
+          label={t('settings.icons.rail.chooseAnotherAction')}
           onClick={props.onBack}
         />
-        <div className="min-w-0 truncate text-[1.02rem] font-semibold text-foreground">Choose an icon for the action</div>
+        <div className="min-w-0 truncate text-[1.02rem] font-semibold text-foreground">{t('settings.icons.rail.chooseIcon')}</div>
       </div>
       <AppInput
-        aria-label="Search icons"
+        aria-label={t('settings.icons.picker.search')}
         autoFocus
         className="h-9 text-sm"
         onChange={(event) => props.onQueryChange(event.target.value)}
-        placeholder="Search icons..."
+        placeholder={t('settings.icons.picker.searchPlaceholder')}
         value={props.query}
       />
       <IconGrid icons={filteredIcons} selectedIconId={props.selectedIconId} onSelect={props.onSelect} />

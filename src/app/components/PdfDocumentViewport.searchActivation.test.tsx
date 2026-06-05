@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 const { collectTextSegmentsSpy } = vi.hoisted(() => ({
   collectTextSegmentsSpy: vi.fn()
@@ -129,7 +131,7 @@ describe('PdfDocumentViewport search activation', () => {
         : [];
     });
 
-    render(<PdfDocumentViewportSearchActivationHarness />);
+    renderWithLocalization(<PdfDocumentViewportSearchActivationHarness />);
     await waitFor(() => expect(screen.getByLabelText('PDF search')).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText('PDF search'), { target: { value: 'keyword' } });
@@ -148,7 +150,7 @@ describe('PdfDocumentViewport search activation', () => {
         : [];
     });
 
-    render(<PdfDocumentViewportSearchActivationHarness />);
+    renderWithLocalization(<PdfDocumentViewportSearchActivationHarness />);
     await waitFor(() => expect(screen.getByLabelText('PDF search')).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText('PDF search'), { target: { value: 'keyword' } });

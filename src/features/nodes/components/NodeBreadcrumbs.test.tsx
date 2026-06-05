@@ -1,10 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 
 import { NodeBreadcrumbs } from './NodeBreadcrumbs';
 
 it('shows breadcrumb titles without kind labels', () => {
-  render(
+  renderWithLocalization(
     <NodeBreadcrumbs
       activeNodeId="item-1"
       nodesById={{
@@ -66,7 +68,7 @@ it('shows breadcrumb titles without kind labels', () => {
 it('routes nested topic breadcrumb selections to that topic', () => {
   const onSelectNode = vi.fn();
 
-  render(
+  renderWithLocalization(
     <NodeBreadcrumbs
       activeNodeId="item-1"
       nodesById={{

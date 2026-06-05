@@ -1,5 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 
+import { useTranslation } from '../shared/localization/LocalizationProvider';
+
 import {
   companionFlexColumnGapHalfClassName,
   companionFlexRowGap1ClassName
@@ -52,6 +54,7 @@ export function CompanionBottomTabBar(props: {
   onSecondaryDestination(destinationId: CompanionSecondaryDestinationId): void;
   visible: boolean;
 }) {
+  const t = useTranslation();
   if (!props.visible) {
     return null;
   }
@@ -62,7 +65,7 @@ export function CompanionBottomTabBar(props: {
       data-testid="companion-bottom-tab-bar"
     >
       <div className={`mx-auto flex h-full w-full max-w-[760px] items-center ${companionFlexRowGap1ClassName}`}>
-        {renderTabButtons(resolveCompanionTabs(props.config), props)}
+        {renderTabButtons(resolveCompanionTabs(props.config), props, t)}
       </div>
     </footer>
   );
@@ -73,12 +76,13 @@ function renderTabButtons(
   props: Pick<
     Parameters<typeof CompanionBottomTabBar>[0],
     'activeAction' | 'activeSecondaryDestinationId' | 'onAction' | 'onSecondaryDestination'
-  >
+  >,
+  t: ReturnType<typeof useTranslation>
 ) {
   const isShortcutActive = tabs.some(
     (tab) => tab.id === 'shortcut' && tab.destinationId === props.activeSecondaryDestinationId
   );
-  return tabs.map((tab) => renderTabButton(tab, props, isShortcutActive));
+  return tabs.map((tab) => renderTabButton(tab, props, isShortcutActive, t));
 }
 
 function renderTabButton(
@@ -87,7 +91,8 @@ function renderTabButton(
     Parameters<typeof CompanionBottomTabBar>[0],
     'activeAction' | 'activeSecondaryDestinationId' | 'onAction' | 'onSecondaryDestination'
   >,
-  isShortcutActive: boolean
+  isShortcutActive: boolean,
+  t: ReturnType<typeof useTranslation>
 ) {
   const isShortcut = tab.id === 'shortcut' && Boolean(tab.destinationId);
   const isActive = isShortcut
@@ -98,11 +103,15 @@ function renderTabButton(
       active={isActive}
       icon={tab.icon}
       key={tab.id}
-      label={tab.label}
+      label={translateTabLabel(tab, t)}
       onClick={() => {
         if (tab.destinationId) props.onSecondaryDestination(tab.destinationId);
         else if (tab.action) props.onAction(tab.action);
       }}
     />
   );
+}
+
+function translateTabLabel(tab: CompanionResolvedTab, t: ReturnType<typeof useTranslation>) {
+  return t(tab.labelKey);
 }

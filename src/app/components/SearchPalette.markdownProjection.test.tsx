@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
@@ -8,13 +8,15 @@ vi.mock('../../shared/platform/removedSourcesRuntimeRepository', () => ({
   loadRuntimeRemovedSources: vi.fn().mockResolvedValue({ entries: [], loadedAt: '2026-05-13T00:00:00.000Z' })
 }));
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 function renderSearchPalette() {
-  render(
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
+  renderWithLocalization(
     <SearchPalette
       isOpen
       nodeOrder={['node-1', 'node-2']}

@@ -1,6 +1,8 @@
 import { StateEffect } from '@codemirror/state';
 import { EditorView, WidgetType } from '@codemirror/view';
 
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate, type TranslationKey } from '../../../shared/localization/translations';
 import { parseFrontmatterMetaFieldGroups } from '../model/frontmatterMetaFieldsSetting';
 import type { FrontmatterEntry } from '../model/markdownFrontmatterProjection';
 
@@ -12,6 +14,10 @@ interface FrontmatterMetaItem {
   href: string | null;
   text: string;
   tooltip: string;
+}
+
+function t(key: TranslationKey) {
+  return translate(getStoredAppLocale(), key);
 }
 
 function isSourceLikeField(key: string) {
@@ -131,7 +137,7 @@ export class FrontmatterCompactWidget extends WidgetType {
     element.className = 'cm-md-frontmatter-compact';
 
     const metaLine = createFrontmatterMetaLine(view, this.entries, this.metaFields);
-    const button = createFrontmatterToggle('Meta', () => {
+    const button = createFrontmatterToggle(t('desktop.editor.frontmatter.meta'), () => {
       view.dispatch({ effects: setFrontmatterModeEffect.of('full') });
     });
 
@@ -168,7 +174,7 @@ function createFrontmatterHeader(view: EditorView, entries: readonly Frontmatter
   header.className = 'cm-md-frontmatter-header';
   header.append(
     createFrontmatterMetaLine(view, entries, metaFields),
-    createFrontmatterToggle('Close', () => {
+    createFrontmatterToggle(t('desktop.editor.frontmatter.close'), () => {
       view.dispatch({ effects: setFrontmatterModeEffect.of('compact') });
     })
   );

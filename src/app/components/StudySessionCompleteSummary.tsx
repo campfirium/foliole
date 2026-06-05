@@ -1,4 +1,5 @@
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 
 export interface StudySessionCompleteSummaryProps {
   completedAt: string | null;
@@ -12,21 +13,26 @@ export interface StudySessionCompleteSummaryProps {
   sessionStartedAt: string | null;
 }
 
-function formatElapsedMs(elapsedMs: number) {
+function formatElapsedMs(elapsedMs: number, t: Translate) {
   if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) {
-    return 'Just now';
+    return t('desktop.reviewComplete.justNow');
   }
   const totalMinutes = Math.max(1, Math.round(elapsedMs / 60000));
   if (totalMinutes < 60) {
-    return `${totalMinutes} min`;
+    return t('desktop.reviewComplete.minutes', { count: totalMinutes });
   }
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return minutes ? `${hours} hr ${minutes} min` : `${hours} hr`;
+  return minutes
+    ? t('desktop.reviewComplete.hoursMinutes', { hours, minutes })
+    : t('desktop.reviewComplete.hours', { count: hours });
 }
 
-function pluralize(count: number, singular: string) {
-  return count === 1 ? singular : `${singular}s`;
+function formatUnit(count: number, unit: 'item' | 'topic', t: Translate) {
+  if (unit === 'item') {
+    return t(count === 1 ? 'desktop.reviewComplete.item.one' : 'desktop.reviewComplete.item.many', { count });
+  }
+  return t(count === 1 ? 'desktop.reviewComplete.topic.one' : 'desktop.reviewComplete.topic.many', { count });
 }
 
 function SummaryRow({
@@ -38,26 +44,27 @@ function SummaryRow({
   count: number;
   elapsedMs?: number;
   label: string;
-  unit: string;
+  unit: 'item' | 'topic';
 }) {
+  const t = useTranslation();
   return (
     <div className="grid min-h-12 grid-cols-[minmax(6rem,1fr)_auto_auto] items-baseline gap-x-5">
       <div className="text-sm font-normal text-muted-foreground">{label}</div>
       <div className="text-right">
         <span className="text-[26px] font-medium leading-none text-accent">{count}</span>
-        <span className="ml-2 text-sm text-muted-foreground">{pluralize(count, unit)}</span>
+        <span className="ml-2 text-sm text-muted-foreground">{formatUnit(count, unit, t)}</span>
       </div>
       <div className="min-w-20 text-right text-sm font-normal text-muted-foreground">
-        {elapsedMs === undefined ? null : formatElapsedMs(elapsedMs)}
+        {elapsedMs === undefined ? null : formatElapsedMs(elapsedMs, t)}
       </div>
     </div>
   );
 }
 
-function getCompletionTitle(mode: ReviewSessionMode) {
-  if (mode === 'review-first') return 'Review queue clear';
-  if (mode === 'reading-only') return 'Reading complete';
-  return 'Queue clear';
+function getCompletionTitle(mode: ReviewSessionMode, t: Translate) {
+  if (mode === 'review-first') return t('desktop.reviewComplete.title.reviewFirst');
+  if (mode === 'reading-only') return t('desktop.reviewComplete.title.readingOnly');
+  return t('desktop.reviewComplete.title.default');
 }
 
 export function StudySessionCompleteSummary({
@@ -69,24 +76,25 @@ export function StudySessionCompleteSummary({
   reviewSessionMode,
   reviewedItemCount
 }: StudySessionCompleteSummaryProps) {
+  const t = useTranslation();
   return (
     <div className="flex min-h-0 flex-1 items-start justify-center bg-canvas px-8 pt-[18vh] text-foreground">
       <div className="w-full max-w-[520px]">
-        <h1 className="text-[30px] font-medium leading-tight text-accent">{getCompletionTitle(reviewSessionMode)}</h1>
+        <h1 className="text-[30px] font-medium leading-tight text-accent">{getCompletionTitle(reviewSessionMode, t)}</h1>
         <div className="mt-8 space-y-3">
           {reviewedItemCount > 0 ? (
-            <SummaryRow count={reviewedItemCount} elapsedMs={reviewElapsedMs} label="Reviewed" unit="item" />
+            <SummaryRow count={reviewedItemCount} elapsedMs={reviewElapsedMs} label={t('desktop.reviewComplete.reviewed')} unit="item" />
           ) : null}
           {readTopicCount > 0 ? (
-            <SummaryRow count={readTopicCount} elapsedMs={readingElapsedMs} label="Read" unit="topic" />
+            <SummaryRow count={readTopicCount} elapsedMs={readingElapsedMs} label={t('desktop.reviewComplete.read')} unit="topic" />
           ) : null}
           {createdItemCount > 0 || createdTopicCount > 0 ? (
             <div className="pt-4">
               {createdItemCount > 0 ? (
-                <SummaryRow count={createdItemCount} label="Created" unit="item" />
+                <SummaryRow count={createdItemCount} label={t('desktop.reviewComplete.created')} unit="item" />
               ) : null}
               {createdTopicCount > 0 ? (
-                <SummaryRow count={createdTopicCount} label={createdItemCount > 0 ? '' : 'Created'} unit="topic" />
+                <SummaryRow count={createdTopicCount} label={createdItemCount > 0 ? '' : t('desktop.reviewComplete.created')} unit="topic" />
               ) : null}
             </div>
           ) : null}

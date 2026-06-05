@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionCaptureSheet } from './CompanionCaptureSheet';
 import { CompanionSearchContent } from './CompanionSearchContent';
@@ -29,13 +31,13 @@ function expectInputFocusVisible(element: HTMLElement) {
 }
 
 it('keeps the capture textarea keyboard focus visible', () => {
-  render(<CompanionCaptureSheet onOpenChange={vi.fn()} open />);
+  renderWithLocalization(<CompanionCaptureSheet onOpenChange={vi.fn()} open />);
 
   expectInputFocusVisible(screen.getByLabelText('Capture text'));
 });
 
 it('keeps the selection note textarea keyboard focus visible', () => {
-  render(
+  renderWithLocalization(
     <CompanionSelectionAnnotationToolbar
       onAddExistingHighlightNote={vi.fn()}
       onApply={vi.fn()}
@@ -57,7 +59,7 @@ it('keeps the selection note textarea keyboard focus visible', () => {
 });
 
 it('keeps the disabled companion search input on the shared focus-visible class', () => {
-  render(<CompanionSearchContent />);
+  renderWithLocalization(<CompanionSearchContent />);
 
   const search = screen.getByRole('searchbox', { name: 'Search topics' });
   expect(search).toBeDisabled();

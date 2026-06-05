@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode, RefObject } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { AppSpinner } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -13,13 +14,13 @@ import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import { ReadwiseBookDocumentGate } from './ReadwiseBookDocumentGate';
 import { TrashDocumentRestoreAction } from './TrashDocumentRestoreAction';
 
-function renderPdfLoadingSurface() {
+function renderPdfLoadingSurface(t: Translate) {
   return (
-    <section aria-label="PDF reader panel" className="workspace-region-main-document flex min-h-0 flex-1 flex-col" data-testid="pdf-document-loading-shell">
+    <section aria-label={t('desktop.pdf.readerPanel')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col" data-testid="pdf-document-loading-shell">
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div
           aria-busy="true"
-          aria-label="PDF reader progress"
+          aria-label={t('desktop.pdf.loading.progress')}
           className="workspace-region-main-document pointer-events-none absolute inset-0 z-workspace-overlay flex items-center justify-center"
           role="status"
         >
@@ -68,6 +69,7 @@ export function renderPdfOrBodyContent(args: {
   pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
   pdfHighlightLocators: PdfHighlightLocator[];
   shouldHideEditorBodyDuringSourceLoad: boolean;
+  t: Translate;
   trashedNodeIds: string[];
 }) {
   const action = (
@@ -89,7 +91,7 @@ export function renderPdfOrBodyContent(args: {
 
   if (!args.pdfDocumentSurface) {
     const content = args.shouldHideEditorBodyDuringSourceLoad
-      ? renderPdfLoadingSurface()
+      ? renderPdfLoadingSurface(args.t)
       : renderDocumentBody(args.activeNodeId, args.bodyProps);
     return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, action, content, panelStack);
   }
@@ -105,7 +107,8 @@ export function renderPdfOrBodyContent(args: {
         args.pdfHighlightLocators,
         args.onCreatePdfHighlight,
         args.onPersistPdfViewState,
-        args.onOpenExternalLink
+        args.onOpenExternalLink,
+        args.t
       )
     : null;
   return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, action, content, panelStack);

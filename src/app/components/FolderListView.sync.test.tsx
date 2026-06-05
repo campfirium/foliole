@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { FolderListView } from './FolderListView';
 
@@ -30,7 +31,7 @@ it('keeps folder contents aligned with created, moved, and trashed nodes', () =>
     [folderNode, otherFolderNode, staleNode, movedNode, createdNode].map((node) => [node.id, node])
   );
 
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1', 'folder-2', 'node-1', 'node-2', 'node-3']}

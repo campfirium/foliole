@@ -1,6 +1,7 @@
 import { FileUp, Mic, Clipboard, type LucideIcon } from 'lucide-react';
 
 import { cn } from '../shared/lib/utils';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
   AppDialog,
   AppDialogClose,
@@ -33,6 +34,7 @@ export function CompanionCaptureSheet(props: {
   onOpenChange(open: boolean): void;
   open: boolean;
 }) {
+  const t = useTranslation();
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
       <AppDialogPortal>
@@ -42,9 +44,9 @@ export function CompanionCaptureSheet(props: {
           <div className="mx-auto w-full max-w-[760px]">
             <div className="mb-4 flex items-center justify-between">
               <AppDialogClose className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle">
-                Cancel
+                {t('common.cancel')}
               </AppDialogClose>
-              <AppDialogTitle>Capture</AppDialogTitle>
+              <AppDialogTitle>{t('companion.capture.title')}</AppDialogTitle>
               <div className="w-14" />
             </div>
             <div className="rounded-md border border-companion-divider px-4 py-4">
@@ -57,17 +59,17 @@ export function CompanionCaptureSheet(props: {
                 <Mic className="h-5 w-5" />
               </button>
               <textarea
-                aria-label="Capture text"
+                aria-label={t('companion.capture.text')}
                 className={cn(
                   'min-h-24 w-full resize-none bg-transparent text-base leading-6 text-foreground placeholder:text-companion-text-tertiary',
                   appInputFocusVisibleClassName
                 )}
-                placeholder="Type or speak a new topic"
+                placeholder={t('companion.capture.placeholder')}
               />
             </div>
             <div className="mt-5 border-t border-companion-divider">
-              <CaptureActionRow icon={Clipboard} label="Paste from Clipboard" />
-              <CaptureActionRow icon={FileUp} label="Upload File" />
+              <CaptureActionRow icon={Clipboard} label={t('companion.capture.paste')} />
+              <CaptureActionRow icon={FileUp} label={t('companion.capture.upload')} />
             </div>
           </div>
         </AppDialogContent>

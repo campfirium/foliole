@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 
+import { getStoredAppLocale } from '../localization/appLanguage';
+import { translate, type TranslationKey, type TranslationParams } from '../localization/translations';
+
 import { AppButton } from './Button';
 
 export interface StartupSurfaceAction {
@@ -31,30 +34,30 @@ export interface StartupErrorViewModel {
   title?: string;
 }
 
-const STARTUP_ERROR_TITLE = 'Foliole startup encountered a problem';
-const STARTUP_BOOT_TITLE = 'Starting Foliole';
-const STARTUP_BOOT_HELP = 'Preparing the workspace services...';
+function t(key: TranslationKey, params?: TranslationParams) {
+  return translate(getStoredAppLocale(), key, params);
+}
 
 function resolveActionList(actions: StartupErrorActions): StartupSurfaceAction[] {
   const actionList: StartupSurfaceAction[] = [];
   if (actions.retry) {
-    actionList.push({ label: 'Retry', onClick: actions.retry, variant: 'primary' });
+    actionList.push({ label: t('shared.startup.retry'), onClick: actions.retry, variant: 'primary' });
   }
   if (actions.openLogs) {
-    actionList.push({ label: 'Open logs', onClick: actions.openLogs });
+    actionList.push({ label: t('shared.startup.openLogs'), onClick: actions.openLogs });
   }
-  if (actions.copyDiagnostics) actionList.push({ label: 'Copy diagnostics', onClick: actions.copyDiagnostics });
+  if (actions.copyDiagnostics) actionList.push({ label: t('shared.startup.copyDiagnostics'), onClick: actions.copyDiagnostics });
   if (actions.exit) {
-    actionList.push({ label: 'Exit', onClick: actions.exit });
+    actionList.push({ label: t('shared.startup.exit'), onClick: actions.exit });
   }
   return actionList;
 }
 
 export function createStartupBootSurfaceModel(): StartupSurfaceModel {
   return {
-    eyebrow: 'Startup',
-    message: STARTUP_BOOT_HELP,
-    title: STARTUP_BOOT_TITLE,
+    eyebrow: t('shared.startup.eyebrow'),
+    message: t('shared.startup.bootHelp'),
+    title: t('shared.startup.bootTitle'),
     tone: 'default'
   };
 }
@@ -62,11 +65,11 @@ export function createStartupBootSurfaceModel(): StartupSurfaceModel {
 export function createStartupErrorSurfaceModel(input: string | StartupErrorViewModel): StartupSurfaceModel {
   const model = typeof input === 'string' ? { message: input } : input;
   return {
-    eyebrow: 'Startup problem',
+    eyebrow: t('shared.startup.problemEyebrow'),
     ...(model.logPath !== undefined ? { logPath: model.logPath } : {}),
     message: model.message,
     ...(model.moduleLabel !== undefined ? { moduleLabel: model.moduleLabel } : {}),
-    title: model.title ?? STARTUP_ERROR_TITLE,
+    title: model.title ?? t('shared.startup.errorTitle'),
     tone: 'critical'
   };
 }
@@ -82,12 +85,12 @@ export function StartupSurface(props: {
       <p className="startup-surface__eyebrow">{props.model.eyebrow}</p>
       <h1 className="startup-surface__title">{props.model.title}</h1>
       {props.model.moduleLabel ? (
-        <p className="startup-surface__meta">Failed module: {props.model.moduleLabel}</p>
+        <p className="startup-surface__meta">{t('shared.startup.failedModule', { module: props.model.moduleLabel })}</p>
       ) : null}
       <p className="startup-surface__message" data-tone={isCritical ? 'critical' : 'default'}>
         {props.model.message}
       </p>
-      {props.model.logPath ? <p className="startup-surface__meta">Logs: {props.model.logPath}</p> : null}
+      {props.model.logPath ? <p className="startup-surface__meta">{t('shared.startup.logs', { path: props.model.logPath })}</p> : null}
       {props.actions?.length ? (
         <div className="startup-surface__actions">
           {props.actions.map((action) => (
@@ -158,14 +161,14 @@ function renderStartupSurface(
   appendTextElement(section, 'h1', 'startup-surface__title', model.title);
 
   if (model.moduleLabel) {
-    appendTextElement(section, 'p', 'startup-surface__meta', `Failed module: ${model.moduleLabel}`);
+    appendTextElement(section, 'p', 'startup-surface__meta', t('shared.startup.failedModule', { module: model.moduleLabel }));
   }
 
   const message = appendTextElement(section, 'p', 'startup-surface__message', model.message);
   message.dataset.tone = model.tone === 'critical' ? 'critical' : 'default';
 
   if (model.logPath) {
-    appendTextElement(section, 'p', 'startup-surface__meta', `Logs: ${model.logPath}`);
+    appendTextElement(section, 'p', 'startup-surface__meta', t('shared.startup.logs', { path: model.logPath }));
   }
 
   const actionRow = document.createElement('div');

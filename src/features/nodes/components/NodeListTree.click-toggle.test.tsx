@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it } from 'vitest';
 
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 
 import { NodeListTree } from './NodeListTree';
@@ -65,7 +66,7 @@ beforeEach(() => {
 });
 
 it('expands only the clicked folder branch', () => {
-  render(<NodeListTreeHarness />);
+  renderWithLocalization(<NodeListTreeHarness />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   const folderRow = within(listPanel).getByRole('treeitem', { name: 'Folder A' });
@@ -82,7 +83,7 @@ it('expands only the clicked folder branch', () => {
 });
 
 it('shows every ctrl-selected row as selected', () => {
-  render(<NodeListTreeHarness />);
+  renderWithLocalization(<NodeListTreeHarness />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Folder A' }));

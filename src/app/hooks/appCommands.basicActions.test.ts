@@ -69,6 +69,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openGitHubRepository: () => undefined,
     openGitHubIssues: () => undefined,
     openGitHubDiscussions: () => undefined,
+    openYouTubePlaylist: () => undefined,
     openReadwiseReaderSettings: () => undefined,
     openSettings: () => undefined,
     openTrash: () => undefined,
@@ -135,6 +136,14 @@ it('runs open guided sample through the shared command handler', () => {
   expectCommandRuns(APP_COMMAND_IDS.openGuidedSample, { openGuidedSample });
 
   expect(openGuidedSample).toHaveBeenCalledTimes(1);
+});
+
+it('runs the YouTube playlist command through the shared command handler', () => {
+  const openYouTubePlaylist = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.openYouTubePlaylist, { openYouTubePlaylist });
+
+  expect(openYouTubePlaylist).toHaveBeenCalledTimes(1);
 });
 
 it('runs sidebar visibility commands through the shared command handler', () => {

@@ -4,6 +4,7 @@ import { collectDocumentTextAnchorDecorations } from '../../features/editor/mode
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   recordComponentRender
 } from '../../shared/platform/performanceDiagnosticsProbe';
@@ -78,13 +79,15 @@ function useDocumentPanelClozePresentations(activeNode: Node | undefined, props:
 }
 
 function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
+  const t = useTranslation();
   const { editorDisplayMode, readingContentWidth } = useAppearanceSettings();
   const { isRetryingDocument, retryDocumentLoad } = useDocumentPanelDocumentRetry(props.editorNodeId);
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const { bodyProps, documentLayoutStyle, documentStatus, isFolderListView, loadingLabel } = getDocumentPanelView(
     props,
     editorDisplayMode,
-    readingContentWidth
+    readingContentWidth,
+    t
   );
   const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
   const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
@@ -106,13 +109,15 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     documentStatus,
     isRetryingDocument,
     loadingLabel,
-    retryDocumentLoad
+    retryDocumentLoad,
+    t
   });
   useDocumentPanelPerformanceMarkers(props, Boolean(bodyProps.emptyState), isEditorDocumentLoaded);
   useDocumentPanelClozePresentations(activeNode, props);
 
   return {
     bodyProps,
+    documentAreaLabel: t('desktop.document.area'),
     documentLayoutStyle,
     emptyContent,
     textAnchorState,
@@ -177,7 +182,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
     nodesById: draftProps.nodesById
   });
   return (
-    <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={model.documentLayoutStyle}>
+    <section aria-label={model.documentAreaLabel} className="flex min-h-0 flex-1 flex-col" style={model.documentLayoutStyle}>
       <DocumentPanelSectionShell
         bodyProps={definedProps({
           ...model.bodyProps,

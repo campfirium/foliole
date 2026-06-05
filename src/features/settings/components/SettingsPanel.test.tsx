@@ -33,9 +33,6 @@ function expectPushQueueSemanticCopy() {
   expect(screen.getByText('Reading vs review mix')).toBeInTheDocument();
   expect(screen.getByText('Priority weight')).toBeInTheDocument();
   expect(screen.getByText(/fallback priority for new topics/i)).toBeInTheDocument();
-  expect(screen.getByText(/default 1:5 means one reading draw after every five review draws/i)).toBeInTheDocument();
-  expect(screen.getByText(/default 5 means a P1 topic is drawn five times as often as a P9 topic/i)).toBeInTheDocument();
-  expect(screen.getByText(/minimum applies to P1 topics, the maximum to P9/i)).toBeInTheDocument();
 }
 
 async function expectUpdatedPushQueueValues() {
@@ -75,7 +72,8 @@ it('groups settings sidebar entries by workspace, storage, and sources', async (
   expect(screen.getByText('Storage')).toBeInTheDocument();
   expect(screen.getByText('Sources')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
-  expect(labels.slice(0, 8)).toEqual([
+  expect(labels.slice(0, 9)).toEqual([
+    'About',
     'General',
     'Appearance',
     'Editor',
@@ -91,6 +89,7 @@ it('groups settings sidebar entries by workspace, storage, and sources', async (
   expect(labels).toContain('External sources');
   expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('General'));
   expect(labels.indexOf('Hotkeys')).toBeGreaterThan(labels.indexOf('Review'));
+  expect(labels.indexOf('General')).toBeGreaterThan(labels.indexOf('About'));
   expect(labels.indexOf('Library')).toBeGreaterThan(labels.indexOf('Action bar'));
   expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Library'));
   expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));

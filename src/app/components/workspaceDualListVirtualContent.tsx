@@ -6,6 +6,7 @@ import {
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
 import { buildVirtualNodeResultIndex, getVirtualNodePrimaryKeyword } from '../../features/nodes/model/virtualNodeDetail';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import type { WorkspaceDualListContentProps } from './WorkspaceDualListContent';
@@ -16,6 +17,7 @@ function resolveVirtualHeader(args: {
   activeVirtualNodeId: string;
   isRemovedView: boolean;
   isShelvedView: boolean;
+  t: Translate;
 }) {
   if (args.activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
     return { kind: 'root' as const };
@@ -31,26 +33,27 @@ function resolveVirtualHeader(args: {
   if (args.isRemovedView) {
     return {
       kind: 'description' as const,
-      text: 'List deleted topics with linked sources.',
-      title: 'Removed'
+      text: args.t('desktop.virtualSearch.removed.description'),
+      title: args.t('desktop.virtualSearch.removed.title')
     };
   }
   return {
     kind: 'description' as const,
     text: args.isShelvedView
-      ? 'List topics that are shelved.'
+      ? args.t('desktop.virtualSearch.shelved.description')
       : '',
-    title: args.isShelvedView ? 'Shelved' : 'Virtual'
+    title: args.isShelvedView ? args.t('desktop.virtualSearch.shelved.title') : args.t('desktop.virtualSearch.title')
   };
 }
 
 export function renderVirtualContentColumn(
   props: WorkspaceDualListContentProps,
-  virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>
+  virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>,
+  t: Translate
 ) {
   const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
   if (activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
-    return <div aria-label="Current folder contents" className="flex min-h-0 min-w-0 flex-1" />;
+    return <div aria-label={t('desktop.workspace.currentFolderContents')} className="flex min-h-0 min-w-0 flex-1" />;
   }
   const isRemovedView = activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID;
   const isShelvedView = activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
@@ -62,23 +65,24 @@ export function renderVirtualContentColumn(
       activeNodeId={props.activeNodeId}
       emptyState={{
         description: isRemovedView
-          ? 'Removed topics will appear here.'
+          ? t('desktop.virtualSearch.removed.empty.description')
           : isShelvedView
-          ? 'Shelved topics will appear here.'
+          ? t('desktop.virtualSearch.shelved.empty.description')
           : activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID
-            ? 'Try another topic search.'
-            : 'No topics match this saved search yet.',
+            ? t('desktop.virtualSearch.empty.description')
+            : t('desktop.virtualSearch.saved.empty.description'),
         title: isRemovedView
-          ? 'No removed topics'
+          ? t('desktop.virtualSearch.removed.empty.title')
           : isShelvedView
-          ? 'No shelved topics'
-          : activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID ? 'No matching topics' : 'No matching topics'
+          ? t('desktop.virtualSearch.shelved.empty.title')
+          : t('desktop.virtualSearch.empty.title')
       }}
       header={resolveVirtualHeader({
         activeVirtualNode: props.nodesById[activeVirtualNodeId],
         activeVirtualNodeId,
         isRemovedView,
-        isShelvedView
+        isShelvedView,
+        t
       })}
       nodeOrder={props.nodeOrder}
       nodes={items}

@@ -1,8 +1,9 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
 
@@ -50,7 +51,7 @@ function noopProps() {
 }
 
 it('groups node context actions into create, edit, review, and destructive order', () => {
-  render(<NodeListContextMenu {...noopProps()} />);
+  renderWithLocalization(<NodeListContextMenu {...noopProps()} />);
 
   const labels = within(screen.getByRole('menu')).getAllByRole('menuitem').map((item) => item.textContent);
 
@@ -71,7 +72,7 @@ it('groups node context actions into create, edit, review, and destructive order
 });
 
 it('renders compact icon menu items and keeps delete visually destructive', () => {
-  render(<NodeListContextMenu {...noopProps()} />);
+  renderWithLocalization(<NodeListContextMenu {...noopProps()} />);
 
   const menu = screen.getByRole('menu');
   expect(within(menu).getAllByRole('separator')).toHaveLength(4);
@@ -80,7 +81,7 @@ it('renders compact icon menu items and keeps delete visually destructive', () =
 });
 
 it('does not render a leading separator when create actions are hidden', () => {
-  render(
+  renderWithLocalization(
     <NodeListContextMenu
       {...noopProps()}
       createCommands={[]}
@@ -105,7 +106,7 @@ it('does not render a leading separator when create actions are hidden', () => {
 
 it('shows Relearn help after a long hover', () => {
   vi.useFakeTimers();
-  render(<NodeListContextMenu {...noopProps()} />);
+  renderWithLocalization(<NodeListContextMenu {...noopProps()} />);
 
   const relearn = screen.getByRole('menuitem', { name: 'Relearn' });
   fireEvent.pointerMove(relearn, { pointerType: 'mouse' });
@@ -127,7 +128,7 @@ it('shows Relearn help after a long hover', () => {
 
 it('shows action help for complex topic menu actions', () => {
   vi.useFakeTimers();
-  render(<NodeListContextMenu {...noopProps()} />);
+  renderWithLocalization(<NodeListContextMenu {...noopProps()} />);
 
   const shelve = screen.getByRole('menuitem', { name: 'Shelve entire topic' });
   fireEvent.pointerEnter(shelve, { pointerType: 'mouse' });
@@ -143,7 +144,7 @@ it('shows action help for complex topic menu actions', () => {
 it('does not show action help when the setting is off', () => {
   vi.useFakeTimers();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.actionHelpCardsEnabled, 'false');
-  render(<NodeListContextMenu {...noopProps()} />);
+  renderWithLocalization(<NodeListContextMenu {...noopProps()} />);
 
   const relearn = screen.getByRole('menuitem', { name: 'Relearn' });
   fireEvent.pointerMove(relearn, { pointerType: 'mouse' });
@@ -157,7 +158,7 @@ it('does not show action help when the setting is off', () => {
 
 it('does not show action help for actions without help copy', () => {
   vi.useFakeTimers();
-  render(<NodeListContextMenu {...noopProps()} />);
+  renderWithLocalization(<NodeListContextMenu {...noopProps()} />);
 
   const rename = screen.getByRole('menuitem', { name: 'Rename' });
   fireEvent.pointerMove(rename, { pointerType: 'mouse' });

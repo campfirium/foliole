@@ -1,5 +1,7 @@
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
+import { resolveReviewStatusMemoryPaletteTitle } from './appPaletteCommandLocalization';
+
 export const DEVELOPER_PALETTE_COMMANDS = [
   {
     id: APP_COMMAND_IDS.resetImportData,
@@ -31,9 +33,7 @@ export function resolveDeveloperPaletteTitle(id: string, options: { isDevReviewS
   if (id !== APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence) {
     return null;
   }
-  return options.isDevReviewStatusBarPersistenceEnabled
-    ? 'DEV Disable Review Status Bar Memory'
-    : 'DEV Enable Review Status Bar Memory';
+  return resolveReviewStatusMemoryPaletteTitle(options.isDevReviewStatusBarPersistenceEnabled);
 }
 
 export function isDeveloperCommandEnabled(

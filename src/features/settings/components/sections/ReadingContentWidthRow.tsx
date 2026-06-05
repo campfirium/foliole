@@ -1,5 +1,6 @@
 import { RotateCcw } from 'lucide-react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_RANGE_WIDTH_CLASS_NAME,
@@ -21,11 +22,13 @@ export function ReadingContentWidthRow(props: {
   onReadingContentWidthChange: (value: number) => void;
   readingContentWidth: number;
 }) {
+  const t = useTranslation();
+
   return (
-    <SettingsRow description="Set the maximum reading width for topic content." title="Reading width">
+    <SettingsRow description={t('settings.appearance.readingWidth.description')} title={t('settings.appearance.readingWidth.title')}>
       <SettingsControlSlot className={SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
         <button
-          aria-label="Reset reading width"
+          aria-label={t('settings.appearance.readingWidth.reset')}
           className={settingsResetButtonClassName()}
           disabled={props.readingContentWidth === READING_CONTENT_WIDTH_DEFAULT}
           onClick={() => props.onReadingContentWidthChange(READING_CONTENT_WIDTH_DEFAULT)}
@@ -34,7 +37,7 @@ export function ReadingContentWidthRow(props: {
           <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
         </button>
         <input
-          aria-label="Reading width"
+          aria-label={t('settings.appearance.readingWidth.title')}
           className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)}
           max={READING_CONTENT_WIDTH_MAX}
           min={READING_CONTENT_WIDTH_MIN}

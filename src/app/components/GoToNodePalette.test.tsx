@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { GoToNodePalette } from './GoToNodePalette';
 
 it('marks the go-to palette dialog as modal', () => {
-  render(
+  renderWithLocalization(
     <GoToNodePalette
       isOpen
       nodeOrder={['node-1']}

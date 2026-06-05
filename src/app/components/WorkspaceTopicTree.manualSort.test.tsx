@@ -1,7 +1,8 @@
-import { createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -125,7 +126,7 @@ beforeEach(() => {
 });
 
 it('uses folder manual topic order in the current folder tree', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="topic-a"
@@ -147,7 +148,7 @@ it('uses folder manual topic order in the current folder tree', () => {
 });
 
 it('falls back to name order before the current folder has manual topic order', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="topic-b"
@@ -177,7 +178,7 @@ it('writes manual topic order when dragging within the current folder', async ()
       'topic-b': createTopic('topic-b', 'Beta')
     }
   }));
-  render(<ManualTopicTreeHarness />);
+  renderWithLocalization(<ManualTopicTreeHarness />);
   chooseManualSort();
   const transfer = createDragTransfer();
 
@@ -205,7 +206,7 @@ it('clears the drop marker when a dragged topic leaves the target row', async ()
       'topic-b': createTopic('topic-b', 'Beta')
     }
   }));
-  render(<ManualTopicTreeHarness />);
+  renderWithLocalization(<ManualTopicTreeHarness />);
   chooseManualSort();
   const transfer = createDragTransfer();
   const targetFrame = mockRowFrame(screen.getByRole('treeitem', { name: 'Beta' }));

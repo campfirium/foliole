@@ -1,5 +1,6 @@
 import { ArrowUpRight, CheckCircle2, XCircle } from 'lucide-react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppSpinner } from '../../shared/ui';
 
 export type WorkspaceActivityNoticeTone = 'loading' | 'success' | 'error';
@@ -20,7 +21,7 @@ function renderIcon(tone: WorkspaceActivityNoticeTone) {
 export function WorkspaceActivityNotice({
   message,
   onOpen,
-  openLabel = 'Open imported topic',
+  openLabel,
   tone
 }: {
   message: string;
@@ -28,13 +29,15 @@ export function WorkspaceActivityNotice({
   openLabel?: string;
   tone: WorkspaceActivityNoticeTone;
 }) {
+  const t = useTranslation();
+  const resolvedOpenLabel = openLabel ?? t('desktop.workspaceActivity.openImportedTopic');
   const content = (
     <>
       {renderIcon(tone)}
       <span className="min-w-0 flex-1">{message}</span>
       {onOpen ? (
         <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-foreground/70 group-hover:text-foreground">
-          Open topic
+          {t('desktop.workspaceActivity.openTopic')}
           <ArrowUpRight aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
         </span>
       ) : null}
@@ -50,7 +53,7 @@ export function WorkspaceActivityNotice({
     >
       {onOpen ? (
         <button
-          aria-label={openLabel}
+          aria-label={resolvedOpenLabel}
           className="group flex w-full items-start gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           onClick={onOpen}
           type="button"

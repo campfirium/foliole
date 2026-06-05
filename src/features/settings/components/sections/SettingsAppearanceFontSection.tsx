@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { SettingsSection } from '../../../../shared/ui';
 import {
   INTERFACE_PRESET_OPTION_VALUES,
@@ -34,13 +35,14 @@ export function SettingsAppearanceFontSection(props: {
   onReadingLineHeightChange: (value: number) => void;
   onReadingParagraphSpacingChange: (value: number) => void;
 }) {
-  const textOptions = [...buildFontOptions('preset', INTERFACE_PRESET_OPTION_VALUES, presetLabel), ...buildFontOptions('font', props.interfaceFontOptions, (font) => font)];
-  const monospaceOptions = [...buildFontOptions('mono-preset', MONOSPACE_PRESET_OPTION_VALUES, monospacePresetLabel), ...buildFontOptions('mono-font', props.monospaceFontOptions, (font) => font)];
+  const t = useTranslation();
+  const textOptions = [...buildFontOptions('preset', INTERFACE_PRESET_OPTION_VALUES, (value) => presetLabel(value, t)), ...buildFontOptions('font', props.interfaceFontOptions, (font) => font)];
+  const monospaceOptions = [...buildFontOptions('mono-preset', MONOSPACE_PRESET_OPTION_VALUES, (value) => monospacePresetLabel(value, t)), ...buildFontOptions('mono-font', props.monospaceFontOptions, (font) => font)];
 
   return (
-    <SettingsSection ariaLabel="Appearance reading typography section" title="Reading">
-      <SettingsSelectRow ariaLabel="Text font" description="Font used in main content text." disabled={!props.areFontOptionsReady} label="Text font" onChange={props.onInterfaceFontSelectionChange} options={textOptions} value={props.selectedInterfaceFontValue} />
-      <SettingsSelectRow ariaLabel="Monospace font preset" description="Code font in fenced blocks and inline code. Monospaced fonts are listed first." disabled={!props.areFontOptionsReady} label="Monospace font" onChange={props.onMonospaceFontSelectionChange} options={monospaceOptions} value={props.selectedMonospaceFontValue} />
+    <SettingsSection ariaLabel={t('settings.appearance.section.readingTypography')} title={t('settings.appearance.section.readingTypography')}>
+      <SettingsSelectRow ariaLabel={t('settings.appearance.textFont.title')} description={t('settings.appearance.textFont.description')} disabled={!props.areFontOptionsReady} label={t('settings.appearance.textFont.title')} onChange={props.onInterfaceFontSelectionChange} options={textOptions} value={props.selectedInterfaceFontValue} />
+      <SettingsSelectRow ariaLabel={t('settings.appearance.monospaceFont.aria')} description={t('settings.appearance.monospaceFont.description')} disabled={!props.areFontOptionsReady} label={t('settings.appearance.monospaceFont.title')} onChange={props.onMonospaceFontSelectionChange} options={monospaceOptions} value={props.selectedMonospaceFontValue} />
       <FontSizeRow interfaceFontSize={props.interfaceFontSize} onInterfaceFontSizeChange={props.onInterfaceFontSizeChange} onInterfaceFontSizeReset={props.onInterfaceFontSizeReset} />
       <ReadingLineHeightRow
         onReadingLineHeightChange={props.onReadingLineHeightChange}

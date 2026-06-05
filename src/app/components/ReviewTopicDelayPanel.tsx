@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { getTopicPostponeDelayOption, TOPIC_POSTPONE_DELAY_OPTIONS } from '../../../lib/core/review/topicPostponeDelay';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 import { AppButton } from '../../shared/ui';
 import type { useReviewTopicDelayPanel } from '../hooks/useReviewTopicDelayPanel';
@@ -49,6 +50,7 @@ function DelayTickLabels() {
 }
 
 function ReviewTopicDelaySlider(props: Pick<ReviewTopicDelayPanelProps, 'selectedLevel' | 'setSelectedLevel'>) {
+  const t = useTranslation();
   const progress = `${(props.selectedLevel / 9) * 100}%`;
   return (
     <div className="w-full">
@@ -61,7 +63,7 @@ function ReviewTopicDelaySlider(props: Pick<ReviewTopicDelayPanelProps, 'selecte
           style={{ left: progress }}
         />
         <input
-          aria-label="Postpone delay"
+          aria-label={t('desktop.reviewDelay.slider')}
           className="absolute inset-0 h-5 w-full cursor-pointer opacity-0"
           max={9}
           min={0}
@@ -77,20 +79,21 @@ function ReviewTopicDelaySlider(props: Pick<ReviewTopicDelayPanelProps, 'selecte
 }
 
 export function ReviewTopicDelayPanel(props: ReviewTopicDelayPanelProps) {
+  const t = useTranslation();
   const selectedOption = getTopicPostponeDelayOption(props.selectedLevel);
   useReviewTopicDelayPanelKeys(props);
   if (!props.isOpen) return null;
   return (
     <div className="fixed inset-0 z-command-palette flex items-center justify-center px-4" role="presentation">
       <section
-        aria-label="Postpone Topic"
+        aria-label={t('desktop.reviewDelay.dialog')}
         className="grid w-full max-w-md gap-4 rounded-lg border border-[var(--app-floating-border-color)] bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_82%,rgb(var(--color-background)))] px-5 py-4 text-foreground/72 shadow-popover"
         role="dialog"
       >
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/50">
             <span className="size-2 rounded-full bg-foreground/32" aria-hidden="true" />
-            Postpone
+            {t('desktop.reviewDelay.title')}
           </div>
         </div>
 
@@ -101,7 +104,7 @@ export function ReviewTopicDelayPanel(props: ReviewTopicDelayPanelProps) {
             <span className="pl-1 text-lg text-foreground/48" aria-hidden="true">-&gt;</span>
           </div>
           <div className="text-right">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/50">Next due</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/50">{t('desktop.reviewDelay.nextDue')}</div>
             <div className="mt-1 text-sm font-semibold text-foreground/72">{props.dueDateLabel}</div>
           </div>
         </div>
@@ -111,12 +114,12 @@ export function ReviewTopicDelayPanel(props: ReviewTopicDelayPanelProps) {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-foreground/62">
             <kbd className="rounded-md border border-border px-2 py-0.5 text-xs font-semibold">0-9</kbd>
-            <span>apply instantly</span>
+            <span>{t('desktop.reviewDelay.keyboardHint')}</span>
           </div>
           <div className="flex items-center gap-2">
-            <AppButton className="text-foreground/62 hover:text-foreground/78" onClick={props.close} size="sm" variant="ghost">Cancel</AppButton>
+            <AppButton className="text-foreground/62 hover:text-foreground/78" onClick={props.close} size="sm" variant="ghost">{t('desktop.reviewDelay.cancel')}</AppButton>
             <AppButton className="text-foreground/72 hover:text-foreground/86" disabled={props.isSubmitting} onClick={() => void props.submit(props.selectedLevel)} size="sm" variant="primary">
-              Confirm
+              {t('desktop.reviewDelay.confirm')}
             </AppButton>
           </div>
         </div>

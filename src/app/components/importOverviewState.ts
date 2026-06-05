@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { loadRuntimePdfImportsInventoryResult } from '../../shared/platform/pdfImportsInventoryLoadResult';
 import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
 import { loadRuntimeReadwiseBooksInventoryResult } from '../../shared/platform/readwiseBooksInventoryLoadResult';
@@ -11,13 +12,12 @@ import {
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useFormalImport } from '../hooks/useFormalImport';
 
-import { IMPORT_CATALOG_SORT_OPTIONS, type ImportCatalogSortKey } from './importCatalogOrdering';
+import type { ImportCatalogSortKey } from './importCatalogOrdering';
 import type { ImportInventoryLoadIssue } from './ImportInventoryState';
 import { matchesImportSearch } from './importManagementSearch';
 import { useOverviewSorting } from './importOverviewSorting';
 import { applyResetReadwiseBookImportToWorkspace, selectReadwiseBookNode } from './importSourceWorkspaceReadwiseBooks';
 
-export const overviewSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
 export type OverviewSortKey = ImportCatalogSortKey;
 
 function useOverviewInventories(enabled: boolean) {
@@ -61,13 +61,15 @@ function useOverviewInventories(enabled: boolean) {
   return { booksInventory, isLoading, loadIssue, pdfInventory, refresh };
 }
 
-async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
+type ImportOverviewTranslate = ReturnType<typeof useTranslation>;
+
+async function runReadwiseBookReset(input: { nodeId: string; t: ImportOverviewTranslate; title: string }) {
   const result = await resetRuntimeReadwiseBookImport(input.nodeId);
   if (result?.status === 'blocked_secondary') {
-    throw new Error('Readwise actions run on the current primary device.');
+    throw new Error(input.t('desktop.importInventory.readwise.primaryDeviceOnly'));
   }
   if (!result || result.status !== 'reset' || !result.node_id || result.content === null || !result.updated_at) {
-    throw new Error(`Could not import ${input.title}.`);
+    throw new Error(input.t('desktop.importInventory.readwise.importFailed', { title: input.title }));
   }
 
   applyResetReadwiseBookImportToWorkspace({
@@ -124,6 +126,7 @@ function useReadwiseBookActions(input: {
   onOpenChange: (open: boolean) => void;
   onSelectNode?: (nodeId: string) => void;
   refresh: () => Promise<void>;
+  t: ImportOverviewTranslate;
 }) {
   const [resettingNodeId, setResettingNodeId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState('');
@@ -139,11 +142,11 @@ function useReadwiseBookActions(input: {
     async (book: { nodeId: string; title: string }) => {
       setResettingNodeId(book.nodeId);
       try {
-        const nodeId = await runReadwiseBookReset(book);
+        const nodeId = await runReadwiseBookReset({ ...book, t: input.t });
         setActionMessage('');
         handleOpenBookNode(nodeId);
       } catch {
-        setActionMessage(`Could not import ${book.title}.`);
+        setActionMessage(input.t('desktop.importInventory.readwise.importFailed', { title: book.title }));
       } finally {
         setResettingNodeId(null);
         await input.refresh();
@@ -160,6 +163,7 @@ export function useImportOverviewState(input: {
   onSelectNode?: (nodeId: string) => void;
   open: boolean;
 }) {
+  const t = useTranslation();
   const formalImport = useFormalImport();
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
@@ -187,6 +191,7 @@ export function useImportOverviewState(input: {
   const actions = useReadwiseBookActions({
     onOpenChange: input.onOpenChange,
     refresh,
+    t,
     ...definedProps({ onSelectNode: input.onSelectNode })
   });
 

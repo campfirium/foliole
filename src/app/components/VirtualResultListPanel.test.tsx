@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 
@@ -29,7 +30,7 @@ it('renders virtual root with the shared topic list surface', () => {
   const second = createNode('second', 'Second result');
   const onSelectNode = vi.fn();
 
-  render(
+  renderWithLocalization(
     <VirtualResultListPanel
       activeNodeId="first"
       emptyState={{ description: 'No results', title: 'Empty' }}
@@ -62,7 +63,7 @@ it('filters saved virtual list results from the shared topic list header', () =>
   const first = createNode('first', 'First result');
   const second = createNode('second', 'Second result');
 
-  render(
+  renderWithLocalization(
     <VirtualResultListPanel
       activeNodeId={null}
       emptyState={{ description: 'No results', title: 'Empty' }}
@@ -89,7 +90,7 @@ it('filters saved virtual list results from the shared topic list header', () =>
 it('renders built-in virtual lists with the shared topic header', () => {
   const first = createNode('first', 'First result');
 
-  render(
+  renderWithLocalization(
     <VirtualResultListPanel
       activeNodeId={null}
       emptyState={{ description: 'No results', title: 'Empty' }}

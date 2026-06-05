@@ -6,6 +6,7 @@ import { createNodeListRowKeydownHandler } from '../../features/nodes/components
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { resolveNodeTreeRowIconKind } from '../../features/nodes/components/NodeTreeRowIconModel';
 import type { NodeTreeRow as RemovedTreeRow } from '../../features/nodes/model/nodeTree';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimeRemovedSourceEntry } from '../../shared/platform/removedSourcesRuntimeRepository';
 import {
   AppDropdownMenu,
@@ -31,18 +32,19 @@ export function RemovedSourcesToolbar(props: {
   sortDirection: WorkspaceContentSortDirection;
   sortKey: WorkspaceContentSortKey;
 }) {
+  const t = useTranslation();
   return (
     <AppToolbar as="header" className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4">
       <p className="min-w-0 flex-1 truncate text-sm leading-6 text-foreground/62">
-        List deleted topics with linked sources.
+        {t('desktop.removed.description')}
       </p>
-      <ToolbarActionGroup ariaLabel="Removed actions">
+      <ToolbarActionGroup ariaLabel={t('desktop.removed.actions')}>
         <WorkspaceContentSortControls
           onChangeSortDirection={props.onChangeSortDirection}
           onChangeSortKey={props.onChangeSortKey}
           options={[
-            { key: 'deletedAt', label: 'Date removed' },
-            { key: 'name', label: 'Name' }
+            { key: 'deletedAt', label: t('desktop.removed.sort.dateRemoved') },
+            { key: 'name', label: t('desktop.removed.sort.name') }
           ]}
           sortDirection={props.sortDirection}
           sortKey={props.sortKey}
@@ -51,13 +53,13 @@ export function RemovedSourcesToolbar(props: {
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           disabled={!props.hasCollapsibleNodes}
           icon={props.hasCollapsedNodes ? <ChevronsDownUp size={16} strokeWidth={1.9} /> : <ChevronsUpDown size={16} strokeWidth={1.9} />}
-          label={props.hasCollapsedNodes ? 'Expand all topics' : 'Collapse all topics'}
+          label={props.hasCollapsedNodes ? t('desktop.removed.expandAll') : t('desktop.removed.collapseAll')}
           onClick={props.onToggleCollapseAll}
         />
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           icon={<RefreshCw size={15} strokeWidth={1.9} />}
-          label="Refresh Removed"
+          label={t('desktop.removed.refresh')}
           onClick={props.loadEntries}
         />
       </ToolbarActionGroup>
@@ -74,6 +76,7 @@ export function RemovedSourceRows(props: {
   onSelect: (entry: RuntimeRemovedSourceEntry) => void;
   onToggleCollapse: (nodeId: string) => void;
 }) {
+  const t = useTranslation();
   const rowSpacing = getNodeListRowSpacing();
   const onRowKeyDown = useMemo(
     () =>
@@ -92,15 +95,15 @@ export function RemovedSourceRows(props: {
     return (
       <div className="flex min-h-full items-center justify-center py-6">
         <AppEmptyState
-          description="Removed keep or Readwise topics will appear here while their source still exists."
-          title="No removed topics"
+          description={t('desktop.removed.empty.description')}
+          title={t('desktop.removed.empty.title')}
         />
       </div>
     );
   }
   return (
-    <div aria-label="Removed topics" className="flex flex-col gap-2" role="tree">
-      {props.rows.map((row) => renderRemovedSourceRow(row, { ...props, onRowKeyDown, rowSpacing }))}
+    <div aria-label={t('desktop.removed.tree')} className="flex flex-col gap-2" role="tree">
+      {props.rows.map((row) => renderRemovedSourceRow(row, { ...props, onRowKeyDown, rowSpacing, updatedLabel: t('desktop.removed.updated') }))}
     </div>
   );
 }
@@ -116,6 +119,7 @@ function renderRemovedSourceRow(
     onToggleCollapse: (nodeId: string) => void;
     rowSpacing: number;
     selectedId: string | null;
+    updatedLabel: string;
   }
 ) {
   const entry = args.entryByNodeId[row.node.id];
@@ -154,7 +158,7 @@ function renderRemovedSourceRow(
       onToggleCollapse={args.onToggleCollapse}
       rowSpacing={args.rowSpacing}
       showIcon
-      trailingLabelContent={entry?.hasSourceUpdate ? <span className="text-xs text-foreground/55">Updated</span> : null}
+      trailingLabelContent={entry?.hasSourceUpdate ? <span className="text-xs text-foreground/55">{args.updatedLabel}</span> : null}
     />
   );
 }
@@ -166,6 +170,7 @@ export function RemovedSourceContextMenu(props: {
   onImport: (entry: RuntimeRemovedSourceEntry) => void;
   top: number;
 }) {
+  const t = useTranslation();
   if (!props.entry) {
     return null;
   }
@@ -185,7 +190,7 @@ export function RemovedSourceContextMenu(props: {
         onContextMenu={(event) => event.preventDefault()}
         sideOffset={0}
       >
-        <AppDropdownMenuItem onSelect={() => props.onImport(props.entry!)}>Re-import to Foliole</AppDropdownMenuItem>
+        <AppDropdownMenuItem onSelect={() => props.onImport(props.entry!)}>{t('desktop.removed.reimport')}</AppDropdownMenuItem>
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );

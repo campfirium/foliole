@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
 import { DocumentPanelNodeReviewSettings } from '../app/components/DocumentPanelNodeReviewSettings';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../features/settings/model/reviewSchedulerSettings';
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { createNode } from './app-smoke.shared';
 
@@ -17,7 +18,7 @@ it('shows default desired retention and priority fallbacks on nodes without over
     })
   };
 
-  render(
+  renderWithLocalization(
     <DocumentPanelNodeReviewSettings
       activeNodeId="root-node"
       editableNodeId="root-node"
@@ -50,7 +51,7 @@ it('shows inherited values, writes explicit overrides, and falls back to ancesto
     })
   };
 
-  render(
+  renderWithLocalization(
     <DocumentPanelNodeReviewSettings
       activeNodeId="child-node"
       editableNodeId="child-node"
@@ -62,8 +63,8 @@ it('shows inherited values, writes explicit overrides, and falls back to ancesto
     />
   );
 
-  expect(screen.getByText('Inherited · 0.84 from Root node')).toBeInTheDocument();
-  expect(screen.getByText('Inherited · P2 from Root node')).toBeInTheDocument();
+  expect(screen.getByText('Inherited - 0.84 from Root node')).toBeInTheDocument();
+  expect(screen.getByText('Inherited - P2 from Root node')).toBeInTheDocument();
 });
 
 it('updates the default priority copy when the global fallback changes', () => {
@@ -75,7 +76,7 @@ it('updates the default priority copy when the global fallback changes', () => {
     })
   };
 
-  const { rerender } = render(
+  const { rerender } = renderWithLocalization(
     <DocumentPanelNodeReviewSettings
       activeNodeId="root-node"
       editableNodeId="root-node"

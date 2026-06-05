@@ -2,6 +2,8 @@ import { Library, Star } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode, Ref, RefObject } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+
 import { WorkspaceSurfaceThemeFavoritesPopover, type ThemeFavoritesPopoverPosition } from './WorkspaceSurfaceThemeFavoritesPopover';
 
 import { settingsColorSwatchClassName, settingsPaletteButtonClassName, settingsUtilityIconButtonClassName, settingsValueBoxClassName } from '@/shared/ui';
@@ -53,11 +55,12 @@ function ThemeHistorySlots(props: {
   history: string[][];
   onApplyPalette: (palette: string[]) => void;
 }) {
+  const t = useTranslation();
   return (
-    <div aria-label="Theme history" className="flex items-center gap-1.5">
+    <div aria-label={t('settings.appearance.surface.themeHistory')} className="flex items-center gap-1.5">
       {Array.from({ length: 8 }, (_, index) => {
         const palette = props.history[index];
-        const label = `Restore theme history ${index + 1}`;
+        const label = t('settings.appearance.surface.restoreHistory', { index: index + 1 });
         return palette ? (
           <button
             aria-label={label}
@@ -124,33 +127,35 @@ function ThemeToolbarRow(props: {
   toolbarRef: Ref<HTMLDivElement>;
   triggerRef: Ref<HTMLButtonElement>;
 }) {
+  const t = useTranslation();
+
   return (
     <div className="space-y-3" ref={props.toolbarRef}>
       <div className="space-y-2 py-1">
-        <h4 className="text-sm font-medium text-foreground">Current theme</h4>
+        <h4 className="text-sm font-medium text-foreground">{t('settings.appearance.surface.currentTheme')}</h4>
         <div className="flex items-center gap-2">
           <PaletteStrip palette={props.currentPalette} />
           <IconToggleButton
             active={props.isFavorited}
-            ariaLabel={props.isFavorited ? 'Remove current theme from favorites' : 'Add current theme to favorites'}
+            ariaLabel={props.isFavorited ? t('settings.appearance.surface.removeFavorite') : t('settings.appearance.surface.addFavorite')}
             onClick={props.onToggleFavorite}
-            title={props.isFavorited ? 'Favorited' : 'Add to favorites'}
+            title={props.isFavorited ? t('settings.appearance.surface.favorited') : t('settings.appearance.surface.addFavorite')}
           >
             <Star aria-hidden="true" className="text-current" fill={props.isFavorited ? 'currentColor' : 'none'} fillOpacity={props.isFavorited ? 0.16 : undefined} size={22} strokeWidth={1.9} />
           </IconToggleButton>
           <IconToggleButton
             active={props.favoritesOpen}
-            ariaLabel="Open theme collection"
+            ariaLabel={t('settings.appearance.surface.openCollection')}
             onClick={props.onToggleFavorites}
             triggerRef={props.triggerRef}
-            title="Theme collection"
+            title={t('settings.appearance.surface.collection')}
           >
             <Library aria-hidden="true" className="text-current" size={22} strokeWidth={1.8} />
           </IconToggleButton>
         </div>
       </div>
       <div className="space-y-2 border-t border-settings-divider/55 py-3">
-        <h4 className="text-sm font-medium text-foreground">History</h4>
+        <h4 className="text-sm font-medium text-foreground">{t('settings.appearance.surface.history')}</h4>
         <ThemeHistorySlots currentPalette={props.currentPalette} history={props.history} onApplyPalette={props.onApplyHistory} />
       </div>
     </div>

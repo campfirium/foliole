@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ExternalLibrarySection } from './ExternalLibrarySection';
 
@@ -39,7 +40,7 @@ it('shows external folders in the persisted manual order', () => {
     ])
   );
 
-  render(
+  renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{}}
       folders={folders}
@@ -56,7 +57,7 @@ it('shows external folders in the persisted manual order', () => {
 });
 
 it('groups Readwise-managed external folders under one Readwise row', () => {
-  render(
+  renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{}}
       folders={[
@@ -78,7 +79,7 @@ it('groups Readwise-managed external folders under one Readwise row', () => {
 it('opens external settings from the setup row keyboard path', () => {
   const onOpenExternalLibrarySettings = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{}}
       folders={[]}
@@ -95,7 +96,7 @@ it('opens external settings from the setup row keyboard path', () => {
 });
 
 it('keeps external folder tree left and right arrow behavior on hierarchical rows', () => {
-  render(
+  renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{}}
       folders={[
@@ -118,7 +119,7 @@ it('keeps external folder tree left and right arrow behavior on hierarchical row
 });
 
 it('places the external folder icon after the label and keeps the count separate', () => {
-  render(
+  renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{}}
       folders={[externalFolder('folder-1', '/library/1act')]}

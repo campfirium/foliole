@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
 
@@ -15,7 +17,7 @@ it('opens imported external folder documents in the external preview first', () 
   const onOpenImportedNodeId = vi.fn();
   const onOpenSelection = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalLibraryDocumentSurface
       canGoBack={false}
       canGoForward={false}
@@ -75,7 +77,7 @@ it('opens an imported external preview from the Imported action', () => {
   const onOpenImportedNodeId = vi.fn();
   const onOpenSelection = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ExternalLibraryDocumentSurface
       canGoBack={false}
       canGoForward={false}

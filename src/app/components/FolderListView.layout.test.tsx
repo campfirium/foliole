@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { FolderListView } from './FolderListView';
 
@@ -21,7 +22,7 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
 }
 
 it('keeps long titles, empty bodies, and long summaries clamped inside the row', () => {
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1', 'node-4', 'node-5']}
@@ -55,7 +56,7 @@ it('keeps long titles, empty bodies, and long summaries clamped inside the row',
 });
 
 it('reserves the current-view action slot when no action is available', () => {
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1']}
@@ -73,7 +74,7 @@ it('reserves the current-view action slot when no action is available', () => {
 });
 
 it('hides the embedded folder header when requested', () => {
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1']}
@@ -93,7 +94,7 @@ it('hides the embedded folder header when requested', () => {
 });
 
 it('keeps the folder header search box on the toolbar row as width shrinks', () => {
-  render(
+  renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1']}

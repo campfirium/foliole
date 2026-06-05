@@ -1,7 +1,8 @@
-import { act, render } from '@testing-library/react';
+import { act } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { HighlightRangeHandles } from './HighlightRangeHandles';
 
@@ -55,7 +56,7 @@ it('renders visible range handles for an adjustable highlight', () => {
     )
   });
 
-  render(
+  renderWithLocalization(
     <HighlightRangeHandles
       editor={editor}
       highlight={{ kind: 'highlight', locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
@@ -87,7 +88,7 @@ it('commits the dragged highlight range', () => {
     setHighlightRangePreview: vi.fn()
   });
 
-  render(
+  renderWithLocalization(
     <HighlightRangeHandles
       editor={editor}
       highlight={{ kind: 'highlight', locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
@@ -121,7 +122,7 @@ it('keeps the committed range when pointerup follows pointermove before React st
     setHighlightRangePreview: vi.fn()
   });
 
-  render(
+  renderWithLocalization(
     <HighlightRangeHandles
       editor={editor}
       highlight={{ kind: 'highlight', locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }}
@@ -147,7 +148,7 @@ it('uses the cloze anchor color for cloze range handles', () => {
     )
   });
 
-  render(
+  renderWithLocalization(
     <HighlightRangeHandles
       editor={editor}
       highlight={{ kind: 'cloze', locator: { from: 0, to: 7 }, nodeId: 'cloze-1' }}

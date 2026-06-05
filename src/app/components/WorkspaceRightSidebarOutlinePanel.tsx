@@ -1,7 +1,8 @@
 import { ChevronDown } from 'lucide-react';
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, type RefObject } from 'react';
 
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { InspectorSection } from '../../shared/ui';
 
 import { mayHaveOutline, resolveActiveIndex, resolveDisplayItems } from './DocumentOutlineLayerModel';
@@ -13,6 +14,7 @@ interface WorkspaceRightSidebarOutlinePanelProps {
   activePosition: number;
   content: string;
   emptyDescription?: string;
+  emptyDescriptionKind?: 'document' | 'topic';
   onRevealPosition: (position: number) => void;
 }
 
@@ -108,10 +110,64 @@ export function scrollActiveOutlineItemIntoView(activeItem: HTMLElement) {
   }
 }
 
+function OutlineEmptyState(props: {
+  emptyDescription?: string;
+  emptyDescriptionKind: 'document' | 'topic';
+}) {
+  const t = useTranslation();
+  return (
+    <InspectorSection
+      description={props.emptyDescription ?? t(props.emptyDescriptionKind === 'document' ? 'desktop.rightPanel.outline.empty.document' : 'desktop.rightPanel.outline.empty.topic')}
+      title={t('desktop.rightPanel.outline')}
+    />
+  );
+}
+
+function OutlineItemsNav(props: {
+  activeIndex: number;
+  activeItemRef: RefObject<HTMLButtonElement | null>;
+  hasNestedLevels: boolean;
+  onRevealPosition: (position: number) => void;
+  treeItems: ReturnType<typeof resolveOutlineTreeItems>;
+}) {
+  const t = useTranslation();
+  return (
+    <nav aria-label={t('desktop.rightPanel.outline.navigation')} className="relative min-h-full px-1 py-1">
+      <ol className="relative m-0 list-none p-0">
+        {props.treeItems.map((item, index) => (
+          <li className="relative" key={`${item.from}-${item.text}`}>
+            <button
+              aria-current={index === props.activeIndex ? 'location' : undefined}
+              className={cn(
+                'group relative flex min-h-7 w-full items-center rounded-md py-1 pr-2 text-left text-[13px] font-normal leading-5 transition-colors',
+                'hover:bg-foreground/[0.055] hover:text-foreground focus-visible:bg-foreground/[0.07] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                index === props.activeIndex ? 'bg-[rgb(var(--app-accent-color-rgb)/0.22)] shadow-[inset_0_0_0_1px_rgb(var(--app-accent-color-rgb)/0.08)]' : '',
+                getOutlineItemTone(item.level, index === props.activeIndex)
+              )}
+              onClick={() => props.onRevealPosition(item.from)}
+              ref={index === props.activeIndex ? props.activeItemRef : undefined}
+              style={{ paddingLeft: props.hasNestedLevels ? `${0.45 + (item.level - 1) * 1.15}rem` : '0.75rem' }}
+              type="button"
+            >
+              {props.hasNestedLevels ? (
+                <span aria-hidden="true" className="mr-1 flex size-4 shrink-0 items-center justify-center text-foreground/42">
+                  {item.hasChildren ? <ChevronDown size={14} strokeWidth={2.1} /> : null}
+                </span>
+              ) : null}
+              <span className="line-clamp-2">{item.text}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
 export function WorkspaceRightSidebarOutlinePanel({
   activePosition,
   content,
-  emptyDescription = 'This topic has no outline headings yet.',
+  emptyDescription,
+  emptyDescriptionKind = 'topic',
   onRevealPosition
 }: WorkspaceRightSidebarOutlinePanelProps) {
   useWorkspaceRenderDiagnostic('workspace-outline-panel-render', {
@@ -131,40 +187,16 @@ export function WorkspaceRightSidebarOutlinePanel({
   }, [activeIndex]);
 
   if (outlineItems.length === 0) {
-    return <InspectorSection description={emptyDescription} title="Outline" />;
+    return <OutlineEmptyState emptyDescription={emptyDescription} emptyDescriptionKind={emptyDescriptionKind} />;
   }
 
   return (
-    <nav aria-label="Document outline" className="relative min-h-full px-1 py-1">
-      <ol className="relative m-0 list-none p-0">
-        {treeItems.map((item, index) => (
-          <li className="relative" key={`${item.from}-${item.text}`}>
-            <button
-              aria-current={index === activeIndex ? 'location' : undefined}
-              className={cn(
-                'group relative flex min-h-7 w-full items-center rounded-md py-1 pr-2 text-left text-[13px] font-normal leading-5 transition-colors',
-                'hover:bg-foreground/[0.055] hover:text-foreground focus-visible:bg-foreground/[0.07] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-                index === activeIndex ? 'bg-[rgb(var(--app-accent-color-rgb)/0.22)] shadow-[inset_0_0_0_1px_rgb(var(--app-accent-color-rgb)/0.08)]' : '',
-                getOutlineItemTone(item.level, index === activeIndex)
-              )}
-              onClick={() => onRevealPosition(item.from)}
-              ref={index === activeIndex ? activeItemRef : undefined}
-              style={{ paddingLeft: hasNestedLevels ? `${0.45 + (item.level - 1) * 1.15}rem` : '0.75rem' }}
-              type="button"
-            >
-              {hasNestedLevels ? (
-                <span
-                  aria-hidden="true"
-                  className="mr-1 flex size-4 shrink-0 items-center justify-center text-foreground/42"
-                >
-                  {item.hasChildren ? <ChevronDown size={14} strokeWidth={2.1} /> : null}
-                </span>
-              ) : null}
-              <span className="line-clamp-2">{item.text}</span>
-            </button>
-          </li>
-        ))}
-      </ol>
-    </nav>
+    <OutlineItemsNav
+      activeIndex={activeIndex}
+      activeItemRef={activeItemRef}
+      hasNestedLevels={hasNestedLevels}
+      onRevealPosition={onRevealPosition}
+      treeItems={treeItems}
+    />
   );
 }

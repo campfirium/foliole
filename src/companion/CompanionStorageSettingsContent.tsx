@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { clearCompanionAppData } from '../shared/platform/companionAppData';
 import {
   AppDialog,
@@ -20,14 +21,15 @@ function ClearAppDataDialog(props: {
   onClear: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslation();
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={props.isOpen}>
       <AppDialogPortal>
         <AppDialogOverlay />
         <AppDialogContent className="w-[calc(100vw-3rem)] max-w-[420px] px-5 py-5">
-          <AppDialogTitle>Clear App Data?</AppDialogTitle>
+          <AppDialogTitle>{t('companion.settings.storage.clearDialog.title')}</AppDialogTitle>
           <AppDialogDescription className="mt-2">
-            This will disconnect the current connection and clear Foliole app data on this device. Data on your desktop and other devices will not be deleted.
+            {t('companion.settings.storage.clearDialog.description')}
           </AppDialogDescription>
           <div className="mt-5 flex flex-col gap-3">
             <button
@@ -36,7 +38,7 @@ function ClearAppDataDialog(props: {
               onClick={props.onClear}
               type="button"
             >
-              {props.isClearing ? 'Clearing...' : 'Clear App Data'}
+              {props.isClearing ? t('companion.settings.storage.clearing') : t('companion.settings.storage.clear')}
             </button>
             <button
               className="w-full rounded-2xl border border-companion-divider px-4 py-3 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
@@ -44,7 +46,7 @@ function ClearAppDataDialog(props: {
               onClick={() => props.onOpenChange(false)}
               type="button"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </AppDialogContent>
@@ -54,6 +56,7 @@ function ClearAppDataDialog(props: {
 }
 
 export function CompanionStorageSettingsContent() {
+  const t = useTranslation();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,16 +69,16 @@ export function CompanionStorageSettingsContent() {
       reloadCompanionApp();
     } catch (clearError) {
       setIsClearing(false);
-      setError(clearError instanceof Error ? clearError.message : 'Failed to clear app data.');
+      setError(clearError instanceof Error ? clearError.message : t('companion.settings.storage.error'));
     }
   }
 
   return (
     <section className="px-5 py-5">
       <div className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
-        <h3 className="text-base font-semibold text-foreground">App data</h3>
+        <h3 className="text-base font-semibold text-foreground">{t('companion.settings.storage.appData')}</h3>
         <p className="mt-2 text-sm leading-6 text-companion-text-secondary">
-          Clear Foliole data on this device and disconnect the current connection. Desktop and other devices are not deleted.
+          {t('companion.settings.storage.description')}
         </p>
         <button
           className="mt-5 w-full rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed disabled:opacity-45"
@@ -83,7 +86,7 @@ export function CompanionStorageSettingsContent() {
           onClick={() => setIsConfirmOpen(true)}
           type="button"
         >
-          {isClearing ? 'Clearing...' : 'Clear App Data'}
+          {isClearing ? t('companion.settings.storage.clearing') : t('companion.settings.storage.clear')}
         </button>
         {error ? <p className="mt-3 text-sm leading-6 text-error">{error}</p> : null}
       </div>

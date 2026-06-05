@@ -4,6 +4,8 @@ import { beforeEach, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
 
+import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
+
 import { DocumentPanelSection } from './DocumentPanelSection';
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -139,7 +141,11 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
 }
 
 export function createSectionElement(overrides: Partial<ComponentProps<typeof DocumentPanelSection>> = {}) {
-  return <DocumentPanelSection {...buildSectionProps(overrides)} />;
+  return (
+    <LocalizationProvider>
+      <DocumentPanelSection {...buildSectionProps(overrides)} />
+    </LocalizationProvider>
+  );
 }
 
 export function renderSectionWithProps(overrides: Partial<ComponentProps<typeof DocumentPanelSection>>) {

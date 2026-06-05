@@ -1,7 +1,9 @@
 import { renderHook } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
 import { expect, it } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 import { createInitialWorkspaceState } from '../../store/workspaceStore';
 
 import { useAppPaletteItems } from './useAppPaletteItems';
@@ -44,9 +46,14 @@ function createPaletteArgs(activeNodeId: string | null) {
   };
 }
 
+function wrapper({ children }: { children: ReactNode }) {
+  return createElement(LocalizationProvider, null, children);
+}
+
 it('enables developer source reimport for the current non-folder topic surface', () => {
-  const { result } = renderHook(() =>
-    useAppPaletteItems(createPaletteArgs('node-1') as unknown as Parameters<typeof useAppPaletteItems>[0])
+  const { result } = renderHook(
+    () => useAppPaletteItems(createPaletteArgs('node-1') as unknown as Parameters<typeof useAppPaletteItems>[0]),
+    { wrapper }
   );
 
   expect(result.current.find((item) => item.id === APP_COMMAND_IDS.reimportSelectedTopic)).toMatchObject({
@@ -60,7 +67,7 @@ it('enables review mode from the directory list when due review items exist with
       ...createPaletteArgs(null),
       activeNodeId: null,
       reviewDueCount: 2
-    } as unknown as Parameters<typeof useAppPaletteItems>[0])
+    } as unknown as Parameters<typeof useAppPaletteItems>[0]), { wrapper }
   );
 
   expect(result.current.find((item) => item.id === APP_COMMAND_IDS.startStudyMode)).toMatchObject({
@@ -73,7 +80,7 @@ it('keeps immersive reading available while review mode is active', () => {
     useAppPaletteItems({
       ...createPaletteArgs('node-1'),
       isStudyMode: true
-    } as unknown as Parameters<typeof useAppPaletteItems>[0])
+    } as unknown as Parameters<typeof useAppPaletteItems>[0]), { wrapper }
   );
 
   expect(result.current.find((item) => item.id === APP_COMMAND_IDS.toggleImmersiveMode)).toMatchObject({
@@ -86,7 +93,7 @@ it('keeps import commands enabled for the unified shortcut and menu command path
     useAppPaletteItems({
       ...createPaletteArgs('node-1'),
       formalImportAvailable: false
-    } as unknown as Parameters<typeof useAppPaletteItems>[0])
+    } as unknown as Parameters<typeof useAppPaletteItems>[0]), { wrapper }
   );
 
   expect(result.current.find((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toMatchObject({

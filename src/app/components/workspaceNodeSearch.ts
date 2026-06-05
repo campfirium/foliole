@@ -1,5 +1,7 @@
 import { buildNodeBreadcrumbs } from '../../features/nodes/model/nodeBreadcrumbs';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { translate } from '../../shared/localization/translations';
 
 export interface WorkspaceNodeSearchResult {
   id: string;
@@ -18,12 +20,16 @@ function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+function untitledLabel() {
+  return translate(getStoredAppLocale(), 'desktop.search.context.untitled');
+}
+
 function buildNodePathLabel(node: WorkspaceListNode, nodesById: Record<string, WorkspaceListNode>) {
   const breadcrumbItems = buildNodeBreadcrumbs(node.parentNodeId, nodesById);
   if (!breadcrumbItems.length) {
-    return 'Top level';
+    return translate(getStoredAppLocale(), 'desktop.search.context.topLevel');
   }
-  return breadcrumbItems.map((item) => item.title.trim() || 'Untitled').join(' / ');
+  return breadcrumbItems.map((item) => item.title.trim() || untitledLabel()).join(' / ');
 }
 
 function buildNodeKeywords(node: WorkspaceListNode) {
@@ -97,7 +103,7 @@ export function buildNodeSearchResults(
       if (!node) {
         return [];
       }
-      const title = normalizeWhitespace(node.title) || 'Untitled';
+      const title = normalizeWhitespace(node.title) || untitledLabel();
       const path = buildNodePathLabel(node, availableNodesById);
       const keywords = buildNodeKeywords(node);
       const score = resolveQueryScore({

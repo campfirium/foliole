@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type {
@@ -49,35 +50,38 @@ function ExternalEmptySurface(args: {
   selectedFolder: ExternalLibraryFolder | null;
   selection: Exclude<ExternalLibrarySelection, { kind: 'document' }>;
 }) {
+  const t = useTranslation();
   return (
-    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
+    <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
       <AppEmptyState
-        description={resolveExternalSurfaceDescription(args.selection, args.selectedFolder, null)}
-        title={resolveExternalSurfaceTitle(args.selection, args.selectedFolder)}
+        description={resolveExternalSurfaceDescription(args.selection, args.selectedFolder, null, t)}
+        title={resolveExternalSurfaceTitle(args.selection, args.selectedFolder, t)}
       />
     </section>
   );
 }
 
 function ExternalDocumentLoadingSurface() {
+  const t = useTranslation();
   return (
-    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
+    <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
       <AppLoadingState />
     </section>
   );
 }
 
 function ExternalDocumentErrorSurface(args: { error: string; onRetry: () => void }) {
+  const t = useTranslation();
   return (
-    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
+    <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
       <AppErrorState
         action={
           <AppButton onClick={args.onRetry} size="sm">
-            Retry
+            {t('desktop.externalLibrary.retry')}
           </AppButton>
         }
         description={args.error}
-        title="External preview unavailable"
+        title={t('desktop.externalLibrary.previewUnavailable')}
       />
     </section>
   );

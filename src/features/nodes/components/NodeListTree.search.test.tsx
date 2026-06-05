@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, it } from 'vitest';
 
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import type { WorkspaceListNode } from '../model/workspaceListNode';
 
@@ -59,7 +60,7 @@ it('filters node titles while keeping the matched path visible', () => {
     trashedNodeIds: []
   }));
 
-  render(<NodeListTreeSearchHarness />);
+  renderWithLocalization(<NodeListTreeSearchHarness />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
@@ -87,7 +88,7 @@ it('toggles between collapsing and expanding all node groups from the toolbar bu
     trashedNodeIds: []
   }));
 
-  render(<NodeListTreeSearchHarness forceActivePath={false} />);
+  renderWithLocalization(<NodeListTreeSearchHarness forceActivePath={false} />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
 
@@ -113,7 +114,7 @@ it('shows original path for trashed rows', () => {
     trashedNodeIds: ['highlight-a']
   }));
 
-  render(
+  renderWithLocalization(
     <NodeListTree
       activeNodeId={null}
       isTrashViewOpen
@@ -142,7 +143,7 @@ it('shows only trash roots when a deleted folder covers its subtree', () => {
     trashedNodeIds: ['folder-a', 'article-a', 'highlight-a']
   }));
 
-  render(
+  renderWithLocalization(
     <NodeListTree
       activeNodeId={null}
       isTrashViewOpen
@@ -172,7 +173,7 @@ it('searches covered trash descendants while showing the trash root', () => {
     trashedNodeIds: ['folder-a', 'article-a', 'highlight-a']
   }));
 
-  render(
+  renderWithLocalization(
     <NodeListTree
       activeNodeId={null}
       isTrashViewOpen
@@ -206,7 +207,7 @@ it('searches trashed rows from the trash header', () => {
     trashedNodeIds: ['item-a', 'item-b']
   }));
 
-  render(
+  renderWithLocalization(
     <NodeListTree
       activeNodeId={null}
       isTrashViewOpen

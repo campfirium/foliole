@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
@@ -117,7 +119,7 @@ beforeEach(() => {
 it('writes pdf page and zoom through onPersistPdfViewState callback', async () => {
   const onPersistPdfViewState = vi.fn();
 
-  render(<DocumentPanelSection {...createDefaultProps()} onPersistPdfViewState={onPersistPdfViewState} />);
+  renderWithLocalization(<DocumentPanelSection {...createDefaultProps()} onPersistPdfViewState={onPersistPdfViewState} />);
 
   expect(onPersistPdfViewState).not.toHaveBeenCalled();
 
@@ -135,13 +137,16 @@ it('writes pdf page and zoom through onPersistPdfViewState callback', async () =
 it('keeps fit width as the default persisted zoom mode for a new pdf', async () => {
   const onPersistPdfViewState = vi.fn();
 
-  render(<DocumentPanelSection {...createDefaultProps()} onPersistPdfViewState={onPersistPdfViewState} />);
+  renderWithLocalization(<DocumentPanelSection {...createDefaultProps()} onPersistPdfViewState={onPersistPdfViewState} />);
 
-  await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF page' })).toBeInTheDocument());
-  fireEvent.change(screen.getByRole('textbox', { name: 'PDF page' }), {
+  await waitFor(() => expect(screen.getAllByTestId('pdf-document-page').length).toBeGreaterThan(1));
+  const pageInput = screen.getByRole('textbox', { name: 'PDF page' });
+  fireEvent.focus(pageInput);
+  fireEvent.change(pageInput, {
     target: { value: '2' }
   });
-  fireEvent.keyDown(screen.getByRole('textbox', { name: 'PDF page' }), { key: 'Enter' });
+  await waitFor(() => expect(pageInput).toHaveValue('2'));
+  fireEvent.keyDown(pageInput, { key: 'Enter' });
 
   await waitFor(() =>
     expect(onPersistPdfViewState).toHaveBeenCalledWith('node-1', {

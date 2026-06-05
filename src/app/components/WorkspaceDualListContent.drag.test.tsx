@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState, type ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { resetNodeListCollapseSessionForTest } from '../../features/nodes/components/nodeListCollapseSession';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
@@ -70,7 +71,7 @@ function renderWorkspaceContent(
     trashedNodeIds: []
   }));
 
-  render(
+  renderWithLocalization(
     <WorkspaceDualListContent
       activeNodeId="topic-a"
       activeVirtualNodeId={null}
@@ -235,7 +236,7 @@ it('expands a collapsed directory folder while dragging a topic over it', async 
 });
 
 it('keeps sibling folder branches open when another folder is clicked', () => {
-  render(<FolderClickHarness />);
+  renderWithLocalization(<FolderClickHarness />);
 
   fireEvent.click(screen.getByRole('treeitem', { name: 'Folder A' }));
   expect(screen.getByRole('treeitem', { name: 'Folder A child' })).toBeInTheDocument();

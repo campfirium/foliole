@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, ExternalLink, X } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { AppIconButton } from '../../shared/ui';
 
@@ -26,6 +27,8 @@ function LinkPanelHeader(props: {
   panel: LinkPanelRecord;
   webviewRef: RefObject<LinkPanelWebviewTag>;
 }) {
+  const t = useTranslation();
+
   return (
     <header
       className="flex cursor-move items-center gap-2 border-b border-border bg-bg-panel/85 px-3 py-2"
@@ -38,23 +41,23 @@ function LinkPanelHeader(props: {
       <AppIconButton
         disabled={!props.panel.canGoBack}
         icon={<ArrowLeft className="size-4" />}
-        label="Back"
+        label={t('desktop.linkPanels.back')}
         onClick={() => props.webviewRef.current?.goBack()}
       />
       <AppIconButton
         disabled={!props.panel.canGoForward}
         icon={<ArrowRight className="size-4" />}
-        label="Forward"
+        label={t('desktop.linkPanels.forward')}
         onClick={() => props.webviewRef.current?.goForward()}
       />
       <AppIconButton
         icon={<ExternalLink className="size-4" />}
-        label="Open in browser"
+        label={t('desktop.linkPanels.openInBrowser')}
         onClick={() => void openExternalUrl(props.panel.currentUrl)}
       />
       <AppIconButton
         icon={<X className="size-4" />}
-        label="Close"
+        label={t('desktop.linkPanels.close')}
         onClick={() => props.onClose(props.panel.id)}
       />
     </header>
@@ -118,6 +121,7 @@ export function LinkPanelStack(props: {
   onStateChange: (panelId: string, state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>) => void;
   panels: LinkPanelRecord[];
 }) {
+  const t = useTranslation();
   const { setSize, size } = useLinkPanelSize();
   const bounds = useLinkPanelViewportBounds(props.anchorRootRef);
   const effectiveSize = useMemo(() => fitLinkPanelSizeToBounds(size, bounds), [bounds, size]);
@@ -134,7 +138,7 @@ export function LinkPanelStack(props: {
   }
 
   return (
-    <div aria-label="Link panels" className="pointer-events-none fixed inset-0 z-workspace-overlay">
+    <div aria-label={t('desktop.linkPanels.region')} className="pointer-events-none fixed inset-0 z-workspace-overlay">
       {props.panels.map((panel, index) => (
         <LinkPanelCard
           key={panel.id}

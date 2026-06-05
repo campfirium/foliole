@@ -1,6 +1,7 @@
 import { CheckCircle2, MessageCircle, Search, Table, XCircle } from 'lucide-react';
 import { useState, type MouseEvent, type PointerEvent } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import {
   getEnabledWebLookupEntries,
@@ -11,10 +12,7 @@ import { AppButton, AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } fro
 import type { SelectionCommandPayload } from '../contextCommands';
 
 type WebLookupActionEntry = NonNullable<ReturnType<typeof resolveWebLookupAction>>;
-
-const WEB_LOOKUP_SELECTION_COPIED_NOTICE = 'Selection is too long to send this way. Copied it instead; paste it in the page that opens.';
-const WEB_LOOKUP_DOCUMENT_COPIED_NOTICE = 'Full topic is too long to send this way. Copied it instead; paste it in the page that opens.';
-const WEB_LOOKUP_COPY_FAILED_NOTICE = 'Text is too long to send this way, and Foliole could not copy it.';
+type Translate = ReturnType<typeof useTranslation>;
 
 interface WebLookupSelectionMenuProps {
   documentText?: string | null | undefined;
@@ -48,10 +46,10 @@ async function copyWebLookupText(text: string) {
   }
 }
 
-function getCopiedNoticeMessage(action: WebLookupActionEntry) {
+function getCopiedNoticeMessage(action: WebLookupActionEntry, t: Translate) {
   return action.overflowSource === 'selection'
-    ? WEB_LOOKUP_SELECTION_COPIED_NOTICE
-    : WEB_LOOKUP_DOCUMENT_COPIED_NOTICE;
+    ? t('desktop.webLookup.selectionCopied')
+    : t('desktop.webLookup.documentCopied');
 }
 
 function resolveWebLookupEntries(props: WebLookupSelectionMenuProps, selectionText: string) {
@@ -101,6 +99,7 @@ function WebLookupConfirmationPanel(props: {
   onCancel: () => void;
   onContinue: () => void;
 }) {
+  const t = useTranslation();
   return (
     <div className="w-80 p-3">
       <div
@@ -119,7 +118,7 @@ function WebLookupConfirmationPanel(props: {
           size="sm"
           variant="ghost"
         >
-          Cancel
+          {t('desktop.webLookup.cancel')}
         </AppButton>
         <AppButton
           className="min-w-24"
@@ -129,7 +128,7 @@ function WebLookupConfirmationPanel(props: {
           size="sm"
           variant="primary"
         >
-          Continue
+          {t('desktop.webLookup.continue')}
         </AppButton>
       </div>
     </div>
@@ -159,6 +158,7 @@ function WebLookupActionItems(props: {
 }
 
 export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
+  const t = useTranslation();
   const [confirmation, setConfirmation] = useState<WebLookupConfirmationState | null>(null);
   const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
   const selectionText = props.selectionPayload?.selectionText.trim() ?? '';
@@ -176,10 +176,10 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
     }
     const copied = await copyWebLookupText(action.copyText);
     if (copied) {
-      setConfirmation({ message: getCopiedNoticeMessage(action), url: action.url });
+      setConfirmation({ message: getCopiedNoticeMessage(action, t), url: action.url });
       return;
     }
-    setNotice({ message: WEB_LOOKUP_COPY_FAILED_NOTICE, tone: 'error' });
+    setNotice({ message: t('desktop.webLookup.copyFailed'), tone: 'error' });
   };
 
   const continueWebLookup = (url: string) => {
@@ -203,7 +203,7 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
           }}
         >
           <Table aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} />
-          <span className="min-w-0 truncate">Repair Table</span>
+          <span className="min-w-0 truncate">{t('desktop.webLookup.repairTable')}</span>
         </AppSelectionDropdownMenuItem>
       ) : null}
       {!confirmation && props.repairTableAvailable && entries.length > 0 ? <SelectionMenuSeparator /> : null}

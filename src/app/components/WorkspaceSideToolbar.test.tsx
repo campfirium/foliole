@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { AppearanceSettingsProvider } from '../../features/settings/context/AppearanceSettingsProvider';
 import { WorkspaceRailSettingsProvider } from '../../features/settings/context/WorkspaceRailSettingsProvider';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
@@ -26,7 +27,7 @@ function toolbar(isStudyMode: boolean, onRunRailAction = vi.fn(), canStartStudyM
 }
 
 function renderToolbar(isStudyMode: boolean) {
-  return render(
+  return renderWithLocalization(
     <AppearanceSettingsProvider>
       <WorkspaceRailSettingsProvider>{toolbar(isStudyMode)}</WorkspaceRailSettingsProvider>
     </AppearanceSettingsProvider>
@@ -54,7 +55,7 @@ it('shows the bottom divider only while review mode is active', () => {
 
 it('runs the shared light and dark mode command from the rail theme button', () => {
   const onRunRailAction = vi.fn();
-  render(
+  renderWithLocalization(
     <AppearanceSettingsProvider>
       <WorkspaceRailSettingsProvider>{toolbar(false, onRunRailAction)}</WorkspaceRailSettingsProvider>
     </AppearanceSettingsProvider>
@@ -67,7 +68,7 @@ it('runs the shared light and dark mode command from the rail theme button', () 
 
 it('keeps the Flow button enabled when the current context cannot start Flow mode', () => {
   const onToggleReviewSession = vi.fn();
-  render(
+  renderWithLocalization(
     <AppearanceSettingsProvider>
       <WorkspaceRailSettingsProvider>
         <WorkspaceSideToolbar

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { buildCommandMenuSections } from '../../shared/commands/menuModel';
 import { formatAriaKeyShortcuts, formatShortcutSetLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   appFloatingEmptyStateClassName,
   appFloatingItemClassName,
@@ -157,6 +158,7 @@ export function CommandPalette({
   onClose,
   onRunCommand
 }: CommandPaletteProps) {
+  const t = useTranslation();
   const focusTrap = useFloatingDialogFocusTrap(isOpen);
   useFloatingPaletteEscape(isOpen, onClose);
   const { activeIndex, activeItems, displaySections, query, setActiveIndex, setQuery } =
@@ -176,7 +178,7 @@ export function CommandPalette({
 
   return (
     <div
-      aria-label="Command palette"
+      aria-label={t('desktop.palette.command.dialog')}
       aria-modal="true"
       className={appFloatingOverlayClassName()}
       onClick={onClose}
@@ -189,12 +191,12 @@ export function CommandPalette({
         ref={focusTrap.containerRef}
       >
         <FloatingPaletteInput
-          inputLabel="Search commands"
+          inputLabel={t('desktop.palette.command.search')}
           onClose={onClose}
           onQueryChange={setQuery}
           onRunActive={() => runPaletteItem(activeItems[activeIndex])}
           onSetActiveIndex={setActiveIndex}
-          placeholder="Type a command..."
+          placeholder={t('desktop.palette.command.placeholder')}
           query={query}
           totalItems={activeItems.length}
         />
@@ -202,7 +204,7 @@ export function CommandPalette({
           activeIndex={activeIndex}
           activeItems={activeItems}
           displaySections={displaySections}
-          emptyLabel="No matching commands"
+          emptyLabel={t('desktop.palette.command.empty')}
           onRunItem={runPaletteItem}
         />
       </div>

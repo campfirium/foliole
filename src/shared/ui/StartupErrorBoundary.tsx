@@ -1,5 +1,8 @@
 import React from 'react';
 
+import { getStoredAppLocale } from '../localization/appLanguage';
+import { translate } from '../localization/translations';
+
 import { createStartupErrorSurfaceModel, StartupSurface } from './StartupSurface';
 
 interface StartupErrorBoundaryProps {
@@ -19,7 +22,7 @@ export class StartupErrorBoundary extends React.Component<StartupErrorBoundaryPr
 
   static getDerivedStateFromError(error: Error): StartupErrorBoundaryState {
     return {
-      message: error.message || 'Unknown renderer exception'
+      message: error.message || translate(getStoredAppLocale(), 'shared.startup.unknownRendererException')
     };
   }
 

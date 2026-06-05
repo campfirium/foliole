@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { translate } from '../shared/localization/translations';
+
 import { formatCompanionSyncProgressSummary } from './companionSyncProgressSummary';
+
+const t = translate.bind(null, 'en');
 
 function expectReviewQueueBodyProgressAfterActiveTopic() {
   const summary = formatCompanionSyncProgressSummary({
@@ -17,7 +21,7 @@ function expectReviewQueueBodyProgressAfterActiveTopic() {
     phase: 'content',
     total: 616,
     totalBytes: 2097152
-  });
+  }, t);
 
   expect(summary.title).toBe('Review resources');
   expect(summary.status).toBe('2/7');
@@ -41,7 +45,7 @@ function expectReviewQueueAttachmentProgressAfterActiveTopic() {
     phase: 'attachment',
     total: 12,
     totalBytes: 8388608
-  });
+  }, t);
 
   expect(summary.title).toBe('Review resources');
   expect(summary.status).toBe('1/3');
@@ -56,7 +60,7 @@ function expectRemainingBodyBacklogLabel() {
     phase: 'content',
     total: 5,
     totalBytes: 5242880
-  });
+  }, t);
 
   expect(summary.title).toBe('Body downloads');
   expect(summary.status).toBe('5 left - 0 B/5.0 MB');

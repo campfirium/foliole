@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   dismissSearchEnhancementPrompt,
   dismissSearchEnhancementPromptIfEnabled,
@@ -21,6 +22,7 @@ import {
   AppDialogTitle
 } from '../../shared/ui';
 
+type Translate = ReturnType<typeof useTranslation>;
 type PromptState = 'hidden' | 'prompt' | 'status';
 interface SearchEnhancementPromptContentProps {
   error: string | null;
@@ -33,6 +35,15 @@ interface SearchEnhancementRestartContentProps {
   onDone: () => void;
   status: SearchIndexRebuildStatus | null;
 }
+interface SearchEnhancementDialogContentProps {
+  error: string | null;
+  isUpdating: boolean;
+  onDone: () => void;
+  onSkip: () => void;
+  onTurnOn: () => void;
+  state: PromptState;
+  status: SearchIndexRebuildStatus | null;
+}
 
 function initialPromptState(): PromptState {
   if (isSearchEnhancementEnabled() || isSearchEnhancementPromptDismissed()) {
@@ -41,7 +52,8 @@ function initialPromptState(): PromptState {
   return 'prompt';
 }
 
-export function SearchPaletteEnhancementPrompt() {
+function useSearchEnhancementPromptState() {
+  const t = useTranslation();
   const [state, setState] = useState<PromptState>(initialPromptState);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -57,8 +69,6 @@ export function SearchPaletteEnhancementPrompt() {
 
   useEffect(() => onSearchIndexRebuildStatus(setStatus), []);
 
-  if (state === 'hidden') return null;
-
   const handleTurnOn = async () => {
     setIsUpdating(true);
     try {
@@ -68,7 +78,7 @@ export function SearchPaletteEnhancementPrompt() {
       setError(null);
       setState('status');
     } catch {
-      setError('Search enhancement could not be turned on.');
+      setError(t('desktop.searchEnhancement.error.turnOn'));
     } finally {
       setIsUpdating(false);
     }
@@ -79,7 +89,7 @@ export function SearchPaletteEnhancementPrompt() {
       setError(null);
       setState('hidden');
     } catch {
-      setError('Search enhancement prompt could not be skipped.');
+      setError(t('desktop.searchEnhancement.error.skip'));
     }
   };
   const handleOpenChange = (open: boolean) => {
@@ -92,33 +102,69 @@ export function SearchPaletteEnhancementPrompt() {
     }
   };
 
+  return {
+    error,
+    handleDone: () => setState('hidden'),
+    handleOpenChange,
+    handleSkip,
+    handleTurnOn: () => void handleTurnOn(),
+    isUpdating,
+    state,
+    status
+  };
+}
+
+export function SearchPaletteEnhancementPrompt() {
+  const prompt = useSearchEnhancementPromptState();
+
+  if (prompt.state === 'hidden') return null;
+
   return (
-    <AppDialog open onOpenChange={handleOpenChange}>
+    <AppDialog open onOpenChange={prompt.handleOpenChange}>
       <AppDialogPortal>
         <AppDialogOverlay />
         <AppDialogContent className="w-[min(440px,calc(100vw-32px))] p-5">
-          {state === 'status' ? (
-            <SearchEnhancementRestartContent error={error} onDone={() => setState('hidden')} status={status} />
-          ) : (
-            <SearchEnhancementPromptContent error={error} isUpdating={isUpdating} onSkip={handleSkip} onTurnOn={() => void handleTurnOn()} />
-          )}
+          <SearchEnhancementDialogContent
+            error={prompt.error}
+            isUpdating={prompt.isUpdating}
+            onDone={prompt.handleDone}
+            onSkip={prompt.handleSkip}
+            onTurnOn={prompt.handleTurnOn}
+            state={prompt.state}
+            status={prompt.status}
+          />
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
   );
 }
 
+function SearchEnhancementDialogContent(props: SearchEnhancementDialogContentProps) {
+  if (props.state === 'status') {
+    return <SearchEnhancementRestartContent error={props.error} onDone={props.onDone} status={props.status} />;
+  }
+  return (
+    <SearchEnhancementPromptContent
+      error={props.error}
+      isUpdating={props.isUpdating}
+      onSkip={props.onSkip}
+      onTurnOn={props.onTurnOn}
+    />
+  );
+}
+
 function SearchEnhancementRestartContent(props: SearchEnhancementRestartContentProps) {
-  const message = getPromptStatusCopy(props.status);
+  const t = useTranslation();
+  const message = getPromptStatusCopy(props.status, t);
   return (
     <>
-      <AppDialogTitle>Search enhancement is on</AppDialogTitle>
+      <AppDialogTitle>{t('desktop.searchEnhancement.status.title')}</AppDialogTitle>
       <AppDialogDescription className="mt-2">
         {message}
       </AppDialogDescription>
       <div className="mt-5 flex justify-end">
         <AppButton onClick={props.onDone} variant="primary">
-          Done
+          {t('desktop.searchEnhancement.done')}
         </AppButton>
       </div>
       {props.error ? <p className="mt-3 text-sm text-error">{props.error}</p> : null}
@@ -127,18 +173,19 @@ function SearchEnhancementRestartContent(props: SearchEnhancementRestartContentP
 }
 
 function SearchEnhancementPromptContent(props: SearchEnhancementPromptContentProps) {
+  const t = useTranslation();
   return (
     <>
-      <AppDialogTitle>Turn on search enhancement for languages without spaces?</AppDialogTitle>
+      <AppDialogTitle>{t('desktop.searchEnhancement.prompt.title')}</AppDialogTitle>
       <AppDialogDescription className="mt-2">
-        This improves search for Chinese, Japanese, Korean, and other languages that are not separated by spaces. It uses more search data. You can change this later in Settings &gt; General.
+        {t('desktop.searchEnhancement.prompt.description')}
       </AppDialogDescription>
       <div className="mt-5 flex justify-end gap-2">
         <AppButton onClick={props.onSkip} variant="ghost">
-          Not now
+          {t('desktop.searchEnhancement.notNow')}
         </AppButton>
         <AppButton disabled={props.isUpdating} onClick={props.onTurnOn} variant="primary">
-          {props.isUpdating ? 'Turning on...' : 'Turn on'}
+          {props.isUpdating ? t('desktop.searchEnhancement.turningOn') : t('desktop.searchEnhancement.turnOn')}
         </AppButton>
       </div>
       {props.error ? <p className="mt-3 text-sm text-error">{props.error}</p> : null}
@@ -146,8 +193,8 @@ function SearchEnhancementPromptContent(props: SearchEnhancementPromptContentPro
   );
 }
 
-function getPromptStatusCopy(status: SearchIndexRebuildStatus | null) {
-  if (status?.status === 'ready') return 'Enhanced search is ready.';
-  if (status?.status === 'failed') return 'Could not prepare enhanced search.';
-  return 'Preparing enhanced search...';
+function getPromptStatusCopy(status: SearchIndexRebuildStatus | null, t: Translate) {
+  if (status?.status === 'ready') return t('desktop.searchEnhancement.status.ready');
+  if (status?.status === 'failed') return t('desktop.searchEnhancement.status.failed');
+  return t('desktop.searchEnhancement.status.preparing');
 }

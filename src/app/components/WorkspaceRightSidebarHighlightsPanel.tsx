@@ -8,6 +8,7 @@ import {
   projectWorkspaceListNodesById,
   type WorkspaceListNodesById
 } from '../../features/nodes/model/workspaceListNode';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppErrorState } from '../../shared/ui';
 
 interface WorkspaceRightSidebarHighlightsPanelProps {
@@ -169,6 +170,7 @@ function collectSubtreeHighlights(
 }
 
 export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSidebarHighlightsPanelProps) {
+  const t = useTranslation();
   const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
   const listNodesById = useMemo(() => {
     const nextProjection = projectWorkspaceListNodesById(
@@ -197,7 +199,7 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
     return <EmptyHighlightsState />;
   }
   if (!node) {
-    return <AppErrorState description="The selected topic is no longer available." title="Topic unavailable" />;
+    return <AppErrorState description={t('desktop.rightPanel.highlights.unavailableDescription')} title={t('desktop.rightPanel.highlights.unavailableTitle')} />;
   }
   if (!isHighlightPanelTopic(node)) {
     return <EmptyHighlightsState />;
@@ -209,9 +211,9 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
   return (
     <div className="min-w-0 px-1">
       <p className="px-1 pb-2 text-xs font-medium uppercase tracking-[0.08em] text-foreground/55">
-        HIGHLIGHTS({highlights.length})
+        {t('desktop.rightPanel.highlights.count', { count: highlights.length })}
       </p>
-      <ol aria-label="Document highlights" className="flex min-w-0 flex-col">
+      <ol aria-label={t('desktop.rightPanel.highlights.list')} className="flex min-w-0 flex-col">
         {highlights.map((highlight) => (
           <li className="min-w-0 border-b border-border/35 last:border-b-0" key={highlight.nodeId}>
             <button

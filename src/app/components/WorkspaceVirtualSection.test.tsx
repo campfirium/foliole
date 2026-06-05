@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import {
@@ -7,6 +7,7 @@ import {
   VIRTUAL_SHELVED_NODE_ID
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
@@ -55,7 +56,7 @@ it('moves from the virtual root through built-in virtual rows with arrow keys', 
     title: 'Custom virtual'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceVirtualSection
       activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
       isVirtualViewOpen
@@ -91,7 +92,7 @@ it('hides the Removed row when the virtual root is collapsed', () => {
     title: 'Custom virtual'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceVirtualSection
       activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
       isVirtualViewOpen
@@ -130,7 +131,7 @@ it('does not show a result count on the virtual root', () => {
     title: 'Custom virtual'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceVirtualSection
       activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
       isVirtualViewOpen

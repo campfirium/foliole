@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeReadwiseImportRunResult } from '../../../lib/platform/nativeImportContract';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { createReadwiseImportSources } from './importSourceWorkspaceModel';
@@ -36,7 +37,7 @@ beforeEach(() => {
 type RunSync = (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
 
 function renderManualSyncHarness(onRunSync: RunSync) {
-  render(
+  renderWithLocalization(
     <SettingsReadwiseReaderContent
       config={createEnabledReadwiseConfig()}
       onPreviewSync={vi.fn().mockResolvedValue(createReadwiseImportPreview())}

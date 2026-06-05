@@ -5,6 +5,7 @@ import { importActionOptions } from '../../../lib/core/import/importSourceAction
 import { isGenericSplitImportSourceUnsupported } from '../../../lib/core/import/unsupportedKeepImportRules';
 import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME,
@@ -12,10 +13,20 @@ import {
   settingsActionTableRowClassName
 } from '../../shared/ui';
 
-import { type DraftImportSource, type DraftImportSourceField, formatHighlightModeLabel, formatKeepStateLabel, importSourceSelectClassName } from './importSourceWorkspaceModel';
+import { type DraftImportSource, type DraftImportSourceField, importSourceSelectClassName } from './importSourceWorkspaceModel';
 import { FolderButton, resolveFolderPathHint, resolveFolderPathLabel } from './ImportSourceWorkspaceTableParts';
 
 const TABLE_COLUMNS = SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME;
+
+function formatHighlightModeLabel(mode: DraftImportSource['highlightMode'], t: ReturnType<typeof useTranslation>) {
+  return t(mode === 'split' ? 'desktop.importSource.mode.split' : 'desktop.importSource.mode.merged');
+}
+
+function formatKeepStateLabel(state: DraftImportSource['keepState'], t: ReturnType<typeof useTranslation>) {
+  if (state === 'enabled') return t('desktop.importSource.enabled');
+  if (state === 'previewed') return t('desktop.importSource.readyToEnable');
+  return t('desktop.importSource.needsPreview');
+}
 
 export interface ImportSourceTableRowActions {
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
@@ -50,31 +61,32 @@ function PreviewCell(props: {
   onDisableKeepImport: (sourceId: string) => void;
   onPreviewKeepImport: (sourceId: string) => void;
 }) {
+  const t = useTranslation();
   const unsupportedSplit = isGenericSplitImportSourceUnsupported(props.source);
   const missingPath = !props.source.primaryPath.trim() || (props.source.highlightMode === 'split' && !props.source.highlightPath.trim());
   if (props.source.keepState === 'enabled') {
     return (
       <AppButton
-        aria-label={`Disable keep import ${props.source.id}`}
+        aria-label={t('desktop.importSource.disableKeep', { id: props.source.id })}
         className="h-9 w-full min-w-0 px-2.5 text-sm"
         onClick={() => props.onDisableKeepImport(props.source.id)}
         variant="primary"
       >
-        Enabled
+        {t('desktop.importSource.enabled')}
       </AppButton>
     );
   }
 
   return (
     <AppButton
-      aria-label={`Preview ${props.source.id}`}
+      aria-label={`${t('desktop.importSource.preview')} ${props.source.id}`}
       className="h-9 w-full min-w-0 px-2.5 text-sm"
       disabled={missingPath || unsupportedSplit}
       onClick={() => props.onPreviewKeepImport(props.source.id)}
-      title={unsupportedSplit ? 'Generic split highlights are not available yet.' : formatKeepStateLabel(props.source.keepState)}
+      title={unsupportedSplit ? t('desktop.importSource.unsupportedSplit') : formatKeepStateLabel(props.source.keepState, t)}
       variant="primary"
     >
-      {unsupportedSplit ? 'Unavailable' : 'Preview'}
+      {unsupportedSplit ? t('desktop.importSource.unavailable') : t('desktop.importSource.preview')}
     </AppButton>
   );
 }
@@ -83,16 +95,17 @@ function HandlingCell(props: {
   source: DraftImportSource;
   onChangeAction: (sourceId: string, value: string) => void;
 }) {
+  const t = useTranslation();
   return (
     <div className="min-w-0">
       <SourceSelect
-        ariaLabel={`Handling ${props.source.id}`}
+        ariaLabel={`${t('desktop.importSource.table.handling')} ${props.source.id}`}
         onChange={(value) => props.onChangeAction(props.source.id, value)}
         value={props.source.actionMode}
       >
         {importActionOptions.map((option) => (
           <option key={option.value} value={option.value}>
-            {option.label}
+            {option.value === 'delete' ? t('desktop.readwise.cleanup.delete') : t('desktop.readwise.cleanup.keep')}
           </option>
         ))}
       </SourceSelect>
@@ -104,9 +117,10 @@ function SourceActions(props: {
   source: DraftImportSource;
   onDeleteSource: (sourceId: string) => void;
 }) {
+  const t = useTranslation();
   return (
     <div className="flex items-center justify-end gap-1">
-      <AppButton aria-label={`Delete ${props.source.id}`} className="size-9 px-0 text-settings-icon hover:text-settings-icon-hover" onClick={() => props.onDeleteSource(props.source.id)} variant="ghost">
+      <AppButton aria-label={t('desktop.importSource.delete', { id: props.source.id })} className="size-9 px-0 text-settings-icon hover:text-settings-icon-hover" onClick={() => props.onDeleteSource(props.source.id)} variant="ghost">
         <Trash2 aria-hidden="true" size={15} strokeWidth={1.8} />
       </AppButton>
     </div>
@@ -118,22 +132,23 @@ function SourceFolderCells(props: {
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
 }) {
+  const t = useTranslation();
   return (
     <>
       <FolderButton
-        label={`Original folder ${props.source.id}`}
+        label={t('desktop.importSource.folder.original', { id: props.source.id })}
         onClick={() => props.onChoosePrimaryFolder(props.source.id)}
-        path={resolveFolderPathLabel(props.source.primaryPath, 'Choose')}
+        path={resolveFolderPathLabel(props.source.primaryPath, t('desktop.importSource.folder.choose'))}
         {...definedProps({ tooltip: resolveFolderPathHint(props.source.primaryPath) })}
         className="h-9 px-2.5 text-sm"
       />
       <FolderButton
-        label={`Highlight folder ${props.source.id}`}
+        label={t('desktop.importSource.folder.highlight', { id: props.source.id })}
         disabled={props.source.highlightMode !== 'split'}
         onClick={() => props.onChooseHighlightFolder(props.source.id)}
         path={resolveFolderPathLabel(
           props.source.highlightPath,
-          props.source.highlightMode === 'split' ? 'Choose' : 'Not used'
+          props.source.highlightMode === 'split' ? t('desktop.importSource.folder.choose') : t('desktop.importSource.folder.notUsed')
         )}
         {...definedProps({ tooltip: resolveFolderPathHint(props.source.highlightPath) })}
         className="h-9 px-2.5 text-sm"
@@ -154,6 +169,7 @@ export function SourceRow({
 }: ImportSourceTableRowActions & {
   source: DraftImportSource;
 }) {
+  const t = useTranslation();
   return (
     <div className={settingsActionTableRowClassName(TABLE_COLUMNS)}>
       <SourceFolderCells
@@ -162,12 +178,12 @@ export function SourceRow({
         source={source}
       />
       <SourceSelect
-        ariaLabel={`Mode ${source.id}`}
+        ariaLabel={`${t('desktop.importSource.table.mode')} ${source.id}`}
         onChange={(value) => onChange(source.id, 'highlightMode', value)}
         value={source.highlightMode}
       >
-        <option value="merged">{formatHighlightModeLabel('merged')}</option>
-          <option value="split">{formatHighlightModeLabel('split')}</option>
+        <option value="merged">{formatHighlightModeLabel('merged', t)}</option>
+        <option value="split">{formatHighlightModeLabel('split', t)}</option>
         </SourceSelect>
       <HandlingCell onChangeAction={onChangeAction} source={source} />
       <PreviewCell onDisableKeepImport={onDisableKeepImport} onPreviewKeepImport={onPreviewKeepImport} source={source} />
@@ -177,16 +193,17 @@ export function SourceRow({
 }
 
 export function AddSourceRow(props: { onAddSource: () => void }) {
+  const t = useTranslation();
   return (
     <div className={settingsActionTableRowClassName(TABLE_COLUMNS, 'pb-3 pt-1')}>
       <button
-        aria-label="Add source"
+        aria-label={t('desktop.importSource.add')}
         className={settingsActionTableAddButtonClassName()}
         onClick={props.onAddSource}
         type="button"
       >
         <Plus aria-hidden="true" size={15} strokeWidth={1.9} />
-        Add source
+        {t('desktop.importSource.add')}
       </button>
     </div>
   );

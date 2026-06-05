@@ -1,9 +1,10 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, it } from 'vitest';
 
 import { NodeListTree } from '../features/nodes/components/NodeListTree';
 import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 function createNode(args: {
@@ -79,7 +80,7 @@ it('keeps navigation trees icon-free even when icon settings exist', () => {
     trashedNodeIds: []
   }));
 
-  render(<NodeListTreeHarness />);
+  renderWithLocalization(<NodeListTreeHarness />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   expect(within(listPanel).getByRole('treeitem', { name: 'Reading 1' }).querySelector('[data-node-icon]')).toBeNull();

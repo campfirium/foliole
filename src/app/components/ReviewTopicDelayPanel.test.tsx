@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ReviewTopicDelayPanel } from './ReviewTopicDelayPanel';
 
@@ -16,7 +18,7 @@ function renderPanel(overrides: Partial<Parameters<typeof ReviewTopicDelayPanel>
     submit: vi.fn(async () => true),
     ...overrides
   };
-  render(<ReviewTopicDelayPanel {...props} />);
+  renderWithLocalization(<ReviewTopicDelayPanel {...props} />);
   return props;
 }
 

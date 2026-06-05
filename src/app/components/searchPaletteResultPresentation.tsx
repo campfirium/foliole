@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { projectMarkdownDisplayText } from '../../features/nodes/model/nodeListLabelProjection';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { appFloatingMetaBadgeClassName } from '../../shared/ui';
 
@@ -56,7 +57,8 @@ export function renderSearchResultText(text: string, query: string, options?: { 
 
 function buildAncestorTitles(
   nodeId: string,
-  nodesById: Record<string, WorkspaceListNode | undefined>
+  nodesById: Record<string, WorkspaceListNode | undefined>,
+  t: Translate
 ) {
   const titles: string[] = [];
   let currentNode = nodesById[nodeId];
@@ -65,7 +67,7 @@ function buildAncestorTitles(
     if (!parentNode) {
       break;
     }
-    titles.unshift(parentNode.title.trim() || 'Untitled');
+    titles.unshift(parentNode.title.trim() || t('desktop.search.context.untitled'));
     currentNode = parentNode;
   }
   return titles;
@@ -73,7 +75,8 @@ function buildAncestorTitles(
 
 export function resolveSearchResultPathLabel(
   result: WorkspaceSearchResult,
-  nodesById: Record<string, WorkspaceListNode | undefined>
+  nodesById: Record<string, WorkspaceListNode | undefined>,
+  t: Translate
 ) {
   if (result.kind === 'removed' && result.removedMatch) {
     return result.removedMatch.entry.sourcePath;
@@ -81,8 +84,8 @@ export function resolveSearchResultPathLabel(
   if (result.kind === 'external' && result.externalMatch) {
     return result.externalMatch.relativePath;
   }
-  const titles = buildAncestorTitles(result.id, nodesById);
-  return titles.length > 0 ? titles.join(' / ') : 'Top level';
+  const titles = buildAncestorTitles(result.id, nodesById, t);
+  return titles.length > 0 ? titles.join(' / ') : null;
 }
 
 export function resolveSearchResultContext(result: WorkspaceSearchResult) {
@@ -94,20 +97,21 @@ export function resolveSearchResultContext(result: WorkspaceSearchResult) {
 
 export function resolveSearchResultNodeBadge(
   result: WorkspaceSearchResult,
-  nodesById: Record<string, WorkspaceListNode | undefined>
+  nodesById: Record<string, WorkspaceListNode | undefined>,
+  t: Translate
 ) {
   if (result.kind === 'external') {
-    return 'External';
+    return t('desktop.search.badge.external');
   }
   if (result.kind === 'removed') {
-    return 'Removed';
+    return t('desktop.search.badge.removed');
   }
   const anchorKind = nodesById[result.id]?.anchorLink?.kind;
   if (anchorKind === 'highlight') {
-    return 'Highlight';
+    return t('desktop.search.badge.highlight');
   }
   if (anchorKind === 'cloze') {
-    return 'Cloze';
+    return t('desktop.search.badge.cloze');
   }
   return null;
 }
@@ -115,7 +119,7 @@ export function resolveSearchResultNodeBadge(
 function resolveWatchedFolderFallback(details: RuntimeNodeSourceDetails) {
   const pathValue = details.keepImportItem?.primaryPath?.trim();
   if (!pathValue) {
-    return 'Watched folder';
+    return null;
   }
   const normalizedPath = pathValue.replace(/\\/g, '/');
   const segments = normalizedPath.split('/').filter(Boolean);

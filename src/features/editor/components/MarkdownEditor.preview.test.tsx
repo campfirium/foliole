@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import {
   registerImageClozeEditorPresentation,
   unregisterImageClozeEditorPresentation
@@ -53,7 +54,11 @@ import { MarkdownEditor } from './MarkdownEditor';
 
 function renderWithMouseGestureProvider(ui: React.ReactElement) {
   return render(ui, {
-    wrapper: ({ children }) => <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+    wrapper: ({ children }) => (
+      <LocalizationProvider>
+        <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+      </LocalizationProvider>
+    )
   });
 }
 

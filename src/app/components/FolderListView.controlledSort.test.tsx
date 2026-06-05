@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, it } from 'vitest';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
@@ -56,7 +57,7 @@ it('updates a controlled sort key through the toolbar menu', () => {
     );
   }
 
-  render(<ControlledFolderList />);
+  renderWithLocalization(<ControlledFolderList />);
 
   fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date imported' }), { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Date modified' }));
@@ -91,10 +92,10 @@ it('updates a controlled sort direction through the toolbar menu', () => {
     );
   }
 
-  render(<ControlledFolderList />);
+  renderWithLocalization(<ControlledFolderList />);
 
   fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date imported' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Older -> Recent' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Oldest first' }));
 
   expect(getRenderedEntryTitles()).toEqual(['First imported', 'Last imported']);
 });
@@ -142,7 +143,7 @@ it('keeps last-opened order newest first even if controlled direction is ascendi
     );
   }
 
-  render(<ControlledFolderList />);
+  renderWithLocalization(<ControlledFolderList />);
 
   expect(getRenderedEntryTitles()).toEqual(['Latest', 'Earlier']);
 
@@ -150,6 +151,6 @@ it('keeps last-opened order newest first even if controlled direction is ascendi
   expect(getRenderedEntryTitles()).toEqual(['Latest', 'Earlier']);
 
   fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Last opened' }), { key: 'ArrowDown' });
-  expect(screen.getByRole('menuitem', { name: 'Recent -> Older' })).toBeInTheDocument();
-  expect(screen.queryByRole('menuitem', { name: 'Older -> Recent' })).toBeNull();
+  expect(screen.getByRole('menuitem', { name: 'Newest first' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Oldest first' })).toBeNull();
 });

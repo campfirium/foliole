@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { readAttachmentResourceCacheStats } from '../../shared/platform/attachmentResources';
 import { readPerformanceDiagnosticsProbe } from '../../shared/platform/performanceDiagnosticsProbe';
 import { loadRuntimePerformanceMemorySnapshot } from '../../shared/platform/performanceMemoryRuntimeRepository';
@@ -27,7 +28,7 @@ function formatCount(value: number) {
   return String(Math.max(0, value));
 }
 
-function formatBytes(value: number | null, fallback = 'Unavailable') {
+function formatBytes(value: number | null, fallback: string) {
   return value === null ? fallback : `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -69,6 +70,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export function WorkspaceRightSidebarPerformancePanel(props: WorkspaceRightSidebarPerformancePanelProps) {
+  const t = useTranslation();
   const memorySnapshot = usePerformanceMemorySnapshot();
   useDiagnosticsRefresh();
   const diagnostics = readPerformanceDiagnosticsProbe();
@@ -84,37 +86,37 @@ export function WorkspaceRightSidebarPerformancePanel(props: WorkspaceRightSideb
   return (
     <div className="flex min-h-0 flex-col gap-3">
       <InspectorSection
-        description={activeNodeTitle ? `Latest selection: ${activeNodeTitle}` : 'Select a node to capture the next interaction chain.'}
+        description={activeNodeTitle ? t('desktop.diagnostics.performance.latestSelection', { title: activeNodeTitle }) : t('desktop.diagnostics.performance.selectNode')}
         contentClassName="grid grid-cols-[minmax(96px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]"
-        title="Timing"
+        title={t('desktop.diagnostics.performance.timing')}
       >
         <dl className="contents">
-          <InfoRow label="Real overall" value={formatDuration(diagnostics.flow.overallReadyDurationMs, 'Waiting')} />
-          <InfoRow label="Click to switch" value={formatDuration(diagnostics.flow.requestToApplyDurationMs, 'Pending')} />
-          <InfoRow label="Panel shown" value={formatDuration(diagnostics.flow.panelBoundDurationMs, 'Pending')} />
-          <InfoRow label="Content ready" value={formatDuration(diagnostics.flow.realContentReadyDurationMs, 'Pending')} />
-          <InfoRow label="Content stable" value={formatDuration(diagnostics.flow.realReadyDurationMs, 'Pending')} />
-          <InfoRow label="Shell stable" value={formatDuration(diagnostics.flow.bodyReadyDurationMs, 'Pending')} />
-          <InfoRow label="Load start" value={formatDuration(diagnostics.flow.documentLoadStartDurationMs, 'Hot cache')} />
-          <InfoRow label="Load spent" value={formatDuration(diagnostics.flow.documentLoadDurationMs, 'Hot cache')} />
-          <InfoRow label="First paint" value={formatDuration(diagnostics.flow.bodyPaintDurationMs, 'Pending')} />
-          <InfoRow label="Position wait" value={formatPositionWait(diagnostics.flow.positionStatus, diagnostics.flow.positionWaitDurationMs)} />
-          <InfoRow label="Position done" value={formatPositionDone(diagnostics.flow.positionStatus, diagnostics.flow.positionReadyDurationMs)} />
-          <InfoRow label="First image" value={formatImageDuration(diagnostics.flow.imageStatus, diagnostics.flow.firstImageReadyDurationMs)} />
-          <InfoRow label="All images" value={formatImageDuration(diagnostics.flow.imageStatus, diagnostics.flow.imagesReadyDurationMs)} />
+          <InfoRow label={t('desktop.diagnostics.performance.realOverall')} value={formatDuration(diagnostics.flow.overallReadyDurationMs, t('desktop.diagnostics.performance.waiting'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.clickToSwitch')} value={formatDuration(diagnostics.flow.requestToApplyDurationMs, t('desktop.diagnostics.performance.pending'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.panelShown')} value={formatDuration(diagnostics.flow.panelBoundDurationMs, t('desktop.diagnostics.performance.pending'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.contentReady')} value={formatDuration(diagnostics.flow.realContentReadyDurationMs, t('desktop.diagnostics.performance.pending'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.contentStable')} value={formatDuration(diagnostics.flow.realReadyDurationMs, t('desktop.diagnostics.performance.pending'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.shellStable')} value={formatDuration(diagnostics.flow.bodyReadyDurationMs, t('desktop.diagnostics.performance.pending'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.loadStart')} value={formatDuration(diagnostics.flow.documentLoadStartDurationMs, t('desktop.diagnostics.performance.hotCache'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.loadSpent')} value={formatDuration(diagnostics.flow.documentLoadDurationMs, t('desktop.diagnostics.performance.hotCache'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.firstPaint')} value={formatDuration(diagnostics.flow.bodyPaintDurationMs, t('desktop.diagnostics.performance.pending'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.positionWait')} value={formatPositionWait(diagnostics.flow.positionStatus, diagnostics.flow.positionWaitDurationMs, t)} />
+          <InfoRow label={t('desktop.diagnostics.performance.positionDone')} value={formatPositionDone(diagnostics.flow.positionStatus, diagnostics.flow.positionReadyDurationMs, t)} />
+          <InfoRow label={t('desktop.diagnostics.performance.firstImage')} value={formatImageDuration(diagnostics.flow.imageStatus, diagnostics.flow.firstImageReadyDurationMs, t)} />
+          <InfoRow label={t('desktop.diagnostics.performance.allImages')} value={formatImageDuration(diagnostics.flow.imageStatus, diagnostics.flow.imagesReadyDurationMs, t)} />
         </dl>
       </InspectorSection>
 
       <InspectorSection
         contentClassName="grid grid-cols-[minmax(96px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]"
-        title="Memory"
+        title={t('desktop.diagnostics.performance.memory')}
       >
         <dl className="contents">
-          <InfoRow label="Known total" value={formatBytes(memoryTotalBytes)} />
-          <InfoRow label="Main process" value={formatBytes(memorySnapshot.mainProcessRssBytes)} />
-          <InfoRow label="Renderer" value={formatBytes(memorySnapshot.rendererHeapBytes)} />
-          <InfoRow label="Text buffer" value={formatBytes(loadedNodeStats.textPrefetchBytes, '0.0 MB')} />
-          <InfoRow label="Loaded topics" value={formatCount(loadedNodeStats.loadedNodeCount)} />
+          <InfoRow label={t('desktop.diagnostics.performance.knownTotal')} value={formatBytes(memoryTotalBytes, t('desktop.diagnostics.performance.unavailable'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.mainProcess')} value={formatBytes(memorySnapshot.mainProcessRssBytes, t('desktop.diagnostics.performance.unavailable'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.renderer')} value={formatBytes(memorySnapshot.rendererHeapBytes, t('desktop.diagnostics.performance.unavailable'))} />
+          <InfoRow label={t('desktop.diagnostics.performance.textBuffer')} value={formatBytes(loadedNodeStats.textPrefetchBytes, '0.0 MB')} />
+          <InfoRow label={t('desktop.diagnostics.performance.loadedTopics')} value={formatCount(loadedNodeStats.loadedNodeCount)} />
         </dl>
       </InspectorSection>
       <CacheSection
@@ -122,6 +124,7 @@ export function WorkspaceRightSidebarPerformancePanel(props: WorkspaceRightSideb
         cacheTotalEntries={cacheTotalEntries}
         diagnostics={diagnostics}
         loadedNodeCount={loadedNodeStats.loadedNodeCount}
+        t={t}
       />
     </div>
   );
@@ -131,54 +134,56 @@ function CacheSection({
   attachmentEntries,
   cacheTotalEntries,
   diagnostics,
-  loadedNodeCount
+  loadedNodeCount,
+  t
 }: {
   attachmentEntries: number;
   cacheTotalEntries: number;
   diagnostics: ReturnType<typeof readPerformanceDiagnosticsProbe>;
   loadedNodeCount: number;
+  t: Translate;
 }) {
   return (
     <InspectorSection
       contentClassName="grid grid-cols-[minmax(96px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]"
-      title="Cache"
+      title={t('desktop.diagnostics.performance.cache')}
     >
       <dl className="contents">
-        <InfoRow label="Known total" value={formatCount(cacheTotalEntries)} />
-        <InfoRow label="Topic blocks" value={formatCount(loadedNodeCount)} />
-        <InfoRow label="Topic hits" value={formatCount(diagnostics.nodeDocumentCache.hits)} />
-        <InfoRow label="Topic misses" value={formatCount(diagnostics.nodeDocumentCache.misses)} />
-        <InfoRow label="Source details" value={formatCount(diagnostics.sourceDetailsCache.entries)} />
-        <InfoRow label="Source hits" value={formatCount(diagnostics.sourceDetailsCache.hits)} />
-        <InfoRow label="Source misses" value={formatCount(diagnostics.sourceDetailsCache.misses)} />
-        <InfoRow label="PDF surfaces" value={formatCount(diagnostics.pdfSurfaceCache.entries)} />
-        <InfoRow label="Image results" value={formatCount(attachmentEntries)} />
-        <InfoRow label="Image hits" value={formatCount(diagnostics.imageCache.hits)} />
-        <InfoRow label="Image misses" value={formatCount(diagnostics.imageCache.misses)} />
+        <InfoRow label={t('desktop.diagnostics.performance.knownTotal')} value={formatCount(cacheTotalEntries)} />
+        <InfoRow label={t('desktop.diagnostics.performance.topicBlocks')} value={formatCount(loadedNodeCount)} />
+        <InfoRow label={t('desktop.diagnostics.performance.topicHits')} value={formatCount(diagnostics.nodeDocumentCache.hits)} />
+        <InfoRow label={t('desktop.diagnostics.performance.topicMisses')} value={formatCount(diagnostics.nodeDocumentCache.misses)} />
+        <InfoRow label={t('desktop.diagnostics.performance.sourceDetails')} value={formatCount(diagnostics.sourceDetailsCache.entries)} />
+        <InfoRow label={t('desktop.diagnostics.performance.sourceHits')} value={formatCount(diagnostics.sourceDetailsCache.hits)} />
+        <InfoRow label={t('desktop.diagnostics.performance.sourceMisses')} value={formatCount(diagnostics.sourceDetailsCache.misses)} />
+        <InfoRow label={t('desktop.diagnostics.performance.pdfSurfaces')} value={formatCount(diagnostics.pdfSurfaceCache.entries)} />
+        <InfoRow label={t('desktop.diagnostics.performance.imageResults')} value={formatCount(attachmentEntries)} />
+        <InfoRow label={t('desktop.diagnostics.performance.imageHits')} value={formatCount(diagnostics.imageCache.hits)} />
+        <InfoRow label={t('desktop.diagnostics.performance.imageMisses')} value={formatCount(diagnostics.imageCache.misses)} />
       </dl>
     </InspectorSection>
   );
 }
 
-function formatImageDuration(status: 'done' | 'no-images' | 'pending', value: number | null) {
+function formatImageDuration(status: 'done' | 'no-images' | 'pending', value: number | null, t: Translate) {
   if (status === 'no-images') {
-    return 'No images';
+    return t('desktop.diagnostics.performance.noImages');
   }
-  return formatDuration(value, 'Pending');
+  return formatDuration(value, t('desktop.diagnostics.performance.pending'));
 }
 
-function formatPositionDone(status: 'done' | 'not-requested' | 'pending', value: number | null) {
+function formatPositionDone(status: 'done' | 'not-requested' | 'pending', value: number | null, t: Translate) {
   if (status === 'not-requested') {
-    return 'Not triggered';
+    return t('desktop.diagnostics.performance.notTriggered');
   }
-  return formatDuration(value, 'Pending');
+  return formatDuration(value, t('desktop.diagnostics.performance.pending'));
 }
 
-function formatPositionWait(status: 'done' | 'not-requested' | 'pending', value: number | null) {
+function formatPositionWait(status: 'done' | 'not-requested' | 'pending', value: number | null, t: Translate) {
   if (status === 'not-requested') {
-    return 'Not triggered';
+    return t('desktop.diagnostics.performance.notTriggered');
   }
-  return formatDuration(value, 'Pending');
+  return formatDuration(value, t('desktop.diagnostics.performance.pending'));
 }
 
 function sumKnownMemory(...values: Array<number | null>) {

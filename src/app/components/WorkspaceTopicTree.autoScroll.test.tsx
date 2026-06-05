@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { useEffect, useState } from 'react';
 import { beforeEach, expect, it } from 'vitest';
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -128,7 +129,7 @@ beforeEach(() => {
 });
 
 it('scrolls the current folder item column to the externally selected node', async () => {
-  render(<WorkspaceTopicTreeAutoScrollHarness />);
+  renderWithLocalization(<WorkspaceTopicTreeAutoScrollHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   const scrollContainer = itemColumn.querySelector('.app-scrollbar') as HTMLDivElement;
@@ -152,7 +153,7 @@ it('scrolls the current folder item column to the anchor-backed entry for an act
     }
   }));
 
-  render(<WorkspaceTopicTreeAnchorFocusHarness />);
+  renderWithLocalization(<WorkspaceTopicTreeAnchorFocusHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   const scrollContainer = itemColumn.querySelector('.app-scrollbar') as HTMLDivElement;
@@ -177,7 +178,7 @@ it('reruns anchor-backed item column scrolling when sorting changes the focused 
     }
   }));
 
-  render(<WorkspaceTopicTreeSortedAnchorFocusHarness />);
+  renderWithLocalization(<WorkspaceTopicTreeSortedAnchorFocusHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   const scrollContainer = itemColumn.querySelector('.app-scrollbar') as HTMLDivElement;

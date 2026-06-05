@@ -3,6 +3,7 @@ import type { ClipboardAnchorRange } from '../../features/editor/model/anchorCli
 import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
 import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 interface DocumentPanelAnswerSectionProps {
   answerEditorDebugId?: string;
@@ -20,19 +21,20 @@ interface DocumentPanelAnswerSectionProps {
 }
 
 export function DocumentPanelAnswerSection(props: DocumentPanelAnswerSectionProps) {
+  const t = useTranslation();
   const answerNodeId = getImageClozeAnswerEditorNodeId(props.editorNodeId);
   const answerEditorKey = `answer-${props.editorAppearanceKey}-${answerNodeId ?? 'none'}`;
 
   return (
     <section
-      aria-label="Answer section"
+      aria-label={t('desktop.document.answerSection')}
       className={cn(
         'relative flex min-h-0 overflow-hidden',
         props.answerSectionMode === 'balanced' ? 'flex-1' : 'flex-[0_0_calc(30dvh+60px)]'
       )}
     >
       <MarkdownEditor
-        ariaLabel="Answer editor"
+        ariaLabel={t('desktop.document.answerEditor')}
         className="answer-editor-host min-h-0"
         hideTitleHeading={false}
         key={answerEditorKey}

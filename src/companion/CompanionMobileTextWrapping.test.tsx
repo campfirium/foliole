@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
   SyncDiagnosticHost,
   SyncDiagnosticSnapshot
 } from '../../lib/platform/syncDiagnosticsContract';
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionSettingsList } from './CompanionSettingsContent';
 import { CompanionSyncDiagnosticCheckpoint } from './CompanionSyncDiagnosticCheckpoint';
@@ -39,7 +40,7 @@ function createSyncSnapshot(host: SyncDiagnosticHost): SyncDiagnosticSnapshot {
 }
 
 function renderDiagnosticCheckpoint() {
-  render(
+  renderWithLocalization(
     <CompanionSyncDiagnosticCheckpoint
       result={{
         android: createSyncSnapshot('android'),
@@ -52,7 +53,7 @@ function renderDiagnosticCheckpoint() {
 
 describe('companion mobile text wrapping', () => {
   it('allows settings detail text to use two lines', () => {
-    render(
+    renderWithLocalization(
       <CompanionSettingsList
         onOpenAppearance={vi.fn()}
         onOpenDebug={vi.fn()}
@@ -74,7 +75,7 @@ describe('companion mobile text wrapping', () => {
   });
 
   it('wraps long diagnostic object identifiers instead of truncating them', () => {
-    render(
+    renderWithLocalization(
       <DirtyObjectRows
         rows={[{
           content_hash: 'abcdef1234567890',
@@ -90,7 +91,7 @@ describe('companion mobile text wrapping', () => {
   });
 
   it('uses two-line topic titles and one-line folder titles in browse lists', () => {
-    render(
+    renderWithLocalization(
       <NodeBrowseList
         currentNodeId={null}
         emptyLabel="No topics"

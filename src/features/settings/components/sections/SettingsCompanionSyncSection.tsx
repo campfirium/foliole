@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -13,30 +14,34 @@ import {
 
 import { SettingsCompanionSyncPrimaryRows } from './SettingsCompanionSyncPrimaryRows';
 
-function renderSyncError(overview: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']) {
+type Translate = ReturnType<typeof useTranslation>;
+
+function renderSyncError(overview: ReturnType<typeof useDesktopCompanionPairingRequests>['overview'], t: Translate) {
   if (overview.server_status.last_error) {
-    return `Could not open sync. ${overview.server_status.last_error}`;
+    return t('settings.companionSync.error.open', { error: overview.server_status.last_error });
   }
   return undefined;
 }
 
-function formatDeviceKind(deviceKind: string) {
+function formatDeviceKind(deviceKind: string, t: Translate) {
   if (deviceKind === 'android-capacitor' || deviceKind === 'android') {
     return 'Android';
   }
-  return deviceKind || 'Client';
+  return deviceKind || t('settings.companionSync.device.client');
 }
 
-function resolveDeviceName(deviceName: string, deviceKind: string, clientAddress?: string | null) {
+function resolveDeviceName(deviceName: string, deviceKind: string, t: Translate, clientAddress?: string | null) {
   const normalizedName = deviceName.trim();
   const isGeneratedAndroidName = normalizedName.toLowerCase().startsWith('android companion');
   if (!normalizedName || isGeneratedAndroidName) {
     if ((deviceKind === 'android-capacitor' || deviceKind === 'android') && clientAddress === '127.0.0.1') {
-      return 'Android Emulator';
+      return t('settings.companionSync.device.androidEmulator');
     }
-    return deviceKind === 'android-capacitor' || deviceKind === 'android' ? 'Android device' : 'Device';
+    return deviceKind === 'android-capacitor' || deviceKind === 'android'
+      ? t('settings.companionSync.device.androidDevice')
+      : t('settings.companionSync.device.generic');
   }
-  return normalizedName || formatDeviceKind(deviceKind);
+  return normalizedName || formatDeviceKind(deviceKind, t);
 }
 
 function ConnectedDeviceList({
@@ -48,8 +53,10 @@ function ConnectedDeviceList({
   onDisconnect(deviceId: string): void;
   pendingActionId: string | null;
 }) {
+  const t = useTranslation();
+
   if (devices.length === 0) {
-    return <p className="text-sm text-foreground/45">0 devices</p>;
+    return <p className="text-sm text-foreground/45">{t('settings.companionSync.connected.empty')}</p>;
   }
   return (
     <div className="mt-3 flex flex-col gap-2" role="list">
@@ -61,7 +68,7 @@ function ConnectedDeviceList({
         >
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">
-              {resolveDeviceName(device.device_name, device.device_kind, device.client_address)} <span className="text-foreground/55">({formatDeviceKind(device.device_kind)})</span>
+              {resolveDeviceName(device.device_name, device.device_kind, t, device.client_address)} <span className="text-foreground/55">({formatDeviceKind(device.device_kind, t)})</span>
             </p>
             {device.client_address ? (
               <p className="mt-0.5 truncate text-xs text-foreground/50">{device.client_address}</p>
@@ -73,7 +80,7 @@ function ConnectedDeviceList({
             onClick={() => onDisconnect(device.device_id)}
             type="button"
           >
-            {pendingActionId === `remove-paired-device:${device.device_id}` ? 'Disconnecting...' : 'Disconnect'}
+            {pendingActionId === `remove-paired-device:${device.device_id}` ? t('settings.companionSync.disconnect.pending') : t('settings.companionSync.disconnect.action')}
           </button>
         </div>
       ))}
@@ -92,14 +99,16 @@ function ConnectedDevicesRow({
   onDisconnect(deviceId: string): void;
   pendingActionId: string | null;
 }) {
+  const t = useTranslation();
+
   return (
     <div
       className="relative px-5 py-5 before:absolute before:left-5 before:right-5 before:top-0 before:block before:border-t before:border-settings-divider/55"
       data-settings-row
     >
       <div>
-        <h4 className="text-[0.95rem] font-normal text-foreground">Connected devices</h4>
-        <p className="mt-0.5 text-sm text-foreground/65">Approved devices that can sync with this desktop.</p>
+        <h4 className="text-[0.95rem] font-normal text-foreground">{t('settings.companionSync.connected.title')}</h4>
+        <p className="mt-0.5 text-sm text-foreground/65">{t('settings.companionSync.connected.description')}</p>
       </div>
       {isLoading ? (
         <SettingsLoadingState className="mt-3 px-0 py-0" />
@@ -113,13 +122,14 @@ function ConnectedDevicesRow({
 function DeviceSyncSwitch(props: {
   state: ReturnType<typeof useDesktopCompanionPairingRequests>;
 }) {
+  const t = useTranslation();
   const overview = props.state.overview;
   const disabled = !props.state.isDesktopRuntime || props.state.pendingActionId !== null || props.state.isLoading;
 
   return (
     <button
       aria-checked={overview.sync_enabled}
-      aria-label="Enable desktop sync"
+      aria-label={t('settings.companionSync.enableDesktop.aria')}
       className={settingsSwitchClassName(overview.sync_enabled)}
       disabled={disabled}
       onClick={() => void (overview.sync_enabled ? props.state.disableSync() : props.state.enableSync())}
@@ -135,19 +145,20 @@ function DeviceSyncSwitch(props: {
 }
 
 export function SettingsCompanionSyncSection() {
+  const t = useTranslation();
   const state = useDesktopCompanionPairingRequests(3_000);
   const overview = state.overview;
-  const syncError = renderSyncError(overview);
+  const syncError = renderSyncError(overview, t);
 
   return (
     <SettingsSection
-      ariaLabel="Sync section"
-      description="Turn on desktop sync before pairing another device. Phones on the same Wi-Fi can then sync with this desktop after you approve them."
-      title="Sync"
+      ariaLabel={t('settings.companionSync.sectionAria')}
+      description={t('settings.companionSync.description')}
+      title={t('settings.companionSync.title')}
     >
       <SettingsRow
         description={syncError ?? undefined}
-        title="Enable on this desktop"
+        title={t('settings.companionSync.enableDesktop.title')}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <DeviceSyncSwitch state={state} />
@@ -157,7 +168,7 @@ export function SettingsCompanionSyncSection() {
         <SettingsErrorState
           className="px-5 py-3"
           description={syncError}
-          title="Desktop sync unavailable"
+          title={t('settings.companionSync.error.desktopUnavailable')}
         />
       ) : null}
       <SettingsCompanionSyncPrimaryRows
@@ -176,7 +187,7 @@ export function SettingsCompanionSyncSection() {
         <SettingsErrorState
           className="px-5 py-3"
           description={state.error}
-          title="Sync devices unavailable"
+          title={t('settings.companionSync.error.devicesUnavailable')}
         />
       ) : null}
     </SettingsSection>

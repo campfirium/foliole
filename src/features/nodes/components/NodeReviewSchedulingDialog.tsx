@@ -8,6 +8,7 @@ import {
 } from '../model/nodeReviewSettings';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import { useTranslation, type Translate } from '@/shared/localization/LocalizationProvider';
 import {
   AppDialog,
   AppDialogContent,
@@ -25,26 +26,26 @@ import {
   settingsSwitchKnobClassName
 } from '@/shared/ui';
 
-function getScopeLabel(node: WorkspaceListNode) {
+function getScopeLabel(node: WorkspaceListNode, t: Translate) {
   if (node.kind === 'folder') {
-    return 'Folder';
+    return t('desktop.nodeReview.scope.folder');
   }
   if (node.kind === 'item') {
-    return 'Item';
+    return t('desktop.nodeReview.scope.item');
   }
-  return 'Topic';
+  return t('desktop.nodeReview.scope.topic');
 }
 
-function renderShortTermDescription() {
-  return 'Add extra reviews for new Items. Experimental FSRS setting; enable only for material that needs upfront practice.';
+function renderShortTermDescription(t: Translate) {
+  return t('desktop.nodeReview.shortTerm.description');
 }
 
-function renderPriorityDescription(node: WorkspaceListNode) {
-  const scope = getScopeLabel(node);
-  return `Affects Review order for Items in this ${scope}. P0 comes first and is not delayed by priority scaling.`;
+function renderPriorityDescription(node: WorkspaceListNode, t: Translate) {
+  return t('desktop.nodeReview.priority.description', { scope: getScopeLabel(node, t) });
 }
 
 function ShortTermControl(props: {
+  ariaLabel: string;
   onChange: (enableShortTerm: boolean) => void;
   value: boolean;
 }) {
@@ -52,7 +53,7 @@ function ShortTermControl(props: {
     <SettingsControlSlot>
       <button
         aria-checked={props.value}
-        aria-label="Short-term learning steps"
+        aria-label={props.ariaLabel}
         className={settingsSwitchClassName(props.value)}
         onClick={() => props.onChange(!props.value)}
         role="switch"
@@ -65,13 +66,14 @@ function ShortTermControl(props: {
 }
 
 function PriorityControl(props: {
+  ariaLabel: string;
   onChange: (priority: number) => void;
   value: number;
 }) {
   return (
     <SettingsControlSlot>
       <input
-        aria-label="Review queue priority"
+        aria-label={props.ariaLabel}
         className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)}
         max={9}
         min={0}
@@ -120,6 +122,25 @@ function useNodeReviewSchedulingDraft(args: {
   };
 }
 
+type NodeReviewSchedulingDraft = ReturnType<typeof useNodeReviewSchedulingDraft>;
+
+function ReviewSchedulingRows(props: {
+  draft: NodeReviewSchedulingDraft;
+  node: WorkspaceListNode;
+  t: Translate;
+}) {
+  return (
+    <SettingsSection ariaLabel={props.t('desktop.nodeReview.optionsPanel')} className="mb-0 pb-5">
+      <SettingsRow description={renderPriorityDescription(props.node, props.t)} title={props.t('desktop.nodeReview.priority')}>
+        <PriorityControl ariaLabel={props.t('desktop.nodeReview.priority.aria')} onChange={props.draft.setPriorityDraft} value={props.draft.priorityDraft} />
+      </SettingsRow>
+      <SettingsRow description={renderShortTermDescription(props.t)} title={props.t('desktop.nodeReview.shortTerm')}>
+        <ShortTermControl ariaLabel={props.t('desktop.nodeReview.shortTerm')} onChange={props.draft.setShortTermDraft} value={props.draft.shortTermDraft} />
+      </SettingsRow>
+    </SettingsSection>
+  );
+}
+
 export function NodeReviewSchedulingDialog(props: {
   defaultPriority: number;
   node: WorkspaceListNode | null;
@@ -132,6 +153,7 @@ export function NodeReviewSchedulingDialog(props: {
   if (!node) {
     return null;
   }
+  const t = useTranslation();
   const nodeId = node.id;
   const shortTerm = resolveNodeShortTermSetting(nodeId, props.nodesById);
   const priority = resolveNodePrioritySetting(nodeId, props.nodesById, normalizePushQueuePriority(props.defaultPriority));
@@ -153,28 +175,9 @@ export function NodeReviewSchedulingDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent aria-describedby={undefined} className="w-[min(640px,calc(100vw-32px))] p-0">
           <div className="px-5 pb-2 pt-5">
-            <AppDialogTitle className="text-base font-semibold">Review options</AppDialogTitle>
+            <AppDialogTitle className="text-base font-semibold">{t('desktop.nodeReview.title')}</AppDialogTitle>
           </div>
-          <SettingsSection ariaLabel="Review options panel" className="mb-0 pb-5">
-            <SettingsRow
-              description={renderPriorityDescription(node)}
-              title="Priority"
-            >
-              <PriorityControl
-                onChange={draft.setPriorityDraft}
-                value={draft.priorityDraft}
-              />
-            </SettingsRow>
-            <SettingsRow
-              description={renderShortTermDescription()}
-              title="Short-term learning steps"
-            >
-              <ShortTermControl
-                onChange={draft.setShortTermDraft}
-                value={draft.shortTermDraft}
-              />
-            </SettingsRow>
-          </SettingsSection>
+          <ReviewSchedulingRows draft={draft} node={node} t={t} />
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

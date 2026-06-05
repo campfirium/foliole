@@ -1,5 +1,6 @@
 import { RefreshCw } from 'lucide-react';
 
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppSpinner } from '../shared/ui';
 
 import { CompanionSyncDeviceList } from './CompanionSyncDeviceList';
@@ -8,16 +9,17 @@ import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 function SearchingDiscoveryContent(props: {
   onRefresh(): void;
 }) {
+  const t = useTranslation();
   return (
     <>
-      <h2 className="text-xl font-semibold leading-tight text-foreground">Looking for another device</h2>
+      <h2 className="text-xl font-semibold leading-tight text-foreground">{t('companion.sync.discovery.title')}</h2>
       <p className="mt-3 text-sm leading-6 text-accent">
-        Keep both devices on the same Wi-Fi and open Device sync on the desktop.
+        {t('companion.sync.discovery.description')}
       </p>
       <div className="mt-5 flex items-center justify-between gap-3">
         <div className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-accent">
           <AppSpinner decorative size="sm" />
-          <span>Searching...</span>
+          <span>{t('companion.sync.discovery.searching')}</span>
         </div>
         <button
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80"
@@ -25,7 +27,7 @@ function SearchingDiscoveryContent(props: {
           type="button"
         >
           <RefreshCw aria-hidden="true" className="size-4" strokeWidth={1.8} />
-          Refresh
+          {t('companion.sync.discovery.refresh')}
         </button>
       </div>
     </>
@@ -38,14 +40,16 @@ function FoundDevicesDiscoveryContent(props: {
   isConnecting: boolean;
   onPair(endpointUrl: string): void;
 }) {
+  const t = useTranslation();
   const deviceCount = props.desktops.length;
+  const unit = t(deviceCount === 1 ? 'companion.sync.discovery.device' : 'companion.sync.discovery.devices');
   return (
     <>
       <h2 className="text-xl font-semibold leading-tight text-foreground">
-        Found {deviceCount} {deviceCount === 1 ? 'device' : 'devices'}
+        {t('companion.sync.discovery.found', { count: deviceCount, unit })}
       </h2>
       <p className="mt-3 text-sm leading-6 text-accent">
-        Connect to this desktop to bring your topics onto this device.
+        {t('companion.sync.discovery.foundDescription')}
       </p>
       <div className="mt-5">
         <CompanionSyncDeviceList

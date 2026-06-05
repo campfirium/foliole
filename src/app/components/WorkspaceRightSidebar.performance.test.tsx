@@ -1,7 +1,7 @@
-import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 const reviewQueuePanelRender = vi.hoisted(() => vi.fn());
 
@@ -110,5 +110,5 @@ function createReviewQueueSidebarElement(node: Node) {
 }
 
 function renderReviewQueueSidebar(node: Node) {
-  return render(createReviewQueueSidebarElement(node));
+  return renderWithLocalization(createReviewQueueSidebarElement(node));
 }

@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 
@@ -8,7 +10,7 @@ function renderActivity(
   events: ComponentProps<typeof CompanionSyncStatusDetails>['syncEvents'],
   overrides: Partial<Pick<ComponentProps<typeof CompanionSyncStatusDetails>, 'status' | 'syncProgress'>> = {}
 ) {
-  render(
+  renderWithLocalization(
     <CompanionSyncStatusDetails
       endpointUrl="http://10.0.2.2:38641"
       lastSyncedAt={null}

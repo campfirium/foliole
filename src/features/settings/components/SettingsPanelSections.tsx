@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import type { TranslationKey } from '../../../shared/localization/translations';
 import type {
   ExternalSourceSettingsFolder,
   ExternalSourceSettingsFolderPatch
@@ -16,6 +18,7 @@ import { SettingsBackupsSection } from './sections/SettingsBackupsSection';
 import { SettingsCompanionSyncSection } from './sections/SettingsCompanionSyncSection';
 import { SettingsEditorSection } from './sections/SettingsEditorSection';
 import { SettingsExternalSearchSection } from './sections/SettingsExternalSearchSection';
+import { SettingsGeneralSection } from './sections/SettingsGeneralSection';
 import { SettingsImportSection } from './sections/SettingsImportSection';
 import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSection';
 import { SettingsRailSection } from './sections/SettingsRailSection';
@@ -114,13 +117,18 @@ function renderExternalSearchCategory(props: SettingsCategoryContentProps) {
   );
 }
 
-function renderFallbackCategory(props: SettingsCategoryContentProps) {
+type LocalizedSettingsCategoryContentProps = SettingsCategoryContentProps & {
+  t: (key: TranslationKey) => string;
+};
+
+function renderFallbackCategory(props: LocalizedSettingsCategoryContentProps) {
+  const t = props.t;
   if (props.activeCategory === 'import') {
-    return props.importCategoryContent ?? <p className="text-sm text-foreground/65">Import content is not available yet.</p>;
+    return props.importCategoryContent ?? <p className="text-sm text-foreground/65">{t('settings.fallback.import')}</p>;
   }
   if (props.activeCategory === 'readwise-reader') {
     return props.readwiseReaderCategoryContent ?? (
-      <p className="text-sm text-foreground/65">Readwise Reader content is not available yet.</p>
+      <p className="text-sm text-foreground/65">{t('settings.fallback.readwiseReader')}</p>
     );
   }
   if (props.activeCategory === 'review') {
@@ -146,9 +154,13 @@ function renderFallbackCategory(props: SettingsCategoryContentProps) {
 }
 
 export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
+  const t = useTranslation();
+  const localizedProps = { ...props, t };
   switch (props.activeCategory) {
     case 'editor':
       return <SettingsEditorSection />;
+    case 'general':
+      return <SettingsGeneralSection />;
     case 'web-lookup':
       return <SettingsWebLookupSection />;
     case 'appearance':
@@ -162,6 +174,6 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     case 'external-search':
       return renderExternalSearchCategory(props);
     default:
-      return renderFallbackCategory(props);
+      return renderFallbackCategory(localizedProps);
   }
 }

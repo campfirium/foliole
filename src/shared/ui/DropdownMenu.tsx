@@ -3,6 +3,8 @@ import * as React from 'react';
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useTranslation } from '../localization/LocalizationProvider';
+
 import { appFloatingSurfaceClassName } from './FloatingSurface';
 
 import { cn } from '@/shared/lib/utils';
@@ -136,6 +138,7 @@ function AppSelectionDropdownMenu({
   outsidePointerMode = 'blocking',
   top
 }: AppSelectionDropdownMenuProps) {
+  const t = useTranslation();
   const menuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => onWindowEscape(onClose), [onClose]);
   useEffect(() => {
@@ -167,7 +170,7 @@ function AppSelectionDropdownMenu({
         />
       ) : null}
       <div
-        aria-label="Selection commands"
+        aria-label={t('shared.selection.commands')}
         className={cn(
           dropdownMenuContentClassName(),
           'fixed p-2 shadow-popover',

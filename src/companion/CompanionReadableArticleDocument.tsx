@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 
+import { useTranslation } from '../shared/localization/LocalizationProvider';
+
 import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -71,6 +73,7 @@ export function ReadableArticleDocument(props: {
   scrollContainer?: 'editor' | 'outer';
   syncEndpointUrl?: string | null;
 }) {
+  const t = useTranslation();
   const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
   const { canEdit, editorState } = useReadableArticleEditorState({
@@ -96,9 +99,9 @@ export function ReadableArticleDocument(props: {
     <>
       {pdfAttachmentId ? (
         <div className="mb-3 flex items-center justify-between border-b border-companion-divider px-1 pb-3">
-          <span className="text-xs text-companion-text-secondary">Text version</span>
+          <span className="text-xs text-companion-text-secondary">{t('companion.reading.textVersion')}</span>
           <AppButton onClick={() => setIsViewingPdfOriginal(true)} variant="ghost">
-            Open PDF
+            {t('companion.reading.openPdf')}
           </AppButton>
         </div>
       ) : null}

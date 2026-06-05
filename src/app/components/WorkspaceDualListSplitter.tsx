@@ -1,6 +1,7 @@
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import { cn } from '../../shared/lib/utils';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 interface WorkspaceDualListSplitterProps {
   isResizing: boolean;
@@ -15,9 +16,10 @@ export function WorkspaceDualListSplitter({
   onPointerDown,
   width
 }: WorkspaceDualListSplitterProps) {
+  const t = useTranslation();
   return (
     <div
-      aria-label="Resize folder list"
+      aria-label={t('desktop.workspace.resizeFolderList')}
       aria-orientation="vertical"
       aria-valuenow={Math.round(width)}
       className="group relative w-px self-stretch bg-transparent"

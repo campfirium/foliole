@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_RANGE_WIDTH_CLASS_NAME,
@@ -11,6 +12,7 @@ import {
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 
 export function SelectionToolbarSettingsRow() {
+  const t = useTranslation();
   const {
     selectionToolbarEnabled,
     selectionToolbarOpacityPercent,
@@ -20,12 +22,12 @@ export function SelectionToolbarSettingsRow() {
 
   return (
     <SettingsRow
-      description="Adjust the floating toolbar shown for text selections and existing highlights."
-      title="Floating toolbar"
+      description={t('settings.appearance.floatingToolbar.description')}
+      title={t('settings.appearance.floatingToolbar.title')}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <input
-          aria-label="Floating toolbar opacity"
+          aria-label={t('settings.appearance.floatingToolbar.opacity')}
           className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)}
           max={100}
           min={0}
@@ -39,7 +41,7 @@ export function SelectionToolbarSettingsRow() {
         </span>
         <button
           aria-checked={selectionToolbarEnabled}
-          aria-label="Show floating toolbar"
+          aria-label={t('settings.appearance.floatingToolbar.show')}
           className={settingsSwitchClassName(selectionToolbarEnabled)}
           onClick={() => setSelectionToolbarEnabled(!selectionToolbarEnabled)}
           role="switch"

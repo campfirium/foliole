@@ -22,7 +22,13 @@ export function SettingsSection({
   const hasHeader = Boolean(title || description || actions);
 
   return (
-    <section aria-label={ariaLabel} className={cn('mb-8 last:mb-0', className)}>
+    <section
+      aria-label={ariaLabel}
+      className={cn(
+        'relative mb-8 before:absolute before:-top-4 before:left-5 before:right-5 before:hidden before:border-t before:border-settings-divider/55 first:before:hidden last:mb-0 [&+&]:before:block',
+        className
+      )}
+    >
       {hasHeader ? (
         <div className="px-5 pb-3">
           <div className="flex items-start justify-between gap-4">

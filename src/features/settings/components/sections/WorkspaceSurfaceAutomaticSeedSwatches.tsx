@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   appFloatingSurfaceClassName,
   settingsPaletteButtonClassName
@@ -130,9 +131,10 @@ export function AutomaticSeedPopoverSurface(props: {
   panelRef: RefObject<HTMLDivElement | null>;
   resolvedBaseColorMode: WorkspaceSurfaceAutoPaletteMode;
 }) {
+  const t = useTranslation();
   return (
     <div
-      aria-label="Automatic workspace seed picker"
+      aria-label={t('settings.appearance.surface.autoSeedPicker')}
       className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-popover-elevated max-h-80 w-72 overflow-y-auto rounded-md p-2.5 shadow-panel')}
       ref={props.panelRef as RefObject<HTMLDivElement>}
       role="dialog"

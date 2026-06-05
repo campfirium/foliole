@@ -8,12 +8,12 @@ import {
 
 describe('CompanionTabsConfig', () => {
   it('resolves the default companion tabs in the current order', () => {
-    expect(resolveCompanionTabs().map((tab) => tab.label)).toEqual([
-      'Directory',
-      'Browse',
-      'Flow',
-      'Search',
-      'Settings'
+    expect(resolveCompanionTabs().map((tab) => tab.labelKey)).toEqual([
+      'companion.tabs.shortcut.directory',
+      'companion.tabs.browse',
+      'companion.tabs.learn',
+      'companion.tabs.search',
+      'companion.tabs.settings'
     ]);
   });
 

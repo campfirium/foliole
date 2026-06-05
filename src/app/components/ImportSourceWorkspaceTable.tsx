@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME,
   settingsActionTableClassName,
@@ -14,14 +15,15 @@ const TABLE_COLUMNS = SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME;
 const IMPORT_SOURCE_ROW_VIRTUAL_SIZE = 56;
 
 function TableHeader() {
+  const t = useTranslation();
   return (
     <div className={settingsActionTableHeaderClassName(TABLE_COLUMNS)}>
-      <span>Original</span>
-      <span>Highlight</span>
-      <span>Mode</span>
-      <span>Handling</span>
-      <span>Preview</span>
-      <span className="text-right">Action</span>
+      <span>{t('desktop.importSource.table.original')}</span>
+      <span>{t('desktop.importSource.table.highlight')}</span>
+      <span>{t('desktop.importSource.table.mode')}</span>
+      <span>{t('desktop.importSource.table.handling')}</span>
+      <span>{t('desktop.importSource.table.preview')}</span>
+      <span className="text-right">{t('desktop.importSource.table.action')}</span>
     </div>
   );
 }
@@ -87,6 +89,7 @@ export function ImportSourceTable({
   onDeleteSource: (sourceId: string) => void;
   onPreviewKeepImport: (sourceId: string) => void;
 }) {
+  const t = useTranslation();
   const actions = {
     onChange,
     onChangeAction,
@@ -98,7 +101,7 @@ export function ImportSourceTable({
   };
 
   return (
-    <div className={settingsActionTableClassName()} role="table" aria-label="Watch folders">
+    <div className={settingsActionTableClassName()} role="table" aria-label={t('desktop.importSource.table.aria')}>
       <TableHeader />
       <ImportSourceRows actions={actions} sources={sources} />
       <AddSourceRow onAddSource={onAddSource} />

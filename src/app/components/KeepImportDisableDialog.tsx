@@ -1,3 +1,4 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
 export function KeepImportDisableDialog(props: {
@@ -6,6 +7,7 @@ export function KeepImportDisableDialog(props: {
   open: boolean;
   sourceLabel: string;
 }) {
+  const t = useTranslation();
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
       <AppDialogPortal>
@@ -16,20 +18,20 @@ export function KeepImportDisableDialog(props: {
         >
           <section className="flex flex-col">
             <header className="border-b border-border/60 px-6 pb-4 pt-5">
-              <AppDialogTitle className="text-base font-semibold">Turn off keep import</AppDialogTitle>
+              <AppDialogTitle className="text-base font-semibold">{t('desktop.keepImport.disable.title')}</AppDialogTitle>
               <p className="mt-1 text-sm text-foreground/62">{props.sourceLabel}</p>
             </header>
             <div className="px-6 py-5">
               <p className="text-sm text-foreground/70">
-                This will stop automatic updates for this source. You can preview it again and turn it back on later.
+                {t('desktop.keepImport.disable.description')}
               </p>
             </div>
             <footer className="flex items-center justify-end gap-2 border-t border-border/60 px-6 py-4">
               <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">
-                Cancel
+                {t('desktop.keepImport.disable.cancel')}
               </AppButton>
               <AppButton onClick={props.onConfirm} variant="primary">
-                Turn off
+                {t('desktop.keepImport.disable.turnOff')}
               </AppButton>
             </footer>
           </section>

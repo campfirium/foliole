@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
@@ -48,6 +49,7 @@ function toggleCollapsed(nextId: string, setCollapsedIds: React.Dispatch<React.S
 }
 
 export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
+  const t = useTranslation();
   const rowSpacing = getNodeListRowSpacing();
   const [folderOrder, setFolderOrder] = useState<ExternalLibraryFolderOrderItem[]>(loadExternalLibraryFolderOrder);
   const orderedFolders = useMemo(() => sortExternalLibraryFolders(props.folders, folderOrder), [folderOrder, props.folders]);
@@ -65,7 +67,7 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
           onOpenSettings={props.onOpenExternalLibrarySettings ?? (() => undefined)}
         />
       ) : (
-        <section aria-label="External folder tree" className="flex flex-col pb-2 pt-1" role="tree">
+        <section aria-label={t('desktop.externalLibrary.folderTree')} className="flex flex-col pb-2 pt-1" role="tree">
           {rows.map((row) => (
             <NodeTreeRow
               depth={row.depth}
@@ -84,7 +86,7 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
               rowSpacing={rowSpacing}
               secondaryLabel={row.secondaryLabel}
               showIcon={false}
-              trailingLabelContent={renderExternalTrailingLabelContent(row)}
+              trailingLabelContent={renderExternalTrailingLabelContent(row, t('desktop.externalLibrary.folderIcon'))}
               onDragEnd={drag.onDragEnd}
               onDragOver={drag.onDragOver}
               onDragStart={drag.onDragStart}
@@ -100,12 +102,12 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
   );
 }
 
-function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord) {
+function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord, label: string) {
   if (row.secondaryIconKind !== 'external-folder') {
     return null;
   }
   return (
-    <span aria-label="External folder" className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45">
+    <span aria-label={label} className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45">
       <HardDrive aria-hidden="true" className="-translate-y-[1px]" size={14} strokeWidth={1.7} />
     </span>
   );

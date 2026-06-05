@@ -6,6 +6,7 @@ import {
 } from '../../features/nodes/model/nodeReviewSettings';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { InspectorSection } from '../../shared/ui';
 
 interface DocumentPanelNodeReviewSettingsProps {
@@ -24,9 +25,10 @@ const DESIRED_RETENTION_OPTIONS = Array.from({ length: 99 }, (_, index) => {
 });
 
 const PRIORITY_OPTIONS = Array.from({ length: 10 }, (_, index) => ({
-  label: index === 0 ? 'P0 · First, no delay scaling' : `P${index}`,
   value: String(index)
 }));
+
+type NodeReviewTranslate = ReturnType<typeof useTranslation>;
 
 function getOwnerLabel(setting: ResolvedNodeSetting<unknown>, nodesById: Record<string, Node>) {
   if (!setting.ownerNodeId) {
@@ -35,37 +37,37 @@ function getOwnerLabel(setting: ResolvedNodeSetting<unknown>, nodesById: Record<
   return nodesById[setting.ownerNodeId]?.title ?? setting.ownerNodeId;
 }
 
-function renderDesiredRetentionState(setting: ResolvedNodeSetting<number>, nodesById: Record<string, Node>) {
+function renderDesiredRetentionState(setting: ResolvedNodeSetting<number>, nodesById: Record<string, Node>, t: NodeReviewTranslate) {
   const valueLabel = setting.value.toFixed(2);
   if (setting.source === 'explicit') {
-    return `Explicit · ${valueLabel} on this node`;
+    return t('desktop.nodeReview.explicit', { value: valueLabel });
   }
   if (setting.source === 'inherited') {
-    return `Inherited · ${valueLabel} from ${getOwnerLabel(setting, nodesById) ?? 'ancestor'}`;
+    return t('desktop.nodeReview.inherited', { owner: getOwnerLabel(setting, nodesById) ?? t('desktop.nodeReview.ancestor'), value: valueLabel });
   }
-  return `Using review settings: ${valueLabel}`;
+  return t('desktop.nodeReview.usingReviewSettings', { value: valueLabel });
 }
 
-function renderPriorityState(setting: ResolvedNodeSetting<number>, nodesById: Record<string, Node>) {
+function renderPriorityState(setting: ResolvedNodeSetting<number>, nodesById: Record<string, Node>, t: NodeReviewTranslate) {
   const valueLabel = `P${setting.value}`;
   if (setting.source === 'explicit') {
-    return `Explicit · ${valueLabel} on this node`;
+    return t('desktop.nodeReview.explicit', { value: valueLabel });
   }
   if (setting.source === 'inherited') {
-    return `Inherited · ${valueLabel} from ${getOwnerLabel(setting, nodesById) ?? 'ancestor'}`;
+    return t('desktop.nodeReview.inherited', { owner: getOwnerLabel(setting, nodesById) ?? t('desktop.nodeReview.ancestor'), value: valueLabel });
   }
-  return `Using queue fallback: ${valueLabel}`;
+  return t('desktop.nodeReview.usingQueueFallback', { value: valueLabel });
 }
 
-function renderShortTermState(setting: ResolvedNodeSetting<boolean>, nodesById: Record<string, Node>) {
-  const valueLabel = setting.value ? 'Enabled' : 'Disabled';
+function renderShortTermState(setting: ResolvedNodeSetting<boolean>, nodesById: Record<string, Node>, t: NodeReviewTranslate) {
+  const valueLabel = setting.value ? t('desktop.nodeReview.enabled') : t('desktop.nodeReview.disabled');
   if (setting.source === 'explicit') {
-    return `Explicit · ${valueLabel} on this node`;
+    return t('desktop.nodeReview.explicit', { value: valueLabel });
   }
   if (setting.source === 'inherited') {
-    return `Inherited · ${valueLabel} from ${getOwnerLabel(setting, nodesById) ?? 'ancestor'}`;
+    return t('desktop.nodeReview.inherited', { owner: getOwnerLabel(setting, nodesById) ?? t('desktop.nodeReview.ancestor'), value: valueLabel });
   }
-  return 'No local short-term setting';
+  return t('desktop.nodeReview.noLocalShortTerm');
 }
 
 function DesiredRetentionField({
@@ -83,14 +85,15 @@ function DesiredRetentionField({
   onDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => void;
   setting: ResolvedNodeSetting<number>;
 }) {
+  const t = useTranslation();
   return (
     <label className="flex min-w-0 flex-col gap-1 text-sm text-foreground">
-      <span className="font-medium">Desired retention</span>
-      <select aria-label="Review desired retention" className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onDesiredRetentionChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.desiredRetention == null ? 'inherit' : node.desiredRetention.toFixed(2)}>
-        <option value="inherit">Inherit resolved value</option>
+      <span className="font-medium">{t('desktop.nodeReview.desiredRetention')}</span>
+      <select aria-label={t('desktop.nodeReview.desiredRetention.aria')} className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onDesiredRetentionChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.desiredRetention == null ? 'inherit' : node.desiredRetention.toFixed(2)}>
+        <option value="inherit">{t('desktop.nodeReview.inherit')}</option>
         {DESIRED_RETENTION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
-      <span className="text-xs text-foreground/70">{renderDesiredRetentionState(setting, nodesById)}</span>
+      <span className="text-xs text-foreground/70">{renderDesiredRetentionState(setting, nodesById, t)}</span>
     </label>
   );
 }
@@ -110,14 +113,15 @@ function PriorityField({
   onPriorityChange: (nodeId: string, priority: number | null) => void;
   setting: ResolvedNodeSetting<number>;
 }) {
+  const t = useTranslation();
   return (
     <label className="flex min-w-0 flex-col gap-1 text-sm text-foreground">
-      <span className="font-medium">Priority</span>
-      <select aria-label="Review queue priority" className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onPriorityChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.priority == null ? 'inherit' : String(node.priority)}>
-        <option value="inherit">Inherit resolved value</option>
-        {PRIORITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      <span className="font-medium">{t('desktop.nodeReview.priority')}</span>
+      <select aria-label={t('desktop.nodeReview.priority.aria')} className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onPriorityChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.priority == null ? 'inherit' : String(node.priority)}>
+        <option value="inherit">{t('desktop.nodeReview.inherit')}</option>
+        {PRIORITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.value === '0' ? t('desktop.nodeReview.priority.p0') : `P${option.value}`}</option>)}
       </select>
-      <span className="text-xs text-foreground/70">{renderPriorityState(setting, nodesById)}</span>
+      <span className="text-xs text-foreground/70">{renderPriorityState(setting, nodesById, t)}</span>
     </label>
   );
 }
@@ -137,18 +141,19 @@ function ShortTermField({
   onShortTermChange: (nodeId: string, enableShortTerm: boolean | null) => void;
   setting: ResolvedNodeSetting<boolean>;
 }) {
+  const t = useTranslation();
   return (
     <label className="flex min-w-0 flex-col gap-1 text-sm text-foreground">
-      <span className="font-medium">Short-term learning steps</span>
-      <select aria-label="Short-term learning steps" className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => {
+      <span className="font-medium">{t('desktop.nodeReview.shortTerm')}</span>
+      <select aria-label={t('desktop.nodeReview.shortTerm')} className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => {
         const value = event.target.value;
         onShortTermChange(activeNodeId, value === 'inherit' ? null : value === 'enabled');
       }} value={node.enableShortTerm == null ? 'inherit' : node.enableShortTerm ? 'enabled' : 'disabled'}>
-        <option value="inherit">Inherit resolved value</option>
-        <option value="enabled">Enabled</option>
-        <option value="disabled">Disabled</option>
+        <option value="inherit">{t('desktop.nodeReview.inherit')}</option>
+        <option value="enabled">{t('desktop.nodeReview.enabled')}</option>
+        <option value="disabled">{t('desktop.nodeReview.disabled')}</option>
       </select>
-      <span className="text-xs text-foreground/70">{renderShortTermState(setting, nodesById)}</span>
+      <span className="text-xs text-foreground/70">{renderShortTermState(setting, nodesById, t)}</span>
     </label>
   );
 }
@@ -183,6 +188,7 @@ export function DocumentPanelNodeReviewSettings({
   onShortTermChange,
   reviewSchedulerSettings
 }: DocumentPanelNodeReviewSettingsProps) {
+  const t = useTranslation();
   if (!activeNodeId) {
     return null;
   }
@@ -206,9 +212,9 @@ export function DocumentPanelNodeReviewSettings({
 
   return (
     <InspectorSection
-      ariaLabel="Node review settings"
-      description="`desired retention` is the memory target. `priority` affects Review order; `P0` comes first and is not delayed by priority scaling."
-      title="Review options"
+      ariaLabel={t('desktop.nodeReview.aria')}
+      description={t('desktop.nodeReview.description')}
+      title={t('desktop.nodeReview.title')}
     >
       <ReviewSchedulingFields
         activeNodeId={activeNodeId}

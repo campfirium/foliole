@@ -1,3 +1,4 @@
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppEmptyState, AppErrorState } from '../shared/ui';
 
 type ReviewFallbackSession = {
@@ -16,6 +17,7 @@ export function CompanionReviewFallback(props: {
   hasSnapshot: boolean;
   reviewSession: ReviewFallbackSession;
 }) {
+  const t = useTranslation();
   const nextFsrsLabel = formatDueLabel(props.reviewSession.nextFsrsDueAt);
   const nextReadingLabel = formatDueLabel(props.reviewSession.nextReadingDueAt);
   const hasScheduledReviews = props.reviewSession.scheduledFsrsCount > 0 || props.reviewSession.scheduledReadingCount > 0;
@@ -27,30 +29,33 @@ export function CompanionReviewFallback(props: {
           <AppEmptyState
             className="min-h-0 items-start text-left text-companion-text-secondary"
             description={hasScheduledReviews
-              ? 'Your synced review state has no due work right now.'
-              : 'Pull a newer snapshot when you want this device to refresh upcoming review work.'}
-            title={hasScheduledReviews ? 'No items are due right now' : 'No items scheduled on this device'}
+              ? t('companion.review.noDueDescription')
+              : t('companion.review.noScheduledDescription')}
+            title={hasScheduledReviews ? t('companion.review.noDueTitle') : t('companion.review.noScheduledTitle')}
           />
-          {nextReadingLabel ? <p className="mt-3">Next reading topic: {nextReadingLabel}</p> : null}
-          {nextFsrsLabel ? <p className="mt-2">Next item: {nextFsrsLabel}</p> : null}
+          {nextReadingLabel ? <p className="mt-3">{t('companion.review.nextReading', { date: nextReadingLabel })}</p> : null}
+          {nextFsrsLabel ? <p className="mt-2">{t('companion.review.nextItem', { date: nextFsrsLabel })}</p> : null}
           <p className="mt-3">
             {hasScheduledReviews
-              ? `Synced review state: ${props.reviewSession.scheduledReadingCount} reading topics, ${props.reviewSession.scheduledFsrsCount} items.`
-              : 'Connect to desktop to bring review work onto this device.'}
+              ? t('companion.review.syncedState', {
+                itemCount: props.reviewSession.scheduledFsrsCount,
+                readingCount: props.reviewSession.scheduledReadingCount
+              })
+              : t('companion.review.connectForWork')}
           </p>
         </>
       ) : (
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
-          description="Connect this device with desktop and keep both devices on the same network."
-          title="No topics synced yet"
+          description={t('companion.review.noTopicsDescription')}
+          title={t('companion.review.noTopicsTitle')}
         />
       )}
       {props.error ? (
         <AppErrorState
           className="mt-4 min-h-0 items-start text-left text-error"
           description={props.error}
-          title="Review queue could not refresh"
+          title={t('companion.review.refreshError')}
         />
       ) : null}
     </section>

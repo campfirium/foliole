@@ -3,10 +3,12 @@ import { useMemo } from 'react';
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 const EXTERNAL_SETUP_ROW_ID = 'external-library-setup';
 
 export function ExternalLibrarySetupRow(props: { isSelected: boolean; onOpenSettings: () => void }) {
+  const t = useTranslation();
   const rowSpacing = getNodeListRowSpacing();
   const onRowKeyDown = useMemo(
     () =>
@@ -20,14 +22,14 @@ export function ExternalLibrarySetupRow(props: { isSelected: boolean; onOpenSett
   );
 
   return (
-    <section aria-label="External folder tree" className="flex flex-col pb-2 pt-1" role="tree">
+    <section aria-label={t('desktop.externalLibrary.folderTree')} className="flex flex-col pb-2 pt-1" role="tree">
       <NodeTreeRow
         depth={0}
         hasChildren={false}
         isActive={props.isSelected}
         isCollapsed={false}
         isSelected={props.isSelected}
-        label="External"
+        label={t('desktop.externalLibrary.setupLabel')}
         nodeId={EXTERNAL_SETUP_ROW_ID}
         rowSpacing={rowSpacing}
         showIcon={false}

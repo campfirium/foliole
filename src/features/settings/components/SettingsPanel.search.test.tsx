@@ -80,6 +80,25 @@ it('searches categories without mixing in action help actions', () => {
   expect(screen.getByText('No settings found.')).toBeInTheDocument();
 });
 
+it('updates settings navigation and search results when the app language changes', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="appearance" />);
+
+  fireEvent.change(screen.getByLabelText('App language'), { target: { value: 'zh-Hans' } });
+
+  expect(screen.getByRole('heading', { name: '外观' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '关于' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '通用' })).toBeInTheDocument();
+
+  const input = screen.getByRole('textbox', { name: '搜索设置' });
+  fireEvent.change(input, { target: { value: '目标保持率' } });
+  fireEvent.click(screen.getByRole('option', { name: /目标保持率/ }));
+
+  await waitFor(() => {
+    expect(document.querySelector('[data-settings-search-row-id="review-desired-retention"]')).not.toBeNull();
+  });
+  expect(screen.getByRole('button', { name: '复习' })).toHaveAttribute('aria-current', 'page');
+});
+
 it('supports keyboard selection and clears query with Escape before closing settings', () => {
   const onClose = vi.fn();
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} onClose={onClose} requestedCategory="about" />);
@@ -102,7 +121,7 @@ it('closes search results when clicking outside or pressing Escape', () => {
   fireEvent.change(input, { target: { value: 'Mirror' } });
   expect(screen.getByRole('listbox', { name: 'Settings search results' })).toBeInTheDocument();
 
-  fireEvent.mouseDown(screen.getByRole('heading', { name: 'General' }));
+  fireEvent.mouseDown(screen.getByRole('heading', { name: 'About' }));
   expect(screen.queryByRole('listbox', { name: 'Settings search results' })).not.toBeInTheDocument();
 
   fireEvent.focus(input);

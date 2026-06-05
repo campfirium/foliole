@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { HOME_NODE_ID, INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import {
@@ -147,7 +148,7 @@ it('keeps the dual-column layout when opening trash search', () => {
 });
 
 it('keeps Home selected and reveals the source folder when opening a Home topic', () => {
-  render(<HomePinnedWorkspaceHarness />);
+  renderWithLocalization(<HomePinnedWorkspaceHarness />);
 
   const folderColumn = screen.getAllByRole('tree', { name: 'Topic list' })[0]!;
   expect(within(folderColumn).getByRole('treeitem', { name: 'Home' })).toHaveAttribute('aria-current', 'page');

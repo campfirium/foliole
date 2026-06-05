@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   AppInput,
   LUCIDE_ICON_OPTIONS,
@@ -7,9 +8,6 @@ import type { NodeTreeRowIconKind, NodeTreeRowIconState } from '../../../nodes/c
 
 import type { useNodeIconSettingsState } from './nodeIconSettingsState';
 import { IconGrid, matchesIconQuery } from './SettingsRailIconPicker';
-
-const SVG_PLACEHOLDER = 'Optional SVG. Empty uses the selected Lucide icon.';
-const STATE_SVG_PLACEHOLDER = 'Optional SVG. Empty uses the selected Lucide icon or base icon.';
 
 const SEARCH_INPUT_CLASS_NAME =
   'h-9 text-sm focus-visible:border-settings-control-border-hover focus-visible:ring-0 focus-visible:ring-offset-0';
@@ -33,16 +31,17 @@ function SvgEditDialog(props: {
   placeholder?: string;
   svgValue: string;
 }) {
+  const t = useTranslation();
   const filteredIcons = LUCIDE_ICON_OPTIONS.filter((icon) => matchesIconQuery([icon.id, icon.label], props.iconQuery));
   return (
     <div className="grid min-h-0 gap-3">
       <div>
-        <p className="mb-2 text-sm font-medium text-foreground">Lucide icon</p>
+        <p className="mb-2 text-sm font-medium text-foreground">{t('settings.icons.picker.lucide')}</p>
         <AppInput
-          aria-label="Search icons"
+          aria-label={t('settings.icons.picker.search')}
           className={SEARCH_INPUT_CLASS_NAME}
           onChange={(event) => props.onIconQueryChange(event.target.value)}
-          placeholder="Search icons..."
+          placeholder={t('settings.icons.picker.searchPlaceholder')}
           value={props.iconQuery}
         />
         <IconGrid
@@ -56,12 +55,12 @@ function SvgEditDialog(props: {
         />
       </div>
       <label className="grid gap-2 text-sm font-medium text-foreground">
-        SVG
+        {t('settings.icons.picker.svg')}
         <textarea
-          aria-label="SVG"
+          aria-label={t('settings.icons.picker.svg')}
           className={TEXTAREA_CLASS_NAME}
           onChange={(event) => props.onSvgChange(event.target.value)}
-          placeholder={props.placeholder ?? SVG_PLACEHOLDER}
+          placeholder={props.placeholder ?? t('settings.icons.picker.svgPlaceholder')}
           spellCheck={false}
           value={props.svgValue}
         />
@@ -77,6 +76,7 @@ export function NodeIconSettingsDialogBody(props: {
   target: NodeIconEditTarget;
 }) {
   const { target } = props;
+  const t = useTranslation();
   return (
     <div className="min-h-0">
       {target.type === 'svg' ? (
@@ -95,7 +95,7 @@ export function NodeIconSettingsDialogBody(props: {
           onIconChange={(value) => props.state.setStateIcon(target.state, target.kind, value)}
           onIconQueryChange={props.onIconQueryChange}
           onSvgChange={(value) => props.state.setStateSvg(target.state, target.kind, value)}
-          placeholder={STATE_SVG_PLACEHOLDER}
+          placeholder={t('settings.icons.picker.stateSvgPlaceholder')}
           svgValue={props.state.stateStyles[target.state][target.kind].svg}
         />
       )}

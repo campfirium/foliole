@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 
 function renderOverlayResume(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}) {
-  return render(
+  return renderWithLocalization(
     <ReviewModeToolbar
       isAnswerRevealed={false}
       isCurrentItemGradable={false}

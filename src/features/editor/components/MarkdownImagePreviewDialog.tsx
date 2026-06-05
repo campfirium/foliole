@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppIconButton } from '../../../shared/ui';
 import type { MarkdownImagePreviewRequest } from '../model/markdownImagePreview';
 
@@ -52,6 +53,7 @@ function renderPreviewImage(
 }
 
 export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProps) {
+  const t = useTranslation();
   const hiddenRegionIds = new Set(props.image?.presentation?.hiddenRegionIds ?? []);
   const outlinedRegionIds = new Set(props.image?.presentation?.outlinedRegionIds ?? []);
   const handleDismiss = () => props.onOpenChange(false);
@@ -64,7 +66,7 @@ export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProp
           aria-describedby={undefined}
           className="left-4 top-4 right-4 bottom-4 z-preview-dialog max-w-none translate-x-0 translate-y-0 overflow-visible border-transparent bg-transparent p-0 shadow-none"
         >
-          <AppDialogTitle className="sr-only">Image preview</AppDialogTitle>
+          <AppDialogTitle className="sr-only">{t('desktop.editorPreview.imageTitle')}</AppDialogTitle>
           <div
             className="relative flex h-full w-full cursor-zoom-out items-center justify-center p-0"
             onClick={(event) => {
@@ -77,7 +79,7 @@ export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProp
               <AppIconButton
                 className="bg-bg-elevated/92 text-foreground hover:bg-bg-elevated"
                 icon={<X aria-hidden="true" size={16} strokeWidth={2} />}
-                label="Close image preview"
+                label={t('desktop.editorPreview.closeImage')}
                 onClick={handleDismiss}
               />
             </div>

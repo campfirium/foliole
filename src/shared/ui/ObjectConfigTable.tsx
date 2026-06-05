@@ -1,6 +1,8 @@
 import { FolderOpen, RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { useTranslation } from '../localization/LocalizationProvider';
+
 import { AppButton } from './Button';
 import {
   SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME,
@@ -118,18 +120,20 @@ export function ObjectConfigPathButton({
 
 export function ObjectConfigPathControl({
   onRestoreDefault,
-  restoreLabel = 'Restore default',
+  restoreLabel,
   restoreDisabled,
   ...buttonProps
 }: ObjectConfigPathControlProps) {
+  const t = useTranslation();
+  const resolvedRestoreLabel = restoreLabel ?? t('desktop.objectConfig.restoreDefault');
   return (
     <div className={SETTINGS_PATH_CONTROL_CLASS_NAME} data-settings-path-control>
       <button
-        aria-label={restoreLabel}
+        aria-label={resolvedRestoreLabel}
         className={settingsResetButtonClassName(SETTINGS_PATH_RESET_BUTTON_CLASS_NAME)}
         disabled={restoreDisabled ?? buttonProps.disabled}
         onClick={onRestoreDefault}
-        title={restoreLabel}
+        title={resolvedRestoreLabel}
         type="button"
       >
         <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />

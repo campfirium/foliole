@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
@@ -8,6 +8,7 @@ vi.mock('../../shared/platform/removedSourcesRuntimeRepository', () => ({
   loadRuntimeRemovedSources: vi.fn().mockResolvedValue({ entries: [], loadedAt: '2026-05-13T00:00:00.000Z' })
 }));
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
@@ -43,30 +44,31 @@ function createWatchedSourceDetails(nodeId: string) {
   };
 }
 
+function createPdfSearchResults(): WorkspaceSearchResult[] {
+  return [{
+    externalMatch: null,
+    excerpt: 'Page 13 · 这是一个测试片段',
+    id: 'pdf-1',
+    kind: 'pdf',
+    nodeMatch: null,
+    pdfMatch: {
+      attachmentId: 'att-1',
+      matchStart: 4,
+      page: 13,
+      pageTextLength: 12,
+      query: '测试'
+    },
+    title: '测试文档.pdf',
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  }];
+}
+
 it('shows a watched source badge on the right for matching results', async () => {
-  vi.mocked(getRuntimeInvoke).mockReturnValue(
-    vi.fn().mockResolvedValue([
-      {
-        externalMatch: null,
-        excerpt: 'Page 13 · 这是一个测试片段',
-        id: 'pdf-1',
-        kind: 'pdf',
-        nodeMatch: null,
-        pdfMatch: {
-          attachmentId: 'att-1',
-          matchStart: 4,
-          page: 13,
-          pageTextLength: 12,
-          query: '测试'
-        },
-        title: '测试文档.pdf',
-        updatedAt: '2026-03-30T00:00:00.000Z'
-      }
-    ] satisfies WorkspaceSearchResult[])
-  );
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(createPdfSearchResults()));
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(createWatchedSourceDetails('pdf-1'));
 
-  render(
+  renderWithLocalization(
     <SearchPalette
       isOpen
       nodeOrder={['root', 'pdf-1']}

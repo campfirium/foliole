@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 vi.mock('./DocumentPanelBody', () => ({
   DocumentPanelBody: () => <div data-testid="source-update-pane" />
@@ -11,7 +12,7 @@ import { DocumentSourceUpdatePanel } from './DocumentSourceUpdatePanel';
 
 describe('DocumentSourceUpdatePanel integration', () => {
   it('renders the live two-pane comparison without crashing', () => {
-    render(
+    renderWithLocalization(
       <MouseGestureSettingsProvider>
         <DocumentSourceUpdatePanel
           currentContent={'# Title\n\nSame\nLeft only\nEnd'}

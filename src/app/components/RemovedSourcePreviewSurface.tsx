@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { restoreRuntimeRemovedSource } from '../../shared/platform/removedSourcesRuntimeRepository';
 import { AppEmptyState } from '../../shared/ui';
 
@@ -39,11 +40,12 @@ function RemovedImportAction(props: {
   needsSourceUpdateConfirm: boolean;
   onImport: () => void;
 }) {
+  const t = useTranslation();
   return (
     <DocumentRestoreAction
-      ariaLabel="Re-import"
+      ariaLabel={t('desktop.removed.preview.reimport')}
       disabled={props.isImporting}
-      label={props.isImporting ? 'Re-importing...' : props.needsSourceUpdateConfirm ? 'Re-import current source' : 'Re-import'}
+      label={props.isImporting ? t('desktop.removed.preview.reimporting') : props.needsSourceUpdateConfirm ? t('desktop.removed.preview.reimportCurrent') : t('desktop.removed.preview.reimport')}
       onRestore={props.onImport}
     />
   );
@@ -55,10 +57,11 @@ function RemovedPreviewHeader(props: {
   onGoBack: () => void;
   onGoForward: () => void;
 }) {
+  const t = useTranslation();
   const rootId = 'removed-root';
   const activeNodeId = 'removed-preview';
   const nodesById = {
-    [rootId]: createHeaderNode(rootId, null, 'Removed', 'folder'),
+    [rootId]: createHeaderNode(rootId, null, t('desktop.removed.preview.root'), 'folder'),
     [activeNodeId]: createHeaderNode(activeNodeId, rootId, '', 'topic')
   };
   return (
@@ -88,7 +91,7 @@ function RemovedPreviewHeader(props: {
   );
 }
 
-function useRemovedSourceImportAction(entry: SelectedRemovedSource | null, onSelectNode: (nodeId: string) => void) {
+function useRemovedSourceImportAction(entry: SelectedRemovedSource | null, onSelectNode: (nodeId: string) => void, t: Translate) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -104,13 +107,13 @@ function useRemovedSourceImportAction(entry: SelectedRemovedSource | null, onSel
     try {
       const result = await restoreRuntimeRemovedSource(entry);
       if (!result || result.status === 'failed') {
-        setErrorMessage(result?.detail?.trim() || 'Re-import failed.');
+        setErrorMessage(result?.detail?.trim() || t('desktop.removed.importFailed'));
         return;
       }
       setSelectedRemovedSource(null);
       if (result.node_id) onSelectNode(result.node_id);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Re-import failed.');
+      setErrorMessage(error instanceof Error ? error.message : t('desktop.removed.importFailed'));
     } finally {
       setIsImporting(false);
     }
@@ -120,9 +123,10 @@ function useRemovedSourceImportAction(entry: SelectedRemovedSource | null, onSel
 }
 
 function RemovedSourceEmptySurface() {
+  const t = useTranslation();
   return (
-    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
-      <AppEmptyState description="Select a removed topic to preview it." title="No topic selected" />
+    <section aria-label={t('desktop.document.area')} className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
+      <AppEmptyState description={t('desktop.removed.preview.empty.description')} title={t('desktop.removed.preview.empty.title')} />
     </section>
   );
 }
@@ -140,6 +144,7 @@ function RemovedSourcePreviewContent(props: {
   onLinkPanelStateChange: ReturnType<typeof useExternalLinkPanels>['handleLinkPanelStateChange'];
   onOpenExternalLink: ReturnType<typeof useExternalLinkPanels>['handleOpenExternalLink'];
 }) {
+  const t = useTranslation();
   return (
     <div className="relative flex min-h-0 flex-1 flex-col pl-4 pr-0 pt-2 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0" ref={props.contentAreaRef}>
       <RemovedImportAction
@@ -149,7 +154,7 @@ function RemovedSourcePreviewContent(props: {
       />
       {props.confirmId === props.entry.id ? (
         <p className="mx-auto w-full max-w-[var(--document-max-width)] px-[var(--document-content-inline-padding)] py-2 text-sm text-foreground/70">
-          The source changed after this topic was deleted. Re-import will use the current source text.
+          {t('desktop.removed.preview.changedSource')}
         </p>
       ) : null}
       {props.errorMessage ? (
@@ -185,10 +190,11 @@ export function RemovedSourcePreviewSurface(props: {
   onGoForward: () => void;
   onSelectNode: (nodeId: string) => void;
 }) {
+  const t = useTranslation();
   const entry = useSelectedRemovedSource();
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
-  const importAction = useRemovedSourceImportAction(entry, props.onSelectNode);
+  const importAction = useRemovedSourceImportAction(entry, props.onSelectNode, t);
   const style = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
 
   if (!entry) {
@@ -196,7 +202,7 @@ export function RemovedSourcePreviewSurface(props: {
   }
 
   return (
-    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col" style={style}>
+    <section aria-label={t('desktop.document.area')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col" style={style}>
       <RemovedPreviewHeader
         canGoBack={props.canGoBack}
         canGoForward={props.canGoForward}

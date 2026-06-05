@@ -2,6 +2,7 @@ import { ChevronsDownUp, ChevronsUpDown, Focus, Scan, SquarePen } from 'lucide-r
 import { useEffect, useState } from 'react';
 
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
 import type { WorkspaceContentSortDirection, WorkspaceContentSortKey } from './workspaceContentSort';
@@ -40,6 +41,7 @@ export function WorkspaceTopicTreeHeader({
   sortKey,
   viewHideDismissedTopics = false
 }: WorkspaceTopicTreeHeaderProps) {
+  const t = useTranslation();
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(searchQuery));
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export function WorkspaceTopicTreeHeader({
       as="header"
       className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4"
     >
-      <h2 className="sr-only">Current folder topics</h2>
+      <h2 className="sr-only">{t('desktop.nodeList.currentFolderTopics')}</h2>
       <WorkspaceTopicTreeHeaderLead
         {...(headerDescription ? { description: headerDescription } : {})}
         onOpenSearch={() => setIsSearchOpen(true)}
@@ -110,8 +112,9 @@ function WorkspaceTopicTreeHeaderLead({
 }
 
 function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderProps, 'onSearchQueryChange' | 'searchQuery'>) {
+  const t = useTranslation();
   return (
-    <ToolbarActionGroup ariaLabel="Current folder topic actions">
+    <ToolbarActionGroup ariaLabel={t('desktop.nodeList.currentFolderTopicActions')}>
       <WorkspaceContentSortControls
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}
@@ -129,7 +132,7 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
         icon={props.hasCollapsedNodes ? <ChevronsDownUp size={16} strokeWidth={1.9} /> : <ChevronsUpDown size={16} strokeWidth={1.9} />}
         disabled={!props.hasCollapsibleNodes}
-        label={props.hasCollapsedNodes ? 'Expand all topics' : 'Collapse all topics'}
+        label={props.hasCollapsedNodes ? t('desktop.nodeList.expandAllTopics') : t('desktop.nodeList.collapseAllTopics')}
         onClick={props.onToggleCollapseAll}
       />
       <AppTooltip>
@@ -143,22 +146,22 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
                   ? <Focus size={16} strokeWidth={1.9} />
                   : <Scan size={16} strokeWidth={1.9} />
               }
-              label={props.viewHideDismissedTopics ? 'Show all topics' : 'Focus active topics'}
+              label={props.viewHideDismissedTopics ? t('desktop.nodeList.showAllTopics') : t('desktop.nodeList.focusActiveTopics')}
               onClick={props.onToggleDismissedTopicsVisibility}
             />
           </span>
         </AppTooltipTrigger>
         <AppTooltipContent align="center" avoidCollisions={false} side="top" sideOffset={8}>
           {props.viewHideDismissedTopics
-            ? 'Show all topic branches.'
-            : 'Focus active topics by hiding dismissed branches.'}
+            ? t('desktop.nodeList.showAllTopicBranches')
+            : t('desktop.nodeList.focusActiveTopicsDescription')}
         </AppTooltipContent>
       </AppTooltip>
       {props.showCreateTopic !== false ? (
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           icon={<SquarePen size={16} strokeWidth={1.9} />}
-          label="Create topic"
+          label={t('desktop.nodeList.createTopicButton')}
           onClick={props.onCreateTopic}
         />
       ) : null}

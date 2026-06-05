@@ -1,5 +1,7 @@
 import { EllipsisVertical, ListTree, X, type LucideIcon } from 'lucide-react';
 
+import { useTranslation } from '../shared/localization/LocalizationProvider';
+
 import { companionFlexRowGap2ClassName } from './companionCssCompatibility';
 
 function ReadingChromeButton(props: {
@@ -29,19 +31,20 @@ export function ReadingChrome(props: {
   onOpenOutline(): void;
   title: string;
 }) {
+  const t = useTranslation();
   return (
     <>
       <div className="fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 px-4 pb-3 pt-3 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),12px)] backdrop-blur">
         <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
-          <ReadingChromeButton icon={X} label="Exit" onClick={props.onExit} />
-          <ReadingChromeButton icon={ListTree} label="Outline" onClick={props.onOpenOutline} />
+          <ReadingChromeButton icon={X} label={t('companion.reading.exit')} onClick={props.onExit} />
+          <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
           <span className="min-w-0 flex-1 truncate text-center text-sm font-medium text-foreground">
             {props.title}
           </span>
         </div>
       </div>
       <div className={`fixed right-5 bottom-5 supports-[bottom:max(0px)]:bottom-[max(env(safe-area-inset-bottom),20px)] z-workspace-overlay flex items-center ${companionFlexRowGap2ClassName}`}>
-        <ReadingChromeButton icon={EllipsisVertical} label="More reading actions" onClick={props.onOpenActions} />
+        <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
       </div>
     </>
   );

@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { createDefaultReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { createReadwiseImportSources } from './importSourceWorkspaceModel';
 import {
@@ -15,7 +16,7 @@ it('previews and runs Readwise cleanup from the setup action row', async () => {
   const onRunCleanup = vi.fn().mockResolvedValue(createReadwiseCleanupRunResult());
   const onSave = vi.fn();
 
-  render(
+  renderWithLocalization(
     <SettingsReadwiseReaderContent
       config={{
         ...createDefaultReadwiseReaderConfig(),

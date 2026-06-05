@@ -8,6 +8,7 @@ import {
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
@@ -32,9 +33,10 @@ interface WorkspaceSideToolbarProps {
 }
 
 function SettingsAction({ isSettingsOpen, onOpenSettings }: { isSettingsOpen: boolean; onOpenSettings: () => void }) {
+  const t = useTranslation();
   return (
     <ToolbarActionGroup
-      ariaLabel="Workspace settings actions"
+      ariaLabel={t('desktop.workspace.settingsActions')}
       className="h-[var(--workspace-top-toolbar-height)] w-full justify-center"
       fullWidth
       orientation="vertical"
@@ -43,7 +45,7 @@ function SettingsAction({ isSettingsOpen, onOpenSettings }: { isSettingsOpen: bo
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
         data-active={isSettingsOpen}
         icon={<Settings aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Settings"
+        label={t('desktop.workspace.settings')}
         onClick={onOpenSettings}
       />
     </ToolbarActionGroup>
@@ -57,10 +59,11 @@ function FlowAction({
   isStudyMode: boolean;
   onToggleReviewSession: () => void;
 }) {
-  const actionLabel = isStudyMode ? 'Leave Flow' : 'Enter Flow';
+  const t = useTranslation();
+  const actionLabel = isStudyMode ? t('desktop.workspace.leaveFlow') : t('desktop.workspace.enterFlow');
   return (
     <ToolbarActionGroup
-      ariaLabel="Workspace study actions"
+      ariaLabel={t('desktop.workspace.studyActions')}
       className="h-[var(--workspace-bottom-toolbar-height)] w-full justify-center px-1"
       fullWidth
       orientation="vertical"
@@ -147,11 +150,12 @@ function renderStudyDock(props: {
 }
 
 export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
+  const t = useTranslation();
   const state = useWorkspaceRailToolbarState(props);
 
   return (
     <AppToolbar
-      aria-label="Workspace side toolbar"
+      aria-label={t('desktop.workspace.sideToolbar')}
       className="workspace-region-main-rail flex h-full w-[var(--workspace-rail-width)] flex-col"
       onContextMenu={(event) => {
         event.preventDefault();
@@ -160,13 +164,13 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
     >
       <div className="flex min-h-0 flex-1 flex-col items-center">
         <RailActionGroup
-          ariaLabel="Workspace top rail actions"
+          ariaLabel={t('desktop.workspace.topRailActions')}
           items={state.topItems}
           onRun={state.runRailCommand}
         />
         <div className="flex-1" />
         <RailActionGroup
-          ariaLabel="Workspace bottom rail actions"
+          ariaLabel={t('desktop.workspace.bottomRailActions')}
           items={state.bottomItems}
           onRun={state.runRailCommand}
         />

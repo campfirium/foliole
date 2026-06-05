@@ -4,6 +4,8 @@ import type {
   FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 
+import { resolveCompanionUntitledLabel } from './companionReadableArticle';
+
 type CompanionBrowseNode = WorkspaceSnapshot['nodesById'][string];
 
 function resolveCompanionLastOpenedAt(snapshot: WorkspaceSnapshot, nodeId: string) {
@@ -33,7 +35,7 @@ function compareText(left: string, right: string) {
 }
 
 function resolveTitle(node: CompanionBrowseNode) {
-  return node.title.trim() || 'Untitled';
+  return node.title.trim() || resolveCompanionUntitledLabel();
 }
 
 function compareTimestampDesc(left: string | null | undefined, right: string | null | undefined) {

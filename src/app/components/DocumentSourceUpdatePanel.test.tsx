@@ -1,5 +1,7 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentSourceUpdatePanel } from './DocumentSourceUpdatePanel';
 
@@ -45,7 +47,7 @@ function createScrollAdapter(options?: {
 }
 
 function renderPanel(currentContent: string, updatedContent: string) {
-  render(
+  renderWithLocalization(
     <DocumentSourceUpdatePanel
       currentContent={currentContent}
       currentHighlightCount={1}
@@ -123,7 +125,7 @@ describe('DocumentSourceUpdatePanel rendering', () => {
       )
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Comparison overview ruler')).toBeInTheDocument();
-    expect(screen.getByText('1 highlights')).toBeInTheDocument();
+    expect(screen.getByText('1 highlight')).toBeInTheDocument();
     expect(screen.getByText('Highlights grow from 1 to 2')).toBeInTheDocument();
   });
 
@@ -172,7 +174,7 @@ describe('DocumentSourceUpdatePanel diff hints', () => {
       expect.objectContaining({
         editorDiffDecorations: {
           lineDecorations: [],
-          spacerDecorations: [{ beforeLineNumber: 3, kind: 'removed', lines: [{ className: null, lineNumber: 3, text: 'left only' }] }]
+          spacerDecorations: [{ beforeLineNumber: 3, kind: 'removed', lines: [{ className: 'cm-line-paragraph', lineNumber: 3, text: 'left only' }] }]
         }
       })
     );

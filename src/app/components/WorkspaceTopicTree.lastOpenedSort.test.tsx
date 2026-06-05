@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it } from 'vitest';
 
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -171,7 +172,7 @@ beforeEach(() => {
 });
 
 it('keeps the current folder list stable when last-opened timestamps change', () => {
-  render(<LastOpenedSortHarness />);
+  renderWithLocalization(<LastOpenedSortHarness />);
 
   chooseLastOpenedSort();
   expect(rowTitles()).toEqual(['Latest', 'Earlier']);
@@ -204,7 +205,7 @@ it('does not move a newly opened topic to the top while the folder stays open', 
     },
     trashedNodeIds: []
   }));
-  render(<StoreBackedLastOpenedHarness />);
+  renderWithLocalization(<StoreBackedLastOpenedHarness />);
 
   chooseLastOpenedSort();
   expect(rowTitles()).toEqual(['Opened latest', 'Opened earlier', 'Newly opened']);
@@ -215,7 +216,7 @@ it('does not move a newly opened topic to the top while the folder stays open', 
 });
 
 it('keeps the refreshed last-opened order after leaving and returning to a folder', () => {
-  render(<LastOpenedFolderSwitchHarness />);
+  renderWithLocalization(<LastOpenedFolderSwitchHarness />);
 
   chooseLastOpenedSort();
   expect(rowTitles()).toEqual(['Latest', 'Earlier']);
@@ -239,7 +240,7 @@ it('keeps the refreshed last-opened order after leaving and returning to a folde
 });
 
 it('keeps derived children independent from last-opened sorting', () => {
-  render(<LastOpenedDerivedChildrenHarness />);
+  renderWithLocalization(<LastOpenedDerivedChildrenHarness />);
 
   chooseLastOpenedSort();
 

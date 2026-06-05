@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
 
@@ -51,7 +52,7 @@ it('allows long markdown link tokens to wrap inside the highlights sidebar', () 
     parentNodeId: 'node-parent'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}
@@ -92,7 +93,7 @@ it('keeps highlight summaries stable when child node content changes', () => {
     id: 'node-highlight',
     parentNodeId: 'node-parent'
   });
-  const { rerender } = render(
+  const { rerender } = renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}
@@ -153,7 +154,7 @@ it('projects markdown syntax out of highlight summaries', () => {
     parentNodeId: 'node-parent'
   });
 
-  render(
+  renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId="node-parent"
       nodeOrder={['node-parent', 'node-highlight']}

@@ -1,3 +1,4 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton } from '../../shared/ui';
 
 import { ArrowLeftIcon, ArrowRightIcon } from './DocumentPanelHeaderIcons';
@@ -10,6 +11,7 @@ export interface FolderListNavigationOverlayProps {
 }
 
 export function FolderListNavigationOverlay(props: FolderListNavigationOverlayProps) {
+  const t = useTranslation();
   if (!props.canGoBack && !props.canGoForward) {
     return null;
   }
@@ -22,14 +24,14 @@ export function FolderListNavigationOverlay(props: FolderListNavigationOverlayPr
             className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
             disabled={!props.canGoBack}
             icon={<ArrowLeftIcon />}
-            label="Go back"
+            label={t('desktop.navigation.back')}
             onClick={props.onGoBack}
           />
           <AppIconButton
             className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
             disabled={!props.canGoForward}
             icon={<ArrowRightIcon />}
-            label="Go forward"
+            label={t('desktop.navigation.forward')}
             onClick={props.onGoForward}
           />
         </div>

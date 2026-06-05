@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { translate } from '../shared/localization/translations';
+
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
 
 function buildTopBarProps(settingsPage = 'list') {
   return resolveCompanionTopBarProps(
+    (key, params) => translate('en', key, params),
     { activeAction: 'more' } as never,
     settingsPage as never,
     false,

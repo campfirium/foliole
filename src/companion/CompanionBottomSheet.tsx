@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
   AppDialog,
   AppDialogClose,
@@ -16,6 +17,8 @@ export function CompanionBottomSheet(props: {
   open: boolean;
   title: string;
 }) {
+  const t = useTranslation();
+
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
       <AppDialogPortal>
@@ -27,7 +30,7 @@ export function CompanionBottomSheet(props: {
               {props.leadingAction}
               <AppDialogTitle>{props.title}</AppDialogTitle>
               <AppDialogClose className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle">
-                Cancel
+                {t('common.cancel')}
               </AppDialogClose>
             </div>
             <div className="min-h-0 overflow-y-auto">{props.children}</div>

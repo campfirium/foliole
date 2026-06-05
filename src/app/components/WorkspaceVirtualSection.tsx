@@ -10,6 +10,7 @@ import {
   isVirtualRootNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { compareVirtualNodeTitle } from './workspaceVirtualNodeSort';
@@ -60,6 +61,7 @@ function renderSavedSearchContextMenu(args: {
 }
 
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
+  const t = useTranslation();
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const [contextMenu, setContextMenu] = useState<{ left: number; nodeId: string; top: number } | null>(null);
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
@@ -89,7 +91,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
   return (
     <div className="mt-1 flex min-w-0 flex-col">
       <div aria-hidden="true" className="mx-4 border-t border-border/15" />
-      <section aria-label="Virtual folder tree" className="flex flex-col pt-1" role="tree">
+      <section aria-label={t('desktop.workspace.virtualFolderTree')} className="flex flex-col pt-1" role="tree">
         {renderVirtualRows({
           collapsedIds,
           onRowKeyDown,

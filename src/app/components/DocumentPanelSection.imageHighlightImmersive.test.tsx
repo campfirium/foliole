@@ -1,9 +1,9 @@
-import { render } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 
@@ -103,7 +103,7 @@ function createImageHighlightNodes(): Record<string, Node> {
 }
 
 function renderImageHighlightImmersivePanel() {
-  return render(<DocumentPanelSection {...DOCUMENT_PANEL_PROPS} nodesById={createImageHighlightNodes()} />);
+  return renderWithLocalization(<DocumentPanelSection {...DOCUMENT_PANEL_PROPS} nodesById={createImageHighlightNodes()} />);
 }
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({

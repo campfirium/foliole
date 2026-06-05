@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import type { SourceUpdateOverviewKind, SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
 
@@ -34,14 +35,16 @@ function getMarkerClassName(kind: SourceUpdateOverviewKind, active: boolean) {
   return active ? 'bg-foreground/85' : 'bg-foreground/55 hover:bg-foreground';
 }
 
-function getMarkerLabel(segment: SourceUpdateOverviewSegment) {
+type Translate = ReturnType<typeof useTranslation>;
+
+function getMarkerLabel(t: Translate, segment: SourceUpdateOverviewSegment) {
   if (segment.kind === 'current-only') {
-    return `Jump to lines only in current draft around row ${segment.row}`;
+    return t('desktop.sourceUpdate.overview.marker.currentOnly', { row: segment.row });
   }
   if (segment.kind === 'updated-only') {
-    return `Jump to lines only in updated source around row ${segment.row}`;
+    return t('desktop.sourceUpdate.overview.marker.updatedOnly', { row: segment.row });
   }
-  return `Jump to changed lines around row ${segment.row}`;
+  return t('desktop.sourceUpdate.overview.marker.changed', { row: segment.row });
 }
 
 function jumpEditorsToSegment(
@@ -113,6 +116,7 @@ function OverviewNavButton(props: {
 }
 
 function renderOverviewMarkers(
+  t: Translate,
   activeIndex: number,
   overviewSegments: SourceUpdateOverviewSegment[],
   totalRows: number,
@@ -124,7 +128,7 @@ function renderOverviewMarkers(
 
     return (
       <button
-        aria-label={getMarkerLabel(segment)}
+        aria-label={getMarkerLabel(t, segment)}
         className={`pointer-events-auto absolute inset-x-0 transition-colors ${getMarkerClassName(segment.kind, index === activeIndex)}`}
         data-kind={segment.kind}
         data-testid="source-update-overview-marker"
@@ -158,6 +162,7 @@ export function SourceUpdateOverviewRuler({
   updatedContent: string;
   updatedEditor: EditorAdapter | null;
 }) {
+  const t = useTranslation();
   const currentLineStarts = useMemo(() => buildLineStartPositions(currentContent), [currentContent]);
   const updatedLineStarts = useMemo(() => buildLineStartPositions(updatedContent), [updatedContent]);
   const { activeIndex, setActiveIndex } = useActiveOverviewIndex(overviewSegments);
@@ -180,19 +185,19 @@ export function SourceUpdateOverviewRuler({
   };
   return (
     <aside
-      aria-label="Comparison overview ruler"
+      aria-label={t('desktop.sourceUpdate.overview.aria')}
       className="flex min-h-0 flex-1 flex-col items-center gap-2 px-1 py-3"
       data-testid="source-update-overview-ruler"
     >
-      <OverviewNavButton ariaLabel="Jump to previous diff" onClick={moveToPrevious}>
+      <OverviewNavButton ariaLabel={t('desktop.sourceUpdate.overview.previous')} onClick={moveToPrevious}>
         <ChevronUp aria-hidden="true" size={12} strokeWidth={2.2} />
       </OverviewNavButton>
       <div className="pointer-events-none relative flex-1 w-3">
-        {renderOverviewMarkers(activeIndex, overviewSegments, totalRows, (index) =>
+        {renderOverviewMarkers(t, activeIndex, overviewSegments, totalRows, (index) =>
           revealSegmentAtIndex(index, overviewSegments, handleRevealSegment, setActiveIndex)
         )}
       </div>
-      <OverviewNavButton ariaLabel="Jump to next diff" onClick={moveToNext}>
+      <OverviewNavButton ariaLabel={t('desktop.sourceUpdate.overview.next')} onClick={moveToNext}>
         <ChevronDown aria-hidden="true" size={12} strokeWidth={2.2} />
       </OverviewNavButton>
     </aside>

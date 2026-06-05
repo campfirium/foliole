@@ -1,3 +1,5 @@
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+
 import { settingsColorSwatchClassName, settingsPaletteButtonClassName } from '@/shared/ui';
 
 function AutomaticPalettePreview(props: { palette: string[] }) {
@@ -20,9 +22,10 @@ export function WorkspaceSurfaceAutomaticPaletteCard(props: {
   onClick: () => void;
   palette: string[];
 }) {
+  const t = useTranslation();
   return (
     <button
-      aria-label="Apply automatic palette"
+      aria-label={t('settings.appearance.surface.applyAutomaticPalette')}
       className={settingsPaletteButtonClassName(props.activeMode === 'automatic')}
       onClick={props.onClick}
       type="button"

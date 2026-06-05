@@ -1,3 +1,4 @@
+import { useLocalization, useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   setActionHelpCardsEnabled,
   useActionHelpCardsEnabled
@@ -19,6 +20,7 @@ import {
   DEFAULT_HIGHLIGHT_COLOR_PRESET,
   DEFAULT_SELECTION_COLOR_PRESET
 } from '../../model/appearanceSettings';
+import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useSettingsFontOptions } from '../useSettingsFontOptions';
 
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
@@ -27,6 +29,7 @@ import {
   AppearanceDarkModeContentSection,
   AppearanceReadingColorSection
 } from './SettingsAppearanceColorSections';
+import { SettingsSelectRow } from './settingsAppearanceControls';
 import { SettingsAppearanceFontSection } from './SettingsAppearanceFontSection';
 import { WorkspaceDividerSettingsSection } from './WorkspaceDividerSettingsSection';
 import { WorkspaceSurfaceColorSection } from './WorkspaceSurfaceColorSection';
@@ -74,18 +77,19 @@ function useAppearanceSectionState() {
 
 function AppearanceColorModeSection(props: ReturnType<typeof useAppearanceSectionState>) {
   const { appearance } = props;
+  const t = useTranslation();
 
   return (
-    <SettingsSection ariaLabel="Appearance color mode section" title="Color mode">
+    <SettingsSection ariaLabel={t('settings.appearance.colorMode.aria')} title={t('settings.appearance.colorMode.section')}>
       <SettingsSegmentedRow
-        ariaLabel="Mode"
-        description="Choose whether Foliole stays light, stays dark, or follows the system appearance."
-        label="Base color mode"
+        ariaLabel={t('settings.appearance.colorMode.modeAria')}
+        description={t('settings.appearance.colorMode.description')}
+        label={t('settings.appearance.colorMode.row')}
         onChange={(value) => appearance.setBaseColorMode(value as typeof appearance.baseColorMode)}
         options={[
-          { label: 'Light', value: 'light' },
-          { label: 'Dark', value: 'dark' },
-          { label: 'System', value: 'system' }
+          { label: t('settings.appearance.colorMode.light'), value: 'light' },
+          { label: t('settings.appearance.colorMode.dark'), value: 'dark' },
+          { label: t('settings.appearance.colorMode.system'), value: 'system' }
         ]}
         value={appearance.baseColorMode}
       />
@@ -94,17 +98,18 @@ function AppearanceColorModeSection(props: ReturnType<typeof useAppearanceSectio
 }
 
 function InterfaceBehaviorSection() {
+  const t = useTranslation();
   const actionHelpEnabled = useActionHelpCardsEnabled();
   return (
-    <SettingsSection ariaLabel="Interface behavior settings section" title="Interface">
+    <SettingsSection ariaLabel={t('settings.appearance.interface.aria')} title={t('settings.appearance.interface.section')}>
       <SettingsRow
-        description="Pause on an action to see what it does, when context is available."
-        title="Action help on hover"
+        description={t('settings.appearance.actionHelp.description')}
+        title={t('settings.appearance.actionHelp.row')}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <button
             aria-checked={actionHelpEnabled}
-            aria-label="Action help on hover"
+            aria-label={t('settings.appearance.actionHelp.row')}
             className={settingsSwitchClassName(actionHelpEnabled)}
             onClick={() => setActionHelpCardsEnabled(!actionHelpEnabled)}
             role="switch"
@@ -117,6 +122,28 @@ function InterfaceBehaviorSection() {
           </button>
         </SettingsControlSlot>
       </SettingsRow>
+    </SettingsSection>
+  );
+}
+
+function AppearanceLanguageSection() {
+  const { locale, setLocale } = useLocalization();
+  const t = useTranslation();
+  return (
+    <SettingsSection ariaLabel={t('settings.appearance.language.section')} title={t('settings.appearance.language.section')}>
+      <div {...settingsSearchRowProps({ categoryId: 'appearance', id: 'appearance-app-language', title: '', description: '' })}>
+        <SettingsSelectRow
+          ariaLabel={t('settings.appearance.language.aria')}
+          description={t('settings.appearance.language.description')}
+          label={t('settings.appearance.language.row')}
+          onChange={(value) => setLocale(value === 'zh-Hans' ? 'zh-Hans' : 'en')}
+          options={[
+            { label: t('language.en'), value: 'en' },
+            { label: t('language.zhHans'), value: 'zh-Hans' }
+          ]}
+          value={locale}
+        />
+      </div>
     </SettingsSection>
   );
 }
@@ -159,6 +186,7 @@ export function SettingsAppearanceSection(props: {
   const state = useAppearanceSectionState();
   return (
     <>
+      <AppearanceLanguageSection />
       <AppearanceColorModeSection {...state} />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <WorkspaceDividerSettingsSection />

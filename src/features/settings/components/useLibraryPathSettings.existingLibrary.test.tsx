@@ -2,6 +2,7 @@ import { act, fireEvent, renderHook, screen, waitFor, within } from '@testing-li
 import type { ReactNode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { selectRuntimeFolder } from '../../../shared/platform/folderSelectionRuntimeRepository';
 import {
   EXISTING_LIBRARY_HOME_CONFIRMATION_ERROR,
@@ -41,7 +42,11 @@ const mockedLoadRuntimeLibraryPathSettings = vi.mocked(loadRuntimeLibraryPathSet
 const mockedUpdateRuntimeLibraryPathSetting = vi.mocked(updateRuntimeLibraryPathSetting);
 
 function ConfirmationWrapper({ children }: { children: ReactNode }) {
-  return <AppConfirmationProvider>{children}</AppConfirmationProvider>;
+  return (
+    <LocalizationProvider>
+      <AppConfirmationProvider>{children}</AppConfirmationProvider>
+    </LocalizationProvider>
+  );
 }
 
 beforeEach(() => {

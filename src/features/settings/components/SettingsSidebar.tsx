@@ -13,13 +13,15 @@ import {
   PanelLeft,
   Pencil,
   RefreshCw,
+  SlidersHorizontal,
   type LucideIcon
 } from 'lucide-react';
 
 import folioleAppIconUrl from '../../../../assets/brand/foliole-app-icon.png?url';
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
   getSettingsCategoryOption,
-  SETTINGS_CATEGORY_GROUPS,
+  getSettingsCategoryGroups,
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
 
@@ -29,6 +31,7 @@ import { AppButton, AppPanel } from '@/shared/ui';
 
 const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   about: Info,
+  general: SlidersHorizontal,
   appearance: Palette,
   editor: Pencil,
   'web-lookup': Globe2,
@@ -48,18 +51,20 @@ export function SettingsSidebar(props: {
   activeCategory: SettingsCategoryId;
   setActiveCategory: (category: SettingsCategoryId) => void;
 }) {
+  const t = useTranslation();
+  const groups = getSettingsCategoryGroups(t);
   return (
     <AppPanel
       as="aside"
-      ariaLabel="Settings categories"
+      ariaLabel={t('settings.sidebar.aria')}
       bodyClassName="px-4 pb-5 pt-3"
       className="border-r border-settings-divider"
       headerClassName="min-h-[64px] border-b border-settings-divider/55 px-5 py-3"
       surfaceClassName="bg-settings-sidebar"
       title={<SettingsSidebarBrand />}
     >
-      <nav aria-label="Settings navigation" className="flex flex-col gap-4">
-        {SETTINGS_CATEGORY_GROUPS.map((group) => (
+      <nav aria-label={t('settings.navigation.aria')} className="flex flex-col gap-4">
+        {groups.map((group) => (
           <SettingsSidebarGroup
             activeCategory={props.activeCategory}
             group={group}
@@ -95,9 +100,10 @@ function SettingsSidebarBrand() {
 
 function SettingsSidebarGroup(props: {
   activeCategory: SettingsCategoryId;
-  group: (typeof SETTINGS_CATEGORY_GROUPS)[number];
+  group: ReturnType<typeof getSettingsCategoryGroups>[number];
   setActiveCategory: (category: SettingsCategoryId) => void;
 }) {
+  const t = useTranslation();
   return (
     <div className="relative pt-4 before:absolute before:left-3 before:right-3 before:top-0 before:border-t before:border-settings-divider/65 first:pt-0 first:before:hidden">
       <div className="mb-1 flex items-center gap-2 px-3 text-[0.72rem] font-semibold uppercase leading-5 tracking-[0.12em] text-foreground/58">
@@ -105,7 +111,7 @@ function SettingsSidebarGroup(props: {
       </div>
       <div className="flex flex-col gap-0.5">
         {props.group.categoryIds.map((categoryId) => {
-          const category = getSettingsCategoryOption(categoryId);
+          const category = getSettingsCategoryOption(categoryId, t);
           return category ? (
             <SettingsSidebarItem
               active={category.id === props.activeCategory}

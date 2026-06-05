@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
+import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import { getEnabledWebLookupEntries } from '../../../../shared/platform/webLookupEntries';
 
 import { SettingsWebLookupSection } from './SettingsWebLookupSection';
@@ -10,20 +11,20 @@ beforeEach(() => {
 });
 
 it('shows built-in right-click menu items with DuckDuckGo disabled by default', () => {
-  render(<SettingsWebLookupSection />);
+  renderWithLocalization(<SettingsWebLookupSection />);
 
   expect(screen.getByRole('heading', { name: 'Right-click menu items' })).toBeInTheDocument();
-  expect(screen.getByDisplayValue('Ask ChatGPT')).toBeInTheDocument();
+  expect(screen.getByDisplayValue('Chat with ChatGPT')).toBeInTheDocument();
   expect(screen.getByDisplayValue('Search with Google')).toBeInTheDocument();
   expect(screen.getByDisplayValue('Search with DuckDuckGo')).toBeInTheDocument();
   expect(screen.getByRole('switch', { name: 'Show menu item: Search with DuckDuckGo' })).toHaveAttribute('aria-checked', 'false');
-  expect(screen.queryByRole('button', { name: 'Remove Ask ChatGPT' })).toBeNull();
-  expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Ask ChatGPT link' }).value)
+  expect(screen.queryByRole('button', { name: 'Remove Chat with ChatGPT' })).toBeNull();
+  expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Chat with ChatGPT link' }).value)
     .toContain('{title}');
 });
 
 it('toggles whether an entry appears in the context menu', () => {
-  render(<SettingsWebLookupSection />);
+  renderWithLocalization(<SettingsWebLookupSection />);
 
   fireEvent.click(screen.getByRole('switch', { name: 'Show menu item: Search with DuckDuckGo' }));
 
@@ -36,9 +37,9 @@ it('toggles whether an entry appears in the context menu', () => {
 });
 
 it('updates the ChatGPT menu label and link', () => {
-  render(<SettingsWebLookupSection />);
+  renderWithLocalization(<SettingsWebLookupSection />);
 
-  fireEvent.change(screen.getByRole('textbox', { name: 'Ask ChatGPT menu label' }), {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Chat with ChatGPT menu label' }), {
     target: { value: 'Ask' }
   });
   fireEvent.change(screen.getByRole('textbox', { name: 'Ask link' }), {
@@ -51,7 +52,7 @@ it('updates the ChatGPT menu label and link', () => {
 });
 
 it('adds and removes a custom menu item', () => {
-  render(<SettingsWebLookupSection />);
+  renderWithLocalization(<SettingsWebLookupSection />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Add menu item' }));
   expect(screen.getByDisplayValue('New menu item')).toBeInTheDocument();
@@ -61,7 +62,7 @@ it('adds and removes a custom menu item', () => {
 });
 
 it('reorders menu items by dragging the handle', () => {
-  render(<SettingsWebLookupSection />);
+  renderWithLocalization(<SettingsWebLookupSection />);
 
   fireEvent.drop(screen.getByTestId('web-lookup-row-chatgpt'), {
     dataTransfer: { getData: () => 'google' }

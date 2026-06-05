@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 
 import type { EditorAdapter, EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import type { SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
@@ -131,6 +132,7 @@ function buildUpdatedPaneProps(props: SourceUpdatePanelColumnsProps): ComponentP
 }
 
 export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
+  const t = useTranslation();
   const currentPaneProps = buildCurrentPaneProps(props);
   const updatedPaneProps = buildUpdatedPaneProps(props);
 
@@ -142,13 +144,13 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
       />
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
         <PanelColumnLabel
-          description="This side keeps the same reading and editing feel as the main document, stays vertically synced with the updated source, and leaves aligned gaps where the source has extra lines."
-          title="Current"
+          description={t('desktop.sourceUpdate.current.description')}
+          title={t('desktop.sourceUpdate.current.title')}
         />
         <div className="border-l border-border bg-bg-panel/40">
           <PanelColumnLabel
-            description="This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines."
-            title="Updated Source"
+            description={t('desktop.sourceUpdate.updated.description')}
+            title={t('desktop.sourceUpdate.updated.title')}
           />
         </div>
         <div aria-hidden="true" className="border-b border-l border-border bg-bg-panel/40" />

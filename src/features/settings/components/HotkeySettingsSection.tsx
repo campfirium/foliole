@@ -2,6 +2,7 @@ import { CirclePlus, X } from 'lucide-react';
 import { Fragment, useEffect, useRef } from 'react';
 
 import { cn } from '../../../shared/lib/utils';
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
   settingsHotkeyChipClassName,
   settingsHotkeyChipClearClassName,
@@ -50,8 +51,9 @@ function HotkeyChip(props: {
   onBeginRecording: HotkeyRowProps['onBeginRecording'];
   onClearShortcut: HotkeyRowProps['onClearShortcut'];
 }) {
+  const t = useTranslation();
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const displayLabel = props.isRecording ? 'Press hotkey...' : props.label || 'Blank';
+  const displayLabel = props.isRecording ? t('settings.hotkeys.recording') : props.label || t('settings.hotkeys.blank');
   const chipState = props.isRecording ? 'recording' : props.label ? 'assigned' : 'empty';
 
   useEffect(() => {
@@ -74,7 +76,7 @@ function HotkeyChip(props: {
       </button>
       {props.label && !props.isRecording ? (
         <button
-          aria-label={`Clear ${props.ariaLabel}`}
+          aria-label={t('settings.hotkeys.clearShortcut', { label: props.ariaLabel })}
           className={settingsHotkeyChipClearClassName()}
           onClick={() => props.onClearShortcut(props.commandId, props.slot)}
           type="button"
@@ -105,6 +107,7 @@ function getDisplayEntries(item: HotkeySettingItem) {
 }
 
 function HotkeyRow({ item, message, recordingSlot, onBeginRecording, onClearShortcut }: HotkeyRowProps) {
+  const t = useTranslation();
   const primaryLabel = item.primaryShortcutLabel;
   const secondaryLabel = item.secondaryShortcutLabel;
   const addSlot: HotkeySlot = primaryLabel ? 'secondary' : 'primary';
@@ -118,7 +121,7 @@ function HotkeyRow({ item, message, recordingSlot, onBeginRecording, onClearShor
       <div className="min-w-0">
         <div className="truncate text-[0.95rem] text-foreground">{item.title}</div>
         <div className={cn('mt-0.5 truncate text-sm', conflictClassName(item))}>
-          {item.conflictMessage ?? item.section ?? 'Other'}
+          {item.conflictMessage ?? item.section ?? t('settings.hotkeys.otherSection')}
         </div>
       </div>
       <div className="flex min-w-0 items-center justify-end gap-1.5">
@@ -127,7 +130,7 @@ function HotkeyRow({ item, message, recordingSlot, onBeginRecording, onClearShor
             {index > 0 ? <span className="text-foreground/45">,</span> : null}
             {entry.slot === 'primary' || entry.slot === 'secondary' ? (
               <HotkeyChip
-                ariaLabel={`${entry.slot === 'primary' ? 'Shortcut' : 'Secondary shortcut'} for ${item.title}`}
+                ariaLabel={t(entry.slot === 'primary' ? 'settings.hotkeys.primaryShortcutFor' : 'settings.hotkeys.secondaryShortcutFor', { title: item.title })}
                 commandId={item.commandId}
                 isRecording={recordingSlot === entry.slot}
                 label={entry.label}
@@ -142,7 +145,7 @@ function HotkeyRow({ item, message, recordingSlot, onBeginRecording, onClearShor
         ))}
         {!secondaryLabel ? (
           <button
-            aria-label={`Add shortcut for ${item.title}`}
+            aria-label={t('settings.hotkeys.addShortcut', { title: item.title })}
             className={HOTKEY_ICON_BUTTON_CLASS_NAME}
             onClick={() => onBeginRecording(item.commandId, addSlot)}
             type="button"
@@ -160,8 +163,10 @@ function HotkeyList(props: {
   items: HotkeySettingItem[];
   model: ReturnType<typeof useHotkeySectionModel>;
 }) {
+  const t = useTranslation();
+
   return (
-    <div aria-label="Command shortcut list" role="list">
+    <div aria-label={t('settings.hotkeys.commandList')} role="list">
       {props.items.map((item) => {
         const draft = props.model.draftById[item.commandId];
         const hasDraftChange = Boolean(draft && (draft.primary !== item.primaryShortcutLabel || draft.secondary !== item.secondaryShortcutLabel));
@@ -189,7 +194,7 @@ function HotkeyList(props: {
         );
       })}
       {!props.items.length ? (
-        <p className="border-t border-settings-divider/55 px-5 py-4 text-foreground/65">No matching hotkeys.</p>
+        <p className="border-t border-settings-divider/55 px-5 py-4 text-foreground/65">{t('settings.hotkeys.empty')}</p>
       ) : null}
     </div>
   );
@@ -197,9 +202,10 @@ function HotkeyList(props: {
 
 export function HotkeySettingsSection({ items, onUpdate, onResetAll }: HotkeySettingsSectionProps) {
   void onResetAll;
+  const t = useTranslation();
   const model = useHotkeySectionModel(items, onUpdate);
   return (
-    <SettingsSection ariaLabel="Hotkeys settings section">
+    <SettingsSection ariaLabel={t('settings.hotkeys.sectionAria')}>
       <div className="bg-settings-group">
         <HotkeySearchPanel
           count={model.filteredItems.length}

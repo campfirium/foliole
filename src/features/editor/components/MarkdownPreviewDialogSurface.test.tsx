@@ -1,5 +1,6 @@
-import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 
 import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
 import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
@@ -26,7 +27,7 @@ function expectSharedPreviewOverlay() {
 
 describe('Markdown preview dialog surface', () => {
   it('keeps image preview overlay on shared theme-aware floating tokens', () => {
-    render(
+    renderWithLocalization(
       <MarkdownImagePreviewDialog
         image={{ alt: 'Cover', presentation: null, src: 'https://example.com/cover.png' }}
         onOpenChange={vi.fn()}
@@ -37,7 +38,7 @@ describe('Markdown preview dialog surface', () => {
   });
 
   it('keeps table preview overlay on shared theme-aware floating tokens', () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={TABLE_PREVIEW} />);
 
     expectSharedPreviewOverlay();
   });

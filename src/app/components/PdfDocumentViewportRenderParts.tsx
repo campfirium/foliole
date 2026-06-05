@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Document } from 'react-pdf';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
+
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import type { PdfPageDimensions } from './pdfPageDimensions';
@@ -43,6 +45,7 @@ interface PdfViewportDocumentProps {
 }
 
 export function PdfViewportDocument(props: PdfViewportDocumentProps) {
+  const t = useTranslation();
   const persistedPageDimensions = props.persistedPageDimensions ?? {};
   const [pageDimensionsByNumber, setPageDimensionsByNumber] = useState<Record<number, PdfPageDimensions>>(persistedPageDimensions);
   const [isDocumentLoaded, setIsDocumentLoaded] = useState(false);
@@ -81,6 +84,7 @@ export function PdfViewportDocument(props: PdfViewportDocumentProps) {
     pageDimensionsByNumber,
     isLayoutReady,
     hasCompletePageMetrics,
+    t('desktop.pdf.noFile'),
     setIsDocumentLoaded,
     setPageDimensionsByNumber
   );
@@ -91,6 +95,7 @@ function renderPdfDocument(
   pageDimensionsByNumber: Record<number, PdfPageDimensions>,
   isLayoutReady: boolean,
   hasCompletePageMetrics: boolean,
+  noDataLabel: string,
   setIsDocumentLoaded: Dispatch<SetStateAction<boolean>>,
   setPageDimensionsByNumber: Dispatch<SetStateAction<Record<number, PdfPageDimensions>>>
 ) {
@@ -116,7 +121,7 @@ function renderPdfDocument(
         data-testid="pdf-document-view"
         file={props.pdfSource}
         loading={null}
-        noData={<p className="text-sm text-foreground/70">No PDF file selected.</p>}
+        noData={<p className="text-sm text-foreground/70">{noDataLabel}</p>}
         onLoadError={(error) => props.onLoadError(error.message || 'Failed to load PDF document.')}
         onLoadSuccess={handleDocumentLoadSuccess}
       >

@@ -1,0 +1,116 @@
+import type { AppCommandId } from '../../shared/commands/ids';
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { translate, type TranslationKey } from '../../shared/localization/translations';
+
+const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
+  [APP_COMMAND_IDS.createFolder]: 'desktop.command.createFolder',
+  [APP_COMMAND_IDS.createTopic]: 'desktop.command.createTopic',
+  [APP_COMMAND_IDS.createItem]: 'desktop.command.createItem',
+  [APP_COMMAND_IDS.createVirtualNode]: 'desktop.command.createVirtualNode',
+  [APP_COMMAND_IDS.undo]: 'desktop.command.undo',
+  [APP_COMMAND_IDS.redo]: 'desktop.command.redo',
+  [APP_COMMAND_IDS.importSingleFile]: 'desktop.command.importFiles',
+  [APP_COMMAND_IDS.importFolder]: 'desktop.command.importFolder',
+  [APP_COMMAND_IDS.clipboardImport]: 'desktop.command.importClipboard',
+  [APP_COMMAND_IDS.openImportManagement]: 'desktop.command.openImportManagement',
+  [APP_COMMAND_IDS.openTrash]: 'desktop.command.openTrash',
+  [APP_COMMAND_IDS.openGuidedSample]: 'desktop.command.openGuidedSample',
+  [APP_COMMAND_IDS.renameNode]: 'desktop.command.rename',
+  [APP_COMMAND_IDS.exportCurrentArticle]: 'desktop.command.exportCurrentTopic',
+  [APP_COMMAND_IDS.mergeHighlightsIntoTopic]: 'desktop.command.mergeHighlights',
+  [APP_COMMAND_IDS.createSelectionHighlight]: 'desktop.command.highlightSelection',
+  [APP_COMMAND_IDS.createSelectionCloze]: 'desktop.command.clozeSelection',
+  [APP_COMMAND_IDS.addSelectionNote]: 'desktop.command.annotateSelection',
+  [APP_COMMAND_IDS.repairTable]: 'desktop.command.repairTable',
+  [APP_COMMAND_IDS.restartApp]: 'desktop.command.restartApp',
+  [APP_COMMAND_IDS.toggleList]: 'desktop.command.toggleLeftSidebar',
+  [APP_COMMAND_IDS.toggleRightSidebar]: 'desktop.command.toggleRightSidebar',
+  [APP_COMMAND_IDS.toggleBothSidebars]: 'desktop.command.toggleBothSidebars',
+  [APP_COMMAND_IDS.toggleDevTools]: 'desktop.command.toggleDevTools',
+  [APP_COMMAND_IDS.openHelpSearch]: 'desktop.command.openHelpSearch',
+  [APP_COMMAND_IDS.goBack]: 'desktop.command.goBack',
+  [APP_COMMAND_IDS.goForward]: 'desktop.command.goForward',
+  [APP_COMMAND_IDS.goToNode]: 'desktop.command.goToNode',
+  [APP_COMMAND_IDS.moveToNode]: 'desktop.command.moveToNode',
+  [APP_COMMAND_IDS.goParent]: 'desktop.command.goParent',
+  [APP_COMMAND_IDS.findInTopic]: 'desktop.command.findInTopic',
+  [APP_COMMAND_IDS.toggleDismissedTopicsVisibility]: 'desktop.command.toggleDismissedTopicsVisibility',
+  [APP_COMMAND_IDS.enterPriorityMode]: 'desktop.command.setPriority',
+  [APP_COMMAND_IDS.toggleEditorDisplayMode]: 'desktop.command.toggleEditorDisplayMode',
+  [APP_COMMAND_IDS.openSettings]: 'desktop.command.openSettings',
+  [APP_COMMAND_IDS.openReadwiseReaderSettings]: 'desktop.command.openReadwiseReaderSettings',
+  [APP_COMMAND_IDS.toggleBaseColorMode]: 'desktop.command.toggleBaseColorMode',
+  [APP_COMMAND_IDS.setPdfDarkAppearanceOriginal]: 'desktop.command.pdfDarkOriginal',
+  [APP_COMMAND_IDS.setPdfDarkAppearanceInverted]: 'desktop.command.pdfDarkInverted',
+  [APP_COMMAND_IDS.setPdfDarkAppearanceWarm]: 'desktop.command.pdfDarkWarm',
+  [APP_COMMAND_IDS.closeSettings]: 'desktop.command.closeSettings',
+  [APP_COMMAND_IDS.checkForUpdates]: 'desktop.command.checkForUpdates',
+  [APP_COMMAND_IDS.openLatestRelease]: 'desktop.command.openReleases',
+  [APP_COMMAND_IDS.openGitHubRepository]: 'desktop.command.openRepository',
+  [APP_COMMAND_IDS.openGitHubIssues]: 'desktop.command.reportIssue',
+  [APP_COMMAND_IDS.openGitHubDiscussions]: 'desktop.command.openDiscussions',
+  [APP_COMMAND_IDS.startStudyMode]: 'desktop.command.flow.toggle',
+  [APP_COMMAND_IDS.revealReviewAnswer]: 'desktop.command.review.revealAnswer',
+  [APP_COMMAND_IDS.gradeReviewAgain]: 'desktop.command.review.gradeAgain',
+  [APP_COMMAND_IDS.gradeReviewHard]: 'desktop.command.review.gradeHard',
+  [APP_COMMAND_IDS.gradeReviewGood]: 'desktop.command.review.gradeGood',
+  [APP_COMMAND_IDS.gradeReviewEasy]: 'desktop.command.review.gradeEasy',
+  [APP_COMMAND_IDS.readingReviewSoon]: 'desktop.command.review.readingSoon',
+  [APP_COMMAND_IDS.readingReviewLater]: 'desktop.command.review.readingLater',
+  [APP_COMMAND_IDS.readingReviewPostpone]: 'desktop.command.review.postponeTopic',
+  [APP_COMMAND_IDS.readingReviewRead]: 'desktop.command.review.read',
+  [APP_COMMAND_IDS.readingReviewDismiss]: 'desktop.command.review.dismiss',
+  [APP_COMMAND_IDS.reviewScrollReadingDown]: 'desktop.command.review.scrollDown',
+  [APP_COMMAND_IDS.reviewScrollReadingUp]: 'desktop.command.review.scrollUp',
+  [APP_COMMAND_IDS.deleteCurrentReviewItem]: 'desktop.command.review.deleteCurrentItem',
+  [APP_COMMAND_IDS.reviewNavigateParent]: 'desktop.command.review.navigateParent',
+  [APP_COMMAND_IDS.reviewNavigateBack]: 'desktop.command.review.navigateBack',
+  [APP_COMMAND_IDS.reviewNavigateForward]: 'desktop.command.review.navigateForward',
+  [APP_COMMAND_IDS.reviewNavigateDown]: 'desktop.command.review.navigateDown',
+  [APP_COMMAND_IDS.reviewNavigatePreviousSibling]: 'desktop.command.review.navigatePreviousSibling',
+  [APP_COMMAND_IDS.reviewNavigateNextSibling]: 'desktop.command.review.navigateNextSibling',
+  [APP_COMMAND_IDS.deleteReviewSourceTopic]: 'desktop.command.review.deleteSourceTopic',
+  [APP_COMMAND_IDS.resetImportData]: 'desktop.command.dev.resetImportData',
+  [APP_COMMAND_IDS.reimportSelectedTopic]: 'desktop.command.dev.reimportSelectedTopic',
+  [APP_COMMAND_IDS.openPerformancePanel]: 'desktop.command.dev.openPerformancePanel'
+};
+
+const SECTION_KEYS: Record<string, TranslationKey> = {
+  Create: 'desktop.command.section.create',
+  Workspace: 'desktop.command.section.workspace',
+  Import: 'desktop.command.section.import',
+  Editor: 'desktop.command.section.editor',
+  Developer: 'desktop.command.section.developer',
+  Settings: 'desktop.command.section.settings',
+  Help: 'desktop.command.section.help',
+  Navigation: 'desktop.command.section.navigation',
+  Review: 'desktop.command.section.review',
+  Flow: 'desktop.command.section.flow'
+};
+
+export function localizePaletteCommandTitle(id: string, fallback: string) {
+  const key = COMMAND_TITLE_KEYS[id as AppCommandId];
+  return key ? translate(getStoredAppLocale(), key) : fallback;
+}
+
+export function localizePaletteCommandSection(section: string) {
+  const key = SECTION_KEYS[section];
+  return key ? translate(getStoredAppLocale(), key) : section;
+}
+
+export function resolveImmersiveModePaletteTitle(isImmersiveMode: boolean) {
+  return translate(
+    getStoredAppLocale(),
+    isImmersiveMode ? 'desktop.command.exitImmersiveReading' : 'desktop.command.enterImmersiveReading'
+  );
+}
+
+export function resolveReviewStatusMemoryPaletteTitle(isEnabled: boolean) {
+  return translate(
+    getStoredAppLocale(),
+    isEnabled
+      ? 'desktop.command.dev.disableReviewStatusMemory'
+      : 'desktop.command.dev.enableReviewStatusMemory'
+  );
+}

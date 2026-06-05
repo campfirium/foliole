@@ -3,6 +3,7 @@ import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import type { useWorkspaceTopicTreeInteraction } from './WorkspaceTopicTree';
@@ -29,13 +30,14 @@ export function renderWorkspaceTopicTreeShell(args: {
   setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
   onToggleDismissedTopicsVisibility: () => void;
   setSearchQuery: (value: string) => void;
+  t: Translate;
   scrollTargetNodeId?: string | null;
   showCreateTopic?: boolean;
   viewHideDismissedTopics: boolean;
   visibleRows: NodeTreeRow[];
 }) {
   return (
-    <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
+    <aside aria-label={args.t('desktop.workspace.currentFolderContents')} className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
       <WorkspaceTopicTreeHeaderBridge
         activeFolderId={args.activeFolderId}
         collapsibleNodeIds={args.collapsibleNodeIds}

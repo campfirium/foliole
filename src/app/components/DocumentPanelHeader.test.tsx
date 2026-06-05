@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 
@@ -41,7 +42,7 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
 }));
 
 it('shows the breadcrumb title without a kind label in the document header', () => {
-  render(
+  renderWithLocalization(
     <DocumentPanelHeader
       activeNodeId="node-1"
       backlinks={[]}
@@ -72,7 +73,7 @@ it('shows the breadcrumb title without a kind label in the document header', () 
 });
 
 it('keeps breadcrumb and priority controls on the document content rail', () => {
-  render(
+  renderWithLocalization(
     <DocumentPanelHeader
       activeNodeId="node-1"
       backlinks={[]}
@@ -111,7 +112,7 @@ it('keeps breadcrumb and priority controls on the document content rail', () => 
 });
 
 it('keeps the folder-mode header free of document controls', () => {
-  render(
+  renderWithLocalization(
     <DocumentPanelHeader
       activeNodeId="node-1"
       backlinks={[]}
@@ -156,7 +157,7 @@ it('keeps the folder-mode header free of document controls', () => {
 });
 
 it('shows a backlinks trigger with count and opens the inline backlinks menu', () => {
-  render(
+  renderWithLocalization(
     <DocumentPanelHeader
       activeNodeId="node-1"
       backlinks={[

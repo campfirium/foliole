@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import { createPortal } from 'react-dom';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 interface HighlightRangeHandlesProps {
   editor: EditorAdapter | null;
@@ -137,12 +138,14 @@ function HighlightRangeHandle(props: {
   position: HandlePosition;
   side: 'from' | 'to';
 }) {
+  const t = useTranslation();
+  const label = props.side === 'from' ? t('desktop.highlightRange.start') : t('desktop.highlightRange.end');
   const color = props.kind === 'cloze'
     ? 'rgb(var(--app-cloze-color-rgb) / 0.82)'
     : 'rgb(var(--app-highlight-color-rgb) / 0.82)';
   return (
     <button
-      aria-label={props.side === 'from' ? 'Adjust anchor start' : 'Adjust anchor end'}
+      aria-label={label}
       className="fixed z-floating flex w-4 cursor-ew-resize items-start justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-selection-blue/50"
       data-highlight-range-handle="true"
       onPointerDown={props.onPointerDown}
@@ -152,7 +155,7 @@ function HighlightRangeHandle(props: {
         top: props.position.top,
         transform: 'translateX(-50%)'
       }}
-      title={props.side === 'from' ? 'Adjust anchor start' : 'Adjust anchor end'}
+      title={label}
       type="button"
     >
       <span

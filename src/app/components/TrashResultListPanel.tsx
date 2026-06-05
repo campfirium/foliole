@@ -1,8 +1,6 @@
-import { Trash2 } from 'lucide-react';
 import { useMemo, useRef, useState, type RefObject } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
-import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
 import { NodeListStateSurface } from '../../features/nodes/components/NodeListStateSurface';
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -12,12 +10,12 @@ import { TrashListRows } from '../../features/nodes/components/TrashListRows';
 import { buildFlatNodeRows } from '../../features/nodes/model/nodeTree';
 import { filterTrashRootIdsByTitle, selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
+import { TrashResultHeader } from './TrashResultHeader';
 import { normalizeWorkspaceContentSort, sortTrashContentRows } from './workspaceContentSort';
-import { WorkspaceContentSortControls } from './WorkspaceContentSortControls';
 
 interface TrashResultListPanelProps {
   nodeOrder: string[];
@@ -51,6 +49,7 @@ function TrashRowsBody(props: {
   selectTrashNode: ReturnType<typeof useNodeSelectionHandler>;
   selectedNodeIds: string[];
 }) {
+  const t = useTranslation();
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({
@@ -65,10 +64,13 @@ function TrashRowsBody(props: {
   return (
     <NodeListStateSurface
       className="flex min-h-full items-center justify-center py-6"
-      emptyState={{ description: 'Deleted topics will appear here.', title: 'Trash is empty' }}
+      emptyState={{
+        description: t('desktop.nodeList.trash.empty.description'),
+        title: t('desktop.nodeList.trash.empty.title')
+      }}
       hasRows={props.rows.length > 0}
     >
-      <div aria-label="Trash topics" className="flex flex-col gap-2" role="tree">
+      <div aria-label={t('desktop.nodeList.trash.topics')} className="flex flex-col gap-2" role="tree">
         <TrashListRows
           activeNodeId={props.selectedNodeIds[0] ?? null}
           nodesById={props.nodesById}
@@ -116,6 +118,7 @@ function TrashContextMenu(props: {
 }
 
 export function TrashResultListPanel(props: TrashResultListPanelProps) {
+  const t = useTranslation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -137,7 +140,7 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
   const workspaceActions = useTrashWorkspaceActions();
 
   return (
-    <aside aria-label="Topic list panel" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
+    <aside aria-label={t('desktop.workspaceList.topicPanel')} className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
       <TrashResultHeader
         contentSort={contentSort}
         isSearchOpen={isSearchOpen}
@@ -187,48 +190,4 @@ function useTrashWorkspaceActions() {
     shelveNode: useWorkspaceStore((state) => state.shelveNode),
     unshelveNode: useWorkspaceStore((state) => state.unshelveNode)
   };
-}
-
-function TrashResultHeader(props: {
-  contentSort: ReturnType<typeof useWorkspaceContentSort>;
-  isSearchOpen: boolean;
-  onCloseSearch: () => void;
-  onOpenSearch: () => void;
-  onSearchQueryChange: (value: string) => void;
-  normalizedSort: ReturnType<typeof normalizeWorkspaceContentSort>;
-  searchQuery: string;
-  trashedNodeIds: string[];
-}) {
-  const deleteNodesPermanently = useWorkspaceStore((state) => state.deleteNodesPermanently);
-  return (
-    <AppToolbar as="header" className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4">
-      {renderSearchLauncher(props.onOpenSearch)}
-      <ToolbarActionGroup ariaLabel="Trash actions">
-        <WorkspaceContentSortControls
-          onChangeSortDirection={props.contentSort.setSortDirection}
-          onChangeSortKey={props.contentSort.setSortKey}
-          options={[
-            { key: 'deletedAt', label: 'Deleted time' },
-            { key: 'name', label: 'Name' }
-          ]}
-          sortDirection={props.normalizedSort.direction}
-          sortKey={props.normalizedSort.key}
-        />
-        <AppIconButton
-          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-          disabled={props.trashedNodeIds.length === 0}
-          icon={<Trash2 size={16} strokeWidth={1.9} />}
-          label="Empty trash"
-          onClick={() => deleteNodesPermanently(props.trashedNodeIds)}
-        />
-      </ToolbarActionGroup>
-      {props.isSearchOpen ? (
-        <NodeListSearchOverlay
-          onChangeSearchQuery={props.onSearchQueryChange}
-          onClose={props.onCloseSearch}
-          searchQuery={props.searchQuery}
-        />
-      ) : null}
-    </AppToolbar>
-  );
 }

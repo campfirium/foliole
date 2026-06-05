@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { useTranslation } from '../localization/LocalizationProvider';
+
 import { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
 import { AppButton } from './Button';
 import { READING_REVIEW_ACTION_HELP } from './reviewActionHelp';
@@ -8,11 +10,10 @@ import { renderOverlayDividedActions, ReviewOverlayActionButton } from './Review
 import { ToolbarActionGroup } from './ToolbarActionGroup';
 
 type ReviewActionItem = { key: string; node: ReactNode };
-type ReadingReviewActionLabel = 'Soon' | 'Later' | 'Read' | 'Dismiss';
 
 function ReadingReviewButton(props: {
   className: string;
-  label: ReadingReviewActionLabel;
+  label: string;
   onClick: () => void;
   surface: ReviewActionSurface;
 }) {
@@ -46,6 +47,7 @@ type ResolvedReadingReviewActionsProps = Required<
 };
 
 function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps) {
+  const t = useTranslation();
   const wrapWithHelpCard = (button: ReactNode, help: ActionHelpCardCopy) =>
     props.showActionHelp ? (
       <ActionHelpCard help={help} placement="above">
@@ -57,7 +59,7 @@ function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps
       ? {
           key: 'soon',
           node: wrapWithHelpCard(
-            <ReadingReviewButton className={props.buttonClassName} label="Soon" onClick={props.onRevisitReviewTopicSoon} surface={props.surface} />,
+            <ReadingReviewButton className={props.buttonClassName} label={t('desktop.reviewActions.reading.soon')} onClick={props.onRevisitReviewTopicSoon} surface={props.surface} />,
             READING_REVIEW_ACTION_HELP.soon
           )
         }
@@ -65,21 +67,21 @@ function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps
     {
       key: 'later',
       node: wrapWithHelpCard(
-        <ReadingReviewButton className={props.buttonClassName} label="Later" onClick={props.onPostponeReviewTopic} surface={props.surface} />,
+        <ReadingReviewButton className={props.buttonClassName} label={t('desktop.reviewActions.reading.later')} onClick={props.onPostponeReviewTopic} surface={props.surface} />,
         READING_REVIEW_ACTION_HELP.later
       )
     },
     {
       key: 'read',
       node: wrapWithHelpCard(
-        <ReadingReviewButton className={props.buttonClassName} label="Read" onClick={props.onReadReviewTopic} surface={props.surface} />,
+        <ReadingReviewButton className={props.buttonClassName} label={t('desktop.reviewActions.reading.read')} onClick={props.onReadReviewTopic} surface={props.surface} />,
         READING_REVIEW_ACTION_HELP.read
       )
     },
     {
       key: 'dismiss',
       node: wrapWithHelpCard(
-        <ReadingReviewButton className={props.buttonClassName} label="Dismiss" onClick={props.onDismissReviewTopic} surface={props.surface} />,
+        <ReadingReviewButton className={props.buttonClassName} label={t('desktop.reviewActions.reading.dismiss')} onClick={props.onDismissReviewTopic} surface={props.surface} />,
         READING_REVIEW_ACTION_HELP.dismiss
       )
     }
@@ -88,6 +90,7 @@ function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps
 }
 
 export function ReadingReviewActions(props: ReadingReviewActionsProps) {
+  const t = useTranslation();
   const surface = props.surface ?? 'panel';
   const readingActions = createReadingReviewActionItems({
     buttonClassName: props.actionButtonClassName ?? 'min-w-20 border-border px-4',
@@ -99,7 +102,7 @@ export function ReadingReviewActions(props: ReadingReviewActionsProps) {
     surface
   });
   return (
-    <ToolbarActionGroup ariaLabel="Reading review actions" className={props.groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`} data-review-toolbar-kind="reading">
+    <ToolbarActionGroup ariaLabel={t('desktop.reviewActions.reading.group')} className={props.groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`} data-review-toolbar-kind="reading">
       {renderOverlayDividedActions(readingActions, surface)}
     </ToolbarActionGroup>
   );

@@ -4,6 +4,7 @@ import { Document, Page } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource
@@ -134,17 +135,18 @@ function SimplePdfToolbar(props: {
   totalPages: number | null;
   zoom: number;
 }) {
+  const t = useTranslation();
   return (
     <div className="sticky top-0 z-surface flex items-center justify-between gap-2 border-b border-companion-divider bg-companion-surface px-1 py-2">
       {props.onBackToText ? (
         <AppButton onClick={props.onBackToText} variant="ghost">
-          Text
+          {t('desktop.pdf.simple.backToText')}
         </AppButton>
       ) : (
         <span aria-hidden="true" className="w-14" />
       )}
       <span className="text-xs text-companion-text-secondary">
-        {props.totalPages ? `${props.totalPages} pages` : '-'}
+        {props.totalPages ? t(props.totalPages === 1 ? 'desktop.pdf.simple.pageCount.one' : 'desktop.pdf.simple.pageCount.many', { count: props.totalPages }) : '-'}
       </span>
       <div className="flex items-center gap-1">
         <AppButton onClick={props.onZoomOut} variant="ghost">
@@ -165,6 +167,7 @@ export function SimplePdfDocument(props: {
   onMissingResource?: (attachmentId: string) => Promise<void> | void;
   title: string;
 }) {
+  const t = useTranslation();
   const { ref, width } = useElementWidth();
   const { source, state } = useAttachmentPdfSource(props.attachmentId, props.onMissingResource);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -182,15 +185,15 @@ export function SimplePdfDocument(props: {
     return (
       <section className="flex min-h-[calc(100dvh-9rem)] items-center justify-center py-6">
         <AppEmptyState
-          description={state === 'loading' && !loadFailed ? 'Preparing the synced PDF file.' : 'Sync this PDF attachment again from desktop.'}
-          title={state === 'loading' && !loadFailed ? 'Preparing PDF' : 'PDF file unavailable'}
+          description={state === 'loading' && !loadFailed ? t('desktop.pdf.simple.preparing.syncedFile') : t('desktop.pdf.simple.unavailable.description')}
+          title={state === 'loading' && !loadFailed ? t('desktop.pdf.simple.preparing.title') : t('desktop.pdf.simple.unavailable.title')}
         />
       </section>
     );
   }
 
   return (
-    <section aria-label={`${props.title} PDF reader`} className="pdf-document-surface flex min-h-[calc(100dvh-9rem)] flex-col" ref={ref}>
+    <section aria-label={t('desktop.pdf.simple.readerLabel', { title: props.title })} className="pdf-document-surface flex min-h-[calc(100dvh-9rem)] flex-col" ref={ref}>
       <SimplePdfToolbar
         {...(props.onBackToText ? { onBackToText: props.onBackToText } : {})}
         onZoomIn={() => setZoom((current) => clampPdfZoom(current + PDF_ZOOM_STEP))}
@@ -201,8 +204,8 @@ export function SimplePdfDocument(props: {
       <div className="min-h-0 flex-1 overflow-auto py-3">
         <Document
           file={source}
-          loading={<AppEmptyState description="Preparing the PDF page." title="Preparing PDF" />}
-          noData={<AppEmptyState description="The synced PDF file is empty." title="No PDF file selected" />}
+          loading={<AppEmptyState description={t('desktop.pdf.simple.preparing.page')} title={t('desktop.pdf.simple.preparing.title')} />}
+          noData={<AppEmptyState description={t('desktop.pdf.simple.noFile.description')} title={t('desktop.pdf.simple.noFile.title')} />}
           onLoadError={() => setLoadFailed(true)}
           onLoadSuccess={({ numPages }) => {
             setTotalPages(numPages);

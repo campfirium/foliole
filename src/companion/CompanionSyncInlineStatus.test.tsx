@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 function createWorkspaceSync(overrides: Record<string, unknown> = {}) {
   return {
@@ -24,7 +26,9 @@ describe('CompanionSyncInlineStatus visibility', () => {
   it('stays hidden while idle even when a sync endpoint is remembered', async () => {
     const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
 
-    render(<CompanionSyncInlineStatus onOpenSyncSettings={vi.fn()} workspaceSync={createWorkspaceSync() as never} />);
+    renderWithLocalization(
+      <CompanionSyncInlineStatus onOpenSyncSettings={vi.fn()} workspaceSync={createWorkspaceSync() as never} />
+    );
 
     expect(screen.queryByLabelText('Sync in progress')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
@@ -33,7 +37,7 @@ describe('CompanionSyncInlineStatus visibility', () => {
   it('shows top bar sync progress as an icon-only entry', async () => {
     const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
 
-    render(
+    renderWithLocalization(
       <CompanionSyncInlineStatus
         onOpenSyncSettings={vi.fn()}
         workspaceSync={createWorkspaceSync({ status: 'syncing' }) as never}
@@ -49,7 +53,7 @@ describe('CompanionSyncInlineStatus visibility', () => {
   it('keeps sync failures out of the main content flow', async () => {
     const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
 
-    render(
+    renderWithLocalization(
       <CompanionSyncInlineStatus
         onOpenSyncSettings={vi.fn()}
         workspaceSync={createWorkspaceSync({ error: 'Desktop sync failed.' }) as never}

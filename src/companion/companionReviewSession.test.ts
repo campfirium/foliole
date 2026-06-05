@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { getCurrentReviewSchedulerSettings, getReviewSchedulerVersion } from '../features/settings/model/reviewSchedulerSettings';
 
 import { gradeCompanionReviewCard, postponeCompanionReviewTopic, resolveCompanionReviewSession } from './companionReviewSession';
 
@@ -201,7 +202,7 @@ describe('companionReviewSession', () => {
       },
       grade: 3,
       reviewedAt: '2026-04-22T08:10:00.000Z',
-      schedulerVersion: 'ts-fsrs@5.4.0 using FSRS-6.0|dr=0.90|mi=36500|ds=4|st=0|pqdp=5|pqpr=5.00|pqmx=1:5|pqii=86400000|pqgr=1.10-1.50'
+      schedulerVersion: getReviewSchedulerVersion(getCurrentReviewSchedulerSettings())
     });
   });
 });

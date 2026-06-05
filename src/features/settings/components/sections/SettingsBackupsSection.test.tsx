@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../../../shared/platform/folderSelectionRuntimeRepository', () => ({
@@ -21,6 +21,7 @@ vi.mock('../../model/databaseBackups', () => ({
   restoreDatabaseBackup: vi.fn()
 }));
 
+import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import { selectRuntimeFolder } from '../../../../shared/platform/folderSelectionRuntimeRepository';
 import {
   areDatabaseBackupActionsAvailable,
@@ -82,7 +83,7 @@ beforeEach(() => {
 });
 
 it('shows backup settings and backup list in the backups section', async () => {
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   await waitFor(() => {
     expect(screen.getByDisplayValue('24')).toBeInTheDocument();
@@ -100,7 +101,7 @@ it('shows backup settings and backup list in the backups section', async () => {
   expect(screen.getByRole('button', { name: 'Create backup' }).className).not.toContain('min-w-[');
   expect(screen.getByDisplayValue('24').parentElement?.className).toContain('flex-[0_0_160px]');
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
-  expect(screen.getByText(/Auto backup · daily/)).toBeInTheDocument();
+  expect(screen.getByText(/Auto backup .* daily/)).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Source topic handling' })).toBeInTheDocument();
   expect(screen.getByText('Saved source topic handling')).toBeInTheDocument();
   expect(screen.getByText('2 entries / 2 KB')).toBeInTheDocument();
@@ -111,7 +112,7 @@ it('shows a retry action when backup settings fail to load', async () => {
     .mockRejectedValueOnce(new Error('Settings IPC failed.'))
     .mockResolvedValueOnce(defaultSettings);
 
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   const alert = await screen.findByRole('alert');
   expect(alert).toHaveTextContent('Backup settings unavailable');
@@ -126,7 +127,7 @@ it('shows a retry action when backup settings fail to load', async () => {
 });
 
 it('auto-saves edited backup settings without a save button', async () => {
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   await screen.findByDisplayValue('24');
   fireEvent.change(screen.getByDisplayValue('24'), { target: { value: '12' } });
@@ -146,7 +147,7 @@ it('auto-saves edited backup settings without a save button', async () => {
 it('changes backup location through folder picker and saves immediately', async () => {
   vi.mocked(selectRuntimeFolder).mockResolvedValue('/new/Backups');
 
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   await screen.findByDisplayValue('24');
   fireEvent.click(screen.getByRole('button', { name: 'Change location' }));
@@ -161,7 +162,7 @@ it('changes backup location through folder picker and saves immediately', async 
 it('changes and turns off the extra backup location', async () => {
   vi.mocked(selectRuntimeFolder).mockResolvedValue('/cloud/Foliole Backups');
 
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   await screen.findByDisplayValue('24');
   fireEvent.click(screen.getByRole('button', { name: 'Change extra location' }));
@@ -189,7 +190,7 @@ it('shows only three backups by default and expands the rest on demand', async (
     ...defaultBackups
   ]);
 
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   await screen.findByRole('button', { name: 'Show 1 more' });
   expect(screen.queryByText('auto-daily-2026-04-02_08-00-00-000.db')).not.toBeInTheDocument();
@@ -208,7 +209,7 @@ it('creates a manual backup and refreshes the list', async () => {
       backupEntry('manual-2026-04-02_09-00-00-000.db', '2026-04-02T09:00:00.000Z')
     ]);
 
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   await screen.findByRole('button', { name: 'Create backup' });
   fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
@@ -235,7 +236,7 @@ it('shows a warning when the extra backup copy fails after the main backup is cr
     }
   });
 
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   await screen.findByRole('button', { name: 'Create backup' });
   fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
@@ -244,7 +245,7 @@ it('shows a warning when the extra backup copy fails after the main backup is cr
 });
 
 it('restores from a listed backup', async () => {
-  render(<SettingsBackupsSection />);
+  renderWithLocalization(<SettingsBackupsSection />);
 
   const restoreButton = await screen.findByRole('button', { name: 'Restore' });
   fireEvent.click(restoreButton);

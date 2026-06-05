@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 
 import { PdfInventoryItem, ReadwiseBookInventoryItem } from './ImportInventoryListItems';
@@ -54,8 +55,10 @@ function InboxOverviewSection(props: {
   sortedInboxNodes: SortedInboxNodeItem[];
   sortedInboxRuns: SortedInboxRunItem[];
 }) {
+  const t = useTranslation();
+
   return (
-    <SectionBlock count={props.sortedInboxNodes.length + props.sortedInboxRuns.length} title="Inbox History">
+    <SectionBlock count={props.sortedInboxNodes.length + props.sortedInboxRuns.length} title={t('desktop.importOverview.inboxHistory')}>
       {props.sortedInboxNodes.map(({ entry }) => (
         <InboxImportedNodeRow entry={entry} key={`linked-${entry.importId}`} nodesById={props.nodesById} onOpenNode={props.onOpenNode} />
       ))}
@@ -75,9 +78,11 @@ function LibraryOverviewSection(props: {
   sortedBooks: SortedBookItem[];
   sortedPdfItems: SortedPdfItem[];
 }) {
+  const t = useTranslation();
+
   return (
     <>
-      <SectionBlock count={props.sortedBooks.length} title="Readwise Books">
+      <SectionBlock count={props.sortedBooks.length} title={t('desktop.importOverview.readwiseBooks')}>
         {props.sortedBooks.map(({ book }) => (
           <ReadwiseBookInventoryItem
             book={book}
@@ -90,7 +95,7 @@ function LibraryOverviewSection(props: {
           />
         ))}
       </SectionBlock>
-      <SectionBlock count={props.sortedPdfItems.length} title="PDF">
+      <SectionBlock count={props.sortedPdfItems.length} title={t('desktop.importOverview.pdf')}>
         {props.sortedPdfItems.map(({ item }) => (
           <PdfInventoryItem
             importedAt={formatDateLabel(item.lastImportedAt)}

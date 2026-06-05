@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { onWindowEscape } from '../../../../shared/platform/keyboard';
 import {
   AppButton,
@@ -30,6 +31,7 @@ type NodeIconSettingsDialogProps = {
 
 export function NodeIconSettingsDialog(props: NodeIconSettingsDialogProps) {
   const target = props.editTarget;
+  const t = useTranslation();
   useEffect(() => {
     if (!target) return undefined;
     return onWindowEscape(() => {
@@ -51,7 +53,7 @@ export function NodeIconSettingsDialog(props: NodeIconSettingsDialogProps) {
           <NodeIconSettingsDialogBody {...props} target={target} />
           <footer className="flex justify-between border-t border-settings-divider/55 pt-4">
             <AppButton onClick={() => props.onReset(target)}>{props.resetLabel}</AppButton>
-            <AppButton onClick={props.onClose} variant="primary">Done</AppButton>
+            <AppButton onClick={props.onClose} variant="primary">{t('settings.icons.done')}</AppButton>
           </footer>
         </AppDialogContent>
       </AppDialogPortal>

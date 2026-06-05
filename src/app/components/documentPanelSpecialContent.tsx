@@ -3,6 +3,7 @@ import type { ComponentProps, RefObject } from 'react';
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -47,6 +48,7 @@ export function resolveDocumentPanelContentBody(args: {
   pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
   pdfHighlightLocators: PdfHighlightLocator[];
   shouldHideEditorBodyDuringSourceLoad: boolean;
+  t: Translate;
   trashedNodeIds: string[];
 }) {
   const specialContent = resolveSpecialDocumentContent(args);
@@ -71,6 +73,7 @@ export function resolveDocumentPanelContentBody(args: {
     pdfDocumentSurface: args.pdfDocumentSurface,
     pdfHighlightLocators: args.pdfHighlightLocators,
     shouldHideEditorBodyDuringSourceLoad: args.shouldHideEditorBodyDuringSourceLoad,
+    t: args.t,
     trashedNodeIds: args.trashedNodeIds
   });
 }

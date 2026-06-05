@@ -1,7 +1,4 @@
-import {
-  SETTINGS_CATEGORIES,
-  type SettingsCategoryId
-} from './settingsPanelOptions';
+import type { SettingsCategoryId, SettingsCategoryOption } from './settingsPanelOptions';
 
 export type SettingsSearchResultKind = 'category' | 'row';
 
@@ -37,13 +34,14 @@ function matchesSearchText(values: Array<string | undefined>, query: string) {
 }
 
 export function querySettingsSearch(
+  categories: SettingsCategoryOption[],
   rows: SettingsSearchRowMeta[],
   rawQuery: string
 ): SettingsSearchResult[] {
   const query = normalizeSearchText(rawQuery);
   if (!query) return [];
 
-  const categoryResults = SETTINGS_CATEGORIES.filter((category) =>
+  const categoryResults = categories.filter((category) =>
     matchesSearchText([category.label, category.description], query)
   ).map<SettingsSearchResult>((category) => ({
     categoryId: category.id,

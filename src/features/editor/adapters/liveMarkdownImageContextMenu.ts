@@ -1,3 +1,5 @@
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import { onWindowEscape } from '../../../shared/platform/keyboard';
 import { appFloatingSurfaceClassName } from '../../../shared/ui/FloatingSurface';
 
@@ -46,6 +48,7 @@ export function closeActiveRemoteImageFailureMenu() {
 }
 
 export function openRemoteImageFailureContextMenu(options: RemoteImageFailureContextMenuOptions) {
+  const locale = getStoredAppLocale();
   closeActiveRemoteImageFailureMenu();
   const overlay = document.createElement('div');
   overlay.className = 'fixed inset-0 z-workspace-overlay';
@@ -67,14 +70,14 @@ export function openRemoteImageFailureContextMenu(options: RemoteImageFailureCon
     event.stopPropagation();
   });
   const items = [
-    createMenuItem('Retry', options.onRetry),
-    createMenuItem('Add source', options.onProvideSourceWebsite)
+    createMenuItem(translate(locale, 'desktop.editor.imageFailure.retry'), options.onRetry),
+    createMenuItem(translate(locale, 'desktop.editor.imageFailure.addSource'), options.onProvideSourceWebsite)
   ];
   if (options.onRemoveImage) {
-    items.push(createMenuItem('Remove', options.onRemoveImage));
+    items.push(createMenuItem(translate(locale, 'desktop.editor.imageFailure.remove'), options.onRemoveImage));
   }
   if (options.canForgetLearnedSource) {
-    items.push(createMenuItem('Forget learned source for this site', options.onForgetLearnedSource));
+    items.push(createMenuItem(translate(locale, 'desktop.editor.imageFailure.forgetLearnedSource'), options.onForgetLearnedSource));
   }
   menu.append(...items);
 

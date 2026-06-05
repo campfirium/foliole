@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { AnnotationNotePanel } from './AnnotationNotePanel';
 
 it('keeps the annotation note textarea keyboard focus visible', () => {
-  render(
+  renderWithLocalization(
     <AnnotationNotePanel
       draft=""
       left={12}

@@ -1,3 +1,4 @@
+import type { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
 export type CompanionSyncProgressSummary = {
@@ -5,6 +6,8 @@ export type CompanionSyncProgressSummary = {
   status: string;
   title: string;
 };
+
+type Translate = ReturnType<typeof useTranslation>;
 
 function countLabel(count: number | undefined, singular: string, plural: string) {
   const value = count ?? 0;
@@ -44,12 +47,12 @@ function visibleCompleted(progress: CompanionDesktopSyncProgress, total: number)
   return clampCount(progress.completed, total);
 }
 
-function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
-  if (progress.phase === 'structure') return 'Library index';
-  if (isActiveTopicProgress(progress)) return 'Current topic';
-  if (isReviewQueueProgress(progress)) return 'Review resources';
-  if (progress.phase === 'attachment') return 'Attachments';
-  return 'Body downloads';
+function formatSyncPhase(progress: CompanionDesktopSyncProgress, t: Translate) {
+  if (progress.phase === 'structure') return t('companion.sync.progress.libraryIndex');
+  if (isActiveTopicProgress(progress)) return t('companion.sync.progress.currentTopic');
+  if (isReviewQueueProgress(progress)) return t('companion.sync.progress.reviewResources');
+  if (progress.phase === 'attachment') return t('companion.sync.progress.attachments');
+  return t('companion.sync.progress.bodyDownloads');
 }
 
 function formatBytes(bytes: number) {
@@ -66,29 +69,37 @@ function formatElapsedTime(elapsedMs: number | undefined) {
   return `${minutes}m ${seconds % 60}s`;
 }
 
-function formatContentBreakdown(progress: CompanionDesktopSyncProgress) {
+function formatContentBreakdown(progress: CompanionDesktopSyncProgress, t: Translate) {
   const breakdown = progress.contentBreakdown;
   if (progress.phase !== 'content' || !breakdown) return null;
-  if (isActiveTopicProgress(progress)) return `Current topic: ${countLabel(breakdown.activeTopicBodies, 'body', 'bodies')}`;
-  if (isReviewQueueProgress(progress)) return `Review queue: ${countLabel(breakdown.dueReviewBodies, 'body', 'bodies')}`;
+  const body = t('companion.sync.progress.body');
+  const bodies = t('companion.sync.progress.bodies');
+  const currentTopic = t('companion.sync.progress.currentTopic');
+  const reviewQueue = t('companion.sync.progress.reviewQueue');
+  if (isActiveTopicProgress(progress)) return `${currentTopic}: ${countLabel(breakdown.activeTopicBodies, body, bodies)}`;
+  if (isReviewQueueProgress(progress)) return `${reviewQueue}: ${countLabel(breakdown.dueReviewBodies, body, bodies)}`;
   const segments = [
-    ['Top-level', breakdown.topLevelTopicBodies],
-    ['Nested', breakdown.nestedTopicBodies],
-    ['External', breakdown.externalDocumentBodies],
-    ['Review queue', breakdown.dueReviewBodies]
+    [t('companion.sync.progress.topLevel'), breakdown.topLevelTopicBodies],
+    [t('companion.sync.progress.nested'), breakdown.nestedTopicBodies],
+    [t('companion.sync.progress.external'), breakdown.externalDocumentBodies],
+    [reviewQueue, breakdown.dueReviewBodies]
   ].filter((segment): segment is [string, number] => typeof segment[1] === 'number');
   return segments.map(([label, count]) => `${label} ${count}`).join(' · ') || null;
 }
 
-function formatAttachmentBreakdown(progress: CompanionDesktopSyncProgress) {
+function formatAttachmentBreakdown(progress: CompanionDesktopSyncProgress, t: Translate) {
   const breakdown = progress.attachmentBreakdown;
   if (progress.phase !== 'attachment' || !breakdown) return null;
-  if (isActiveTopicProgress(progress)) return `Current topic: ${countLabel(breakdown.activeTopicAttachments, 'attachment', 'attachments')}`;
-  if (isReviewQueueProgress(progress)) return `Review queue: ${countLabel(breakdown.dueReviewAttachments, 'attachment', 'attachments')}`;
+  const attachment = t('companion.sync.progress.attachment');
+  const attachments = t('companion.sync.progress.attachmentsCount');
+  const currentTopic = t('companion.sync.progress.currentTopic');
+  const reviewQueue = t('companion.sync.progress.reviewQueue');
+  if (isActiveTopicProgress(progress)) return `${currentTopic}: ${countLabel(breakdown.activeTopicAttachments, attachment, attachments)}`;
+  if (isReviewQueueProgress(progress)) return `${reviewQueue}: ${countLabel(breakdown.dueReviewAttachments, attachment, attachments)}`;
   const segments = [
-    ['Images', breakdown.imageAttachments],
-    ['PDFs', breakdown.pdfAttachments],
-    ['Other', breakdown.otherAttachments]
+    [t('companion.sync.progress.images'), breakdown.imageAttachments],
+    [t('companion.sync.progress.pdfs'), breakdown.pdfAttachments],
+    [t('companion.sync.progress.other'), breakdown.otherAttachments]
   ].filter((segment): segment is [string, number] => typeof segment[1] === 'number');
   return segments.map(([label, count]) => `${label} ${count}`).join(' · ') || null;
 }
@@ -99,24 +110,26 @@ function displayTotal(progress: CompanionDesktopSyncProgress) {
   return progress.total ?? 0;
 }
 
-function progressCountLabel(progress: CompanionDesktopSyncProgress, completed: number, total: number) {
-  if (progress.mode === 'remaining' && progress.total !== null) return `${total} left`;
-  return progress.total === null ? 'Checking' : `${completed}/${total}`;
+function progressCountLabel(progress: CompanionDesktopSyncProgress, completed: number, total: number, t: Translate) {
+  if (progress.mode === 'remaining' && progress.total !== null) return t('companion.sync.progress.left', { count: total });
+  return progress.total === null ? t('companion.sync.progress.checking') : `${completed}/${total}`;
 }
 
-export function formatCompanionSyncProgressSummary(progress: CompanionDesktopSyncProgress): CompanionSyncProgressSummary {
+export function formatCompanionSyncProgressSummary(progress: CompanionDesktopSyncProgress, t: Translate): CompanionSyncProgressSummary {
   const total = displayTotal(progress);
   const completed = visibleCompleted(progress, total);
-  const count = progressCountLabel(progress, completed, total);
+  const count = progressCountLabel(progress, completed, total, t);
   const showBytes = !isActiveTopicProgress(progress) && !isReviewQueueProgress(progress);
   const byteLabel = showBytes && progress.totalBytes != null && progress.completedBytes != null
     ? `${formatBytes(progress.completedBytes)}/${formatBytes(progress.totalBytes)}`
     : null;
   const elapsedLabel = formatElapsedTime(progress.elapsedMs);
-  const failedLabel = progress.failedCount && progress.failedCount > 0 ? `${progress.failedCount} failed` : null;
+  const failedLabel = progress.failedCount && progress.failedCount > 0
+    ? fallbackT(t, 'companion.sync.progress.failed', { count: progress.failedCount }) ?? `${progress.failedCount} failed`
+    : null;
   return {
-    detail: formatContentBreakdown(progress) ?? formatAttachmentBreakdown(progress),
+    detail: formatContentBreakdown(progress, t) ?? formatAttachmentBreakdown(progress, t),
     status: [byteLabel ? `${count} - ${byteLabel}` : count, failedLabel, elapsedLabel].filter(Boolean).join(' · '),
-    title: formatSyncPhase(progress)
+    title: formatSyncPhase(progress, t)
   };
 }

@@ -3,6 +3,7 @@ import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'rea
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
@@ -34,6 +35,7 @@ function containsQuery(value: string, query: string) {
 }
 
 export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
+  const t = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const contentSort = useWorkspaceContentSort();
   const lastOpenedAtByPath = useExternalDocumentLastOpenedAt();
@@ -47,7 +49,7 @@ export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
   );
 
   return (
-    <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
+    <aside aria-label={t('desktop.externalLibrary.currentFolderContents')} className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
       <ExternalLibraryListToolbar
         contentSort={contentSort}
         normalizedSort={normalizedSort}
@@ -111,6 +113,7 @@ function ExternalDocumentListBody(props: {
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   selection: ExternalLibrarySelection;
 }) {
+  const t = useTranslation();
   const rowSpacing = getNodeListRowSpacing();
   const onRowKeyDown = useExternalDocumentKeyboard(props.documents, props.onOpenExternalSelection);
 
@@ -121,15 +124,16 @@ function ExternalDocumentListBody(props: {
   if (props.documents.length === 0) {
     return (
       <div className="flex min-h-full items-center justify-center px-3 py-6">
-        <AppEmptyState description="No documents are available in the selected folder." title="No documents" />
+        <AppEmptyState description={t('desktop.externalLibrary.empty.description')} title={t('desktop.externalLibrary.empty.title')} />
       </div>
     );
   }
 
   return (
-    <section aria-label="External folder contents" className="flex flex-col" role="tree">
+    <section aria-label={t('desktop.externalLibrary.folderContents')} className="flex flex-col" role="tree">
       {props.documents.map((document) =>
         renderExternalDocumentRow({
+          archivedLabel: t('desktop.externalLibrary.archived'),
           document,
           onOpenExternalSelection: props.onOpenExternalSelection,
           onRowKeyDown,
@@ -177,6 +181,7 @@ function openExternalDocumentSelection(
 }
 
 function renderExternalDocumentRow(args: {
+  archivedLabel: string;
   document: ReturnType<typeof buildExternalLibraryFolderBrowseState>['documentItems'][number];
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
@@ -195,7 +200,7 @@ function renderExternalDocumentRow(args: {
       label={args.document.title}
       nodeId={args.document.absolutePath}
       rowSpacing={args.rowSpacing}
-      secondaryLabel={args.document.isPresent === false ? 'Archived' : undefined}
+      secondaryLabel={args.document.isPresent === false ? args.archivedLabel : undefined}
       showIcon={false}
       onKeyDown={args.onRowKeyDown}
       onSelect={() => openExternalDocumentSelection(args.document.absolutePath, [args.document], args.onOpenExternalSelection)}

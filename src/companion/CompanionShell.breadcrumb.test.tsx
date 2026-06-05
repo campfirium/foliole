@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
@@ -205,7 +206,7 @@ async function renderBreadcrumbShell(surface = createItemReviewSurface()) {
   useCompanionArticleSurface.mockReturnValue(surface);
 
   const { CompanionShell } = await import('./CompanionShell');
-  render(
+  renderWithLocalization(
     <CompanionShell
       bootstrapState={{
         booted_at: '2026-04-22T09:05:00.000Z',
@@ -237,7 +238,7 @@ describe('CompanionShell review breadcrumb', () => {
     expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('folder-1');
   });
 
-  it('routes nested breadcrumb labels back to the article target', async () => {
+  it('routes nested breadcrumb labels back to the nested review topic target', async () => {
     const surface = createItemReviewSurface();
     surface.reviewSession.currentCard = {
       ...surface.reviewSession.currentCard,
@@ -245,8 +246,8 @@ describe('CompanionShell review breadcrumb', () => {
     };
     await renderBreadcrumbShell(surface);
 
-    fireEvent.click(screen.getByRole('button', { name: 'In...' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inner review topic' }));
 
-    expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-1');
+    expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-2');
   });
 });

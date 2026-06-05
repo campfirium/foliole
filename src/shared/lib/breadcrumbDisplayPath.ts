@@ -41,13 +41,13 @@ function collectPath(
   return path.reverse();
 }
 
-function normalizeTitle(title: string) {
+function normalizeTitle(title: string, untitledLabel: string) {
   const trimmed = title.trim();
-  return trimmed || 'Untitled';
+  return trimmed || untitledLabel;
 }
 
-function abbreviateTitle(title: string) {
-  const normalized = normalizeTitle(title);
+function abbreviateTitle(title: string, untitledLabel: string) {
+  const normalized = normalizeTitle(title, untitledLabel);
   const glyphs = Array.from(normalized);
   if (glyphs.length <= 2) {
     return normalized;
@@ -84,18 +84,21 @@ function resolveTargetNodeId(
 
 function resolveDisplayTitle(
   node: BreadcrumbDisplayPathNode,
-  isNestedUnderArticle: boolean
+  isNestedUnderArticle: boolean,
+  untitledLabel: string
 ) {
   if (node.kind === 'topic') {
-    return normalizeTitle(node.title);
+    return normalizeTitle(node.title, untitledLabel);
   }
-  return isNestedUnderArticle ? abbreviateTitle(node.title) : normalizeTitle(node.title);
+  return isNestedUnderArticle ? abbreviateTitle(node.title, untitledLabel) : normalizeTitle(node.title, untitledLabel);
 }
 
 export function buildBreadcrumbDisplayPath(
   nodeId: string | null,
-  nodesById: Record<string, BreadcrumbDisplayPathNode | undefined>
+  nodesById: Record<string, BreadcrumbDisplayPathNode | undefined>,
+  options: { untitledLabel?: string } = {}
 ): BreadcrumbDisplayPathItem[] {
+  const untitledLabel = options.untitledLabel ?? 'Untitled';
   const fullPath = collectPath(nodeId, nodesById);
   const ancestorPath = fullPath.slice(0, -1);
   const articleIndex = findArticleIndex(ancestorPath, nodesById);
@@ -104,6 +107,6 @@ export function buildBreadcrumbDisplayPath(
   return ancestorPath.map((node, index) => ({
     id: node.id,
     targetNodeId: resolveTargetNodeId(node, index > articleIndex, articleNodeId),
-    title: resolveDisplayTitle(node, articleIndex >= 0 && index > articleIndex)
+    title: resolveDisplayTitle(node, articleIndex >= 0 && index > articleIndex, untitledLabel)
   }));
 }

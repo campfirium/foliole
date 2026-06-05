@@ -25,12 +25,17 @@ export function buildTopicSearchMatches(content: string, query: string): TopicSe
   return matches;
 }
 
-export function resolveTopicSearchStatusLabel(query: string, currentIndex: number, total: number) {
+export function resolveTopicSearchStatusLabel(
+  query: string,
+  currentIndex: number,
+  total: number,
+  noMatchesLabel = 'No matches'
+) {
   if (!query.trim()) {
     return '';
   }
   if (total <= 0) {
-    return 'No matches';
+    return noMatchesLabel;
   }
   return `${currentIndex + 1} / ${total}`;
 }

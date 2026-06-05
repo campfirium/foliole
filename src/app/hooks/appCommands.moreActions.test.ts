@@ -69,6 +69,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openGitHubRepository: () => undefined,
     openGitHubIssues: () => undefined,
     openGitHubDiscussions: () => undefined,
+    openYouTubePlaylist: () => undefined,
     openReadwiseReaderSettings: () => undefined,
     openSettings: () => undefined,
     openTrash: () => undefined,

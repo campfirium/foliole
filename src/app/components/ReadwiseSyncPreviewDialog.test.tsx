@@ -1,5 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { createReadwiseImportPreview } from './readwiseReaderSettingsTestSupport';
 import { ReadwiseSyncPreviewDialog } from './ReadwiseSyncPreviewDialog';
@@ -64,7 +66,7 @@ function createSpecialReadwiseImportPreview() {
 }
 
 it('changes the start action label while showing progress feedback', () => {
-  render(
+  renderWithLocalization(
     <ReadwiseSyncPreviewDialog
       error={null}
       isCancelling={false}
@@ -83,16 +85,14 @@ it('changes the start action label while showing progress feedback', () => {
   const startButton = screen.getByRole('button', { name: 'Importing' });
   expect(startButton).toBeDisabled();
   expect(startButton.querySelector('.animate-spin')).toBeNull();
-  expect(screen.getByRole('button', { name: 'Cancel' }).className).toContain(
-    'border-[var(--app-control-border-color)]'
-  );
+  expect(screen.getByRole('button', { name: 'Cancel' }).className).toContain('border-[var(--app-control-border-color)]');
   expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
   expect(screen.getByRole('progressbar', { name: 'Readwise import progress' })).toBeInTheDocument();
   expect(screen.getByText('Preparing Readwise import')).toBeInTheDocument();
 });
 
 it('shows the active Readwise import stage in the preview dialog', () => {
-  render(
+  renderWithLocalization(
     <ReadwiseSyncPreviewDialog
       error={null}
       isCancelling={false}
@@ -130,7 +130,7 @@ it('shows the active Readwise import stage in the preview dialog', () => {
 });
 
 it('keeps long source topic names on one truncated row beside the percent', () => {
-  render(
+  renderWithLocalization(
     <ReadwiseSyncPreviewDialog
       error={null}
       isCancelling={false}
@@ -167,7 +167,7 @@ it('keeps long source topic names on one truncated row beside the percent', () =
 });
 
 it('uses Readwise import preview before execution starts', () => {
-  render(
+  renderWithLocalization(
     <ReadwiseSyncPreviewDialog
       error={null}
       isCancelling={false}
@@ -191,7 +191,7 @@ it('places unparsed Readwise entries first and opens their highlight file from t
   openLocalPath.mockReset();
   const preview = createSpecialReadwiseImportPreview();
 
-  render(
+  renderWithLocalization(
     <ReadwiseSyncPreviewDialog
       error={null}
       isCancelling={false}
@@ -217,7 +217,7 @@ it('places unparsed Readwise entries first and opens their highlight file from t
 
 
 it('shows cancelling state while a running import is being cancelled', () => {
-  render(
+  renderWithLocalization(
     <ReadwiseSyncPreviewDialog
       error={null}
       isCancelling={true}

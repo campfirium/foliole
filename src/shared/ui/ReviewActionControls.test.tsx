@@ -1,5 +1,7 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../localization/testLocalization';
 
 import { ReadingReviewActions, ReviewGradeActions } from './ReviewActionControls';
 
@@ -10,7 +12,7 @@ afterEach(() => {
 it('renders companion-friendly grade buttons as a single shared row when requested', () => {
   const submitGrade = vi.fn(async () => undefined);
 
-  render(
+  renderWithLocalization(
     <ReviewGradeActions
       buttonClassName="min-w-0 flex-1 px-3"
       buttonVariant="primary"
@@ -34,7 +36,7 @@ it('renders companion-friendly grade buttons as a single shared row when request
 it('renders an optional retry action next to grade errors', () => {
   const onRetry = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ReviewGradeActions
       errorMessage="Failed to save grade. Please retry."
       isSubmitting={false}
@@ -51,7 +53,7 @@ it('renders an optional retry action next to grade errors', () => {
 });
 
 it('adds short overlay dividers between grade actions only for overlay surface', () => {
-  render(
+  renderWithLocalization(
     <ReviewGradeActions
       errorMessage={null}
       isSubmitting={false}
@@ -71,7 +73,7 @@ it('adds short overlay dividers between grade actions only for overlay surface',
 });
 
 it('adds short overlay dividers between reading review actions only for overlay surface', () => {
-  render(
+  renderWithLocalization(
     <ReadingReviewActions
       onDismissReviewTopic={vi.fn()}
       onPostponeReviewTopic={vi.fn()}
@@ -93,7 +95,7 @@ it('adds short overlay dividers between reading review actions only for overlay 
 
 it('shows action help cards for reading review actions when enabled', () => {
   vi.useFakeTimers();
-  render(
+  renderWithLocalization(
     <ReadingReviewActions
       onDismissReviewTopic={vi.fn()}
       onPostponeReviewTopic={vi.fn()}
@@ -117,7 +119,7 @@ it('shows action help cards for reading review actions when enabled', () => {
 
 it('shows action help cards for grade actions when enabled', () => {
   vi.useFakeTimers();
-  render(
+  renderWithLocalization(
     <ReviewGradeActions
       errorMessage={null}
       isSubmitting={false}

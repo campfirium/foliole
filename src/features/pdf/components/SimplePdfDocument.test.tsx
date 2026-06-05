@@ -1,5 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 
 const resourceMock = vi.hoisted(() => ({
   invalidateAttachmentResourceResolution: vi.fn(),
@@ -47,7 +49,7 @@ describe('SimplePdfDocument', () => {
       status: 'ready'
     });
 
-    render(<SimplePdfDocument attachmentId="pdf-attachment-1" title="Paper" />);
+    renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" title="Paper" />);
 
     await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
     expect(screen.getByText('PDF page 2')).toBeInTheDocument();
@@ -60,7 +62,7 @@ describe('SimplePdfDocument', () => {
       status: 'ready'
     });
 
-    render(<SimplePdfDocument attachmentId="pdf-attachment-1" onBackToText={vi.fn()} title="Paper" />);
+    renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" onBackToText={vi.fn()} title="Paper" />);
 
     await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
     expect(screen.getByText('100%')).toBeInTheDocument();
@@ -77,7 +79,7 @@ describe('SimplePdfDocument', () => {
       .mockResolvedValueOnce({ resource_url: null, status: 'missing_file' })
       .mockResolvedValueOnce({ resource_url: 'capacitor://pdf-file', status: 'ready' });
 
-    render(<SimplePdfDocument attachmentId="pdf-attachment-1" onMissingResource={syncMissing} title="Paper" />);
+    renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" onMissingResource={syncMissing} title="Paper" />);
 
     await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
     expect(syncMissing).toHaveBeenCalledWith('pdf-attachment-1');

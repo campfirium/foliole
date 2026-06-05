@@ -6,6 +6,7 @@ import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { resolveInternalLinkTargetId } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
 import { DocumentPanelDocumentStatusContent } from './DocumentPanelDocumentStatusContent';
@@ -92,14 +93,16 @@ export function renderDocumentPanelEmptyContent(args: {
   isRetryingDocument: boolean;
   loadingLabel: string | undefined;
   retryDocumentLoad: () => void;
+  t: Translate;
 }) {
   if (args.documentStatus === 'failed' || args.documentStatus === 'missing') {
     return (
       <DocumentPanelDocumentStatusContent
-        loadingLabel="Document progress"
+        loadingLabel={args.t('desktop.document.progress')}
         onRetry={args.retryDocumentLoad}
         retrying={args.isRetryingDocument}
         status={args.documentStatus}
+        t={args.t}
       />
     );
   }

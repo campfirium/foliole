@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { createDraftImportSource } from './importSourceWorkspaceModel';
 import { ImportSourceTable } from './ImportSourceWorkspaceTable';
@@ -21,7 +23,7 @@ function createSplitSource() {
 }
 
 function renderTable(sourceCount: number, onAddSource = vi.fn()) {
-  return render(
+  return renderWithLocalization(
     <ImportSourceTable
       onAddSource={onAddSource}
       onChange={vi.fn()}
@@ -65,7 +67,7 @@ it('virtualizes large import source lists', () => {
 });
 
 it('allows preview for generic split sources when both folders are selected', () => {
-  render(
+  renderWithLocalization(
     <ImportSourceTable
       onAddSource={vi.fn()}
       onChange={vi.fn()}

@@ -1,4 +1,5 @@
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
+import { LocalizationProvider, useTranslation } from '../shared/localization/LocalizationProvider';
 import {
   createStartupBootSurfaceModel,
   createStartupErrorSurfaceModel,
@@ -8,33 +9,33 @@ import {
 import { CompanionShell } from './CompanionShell';
 import { useCompanionBootstrap } from './useCompanionBootstrap';
 
-const COMPANION_BOOT_MODEL = {
-  ...createStartupBootSurfaceModel(),
-  eyebrow: 'Companion runtime',
-  message: 'Preparing a stable device identity and local companion storage before the topic surface loads.',
-  title: 'Starting companion runtime'
-};
-
 function reloadCompanionRuntime() {
   window.location.reload();
 }
 
-export function CompanionApp() {
+function CompanionAppContent() {
+  const t = useTranslation();
   const bootstrap = useCompanionBootstrap();
+  const bootModel = {
+    ...createStartupBootSurfaceModel(),
+    eyebrow: t('companion.app.starting.eyebrow'),
+    message: t('companion.app.starting.message'),
+    title: t('companion.app.starting.title')
+  };
 
   const content = (() => {
     if (bootstrap.status === 'booting') {
-      return <StartupSurface model={COMPANION_BOOT_MODEL} />;
+      return <StartupSurface model={bootModel} />;
     }
 
     if (bootstrap.status === 'failed') {
       return (
         <StartupSurface
-          actions={[{ label: 'Retry', onClick: reloadCompanionRuntime, variant: 'primary' }]}
+          actions={[{ label: t('companion.app.retry'), onClick: reloadCompanionRuntime, variant: 'primary' }]}
           model={createStartupErrorSurfaceModel({
             message: bootstrap.message,
-            moduleLabel: 'Companion bootstrap',
-            title: 'Companion bootstrap failed'
+            moduleLabel: t('companion.app.bootstrap.module'),
+            title: t('companion.app.bootstrapFailed')
           })}
         />
       );
@@ -44,4 +45,8 @@ export function CompanionApp() {
   })();
 
   return <MouseGestureSettingsProvider>{content}</MouseGestureSettingsProvider>;
+}
+
+export function CompanionApp() {
+  return <LocalizationProvider><CompanionAppContent /></LocalizationProvider>;
 }

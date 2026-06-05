@@ -1,5 +1,6 @@
 import { ArrowDownNarrowWide } from 'lucide-react';
 
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppDropdownMenu,
   AppDropdownMenuCheckItem,
@@ -14,27 +15,29 @@ import {
 
 import type { WorkspaceContentSortDirection, WorkspaceContentSortKey } from './workspaceContentSort';
 
+type Translate = ReturnType<typeof useTranslation>;
+
 export interface WorkspaceContentSortOption {
   key: WorkspaceContentSortKey;
   label: string;
 }
 
-function getOrderOptions(sortKey: WorkspaceContentSortKey): { label: string; value: WorkspaceContentSortDirection }[] {
+function getOrderOptions(sortKey: WorkspaceContentSortKey, t: Translate): { label: string; value: WorkspaceContentSortDirection }[] {
   if (sortKey === 'name') {
     return [
-      { label: 'A -> Z', value: 'asc' },
-      { label: 'Z -> A', value: 'desc' }
+      { label: t('desktop.sort.order.az'), value: 'asc' },
+      { label: t('desktop.sort.order.za'), value: 'desc' }
     ];
   }
   if (sortKey === 'lastOpenedAt') {
-    return [{ label: 'Newest first', value: 'desc' }];
+    return [{ label: t('desktop.sort.order.newest'), value: 'desc' }];
   }
   if (sortKey === 'manual') {
-    return [{ label: 'Manual order', value: 'asc' }];
+    return [{ label: t('desktop.sort.order.manual'), value: 'asc' }];
   }
   return [
-    { label: 'Newest first', value: 'desc' },
-    { label: 'Oldest first', value: 'asc' }
+    { label: t('desktop.sort.order.newest'), value: 'desc' },
+    { label: t('desktop.sort.order.oldest'), value: 'asc' }
   ];
 }
 
@@ -45,12 +48,13 @@ export function WorkspaceContentSortControls(props: {
   sortDirection: WorkspaceContentSortDirection;
   sortKey: WorkspaceContentSortKey;
 }) {
+  const t = useTranslation();
   const activeOption = props.options.find((option) => option.key === props.sortKey) ?? props.options[0];
-  const activeLabel = activeOption?.label ?? 'Date imported';
+  const activeLabel = activeOption?.label ?? t('desktop.sort.fallback.dateImported');
   const activeKey = activeOption?.key ?? 'importedAt';
-  const orderOptions = getOrderOptions(activeKey);
+  const orderOptions = getOrderOptions(activeKey, t);
   const activeOrderLabel = orderOptions.find((option) => option.value === props.sortDirection)?.label ?? orderOptions[0]?.label;
-  const triggerLabel = `Sort list by ${activeLabel}`;
+  const triggerLabel = t('desktop.sort.listBy', { label: activeLabel });
   const tooltipLabel = activeOrderLabel ? `${triggerLabel}: ${activeOrderLabel}` : triggerLabel;
 
   return (
@@ -59,7 +63,7 @@ export function WorkspaceContentSortControls(props: {
         <WorkspaceContentSortTrigger triggerLabel={triggerLabel} />
         <AppTooltipContent avoidCollisions={false} side="top">{tooltipLabel}</AppTooltipContent>
         <AppDropdownMenuContent align="end" className="min-w-[220px]" sideOffset={8}>
-          <AppDropdownMenuLabel>Sort by</AppDropdownMenuLabel>
+          <AppDropdownMenuLabel>{t('desktop.sort.sortBy')}</AppDropdownMenuLabel>
           {props.options.map((option) => (
             <AppDropdownMenuCheckItem
               checked={activeKey === option.key}
@@ -70,7 +74,7 @@ export function WorkspaceContentSortControls(props: {
             </AppDropdownMenuCheckItem>
           ))}
           <AppDropdownMenuSeparator />
-          <AppDropdownMenuLabel>Order</AppDropdownMenuLabel>
+          <AppDropdownMenuLabel>{t('desktop.sort.order')}</AppDropdownMenuLabel>
           {orderOptions.map((option) => (
             <AppDropdownMenuCheckItem
               checked={props.sortDirection === option.value}

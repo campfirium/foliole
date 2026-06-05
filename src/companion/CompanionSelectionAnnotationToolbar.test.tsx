@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { definedProps } from '../shared/lib/definedProps';
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import {
   CompanionSelectionAnnotationToolbar,
@@ -38,7 +39,7 @@ function renderToolbar(onApply = vi.fn(), resolveSelectionPayload?: () => typeof
   const onClose = vi.fn();
   const onAddExistingHighlightNote = vi.fn();
   const onDeleteExistingHighlight = vi.fn();
-  render(
+  renderWithLocalization(
     <CompanionSelectionAnnotationToolbar
       onAddExistingHighlightNote={onAddExistingHighlightNote}
       onApply={onApply}
@@ -61,7 +62,7 @@ function renderExistingToolbar() {
   const onAddExistingHighlightNote = vi.fn();
   const onClose = vi.fn();
   const onDeleteExistingHighlight = vi.fn();
-  render(
+  renderWithLocalization(
     <CompanionSelectionAnnotationToolbar
       onAddExistingHighlightNote={onAddExistingHighlightNote}
       onApply={vi.fn()}

@@ -15,8 +15,6 @@ const TOOLTIP_BOUNDARY_GAP = 2;
 const TOOLTIP_BOUNDARY_SELECTORS = [
   '.workspace-region-main-topic',
   '.workspace-region-main-folder',
-  '[aria-label="Folder list body"]',
-  '[aria-label="Current folder contents"]',
   '[role="tree"]',
 ];
 

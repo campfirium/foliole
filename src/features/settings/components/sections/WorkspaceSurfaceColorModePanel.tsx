@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   buildWorkspaceSurfaceAutoColumnPalette,
   type WorkspaceSurfaceAutoPaletteMode,
@@ -40,26 +41,28 @@ export function WorkspaceSurfacePreferences(props: {
   options: WorkspaceSurfaceAutoPaletteOptions;
   onOptionsChange: (options: WorkspaceSurfaceAutoPaletteOptions) => void;
 }) {
+  const t = useTranslation();
   const setOption = (key: keyof WorkspaceSurfaceAutoPaletteOptions, value: boolean) => {
     props.onOptionsChange({ ...props.options, [key]: value });
   };
 
   return (
-    <ModeBlock title="Preferences">
+    <ModeBlock ariaLabel={t('settings.appearance.surface.preferencesPanel')} title={t('settings.appearance.surface.preferences')}>
       <div className="space-y-2">
-        <InlineSwitch checked={props.options.documentPureWhite} label="Use neutral document surface" onChange={(checked) => setOption('documentPureWhite', checked)} />
-        <InlineSwitch checked={props.options.folderTopicSharedTone} label="Folder and topic share tone" onChange={(checked) => setOption('folderTopicSharedTone', checked)} />
+        <InlineSwitch checked={props.options.documentPureWhite} label={t('settings.appearance.surface.preference.neutralDocument')} onChange={(checked) => setOption('documentPureWhite', checked)} />
+        <InlineSwitch checked={props.options.folderTopicSharedTone} label={t('settings.appearance.surface.preference.sharedTone')} onChange={(checked) => setOption('folderTopicSharedTone', checked)} />
       </div>
     </ModeBlock>
   );
 }
 
 function ModeBlock(props: {
+  ariaLabel: string;
   children: ReactNode;
   title: string;
 }) {
   return (
-    <div aria-label={`${props.title} mode panel`} className="space-y-2 py-1">
+    <div aria-label={props.ariaLabel} className="space-y-2 py-1">
       <h4 className="text-sm font-medium text-foreground">{props.title}</h4>
       {props.children}
     </div>
@@ -74,10 +77,11 @@ export function WorkspaceSurfaceAutomaticPanel(props: {
   onApplyAutomaticPalette: () => void;
   onAutoSeedColorChange: (color: WorkspaceSurfaceColorValue) => void;
 }) {
+  const t = useTranslation();
   const autoPalette = buildWorkspaceSurfaceAutoColumnPalette(props.autoSeedColor, props.options, undefined, props.resolvedBaseColorMode);
 
   return (
-    <ModeBlock title="Automatic">
+    <ModeBlock ariaLabel={t('settings.appearance.surface.automaticPanel')} title={t('settings.appearance.surface.automatic')}>
       <div className="flex items-center gap-2">
         <WorkspaceSurfaceAutomaticSeedPopover
           color={props.autoSeedColor}

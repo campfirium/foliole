@@ -1,12 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceTopicTreeHeader } from './WorkspaceTopicTreeHeader';
 
 it('adds a create topic action alongside current folder tools', () => {
   const onCreateTopic = vi.fn();
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -27,7 +29,7 @@ it('adds a create topic action alongside current folder tools', () => {
 });
 
 it('shows an expand action after some items are collapsed', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes
@@ -47,7 +49,7 @@ it('shows an expand action after some items are collapsed', () => {
 });
 
 it('disables the toggle when the current folder has no collapsible items', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes={false}
       hasCollapsedNodes={false}
@@ -66,7 +68,7 @@ it('disables the toggle when the current folder has no collapsible items', () =>
 });
 
 it('keeps the top toolbar sort tooltip above the trigger', async () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -92,7 +94,7 @@ it('keeps the top toolbar sort tooltip above the trigger', async () => {
 });
 
 it('keeps last opened order fixed to newest first', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -114,7 +116,7 @@ it('keeps last opened order fixed to newest first', () => {
 });
 
 it('shows manual sorting in the current folder topic menu', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -135,7 +137,7 @@ it('shows manual sorting in the current folder topic menu', () => {
 });
 
 it('keeps manual order fixed to manual order', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -157,7 +159,7 @@ it('keeps manual order fixed to manual order', () => {
 });
 
 it('keeps the top toolbar focus tooltip above the trigger', async () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
@@ -183,7 +185,7 @@ it('keeps the top toolbar focus tooltip above the trigger', async () => {
 });
 
 it('shows the focus tooltip as the next toggle action when focus is active', async () => {
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}

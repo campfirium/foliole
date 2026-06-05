@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { AppEmptyState, AppSpinner } from '../../shared/ui';
@@ -79,7 +80,7 @@ export function resolvePdfDocumentSurface(
   return { details, pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null, sourceHint, state: 'ready' };
 }
 
-function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>) {
+function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>, t: Translate) {
   if (state === 'loading') {
     return (
       <div data-testid="pdf-document-state-loading">
@@ -93,15 +94,15 @@ function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>)
     return (
       <div data-testid="pdf-document-state-failed">
         <AppEmptyState
-          description="The PDF topic was found, but the linked file could not be prepared. Re-import or reconnect the source."
-          title="PDF reader failed"
+          description={t('desktop.pdf.failed.description')}
+          title={t('desktop.pdf.failed.title')}
         />
       </div>
     );
   }
   return (
     <div data-testid="pdf-document-state-empty">
-      <AppEmptyState description="This PDF topic uses the reader, but no file is linked yet." title="PDF file not linked yet" />
+      <AppEmptyState description={t('desktop.pdf.linkMissing.description')} title={t('desktop.pdf.linkMissing.title')} />
     </div>
   );
 }
@@ -115,7 +116,8 @@ export function renderPdfDocumentSurface(
   highlightLocators: PdfHighlightLocator[],
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean,
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void,
-  onOpenExternalLink: (request: ExternalLinkOpenRequest) => void
+  onOpenExternalLink: (request: ExternalLinkOpenRequest) => void,
+  t: Translate
 ) {
   if (pdfDocumentSurface.state === 'ready') {
     return (
@@ -140,10 +142,10 @@ export function renderPdfDocumentSurface(
   }
 
   return (
-    <section aria-label="PDF reader panel" className="workspace-region-main-document flex min-h-0 flex-1 flex-col" data-testid="pdf-document-surface">
+    <section aria-label={t('desktop.pdf.readerPanel')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col" data-testid="pdf-document-surface">
       <div className="mx-auto flex min-h-0 w-full max-w-[var(--document-max-width)] flex-1 flex-col px-6 py-5 max-[1080px]:px-4">
         <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-xl border border-border bg-bg-elevated px-6 py-8 shadow-page">
-          {renderPdfStateSurface(pdfDocumentSurface.state)}
+          {renderPdfStateSurface(pdfDocumentSurface.state, t)}
         </div>
       </div>
     </section>

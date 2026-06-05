@@ -1,5 +1,7 @@
 import { buildNodeBreadcrumbs } from '../../features/nodes/model/nodeBreadcrumbs';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { translate } from '../../shared/localization/translations';
 import type { RuntimeRemovedSourceEntry } from '../../shared/platform/removedSourcesRuntimeRepository';
 
 export interface WorkspaceSearchResult {
@@ -42,10 +44,14 @@ function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+function untitledLabel() {
+  return translate(getStoredAppLocale(), 'desktop.search.context.untitled');
+}
+
 function buildExcerpt(content: string, query: string) {
   const normalizedContent = normalizeWhitespace(content);
   if (!normalizedContent) {
-    return 'No content preview';
+    return translate(getStoredAppLocale(), 'desktop.search.context.noPreview');
   }
   const matchIndex = normalizedContent.toLowerCase().indexOf(query);
   if (matchIndex === -1) {
@@ -59,9 +65,9 @@ function buildExcerpt(content: string, query: string) {
 function buildPathLabel(node: WorkspaceListNode, nodesById: Record<string, WorkspaceListNode>) {
   const breadcrumbItems = buildNodeBreadcrumbs(node.parentNodeId, nodesById);
   if (!breadcrumbItems.length) {
-    return 'Top level';
+    return translate(getStoredAppLocale(), 'desktop.search.context.topLevel');
   }
-  return breadcrumbItems.map((item) => item.title.trim() || 'Untitled').join(' / ');
+  return breadcrumbItems.map((item) => item.title.trim() || untitledLabel()).join(' / ');
 }
 
 function buildRemovedExcerpt(entry: RuntimeRemovedSourceEntry, query: string) {
@@ -121,7 +127,7 @@ export function buildWorkspaceSearchResults(
     if (!node) {
       continue;
     }
-    const title = normalizeWhitespace(node.title) || 'Untitled';
+    const title = normalizeWhitespace(node.title) || untitledLabel();
     const path = buildPathLabel(node, availableNodesById);
     const haystack = `${title}\n${path}`.toLowerCase();
     if (!haystack.includes(normalizedQuery)) {

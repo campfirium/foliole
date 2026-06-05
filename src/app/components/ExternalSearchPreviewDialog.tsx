@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   importExternalDocument,
   type ExternalDocumentImportResult
@@ -18,6 +19,8 @@ function ExternalSearchPreviewBody(args: {
   onRetry: () => void;
   preview: ExternalDocumentPreview | null;
 }) {
+  const t = useTranslation();
+
   if (args.isLoading) {
     return (
       <div className="flex h-full items-center justify-center px-6">
@@ -32,11 +35,11 @@ function ExternalSearchPreviewBody(args: {
         <AppErrorState
           action={
             <AppButton onClick={args.onRetry} size="sm">
-              Retry
+              {t('desktop.externalPreview.retry')}
             </AppButton>
           }
           description={args.error}
-          title="External preview unavailable"
+          title={t('desktop.externalPreview.unavailable')}
         />
       </div>
     );
@@ -69,6 +72,7 @@ export function ExternalSearchPreviewDialog(props: {
   onImportComplete: (result: ExternalDocumentImportResult) => void;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslation();
   const { editorAppearanceKey } = useAppearanceSettings();
   const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(props.absolutePath);
   const [isImporting, setIsImporting] = useState(false);
@@ -98,15 +102,15 @@ export function ExternalSearchPreviewDialog(props: {
         >
           <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
             <div className="min-w-0">
-              <AppDialogTitle className="text-base font-semibold text-foreground">{preview?.fileName ?? 'External preview'}</AppDialogTitle>
+              <AppDialogTitle className="text-base font-semibold text-foreground">{preview?.fileName ?? t('desktop.externalPreview.title')}</AppDialogTitle>
               <p className="mt-1 break-all text-sm text-foreground/60">{preview?.relativePath ?? props.absolutePath}</p>
             </div>
             <div className="flex shrink-0 gap-2">
               <AppButton disabled={!preview || isImporting} onClick={() => void handleImport()}>
-                Import
+                {t('desktop.externalPreview.import')}
               </AppButton>
               <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">
-                Close
+                {t('desktop.externalPreview.close')}
               </AppButton>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis, X } from
 import { useState } from 'react';
 
 import { cn } from '../shared/lib/utils';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
 import { appFloatingSurfaceClassName, AppButton, appInputFocusVisibleClassName } from '../shared/ui';
 
@@ -45,6 +46,7 @@ function CompanionSelectionNotePanel(props: {
   onSave: () => void;
   top: number;
 }) {
+  const t = useTranslation();
   return (
     <div className={cn(appFloatingSurfaceClassName('popover'), 'mt-2 w-64 rounded-md p-2')} style={{ left: props.left, position: 'absolute', top: props.top }}>
       <textarea
@@ -54,12 +56,12 @@ function CompanionSelectionNotePanel(props: {
           appInputFocusVisibleClassName
         )}
         onChange={(event) => props.onChange(event.target.value)}
-        placeholder="Add annotation..."
+        placeholder={t('companion.selection.addAnnotation')}
         value={props.draft}
       />
       <div className="mt-2 flex justify-end gap-2">
-        <AppButton onClick={props.onCancel} size="sm" variant="ghost">Cancel</AppButton>
-        <AppButton disabled={!props.draft.trim()} onClick={props.onSave} size="sm">Save</AppButton>
+        <AppButton onClick={props.onCancel} size="sm" variant="ghost">{t('common.cancel')}</AppButton>
+        <AppButton disabled={!props.draft.trim()} onClick={props.onSave} size="sm">{t('companion.selection.save')}</AppButton>
       </div>
     </div>
   );
@@ -71,26 +73,27 @@ function CompanionSelectionToolbarActions(props: {
   onApply: (kind: CompanionSelectionAnnotationKind) => void;
   onDeleteExistingHighlight: () => void;
 }) {
+  const t = useTranslation();
   return (
     <div className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar">
       {props.isExistingHighlight ? (
-        <ToolbarButton label="Close Highlight" onClick={props.onDeleteExistingHighlight}>
+        <ToolbarButton label={t('companion.selection.closeHighlight')} onClick={props.onDeleteExistingHighlight}>
           <X aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       ) : (
-        <ToolbarButton label="Highlight" onClick={() => props.onApply('highlight')}>
+        <ToolbarButton label={t('companion.selection.highlight')} onClick={() => props.onApply('highlight')}>
           <Highlighter aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
-      <ToolbarButton label="Add Comment" onClick={props.onAddNote}>
+      <ToolbarButton label={t('companion.selection.addComment')} onClick={props.onAddNote}>
         <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton>
       {props.isExistingHighlight ? null : (
-        <ToolbarButton label="Cloze" onClick={() => props.onApply('cloze')}>
+        <ToolbarButton label={t('companion.selection.cloze')} onClick={() => props.onApply('cloze')}>
           <RectangleEllipsis aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
-      <ToolbarButton label="More" onClick={() => undefined}>
+      <ToolbarButton label={t('companion.selection.more')} onClick={() => undefined}>
         <MoreHorizontal aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton>
     </div>

@@ -3,6 +3,8 @@ import type { CSSProperties } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isHomeNode, isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { NODE_TITLE_SLOT_PADDING_TOP, shouldReserveNodeTitleSlot } from '../../shared/lib/nodeTitleSlot';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
+import { translate } from '../../shared/localization/translations';
 import { updateNodeImageState } from '../../shared/platform/performanceDiagnosticsProbe';
 import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
@@ -12,14 +14,15 @@ import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 export { hasVisibleTitleHeading } from '../../shared/lib/nodeTitleSlot';
 
 const READER_END_CUSHION_PADDING = 'clamp(calc(var(--workspace-bottom-toolbar-height) + 1.5rem), 36dvh, 26rem)';
+const translateEn: Translate = (key, params) => translate('en', key, params);
 
 function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNode: Node | undefined) {
   if (props.isWorkspaceHydrated === false) {
     return {
       loadingLabel: 'Document progress',
       emptyState: {
-        title: 'Preparing workspace',
-        description: 'Your topics are still being prepared.'
+        titleKey: 'desktop.document.preparingWorkspace.title',
+        descriptionKey: 'desktop.document.preparingWorkspace.description'
       }
     };
   }
@@ -28,16 +31,16 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
     if (props.isTrashViewOpen) {
       return {
         emptyState: {
-          title: 'This folder is empty',
-          description: 'Topics and folders will appear here after you add them to this folder.'
+          titleKey: 'desktop.document.emptyFolder.title',
+          descriptionKey: 'desktop.document.emptyFolder.description'
         }
       };
     }
 
     return {
       emptyState: {
-        title: 'No document selected',
-        description: 'Choose a document from the list to keep working.'
+        titleKey: 'desktop.document.noneSelected.title',
+        descriptionKey: 'desktop.document.noneSelected.description'
       }
     };
   }
@@ -47,8 +50,8 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
     return {
       documentStatus,
       emptyState: {
-        title: 'Topic body unavailable',
-        description: 'The selected topic body could not be loaded.'
+        titleKey: 'desktop.document.bodyUnavailable.title',
+        descriptionKey: 'desktop.document.bodyUnavailable.description'
       }
     };
   }
@@ -58,8 +61,8 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
       documentStatus,
       loadingLabel: 'Document progress',
       emptyState: {
-        title: 'Preparing document',
-        description: 'The selected document is still being prepared.'
+        titleKey: 'desktop.document.preparing.title',
+        descriptionKey: 'desktop.document.preparing.description'
       }
     };
   }
@@ -121,7 +124,8 @@ export function shouldReserveTitleSlot(
 function getDocumentPanelBodyProps(
   props: DocumentPanelSectionProps,
   panelState: ReturnType<typeof getDocumentPanelState>,
-  documentMaxWidth: number
+  documentMaxWidth: number,
+  t: Translate
 ) {
   const editorHideTitleHeading = props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false;
   const editorNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
@@ -146,7 +150,12 @@ function getDocumentPanelBodyProps(
     editorNodeViewState: props.editorNodeViewState,
     onBeginApplyingReadingPosition: props.onBeginApplyingReadingPosition,
     onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
-    emptyState: panelState.emptyState,
+    emptyState: panelState.emptyState
+      ? {
+          title: t(panelState.emptyState.titleKey),
+          description: t(panelState.emptyState.descriptionKey)
+        }
+      : undefined,
     fitBlockImagesToViewport: panelState.fitBlockImagesToViewport,
     hasAnswerSection: panelState.hasAnswerSection,
     onAnswerChange: props.onAnswerChange,
@@ -175,17 +184,18 @@ function getDocumentPanelBodyProps(
 export function getDocumentPanelView(
   props: DocumentPanelSectionProps,
   editorDisplayMode: 'preview' | 'source',
-  documentMaxWidth: number
+  documentMaxWidth: number,
+  t: Translate = translateEn
 ) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const panelState = getDocumentPanelState(props, activeNode, editorDisplayMode, props.showAnswerSection);
 
   return {
     activeNode,
-    bodyProps: getDocumentPanelBodyProps(props, panelState, documentMaxWidth),
+    bodyProps: getDocumentPanelBodyProps(props, panelState, documentMaxWidth, t),
     documentStatus: panelState.documentStatus,
     documentLayoutStyle: { '--document-max-width': `${documentMaxWidth}px` } as CSSProperties,
-    loadingLabel: panelState.loadingLabel,
+    loadingLabel: panelState.loadingLabel ? t('desktop.document.progress') : undefined,
     isFolderListView: Boolean(
       props.isTrashViewOpen && (!activeNode || activeNode.kind === 'folder') ||
         activeNode &&

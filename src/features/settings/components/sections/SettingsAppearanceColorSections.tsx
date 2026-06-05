@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
@@ -27,7 +28,7 @@ import {
   FontColorRow,
   HighlightColorRow,
   SelectionColorRow
-} from './settingsAppearanceControls';
+} from './appearanceColorRows';
 
 type AppearanceSettings = ReturnType<typeof useAppearanceSettings>;
 
@@ -36,15 +37,17 @@ function defaultModeColor(light: string, dark: string, appearance: AppearanceSet
 }
 
 export function AppearancePdfReadingModeRow(props: { appearance: AppearanceSettings }) {
+  const t = useTranslation();
+
   return (
     <SettingsSegmentedRow
-      description="Choose how PDF pages appear when the app uses dark mode. Light mode always shows the original PDF."
-      label="PDF in dark mode"
+      description={t('settings.appearance.pdfDarkMode.description')}
+      label={t('settings.appearance.pdfDarkMode.title')}
       onChange={(value) => props.appearance.setPdfReadingMode(value as typeof props.appearance.pdfReadingMode)}
       options={[
-        { label: 'Original', value: 'original' },
-        { label: 'Inverted', value: 'inverted' },
-        { label: 'Warm', value: 'warm' }
+        { label: t('settings.appearance.pdfDarkMode.original'), value: 'original' },
+        { label: t('settings.appearance.pdfDarkMode.inverted'), value: 'inverted' },
+        { label: t('settings.appearance.pdfDarkMode.warm'), value: 'warm' }
       ]}
       value={props.appearance.pdfReadingMode}
     />
@@ -52,17 +55,18 @@ export function AppearancePdfReadingModeRow(props: { appearance: AppearanceSetti
 }
 
 export function DimImagesInDarkModeRow(props: { appearance: AppearanceSettings }) {
+  const t = useTranslation();
   const { appearance } = props;
 
   return (
     <SettingsRow
-      description="Apply a gentle dimming filter to regular document images when the app is in dark mode."
-      title="Dim images in dark mode"
+      description={t('settings.appearance.dimImages.description')}
+      title={t('settings.appearance.dimImages.title')}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <button
           aria-checked={appearance.dimImagesInDarkMode}
-          aria-label="Dim images in dark mode"
+          aria-label={t('settings.appearance.dimImages.title')}
           className={settingsSwitchClassName(appearance.dimImagesInDarkMode)}
           onClick={() => appearance.setDimImagesInDarkMode(!appearance.dimImagesInDarkMode)}
           role="switch"
@@ -86,8 +90,10 @@ export function AppearanceReadingColorSection(props: {
   safeHighlightColor: string;
   safeSelectionColor: string;
 }) {
+  const t = useTranslation();
+
   return (
-    <SettingsSection ariaLabel="Appearance reading colors section" title="Reading colors">
+    <SettingsSection ariaLabel={t('settings.appearance.colors.sectionAria')} title={t('settings.appearance.colors.section')}>
       <AccentColorRow
         defaultAccentColor={defaultModeColor(DEFAULT_ACCENT_COLOR_PRESET, DEFAULT_DARK_ACCENT_COLOR_PRESET, props.appearance)}
         onAccentColorPresetReset={props.appearance.resetAccentColorPreset}
@@ -123,8 +129,10 @@ export function AppearanceReadingColorSection(props: {
 }
 
 export function AppearanceDarkModeContentSection(props: { appearance: AppearanceSettings }) {
+  const t = useTranslation();
+
   return (
-    <SettingsSection ariaLabel="Appearance dark mode content section" title="Dark mode content">
+    <SettingsSection ariaLabel={t('settings.appearance.darkMode.sectionAria')} title={t('settings.appearance.darkMode.section')}>
       <AppearancePdfReadingModeRow appearance={props.appearance} />
       <DimImagesInDarkModeRow appearance={props.appearance} />
     </SettingsSection>

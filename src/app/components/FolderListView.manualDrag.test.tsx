@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { expect, it, vi, beforeEach } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
@@ -81,7 +82,7 @@ beforeEach(() => {
 });
 
 it('reorders manual folder contents when the visible row button is dragged', () => {
-  render(<ManualFolderListHarness />);
+  renderWithLocalization(<ManualFolderListHarness />);
   const transfer = createDragTransfer();
 
   expect(getRenderedEntryTitles()).toEqual(['Beta', 'Alpha']);

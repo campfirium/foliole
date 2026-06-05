@@ -2,6 +2,8 @@ import { GripVertical } from 'lucide-react';
 import { useState, type PointerEvent } from 'react';
 
 import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
+import type { TranslationKey } from '../shared/localization/translations';
 
 import {
   COMPANION_SECONDARY_DESTINATIONS,
@@ -9,12 +11,12 @@ import {
   type CompanionTabSlotId
 } from './CompanionTabsConfig';
 
-const TAB_LABELS: Record<CompanionTabSlotId, string> = {
-  browse: 'Browse',
-  learn: 'Learn',
-  search: 'Search',
-  settings: 'Settings',
-  shortcut: 'Shortcut'
+const TAB_LABEL_KEYS: Record<CompanionTabSlotId, TranslationKey> = {
+  browse: 'companion.tabs.browse',
+  learn: 'companion.tabs.learn',
+  search: 'companion.tabs.search',
+  settings: 'companion.tabs.settings',
+  shortcut: 'companion.settings.tabs.shortcut'
 };
 
 const TAB_SLOT_IDS: CompanionTabSlotId[] = ['browse', 'learn', 'search', 'settings', 'shortcut'];
@@ -42,11 +44,12 @@ function TabTargetSelect(props: {
   config: CompanionTabConfig;
   onConfigChange(config: CompanionTabConfig): void;
 }) {
+  const t = useTranslation();
   return (
     <>
-      <span className="min-w-0 flex-1 text-base font-medium text-foreground">Shortcut</span>
+      <span className="min-w-0 flex-1 text-base font-medium text-foreground">{t('companion.settings.tabs.shortcut')}</span>
       <select
-        aria-label="Shortcut tab target"
+        aria-label={t('companion.settings.tabs.shortcutTarget')}
         className="h-10 max-w-[190px] shrink-0 rounded-md border border-border bg-canvas px-3 text-sm text-foreground"
         onChange={(event) => {
           const destinationId = parseLiteralUnion(event.target.value, COMPANION_SECONDARY_DESTINATION_IDS);
@@ -59,9 +62,9 @@ function TabTargetSelect(props: {
         }}
         value={props.config.shortcut.enabled ? props.config.shortcut.destinationId : ''}
       >
-        <option value="">Hidden</option>
+        <option value="">{t('companion.settings.tabs.hidden')}</option>
         {COMPANION_SECONDARY_DESTINATIONS.map((destination) => (
-          <option key={destination.id} value={destination.id}>{destination.label}</option>
+          <option key={destination.id} value={destination.id}>{t(destination.labelKey)}</option>
         ))}
       </select>
     </>
@@ -73,9 +76,10 @@ function TabDragHandle(props: {
   onPointerEnd(event: PointerEvent<HTMLButtonElement>, tabId: CompanionTabSlotId): void;
   onPointerStart(event: PointerEvent<HTMLButtonElement>, tabId: CompanionTabSlotId): void;
 }) {
+  const t = useTranslation();
   return (
     <button
-      aria-label={`Drag ${TAB_LABELS[props.tabId]}`}
+      aria-label={t('companion.settings.tabs.drag', { label: t(TAB_LABEL_KEYS[props.tabId]) })}
       className="flex h-9 w-9 shrink-0 touch-none cursor-grab items-center justify-center rounded-md text-companion-text-secondary hover:bg-companion-surface-subtle active:cursor-grabbing"
       data-testid={`tab-slot-${props.tabId}-handle`}
       onPointerCancel={(event) => props.onPointerEnd(event, props.tabId)}
@@ -92,6 +96,7 @@ export function CompanionTabsSettingsContent(props: {
   config: CompanionTabConfig;
   onConfigChange(config: CompanionTabConfig): void;
 }) {
+  const t = useTranslation();
   const [draggedTabId, setDraggedTabId] = useState<CompanionTabSlotId | null>(null);
   const handlePointerStart = (event: PointerEvent<HTMLButtonElement>, tabId: CompanionTabSlotId) => {
     event.preventDefault();
@@ -114,7 +119,7 @@ export function CompanionTabsSettingsContent(props: {
   return (
     <section className="px-1 py-4">
       <p className="mb-4 text-sm leading-6 text-companion-text-secondary">
-        Drag tabs to reorder the bottom bar. Choose a shortcut when you want one extra tab.
+        {t('companion.settings.tabs.description')}
       </p>
       <div className="divide-y divide-companion-divider border-y border-companion-divider">
         {props.config.orderedTabIds.map((tabId) => (
@@ -132,7 +137,7 @@ export function CompanionTabsSettingsContent(props: {
             {tabId === 'shortcut' ? (
               <TabTargetSelect config={props.config} onConfigChange={props.onConfigChange} />
             ) : (
-              <span className="flex-1 text-base font-medium text-foreground">{TAB_LABELS[tabId] ?? tabId}</span>
+              <span className="flex-1 text-base font-medium text-foreground">{t(TAB_LABEL_KEYS[tabId])}</span>
             )}
           </div>
         ))}

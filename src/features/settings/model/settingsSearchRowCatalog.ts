@@ -1,184 +1,92 @@
+import { EN_TRANSLATIONS } from '../../../shared/localization/locales/en';
+import type { TranslationKey } from '../../../shared/localization/translations';
+
+import type { SettingsCategoryId } from './settingsPanelOptions';
 import type { SettingsSearchRowMeta } from './settingsSearch';
 
-export const ABOUT_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
-  {
-    categoryId: 'about',
-    description: 'Current Foliole desktop version and update check.',
-    id: 'about-foliole-desktop',
-    searchTerms: ['check updates', 'release notes'],
-    title: 'Version'
-  },
-  {
-    categoryId: 'about',
-    description: 'Copy a small support report with recent errors and crash status. It does not include your library content.',
-    id: 'about-diagnostic-report',
-    title: 'Diagnostic report'
-  },
-  {
-    categoryId: 'about',
-    description: 'Improves search for Chinese, Japanese, Korean, and other languages that are not separated by spaces.',
-    id: 'about-search-enhancement',
-    searchTerms: ['full text search', 'CJK search'],
-    title: 'Search enhancement'
-  },
-  {
-    categoryId: 'about',
-    description: 'Open source code, community discussions, and feedback.',
-    id: 'about-community',
-    searchTerms: ['feedback', 'github', 'issue', 'discussion'],
-    title: 'Community'
-  }
+type Translate = (key: TranslationKey) => string;
+
+interface SearchRowDefinition {
+  categoryId: SettingsCategoryId;
+  descriptionKey: TranslationKey;
+  id: string;
+  searchTermsKey?: TranslationKey;
+  titleKey: TranslationKey;
+}
+
+const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
+  row('about', 'about-foliole-desktop', 'settings.search.aboutVersion.title', 'settings.search.aboutVersion.description', 'settings.search.aboutVersion.terms'),
+  row('about', 'about-diagnostic-report', 'settings.search.aboutDiagnostic.title', 'settings.search.aboutDiagnostic.description'),
+  row('about', 'about-community', 'settings.search.aboutCommunity.title', 'settings.search.aboutCommunity.description', 'settings.search.aboutCommunity.terms'),
+  row('general', 'general-search-enhancement', 'settings.search.generalSearchEnhancement.title', 'settings.search.generalSearchEnhancement.description', 'settings.search.generalSearchEnhancement.terms'),
+  row('appearance', 'appearance-app-language', 'settings.search.language.title', 'settings.search.language.description', 'settings.search.language.terms'),
+  row('editor', 'editor-save-remote-images-locally', 'settings.search.editorRemoteImages.title', 'settings.search.editorRemoteImages.description', 'settings.search.editorRemoteImages.terms'),
+  row('editor', 'editor-highlight-annotation-prefix', 'settings.search.editorHighlightPrefix.title', 'settings.search.editorHighlightPrefix.description'),
+  row('editor', 'editor-frontmatter-meta', 'settings.search.editorFrontmatter.title', 'settings.search.editorFrontmatter.description'),
+  row('editor', 'editor-long-cloze-mistake-guard', 'settings.search.editorLongCloze.title', 'settings.search.editorLongCloze.description'),
+  row('review', 'review-desired-retention', 'settings.search.reviewRetention.title', 'settings.search.reviewRetention.description'),
+  row('review', 'review-maximum-interval', 'settings.search.reviewMaximumInterval.title', 'settings.search.reviewMaximumInterval.description'),
+  row('review', 'review-new-day-starts-at', 'settings.search.reviewDayStart.title', 'settings.search.reviewDayStart.description'),
+  row('review', 'review-default-topic-priority', 'settings.search.reviewDefaultPriority.title', 'settings.search.reviewDefaultPriority.description'),
+  row('review', 'review-reading-vs-review-mix', 'settings.search.reviewMix.title', 'settings.search.reviewMix.description'),
+  row('review', 'review-priority-weight', 'settings.search.reviewPriorityWeight.title', 'settings.search.reviewPriorityWeight.description'),
+  row('review', 'review-reading-initial-interval', 'settings.search.reviewInitialInterval.title', 'settings.search.reviewInitialInterval.description'),
+  row('review', 'review-reading-interval-growth', 'settings.search.reviewIntervalGrowth.title', 'settings.search.reviewIntervalGrowth.description'),
+  row('mouse-gestures', 'mouse-gestures-active-area', 'settings.search.gestureActiveArea.title', 'settings.search.gestureActiveArea.description'),
+  row('mouse-gestures', 'mouse-gestures-line-color', 'settings.search.gestureLineColor.title', 'settings.search.gestureLineColor.description'),
+  row('mouse-gestures', 'mouse-gestures-line-width', 'settings.search.gestureLineWidth.title', 'settings.search.gestureLineWidth.description'),
+  row('mouse-gestures', 'mouse-gestures-direction-threshold', 'settings.search.gestureThreshold.title', 'settings.search.gestureThreshold.description'),
+  row('library', 'library-home', 'settings.search.libraryHome.title', 'settings.search.libraryHome.description'),
+  row('library', 'library-assets', 'settings.search.libraryAssets.title', 'settings.search.libraryAssets.description'),
+  row('library', 'library-inbox', 'settings.search.libraryInbox.title', 'settings.search.libraryInbox.description'),
+  row('library', 'library-mirror', 'settings.search.libraryMirror.title', 'settings.search.libraryMirror.description'),
+  row('library', 'library-mirror-output', 'settings.search.libraryMirrorOutput.title', 'settings.search.libraryMirrorOutput.description'),
+  row('library', 'library-mirror-links', 'settings.search.libraryMirrorLinks.title', 'settings.search.libraryMirrorLinks.description')
 ];
 
-export const EDITOR_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
-  {
-    categoryId: 'editor',
-    description: 'Automatically copy remote pictures in topics into your local library so they stay available offline.',
-    id: 'editor-save-remote-images-locally',
-    searchTerms: ['remote images', 'offline images'],
-    title: 'Save remote images locally'
-  },
-  {
-    categoryId: 'editor',
-    description: 'Inserted before annotation text when creating or adding a highlight annotation.',
-    id: 'editor-highlight-annotation-prefix',
-    title: 'Highlight annotation prefix'
-  },
-  {
-    categoryId: 'editor',
-    description: 'Fields shown under the title. Use commas for groups and | for aliases.',
-    id: 'editor-frontmatter-meta',
-    title: 'Frontmatter meta'
-  },
-  {
-    categoryId: 'editor',
-    description: 'When both length checks are exceeded, ask first, create a highlight, or allow the cloze.',
-    id: 'editor-long-cloze-mistake-guard',
-    title: 'Long cloze mistake guard'
-  }
-];
+function row(
+  categoryId: SettingsCategoryId,
+  id: string,
+  titleKey: TranslationKey,
+  descriptionKey: TranslationKey,
+  searchTermsKey?: TranslationKey
+): SearchRowDefinition {
+  return {
+    categoryId,
+    descriptionKey,
+    id,
+    titleKey,
+    ...(searchTermsKey ? { searchTermsKey } : {})
+  };
+}
 
-export const REVIEW_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
-  {
-    categoryId: 'review',
-    description: 'Lower values shorten intervals. Recommended around 0.80-0.95.',
-    id: 'review-desired-retention',
-    title: 'Desired retention'
-  },
-  {
-    categoryId: 'review',
-    description: 'Cap long-term intervals in days.',
-    id: 'review-maximum-interval',
-    title: 'Maximum interval'
-  },
-  {
-    categoryId: 'review',
-    description: 'Cards due on a day become available from this local time.',
-    id: 'review-new-day-starts-at',
-    title: 'New day starts at'
-  },
-  {
-    categoryId: 'review',
-    description: 'Fallback priority for new topics when neither the topic nor its ancestors set one.',
-    id: 'review-default-topic-priority',
-    title: 'Default topic priority'
-  },
-  {
-    categoryId: 'review',
-    description: 'How often a reading card is drawn against a review card.',
-    id: 'review-reading-vs-review-mix',
-    title: 'Reading vs review mix'
-  },
-  {
-    categoryId: 'review',
-    description: 'How strongly higher-priority topics are favored.',
-    id: 'review-priority-weight',
-    title: 'Priority weight'
-  },
-  {
-    categoryId: 'review',
-    description: 'Wait time after a reading card is handled before it can return to the reading queue.',
-    id: 'review-reading-initial-interval',
-    title: 'Reading initial interval'
-  },
-  {
-    categoryId: 'review',
-    description: 'How quickly the reading interval grows after each pass.',
-    id: 'review-reading-interval-growth',
-    title: 'Reading interval growth'
-  }
-];
+function splitSearchTerms(value: string) {
+  return value.split('|').map((term) => term.trim()).filter(Boolean);
+}
 
-export const MOUSE_GESTURE_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
-  {
-    categoryId: 'mouse-gestures',
-    description: 'More areas can be added later without changing the gesture model.',
-    id: 'mouse-gestures-active-area',
-    title: 'Active area'
-  },
-  {
-    categoryId: 'mouse-gestures',
-    description: 'Main panel gesture trail color.',
-    id: 'mouse-gestures-line-color',
-    title: 'Line color'
-  },
-  {
-    categoryId: 'mouse-gestures',
-    description: 'Visible stroke width for the gesture trail.',
-    id: 'mouse-gestures-line-width',
-    title: 'Line width (px)'
-  },
-  {
-    categoryId: 'mouse-gestures',
-    description: 'Minimum movement before a direction is accepted.',
-    id: 'mouse-gestures-direction-threshold',
-    title: 'Direction threshold (px)'
-  }
-];
+export function createSettingsSearchRows(t: Translate): SettingsSearchRowMeta[] {
+  return SETTINGS_SEARCH_ROW_DEFINITIONS.map((definition) => {
+    const searchTerms = definition.searchTermsKey ? splitSearchTerms(t(definition.searchTermsKey)) : [];
+    return {
+      categoryId: definition.categoryId,
+      description: t(definition.descriptionKey),
+      id: definition.id,
+      title: t(definition.titleKey),
+      ...(searchTerms.length ? { searchTerms } : {})
+    };
+  });
+}
 
-export const LIBRARY_SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
-  {
-    categoryId: 'library',
-    description: 'Main library root for your long-term data.',
-    id: 'library-home',
-    title: 'Library Home'
-  },
-  {
-    categoryId: 'library',
-    description: 'Folder for attachments and copied media.',
-    id: 'library-assets',
-    title: 'Assets'
-  },
-  {
-    categoryId: 'library',
-    description: 'Drop folder for incoming files.',
-    id: 'library-inbox',
-    title: 'Inbox'
-  },
-  {
-    categoryId: 'library',
-    description: 'A read-only Markdown export Foliole regenerates automatically.',
-    id: 'library-mirror',
-    title: 'Mirror'
-  },
-  {
-    categoryId: 'library',
-    description: 'Rebuild daily mirror output for recovery or rule changes.',
-    id: 'library-mirror-output',
-    title: 'Mirror output'
-  },
-  {
-    categoryId: 'library',
-    description: 'Rebuild links after moving Mirror or Assets folders.',
-    id: 'library-mirror-links',
-    title: 'Mirror links'
-  }
-];
+const ENGLISH_SETTINGS_SEARCH_ROWS = createSettingsSearchRows((key) => EN_TRANSLATIONS[key]);
 
-export const SETTINGS_SEARCH_ROWS: SettingsSearchRowMeta[] = [
-  ...ABOUT_SETTINGS_SEARCH_ROWS,
-  ...EDITOR_SETTINGS_SEARCH_ROWS,
-  ...REVIEW_SETTINGS_SEARCH_ROWS,
-  ...MOUSE_GESTURE_SETTINGS_SEARCH_ROWS,
-  ...LIBRARY_SETTINGS_SEARCH_ROWS
-];
+function rowsForCategory(categoryId: SettingsCategoryId) {
+  return ENGLISH_SETTINGS_SEARCH_ROWS.filter((rowMeta) => rowMeta.categoryId === categoryId);
+}
+
+export const ABOUT_SETTINGS_SEARCH_ROWS = rowsForCategory('about');
+export const GENERAL_SETTINGS_SEARCH_ROWS = rowsForCategory('general');
+export const EDITOR_SETTINGS_SEARCH_ROWS = rowsForCategory('editor');
+export const REVIEW_SETTINGS_SEARCH_ROWS = rowsForCategory('review');
+export const MOUSE_GESTURE_SETTINGS_SEARCH_ROWS = rowsForCategory('mouse-gestures');
+export const LIBRARY_SETTINGS_SEARCH_ROWS = rowsForCategory('library');
+export const SETTINGS_SEARCH_ROWS = ENGLISH_SETTINGS_SEARCH_ROWS;

@@ -1,3 +1,5 @@
+import { useTranslation } from '../shared/localization/LocalizationProvider';
+
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
 function ChevronIcon() {
@@ -31,14 +33,15 @@ export function CompanionSettingsList(props: {
   onOpenStorage(): void;
   onOpenSync(): void;
 }) {
+  const t = useTranslation();
   return (
     <section className="px-1 pb-4">
       <div>
-        <SettingsListItem detail="Connect another device and bring your content here." onClick={props.onOpenSync} title="Sync" />
-        <SettingsListItem detail="Device information will appear here." onClick={props.onOpenDevice} title="Device" />
-        <SettingsListItem detail="Clear Foliole data on this device." onClick={props.onOpenStorage} title="Storage" />
-        <SettingsListItem detail="Display preferences will appear here." onClick={props.onOpenAppearance} title="Appearance" />
-        <SettingsListItem detail="Diagnostics and development details will appear here." onClick={props.onOpenDebug} title="Debug" />
+        <SettingsListItem detail={t('companion.settings.sync.detail')} onClick={props.onOpenSync} title={t('companion.settings.sync.title')} />
+        <SettingsListItem detail={t('companion.settings.device.detail')} onClick={props.onOpenDevice} title={t('companion.settings.device.title')} />
+        <SettingsListItem detail={t('companion.settings.storage.detail')} onClick={props.onOpenStorage} title={t('companion.settings.storage.title')} />
+        <SettingsListItem detail={t('companion.settings.appearance.detail')} onClick={props.onOpenAppearance} title={t('companion.settings.appearance.title')} />
+        <SettingsListItem detail={t('companion.settings.debug.detail')} onClick={props.onOpenDebug} title={t('companion.settings.debug.title')} />
       </div>
     </section>
   );

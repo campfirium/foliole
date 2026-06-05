@@ -1,15 +1,17 @@
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppEmptyState, AppErrorState } from '../shared/ui';
 
 export function CompanionSyncDiagnosticStatus(props: {
   error: string | null;
   status: 'checking' | 'idle' | 'running';
 }) {
+  const t = useTranslation();
   if (props.error) {
     return (
       <AppErrorState
         className="min-h-0 items-start text-left text-error"
         description={props.error}
-        title="Sync diagnostic failed"
+        title={t('companion.sync.diagnostic.failed')}
       />
     );
   }
@@ -17,8 +19,8 @@ export function CompanionSyncDiagnosticStatus(props: {
     return (
       <AppEmptyState
         className="min-h-0 items-start text-left text-companion-text-secondary"
-        description="Collecting sync state from this device and desktop."
-        title="Running sync diagnostic"
+        description={t('companion.sync.diagnostic.running.description')}
+        title={t('companion.sync.diagnostic.running.title')}
       />
     );
   }
@@ -26,8 +28,8 @@ export function CompanionSyncDiagnosticStatus(props: {
     return (
       <AppEmptyState
         className="min-h-0 items-start text-left text-companion-text-secondary"
-        description="Checking whether this device and desktop have converged."
-        title="Running convergence check"
+        description={t('companion.sync.diagnostic.checking.description')}
+        title={t('companion.sync.diagnostic.checking.title')}
       />
     );
   }

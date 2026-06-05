@@ -1,14 +1,17 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
+
 import type { ReadwiseImportProgressView } from './readwiseImportProgressView';
 
 export function ReadwiseImportProgressPanel(props: {
   isRunning: boolean;
   progress: ReadwiseImportProgressView | null;
 }) {
+  const t = useTranslation();
   if (!props.isRunning && !props.progress) {
     return null;
   }
   const progress = props.progress ?? {
-    message: 'Preparing Readwise import',
+    message: t('desktop.readwise.progress.preparing'),
     progress: null
   };
   const percent = progress.progress === null ? null : Math.round(progress.progress * 100);
@@ -23,7 +26,7 @@ export function ReadwiseImportProgressPanel(props: {
         ) : null}
       </div>
       <div
-        aria-label="Readwise import progress"
+        aria-label={t('desktop.readwise.progress.aria')}
         aria-valuemax={100}
         aria-valuemin={0}
         {...(percent !== null ? { 'aria-valuenow': percent } : {})}

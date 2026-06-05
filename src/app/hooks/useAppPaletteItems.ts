@@ -13,6 +13,7 @@ import {
   resolveReviewSourceTopicNodeId
 } from '../../features/review/model/reviewGameNavigation';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { getWorkspaceRedoTitle, getWorkspaceUndoTitle } from '../../store/workspaceActionHistory';
 import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 
@@ -108,6 +109,7 @@ export function resolveEditorAwarePaletteHistoryOptions(args: {
   activeNodeId: string | null;
   appActionHistory: Parameters<typeof getWorkspaceUndoTitle>[0];
   editorOperationHistory: Parameters<typeof getEditorOperationUndoTitle>[0];
+  t: Translate;
 }) {
   const canUndoEditorOperation = canApplyEditorOperationEntryForCurrentNode(args.editorOperationHistory.undoStack.at(-1), args.activeNodeId);
   const canRedoEditorOperation = canApplyEditorOperationEntryForCurrentNode(args.editorOperationHistory.redoStack.at(-1), args.activeNodeId);
@@ -115,10 +117,10 @@ export function resolveEditorAwarePaletteHistoryOptions(args: {
     canRedoWorkspaceAction: canRedoEditorOperation || args.appActionHistory.redoStack.length > 0,
     canUndoWorkspaceAction: canUndoEditorOperation || args.appActionHistory.undoStack.length > 0,
     redoWorkspaceActionTitle: canRedoEditorOperation
-      ? getEditorOperationRedoTitle(args.editorOperationHistory)
+      ? getEditorOperationRedoTitle(args.editorOperationHistory, args.t)
       : getWorkspaceRedoTitle(args.appActionHistory),
     undoWorkspaceActionTitle: canUndoEditorOperation
-      ? getEditorOperationUndoTitle(args.editorOperationHistory)
+      ? getEditorOperationUndoTitle(args.editorOperationHistory, args.t)
       : getWorkspaceUndoTitle(args.appActionHistory)
   };
 }
@@ -126,10 +128,10 @@ export function resolveEditorAwarePaletteHistoryOptions(args: {
 function buildPaletteOptions(
   args: Parameters<typeof useAppPaletteItems>[0],
   canMoveToNode: boolean,
-  hasNavigableNodes: boolean
+  hasNavigableNodes: boolean,
+  t: Translate
 ) {
-  const canUseCurrentTopic = canMergeHighlightsIntoTopic(args);
-  const activeNodeId = args.activeNodeId;
+  const canUseCurrentTopic = canMergeHighlightsIntoTopic(args), activeNodeId = args.activeNodeId;
   const reviewNavigationSource = {
     nodeOrder: args.ws.nodeOrder,
     nodesById: args.ws.nodesById,
@@ -138,7 +140,8 @@ function buildPaletteOptions(
   const historyOptions = resolveEditorAwarePaletteHistoryOptions({
     activeNodeId: args.activeNodeId,
     appActionHistory: args.ws.appActionHistory,
-    editorOperationHistory: args.ws.editorOperationHistory
+    editorOperationHistory: args.ws.editorOperationHistory,
+    t
   });
   return {
     ...historyOptions,
@@ -198,6 +201,7 @@ export function useAppPaletteItems(args: {
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
   ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'appActionHistory' | 'editorOperationHistory' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
 }) {
+  const t = useTranslation();
   const hasNavigableNodes = useMemo(
     () => args.ws.nodeOrder.some((nodeId) => !args.ws.trashedNodeIds.includes(nodeId) && Boolean(args.ws.nodesById[nodeId])),
     [args.ws.nodeOrder, args.ws.nodesById, args.ws.trashedNodeIds]
@@ -216,10 +220,10 @@ export function useAppPaletteItems(args: {
 
   return useMemo(
     () =>
-      buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes)).map((item) => ({
+      buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes, t)).map((item) => ({
         ...item,
         ...definedProps({ shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts })
       })),
-    [args, canMoveToNode, hasNavigableNodes]
+    [args, canMoveToNode, hasNavigableNodes, t]
   );
 }

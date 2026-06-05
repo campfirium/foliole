@@ -1,11 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionBottomTabBar } from './CompanionFloatingBars';
 import { DEFAULT_COMPANION_TAB_CONFIG } from './CompanionTabsConfig';
 
 function renderBottomBar() {
-  render(
+  renderWithLocalization(
     <CompanionBottomTabBar
       activeAction="recent"
       activeSecondaryDestinationId={null}

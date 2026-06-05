@@ -5,7 +5,6 @@ import {
   createNextImportSourceIndex,
   createReadwiseImportSources,
   formatReadwiseSourceLabel,
-  type ImportHighlightMode,
   type ImportManagerSourceDraft as DraftImportSource
 } from '../../../lib/core/import/importManagerSettings';
 
@@ -20,20 +19,6 @@ export function cloneDraftImportSource(source: DraftImportSource, index: number)
     ...source,
     id: createDraftImportSource(index).id
   };
-}
-
-export function formatHighlightModeLabel(mode: ImportHighlightMode) {
-  return mode === 'split' ? 'Split' : 'Merged';
-}
-
-export function formatKeepStateLabel(state: DraftImportSource['keepState']) {
-  if (state === 'enabled') {
-    return 'Enabled';
-  }
-  if (state === 'previewed') {
-    return 'Ready to enable';
-  }
-  return 'Needs preview';
 }
 
 export function updateDraftImportSource(

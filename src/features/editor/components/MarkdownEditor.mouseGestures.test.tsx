@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { SettingsMouseGesturesSection } from '../../settings/components/sections/SettingsMouseGesturesSection';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 import {
@@ -65,7 +66,11 @@ import { MarkdownEditor } from './MarkdownEditor';
 
 function renderWithMouseGestureProvider(ui: React.ReactElement) {
   return render(ui, {
-    wrapper: ({ children }) => <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+    wrapper: ({ children }) => (
+      <LocalizationProvider>
+        <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+      </LocalizationProvider>
+    )
   });
 }
 

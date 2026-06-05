@@ -2,6 +2,7 @@ import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
@@ -49,10 +50,12 @@ interface DocumentPanelHeaderProps {
 function SourceUpdateAction({
   isOpen,
   onToggle,
+  t,
   visible
 }: {
   isOpen: boolean;
   onToggle: () => void;
+  t: Translate;
   visible: boolean;
 }) {
   if (!visible) {
@@ -64,7 +67,7 @@ function SourceUpdateAction({
       className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
       data-active={isOpen}
       icon={<SplitPanelIcon />}
-      label="Toggle source update panel"
+      label={t('desktop.document.toggleSourceUpdatePanel')}
       onClick={onToggle}
     />
   );
@@ -78,16 +81,18 @@ function renderHeaderActions(args: {
   showSourceUpdateAction: boolean;
   showDocumentControls: boolean;
   toggleEditorDisplayMode: () => void;
+  t: Translate;
 }) {
   if (args.isFolderListView || !args.showDocumentControls) {
     return null;
   }
 
   return (
-    <ToolbarActionGroup ariaLabel="Document editor actions" className="justify-end">
+    <ToolbarActionGroup ariaLabel={args.t('desktop.document.editorActions')} className="justify-end">
       <SourceUpdateAction
         isOpen={args.isSourceUpdatePanelOpen}
         onToggle={args.onToggleSourceUpdatePanel}
+        t={args.t}
         visible={args.showSourceUpdateAction}
       />
       <AppDropdownMenu>
@@ -95,12 +100,12 @@ function renderHeaderActions(args: {
           <AppIconButton
             className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
             icon={<MoreOptionsIcon />}
-            label="More editor options"
+            label={args.t('desktop.document.moreEditorOptions')}
           />
         </AppDropdownMenuTrigger>
         <AppDropdownMenuContent align="end" sideOffset={6}>
           <AppDropdownMenuItem onSelect={args.toggleEditorDisplayMode}>
-            {args.editorDisplayMode === 'preview' ? 'Switch to Source mode' : 'Switch to Live Preview mode'}
+            {args.editorDisplayMode === 'preview' ? args.t('desktop.document.switchToSource') : args.t('desktop.document.switchToLivePreview')}
           </AppDropdownMenuItem>
         </AppDropdownMenuContent>
       </AppDropdownMenu>
@@ -121,6 +126,7 @@ function buildNavigationProps(args: DocumentPanelHeaderProps): DocumentPanelHead
 
 function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
   editorDisplayMode: ReturnType<typeof useAppearanceSettings>['editorDisplayMode'];
+  t: Translate;
   toggleEditorDisplayMode: () => void;
 }) {
   const navigationProps = buildNavigationProps(args);
@@ -159,6 +165,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
           onToggleSourceUpdatePanel: args.onToggleSourceUpdatePanel,
           showDocumentControls,
           showSourceUpdateAction: args.showSourceUpdateAction,
+          t: args.t,
           toggleEditorDisplayMode: args.toggleEditorDisplayMode
         })}
       </div>
@@ -190,11 +197,12 @@ export function DocumentPanelHeader({
   showDocumentControls = true,
   showSourceUpdateAction
 }: DocumentPanelHeaderProps) {
+  const t = useTranslation();
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
 
   return (
     <AppToolbar as="header" className="min-h-8 pl-4 pr-4 max-[1080px]:px-2">
-      <h2 className="sr-only">Content</h2>
+      <h2 className="sr-only">{t('desktop.document.content')}</h2>
       {renderDocumentHeaderContent({
         activeNodeId,
         backlinks,
@@ -219,6 +227,7 @@ export function DocumentPanelHeader({
         reviewSchedulerSettings,
         ...(showDocumentControls !== undefined ? { showDocumentControls } : {}),
         showSourceUpdateAction,
+        t,
         toggleEditorDisplayMode
       })}
     </AppToolbar>

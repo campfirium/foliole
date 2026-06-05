@@ -1,12 +1,14 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 
 const progressCounts = (completedItemCount: number, completedTopicCount: number, queuedItemCount: number, queuedTopicCount: number) => ({ completedItemCount, completedTopicCount, queuedItemCount, queuedTopicCount });
 
 function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}) {
-  return render(
+  return renderWithLocalization(
     <ReviewModeToolbar
       isAnswerRevealed={false}
       isCurrentItemGradable={false}

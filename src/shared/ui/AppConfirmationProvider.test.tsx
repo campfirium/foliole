@@ -1,5 +1,7 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../localization/testLocalization';
 
 import { requestAppConfirmation, requestAppTextInput } from './appConfirmation';
 import { AppConfirmationProvider } from './AppConfirmationProvider';
@@ -45,7 +47,7 @@ function TextInputDemo({ onResult }: { onResult: (value: string | null) => void 
 
 it('resolves confirmation requests from the shared app dialog', async () => {
   const onResult = vi.fn();
-  render(<ConfirmationDemo onResult={onResult} />);
+  renderWithLocalization(<ConfirmationDemo onResult={onResult} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Open confirmation' }));
   const dialog = await screen.findByRole('dialog', { name: 'Continue action?' });
@@ -58,7 +60,7 @@ it('resolves confirmation requests from the shared app dialog', async () => {
 
 it('resolves text input requests from the shared app dialog', async () => {
   const onResult = vi.fn();
-  render(<TextInputDemo onResult={onResult} />);
+  renderWithLocalization(<TextInputDemo onResult={onResult} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Open text input' }));
   const dialog = await screen.findByRole('dialog', { name: 'Add source website' });

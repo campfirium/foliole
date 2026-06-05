@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
-import { AppSpinner } from '../../shared/ui';
 
+import { PdfDocumentLoadingOverlay } from './PdfDocumentLoadingOverlay';
 import type { PdfSearchStatus, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import { PdfViewportDocument } from './PdfDocumentViewportRenderParts';
+import { useDisplayedPdfZoom, useFitWidthTargetWidth } from './PdfDocumentViewportSizing';
 import type { PdfPageDimensions } from './pdfPageDimensions';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { PdfViewportToolbar } from './PdfViewportToolbar';
@@ -53,20 +54,6 @@ interface PdfDocumentViewportContentBodyProps {
   zoom: number;
 }
 
-function PdfDocumentLoadingOverlay() {
-  return (
-    <div
-      aria-busy="true"
-      aria-label="PDF page progress"
-      className="pointer-events-none absolute inset-0 z-workspace-overlay flex items-center justify-center"
-      data-testid="pdf-document-loading-overlay"
-      role="status"
-    >
-      <AppSpinner decorative size="lg" />
-    </div>
-  );
-}
-
 function isPdfShellLoading(shell: HTMLDivElement | null) {
   if (!shell) {
     return true;
@@ -75,47 +62,6 @@ function isPdfShellLoading(shell: HTMLDivElement | null) {
     return true;
   }
   return shell.querySelector('.react-pdf__Page,[data-testid="pdf-document-page"],canvas,.textLayer') === null;
-}
-
-function useFitWidthTargetWidth(scrollContainerRef: MutableRefObject<HTMLDivElement | null>) {
-  const [targetWidth, setTargetWidth] = useState<number | null>(null);
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) {
-      return;
-    }
-    const updateTargetWidth = () => {
-      setTargetWidth(container.clientWidth > 48 ? Math.max(160, container.clientWidth - 48) : null);
-    };
-    updateTargetWidth();
-    window.addEventListener('resize', updateTargetWidth);
-    return () => window.removeEventListener('resize', updateTargetWidth);
-  }, [scrollContainerRef]);
-
-  return targetWidth;
-}
-
-function useDisplayedPdfZoom(args: {
-  fitWidthTargetWidth: number | null;
-  visiblePage: number;
-  zoom: number;
-  zoomMode: 'custom' | 'fit-width';
-}) {
-  const [baseWidthByPage, setBaseWidthByPage] = useState<Record<number, number>>({});
-  const visibleBaseWidth = baseWidthByPage[args.visiblePage];
-  const displayedZoom =
-    args.zoomMode === 'fit-width' && args.fitWidthTargetWidth && visibleBaseWidth
-      ? Math.max(1, Math.round((args.fitWidthTargetWidth / visibleBaseWidth) * 100))
-      : args.zoom;
-
-  const handlePageLoadSuccess = (pageNumber: number, dimensions: PdfPageDimensions) => {
-    setBaseWidthByPage((current) =>
-      current[pageNumber] === dimensions.width ? current : { ...current, [pageNumber]: dimensions.width }
-    );
-  };
-
-  return { displayedZoom, handlePageLoadSuccess };
 }
 
 function useViewportPageLoadingState(

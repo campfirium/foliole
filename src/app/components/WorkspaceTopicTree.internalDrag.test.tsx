@@ -1,7 +1,8 @@
-import { createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -137,7 +138,7 @@ beforeEach(() => {
 
 it('does not apply topic-to-topic drops outside manual sorting', () => {
   seed(['folder-a', 'topic-a', 'topic-b'], ['topic-a', 'topic-b']);
-  render(<TopicTreeHarness />);
+  renderWithLocalization(<TopicTreeHarness />);
   const dataTransfer = transfer();
   const alphaFrame = rowFrame('Alpha');
   const betaFrame = rowFrame('Beta');
@@ -155,7 +156,7 @@ it('does not apply topic-to-topic drops outside manual sorting', () => {
 
 it('does not fall back to structural movement for manual child drops', () => {
   seed(['folder-a', 'topic-a', 'topic-b'], ['topic-b', 'topic-a']);
-  render(<TopicTreeHarness />);
+  renderWithLocalization(<TopicTreeHarness />);
   chooseManualSort();
   const dataTransfer = transfer();
   const betaFrame = rowFrame('Beta');
@@ -166,14 +167,14 @@ it('does not fall back to structural movement for manual child drops', () => {
 
   expect(betaFrame).not.toHaveClass('border');
   expect(useWorkspaceStore.getState().nodeOrder).toEqual(['folder-a', 'topic-a', 'topic-b']);
-  expect(useWorkspaceStore.getState().nodesById['folder-a']?.manualChildOrder).toEqual(['topic-a', 'topic-b']);
+  expect(useWorkspaceStore.getState().nodesById['folder-a']?.manualChildOrder).toEqual(['topic-b', 'topic-a']);
   expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-a');
   expect(useWorkspaceStore.getState().nodesById['topic-b']?.parentNodeId).toBe('folder-a');
 });
 
 it('shows Alt structural drop feedback for movable topics', async () => {
   seed(['folder-a', 'topic-a', 'topic-b'], ['topic-a', 'topic-b']);
-  render(<TopicTreeHarness />);
+  renderWithLocalization(<TopicTreeHarness />);
   const dataTransfer = transfer();
   const betaFrame = rowFrame('Beta');
 
@@ -185,7 +186,7 @@ it('shows Alt structural drop feedback for movable topics', async () => {
 
 it('keeps derived topics as manual sort anchors but not drag sources', () => {
   seed(['folder-a', 'topic-a', 'topic-b', 'topic-derived'], ['topic-derived', 'topic-b', 'topic-a'], true);
-  render(<TopicTreeHarness />);
+  renderWithLocalization(<TopicTreeHarness />);
   chooseManualSort();
   const dataTransfer = transfer();
 
@@ -205,7 +206,7 @@ it('keeps derived topics as manual sort anchors but not drag sources', () => {
 
 it('does not apply Alt child drops into derived topics', () => {
   seed(['folder-a', 'topic-a', 'topic-b', 'topic-derived'], ['topic-derived', 'topic-b', 'topic-a'], true);
-  render(<TopicTreeHarness />);
+  renderWithLocalization(<TopicTreeHarness />);
   const dataTransfer = transfer();
   const derivedFrame = rowFrame('Derived');
 

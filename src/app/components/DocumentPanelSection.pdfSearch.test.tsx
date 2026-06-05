@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
@@ -98,7 +100,7 @@ beforeEach(() => {
 });
 
 it('supports in-view pdf search navigation and empty-state feedback', async () => {
-  render(<DocumentPanelSection {...defaultProps} />);
+  renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF search' })).toBeInTheDocument());
   const previousMatchButton = screen.getByRole('button', { name: 'Previous match' });
   const nextMatchButton = screen.getByRole('button', { name: 'Next match' });
@@ -134,7 +136,7 @@ it('supports in-view pdf search navigation and empty-state feedback', async () =
 });
 
 it('supports Enter and Shift+Enter for in-view pdf search navigation', async () => {
-  render(<DocumentPanelSection {...defaultProps} />);
+  renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF search' })).toBeInTheDocument());
   const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
   fireEvent.change(searchInput, { target: { value: 'keyword' } });
@@ -146,7 +148,7 @@ it('supports Enter and Shift+Enter for in-view pdf search navigation', async () 
 });
 
 it('waits for composition to finish before running pdf search', async () => {
-  render(<DocumentPanelSection {...defaultProps} />);
+  renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF search' })).toBeInTheDocument());
   const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
   const initialStatus = screen.getByTestId('pdf-search-status').textContent;

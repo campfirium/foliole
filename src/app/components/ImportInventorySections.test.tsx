@@ -1,14 +1,16 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-import { ReadwiseBooksInventorySection } from './ImportOverviewSections';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
+
+import { ReadwiseBooksInventorySection } from './ImportOverviewInventorySections';
 import { PdfImportsInventorySection } from './ImportPdfOverviewSection';
 
 it('renders readwise books inside the shared list surface and keeps import actions working', () => {
   const onOpenBookNode = vi.fn();
   const onResetBookImport = vi.fn();
 
-  render(
+  renderWithLocalization(
     <ReadwiseBooksInventorySection
       inventory={{
         books: [
@@ -52,7 +54,7 @@ it('renders readwise books inside the shared list surface and keeps import actio
 });
 
 it('renders pdf inventory inside the shared list surface', () => {
-  render(
+  renderWithLocalization(
     <PdfImportsInventorySection
       inventory={{
         items: [

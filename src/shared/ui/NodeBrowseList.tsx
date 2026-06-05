@@ -1,3 +1,5 @@
+import { useTranslation, type Translate } from '../localization/LocalizationProvider';
+
 export interface NodeBrowseListItem {
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   kind?: 'folder' | 'topic' | 'item';
@@ -6,19 +8,19 @@ export interface NodeBrowseListItem {
   title: string;
 }
 
-function buildOpenLabel(title: string, kind?: NodeBrowseListItem['kind']) {
+function buildOpenLabel(title: string, t: Translate, kind?: NodeBrowseListItem['kind']) {
   if (kind === 'folder') {
-    return `Open folder ${title}`;
+    return t('desktop.nodeBrowse.openFolder', { title });
   }
-  return `Open topic ${title}`;
+  return t('desktop.nodeBrowse.openTopic', { title });
 }
 
-function renderBodyStatus(status: NodeBrowseListItem['bodyStatus']) {
+function renderBodyStatus(status: NodeBrowseListItem['bodyStatus'], t: Translate) {
   if (status === 'failed') {
-    return 'Topic body unavailable';
+    return t('desktop.nodeBrowse.bodyUnavailable');
   }
   if (status === 'empty') {
-    return 'Empty topic';
+    return t('desktop.nodeBrowse.emptyTopic');
   }
   return null;
 }
@@ -29,6 +31,7 @@ export function NodeBrowseList(props: {
   items: NodeBrowseListItem[];
   onSelectNode(nodeId: string): void;
 }) {
+  const t = useTranslation();
   if (props.items.length === 0) {
     return (
       <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
@@ -40,11 +43,11 @@ export function NodeBrowseList(props: {
   return (
     <section className="border-t border-companion-divider">
       {props.items.map((item) => {
-        const bodyStatusLabel = renderBodyStatus(item.bodyStatus);
+        const bodyStatusLabel = renderBodyStatus(item.bodyStatus, t);
         return (
           <button
             key={item.nodeId}
-            aria-label={buildOpenLabel(item.title, item.kind)}
+            aria-label={buildOpenLabel(item.title, t, item.kind)}
             className={`block w-full border-b px-1 py-4 text-left transition-colors ${
               item.nodeId === props.currentNodeId
                 ? 'border-companion-divider bg-companion-subtle'

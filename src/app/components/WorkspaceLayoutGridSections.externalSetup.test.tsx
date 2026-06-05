@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { toWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 vi.mock('./WorkspaceDocumentSurface', () => ({
   WorkspaceDocumentSurface: () => null
@@ -47,7 +48,7 @@ it('opens external library settings from the empty External row in the real list
     Object.entries(nodesById).map(([nodeId, node]) => [nodeId, toWorkspaceListNode(node)])
   );
 
-  render(
+  renderWithLocalization(
     <WorkspaceListArea
       activeNodeId="folder-a"
       activeVirtualNodeId={null}

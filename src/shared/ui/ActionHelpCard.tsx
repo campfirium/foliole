@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useTranslation } from '../localization/LocalizationProvider';
+
+import { localizeActionHelpCopy } from './actionHelpLocalization';
+
 import { cn } from '@/shared/lib/utils';
 
 interface ActionHelpCardProps {
@@ -64,6 +68,8 @@ function positionTransform(side: TooltipPosition['side']) {
 }
 
 function ActionHelpCardContent({ help, position }: ActionHelpCardContentProps) {
+  const t = useTranslation();
+  const copy = localizeActionHelpCopy(t, help);
   return createPortal(
     <div
       className={cn(
@@ -80,11 +86,11 @@ function ActionHelpCardContent({ help, position }: ActionHelpCardContentProps) {
         width: `${ACTION_HELP_CARD_WIDTH}px`
       }}
     >
-      <h3 className="m-0 text-[14px] font-semibold leading-5 text-foreground/88">{help.title}</h3>
-      <p className="m-0 mt-1.5 text-[13px] font-normal leading-5 text-foreground/72">{help.body}</p>
-      {help.detail ? (
+      <h3 className="m-0 text-[14px] font-semibold leading-5 text-foreground/88">{copy.title}</h3>
+      <p className="m-0 mt-1.5 text-[13px] font-normal leading-5 text-foreground/72">{copy.body}</p>
+      {copy.detail ? (
         <p className="m-0 mt-2.5 border-t border-[var(--app-floating-divider-color)] pt-2 text-[12px] font-normal leading-4 text-foreground/48">
-          {help.detail}
+          {copy.detail}
         </p>
       ) : null}
     </div>,

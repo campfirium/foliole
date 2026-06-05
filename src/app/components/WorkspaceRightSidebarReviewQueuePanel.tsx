@@ -1,5 +1,6 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { AppErrorState } from '../../shared/ui';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
@@ -18,30 +19,32 @@ function buildDisplayQueueNodeIds(queueNodeIds: string[], currentNodeId: string 
   return [...queueNodeIds.slice(currentIndex), ...queueNodeIds.slice(0, currentIndex)];
 }
 
-function getQueueItemTitle(node: Node | undefined) {
+function getQueueItemTitle(node: Node | undefined, t: Translate) {
   if (!node) {
-    return 'Missing topic';
+    return t('desktop.rightPanel.flow.missingTopic');
   }
   const title = node.title.trim();
   if (title.length > 0) {
     return title;
   }
-  return 'Untitled topic';
+  return t('desktop.rightPanel.flow.untitledTopic');
 }
 
 function QueueHeader() {
+  const t = useTranslation();
   return (
     <header className="px-4 pb-2 pt-3">
-      <h2 className="m-0 text-[13px] font-medium uppercase tracking-[0.02em] text-foreground/55">Flow</h2>
+      <h2 className="m-0 text-[13px] font-medium uppercase tracking-[0.02em] text-foreground/55">{t('desktop.rightPanel.flow')}</h2>
     </header>
   );
 }
 
 function EmptyQueueState() {
+  const t = useTranslation();
   return (
     <section className="min-h-0">
       <QueueHeader />
-      <p className="px-4 py-3 text-[13px] text-foreground/55">No Flow topics are available right now.</p>
+      <p className="px-4 py-3 text-[13px] text-foreground/55">{t('desktop.rightPanel.flow.empty')}</p>
     </section>
   );
 }
@@ -67,6 +70,7 @@ function QueueRow(props: {
   nodeId: string;
   onSelectNode: (nodeId: string) => void;
 }) {
+  const t = useTranslation();
   const kind = isFsrsReviewItemNode(props.node) ? 'item' : 'topic';
   return (
     <li className="grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)] items-center gap-2 px-4 py-1.5 hover:bg-foreground/[0.025]">
@@ -77,7 +81,7 @@ function QueueRow(props: {
         onClick={() => props.onSelectNode(props.nodeId)}
         type="button"
       >
-        {getQueueItemTitle(props.node)}
+        {getQueueItemTitle(props.node, t)}
       </button>
     </li>
   );
@@ -114,6 +118,7 @@ function collectFlowNodeIds(flowWindow: ReviewFlowWindow) {
 }
 
 export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
+  const t = useTranslation();
   const flowNodeIds = collectFlowNodeIds(props.flowWindow);
   if (flowNodeIds.length === 0) {
     return <EmptyQueueState />;
@@ -123,8 +128,8 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
   if (missingQueueNodeId) {
     return (
       <AppErrorState
-        description="Refresh the workspace before continuing."
-        title="Flow has an unavailable topic"
+        description={t('desktop.rightPanel.flow.unavailableDescription')}
+        title={t('desktop.rightPanel.flow.unavailableTitle')}
       />
     );
   }
@@ -135,7 +140,7 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
   return (
     <section className="flex min-h-0 flex-col">
       <QueueHeader />
-      <ol aria-label="Flow items" className="min-h-0 flex-1 overflow-y-auto py-1">
+      <ol aria-label={t('desktop.rightPanel.flow.items')} className="min-h-0 flex-1 overflow-y-auto py-1">
         <FlowSection
           indexOffset={0}
           nodeIds={displayQueueNodeIds}

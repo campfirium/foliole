@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
 
@@ -64,7 +65,7 @@ it('keeps rendering stable when the active node appears after the empty state re
     selectedText: 'first marked text'
   });
 
-  const { rerender } = render(
+  const { container, rerender } = renderWithLocalization(
     <WorkspaceRightSidebarHighlightsPanel
       activeNodeId={null}
       nodeOrder={['node-1', 'node-2']}
@@ -74,7 +75,7 @@ it('keeps rendering stable when the active node appears after the empty state re
     />
   );
 
-  expect(screen.getByText('Select a document to browse its highlights.')).toBeInTheDocument();
+  expect(container).toBeEmptyDOMElement();
 
   rerender(
     <WorkspaceRightSidebarHighlightsPanel

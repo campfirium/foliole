@@ -56,7 +56,7 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.goToNode)).toBe(true);
-  expect(items.find((item) => item.id === APP_COMMAND_IDS.goToNode)?.title).toBe('Go to…');
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.goToNode)?.title).toBe('Go to...');
   expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.renameNode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.findInTopic)).toBe(true);

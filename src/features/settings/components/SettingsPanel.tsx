@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import {
@@ -42,6 +43,7 @@ function SettingsPanelContent(props: SettingsPanelProps) {
 }
 
 function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null) {
+  const t = useTranslation();
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => requestedCategory ?? getInitialSettingsCategory());
   const libraryPathSettings = useLibraryPathSettings();
   const externalSearchFolders = useExternalSearchFolders();
@@ -52,9 +54,9 @@ function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null)
       setActiveCategory(requestedCategory);
     }
   }, [requestedCategory]);
-  const category = getSettingsCategoryOption(activeCategory);
-  const title = category?.label ?? 'Settings';
-  const description = category?.description ?? 'Adjust how Foliole looks and behaves.';
+  const category = getSettingsCategoryOption(activeCategory, t);
+  const title = category?.label ?? t('settings.title');
+  const description = category?.description ?? t('settings.description');
 
   return {
     activeCategory,

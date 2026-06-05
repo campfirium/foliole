@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -66,7 +67,7 @@ it('hides fully dismissed topic branches and keeps active descendants after the 
     'active-topic': createTopic({ id: 'active-topic', readingState: 'active', title: 'Active Topic' })
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="active-topic"
@@ -99,7 +100,7 @@ it('keeps title search able to show dismissed matches while the view hides dismi
     'active-topic': createTopic({ id: 'active-topic', readingState: 'active', title: 'Active Topic' })
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="active-topic"
@@ -150,7 +151,7 @@ it('shows all dismissed branches for the active review item when topic focus is 
     })
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="review-item"
@@ -194,7 +195,7 @@ it('hides fully dismissed branches but keeps partially dismissed branches for th
     })
   };
 
-  render(
+  renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
       activeNodeId="review-item"

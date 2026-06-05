@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { resetExternalCollapsedRowIds } from './externalLibraryCollapseSettings';
@@ -40,7 +41,7 @@ beforeEach(() => {
 });
 
 it('renders Readwise-managed external folders distinctly in the workspace node lists', () => {
-  render(
+  renderWithLocalization(
     <WorkspaceDualListContent
       activeNodeId="folder-a"
       activeVirtualNodeId={null}

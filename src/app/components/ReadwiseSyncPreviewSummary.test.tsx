@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { createReadwiseImportPreview } from './readwiseReaderSettingsTestSupport';
 import { ReadwisePreviewSummary } from './ReadwiseSyncPreviewList';
@@ -29,7 +31,7 @@ it('summarizes external destinations separately from inbox imports', () => {
     }
   ];
 
-  render(<ReadwisePreviewSummary preview={preview} />);
+  renderWithLocalization(<ReadwisePreviewSummary preview={preview} />);
 
   expect(screen.getByText('1 ready for external library (1 highlight-only), 1 skipped.')).toBeInTheDocument();
 });

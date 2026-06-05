@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
@@ -109,6 +110,7 @@ function useWorkspaceImportNoticeController(imports: WorkspaceLayoutProps['impor
 }
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
+  const t = useTranslation();
   const { imports, layoutChrome, navigation, settings, trash } = props;
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
     loadWorkspaceRightPanelPreference()
@@ -145,7 +147,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   useEffect(() => subscribeWorkspaceRightPanelRequests(handleSelectRightPanel), [handleSelectRightPanel]);
 
   return (
-    <main aria-label="Foliole workspace" className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
+    <main aria-label={t('desktop.workspace.main')} className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
       <WorkspaceMainChrome
         activeRightPanelId={activeRightPanelId}
         onOpenTrashView={handleOpenTrashView}

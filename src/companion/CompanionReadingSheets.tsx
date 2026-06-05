@@ -1,6 +1,8 @@
 import { Highlighter, Info, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { useTranslation } from '../shared/localization/LocalizationProvider';
+
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
@@ -43,37 +45,38 @@ export function ReadingActionsSheet(props: {
   onRestoreFromTrash?: () => void;
   open: boolean;
 }) {
+  const t = useTranslation();
   const openReadingSheet = (sheet: 'font' | 'highlight' | 'info') => {
     props.onOpenChange(false);
     props.onOpenReadingSheet(sheet);
   };
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Actions">
+    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
       <div className="border-t border-companion-divider">
         <ReadingActionRow
           icon={<Search aria-hidden="true" className="h-5 w-5" />}
-          label="Find in document"
+          label={t('companion.reading.find')}
           onClick={props.onFindInDocument}
         />
         <ReadingActionRow
           icon={<SlidersHorizontal aria-hidden="true" className="h-5 w-5" />}
-          label="Font"
+          label={t('companion.reading.font')}
           onClick={() => openReadingSheet('font')}
         />
         <ReadingActionRow
           icon={<Highlighter aria-hidden="true" className="h-5 w-5" />}
-          label="Highlight"
+          label={t('companion.reading.highlight')}
           onClick={() => openReadingSheet('highlight')}
         />
         <ReadingActionRow
           icon={<Info aria-hidden="true" className="h-5 w-5" />}
-          label="Info"
+          label={t('companion.reading.info')}
           onClick={() => openReadingSheet('info')}
         />
         {props.onRestoreFromTrash ? (
           <ReadingActionRow
             icon={<RotateCcw aria-hidden="true" className="h-5 w-5" />}
-            label="Restore from Trash"
+            label={t('companion.reading.restoreFromTrash')}
             onClick={props.onRestoreFromTrash}
           />
         ) : null}
@@ -88,9 +91,10 @@ export function OutlineSheet(props: {
   onSelect(item: { from: number; to: number }): void;
   open: boolean;
 }) {
+  const t = useTranslation();
   const outlineItems = extractDocumentOutline(props.content);
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Outline">
+    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.outline')}>
       <div className="border-t border-companion-divider">
         {outlineItems.length > 0 ? outlineItems.map((item) => (
           <button
@@ -105,8 +109,8 @@ export function OutlineSheet(props: {
         )) : (
           <AppEmptyState
             className="min-h-0 items-start py-5 text-left text-companion-text-secondary"
-            description="Headings will appear here when this topic contains an outline."
-            title="No headings in this topic"
+            description={t('companion.reading.noHeadings.description')}
+            title={t('companion.reading.noHeadings.title')}
           />
         )}
       </div>
@@ -118,13 +122,14 @@ export function ReadingFontSheet(props: {
   onOpenChange(open: boolean): void;
   open: boolean;
 }) {
+  const t = useTranslation();
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Font">
+    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.font')}>
       <div className="border-t border-companion-divider py-5">
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
-          description="Reading font controls are not available on Android yet."
-          title="Font controls are coming soon"
+          description={t('companion.reading.fontComing.description')}
+          title={t('companion.reading.fontComing.title')}
         />
       </div>
     </ReadingBottomSheet>
@@ -135,13 +140,14 @@ export function ReadingHighlightSheet(props: {
   onOpenChange(open: boolean): void;
   open: boolean;
 }) {
+  const t = useTranslation();
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Highlight">
+    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.highlight')}>
       <div className="border-t border-companion-divider py-5">
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
-          description="Highlight tools are not available on Android yet."
-          title="Highlight tools are coming soon"
+          description={t('companion.reading.highlightComing.description')}
+          title={t('companion.reading.highlightComing.title')}
         />
       </div>
     </ReadingBottomSheet>
@@ -154,16 +160,17 @@ export function ReadingInfoSheet(props: {
   open: boolean;
   title: string;
 }) {
+  const t = useTranslation();
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Info">
+    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.info')}>
       <dl className="border-t border-companion-divider text-sm">
         <div className="flex items-center justify-between border-b border-companion-divider py-3">
-          <dt className="text-companion-text-secondary">Topic</dt>
+          <dt className="text-companion-text-secondary">{t('companion.reading.info.topic')}</dt>
           <dd className="min-w-0 max-w-[70%] truncate text-right text-foreground">{props.title}</dd>
         </div>
         <div className="flex items-center justify-between border-b border-companion-divider py-3">
-          <dt className="text-companion-text-secondary">Source</dt>
-          <dd className="text-foreground">{props.hasPdf ? 'PDF and text' : 'Text'}</dd>
+          <dt className="text-companion-text-secondary">{t('companion.reading.info.source')}</dt>
+          <dd className="text-foreground">{props.hasPdf ? t('companion.reading.info.pdfAndText') : t('companion.reading.info.text')}</dd>
         </div>
       </dl>
     </ReadingBottomSheet>

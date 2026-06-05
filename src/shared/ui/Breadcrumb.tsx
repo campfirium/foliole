@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { useTranslation } from '../localization/LocalizationProvider';
+
 import { cn } from '@/shared/lib/utils';
 
 export interface AppBreadcrumbItem {
@@ -18,14 +20,16 @@ interface BreadcrumbProps {
 }
 
 export function AppBreadcrumb({
-  ariaLabel = 'Breadcrumb',
+  ariaLabel,
   className,
   items,
   onSelect,
   onExpandEllipsis
 }: BreadcrumbProps) {
+  const t = useTranslation();
+  const resolvedAriaLabel = ariaLabel ?? t('shared.breadcrumb.aria');
   return (
-    <nav aria-label={ariaLabel} className={cn('block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap', className)}>
+    <nav aria-label={resolvedAriaLabel} className={cn('block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap', className)}>
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         const isCurrent = Boolean(item.isCurrent);
@@ -33,7 +37,7 @@ export function AppBreadcrumb({
         if (item.isEllipsis) {
           return (
             <button
-              aria-label="Expand breadcrumb path"
+              aria-label={t('shared.breadcrumb.expand')}
               className="inline-block max-w-none border-0 bg-transparent p-0 text-sm font-normal leading-[1.25] text-foreground/45 hover:text-foreground/65"
               key={item.id}
               onClick={() => onExpandEllipsis?.(item.id)}

@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 
 function renderReviewBar(reviewCardKey: string) {
-  return render(
+  return renderWithLocalization(
     <CompanionBottomReviewBar
       hasAnswer={true}
       isAnswerRevealed={false}
@@ -53,7 +55,7 @@ describe('CompanionBottomReviewBar', () => {
   });
 
   it('does not show grade actions before a synced answer exists', () => {
-    render(
+    renderWithLocalization(
       <CompanionBottomReviewBar
         hasAnswer={false}
         isAnswerRevealed={true}

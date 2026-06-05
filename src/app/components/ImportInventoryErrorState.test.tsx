@@ -1,5 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 const { loadPdfInventoryResult, loadReadwiseInventoryResult } = vi.hoisted(() => ({
   loadPdfInventoryResult: vi.fn(),
@@ -85,7 +87,7 @@ describe('PDF import inventory states', () => {
   it('keeps raw PDF load errors in the description and retries the inventory load', async () => {
     loadPdfInventoryResult.mockResolvedValue({ message: 'EACCES: permission denied', status: 'failed' });
 
-    render(<ImportSourceWorkspacePdfPage open />);
+    renderWithLocalization(<ImportSourceWorkspacePdfPage open />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to load PDFs');
     expect(screen.getByRole('alert')).toHaveTextContent('EACCES: permission denied');
@@ -100,7 +102,7 @@ describe('PDF import inventory states', () => {
   it('shows a disabled desktop-runtime state for PDF imports without Retry', async () => {
     loadPdfInventoryResult.mockResolvedValue({ status: 'unavailable' });
 
-    render(<ImportSourceWorkspacePdfPage open />);
+    renderWithLocalization(<ImportSourceWorkspacePdfPage open />);
 
     expect(await screen.findByText('Available in the desktop app')).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Open Foliole in the desktop app to load PDFs.');
@@ -110,7 +112,7 @@ describe('PDF import inventory states', () => {
   it('keeps empty PDF imports distinct from failed loads', async () => {
     loadPdfInventoryResult.mockResolvedValue({ inventory: EMPTY_PDF_INVENTORY, status: 'loaded' });
 
-    render(<ImportSourceWorkspacePdfPage open />);
+    renderWithLocalization(<ImportSourceWorkspacePdfPage open />);
 
     expect(await screen.findByText('PDF is empty')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -119,7 +121,7 @@ describe('PDF import inventory states', () => {
   it('renders loaded PDF imports as catalog rows', async () => {
     loadPdfInventoryResult.mockResolvedValue({ inventory: PDF_INVENTORY_WITH_ITEM, status: 'loaded' });
 
-    render(<ImportSourceWorkspacePdfPage open />);
+    renderWithLocalization(<ImportSourceWorkspacePdfPage open />);
 
     expect(await screen.findByText('Deep Work PDF')).toBeInTheDocument();
     expect(screen.getByText('Indexed')).toBeInTheDocument();
@@ -131,7 +133,7 @@ describe('Readwise Books inventory states', () => {
   it('shows a disabled desktop-runtime state without Retry', async () => {
     loadReadwiseInventoryResult.mockResolvedValue({ status: 'unavailable' });
 
-    render(<ImportSourceWorkspaceReadwiseBooksPage onOpenChange={() => undefined} open />);
+    renderWithLocalization(<ImportSourceWorkspaceReadwiseBooksPage onOpenChange={() => undefined} open />);
 
     expect(await screen.findByText('Available in the desktop app')).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Open Foliole in the desktop app to load Readwise Books.');
@@ -141,7 +143,7 @@ describe('Readwise Books inventory states', () => {
   it('keeps raw load errors in the description and retries the inventory load', async () => {
     loadReadwiseInventoryResult.mockResolvedValue({ message: 'Readwise directory missing', status: 'failed' });
 
-    render(<ImportSourceWorkspaceReadwiseBooksPage onOpenChange={() => undefined} open />);
+    renderWithLocalization(<ImportSourceWorkspaceReadwiseBooksPage onOpenChange={() => undefined} open />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to load Readwise Books');
     expect(screen.getByRole('alert')).toHaveTextContent('Readwise directory missing');
@@ -156,7 +158,7 @@ describe('Readwise Books inventory states', () => {
   it('keeps successful Readwise Books inventory rendering unchanged', async () => {
     loadReadwiseInventoryResult.mockResolvedValue({ inventory: EMPTY_READWISE_INVENTORY, status: 'loaded' });
 
-    render(<ImportSourceWorkspaceReadwiseBooksPage onOpenChange={() => undefined} open />);
+    renderWithLocalization(<ImportSourceWorkspaceReadwiseBooksPage onOpenChange={() => undefined} open />);
 
     expect(await screen.findByText('Readwise Books is empty')).toBeInTheDocument();
     expect(screen.queryByText('Available in the desktop app')).not.toBeInTheDocument();
@@ -165,7 +167,7 @@ describe('Readwise Books inventory states', () => {
   it('renders loaded Readwise Books as catalog rows', async () => {
     loadReadwiseInventoryResult.mockResolvedValue({ inventory: READWISE_INVENTORY_WITH_BOOK, status: 'loaded' });
 
-    render(<ImportSourceWorkspaceReadwiseBooksPage onOpenChange={() => undefined} open />);
+    renderWithLocalization(<ImportSourceWorkspaceReadwiseBooksPage onOpenChange={() => undefined} open />);
 
     expect(await screen.findByText('Deep Work')).toBeInTheDocument();
     expect(screen.getByText('Has highlights')).toBeInTheDocument();
@@ -177,7 +179,7 @@ describe('Recent Imports inventory states', () => {
     loadReadwiseInventoryResult.mockResolvedValue({ inventory: EMPTY_READWISE_INVENTORY, status: 'loaded' });
     loadPdfInventoryResult.mockResolvedValue({ message: 'Failed to fetch PDF inventory.', status: 'failed' });
 
-    render(<ImportOverviewPage onOpenChange={() => undefined} open />);
+    renderWithLocalization(<ImportOverviewPage onOpenChange={() => undefined} open />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to load recent imports');
     expect(screen.getByRole('alert')).toHaveTextContent('Failed to fetch PDF inventory.');

@@ -1,15 +1,16 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { createDefaultImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { SettingsImportManagementContent } from './SettingsImportManagementContent';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 
-it('shows watch folders directly in settings', () => {
+it('shows linked folders directly in settings', () => {
   const settings = createDefaultImportManagerSettings();
 
-  render(
+  renderWithLocalization(
     <SettingsImportManagementContent
       onChange={() => undefined}
       onChangeAction={() => undefined}
@@ -25,8 +26,8 @@ it('shows watch folders directly in settings', () => {
     />
   );
 
-  expect(screen.getByText('Watch folders')).toBeInTheDocument();
-  expect(screen.getByRole('table', { name: 'Watch folders' })).toBeInTheDocument();
+  expect(screen.getByText('Linked folders')).toBeInTheDocument();
+  expect(screen.getByRole('table', { name: 'Linked folders' })).toBeInTheDocument();
   expect(screen.getByText('Original')).toBeInTheDocument();
   expect(screen.getByText('Highlight')).toBeInTheDocument();
   expect(screen.getByText('Handling')).toBeInTheDocument();
@@ -37,7 +38,7 @@ it('shows watch folders directly in settings', () => {
 it('shows the restored Readwise Reader setup directly in settings', () => {
   const settings = createDefaultImportManagerSettings();
 
-  render(
+  renderWithLocalization(
     <SettingsReadwiseReaderContent
       config={settings.readwiseReaderConfig}
       onSave={vi.fn()}

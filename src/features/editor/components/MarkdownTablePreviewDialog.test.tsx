@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 
 import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
 
@@ -106,7 +108,7 @@ const ANCHORED_TABLE_PREVIEW = {
 
 describe('MarkdownTablePreviewDialog', () => {
   it('applies GFM table alignment inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={ALIGNED_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={ALIGNED_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     const cells = Array.from(dialog.querySelectorAll('td'));
@@ -114,7 +116,7 @@ describe('MarkdownTablePreviewDialog', () => {
   });
 
   it('renders OB-like source highlights inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={SOURCE_HIGHLIGHT_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={SOURCE_HIGHLIGHT_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('td .cm-md-source-highlight')?.textContent).toBe('Marked');
@@ -122,7 +124,7 @@ describe('MarkdownTablePreviewDialog', () => {
   });
 
   it('renders GFM emphasis inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={EMPHASIS_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={EMPHASIS_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('td .cm-md-emphasis')?.textContent).toBe('Marked');
@@ -130,7 +132,7 @@ describe('MarkdownTablePreviewDialog', () => {
   });
 
   it('renders GFM strong text with the shared table class inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={STRONG_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={STRONG_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('td .cm-md-strong')?.textContent).toBe('Bold');
@@ -138,7 +140,7 @@ describe('MarkdownTablePreviewDialog', () => {
   });
 
   it('renders GFM strikethrough with the shared table class inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={STRIKETHROUGH_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={STRIKETHROUGH_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('td .cm-md-strikethrough')?.textContent).toBe('Gone');
@@ -146,7 +148,7 @@ describe('MarkdownTablePreviewDialog', () => {
   });
 
   it('renders GFM inline code with the shared table class inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={INLINE_CODE_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={INLINE_CODE_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('td .cm-md-inline-code')?.textContent).toBe('code');
@@ -156,7 +158,7 @@ describe('MarkdownTablePreviewDialog', () => {
 
 describe('MarkdownTablePreviewDialog links and anchors', () => {
   it('renders GFM inline links inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={INLINE_LINK_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={INLINE_LINK_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     const link = dialog.querySelector('td .cm-md-link-text[data-md-link-url="https://example.com"]');
@@ -165,7 +167,7 @@ describe('MarkdownTablePreviewDialog links and anchors', () => {
   });
 
   it('renders unsafe links as readable but non-clickable text inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={UNSAFE_LINK_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={UNSAFE_LINK_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     const link = dialog.querySelector('td .cm-md-link-text-unsafe');
@@ -175,7 +177,7 @@ describe('MarkdownTablePreviewDialog links and anchors', () => {
   });
 
   it('renders GFM reference-style links inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={REFERENCE_LINK_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={REFERENCE_LINK_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     const link = dialog.querySelector('td .cm-md-link-text[data-md-link-url="https://example.com"]');
@@ -184,7 +186,7 @@ describe('MarkdownTablePreviewDialog links and anchors', () => {
   });
 
   it('renders OB-like wiki links inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={WIKI_LINK_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={WIKI_LINK_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     const link = dialog.querySelector('td .cm-md-link-text[data-md-link-node-title="Folder/Card"]');
@@ -193,7 +195,7 @@ describe('MarkdownTablePreviewDialog links and anchors', () => {
   });
 
   it('renders OB-like embeds inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={EMBED_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={EMBED_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     const embed = dialog.querySelector('td .cm-md-link-text[data-md-embed-target="Folder/Card"]');
@@ -202,7 +204,7 @@ describe('MarkdownTablePreviewDialog links and anchors', () => {
   });
 
   it('renders OB-like footnotes inside the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={FOOTNOTE_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={FOOTNOTE_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     const footnote = dialog.querySelector<HTMLElement>('td .cm-md-footnote-widget');
@@ -212,7 +214,7 @@ describe('MarkdownTablePreviewDialog links and anchors', () => {
   });
 
   it('projects table-scoped highlight and cloze decorations into the full table preview', async () => {
-    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={ANCHORED_TABLE_PREVIEW} />);
+    renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={ANCHORED_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('td.cm-md-highlight')?.textContent).toBe('Alpha');

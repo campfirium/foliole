@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 
 import { SettingsImportSection } from './SettingsImportSection';
 import type { SettingsImportSectionProps } from './settingsImportSectionTypes';
@@ -31,7 +33,7 @@ const baseProps: SettingsImportSectionProps = {
 };
 
 it('shows progress rows while library paths load', () => {
-  render(<SettingsImportSection {...baseProps} isLoadingLibraryPaths />);
+  renderWithLocalization(<SettingsImportSection {...baseProps} isLoadingLibraryPaths />);
 
   const status = screen.getByRole('status');
   expect(status).toHaveAttribute('aria-busy', 'true');
@@ -39,7 +41,7 @@ it('shows progress rows while library paths load', () => {
 });
 
 it('marks library path and mirror rebuild errors as alerts', () => {
-  render(
+  renderWithLocalization(
     <SettingsImportSection
       {...baseProps}
       errorByLocation={{ ...baseProps.errorByLocation, inbox: 'Could not choose a new Inbox folder.' }}

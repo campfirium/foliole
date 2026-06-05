@@ -1,3 +1,5 @@
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
+
 import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 
 interface PdfSearchDebugOverlayProps {
@@ -33,6 +35,7 @@ function resolveDebugPayload(props: Omit<PdfSearchDebugOverlayProps, 'isOpen' | 
 }
 
 export function PdfSearchDebugOverlay(props: PdfSearchDebugOverlayProps) {
+  const t = useTranslation();
   if (!props.isOpen) {
     return null;
   }
@@ -40,9 +43,9 @@ export function PdfSearchDebugOverlay(props: PdfSearchDebugOverlayProps) {
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-debug w-[460px] max-w-[70vw] rounded-md border border-border bg-bg-panel/95 p-3 shadow-debug">
       <div className="pointer-events-auto mb-2 flex items-center justify-between">
-        <p className="text-sm font-semibold text-foreground">Search debug</p>
+        <p className="text-sm font-semibold text-foreground">{t('desktop.diagnostics.searchDebug')}</p>
         <button className="rounded px-2 py-1 text-xs text-foreground/70 hover:bg-bg-muted hover:text-foreground" onClick={props.onClose} type="button">
-          Close
+          {t('shared.close')}
         </button>
       </div>
       <pre className="max-h-[40vh] overflow-auto whitespace-pre-wrap break-all text-[11px] leading-4 text-foreground/80">

@@ -1,6 +1,8 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
 
 import { parseLiteralUnion } from '../../../../shared/lib/parseLiteralUnion';
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import type { TranslationKey } from '../../../../shared/localization/translations';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_SELECT_WIDTH_CLASS_NAME,
@@ -31,20 +33,20 @@ const MOUSE_GESTURE_ROW = {
 };
 
 const GESTURE_ROWS: Array<{
-  description: string;
   gestureId: EditorMouseGestureId;
-  label: string;
+  descriptionKey: TranslationKey;
+  labelKey: TranslationKey;
 }> = [
-  { gestureId: 'left', label: 'Left', description: 'Reserved one-stroke gesture. Disabled by default.' },
-  { gestureId: 'right', label: 'Right', description: 'Reserved one-stroke gesture. Disabled by default.' },
-  { gestureId: 'left-up', label: 'Left then up', description: 'Default shortcut for jumping to the top of the document.' },
-  { gestureId: 'left-down', label: 'Left then down', description: 'Default shortcut for jumping to the bottom of the document.' }
+  { gestureId: 'left', labelKey: 'settings.mouseGestures.gesture.left', descriptionKey: 'settings.mouseGestures.gesture.reserved' },
+  { gestureId: 'right', labelKey: 'settings.mouseGestures.gesture.right', descriptionKey: 'settings.mouseGestures.gesture.reserved' },
+  { gestureId: 'left-up', labelKey: 'settings.mouseGestures.gesture.leftUp', descriptionKey: 'settings.mouseGestures.gesture.topShortcut' },
+  { gestureId: 'left-down', labelKey: 'settings.mouseGestures.gesture.leftDown', descriptionKey: 'settings.mouseGestures.gesture.bottomShortcut' }
 ];
 
-const ACTION_LABELS: Record<EditorMouseGestureActionSetting, string> = {
-  disabled: 'Disabled',
-  'scroll-top': 'Scroll to top',
-  'scroll-bottom': 'Scroll to bottom'
+const ACTION_LABEL_KEYS: Record<EditorMouseGestureActionSetting, TranslationKey> = {
+  disabled: 'settings.mouseGestures.action.disabled',
+  'scroll-top': 'settings.mouseGestures.action.scrollTop',
+  'scroll-bottom': 'settings.mouseGestures.action.scrollBottom'
 };
 
 function GestureIcon({ gestureId }: { gestureId: EditorMouseGestureId }) {
@@ -66,10 +68,11 @@ function GestureIcon({ gestureId }: { gestureId: EditorMouseGestureId }) {
 }
 
 function MouseGestureAreaSection() {
+  const t = useTranslation();
   return (
     <SettingsSection
-      ariaLabel="Mouse gesture area section"
-      title="Area"
+      ariaLabel={t('settings.mouseGestures.area.sectionAria')}
+      title={t('settings.mouseGestures.area.title')}
     >
       <SettingsRow
         {...settingsSearchRowProps(MOUSE_GESTURE_ROW.activeArea)}
@@ -79,7 +82,7 @@ function MouseGestureAreaSection() {
       >
         <SettingsControlSlot>
           <div className={settingsValueBoxClassName('w-full text-foreground')}>
-            Main panel
+            {t('settings.mouseGestures.area.mainPanel')}
           </div>
         </SettingsControlSlot>
       </SettingsRow>
@@ -90,18 +93,21 @@ function MouseGestureAreaSection() {
 function MouseGestureBindingsSection(props: {
   onActionChange: (gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) => void;
 }) {
+  const t = useTranslation();
   const { settings } = useMouseGestureSettings();
   return (
     <SettingsSection
-      ariaLabel="Mouse gesture bindings section"
-      title="Bindings"
+      ariaLabel={t('settings.mouseGestures.bindings.sectionAria')}
+      title={t('settings.mouseGestures.bindings.title')}
     >
-      {GESTURE_ROWS.map((gesture) => (
-        <SettingsRow description={gesture.description} key={gesture.gestureId} title={gesture.label}>
+      {GESTURE_ROWS.map((gesture) => {
+        const label = t(gesture.labelKey);
+        return (
+        <SettingsRow description={t(gesture.descriptionKey)} key={gesture.gestureId} title={label}>
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
             <GestureIcon gestureId={gesture.gestureId} />
             <select
-              aria-label={`${gesture.label} mouse gesture action`}
+              aria-label={t('settings.mouseGestures.action.aria', { label })}
               className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
               onChange={(event) => {
                 const action = parseLiteralUnion(event.target.value, EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS);
@@ -111,13 +117,14 @@ function MouseGestureBindingsSection(props: {
             >
               {EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS.map((action) => (
                 <option key={action} value={action}>
-                  {ACTION_LABELS[action]}
+                  {t(ACTION_LABEL_KEYS[action])}
                 </option>
               ))}
             </select>
           </SettingsControlSlot>
         </SettingsRow>
-      ))}
+        );
+      })}
     </SettingsSection>
   );
 }

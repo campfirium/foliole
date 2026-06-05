@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { NodeTreeRowIcon } from '../../nodes/components/NodeTreeRowIcon';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
@@ -183,7 +184,11 @@ it('uses separate dismissed icon and text opacity controls', () => {
 });
 
 it('renders the marker preview before editor state is available', () => {
-  render(<NodeIconSettingsPreview />);
+  render(
+    <LocalizationProvider>
+      <NodeIconSettingsPreview />
+    </LocalizationProvider>
+  );
 
   expect(screen.getByText('Topic scheduled')).toBeInTheDocument();
 });
@@ -192,7 +197,7 @@ it('shows marker rows for the active marker kind', () => {
   openAppearance();
   openIconEditor();
 
-  expect(screen.getByRole('dialog', { name: 'Navigation icons' })).toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'Node icons' })).toBeInTheDocument();
   expect(screen.queryByRole('tab', { name: 'Topics' })).not.toBeInTheDocument();
   expect(getMarkerRow('Topic (pending)')).toBeInTheDocument();
   expect(getMarkerRow('Topic (scheduled)')).toBeInTheDocument();
@@ -206,7 +211,7 @@ it('shows marker rows for the active marker kind', () => {
 it('keeps the settings page compact until the icon editor is opened', () => {
   openAppearance();
 
-  expect(screen.getByText('Navigation icons')).toBeInTheDocument();
+  expect(screen.getByText('Node icons')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Edit' }).querySelector('svg')).toBeNull();
   expect(screen.getAllByRole('group', { name: /^(Topic|Item) (icon|pending|scheduled|dismissed)$/ })).toHaveLength(7);
   expect(screen.queryByRole('group', { name: 'Item dismissed' })).not.toBeInTheDocument();

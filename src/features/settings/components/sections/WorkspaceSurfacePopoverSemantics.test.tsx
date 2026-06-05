@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { createRef } from 'react';
 import { expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 
 import { WorkspaceSurfaceAutomaticSeedPopover } from './WorkspaceSurfaceAutomaticSeedPopover';
 import { WorkspaceSurfaceColorEditor } from './WorkspaceSurfaceColorEditor';
@@ -11,7 +13,7 @@ const autoOptions = { documentPureWhite: false, folderTopicSharedTone: false };
 
 it('exposes the theme favorites popover as a named non-modal dialog', async () => {
   const triggerRef = createRef<HTMLButtonElement>();
-  render(
+  renderWithLocalization(
     <>
       <button ref={triggerRef} type="button">
         Favorites
@@ -35,7 +37,7 @@ it('exposes the theme favorites popover as a named non-modal dialog', async () =
 });
 
 it('exposes the automatic seed picker as a named non-modal dialog', async () => {
-  render(
+  renderWithLocalization(
     <WorkspaceSurfaceAutomaticSeedPopover
       color={color}
       onChange={vi.fn()}
@@ -52,7 +54,7 @@ it('exposes the automatic seed picker as a named non-modal dialog', async () => 
 });
 
 it('exposes the color editor as a named non-modal dialog', async () => {
-  render(
+  renderWithLocalization(
     <WorkspaceSurfaceColorEditor
       anchorPoint={{ x: 24, y: 24 }}
       bounds={{ height: 640, width: 800 }}

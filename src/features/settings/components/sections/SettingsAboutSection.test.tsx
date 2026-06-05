@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
@@ -8,9 +8,11 @@ vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
+import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import { copyDiagnosticReport } from '../../../../shared/platform/diagnosticBundle';
 
 import { SettingsAboutSection } from './SettingsAboutSection';
+import { SettingsGeneralSection } from './SettingsGeneralSection';
 
 beforeEach(() => {
   vi.mocked(copyDiagnosticReport).mockReset();
@@ -41,7 +43,7 @@ it('shows application info and copies the diagnostic report in the about section
     reportText: '# Foliole Diagnostic Report',
     status: 'generated'
   });
-  render(<SettingsAboutSection />);
+  renderWithLocalization(<SettingsAboutSection />);
 
   expect(screen.getByText('Version 0.6.1')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Check for Updates' })).toBeInTheDocument();
@@ -55,20 +57,22 @@ it('shows application info and copies the diagnostic report in the about section
   expect(screen.queryByRole('button', { name: 'Create backup' })).not.toBeInTheDocument();
 });
 
-it('runs update and community commands from General settings', () => {
+it('runs update and community commands from About settings', () => {
   const onRunSupportCommand = vi.fn();
-  render(<SettingsAboutSection onRunSupportCommand={onRunSupportCommand} />);
+  renderWithLocalization(<SettingsAboutSection onRunSupportCommand={onRunSupportCommand} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Check for Updates' }));
   fireEvent.click(screen.getByRole('button', { name: 'Feedback' }));
+  fireEvent.click(screen.getByRole('button', { name: 'YouTube (in progress)' }));
 
   expect(screen.getByText('Checking')).toBeInTheDocument();
   expect(screen.getByText('Checking for updates...')).toBeInTheDocument();
   expect(onRunSupportCommand).toHaveBeenNthCalledWith(1, APP_COMMAND_IDS.checkForUpdates);
   expect(onRunSupportCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.openGitHubIssues);
+  expect(onRunSupportCommand).toHaveBeenNthCalledWith(3, APP_COMMAND_IDS.openYouTubePlaylist);
 });
 
-it('shows the latest available release in General settings', () => {
+it('shows the latest available release in About settings', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: null,
     dismissedVersion: null,
@@ -79,20 +83,28 @@ it('shows the latest available release in General settings', () => {
     latestVersion: '0.1.1'
   }));
 
-  render(<SettingsAboutSection />);
+  renderWithLocalization(<SettingsAboutSection />);
 
   expect(screen.getByText('Update available')).toBeInTheDocument();
   expect(screen.getByText('Foliole 0.1.1 is available.')).toBeInTheDocument();
 });
 
+it('shows About sections in application, support, and community order', () => {
+  renderWithLocalization(<SettingsAboutSection />);
+
+  const appTitle = screen.getByRole('heading', { level: 3, name: 'App' });
+  const supportTitle = screen.getByRole('heading', { level: 3, name: 'Support' });
+  const communityTitle = screen.getByText('Community', { selector: 'h3' });
+  expect(appTitle.compareDocumentPosition(supportTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(supportTitle.compareDocumentPosition(communityTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByRole('switch', { name: 'Search enhancement' })).not.toBeInTheDocument();
+});
+
 it('shows the global search enhancement switch in General', async () => {
-  render(<SettingsAboutSection />);
+  renderWithLocalization(<SettingsGeneralSection />);
 
   const toggle = screen.getByRole('switch', { name: 'Search enhancement' });
-  const versionTitle = screen.getByText('Version 0.6.1');
-  const searchTitle = screen.getByText('Search');
   expect(toggle).toHaveAttribute('aria-checked', 'false');
-  expect(versionTitle.compareDocumentPosition(searchTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByText(/other languages that are not separated by spaces/)).toBeInTheDocument();
   expect(screen.getByText(/Uses more search data/)).toBeInTheDocument();
 
