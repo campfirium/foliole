@@ -1,14 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
-import { APP_LANGUAGE_STORAGE_KEY } from './appLanguage';
+import { APP_LANGUAGE_STORAGE_KEY, resolveSystemAppLocale } from './appLanguage';
 import { LocalizationProvider, useLocalization, useTranslation } from './LocalizationProvider';
 
 function TranslationHarness() {
   const t = useTranslation();
-  const { locale, setLocale } = useLocalization();
+  const { languagePreference, locale, setLanguagePreference, setLocale } = useLocalization();
   return (
     <>
+      <p>{languagePreference}</p>
       <p>{locale}</p>
       <p>{t('settings.title')}</p>
       <p>{t('desktop.diagnostics.scheduling.priorityRatio')}</p>
@@ -17,12 +18,19 @@ function TranslationHarness() {
       <button onClick={() => setLocale('zh-Hans')} type="button">
         Switch
       </button>
+      <button onClick={() => setLanguagePreference('system')} type="button">
+        System
+      </button>
     </>
   );
 }
 
 beforeEach(() => {
   window.localStorage.clear();
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: ['en-US']
+  });
 });
 
 it('hydrates the saved app language and updates translated consumers', () => {
@@ -34,11 +42,33 @@ it('hydrates the saved app language and updates translated consumers', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('zh-Hans')).toBeInTheDocument();
+  expect(screen.getAllByText('zh-Hans')).toHaveLength(2);
   expect(screen.getByText('设置')).toBeInTheDocument();
   expect(screen.getByText('队列权重倍率')).toBeInTheDocument();
   expect(screen.getByText('当前队列权重')).toBeInTheDocument();
   expect(screen.getByText('阅读增长系数')).toBeInTheDocument();
+});
+
+it('defaults to system language and resolves supported Chinese locales', () => {
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: ['zh-CN', 'en-US']
+  });
+
+  render(
+    <LocalizationProvider>
+      <TranslationHarness />
+    </LocalizationProvider>
+  );
+
+  expect(screen.getByText('system')).toBeInTheDocument();
+  expect(screen.getByText('zh-Hans')).toBeInTheDocument();
+  expect(screen.getByText('设置')).toBeInTheDocument();
+  expect(window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBeNull();
+});
+
+it('falls back to English when the system language is unsupported', () => {
+  expect(resolveSystemAppLocale(['fr-FR'])).toBe('en');
 });
 
 it('persists language changes through the shared provider', () => {
@@ -50,7 +80,7 @@ it('persists language changes through the shared provider', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Switch' }));
 
-  expect(screen.getByText('zh-Hans')).toBeInTheDocument();
+  expect(screen.getAllByText('zh-Hans')).toHaveLength(2);
   expect(screen.getByText('队列权重倍率')).toBeInTheDocument();
   expect(window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('zh-Hans');
 });

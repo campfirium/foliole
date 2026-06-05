@@ -43,6 +43,7 @@ export const EN_TRANSLATIONS = {
   ...EN_DESKTOP_SEARCH_TRANSLATIONS,
   ...EN_DESKTOP_SORT_TRANSLATIONS,
   ...EN_DESKTOP_SOURCE_UPDATE_TRANSLATIONS,
+  'language.system': 'System',
   'language.en': 'English',
   'language.zhHans': 'Simplified Chinese',
   'common.cancel': 'Cancel',

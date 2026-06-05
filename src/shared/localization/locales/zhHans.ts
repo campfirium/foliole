@@ -45,6 +45,7 @@ export const ZH_HANS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   ...ZH_HANS_DESKTOP_SEARCH_TRANSLATIONS,
   ...ZH_HANS_DESKTOP_SORT_TRANSLATIONS,
   ...ZH_HANS_DESKTOP_SOURCE_UPDATE_TRANSLATIONS,
+  'language.system': '跟随系统',
   'language.en': '英文',
   'language.zhHans': '简体中文',
   'common.cancel': '取消',

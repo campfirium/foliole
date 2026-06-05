@@ -143,7 +143,7 @@ describe('electron-builder release packaging config', () => {
     expect(config.linux.icon).toBe('build/icon.png');
   });
 
-  it('uses a per-user assisted Windows installer with explicit shortcuts', async () => {
+  it('uses a per-user assisted Windows installer with directory choice, default shortcuts, and launch', async () => {
     const config = await readBuilderConfig();
 
     expect(config.win.artifactName).toBe('${productName}-Setup-${version}-win-${arch}.${ext}');
@@ -152,6 +152,7 @@ describe('electron-builder release packaging config', () => {
     expect(config.nsis.perMachine).toBe(false);
     expect(config.nsis.createStartMenuShortcut).toBe(true);
     expect(config.nsis.createDesktopShortcut).toBe(true);
+    expect(config.nsis.runAfterFinish).toBe(true);
     expect(config.nsis.shortcutName).toBe('Foliole');
     expect(config.fileAssociations).toBeUndefined();
   });

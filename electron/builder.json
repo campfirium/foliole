@@ -67,6 +67,7 @@
     "perMachine": false,
     "createStartMenuShortcut": true,
     "createDesktopShortcut": true,
+    "runAfterFinish": true,
     "shortcutName": "Foliole"
   },
   "linux": {

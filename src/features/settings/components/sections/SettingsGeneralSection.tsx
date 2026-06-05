@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { isAppLanguagePreference } from '../../../../shared/localization/appLanguage';
 import { useLocalization, useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   isSearchEnhancementEnabled,
@@ -113,7 +114,7 @@ function SearchEnhancementRow() {
 }
 
 function LanguageSection() {
-  const { locale, setLocale } = useLocalization();
+  const { languagePreference, setLanguagePreference } = useLocalization();
   const t = useTranslation();
   return (
     <SettingsSection ariaLabel={t('settings.general.language.section')} title={t('settings.general.language.section')}>
@@ -122,12 +123,13 @@ function LanguageSection() {
           ariaLabel={t('settings.general.language.aria')}
           description={t('settings.general.language.description')}
           label={t('settings.general.language.row')}
-          onChange={(value) => setLocale(value === 'zh-Hans' ? 'zh-Hans' : 'en')}
+          onChange={(value) => setLanguagePreference(isAppLanguagePreference(value) ? value : 'system')}
           options={[
+            { label: t('language.system'), value: 'system' },
             { label: t('language.en'), value: 'en' },
             { label: t('language.zhHans'), value: 'zh-Hans' }
           ]}
-          value={locale}
+          value={languagePreference}
         />
       </div>
     </SettingsSection>
