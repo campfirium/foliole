@@ -43,7 +43,7 @@ describe('buildNodeTreeRows', () => {
     expect(rows.find((row) => row.node.id === 'child-1')?.hasChildren).toBe(false);
   });
 
-  it('counts all descendants for each row', () => {
+  it('counts direct children for each row', () => {
     const nodeOrder = ['root', 'child-1', 'grandchild-1', 'child-2'];
     const nodesById: Record<string, WorkspaceListNode> = {
       root: createNode('root', 'Root', null),
@@ -54,7 +54,7 @@ describe('buildNodeTreeRows', () => {
 
     const rows = buildNodeTreeRows(nodeOrder, nodesById);
 
-    expect(rows.find((row) => row.node.id === 'root')?.descendantCount).toBe(3);
+    expect(rows.find((row) => row.node.id === 'root')?.descendantCount).toBe(2);
     expect(rows.find((row) => row.node.id === 'child-1')?.descendantCount).toBe(1);
     expect(rows.find((row) => row.node.id === 'grandchild-1')?.descendantCount).toBe(0);
     expect(rows.find((row) => row.node.id === 'child-2')?.descendantCount).toBe(0);

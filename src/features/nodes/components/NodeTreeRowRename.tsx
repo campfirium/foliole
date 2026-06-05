@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const NODE_RENAME_REQUEST_EVENT = 'foliole:node-rename-request';
 
@@ -77,12 +77,20 @@ export function NodeRenameInput({
   onChange,
   onSubmit
 }: NodeRenameInputProps) {
+  const skipNextBlurSubmitRef = useRef(false);
+
   return (
     <input
       aria-label={`Rename ${label}`}
       autoFocus
       className="box-border h-5 min-w-0 max-w-full flex-1 rounded-sm border border-border/35 bg-[var(--app-surface-control-bg)] px-1.5 py-0 text-[13px] leading-5 text-foreground focus:border-border/70 focus:bg-[var(--app-surface-control-hover-bg)] focus-visible:outline-none"
-      onBlur={onSubmit}
+      onBlur={() => {
+        if (skipNextBlurSubmitRef.current) {
+          skipNextBlurSubmitRef.current = false;
+          return;
+        }
+        onSubmit();
+      }}
       onChange={(event) => onChange(event.target.value)}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => {
@@ -93,6 +101,8 @@ export function NodeRenameInput({
         }
         if (event.key === 'Escape') {
           event.preventDefault();
+          event.stopPropagation();
+          skipNextBlurSubmitRef.current = true;
           onCancel();
         }
       }}

@@ -96,7 +96,9 @@ function countHomeNativeContentNodes(
   index: WorkspaceListChildrenIndex,
   nodesById: WorkspaceListNodesById
 ) {
-  return index.visibleNodeIds.filter((nodeId) => isNativeContentNode(nodeId, nodesById)).length;
+  return collectHomeTopicColumnNodeIds(index, nodesById).filter((nodeId) =>
+    isNativeContentNode(nodeId, nodesById)
+  ).length;
 }
 
 function collectHomeTopicColumnNodeIds(

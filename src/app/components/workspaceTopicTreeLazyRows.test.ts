@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
-import { buildTopicChildrenByParent, createDerivedMaterialDescendantCounter } from './workspaceTopicTreeLazyRows';
+import { buildTopicChildrenByParent, createDerivedMaterialDirectChildCounter } from './workspaceTopicTreeLazyRows';
 
 function createTopic(id: string, parentNodeId: string | null = null, anchorLink = false): WorkspaceListNode {
   return {
@@ -39,7 +39,7 @@ function createReviewItem(id: string, parentNodeId: string): WorkspaceListNode {
   };
 }
 
-it('counts descendant derived materials without counting plain chapter topics', () => {
+it('counts direct derived materials without counting nested chapter materials', () => {
   const nodesById: WorkspaceListNodesById = {
     book: createTopic('book'),
     chapter: createTopic('chapter', 'book'),
@@ -48,10 +48,10 @@ it('counts descendant derived materials without counting plain chapter topics', 
     nestedCard: createReviewItem('nestedCard', 'excerpt')
   };
   const childrenByParent = buildTopicChildrenByParent(Object.keys(nodesById), nodesById);
-  const countDescendantDerivedMaterials = createDerivedMaterialDescendantCounter(childrenByParent, nodesById);
+  const countDirectDerivedMaterials = createDerivedMaterialDirectChildCounter(childrenByParent, nodesById);
 
-  expect(countDescendantDerivedMaterials('book')).toBe(3);
-  expect(countDescendantDerivedMaterials('chapter')).toBe(3);
-  expect(countDescendantDerivedMaterials('excerpt')).toBe(1);
-  expect(countDescendantDerivedMaterials('card')).toBe(0);
+  expect(countDirectDerivedMaterials('book')).toBe(0);
+  expect(countDirectDerivedMaterials('chapter')).toBe(2);
+  expect(countDirectDerivedMaterials('excerpt')).toBe(1);
+  expect(countDirectDerivedMaterials('card')).toBe(0);
 });

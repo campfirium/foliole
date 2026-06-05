@@ -61,7 +61,7 @@ it('uses Home as the entity root without reparenting Inbox in source data', () =
   expect(nodesById[INBOX_NODE_ID]?.parentNodeId).toBeNull();
   expect(result.current.topicNodeOrder).toEqual(['topic-a', 'topic-nested', 'topic-inbox']);
   expect(result.current.topicChildrenByParent.get('topic-a')).toEqual(['topic-child']);
-  expect(result.current.folderTopicCountById.get(HOME_NODE_ID)).toBe(4);
+  expect(result.current.folderTopicCountById.get(HOME_NODE_ID)).toBe(3);
 
   expect(
     sortWorkspaceContentNodeIds(

@@ -37,38 +37,16 @@ function buildNodeRelationships(nodeOrder: string[], nodesById: WorkspaceListNod
   return { childrenByParent, parentById };
 }
 
-function createDescendantCounter(childrenByParent: Map<string | null, string[]>) {
-  const descendantCountById = new Map<string, number>();
-
-  const countDescendants = (nodeId: string) => {
-    const cached = descendantCountById.get(nodeId);
-    if (cached !== undefined) {
-      return cached;
-    }
-
-    const children = childrenByParent.get(nodeId) ?? [];
-    let count = children.length;
-    for (const childId of children) {
-      count += countDescendants(childId);
-    }
-
-    descendantCountById.set(nodeId, count);
-    return count;
-  };
-
-  return countDescendants;
-}
-
 function createTreeRow(
   depth: number,
   node: WorkspaceListNode,
-  childrenByParent: Map<string | null, string[]>,
-  countDescendants: (nodeId: string) => number
+  childrenByParent: Map<string | null, string[]>
 ): NodeTreeRow {
+  const childCount = childrenByParent.get(node.id)?.length ?? 0;
   return {
-    descendantCount: countDescendants(node.id),
+    descendantCount: childCount,
     depth,
-    hasChildren: (childrenByParent.get(node.id)?.length ?? 0) > 0,
+    hasChildren: childCount > 0,
     node
   };
 }
@@ -80,7 +58,6 @@ export function buildNodeTree(
   const { childrenByParent, parentById } = buildNodeRelationships(nodeOrder, nodesById);
   const rows: NodeTreeRow[] = [];
   const visited = new Set<string>();
-  const countDescendants = createDescendantCounter(childrenByParent);
 
   const walk = (parentId: string | null, depth: number) => {
     const children = childrenByParent.get(parentId) ?? [];
@@ -95,7 +72,7 @@ export function buildNodeTree(
       }
 
       visited.add(childId);
-      rows.push(createTreeRow(depth, node, childrenByParent, countDescendants));
+      rows.push(createTreeRow(depth, node, childrenByParent));
 
       walk(childId, depth + 1);
     }
@@ -112,7 +89,7 @@ export function buildNodeTree(
       continue;
     }
 
-    rows.push(createTreeRow(0, node, childrenByParent, countDescendants));
+    rows.push(createTreeRow(0, node, childrenByParent));
   }
 
   return { parentById, rows };

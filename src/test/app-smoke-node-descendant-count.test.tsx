@@ -9,7 +9,7 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, getCurrentFolderPanel } from './app-smoke.shared';
 
-it('shows total descendant counts at the end of node rows', () => {
+it('shows direct child counts at the end of node rows', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: INBOX_NODE_ID,
     nodeOrder: [INBOX_NODE_ID, 'root', 'child-1', 'grandchild', 'child-2'],
@@ -20,7 +20,8 @@ it('shows total descendant counts at the end of node rows', () => {
         id: 'child-1',
         parentNodeId: 'root',
         title: 'Child 1',
-        content: '# Child 1'
+        content: '# Child 1',
+        kind: 'item'
       }),
       grandchild: createNode({
         id: 'grandchild',
@@ -32,7 +33,8 @@ it('shows total descendant counts at the end of node rows', () => {
         id: 'child-2',
         parentNodeId: 'root',
         title: 'Child 2',
-        content: '# Child 2'
+        content: '# Child 2',
+        kind: 'item'
       })
     }
   }));
@@ -42,8 +44,9 @@ it('shows total descendant counts at the end of node rows', () => {
   const listPanel = getCurrentFolderPanel();
   fireEvent.click(within(listPanel).getByRole('button', { name: 'Expand all topics' }));
 
-  expect(within(listPanel).getByRole('treeitem', { name: 'Root' })).toHaveTextContent('Root(3)');
-  expect(within(listPanel).getByRole('treeitem', { name: 'Child 1' })).toHaveTextContent('Child 1(1)');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Root' })).toHaveTextContent('Root2');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Child 1' })).toHaveTextContent('Child 1');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Child 1' })).not.toHaveTextContent('(1)');
   expect(within(listPanel).getByRole('treeitem', { name: 'Grandchild' })).toHaveTextContent('Grandchild');
   expect(within(listPanel).getByRole('treeitem', { name: 'Grandchild' })).not.toHaveTextContent('(0)');
   expect(within(listPanel).getByRole('treeitem', { name: 'Child 2' })).toHaveTextContent('Child 2');
