@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import type { BrowserWindowConstructorOptions, Session, WebContents } from 'electron';
+import { app, type BrowserWindowConstructorOptions, type Session, type WebContents } from 'electron';
 
 import { logMainProcessException } from './diagnostics/mainProcessDiagnostics.js';
 import {
@@ -30,6 +30,7 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
     show: false,
     webPreferences: {
       backgroundThrottling: false,
+      devTools: !app.isPackaged,
       preload: preloadPath,
       contextIsolation: true,
       sandbox: true,

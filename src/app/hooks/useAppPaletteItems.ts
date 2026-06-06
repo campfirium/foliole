@@ -19,6 +19,7 @@ import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 
 import { buildAppPaletteItems } from './appCommands';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { resolveDevPaletteOptions } from './appPaletteDevOptions';
 import { canDelayReviewTopic } from './appPaletteNodeActionGuards';
 import { useCommandShortcutState } from './reviewHotkeysState';
 
@@ -154,7 +155,7 @@ function buildPaletteOptions(
     canRenameNode: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
     canReimportSelectedTopic: canReimportSelectedTopic(args),
     canResetImportData: args.formalImportAvailable,
-    canToggleDevReviewStatusBarPersistence: import.meta.env.DEV,
+    ...resolveDevPaletteOptions(),
     canGoBack: args.nav.canGoBack,
     canGoForward: args.nav.canGoForward,
     canGoToNode: hasNavigableNodes,

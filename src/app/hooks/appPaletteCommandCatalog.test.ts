@@ -28,6 +28,7 @@ const enabledOptions: BuildAppPaletteItemsOptions = {
   canRedoWorkspaceAction: true,
   canReimportSelectedTopic: true,
   canResetImportData: true,
+  canToggleDevTools: true,
   canToggleDevReviewStatusBarPersistence: true,
   canRevealAnswer: true,
   canSetNodePriority: true,
@@ -64,6 +65,12 @@ describe('getAppPaletteCommands', () => {
     expect(sectionFor(APP_COMMAND_IDS.openGuidedSample)).toBe('Workspace');
     expect(sectionFor(APP_COMMAND_IDS.renameNode)).toBe('Workspace');
     expect(sectionFor(APP_COMMAND_IDS.setPdfDarkAppearanceWarm)).toBe('Settings');
+  });
+
+  it('omits the DevTools command outside renderer dev mode', () => {
+    const items = getAppPaletteCommands({ ...enabledOptions, canToggleDevTools: false });
+
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(false);
   });
 
   it('uses dynamic labels for the dev review status bar memory toggle', () => {

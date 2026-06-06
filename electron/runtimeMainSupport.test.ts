@@ -1,5 +1,13 @@
 import { expect, it, vi } from 'vitest';
 
+const { appMock } = vi.hoisted(() => ({
+  appMock: { isPackaged: false }
+}));
+
+vi.mock('electron', () => ({
+  app: appMock
+}));
+
 import {
   bindMainWindowNavigationGuard,
   bindEmbeddedLinkPanelContents,
@@ -10,6 +18,15 @@ import {
 
 it('keeps the startup renderer unthrottled while the hidden window is loading', () => {
   expect(createMainWindowOptions('/tmp/preload.cjs').webPreferences?.backgroundThrottling).toBe(false);
+});
+
+it('disables DevTools in packaged main window options', () => {
+  appMock.isPackaged = true;
+
+  expect(createMainWindowOptions('/tmp/preload.cjs').webPreferences?.devTools).toBe(false);
+
+  appMock.isPackaged = false;
+  expect(createMainWindowOptions('/tmp/preload.cjs').webPreferences?.devTools).toBe(true);
 });
 
 it('uses the branded runtime window icon next to the electron preload source', () => {

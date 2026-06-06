@@ -71,6 +71,9 @@ async function handleWindowCommand(request: InvokeRequest, context?: InvokeConte
     return null;
   }
   if (request.command === NATIVE_COMMANDS.windowToggleDevTools) {
+    if (app.isPackaged) {
+      return null;
+    }
     window?.webContents.toggleDevTools();
     return null;
   }

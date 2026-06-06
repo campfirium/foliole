@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { menuMock } = vi.hoisted(() => ({
+const { appMock, menuMock } = vi.hoisted(() => ({
+  appMock: { isPackaged: false },
   menuMock: {
     applicationMenu: null as { items: unknown[] } | null,
     buildFromTemplate: vi.fn(),
@@ -9,6 +10,7 @@ const { menuMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('electron', () => ({
+  app: appMock,
   BrowserWindow: {
     getFocusedWindow: vi.fn()
   },
@@ -52,6 +54,7 @@ function findMenuItem(items: MockMenuItem[], id: string): MockMenuItem | null {
 
 function resetMenuMock() {
   vi.clearAllMocks();
+  appMock.isPackaged = false;
   menuMock.applicationMenu = null;
   menuMock.buildFromTemplate.mockImplementation((template: Record<string, unknown>[]) => ({
     items: template.map((item) => toMenuItem(item))
@@ -83,6 +86,15 @@ describe('native app menu command state', () => {
     expect(findMenuItem(items, 'support.openIssues')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).not.toHaveProperty('accelerator');
+  });
+
+  it('omits the DevTools menu entry from packaged app menus', () => {
+    appMock.isPackaged = true;
+
+    installAppMenu();
+
+    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+    expect(findMenuItem(items, 'workspace.toggleDevTools')).toBeNull();
   });
 
   it('exposes undo and redo as app commands instead of Electron native roles', () => {

@@ -39,6 +39,7 @@ const {
     exit: vi.fn(),
     getPath: vi.fn((name: string) => ({ crashDumps: '/crash', desktop: '/desktop', logs: '/log' })[name] ?? '/tmp'),
     getVersion: () => '1.0.0',
+    isPackaged: false,
     relaunch: vi.fn()
   },
   mockWindow: {
@@ -110,6 +111,7 @@ vi.mock('./review.js', () => ({ reviewGrade: vi.fn().mockReturnValue({ card: {},
 beforeEach(() => {
   vi.clearAllMocks();
   requestDevShellRestart.mockReturnValue(false);
+  mockApp.isPackaged = false;
   mockWindow.isMaximized.mockReturnValue(false);
 });
 
@@ -196,6 +198,14 @@ it('handles window commands through invoke channel', async () => {
   expect(mockWindow.webContents.toggleDevTools).toHaveBeenCalledTimes(1);
   expect(mockWindow.maximize).toHaveBeenCalledTimes(1);
   expect(mockWindow.close).toHaveBeenCalledTimes(1);
+});
+
+it('does not open DevTools from packaged native window command', async () => {
+  mockApp.isPackaged = true;
+
+  await expect(handleInvokeRequest({ command: 'window_toggle_dev_tools' })).resolves.toBeNull();
+
+  expect(mockWindow.webContents.toggleDevTools).not.toHaveBeenCalled();
 });
 
 it('flushes dirty node sync versions through invoke channel', async () => {

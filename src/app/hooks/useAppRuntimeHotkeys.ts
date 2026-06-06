@@ -21,6 +21,10 @@ export function isDevToolsToggleShortcut(event: CommandPaletteToggleShortcutEven
   );
 }
 
+export function shouldHandleDevToolsToggleShortcut(event: CommandPaletteToggleShortcutEvent, canToggleDevTools = import.meta.env.DEV) {
+  return canToggleDevTools && isDevToolsToggleShortcut(event);
+}
+
 export function isCommandPaletteToggleShortcut(event: CommandPaletteToggleShortcutEvent) {
   return (
     (event.metaKey || event.ctrlKey) &&
@@ -40,6 +44,7 @@ export function isSearchPaletteToggleShortcut(event: CommandPaletteToggleShortcu
 }
 
 export function useWindowHotkeys(args: {
+  canToggleDevTools?: boolean;
   setIsCommandPaletteOpen: (update: (open: boolean) => boolean) => void;
   setIsGoToNodePaletteOpen: (open: boolean) => void;
   setIsMoveToNodePaletteOpen: (open: boolean) => void;
@@ -48,7 +53,7 @@ export function useWindowHotkeys(args: {
   useEffect(
     () =>
       onWindowKeydown((event) => {
-        if (isDevToolsToggleShortcut(event)) {
+        if (shouldHandleDevToolsToggleShortcut(event, args.canToggleDevTools ?? import.meta.env.DEV)) {
           event.preventDefault();
           void toggleMainWindowDevTools();
           return;

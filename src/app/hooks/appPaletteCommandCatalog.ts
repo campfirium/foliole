@@ -25,6 +25,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canRenameNode: boolean;
   canReimportSelectedTopic: boolean;
   canResetImportData: boolean;
+  canToggleDevTools: boolean;
   canToggleDevReviewStatusBarPersistence: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -81,6 +82,9 @@ function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOpti
     id === APP_COMMAND_IDS.toggleBothSidebars
   ) {
     return true;
+  }
+  if (id === APP_COMMAND_IDS.toggleDevTools) {
+    return options.canToggleDevTools;
   }
   if (id === APP_COMMAND_IDS.renameNode) {
     return options.canRenameNode;
@@ -162,10 +166,12 @@ export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItem
 }
 
 export function getAppPaletteCommands(options: BuildAppPaletteItemsOptions) {
-  return APP_PALETTE_COMMANDS.map((command) => ({
-    ...command,
-    enabled: isPaletteCommandEnabled(command.id, options),
-    section: localizePaletteCommandSection(command.section),
-    title: resolvePaletteTitle(command.id, options, command.title)
-  }));
+  return APP_PALETTE_COMMANDS
+    .filter((command) => command.id !== APP_COMMAND_IDS.toggleDevTools || options.canToggleDevTools)
+    .map((command) => ({
+      ...command,
+      enabled: isPaletteCommandEnabled(command.id, options),
+      section: localizePaletteCommandSection(command.section),
+      title: resolvePaletteTitle(command.id, options, command.title)
+    }));
 }

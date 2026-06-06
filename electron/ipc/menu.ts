@@ -1,4 +1,5 @@
 import {
+  app,
   BrowserWindow,
   Menu,
   type BrowserWindow as ElectronBrowserWindow,
@@ -91,6 +92,14 @@ function buildHelpMenu(state: MenuState): MenuItemConstructorOptions {
 }
 
 function buildAppMenuTemplate(state: MenuState): MenuItemConstructorOptions[] {
+  const developerMenu = app.isPackaged
+    ? []
+    : [
+        {
+          label: 'Developer',
+          submenu: [commandItem('Toggle DevTools', 'workspace.toggleDevTools', state)]
+        }
+      ];
   return [
     buildWorkspaceMenu(state),
     {
@@ -127,10 +136,7 @@ function buildAppMenuTemplate(state: MenuState): MenuItemConstructorOptions[] {
         commandItem('Toggle Immersive Reading', 'editor.toggleImmersiveMode', state)
       ]
     },
-    {
-      label: 'Developer',
-      submenu: [commandItem('Toggle DevTools', 'workspace.toggleDevTools', state)]
-    },
+    ...developerMenu,
     buildHelpMenu(state)
   ];
 }

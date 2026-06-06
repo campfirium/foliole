@@ -17,6 +17,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canRenameNode: true,
     canReimportSelectedTopic: true,
     canResetImportData: true,
+    canToggleDevTools: true,
     canToggleDevReviewStatusBarPersistence: true,
     canGoBack: true,
     canGoForward: true,
@@ -133,6 +134,15 @@ describe('buildAppPaletteItems', () => {
       ctrlKey: true,
       key: 'y'
     });
+  });
+
+  it('omits the DevTools command when renderer dev entries are disabled', () => {
+    const items = buildAppPaletteItems({
+      ...createPaletteOptions(false),
+      canToggleDevTools: false
+    });
+
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(false);
   });
 });
 

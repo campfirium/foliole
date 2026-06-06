@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   isCommandPaletteToggleShortcut,
   isDevToolsToggleShortcut,
-  isSearchPaletteToggleShortcut
+  isSearchPaletteToggleShortcut,
+  shouldHandleDevToolsToggleShortcut
 } from './useAppRuntimeHotkeys';
 
 describe('isCommandPaletteToggleShortcut', () => {
@@ -71,6 +72,19 @@ describe('isDevToolsToggleShortcut', () => {
         shiftKey: true
       })
     ).toBe(false);
+  });
+
+  it('handles DevTools only when renderer dev entries are enabled', () => {
+    const event = {
+      altKey: false,
+      ctrlKey: true,
+      key: 'i',
+      metaKey: false,
+      shiftKey: true
+    };
+
+    expect(shouldHandleDevToolsToggleShortcut(event, true)).toBe(true);
+    expect(shouldHandleDevToolsToggleShortcut(event, false)).toBe(false);
   });
 });
 
