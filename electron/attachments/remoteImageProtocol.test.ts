@@ -63,7 +63,7 @@ it('registers the remote image scheme with secure standard privileges', () => {
   ]);
 });
 
-it('serves a preview-only remote image without persisting it', async () => {
+it('serves preview-only remote image resources with mime and cache headers but no page CSP', async () => {
   fetchRemoteImageResource.mockResolvedValue({
     status: 'ready',
     resource: {
@@ -89,6 +89,8 @@ it('serves a preview-only remote image without persisting it', async () => {
   expect(importRemoteImageAttachment).not.toHaveBeenCalled();
   expect(response.status).toBe(200);
   expect(response.headers.get('content-type')).toBe('image/png');
+  expect(response.headers.get('content-security-policy')).toBeNull();
+  expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
 });
 
 it('resolves the source origin from the node id without exposing it in the render URL', async () => {

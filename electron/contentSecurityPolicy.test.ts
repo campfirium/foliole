@@ -40,7 +40,7 @@ it('keeps vite dev server and websocket access only for localhost renderer URLs'
   expect(policy).toContain('foliole-remote-image:');
 });
 
-it('installs the header hook once and only handles main frame responses', () => {
+it('installs the main window session header hook once and only handles main frame responses', () => {
   type HeaderHandler = (
     details: {
       resourceType: string;

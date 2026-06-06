@@ -74,6 +74,8 @@ export function installMainWindowContentSecurityPolicy(session: Session | undefi
     return;
   }
   installedSessions.add(session);
+  // This hook is installed on the main window session; link panel webviews use
+  // their own persistent partition and keep third-party pages outside this CSP.
   session.webRequest.onHeadersReceived((details, callback) => {
     if (details.resourceType !== 'mainFrame') {
       callback({});

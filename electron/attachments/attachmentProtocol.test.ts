@@ -56,7 +56,7 @@ it('registers the attachment scheme with secure standard privileges', () => {
   ]);
 });
 
-it('serves attachment files through Electron net fetch with the stored mime type', async () => {
+it('serves attachment resources with mime and cache headers but no page CSP', async () => {
   fetch.mockResolvedValue(new Response(Buffer.from('image-bytes'), { status: 200 }));
   resolveAttachmentFile.mockReturnValue({
     status: 'ready',
@@ -74,6 +74,8 @@ it('serves attachment files through Electron net fetch with the stored mime type
   expect(fetch).toHaveBeenCalledWith('file:///tmp/attachment-hash');
   expect(response.status).toBe(200);
   expect(response.headers.get('content-type')).toBe('image/png');
+  expect(response.headers.get('content-security-policy')).toBeNull();
+  expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
   await expect(response.arrayBuffer()).resolves.toMatchObject(Buffer.from('image-bytes').buffer);
 });
 
