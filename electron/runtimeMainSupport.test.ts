@@ -91,6 +91,7 @@ it('blocks main window renderer navigation and renderer-created windows', () => 
   const navigationEvent = { preventDefault: vi.fn() };
   willNavigateHandlers[0]?.(navigationEvent, 'https://example.com');
 
+  expect(webContents.on).toHaveBeenCalledWith('will-navigate', expect.any(Function));
   expect(navigationEvent.preventDefault).toHaveBeenCalledTimes(1);
   expect(windowOpenHandlers[0]?.({ url: 'https://example.com' })).toEqual({ action: 'deny' });
 });
