@@ -19,12 +19,12 @@ import {
   resolveRemoteImageCacheKey,
   resolveRemoteImageFailureCacheMs,
   resolveRemoteImageFetchKey,
-  resolveRemoteImageTransportName,
   type RemoteImageFetchOptions,
   type RemoteImageFetchResult,
   type RemoteImageFetchTransport
 } from './remoteImageDownload.js';
 import { learnRemoteImageSourceOrigin } from './remoteImageLearnedSources.js';
+import { resolveRemoteImageTransportName } from './remoteImageTransport.js';
 
 const fetchByCacheKey = new Map<string, Promise<RemoteImageFetchResult>>();
 const importByNodeAndCacheKey = new Map<string, Promise<NativeImportLocalImageAttachmentResult>>();

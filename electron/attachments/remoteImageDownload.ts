@@ -3,16 +3,22 @@ import path from 'node:path';
 import type { NativeImportLocalImageAttachmentResult } from '../../lib/platform/nativeStorageContract.js';
 
 import { normalizeImageFileName, resolveImageMimeType } from './importImageAttachmentBytes.js';
+import { readRemoteImageResponseBytes } from './remoteImageBodyReader.js';
 import {
   recordRemoteImageDiagnostic,
   type RemoteImageDiagnosticEvent
 } from './remoteImageDiagnostics.js';
+import {
+  fetchRemoteImageWithRuntimeTransport,
+  resolveRemoteImageTransportName,
+  type RemoteImageFetchTransport
+} from './remoteImageTransport.js';
 
 const REMOTE_IMAGE_TIMEOUT_MS = 12_000;
 const REMOTE_IMAGE_TRANSIENT_FAILURE_CACHE_MS = 5_000;
 const REMOTE_IMAGE_STABLE_FAILURE_CACHE_MS = 60_000;
 
-export type RemoteImageFetchTransport = (sourceUrl: string, init: RequestInit) => Promise<Response>;
+export type { RemoteImageFetchTransport } from './remoteImageTransport.js';
 export type RemoteImageErrorResult = Extract<NativeImportLocalImageAttachmentResult, { status: 'error' }>;
 
 type RemoteImageFetchStrategy = 'direct' | 'source-origin';
@@ -26,6 +32,12 @@ interface RemoteImageAttempt {
   attempt: number;
   sourceOrigin: string | null;
   strategy: RemoteImageFetchStrategy;
+}
+
+interface RemoteImageFetchResponse {
+  clearTimeout: () => void;
+  response: Response;
+  signal: AbortSignal;
 }
 
 export interface RemoteImageBytesResult {
@@ -89,12 +101,6 @@ export function resolveImageHost(sourceUrl: string) {
   }
 }
 
-export function resolveRemoteImageTransportName(
-  fetchTransportForTests: RemoteImageFetchTransport | null
-): RemoteImageDiagnosticEvent['transport'] {
-  return fetchTransportForTests ? 'test' : process.versions.electron ? 'electron.net.fetch' : 'global.fetch';
-}
-
 function resolveImageMimeTypeFromResponse(sourceUrl: string, response: Response) {
   const headerValue = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
   if (headerValue.startsWith('image/')) return headerValue;
@@ -109,22 +115,6 @@ function resolveOriginalName(sourceUrl: string, mimeType: string) {
   }
 }
 
-async function resolveElectronNetFetch(): Promise<RemoteImageFetchTransport | null> {
-  if (!process.versions.electron) return null;
-  try {
-    const electronModule = await import('electron');
-    const netFetch = (electronModule as { net?: { fetch?: RemoteImageFetchTransport } }).net?.fetch;
-    return typeof netFetch === 'function' ? netFetch.bind(electronModule.net) : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchRemoteImageWithRuntimeTransport(sourceUrl: string, init: RequestInit) {
-  const electronNetFetch = await resolveElectronNetFetch();
-  return electronNetFetch ? electronNetFetch(sourceUrl, init) : fetch(sourceUrl, init);
-}
-
 function createAttemptHeaders(attempt: RemoteImageAttempt): Record<string, string> {
   const headers: Record<string, string> = { Accept: 'image/*,*/*;q=0.8' };
   if (attempt.strategy === 'source-origin' && attempt.sourceOrigin) {
@@ -135,14 +125,20 @@ function createAttemptHeaders(attempt: RemoteImageAttempt): Record<string, strin
   return headers;
 }
 
-async function fetchRemoteImage(sourceUrl: string, attempt: RemoteImageAttempt, fetchTransportForTests: RemoteImageFetchTransport | null) {
+async function fetchRemoteImage(
+  sourceUrl: string,
+  attempt: RemoteImageAttempt,
+  fetchTransportForTests: RemoteImageFetchTransport | null
+): Promise<RemoteImageFetchResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REMOTE_IMAGE_TIMEOUT_MS);
   const transport = fetchTransportForTests ?? fetchRemoteImageWithRuntimeTransport;
   try {
-    return await transport(sourceUrl, { headers: createAttemptHeaders(attempt), redirect: 'follow', signal: controller.signal });
-  } finally {
+    const response = await transport(sourceUrl, { headers: createAttemptHeaders(attempt), redirect: 'follow', signal: controller.signal });
+    return { clearTimeout: () => clearTimeout(timeout), response, signal: controller.signal };
+  } catch (error) {
     clearTimeout(timeout);
+    throw error;
   }
 }
 
@@ -178,33 +174,48 @@ async function runRemoteImageAttempt(
 ): Promise<RemoteImageFetchResult> {
   const startedAt = Date.now();
   const transportName = resolveRemoteImageTransportName(fetchTransportForTests);
+  let fetched: RemoteImageFetchResponse;
   let response: Response;
   try {
-    response = await fetchRemoteImage(sourceUrl, attempt, fetchTransportForTests);
+    fetched = await fetchRemoteImage(sourceUrl, attempt, fetchTransportForTests);
+    response = fetched.response;
   } catch {
     recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, null, null, 'download_failed');
     return { status: 'error', error: createRemoteImageDownloadError('The remote image could not be downloaded.', sourceUrl) };
   }
-  if (!response.ok) {
-    recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, null, 'download_failed');
-    return { status: 'error', error: createRemoteImageDownloadError(`The remote image request failed with status ${response.status}.`, sourceUrl) };
+  try {
+    if (!response.ok) {
+      recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, null, 'download_failed');
+      return { status: 'error', error: createRemoteImageDownloadError(`The remote image request failed with status ${response.status}.`, sourceUrl) };
+    }
+    const mimeType = resolveImageMimeTypeFromResponse(sourceUrl, response);
+    if (!mimeType) {
+      recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, null, 'unsupported_format');
+      return { status: 'error', error: createUnsupportedFormatResult(sourceUrl) };
+    }
+    const readResult = await readRemoteImageResponseBytes(response, fetched.signal).catch(() => null);
+    if (!readResult) {
+      recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, null, 'download_failed');
+      return { status: 'error', error: createRemoteImageDownloadError('The remote image could not be downloaded.', sourceUrl) };
+    }
+    if (readResult.status === 'too_large') {
+      recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, readResult.bytes, 'download_failed');
+      return { status: 'error', error: createRemoteImageDownloadError('The remote image is larger than the supported size limit.', sourceUrl) };
+    }
+    const { bytes } = readResult;
+    if (bytes.length === 0) {
+      recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, 0, 'download_failed');
+      return { status: 'error', error: createRemoteImageDownloadError('The remote image response was empty.', sourceUrl) };
+    }
+    recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, bytes.length, null);
+    return {
+      status: 'ready',
+      resource: { bytes, cacheKey, mimeType, originalName: resolveOriginalName(sourceUrl, mimeType), sourceUrl },
+      strategy: attempt.strategy
+    } satisfies RemoteImageFetchResult;
+  } finally {
+    fetched.clearTimeout();
   }
-  const mimeType = resolveImageMimeTypeFromResponse(sourceUrl, response);
-  if (!mimeType) {
-    recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, null, 'unsupported_format');
-    return { status: 'error', error: createUnsupportedFormatResult(sourceUrl) };
-  }
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.length === 0) {
-    recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, 0, 'download_failed');
-    return { status: 'error', error: createRemoteImageDownloadError('The remote image response was empty.', sourceUrl) };
-  }
-  recordAttemptDiagnostic(sourceUrl, attempt, Date.now() - startedAt, transportName, response, bytes.length, null);
-  return {
-    status: 'ready',
-    resource: { bytes, cacheKey, mimeType, originalName: resolveOriginalName(sourceUrl, mimeType), sourceUrl },
-    strategy: attempt.strategy
-  } satisfies RemoteImageFetchResult;
 }
 
 export async function downloadRemoteImageBytes(
