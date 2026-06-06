@@ -77,18 +77,7 @@ jobs:
           }
 
           $notes = @"
-          Private Windows installer test build.
-
-          Verify checksum:
-          ``````pwsh
-          Get-FileHash -Algorithm SHA256 .\$($installer.Name)
-          Get-Content .\SHA256SUMS.txt
-          ``````
-
-          Verify GitHub Actions provenance:
-          ``````sh
-          gh attestation verify "$($installer.Name)" -R $env:GITHUB_REPOSITORY
-          ``````
+          Windows alpha; please use test data and keep your own backup.
           "@
 
           gh release create $tagName $installer.FullName $checksums.FullName --draft --title $releaseTitle --notes $notes
