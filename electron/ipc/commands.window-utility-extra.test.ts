@@ -138,6 +138,40 @@ it('handles typed native utility commands', async () => {
   expect(syncAppMenuState).toHaveBeenCalledWith(['node.create'], []);
 });
 
+it('does not open rejected local paths through the native utility command', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'open_local_path',
+      args: { path: 'file:///tmp/source.md' }
+    })
+  ).resolves.toBeNull();
+  await expect(
+    handleInvokeRequest({
+      command: 'open_local_path',
+      args: { path: '/tmp/install.exe' }
+    })
+  ).resolves.toBeNull();
+  await expect(
+    handleInvokeRequest({
+      command: 'open_local_path',
+      args: { path: '/tmp' }
+    })
+  ).resolves.toBeNull();
+
+  expect(openPath).not.toHaveBeenCalled();
+});
+
+it('opens app-managed log directories through the native utility command', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'open_local_path',
+      args: { path: '/log' }
+    })
+  ).resolves.toBeNull();
+
+  expect(openPath).toHaveBeenCalledWith('/log');
+});
+
 it('handles the dev app restart command through a shell restart request', async () => {
   requestDevShellRestart.mockReturnValue(true);
 

@@ -13,6 +13,7 @@ import { asString, asStringArray } from './commandParsers.js';
 import type { InvokeContext } from './commands.js';
 import type { InvokeRequest } from './contracts.js';
 import { listSystemFonts } from './fonts.js';
+import { resolveAllowedLocalOpenPath } from './localOpenPathGuard.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
 
@@ -112,7 +113,7 @@ function handleUtilityCommand(request: InvokeRequest) {
     return shell.openExternal(url).then(() => null);
   }
   if (request.command === NATIVE_COMMANDS.openLocalPath) {
-    const targetPath = asString(args.path, 'path').trim();
+    const targetPath = resolveAllowedLocalOpenPath(asString(args.path, 'path'), resolveAppPaths());
     if (!targetPath) {
       return null;
     }
