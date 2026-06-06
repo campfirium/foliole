@@ -59,15 +59,23 @@ export function installMainRuntimeDiagnostics() {
 }
 
 export function bindEmbeddedLinkPanelContents(contents: WebContents) {
-  if (contents.getType() === 'webview') {
-    installEmbeddedLinkPanelSessionGuards(contents.session);
+  if (contents.getType() !== 'webview') {
+    return;
   }
+  installEmbeddedLinkPanelSessionGuards(contents.session);
   contents.setWindowOpenHandler(({ url }) => {
-    if (contents.getType() === 'webview' && isAllowedEmbeddedLinkPanelUrl(url)) {
+    if (isAllowedEmbeddedLinkPanelUrl(url)) {
       void contents.loadURL(url);
     }
     return { action: 'deny' };
   });
+}
+
+export function bindMainWindowNavigationGuard(window: import('electron').BrowserWindow) {
+  window.webContents.on('will-navigate', (event) => {
+    event.preventDefault();
+  });
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 }
 
 function installEmbeddedLinkPanelSessionGuards(session: Session | undefined) {

@@ -62,6 +62,7 @@ vi.mock('./mirror/mirrorSyncScheduler.js', () => ({ flushMirrorSync: vi.fn().moc
 vi.mock('./mirror/rebuildMirrorOutput.js', () => ({ backfillMissingMirrorOutput: vi.fn() }));
 vi.mock('./runtimeMainSupport.js', () => ({
   bindEmbeddedLinkPanelContents: vi.fn(),
+  bindMainWindowNavigationGuard: vi.fn(),
   focusWindow: vi.fn(),
   installMainRuntimeDiagnostics: vi.fn()
 }));

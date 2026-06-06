@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
 import {
+  bindMainWindowNavigationGuard,
   bindEmbeddedLinkPanelContents,
   createMainWindowOptions,
   isAllowedEmbeddedLinkPanelUrl,
@@ -50,6 +51,48 @@ it('denies blocked embedded link panel window opens without loading them', () =>
   expect(contents.loadURL).not.toHaveBeenCalled();
   expect(installedHandler({ url: 'https://example.com' })).toEqual({ action: 'deny' });
   expect(contents.loadURL).toHaveBeenCalledWith('https://example.com');
+});
+
+it('does not bind embedded link panel guards to the main window contents', () => {
+  const contents = {
+    getType: vi.fn(() => 'window'),
+    loadURL: vi.fn(),
+    session: {
+      on: vi.fn(),
+      setPermissionRequestHandler: vi.fn()
+    },
+    setWindowOpenHandler: vi.fn()
+  };
+
+  bindEmbeddedLinkPanelContents(contents as never);
+
+  expect(contents.setWindowOpenHandler).not.toHaveBeenCalled();
+  expect(contents.session.setPermissionRequestHandler).not.toHaveBeenCalled();
+  expect(contents.session.on).not.toHaveBeenCalled();
+});
+
+it('blocks main window renderer navigation and renderer-created windows', () => {
+  type WindowOpenHandler = (details: { url: string }) => { action: 'deny' };
+  type WillNavigateHandler = (event: { preventDefault: () => void }, url: string) => void;
+  const windowOpenHandlers: WindowOpenHandler[] = [];
+  const willNavigateHandlers: WillNavigateHandler[] = [];
+  const webContents = {
+    on: vi.fn((eventName: string, handler: WillNavigateHandler) => {
+      if (eventName === 'will-navigate') {
+        willNavigateHandlers.push(handler);
+      }
+    }),
+    setWindowOpenHandler: vi.fn((handler: WindowOpenHandler) => {
+      windowOpenHandlers.push(handler);
+    })
+  };
+
+  bindMainWindowNavigationGuard({ webContents } as never);
+  const navigationEvent = { preventDefault: vi.fn() };
+  willNavigateHandlers[0]?.(navigationEvent, 'https://example.com');
+
+  expect(navigationEvent.preventDefault).toHaveBeenCalledTimes(1);
+  expect(windowOpenHandlers[0]?.({ url: 'https://example.com' })).toEqual({ action: 'deny' });
 });
 
 it('denies embedded link panel permissions and prevents downloads', () => {

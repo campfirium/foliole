@@ -42,6 +42,7 @@ vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
 }));
 vi.mock('./runtimeMainSupport.js', () => ({
   bindEmbeddedLinkPanelContents: vi.fn(),
+  bindMainWindowNavigationGuard: vi.fn(),
   focusWindow: vi.fn(),
   installMainRuntimeDiagnostics: vi.fn()
 }));
