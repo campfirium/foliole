@@ -7,6 +7,7 @@ import { measureSelectionComputation } from './appControllerInstrumentation';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
 import { buildAppControllerResult } from './appControllerResult';
 import { useControllerReviewEditingState } from './appControllerReviewEditingState';
+import { useControllerStartupEffects } from './appControllerStartupEffects';
 import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import type { AppControllerResult } from './appControllerTypes';
 import { countDueReviewNodes } from './layoutPropsBuilder';
@@ -16,8 +17,6 @@ import { useControllerPaletteItems } from './useControllerPaletteItems';
 import { useControllerPriorityQuickSet } from './useControllerPriorityQuickSet';
 import { useCurrentNodeKeyboardShortcuts } from './useCurrentNodeKeyboardShortcuts';
 import { useFormalImport } from './useFormalImport';
-import { useGuidedSampleAutoOpen } from './useGuidedSampleAutoOpen';
-import { useReviewQueueDocumentPrefetch } from './useReviewQueueDocumentPrefetch';
 import { useReviewSessionRuntime } from './useReviewSessionRuntime';
 import { useReviewTopicDelayPanel } from './useReviewTopicDelayPanel';
 
@@ -152,19 +151,6 @@ function useControllerAuxiliaryResult(args: {
   return useControllerAuxiliaryState(args);
 }
 
-function useControllerStartupEffects(args: {
-  controller: ReturnType<typeof useWorkspaceControllerState>;
-  isWorkspaceHydrated: boolean;
-  startStudyMode: ReturnType<typeof useWorkspaceControllerState>['study']['startStudyMode'];
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
-  useReviewQueueDocumentPrefetch(args.ws.reviewSession);
-  useGuidedSampleAutoOpen(args.isWorkspaceHydrated, {
-    openNotesView: args.controller.trash.closeTrashView,
-    startStudyMode: args.startStudyMode
-  });
-}
-
 export function useAppController(args: {
   onOpenHelpSearch: () => void;
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
@@ -174,7 +160,7 @@ export function useAppController(args: {
   const { exitStudyMode, isStudyMode, startStudyMode } = core.controller.study;
   const { priorityQuickSet, reviewTopicDelayPanel } = useControllerQuickEntryState({ controller, hotkeys, isStudyMode, ws });
   const reviewPreview = useReviewSessionRuntime({ isStudyMode, nowIso, reviewSettings, ws });
-  useControllerStartupEffects({ controller, isWorkspaceHydrated, startStudyMode, ws });
+  useControllerStartupEffects({ controller, isStudyMode, isWorkspaceHydrated, startStudyMode, ws });
   const reviewEditing = useControllerReviewEditingState({
     controller,
     hotkeys,

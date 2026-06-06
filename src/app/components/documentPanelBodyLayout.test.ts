@@ -12,6 +12,7 @@ vi.mock('../../features/editor/components/MarkdownEditor', () => ({
     contentPaddingBottom?: string;
     nodeId: string | null;
     reviewCaretLineHighlight?: boolean;
+    reviewEscapeBlurEnabled?: boolean;
     trailingDivider?: boolean;
   }) => {
     useEffect(() => {
@@ -24,6 +25,7 @@ vi.mock('../../features/editor/components/MarkdownEditor', () => ({
       'data-testid': `editor-${props.nodeId ?? 'none'}`,
       'data-content-padding-bottom': props.contentPaddingBottom,
       'data-review-caret-line': props.reviewCaretLineHighlight ? 'true' : 'false',
+      'data-review-escape-blur': props.reviewEscapeBlurEnabled ? 'true' : 'false',
       'data-trailing-divider': props.trailingDivider ? 'true' : 'false'
     });
   }
@@ -143,5 +145,35 @@ describe('renderDocumentPanelBodyLayout', () => {
 
     expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-review-caret-line', 'true');
     expect(view.getByTestId('editor-node-1::answer')).toHaveAttribute('data-review-caret-line', 'false');
+  });
+});
+
+describe('renderDocumentPanelBodyLayout review Escape handling', () => {
+  it('enables review Escape blur handling for prompt and answer editors', () => {
+    const view = render(
+      renderDocumentPanelBodyLayout(createLayoutProps({
+        hasAnswerSection: true,
+        reveal: 'Beta',
+        reviewEscapeBlurEnabled: true
+      }))
+    );
+
+    expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-review-escape-blur', 'true');
+    expect(view.getByTestId('editor-node-1::answer')).toHaveAttribute('data-review-escape-blur', 'true');
+  });
+
+  it('keeps the review caret-line hint on the prompt editor when Escape blur also covers answers', () => {
+    const view = render(
+      renderDocumentPanelBodyLayout(createLayoutProps({
+        hasAnswerSection: true,
+        reveal: 'Beta',
+        reviewCaretLineHighlight: true,
+        reviewEscapeBlurEnabled: true
+      }))
+    );
+
+    expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-review-caret-line', 'true');
+    expect(view.getByTestId('editor-node-1::answer')).toHaveAttribute('data-review-caret-line', 'false');
+    expect(view.getByTestId('editor-node-1::answer')).toHaveAttribute('data-review-escape-blur', 'true');
   });
 });

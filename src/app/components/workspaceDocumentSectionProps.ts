@@ -30,6 +30,7 @@ function buildDocumentEditorProps(
     ...buildReadingPositionProps(props),
     isEditorReadOnly: props.isEditorReadOnly,
     reviewCaretLineHighlight: props.reviewCaretLineHighlight,
+    reviewEscapeBlurEnabled: props.reviewEscapeBlurEnabled,
     isImmersiveEditing,
     isImmersiveMode: props.isImmersiveMode,
     isPriorityQuickSetActive: props.isPriorityQuickSetActive,

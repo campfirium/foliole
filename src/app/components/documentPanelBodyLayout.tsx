@@ -36,6 +36,7 @@ export interface DocumentPanelBodyLayoutProps {
   editorHideTitleHeading?: boolean;
   immersiveEditing?: boolean;
   reviewCaretLineHighlight?: boolean;
+  reviewEscapeBlurEnabled?: boolean;
   editorNodeId: string | null;
   editorReadingRestoreCommandId?: string | null;
   editorReadingRestoreScrollTop?: number;
@@ -131,6 +132,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
           readingTargetViewportMode: props.editorReadingTargetViewportMode,
           readingTargetViewportRatio: props.editorReadingTargetViewportRatio,
           reviewCaretLineHighlight: props.reviewCaretLineHighlight,
+          reviewEscapeBlurEnabled: props.reviewEscapeBlurEnabled,
           textAnchorDecorations: props.textAnchorDecorations
         })}
       />

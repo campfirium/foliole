@@ -4,7 +4,7 @@ import type { MarkdownEditorProps } from './markdownEditorTypes';
 import { handleEditorUndoRedoKeyDown } from './markdownEditorUndoRedoShortcut';
 
 function isReviewEditorActive(activeElement: Element) {
-  return Boolean(activeElement.closest('.markdown-editor-host[data-review-caret-line="true"]'));
+  return Boolean(activeElement.closest('.markdown-editor-host[data-review-escape-blur="true"]'));
 }
 
 function blurReviewEditorIfEscape(event: KeyboardEvent | ReactKeyboardEvent<HTMLDivElement>) {
@@ -16,8 +16,6 @@ function blurReviewEditorIfEscape(event: KeyboardEvent | ReactKeyboardEvent<HTML
     return false;
   }
   activeElement.blur();
-  event.preventDefault();
-  event.stopPropagation();
   return true;
 }
 
@@ -46,7 +44,7 @@ export function handleMarkdownEditorKeyDownCapture(
   event: ReactKeyboardEvent<HTMLDivElement>,
   props: MarkdownEditorProps
 ) {
-  if (props.reviewCaretLineHighlight === true && blurReviewEditorIfEscape(event)) {
+  if (props.reviewEscapeBlurEnabled === true && blurReviewEditorIfEscape(event)) {
     return;
   }
   handleEditorUndoRedoKeyDown(event, props);

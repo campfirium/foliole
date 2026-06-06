@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI, NativeKeyboardInputPayload } from '../../shared/platform/electronApi';
@@ -110,10 +110,11 @@ it('leaves current node editing after an editor Escape handler only blurs the ed
   fireEvent.focusIn(editor);
   editor.blur();
   fireEvent.blur(editor);
-  await new Promise((resolve) => window.setTimeout(resolve, 0));
-  fireEvent.keyDown(window, { key: 'Delete' });
 
-  expect(deleteNode).toHaveBeenCalledWith('node-1');
+  await waitFor(() => {
+    fireEvent.keyDown(window, { key: 'Delete' });
+    expect(deleteNode).toHaveBeenCalledWith('node-1');
+  });
 });
 
 it('keeps current node editing context through a dialog and native Escape clears it outside review mode', async () => {

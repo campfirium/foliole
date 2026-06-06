@@ -50,6 +50,7 @@ export type WorkspaceDocumentSurfaceProps = WorkspaceDocumentSurfaceFlatSource &
   onExternalPreviewEditorReady?: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore: () => boolean;
   reviewCaretLineHighlight: boolean;
+  reviewEscapeBlurEnabled: boolean;
   showDocumentOutline?: boolean;
 };
 
@@ -76,6 +77,7 @@ function selectDocumentSurfaceState({
     isImmersiveMode: props.layoutChrome.isImmersiveMode,
     isPriorityQuickSetActive: props.document.isPriorityQuickSetActive,
     reviewCaretLineHighlight: props.review.isStudyMode && props.review.isReviewEditing,
+    reviewEscapeBlurEnabled: props.review.isStudyMode,
     isTrashViewOpen: props.trash.isTrashViewOpen,
     isVirtualViewOpen: props.virtualView.isVirtualViewOpen,
     onEnterImmersiveEdit,

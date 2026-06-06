@@ -33,6 +33,7 @@ interface DocumentPanelBodyProps {
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;
   reviewCaretLineHighlight?: boolean;
+  reviewEscapeBlurEnabled?: boolean;
   emptyContent?: ReactNode;
   editorNodeId: string | null;
   editorReadingRestoreCommandId?: string | null;

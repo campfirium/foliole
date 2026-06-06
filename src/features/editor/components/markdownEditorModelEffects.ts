@@ -28,5 +28,5 @@ export function useMarkdownEditorModelEffects(args: {
     props.lineDiffDecorations
   );
   useEditorAppearanceEffects(adapterRef, props.hideTitleHeading ?? false, props.nodeId);
-  useReviewEditorEscapeBlur({ enabled: props.reviewCaretLineHighlight === true, rootRef });
+  useReviewEditorEscapeBlur({ enabled: props.reviewEscapeBlurEnabled === true, rootRef });
 }

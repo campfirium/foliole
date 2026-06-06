@@ -17,6 +17,7 @@ interface DocumentPanelAnswerSectionProps {
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   readOnly?: boolean;
   reveal: string;
+  reviewEscapeBlurEnabled?: boolean;
   sharedBlockImageMaxHeight?: number;
 }
 
@@ -48,7 +49,8 @@ export function DocumentPanelAnswerSection(props: DocumentPanelAnswerSectionProp
           onFitBlockImageMetricsChange: props.onAnswerImageMetricsChange,
           onImageLoadStateChange: props.onAnswerImageLoadStateChange,
           onPastedAnchors: props.onPastedTextAnchors,
-          readOnly: props.readOnly
+          readOnly: props.readOnly,
+          reviewEscapeBlurEnabled: props.reviewEscapeBlurEnabled
         })}
       />
     </section>

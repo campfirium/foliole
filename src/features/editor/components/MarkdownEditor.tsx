@@ -42,6 +42,7 @@ function MarkdownEditorSurface(args: {
   onKeyDownCapture: MarkdownEditorProps['onKeyDownCapture'];
   readOnly: boolean;
   reviewCaretLineHighlight: boolean;
+  reviewEscapeBlurEnabled: boolean;
   rootRef: MutableRefObject<HTMLDivElement | null>;
   scrollContainer: NonNullable<MarkdownEditorProps['scrollContainer']>;
 }) {
@@ -67,6 +68,7 @@ function MarkdownEditorSurface(args: {
         data-immersive-editing={args.immersiveEditing ? 'true' : 'false'}
         data-read-only={args.readOnly ? 'true' : 'false'}
         data-review-caret-line={args.reviewCaretLineHighlight ? 'true' : 'false'}
+        data-review-escape-blur={args.reviewEscapeBlurEnabled ? 'true' : 'false'}
         data-scroll-container={args.scrollContainer}
         ref={args.hostRef}
         style={args.editorStyle}
@@ -192,6 +194,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         onKeyDownCapture={(event) => handleMarkdownEditorKeyDownCapture(event, props)}
         readOnly={props.readOnly === true}
         reviewCaretLineHighlight={props.reviewCaretLineHighlight === true}
+        reviewEscapeBlurEnabled={props.reviewEscapeBlurEnabled === true}
         rootRef={rootRef}
         scrollContainer={props.scrollContainer ?? 'editor'}
       />
