@@ -7,6 +7,9 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-readwise-reader-incremental-tests';
+const { isKeepImportMonitorSnapshotFresh } = vi.hoisted(() => ({
+  isKeepImportMonitorSnapshotFresh: vi.fn(() => false)
+}));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -15,6 +18,10 @@ vi.mock('../ipc/paths.js', () => ({
     app_data_dir: mockedAppDataDir,
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
+}));
+
+vi.mock('./keepImportMonitorRuntime.js', () => ({
+  isKeepImportMonitorSnapshotFresh
 }));
 
 import { closeDatabaseConnection } from '../database/connection.js';
@@ -28,6 +35,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-reader-incremental-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  isKeepImportMonitorSnapshotFresh.mockReturnValue(false);
   initializeDatabase();
 });
 
@@ -80,6 +88,7 @@ it('does not read unchanged Readwise article markdown during repeat sync', async
     skipped_count: 1,
     status: 'completed'
   });
+  isKeepImportMonitorSnapshotFresh.mockReturnValue(true);
   const readFile = vi.spyOn(fs, 'readFile');
   await expect(runReadwiseReaderImport()).resolves.toMatchObject({
     imported_count: 0,

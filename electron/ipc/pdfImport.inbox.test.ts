@@ -3,7 +3,6 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -26,6 +25,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -46,13 +46,13 @@ beforeEach(async () => {
 
 afterEach(async () => {
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
 });
 
 async function writePdf(fileName: string) {
   const filePath = path.join(tempRoot, fileName);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n'));
+  await fs.writeFile(filePath, Buffer.from(`%PDF-1.4\n% ${fileName}\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n`));
   return filePath;
 }
 
@@ -85,10 +85,10 @@ function readPdfOpenDetails(nodeId: string) {
     : null;
 }
 
-function resolvePdfAttachmentFileUrl(attachmentId: string) {
+function resolvePdfAttachmentAssetUrl(attachmentId: string) {
   const resolved = resolveAttachmentFile(attachmentId);
   expect(resolved.status).toBe('ready');
-  return resolved.status === 'ready' ? pathToFileURL(resolved.filePath).toString() : '';
+  return buildAttachmentAssetUrl(attachmentId);
 }
 
 async function expectPdfImportChain(options: {
@@ -116,7 +116,7 @@ async function expectPdfImportChain(options: {
   );
   expect(readPdfOpenDetails(options.nodeId)).toEqual({
     source_kind: 'pdf',
-    source_locator: resolvePdfAttachmentFileUrl(pdfAttachment?.attachmentId as string),
+    source_locator: resolvePdfAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
     source_name: options.sourceName
   });
   expect(openDatabaseConnection().sqlite
@@ -164,7 +164,7 @@ it('reopens the same pdf from attachments after the original file is removed and
   const linkedBeforeRestart = readPdfOpenDetails(imported.nodeId as string);
   expect(linkedBeforeRestart).toEqual({
     source_kind: 'pdf',
-    source_locator: resolvePdfAttachmentFileUrl(pdfAttachment?.attachmentId as string),
+    source_locator: resolvePdfAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
     source_name: 'restart-proof.pdf'
   });
 

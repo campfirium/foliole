@@ -34,10 +34,16 @@ resolve_vitest_json_report_file() {
   case "${script_name}" in
     test) printf '.tmp/vitest/related.json' ;;
     test:desktop) printf '.tmp/vitest/desktop.json' ;;
+    test:desktop:src) printf '.tmp/vitest/desktop-src.json' ;;
+    test:desktop:electron) printf '.tmp/vitest/desktop-electron.json' ;;
     test:android) printf '.tmp/vitest/android.json' ;;
     test:shared) printf '.tmp/vitest/shared.json' ;;
     test:sync-pack) printf '.tmp/vitest/sync-pack.json' ;;
     test:quality) printf '.tmp/vitest/quality.json' ;;
+    test:quality:core) printf '.tmp/vitest/quality-core.json' ;;
+    test:quality:gate) printf '.tmp/vitest/quality-gate.json' ;;
+    test:quality:node) printf '.tmp/vitest/quality-node.json' ;;
+    test:quality:preview) printf '.tmp/vitest/quality-preview.json' ;;
     test:full) printf '.tmp/vitest/full.json' ;;
     test:changed) printf '.tmp/vitest/changed.json' ;;
     check:android-boundary) printf '.tmp/vitest/android-boundary.json' ;;

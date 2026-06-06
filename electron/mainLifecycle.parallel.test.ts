@@ -99,7 +99,7 @@ afterEach(async () => {
 });
 
 it('starts runtime services before renderer shell loading completes', async () => {
-  const window = { isDestroyed: vi.fn(() => false) };
+  const window = { isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => false), show: vi.fn() };
   const rendererLoad = createDeferred();
   const activateMainWindow = vi.fn().mockResolvedValue(undefined);
   const createMainWindow = vi.fn().mockResolvedValue(window);
@@ -173,7 +173,7 @@ it('fails database readiness when startup stops before database initialization s
 
 
 it('starts companion sync after database startup before activating the renderer', async () => {
-  const window = { isDestroyed: vi.fn(() => false) };
+  const window = { isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => false), show: vi.fn() };
   const activateMainWindow = vi.fn().mockResolvedValue(undefined);
   mocks.isDesktopCompanionSyncEnabled.mockReturnValue(true);
   mocks.app.whenReady.mockResolvedValue(undefined);

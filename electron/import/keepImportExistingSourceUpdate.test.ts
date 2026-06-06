@@ -68,16 +68,15 @@ it('notifies the renderer and keeps the existing node unchanged when an existing
     .get() as { count: number };
 
   await fs.writeFile(
-    path.join(fixture.highlightDir, 'Sample Article.md'),
+    path.join(fixture.fullDocumentDir, 'Sample Article.md'),
     [
-      '# Sample Article',
+      '## Metadata',
+      '- Author: Someone',
       '',
-      '## Highlights',
-      'This is the highlighted sentence. [...] (https://example.com)',
+      '## Full Document',
+      'Completely different upstream body.',
       '',
-      'Another matching excerpt. Tags: [[tag-a]] [[tag-b]]',
-      '',
-      'After the quote.'
+      'Another paragraph with Another matching excerpt. End.'
     ].join('\n'),
     'utf8'
   );

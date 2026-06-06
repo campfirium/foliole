@@ -38,26 +38,53 @@ afterEach(async () => {
   delete process.env.FOLIOLE_SKIP_STARTUP_SCHEMA_INIT;
   delete process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE;
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await removeTempRoot();
 });
 
 it('quarantines a malformed sqlite database and recreates an empty schema on initialize', async () => {
   const databasePath = resolveDatabasePath();
-  await fs.mkdir(path.dirname(databasePath), { recursive: true });
-  await fs.writeFile(databasePath, 'not-a-sqlite-database');
+  initializeDatabase();
+  closeDatabaseConnection();
+  const validDatabase = await fs.readFile(databasePath);
+  const malformedDatabase = Buffer.from(validDatabase);
+  malformedDatabase[4_096] = malformedDatabase[4_096] ^ 0xff;
+  await fs.writeFile(databasePath, malformedDatabase);
 
   const recoveredConnection = initializeDatabase();
   const recoveryDir = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'recovery');
   const recoveredEntries = await fs.readdir(recoveryDir);
-  const recoveredDatabaseName = recoveredEntries.find((entry) => entry.endsWith('.db'));
+  const recoveredDatabaseNames = recoveredEntries.filter((entry) => /^foliole-corrupt-.*\.db$/.test(entry));
 
   expect(recoveredConnection.sqlite.prepare('PRAGMA quick_check(1)').pluck().get()).toBe('ok');
   expect(recoveredConnection.sqlite.prepare('PRAGMA user_version').pluck().get()).toBe(DATABASE_SCHEMA_VERSION);
-  expect(recoveredDatabaseName).toMatch(/^foliole-corrupt-.*\.db$/);
-  expect(
-    await fs.readFile(path.join(recoveryDir, recoveredDatabaseName ?? ''), 'utf8')
-  ).toBe('not-a-sqlite-database');
+  expect(recoveredDatabaseNames).toHaveLength(1);
+  closeDatabaseConnection();
+  const recoveredStats = await fs.stat(path.join(recoveryDir, recoveredDatabaseNames[0] ?? ''));
+  expect(recoveredStats.size).toBeGreaterThan(0);
 });
+
+async function removeTempRoot() {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await fs.rm(tempRoot, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (attempt === 2 || !isRetryableRemoveError(error)) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+}
+
+function isRetryableRemoveError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    ['EBUSY', 'ENOTEMPTY', 'EPERM'].includes(String(error.code))
+  );
+}
 
 it('moves legacy development databases to a pre-rebuild snapshot before recreating schema', async () => {
   const databasePath = resolveDatabasePath();

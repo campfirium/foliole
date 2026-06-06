@@ -90,7 +90,9 @@ it('returns source update content after the readwise body changes upstream', asy
 });
 
 it('returns plain markdown updates for generic adopt imports after the source changes', async () => {
-  await fs.writeFile(path.join(tempRoot, 'entry.md'), 'Before ==important== after', 'utf8');
+  const sourceDir = path.join(tempRoot, 'watched-source');
+  await fs.mkdir(sourceDir, { recursive: true });
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), 'Before ==important== after', 'utf8');
   saveImportManagerSettings({
     sources: [
       {
@@ -101,14 +103,14 @@ it('returns plain markdown updates for generic adopt imports after the source ch
         highlightPath: '',
         keepPreview: null,
         keepState: 'enabled',
-        primaryPath: tempRoot
+        primaryPath: sourceDir
       }
     ]
   });
 
-  await runKeepImportRule(createGenericKeepImportConfig(tempRoot, 'draft-import-source-201', 'adopt'));
-  await fs.writeFile(path.join(tempRoot, 'entry.md'), 'Before ==important== after again', 'utf8');
-  await runKeepImportRule(createGenericKeepImportConfig(tempRoot, 'draft-import-source-201', 'adopt'));
+  await runKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-201', 'adopt'));
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), 'Before ==important== after again', 'utf8');
+  await runKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-201', 'adopt'));
 
   const importedNode = openDatabaseConnection().sqlite
     .prepare(`SELECT latest_node_id FROM import_sources WHERE source_name = 'entry.md'`)

@@ -18,6 +18,9 @@ export interface PreparedHighlightExcerptCandidate {
   quoteWithoutTitle: string | null;
 }
 
+const MARKDOWN_IMAGE_ONLY_PATTERN = /^\s*!\[([^\]]*)\][(]([^)\n]+)[)]\s*$/u;
+const MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*\][(][^)\n]+[)]/g;
+
 function createQuoteWithoutTitle(quote: string) {
   const lines = quote.replace(/\r\n?/g, '\n').split('\n');
   const firstContentLine = lines.findIndex((line) => line.trim().length > 0);
@@ -40,12 +43,38 @@ export function prepareHighlightExcerptCandidate(candidate: HighlightExcerptCand
   };
 }
 
+function parseMarkdownImageOnly(value: string) {
+  const match = MARKDOWN_IMAGE_ONLY_PATTERN.exec(value);
+  return match ? { altText: (match[1] ?? '').trim(), markdown: match[0].trim() } : null;
+}
+
+function markdownImageAltText(value: string) {
+  return MARKDOWN_IMAGE_ONLY_PATTERN.exec(value)?.[1]?.trim() ?? null;
+}
+
+function findMarkdownImageExcerptInLocator(locator: ContextExcerptLocator, quote: string) {
+  const quoteImage = parseMarkdownImageOnly(quote);
+  if (!quoteImage) {
+    return null;
+  }
+  const images = Array.from(locator.content.matchAll(MARKDOWN_IMAGE_PATTERN), (match) => match[0]);
+  const exactMatches = images.filter((image) => image === quoteImage.markdown);
+  if (exactMatches.length === 1) {
+    return exactMatches[0] ?? null;
+  }
+  if (!quoteImage.altText) {
+    return null;
+  }
+  const altMatches = images.filter((image) => markdownImageAltText(image) === quoteImage.altText);
+  return altMatches.length === 1 ? altMatches[0] ?? null : null;
+}
+
 export function findPreparedHighlightExcerptInLocator(
   locator: ContextExcerptLocator,
   prepared: PreparedHighlightExcerptCandidate
 ) {
   if (!prepared.quoteLocator) {
-    return null;
+    return findMarkdownImageExcerptInLocator(locator, prepared.quote);
   }
   const fullMatch = findContextExcerptLocatorTextInLocatorByQuoteLocator(locator, prepared.quote, prepared.quoteLocator);
   if (

@@ -20,7 +20,6 @@ vi.mock('../ipc/paths.js', () => ({
 import { saveImportManagerSettings } from '../import/importManagerSettings.js';
 
 import { closeDatabaseConnection } from './connection.js';
-import { rebuildExternalSearchIndexes, searchExternalDocuments } from './externalSearchCache.js';
 import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
@@ -39,11 +38,6 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-async function writeTextFile(filePath: string, content: string) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, content, 'utf8');
-}
-
 function saveExternalFolder(folderPath: string) {
   saveExternalSearchFolders([
     {
@@ -60,33 +54,22 @@ function saveReadwiseRoot(readwiseRoot: string) {
   saveImportManagerSettings({ readwiseRootPath: readwiseRoot });
 }
 
-it('excludes the current Readwise root when an external folder points at its parent', async () => {
+it('rejects an external folder that points at the current Readwise root parent', () => {
   const vaultRoot = path.join(tempRoot, 'vault');
   const readwiseRoot = path.join(vaultRoot, 'Readwise');
-  await writeTextFile(path.join(vaultRoot, 'ordinary.md'), 'ordinary external content');
-  await writeTextFile(
-    path.join(readwiseRoot, 'Full Document Contents', 'Articles', 'readwise.md'),
-    'duplicated readwise content'
-  );
   saveReadwiseRoot(readwiseRoot);
-  saveExternalFolder(vaultRoot);
 
-  await rebuildExternalSearchIndexes();
-
-  expect(searchExternalDocuments('ordinary').map((result) => result.id)).toContain(
-    path.join(vaultRoot, 'ordinary.md')
+  expect(() => saveExternalFolder(vaultRoot)).toThrow(
+    'Readwise Reader folder cannot overlap External source 1.'
   );
-  expect(searchExternalDocuments('duplicated')).toEqual([]);
 });
 
-it('skips scanning when an external folder points inside the Readwise root', async () => {
+it('rejects an external folder that points inside the current Readwise root', () => {
   const readwiseRoot = path.join(tempRoot, 'Readwise');
   const articlesRoot = path.join(readwiseRoot, 'Full Document Contents', 'Articles');
-  await writeTextFile(path.join(articlesRoot, 'readwise.md'), 'readwise category content');
   saveReadwiseRoot(readwiseRoot);
-  saveExternalFolder(articlesRoot);
 
-  await rebuildExternalSearchIndexes();
-
-  expect(searchExternalDocuments('category')).toEqual([]);
+  expect(() => saveExternalFolder(articlesRoot)).toThrow(
+    'Readwise Reader folder cannot overlap External source 1.'
+  );
 });

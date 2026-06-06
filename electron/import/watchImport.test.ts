@@ -71,6 +71,14 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+vi.mock('../ipc/libraryPathBootstrap.js', () => ({
+  readLegacyLibraryPathOverrides: vi.fn(() => null),
+  resolveBootstrapLibraryHome: vi.fn(() => path.join(mockedAppDataDir, 'library-home')),
+  resolveBootstrapLibraryPaths: () => loadLibraryPathSettingsSync(),
+  resolveExplicitLibraryHome: vi.fn(() => null),
+  saveCurrentLibraryHome: vi.fn()
+}));
+
 vi.mock('./directoryImportBatch.js', () => ({ runDirectoryImportBatch }));
 vi.mock('../ipc/libraryPaths.js', () => ({
   ensureLibraryPathLayout,

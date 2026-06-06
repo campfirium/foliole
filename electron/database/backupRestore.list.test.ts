@@ -20,6 +20,8 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { listApplicationDatabaseBackups } from './backupRestore.js';
+import { closeDatabaseConnection } from './connection.js';
+import { initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
 
@@ -27,9 +29,11 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-backup-list-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   mockedDocumentsDir = path.join(tempRoot, 'Documents');
+  initializeDatabase();
 });
 
 afterEach(async () => {
+  closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 

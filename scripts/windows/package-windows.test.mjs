@@ -14,6 +14,7 @@ import {
   readPackageVersion,
   resolveReleaseArtifactPaths,
   resolveInstallMode,
+  resolvePackageStatusLabel,
   resolvePackagedInstallerPath,
   resolvePackageMode
 } from './package-windows.mjs';
@@ -28,6 +29,11 @@ describe('windows package runner', () => {
   it('only installs when explicitly requested', () => {
     expect(resolveInstallMode(['node', 'script'])).toBe(false);
     expect(resolveInstallMode(['node', 'script', '--install'])).toBe(true);
+  });
+
+  it('reports installed status only after the install path is requested', () => {
+    expect(resolvePackageStatusLabel(false)).toBe('PACKAGED');
+    expect(resolvePackageStatusLabel(true)).toBe('PACKAGED_AND_INSTALLED');
   });
 
   it('runs the native package pipeline through npm and electron-builder', () => {

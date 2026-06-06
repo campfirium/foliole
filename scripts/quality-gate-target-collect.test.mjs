@@ -82,11 +82,16 @@ describe('quality-gate-target.sh collected failure mode', () => {
         'lint:full': 'node -e "console.log(\'lint failed details\'); process.exit(1)"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck failed details\'); process.exit(1)"',
-        'test:desktop': 'node -e "console.log(\'desktop test still ran\')"',
+        'test:desktop:src': 'node -e "console.log(\'desktop src test still ran\')"',
+        'test:desktop:electron': 'node -e "console.log(\'desktop electron test still ran\')"',
+        'test:windows:core': 'node -e "console.log(\'windows core test still ran\')"',
         'test:android': 'node -e "console.log(\'android test still ran\')"',
         'test:shared': 'node -e "console.log(\'shared test still ran\')"',
         'test:sync-pack': 'node -e "console.log(\'sync pack test still ran\')"',
-        'test:quality': 'node -e "console.log(\'quality test still ran\')"',
+        'test:quality:core': 'node -e "console.log(\'quality core test still ran\')"',
+        'test:quality:gate': 'node -e "console.log(\'quality gate test still ran\')"',
+        'test:quality:node': 'node -e "console.log(\'quality node test still ran\')"',
+        'test:quality:preview': 'node -e "console.log(\'quality preview test still ran\')"',
         build: 'node -e "console.log(\'build still ran\')"',
         'electron:compile': 'node -e "console.log(\'electron compile failed details\'); process.exit(1)"',
         'android:web:build': 'node -e "console.log(\'android web build still ran\')"'
@@ -98,11 +103,16 @@ describe('quality-gate-target.sh collected failure mode', () => {
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('[quality-gate:full] lint:full failed:');
       expect(result.stdout).toContain('[quality-gate:full] typecheck:android failed:');
-      expect(result.stdout).toContain('desktop test still ran');
+      expect(result.stdout).toContain('desktop src test still ran');
+      expect(result.stdout).toContain('desktop electron test still ran');
+      expect(result.stdout).toContain('windows core test still ran');
       expect(result.stdout).toContain('android test still ran');
       expect(result.stdout).toContain('shared test still ran');
       expect(result.stdout).toContain('sync pack test still ran');
-      expect(result.stdout).toContain('quality test still ran');
+      expect(result.stdout).toContain('quality core test still ran');
+      expect(result.stdout).toContain('quality gate test still ran');
+      expect(result.stdout).toContain('quality node test still ran');
+      expect(result.stdout).toContain('quality preview test still ran');
       expect(result.stdout).toContain('android web build still ran');
       expect(result.stdout).toContain('[quality-gate:full] electron:compile failed:');
       expect(result.stdout).toContain('[quality-gate:full] collected failures summary:');

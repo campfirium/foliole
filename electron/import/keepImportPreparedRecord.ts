@@ -31,7 +31,9 @@ export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfi
     !hasPrimarySourceChanged(existingItem, sourceSignature) &&
     !hasHighlightSourceChanged(existingItem, sourceSignature)
   ) {
-    return !(existingItem.last_status === 'discovered' && !existingItem.last_node_id);
+    if (!(existingItem.last_status === 'discovered' && !existingItem.last_node_id)) {
+      return true;
+    }
   }
   return readwiseKeepAdapter.shouldImportSource(source, {
     highlightDirectoryPath: readwiseSource.highlightPath.trim(),

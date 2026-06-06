@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -12,11 +12,11 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-target.sh');
 
-function runTargetGate(cwd, target, env = {}) {
+function runTargetGate(cwd, target) {
   return new Promise((resolve) => {
     const child = spawn('bash', [TARGET_SCRIPT, target], {
       cwd,
-      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env }
+      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary' }
     });
     let stdout = '';
     let stderr = '';
@@ -37,7 +37,19 @@ async function writePackageJson(rootDir, scripts) {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
     ...scripts
   };
-  for (const bucket of ['test:desktop', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality']) {
+  for (const bucket of [
+    'test:desktop',
+    'test:windows:core',
+    'test:windows:preview-recovery',
+    'test:android',
+    'test:shared',
+    'test:sync-pack',
+    'test:quality',
+    'test:quality:core',
+    'test:quality:gate',
+    'test:quality:node',
+    'test:quality:preview'
+  ]) {
     fixtureScripts[bucket] ??= scripts['test:full'];
   }
   await writeFile(
@@ -82,6 +94,7 @@ describe('quality-gate-target.sh', () => {
         'lint:desktop:full': 'node -e "console.log(\'desktop full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'test:desktop': 'node -e "console.log(\'desktop test ok\')"',
+        'test:windows:core': 'node -e "console.log(\'windows core test ok\')"',
         'test:quality': 'node -e "console.log(\'quality test ok\')"',
         build: 'node -e "console.log(\'desktop build ok\')"',
         'electron:compile': 'node -e "console.log(\'electron compile ok\')"'
@@ -97,6 +110,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('desktop full lint ok');
       expect(result.stdout).toContain('desktop typecheck ok');
       expect(result.stdout).toContain('desktop test ok');
+      expect(result.stdout).toContain('windows core test ok');
       expect(result.stdout).toContain('quality test ok');
       expect(result.stdout).toContain('desktop build ok');
       expect(result.stdout).toContain('electron compile ok');
@@ -212,269 +226,4 @@ describe('quality-gate-target.sh', () => {
     }
   }, 60000);
 
-  it('runs the full gate without android host checks', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {
-        'check:native-contracts': 'node -e "console.log(\'native contracts ok\')"',
-        'check:reading-typography': 'node -e "console.log(\'reading typography ok\')"',
-        'lint:full': 'node -e "console.log(\'full lint ok\')"',
-        'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
-        'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
-        'test:full': 'node -e "console.log(\'full deduped test ok\')"',
-        build: 'node -e "console.log(\'full build ok\')"',
-        'electron:compile': 'node -e "console.log(\'full electron compile ok\')"',
-        'android:web:build': 'node -e "console.log(\'full android web build ok\')"',
-        'android:sync': 'node -e "console.log(\'full android sync ok\')"',
-        'android:host:lint': 'node -e "console.log(\'full android host lint ok\')"',
-        'android:host:test': 'node -e "console.log(\'full android host test ok\')"'
-      });
-      await writeRepositoryRootBoundaryScript(tempRoot);
-      await writeWorkspaceBoundaryScript(tempRoot);
-
-      const result = await runTargetGate(tempRoot, 'full');
-
-      expect(result.code).toBe(0);
-      expect(result.stdout).toContain('full lint ok');
-      expect(result.stdout).toContain('full desktop typecheck ok');
-      expect(result.stdout).toContain('full android typecheck ok');
-      expect(result.stdout).toContain('full deduped test ok');
-      expect(result.stdout).toContain('full build ok');
-      expect(result.stdout).toContain('native contracts ok');
-      expect(result.stdout).toContain('reading typography ok');
-      expect(result.stdout).toContain('[quality-gate:full] running in parallel: lint:full typecheck:desktop typecheck:android');
-      expect(result.stdout).toContain('[quality-gate:full] running in parallel: build electron:compile android:web:build');
-      expect(result.stdout).toContain('full electron compile ok');
-      expect(result.stdout).toContain('full android web build ok');
-      expect(result.stdout).not.toContain('full android sync ok');
-      expect(result.stdout).not.toContain('full android host lint ok');
-      expect(result.stdout).not.toContain('full android host test ok');
-      expect(result.stdout).toContain('repository root boundary ok');
-      expect(result.stdout).toContain('workspace boundary ok');
-      expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
-
-  it('runs the release gate including android host checks', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {
-        'lint:full': 'node -e "console.log(\'release lint ok\')"',
-        'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
-        'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
-        'test:full': 'node -e "console.log(\'release deduped test ok\')"',
-        build: 'node -e "console.log(\'release build ok\')"',
-        'electron:compile': 'node -e "console.log(\'release electron compile ok\')"',
-        'android:web:build': 'node -e "console.log(\'release android web build ok\')"',
-        'android:sync': 'node -e "console.log(\'release android sync ok\')"',
-        'android:host:lint': 'node -e "console.log(\'release android host lint ok\')"',
-        'android:host:test': 'node -e "console.log(\'release android host test ok\')"'
-      });
-      await writeRepositoryRootBoundaryScript(tempRoot);
-      await writeWorkspaceBoundaryScript(tempRoot);
-
-      const result = await runTargetGate(tempRoot, 'release');
-
-      expect(result.code).toBe(0);
-      const fullGateMessages = [
-        'release lint ok', 'release desktop typecheck ok', 'release android typecheck ok', 'release deduped test ok',
-        'release build ok', 'release electron compile ok', 'release android web build ok'
-      ];
-      const androidHostMessages = ['release android sync ok', 'release android host lint ok', 'release android host test ok'];
-      for (const message of fullGateMessages) {
-        expect(result.stdout).toContain(message);
-      }
-      expect(result.stdout).toContain('[quality-gate:release] running in parallel: build electron:compile android:web:build');
-      for (const message of androidHostMessages) {
-        expect(result.stdout).toContain(message);
-      }
-      expect(result.stdout).toContain('repository root boundary ok');
-      expect(result.stdout).toContain('workspace boundary ok');
-      expect(result.stdout).toContain('[quality-gate:release] all checks passed.');
-
-      const releaseCoreResult = await runTargetGate(tempRoot, 'release-core');
-
-      expect(releaseCoreResult.code).toBe(0);
-      for (const message of fullGateMessages) {
-        expect(releaseCoreResult.stdout).toContain(message);
-      }
-      for (const message of androidHostMessages) {
-        expect(releaseCoreResult.stdout).not.toContain(message);
-      }
-      expect(releaseCoreResult.stdout).toContain('[quality-gate:release-core] all checks passed.');
-
-      const releaseAndroidHostResult = await runTargetGate(tempRoot, 'release-android-host');
-
-      expect(releaseAndroidHostResult.code).toBe(0);
-      for (const message of androidHostMessages) {
-        expect(releaseAndroidHostResult.stdout).toContain(message);
-      }
-      for (const message of fullGateMessages) {
-        expect(releaseAndroidHostResult.stdout).not.toContain(message);
-      }
-      expect(releaseAndroidHostResult.stdout).toContain('[quality-gate:release-android-host] all checks passed.');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
-
-  it('reports every failed parallel step', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {
-        'lint:full': 'node -e "console.log(\'lint ok\')"',
-        'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
-        'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
-        'test:full': 'node -e "console.log(\'test full ok\')"',
-        build: 'node -e "console.log(\'build failed details\'); process.exit(1)"',
-        'electron:compile': 'node -e "console.log(\'electron failed details\'); process.exit(1)"',
-        'android:web:build': 'node -e "console.log(\'android web build ok\')"'
-      });
-
-      const result = await runTargetGate(tempRoot, 'full');
-
-      expect(result.code).toBe(1);
-      expect(result.stdout).toContain('[quality-gate:full] build failed:');
-      expect(result.stdout).toContain('[quality-gate:full] electron:compile failed:');
-      expect(result.stdout).toContain('build failed details');
-      expect(result.stdout).toContain('electron failed details');
-      expect(result.stdout).toContain('android web build ok');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
-
-  it('reports missing scripts from parallel steps', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {
-        'lint:full': 'node -e "console.log(\'lint ok\')"',
-        'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
-        'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
-        'test:full': 'node -e "console.log(\'test full ok\')"',
-        build: 'node -e "console.log(\'build ok\')"',
-        'android:web:build': 'node -e "console.log(\'android web build ok\')"'
-      });
-
-      const result = await runTargetGate(tempRoot, 'full');
-
-      expect(result.code).toBe(1);
-      expect(result.stdout).toContain('[quality-gate:full] electron:compile failed:');
-      expect(result.stdout).toContain('[quality-gate:full] missing script: electron:compile');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
-
-  it('prints heartbeat while parallel steps are still running', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {
-        'lint:full': 'node -e "console.log(\'lint ok\')"',
-        'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
-        'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
-        'test:full': 'node -e "console.log(\'test full ok\')"',
-        build: 'node -e "setTimeout(() => console.log(\'build ok\'), 2100)"',
-        'electron:compile': 'node -e "setTimeout(() => console.log(\'electron ok\'), 2100)"',
-        'android:web:build': 'node -e "setTimeout(() => console.log(\'android web ok\'), 2100)"'
-      });
-
-      const result = await runTargetGate(tempRoot, 'full', {
-        QUALITY_GATE_PARALLEL_HEARTBEAT_SECONDS: '1'
-      });
-
-      expect(result.code).toBe(0);
-      expect(result.stdout).toContain('[quality-gate:full] still running in parallel:');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
-
-  it('fails for an unknown target', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {});
-
-      const result = await runTargetGate(tempRoot, 'unknown-target');
-
-      expect(result.code).toBe(1);
-      expect(result.stdout).toContain('[quality-gate-target] unknown target: unknown-target');
-      expect(result.stdout).toContain(
-        'Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release|release-core|release-android-host>'
-      );
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
-
-  it('fails when a required package script is missing', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {
-        'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
-        'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
-        'test:android': 'node -e "console.log(\'android test ok\')"',
-        'test:quality': 'node -e "console.log(\'quality test ok\')"',
-        'android:sync': 'node -e "console.log(\'android sync ok\')"',
-        'android:host:test': 'node -e "console.log(\'android host test ok\')"'
-      });
-
-      const result = await runTargetGate(tempRoot, 'android');
-
-      expect(result.code).toBe(1);
-      expect(result.stdout).toContain('[quality-gate:android] missing script: android:host:lint');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
-
-  it('prints a compact failure excerpt instead of dumping the whole log', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {
-        'lint:desktop:full': 'node -e "console.log(\'desktop full lint ok\')"',
-        'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
-        'test:desktop':
-          'node -e "for (let i = 1; i <= 220; i += 1) console.log(\'test-line-\' + i); process.exit(1)"',
-        build: 'node -e "console.log(\'desktop build ok\')"',
-        'electron:compile': 'node -e "console.log(\'electron compile ok\')"'
-      });
-
-      const result = await runTargetGate(tempRoot, 'desktop');
-
-      expect(result.code).toBe(1);
-      expect(result.stdout).toContain('[quality-gate:desktop] failed: test:desktop');
-      expect(result.stdout).toContain('showing first 20 and last 120 lines');
-      expect(result.stdout).toContain('test-line-1');
-      expect(result.stdout).toContain('test-line-220');
-      expect(result.stdout).toContain('[quality-gate:desktop] ... output trimmed ...');
-      expect(result.stdout).not.toContain('test-line-60');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
-
-  it('keeps the full failure log on disk and prints its absolute path', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {
-        'lint:desktop:full': 'node -e "console.log(\'desktop full lint ok\')"',
-        'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
-        'test:desktop': 'node -e "console.log(\'deep failure details\'); process.exit(1)"',
-        build: 'node -e "console.log(\'desktop build ok\')"',
-        'electron:compile': 'node -e "console.log(\'electron compile ok\')"'
-      });
-
-      const result = await runTargetGate(tempRoot, 'desktop');
-      const match = result.stdout.match(/\[quality-gate:desktop\] full log: (.+\.log)/);
-
-      expect(result.code).toBe(1);
-      expect(match).not.toBeNull();
-      await access(match[1]);
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
 });

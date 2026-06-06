@@ -79,7 +79,7 @@ function readRows<T>(sql: string) {
   return openDatabaseConnection().sqlite.prepare(sql).all() as T[];
 }
 
-it('reimports a locally deleted Readwise Inbox topic during sync', async () => {
+it('blocks automatic Readwise Inbox topic recreation after local deletion during sync', async () => {
   const fixture = await seedReadwiseFixture();
   saveReadwiseSettings(fixture);
   await runReadwiseReaderImport();
@@ -93,15 +93,14 @@ it('reimports a locally deleted Readwise Inbox topic during sync', async () => {
   const nodeRows = readRows<{ deleted_at: string | null; id: string }>(
     `SELECT id, deleted_at FROM nodes WHERE title = 'Same Title' ORDER BY created_at ASC`
   );
-  const keepRows = readRows<{ last_node_id: string; last_status: string; local_node_state: string }>(
-    `SELECT last_node_id, last_status, local_node_state FROM keep_import_items WHERE source_path = 'Highlighted.md'`
+  const keepRows = readRows<{ has_source_update: number; last_node_id: string; last_status: string; local_node_state: string }>(
+    `SELECT has_source_update, last_node_id, last_status, local_node_state FROM keep_import_items WHERE source_path = 'Highlighted.md'`
   );
 
   expect(nodeRows).toEqual([
-    { deleted_at: '2026-05-12T00:00:00.000Z', id: importedNode.last_node_id },
-    { deleted_at: null, id: expect.any(String) }
+    { deleted_at: '2026-05-12T00:00:00.000Z', id: importedNode.last_node_id }
   ]);
   expect(keepRows).toEqual([
-    { last_node_id: nodeRows[1]?.id, last_status: 'degraded', local_node_state: 'active' }
+    { has_source_update: 1, last_node_id: importedNode.last_node_id, last_status: 'blocked_deleted', local_node_state: 'locally_deleted' }
   ]);
 });

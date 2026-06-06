@@ -41,6 +41,25 @@ function createDuplicateNoopRecord(prepared: PreparedImportRecord, nodeId: strin
   };
 }
 
+function refreshDuplicateImportSourceLocator(record: PersistedImportRecord) {
+  openDatabaseConnection().sqlite
+    .prepare(
+      `UPDATE import_sources
+       SET source_locator = ?,
+           source_name = ?
+       WHERE source_fingerprint = ?
+         AND last_content_fingerprint = ?
+         AND latest_node_id = ?`
+    )
+    .run(
+      record.sourceLocator,
+      record.sourceName,
+      record.sourceFingerprint,
+      record.contentFingerprint,
+      record.nodeId
+    );
+}
+
 export function persistAutomaticDuplicateNoop(input: {
   config: KeepImportRuleConfig;
   hasSourceUpdate: boolean;
@@ -56,6 +75,7 @@ export function persistAutomaticDuplicateNoop(input: {
     return null;
   }
   const record = createDuplicateNoopRecord(input.prepared, nodeId);
+  refreshDuplicateImportSourceLocator(record);
   persistKeepImportState(input.config, input.source, input.sourceSignature, record, 'duplicate', input.hasSourceUpdate);
   return record;
 }

@@ -135,7 +135,7 @@ function saveNodeViewStates(
 ) {
   for (const state of input.nodeViewStates) {
     const existing = loadExistingNodeViewState(connection, deviceId, state.nodeId);
-    const updatedAt = state.updatedAt?.trim() || existing?.updatedAt;
+    const updatedAt = state.updatedAt?.trim() || existing?.updatedAt || input.updatedAt;
     if (!updatedAt) {
       continue;
     }

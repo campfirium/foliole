@@ -10,8 +10,8 @@ let mockedAppDataDir = '/tmp/foliole-keep-import-high-fanout-tests';
 const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
-const { runPreparedImportInWorker } = vi.hoisted(() => ({
-  runPreparedImportInWorker: vi.fn()
+const { runPreparedImportInWorkerWithSignal } = vi.hoisted(() => ({
+  runPreparedImportInWorkerWithSignal: vi.fn()
 }));
 
 vi.mock('../ipc/paths.js', () => ({
@@ -28,7 +28,7 @@ vi.mock('./managedInboxEvents.js', () => ({
 }));
 
 vi.mock('./keepImportPreparedImportWorkerClient.js', () => ({
-  runPreparedImportInWorker
+  runPreparedImportInWorkerWithSignal
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -44,7 +44,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-keep-import-high-fanout-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  runPreparedImportInWorker.mockImplementation(async (prepared) => {
+  runPreparedImportInWorkerWithSignal.mockImplementation(async ({ prepared }) => {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 0);
     });
@@ -57,7 +57,7 @@ afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
   notifyManagedInboxUpdated.mockReset();
-  runPreparedImportInWorker.mockReset();
+  runPreparedImportInWorkerWithSignal.mockReset();
 });
 
 async function seedHighFanoutFixture(highlightCount: number) {
@@ -165,7 +165,7 @@ it('publishes source and highlight progress for high fanout Readwise imports', a
     )
     .get() as { count: number };
 
-  expect(runPreparedImportInWorker).toHaveBeenCalledTimes(1);
+  expect(runPreparedImportInWorkerWithSignal).toHaveBeenCalledTimes(1);
   expect(timerFired).toBe(true);
   expect(childCount.count).toBe(305);
   expect(openDatabaseConnection().sqlite

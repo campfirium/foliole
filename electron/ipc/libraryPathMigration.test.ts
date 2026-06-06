@@ -32,6 +32,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-library-path-migration-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   mockedDocumentsDir = path.join(tempRoot, 'Documents');
+  initializeDatabase();
 });
 
 afterEach(async () => {

@@ -36,25 +36,31 @@ vi.mock('electron', () => ({
   shell: { trashItem: vi.fn() }
 }));
 
+import { closeDatabaseConnection } from '../database/connection.js';
+import { initializeDatabase } from '../database/migrate.js';
+
 import { runDirectoryImport } from './importDirectory.js';
 import { createTempRoot } from './importDirectory.test-support.js';
 
 const tempRoots: string[] = [];
 
-beforeEach(() => {
+beforeEach(async () => {
+  const appDataDir = await createTempRoot('import-directory-logging-app-data', tempRoots);
   vi.clearAllMocks();
   logDirectoryImportCompleted.mockResolvedValue(undefined);
   logDirectoryImportFailed.mockResolvedValue(undefined);
   resolveAppPaths.mockReturnValue({
-    app_cache_dir: '/tmp/cache',
-    app_config_dir: '/tmp/config',
-    app_data_dir: '/tmp/app-data',
-    app_log_dir: '/tmp/logs'
+    app_cache_dir: path.join(appDataDir, 'cache'),
+    app_config_dir: path.join(appDataDir, 'config'),
+    app_data_dir: appDataDir,
+    app_log_dir: path.join(appDataDir, 'logs')
   });
   loadAppSettingsState.mockResolvedValue({});
+  initializeDatabase();
 });
 
 afterEach(async () => {
+  closeDatabaseConnection();
   await Promise.all(tempRoots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })));
 });
 

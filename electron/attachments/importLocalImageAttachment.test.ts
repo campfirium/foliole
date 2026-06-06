@@ -98,6 +98,7 @@ it('imports a local png into the app attachment directory and links it to the no
     attachment_record: 'created',
     created_at: expect.any(String),
     hash: hashBytes(imageBytes),
+    intrinsic_size: null,
     mime_type: 'image/png',
     original_name: 'cover.png',
     size_bytes: imageBytes.byteLength,

@@ -63,11 +63,13 @@ function saveGenericKeepSettings(sourceDir: string) {
 }
 
 it('reimports an updated keep source into the same active topic', async () => {
-  await fs.writeFile(path.join(tempRoot, 'entry.md'), '# Entry\n\nOld body\n', 'utf8');
-  saveGenericKeepSettings(tempRoot);
+  const sourceDir = path.join(tempRoot, 'watched-source');
+  await fs.mkdir(sourceDir, { recursive: true });
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Entry\n\nOld body\n', 'utf8');
+  saveGenericKeepSettings(sourceDir);
 
   await runKeepImportRule({
-    directoryPath: tempRoot,
+    directoryPath: sourceDir,
     highlightPolicy: 'adopt',
     ruleId: 'draft-import-source-401'
   });
@@ -77,7 +79,7 @@ it('reimports an updated keep source into the same active topic', async () => {
     .prepare(`SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?`)
     .get('draft-import-source-401', 'entry.md') as { last_node_id: string };
 
-  await fs.writeFile(path.join(tempRoot, 'entry.md'), '# Entry\n\nFresh body\n', 'utf8');
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Entry\n\nFresh body\n', 'utf8');
 
   const result = await reimportCurrentTopicSource(first.last_node_id);
   const node = connection.sqlite
@@ -105,11 +107,13 @@ it('reimports an updated keep source into the same active topic', async () => {
 });
 
 it('overwrites local article edits even when the source file is unchanged', async () => {
-  await fs.writeFile(path.join(tempRoot, 'entry.md'), '# Entry\n\nSource body\n', 'utf8');
-  saveGenericKeepSettings(tempRoot);
+  const sourceDir = path.join(tempRoot, 'watched-source');
+  await fs.mkdir(sourceDir, { recursive: true });
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Entry\n\nSource body\n', 'utf8');
+  saveGenericKeepSettings(sourceDir);
 
   await runKeepImportRule({
-    directoryPath: tempRoot,
+    directoryPath: sourceDir,
     highlightPolicy: 'adopt',
     ruleId: 'draft-import-source-401'
   });

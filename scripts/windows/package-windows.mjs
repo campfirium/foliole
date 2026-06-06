@@ -19,6 +19,10 @@ export function resolveInstallMode(argv = process.argv) {
   return argv.includes('--install');
 }
 
+export function resolvePackageStatusLabel(install) {
+  return install ? 'PACKAGED_AND_INSTALLED' : 'PACKAGED';
+}
+
 function createCmdStep(label, command) {
   return {
     args: ['/d', '/s', '/c', command],
@@ -202,7 +206,7 @@ async function main() {
     if (install) {
       await installPackagedApp();
     }
-    console.log('[windows-package] status: PACKAGED');
+    console.log(`[windows-package] status: ${resolvePackageStatusLabel(install)}`);
   }
 }
 

@@ -3,7 +3,6 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -41,6 +40,7 @@ vi.mock('./paths.js', () => ({
   })
 }));
 
+import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection } from '../database/connection.js';
@@ -60,13 +60,13 @@ beforeEach(async () => {
 
 afterEach(async () => {
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
 });
 
 async function writePdf(fileName: string) {
   const filePath = path.join(tempRoot, fileName);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n'));
+  await fs.writeFile(filePath, Buffer.from(`%PDF-1.4\n% ${fileName}\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n`));
   return filePath;
 }
 
@@ -92,7 +92,7 @@ it('imports a copied PDF through the same linked reader chain as manual file imp
   expect(toNativeNodeSourceDetails(imported?.node_id as string)?.import_source).toEqual(
     expect.objectContaining({
       source_kind: 'pdf',
-      source_locator: resolvedAttachment.status === 'ready' ? pathToFileURL(resolvedAttachment.filePath).toString() : '',
+      source_locator: buildAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
       source_name: '渐进阅读报告.pdf'
     })
   );

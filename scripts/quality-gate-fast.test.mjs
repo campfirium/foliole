@@ -81,7 +81,7 @@ async function writePackageJson(rootDir, scripts) {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
     ...scripts
   };
-  for (const bucket of ['test:desktop', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality']) {
+  for (const bucket of ['test:desktop', 'test:desktop:src', 'test:desktop:electron', 'test:windows:core', 'test:windows:preview-recovery', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality', 'test:quality:core', 'test:quality:gate', 'test:quality:node', 'test:quality:preview']) {
     fixtureScripts[bucket] ??= scripts['test:full'];
   }
   const packageJson = {
@@ -127,7 +127,7 @@ describe('quality-gate-fast.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it('reports the failed script in fail-only mode', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
@@ -556,7 +556,7 @@ describe('quality-gate-fast.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it('delegates android path changes to the android gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));

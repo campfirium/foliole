@@ -9,7 +9,7 @@ if [[ ! -f "package.json" ]]; then
   exit 1
 fi
 
-target="${1:-}"; usage="Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release|release-core|release-android-host> [--fail-fast]"
+target="${1:-}"; usage="Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release|release-core|release-preview-recovery|release-android-host> [--fail-fast]"
 QUALITY_GATE_COLLECT_FAILURES=1
 case "${2:-}" in
   --fail-fast) QUALITY_GATE_COLLECT_FAILURES=0 ;;
@@ -177,20 +177,7 @@ run_gate_steps_parallel() {
   fi
 }
 
-run_renderer_guards_if_present() {
-  [[ ! -f "scripts/check-ui-copy-guard.mjs" ]] || run_quality_gate_script "${prefix}" "${pm}" "copy:guard"
-  [[ ! -f "scripts/check-native-dialog-guard.mjs" ]] || run_quality_gate_script "${prefix}" "${pm}" "native-dialog:guard"
-}
-
-run_full_gate_steps() {
-  run_renderer_guards_if_present
-  run_repository_root_boundary_check_if_present
-  run_gate_steps check:android-boundary
-  run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
-  run_gate_steps test:desktop test:android test:shared test:sync-pack test:quality
-  run_gate_steps_parallel build electron:compile android:web:build
-  run_workspace_boundary_check_if_present
-}
+source "${SCRIPT_DIR}/quality-gate-target-steps.sh"
 if quality_gate_should_print_step; then
   echo "[${prefix}] detected package manager: ${pm}"
 fi
@@ -206,7 +193,7 @@ case "${target}" in
   desktop)
     run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint:desktop:full typecheck:desktop test:desktop test:quality build electron:compile
+    run_gate_steps lint:desktop:full typecheck:desktop test:desktop test:windows:core test:quality build electron:compile
     run_workspace_boundary_check_if_present
     ;;
   android)
@@ -225,15 +212,23 @@ case "${target}" in
     run_gate_steps check:android-boundary lint:shared:full typecheck:shared test:shared test:quality build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
-  full|release-core)
-    run_full_gate_steps
+  release-core)
+    run_release_core_gate_steps
+    ;;
+  full)
+    run_release_core_gate_steps
+    run_release_preview_recovery_gate_steps
     ;;
   release)
-    run_full_gate_steps
-    run_gate_steps android:sync android:host:lint android:host:test
+    run_release_core_gate_steps
+    run_release_preview_recovery_gate_steps
+    run_release_android_host_gate_steps
+    ;;
+  release-preview-recovery)
+    run_release_preview_recovery_gate_steps
     ;;
   release-android-host)
-    run_gate_steps android:sync android:host:lint android:host:test
+    run_release_android_host_gate_steps
     ;;
   *)
     echo "[quality-gate-target] unknown target: ${target}"
