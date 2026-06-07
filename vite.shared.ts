@@ -10,7 +10,7 @@ const WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = 'virtual:workspace-change-timestamp
 const RESOLVED_WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = `\0${WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID}`;
 const WORKSPACE_TIMESTAMP_ROOTS = ['src', 'electron'];
 const WORKSPACE_TIMESTAMP_INCLUDE_EXTENSIONS = new Set(['.css', '.js', '.jsx', '.mjs', '.mts', '.scss', '.ts', '.tsx']);
-export const DESKTOP_RENDERER_WARMUP_FILES = [
+const DESKTOP_RENDERER_WARMUP_FILES = [
   './src/main.tsx',
   './src/app/styles.css',
   './src/startupBootstrap.ts',
@@ -19,17 +19,7 @@ export const DESKTOP_RENDERER_WARMUP_FILES = [
   './src/shared/platform/appSettingsSync.ts',
   './src/shared/platform/desktopDebugProbe.ts',
   './src/shared/platform/rendererErrorDiagnostics.ts',
-  './src/app/App.tsx',
-  './src/app/AppRuntime.tsx',
-  './src/app/hooks/useAppController.ts',
-  './src/app/hooks/appControllerState.ts',
-  './src/app/hooks/appControllerLayoutProps.ts',
-  './src/app/components/WorkspaceLayout.tsx',
-  './src/app/components/WorkspaceLayoutGrid.tsx',
-  './src/store/workspaceStoreHydration.ts',
-  './src/store/workspaceRendererBoundaryKeepNodeIds.ts',
-  './src/shared/localization/locales/en.ts',
-  './src/shared/localization/locales/zhHans.ts'
+  './src/app/App.tsx'
 ];
 
 function resolveDevPort() {

@@ -3,7 +3,6 @@
 import { describe, expect, it } from 'vitest';
 
 import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
-import { DESKTOP_RENDERER_WARMUP_FILES } from '../vite.shared.ts';
 import viteConfig from '../vite.config.ts';
 
 describe('vite config', () => {
@@ -22,24 +21,7 @@ describe('vite config', () => {
         './src/app/styles.css',
         './src/startupBootstrap.ts',
         './src/shared/platform/bridge.ts',
-        './src/app/App.tsx',
-        './src/app/AppRuntime.tsx'
-      ])
-    );
-  });
-
-  it('warms the measured desktop workspace startup hotspots', () => {
-    expect(DESKTOP_RENDERER_WARMUP_FILES).toEqual(
-      expect.arrayContaining([
-        './src/app/hooks/useAppController.ts',
-        './src/app/hooks/appControllerState.ts',
-        './src/app/hooks/appControllerLayoutProps.ts',
-        './src/app/components/WorkspaceLayout.tsx',
-        './src/app/components/WorkspaceLayoutGrid.tsx',
-        './src/store/workspaceStoreHydration.ts',
-        './src/store/workspaceRendererBoundaryKeepNodeIds.ts',
-        './src/shared/localization/locales/en.ts',
-        './src/shared/localization/locales/zhHans.ts'
+        './src/app/App.tsx'
       ])
     );
   });

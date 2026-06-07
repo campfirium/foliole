@@ -16,16 +16,6 @@ export const VITE_RENDERER_PREWARM_PATHS = [
   '/src/app/styles.css',
   '/src/main.tsx',
   '/src/app/App.tsx',
-  '/src/app/AppRuntime.tsx',
-  '/src/app/hooks/useAppController.ts',
-  '/src/app/hooks/appControllerState.ts',
-  '/src/app/hooks/appControllerLayoutProps.ts',
-  '/src/app/components/WorkspaceLayout.tsx',
-  '/src/app/components/WorkspaceLayoutGrid.tsx',
-  '/src/store/workspaceStoreHydration.ts',
-  '/src/store/workspaceRendererBoundaryKeepNodeIds.ts',
-  '/src/shared/localization/locales/en.ts',
-  '/src/shared/localization/locales/zhHans.ts',
   '/@vite/client',
   '/lib/platform/managedInbox.ts'
 ];
