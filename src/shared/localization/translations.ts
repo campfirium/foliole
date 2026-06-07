@@ -1,14 +1,14 @@
 import type { AppLocale } from './appLanguage';
 import { EN_TRANSLATIONS } from './locales/en';
-import { ZH_HANS_TRANSLATIONS } from './locales/zhHans';
 
 export type TranslationKey = keyof typeof EN_TRANSLATIONS;
 export type TranslationParams = Record<string, string | number>;
+type TranslationCatalog = Partial<Record<TranslationKey, string>>;
 
-export const TRANSLATIONS: Record<AppLocale, Partial<Record<TranslationKey, string>>> = {
-  en: EN_TRANSLATIONS,
-  'zh-Hans': ZH_HANS_TRANSLATIONS
+const TRANSLATIONS: Partial<Record<AppLocale, TranslationCatalog>> = {
+  en: EN_TRANSLATIONS
 };
+const translationCatalogPromises = new Map<AppLocale, Promise<void>>();
 
 function interpolate(template: string, params?: TranslationParams) {
   if (!params) {
@@ -20,6 +20,27 @@ function interpolate(template: string, params?: TranslationParams) {
 }
 
 export function translate(locale: AppLocale, key: TranslationKey, params?: TranslationParams) {
-  const template = TRANSLATIONS[locale][key] ?? EN_TRANSLATIONS[key];
+  const template = TRANSLATIONS[locale]?.[key] ?? EN_TRANSLATIONS[key] ?? key;
   return interpolate(template, params);
+}
+
+export function hasTranslationCatalog(locale: AppLocale) {
+  return Boolean(TRANSLATIONS[locale]);
+}
+
+export function preloadTranslationCatalog(locale: AppLocale) {
+  if (hasTranslationCatalog(locale)) {
+    return Promise.resolve();
+  }
+  const existingPromise = translationCatalogPromises.get(locale);
+  if (existingPromise) {
+    return existingPromise;
+  }
+  const promise = import('./locales/zhHans').then((module) => {
+    TRANSLATIONS['zh-Hans'] = module.ZH_HANS_TRANSLATIONS;
+  }).finally(() => {
+    translationCatalogPromises.delete(locale);
+  });
+  translationCatalogPromises.set(locale, promise);
+  return promise;
 }

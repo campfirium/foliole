@@ -1,13 +1,17 @@
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it } from 'vitest';
 
 import { createEmptyEditorOperationHistory } from '../../features/editor/model/editorOperationHistory';
-import { translate } from '../../shared/localization/translations';
+import { preloadTranslationCatalog, translate } from '../../shared/localization/translations';
 import { createEmptyWorkspaceActionHistory } from '../../store/workspaceActionHistory';
 
 import { resolveEditorAwarePaletteHistoryOptions } from './useAppPaletteItems';
 
 const t = translate.bind(null, 'en');
 const zhHans = translate.bind(null, 'zh-Hans');
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('zh-Hans');
+});
 
 it('enables app undo for the current editor operation stack', () => {
   const options = resolveEditorAwarePaletteHistoryOptions({

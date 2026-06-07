@@ -1,11 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
-import { translate } from '../shared/localization/translations';
+import { preloadTranslationCatalog, translate } from '../shared/localization/translations';
 
 import { formatSyncResultMessage, isReportableSyncEvent } from './companionSyncActivityCopy';
 
 const t = translate.bind(null, 'en');
 const zhHans = translate.bind(null, 'zh-Hans');
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('zh-Hans');
+});
 
 describe('formatSyncResultMessage', () => {
   it('hides diagnostic timing for check-only completion', () => {

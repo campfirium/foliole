@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import {
   getStoredAppLanguagePreference,
@@ -9,7 +9,13 @@ import {
   type AppLanguagePreference,
   type AppLocale
 } from './appLanguage';
-import { translate, type TranslationKey, type TranslationParams } from './translations';
+import {
+  hasTranslationCatalog,
+  preloadTranslationCatalog,
+  translate,
+  type TranslationKey,
+  type TranslationParams
+} from './translations';
 
 interface LocalizationContextValue {
   languagePreference: AppLanguagePreference;
@@ -26,6 +32,8 @@ const LocalizationContext = createContext<LocalizationContextValue | null>(null)
 export function LocalizationProvider({ children }: { children: ReactNode }) {
   const [languagePreference, setLanguagePreferenceState] = useState(getStoredAppLanguagePreference);
   const [locale, setLocaleState] = useState(getStoredAppLocale);
+  const [, setCatalogVersion] = useState(0);
+  const catalogReady = hasTranslationCatalog(locale);
   const setLocale = useCallback((nextLocale: AppLocale) => {
     setStoredAppLocale(nextLocale);
     setLanguagePreferenceState(nextLocale);
@@ -41,7 +49,24 @@ export function LocalizationProvider({ children }: { children: ReactNode }) {
     () => ({ languagePreference, locale, setLanguagePreference, setLocale, t }),
     [languagePreference, locale, setLanguagePreference, setLocale, t]
   );
+  useEffect(() => {
+    if (catalogReady) {
+      return undefined;
+    }
+    let active = true;
+    void preloadTranslationCatalog(locale).then(() => {
+      if (active) {
+        setCatalogVersion((version) => version + 1);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [catalogReady, locale]);
 
+  if (!catalogReady) {
+    return null;
+  }
   return <LocalizationContext.Provider value={value}>{children}</LocalizationContext.Provider>;
 }
 

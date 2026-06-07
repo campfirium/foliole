@@ -92,7 +92,7 @@ it('updates settings navigation and search results when the app language changes
 
   fireEvent.change(screen.getByLabelText('App language'), { target: { value: 'zh-Hans' } });
 
-  expect(screen.getByRole('heading', { name: '通用' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: '通用' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '关于' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '通用' })).toBeInTheDocument();
 
