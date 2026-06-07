@@ -29,6 +29,10 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/storageSyncCommands.ts',
   'electron/ipc/windowCommands.ts'
 ];
+const SECURITY_CAPABILITY_FILES = [
+  'electron/ipc/commandSecurityCapabilities.ts',
+  'electron/ipc/commandSecurityCapabilityGroups.ts'
+];
 const INVENTORY_FILE = '.lab/specs/shared/platform/native-command-contract-map.md';
 
 function resolveRepoRoot() {
@@ -96,9 +100,11 @@ export function inspectNativeCommandContracts({ repoRoot = resolveRepoRoot() } =
   const commandValues = commands.map((command) => command.value);
   const contractKeys = collectReferencedCommandKeys(repoRoot, CONTRACT_FILES);
   const handlerKeys = collectReferencedCommandKeys(repoRoot, ELECTRON_HANDLER_FILES);
+  const securityCapabilityKeys = collectReferencedCommandKeys(repoRoot, SECURITY_CAPABILITY_FILES);
   const inventory = collectInventory(repoRoot);
 
   const missingContractKeys = missingEntries(commandKeys, contractKeys);
+  const missingSecurityCapabilityKeys = missingEntries(commandKeys, securityCapabilityKeys);
   const missingInventoryValues = inventory.commandValues ? missingEntries(commandValues, inventory.commandValues) : [];
   const missingHandlerKeys = commands
     .filter((command) => !handlerKeys.has(command.key) && !inventory.explicitMissingHandlers.has(command.value))
@@ -106,6 +112,7 @@ export function inspectNativeCommandContracts({ repoRoot = resolveRepoRoot() } =
 
   const violations = [
     ...formatViolation('missing contract map entry', missingContractKeys),
+    ...formatViolation('missing security capability entry', missingSecurityCapabilityKeys),
     ...formatViolation('missing inventory entry', missingInventoryValues),
     ...formatViolation('missing electron handler or explicit gap', missingHandlerKeys)
   ];

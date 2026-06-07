@@ -11,6 +11,12 @@ import {
 
 import { buildCommandRouteMap, COMMAND_ROUTE_ENTRIES, resolveCommandRoute } from './commandRoutes.js';
 import { handleInvokeRequest } from './commands.js';
+import {
+  buildCommandSecurityCapabilityMap,
+  COMMAND_SECURITY_CAPABILITY_ENTRIES,
+  isHighImpactNativeCommand,
+  resolveCommandSecurityCapability
+} from './commandSecurityCapabilities.js';
 
 const { handleImportCommand, handleReviewCommand, handleStorageCommand, handleWindowAndUtilityCommand } = vi.hoisted(
   () => ({
@@ -32,6 +38,40 @@ vi.mock('./importCommands.js', () => ({ handleImportCommand }));
 vi.mock('./reviewCommands.js', () => ({ handleReviewCommand }));
 vi.mock('./storageCommands.js', () => ({ handleStorageCommand }));
 vi.mock('./windowCommands.js', () => ({ handleWindowAndUtilityCommand }));
+
+const HIGH_IMPACT_COMMANDS = [
+  NATIVE_COMMANDS.deleteNodesPermanently,
+  NATIVE_COMMANDS.restoreSqliteDatabase,
+  NATIVE_COMMANDS.backupSqliteDatabase,
+  NATIVE_COMMANDS.applySyncNodes,
+  NATIVE_COMMANDS.applySyncObjects,
+  NATIVE_COMMANDS.recordSyncNodeConflicts,
+  NATIVE_COMMANDS.resetImportData,
+  NATIVE_COMMANDS.updateLibraryPathSetting,
+  NATIVE_COMMANDS.saveBackupSettings,
+  NATIVE_COMMANDS.saveExternalSearchFolders,
+  NATIVE_COMMANDS.saveSyncPeers,
+  NATIVE_COMMANDS.clearCompanionPairedDevices,
+  NATIVE_COMMANDS.removeCompanionPairedDevice,
+  NATIVE_COMMANDS.restoreSourceDispositions,
+  NATIVE_COMMANDS.resetSourceDispositions,
+  NATIVE_COMMANDS.runReadwiseImportCleanup,
+  NATIVE_COMMANDS.runReadwiseReaderImport,
+  NATIVE_COMMANDS.runClipboardImport,
+  NATIVE_COMMANDS.runDirectoryImport,
+  NATIVE_COMMANDS.runTextFileImport,
+  NATIVE_COMMANDS.importExternalSearchDocument,
+  NATIVE_COMMANDS.openExternalDocumentFile,
+  NATIVE_COMMANDS.openLocalPath,
+  NATIVE_COMMANDS.openExternalUrl,
+  NATIVE_COMMANDS.importClipboardImageAttachment,
+  NATIVE_COMMANDS.importLocalImageAttachment,
+  NATIVE_COMMANDS.importRemoteImageAttachment,
+  NATIVE_COMMANDS.exportAttachmentImage,
+  NATIVE_COMMANDS.copyAttachmentImageToClipboard,
+  NATIVE_COMMANDS.saveRemoteImageSourceOrigin,
+  NATIVE_COMMANDS.clearLinkPanelBrowsingData
+] as const satisfies readonly NativeCommandName[];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -87,6 +127,47 @@ describe('native command route registry', () => {
     expect(handleReviewCommand).not.toHaveBeenCalled();
   });
 
+});
+
+describe('native command security capability inventory', () => {
+  it('resolves every native command to exactly one security capability', () => {
+    const commands = Object.values(NATIVE_COMMANDS);
+    const registeredCommands = new Set(COMMAND_SECURITY_CAPABILITY_ENTRIES.map((entry) => entry.command));
+
+    expect(registeredCommands.size).toBe(commands.length);
+    for (const command of commands) {
+      expect(resolveCommandSecurityCapability(command)).not.toBeNull();
+    }
+  });
+
+  it('rejects duplicate security capability registrations', () => {
+    const command = NATIVE_COMMANDS.appGetVersion;
+
+    expect(() =>
+      buildCommandSecurityCapabilityMap(
+        [
+          { command, capability: 'diagnostic' },
+          { command, capability: 'read' }
+        ],
+        [command]
+      )
+    ).toThrow(`duplicate native command security capability: ${command}`);
+  });
+
+  it('rejects missing security capability registrations', () => {
+    const command = NATIVE_COMMANDS.appGetVersion;
+
+    expect(() => buildCommandSecurityCapabilityMap([], [command])).toThrow(
+      `missing native command security capability: ${command}`
+    );
+  });
+
+  it('keeps highest-impact commands out of read, diagnostic, and window control buckets', () => {
+    for (const command of HIGH_IMPACT_COMMANDS) {
+      expect(isHighImpactNativeCommand(command), command).toBe(true);
+      expect(resolveCommandSecurityCapability(command), command).not.toMatch(/^(read|diagnostic|windowControl)$/);
+    }
+  });
 });
 
 describe('database readiness routing', () => {
