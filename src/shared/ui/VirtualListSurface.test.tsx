@@ -35,11 +35,11 @@ function getVirtualList() {
   return document.querySelector('[data-virtual-list="true"]');
 }
 
-it('keeps short lists non-virtualized', () => {
+it('keeps short lists non-virtualized', async () => {
   render(<VirtualListHarness items={['A', 'B', 'C']} />);
 
   expect(getVirtualList()).not.toBeInTheDocument();
-  expect(screen.getByText('A')).toBeInTheDocument();
+  expect(await screen.findByText('A')).toBeInTheDocument();
   expect(screen.getByText('C')).toHaveAttribute('aria-posinset', '3');
   expect(shouldVirtualizeList(99)).toBe(false);
   expect(shouldVirtualizeList(100)).toBe(true);

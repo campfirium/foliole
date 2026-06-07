@@ -116,6 +116,8 @@ function bindWindowIpc(window: ElectronBrowserWindow) {
   };
 
   window.on('maximize', publishResize);
+  window.on('restore', publishResize);
+  window.on('show', publishResize);
   window.on('unmaximize', publishResize);
   window.on('resize', publishResize);
 }
