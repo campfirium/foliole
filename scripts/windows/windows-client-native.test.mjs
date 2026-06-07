@@ -92,12 +92,13 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).not.toContain('buildPowerShellArgs');
 });
 
-it('routes the clickable Windows launcher through controlled client start by default', async () => {
+it('routes the clickable Windows launcher through WSL preview by default', async () => {
   const launcher = await readFile(path.resolve(process.cwd(), 'Start-Foliole.cmd'), 'utf8');
 
   expect(launcher).toContain('if "%FOLIOLE_ACTION%"=="" set "FOLIOLE_ACTION=start"');
   expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev" set "FOLIOLE_ACTION=start"');
   expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev-direct"');
+  expect(launcher).toContain('call "%~dp0scripts\\windows\\start-windows-preview.cmd"');
   expect(launcher).toContain('npm run windows:client:native -- %FOLIOLE_ACTION%');
 });
 

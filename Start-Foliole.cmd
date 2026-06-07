@@ -10,6 +10,8 @@ if /i "%FOLIOLE_ACTION%"=="dev" set "FOLIOLE_ACTION=start"
 
 if /i "%FOLIOLE_ACTION%"=="dev-direct" (
   npm run electron:dev:native
+) else if /i "%FOLIOLE_ACTION%"=="start" (
+  call "%~dp0scripts\windows\start-windows-preview.cmd"
 ) else (
   npm run windows:client:native -- %FOLIOLE_ACTION%
 )
