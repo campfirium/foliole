@@ -1,3 +1,5 @@
+import { buildExternalLibraryDirectoryNodes } from './externalLibraryDirectoryNodes';
+
 export interface ExternalLibraryBrowseEntry {
   absolutePath: string;
   extension: 'md' | 'txt';
@@ -69,12 +71,16 @@ const READWISE_EXTERNAL_CHILD_LABELS: Record<string, string> = {
   'readwise-reader-import-tweets': 'Tweets'
 };
 
+const OPENED_EXTERNAL_FOLDER_LABELS: Record<string, string> = {
+  'opened-external-documents': 'Recent'
+};
+
 export function isReadwiseExternalFolder(folder: Pick<ExternalLibraryFolder, 'id'>) {
   return Object.prototype.hasOwnProperty.call(READWISE_EXTERNAL_FOLDER_LABELS, folder.id);
 }
 
 export function resolveExternalFolderDisplayLabel(folder: Pick<ExternalLibraryFolder, 'folderPath' | 'id'>) {
-  return READWISE_EXTERNAL_FOLDER_LABELS[folder.id] ?? resolveExternalFolderLabel(folder.folderPath);
+  return OPENED_EXTERNAL_FOLDER_LABELS[folder.id] ?? READWISE_EXTERNAL_FOLDER_LABELS[folder.id] ?? resolveExternalFolderLabel(folder.folderPath);
 }
 
 export function resolveReadwiseExternalChildLabel(folder: Pick<ExternalLibraryFolder, 'folderPath' | 'id'>) {
@@ -88,55 +94,13 @@ export function resolveExternalEntryDirectoryPath(relativePath: string) {
   return segments.join('/');
 }
 
-function collectDirectoryPaths(entries: ExternalLibraryBrowseEntry[]) {
-  const paths = new Set<string>();
-  entries.forEach((entry) => {
-    const segments = resolveExternalEntryDirectoryPath(entry.relativePath).split('/').filter(Boolean);
-    let currentPath = '';
-    segments.forEach((segment) => {
-      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-      paths.add(currentPath);
-    });
+function buildDirectoryNodes(folder: ExternalLibraryFolder, entries: ExternalLibraryBrowseEntry[]) {
+  return buildExternalLibraryDirectoryNodes(folder, entries, {
+    compareNaturalName,
+    normalizeDirectoryPath: normalizeExternalDirectoryPath,
+    resolveEntryDirectoryPath: resolveExternalEntryDirectoryPath,
+    resolveFolderDisplayLabel: resolveExternalFolderDisplayLabel
   });
-  return [...paths].sort(compareDirectoryPath);
-}
-
-function compareDirectoryPath(left: string, right: string) {
-  const leftSegments = normalizeExternalDirectoryPath(left).split('/').filter(Boolean);
-  const rightSegments = normalizeExternalDirectoryPath(right).split('/').filter(Boolean);
-  const length = Math.min(leftSegments.length, rightSegments.length);
-  for (let index = 0; index < length; index += 1) {
-    const result = compareNaturalName(leftSegments[index] ?? '', rightSegments[index] ?? '');
-    if (result !== 0) return result;
-  }
-  return leftSegments.length - rightSegments.length;
-}
-
-function buildDirectoryNode(folder: ExternalLibraryFolder, directoryPath: string, entries: ExternalLibraryBrowseEntry[]) {
-  const normalizedDirectoryPath = normalizeExternalDirectoryPath(directoryPath);
-  const documentCount = entries.filter((entry) => {
-    const entryDirectoryPath = resolveExternalEntryDirectoryPath(entry.relativePath);
-    return entryDirectoryPath === normalizedDirectoryPath || entryDirectoryPath.startsWith(`${normalizedDirectoryPath}/`);
-  }).length;
-  const childPrefix = normalizedDirectoryPath ? `${normalizedDirectoryPath}/` : '';
-  const hasChildren = entries.some((entry) => {
-    const entryDirectoryPath = resolveExternalEntryDirectoryPath(entry.relativePath);
-    if (!entryDirectoryPath.startsWith(childPrefix) || entryDirectoryPath === normalizedDirectoryPath) {
-      return false;
-    }
-    return entryDirectoryPath.slice(childPrefix.length).includes('/');
-  });
-
-  return {
-    directoryPath: normalizedDirectoryPath,
-    documentCount,
-    folderId: folder.id,
-    hasChildren,
-    name: normalizedDirectoryPath.split('/').filter(Boolean).at(-1) ?? resolveExternalFolderDisplayLabel(folder),
-    parentDirectoryPath: normalizedDirectoryPath.includes('/')
-      ? normalizedDirectoryPath.slice(0, normalizedDirectoryPath.lastIndexOf('/'))
-      : null
-  } satisfies ExternalLibraryDirectoryNode;
 }
 
 function resolveSelectedDirectoryPath(
@@ -172,7 +136,7 @@ export function buildExternalLibraryFolderBrowseState<TFolder extends ExternalLi
 ): ExternalLibraryFolderBrowseState & { folder: TFolder } {
   const selectedDirectoryPath = resolveSelectedDirectoryPath(entries, selection);
   return {
-    directoryNodes: collectDirectoryPaths(entries).map((directoryPath) => buildDirectoryNode(folder, directoryPath, entries)),
+    directoryNodes: buildDirectoryNodes(folder, entries),
     documentItems: listDocumentsForDirectory(entries, selectedDirectoryPath),
     folder,
     selectedDirectoryPath: selectedDirectoryPath || null

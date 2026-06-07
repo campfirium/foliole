@@ -60,7 +60,49 @@ it('keeps directories in the left tree model and returns all descendant document
   const state = buildExternalLibraryFolderBrowseState(folder, entries, { folderId: 'folder-1', kind: 'folder' });
 
   expect(state.directoryNodes.map((node) => node.directoryPath)).toEqual(['sub', 'sub/deep']);
+  expect(state.directoryNodes.map((node) => node.name)).toEqual(['sub', 'deep']);
   expect(state.documentItems.map((item) => item.relativePath)).toEqual(['a.md', 'sub/b.md', 'sub/deep/c.txt']);
+});
+
+it('compacts a single directory chain until the first useful branch point', () => {
+  const state = buildExternalLibraryFolderBrowseState(folder, [
+    {
+      ...entries[0],
+      absolutePath: 'D:/T/test/a.md',
+      relativePath: 'D:/T/test/a.md'
+    },
+    {
+      ...entries[1],
+      absolutePath: 'D:/T/test/deep/b.md',
+      relativePath: 'D:/T/test/deep/b.md'
+    }
+  ], { folderId: 'folder-1', kind: 'folder' });
+
+  expect(state.directoryNodes.map((node) => [node.directoryPath, node.name, node.parentDirectoryPath])).toEqual([
+    ['D:/T/test', 'D › T › test', null],
+    ['D:/T/test/deep', 'deep', 'D:/T/test']
+  ]);
+});
+
+it('keeps the branch point when opened documents spread across sibling directories', () => {
+  const state = buildExternalLibraryFolderBrowseState(folder, [
+    {
+      ...entries[0],
+      absolutePath: 'D:/T/test/a.md',
+      relativePath: 'D:/T/test/a.md'
+    },
+    {
+      ...entries[1],
+      absolutePath: 'D:/T/draft/b.md',
+      relativePath: 'D:/T/draft/b.md'
+    }
+  ], { folderId: 'folder-1', kind: 'folder' });
+
+  expect(state.directoryNodes.map((node) => [node.directoryPath, node.name, node.parentDirectoryPath])).toEqual([
+    ['D:/T', 'D › T', null],
+    ['D:/T/draft', 'draft', 'D:/T'],
+    ['D:/T/test', 'test', 'D:/T']
+  ]);
 });
 
 it('returns all descendant documents for the selected directory instead of child directories', () => {
@@ -81,4 +123,11 @@ it('uses stable Readwise labels for managed external folders', () => {
   };
   expect(resolveExternalFolderDisplayLabel(folder)).toBe('Readwise Articles');
   expect(resolveReadwiseExternalChildLabel(folder)).toBe('Articles');
+});
+
+it('uses a stable recent-files label even when cached rows still carry the old folder path', () => {
+  expect(resolveExternalFolderDisplayLabel({
+    folderPath: 'Opened in Foliole',
+    id: 'opened-external-documents'
+  })).toBe('Recent');
 });

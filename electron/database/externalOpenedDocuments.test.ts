@@ -62,7 +62,7 @@ it('keeps recently opened external documents and shows archived copies when file
   }));
   expect(loadOpenedExternalSearchFolder()).toEqual(expect.objectContaining({
     document_count: 1,
-    folder_path: 'Opened in Foliole',
+    folder_path: 'Recent',
     id: 'opened-external-documents'
   }));
 

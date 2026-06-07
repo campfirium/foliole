@@ -16,6 +16,7 @@ import {
 } from './externalLibraryBrowseModel';
 
 const READWISE_GROUP_ROW_ID = 'external-library-readwise-group';
+const RECENT_EXTERNAL_FOLDER_ID = 'opened-external-documents';
 
 export interface ExternalTreeRowRecord {
   depth: number;
@@ -24,7 +25,7 @@ export interface ExternalTreeRowRecord {
   isSelected: boolean;
   label: string;
   documentCount?: number;
-  secondaryIconKind?: 'external-folder';
+  secondaryIconKind?: 'external-folder' | 'recent';
   secondaryLabel?: string;
   selection: Extract<ExternalLibrarySelection, { folderId: string }> | null;
 }
@@ -55,11 +56,12 @@ function buildVisibleDirectoryNodes(
 
 function buildDirectoryTreeRow(
   node: ExternalLibraryDirectoryNode,
+  nodes: ExternalLibraryDirectoryNode[],
   depthOffset: number,
   selection: ExternalLibrarySelection
 ): ExternalTreeRowRecord {
   return {
-    depth: node.directoryPath.split('/').length + depthOffset,
+    depth: resolveVisibleDirectoryDepth(node, nodes) + depthOffset,
     hasChildren: node.hasChildren,
     id: buildDirectoryRowId(node.folderId, node.directoryPath),
     isSelected: selection.kind === 'directory' && selection.folderId === node.folderId && selection.directoryPath === node.directoryPath,
@@ -71,6 +73,16 @@ function buildDirectoryTreeRow(
       kind: 'directory'
     }
   };
+}
+
+function resolveVisibleDirectoryDepth(node: ExternalLibraryDirectoryNode, nodes: ExternalLibraryDirectoryNode[]) {
+  let depth = 1;
+  let parentDirectoryPath = node.parentDirectoryPath;
+  while (parentDirectoryPath) {
+    depth += 1;
+    parentDirectoryPath = nodes.find((candidate) => candidate.directoryPath === parentDirectoryPath)?.parentDirectoryPath ?? null;
+  }
+  return depth;
 }
 
 function buildFolderTreeRows(
@@ -93,11 +105,12 @@ function buildFolderTreeRows(
       (selection.kind === 'folder' || browseState.selectedDirectoryPath === null),
     label: options.label,
     documentCount: folder.documentCount,
-    secondaryIconKind: 'external-folder',
+    secondaryIconKind: folder.id === RECENT_EXTERNAL_FOLDER_ID ? 'recent' : 'external-folder',
     selection: { folderId: folder.id, kind: 'folder' }
   }];
-  buildVisibleDirectoryNodes(folder.id, browseState.directoryNodes, collapsedIds).forEach((node) => {
-    rows.push(buildDirectoryTreeRow(node, options.depth, selection));
+  const visibleDirectoryNodes = buildVisibleDirectoryNodes(folder.id, browseState.directoryNodes, collapsedIds);
+  visibleDirectoryNodes.forEach((node) => {
+    rows.push(buildDirectoryTreeRow(node, visibleDirectoryNodes, options.depth, selection));
   });
   return rows;
 }
@@ -143,8 +156,15 @@ export function buildExternalTreeRows(
   collapsedIds: Set<string>
 ) {
   const readwiseFolders = folders.filter(isReadwiseExternalFolder);
-  const regularFolders = folders.filter((folder) => !isReadwiseExternalFolder(folder));
+  const recentFolders = folders.filter((folder) => folder.id === RECENT_EXTERNAL_FOLDER_ID);
+  const regularFolders = folders.filter((folder) => !isReadwiseExternalFolder(folder) && folder.id !== RECENT_EXTERNAL_FOLDER_ID);
   return [
+    ...recentFolders.flatMap((folder) =>
+      buildFolderTreeRows(folder, entriesByFolderId[folder.id] ?? [], selection, isExternalViewOpen, collapsedIds, {
+        depth: 0,
+        label: resolveExternalFolderDisplayLabel(folder)
+      })
+    ),
     ...regularFolders.flatMap((folder) =>
       buildFolderTreeRows(folder, entriesByFolderId[folder.id] ?? [], selection, isExternalViewOpen, collapsedIds, {
         depth: 0,
