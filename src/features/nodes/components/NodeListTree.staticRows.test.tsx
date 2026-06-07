@@ -50,5 +50,6 @@ it('renders every row immediately when virtualization is disabled', () => {
   );
 
   expect(screen.getByRole('treeitem', { name: 'folder-119' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'folder-119' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
   expect(container.querySelector('[data-virtual-list="true"]')).toBeNull();
 });

@@ -73,6 +73,7 @@ function renderTrashRow(
       rowSpacing={props.rowSpacing}
       secondaryLabel={buildFolderPath(row.node.id, props.nodesById)}
       showIcon={false}
+      showLeafChevronPlaceholder={false}
     />
   );
 }

@@ -82,6 +82,7 @@ function renderNodeListRow(
       nodeIconKind={rowModel.nodeIconKind}
       nodeIconState={rowModel.nodeIconState}
       showIcon={false}
+      showLeafChevronPlaceholder={false}
       rowSpacing={props.rowSpacing}
       onContextMenu={props.onContextMenu}
       onDragEnd={props.drag.onDragEnd}

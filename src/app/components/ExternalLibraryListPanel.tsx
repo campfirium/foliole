@@ -202,6 +202,7 @@ function renderExternalDocumentRow(args: {
       rowSpacing={args.rowSpacing}
       secondaryLabel={args.document.isPresent === false ? args.archivedLabel : undefined}
       showIcon={false}
+      showLeafChevronPlaceholder={false}
       onKeyDown={args.onRowKeyDown}
       onSelect={() => openExternalDocumentSelection(args.document.absolutePath, [args.document], args.onOpenExternalSelection)}
       onToggleCollapse={() => undefined}

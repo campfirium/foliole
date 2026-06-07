@@ -1,4 +1,4 @@
-import { HardDrive, History } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
@@ -92,6 +92,7 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
               rowSpacing={rowSpacing}
               secondaryLabel={row.secondaryLabel}
               showIcon={false}
+              showLeafChevronPlaceholder={false}
               trailingLabelContent={renderExternalTrailingLabelContent(row, t('desktop.externalLibrary.folderIcon'))}
               onDragEnd={drag.onDragEnd}
               onDragOver={drag.onDragOver}
@@ -109,15 +110,8 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
 }
 
 function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord, label: string) {
-  if (!row.secondaryIconKind) {
+  if (!row.secondaryIconKind || row.secondaryIconKind === 'recent') {
     return null;
-  }
-  if (row.secondaryIconKind === 'recent') {
-    return (
-      <span aria-hidden="true" className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45">
-        <History aria-hidden="true" className="-translate-y-[1px]" size={14} strokeWidth={1.7} />
-      </span>
-    );
   }
   return (
     <span aria-label={label} className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45">

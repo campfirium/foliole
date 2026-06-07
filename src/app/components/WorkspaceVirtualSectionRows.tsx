@@ -55,6 +55,7 @@ function renderBuiltinVirtualRow(
       nodeId={props.nodeId}
       rowSpacing={props.rowSpacing}
       showIcon={false}
+      showLeafChevronPlaceholder={false}
       onKeyDown={props.onRowKeyDown}
       onSelect={() => props.onOpenVirtualView?.(props.nodeId)}
       onToggleCollapse={() => undefined}
@@ -104,6 +105,7 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       descendantCount={args.isVirtualRoot ? 0 : (args.props.virtualResultCountById?.get(args.row.node.id) ?? 0)}
       rowSpacing={args.rowSpacing}
       showIcon={false}
+      showLeafChevronPlaceholder={false}
       {...(args.isSavedSearch ? { onRename: args.props.onRenameVirtualNode } : {})}
       {...(args.isSavedSearch ? { onContextMenu: args.props.onContextMenuSavedSearch } : {})}
       onKeyDown={args.onRowKeyDown}

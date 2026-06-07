@@ -66,6 +66,7 @@ it('reuses the compact item row style for external library items without dates o
   );
 
   expect(screen.getByRole('treeitem', { name: 'Alpha title' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Alpha title' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
   expect(screen.getByRole('button', { name: 'Sort list by Modified time' })).toBeInTheDocument();
   expect(screen.queryByText('2026-04-21')).toBeNull();
   expect(screen.queryByText('The first useful sentence inside this external document.')).toBeNull();

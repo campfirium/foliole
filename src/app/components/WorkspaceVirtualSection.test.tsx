@@ -73,6 +73,8 @@ it('moves from the virtual root through built-in virtual rows with arrow keys', 
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowDown' });
 
+  expect(screen.getByRole('treeitem', { name: 'Shelved' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Removed' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
   expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_SHELVED_NODE_ID);
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Shelved' }), { key: 'ArrowDown' });
   expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_REMOVED_NODE_ID);

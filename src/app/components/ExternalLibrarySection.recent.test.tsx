@@ -26,7 +26,7 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-it('keeps Recent above manually ordered external folders and uses the history icon', () => {
+it('keeps Recent above manually ordered external folders without a special trailing icon', () => {
   window.localStorage.setItem(
     APP_SETTINGS_STORAGE_KEYS.externalLibraryFolderOrder,
     JSON.stringify([
@@ -55,7 +55,7 @@ it('keeps Recent above manually ordered external folders and uses the history ic
     expect.stringContaining('2think'),
     expect.stringContaining('1act')
   ]);
-  expect(screen.getByRole('treeitem', { name: /^Recent$/i }).querySelector('.lucide-history')).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: /^Recent$/i }).querySelector('.lucide-history')).toBeNull();
   expect(screen.getByRole('treeitem', { name: /^Recent$/i }).querySelector('[aria-label="External folder"]')).toBeNull();
 });
 
@@ -85,6 +85,7 @@ it('shows recent files as one folder and compacts single path chains below it', 
   fireEvent.keyDown(screen.getByRole('treeitem', { name: /Recent/i }), { key: 'ArrowRight' });
 
   expect(screen.getByRole('treeitem', { name: /D › T › test/i })).toHaveAttribute('aria-level', '2');
+  expect(screen.getByRole('treeitem', { name: /D › T › test/i }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
   expect(screen.queryByRole('treeitem', { name: /^D:$/i })).toBeNull();
   expect(screen.queryByRole('treeitem', { name: /^T$/i })).toBeNull();
 });
