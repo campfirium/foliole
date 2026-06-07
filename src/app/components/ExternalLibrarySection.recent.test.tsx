@@ -1,10 +1,14 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { preloadTranslationCatalog } from '../../shared/localization/translations';
 
 import { ExternalLibrarySection } from './ExternalLibrarySection';
+
+beforeAll(() => preloadTranslationCatalog(getStoredAppLocale()));
 
 function externalFolder(id: string, folderPath: string) {
   return {
@@ -59,7 +63,7 @@ it('keeps Recent above manually ordered external folders without a special trail
   expect(screen.getByRole('treeitem', { name: /^Recent$/i }).querySelector('[aria-label="External folder"]')).toBeNull();
 });
 
-it('shows recent files as one folder and compacts single path chains below it', () => {
+it('shows recent files as one folder and only keeps the last compact path segment below it', () => {
   renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{
@@ -84,16 +88,17 @@ it('shows recent files as one folder and compacts single path chains below it', 
 
   fireEvent.keyDown(screen.getByRole('treeitem', { name: /Recent/i }), { key: 'ArrowRight' });
 
-  expect(screen.getByRole('treeitem', { name: /D › T › test/i })).toHaveAttribute('aria-level', '2');
-  expect(screen.getByRole('treeitem', { name: /D › T › test/i }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
+  expect(screen.getByRole('treeitem', { name: /^› test$/i })).toHaveAttribute('aria-level', '2');
+  expect(screen.getByRole('treeitem', { name: /^› test$/i }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: /D › T › test/i })).toBeNull();
   expect(screen.queryByRole('treeitem', { name: /^D:$/i })).toBeNull();
   expect(screen.queryByRole('treeitem', { name: /^T$/i })).toBeNull();
 });
 
-it('keeps compact path rows eligible for the truncated text tooltip', () => {
+it('shows the full compact path in the tooltip text for recent path rows', async () => {
   const scrollWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth');
   const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
-  Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 360 });
+  Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 80 });
   Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 80 });
   const longPath = 'D:/very-long-workspace-name/research-notes/experiments';
   const displayPath = 'D › very-long-workspace-name › research-notes › experiments';
@@ -123,7 +128,11 @@ it('keeps compact path rows eligible for the truncated text tooltip', () => {
 
     fireEvent.keyDown(screen.getByRole('treeitem', { name: /Recent/i }), { key: 'ArrowRight' });
 
-    expect(screen.getByText(displayPath)).toHaveAttribute('data-truncated-text-tooltip-trigger', 'true');
+    const pathLabel = screen.getByText('› experiments');
+    expect(pathLabel).toHaveAttribute('data-truncated-text-tooltip-trigger', 'true');
+    fireEvent.pointerMove(pathLabel, { pointerType: 'mouse' });
+    fireEvent.pointerEnter(pathLabel, { pointerType: 'mouse' });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(displayPath);
   } finally {
     if (scrollWidth) Object.defineProperty(HTMLElement.prototype, 'scrollWidth', scrollWidth);
     else Reflect.deleteProperty(HTMLElement.prototype, 'scrollWidth');

@@ -24,15 +24,16 @@ function resolveSelectModifiers(event: ReactMouseEvent<HTMLButtonElement>): Node
 
 function renderLabelCluster(props: {
   label: string;
+  labelTooltipText?: string;
   rename: ReturnType<typeof useRenameState>;
   trailingLabelContent?: ReactNode;
 }) {
   if (!props.trailingLabelContent) {
-    return renderNodeLabel(props.label, props.rename);
+    return renderNodeLabel(props.label, props.rename, undefined, props.labelTooltipText);
   }
   return (
     <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
-      {renderNodeLabel(props.label, props.rename, 'node-tree-row-text block min-w-0 truncate')}
+      {renderNodeLabel(props.label, props.rename, 'node-tree-row-text block min-w-0 truncate', props.labelTooltipText)}
       {renderInlineTrailingContent(props.trailingLabelContent)}
     </span>
   );
@@ -84,6 +85,7 @@ export function renderNodeTreeRowContent(props: {
   descendantCount: number;
   isMuted: boolean;
   label: string;
+  labelTooltipText?: string;
   mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
@@ -100,6 +102,7 @@ export function renderNodeTreeRowContent(props: {
         {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
       {renderLabelCluster({
         label: props.label,
+        labelTooltipText: props.labelTooltipText,
         rename: props.rename,
         trailingLabelContent: props.trailingLabelContent
       })}
@@ -150,6 +153,7 @@ export function renderNodeTreeRowButtonSurface(props: {
   isHighlighted: boolean;
   isMuted: boolean;
   label: string;
+  labelTooltipText?: string;
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
   nodeId: string;
@@ -210,6 +214,7 @@ function renderNodeTreeRowButtonBody(
         descendantCount: props.descendantCount,
         isMuted: props.isMuted,
         label: props.label,
+        labelTooltipText: props.labelTooltipText,
         mutedOpacity: props.mutedOpacity,
         nodeIconKind: props.nodeIconKind,
         nodeIconState: props.nodeIconState,

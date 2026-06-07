@@ -4,7 +4,12 @@ import { projectNodeListLabel } from '../model/nodeListLabelProjection';
 
 import { NodeRenameInput, type useRenameState } from './NodeTreeRowRename';
 
-export function renderNodeLabel(label: string, rename: ReturnType<typeof useRenameState>, className = 'node-tree-row-text block min-w-0 flex-1 truncate') {
+export function renderNodeLabel(
+  label: string,
+  rename: ReturnType<typeof useRenameState>,
+  className = 'node-tree-row-text block min-w-0 flex-1 truncate',
+  tooltipText?: string
+) {
   if (rename.isRenaming) {
     return (
       <NodeRenameInput
@@ -17,8 +22,9 @@ export function renderNodeLabel(label: string, rename: ReturnType<typeof useRena
     );
   }
   const projectedLabel = projectNodeListLabel(label);
+  const projectedTooltipText = tooltipText ? projectNodeListLabel(tooltipText) : projectedLabel;
   return (
-    <TruncatedTextTooltip className={className} text={projectedLabel}>
+    <TruncatedTextTooltip className={className} forceTooltip={projectedTooltipText !== projectedLabel} text={projectedTooltipText}>
       {projectedLabel}
     </TruncatedTextTooltip>
   );

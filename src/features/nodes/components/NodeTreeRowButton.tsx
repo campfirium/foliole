@@ -33,6 +33,7 @@ export interface NodeTreeRowButtonProps {
   showLeafChevronPlaceholder: boolean;
   isSelected: boolean;
   label: string;
+  labelTooltipText?: string;
   nodeId: string;
   ariaPosInSet?: number;
   ariaSetSize?: number;
@@ -76,6 +77,7 @@ export function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
     isHighlighted: props.isHighlighted,
     isMuted: props.isMuted,
     label: props.label,
+    ...definedProps({ labelTooltipText: props.labelTooltipText }),
     mutedOpacity: props.mutedOpacity,
     nodeIconKind: props.nodeIconKind,
     nodeIconState: props.nodeIconState,

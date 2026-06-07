@@ -37,6 +37,7 @@ interface NodeTreeRowProps {
   ariaPosInSet?: number;
   ariaSetSize?: number;
   label: string;
+  labelTooltipText?: string;
   nodeId: string;
   rowSpacing: number;
   secondaryLabel?: ReactNode;
@@ -79,6 +80,7 @@ function renderNodeTreeRowButton(props: {
   showLeafChevronPlaceholder: boolean;
   isSelected: boolean;
   label: string;
+  labelTooltipText?: string;
   nodeId: string;
   ariaPosInSet?: number;
   ariaSetSize?: number;
@@ -128,6 +130,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         showLeafChevronPlaceholder: props.showLeafChevronPlaceholder ?? true,
         isSelected: props.isSelected,
         label: props.label,
+        ...(props.labelTooltipText !== undefined ? { labelTooltipText: props.labelTooltipText } : {}),
         nodeId: props.nodeId,
         ...(props.ariaPosInSet !== undefined ? { ariaPosInSet: props.ariaPosInSet } : {}),
         ...(props.ariaSetSize !== undefined ? { ariaSetSize: props.ariaSetSize } : {}),
@@ -164,6 +167,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.isMuted === next.isMuted &&
     previous.isSelected === next.isSelected &&
     previous.label === next.label &&
+    previous.labelTooltipText === next.labelTooltipText &&
     previous.mutedOpacity === next.mutedOpacity &&
     previous.nodeIconKind === next.nodeIconKind &&
     previous.nodeIconState === next.nodeIconState &&

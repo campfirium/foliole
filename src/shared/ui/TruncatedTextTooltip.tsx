@@ -4,6 +4,7 @@ import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from './Tooltip';
 
 type TruncatedTextTooltipProps = {
   children: React.ReactNode;
+  forceTooltip?: boolean;
   text: string;
 } & React.ComponentPropsWithoutRef<'span'>;
 
@@ -121,7 +122,7 @@ function TruncatedTooltipContent(props: {
   );
 }
 
-export function TruncatedTextTooltip({ children, text, ...spanProps }: TruncatedTextTooltipProps) {
+export function TruncatedTextTooltip({ children, forceTooltip = false, text, ...spanProps }: TruncatedTextTooltipProps) {
   const textRef = React.useRef<HTMLSpanElement | null>(null);
   const [isTruncated, setIsTruncated] = React.useState(false);
   const [sideOffset, setSideOffset] = React.useState(DEFAULT_SIDE_OFFSET);
@@ -158,11 +159,12 @@ export function TruncatedTextTooltip({ children, text, ...spanProps }: Truncated
     };
   }, [text, updateTooltipState]);
 
+  const hasTooltip = forceTooltip || isTruncated;
   const textElement = (
     <span
       {...spanProps}
-      data-truncated-text-tooltip-trigger={isTruncated ? 'true' : 'false'}
-      data-truncated-text-tooltip-side-offset={isTruncated ? sideOffset : undefined}
+      data-truncated-text-tooltip-trigger={hasTooltip ? 'true' : 'false'}
+      data-truncated-text-tooltip-side-offset={hasTooltip ? sideOffset : undefined}
       onFocus={updateTooltipState}
       onPointerEnter={updateTooltipState}
       ref={textRef}
@@ -171,7 +173,7 @@ export function TruncatedTextTooltip({ children, text, ...spanProps }: Truncated
     </span>
   );
 
-  if (!isTruncated) {
+  if (!hasTooltip) {
     return textElement;
   }
 

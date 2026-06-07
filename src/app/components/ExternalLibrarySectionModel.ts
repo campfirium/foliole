@@ -24,6 +24,7 @@ export interface ExternalTreeRowRecord {
   id: string;
   isSelected: boolean;
   label: string;
+  labelTooltipText?: string;
   documentCount?: number;
   secondaryIconKind?: 'external-folder' | 'recent';
   secondaryLabel?: string;
@@ -65,7 +66,8 @@ function buildDirectoryTreeRow(
     hasChildren: node.hasChildren,
     id: buildDirectoryRowId(node.folderId, node.directoryPath),
     isSelected: selection.kind === 'directory' && selection.folderId === node.folderId && selection.directoryPath === node.directoryPath,
-    label: node.name,
+    label: resolveDirectoryRowLabel(node),
+    ...(node.folderId === RECENT_EXTERNAL_FOLDER_ID ? { labelTooltipText: node.name } : {}),
     documentCount: node.documentCount,
     selection: {
       directoryPath: node.directoryPath,
@@ -73,6 +75,14 @@ function buildDirectoryTreeRow(
       kind: 'directory'
     }
   };
+}
+
+function resolveDirectoryRowLabel(node: ExternalLibraryDirectoryNode) {
+  if (node.folderId !== RECENT_EXTERNAL_FOLDER_ID) {
+    return node.name;
+  }
+  const lastSegment = node.name.split(' › ').filter(Boolean).at(-1) ?? node.name;
+  return `› ${lastSegment}`;
 }
 
 function resolveVisibleDirectoryDepth(node: ExternalLibraryDirectoryNode, nodes: ExternalLibraryDirectoryNode[]) {

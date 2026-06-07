@@ -1,8 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it } from 'vitest';
+
+import { getStoredAppLocale } from '../localization/appLanguage';
+import { preloadTranslationCatalog } from '../localization/translations';
 
 import { AppTooltip, AppTooltipContent, AppTooltipProvider, AppTooltipTrigger } from './Tooltip';
 import { TruncatedTextTooltip } from './TruncatedTextTooltip';
+
+beforeAll(() => preloadTranslationCatalog(getStoredAppLocale()));
 
 class TestResizeObserver {
   disconnect() {}
@@ -93,6 +98,15 @@ it('enables title tooltip trigger only when text is truncated', () => {
     if (clientWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
     else Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth');
   }
+});
+
+it('enables title tooltip trigger when a full tooltip is forced', () => {
+  render(
+    <TruncatedTextTooltip forceTooltip text="Full path">
+      Short
+    </TruncatedTextTooltip>
+  );
+  expect(screen.getByText('Short')).toHaveAttribute('data-truncated-text-tooltip-trigger', 'true');
 });
 
 it('positions truncated title tooltip from the current list boundary', () => {

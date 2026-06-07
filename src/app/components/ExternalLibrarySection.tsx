@@ -86,6 +86,7 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
               descendantCount={row.documentCount ?? 0}
               key={row.id}
               label={row.label}
+              labelTooltipText={row.labelTooltipText}
               nodeId={row.id}
               dragDisabledLabel={null}
               dropIntent={drag.state?.targetId === row.id ? drag.state.dropIntent : null}
