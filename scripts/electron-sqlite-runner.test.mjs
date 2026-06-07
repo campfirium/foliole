@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildElectronNodeArgs,
   buildElectronNodeEnv,
+  buildElectronNodeSpawnOptions,
   buildRunnerInvocation,
   resolveElectronBinary
 } from './electron-sqlite-runner.mjs';
@@ -42,6 +43,23 @@ describe('electron sqlite runner', () => {
       cwd: 'D:/C/foliole',
       electronPath: path.join('D:/C/foliole', 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron'),
       env: { ELECTRON_RUN_AS_NODE: '1' }
+    });
+  });
+
+  it('inherits child output for normal script runs so large test logs do not fill a sync buffer', () => {
+    expect(buildElectronNodeSpawnOptions('D:/C/foliole')).toEqual({
+      cwd: 'D:/C/foliole',
+      env: expect.objectContaining({ ELECTRON_RUN_AS_NODE: '1' }),
+      stdio: 'inherit'
+    });
+  });
+
+  it('keeps captured text available for sqlite preflight diagnostics', () => {
+    expect(buildElectronNodeSpawnOptions('D:/C/foliole', ['ignore', 'pipe', 'pipe'])).toEqual({
+      cwd: 'D:/C/foliole',
+      encoding: 'utf8',
+      env: expect.objectContaining({ ELECTRON_RUN_AS_NODE: '1' }),
+      stdio: ['ignore', 'pipe', 'pipe']
     });
   });
 

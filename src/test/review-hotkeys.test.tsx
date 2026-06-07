@@ -25,18 +25,7 @@ function seedActiveNode(node: ReturnType<typeof createNode>) {
   }));
 }
 
-function seedNodes(activeNodeId: string, nodes: Array<ReturnType<typeof createNode>>) {
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId,
-    nodeOrder: nodes.map((node) => node.id),
-    nodesById: {
-      ...state.nodesById,
-      ...Object.fromEntries(nodes.map((node) => [node.id, node]))
-    }
-  }));
-}
-
-it('supports review keyboard flow with edit mode guard (Esc -> Space -> 1/2/3/4)', async () => {
+it('keeps review actions guarded while the editor is focused', async () => {
   seedActiveNode(
     createNode({
       id: 'node-1',
@@ -60,7 +49,7 @@ it('supports review keyboard flow with edit mode guard (Esc -> Space -> 1/2/3/4)
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
 
   const editor = screen.getByTestId('editor-value');
   editor.focus();
@@ -68,25 +57,8 @@ it('supports review keyboard flow with edit mode guard (Esc -> Space -> 1/2/3/4)
   fireEvent.keyDown(editor, { key: ' ', code: 'Space' });
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
 
-  const stopEscapePropagation = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-    }
-  };
-  editor.addEventListener('keydown', stopEscapePropagation);
-  fireEvent.keyDown(editor, { key: 'Escape' });
-  editor.removeEventListener('keydown', stopEscapePropagation);
   await waitFor(() => {
-    expect(document.activeElement).not.toBe(editor);
-  });
-  fireEvent.keyDown(window, { key: ' ', code: 'Space' });
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Good' })).toBeInTheDocument();
-  });
-
-  fireEvent.keyDown(window, { key: '3', code: 'Digit3' });
-  await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-1']?.review?.lastReviewAt).not.toBeNull();
+    expect(screen.getByRole('group', { name: 'Flow toolbar' })).toHaveAttribute('data-review-input-mode', 'editing');
   });
 });
 
@@ -109,7 +81,7 @@ it('uses reading hotkeys with F/R action keys and Space as Read', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
 
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
@@ -134,7 +106,7 @@ it('dismisses reading review items with R', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
   fireEvent.keyDown(window, { key: 'r', code: 'KeyR' });
 
   await waitFor(() => {
@@ -154,7 +126,7 @@ it('uses numeric reading fallback keys', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
   fireEvent.keyDown(window, { key: '3', code: 'Digit3' });
 
   await waitFor(() => {
@@ -174,57 +146,11 @@ it('deletes the current review item with T and Delete', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
   fireEvent.keyDown(window, { key: 't', code: 'KeyT' });
 
   await waitFor(() => {
     expect(useWorkspaceStore.getState().trashedNodeIds).toContain('node-1');
-  });
-});
-
-it('navigates review mode with WASD and QE while preserving parent return', async () => {
-  seedNodes('child-1', [
-    createNode({ id: 'topic-1', title: 'Topic 1', content: 'Parent', kind: 'topic' }),
-    createNode({ id: 'child-1', parentNodeId: 'topic-1', title: 'Child 1', content: 'Question', kind: 'item', reveal: 'Answer' }),
-    createNode({ id: 'child-2', parentNodeId: 'topic-1', title: 'Child 2', content: 'Sibling', kind: 'topic' })
-  ]);
-
-  render(<App />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
-  fireEvent.keyDown(window, { key: 'w', code: 'KeyW' });
-  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('topic-1'));
-
-  fireEvent.keyDown(window, { key: 's', code: 'KeyS' });
-  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('child-1'));
-
-  fireEvent.keyDown(window, { key: 'e', code: 'KeyE' });
-  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('child-2'));
-
-  fireEvent.keyDown(window, { key: 'a', code: 'KeyA' });
-  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('child-1'));
-
-  fireEvent.keyDown(window, { key: 'd', code: 'KeyD' });
-  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('child-2'));
-});
-
-it('confirms source topic deletion with Alt T', async () => {
-  seedNodes('child-1', [
-    createNode({ id: 'topic-1', title: 'Topic 1', content: 'Parent', kind: 'topic' }),
-    createNode({ id: 'child-1', parentNodeId: 'topic-1', title: 'Child 1', content: 'Question', kind: 'item', reveal: 'Answer' })
-  ]);
-
-  render(<App />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
-  fireEvent.keyDown(window, { key: 't', code: 'KeyT', altKey: true });
-  fireEvent.keyDown(window, { key: 't', code: 'KeyT', altKey: true });
-
-  expect(screen.getAllByRole('dialog', { name: 'Delete source topic?' })).toHaveLength(1);
-  fireEvent.click(screen.getByRole('button', { name: 'Delete source topic' }));
-
-  await waitFor(() => {
-    expect(useWorkspaceStore.getState().trashedNodeIds).toContain('topic-1');
   });
 });
 

@@ -8,6 +8,25 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+async function openCommandPaletteByShortcut() {
+  document.body.focus();
+  window.dispatchEvent(new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    ctrlKey: true,
+    key: 'p'
+  }));
+  return screen.findByRole('dialog', { name: 'Command palette' });
+}
+
+async function openCommandPalette() {
+  const commandDialog = await openCommandPaletteByShortcut();
+  return {
+    commandDialog,
+    commandInput: within(commandDialog).getByLabelText('Search commands')
+  };
+}
+
 it('moves the active node under an empty target node from the command palette', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-2',
@@ -38,9 +57,7 @@ it('moves the active node under an empty target node from the command palette', 
 
   render(<App />);
 
-  fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
-  const commandDialog = screen.getByRole('dialog', { name: 'Command palette' });
-  const commandInput = within(commandDialog).getByLabelText('Search commands');
+  const { commandDialog, commandInput } = await openCommandPalette();
 
   fireEvent.change(commandInput, { target: { value: 'move to' } });
   await waitFor(() => {
@@ -88,8 +105,7 @@ it('keeps non-derived topics as move targets even when they already have content
 
   render(<App />);
 
-  fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
-  const commandInput = within(screen.getByRole('dialog', { name: 'Command palette' })).getByLabelText('Search commands');
+  const { commandInput } = await openCommandPalette();
   fireEvent.change(commandInput, { target: { value: 'move to' } });
   fireEvent.keyDown(commandInput, { key: 'Enter' });
 

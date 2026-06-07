@@ -18,7 +18,7 @@ import { runCleanupMainFts } from './sqlite-maintenance-cleanup-main-fts.ts';
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
-const BOOLEAN_FLAGS = new Set(['apply', 'i-understand-live-database', 'no-vacuum']);
+const BOOLEAN_FLAGS = new Set(['apply', 'i-have-current-backup', 'i-understand-live-database', 'no-vacuum']);
 const DEFAULT_SEARCH_INVALIDATION_RETENTION_DAYS = 30;
 
 async function main() {
@@ -185,7 +185,7 @@ function printUsage() {
   console.error('  npm run sqlite:backup -- --db-path <db> [--destination-path <backup>]');
   console.error('  npm run sqlite:restore -- --db-path <db> --source-path <backup>');
   console.error('  npm run sqlite:prune-search-invalidations -- --db-path <db> [--retention-days <days> | --older-than-iso <iso>] [--apply]');
-  console.error('  npm run sqlite:cleanup-main-fts -- --db-path <db> [--apply] [--snapshot-dir <dir>] [--no-vacuum] [--i-understand-live-database]');
+  console.error('  npm run sqlite:cleanup-main-fts -- --db-path <db> [--apply] [--snapshot-dir <dir>] [--no-vacuum] [--i-understand-live-database] [--i-have-current-backup]');
 }
 
 main().catch((error) => {

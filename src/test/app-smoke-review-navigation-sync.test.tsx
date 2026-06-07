@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
@@ -13,10 +13,13 @@ import {
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
+import { createNode, createSmokeRuntimeInvoke } from './app-smoke.shared';
+
+const FUTURE_TIMESTAMP = '2099-01-01T00:00:00.000Z';
 
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(createSmokeRuntimeInvoke());
 });
 
 vi.stubGlobal('ResizeObserver', class { disconnect() {} observe() {} unobserve() {} });
@@ -27,9 +30,10 @@ function enablePersistedStudyMode() {
 }
 
 function mockDocumentLoad() {
+  const baseInvoke = createSmokeRuntimeInvoke();
   const invoke = vi.fn().mockImplementation((command: string, args?: { nodeId?: string }) => {
     if (command !== 'load_node_document') {
-      return Promise.resolve(null);
+      return baseInvoke(command, args);
     }
     if (args?.nodeId === 'fsrs-1') {
       return Promise.resolve({
@@ -47,7 +51,7 @@ function mockDocumentLoad() {
         reveal: null
       });
     }
-    return Promise.resolve(null);
+    return baseInvoke(command, args);
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
   return invoke;
@@ -64,7 +68,7 @@ function createReadingNode(id: string, title: string, content: string) {
       intervalDurationMs: 24 * 60 * 60 * 1000,
       intervalGrowthFactor: 1.3,
       lastHandledAt: '2026-03-02T00:00:00.000Z',
-      nextAt: FIXED_TIMESTAMP,
+      nextAt: FUTURE_TIMESTAMP,
       priority: 5,
       readingPosition: 0,
       repetitionCount: 1,
@@ -87,7 +91,7 @@ function seedReviewNavigationMismatch() {
         content: 'Prompt 1',
         reveal: 'Answer 1',
         review: {
-          due: FIXED_TIMESTAMP,
+          due: FUTURE_TIMESTAMP,
           lastReviewAt: null,
           state: 0,
           stability: 0,
@@ -118,7 +122,8 @@ it('keeps review paused when navigation history jumps to another queued node dur
     expect(screen.getByLabelText('Flow toolbar')).toHaveAttribute('data-review-item-kind', 'fsrs');
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+  const documentNavigationActions = screen.getAllByRole('group', { name: 'Document navigation actions' })[0]!;
+  fireEvent.click(within(documentNavigationActions).getByRole('button', { name: 'Go back' }));
 
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();

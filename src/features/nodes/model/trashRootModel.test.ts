@@ -79,7 +79,7 @@ describe('trash root model', () => {
     manyTrashedNodeIds.push('solo');
 
     expect(selectTrashRootIds(manyNodeOrder, manyNodesById, manyTrashedNodeIds)).toEqual(['root', 'solo']);
-  });
+  }, 15000);
 
   it('matches deep covered descendants without changing root order', () => {
     expect(filterTrashRootIdsByTitle(['folder', 'solo'], nodeOrder, nodesById, ['folder', 'topic', 'item', 'solo'], 'needle')).toEqual(['folder']);

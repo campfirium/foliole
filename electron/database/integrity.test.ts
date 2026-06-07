@@ -47,7 +47,7 @@ it('quarantines a malformed sqlite database and recreates an empty schema on ini
   closeDatabaseConnection();
   const validDatabase = await fs.readFile(databasePath);
   const malformedDatabase = Buffer.from(validDatabase);
-  malformedDatabase[4_096] = malformedDatabase[4_096] ^ 0xff;
+  malformedDatabase[4_096] = (malformedDatabase[4_096] ?? 0) ^ 0xff;
   await fs.writeFile(databasePath, malformedDatabase);
 
   const recoveredConnection = initializeDatabase();

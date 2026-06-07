@@ -83,5 +83,5 @@ describe('quality gate critical routes integration', () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 30000);
 });

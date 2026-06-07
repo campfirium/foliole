@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, mockEditorState } from './app-smoke.shared';
@@ -64,11 +65,10 @@ it('reveals document highlights from the right sidebar list', () => {
 it('renders the full ancestor path and keeps nested topics navigable', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-7',
-    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4', 'node-5', 'node-6', 'node-7'],
+    nodeOrder: [INBOX_NODE_ID, 'node-2', 'node-3', 'node-4', 'node-5', 'node-6', 'node-7'],
     nodesById: {
       ...state.nodesById,
-      'node-1': createNode({ id: 'node-1', kind: 'folder', parentNodeId: null, title: 'Inbox', content: '' }),
-      'node-2': createNode({ id: 'node-2', kind: 'topic', parentNodeId: 'node-1', title: 'Book', content: '# Book' }),
+      'node-2': createNode({ id: 'node-2', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Book', content: '# Book' }),
       'node-3': createNode({ id: 'node-3', kind: 'topic', parentNodeId: 'node-2', title: 'Chapter One', content: '# Chapter One' }),
       'node-4': createNode({ id: 'node-4', kind: 'item', parentNodeId: 'node-3', title: 'Derived card title', content: '# Derived' }),
       'node-5': createNode({ id: 'node-5', kind: 'item', parentNodeId: 'node-4', title: 'Current parent', content: '# Parent' }),
@@ -79,7 +79,7 @@ it('renders the full ancestor path and keeps nested topics navigable', () => {
 
   render(<App />);
 
-  const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
+  const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
   expect(within(nav).getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
   expect(within(nav).getByRole('button', { name: 'Book' })).toBeInTheDocument();
   expect(within(nav).getByRole('button', { name: 'Chapter One' })).toBeInTheDocument();

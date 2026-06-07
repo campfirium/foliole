@@ -197,7 +197,7 @@ it('previews changed import behavior before running manual Readwise sync', async
     }
   });
   const withoutHighlightsGroup = screen.getByRole('radiogroup', {
-    name: 'Without highlights destination'
+    name: 'Content without highlights destination'
   });
 
   fireEvent.click(within(withoutHighlightsGroup).getByRole('radio', { name: 'External' }));

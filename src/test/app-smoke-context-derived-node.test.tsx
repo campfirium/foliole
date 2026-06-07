@@ -54,7 +54,7 @@ it('creates highlight node without leaving current node', async () => {
   }
   expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
   expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome');
-  expect(workspace.nodesById[createdNodeId]?.content).toBe('Welcome');
+  expect(workspace.nodesById[createdNodeId]?.hasContent).toBe(true);
 
   openInboxWithExpandedTopics();
 

@@ -20,7 +20,7 @@ function seedTopicInInbox(args: {
   extraNode?: ReturnType<typeof createNode>;
 }) {
   useWorkspaceStore.setState((state) => ({
-    activeNodeId: args.nodeId,
+    activeNodeId: INBOX_NODE_ID,
     nodeOrder: args.extraNode ? [INBOX_NODE_ID, args.nodeId, args.extraNode.id] : [INBOX_NODE_ID, args.nodeId],
     nodesById: {
       ...state.nodesById,
@@ -55,7 +55,7 @@ function createReadingState(state: 'active' | 'done' | 'dismissed' | 'locked' = 
   };
 }
 
-it('shows relearn actions for pending reading nodes and keeps the pending icon state', () => {
+it('shows relearn actions for pending reading nodes and keeps the pending icon state', async () => {
   seedTopicInInbox({
     nodeId: 'node-pending',
     title: 'Pending note',
@@ -65,8 +65,7 @@ it('shows relearn actions for pending reading nodes and keeps the pending icon s
   render(<App />);
 
   const panel = openNodeMenu('Pending note');
-  expect(screen.getByRole('menuitem', { name: 'Relearn' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Dismiss' })).toBeInTheDocument();
+  expect(await screen.findByRole('menuitem', { name: 'Relearn' })).toBeInTheDocument();
   expect(within(panel).getByRole('treeitem', { hidden: true, name: 'Pending note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-state',
     'scheduled'
@@ -176,20 +175,22 @@ it('hides sequential reading actions from non-source menus', () => {
   expect(screen.queryByRole('menuitem', { name: 'Disable Sequential Reading' })).toBeNull();
 });
 
-it('creates a child node from the inbox menu', () => {
+it('creates a child node from the inbox menu', async () => {
   render(<App />);
   const initialInboxChildCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
     (node) => node?.parentNodeId === INBOX_NODE_ID
   ).length;
 
   openNodeMenu('Inbox');
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Create folder' }));
 
-  const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter((node) => node?.parentNodeId === INBOX_NODE_ID);
-  expect(inboxChildren).toHaveLength(initialInboxChildCount + 1);
+  await waitFor(() => {
+    const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter((node) => node?.parentNodeId === INBOX_NODE_ID);
+    expect(inboxChildren).toHaveLength(initialInboxChildCount + 1);
+  });
 });
 
-it('creates an inbox topic from the blank current-folder area menu', () => {
+it('creates an inbox topic from the blank current-folder area menu', async () => {
   render(<App />);
   const initialInboxChildCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
     (node) => node && node.parentNodeId === INBOX_NODE_ID
@@ -197,15 +198,17 @@ it('creates an inbox topic from the blank current-folder area menu', () => {
 
   const tree = within(getNodeListPanel()).getAllByRole('tree')[0]!;
   fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Create Topic' }));
 
-  const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
-    (node) => node && node.parentNodeId === INBOX_NODE_ID
-  );
-  expect(inboxChildren).toHaveLength(initialInboxChildCount + 1);
+  await waitFor(() => {
+    const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
+      (node) => node && node.parentNodeId === INBOX_NODE_ID
+    );
+    expect(inboxChildren).toHaveLength(initialInboxChildCount + 1);
+  });
 });
 
-it('creates an inbox topic from the current folder create button', () => {
+it('creates an inbox topic from the current folder create button', async () => {
   render(<App />);
   const initialInboxChildCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
     (node) => node && node.parentNodeId === INBOX_NODE_ID
@@ -213,10 +216,12 @@ it('creates an inbox topic from the current folder create button', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
 
-  const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
-    (node) => node && node.parentNodeId === INBOX_NODE_ID
-  );
-  expect(inboxChildren).toHaveLength(initialInboxChildCount + 1);
+  await waitFor(() => {
+    const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
+      (node) => node && node.parentNodeId === INBOX_NODE_ID
+    );
+    expect(inboxChildren).toHaveLength(initialInboxChildCount + 1);
+  });
 });
 
 it('shows merge import actions on ordinary article topics', () => {

@@ -32,6 +32,15 @@ export function buildRunnerInvocation(scriptPath, scriptArgs = [], repoRoot = pr
   };
 }
 
+export function buildElectronNodeSpawnOptions(repoRoot = process.cwd(), stdio = 'inherit') {
+  return {
+    cwd: repoRoot,
+    env: buildElectronNodeEnv(),
+    stdio,
+    ...(stdio === 'inherit' ? {} : { encoding: 'utf8' })
+  };
+}
+
 function writePreflightScript(tempDir, repoRoot) {
   const modulePath = path.join(repoRoot, 'node_modules', 'better-sqlite3').replaceAll('\\', '/');
   const scriptPath = path.join(tempDir, 'better-sqlite3-electron-preflight.cjs');
@@ -53,13 +62,8 @@ function writePreflightScript(tempDir, repoRoot) {
   return scriptPath;
 }
 
-function runElectronNode(electronPath, args, repoRoot) {
-  return spawnSync(electronPath, args, {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    env: buildElectronNodeEnv(),
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
+function runElectronNode(electronPath, args, repoRoot, stdio = 'inherit') {
+  return spawnSync(electronPath, args, buildElectronNodeSpawnOptions(repoRoot, stdio));
 }
 
 function assertElectronAbi(electronPath, repoRoot) {
@@ -68,7 +72,7 @@ function assertElectronAbi(electronPath, repoRoot) {
   const tempDir = mkdtempSync(path.join(tempRoot, 'electron-sqlite-runner-'));
   try {
     const preflightScript = writePreflightScript(tempDir, repoRoot);
-    const result = runElectronNode(electronPath, [preflightScript], repoRoot);
+    const result = runElectronNode(electronPath, [preflightScript], repoRoot, ['ignore', 'pipe', 'pipe']);
     if (result.status === 0) {
       return;
     }
@@ -108,11 +112,8 @@ function main() {
   const electronPath = invocation.electronPath;
   assertElectronAbi(electronPath, repoRoot);
   const result = runElectronNode(electronPath, invocation.args, repoRoot);
-  if (result.stdout) {
-    process.stdout.write(result.stdout);
-  }
-  if (result.stderr) {
-    process.stderr.write(result.stderr);
+  if (result.error) {
+    console.error(result.error.message);
   }
   process.exitCode = result.status ?? 1;
 }

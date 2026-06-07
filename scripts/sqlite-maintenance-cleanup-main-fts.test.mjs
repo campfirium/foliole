@@ -119,7 +119,7 @@ it('refuses the default live database path unless the second confirmation flag i
     '--apply',
     '--i-understand-live-database'
   )).rejects.toMatchObject({
-    stderr: expect.not.stringContaining('"status":"refused-live-database"')
+    stderr: expect.stringContaining('--i-have-current-backup')
   });
 });
 

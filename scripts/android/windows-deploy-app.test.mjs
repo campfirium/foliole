@@ -135,6 +135,7 @@ describe('windows-deploy-app.sh', () => {
       );
 
       const result = await runDeploy(tempRoot, {
+        ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-test',
         FOLIOLE_ANDROID_ALLOW_DIRECT_DEPLOY: '1'
       });
 

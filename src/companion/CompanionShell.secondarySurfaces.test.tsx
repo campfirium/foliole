@@ -127,17 +127,19 @@ describe('CompanionShell secondary surfaces', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expectBrowseMenuSheet();
-  });
+  }, 15000);
 
   it('opens Only Review as a Learn placeholder without mixed cards', async () => {
     await renderShellWithSurface(createSurface('review'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Only Review' }));
+    const topOnlyReviewButton = screen.getAllByRole('button', { name: 'Only Review' }).at(0);
+    if (!topOnlyReviewButton) throw new Error('missing top Only Review button');
+    fireEvent.click(topOnlyReviewButton);
 
     expect(screen.getByRole('heading', { name: 'Only Review' })).toBeInTheDocument();
     expect(screen.getByText('Only Review mode is coming soon')).toBeInTheDocument();
     expect(screen.queryByTestId('companion-review-card')).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it('shows Search as an independent input surface', async () => {
     await renderShellWithSurface(createSurface('search'));

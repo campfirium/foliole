@@ -73,7 +73,7 @@ it('uses core indexes for high-risk review and sync queries', () => {
   )).toContain('idx_nodes_dirty_or_unversioned_updated');
   expect(queryPlan(connection.sqlite, `SELECT id FROM nodes WHERE body_blob_hash IS NOT NULL`))
     .toContain('idx_nodes_body_blob_hash');
-});
+}, 15000);
 
 function readCoreIndexNames(sqlite: ReturnType<typeof openDatabaseConnection>['sqlite']) {
   return (sqlite

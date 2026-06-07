@@ -1,16 +1,83 @@
 import { screen, within } from '@testing-library/react';
-import { useEffect } from 'react';
 import { beforeEach, vi } from 'vitest';
 
 import './reactPdfMock';
 
-import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { definedProps } from '../shared/lib/definedProps';
 import { resetPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { resetWorkspaceNodeDocumentPrefetchForTest } from '../store/workspaceNodeDocumentPrefetch';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
+
+import { mockEditorState } from './app-smoke-editor-mock';
+
+export { mockEditorState } from './app-smoke-editor-mock';
+
+const smokeRuntimeMocks = vi.hoisted(() => ({
+  createRuntimeInvoke: () => vi.fn(async (command: string, payload?: Record<string, unknown>) => {
+    if (command === 'create_folder' || command === 'create_topic' || command === 'create_item') {
+      const nodeId = typeof payload?.nodeId === 'string' ? payload.nodeId : 'node-created';
+      const parentNodeId = typeof payload?.parentNodeId === 'string' ? payload.parentNodeId : null;
+      const content = typeof payload?.content === 'string' ? payload.content : '';
+      const reveal = typeof payload?.reveal === 'string' ? payload.reveal : null;
+      const kind =
+        typeof payload?.kind === 'string'
+          ? payload.kind
+          : command === 'create_folder'
+            ? 'folder'
+            : command === 'create_item'
+              ? 'item'
+              : 'topic';
+      return {
+        activeNodeId: typeof payload?.activeNodeId === 'string' ? payload.activeNodeId : nodeId,
+        createdNodeIds: [nodeId],
+        nodeOrder: Array.isArray(payload?.nodeOrder) ? payload.nodeOrder : [nodeId],
+        nodes: [
+          {
+            nodeId,
+            parentNodeId,
+            kind,
+            title: typeof payload?.title === 'string' ? payload.title : '',
+            content,
+            hasContent: typeof payload?.hasContent === 'boolean' ? payload.hasContent : content.trim().length > 0,
+            reveal,
+            hasReveal: typeof payload?.hasReveal === 'boolean' ? payload.hasReveal : reveal != null,
+            anchorLink: null,
+            reading: null,
+            review: null,
+            createdAt: '2026-02-25T00:00:00.000Z',
+            updatedAt: '2026-02-25T00:00:00.000Z'
+          }
+        ]
+      };
+    }
+    if (command === 'update_node_content' || command === 'update_node_reveal') {
+      return { nodes: payload ? [payload] : [], updatedNodeIds: typeof payload?.nodeId === 'string' ? [payload.nodeId] : [] };
+    }
+    if (command === 'update_node_content_with_anchors') {
+      return {
+        anchorUpdates: Array.isArray(payload?.affectedAnchors) ? payload.affectedAnchors : [],
+        nodes: payload?.parent ? [payload.parent] : []
+      };
+    }
+    if (command === 'soft_delete_nodes') return { deletedNodeIds: Array.isArray(payload?.nodeIds) ? payload.nodeIds : [] };
+    if (command === 'restore_nodes') return { restoredNodeIds: Array.isArray(payload?.nodeIds) ? payload.nodeIds : [], skippedConflicts: [] };
+    if (command === 'delete_nodes_permanently') {
+      const nodeOrder = Array.isArray(payload?.nodeOrder) ? payload.nodeOrder : [];
+      const nodeIds = Array.isArray(payload?.nodeIds) ? payload.nodeIds : [];
+      return { nodeOrder: nodeOrder.filter((nodeId) => !nodeIds.includes(nodeId)), removedNodeIds: nodeIds };
+    }
+    if (command === 'move_nodes') return { movedNodeIds: Array.isArray(payload?.nodeIds) ? payload.nodeIds : [], nodeOrder: payload?.nodeOrder };
+    if (command === 'load_node_backlinks') return [];
+    if (command === 'load_readwise_books_inventory') return { books: [] };
+    return null;
+  })
+}));
+
+export function createSmokeRuntimeInvoke() {
+  return smokeRuntimeMocks.createRuntimeInvoke();
+}
 
 const smokeBridgeMocks = vi.hoisted(() => ({
   loadRuntimePdfImportsInventory: vi.fn(async () => ({ items: [] })),
@@ -26,123 +93,17 @@ const smokeBridgeMocks = vi.hoisted(() => ({
   }))
 }));
 
+vi.mock('../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => window.electronAPI?.invoke ?? smokeRuntimeMocks.createRuntimeInvoke())
+}));
+
 export const loadRuntimeNodeBacklinksMock = smokeBridgeMocks.loadRuntimeNodeBacklinks;
 export const loadRuntimePdfImportsInventoryMock = smokeBridgeMocks.loadRuntimePdfImportsInventory;
 export const loadRuntimeReadwiseBooksInventoryMock = smokeBridgeMocks.loadRuntimeReadwiseBooksInventory;
 export const useNodeSourceDetailsMock = smokeBridgeMocks.useNodeSourceDetails;
 export const useNodeSourceUpdatePreviewMock = smokeBridgeMocks.useNodeSourceUpdatePreview;
 
-export const mockEditorState: { content: string; selectionFrom: number; selectionTo: number } = {
-  content: '',
-  selectionFrom: 0,
-  selectionTo: 0
-};
-
-export const mockEditorAdapter: EditorAdapter = {
-  destroy: () => undefined,
-  focus: () => undefined,
-  getContent: () => mockEditorState.content,
-  getDocumentPositionAtViewportY: () => 0,
-  setContent: (content: string) => {
-    mockEditorState.content = content;
-  },
-  getSelection: () => ({ from: mockEditorState.selectionFrom, to: mockEditorState.selectionTo }),
-  getSelectionRanges: () => [{ from: mockEditorState.selectionFrom, to: mockEditorState.selectionTo }],
-  getLineBlockHeight: () => 24,
-  revealPosition: (position) => {
-    mockEditorState.selectionFrom = position;
-    mockEditorState.selectionTo = position;
-  },
-  restoreSelection: (selection) => {
-    if (!selection) return;
-    mockEditorState.selectionFrom = selection.from;
-    mockEditorState.selectionTo = selection.to;
-  },
-  revealSelection: (selection) => {
-    mockEditorState.selectionFrom = selection.from;
-    mockEditorState.selectionTo = selection.to;
-  },
-  setSelection: (selection) => {
-    mockEditorState.selectionFrom = selection.from;
-    mockEditorState.selectionTo = selection.to;
-  },
-  setSelectionRanges: (selections) => {
-    const selection = selections.at(-1) ?? { from: 0, to: 0 };
-    mockEditorState.selectionFrom = selection.from;
-    mockEditorState.selectionTo = selection.to;
-  },
-  getScrollTop: () => 0,
-  setScrollTop: () => undefined,
-  getScrollMetrics: () => ({ clientHeight: 1, scrollHeight: 1, scrollTop: 0 }),
-  replaceRange: (from: number, to: number, content: string) => {
-    mockEditorState.content = `${mockEditorState.content.slice(0, from)}${content}${mockEditorState.content.slice(to)}`;
-    const nextCursor = from + content.length;
-    mockEditorState.selectionFrom = nextCursor;
-    mockEditorState.selectionTo = nextCursor;
-  },
-  replaceSelection: (content: string) => {
-    const from = Math.min(mockEditorState.selectionFrom, mockEditorState.selectionTo);
-    const to = Math.max(mockEditorState.selectionFrom, mockEditorState.selectionTo);
-    mockEditorState.content = `${mockEditorState.content.slice(0, from)}${content}${mockEditorState.content.slice(to)}`;
-    const nextCursor = from + content.length;
-    mockEditorState.selectionFrom = nextCursor;
-    mockEditorState.selectionTo = nextCursor;
-  },
-  setDiffDecorations: () => undefined,
-  setSearchDecorations: () => undefined,
-  onContentChange: () => () => undefined,
-  onScroll: () => () => undefined
-};
-
-vi.mock('../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: ({
-    ariaLabel,
-    readingSelection,
-    nodeViewState,
-    value,
-    onChange,
-    onImageLoadStateChange,
-    onReady
-  }: {
-    ariaLabel?: string;
-    readingSelection?: { from: number; to: number } | null;
-    nodeViewState?: { selection: { from: number; to: number } };
-    value: string;
-    onChange: (value: string) => void;
-    onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
-    onReady?: (adapter: EditorAdapter | null) => void;
-  }) => {
-    mockEditorState.content = value;
-    useEffect(() => {
-      onImageLoadStateChange?.({ loadedCount: 0, totalCount: 0 });
-      onReady?.(mockEditorAdapter);
-      return () => onReady?.(null);
-    }, [onImageLoadStateChange, onReady]);
-    useEffect(() => {
-      if (readingSelection) {
-        mockEditorAdapter.restoreSelection(readingSelection);
-      }
-    }, [readingSelection]);
-    useEffect(() => {
-      if (!nodeViewState) {
-        return;
-      }
-      mockEditorAdapter.restoreSelection(nodeViewState.selection);
-    }, [nodeViewState]);
-    return (
-      <textarea
-        aria-label={ariaLabel ?? 'Mock editor'}
-        data-testid={ariaLabel === 'Answer editor' ? 'answer-editor-value' : 'editor-value'}
-        onChange={(event) => {
-          const nextValue = event.currentTarget.value;
-          mockEditorState.content = nextValue;
-          onChange(nextValue);
-        }}
-        value={value}
-      />
-    );
-  }
-}));
+vi.mock('../features/editor/components/MarkdownEditor', () => import('./app-smoke-editor-mock'));
 
 vi.mock('../app/components/ReadwiseBookActionsPanel', () => ({
   ReadwiseBookActionsPanel: () => null
@@ -198,7 +159,9 @@ export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 
     desiredRetention: partial.desiredRetention ?? null,
     title: partial.title,
     content: partial.content,
+    hasContent: partial.hasContent ?? partial.content.trim().length > 0,
     reveal: partial.reveal ?? null,
+    hasReveal: partial.hasReveal ?? partial.reveal != null,
     reading: partial.reading ?? null,
     review: partial.review ?? null,
     ...definedProps({
@@ -254,6 +217,11 @@ export function queryCurrentFolderTreeItem(name: string | RegExp) {
 }
 
 beforeEach(() => {
+  vi.stubGlobal('ResizeObserver', class {
+    disconnect() {}
+    observe() {}
+    unobserve() {}
+  });
   loadRuntimeNodeBacklinksMock.mockReset();
   loadRuntimeNodeBacklinksMock.mockResolvedValue(null);
   loadRuntimePdfImportsInventoryMock.mockReset();

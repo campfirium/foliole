@@ -14,10 +14,13 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode, FIXED_TIMESTAMP, getCurrentFolderTreeItem } from './app-smoke.shared';
+import { createNode, createSmokeRuntimeInvoke, FIXED_TIMESTAMP, getCurrentFolderTreeItem } from './app-smoke.shared';
+
+const FUTURE_TIMESTAMP = '2099-01-01T00:00:00.000Z';
 
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(createSmokeRuntimeInvoke());
 });
 
 vi.stubGlobal('ResizeObserver', class { disconnect() {} observe() {} unobserve() {} });
@@ -28,9 +31,10 @@ function enablePersistedStudyMode() {
 }
 
 function mockDocumentLoad() {
+  const baseInvoke = createSmokeRuntimeInvoke();
   const invoke = vi.fn().mockImplementation((command: string, args?: { nodeId?: string }) => {
     if (command !== 'load_node_document') {
-      return Promise.resolve(null);
+      return baseInvoke(command, args);
     }
     if (args?.nodeId === 'fsrs-1') {
       return Promise.resolve({
@@ -48,13 +52,13 @@ function mockDocumentLoad() {
         reveal: null
       });
     }
-    return Promise.resolve(null);
+    return baseInvoke(command, args);
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
   return invoke;
 }
 
-function createReadingNode(id: string, title: string, content: string) {
+function createReadingNode(id: string, title: string, content: string, nextAt = FUTURE_TIMESTAMP) {
   return createNode({
     id,
     kind: 'topic',
@@ -66,7 +70,7 @@ function createReadingNode(id: string, title: string, content: string) {
       intervalDurationMs: 24 * 60 * 60 * 1000,
       intervalGrowthFactor: 1.3,
       lastHandledAt: '2026-03-02T00:00:00.000Z',
-      nextAt: FIXED_TIMESTAMP,
+      nextAt,
       priority: 5,
       readingPosition: 0,
       repetitionCount: 1,
@@ -82,7 +86,7 @@ it('switches toolbar actions when review queue advances from fsrs card to readin
     nodeOrder: [INBOX_NODE_ID, 'reading-1', 'fsrs-1'],
     nodesById: {
       ...state.nodesById,
-      'reading-1': createReadingNode('reading-1', 'Reading 1', 'Read this first'),
+      'reading-1': createReadingNode('reading-1', 'Reading 1', 'Read this first', FIXED_TIMESTAMP),
       'fsrs-1': createNode({
         id: 'fsrs-1',
         parentNodeId: INBOX_NODE_ID,
@@ -90,7 +94,7 @@ it('switches toolbar actions when review queue advances from fsrs card to readin
         content: 'Prompt 1',
         reveal: 'Answer 1',
         review: {
-          due: FIXED_TIMESTAMP,
+          due: FUTURE_TIMESTAMP,
           lastReviewAt: null,
           state: 0,
           stability: 0,
@@ -145,7 +149,7 @@ it('keeps review paused when clicking another queued node during study', async (
         content: 'Prompt 1',
         reveal: 'Answer 1',
         review: {
-          due: FIXED_TIMESTAMP,
+          due: FUTURE_TIMESTAMP,
           lastReviewAt: null,
           state: 0,
           stability: 0,

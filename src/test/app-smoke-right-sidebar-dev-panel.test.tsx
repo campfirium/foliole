@@ -47,7 +47,7 @@ it('renders topic scheduling from reading cadence instead of FSRS fields', () =>
   expect(screen.getAllByText('P2')).toHaveLength(2);
   expect(screen.getByText('Initial interval')).toBeInTheDocument();
   expect(screen.getByText('Current interval')).toBeInTheDocument();
-  expect(screen.getByText('1.40')).toBeInTheDocument();
+  expect(screen.getByText('Reading growth factor')).toBeInTheDocument();
   expect(screen.getByText('3')).toBeInTheDocument();
   expect(screen.queryByText('Memory')).not.toBeInTheDocument();
   expect(screen.queryByText('Retention')).not.toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI, NativeKeyboardInputPayload } from '../../shared/platform/electronApi';
@@ -6,6 +6,7 @@ import type { ElectronAPI, NativeKeyboardInputPayload } from '../../shared/platf
 import { ReviewShortcutHarness } from './useReviewKeyboardShortcuts.testUtils';
 
 afterEach(() => {
+  vi.useRealTimers();
   delete window.electronAPI;
   cleanup();
   document.body.innerHTML = '';
@@ -38,6 +39,7 @@ function dispatchNativeEscape(dispatchNativeKeyboard: (payload: NativeKeyboardIn
 
 it('leaves review editing when native Escape arrives without a DOM keydown', () => {
   const dispatchNativeKeyboard = installNativeKeyboardBridge();
+  vi.useFakeTimers();
   const readReviewTopic = vi.fn(async () => true);
   render(<ReviewShortcutHarness readReviewTopic={readReviewTopic} />);
   const editable = document.createElement('div');
@@ -46,7 +48,10 @@ it('leaves review editing when native Escape arrives without a DOM keydown', () 
   editable.focus();
   fireEvent.focusIn(editable);
 
-  dispatchNativeEscape(dispatchNativeKeyboard);
+  act(() => {
+    dispatchNativeEscape(dispatchNativeKeyboard);
+    vi.runOnlyPendingTimers();
+  });
   fireEvent.keyDown(window, { key: 'r' });
 
   expect(document.activeElement).not.toBe(editable);

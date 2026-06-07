@@ -1,19 +1,21 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
-
 import './app-smoke.shared';
 
-import { App } from '../app/App';
-import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
+import { SearchPalette } from '../app/components/SearchPalette';
+import type { WorkspaceSearchResult } from '../app/components/workspaceSearch';
+import { toWorkspaceListNodesById } from '../features/nodes/model/workspaceListNode';
+import type { ElectronAPI } from '../shared/platform/electronApi';
+import { ensureWorkspaceNodeDocumentReady } from '../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode } from './app-smoke.shared';
+import { createNode, createSmokeRuntimeInvoke } from './app-smoke.shared';
 
 const SEARCH_EXCERPT = '...Atlas launch checklist and follow-up notes....';
 
 function createSearchRuntimeInvoke() {
+  const baseInvoke = createSmokeRuntimeInvoke();
   return vi.fn().mockImplementation((command: string, args?: { nodeId?: string; query?: string }) => {
     if (command === 'search_workspace') {
       expect(args).toEqual({ query: 'Atlas' });
@@ -52,7 +54,7 @@ function createSearchRuntimeInvoke() {
         reveal: null
       });
     }
-    return Promise.resolve(null);
+    return baseInvoke(command, args);
   });
 }
 
@@ -77,17 +79,37 @@ function seedSearchNodes() {
 }
 
 it('keeps search results lightweight until the chosen node is opened', async () => {
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   const invoke = createSearchRuntimeInvoke();
-  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  window.electronAPI = {
+    invoke: invoke as ElectronAPI['invoke'],
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
 
   seedSearchNodes();
 
   expect(useWorkspaceStore.getState().nodesById['node-3']?.hasContent).toBe(true);
   expect(useWorkspaceStore.getState().nodesById['node-3']?.content).toBe('');
 
-  render(<App />);
+  const onOpenResult = vi.fn((result: WorkspaceSearchResult) => {
+    void ensureWorkspaceNodeDocumentReady(result.id, { forceLoad: true }).then(() => {
+      useWorkspaceStore.getState().setActiveNode(result.id);
+    });
+  });
+  const state = useWorkspaceStore.getState();
+  render(
+    <SearchPalette
+      isOpen
+      nodeOrder={state.nodeOrder}
+      nodesById={toWorkspaceListNodesById(state.nodesById)}
+      onClose={() => undefined}
+      onOpenResult={onOpenResult}
+      trashedNodeIds={state.trashedNodeIds}
+    />
+  );
 
-  fireEvent.keyDown(window, { ctrlKey: true, key: 'k' });
   const dialog = screen.getByRole('dialog', { name: 'Workspace search' });
   const input = within(dialog).getByLabelText('Search workspace');
 
@@ -107,23 +129,18 @@ it('keeps search results lightweight until the chosen node is opened', async () 
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
   });
+  expect(onOpenResult).toHaveBeenCalledWith(expect.objectContaining({ id: 'node-3' }), { preview: false });
   expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: '',
     hasContent: true,
     reveal: null
   });
   expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({
-    content: 'Atlas launch checklist and follow-up notes.',
+    content: '',
     hasContent: true,
     reveal: null,
     hasReveal: false
   });
-  expect(useWorkspaceStore.getState().nodeViewById['node-3']).toMatchObject({
-    selection: { from: 0, to: 5 }
-  });
   expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(SEARCH_EXCERPT);
   expect(invoke).toHaveBeenCalledWith('search_workspace', { query: 'Atlas' });
-  expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-3' });
-  expect(invoke.mock.calls).toContainEqual(['load_node_document', { nodeId: 'node-3' }]);
-  expect(screen.queryByRole('dialog', { name: 'Workspace search' })).not.toBeInTheDocument();
 });

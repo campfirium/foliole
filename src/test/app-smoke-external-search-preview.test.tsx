@@ -1,14 +1,19 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { useState } from 'react';
 import { expect, it, vi } from 'vitest';
-
-vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 
 import './app-smoke.shared';
 
-import { App } from '../app/App';
-import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
+import { SearchPalette } from '../app/components/SearchPalette';
+import { SearchResultPreviewPanel } from '../app/components/SearchResultPreviewPanel';
+import type { WorkspaceSearchResult } from '../app/components/workspaceSearch';
+import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
+import type { ElectronAPI } from '../shared/platform/electronApi';
+
+import { createSmokeRuntimeInvoke } from './app-smoke.shared';
 
 function createExternalSearchRuntimeInvoke() {
+  const baseInvoke = createSmokeRuntimeInvoke();
   return vi.fn().mockImplementation((command: string, args?: { absolute_path?: string; query?: string }) => {
     if (command === 'search_workspace') {
       expect(args).toEqual({ query: 'Atlas' });
@@ -42,27 +47,58 @@ function createExternalSearchRuntimeInvoke() {
         relative_path: 'atlas.md'
       });
     }
-    return Promise.resolve(null);
+    return baseInvoke(command, args);
   });
 }
 
+function ExternalSearchPreviewSmoke({ nodesById }: { nodesById: Record<string, never> }) {
+  const [previewResult, setPreviewResult] = useState<WorkspaceSearchResult | null>(null);
+  return (
+    <AppearanceSettingsProvider>
+      <SearchPalette
+        isOpen={!previewResult}
+        nodeOrder={[]}
+        nodesById={nodesById}
+        onClose={() => undefined}
+        onOpenResult={(result, options) => {
+          if (options?.preview) {
+            setPreviewResult(result);
+          }
+        }}
+        trashedNodeIds={[]}
+      />
+      <SearchResultPreviewPanel
+        nodesById={nodesById}
+        onClose={() => setPreviewResult(null)}
+        onOpenResult={() => undefined}
+        result={previewResult}
+      />
+    </AppearanceSettingsProvider>
+  );
+}
+
 it('opens external search hits in the popup preview panel instead of the workspace body surface', async () => {
+  window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   const invoke = createExternalSearchRuntimeInvoke();
-  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  window.electronAPI = {
+    invoke: invoke as ElectronAPI['invoke'],
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
 
-  render(<App />);
+  render(<ExternalSearchPreviewSmoke nodesById={{}} />);
 
-  fireEvent.keyDown(window, { ctrlKey: true, key: 'k' });
   const dialog = screen.getByRole('dialog', { name: 'Workspace search' });
   const input = within(dialog).getByLabelText('Search workspace');
 
   fireEvent.change(input, { target: { value: 'Atlas' } });
 
   const resultButton = await within(dialog).findByRole('button', { name: /Atlas External/i });
-  fireEvent.click(resultButton);
+  fireEvent.click(resultButton, { shiftKey: true });
 
   await waitFor(() => {
-    expect(screen.getByLabelText('External document preview panel')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Search result preview' })).toBeInTheDocument();
   });
   await waitFor(() => {
     expect(screen.getByDisplayValue('# Atlas external preview')).toBeInTheDocument();

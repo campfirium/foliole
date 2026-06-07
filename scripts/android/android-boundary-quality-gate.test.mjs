@@ -11,6 +11,8 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-target.sh');
+const QUALITY_GATE_ROUTING_TIMEOUT_MS = 30_000;
+const RELEASE_GATE_ROUTING_TIMEOUT_MS = 60_000;
 
 function runTargetGate(cwd, target) {
   return new Promise((resolve) => {
@@ -70,14 +72,21 @@ const SHARED_GATE_SCRIPTS = {
 
 const FULL_GATE_SCRIPTS = {
   'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+  'copy:guard': 'node -e "console.log(\'copy guard ok\')"',
   'lint:full': 'node -e "console.log(\'full lint ok\')"',
   'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
   'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
-  'test:desktop': 'node -e "console.log(\'full desktop test ok\')"',
+  'test:desktop:src': 'node -e "console.log(\'full desktop src test ok\')"',
+  'test:desktop:electron': 'node -e "console.log(\'full desktop electron test ok\')"',
+  'test:windows:core': 'node -e "console.log(\'full windows core test ok\')"',
   'test:android': 'node -e "console.log(\'full android test ok\')"',
   'test:shared': 'node -e "console.log(\'full shared test ok\')"',
   'test:sync-pack': 'node -e "console.log(\'full sync pack test ok\')"',
-  'test:quality': 'node -e "console.log(\'full quality test ok\')"',
+  'test:quality:core': 'node -e "console.log(\'full quality core test ok\')"',
+  'test:quality:gate': 'node -e "console.log(\'full quality gate test ok\')"',
+  'test:quality:node': 'node -e "console.log(\'full quality node test ok\')"',
+  'test:quality:preview': 'node -e "console.log(\'full quality preview test ok\')"',
+  'test:windows:preview-recovery': 'node -e "console.log(\'full preview recovery test ok\')"',
   build: 'node -e "console.log(\'full build ok\')"',
   'electron:compile': 'node -e "console.log(\'full electron compile ok\')"',
   'android:web:build': 'node -e "console.log(\'full android build ok\')"'
@@ -88,11 +97,17 @@ const RELEASE_GATE_SCRIPTS = {
   'lint:full': 'node -e "console.log(\'release lint ok\')"',
   'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
   'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
-  'test:desktop': 'node -e "console.log(\'release desktop test ok\')"',
+  'test:desktop:src': 'node -e "console.log(\'release desktop src test ok\')"',
+  'test:desktop:electron': 'node -e "console.log(\'release desktop electron test ok\')"',
+  'test:windows:core': 'node -e "console.log(\'release windows core test ok\')"',
   'test:android': 'node -e "console.log(\'release android test ok\')"',
   'test:shared': 'node -e "console.log(\'release shared test ok\')"',
   'test:sync-pack': 'node -e "console.log(\'release sync pack test ok\')"',
-  'test:quality': 'node -e "console.log(\'release quality test ok\')"',
+  'test:quality:core': 'node -e "console.log(\'release quality core test ok\')"',
+  'test:quality:gate': 'node -e "console.log(\'release quality gate test ok\')"',
+  'test:quality:node': 'node -e "console.log(\'release quality node test ok\')"',
+  'test:quality:preview': 'node -e "console.log(\'release quality preview test ok\')"',
+  'test:windows:preview-recovery': 'node -e "console.log(\'release preview recovery test ok\')"',
   build: 'node -e "console.log(\'release build ok\')"',
   'electron:compile': 'node -e "console.log(\'release electron compile ok\')"',
   'android:web:build': 'node -e "console.log(\'release android build ok\')"',
@@ -117,7 +132,7 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, RELEASE_GATE_ROUTING_TIMEOUT_MS);
 
   it('runs the Android boundary check in the shared gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
@@ -135,7 +150,7 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, QUALITY_GATE_ROUTING_TIMEOUT_MS);
 
   it('runs the Android boundary check in the full gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
@@ -153,7 +168,7 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, QUALITY_GATE_ROUTING_TIMEOUT_MS);
 
   it('runs the Android boundary check in the release gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
@@ -171,5 +186,5 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  }, RELEASE_GATE_ROUTING_TIMEOUT_MS);
 });

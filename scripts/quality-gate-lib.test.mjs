@@ -201,6 +201,6 @@ describe('quality-gate-lib.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
 });

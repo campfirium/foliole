@@ -19,6 +19,7 @@ import { SettingsGeneralSection } from './SettingsGeneralSection';
 beforeEach(() => {
   vi.mocked(copyDiagnosticReport).mockReset();
   window.localStorage.clear();
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'en');
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
     value: { writeText: vi.fn().mockResolvedValue(undefined) }
@@ -99,7 +100,7 @@ it('shows release notes for the available update in About settings', async () =>
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: {
       releases: [
-        { date: '2026-06-01', platforms: ['windows'], url: 'https://example.com/062', version: '0.6.2' }
+        { date: '2026-06-01', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.6.2', version: '0.6.2' }
       ],
       schemaVersion: 1
     },
@@ -131,7 +132,7 @@ it('shows release notes for the available update in About settings', async () =>
     lastCheckedAt: '2026-06-01T00:00:00.000Z',
     lastCheckStatus: 'available',
     lastSeenVersion: '0.6.2',
-    latestReleaseUrl: 'https://example.com/062',
+    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.6.2',
     latestVersion: '0.6.2'
   }));
 
@@ -153,7 +154,7 @@ it('shows release notes in Simplified Chinese', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: {
       releases: [
-        { date: '2026-06-01', platforms: ['windows'], url: 'https://example.com/062', version: '0.6.2' }
+        { date: '2026-06-01', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.6.2', version: '0.6.2' }
       ],
       schemaVersion: 1
     },
@@ -174,7 +175,7 @@ it('shows release notes in Simplified Chinese', async () => {
     lastCheckedAt: '2026-06-01T00:00:00.000Z',
     lastCheckStatus: 'available',
     lastSeenVersion: '0.6.2',
-    latestReleaseUrl: 'https://example.com/062',
+    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.6.2',
     latestVersion: '0.6.2'
   }));
 

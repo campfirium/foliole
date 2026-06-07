@@ -6,7 +6,7 @@ import './app-smoke.shared';
 import { App } from '../app/App';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-it('leaves editor focus with Escape before Delete sends the current article to trash', async () => {
+it('keeps Delete reserved while the editor is focused and sends the current article to trash after focus leaves', async () => {
   render(<App />);
 
   const editor = screen.getByTestId('editor-value');
@@ -15,21 +15,14 @@ it('leaves editor focus with Escape before Delete sends the current article to t
   fireEvent.keyDown(editor, { code: 'Delete', key: 'Delete' });
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-1');
 
-  const stopEscapePropagation = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-    }
-  };
-  editor.addEventListener('keydown', stopEscapePropagation);
-  fireEvent.keyDown(editor, { key: 'Escape' });
-  editor.removeEventListener('keydown', stopEscapePropagation);
+  editor.blur();
+  fireEvent.focusOut(editor);
   await waitFor(() => {
     expect(document.activeElement).not.toBe(editor);
   });
 
-  fireEvent.keyDown(window, { code: 'Delete', key: 'Delete' });
-
   await waitFor(() => {
+    fireEvent.keyDown(window, { code: 'Delete', key: 'Delete' });
     expect(useWorkspaceStore.getState().trashedNodeIds).toContain('node-1');
   });
 });

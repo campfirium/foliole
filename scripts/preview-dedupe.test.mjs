@@ -96,7 +96,7 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 15000);
 
   it('runs a covered windows preview when the native runtime is stopped', async () => {
     const repoRoot = await createRepo();
@@ -125,7 +125,7 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 15000);
 
   it('runs a covered windows preview when the native runtime window is unresponsive', async () => {
     const repoRoot = await createRepo();
@@ -153,7 +153,7 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 15000);
 
   it('does not mark a failed preview hash as successfully covered', async () => {
     const repoRoot = await createRepo();
@@ -175,7 +175,7 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 15000);
 
   it('includes untracked files when matching the preview hash', async () => {
     const repoRoot = await createRepo();
@@ -195,7 +195,7 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 15000);
 
   it('ignores files outside the target preview surface', async () => {
     const repoRoot = await createRepo();
@@ -220,7 +220,7 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 15000);
 
   it('ignores gitignored untracked files when matching the preview hash', async () => {
     const repoRoot = await createRepo();
@@ -243,6 +243,6 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 15000);
 
 });

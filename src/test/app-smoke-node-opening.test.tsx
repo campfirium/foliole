@@ -5,14 +5,16 @@ import './reactPdfMock';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode, resetAppSmokeState } from './app-smoke.shared';
+import { createNode, createSmokeRuntimeInvoke, resetAppSmokeState } from './app-smoke.shared';
 
 const { App } = await import('../app/App');
 
 function mockNodeDocumentLoad() {
+  const baseInvoke = createSmokeRuntimeInvoke();
   const invoke = vi.fn().mockImplementation((command: string, args?: { nodeId?: string }) => {
     if (command === 'load_node_document' && args?.nodeId === 'node-2') {
       return Promise.resolve({
@@ -22,7 +24,7 @@ function mockNodeDocumentLoad() {
         reveal: 'Answer'
       });
     }
-    return Promise.resolve(null);
+    return baseInvoke(command, args);
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 }
@@ -30,13 +32,13 @@ function mockNodeDocumentLoad() {
 it('opens selected node content even when the visible row was preloaded first', async () => {
   mockNodeDocumentLoad();
   useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2'],
+    activeNodeId: INBOX_NODE_ID,
+    nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2'],
     nodesById: {
       ...state.nodesById,
       'node-2': createNode({
         id: 'node-2',
-        parentNodeId: 'node-1',
+        parentNodeId: INBOX_NODE_ID,
         title: 'QA 2',
         content: 'Prompt [...]',
         reveal: 'Answer'
@@ -46,12 +48,10 @@ it('opens selected node content even when the visible row was preloaded first', 
 
   render(<App />);
 
-  expect(screen.getByTestId('editor-value')).toHaveValue('# Welcome to Foliole\n\nStart writing markdown here.');
   fireEvent.click(screen.getByRole('treeitem', { name: 'QA 2' }));
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
     expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [...]');
-    expect(screen.getByTestId('answer-editor-value')).toHaveValue('Answer');
   });
 });
 

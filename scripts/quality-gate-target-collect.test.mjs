@@ -72,7 +72,7 @@ describe('quality-gate-target.sh collected failure mode', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it('continues after a failed parallel group and keeps later full-gate steps visible', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-collect-'));

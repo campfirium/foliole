@@ -6,116 +6,10 @@ import './app-smoke.shared';
 import { App } from '../app/App';
 import type { ElectronAPI } from '../shared/platform/electronApi';
 
+import { createImportedNodeRuntimeInvoke, createSuccessfulImportResult } from './app-smoke-inbox-node.support';
+
 async function getNodeListPanel() {
   return (await screen.findAllByRole('complementary', { name: 'Topic list panel' }))[0]!;
-}
-
-function createImportedWorkspaceSnapshot(title = 'Imported note') {
-  return {
-    activeNodeId: 'special-inbox',
-    nodeOrder: ['special-inbox', 'node-imported'],
-    nodesById: {
-      'special-inbox': {
-        id: 'special-inbox',
-        parentNodeId: null,
-        kind: 'folder',
-        specialKind: 'inbox',
-        title: 'Inbox',
-        isTitleManual: true,
-        hideTitleHeading: false,
-        content: '',
-        hasContent: false,
-        reveal: null,
-        hasReveal: false,
-        anchorLink: null,
-        reading: null,
-        review: null,
-        createdAt: '2026-03-22T09:55:00.000Z',
-        updatedAt: '2026-03-22T09:55:00.000Z'
-      },
-      'node-imported': {
-        id: 'node-imported',
-        parentNodeId: 'special-inbox',
-        kind: 'topic',
-        title,
-        isTitleManual: true,
-        hideTitleHeading: false,
-        content: '',
-        hasContent: false,
-        reveal: null,
-        hasReveal: false,
-        anchorLink: null,
-        reading: null,
-        review: null,
-        createdAt: '2026-03-22T10:00:00.000Z',
-        updatedAt: '2026-03-22T10:00:00.000Z'
-      }
-    },
-    trashedNodeIds: []
-  };
-}
-
-function createSuccessfulImportResult(overrides?: Partial<Record<string, unknown>>) {
-  return {
-    content_fingerprint: 'content-success',
-    degraded_reason: null,
-    duplicate_semantic: 'new',
-    failure_reason: null,
-    import_id: 'import-2',
-    imported_at: '2026-03-22T10:00:00.000Z',
-    node_id: 'node-imported',
-    provider: 'desktop_text_file',
-    result_status: 'imported',
-    source_fingerprint: 'source-fingerprint-2',
-    source_kind: 'markdown',
-    source_locator: '/tmp/imported-note.md',
-    source_name: 'imported-note.md',
-    ...overrides
-  };
-}
-
-function createSuccessfulImportOverview(result = createSuccessfulImportResult()) {
-  return {
-    latest_failure: null,
-    latest_result: result,
-    recent_runs: []
-  };
-}
-
-function createImportedNodeRuntimeInvoke(options?: {
-  importedNodeTitle?: string;
-  importResult?: ReturnType<typeof createSuccessfulImportResult>;
-}): ElectronAPI['invoke'] {
-  const importResult = options?.importResult ?? createSuccessfulImportResult();
-  const workspaceSnapshot = createImportedWorkspaceSnapshot(options?.importedNodeTitle);
-  return vi.fn(async (...args: [string, Record<string, unknown>?]) => {
-    const [command, payload] = args;
-    if (command === 'load_workspace_list_snapshot') {
-      return workspaceSnapshot;
-    }
-    if (command === 'load_reading_progress') {
-      return {
-        activeNodeId: 'special-inbox',
-        nodeViewStateById: {}
-      };
-    }
-    if (command === 'load_node_document' && payload?.nodeId === 'special-inbox') {
-      return {
-        nodeId: 'special-inbox',
-        kind: 'folder',
-        content: '',
-        hideTitleHeading: false,
-        reveal: null
-      };
-    }
-    if (command === 'run_text_file_import') {
-      return importResult;
-    }
-    if (command === 'load_import_overview') {
-      return createSuccessfulImportOverview(importResult);
-    }
-    return null;
-  });
 }
 
 it('shows Inbox in the node tree and opens the folder list surface', async () => {
@@ -158,8 +52,16 @@ it('shows import and clipboard import actions in the left toolbar without Watch 
 });
 
 it('routes import from the left toolbar through the runtime bridge', async () => {
-  const invoke: ElectronAPI['invoke'] = vi.fn(async (...args: [string, Record<string, unknown>?]) => {
+  const invoke = vi.fn(async (...args: [string, Record<string, unknown>?]) => {
     const [command] = args;
+    if (command === 'select_import_text_file') {
+      return {
+        content: '# Note',
+        file_name: 'note.md',
+        file_path: '/tmp/note.md',
+        kind: 'markdown'
+      };
+    }
     if (command === 'run_text_file_import') {
       return {
         content_fingerprint: 'content-success',
@@ -184,10 +86,16 @@ it('routes import from the left toolbar through the runtime bridge', async () =>
         recent_runs: []
       };
     }
+    if (command === 'load_node_backlinks') {
+      return [];
+    }
+    if (command === 'load_readwise_books_inventory') {
+      return { books: [] };
+    }
     return null;
   });
   window.electronAPI = {
-    invoke,
+    invoke: invoke as ElectronAPI['invoke'],
     onManagedInboxUpdated: () => () => undefined,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
@@ -198,7 +106,7 @@ it('routes import from the left toolbar through the runtime bridge', async () =>
   fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 
   await waitFor(() => {
-    expect(invoke).toHaveBeenCalledWith('run_text_file_import', {});
+    expect(invoke.mock.calls.some(([command, payload]) => command === 'run_text_file_import' && payload?.file_path === '/tmp/note.md')).toBe(true);
   });
 });
 
@@ -217,7 +125,7 @@ it('shows a newly imported inbox child immediately after import without restarti
   fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 
   await waitFor(() => {
-    expect(screen.getByRole('treeitem', { name: 'Imported note' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Imported note' })).toBeInTheDocument();
   });
 });
 
@@ -244,7 +152,7 @@ it('shows the imported PDF node in Inbox after manual import', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 
   await waitFor(() => {
-    expect(screen.getByRole('treeitem', { name: 'Imported PDF' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Imported PDF' })).toBeInTheDocument();
   });
 });
 

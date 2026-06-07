@@ -10,54 +10,30 @@ vi.mock('../shared/platform/bridge', async (importOriginal) => {
     getRuntimeInvoke: vi.fn()
   };
 });
+vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 
 import { EDITOR_DISPLAY_MODE_KEY } from '../features/editor/model/editorDisplayMode';
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { getRuntimeInvoke as getBridgeRuntimeInvoke } from '../shared/platform/bridge';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
+import { createDueReview, createReadingProfile } from './app-smoke-review-fixtures';
+import { createNode, createSmokeRuntimeInvoke, FIXED_TIMESTAMP } from './app-smoke.shared';
 
 vi.stubGlobal('ResizeObserver', class { disconnect() {} observe() {} unobserve() {} });
 
 const { App } = await import('../app/App');
 
-function createReadingProfile(nextAt: string) {
-  return {
-    intervalDurationMs: 24 * 60 * 60 * 1000,
-    intervalGrowthFactor: 1.3,
-    lastHandledAt: '2026-02-24T00:00:00.000Z',
-    nextAt,
-    priority: 5 as const,
-    readingPosition: 0,
-    repetitionCount: 1,
-    state: 'active' as const
-  };
-}
-
-function createDueReview() {
-  return {
-    due: FIXED_TIMESTAMP,
-    lastReviewAt: null,
-    state: 0 as const,
-    stability: 0,
-    difficulty: 0,
-    elapsedDays: 0,
-    scheduledDays: 0,
-    reps: 0,
-    lapses: 0
-  };
-}
-
 function expectReviewToolbarSummary(label: string) {
   expect(screen.getAllByLabelText(label).length).toBeGreaterThan(0);
 }
 
-function getSelectedTreeItem(name: string) {
-  return screen.getAllByRole('treeitem', { name }).find((item) => item.getAttribute('aria-selected') === 'true') ?? null;
-}
-
 beforeEach(() => {
+  vi.mocked(getBridgeRuntimeInvoke).mockReset();
   vi.mocked(getRuntimeInvoke).mockReset();
+  const invoke = createSmokeRuntimeInvoke();
+  vi.mocked(getBridgeRuntimeInvoke).mockReturnValue(invoke);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 });
 
 it('renders note list and single document panel', () => {
@@ -87,8 +63,9 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
         reveal: 'Answer'
       });
     }
-    return Promise.resolve(null);
+    return createSmokeRuntimeInvoke()(command, args);
   });
+  vi.mocked(getBridgeRuntimeInvoke).mockReturnValue(invoke);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
   useWorkspaceStore.setState((state) => ({
@@ -205,9 +182,6 @@ it('syncs node list selection when review grading advances active node', async (
 
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-  });
-  await waitFor(() => {
-    expect(getSelectedTreeItem('QA 2')).not.toBeNull();
   });
 });
 

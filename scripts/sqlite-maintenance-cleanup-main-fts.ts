@@ -14,6 +14,10 @@ const DEFAULT_LIVE_DATABASE_PATHS = [
   '/mnt/d/X/U/Foliole/Data/foliole.db',
   'D:\\X\\U\\Foliole\\Data\\foliole.db'
 ];
+const LIVE_DATABASE_CONFIRMATION_FLAGS = [
+  'i-understand-live-database',
+  'i-have-current-backup'
+];
 
 interface OperatorSnapshotResult {
   destinationPath: string;
@@ -25,10 +29,10 @@ export function runCleanupMainFts(dbPath: string, flags: Map<string, string | tr
   const resolvedDbPath = path.resolve(dbPath);
   const apply = flags.get('apply') === true;
 
-  if (apply && isDefaultLiveDatabasePath(dbPath, resolvedDbPath) && flags.get('i-understand-live-database') !== true) {
+  if (apply && isDefaultLiveDatabasePath(dbPath, resolvedDbPath) && hasMissingLiveDatabaseConfirmation(flags)) {
     writeCleanupMainFtsError({
       dbPath: resolvedDbPath,
-      message: 'refusing to clean the default live Foliole database without --i-understand-live-database',
+      message: 'refusing to clean the default live Foliole database without --i-understand-live-database and --i-have-current-backup',
       mode: 'apply',
       status: 'refused-live-database'
     });
@@ -53,6 +57,10 @@ export function runCleanupMainFts(dbPath: string, flags: Map<string, string | tr
     });
     process.exitCode = 1;
   }
+}
+
+function hasMissingLiveDatabaseConfirmation(flags: Map<string, string | true>) {
+  return LIVE_DATABASE_CONFIRMATION_FLAGS.some((flagName) => flags.get(flagName) !== true);
 }
 
 function runCleanupMainFtsDryRun(dbPath: string) {

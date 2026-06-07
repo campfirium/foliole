@@ -5,34 +5,12 @@ import './app-smoke.shared';
 
 import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
-import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
+import { createTextAnchorLink, mockMoveRuntime } from './app-smoke-navigation.support';
 import { createNode, getCurrentFolderPanel, getCurrentFolderTreeItem, getTopicListPanel } from './app-smoke.shared';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
-
-function mockMoveRuntime() {
-  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(async (command, args?: unknown) => {
-    if (command === 'move_nodes') {
-      const payload = args as { nodeOrder: string[]; nodes: Array<{ nodeId: string }> };
-      return { movedNodeIds: payload.nodes.map((node) => node.nodeId), nodeOrder: payload.nodeOrder };
-    }
-    return null;
-  }));
-}
-
-function createTextAnchorLink(id: string, originalText: string, from: number) {
-  return {
-    id,
-    kind: 'highlight' as const,
-    locator: {
-      from,
-      originalText,
-      to: from + originalText.length
-    }
-  };
-}
 
 it('supports ctrl/cmd multi-select and shift range select in node list', async () => {
   useWorkspaceStore.setState((state) => ({
@@ -199,7 +177,7 @@ it('renders breadcrumbs in document header and jumps to ancestor node', async ()
 
   render(<App />);
 
-  const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
+  const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
   const parentCrumb = within(nav).getByRole('button', { name: /Pa/ });
   expect(parentCrumb).toBeInTheDocument();
   fireEvent.click(parentCrumb);
@@ -234,15 +212,16 @@ it('supports toolbar parent and navigation history actions', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Go to parent' }));
+  const documentNavigationActions = screen.getAllByRole('group', { name: 'Document navigation actions' })[0]!;
+  fireEvent.click(within(documentNavigationActions).getByRole('button', { name: 'Go to parent' }));
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+  fireEvent.click(within(documentNavigationActions).getByRole('button', { name: 'Go back' }));
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Go forward' }));
+  fireEvent.click(within(documentNavigationActions).getByRole('button', { name: 'Go forward' }));
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   });

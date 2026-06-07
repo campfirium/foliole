@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
-import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 function createTopicFromHeaderMenu() {
@@ -13,7 +13,20 @@ function createTopicFromHeaderMenu() {
 
 function findCreatedNoteId() {
   const workspace = useWorkspaceStore.getState();
-  return workspace.nodeOrder.find((nodeId) => ![INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'node-1'].includes(nodeId));
+  return workspace.nodeOrder.find((nodeId) => {
+    const node = workspace.nodesById[nodeId];
+    return node?.parentNodeId === INBOX_NODE_ID && node.id !== 'node-1' && node.title.startsWith('Untitled');
+  });
+}
+
+function getCreatedUntitledTitles() {
+  const workspace = useWorkspaceStore.getState();
+  return workspace.nodeOrder
+    .map((nodeId) => workspace.nodesById[nodeId])
+    .filter((node): node is NonNullable<typeof node> =>
+      Boolean(node?.parentNodeId === INBOX_NODE_ID && node.title.startsWith('Untitled'))
+    )
+    .map((node) => node.title);
 }
 
 function keepOnlyInboxWithoutActiveNode() {
@@ -52,50 +65,55 @@ it('shows the document empty state when no note is selected', () => {
   expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
 });
 
-it('creates a new empty note from node panel action', () => {
+it('creates a new empty note from node panel action', async () => {
   const initialNodeOrder = [...useWorkspaceStore.getState().nodeOrder];
 
   render(<App />);
   createTopicFromHeaderMenu();
 
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().nodeOrder).toHaveLength(initialNodeOrder.length + 1);
+  });
   const workspace = useWorkspaceStore.getState();
   expect(workspace.activeNodeId).toBeTruthy();
   if (!workspace.activeNodeId) {
     throw new Error('expected active node to be created');
   }
-  expect(workspace.nodeOrder).toHaveLength(initialNodeOrder.length + 1);
   expect(workspace.nodesById[workspace.activeNodeId]?.content).toBe('');
   expect(workspace.nodesById[workspace.activeNodeId]?.parentNodeId).toBe(INBOX_NODE_ID);
   expect(workspace.nodesById[workspace.activeNodeId]?.title).toBe('Untitled');
 });
 
-it('increments Untitled titles when creating multiple empty notes', () => {
+it('increments Untitled titles when creating multiple empty notes', async () => {
   render(<App />);
   createTopicFromHeaderMenu();
+  await waitFor(() => {
+    expect(getCreatedUntitledTitles()).toHaveLength(1);
+  });
   createTopicFromHeaderMenu();
 
-  const titles = useWorkspaceStore
-    .getState()
-    .nodeOrder
-    .filter((nodeId) => ![INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID].includes(nodeId))
-    .map((nodeId) => useWorkspaceStore.getState().nodesById[nodeId]?.title);
-  const untitledTitles = titles.filter((title): title is string => title?.startsWith('Untitled') ?? false);
+  await waitFor(() => {
+    expect(getCreatedUntitledTitles()).toHaveLength(2);
+  });
+  const untitledTitles = getCreatedUntitledTitles();
 
-  expect(untitledTitles).toHaveLength(2);
   expect(untitledTitles).toEqual(expect.arrayContaining(['Untitled', 'Untitled 1']));
 });
 
 it('keeps first note content unchanged when editing a newly created note', async () => {
   render(<App />);
   createTopicFromHeaderMenu();
+  await waitFor(() => expect(findCreatedNoteId()).toBeTruthy());
   const firstNodeId = findCreatedNoteId();
   if (!firstNodeId) {
     throw new Error('expected first created node');
   }
   createTopicFromHeaderMenu();
 
-  const workspaceAfterCreate = useWorkspaceStore.getState();
-  const newNodeId = workspaceAfterCreate.activeNodeId;
+  await waitFor(() => {
+    expect(getCreatedUntitledTitles()).toHaveLength(2);
+  });
+  const newNodeId = useWorkspaceStore.getState().activeNodeId;
   expect(newNodeId).toBeTruthy();
   if (!newNodeId) {
     throw new Error('expected new active node');
@@ -117,10 +135,10 @@ it('keeps first note content unchanged when editing a newly created note', async
   });
 });
 
-it('preserves a manual title after content edits', () => {
+it('preserves a manual title after content edits', async () => {
   render(<App />);
 
-  useWorkspaceStore.getState().updateNodeTitle('node-1', 'Manual Article Title');
+  await useWorkspaceStore.getState().updateNodeTitle('node-1', 'Manual Article Title');
 
   expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Article Title');
 

@@ -23,7 +23,7 @@ it('shows only folder creation in the folder panel context menu', () => {
   const tree = within(getTopicListPanel()).getByRole('tree', { name: 'Topic list' });
   fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
 
-  expect(screen.getByRole('menuitem', { name: 'Create Folder' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Create folder' })).toBeInTheDocument();
   expect(screen.queryByRole('menuitem', { name: 'Create Topic' })).toBeNull();
   expect(screen.queryByRole('menuitem', { name: 'Create Item' })).toBeNull();
 });
@@ -42,7 +42,7 @@ it('shows only topic and item creation in the current folder context menu', () =
   const tree = within(getCurrentFolderPanel()).getByRole('tree');
   fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
 
-  expect(screen.queryByRole('menuitem', { name: 'Create Folder' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Create folder' })).toBeNull();
   expect(screen.getByRole('menuitem', { name: 'Create Topic' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Create Item' })).toBeInTheDocument();
 });

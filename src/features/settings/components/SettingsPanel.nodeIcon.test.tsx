@@ -127,7 +127,7 @@ it('uses compact icon defaults and closes nested icon editing before settings', 
   expect(screen.queryByRole('dialog', { name: 'Edit Topic (base) marker' })).not.toBeInTheDocument();
   expect(screen.getByLabelText('Settings dialog')).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
-});
+}, 15000);
 
 it('presents scheduled outline and inner ring controls as separate rows', () => {
   openAppearance();

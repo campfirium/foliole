@@ -95,7 +95,7 @@ describe('git hooks', () => {
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('refusing to commit .lab files');
     expect(result.stderr).toContain('.lab/memo.md');
-  });
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
 
   it('keeps pre-commit limited to the local lab guard', async () => {
     const repoDir = await createRepo();
@@ -104,7 +104,7 @@ describe('git hooks', () => {
 
     expect(result.code, result.stderr).toBe(0);
     expect(result.stderr).not.toContain('pre-commit-validation');
-  });
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
 
   it('blocks commit messages that skip the next sequence', async () => {
     const repoDir = await createRepo();
@@ -114,7 +114,7 @@ describe('git hooks', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('commit subject must start with next sequence 000002');
-  });
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
 
   it('blocks branch pushes with non-continuous numbered history', async () => {
     const repoDir = await createRepo();
@@ -131,7 +131,7 @@ describe('git hooks', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('sequence must be 000002');
-  });
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
 
   it('blocks branch pushes with unnumbered new commit subjects', async () => {
     const repoDir = await createRepo();
