@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { translate } from '../../../shared/localization/translations';
+import { preloadTranslationCatalog, translate } from '../../../shared/localization/translations';
 
 import {
   applyEditorOperationHistory,
@@ -12,6 +12,10 @@ import {
 } from './editorOperationHistory';
 
 const t = translate.bind(null, 'en');
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+});
 
 function createTextEntry(
   nodeId: string,

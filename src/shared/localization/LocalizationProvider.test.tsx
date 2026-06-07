@@ -27,6 +27,7 @@ function TranslationHarness() {
 }
 
 beforeAll(async () => {
+  await preloadTranslationCatalog('en');
   await preloadTranslationCatalog('zh-Hans');
 });
 

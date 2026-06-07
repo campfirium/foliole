@@ -10,6 +10,7 @@ const t = translate.bind(null, 'en');
 const zhHans = translate.bind(null, 'zh-Hans');
 
 beforeAll(async () => {
+  await preloadTranslationCatalog('en');
   await preloadTranslationCatalog('zh-Hans');
 });
 

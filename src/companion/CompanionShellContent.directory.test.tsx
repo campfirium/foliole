@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { translate } from '../shared/localization/translations';
+import { preloadTranslationCatalog, translate } from '../shared/localization/translations';
 
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+});
 
 function createSurface() {
   return {

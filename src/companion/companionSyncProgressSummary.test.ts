@@ -1,10 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
-import { translate } from '../shared/localization/translations';
+import { preloadTranslationCatalog, translate } from '../shared/localization/translations';
 
 import { formatCompanionSyncProgressSummary } from './companionSyncProgressSummary';
 
 const t = translate.bind(null, 'en');
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+});
 
 function expectReviewQueueBodyProgressAfterActiveTopic() {
   const summary = formatCompanionSyncProgressSummary({

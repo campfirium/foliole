@@ -1,11 +1,17 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
+import { preloadTranslationCatalog } from '../../../shared/localization/translations';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 import { SETTINGS_SEARCH_ROWS } from './settingsSearchRows';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+  await preloadTranslationCatalog('zh-Hans');
+});
 
 beforeEach(() => {
   window.localStorage.clear();

@@ -1,4 +1,3 @@
-import { EN_TRANSLATIONS } from '../../../shared/localization/locales/en';
 import type { TranslationKey } from '../../../shared/localization/translations';
 
 import type { SettingsCategoryId } from './settingsPanelOptions';
@@ -77,6 +76,4 @@ export function createSettingsSearchRows(t: Translate): SettingsSearchRowMeta[] 
   });
 }
 
-const ENGLISH_SETTINGS_SEARCH_ROWS = createSettingsSearchRows((key) => EN_TRANSLATIONS[key]);
-
-export const SETTINGS_SEARCH_ROWS = ENGLISH_SETTINGS_SEARCH_ROWS;
+export const SETTINGS_SEARCH_ROWS = createSettingsSearchRows((key) => key);
