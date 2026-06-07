@@ -1,8 +1,11 @@
 import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
+import { loadExternalSourceSettingsFolders } from '../../shared/platform/externalSourceSettingsRepository';
+import { loadRuntimeLibraryPathSettings } from '../../shared/platform/libraryPathsRuntimeRepository';
 import { requestAppConfirmation } from '../../shared/ui';
 
 import { useKeepPreviewDialog } from './importSourceWorkspaceDialogs';
+import { loadImportSourceWorkspaceSettings } from './importSourceWorkspaceSettings';
 import { KeepImportPreviewDialog } from './KeepImportPreviewDialog';
 import { SettingsImportManagementContent } from './SettingsImportManagementContent';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
@@ -16,6 +19,14 @@ interface WorkspaceSettingsOverlayContentProps {
 
 type ImportSettingsState = ReturnType<typeof useImportSourceWorkspaceState>;
 type KeepPreviewState = ReturnType<typeof useKeepPreviewDialog>;
+
+export async function prewarmWorkspaceSettingsOverlayContent() {
+  await Promise.allSettled([
+    loadImportSourceWorkspaceSettings(),
+    loadRuntimeLibraryPathSettings(),
+    loadExternalSourceSettingsFolders()
+  ]);
+}
 
 export function WorkspaceSettingsOverlayContent({
   onClose,

@@ -1,51 +1,23 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
 import { installWorkspaceDebugBridge } from '../shared/diagnostics/workspaceDebugBridge';
-import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
 import { AppProviders } from './AppProviders';
-import { CompanionPairingRequestsDialog } from './components/CompanionPairingRequestsDialog';
-import { EpubImportReleaseModeDialog } from './components/EpubImportReleaseModeDialog';
+import { AppOverlayStack } from './components/AppOverlayStack';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import type { WorkspaceSearchResult } from './components/workspaceSearch';
+import { prewarmWorkspaceSettingsOverlay } from './components/WorkspaceSettingsOverlay';
 import { useAppController } from './hooks/useAppController';
 import { useReadwiseAutoSync } from './hooks/useReadwiseAutoSync';
 import { useReleaseUpdateCheck } from './hooks/useReleaseUpdateCheck';
 import { useWorkspaceContentChangedRefresh, useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
 
-type AppController = ReturnType<typeof useAppController>;
-
-const CommandPalette = lazy(() =>
-  import('./components/CommandPalette').then((module) => ({ default: module.CommandPalette }))
-);
-const GoToNodePalette = lazy(() =>
-  import('./components/GoToNodePalette').then((module) => ({ default: module.GoToNodePalette }))
-);
-const HelpSearch = lazy(() =>
-  import('./components/HelpSearch').then((module) => ({ default: module.HelpSearch }))
-);
-const ReviewSourceTopicDeleteDialog = lazy(() =>
-  import('./components/ReviewSourceTopicDeleteDialog').then((module) => ({
-    default: module.ReviewSourceTopicDeleteDialog
-  }))
-);
-const ReviewTopicDelayPanel = lazy(() =>
-  import('./components/ReviewTopicDelayPanel').then((module) => ({
-    default: module.ReviewTopicDelayPanel
-  }))
-);
-const SearchPalette = lazy(() =>
-  import('./components/SearchPalette').then((module) => ({ default: module.SearchPalette }))
-);
-const SearchResultPreviewPanel = lazy(() =>
-  import('./components/SearchResultPreviewPanel').then((module) => ({ default: module.SearchResultPreviewPanel }))
-);
-
 function AppContent() {
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isHelpSearchOpen, setIsHelpSearchOpen] = useState(false);
   const [searchPreviewResult, setSearchPreviewResult] = useState<WorkspaceSearchResult | null>(null);
   const handleOpenSearchPreview = useCallback((result: WorkspaceSearchResult) => {
@@ -53,7 +25,8 @@ function AppContent() {
   }, []);
   const controller = useAppController({
     onOpenHelpSearch: () => setIsHelpSearchOpen(true),
-    onOpenSearchPreview: handleOpenSearchPreview
+    onOpenSearchPreview: handleOpenSearchPreview,
+    onSendFeedback: () => setIsFeedbackOpen(true)
   });
   useWorkspaceSyncAppliedRefresh();
   useWorkspaceContentChangedRefresh();
@@ -65,6 +38,7 @@ function AppContent() {
     readPerformanceDiagnosticsProbe();
   }, []);
   useReportAppReadyWhenHydrated(controller.layoutProps.layoutChrome.isWorkspaceHydrated);
+  usePrewarmSettingsAfterReady(controller.layoutProps.layoutChrome.isWorkspaceHydrated);
 
   const workspaceLayoutProps = {
     ...controller.layoutProps,
@@ -78,9 +52,11 @@ function AppContent() {
     <HotkeySettingsProvider {...controller.hotkeySettings}>
       <>
         <WorkspaceLayout {...workspaceLayoutProps} />
-        <AppOverlays
+        <AppOverlayStack
           controller={controller}
+          isFeedbackOpen={isFeedbackOpen}
           isHelpSearchOpen={isHelpSearchOpen}
+          onCloseFeedback={() => setIsFeedbackOpen(false)}
           onCloseHelpSearch={() => setIsHelpSearchOpen(false)}
           onCloseSearchPreview={() => setSearchPreviewResult(null)}
           searchPreviewResult={searchPreviewResult}
@@ -134,64 +110,24 @@ function useReportAppReadyWhenHydrated(isWorkspaceHydrated?: boolean) {
   }, [isWorkspaceHydrated]);
 }
 
-function AppOverlays({
-  controller,
-  isHelpSearchOpen,
-  onCloseHelpSearch,
-  onCloseSearchPreview,
-  searchPreviewResult
-}: {
-  controller: AppController;
-  isHelpSearchOpen: boolean;
-  onCloseHelpSearch: () => void;
-  onCloseSearchPreview: () => void;
-  searchPreviewResult: WorkspaceSearchResult | null;
-}) {
-  const t = useTranslation();
+function scheduleIdleTask(task: () => void) {
+  if ('requestIdleCallback' in window) {
+    const idleId = window.requestIdleCallback(task, { timeout: 2500 });
+    return () => window.cancelIdleCallback(idleId);
+  }
+  const timeoutId = globalThis.setTimeout(task, 800);
+  return () => globalThis.clearTimeout(timeoutId);
+}
 
-  return (
-    <>
-      <CompanionPairingRequestsDialog />
-      <EpubImportReleaseModeDialog />
-      <Suspense fallback={null}>
-        {controller.paletteState.isOpen ? <CommandPalette {...controller.paletteState} /> : null}
-        {isHelpSearchOpen ? (
-          <HelpSearch
-            isOpen={isHelpSearchOpen}
-            onClose={onCloseHelpSearch}
-          />
-        ) : null}
-        {controller.searchState.isOpen ? <SearchPalette {...controller.searchState} /> : null}
-        {controller.goToNodeState.isOpen ? <GoToNodePalette {...controller.goToNodeState} /> : null}
-        {controller.moveToNodeState.isOpen ? (
-          <GoToNodePalette
-            {...controller.moveToNodeState}
-            dialogLabel={t('desktop.palette.move.dialog')}
-            emptyLabel={t('desktop.palette.move.empty')}
-            inputLabel={t('desktop.palette.move.input')}
-            noResultsLabel={t('desktop.palette.move.noResults')}
-            onSelectNode={controller.moveToNodeState.onOpenNode}
-            placeholder={t('desktop.palette.node.placeholder')}
-          />
-        ) : null}
-        {controller.reviewSourceTopicDeleteDialog.isOpen ? (
-          <ReviewSourceTopicDeleteDialog {...controller.reviewSourceTopicDeleteDialog} />
-        ) : null}
-        {controller.reviewTopicDelayPanel?.isOpen ? <ReviewTopicDelayPanel {...controller.reviewTopicDelayPanel} /> : null}
-        {searchPreviewResult ? (
-          <SearchResultPreviewPanel
-            nodesById={controller.layoutProps.nodeList.nodesById}
-            onClose={onCloseSearchPreview}
-            onOpenResult={(result) => {
-              controller.searchState.onOpenResult(result);
-              onCloseSearchPreview();
-            }}
-            result={searchPreviewResult}
-          />
-        ) : null}
-      </Suspense>
-    </>
-  );
+function usePrewarmSettingsAfterReady(isWorkspaceHydrated?: boolean) {
+  useEffect(() => {
+    if (!isWorkspaceHydrated) {
+      return undefined;
+    }
+    return scheduleIdleTask(() => {
+      void prewarmWorkspaceSettingsOverlay();
+    });
+  }, [isWorkspaceHydrated]);
 }
 
 export function App() {

@@ -5,7 +5,9 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { ElectronAPI } from './electronApi';
 import {
   createDraftExternalSourceFolder,
+  loadExternalSourceSettingsFolders,
   rebuildExternalSourceSettingsIndex,
+  resetExternalSourceSettingsFoldersCacheForTest,
   saveExternalSourceSettingsFolders,
   selectExternalSourceSettingsFolderPath,
   type ExternalSourceSettingsFolder
@@ -45,6 +47,7 @@ function createNativeFolder() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetExternalSourceSettingsFoldersCacheForTest();
   vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
   delete window.electronAPI;
 });
@@ -83,6 +86,22 @@ it('saves external source settings through the native external search command', 
     ]
   });
   expect(result).toEqual([createExternalSourceFolder()]);
+});
+
+it('reuses the first external source settings load for prewarm and open', async () => {
+  const invoke = vi.fn(async (command: string) => (command === NATIVE_COMMANDS.loadExternalSearchFolders ? [createNativeFolder()] : null));
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  const [first, second] = await Promise.all([
+    loadExternalSourceSettingsFolders(),
+    loadExternalSourceSettingsFolders()
+  ]);
+  const third = await loadExternalSourceSettingsFolders();
+
+  expect(first).toEqual([createExternalSourceFolder()]);
+  expect(second).toEqual(first);
+  expect(third).toEqual(first);
+  expect(invoke).toHaveBeenCalledTimes(1);
 });
 
 it('rebuilds external source indexes without changing the command payload shape', async () => {

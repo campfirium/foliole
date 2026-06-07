@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
+import { resetRuntimeLibraryPathSettingsCacheForTest } from './libraryPathSettingsCache';
 import {
   loadRuntimeLibraryPathSettings,
   rebuildRuntimeMirrorAttachmentLinks,
@@ -19,6 +20,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetRuntimeLibraryPathSettingsCacheForTest();
   delete window.electronAPI;
 });
 
@@ -44,6 +46,29 @@ it('loads runtime library paths through the native bridge', async () => {
     updatedAt: '2026-03-30T00:00:00.000Z'
   });
   expect(invoke).toHaveBeenCalledWith('load_library_path_settings');
+});
+
+it('reuses the first runtime library path load for settings prewarm and open', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    assets_dir: '/library/Assets',
+    data_dir: '/library/Data',
+    database_path: '/library/Data/foliole.db',
+    inbox: '/library/Inbox',
+    library_home: '/library',
+    mirror: '/library/Mirror',
+    updated_at: '2026-03-30T00:00:00.000Z'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  const [first, second] = await Promise.all([
+    loadRuntimeLibraryPathSettings(),
+    loadRuntimeLibraryPathSettings()
+  ]);
+  const third = await loadRuntimeLibraryPathSettings();
+
+  expect(first).toEqual(second);
+  expect(third).toEqual(first);
+  expect(invoke).toHaveBeenCalledTimes(1);
 });
 
 it('updates a library path through the native bridge', async () => {

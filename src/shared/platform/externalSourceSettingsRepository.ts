@@ -12,6 +12,14 @@ export type ExternalSourceSettingsFolderPatch = Partial<
   Pick<ExternalSourceSettingsFolder, 'attachmentRootPath' | 'excludedDirs' | 'folderPath'>
 >;
 
+let externalSourceSettingsFoldersCache: ExternalSourceSettingsFolder[] | null | undefined;
+let externalSourceSettingsFoldersLoadPromise: Promise<ExternalSourceSettingsFolder[] | null> | null = null;
+
+export function resetExternalSourceSettingsFoldersCacheForTest() {
+  externalSourceSettingsFoldersCache = undefined;
+  externalSourceSettingsFoldersLoadPromise = null;
+}
+
 export function createDraftExternalSourceFolder(folderPath: string): ExternalSourceSettingsFolder {
   const now = new Date().toISOString();
   return {
@@ -30,15 +38,33 @@ export function createDraftExternalSourceFolder(folderPath: string): ExternalSou
 }
 
 export function loadExternalSourceSettingsFolders() {
-  return loadRuntimeExternalSearchFolders();
+  if (externalSourceSettingsFoldersCache !== undefined) {
+    return Promise.resolve(externalSourceSettingsFoldersCache);
+  }
+  if (externalSourceSettingsFoldersLoadPromise) {
+    return externalSourceSettingsFoldersLoadPromise;
+  }
+  externalSourceSettingsFoldersLoadPromise = loadRuntimeExternalSearchFolders().then((folders) => {
+    externalSourceSettingsFoldersCache = folders;
+    return folders;
+  }).finally(() => {
+    externalSourceSettingsFoldersLoadPromise = null;
+  });
+  return externalSourceSettingsFoldersLoadPromise;
 }
 
 export function saveExternalSourceSettingsFolders(folders: ExternalSourceSettingsFolder[]) {
-  return saveRuntimeExternalSearchFolders(folders);
+  return saveRuntimeExternalSearchFolders(folders).then((saved) => {
+    externalSourceSettingsFoldersCache = saved;
+    return saved;
+  });
 }
 
 export function rebuildExternalSourceSettingsIndex(folderId?: string) {
-  return rebuildRuntimeExternalSearchIndex(folderId);
+  return rebuildRuntimeExternalSearchIndex(folderId).then((folders) => {
+    externalSourceSettingsFoldersCache = folders;
+    return folders;
+  });
 }
 
 export function selectExternalSourceSettingsFolderPath() {

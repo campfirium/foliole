@@ -1,5 +1,6 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
+import { loadCachedRuntimeLibraryPathSettings, setRuntimeLibraryPathSettingsCache } from './libraryPathSettingsCache';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
@@ -119,7 +120,11 @@ function toRuntimeMirrorOutputRebuildResult(payload: unknown): RuntimeMirrorOutp
   };
 }
 
-export async function loadRuntimeLibraryPathSettings(): Promise<RuntimeLibraryPaths | null> {
+export function loadRuntimeLibraryPathSettings(): Promise<RuntimeLibraryPaths | null> {
+  return loadCachedRuntimeLibraryPathSettings(loadRuntimeLibraryPathSettingsFromSource);
+}
+
+async function loadRuntimeLibraryPathSettingsFromSource(): Promise<RuntimeLibraryPaths | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
@@ -172,6 +177,7 @@ export async function updateRuntimeLibraryPathSetting(
     if (!result) {
       throw new Error('native library path payload invalid');
     }
+    setRuntimeLibraryPathSettingsCache(result);
     return result;
   } catch (error) {
     logRuntimeWarning('native library path update failed', {

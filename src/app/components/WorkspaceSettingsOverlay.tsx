@@ -2,9 +2,22 @@ import { Suspense, lazy } from 'react';
 
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 
+function loadWorkspaceSettingsOverlayContent() {
+  return import('./WorkspaceSettingsOverlayContent');
+}
+
 const WorkspaceSettingsOverlayContent = lazy(() =>
-  import('./WorkspaceSettingsOverlayContent').then((module) => ({ default: module.WorkspaceSettingsOverlayContent }))
+  loadWorkspaceSettingsOverlayContent().then((module) => ({ default: module.WorkspaceSettingsOverlayContent }))
 );
+
+let workspaceSettingsOverlayPrewarm: Promise<void> | null = null;
+
+export function prewarmWorkspaceSettingsOverlay() {
+  workspaceSettingsOverlayPrewarm ??= loadWorkspaceSettingsOverlayContent()
+    .then((module) => module.prewarmWorkspaceSettingsOverlayContent())
+    .catch(() => undefined);
+  return workspaceSettingsOverlayPrewarm;
+}
 
 export interface WorkspaceSettingsOverlayProps {
   isSettingsOpen: boolean;
