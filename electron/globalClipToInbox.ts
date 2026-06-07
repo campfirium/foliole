@@ -15,10 +15,11 @@ import {
 import { waitForDatabaseReady } from './database/databaseReadiness.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
+import type { GlobalClipDesktopToast, GlobalClipToastStatus } from './globalClipDesktopToastState.js';
 import { isExistingClipboardFallbackEnabled } from './globalClipSettings.js';
 import { runClipboardImport } from './ipc/importClipboard.js';
 
-const DEFAULT_SHORTCUT = 'Control+Alt+C';
+const DEFAULT_SHORTCUT = 'Alt+Shift+C';
 const COPY_WAIT_TIMEOUT_MS = 700;
 const COPY_POLL_INTERVAL_MS = 50;
 const POWERSHELL_COPY_COMMAND = [
@@ -37,7 +38,7 @@ export interface GlobalClipToInboxDeps {
   runImport?: typeof runClipboardImport;
   sendCopyShortcut?: () => Promise<boolean>;
   shouldImportExistingClipboard?: () => boolean;
-  showDesktopToast?: () => void;
+  showDesktopToast?: (status: GlobalClipToastStatus) => GlobalClipDesktopToast;
   shortcut?: string;
   waitForClipboardChange?: (
     before: ClipboardSnapshot,
@@ -148,31 +149,42 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const waitForReady = deps.waitForReady ?? waitForDatabaseReady;
   const showDesktopToast = deps.showDesktopToast ?? showGlobalClipDesktopToast;
   const before = readClipboardSnapshot(clipboardRef);
+  const toast = showDesktopToast('pending');
   const copySent = await sendCopyShortcut();
   if (!copySent) {
     log('global_clip_copy_not_sent');
+    toast.update('copyFailed');
     return null;
   }
   if (!await waitForChange(before, clipboardRef)) {
     if (!shouldImportExistingClipboard()) {
       log('global_clip_clipboard_unchanged');
+      toast.update('empty');
       return null;
     }
     log('global_clip_importing_existing_clipboard');
   }
-  await waitForReady();
+  try {
+    await waitForReady();
+  } catch (error) {
+    log('global_clip_database_not_ready', { error });
+    toast.update('importFailed');
+    return null;
+  }
   let result: Awaited<ReturnType<typeof runClipboardImport>> | null = null;
   try {
     result = await runImport();
   } catch (error) {
     log('global_clip_import_failed', { error });
+    toast.update('importFailed');
     return null;
   }
   if (!result?.import_id) {
     log('global_clip_import_empty');
+    toast.update('empty');
     return null;
   }
-  showDesktopToast();
+  toast.update('success');
   return result;
 }
 

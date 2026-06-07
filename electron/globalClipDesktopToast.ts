@@ -1,5 +1,13 @@
 import { BrowserWindow, nativeTheme, screen } from 'electron';
 
+import { buildBrandMarkHtml } from './globalClipDesktopToastBrand.js';
+import {
+  resolveToastText,
+  serializeToastState,
+  type GlobalClipDesktopToast,
+  type GlobalClipToastStatus
+} from './globalClipDesktopToastState.js';
+
 const TOAST_DISPLAY_MS = 1800;
 const TOAST_HEIGHT = 64;
 const TOAST_MARGIN = 18;
@@ -97,7 +105,8 @@ function closeToastAfterDisplay(toastWindow: BrowserWindow) {
   }, TOAST_DISPLAY_MS);
 }
 
-function buildToastHtml(theme: GlobalClipToastTheme) {
+function buildToastHtml(theme: GlobalClipToastTheme, status: GlobalClipToastStatus) {
+  const text = resolveToastText(status);
   const html = [
     '<!doctype html>',
     '<meta charset="utf-8">',
@@ -111,19 +120,37 @@ function buildToastHtml(theme: GlobalClipToastTheme) {
     '}',
     'html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI","Microsoft YaHei UI",sans-serif;}',
     'body{display:flex;align-items:center;justify-content:center;padding:0;}',
-    '.toast{box-sizing:border-box;display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:10px;width:100%;height:100%;border:1px solid var(--toast-border);border-radius:8px;background:var(--toast-bg);color:var(--toast-fg);box-shadow:0 12px 28px rgba(0,0,0,.18);font-size:14px;}',
-    '.mark{justify-self:end;width:10px;height:10px;border-radius:999px;background:var(--toast-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--toast-accent) 18%,transparent);}',
+    '.toast{box-sizing:border-box;display:grid;grid-template-columns:18px 1fr 36px;align-items:center;gap:14px;width:100%;height:100%;padding:0 22px;border:1px solid var(--toast-border);border-radius:8px;background:var(--toast-bg);color:var(--toast-fg);box-shadow:0 12px 28px rgba(0,0,0,.18);font-size:14px;}',
+    '.mark{justify-self:center;width:10px;height:10px;border-radius:999px;background:var(--toast-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--toast-accent) 18%,transparent);}',
+    '.toast[data-status="copyFailed"] .mark,.toast[data-status="empty"] .mark,.toast[data-status="importFailed"] .mark{background:var(--toast-muted);box-shadow:0 0 0 3px color-mix(in srgb,var(--toast-muted) 16%,transparent);}',
     '.content{display:grid;gap:2px;min-width:0;}',
     '.title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;line-height:18px;}',
     '.meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--toast-muted);font-size:12px;line-height:16px;}',
-    '.badge{margin-right:14px;border:1px solid color-mix(in srgb,var(--toast-border) 72%,transparent);border-radius:999px;padding:2px 8px;color:var(--toast-muted);font-size:11px;line-height:14px;}',
+    '.brand{display:flex;width:36px;height:36px;align-items:center;justify-content:center;justify-self:center;opacity:.82;}',
+    '.brand img{display:block;width:auto;height:36px;object-fit:contain;}',
+    '.brand-fallback{display:block;width:26px;height:31px;border-radius:9px;background:color-mix(in srgb,var(--toast-accent) 34%,transparent);}',
     '</style>',
-    '<div class="toast" role="status"><span class="mark"></span><span class="content"><span class="title">Clipped to Inbox</span><span class="meta">Ready to process</span></span><span class="badge">Inbox</span></div>'
+    `<div class="toast" data-status="${status}" role="status"><span class="mark"></span><span class="content"><span class="title">${text.title}</span><span class="meta">${text.meta}</span></span><span class="brand">${buildBrandMarkHtml()}</span></div>`
   ].join('');
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
 
-export function showGlobalClipDesktopToast() {
+function buildToastUpdateScript(status: GlobalClipToastStatus) {
+  return `
+    (() => {
+      const state = ${serializeToastState(status)};
+      const toast = document.querySelector('.toast');
+      const title = document.querySelector('.title');
+      const meta = document.querySelector('.meta');
+      if (!toast || !title || !meta) return;
+      toast.dataset.status = state.status;
+      title.textContent = state.title;
+      meta.textContent = state.meta;
+    })()
+  `;
+}
+
+function createToastWindow() {
   const display = screen.getPrimaryDisplay();
   const { x, y, width, height } = display.workArea;
   const toastWindow = new BrowserWindow({
@@ -146,12 +173,43 @@ export function showGlobalClipDesktopToast() {
   });
   toastWindow.setAlwaysOnTop(true, 'screen-saver');
   toastWindow.setIgnoreMouseEvents(true);
+  return toastWindow;
+}
+
+export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'success'): GlobalClipDesktopToast {
+  const toastWindow = createToastWindow();
+  let currentStatus = status;
+  let isLoaded = false;
+  let closeScheduled = false;
+  const scheduleClose = () => {
+    if (closeScheduled || currentStatus === 'pending') {
+      return;
+    }
+    closeScheduled = true;
+    closeToastAfterDisplay(toastWindow);
+  };
+  const update = (nextStatus: GlobalClipToastStatus) => {
+    currentStatus = nextStatus;
+    if (isLoaded && !toastWindow.isDestroyed()) {
+      void toastWindow.webContents.executeJavaScript(buildToastUpdateScript(nextStatus), true);
+    }
+    scheduleClose();
+  };
   void resolveToastTheme(toastWindow)
-    .then((theme) => toastWindow.loadURL(buildToastHtml(theme)))
+    .then((theme) => toastWindow.loadURL(buildToastHtml(theme, currentStatus)))
     .then(() => {
       if (!toastWindow.isDestroyed()) {
+        isLoaded = true;
+        update(currentStatus);
         toastWindow.showInactive();
-        closeToastAfterDisplay(toastWindow);
       }
     });
+  return {
+    close: () => {
+      if (!toastWindow.isDestroyed()) {
+        toastWindow.close();
+      }
+    },
+    update
+  };
 }

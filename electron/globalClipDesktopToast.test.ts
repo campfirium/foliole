@@ -32,7 +32,10 @@ function createToastWindow() {
     loadURL: vi.fn<(_url: string) => Promise<void>>(async () => undefined),
     setAlwaysOnTop: vi.fn(),
     setIgnoreMouseEvents: vi.fn(),
-    showInactive: vi.fn()
+    showInactive: vi.fn(),
+    webContents: {
+      executeJavaScript: vi.fn()
+    }
   };
 }
 
@@ -71,6 +74,38 @@ it('shows a non-focusable app-owned desktop toast and closes it automatically', 
   expect(toastWindow.setAlwaysOnTop).toHaveBeenCalledWith(true, 'screen-saver');
   expect(toastWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(true);
   expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
+  const loadedUrl = toastWindow.loadURL.mock.calls[0]?.[0] ?? '';
+  const html = decodeURIComponent(loadedUrl);
+  expect(html).toContain('Clipped to Inbox');
+  expect(html).toContain('Ready to process');
+  expect(html).toContain('data:image/svg+xml;base64');
+  expect(html).not.toContain('class="badge"');
+
+  vi.advanceTimersByTime(1800);
+
+  expect(toastWindow.close).toHaveBeenCalledTimes(1);
+});
+
+it('updates the same pending toast before closing it', async () => {
+  vi.useFakeTimers();
+  const toastWindow = createToastWindow();
+  electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
+    return toastWindow;
+  });
+
+  const toast = showGlobalClipDesktopToast('pending');
+  await flushToastLoad(toastWindow);
+
+  expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
+  vi.advanceTimersByTime(1800);
+  expect(toastWindow.close).not.toHaveBeenCalled();
+
+  toast.update('success');
+
+  expect(toastWindow.webContents.executeJavaScript).toHaveBeenCalledWith(
+    expect.stringContaining('"status":"success"'),
+    true
+  );
 
   vi.advanceTimersByTime(1800);
 

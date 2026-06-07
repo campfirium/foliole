@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { RuntimeKeyboardInputPayload } from '../../../shared/platform/nativeHotkeyRecordingRuntime';
@@ -13,6 +13,15 @@ afterEach(() => {
 
 function createHotkeyItems(): HotkeySettingItem[] {
   return [
+    {
+      commandId: 'workspace.createFolder',
+      title: 'Create Folder',
+      section: 'Create',
+      primaryShortcutLabel: 'Ctrl+Alt+F',
+      secondaryShortcutLabel: '',
+      shortcutSummaryLabel: 'Ctrl+Alt+F',
+      isCustomized: false
+    },
     {
       commandId: 'review.good',
       title: 'Grade Review: Good',
@@ -78,14 +87,14 @@ function installNativeHotkeyApi() {
   };
 }
 
-function renderHotkeyPanel(onHotkeyUpdate = vi.fn()) {
+async function renderHotkeyPanel(onHotkeyUpdate = vi.fn()) {
   const hotkeyItems = createHotkeyItems();
   const onHotkeyReset = vi.fn();
   const onHotkeyResetAll = vi.fn();
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />, {
     hotkeySettings: { hotkeyItems, onHotkeyReset, onHotkeyResetAll, onHotkeyUpdate }
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Hotkeys' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Hotkeys' }));
   return { onHotkeyReset, onHotkeyResetAll, onHotkeyUpdate };
 }
 
@@ -95,7 +104,7 @@ it('records, clears, and restores hotkeys from the settings section', async () =
     status: 'applied' as const,
     normalizedShortcutLabel: nextLabel
   }));
-  renderHotkeyPanel(onHotkeyUpdate);
+  await renderHotkeyPanel(onHotkeyUpdate);
 
   fireEvent.click(screen.getByRole('button', { name: 'Add shortcut for Grade Review: Good' }));
   expect(screen.getByRole('button', { name: 'Secondary shortcut for Grade Review: Good' })).toHaveTextContent('Press hotkey...');
@@ -120,7 +129,7 @@ it('records, clears, and restores hotkeys from the settings section', async () =
 
 it('filters hotkeys by text, assignment state, and recorded search shortcut', async () => {
   const nativeHotkeys = installNativeHotkeyApi();
-  renderHotkeyPanel(vi.fn((_commandId, _slot, nextLabel: string) => ({
+  await renderHotkeyPanel(vi.fn((_commandId, _slot, nextLabel: string) => ({
     status: 'applied' as const,
     normalizedShortcutLabel: nextLabel
   })));
@@ -148,8 +157,8 @@ it('filters hotkeys by text, assignment state, and recorded search shortcut', as
   expect(screen.queryByText('Grade Review: Good')).not.toBeInTheDocument();
 });
 
-it('shows single-key bracket shortcuts as visible hotkey chips', () => {
-  renderHotkeyPanel();
+it('shows single-key bracket shortcuts as visible hotkey chips', async () => {
+  await renderHotkeyPanel();
 
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search hotkeys' }), { target: { value: '[' } });
 
@@ -157,8 +166,8 @@ it('shows single-key bracket shortcuts as visible hotkey chips', () => {
   expect(screen.getByRole('button', { name: 'Shortcut for Toggle Left Sidebar' })).toHaveTextContent('[');
 });
 
-it('filters hotkeys by the platform-specific display labels', () => {
-  renderHotkeyPanel();
+it('filters hotkeys by the platform-specific display labels', async () => {
+  await renderHotkeyPanel();
 
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search hotkeys' }), { target: { value: 'cmd' } });
 
@@ -170,8 +179,8 @@ it('filters hotkeys by the platform-specific display labels', () => {
   expect(screen.getByRole('button', { name: 'Secondary shortcut for Toggle Left Sidebar' })).toHaveTextContent('Ctrl+Shift+L');
 });
 
-it('keeps platform-folded shortcuts in the visible list before any local edit', () => {
-  renderHotkeyPanel();
+it('keeps platform-folded shortcuts in the visible list before any local edit', async () => {
+  await renderHotkeyPanel();
 
   expect(screen.getByText('Toggle Left Sidebar')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Shortcut for Toggle Left Sidebar' })).toHaveTextContent('[');
@@ -179,10 +188,22 @@ it('keeps platform-folded shortcuts in the visible list before any local edit', 
   expect(screen.queryByText('Cmd+Shift+L')).not.toBeInTheDocument();
 });
 
-it('filters hotkeys across shortcut separator characters', () => {
-  renderHotkeyPanel();
+it('filters hotkeys across shortcut separator characters', async () => {
+  await renderHotkeyPanel();
 
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search hotkeys' }), { target: { value: 'ctrl shift l' } });
 
   expect(screen.getByText('Toggle Left Sidebar')).toBeInTheDocument();
+});
+
+it('shows the global clip shortcut as the first hotkey row', async () => {
+  await renderHotkeyPanel();
+
+  const rows = within(screen.getByLabelText('Command shortcut list')).getAllByRole('listitem');
+  expect(rows[0]).toHaveTextContent('Clip selection or clipboard to Inbox (global)');
+  expect(rows[0]).toHaveTextContent('Clipping');
+  expect(rows[0]).toHaveTextContent('Alt+Shift+C');
+  expect(within(rows[0]!).queryByRole('button')).not.toBeInTheDocument();
+  expect(rows[1]).toHaveTextContent('Create Folder');
+  expect(screen.queryByRole('switch', { name: 'Use current clipboard when nothing is selected' })).not.toBeInTheDocument();
 });

@@ -20,5 +20,14 @@ export const EN_SETTINGS_HOTKEYS_TRANSLATIONS = {
   'settings.hotkeys.commandList': 'Command shortcut list',
   'settings.hotkeys.empty': 'No matching hotkeys.',
   'settings.hotkeys.sectionAria': 'Hotkeys settings section',
-  'settings.hotkeys.invalidShortcut': 'Shortcut is invalid.'
+  'settings.hotkeys.invalidShortcut': 'Shortcut is invalid.',
+  'settings.globalClip.sectionAria': 'Global clipping section',
+  'settings.globalClip.title': 'Global clipping',
+  'settings.globalClip.shortcut.title': 'Clip selection or clipboard to Inbox (global)',
+  'settings.globalClip.shortcut.section': 'Clipping',
+  'settings.globalClip.shortcut.description': 'Copy the current selection when possible; otherwise import the current clipboard.',
+  'settings.globalClip.shortcut.value': 'Alt+Shift+C',
+  'settings.globalClip.clipboardFallback.title': 'Use current clipboard when nothing is selected',
+  'settings.globalClip.clipboardFallback.description': 'When the global clip shortcut does not copy a new selection, import the current clipboard into Inbox.',
+  'settings.globalClip.clipboardFallback.aria': 'Use current clipboard when nothing is selected'
 } as const;
