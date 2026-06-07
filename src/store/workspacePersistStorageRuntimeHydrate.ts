@@ -7,23 +7,19 @@ import {
   hasWorkspaceRuntimeRepository,
   loadReadingProgressFromRuntime,
   loadWorkspaceListSnapshotFromRuntime,
-  loadWorkspaceNodeDocumentFromRuntime,
   replayPendingWorkspaceNodeSync
 } from '../shared/platform/workspaceRuntimeRepository';
 
+import { reportWorkspaceHydrateBootStage } from './workspaceHydrateBootTelemetry';
 import { listPendingNodeSyncNodeIds, mergePendingNodeSyncIntoSnapshot } from './workspacePendingNodeSync';
 import {
   appendWorkspaceHydrateCompletedLog,
   appendWorkspaceHydrateFailedLog,
   appendWorkspaceHydrateStartedLog
 } from './workspacePersistStorageHydrateLogging';
-import { syncHydratedTextAnchorChildrenForActiveNode } from './workspacePersistStorageTextAnchorHydrate';
+import { hydrateActiveNodeDocument } from './workspacePersistStorageRuntimeActiveDocumentHydrate';
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
-import {
-  isNodeDocumentLoaded,
-  mergeWorkspaceNodeDocument,
-  trimWorkspaceNodesForRendererBoundary
-} from './workspaceRendererBoundary';
+import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
 
 function toPersistedStatePayload(value: unknown): string | null {
   if (!value || typeof value !== 'object') {
@@ -80,61 +76,6 @@ function toRuntimeWorkspaceSnapshotForNormalization(snapshot: unknown): RuntimeW
   return snapshot as RuntimeWorkspaceSnapshotForNormalization;
 }
 
-async function hydrateActiveNodeDocument(name: string, snapshot: RuntimeWorkspaceSnapshotLike) {
-  const activeNodeId = snapshot.activeNodeId;
-  if (!hasWorkspaceRuntimeRepository() || typeof activeNodeId !== 'string') {
-    return snapshot;
-  }
-
-  const activeNode = snapshot.nodesById[activeNodeId];
-  if (!activeNode || isNodeDocumentLoaded(activeNode)) {
-    return snapshot;
-  }
-
-  const startedAt = Date.now();
-  const activeDocument = await loadWorkspaceNodeDocumentFromRuntime(activeNodeId).catch((error) => {
-    logRuntimeWarning('active node document load failed during workspace hydrate', {
-      area: 'persistence',
-      action: 'hydrate_active_node_document',
-      fallback: 'keep_lightweight_node',
-      storageKey: name,
-      nodeId: activeNodeId,
-      error
-    });
-    return null;
-  });
-
-  if (!activeDocument || !snapshot.nodesById || typeof snapshot.nodesById !== 'object') {
-    return snapshot;
-  }
-
-  const mergedActiveNode = mergeWorkspaceNodeDocument(activeNode, activeDocument);
-  appendReadingPositionTraceLog({
-    event: 'workspace.hydrate-active-document',
-    payload: {
-      durationMs: Date.now() - startedAt,
-      nodeId: activeNodeId,
-      storageKey: name
-    },
-    timestamp: Date.now()
-  });
-  const timestamp = new Date().toISOString();
-  const syncedNodesById = syncHydratedTextAnchorChildrenForActiveNode({
-    activeNode: mergedActiveNode,
-    nodeOrder: snapshot.nodeOrder,
-    nodesById: {
-      ...snapshot.nodesById,
-      [activeNodeId]: mergedActiveNode
-    },
-    timestamp
-  });
-
-  return {
-    ...snapshot,
-    nodesById: syncedNodesById
-  };
-}
-
 function trimRuntimeWorkspaceSnapshot(snapshot: RuntimeWorkspaceSnapshotInput | null) {
   if (!snapshot) {
     return null;
@@ -179,12 +120,17 @@ async function loadRuntimeWorkspaceState(name: string) {
   }
 
   const snapshotStartedAt = Date.now();
+  reportWorkspaceHydrateBootStage('runtime_load_start');
   const [snapshot, readingProgress] = await Promise.all([
     loadWorkspaceListSnapshotFromRuntime({
       includePdfOpenings: false
     }),
     loadReadingProgressForHydrate(name)
   ]);
+  reportWorkspaceHydrateBootStage('runtime_load_complete', {
+    durationMs: Date.now() - snapshotStartedAt,
+    nodeCount: snapshot ? Object.keys(snapshot.nodesById).length : 0
+  });
   const normalizedSnapshot = snapshot
     ? ensureInboxNodeInSnapshot(
         normalizeWorkspaceSnapshot<Node, RuntimeWorkspaceSnapshotForNormalization>(
@@ -210,6 +156,11 @@ async function loadRuntimeWorkspaceState(name: string) {
     },
     timestamp: Date.now()
   });
+  reportWorkspaceHydrateBootStage('runtime_merge_complete', {
+    durationMs: Date.now() - snapshotStartedAt,
+    mergedActiveNodeId: mergedSnapshot?.activeNodeId ?? null,
+    nodeViewStateCount: countSnapshotNodeViewStates(mergedSnapshot)
+  });
   if (!mergedSnapshot) {
     return null;
   }
@@ -219,14 +170,23 @@ async function loadRuntimeWorkspaceState(name: string) {
 export async function getRuntimeWorkspaceState(name: string) {
   const startedAt = Date.now();
   appendWorkspaceHydrateStartedLog(name);
+  reportWorkspaceHydrateBootStage('runtime_start');
 
   try {
     const mergedSnapshot = await loadRuntimeWorkspaceState(name);
     replayPendingNodeSyncAfterHydrate(name);
     appendWorkspaceHydrateCompletedLog(name, startedAt, mergedSnapshot);
+    reportWorkspaceHydrateBootStage('runtime_complete', {
+      durationMs: Date.now() - startedAt,
+      nodeCount: mergedSnapshot ? Object.keys(mergedSnapshot.nodesById).length : 0
+    });
     return toPersistedStatePayload(mergedSnapshot);
   } catch (error) {
     appendWorkspaceHydrateFailedLog(name, startedAt, error);
+    reportWorkspaceHydrateBootStage('runtime_failed', {
+      durationMs: Date.now() - startedAt,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
     logRuntimeError('workspace hydrate failed', {
       area: 'persistence',
       action: 'hydrate_workspace_state',

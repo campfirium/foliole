@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
+import { reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import { workspacePersistStorage } from './workspacePersistStorage';
@@ -8,6 +9,10 @@ import { readWorkspaceNodesFromPayload } from './workspacePersistStorage.test-su
 
 vi.mock('../shared/platform/readingPositionTraceRuntimeRepository', () => ({
   appendReadingPositionTraceLog: vi.fn()
+}));
+
+vi.mock('../shared/platform/runtimeBootTelemetry', () => ({
+  reportRuntimeBootStage: vi.fn()
 }));
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({
@@ -119,6 +124,7 @@ function createNearTermDirectionRuntimeInvoke(longDocument: string) {
 beforeEach(() => {
   vi.restoreAllMocks();
   vi.mocked(appendReadingPositionTraceLog).mockReset();
+  vi.mocked(reportRuntimeBootStage).mockReset();
   vi.mocked(getRuntimeInvoke).mockReset();
   window.localStorage.clear();
 });
@@ -208,4 +214,15 @@ it('keeps the initial workspace hydrate on the fixed route: lightweight list, se
   ]);
   expect(invoke.mock.calls.some(([command, payload]) => command === 'load_node_document' && payload?.nodeId === 'node-1')).toBe(false);
   expect(invoke.mock.calls.some(([command]) => command === 'load_workspace_snapshot')).toBe(false);
+  expect(vi.mocked(reportRuntimeBootStage).mock.calls.map(([stage]) => stage)).toEqual(
+    expect.arrayContaining([
+      'workspace_hydrate_runtime_start',
+      'workspace_hydrate_runtime_load_start',
+      'workspace_hydrate_runtime_load_complete',
+      'workspace_hydrate_runtime_merge_complete',
+      'workspace_hydrate_active_document_start',
+      'workspace_hydrate_active_document_complete',
+      'workspace_hydrate_runtime_complete'
+    ])
+  );
 });
