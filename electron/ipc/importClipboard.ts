@@ -21,6 +21,7 @@ import {
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 
 import { collectClipboardFilePaths } from './clipboardFilePaths.js';
+import { resolveClipboardTextSourceName } from './clipboardTextSourceName.js';
 import { buildPreparedImportRecord, importTargetParentNodeProps, resolveImportHighlightPolicy, resolveImportKind, resolveImportNodeTitleStrategy, toImportPayload } from './importSourcePipeline.js';
 import { runImportForFilePath, toNativeTextImportResult } from './importTextFile.js';
 
@@ -159,8 +160,8 @@ function createClipboardTextPreparedRecord(input: {
   importedAt: string;
   kind: 'html' | 'text';
 }) {
-  const sourceName = input.kind === 'html' ? 'Clipboard HTML.html' : 'Clipboard Text.txt';
-  const payload = toImportPayload(input.content, input.kind, sourceName);
+  const payload = toImportPayload(input.content, input.kind, 'Clipboard import');
+  const sourceName = resolveClipboardTextSourceName(payload.content);
   const record = buildPreparedImportRecord(
     {
       filePath: `clipboard://${input.kind}/${input.importedAt}`,

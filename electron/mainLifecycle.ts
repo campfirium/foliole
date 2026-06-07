@@ -13,6 +13,7 @@ import { stopDevScreenshotServer } from './devScreenshotServer.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { installExternalDocumentFileOpenLifecycle } from './externalDocumentFileOpen.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
+import { installGlobalClipToInboxShortcut } from './globalClipToInbox.js';
 import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { appendBootEvent } from './ipc/boot.js';
@@ -206,6 +207,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
   app.whenReady().then(async () => {
     installAppProcessDiagnostics();
     args.installInvokeHandler();
+    installGlobalClipToInboxShortcut();
     await appendBootEvent('app_when_ready');
     beginDatabaseStartup();
     const mainWindow = await args.createMainWindow();

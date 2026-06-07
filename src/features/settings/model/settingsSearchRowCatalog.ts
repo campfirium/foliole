@@ -38,6 +38,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('library', 'library-home', 'settings.search.libraryHome.title', 'settings.search.libraryHome.description'),
   row('library', 'library-assets', 'settings.search.libraryAssets.title', 'settings.search.libraryAssets.description'),
   row('library', 'library-inbox', 'settings.search.libraryInbox.title', 'settings.search.libraryInbox.description'),
+  row('library', 'library-global-clip-clipboard-fallback', 'settings.globalClip.clipboardFallback.title', 'settings.globalClip.clipboardFallback.description'),
   row('library', 'library-mirror', 'settings.search.libraryMirror.title', 'settings.search.libraryMirror.description'),
   row('library', 'library-mirror-output', 'settings.search.libraryMirrorOutput.title', 'settings.search.libraryMirrorOutput.description'),
   row('library', 'library-mirror-links', 'settings.search.libraryMirrorLinks.title', 'settings.search.libraryMirrorLinks.description')

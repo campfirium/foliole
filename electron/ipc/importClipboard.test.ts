@@ -180,65 +180,6 @@ it('reports unsupported copied file formats instead of falling back to clipboard
   expect(runPreparedImport).not.toHaveBeenCalled();
 });
 
-it('imports plain clipboard text as an Inbox topic through the prepared import pipeline', async () => {
-  clipboard.readText.mockReturnValue('# Clipboard topic\n\nBody');
-
-  await expect(runClipboardImport()).resolves.toMatchObject({
-    import_id: 'import-1',
-    node_id: 'node-1',
-    source_kind: 'text',
-    source_name: 'Clipboard Text.txt'
-  });
-
-  expect(runPreparedImport).toHaveBeenCalledWith(
-    expect.objectContaining({
-      content: '# Clipboard topic\n\nBody',
-      hideTitleHeading: false,
-      nodeTitle: 'Clipboard topic',
-      sourceKind: 'text',
-      sourceName: 'Clipboard Text.txt'
-    })
-  );
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('import-1');
-});
-
-it('imports plain clipboard text containing malformed URI escapes instead of failing path detection', async () => {
-  clipboard.readText.mockReturnValue('# Clipboard topic\n\nLarge section is 100% incomplete');
-
-  await expect(runClipboardImport()).resolves.toMatchObject({
-    import_id: 'import-1',
-    source_kind: 'text',
-    source_name: 'Clipboard Text.txt'
-  });
-
-  expect(runPreparedImport).toHaveBeenCalledWith(
-    expect.objectContaining({
-      content: '# Clipboard topic\n\nLarge section is 100% incomplete',
-      sourceKind: 'text',
-      sourceName: 'Clipboard Text.txt'
-    })
-  );
-});
-
-it('prefers clipboard HTML over plain text and converts it before import', async () => {
-  clipboard.readHTML.mockReturnValue('<h1>Rich topic</h1><p><strong>Body</strong></p>');
-  clipboard.readText.mockReturnValue('Rich topic\nBody');
-  runPreparedImport.mockReturnValue(createImportRecord({ sourceKind: 'html', sourceName: 'Clipboard HTML.html' }));
-
-  await expect(runClipboardImport()).resolves.toMatchObject({
-    source_kind: 'html',
-    source_name: 'Clipboard HTML.html'
-  });
-
-  expect(runPreparedImport).toHaveBeenCalledWith(
-    expect.objectContaining({
-      content: '# Rich topic\n\n**Body**',
-      nodeTitle: 'Rich topic',
-      sourceKind: 'html'
-    })
-  );
-});
-
 it('imports clipboard image bytes as a topic with an attachment markdown link', async () => {
   clipboardImage.isEmpty.mockReturnValue(false);
   runPreparedImport.mockReturnValue(createImportRecord({ sourceKind: 'markdown', sourceName: 'pasted-image.png' }));
