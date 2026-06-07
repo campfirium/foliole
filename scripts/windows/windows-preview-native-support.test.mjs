@@ -123,6 +123,17 @@ it('full restarts when workspace shell renderer files changed', () => {
   });
 });
 
+it('full restarts when workspace overlay entry files changed', () => {
+  expect(selectNativePreviewAction({
+    changedFiles: ['src/app/components/WorkspaceSettingsOverlay.tsx'],
+    currentHead: 'abc123',
+    status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
+  })).toMatchObject({
+    action: 'full-restart',
+    reason: 'Class D: working tree startup renderer changes detected'
+  });
+});
+
 it('uses restart intent when the runtime is behind committed electron files', () => {
   expect(selectNativePreviewActionWithCommittedFiles({
     changedFiles: [],

@@ -1,4 +1,8 @@
-import { ImportSourceWorkspaceDetails } from './ImportSourceWorkspaceDetails';
+import { Suspense, lazy } from 'react';
+
+const ImportSourceWorkspaceDetails = lazy(() =>
+  import('./ImportSourceWorkspaceDetails').then((module) => ({ default: module.ImportSourceWorkspaceDetails }))
+);
 
 type ImportSourceWorkspaceProps = {
   open: boolean;
@@ -10,5 +14,9 @@ export function ImportSourceWorkspace({ open, onOpenChange, onSelectNode }: Impo
   if (!open) {
     return null;
   }
-  return <ImportSourceWorkspaceDetails onOpenChange={onOpenChange} {...(onSelectNode ? { onSelectNode } : {})} open={open} />;
+  return (
+    <Suspense fallback={null}>
+      <ImportSourceWorkspaceDetails onOpenChange={onOpenChange} {...(onSelectNode ? { onSelectNode } : {})} open={open} />
+    </Suspense>
+  );
 }

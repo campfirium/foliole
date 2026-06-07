@@ -58,7 +58,7 @@ export function isRendererSourceFile(file) {
 }
 
 export function isStartupRendererFile(file) {
-  return /^(src\/main\.tsx|src\/startupBootstrap\.ts|src\/startupViewMode\.ts|src\/app\/App\.tsx|src\/app\/components\/WorkspaceLayout.*\.tsx|src\/app\/components\/WorkspaceRightSidebar.*\.tsx|src\/shared\/platform\/bridge\.ts|src\/shared\/platform\/runtimeBootTelemetry\.ts)$/u.test(file);
+  return /^(src\/main\.tsx|src\/startupBootstrap\.ts|src\/startupViewMode\.ts|src\/app\/App\.tsx|src\/app\/components\/ImportSourceWorkspace\.tsx|src\/app\/components\/WorkspaceLayout.*\.tsx|src\/app\/components\/WorkspaceRightSidebar.*\.tsx|src\/app\/components\/WorkspaceSettingsOverlay.*\.tsx|src\/shared\/platform\/bridge\.ts|src\/shared\/platform\/runtimeBootTelemetry\.ts)$/u.test(file);
 }
 
 function hasFile(files, predicate) {

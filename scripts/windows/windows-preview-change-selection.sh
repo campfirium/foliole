@@ -75,7 +75,7 @@ has_committed_shell_config_changes_since() {
 
 is_startup_renderer_file() {
   local file="$1"
-  if echo "${file}" | grep -qE '^(src/main\.tsx|src/startupBootstrap\.ts|src/startupViewMode\.ts|src/app/App\.tsx|src/app/components/WorkspaceLayout.*\.tsx|src/app/components/WorkspaceRightSidebar.*\.tsx|src/shared/platform/bridge\.ts|src/shared/platform/runtimeBootTelemetry\.ts)$'; then
+  if echo "${file}" | grep -qE '^(src/main\.tsx|src/startupBootstrap\.ts|src/startupViewMode\.ts|src/app/App\.tsx|src/app/components/ImportSourceWorkspace\.tsx|src/app/components/WorkspaceLayout.*\.tsx|src/app/components/WorkspaceRightSidebar.*\.tsx|src/app/components/WorkspaceSettingsOverlay.*\.tsx|src/shared/platform/bridge\.ts|src/shared/platform/runtimeBootTelemetry\.ts)$'; then
     return 0
   fi
   return 1

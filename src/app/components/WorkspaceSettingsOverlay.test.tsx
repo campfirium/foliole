@@ -149,7 +149,8 @@ it('opens the keep import preview dialog from the watch folders table', async ()
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Preview source-1' }));
+  await vi.dynamicImportSettled();
+  fireEvent.click(await screen.findByRole('button', { name: 'Preview source-1' }));
 
   await waitFor(() => expect(handlePreviewKeepImport).toHaveBeenCalledWith('source-1', 'sources'));
   expect(await screen.findByRole('dialog', { name: 'Import preview' })).toBeInTheDocument();
@@ -177,7 +178,8 @@ it('confirms before enabling delete handling for a watch folder', async () => {
     />
   );
 
-  fireEvent.change(screen.getByRole('combobox', { name: 'Handling source-1' }), {
+  await vi.dynamicImportSettled();
+  fireEvent.change(await screen.findByRole('combobox', { name: 'Handling source-1' }), {
     target: { value: 'delete' }
   });
 
