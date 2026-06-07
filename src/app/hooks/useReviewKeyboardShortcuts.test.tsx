@@ -61,6 +61,22 @@ it('leaves review editing when Escape starts from an editable target', () => {
   expect(readReviewTopic).toHaveBeenCalledTimes(1);
 });
 
+it('leaves review editing when the editor blurs before the shared Escape handler runs', () => {
+  const readReviewTopic = vi.fn(async () => true);
+  render(<ReviewShortcutHarness readReviewTopic={readReviewTopic} />);
+  const editable = document.createElement('div');
+  editable.setAttribute('contenteditable', 'true');
+  document.body.append(editable);
+  editable.focus();
+  fireEvent.focusIn(editable);
+  window.addEventListener('keydown', () => editable.blur(), { capture: true, once: true });
+
+  fireEvent.keyDown(editable, { key: 'Escape' });
+  fireEvent.keyDown(window, { key: 'r' });
+
+  expect(readReviewTopic).toHaveBeenCalledTimes(1);
+});
+
 it('leaves review editing after an editor Escape handler only blurs the editable target', async () => {
   const readReviewTopic = vi.fn(async () => true);
   render(<ReviewShortcutHarness readReviewTopic={readReviewTopic} />);

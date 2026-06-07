@@ -1,17 +1,32 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { preloadTranslationCatalog } from '../shared/localization/translations';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
+import {
+  dispatchNativeEscape,
+  installNativeKeyboardBridge,
+  resetReviewHotkeysRuntimeInvokeMock
+} from './review-hotkeys-native-bridge';
 
 vi.stubGlobal('ResizeObserver', class {
   disconnect() {}
   observe() {}
   unobserve() {}
+});
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+  await preloadTranslationCatalog('zh-Hans');
+});
+
+afterEach(() => {
+  resetReviewHotkeysRuntimeInvokeMock();
 });
 
 function seedActiveNode(node: ReturnType<typeof createNode>) {
@@ -25,7 +40,7 @@ function seedActiveNode(node: ReturnType<typeof createNode>) {
   }));
 }
 
-it('keeps review actions guarded while the editor is focused', async () => {
+it('supports review keyboard flow with edit mode guard (native Esc -> F)', async () => {
   seedActiveNode(
     createNode({
       id: 'node-1',
@@ -47,18 +62,25 @@ it('keeps review actions guarded while the editor is focused', async () => {
     })
   );
 
+  const dispatchNativeKeyboard = installNativeKeyboardBridge();
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
 
   const editor = screen.getByTestId('editor-value');
+  expect(editor).toHaveAttribute('data-review-escape-blur', 'true');
   editor.focus();
   fireEvent.focusIn(editor);
   fireEvent.keyDown(editor, { key: ' ', code: 'Space' });
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
 
+  dispatchNativeEscape(dispatchNativeKeyboard);
   await waitFor(() => {
-    expect(screen.getByRole('group', { name: 'Flow toolbar' })).toHaveAttribute('data-review-input-mode', 'editing');
+    expect(document.activeElement).not.toBe(editor);
+  });
+  fireEvent.keyDown(window, { key: 'f', code: 'KeyF' });
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Good' })).toBeInTheDocument();
   });
 });
 

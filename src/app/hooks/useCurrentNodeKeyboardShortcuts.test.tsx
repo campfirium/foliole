@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
+import { preloadTranslationCatalog } from '../../shared/localization/translations';
 import type { ElectronAPI, NativeKeyboardInputPayload } from '../../shared/platform/electronApi';
 
 import { useCurrentNodeKeyboardShortcuts } from './useCurrentNodeKeyboardShortcuts';
@@ -84,6 +85,11 @@ function HookHarness(props: {
     </>
   );
 }
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+  await preloadTranslationCatalog('zh-Hans');
+});
 
 afterEach(() => {
   delete window.electronAPI;

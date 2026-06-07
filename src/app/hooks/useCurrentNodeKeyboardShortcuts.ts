@@ -4,6 +4,7 @@ import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
 import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { onEditingEscapeNativeFallback } from './editingEscapeNativeFallback';
 import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
 
 export function useCurrentNodeKeyboardShortcuts(args: {
@@ -117,7 +118,15 @@ function useCurrentNodeEditingEscape(
       exitEditing();
     };
     const unlistenEscape = onWindowEscape(handleEscape);
-    return () => unlistenEscape();
+    const unlistenNativeFallback = onEditingEscapeNativeFallback({
+      exitEditing,
+      isDialogOpen: () => transientSurfaceOpen || Boolean(document.querySelector('[role="dialog"]')),
+      isEditing: () => editingContextRef.current || isEditableKeyboardTarget(document.activeElement)
+    });
+    return () => {
+      unlistenEscape();
+      unlistenNativeFallback();
+    };
   }, [blocked, editingContextRef, setIsEditing, transientSurfaceOpen]);
 }
 

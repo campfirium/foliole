@@ -1,6 +1,13 @@
-import { vi } from 'vitest';
+import { beforeAll, vi } from 'vitest';
+
+import { preloadTranslationCatalog } from '../../shared/localization/translations';
 
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+  await preloadTranslationCatalog('zh-Hans');
+});
 
 const TEST_NODE = {
   id: 'topic-1',

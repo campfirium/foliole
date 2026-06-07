@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 
@@ -71,7 +71,8 @@ export function MarkdownEditor({
   value,
   onChange,
   onImageLoadStateChange,
-  onReady
+  onReady,
+  reviewEscapeBlurEnabled
 }: {
   ariaLabel?: string;
   readingSelection?: { from: number; to: number } | null;
@@ -80,9 +81,11 @@ export function MarkdownEditor({
   onChange: (value: string) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
+  reviewEscapeBlurEnabled?: boolean;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   mockEditorState.content = value;
-  useEffect(() => {
+  useLayoutEffect(() => {
     onImageLoadStateChange?.({ loadedCount: 0, totalCount: 0 });
     onReady?.(mockEditorAdapter);
     return () => onReady?.(null);
@@ -93,15 +96,28 @@ export function MarkdownEditor({
   useEffect(() => {
     if (nodeViewState) mockEditorAdapter.restoreSelection(nodeViewState.selection);
   }, [nodeViewState]);
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || !reviewEscapeBlurEnabled) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        textarea.blur();
+      }
+    };
+    textarea.addEventListener('keydown', handleKeyDown, true);
+    return () => textarea.removeEventListener('keydown', handleKeyDown, true);
+  }, [reviewEscapeBlurEnabled]);
   return (
     <textarea
       aria-label={ariaLabel ?? 'Mock editor'}
+      data-review-escape-blur={reviewEscapeBlurEnabled ? 'true' : 'false'}
       data-testid={ariaLabel === 'Answer editor' ? 'answer-editor-value' : 'editor-value'}
       onChange={(event) => {
         const nextValue = event.currentTarget.value;
         mockEditorState.content = nextValue;
         onChange(nextValue);
       }}
+      ref={textareaRef}
       value={value}
     />
   );
