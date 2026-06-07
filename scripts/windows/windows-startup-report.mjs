@@ -17,6 +17,13 @@ const STAGE_KEYS = [
   'app_ready',
   'app_responsive'
 ];
+const REQUIRED_TIMING_KEYS = [
+  'window_visible',
+  'main_window_ready',
+  'bridge_ready',
+  'app_ready',
+  'app_responsive'
+];
 const ANSI_ESCAPE_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'gu');
 
 function stripAnsi(text) {
@@ -120,6 +127,16 @@ function addBudgetFailure(failures, label, actualMs, budgetMs) {
   }
 }
 
+function missingRequiredTimings(timings) {
+  return REQUIRED_TIMING_KEYS.filter((key) => timings[key] === null);
+}
+
+function resolveStatus(failures, missingTimings) {
+  if (failures.length > 0) return 'FAILED';
+  if (missingTimings.length > 0) return 'INCOMPLETE';
+  return 'PASSED';
+}
+
 export function buildStartupReport({ budgets, events, session, stdout }) {
   const byStage = firstEventByStage(events);
   const start = byStage.get('main_process_start');
@@ -138,12 +155,14 @@ export function buildStartupReport({ budgets, events, session, stdout }) {
   for (const resource of resources.filter((item) => item.durationMs > budgets.resourceMs).slice(0, 3)) {
     failures.push(`resource=${resource.durationMs}ms ${resource.name}`);
   }
+  const missingTimings = missingRequiredTimings(timings);
   return {
     budgets,
     failures,
+    missingTimings,
     resources,
     session,
-    status: failures.length === 0 ? 'PASSED' : 'FAILED',
+    status: resolveStatus(failures, missingTimings),
     stdoutTiming,
     timings
   };

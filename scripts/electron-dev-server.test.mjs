@@ -32,6 +32,20 @@ describe('prewarmViteRendererEntries', () => {
     );
     expect(results.every((result) => result.ok)).toBe(true);
     expect(VITE_RENDERER_PREWARM_PATHS).toContain('/src/app/App.tsx');
+    expect(VITE_RENDERER_PREWARM_PATHS).toContain('/src/app/AppRuntime.tsx');
+    expect(VITE_RENDERER_PREWARM_PATHS).toEqual(
+      expect.arrayContaining([
+        '/src/app/hooks/useAppController.ts',
+        '/src/app/hooks/appControllerState.ts',
+        '/src/app/hooks/appControllerLayoutProps.ts',
+        '/src/app/components/WorkspaceLayout.tsx',
+        '/src/app/components/WorkspaceLayoutGrid.tsx',
+        '/src/store/workspaceStoreHydration.ts',
+        '/src/store/workspaceRendererBoundaryKeepNodeIds.ts',
+        '/src/shared/localization/locales/en.ts',
+        '/src/shared/localization/locales/zhHans.ts'
+      ])
+    );
   });
 
   it('reports failed prewarm requests without hiding the target path', async () => {

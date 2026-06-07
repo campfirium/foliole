@@ -101,7 +101,7 @@ beforeEach(() => {
   setDocumentVisibility('visible');
 });
 
-it('renders the workspace chrome immediately without a boot-only shell', async () => {
+it('shows the startup surface until the workspace runtime loads', async () => {
   useAppController.mockReturnValue({
     ...createClosedOverlayState(),
     hotkeySettings: {},
@@ -112,8 +112,9 @@ it('renders the workspace chrome immediately without a boot-only shell', async (
 
   render(<App />);
 
-  expect(screen.getByText('workspace-layout')).toBeInTheDocument();
-  expect(screen.queryByText('Preparing workspace')).not.toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveTextContent('Starting Foliole');
+  expect(await screen.findByText('workspace-layout', {}, { timeout: 5000 })).toBeInTheDocument();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
   expect(useAppController).toHaveBeenCalledTimes(1);
   await waitFor(() => {
     expect(ensureWorkspaceHydrated).toHaveBeenCalledTimes(1);
@@ -136,7 +137,7 @@ it('loads lazy command overlays only after the command entry opens', async () =>
 
   render(<App />);
 
-  expect(screen.getByText('workspace-layout')).toBeInTheDocument();
+  expect(await screen.findByText('workspace-layout', {}, { timeout: 5000 })).toBeInTheDocument();
   await waitFor(() => {
     expect(screen.getByText('command-palette')).toBeInTheDocument();
   });
@@ -156,11 +157,15 @@ it('reports app ready only after the hydrated workspace has painted', async () =
 
   render(<App />);
 
-  await waitFor(() => {
-    expect(reportRuntimeAppReady).toHaveBeenCalledWith(
-      expect.objectContaining({ source: 'workspace_hydrated_double_raf' })
-    );
-  });
+  await screen.findByText('workspace-layout', {}, { timeout: 5000 });
+  await waitFor(
+    () => {
+      expect(reportRuntimeAppReady).toHaveBeenCalledWith(
+        expect.objectContaining({ source: 'workspace_hydrated_double_raf' })
+      );
+    },
+    { timeout: 5000 }
+  );
   expect(document.body.dataset.bootSkeleton).toBe('hidden');
 });
 
@@ -176,10 +181,14 @@ it('reports app ready without waiting for animation frames while the window is h
 
   render(<App />);
 
-  await waitFor(() => {
-    expect(reportRuntimeAppReady).toHaveBeenCalledWith(
-      expect.objectContaining({ source: 'workspace_hydrated_hidden_window' })
-    );
-  });
+  await screen.findByText('workspace-layout', {}, { timeout: 5000 });
+  await waitFor(
+    () => {
+      expect(reportRuntimeAppReady).toHaveBeenCalledWith(
+        expect.objectContaining({ source: 'workspace_hydrated_hidden_window' })
+      );
+    },
+    { timeout: 5000 }
+  );
   expect(document.body.dataset.bootSkeleton).toBe('hidden');
 });

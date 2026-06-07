@@ -74,6 +74,10 @@ function printReport(report) {
   if (report.resources.length > 0) {
     console.log(`[windows-startup-check] top_resources=${formatTopResources(report.resources)}`);
   }
+  if (report.missingTimings.length > 0) {
+    console.error(`[windows-startup-check] analysis: startup timing incomplete missing=${report.missingTimings.join(',')}`);
+    console.error('[windows-startup-check] analysis: missing timings mean the startup marker chain was not sampled, so this run cannot prove startup performance.');
+  }
   if (report.failures.length > 0) {
     console.error('[windows-startup-check] analysis: startup budget failed');
     for (const failure of report.failures) console.error(`[windows-startup-check] analysis: ${failure}`);

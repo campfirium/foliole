@@ -13,7 +13,7 @@ it('resolves Windows native runtime paths from the current checkout', () => {
   expect(WINDOWS_NATIVE_REPO_ROOT).toBe(path.resolve(process.cwd()));
   expect(paths.userDataPath).toBe(path.join(process.cwd(), '.tmp', 'electron-user-data'));
   expect(paths.bootEventLogFile).toBe(
-    path.join(process.cwd(), '.tmp', 'electron-user-data', 'logs', 'windows', 'native-boot-events.ndjson')
+    path.join(process.cwd(), 'logs', 'windows', 'native-boot-events.ndjson')
   );
   expect(paths.appReadyFile).toBe(path.join(process.cwd(), '.windows-native-boot-ready.json'));
   expect(paths.bridgeReadyFile).toBe(path.join(process.cwd(), '.windows-native-bridge-ready.json'));

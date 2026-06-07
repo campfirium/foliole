@@ -103,6 +103,25 @@ describe('buildStartupReport', () => {
     expect(report.failures).toContain('resource=7600ms /src/app/styles.css');
   });
 
+  it('marks startup reports incomplete when required timing markers are missing', () => {
+    const report = buildStartupReport({
+      budgets,
+      events: [],
+      session: 'startup-session',
+      stdout: ''
+    });
+
+    expect(report.status).toBe('INCOMPLETE');
+    expect(report.failures).toEqual([]);
+    expect(report.missingTimings).toEqual([
+      'window_visible',
+      'main_window_ready',
+      'bridge_ready',
+      'app_ready',
+      'app_responsive'
+    ]);
+  });
+
   it('uses environment overrides for startup budgets', () => {
     expect(resolveStartupBudgets({
       FOLIOLE_STARTUP_BUDGET_APP_READY_MS: '9000',
