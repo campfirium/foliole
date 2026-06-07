@@ -15,6 +15,7 @@ interface WorkspaceActivityNoticeState {
   nodeId: string | null;
   tone: WorkspaceActivityNoticeTone;
 }
+type SetWorkspaceActivityNotice = (notice: WorkspaceActivityNoticeState | null) => void;
 
 const NOTICE_TIMEOUT_MS = 3600;
 type ImportNoticeKind = 'clipboard' | 'file';
@@ -56,6 +57,19 @@ function resolveImportNotice(id: number, kind: ImportNoticeKind, imported: boole
   };
 }
 
+export function applyWorkspaceImportNoticeResolution(
+  nextNotice: WorkspaceActivityNoticeState,
+  onOpenImportedTopic: (nodeId: string) => void,
+  setNotice: SetWorkspaceActivityNotice
+) {
+  if (nextNotice.nodeId) {
+    onOpenImportedTopic(nextNotice.nodeId);
+    setNotice(null);
+    return;
+  }
+  setNotice(nextNotice);
+}
+
 export function useWorkspaceActivityNotice(
   onStartClipboardImport: (detail?: ClipboardImportRequestDetail) => boolean | Promise<boolean>,
   onStartFileImport: (options?: { onImportStarted?: () => void }) => boolean | Promise<boolean>,
@@ -76,9 +90,10 @@ export function useWorkspaceActivityNotice(
     const id = Date.now();
     setNotice({ id, message: formatLoadingMessage(kind, t), nodeId: null, tone: 'loading' });
     const imported = await runner();
-    setNotice(resolveImportNotice(id, kind, imported, t));
+    const nextNotice = resolveImportNotice(id, kind, imported, t);
+    applyWorkspaceImportNoticeResolution(nextNotice, onOpenImportedTopic, setNotice);
     return imported;
-  }, [t]);
+  }, [onOpenImportedTopic, t]);
 
   const startClipboardImport = useCallback(
     (detail?: ClipboardImportRequestDetail) => startImport('clipboard', () => onStartClipboardImport(detail)),
@@ -96,11 +111,12 @@ export function useWorkspaceActivityNotice(
         }
       });
       if (didStartImport || imported) {
-        setNotice(resolveImportNotice(id, 'file', imported, t));
+        const nextNotice = resolveImportNotice(id, 'file', imported, t);
+        applyWorkspaceImportNoticeResolution(nextNotice, onOpenImportedTopic, setNotice);
       }
       return imported;
     },
-    [onStartFileImport, t]
+    [onOpenImportedTopic, onStartFileImport, t]
   );
 
   const openImportedTopic = useCallback(() => {
