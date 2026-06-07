@@ -42,6 +42,7 @@ import {
 import {
   activateMainWindowRenderer,
   bindMainWindowNavigationGuard,
+  bindMainWindowWebviewAttachGuard,
   createMainWindowOptions,
   loadMainWindowRenderer,
   logWindowStateLifecycleEvent,
@@ -169,6 +170,7 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
   const window = new BrowserWindow(options);
   installMainWindowContentSecurityPolicy(window.webContents.session);
   bindMainWindowNavigationGuard(window);
+  bindMainWindowWebviewAttachGuard(window);
   await appendBootEvent('browser_window_created', {
     bounds: window.getBounds(),
     show: window.isVisible()

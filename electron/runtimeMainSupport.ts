@@ -1,8 +1,9 @@
 import path from 'node:path';
 
-import { app, type BrowserWindowConstructorOptions, type Session, type WebContents } from 'electron';
+import { app, type BrowserWindowConstructorOptions, type Session, type WebContents, type WebPreferences } from 'electron';
 
 import { logMainProcessException } from './diagnostics/mainProcessDiagnostics.js';
+import { LINK_PANEL_WEBVIEW_PARTITION } from './linkPanelBrowsingData.js';
 import {
   loadRenderer,
   logActiveRuntimeDiagnostics,
@@ -79,11 +80,22 @@ export function bindMainWindowNavigationGuard(window: import('electron').Browser
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 }
 
+export function bindMainWindowWebviewAttachGuard(window: import('electron').BrowserWindow) {
+  window.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+    if (!isAllowedLinkPanelAttachParams(params)) {
+      event.preventDefault();
+      return;
+    }
+    normalizeLinkPanelWebviewPreferences(webPreferences);
+  });
+}
+
 function installEmbeddedLinkPanelSessionGuards(session: Session | undefined) {
   if (!session || guardedEmbeddedLinkPanelSessions.has(session)) {
     return;
   }
   guardedEmbeddedLinkPanelSessions.add(session);
+  session.setPermissionCheckHandler(() => false);
   session.setPermissionRequestHandler((webContents, _permission, callback) => {
     if (webContents?.getType() === 'webview') {
       callback(false);
@@ -96,6 +108,17 @@ function installEmbeddedLinkPanelSessionGuards(session: Session | undefined) {
       event.preventDefault();
     }
   });
+}
+
+function isAllowedLinkPanelAttachParams(params: Record<string, string | undefined>) {
+  return params.partition === LINK_PANEL_WEBVIEW_PARTITION && isAllowedEmbeddedLinkPanelUrl(params.src ?? '');
+}
+
+function normalizeLinkPanelWebviewPreferences(webPreferences: WebPreferences) {
+  delete webPreferences.preload;
+  webPreferences.nodeIntegration = false;
+  webPreferences.contextIsolation = true;
+  webPreferences.sandbox = true;
 }
 
 export function isAllowedEmbeddedLinkPanelUrl(url: string) {

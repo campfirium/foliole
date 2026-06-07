@@ -5,11 +5,20 @@ import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLink
 
 import { appendLinkPanel, closeLinkPanel, patchLinkPanel, type LinkPanelRecord } from './linkPanelState';
 
+function canOpenInLinkPanel(href: string) {
+  try {
+    const url = new URL(href.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export function useExternalLinkPanels() {
   const [linkPanels, setLinkPanels] = useState<LinkPanelRecord[]>([]);
 
   const handleOpenExternalLink = useCallback((request: ExternalLinkOpenRequest) => {
-    if (request.target === 'browser') {
+    if (request.target === 'browser' || !canOpenInLinkPanel(request.href)) {
       void openExternalUrl(request.href);
       return;
     }
@@ -22,6 +31,9 @@ export function useExternalLinkPanels() {
 
   const handleLinkPanelStateChange = useCallback(
     (panelId: string, state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>) => {
+      if (state.currentUrl !== undefined && !canOpenInLinkPanel(state.currentUrl)) {
+        return;
+      }
       setLinkPanels((current) => patchLinkPanel(current, panelId, state));
     },
     []

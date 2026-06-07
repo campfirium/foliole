@@ -10,6 +10,7 @@ vi.mock('electron', () => ({
 
 import {
   bindMainWindowNavigationGuard,
+  bindMainWindowWebviewAttachGuard,
   bindEmbeddedLinkPanelContents,
   createMainWindowOptions,
   isAllowedEmbeddedLinkPanelUrl,
@@ -50,6 +51,7 @@ it('denies blocked embedded link panel window opens without loading them', () =>
   const handlers: WindowOpenHandler[] = [];
   const session = {
     on: vi.fn(),
+    setPermissionCheckHandler: vi.fn(),
     setPermissionRequestHandler: vi.fn()
   };
   const contents = {
@@ -76,6 +78,7 @@ it('does not bind embedded link panel guards to the main window contents', () =>
     loadURL: vi.fn(),
     session: {
       on: vi.fn(),
+      setPermissionCheckHandler: vi.fn(),
       setPermissionRequestHandler: vi.fn()
     },
     setWindowOpenHandler: vi.fn()
@@ -113,6 +116,52 @@ it('blocks main window renderer navigation and renderer-created windows', () => 
   expect(windowOpenHandlers[0]?.({ url: 'https://example.com' })).toEqual({ action: 'deny' });
 });
 
+it('allows only the fixed link panel partition and web URLs for webview attach', () => {
+  type AttachHandler = (
+    event: { preventDefault: () => void },
+    webPreferences: Record<string, unknown>,
+    params: Record<string, string | undefined>
+  ) => void;
+  const attachHandlers: AttachHandler[] = [];
+  const webContents = {
+    on: vi.fn((eventName: string, handler: AttachHandler) => {
+      if (eventName === 'will-attach-webview') {
+        attachHandlers.push(handler);
+      }
+    })
+  };
+
+  bindMainWindowWebviewAttachGuard({ webContents } as never);
+  const handler = attachHandlers[0] as AttachHandler;
+  const allowedEvent = { preventDefault: vi.fn() };
+  const webPreferences = {
+    contextIsolation: false,
+    nodeIntegration: true,
+    preload: '/tmp/unsafe-preload.js',
+    sandbox: false
+  };
+
+  handler(allowedEvent, webPreferences, {
+    partition: 'persist:foliole-link-panels',
+    src: 'https://example.com/docs'
+  });
+
+  expect(allowedEvent.preventDefault).not.toHaveBeenCalled();
+  expect(webPreferences).toEqual({
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: true
+  });
+
+  const blockedSrcEvent = { preventDefault: vi.fn() };
+  handler(blockedSrcEvent, {}, { partition: 'persist:foliole-link-panels', src: 'file:///tmp/secret.txt' });
+  expect(blockedSrcEvent.preventDefault).toHaveBeenCalledTimes(1);
+
+  const blockedPartitionEvent = { preventDefault: vi.fn() };
+  handler(blockedPartitionEvent, {}, { partition: 'persist:foliole-link-panels-evil', src: 'https://example.com' });
+  expect(blockedPartitionEvent.preventDefault).toHaveBeenCalledTimes(1);
+});
+
 it('denies embedded link panel permissions and prevents downloads', () => {
   type PermissionHandler = (
     webContents: { getType: () => string },
@@ -125,12 +174,16 @@ it('denies embedded link panel permissions and prevents downloads', () => {
     webContents: { getType: () => string }
   ) => void;
   const permissionHandlers: PermissionHandler[] = [];
+  const permissionCheckHandlers: Array<() => boolean> = [];
   const downloadHandlers: DownloadHandler[] = [];
   const session = {
     on: vi.fn((eventName: string, handler: DownloadHandler) => {
       if (eventName === 'will-download') {
         downloadHandlers.push(handler);
       }
+    }),
+    setPermissionCheckHandler: vi.fn((handler: () => boolean) => {
+      permissionCheckHandlers.push(handler);
     }),
     setPermissionRequestHandler: vi.fn((handler: PermissionHandler) => {
       permissionHandlers.push(handler);
@@ -145,6 +198,7 @@ it('denies embedded link panel permissions and prevents downloads', () => {
 
   bindEmbeddedLinkPanelContents(contents as never);
   const permissionCallback = vi.fn();
+  expect(permissionCheckHandlers[0]?.()).toBe(false);
   permissionHandlers[0]?.({ getType: () => 'webview' }, 'media', permissionCallback);
   const downloadEvent = { preventDefault: vi.fn() };
   downloadHandlers[0]?.(downloadEvent, null, { getType: () => 'webview' });

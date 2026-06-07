@@ -35,3 +35,36 @@ it('opens browser-targeted external links through platform navigation', () => {
   expect(result.current.linkPanels).toHaveLength(0);
   expect(openExternalUrl).toHaveBeenCalledWith('https://example.com/docs');
 });
+
+it('does not create link panels for non-web protocols', () => {
+  const { result } = renderHook(() => useExternalLinkPanels());
+
+  act(() => {
+    result.current.handleOpenExternalLink({ href: 'mailto:reader@example.com' });
+  });
+
+  expect(result.current.linkPanels).toHaveLength(0);
+  expect(openExternalUrl).toHaveBeenCalledWith('mailto:reader@example.com');
+});
+
+it('ignores non-web navigation updates from an existing link panel', () => {
+  const { result } = renderHook(() => useExternalLinkPanels());
+
+  act(() => {
+    result.current.handleOpenExternalLink({ href: 'https://example.com/docs' });
+  });
+  const panelId = result.current.linkPanels[0]?.id as string;
+
+  act(() => {
+    result.current.handleLinkPanelStateChange(panelId, {
+      canGoBack: true,
+      currentUrl: 'file:///tmp/secret.txt',
+      title: 'Local file'
+    });
+  });
+
+  expect(result.current.linkPanels[0]).toMatchObject({
+    canGoBack: false,
+    currentUrl: 'https://example.com/docs'
+  });
+});
