@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import './app/styles.css';
-import { EditorInputDiagnosticsPanel } from './app/components/EditorInputDiagnosticsPanel';
 import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
 import {
   reportRuntimeAppReady,
@@ -20,6 +19,30 @@ import { createStartupErrorActions, resolveStartupView } from './startupViewMode
 
 const ROOT_ID = 'root';
 const STARTUP_RESOURCE_SAMPLE_LIMIT = 16;
+type EditorInputDiagnosticsPanelGlobal = typeof globalThis & {
+  __FOLIOLE_EDITOR_INPUT_DIAG_PANEL?: boolean;
+};
+
+const LazyEditorInputDiagnosticsPanel = React.lazy(() =>
+  import('./app/components/EditorInputDiagnosticsPanel').then((module) => ({
+    default: module.EditorInputDiagnosticsPanel
+  }))
+);
+
+function isEditorInputDiagnosticsPanelEnabled() {
+  return (globalThis as EditorInputDiagnosticsPanelGlobal).__FOLIOLE_EDITOR_INPUT_DIAG_PANEL === true;
+}
+
+function renderEditorInputDiagnosticsPanel() {
+  if (!import.meta.env.DEV || !isEditorInputDiagnosticsPanelEnabled()) {
+    return null;
+  }
+  return (
+    <React.Suspense fallback={null}>
+      <LazyEditorInputDiagnosticsPanel />
+    </React.Suspense>
+  );
+}
 
 function renderStartupError(message: string) {
   const rootElement = document.getElementById(ROOT_ID);
@@ -167,7 +190,7 @@ async function mountApp() {
         }}
       >
         <App />
-        <EditorInputDiagnosticsPanel />
+        {renderEditorInputDiagnosticsPanel()}
       </StartupErrorBoundary>
     </React.StrictMode>
   );
