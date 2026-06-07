@@ -55,7 +55,7 @@ function renderOutlineSidebar(args: {
   );
 }
 
-it('renders external document headings in the outline panel instead of the active internal topic', () => {
+it('renders external document headings in the outline panel instead of the active internal topic', async () => {
   const onRevealExternalPosition = vi.fn();
 
   renderOutlineSidebar({
@@ -66,7 +66,7 @@ it('renders external document headings in the outline panel instead of the activ
     }
   });
 
-  expect(screen.getByRole('button', { name: 'External section' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'External section' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'External detail' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Internal heading' })).not.toBeInTheDocument();
 
@@ -75,7 +75,7 @@ it('renders external document headings in the outline panel instead of the activ
   expect(onRevealExternalPosition).toHaveBeenCalledWith(21);
 });
 
-it('does not leak the previous internal topic outline while an external non-document view is open', () => {
+it('does not leak the previous internal topic outline while an external non-document view is open', async () => {
   renderOutlineSidebar({
     outlineDocument: {
       activePosition: 0,
@@ -84,6 +84,6 @@ it('does not leak the previous internal topic outline while an external non-docu
     }
   });
 
-  expect(screen.getByText('This document has no outline headings yet.')).toBeInTheDocument();
+  expect(await screen.findByText('This document has no outline headings yet.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Internal heading' })).not.toBeInTheDocument();
 });

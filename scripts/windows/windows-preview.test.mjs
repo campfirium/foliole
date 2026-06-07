@@ -318,7 +318,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
-        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/components/SearchPalette.tsx'
       });
 
       expect(result.code).toBe(0);
@@ -334,7 +334,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('chooses renderer reload intent for Class A on a trusted running client', { timeout: 30000 }, async () => {
+  it('chooses renderer reload intent for ordinary Class A renderer changes on a trusted running client', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'renderer-reload');
     try {
@@ -350,7 +350,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
-        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/components/SearchPalette.tsx'
       });
       const rendererReloadDelivery = await readRendererReloadDelivery(tempRoot);
       expect(result.code).toBe(0);
@@ -731,7 +731,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
-        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx',
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/components/SearchPalette.tsx',
         WINDOWS_PREVIEW_TIMEOUT_START_SECONDS: '5'
       });
 
@@ -746,9 +746,8 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('chooses renderer reload intent when electron changes are test-only files', { timeout: 30000 }, async () => {
+  it('chooses sync-only when electron changes are test-only files', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
-    const consumer = startIntentConsumer(tempRoot, 'renderer-reload');
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
@@ -769,22 +768,14 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CHANGED_FILES: ['electron/ipc/commands.test.ts', 'electron/database/nodeMutations.test.ts'].join('\n')
       });
-      const rendererReloadDelivery = await readRendererReloadDelivery(tempRoot);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('reason: Class A: renderer-only sync path');
-      expect(result.stdout).toContain('selected action: renderer-reload-intent');
-      expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
+      expect(result.stdout).toContain('reason: Class A: no runtime changes detected');
+      expect(result.stdout).toContain('selected action: sync-only');
       expect(result.stdout).toContain('[windows-preview] status: STARTED');
       expect(result.stdout).not.toContain('[windows-sync] include electron-dist');
-      expect(rendererReloadDelivery).toMatchObject({
-        nonce: 1,
-        target: 'electron-dev-renderer',
-        reason: 'Class A: renderer-only sync path'
-      });
       expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
-      consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
@@ -853,7 +844,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_RENDERER_RELOAD_INTENT_ROOT: rendererReloadRoot,
-        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx',
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/components/SearchPalette.tsx',
         WINDOWS_PREVIEW_TIMEOUT_SECONDS: '1',
         WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '1',
         WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '3'

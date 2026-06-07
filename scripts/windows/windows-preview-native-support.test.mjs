@@ -93,11 +93,33 @@ it('uses restart intent for runtime changes on trusted native debug clients', ()
 it('does not full restart when the runtime is only behind committed renderer files', () => {
   expect(selectNativePreviewActionWithCommittedFiles({
     changedFiles: [],
-    committedFilesSinceRuntime: ['src/main.tsx'],
+    committedFilesSinceRuntime: ['src/app/components/SearchPalette.tsx'],
     currentHead: 'def456',
     status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
   })).toMatchObject({
     action: 'renderer-reload-intent'
+  });
+});
+
+it('full restarts when startup renderer files changed', () => {
+  expect(selectNativePreviewAction({
+    changedFiles: ['src/app/App.tsx'],
+    currentHead: 'abc123',
+    status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
+  })).toMatchObject({
+    action: 'full-restart',
+    reason: 'Class D: working tree startup renderer changes detected'
+  });
+});
+
+it('full restarts when workspace shell renderer files changed', () => {
+  expect(selectNativePreviewAction({
+    changedFiles: ['src/app/components/WorkspaceRightSidebarPanels.tsx'],
+    currentHead: 'abc123',
+    status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
+  })).toMatchObject({
+    action: 'full-restart',
+    reason: 'Class D: working tree startup renderer changes detected'
   });
 });
 
@@ -114,7 +136,7 @@ it('uses restart intent when the runtime is behind committed electron files', ()
 
 it('uses renderer reload for renderer-only changes on trusted clients', () => {
   expect(selectNativePreviewAction({
-    changedFiles: ['src/app/App.tsx'],
+    changedFiles: ['src/app/components/SearchPalette.tsx'],
     currentHead: 'abc123',
     status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
   })).toMatchObject({

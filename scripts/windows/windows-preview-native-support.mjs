@@ -34,7 +34,7 @@ export function isBootEventAfterIntent(event, intent) {
 }
 
 export function isShellConfigFile(file) {
-  return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|package\.json|package-lock\.json|scripts\/electron-dev(\.test)?\.mjs|scripts\/electron-dev-server(\.test)?\.mjs|scripts\/windows\/electron-dev-native(\.test)?\.mjs|scripts\/windows\/windows-client-native.*\.mjs|scripts\/windows\/windows-preview-native.*\.mjs|scripts\/windows\/start-electron-dev-native\.ps1)$/u.test(file);
+  return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|vite\.shared\.ts|package\.json|package-lock\.json|scripts\/electron-dev\.mjs|scripts\/electron-dev-server\.mjs|scripts\/windows\/electron-dev-native\.mjs|scripts\/windows\/windows-client-native.*\.mjs|scripts\/windows\/windows-preview-native.*\.mjs|scripts\/windows\/start-electron-dev-native\.ps1)$/u.test(file);
 }
 
 export function isRuntimeFile(file) {
@@ -55,6 +55,10 @@ export function isRendererSourceFile(file) {
     return false;
   }
   return !/\.(test|spec)\.(ts|tsx|mjs|js)$/u.test(file);
+}
+
+export function isStartupRendererFile(file) {
+  return /^(src\/main\.tsx|src\/startupBootstrap\.ts|src\/startupViewMode\.ts|src\/app\/App\.tsx|src\/app\/components\/WorkspaceLayout.*\.tsx|src\/app\/components\/WorkspaceRightSidebar.*\.tsx|src\/shared\/platform\/bridge\.ts|src\/shared\/platform\/runtimeBootTelemetry\.ts)$/u.test(file);
 }
 
 function hasFile(files, predicate) {
@@ -85,6 +89,12 @@ export function selectNativePreviewActionWithCommittedFiles({
     }
     if (hasFile(committedFilesSinceRuntime, isShellConfigFile)) {
       return { action: 'full-restart', reason: 'Class D: runtime behind committed shell/vite config changes' };
+    }
+    if (hasFile(changedFiles, isStartupRendererFile)) {
+      return { action: 'full-restart', reason: 'Class D: working tree startup renderer changes detected' };
+    }
+    if (hasFile(committedFilesSinceRuntime, isStartupRendererFile)) {
+      return { action: 'full-restart', reason: 'Class D: runtime behind committed startup renderer changes' };
     }
     if (hasFile(changedFiles, isRuntimeFile)) {
       if (hasFile(changedFiles, isRendererSourceFile)) {

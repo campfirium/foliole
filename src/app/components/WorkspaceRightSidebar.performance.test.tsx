@@ -1,3 +1,4 @@
+import { waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -53,7 +54,31 @@ function createNode(overrides: Partial<Node>): Node {
 }
 
 describe('WorkspaceRightSidebar performance', () => {
-  it('keeps review queue panel steady when only queued node content changes', () => {
+  it('does not render the review queue panel before workspace hydration completes', async () => {
+    reviewQueuePanelRender.mockClear();
+    renderWithLocalization(
+      <WorkspaceRightSidebar
+        activeNodeId={null}
+        activePanelId="review-queue"
+        isWorkspaceHydrated={false}
+        nodeOrder={[]}
+        nodesById={{}}
+        onRevealAnchorInDocument={vi.fn()}
+        onSelectBreadcrumbNode={STABLE_NOOP}
+        onSelectNode={STABLE_NOOP}
+        reviewCurrentNodeId={null}
+        reviewQueueNodeIds={[]}
+        reviewSchedulerSettings={{} as never}
+        trashedNodeIds={[]}
+      />
+    );
+
+    await Promise.resolve();
+
+    expect(reviewQueuePanelRender).not.toHaveBeenCalled();
+  });
+
+  it('keeps review queue panel steady when only queued node content changes', async () => {
     reviewQueuePanelRender.mockClear();
     const queuedNode = createNode({
       id: 'node-1',
@@ -71,7 +96,7 @@ describe('WorkspaceRightSidebar performance', () => {
 
     const { rerender } = renderReviewQueueSidebar(queuedNode);
 
-    expect(reviewQueuePanelRender).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(reviewQueuePanelRender).toHaveBeenCalledTimes(1));
 
     rerender(createReviewQueueSidebarElement(createNode({
       id: 'node-1',

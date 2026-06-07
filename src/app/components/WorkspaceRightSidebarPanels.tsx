@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { Suspense, lazy, memo } from 'react';
 
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
@@ -9,13 +9,26 @@ import {
   isWorkspaceRightPanelAvailable,
   resolveWorkspaceRightPanelContext
 } from './workspaceRightPanelAvailability';
-import { WorkspaceRightSidebarBacklinksPanel } from './WorkspaceRightSidebarBacklinksPanel';
-import { WorkspaceRightSidebarDevPanel } from './WorkspaceRightSidebarDevPanel';
-import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
-import { WorkspaceRightSidebarOutlinePanel } from './WorkspaceRightSidebarOutlinePanel';
-import { WorkspaceRightSidebarPerformancePanel } from './WorkspaceRightSidebarPerformancePanel';
-import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
+
+const WorkspaceRightSidebarBacklinksPanel = lazy(() =>
+  import('./WorkspaceRightSidebarBacklinksPanel').then((module) => ({ default: module.WorkspaceRightSidebarBacklinksPanel }))
+);
+const WorkspaceRightSidebarDevPanel = lazy(() =>
+  import('./WorkspaceRightSidebarDevPanel').then((module) => ({ default: module.WorkspaceRightSidebarDevPanel }))
+);
+const WorkspaceRightSidebarHighlightsPanel = lazy(() =>
+  import('./WorkspaceRightSidebarHighlightsPanel').then((module) => ({ default: module.WorkspaceRightSidebarHighlightsPanel }))
+);
+const WorkspaceRightSidebarOutlinePanel = lazy(() =>
+  import('./WorkspaceRightSidebarOutlinePanel').then((module) => ({ default: module.WorkspaceRightSidebarOutlinePanel }))
+);
+const WorkspaceRightSidebarPerformancePanel = lazy(() =>
+  import('./WorkspaceRightSidebarPerformancePanel').then((module) => ({ default: module.WorkspaceRightSidebarPerformancePanel }))
+);
+const WorkspaceRightSidebarReviewQueuePanel = lazy(() =>
+  import('./WorkspaceRightSidebarReviewQueuePanel').then((module) => ({ default: module.WorkspaceRightSidebarReviewQueuePanel }))
+);
 
 type WorkspaceRightSidebarNodesById = Record<string, Node>;
 
@@ -28,6 +41,7 @@ export interface WorkspaceRightSidebarOutlineDocument {
 export interface WorkspaceRightSidebarPanelProps {
   activeNodeId: string | null;
   activePanelId: WorkspaceRightPanelId;
+  isWorkspaceHydrated?: boolean;
   outlineActivePosition: number;
   nodeOrder: string[];
   nodesById: WorkspaceRightSidebarNodesById;
@@ -45,29 +59,36 @@ export interface WorkspaceRightSidebarPanelProps {
 }
 
 export function renderWorkspaceRightSidebarPanel(props: WorkspaceRightSidebarPanelProps) {
-  return measureWorkspaceDiagnostic(
-    'workspace-right-sidebar-panel-select',
-    {
-      activeNodeId: props.activeNodeId,
-      activePanelId: props.activePanelId,
-      nodeCount: Object.keys(props.nodesById).length
-    },
-    () => {
-      const context = resolveWorkspaceRightPanelContext({
-        activeNodeId: props.activeNodeId,
-        hasExternalDocument: Boolean(props.outlineDocument),
-        nodesById: props.nodesById
-      });
-      if (!isWorkspaceRightPanelAvailable(props.activePanelId, context)) {
-        return null;
-      }
-      if (props.activePanelId === 'dev') return renderDevPanel(props);
-      if (props.activePanelId === 'performance') return renderPerformancePanel(props);
-      if (props.activePanelId === 'highlights') return renderHighlightsPanel(props);
-      if (props.activePanelId === 'outline') return renderOutlinePanel(props);
-      if (props.activePanelId === 'backlinks') return renderBacklinksPanel(props);
-      return renderReviewQueuePanel(props);
-    }
+  return (
+    <Suspense fallback={null}>
+      {measureWorkspaceDiagnostic(
+        'workspace-right-sidebar-panel-select',
+        {
+          activeNodeId: props.activeNodeId,
+          activePanelId: props.activePanelId,
+          nodeCount: Object.keys(props.nodesById).length
+        },
+        () => {
+          if (props.isWorkspaceHydrated === false) {
+            return null;
+          }
+          const context = resolveWorkspaceRightPanelContext({
+            activeNodeId: props.activeNodeId,
+            hasExternalDocument: Boolean(props.outlineDocument),
+            nodesById: props.nodesById
+          });
+          if (!isWorkspaceRightPanelAvailable(props.activePanelId, context)) {
+            return null;
+          }
+          if (props.activePanelId === 'dev') return renderDevPanel(props);
+          if (props.activePanelId === 'performance') return renderPerformancePanel(props);
+          if (props.activePanelId === 'highlights') return renderHighlightsPanel(props);
+          if (props.activePanelId === 'outline') return renderOutlinePanel(props);
+          if (props.activePanelId === 'backlinks') return renderBacklinksPanel(props);
+          return renderReviewQueuePanel(props);
+        }
+      )}
+    </Suspense>
   );
 }
 

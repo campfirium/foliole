@@ -41,7 +41,7 @@ function createNode(overrides: Partial<Node>): Node {
   };
 }
 
-it('opens pdf highlight parent through unified node selection when parent is not active yet', () => {
+it('opens pdf highlight parent through unified node selection when parent is not active yet', async () => {
   const onSelectNode = vi.fn();
   const onRevealAnchorInDocument = vi.fn();
 
@@ -80,7 +80,7 @@ it('opens pdf highlight parent through unified node selection when parent is not
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: /picked text/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /picked text/i }));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',
@@ -90,7 +90,7 @@ it('opens pdf highlight parent through unified node selection when parent is not
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 });
 
-it('opens parent node with text highlight focus when highlight parent is not active yet', () => {
+it('opens parent node with text highlight focus when highlight parent is not active yet', async () => {
   const onSelectNode = vi.fn();
   const onRevealAnchorInDocument = vi.fn();
 
@@ -133,7 +133,7 @@ it('opens parent node with text highlight focus when highlight parent is not act
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Beta' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Beta' }));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',
@@ -148,7 +148,7 @@ it('opens parent node with text highlight focus when highlight parent is not act
 });
 
 
-it('routes current-parent pdf highlights through unified node selection without reopening', () => {
+it('routes current-parent pdf highlights through unified node selection without reopening', async () => {
   const onSelectNode = vi.fn();
   const onRevealAnchorInDocument = vi.fn();
 
@@ -181,7 +181,7 @@ it('routes current-parent pdf highlights through unified node selection without 
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: /picked text/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /picked text/i }));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',
@@ -191,7 +191,7 @@ it('routes current-parent pdf highlights through unified node selection without 
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 });
 
-it('routes current-parent text highlights through unified node selection without reopening another note', () => {
+it('routes current-parent text highlights through unified node selection without reopening another note', async () => {
   const onSelectNode = vi.fn();
   const onRevealAnchorInDocument = vi.fn();
 
@@ -228,7 +228,7 @@ it('routes current-parent text highlights through unified node selection without
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Beta' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Beta' }));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',
@@ -242,7 +242,7 @@ it('routes current-parent text highlights through unified node selection without
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 });
 
-it('renders the outline panel from active topic headings', () => {
+it('renders the outline panel from active topic headings', async () => {
   const onRevealDocumentPosition = vi.fn();
   const activeNode = createNode({
     content: '# Title\n\n## First section\n\nText\n\n### Detail',
@@ -268,7 +268,7 @@ it('renders the outline panel from active topic headings', () => {
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: /first section/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /first section/i }));
 
   expect(screen.getByRole('navigation', { name: 'Document outline' })).toBeInTheDocument();
   expect(screen.queryByText('Outline')).not.toBeInTheDocument();
