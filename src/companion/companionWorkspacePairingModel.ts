@@ -1,6 +1,5 @@
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 
-export const UNKNOWN_DESKTOP_HOST = '';
 export const UNKNOWN_DESKTOP_PLATFORM = '';
 export const UNKNOWN_DESKTOP_VERSION = '';
 
@@ -10,7 +9,6 @@ export type CompanionDesktopDiscovery = {
   desktopName: string;
   desktopPlatform: string;
   endpointUrl: string;
-  hostName: string;
   peerId: string;
 };
 
@@ -31,7 +29,6 @@ export function normalizeDiscovery(endpointUrl: string, discovery: {
   desktop_device_name?: string;
   desktop_name: string;
   desktop_platform?: string;
-  host_name?: string;
   peer_id: string;
 }) {
   return {
@@ -40,7 +37,6 @@ export function normalizeDiscovery(endpointUrl: string, discovery: {
     desktopName: discovery.desktop_name,
     desktopPlatform: discovery.desktop_platform?.trim() || UNKNOWN_DESKTOP_PLATFORM,
     endpointUrl: endpointUrl.trim(),
-    hostName: discovery.host_name?.trim() || UNKNOWN_DESKTOP_HOST,
     peerId: discovery.peer_id
   };
 }

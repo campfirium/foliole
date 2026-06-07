@@ -20,6 +20,11 @@ import { countPendingCompanionPairRequests } from './companionPairingRequests.js
 import { countPairedCompanionDevices } from './companionPairingStore.js';
 
 const DEFAULT_SYNC_PORT = 38641;
+export const LAN_WORKSPACE_SYNC_HTTP_LIMITS = {
+  headersTimeout: 10_000,
+  keepAliveTimeout: 2_000,
+  requestTimeout: 30_000
+} as const;
 
 export interface LanWorkspaceSyncServerStatus {
   advertised_urls: string[];
@@ -79,8 +84,8 @@ export function setLanWorkspaceSyncPairRequestHandler(handler: (() => void) | nu
   activePairRequestHandler = handler;
 }
 
-function createWorkspaceSyncHttpServer(args: { appVersion: string; peerId: string }) {
-  return http.createServer(
+export function createWorkspaceSyncHttpServer(args: { appVersion: string; peerId: string }) {
+  const server = http.createServer(
     createLanWorkspaceSyncRequestHandler({
       appVersion: args.appVersion,
       getSyncStatus: () => activeStatus,
@@ -91,6 +96,10 @@ function createWorkspaceSyncHttpServer(args: { appVersion: string; peerId: strin
       }
     })
   );
+  server.headersTimeout = LAN_WORKSPACE_SYNC_HTTP_LIMITS.headersTimeout;
+  server.keepAliveTimeout = LAN_WORKSPACE_SYNC_HTTP_LIMITS.keepAliveTimeout;
+  server.requestTimeout = LAN_WORKSPACE_SYNC_HTTP_LIMITS.requestTimeout;
+  return server;
 }
 
 async function listenOnSyncPort(server: http.Server, port: number) {

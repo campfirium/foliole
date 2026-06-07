@@ -72,7 +72,6 @@ export interface CompanionWorkspaceDiscoveryPayload {
   desktop_device_name: string;
   desktop_name: string;
   desktop_platform: string;
-  host_name: string;
   pairing_mode: 'desktop-confirm';
   peer_id: string;
 }

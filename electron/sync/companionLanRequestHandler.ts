@@ -1,6 +1,4 @@
-import { createReadStream } from 'node:fs';
 import type http from 'node:http';
-import { pipeline } from 'node:stream/promises';
 
 import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
@@ -22,6 +20,7 @@ import {
   buildWorkspaceSnapshotPayload,
   buildWorkspaceVersionPayload
 } from './companionLanPayloads.js';
+import { writeBinary, writeFileStream, writeJson, writeOptions } from './companionLanResponses.js';
 import {
   isRetiredSyncJsonEndpoint,
   SYNC_INDEX_PATH,
@@ -34,8 +33,6 @@ import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
 import { handleSyncPackGet } from './companionLanSyncPackGet.js';
 import { SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
-
-const ALLOWED_CORS_PROTOCOLS = new Set(['capacitor:', 'http:', 'https:']);
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
 export const PAIR_ENDPOINT_PATH = '/companion/pair';
@@ -56,73 +53,6 @@ export {
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH
 };
-
-function resolveCorsOrigin(request: http.IncomingMessage) {
-  const origin = request.headers.origin;
-  if (typeof origin !== 'string' || !origin.trim()) {
-    return null;
-  }
-  try {
-    const parsedOrigin = new URL(origin);
-    if (parsedOrigin.hostname === 'localhost' && ALLOWED_CORS_PROTOCOLS.has(parsedOrigin.protocol)) {
-      return origin;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-function writeJson(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  statusCode: number,
-  payload: unknown,
-  methods = 'GET, OPTIONS, POST'
-) {
-  const allowedOrigin = resolveCorsOrigin(request);
-  response.writeHead(statusCode, {
-    'Access-Control-Allow-Headers': 'Content-Type, X-Device-Id, X-Nonce, X-Signature, X-Timestamp',
-    'Access-Control-Allow-Methods': methods,
-    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin, Vary: 'Origin' } : {}),
-    'Content-Type': 'application/json; charset=utf-8'
-  });
-  response.end(JSON.stringify(payload));
-}
-
-function writeOptions(request: http.IncomingMessage, response: http.ServerResponse) {
-  response.writeHead(204, {
-    'Access-Control-Allow-Headers': 'Content-Type, X-Device-Id, X-Nonce, X-Signature, X-Timestamp',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS, POST',
-    ...(resolveCorsOrigin(request)
-      ? {
-          'Access-Control-Allow-Origin': resolveCorsOrigin(request) ?? '',
-          Vary: 'Origin'
-        }
-      : {})
-  });
-  response.end();
-}
-
-function writeBinary(response: http.ServerResponse, statusCode: number, body: Buffer, mimeType: string | null) {
-  response.writeHead(statusCode, {
-    'Content-Length': body.byteLength,
-    'Content-Type': mimeType ?? 'application/octet-stream'
-  });
-  response.end(body);
-}
-
-async function writeFileStream(
-  response: http.ServerResponse,
-  statusCode: number,
-  resource: { contentLength: number; filePath: string; mimeType: string | null }
-) {
-  response.writeHead(statusCode, {
-    'Content-Length': resource.contentLength,
-    'Content-Type': resource.mimeType ?? 'application/octet-stream'
-  });
-  await pipeline(createReadStream(resource.filePath), response);
-}
 
 function handleWorkspaceMetadataGet(
   request: http.IncomingMessage,
@@ -244,7 +174,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       return;
     }
     if (parsedRequestUrl.pathname === '/health') {
-      writeJson(request, response, 200, { ok: true, peer_id: args.peerId });
+      writeJson(request, response, 200, { ok: true });
       return;
     }
     const auth = authenticateCompanionRequest({ request });

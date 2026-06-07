@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 const PAIR_REQUEST_TTL_MS = 2 * 60 * 1000;
 const PAIR_REQUEST_RATE_LIMIT_MAX = 5;
 const PAIR_REQUEST_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const PAIR_COMPLETION_RATE_LIMIT_MAX = 10;
+const PAIR_COMPLETION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 export interface PendingCompanionPairRequest {
   client_address: string | null;
@@ -21,6 +23,7 @@ interface StoredCompanionPairRequest extends PendingCompanionPairRequest {
 }
 
 const requestsById = new Map<string, StoredCompanionPairRequest>();
+const pairCompletionTimestampsByClient = new Map<string, number[]>();
 const requestTimestampsByClient = new Map<string, number[]>();
 
 function pruneExpiredRequests(nowMs: number) {
@@ -160,7 +163,24 @@ export function consumeApprovedCompanionPairRequest(pairRequestId: string, nowMs
   return toPublicRequest(request);
 }
 
+export function reservePairCompletionSlot(args: { clientAddress?: string | null; nowMs?: number }) {
+  const nowMs = args.nowMs ?? Date.now();
+  const key = args.clientAddress?.trim() || 'unknown';
+  const windowStartMs = nowMs - PAIR_COMPLETION_RATE_LIMIT_WINDOW_MS;
+  const recentTimestamps = (pairCompletionTimestampsByClient.get(key) ?? []).filter((timestamp) => timestamp > windowStartMs);
+  if (recentTimestamps.length >= PAIR_COMPLETION_RATE_LIMIT_MAX) {
+    return {
+      allowed: false,
+      retry_after_ms: (recentTimestamps[0] ?? nowMs) + PAIR_COMPLETION_RATE_LIMIT_WINDOW_MS - nowMs
+    } as const;
+  }
+  recentTimestamps.push(nowMs);
+  pairCompletionTimestampsByClient.set(key, recentTimestamps);
+  return { allowed: true } as const;
+}
+
 export function clearCompanionPairRequests() {
+  pairCompletionTimestampsByClient.clear();
   requestsById.clear();
   requestTimestampsByClient.clear();
 }

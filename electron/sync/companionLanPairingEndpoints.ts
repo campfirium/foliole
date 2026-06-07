@@ -5,7 +5,8 @@ import { encryptCompanionPairingSecret, isSupportedPairingPublicKey } from './co
 import {
   consumeApprovedCompanionPairRequest,
   countPendingCompanionPairRequests,
-  createCompanionPairRequest
+  createCompanionPairRequest,
+  reservePairCompletionSlot
 } from './companionPairingRequests.js';
 import { countPairedCompanionDevices, registerPairedCompanionDevice } from './companionPairingStore.js';
 
@@ -39,6 +40,24 @@ function normalizeClientAddress(address: string | undefined) {
   return address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
 }
 
+function writePairCompletionRateLimit(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  writeJson: JsonResponder
+) {
+  const pairRateLimit = reservePairCompletionSlot({
+    clientAddress: normalizeClientAddress(request.socket.remoteAddress)
+  });
+  if (pairRateLimit.allowed) {
+    return false;
+  }
+  writeJson(request, response, 429, {
+    error: 'pair_completion_rate_limited',
+    retry_after_ms: pairRateLimit.retry_after_ms
+  });
+  return true;
+}
+
 export async function handlePairRequest(
   request: http.IncomingMessage,
   response: http.ServerResponse,
@@ -47,6 +66,7 @@ export async function handlePairRequest(
   updatePairingStatus: PairingStatusUpdater,
   writeJson: JsonResponder
 ) {
+  if (writePairCompletionRateLimit(request, response, writeJson)) return;
   let payload: Record<string, unknown>;
   try {
     payload = await readJsonPayload(request);

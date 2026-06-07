@@ -36,7 +36,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.category.companionSync.description': 'Pair other devices and manage local sync.',
   'settings.companionSync.sectionAria': 'Sync section',
   'settings.companionSync.title': 'Sync',
-  'settings.companionSync.description': 'Turn on desktop sync before pairing another device. Phones on the same Wi-Fi can then sync with this desktop after you approve them.',
+  'settings.companionSync.description': 'Turn on desktop sync before pairing another device. Phones on your local network can discover this desktop, then sync after you approve them.',
   'settings.companionSync.enableDesktop.title': 'Enable on this desktop',
   'settings.companionSync.enableDesktop.aria': 'Enable desktop sync',
   'settings.companionSync.error.open': 'Could not open sync. {error}',

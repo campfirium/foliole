@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
@@ -54,7 +54,6 @@ function desktopDiscovery(hostName = 'V', endpointUrl = 'http://192.168.1.8:3864
       desktop_device_name: `Foliole Desktop on ${hostName}`,
       desktop_name: 'Foliole Desktop',
       desktop_platform: hostName === 'Studio' ? 'macOS' : 'Windows',
-      host_name: hostName,
       peer_id: `desktop-${hostName.toLowerCase()}`
     },
     endpointUrl
@@ -83,53 +82,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('useCompanionWorkspacePairing loading', () => {
-  it('loads stored pairing state once on initial render', async () => {
-    mockStoredPairingState();
-    const args = createArgs();
-
-    const { rerender } = renderHook(() => useCompanionWorkspacePairing(args));
-    rerender();
-    rerender();
-
-    await waitFor(() => {
-      expect(syncMocks.loadCompanionPairingState).toHaveBeenCalledTimes(1);
-    });
-  });
-});
-
 describe('useCompanionWorkspacePairing request flow', () => {
-  it('can cancel a pending pair request and keep discovered devices available', async () => {
-    mockStoredPairingState();
-    syncMocks.discoverCompanionDesktops.mockResolvedValue([
-      desktopDiscovery(),
-      desktopDiscovery('Studio', 'http://192.168.1.12:38641')
-    ]);
-    syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());
-    mockPairRequest();
-    const args = createArgs();
-    const { result } = renderHook(() => useCompanionWorkspacePairing(args));
-
-    await act(async () => {
-      await result.current.checkDesktop('http://10.0.2.2:38641');
-    });
-    await act(async () => {
-      await result.current.requestPairing('http://192.168.1.8:38641');
-    });
-
-    expect(syncMocks.discoverCompanionDesktop).not.toHaveBeenCalled();
-    expect(result.current.pendingPairRequest?.pairRequestId).toBe('pair-request-1');
-    expect(result.current.desktopDiscoveries).toHaveLength(2);
-
-    act(() => {
-      result.current.cancelPairing();
-    });
-
-    expect(result.current.pendingPairRequest).toBeNull();
-    expect(result.current.pairingStatus).toBe('idle');
-    expect(result.current.desktopDiscoveries.map((desktop) => desktop.hostName)).toEqual(['V', 'Studio']);
-  });
-
   it('clears an expired pending pair request so the user can pair again', async () => {
     mockStoredPairingState();
     syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());

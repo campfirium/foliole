@@ -123,7 +123,6 @@ describe('CompanionSyncPanel discovery list', () => {
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'Windows',
           endpointUrl: 'http://192.168.1.8:38641',
-          hostName: 'ZEPHU-PC',
           peerId: 'desktop-local'
         }
       ]
@@ -137,7 +136,7 @@ describe('CompanionSyncPanel discovery list', () => {
     expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
     expect(screen.queryByText('Choose the device to pair and sync with.')).not.toBeInTheDocument();
-    expect(screen.getByText('ZEPHU-PC')).toBeInTheDocument();
+    expect(screen.getByText('Foliole Desktop on ZEPHU-PC')).toBeInTheDocument();
     expect(screen.getByText('(Windows)')).toBeInTheDocument();
     expect(screen.getByText('192.168.1.8:38641')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pair with this device' })).not.toBeInTheDocument();
@@ -158,7 +157,6 @@ describe('CompanionSyncPanel discovery list', () => {
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'Windows',
           endpointUrl: 'http://192.168.1.8:38641',
-          hostName: 'V',
           peerId: 'desktop-v'
         }
       ],
@@ -182,7 +180,6 @@ describe('CompanionSyncPanel multiple discovery list', () => {
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'Windows',
           endpointUrl: 'http://192.168.1.8:38641',
-          hostName: 'V',
           peerId: 'desktop-v'
         },
         {
@@ -191,7 +188,6 @@ describe('CompanionSyncPanel multiple discovery list', () => {
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'macOS',
           endpointUrl: 'http://192.168.1.12:38641',
-          hostName: 'Studio',
           peerId: 'desktop-studio'
         }
       ]
@@ -201,8 +197,8 @@ describe('CompanionSyncPanel multiple discovery list', () => {
 
     expect(screen.getByRole('heading', { name: 'Found 2 devices' })).toBeInTheDocument();
     expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
-    expect(screen.getByText('V')).toBeInTheDocument();
-    expect(screen.getByText('Studio')).toBeInTheDocument();
+    expect(screen.getByText('Foliole Desktop on V')).toBeInTheDocument();
+    expect(screen.getByText('Foliole Desktop on Studio')).toBeInTheDocument();
     const pairButtons = screen.getAllByRole('button', { name: 'Connect' });
     fireEvent.click(pairButtons[1]!);
 

@@ -1,7 +1,7 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppSpinner } from '../shared/ui';
 
-import { UNKNOWN_DESKTOP_HOST, UNKNOWN_DESKTOP_PLATFORM } from './companionWorkspacePairingModel';
+import { UNKNOWN_DESKTOP_PLATFORM } from './companionWorkspacePairingModel';
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
 function formatEndpoint(endpointUrl: string) {
@@ -14,7 +14,7 @@ function formatEndpoint(endpointUrl: string) {
 }
 
 function resolveDeviceTitle(desktop: CompanionDesktopDiscovery, unknownHost: string) {
-  return desktop.hostName !== UNKNOWN_DESKTOP_HOST ? desktop.hostName : desktop.desktopDeviceName || unknownHost;
+  return desktop.desktopDeviceName || unknownHost;
 }
 
 function resolveDesktopPlatform(desktop: CompanionDesktopDiscovery, desktopFallback: string) {

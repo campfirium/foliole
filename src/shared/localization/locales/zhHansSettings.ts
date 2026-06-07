@@ -38,7 +38,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.category.companionSync.description': '配对其他设备并管理本地同步。',
   'settings.companionSync.sectionAria': '同步设置区',
   'settings.companionSync.title': '同步',
-  'settings.companionSync.description': '配对其他设备前，先在这台桌面端打开同步。同一 Wi-Fi 下的手机经你批准后即可与这台桌面端同步。',
+  'settings.companionSync.description': '配对其他设备前，先在这台桌面端打开同步。同一局域网内的手机可发现这台桌面端，经你批准后即可同步。',
   'settings.companionSync.enableDesktop.title': '在这台桌面端启用',
   'settings.companionSync.enableDesktop.aria': '启用桌面同步',
   'settings.companionSync.error.open': '无法打开同步。{error}',

@@ -11,7 +11,7 @@ const pairingStoreMock = vi.hoisted(() => ({
 
 vi.mock('./companionPairingStore.js', () => pairingStoreMock);
 
-import { handlePairRequestCreate } from './companionLanPairingEndpoints.js';
+import { handlePairRequest, handlePairRequestCreate } from './companionLanPairingEndpoints.js';
 import { clearCompanionPairRequests } from './companionPairingRequests.js';
 
 const TEST_PAIRING_PUBLIC_KEY = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString('base64url');
@@ -55,5 +55,32 @@ it('does not revoke an existing paired device before desktop approval', async ()
   expect(pairingStoreMock.removePairedCompanionDevice).not.toHaveBeenCalled();
   expect(writeJson).toHaveBeenCalledWith(expect.anything(), expect.anything(), 202, expect.objectContaining({
     status: 'pending'
+  }));
+});
+
+it('rate limits pair completion attempts by client address before consuming approved requests', async () => {
+  const writeJson = vi.fn();
+  for (let index = 0; index < 10; index += 1) {
+    await handlePairRequest(
+      createRequest({ pair_request_id: `missing-${index}` }),
+      createResponse(),
+      '0.1.0-test',
+      'desktop-local',
+      vi.fn(),
+      writeJson
+    );
+  }
+
+  await handlePairRequest(
+    createRequest({ pair_request_id: 'missing-10' }),
+    createResponse(),
+    '0.1.0-test',
+    'desktop-local',
+    vi.fn(),
+    writeJson
+  );
+
+  expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 429, expect.objectContaining({
+    error: 'pair_completion_rate_limited'
   }));
 });

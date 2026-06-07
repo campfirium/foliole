@@ -25,7 +25,6 @@ function discoveryBody(args: { hostName: string; peerId: string; platform: strin
     desktop_device_name: `Foliole Desktop on ${args.hostName}`,
     desktop_name: 'Foliole Desktop',
     desktop_platform: args.platform,
-    host_name: args.hostName,
     pairing_mode: 'desktop-confirm',
     peer_id: args.peerId
   });

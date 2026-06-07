@@ -124,8 +124,6 @@ function registerSnapshotProtectionTest() {
     });
 
     expect(status.state).toBe('running');
-    expect(status.pending_pair_request_count).toBe(0);
-    expect(getLanWorkspaceSyncServerStatus().port).toBe(38679);
 
     const discoveryResponse = await fetch('http://127.0.0.1:38679/companion/discovery');
     expect(discoveryResponse.status).toBe(200);

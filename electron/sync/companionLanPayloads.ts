@@ -38,13 +38,11 @@ function resolveDesktopDeviceName() {
 }
 
 export function buildDiscoveryPayload(appVersion: string, peerId: string) {
-  const hostName = os.hostname().trim();
   return {
     app_version: appVersion,
     desktop_device_name: resolveDesktopDeviceName(),
     desktop_name: 'Foliole Desktop',
     desktop_platform: resolveDesktopPlatformLabel(),
-    host_name: hostName || 'Desktop',
     pairing_mode: 'desktop-confirm' as const,
     peer_id: peerId
   };

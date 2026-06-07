@@ -117,13 +117,6 @@ export function authenticateCompanionRequest(args: {
       status_code: 401
     };
   }
-  if (!consumeNonce(deviceId, nonce, nowMs)) {
-    return {
-      error: 'replayed_nonce',
-      ok: false,
-      status_code: 409
-    };
-  }
   const canonicalPayload = buildCanonicalRequestPayload({
     bodyHash: sha256Hex(args.bodyText ?? ''),
     method: args.request.method ?? 'GET',
@@ -137,6 +130,13 @@ export function authenticateCompanionRequest(args: {
       error: 'invalid_signature',
       ok: false,
       status_code: 401
+    };
+  }
+  if (!consumeNonce(deviceId, nonce, nowMs)) {
+    return {
+      error: 'replayed_nonce',
+      ok: false,
+      status_code: 409
     };
   }
   return {
