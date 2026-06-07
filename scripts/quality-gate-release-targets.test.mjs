@@ -1,72 +1,21 @@
 // @vitest-environment node
-/* global process */
-
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import packageJson from '../package.json' with { type: 'json' };
 
 import { describe, expect, it } from 'vitest';
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-target.sh');
-
-function runTargetGate(cwd, target) {
-  return new Promise((resolve) => {
-    const child = spawn('bash', [TARGET_SCRIPT, target], {
-      cwd,
-      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary' }
-    });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on('close', (code) => {
-      resolve({ code, stdout, stderr });
-    });
-  });
-}
-
-async function writePackageJson(rootDir, scripts) {
-  await writeFile(
-    path.join(rootDir, 'package.json'),
-    `${JSON.stringify({ name: 'quality-gate-release-target-fixture', private: true, scripts }, null, 2)}\n`,
-    'utf8'
-  );
-}
-
-function releaseScripts() {
-  return {
-    'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
-    'lint:full': 'node -e "console.log(\'release lint ok\')"',
-    'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
-    'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
-    'test:desktop:src': 'node -e "console.log(\'release desktop src test ok\')"',
-    'test:desktop:electron': 'node -e "console.log(\'release desktop electron test ok\')"',
-    'test:windows:core': 'node -e "console.log(\'release windows core test ok\')"',
-    'test:windows:preview-recovery': 'node -e "console.log(\'release windows preview recovery test ok\')"',
-    'test:android': 'node -e "console.log(\'release android test ok\')"',
-    'test:shared': 'node -e "console.log(\'release shared test ok\')"',
-    'test:sync-pack': 'node -e "console.log(\'release sync-pack test ok\')"',
-    'test:quality:core': 'node -e "console.log(\'release quality core test ok\')"',
-    'test:quality:gate': 'node -e "console.log(\'release quality gate test ok\')"',
-    'test:quality:node': 'node -e "console.log(\'release quality node test ok\')"',
-    'test:quality:preview': 'node -e "console.log(\'release quality preview test ok\')"',
-    build: 'node -e "console.log(\'release build ok\')"',
-    'electron:compile': 'node -e "console.log(\'release electron compile ok\')"',
-    'android:web:build': 'node -e "console.log(\'release android web build ok\')"',
-    'android:sync': 'node -e "console.log(\'release android sync ok\')"',
-    'android:host:lint': 'node -e "console.log(\'release android host lint ok\')"',
-    'android:host:test': 'node -e "console.log(\'release android host test ok\')"'
-  };
-}
+import { releaseScripts, runTargetGate, writePackageJson } from './quality-gate-release-targets.support.mjs';
 
 describe('quality-gate release split targets', () => {
+  it('exposes release core, fail-fast, base, and tail package aliases', () => {
+    expect(packageJson.scripts['quality:release:core']).toBe('bash scripts/quality-gate-target.sh release-core');
+    expect(packageJson.scripts['quality:release:fail-fast']).toBe('bash scripts/quality-gate-target.sh release --fail-fast');
+    expect(packageJson.scripts['quality:release:base']).toBe('bash scripts/quality-gate-target.sh release-base');
+    expect(packageJson.scripts['quality:release:windows:tail']).toBe('bash scripts/quality-gate-target.sh release-windows-tail');
+  });
+
   it('keeps release-core isolated from preview recovery and android host checks', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
@@ -91,6 +40,47 @@ describe('quality-gate release split targets', () => {
       expect(result.stdout).not.toContain('release windows preview recovery test ok');
       expect(result.stdout).not.toContain('release android sync ok');
       expect(result.stdout).toContain('[quality-gate:release-core] all checks passed.');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 60000);
+
+  it.each([
+    {
+      expected: ['android boundary ok', 'release lint ok', 'release desktop typecheck ok', 'release android typecheck ok'],
+      name: 'guards, lint, and typecheck',
+      rejected: ['release desktop src test ok', 'release build ok'],
+      target: 'release-static'
+    },
+    {
+      expected: ['release desktop src test ok', 'release windows core test ok', 'release android test ok', 'release shared test ok', 'release sync-pack test ok', 'release quality gate test ok'],
+      name: 'non-preview test buckets',
+      rejected: ['release quality preview test ok', 'release preview recovery test ok', 'release build ok'],
+      target: 'release-tests'
+    },
+    {
+      expected: ['release quality preview test ok', 'release build ok', 'release electron compile ok', 'release android web build ok'],
+      name: 'release build outputs',
+      rejected: ['release desktop src test ok', 'release windows preview recovery test ok'],
+      target: 'release-build'
+    },
+    {
+      expected: ['release quality preview test ok'],
+      name: 'script preview tests',
+      rejected: ['release desktop src test ok', 'release windows preview recovery test ok'],
+      target: 'release-script-preview'
+    }
+  ])('keeps $target isolated to $name', async ({ expected, rejected, target }) => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
+    try {
+      await writePackageJson(tempRoot, releaseScripts());
+
+      const result = await runTargetGate(tempRoot, target);
+
+      expect(result.code).toBe(0);
+      for (const text of expected) expect(result.stdout).toContain(text);
+      for (const text of rejected) expect(result.stdout).not.toContain(text);
+      expect(result.stdout).toContain(`[quality-gate:${target}] all checks passed.`);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

@@ -9,7 +9,7 @@ if [[ ! -f "package.json" ]]; then
   exit 1
 fi
 
-target="${1:-}"; usage="Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release|release-core|release-preview-recovery|release-android-host> [--fail-fast]"
+target="${1:-}"; usage="Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release|release-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host> [--fail-fast]"
 QUALITY_GATE_COLLECT_FAILURES=1
 case "${2:-}" in
   --fail-fast) QUALITY_GATE_COLLECT_FAILURES=0 ;;
@@ -212,23 +212,8 @@ case "${target}" in
     run_gate_steps check:android-boundary lint:shared:full typecheck:shared test:shared test:quality build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
-  release-core)
-    run_release_core_gate_steps
-    ;;
-  full)
-    run_release_core_gate_steps
-    run_release_preview_recovery_gate_steps
-    ;;
-  release)
-    run_release_core_gate_steps
-    run_release_preview_recovery_gate_steps
-    run_release_android_host_gate_steps
-    ;;
-  release-preview-recovery)
-    run_release_preview_recovery_gate_steps
-    ;;
-  release-android-host)
-    run_release_android_host_gate_steps
+  full|release|release-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host)
+    run_release_target_steps "${target}"
     ;;
   *)
     echo "[quality-gate-target] unknown target: ${target}"
