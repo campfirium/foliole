@@ -46,6 +46,7 @@ function MarkdownMermaidPreviewBody(props: { source: string }) {
     renderMermaidSvg(`foliole-mermaid-preview-${Date.now().toString(36)}`, props.source)
       .then((rendered) => {
         if (cancelled || !container.isConnected) return;
+        // Trust only Mermaid strict/htmlLabels=false output here, not the raw user source.
         container.innerHTML = rendered.svg;
         applyPreviewSvgSizing(container, diagramKind);
         rendered.bindFunctions?.(container);

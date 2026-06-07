@@ -1,13 +1,17 @@
 import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { initializeMermaid, renderMermaid } = vi.hoisted(() => ({
-  initializeMermaid: vi.fn(),
-  renderMermaid: vi.fn(async (id: string, source: string) => ({
-    bindFunctions: undefined,
-    svg: `<svg data-mermaid-id="${id}"><text>${source}</text></svg>`
-  }))
-}));
+const { bindMermaidFunctions, initializeMermaid, renderMermaid } = vi.hoisted(() => {
+  const bindFunctions = vi.fn();
+  return {
+    bindMermaidFunctions: bindFunctions,
+    initializeMermaid: vi.fn(),
+    renderMermaid: vi.fn(async (id: string, source: string) => ({
+      bindFunctions,
+      svg: `<svg data-mermaid-id="${id}"><text>${source}</text></svg>`
+    }))
+  };
+});
 
 vi.mock('mermaid', () => ({
   default: {
@@ -30,6 +34,7 @@ function createAdapterHost(initialContent: string) {
 }
 
 beforeEach(() => {
+  bindMermaidFunctions.mockClear();
   initializeMermaid.mockClear();
   renderMermaid.mockClear();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
@@ -94,12 +99,16 @@ describe('live markdown mermaid rendering', () => {
     expect(host.textContent).not.toContain('```mermaid');
     expect(initializeMermaid).toHaveBeenCalledWith(
       expect.objectContaining({
+        htmlLabels: false,
+        securityLevel: 'strict',
+        startOnLoad: false,
         themeVariables: expect.objectContaining({
           primaryTextColor: 'rgb(32, 33, 36)',
           textColor: 'rgb(32, 33, 36)'
         })
       })
     );
+    expect(bindMermaidFunctions).toHaveBeenCalledWith(host.querySelector('.cm-md-mermaid-body'));
     expect(adapter.getContent()).toBe(initialContent);
 
     adapter.destroy();
@@ -137,6 +146,9 @@ describe('live markdown imported mermaid rendering', () => {
     });
     expect(initializeMermaid).toHaveBeenCalledWith(
       expect.objectContaining({
+        htmlLabels: false,
+        securityLevel: 'strict',
+        startOnLoad: false,
         themeVariables: expect.objectContaining({
           darkMode: true,
           textColor: 'rgb(232, 230, 223)'

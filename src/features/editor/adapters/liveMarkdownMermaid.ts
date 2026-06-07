@@ -131,6 +131,7 @@ async function renderMermaidDiagram(wrapper: HTMLElement, source: string) {
     const id = `foliole-mermaid-${hashMermaidSource(source)}-${Date.now().toString(36)}`;
     const rendered = await renderMermaidSvg(id, source);
     if (!wrapper.isConnected) return;
+    // Trust only Mermaid strict/htmlLabels=false output here, not the raw user source.
     wrapper.innerHTML = rendered.svg;
     rendered.bindFunctions?.(wrapper);
   } catch {

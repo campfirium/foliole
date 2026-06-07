@@ -1,16 +1,21 @@
 import { screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { renderMermaid } = vi.hoisted(() => ({
-  renderMermaid: vi.fn(async (id: string, source: string) => ({
-    bindFunctions: undefined,
-    svg: `<svg data-mermaid-id="${id}"><text>${source}</text></svg>`
-  }))
-}));
+const { bindMermaidFunctions, initializeMermaid, renderMermaid } = vi.hoisted(() => {
+  const bindFunctions = vi.fn();
+  return {
+    bindMermaidFunctions: bindFunctions,
+    initializeMermaid: vi.fn(),
+    renderMermaid: vi.fn(async (id: string, source: string) => ({
+      bindFunctions,
+      svg: `<svg data-mermaid-id="${id}"><text>${source}</text></svg>`
+    }))
+  };
+});
 
 vi.mock('mermaid', () => ({
   default: {
-    initialize: vi.fn(),
+    initialize: initializeMermaid,
     render: renderMermaid
   }
 }));
@@ -18,6 +23,12 @@ vi.mock('mermaid', () => ({
 import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 
 import { MarkdownMermaidPreviewDialog } from './MarkdownMermaidPreviewDialog';
+
+beforeEach(() => {
+  bindMermaidFunctions.mockClear();
+  initializeMermaid.mockClear();
+  renderMermaid.mockClear();
+});
 
 describe('MarkdownMermaidPreviewDialog', () => {
   it('renders diagram preview in the shared centered preview dialog', async () => {
@@ -27,6 +38,12 @@ describe('MarkdownMermaidPreviewDialog', () => {
     await waitFor(() => {
       expect(dialog.querySelector('.cm-md-mermaid-preview svg')).not.toBeNull();
     });
+    expect(initializeMermaid).toHaveBeenCalledWith(expect.objectContaining({
+      htmlLabels: false,
+      securityLevel: 'strict',
+      startOnLoad: false
+    }));
+    expect(bindMermaidFunctions).toHaveBeenCalledWith(dialog.querySelector('.cm-md-mermaid-preview'));
     expect(dialog.textContent).toContain('gantt');
     expect(dialog.querySelector('[data-md-mermaid-kind="gantt"]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /code/i })).not.toBeInTheDocument();
