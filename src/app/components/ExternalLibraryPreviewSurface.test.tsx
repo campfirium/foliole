@@ -1,10 +1,8 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
-
-import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
 
 const mocks = vi.hoisted(() => ({
   markdownEditorMounted: vi.fn(),
@@ -41,7 +39,9 @@ vi.mock('./LinkPanelStack', () => ({
   )
 }));
 
-it('opens the link panel when an external document preview link is clicked', () => {
+const { ExternalLibraryPreviewSurface } = await import('./ExternalLibraryPreviewSurface');
+
+it('opens the link panel when an external document preview link is clicked', async () => {
   renderWithLocalization(
     <ExternalLibraryPreviewSurface
       canGoBack={false}
@@ -67,11 +67,13 @@ it('opens the link panel when an external document preview link is clicked', () 
     />
   );
 
-  expect(screen.getByText('to sync')).toBeInTheDocument();
+  expect(await screen.findByText('to sync')).toBeInTheDocument();
   expect(screen.getByText('folder')).toBeInTheDocument();
   expect(screen.getByTestId('external-preview-editor').parentElement).toHaveClass('pl-4', 'pt-2');
   expect(screen.getByTestId('document-header-content-rail')).toHaveClass('px-[var(--document-content-inline-padding)]');
-  expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveClass('translate-x-[calc(100%+theme(spacing.3))]');
+  expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveClass('p-0', 'text-sm', 'leading-[1.25]');
+  expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveTextContent('Import');
+  expect(screen.getByRole('button', { name: 'Import to Foliole' }).closest('[data-testid="document-header-content-rail"]')).toBeInTheDocument();
   expect(screen.queryByText('/library/to sync/folder/topic.md')).not.toBeInTheDocument();
   expect(screen.getByTestId('link-panel-count')).toHaveTextContent('0');
   expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.objectContaining({ nodeId: null, readOnly: true }));
@@ -81,7 +83,7 @@ it('opens the link panel when an external document preview link is clicked', () 
   expect(screen.getByTestId('link-panel-count')).toHaveTextContent('1');
 });
 
-it('remounts the external library preview editor when editor appearance changes', () => {
+it('remounts the external library preview editor when editor appearance changes', async () => {
   mocks.markdownEditorMounted.mockReset();
   const preview = {
     absolutePath: '/library/topic.md',
@@ -107,9 +109,9 @@ it('remounts the external library preview editor when editor appearance changes'
   };
   const { rerender } = renderWithLocalization(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="preview" />);
 
-  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1));
 
   rerender(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="source" />);
 
-  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(2);
+  await waitFor(() => expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(2));
 });

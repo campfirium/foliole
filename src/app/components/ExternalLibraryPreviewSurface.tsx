@@ -43,19 +43,16 @@ export function ExternalLibraryPreviewSurface(args: {
         canGoForward={args.canGoForward}
         onGoBack={args.onGoBack}
         onGoForward={args.onGoForward}
+        onHandleImport={args.onHandleImport}
+        onOpenImportedNodeId={args.onOpenImportedNodeId}
         onOpenSelection={args.onOpenSelection}
         preview={args.preview}
+        isImporting={args.isImporting}
       />
       <div
         className="relative flex min-h-0 flex-1 flex-col pl-4 pr-0 pt-2 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0"
         ref={contentAreaRef}
       >
-        <ExternalImportAction
-          importedNodeId={args.preview.importedNodeId ?? null}
-          isImporting={args.isImporting}
-          onHandleImport={args.onHandleImport}
-          onOpenImportedNodeId={args.onOpenImportedNodeId}
-        />
         <ExternalArchivedNotice isPresent={args.preview.isPresent} />
         <MarkdownEditor
           blockImageMaxHeightOverride={520}
@@ -101,8 +98,11 @@ function toDocumentWidthStyle(documentMaxWidth: number) {
 function ExternalPreviewHeader(args: {
   canGoBack: boolean;
   canGoForward: boolean;
+  isImporting: boolean;
   onGoBack: () => void;
   onGoForward: () => void;
+  onHandleImport: () => void;
+  onOpenImportedNodeId: (nodeId: string) => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
   preview: ExternalDocumentPreview;
 }) {
@@ -132,6 +132,14 @@ function ExternalPreviewHeader(args: {
         onToggleSourceUpdatePanel={() => undefined}
         priorityQuickSetShortcutLabel=""
         reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
+        rightSlot={(
+          <ExternalImportAction
+            importedNodeId={args.preview.importedNodeId ?? null}
+            isImporting={args.isImporting}
+            onHandleImport={args.onHandleImport}
+            onOpenImportedNodeId={args.onOpenImportedNodeId}
+          />
+        )}
         showDocumentControls={false}
         showSourceUpdateAction={false}
       />
@@ -150,30 +158,26 @@ function ExternalImportAction(args: {
   const label = isImported ? t('desktop.externalLibrary.preview.imported') : t('desktop.externalLibrary.preview.import');
   const actionLabel = isImported ? t('desktop.externalLibrary.preview.openImported') : t('desktop.externalLibrary.preview.importToFoliole');
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-5 z-local-overlay overflow-visible">
-      <div className="mx-auto flex w-full max-w-[var(--document-max-width)] justify-end px-[var(--document-content-inline-padding)]">
-        <AppTooltip>
-          <AppTooltipTrigger asChild>
-            <button
-              aria-label={actionLabel}
-              className="pointer-events-auto inline-flex h-10 min-w-20 translate-x-[calc(100%+theme(spacing.3))] items-center justify-center rounded-md border border-transparent bg-[var(--app-accent-color)] px-4 text-sm font-medium text-accent-foreground shadow-control transition-colors hover:bg-[rgb(var(--app-accent-color-rgb)/0.88)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45 max-[1280px]:translate-x-0"
-              disabled={args.isImporting}
-              onClick={() => {
-                if (args.importedNodeId) {
-                  args.onOpenImportedNodeId(args.importedNodeId);
-                  return;
-                }
-                args.onHandleImport();
-              }}
-              type="button"
-            >
-              {label}
-            </button>
-          </AppTooltipTrigger>
-          <AppTooltipContent side="left">{actionLabel}</AppTooltipContent>
-        </AppTooltip>
-      </div>
-    </div>
+    <AppTooltip>
+      <AppTooltipTrigger asChild>
+        <button
+          aria-label={actionLabel}
+          className="inline-block border-0 bg-transparent p-0 text-sm font-normal leading-[1.25] text-foreground/45 transition-colors hover:text-foreground/65 focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45"
+          disabled={args.isImporting}
+          onClick={() => {
+            if (args.importedNodeId) {
+              args.onOpenImportedNodeId(args.importedNodeId);
+              return;
+            }
+            args.onHandleImport();
+          }}
+          type="button"
+        >
+          {label}
+        </button>
+      </AppTooltipTrigger>
+      <AppTooltipContent side="bottom">{actionLabel}</AppTooltipContent>
+    </AppTooltip>
   );
 }
 
