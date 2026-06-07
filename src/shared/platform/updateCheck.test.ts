@@ -3,12 +3,14 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
+import { FOLIOLE_RELEASE_LINKS } from './releaseLinks';
 import {
   checkForFolioleUpdates,
   compareVersionStrings,
   getNextUpdateCheckDelayMs,
   normalizeReleaseNotesCatalog,
   normalizeUpdateManifest,
+  openFolioleLatestRelease,
   readUpdateCheckState,
   selectLatestPlatformRelease,
   selectSkippedPlatformReleases,
@@ -30,10 +32,10 @@ function createManifest() {
     channel: 'beta',
     checkPolicy: { failureRetryMinutes: 15, intervalMinutes: 60 },
     releases: [
-      { version: '0.2.0', platforms: ['android'], url: 'https://example.com/android' },
-      { version: '0.1.3', platforms: ['windows'], url: 'https://example.com/windows-013' },
-      { version: '0.1.2', platforms: ['windows'], url: 'https://example.com/windows-012' },
-      { version: '0.1.1', platforms: ['windows'], url: 'https://example.com/windows-011' }
+      { version: '0.2.0', platforms: ['android'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.2.0' },
+      { version: '0.1.3', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.3' },
+      { version: '0.1.2', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.2' },
+      { version: '0.1.1', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.1' }
     ]
   };
 }
@@ -56,10 +58,32 @@ it('selects the newest Windows release above the installed version', () => {
 
   expect(manifest).not.toBeNull();
   expect(selectLatestPlatformRelease(manifest!, '0.1.0')).toMatchObject({
-    url: 'https://example.com/windows-013',
+    url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.3',
     version: '0.1.3'
   });
   expect(selectLatestPlatformRelease(manifest!, '0.1.3')).toBeNull();
+});
+
+it('filters release URLs outside the official GitHub releases path', () => {
+  const manifest = normalizeUpdateManifest({
+    schemaVersion: 1,
+    releases: [
+      { version: '0.1.6', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/download/v0.1.6/Foliole.exe' },
+      { version: '0.1.5', platforms: ['windows'], url: 'http://github.com/campfirium/foliole/releases/tag/v0.1.5' },
+      { version: '0.1.4', platforms: ['windows'], url: 'https://evil.example/releases/tag/v0.1.4' },
+      { version: '0.1.3', platforms: ['windows'], url: 'https://github.com.evil.example/campfirium/foliole/releases/tag/v0.1.3' },
+      { version: '0.1.2', platforms: ['windows'], url: 'https://github.com/other/repo/releases/tag/v0.1.2' },
+      { version: '0.1.1', platforms: ['windows'], url: 'not a url' }
+    ]
+  });
+
+  expect(manifest?.releases).toEqual([
+    {
+      platforms: ['windows'],
+      url: 'https://github.com/campfirium/foliole/releases/download/v0.1.6/Foliole.exe',
+      version: '0.1.6'
+    }
+  ]);
 });
 
 it('selects skipped Windows releases between the installed and latest versions', () => {
@@ -114,9 +138,23 @@ it('checks the static manifest and persists the latest release state', async () 
       'zh-Hans': { '0.1.3': { notes: ['新的更新说明。'] } }
     },
     lastCheckStatus: 'available',
-    latestReleaseUrl: 'https://example.com/windows-013',
+    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.1.3',
     latestVersion: '0.1.3'
   });
+});
+
+it('drops untrusted cached release URLs and falls back to the official releases page', async () => {
+  const invoke = vi.fn().mockResolvedValue(null);
+  window.electronAPI = createMockElectronApi(invoke);
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
+    ...readUpdateCheckState(),
+    latestReleaseUrl: 'https://evil.example/download'
+  }));
+
+  expect(readUpdateCheckState().latestReleaseUrl).toBeNull();
+  await openFolioleLatestRelease();
+
+  expect(invoke).toHaveBeenCalledWith('open_external_url', { url: FOLIOLE_RELEASE_LINKS.releases });
 });
 
 it('keeps the update available when release notes fail to load', async () => {

@@ -6,6 +6,8 @@ const MIN_INTERVAL_MINUTES = 30;
 const MAX_INTERVAL_MINUTES = 24 * 60;
 const MIN_FAILURE_RETRY_MINUTES = 5;
 const MAX_FAILURE_RETRY_MINUTES = 24 * 60;
+const TRUSTED_RELEASE_URL_HOST = 'github.com';
+const TRUSTED_RELEASE_URL_PATH_PREFIX = '/campfirium/foliole/releases';
 
 type CheckStatus = 'available' | 'current' | 'failed' | 'idle';
 type UpdateNotesLocale = 'en' | 'zh-Hans';
@@ -80,10 +82,23 @@ function normalizePolicy(policy: Record<string, unknown>): UpdateCheckPolicy {
   };
 }
 
+function normalizeTrustedReleaseUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const isTrustedPath = url.pathname === TRUSTED_RELEASE_URL_PATH_PREFIX
+      || url.pathname.startsWith(`${TRUSTED_RELEASE_URL_PATH_PREFIX}/`);
+    return url.protocol === 'https:' && url.hostname === TRUSTED_RELEASE_URL_HOST && isTrustedPath ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeRelease(value: unknown): UpdateRelease | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
   if (typeof raw.version !== 'string' || typeof raw.url !== 'string' || !Array.isArray(raw.platforms)) return null;
+  const releaseUrl = normalizeTrustedReleaseUrl(raw.url);
+  if (!releaseUrl) return null;
   const platforms = raw.platforms.filter((platform): platform is string => typeof platform === 'string');
   if (!platforms.length) return null;
   return {
@@ -91,7 +106,7 @@ function normalizeRelease(value: unknown): UpdateRelease | null {
     platforms,
     ...(raw.severity === 'critical' || raw.severity === 'normal' || raw.severity === 'security' ? { severity: raw.severity } : {}),
     ...(typeof raw.summary === 'string' ? { summary: raw.summary } : {}),
-    url: raw.url,
+    url: releaseUrl,
     version: raw.version
   };
 }
@@ -156,7 +171,7 @@ export function normalizeUpdateState(value: unknown): UpdateCheckState {
         ? raw.lastCheckStatus
         : 'idle',
     lastSeenVersion: typeof raw.lastSeenVersion === 'string' ? raw.lastSeenVersion : null,
-    latestReleaseUrl: typeof raw.latestReleaseUrl === 'string' ? raw.latestReleaseUrl : null,
+    latestReleaseUrl: typeof raw.latestReleaseUrl === 'string' ? normalizeTrustedReleaseUrl(raw.latestReleaseUrl) : null,
     latestVersion: typeof raw.latestVersion === 'string' ? raw.latestVersion : null
   };
 }
