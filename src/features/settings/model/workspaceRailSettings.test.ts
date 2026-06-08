@@ -137,12 +137,12 @@ it('adds a new action to the top rail by default', () => {
   ]);
 });
 
-it('adds feedback to the default bottom rail with a signal return icon', () => {
+it('adds feedback to the default bottom rail with a warning bubble icon', () => {
   const feedback = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'bottom')[0];
 
   expect(feedback).toMatchObject({
     commandId: APP_COMMAND_IDS.sendFeedback,
-    iconId: 'SatelliteDish',
+    iconId: 'MessageSquareWarning',
     id: 'system.feedback',
     source: 'system',
     visible: true
@@ -162,7 +162,7 @@ it('updates persisted system icons when the default icon changes', () => {
     }
   ]);
 
-  expect(normalized.find((item) => item.id === 'system.feedback')?.iconId).toBe('SatelliteDish');
+  expect(normalized.find((item) => item.id === 'system.feedback')?.iconId).toBe('MessageSquareWarning');
 });
 
 it('resets the rail model back to the default layout', () => {

@@ -28,7 +28,7 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     order: 0,
     visible: true,
     source: 'system',
-    iconId: 'SatelliteDish'
+    iconId: 'MessageSquareWarning'
   },
   {
     id: 'fixed.review',
