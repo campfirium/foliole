@@ -16,13 +16,14 @@ export function FeedbackAttachmentPicker(props: {
   const t = useTranslation();
   const attachmentLabel = useMemo(() => `${props.attachments.length}/${FEEDBACK_LIMITS.attachmentCount}`, [props.attachments.length]);
   return (
-    <section className="rounded-md border border-border bg-settings-control/35 px-3 py-2.5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-baseline gap-2">
+    <section className="py-3">
+      <div className="flex min-h-8 flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-baseline gap-2 text-sm text-foreground/60">
           <p className="text-sm font-medium text-foreground">{t('feedback.attachments.title')}</p>
-          <span className="rounded-full bg-background px-2 py-0.5 text-xs text-foreground/60">
+          <span className="rounded-full border border-border bg-background px-2 py-0.5 text-xs tabular-nums text-foreground/60">
             {t('feedback.attachments.count', { count: attachmentLabel })}
           </span>
+          <span>{t('feedback.attachments.hint')}</span>
         </div>
         <label className="inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-2.5 text-sm text-foreground hover:bg-foreground/[0.03]">
           <ImagePlus aria-hidden className="size-4" />
@@ -36,7 +37,6 @@ export function FeedbackAttachmentPicker(props: {
           />
         </label>
       </div>
-      <p className="mt-1 text-xs leading-5 text-foreground/55">{t('feedback.attachments.hint')}</p>
       {props.attachments.length ? (
         <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
           {props.attachments.map((attachment, index) => (
@@ -60,10 +60,10 @@ function FeedbackAttachmentPreview(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="group relative w-24 shrink-0 overflow-hidden rounded-md border border-border bg-background">
+    <div className="group relative w-28 shrink-0 overflow-hidden rounded-md border border-border bg-background">
       <img
         alt={props.attachment.name}
-        className="h-16 w-full object-cover"
+        className="h-[4.5rem] w-full object-cover"
         src={`data:${props.attachment.type};base64,${props.attachment.contentBase64}`}
       />
       <div className="px-2 py-1.5">

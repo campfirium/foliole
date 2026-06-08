@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
+import { onWindowEscape } from '../../shared/platform/keyboard';
 
 vi.mock('../../shared/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../shared/ui')>();
@@ -30,7 +31,28 @@ beforeAll(async () => {
   await preloadTranslationCatalog('en');
 });
 
+function createPastedImage(name: string, bytes = 'image-bytes') {
+  const file = new File([bytes], name, { type: 'image/png' });
+  Object.defineProperty(file, 'arrayBuffer', {
+    value: vi.fn(async () => new TextEncoder().encode(bytes).buffer)
+  });
+  return file;
+}
+
 describe('FeedbackDialog text submission', () => {
+  it('closes from the shared Escape stack before background handlers', () => {
+    const backgroundClose = vi.fn();
+    const onClose = vi.fn();
+    const unlistenBackground = onWindowEscape(backgroundClose);
+    renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={onClose} open />);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { cancelable: true, key: 'Escape' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(backgroundClose).not.toHaveBeenCalled();
+    unlistenBackground();
+  });
+
   it('keeps submit disabled until feedback text is present', () => {
     renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
 
@@ -69,7 +91,7 @@ describe('FeedbackDialog text submission', () => {
       message: 'The app needs an easier feedback path.',
       metadata: { platform: 'desktop' }
     });
-    expect(await screen.findByText('Thanks. Your message has reached us.')).toBeInTheDocument();
+    expect(await screen.findByText('Feedback sent')).toBeInTheDocument();
     expect(screen.queryByLabelText('Feedback')).not.toBeInTheDocument();
   });
 
@@ -87,7 +109,7 @@ describe('FeedbackDialog text submission', () => {
     fireEvent.change(screen.getByLabelText('Feedback'), { target: { value: 'The screenshot can wait.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
-    expect(await screen.findByText('Thanks. Your message has reached us.')).toBeInTheDocument();
+    expect(await screen.findByText('Feedback sent')).toBeInTheDocument();
     expect(screen.getByText('Your message was sent. Images are temporarily unavailable and were not attached.')).toBeInTheDocument();
   });
 });
@@ -98,10 +120,7 @@ describe('FeedbackDialog attachments', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
 
-    const pastedImage = new File(['image-bytes'], 'screenshot.png', { type: 'image/png' });
-    Object.defineProperty(pastedImage, 'arrayBuffer', {
-      value: vi.fn(async () => new TextEncoder().encode('image-bytes').buffer)
-    });
+    const pastedImage = createPastedImage('screenshot.png');
     fireEvent.change(screen.getByLabelText('Feedback'), { target: { value: 'Screenshot pasted inline.' } });
     fireEvent.paste(screen.getByRole('dialog'), {
       clipboardData: {
@@ -110,7 +129,7 @@ describe('FeedbackDialog attachments', () => {
       }
     });
 
-    expect(await screen.findByText('1/3 images')).toBeInTheDocument();
+    expect(await screen.findByText('1/3')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -124,10 +143,7 @@ describe('FeedbackDialog attachments', () => {
   it('shows pasted image previews and allows removing them before sending', async () => {
     renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
 
-    const pastedImage = new File(['image-bytes'], 'preview.png', { type: 'image/png' });
-    Object.defineProperty(pastedImage, 'arrayBuffer', {
-      value: vi.fn(async () => new TextEncoder().encode('image-bytes').buffer)
-    });
+    const pastedImage = createPastedImage('preview.png');
     fireEvent.paste(screen.getByRole('dialog'), {
       clipboardData: {
         files: [pastedImage],
@@ -138,7 +154,27 @@ describe('FeedbackDialog attachments', () => {
     expect(await screen.findByRole('img', { name: 'preview.png' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Remove preview.png' }));
     expect(screen.queryByRole('img', { name: 'preview.png' })).not.toBeInTheDocument();
-    expect(screen.getByText('0/3 images')).toBeInTheDocument();
+    expect(screen.getByText('0/3')).toBeInTheDocument();
+  });
+});
+
+describe('FeedbackDialog attachment limits', () => {
+  it('keeps the available image slots when too many images are pasted', async () => {
+    renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
+
+    const pastedImages = Array.from({ length: 4 }, (_, index) => createPastedImage(`screen-${index + 1}.png`, `image-${index}`));
+    fireEvent.paste(screen.getByRole('dialog'), {
+      clipboardData: {
+        files: pastedImages,
+        items: []
+      }
+    });
+
+    expect(await screen.findByText('3/3')).toBeInTheDocument();
+    expect(screen.getByText('You can add up to 3 images. The first 3 were kept.')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'screen-1.png' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'screen-3.png' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'screen-4.png' })).not.toBeInTheDocument();
   });
 
 });

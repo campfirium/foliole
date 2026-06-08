@@ -91,6 +91,7 @@ export function SettingsPanelDialog(props: SettingsPanelDialogProps) {
           aria-label={t('settings.dialog.aria')}
           aria-describedby={undefined}
           className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden rounded-lg border-settings-outline bg-settings-group shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}
+          data-settings-root-dialog="true"
           onEscapeKeyDown={(event) => {
             if (props.searchQuery.trim().length > 0) {
               event.preventDefault();

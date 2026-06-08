@@ -6,6 +6,7 @@ import {
   type FeedbackAttachmentPayload
 } from '../../shared/feedback/feedbackContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { onWindowEscape } from '../../shared/platform/keyboard';
 import {
   AppDialog,
   AppDialogOverlay,
@@ -61,6 +62,13 @@ function validateFile(file: File) {
 
 export function FeedbackDialog({ endpoint, onClose, open, turnstileSiteKey }: FeedbackDialogProps) {
   const controller = useFeedbackDialogController({ endpoint, open, turnstileSiteKey });
+  useEffect(() => {
+    if (!open) return undefined;
+    return onWindowEscape(() => {
+      onClose();
+      return true;
+    });
+  }, [onClose, open]);
   return (
     <AppDialog onOpenChange={(nextOpen) => (nextOpen ? undefined : onClose())} open={open}>
       <AppDialogPortal>
