@@ -201,6 +201,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.rail.dropBottom': '拖放操作到底部',
   'settings.rail.item.import': '导入',
   'settings.rail.item.importClipboard': '导入剪贴板',
+  'settings.rail.item.feedback': '发送反馈',
   'settings.rail.item.settings': '设置',
   'settings.rail.item.study': '学习',
   'settings.rail.remove': '移除 {label}',

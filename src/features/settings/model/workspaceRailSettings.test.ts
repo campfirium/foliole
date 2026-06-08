@@ -42,7 +42,7 @@ it('normalizes top, bottom, and fixed rail sections independently', () => {
     'system.import-file',
     'system.import-clipboard'
   ]);
-  expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command']);
+  expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command', 'system.feedback']);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'fixed'))).toEqual(['fixed.review', 'fixed.settings']);
 });
 
@@ -112,7 +112,7 @@ it('moves ordinary items across top and bottom sections', () => {
   const moved = moveWorkspaceRailItem(DEFAULT_WORKSPACE_RAIL_ITEMS, 'system.import-file', 'bottom', 0);
 
   expect(itemIds(getWorkspaceRailSectionItems(moved, 'top'))).toEqual(['system.import-clipboard']);
-  expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file']);
+  expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file', 'system.feedback']);
 });
 
 it('adds a new action to the top rail by default', () => {
@@ -135,6 +135,34 @@ it('adds a new action to the top rail by default', () => {
     'system.import-clipboard',
     'user.document-findInTopic'
   ]);
+});
+
+it('adds feedback to the default bottom rail with a signal return icon', () => {
+  const feedback = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'bottom')[0];
+
+  expect(feedback).toMatchObject({
+    commandId: APP_COMMAND_IDS.sendFeedback,
+    iconId: 'SatelliteDish',
+    id: 'system.feedback',
+    source: 'system',
+    visible: true
+  });
+});
+
+it('updates persisted system icons when the default icon changes', () => {
+  const normalized = normalizeWorkspaceRailItems([
+    {
+      id: 'system.feedback',
+      commandId: APP_COMMAND_IDS.sendFeedback,
+      section: 'bottom',
+      order: 0,
+      visible: true,
+      source: 'system',
+      iconId: 'LifeBuoy'
+    }
+  ]);
+
+  expect(normalized.find((item) => item.id === 'system.feedback')?.iconId).toBe('SatelliteDish');
 });
 
 it('resets the rail model back to the default layout', () => {

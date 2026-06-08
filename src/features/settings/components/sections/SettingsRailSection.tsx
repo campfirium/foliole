@@ -29,6 +29,7 @@ type ManagerSection = Exclude<WorkspaceRailSection, 'fixed'>;
 const RAIL_COMMAND_LABEL_KEYS: Partial<Record<string, TranslationKey>> = {
   [APP_COMMAND_IDS.importSingleFile]: 'settings.rail.item.import',
   [APP_COMMAND_IDS.clipboardImport]: 'settings.rail.item.importClipboard',
+  [APP_COMMAND_IDS.sendFeedback]: 'settings.rail.item.feedback',
   [APP_COMMAND_IDS.startStudyMode]: 'settings.rail.item.study',
   [APP_COMMAND_IDS.openSettings]: 'settings.rail.item.settings'
 };

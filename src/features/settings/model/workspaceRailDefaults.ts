@@ -1,0 +1,61 @@
+import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
+
+import type { WorkspaceRailItemConfig } from './workspaceRailSettings';
+
+export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
+  {
+    id: 'system.import-file',
+    commandId: APP_COMMAND_IDS.importSingleFile,
+    section: 'top',
+    order: 0,
+    visible: true,
+    source: 'system',
+    iconId: 'FileUp'
+  },
+  {
+    id: 'system.import-clipboard',
+    commandId: APP_COMMAND_IDS.clipboardImport,
+    section: 'top',
+    order: 1,
+    visible: true,
+    source: 'system',
+    iconId: 'ClipboardPlus'
+  },
+  {
+    id: 'system.feedback',
+    commandId: APP_COMMAND_IDS.sendFeedback,
+    section: 'bottom',
+    order: 0,
+    visible: true,
+    source: 'system',
+    iconId: 'SatelliteDish'
+  },
+  {
+    id: 'fixed.review',
+    commandId: APP_COMMAND_IDS.startStudyMode,
+    section: 'fixed',
+    order: 0,
+    visible: true,
+    source: 'system',
+    iconId: 'GraduationCap',
+    locked: true
+  },
+  {
+    id: 'fixed.settings',
+    commandId: APP_COMMAND_IDS.openSettings,
+    section: 'fixed',
+    order: 1,
+    visible: true,
+    source: 'system',
+    iconId: 'Settings',
+    locked: true
+  }
+];
+
+export const WORKSPACE_RAIL_COMMAND_LABELS: Record<string, string> = {
+  [APP_COMMAND_IDS.importSingleFile]: 'Import',
+  [APP_COMMAND_IDS.clipboardImport]: 'Import Clipboard',
+  [APP_COMMAND_IDS.sendFeedback]: 'Send Feedback',
+  [APP_COMMAND_IDS.startStudyMode]: 'Study',
+  [APP_COMMAND_IDS.openSettings]: 'Settings'
+};

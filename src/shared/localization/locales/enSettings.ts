@@ -201,6 +201,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.rail.dropBottom': 'Drop action at the bottom',
   'settings.rail.item.import': 'Import',
   'settings.rail.item.importClipboard': 'Import Clipboard',
+  'settings.rail.item.feedback': 'Send Feedback',
   'settings.rail.item.settings': 'Settings',
   'settings.rail.item.study': 'Study',
   'settings.rail.remove': 'Remove {label}',

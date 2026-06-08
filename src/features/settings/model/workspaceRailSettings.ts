@@ -1,10 +1,14 @@
-import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import {
   getWhitelistedLocalStorageItem,
   setWhitelistedLocalStorageItem
 } from '../../../shared/platform/storage';
+
+import {
+  DEFAULT_WORKSPACE_RAIL_ITEMS,
+  WORKSPACE_RAIL_COMMAND_LABELS
+} from './workspaceRailDefaults';
 
 export type WorkspaceRailSection = 'top' | 'bottom' | 'fixed';
 
@@ -22,56 +26,10 @@ export interface WorkspaceRailItemConfig {
   locked?: boolean;
 }
 
-export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
-  {
-    id: 'system.import-file',
-    commandId: APP_COMMAND_IDS.importSingleFile,
-    section: 'top',
-    order: 0,
-    visible: true,
-    source: 'system',
-    iconId: 'FileUp'
-  },
-  {
-    id: 'system.import-clipboard',
-    commandId: APP_COMMAND_IDS.clipboardImport,
-    section: 'top',
-    order: 1,
-    visible: true,
-    source: 'system',
-    iconId: 'ClipboardPlus'
-  },
-  {
-    id: 'fixed.review',
-    commandId: APP_COMMAND_IDS.startStudyMode,
-    section: 'fixed',
-    order: 0,
-    visible: true,
-    source: 'system',
-    iconId: 'GraduationCap',
-    locked: true
-  },
-  {
-    id: 'fixed.settings',
-    commandId: APP_COMMAND_IDS.openSettings,
-    section: 'fixed',
-    order: 1,
-    visible: true,
-    source: 'system',
-    iconId: 'Settings',
-    locked: true
-  }
-];
-
 const WORKSPACE_RAIL_SECTIONS: WorkspaceRailSection[] = ['top', 'bottom', 'fixed'];
 const RETIRED_IMPORT_MANAGEMENT_COMMAND_ID = 'import.openManagement';
 
-export const WORKSPACE_RAIL_COMMAND_LABELS: Record<string, string> = {
-  [APP_COMMAND_IDS.importSingleFile]: 'Import',
-  [APP_COMMAND_IDS.clipboardImport]: 'Import Clipboard',
-  [APP_COMMAND_IDS.startStudyMode]: 'Study',
-  [APP_COMMAND_IDS.openSettings]: 'Settings'
-};
+export { DEFAULT_WORKSPACE_RAIL_ITEMS, WORKSPACE_RAIL_COMMAND_LABELS };
 
 export function getWorkspaceRailItemLabel(item: WorkspaceRailItemConfig) {
   return item.labelOverride ?? WORKSPACE_RAIL_COMMAND_LABELS[item.commandId] ?? item.commandId;
@@ -108,7 +66,7 @@ function normalizeDefaultItem(item: WorkspaceRailItemConfig) {
     section: defaultItem.locked ? defaultItem.section : item.section,
     order: item.order,
     visible: defaultItem.locked ? true : item.visible,
-    ...((item.iconId ?? defaultItem.iconId) ? { iconId: item.iconId ?? defaultItem.iconId } : {}),
+    ...(defaultItem.iconId ? { iconId: defaultItem.iconId } : {}),
     ...(item.labelOverride ? { labelOverride: item.labelOverride } : {}),
     ...(defaultItem.locked !== undefined ? { locked: defaultItem.locked } : {})
   };
