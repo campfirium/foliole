@@ -5,6 +5,7 @@ import type {
   ReactNode
 } from 'react';
 
+import { definedProps } from '../../../shared/lib/definedProps';
 import { AppButton } from '../../../shared/ui';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
@@ -102,9 +103,11 @@ export function renderNodeTreeRowContent(props: {
         {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
       {renderLabelCluster({
         label: props.label,
-        labelTooltipText: props.labelTooltipText,
         rename: props.rename,
-        trailingLabelContent: props.trailingLabelContent
+        ...definedProps({
+          labelTooltipText: props.labelTooltipText,
+          trailingLabelContent: props.trailingLabelContent
+        })
       })}
         {renderRowCount(props.descendantCount)}
       </span>
@@ -214,12 +217,14 @@ function renderNodeTreeRowButtonBody(
         descendantCount: props.descendantCount,
         isMuted: props.isMuted,
         label: props.label,
-        labelTooltipText: props.labelTooltipText,
         mutedOpacity: props.mutedOpacity,
         nodeIconKind: props.nodeIconKind,
         nodeIconState: props.nodeIconState,
-        secondaryLabel: props.secondaryLabel,
-        trailingLabelContent: props.trailingLabelContent,
+        ...definedProps({
+          labelTooltipText: props.labelTooltipText,
+          secondaryLabel: props.secondaryLabel,
+          trailingLabelContent: props.trailingLabelContent
+        }),
         showIcon: props.showIcon,
         rename: props.rename
       })}

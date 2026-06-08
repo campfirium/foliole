@@ -22,6 +22,7 @@ function areReviewQueueSidebarPropsEqual(previous: WorkspaceRightSidebarProps, n
   const changed = {
     activeNodeId: previous.activeNodeId !== next.activeNodeId,
     activePanelId: previous.activePanelId !== next.activePanelId,
+    isWorkspaceHydrated: previous.isWorkspaceHydrated !== next.isWorkspaceHydrated,
     reviewActiveQueueNodeIds: !areStringArraysEqual(previous.reviewActiveQueueNodeIds ?? [], next.reviewActiveQueueNodeIds ?? []),
     reviewCurrentNodeId: previous.reviewCurrentNodeId !== next.reviewCurrentNodeId,
     reviewFlowWindow: !areReviewFlowWindowsEqual(previous.reviewFlowWindow, next.reviewFlowWindow),

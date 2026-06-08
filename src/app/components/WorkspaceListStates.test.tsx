@@ -20,9 +20,12 @@ beforeEach(() => {
 });
 
 it('shows a progress state while the workspace list hydrates', () => {
-  renderWithLocalization(<WorkspaceListLoadingState />);
+  const { container } = renderWithLocalization(<WorkspaceListLoadingState />);
 
   expect(screen.getByLabelText('Workspace list progress')).toHaveAttribute('aria-busy', 'true');
+  expect(container.querySelector('.animate-spin')).toBeNull();
+  expect(container.querySelector('.workspace-region-main-folder')).not.toBeNull();
+  expect(container.querySelector('.workspace-region-main-topic')).not.toBeNull();
   expect(screen.queryByText('Preparing workspace')).toBeNull();
 });
 

@@ -1,7 +1,6 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 
 import { SettingsImportSection } from './SettingsImportSection';
@@ -67,19 +66,10 @@ it('uses separate action labels for mirror rebuild and link repair', async () =>
   expect(screen.getByRole('button', { name: 'Repair mirror links' })).toHaveTextContent('Repair');
 });
 
-it('enables current clipboard fallback by default and lets users turn it off', async () => {
+it('keeps mirror rows mapped to mirror copy and controls', async () => {
   renderWithLocalization(<SettingsImportSection {...baseProps} />);
 
-  const toggle = await screen.findByRole('switch', { name: 'Use current clipboard when nothing is selected' });
-  expect(toggle).toHaveAttribute('aria-checked', 'true');
-
-  fireEvent.click(toggle);
-
-  expect(toggle).toHaveAttribute('aria-checked', 'false');
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.globalClipExistingClipboardFallbackEnabled)).toBe('false');
-
-  fireEvent.click(toggle);
-
-  expect(toggle).toHaveAttribute('aria-checked', 'true');
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.globalClipExistingClipboardFallbackEnabled)).toBe('true');
+  expect(await screen.findByRole('heading', { name: 'Mirror folder' })).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Change location' })[3]).toHaveTextContent('Mirror');
+  expect(screen.queryByText('Use current clipboard when nothing is selected')).not.toBeInTheDocument();
 });

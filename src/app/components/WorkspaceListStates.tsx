@@ -1,5 +1,5 @@
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
+import { AppButton, AppEmptyState, AppErrorState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { ensureWorkspaceHydrated } from '../../store/workspaceStoreHydration';
 
@@ -26,12 +26,10 @@ export function WorkspaceListLoadingState() {
   }
 
   return (
-    <aside
-      aria-busy="true"
-      aria-label={t('desktop.workspaceList.progress')}
-      className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 items-center justify-center px-6"
-    >
-      <AppLoadingState />
+    <aside aria-busy="true" aria-label={t('desktop.workspaceList.progress')} className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div className="workspace-region-main-folder min-h-0 min-w-0 flex-none basis-[var(--workspace-folder-column-width)]" />
+      <div className="w-px shrink-0" />
+      <div className="workspace-region-main-topic min-h-0 min-w-0 flex-1" />
     </aside>
   );
 }

@@ -1,12 +1,14 @@
 import {
   getElectronAPI,
   type ReadwiseReaderImportProgressPayload,
+  type GlobalCaptureNavigatePayload,
   type WorkspaceContentChangedPayload,
   type WorkspaceSyncAppliedPayload
 } from './electronApi';
 import { isDesktopRuntime } from './runtime';
 
 export type ManagedInboxUpdateUnlisten = (() => void) | null;
+export type GlobalCaptureNavigateUnlisten = (() => void) | null;
 export type ReadwiseReaderImportProgressUnlisten = (() => void) | null;
 export type { ReadwiseReaderImportProgressPayload };
 export type WorkspaceContentChangedUnlisten = (() => void) | null;
@@ -31,6 +33,21 @@ export async function onManagedInboxUpdated(
       return;
     }
     handler(importId);
+  });
+}
+
+export async function onGlobalCaptureNavigate(
+  handler: (payload: GlobalCaptureNavigatePayload) => void
+): Promise<GlobalCaptureNavigateUnlisten> {
+  const bridge = getElectronBridge();
+  if (!bridge?.onGlobalCaptureNavigate) {
+    return null;
+  }
+  return bridge.onGlobalCaptureNavigate((payload) => {
+    if (!payload.nodeId.trim()) {
+      return;
+    }
+    handler(payload);
   });
 }
 

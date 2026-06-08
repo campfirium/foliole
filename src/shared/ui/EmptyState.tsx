@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { definedProps } from '@/shared/lib/definedProps';
 import { cn } from '@/shared/lib/utils';
 
 interface EmptyStateProps {
@@ -107,13 +108,39 @@ function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, 
 }
 
 export function AppEmptyState({ title, description, action, className, surface = 'document' }: EmptyStateProps) {
-  return <AppStateSurface action={action} className={className} description={description} role="status" surface={surface} title={title} tone="empty" />;
+  return (
+    <AppStateSurface
+      description={description}
+      role="status"
+      surface={surface}
+      title={title}
+      tone="empty"
+      {...definedProps({ action, className })}
+    />
+  );
 }
 
 export function AppLoadingState({ className, description, label, surface = 'document', title }: LoadingStateProps) {
-  return <AppStateSurface ariaBusy="true" ariaLabel={label} className={className} description={description} role="status" surface={surface} title={title} tone="loading" />;
+  return (
+    <AppStateSurface
+      ariaBusy="true"
+      role="status"
+      surface={surface}
+      tone="loading"
+      {...definedProps({ ariaLabel: label, className, description, title })}
+    />
+  );
 }
 
 export function AppErrorState({ title, description, action, className, surface = 'document' }: ErrorStateProps) {
-  return <AppStateSurface action={action} className={className} description={description} role="alert" surface={surface} title={title} tone="error" />;
+  return (
+    <AppStateSurface
+      description={description}
+      role="alert"
+      surface={surface}
+      title={title}
+      tone="error"
+      {...definedProps({ action, className })}
+    />
+  );
 }

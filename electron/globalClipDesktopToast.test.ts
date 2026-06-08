@@ -9,6 +9,9 @@ const { electronMocks } = vi.hoisted(() => {
       BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
         return {};
       }), { getAllWindows }),
+      ipcMain: {
+        on: vi.fn()
+      },
       nativeTheme: {
         shouldUseDarkColors: false
       },
@@ -34,7 +37,8 @@ function createToastWindow() {
     setIgnoreMouseEvents: vi.fn(),
     showInactive: vi.fn(),
     webContents: {
-      executeJavaScript: vi.fn()
+      executeJavaScript: vi.fn(),
+      send: vi.fn()
     }
   };
 }
@@ -76,12 +80,12 @@ it('shows a non-focusable app-owned desktop toast and closes it automatically', 
   expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
   const loadedUrl = toastWindow.loadURL.mock.calls[0]?.[0] ?? '';
   const html = decodeURIComponent(loadedUrl);
-  expect(html).toContain('Clipped to Inbox');
-  expect(html).toContain('Ready to process');
+  expect(html).toContain('Clipped');
+  expect(html).toContain('Saved to Inbox');
   expect(html).toContain('data:image/svg+xml;base64');
   expect(html).not.toContain('class="badge"');
 
-  vi.advanceTimersByTime(1800);
+  vi.advanceTimersByTime(3000);
 
   expect(toastWindow.close).toHaveBeenCalledTimes(1);
 });
@@ -100,16 +104,47 @@ it('updates the same pending toast before closing it', async () => {
   vi.advanceTimersByTime(1800);
   expect(toastWindow.close).not.toHaveBeenCalled();
 
-  toast.update('success');
+  toast.update('success', 'node-1', 'Captured source preview');
 
   expect(toastWindow.webContents.executeJavaScript).toHaveBeenCalledWith(
     expect.stringContaining('"status":"success"'),
     true
   );
+  expect(toastWindow.webContents.executeJavaScript).toHaveBeenCalledWith(
+    expect.stringContaining('Captured source preview'),
+    true
+  );
+  expect(toastWindow.setIgnoreMouseEvents).toHaveBeenLastCalledWith(false);
+  expect(toastWindow.webContents.send).toHaveBeenCalledWith(
+    'foliole:global-capture-toast:target',
+    { nodeId: 'node-1' }
+  );
 
-  vi.advanceTimersByTime(1800);
+  vi.advanceTimersByTime(3000);
 
   expect(toastWindow.close).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the success preview when import finishes before the toast loads', async () => {
+  vi.useFakeTimers();
+  const toastWindow = createToastWindow();
+  electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
+    return toastWindow;
+  });
+
+  const toast = showGlobalClipDesktopToast('pending');
+  toast.update('success', 'node-1', 'Fast captured preview');
+  await flushToastLoad(toastWindow);
+
+  expect(toastWindow.webContents.executeJavaScript).toHaveBeenCalledWith(
+    expect.stringContaining('Fast captured preview'),
+    true
+  );
+  expect(toastWindow.webContents.send).toHaveBeenCalledWith(
+    'foliole:global-capture-toast:target',
+    { nodeId: 'node-1' }
+  );
+  expect(toastWindow.setIgnoreMouseEvents).toHaveBeenLastCalledWith(false);
 });
 
 it('uses the current app floating theme for the desktop toast', async () => {
@@ -119,6 +154,8 @@ it('uses the current app floating theme for the desktop toast', async () => {
     background: 'rgb(42, 45, 41)',
     border: 'rgb(80, 84, 78)',
     foreground: 'rgb(232, 230, 223)',
+    hasAppTheme: true,
+    inputBackground: 'rgb(36, 39, 35)',
     mutedForeground: 'rgb(165, 164, 159)'
   }));
   const toastWindow = createToastWindow();
@@ -135,8 +172,8 @@ it('uses the current app floating theme for the desktop toast', async () => {
 
   expect(executeJavaScript).toHaveBeenCalledTimes(1);
   const loadedUrl = toastWindow.loadURL.mock.calls[0]?.[0] ?? '';
-  expect(decodeURIComponent(loadedUrl)).toContain('--toast-bg:rgb(42, 45, 41);');
-  expect(decodeURIComponent(loadedUrl)).toContain('--toast-fg:rgb(232, 230, 223);');
+  expect(decodeURIComponent(loadedUrl)).toContain('--capture-bg:rgb(42, 45, 41);');
+  expect(decodeURIComponent(loadedUrl)).toContain('--capture-fg:rgb(232, 230, 223);');
   expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
 });
 
@@ -162,7 +199,7 @@ it('falls back and shows the toast when app theme reading stalls', async () => {
   expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
   expect(toastWindow.close).not.toHaveBeenCalled();
 
-  vi.advanceTimersByTime(1800);
+  vi.advanceTimersByTime(3000);
 
   expect(toastWindow.close).toHaveBeenCalledTimes(1);
 });
@@ -175,6 +212,8 @@ it('does not read the theme from the toast window itself', async () => {
     background: 'rgb(255, 255, 255)',
     border: 'rgb(188, 189, 187)',
     foreground: 'rgb(32, 33, 36)',
+    hasAppTheme: true,
+    inputBackground: 'rgb(246, 246, 246)',
     mutedForeground: 'rgb(94, 95, 97)'
   }));
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import './reactPdfMock';
 
@@ -13,6 +13,7 @@ vi.mock('../shared/platform/bridge', async (importOriginal) => {
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 
 import { EDITOR_DISPLAY_MODE_KEY } from '../features/editor/model/editorDisplayMode';
+import { preloadTranslationCatalog } from '../shared/localization/translations';
 import { getRuntimeInvoke as getBridgeRuntimeInvoke } from '../shared/platform/bridge';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
@@ -23,6 +24,11 @@ import { createNode, createSmokeRuntimeInvoke, FIXED_TIMESTAMP } from './app-smo
 vi.stubGlobal('ResizeObserver', class { disconnect() {} observe() {} unobserve() {} });
 
 const { App } = await import('../app/App');
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+  await preloadTranslationCatalog('zh-Hans');
+});
 
 function expectReviewToolbarSummary(label: string) {
   expect(screen.getAllByLabelText(label).length).toBeGreaterThan(0);
@@ -40,7 +46,7 @@ it('renders note list and single document panel', () => {
   render(<App />);
   expect(screen.getByRole('heading', { name: 'Topics' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Content' })).toBeInTheDocument();
-  expect(screen.getByRole('region', { name: 'Workspace side toolbar' })).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Workspace Ribbon' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Review mode toolbar')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Create QA Node' })).not.toBeInTheDocument();
 });

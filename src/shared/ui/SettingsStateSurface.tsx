@@ -6,6 +6,7 @@ import {
   settingsButtonClassName
 } from './SettingsLayout';
 
+import { definedProps } from '@/shared/lib/definedProps';
 import { cn } from '@/shared/lib/utils';
 
 interface SettingsStateSurfaceProps {
@@ -68,7 +69,7 @@ export function SettingsLoadingState({ className, description, title }: Settings
         role="status"
         title={title ?? ''}
         tone="loading"
-        className={className}
+        {...definedProps({ className })}
       />
     );
   }

@@ -61,10 +61,15 @@ export interface ExternalDocumentFileOpenedPayload {
   folderId: string;
 }
 
+export interface GlobalCaptureNavigatePayload {
+  nodeId: string;
+}
+
 export interface ElectronAPI {
   debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
   logDiagnosticEvent?: (input: DiagnosticLogPayload) => Promise<void>;
+  onGlobalCaptureNavigate?: (handler: (payload: GlobalCaptureNavigatePayload) => void) => () => void;
   onManagedInboxUpdated: (handler: (importId: string) => void) => () => void;
   onNativeMenuCommand: (handler: (commandId: string) => void) => () => void;
   onNativeKeyboardInput?: (handler: (payload: NativeKeyboardInputPayload) => void) => () => void;

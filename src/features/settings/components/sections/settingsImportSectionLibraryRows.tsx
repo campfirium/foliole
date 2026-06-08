@@ -17,14 +17,18 @@ import { createSettingsSearchRows } from '../../model/settingsSearchRowCatalog';
 import type { LibraryPathLocation, SettingsImportSectionProps } from './settingsImportSectionTypes';
 
 export function getLibraryRows(t: ReturnType<typeof useTranslation>) {
-  const rows = createSettingsSearchRows(t).filter((row) => row.categoryId === 'library');
+  const rows = new Map(
+    createSettingsSearchRows(t)
+      .filter((row) => row.categoryId === 'library')
+      .map((row) => [row.id, row])
+  );
   return {
-    assets: rows[1]!,
-    inbox: rows[2]!,
-    libraryHome: rows[0]!,
-    mirror: rows[3]!,
-    mirrorLinks: rows[5]!,
-    mirrorOutput: rows[4]!
+    assets: rows.get('library-assets')!,
+    inbox: rows.get('library-inbox')!,
+    libraryHome: rows.get('library-home')!,
+    mirror: rows.get('library-mirror')!,
+    mirrorLinks: rows.get('library-mirror-links')!,
+    mirrorOutput: rows.get('library-mirror-output')!
   };
 }
 

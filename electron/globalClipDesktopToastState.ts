@@ -2,7 +2,13 @@ export type GlobalClipToastStatus = 'copyFailed' | 'empty' | 'importFailed' | 'p
 
 export interface GlobalClipDesktopToast {
   close: () => void;
-  update: (status: GlobalClipToastStatus) => void;
+  update: (status: GlobalClipToastStatus, targetNodeId?: string | null, previewTitle?: string | null) => void;
+}
+
+export function resolveToastDisplayMs(status: GlobalClipToastStatus) {
+  if (status === 'importFailed') return 3500;
+  if (status === 'success') return 3000;
+  return status === 'pending' ? 0 : 2500;
 }
 
 export function resolveToastText(status: GlobalClipToastStatus) {
@@ -24,8 +30,8 @@ export function resolveToastText(status: GlobalClipToastStatus) {
       };
     case 'success':
       return {
-        meta: 'Ready to process',
-        title: 'Clipped to Inbox'
+        meta: 'Saved to Inbox',
+        title: 'Clipped'
       };
     case 'pending':
     default:

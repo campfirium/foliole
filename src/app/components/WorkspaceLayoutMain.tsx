@@ -10,6 +10,7 @@ import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { useDesktopResizeRemeasureBridge } from './useDesktopResizeRemeasureBridge';
+import { useGlobalCaptureNavigation } from './useGlobalCaptureNavigation';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { useWorkspaceActivityNotice } from './useWorkspaceActivityNotice';
 import { WorkspaceActivityNotice } from './WorkspaceActivityNotice';
@@ -22,10 +23,7 @@ import {
 } from './workspaceRightPanelPreference';
 import { subscribeWorkspaceRightPanelRequests } from './workspaceRightPanelRequests';
 import { WorkspaceRuntimeNotice } from './WorkspaceRuntimeNotice';
-import {
-  selectWorkspaceSettingsOverlayProps,
-  WorkspaceSettingsOverlay
-} from './WorkspaceSettingsOverlay';
+import { selectWorkspaceSettingsOverlayProps, WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 interface WorkspaceSurfaceActionsSource {
@@ -33,8 +31,6 @@ interface WorkspaceSurfaceActionsSource {
   onOpenTrashView: () => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
 }
-
-type WorkspaceGridRenderSource = WorkspaceLayoutGridSource;
 
 function useWorkspaceSurfaceActions(props: WorkspaceSurfaceActionsSource) {
   const handleOpenTrashView = useCallback(() => {
@@ -133,6 +129,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
     onOpenTrashView: trash.onOpenTrashView,
     onSelectNode: navigation.onSelectNode
   });
+  useGlobalCaptureNavigation(handleSelectNode);
   const workspaceGridStyle = buildWorkspaceGridStyle(layoutChrome);
 
   useEffect(() => {
@@ -179,7 +176,7 @@ function renderWorkspaceGrid(args: {
   immersive: ReturnType<typeof useImmersiveReadingMode>;
   onEnterImmersiveEdit: () => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
-  props: WorkspaceGridRenderSource;
+  props: WorkspaceLayoutGridSource;
 }) {
   const shouldSuppressSelectionRestore = () =>
     args.immersive.shouldSuppressSelectionRestore() || args.props.navigation.shouldSuppressNavigationSelectionRestore();
@@ -212,7 +209,7 @@ function WorkspaceMainChrome({
   onOpenTrashView: () => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
-  gridProps: WorkspaceGridRenderSource;
+  gridProps: WorkspaceLayoutGridSource;
   titleBarProps: WorkspaceTitleBarSource;
   immersive: ReturnType<typeof useImmersiveReadingMode>;
 }) {

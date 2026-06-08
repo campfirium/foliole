@@ -108,6 +108,7 @@ const sanitizedCompletedReadwiseProgressPayload = {
       expect.objectContaining({
         invoke: expect.any(Function),
         logDiagnosticEvent: expect.any(Function),
+        onGlobalCaptureNavigate: expect.any(Function),
         onManagedInboxUpdated: expect.any(Function),
         onNativeKeyboardInput: expect.any(Function),
         onNativeMenuCommand: expect.any(Function),
@@ -206,6 +207,19 @@ const sanitizedCompletedReadwiseProgressPayload = {
     expect(ipcOn).toHaveBeenCalledWith('foliole:workspace-content-changed', expect.any(Function));
     expect(handler).toHaveBeenNthCalledWith(1, { scope: 'workspace' });
     expect(handler).toHaveBeenNthCalledWith(2, { scope: '' });
+  });
+
+  it('forwards sanitized global capture navigation events through preload', () => {
+    const { exposeInMainWorld, ipcOn } = executePreload();
+    const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+    const handler = vi.fn();
+
+    electronApi.onGlobalCaptureNavigate(handler);
+    const listener = ipcOn.mock.calls[0]?.[1];
+    listener({}, { nodeId: 'node-1', ignored: true });
+
+    expect(ipcOn).toHaveBeenCalledWith('foliole:global-capture-navigate', expect.any(Function));
+    expect(handler).toHaveBeenCalledWith({ nodeId: 'node-1' });
   });
 
   it('forwards sanitized Readwise Reader import progress events through preload', () => {

@@ -14,9 +14,10 @@ import {
 
 import { waitForDatabaseReady } from './database/databaseReadiness.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
+import { showGlobalCapturePanel, type GlobalCapturePanelResult } from './globalCapturePanel.js';
 import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 import type { GlobalClipDesktopToast, GlobalClipToastStatus } from './globalClipDesktopToastState.js';
-import { isExistingClipboardFallbackEnabled } from './globalClipSettings.js';
+import { handleGlobalCapturePanelResult, importWithGlobalClipToast } from './globalClipImportRunner.js';
 import { runClipboardImport } from './ipc/importClipboard.js';
 
 const DEFAULT_SHORTCUT = 'Alt+Shift+C';
@@ -37,7 +38,7 @@ export interface GlobalClipToInboxDeps {
   platform?: NodeJS.Platform;
   runImport?: typeof runClipboardImport;
   sendCopyShortcut?: () => Promise<boolean>;
-  shouldImportExistingClipboard?: () => boolean;
+  showCapturePanel?: () => Promise<GlobalCapturePanelResult>;
   showDesktopToast?: (status: GlobalClipToastStatus) => GlobalClipDesktopToast;
   shortcut?: string;
   waitForClipboardChange?: (
@@ -46,6 +47,8 @@ export interface GlobalClipToInboxDeps {
   ) => Promise<boolean>;
   waitForReady?: typeof waitForDatabaseReady;
 }
+
+let globalCaptureInFlight = false;
 
 interface ClipboardSnapshot {
   fingerprint: string;
@@ -144,48 +147,61 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const log = deps.log ?? appendMainProcessDiagnosticLog;
   const runImport = deps.runImport ?? runClipboardImport;
   const sendCopyShortcut = deps.sendCopyShortcut ?? sendWindowsCopyShortcut;
-  const shouldImportExistingClipboard = deps.shouldImportExistingClipboard ?? isExistingClipboardFallbackEnabled;
+  const showCapturePanel = deps.showCapturePanel ?? showGlobalCapturePanel;
   const waitForChange = deps.waitForClipboardChange ?? waitForClipboardChange;
   const waitForReady = deps.waitForReady ?? waitForDatabaseReady;
   const showDesktopToast = deps.showDesktopToast ?? showGlobalClipDesktopToast;
-  const before = readClipboardSnapshot(clipboardRef);
-  const toast = showDesktopToast('pending');
-  const copySent = await sendCopyShortcut();
+  if (globalCaptureInFlight) {
+    log('global_clip_capture_in_flight');
+    return null;
+  }
+  globalCaptureInFlight = true;
+  try {
+    return await runGlobalClipToInboxOnce({
+      clipboardRef,
+      log,
+      runImport,
+      sendCopyShortcut,
+      showCapturePanel,
+      showDesktopToast,
+      waitForChange,
+      waitForReady
+    });
+  } finally {
+    globalCaptureInFlight = false;
+  }
+}
+
+async function runGlobalClipToInboxOnce(args: {
+  clipboardRef: NonNullable<GlobalClipToInboxDeps['clipboardRef']>;
+  log: NonNullable<GlobalClipToInboxDeps['log']>;
+  runImport: typeof runClipboardImport;
+  sendCopyShortcut: NonNullable<GlobalClipToInboxDeps['sendCopyShortcut']>;
+  showCapturePanel: NonNullable<GlobalClipToInboxDeps['showCapturePanel']>;
+  showDesktopToast: NonNullable<GlobalClipToInboxDeps['showDesktopToast']>;
+  waitForChange: NonNullable<GlobalClipToInboxDeps['waitForClipboardChange']>;
+  waitForReady: typeof waitForDatabaseReady;
+}) {
+  const before = readClipboardSnapshot(args.clipboardRef);
+  const copySent = await args.sendCopyShortcut();
   if (!copySent) {
-    log('global_clip_copy_not_sent');
+    args.log('global_clip_copy_not_sent');
+    const toast = args.showDesktopToast('pending');
     toast.update('copyFailed');
     return null;
   }
-  if (!await waitForChange(before, clipboardRef)) {
-    if (!shouldImportExistingClipboard()) {
-      log('global_clip_clipboard_unchanged');
-      toast.update('empty');
-      return null;
-    }
-    log('global_clip_importing_existing_clipboard');
+  if (!await args.waitForChange(before, args.clipboardRef)) {
+    args.log('global_clip_opening_capture_panel');
+    return handleGlobalCapturePanelResult({
+      log: args.log,
+      panelResult: await args.showCapturePanel(),
+      runImport: args.runImport,
+      showDesktopToast: args.showDesktopToast,
+      waitForReady: args.waitForReady
+    });
   }
-  try {
-    await waitForReady();
-  } catch (error) {
-    log('global_clip_database_not_ready', { error });
-    toast.update('importFailed');
-    return null;
-  }
-  let result: Awaited<ReturnType<typeof runClipboardImport>> | null = null;
-  try {
-    result = await runImport();
-  } catch (error) {
-    log('global_clip_import_failed', { error });
-    toast.update('importFailed');
-    return null;
-  }
-  if (!result?.import_id) {
-    log('global_clip_import_empty');
-    toast.update('empty');
-    return null;
-  }
-  toast.update('success');
-  return result;
+  const toast = args.showDesktopToast('pending');
+  return importWithGlobalClipToast({ log: args.log, run: args.runImport, toast, waitForReady: args.waitForReady });
 }
 
 export function installGlobalClipToInboxShortcut(deps: GlobalClipToInboxDeps = {}) {

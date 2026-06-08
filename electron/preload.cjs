@@ -6,6 +6,7 @@ const preloadPath = typeof __filename === 'string' ? __filename : null;
 
 const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
+const IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL = 'foliole:global-capture-navigate';
 const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
@@ -39,6 +40,7 @@ function resolveGuidedSampleLocaleOverride() {
 function subscribe(channel, handler) {
   if (
     channel !== IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL &&
+    channel !== IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL &&
     channel !== IPC_MENU_EVENT_CHANNEL &&
     channel !== IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL &&
     channel !== IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL &&
@@ -56,6 +58,12 @@ function subscribe(channel, handler) {
   const listener = (_event, payload) => {
     if (channel === IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL) {
       handler(payload?.importId ?? '');
+      return;
+    }
+    if (channel === IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL) {
+      handler({
+        nodeId: typeof payload?.nodeId === 'string' ? payload.nodeId : ''
+      });
       return;
     }
     if (channel === IPC_MENU_EVENT_CHANNEL) {
@@ -166,6 +174,7 @@ const electronApi = {
   invoke: (command, args) => ipcRenderer.invoke(IPC_INVOKE_CHANNEL, { command, args }),
   logDiagnosticEvent: (input) => ipcRenderer.invoke(IPC_DIAGNOSTIC_LOG_CHANNEL, input),
   onManagedInboxUpdated: (handler) => subscribe(IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, handler),
+  onGlobalCaptureNavigate: (handler) => subscribe(IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL, handler),
   onNativeMenuCommand: (handler) => subscribe(IPC_MENU_EVENT_CHANNEL, handler),
   onNativeKeyboardInput: (handler) => subscribe(IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL, handler),
   onReadwiseBookEpubProgress: (handler) => subscribe(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, handler),

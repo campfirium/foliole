@@ -1,5 +1,7 @@
 import { expect, it } from 'vitest';
 
+import type { ExternalLibraryBrowseEntry } from '../../shared/platform/externalLibraryBrowseRepository';
+
 import {
   buildExternalLibraryFolderBrowseState,
   resolveExternalFolderDisplayLabel,
@@ -20,7 +22,7 @@ const folder = {
   updatedAt: '2026-04-21T00:00:00.000Z'
 };
 
-const entries = [
+const entries: ExternalLibraryBrowseEntry[] = [
   {
     absolutePath: '/library/two think/a.md',
     extension: 'md' as const,
@@ -67,12 +69,12 @@ it('keeps directories in the left tree model and returns all descendant document
 it('compacts a single directory chain until the first useful branch point', () => {
   const state = buildExternalLibraryFolderBrowseState(folder, [
     {
-      ...entries[0],
+      ...entries[0]!,
       absolutePath: 'D:/T/test/a.md',
       relativePath: 'D:/T/test/a.md'
     },
     {
-      ...entries[1],
+      ...entries[1]!,
       absolutePath: 'D:/T/test/deep/b.md',
       relativePath: 'D:/T/test/deep/b.md'
     }
@@ -87,12 +89,12 @@ it('compacts a single directory chain until the first useful branch point', () =
 it('keeps the branch point when opened documents spread across sibling directories', () => {
   const state = buildExternalLibraryFolderBrowseState(folder, [
     {
-      ...entries[0],
+      ...entries[0]!,
       absolutePath: 'D:/T/test/a.md',
       relativePath: 'D:/T/test/a.md'
     },
     {
-      ...entries[1],
+      ...entries[1]!,
       absolutePath: 'D:/T/draft/b.md',
       relativePath: 'D:/T/draft/b.md'
     }

@@ -50,7 +50,7 @@ vi.mock('./useImmersiveReadingMode', () => ({
   })
 }));
 
-import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
+import { clearAppRuntimeNotice, showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 import {
   requestClipboardImport,
@@ -108,6 +108,9 @@ beforeEach(() => {
   getFormalImportFailureMessage.mockReturnValue(null);
   getFormalImportLatestResult.mockClear();
   getFormalImportLatestResult.mockReturnValue(null);
+  for (let noticeId = 1; noticeId <= 100; noticeId += 1) {
+    clearAppRuntimeNotice(noticeId);
+  }
 });
 
 it('opens the imported clipboard topic from the success notice', async () => {
@@ -220,7 +223,7 @@ it('shows an empty file import notice after a selected file imports no topic', a
 it('shows app runtime notices inside the workspace surface', async () => {
   renderWithLocalization(<WorkspaceLayoutMain {...createProps({})} />);
 
-  showAppRuntimeNotice('Selected topic is not backed by an active keep import source.');
+  const noticeId = showAppRuntimeNotice('Selected topic is not backed by an active keep import source.');
 
   const notice = await screen.findByTestId('app-runtime-notice');
   expect(notice).toHaveClass('left-1/2');
@@ -228,4 +231,7 @@ it('shows app runtime notices inside the workspace surface', async () => {
   expect(notice).toHaveTextContent(
     'Selected topic is not backed by an active keep import source.'
   );
+  if (noticeId) {
+    clearAppRuntimeNotice(noticeId);
+  }
 });

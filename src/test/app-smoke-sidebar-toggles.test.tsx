@@ -1,10 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { preloadTranslationCatalog } from '../shared/localization/translations';
 import { useWorkspaceStore } from '../store/workspaceStore';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+  await preloadTranslationCatalog('zh-Hans');
+});
 
 function openRightPanelFromMenu(label: string) {
   fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
@@ -17,11 +23,11 @@ it('toggles both sidebars from the titlebar buttons', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Toggle left panel' }));
   expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(true);
   expect(screen.queryByRole('complementary', { name: 'Topic list panel' })).not.toBeInTheDocument();
-  expect(screen.getByRole('region', { name: 'Workspace side toolbar' })).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Workspace Ribbon' })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle left panel' }));
   expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(false);
-  expect(screen.getByRole('region', { name: 'Workspace side toolbar' })).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Workspace Ribbon' })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle right sidebar' }));
   expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(true);

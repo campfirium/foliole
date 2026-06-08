@@ -200,8 +200,8 @@ it('shows the global clip shortcut as the first hotkey row', async () => {
   await renderHotkeyPanel();
 
   const rows = within(screen.getByLabelText('Command shortcut list')).getAllByRole('listitem');
-  expect(rows[0]).toHaveTextContent('Clip selection or clipboard to Inbox (global)');
-  expect(rows[0]).toHaveTextContent('Clipping');
+  expect(rows[0]).toHaveTextContent('Capture to Inbox (global)');
+  expect(rows[0]).toHaveTextContent('Capture');
   expect(rows[0]).toHaveTextContent('Alt+Shift+C');
   expect(within(rows[0]!).queryByRole('button')).not.toBeInTheDocument();
   expect(rows[1]).toHaveTextContent('Create Folder');

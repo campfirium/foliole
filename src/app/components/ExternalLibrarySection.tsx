@@ -86,7 +86,6 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
               descendantCount={row.documentCount ?? 0}
               key={row.id}
               label={row.label}
-              labelTooltipText={row.labelTooltipText}
               nodeId={row.id}
               dragDisabledLabel={null}
               dropIntent={drag.state?.targetId === row.id ? drag.state.dropIntent : null}
@@ -95,6 +94,7 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
               showIcon={false}
               showLeafChevronPlaceholder={false}
               trailingLabelContent={renderExternalTrailingLabelContent(row, t('desktop.externalLibrary.folderIcon'))}
+              {...(row.labelTooltipText !== undefined ? { labelTooltipText: row.labelTooltipText } : {})}
               onDragEnd={drag.onDragEnd}
               onDragOver={drag.onDragOver}
               onDragStart={drag.onDragStart}

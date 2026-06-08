@@ -1,8 +1,9 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { preloadTranslationCatalog } from '../../../shared/localization/translations';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -14,6 +15,11 @@ import {
   openReviewSettings,
   renderWithMouseGestureProvider
 } from './SettingsPanel.testUtils';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+  await preloadTranslationCatalog('zh-Hans');
+});
 
 function PushQueueSettingsHarness() {
   const [isOpen, setIsOpen] = useState(true);
@@ -81,7 +87,7 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
     'Review',
     'Hotkeys',
     'Mouse gestures',
-    'Action bar'
+    'Ribbon'
   ]);
   expect(labels).toContain('Storage');
   expect(labels).toContain('Watched folders');
@@ -90,7 +96,7 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('General'));
   expect(labels.indexOf('Hotkeys')).toBeGreaterThan(labels.indexOf('Review'));
   expect(labels.indexOf('General')).toBeGreaterThan(labels.indexOf('About'));
-  expect(labels.indexOf('Storage')).toBeGreaterThan(labels.indexOf('Action bar'));
+  expect(labels.indexOf('Storage')).toBeGreaterThan(labels.indexOf('Ribbon'));
   expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Storage'));
   expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
   expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Backups'));

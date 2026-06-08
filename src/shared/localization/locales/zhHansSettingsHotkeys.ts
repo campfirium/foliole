@@ -23,13 +23,8 @@ export const ZH_HANS_SETTINGS_HOTKEYS_TRANSLATIONS: Partial<Record<TranslationKe
   'settings.hotkeys.empty': '没有匹配的快捷键。',
   'settings.hotkeys.sectionAria': '快捷键设置区域',
   'settings.hotkeys.invalidShortcut': '快捷键无效。',
-  'settings.globalClip.sectionAria': '全局剪辑设置区',
-  'settings.globalClip.title': '全局剪辑',
-  'settings.globalClip.shortcut.title': '剪辑选区或剪贴板到 Inbox（全局）',
-  'settings.globalClip.shortcut.section': '剪辑',
-  'settings.globalClip.shortcut.description': '优先复制当前选区；没有新选区时导入当前剪贴板。',
-  'settings.globalClip.shortcut.value': 'Alt+Shift+C',
-  'settings.globalClip.clipboardFallback.title': '没有选中内容时使用当前剪贴板',
-  'settings.globalClip.clipboardFallback.description': '全局剪辑快捷键没有复制到新选区时，将当前剪贴板导入 Inbox。',
-  'settings.globalClip.clipboardFallback.aria': '没有选中内容时使用当前剪贴板'
+  'settings.globalClip.shortcut.title': '捕捉到 Inbox（全局）',
+  'settings.globalClip.shortcut.section': '捕捉',
+  'settings.globalClip.shortcut.description': '捕捉当前选区、快速输入想法，或直接回车导入剪贴板。',
+  'settings.globalClip.shortcut.value': 'Alt+Shift+C'
 };

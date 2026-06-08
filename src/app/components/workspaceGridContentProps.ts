@@ -156,7 +156,10 @@ function selectWorkspaceRightSidebarProps({
     reviewQueueNodeIds: props.review.reviewPanelQueueNodeIds,
     reviewSchedulerSettings: props.review.reviewSchedulerSettings,
     trashedNodeIds: props.trash.trashedNodeIds,
-    ...definedProps({ outlineDocument: externalOutlineDocument })
+    ...definedProps({
+      isWorkspaceHydrated: props.layoutChrome.isWorkspaceHydrated,
+      outlineDocument: externalOutlineDocument
+    })
   };
 }
 

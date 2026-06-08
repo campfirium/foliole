@@ -4,6 +4,7 @@ export const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 export const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
 export const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
 export const IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL = 'foliole:external-document-file-opened';
+export const IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL = 'foliole:global-capture-navigate';
 export const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 export const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 export const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
@@ -39,6 +40,10 @@ export interface NativeKeyboardInputEvent {
   metaKey: boolean;
   shiftKey: boolean;
   type: string;
+}
+
+export interface GlobalCaptureNavigateEvent {
+  nodeId: string;
 }
 
 export interface WorkspaceSyncAppliedEvent {
