@@ -1,5 +1,6 @@
 import { ensureGuidedSampleTopicTree } from '../../features/guidedSample/model/guidedSampleWorkspace';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { createStartedReviewSession } from '../../store/workspaceReviewReading';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -34,7 +35,7 @@ export async function openGuidedSampleCommand(actions: OpenGuidedSampleCommandAc
   const result = await ensureGuidedSampleTopicTree(
     () => useWorkspaceStore.getState(),
     undefined,
-    { refreshWorkspaceState: () => useWorkspaceStore.persist.rehydrate() }
+    { refreshWorkspaceState: () => refreshWorkspaceState('guided-sample') }
   );
   if (!result.rootNodeId) {
     return false;

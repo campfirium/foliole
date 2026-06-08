@@ -13,6 +13,7 @@ import {
   type RuntimeReadwiseBookInventoryItem
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestReadwiseBookEpubImportReleaseMode } from '../hooks/epubImportReleaseModeDialogStore';
 
@@ -131,7 +132,7 @@ export function useReadwiseBookActions(activeNodeId: string | null) {
       const result = await loadRuntimeReadwiseBookEpub(activeNodeId);
       setStatusMessage(formatLoadMessage(result, book));
       if (result?.status === 'selected') {
-        await useWorkspaceStore.persist.rehydrate();
+        await refreshWorkspaceState('readwise-book-load');
         await ensureWorkspaceNodeDocumentReady(activeNodeId, { forceLoad: true });
         const mode = book
           ? await requestReadwiseBookEpubImportReleaseMode({

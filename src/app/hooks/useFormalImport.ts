@@ -7,7 +7,7 @@ import {
 } from '../../shared/platform/importExecutionRuntimeRepository';
 import { loadRuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
-import { useWorkspaceStore } from '../../store/workspaceStore';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 
 import { runFormalImportFileFlow, type FormalImportFileFlowOptions } from './formalImportFileFlow';
 import {
@@ -48,9 +48,9 @@ async function refreshFormalImportOverview(triggerImportId?: string) {
   const nextImportId = triggerImportId ?? latestResult?.importId ?? null;
   const hasFreshImport = Boolean(nextImportId && nextImportId !== previousImportId);
   if (triggerImportId) {
-    await useWorkspaceStore.persist.rehydrate();
+    await refreshWorkspaceState('managed-inbox');
   } else if (latestResult && hasFreshImport && shouldRehydrateWorkspace(latestResult)) {
-    await useWorkspaceStore.persist.rehydrate();
+    await refreshWorkspaceState('formal-import');
   }
 
   useFormalImportState.setState({
@@ -179,7 +179,7 @@ function useFormalImportActions() {
     () =>
       runResetImportDataFlow({
         getIsImporting: () => useFormalImportState.getState().isImporting,
-        rehydrateWorkspace: () => useWorkspaceStore.persist.rehydrate(),
+        rehydrateWorkspace: () => refreshWorkspaceState('import-overview-reset'),
         refreshOverview: refreshFormalImportOverview,
         setFailureStatus: applyImportFailureStatus,
         setImporting: (isImporting) => useFormalImportState.setState({ isImporting }),

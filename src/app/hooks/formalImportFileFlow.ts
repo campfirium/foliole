@@ -4,6 +4,7 @@ import {
   type RuntimeImportedTextFile,
   type RuntimeTextImportResult
 } from '../../shared/platform/importExecutionRuntimeRepository';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { requestEpubImportReleaseMode } from './epubImportReleaseModeDialogStore';
@@ -16,7 +17,7 @@ async function applyPostImportEpubReadingMode(file: RuntimeImportedTextFile, res
   if (!result.nodeId || result.resultStatus === 'failed') {
     return;
   }
-  await useWorkspaceStore.persist.rehydrate();
+  await refreshWorkspaceState('formal-import');
   const mode = await requestEpubImportReleaseMode(file);
   if (!mode) {
     return;

@@ -1,5 +1,5 @@
 import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
-import { useWorkspaceStore } from '../../store/workspaceStore';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
@@ -10,7 +10,7 @@ export async function openImportedExternalResult(
 ) {
   setExternalPreviewPath(null);
   if (!result.node_id) return;
-  await useWorkspaceStore.persist.rehydrate();
+  await refreshWorkspaceState('search-palette-import');
   onOpenResult({
     excerpt: '',
     externalMatch: null,

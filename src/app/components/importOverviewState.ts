@@ -9,6 +9,7 @@ import {
   resetRuntimeReadwiseBookImport,
   type RuntimeReadwiseBooksInventory
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useFormalImport } from '../hooks/useFormalImport';
 
@@ -79,7 +80,7 @@ async function runReadwiseBookReset(input: { nodeId: string; t: ImportOverviewTr
     title: result.title ?? input.title,
     updated_at: result.updated_at
   });
-  await useWorkspaceStore.persist.rehydrate();
+  await refreshWorkspaceState('import-overview-reset');
   return result.node_id;
 }
 

@@ -1,9 +1,14 @@
 /* global URL */
 
+import { collectPostReadyActivity } from './windows-startup-post-ready-report.mjs';
+
 const DEFAULT_BUDGETS = {
   appReadyMs: 12000,
   appResponsiveMs: 13000,
+  backgroundTaskMs: 15000,
   bridgeReadyMs: 10000,
+  postReadyHydrateCount: 5,
+  postReadyWindowMs: 30000,
   prewarmMs: 3000,
   resourceMs: 3000,
   windowVisibleMs: 3000
@@ -39,7 +44,18 @@ export function resolveStartupBudgets(env = {}) {
   return {
     appReadyMs: readBudget(env, 'FOLIOLE_STARTUP_BUDGET_APP_READY_MS', DEFAULT_BUDGETS.appReadyMs),
     appResponsiveMs: readBudget(env, 'FOLIOLE_STARTUP_BUDGET_APP_RESPONSIVE_MS', DEFAULT_BUDGETS.appResponsiveMs),
+    backgroundTaskMs: readBudget(env, 'FOLIOLE_STARTUP_BUDGET_BACKGROUND_TASK_MS', DEFAULT_BUDGETS.backgroundTaskMs),
     bridgeReadyMs: readBudget(env, 'FOLIOLE_STARTUP_BUDGET_BRIDGE_READY_MS', DEFAULT_BUDGETS.bridgeReadyMs),
+    postReadyHydrateCount: readBudget(
+      env,
+      'FOLIOLE_STARTUP_BUDGET_POST_READY_HYDRATE_COUNT',
+      DEFAULT_BUDGETS.postReadyHydrateCount
+    ),
+    postReadyWindowMs: readBudget(
+      env,
+      'FOLIOLE_STARTUP_BUDGET_POST_READY_WINDOW_MS',
+      DEFAULT_BUDGETS.postReadyWindowMs
+    ),
     prewarmMs: readBudget(env, 'FOLIOLE_STARTUP_BUDGET_PREWARM_MS', DEFAULT_BUDGETS.prewarmMs),
     resourceMs: readBudget(env, 'FOLIOLE_STARTUP_BUDGET_RESOURCE_MS', DEFAULT_BUDGETS.resourceMs),
     windowVisibleMs: readBudget(env, 'FOLIOLE_STARTUP_BUDGET_WINDOW_VISIBLE_MS', DEFAULT_BUDGETS.windowVisibleMs)
@@ -54,6 +70,22 @@ function firstEventByStage(events) {
     }
   }
   return byStage;
+}
+
+function latestStartupCycle(events) {
+  const bootIndex = events.findLastIndex((event) => event.stage === 'boot_start');
+  if (bootIndex >= 0) {
+    const mainIndex = events
+      .slice(0, bootIndex + 1)
+      .findLastIndex((event) => event.stage === 'main_process_start');
+    const previousBootIndex = events
+      .slice(0, bootIndex)
+      .findLastIndex((event) => event.stage === 'boot_start');
+    const startIndex = mainIndex >= 0 && mainIndex > previousBootIndex ? mainIndex : bootIndex;
+    return events.slice(startIndex);
+  }
+  const mainIndex = events.findLastIndex((event) => event.stage === 'main_process_start');
+  return mainIndex >= 0 ? events.slice(mainIndex) : events;
 }
 
 function elapsedMs(start, event) {
@@ -138,14 +170,16 @@ function resolveStatus(failures, missingTimings) {
 }
 
 export function buildStartupReport({ budgets, events, session, stdout }) {
-  const byStage = firstEventByStage(events);
-  const start = byStage.get('main_process_start');
+  const cycleEvents = latestStartupCycle(events);
+  const byStage = firstEventByStage(cycleEvents);
+  const start = byStage.get('main_process_start') ?? byStage.get('boot_start');
   const timings = {};
   for (const stage of STAGE_KEYS) {
     timings[stage] = elapsedMs(start, byStage.get(stage));
   }
   const stdoutTiming = parseStartupTiming(stdout);
   const resources = topBootResources(byStage);
+  const postReadyActivity = collectPostReadyActivity(cycleEvents, byStage, budgets);
   const failures = [];
   addBudgetFailure(failures, 'prewarm', stdoutTiming.prewarmTotalMs ?? stdoutTiming.prewarmTimeoutMs ?? null, budgets.prewarmMs);
   addBudgetFailure(failures, 'window_visible', timings.window_visible, budgets.windowVisibleMs);
@@ -155,11 +189,20 @@ export function buildStartupReport({ budgets, events, session, stdout }) {
   for (const resource of resources.filter((item) => item.durationMs > budgets.resourceMs).slice(0, 3)) {
     failures.push(`resource=${resource.durationMs}ms ${resource.name}`);
   }
+  if (postReadyActivity.hydrateCount > budgets.postReadyHydrateCount) {
+    failures.push(
+      `post_ready_hydrate_count=${postReadyActivity.hydrateCount} budget=${budgets.postReadyHydrateCount}`
+    );
+  }
+  for (const task of postReadyActivity.longBackgroundTasks.slice(0, 3)) {
+    failures.push(`background_task=${task.durationMs}ms ${task.label}`);
+  }
   const missingTimings = missingRequiredTimings(timings);
   return {
     budgets,
     failures,
     missingTimings,
+    postReadyActivity,
     resources,
     session,
     status: resolveStatus(failures, missingTimings),

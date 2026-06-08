@@ -2,7 +2,7 @@ import {
   type RuntimeDirectoryImportResult,
   type RuntimeTextImportResult
 } from '../../shared/platform/importExecutionRuntimeRepository';
-import { useWorkspaceStore } from '../../store/workspaceStore';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 
 import {
   applyCancelledImportStatus,
@@ -35,7 +35,7 @@ export async function runImportFlow<Result extends RuntimeTextImportResult | Run
       return false;
     }
     if (shouldRehydrate(importResult) || applyResultStatus) {
-      await useWorkspaceStore.persist.rehydrate();
+      await refreshWorkspaceState('formal-import');
     }
     if (applyResultStatus) {
       applyResultStatus(importResult);

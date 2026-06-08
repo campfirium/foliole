@@ -35,6 +35,15 @@ export async function readBootEvents(eventLogFile, session) {
     .filter((event) => event?.session === session);
 }
 
+async function latestEventSession(eventLogFile) {
+  const text = await readText(eventLogFile);
+  const events = text.split(/\r?\n/u)
+    .filter(Boolean)
+    .map(parseJsonLine)
+    .filter((event) => event?.session && event?.stage === 'boot_start');
+  return events.at(-1)?.session ?? null;
+}
+
 async function findSessionStdoutLog(logDir, session) {
   const files = await readdir(logDir).catch(() => []);
   const match = files.find((file) => file === `${session}.out.log`);
@@ -49,7 +58,11 @@ export async function analyzeStartupSession({ budgets, paths, session }) {
   return buildStartupReport({ budgets, events, session, stdout });
 }
 
-async function latestSession(paths) {
+async function latestSession(paths, preferBootEventLog) {
+  if (preferBootEventLog) {
+    const session = await latestEventSession(paths.bootEventLogFile);
+    if (session) return session;
+  }
   const state = readClientState(paths.stateFile);
   if (state?.session) return state.session;
   const files = await readdir(paths.logDir).catch(() => []);
@@ -66,11 +79,15 @@ function formatTopResources(resources) {
 }
 
 function printReport(report) {
-  const { stdoutTiming, timings } = report;
+  const { postReadyActivity, stdoutTiming, timings } = report;
   console.log(`[windows-startup-check] session=${report.session}`);
   console.log(`[windows-startup-check] vite_ready_ms=${stdoutTiming.viteReadyMs ?? 'unknown'}`);
   console.log(`[windows-startup-check] prewarm_ms=${stdoutTiming.prewarmTotalMs ?? stdoutTiming.prewarmTimeoutMs ?? 'unknown'} status=${stdoutTiming.prewarmFinalStatus ?? stdoutTiming.prewarmLaunchStatus ?? 'unknown'}`);
   console.log(`[windows-startup-check] window_visible_ms=${timings.window_visible ?? 'unknown'} main_window_ready_ms=${timings.main_window_ready ?? 'unknown'} bridge_ready_ms=${timings.bridge_ready ?? 'unknown'} app_ready_ms=${timings.app_ready ?? 'unknown'} app_responsive_ms=${timings.app_responsive ?? 'unknown'}`);
+  console.log(`[windows-startup-check] post_ready_window_ms=${postReadyActivity.windowMs} hydrate_count=${postReadyActivity.hydrateCount} long_background_tasks=${postReadyActivity.longBackgroundTasks.length}`);
+  for (const task of postReadyActivity.longBackgroundTasks.slice(0, 5)) {
+    console.log(`[windows-startup-check] long_background_task duration_ms=${task.durationMs} label=${task.label}`);
+  }
   if (report.resources.length > 0) {
     console.log(`[windows-startup-check] top_resources=${formatTopResources(report.resources)}`);
   }
@@ -108,9 +125,13 @@ async function maybeRestart(paths, argv) {
 async function main() {
   const argv = process.argv.slice(2);
   const paths = resolveWindowsNativePaths();
+  const logArg = argv.indexOf('--log');
+  if (logArg >= 0 && argv[logArg + 1]) {
+    paths.bootEventLogFile = argv[logArg + 1];
+  }
   await maybeRestart(paths, argv);
   const sessionArg = argv.indexOf('--session');
-  const session = sessionArg >= 0 ? argv[sessionArg + 1] : await latestSession(paths);
+  const session = sessionArg >= 0 ? argv[sessionArg + 1] : await latestSession(paths, logArg >= 0);
   if (!session) throw new Error('no windows native startup session found');
   const report = await analyzeStartupSession({ budgets: resolveStartupBudgets(process.env), paths, session });
   printReport(report);

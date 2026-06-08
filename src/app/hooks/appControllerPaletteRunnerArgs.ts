@@ -9,6 +9,7 @@ import { checkForFolioleUpdates, openFolioleLatestRelease } from '../../shared/p
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
@@ -61,7 +62,7 @@ function createMergeHighlightsIntoTopicCommand(args: {
       return false;
     }
     if (result.status === 'merged') {
-      await useWorkspaceStore.persist.rehydrate();
+      await refreshWorkspaceState('merge-highlights');
     }
     return true;
   };
@@ -82,7 +83,7 @@ function createReimportSelectedTopicCommand(args: {
       showAppRuntimeNotice(result.detail);
       return false;
     }
-    await useWorkspaceStore.persist.rehydrate();
+    await refreshWorkspaceState('reimport-selected-topic');
     await openWorkspaceNodeWithPreparedDocument(result.nodeId ?? nodeId, { forceLoad: true });
     return true;
   };

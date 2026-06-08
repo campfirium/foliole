@@ -5,7 +5,7 @@ import {
   type ExternalDocumentImportResult
 } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
-import { useWorkspaceStore } from '../../store/workspaceStore';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 
 export function useOpenImportedExternalDocument(
   preview: ExternalDocumentPreview | null,
@@ -19,7 +19,7 @@ export function useOpenImportedExternalDocument(
     try {
       const result = await importExternalDocument(preview.absolutePath);
       if (!result?.node_id) return;
-      await useWorkspaceStore.persist.rehydrate();
+      await refreshWorkspaceState('external-document-import');
       onOpenImportedNode(result);
     } finally {
       setIsImporting(false);
