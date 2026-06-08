@@ -509,9 +509,9 @@ body {
 }
 
 .startup-surface__button[data-variant='emphasis'] {
-  background: rgb(var(--app-accent-color-rgb) / 0.1);
-  border-color: rgb(var(--app-accent-color-rgb) / 0.45);
-  color: rgb(var(--app-accent-color-rgb));
+  background: color-mix(in srgb, var(--workspace-region-main-rail-bg) 88%, rgb(var(--color-foreground)) 12%);
+  border-color: color-mix(in oklab, var(--workspace-region-main-rail-bg) 72%, rgb(var(--color-foreground)) 28%);
+  color: rgb(var(--color-foreground));
 }
 
 strong,

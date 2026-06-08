@@ -48,10 +48,10 @@ it('renders startup diagnostics and action buttons', () => {
   expect(rootElement.textContent).toContain('Copy diagnostics');
 });
 
-it('keeps startup emphasis action aligned with the soft accent button style', () => {
+it('keeps startup emphasis action aligned with the workspace shell button style', () => {
   const styles = readFileSync(join(process.cwd(), 'src/app/styles.css'), 'utf8');
   const emphasisRule = styles.slice(styles.indexOf(".startup-surface__button[data-variant='emphasis']"));
 
-  expect(emphasisRule).toContain('--app-accent-color-rgb');
-  expect(emphasisRule.split('}')[0]).not.toContain('--color-accent-strong');
+  expect(emphasisRule).toContain('--workspace-region-main-rail-bg');
+  expect(emphasisRule.split('}')[0]).not.toContain('--app-accent-color-rgb');
 });
