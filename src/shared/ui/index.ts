@@ -1,12 +1,6 @@
+// Foundation controls: reusable across desktop workbench surfaces and companion shell.
 export { AppBreadcrumb, type AppBreadcrumbItem } from './Breadcrumb';
 export { AppButton } from './Button';
-export { AppConfirmationProvider } from './AppConfirmationProvider';
-export {
-  requestAppConfirmation,
-  requestAppTextInput,
-  type AppConfirmationOptions,
-  type AppTextInputOptions
-} from './appConfirmation';
 export {
   AppDialog,
   AppDialogClose,
@@ -17,47 +11,34 @@ export {
   AppDialogTitle,
   AppDialogTrigger
 } from './Dialog';
-export {
-  AppDropdownMenu,
-  AppDropdownMenuCheckItem,
-  AppDropdownMenuContent,
-  AppDropdownMenuItem,
-  AppDropdownMenuLabel,
-  AppDropdownMenuPortal,
-  AppDropdownMenuSeparator,
-  AppDropdownMenuTrigger,
-  AppSelectionDropdownMenu,
-  AppSelectionDropdownMenuItem
-} from './DropdownMenu';
-export { AppEmptyState, AppErrorState, AppLoadingState, AppSpinner } from './EmptyState';
 export { AppIconButton } from './IconButton';
-export { LucideCatalogIcon, LUCIDE_ICON_OPTIONS } from './LucideIconCatalog';
 export { AppInput } from './Input';
 export {
   appInputBorderFocusVisibleClassName,
   appInputFocusVisibleClassName
 } from './InputFocus';
-export { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
-export { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
-export { NodeBrowseList, type NodeBrowseListItem } from './NodeBrowseList';
-export {
-  ObjectConfigHeader,
-  ObjectConfigPathButton,
-  ObjectConfigPathControl,
-  ObjectConfigRow,
-  ObjectConfigTable
-} from './ObjectConfigTable';
+export { LucideCatalogIcon, LUCIDE_ICON_OPTIONS } from './LucideIconCatalog';
 export { AppPanel } from './Panel';
-export { InspectorSection } from './InspectorSection';
-export { ReviewActionBar } from './ReviewActionBar';
+export { AppToolbar } from './Toolbar';
+export { ToolbarActionGroup } from './ToolbarActionGroup';
 export {
-  ContinueReadingAction,
-  FsrsRevealAction,
-  ReadingReviewActions,
-  ReviewCompleteAction,
-  ResumeReviewAction,
-  ReviewGradeActions
-} from './ReviewActionControls';
+  AppTooltip,
+  AppTooltipContent,
+  AppTooltipPortal,
+  AppTooltipProvider,
+  AppTooltipTrigger
+} from './Tooltip';
+export { TruncatedTextTooltip } from './TruncatedTextTooltip';
+
+// Feedback and status surfaces: empty, loading, error, badges, confirmation, and startup fallback.
+export { AppConfirmationProvider } from './AppConfirmationProvider';
+export {
+  requestAppConfirmation,
+  requestAppTextInput,
+  type AppConfirmationOptions,
+  type AppTextInputOptions
+} from './appConfirmation';
+export { AppEmptyState, AppErrorState, AppLoadingState, AppSpinner } from './EmptyState';
 export { AppStatusBadge } from './StatusBadge';
 export { StartupErrorBoundary } from './StartupErrorBoundary';
 export {
@@ -71,21 +52,20 @@ export {
   type StartupSurfaceAction,
   type StartupSurfaceModel
 } from './StartupSurface';
-export { AppToolbar } from './Toolbar';
-export { ToolbarActionGroup } from './ToolbarActionGroup';
+
+// Floating surfaces: dropdowns, selection menus, and reusable floating class contracts.
 export {
-  shouldVirtualizeList,
-  VirtualListSurface,
-  type VirtualListRenderMeta
-} from './VirtualListSurface';
-export {
-  AppTooltip,
-  AppTooltipContent,
-  AppTooltipPortal,
-  AppTooltipProvider,
-  AppTooltipTrigger
-} from './Tooltip';
-export { TruncatedTextTooltip } from './TruncatedTextTooltip';
+  AppDropdownMenu,
+  AppDropdownMenuCheckItem,
+  AppDropdownMenuContent,
+  AppDropdownMenuItem,
+  AppDropdownMenuLabel,
+  AppDropdownMenuPortal,
+  AppDropdownMenuSeparator,
+  AppDropdownMenuTrigger,
+  AppSelectionDropdownMenu,
+  AppSelectionDropdownMenuItem
+} from './DropdownMenu';
 export {
   appFloatingEmptyStateClassName,
   appFloatingInputClassName,
@@ -96,6 +76,37 @@ export {
   appFloatingSectionHeaderClassName,
   appFloatingSurfaceClassName
 } from './FloatingSurface';
+
+// Workbench list and inspector patterns: shared desktop structure, not settings-specific.
+export { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
+export { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
+export { InspectorSection } from './InspectorSection';
+export { NodeBrowseList, type NodeBrowseListItem } from './NodeBrowseList';
+export {
+  ObjectConfigHeader,
+  ObjectConfigPathButton,
+  ObjectConfigPathControl,
+  ObjectConfigRow,
+  ObjectConfigTable
+} from './ObjectConfigTable';
+export {
+  shouldVirtualizeList,
+  VirtualListSurface,
+  type VirtualListRenderMeta
+} from './VirtualListSurface';
+
+// Review patterns: action hierarchy consumers for desktop review and companion review shell.
+export {
+  ContinueReadingAction,
+  FsrsRevealAction,
+  ReadingReviewActions,
+  ReviewCompleteAction,
+  ResumeReviewAction,
+  ReviewGradeActions
+} from './ReviewActionControls';
+export { ReviewActionBar } from './ReviewActionBar';
+
+// Settings patterns: shared only because settings pages reuse them; do not treat as generic controls.
 export {
   SETTINGS_ACTION_TABLE_EXTERNAL_LIBRARY_COLUMNS_CLASS_NAME,
   SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME,
