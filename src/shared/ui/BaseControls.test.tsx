@@ -5,6 +5,7 @@ import { preloadTranslationCatalog } from '../localization/translations';
 
 import { AppButton } from './Button';
 import { AppIconButton } from './IconButton';
+import { AppInput } from './Input';
 import { AppPanel } from './Panel';
 import { AppStatusBadge } from './StatusBadge';
 
@@ -42,6 +43,7 @@ it('renders shared control wrappers without Radix theme context', () => {
       <AppButton variant="default">Save</AppButton>
       <AppButton variant="list">Topic row</AppButton>
       <AppIconButton icon={<span aria-hidden="true">+</span>} label="Add item" />
+      <AppInput aria-label="Search" />
       <AppPanel footer={<div>Footer</div>} title="Queue summary">
         <p>Panel body</p>
       </AppPanel>
@@ -54,6 +56,7 @@ it('renders shared control wrappers without Radix theme context', () => {
   expect(screen.getByRole('button', { name: 'Topic row' }).className).toContain('focus-visible:ring-ring');
   expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('focus:outline-none');
   expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('focus-visible:ring-ring');
+  expect(screen.getByRole('textbox', { name: 'Search' }).className).toContain('text-ui-input');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).tagName).toBe('H3');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).className).toContain('text-ui-md');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).closest('header')?.className).toContain('min-h-panel-header');

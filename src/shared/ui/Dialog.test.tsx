@@ -3,7 +3,7 @@ import { expect, it } from 'vitest';
 
 import { AppDialog, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
 
-it('renders dialog content with shared floating surface baseline', () => {
+it('renders dialog content with shared floating surface baseline', async () => {
   render(
     <AppDialog open>
       <AppDialogPortal>
@@ -16,13 +16,14 @@ it('renders dialog content with shared floating surface baseline', () => {
     </AppDialog>
   );
 
-  const dialog = screen.getByRole('dialog', { name: 'Shared dialog' });
+  const dialog = await screen.findByRole('dialog', { name: 'Shared dialog' });
   expect(dialog).toBeInTheDocument();
   expect(dialog.className).toContain('rounded-lg');
   expect(dialog.className).toContain('shadow-panel');
   expect(dialog.className).toContain('border-[var(--app-floating-border-color)]');
   expect(dialog.className).toContain('bg-[var(--app-floating-surface-bg)]');
   expect(screen.getByLabelText('Demo overlay')).toBeInTheDocument();
+  expect(screen.getByText('Shared dialog').className).toContain('text-ui-xl');
   expect(screen.getByText('Body copy').className).toContain('text-foreground/68');
   expect(screen.getByText('Body copy')).toBeInTheDocument();
 });

@@ -22,7 +22,7 @@ const floatingSectionHeaderBaseClassName =
 const floatingEmptyStateBaseClassName = 'px-3 py-8 text-center text-ui-md text-foreground/60';
 const floatingMetaBadgeBaseClassName = [
   'truncate rounded-full border border-[var(--app-floating-border-color)] bg-[var(--app-floating-muted-bg)]',
-  'px-2 py-0.5 text-[10px] font-medium text-foreground/65'
+  'px-2 py-0.5 text-ui-xs font-medium text-foreground/65'
 ].join(' ');
 
 export function appFloatingSurfaceClassName(

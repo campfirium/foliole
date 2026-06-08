@@ -118,6 +118,8 @@ export default {
         'ui-base': ['13px', { lineHeight: '1.25rem' }],
         'ui-md': ['14px', { lineHeight: '1.5rem' }],
         'ui-lg': ['15px', { lineHeight: '1.5rem' }],
+        'ui-input': ['16px', { lineHeight: '1.5rem' }],
+        'ui-xl': ['18px', { lineHeight: '1.75rem' }],
         'reading-sm': ['14px', { lineHeight: '1.7' }],
         'reading-base': ['17px', { lineHeight: '1.75' }],
         'reading-lg': ['19px', { lineHeight: '1.8' }]

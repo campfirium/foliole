@@ -10,6 +10,8 @@ const mergeClassNames = extendTailwindMerge({
         'text-ui-base',
         'text-ui-md',
         'text-ui-lg',
+        'text-ui-input',
+        'text-ui-xl',
         'text-reading-sm',
         'text-reading-base',
         'text-reading-lg'

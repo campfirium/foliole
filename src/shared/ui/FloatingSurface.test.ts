@@ -4,6 +4,7 @@ import {
   appFloatingInputClassName,
   appFloatingItemClassName,
   appFloatingListClassName,
+  appFloatingMetaBadgeClassName,
   appFloatingOverlayClassName,
   appFloatingSurfaceClassName
 } from './FloatingSurface';
@@ -24,4 +25,6 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingItemClassName()).toContain(
     'data-[active=true]:bg-[var(--app-floating-item-active-bg)]'
   );
+  expect(appFloatingMetaBadgeClassName()).toContain('text-ui-xs');
+  expect(appFloatingMetaBadgeClassName()).not.toContain('text-[10px]');
 });
