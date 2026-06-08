@@ -18,7 +18,7 @@ function resolveVariantClass(variant: ButtonVariant) {
     return 'border border-[var(--app-control-border-color)] bg-transparent text-foreground hover:border-[var(--app-control-border-hover-color)] hover:bg-[var(--app-control-bg-hover-color)]';
   }
   if (variant === 'emphasis') {
-    return 'border border-[rgb(var(--color-accent-strong))] bg-[rgb(var(--color-accent-strong))] text-accent-foreground hover:border-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent))]';
+    return 'border border-[rgb(var(--app-accent-color-rgb)/0.45)] bg-[rgb(var(--app-accent-color-rgb)/0.1)] text-[rgb(var(--app-accent-color-rgb))] hover:border-[rgb(var(--app-accent-color-rgb)/0.62)] hover:bg-[rgb(var(--app-accent-color-rgb)/0.16)]';
   }
   if (variant === 'danger') {
     return 'border border-error/35 bg-transparent text-error hover:border-error/55 hover:bg-error/8 hover:text-error-foreground';

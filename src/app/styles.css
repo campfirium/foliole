@@ -509,9 +509,9 @@ body {
 }
 
 .startup-surface__button[data-variant='emphasis'] {
-  background: rgb(var(--color-accent-strong));
-  border-color: rgb(var(--color-accent-strong));
-  color: rgb(var(--color-accent-foreground));
+  background: rgb(var(--app-accent-color-rgb) / 0.1);
+  border-color: rgb(var(--app-accent-color-rgb) / 0.45);
+  color: rgb(var(--app-accent-color-rgb));
 }
 
 strong,

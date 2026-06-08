@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 import { renderStartupErrorView } from './StartupSurface';
@@ -43,4 +46,12 @@ it('renders startup diagnostics and action buttons', () => {
   rootElement.querySelectorAll<HTMLButtonElement>('button')[2]?.click();
   expect(copyDiagnostics).toHaveBeenCalledTimes(1);
   expect(rootElement.textContent).toContain('Copy diagnostics');
+});
+
+it('keeps startup emphasis action aligned with the soft accent button style', () => {
+  const styles = readFileSync(join(process.cwd(), 'src/app/styles.css'), 'utf8');
+  const emphasisRule = styles.slice(styles.indexOf(".startup-surface__button[data-variant='emphasis']"));
+
+  expect(emphasisRule).toContain('--app-accent-color-rgb');
+  expect(emphasisRule.split('}')[0]).not.toContain('--color-accent-strong');
 });
