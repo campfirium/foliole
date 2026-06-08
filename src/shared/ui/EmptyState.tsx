@@ -79,7 +79,7 @@ function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, 
     <div
       aria-busy={ariaBusy}
       aria-label={ariaLabel}
-      className={cn('flex min-h-[120px] flex-col items-center justify-center gap-3 text-center text-ui-md', STATE_SURFACE_TONE_CLASS_NAMES[tone], className)}
+      className={cn('flex min-h-state-surface flex-col items-center justify-center gap-3 text-center text-ui-md', STATE_SURFACE_TONE_CLASS_NAMES[tone], className)}
       data-state-surface-tone={tone}
       role={role}
     >

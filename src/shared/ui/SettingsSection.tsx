@@ -25,12 +25,12 @@ export function SettingsSection({
     <section
       aria-label={ariaLabel}
       className={cn(
-        'relative mb-8 pt-7 before:absolute before:left-5 before:right-5 before:top-0 before:border-t before:border-settings-divider/70 first:pt-0 first:before:hidden last:mb-0',
+        'relative mb-8 pt-7 before:absolute before:left-settings-panel-x before:right-settings-panel-x before:top-0 before:border-t before:border-settings-divider/70 first:pt-0 first:before:hidden last:mb-0',
         className
       )}
     >
       {hasHeader ? (
-        <div className="px-5 pb-3">
+        <div className="px-settings-panel-x pb-3">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               {title ? <h3 className="text-ui-lg font-semibold text-foreground">{title}</h3> : null}

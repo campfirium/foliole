@@ -53,7 +53,7 @@ export function AppPanel<T extends PanelElement = 'section'>({
       >
         <header
           className={cn(
-            'flex min-h-[48px] items-center justify-start gap-3 px-4 py-2',
+            'flex min-h-panel-header items-center justify-start gap-3 px-4 py-2',
             headerClassName,
             onHeaderClick && 'cursor-pointer transition-colors hover:bg-foreground/[0.03]'
           )}

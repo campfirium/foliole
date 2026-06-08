@@ -56,6 +56,7 @@ it('renders shared control wrappers without Radix theme context', () => {
   expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('focus-visible:ring-ring');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).tagName).toBe('H3');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).className).toContain('text-ui-md');
+  expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).closest('header')?.className).toContain('min-h-panel-header');
   expect(screen.getByText('Panel body')).toBeInTheDocument();
   expect(screen.getByText('Ready').tagName).toBe('SPAN');
   expect(screen.getByText('Ready').className).toContain('text-ui-md');

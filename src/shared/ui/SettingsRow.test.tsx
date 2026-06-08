@@ -31,6 +31,8 @@ it('tags the row with data-settings-row so the section divider selector can matc
   render(<SettingsRow data-testid="row" title="Tagged" />);
 
   expect(screen.getByTestId('row')).toHaveAttribute('data-settings-row');
+  expect(screen.getByTestId('row').className).toContain('min-h-settings-row');
+  expect(screen.getByTestId('row').className).toContain('py-settings-panel-y');
 });
 
 it('passes through arbitrary div props', () => {

@@ -21,7 +21,7 @@ export function SettingsRow({
   return (
     <div
       className={cn(
-        'relative flex min-h-[82px] items-start justify-between gap-6 px-5 py-5 before:absolute before:left-5 before:right-5 before:top-0 before:hidden before:border-t before:border-settings-divider/70 first:before:hidden max-[1080px]:flex-col max-[1080px]:items-start',
+        'relative flex min-h-settings-row items-start justify-between gap-6 px-settings-panel-x py-settings-panel-y before:absolute before:left-settings-panel-x before:right-settings-panel-x before:top-0 before:hidden before:border-t before:border-settings-divider/70 first:before:hidden max-[1080px]:flex-col max-[1080px]:items-start',
         readonly && 'text-foreground/80',
         className
       )}

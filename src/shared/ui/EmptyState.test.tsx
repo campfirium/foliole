@@ -63,6 +63,7 @@ describe('AppEmptyState', () => {
     const { container } = render(<AppEmptyState description="No due cards." title="Nothing to review" />);
 
     expect(container.firstElementChild?.className).toContain('text-ui-md');
+    expect(container.firstElementChild?.className).toContain('min-h-state-surface');
     expect(screen.getByRole('status')).toHaveAttribute('data-state-surface-tone', 'empty');
     expect(screen.getByText('Nothing to review').className).toContain('text-ui-md');
     expect(screen.getByText('No due cards.').className).toContain('text-ui-base');

@@ -20,6 +20,8 @@ it('marks settings empty, loading, and error surfaces with shared state tones', 
 
   expect(screen.getAllByRole('status')[1]).toHaveAttribute('data-state-surface-tone', 'loading');
   expect(screen.getByText('No backups').closest('[data-settings-state-surface]')).toHaveAttribute('data-state-surface-tone', 'empty');
+  expect(screen.getByText('No backups').closest('[data-settings-state-surface]')?.className).toContain('min-h-settings-row');
+  expect(screen.getByText('No backups').closest('[data-settings-state-surface]')?.className).toContain('px-settings-panel-x');
   expect(screen.getByText('Backup failed').closest('[data-settings-state-surface]')).toHaveAttribute('data-state-surface-tone', 'error');
   expect(screen.getByText('Backup failed').className).toContain('text-error');
 });

@@ -30,6 +30,8 @@ it('renders settings pattern structure with shared copy and action slot', () => 
   expect(screen.getByRole('heading', { level: 4, name: 'Primary shortcut' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 4, name: 'Primary shortcut' }).className).toContain('text-ui-lg');
   expect(screen.getByText('Controls the main action.')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 4, name: 'Primary shortcut' }).closest('[data-settings-row]')?.className).toContain('min-h-settings-row');
+  expect(screen.getByRole('heading', { level: 4, name: 'Primary shortcut' }).closest('[data-settings-row]')?.className).toContain('px-settings-panel-x');
   expect(screen.getByRole('button', { name: 'Reset all' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Save' }).closest('.bg-settings-group')).not.toBeNull();

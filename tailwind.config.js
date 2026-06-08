@@ -122,6 +122,13 @@ export default {
         'reading-base': ['17px', { lineHeight: '1.75' }],
         'reading-lg': ['19px', { lineHeight: '1.8' }]
       },
+      spacing: {
+        'panel-header': '3rem',
+        'settings-row': '5.125rem',
+        'settings-panel-x': '1.25rem',
+        'settings-panel-y': '1.25rem',
+        'state-surface': '7.5rem'
+      },
       boxShadow: {
         popover: 'var(--shadow-popover)',
         panel: 'var(--shadow-panel)',
