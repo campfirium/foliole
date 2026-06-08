@@ -65,6 +65,8 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     checkForUpdates: () => undefined,
     openLatestRelease: () => undefined,
     openGitHubRepository: () => undefined,
+    sendFeedback: () => undefined,
+    openSupportEmail: () => undefined,
     openGitHubIssues: () => undefined,
     openGitHubDiscussions: () => undefined,
     openYouTubePlaylist: () => undefined,
@@ -118,6 +120,22 @@ it('runs the developer performance panel command through the shared command hand
   expectCommandRuns(APP_COMMAND_IDS.openPerformancePanel, { openPerformancePanel });
 
   expect(openPerformancePanel).toHaveBeenCalledTimes(1);
+});
+
+it('runs send feedback through the shared command handler', () => {
+  const sendFeedback = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.sendFeedback, { sendFeedback });
+
+  expect(sendFeedback).toHaveBeenCalledTimes(1);
+});
+
+it('runs email support through the shared command handler', () => {
+  const openSupportEmail = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.openSupportEmail, { openSupportEmail });
+
+  expect(openSupportEmail).toHaveBeenCalledTimes(1);
 });
 
 it('runs open help search through the shared command handler', () => {

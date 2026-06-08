@@ -134,6 +134,7 @@ function createPaletteReleaseActions() {
     openGitHubDiscussions: () => openFolioleReleaseLink('discussions'),
     openGitHubIssues: () => openFolioleReleaseLink('issues'),
     openGitHubRepository: () => openFolioleReleaseLink('repository'),
+    openSupportEmail: () => openFolioleReleaseLink('contactEmail'),
     openLatestRelease: openFolioleLatestRelease,
     openYouTubePlaylist: () => openFolioleReleaseLink('youtubePlaylist')
   };
@@ -168,6 +169,7 @@ export function createPaletteRunnerArgs(args: {
   layoutProps: WorkspaceLayoutProps;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   onOpenHelpSearch: () => void;
+  onSendFeedback: () => void;
   paletteItems: CommandPaletteItem[];
   requestDeleteSourceTopic: (nodeId: string) => boolean;
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
@@ -193,6 +195,7 @@ export function createPaletteRunnerArgs(args: {
     ...createPaletteImportActions(args.formalImport),
     onRestartApp: createRestartAppCommand(args),
     onOpenHelpSearch: args.onOpenHelpSearch,
+    onSendFeedback: args.onSendFeedback,
     ...createPaletteAppearanceActions(args),
     ...createPaletteViewActions(),
     ...createPaletteReleaseActions(),

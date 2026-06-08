@@ -4,6 +4,8 @@ export const HELP_PALETTE_COMMANDS = [
   { id: APP_COMMAND_IDS.checkForUpdates, title: 'Check for Updates', section: 'Help', keywords: ['release', 'version'] },
   { id: APP_COMMAND_IDS.openLatestRelease, title: 'Open Releases', section: 'Help', keywords: ['download', 'version'] },
   { id: APP_COMMAND_IDS.openGitHubRepository, title: 'Open GitHub Repository', section: 'Help', keywords: ['github', 'source'] },
+  { id: APP_COMMAND_IDS.sendFeedback, title: 'Send Feedback', section: 'Help', keywords: ['feedback', 'support'] },
+  { id: APP_COMMAND_IDS.openSupportEmail, title: 'Email', section: 'Help', keywords: ['email', 'contact', 'support'] },
   { id: APP_COMMAND_IDS.openGitHubIssues, title: 'Report an Issue', section: 'Help', keywords: ['github', 'bug', 'feedback'] },
   { id: APP_COMMAND_IDS.openGitHubDiscussions, title: 'Open Discussions', section: 'Help', keywords: ['github', 'feedback'] },
   { id: APP_COMMAND_IDS.openYouTubePlaylist, title: 'Open YouTube', section: 'Help', keywords: ['youtube', 'video'] }

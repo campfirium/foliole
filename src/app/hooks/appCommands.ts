@@ -42,6 +42,8 @@ interface RunAppCommandActions {
   checkForUpdates: () => void | Promise<void>;
   openLatestRelease: () => void | Promise<void>;
   openGitHubRepository: () => void | Promise<void>;
+  sendFeedback?: () => void;
+  openSupportEmail: () => void | Promise<void>;
   openGitHubIssues: () => void | Promise<void>;
   openGitHubDiscussions: () => void | Promise<void>;
   openYouTubePlaylist: () => void | Promise<void>;
@@ -124,6 +126,8 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.checkForUpdates]: actions.checkForUpdates,
     [APP_COMMAND_IDS.openLatestRelease]: actions.openLatestRelease,
     [APP_COMMAND_IDS.openGitHubRepository]: actions.openGitHubRepository,
+    [APP_COMMAND_IDS.sendFeedback]: actions.sendFeedback ?? (() => undefined),
+    [APP_COMMAND_IDS.openSupportEmail]: actions.openSupportEmail,
     [APP_COMMAND_IDS.openGitHubIssues]: actions.openGitHubIssues,
     [APP_COMMAND_IDS.openGitHubDiscussions]: actions.openGitHubDiscussions,
     [APP_COMMAND_IDS.openYouTubePlaylist]: actions.openYouTubePlaylist,

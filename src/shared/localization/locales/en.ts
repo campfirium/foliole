@@ -14,6 +14,7 @@ import { EN_DESKTOP_REVIEW_TRANSLATIONS } from './enDesktopReview';
 import { EN_DESKTOP_SEARCH_TRANSLATIONS } from './enDesktopSearch';
 import { EN_DESKTOP_SORT_TRANSLATIONS } from './enDesktopSort';
 import { EN_DESKTOP_SOURCE_UPDATE_TRANSLATIONS } from './enDesktopSourceUpdate';
+import { EN_FEEDBACK_TRANSLATIONS } from './enFeedback';
 import { EN_SETTINGS_TRANSLATIONS } from './enSettings';
 import { EN_SETTINGS_ABOUT_TRANSLATIONS } from './enSettingsAbout';
 import { EN_SETTINGS_APPEARANCE_TRANSLATIONS } from './enSettingsAppearance';
@@ -43,6 +44,7 @@ export const EN_TRANSLATIONS = {
   ...EN_DESKTOP_SEARCH_TRANSLATIONS,
   ...EN_DESKTOP_SORT_TRANSLATIONS,
   ...EN_DESKTOP_SOURCE_UPDATE_TRANSLATIONS,
+  ...EN_FEEDBACK_TRANSLATIONS,
   'language.system': 'System',
   'language.en': 'English',
   'language.zhHans': 'Simplified Chinese',

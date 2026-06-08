@@ -3,10 +3,12 @@ import type { TranslationKey } from '../translations';
 export const ZH_HANS_SETTINGS_ABOUT_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'settings.search.aboutVersion.title': '版本',
   'settings.search.aboutVersion.description': '当前 Foliole 桌面版本和更新检查。',
+  'settings.search.aboutFeedback.title': '反馈',
+  'settings.search.aboutFeedback.description': '发送私下反馈，可选择留下联系方式和图片；也可以通过邮件继续沟通。',
   'settings.search.aboutDiagnostic.title': '诊断报告',
   'settings.search.aboutDiagnostic.description': '复制一份包含最近错误和崩溃状态的简短支持报告，不包含你的资料库内容。',
   'settings.search.aboutCommunity.title': '社区',
-  'settings.search.aboutCommunity.description': '打开源代码、社区讨论、反馈和视频更新入口。',
+  'settings.search.aboutCommunity.description': '打开源代码、社区讨论、问题列表和视频更新入口。',
   'settings.search.generalSearchEnhancement.title': '搜索增强',
   'settings.search.generalSearchEnhancement.description': '改进中文、日文、韩文以及其他不按空格分词语言的搜索。',
   'settings.about.app.section': '应用',

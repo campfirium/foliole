@@ -144,6 +144,7 @@ function useControllerAuxiliaryResult(args: {
   layoutProps: ReturnType<typeof buildAppControllerLayoutProps>;
   onOpenHelpSearch: () => void;
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
+  onSendFeedback: () => void;
   paletteItems: ReturnType<typeof useControllerPaletteItems>;
   requestDeleteSourceTopic: (nodeId: string) => boolean;
   ws: ReturnType<typeof useWorkspaceSelectors>;
@@ -154,6 +155,7 @@ function useControllerAuxiliaryResult(args: {
 export function useAppController(args: {
   onOpenHelpSearch: () => void;
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
+  onSendFeedback: () => void;
 }): AppControllerResult {
   const core = useControllerCoreState();
   const { appearance, controller, formalImport, hotkeys, isWorkspaceHydrated, nowIso, reviewSettings, ws } = core;
@@ -197,6 +199,7 @@ export function useAppController(args: {
     layoutProps,
     onOpenHelpSearch: args.onOpenHelpSearch,
     onOpenSearchPreview: args.onOpenSearchPreview,
+    onSendFeedback: args.onSendFeedback,
     paletteItems,
     requestDeleteSourceTopic: reviewEditing.reviewSourceTopicDeleteDialog.requestDeleteSourceTopic,
     ws

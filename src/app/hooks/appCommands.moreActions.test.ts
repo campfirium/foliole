@@ -65,6 +65,8 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     checkForUpdates: () => undefined,
     openLatestRelease: () => undefined,
     openGitHubRepository: () => undefined,
+    sendFeedback: () => undefined,
+    openSupportEmail: () => undefined,
     openGitHubIssues: () => undefined,
     openGitHubDiscussions: () => undefined,
     openYouTubePlaylist: () => undefined,

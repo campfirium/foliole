@@ -4,6 +4,7 @@ export interface PaletteHelpCommandRunnerArgs {
   openGitHubIssues: () => Promise<void>;
   openGitHubRepository: () => Promise<void>;
   openLatestRelease: () => Promise<void>;
+  openSupportEmail: () => Promise<void>;
   openYouTubePlaylist: () => Promise<void>;
 }
 
@@ -14,6 +15,7 @@ export function createPaletteHelpCommandActions(args: PaletteHelpCommandRunnerAr
     openGitHubIssues: () => void args.openGitHubIssues(),
     openGitHubRepository: () => void args.openGitHubRepository(),
     openLatestRelease: () => void args.openLatestRelease(),
+    openSupportEmail: () => void args.openSupportEmail(),
     openYouTubePlaylist: () => void args.openYouTubePlaylist()
   };
 }

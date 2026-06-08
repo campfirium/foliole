@@ -53,6 +53,7 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
   onToggleListVisibility: () => void;
   onToggleRightSidebarVisibility: () => void;
   onOpenHelpSearch: () => void;
+  onSendFeedback: () => void;
   onRestartApp: () => void;
   onSetPdfReadingMode: (value: PdfReadingMode) => void;
   onToggleBaseColorMode: () => void;
@@ -177,6 +178,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     },
     openNotes: args.closeTrashView,
     openHelpSearch: args.onOpenHelpSearch,
+    sendFeedback: args.onSendFeedback,
     ...createPaletteHelpCommandActions(args),
     openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
     restartApp: args.onRestartApp,

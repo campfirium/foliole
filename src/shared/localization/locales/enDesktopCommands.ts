@@ -58,6 +58,8 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.checkForUpdates': 'Check for Updates',
   'desktop.command.openReleases': 'Open Releases',
   'desktop.command.openRepository': 'Open GitHub Repository',
+  'desktop.command.sendFeedback': 'Send Feedback',
+  'desktop.command.emailSupport': 'Email',
   'desktop.command.reportIssue': 'Report an Issue',
   'desktop.command.openDiscussions': 'Open Discussions',
   'desktop.command.flow.toggle': 'Toggle Flow Mode',

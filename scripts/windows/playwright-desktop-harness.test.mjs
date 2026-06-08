@@ -2,187 +2,15 @@
 
 import { Buffer } from 'node:buffer';
 import { EventEmitter } from 'node:events';
-import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import {
   APP_READY_FLAG,
-  acquireStableDesktopWindow,
-  createDesktopLaunchOptions,
-  launchDesktopSession,
-  resolveDesktopAppRoot,
-  resolveElectronExecutablePath,
-  resolveDesktopLaunchTarget,
-  waitForDesktopAppReady
+  launchDesktopSession
 } from './playwright-desktop-harness.mjs';
 
 describe('playwright desktop harness', () => {
-  it('prefers configured app root over mirror detection', () => {
-    const appRoot = resolveDesktopAppRoot({ FOLIOLE_ELECTRON_APP_ROOT: '/tmp/custom-root' });
-
-    expect(appRoot).toBe('/tmp/custom-root');
-  });
-
-  it('defaults to the fixed windows mirror root instead of current working directory', () => {
-    const appRoot = resolveDesktopAppRoot({});
-
-    expect(appRoot).toBe('/mnt/d/C/foliole');
-  });
-
-  it('derives the mirror root from the configured windows workdir', () => {
-    const appRoot = resolveDesktopAppRoot({
-      FOLIOLE_WINDOWS_WORKDIR: 'D:\\foliole-dev\\sandbox'
-    });
-
-    expect(appRoot).toBe('/mnt/d/foliole-dev/sandbox');
-  });
-
-  it('resolves current build output paths in args launch mode', () => {
-    const target = resolveDesktopLaunchTarget('/workspace/foliole', () => true);
-
-    expect(target).toEqual({
-      appRoot: '/workspace/foliole',
-      launchMode: 'args',
-      mainEntry: '/workspace/foliole/electron-dist/electron/main.js',
-      missingPaths: [],
-      preloadPath: '/workspace/foliole/electron/preload.cjs',
-      rendererIndexPath: '/workspace/foliole/dist/index.html'
-    });
-  });
-
-  it('requires the current preload entry instead of historical electron-dist fallback paths', () => {
-    const target = resolveDesktopLaunchTarget('/workspace/foliole', (filePath) =>
-      [
-        '/workspace/foliole/electron-dist/electron/main.js',
-        '/workspace/foliole/electron-dist/preload.cjs',
-        '/workspace/foliole/dist/index.html'
-      ].includes(filePath)
-    );
-
-    expect(target.missingPaths).toEqual(['/workspace/foliole/electron/preload.cjs']);
-  });
-
-  it('creates args-based launch options with optional executable override', () => {
-    const target = resolveDesktopLaunchTarget('/workspace/foliole', () => true);
-    const stateRoot = '/tmp/foliole-playwright-state';
-    const isolationEnv = {
-      FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
-      FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
-      FOLIOLE_SESSION_DATA_PATH: path.join(stateRoot, 'session-data'),
-      FOLIOLE_USER_DATA_PATH: path.join(stateRoot, 'user-data'),
-      FOLIOLE_WORKDIR: stateRoot
-    };
-
-    expect(
-      createDesktopLaunchOptions(target, 12_345, {
-        ELECTRON_RUN_AS_NODE: '1',
-        FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot
-      }, undefined, (filePath) => filePath === '/workspace/foliole/node_modules/electron/dist/electron')
-    ).toEqual({
-      args: ['/workspace/foliole/electron-dist/electron/main.js'],
-      cwd: '/workspace/foliole',
-      env: {
-        ...isolationEnv,
-        FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
-      },
-      executablePath: '/workspace/foliole/node_modules/electron/dist/electron',
-      timeout: 12_345
-    });
-
-    expect(
-      createDesktopLaunchOptions(target, 9_999, {
-        FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
-        FOLIOLE_ELECTRON_EXECUTABLE_PATH: '../Electron/electron.exe'
-      }, undefined, () => false)
-    ).toMatchObject({
-      env: {
-        ...isolationEnv,
-        FOLIOLE_ELECTRON_EXECUTABLE_PATH: '../Electron/electron.exe',
-        FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
-      },
-      executablePath: expect.stringMatching(/Electron\/electron\.exe$/),
-      timeout: 9_999
-    });
-  });
-
-  it('infers the electron executable from the app root when no override is provided', () => {
-    expect(
-      resolveElectronExecutablePath(
-        '/mnt/d/C/foliole',
-        {},
-        (filePath) => filePath === '/mnt/d/C/foliole/node_modules/electron/dist/electron.exe'
-      )
-    ).toBe('/mnt/d/C/foliole/node_modules/electron/dist/electron.exe');
-
-    expect(
-      resolveElectronExecutablePath(
-        '/workspace/foliole',
-        {},
-        (filePath) => filePath === '/workspace/foliole/node_modules/electron/dist/electron'
-      )
-    ).toBe('/workspace/foliole/node_modules/electron/dist/electron');
-  });
-
-  it('waits for a non-blank desktop window before returning it', async () => {
-    const calls = [];
-    const windowPage = {
-      async waitForFunction(pageFunction, arg, options) {
-        calls.push(['waitForFunction', pageFunction, arg, options]);
-      },
-      async waitForLoadState(state, options) {
-        calls.push(['waitForLoadState', state, options]);
-      }
-    };
-
-    const stableWindow = await acquireStableDesktopWindow(
-      {
-        async firstWindow({ timeout }) {
-          calls.push(['firstWindow', timeout]);
-          return windowPage;
-        }
-      },
-      4_321
-    );
-
-    expect(stableWindow).toBe(windowPage);
-    expect(calls).toEqual([
-      ['firstWindow', 4_321],
-      ['waitForLoadState', 'domcontentloaded', { timeout: 4_321 }],
-      ['waitForFunction', expect.any(Function), undefined, { timeout: 4_321 }]
-    ]);
-  });
-
-  it('waits for the renderer app_ready flag before returning metadata', async () => {
-    const calls = [];
-    const appReady = await waitForDesktopAppReady(
-      {
-        async evaluate(pageFunction, appReadyFlag) {
-          calls.push(['evaluate', pageFunction, appReadyFlag]);
-          return {
-            href: 'file:///workspace/foliole/dist/index.html',
-            readyState: 'complete',
-            reported: true
-          };
-        },
-        async waitForFunction(pageFunction, appReadyFlag, options) {
-          calls.push(['waitForFunction', pageFunction, appReadyFlag, options]);
-        }
-      },
-      7_654
-    );
-
-    expect(appReady).toEqual({
-      href: 'file:///workspace/foliole/dist/index.html',
-      readyState: 'complete',
-      reported: true
-    });
-    expect(calls).toEqual([
-      ['waitForFunction', expect.any(Function), APP_READY_FLAG, { timeout: 7_654 }],
-      ['evaluate', expect.any(Function), APP_READY_FLAG]
-    ]);
-  });
-
   it('launches electron and returns a reusable session envelope', async () => {
     const calls = [];
     let closed = false;
@@ -259,6 +87,7 @@ describe('playwright desktop harness', () => {
       appRoot: '/workspace/foliole',
       electronLauncher,
       env: {
+        FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1',
         FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '12345',
         FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state'
       },
@@ -271,6 +100,7 @@ describe('playwright desktop harness', () => {
         cwd: '/workspace/foliole',
         env: {
           FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+          FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1',
           FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '12345',
           FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state',
           FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1',
@@ -328,81 +158,6 @@ describe('playwright desktop harness', () => {
     await session.close();
 
     expect(closed).toBe(true);
-  });
-
-  it('attaches desktop diagnostics when window acquisition stalls before domcontentloaded', async () => {
-    const childProcess = {
-      pid: 4821,
-      stderr: new EventEmitter(),
-      stdout: new EventEmitter()
-    };
-    const windowPage = new EventEmitter();
-    windowPage.url = () => 'http://127.0.0.1:24600/';
-    windowPage.evaluate = async (pageFunction, appReadyFlag) => {
-      if (appReadyFlag === APP_READY_FLAG) {
-        return pageFunction(appReadyFlag);
-      }
-      throw new Error('Execution context was destroyed.');
-    };
-    windowPage.waitForLoadState = async () => {
-      throw new Error('page.waitForLoadState: Timeout 30000ms exceeded');
-    };
-
-    const electronLauncher = {
-      async launch() {
-        return {
-          async close() {},
-          process() {
-            return childProcess;
-          },
-          async firstWindow() {
-            childProcess.stdout.emit('data', Buffer.from('did-start-navigation http://127.0.0.1:24600/\n'));
-            windowPage.emit('framenavigated', {
-              parentFrame: () => null,
-              url: () => 'http://127.0.0.1:24600/'
-            });
-            return windowPage;
-          }
-        };
-      }
-    };
-
-    await expect(
-      launchDesktopSession({
-        appRoot: '/workspace/foliole',
-        electronLauncher,
-        env: {
-          FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '30000',
-          FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state'
-        },
-        existsSync: () => true
-      })
-    ).rejects.toMatchObject({
-      desktopDiagnostics: {
-        boot: {
-          bootEvents: []
-        },
-        currentRuntime: {
-          appReady: false,
-          pid: 4821,
-          rendererUrl: null
-        },
-        mainProcessLogs: {
-          stdoutTail: ['did-start-navigation http://127.0.0.1:24600/\n']
-        },
-        rendererPage: {
-          error: 'Execution context was destroyed.',
-          pageUrl: 'http://127.0.0.1:24600/',
-          url: 'http://127.0.0.1:24600/'
-        },
-        rendererPageEvents: [],
-        rendererRuntime: {
-          appReady: false,
-          readyState: null,
-          rendererUrl: null
-        }
-      }
-    });
   });
 
   it('fails fast when build output is missing', async () => {

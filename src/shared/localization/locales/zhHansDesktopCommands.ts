@@ -60,6 +60,8 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.checkForUpdates': '检查更新',
   'desktop.command.openReleases': '打开发布页',
   'desktop.command.openRepository': '打开 GitHub 仓库',
+  'desktop.command.sendFeedback': '发送反馈',
+  'desktop.command.emailSupport': '邮件联系',
   'desktop.command.reportIssue': '报告问题',
   'desktop.command.openDiscussions': '打开讨论区',
   'desktop.command.flow.toggle': '切换 Flow 模式',

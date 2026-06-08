@@ -33,8 +33,15 @@ it('opens allowed external URL protocols through Electron shell', async () => {
       args: { url: 'https://example.com/docs' }
     } satisfies NativeInvokeRequest<'open_external_url'>)
   ).resolves.toBeNull();
+  await expect(
+    handleWindowAndUtilityCommand({
+      command: 'open_external_url',
+      args: { url: 'mailto:hello@foliole.app?subject=Foliole%20feedback' }
+    } satisfies NativeInvokeRequest<'open_external_url'>)
+  ).resolves.toBeNull();
 
   expect(openExternal).toHaveBeenCalledWith('https://example.com/docs');
+  expect(openExternal).toHaveBeenCalledWith('mailto:hello@foliole.app?subject=Foliole%20feedback');
 });
 
 it('ignores unsafe external URL protocols before Electron shell open', async () => {

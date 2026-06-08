@@ -1,0 +1,31 @@
+import type { TranslationKey } from '../translations';
+
+export const ZH_HANS_FEEDBACK_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'feedback.title': '发送反馈',
+  'feedback.description': '告诉我们哪里出错、哪里不清楚，或哪里可以更顺手。',
+  'feedback.message.label': '反馈',
+  'feedback.message.placeholder': '你想告诉我们什么？',
+  'feedback.name.label': '名字',
+  'feedback.name.placeholder': '名字，可不填',
+  'feedback.contact.label': '联系方式',
+  'feedback.contact.placeholder': '邮箱或其他联系方式，可不填',
+  'feedback.attachments.add': '添加图片',
+  'feedback.attachments.title': '图片',
+  'feedback.attachments.hint': '可以选择图片，也可以在这个窗口里直接粘贴截图。',
+  'feedback.attachments.count': '{count} 张图片',
+  'feedback.attachments.limit': 'PNG、JPG 或 WebP，单张不超过 3 MB。',
+  'feedback.attachments.remove': '移除 {name}',
+  'feedback.privacy': '你的反馈、可选联系方式、所选图片、语言和平台会一起发送。',
+  'feedback.cancel': '取消',
+  'feedback.done': '完成',
+  'feedback.submit': '发送',
+  'feedback.sending': '发送中...',
+  'feedback.success': '反馈已发送。',
+  'feedback.success.title': '反馈已发送',
+  'feedback.success.description': '谢谢，我们已经收到这条反馈。',
+  'feedback.success.attachmentsSkipped': '文字反馈已发送。图片暂时不可用，所以没有附上。',
+  'feedback.error.attachments': '图片必须是 PNG、JPG 或 WebP，单张不超过 3 MB。',
+  'feedback.error.failed': '反馈未能发送，已输入内容还在。',
+  'feedback.error.unavailable': '这个版本暂未配置反馈通道。',
+  'feedback.error.verification': '验证暂时无法加载，请稍后再试。'
+};

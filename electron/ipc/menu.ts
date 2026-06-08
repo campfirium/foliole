@@ -85,6 +85,8 @@ function buildHelpMenu(state: MenuState): MenuItemConstructorOptions {
       commandItem('Open Releases', 'release.openLatestRelease', state),
       { type: 'separator' },
       commandItem('GitHub Repository', 'support.openRepository', state),
+      commandItem('Send Feedback', 'support.sendFeedback', state),
+      commandItem('Email', 'support.email', state),
       commandItem('Report an Issue', 'support.openIssues', state),
       commandItem('Discussions', 'support.openDiscussions', state)
     ]

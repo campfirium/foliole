@@ -1,9 +1,14 @@
+import { Mail, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 
+import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { copyDiagnosticReport } from '../../../../shared/platform/diagnosticBundle';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  AppTooltip,
+  AppTooltipContent,
+  AppTooltipTrigger,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
@@ -16,6 +21,45 @@ import {
   SettingsAppSection,
   SettingsCommunitySection
 } from './SettingsSupportSection';
+
+function FeedbackRow(props: { onRunSupportCommand?: ((commandId: string) => void) | undefined }) {
+  const t = useTranslation();
+  const feedbackRow = useLocalizedSettingsSearchRow('about-feedback');
+  return (
+    <SettingsRow
+      {...settingsSearchRowProps(feedbackRow)}
+      description={feedbackRow.description}
+      title={feedbackRow.title}
+    >
+      <SettingsControlSlot className={`${SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME} flex flex-wrap justify-end gap-2`}>
+        <button
+          className={settingsButtonClassName('gap-2')}
+          disabled={!props.onRunSupportCommand}
+          onClick={() => props.onRunSupportCommand?.(APP_COMMAND_IDS.sendFeedback)}
+          type="button"
+        >
+          <MessageSquare aria-hidden="true" className="size-4 shrink-0 text-settings-icon-active" strokeWidth={1.8} />
+          {t('settings.about.feedback')}
+        </button>
+        <AppTooltip>
+          <AppTooltipTrigger asChild>
+            <button
+              className={settingsButtonClassName('gap-2')}
+              disabled={!props.onRunSupportCommand}
+              onClick={() => props.onRunSupportCommand?.(APP_COMMAND_IDS.openSupportEmail)}
+              title="hello@foliole.app"
+              type="button"
+            >
+              <Mail aria-hidden="true" className="size-4 shrink-0 text-settings-icon-active" strokeWidth={1.8} />
+              {t('settings.about.emailSupport')}
+            </button>
+          </AppTooltipTrigger>
+          <AppTooltipContent className="[z-index:var(--z-dropdown)]" side="top">hello@foliole.app</AppTooltipContent>
+        </AppTooltip>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
 
 function DiagnosticExportRow() {
   const t = useTranslation();
@@ -76,6 +120,7 @@ function ApplicationInfo(props: { onRunSupportCommand?: ((commandId: string) => 
     <>
       <SettingsAppSection onRunSupportCommand={props.onRunSupportCommand} />
       <SettingsSection ariaLabel={t('settings.about.support.aria')} title={t('settings.about.support.section')}>
+        <FeedbackRow onRunSupportCommand={props.onRunSupportCommand} />
         <DiagnosticExportRow />
       </SettingsSection>
       <SettingsCommunitySection onRunSupportCommand={props.onRunSupportCommand} />

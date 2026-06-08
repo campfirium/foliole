@@ -58,6 +58,8 @@ export const APP_COMMAND_IDS = {
   checkForUpdates: 'release.checkForUpdates',
   openLatestRelease: 'release.openLatestRelease',
   openGitHubRepository: 'support.openRepository',
+  sendFeedback: 'support.sendFeedback',
+  openSupportEmail: 'support.email',
   openGitHubIssues: 'support.openIssues',
   openGitHubDiscussions: 'support.openDiscussions',
   openYouTubePlaylist: 'support.openYouTubePlaylist',

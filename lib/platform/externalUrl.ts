@@ -1,4 +1,4 @@
-const ALLOWED_EXTERNAL_URL_PROTOCOLS = new Set(['http:', 'https:']);
+const ALLOWED_EXTERNAL_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 
 export function normalizeOpenExternalUrl(target: string) {
   const trimmedTarget = target.trim();

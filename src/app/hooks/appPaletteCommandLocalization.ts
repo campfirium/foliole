@@ -46,6 +46,8 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.checkForUpdates]: 'desktop.command.checkForUpdates',
   [APP_COMMAND_IDS.openLatestRelease]: 'desktop.command.openReleases',
   [APP_COMMAND_IDS.openGitHubRepository]: 'desktop.command.openRepository',
+  [APP_COMMAND_IDS.sendFeedback]: 'desktop.command.sendFeedback',
+  [APP_COMMAND_IDS.openSupportEmail]: 'desktop.command.emailSupport',
   [APP_COMMAND_IDS.openGitHubIssues]: 'desktop.command.reportIssue',
   [APP_COMMAND_IDS.openGitHubDiscussions]: 'desktop.command.openDiscussions',
   [APP_COMMAND_IDS.startStudyMode]: 'desktop.command.flow.toggle',

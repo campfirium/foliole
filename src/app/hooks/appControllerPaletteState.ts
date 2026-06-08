@@ -15,6 +15,7 @@ export function buildControllerPaletteState(args: {
   layoutProps: WorkspaceLayoutProps;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   onOpenHelpSearch: () => void;
+  onSendFeedback: () => void;
   paletteItems: CommandPaletteItem[];
   requestDeleteSourceTopic: (nodeId: string) => boolean;
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];

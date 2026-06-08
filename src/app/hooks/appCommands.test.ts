@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { preloadTranslationCatalog } from '../../shared/localization/translations';
 
 import { buildAppPaletteItems, runReviewModeToggle } from './appCommands';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+});
 
 function createPaletteOptions(isReviewMode: boolean) {
   return {
@@ -75,6 +80,8 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.checkForUpdates)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openLatestRelease)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubRepository)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.sendFeedback)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.openSupportEmail)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubIssues)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubDiscussions)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openYouTubePlaylist)).toBe(true);

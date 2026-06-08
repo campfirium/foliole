@@ -83,6 +83,8 @@ describe('native app menu command state', () => {
     expect(findMenuItem(items, 'nodes.enterPriorityMode')).toMatchObject({ accelerator: 'Control+M', enabled: true });
     expect(findMenuItem(items, 'workspace.openGuidedSample')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'release.checkForUpdates')).toMatchObject({ enabled: false });
+    expect(findMenuItem(items, 'support.sendFeedback')).toMatchObject({ enabled: false });
+    expect(findMenuItem(items, 'support.email')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'support.openIssues')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).not.toHaveProperty('accelerator');

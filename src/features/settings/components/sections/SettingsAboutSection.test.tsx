@@ -7,7 +7,6 @@ vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
 
 import { NATIVE_COMMANDS } from '../../../../../lib/platform/nativeCommands';
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
-import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { APP_LANGUAGE_STORAGE_KEY } from '../../../../shared/localization/appLanguage';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
@@ -48,7 +47,7 @@ it('shows application info and copies the diagnostic report in the about section
   });
   renderWithLocalization(<SettingsAboutSection />);
 
-  expect(screen.getByText('Version 0.6.2')).toBeInTheDocument();
+  expect(await screen.findByText('Version 0.6.2')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Check for Updates' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic report' }));
   await waitFor(() => {
@@ -60,22 +59,7 @@ it('shows application info and copies the diagnostic report in the about section
   expect(screen.queryByRole('button', { name: 'Create backup' })).not.toBeInTheDocument();
 });
 
-it('runs update and community commands from About settings', () => {
-  const onRunSupportCommand = vi.fn();
-  renderWithLocalization(<SettingsAboutSection onRunSupportCommand={onRunSupportCommand} />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Check for Updates' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Issues' }));
-  fireEvent.click(screen.getByRole('button', { name: 'YouTube' }));
-
-  expect(screen.getByText('Checking')).toBeInTheDocument();
-  expect(screen.getByText('Checking for updates...')).toBeInTheDocument();
-  expect(onRunSupportCommand).toHaveBeenNthCalledWith(1, APP_COMMAND_IDS.checkForUpdates);
-  expect(onRunSupportCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.openGitHubIssues);
-  expect(onRunSupportCommand).toHaveBeenNthCalledWith(3, APP_COMMAND_IDS.openYouTubePlaylist);
-});
-
-it('shows the latest available release in About settings', () => {
+it('shows the latest available release in About settings', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: null,
     cachedReleaseNotes: null,
@@ -89,7 +73,7 @@ it('shows the latest available release in About settings', () => {
 
   renderWithLocalization(<SettingsAboutSection />);
 
-  expect(screen.getByText('Update available')).toBeInTheDocument();
+  expect(await screen.findByText('Update available')).toBeInTheDocument();
   expect(screen.getByText('Foliole 0.1.1 is available.')).toBeInTheDocument();
 });
 
@@ -216,6 +200,7 @@ it('shows the global search enhancement switch in General', async () => {
   expect(screen.getByText('Preparing search...')).toBeInTheDocument();
 });
 
+
 it('localizes About and General settings rows in Simplified Chinese', () => {
   window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
 
@@ -227,7 +212,8 @@ it('localizes About and General settings rows in Simplified Chinese', () => {
   );
 
   expect(screen.getByText('诊断报告')).toBeInTheDocument();
-  expect(screen.getByText('打开源代码、社区讨论、反馈和视频更新入口。')).toBeInTheDocument();
+  expect(screen.getByText('发送私下反馈，可选择留下联系方式和图片；也可以通过邮件继续沟通。')).toBeInTheDocument();
+  expect(screen.getByText('打开源代码、社区讨论、问题列表和视频更新入口。')).toBeInTheDocument();
   expect(screen.getByRole('switch', { name: '搜索增强' })).toBeInTheDocument();
   expect(screen.getByText('改进中文、日文、韩文以及其他不按空格分词语言的搜索，会使用更多搜索数据。')).toBeInTheDocument();
   expect(screen.queryByText('Diagnostic report')).not.toBeInTheDocument();

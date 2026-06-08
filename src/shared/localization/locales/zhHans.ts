@@ -16,6 +16,7 @@ import { ZH_HANS_DESKTOP_REVIEW_TRANSLATIONS } from './zhHansDesktopReview';
 import { ZH_HANS_DESKTOP_SEARCH_TRANSLATIONS } from './zhHansDesktopSearch';
 import { ZH_HANS_DESKTOP_SORT_TRANSLATIONS } from './zhHansDesktopSort';
 import { ZH_HANS_DESKTOP_SOURCE_UPDATE_TRANSLATIONS } from './zhHansDesktopSourceUpdate';
+import { ZH_HANS_FEEDBACK_TRANSLATIONS } from './zhHansFeedback';
 import { ZH_HANS_SETTINGS_TRANSLATIONS } from './zhHansSettings';
 import { ZH_HANS_SETTINGS_ABOUT_TRANSLATIONS } from './zhHansSettingsAbout';
 import { ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS } from './zhHansSettingsAppearance';
@@ -45,6 +46,7 @@ export const ZH_HANS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   ...ZH_HANS_DESKTOP_SEARCH_TRANSLATIONS,
   ...ZH_HANS_DESKTOP_SORT_TRANSLATIONS,
   ...ZH_HANS_DESKTOP_SOURCE_UPDATE_TRANSLATIONS,
+  ...ZH_HANS_FEEDBACK_TRANSLATIONS,
   'language.system': '跟随系统',
   'language.en': '英文',
   'language.zhHans': '简体中文',

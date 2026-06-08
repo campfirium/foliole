@@ -64,6 +64,7 @@ export function useControllerAuxiliaryState(args: {
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
   onOpenHelpSearch: () => void;
+  onSendFeedback: () => void;
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
   paletteItems: CommandPaletteItem[];
   requestDeleteSourceTopic: (nodeId: string) => boolean;
@@ -76,6 +77,7 @@ export function useControllerAuxiliaryState(args: {
     layoutProps: args.layoutProps,
     nav: args.controller.nav,
     onOpenHelpSearch: args.onOpenHelpSearch,
+    onSendFeedback: args.onSendFeedback,
     paletteItems: args.paletteItems,
     requestDeleteSourceTopic: args.requestDeleteSourceTopic,
     runtime: args.controller.runtime,
