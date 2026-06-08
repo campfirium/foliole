@@ -1,4 +1,4 @@
-import { waitFor } from '@testing-library/react';
+import { fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { bindMermaidFunctions, initializeMermaid, renderMermaid } = vi.hoisted(() => {
@@ -81,6 +81,25 @@ describe('live markdown code fence highlighting', () => {
     expect(host.querySelector('.cm-md-syntax-visible')?.textContent).toBe('```typescript');
     expect(host.querySelector('.cm-md-code-tok-keyword')?.textContent).toBe('const');
     expect(host.querySelector('.cm-md-code-tok-number')?.textContent).toBe('1');
+
+    adapter.destroy();
+  });
+
+  it('copies fenced code body without the fence syntax', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText }
+    });
+    const initialContent = '```ts\nconst label = "ok";\nconst count = 1;\n```';
+    const { adapter, host } = createAdapterHost(initialContent);
+
+    fireEvent.click(host.querySelector('.cm-md-code-copy-button') as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith('const label = "ok";\nconst count = 1;');
+    });
+    expect(adapter.getContent()).toBe(initialContent);
 
     adapter.destroy();
   });

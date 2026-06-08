@@ -17,6 +17,8 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.editorPreview.openTable': 'Open table preview',
   'desktop.editorPreview.openDiagram': 'Open diagram preview',
   'desktop.editorPreview.openImage': 'Open image preview',
+  'desktop.editorPreview.copyCode': 'Copy code',
+  'desktop.editorPreview.copiedCode': 'Code copied',
   'desktop.editorPreview.tableTitle': 'Table preview',
   'desktop.editorPreview.diagramTitle': 'Diagram preview',
   'desktop.editorPreview.imageTitle': 'Image preview',

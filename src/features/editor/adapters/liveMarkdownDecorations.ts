@@ -19,6 +19,7 @@ import { collectMultilineLinkPresentationPlans } from '../model/markdownMultilin
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { addPreviewBlockDecorations, collectPreviewMermaidLineFroms } from './liveMarkdownBlockDecorations';
+import { addCodeFenceCopyDecorations } from './liveMarkdownCodeFenceCopy';
 import { addCodeFenceSyntaxHighlightDecorations } from './liveMarkdownCodeFenceHighlight';
 import {
   collectCalloutPrefixRangeByLineFrom,
@@ -170,6 +171,7 @@ export function buildPreviewDecorationSet(
   addForumTitleLinkDecorations(ranges, data.forumTitleLinks);
   addPreviewBlockDecorations(ranges, { codeFenceProjection: data.codeFenceProjection, context, mathRanges: data.mathRanges, source: data.source, view });
   addEditedMathSourceDecoration(ranges, view, data.mathRanges, context.editedMathRange);
+  addCodeFenceCopyDecorations(ranges, data.source, data.codeFenceProjection.codeBlocks, data.viewport.viewportRange, view);
   addCodeFenceSyntaxHighlightDecorations(ranges, data.source, data.codeFenceProjection.codeBlocks, data.viewport.viewportRange);
   addMultilineLinkDecorations(ranges, data.source, {
     links: data.inlineLinks,
@@ -211,6 +213,10 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
     from: view.state.doc.line(startLineNumber).from,
     to: view.state.doc.line(endLineNumber).to
   });
+  addCodeFenceCopyDecorations(ranges, source, codeFenceProjection.codeBlocks, {
+    from: view.state.doc.line(startLineNumber).from,
+    to: view.state.doc.line(endLineNumber).to
+  }, view);
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
     const calloutPrefixRange = calloutPrefixRangeByLineFrom.get(lineFrom);
