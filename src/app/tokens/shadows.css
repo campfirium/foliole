@@ -9,3 +9,13 @@
   --shadow-picker-thumb-ring-strong: 0 0 0 1px rgb(var(--color-foreground) / 0.45);
   --shadow-debug: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
+
+:root[data-resolved-base-color='dark'] {
+  --shadow-popover: 0 20px 44px rgb(0 0 0 / 0.42);
+  --shadow-panel: 0 14px 30px rgb(0 0 0 / 0.34);
+  --shadow-settings: 0 20px 46px rgb(0 0 0 / 0.36), 0 2px 8px rgb(0 0 0 / 0.24);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.28);
+  --shadow-page: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-marker: 0 1px 2px rgb(0 0 0 / 0.32);
+  --shadow-debug: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.42);
+}

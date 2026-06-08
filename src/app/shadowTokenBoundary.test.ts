@@ -61,4 +61,15 @@ describe('shadow token boundary', () => {
       expect(shadowTokens).toContain(variableName);
     }
   });
+
+  it('keeps dark mode shadows on explicit token overrides', () => {
+    const shadowTokens = readWorkspaceFile('src/app/tokens/shadows.css');
+    const darkOverrideStart = shadowTokens.indexOf(":root[data-resolved-base-color='dark']");
+    const darkOverride = shadowTokens.slice(darkOverrideStart);
+
+    expect(darkOverrideStart).toBeGreaterThan(-1);
+    expect(darkOverride).toContain('--shadow-popover: 0 20px 44px rgb(0 0 0 / 0.42)');
+    expect(darkOverride).toContain('--shadow-panel: 0 14px 30px rgb(0 0 0 / 0.34)');
+    expect(darkOverride).toContain('--shadow-settings: 0 20px 46px rgb(0 0 0 / 0.36), 0 2px 8px rgb(0 0 0 / 0.24)');
+  });
 });

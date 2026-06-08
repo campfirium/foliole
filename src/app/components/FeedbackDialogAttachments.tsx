@@ -71,7 +71,7 @@ function FeedbackAttachmentPreview(props: {
       </div>
       <button
         aria-label={t('feedback.attachments.remove', { name: props.attachment.name })}
-        className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-md bg-background/90 text-foreground/65 shadow-sm hover:bg-background hover:text-foreground"
+        className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-md bg-background/90 text-foreground/65 shadow-control hover:bg-background hover:text-foreground"
         onClick={() => props.onRemoveAttachment(props.index)}
         type="button"
       >
