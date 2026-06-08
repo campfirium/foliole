@@ -19,31 +19,42 @@ beforeEach(() => {
   delete window.electronAPI;
 });
 
-it('hydrates local settings from runtime snapshot without writing during startup', async () => {
+it('hydrates local settings from runtime snapshot and writes the merged startup snapshot back', async () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize, '17');
   const invoke = vi
     .fn()
     .mockResolvedValueOnce({
       [APP_SETTINGS_STORAGE_KEYS.uiFont]: 'inter',
       [APP_SETTINGS_STORAGE_KEYS.interfaceFontSize]: '19'
-    });
+    })
+    .mockResolvedValueOnce(null);
   window.electronAPI = createMockElectronApi(invoke);
 
   await syncAppSettingsWithRuntime();
 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.uiFont)).toBe('inter');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize)).toBe('19');
-  expect(invoke).toHaveBeenCalledOnce();
   expect(invoke).toHaveBeenCalledWith('load_app_settings_state');
+  expect(invoke).toHaveBeenCalledWith('save_app_settings_state', {
+    settings: {
+      [APP_SETTINGS_STORAGE_KEYS.uiFont]: 'inter',
+      [APP_SETTINGS_STORAGE_KEYS.interfaceFontSize]: '19'
+    }
+  });
 });
 
-it('does not migrate existing local values during startup sync', async () => {
+it('writes existing local values back when the runtime startup snapshot is empty', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.uiFont, 'source-sans');
-  const invoke = vi.fn().mockResolvedValueOnce({});
+  const invoke = vi.fn().mockResolvedValueOnce({}).mockResolvedValueOnce(null);
   window.electronAPI = createMockElectronApi(invoke);
 
   await syncAppSettingsWithRuntime();
 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.uiFont)).toBe('source-sans');
-  expect(invoke).toHaveBeenCalledOnce();
   expect(invoke).toHaveBeenCalledWith('load_app_settings_state');
+  expect(invoke).toHaveBeenCalledWith('save_app_settings_state', {
+    settings: {
+      [APP_SETTINGS_STORAGE_KEYS.uiFont]: 'source-sans'
+    }
+  });
 });

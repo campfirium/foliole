@@ -1,4 +1,4 @@
-import { loadRuntimeAppSettingsState } from './appSettingsState';
+import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from './appSettingsState';
 import { getLocalStorageWhitelist } from './storage';
 
 function normalizeSettingsPayload(value: unknown) {
@@ -28,11 +28,31 @@ function writeWhitelistedLocalSettings(settings: Record<string, string>) {
   }
 }
 
+function readWhitelistedLocalSettings() {
+  const settings: Record<string, string> = {};
+  if (typeof window === 'undefined') {
+    return settings;
+  }
+  for (const key of getLocalStorageWhitelist()) {
+    const value = window.localStorage.getItem(key);
+    if (typeof value === 'string') {
+      settings[key] = value;
+    }
+  }
+  return settings;
+}
+
 export async function syncAppSettingsWithRuntime() {
+  const localSnapshot = readWhitelistedLocalSettings();
   const runtimeSnapshot = await loadRuntimeAppSettingsState();
   if (!runtimeSnapshot) {
     return;
   }
 
-  writeWhitelistedLocalSettings(normalizeSettingsPayload(runtimeSnapshot));
+  const mergedSnapshot = {
+    ...localSnapshot,
+    ...normalizeSettingsPayload(runtimeSnapshot)
+  };
+  writeWhitelistedLocalSettings(mergedSnapshot);
+  await saveRuntimeAppSettingsState(mergedSnapshot);
 }
