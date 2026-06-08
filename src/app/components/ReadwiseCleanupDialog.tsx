@@ -97,7 +97,7 @@ export function ReadwiseCleanupDialog(props: {
             <AppButton
               disabled={props.isRunning || !props.preview || props.preview.total_count === 0}
               onClick={props.onRun}
-              variant="primary"
+              variant="danger"
             >
               {props.isRunning ? t('desktop.readwise.cleanup.dialogRunning') : t('desktop.readwise.cleanup.dialogAction')}
             </AppButton>

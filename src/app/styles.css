@@ -508,7 +508,7 @@ body {
   border-color: var(--app-control-border-hover-color);
 }
 
-.startup-surface__button[data-variant='primary'] {
+.startup-surface__button[data-variant='emphasis'] {
   background: rgb(var(--color-accent-strong));
   border-color: rgb(var(--color-accent-strong));
   color: rgb(var(--color-accent-foreground));

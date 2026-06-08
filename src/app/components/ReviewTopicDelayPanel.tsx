@@ -118,7 +118,7 @@ export function ReviewTopicDelayPanel(props: ReviewTopicDelayPanelProps) {
           </div>
           <div className="flex items-center gap-2">
             <AppButton className="text-foreground/62 hover:text-foreground/78" onClick={props.close} size="sm" variant="ghost">{t('desktop.reviewDelay.cancel')}</AppButton>
-            <AppButton className="text-foreground/72 hover:text-foreground/86" disabled={props.isSubmitting} onClick={() => void props.submit(props.selectedLevel)} size="sm" variant="primary">
+            <AppButton className="text-foreground/72 hover:text-foreground/86" disabled={props.isSubmitting} onClick={() => void props.submit(props.selectedLevel)} size="sm" variant="default">
               {t('desktop.reviewDelay.confirm')}
             </AppButton>
           </div>

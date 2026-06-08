@@ -53,7 +53,7 @@ export function NodeIconSettingsDialog(props: NodeIconSettingsDialogProps) {
           <NodeIconSettingsDialogBody {...props} target={target} />
           <footer className="flex justify-between border-t border-settings-divider/55 pt-4">
             <AppButton onClick={() => props.onReset(target)}>{props.resetLabel}</AppButton>
-            <AppButton onClick={props.onClose} variant="primary">{t('settings.icons.done')}</AppButton>
+            <AppButton onClick={props.onClose} variant="default">{t('settings.icons.done')}</AppButton>
           </footer>
         </AppDialogContent>
       </AppDialogPortal>

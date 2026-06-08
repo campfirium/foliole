@@ -17,7 +17,7 @@ export function DocumentPanelDocumentStatusContent(props: {
   return (
     <AppErrorState
       action={
-        <AppButton disabled={props.retrying} onClick={props.onRetry} size="sm" variant="primary">
+        <AppButton disabled={props.retrying} onClick={props.onRetry} size="sm" variant="default">
           {props.t('desktop.document.retry')}
         </AppButton>
       }

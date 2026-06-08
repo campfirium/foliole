@@ -76,7 +76,7 @@ export function ReadwiseReaderSyncRow(props: {
             </option>
           ))}
         </select>
-        <AppButton disabled={props.disabled} onClick={props.onSync} size="sm" variant="primary">
+        <AppButton disabled={props.disabled} onClick={props.onSync} size="sm" variant="default">
           {props.isSyncing ? t('desktop.readwise.sync.running') : t('desktop.readwise.sync.action')}
         </AppButton>
       </SettingsControlSlot>

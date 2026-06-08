@@ -128,7 +128,7 @@ function TrashCurrentViewDeleteDialog({
               <AppButton variant="ghost">{t('desktop.nodeList.trash.deleteDialog.cancel')}</AppButton>
             </AppDialogClose>
             <AppButton
-              variant="primary"
+              variant="danger"
               onClick={() => {
                 if (deleteSnapshot) {
                   const trashedNodeIdSet = new Set(trashedNodeIds);

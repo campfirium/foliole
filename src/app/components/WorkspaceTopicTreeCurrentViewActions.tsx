@@ -142,7 +142,7 @@ function CurrentViewDeleteDialog({
               <AppButton variant="ghost">{t('desktop.currentView.deleteDialog.cancel')}</AppButton>
             </AppDialogClose>
             <AppButton
-              variant="primary"
+              variant="danger"
               onClick={() => {
                 if (deleteSnapshot) {
                   deleteNodes(collectStillCurrentTopicIds({ nodesById, snapshot: deleteSnapshot, trashedNodeIds }));

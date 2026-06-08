@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '@/shared/lib/utils';
 
-type ButtonVariant = 'primary' | 'ghost' | 'subtle' | 'list';
+type ButtonVariant = 'default' | 'ghost' | 'subtle' | 'emphasis' | 'danger' | 'list';
 type ButtonSize = 'sm' | 'md';
 
 interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color'> {
@@ -14,8 +14,14 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'col
 }
 
 function resolveVariantClass(variant: ButtonVariant) {
-  if (variant === 'primary') {
+  if (variant === 'default') {
     return 'border border-[var(--app-control-border-color)] bg-transparent text-foreground hover:border-[var(--app-control-border-hover-color)] hover:bg-[var(--app-control-bg-hover-color)]';
+  }
+  if (variant === 'emphasis') {
+    return 'border border-[rgb(var(--color-accent-strong))] bg-[rgb(var(--color-accent-strong))] text-accent-foreground hover:border-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent))]';
+  }
+  if (variant === 'danger') {
+    return 'border border-error/35 bg-transparent text-error hover:border-error/55 hover:bg-error/8 hover:text-error-foreground';
   }
   if (variant === 'subtle') {
     return 'text-foreground/70 hover:text-foreground';
@@ -31,7 +37,7 @@ function resolveSizeClass(size: ButtonSize) {
 }
 
 export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function AppButton(
-  { children, variant = 'ghost', size = 'sm', className, active = false, type = 'button', ...rest },
+  { children, variant = 'default', size = 'sm', className, active = false, type = 'button', ...rest },
   ref
 ) {
   const isList = variant === 'list';

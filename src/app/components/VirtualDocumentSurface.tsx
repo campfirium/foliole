@@ -78,7 +78,7 @@ function VirtualRootDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'no
             setQuery('');
           }}
           size="sm"
-          variant="primary"
+          variant="default"
         >
           {t('desktop.virtualSearch.save')}
         </AppButton>

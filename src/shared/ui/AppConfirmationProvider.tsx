@@ -141,7 +141,7 @@ function AppDialogBody(props: {
         <AppButton onClick={() => props.onClose(false)}>
           {props.activeDialog?.options.cancelLabel ?? t('shared.confirm.cancel')}
         </AppButton>
-        <AppButton onClick={() => props.onClose(true)} variant="primary">
+        <AppButton onClick={() => props.onClose(true)} variant="default">
           {props.activeDialog?.options.confirmLabel ?? t('shared.confirm.confirm')}
         </AppButton>
       </div>

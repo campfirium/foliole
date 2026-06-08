@@ -23,7 +23,7 @@ const reviewGradeButtons = [
 
 function ReviewGradeButton(props: {
   buttonClassName?: string;
-  buttonVariant: 'ghost' | 'primary';
+  buttonVariant: 'ghost' | 'default';
   disabled: boolean;
   grade: ReviewGrade;
   label: string;
@@ -75,7 +75,7 @@ function ReviewGradeErrorFeedback(props: {
 
 export function ReviewGradeActions({
   buttonClassName,
-  buttonVariant = 'primary',
+  buttonVariant = 'default',
   errorMessage,
   groupClassName,
   isSubmitting,
@@ -85,7 +85,7 @@ export function ReviewGradeActions({
   submitGrade
 }: {
   buttonClassName?: string;
-  buttonVariant?: 'ghost' | 'primary';
+  buttonVariant?: 'ghost' | 'default';
   errorMessage: string | null;
   groupClassName?: string;
   isSubmitting: boolean;
@@ -133,7 +133,7 @@ export function FsrsRevealAction({ disabled = false, onRevealAnswer }: { disable
 
   return (
     <ToolbarActionGroup ariaLabel={t('desktop.reviewActions.reveal.group')} className="gap-2" data-review-toolbar-kind="fsrs-prompt">
-      <AppButton aria-label={t('desktop.reviewActions.showAnswer')} className="min-w-32 px-5" disabled={disabled} onClick={onRevealAnswer} size="md" variant="primary">
+      <AppButton aria-label={t('desktop.reviewActions.showAnswer')} className="min-w-32 px-5" disabled={disabled} onClick={onRevealAnswer} size="md" variant="default">
         {t('desktop.reviewActions.showAnswer')}
       </AppButton>
     </ToolbarActionGroup>
@@ -164,7 +164,7 @@ export function ResumeReviewAction({
   }
 
   return (
-    <AppButton aria-label={t('desktop.reviewActions.resumeReview')} className="min-w-32 px-5" onClick={onResumeReviewItem} size="md" variant="primary">
+    <AppButton aria-label={t('desktop.reviewActions.resumeReview')} className="min-w-32 px-5" onClick={onResumeReviewItem} size="md" variant="default">
       {t('desktop.reviewActions.resume')}
     </AppButton>
   );

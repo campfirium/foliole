@@ -46,7 +46,7 @@ export function ClozeGuardPanel(props: {
           <Settings2 aria-hidden="true" size={17} strokeWidth={1.9} />
         </button>
         <div className="flex items-center gap-2">
-          <AppButton onClick={props.onCreateHighlight} size="sm" variant="primary">
+          <AppButton onClick={props.onCreateHighlight} size="sm" variant="default">
             {t('desktop.clozeGuard.highlight')}
           </AppButton>
           <AppButton

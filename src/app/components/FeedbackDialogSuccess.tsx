@@ -20,7 +20,7 @@ export function FeedbackSuccessContent(props: {
         </div>
       </div>
       <div className="flex justify-end">
-        <AppButton onClick={props.onClose} variant="primary">{t('feedback.done')}</AppButton>
+        <AppButton onClick={props.onClose} variant="default">{t('feedback.done')}</AppButton>
       </div>
     </AppDialogContent>
   );

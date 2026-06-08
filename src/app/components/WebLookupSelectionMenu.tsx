@@ -126,7 +126,7 @@ function WebLookupConfirmationPanel(props: {
           onMouseDown={keepConfirmationButtonEventInMenu}
           onPointerDown={keepConfirmationButtonEventInMenu}
           size="sm"
-          variant="primary"
+          variant="default"
         >
           {t('desktop.webLookup.continue')}
         </AppButton>

@@ -30,7 +30,7 @@ export function KeepImportDisableDialog(props: {
               <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">
                 {t('desktop.keepImport.disable.cancel')}
               </AppButton>
-              <AppButton onClick={props.onConfirm} variant="primary">
+              <AppButton onClick={props.onConfirm} variant="danger">
                 {t('desktop.keepImport.disable.turnOff')}
               </AppButton>
             </footer>

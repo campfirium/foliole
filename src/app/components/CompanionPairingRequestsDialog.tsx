@@ -131,7 +131,7 @@ function PairingDialogActions({
           className="border border-border-strong bg-bg-panel text-foreground hover:bg-bg-subtle"
           disabled={disabled}
           onClick={() => void runPairingAction(state.rejectRequest)}
-          variant="primary"
+          variant="danger"
         >
           {actionIcon}
           {disabled ? 'Working...' : 'Reject'}
@@ -140,7 +140,7 @@ function PairingDialogActions({
           className="border border-border-strong"
           disabled={disabled}
           onClick={() => void runPairingAction(state.approveRequest)}
-          variant="primary"
+          variant="emphasis"
         >
           {actionIcon}
           {disabled ? 'Working...' : 'Allow'}

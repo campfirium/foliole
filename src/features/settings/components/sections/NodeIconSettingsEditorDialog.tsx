@@ -70,7 +70,7 @@ export function NodeIconSettingsEditorDialog(props: {
             <NodeIconSettingsPreview state={props.state} />
           </div>
           <footer className="flex justify-end bg-settings-control/45 px-6 py-3">
-            <AppButton onClick={props.onClose} variant="primary">{t('settings.icons.done')}</AppButton>
+            <AppButton onClick={props.onClose} variant="default">{t('settings.icons.done')}</AppButton>
           </footer>
         </AppDialogContent>
       </AppDialogPortal>

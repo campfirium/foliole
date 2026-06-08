@@ -8,7 +8,7 @@ import { AppButton } from './Button';
 export interface StartupSurfaceAction {
   label: string;
   onClick: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: 'emphasis' | 'secondary';
 }
 
 export interface StartupSurfaceModel {
@@ -41,7 +41,7 @@ function t(key: TranslationKey, params?: TranslationParams) {
 function resolveActionList(actions: StartupErrorActions): StartupSurfaceAction[] {
   const actionList: StartupSurfaceAction[] = [];
   if (actions.retry) {
-    actionList.push({ label: t('shared.startup.retry'), onClick: actions.retry, variant: 'primary' });
+    actionList.push({ label: t('shared.startup.retry'), onClick: actions.retry, variant: 'emphasis' });
   }
   if (actions.openLogs) {
     actionList.push({ label: t('shared.startup.openLogs'), onClick: actions.openLogs });
@@ -98,7 +98,7 @@ export function StartupSurface(props: {
               key={action.label}
               onClick={action.onClick}
               size="sm"
-              variant={action.variant === 'primary' ? 'primary' : 'ghost'}
+              variant={action.variant === 'emphasis' ? 'emphasis' : 'ghost'}
             >
               {action.label}
             </AppButton>
@@ -122,7 +122,7 @@ function appendActionButton(
   parent: HTMLElement,
   label: string,
   action: (() => void) | undefined,
-  variant: 'primary' | 'secondary' = 'secondary'
+  variant: 'emphasis' | 'secondary' = 'secondary'
 ) {
   if (!action) {
     return;

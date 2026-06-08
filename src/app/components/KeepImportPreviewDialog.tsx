@@ -118,7 +118,7 @@ export function KeepImportPreviewDialog(props: {
               <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">
                 {t('desktop.keepImport.preview.notNow')}
               </AppButton>
-              <AppButton disabled={!props.preview} onClick={props.onConfirm} variant="primary">
+              <AppButton disabled={!props.preview} onClick={props.onConfirm} variant="emphasis">
                 {t('desktop.keepImport.preview.enable')}
               </AppButton>
             </footer>

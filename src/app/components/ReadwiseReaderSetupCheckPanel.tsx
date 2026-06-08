@@ -105,7 +105,7 @@ export function ReadwiseReaderSetupCheckPanel(props: {
           <AppButton
             disabled={!props.canCheck || props.isChecking}
             onClick={props.onCheck}
-            variant="primary"
+            variant="default"
           >
             {buttonLabel}
           </AppButton>

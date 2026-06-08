@@ -31,7 +31,7 @@ function CompanionAppContent() {
     if (bootstrap.status === 'failed') {
       return (
         <StartupSurface
-          actions={[{ label: t('companion.app.retry'), onClick: reloadCompanionRuntime, variant: 'primary' }]}
+          actions={[{ label: t('companion.app.retry'), onClick: reloadCompanionRuntime, variant: 'emphasis' }]}
           model={createStartupErrorSurfaceModel({
             message: bootstrap.message,
             moduleLabel: t('companion.app.bootstrap.module'),

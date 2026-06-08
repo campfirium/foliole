@@ -33,7 +33,7 @@ export function ReviewSourceTopicDeleteDialog(props: ReviewSourceTopicDeleteDial
             <AppDialogClose asChild>
               <AppButton variant="ghost">{t('common.cancel')}</AppButton>
             </AppDialogClose>
-            <AppButton variant="primary" onClick={props.onConfirm}>
+            <AppButton variant="danger" onClick={props.onConfirm}>
               {t('desktop.deleteSourceTopic.confirm')}
             </AppButton>
           </div>

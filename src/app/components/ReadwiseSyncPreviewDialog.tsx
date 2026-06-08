@@ -31,7 +31,7 @@ const ReadwiseBlockedPreviewDialog = forwardRef<
       <AppDialogTitle className="text-base font-semibold">{props.t('desktop.readwise.importDialog.blockedTitle')}</AppDialogTitle>
       <p className="text-sm leading-5 text-foreground/70">{props.notice}</p>
       <div className="flex justify-end">
-        <AppButton onClick={props.onCancel} variant="primary">
+        <AppButton onClick={props.onCancel} variant="default">
           {props.t('desktop.readwise.importDialog.ok')}
         </AppButton>
       </div>
@@ -80,14 +80,14 @@ const ReadwiseImportPreviewDialog = forwardRef<
       <AppButton
         disabled={props.isCancelling}
         onClick={props.onCancel}
-        variant={props.isStarting ? 'primary' : 'ghost'}
+        variant={props.isStarting ? 'default' : 'ghost'}
       >
         {props.isCancelling ? props.t('desktop.readwise.importDialog.cancelling') : props.t('desktop.readwise.importDialog.cancel')}
       </AppButton>
       <AppButton
         disabled={props.isStarting || !props.preview}
         onClick={props.onStart}
-        variant="primary"
+        variant="default"
       >
         {props.isStarting ? props.t('desktop.readwise.importDialog.importing') : props.t('desktop.readwise.importDialog.import')}
       </AppButton>

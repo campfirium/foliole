@@ -48,7 +48,7 @@ export function CompanionBottomReviewBar(props: {
             ) : (
               <ReviewGradeActions
                 buttonClassName="min-w-0 flex-1 px-3"
-                buttonVariant="primary"
+                buttonVariant="default"
                 errorMessage={null}
                 groupClassName={actionGroupClassName}
                 isSubmitting={Boolean(props.disabled)}

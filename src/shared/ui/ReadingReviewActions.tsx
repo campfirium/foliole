@@ -22,7 +22,7 @@ function ReadingReviewButton(props: {
   }
 
   return (
-    <AppButton aria-label={props.label} className={props.className} onClick={props.onClick} size="md" variant="primary">
+    <AppButton aria-label={props.label} className={props.className} onClick={props.onClick} size="md" variant="default">
       {props.label}
     </AppButton>
   );

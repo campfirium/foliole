@@ -70,7 +70,7 @@ function PreviewCell(props: {
         aria-label={t('desktop.importSource.disableKeep', { id: props.source.id })}
         className="h-9 w-full min-w-0 px-2.5 text-sm"
         onClick={() => props.onDisableKeepImport(props.source.id)}
-        variant="primary"
+        variant="default"
       >
         {t('desktop.importSource.enabled')}
       </AppButton>
@@ -84,7 +84,7 @@ function PreviewCell(props: {
       disabled={missingPath || unsupportedSplit}
       onClick={() => props.onPreviewKeepImport(props.source.id)}
       title={unsupportedSplit ? t('desktop.importSource.unsupportedSplit') : formatKeepStateLabel(props.source.keepState, t)}
-      variant="primary"
+      variant="default"
     >
       {unsupportedSplit ? t('desktop.importSource.unavailable') : t('desktop.importSource.preview')}
     </AppButton>

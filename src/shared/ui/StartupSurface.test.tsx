@@ -36,7 +36,7 @@ it('renders startup diagnostics and action buttons', () => {
 
   expect(rootElement.textContent).toContain('Failed module: Database migration');
   expect(rootElement.textContent).toContain('Logs: /logs');
-  rootElement.querySelector<HTMLButtonElement>('button[data-variant="primary"]')?.click();
+  rootElement.querySelector<HTMLButtonElement>('button[data-variant="emphasis"]')?.click();
   expect(retry).toHaveBeenCalledTimes(1);
   rootElement.querySelectorAll<HTMLButtonElement>('button')[1]?.click();
   expect(openLogs).toHaveBeenCalledTimes(1);

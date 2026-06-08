@@ -106,7 +106,7 @@ function renderImportCatalogBody(props: Parameters<typeof ImportCatalogLayout>[0
       <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
         <AppErrorState
           action={
-            <AppButton onClick={props.errorState.onRetry} variant="primary">
+            <AppButton onClick={props.errorState.onRetry} variant="default">
               {retryLabel}
             </AppButton>
           }

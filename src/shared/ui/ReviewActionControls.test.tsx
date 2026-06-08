@@ -1,12 +1,17 @@
 import { act, fireEvent, screen } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../localization/testLocalization';
+import { preloadTranslationCatalog } from '../localization/translations';
 
 import { ReadingReviewActions, ReviewGradeActions } from './ReviewActionControls';
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
 });
 
 it('renders companion-friendly grade buttons as a single shared row when requested', () => {
@@ -15,7 +20,7 @@ it('renders companion-friendly grade buttons as a single shared row when request
   renderWithLocalization(
     <ReviewGradeActions
       buttonClassName="min-w-0 flex-1 px-3"
-      buttonVariant="primary"
+      buttonVariant="default"
       errorMessage={null}
       groupClassName="w-full gap-2"
       isSubmitting={false}

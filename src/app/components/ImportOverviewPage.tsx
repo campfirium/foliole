@@ -64,7 +64,7 @@ function ImportOverviewErrorState(props: { state: ReturnType<typeof useImportOve
     <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
       <AppErrorState
         action={
-          <AppButton onClick={props.state.refresh} variant="primary">
+          <AppButton onClick={props.state.refresh} variant="default">
             {t('desktop.importOverview.retry')}
           </AppButton>
         }

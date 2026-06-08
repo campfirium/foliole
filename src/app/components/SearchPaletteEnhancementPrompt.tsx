@@ -163,7 +163,7 @@ function SearchEnhancementRestartContent(props: SearchEnhancementRestartContentP
         {message}
       </AppDialogDescription>
       <div className="mt-5 flex justify-end">
-        <AppButton onClick={props.onDone} variant="primary">
+        <AppButton onClick={props.onDone} variant="default">
           {t('desktop.searchEnhancement.done')}
         </AppButton>
       </div>
@@ -184,7 +184,7 @@ function SearchEnhancementPromptContent(props: SearchEnhancementPromptContentPro
         <AppButton onClick={props.onSkip} variant="ghost">
           {t('desktop.searchEnhancement.notNow')}
         </AppButton>
-        <AppButton disabled={props.isUpdating} onClick={props.onTurnOn} variant="primary">
+        <AppButton disabled={props.isUpdating} onClick={props.onTurnOn} variant="emphasis">
           {props.isUpdating ? t('desktop.searchEnhancement.turningOn') : t('desktop.searchEnhancement.turnOn')}
         </AppButton>
       </div>

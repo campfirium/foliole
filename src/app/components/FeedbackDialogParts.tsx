@@ -200,7 +200,7 @@ export function FeedbackActions(props: {
   return (
     <div className="flex justify-end gap-2 border-t border-foreground/[0.08] bg-background/80 px-6 py-4">
       <AppButton onClick={props.onClose} variant="ghost">{t('feedback.cancel')}</AppButton>
-      <AppButton disabled={!props.canSubmit} onClick={() => void props.onSubmit()} variant="primary">
+      <AppButton disabled={!props.canSubmit} onClick={() => void props.onSubmit()} variant="emphasis">
         {props.state === 'sending' ? t('feedback.sending') : t('feedback.submit')}
       </AppButton>
     </div>

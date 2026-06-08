@@ -134,7 +134,7 @@ function ReadwiseCleanupRow(props: { disabled: boolean; onCleanup: () => void })
       title={t('desktop.readwise.cleanup.title')}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <AppButton disabled={props.disabled} onClick={props.onCleanup} size="sm" variant="primary">
+        <AppButton disabled={props.disabled} onClick={props.onCleanup} size="sm" variant="danger">
           {t('desktop.readwise.cleanup.action')}
         </AppButton>
       </SettingsControlSlot>
