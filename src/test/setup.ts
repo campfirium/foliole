@@ -1,9 +1,17 @@
 import '@testing-library/jest-dom/vitest';
 
 import { createElement, type ComponentType, type ReactNode } from 'react';
-import { vi } from 'vitest';
+import { beforeAll, vi } from 'vitest';
 
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
+import { preloadTranslationCatalog } from '../shared/localization/translations';
+
+beforeAll(async () => {
+  await Promise.all([
+    preloadTranslationCatalog('en'),
+    preloadTranslationCatalog('zh-Hans')
+  ]);
+});
 
 vi.mock('@testing-library/react', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@testing-library/react')>();

@@ -72,7 +72,6 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,
     noteRowsAll: props.state.noteRowsAll,
-    trashRowsAll: props.state.trashRowsAll,
     trashedNodeIds: props.trashedNodeIds
   });
 

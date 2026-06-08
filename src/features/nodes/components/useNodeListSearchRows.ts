@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 
-import { filterNodeTreeRowsByTitle, type NodeTreeRow } from '../model/nodeTree';
-import { filterTrashRootIdsByTitle } from '../model/trashRootModel';
+import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
+
+import { resolveNodeListActiveRows } from './nodeListActiveRows';
 
 export function useNodeListSearchRows(args: {
   activeRows: NodeTreeRow[];
@@ -11,30 +12,21 @@ export function useNodeListSearchRows(args: {
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   noteRowsAll: NodeTreeRow[];
-  trashRowsAll: NodeTreeRow[];
   trashedNodeIds: string[];
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const filteredActiveRows = useMemo(
-    () => {
-      if (args.isVirtualViewOpen) {
-        return args.activeRows;
-      }
-      if (!searchQuery.trim()) {
-        return args.activeRows;
-      }
-      if (args.isTrashViewOpen) {
-        const rootIds = filterTrashRootIdsByTitle(
-          args.activeRows.map((row) => row.node.id),
-          args.nodeOrder,
-          args.nodesById,
-          args.trashedNodeIds,
-          searchQuery
-        );
-        return args.activeRows.filter((row) => rootIds.includes(row.node.id));
-      }
-      return filterNodeTreeRowsByTitle(args.noteRowsAll, searchQuery);
-    },
+    () =>
+      resolveNodeListActiveRows({
+        activeRows: args.activeRows,
+        isTrashViewOpen: args.isTrashViewOpen,
+        isVirtualViewOpen: args.isVirtualViewOpen,
+        nodeOrder: args.nodeOrder,
+        nodesById: args.nodesById,
+        noteRowsAll: args.noteRowsAll,
+        searchQuery,
+        trashedNodeIds: args.trashedNodeIds
+      }),
     [
       args.activeRows,
       args.isTrashViewOpen,
@@ -42,7 +34,6 @@ export function useNodeListSearchRows(args: {
       args.nodeOrder,
       args.nodesById,
       args.noteRowsAll,
-      args.trashRowsAll,
       args.trashedNodeIds,
       searchQuery
     ]
