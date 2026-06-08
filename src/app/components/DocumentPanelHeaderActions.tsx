@@ -35,7 +35,7 @@ function SourceUpdateAction({
   return (
     <AppIconButton
       aria-pressed={isOpen}
-      className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+      className="text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
       data-active={isOpen}
       icon={<SplitPanelIcon />}
       label={t('desktop.document.toggleSourceUpdatePanel')}
@@ -94,7 +94,7 @@ export function renderDocumentHeaderActions(args: {
       <AppDropdownMenu>
         <AppDropdownMenuTrigger asChild>
           <AppIconButton
-            className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+            className="text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
             icon={<MoreOptionsIcon />}
             label={args.t('desktop.document.moreEditorOptions')}
           />

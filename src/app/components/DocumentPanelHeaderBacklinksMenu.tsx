@@ -25,7 +25,7 @@ export function DocumentPanelHeaderBacklinksMenu(props: DocumentPanelHeaderBackl
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label={t('desktop.links.openReferences', { count: props.backlinks.length })}
-          className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-[max(var(--radius-1),var(--radius-full))] border border-transparent bg-transparent px-1.5 text-sm font-normal leading-none text-foreground/58 transition-colors hover:bg-foreground/[0.03] hover:text-foreground/78 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[state=open]:bg-foreground/[0.04] data-[state=open]:text-foreground/82"
+          className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-transparent bg-transparent px-1.5 text-sm font-normal leading-none text-foreground/58 transition-colors hover:bg-foreground/[0.03] hover:text-foreground/78 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[state=open]:bg-foreground/[0.04] data-[state=open]:text-foreground/82"
           type="button"
         >
           <ArrowDownLeft aria-hidden="true" size={15} strokeWidth={1.75} />
