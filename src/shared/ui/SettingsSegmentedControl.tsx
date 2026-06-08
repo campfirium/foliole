@@ -41,7 +41,7 @@ export function SettingsSegmentedControl({
     <div
       aria-label={ariaLabel}
       className={cn(
-        'inline-flex h-9 max-w-full items-stretch overflow-hidden rounded-md border border-settings-control-border bg-settings-control text-sm transition-colors',
+        'inline-flex h-9 max-w-full items-stretch overflow-hidden rounded-md border border-settings-control-border bg-settings-control text-ui-md transition-colors',
         'hover:border-settings-control-border-hover',
         disabled && 'pointer-events-none opacity-50',
         className

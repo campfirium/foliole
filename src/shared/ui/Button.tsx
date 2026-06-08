@@ -27,13 +27,13 @@ function resolveVariantClass(variant: ButtonVariant) {
     return 'text-foreground/70 hover:text-foreground';
   }
   if (variant === 'list') {
-    return 'w-full justify-start px-3 text-left text-[13px] text-foreground/80 hover:bg-foreground/[0.03] hover:text-foreground';
+    return 'w-full justify-start px-3 text-left text-ui-base text-foreground/80 hover:bg-foreground/[0.03] hover:text-foreground';
   }
   return 'border border-transparent bg-transparent text-foreground/70 hover:bg-[var(--app-control-bg-hover-color)] hover:text-foreground';
 }
 
 function resolveSizeClass(size: ButtonSize) {
-  return size === 'sm' ? 'min-h-8 px-3 text-sm' : 'min-h-9 px-3.5 text-sm';
+  return size === 'sm' ? 'min-h-8 px-3 text-ui-md' : 'min-h-9 px-3.5 text-ui-md';
 }
 
 export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function AppButton(

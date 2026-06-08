@@ -112,6 +112,16 @@ export default {
         sans: ['var(--font-family-interface)'],
         mono: ['var(--font-family-mono)']
       },
+      fontSize: {
+        'ui-xs': ['11px', { lineHeight: '1rem' }],
+        'ui-sm': ['12px', { lineHeight: '1.25rem' }],
+        'ui-base': ['13px', { lineHeight: '1.25rem' }],
+        'ui-md': ['14px', { lineHeight: '1.5rem' }],
+        'ui-lg': ['15px', { lineHeight: '1.5rem' }],
+        'reading-sm': ['14px', { lineHeight: '1.7' }],
+        'reading-base': ['17px', { lineHeight: '1.75' }],
+        'reading-lg': ['19px', { lineHeight: '1.8' }]
+      },
       boxShadow: {
         popover: 'var(--shadow-popover)',
         panel: 'var(--shadow-panel)',

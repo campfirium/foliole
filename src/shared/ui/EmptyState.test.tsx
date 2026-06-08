@@ -1,6 +1,13 @@
 import { render, screen } from '@testing-library/react';
+import { beforeAll } from 'vitest';
 
-import { AppLoadingState, AppSpinner } from './EmptyState';
+import { preloadTranslationCatalog } from '../localization/translations';
+
+import { AppEmptyState, AppErrorState, AppLoadingState, AppSpinner } from './EmptyState';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+});
 
 describe('AppSpinner', () => {
   it('exposes a named progress indicator when not decorative', () => {
@@ -32,5 +39,24 @@ describe('AppLoadingState', () => {
 
     expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
     expect(container.querySelector('.animate-spin')).toHaveAttribute('aria-hidden', 'true');
+  });
+});
+
+describe('AppEmptyState', () => {
+  it('uses UI type scale classes for empty state copy', () => {
+    const { container } = render(<AppEmptyState description="No due cards." title="Nothing to review" />);
+
+    expect(container.firstElementChild?.className).toContain('text-ui-md');
+    expect(screen.getByText('Nothing to review').className).toContain('text-ui-md');
+    expect(screen.getByText('No due cards.').className).toContain('text-ui-base');
+  });
+});
+
+describe('AppErrorState', () => {
+  it('uses UI type scale classes for error state copy', () => {
+    render(<AppErrorState description="Try again." title="Sync failed" />);
+
+    expect(screen.getByText('Sync failed').className).toContain('text-ui-md');
+    expect(screen.getByText('Try again.').className).toContain('text-ui-base');
   });
 });

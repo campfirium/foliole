@@ -57,7 +57,7 @@ export function ReviewActionBar({
         <div className="flex items-center justify-center">{primary}</div>
       ) : (
         <div className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 pl-[var(--document-content-inline-start-padding,var(--document-content-inline-padding))] pr-[var(--document-content-inline-end-padding,var(--document-content-inline-padding))]">
-          <div className="min-w-0 truncate text-[13px] font-medium text-muted-foreground">{secondary}</div>
+          <div className="min-w-0 truncate text-ui-base font-medium text-muted-foreground">{secondary}</div>
           <div className="flex items-center justify-center">{primary}</div>
           <div aria-hidden="true" className="min-w-0" />
         </div>

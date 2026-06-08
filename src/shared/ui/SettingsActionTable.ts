@@ -9,7 +9,7 @@ export function settingsActionTableClassName(className?: string) {
 
 export function settingsActionTableHeaderClassName(columnsClassName: string, className?: string) {
   return cn(
-    'relative grid gap-3 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/45 after:absolute after:bottom-0 after:left-4 after:right-4 after:border-b after:border-settings-divider',
+    'relative grid gap-3 px-4 py-3 text-ui-xs font-semibold uppercase tracking-[0.08em] text-foreground/45 after:absolute after:bottom-0 after:left-4 after:right-4 after:border-b after:border-settings-divider',
     columnsClassName,
     className
   );
@@ -21,7 +21,7 @@ export function settingsActionTableRowClassName(columnsClassName: string, classN
 
 export function settingsActionTableAddButtonClassName(className?: string) {
   return cn(
-    'col-span-full flex h-9 items-center justify-center gap-2 rounded-md border border-dashed border-settings-control-border bg-transparent text-sm text-foreground/60 transition-colors',
+    'col-span-full flex h-9 items-center justify-center gap-2 rounded-md border border-dashed border-settings-control-border bg-transparent text-ui-md text-foreground/60 transition-colors',
     'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45',
     className
   );

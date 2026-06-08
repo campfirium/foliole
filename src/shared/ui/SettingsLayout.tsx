@@ -41,7 +41,7 @@ export function settingsHotkeySearchFieldClassName(className?: string) {
 
 export function settingsHotkeyChipClassName(state: SettingsHotkeyChipState, className?: string) {
   return cn(
-    'group inline-flex h-7 max-w-[34ch] cursor-pointer items-center justify-center gap-1 rounded-sm border border-transparent bg-settings-control px-2.5 py-0 font-mono text-sm text-foreground transition-colors',
+    'group inline-flex h-7 max-w-[34ch] cursor-pointer items-center justify-center gap-1 rounded-sm border border-transparent bg-settings-control px-2.5 py-0 font-mono text-ui-md text-foreground transition-colors',
     state === 'recording' && 'bg-settings-control-active text-foreground ring-1 ring-ring',
     state === 'empty' && 'text-foreground/55',
     'hover:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
@@ -68,7 +68,7 @@ export function settingsHotkeyRowClassName(className?: string) {
 
 export function settingsFieldClassName(className?: string) {
   return cn(
-    'h-9 w-full min-w-0 rounded-md border border-settings-control-border bg-settings-control px-3 text-sm text-foreground transition-colors',
+    'h-9 w-full min-w-0 rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground transition-colors',
     'hover:border-settings-control-border-hover hover:bg-settings-control-hover',
     'focus-visible:border-settings-control-border-hover focus-visible:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
     'disabled:cursor-not-allowed disabled:opacity-45',
@@ -78,7 +78,7 @@ export function settingsFieldClassName(className?: string) {
 
 export function settingsButtonClassName(className?: string) {
   return cn(
-    'inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-settings-control-border bg-settings-control px-3 text-sm text-foreground/88 transition-colors',
+    'inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground/88 transition-colors',
     'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground',
     'active:bg-settings-control-active focus-visible:border-settings-control-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
     'disabled:pointer-events-none disabled:opacity-45',
@@ -113,7 +113,7 @@ export function settingsIconButtonClassName(className?: string) {
 
 export function settingsUtilityIconButtonClassName(active = false, className?: string) {
   return cn(
-    'inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent bg-transparent px-0 text-sm transition-colors',
+    'inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent bg-transparent px-0 text-ui-md transition-colors',
     active ? 'text-settings-icon-active' : 'text-settings-icon',
     '[&>svg]:pointer-events-none [&>svg]:text-current',
     'hover:border-transparent hover:bg-transparent hover:text-settings-icon-hover',
@@ -146,7 +146,7 @@ export function settingsRangeClassName(className?: string) {
 }
 
 export function settingsControlValueClassName(className?: string) {
-  return cn('text-right text-[0.86rem] text-foreground/65', className);
+  return cn('text-right text-ui-base text-foreground/65', className);
 }
 
 export function settingsColorFieldClassName(className?: string) {
@@ -159,7 +159,7 @@ export function settingsColorFieldClassName(className?: string) {
 }
 
 export function settingsValueBoxClassName(className?: string) {
-  return cn('rounded-md border border-transparent bg-settings-control px-3 py-2 text-sm text-foreground/75', className);
+  return cn('rounded-md border border-transparent bg-settings-control px-3 py-2 text-ui-md text-foreground/75', className);
 }
 
 export function SettingsGroup({ children, className }: { children: ReactNode; className?: string }) {

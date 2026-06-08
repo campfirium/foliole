@@ -61,7 +61,7 @@ function ReviewGradeErrorFeedback(props: {
 
   return (
     <div className="flex items-center gap-2">
-      <p aria-live="assertive" className="text-xs text-error">
+      <p aria-live="assertive" className="text-ui-sm text-error">
         {props.errorMessage}
       </p>
       {props.onRetry ? (

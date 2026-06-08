@@ -29,13 +29,13 @@ function SettingsStateSurface({
 }: SettingsStateSurfaceProps & { role: 'alert' | 'status'; 'aria-busy'?: 'true' }) {
   return (
     <div
-      className={cn('flex min-h-[82px] flex-col justify-center gap-2 px-5 py-5 text-sm text-foreground/65', className)}
+      className={cn('flex min-h-[82px] flex-col justify-center gap-2 px-5 py-5 text-ui-md text-foreground/65', className)}
       data-settings-state-surface
       {...rest}
     >
       <div>
-        <p className="m-0 text-[0.95rem] font-normal text-foreground">{title}</p>
-        <p className="m-0 mt-0.5 text-sm text-foreground/65">{description}</p>
+        <p className="m-0 text-ui-lg font-normal text-foreground">{title}</p>
+        <p className="m-0 mt-0.5 text-ui-md text-foreground/65">{description}</p>
       </div>
       {action ? <div className="flex items-center">{action}</div> : null}
     </div>

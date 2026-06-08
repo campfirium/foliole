@@ -39,7 +39,7 @@ function dropdownMenuContentClassName(className?: string) {
 
 function dropdownMenuItemClassName(className?: string) {
   return cn(
-    'relative flex min-h-8 cursor-default select-none items-center gap-2 rounded-md px-2 py-1 text-[13px] font-normal leading-5 text-foreground/78 outline-none transition-colors',
+    'relative flex min-h-8 cursor-default select-none items-center gap-2 rounded-md px-2 py-1 text-ui-base font-normal leading-5 text-foreground/78 outline-none transition-colors',
     'focus:bg-[var(--app-floating-item-hover-bg)] focus:text-foreground data-[highlighted]:bg-[var(--app-floating-item-hover-bg)] data-[highlighted]:text-foreground',
     'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
     className
@@ -47,7 +47,7 @@ function dropdownMenuItemClassName(className?: string) {
 }
 
 function dropdownMenuLabelClassName(className?: string) {
-  return cn('px-2 pb-1 pt-2 text-xs font-medium text-foreground/45', className);
+  return cn('px-2 pb-1 pt-2 text-ui-sm font-medium text-foreground/45', className);
 }
 
 function dropdownMenuSeparatorClassName(className?: string) {

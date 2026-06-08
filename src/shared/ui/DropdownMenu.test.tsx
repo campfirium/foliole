@@ -1,7 +1,8 @@
 import { createEvent, fireEvent, render, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../localization/testLocalization';
+import { preloadTranslationCatalog } from '../localization/translations';
 
 import {
   AppDropdownMenu,
@@ -13,6 +14,10 @@ import {
   AppSelectionDropdownMenu,
   AppSelectionDropdownMenuItem
 } from './DropdownMenu';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+});
 
 it('prevents selection-safe menu items from stealing focus on pointer down', () => {
   renderWithLocalization(
@@ -105,7 +110,9 @@ it('uses shared dropdown styling for grouped checked menu items', () => {
 
   const checkedItem = screen.getByRole('menuitem', { name: 'Date modified' });
   expect(checkedItem).toHaveAttribute('aria-checked', 'true');
+  expect(checkedItem.className).toContain('text-ui-base');
   expect(checkedItem.className).toContain('data-[highlighted]:bg-[var(--app-floating-item-hover-bg)]');
+  expect(screen.getByText('Sort by').className).toContain('text-ui-sm');
   expect(screen.getByText('Sort by').className).toContain('text-foreground/45');
   expect(screen.getByRole('separator').className).toContain('var(--app-floating-divider-color)');
 });

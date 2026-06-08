@@ -33,8 +33,8 @@ export function SettingsSection({
         <div className="px-5 pb-3">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              {title ? <h3 className="text-[0.95rem] font-semibold text-foreground">{title}</h3> : null}
-              {description ? <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{description}</p> : null}
+              {title ? <h3 className="text-ui-lg font-semibold text-foreground">{title}</h3> : null}
+              {description ? <p className="mt-1 max-w-[760px] text-ui-md leading-6 text-muted-foreground">{description}</p> : null}
             </div>
             {actions ? <div className="shrink-0">{actions}</div> : null}
           </div>

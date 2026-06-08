@@ -25,11 +25,13 @@ it('maps button variants to the desktop action hierarchy', () => {
   );
 
   expect(screen.getByRole('button', { name: 'Default' }).className).toContain('--app-control-border-color');
+  expect(screen.getByRole('button', { name: 'Default' }).className).toContain('text-ui-md');
   expect(screen.getByRole('button', { name: 'Ghost' }).className).toContain('border-transparent');
   expect(screen.getByRole('button', { name: 'Subtle' }).className).toContain('text-foreground/70');
   expect(screen.getByRole('button', { name: 'Emphasis' }).className).toContain('--color-accent-strong');
   expect(screen.getByRole('button', { name: 'Danger' }).className).toContain('border-error/35');
   expect(screen.getByRole('button', { name: 'List' }).className).toContain('w-full');
+  expect(screen.getByRole('button', { name: 'List' }).className).toContain('text-ui-base');
   expect(screen.getByRole('button', { name: 'List' }).className).toContain('border-border-strong');
 });
 
@@ -52,8 +54,10 @@ it('renders shared control wrappers without Radix theme context', () => {
   expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('focus:outline-none');
   expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('focus-visible:ring-ring');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).tagName).toBe('H3');
+  expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).className).toContain('text-ui-md');
   expect(screen.getByText('Panel body')).toBeInTheDocument();
   expect(screen.getByText('Ready').tagName).toBe('SPAN');
+  expect(screen.getByText('Ready').className).toContain('text-ui-md');
   expect(container.querySelector('.radix-themes')).toBeNull();
 });
 

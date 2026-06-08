@@ -61,7 +61,7 @@ export function AppPanel<T extends PanelElement = 'section'>({
         >
           <div className="min-w-0 shrink-0">
             {useHeading ? (
-              <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.04em]">
+              <h3 className="m-0 text-ui-md font-semibold uppercase tracking-[0.04em]">
                 {title}
               </h3>
             ) : (

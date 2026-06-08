@@ -86,13 +86,13 @@ export function AppListHeader({ actions, children, className }: AppListHeaderPro
 export function AppListSectionHeader({ countLabel, description, title, toolbar }: AppListSectionHeaderProps) {
   return (
     <div className="flex flex-col gap-3">
-      <AppListHeader actions={countLabel ? <p className="text-sm text-foreground/65">{countLabel}</p> : null} className="items-start gap-y-2">
+      <AppListHeader actions={countLabel ? <p className="text-ui-md text-foreground/65">{countLabel}</p> : null} className="items-start gap-y-2">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-          {description ? <p className="mt-1 text-sm text-foreground/65">{description}</p> : null}
+          <h2 className="text-ui-md font-semibold text-foreground">{title}</h2>
+          {description ? <p className="mt-1 text-ui-md text-foreground/65">{description}</p> : null}
         </div>
       </AppListHeader>
-      {toolbar ? <div className="flex flex-wrap items-center gap-2 text-sm text-foreground/72">{toolbar}</div> : null}
+      {toolbar ? <div className="flex flex-wrap items-center gap-2 text-ui-md text-foreground/72">{toolbar}</div> : null}
     </div>
   );
 }
@@ -130,16 +130,16 @@ export function AppListItem({
       >
       <div className="flex items-start justify-between gap-5">
         <div className="min-w-0 flex-1">
-          <div className="min-w-0 text-sm font-semibold leading-5 text-foreground">{title}</div>
-          {meta && !metaAfterSummary ? <div className="mt-1 min-w-0 text-xs leading-5 text-foreground/52">{meta}</div> : null}
-          {summary ? <div className={cn('mt-2 min-w-0 text-sm leading-6 text-foreground/68', summaryClassName)}>{summary}</div> : null}
+          <div className="min-w-0 text-ui-md font-semibold leading-5 text-foreground">{title}</div>
+          {meta && !metaAfterSummary ? <div className="mt-1 min-w-0 text-ui-sm leading-5 text-foreground/52">{meta}</div> : null}
+          {summary ? <div className={cn('mt-2 min-w-0 text-ui-md leading-6 text-foreground/68', summaryClassName)}>{summary}</div> : null}
           {meta && metaAfterSummary ? (
-            <div className={cn('min-w-0 text-xs leading-5 text-foreground/52', metaAfterSummary ? 'mt-3' : 'mt-1')}>
+            <div className={cn('min-w-0 text-ui-sm leading-5 text-foreground/52', metaAfterSummary ? 'mt-3' : 'mt-1')}>
               {meta}
             </div>
           ) : null}
         </div>
-        {trailing ? <div className="w-36 shrink-0 text-right text-xs leading-5 text-foreground/56">{trailing}</div> : null}
+        {trailing ? <div className="w-36 shrink-0 text-right text-ui-sm leading-5 text-foreground/56">{trailing}</div> : null}
       </div>
       {actions ? <div className={cn('mt-1 pt-3', actionsSeparated && 'border-t border-border/50')}>{actions}</div> : null}
     </Component>

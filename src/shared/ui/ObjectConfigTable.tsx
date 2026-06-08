@@ -72,7 +72,7 @@ export function ObjectConfigHeader({ columns, columnsClassName }: ObjectConfigHe
   return (
     <div
       className={cn(
-        'grid gap-4 px-2 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/48',
+        'grid gap-4 px-2 py-3 text-ui-xs font-semibold uppercase tracking-[0.08em] text-foreground/48',
         columnsClassName
       )}
     >

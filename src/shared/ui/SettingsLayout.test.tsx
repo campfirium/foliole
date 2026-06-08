@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it } from 'vitest';
+
+import { preloadTranslationCatalog } from '../localization/translations';
 
 import { SettingsControlSlot, SettingsGroup, SettingsRow, SettingsSection } from './SettingsLayout';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+});
 
 it('renders settings pattern structure with shared copy and action slot', () => {
   render(
@@ -17,9 +23,12 @@ it('renders settings pattern structure with shared copy and action slot', () => 
   );
 
   expect(screen.getByRole('heading', { level: 3, name: 'Hotkeys' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 3, name: 'Hotkeys' }).className).toContain('text-ui-lg');
   expect(screen.getByText('Shared settings layout.')).toBeInTheDocument();
+  expect(screen.getByText('Shared settings layout.').className).toContain('text-ui-md');
   expect(screen.getByText('Shared settings layout.').className).toContain('text-muted-foreground');
   expect(screen.getByRole('heading', { level: 4, name: 'Primary shortcut' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 4, name: 'Primary shortcut' }).className).toContain('text-ui-lg');
   expect(screen.getByText('Controls the main action.')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Reset all' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();

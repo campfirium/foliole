@@ -5,7 +5,7 @@ const floatingSurfaceBaseClassName =
 const floatingOverlayBaseClassName =
   'fixed inset-0 z-floating flex items-start justify-center bg-[var(--app-floating-overlay-bg)] px-4 pt-[12vh]';
 const floatingInputBaseClassName = [
-  'w-full border-x-0 border-t-0 border-b border-[var(--app-floating-divider-color)] bg-[var(--app-floating-input-bg)] px-4 py-3 text-sm text-foreground',
+  'w-full border-x-0 border-t-0 border-b border-[var(--app-floating-divider-color)] bg-[var(--app-floating-input-bg)] px-4 py-3 text-ui-md text-foreground',
   'focus-visible:outline-none focus-visible:ring-0',
   'placeholder:text-foreground/42'
 ].join(' ');
@@ -18,8 +18,8 @@ const floatingItemBaseClassName = [
   'data-[disabled=true]:opacity-40'
 ].join(' ');
 const floatingSectionHeaderBaseClassName =
-  'px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/50';
-const floatingEmptyStateBaseClassName = 'px-3 py-8 text-center text-sm text-foreground/60';
+  'px-3 pb-1 pt-3 text-ui-xs font-semibold uppercase tracking-[0.08em] text-foreground/50';
+const floatingEmptyStateBaseClassName = 'px-3 py-8 text-center text-ui-md text-foreground/60';
 const floatingMetaBadgeBaseClassName = [
   'truncate rounded-full border border-[var(--app-floating-border-color)] bg-[var(--app-floating-muted-bg)]',
   'px-2 py-0.5 text-[10px] font-medium text-foreground/65'

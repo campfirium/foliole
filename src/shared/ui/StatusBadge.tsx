@@ -25,7 +25,7 @@ function toneClass(tone: StatusTone) {
 
 export function AppStatusBadge({ label, tone = 'neutral' }: StatusBadgeProps) {
   return (
-    <span className={cn('inline-flex min-h-6 items-center gap-1.5 text-sm font-medium leading-none', toneClass(tone))}>
+    <span className={cn('inline-flex min-h-6 items-center gap-1.5 text-ui-md font-medium leading-none', toneClass(tone))}>
       <span aria-hidden="true" className="size-1.5 rounded-full bg-current opacity-80" />
       {label}
     </span>

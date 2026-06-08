@@ -29,8 +29,8 @@ export function SettingsRow({
       {...rest}
     >
       <div className="min-w-0 flex-1">
-        <h4 className="text-[0.95rem] font-normal text-foreground">{title}</h4>
-        {description ? <p className="mt-0.5 max-w-[780px] text-sm leading-6 text-foreground/64">{description}</p> : null}
+        <h4 className="text-ui-lg font-normal text-foreground">{title}</h4>
+        {description ? <p className="mt-0.5 max-w-[780px] text-ui-md leading-6 text-foreground/64">{description}</p> : null}
       </div>
       {children}
     </div>

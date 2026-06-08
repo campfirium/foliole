@@ -86,10 +86,10 @@ function ActionHelpCardContent({ help, position }: ActionHelpCardContentProps) {
         width: `${ACTION_HELP_CARD_WIDTH}px`
       }}
     >
-      <h3 className="m-0 text-[14px] font-semibold leading-5 text-foreground/88">{copy.title}</h3>
-      <p className="m-0 mt-1.5 text-[13px] font-normal leading-5 text-foreground/72">{copy.body}</p>
+      <h3 className="m-0 text-ui-md font-semibold leading-5 text-foreground/88">{copy.title}</h3>
+      <p className="m-0 mt-1.5 text-ui-base font-normal leading-5 text-foreground/72">{copy.body}</p>
       {copy.detail ? (
-        <p className="m-0 mt-2.5 border-t border-[var(--app-floating-divider-color)] pt-2 text-[12px] font-normal leading-4 text-foreground/48">
+        <p className="m-0 mt-2.5 border-t border-[var(--app-floating-divider-color)] pt-2 text-ui-sm font-normal leading-4 text-foreground/48">
           {copy.detail}
         </p>
       ) : null}

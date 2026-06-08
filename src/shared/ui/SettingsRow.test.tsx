@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it } from 'vitest';
+
+import { preloadTranslationCatalog } from '../localization/translations';
 
 import { SettingsRow } from './SettingsRow';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+});
 
 it('renders title, description, and control children', () => {
   render(

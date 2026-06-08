@@ -46,9 +46,9 @@ export function AppSpinner({
 
 export function AppEmptyState({ title, description, className }: EmptyStateProps) {
   return (
-    <div className={cn('flex min-h-[120px] flex-col items-center justify-center gap-2 text-center text-sm text-foreground/60', className)} role="status">
-      <p className="m-0 text-sm font-semibold text-foreground">{title}</p>
-      <p className="m-0 text-[13px]">{description}</p>
+    <div className={cn('flex min-h-[120px] flex-col items-center justify-center gap-2 text-center text-ui-md text-foreground/60', className)} role="status">
+      <p className="m-0 text-ui-md font-semibold text-foreground">{title}</p>
+      <p className="m-0 text-ui-base">{description}</p>
     </div>
   );
 }
@@ -63,10 +63,10 @@ export function AppLoadingState({ className }: LoadingStateProps) {
 
 export function AppErrorState({ title, description, action, className }: ErrorStateProps) {
   return (
-    <div className={cn('flex min-h-[120px] flex-col items-center justify-center gap-3 text-center text-sm text-foreground/65', className)} role="alert">
+    <div className={cn('flex min-h-[120px] flex-col items-center justify-center gap-3 text-center text-ui-md text-foreground/65', className)} role="alert">
       <div className="flex flex-col items-center gap-2">
-        <p className="m-0 text-sm font-semibold text-foreground">{title}</p>
-        <p className="m-0 text-[13px]">{description}</p>
+        <p className="m-0 text-ui-md font-semibold text-foreground">{title}</p>
+        <p className="m-0 text-ui-base">{description}</p>
       </div>
       {action ? <div className="flex items-center justify-center">{action}</div> : null}
     </div>
