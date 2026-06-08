@@ -152,6 +152,7 @@ export function resolveReleaseArtifactPaths(rootDir = repoRoot, packageVersion =
   const installerBlockmaps = installerArtifacts.map((artifactPath) => `${artifactPath}.blockmap`);
   return [
     resolve(rootDir, 'release/win-unpacked'),
+    resolve(rootDir, 'release/win-unpacked.tmp'),
     resolve(rootDir, `release/${installerBaseName}.exe`),
     resolve(rootDir, `release/${installerBaseName}.exe.blockmap`),
     ...installerArtifacts,

@@ -86,6 +86,7 @@ describe('windows package runner', () => {
   it('cleans only known release artifacts before native packaging', () => {
     expect(resolveReleaseArtifactPaths('/repo', '9.8.7')).toEqual([
       '/repo/release/win-unpacked',
+      '/repo/release/win-unpacked.tmp',
       '/repo/release/Foliole Setup 9.8.7.exe',
       '/repo/release/Foliole Setup 9.8.7.exe.blockmap',
       '/repo/release/latest.yml',

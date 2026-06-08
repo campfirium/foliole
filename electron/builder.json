@@ -5,6 +5,7 @@
   "directories": {
     "output": "release"
   },
+  "electronDist": "node_modules/electron/dist",
   "asar": true,
   "asarUnpack": [
     "**/node_modules/better-sqlite3/build/Release/*.node"
