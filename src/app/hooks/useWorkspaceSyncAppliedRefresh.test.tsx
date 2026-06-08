@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const onWorkspaceContentChanged = vi.hoisted(() => vi.fn());
 const onWorkspaceSyncApplied = vi.hoisted(() => vi.fn());
@@ -17,10 +17,21 @@ import {
   useWorkspaceSyncAppliedRefresh
 } from './useWorkspaceSyncAppliedRefresh';
 
+async function flushPromises() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 beforeEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   onWorkspaceContentChanged.mockReset();
   onWorkspaceSyncApplied.mockReset();
+});
+
+afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
 });
 
 it('rehydrates the desktop workspace when sync changes are applied by the runtime', async () => {
@@ -34,8 +45,13 @@ it('rehydrates the desktop workspace when sync changes are applied by the runtim
 
   const view = renderHook(() => useWorkspaceSyncAppliedRefresh());
   await waitFor(() => expect(onWorkspaceSyncApplied).toHaveBeenCalledTimes(1));
+  vi.useFakeTimers();
   await act(async () => {
     handler?.();
+  });
+  expect(rehydrate).not.toHaveBeenCalled();
+  await act(async () => {
+    vi.advanceTimersByTime(1200);
   });
 
   expect(rehydrate).toHaveBeenCalledTimes(1);
@@ -54,8 +70,13 @@ it('rehydrates the desktop workspace when runtime content changes', async () => 
 
   const view = renderHook(() => useWorkspaceContentChangedRefresh());
   await waitFor(() => expect(onWorkspaceContentChanged).toHaveBeenCalledTimes(1));
+  vi.useFakeTimers();
   await act(async () => {
     handler?.();
+  });
+  expect(rehydrate).not.toHaveBeenCalled();
+  await act(async () => {
+    vi.advanceTimersByTime(1200);
   });
 
   expect(rehydrate).toHaveBeenCalledTimes(1);
@@ -87,14 +108,30 @@ it('queues sync and content refreshes through one rehydrate scheduler', async ()
   });
   await waitFor(() => expect(onWorkspaceSyncApplied).toHaveBeenCalledTimes(1));
   await waitFor(() => expect(onWorkspaceContentChanged).toHaveBeenCalledTimes(1));
+  vi.useFakeTimers();
   act(() => {
     syncHandler?.();
     contentHandler?.();
+    contentHandler?.();
+    syncHandler?.();
   });
-  await waitFor(() => expect(rehydrate).toHaveBeenCalledTimes(1));
-  await act(async () => {
+  act(() => {
+    vi.advanceTimersByTime(1199);
+  });
+  expect(rehydrate).not.toHaveBeenCalled();
+  act(() => {
+    vi.advanceTimersByTime(1);
+  });
+  expect(rehydrate).toHaveBeenCalledTimes(1);
+  act(() => {
+    contentHandler?.();
+    contentHandler?.();
     resolveFirstRehydrate?.();
   });
+  await flushPromises();
 
-  await waitFor(() => expect(rehydrate).toHaveBeenCalledTimes(2));
+  act(() => {
+    vi.advanceTimersByTime(1200);
+  });
+  expect(rehydrate).toHaveBeenCalledTimes(2);
 });
