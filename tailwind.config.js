@@ -82,8 +82,8 @@ export default {
         background: 'rgb(var(--color-background) / <alpha-value>)',
         foreground: 'rgb(var(--color-foreground) / <alpha-value>)',
         primary: {
-          DEFAULT: '#5f6368',
-          foreground: '#f7f7f5'
+          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+          foreground: 'rgb(var(--color-accent-foreground) / <alpha-value>)'
         },
         secondary: {
           DEFAULT: 'rgb(var(--color-secondary) / <alpha-value>)',
@@ -102,8 +102,8 @@ export default {
           foreground: 'rgb(var(--color-foreground) / <alpha-value>)'
         },
         destructive: {
-          DEFAULT: '#fb7185',
-          foreground: '#ffffff'
+          DEFAULT: 'rgb(var(--color-error) / <alpha-value>)',
+          foreground: 'rgb(var(--color-error-foreground) / <alpha-value>)'
         },
         input: 'rgb(var(--color-border) / <alpha-value>)',
         ring: 'rgb(var(--color-accent) / <alpha-value>)'
