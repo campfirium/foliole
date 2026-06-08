@@ -24,6 +24,12 @@ describe('AppSpinner', () => {
     expect(screen.getByLabelText('PDF progress')).toHaveClass('h-10', 'w-10');
   });
 
+  it('supports state tone styling for progress indicators', () => {
+    render(<AppSpinner label="Sync progress" tone="accent" />);
+
+    expect(screen.getByLabelText('Sync progress').className).toContain('border-t-[rgb(var(--app-accent-color-rgb))]');
+  });
+
   it('hides decorative indicators from assistive technology', () => {
     const { container } = render(<AppSpinner decorative label="Ignored label" />);
 
@@ -38,7 +44,17 @@ describe('AppLoadingState', () => {
     const { container } = render(<AppLoadingState />);
 
     expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('status')).toHaveAttribute('data-state-surface-tone', 'loading');
     expect(container.querySelector('.animate-spin')).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('.animate-spin')?.className).toContain('border-t-[rgb(var(--app-accent-color-rgb))]');
+  });
+
+  it('can carry loading copy without changing the state surface contract', () => {
+    render(<AppLoadingState description="Preparing preview." label="Preparing" title="Loading" />);
+
+    expect(screen.getByRole('status', { name: 'Preparing' })).toHaveAttribute('data-state-surface-tone', 'loading');
+    expect(screen.getByText('Loading').className).toContain('text-ui-md');
+    expect(screen.getByText('Preparing preview.').className).toContain('text-ui-base');
   });
 });
 
@@ -47,6 +63,7 @@ describe('AppEmptyState', () => {
     const { container } = render(<AppEmptyState description="No due cards." title="Nothing to review" />);
 
     expect(container.firstElementChild?.className).toContain('text-ui-md');
+    expect(screen.getByRole('status')).toHaveAttribute('data-state-surface-tone', 'empty');
     expect(screen.getByText('Nothing to review').className).toContain('text-ui-md');
     expect(screen.getByText('No due cards.').className).toContain('text-ui-base');
   });
@@ -57,6 +74,8 @@ describe('AppErrorState', () => {
     render(<AppErrorState description="Try again." title="Sync failed" />);
 
     expect(screen.getByText('Sync failed').className).toContain('text-ui-md');
+    expect(screen.getByText('Sync failed').className).toContain('text-error');
     expect(screen.getByText('Try again.').className).toContain('text-ui-base');
+    expect(screen.getByRole('alert')).toHaveAttribute('data-state-surface-tone', 'error');
   });
 });

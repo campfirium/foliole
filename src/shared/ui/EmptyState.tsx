@@ -3,20 +3,36 @@ import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 
 interface EmptyStateProps {
+  action?: ReactNode;
   className?: string;
   title: string;
   description: string;
 }
 
-interface ErrorStateProps extends EmptyStateProps {
-  action?: ReactNode;
-}
+type ErrorStateProps = EmptyStateProps;
 
 interface LoadingStateProps {
   className?: string;
+  description?: string;
+  label?: string;
+  title?: string;
+}
+
+type StateSurfaceTone = 'empty' | 'error' | 'loading';
+
+interface StateSurfaceProps {
+  action?: ReactNode;
+  ariaBusy?: 'true';
+  ariaLabel?: string;
+  className?: string;
+  description?: string;
+  role: 'alert' | 'status';
+  title?: string;
+  tone: StateSurfaceTone;
 }
 
 type AppSpinnerSize = 'sm' | 'md' | 'lg';
+type AppSpinnerTone = 'accent' | 'danger' | 'neutral';
 
 const SPINNER_SIZE_CLASS_NAMES: Record<AppSpinnerSize, string> = {
   lg: 'h-10 w-10',
@@ -24,51 +40,69 @@ const SPINNER_SIZE_CLASS_NAMES: Record<AppSpinnerSize, string> = {
   sm: 'h-4 w-4'
 };
 
+const SPINNER_TONE_CLASS_NAMES: Record<AppSpinnerTone, string> = {
+  accent: 'border-t-[rgb(var(--app-accent-color-rgb))]',
+  danger: 'border-t-error',
+  neutral: 'border-t-foreground/55'
+};
+
+const STATE_SURFACE_TONE_CLASS_NAMES: Record<StateSurfaceTone, string> = {
+  empty: 'text-foreground/60',
+  error: 'text-foreground/65',
+  loading: 'text-foreground/60'
+};
+
 export function AppSpinner({
   className,
   decorative = false,
   label,
-  size = 'md'
+  size = 'md',
+  tone = 'neutral'
 }: {
   className?: string;
   decorative?: boolean;
   label?: string;
   size?: AppSpinnerSize;
+  tone?: AppSpinnerTone;
 }) {
   return (
     <div
       aria-hidden={decorative ? 'true' : undefined}
       aria-label={!decorative ? label : undefined}
-      className={cn(SPINNER_SIZE_CLASS_NAMES[size], 'animate-spin rounded-full border-2 border-border border-t-foreground/55', className)}
+      className={cn(SPINNER_SIZE_CLASS_NAMES[size], 'animate-spin rounded-full border-2 border-border', SPINNER_TONE_CLASS_NAMES[tone], className)}
     />
   );
 }
 
-export function AppEmptyState({ title, description, className }: EmptyStateProps) {
+function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, role, title, tone }: StateSurfaceProps) {
   return (
-    <div className={cn('flex min-h-[120px] flex-col items-center justify-center gap-2 text-center text-ui-md text-foreground/60', className)} role="status">
-      <p className="m-0 text-ui-md font-semibold text-foreground">{title}</p>
-      <p className="m-0 text-ui-base">{description}</p>
-    </div>
-  );
-}
-
-export function AppLoadingState({ className }: LoadingStateProps) {
-  return (
-    <div aria-busy="true" className={cn('flex min-h-[120px] items-center justify-center text-foreground/60', className)} role="status">
-      <AppSpinner decorative />
-    </div>
-  );
-}
-
-export function AppErrorState({ title, description, action, className }: ErrorStateProps) {
-  return (
-    <div className={cn('flex min-h-[120px] flex-col items-center justify-center gap-3 text-center text-ui-md text-foreground/65', className)} role="alert">
-      <div className="flex flex-col items-center gap-2">
-        <p className="m-0 text-ui-md font-semibold text-foreground">{title}</p>
-        <p className="m-0 text-ui-base">{description}</p>
-      </div>
+    <div
+      aria-busy={ariaBusy}
+      aria-label={ariaLabel}
+      className={cn('flex min-h-[120px] flex-col items-center justify-center gap-3 text-center text-ui-md', STATE_SURFACE_TONE_CLASS_NAMES[tone], className)}
+      data-state-surface-tone={tone}
+      role={role}
+    >
+      {tone === 'loading' ? <AppSpinner decorative tone="accent" /> : null}
+      {title || description ? (
+        <div className="flex flex-col items-center gap-2">
+          {title ? <p className={cn('m-0 text-ui-md font-semibold', tone === 'error' ? 'text-error' : 'text-foreground')}>{title}</p> : null}
+          {description ? <p className="m-0 text-ui-base">{description}</p> : null}
+        </div>
+      ) : null}
       {action ? <div className="flex items-center justify-center">{action}</div> : null}
     </div>
   );
+}
+
+export function AppEmptyState({ title, description, action, className }: EmptyStateProps) {
+  return <AppStateSurface action={action} className={className} description={description} role="status" title={title} tone="empty" />;
+}
+
+export function AppLoadingState({ className, description, label, title }: LoadingStateProps) {
+  return <AppStateSurface ariaBusy="true" ariaLabel={label} className={className} description={description} role="status" title={title} tone="loading" />;
+}
+
+export function AppErrorState({ title, description, action, className }: ErrorStateProps) {
+  return <AppStateSurface action={action} className={className} description={description} role="alert" title={title} tone="error" />;
 }
