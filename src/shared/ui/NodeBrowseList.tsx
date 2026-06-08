@@ -56,7 +56,7 @@ export function NodeBrowseList(props: {
             onClick={() => props.onSelectNode(item.nodeId)}
             type="button"
           >
-            <h2 className={`text-[18px] font-semibold leading-7 text-foreground ${item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{item.title}</h2>
+            <h2 className={`text-ui-xl font-semibold leading-7 text-foreground ${item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{item.title}</h2>
             {bodyStatusLabel ? (
               <p className="mt-1 text-xs font-medium leading-5 text-companion-text-secondary">{bodyStatusLabel}</p>
             ) : null}

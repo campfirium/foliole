@@ -138,6 +138,7 @@ export default {
         control: 'var(--shadow-control)',
         page: 'var(--shadow-page)',
         marker: 'var(--shadow-marker)',
+        'inspector-section': 'var(--shadow-inspector-section)',
         'picker-thumb-ring': 'var(--shadow-picker-thumb-ring)',
         'picker-thumb-ring-strong': 'var(--shadow-picker-thumb-ring-strong)',
         debug: 'var(--shadow-debug)'

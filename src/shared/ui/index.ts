@@ -74,6 +74,7 @@ export {
   appFloatingMetaBadgeClassName,
   appFloatingOverlayClassName,
   appFloatingSectionHeaderClassName,
+  appFloatingStateSurfaceClassName,
   appFloatingSurfaceClassName
 } from './FloatingSurface';
 

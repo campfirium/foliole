@@ -64,10 +64,27 @@ describe('AppEmptyState', () => {
 
     expect(container.firstElementChild?.className).toContain('text-ui-md');
     expect(container.firstElementChild?.className).toContain('min-h-state-surface');
+    expect(screen.getByRole('status')).toHaveAttribute('data-state-surface-scope', 'document');
     expect(screen.getByRole('status')).toHaveAttribute('data-state-surface-tone', 'empty');
     expect(screen.getByText('Nothing to review').className).toContain('text-ui-md');
     expect(screen.getByText('No due cards.').className).toContain('text-ui-base');
   });
+});
+
+it('separates document, panel, and floating state surface scope', () => {
+  render(
+    <>
+      <AppEmptyState description="No note." title="Empty document" />
+      <AppLoadingState label="Panel loading" surface="panel" />
+      <AppErrorState description="Try again." surface="floating" title="Command failed" />
+    </>
+  );
+
+  expect(screen.getByText('Empty document').closest('[data-state-surface-scope]')).toHaveAttribute('data-state-surface-scope', 'document');
+  expect(screen.getByRole('status', { name: 'Panel loading' })).toHaveAttribute('data-state-surface-scope', 'panel');
+  expect(screen.getByRole('status', { name: 'Panel loading' }).className).toContain('px-settings-panel-x');
+  expect(screen.getByText('Command failed').closest('[data-state-surface-scope]')).toHaveAttribute('data-state-surface-scope', 'floating');
+  expect(screen.getByText('Command failed').closest('[data-state-surface-scope]')?.className).not.toContain('min-h-state-surface');
 });
 
 describe('AppErrorState', () => {

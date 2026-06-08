@@ -20,6 +20,7 @@ const floatingItemBaseClassName = [
 const floatingSectionHeaderBaseClassName =
   'px-3 pb-1 pt-3 text-ui-xs font-semibold uppercase tracking-[0.08em] text-foreground/50';
 const floatingEmptyStateBaseClassName = 'px-3 py-8 text-center text-ui-md text-foreground/60';
+const floatingStateSurfaceBaseClassName = 'px-3 py-8 text-center text-ui-md text-foreground/60';
 const floatingMetaBadgeBaseClassName = [
   'truncate rounded-full border border-[var(--app-floating-border-color)] bg-[var(--app-floating-muted-bg)]',
   'px-2 py-0.5 text-ui-xs font-medium text-foreground/65'
@@ -56,6 +57,10 @@ export function appFloatingSectionHeaderClassName(className?: string) {
 
 export function appFloatingEmptyStateClassName(className?: string) {
   return cn(floatingEmptyStateBaseClassName, className);
+}
+
+export function appFloatingStateSurfaceClassName(className?: string) {
+  return cn(floatingStateSurfaceBaseClassName, className);
 }
 
 export function appFloatingMetaBadgeClassName(className?: string) {

@@ -1,10 +1,16 @@
 import { render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it } from 'vitest';
+
+import { preloadTranslationCatalog } from '../localization/translations';
 
 import { InspectorSection } from './InspectorSection';
 import { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
 import { ReviewActionBar } from './ReviewActionBar';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('en');
+});
 
 it('renders inspector section with shared header and body copy', () => {
   render(

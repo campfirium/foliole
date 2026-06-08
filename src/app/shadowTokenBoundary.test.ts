@@ -7,6 +7,7 @@ const PRODUCT_SOURCE_ROOT = 'src';
 const DEFAULT_SHADOW_CLASS_PATTERN = /\bshadow-(?:sm|md|lg|xl|2xl)\b/;
 const REQUIRED_SHADOW_ALIASES = [
   'control',
+  'inspector-section',
   'page',
   'marker',
   'picker-thumb-ring',

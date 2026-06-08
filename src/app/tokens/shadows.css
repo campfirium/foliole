@@ -3,6 +3,7 @@
   --shadow-panel: 0 10px 24px rgb(15 17 19 / 0.08);
   --shadow-settings: 0 18px 42px rgb(15 17 19 / 0.08), 0 2px 6px rgb(15 17 19 / 0.03);
   --shadow-control: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-inspector-section: 0 1px 0 var(--app-inspector-section-shadow-color);
   --shadow-page: 0 1px 2px rgb(0 0 0 / 0.05);
   --shadow-marker: 0 1px 2px rgb(0 0 0 / 0.05);
   --shadow-picker-thumb-ring: 0 0 0 1px rgb(var(--color-foreground) / 0.34);
@@ -15,6 +16,7 @@
   --shadow-panel: 0 14px 30px rgb(0 0 0 / 0.34);
   --shadow-settings: 0 20px 46px rgb(0 0 0 / 0.36), 0 2px 8px rgb(0 0 0 / 0.24);
   --shadow-control: 0 1px 2px rgb(0 0 0 / 0.28);
+  --shadow-inspector-section: 0 1px 0 var(--app-inspector-section-shadow-color);
   --shadow-page: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-marker: 0 1px 2px rgb(0 0 0 / 0.32);
   --shadow-debug: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.42);

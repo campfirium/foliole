@@ -5,6 +5,7 @@ import { cn } from '@/shared/lib/utils';
 interface EmptyStateProps {
   action?: ReactNode;
   className?: string;
+  surface?: StateSurfaceScope;
   title: string;
   description: string;
 }
@@ -15,10 +16,12 @@ interface LoadingStateProps {
   className?: string;
   description?: string;
   label?: string;
+  surface?: StateSurfaceScope;
   title?: string;
 }
 
 type StateSurfaceTone = 'empty' | 'error' | 'loading';
+type StateSurfaceScope = 'document' | 'floating' | 'panel';
 
 interface StateSurfaceProps {
   action?: ReactNode;
@@ -27,6 +30,7 @@ interface StateSurfaceProps {
   className?: string;
   description?: string;
   role: 'alert' | 'status';
+  surface: StateSurfaceScope;
   title?: string;
   tone: StateSurfaceTone;
 }
@@ -52,6 +56,12 @@ const STATE_SURFACE_TONE_CLASS_NAMES: Record<StateSurfaceTone, string> = {
   loading: 'text-foreground/60'
 };
 
+const STATE_SURFACE_SCOPE_CLASS_NAMES: Record<StateSurfaceScope, string> = {
+  document: 'min-h-state-surface px-6 py-10',
+  floating: 'px-3 py-8',
+  panel: 'min-h-state-surface px-settings-panel-x py-settings-panel-y'
+};
+
 export function AppSpinner({
   className,
   decorative = false,
@@ -74,12 +84,13 @@ export function AppSpinner({
   );
 }
 
-function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, role, title, tone }: StateSurfaceProps) {
+function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, role, surface, title, tone }: StateSurfaceProps) {
   return (
     <div
       aria-busy={ariaBusy}
       aria-label={ariaLabel}
-      className={cn('flex min-h-state-surface flex-col items-center justify-center gap-3 text-center text-ui-md', STATE_SURFACE_TONE_CLASS_NAMES[tone], className)}
+      className={cn('flex flex-col items-center justify-center gap-3 text-center text-ui-md', STATE_SURFACE_SCOPE_CLASS_NAMES[surface], STATE_SURFACE_TONE_CLASS_NAMES[tone], className)}
+      data-state-surface-scope={surface}
       data-state-surface-tone={tone}
       role={role}
     >
@@ -95,14 +106,14 @@ function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, 
   );
 }
 
-export function AppEmptyState({ title, description, action, className }: EmptyStateProps) {
-  return <AppStateSurface action={action} className={className} description={description} role="status" title={title} tone="empty" />;
+export function AppEmptyState({ title, description, action, className, surface = 'document' }: EmptyStateProps) {
+  return <AppStateSurface action={action} className={className} description={description} role="status" surface={surface} title={title} tone="empty" />;
 }
 
-export function AppLoadingState({ className, description, label, title }: LoadingStateProps) {
-  return <AppStateSurface ariaBusy="true" ariaLabel={label} className={className} description={description} role="status" title={title} tone="loading" />;
+export function AppLoadingState({ className, description, label, surface = 'document', title }: LoadingStateProps) {
+  return <AppStateSurface ariaBusy="true" ariaLabel={label} className={className} description={description} role="status" surface={surface} title={title} tone="loading" />;
 }
 
-export function AppErrorState({ title, description, action, className }: ErrorStateProps) {
-  return <AppStateSurface action={action} className={className} description={description} role="alert" title={title} tone="error" />;
+export function AppErrorState({ title, description, action, className, surface = 'document' }: ErrorStateProps) {
+  return <AppStateSurface action={action} className={className} description={description} role="alert" surface={surface} title={title} tone="error" />;
 }

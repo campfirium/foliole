@@ -46,6 +46,7 @@ function SettingsStateSurface({
     <div
       className={cn('flex min-h-settings-row flex-col justify-center gap-2 px-settings-panel-x py-settings-panel-y text-ui-md text-foreground/65', className)}
       data-settings-state-surface
+      data-state-surface-scope="settings"
       data-state-surface-tone={tone}
       {...rest}
     >
@@ -76,6 +77,7 @@ export function SettingsLoadingState({ className, description, title }: Settings
       aria-busy="true"
       className={cn('flex min-h-settings-row items-center justify-center px-settings-panel-x py-settings-panel-y text-foreground/65', className)}
       data-settings-state-surface
+      data-state-surface-scope="settings"
       data-state-surface-tone="loading"
       role="status"
     >
