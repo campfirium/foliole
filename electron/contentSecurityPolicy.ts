@@ -5,6 +5,7 @@ import { REMOTE_IMAGE_PROTOCOL_SCHEME } from '../lib/platform/remoteImageProtoco
 const CSP_HEADER = 'Content-Security-Policy';
 const REMOTE_IMAGE_PROTOCOL_SOURCE = `${REMOTE_IMAGE_PROTOCOL_SCHEME}:`;
 const UPDATE_MANIFEST_ORIGIN = 'https://campfirium.github.io';
+const FEEDBACK_ENDPOINT_ORIGIN = 'https://feedback.foliole.app';
 const MAIN_WINDOW_CSP = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -14,7 +15,7 @@ const MAIN_WINDOW_CSP = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: file: foliole-asset: ${REMOTE_IMAGE_PROTOCOL_SOURCE}`,
   "font-src 'self' data:",
-  `connect-src 'self' foliole-asset: ${UPDATE_MANIFEST_ORIGIN}`,
+  `connect-src 'self' foliole-asset: ${UPDATE_MANIFEST_ORIGIN} ${FEEDBACK_ENDPOINT_ORIGIN}`,
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
   "media-src 'self' data: blob: file: foliole-asset:"
@@ -37,8 +38,8 @@ const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
     "font-src 'self' data: http://localhost:* http://127.0.0.1:*"
   )
   .replace(
-    `connect-src 'self' foliole-asset: ${UPDATE_MANIFEST_ORIGIN}`,
-    `connect-src 'self' foliole-asset: ${UPDATE_MANIFEST_ORIGIN} http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*`
+    `connect-src 'self' foliole-asset: ${UPDATE_MANIFEST_ORIGIN} ${FEEDBACK_ENDPOINT_ORIGIN}`,
+    `connect-src 'self' foliole-asset: ${UPDATE_MANIFEST_ORIGIN} ${FEEDBACK_ENDPOINT_ORIGIN} http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*`
   );
 
 const installedSessions = new WeakSet<Session>();
