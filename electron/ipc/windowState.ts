@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron';
 
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import { normalizeWindowBoundsToDip } from '../windowBoundsDpi.js';
 import { logWindowStateLifecycleEvent } from '../windowStateDiagnostics.js';
 
 const WINDOW_STATE_KEY = 'window_state';
@@ -59,8 +60,9 @@ export async function loadWindowState(): Promise<PersistedWindowState | null> {
 }
 
 function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {
-  const bounds =
+  const runtimeBounds =
     window.isMaximized() || window.isFullScreen() ? window.getNormalBounds() : window.getBounds();
+  const bounds = normalizeWindowBoundsToDip(window, runtimeBounds);
   return {
     x: bounds.x,
     y: bounds.y,

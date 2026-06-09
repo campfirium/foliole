@@ -5,6 +5,7 @@ import type { BrowserWindow } from 'electron';
 
 import { resolveWindowsDiagnosticLogPath } from './diagnostics/windowsDiagnosticPaths.js';
 import type { PersistedWindowState } from './ipc/windowState.js';
+import { normalizeWindowBoundsToDip } from './windowBoundsDpi.js';
 
 const LOG_FILE_NAME = 'window-state-lifecycle.ndjson';
 
@@ -34,13 +35,20 @@ function collectRuntimeState(window: BrowserWindow): WindowRuntimeStateSnapshot 
   };
 
   return {
-    bounds: tryBounds(window.getBounds?.bind(window)),
+    bounds: normalizeOptionalBounds(window, tryBounds(window.getBounds?.bind(window))),
     isFocused: tryBoolean(window.isFocused?.bind(window)),
     isFullScreen: tryBoolean(window.isFullScreen?.bind(window)),
     isMaximized: tryBoolean(window.isMaximized?.bind(window)),
     isMinimized: tryBoolean(window.isMinimized?.bind(window)),
-    normalBounds: tryBounds(window.getNormalBounds?.bind(window))
+    normalBounds: normalizeOptionalBounds(window, tryBounds(window.getNormalBounds?.bind(window)))
   };
+}
+
+function normalizeOptionalBounds(
+  window: BrowserWindow,
+  bounds: ReturnType<BrowserWindow['getBounds']> | null
+) {
+  return bounds ? normalizeWindowBoundsToDip(window, bounds) : null;
 }
 
 export function logWindowStateLifecycleEvent(

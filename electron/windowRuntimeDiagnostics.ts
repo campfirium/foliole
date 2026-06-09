@@ -7,6 +7,7 @@ import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnos
 import { resolveWindowsDiagnosticLogPath } from './diagnostics/windowsDiagnosticPaths.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { startStartupWindowFrameCapture } from './startupWindowFrameCapture.js';
+import { normalizeWindowBoundsToDip } from './windowBoundsDpi.js';
 
 const LOG_FILE_NAME = 'renderer-state.ndjson';
 const startupPresentationByWindow = new WeakMap<BrowserWindow, StartupWindowPresentation>();
@@ -123,7 +124,7 @@ export async function presentInitialRendererWindow(window: BrowserWindow) {
     window.show();
   }
   await appendBootEvent('window_visible', {
-    bounds: window.getBounds(),
+    bounds: normalizeWindowBoundsToDip(window, window.getBounds()),
     isVisible: window.isVisible()
   });
   startStartupWindowFrameCapture(window);
