@@ -17,10 +17,11 @@ export function useReviewModeStartupSessionRestore(args: {
       restoredEntryRef.current = false;
       return;
     }
-    if (!restoredEntryRef.current) {
-      restoredEntryRef.current = true;
-      args.onReviewSessionStarted();
+    if (restoredEntryRef.current) {
+      return;
     }
+    restoredEntryRef.current = true;
+    args.onReviewSessionStarted();
     const isCurrentReviewItemActive = Boolean(
       args.reviewCurrentNodeId &&
         args.activeNodeId === args.reviewCurrentNodeId

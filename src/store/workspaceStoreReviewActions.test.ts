@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { syncNodeContentToRuntime, syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createClozeReviewNode,
@@ -129,6 +130,53 @@ it('persists runtime sync and advances review state in one grading action', asyn
   expect(grade).toHaveBeenCalledTimes(1);
   expectReviewRuntimeSyncCalled();
   expectReviewQueueAdvanced(harness.getState());
+});
+
+it('undoes and redoes fsrs grading with the review session position', async () => {
+  const due = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
+  );
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
+    grade: createSchedulerGradeMock(),
+    preview: previewStub
+  });
+  const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+
+  actions.startReviewSession(due);
+  actions.revealReviewAnswer();
+  await expect(actions.gradeReviewCard(3, due)).resolves.toBe(true);
+
+  expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({ title: 'Grade Review' });
+  expect(historyActions.undoWorkspaceAction('2026-03-04T00:00:00.000Z')).toBe(true);
+  expect(harness.getState().activeNodeId).toBe('qa-1');
+  expect(harness.getState().reviewSession).toMatchObject({
+    currentNodeId: 'qa-1',
+    isAnswerRevealed: true,
+    queueNodeIds: ['qa-1', 'qa-2']
+  });
+  expect(harness.getState().nodesById['qa-1']?.review).toMatchObject({
+    due,
+    lastReviewAt: null,
+    reps: 0,
+    state: 0
+  });
+  expect(syncNodeContentToRuntime).toHaveBeenLastCalledWith(
+    expect.objectContaining({ id: 'qa-1', review: expect.objectContaining({ reps: 0 }) })
+  );
+
+  expect(historyActions.redoWorkspaceAction('2026-03-05T00:00:00.000Z')).toBe(true);
+  expect(harness.getState().activeNodeId).toBe('qa-2');
+  expect(harness.getState().reviewSession).toMatchObject({
+    currentNodeId: 'qa-2',
+    isAnswerRevealed: false,
+    queueNodeIds: ['qa-2']
+  });
+  expect(harness.getState().nodesById['qa-1']?.review).toMatchObject({
+    lastReviewAt: due,
+    reps: 1,
+    state: 1
+  });
 });
 
 it('keeps current review card when runtime sync fails', async () => {

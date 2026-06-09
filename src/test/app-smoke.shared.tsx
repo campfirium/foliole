@@ -110,6 +110,7 @@ vi.mock('../app/components/ReadwiseBookActionsPanel', () => ({
 }));
 
 vi.mock('../app/components/WorkspaceSettingsOverlay', () => ({
+  prewarmWorkspaceSettingsOverlay: vi.fn(() => Promise.resolve()),
   selectWorkspaceSettingsOverlayProps: (props: {
     isSettingsOpen: boolean;
     onCloseSettings: () => void;

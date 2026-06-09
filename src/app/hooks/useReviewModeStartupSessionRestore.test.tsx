@@ -72,4 +72,5 @@ it('does not repeat the review surface startup action while restored Flow stays 
   view.rerender({ ...props, activeNodeId: 'review-2' });
 
   expect(props.onReviewSessionStarted).toHaveBeenCalledTimes(1);
+  expect(props.resumeReviewSession).not.toHaveBeenCalled();
 });

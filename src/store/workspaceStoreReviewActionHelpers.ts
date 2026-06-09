@@ -6,6 +6,7 @@ import {
   pushWorkspaceUndoEntry,
   type WorkspaceTopicReadingActionTitle
 } from './workspaceActionHistory';
+import { createReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { advanceReviewSession, completeReviewSession } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
@@ -62,6 +63,29 @@ export function applyGradedReviewState(args: {
     const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
     return {
       activeNodeId: nextNodeId ?? continueNodeId ?? state.activeNodeId,
+      appActionHistory: pushWorkspaceUndoEntry(
+        state.appActionHistory,
+        createReviewGradeHistoryEntry({
+          afterReview: args.nodePatch.review,
+          afterReviewSession: nextNodeId
+            ? advanceReviewSession(args.snapshot.reviewSession, {
+                handledAt: args.now,
+                nextNodeId,
+                queueNodeIds: nextQueue.taskNodeIds,
+                reviewElapsedMsDelta,
+                reviewedItemDelta
+              })
+            : completeReviewSession(args.snapshot.reviewSession, {
+                completedAt: args.now,
+                continueNodeId,
+                reviewElapsedMsDelta,
+                reviewedItemDelta
+              }),
+          beforeReview: args.snapshot.nodesById[args.currentNodeId]!.review!,
+          beforeReviewSession: args.snapshot.reviewSession,
+          nodeId: args.currentNodeId
+        })
+      ),
       nodesById: nextNodesById,
       reviewSession: nextNodeId
         ? advanceReviewSession(args.snapshot.reviewSession, {
