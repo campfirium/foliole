@@ -16,6 +16,7 @@ export interface CodeMirrorEditorAdapterOptions {
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   hideTitleHeading?: boolean;
   initialContent: string;
+  localDocumentPath?: string | null;
   onChange?: (content: string, meta?: EditorContentChangeMeta) => void;
   onDocumentInput?: (meta: EditorDocumentChangeMeta) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
@@ -37,6 +38,7 @@ export function createLiveMarkdownReconfigureEffect(args: {
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
+  localDocumentPath?: string | null;
   nodeId: string | null;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
@@ -49,6 +51,7 @@ export function createLiveMarkdownReconfigureEffect(args: {
       textAnchorDecorations: args.textAnchorDecorations,
       hideTitleHeading: args.hideTitleHeading,
       imageClozePresentationVersion: args.imageClozePresentationVersion,
+      localDocumentPath: args.localDocumentPath ?? null,
       nodeId: args.nodeId,
       onMissingAttachmentResource: args.onMissingAttachmentResource ?? null,
       onOpenExternalLink: args.onOpenExternalLink ?? null,
@@ -84,6 +87,7 @@ export function dispatchLiveMarkdownReconfigure(args: {
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
+  localDocumentPath?: string | null;
   nodeId: string | null;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
@@ -98,6 +102,7 @@ export function dispatchLiveMarkdownReconfigure(args: {
       textAnchorDecorations: args.textAnchorDecorations,
       hideTitleHeading: args.hideTitleHeading,
       imageClozePresentationVersion: args.imageClozePresentationVersion,
+      localDocumentPath: args.localDocumentPath ?? null,
       nodeId: args.nodeId,
       onMissingAttachmentResource: args.onMissingAttachmentResource ?? null,
       onOpenExternalLink: args.onOpenExternalLink ?? null,

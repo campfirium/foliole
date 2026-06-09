@@ -67,6 +67,7 @@ function createEditorViewRuntime(
     hideTitleHeading: args.hideTitleHeading,
     host: args.host,
     imageClozePresentationVersion: args.imageClozePresentationVersion,
+    localDocumentPath: args.options.localDocumentPath ?? null,
     liveMarkdownCompartment: args.liveMarkdownCompartment,
     liveMarkdownStateCompartment: args.liveMarkdownStateCompartment,
     nodeId: args.getNodeId(),

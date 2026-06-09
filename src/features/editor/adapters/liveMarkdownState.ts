@@ -19,6 +19,10 @@ export const activeNodeIdFacet = Facet.define<string | null, string | null>({
   combine: (values) => values[0] ?? null
 });
 
+export const localDocumentPathFacet = Facet.define<string | null, string | null>({
+  combine: (values) => values[0] ?? null
+});
+
 export const imageClozePresentationVersionFacet = Facet.define<number, number>({
   combine: (values) => values[0] ?? 0
 });
@@ -70,6 +74,7 @@ export function createLiveMarkdownStateExtensions(args: {
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
+  localDocumentPath?: string | null;
   nodeId: string | null;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
@@ -80,6 +85,7 @@ export function createLiveMarkdownStateExtensions(args: {
   return [
     hideTitleHeadingFacet.of(args.hideTitleHeading),
     activeNodeIdFacet.of(args.nodeId),
+    localDocumentPathFacet.of(args.localDocumentPath ?? null),
     imageClozePresentationVersionFacet.of(args.imageClozePresentationVersion),
     missingAttachmentResourceFacet.of(args.onMissingAttachmentResource ?? null),
     textAnchorDecorationsFacet.of(args.textAnchorDecorations),

@@ -10,6 +10,7 @@ export function createMarkdownEditorAdapter(args: {
   hideTitleHeading: boolean;
   host: HTMLDivElement;
   initialContent: string;
+  localDocumentPath?: string | null;
   onChange: MarkdownEditorProps['onChange'];
   onDocumentInput: MarkdownEditorProps['onDocumentInput'];
   onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'];
@@ -24,6 +25,7 @@ export function createMarkdownEditorAdapter(args: {
   return new CodeMirrorEditorAdapter(args.host, {
     hideTitleHeading: args.hideTitleHeading,
     initialContent: args.initialContent,
+    localDocumentPath: args.localDocumentPath ?? null,
     onChange: args.onChange,
     ...(args.onDocumentInput ? { onDocumentInput: args.onDocumentInput } : {}),
     ...(args.onMissingAttachmentResource ? { onMissingAttachmentResource: args.onMissingAttachmentResource } : {}),

@@ -11,6 +11,7 @@ import {
   activeNodeIdFacet,
   hideTitleHeadingFacet,
   imageClozePresentationVersionFacet,
+  localDocumentPathFacet,
   missingAttachmentResourceFacet,
   textAnchorDecorationsFacet
 } from './liveMarkdownState';
@@ -36,6 +37,7 @@ function buildLineDecorations(view: EditorView, parsedPreviewMarkdown: PreviewMa
     editedMathRange: getEditedMathRange(view.state),
     hideTitleHeading: view.state.facet(hideTitleHeadingFacet),
     imageClozePresentationVersion: view.state.facet(imageClozePresentationVersionFacet),
+    localDocumentPath: view.state.facet(localDocumentPathFacet),
     markdownSyntaxVisible: getMarkdownSyntaxVisibility() === 'visible',
     onMissingAttachmentResource: view.state.facet(missingAttachmentResourceFacet),
     nodeId: view.state.facet(activeNodeIdFacet)
@@ -67,6 +69,8 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
     update(update: ViewUpdate) {
       const nodeIdChanged =
         update.startState.facet(activeNodeIdFacet) !== update.state.facet(activeNodeIdFacet);
+      const localDocumentPathChanged =
+        update.startState.facet(localDocumentPathFacet) !== update.state.facet(localDocumentPathFacet);
       const imageClozePresentationChanged =
         update.startState.facet(imageClozePresentationVersionFacet) !==
         update.state.facet(imageClozePresentationVersionFacet);
@@ -81,6 +85,7 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
       if (
         shouldRefreshLineDecorations(update, this.cursorLineNumber, nextCursorLineNumber) ||
         nodeIdChanged ||
+        localDocumentPathChanged ||
         imageClozePresentationChanged ||
         textAnchorDecorationsChanged ||
         editedMathRangeChanged

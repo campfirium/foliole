@@ -38,6 +38,7 @@ export function createCodeMirrorEditorExtensions(args: {
   textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
+  localDocumentPath?: string | null;
   liveMarkdownCompartment: import('@codemirror/state').Compartment;
   liveMarkdownStateCompartment: import('@codemirror/state').Compartment;
   nodeId: string | null;
@@ -69,6 +70,7 @@ export function createCodeMirrorEditorExtensions(args: {
         textAnchorDecorations: args.textAnchorDecorations,
         hideTitleHeading: args.hideTitleHeading,
         imageClozePresentationVersion: args.imageClozePresentationVersion,
+        localDocumentPath: args.options.localDocumentPath ?? null,
         nodeId: args.nodeId,
         onMissingAttachmentResource: args.options.onMissingAttachmentResource ?? null,
         onOpenExternalLink: args.options.onOpenExternalLink ?? null,
@@ -92,6 +94,7 @@ export function createLiveMarkdownEffect(args: {
   textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
+  localDocumentPath?: string | null;
   nodeId: string | null;
   onMissingAttachmentResource?: import('./EditorAdapter').EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;

@@ -13,6 +13,7 @@ export function createCodeMirrorEditorView(args: {
   hideTitleHeading: boolean;
   host: HTMLElement;
   imageClozePresentationVersion: number;
+  localDocumentPath?: string | null;
   liveMarkdownCompartment: Compartment;
   liveMarkdownStateCompartment: Compartment;
   nodeId: string | null;
@@ -33,6 +34,7 @@ export function createCodeMirrorEditorView(args: {
         textAnchorDecorations: args.textAnchorDecorations,
         hideTitleHeading: args.hideTitleHeading,
         imageClozePresentationVersion: args.imageClozePresentationVersion,
+        localDocumentPath: args.options.localDocumentPath ?? null,
         liveMarkdownCompartment: args.liveMarkdownCompartment,
         liveMarkdownStateCompartment: args.liveMarkdownStateCompartment,
         nodeId: args.nodeId,

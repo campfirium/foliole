@@ -9,6 +9,7 @@ import type { EditorMissingAttachmentResourceHandler, EditorTextAnchorDecoration
 export function reconfigureCodeMirrorLiveMarkdown(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
+  localDocumentPath?: string | null;
   liveMarkdownStateCompartment: import('@codemirror/state').Compartment;
   nodeId: string | null;
   onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null;

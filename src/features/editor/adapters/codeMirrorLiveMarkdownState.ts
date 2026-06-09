@@ -12,6 +12,7 @@ export function applyLiveMarkdownState(args: {
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
+  localDocumentPath?: string | null;
   nodeId: string | null;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
@@ -25,6 +26,7 @@ export function applyLiveMarkdownState(args: {
     textAnchorDecorations: args.textAnchorDecorations,
     hideTitleHeading: args.hideTitleHeading,
     imageClozePresentationVersion: args.imageClozePresentationVersion,
+    localDocumentPath: args.localDocumentPath ?? null,
     nodeId: args.nodeId,
     onMissingAttachmentResource: args.onMissingAttachmentResource ?? null,
     onOpenExternalLink: args.onOpenExternalLink ?? null,

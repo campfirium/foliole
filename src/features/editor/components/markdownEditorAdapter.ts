@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, type MutableRefObject } from 'react';
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/diagnostics/debugTrace';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
-import { EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS, type EditorAdapter } from '../adapters/EditorAdapter';
+import { EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS, type EditorAdapter, type EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import { createMarkdownEditorAdapter } from './markdownEditorAdapterFactory';
@@ -14,9 +14,31 @@ function resolveTextAnchorDecorations(textAnchorDecorations: MarkdownEditorProps
   return textAnchorDecorations ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
 }
 
+function syncEditorAdapterInputRefs(
+  refs: ReturnType<typeof useEditorAdapterInputs>,
+  args: Parameters<typeof useEditorAdapterInputs>[0],
+  resolvedTextAnchorDecorations: readonly EditorTextAnchorDecoration[]
+) {
+  refs.onChangeRef.current = args.onChange;
+  refs.onDocumentInputRef.current = args.onDocumentInput;
+  refs.onMissingAttachmentResourceRef.current = args.onMissingAttachmentResource;
+  refs.initialValueRef.current = args.initialValue;
+  refs.localDocumentPathRef.current = args.localDocumentPath ?? null;
+  refs.onOpenExternalLinkRef.current = args.onOpenExternalLink;
+  refs.onOpenNodeLinkRef.current = args.onOpenNodeLink;
+  refs.onPreviewNodeLinkRef.current = args.onPreviewNodeLink;
+  refs.onPastedAnchorsRef.current = args.onPastedAnchors;
+  refs.onReadyRef.current = args.onReady;
+  refs.hideTitleHeadingRef.current = args.hideTitleHeading;
+  refs.readOnlyRef.current = args.readOnly;
+  refs.trailingDividerRef.current = args.trailingDivider;
+  refs.textAnchorDecorationsRef.current = resolvedTextAnchorDecorations;
+}
+
 function useEditorAdapterInputs(args: {
   hideTitleHeading: boolean;
   initialValue: string;
+  localDocumentPath?: string | null;
   onChange: MarkdownEditorProps['onChange'];
   onDocumentInput: MarkdownEditorProps['onDocumentInput'];
   onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'];
@@ -30,6 +52,7 @@ function useEditorAdapterInputs(args: {
   trailingDivider: boolean | undefined;
 }) {
   const initialValueRef = useRef(args.initialValue);
+  const localDocumentPathRef = useRef(args.localDocumentPath ?? null);
   const onChangeRef = useRef(args.onChange);
   const onDocumentInputRef = useRef(args.onDocumentInput);
   const onMissingAttachmentResourceRef = useRef(args.onMissingAttachmentResource);
@@ -44,23 +67,10 @@ function useEditorAdapterInputs(args: {
   const resolvedTextAnchorDecorations = resolveTextAnchorDecorations(args.textAnchorDecorations);
   const textAnchorDecorationsRef = useRef(resolvedTextAnchorDecorations);
 
-  onChangeRef.current = args.onChange;
-  onDocumentInputRef.current = args.onDocumentInput;
-  onMissingAttachmentResourceRef.current = args.onMissingAttachmentResource;
-  initialValueRef.current = args.initialValue;
-  onOpenExternalLinkRef.current = args.onOpenExternalLink;
-  onOpenNodeLinkRef.current = args.onOpenNodeLink;
-  onPreviewNodeLinkRef.current = args.onPreviewNodeLink;
-  onPastedAnchorsRef.current = args.onPastedAnchors;
-  onReadyRef.current = args.onReady;
-  hideTitleHeadingRef.current = args.hideTitleHeading;
-  readOnlyRef.current = args.readOnly;
-  trailingDividerRef.current = args.trailingDivider;
-  textAnchorDecorationsRef.current = resolvedTextAnchorDecorations;
-
-  return {
+  const refs = {
     hideTitleHeadingRef,
     initialValueRef,
+    localDocumentPathRef,
     onChangeRef,
     onDocumentInputRef,
     onMissingAttachmentResourceRef,
@@ -74,6 +84,8 @@ function useEditorAdapterInputs(args: {
     textAnchorDecorationsRef,
     trailingDividerRef
   };
+  syncEditorAdapterInputRefs(refs, args, resolvedTextAnchorDecorations);
+  return refs;
 }
 
 function useEditorAdapterLifecycle(args: {
@@ -94,6 +106,7 @@ function useEditorAdapterLifecycle(args: {
       hideTitleHeading: inputs.hideTitleHeadingRef.current,
       host,
       initialContent: inputs.initialValueRef.current,
+      localDocumentPath: inputs.localDocumentPathRef.current,
       onChange: (nextValue, meta) => inputs.onChangeRef.current(nextValue, meta),
       onDocumentInput: (meta) => inputs.onDocumentInputRef.current?.(meta),
       onMissingAttachmentResource: (attachmentId) => inputs.onMissingAttachmentResourceRef.current?.(attachmentId),
@@ -129,6 +142,7 @@ export function useEditorAdapter(
   onDocumentInput: MarkdownEditorProps['onDocumentInput'],
   onReady: ((adapter: EditorAdapter | null) => void) | undefined,
   initialValue: string,
+  localDocumentPath: string | null | undefined,
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'],
   hideTitleHeading: boolean,
   onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'],
@@ -143,6 +157,7 @@ export function useEditorAdapter(
   const inputs = useEditorAdapterInputs({
     hideTitleHeading,
     initialValue,
+    localDocumentPath: localDocumentPath ?? null,
     onChange,
     onDocumentInput,
     onMissingAttachmentResource,
@@ -159,6 +174,10 @@ export function useEditorAdapter(
   useEditorAdapterLifecycle({ adapterRef, debugId, hostRef, inputs });
 
   useTextAnchorPresentationSync(adapterRef, inputs.resolvedTextAnchorDecorations, initialValue);
+
+  useLayoutEffect(() => {
+    adapterRef.current?.setLocalDocumentPath?.(localDocumentPath ?? null);
+  }, [localDocumentPath]);
 
   useLayoutEffect(() => {
     adapterRef.current?.setReadOnly?.(readOnly === true);

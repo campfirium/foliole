@@ -29,6 +29,7 @@ function resolveCurrentImageMatchFromDom(dom: HTMLElement | null, imageMatch: Ma
 class MarkdownImageWidget extends WidgetType {
   readonly editorNodeId: string | null;
   readonly imageMatch: MarkdownImageMatch;
+  readonly localDocumentPath: string | null;
   readonly onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null;
   readonly presentationVersion: number;
 
@@ -36,11 +37,13 @@ class MarkdownImageWidget extends WidgetType {
     imageMatch: MarkdownImageMatch,
     editorNodeId: string | null,
     presentationVersion: number,
-    onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null
+    onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null,
+    localDocumentPath: string | null
   ) {
     super();
     this.editorNodeId = editorNodeId;
     this.imageMatch = imageMatch;
+    this.localDocumentPath = localDocumentPath;
     this.onMissingAttachmentResource = onMissingAttachmentResource;
     this.presentationVersion = presentationVersion;
   }
@@ -53,6 +56,7 @@ class MarkdownImageWidget extends WidgetType {
       this.imageMatch.attachmentId === other.imageMatch.attachmentId &&
       this.imageMatch.from === other.imageMatch.from &&
       this.imageMatch.linkHref === other.imageMatch.linkHref &&
+      this.localDocumentPath === other.localDocumentPath &&
       this.imageMatch.source === other.imageMatch.source &&
       this.imageMatch.to === other.imageMatch.to
     );
@@ -70,7 +74,8 @@ class MarkdownImageWidget extends WidgetType {
       this.onMissingAttachmentResource,
       () => view.requestMeasure(),
       () => removeMarkdownImage(view, resolveCurrentImageMatchFromDom(widgetDom, this.imageMatch)),
-      this.presentationVersion
+      this.presentationVersion,
+      this.localDocumentPath
     );
     return widgetDom;
   }
@@ -112,14 +117,15 @@ export function addImageDecorations(
   preserveSource = false,
   editorNodeId: string | null = null,
   presentationVersion = 0,
-  onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null = null
+  onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null = null,
+  localDocumentPath: string | null = null
 ) {
   for (const imageMatch of imageMatches) {
     if (preserveSource) {
       ranges.push(
         Decoration.widget({
           side: 1,
-          widget: new MarkdownImageWidget(imageMatch, editorNodeId, presentationVersion, onMissingAttachmentResource)
+          widget: new MarkdownImageWidget(imageMatch, editorNodeId, presentationVersion, onMissingAttachmentResource, localDocumentPath)
         }).range(imageMatch.to)
       );
       continue;
@@ -127,7 +133,7 @@ export function addImageDecorations(
 
     ranges.push(
       Decoration.replace({
-        widget: new MarkdownImageWidget(imageMatch, editorNodeId, presentationVersion, onMissingAttachmentResource),
+        widget: new MarkdownImageWidget(imageMatch, editorNodeId, presentationVersion, onMissingAttachmentResource, localDocumentPath),
         inclusive: false
       }).range(
         imageMatch.from,

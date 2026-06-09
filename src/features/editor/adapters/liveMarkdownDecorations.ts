@@ -57,6 +57,7 @@ interface DecorationBuildContext {
   editedMathRange: EditedMathRange | null;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
+  localDocumentPath: string | null;
   markdownSyntaxVisible: boolean;
   nodeId: string | null;
   onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null;
@@ -113,7 +114,9 @@ function collectPreviewDecorationData(view: EditorView, parsed: PreviewMarkdownP
   const { markdownTree, source } = parsed;
   const codeFenceProjection = collectCodeFenceProjection(view);
   const linkReferences = collectMarkdownLinkReferencesFromTree(markdownTree, source);
-  const documentImageMatches = collectImageMatches(0, source, linkReferences);
+  const documentImageMatches = collectImageMatches(0, source, linkReferences, {
+    allowRelativeImages: Boolean(context.localDocumentPath)
+  });
   const linkReferenceRangeByLineFrom = collectLinkReferenceRangeByLineFrom(view);
   const viewportTablePlans = collectViewportTablePlans({
     endLine: viewport.endLine,
@@ -148,6 +151,7 @@ function collectPreviewDecorationData(view: EditorView, parsed: PreviewMarkdownP
       linkReferenceLineFroms: new Set(linkReferenceRangeByLineFrom.keys()),
       lines: collectViewportLines(view, viewport.startLineNumber, viewport.endLineNumber),
       linkReferences,
+      localDocumentPath: context.localDocumentPath,
       markdownSyntaxVisible: context.markdownSyntaxVisible,
       documentImageMatches,
       startInCodeBlock: false,

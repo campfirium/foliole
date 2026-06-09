@@ -19,6 +19,7 @@ const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
 const IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL = 'foliole:native-keyboard-input';
 const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
 const IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL = 'foliole:external-document-file-opened';
+const IPC_LOCAL_FILE_OPENED_CHANNEL = 'foliole:local-file-opened';
 
 function isDesktopDebugProbeEnabled() {
   return process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE === '1' || Boolean(process.env.ELECTRON_RENDERER_URL);
@@ -50,7 +51,8 @@ function subscribe(channel, handler) {
     channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL &&
     channel !== IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL &&
     channel !== IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL &&
-    channel !== IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL
+    channel !== IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL &&
+    channel !== IPC_LOCAL_FILE_OPENED_CHANNEL
   ) {
     return () => undefined;
   }
@@ -86,6 +88,12 @@ function subscribe(channel, handler) {
       handler({
         absolutePath: typeof payload?.absolutePath === 'string' ? payload.absolutePath : '',
         folderId: typeof payload?.folderId === 'string' ? payload.folderId : ''
+      });
+      return;
+    }
+    if (channel === IPC_LOCAL_FILE_OPENED_CHANNEL) {
+      handler({
+        absolutePath: typeof payload?.absolutePath === 'string' ? payload.absolutePath : ''
       });
       return;
     }
@@ -185,6 +193,7 @@ const electronApi = {
   onWorkspaceSyncApplied: (handler) => subscribe(IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, handler),
   onCompanionPairingRequestsChanged: (handler) => subscribe(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, handler),
   onExternalDocumentFileOpened: (handler) => subscribe(IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, handler),
+  onLocalFileOpened: (handler) => subscribe(IPC_LOCAL_FILE_OPENED_CHANNEL, handler),
   onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler),
   runtimeConfig: {
     guidedSampleLocale: resolveGuidedSampleLocaleOverride()

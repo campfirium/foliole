@@ -57,6 +57,25 @@ describe('markdownImageMatches', () => {
       }
     ]);
   });
+
+});
+
+describe('markdownImageMatches local document images', () => {
+  it('collects relative image sources only when a local document context opts in', () => {
+    const markdown = '![Cover](images/cover.png)';
+
+    expect(collectImageMatches(0, markdown)).toEqual([]);
+    expect(collectImageMatches(0, markdown, new Map(), { allowRelativeImages: true })).toEqual([
+      {
+        attachmentId: null,
+        alt: 'Cover',
+        display: 'block',
+        from: 0,
+        source: 'images/cover.png',
+        to: markdown.length
+      }
+    ]);
+  });
 });
 
 describe('markdownImageMatches data url safety', () => {

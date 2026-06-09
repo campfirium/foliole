@@ -21,6 +21,7 @@ import {
   setMarkdownImageWidgetDomIdentity,
   updateMarkdownImageWidgetDomRange
 } from './liveMarkdownImageWidgetDom';
+import { resolveLocalDocumentImageSource } from './liveMarkdownLocalDocumentImages';
 import { createRemoteImageFailureStatus } from './liveMarkdownRemoteImageFailure';
 import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
 
@@ -172,9 +173,11 @@ export function createMarkdownImageWidgetDom(
   onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null = null,
   requestMeasure: RequestEditorMeasure = null,
   onRemoveImage: (() => void) | null = null,
-  presentationVersion = 0
+  presentationVersion = 0,
+  localDocumentPath: string | null = null
 ) {
   const renderPlan = buildMarkdownImageRenderPlan(imageMatch);
+  const localDocumentImageSrc = resolveLocalDocumentImageSource(imageMatch, localDocumentPath);
   const wrapper = document.createElement('span');
   wrapper.className = imageMatch.display === 'block' ? 'cm-md-image-widget cm-md-image-widget-block' : 'cm-md-image-widget cm-md-image-widget-inline';
   setMarkdownImageWidgetDomIdentity(wrapper, imageMatch, editorNodeId, presentationVersion);
@@ -192,8 +195,8 @@ export function createMarkdownImageWidgetDom(
     return wrapper;
   }
 
-  if (renderPlan.browserImageSrc) {
-    wrapper.append(createImageSurface(imageMatch, renderPlan.browserImageSrc, editorNodeId, { requestMeasure }));
+  if (renderPlan.browserImageSrc || localDocumentImageSrc) {
+    wrapper.append(createImageSurface(imageMatch, renderPlan.browserImageSrc ?? localDocumentImageSrc!, editorNodeId, { requestMeasure }));
     return wrapper;
   }
 

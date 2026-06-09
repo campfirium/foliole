@@ -34,6 +34,7 @@ export function collectPreviewViewportPlans(args: {
   linkReferenceLineFroms?: ReadonlySet<number>;
   lines: ReadonlyArray<ViewportLineInput>;
   linkReferences?: MarkdownLinkReferenceMap;
+  localDocumentPath?: string | null;
   markdownSyntaxVisible: boolean;
   documentImageMatches?: ReadonlyArray<MarkdownImageMatch>;
   startInCodeBlock: boolean;
@@ -55,6 +56,7 @@ export function collectPreviewViewportPlans(args: {
       lineNumber: line.lineNumber,
       lineText: line.text,
       ...(args.linkReferences ? { linkReferences: args.linkReferences } : {}),
+      localDocumentPath: args.localDocumentPath ?? null,
       markdownSyntaxVisible: args.markdownSyntaxVisible,
       ...(args.thematicBreakLineFroms ? { thematicBreakLineFroms: args.thematicBreakLineFroms } : {})
     });

@@ -29,6 +29,7 @@ interface PreviewDecorationContext {
   cursorLineNumber: number | null;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
+  localDocumentPath: string | null;
   markdownSyntaxVisible: boolean;
   mermaidLineFroms?: ReadonlySet<number>;
   nodeId: string | null;
@@ -58,7 +59,8 @@ function addPreviewImageDecorations(
     false,
     context.nodeId,
     context.imageClozePresentationVersion,
-    context.onMissingAttachmentResource
+    context.onMissingAttachmentResource,
+    context.localDocumentPath
   );
 }
 

@@ -1,8 +1,7 @@
-import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
-import { EXT_DOC_IMAGE_PROTOCOL_SCHEME } from '../../../../lib/platform/extDocImageProtocolUrl';
-import { isSafeMarkdownDataImageUrl } from '../../../../lib/platform/markdownImageDataUrl';
+import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { isBrowserImageSource, isInternalImageSource, isRelativeImageSource } from './markdownImageSourceKinds';
 import { resolveMarkdownImageWrappingLink } from './markdownImageWrappingLink';
 import { collectMarkdownInlineRanges } from './markdownInlineProjection';
 import {
@@ -31,25 +30,6 @@ interface ParserImageMatch {
   linkHref?: string;
   rawTarget: string;
   start: number;
-}
-
-function isBrowserImageSource(value: string) {
-  try {
-    const parsed = new URL(value);
-    return (
-      isSafeMarkdownDataImageUrl(value) ||
-      parsed.protocol === 'file:' ||
-      parsed.protocol === `${EXT_DOC_IMAGE_PROTOCOL_SCHEME}:` ||
-      parsed.protocol === 'http:' ||
-      parsed.protocol === 'https:'
-    );
-  } catch {
-    return false;
-  }
-}
-
-function isInternalImageSource(value: string) {
-  return value.startsWith(ASSET_MARKDOWN_SCHEME);
 }
 
 function resolveImageDisplay(text: string, matchIndex: number, raw: string) {
@@ -208,12 +188,20 @@ function collectParserImageMatches(text: string, references: MarkdownLinkReferen
   return [...matches, ...collectBracketedAltImageMatches(text)].sort((left, right) => left.start - right.start);
 }
 
-export function collectImageMatches(from: number, text: string, references: MarkdownLinkReferenceMap = new Map()): MarkdownImageMatch[] {
+export function collectImageMatches(
+  from: number,
+  text: string,
+  references: MarkdownLinkReferenceMap = new Map(),
+  options: { allowRelativeImages?: boolean } = {}
+): MarkdownImageMatch[] {
   const matches: MarkdownImageMatch[] = [];
 
   for (const match of collectParserImageMatches(text, references)) {
     const source = match.rawTarget;
-    if (source && (isBrowserImageSource(source) || isInternalImageSource(source))) {
+    if (
+      source &&
+      (isBrowserImageSource(source) || isInternalImageSource(source) || (options.allowRelativeImages && isRelativeImageSource(source)))
+    ) {
       const start = from + match.start;
       matches.push({
         attachmentId: isInternalImageSource(source) ? parseAssetMarkdownUrl(source) : null,

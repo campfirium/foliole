@@ -55,6 +55,7 @@ interface PreviewLineDecorationPlanArgs {
   lineText: string;
   linkReferenceLineFroms?: ReadonlySet<number>;
   linkReferences?: MarkdownLinkReferenceMap;
+  localDocumentPath?: string | null;
   markdownSyntaxVisible: boolean;
   thematicBreakLineFroms?: ReadonlySet<number>;
 }
@@ -142,7 +143,9 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
     lineNumber: args.lineNumber,
     showSyntaxOnLine
   });
-  const imageMatches = collectImageMatches(args.lineFrom, args.lineText, linkReferences);
+  const imageMatches = collectImageMatches(args.lineFrom, args.lineText, linkReferences, {
+    allowRelativeImages: Boolean(args.localDocumentPath)
+  });
   const {
     autolinkMatches,
     clozePlaceholderRanges,

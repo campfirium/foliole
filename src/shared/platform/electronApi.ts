@@ -61,6 +61,10 @@ export interface ExternalDocumentFileOpenedPayload {
   folderId: string;
 }
 
+export interface LocalFileOpenedPayload {
+  absolutePath: string;
+}
+
 export interface GlobalCaptureNavigatePayload {
   nodeId: string;
 }
@@ -84,6 +88,7 @@ export interface ElectronAPI {
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;
   onExternalDocumentFileOpened?: (handler: (payload: ExternalDocumentFileOpenedPayload) => void) => () => void;
+  onLocalFileOpened?: (handler: (payload: LocalFileOpenedPayload) => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;
   runtimeConfig?: ElectronRuntimeConfig;
   setNativeHotkeyRecordingActive?: (active: boolean) => void;

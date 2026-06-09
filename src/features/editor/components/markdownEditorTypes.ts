@@ -37,6 +37,7 @@ export interface MarkdownEditorProps {
   trailingDivider?: boolean;
   immersiveEditing?: boolean;
   lineDiffDecorations?: EditorDiffDecorations | null;
+  localDocumentPath?: string | null;
   nodeId: string | null;
   readingRestoreCommandId?: string | null;
   readingRestoreScrollTop?: number;

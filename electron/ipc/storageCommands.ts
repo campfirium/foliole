@@ -14,6 +14,7 @@ import { toNativeReadwiseBooksInventory } from './readwiseBooksInventoryPayload.
 import { loadRemovedSources } from './removedSourcesPayload.js';
 import { handleStorageAttachmentCommand } from './storageAttachmentCommands.js';
 import { handleSqliteMaintenanceCommand } from './storageCommandSupport.js';
+import { handleLocalFileStorageCommand } from './storageLocalFileCommands.js';
 import { handleNodeMutationCommand } from './storageNodeMutationCommands.js';
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
 import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
@@ -48,6 +49,10 @@ export async function handleStorageCommand(
   const storageReadResult = await handleStorageReadCommand(command, args);
   if (storageReadResult !== undefined) {
     return storageReadResult;
+  }
+  const localFileResult = await handleLocalFileStorageCommand(command, args);
+  if (localFileResult !== undefined) {
+    return localFileResult;
   }
   const importMutationResult = await handleImportMutationCommand(command, args, window);
   if (importMutationResult !== undefined) {

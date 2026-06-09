@@ -51,3 +51,16 @@ it('forwards sanitized external document file open events through preload', () =
     folderId: 'opened-external-documents'
   });
 });
+
+it('forwards sanitized local file open events through preload', () => {
+  const { exposeInMainWorld, ipcOn } = executePreload();
+  const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+  const handler = vi.fn();
+
+  electronApi.onLocalFileOpened(handler);
+  const listener = ipcOn.mock.calls.find((call) => call[0] === 'foliole:local-file-opened')?.[1];
+  listener({}, { absolutePath: '/notes/recent.md' });
+
+  expect(ipcOn).toHaveBeenCalledWith('foliole:local-file-opened', expect.any(Function));
+  expect(handler).toHaveBeenCalledWith({ absolutePath: '/notes/recent.md' });
+});

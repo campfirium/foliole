@@ -169,6 +169,30 @@ describe('live markdown image rendering basics', () => {
 
     expect(requestMeasure).toHaveBeenCalledTimes(1);
   });
+
+});
+
+describe('live markdown local document image rendering', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('projects local document relative images into browser src without changing markdown source', () => {
+    const imageMatch = {
+      alt: 'Cover',
+      attachmentId: null,
+      display: 'block' as const,
+      from: 0,
+      source: 'images/cover.png',
+      to: '![Cover](images/cover.png)'.length
+    };
+    const widget = createMarkdownImageWidgetDom(imageMatch, null, null, null, null, 0, '/vault/topic.md');
+    const image = widget.querySelector('.cm-md-image-element');
+
+    expect(image?.getAttribute('src')).toContain('foliole-ext-image://resource/');
+    expect(image?.getAttribute('src')).toContain('imageDestination=images%2Fcover.png');
+    expect(imageMatch.source).toBe('images/cover.png');
+  });
 });
 
 describe('live markdown image rendering interactions', () => {

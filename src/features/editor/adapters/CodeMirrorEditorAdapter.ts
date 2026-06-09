@@ -54,6 +54,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private imageClozePresentationVersion = 0;
   private liveMarkdownCompartment = new Compartment();
   private liveMarkdownStateCompartment = new Compartment();
+  private localDocumentPath: string | null = null;
   private nodeId: string | null = null;
   private onChange: ((content: string, meta?: { nodeId: string | null }) => void) | undefined;
   private onMissingAttachmentResource: NonNullable<CodeMirrorEditorAdapterOptions['onMissingAttachmentResource']> | null = null;
@@ -74,6 +75,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
 
   constructor(private readonly host: HTMLElement, options: CodeMirrorEditorAdapterOptions) {
     this.hideTitleHeading = options.hideTitleHeading === true;
+    this.localDocumentPath = options.localDocumentPath ?? null;
     this.textAnchorDecorations = options.textAnchorDecorations ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
     this.onChange = options.onChange;
     this.onMissingAttachmentResource = options.onMissingAttachmentResource ?? null;
@@ -149,6 +151,13 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.reconfigureLiveMarkdown();
     this.remoteImageLocalization.schedule();
   }
+  setLocalDocumentPath(localDocumentPath: string | null) {
+    if (this.localDocumentPath === localDocumentPath) {
+      return;
+    }
+    this.localDocumentPath = localDocumentPath;
+    this.reconfigureLiveMarkdown();
+  }
   refreshImageClozePresentation() {
     this.imageClozePresentationVersion += 1;
     this.reconfigureLiveMarkdown();
@@ -218,5 +227,5 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     };
   }
   onScroll(listener: Parameters<typeof subscribeToEditorScroll>[1]) { return subscribeToEditorScroll(this.view, listener); }
-  private reconfigureLiveMarkdown() { reconfigureCodeMirrorLiveMarkdown({ liveMarkdownStateCompartment: this.liveMarkdownStateCompartment, textAnchorDecorations: this.textAnchorDecorations, hideTitleHeading: this.hideTitleHeading, imageClozePresentationVersion: this.imageClozePresentationVersion, nodeId: this.nodeId, onMissingAttachmentResource: this.onMissingAttachmentResource, onOpenExternalLink: this.onOpenExternalLink, onOpenNodeLink: this.onOpenNodeLink, onPreviewNodeLink: this.onPreviewNodeLink, onPastedAnchors: this.onPastedAnchors, view: this.view }); }
+  private reconfigureLiveMarkdown() { reconfigureCodeMirrorLiveMarkdown({ liveMarkdownStateCompartment: this.liveMarkdownStateCompartment, textAnchorDecorations: this.textAnchorDecorations, hideTitleHeading: this.hideTitleHeading, imageClozePresentationVersion: this.imageClozePresentationVersion, localDocumentPath: this.localDocumentPath, nodeId: this.nodeId, onMissingAttachmentResource: this.onMissingAttachmentResource, onOpenExternalLink: this.onOpenExternalLink, onOpenNodeLink: this.onOpenNodeLink, onPreviewNodeLink: this.onPreviewNodeLink, onPastedAnchors: this.onPastedAnchors, view: this.view }); }
 }

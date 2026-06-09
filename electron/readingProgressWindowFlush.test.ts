@@ -40,7 +40,7 @@ it('executes the renderer close flush when available', async () => {
 
   await expect(flushWindowReadingProgress(window as never)).resolves.toBe(true);
   expect(window.webContents.executeJavaScript).toHaveBeenCalledWith(
-    'Promise.all([globalThis.__folioleFlushReadingProgressBeforeClose?.() ?? true, globalThis.__folioleFlushPendingEditorDraftBeforeClose?.() ?? true]).then((results) => results.every(Boolean))',
+    'Promise.all([globalThis.__folioleFlushReadingProgressBeforeClose?.() ?? true, globalThis.__folioleFlushPendingEditorDraftBeforeClose?.() ?? true, globalThis.__folioleFlushLocalFileBeforeClose?.() ?? true]).then((results) => results.every(Boolean))',
     true
   );
 });
@@ -55,6 +55,20 @@ it('flushes once before allowing the window to close', async () => {
   expect(closeEvent.preventDefault).toHaveBeenCalledTimes(1);
   expect(window.webContents.executeJavaScript).toHaveBeenCalledTimes(1);
   expect(window.close).toHaveBeenCalledTimes(1);
+});
+
+it('continues closing when renderer close flush times out', async () => {
+  vi.useFakeTimers();
+  const window = createWindowMock();
+  window.webContents.executeJavaScript.mockReturnValue(new Promise(() => undefined));
+  bindWindowReadingProgressFlush(window as never);
+
+  const closeEvent = window.triggerClose();
+  await vi.advanceTimersByTimeAsync(800);
+
+  expect(closeEvent.preventDefault).toHaveBeenCalledTimes(1);
+  expect(window.close).toHaveBeenCalledTimes(1);
+  vi.useRealTimers();
 });
 
 it('skips the flush after the window has already been approved to close', () => {
