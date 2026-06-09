@@ -263,6 +263,6 @@ it('imports every selected file and returns the last import result', async () =>
   });
 
   expect(runPreparedImport).toHaveBeenCalledTimes(2);
-  expect(notifyManagedInboxUpdated).toHaveBeenNthCalledWith(1, 'import-1');
-  expect(notifyManagedInboxUpdated).toHaveBeenNthCalledWith(2, 'import-2');
+  expect(notifyManagedInboxUpdated).toHaveBeenCalledTimes(1);
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toBe('import-2');
 });

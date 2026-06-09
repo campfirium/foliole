@@ -106,5 +106,5 @@ it('notifies the renderer and keeps the existing node unchanged when an existing
   expect(importCountAfter.count).toBe(importCountBefore.count);
   expect(keepItem.has_source_update).toBe(1);
   expect(notifyManagedInboxUpdated).toHaveBeenCalledTimes(1);
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('keep-update-draft-import-source-1-Sample Article.md');
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toBe('keep-update-draft-import-source-1-Sample Article.md');
 });

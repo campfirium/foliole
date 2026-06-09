@@ -8,6 +8,7 @@ import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { requestEpubImportReleaseMode } from './epubImportReleaseModeDialogStore';
+import { applyImportWorkspacePatch } from './formalImportWorkspacePatch';
 
 export interface FormalImportFileFlowOptions {
   onImportStarted?: () => void;
@@ -17,7 +18,9 @@ async function applyPostImportEpubReadingMode(file: RuntimeImportedTextFile, res
   if (!result.nodeId || result.resultStatus === 'failed') {
     return;
   }
-  await refreshWorkspaceState('formal-import');
+  if (!applyImportWorkspacePatch(result.importId, result.nodeMutationPatch)) {
+    await refreshWorkspaceState('formal-import');
+  }
   const mode = await requestEpubImportReleaseMode(file);
   if (!mode) {
     return;

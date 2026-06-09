@@ -1,3 +1,6 @@
+import { isNodeMutationPatchResult } from './workspaceRuntimeMutationResults';
+import type { WorkspaceNodeMutationPatchResult } from './workspaceRuntimeTypes';
+
 export interface RuntimeImportedTextFile {
   fileName: string;
   filePath: string;
@@ -13,6 +16,7 @@ export interface RuntimeTextImportResult {
   importId: string;
   importedAt: string;
   nodeId: string | null;
+  nodeMutationPatch?: WorkspaceNodeMutationPatchResult | null;
   provider: 'desktop_text_file';
   resultStatus: 'imported' | 'degraded' | 'failed';
   sourceFingerprint: string;
@@ -33,6 +37,7 @@ export interface RuntimeDirectoryImportResult {
   entries: RuntimeDirectoryImportEntry[];
   failedCount: number;
   importedCount: number;
+  nodeMutationPatch?: WorkspaceNodeMutationPatchResult | null;
   rootPath: string;
   sourceAdapter: 'external_directory' | 'foliole_managed_inbox_folder';
 }
@@ -118,6 +123,7 @@ export function toRuntimeTextImportResult(value: unknown): RuntimeTextImportResu
     importId: payload.import_id,
     importedAt: payload.imported_at,
     nodeId: payload.node_id,
+    nodeMutationPatch: isNodeMutationPatchResult(payload.node_mutation_patch) ? payload.node_mutation_patch : null,
     provider: payload.provider,
     resultStatus: payload.result_status,
     sourceFingerprint: payload.source_fingerprint,
@@ -167,6 +173,7 @@ export function toRuntimeDirectoryImportResult(value: unknown): RuntimeDirectory
     entries: entries.filter((entry): entry is RuntimeDirectoryImportEntry => Boolean(entry)),
     failedCount: payload.failed_count,
     importedCount: payload.imported_count,
+    nodeMutationPatch: isNodeMutationPatchResult(payload.node_mutation_patch) ? payload.node_mutation_patch : null,
     rootPath: payload.root_path,
     sourceAdapter: payload.source_adapter
   };

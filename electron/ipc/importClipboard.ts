@@ -12,6 +12,7 @@ import type { NativeTextImportArgs, NativeTextImportResult } from '../../lib/pla
 import { importImageAttachmentBytes, normalizeImageFileName } from '../attachments/importImageAttachmentBytes.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
+import { buildImportNodeMutationPatch, withTextImportNodeMutationPatch } from '../import/importNodeMutationPatch.js';
 import {
   createLocalImageInboxMarkdown,
   createUnsupportedLocalImageMessage,
@@ -72,14 +73,15 @@ async function runLocalImageFileImport(filePath: string, args?: NativeTextImport
 
 async function runClipboardFileImport(filePaths: string[], args?: NativeTextImportArgs) {
   let lastResult: NativeTextImportResult | null = null;
+  const results: NativeTextImportResult[] = [];
   for (const filePath of filePaths) {
     if (canImportTextFilePath(filePath)) {
       lastResult = await runImportForFilePath(filePath, args);
     } else {
       lastResult = await runLocalImageFileImport(filePath, args);
     }
-    if (lastResult?.import_id) {
-      notifyManagedInboxUpdated(lastResult.import_id);
+    if (lastResult) {
+      results.push(lastResult);
     }
   }
   if (!lastResult) {
@@ -87,7 +89,10 @@ async function runClipboardFileImport(filePaths: string[], args?: NativeTextImpo
       'Clipboard file format is not supported. Supported formats: PDF, EPUB, Markdown, HTML, text, png, jpg, jpeg, webp, and gif.'
     );
   }
-  return lastResult;
+  const nodeMutationPatch = buildImportNodeMutationPatch(results);
+  const patchedResult = nodeMutationPatch ? { ...lastResult, node_mutation_patch: nodeMutationPatch } : lastResult;
+  notifyManagedInboxUpdated(patchedResult.import_id, patchedResult.node_mutation_patch);
+  return patchedResult;
 }
 
 function updateImportedNodeContent(nodeId: string, content: string, nodeTitle: string, importedAt: string) {
@@ -150,8 +155,9 @@ async function runClipboardImageImport(args?: NativeTextImportArgs) {
       updateImportedNodeContent(result.node_id, `[${attachmentResult.message}]`, 'Pasted image', importedAt);
     }
   }
-  notifyManagedInboxUpdated(result.import_id);
-  return result;
+  const patchedResult = withTextImportNodeMutationPatch(result);
+  notifyManagedInboxUpdated(patchedResult.import_id, patchedResult.node_mutation_patch);
+  return patchedResult;
 }
 
 function createClipboardTextPreparedRecord(input: {
@@ -208,17 +214,15 @@ function runClipboardTextImport(args?: NativeTextImportArgs) {
       })
     )
   );
-  notifyManagedInboxUpdated(result.import_id);
-  return result;
+  const patchedResult = withTextImportNodeMutationPatch(result);
+  notifyManagedInboxUpdated(patchedResult.import_id, patchedResult.node_mutation_patch);
+  return patchedResult;
 }
 
 export async function runClipboardImport(args?: NativeTextImportArgs) {
   const filePaths = await collectClipboardFilePaths();
   if (filePaths.length > 0) {
-    const result = await runClipboardFileImport(filePaths, args);
-    if (result) {
-      return result;
-    }
+    return runClipboardFileImport(filePaths, args);
   }
   const imageResult = await runClipboardImageImport(args);
   if (imageResult) {

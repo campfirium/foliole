@@ -161,7 +161,7 @@ it('imports markdown and HTML directories through the shared normalization and p
       source_adapter: 'external_directory'
     })
   );
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.any(String));
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toEqual(expect.any(String));
 });
 
 it('classifies vault markdown as obsidian imports and skips the .obsidian control directory', async () => {
@@ -204,5 +204,5 @@ it('classifies vault markdown as obsidian imports and skips the .obsidian contro
       source_adapter: 'external_directory'
     })
   );
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.any(String));
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toEqual(expect.any(String));
 });

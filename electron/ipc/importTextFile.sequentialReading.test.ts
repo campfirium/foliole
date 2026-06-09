@@ -76,5 +76,5 @@ it('imports the selected EPUB path with the requested release mode without reope
     expect.any(String),
     { sequentialReadingMode: 'sequential' }
   );
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('import-epub');
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toBe('import-epub');
 });

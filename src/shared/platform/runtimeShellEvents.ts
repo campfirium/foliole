@@ -1,11 +1,13 @@
 import {
   getElectronAPI,
+  type ManagedInboxUpdatedPayload,
   type ReadwiseReaderImportProgressPayload,
   type GlobalCaptureNavigatePayload,
   type WorkspaceContentChangedPayload,
   type WorkspaceSyncAppliedPayload
 } from './electronApi';
 import { isDesktopRuntime } from './runtime';
+import { isNodeMutationPatchResult } from './workspaceRuntimeMutationResults';
 
 export type ManagedInboxUpdateUnlisten = (() => void) | null;
 export type GlobalCaptureNavigateUnlisten = (() => void) | null;
@@ -22,17 +24,22 @@ function getElectronBridge() {
 }
 
 export async function onManagedInboxUpdated(
-  handler: (importId: string) => void
+  handler: (payload: ManagedInboxUpdatedPayload) => void
 ): Promise<ManagedInboxUpdateUnlisten> {
   const bridge = getElectronBridge();
   if (!bridge) {
     return null;
   }
-  return bridge.onManagedInboxUpdated((importId) => {
+  return bridge.onManagedInboxUpdated((payload) => {
+    const importId = typeof payload === 'string' ? payload : payload?.importId ?? '';
     if (!importId.trim()) {
       return;
     }
-    handler(importId);
+    const nodeMutationPatch =
+      typeof payload === 'object' && isNodeMutationPatchResult(payload.nodeMutationPatch)
+        ? payload.nodeMutationPatch
+        : null;
+    handler({ importId, nodeMutationPatch });
   });
 }
 

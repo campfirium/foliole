@@ -65,7 +65,7 @@ it('imports plain clipboard text with a readable content source name', async () 
     sourceKind: 'text',
     sourceName: 'Clipboard topic Body'
   }));
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('import-1');
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toBe('import-1');
 });
 
 it('imports plain clipboard text containing malformed URI escapes instead of failing path detection', async () => {

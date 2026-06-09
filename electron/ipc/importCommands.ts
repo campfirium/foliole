@@ -52,16 +52,17 @@ function notifyIfReadwiseReaderImportChanged(result: Awaited<ReturnType<typeof r
 }
 
 function notifyIfTextImportChanged(
-  result: Awaited<ReturnType<typeof runTextFileImport>> | Awaited<ReturnType<typeof runImportForFilePath>>
+  result: Awaited<ReturnType<typeof runTextFileImport>> | Awaited<ReturnType<typeof runImportForFilePath>>,
+  originWindow: BrowserWindow | null = null
 ) {
   if (result?.result_status !== 'failed' && result?.node_id) {
-    notifyWorkspaceContentChanged();
+    notifyWorkspaceContentChanged(originWindow);
   }
 }
 
-function notifyIfDirectoryImportChanged(result: Awaited<ReturnType<typeof runDirectoryImport>>) {
+function notifyIfDirectoryImportChanged(result: Awaited<ReturnType<typeof runDirectoryImport>>, originWindow: BrowserWindow | null = null) {
   if (result && result.imported_count > 0) {
-    notifyWorkspaceContentChanged();
+    notifyWorkspaceContentChanged(originWindow);
   }
 }
 
@@ -161,18 +162,21 @@ async function handleTextImportCommand(
   context?: InvokeContext
 ) {
   if (request.command === NATIVE_COMMANDS.runTextFileImport) {
-    const result = await runTextFileImport(resolveTargetWindow(context), args);
-    notifyIfTextImportChanged(result);
+    const originWindow = resolveTargetWindow(context);
+    const result = await runTextFileImport(originWindow, args);
+    notifyIfTextImportChanged(result, originWindow);
     return result;
   }
   if (request.command === NATIVE_COMMANDS.runClipboardImport) {
+    const originWindow = resolveTargetWindow(context);
     const result = await runClipboardImport(args);
-    notifyIfTextImportChanged(result);
+    notifyIfTextImportChanged(result, originWindow);
     return result;
   }
   if (request.command === NATIVE_COMMANDS.runDirectoryImport) {
-    const result = await runDirectoryImport(resolveTargetWindow(context), args);
-    notifyIfDirectoryImportChanged(result);
+    const originWindow = resolveTargetWindow(context);
+    const result = await runDirectoryImport(originWindow, args);
+    notifyIfDirectoryImportChanged(result, originWindow);
     return result;
   }
   if (request.command === NATIVE_COMMANDS.selectImportTextFile) {
@@ -180,7 +184,7 @@ async function handleTextImportCommand(
   }
   if (request.command === NATIVE_COMMANDS.importExternalSearchDocument) {
     const result = await runImportForFilePath(asString(args.absolute_path, 'absolute_path'), args);
-    notifyIfTextImportChanged(result);
+    notifyIfTextImportChanged(result, resolveTargetWindow(context));
     return result;
   }
   return undefined;

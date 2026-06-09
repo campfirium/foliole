@@ -220,9 +220,9 @@ it('subscribes window resize through typed electron bridge', async () => {
 });
 
 it('filters empty managed inbox update events before reaching the handler', async () => {
-  const onManagedInboxUpdatedBridge = vi.fn((handler: (importId: string) => void) => {
+  const onManagedInboxUpdatedBridge = vi.fn((handler: (payload: { importId: string } | string) => void) => {
     handler('');
-    handler('import-42');
+    handler({ importId: 'import-42' });
     return () => undefined;
   });
   window.electronAPI = {
@@ -234,7 +234,7 @@ it('filters empty managed inbox update events before reaching the handler', asyn
   await onManagedInboxUpdated(handler);
 
   expect(handler).toHaveBeenCalledTimes(1);
-  expect(handler).toHaveBeenCalledWith('import-42');
+  expect(handler).toHaveBeenCalledWith({ importId: 'import-42', nodeMutationPatch: null });
 });
 
 it('filters empty workspace sync applied events before reaching the handler', async () => {

@@ -1,6 +1,7 @@
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
 import type { DiagnosticLogPayload } from './runtimeLogging';
+import type { WorkspaceNodeMutationPatchResult } from './workspaceRuntimeTypes';
 
 export interface ElectronDebugMetadata {
   preloadPath: string | null;
@@ -69,12 +70,17 @@ export interface GlobalCaptureNavigatePayload {
   nodeId: string;
 }
 
+export interface ManagedInboxUpdatedPayload {
+  importId: string;
+  nodeMutationPatch?: WorkspaceNodeMutationPatchResult | null;
+}
+
 export interface ElectronAPI {
   debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
   logDiagnosticEvent?: (input: DiagnosticLogPayload) => Promise<void>;
   onGlobalCaptureNavigate?: (handler: (payload: GlobalCaptureNavigatePayload) => void) => () => void;
-  onManagedInboxUpdated: (handler: (importId: string) => void) => () => void;
+  onManagedInboxUpdated: (handler: (payload: ManagedInboxUpdatedPayload | string) => void) => () => void;
   onNativeMenuCommand: (handler: (commandId: string) => void) => () => void;
   onNativeKeyboardInput?: (handler: (payload: NativeKeyboardInputPayload) => void) => () => void;
   onReadwiseBookEpubProgress?: (

@@ -6,7 +6,6 @@ import {
   runRuntimeDirectoryImport
 } from '../../shared/platform/importExecutionRuntimeRepository';
 import { loadRuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
-import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 
 import { runFormalImportFileFlow, type FormalImportFileFlowOptions } from './formalImportFileFlow';
@@ -28,6 +27,12 @@ import {
   buildStatusFromOverview,
   DEFAULT_FORMAL_IMPORT_STATUS
 } from './formalImportStatus';
+import {
+  hasHandledImportWorkspaceChange,
+  markImportWorkspaceChangeHandled,
+  resetAppliedImportWorkspacePatches
+} from './formalImportWorkspacePatch';
+import { useManagedInboxFocusRefresh, useManagedInboxUpdateSubscription } from './useManagedInboxRefresh';
 
 export {
   getFormalImportFailureMessage,
@@ -37,7 +42,10 @@ export {
 let managedInboxRefreshInFlight: Promise<void> | null = null;
 let managedInboxQueuedRefreshImportId: string | null = null;
 
-async function refreshFormalImportOverview(triggerImportId?: string) {
+async function refreshFormalImportOverview(
+  triggerImportId?: string,
+  options: { rehydrateFreshResult?: boolean } = {}
+) {
   const overview = await loadRuntimeImportOverview();
   if (!overview) {
     return;
@@ -47,9 +55,21 @@ async function refreshFormalImportOverview(triggerImportId?: string) {
   const previousImportId = useFormalImportState.getState().lastSeenResultImportId;
   const nextImportId = triggerImportId ?? latestResult?.importId ?? null;
   const hasFreshImport = Boolean(nextImportId && nextImportId !== previousImportId);
-  if (triggerImportId) {
+  const triggeredLatestResult = triggerImportId && latestResult?.importId === triggerImportId ? latestResult : null;
+  if (
+    triggeredLatestResult &&
+    !hasHandledImportWorkspaceChange(triggerImportId) &&
+    shouldRehydrateWorkspace(triggeredLatestResult)
+  ) {
     await refreshWorkspaceState('managed-inbox');
-  } else if (latestResult && hasFreshImport && shouldRehydrateWorkspace(latestResult)) {
+    markImportWorkspaceChangeHandled(triggerImportId);
+  } else if (
+    !triggerImportId &&
+    options.rehydrateFreshResult !== false &&
+    latestResult &&
+    hasFreshImport &&
+    shouldRehydrateWorkspace(latestResult)
+  ) {
     await refreshWorkspaceState('formal-import');
   }
 
@@ -64,6 +84,7 @@ async function refreshFormalImportOverview(triggerImportId?: string) {
 export function resetFormalImportState() {
   managedInboxRefreshInFlight = null;
   managedInboxQueuedRefreshImportId = null;
+  resetAppliedImportWorkspacePatches();
   useFormalImportState.setState({
     hasLoadedOverview: false,
     isImporting: false,
@@ -92,58 +113,15 @@ async function refreshManagedInboxOverview(importId?: string) {
   await managedInboxRefreshInFlight;
 }
 
-function useManagedInboxUpdateSubscription(isAvailable: boolean) {
-  useEffect(() => {
-    if (!isAvailable) {
-      return;
-    }
-    let isDisposed = false;
-    let unlisten: (() => void) | null = null;
-    void onManagedInboxUpdated((importId) => {
-      if (isDisposed) {
-        return;
-      }
-      void refreshManagedInboxOverview(importId);
-    }).then((nextUnlisten) => {
-      if (isDisposed) {
-        nextUnlisten?.();
-        return;
-      }
-      unlisten = nextUnlisten;
-    });
-    return () => {
-      isDisposed = true;
-      unlisten?.();
-    };
-  }, [isAvailable]);
-}
-
-function useManagedInboxFocusRefresh(isAvailable: boolean) {
-  useEffect(() => {
-    if (!isAvailable || typeof window === 'undefined') {
-      return;
-    }
-
-    const handleFocus = () => {
-      void refreshManagedInboxOverview();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [isAvailable]);
-}
-
 function useFormalImportBootstrap(isAvailable: boolean, hasLoadedOverview: boolean) {
   useEffect(() => {
     if (!isAvailable || hasLoadedOverview) {
       return;
     }
-    void refreshFormalImportOverview();
+    void refreshFormalImportOverview(undefined, { rehydrateFreshResult: false });
   }, [hasLoadedOverview, isAvailable]);
-  useManagedInboxUpdateSubscription(isAvailable);
-  useManagedInboxFocusRefresh(isAvailable);
+  useManagedInboxUpdateSubscription(isAvailable, refreshManagedInboxOverview);
+  useManagedInboxFocusRefresh(isAvailable, refreshManagedInboxOverview);
 }
 
 function useFormalImportActions() {
@@ -156,7 +134,7 @@ function useFormalImportActions() {
           detail?.targetParentNodeId ? { targetParentNodeId: detail.targetParentNodeId } : undefined
         ),
         shouldRehydrateWorkspace,
-        refreshFormalImportOverview,
+        () => refreshFormalImportOverview(undefined, { rehydrateFreshResult: false }),
         applyImportResultStatus
       ),
     []
@@ -166,13 +144,18 @@ function useFormalImportActions() {
       runImportFlow(
         () => runFormalImportFileFlow(options),
         shouldRehydrateWorkspace,
-        refreshFormalImportOverview,
+        () => refreshFormalImportOverview(undefined, { rehydrateFreshResult: false }),
         applyImportResultStatus
       ),
     []
   );
   const startImportDirectory = useCallback(
-    () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport, refreshFormalImportOverview),
+    () =>
+      runImportFlow(
+        runRuntimeDirectoryImport,
+        shouldRehydrateDirectoryImport,
+        () => refreshFormalImportOverview(undefined, { rehydrateFreshResult: false })
+      ),
     []
   );
   const resetImportData = useCallback(

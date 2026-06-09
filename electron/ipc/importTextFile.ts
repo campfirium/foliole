@@ -10,6 +10,7 @@ import type {
 } from '../../lib/platform/nativeContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 import { logMainProcessOperationFailure } from '../diagnostics/mainProcessDiagnostics.js';
+import { buildImportNodeMutationPatch, withTextImportNodeMutationPatch } from '../import/importNodeMutationPatch.js';
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 
 import { loadEpubPreview, runEpubImport } from './epubImport.js';
@@ -142,9 +143,9 @@ export async function runTextFileImport(
   args?: NativeTextImportArgs
 ): Promise<NativeTextImportResult | null> {
   if (typeof args?.file_path === 'string' && args.file_path.trim()) {
-    const result = await runImportForFilePath(args.file_path, args);
+    const result = withTextImportNodeMutationPatch(await runImportForFilePath(args.file_path, args));
     if (result?.import_id) {
-      notifyManagedInboxUpdated(result.import_id);
+      notifyManagedInboxUpdated(result.import_id, result.node_mutation_patch);
     }
     return result;
   }
@@ -153,11 +154,18 @@ export async function runTextFileImport(
     return null;
   }
   let lastResult: NativeTextImportResult | null = null;
+  const results: NativeTextImportResult[] = [];
   for (const filePath of filePaths) {
     lastResult = await runImportForFilePath(filePath, args);
-    if (lastResult?.import_id) {
-      notifyManagedInboxUpdated(lastResult.import_id);
+    if (lastResult) {
+      results.push(lastResult);
     }
   }
-  return lastResult;
+  const patchedResult = withTextImportNodeMutationPatch(lastResult);
+  if (patchedResult?.import_id) {
+    const nodeMutationPatch = buildImportNodeMutationPatch(results);
+    notifyManagedInboxUpdated(patchedResult.import_id, nodeMutationPatch);
+    return nodeMutationPatch ? { ...patchedResult, node_mutation_patch: nodeMutationPatch } : patchedResult;
+  }
+  return patchedResult;
 }

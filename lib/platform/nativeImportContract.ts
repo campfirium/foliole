@@ -94,9 +94,7 @@ export interface NativeReadwiseImportRunResult {
   status: 'cancelled' | 'completed' | 'failed';
 }
 
-export interface NativeReadwiseImportCancelResult {
-  status: 'cancelled' | 'idle';
-}
+export type NativeReadwiseImportCancelResult = { status: 'cancelled' | 'idle' };
 
 export type NativeReadwiseCleanupAction = 'delete' | 'keep';
 
@@ -147,6 +145,7 @@ export interface NativeTextImportResult {
   result_status: 'imported' | 'degraded' | 'failed';
   imported_at: string;
   node_id: string | null;
+  node_mutation_patch?: import('./nativeNodeMutationContract.js').NativeNodeMutationPatchResult | null;
   degraded_reason: string | null;
   failure_reason: string | null;
 }
@@ -165,6 +164,7 @@ export interface NativeDirectoryImportResult {
   imported_count: number;
   failed_count: number;
   entries: NativeDirectoryImportEntry[];
+  node_mutation_patch?: import('./nativeNodeMutationContract.js').NativeNodeMutationPatchResult | null;
 }
 
 export type NativeDevReimportCurrentTopicSourceResult =

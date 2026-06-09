@@ -3,6 +3,7 @@ import { dialog, type BrowserWindow } from 'electron';
 import type { NativeDirectoryImportArgs, NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
 import { runDirectoryImportBatch } from '../import/directoryImportBatch.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
+import { withDirectoryImportNodeMutationPatch } from '../import/importNodeMutationPatch.js';
 import { logDirectoryImportCompleted, logDirectoryImportFailed } from '../import/importRunLogger.js';
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 import { assertMirrorSeparatedFromImportPath, assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
@@ -102,17 +103,17 @@ export async function runDirectoryImport(
         ? { excludedPaths: [libraryPaths.mirror], includeLocalImages: true, supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS }
         : { excludedPaths: [libraryPaths.mirror] }
     );
-    const result = await runDirectoryImportBatch({
+    const result = withDirectoryImportNodeMutationPatch(await runDirectoryImportBatch({
       consumePolicy,
       highlightPolicy,
       rootPath,
       sourceAdapter,
       sources,
       titleStrategy
-    });
+    }));
     const latestImportId = resolveLatestImportId(result);
     if (latestImportId) {
-      notifyManagedInboxUpdated(latestImportId);
+      notifyManagedInboxUpdated(latestImportId, result.node_mutation_patch);
     }
     await logDirectoryImportCompleted(result);
     return result;
@@ -132,7 +133,7 @@ export async function runManagedInboxImport(rootPath: string) {
       mirrorPath: libraryPaths.mirror
     });
     const titleStrategy = loadImportManagerSettings().titleStrategy;
-    const result = await runDirectoryImportBatch({
+    const result = withDirectoryImportNodeMutationPatch(await runDirectoryImportBatch({
       consumePolicy: 'clear',
       highlightPolicy: 'reference_only',
       rootPath,
@@ -143,7 +144,7 @@ export async function runManagedInboxImport(rootPath: string) {
         supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS
       }),
       titleStrategy
-    });
+    }));
     await logDirectoryImportCompleted(result);
     return result;
   } catch (error) {

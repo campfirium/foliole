@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 
 import type { NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
+import type { NativeNodeMutationPatchResult } from '../../lib/platform/nativeContract.js';
 import { runManagedInboxImport } from '../ipc/importDirectory.js';
 import { loadLibraryPathSettings } from '../ipc/libraryPaths.js';
 import { ensureManagedInboxRoot, resolveManagedInboxPaths } from '../ipc/managedInboxFolder.js';
@@ -18,7 +19,7 @@ interface ManagedInboxMonitorDeps {
   ensureRoot(rootPath: string): Promise<void>;
   loadConfiguredRootPath(): Promise<string>;
   logError(message: string, error: unknown): void;
-  notifyUpdate(importId: string): void;
+  notifyUpdate(importId: string, nodeMutationPatch?: NativeNodeMutationPatchResult | null): void;
   runImport(rootPath: string): Promise<NativeDirectoryImportResult>;
   watch(rootPath: string, listener: () => void): ManagedInboxWatchHandle;
 }
@@ -102,9 +103,18 @@ function requestRerun(state: ManagedInboxMonitorState) {
   state.rerunRequested = true;
 }
 
-function resolveLatestImportId(result: NativeDirectoryImportResult) {
-  const latestEntry = result.entries[result.entries.length - 1];
-  return typeof latestEntry?.import_id === 'string' ? latestEntry.import_id : null;
+function resolveLatestWorkspaceImportId(result: NativeDirectoryImportResult) {
+  for (let index = result.entries.length - 1; index >= 0; index -= 1) {
+    const entry = result.entries[index];
+    if (
+      entry?.result_status === 'imported' &&
+      entry.duplicate_semantic !== 'duplicate' &&
+      typeof entry.import_id === 'string'
+    ) {
+      return entry.import_id;
+    }
+  }
+  return null;
 }
 
 async function ensureWatcher(
@@ -150,9 +160,9 @@ async function runImportCycle(
       nextRootPath = null;
       await ensureWatcher(deps, state, scheduleRun, rootPath);
       const result = await deps.runImport(rootPath);
-      const latestImportId = resolveLatestImportId(result);
+      const latestImportId = resolveLatestWorkspaceImportId(result);
       if (latestImportId) {
-        deps.notifyUpdate(latestImportId);
+        deps.notifyUpdate(latestImportId, result.node_mutation_patch);
       }
     } while (state.rerunRequested && state.started);
   } catch (error) {

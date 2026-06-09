@@ -209,6 +209,24 @@ const sanitizedCompletedReadwiseProgressPayload = {
     expect(handler).toHaveBeenNthCalledWith(2, { scope: '' });
   });
 
+  it('forwards managed inbox update patches through preload', () => {
+    const { exposeInMainWorld, ipcOn } = executePreload();
+    const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+    const handler = vi.fn();
+    const nodeMutationPatch = {
+      createdNodeIds: ['node-1'],
+      nodeOrder: ['node-1'],
+      nodes: [{ nodeId: 'node-1' }]
+    };
+
+    electronApi.onManagedInboxUpdated(handler);
+    const listener = ipcOn.mock.calls[0]?.[1];
+    listener({}, { importId: 'import-1', nodeMutationPatch });
+
+    expect(ipcOn).toHaveBeenCalledWith('foliole:managed-inbox-updated', expect.any(Function));
+    expect(handler).toHaveBeenCalledWith({ importId: 'import-1', nodeMutationPatch });
+  });
+
   it('forwards sanitized global capture navigation events through preload', () => {
     const { exposeInMainWorld, ipcOn } = executePreload();
     const electronApi = exposeInMainWorld.mock.calls[0]?.[1];

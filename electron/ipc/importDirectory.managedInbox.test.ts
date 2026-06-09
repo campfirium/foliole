@@ -106,5 +106,5 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
   expect(logDirectoryImportCompleted).toHaveBeenCalledWith(
     expect.objectContaining({ failed_count: 1, source_adapter: 'foliole_managed_inbox_folder' })
   );
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.any(String));
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toEqual(expect.any(String));
 });

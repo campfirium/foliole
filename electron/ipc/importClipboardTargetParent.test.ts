@@ -67,7 +67,7 @@ it('passes the requested parent when importing plain clipboard text', async () =
       targetParentNodeId: 'node-target'
     })
   );
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('import-1');
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toBe('import-1');
 });
 
 it('ignores a blank requested parent when importing plain clipboard text', async () => {

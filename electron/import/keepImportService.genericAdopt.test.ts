@@ -50,7 +50,7 @@ it('notifies the renderer after keep imports write a new record', async () => {
   await runKeepImportRule(createGenericKeepImportConfig(tempRoot, 'draft-import-source-301'));
 
   expect(notifyManagedInboxUpdated).toHaveBeenCalledTimes(1);
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.stringMatching(/^import-/));
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toEqual(expect.stringMatching(/^import-/));
 });
 
 it('adopts inline markdown highlights for generic merged keep imports', async () => {

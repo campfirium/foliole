@@ -39,7 +39,7 @@ it('imports typed capture text into Inbox and notifies the managed Inbox', () =>
     sourceLocator: expect.stringMatching(/^capture:\/\/text\//),
     sourceName: 'quick thought'
   }));
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('import-1');
+  expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toBe('import-1');
 });
 
 it('names long typed capture text from a truncated content preview', () => {

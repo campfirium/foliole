@@ -59,7 +59,10 @@ function subscribe(channel, handler) {
 
   const listener = (_event, payload) => {
     if (channel === IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL) {
-      handler(payload?.importId ?? '');
+      handler({
+        importId: typeof payload?.importId === 'string' ? payload.importId : '',
+        nodeMutationPatch: payload?.nodeMutationPatch ?? null
+      });
       return;
     }
     if (channel === IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL) {
