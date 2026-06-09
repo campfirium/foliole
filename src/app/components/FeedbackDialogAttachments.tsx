@@ -25,7 +25,7 @@ export function FeedbackAttachmentPicker(props: {
           </span>
           <span>{t('feedback.attachments.hint')}</span>
         </div>
-        <label className="inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-2.5 text-sm text-foreground hover:bg-foreground/[0.03]">
+        <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-[var(--app-control-border-color)] bg-transparent px-3.5 text-ui-md text-foreground transition-colors hover:border-[var(--app-control-border-hover-color)] hover:bg-[var(--app-control-bg-hover-color)]">
           <ImagePlus aria-hidden className="size-4" />
           {t('feedback.attachments.add')}
           <input

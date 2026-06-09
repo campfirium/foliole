@@ -72,8 +72,8 @@ it('shows a non-focusable app-owned desktop toast and closes it automatically', 
     frame: false,
     skipTaskbar: true,
     transparent: true,
-    x: 1078,
-    y: 818
+    x: 1042,
+    y: 810
   }));
   expect(toastWindow.setAlwaysOnTop).toHaveBeenCalledWith(true, 'screen-saver');
   expect(toastWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(true);
@@ -82,7 +82,10 @@ it('shows a non-focusable app-owned desktop toast and closes it automatically', 
   const html = decodeURIComponent(loadedUrl);
   expect(html).toContain('Clipped');
   expect(html).toContain('Saved to Inbox');
+  expect(html).toContain('--capture-bg:rgb(255, 255, 255);');
+  expect(html).toContain('grid-template-columns:16px 1fr 18px');
   expect(html).toContain('data:image/svg+xml;base64');
+  expect(html).toContain('height:18px');
   expect(html).not.toContain('class="badge"');
 
   vi.advanceTimersByTime(3000);

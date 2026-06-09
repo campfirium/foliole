@@ -20,9 +20,9 @@ import {
 } from './globalClipDesktopToastState.js';
 import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigation.js';
 
-const TOAST_HEIGHT = 64;
+const TOAST_HEIGHT = 72;
 const TOAST_MARGIN = 18;
-const TOAST_WIDTH = 304;
+const TOAST_WIDTH = 340;
 
 function closeToastAfterDisplay(toastWindow: BrowserWindow, status: GlobalClipToastStatus) {
   if (status === 'pending') {
@@ -51,15 +51,15 @@ function buildToastHtml(theme: GlobalCaptureFloatingTheme, status: GlobalClipToa
     '<meta charset="utf-8">',
     '<style>',
     buildFloatingThemeStyle(theme),
-    '.toast{display:grid;grid-template-columns:18px 1fr 36px;align-items:center;gap:14px;width:100%;height:100%;padding:0 22px;font-size:14px;}',
-    '.mark{justify-self:center;width:10px;height:10px;border-radius:999px;background:var(--capture-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--capture-accent) 18%,transparent);}',
+    '.toast{display:grid;grid-template-columns:16px 1fr 18px;align-items:center;gap:12px;width:100%;height:100%;padding:0 18px;font-size:14px;}',
+    '.mark{justify-self:center;width:8px;height:8px;border-radius:999px;background:var(--capture-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--capture-accent) 16%,transparent);}',
     '.toast[data-status="copyFailed"] .mark,.toast[data-status="empty"] .mark,.toast[data-status="importFailed"] .mark{background:var(--capture-muted);box-shadow:0 0 0 3px color-mix(in srgb,var(--capture-muted) 16%,transparent);}',
     '.content{display:grid;gap:2px;min-width:0;}',
-    '.title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;line-height:18px;}',
+    '.title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;line-height:20px;}',
     '.meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--capture-muted);font-size:12px;line-height:16px;}',
-    '.brand{display:flex;width:36px;height:36px;align-items:center;justify-content:center;justify-self:center;opacity:.82;}',
-    '.brand img{display:block;width:auto;height:36px;object-fit:contain;}',
-    '.brand-fallback{display:block;width:26px;height:31px;border-radius:9px;background:color-mix(in srgb,var(--capture-accent) 34%,transparent);}',
+    '.brand{display:flex;width:18px;height:18px;align-items:center;justify-content:center;justify-self:center;opacity:.36;}',
+    '.brand img{display:block;width:auto;height:18px;object-fit:contain;}',
+    '.brand-fallback{display:block;width:14px;height:16px;border-radius:6px;background:color-mix(in srgb,var(--capture-accent) 20%,transparent);}',
     '.toast[data-clickable="true"]{cursor:pointer;}',
     '</style>',
     `<div class="capture-surface toast" data-clickable="false" data-status="${status}" role="status"><span class="mark"></span><span class="content"><span class="title">${escapeHtml(text.title)}</span><span class="meta">${escapeHtml(text.meta)}</span></span><span class="brand">${buildBrandMarkHtml()}</span></div>`,

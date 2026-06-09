@@ -2,6 +2,7 @@
 @config "../../tailwind.config.js";
 @import "./generated/appearance-colors.css";
 @import "./tokens/shadows.css";
+@import "./tokens/shellless-surfaces.css";
 @import "./tokens/z-index.css";
 
 * {

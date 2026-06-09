@@ -39,7 +39,7 @@ function createPastedImage(name: string, bytes = 'image-bytes') {
   return file;
 }
 
-describe('FeedbackDialog text submission', () => {
+describe('FeedbackDialog shell behavior', () => {
   it('closes from the shared Escape stack before background handlers', () => {
     const backgroundClose = vi.fn();
     const onClose = vi.fn();
@@ -52,12 +52,17 @@ describe('FeedbackDialog text submission', () => {
     expect(backgroundClose).not.toHaveBeenCalled();
     unlistenBackground();
   });
+});
 
+describe('FeedbackDialog text submission', () => {
   it('keeps submit disabled until feedback text is present', () => {
     renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
 
     const submit = screen.getByRole('button', { name: 'Send' });
     expect(submit).toBeDisabled();
+    expect(submit.className).toContain('bg-transparent');
+    expect(submit.className).not.toContain('workspace-region-main-rail-bg');
+    expect(screen.getByRole('button', { name: 'Cancel' }).className).toContain('border-[var(--app-control-border-color)]');
 
     fireEvent.change(screen.getByLabelText('Feedback'), { target: { value: 'This path should stay low friction.' } });
     expect(submit).not.toBeDisabled();
@@ -111,6 +116,17 @@ describe('FeedbackDialog text submission', () => {
 
     expect(await screen.findByText('Feedback sent')).toBeInTheDocument();
     expect(screen.getByText('Your message was sent. Images are temporarily unavailable and were not attached.')).toBeInTheDocument();
+  });
+});
+
+describe('FeedbackDialog action styling', () => {
+  it('keeps the attachment picker on the neutral control style', () => {
+    renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
+
+    const picker = screen.getByText('Add image').closest('label');
+    expect(picker?.className).toContain('border-[var(--app-control-border-color)]');
+    expect(picker?.className).toContain('bg-transparent');
+    expect(picker?.className).toContain('text-ui-md');
   });
 });
 

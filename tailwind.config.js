@@ -65,6 +65,19 @@ export default {
         'settings-outline': 'rgb(var(--color-foreground) / 0.14)',
         'settings-control-border': 'var(--app-settings-control-border-color)',
         'settings-control-border-hover': 'var(--app-settings-control-border-hover-color)',
+        'shellless-surface': 'var(--app-shellless-surface-bg)',
+        'shellless-input': 'var(--app-shellless-input-bg)',
+        'shellless-border': 'var(--app-shellless-border-color)',
+        'shellless-divider': 'var(--app-shellless-divider-color)',
+        'shellless-fg': 'var(--app-shellless-fg)',
+        'shellless-title': 'var(--app-shellless-title-fg)',
+        'shellless-muted': 'var(--app-shellless-muted-fg)',
+        'shellless-faint': 'var(--app-shellless-faint-fg)',
+        'shellless-placeholder': 'var(--app-shellless-placeholder-fg)',
+        'shellless-control-border': 'var(--app-shellless-control-border-color)',
+        'shellless-control-border-hover': 'var(--app-shellless-control-border-hover-color)',
+        'shellless-control-hover': 'var(--app-shellless-control-hover-bg)',
+        'shellless-brand-mark': 'var(--app-shellless-brand-mark-color)',
         border: {
           DEFAULT: 'rgb(var(--color-border) / <alpha-value>)',
           strong: 'rgb(var(--color-border-strong) / <alpha-value>)'
@@ -110,7 +123,9 @@ export default {
       },
       fontFamily: {
         sans: ['var(--font-family-interface)'],
-        mono: ['var(--font-family-mono)']
+        mono: ['var(--font-family-mono)'],
+        'shellless-ui': ['var(--app-shellless-ui-font-family)'],
+        'shellless-input': ['var(--app-shellless-input-font-family)']
       },
       fontSize: {
         'ui-xs': ['11px', { lineHeight: '1rem' }],
@@ -122,7 +137,13 @@ export default {
         'ui-xl': ['18px', { lineHeight: '1.75rem' }],
         'reading-sm': ['14px', { lineHeight: '1.7' }],
         'reading-base': ['17px', { lineHeight: '1.75' }],
-        'reading-lg': ['19px', { lineHeight: '1.8' }]
+        'reading-lg': ['19px', { lineHeight: '1.8' }],
+        'shellless-ui': ['var(--app-shellless-ui-font-size)', { lineHeight: '1.5rem' }],
+        'shellless-meta': ['var(--app-shellless-meta-font-size)', { lineHeight: '1.25rem' }],
+        'shellless-input': [
+          'var(--app-shellless-input-font-size)',
+          { lineHeight: 'var(--app-shellless-input-line-height)' }
+        ]
       },
       spacing: {
         'panel-header': '3rem',
@@ -141,6 +162,7 @@ export default {
         'inspector-section': 'var(--shadow-inspector-section)',
         'picker-thumb-ring': 'var(--shadow-picker-thumb-ring)',
         'picker-thumb-ring-strong': 'var(--shadow-picker-thumb-ring-strong)',
+        shellless: 'var(--app-shellless-shadow)',
         debug: 'var(--shadow-debug)'
       },
       zIndex: {
@@ -168,6 +190,8 @@ export default {
         md: 'var(--radius-md)',
         lg: 'var(--radius-lg)',
         xl: 'var(--radius-xl)',
+        shellless: 'var(--app-shellless-radius)',
+        'shellless-control': 'var(--app-shellless-control-radius)',
         companion: '10px'
       }
     }
