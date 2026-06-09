@@ -68,12 +68,15 @@ it('shows a non-focusable app-owned desktop toast and closes it automatically', 
 
   expect(electronMocks.BrowserWindow).toHaveBeenCalledWith(expect.objectContaining({
     alwaysOnTop: true,
+    backgroundColor: '#00000000',
     focusable: false,
     frame: false,
+    height: 116,
     skipTaskbar: true,
     transparent: true,
-    x: 1042,
-    y: 810
+    width: 384,
+    x: 1020,
+    y: 788
   }));
   expect(toastWindow.setAlwaysOnTop).toHaveBeenCalledWith(true, 'screen-saver');
   expect(toastWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(true);
@@ -83,7 +86,9 @@ it('shows a non-focusable app-owned desktop toast and closes it automatically', 
   expect(html).toContain('Clipped');
   expect(html).toContain('Saved to Inbox');
   expect(html).toContain('--capture-bg:rgb(255, 255, 255);');
+  expect(html).toContain('body{padding:22px;}');
   expect(html).toContain('grid-template-columns:16px 1fr 18px');
+  expect(html).toContain('font-weight:500');
   expect(html).toContain('data:image/svg+xml;base64');
   expect(html).toContain('height:18px');
   expect(html).not.toContain('class="badge"');

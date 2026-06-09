@@ -1,0 +1,85 @@
+/* global document, window */
+
+const { ipcRenderer } = require('electron');
+
+const SUBMIT_CHANNEL = 'foliole:global-capture-panel:submit';
+const CANCEL_CHANNEL = 'foliole:global-capture-panel:cancel';
+const READY_CHANNEL = 'foliole:global-capture-panel:ready';
+const RESIZE_CHANNEL = 'foliole:global-capture-panel:resize';
+const HINT_VISIBLE_CHANNEL = 'foliole:global-capture-panel:hint-visible';
+
+const FOOTER_HEIGHT = 44;
+const GUTTER = 26;
+const INPUT_MAX_HEIGHT = 376;
+const INPUT_MIN_HEIGHT = 144;
+const SURFACE_MAX_HEIGHT = 420;
+const SURFACE_MIN_HEIGHT = 188;
+
+function submitCapture() {
+  const input = document.getElementById('capture');
+  ipcRenderer.send(SUBMIT_CHANNEL, typeof input?.value === 'string' ? input.value : '');
+}
+
+function cancelCapture() {
+  ipcRenderer.send(CANCEL_CHANNEL);
+}
+
+function setHintVisible(visible) {
+  ipcRenderer.send(HINT_VISIBLE_CHANNEL, Boolean(visible));
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function resizeCaptureSurface() {
+  const input = document.getElementById('capture');
+  if (!input || typeof input.scrollHeight !== 'number') return;
+  input.style.height = 'auto';
+  const inputHeight = clamp(input.scrollHeight, INPUT_MIN_HEIGHT, INPUT_MAX_HEIGHT);
+  input.style.height = `${inputHeight}px`;
+  input.style.overflowY = input.scrollHeight > INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
+  const surfaceHeight = clamp(inputHeight + FOOTER_HEIGHT, SURFACE_MIN_HEIGHT, SURFACE_MAX_HEIGHT);
+  ipcRenderer.send(RESIZE_CHANNEL, surfaceHeight + GUTTER * 2);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('capture');
+  const form = document.getElementById('form');
+  const hideHint = document.getElementById('hide-hint');
+  const showHint = document.getElementById('show-hint');
+  const close = document.getElementById('close');
+  input?.focus();
+  resizeCaptureSurface();
+  ipcRenderer.send(READY_CHANNEL);
+  input?.addEventListener('input', resizeCaptureSurface);
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submitCapture();
+  });
+  close?.addEventListener('click', (event) => {
+    event.preventDefault();
+    cancelCapture();
+  });
+  hideHint?.addEventListener('click', (event) => {
+    event.preventDefault();
+    document.body.dataset.hintVisible = 'false';
+    setHintVisible(false);
+  });
+  showHint?.addEventListener('click', (event) => {
+    event.preventDefault();
+    document.body.dataset.hintVisible = 'true';
+    setHintVisible(true);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancelCapture();
+      return;
+    }
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      submitCapture();
+    }
+  }, true);
+});

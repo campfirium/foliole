@@ -123,6 +123,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   rightSidebarPanelOrder: 'foliole-workspace-right-sidebar-panel-order',
   importManagementActivePage: 'foliole-import-management-active-page',
   globalClipExistingClipboardFallbackEnabled: 'foliole-global-clip-existing-clipboard-fallback-enabled',
+  globalClipHintVisible: 'foliole-global-clip-hint-visible',
   managedInboxPath: MANAGED_INBOX_APP_SETTING_KEY,
   commandRecents: 'foliole-command-recents',
   nodePaletteRecents: 'foliole-node-palette-recents',

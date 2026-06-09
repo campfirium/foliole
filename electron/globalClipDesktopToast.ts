@@ -20,9 +20,12 @@ import {
 } from './globalClipDesktopToastState.js';
 import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigation.js';
 
+const TOAST_GUTTER = 22;
 const TOAST_HEIGHT = 72;
 const TOAST_MARGIN = 18;
 const TOAST_WIDTH = 340;
+const TOAST_WINDOW_HEIGHT = TOAST_HEIGHT + TOAST_GUTTER * 2;
+const TOAST_WINDOW_WIDTH = TOAST_WIDTH + TOAST_GUTTER * 2;
 
 function closeToastAfterDisplay(toastWindow: BrowserWindow, status: GlobalClipToastStatus) {
   if (status === 'pending') {
@@ -51,11 +54,12 @@ function buildToastHtml(theme: GlobalCaptureFloatingTheme, status: GlobalClipToa
     '<meta charset="utf-8">',
     '<style>',
     buildFloatingThemeStyle(theme),
+    'body{padding:22px;}',
     '.toast{display:grid;grid-template-columns:16px 1fr 18px;align-items:center;gap:12px;width:100%;height:100%;padding:0 18px;font-size:14px;}',
     '.mark{justify-self:center;width:8px;height:8px;border-radius:999px;background:var(--capture-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--capture-accent) 16%,transparent);}',
     '.toast[data-status="copyFailed"] .mark,.toast[data-status="empty"] .mark,.toast[data-status="importFailed"] .mark{background:var(--capture-muted);box-shadow:0 0 0 3px color-mix(in srgb,var(--capture-muted) 16%,transparent);}',
     '.content{display:grid;gap:2px;min-width:0;}',
-    '.title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;line-height:20px;}',
+    '.title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--capture-title-fg);font-weight:500;line-height:20px;}',
     '.meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--capture-muted);font-size:12px;line-height:16px;}',
     '.brand{display:flex;width:18px;height:18px;align-items:center;justify-content:center;justify-self:center;opacity:.36;}',
     '.brand img{display:block;width:auto;height:18px;object-fit:contain;}',
@@ -93,9 +97,10 @@ function createToastWindow() {
   const { x, y, width, height } = display.workArea;
   const toastWindow = new BrowserWindow({
     alwaysOnTop: true,
+    backgroundColor: '#00000000',
     focusable: false,
     frame: false,
-    height: TOAST_HEIGHT,
+    height: TOAST_WINDOW_HEIGHT,
     resizable: false,
     show: false,
     skipTaskbar: true,
@@ -106,9 +111,9 @@ function createToastWindow() {
       preload: join(process.cwd(), 'electron', 'globalCaptureToastPreload.cjs'),
       sandbox: true
     },
-    width: TOAST_WIDTH,
-    x: x + width - TOAST_WIDTH - TOAST_MARGIN,
-    y: y + height - TOAST_HEIGHT - TOAST_MARGIN
+    width: TOAST_WINDOW_WIDTH,
+    x: x + width - TOAST_WIDTH - TOAST_MARGIN - TOAST_GUTTER,
+    y: y + height - TOAST_HEIGHT - TOAST_MARGIN - TOAST_GUTTER
   });
   toastWindow.setAlwaysOnTop(true, 'screen-saver');
   toastWindow.setIgnoreMouseEvents(true);

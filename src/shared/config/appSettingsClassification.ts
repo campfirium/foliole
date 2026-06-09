@@ -140,6 +140,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'rightSidebarPanelOrder',
   'importManagementActivePage',
   'globalClipExistingClipboardFallbackEnabled',
+  'globalClipHintVisible',
   'managedInboxPath',
   'commandRecents',
   'nodePaletteRecents',
