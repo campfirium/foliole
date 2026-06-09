@@ -1,5 +1,6 @@
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
+import { resolveReviewDeleteTargetNodeId } from './appControllerPaletteReviewActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { useCommandShortcutState } from './reviewHotkeysState';
 import { scrollReviewReadingSurface } from './reviewReadingScrollCommand';
@@ -69,7 +70,7 @@ export function useReviewEditingState(args: {
     readReviewTopic: args.ws.readReviewTopic,
     postponeReviewTopic: args.ws.postponeReviewTopic,
     deleteCurrentReviewItem: () => {
-      const nodeId = args.ws.reviewSession.currentNodeId;
+      const nodeId = resolveReviewDeleteTargetNodeId(args.ws);
       if (!nodeId) {
         return false;
       }

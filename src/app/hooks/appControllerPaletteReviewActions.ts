@@ -1,3 +1,4 @@
+import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
 import {
   resolveReviewFirstChildNodeId,
   resolveReviewSiblingNodeId,
@@ -7,11 +8,20 @@ import {
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { scrollReviewReadingSurface } from './reviewReadingScrollCommand';
 
+export function resolveReviewDeleteTargetNodeId(ws: ReturnType<typeof useWorkspaceSelectors>) {
+  const nodeId = ws.activeNodeId;
+  const node = nodeId ? ws.nodesById[nodeId] : null;
+  if (!nodeId || !node || isProtectedRootNode(node)) {
+    return null;
+  }
+  return nodeId;
+}
+
 function createDeleteCurrentReviewItemCommand(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   return () => {
-    const nodeId = args.ws.reviewSession.currentNodeId;
+    const nodeId = resolveReviewDeleteTargetNodeId(args.ws);
     if (!nodeId) {
       return false;
     }
