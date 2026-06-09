@@ -8,6 +8,22 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-window-state-tests';
 
+const screenMock = vi.hoisted(() => ({
+  getDisplayMatching: vi.fn(() => ({
+    workArea: { height: 1040, width: 1920, x: 0, y: 0 }
+  })),
+  screenToDipRect: vi.fn((_window: unknown, rect: { height: number; width: number; x: number; y: number }) => ({
+    height: rect.height / 2,
+    width: rect.width / 2,
+    x: rect.x / 2,
+    y: rect.y / 2
+  }))
+}));
+
+vi.mock('electron', () => ({
+  screen: screenMock
+}));
+
 vi.mock('./paths.js', () => ({
   resolveAppPaths: () => ({
     app_data_dir: mockedAppDataDir,
@@ -33,6 +49,7 @@ beforeEach(async () => {
 afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
+  vi.unstubAllGlobals();
 });
 
 it('persists and loads maximized window state', async () => {
@@ -61,7 +78,8 @@ it('persists and loads maximized window state', async () => {
     width: 1500,
     height: 980,
     isMaximized: true,
-    isFullScreen: false
+    isFullScreen: false,
+    coordinateUnit: 'dip'
   });
 });
 
@@ -91,7 +109,8 @@ it('persists and loads fullscreen window state using normal bounds', async () =>
     width: 1440,
     height: 920,
     isMaximized: false,
-    isFullScreen: true
+    isFullScreen: true,
+    coordinateUnit: 'dip'
   });
 });
 
@@ -138,7 +157,36 @@ it('does not let minimized transition overwrite a maximized preference', async (
     width: 1242,
     height: 811,
     isMaximized: true,
-    isFullScreen: false
+    isFullScreen: false,
+    coordinateUnit: 'dip'
+  });
+});
+
+it('normalizes legacy physical window state before restore', async () => {
+  vi.stubGlobal('process', { ...process, platform: 'win32' });
+  openDatabaseConnection().sqlite
+    .prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+    .run(
+      'window_state',
+      JSON.stringify({
+        x: -13,
+        y: -13,
+        width: 3866,
+        height: 2106,
+        isMaximized: false,
+        isFullScreen: false
+      }),
+      '2026-06-09T00:00:00.000Z'
+    );
+
+  await expect(loadWindowState()).resolves.toEqual({
+    x: -6,
+    y: -6,
+    width: 1933,
+    height: 1053,
+    isMaximized: false,
+    isFullScreen: false,
+    coordinateUnit: 'dip'
   });
 });
 

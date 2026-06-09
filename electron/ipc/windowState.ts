@@ -5,6 +5,7 @@ import { normalizeWindowBoundsToDip } from '../windowBoundsDpi.js';
 import { logWindowStateLifecycleEvent } from '../windowStateDiagnostics.js';
 
 const WINDOW_STATE_KEY = 'window_state';
+const WINDOW_STATE_COORDINATE_UNIT = 'dip';
 
 export interface PersistedWindowState {
   x?: number;
@@ -13,6 +14,7 @@ export interface PersistedWindowState {
   height: number;
   isMaximized: boolean;
   isFullScreen: boolean;
+  coordinateUnit?: typeof WINDOW_STATE_COORDINATE_UNIT;
 }
 
 function isMissingSettingsTableError(error: unknown) {
@@ -38,13 +40,34 @@ function normalizeWindowStatePayload(payload: unknown): PersistedWindowState | n
   }
   const x = toFiniteNumber(data.x);
   const y = toFiniteNumber(data.y);
-  return {
+  const state: PersistedWindowState = {
     ...(x === null ? {} : { x }),
     ...(y === null ? {} : { y }),
     width,
     height,
     isMaximized: data.isMaximized === true,
     isFullScreen: data.isFullScreen === true
+  };
+  if (data.coordinateUnit === WINDOW_STATE_COORDINATE_UNIT) {
+    state.coordinateUnit = WINDOW_STATE_COORDINATE_UNIT;
+  }
+  if (state.coordinateUnit === WINDOW_STATE_COORDINATE_UNIT) {
+    return state;
+  }
+  const bounds = normalizeWindowBoundsToDip(null, {
+    height: state.height,
+    width: state.width,
+    x: state.x ?? 0,
+    y: state.y ?? 0
+  });
+  return {
+    ...(x === null ? {} : { x: bounds.x }),
+    ...(y === null ? {} : { y: bounds.y }),
+    width: bounds.width,
+    height: bounds.height,
+    isMaximized: state.isMaximized,
+    isFullScreen: state.isFullScreen,
+    coordinateUnit: WINDOW_STATE_COORDINATE_UNIT
   };
 }
 
@@ -69,7 +92,8 @@ function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {
     width: bounds.width,
     height: bounds.height,
     isMaximized: window.isMaximized(),
-    isFullScreen: window.isFullScreen()
+    isFullScreen: window.isFullScreen(),
+    coordinateUnit: WINDOW_STATE_COORDINATE_UNIT
   };
 }
 
