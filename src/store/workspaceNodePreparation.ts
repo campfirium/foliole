@@ -1,6 +1,6 @@
 import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
 
-import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
+import { isCanonicalTrashedNodeId, isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { pushNavigationHistory } from './workspaceNavigation';
 import { writeCachedWorkspaceNodeDocument } from './workspaceNodeDocumentCache';
 import { loadWorkspaceNodeDocument, shouldSkipNodeDocumentPreparation } from './workspaceNodeDocumentLoader';
@@ -13,6 +13,7 @@ import { useWorkspaceStore } from './workspaceStore';
 
 interface EnsureWorkspaceNodeDocumentReadyOptions {
   forceLoad?: boolean;
+  includeTrashed?: boolean;
   keepWarm?: boolean;
   onDocumentMerged?: (document: WorkspaceNodeDocument) => void;
   onLoadResolved?: (document: WorkspaceNodeDocument) => void;
@@ -115,11 +116,26 @@ function isWorkspaceNodeVisible(state: WorkspaceState, nodeId: string) {
   }, nodeId);
 }
 
+function isWorkspaceNodeDocumentLoadAllowed(state: WorkspaceState, nodeId: string, options: EnsureWorkspaceNodeDocumentReadyOptions) {
+  if (isWorkspaceNodeVisible(state, nodeId)) {
+    return true;
+  }
+  return Boolean(
+    options.includeTrashed &&
+    isCanonicalTrashedNodeId({
+      nodeOrder: state.nodeOrder,
+      nodesById: state.nodesById,
+      trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
+      trashedNodeIds: state.trashedNodeIds
+    }, nodeId)
+  );
+}
+
 export async function ensureWorkspaceNodeDocumentReady(
   nodeId: string,
   options: EnsureWorkspaceNodeDocumentReadyOptions = {}
 ) {
-  if (!isWorkspaceNodeVisible(useWorkspaceStore.getState(), nodeId)) {
+  if (!isWorkspaceNodeDocumentLoadAllowed(useWorkspaceStore.getState(), nodeId, options)) {
     return null;
   }
   if (!options.forceLoad && shouldSkipNodeDocumentPreparation(nodeId)) {

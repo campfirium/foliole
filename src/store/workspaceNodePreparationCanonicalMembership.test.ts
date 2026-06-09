@@ -6,7 +6,10 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({
 
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
-import { openWorkspaceNodeWithPreparedDocument } from './workspaceNodePreparation';
+import {
+  ensureWorkspaceNodeDocumentReady,
+  openWorkspaceNodeWithPreparedDocument
+} from './workspaceNodePreparation';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 beforeEach(() => {
@@ -47,4 +50,39 @@ it('does not apply a prepared open for a deleted node when trash projection is s
 
   expect(invoke).not.toHaveBeenCalled();
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+});
+
+it('allows explicit trash document preload without making the deleted node active', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    content: 'Loaded deleted body',
+    hideTitleHeading: false,
+    kind: 'topic',
+    reveal: null,
+    virtualFilter: null
+  });
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    nodesById: {
+      ...state.nodesById,
+      'node-2': {
+        ...state.nodesById['node-2']!,
+        content: '',
+        hasContent: true
+      }
+    },
+    trashedNodeIds: ['node-2']
+  }));
+
+  await ensureWorkspaceNodeDocumentReady('node-2', {
+    includeTrashed: true,
+    keepWarm: true
+  });
+
+  expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+    content: 'Loaded deleted body'
+  });
+  expect(useWorkspaceStore.getState().rendererBoundaryKeepNodeIds).toContain('node-2');
 });

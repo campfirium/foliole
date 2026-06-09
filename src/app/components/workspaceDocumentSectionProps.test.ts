@@ -137,3 +137,35 @@ it('passes existing highlight range adjustment through to the document section',
 
   expect(sectionProps.onAdjustExistingHighlightRange).toBe(onAdjustExistingHighlightRange);
 });
+
+it('uses the selected trash node as the read-only editor source', () => {
+  const sectionProps = buildDocumentSectionProps(
+    'trash-topic',
+    'appearance',
+    false,
+    () => false,
+    createSurfaceProps({
+      editorContent: 'Active node body',
+      editorNodeId: 'active-topic',
+      isTrashViewOpen: true,
+      nodeViewById: {
+        'trash-topic': { scrollTop: 120, selection: { from: 4, to: 4 } }
+      },
+      nodesById: {
+        'trash-topic': {
+          content: 'Trash node body',
+          id: 'trash-topic',
+          kind: 'topic',
+          parentNodeId: null,
+          title: 'Trash Topic'
+        }
+      } as never
+    })
+  );
+
+  expect(sectionProps.editableNodeId).toBe('trash-topic');
+  expect(sectionProps.editorContent).toBe('Trash node body');
+  expect(sectionProps.editorNodeId).toBe('trash-topic');
+  expect(sectionProps.editorNodeViewState).toEqual({ scrollTop: 120, selection: { from: 4, to: 4 } });
+  expect(sectionProps.isEditorReadOnly).toBe(true);
+});

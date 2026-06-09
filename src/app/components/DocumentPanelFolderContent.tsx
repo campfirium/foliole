@@ -5,6 +5,16 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { FolderListView } from './FolderListView';
 
+function normalizeFolderListSort(
+  key: FolderListSortKey,
+  direction: FolderListSortDirection
+): { key: FolderListSortKey; direction: FolderListSortDirection } {
+  if (key === 'dateDeleted') {
+    return { key: 'dateSaved', direction: 'desc' };
+  }
+  return { key, direction };
+}
+
 export function DocumentPanelFolderContent({
   activeNodeId,
   folderListSortDirection,
@@ -32,6 +42,8 @@ export function DocumentPanelFolderContent({
   pdfCache: JSX.Element;
   trashedNodeIds: string[];
 }) {
+  const normalizedSort = normalizeFolderListSort(folderListSortKey, folderListSortDirection);
+
   return (
     <>
       {pdfCache}
@@ -44,8 +56,8 @@ export function DocumentPanelFolderContent({
         onChangeSortKey={onChangeFolderListSortKey}
         {...(onOpenMoveToNode ? { onOpenMoveToNode } : {})}
         onSelectNode={onSelectNode}
-        sortDirection={folderListSortDirection}
-        sortKey={folderListSortKey}
+        sortDirection={normalizedSort.direction}
+        sortKey={normalizedSort.key}
         trashedNodeIds={trashedNodeIds}
       />
     </>

@@ -13,6 +13,7 @@ import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspa
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 interface UseWorkspaceActiveNodeDocumentOptions {
+  includeTrashed?: boolean;
   keepWarm?: boolean;
 }
 
@@ -53,11 +54,11 @@ export function useWorkspaceActiveNodeDocument(
           markNodeDocumentLoadStarted(activeNodeId);
         }
       },
-      ...definedProps({ keepWarm: options.keepWarm })
+      ...definedProps({ includeTrashed: options.includeTrashed, keepWarm: options.keepWarm })
     });
 
     return () => {
       cancelled = true;
     };
-  }, [activeNodeDocumentStatus, activeNodeId, options.keepWarm]);
+  }, [activeNodeDocumentStatus, activeNodeId, options.includeTrashed, options.keepWarm]);
 }

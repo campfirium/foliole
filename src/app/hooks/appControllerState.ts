@@ -135,7 +135,7 @@ export function useWorkspaceControllerState(
 ) {
   const trash = useTrashView({ trashedNodeIds: ws.trashedNodeIds });
   useWorkspaceActiveNodeDocument(ws.activeNodeId);
-  useWorkspaceActiveNodeDocument(trash.selectedTrashNodeId, { keepWarm: true });
+  useWorkspaceActiveNodeDocument(trash.selectedTrashNodeId, { includeTrashed: true, keepWarm: true });
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
   const virtualView = useVirtualNodeView();
   const externalView = useExternalLibraryView();

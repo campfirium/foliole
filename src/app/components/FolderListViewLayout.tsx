@@ -24,6 +24,7 @@ interface FolderListHeaderProps {
   showCountAndTitle: boolean;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
+  sortOptions?: { key: FolderListSortKey; label: string }[] | undefined;
   onChangeSearchQuery: (value: string) => void;
   onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
@@ -57,6 +58,7 @@ function FolderListHeader(props: FolderListHeaderProps) {
           <FolderListSortControls
             onChangeSortDirection={props.onChangeSortDirection}
             onChangeSortKey={props.onChangeSortKey}
+            {...definedProps({ options: props.sortOptions })}
             sortDirection={props.sortDirection}
             sortKey={props.sortKey}
           />
@@ -134,6 +136,7 @@ function renderFolderListHeader(props: Parameters<typeof FolderListViewLayout>[0
       showCountAndTitle={props.headerMode === 'full'}
       sortDirection={props.sortDirection}
       sortKey={props.sortKey}
+      sortOptions={props.sortOptions}
       t={props.t}
     />
   );
@@ -165,6 +168,7 @@ export function FolderListViewLayout(props: {
   headerMode: 'full' | 'search-only' | 'hidden';
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
+  sortOptions?: { key: FolderListSortKey; label: string }[] | undefined;
 }) {
   return (
     <FolderListSurface>

@@ -16,11 +16,13 @@ import {
 export function FolderListSortControls(props: {
   onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
+  options?: { key: FolderListSortKey; label: string }[];
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
   const t = useTranslation();
-  const activeOption = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey);
+  const options = props.options ?? FOLDER_LIST_SORT_OPTIONS;
+  const activeOption = options.find((option) => option.key === props.sortKey);
   const activeLabel = activeOption ? translateSortLabel(activeOption.label, t) : t('desktop.sort.fallback.dateImported');
   const orderOptions = getFolderListSortOrderOptions(props.sortKey);
   const triggerLabel = t('desktop.sort.listBy', { label: activeLabel });
@@ -40,7 +42,7 @@ export function FolderListSortControls(props: {
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" className="min-w-[240px]" sideOffset={8}>
         <AppDropdownMenuLabel>{t('desktop.sort.sortBy')}</AppDropdownMenuLabel>
-        {FOLDER_LIST_SORT_OPTIONS.map((option) => (
+        {options.map((option) => (
           <AppDropdownMenuCheckItem
             checked={props.sortKey === option.key}
             key={option.key}
@@ -66,6 +68,7 @@ export function FolderListSortControls(props: {
 }
 
 function translateSortLabel(label: string, t: ReturnType<typeof useTranslation>) {
+  if (label === 'Deleted time') return t('desktop.nodeList.trash.sort.deletedTime');
   if (label === 'Date imported') return t('desktop.sort.fallback.dateImported');
   if (label === 'Last opened') return t('desktop.sort.key.lastOpened');
   if (label === 'Name') return t('desktop.sort.key.name');

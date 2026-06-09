@@ -3,7 +3,10 @@ import { definedProps } from '../../shared/lib/definedProps';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 
-function buildReadingPositionProps(props: WorkspaceDocumentSurfaceProps) {
+function buildReadingPositionProps(
+  editorState: ReturnType<typeof resolveDocumentEditorState>,
+  props: WorkspaceDocumentSurfaceProps
+) {
   const restoreCommand = props.getReadingPositionRestoreCommand();
   return {
     editorReadingRestoreCommandId: restoreCommand?.commandId ?? null,
@@ -14,21 +17,49 @@ function buildReadingPositionProps(props: WorkspaceDocumentSurfaceProps) {
     onCompleteApplyingReadingPosition: props.completeApplyingReadingPosition,
     onSetReadingPositionSelection: props.setReadingPositionSelection,
     ...definedProps({
-      editorNodeViewState: props.editorNodeViewState,
+      editorNodeViewState: editorState.editorNodeViewState,
       editorReadingRestoreScrollTop: restoreCommand?.scrollTop
     })
   };
 }
 
+function resolveDocumentEditorState(
+  documentNodeId: string | null,
+  props: WorkspaceDocumentSurfaceProps
+) {
+  const currentState = {
+    editorContent: props.editorContent,
+    editorNodeId: props.editorNodeId,
+    editorNodeViewState: props.editorNodeViewState,
+    isEditorReadOnly: props.isEditorReadOnly
+  };
+  if (!props.isTrashViewOpen || !documentNodeId || documentNodeId === props.editorNodeId) {
+    return currentState;
+  }
+
+  const node = props.nodesById[documentNodeId];
+  if (!node || node.kind === 'folder') {
+    return currentState;
+  }
+
+  return {
+    editorContent: node.content,
+    editorNodeId: documentNodeId,
+    editorNodeViewState: props.nodeViewById[documentNodeId],
+    isEditorReadOnly: true
+  };
+}
+
 function buildDocumentEditorProps(
+  editorState: ReturnType<typeof resolveDocumentEditorState>,
   isImmersiveEditing: boolean,
   onShouldSuppressSelectionRestore: () => boolean,
   props: WorkspaceDocumentSurfaceProps
 ) {
   return {
-    editorNodeId: props.editorNodeId,
-    ...buildReadingPositionProps(props),
-    isEditorReadOnly: props.isEditorReadOnly,
+    editorNodeId: editorState.editorNodeId,
+    ...buildReadingPositionProps(editorState, props),
+    isEditorReadOnly: editorState.isEditorReadOnly,
     reviewCaretLineHighlight: props.reviewCaretLineHighlight,
     reviewEscapeBlurEnabled: props.reviewEscapeBlurEnabled,
     isImmersiveEditing,
@@ -62,6 +93,7 @@ export function buildDocumentSectionProps(
   onShouldSuppressSelectionRestore: () => boolean,
   props: WorkspaceDocumentSurfaceProps
 ): DocumentPanelSectionProps {
+  const editorState = resolveDocumentEditorState(documentNodeId, props);
   return {
     activeNodeId: documentNodeId,
     isTrashViewOpen: props.isTrashViewOpen,
@@ -69,10 +101,10 @@ export function buildDocumentSectionProps(
     canGoForward: props.canGoForward,
     canGoParent: props.canGoParent,
     contextMenu: props.contextMenu,
-    editableNodeId: props.editorNodeId,
+    editableNodeId: editorState.editorNodeId,
     editorAppearanceKey,
-    editorContent: props.editorContent,
-    ...buildDocumentEditorProps(isImmersiveEditing, onShouldSuppressSelectionRestore, props),
+    editorContent: editorState.editorContent,
+    ...buildDocumentEditorProps(editorState, isImmersiveEditing, onShouldSuppressSelectionRestore, props),
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,
     onCloseContextMenu: props.onCloseContextMenu,

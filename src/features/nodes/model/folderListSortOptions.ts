@@ -8,6 +8,11 @@ export const FOLDER_LIST_SORT_OPTIONS: { key: FolderListSortKey; label: string }
   { key: 'manual', label: 'Manual' }
 ];
 
+export const TRASH_FOLDER_LIST_SORT_OPTIONS: { key: FolderListSortKey; label: string }[] = [
+  { key: 'dateDeleted', label: 'Deleted time' },
+  { key: 'name', label: 'Name' }
+];
+
 export function getFolderListSortOrderOptions(sortKey?: FolderListSortKey): { label: string; value: FolderListSortDirection }[] {
   if (sortKey === 'dateLastOpened') {
     return [{ label: 'Recent -> Older', value: 'desc' }];

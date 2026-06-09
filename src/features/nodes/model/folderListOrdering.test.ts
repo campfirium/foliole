@@ -52,4 +52,22 @@ describe('folderListOrdering defaults', () => {
 
     expect(result.map((node) => node.title)).toEqual(['Saved later', 'Imported later']);
   });
+
+  it('sorts deleted topics by deletion time in both directions', () => {
+    const nodes = [
+      createNode({
+        deletedAt: '2026-04-02T09:00:00.000Z',
+        id: 'older',
+        title: 'Older deleted'
+      }),
+      createNode({
+        deletedAt: '2026-04-04T09:00:00.000Z',
+        id: 'newer',
+        title: 'Newer deleted'
+      })
+    ];
+
+    expect(sortFolderListNodes(nodes, 'dateDeleted', 'desc', {}).map((node) => node.id)).toEqual(['newer', 'older']);
+    expect(sortFolderListNodes(nodes, 'dateDeleted', 'asc', {}).map((node) => node.id)).toEqual(['older', 'newer']);
+  });
 });

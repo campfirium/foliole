@@ -2,6 +2,7 @@ import { ChevronDown, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+import { TRASH_FOLDER_LIST_SORT_OPTIONS } from '../../features/nodes/model/folderListSortOptions';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
@@ -31,16 +32,33 @@ function collectTrashFolderNodes(args: {
   nodesById: Record<string, Node>;
   trashedNodeIds: string[];
 }) {
+  const trashedNodeIdSet = new Set(args.trashedNodeIds);
   if (!args.folderNodeId) {
     return selectTrashRootIds(args.nodeOrder, args.nodesById, args.trashedNodeIds)
       .map((nodeId) => args.nodesById[nodeId])
       .filter((node): node is Node => Boolean(node));
   }
 
-  const trashedNodeIdSet = new Set(args.trashedNodeIds);
-  return args.nodeOrder
+  const folderNodeId = args.folderNodeId;
+  const orderedNodeIds = [...new Set([...args.nodeOrder, ...args.trashedNodeIds])];
+  return orderedNodeIds
     .map((nodeId) => args.nodesById[nodeId])
-    .filter((node): node is Node => Boolean(node && node.parentNodeId === args.folderNodeId && trashedNodeIdSet.has(node.id)));
+    .filter((node): node is Node => Boolean(node && node.parentNodeId === folderNodeId))
+    .filter((node) => trashedNodeIdSet.has(node.id) || trashedNodeIdSet.has(folderNodeId))
+    .map((node) => {
+      const deletedAt = node.deletedAt ?? args.nodesById[folderNodeId]?.deletedAt;
+      return deletedAt ? { ...node, deletedAt } : node;
+    });
+}
+
+function normalizeTrashFolderSort(
+  key: FolderListSortKey,
+  direction: FolderListSortDirection
+): { key: FolderListSortKey; direction: FolderListSortDirection } {
+  if (key === 'name' || key === 'dateDeleted') {
+    return { key, direction };
+  }
+  return { key: 'dateDeleted', direction: 'desc' };
 }
 
 function formatTrashCount(count: number, t: Translate) {
@@ -51,12 +69,10 @@ function formatTrashCount(count: number, t: Translate) {
 
 function TrashCurrentViewActions({
   nodes,
-  nodesById,
-  trashedNodeIds
+  nodesById
 }: {
   nodes: Node[];
   nodesById: Record<string, Node>;
-  trashedNodeIds: string[];
 }) {
   const t = useTranslation();
   const deleteNodesPermanently = useWorkspaceStore((state) => state.deleteNodesPermanently);
@@ -92,7 +108,6 @@ function TrashCurrentViewActions({
         onOpenChange={(open) => {
           if (!open) setDeleteSnapshot(null);
         }}
-        trashedNodeIds={trashedNodeIds}
       />
     </>
   );
@@ -102,14 +117,12 @@ function TrashCurrentViewDeleteDialog({
   deleteNodesPermanently,
   deleteSnapshot,
   nodesById,
-  onOpenChange,
-  trashedNodeIds
+  onOpenChange
 }: {
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteSnapshot: Node[] | null;
   nodesById: Record<string, Node>;
   onOpenChange: (open: boolean) => void;
-  trashedNodeIds: string[];
 }) {
   const t = useTranslation();
   const nodeCount = deleteSnapshot?.length ?? 0;
@@ -131,10 +144,7 @@ function TrashCurrentViewDeleteDialog({
               variant="danger"
               onClick={() => {
                 if (deleteSnapshot) {
-                  const trashedNodeIdSet = new Set(trashedNodeIds);
-                  const nodeIds = deleteSnapshot
-                    .map((node) => node.id)
-                    .filter((nodeId) => nodesById[nodeId] && trashedNodeIdSet.has(nodeId));
+                  const nodeIds = deleteSnapshot.map((node) => node.id).filter((nodeId) => nodesById[nodeId]);
                   deleteNodesPermanently(nodeIds);
                 }
                 onOpenChange(false);
@@ -176,12 +186,13 @@ export function DocumentPanelTrashContent({
 }) {
   const t = useTranslation();
   const listedNodes = collectTrashFolderNodes({ folderNodeId, nodeOrder, nodesById, trashedNodeIds });
+  const normalizedSort = normalizeTrashFolderSort(folderListSortKey, folderListSortDirection);
 
   return (
     <>
       {pdfCache}
       <FolderListView
-        currentViewActions={<TrashCurrentViewActions nodes={listedNodes} nodesById={nodesById} trashedNodeIds={trashedNodeIds} />}
+        currentViewActions={<TrashCurrentViewActions nodes={listedNodes} nodesById={nodesById} />}
         emptyState={{
           description: t('desktop.nodeList.trash.emptyFolder.description'),
           title: t('desktop.nodeList.trash.emptyFolder.title')
@@ -193,8 +204,9 @@ export function DocumentPanelTrashContent({
         onChangeSortKey={onChangeFolderListSortKey}
         onSelectNode={onSelectTrashNode}
         regionLabel={t('desktop.nodeList.trash.folderList')}
-        sortDirection={folderListSortDirection}
-        sortKey={folderListSortKey}
+        sortDirection={normalizedSort.direction}
+        sortKey={normalizedSort.key}
+        sortOptions={TRASH_FOLDER_LIST_SORT_OPTIONS}
       />
     </>
   );

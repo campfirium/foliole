@@ -13,6 +13,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.browse.orderBy': 'Order by',
   'companion.browse.sort': 'Sort',
   'companion.browse.sortBy': 'Sort by',
+  'companion.browse.sort.dateDeleted': 'Deleted time',
   'companion.browse.sort.dateImported': 'Date imported',
   'companion.browse.sort.dateModified': 'Date modified',
   'companion.browse.sort.lastOpened': 'Last opened',

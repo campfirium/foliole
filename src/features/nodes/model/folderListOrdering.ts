@@ -2,7 +2,7 @@ import type { Node } from './nodeTypes';
 import { compareWorkspaceListNodeDateDesc } from './workspaceListNode';
 import { compareWorkspaceListNodeAuthor } from './workspaceListNodeMetadata';
 
-export type FolderListSortKey = 'dateImported' | 'dateLastOpened' | 'dateSaved' | 'manual' | 'name';
+export type FolderListSortKey = 'dateDeleted' | 'dateImported' | 'dateLastOpened' | 'dateSaved' | 'manual' | 'name';
 export type FolderListSortDirection = 'desc' | 'asc';
 
 export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'dateSaved';
@@ -67,13 +67,14 @@ function compareImportedDate(
   return compareText(left.title, right.title);
 }
 
-function resolveSavedTimestamp(node: Node) {
-  return node.updatedAt?.trim() || null;
+function resolveTimestamp(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed && !Number.isNaN(new Date(trimmed).getTime()) ? trimmed : null;
 }
 
-function compareSavedDateDesc(left: Node, right: Node) {
-  const leftTimestamp = resolveSavedTimestamp(left);
-  const rightTimestamp = resolveSavedTimestamp(right);
+function compareTimestampDesc(left: string | null | undefined, right: string | null | undefined) {
+  const leftTimestamp = resolveTimestamp(left);
+  const rightTimestamp = resolveTimestamp(right);
   if (!leftTimestamp && !rightTimestamp) return 0;
   if (!leftTimestamp) return 1;
   if (!rightTimestamp) return -1;
@@ -85,7 +86,19 @@ function compareSavedDate(
   right: { node: Node; title: string },
   directionMultiplier: number
 ) {
-  const dateResult = compareSavedDateDesc(left.node, right.node) * directionMultiplier;
+  const dateResult = compareTimestampDesc(left.node.updatedAt, right.node.updatedAt) * directionMultiplier;
+  if (dateResult !== 0) {
+    return dateResult;
+  }
+  return compareText(left.title, right.title);
+}
+
+function compareDeletedDate(
+  left: { node: Node; title: string },
+  right: { node: Node; title: string },
+  directionMultiplier: number
+) {
+  const dateResult = compareTimestampDesc(left.node.deletedAt, right.node.deletedAt) * directionMultiplier;
   if (dateResult !== 0) {
     return dateResult;
   }
@@ -147,6 +160,13 @@ export function sortFolderListNodes(
 
       if (sortKey === 'dateSaved') {
         const dateResult = compareSavedDate(left, right, dateDirectionMultiplier);
+        if (dateResult !== 0) {
+          return dateResult;
+        }
+      }
+
+      if (sortKey === 'dateDeleted') {
+        const dateResult = compareDeletedDate(left, right, dateDirectionMultiplier);
         if (dateResult !== 0) {
           return dateResult;
         }

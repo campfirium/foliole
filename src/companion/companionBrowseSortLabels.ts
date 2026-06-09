@@ -3,6 +3,7 @@ import type { useTranslation } from '../shared/localization/LocalizationProvider
 import type { TranslationKey } from '../shared/localization/translations';
 
 export const COMPANION_SORT_LABEL_KEYS: Record<FolderListSortKey, TranslationKey> = {
+  dateDeleted: 'companion.browse.sort.dateDeleted',
   dateImported: 'companion.browse.sort.dateImported',
   dateLastOpened: 'companion.browse.sort.lastOpened',
   dateSaved: 'companion.browse.sort.dateModified',

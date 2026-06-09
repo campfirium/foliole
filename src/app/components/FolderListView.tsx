@@ -48,6 +48,7 @@ interface FolderListViewProps {
   navigationOverlay?: FolderListNavigationOverlayProps;
   sortDirection?: FolderListSortDirection;
   sortKey?: FolderListSortKey;
+  sortOptions?: { key: FolderListSortKey; label: string }[];
   trashedNodeIds?: string[];
 }
 
@@ -110,7 +111,7 @@ function useResolvedFolderListState(props: FolderListViewProps) {
     controlledSearchQuery: props.searchQuery,
     controlledSortDirection: props.sortDirection,
     controlledSortKey: props.sortKey,
-    defaultSortKey: DEFAULT_FOLDER_LIST_SORT_KEY,
+    defaultSortKey: props.sortOptions?.[0]?.key ?? DEFAULT_FOLDER_LIST_SORT_KEY,
     filterSearchResults: props.filterSearchResults,
     listedNodes,
     nodeViewById,
@@ -183,6 +184,7 @@ export function FolderListView(props: FolderListViewProps) {
           scrollElementRef={scrollElementRef}
           sortDirection={state.sortDirection}
           sortKey={state.sortKey}
+          sortOptions={props.sortOptions}
           t={t}
         />
       </section>
