@@ -4,7 +4,13 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { resolveExternalPreviewSourceContent, rewriteExternalPreviewContent } from './externalSearchPreviewContent.js';
+import { buildExtDocImageRenderUrl, parseExtDocImageRenderUrl } from '../../lib/platform/extDocImageProtocolUrl.js';
+
+import {
+  resolveExternalPreviewImageResource,
+  resolveExternalPreviewSourceContent,
+  rewriteExternalPreviewContent
+} from './externalSearchPreviewContent.js';
 
 const tempRoots: string[] = [];
 
@@ -39,29 +45,38 @@ function createFolderConfig(root: string) {
 }
 
 describe('rewriteExternalPreviewContent', () => {
-  it('rewrites relative markdown images to file urls using the note folder first', async () => {
+  it('rewrites relative markdown images to external image protocol urls using the note folder first', async () => {
     const root = await createTempRoot();
     const noteDir = path.join(root, 'notes');
     const imageDir = path.join(noteDir, 'images');
     await mkdir(imageDir, { recursive: true });
     await writeFile(path.join(imageDir, 'cover.png'), 'png');
+    const notePath = path.join(noteDir, 'topic.md');
 
-    expect(
-      rewriteExternalPreviewContent('![Cover](images/cover.png)', path.join(noteDir, 'topic.md'), createFolderConfig(root))
-    ).toBe('![Cover](data:image/png;base64,cG5n)');
+    const rewritten = rewriteExternalPreviewContent('![Cover](images/cover.png)', notePath, createFolderConfig(root));
+
+    expect(rewritten).toBe(
+      `![Cover](${buildExtDocImageRenderUrl({ documentAbsolutePath: notePath, imageDestination: 'images/cover.png' })})`
+    );
+    expect(rewritten).not.toContain('base64');
   });
 
-  it('rewrites obsidian embeds to file urls using the attachment folder fallback', async () => {
+  it('rewrites obsidian embeds to external image protocol urls using the attachment folder fallback', async () => {
     const root = await createTempRoot();
     const noteDir = path.join(root, 'notes');
     const attachmentDir = path.join(root, 'attachments');
     await mkdir(noteDir, { recursive: true });
     await mkdir(attachmentDir, { recursive: true });
     await writeFile(path.join(attachmentDir, 'Pasted image.png'), 'png');
+    const notePath = path.join(noteDir, 'topic.md');
 
-    expect(
-      rewriteExternalPreviewContent('![[Pasted image.png]]', path.join(noteDir, 'topic.md'), createFolderConfig(root))
-    ).toBe('![Pasted image](data:image/png;base64,cG5n)');
+    const rewritten = rewriteExternalPreviewContent('![[Pasted image.png]]', notePath, createFolderConfig(root));
+    const match = rewritten.match(/!\[Pasted image\]\((?<url>[^)]+)\)/);
+
+    expect(parseExtDocImageRenderUrl(match?.groups?.url ?? '')).toEqual({
+      documentAbsolutePath: notePath,
+      imageDestination: 'Pasted image.png'
+    });
   });
 
   it('leaves unresolved references unchanged', async () => {
@@ -74,6 +89,27 @@ describe('rewriteExternalPreviewContent', () => {
     );
   });
 
+  it('keeps already resolved data image references unchanged', async () => {
+    const root = await createTempRoot();
+    const noteDir = path.join(root, 'notes');
+    await mkdir(noteDir, { recursive: true });
+
+    expect(rewriteExternalPreviewContent('![Inline](data:image/png;base64,abc123)', path.join(noteDir, 'topic.md'), null)).toBe(
+      '![Inline](data:image/png;base64,abc123)'
+    );
+  });
+
+  it('rejects image paths that escape the document folder and attachment root', async () => {
+    const root = await createTempRoot();
+    const noteDir = path.join(root, 'notes');
+    await mkdir(noteDir, { recursive: true });
+    await writeFile(path.join(root, 'secret.png'), 'png');
+
+    expect(resolveExternalPreviewImageResource('../secret.png', path.join(noteDir, 'topic.md'), createFolderConfig(root))).toBeNull();
+  });
+});
+
+describe('resolveExternalPreviewSourceContent', () => {
   it('prefers live file content over stale cached content', async () => {
     const root = await createTempRoot();
     const noteDir = path.join(root, 'notes');

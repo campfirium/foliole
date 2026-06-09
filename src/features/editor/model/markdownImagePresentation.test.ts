@@ -51,6 +51,12 @@ describe('markdownImagePresentation', () => {
     expectBrowserImagePlan('data:image/png;base64,abc123');
   });
 
+  it('builds external document image protocol render state for external preview resources', () => {
+    expectBrowserImagePlan(
+      'foliole-ext-image://resource/?documentPath=%2Fvault%2Ftopic.md&imageDestination=images%2Fcover.png'
+    );
+  });
+
   it('builds svg data image render state for exported inline icons', () => {
     expectBrowserImagePlan('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiPjwvc3ZnPg==');
   });

@@ -1,3 +1,4 @@
+import { EXT_DOC_IMAGE_PROTOCOL_SCHEME } from '../../../../lib/platform/extDocImageProtocolUrl';
 import { isSafeMarkdownDataImageUrl } from '../../../../lib/platform/markdownImageDataUrl';
 
 import type { MarkdownImageMatch } from './markdownImageMatches';
@@ -23,7 +24,11 @@ function isRemoteHttpImageSource(value: string) {
 function isInlineBrowserImageSource(value: string) {
   try {
     const parsed = new URL(value);
-    return isSafeMarkdownDataImageUrl(value) || parsed.protocol === 'file:';
+    return (
+      isSafeMarkdownDataImageUrl(value) ||
+      parsed.protocol === 'file:' ||
+      parsed.protocol === `${EXT_DOC_IMAGE_PROTOCOL_SCHEME}:`
+    );
   } catch {
     return false;
   }

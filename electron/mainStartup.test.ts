@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   appendBootEvent: vi.fn(),
   presentInitialRendererWindow: vi.fn(),
   registerAttachmentProtocol: vi.fn(),
+  registerExtDocImageProtocol: vi.fn(),
   registerRemoteImageProtocol: vi.fn(),
   startDevScreenshotServer: vi.fn(),
   startFollowupTasks: vi.fn(),
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('./attachments/attachmentProtocol.js', () => ({ registerAttachmentProtocol: mocks.registerAttachmentProtocol }));
+vi.mock('./attachments/extDocImageProtocol.js', () => ({ registerExtDocImageProtocol: mocks.registerExtDocImageProtocol }));
 vi.mock('./attachments/remoteImagePipeline.js', () => ({ configureRemoteImagePipelineCacheRoot: vi.fn() }));
 vi.mock('./attachments/remoteImageProtocol.js', () => ({ registerRemoteImageProtocol: mocks.registerRemoteImageProtocol }));
 vi.mock('./devScreenshotServer.js', () => ({ startDevScreenshotServer: mocks.startDevScreenshotServer }));

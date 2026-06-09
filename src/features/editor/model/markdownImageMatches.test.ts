@@ -41,6 +41,22 @@ describe('markdownImageMatches', () => {
       }
     ]);
   });
+
+  it('collects external document image protocol sources for external preview rendering', () => {
+    const source = 'foliole-ext-image://resource/?documentPath=%2Fvault%2Ftopic.md&imageDestination=images%2Fcover.png';
+    const markdown = `![Cover](${source})`;
+
+    expect(collectImageMatches(0, markdown)).toEqual([
+      {
+        attachmentId: null,
+        alt: 'Cover',
+        display: 'block',
+        from: 0,
+        source,
+        to: markdown.length
+      }
+    ]);
+  });
 });
 
 describe('markdownImageMatches data url safety', () => {

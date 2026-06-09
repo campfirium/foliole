@@ -1,8 +1,10 @@
 import type { Session } from 'electron';
 
+import { EXT_DOC_IMAGE_PROTOCOL_SCHEME } from '../lib/platform/extDocImageProtocolUrl.js';
 import { REMOTE_IMAGE_PROTOCOL_SCHEME } from '../lib/platform/remoteImageProtocolUrl.js';
 
 const CSP_HEADER = 'Content-Security-Policy';
+const EXT_DOC_IMAGE_PROTOCOL_SOURCE = `${EXT_DOC_IMAGE_PROTOCOL_SCHEME}:`;
 const REMOTE_IMAGE_PROTOCOL_SOURCE = `${REMOTE_IMAGE_PROTOCOL_SCHEME}:`;
 const UPDATE_MANIFEST_ORIGIN = 'https://campfirium.github.io';
 const FEEDBACK_ENDPOINT_ORIGIN = 'https://feedback.foliole.app';
@@ -13,7 +15,7 @@ const MAIN_WINDOW_CSP = [
   "frame-ancestors 'none'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: file: foliole-asset: ${REMOTE_IMAGE_PROTOCOL_SOURCE}`,
+  `img-src 'self' data: blob: file: foliole-asset: ${EXT_DOC_IMAGE_PROTOCOL_SOURCE} ${REMOTE_IMAGE_PROTOCOL_SOURCE}`,
   "font-src 'self' data:",
   `connect-src 'self' foliole-asset: ${UPDATE_MANIFEST_ORIGIN} ${FEEDBACK_ENDPOINT_ORIGIN}`,
   "worker-src 'self' blob:",
@@ -26,8 +28,8 @@ const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
     "base-uri 'self' http://localhost:* http://127.0.0.1:*"
   )
   .replace(
-    `img-src 'self' data: blob: file: foliole-asset: ${REMOTE_IMAGE_PROTOCOL_SOURCE}`,
-    `img-src 'self' data: blob: file: foliole-asset: ${REMOTE_IMAGE_PROTOCOL_SOURCE} http://localhost:* http://127.0.0.1:*`
+    `img-src 'self' data: blob: file: foliole-asset: ${EXT_DOC_IMAGE_PROTOCOL_SOURCE} ${REMOTE_IMAGE_PROTOCOL_SOURCE}`,
+    `img-src 'self' data: blob: file: foliole-asset: ${EXT_DOC_IMAGE_PROTOCOL_SOURCE} ${REMOTE_IMAGE_PROTOCOL_SOURCE} http://localhost:* http://127.0.0.1:*`
   )
   .replace(
     "script-src 'self'",

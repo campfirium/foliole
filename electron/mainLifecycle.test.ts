@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   isDesktopCompanionSyncEnabled: vi.fn(() => false),
   presentInitialRendererWindow: vi.fn(),
   registerAttachmentProtocol: vi.fn(),
+  registerExtDocImageProtocol: vi.fn(),
   registerRemoteImageProtocol: vi.fn(),
   resolveAppPaths: vi.fn(() => ({ app_cache_dir: '/cache', app_log_dir: '/logs' }))
 }));
@@ -28,6 +29,7 @@ vi.mock('electron', () => ({
   app: mocks.app
 }));
 vi.mock('./attachments/attachmentProtocol.js', () => ({ registerAttachmentProtocol: mocks.registerAttachmentProtocol }));
+vi.mock('./attachments/extDocImageProtocol.js', () => ({ registerExtDocImageProtocol: mocks.registerExtDocImageProtocol }));
 vi.mock('./attachments/remoteImageProtocol.js', () => ({ registerRemoteImageProtocol: mocks.registerRemoteImageProtocol }));
 vi.mock('./database/backupRestore.js', () => ({ reconcileAutomaticDatabaseBackups: vi.fn() }));
 vi.mock('./database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop') }));

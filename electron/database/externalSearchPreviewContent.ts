@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { buildExtDocImageRenderUrl } from '../../lib/platform/extDocImageProtocolUrl.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { rewriteInlineImageReferences } from './inlineImageReferences.js';
@@ -28,7 +29,13 @@ function decodeMarkdownPath(destination: string) {
 function isAlreadyResolvedDestination(destination: string) {
   try {
     const parsed = new URL(destination);
-    return parsed.protocol === 'asset:' || parsed.protocol === 'file:' || parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    return (
+      parsed.protocol === 'asset:' ||
+      parsed.protocol === 'data:' ||
+      parsed.protocol === 'file:' ||
+      parsed.protocol === 'http:' ||
+      parsed.protocol === 'https:'
+    );
   } catch {
     return false;
   }
@@ -42,13 +49,18 @@ function isPreviewImageFile(filePath: string) {
   return PREVIEW_IMAGE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
 }
 
-function buildImageDataUrl(filePath: string) {
-  const mimeType = PREVIEW_IMAGE_MIME_TYPES.get(path.extname(filePath).toLowerCase());
-  if (!mimeType) {
-    return null;
-  }
-  const encoded = readFileSync(filePath).toString('base64');
-  return `data:${mimeType};base64,${encoded}`;
+function resolvePreviewImageMimeType(filePath: string) {
+  return PREVIEW_IMAGE_MIME_TYPES.get(path.extname(filePath).toLowerCase()) ?? null;
+}
+
+function isWithinBasePath(candidate: string, basePath: string) {
+  const relative = path.relative(basePath, candidate);
+  return relative === '' || (!!relative && !relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function resolveWithinBasePath(basePath: string, destination: string) {
+  const resolved = isAbsoluteLocalPath(destination) ? path.resolve(destination) : path.resolve(basePath, destination);
+  return isWithinBasePath(resolved, basePath) ? resolved : null;
 }
 
 function resolveCandidatePaths(
@@ -57,14 +69,35 @@ function resolveCandidatePaths(
   folder: NativeExternalSearchFolder | null
 ) {
   const decodedDestination = decodeMarkdownPath(destination);
-  if (isAbsoluteLocalPath(decodedDestination)) {
-    return [decodedDestination];
+  const candidates: string[] = [];
+  const documentPath = resolveWithinBasePath(path.dirname(absolutePath), decodedDestination);
+  if (documentPath) {
+    candidates.push(documentPath);
   }
-  const candidates = [path.resolve(path.dirname(absolutePath), decodedDestination)];
   if (folder?.attachment_root_path?.trim()) {
-    candidates.push(path.resolve(folder.attachment_root_path, decodedDestination));
+    const attachmentPath = resolveWithinBasePath(folder.attachment_root_path, decodedDestination);
+    if (attachmentPath) {
+      candidates.push(attachmentPath);
+    }
   }
   return [...new Set(candidates)];
+}
+
+export interface ExternalPreviewImageResource {
+  filePath: string;
+  mimeType: string;
+}
+
+export function resolveExternalPreviewImageResource(
+  destination: string,
+  absolutePath: string,
+  folder: NativeExternalSearchFolder | null
+) {
+  const resolvedPath = resolveCandidatePaths(destination, absolutePath, folder).find(
+    (candidate) => isPreviewImageFile(candidate) && existsSync(candidate)
+  );
+  const mimeType = resolvedPath ? resolvePreviewImageMimeType(resolvedPath) : null;
+  return resolvedPath && mimeType ? { filePath: resolvedPath, mimeType } : null;
 }
 
 function resolveImagePreviewUrl(
@@ -75,10 +108,13 @@ function resolveImagePreviewUrl(
   if (isAlreadyResolvedDestination(destination)) {
     return destination;
   }
-  const resolvedPath = resolveCandidatePaths(destination, absolutePath, folder).find(
-    (candidate) => isPreviewImageFile(candidate) && existsSync(candidate)
-  );
-  return resolvedPath ? buildImageDataUrl(resolvedPath) : null;
+  const resolved = resolveExternalPreviewImageResource(destination, absolutePath, folder);
+  return resolved
+    ? buildExtDocImageRenderUrl({
+        documentAbsolutePath: absolutePath,
+        imageDestination: destination
+      })
+    : null;
 }
 
 export function resolveExternalPreviewSourceContent(cachedContent: string, absolutePath: string) {

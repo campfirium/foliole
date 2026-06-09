@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { BrowserWindow } from 'electron';
 
 import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js';
+import { registerExtDocImageProtocol } from './attachments/extDocImageProtocol.js';
 import { configureRemoteImagePipelineCacheRoot } from './attachments/remoteImagePipeline.js';
 import { registerRemoteImageProtocol } from './attachments/remoteImageProtocol.js';
 import { startDevScreenshotServer } from './devScreenshotServer.js';
@@ -75,6 +76,7 @@ export async function startInitialMainWindow(
   try {
     configureRemoteImagePipelineCacheRoot(path.join(resolveAppPaths().app_cache_dir, 'remote-images'));
     registerAttachmentProtocol();
+    registerExtDocImageProtocol();
     registerRemoteImageProtocol();
   } catch (error) {
     startup.failDatabaseStartup(error);

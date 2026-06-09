@@ -1,4 +1,5 @@
 import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
+import { EXT_DOC_IMAGE_PROTOCOL_SCHEME } from '../../../../lib/platform/extDocImageProtocolUrl';
 import { isSafeMarkdownDataImageUrl } from '../../../../lib/platform/markdownImageDataUrl';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
@@ -38,6 +39,7 @@ function isBrowserImageSource(value: string) {
     return (
       isSafeMarkdownDataImageUrl(value) ||
       parsed.protocol === 'file:' ||
+      parsed.protocol === `${EXT_DOC_IMAGE_PROTOCOL_SCHEME}:` ||
       parsed.protocol === 'http:' ||
       parsed.protocol === 'https:'
     );

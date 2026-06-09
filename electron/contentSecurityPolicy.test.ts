@@ -16,6 +16,7 @@ it('injects a packaged main window content security policy', () => {
   expect(headers['Content-Security-Policy']?.[0]).toContain('img-src');
   expect(headers['Content-Security-Policy']?.[0]).toContain('connect-src');
   expect(headers['Content-Security-Policy']?.[0]).toContain('foliole-asset:');
+  expect(headers['Content-Security-Policy']?.[0]).toContain('foliole-ext-image:');
   expect(headers['Content-Security-Policy']?.[0]).toContain('https://campfirium.github.io');
   expect(headers['Content-Security-Policy']?.[0]).toContain('https://feedback.foliole.app');
   expect(headers['Content-Security-Policy']?.[0]).toContain('foliole-remote-image:');
@@ -36,9 +37,10 @@ it('keeps vite dev server and websocket access only for localhost renderer URLs'
   expect(policy).toContain('connect-src');
   expect(policy).toContain('https://campfirium.github.io');
   expect(policy).toContain('https://feedback.foliole.app');
-  expect(policy).toContain("img-src 'self' data: blob: file: foliole-asset: foliole-remote-image: http://localhost:* http://127.0.0.1:*");
+  expect(policy).toContain("img-src 'self' data: blob: file: foliole-asset: foliole-ext-image: foliole-remote-image: http://localhost:* http://127.0.0.1:*");
   expect(policy).toContain("font-src 'self' data: http://localhost:* http://127.0.0.1:*");
   expect(policy).toContain('foliole-asset:');
+  expect(policy).toContain('foliole-ext-image:');
   expect(policy).toContain('foliole-remote-image:');
 });
 
