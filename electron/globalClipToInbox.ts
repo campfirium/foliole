@@ -1,5 +1,4 @@
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { promisify } from 'node:util';
 
 import {
@@ -8,16 +7,22 @@ import {
   globalShortcut,
   type App,
   type Clipboard,
-  type GlobalShortcut,
-  type NativeImage
+  type GlobalShortcut
 } from 'electron';
 
 import { waitForDatabaseReady } from './database/databaseReadiness.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { showGlobalCapturePanel, type GlobalCapturePanelResult } from './globalCapturePanel.js';
+import {
+  hasClipboardChanged,
+  hasStrictTextSelectionClipboard,
+  readClipboardSnapshot,
+  type ClipboardSnapshot
+} from './globalClipClipboardEvidence.js';
 import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 import type { GlobalClipDesktopToast, GlobalClipToastStatus } from './globalClipDesktopToastState.js';
 import { handleGlobalCapturePanelResult, importWithGlobalClipToast } from './globalClipImportRunner.js';
+import { detectWindowsTextSelection } from './globalClipTextSelection.js';
 import { runClipboardImport } from './ipc/importClipboard.js';
 
 const DEFAULT_SHORTCUT = 'Alt+Shift+C';
@@ -36,6 +41,7 @@ export interface GlobalClipToInboxDeps {
   globalShortcutRef?: Pick<GlobalShortcut, 'register' | 'unregister'>;
   log?: (event: string, payload?: Record<string, unknown>) => void;
   platform?: NodeJS.Platform;
+  detectTextSelection?: () => Promise<boolean | null>;
   runImport?: typeof runClipboardImport;
   sendCopyShortcut?: () => Promise<boolean>;
   showCapturePanel?: () => Promise<GlobalCapturePanelResult>;
@@ -49,62 +55,6 @@ export interface GlobalClipToInboxDeps {
 }
 
 let globalCaptureInFlight = false;
-
-interface ClipboardSnapshot {
-  fingerprint: string;
-}
-
-function hashText(value: string) {
-  return createHash('sha256').update(value).digest('hex');
-}
-
-function hashBuffer(value: Buffer) {
-  return createHash('sha256').update(value).digest('hex');
-}
-
-function safeReadBuffer(clipboardRef: GlobalClipToInboxDeps['clipboardRef'], format: string) {
-  try {
-    return clipboardRef?.readBuffer(format) ?? Buffer.alloc(0);
-  } catch {
-    return Buffer.alloc(0);
-  }
-}
-
-function safeReadText(read: () => string) {
-  try {
-    return read();
-  } catch {
-    return '';
-  }
-}
-
-function isImageEmpty(image: NativeImage) {
-  try {
-    return image.isEmpty();
-  } catch {
-    return true;
-  }
-}
-
-function readClipboardSnapshot(clipboardRef: NonNullable<GlobalClipToInboxDeps['clipboardRef']>): ClipboardSnapshot {
-  const formats = [...clipboardRef.availableFormats()].sort();
-  const formatFingerprints = formats.map((format) => {
-    const bytes = safeReadBuffer(clipboardRef, format);
-    return `${format}:${bytes.length}:${hashBuffer(bytes)}`;
-  });
-  const image = clipboardRef.readImage();
-  const parts = [
-    `formats=${formatFingerprints.join('|')}`,
-    `html=${hashText(safeReadText(() => clipboardRef.readHTML()))}`,
-    `text=${hashText(safeReadText(() => clipboardRef.readText()))}`,
-    `image=${isImageEmpty(image) ? 'empty' : 'present'}`
-  ];
-  return { fingerprint: hashText(parts.join('\n')) };
-}
-
-function hasClipboardChanged(before: ClipboardSnapshot, after: ClipboardSnapshot) {
-  return before.fingerprint !== after.fingerprint;
-}
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -144,6 +94,9 @@ async function sendWindowsCopyShortcut() {
 
 export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const clipboardRef = deps.clipboardRef ?? clipboard;
+  const platform = deps.platform ?? process.platform;
+  const detectTextSelection = deps.detectTextSelection
+    ?? (platform === 'win32' ? detectWindowsTextSelection : async () => null);
   const log = deps.log ?? appendMainProcessDiagnosticLog;
   const runImport = deps.runImport ?? runClipboardImport;
   const sendCopyShortcut = deps.sendCopyShortcut ?? sendWindowsCopyShortcut;
@@ -160,6 +113,7 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
     return await runGlobalClipToInboxOnce({
       clipboardRef,
       log,
+      detectTextSelection,
       runImport,
       sendCopyShortcut,
       showCapturePanel,
@@ -174,6 +128,7 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
 
 async function runGlobalClipToInboxOnce(args: {
   clipboardRef: NonNullable<GlobalClipToInboxDeps['clipboardRef']>;
+  detectTextSelection: NonNullable<GlobalClipToInboxDeps['detectTextSelection']>;
   log: NonNullable<GlobalClipToInboxDeps['log']>;
   runImport: typeof runClipboardImport;
   sendCopyShortcut: NonNullable<GlobalClipToInboxDeps['sendCopyShortcut']>;
@@ -183,6 +138,20 @@ async function runGlobalClipToInboxOnce(args: {
   waitForReady: typeof waitForDatabaseReady;
 }) {
   const before = readClipboardSnapshot(args.clipboardRef);
+  const textSelection = await args.detectTextSelection();
+  const openCapturePanel = async () => handleGlobalCapturePanelResult({
+    log: args.log,
+    panelResult: await args.showCapturePanel(),
+    runImport: args.runImport,
+    showDesktopToast: args.showDesktopToast,
+    waitForReady: args.waitForReady
+  });
+  if (textSelection !== true) {
+    args.log('global_clip_opening_capture_panel_without_text_selection', {
+      textSelection: textSelection === false ? 'none' : 'unknown'
+    });
+    return openCapturePanel();
+  }
   const copySent = await args.sendCopyShortcut();
   if (!copySent) {
     args.log('global_clip_copy_not_sent');
@@ -192,13 +161,16 @@ async function runGlobalClipToInboxOnce(args: {
   }
   if (!await args.waitForChange(before, args.clipboardRef)) {
     args.log('global_clip_opening_capture_panel');
-    return handleGlobalCapturePanelResult({
-      log: args.log,
-      panelResult: await args.showCapturePanel(),
-      runImport: args.runImport,
-      showDesktopToast: args.showDesktopToast,
-      waitForReady: args.waitForReady
+    return openCapturePanel();
+  }
+  const after = readClipboardSnapshot(args.clipboardRef);
+  if (!hasStrictTextSelectionClipboard(after)) {
+    args.log('global_clip_opening_capture_panel_without_text_selection', {
+      formats: after.formats,
+      hasImage: after.hasImage,
+      hasText: after.text.trim().length > 0
     });
+    return openCapturePanel();
   }
   const toast = args.showDesktopToast('pending');
   return importWithGlobalClipToast({ log: args.log, run: args.runImport, toast, waitForReady: args.waitForReady });

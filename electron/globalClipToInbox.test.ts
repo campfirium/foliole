@@ -80,6 +80,7 @@ it('opens the capture panel when the copy shortcut does not change the clipboard
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('old clipboard'),
+    detectTextSelection: vi.fn(async () => true),
     runImport,
     sendCopyShortcut: vi.fn(async () => true),
     showCapturePanel,
@@ -155,6 +156,7 @@ it('imports and notifies when the copy shortcut changes to importable clipboard 
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
+    detectTextSelection: vi.fn(async () => true),
     runImport: runImport as never,
     sendCopyShortcut,
     showDesktopToast,
@@ -173,6 +175,7 @@ it('shows an empty result when changed clipboard content is not importable', asy
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
+    detectTextSelection: vi.fn(async () => true),
     log,
     runImport: vi.fn(async () => null),
     sendCopyShortcut: vi.fn(async () => true),
@@ -192,6 +195,7 @@ it('shows a failure result when copy cannot be sent', async () => {
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
+    detectTextSelection: vi.fn(async () => true),
     log,
     runImport,
     sendCopyShortcut: vi.fn(async () => false),
@@ -212,6 +216,7 @@ it('shows a failure result when database readiness fails', async () => {
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
+    detectTextSelection: vi.fn(async () => true),
     log,
     runImport,
     sendCopyShortcut: vi.fn(async () => true),
@@ -233,6 +238,7 @@ it('logs import errors and shows a failure result', async () => {
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
+    detectTextSelection: vi.fn(async () => true),
     log,
     runImport: vi.fn(async () => {
       throw new Error('unsupported clipboard content');
