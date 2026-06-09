@@ -13,6 +13,7 @@ import { stopDevScreenshotServer } from './devScreenshotServer.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { installExternalDocumentFileOpenLifecycle } from './externalDocumentFileOpen.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
+import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigation.js';
 import { installGlobalClipToInboxShortcut } from './globalClipToInbox.js';
 import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
@@ -208,6 +209,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     installAppProcessDiagnostics();
     args.installInvokeHandler();
     installGlobalClipToInboxShortcut();
+    installGlobalCaptureToastOpenHandler();
     await appendBootEvent('app_when_ready');
     beginDatabaseStartup();
     const mainWindow = await args.createMainWindow();

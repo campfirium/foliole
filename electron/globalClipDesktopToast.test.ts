@@ -33,10 +33,13 @@ function createToastWindow() {
     close: vi.fn(),
     isDestroyed: vi.fn(() => false),
     loadURL: vi.fn<(_url: string) => Promise<void>>(async () => undefined),
+    moveTop: vi.fn(),
+    on: vi.fn(),
     setAlwaysOnTop: vi.fn(),
     setIgnoreMouseEvents: vi.fn(),
     showInactive: vi.fn(),
     webContents: {
+      id: 42,
       executeJavaScript: vi.fn(),
       send: vi.fn()
     }
@@ -56,7 +59,7 @@ beforeEach(() => {
   electronMocks.nativeTheme.shouldUseDarkColors = false;
 });
 
-it('shows a non-focusable app-owned desktop toast and closes it automatically', async () => {
+it('shows an app-owned desktop toast and closes it automatically', async () => {
   vi.useFakeTimers();
   const toastWindow = createToastWindow();
   electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
@@ -119,10 +122,18 @@ it('updates the same pending toast before closing it', async () => {
     true
   );
   expect(toastWindow.webContents.executeJavaScript).toHaveBeenCalledWith(
+    expect.stringContaining("toast.dataset.clickable = state.status === 'success' && Boolean(targetNodeId)"),
+    true
+  );
+  expect(toastWindow.webContents.executeJavaScript).toHaveBeenCalledWith(
     expect.stringContaining('Captured source preview'),
     true
   );
   expect(toastWindow.setIgnoreMouseEvents).toHaveBeenLastCalledWith(false);
+  expect(toastWindow.moveTop).toHaveBeenCalledTimes(1);
+  expect(toastWindow.setIgnoreMouseEvents.mock.invocationCallOrder.at(-1)).toBeLessThan(
+    toastWindow.moveTop.mock.invocationCallOrder[0] ?? 0
+  );
   expect(toastWindow.webContents.send).toHaveBeenCalledWith(
     'foliole:global-capture-toast:target',
     { nodeId: 'node-1' }

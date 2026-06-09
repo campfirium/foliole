@@ -141,6 +141,9 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
     currentPreviewTitle = nextStatus === 'success' ? previewTitle ?? currentPreviewTitle : null;
     if (isLoaded && !toastWindow.isDestroyed()) {
       toastWindow.setIgnoreMouseEvents(!navigationTargetNodeId);
+      if (navigationTargetNodeId) {
+        toastWindow.moveTop();
+      }
       toastWindow.webContents.send(GLOBAL_CAPTURE_TOAST_TARGET_CHANNEL, { nodeId: navigationTargetNodeId });
       void toastWindow.webContents.executeJavaScript(buildToastUpdateScript(nextStatus, navigationTargetNodeId, currentPreviewTitle), true);
     }

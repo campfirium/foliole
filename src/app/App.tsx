@@ -10,6 +10,7 @@ import { AppProviders } from './AppProviders';
 import { AppOverlayStack, prewarmAppOverlayStack } from './components/AppOverlayStack';
 import { prewarmImportSourceWorkspace } from './components/ImportSourceWorkspace';
 import { LocalFileEditorSurface } from './components/LocalFileEditorSurface';
+import { useGlobalCaptureNavigation } from './components/useGlobalCaptureNavigation';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { prewarmWorkspaceRightSidebarPanels } from './components/workspaceRightSidebarPanelLoaders';
 import type { WorkspaceSearchResult } from './components/workspaceSearch';
@@ -35,6 +36,11 @@ function AppContent() {
   useWorkspaceContentChangedRefresh();
   useReadwiseAutoSync();
   useReleaseUpdateCheck();
+  const handleGlobalCaptureNavigation = useCallback((nodeId: string) => {
+    controller.layoutProps.imports.onCloseImportManagement();
+    controller.layoutProps.navigation.onSelectNode(nodeId);
+  }, [controller.layoutProps.imports, controller.layoutProps.navigation]);
+  useGlobalCaptureNavigation(handleGlobalCaptureNavigation);
 
   useEffect(() => {
     installWorkspaceDebugBridge();
