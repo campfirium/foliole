@@ -9,25 +9,33 @@ import {
   isWorkspaceRightPanelAvailable,
   resolveWorkspaceRightPanelContext
 } from './workspaceRightPanelAvailability';
+import {
+  loadWorkspaceRightSidebarBacklinksPanel,
+  loadWorkspaceRightSidebarDevPanel,
+  loadWorkspaceRightSidebarHighlightsPanel,
+  loadWorkspaceRightSidebarOutlinePanel,
+  loadWorkspaceRightSidebarPerformancePanel,
+  loadWorkspaceRightSidebarReviewQueuePanel
+} from './workspaceRightSidebarPanelLoaders';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 const WorkspaceRightSidebarBacklinksPanel = lazy(() =>
-  import('./WorkspaceRightSidebarBacklinksPanel').then((module) => ({ default: module.WorkspaceRightSidebarBacklinksPanel }))
+  loadWorkspaceRightSidebarBacklinksPanel().then((module) => ({ default: module.WorkspaceRightSidebarBacklinksPanel }))
 );
 const WorkspaceRightSidebarDevPanel = lazy(() =>
-  import('./WorkspaceRightSidebarDevPanel').then((module) => ({ default: module.WorkspaceRightSidebarDevPanel }))
+  loadWorkspaceRightSidebarDevPanel().then((module) => ({ default: module.WorkspaceRightSidebarDevPanel }))
 );
 const WorkspaceRightSidebarHighlightsPanel = lazy(() =>
-  import('./WorkspaceRightSidebarHighlightsPanel').then((module) => ({ default: module.WorkspaceRightSidebarHighlightsPanel }))
+  loadWorkspaceRightSidebarHighlightsPanel().then((module) => ({ default: module.WorkspaceRightSidebarHighlightsPanel }))
 );
 const WorkspaceRightSidebarOutlinePanel = lazy(() =>
-  import('./WorkspaceRightSidebarOutlinePanel').then((module) => ({ default: module.WorkspaceRightSidebarOutlinePanel }))
+  loadWorkspaceRightSidebarOutlinePanel().then((module) => ({ default: module.WorkspaceRightSidebarOutlinePanel }))
 );
 const WorkspaceRightSidebarPerformancePanel = lazy(() =>
-  import('./WorkspaceRightSidebarPerformancePanel').then((module) => ({ default: module.WorkspaceRightSidebarPerformancePanel }))
+  loadWorkspaceRightSidebarPerformancePanel().then((module) => ({ default: module.WorkspaceRightSidebarPerformancePanel }))
 );
 const WorkspaceRightSidebarReviewQueuePanel = lazy(() =>
-  import('./WorkspaceRightSidebarReviewQueuePanel').then((module) => ({ default: module.WorkspaceRightSidebarReviewQueuePanel }))
+  loadWorkspaceRightSidebarReviewQueuePanel().then((module) => ({ default: module.WorkspaceRightSidebarReviewQueuePanel }))
 );
 
 type WorkspaceRightSidebarNodesById = Record<string, Node>;

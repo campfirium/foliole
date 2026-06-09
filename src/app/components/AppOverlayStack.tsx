@@ -11,34 +11,82 @@ type AppController = ReturnType<typeof useAppController>;
 
 const DEFAULT_FEEDBACK_ENDPOINT = 'https://feedback.foliole.app/submit';
 
+function loadCommandPalette() {
+  return import('./CommandPalette');
+}
+
+function loadSearchPalette() {
+  return import('./SearchPalette');
+}
+
+function loadFeedbackDialog() {
+  return import('./FeedbackDialog');
+}
+
+function loadGoToNodePalette() {
+  return import('./GoToNodePalette');
+}
+
+function loadHelpSearch() {
+  return import('./HelpSearch');
+}
+
+function loadReviewSourceTopicDeleteDialog() {
+  return import('./ReviewSourceTopicDeleteDialog');
+}
+
+function loadReviewTopicDelayPanel() {
+  return import('./ReviewTopicDelayPanel');
+}
+
+function loadSearchResultPreviewPanel() {
+  return import('./SearchResultPreviewPanel');
+}
+
 const CommandPalette = lazy(() =>
-  import('./CommandPalette').then((module) => ({ default: module.CommandPalette }))
+  loadCommandPalette().then((module) => ({ default: module.CommandPalette }))
 );
 const FeedbackDialog = lazy(() =>
-  import('./FeedbackDialog').then((module) => ({ default: module.FeedbackDialog }))
+  loadFeedbackDialog().then((module) => ({ default: module.FeedbackDialog }))
 );
 const GoToNodePalette = lazy(() =>
-  import('./GoToNodePalette').then((module) => ({ default: module.GoToNodePalette }))
+  loadGoToNodePalette().then((module) => ({ default: module.GoToNodePalette }))
 );
 const HelpSearch = lazy(() =>
-  import('./HelpSearch').then((module) => ({ default: module.HelpSearch }))
+  loadHelpSearch().then((module) => ({ default: module.HelpSearch }))
 );
 const ReviewSourceTopicDeleteDialog = lazy(() =>
-  import('./ReviewSourceTopicDeleteDialog').then((module) => ({
+  loadReviewSourceTopicDeleteDialog().then((module) => ({
     default: module.ReviewSourceTopicDeleteDialog
   }))
 );
 const ReviewTopicDelayPanel = lazy(() =>
-  import('./ReviewTopicDelayPanel').then((module) => ({
+  loadReviewTopicDelayPanel().then((module) => ({
     default: module.ReviewTopicDelayPanel
   }))
 );
 const SearchPalette = lazy(() =>
-  import('./SearchPalette').then((module) => ({ default: module.SearchPalette }))
+  loadSearchPalette().then((module) => ({ default: module.SearchPalette }))
 );
 const SearchResultPreviewPanel = lazy(() =>
-  import('./SearchResultPreviewPanel').then((module) => ({ default: module.SearchResultPreviewPanel }))
+  loadSearchResultPreviewPanel().then((module) => ({ default: module.SearchResultPreviewPanel }))
 );
+
+let appOverlayStackPrewarm: Promise<void> | null = null;
+
+export function prewarmAppOverlayStack() {
+  appOverlayStackPrewarm ??= Promise.allSettled([
+    loadCommandPalette(),
+    loadSearchPalette(),
+    loadGoToNodePalette(),
+    loadHelpSearch(),
+    loadSearchResultPreviewPanel(),
+    loadReviewTopicDelayPanel(),
+    loadReviewSourceTopicDeleteDialog(),
+    loadFeedbackDialog()
+  ]).then(() => undefined);
+  return appOverlayStackPrewarm;
+}
 
 export function AppOverlayStack({
   controller,

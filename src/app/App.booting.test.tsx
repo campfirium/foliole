@@ -3,6 +3,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const useAppController = vi.fn();
 const ensureWorkspaceHydrated = vi.fn(() => Promise.resolve());
+const prewarmAppOverlayStack = vi.fn(() => Promise.resolve());
+const prewarmImportSourceWorkspace = vi.fn(() => Promise.resolve());
+const prewarmWorkspaceRightSidebarPanels = vi.fn(() => Promise.resolve());
 const prewarmWorkspaceSettingsOverlay = vi.fn(() => Promise.resolve());
 const reportRuntimeAppReady = vi.fn();
 const reportRuntimeBootStage = vi.fn();
@@ -29,6 +32,19 @@ vi.mock('../store/workspaceStoreHydration', () => ({
 
 vi.mock('./components/WorkspaceSettingsOverlay', () => ({
   prewarmWorkspaceSettingsOverlay
+}));
+
+vi.mock('./components/AppOverlayStack', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./components/AppOverlayStack')>()),
+  prewarmAppOverlayStack
+}));
+
+vi.mock('./components/ImportSourceWorkspace', () => ({
+  prewarmImportSourceWorkspace
+}));
+
+vi.mock('./components/workspaceRightSidebarPanelLoaders', () => ({
+  prewarmWorkspaceRightSidebarPanels
 }));
 
 vi.mock('../shared/platform/runtimeBootTelemetry', async (importOriginal) => ({
@@ -61,6 +77,10 @@ vi.mock('../shared/localization/LocalizationProvider', () => ({
 
 vi.mock('./components/WorkspaceLayout', () => ({
   WorkspaceLayout: () => <div>workspace-layout</div>
+}));
+
+vi.mock('./components/LocalFileEditorSurface', () => ({
+  LocalFileEditorSurface: () => null
 }));
 
 vi.mock('./components/CommandPalette', () => ({
@@ -103,6 +123,9 @@ function createClosedOverlayState() {
 beforeEach(() => {
   useAppController.mockReset();
   ensureWorkspaceHydrated.mockClear();
+  prewarmAppOverlayStack.mockClear();
+  prewarmImportSourceWorkspace.mockClear();
+  prewarmWorkspaceRightSidebarPanels.mockClear();
   prewarmWorkspaceSettingsOverlay.mockClear();
   reportRuntimeAppReady.mockClear();
   reportRuntimeBootStage.mockClear();
@@ -139,7 +162,7 @@ it('renders the workspace chrome immediately without a boot-only shell', async (
   expect(overlayMocks.SearchPalette).not.toHaveBeenCalled();
 });
 
-it('prewarms settings after the hydrated workspace is ready', async () => {
+it('prewarms interactive surfaces after the hydrated workspace is ready', async () => {
   const requestIdleCallback = vi.fn((callback: IdleRequestCallback) => {
     callback({ didTimeout: false, timeRemaining: () => 20 });
     return 1;
@@ -165,6 +188,9 @@ it('prewarms settings after the hydrated workspace is ready', async () => {
   await waitFor(() => {
     expect(prewarmWorkspaceSettingsOverlay).toHaveBeenCalledTimes(1);
   });
+  expect(prewarmAppOverlayStack).toHaveBeenCalledTimes(1);
+  expect(prewarmWorkspaceRightSidebarPanels).toHaveBeenCalledTimes(1);
+  expect(prewarmImportSourceWorkspace).toHaveBeenCalledTimes(1);
   expect(requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2500 });
 });
 

@@ -7,9 +7,11 @@ import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platfor
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
 import { AppProviders } from './AppProviders';
-import { AppOverlayStack } from './components/AppOverlayStack';
+import { AppOverlayStack, prewarmAppOverlayStack } from './components/AppOverlayStack';
+import { prewarmImportSourceWorkspace } from './components/ImportSourceWorkspace';
 import { LocalFileEditorSurface } from './components/LocalFileEditorSurface';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
+import { prewarmWorkspaceRightSidebarPanels } from './components/workspaceRightSidebarPanelLoaders';
 import type { WorkspaceSearchResult } from './components/workspaceSearch';
 import { prewarmWorkspaceSettingsOverlay } from './components/WorkspaceSettingsOverlay';
 import { useAppController } from './hooks/useAppController';
@@ -39,7 +41,7 @@ function AppContent() {
     readPerformanceDiagnosticsProbe();
   }, []);
   useReportAppReadyWhenHydrated(controller.layoutProps.layoutChrome.isWorkspaceHydrated);
-  usePrewarmSettingsAfterReady(controller.layoutProps.layoutChrome.isWorkspaceHydrated);
+  usePrewarmInteractiveSurfacesAfterReady(controller.layoutProps.layoutChrome.isWorkspaceHydrated);
 
   const workspaceLayoutProps = {
     ...controller.layoutProps,
@@ -121,14 +123,37 @@ function scheduleIdleTask(task: () => void) {
   return () => globalThis.clearTimeout(timeoutId);
 }
 
-function usePrewarmSettingsAfterReady(isWorkspaceHydrated?: boolean) {
+function runStartupPrewarmQueue(tasks: Array<() => Promise<unknown>>) {
+  let cancelled = false;
+  let cancelScheduledTask: (() => void) | undefined;
+
+  const runNextTask = (index: number) => {
+    if (cancelled || index >= tasks.length) {
+      return;
+    }
+    cancelScheduledTask = scheduleIdleTask(() => {
+      void tasks[index]().catch(() => undefined).finally(() => runNextTask(index + 1));
+    });
+  };
+
+  runNextTask(0);
+  return () => {
+    cancelled = true;
+    cancelScheduledTask?.();
+  };
+}
+
+function usePrewarmInteractiveSurfacesAfterReady(isWorkspaceHydrated?: boolean) {
   useEffect(() => {
     if (!isWorkspaceHydrated) {
       return undefined;
     }
-    return scheduleIdleTask(() => {
-      void prewarmWorkspaceSettingsOverlay();
-    });
+    return runStartupPrewarmQueue([
+      prewarmAppOverlayStack,
+      prewarmWorkspaceSettingsOverlay,
+      prewarmWorkspaceRightSidebarPanels,
+      prewarmImportSourceWorkspace
+    ]);
   }, [isWorkspaceHydrated]);
 }
 

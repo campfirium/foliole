@@ -1,8 +1,19 @@
 import { Suspense, lazy } from 'react';
 
+function loadImportSourceWorkspaceDetails() {
+  return import('./ImportSourceWorkspaceDetails');
+}
+
 const ImportSourceWorkspaceDetails = lazy(() =>
-  import('./ImportSourceWorkspaceDetails').then((module) => ({ default: module.ImportSourceWorkspaceDetails }))
+  loadImportSourceWorkspaceDetails().then((module) => ({ default: module.ImportSourceWorkspaceDetails }))
 );
+
+let importSourceWorkspacePrewarm: Promise<void> | null = null;
+
+export function prewarmImportSourceWorkspace() {
+  importSourceWorkspacePrewarm ??= loadImportSourceWorkspaceDetails().then(() => undefined).catch(() => undefined);
+  return importSourceWorkspacePrewarm;
+}
 
 type ImportSourceWorkspaceProps = {
   open: boolean;
