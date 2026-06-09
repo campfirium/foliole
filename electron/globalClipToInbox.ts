@@ -12,7 +12,11 @@ import {
 
 import { waitForDatabaseReady } from './database/databaseReadiness.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
-import { showGlobalCapturePanel, type GlobalCapturePanelResult } from './globalCapturePanel.js';
+import {
+  prepareGlobalCapturePanelWindow,
+  showGlobalCapturePanel,
+  type GlobalCapturePanelResult
+} from './globalCapturePanel.js';
 import {
   hasClipboardChanged,
   hasStrictTextSelectionClipboard,
@@ -22,12 +26,11 @@ import {
 import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 import type { GlobalClipDesktopToast, GlobalClipToastStatus } from './globalClipDesktopToastState.js';
 import { handleGlobalCapturePanelResult, importWithGlobalClipToast } from './globalClipImportRunner.js';
-import { detectWindowsTextSelection } from './globalClipTextSelection.js';
 import { runClipboardImport } from './ipc/importClipboard.js';
 
 const DEFAULT_SHORTCUT = 'Alt+Shift+C';
-const COPY_WAIT_TIMEOUT_MS = 700;
-const COPY_POLL_INTERVAL_MS = 50;
+const COPY_WAIT_TIMEOUT_MS = 220;
+const COPY_POLL_INTERVAL_MS = 25;
 const POWERSHELL_COPY_COMMAND = [
   'Add-Type -AssemblyName System.Windows.Forms;',
   '[System.Windows.Forms.SendKeys]::SendWait("^c");'
@@ -44,6 +47,7 @@ export interface GlobalClipToInboxDeps {
   detectTextSelection?: () => Promise<boolean | null>;
   runImport?: typeof runClipboardImport;
   sendCopyShortcut?: () => Promise<boolean>;
+  prepareCapturePanel?: () => void;
   showCapturePanel?: () => Promise<GlobalCapturePanelResult>;
   showDesktopToast?: (status: GlobalClipToastStatus) => GlobalClipDesktopToast;
   shortcut?: string;
@@ -67,9 +71,7 @@ async function waitForClipboardChange(
   const startedAt = Date.now();
   while (Date.now() - startedAt <= COPY_WAIT_TIMEOUT_MS) {
     const after = readClipboardSnapshot(clipboardRef);
-    if (hasClipboardChanged(before, after)) {
-      return true;
-    }
+    if (hasClipboardChanged(before, after)) return true;
     await delay(COPY_POLL_INTERVAL_MS);
   }
   return false;
@@ -84,7 +86,7 @@ async function sendWindowsCopyShortcut() {
       'Bypass',
       '-Command',
       POWERSHELL_COPY_COMMAND
-    ], { timeout: 2000 });
+    ], { timeout: 1000 });
     return true;
   } catch (error) {
     appendMainProcessDiagnosticLog('global_clip_copy_shortcut_failed', { error });
@@ -94,9 +96,6 @@ async function sendWindowsCopyShortcut() {
 
 export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const clipboardRef = deps.clipboardRef ?? clipboard;
-  const platform = deps.platform ?? process.platform;
-  const detectTextSelection = deps.detectTextSelection
-    ?? (platform === 'win32' ? detectWindowsTextSelection : async () => null);
   const log = deps.log ?? appendMainProcessDiagnosticLog;
   const runImport = deps.runImport ?? runClipboardImport;
   const sendCopyShortcut = deps.sendCopyShortcut ?? sendWindowsCopyShortcut;
@@ -113,7 +112,6 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
     return await runGlobalClipToInboxOnce({
       clipboardRef,
       log,
-      detectTextSelection,
       runImport,
       sendCopyShortcut,
       showCapturePanel,
@@ -128,7 +126,6 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
 
 async function runGlobalClipToInboxOnce(args: {
   clipboardRef: NonNullable<GlobalClipToInboxDeps['clipboardRef']>;
-  detectTextSelection: NonNullable<GlobalClipToInboxDeps['detectTextSelection']>;
   log: NonNullable<GlobalClipToInboxDeps['log']>;
   runImport: typeof runClipboardImport;
   sendCopyShortcut: NonNullable<GlobalClipToInboxDeps['sendCopyShortcut']>;
@@ -138,42 +135,21 @@ async function runGlobalClipToInboxOnce(args: {
   waitForReady: typeof waitForDatabaseReady;
 }) {
   const before = readClipboardSnapshot(args.clipboardRef);
-  const textSelection = await args.detectTextSelection();
-  const openCapturePanel = async () => handleGlobalCapturePanelResult({
+  if (await args.sendCopyShortcut() && await args.waitForChange(before, args.clipboardRef)) {
+    const after = readClipboardSnapshot(args.clipboardRef);
+    if (hasStrictTextSelectionClipboard(after)) {
+      const toast = args.showDesktopToast('pending');
+      return importWithGlobalClipToast({ log: args.log, run: args.runImport, toast, waitForReady: args.waitForReady });
+    }
+  }
+  args.log('global_clip_opening_capture_panel');
+  return handleGlobalCapturePanelResult({
     log: args.log,
     panelResult: await args.showCapturePanel(),
     runImport: args.runImport,
     showDesktopToast: args.showDesktopToast,
     waitForReady: args.waitForReady
   });
-  if (textSelection !== true) {
-    args.log('global_clip_opening_capture_panel_without_text_selection', {
-      textSelection: textSelection === false ? 'none' : 'unknown'
-    });
-    return openCapturePanel();
-  }
-  const copySent = await args.sendCopyShortcut();
-  if (!copySent) {
-    args.log('global_clip_copy_not_sent');
-    const toast = args.showDesktopToast('pending');
-    toast.update('copyFailed');
-    return null;
-  }
-  if (!await args.waitForChange(before, args.clipboardRef)) {
-    args.log('global_clip_opening_capture_panel');
-    return openCapturePanel();
-  }
-  const after = readClipboardSnapshot(args.clipboardRef);
-  if (!hasStrictTextSelectionClipboard(after)) {
-    args.log('global_clip_opening_capture_panel_without_text_selection', {
-      formats: after.formats,
-      hasImage: after.hasImage,
-      hasText: after.text.trim().length > 0
-    });
-    return openCapturePanel();
-  }
-  const toast = args.showDesktopToast('pending');
-  return importWithGlobalClipToast({ log: args.log, run: args.runImport, toast, waitForReady: args.waitForReady });
 }
 
 export function installGlobalClipToInboxShortcut(deps: GlobalClipToInboxDeps = {}) {
@@ -195,6 +171,7 @@ export function installGlobalClipToInboxShortcut(deps: GlobalClipToInboxDeps = {
   appRef.on('will-quit', () => {
     globalShortcutRef.unregister(shortcut);
   });
+  (deps.prepareCapturePanel ?? prepareGlobalCapturePanelWindow)();
   log('global_clip_shortcut_registered', { shortcut });
   return true;
 }

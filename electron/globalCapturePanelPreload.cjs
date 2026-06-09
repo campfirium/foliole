@@ -43,6 +43,23 @@ function resizeCaptureSurface() {
   ipcRenderer.send(RESIZE_CHANNEL, surfaceHeight + GUTTER * 2);
 }
 
+function runAfterInitialPaint(callback) {
+  let completed = false;
+  const finish = () => {
+    if (completed) return;
+    completed = true;
+    callback();
+  };
+  if (typeof window.requestAnimationFrame !== 'function') {
+    window.setTimeout(finish, 0);
+    return;
+  }
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(finish);
+  });
+  window.setTimeout(finish, 32);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('capture');
   const form = document.getElementById('form');
@@ -51,7 +68,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const close = document.getElementById('close');
   input?.focus();
   resizeCaptureSurface();
-  ipcRenderer.send(READY_CHANNEL);
+  runAfterInitialPaint(() => ipcRenderer.send(READY_CHANNEL));
   input?.addEventListener('input', resizeCaptureSurface);
   form?.addEventListener('submit', (event) => {
     event.preventDefault();

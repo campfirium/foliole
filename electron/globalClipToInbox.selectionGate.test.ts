@@ -55,14 +55,13 @@ function createClipboardSnapshotSource(text: string, formats: string[]) {
   };
 }
 
-it('opens the capture panel without copying when Windows reports no text selection', async () => {
-  const sendCopyShortcut = vi.fn();
+it('opens the capture panel when copy cannot be sent', async () => {
+  const sendCopyShortcut = vi.fn(async () => false);
   const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
   const showDesktopToast = vi.fn();
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('old clipboard', ['text/plain']),
-    detectTextSelection: vi.fn(async () => false),
     log: vi.fn(),
     runImport: vi.fn(),
     sendCopyShortcut,
@@ -72,55 +71,55 @@ it('opens the capture panel without copying when Windows reports no text selecti
     waitForReady: vi.fn(async () => undefined)
   })).resolves.toBeNull();
 
-  expect(sendCopyShortcut).not.toHaveBeenCalled();
+  expect(sendCopyShortcut).toHaveBeenCalledTimes(1);
   expect(showDesktopToast).not.toHaveBeenCalled();
   expect(showCapturePanel).toHaveBeenCalledTimes(1);
 });
 
-it('opens the capture panel without copying when text selection cannot be confirmed', async () => {
-  const sendCopyShortcut = vi.fn();
+it('opens the capture panel when copy leaves the clipboard unchanged', async () => {
+  const sendCopyShortcut = vi.fn(async () => true);
   const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
+  const waitForClipboardChange = vi.fn(async () => false);
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('old clipboard', ['text/plain']),
-    detectTextSelection: vi.fn(async () => null),
     log: vi.fn(),
     runImport: vi.fn(),
     sendCopyShortcut,
     showCapturePanel,
     showDesktopToast: vi.fn(),
-    waitForClipboardChange: vi.fn(async () => true),
+    waitForClipboardChange,
     waitForReady: vi.fn(async () => undefined)
   })).resolves.toBeNull();
 
-  expect(sendCopyShortcut).not.toHaveBeenCalled();
+  expect(sendCopyShortcut).toHaveBeenCalledTimes(1);
+  expect(waitForClipboardChange).toHaveBeenCalledTimes(1);
   expect(showCapturePanel).toHaveBeenCalledTimes(1);
 });
 
-it('opens the capture panel when the changed clipboard is not a strict text selection', async () => {
+it('opens the capture panel when copied selection is not strict text', async () => {
   const log = vi.fn();
   const runImport = vi.fn();
   const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
   const showDesktopToast = vi.fn();
+  const sendCopyShortcut = vi.fn(async () => true);
+  const waitForClipboardChange = vi.fn(async () => true);
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('C:\\Users\\me\\Desktop\\image.png', ['FileNameW', 'text/plain']),
-    detectTextSelection: vi.fn(async () => true),
     log,
     runImport,
-    sendCopyShortcut: vi.fn(async () => true),
+    sendCopyShortcut,
     showCapturePanel,
     showDesktopToast,
-    waitForClipboardChange: vi.fn(async () => true),
+    waitForClipboardChange,
     waitForReady: vi.fn(async () => undefined)
   })).resolves.toBeNull();
 
+  expect(sendCopyShortcut).toHaveBeenCalledTimes(1);
+  expect(waitForClipboardChange).toHaveBeenCalledTimes(1);
   expect(runImport).not.toHaveBeenCalled();
   expect(showDesktopToast).not.toHaveBeenCalled();
   expect(showCapturePanel).toHaveBeenCalledTimes(1);
-  expect(log).toHaveBeenCalledWith('global_clip_opening_capture_panel_without_text_selection', {
-    formats: ['FileNameW', 'text/plain'],
-    hasImage: false,
-    hasText: true
-  });
+  expect(log).toHaveBeenCalledWith('global_clip_opening_capture_panel');
 });

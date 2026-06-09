@@ -36,6 +36,12 @@ function countChannelCalls(ipcSend: ReturnType<typeof vi.fn>, channel: string) {
   return ipcSend.mock.calls.filter((call) => call[0] === channel).length;
 }
 
+async function waitForChannel(ipcSend: ReturnType<typeof vi.fn>, channel: string) {
+  for (let index = 0; index < 20 && countChannelCalls(ipcSend, channel) === 0; index += 1) {
+    await new Promise((resolve) => window.setTimeout(resolve, 5));
+  }
+}
+
 beforeEach(() => {
   document.body.innerHTML = [
     '<form id="form">',
@@ -72,11 +78,15 @@ it('asks the main process to grow until the capture max height', () => {
   expect(input.style.overflowY).toBe('auto');
 });
 
-it('signals readiness after the first layout pass', () => {
+it('signals readiness after the first layout paint', async () => {
   const { ipcSend } = executePanelPreload();
-  const calls = ipcSend.mock.calls.map((call) => call[0]);
 
   expect(ipcSend).toHaveBeenCalledWith('foliole:global-capture-panel:resize', 240);
+  expect(ipcSend).not.toHaveBeenCalledWith('foliole:global-capture-panel:ready');
+
+  await waitForChannel(ipcSend, 'foliole:global-capture-panel:ready');
+
+  const calls = ipcSend.mock.calls.map((call) => call[0]);
   expect(ipcSend).toHaveBeenCalledWith('foliole:global-capture-panel:ready');
   expect(calls.indexOf('foliole:global-capture-panel:resize')).toBeLessThan(
     calls.indexOf('foliole:global-capture-panel:ready')

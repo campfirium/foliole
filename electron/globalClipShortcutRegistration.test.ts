@@ -36,6 +36,7 @@ beforeEach(() => {
 
 it('registers and unregisters the Windows global clip shortcut', () => {
   const appRef = { on: vi.fn() };
+  const prepareCapturePanel = vi.fn();
   const globalShortcutRef = {
     register: vi.fn(() => true),
     unregister: vi.fn()
@@ -44,10 +45,12 @@ it('registers and unregisters the Windows global clip shortcut', () => {
   expect(installGlobalClipToInboxShortcut({
     appRef,
     globalShortcutRef,
+    prepareCapturePanel,
     platform: 'win32'
   })).toBe(true);
 
   expect(globalShortcutRef.register).toHaveBeenCalledWith('Alt+Shift+C', expect.any(Function));
+  expect(prepareCapturePanel).toHaveBeenCalledTimes(1);
   const willQuit = appRef.on.mock.calls.find(([event]) => event === 'will-quit')?.[1] as (() => void) | undefined;
   expect(willQuit).toBeTypeOf('function');
   willQuit?.();
@@ -62,6 +65,7 @@ it('does not register outside Windows', () => {
 
   expect(installGlobalClipToInboxShortcut({
     globalShortcutRef,
+    prepareCapturePanel: vi.fn(),
     platform: 'linux'
   })).toBe(false);
 
@@ -78,6 +82,7 @@ it('logs shortcut registration failure without throwing', () => {
   expect(installGlobalClipToInboxShortcut({
     globalShortcutRef,
     log,
+    prepareCapturePanel: vi.fn(),
     platform: 'win32'
   })).toBe(false);
 

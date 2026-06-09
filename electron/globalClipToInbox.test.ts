@@ -72,29 +72,6 @@ beforeEach(() => {
   electronMocks.globalShortcut.register.mockReturnValue(true);
 });
 
-it('opens the capture panel when the copy shortcut does not change the clipboard', async () => {
-  const runImport = vi.fn();
-  const toast = createToastController();
-  const showDesktopToast = vi.fn(() => toast);
-  const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
-
-  await expect(runGlobalClipToInbox({
-    clipboardRef: createClipboardSnapshotSource('old clipboard'),
-    detectTextSelection: vi.fn(async () => true),
-    runImport,
-    sendCopyShortcut: vi.fn(async () => true),
-    showCapturePanel,
-    showDesktopToast,
-    waitForClipboardChange: vi.fn(async () => false),
-    waitForReady: vi.fn(async () => undefined)
-  })).resolves.toBeNull();
-
-  expect(runImport).not.toHaveBeenCalled();
-  expect(showDesktopToast).not.toHaveBeenCalled();
-  expect(toast.close).not.toHaveBeenCalled();
-  expect(showCapturePanel).toHaveBeenCalledTimes(1);
-});
-
 it('imports the current clipboard when the capture panel is submitted empty', async () => {
   const runImport = vi.fn(async () => ({
     import_id: 'import-1',
@@ -138,35 +115,34 @@ it('captures typed panel text without importing the clipboard', async () => {
   expect(runTextCaptureToInbox).toHaveBeenCalledWith('quick thought');
 });
 
-it('imports and notifies when the copy shortcut changes to importable clipboard content', async () => {
+it('imports selected text without opening the capture panel', async () => {
   const runImport = vi.fn(async () => ({
     import_id: 'import-1',
     node_id: 'node-1',
     source_kind: 'text',
-    source_name: 'Selected text preview'
+    source_name: 'Clipboard preview'
   }));
   const toast = createToastController();
   const showDesktopToast = vi.fn(() => toast);
   const waitForReady = vi.fn(async () => undefined);
-  const sendCopyShortcut = vi.fn(async () => {
-    expect(showDesktopToast).not.toHaveBeenCalled();
-    expect(toast.update).not.toHaveBeenCalled();
-    return true;
-  });
+  const sendCopyShortcut = vi.fn(async () => true);
+  const showCapturePanel = vi.fn(async () => ({ type: 'clipboard' as const }));
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
-    detectTextSelection: vi.fn(async () => true),
     runImport: runImport as never,
     sendCopyShortcut,
+    showCapturePanel,
     showDesktopToast,
     waitForClipboardChange: vi.fn(async () => true),
     waitForReady
   })).resolves.toMatchObject({ import_id: 'import-1' });
 
+  expect(showCapturePanel).not.toHaveBeenCalled();
+  expect(sendCopyShortcut).toHaveBeenCalledTimes(1);
   expect(waitForReady).toHaveBeenCalledTimes(1);
   expect(runImport).toHaveBeenCalledTimes(1);
-  expect(toast.update).toHaveBeenCalledWith('success', 'node-1', 'Selected text preview');
+  expect(toast.update).toHaveBeenCalledWith('success', 'node-1', 'Clipboard preview');
 });
 
 it('shows an empty result when changed clipboard content is not importable', async () => {
@@ -179,6 +155,7 @@ it('shows an empty result when changed clipboard content is not importable', asy
     log,
     runImport: vi.fn(async () => null),
     sendCopyShortcut: vi.fn(async () => true),
+    showCapturePanel: vi.fn(async () => ({ type: 'clipboard' as const })),
     showDesktopToast: vi.fn(() => toast),
     waitForClipboardChange: vi.fn(async () => true),
     waitForReady: vi.fn(async () => undefined)
@@ -188,25 +165,28 @@ it('shows an empty result when changed clipboard content is not importable', asy
   expect(toast.update).toHaveBeenCalledWith('empty');
 });
 
-it('shows a failure result when copy cannot be sent', async () => {
-  const log = vi.fn();
+it('opens the capture panel when copy cannot be sent', async () => {
   const runImport = vi.fn();
   const toast = createToastController();
+  const sendCopyShortcut = vi.fn(async () => false);
+  const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
     detectTextSelection: vi.fn(async () => true),
-    log,
+    log: vi.fn(),
     runImport,
-    sendCopyShortcut: vi.fn(async () => false),
+    sendCopyShortcut,
+    showCapturePanel,
     showDesktopToast: vi.fn(() => toast),
     waitForClipboardChange: vi.fn(async () => true),
     waitForReady: vi.fn(async () => undefined)
   })).resolves.toBeNull();
 
-  expect(log).toHaveBeenCalledWith('global_clip_copy_not_sent');
+  expect(showCapturePanel).toHaveBeenCalledTimes(1);
+  expect(sendCopyShortcut).toHaveBeenCalledTimes(1);
   expect(runImport).not.toHaveBeenCalled();
-  expect(toast.update).toHaveBeenCalledWith('copyFailed');
+  expect(toast.update).not.toHaveBeenCalled();
 });
 
 it('shows a failure result when database readiness fails', async () => {
@@ -220,6 +200,7 @@ it('shows a failure result when database readiness fails', async () => {
     log,
     runImport,
     sendCopyShortcut: vi.fn(async () => true),
+    showCapturePanel: vi.fn(async () => ({ type: 'clipboard' as const })),
     showDesktopToast: vi.fn(() => toast),
     waitForClipboardChange: vi.fn(async () => true),
     waitForReady: vi.fn(async () => {
@@ -244,6 +225,7 @@ it('logs import errors and shows a failure result', async () => {
       throw new Error('unsupported clipboard content');
     }),
     sendCopyShortcut: vi.fn(async () => true),
+    showCapturePanel: vi.fn(async () => ({ type: 'clipboard' as const })),
     showDesktopToast: vi.fn(() => toast),
     waitForClipboardChange: vi.fn(async () => true),
     waitForReady: vi.fn(async () => undefined)

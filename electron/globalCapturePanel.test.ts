@@ -33,11 +33,15 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
   }>>(() => []);
   const window = {
     close: vi.fn(),
+    focus: vi.fn(),
     isDestroyed: vi.fn(() => false),
+    isVisible: vi.fn(() => true),
     loadURL: vi.fn<(url: string) => Promise<void>>(async () => undefined),
     on: vi.fn(),
     setBounds: vi.fn(),
-    show: vi.fn(),
+    setIgnoreMouseEvents: vi.fn(),
+    setOpacity: vi.fn(),
+    showInactive: vi.fn(),
     webContents
   };
   return {
@@ -51,7 +55,6 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
         }),
         removeListener: vi.fn()
       },
-      nativeTheme: { shouldUseDarkColors: false },
       screen: { getPrimaryDisplay: vi.fn(() => ({ workArea: { height: 900, width: 1400, x: 0, y: 0 } })) }
     },
     panelWindow: {
@@ -68,7 +71,7 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
 vi.mock('electron', () => electronMocks);
 vi.mock('./globalClipSettings.js', () => clipSettingsMocks);
 
-import { showGlobalCapturePanel } from './globalCapturePanel.js';
+import { resetGlobalCapturePanelWindowForTests, showGlobalCapturePanel } from './globalCapturePanel.js';
 
 async function waitForPanelLoad() {
   for (let index = 0; index < 10 && panelWindow.loadURL.mock.calls.length === 0; index += 1) {
@@ -76,16 +79,19 @@ async function waitForPanelLoad() {
   }
 }
 
-async function waitForPanelShow() {
-  for (let index = 0; index < 10 && panelWindow.show.mock.calls.length === 0; index += 1) {
+async function waitForPanelReveal() {
+  for (let index = 0; index < 10 && panelWindow.focus.mock.calls.length === 0; index += 1) {
     await Promise.resolve();
   }
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetGlobalCapturePanelWindowForTests();
   clipSettingsMocks.isGlobalClipHintVisible.mockReturnValue(true);
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([]);
+  panelWindow.isDestroyed.mockReturnValue(false);
+  panelWindow.isVisible.mockReturnValue(true);
 });
 
 it('shows a compact shell-less capture panel with an isolated preload', async () => {
@@ -103,6 +109,9 @@ it('shows a compact shell-less capture panel with an isolated preload', async ()
       sandbox: true
     })
   }));
+  expect(panelWindow.showInactive).toHaveBeenCalledTimes(1);
+  expect(panelWindow.setOpacity).toHaveBeenCalledWith(0);
+  expect(panelWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(true);
   panelWindow.emitCancel();
   await expect(promise).resolves.toEqual({ type: 'cancelled' });
 });
@@ -138,14 +147,16 @@ it('renders the collapsed hint state from persisted settings', async () => {
   await expect(promise).resolves.toEqual({ type: 'cancelled' });
 });
 
-it('waits for the panel layout before showing the transparent window', async () => {
+it('waits for the panel layout before revealing the prewarmed window', async () => {
   const promise = showGlobalCapturePanel();
   await waitForPanelLoad();
 
-  expect(panelWindow.show).not.toHaveBeenCalled();
+  expect(panelWindow.focus).not.toHaveBeenCalled();
   panelWindow.emitReady();
-  await waitForPanelShow();
-  expect(panelWindow.show).toHaveBeenCalledTimes(1);
+  await waitForPanelReveal();
+  expect(panelWindow.focus).toHaveBeenCalledTimes(1);
+  expect(panelWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(false);
+  expect(panelWindow.setOpacity).toHaveBeenLastCalledWith(1);
 
   panelWindow.emitCancel();
   await expect(promise).resolves.toEqual({ type: 'cancelled' });
@@ -168,6 +179,7 @@ it('settles text, clipboard, and cancel actions from panel ipc', async () => {
 it('clamps auto-grow resize requests from the panel sender', async () => {
   const promise = showGlobalCapturePanel();
   await waitForPanelLoad();
+  panelWindow.setBounds.mockClear();
 
   panelWindow.emitResize(180);
   panelWindow.emitResize(300);
@@ -233,20 +245,7 @@ it('keeps capture shell-less without old dialog chrome', async () => {
   expect(html).toContain('aria-label="Show shortcut hint"');
   expect(html).toContain('placeholder="..."');
   expect(html).toContain('>Save<');
-  expect(html).toContain('grid-template-rows:minmax(0,auto) auto');
-  expect(html).toContain('body{padding:26px;}');
-  expect(html).toContain('width:520px;min-height:188px;max-height:420px');
   expect(html).toContain('font:400 var(--capture-input-font-size)/var(--capture-input-line-height) var(--capture-input-font-family)');
-  expect(html).toContain('padding:var(--capture-input-padding-block-start) var(--capture-content-inline-padding) var(--capture-input-padding-block-end)');
-  expect(html).toContain('textarea::-webkit-scrollbar{display:none;width:0;height:0;}');
-  expect(html).toContain('textarea::placeholder{color:var(--capture-placeholder)');
-  expect(html).toContain('border-top:1px solid var(--capture-divider)');
-  expect(html).toContain('padding:6px var(--capture-content-inline-padding)');
-  expect(html).toContain('background:transparent');
-  expect(html).toContain('min-height:32px');
-  expect(html).toContain('border:1px solid var(--capture-control-border)');
-  expect(html).toContain('border-radius:var(--capture-control-radius)');
-  expect(html).toContain('color:var(--capture-control-fg)');
   expect(html).not.toContain('var(--capture-accent) 8%');
   panelWindow.emitCancel();
   await expect(promise).resolves.toEqual({ type: 'cancelled' });

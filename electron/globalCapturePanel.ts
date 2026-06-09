@@ -31,6 +31,8 @@ const PANEL_MIN_HEIGHT = SURFACE_MIN_HEIGHT + PANEL_GUTTER * 2;
 const PANEL_HEIGHT = PANEL_MIN_HEIGHT;
 const PANEL_WIDTH = SURFACE_WIDTH + PANEL_GUTTER * 2;
 
+let cachedPanelWindow: BrowserWindow | null = null;
+
 function resolvePanelBounds(height: number) {
   const display = screen.getPrimaryDisplay();
   const { x, y, width, height: workAreaHeight } = display.workArea;
@@ -78,7 +80,7 @@ function buildPanelHtml(theme: GlobalCaptureFloatingTheme) {
 
 function createPanelWindow() {
   const bounds = resolvePanelBounds(PANEL_HEIGHT);
-  return new BrowserWindow({
+  const panel = new BrowserWindow({
     alwaysOnTop: true,
     backgroundColor: '#00000000',
     focusable: true,
@@ -98,29 +100,79 @@ function createPanelWindow() {
     x: bounds.x,
     y: bounds.y
   });
+  panel.setOpacity(0);
+  panel.setIgnoreMouseEvents(true);
+  panel.showInactive();
+  panel.on('closed', () => {
+    if (cachedPanelWindow === panel) cachedPanelWindow = null;
+  });
+  return panel;
+}
+
+function getPanelWindow() {
+  if (!cachedPanelWindow || cachedPanelWindow.isDestroyed()) {
+    cachedPanelWindow = createPanelWindow();
+  }
+  return cachedPanelWindow;
+}
+
+export function prepareGlobalCapturePanelWindow() {
+  getPanelWindow();
+}
+
+export function resetGlobalCapturePanelWindowForTests() {
+  cachedPanelWindow = null;
+}
+
+function revealPanel(panel: BrowserWindow) {
+  panel.setIgnoreMouseEvents(false);
+  panel.setOpacity(0);
+  if (!panel.isVisible()) panel.showInactive();
+  panel.setOpacity(1);
+  panel.focus();
+}
+
+function concealPanel(panel: BrowserWindow) {
+  if (panel.isDestroyed()) return;
+  panel.setOpacity(0);
+  panel.setIgnoreMouseEvents(true);
+}
+
+interface PanelIpcHandlers {
+  handleCancel: (event: IpcMainEvent) => void;
+  handleHintVisible: (event: IpcMainEvent, value: unknown) => void;
+  handleReady: (event: IpcMainEvent) => void;
+  handleResize: (event: IpcMainEvent, value: unknown) => void;
+  handleSubmit: (event: IpcMainEvent, value: unknown) => void;
+}
+
+function removePanelIpcListeners(handlers: PanelIpcHandlers) {
+  ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_SUBMIT_CHANNEL, handlers.handleSubmit);
+  ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_CANCEL_CHANNEL, handlers.handleCancel);
+  ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_RESIZE_CHANNEL, handlers.handleResize);
+  ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_READY_CHANNEL, handlers.handleReady);
+  ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_HINT_VISIBLE_CHANNEL, handlers.handleHintVisible);
 }
 
 export function showGlobalCapturePanel(): Promise<GlobalCapturePanelResult> {
   return new Promise((resolve) => {
-    const panel = createPanelWindow();
+    const panel = getPanelWindow();
     let loaded = false;
     let ready = false;
     let settled = false;
     let shown = false;
+    panel.setBounds(resolvePanelBounds(PANEL_HEIGHT), false);
+    concealPanel(panel);
     const showWhenReady = () => {
       if (!loaded || !ready || shown || panel.isDestroyed()) return;
       shown = true;
-      panel.show();
+      revealPanel(panel);
     };
     const settle = (result: GlobalCapturePanelResult) => {
       if (settled) return;
       settled = true;
-      ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_SUBMIT_CHANNEL, handleSubmit);
-      ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_CANCEL_CHANNEL, handleCancel);
-      ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_RESIZE_CHANNEL, handleResize);
-      ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_READY_CHANNEL, handleReady);
-      ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_HINT_VISIBLE_CHANNEL, handleHintVisible);
-      if (!panel.isDestroyed()) panel.close();
+      removePanelIpcListeners({ handleCancel, handleHintVisible, handleReady, handleResize, handleSubmit });
+      concealPanel(panel);
       resolve(result);
     };
     const isPanelSender = (senderId: number) => senderId === panel.webContents.id;
