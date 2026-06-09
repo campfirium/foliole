@@ -31,16 +31,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('turns native window resize notifications into renderer resize events', async () => {
+it('turns startup and native window resize notifications into renderer resize events', async () => {
   const resizeListener = vi.fn();
   window.addEventListener('resize', resizeListener);
 
   const { unmount } = renderHook(() => useDesktopResizeRemeasureBridge());
   await waitFor(() => expect(bridge.onMainWindowResized).toHaveBeenCalledTimes(1));
 
+  expect(resizeListener).toHaveBeenCalledTimes(3);
+
   bridge.handler?.();
 
-  expect(resizeListener).toHaveBeenCalledTimes(3);
+  expect(resizeListener).toHaveBeenCalledTimes(6);
   unmount();
   expect(bridge.unsubscribe).toHaveBeenCalledTimes(1);
   window.removeEventListener('resize', resizeListener);

@@ -20,6 +20,7 @@ export function useDesktopResizeRemeasureBridge() {
     let cancelScheduledDispatch: (() => void) | null = null;
     let unsubscribe: (() => void) | null = null;
     let disposed = false;
+    cancelScheduledDispatch = scheduleViewportResizeDispatch();
 
     void onMainWindowResized(() => {
       cancelScheduledDispatch?.();
