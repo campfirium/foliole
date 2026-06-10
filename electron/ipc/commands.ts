@@ -6,6 +6,11 @@ import { waitForDatabaseReady } from '../database/databaseReadiness.js';
 import { resolveCommandRoute, type CommandRouteFamily } from './commandRoutes.js';
 import type { InvokeRequest } from './contracts.js';
 import { handleImportCommand } from './importCommands.js';
+import {
+  IPC_REQUEST_PAYLOAD_WARNING_BYTES,
+  IPC_RESPONSE_PAYLOAD_WARNING_BYTES,
+  recordIpcPayloadBudget
+} from './ipcPayloadBudget.js';
 import { handleReviewCommand } from './reviewCommands.js';
 import { handleStorageCommand } from './storageCommands.js';
 import { handleWindowAndUtilityCommand } from './windowCommands.js';
@@ -27,6 +32,12 @@ function resolveTargetWindow(context?: InvokeContext) {
 export async function handleInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
   const command = request.command;
   const args = (request.args ?? {}) as Record<string, unknown>;
+  recordIpcPayloadBudget({
+    budgetBytes: IPC_REQUEST_PAYLOAD_WARNING_BYTES,
+    command,
+    direction: 'request',
+    payload: { command, args }
+  });
   const route = resolveCommandRoute(command);
   if (!route) {
     throwUnsupportedCommand(command);
@@ -37,6 +48,12 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
 
   const result = await dispatchRoutedCommand(route, request, args, context);
   if (result !== undefined) {
+    recordIpcPayloadBudget({
+      budgetBytes: IPC_RESPONSE_PAYLOAD_WARNING_BYTES,
+      command,
+      direction: 'response',
+      payload: result
+    });
     return result;
   }
   throwUnsupportedCommand(command);
