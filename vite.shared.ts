@@ -10,7 +10,7 @@ const WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = 'virtual:workspace-change-timestamp
 const RESOLVED_WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = `\0${WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID}`;
 const WORKSPACE_TIMESTAMP_ROOTS = ['src', 'electron'];
 const WORKSPACE_TIMESTAMP_INCLUDE_EXTENSIONS = new Set(['.css', '.js', '.jsx', '.mjs', '.mts', '.scss', '.ts', '.tsx']);
-const DESKTOP_RENDERER_WARMUP_FILES = [
+export const DESKTOP_RENDERER_WARMUP_FILES = [
   './src/main.tsx',
   './src/app/styles.css',
   './src/startupBootstrap.ts',
@@ -124,7 +124,11 @@ function workspaceChangeTimestampPlugin(projectRoot: string): Plugin {
   };
 }
 
-export function createSharedViteConfig(projectRoot: string) {
+interface SharedViteConfigOptions {
+  warmupClientFiles?: string[];
+}
+
+export function createSharedViteConfig(projectRoot: string, options: SharedViteConfigOptions = {}) {
   return defineConfig({
     base: './',
     plugins: [react(), tailwindcss(), workspaceChangeTimestampPlugin(projectRoot)],
@@ -139,9 +143,7 @@ export function createSharedViteConfig(projectRoot: string) {
       host: '127.0.0.1',
       port: resolveDevPort(),
       strictPort: true,
-      warmup: {
-        clientFiles: DESKTOP_RENDERER_WARMUP_FILES
-      }
+      ...(options.warmupClientFiles ? { warmup: { clientFiles: options.warmupClientFiles } } : {})
     },
     test: {
       environment: 'jsdom',

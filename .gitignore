@@ -3,6 +3,7 @@
 ref/
 node_modules/
 dist/
+dist-guides/
 electron-dist/
 release/
 coverage/
