@@ -33,17 +33,6 @@ function resolveReadwiseBookCleanupAction(row: ReadwiseBookNodeRow): Pick<Native
   return { action: 'delete', reason: 'Readwise Books placeholder is unchanged.' };
 }
 
-export function readReadwiseBookCleanupEntries(): NativeReadwiseCleanupEntry[] {
-  return readReadwiseBookCleanupCandidates().map((row) => ({
-    action: row.reason ? 'keep' : 'delete',
-    node_id: row.nodeId,
-    reason: row.reason ?? 'Readwise Books placeholder is unchanged.',
-    rule_id: row.ruleId,
-    source_path: row.sourcePath,
-    title: row.title ?? row.sourcePath
-  }));
-}
-
 export function readReadwiseBookCleanupCandidates(): ReadwiseCleanupCandidate[] {
   const rows = openDatabaseConnection().sqlite
     .prepare(

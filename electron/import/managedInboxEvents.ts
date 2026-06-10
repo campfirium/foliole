@@ -3,7 +3,7 @@ import { BrowserWindow } from 'electron';
 import type { NativeNodeMutationPatchResult } from '../../lib/platform/nativeContract.js';
 import { IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL } from '../ipc/contracts.js';
 
-export interface ManagedInboxUpdatedPayload {
+interface ManagedInboxUpdatedPayload {
   importId: string;
   nodeMutationPatch?: NativeNodeMutationPatchResult | null;
 }

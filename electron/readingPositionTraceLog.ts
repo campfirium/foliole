@@ -79,7 +79,3 @@ function getSharedLogger(): ReadingPositionTraceLogger {
 export function appendReadingPositionTraceRecord(record: ReadingPositionTraceRecord) {
   return getSharedLogger().append(record);
 }
-
-export function getReadingPositionTraceLogPath() {
-  return getSharedLogger().getFilePath();
-}

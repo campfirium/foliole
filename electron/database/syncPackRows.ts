@@ -44,13 +44,13 @@ export interface NodePackRow extends DatabaseRow {
   updated_at: string;
 }
 
-export interface NodeAttachmentPackRow extends DatabaseRow {
+interface NodeAttachmentPackRow extends DatabaseRow {
   attachment_id: string;
   node_id: string;
   role: string;
 }
 
-export interface NodeOrderPackRow extends DatabaseRow {
+interface NodeOrderPackRow extends DatabaseRow {
   node_id: string;
   position: number;
 }

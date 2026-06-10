@@ -119,7 +119,7 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
   };
 }
 
-export function parseNodeCreationArgs(
+function parseNodeCreationArgs(
   args: Record<string, unknown>,
   expectedKind: 'folder' | 'topic' | 'item'
 ) {

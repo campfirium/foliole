@@ -60,7 +60,7 @@ function resolveSettingDeviceId(scope: SettingScope, deviceId: string) {
   return scope === 'user_space' ? '*' : deviceId;
 }
 
-export function toSettingObjectId(input: { deviceId: string; key: string; scope: SettingScope }) {
+function toSettingObjectId(input: { deviceId: string; key: string; scope: SettingScope }) {
   return `${input.scope}:${PLATFORM}:${FORM_FACTOR}:${resolveSettingDeviceId(input.scope, input.deviceId)}:${input.key}`;
 }
 

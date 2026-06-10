@@ -34,7 +34,7 @@ export function resolveImportNodeTitleStrategy(args?: Pick<NativeTextImportArgs,
   return normalizeImportNodeTitleStrategy(args?.title_strategy);
 }
 
-export function resolveImportTargetParentNodeId(args?: Pick<NativeTextImportArgs, 'target_parent_node_id'>) {
+function resolveImportTargetParentNodeId(args?: Pick<NativeTextImportArgs, 'target_parent_node_id'>) {
   const targetParentNodeId = args?.target_parent_node_id?.trim();
   return targetParentNodeId || undefined;
 }

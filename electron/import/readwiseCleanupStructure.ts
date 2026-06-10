@@ -1,5 +1,5 @@
-export const READWISE_BOOK_NODE_PREFIX = 'node-readwise-book-';
-export const READWISE_EPUB_NODE_PREFIX = 'node-epub-';
+const READWISE_BOOK_NODE_PREFIX = 'node-readwise-book-';
+const READWISE_EPUB_NODE_PREFIX = 'node-epub-';
 
 export interface ReadwiseCleanupCandidate {
   deleteReason?: string;

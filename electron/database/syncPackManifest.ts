@@ -8,10 +8,3 @@ export {
   SYNC_PACK_PAYLOAD_OBJECT_TYPES,
   SYNC_PACK_TABLE_NAMES
 } from '../../lib/core/sync/syncPackManifest.js';
-
-export type {
-  SyncPackManifestInput,
-  SyncPackObjectType,
-  SyncPackTableManifest,
-  SyncPackTableName
-} from '../../lib/core/sync/syncPackManifest.js';

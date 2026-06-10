@@ -22,7 +22,7 @@ export interface CommandSecurityCapabilityEntry {
   capability: CommandSecurityCapability;
 }
 
-export const HIGH_IMPACT_SECURITY_CAPABILITIES = new Set<CommandSecurityCapability>([
+const HIGH_IMPACT_SECURITY_CAPABILITIES = new Set<CommandSecurityCapability>([
   'clipboardWrite',
   'dataMutation',
   'destructiveMutation',
@@ -58,7 +58,7 @@ export function buildCommandSecurityCapabilityMap(
   return capabilities;
 }
 
-export const COMMAND_SECURITY_CAPABILITY_MAP = buildCommandSecurityCapabilityMap(COMMAND_SECURITY_CAPABILITY_ENTRIES);
+const COMMAND_SECURITY_CAPABILITY_MAP = buildCommandSecurityCapabilityMap(COMMAND_SECURITY_CAPABILITY_ENTRIES);
 
 export function resolveCommandSecurityCapability(command: NativeCommandName) {
   return COMMAND_SECURITY_CAPABILITY_MAP.get(command) ?? null;

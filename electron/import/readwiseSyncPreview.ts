@@ -7,11 +7,8 @@ import {
   type ReadwiseSourceKind
 } from '../../lib/core/import/importManagerSettings.js';
 import type {
-  NativeReadwiseSyncPreviewDestination,
   NativeReadwiseSyncPreviewEntry,
-  NativeReadwiseSyncPreviewHighlightType,
   NativeReadwiseSyncPreviewResult,
-  NativeReadwiseSyncPreviewStatus
 } from '../../lib/platform/nativeImportContract.js';
 import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -28,11 +25,8 @@ import {
   sortReadwisePreviewEntries
 } from './readwiseSyncPreviewEntryState.js';
 
-export type ReadwiseSyncPreviewDestination = NativeReadwiseSyncPreviewDestination;
-export type ReadwiseSyncPreviewEntry = NativeReadwiseSyncPreviewEntry;
-export type ReadwiseSyncPreviewHighlightType = NativeReadwiseSyncPreviewHighlightType;
+type ReadwiseSyncPreviewEntry = NativeReadwiseSyncPreviewEntry;
 export type ReadwiseSyncPreviewResult = NativeReadwiseSyncPreviewResult;
-export type ReadwiseSyncPreviewStatus = NativeReadwiseSyncPreviewStatus;
 
 type ReadwiseImportSource = ImportManagerSourceDraft & { kind: ReadwiseSourceKind };
 

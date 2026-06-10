@@ -10,7 +10,7 @@ import {
 } from '../database/readwiseManagedExternalDocuments.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
-export function buildReadwiseExternalFolder(
+function buildReadwiseExternalFolder(
   kind: ReadwiseSourceKind,
   primaryPath: string,
   indexedAt: string

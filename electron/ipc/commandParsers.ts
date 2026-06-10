@@ -13,7 +13,10 @@ export {
   asStringArray,
   asTimestamp
 } from './commandParserPrimitives.js';
-export { parseNodeCreationArgs, parseNodeCreationMutationArgs, parseNodeSnapshotArgs } from './commandParserNodeSnapshot.js';
+export {
+  parseNodeCreationMutationArgs,
+  parseNodeSnapshotArgs
+} from './commandParserNodeSnapshot.js';
 export { normalizeNodeViewStateWriteSource };
 
 interface NodeViewStatePayload {
@@ -49,18 +52,6 @@ export function parseNodeViewStatePayloadArray(
     throw new Error(`invalid argument: ${field}`);
   }
   return value.map((item, index) => parseNodeViewStatePayload(item, `${field}[${index}]`));
-}
-
-export function parseNodeSnapshotPayloadArray(value: unknown, field: string) {
-  if (!Array.isArray(value)) {
-    throw new Error(`invalid argument: ${field}`);
-  }
-  return value.map((item, index) => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) {
-      throw new Error(`invalid argument: ${field}[${index}]`);
-    }
-    return parseNodeSnapshotArgs(item as Record<string, unknown>);
-  });
 }
 
 export function parseNodeAnchorLocatorUpdateArray(value: unknown, field: string) {

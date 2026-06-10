@@ -1,11 +1,11 @@
 export type DesktopTaskPriority = 'foreground' | 'startup' | 'background';
 export type DesktopTaskRunLocation = 'main' | 'utility';
-export type DesktopTaskDuplicatePolicy = 'coalesce' | 'enqueue' | 'skip';
+type DesktopTaskDuplicatePolicy = 'coalesce' | 'enqueue' | 'skip';
 export type DesktopTaskCost = 'light' | 'medium' | 'heavy';
 export type DesktopTaskProgressCapability = 'none' | 'bounded' | 'incremental';
 export type DesktopTaskStartupEligibility = 'startup-allowed' | 'startup-deferred' | 'manual-only';
 
-export interface DesktopTaskProgress {
+interface DesktopTaskProgress {
   completed?: number;
   message?: string;
   total?: number;
@@ -23,7 +23,7 @@ export interface DesktopTaskContext {
   yieldIfNeeded: () => Promise<void>;
 }
 
-export interface DesktopTaskAuditMetadata {
+interface DesktopTaskAuditMetadata {
   cancellable: boolean;
   cost: DesktopTaskCost;
   progress: DesktopTaskProgressCapability;

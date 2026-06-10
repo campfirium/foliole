@@ -41,14 +41,14 @@ export function toNativeTextImportResult(record: PersistedImportRecord): NativeT
   };
 }
 
-export function getImportFileDialogOptions() {
+function getImportFileDialogOptions() {
   return {
     filters: [{ name: 'Markdown / HTML / Text / EPUB / PDF', extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub', 'pdf'] }],
     properties: ['openFile', 'multiSelections']
   } satisfies OpenDialogOptions;
 }
 
-export async function selectImportFilePaths(window?: BrowserWindow | null) {
+async function selectImportFilePaths(window?: BrowserWindow | null) {
   const selection = window
     ? await dialog.showOpenDialog(window, getImportFileDialogOptions())
     : await dialog.showOpenDialog(getImportFileDialogOptions());

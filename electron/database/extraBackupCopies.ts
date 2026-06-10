@@ -55,7 +55,7 @@ export async function copyExtraBackup(options: CopyExtraBackupOptions): Promise<
   }
 }
 
-export async function pruneExtraBackups(directoryPath: string, maxCount: number) {
+async function pruneExtraBackups(directoryPath: string, maxCount: number) {
   const entries = await listManagedDatabaseBackups(directoryPath);
   const retained = new Set(entries.slice(0, Math.max(1, maxCount)).map((entry) => entry.filePath));
   const deletedPaths = entries.filter((entry) => !retained.has(entry.filePath)).map((entry) => entry.filePath);

@@ -8,11 +8,11 @@ export interface ExternalSearchScanRuntime {
   yieldEvery: number;
 }
 
-export function normalizeExternalSearchPath(value: string) {
+function normalizeExternalSearchPath(value: string) {
   return path.resolve(value).replace(/\\/g, '/').replace(/\/+$/g, '').toLowerCase();
 }
 
-export function isInsideExcludedExternalSearchPath(currentPath: string, excludedPath: string) {
+function isInsideExcludedExternalSearchPath(currentPath: string, excludedPath: string) {
   const current = normalizeExternalSearchPath(currentPath);
   const excluded = normalizeExternalSearchPath(excludedPath);
   return current === excluded || current.startsWith(`${excluded}/`);

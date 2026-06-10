@@ -12,7 +12,7 @@ import { loadDesktopDeviceId, loadOrCreateDesktopDeviceId } from './deviceIdenti
 import { withTransaction } from './transaction.js';
 import { writeActiveNodeViewStateSync, writeNodeViewStateSync } from './viewStateSync.js';
 
-export interface NodeViewStateInput {
+interface NodeViewStateInput {
   nodeId: string;
   scrollTop: number;
   selectionFrom: number | null;
@@ -27,7 +27,7 @@ export interface SaveReadingProgressInput {
   updatedAt: string;
 }
 
-export interface NodeViewStateSnapshot {
+interface NodeViewStateSnapshot {
   scrollTop: number;
   selectionFrom: number | null;
   selectionTo: number | null;

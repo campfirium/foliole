@@ -96,10 +96,6 @@ function bindWorkerImportHandlers(run: WorkerImportRun, abort: () => void) {
   });
 }
 
-export function runPreparedImportInWorker(prepared: PreparedImportRecord): Promise<PersistedImportRecord> {
-  return runPreparedImportInWorkerWithSignal({ prepared });
-}
-
 export function runPreparedImportInWorkerWithSignal(input: {
   prepared: PreparedImportRecord;
   signal?: AbortSignal;

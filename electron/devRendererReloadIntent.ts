@@ -4,7 +4,7 @@ import path from 'node:path';
 export const DEV_RENDERER_RELOAD_INTENT_FILE = '.windows-dev-renderer-reload-intent.json';
 export const DEV_RENDERER_RELOAD_INTENT_KIND = 'foliole.electron.dev.renderer-reload-intent.v1';
 export const DEV_RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
-export const DEV_RENDERER_RELOAD_DELIVERY_KIND = 'foliole.electron.dev.renderer-reload-delivered.v1';
+const DEV_RENDERER_RELOAD_DELIVERY_KIND = 'foliole.electron.dev.renderer-reload-delivered.v1';
 
 interface RendererReloadIntent {
   head: string | null;
@@ -66,19 +66,19 @@ function isMissingFileError(error: unknown) {
   return Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT');
 }
 
-export function isDevRendererReloadIntentEnabled(env: NodeJS.ProcessEnv = process.env) {
+function isDevRendererReloadIntentEnabled(env: NodeJS.ProcessEnv = process.env) {
   return Boolean(env.ELECTRON_RENDERER_URL);
 }
 
-export function resolveDevRendererReloadIntentPath(rootDir: string) {
+function resolveDevRendererReloadIntentPath(rootDir: string) {
   return path.join(rootDir, DEV_RENDERER_RELOAD_INTENT_FILE);
 }
 
-export function resolveDevRendererReloadDeliveryPath(rootDir: string) {
+function resolveDevRendererReloadDeliveryPath(rootDir: string) {
   return path.join(rootDir, DEV_RENDERER_RELOAD_DELIVERY_FILE);
 }
 
-export function parseDevRendererReloadIntent(content: string): RendererReloadIntent | null {
+function parseDevRendererReloadIntent(content: string): RendererReloadIntent | null {
   try {
     const parsed = JSON.parse(content) as Partial<RendererReloadIntent>;
     const nonce = Number(parsed.nonce);

@@ -65,7 +65,7 @@ export function openExternalSearchCacheDatabase() {
   return cachedCacheDb;
 }
 
-export function ensureExternalSearchCacheStrategy(strategy: FullTextSearchIndexStrategy) {
+function ensureExternalSearchCacheStrategy(strategy: FullTextSearchIndexStrategy) {
   if (!cachedCacheDb) return;
   createExternalSearchMetadataTable(cachedCacheDb);
   if (shouldInitializeExternalSearchSidecar(cachedCacheDb, strategy)) {

@@ -25,7 +25,7 @@ interface StoredBackupSettings {
   updated_at?: unknown;
 }
 
-export const DEFAULT_BACKUP_SETTINGS: NativeBackupSettings = {
+const DEFAULT_BACKUP_SETTINGS: NativeBackupSettings = {
   auto_daily_days: 7,
   auto_hourly_hours: 24,
   auto_monthly_months: 0,
@@ -136,5 +136,3 @@ export function ensureManagedBackupDirectory(settings = loadBackupSettings()) {
   fs.mkdirSync(directoryPath, { recursive: true });
   return directoryPath;
 }
-
-export const BACKUP_SETTINGS_STORAGE_KEY = BACKUP_SETTINGS_KEY;

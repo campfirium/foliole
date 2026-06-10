@@ -76,13 +76,3 @@ export function isCoverLikeChapter(chapter: { content: string; title: string }, 
     .trim();
   return /^!\[[^\]]*\]\([^)]+\)$/.test(body);
 }
-
-export function isTocLikeChapter(chapter: { content: string; title: string }) {
-  const normalizedTitle = chapter.title.trim().toLowerCase();
-  const body = chapter.content.trim();
-  const linkCount = (body.match(/\[[^\]]+\]\([^)]+\)/g) ?? []).length;
-  const lineCount = body.split('\n').filter((line) => line.trim().length > 0).length;
-  const looksLikeTitle = ['contents', 'toc', '目录'].includes(normalizedTitle);
-  const looksLikeHeading = /^#+\s*(contents|目录)\s*$/im.test(body);
-  return (looksLikeTitle || looksLikeHeading) && linkCount >= 5 && lineCount <= 120;
-}

@@ -11,7 +11,7 @@ function conflictCopyBranchMappingKey(objectId: string, sourceDeviceId: string) 
   return `${CONFLICT_COPY_BRANCH_KEY_PREFIX}${encodeURIComponent(objectId)}:${encodeURIComponent(sourceDeviceId)}`;
 }
 
-export interface ConflictCopyBranchMapping {
+interface ConflictCopyBranchMapping {
   copyNodeId: string;
   sourceVersionCreatedAt: string | null;
   sourceVersionId: string | null;

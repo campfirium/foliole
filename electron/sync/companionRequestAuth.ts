@@ -9,12 +9,12 @@ const NONCE_CACHE_LIMIT = 2_048;
 
 const usedNonceExpiryByKey = new Map<string, number>();
 
-export interface CompanionRequestAuthSuccess {
+interface CompanionRequestAuthSuccess {
   device_id: string;
   ok: true;
 }
 
-export interface CompanionRequestAuthFailure {
+interface CompanionRequestAuthFailure {
   error: 'expired_timestamp' | 'invalid_signature' | 'missing_headers' | 'replayed_nonce' | 'unknown_device';
   ok: false;
   status_code: 401 | 409;

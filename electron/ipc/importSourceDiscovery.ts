@@ -5,7 +5,7 @@ import type { ImportSourceKind } from '../../lib/core/import/contract.js';
 import { resolveLocalImageInboxImportMode, type LocalImageInboxImportMode } from '../import/localImageInboxSource.js';
 import { isSameOrNestedPath } from '../libraryPathSafety.js';
 
-export type DirectoryImportAdapterId = 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
+type DirectoryImportAdapterId = 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
 
 export interface ImportSourceDescriptor {
   adapterId: DirectoryImportAdapterId | 'text_file';

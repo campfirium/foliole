@@ -1,4 +1,4 @@
-export type KeepImportProgressPhase = 'indexing' | 'scanning' | 'writing' | 'source_completed';
+type KeepImportProgressPhase = 'indexing' | 'scanning' | 'writing' | 'source_completed';
 
 export interface KeepImportProgressEvent {
   currentSourcePath: string | null;

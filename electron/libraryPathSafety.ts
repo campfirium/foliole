@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-export function normalizeSafetyPath(value: string | null | undefined) {
+function normalizeSafetyPath(value: string | null | undefined) {
   const trimmed = value?.trim();
   if (!trimmed) {
     return null;
@@ -26,7 +26,7 @@ export interface SafetyPathCandidate {
   path: string | null | undefined;
 }
 
-export function findUnsafePathOverlap(candidates: SafetyPathCandidate[]) {
+function findUnsafePathOverlap(candidates: SafetyPathCandidate[]) {
   const normalized = candidates.filter((candidate) => normalizeSafetyPath(candidate.path));
   for (let leftIndex = 0; leftIndex < normalized.length; leftIndex += 1) {
     const left = normalized[leftIndex];

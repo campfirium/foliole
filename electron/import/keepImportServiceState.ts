@@ -47,7 +47,7 @@ export function persistBlockedKeepImportState(
   return record;
 }
 
-export function createBlockedRecord(
+function createBlockedRecord(
   source: DirectoryImportSourceDescriptor,
   importedAt: string,
   lastNodeId: string | null

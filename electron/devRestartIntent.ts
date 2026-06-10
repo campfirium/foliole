@@ -43,19 +43,19 @@ export interface DevRestartIntentWatcher {
   intentPath: string;
 }
 
-export function isDevRestartIntentEnabled(env: NodeJS.ProcessEnv = process.env) {
+function isDevRestartIntentEnabled(env: NodeJS.ProcessEnv = process.env) {
   return Boolean(env.ELECTRON_RENDERER_URL);
 }
 
-export function isInAppRelaunchDisabled(env: NodeJS.ProcessEnv = process.env) {
+function isInAppRelaunchDisabled(env: NodeJS.ProcessEnv = process.env) {
   return env.FOLIOLE_DISABLE_IN_APP_RELAUNCH === '1';
 }
 
-export function resolveDevRestartIntentPath(rootDir: string) {
+function resolveDevRestartIntentPath(rootDir: string) {
   return path.join(rootDir, DEV_RESTART_INTENT_FILE);
 }
 
-export function parseDevRestartIntent(content: string): RestartIntent | null {
+function parseDevRestartIntent(content: string): RestartIntent | null {
   try {
     const parsed = JSON.parse(content) as Partial<RestartIntent>;
     const nonce = Number(parsed.nonce);

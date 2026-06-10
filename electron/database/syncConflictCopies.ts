@@ -46,7 +46,7 @@ function isStaleBranchHead(record: NativeSyncNodeRecord, mappedCreatedAt: string
   return (record.version_id ?? '').localeCompare(mappedVersionId ?? '') <= 0;
 }
 
-export function createNodeConflictCopy(args: {
+function createNodeConflictCopy(args: {
   driver: DatabaseDriver;
   record: NativeSyncNodeRecord;
   timestamp: string;

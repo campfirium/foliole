@@ -36,7 +36,7 @@ export interface GlobalCaptureFloatingTheme {
   strings: GlobalCaptureStrings;
 }
 
-export interface GlobalCaptureStrings {
+interface GlobalCaptureStrings {
   hideHint: string;
   hideHintLabel: string;
   hint: string;
@@ -61,7 +61,7 @@ export function truncateCapturePreview(value: string) {
   return `${chars.slice(0, PREVIEW_LIMIT).join('').trimEnd()}...`;
 }
 
-export function fallbackFloatingTheme(): GlobalCaptureFloatingTheme {
+function fallbackFloatingTheme(): GlobalCaptureFloatingTheme {
   return {
     accent: '#3f8f68',
     actionForeground: 'rgba(32, 33, 36, 0.62)',

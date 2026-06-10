@@ -10,7 +10,7 @@ import {
 import { loadExternalSearchFolders } from '../database/externalSearchFolders.js';
 import { resolveExternalPreviewImageResource } from '../database/externalSearchPreviewContent.js';
 
-export { EXT_DOC_IMAGE_PROTOCOL_SCHEME } from '../../lib/platform/extDocImageProtocolUrl.js';
+
 
 function isWithinFolder(filePath: string, folderPath: string) {
   const relative = path.relative(folderPath, filePath);

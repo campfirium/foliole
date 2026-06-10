@@ -10,7 +10,6 @@ import {
 import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
 import {
   CONTENT_BLOB_ACK_PATH,
-  CONTENT_BLOB_BATCH_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
   loadCompanionContentBlobResource
 } from './companionLanContentBlobs.js';
@@ -31,7 +30,6 @@ import {
 } from './companionLanSyncObjects.js';
 import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
 import { handleSyncPackGet } from './companionLanSyncPackGet.js';
-import { SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
@@ -43,13 +41,11 @@ export const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
 export {
   ATTACHMENT_RESOURCE_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
-  CONTENT_BLOB_BATCH_PATH,
   CONTENT_BLOB_ACK_PATH,
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
   SYNC_PACK_PATH,
-  SYNC_PUSH_PATH,
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH
 };

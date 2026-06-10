@@ -175,7 +175,7 @@ export function buildCommandRouteMap(
   return routes;
 }
 
-export const COMMAND_ROUTE_MAP = buildCommandRouteMap(COMMAND_ROUTE_ENTRIES);
+const COMMAND_ROUTE_MAP = buildCommandRouteMap(COMMAND_ROUTE_ENTRIES);
 
 export function resolveCommandRoute(command: string): CommandRouteFamily | null {
   return COMMAND_ROUTE_MAP.get(command as NativeCommandName) ?? null;

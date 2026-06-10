@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { RestartIntentFileSystem } from './devRestartIntentSupport.js';
 
 export const DEV_RESTART_DELIVERY_FILE = '.windows-dev-restart-delivered.json';
-export const DEV_RESTART_DELIVERY_KIND = 'foliole.electron.dev.restart-delivered.v1';
+const DEV_RESTART_DELIVERY_KIND = 'foliole.electron.dev.restart-delivered.v1';
 
 interface RestartIntentDeliverySource {
   head: string | null;
@@ -18,11 +18,11 @@ interface RestartIntentDeliveryLogger {
   error(message: string, meta?: unknown): void;
 }
 
-export function resolveDevRestartDeliveryPath(rootDir: string) {
+function resolveDevRestartDeliveryPath(rootDir: string) {
   return path.join(rootDir, DEV_RESTART_DELIVERY_FILE);
 }
 
-export function createDevRestartDeliveryPayload(intent: RestartIntentDeliverySource) {
+function createDevRestartDeliveryPayload(intent: RestartIntentDeliverySource) {
   return {
     deliveredAt: new Date().toISOString(),
     head: intent.head,

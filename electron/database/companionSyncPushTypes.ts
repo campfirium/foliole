@@ -1,6 +1,6 @@
 type SyncPushStatus = 'accepted' | 'already_applied' | 'conflict' | 'rejected';
 
-export type SyncBaseReference =
+type SyncBaseReference =
   | { kind: 'blocked'; reason: 'invalid_identity' | 'missing_base_reference' }
   | { baseContentHash: string | null; kind: 'content_hash' }
   | { kind: 'op_id'; opId: string }
@@ -22,7 +22,7 @@ export interface CompanionSyncPushPayload {
   updatedAt?: string;
 }
 
-export interface CompanionSyncPushAck {
+interface CompanionSyncPushAck {
   clientOpId: string;
   conflictReason?: string;
   desktopBase?: SyncBaseReference;

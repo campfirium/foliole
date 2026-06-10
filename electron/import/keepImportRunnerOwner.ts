@@ -24,7 +24,3 @@ export function requestKeepImportRun<T>(
   sessionsByRuleId.set(config.ruleId, session);
   return session.promise;
 }
-
-export function clearKeepImportRunOwnerForTests() {
-  sessionsByRuleId.clear();
-}

@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-export function resolveAttachmentFileExtension(originalName: string | null) {
+function resolveAttachmentFileExtension(originalName: string | null) {
   if (!originalName) {
     return '';
   }

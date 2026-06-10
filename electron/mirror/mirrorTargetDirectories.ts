@@ -6,7 +6,7 @@ const INBOX_NODE_ID = 'special-inbox';
 
 type ArticleNode = WorkspaceSnapshot['nodesById'][string];
 
-export function resolveFolderDirectory(
+function resolveFolderDirectory(
   folderId: string,
   snapshot: WorkspaceSnapshot,
   mirrorRoot: string,
@@ -47,7 +47,7 @@ export function resolveFolderDirectory(
   return directoryPath;
 }
 
-export function resolveAncestorDirectory(
+function resolveAncestorDirectory(
   nodeId: string | null,
   snapshot: WorkspaceSnapshot,
   mirrorRoot: string,

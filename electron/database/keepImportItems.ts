@@ -1,5 +1,4 @@
 import {
-  listPresentKeepImportItems as listPresentKeepImportItemsViaDriver,
   listRemovedKeepImportItems as listRemovedKeepImportItemsViaDriver,
   markKeepImportItemsLocallyDeletedByNodeDeletedAt as markKeepImportItemsLocallyDeletedByNodeDeletedAtViaDriver,
   markMissingKeepImportItems as markMissingKeepImportItemsViaDriver,
@@ -42,10 +41,6 @@ export function readKeepImportNodeContent(nodeId: string) {
       [nodeId]
     )?.content ?? null
   );
-}
-
-export function listPresentKeepImportItems() {
-  return listPresentKeepImportItemsViaDriver(openDatabaseConnection().driver);
 }
 
 export function listRemovedKeepImportItems() {

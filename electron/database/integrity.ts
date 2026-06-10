@@ -7,7 +7,7 @@ const SQLITE_RECOVERY_SUFFIXES = ['', '-shm', '-wal', '-journal'];
 const SQLITE_CORRUPTION_PATTERN =
   /SQLITE_CORRUPT|SQLITE_NOTADB|database disk image is malformed|file is encrypted or is not a database|file is not a database|malformed database schema|not a database/i;
 
-export class DatabaseIntegrityError extends Error {
+class DatabaseIntegrityError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'DatabaseIntegrityError';

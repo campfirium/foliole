@@ -48,7 +48,7 @@ function resolveTextMirrorLocator(
   return null;
 }
 
-export function collectLocatorMirrorSpans(
+function collectLocatorMirrorSpans(
   articleContent: string,
   derivedByAnchorKey: Map<string, MirrorNode[]>
 ) {

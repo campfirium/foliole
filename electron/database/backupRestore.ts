@@ -183,7 +183,3 @@ export async function listApplicationDatabaseBackups(): Promise<ApplicationDatab
   await pruneBackupsNow();
   return listManagedDatabaseBackups(resolveManagedBackupDirectory());
 }
-
-export function getApplicationDatabasePath() {
-  return openDatabaseConnection().dbPath;
-}

@@ -4,7 +4,6 @@ export const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 export const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
 export const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
 export const IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL = 'foliole:external-document-file-opened';
-export const IPC_LOCAL_FILE_OPENED_CHANNEL = 'foliole:local-file-opened';
 export const IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL = 'foliole:global-capture-navigate';
 export const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 export const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
@@ -22,7 +21,7 @@ export const IPC_WINDOW_TOGGLE_MAXIMIZE_CHANNEL = 'foliole:window:toggle-maximiz
 export const IPC_WINDOW_CLOSE_CHANNEL = 'foliole:window:close';
 export const IPC_WINDOW_IS_MAXIMIZED_CHANNEL = 'foliole:window:is-maximized';
 
-export interface UnknownInvokeRequest {
+interface UnknownInvokeRequest {
   command: string;
   args?: Record<string, unknown>;
 }
@@ -41,10 +40,6 @@ export interface NativeKeyboardInputEvent {
   metaKey: boolean;
   shiftKey: boolean;
   type: string;
-}
-
-export interface GlobalCaptureNavigateEvent {
-  nodeId: string;
 }
 
 export interface WorkspaceSyncAppliedEvent {

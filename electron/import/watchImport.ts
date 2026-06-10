@@ -37,7 +37,7 @@ export interface WatchImportAdapterConfig {
   sourceAdapter?: NativeDirectoryImportSourceAdapter;
 }
 
-export interface WatchImportAdapterResult extends NativeDirectoryImportResult {
+interface WatchImportAdapterResult extends NativeDirectoryImportResult {
   adapter_config_id: string;
   pending_count: number;
   skipped_count: number;

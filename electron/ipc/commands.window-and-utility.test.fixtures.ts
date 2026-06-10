@@ -1,19 +1,3 @@
-export const defaultReviewSchedulerSettings = {
-  algorithm: 'ts-fsrs@5.4.0 using FSRS-6.0',
-  desiredRetention: 0.9,
-  maximumIntervalDays: 36500,
-  newDayStartsAtHour: 4,
-  enableShortTerm: false,
-  pushQueue: {
-    defaultPriority: 5,
-    priorityRatio: 5,
-    queueMixRatio: { reading: 1, fsrs: 5 },
-    readingInitialIntervalMs: 24 * 60 * 60 * 1000,
-    readingIntervalGrowthFactorRange: { min: 1.1, max: 1.5 }
-  },
-  updatedAt: '2026-03-06T00:00:00.000Z'
-};
-
 export const importedMarkdownResult = {
   contentFingerprint: 'content-fingerprint',
   degradedReason: null,

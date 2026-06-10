@@ -1,5 +1,4 @@
 import {
-  clearNodeOrder as clearNodeOrderViaDriver,
   deleteNodesPermanently as deleteNodesPermanentlyViaDriver,
   moveNodes as moveNodesViaDriver,
   replaceNodeOrder as replaceNodeOrderViaDriver,
@@ -74,25 +73,6 @@ export function upsertNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, node
   }
 }
 
-export function upsertNodeSnapshots(inputs: UpsertNodeSnapshotInput[]): void {
-  const connection = openDatabaseConnection();
-  withTransaction(connection.driver, () => {
-    inputs.forEach((input) => {
-      upsertNodeSnapshotViaDriver(connection.driver, {
-        ...input,
-        deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
-      });
-      if ('reading' in input) {
-        if (input.reading?.state === 'dismissed') {
-          recordNodeSourceDisposition(input.nodeId, 'dismissed', input.updatedAt);
-        } else {
-          clearNodeSourceDisposition(input.nodeId);
-        }
-      }
-    });
-  });
-}
-
 export function replaceNodeOrder(nodeIds: string[]): void {
   const connection = openDatabaseConnection();
   const now = new Date().toISOString();
@@ -136,10 +116,6 @@ export function moveNodes(input: MoveNodesInput): MoveNodesResult {
 
 export function updateNodeAnchorLinks(inputs: UpdateNodeAnchorLinkInput[]): void {
   updateNodeAnchorLinksViaDriver(openDatabaseConnection().driver, inputs);
-}
-
-export function clearNodeOrder(): void {
-  clearNodeOrderViaDriver(openDatabaseConnection().driver);
 }
 
 export function softDeleteNodes(input: SoftDeleteNodesInput): void {

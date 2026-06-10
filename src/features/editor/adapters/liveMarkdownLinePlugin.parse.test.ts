@@ -96,5 +96,5 @@ function createDecorationContext(): Parameters<typeof buildPreviewDecorationSet>
 }
 
 function countFullSourceParses(parseSpy: ReturnType<typeof vi.spyOn>) {
-  return parseSpy.mock.calls.filter(([source]) => source === COMPLEX_MARKDOWN).length;
+  return parseSpy.mock.calls.filter(([source]: [unknown]) => source === COMPLEX_MARKDOWN).length;
 }

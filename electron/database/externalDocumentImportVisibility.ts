@@ -6,7 +6,7 @@ interface ActiveImportLocatorRow {
   source_locator: string;
 }
 
-export function normalizeExternalImportLocator(locator: string) {
+function normalizeExternalImportLocator(locator: string) {
   return locator.replace(/\\/g, '/').toLowerCase();
 }
 
@@ -14,7 +14,7 @@ export function loadActiveImportedSourceLocators() {
   return new Set(loadActiveImportedSourceLocatorRows().map((row) => normalizeExternalImportLocator(row.source_locator)));
 }
 
-export function loadActiveImportedSourceLocatorRows() {
+function loadActiveImportedSourceLocatorRows() {
   const rows = openDatabaseConnection().sqlite
     .prepare(
       `SELECT source.source_locator, source.latest_node_id, node.deleted_at

@@ -34,7 +34,7 @@ export interface ConfiguredAppIdentity {
 
 export const FOLIOLE_APP_NAME = 'foliole';
 
-export function resolveFolioleUserDataPath(appDataRoot: string) {
+function resolveFolioleUserDataPath(appDataRoot: string) {
   return path.join(appDataRoot, FOLIOLE_APP_NAME);
 }
 

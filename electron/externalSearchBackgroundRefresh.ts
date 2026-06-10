@@ -5,7 +5,7 @@ const INITIAL_DELAY_MS = 20_000;
 const PERIODIC_REFRESH_MS = 15 * 60_000;
 const USER_TRIGGER_MIN_INTERVAL_MS = 5 * 60_000;
 
-export interface ExternalSearchBackgroundRefreshController {
+interface ExternalSearchBackgroundRefreshController {
   notifyUserActivity(): void;
   refreshNow(): void;
   start(): void;

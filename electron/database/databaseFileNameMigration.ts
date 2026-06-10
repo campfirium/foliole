@@ -8,7 +8,7 @@ interface DatabaseFileNameMigration {
   nextFileName: string;
 }
 
-export type DatabaseFileNameMigrationStatus = 'conflict_resolved' | 'migrated' | 'skipped';
+type DatabaseFileNameMigrationStatus = 'conflict_resolved' | 'migrated' | 'skipped';
 
 export interface DatabaseFileNameMigrationResult {
   legacyPath: string;

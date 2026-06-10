@@ -1,6 +1,6 @@
 import Bonjour from 'bonjour-service';
 
-export const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
+const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 
 type PublishedBonjourService = ReturnType<InstanceType<typeof Bonjour>['publish']>;
 
@@ -39,8 +39,4 @@ export function stopCompanionMdnsAdvertisement() {
   activeBonjour = null;
   service?.stop?.();
   bonjour?.destroy();
-}
-
-export function getActiveCompanionMdnsAdvertisement() {
-  return activeService;
 }

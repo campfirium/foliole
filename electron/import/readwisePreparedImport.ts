@@ -7,21 +7,13 @@ import { parseReadwiseFullDocumentImport } from '../../lib/core/import/readwiseF
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import {
   resolveReadwiseImportDestination,
-  type ReadwiseReaderConfig,
-  type ReadwiseWithoutHighlightsDestination
+  type ReadwiseReaderConfig
 } from '../../lib/core/import/readwiseReaderSettings.js';
 import { buildPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 export interface ReadwiseSourceSignature {
   highlight: { mtimeMs: number; sizeBytes: number } | null;
   primary: { mtimeMs: number; sizeBytes: number };
-}
-
-export interface ReadwiseSourceImportDecision {
-  destination: ReadwiseWithoutHighlightsDestination;
-  detectedHighlightCount: number;
-  hasHighlightFile: boolean;
-  hasHighlights: boolean;
 }
 
 function buildReadwiseSourceIdentity(kind: ReadwiseSourceKind, sourceName: string) {

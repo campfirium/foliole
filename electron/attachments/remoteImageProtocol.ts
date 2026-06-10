@@ -8,7 +8,7 @@ import {
 import { fetchRemoteImageResource, importRemoteImageAttachment } from './remoteImagePipeline.js';
 import { resolveRemoteImageSourceContext } from './remoteImageSourceContext.js';
 
-export { REMOTE_IMAGE_PROTOCOL_SCHEME } from '../../lib/platform/remoteImageProtocolUrl.js';
+
 
 function createRemoteImageResponse(bytes: Uint8Array, mimeType: string) {
   const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;

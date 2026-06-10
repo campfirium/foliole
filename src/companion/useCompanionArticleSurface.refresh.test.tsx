@@ -86,6 +86,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot) {
     desktopDiscoveries: [],
     desktopDiscovery: null,
     error: null,
+    isWorkspaceSyncStateReady: true,
     pairingState: createPairingState(),
     pairingStatus: 'idle' as const,
     pendingPairRequest: null,

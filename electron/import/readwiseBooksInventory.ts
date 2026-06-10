@@ -17,8 +17,8 @@ import { resolveInitialReadwiseBookHighlightState, resolveReadwiseBookBodyState 
 
 export type ReadwiseBookAnnotationStatus = 'has_highlights' | 'no_highlights';
 export type ReadwiseBookBodyState = 'loaded' | 'unloaded';
-export type ReadwiseBookNodeStatus = 'generated' | 'missing';
-export type ReadwiseBookEpubStatus = 'received' | 'missing';
+type ReadwiseBookNodeStatus = 'generated' | 'missing';
+type ReadwiseBookEpubStatus = 'received' | 'missing';
 export type ReadwiseBookHighlightState = 'failed' | 'partial' | 'pending' | 'placed';
 export type ReadwiseBookImportStatus = 'completed' | 'pending';
 

@@ -53,7 +53,7 @@ export function readReadwiseRuleIds() {
   return new Set(loadImportManagerSettings().readwiseSources.map((source) => source.id));
 }
 
-export function toSourceKind(ruleId: string, readwiseRuleIds = readReadwiseRuleIds()): SourceDispositionKey['sourceKind'] {
+function toSourceKind(ruleId: string, readwiseRuleIds = readReadwiseRuleIds()): SourceDispositionKey['sourceKind'] {
   return readwiseRuleIds.has(ruleId) ? 'readwise' : 'keep';
 }
 

@@ -40,7 +40,7 @@ interface RemoteImageFetchResponse {
   signal: AbortSignal;
 }
 
-export interface RemoteImageBytesResult {
+interface RemoteImageBytesResult {
   bytes: Uint8Array;
   cacheKey: string;
   mimeType: string;

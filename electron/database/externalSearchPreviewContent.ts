@@ -83,11 +83,6 @@ function resolveCandidatePaths(
   return [...new Set(candidates)];
 }
 
-export interface ExternalPreviewImageResource {
-  filePath: string;
-  mimeType: string;
-}
-
 export function resolveExternalPreviewImageResource(
   destination: string,
   absolutePath: string,
