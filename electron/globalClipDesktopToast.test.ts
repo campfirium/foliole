@@ -73,12 +73,12 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
 
   expect(electronMocks.BrowserWindow).toHaveBeenCalledWith(expect.objectContaining({
     alwaysOnTop: true,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#00000000',
     focusable: true,
     frame: false,
     height: 116,
     skipTaskbar: true,
-    transparent: false,
+    transparent: true,
     width: 384,
     x: 1020,
     y: 788

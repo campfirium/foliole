@@ -9,25 +9,8 @@ const clipSettingsMocks = vi.hoisted(() => ({
 
 const { electronMocks, panelWindow } = vi.hoisted(() => {
   const ipcHandlers = new Map<string, (...args: unknown[]) => void>();
-  function createTheme() {
-    return {
-      accent: 'rgb(127, 177, 141)',
-      actionForeground: 'rgba(232, 230, 223, 0.62)',
-      actionHoverBackground: 'rgba(232, 230, 223, 0.06)',
-      actionHoverForeground: 'rgba(232, 230, 223, 0.78)',
-      background: 'rgb(42, 45, 41)', border: 'rgb(80, 84, 78)',
-      controlForeground: 'rgba(232, 230, 223, 0.58)', controlRadius: '8px',
-      contentInlinePadding: '26px',
-      divider: 'rgba(232, 230, 223, 0.10)',
-      foreground: 'rgb(232, 230, 223)',
-      hasAppTheme: true,
-      inputBackground: 'rgb(36, 39, 35)', inputPaddingBlockEnd: '12px', inputPaddingBlockStart: '24px',
-      mutedForeground: 'rgb(165, 164, 159)',
-      strings: { hideHint: '×', hideHintLabel: '隐藏提示', hint: '回车保存，空白时导入剪贴板', placeholder: '...', save: '保存', showHint: '?', showHintLabel: '显示提示' }
-    };
-  }
   const webContents = {
-    executeJavaScript: vi.fn(async () => createTheme()),
+    executeJavaScript: vi.fn(async () => undefined),
     focus: vi.fn(), id: 11, send: vi.fn()
   };
   const appWindows = vi.fn<() => Array<{ isDestroyed: () => boolean; webContents: typeof webContents }>>(() => []);
@@ -96,9 +79,9 @@ it('shows a compact shell-less capture panel with an isolated preload', async ()
   await waitForPanelLoad();
 
   expect(electronMocks.BrowserWindow).toHaveBeenCalledWith(expect.objectContaining({
-    backgroundColor: '#ffffff',
+    backgroundColor: '#00000000',
     height: 240,
-    transparent: false,
+    transparent: true,
     width: 572,
     webPreferences: expect.objectContaining({
       contextIsolation: true,
@@ -140,15 +123,21 @@ it('renders the collapsed hint state from persisted settings', async () => {
   expect(html).toContain('aria-label="Show shortcut hint"');
   expect(html).toContain('aria-expanded="false"');
   expect(html).toContain('<path d="m8 7 4 5-4 5"/>');
+  expect(html).toContain('.hint-toggle svg{width:18px;height:18px;');
+  expect(html).toContain('stroke-width:2;');
+  expect(html).not.toContain('stroke-width:2.2;');
+  expect(html).not.toContain('>?</button>');
 
   panelWindow.emitCancel();
   await expect(promise).resolves.toEqual({ type: 'cancelled' });
 });
 
-it('reveals the prewarmed panel immediately and focuses its web contents', async () => {
+it('waits for panel readiness before reveal and focuses its web contents', async () => {
   const promise = showGlobalCapturePanel();
   await waitForPanelLoad();
 
+  expect(panelWindow.focus).not.toHaveBeenCalled();
+  panelWindow.emitReady();
   await waitForPanelReveal();
   expect(panelWindow.focus).toHaveBeenCalledTimes(1);
   expect(panelWindow.webContents.focus).toHaveBeenCalledTimes(1);
@@ -187,64 +176,6 @@ it('clamps auto-grow resize requests from the panel sender', async () => {
   expect(panelWindow.setBounds).toHaveBeenNthCalledWith(2, { height: 300, width: 572, x: 414, y: 220 }, false);
   expect(panelWindow.setBounds).toHaveBeenNthCalledWith(3, { height: 472, width: 572, x: 414, y: 220 }, false);
 
-  panelWindow.emitCancel();
-  await expect(promise).resolves.toEqual({ type: 'cancelled' });
-});
-
-it('uses the current app floating theme for the capture panel', async () => {
-  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([{
-    isDestroyed: vi.fn(() => false),
-    webContents: panelWindow.webContents
-  }]);
-
-  const promise = showGlobalCapturePanel();
-  await waitForPanelLoad();
-
-  const latestCall = panelWindow.loadURL.mock.calls.at(-1);
-  const loadedUrl = typeof latestCall?.[0] === 'string' ? latestCall[0] : '';
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-bg:rgb(42, 45, 41);');
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-fg:rgb(232, 230, 223);');
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-action-fg:rgba(232, 230, 223, 0.62);');
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-control-fg:rgba(232, 230, 223, 0.58);');
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-control-radius:8px;');
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-content-inline-padding:26px;');
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-input-padding-block-start:24px;');
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-input-padding-block-end:12px;');
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-divider:rgba(232, 230, 223, 0.10);');
-  expect(decodeURIComponent(loadedUrl)).toContain('回车保存，空白时导入剪贴板');
-  expect(decodeURIComponent(loadedUrl)).toContain('aria-label="隐藏提示"');
-  expect(decodeURIComponent(loadedUrl)).toContain('aria-expanded="true"');
-  expect(decodeURIComponent(loadedUrl)).toContain('<path d="m8 9 4 4 4-4"/>');
-  expect(decodeURIComponent(loadedUrl)).toContain('</button><span class="hint-expanded hint-text">回车保存，空白时导入剪贴板</span>');
-  expect(decodeURIComponent(loadedUrl)).toContain('placeholder="..."');
-  expect(decodeURIComponent(loadedUrl)).toContain('>保存<');
-  expect(decodeURIComponent(loadedUrl)).not.toContain('Capture a thought');
-  expect(decodeURIComponent(loadedUrl)).not.toContain('Enter saves');
-  expect(decodeURIComponent(loadedUrl)).not.toContain('>Save<');
-  panelWindow.emitCancel();
-  await expect(promise).resolves.toEqual({ type: 'cancelled' });
-});
-
-it('keeps capture shell-less without old dialog chrome', async () => {
-  const promise = showGlobalCapturePanel();
-  await waitForPanelLoad();
-
-  const latestCall = panelWindow.loadURL.mock.calls.at(-1);
-  const loadedUrl = typeof latestCall?.[0] === 'string' ? latestCall[0] : '';
-  const html = decodeURIComponent(loadedUrl);
-  expect(html).not.toContain('Capture to Inbox');
-  expect(html).not.toContain('class="bar"');
-  expect(html).not.toContain('id="capture-title"');
-  expect(html).not.toContain('capture-help');
-  expect(html).not.toContain('Tips');
-  expect(html).not.toContain('Hide tips');
-  expect(html).toContain('Enter saves. Empty input imports the clipboard.');
-  expect(html).toContain('aria-label="Hide shortcut hint"');
-  expect(html).toContain('aria-label="Show shortcut hint"');
-  expect(html).toContain('placeholder="..."');
-  expect(html).toContain('>Save<');
-  expect(html).toContain('font:400 var(--capture-input-font-size)/var(--capture-input-line-height) var(--capture-input-font-family)');
-  expect(html).not.toContain('var(--capture-accent) 8%');
   panelWindow.emitCancel();
   await expect(promise).resolves.toEqual({ type: 'cancelled' });
 });

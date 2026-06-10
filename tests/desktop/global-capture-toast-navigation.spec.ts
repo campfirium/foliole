@@ -112,9 +112,10 @@ async function showAndClickGlobalCaptureToast(session: DesktopSession) {
     });
   }, TOAST_TARGET_NODE_ID);
 
-  const toastRendererPage = session.electronApp.windows().find((windowPage) =>
-    windowPage.url().startsWith('data:text/html')
-  );
+  const toastRendererPage = (await Promise.all(session.electronApp.windows().map(async (windowPage) => ({
+    count: await windowPage.locator('.toast').count().catch(() => 0),
+    windowPage
+  })))).find((entry) => entry.count > 0)?.windowPage;
   expect(toastRendererPage).toBeTruthy();
   await expect.poll(async () => toastRendererPage?.evaluate(() =>
     Boolean(window.globalCaptureToast)
@@ -148,6 +149,26 @@ async function showAndClickGlobalCaptureToast(session: DesktopSession) {
   clickWindowsScreenPoint(toastInfo);
 }
 
+async function maximizeMainWindow(session: DesktopSession) {
+  await expect.poll(async () => session.electronApp.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows().find((candidate) =>
+      !candidate.isDestroyed() && candidate.webContents.getURL().startsWith('file:')
+    );
+    if (!window) return false;
+    window.maximize();
+    return window.isMaximized();
+  })).toBe(true);
+}
+
+async function expectMainWindowMaximized(session: DesktopSession) {
+  await expect.poll(async () => session.electronApp.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows().find((candidate) =>
+      !candidate.isDestroyed() && candidate.webContents.getURL().startsWith('file:')
+    );
+    return window?.isMaximized() ?? false;
+  })).toBe(true);
+}
+
 async function expectCapturedTarget(page: Page, targetNodeId: string) {
   await expect.poll(async () => page.evaluate(() =>
     (window as Window & { __globalCaptureNavigateProbe?: string | null }).__globalCaptureNavigateProbe ?? null
@@ -173,6 +194,7 @@ test('opens the clipped target from the global capture toast navigation route', 
       window.__folioleWorkspaceDebug?.getNode?.(targetNodeId)?.title ?? null,
     TARGET_NODE_ID)).toBe('Global Capture Target');
 
+    await maximizeMainWindow(session);
     await showAndClickGlobalCaptureToast(session);
     await expect.poll(async () => {
       try {
@@ -184,6 +206,7 @@ test('opens the clipped target from the global capture toast navigation route', 
       }
     }).toBe(TOAST_TARGET_NODE_ID);
     await expectCapturedTarget(page, TOAST_TARGET_NODE_ID);
+    await expectMainWindowMaximized(session);
   } finally {
     await session.close();
   }

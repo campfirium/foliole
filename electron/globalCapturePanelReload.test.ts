@@ -1,0 +1,128 @@
+// @vitest-environment node
+
+import { beforeEach, expect, it, vi } from 'vitest';
+
+const clipSettingsMocks = vi.hoisted(() => ({
+  isGlobalClipHintVisible: vi.fn(() => true),
+  setGlobalClipHintVisible: vi.fn()
+}));
+
+const { electronMocks, panelWindow } = vi.hoisted(() => {
+  const ipcHandlers = new Map<string, (...args: unknown[]) => void>();
+  const englishTheme = () => ({
+    accent: 'rgb(52, 119, 91)', actionForeground: 'rgba(28, 31, 30, 0.64)',
+    actionHoverBackground: 'rgba(28, 31, 30, 0.06)', actionHoverForeground: 'rgba(28, 31, 30, 0.8)',
+    background: 'rgb(252, 251, 248)', border: 'rgb(210, 209, 203)',
+    controlForeground: 'rgba(28, 31, 30, 0.62)', controlRadius: '8px',
+    contentInlinePadding: '26px', divider: 'rgba(28, 31, 30, 0.12)', foreground: 'rgb(28, 31, 30)',
+    hasAppTheme: true,
+    inputBackground: 'rgb(255, 255, 255)', inputPaddingBlockEnd: '12px', inputPaddingBlockStart: '24px',
+    mutedForeground: 'rgb(124, 123, 118)',
+    strings: {
+      hideHint: '×', hideHintLabel: 'Hide shortcut hint', hint: 'Enter saves. Empty input imports the clipboard.',
+      placeholder: '...', save: 'Save', showHint: '?', showHintLabel: 'Show shortcut hint'
+    }
+  });
+  const chineseDarkTheme = () => ({
+    ...englishTheme(),
+    actionForeground: 'rgba(232, 230, 223, 0.62)', actionHoverBackground: 'rgba(232, 230, 223, 0.06)',
+    actionHoverForeground: 'rgba(232, 230, 223, 0.78)', background: 'rgb(42, 45, 41)',
+    border: 'rgb(80, 84, 78)', controlForeground: 'rgba(232, 230, 223, 0.58)',
+    divider: 'rgba(232, 230, 223, 0.10)', foreground: 'rgb(232, 230, 223)',
+    inputBackground: 'rgb(36, 39, 35)', mutedForeground: 'rgb(165, 164, 159)',
+    strings: {
+      hideHint: '×', hideHintLabel: '隐藏提示', hint: '回车保存，空白时导入剪贴板',
+      placeholder: '...', save: '保存', showHint: '?', showHintLabel: '显示提示'
+    }
+  });
+  let theme = englishTheme();
+  const webContents = { executeJavaScript: vi.fn(async () => theme), focus: vi.fn(), id: 11, send: vi.fn() };
+  const window = {
+    close: vi.fn(), focus: vi.fn(), isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => true),
+    loadURL: vi.fn<(url: string) => Promise<void>>(async () => undefined),
+    on: vi.fn(), setBounds: vi.fn(), setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), showInactive: vi.fn(),
+    webContents
+  };
+  return {
+    electronMocks: {
+      BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
+        return window;
+      }), { getAllWindows: vi.fn(() => [{ isDestroyed: vi.fn(() => false), webContents }]) }),
+      ipcMain: {
+        on: vi.fn((channel: string, handler: (...args: unknown[]) => void) => ipcHandlers.set(channel, handler)),
+        removeListener: vi.fn()
+      },
+      screen: { getPrimaryDisplay: vi.fn(() => ({ workArea: { height: 900, width: 1400, x: 0, y: 0 } })) }
+    },
+    panelWindow: {
+      ...window,
+      emitCancel: () => ipcHandlers.get('foliole:global-capture-panel:cancel')?.({ sender: { id: 11 } }),
+      emitReady: () => ipcHandlers.get('foliole:global-capture-panel:ready')?.({ sender: { id: 11 } }),
+      setChineseDarkTheme: () => {
+        theme = chineseDarkTheme();
+      },
+      setEnglishTheme: () => {
+        theme = englishTheme();
+      }
+    }
+  };
+});
+
+vi.mock('electron', () => electronMocks);
+vi.mock('./globalClipSettings.js', () => clipSettingsMocks);
+
+import { resetGlobalCapturePanelWindowForTests, showGlobalCapturePanel } from './globalCapturePanel.js';
+
+async function waitForPanelLoadCount(count: number) {
+  for (let index = 0; index < 30 && panelWindow.loadURL.mock.calls.length < count; index += 1) {
+    await Promise.resolve();
+  }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetGlobalCapturePanelWindowForTests();
+  panelWindow.setEnglishTheme();
+});
+
+it('reloads current theme and language each time the reused capture panel opens', async () => {
+  const firstPromise = showGlobalCapturePanel();
+  await waitForPanelLoadCount(1);
+  panelWindow.emitReady();
+  panelWindow.emitCancel();
+  await expect(firstPromise).resolves.toEqual({ type: 'cancelled' });
+  expect(decodeURIComponent(panelWindow.loadURL.mock.calls.at(-1)?.[0] ?? '')).toContain('>Save<');
+
+  panelWindow.setChineseDarkTheme();
+  const loadCountBeforeSecondOpen = panelWindow.loadURL.mock.calls.length;
+  const secondPromise = showGlobalCapturePanel();
+  await waitForPanelLoadCount(loadCountBeforeSecondOpen + 1);
+  const secondHtml = decodeURIComponent(panelWindow.loadURL.mock.calls.at(-1)?.[0] ?? '');
+  expect(secondHtml).toContain('--capture-bg:rgb(42, 45, 41);');
+  expect(secondHtml).toContain('回车保存，空白时导入剪贴板');
+  expect(secondHtml).toContain('aria-label="隐藏提示"');
+  expect(secondHtml).toContain('>保存<');
+  expect(secondHtml).not.toContain('>Save<');
+  panelWindow.emitReady();
+  panelWindow.emitCancel();
+  await expect(secondPromise).resolves.toEqual({ type: 'cancelled' });
+});
+
+it('keeps capture shell-less without old dialog chrome', async () => {
+  const promise = showGlobalCapturePanel();
+  await waitForPanelLoadCount(1);
+
+  const html = decodeURIComponent(panelWindow.loadURL.mock.calls.at(-1)?.[0] ?? '');
+  expect(html).not.toContain('Capture to Inbox');
+  expect(html).not.toContain('class="bar"');
+  expect(html).not.toContain('id="capture-title"');
+  expect(html).not.toContain('capture-help');
+  expect(html).toContain('Enter saves. Empty input imports the clipboard.');
+  expect(html).toContain('aria-label="Hide shortcut hint"');
+  expect(html).toContain('placeholder="..."');
+  expect(html).toContain('>Save<');
+  expect(html).toContain('font:400 var(--capture-input-font-size)/var(--capture-input-line-height) var(--capture-input-font-family)');
+  expect(html).not.toContain('var(--capture-accent) 8%');
+  panelWindow.emitCancel();
+  await expect(promise).resolves.toEqual({ type: 'cancelled' });
+});

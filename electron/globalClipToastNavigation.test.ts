@@ -21,14 +21,35 @@ vi.mock('./ipc/boot.js', () => ({
 
 function createWindow(id: number, overrides: Partial<{
   destroyed: boolean;
+  fullScreen: boolean;
+  maximized: boolean;
   minimized: boolean;
 }> = {}) {
+  let fullScreen = overrides.fullScreen ?? false;
+  let maximized = overrides.maximized ?? false;
+  let minimized = overrides.minimized ?? false;
   return {
     focus: vi.fn(),
     isDestroyed: vi.fn(() => overrides.destroyed ?? false),
-    isMinimized: vi.fn(() => overrides.minimized ?? false),
-    restore: vi.fn(),
-    show: vi.fn(),
+    isFullScreen: vi.fn(() => fullScreen),
+    isMaximized: vi.fn(() => maximized),
+    isMinimized: vi.fn(() => minimized),
+    maximize: vi.fn(() => {
+      maximized = true;
+    }),
+    restore: vi.fn(() => {
+      minimized = false;
+    }),
+    setFullScreen: vi.fn((value: boolean) => {
+      fullScreen = value;
+    }),
+    setMinimizedForTest: (value: boolean) => {
+      minimized = value;
+    },
+    show: vi.fn(() => {
+      fullScreen = false;
+      maximized = false;
+    }),
     webContents: {
       id,
       send: vi.fn()
@@ -64,8 +85,10 @@ it('routes a clicked global clip toast to visible main windows only', async () =
     expect.any(Function)
   );
   expect(targetWindow.restore).toHaveBeenCalledTimes(1);
-  expect(targetWindow.show).toHaveBeenCalledTimes(1);
-  expect(targetWindow.focus).toHaveBeenCalledTimes(1);
+  expect(targetWindow.show).toHaveBeenCalledTimes(2);
+  expect(targetWindow.maximize).not.toHaveBeenCalled();
+  expect(targetWindow.setFullScreen).not.toHaveBeenCalled();
+  expect(targetWindow.focus).toHaveBeenCalledTimes(2);
   expect(waitForRendererAppReady).toHaveBeenCalledTimes(1);
   expect(targetWindow.webContents.send).toHaveBeenCalledWith(
     'foliole:global-capture-navigate',
@@ -73,6 +96,46 @@ it('routes a clicked global clip toast to visible main windows only', async () =
   );
   expect(senderToastWindow.webContents.send).not.toHaveBeenCalled();
   expect(destroyedWindow.webContents.send).not.toHaveBeenCalled();
+});
+
+it('keeps a maximized app window maximized when opening a clicked toast target', async () => {
+  const targetWindow = createWindow(1, { maximized: true });
+  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([targetWindow]);
+  const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
+
+  openGlobalCaptureTarget('node-imported', 2);
+
+  expect(targetWindow.show).toHaveBeenCalledTimes(1);
+  expect(targetWindow.maximize).toHaveBeenCalledTimes(1);
+  expect(targetWindow.focus).toHaveBeenCalledTimes(1);
+});
+
+it('repairs a maximized app window if the native toast click minimizes it on the next task', async () => {
+  vi.useFakeTimers();
+  const targetWindow = createWindow(1, { maximized: true });
+  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([targetWindow]);
+  const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
+
+  openGlobalCaptureTarget('node-imported', 2);
+  targetWindow.setMinimizedForTest(true);
+  await vi.advanceTimersByTimeAsync(0);
+
+  expect(targetWindow.restore).toHaveBeenCalledTimes(1);
+  expect(targetWindow.maximize).toHaveBeenCalledTimes(2);
+  expect(targetWindow.focus).toHaveBeenCalledTimes(2);
+});
+
+it('keeps a fullscreen app window fullscreen when opening a clicked toast target', async () => {
+  const targetWindow = createWindow(1, { fullScreen: true });
+  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([targetWindow]);
+  const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
+
+  openGlobalCaptureTarget('node-imported', 2);
+
+  expect(targetWindow.show).toHaveBeenCalledTimes(1);
+  expect(targetWindow.setFullScreen).toHaveBeenCalledWith(true);
+  expect(targetWindow.maximize).not.toHaveBeenCalled();
+  expect(targetWindow.focus).toHaveBeenCalledTimes(1);
 });
 
 it('waits for the renderer app-ready marker before sending the clicked toast target', async () => {

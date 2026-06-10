@@ -119,16 +119,27 @@ it('toggles the persisted hint visibility from the footer buttons', () => {
 it('submits Enter and keeps Shift+Enter for newlines', () => {
   const { emitFocus, ipcSend } = executePanelPreload();
   const input = document.getElementById('capture') as HTMLTextAreaElement;
-  input.value = 'quick thought';
   document.body.focus();
   emitFocus();
   expect(document.activeElement).toBe(input);
+  input.value = 'quick thought';
 
   input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
   input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter', shiftKey: true }));
 
   expect(countChannelCalls(ipcSend, 'foliole:global-capture-panel:submit')).toBe(1);
   expect(ipcSend).toHaveBeenCalledWith('foliole:global-capture-panel:submit', 'quick thought');
+});
+
+it('clears stale text when the capture panel receives focus for a new entry', () => {
+  const { emitFocus } = executePanelPreload();
+  const input = document.getElementById('capture') as HTMLTextAreaElement;
+  input.value = 'old entry from the previous open';
+
+  emitFocus();
+
+  expect(input.value).toBe('');
+  expect(document.activeElement).toBe(input);
 });
 
 it('cancels on Escape or close button', () => {

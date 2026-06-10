@@ -25,6 +25,31 @@ async function sendGlobalCaptureNavigation(window: BrowserWindow, nodeId: string
   }
 }
 
+function restoreWindowPresentation(window: BrowserWindow, shouldRestoreFullScreen: boolean, shouldRestoreMaximized: boolean) {
+  if (window.isDestroyed()) {
+    return;
+  }
+  if (window.isMinimized()) {
+    window.restore();
+  }
+  window.show();
+  if (shouldRestoreFullScreen && !window.isFullScreen()) {
+    window.setFullScreen(true);
+  } else if (shouldRestoreMaximized && !window.isMaximized()) {
+    window.maximize();
+  }
+  window.focus();
+}
+
+function activateWindowPreservingPresentation(window: BrowserWindow) {
+  const wasFullScreen = window.isFullScreen();
+  const wasMaximized = window.isMaximized();
+  restoreWindowPresentation(window, wasFullScreen, wasMaximized);
+  globalThis.setTimeout(() => {
+    restoreWindowPresentation(window, wasFullScreen, wasMaximized);
+  }, 0);
+}
+
 export function openGlobalCaptureTarget(nodeId: string, senderId: number) {
   if (process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1') {
     globalThis.__folioleGlobalCaptureToastOpenForTests = { nodeId, senderId };
@@ -33,11 +58,7 @@ export function openGlobalCaptureTarget(nodeId: string, senderId: number) {
     if (window.isDestroyed() || window.webContents.id === senderId) {
       continue;
     }
-    if (window.isMinimized()) {
-      window.restore();
-    }
-    window.show();
-    window.focus();
+    activateWindowPreservingPresentation(window);
     void sendGlobalCaptureNavigation(window, nodeId);
   }
 }

@@ -29,13 +29,19 @@ vi.mock('electron', () => electronMocks);
 import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 
 function createToastWindow() {
+  const closedHandlers: Array<() => void> = [];
   return {
-    close: vi.fn(),
+    close: vi.fn(() => {
+      closedHandlers.forEach((handler) => handler());
+    }),
     hookWindowMessage: vi.fn(),
     isDestroyed: vi.fn(() => false),
     loadURL: vi.fn<(_url: string) => Promise<void>>(async () => undefined),
     moveTop: vi.fn(),
     on: vi.fn(),
+    once: vi.fn((event: string, handler: () => void) => {
+      if (event === 'closed') closedHandlers.push(handler);
+    }),
     setAlwaysOnTop: vi.fn(),
     setIgnoreMouseEvents: vi.fn(),
     showInactive: vi.fn(),
@@ -65,7 +71,12 @@ it('opens the success target from the native Windows mouse release message', asy
   const mainWindow = {
     focus: vi.fn(),
     isDestroyed: vi.fn(() => false),
+    isFullScreen: vi.fn(() => false),
+    isMaximized: vi.fn(() => false),
     isMinimized: vi.fn(() => false),
+    maximize: vi.fn(),
+    restore: vi.fn(),
+    setFullScreen: vi.fn(),
     show: vi.fn(),
     webContents: {
       id: 7,
@@ -86,8 +97,10 @@ it('opens the success target from the native Windows mouse release message', asy
   nativeClickHandler?.();
   await vi.advanceTimersByTimeAsync(300);
 
-  expect(mainWindow.show).toHaveBeenCalledTimes(1);
-  expect(mainWindow.focus).toHaveBeenCalledTimes(1);
+  expect(mainWindow.show).toHaveBeenCalledTimes(2);
+  expect(mainWindow.maximize).not.toHaveBeenCalled();
+  expect(mainWindow.setFullScreen).not.toHaveBeenCalled();
+  expect(mainWindow.focus).toHaveBeenCalledTimes(2);
   expect(mainWindow.webContents.send).toHaveBeenCalledWith(
     'foliole:global-capture-navigate',
     { nodeId: 'node-1' }

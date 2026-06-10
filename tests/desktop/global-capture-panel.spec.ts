@@ -10,12 +10,20 @@ declare global {
 }
 
 async function showCapturePanel(electronApp: ElectronApplication) {
-  await electronApp.evaluate(() => {
-    if (!globalThis.__folioleShowGlobalCapturePanelForTests) {
-      throw new Error('missing global capture panel test hook');
+  await expect.poll(async () => {
+    try {
+      await electronApp.evaluate(() => {
+        if (!globalThis.__folioleShowGlobalCapturePanelForTests) {
+          throw new Error('missing global capture panel test hook');
+        }
+        globalThis.__folioleShowGlobalCapturePanelForTests();
+      });
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Execution context was destroyed')) return false;
+      throw error;
     }
-    globalThis.__folioleShowGlobalCapturePanelForTests();
-  });
+  }).toBe(true);
 }
 
 async function findCapturePanelPage(electronApp: ElectronApplication) {

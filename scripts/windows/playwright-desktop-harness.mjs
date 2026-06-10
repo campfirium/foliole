@@ -14,6 +14,7 @@ import {
 } from './playwright-desktop-launch-target.mjs';
 import { createDesktopIsolationContext } from './playwright-desktop-isolation.mjs';
 import { assertRendererDistFresh } from './playwright-renderer-dist-freshness.mjs';
+import { waitForDesktopRootWindow } from './playwright-desktop-window.mjs';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 export const APP_READY_FLAG = '__FOLIOLE_APP_READY_REPORTED__';
@@ -36,37 +37,20 @@ function getRemainingTimeout(deadline) {
   return Math.max(1, deadline - Date.now());
 }
 
+function isContextResetError(error) {
+  return error instanceof Error && error.message.includes('Execution context was destroyed');
+}
+
 export async function acquireStableDesktopWindow(electronApp, timeoutMs) {
-  const windowPage = await electronApp.firstWindow({ timeout: timeoutMs });
-
-  await windowPage.waitForLoadState('domcontentloaded', { timeout: timeoutMs });
-  await windowPage.waitForFunction(
-    () =>
-      globalThis.location.href !== 'about:blank' &&
-      globalThis.document.readyState !== 'loading' &&
-      Boolean(globalThis.document.getElementById('root')),
-    undefined,
-    { timeout: timeoutMs }
-  );
-
-  return windowPage;
+  return waitForDesktopRootWindow(electronApp, timeoutMs);
 }
 
 async function acquireDesktopWindowWithConsole(electronApp, timeoutMs) {
-  const windowPage = await electronApp.firstWindow({ timeout: timeoutMs });
+  const windowPage = await waitForDesktopRootWindow(electronApp, timeoutMs);
   const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
   const rendererPageEventCollector = createRendererPageEventCollector(windowPage);
 
   try {
-    await windowPage.waitForLoadState('domcontentloaded', { timeout: timeoutMs });
-    await windowPage.waitForFunction(
-      () =>
-        globalThis.location.href !== 'about:blank' &&
-        globalThis.document.readyState !== 'loading' &&
-        Boolean(globalThis.document.getElementById('root')),
-      undefined,
-      { timeout: timeoutMs }
-    );
     return { rendererConsoleCollector, rendererPageEventCollector, windowPage };
   } catch (error) {
     error.rendererCollectors = {
@@ -118,12 +102,23 @@ export async function waitForDesktopAppReady(windowPage, timeoutMs) {
   }), APP_READY_FLAG);
 }
 
-async function readMainProcessSnapshot(electronApp) {
-  return electronApp.evaluate(({ app }) => ({
-    appName: app.getName(),
-    appPath: app.getAppPath(),
-    isReady: app.isReady()
-  }));
+async function readMainProcessSnapshot(electronApp, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError;
+  while (Date.now() < deadline) {
+    try {
+      return await electronApp.evaluate(({ app }) => ({
+        appName: app.getName(),
+        appPath: app.getAppPath(),
+        isReady: app.isReady()
+      }));
+    } catch (error) {
+      if (!isContextResetError(error)) throw error;
+      lastError = error;
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 100));
+    }
+  }
+  throw lastError ?? new Error('main process snapshot timed out');
 }
 
 export async function loadElectronLauncher() {
@@ -171,7 +166,7 @@ export async function launchDesktopSession({
       windowPage: firstWindow
     } = await acquireDesktopWindowWithConsole(electronApp, getRemainingTimeout(deadline)));
     appReady = await waitForDesktopAppReady(firstWindow, getRemainingTimeout(deadline));
-    snapshot = await readMainProcessSnapshot(electronApp);
+    snapshot = await readMainProcessSnapshot(electronApp, getRemainingTimeout(deadline));
   } catch (error) {
     await enrichDesktopLaunchError({
       appRoot: target.appRoot,

@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { BrowserWindow, nativeTheme, screen } from 'electron';
+import { BrowserWindow, screen } from 'electron';
 
 import { GLOBAL_CAPTURE_TOAST_TARGET_CHANNEL } from './globalCaptureChannels.js';
 import {
@@ -18,6 +18,7 @@ import {
   type GlobalClipDesktopToast,
   type GlobalClipToastStatus
 } from './globalClipDesktopToastState.js';
+import { installGlobalClipDesktopToastTestHook } from './globalClipDesktopToastTestHook.js';
 import { installGlobalCaptureToastOpenHandler, openGlobalCaptureTarget } from './globalClipToastNavigation.js';
 
 const TOAST_GUTTER = 22;
@@ -99,14 +100,14 @@ function createToastWindow() {
   const { x, y, width, height } = display.workArea;
   const toastWindow = new BrowserWindow({
     alwaysOnTop: true,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#2a2d29' : '#ffffff',
+    backgroundColor: '#00000000',
     focusable: true,
     frame: false,
     height: TOAST_WINDOW_HEIGHT,
     resizable: false,
     show: false,
     skipTaskbar: true,
-    transparent: false,
+    transparent: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -126,7 +127,10 @@ function openToastTarget(toastWindow: BrowserWindow, targetNodeId: string | null
   if (!targetNodeId || toastWindow.isDestroyed()) {
     return;
   }
-  openGlobalCaptureTarget(targetNodeId, toastWindow.webContents.id);
+  const senderId = toastWindow.webContents.id;
+  toastWindow.once('closed', () => {
+    openGlobalCaptureTarget(targetNodeId, senderId);
+  });
   toastWindow.close();
 }
 
@@ -181,47 +185,4 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
   };
 }
 
-type GlobalClipDesktopToastTestHook = (input: {
-  previewTitle?: string;
-  status?: GlobalClipToastStatus;
-  targetNodeId: string;
-}) => Promise<{
-  bounds: Electron.Rectangle;
-  clickPoint: Electron.Point;
-  hwndHex: string;
-  webContentsId: number;
-}>;
-
-declare global {
-  var __folioleShowGlobalClipDesktopToastForTests: GlobalClipDesktopToastTestHook | undefined;
-}
-
-function isIsolatedDesktopTestRuntime() {
-  const workdir = process.env.FOLIOLE_WORKDIR?.trim();
-  return process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && Boolean(workdir) && workdir !== process.cwd();
-}
-
-if (isIsolatedDesktopTestRuntime()) {
-  globalThis.__folioleShowGlobalClipDesktopToastForTests = async (input) => {
-    const toast = showGlobalClipDesktopToast(input.status ?? 'pending');
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 250));
-    toast.update('success', input.targetNodeId, input.previewTitle ?? null);
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 250));
-    const toastWindow = BrowserWindow.getAllWindows().find((window) =>
-      !window.isDestroyed() && window.webContents.getURL().startsWith('data:text/html')
-    );
-    if (!toastWindow) {
-      throw new Error('global capture toast window was not created');
-    }
-    const bounds = toastWindow.getBounds();
-    return {
-      bounds,
-      clickPoint: screen.dipToScreenPoint({
-        x: bounds.x + bounds.width / 2,
-        y: bounds.y + bounds.height / 2
-      }),
-      hwndHex: toastWindow.getNativeWindowHandle().toString('hex'),
-      webContentsId: toastWindow.webContents.id
-    };
-  };
-}
+installGlobalClipDesktopToastTestHook(showGlobalClipDesktopToast);

@@ -16,12 +16,10 @@ import {
   type GlobalCaptureFloatingTheme,
   resolveFloatingTheme
 } from './globalCaptureFloatingSurface.js';
+import { installGlobalCapturePanelTestHook } from './globalCapturePanelTestHook.js';
 import { isGlobalClipHintVisible, setGlobalClipHintVisible } from './globalClipSettings.js';
 
-export type GlobalCapturePanelResult =
-  | { type: 'cancelled' }
-  | { type: 'clipboard' }
-  | { text: string; type: 'text' };
+export type GlobalCapturePanelResult = { type: 'cancelled' } | { type: 'clipboard' } | { text: string; type: 'text' };
 
 const PANEL_GUTTER = 26;
 const SURFACE_MAX_HEIGHT = 420;
@@ -29,11 +27,12 @@ const SURFACE_MIN_HEIGHT = 188;
 const SURFACE_WIDTH = 520;
 const PANEL_MAX_HEIGHT = SURFACE_MAX_HEIGHT + PANEL_GUTTER * 2;
 const PANEL_MIN_HEIGHT = SURFACE_MIN_HEIGHT + PANEL_GUTTER * 2;
-const PANEL_HEIGHT = PANEL_MIN_HEIGHT;
 const PANEL_WIDTH = SURFACE_WIDTH + PANEL_GUTTER * 2;
 
 let cachedPanelWindow: BrowserWindow | null = null;
 let cachedPanelLoad: Promise<void> | null = null;
+let cachedPanelReady = false;
+let cachedPanelLoadVersion = 0;
 
 function resolvePanelBounds(height: number) {
   const display = screen.getPrimaryDisplay();
@@ -66,9 +65,9 @@ function buildPanelHtml(theme: GlobalCaptureFloatingTheme) {
     '.footer{display:grid;min-height:44px;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;border-top:1px solid var(--capture-divider);padding:6px var(--capture-content-inline-padding);background:transparent;}',
     '.hint{display:flex;min-width:0;align-items:center;gap:4px;overflow:hidden;color:var(--capture-muted);font:400 12px/18px var(--capture-ui-font-family);}',
     '.hint-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-    '.hint-toggle{display:inline-flex;width:14px;height:20px;margin-left:-5px;align-items:center;justify-content:flex-start;border:0;border-radius:4px;background:transparent;color:color-mix(in srgb,var(--capture-muted) 64%,transparent);padding:0;cursor:pointer;}',
+    '.hint-toggle{display:inline-flex;width:22px;height:22px;margin-left:-6px;align-items:center;justify-content:center;border:0;border-radius:6px;background:transparent;color:color-mix(in srgb,var(--capture-muted) 76%,transparent);padding:0;cursor:pointer;}',
     '.hint-toggle:hover{color:var(--capture-fg);background:var(--capture-control-hover-bg);}',
-    '.hint-toggle svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}',
+    '.hint-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}',
     'body[data-hint-visible="false"] .hint-expanded{display:none;}',
     'body[data-hint-visible="true"] .hint-collapsed{display:none;}',
     '.actions{display:flex;align-items:center;gap:8px;}',
@@ -81,17 +80,17 @@ function buildPanelHtml(theme: GlobalCaptureFloatingTheme) {
 }
 
 function createPanelWindow() {
-  const bounds = resolvePanelBounds(PANEL_HEIGHT);
+  const bounds = resolvePanelBounds(PANEL_MIN_HEIGHT);
   const panel = new BrowserWindow({
     alwaysOnTop: true,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#00000000',
     focusable: true,
     frame: false,
     height: bounds.height,
     resizable: false,
     show: false,
     skipTaskbar: true,
-    transparent: false,
+    transparent: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -105,21 +104,31 @@ function createPanelWindow() {
   panel.setOpacity(0);
   panel.setIgnoreMouseEvents(true);
   panel.showInactive();
+  const handlePanelReady = (event: IpcMainEvent) => {
+    if (event.sender.id === panel.webContents.id) cachedPanelReady = true;
+  };
+  ipcMain.on(GLOBAL_CAPTURE_PANEL_READY_CHANNEL, handlePanelReady);
   panel.on('closed', () => {
     if (cachedPanelWindow === panel) {
       cachedPanelWindow = null;
       cachedPanelLoad = null;
+      cachedPanelReady = false;
     }
+    ipcMain.removeListener(GLOBAL_CAPTURE_PANEL_READY_CHANNEL, handlePanelReady);
   });
   return panel;
 }
 
-function loadPanelWindow(panel: BrowserWindow) {
-  if (!cachedPanelLoad) {
-    cachedPanelLoad = resolveFloatingTheme(panel).then((theme) => {
-      panel.setBackgroundColor(theme.background);
-      return panel.loadURL(buildPanelHtml({ ...theme, hintVisible: isGlobalClipHintVisible() }));
-    }).then(() => undefined);
+function loadPanelWindow(panel: BrowserWindow, forceReload = false) {
+  if (!cachedPanelLoad || forceReload) {
+    const loadVersion = cachedPanelLoadVersion += 1;
+    cachedPanelReady = false;
+    cachedPanelLoad = resolveFloatingTheme(panel)
+      .then((theme) => {
+        if (loadVersion !== cachedPanelLoadVersion || panel.isDestroyed()) return undefined;
+        return panel.loadURL(buildPanelHtml({ ...theme, hintVisible: isGlobalClipHintVisible() }));
+      })
+      .then(() => undefined);
   }
   return cachedPanelLoad;
 }
@@ -128,17 +137,18 @@ function getPanelWindow() {
   if (!cachedPanelWindow || cachedPanelWindow.isDestroyed()) {
     cachedPanelWindow = createPanelWindow();
   }
-  void loadPanelWindow(cachedPanelWindow);
   return cachedPanelWindow;
 }
 
 export function prepareGlobalCapturePanelWindow() {
-  getPanelWindow();
+  void loadPanelWindow(getPanelWindow());
 }
 
 export function resetGlobalCapturePanelWindowForTests() {
   cachedPanelWindow = null;
   cachedPanelLoad = null;
+  cachedPanelReady = false;
+  cachedPanelLoadVersion += 1;
 }
 
 function revealPanel(panel: BrowserWindow) {
@@ -178,9 +188,10 @@ export function showGlobalCapturePanel(): Promise<GlobalCapturePanelResult> {
     const panel = getPanelWindow();
     let settled = false;
     let shown = false;
-    panel.setBounds(resolvePanelBounds(PANEL_HEIGHT), false);
+    panel.setBounds(resolvePanelBounds(PANEL_MIN_HEIGHT), false);
     concealPanel(panel);
-    const showWhenLoaded = () => {
+    const showWhenReady = () => {
+      if (!cachedPanelReady) return;
       if (shown || settled || panel.isDestroyed()) return;
       shown = true;
       revealPanel(panel);
@@ -199,6 +210,8 @@ export function showGlobalCapturePanel(): Promise<GlobalCapturePanelResult> {
     };
     const handleReady = (event: IpcMainEvent) => {
       if (!isPanelSender(event.sender.id)) return;
+      cachedPanelReady = true;
+      showWhenReady();
     };
     const handleHintVisible = (event: IpcMainEvent, value: unknown) => {
       if (!isPanelSender(event.sender.id) || typeof value !== 'boolean') return;
@@ -218,20 +231,8 @@ export function showGlobalCapturePanel(): Promise<GlobalCapturePanelResult> {
     ipcMain.on(GLOBAL_CAPTURE_PANEL_READY_CHANNEL, handleReady);
     ipcMain.on(GLOBAL_CAPTURE_PANEL_HINT_VISIBLE_CHANNEL, handleHintVisible);
     panel.on('closed', () => settle({ type: 'cancelled' }));
-    void loadPanelWindow(panel).then(showWhenLoaded);
+    void loadPanelWindow(panel, true).then(showWhenReady);
   });
 }
 
-const testRuntimeWorkdir = process.env.FOLIOLE_WORKDIR?.trim();
-if (
-  process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && testRuntimeWorkdir !== undefined &&
-  testRuntimeWorkdir !== process.cwd()
-) {
-  Object.assign(globalThis, {
-    __folioleShowGlobalCapturePanelForTests: () => {
-      Object.assign(globalThis, { __folioleGlobalCapturePanelResultForTests: null });
-      void showGlobalCapturePanel().then((result) =>
-        Object.assign(globalThis, { __folioleGlobalCapturePanelResultForTests: result }));
-    }
-  });
-}
+installGlobalCapturePanelTestHook(showGlobalCapturePanel);
