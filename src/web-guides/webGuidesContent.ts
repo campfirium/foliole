@@ -39,6 +39,28 @@ export const WEB_GUIDES: WebGuideSeed[] = [
         ]
       }
     ]
+  },
+  {
+    slug: 'organize-source-topics',
+    title: 'Organize source topics',
+    description: 'A short guide to keeping source topics easy to return to as a reading collection grows.',
+    summary: 'Keep folders and topics simple enough that the next reading step stays visible.',
+    sections: [
+      {
+        heading: 'Use folders for stable context',
+        body: [
+          'Group topics by the context you expect to revisit. A folder should make the next topic easier to find, not become a second classification project.',
+          'When a topic no longer belongs in its first place, move it once the better home is clear.'
+        ]
+      },
+      {
+        heading: 'Keep the inbox small',
+        body: [
+          'Let the inbox collect new topics briefly, then move useful material into folders before the list becomes another reading burden.',
+          'If a topic is only a temporary reminder, decide whether it deserves a source topic before building review material from it.'
+        ]
+      }
+    ]
   }
 ];
 
