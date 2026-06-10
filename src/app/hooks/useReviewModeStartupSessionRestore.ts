@@ -1,5 +1,35 @@
 import { useEffect, useRef } from 'react';
 
+export function useReviewModeRestoredSessionAutoOpen(args: {
+  isReviewSessionCompleted: boolean;
+  isStudyMode: boolean;
+  isWorkspaceHydrated: boolean;
+  reviewCurrentNodeId: string | null;
+  startStudyMode: (options?: { force?: boolean }) => void;
+}) {
+  const openedRestoredSessionRef = useRef(false);
+
+  useEffect(() => {
+    if (!args.isWorkspaceHydrated || args.isStudyMode) {
+      return;
+    }
+    if (openedRestoredSessionRef.current) {
+      return;
+    }
+    if (!args.reviewCurrentNodeId && !args.isReviewSessionCompleted) {
+      return;
+    }
+    openedRestoredSessionRef.current = true;
+    args.startStudyMode({ force: true });
+  }, [
+    args.isReviewSessionCompleted,
+    args.isStudyMode,
+    args.isWorkspaceHydrated,
+    args.reviewCurrentNodeId,
+    args.startStudyMode
+  ]);
+}
+
 export function useReviewModeStartupSessionRestore(args: {
   activeNodeId: string | null;
   isReviewSessionCompleted: boolean;

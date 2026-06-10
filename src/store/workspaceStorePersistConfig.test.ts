@@ -92,6 +92,38 @@ it('drops invalid persisted review next due values', () => {
   expect(merged?.reviewSession.nextReviewDueAt).toBeUndefined();
 });
 
+it('keeps completed review session summary through hydration', () => {
+  const current = createTestWorkspaceState();
+  const merged = createConfig().merge?.(
+    {
+      activeNodeId: INBOX_NODE_ID,
+      nodeOrder: current.nodeOrder,
+      nodesById: current.nodesById,
+      reviewSession: {
+        completedAt: '2026-05-13T00:30:00.000Z',
+        currentNodeId: null,
+        isAnswerRevealed: false,
+        queueNodeIds: [],
+        readTopicCount: 2,
+        readingElapsedMs: 120000,
+        reviewedItemCount: 3,
+        reviewElapsedMs: 180000,
+        totalNodeCount: 5
+      }
+    },
+    current
+  );
+
+  expect(merged?.reviewSession).toMatchObject({
+    completedAt: '2026-05-13T00:30:00.000Z',
+    currentNodeId: null,
+    queueNodeIds: [],
+    readTopicCount: 2,
+    reviewedItemCount: 3,
+    totalNodeCount: 5
+  });
+});
+
 it('does not hydrate legacy persisted temporary session mode', () => {
   const current = createTestWorkspaceState();
   const merged = createConfig().merge?.(

@@ -1,7 +1,63 @@
 import { renderHook } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-import { useReviewModeStartupSessionRestore } from './useReviewModeStartupSessionRestore';
+import {
+  useReviewModeRestoredSessionAutoOpen,
+  useReviewModeStartupSessionRestore
+} from './useReviewModeStartupSessionRestore';
+
+function renderAutoOpenHook(overrides: Partial<Parameters<typeof useReviewModeRestoredSessionAutoOpen>[0]> = {}) {
+  const props = {
+    isReviewSessionCompleted: false,
+    isStudyMode: false,
+    isWorkspaceHydrated: true,
+    reviewCurrentNodeId: 'review-1',
+    startStudyMode: vi.fn(),
+    ...overrides
+  };
+  renderHook(() => useReviewModeRestoredSessionAutoOpen(props));
+  return props;
+}
+
+it('opens Flow once when a hydrated session has a current review item', () => {
+  const props = renderAutoOpenHook();
+
+  expect(props.startStudyMode).toHaveBeenCalledWith({ force: true });
+  expect(props.startStudyMode).toHaveBeenCalledTimes(1);
+});
+
+it('opens Flow once when a hydrated session is completed', () => {
+  const props = renderAutoOpenHook({
+    isReviewSessionCompleted: true,
+    reviewCurrentNodeId: null
+  });
+
+  expect(props.startStudyMode).toHaveBeenCalledWith({ force: true });
+  expect(props.startStudyMode).toHaveBeenCalledTimes(1);
+});
+
+it('does not open Flow without a restored session', () => {
+  const props = renderAutoOpenHook({ reviewCurrentNodeId: null });
+
+  expect(props.startStudyMode).not.toHaveBeenCalled();
+});
+
+it('does not repeat restored Flow auto open across rerenders', () => {
+  const props = {
+    isReviewSessionCompleted: false,
+    isStudyMode: false,
+    isWorkspaceHydrated: true,
+    reviewCurrentNodeId: 'review-1',
+    startStudyMode: vi.fn()
+  };
+  const view = renderHook((hookProps) => useReviewModeRestoredSessionAutoOpen(hookProps), {
+    initialProps: props
+  });
+
+  view.rerender({ ...props });
+
+  expect(props.startStudyMode).toHaveBeenCalledTimes(1);
+});
 
 function renderRestoreHook(overrides: Partial<Parameters<typeof useReviewModeStartupSessionRestore>[0]> = {}) {
   const props = {

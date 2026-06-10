@@ -1,5 +1,5 @@
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
-import { createEmptyReviewSession } from './workspaceReviewReading';
+import { createEmptyReviewSession, isReviewSessionCompleted } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 
 function isVisibleQueuedNode(state: WorkspaceState, nodeId: string) {
@@ -20,6 +20,9 @@ export function reconcileReviewSession(
     isVisibleQueuedNode(state, nodeId)
   );
   if (queuedNodeIds.length === 0) {
+    if (isReviewSessionCompleted(state.reviewSession)) {
+      return state.reviewSession;
+    }
     return createEmptyReviewSession();
   }
 
