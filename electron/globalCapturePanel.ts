@@ -222,21 +222,16 @@ export function showGlobalCapturePanel(): Promise<GlobalCapturePanelResult> {
   });
 }
 
-declare global {
-  var __folioleGlobalCapturePanelResultForTests: GlobalCapturePanelResult | null | undefined,
-    __folioleShowGlobalCapturePanelForTests: (() => void) | undefined;
-}
-
-function isIsolatedDesktopTestRuntime() {
-  const workdir = process.env.FOLIOLE_WORKDIR?.trim();
-  return process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && workdir !== undefined && workdir !== process.cwd();
-}
-
-if (isIsolatedDesktopTestRuntime()) {
-  globalThis.__folioleShowGlobalCapturePanelForTests = () => {
-    globalThis.__folioleGlobalCapturePanelResultForTests = null;
-    void showGlobalCapturePanel().then((result) => {
-      globalThis.__folioleGlobalCapturePanelResultForTests = result;
-    });
-  };
+const testRuntimeWorkdir = process.env.FOLIOLE_WORKDIR?.trim();
+if (
+  process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && testRuntimeWorkdir !== undefined &&
+  testRuntimeWorkdir !== process.cwd()
+) {
+  Object.assign(globalThis, {
+    __folioleShowGlobalCapturePanelForTests: () => {
+      Object.assign(globalThis, { __folioleGlobalCapturePanelResultForTests: null });
+      void showGlobalCapturePanel().then((result) =>
+        Object.assign(globalThis, { __folioleGlobalCapturePanelResultForTests: result }));
+    }
+  });
 }
