@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { resolveCompanionReviewSession } from './companionReviewSession';
@@ -111,9 +111,14 @@ export function useCompanionArticleSurface(
   floatingBar: FloatingBarVisibilityApi,
   browseSort?: CompanionBrowseSortState
 ) {
+  const isActiveActionUserOwnedRef = useRef(false);
   const [activeAction, setActiveAction] = useState<CompanionTabAction>(() => {
     return workspaceSync.state.workspace_snapshot ? 'review' : 'more';
   });
+  const setUserActiveAction = (action: CompanionTabAction) => {
+    isActiveActionUserOwnedRef.current = true;
+    setActiveAction(action);
+  };
   const browseState = useCompanionBrowseState(workspaceSync, browseSort);
   const handleViewScroll = useCompanionViewStateSync({
     activeAction,
@@ -125,17 +130,25 @@ export function useCompanionArticleSurface(
     browseState.browsedFolder?.nodeId ?? null,
     floatingBar,
     browseState.reviewSession,
-    setActiveAction,
+    setUserActiveAction,
     browseState.setSelectedBrowseNodeId,
     browseState.snapshot,
     workspaceSync
   );
 
   useEffect(() => {
+    if (!workspaceSync.isWorkspaceSyncStateReady) {
+      return;
+    }
     if (!workspaceSync.state.workspace_snapshot) {
       setActiveAction('more');
+      isActiveActionUserOwnedRef.current = false;
+      return;
     }
-  }, [workspaceSync.state.workspace_snapshot]);
+    if (!isActiveActionUserOwnedRef.current) {
+      setActiveAction('review');
+    }
+  }, [workspaceSync.isWorkspaceSyncStateReady, workspaceSync.state.workspace_snapshot]);
 
   const missingBodySync = useCompanionMissingBodySync({ readableArticle: browseState.readableArticle, workspaceSync });
   const readableArticle = useReadableArticleWithBodySyncStatus(

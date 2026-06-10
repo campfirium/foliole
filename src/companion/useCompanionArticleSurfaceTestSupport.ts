@@ -69,6 +69,7 @@ export function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createC
     desktopDiscoveries: [],
     desktopDiscovery: null,
     error: null,
+    isWorkspaceSyncStateReady: true,
     pendingPairRequest: null,
     pairingState: createPairingState(true),
     pairingStatus: 'idle' as const,

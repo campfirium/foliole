@@ -99,6 +99,7 @@ function mockWorkspaceSync(args: {
     desktopDiscoveries: [],
     desktopDiscovery: null,
     error: null,
+    isWorkspaceSyncStateReady: true,
     pairingRequest: null,
     pairingState: {
       device_id: 'android-test-device',

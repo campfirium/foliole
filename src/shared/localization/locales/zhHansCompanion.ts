@@ -122,6 +122,8 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.sync.handoff.delay.30': '30 分钟',
   'companion.sync.handoff.delay.60': '1 小时',
   'companion.sync.handoff.delay.180': '3 小时',
+  'companion.sync.loading.title': '正在打开已同步工作区',
+  'companion.sync.loading.description': '正在检查本地数据，然后决定从哪里开始。',
   'companion.syncSetup.approval.title': '正在请求桌面端允许这台设备',
   'companion.syncSetup.approval.detail': '查看正在连接的桌面端并点击批准。批准后这里会自动继续。',
   'companion.syncSetup.expired': '请求已过期。点取消后重试。',

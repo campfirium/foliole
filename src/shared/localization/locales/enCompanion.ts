@@ -121,6 +121,8 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.sync.handoff.delay.30': '30 minutes',
   'companion.sync.handoff.delay.60': '1 hour',
   'companion.sync.handoff.delay.180': '3 hours',
+  'companion.sync.loading.title': 'Opening synced workspace',
+  'companion.sync.loading.description': 'Checking local data before choosing where to start.',
   'companion.syncSetup.approval.title': 'Asking the desktop to allow this device',
   'companion.syncSetup.approval.detail': "Look at the desktop you're connecting to and tap Approve. We'll continue automatically as soon as you do.",
   'companion.syncSetup.expired': 'Request expired. Tap Cancel and try again.',

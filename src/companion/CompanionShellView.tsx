@@ -7,6 +7,7 @@ import type { CompanionShellModel } from './CompanionShell';
 import { renderCompanionShellContent } from './CompanionShellContent';
 import { CompanionShellOverlays } from './CompanionShellOverlays';
 import { CompanionShellTopBar } from './CompanionShellTopBar';
+import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 
 function openCompanionSyncSettings(model: CompanionShellModel) {
   model.surface.handleTabAction('more');
@@ -27,6 +28,13 @@ function renderCompanionMainContent(model: CompanionShellModel) {
   const bottomInsetClassName = model.isReviewTaskActive
     ? companionReviewBottomInsetClassName
     : companionMainBottomInsetClassName;
+  if (!model.workspaceSync.isWorkspaceSyncStateReady) {
+    return (
+      <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pt-4 ${bottomInsetClassName} [padding-left:1.5rem] [padding-right:1.5rem] sm:px-7 sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]`}>
+        <CompanionWorkspaceSyncLoading />
+      </div>
+    );
+  }
   return (
     <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pt-4 ${bottomInsetClassName} [padding-left:1.5rem] [padding-right:1.5rem] sm:px-7 sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]`}>
       <CompanionShellTopBar

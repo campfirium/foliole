@@ -100,7 +100,7 @@ function buildCompanionShellModel(args: {
     isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
     isCaptureSheetOpen: args.isCaptureSheetOpen,
     isOnlyReviewOpen: args.isOnlyReviewOpen,
-    isNavigationVisible: args.reviewChrome.isNavigationVisible,
+    isNavigationVisible: args.workspaceSync.isWorkspaceSyncStateReady && args.reviewChrome.isNavigationVisible,
     isReviewTaskActive: args.reviewChrome.isReviewTaskActive,
     reviewBreadcrumbItems: args.reviewChrome.reviewBreadcrumbItems,
     setIsCaptureSheetOpen: args.setIsCaptureSheetOpen,

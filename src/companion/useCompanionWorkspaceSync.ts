@@ -32,6 +32,7 @@ const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
 async function initializeWorkspaceSyncState(args: {
   cancelled: () => boolean;
   setReadableArticle(article: CompanionReadableArticle | null): void;
+  setIsStateReady(ready: boolean): void;
   setSyncConflictCount(count: number): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
@@ -43,10 +44,12 @@ async function initializeWorkspaceSyncState(args: {
   args.setState(nextState);
   args.setReadableArticle(await syncReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
+  args.setIsStateReady(true);
   args.setStatus('idle');
 }
 
 function useWorkspaceSyncBootstrap(
+  setIsStateReady: (ready: boolean) => void,
   setReadableArticle: (article: CompanionReadableArticle | null) => void,
   setSyncConflictCount: (count: number) => void,
   setState: (state: NativeCompanionWorkspaceSyncState) => void,
@@ -57,6 +60,7 @@ function useWorkspaceSyncBootstrap(
 
     void initializeWorkspaceSyncState({
       cancelled: () => cancelled,
+      setIsStateReady,
       setReadableArticle,
       setSyncConflictCount,
       setState,
@@ -66,13 +70,14 @@ function useWorkspaceSyncBootstrap(
         if (cancelled) {
           return;
         }
+        setIsStateReady(true);
         setStatus('idle');
       });
 
     return () => {
       cancelled = true;
     };
-  }, [setReadableArticle, setSyncConflictCount, setState, setStatus]);
+  }, [setIsStateReady, setReadableArticle, setSyncConflictCount, setState, setStatus]);
 }
 
 async function disconnectCompanionWorkspacePairing(args: {
@@ -95,6 +100,7 @@ function useMergedCompanionSyncProgress() {
 
 export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {
   const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(EMPTY_SYNC_STATE);
+  const [isWorkspaceSyncStateReady, setIsWorkspaceSyncStateReady] = useState(false);
   const [readableArticle, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
   const [syncConflictCount, setSyncConflictCount] = useState(0);
   const [syncProgress, setMergedSyncProgress] = useMergedCompanionSyncProgress();
@@ -124,22 +130,14 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     refreshPairingState: pairing.refreshPairingState,
     saveEndpoint: snapshotActions.saveEndpoint
   }), [pairing.refreshPairingState, snapshotActions.saveEndpoint]);
-  useWorkspaceSyncBootstrap(setReadableArticle, setSyncConflictCount, setState, setStatus);
-  useForegroundAutoSync(
-    setError,
-    setReadableArticle,
-    setState,
-    setMergedSyncProgress,
-    setStatus,
-    pairing.pairingState.is_paired,
-    state,
-    tryForegroundAutoSync
-  );
+  useWorkspaceSyncBootstrap(setIsWorkspaceSyncStateReady, setReadableArticle, setSyncConflictCount, setState, setStatus);
+  useForegroundAutoSync(setError, setReadableArticle, setState, setMergedSyncProgress, setStatus, pairing.pairingState.is_paired, state, tryForegroundAutoSync);
 
   return {
     bootstrapState,
     clearError: () => setError(null),
     error,
+    isWorkspaceSyncStateReady,
     readableArticle,
     state,
     syncConflictCount,

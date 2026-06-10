@@ -24,6 +24,7 @@ import { renderCompanionSettingsContent } from './CompanionSettingsShellContent'
 import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
 import { createCompanionTrashRestoreHandler } from './companionTrashController';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
+import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -182,6 +183,9 @@ export function renderCompanionShellContent(props: {
   workspaceError: string | null;
   workspaceSync: WorkspaceSync;
 }) {
+  if (!props.workspaceSync.isWorkspaceSyncStateReady) {
+    return <CompanionWorkspaceSyncLoading />;
+  }
   if (props.surface.activeAction === 'more') {
     return renderCompanionSettingsContent(props);
   }
