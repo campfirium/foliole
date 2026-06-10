@@ -40,10 +40,15 @@ vi.mock('../import/managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated
 }));
 
+import {
+  authorizeSelectedImportFilePath,
+  resetImportPathAuthorizationForTests
+} from './importPathAuthorization.js';
 import { runTextFileImport } from './importTextFile.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetImportPathAuthorizationForTests();
   runEpubImport.mockResolvedValue({
     contentFingerprint: 'epub-content-fingerprint',
     degradedReason: null,
@@ -62,6 +67,8 @@ beforeEach(() => {
 });
 
 it('imports the selected EPUB path with the requested release mode without reopening the picker', async () => {
+  await authorizeSelectedImportFilePath('/tmp/book.epub');
+
   await expect(runTextFileImport(undefined, {
     file_path: '/tmp/book.epub',
     sequential_reading_mode: 'sequential'
@@ -77,4 +84,11 @@ it('imports the selected EPUB path with the requested release mode without reope
     { sequentialReadingMode: 'sequential' }
   );
   expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toBe('import-epub');
+});
+
+it('rejects renderer-provided EPUB paths that were not selected by the main process', async () => {
+  await expect(runTextFileImport(undefined, {
+    file_path: '/tmp/book.epub',
+    sequential_reading_mode: 'sequential'
+  })).rejects.toThrow('Import file path is not authorized.');
 });

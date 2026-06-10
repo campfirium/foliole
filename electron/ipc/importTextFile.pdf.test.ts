@@ -36,10 +36,12 @@ vi.mock('../import/managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
 import { runTextFileImport, selectImportTextFile } from './importTextFile.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetImportPathAuthorizationForTests();
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/paper.pdf'] });
   runPreparedImport.mockReturnValue({
     contentFingerprint: 'pdf-content-fingerprint',

@@ -15,6 +15,10 @@ import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 
 import { loadEpubPreview, runEpubImport } from './epubImport.js';
 import {
+  assertAuthorizedImportFilePath,
+  authorizeSelectedImportFilePaths
+} from './importPathAuthorization.js';
+import {
   buildPreparedImportRecord,
   importTargetParentNodeProps,
   loadPreparedImportRecord,
@@ -56,6 +60,7 @@ async function selectImportFilePaths(window?: BrowserWindow | null) {
   if (selection.canceled || selection.filePaths.length === 0) {
     return null;
   }
+  await authorizeSelectedImportFilePaths(selection.filePaths);
   return selection.filePaths;
 }
 
@@ -143,7 +148,8 @@ export async function runTextFileImport(
   args?: NativeTextImportArgs
 ): Promise<NativeTextImportResult | null> {
   if (typeof args?.file_path === 'string' && args.file_path.trim()) {
-    const result = withTextImportNodeMutationPatch(await runImportForFilePath(args.file_path, args));
+    const filePath = await assertAuthorizedImportFilePath(args.file_path);
+    const result = withTextImportNodeMutationPatch(await runImportForFilePath(filePath, args));
     if (result?.import_id) {
       notifyManagedInboxUpdated(result.import_id, result.node_mutation_patch);
     }

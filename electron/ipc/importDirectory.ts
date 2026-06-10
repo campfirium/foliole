@@ -10,6 +10,10 @@ import { assertMirrorSeparatedFromImportPath, assertNoUnsafePathOverlap } from '
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import {
+  assertAuthorizedImportDirectoryPath,
+  authorizeSelectedImportDirectoryPath
+} from './importPathAuthorization.js';
+import {
   MANAGED_INBOX_SUPPORTED_KINDS,
   discoverDirectoryImportSources,
   resolveImportHighlightPolicy,
@@ -51,7 +55,7 @@ async function selectImportDirectoryPath(window?: BrowserWindow | null, args?: N
   }
 
   if (typeof args?.directory_path === 'string' && args.directory_path.trim().length > 0) {
-    return args.directory_path;
+    return assertAuthorizedImportDirectoryPath(args.directory_path);
   }
 
   const selection = window
@@ -61,7 +65,11 @@ async function selectImportDirectoryPath(window?: BrowserWindow | null, args?: N
   if (selection.canceled || selection.filePaths.length === 0) {
     return null;
   }
-  return selection.filePaths[0] ?? null;
+  const selectedPath = selection.filePaths[0] ?? null;
+  if (selectedPath) {
+    await authorizeSelectedImportDirectoryPath(selectedPath);
+  }
+  return selectedPath;
 }
 
 function assertSafeDirectoryImportRoot(rootPath: string, sourceAdapter: ReturnType<typeof resolveDirectoryImportSourceAdapter>) {

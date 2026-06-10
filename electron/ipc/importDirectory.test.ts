@@ -50,11 +50,16 @@ vi.mock('electron', () => ({
 
 import { runDirectoryImport } from './importDirectory.js';
 import { createPersistedRecord, createTempRoot } from './importDirectory.test-support.js';
+import {
+  authorizeSelectedImportDirectoryPath,
+  resetImportPathAuthorizationForTests
+} from './importPathAuthorization.js';
 
 const tempRoots: string[] = [];
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetImportPathAuthorizationForTests();
   logDirectoryImportCompleted.mockResolvedValue(undefined);
   logDirectoryImportFailed.mockResolvedValue(undefined);
   resolveAppPaths.mockReturnValue({
@@ -149,6 +154,7 @@ function expectGenericPreparedImports() {
 
 it('imports markdown and HTML directories through the shared normalization and persistence pipeline', async () => {
   const root = await createGenericImportRoot();
+  await authorizeSelectedImportDirectoryPath(root);
 
   const result = await runDirectoryImport(undefined, { directory_path: root, highlight_policy: 'adopt' });
 
@@ -164,12 +170,19 @@ it('imports markdown and HTML directories through the shared normalization and p
   expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toEqual(expect.any(String));
 });
 
+it('rejects renderer-provided directory paths that were not selected by the main process', async () => {
+  const root = await createGenericImportRoot();
+
+  await expect(runDirectoryImport(undefined, { directory_path: root })).rejects.toThrow('Import directory path is not authorized.');
+});
+
 it('classifies vault markdown as obsidian imports and skips the .obsidian control directory', async () => {
   const root = await createTempRoot('import-directory-obsidian', tempRoots);
   await fs.mkdir(path.join(root, '.obsidian'), { recursive: true });
   await fs.writeFile(path.join(root, '.obsidian', 'ignored.md'), '# hidden', 'utf8');
   await fs.mkdir(path.join(root, 'Daily'), { recursive: true });
   await fs.writeFile(path.join(root, 'Daily', 'note.md'), '# Imported vault note', 'utf8');
+  await authorizeSelectedImportDirectoryPath(root);
 
   const result = await runDirectoryImport(undefined, { directory_path: root });
 

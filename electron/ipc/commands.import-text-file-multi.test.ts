@@ -3,6 +3,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { handleInvokeRequest } from './commands.js';
+import { resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
 
 const { readFile, runPreparedImport, showOpenDialog } = vi.hoisted(() => ({
   readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
@@ -52,6 +53,7 @@ vi.mock('./review.js', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetImportPathAuthorizationForTests();
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/first.md', '/tmp/second.md'] });
   runPreparedImport
     .mockReturnValueOnce({

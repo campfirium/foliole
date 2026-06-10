@@ -19,6 +19,7 @@ import type { InvokeContext } from './commands.js';
 import type { InvokeRequest } from './contracts.js';
 import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
+import { assertExternalSearchImportPath, authorizeSelectedImportDirectoryPath } from './importPathAuthorization.js';
 import { runImportForFilePath, runTextFileImport, selectImportTextFile } from './importTextFile.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
@@ -74,7 +75,11 @@ async function selectImportDirectory(context?: InvokeContext) {
   if (selection.canceled || selection.filePaths.length === 0) {
     return null;
   }
-  return selection.filePaths[0] ?? null;
+  const selectedPath = selection.filePaths[0] ?? null;
+  if (selectedPath) {
+    await authorizeSelectedImportDirectoryPath(selectedPath);
+  }
+  return selectedPath;
 }
 
 export async function handleImportCommand(request: InvokeRequest, context?: InvokeContext) {
@@ -183,7 +188,8 @@ async function handleTextImportCommand(
     return selectImportTextFile(resolveTargetWindow(context), args);
   }
   if (request.command === NATIVE_COMMANDS.importExternalSearchDocument) {
-    const result = await runImportForFilePath(asString(args.absolute_path, 'absolute_path'), args);
+    const filePath = await assertExternalSearchImportPath(asString(args.absolute_path, 'absolute_path'));
+    const result = await runImportForFilePath(filePath, args);
     notifyIfTextImportChanged(result, resolveTargetWindow(context));
     return result;
   }
