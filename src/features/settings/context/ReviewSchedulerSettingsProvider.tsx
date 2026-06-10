@@ -15,12 +15,14 @@ import {
 function useReviewSchedulerSettingsState() {
   const [reviewSchedulerSettings, setReviewSchedulerSettingsState] =
     useState<ReviewSchedulerSettings>(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
+  const [isReviewSchedulerSettingsReady, setIsReviewSchedulerSettingsReady] = useState(false);
 
   useEffect(() => {
     let active = true;
     void loadReviewSchedulerSettings().then((settings) => {
       if (active) {
         setReviewSchedulerSettingsState(settings);
+        setIsReviewSchedulerSettingsReady(true);
       }
     });
     return () => {
@@ -29,6 +31,7 @@ function useReviewSchedulerSettingsState() {
   }, []);
 
   return {
+    isReviewSchedulerSettingsReady,
     reviewSchedulerSettings,
     setReviewSchedulerSettingsState
   };
@@ -39,10 +42,11 @@ function useReviewSchedulerSettingsValue() {
 
   return useMemo(
     () => ({
+      isReviewSchedulerSettingsReady: state.isReviewSchedulerSettingsReady,
       reviewSchedulerSettings: state.reviewSchedulerSettings,
       ...createReviewActions({ reviewSettings: state })
     }),
-    [state.reviewSchedulerSettings]
+    [state.isReviewSchedulerSettingsReady, state.reviewSchedulerSettings]
   );
 }
 

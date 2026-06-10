@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 export function useReviewModeRestoredSessionAutoOpen(args: {
   isReviewSessionCompleted: boolean;
+  isReviewSchedulerSettingsReady: boolean;
   isStudyMode: boolean;
   isWorkspaceHydrated: boolean;
   reviewCurrentNodeId: string | null;
@@ -10,7 +11,7 @@ export function useReviewModeRestoredSessionAutoOpen(args: {
   const openedRestoredSessionRef = useRef(false);
 
   useEffect(() => {
-    if (!args.isWorkspaceHydrated || args.isStudyMode) {
+    if (!args.isWorkspaceHydrated || !args.isReviewSchedulerSettingsReady || args.isStudyMode) {
       return;
     }
     if (openedRestoredSessionRef.current) {
@@ -23,6 +24,7 @@ export function useReviewModeRestoredSessionAutoOpen(args: {
     args.startStudyMode({ force: true });
   }, [
     args.isReviewSessionCompleted,
+    args.isReviewSchedulerSettingsReady,
     args.isStudyMode,
     args.isWorkspaceHydrated,
     args.reviewCurrentNodeId,
@@ -33,6 +35,7 @@ export function useReviewModeRestoredSessionAutoOpen(args: {
 export function useReviewModeStartupSessionRestore(args: {
   activeNodeId: string | null;
   isReviewSessionCompleted: boolean;
+  isReviewSchedulerSettingsReady: boolean;
   isStudyMode: boolean;
   isWorkspaceHydrated: boolean;
   onReviewSessionStarted: () => void;
@@ -43,7 +46,7 @@ export function useReviewModeStartupSessionRestore(args: {
   const restoredEntryRef = useRef(false);
 
   useEffect(() => {
-    if (!args.isStudyMode || !args.isWorkspaceHydrated) {
+    if (!args.isStudyMode || !args.isWorkspaceHydrated || !args.isReviewSchedulerSettingsReady) {
       restoredEntryRef.current = false;
       return;
     }
@@ -68,6 +71,7 @@ export function useReviewModeStartupSessionRestore(args: {
   }, [
     args.activeNodeId,
     args.isReviewSessionCompleted,
+    args.isReviewSchedulerSettingsReady,
     args.isStudyMode,
     args.isWorkspaceHydrated,
     args.onReviewSessionStarted,

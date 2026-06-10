@@ -9,6 +9,7 @@ import {
 function renderAutoOpenHook(overrides: Partial<Parameters<typeof useReviewModeRestoredSessionAutoOpen>[0]> = {}) {
   const props = {
     isReviewSessionCompleted: false,
+    isReviewSchedulerSettingsReady: true,
     isStudyMode: false,
     isWorkspaceHydrated: true,
     reviewCurrentNodeId: 'review-1',
@@ -45,6 +46,7 @@ it('does not open Flow without a restored session', () => {
 it('does not repeat restored Flow auto open across rerenders', () => {
   const props = {
     isReviewSessionCompleted: false,
+    isReviewSchedulerSettingsReady: true,
     isStudyMode: false,
     isWorkspaceHydrated: true,
     reviewCurrentNodeId: 'review-1',
@@ -59,10 +61,32 @@ it('does not repeat restored Flow auto open across rerenders', () => {
   expect(props.startStudyMode).toHaveBeenCalledTimes(1);
 });
 
+it('waits for review scheduler settings before restored Flow auto open', () => {
+  const props = {
+    isReviewSessionCompleted: false,
+    isReviewSchedulerSettingsReady: false,
+    isStudyMode: false,
+    isWorkspaceHydrated: true,
+    reviewCurrentNodeId: 'review-1',
+    startStudyMode: vi.fn()
+  };
+  const view = renderHook((hookProps) => useReviewModeRestoredSessionAutoOpen(hookProps), {
+    initialProps: props
+  });
+
+  expect(props.startStudyMode).not.toHaveBeenCalled();
+
+  view.rerender({ ...props, isReviewSchedulerSettingsReady: true });
+
+  expect(props.startStudyMode).toHaveBeenCalledWith({ force: true });
+  expect(props.startStudyMode).toHaveBeenCalledTimes(1);
+});
+
 function renderRestoreHook(overrides: Partial<Parameters<typeof useReviewModeStartupSessionRestore>[0]> = {}) {
   const props = {
     activeNodeId: 'topic-1',
     isReviewSessionCompleted: false,
+    isReviewSchedulerSettingsReady: true,
     isStudyMode: true,
     isWorkspaceHydrated: true,
     onReviewSessionStarted: vi.fn(),
@@ -114,6 +138,7 @@ it('does not repeat the review surface startup action while restored Flow stays 
   const props = {
     activeNodeId: 'review-1',
     isReviewSessionCompleted: false,
+    isReviewSchedulerSettingsReady: true,
     isStudyMode: true,
     isWorkspaceHydrated: true,
     onReviewSessionStarted: vi.fn(),
@@ -129,4 +154,31 @@ it('does not repeat the review surface startup action while restored Flow stays 
 
   expect(props.onReviewSessionStarted).toHaveBeenCalledTimes(1);
   expect(props.resumeReviewSession).not.toHaveBeenCalled();
+});
+
+it('waits for review scheduler settings before restoring a startup review session', () => {
+  const props = {
+    activeNodeId: 'topic-1',
+    isReviewSessionCompleted: false,
+    isReviewSchedulerSettingsReady: false,
+    isStudyMode: true,
+    isWorkspaceHydrated: true,
+    onReviewSessionStarted: vi.fn(),
+    resumeReviewSession: vi.fn(() => false),
+    reviewCurrentNodeId: 'review-1',
+    startReviewSession: vi.fn(() => true)
+  };
+  const view = renderHook((hookProps) => useReviewModeStartupSessionRestore(hookProps), {
+    initialProps: props
+  });
+
+  expect(props.onReviewSessionStarted).not.toHaveBeenCalled();
+  expect(props.resumeReviewSession).not.toHaveBeenCalled();
+  expect(props.startReviewSession).not.toHaveBeenCalled();
+
+  view.rerender({ ...props, isReviewSchedulerSettingsReady: true });
+
+  expect(props.onReviewSessionStarted).toHaveBeenCalledTimes(1);
+  expect(props.resumeReviewSession).toHaveBeenCalledTimes(1);
+  expect(props.startReviewSession).not.toHaveBeenCalled();
 });

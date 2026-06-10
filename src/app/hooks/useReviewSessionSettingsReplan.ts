@@ -4,6 +4,7 @@ import type { ReviewSessionMode } from '../../features/review/model/reviewSessio
 
 export function useReviewSessionSettingsReplan(args: {
   currentNodeId: string | null;
+  isReviewSchedulerSettingsReady: boolean;
   nowIso: string;
   reviewSchedulerSettingsSignature: string;
   reviewSessionMode: ReviewSessionMode;
@@ -13,6 +14,12 @@ export function useReviewSessionSettingsReplan(args: {
 
   useEffect(() => {
     const previousSignature = previousSignatureRef.current;
+    if (!args.isReviewSchedulerSettingsReady) {
+      if (previousSignature === null) {
+        previousSignatureRef.current = args.reviewSchedulerSettingsSignature;
+      }
+      return;
+    }
     previousSignatureRef.current = args.reviewSchedulerSettingsSignature;
     if (previousSignature === null || previousSignature === args.reviewSchedulerSettingsSignature) {
       return;
@@ -23,6 +30,7 @@ export function useReviewSessionSettingsReplan(args: {
     args.setReviewSessionMode(args.reviewSessionMode, args.nowIso);
   }, [
     args.currentNodeId,
+    args.isReviewSchedulerSettingsReady,
     args.nowIso,
     args.reviewSchedulerSettingsSignature,
     args.reviewSessionMode,

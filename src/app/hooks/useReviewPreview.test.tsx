@@ -14,6 +14,7 @@ vi.mock('../../features/review/model/reviewSchedulerFactory', () => ({
 interface HookProps {
   currentNodeId: string | null;
   isAnswerRevealed: boolean;
+  isReviewSchedulerSettingsReady?: boolean;
   isStudyMode: boolean;
   nodesById?: Record<string, { enableShortTerm?: boolean | null; parentNodeId: string | null } | undefined>;
   previewSeed: string;
@@ -55,6 +56,7 @@ function createPreviewResult(scheduledDays: number): SchedulerPreviewResult {
 function PreviewProbe(props: HookProps) {
   const preview = useReviewPreview({
     ...props,
+    isReviewSchedulerSettingsReady: props.isReviewSchedulerSettingsReady ?? true,
     nodesById: props.nodesById ?? { 'node-1': { parentNodeId: null } }
   });
   return <output data-testid="preview-good-days">{preview?.Good.card.scheduled_days ?? 'none'}</output>;
@@ -82,6 +84,39 @@ function createAdapter(preview: ReviewSchedulerAdapter['preview']): ReviewSchedu
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+it('waits for review scheduler settings before requesting preview', async () => {
+  const preview = vi.fn<ReviewSchedulerAdapter['preview']>().mockResolvedValue(createPreviewResult(3));
+  vi.mocked(createReviewSchedulerAdapter).mockReturnValue(createAdapter(preview));
+
+  const { rerender } = render(
+    <PreviewProbe
+      currentNodeId="node-1"
+      isAnswerRevealed
+      isReviewSchedulerSettingsReady={false}
+      isStudyMode
+      previewSeed="0.90"
+      reviewProfile={BASE_PROFILE}
+    />
+  );
+
+  expect(preview).not.toHaveBeenCalled();
+
+  rerender(
+    <PreviewProbe
+      currentNodeId="node-1"
+      isAnswerRevealed
+      isReviewSchedulerSettingsReady
+      isStudyMode
+      previewSeed="0.90"
+      reviewProfile={BASE_PROFILE}
+    />
+  );
+
+  await waitFor(() => {
+    expect(preview).toHaveBeenCalledTimes(1);
+  });
 });
 
 it('requests preview only after answer reveal and avoids duplicate calls for same card signature', async () => {

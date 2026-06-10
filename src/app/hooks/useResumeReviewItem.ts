@@ -31,6 +31,10 @@ export function useResumeReviewItem(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   return useCallback(() => {
+    if (!args.reviewSettings.isReviewSchedulerSettingsReady) {
+      showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
+      return;
+    }
     const queueNodeIds = buildCurrentReviewSessionQueueOutput(args.ws, args.nowIso).taskNodeIds;
     const nodeId = resolveResumeReviewNodeId({
       nodesById: args.ws.nodesById,
@@ -52,5 +56,5 @@ export function useResumeReviewItem(args: {
     args.controller.externalView.closeExternalView();
     args.controller.virtualView.closeVirtualView();
     args.controller.nav.handleSelectNode(nodeId);
-  }, [args.controller, args.nowIso, args.reviewSettings.reviewSchedulerSettings.pushQueue, args.ws.nodeOrder, args.ws.nodesById, args.ws.reviewSession, args.ws.trashedNodeIds]);
+  }, [args.controller, args.nowIso, args.reviewSettings.isReviewSchedulerSettingsReady, args.reviewSettings.reviewSchedulerSettings.pushQueue, args.ws.nodeOrder, args.ws.nodesById, args.ws.reviewSession, args.ws.trashedNodeIds]);
 }

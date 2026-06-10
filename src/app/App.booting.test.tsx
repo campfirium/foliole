@@ -14,6 +14,9 @@ const overlayMocks = vi.hoisted(() => ({
   GoToNodePalette: vi.fn(() => <div>go-to-node-palette</div>),
   SearchPalette: vi.fn(() => <div>search-palette</div>)
 }));
+const reviewSettingsProviderMock = vi.hoisted(() => ({
+  isReady: true
+}));
 
 function setDocumentVisibility(visibilityState: DocumentVisibilityState) {
   Object.defineProperty(document, 'visibilityState', {
@@ -62,7 +65,8 @@ vi.mock('../features/settings/context/MouseGestureSettingsProvider', () => ({
 }));
 
 vi.mock('../features/settings/context/ReviewSchedulerSettingsProvider', () => ({
-  ReviewSchedulerSettingsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
+  ReviewSchedulerSettingsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useReviewSchedulerSettings: () => ({ isReviewSchedulerSettingsReady: reviewSettingsProviderMock.isReady })
 }));
 
 vi.mock('../features/settings/context/HotkeySettingsProvider', () => ({
@@ -132,6 +136,7 @@ beforeEach(() => {
   overlayMocks.CommandPalette.mockClear();
   overlayMocks.GoToNodePalette.mockClear();
   overlayMocks.SearchPalette.mockClear();
+  reviewSettingsProviderMock.isReady = true;
   document.body.dataset.bootSkeleton = '';
   Reflect.deleteProperty(window, 'requestIdleCallback');
   Reflect.deleteProperty(window, 'cancelIdleCallback');

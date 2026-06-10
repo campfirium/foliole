@@ -12,6 +12,7 @@ export interface BuildLayoutPropsArgs {
   activeNodeId: string | null;
   isWorkspaceHydrated: boolean;
   reviewSettings: {
+    isReviewSchedulerSettingsReady: boolean;
     reviewSchedulerSettings: ReviewSchedulerSettings;
   };
   canGoBack: boolean;

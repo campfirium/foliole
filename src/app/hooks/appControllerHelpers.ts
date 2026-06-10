@@ -66,12 +66,14 @@ type WorkspaceSelectors = {
 export function useCurrentReviewPreview(
   isStudyMode: boolean,
   ws: WorkspaceSelectors,
-  previewSeed: string
+  previewSeed: string,
+  isReviewSchedulerSettingsReady: boolean
 ) {
   return useReviewPreview({
     currentNodeId: ws.reviewSession.currentNodeId,
     nodesById: ws.nodesById,
     isAnswerRevealed: ws.reviewSession.isAnswerRevealed,
+    isReviewSchedulerSettingsReady,
     isStudyMode,
     previewSeed,
     reviewProfile: ws.reviewSession.currentNodeId

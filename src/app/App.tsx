@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
+import { useReviewSchedulerSettings } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 import { installWorkspaceDebugBridge } from '../shared/diagnostics/workspaceDebugBridge';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
@@ -36,6 +37,8 @@ function AppContent() {
   useWorkspaceContentChangedRefresh();
   useReadwiseAutoSync();
   useReleaseUpdateCheck();
+  const { isReviewSchedulerSettingsReady } = useReviewSchedulerSettings();
+  const isAppReady = controller.layoutProps.layoutChrome.isWorkspaceHydrated && isReviewSchedulerSettingsReady;
   const handleGlobalCaptureNavigation = useCallback((nodeId: string) => {
     controller.layoutProps.imports.onCloseImportManagement();
     controller.layoutProps.navigation.onSelectNode(nodeId);
@@ -46,8 +49,8 @@ function AppContent() {
     installWorkspaceDebugBridge();
     readPerformanceDiagnosticsProbe();
   }, []);
-  useReportAppReadyWhenHydrated(controller.layoutProps.layoutChrome.isWorkspaceHydrated);
-  usePrewarmInteractiveSurfacesAfterReady(controller.layoutProps.layoutChrome.isWorkspaceHydrated);
+  useReportAppReadyWhenHydrated(isAppReady);
+  usePrewarmInteractiveSurfacesAfterReady(isAppReady);
 
   const workspaceLayoutProps = {
     ...controller.layoutProps,

@@ -11,6 +11,7 @@ interface UseReviewPreviewArgs {
   currentNodeId: string | null;
   nodesById: Record<string, { enableShortTerm?: boolean | null; parentNodeId: string | null } | undefined>;
   isAnswerRevealed: boolean;
+  isReviewSchedulerSettingsReady: boolean;
   isStudyMode: boolean;
   previewSeed: string;
   reviewProfile: NodeReviewProfile | null;
@@ -64,7 +65,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
     : false;
 
   useEffect(() => {
-    if (!args.isStudyMode || !args.isAnswerRevealed || !args.currentNodeId) {
+    if (!args.isReviewSchedulerSettingsReady || !args.isStudyMode || !args.isAnswerRevealed || !args.currentNodeId) {
       requestKeyRef.current = '';
       setPreview(null);
       return;
@@ -96,7 +97,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
     return () => {
       isActive = false;
     };
-  }, [args.currentNodeId, args.isAnswerRevealed, args.isStudyMode, args.previewSeed, args.reviewProfile, cardSignature, enableShortTerm, scheduler]);
+  }, [args.currentNodeId, args.isAnswerRevealed, args.isReviewSchedulerSettingsReady, args.isStudyMode, args.previewSeed, args.reviewProfile, cardSignature, enableShortTerm, scheduler]);
 
   return preview;
 }

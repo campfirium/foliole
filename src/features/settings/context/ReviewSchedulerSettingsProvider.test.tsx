@@ -20,6 +20,7 @@ function ReviewSchedulerHarness() {
       <div>{settings.reviewSchedulerSettings.desiredRetention.toFixed(2)}</div>
       <div>{settings.reviewSchedulerSettings.pushQueue.defaultPriority}</div>
       <div>{settings.reviewSchedulerSettings.newDayStartsAtHour}</div>
+      <div>{settings.isReviewSchedulerSettingsReady ? 'ready' : 'pending'}</div>
       <button onClick={() => settings.onDesiredRetentionChange(0.82)} type="button">
         Change retention
       </button>
@@ -63,7 +64,10 @@ it('hydrates saved review scheduler settings and persists updates through the sh
     </ReviewSchedulerSettingsProvider>
   );
 
+  expect(screen.getByText('pending')).toBeInTheDocument();
+
   await waitFor(() => {
+    expect(screen.getByText('ready')).toBeInTheDocument();
     expect(screen.getByText('0.91')).toBeInTheDocument();
     expect(screen.getByText('6')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
@@ -86,5 +90,35 @@ it('hydrates saved review scheduler settings and persists updates through the sh
         defaultPriority: 4
       })
     })
+  });
+});
+
+it('marks review scheduler settings ready after runtime unavailable fallback', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+
+  render(
+    <ReviewSchedulerSettingsProvider>
+      <ReviewSchedulerHarness />
+    </ReviewSchedulerSettingsProvider>
+  );
+
+  expect(screen.getByText('pending')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByText('ready')).toBeInTheDocument();
+  });
+});
+
+it('marks review scheduler settings ready after load failure fallback', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockRejectedValue(new Error('load failed')));
+
+  render(
+    <ReviewSchedulerSettingsProvider>
+      <ReviewSchedulerHarness />
+    </ReviewSchedulerSettingsProvider>
+  );
+
+  expect(screen.getByText('pending')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByText('ready')).toBeInTheDocument();
   });
 });

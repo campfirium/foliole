@@ -95,7 +95,7 @@ it('shows a notice when resume has no available review item', () => {
         virtualView: { closeVirtualView: vi.fn() }
       } as never,
       nowIso: '2026-03-10T12:00:00.000Z',
-      reviewSettings: { reviewSchedulerSettings: { pushQueue: {} } } as never,
+      reviewSettings: { isReviewSchedulerSettingsReady: true, reviewSchedulerSettings: { pushQueue: {} } } as never,
       ws: {
         nodeOrder: [],
         nodesById: {},

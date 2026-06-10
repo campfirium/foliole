@@ -132,7 +132,8 @@ function useEditorDraftCloseFlushRegistration(
 export function useWorkspaceControllerState(
   ws: ReturnType<typeof useWorkspaceSelectors>,
   isWorkspaceHydrated: boolean,
-  nowIso = new Date().toISOString()
+  nowIso = new Date().toISOString(),
+  isReviewSchedulerSettingsReady = true
 ) {
   const trash = useTrashView({ trashedNodeIds: ws.trashedNodeIds });
   useWorkspaceActiveNodeDocument(ws.activeNodeId);
@@ -143,7 +144,7 @@ export function useWorkspaceControllerState(
   useRemovedSourcesWarmup(isWorkspaceHydrated);
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
-  const canStartStudyMode = buildStartReviewSessionQueue(ws, nowIso).length > 0;
+  const canStartStudyMode = isReviewSchedulerSettingsReady && buildStartReviewSessionQueue(ws, nowIso).length > 0;
   const study = useStudyMode({
     canStartStudyMode
   });

@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react';
 import type { ReviewSchedulerSettings } from '../model/reviewSchedulerSettings';
 
 export interface ReviewSchedulerSettingsContextValue {
+  isReviewSchedulerSettingsReady: boolean;
   reviewSchedulerSettings: ReviewSchedulerSettings;
   onDefaultPriorityChange: (value: number) => void;
   onDesiredRetentionChange: (value: number) => void;

@@ -14,9 +14,15 @@ export function useReviewSessionRuntime(args: {
   const reviewSchedulerSettingsSignature = getReviewSchedulerSettingsSignature(
     args.reviewSettings.reviewSchedulerSettings
   );
-  const reviewPreview = useCurrentReviewPreview(args.isStudyMode, args.ws, reviewSchedulerSettingsSignature);
+  const reviewPreview = useCurrentReviewPreview(
+    args.isStudyMode,
+    args.ws,
+    reviewSchedulerSettingsSignature,
+    args.reviewSettings.isReviewSchedulerSettingsReady
+  );
   useReviewSessionSettingsReplan({
     currentNodeId: args.ws.reviewSession.currentNodeId,
+    isReviewSchedulerSettingsReady: args.reviewSettings.isReviewSchedulerSettingsReady,
     nowIso: args.nowIso,
     reviewSchedulerSettingsSignature,
     reviewSessionMode: args.ws.reviewSessionMode,

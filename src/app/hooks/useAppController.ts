@@ -145,7 +145,7 @@ export function useAppController(args: {
   const { exitStudyMode, isStudyMode, startStudyMode } = core.controller.study;
   const { priorityQuickSet, reviewTopicDelayPanel } = useControllerQuickEntryState({ controller, hotkeys, isStudyMode, ws });
   const reviewPreview = useReviewSessionRuntime({ isStudyMode, nowIso, reviewSettings, ws });
-  useControllerStartupEffects({ controller, isStudyMode, isWorkspaceHydrated, startStudyMode, ws });
+  useControllerStartupEffects({ controller, isReviewSchedulerSettingsReady: reviewSettings.isReviewSchedulerSettingsReady, isStudyMode, isWorkspaceHydrated, startStudyMode, ws });
   const reviewEditing = useControllerReviewEditingState({
     controller,
     hotkeys,

@@ -19,6 +19,7 @@ function openNotesViewForRestoredReviewMode(controller: ReturnType<typeof useWor
 export function useControllerStartupEffects(args: {
   controller: ReturnType<typeof useWorkspaceControllerState>;
   isStudyMode: boolean;
+  isReviewSchedulerSettingsReady: boolean;
   isWorkspaceHydrated: boolean;
   startStudyMode: ReturnType<typeof useWorkspaceControllerState>['study']['startStudyMode'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
@@ -27,6 +28,7 @@ export function useControllerStartupEffects(args: {
   useReviewQueueDocumentPrefetch(args.ws.reviewSession);
   useReviewModeRestoredSessionAutoOpen({
     isReviewSessionCompleted: isRestoredReviewSessionCompleted,
+    isReviewSchedulerSettingsReady: args.isReviewSchedulerSettingsReady,
     isStudyMode: args.isStudyMode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     reviewCurrentNodeId: args.ws.reviewSession.currentNodeId,
@@ -35,6 +37,7 @@ export function useControllerStartupEffects(args: {
   useReviewModeStartupSessionRestore({
     activeNodeId: args.ws.activeNodeId,
     isReviewSessionCompleted: isRestoredReviewSessionCompleted,
+    isReviewSchedulerSettingsReady: args.isReviewSchedulerSettingsReady,
     isStudyMode: args.isStudyMode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     onReviewSessionStarted: () => openNotesViewForRestoredReviewMode(args.controller),
