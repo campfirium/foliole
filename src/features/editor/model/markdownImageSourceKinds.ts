@@ -7,7 +7,6 @@ export function isBrowserImageSource(value: string) {
     const parsed = new URL(value);
     return (
       isSafeMarkdownDataImageUrl(value) ||
-      parsed.protocol === 'file:' ||
       parsed.protocol === `${EXT_DOC_IMAGE_PROTOCOL_SCHEME}:` ||
       parsed.protocol === 'http:' ||
       parsed.protocol === 'https:'

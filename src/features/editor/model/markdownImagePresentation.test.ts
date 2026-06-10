@@ -43,10 +43,6 @@ describe('markdownImagePresentation', () => {
     });
   });
 
-  it('builds file image render state for resolved local preview resources', () => {
-    expectBrowserImagePlan('file:///vault/images/cover.png');
-  });
-
   it('builds data image render state for inline preview resources', () => {
     expectBrowserImagePlan('data:image/png;base64,abc123');
   });
@@ -69,6 +65,28 @@ describe('markdownImagePresentation', () => {
         display: 'inline',
         from: 0,
         source: 'data:text/html;base64,PGgxPk5vPC9oMT4=',
+        to: 10
+      })
+    ).toEqual({
+      attachmentProtocolSrc: null,
+      browserImageSrc: null,
+      display: 'inline',
+      fallbackStatus: 'unavailable',
+      imageSrc: null,
+      isRemote: false
+    });
+  });
+});
+
+describe('markdownImagePresentation unsafe browser sources', () => {
+  it('does not build a browser image source for raw file resources', () => {
+    expect(
+      buildMarkdownImageRenderPlan({
+        attachmentId: null,
+        alt: 'Preview',
+        display: 'inline',
+        from: 0,
+        source: 'file:///vault/images/cover.png',
         to: 10
       })
     ).toEqual({

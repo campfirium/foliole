@@ -17,17 +17,8 @@ describe('markdownImageMatches', () => {
     ]);
   });
 
-  it('collects resolved local file image sources for preview rendering', () => {
-    expect(collectImageMatches(0, '![Local](file:///vault/images/cover.png)')).toEqual([
-      {
-        attachmentId: null,
-        alt: 'Local',
-        display: 'block',
-        from: 0,
-        source: 'file:///vault/images/cover.png',
-        to: 40
-      }
-    ]);
+  it('does not collect raw file image sources from ordinary markdown', () => {
+    expect(collectImageMatches(0, '![Local](file:///vault/images/cover.png)')).toEqual([]);
   });
 
   it('collects data url image sources for external preview rendering', () => {
