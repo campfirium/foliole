@@ -1,26 +1,20 @@
+import {
+  DOCUMENT_KEYS,
+  EDITOR_COMMAND_KEYS,
+  EXTERNAL_LIBRARY_KEYS,
+  IMPORT_KEYS,
+  LAYOUT_CHROME_KEYS,
+  NAVIGATION_KEYS,
+  NODE_LIST_KEYS,
+  READING_POSITION_KEYS,
+  REVIEW_KEYS,
+  SETTINGS_KEYS,
+  TRASH_KEYS,
+  VIRTUAL_VIEW_KEYS,
+  pickLayoutProps
+} from './workspaceLayoutGroupedPropKeys';
+import type { LayoutStateKeys } from './workspaceLayoutGroupedPropKeys';
 import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
-
-type LayoutStateKeys =
-  | 'isWorkspaceHydrated'
-  | 'isImmersiveMode'
-  | 'isResizingList'
-  | 'isResizingRightSidebar'
-  | 'isListCollapsed'
-  | 'isRightSidebarCollapsed'
-  | 'listWidth'
-  | 'rightSidebarWidth'
-  | 'onResetLayout'
-  | 'onSplitterKeyDown'
-  | 'onSplitterPointerDown'
-  | 'onRightSidebarSplitterKeyDown'
-  | 'onRightSidebarSplitterPointerDown'
-  | 'onEnterImmersiveEdit'
-  | 'onEnterImmersiveMode'
-  | 'onExitImmersiveMode'
-  | 'onToggleImmersiveMode'
-  | 'onToggleListVisibility'
-  | 'onToggleBothSidebarVisibility'
-  | 'onToggleRightSidebarVisibility';
 
 export interface WorkspaceLayoutProps {
   navigation: Pick<WorkspaceLayoutFlatProps,
@@ -197,17 +191,17 @@ export function flattenWorkspaceLayoutProps(props: WorkspaceLayoutProps): Worksp
 
 export function groupWorkspaceLayoutProps(flatProps: WorkspaceLayoutFlatProps): WorkspaceLayoutProps {
   return {
-    navigation: flatProps,
-    document: flatProps,
-    editorCommands: flatProps,
-    readingPosition: flatProps,
-    review: flatProps,
-    layoutChrome: flatProps,
-    imports: flatProps,
-    externalLibrary: flatProps,
-    settings: flatProps,
-    nodeList: flatProps,
-    trash: flatProps,
-    virtualView: flatProps
+    navigation: pickLayoutProps(flatProps, NAVIGATION_KEYS),
+    document: pickLayoutProps(flatProps, DOCUMENT_KEYS),
+    editorCommands: pickLayoutProps(flatProps, EDITOR_COMMAND_KEYS),
+    readingPosition: pickLayoutProps(flatProps, READING_POSITION_KEYS),
+    review: pickLayoutProps(flatProps, REVIEW_KEYS),
+    layoutChrome: pickLayoutProps(flatProps, LAYOUT_CHROME_KEYS),
+    imports: pickLayoutProps(flatProps, IMPORT_KEYS),
+    externalLibrary: pickLayoutProps(flatProps, EXTERNAL_LIBRARY_KEYS),
+    settings: pickLayoutProps(flatProps, SETTINGS_KEYS),
+    nodeList: pickLayoutProps(flatProps, NODE_LIST_KEYS),
+    trash: pickLayoutProps(flatProps, TRASH_KEYS),
+    virtualView: pickLayoutProps(flatProps, VIRTUAL_VIEW_KEYS)
   };
 }

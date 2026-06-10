@@ -113,7 +113,7 @@ beforeEach(() => {
   }
 });
 
-it('opens the imported clipboard topic from the success notice', async () => {
+it('opens the imported clipboard topic after the import resolves', async () => {
   const importResult = createDeferred<boolean>();
   const onCloseImportManagement = vi.fn();
   const onSelectNode = vi.fn();
@@ -128,23 +128,23 @@ it('opens the imported clipboard topic from the success notice', async () => {
   importResult.resolve(true);
 
   await waitFor(() => {
-    expect(screen.getByRole('status')).toHaveTextContent('Open topic');
+    expect(onCloseImportManagement).toHaveBeenCalledTimes(1);
+    expect(onSelectNode).toHaveBeenCalledWith('node-imported');
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Open imported topic' }));
-
-  expect(onCloseImportManagement).toHaveBeenCalledTimes(1);
-  expect(onSelectNode).toHaveBeenCalledWith('node-imported');
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 
-it('shows progress while a selected file is importing', async () => {
+it('opens the imported file topic after a selected file imports', async () => {
   const importResult = createDeferred<boolean>();
+  const onCloseImportManagement = vi.fn();
+  const onSelectNode = vi.fn();
   const onRunImportFile = vi.fn((options?: { onImportStarted?: () => void }) => {
     options?.onImportStarted?.();
     return importResult.promise;
   });
   getFormalImportLatestResult.mockReturnValue({ nodeId: 'node-imported', resultStatus: 'imported' });
 
-  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onRunImportFile })} />);
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onCloseImportManagement, onRunImportFile, onSelectNode })} />);
 
   fireEvent.click(screen.getByTestId('workspace-file-import'));
   expect(await screen.findByRole('status')).toHaveTextContent('Importing file...');
@@ -153,8 +153,10 @@ it('shows progress while a selected file is importing', async () => {
   importResult.resolve(true);
 
   await waitFor(() => {
-    expect(screen.getByRole('status')).toHaveTextContent('File imported');
+    expect(onCloseImportManagement).toHaveBeenCalledTimes(1);
+    expect(onSelectNode).toHaveBeenCalledWith('node-imported');
   });
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 
 it('runs requested clipboard imports through the workspace notice controller', async () => {
