@@ -217,6 +217,7 @@ export class DesktopTaskScheduler {
       concurrencyKey: definition.concurrencyKey,
       id: definition.id,
       label: definition.label,
+      metadata: definition.metadata ?? null,
       priority: definition.priority,
       runOn: definition.runOn ?? 'main',
       source: definition.source

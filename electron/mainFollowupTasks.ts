@@ -22,13 +22,45 @@ function ensureDesktopTaskWatchdog() {
 
 export function startFollowupTasks() {
   ensureDesktopTaskWatchdog();
-  runStartupTask('[backup] automatic backup reconcile failed', () => reconcileAutomaticDatabaseBackups());
-  runStartupTask('[mirror] startup backfill failed', backfillMissingMirrorOutput);
-  runStartupTask('[storage] legacy webview migration failed', () => migrateLegacyWebviewStorage());
-  runStartupTask('[pdf] pending indexing resume failed', resumePendingPdfAttachmentIndexing);
-  runStartupTask('[search] invalidation scheduler failed', startSearchIndexInvalidationScheduler);
+  runStartupTask('[backup] automatic backup reconcile failed', () => reconcileAutomaticDatabaseBackups(), {
+    cancellable: false,
+    cost: 'medium',
+    progress: 'none'
+  });
+  runStartupTask('[mirror] startup backfill failed', backfillMissingMirrorOutput, {
+    cancellable: true,
+    cost: 'heavy',
+    progress: 'incremental'
+  });
+  runStartupTask('[storage] legacy webview migration failed', () => migrateLegacyWebviewStorage(), {
+    cancellable: false,
+    cost: 'medium',
+    progress: 'none'
+  });
+  runStartupTask('[pdf] pending indexing resume failed', resumePendingPdfAttachmentIndexing, {
+    cancellable: false,
+    cost: 'light',
+    progress: 'none'
+  });
+  runStartupTask('[search] invalidation scheduler failed', startSearchIndexInvalidationScheduler, {
+    cancellable: false,
+    cost: 'light',
+    progress: 'none'
+  });
   void appendBootEvent('startup_followup_tasks_started');
-  runStartupTask('[managed-inbox] startup monitor failed', startManagedInboxMonitor);
-  runStartupTask('[keep-import] startup monitor failed', startKeepImportMonitor);
-  runStartupTask('[external-search] background refresh scheduler failed', startExternalSearchBackgroundRefresh);
+  runStartupTask('[managed-inbox] startup monitor failed', startManagedInboxMonitor, {
+    cancellable: false,
+    cost: 'light',
+    progress: 'none'
+  });
+  runStartupTask('[keep-import] startup monitor failed', startKeepImportMonitor, {
+    cancellable: false,
+    cost: 'light',
+    progress: 'none'
+  });
+  runStartupTask('[external-search] background refresh scheduler failed', startExternalSearchBackgroundRefresh, {
+    cancellable: false,
+    cost: 'light',
+    progress: 'none'
+  });
 }

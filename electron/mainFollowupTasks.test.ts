@@ -22,11 +22,20 @@ it('starts desktop followup tasks without a Readwise Books inventory write path'
 
   startFollowupTasks();
 
-  const labels = startupMocks.runStartupTask.mock.calls.map((call) => call[0]);
+  const taskOptionsByLabel = new Map(startupMocks.runStartupTask.mock.calls.map((call) => [call[0], call[2]]));
   expect(startupMocks.startDesktopTaskWatchdog).toHaveBeenCalledTimes(1);
-  expect(labels).toContain('[pdf] pending indexing resume failed');
-  expect(labels).toContain('[search] invalidation scheduler failed');
-  expect(labels).toContain('[external-search] background refresh scheduler failed');
-  expect(labels).toContain('[keep-import] startup monitor failed');
-  expect(labels).not.toContain('[readwise-books] startup node sync failed');
+  expect(taskOptionsByLabel.get('[pdf] pending indexing resume failed')).toMatchObject({
+    cancellable: false,
+    cost: 'light',
+    progress: 'none'
+  });
+  expect(taskOptionsByLabel.get('[search] invalidation scheduler failed')).toMatchObject({ cost: 'light' });
+  expect(taskOptionsByLabel.get('[external-search] background refresh scheduler failed')).toMatchObject({ cost: 'light' });
+  expect(taskOptionsByLabel.get('[keep-import] startup monitor failed')).toMatchObject({ cost: 'light' });
+  expect(taskOptionsByLabel.get('[mirror] startup backfill failed')).toMatchObject({
+    cancellable: true,
+    cost: 'heavy',
+    progress: 'incremental'
+  });
+  expect(taskOptionsByLabel.has('[readwise-books] startup node sync failed')).toBe(false);
 });

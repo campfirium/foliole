@@ -43,6 +43,32 @@ it('runs foreground work before startup and background work', async () => {
   expect(order).toEqual(['foreground', 'startup', 'background']);
 });
 
+it('writes task audit metadata to boot events', async () => {
+  const { events, scheduler } = createScheduler();
+
+  scheduler.submit({
+    ...createTask('audited', () => undefined, 'startup'),
+    cancellable: true,
+    metadata: {
+      cancellable: true,
+      cost: 'heavy',
+      progress: 'incremental',
+      startupEligibility: 'startup-allowed'
+    }
+  });
+  await waitForScheduler();
+
+  expect(events.find((event) => event.stage === 'desktop_task_submitted')?.payload).toMatchObject({
+    id: 'audited',
+    metadata: {
+      cancellable: true,
+      cost: 'heavy',
+      progress: 'incremental',
+      startupEligibility: 'startup-allowed'
+    }
+  });
+});
+
 it('coalesces duplicate concurrency keys and preserves same-priority FIFO order', async () => {
   const { scheduler } = createScheduler();
   const order: string[] = [];
