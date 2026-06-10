@@ -4,6 +4,8 @@ import path from 'node:path';
 import { asString, asTimestamp } from '../ipc/commandParsers.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
+import { redactDiagnosticPayload } from './diagnosticRedactor.js';
+
 const DEFAULT_RETENTION_DAYS = 7;
 const LOG_PREFIX = 'runtime-';
 const LOG_SUFFIX = '.ndjson';
@@ -54,15 +56,6 @@ async function pruneExpiredLogs(logDir: string, retentionDays: number, now: Date
   );
 }
 
-function sanitizeDiagnosticPayload(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {};
-  }
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).filter(([, entryValue]) => entryValue !== undefined)
-  );
-}
-
 export function parseDiagnosticLogPayload(value: unknown): DiagnosticLogRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('invalid argument: diagnostic_log_payload');
@@ -77,7 +70,7 @@ export function parseDiagnosticLogPayload(value: unknown): DiagnosticLogRecord {
     occurred_at: payload.occurredAt
       ? asTimestamp(payload.occurredAt, 'diagnostic_log_payload.occurredAt')
       : new Date().toISOString(),
-    payload: sanitizeDiagnosticPayload(payload.payload),
+    payload: redactDiagnosticPayload(payload.payload),
     source: asString(payload.source, 'diagnostic_log_payload.source')
   };
 }
@@ -87,8 +80,12 @@ export async function appendDiagnosticLog(
   now = new Date(input.occurred_at),
   retentionDays = DEFAULT_RETENTION_DAYS
 ) {
+  const record = {
+    ...input,
+    payload: redactDiagnosticPayload(input.payload)
+  };
   const logDir = resolveDiagnosticLogDir();
   await fs.mkdir(logDir, { recursive: true });
   await pruneExpiredLogs(logDir, retentionDays, now);
-  await fs.appendFile(resolveDiagnosticLogPath(formatDateKey(now)), `${JSON.stringify(input)}\n`, 'utf8');
+  await fs.appendFile(resolveDiagnosticLogPath(formatDateKey(now)), `${JSON.stringify(record)}\n`, 'utf8');
 }

@@ -27,7 +27,9 @@ it('parses renderer diagnostic payloads into normalized NDJSON records', () => {
       payload: {
         action: 'resolve_runtime_app_paths',
         fallback: 'return_null',
-        ignored: undefined
+        ignored: undefined,
+        token: 'secret-token',
+        url: 'https://example.test/private?token=secret'
       },
       source: 'renderer.bridge'
     })
@@ -37,7 +39,9 @@ it('parses renderer diagnostic payloads into normalized NDJSON records', () => {
     occurred_at: '2026-04-22T08:00:00.000Z',
     payload: {
       action: 'resolve_runtime_app_paths',
-      fallback: 'return_null'
+      fallback: 'return_null',
+      token: '[redacted-secret]',
+      url: '[redacted-url]'
     },
     source: 'renderer.bridge'
   });
@@ -61,7 +65,10 @@ it('writes runtime diagnostics into the standard app log directory and prunes ol
       occurred_at: '2026-04-22T08:00:00.000Z',
       payload: {
         action: 'resolve_runtime_app_paths',
-        fallback: 'return_null'
+        fallback: 'return_null',
+        filePath: '/Users/alice/private.md',
+        token: 'secret-token',
+        url: 'https://example.test/private?token=secret'
       },
       source: 'renderer.bridge'
     },
@@ -78,7 +85,10 @@ it('writes runtime diagnostics into the standard app log directory and prunes ol
     occurred_at: '2026-04-22T08:00:00.000Z',
     payload: {
       action: 'resolve_runtime_app_paths',
-      fallback: 'return_null'
+      fallback: 'return_null',
+      filePath: '[redacted-path]',
+      token: '[redacted-secret]',
+      url: '[redacted-url]'
     },
     source: 'renderer.bridge'
   });
