@@ -1,5 +1,6 @@
 import { shell, type BrowserWindow } from 'electron';
 
+import { normalizeOpenExternalUrl } from '../../lib/platform/externalUrl.js';
 import type {
   NativeReadwiseBookEpubProgressEvent,
   NativeReadwiseBookDownloadResult,
@@ -49,7 +50,7 @@ export async function openReadwiseBookDownload(nodeId: string): Promise<NativeRe
     };
   }
 
-  const url = getReadwiseOriginalFileDownloadUrl(target)?.trim() ?? '';
+  const url = normalizeOpenExternalUrl(getReadwiseOriginalFileDownloadUrl(target) ?? '') ?? '';
   if (!url) {
     return {
       book_key: getReadwiseOriginalFileTargetKey(target),

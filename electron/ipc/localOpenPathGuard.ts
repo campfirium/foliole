@@ -62,12 +62,13 @@ function isSameOrNestedPath(targetPath: string, allowedRoot: string) {
   return normalizedTarget.startsWith(`${normalizedRoot}${separator}`);
 }
 
-function resolveAllowedAppManagedDirs(appPaths: AppPaths) {
+function resolveAllowedLocalOpenRoots(appPaths: AppPaths) {
   return [
     appPaths.app_log_dir,
     appPaths.app_data_dir,
     appPaths.app_config_dir,
-    appPaths.app_cache_dir
+    appPaths.app_cache_dir,
+    appPaths.documents_dir
   ].filter((value) => value.trim().length > 0);
 }
 
@@ -80,11 +81,12 @@ export function resolveAllowedLocalOpenPath(targetPath: string, appPaths: AppPat
   if (!isAbsoluteLocalPath(normalizedPath)) {
     return null;
   }
+  if (!resolveAllowedLocalOpenRoots(appPaths).some((allowedDir) => isSameOrNestedPath(normalizedPath, allowedDir))) {
+    return null;
+  }
   const extension = path.extname(normalizedPath).toLowerCase();
   if (extension) {
     return DANGEROUS_LOCAL_OPEN_EXTENSIONS.has(extension) ? null : normalizedPath;
   }
-  return resolveAllowedAppManagedDirs(appPaths).some((allowedDir) => isSameOrNestedPath(normalizedPath, allowedDir))
-    ? normalizedPath
-    : null;
+  return normalizedPath;
 }

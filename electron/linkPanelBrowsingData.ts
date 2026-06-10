@@ -1,6 +1,6 @@
 import { session } from 'electron';
 
-export const LINK_PANEL_WEBVIEW_PARTITION = 'persist:foliole-link-panels';
+export const LINK_PANEL_WEBVIEW_PARTITION = 'foliole-link-panels';
 
 export interface ClearLinkPanelBrowsingDataResult {
   cleared_at: string;

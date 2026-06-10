@@ -19,7 +19,8 @@ const MAIN_WINDOW_CSP = [
   "font-src 'self' data:",
   `connect-src 'self' foliole-asset: ${UPDATE_MANIFEST_ORIGIN} ${FEEDBACK_ENDPOINT_ORIGIN}`,
   "worker-src 'self' blob:",
-  "child-src 'self' blob:",
+  "frame-src 'none'",
+  "child-src 'none'",
   "media-src 'self' data: blob: file: foliole-asset:"
 ].join('; ');
 const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
@@ -46,6 +47,10 @@ const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
 
 const installedSessions = new WeakSet<Session>();
 
+interface MainWindowContentSecurityPolicyOptions {
+  isPackaged?: boolean;
+}
+
 function isDevelopmentRendererUrl(url: string) {
   try {
     const parsed = new URL(url);
@@ -58,21 +63,41 @@ function isDevelopmentRendererUrl(url: string) {
   }
 }
 
-function resolvePolicy(url: string) {
-  return isDevelopmentRendererUrl(url) ? MAIN_WINDOW_DEV_CSP : MAIN_WINDOW_CSP;
+function isRuntimeRendererIndexUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'file:' && parsed.pathname.endsWith('/runtime-renderer-index.html');
+  } catch {
+    return false;
+  }
+}
+
+function resolvePolicy(url: string, options: MainWindowContentSecurityPolicyOptions = {}) {
+  const isPackaged = options.isPackaged ?? true;
+  return !isPackaged && (isDevelopmentRendererUrl(url) || isRuntimeRendererIndexUrl(url))
+    ? MAIN_WINDOW_DEV_CSP
+    : MAIN_WINDOW_CSP;
+}
+
+function isFrameResource(resourceType: string) {
+  return resourceType === 'mainFrame' || resourceType === 'subFrame';
 }
 
 export function withMainWindowContentSecurityPolicy(
   url: string,
-  headers: Record<string, string[] | undefined> = {}
+  headers: Record<string, string[] | undefined> = {},
+  options: MainWindowContentSecurityPolicyOptions = {}
 ) {
   return {
     ...headers,
-    [CSP_HEADER]: [resolvePolicy(url)]
+    [CSP_HEADER]: [resolvePolicy(url, options)]
   };
 }
 
-export function installMainWindowContentSecurityPolicy(session: Session | undefined) {
+export function installMainWindowContentSecurityPolicy(
+  session: Session | undefined,
+  options: MainWindowContentSecurityPolicyOptions = {}
+) {
   if (!session || installedSessions.has(session)) {
     return;
   }
@@ -80,12 +105,12 @@ export function installMainWindowContentSecurityPolicy(session: Session | undefi
   // This hook is installed on the main window session; link panel webviews use
   // their own persistent partition and keep third-party pages outside this CSP.
   session.webRequest.onHeadersReceived((details, callback) => {
-    if (details.resourceType !== 'mainFrame') {
+    if (!isFrameResource(details.resourceType)) {
       callback({});
       return;
     }
     callback({
-      responseHeaders: withMainWindowContentSecurityPolicy(details.url, details.responseHeaders)
+      responseHeaders: withMainWindowContentSecurityPolicy(details.url, details.responseHeaders, options)
     });
   });
 }

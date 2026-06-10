@@ -89,7 +89,15 @@ vi.mock('node:fs/promises', () => ({
 vi.mock('./menu.js', () => ({ syncAppMenuState }));
 vi.mock('../diagnostics/diagnosticBundle.js', () => ({ copyDiagnosticReport }));
 vi.mock('../devShellRestartRequest.js', () => ({ requestDevShellRestart }));
-vi.mock('./paths.js', () => ({ resolveAppPaths: vi.fn().mockReturnValue({ app_cache_dir: '/cache', app_config_dir: '/config', app_data_dir: '/data', app_log_dir: '/log' }) }));
+vi.mock('./paths.js', () => ({
+  resolveAppPaths: vi.fn().mockReturnValue({
+    app_cache_dir: '/cache',
+    app_config_dir: '/config',
+    app_data_dir: '/data',
+    app_log_dir: '/log',
+    documents_dir: '/documents'
+  })
+}));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
   flushAllDirtyNodeSyncVersions,
@@ -122,7 +130,7 @@ it('handles typed native utility commands', async () => {
   } satisfies NativeInvokeRequest<'open_external_url'>;
   const openLocalPathRequest = {
     command: 'open_local_path',
-    args: { path: '/tmp/source.md' }
+    args: { path: '/log/source.md' }
   } satisfies NativeInvokeRequest<'open_local_path'>;
 
   await expect(handleInvokeRequest(openExternalUrlRequest)).resolves.toBeNull();
@@ -136,7 +144,7 @@ it('handles typed native utility commands', async () => {
     status: 'generated'
   });
   expect(openExternal).toHaveBeenCalledWith('https://example.com');
-  expect(openPath).toHaveBeenCalledWith('/tmp/source.md');
+  expect(openPath).toHaveBeenCalledWith('/log/source.md');
   expect(syncAppMenuState).toHaveBeenCalledWith(['node.create'], []);
 });
 

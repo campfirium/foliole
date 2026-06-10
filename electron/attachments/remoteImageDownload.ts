@@ -13,6 +13,7 @@ import {
   resolveRemoteImageTransportName,
   type RemoteImageFetchTransport
 } from './remoteImageTransport.js';
+import { isAllowedRemoteImageHostname } from './remoteImageUrlGuard.js';
 
 const REMOTE_IMAGE_TIMEOUT_MS = 12_000;
 const REMOTE_IMAGE_TRANSIENT_FAILURE_CACHE_MS = 5_000;
@@ -76,6 +77,7 @@ export function resolveRemoteImageCacheKey(sourceUrl: string) {
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
     parsed.protocol = parsed.protocol.toLowerCase();
     parsed.hostname = parsed.hostname.toLowerCase();
+    if (!isAllowedRemoteImageHostname(parsed.hostname)) return null;
     parsed.hash = '';
     return parsed.toString();
   } catch {

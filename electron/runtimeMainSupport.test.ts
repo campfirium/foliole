@@ -49,6 +49,7 @@ it('allows only http and https URLs for embedded link panel window opens', () =>
 it('denies blocked embedded link panel window opens without loading them', () => {
   type WindowOpenHandler = (details: { url: string }) => { action: 'deny' };
   const handlers: WindowOpenHandler[] = [];
+  const navigateHandlers: Array<(event: { preventDefault: () => void }, url: string) => void> = [];
   const session = {
     on: vi.fn(),
     setPermissionCheckHandler: vi.fn(),
@@ -56,7 +57,12 @@ it('denies blocked embedded link panel window opens without loading them', () =>
   };
   const contents = {
     getType: vi.fn(() => 'webview'),
-    loadURL: vi.fn(),
+    loadURL: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn((eventName: string, handler: (event: { preventDefault: () => void }, url: string) => void) => {
+      if (eventName === 'will-navigate') {
+        navigateHandlers.push(handler);
+      }
+    }),
     session,
     setWindowOpenHandler: vi.fn((nextHandler: WindowOpenHandler) => {
       handlers.push(nextHandler);
@@ -69,13 +75,22 @@ it('denies blocked embedded link panel window opens without loading them', () =>
   expect(installedHandler({ url: 'file:///C:/Users/example/secret.txt' })).toEqual({ action: 'deny' });
   expect(contents.loadURL).not.toHaveBeenCalled();
   expect(installedHandler({ url: 'https://example.com' })).toEqual({ action: 'deny' });
-  expect(contents.loadURL).toHaveBeenCalledWith('https://example.com');
+  expect(contents.loadURL).toHaveBeenCalledWith('https://example.com', { httpReferrer: '' });
+
+  const blockedNavigationEvent = { preventDefault: vi.fn() };
+  navigateHandlers[0]?.(blockedNavigationEvent, 'javascript:alert(1)');
+  expect(blockedNavigationEvent.preventDefault).toHaveBeenCalledTimes(1);
+
+  const allowedNavigationEvent = { preventDefault: vi.fn() };
+  navigateHandlers[0]?.(allowedNavigationEvent, 'https://example.com/next');
+  expect(allowedNavigationEvent.preventDefault).not.toHaveBeenCalled();
 });
 
 it('does not bind embedded link panel guards to the main window contents', () => {
   const contents = {
     getType: vi.fn(() => 'window'),
     loadURL: vi.fn(),
+    on: vi.fn(),
     session: {
       on: vi.fn(),
       setPermissionCheckHandler: vi.fn(),
@@ -87,6 +102,7 @@ it('does not bind embedded link panel guards to the main window contents', () =>
   bindEmbeddedLinkPanelContents(contents as never);
 
   expect(contents.setWindowOpenHandler).not.toHaveBeenCalled();
+  expect(contents.on).not.toHaveBeenCalled();
   expect(contents.session.setPermissionRequestHandler).not.toHaveBeenCalled();
   expect(contents.session.on).not.toHaveBeenCalled();
 });
@@ -142,7 +158,7 @@ it('allows only the fixed link panel partition and web URLs for webview attach',
   };
 
   handler(allowedEvent, webPreferences, {
-    partition: 'persist:foliole-link-panels',
+    partition: 'foliole-link-panels',
     src: 'https://example.com/docs'
   });
 
@@ -154,11 +170,11 @@ it('allows only the fixed link panel partition and web URLs for webview attach',
   });
 
   const blockedSrcEvent = { preventDefault: vi.fn() };
-  handler(blockedSrcEvent, {}, { partition: 'persist:foliole-link-panels', src: 'file:///tmp/secret.txt' });
+  handler(blockedSrcEvent, {}, { partition: 'foliole-link-panels', src: 'file:///tmp/secret.txt' });
   expect(blockedSrcEvent.preventDefault).toHaveBeenCalledTimes(1);
 
   const blockedPartitionEvent = { preventDefault: vi.fn() };
-  handler(blockedPartitionEvent, {}, { partition: 'persist:foliole-link-panels-evil', src: 'https://example.com' });
+  handler(blockedPartitionEvent, {}, { partition: 'persist:foliole-link-panels', src: 'https://example.com' });
   expect(blockedPartitionEvent.preventDefault).toHaveBeenCalledTimes(1);
 });
 
@@ -192,6 +208,7 @@ it('denies embedded link panel permissions and prevents downloads', () => {
   const contents = {
     getType: vi.fn(() => 'webview'),
     loadURL: vi.fn(),
+    on: vi.fn(),
     session,
     setWindowOpenHandler: vi.fn()
   };

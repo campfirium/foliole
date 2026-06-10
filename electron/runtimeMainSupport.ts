@@ -65,10 +65,14 @@ export function bindEmbeddedLinkPanelContents(contents: WebContents) {
     return;
   }
   installEmbeddedLinkPanelSessionGuards(contents.session);
-  contents.setWindowOpenHandler(({ url }) => {
+  contents.on('will-navigate', (event, url) => {
     if (isAllowedEmbeddedLinkPanelUrl(url)) {
-      void contents.loadURL(url);
+      return;
     }
+    event.preventDefault();
+  });
+  contents.setWindowOpenHandler(({ url }) => {
+    void loadEmbeddedLinkPanelUrl(contents, url);
     return { action: 'deny' };
   });
 }
@@ -119,6 +123,15 @@ function normalizeLinkPanelWebviewPreferences(webPreferences: WebPreferences) {
   webPreferences.nodeIntegration = false;
   webPreferences.contextIsolation = true;
   webPreferences.sandbox = true;
+}
+
+async function loadEmbeddedLinkPanelUrl(contents: WebContents, url: string) {
+  if (!isAllowedEmbeddedLinkPanelUrl(url)) {
+    return;
+  }
+  await contents.loadURL(url, { httpReferrer: '' }).catch((error: unknown) => {
+    logMainProcessException('link_panel_webview_navigation_failed', error);
+  });
 }
 
 export function isAllowedEmbeddedLinkPanelUrl(url: string) {

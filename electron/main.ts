@@ -50,6 +50,7 @@ import {
   logWindowStateRestoreDecision
 } from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
+import { prepareStartupRendererAppearance } from './startupRendererPreparation.js';
 import { loadStartupWindowState } from './startupWindowState.js';
 import { bindWindowRuntimeDiagnostics, setStartupWindowPresentation } from './windowRuntimeDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
@@ -172,7 +173,7 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
     }
   });
   const window = new BrowserWindow(options);
-  installMainWindowContentSecurityPolicy(window.webContents.session);
+  installMainWindowContentSecurityPolicy(window.webContents.session, { isPackaged: app.isPackaged });
   bindMainWindowNavigationGuard(window);
   bindMainWindowWebviewAttachGuard(window);
   await appendBootEvent('browser_window_created', {
@@ -213,5 +214,6 @@ installMainLifecycle({
   createMainWindow,
   installInvokeHandler,
   loadMainWindow: loadRendererIntoWindow,
+  prepareStartupAppearance: () => prepareStartupRendererAppearance(__dirname, configuredIdentity.userDataPath),
   runtimeMode
 });

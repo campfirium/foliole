@@ -33,11 +33,11 @@ vi.mock('../readingProgressWindowFlush.js', () => ({
 
 import { handleWindowAndUtilityCommand } from './windowCommands.js';
 
-it('clears the persistent link panel webview browsing data partition', async () => {
+it('clears the link panel webview browsing data partition', async () => {
   await expect(handleWindowAndUtilityCommand({ command: 'clear_link_panel_browsing_data' })).resolves.toMatchObject({
     status: 'cleared'
   });
 
-  expect(fromPartition).toHaveBeenCalledWith('persist:foliole-link-panels');
+  expect(fromPartition).toHaveBeenCalledWith('foliole-link-panels');
   expect(clearStorageData).toHaveBeenCalledTimes(1);
 });

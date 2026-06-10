@@ -7,7 +7,7 @@ import {
   configureRemoteImageDiagnosticSinkForTests,
   type RemoteImageDiagnosticEvent
 } from './remoteImageDiagnostics.js';
-import { downloadRemoteImageBytes, type RemoteImageFetchTransport } from './remoteImageDownload.js';
+import { downloadRemoteImageBytes, resolveRemoteImageCacheKey, type RemoteImageFetchTransport } from './remoteImageDownload.js';
 
 const SOURCE_URL = 'https://example.com/images/cover.png';
 const CACHE_KEY = 'https://example.com/images/cover.png';
@@ -37,6 +37,24 @@ it('keeps normal remote image responses downloadable', async () => {
     resource: { bytes: new Uint8Array([1, 2, 3]), mimeType: 'image/png' },
     status: 'ready'
   });
+});
+
+it.each([
+  'http://127.0.0.1/image.png',
+  'http://[::1]/image.png',
+  'http://10.0.0.1/image.png',
+  'http://172.16.0.1/image.png',
+  'http://192.168.0.1/image.png',
+  'http://169.254.169.254/latest/meta-data',
+  'http://localhost/image.png',
+  'http://host.local/image.png',
+  'http://metadata.google.internal/computeMetadata/v1/'
+])('rejects remote image cache keys for SSRF-risk host %s', (sourceUrl) => {
+  expect(resolveRemoteImageCacheKey(sourceUrl)).toBeNull();
+});
+
+it('keeps public remote image cache keys normalized', () => {
+  expect(resolveRemoteImageCacheKey('HTTPS://Example.COM/images/cover.png#fragment')).toBe('https://example.com/images/cover.png');
 });
 
 it('rejects remote images when content-length is larger than the byte limit', async () => {

@@ -101,10 +101,15 @@ function LinkPanelCard(props: {
         webviewRef={webviewRef}
       />
       <webview
-        className="h-full w-full bg-bg-elevated"
-        partition="persist:foliole-link-panels"
+        allowpopups="false"
+        className="h-full w-full bg-canvas"
+        disablewebsecurity="false"
+        nodeintegration="false"
+        partition="foliole-link-panels"
+        referrerpolicy="no-referrer"
         ref={webviewRef}
         src={props.panel.currentUrl}
+        webpreferences="contextIsolation=yes, sandbox=yes, nodeIntegration=no"
       />
       <div
         aria-hidden="true"

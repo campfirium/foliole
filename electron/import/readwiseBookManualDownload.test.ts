@@ -118,3 +118,25 @@ it('extracts the original file link from the readwise full document body and ope
   });
   expect(openExternal).toHaveBeenCalledWith('https://readwise.io/reader/document_raw_content/287639057');
 });
+
+it('does not open a non-web original file link through the host shell', async () => {
+  await createBooksFixture([
+    '# Manual Book',
+    '',
+    '## Metadata',
+    '- Download URL: javascript:alert(1)',
+    '',
+    '## Full Document',
+    'Waiting for EPUB.'
+  ].join('\n'));
+
+  const result = await openReadwiseBookDownload(buildReadwiseBookPlaceholderNodeId('manual book'));
+
+  expect(result).toEqual({
+    book_key: 'manual book',
+    status: 'missing_link',
+    title: 'Manual Book',
+    url: null
+  });
+  expect(openExternal).not.toHaveBeenCalled();
+});
