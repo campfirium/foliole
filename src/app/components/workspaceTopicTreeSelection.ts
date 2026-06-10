@@ -9,25 +9,35 @@ export function useWorkspaceTopicTreeSelection(args: {
   onSelectNode: (nodeId: string) => void;
   rowIds: string[];
 }) {
+  const rowIdsKey = args.rowIds.join('\0');
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>(args.activeNodeId ? [args.activeNodeId] : []);
   const [selectionAnchorNodeId, setSelectionAnchorNodeId] = useState<string | null>(args.activeNodeId);
 
   useEffect(() => {
-    setSelectedNodeIds((prev) => prev.filter((nodeId) => Boolean(args.nodesById[nodeId])));
-    setSelectionAnchorNodeId((prev) => (prev && args.nodesById[prev] ? prev : null));
-  }, [args.nodesById]);
+    const rowIdSet = new Set(rowIdsKey ? rowIdsKey.split('\0') : []);
+    setSelectedNodeIds((prev) => {
+      const next = prev.filter((nodeId) => rowIdSet.has(nodeId) && Boolean(args.nodesById[nodeId]));
+      return next.length === prev.length ? prev : next;
+    });
+    setSelectionAnchorNodeId((prev) => (prev && rowIdSet.has(prev) && args.nodesById[prev] ? prev : null));
+  }, [args.nodesById, rowIdsKey]);
 
   useEffect(() => {
     if (!args.activeNodeId) return;
-    setSelectedNodeIds((prev) => (prev.includes(args.activeNodeId!) ? prev : [args.activeNodeId!]));
-    setSelectionAnchorNodeId(args.activeNodeId);
+    setSelectedNodeIds((prev) => {
+      if (prev.includes(args.activeNodeId!)) {
+        setSelectionAnchorNodeId((anchor) => anchor ?? args.activeNodeId);
+        return prev;
+      }
+      setSelectionAnchorNodeId(args.activeNodeId);
+      return [args.activeNodeId!];
+    });
   }, [args.activeNodeId]);
 
   const handleSelectNode = useCallback((nodeId: string, modifiers?: NodeSelectModifiers) => {
-    const fallbackAnchor = args.activeNodeId ?? nodeId;
+    const fallbackAnchor = args.activeNodeId && args.rowIds.includes(args.activeNodeId) ? args.activeNodeId : nodeId;
     if (modifiers?.shiftKey) {
       setSelectedNodeIds(collectRangeNodeIds(args.rowIds, selectionAnchorNodeId ?? fallbackAnchor, nodeId));
-      args.onSelectNode(nodeId);
       return;
     }
     if (modifiers?.metaKey || modifiers?.ctrlKey) {

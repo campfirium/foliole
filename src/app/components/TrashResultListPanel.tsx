@@ -117,6 +117,26 @@ function TrashContextMenu(props: {
   );
 }
 
+function useRenderedTrashListState(
+  listState: ReturnType<typeof useNodeListState>,
+  rows: ReturnType<typeof useTrashRows>['rows']
+) {
+  const rowIds = useMemo(() => rows.map((row) => row.node.id), [rows]);
+  const rowIdSet = useMemo(() => new Set(rowIds), [rowIds]);
+  const renderedListState = useMemo(
+    () => ({
+      ...listState,
+      trashRows: rows,
+      trashRowsAll: rows,
+      trashRowIds: rowIds
+    }),
+    [listState, rowIds, rows]
+  );
+  const selectedNodeIds = listState.selectedNodeIds.filter((nodeId) => rowIdSet.has(nodeId));
+
+  return { renderedListState, selectedNodeIds };
+}
+
 export function TrashResultListPanel(props: TrashResultListPanelProps) {
   const t = useTranslation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -125,7 +145,7 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
   const rowSpacing = getNodeListRowSpacing();
   const { contentSort, normalizedSort, rows } = useTrashRows(props, searchQuery);
   const listState = useNodeListState(null, true, props.nodeOrder, props.nodesById, props.selectedTrashNodeId, new Set());
-  const selectedNodeIds = listState.selectedNodeIds.filter((nodeId) => props.trashedNodeIds.includes(nodeId));
+  const { renderedListState, selectedNodeIds } = useRenderedTrashListState(listState, rows);
   const contextMenu = useNodeListContextMenu(props.nodesById, selectedNodeIds, props.trashedNodeIds);
   const selectTrashNode = useNodeSelectionHandler({
     activeNodeId: null,
@@ -134,7 +154,7 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
     onSelectNode: () => undefined,
     onSelectTrashNode: props.onSelectTrashNode,
     selectedTrashNodeId: props.selectedTrashNodeId,
-    state: listState,
+    state: renderedListState,
     trashedNodeIds: props.trashedNodeIds
   });
   const workspaceActions = useTrashWorkspaceActions();
@@ -167,7 +187,7 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
       </div>
       <TrashContextMenu
         contextMenu={contextMenu}
-        listState={listState}
+        listState={renderedListState}
         nodesById={props.nodesById}
         selectTrashNode={selectTrashNode}
         workspaceActions={workspaceActions}

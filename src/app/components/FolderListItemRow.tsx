@@ -1,4 +1,4 @@
-import type { DragEvent as ReactDragEvent } from 'react';
+import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent } from 'react';
 
 import { TruncatedTextTooltip } from '../../shared/ui';
 
@@ -7,8 +7,9 @@ interface FolderListTextItemProps {
   ariaLabel: string;
   author?: string | null;
   dateLabel: string;
+  isBulkSelectionActive?: boolean;
   nodeId: string;
-  onClick: () => void;
+  onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   summary?: string;
   title: string;
   draggable?: boolean | undefined;
@@ -53,8 +54,9 @@ export function FolderListTextItem(props: FolderListTextItemProps) {
     >
       <button
         aria-label={props.ariaLabel}
+        data-node-bulk-selected={props.isBulkSelectionActive ? 'true' : undefined}
         className={`-mx-4 flex h-[188px] w-[calc(100%+2rem)] flex-col gap-3 overflow-hidden rounded-md px-4 py-5 text-left transition-colors focus-visible:outline-none ${
-          props.active
+          props.active || props.isBulkSelectionActive
             ? 'bg-[var(--app-surface-control-bg)]'
             : 'hover:bg-[var(--app-surface-control-hover-bg)] focus-visible:bg-[var(--app-surface-control-bg)]'
         }`}

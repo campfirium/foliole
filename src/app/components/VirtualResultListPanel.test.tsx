@@ -1,4 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -18,6 +19,30 @@ function createNode(id: string, title: string, content = ''): Node {
     title,
     updatedAt: '2026-05-01T00:00:00.000Z'
   };
+}
+
+function SelectionHarness(props: { onSelectNode?: (nodeId: string) => void }) {
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const first = createNode('first', 'First result');
+  const second = createNode('second', 'Second result');
+  const third = createNode('third', 'Third result');
+  const nodes = [first, second, third];
+  const handleSelectNode = (nodeId: string) => {
+    setActiveNodeId(nodeId);
+    props.onSelectNode?.(nodeId);
+  };
+
+  return (
+    <VirtualResultListPanel
+      activeNodeId={activeNodeId}
+      emptyState={{ description: 'No results', title: 'Empty' }}
+      header={{ kind: 'description', text: 'Mixed results.', title: 'Mixed' }}
+      nodeOrder={nodes.map((node) => node.id)}
+      nodes={nodes}
+      nodesById={{ first, second, third }}
+      onSelectNode={handleSelectNode}
+    />
+  );
 }
 
 beforeEach(() => {
@@ -57,6 +82,28 @@ it('renders virtual root with the shared topic list surface', () => {
   fireEvent.click(screen.getByRole('treeitem', { name: 'Second result' }));
 
   expect(onSelectNode).toHaveBeenCalledWith('second');
+});
+
+it('keeps the original anchor when shift-selecting virtual result ranges', () => {
+  const onSelectNode = vi.fn();
+  renderWithLocalization(<SelectionHarness onSelectNode={onSelectNode} />);
+
+  fireEvent.click(screen.getByRole('treeitem', { name: 'First result' }));
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Third result' }), { shiftKey: true });
+
+  expect(screen.getAllByRole('treeitem', { selected: true })).toHaveLength(3);
+  expect(screen.getByRole('treeitem', { name: 'First result' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(screen.getByRole('treeitem', { name: 'Second result' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(screen.getByRole('treeitem', { name: 'Third result' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(onSelectNode).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Second result' }), { shiftKey: true });
+
+  expect(screen.getAllByRole('treeitem', { selected: true })).toHaveLength(2);
+  expect(screen.getByRole('treeitem', { name: 'First result' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(screen.getByRole('treeitem', { name: 'Second result' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(screen.getByRole('treeitem', { name: 'Third result' })).not.toHaveAttribute('data-node-bulk-selected');
+  expect(onSelectNode).toHaveBeenCalledTimes(1);
 });
 
 it('filters saved virtual list results from the shared topic list header', () => {

@@ -57,6 +57,30 @@ function NodeListTreeHarness() {
   );
 }
 
+function RootNodeListTreeHarness() {
+  const [activeNodeId, setActiveNodeId] = useState<string | null>('article-a');
+  const nodesById = {
+    'article-a': createNode({ id: 'article-a', title: 'Article A' }),
+    'article-b': createNode({ id: 'article-b', title: 'Article B' }),
+    'article-c': createNode({ id: 'article-c', title: 'Article C' })
+  };
+
+  return (
+    <NodeListTree
+      activeNodeId={activeNodeId}
+      isTrashViewOpen={false}
+      isVirtualViewOpen={false}
+      nodeOrder={['article-a', 'article-b', 'article-c']}
+      nodesById={nodesById}
+      onOpenMoveToNode={() => undefined}
+      onOpenNotesView={() => undefined}
+      onSelectNode={setActiveNodeId}
+      onSelectTrashNode={() => undefined}
+      selectedTrashNodeId={null}
+    />
+  );
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   useWorkspaceStore.setState((state) => ({
@@ -95,4 +119,17 @@ it('shows every ctrl-selected row as selected', () => {
   expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toHaveAttribute('data-node-bulk-selected', 'true');
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('data-node-bulk-selected', 'true');
   expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toHaveAttribute('data-active', 'false');
+});
+
+it('keeps the full start-to-end range selected after shift-click', () => {
+  renderWithLocalization(<RootNodeListTreeHarness />);
+
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Article A' }));
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Article C' }), { shiftKey: true });
+
+  expect(within(listPanel).getAllByRole('treeitem', { selected: true })).toHaveLength(3);
+  expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Article B' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Article C' })).toHaveAttribute('data-node-bulk-selected', 'true');
 });

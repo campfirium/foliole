@@ -165,7 +165,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
   const { focusedRowIndex, reviewScroll } = resolveWorkspaceTopicTreeScrollState(props, focusedNodeId, visibleRows);
   const interaction = useWorkspaceTopicTreeInteraction({
     activeFolderId: props.activeFolderId,
-    activeNodeId: focusedNodeId,
+    activeNodeId: props.activeNodeId,
     isManualSort: contentSort.sort.key === 'manual',
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,

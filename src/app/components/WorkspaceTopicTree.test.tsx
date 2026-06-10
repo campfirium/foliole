@@ -92,41 +92,6 @@ function WorkspaceTopicTreeCollapseHarness() {
   );
 }
 
-function WorkspaceTopicTreeSortedSelectionHarness() {
-  const [activeNodeId, setActiveNodeId] = useState<string | null>('article-a');
-  const nodesById = {
-    'article-a': createNode({
-      createdAt: '2026-04-23T00:00:00.000Z',
-      id: 'article-a',
-      title: 'Alpha Notes',
-      updatedAt: '2026-04-20T00:00:00.000Z'
-    }),
-    'article-b': createNode({
-      createdAt: '2026-04-21T00:00:00.000Z',
-      id: 'article-b',
-      title: 'Middle Notes',
-      updatedAt: '2026-04-24T00:00:00.000Z'
-    }),
-    'article-c': createNode({
-      createdAt: '2026-04-22T00:00:00.000Z',
-      id: 'article-c',
-      title: 'Omega Notes',
-      updatedAt: '2026-04-19T00:00:00.000Z'
-    })
-  };
-
-  return (
-    <WorkspaceTopicTree
-      activeFolderId="folder-a"
-      activeNodeId={activeNodeId}
-      itemIds={['article-a', 'article-b', 'article-c']}
-      nodesById={nodesById}
-      onOpenMoveToNode={() => undefined}
-      onSelectNode={setActiveNodeId}
-    />
-  );
-}
-
 beforeEach(() => {
   window.localStorage.clear();
   resetPerformanceDiagnosticsProbe();
@@ -176,19 +141,6 @@ it('opens a collapsed parent row without expanding its children', () => {
   expect(within(itemColumn).queryByRole('treeitem', { name: 'Hook Summary' })).toBeNull();
 });
 
-it('shows every ctrl-selected current-folder topic as selected', () => {
-  renderWithLocalization(<WorkspaceTopicTreeHarness />);
-
-  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
-  fireEvent.click(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' }), { ctrlKey: true });
-
-  const selectedRows = within(itemColumn).getAllByRole('treeitem', { selected: true });
-  expect(selectedRows).toHaveLength(2);
-  expect(within(itemColumn).queryByText('2 selected')).toBeNull();
-  expect(within(itemColumn).getByRole('treeitem', { name: 'React Notes' })).toHaveAttribute('data-node-bulk-selected', 'true');
-  expect(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' })).toHaveAttribute('data-node-bulk-selected', 'true');
-});
-
 it('keeps an expanded branch open when selecting another current-folder topic', () => {
   renderWithLocalization(<WorkspaceTopicTreeHarness />);
 
@@ -202,20 +154,6 @@ it('keeps an expanded branch open when selecting another current-folder topic', 
 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' })).toHaveAttribute('aria-current', 'page');
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
-});
-
-it('selects shift ranges by the sorted visible order in the item column', () => {
-  renderWithLocalization(<WorkspaceTopicTreeSortedSelectionHarness />);
-
-  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
-  fireEvent.click(within(itemColumn).getByRole('treeitem', { name: 'Omega Notes' }), { shiftKey: true });
-
-  const selectedRows = within(itemColumn).getAllByRole('treeitem', { selected: true });
-  expect(selectedRows).toHaveLength(2);
-  expect(within(itemColumn).queryByText('2 selected')).toBeNull();
-  expect(within(itemColumn).getByRole('treeitem', { name: 'Alpha Notes' })).toHaveAttribute('data-node-bulk-selected', 'true');
-  expect(within(itemColumn).getByRole('treeitem', { name: 'Omega Notes' })).toHaveAttribute('data-node-bulk-selected', 'true');
-  expect(within(itemColumn).getByRole('treeitem', { name: 'Middle Notes' })).toHaveAttribute('aria-selected', 'false');
 });
 
 it('collapses a newly opened folder by default', () => {

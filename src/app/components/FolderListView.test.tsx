@@ -185,4 +185,5 @@ describe('FolderListView interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open real location for Small and Beautiful' }));
     expect(onSelectNodePath).toHaveBeenCalledWith('node-9');
   });
+
 });

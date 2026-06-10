@@ -72,8 +72,14 @@ export function useNodeListSelection(
       !activeNodeId ||
       !isCanonicalVisibleNodeId({ nodeOrder: [], nodesById, trashedNodeIds }, activeNodeId)
     ) return;
-    setSelectedNodeIds((prev) => (prev.includes(activeNodeId) ? prev : [activeNodeId]));
-    setSelectionAnchorNodeId(activeNodeId);
+    setSelectedNodeIds((prev) => {
+      if (prev.includes(activeNodeId)) {
+        setSelectionAnchorNodeId((anchor) => anchor ?? activeNodeId);
+        return prev;
+      }
+      setSelectionAnchorNodeId(activeNodeId);
+      return [activeNodeId];
+    });
   }, [activeNodeId, nodesById, trashedNodeIds]);
 
   return {

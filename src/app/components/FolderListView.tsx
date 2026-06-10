@@ -16,6 +16,7 @@ import { resolveFolderManualChildOrder, resolveListedFolderNodes } from './folde
 import { FolderListNavigationOverlay, type FolderListNavigationOverlayProps } from './FolderListNavigationOverlay';
 import type { FolderListItemLayout } from './FolderListViewItem';
 import { FolderListViewLayout } from './FolderListViewLayout';
+import { useFolderListSelection } from './useFolderListSelection';
 import { useFolderListViewState } from './useFolderListViewState';
 import { WorkspaceTopicTreeCurrentViewActions } from './WorkspaceTopicTreeCurrentViewActions';
 
@@ -131,6 +132,36 @@ function useResolvedFolderListState(props: FolderListViewProps) {
   };
 }
 
+function renderFolderListViewItem(args: {
+  canManualDrag: boolean;
+  draggedNodeId: string | null;
+  node: Node;
+  nodeViewById: Record<string, NodeViewState | undefined>;
+  props: FolderListViewProps;
+  selection: ReturnType<typeof useFolderListSelection>;
+  setDraggedNodeId: (nodeId: string | null) => void;
+  setFolderManualChildOrder?: (folderNodeId: string, childNodeIds: string[]) => void;
+  state: ReturnType<typeof useResolvedFolderListState>['state'];
+}) {
+  return renderFolderListItem({
+    activeNodeId: args.props.activeNodeId,
+    canManualDrag: args.canManualDrag,
+    childNodes: args.state.childNodes,
+    draggedNodeId: args.draggedNodeId,
+    isBulkSelectionActive: args.selection.selectedNodeIds.length > 1 && args.selection.selectedNodeIds.includes(args.node.id),
+    itemLayout: args.props.itemLayout ?? 'default',
+    node: args.node,
+    nodeViewById: args.nodeViewById,
+    nodesById: args.props.nodesById,
+    onSelectNode: args.selection.handleSelectNode,
+    ...(args.props.folderNodeId ? { folderNodeId: args.props.folderNodeId } : {}),
+    ...(args.props.onSelectNodePath ? { onSelectNodePath: args.props.onSelectNodePath } : {}),
+    setDraggedNodeId: args.setDraggedNodeId,
+    ...(args.setFolderManualChildOrder ? { setFolderManualChildOrder: args.setFolderManualChildOrder } : {}),
+    sortKey: args.state.sortKey
+  });
+}
+
 export function FolderListView(props: FolderListViewProps) {
   const t = useTranslation();
   const { nodeViewById, resolvedFolderTitle, state } = useResolvedFolderListState(props);
@@ -141,6 +172,11 @@ export function FolderListView(props: FolderListViewProps) {
   const headerMode = props.showEmbeddedHeader === false ? 'hidden' : 'full';
   const canManualDrag = Boolean(props.folderNodeId && state.sortKey === 'manual' && !state.searchQuery.trim());
   const currentViewActions = buildFolderListCurrentViewActions(props, deleteNodes, state.filteredNodes);
+  const selection = useFolderListSelection({
+    activeNodeId: props.activeNodeId,
+    filteredNodes: state.filteredNodes,
+    onSelectNode: props.onSelectNode
+  });
 
   return (
     <div ref={scrollElementRef} className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
@@ -156,21 +192,16 @@ export function FolderListView(props: FolderListViewProps) {
           onChangeSearchQuery={state.setSearchQuery}
           onChangeSortDirection={state.updateSortDirection}
           onChangeSortKey={state.updateSortKey}
-          onRenderItem={(node) => renderFolderListItem({
-            activeNodeId: props.activeNodeId,
+          onRenderItem={(node) => renderFolderListViewItem({
             canManualDrag,
-            childNodes: state.childNodes,
             draggedNodeId,
-            itemLayout: props.itemLayout ?? 'default',
             node,
             nodeViewById,
-            nodesById: props.nodesById,
-            onSelectNode: props.onSelectNode,
-            ...(props.folderNodeId ? { folderNodeId: props.folderNodeId } : {}),
-            ...(props.onSelectNodePath ? { onSelectNodePath: props.onSelectNodePath } : {}),
+            props,
+            selection,
             setDraggedNodeId,
             ...(setFolderManualChildOrder ? { setFolderManualChildOrder } : {}),
-            sortKey: state.sortKey
+            state
           })}
           searchQuery={state.searchQuery}
           {...definedProps({

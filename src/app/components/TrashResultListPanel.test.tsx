@@ -6,6 +6,7 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { TrashResultListPanel } from './TrashResultListPanel';
+import { saveWorkspaceContentSortPreference, type WorkspaceContentSortState } from './workspaceContentSort';
 
 function createNode(args: {
   id: string;
@@ -27,12 +28,18 @@ function createNode(args: {
 }
 
 function renderTrashPanel(args: {
+  nodeOrder?: string[];
+  nodesById?: Record<string, WorkspaceListNode>;
   onSelectTrashNode?: (nodeId: string) => void;
   selectedTrashNodeId?: string | null;
+  sort?: WorkspaceContentSortState;
   trashedNodeDeletedAtById?: Record<string, string | undefined>;
   trashedNodeIds: string[];
 }) {
-  const nodesById = {
+  if (args.sort) {
+    saveWorkspaceContentSortPreference(args.sort);
+  }
+  const nodesById = args.nodesById ?? {
     folder: createNode({ id: 'folder', kind: 'folder', title: 'Folder A' }),
     topic: createNode({ id: 'topic', kind: 'topic', parentNodeId: 'folder', title: 'Topic A' }),
     item: createNode({ id: 'item', kind: 'item', parentNodeId: 'topic', title: 'Needle item' }),
@@ -45,7 +52,7 @@ function renderTrashPanel(args: {
   }));
   renderWithLocalization(
     <TrashResultListPanel
-      nodeOrder={['folder', 'topic', 'item', 'solo']}
+      nodeOrder={args.nodeOrder ?? ['folder', 'topic', 'item', 'solo']}
       nodesById={nodesById}
       onSelectTrashNode={args.onSelectTrashNode ?? (() => undefined)}
       selectedTrashNodeId={args.selectedTrashNodeId ?? null}
@@ -126,4 +133,37 @@ it('moves trash row selection with arrow keys', () => {
   fireEvent.keyDown(screen.getByRole('treeitem', { name: /Solo item/ }), { key: 'ArrowDown' });
 
   expect(onSelectTrashNode).toHaveBeenCalledWith('folder');
+});
+
+it('selects shift ranges using the visible trash row order', () => {
+  renderTrashPanel({
+    nodeOrder: ['beta', 'zulu', 'alpha', 'delta'],
+    nodesById: {
+      alpha: createNode({ id: 'alpha', kind: 'item', title: 'Alpha topic' }),
+      beta: createNode({ id: 'beta', kind: 'item', title: 'Beta topic' }),
+      delta: createNode({ id: 'delta', kind: 'item', title: 'Delta topic' }),
+      zulu: createNode({ id: 'zulu', kind: 'item', title: 'Zulu topic' })
+    },
+    sort: { direction: 'asc', key: 'name' },
+    trashedNodeIds: ['alpha', 'beta', 'delta', 'zulu']
+  });
+
+  const trashTree = screen.getByRole('tree', { name: 'Trash topics' });
+  const visibleRows = within(trashTree).getAllByRole('treeitem');
+  expect(visibleRows.map((row) => row.textContent)).toEqual([
+    expect.stringContaining('Alpha topic'),
+    expect.stringContaining('Beta topic'),
+    expect.stringContaining('Delta topic'),
+    expect.stringContaining('Zulu topic')
+  ]);
+
+  fireEvent.click(within(trashTree).getByRole('treeitem', { name: /Alpha topic/ }));
+  fireEvent.click(within(trashTree).getByRole('treeitem', { name: /Delta topic/ }), {
+    shiftKey: true
+  });
+
+  expect(within(trashTree).getByRole('treeitem', { name: /Alpha topic/ })).toHaveAttribute('aria-selected', 'true');
+  expect(within(trashTree).getByRole('treeitem', { name: /Beta topic/ })).toHaveAttribute('aria-selected', 'true');
+  expect(within(trashTree).getByRole('treeitem', { name: /Delta topic/ })).toHaveAttribute('aria-selected', 'true');
+  expect(within(trashTree).getByRole('treeitem', { name: /Zulu topic/ })).toHaveAttribute('aria-selected', 'false');
 });

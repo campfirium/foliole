@@ -1,3 +1,4 @@
+import type { NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -11,11 +12,12 @@ export interface RenderFolderListItemArgs {
   childNodes: Node[];
   draggedNodeId: string | null;
   folderNodeId?: string;
+  isBulkSelectionActive?: boolean;
   itemLayout: FolderListItemLayout;
   node: Node;
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodesById: Record<string, Node>;
-  onSelectNode: (nodeId: string) => void;
+  onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onSelectNodePath?: (nodeId: string) => void;
   setDraggedNodeId: (nodeId: string | null) => void;
   setFolderManualChildOrder?: (folderNodeId: string, childNodeIds: string[]) => void;
@@ -28,6 +30,7 @@ export function renderFolderListItem(args: RenderFolderListItemArgs) {
     <FolderListViewItem
       active={args.activeNodeId === args.node.id}
       draggable={args.canManualDrag}
+      {...(args.isBulkSelectionActive === undefined ? {} : { isBulkSelectionActive: args.isBulkSelectionActive })}
       itemLayout={args.itemLayout}
       key={args.node.id}
       node={args.node}
