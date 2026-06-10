@@ -25,6 +25,7 @@ function isIsolatedDesktopTestRuntime() {
 
 function isToastWindow(window: BrowserWindow) {
   return !window.isDestroyed() &&
+    window.isVisible() &&
     decodeURIComponent(window.webContents.getURL()).includes('class="capture-surface toast"');
 }
 

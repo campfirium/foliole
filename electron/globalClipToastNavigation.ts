@@ -50,12 +50,17 @@ function activateWindowPreservingPresentation(window: BrowserWindow) {
   }, 0);
 }
 
+function isMainAppWindow(window: BrowserWindow) {
+  const url = window.webContents.getURL();
+  return url.startsWith('file:') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
+}
+
 export function openGlobalCaptureTarget(nodeId: string, senderId: number) {
   if (process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1') {
     globalThis.__folioleGlobalCaptureToastOpenForTests = { nodeId, senderId };
   }
   for (const window of BrowserWindow.getAllWindows()) {
-    if (window.isDestroyed() || window.webContents.id === senderId) {
+    if (window.isDestroyed() || window.webContents.id === senderId || !isMainAppWindow(window)) {
       continue;
     }
     activateWindowPreservingPresentation(window);

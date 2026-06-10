@@ -83,6 +83,7 @@ it('opens the success target from the native Windows mouse release message', asy
     setFullScreen: vi.fn(),
     show: vi.fn(),
     webContents: {
+      getURL: vi.fn(() => 'file:///workspace/foliole/dist/index.html'),
       id: 7,
       send: vi.fn()
     }

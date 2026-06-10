@@ -24,6 +24,7 @@ function createWindow(id: number, overrides: Partial<{
   fullScreen: boolean;
   maximized: boolean;
   minimized: boolean;
+  url: string;
 }> = {}) {
   let fullScreen = overrides.fullScreen ?? false;
   let maximized = overrides.maximized ?? false;
@@ -51,6 +52,7 @@ function createWindow(id: number, overrides: Partial<{
       maximized = false;
     }),
     webContents: {
+      getURL: vi.fn(() => overrides.url ?? 'file:///workspace/foliole/dist/index.html'),
       id,
       send: vi.fn()
     }
@@ -66,12 +68,16 @@ beforeEach(() => {
 
 it('routes a clicked global clip toast to visible main windows only', async () => {
   const targetWindow = createWindow(1, { minimized: true });
-  const senderToastWindow = createWindow(2);
+  const senderToastWindow = createWindow(2, { url: 'data:text/html;charset=utf-8,toast' });
   const destroyedWindow = createWindow(3, { destroyed: true });
+  const prewarmedToastWindow = createWindow(4, { url: 'data:text/html;charset=utf-8,prewarmed-toast' });
+  const capturePanelWindow = createWindow(5, { url: 'data:text/html;charset=utf-8,capture-panel' });
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([
     targetWindow,
     senderToastWindow,
-    destroyedWindow
+    destroyedWindow,
+    prewarmedToastWindow,
+    capturePanelWindow
   ]);
   const { installGlobalCaptureToastOpenHandler } = await import('./globalClipToastNavigation.js');
 
@@ -96,6 +102,10 @@ it('routes a clicked global clip toast to visible main windows only', async () =
   );
   expect(senderToastWindow.webContents.send).not.toHaveBeenCalled();
   expect(destroyedWindow.webContents.send).not.toHaveBeenCalled();
+  expect(prewarmedToastWindow.show).not.toHaveBeenCalled();
+  expect(prewarmedToastWindow.webContents.send).not.toHaveBeenCalled();
+  expect(capturePanelWindow.show).not.toHaveBeenCalled();
+  expect(capturePanelWindow.webContents.send).not.toHaveBeenCalled();
 });
 
 it('keeps a maximized app window maximized when opening a clicked toast target', async () => {

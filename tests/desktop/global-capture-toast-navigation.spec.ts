@@ -112,10 +112,16 @@ async function showAndClickGlobalCaptureToast(session: DesktopSession) {
     });
   }, TOAST_TARGET_NODE_ID);
 
-  const toastRendererPage = (await Promise.all(session.electronApp.windows().map(async (windowPage) => ({
-    count: await windowPage.locator('.toast').count().catch(() => 0),
-    windowPage
-  })))).find((entry) => entry.count > 0)?.windowPage;
+  let toastRendererPage: Page | undefined;
+  for (let index = 0; index < 30 && !toastRendererPage; index += 1) {
+    toastRendererPage = (await Promise.all(session.electronApp.windows().map(async (windowPage) => ({
+      count: await windowPage.locator('.toast').count().catch(() => 0),
+      windowPage
+    })))).find((entry) => entry.count > 0)?.windowPage;
+    if (!toastRendererPage) {
+      await session.firstWindow.waitForTimeout(100);
+    }
+  }
   expect(toastRendererPage).toBeTruthy();
   await expect.poll(async () => toastRendererPage?.evaluate(() =>
     Boolean(window.globalCaptureToast)
@@ -169,6 +175,17 @@ async function expectMainWindowMaximized(session: DesktopSession) {
   })).toBe(true);
 }
 
+async function expectNoVisibleToastWindows(session: DesktopSession) {
+  await expect.poll(async () => session.electronApp.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows().filter((window) =>
+      !window.isDestroyed() &&
+      window.isVisible() &&
+      window.webContents.getURL().startsWith('data:text/html') &&
+      decodeURIComponent(window.webContents.getURL()).includes('class="capture-surface toast"')
+    ).length
+  )).toBe(0);
+}
+
 async function expectCapturedTarget(page: Page, targetNodeId: string) {
   await expect.poll(async () => page.evaluate(() =>
     (window as Window & { __globalCaptureNavigateProbe?: string | null }).__globalCaptureNavigateProbe ?? null
@@ -207,6 +224,7 @@ test('opens the clipped target from the global capture toast navigation route', 
     }).toBe(TOAST_TARGET_NODE_ID);
     await expectCapturedTarget(page, TOAST_TARGET_NODE_ID);
     await expectMainWindowMaximized(session);
+    await expectNoVisibleToastWindows(session);
   } finally {
     await session.close();
   }
