@@ -1,6 +1,6 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import type { MarkdownSyntaxTree } from './markdownLinkReferences';
 
-type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 export interface MarkdownCodeFenceProjection {
@@ -112,7 +112,14 @@ function collectCodeFenceNode(args: {
 }
 
 export function collectMarkdownCodeFenceProjection(text: string, offset = 0): MarkdownCodeFenceProjection {
-  const tree = folioleMarkdownParser.parse(text);
+  return collectMarkdownCodeFenceProjectionFromTree(folioleMarkdownParser.parse(text), text, offset);
+}
+
+export function collectMarkdownCodeFenceProjectionFromTree(
+  tree: MarkdownSyntaxTree,
+  text: string,
+  offset = 0
+): MarkdownCodeFenceProjection {
   const codeBlocks: MarkdownCodeFenceBlock[] = [];
   const codeLineFroms = new Set<number>();
   const fenceLineFroms = new Set<number>();

@@ -1,6 +1,6 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import type { MarkdownSyntaxTree } from './markdownLinkReferences';
 
-type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 export interface MarkdownCalloutPrefixRange {
@@ -85,7 +85,13 @@ function visitCalloutMarkers(args: {
 }
 
 export function collectMarkdownCalloutPrefixRanges(text: string): MarkdownCalloutPrefixRange[] {
-  const tree = folioleMarkdownParser.parse(text);
+  return collectMarkdownCalloutPrefixRangesFromTree(folioleMarkdownParser.parse(text), text);
+}
+
+export function collectMarkdownCalloutPrefixRangesFromTree(
+  tree: MarkdownSyntaxTree,
+  text: string
+): MarkdownCalloutPrefixRange[] {
   const ranges: MarkdownCalloutPrefixRange[] = [];
   visitCalloutMarkers({ ranges, node: tree.topNode, source: text });
   return ranges.sort((left, right) => left.from - right.from);

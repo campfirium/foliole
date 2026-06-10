@@ -1,10 +1,9 @@
 import type { EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
-import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
+import type { MarkdownLinkReferenceMap, MarkdownSyntaxTree } from './markdownLinkReferences';
 import { collectPipeSeparatedTableCells } from './markdownTableCells';
 
-type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 export type MarkdownTableCellAlignment = 'center' | 'left' | 'right' | null;
@@ -202,10 +201,20 @@ export function collectMarkdownTablePlans(args: {
   linkReferences?: MarkdownLinkReferenceMap;
   text: string;
 }): MarkdownTablePlan[] {
-  const tree = folioleMarkdownParser.parse(args.text);
+  return collectMarkdownTablePlansFromTree({ ...args, tree: folioleMarkdownParser.parse(args.text) });
+}
+
+export function collectMarkdownTablePlansFromTree(args: {
+  activePosition: number | null;
+  anchorDecorations?: readonly EditorTextAnchorDecoration[];
+  from: number;
+  linkReferences?: MarkdownLinkReferenceMap;
+  text: string;
+  tree: MarkdownSyntaxTree;
+}): MarkdownTablePlan[] {
   const tables: MarkdownTablePlan[] = [];
 
-  visitTableNodes(tree.topNode, (node) => {
+  visitTableNodes(args.tree.topNode, (node) => {
     const plan = collectTablePlanFromNode({
       activePosition: args.activePosition,
       anchorDecorations: args.anchorDecorations ?? [],

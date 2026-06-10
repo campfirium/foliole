@@ -6,11 +6,11 @@ import { resolveMarkdownImageWrappingLink } from './markdownImageWrappingLink';
 import { collectMarkdownInlineRanges } from './markdownInlineProjection';
 import {
   normalizeMarkdownLinkReferenceLabel,
-  type MarkdownLinkReferenceMap
+  type MarkdownLinkReferenceMap,
+  type MarkdownSyntaxTree
 } from './markdownLinkReferences';
 import { isSafeMarkdownLinkHref, normalizeMarkdownLinkDestination } from './markdownLinkSafety';
 
-type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 const BRACKETED_ALT_IMAGE_PREFIX = '![[';
 
@@ -32,9 +32,20 @@ interface ParserImageMatch {
   start: number;
 }
 
+function findLineEnd(text: string, position: number) {
+  const newline = text.indexOf('\n', position);
+  return newline < 0 ? text.length : newline;
+}
+
+function findLineStart(text: string, position: number) {
+  return text.lastIndexOf('\n', Math.max(0, position - 1)) + 1;
+}
+
 function resolveImageDisplay(text: string, matchIndex: number, raw: string) {
-  const before = text.slice(0, matchIndex).trim();
-  const after = text.slice(matchIndex + raw.length).trim();
+  const lineStart = findLineStart(text, matchIndex);
+  const lineEnd = findLineEnd(text, matchIndex + raw.length);
+  const before = text.slice(lineStart, matchIndex).trim();
+  const after = text.slice(matchIndex + raw.length, lineEnd).trim();
   return before.length === 0 && after.length === 0 ? 'block' : 'inline';
 }
 
@@ -181,8 +192,7 @@ function visitImageNodes(
   }
 }
 
-function collectParserImageMatches(text: string, references: MarkdownLinkReferenceMap) {
-  const tree: MarkdownSyntaxTree = folioleMarkdownParser.parse(text);
+function collectParserImageMatchesFromTree(tree: MarkdownSyntaxTree, text: string, references: MarkdownLinkReferenceMap) {
   const matches: ParserImageMatch[] = [];
   visitImageNodes(tree.topNode, text, matches, references);
   return [...matches, ...collectBracketedAltImageMatches(text)].sort((left, right) => left.start - right.start);
@@ -194,9 +204,19 @@ export function collectImageMatches(
   references: MarkdownLinkReferenceMap = new Map(),
   options: { allowRelativeImages?: boolean } = {}
 ): MarkdownImageMatch[] {
+  return collectImageMatchesFromTree(folioleMarkdownParser.parse(text), from, text, references, options);
+}
+
+export function collectImageMatchesFromTree(
+  tree: MarkdownSyntaxTree,
+  from: number,
+  text: string,
+  references: MarkdownLinkReferenceMap = new Map(),
+  options: { allowRelativeImages?: boolean } = {}
+): MarkdownImageMatch[] {
   const matches: MarkdownImageMatch[] = [];
 
-  for (const match of collectParserImageMatches(text, references)) {
+  for (const match of collectParserImageMatchesFromTree(tree, text, references)) {
     const source = match.rawTarget;
     if (
       source &&

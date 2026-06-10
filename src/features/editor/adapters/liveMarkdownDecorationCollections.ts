@@ -1,10 +1,19 @@
 import type { EditorView } from '@codemirror/view';
 
-import { collectMarkdownLineClassRanges, collectMarkdownPrefixRanges, collectMarkdownThematicBreakRanges } from '../model/markdownBlockProjection';
-import { collectMarkdownCodeFenceProjection } from '../model/markdownCodeFenceProjection';
-import { collectMarkdownLinkReferenceRanges, collectMarkdownLinkReferences, type MarkdownLinkReferenceRange } from '../model/markdownLinkReferences';
-import { collectMarkdownCalloutPrefixRanges, type MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
-import { collectMarkdownTablePlans } from '../model/markdownTablePlans';
+import {
+  collectMarkdownLineClassRangesFromTree,
+  collectMarkdownPrefixRangesFromTree,
+  collectMarkdownThematicBreakRangesFromTree
+} from '../model/markdownBlockProjection';
+import { collectMarkdownCodeFenceProjectionFromTree } from '../model/markdownCodeFenceProjection';
+import {
+  collectMarkdownLinkReferenceRangesFromTree,
+  type MarkdownLinkReferenceMap,
+  type MarkdownLinkReferenceRange,
+  type MarkdownSyntaxTree
+} from '../model/markdownLinkReferences';
+import { collectMarkdownCalloutPrefixRangesFromTree, type MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
+import { collectMarkdownTablePlansFromTree } from '../model/markdownTablePlans';
 import { collectViewportMarkdownTablePlans } from '../model/markdownTableViewport';
 
 import { getTextAnchorDecorations } from './liveMarkdownState';
@@ -18,29 +27,29 @@ export function collectViewportLines(view: EditorView, startLineNumber: number, 
   return lines;
 }
 
-export function collectCodeFenceProjection(view: EditorView) {
-  return collectMarkdownCodeFenceProjection(view.state.doc.toString());
+export function collectCodeFenceProjection(tree: MarkdownSyntaxTree, source: string) {
+  return collectMarkdownCodeFenceProjectionFromTree(tree, source);
 }
 
-export function collectThematicBreakLineFroms(view: EditorView) {
-  return new Set(collectMarkdownThematicBreakRanges(view.state.doc.toString()).map((range) => range.from));
+export function collectThematicBreakLineFroms(tree: MarkdownSyntaxTree, source: string) {
+  return new Set(collectMarkdownThematicBreakRangesFromTree(tree, source).map((range) => range.from));
 }
 
-export function collectLinkReferenceRangeByLineFrom(view: EditorView) {
+export function collectLinkReferenceRangeByLineFrom(tree: MarkdownSyntaxTree, source: string) {
   const rangesByLineFrom = new Map<number, MarkdownLinkReferenceRange>();
-  for (const range of collectMarkdownLinkReferenceRanges(view.state.doc.toString())) {
+  for (const range of collectMarkdownLinkReferenceRangesFromTree(tree, source)) {
     rangesByLineFrom.set(range.lineFrom, range);
   }
   return rangesByLineFrom;
 }
 
-export function collectLineClassByFrom(view: EditorView) {
-  return new Map(collectMarkdownLineClassRanges(view.state.doc.toString()).map((range) => [range.from, range.className]));
+export function collectLineClassByFrom(tree: MarkdownSyntaxTree, source: string) {
+  return new Map(collectMarkdownLineClassRangesFromTree(tree, source).map((range) => [range.from, range.className]));
 }
 
-export function collectPrefixRangesByLineFrom(view: EditorView) {
-  const rangesByLineFrom = new Map<number, Array<ReturnType<typeof collectMarkdownPrefixRanges>[number]>>();
-  for (const range of collectMarkdownPrefixRanges(view.state.doc.toString())) {
+export function collectPrefixRangesByLineFrom(tree: MarkdownSyntaxTree, source: string) {
+  const rangesByLineFrom = new Map<number, Array<ReturnType<typeof collectMarkdownPrefixRangesFromTree>[number]>>();
+  for (const range of collectMarkdownPrefixRangesFromTree(tree, source)) {
     const ranges = rangesByLineFrom.get(range.lineFrom) ?? [];
     ranges.push(range);
     rangesByLineFrom.set(range.lineFrom, ranges);
@@ -48,9 +57,9 @@ export function collectPrefixRangesByLineFrom(view: EditorView) {
   return rangesByLineFrom;
 }
 
-export function collectCalloutPrefixRangeByLineFrom(view: EditorView) {
+export function collectCalloutPrefixRangeByLineFrom(tree: MarkdownSyntaxTree, source: string) {
   const rangesByLineFrom = new Map<number, MarkdownCalloutPrefixRange>();
-  for (const range of collectMarkdownCalloutPrefixRanges(view.state.doc.toString())) {
+  for (const range of collectMarkdownCalloutPrefixRangesFromTree(tree, source)) {
     rangesByLineFrom.set(range.lineFrom, range);
   }
   return rangesByLineFrom;
@@ -58,16 +67,19 @@ export function collectCalloutPrefixRangeByLineFrom(view: EditorView) {
 
 export function collectViewportTablePlans(args: {
   endLine: { to: number };
+  linkReferences: MarkdownLinkReferenceMap;
+  markdownTree: MarkdownSyntaxTree;
   source: string;
   startLine: { from: number };
   view: EditorView;
 }) {
-  const tablePlans = collectMarkdownTablePlans({
+  const tablePlans = collectMarkdownTablePlansFromTree({
     activePosition: null,
     anchorDecorations: getTextAnchorDecorations(args.view),
     from: 0,
-    linkReferences: collectMarkdownLinkReferences(args.source),
-    text: args.source
+    linkReferences: args.linkReferences,
+    text: args.source,
+    tree: args.markdownTree
   });
   return collectViewportMarkdownTablePlans(tablePlans, { from: args.startLine.from, to: args.endLine.to });
 }

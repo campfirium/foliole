@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { folioleMarkdownParser } from './folioleMarkdownParser';
 import {
   collectMarkdownLineClassRanges,
+  collectMarkdownLineClassRangesFromTree,
   collectMarkdownPrefixRanges,
-  collectMarkdownThematicBreakRanges
+  collectMarkdownPrefixRangesFromTree,
+  collectMarkdownThematicBreakRanges,
+  collectMarkdownThematicBreakRangesFromTree
 } from './markdownBlockProjection';
 
 describe('markdownBlockProjection', () => {
@@ -67,5 +71,26 @@ describe('markdownBlockProjection', () => {
       { hiddenRanges: [{ from: 0, to: 4 }, { from: 17, to: 19 }], kind: 'heading', lineFrom: 0 },
       { hiddenRanges: [{ from: 20, to: 25 }, { from: 34, to: 36 }], kind: 'heading', lineFrom: 20 }
     ]);
+  });
+});
+
+describe('markdownBlockProjection shared tree reuse', () => {
+  it('collects offset block projections from a shared tree without reparsing', () => {
+    const text = '# Title\nSetext\n---\n> Quote\n- Item\n- [x] Done\n1. Ordered';
+    const tree = folioleMarkdownParser.parse(text);
+    const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');
+    parseSpy.mockClear();
+
+    expect(collectMarkdownThematicBreakRangesFromTree(tree, text, 10)).toEqual(
+      collectMarkdownThematicBreakRanges(text, 10)
+    );
+    expect(collectMarkdownLineClassRangesFromTree(tree, text, 10)).toEqual(
+      collectMarkdownLineClassRanges(text, 10)
+    );
+    expect(collectMarkdownPrefixRangesFromTree(tree, text, 10)).toEqual(
+      collectMarkdownPrefixRanges(text, 10)
+    );
+    expect(parseSpy).toHaveBeenCalledTimes(3);
+    parseSpy.mockRestore();
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import {
@@ -29,6 +29,8 @@ describe('markdownLinkReferences', () => {
   it('reuses a parsed markdown tree for references and ranges', () => {
     const source = 'Text\n\n[ref]: https://example.com';
     const tree = folioleMarkdownParser.parse(source);
+    const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');
+    parseSpy.mockClear();
 
     expect(Array.from(collectMarkdownLinkReferencesFromTree(tree, source))).toEqual(
       Array.from(collectMarkdownLinkReferences(source))
@@ -36,5 +38,7 @@ describe('markdownLinkReferences', () => {
     expect(collectMarkdownLinkReferenceRangesFromTree(tree, source)).toEqual(
       collectMarkdownLinkReferenceRanges(source)
     );
+    expect(parseSpy).toHaveBeenCalledTimes(2);
+    parseSpy.mockRestore();
   });
 });

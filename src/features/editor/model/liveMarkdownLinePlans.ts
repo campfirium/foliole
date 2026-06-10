@@ -48,6 +48,7 @@ interface PreviewLineDecorationPlanArgs {
   hideTitleHeading: boolean;
   inCodeBlock: boolean;
   codeFenceLineFroms?: ReadonlySet<number>;
+  imageMatches?: MarkdownImageMatch[];
   isCursorLine: boolean;
   lineFrom: number;
   lineNumber: number;
@@ -75,13 +76,7 @@ function collectPreviewTextDecorationPlans(args: {
     collectEmphasisTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
     collectStrongTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
     collectStrikethroughTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
-    collectSourceHighlightDecorationPlan(
-      args.lineFrom,
-      args.lineText,
-      args.inCodeBlock,
-      args.showSyntaxOnLine,
-      preservedRanges
-    )
+    collectSourceHighlightDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock, args.showSyntaxOnLine, preservedRanges)
   ];
 }
 
@@ -143,7 +138,7 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
     lineNumber: args.lineNumber,
     showSyntaxOnLine
   });
-  const imageMatches = collectImageMatches(args.lineFrom, args.lineText, linkReferences, {
+  const imageMatches = args.imageMatches ?? collectImageMatches(args.lineFrom, args.lineText, linkReferences, {
     allowRelativeImages: Boolean(args.localDocumentPath)
   });
   const {

@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { collectMarkdownCalloutPrefixRanges } from './markdownOblikeBlockProjection';
+import { folioleMarkdownParser } from './folioleMarkdownParser';
+import {
+  collectMarkdownCalloutPrefixRanges,
+  collectMarkdownCalloutPrefixRangesFromTree
+} from './markdownOblikeBlockProjection';
 
 describe('markdownOblikeBlockProjection', () => {
   it('collects callout prefixes only from blockquote markers', () => {
@@ -35,5 +39,18 @@ describe('markdownOblikeBlockProjection', () => {
         to: 14
       }
     ]);
+  });
+
+  it('collects callout prefixes from a shared tree without reparsing', () => {
+    const text = '> [!warning]- Folded title\n> Body';
+    const tree = folioleMarkdownParser.parse(text);
+    const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');
+    parseSpy.mockClear();
+
+    expect(collectMarkdownCalloutPrefixRangesFromTree(tree, text)).toEqual(
+      collectMarkdownCalloutPrefixRanges(text)
+    );
+    expect(parseSpy).toHaveBeenCalledTimes(1);
+    parseSpy.mockRestore();
   });
 });

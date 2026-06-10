@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { collectMarkdownTablePlans } from './markdownTablePlans';
+import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { collectMarkdownTablePlans, collectMarkdownTablePlansFromTree } from './markdownTablePlans';
 import { collectViewportMarkdownTablePlans } from './markdownTableViewport';
 
 describe('markdownTablePlans', () => {
@@ -67,5 +68,20 @@ describe('markdownTablePlans', () => {
     expect(viewportTables[0]?.from).toBe(text.indexOf('| Name'));
     expect(viewportTables[0]?.renderFrom).toBe(row12From);
     expect(viewportTables[0]?.rows.map((row) => row.cells[0]?.text)).toEqual(['Name', 'Row 12', 'Row 13', 'Row 14']);
+  });
+});
+
+describe('markdownTablePlans shared tree reuse', () => {
+  it('collects offset table plans from a shared tree without reparsing', () => {
+    const text = '| A | B |\n| --- | --- |\n| 1 | 2 |';
+    const tree = folioleMarkdownParser.parse(text);
+    const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');
+    parseSpy.mockClear();
+
+    const fromTree = collectMarkdownTablePlansFromTree({ activePosition: text.indexOf('1'), from: 10, text, tree });
+
+    expect(parseSpy).not.toHaveBeenCalled();
+    expect(fromTree).toEqual(collectMarkdownTablePlans({ activePosition: text.indexOf('1'), from: 10, text }));
+    parseSpy.mockRestore();
   });
 });

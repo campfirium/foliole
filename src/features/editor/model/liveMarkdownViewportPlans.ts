@@ -51,6 +51,7 @@ export function collectPreviewViewportPlans(args: {
       inCodeBlock: lineInCodeBlock,
       isCursorLine: args.cursorLineNumber !== null && line.lineNumber === args.cursorLineNumber,
       lineFrom: line.from,
+      ...optionalLineImageMatches(line, args.documentImageMatches),
       ...(args.lineClassByFrom ? { lineClassByFrom: args.lineClassByFrom } : {}),
       ...(args.linkReferenceLineFroms ? { linkReferenceLineFroms: args.linkReferenceLineFroms } : {}),
       lineNumber: line.lineNumber,
@@ -63,7 +64,7 @@ export function collectPreviewViewportPlans(args: {
     plans.push({
       lineFrom: line.from,
       lineText: line.text,
-      plan: applyDocumentImageMatches(plan, args.documentImageMatches)
+      plan
     });
     inCodeBlock = args.codeLineFroms ? inCodeBlock : plan.nextInCodeBlock;
   }
@@ -71,20 +72,14 @@ export function collectPreviewViewportPlans(args: {
   return plans;
 }
 
-function applyDocumentImageMatches(
-  plan: PreviewLineDecorationPlan,
+function optionalLineImageMatches(
+  line: ViewportLineInput,
   documentImageMatches: ReadonlyArray<MarkdownImageMatch> | undefined
-): PreviewLineDecorationPlan {
-  if (!documentImageMatches?.length || !plan.imageMatches.length) return plan;
+) {
+  if (!documentImageMatches) return {};
+  const lineTo = line.from + line.text.length;
   return {
-    ...plan,
-    imageMatches: plan.imageMatches.map((lineImage) => {
-      const documentImage = documentImageMatches.find(
-        (item) => item.source === lineImage.source && lineImage.from >= item.from && lineImage.to <= item.to
-      );
-      if (!documentImage?.linkHref) return lineImage;
-      return { ...lineImage, linkHref: documentImage.linkHref };
-    })
+    imageMatches: documentImageMatches.filter((image) => image.from >= line.from && image.to <= lineTo)
   };
 }
 

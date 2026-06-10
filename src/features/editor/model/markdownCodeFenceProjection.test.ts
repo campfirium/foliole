@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { collectMarkdownCodeFenceProjection } from './markdownCodeFenceProjection';
+import { folioleMarkdownParser } from './folioleMarkdownParser';
+import {
+  collectMarkdownCodeFenceProjection,
+  collectMarkdownCodeFenceProjectionFromTree
+} from './markdownCodeFenceProjection';
 
 function materializeProjection(text: string) {
   const projection = collectMarkdownCodeFenceProjection(text);
@@ -53,5 +57,18 @@ describe('markdownCodeFenceProjection', () => {
       codeLineFroms: [11, 17],
       fenceLineFroms: [0, 30]
     });
+  });
+
+  it('collects offset code fence projection from a shared tree without reparsing', () => {
+    const text = '```ts\nconst x = 1\n```';
+    const tree = folioleMarkdownParser.parse(text);
+    const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');
+    parseSpy.mockClear();
+
+    expect(collectMarkdownCodeFenceProjectionFromTree(tree, text, 10)).toEqual(
+      collectMarkdownCodeFenceProjection(text, 10)
+    );
+    expect(parseSpy).toHaveBeenCalledTimes(1);
+    parseSpy.mockRestore();
   });
 });

@@ -5,6 +5,7 @@ import {
   resolveMarkdownHeadingLineClass,
   type MarkdownHeadingPrefixRange
 } from './markdownBlockHeadingProjection';
+import type { MarkdownSyntaxTree } from './markdownLinkReferences';
 import { collectPlainParagraphLineClassRanges } from './markdownParagraphLineClasses';
 import {
   collectMarkdownHyphenThematicBreakLines,
@@ -12,7 +13,6 @@ import {
   type MarkdownThematicBreakRange
 } from './markdownThematicBreakProjection';
 
-type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 export type MarkdownBlockRange = MarkdownThematicBreakRange;
@@ -191,7 +191,10 @@ function visitLineClassNodes(args: {
 }
 
 export function collectMarkdownThematicBreakRanges(text: string, offset = 0): MarkdownBlockRange[] {
-  const tree = folioleMarkdownParser.parse(text);
+  return collectMarkdownThematicBreakRangesFromTree(folioleMarkdownParser.parse(text), text, offset);
+}
+
+export function collectMarkdownThematicBreakRangesFromTree(tree: MarkdownSyntaxTree, text: string, offset = 0): MarkdownBlockRange[] {
   const rangesByFrom = new Map<number, MarkdownBlockRange>();
   for (const range of collectMarkdownThematicBreakNodes(tree.topNode, offset)) {
     rangesByFrom.set(range.from, range);
@@ -203,7 +206,10 @@ export function collectMarkdownThematicBreakRanges(text: string, offset = 0): Ma
 }
 
 export function collectMarkdownLineClassRanges(text: string, offset = 0): MarkdownLineClassRange[] {
-  const tree = folioleMarkdownParser.parse(text);
+  return collectMarkdownLineClassRangesFromTree(folioleMarkdownParser.parse(text), text, offset);
+}
+
+export function collectMarkdownLineClassRangesFromTree(tree: MarkdownSyntaxTree, text: string, offset = 0): MarkdownLineClassRange[] {
   const lineClasses = new Map<number, MarkdownLineClassRange>();
   visitLineClassNodes({
     lineClasses,
@@ -212,14 +218,18 @@ export function collectMarkdownLineClassRanges(text: string, offset = 0): Markdo
     parentName: null,
     source: text
   });
-  for (const range of collectPlainParagraphLineClassRanges(text, offset, collectMarkdownThematicBreakRanges(text, offset), new Set(lineClasses.keys()))) {
+  const thematicBreaks = collectMarkdownThematicBreakRangesFromTree(tree, text, offset);
+  for (const range of collectPlainParagraphLineClassRanges(text, offset, thematicBreaks, new Set(lineClasses.keys()))) {
     setLineClass(lineClasses, range.from, range.className, range.priority);
   }
   return Array.from(lineClasses.values()).sort((left, right) => left.from - right.from);
 }
 
 export function collectMarkdownPrefixRanges(text: string, offset = 0): MarkdownPrefixRange[] {
-  const tree = folioleMarkdownParser.parse(text);
+  return collectMarkdownPrefixRangesFromTree(folioleMarkdownParser.parse(text), text, offset);
+}
+
+export function collectMarkdownPrefixRangesFromTree(tree: MarkdownSyntaxTree, text: string, offset = 0): MarkdownPrefixRange[] {
   const prefixes: MarkdownPrefixRange[] = [];
   visitPrefixNodes({
     node: tree.topNode,

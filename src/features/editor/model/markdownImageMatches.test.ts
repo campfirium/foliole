@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { collectImageMatches } from './markdownImageMatches';
+import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { collectImageMatches, collectImageMatchesFromTree } from './markdownImageMatches';
 
 describe('markdownImageMatches', () => {
   it('collects supported markdown image sources', () => {
@@ -58,6 +59,36 @@ describe('markdownImageMatches', () => {
     ]);
   });
 
+});
+
+describe('markdownImageMatches shared tree reuse', () => {
+  it('collects shared-tree image matches without reparsing', () => {
+    const references = new Map([['img', 'https://example.com/ref.png']]);
+    const markdown = [
+      '[![Cover](asset://hash-1.png)](https://example.com/post)',
+      '![Ref][img]',
+      '![[作揖]](asset://hash-2.png)'
+    ].join('\n');
+    const tree = folioleMarkdownParser.parse(markdown);
+    const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');
+    parseSpy.mockClear();
+
+    expect(collectImageMatchesFromTree(tree, 0, markdown, references)).toEqual(
+      collectImageMatches(0, markdown, references)
+    );
+    expect(parseSpy.mock.calls.filter(([source]) => source === markdown)).toHaveLength(1);
+    parseSpy.mockRestore();
+  });
+
+  it('keeps a line-alone image block-rendered in a multi-line document', () => {
+    const markdown = ['Intro text', '![Cover](https://example.com/a.png)', 'Tail text'].join('\n');
+    const tree = folioleMarkdownParser.parse(markdown);
+
+    expect(collectImageMatchesFromTree(tree, 0, markdown)[0]).toMatchObject({
+      display: 'block',
+      from: markdown.indexOf('![Cover]')
+    });
+  });
 });
 
 describe('markdownImageMatches local document images', () => {
