@@ -25,7 +25,7 @@ export function InspectorSection({
     <section
       aria-label={ariaLabel}
       className={cn(
-        'rounded-lg border border-border bg-[var(--app-inspector-section-bg)] p-4 shadow-inspector-section',
+        'rounded-[var(--app-inspector-section-radius,var(--radius-lg))] bg-[var(--app-inspector-section-bg)] p-[var(--app-inspector-section-padding,1rem)] shadow-inspector-section [border-color:var(--app-inspector-section-border-color,rgb(var(--color-border)))] [border-width:var(--app-inspector-section-border-width,1px)]',
         className
       )}
     >
