@@ -100,13 +100,13 @@ function runCommand(command, args, options = {}) {
 
 async function syncBatch({ action, changedFiles, hasDeletion, mirrorDir, repoRoot }) {
   const changedFilesText = changedFiles.join('\n');
+  let forceFullFallback = false;
   if (action === 'runtime') {
     await runCommand('npm', ['run', 'electron:compile'], { cwd: repoRoot });
     try {
       await runCommand(process.execPath, ['scripts/windows/electron-dist-incremental-sync.mjs', '--changed-files', changedFilesText], { cwd: repoRoot });
     } catch {
-      process.env.WINDOWS_SYNC_INCLUDE_ELECTRON_DIST = '1';
-      process.env.WINDOWS_SYNC_FORCE_FULL = '1';
+      forceFullFallback = true;
     }
   }
   await runCommand('bash', ['scripts/windows/windows-sync.sh'], {
@@ -114,8 +114,9 @@ async function syncBatch({ action, changedFiles, hasDeletion, mirrorDir, repoRoo
     env: {
       ...process.env,
       WINDOWS_MIRROR_DIR: mirrorDir,
-      WINDOWS_SYNC_CHANGED_FILES: hasDeletion ? '' : changedFilesText,
-      WINDOWS_SYNC_FORCE_FULL: hasDeletion ? '1' : process.env.WINDOWS_SYNC_FORCE_FULL ?? ''
+      WINDOWS_SYNC_CHANGED_FILES: hasDeletion || forceFullFallback ? '' : changedFilesText,
+      WINDOWS_SYNC_FORCE_FULL: hasDeletion || forceFullFallback ? '1' : process.env.WINDOWS_SYNC_FORCE_FULL ?? '',
+      WINDOWS_SYNC_INCLUDE_ELECTRON_DIST: forceFullFallback ? '1' : process.env.WINDOWS_SYNC_INCLUDE_ELECTRON_DIST ?? ''
     }
   });
 }
