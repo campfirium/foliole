@@ -9,19 +9,16 @@ import {
 } from './studyModeStatusBarPersistence';
 
 interface UseStudyModeOptions {
-  activeNodeId: string | null;
-  isViewingTrashNode: boolean;
+  canStartStudyMode: boolean;
 }
 
-export function useStudyMode({ activeNodeId, isViewingTrashNode }: UseStudyModeOptions) {
+export function useStudyMode({ canStartStudyMode }: UseStudyModeOptions) {
   const [isDevReviewStatusBarPersistenceEnabledState, setIsDevReviewStatusBarPersistenceEnabledState] = useState(
     () => import.meta.env.DEV && isDevReviewStatusBarPersistenceEnabled()
   );
   const [isStudyMode, setIsStudyMode] = useState(
     () => import.meta.env.DEV && isDevReviewStatusBarPersistenceEnabled() && isDevReviewStatusBarOpen()
   );
-  const canStartStudyMode = Boolean(activeNodeId) && !isViewingTrashNode;
-
   const setStudyMode = (next: boolean) => {
     setIsStudyMode(next);
     if (isDevReviewStatusBarPersistenceEnabledState) {

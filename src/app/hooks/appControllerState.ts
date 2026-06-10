@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { isHomeNode, isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
+import { buildStartReviewSessionQueue } from '../../store/workspaceReviewLiveQueue';
 
 import {
   useActiveNodeReadingPositionRestore,
@@ -131,7 +131,8 @@ function useEditorDraftCloseFlushRegistration(
 
 export function useWorkspaceControllerState(
   ws: ReturnType<typeof useWorkspaceSelectors>,
-  isWorkspaceHydrated: boolean
+  isWorkspaceHydrated: boolean,
+  nowIso = new Date().toISOString()
 ) {
   const trash = useTrashView({ trashedNodeIds: ws.trashedNodeIds });
   useWorkspaceActiveNodeDocument(ws.activeNodeId);
@@ -142,9 +143,9 @@ export function useWorkspaceControllerState(
   useRemovedSourcesWarmup(isWorkspaceHydrated);
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
+  const canStartStudyMode = buildStartReviewSessionQueue(ws, nowIso).length > 0;
   const study = useStudyMode({
-    activeNodeId: isHomeNode(activeNode) || isInboxNode(activeNode) ? null : ws.activeNodeId,
-    isViewingTrashNode: runtime.isViewingTrashNode
+    canStartStudyMode
   });
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);

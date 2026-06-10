@@ -85,7 +85,7 @@ it('runs the feedback command from the bottom rail', () => {
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.sendFeedback);
 });
 
-it('keeps the Flow button enabled when the current context cannot start Flow mode', () => {
+it('keeps the Flow button enabled with an empty review queue prompt', () => {
   const onToggleReviewSession = vi.fn();
   renderWithLocalization(
     <AppearanceSettingsProvider>
@@ -104,7 +104,7 @@ it('keeps the Flow button enabled when the current context cannot start Flow mod
     </AppearanceSettingsProvider>
   );
 
-  const studyButton = screen.getByRole('button', { name: 'Enter Flow' });
+  const studyButton = screen.getByRole('button', { name: 'Review queue empty' });
   expect(studyButton).not.toBeDisabled();
 
   fireEvent.click(studyButton);

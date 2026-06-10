@@ -51,14 +51,20 @@ function SettingsAction({ isSettingsOpen, onOpenSettings }: { isSettingsOpen: bo
 }
 
 function FlowAction({
+  canStartStudyMode,
   isStudyMode,
   onToggleReviewSession
 }: {
+  canStartStudyMode: boolean;
   isStudyMode: boolean;
   onToggleReviewSession: () => void;
 }) {
   const t = useTranslation();
-  const actionLabel = isStudyMode ? t('desktop.workspace.leaveFlow') : t('desktop.workspace.enterFlow');
+  const actionLabel = isStudyMode
+    ? t('desktop.workspace.leaveFlow')
+    : canStartStudyMode
+      ? t('desktop.workspace.enterFlow')
+      : t('desktop.workspace.reviewQueueEmpty');
   return (
     <ToolbarActionGroup
       ariaLabel={t('desktop.workspace.studyActions')}
@@ -117,6 +123,7 @@ function useWorkspaceRailToolbarState({
 }
 
 function renderStudyDock(props: {
+  canStartStudyMode: boolean;
   isStudyMode: boolean;
   onToggleReviewSession: () => void;
   showStudyDock: boolean;
@@ -136,6 +143,7 @@ function renderStudyDock(props: {
       ) : null}
       <div className="flex h-[var(--workspace-bottom-toolbar-height)] w-full shrink-0 items-center justify-center">
         <FlowAction
+          canStartStudyMode={props.canStartStudyMode}
           isStudyMode={props.isStudyMode}
           onToggleReviewSession={props.onToggleReviewSession}
         />
@@ -173,6 +181,7 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
         <SettingsAction isSettingsOpen={props.isSettingsOpen} onOpenSettings={props.onOpenSettings} />
       </div>
       {renderStudyDock({
+        canStartStudyMode: props.canStartStudyMode,
         isStudyMode: props.isStudyMode,
         onToggleReviewSession: props.onToggleReviewSession,
         showStudyDock: props.showStudyDock ?? true
@@ -203,6 +212,7 @@ export function WorkspaceStudyDockTrigger(props: {
       style={{ backgroundColor: 'var(--workspace-region-footer-rail-bg)' }}
     >
       <FlowAction
+        canStartStudyMode={props.canStartStudyMode}
         isStudyMode={props.isStudyMode}
         onToggleReviewSession={props.onToggleReviewSession}
       />

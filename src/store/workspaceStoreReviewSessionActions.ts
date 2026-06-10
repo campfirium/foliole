@@ -1,6 +1,6 @@
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 
-import { buildCurrentReviewSessionQueue, buildLiveReviewQueue, buildLiveReviewQueueOutput } from './workspaceReviewLiveQueue';
+import { buildCurrentReviewSessionQueue, buildLiveReviewQueue, buildStartReviewSessionQueue } from './workspaceReviewLiveQueue';
 import {
   advanceReviewSession,
   createEmptyReviewSession,
@@ -13,21 +13,6 @@ type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state
 
 function buildReviewQueue(state: WorkspaceState, now: string, mode: ReviewSessionMode): string[] {
   return buildLiveReviewQueue(state, now, { mode });
-}
-
-function buildReadingPushQueue(state: WorkspaceState, now: string) {
-  return buildLiveReviewQueue(state, now, { mode: 'reading-only' });
-}
-
-function buildStartReviewQueue(state: WorkspaceState, now: string) {
-  const liveQueue = buildLiveReviewQueueOutput(state, now, { mode: state.reviewSessionMode });
-  if (liveQueue.taskNodeIds.length > 0) {
-    return liveQueue.taskNodeIds;
-  }
-  if (state.reviewSessionMode === 'recommended') {
-    return buildReadingPushQueue(state, now);
-  }
-  return [];
 }
 
 function buildCurrentSessionQueue(state: WorkspaceState, now: string, mode = state.reviewSessionMode) {
@@ -48,7 +33,7 @@ export function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceStat
   return (now = new Date().toISOString()) => {
     let started = false;
     set((state) => {
-      const queueNodeIds = buildStartReviewQueue(state, now);
+      const queueNodeIds = buildStartReviewSessionQueue(state, now);
       if (queueNodeIds.length === 0) return state;
       started = true;
       return {

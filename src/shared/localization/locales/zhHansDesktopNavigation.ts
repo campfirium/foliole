@@ -17,6 +17,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.workspace.settings': '设置',
   'desktop.workspace.enterFlow': '进入 Flow',
   'desktop.workspace.leaveFlow': '退出 Flow',
+  'desktop.workspace.reviewQueueEmpty': '复习队列为空',
   'desktop.workspace.toggleTheme': '切换浅色/深色模式',
   'desktop.workspace.toggleLeftPanel': '切换左侧面板',
   'desktop.workspace.toggleRightSidebar': '切换右侧栏',

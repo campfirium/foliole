@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { buildLiveReviewQueueOutput } from './workspaceReviewLiveQueue';
+import { buildLiveReviewQueueOutput, buildStartReviewSessionQueue } from './workspaceReviewLiveQueue';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createQaNode,
@@ -26,6 +26,27 @@ it('splits review-first due readings into extension without expanding the task',
   expect(output.taskNodeIds).toEqual(['qa-due']);
   expect(output.extensionNodeIds).toEqual(['reading-due']);
   expect(output.visibleNodeIds).toEqual(['qa-due', 'reading-due']);
+});
+
+it('builds the start queue without requiring an active topic', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const state = {
+    ...createWorkspaceFixture([createQaNode('qa-due', '2026-03-01T00:00:00.000Z')]),
+    activeNodeId: null
+  };
+
+  expect(buildStartReviewSessionQueue(state, now)).toEqual(['qa-due']);
+});
+
+it('keeps recommended reading fallback for start queue', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const state = {
+    ...createWorkspaceFixture([createReadingNode('reading-due', '2026-03-01T00:00:00.000Z')]),
+    activeNodeId: null,
+    reviewSessionMode: 'recommended' as const
+  };
+
+  expect(buildStartReviewSessionQueue(state, now)).toEqual(['reading-due']);
 });
 
 it('keeps an actionable current pin at the front without trusting the old session queue', () => {

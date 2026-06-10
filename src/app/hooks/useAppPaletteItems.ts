@@ -165,7 +165,7 @@ function buildPaletteOptions(
     canToggleImmersiveMode: canToggleImmersiveMode(args),
     canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
     canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
-    canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode || args.reviewDueCount > 0,
+    canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
     canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,
     canSoonReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
     canPostponeReviewTopic: args.hasReviewCard && !args.isCurrentReviewItemGradable,

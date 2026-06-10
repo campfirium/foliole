@@ -61,17 +61,33 @@ it('enables developer source reimport for the current non-folder topic surface',
   });
 });
 
-it('enables review mode from the directory list when due review items exist without an active topic', () => {
+it('enables review mode from the directory list when the review queue can start without an active topic', () => {
   const { result } = renderHook(() =>
     useAppPaletteItems({
       ...createPaletteArgs(null),
       activeNodeId: null,
-      reviewDueCount: 2
+      reviewDueCount: 0,
+      study: { canStartStudyMode: true, isDevReviewStatusBarPersistenceEnabled: false }
     } as unknown as Parameters<typeof useAppPaletteItems>[0]), { wrapper }
   );
 
   expect(result.current.find((item) => item.id === APP_COMMAND_IDS.startStudyMode)).toMatchObject({
     enabled: true
+  });
+});
+
+it('does not enable review mode from due count alone', () => {
+  const { result } = renderHook(() =>
+    useAppPaletteItems({
+      ...createPaletteArgs(null),
+      activeNodeId: null,
+      reviewDueCount: 2,
+      study: { canStartStudyMode: false, isDevReviewStatusBarPersistenceEnabled: false }
+    } as unknown as Parameters<typeof useAppPaletteItems>[0]), { wrapper }
+  );
+
+  expect(result.current.find((item) => item.id === APP_COMMAND_IDS.startStudyMode)).toMatchObject({
+    enabled: false
   });
 });
 

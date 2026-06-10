@@ -75,6 +75,17 @@ export function buildLiveReviewQueue(
   return buildLiveReviewQueueOutput(state, now, overrides).taskNodeIds;
 }
 
+export function buildStartReviewSessionQueue(state: ReviewLiveQueueState, now: string) {
+  const liveQueue = buildLiveReviewQueueOutput(state, now, { mode: state.reviewSessionMode });
+  if (liveQueue.taskNodeIds.length > 0) {
+    return liveQueue.taskNodeIds;
+  }
+  if (state.reviewSessionMode === 'recommended') {
+    return buildLiveReviewQueue(state, now, { mode: 'reading-only' });
+  }
+  return [];
+}
+
 export function buildLiveReviewQueueOutput(
   state: ReviewLiveQueueState,
   now: string,

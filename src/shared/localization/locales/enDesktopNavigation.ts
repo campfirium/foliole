@@ -15,6 +15,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.workspace.settings': 'Settings',
   'desktop.workspace.enterFlow': 'Enter Flow',
   'desktop.workspace.leaveFlow': 'Leave Flow',
+  'desktop.workspace.reviewQueueEmpty': 'Review queue empty',
   'desktop.workspace.toggleTheme': 'Toggle Light/Dark Mode',
   'desktop.workspace.toggleLeftPanel': 'Toggle left panel',
   'desktop.workspace.toggleRightSidebar': 'Toggle right sidebar',

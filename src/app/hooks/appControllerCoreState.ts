@@ -12,7 +12,7 @@ export function useControllerCoreState() {
   const reviewSettings = useReviewSchedulerSettings();
   const nowIso = useNowIso();
   const isWorkspaceHydrated = useWorkspaceHydration();
-  const controller = useWorkspaceControllerState(ws, isWorkspaceHydrated);
+  const controller = useWorkspaceControllerState(ws, isWorkspaceHydrated, nowIso);
   const formalImport = useFormalImport();
   const hotkeys = useCommandShortcutState(APP_SHORTCUT_COMMAND_IDS);
   return { appearance, controller, formalImport, hotkeys, isWorkspaceHydrated, nowIso, reviewSettings, ws };

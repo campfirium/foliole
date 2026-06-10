@@ -11,9 +11,8 @@ beforeEach(() => {
 });
 
 function Probe() {
-  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
-  const study = useStudyMode({ activeNodeId, isViewingTrashNode });
+  const [canStartStudyMode, setCanStartStudyMode] = useState(false);
+  const study = useStudyMode({ canStartStudyMode });
   return (
     <>
       <div data-testid="mode">{study.isStudyMode ? 'on' : 'off'}</div>
@@ -23,18 +22,18 @@ function Probe() {
       </button>
       <button
         onClick={() => {
-          setActiveNodeId('due-node');
+          setCanStartStudyMode(true);
           study.startStudyMode({ force: true });
         }}
         type="button"
       >
         forced
       </button>
-      <button onClick={() => setActiveNodeId(null)} type="button">
-        delete current node
+      <button onClick={() => setCanStartStudyMode(false)} type="button">
+        clear queue
       </button>
-      <button onClick={() => setIsViewingTrashNode(true)} type="button">
-        open trash
+      <button onClick={() => setCanStartStudyMode(true)} type="button">
+        fill queue
       </button>
       <button onClick={() => study.toggleDevReviewStatusBarPersistence()} type="button">
         toggle dev memory
@@ -43,7 +42,7 @@ function Probe() {
   );
 }
 
-it('keeps guarded starts blocked without a current node but allows forced review starts', () => {
+it('keeps guarded starts blocked without a review queue but allows forced review starts', () => {
   render(<Probe />);
 
   act(() => screen.getByRole('button', { name: 'guarded' }).click());
@@ -53,20 +52,20 @@ it('keeps guarded starts blocked without a current node but allows forced review
   expect(screen.getByTestId('mode')).toHaveTextContent('on');
 });
 
-it('keeps an active review session when the current node is deleted', () => {
+it('starts guarded mode when the review queue can start', () => {
   render(<Probe />);
 
-  act(() => screen.getByRole('button', { name: 'forced' }).click());
-  act(() => screen.getByRole('button', { name: 'delete current node' }).click());
+  act(() => screen.getByRole('button', { name: 'fill queue' }).click());
+  act(() => screen.getByRole('button', { name: 'guarded' }).click());
 
   expect(screen.getByTestId('mode')).toHaveTextContent('on');
 });
 
-it('keeps review mode paused when trash view opens', () => {
+it('keeps an active review session when the queue later becomes empty', () => {
   render(<Probe />);
 
   act(() => screen.getByRole('button', { name: 'forced' }).click());
-  act(() => screen.getByRole('button', { name: 'open trash' }).click());
+  act(() => screen.getByRole('button', { name: 'clear queue' }).click());
 
   expect(screen.getByTestId('mode')).toHaveTextContent('on');
 });
