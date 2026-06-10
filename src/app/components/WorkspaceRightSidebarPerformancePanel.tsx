@@ -5,7 +5,12 @@ import { useTranslation, type Translate } from '../../shared/localization/Locali
 import { readAttachmentResourceCacheStats } from '../../shared/platform/attachmentResources';
 import { readPerformanceDiagnosticsProbe } from '../../shared/platform/performanceDiagnosticsProbe';
 import { loadRuntimePerformanceMemorySnapshot } from '../../shared/platform/performanceMemoryRuntimeRepository';
-import { InspectorSection } from '../../shared/ui';
+import {
+  InspectorSection,
+  inspectorDefinitionListClassName,
+  inspectorDefinitionTermClassName,
+  inspectorDefinitionValueClassName
+} from '../../shared/ui';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 interface WorkspaceRightSidebarPerformancePanelProps {
@@ -63,8 +68,8 @@ function readLoadedNodeStats(nodesById: Record<string, Node>) {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <>
-      <dt className="text-foreground/55">{label}</dt>
-      <dd className="min-w-0 break-all text-right text-foreground">{value}</dd>
+      <dt className={inspectorDefinitionTermClassName}>{label}</dt>
+      <dd className={`${inspectorDefinitionValueClassName} break-all`}>{value}</dd>
     </>
   );
 }
@@ -87,7 +92,7 @@ export function WorkspaceRightSidebarPerformancePanel(props: WorkspaceRightSideb
     <div className="flex min-h-0 flex-col gap-3">
       <InspectorSection
         description={activeNodeTitle ? t('desktop.diagnostics.performance.latestSelection', { title: activeNodeTitle }) : t('desktop.diagnostics.performance.selectNode')}
-        contentClassName="grid grid-cols-[minmax(96px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]"
+        contentClassName={inspectorDefinitionListClassName}
         title={t('desktop.diagnostics.performance.timing')}
       >
         <dl className="contents">
@@ -108,7 +113,7 @@ export function WorkspaceRightSidebarPerformancePanel(props: WorkspaceRightSideb
       </InspectorSection>
 
       <InspectorSection
-        contentClassName="grid grid-cols-[minmax(96px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]"
+        contentClassName={inspectorDefinitionListClassName}
         title={t('desktop.diagnostics.performance.memory')}
       >
         <dl className="contents">
@@ -145,7 +150,7 @@ function CacheSection({
 }) {
   return (
     <InspectorSection
-      contentClassName="grid grid-cols-[minmax(96px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]"
+      contentClassName={inspectorDefinitionListClassName}
       title={t('desktop.diagnostics.performance.cache')}
     >
       <dl className="contents">

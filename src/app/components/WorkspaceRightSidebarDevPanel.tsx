@@ -3,6 +3,15 @@ import type { ReactNode } from 'react';
 import type { Node, NodeReadingProfile } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
+import {
+  inspectorDefinitionListClassName,
+  inspectorDefinitionTermClassName,
+  inspectorDefinitionValueClassName,
+  inspectorListHeadingClassName,
+  inspectorListMetaClassName,
+  inspectorListTopDividerClassName,
+  inspectorListTitleClassName
+} from '../../shared/ui';
 
 import {
   formatDateTime,
@@ -25,17 +34,17 @@ interface WorkspaceRightSidebarDevPanelProps {
 function SchedulingInfoRow({ label, value }: { label: string; value: string }) {
   return (
     <>
-      <dt className="text-foreground/55">{label}</dt>
-      <dd className="min-w-0 text-right text-foreground">{value}</dd>
+      <dt className={inspectorDefinitionTermClassName}>{label}</dt>
+      <dd className={inspectorDefinitionValueClassName}>{value}</dd>
     </>
   );
 }
 
 function SchedulingSection({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <section className="border-t border-border/70 py-3 first:border-t-0 first:pt-0">
-      <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-foreground/50">{title}</h3>
-      <dl className="grid grid-cols-[minmax(92px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]">{children}</dl>
+    <section className={`mx-1 py-4 first:pt-0 ${inspectorListTopDividerClassName}`}>
+      <h3 className={`mb-2 px-3 pb-0 ${inspectorListHeadingClassName}`}>{title}</h3>
+      <dl className={inspectorDefinitionListClassName}>{children}</dl>
     </section>
   );
 }
@@ -62,9 +71,9 @@ function ReadingProfileSection({ reading, t }: { reading: NodeReadingProfile | n
 
 function EmptyDevPanelState({ t }: { t: SchedulingTranslate }) {
   return (
-    <section className="py-3">
-      <h3 className="text-sm font-semibold text-foreground">{t('desktop.diagnostics.scheduling.title')}</h3>
-      <p className="mt-1 text-sm text-foreground/65">{t('desktop.diagnostics.scheduling.empty')}</p>
+    <section className="px-1 py-3">
+      <h3 className={inspectorListTitleClassName}>{t('desktop.diagnostics.scheduling.title')}</h3>
+      <p className={`mt-1 ${inspectorListMetaClassName}`}>{t('desktop.diagnostics.scheduling.empty')}</p>
     </section>
   );
 }
@@ -98,10 +107,10 @@ function ReadingTopicContent({ data, t }: { data: SchedulingPanelData; t: Schedu
 
 function SchedulingHeader({ subtitle, t }: { subtitle: string; t: SchedulingTranslate }) {
   return (
-    <section className="pb-3">
+    <section className="px-1 pb-4">
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-foreground">{t('desktop.diagnostics.scheduling.title')}</h3>
-        <p className="mt-1 text-sm text-foreground/65">{subtitle}</p>
+        <h3 className={inspectorListTitleClassName}>{t('desktop.diagnostics.scheduling.title')}</h3>
+        <p className={`mt-1 ${inspectorListMetaClassName}`}>{subtitle}</p>
       </div>
     </section>
   );

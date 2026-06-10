@@ -3,6 +3,13 @@ import { beforeAll, expect, it } from 'vitest';
 
 import { preloadTranslationCatalog } from '../localization/translations';
 
+import {
+  InspectorList,
+  InspectorListHeading,
+  InspectorListRow,
+  inspectorDefinitionListClassName,
+  inspectorListDividerClassName
+} from './InspectorList';
 import { InspectorSection } from './InspectorSection';
 import { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
 import { ReviewActionBar } from './ReviewActionBar';
@@ -24,6 +31,28 @@ it('renders inspector section with shared header and body copy', () => {
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' })).toBeInTheDocument();
   expect(screen.getByText('Shared inspector copy.')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Inspect' })).toBeInTheDocument();
+});
+
+it('renders flat inspector list rows without a panel shell', () => {
+  render(
+    <>
+      <InspectorListHeading>Highlights(2)</InspectorListHeading>
+      <InspectorList ariaLabel="Inspector items">
+        <li className={inspectorListDividerClassName}>
+          <InspectorListRow active>Active entry</InspectorListRow>
+        </li>
+      </InspectorList>
+      <dl className={inspectorDefinitionListClassName}>
+        <dt>Timing</dt>
+        <dd>12 ms</dd>
+      </dl>
+    </>
+  );
+
+  expect(screen.getByText('Highlights(2)').className).toContain('uppercase');
+  expect(screen.getByRole('list', { name: 'Inspector items' }).className).not.toContain('bg-bg-panel');
+  expect(screen.getByRole('button', { name: 'Active entry' }).className).toContain('--app-surface');
+  expect(screen.getByText('Timing').parentElement?.className).toBe(inspectorDefinitionListClassName);
 });
 
 it('renders review action bar with primary, secondary, and status slots', () => {

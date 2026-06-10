@@ -1,7 +1,13 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
-import { AppErrorState } from '../../shared/ui';
+import {
+  AppErrorState,
+  inspectorListDividerLineClassName,
+  inspectorListHeadingClassName,
+  inspectorListMetaClassName,
+  inspectorListTitleClassName
+} from '../../shared/ui';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
 interface WorkspaceRightSidebarReviewQueuePanelProps {
@@ -34,7 +40,7 @@ function QueueHeader() {
   const t = useTranslation();
   return (
     <header className="px-4 pb-2 pt-3">
-      <h2 className="m-0 text-[13px] font-medium uppercase tracking-[0.02em] text-foreground/55">{t('desktop.rightPanel.flow')}</h2>
+      <h2 className={`m-0 px-0 pb-0 ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
     </header>
   );
 }
@@ -44,7 +50,7 @@ function EmptyQueueState() {
   return (
     <section className="min-h-0">
       <QueueHeader />
-      <p className="px-4 py-3 text-[13px] text-foreground/55">{t('desktop.rightPanel.flow.empty')}</p>
+      <p className={`px-4 py-3 ${inspectorListMetaClassName}`}>{t('desktop.rightPanel.flow.empty')}</p>
     </section>
   );
 }
@@ -73,11 +79,11 @@ function QueueRow(props: {
   const t = useTranslation();
   const kind = isFsrsReviewItemNode(props.node) ? 'item' : 'topic';
   return (
-    <li className="grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)] items-center gap-2 px-4 py-1.5 hover:bg-foreground/[0.025]">
-      <span className="text-right text-[11px] tabular-nums text-foreground/28">{props.index + 1}</span>
+    <li className="grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)] items-center gap-2 px-4 py-1.5 hover:bg-[var(--app-inspector-list-row-hover-bg)]">
+      <span className={`${inspectorListMetaClassName} text-right tabular-nums text-foreground/28`}>{props.index + 1}</span>
       <QueueKindIcon kind={kind} />
       <button
-        className="min-w-0 truncate text-left text-[13.5px] font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/35"
+        className={`${inspectorListTitleClassName} truncate font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
         onClick={() => props.onSelectNode(props.nodeId)}
         type="button"
       >
@@ -99,7 +105,7 @@ function FlowSection(props: {
   }
   return (
     <>
-      {props.showDivider ? <li className="mx-4 my-1.5 h-px list-none bg-border/45" role="presentation" /> : null}
+      {props.showDivider ? <li className={`mx-4 my-1.5 h-px list-none ${inspectorListDividerLineClassName}`} role="presentation" /> : null}
       {props.nodeIds.map((nodeId, index) => (
         <QueueRow
           index={props.indexOffset + index}

@@ -3,7 +3,7 @@ import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { InspectorSection } from '../../shared/ui';
+import { InspectorList, InspectorListRow, InspectorSection } from '../../shared/ui';
 
 import { mayHaveOutline, resolveActiveIndex, resolveDisplayItems } from './DocumentOutlineLayerModel';
 import { measureWorkspaceDiagnostic, useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
@@ -133,15 +133,14 @@ function OutlineItemsNav(props: {
   const t = useTranslation();
   return (
     <nav aria-label={t('desktop.rightPanel.outline.navigation')} className="relative min-h-full px-1 py-1">
-      <ol className="relative m-0 list-none p-0">
+      <InspectorList className="relative m-0 list-none p-0">
         {props.treeItems.map((item, index) => (
           <li className="relative" key={`${item.from}-${item.text}`}>
-            <button
+            <InspectorListRow
+              active={index === props.activeIndex}
               aria-current={index === props.activeIndex ? 'location' : undefined}
               className={cn(
-                'group relative flex min-h-7 w-full items-center rounded-md py-1 pr-2 text-left text-[13px] font-normal leading-5 transition-colors',
-                'hover:bg-foreground/[0.055] hover:text-foreground focus-visible:bg-foreground/[0.07] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-                index === props.activeIndex ? 'bg-[rgb(var(--app-accent-color-rgb)/0.22)] shadow-[inset_0_0_0_1px_rgb(var(--app-accent-color-rgb)/0.08)]' : '',
+                'group relative min-h-7 items-center rounded-md py-1 pr-2 text-[13px] font-normal leading-5 hover:text-foreground',
                 getOutlineItemTone(item.level, index === props.activeIndex)
               )}
               onClick={() => props.onRevealPosition(item.from)}
@@ -157,10 +156,10 @@ function OutlineItemsNav(props: {
                 </span>
               ) : null}
               <span className="line-clamp-2">{item.text}</span>
-            </button>
+            </InspectorListRow>
           </li>
         ))}
-      </ol>
+      </InspectorList>
     </nav>
   );
 }

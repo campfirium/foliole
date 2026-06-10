@@ -9,7 +9,14 @@ import {
   type WorkspaceListNodesById
 } from '../../features/nodes/model/workspaceListNode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppErrorState } from '../../shared/ui';
+import {
+  AppErrorState,
+  InspectorList,
+  InspectorListHeading,
+  InspectorListRow,
+  inspectorListBodyClassName,
+  inspectorListDividerClassName
+} from '../../shared/ui';
 
 interface WorkspaceRightSidebarHighlightsPanelProps {
   activeNodeId: string | null;
@@ -17,10 +24,6 @@ interface WorkspaceRightSidebarHighlightsPanelProps {
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
   onRevealHighlight: (nodeId: string) => void;
-}
-
-function EmptyHighlightsState() {
-  return null;
 }
 
 function isHighlightPanelTopic(node: Node) {
@@ -196,38 +199,38 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
   );
 
   if (!props.activeNodeId) {
-    return <EmptyHighlightsState />;
+    return null;
   }
   if (!node) {
     return <AppErrorState description={t('desktop.rightPanel.highlights.unavailableDescription')} title={t('desktop.rightPanel.highlights.unavailableTitle')} />;
   }
   if (!isHighlightPanelTopic(node)) {
-    return <EmptyHighlightsState />;
+    return null;
   }
   if (highlights.length === 0) {
-    return <EmptyHighlightsState />;
+    return null;
   }
 
   return (
     <div className="min-w-0 px-1">
-      <p className="px-1 pb-2 text-xs font-medium uppercase tracking-[0.08em] text-foreground/55">
+      <InspectorListHeading>
         {t('desktop.rightPanel.highlights.count', { count: highlights.length })}
-      </p>
-      <ol aria-label={t('desktop.rightPanel.highlights.list')} className="flex min-w-0 flex-col">
+      </InspectorListHeading>
+      <InspectorList ariaLabel={t('desktop.rightPanel.highlights.list')}>
         {highlights.map((highlight) => (
-          <li className="min-w-0 border-b border-border/35 last:border-b-0" key={highlight.nodeId}>
-            <button
-              className="flex min-w-0 w-full flex-col items-start px-1 py-4 text-left transition-colors hover:bg-black/[0.015] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+          <li className={`min-w-0 ${inspectorListDividerClassName}`} key={highlight.nodeId}>
+            <InspectorListRow
+              className="flex-col items-start px-1 py-4"
               onClick={() => props.onRevealHighlight(highlight.nodeId)}
               type="button"
             >
-              <span className="min-w-0 max-w-full whitespace-normal break-words text-sm leading-7 text-foreground">
+              <span className={`${inspectorListBodyClassName} max-w-full whitespace-normal break-words leading-7 text-foreground`}>
                 {highlight.text}
               </span>
-            </button>
+            </InspectorListRow>
           </li>
         ))}
-      </ol>
+      </InspectorList>
     </div>
   );
 }
