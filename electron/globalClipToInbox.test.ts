@@ -40,6 +40,7 @@ const { clipboardImage, electronMocks } = vi.hoisted(() => {
 vi.mock('electron', () => electronMocks);
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({ appendMainProcessDiagnosticLog: vi.fn() }));
 vi.mock('./database/databaseReadiness.js', () => ({ waitForDatabaseReady: vi.fn(async () => undefined) }));
+vi.mock('./globalClipTextSelection.js', () => ({ detectWindowsTextSelection: vi.fn(async () => null) }));
 vi.mock('./ipc/importClipboard.js', () => ({ runClipboardImport: vi.fn(async () => null) }));
 vi.mock('./ipc/importTextCapture.js', () => ({ runTextCaptureToInbox: vi.fn(async () => null) }));
 

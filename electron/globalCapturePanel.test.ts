@@ -9,8 +9,8 @@ const clipSettingsMocks = vi.hoisted(() => ({
 
 const { electronMocks, panelWindow } = vi.hoisted(() => {
   const ipcHandlers = new Map<string, (...args: unknown[]) => void>();
-  const webContents = {
-    executeJavaScript: vi.fn(async () => ({
+  function createTheme() {
+    return {
       accent: 'rgb(127, 177, 141)',
       actionForeground: 'rgba(232, 230, 223, 0.62)',
       actionHoverBackground: 'rgba(232, 230, 223, 0.06)',
@@ -24,24 +24,21 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
       inputBackground: 'rgb(36, 39, 35)', inputPaddingBlockEnd: '12px', inputPaddingBlockStart: '24px',
       mutedForeground: 'rgb(165, 164, 159)',
       strings: { hideHint: '×', hideHintLabel: '隐藏提示', hint: '回车保存，空白时导入剪贴板', placeholder: '...', save: '保存', showHint: '?', showHintLabel: '显示提示' }
-    })),
-    id: 11
+    };
+  }
+  const webContents = {
+    executeJavaScript: vi.fn(async () => createTheme()),
+    focus: vi.fn(), id: 11, send: vi.fn()
   };
-  const appWindows = vi.fn<() => Array<{
-    isDestroyed: () => boolean;
-    webContents: typeof webContents;
-  }>>(() => []);
+  const appWindows = vi.fn<() => Array<{ isDestroyed: () => boolean; webContents: typeof webContents }>>(() => []);
   const window = {
-    close: vi.fn(),
-    focus: vi.fn(),
+    close: vi.fn(), focus: vi.fn(),
     isDestroyed: vi.fn(() => false),
     isVisible: vi.fn(() => true),
     loadURL: vi.fn<(url: string) => Promise<void>>(async () => undefined),
     on: vi.fn(),
-    setBounds: vi.fn(),
-    setIgnoreMouseEvents: vi.fn(),
-    setOpacity: vi.fn(),
-    showInactive: vi.fn(),
+    setBackgroundColor: vi.fn(), setBounds: vi.fn(),
+    setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), showInactive: vi.fn(),
     webContents
   };
   return {
@@ -74,7 +71,7 @@ vi.mock('./globalClipSettings.js', () => clipSettingsMocks);
 import { resetGlobalCapturePanelWindowForTests, showGlobalCapturePanel } from './globalCapturePanel.js';
 
 async function waitForPanelLoad() {
-  for (let index = 0; index < 10 && panelWindow.loadURL.mock.calls.length === 0; index += 1) {
+  for (let index = 0; index < 30 && panelWindow.loadURL.mock.calls.length === 0; index += 1) {
     await Promise.resolve();
   }
 }
@@ -99,8 +96,9 @@ it('shows a compact shell-less capture panel with an isolated preload', async ()
   await waitForPanelLoad();
 
   expect(electronMocks.BrowserWindow).toHaveBeenCalledWith(expect.objectContaining({
-    backgroundColor: '#00000000',
+    backgroundColor: '#ffffff',
     height: 240,
+    transparent: false,
     width: 572,
     webPreferences: expect.objectContaining({
       contextIsolation: true,
@@ -147,14 +145,14 @@ it('renders the collapsed hint state from persisted settings', async () => {
   await expect(promise).resolves.toEqual({ type: 'cancelled' });
 });
 
-it('waits for the panel layout before revealing the prewarmed window', async () => {
+it('reveals the prewarmed panel immediately and focuses its web contents', async () => {
   const promise = showGlobalCapturePanel();
   await waitForPanelLoad();
 
-  expect(panelWindow.focus).not.toHaveBeenCalled();
-  panelWindow.emitReady();
   await waitForPanelReveal();
   expect(panelWindow.focus).toHaveBeenCalledTimes(1);
+  expect(panelWindow.webContents.focus).toHaveBeenCalledTimes(1);
+  expect(panelWindow.webContents.send).toHaveBeenCalledWith('foliole:global-capture-panel:focus');
   expect(panelWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(false);
   expect(panelWindow.setOpacity).toHaveBeenLastCalledWith(1);
 

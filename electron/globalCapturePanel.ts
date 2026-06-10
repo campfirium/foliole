@@ -4,6 +4,7 @@ import { BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron';
 
 import {
   GLOBAL_CAPTURE_PANEL_CANCEL_CHANNEL,
+  GLOBAL_CAPTURE_PANEL_FOCUS_CHANNEL,
   GLOBAL_CAPTURE_PANEL_READY_CHANNEL,
   GLOBAL_CAPTURE_PANEL_RESIZE_CHANNEL,
   GLOBAL_CAPTURE_PANEL_HINT_VISIBLE_CHANNEL,
@@ -32,6 +33,7 @@ const PANEL_HEIGHT = PANEL_MIN_HEIGHT;
 const PANEL_WIDTH = SURFACE_WIDTH + PANEL_GUTTER * 2;
 
 let cachedPanelWindow: BrowserWindow | null = null;
+let cachedPanelLoad: Promise<void> | null = null;
 
 function resolvePanelBounds(height: number) {
   const display = screen.getPrimaryDisplay();
@@ -82,14 +84,14 @@ function createPanelWindow() {
   const bounds = resolvePanelBounds(PANEL_HEIGHT);
   const panel = new BrowserWindow({
     alwaysOnTop: true,
-    backgroundColor: '#00000000',
+    backgroundColor: '#ffffff',
     focusable: true,
     frame: false,
     height: bounds.height,
     resizable: false,
     show: false,
     skipTaskbar: true,
-    transparent: true,
+    transparent: false,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -104,15 +106,29 @@ function createPanelWindow() {
   panel.setIgnoreMouseEvents(true);
   panel.showInactive();
   panel.on('closed', () => {
-    if (cachedPanelWindow === panel) cachedPanelWindow = null;
+    if (cachedPanelWindow === panel) {
+      cachedPanelWindow = null;
+      cachedPanelLoad = null;
+    }
   });
   return panel;
+}
+
+function loadPanelWindow(panel: BrowserWindow) {
+  if (!cachedPanelLoad) {
+    cachedPanelLoad = resolveFloatingTheme(panel).then((theme) => {
+      panel.setBackgroundColor(theme.background);
+      return panel.loadURL(buildPanelHtml({ ...theme, hintVisible: isGlobalClipHintVisible() }));
+    }).then(() => undefined);
+  }
+  return cachedPanelLoad;
 }
 
 function getPanelWindow() {
   if (!cachedPanelWindow || cachedPanelWindow.isDestroyed()) {
     cachedPanelWindow = createPanelWindow();
   }
+  void loadPanelWindow(cachedPanelWindow);
   return cachedPanelWindow;
 }
 
@@ -122,6 +138,7 @@ export function prepareGlobalCapturePanelWindow() {
 
 export function resetGlobalCapturePanelWindowForTests() {
   cachedPanelWindow = null;
+  cachedPanelLoad = null;
 }
 
 function revealPanel(panel: BrowserWindow) {
@@ -130,6 +147,8 @@ function revealPanel(panel: BrowserWindow) {
   if (!panel.isVisible()) panel.showInactive();
   panel.setOpacity(1);
   panel.focus();
+  panel.webContents.focus();
+  panel.webContents.send(GLOBAL_CAPTURE_PANEL_FOCUS_CHANNEL);
 }
 
 function concealPanel(panel: BrowserWindow) {
@@ -157,14 +176,12 @@ function removePanelIpcListeners(handlers: PanelIpcHandlers) {
 export function showGlobalCapturePanel(): Promise<GlobalCapturePanelResult> {
   return new Promise((resolve) => {
     const panel = getPanelWindow();
-    let loaded = false;
-    let ready = false;
     let settled = false;
     let shown = false;
     panel.setBounds(resolvePanelBounds(PANEL_HEIGHT), false);
     concealPanel(panel);
-    const showWhenReady = () => {
-      if (!loaded || !ready || shown || panel.isDestroyed()) return;
+    const showWhenLoaded = () => {
+      if (shown || settled || panel.isDestroyed()) return;
       shown = true;
       revealPanel(panel);
     };
@@ -182,8 +199,6 @@ export function showGlobalCapturePanel(): Promise<GlobalCapturePanelResult> {
     };
     const handleReady = (event: IpcMainEvent) => {
       if (!isPanelSender(event.sender.id)) return;
-      ready = true;
-      showWhenReady();
     };
     const handleHintVisible = (event: IpcMainEvent, value: unknown) => {
       if (!isPanelSender(event.sender.id) || typeof value !== 'boolean') return;
@@ -203,11 +218,25 @@ export function showGlobalCapturePanel(): Promise<GlobalCapturePanelResult> {
     ipcMain.on(GLOBAL_CAPTURE_PANEL_READY_CHANNEL, handleReady);
     ipcMain.on(GLOBAL_CAPTURE_PANEL_HINT_VISIBLE_CHANNEL, handleHintVisible);
     panel.on('closed', () => settle({ type: 'cancelled' }));
-    void resolveFloatingTheme(panel).then((theme) =>
-      panel.loadURL(buildPanelHtml({ ...theme, hintVisible: isGlobalClipHintVisible() }))
-    ).then(() => {
-      loaded = true;
-      showWhenReady();
-    });
+    void loadPanelWindow(panel).then(showWhenLoaded);
   });
+}
+
+declare global {
+  var __folioleGlobalCapturePanelResultForTests: GlobalCapturePanelResult | null | undefined,
+    __folioleShowGlobalCapturePanelForTests: (() => void) | undefined;
+}
+
+function isIsolatedDesktopTestRuntime() {
+  const workdir = process.env.FOLIOLE_WORKDIR?.trim();
+  return process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && workdir !== undefined && workdir !== process.cwd();
+}
+
+if (isIsolatedDesktopTestRuntime()) {
+  globalThis.__folioleShowGlobalCapturePanelForTests = () => {
+    globalThis.__folioleGlobalCapturePanelResultForTests = null;
+    void showGlobalCapturePanel().then((result) => {
+      globalThis.__folioleGlobalCapturePanelResultForTests = result;
+    });
+  };
 }

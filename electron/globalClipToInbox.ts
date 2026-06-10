@@ -26,11 +26,13 @@ import {
 import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 import type { GlobalClipDesktopToast, GlobalClipToastStatus } from './globalClipDesktopToastState.js';
 import { handleGlobalCapturePanelResult, importWithGlobalClipToast } from './globalClipImportRunner.js';
+import { detectWindowsTextSelection } from './globalClipTextSelection.js';
 import { runClipboardImport } from './ipc/importClipboard.js';
 
 const DEFAULT_SHORTCUT = 'Alt+Shift+C';
 const COPY_WAIT_TIMEOUT_MS = 220;
 const COPY_POLL_INTERVAL_MS = 25;
+const TEXT_SELECTION_DETECT_TIMEOUT_MS = 90;
 const POWERSHELL_COPY_COMMAND = [
   'Add-Type -AssemblyName System.Windows.Forms;',
   '[System.Windows.Forms.SendKeys]::SendWait("^c");'
@@ -77,6 +79,24 @@ async function waitForClipboardChange(
   return false;
 }
 
+async function detectTextSelectionQuickly(
+  detectTextSelection: NonNullable<GlobalClipToInboxDeps['detectTextSelection']>,
+  log: NonNullable<GlobalClipToInboxDeps['log']>
+) {
+  let timedOut = false;
+  const detected = detectTextSelection().catch((error) => {
+    log('global_clip_text_selection_detection_failed', { error });
+    return null;
+  });
+  const timeout = delay(TEXT_SELECTION_DETECT_TIMEOUT_MS).then(() => {
+    timedOut = true;
+    return false;
+  });
+  const result = await Promise.race([detected, timeout]);
+  if (timedOut) log('global_clip_text_selection_detection_timed_out');
+  return result;
+}
+
 async function sendWindowsCopyShortcut() {
   try {
     await execFileAsync('powershell.exe', [
@@ -99,6 +119,7 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const log = deps.log ?? appendMainProcessDiagnosticLog;
   const runImport = deps.runImport ?? runClipboardImport;
   const sendCopyShortcut = deps.sendCopyShortcut ?? sendWindowsCopyShortcut;
+  const detectTextSelection = deps.detectTextSelection ?? detectWindowsTextSelection;
   const showCapturePanel = deps.showCapturePanel ?? showGlobalCapturePanel;
   const waitForChange = deps.waitForClipboardChange ?? waitForClipboardChange;
   const waitForReady = deps.waitForReady ?? waitForDatabaseReady;
@@ -112,6 +133,7 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
     return await runGlobalClipToInboxOnce({
       clipboardRef,
       log,
+      detectTextSelection,
       runImport,
       sendCopyShortcut,
       showCapturePanel,
@@ -127,6 +149,7 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
 async function runGlobalClipToInboxOnce(args: {
   clipboardRef: NonNullable<GlobalClipToInboxDeps['clipboardRef']>;
   log: NonNullable<GlobalClipToInboxDeps['log']>;
+  detectTextSelection: NonNullable<GlobalClipToInboxDeps['detectTextSelection']>;
   runImport: typeof runClipboardImport;
   sendCopyShortcut: NonNullable<GlobalClipToInboxDeps['sendCopyShortcut']>;
   showCapturePanel: NonNullable<GlobalClipToInboxDeps['showCapturePanel']>;
@@ -135,6 +158,17 @@ async function runGlobalClipToInboxOnce(args: {
   waitForReady: typeof waitForDatabaseReady;
 }) {
   const before = readClipboardSnapshot(args.clipboardRef);
+  const hasTextSelection = await detectTextSelectionQuickly(args.detectTextSelection, args.log);
+  if (hasTextSelection === false) {
+    args.log('global_clip_opening_capture_panel');
+    return handleGlobalCapturePanelResult({
+      log: args.log,
+      panelResult: await args.showCapturePanel(),
+      runImport: args.runImport,
+      showDesktopToast: args.showDesktopToast,
+      waitForReady: args.waitForReady
+    });
+  }
   if (await args.sendCopyShortcut() && await args.waitForChange(before, args.clipboardRef)) {
     const after = readClipboardSnapshot(args.clipboardRef);
     if (hasStrictTextSelectionClipboard(after)) {

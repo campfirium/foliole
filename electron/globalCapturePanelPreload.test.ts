@@ -10,9 +10,17 @@ const PRELOAD_PATH = path.resolve(process.cwd(), 'electron', 'globalCapturePanel
 
 function executePanelPreload() {
   const ipcSend = vi.fn();
+  const ipcHandlers = new Map<string, () => void>();
   const sandboxRequire = vi.fn((specifier: string) => {
     if (specifier === 'electron') {
-      return { ipcRenderer: { send: ipcSend } };
+      return {
+        ipcRenderer: {
+          on: vi.fn((channel: string, handler: () => void) => {
+            ipcHandlers.set(channel, handler);
+          }),
+          send: ipcSend
+        }
+      };
     }
     throw new Error(`unsupported require: ${specifier}`);
   });
@@ -22,7 +30,10 @@ function executePanelPreload() {
     window
   }, { filename: PRELOAD_PATH });
   window.dispatchEvent(new Event('DOMContentLoaded'));
-  return { ipcSend };
+  return {
+    emitFocus: () => ipcHandlers.get('foliole:global-capture-panel:focus')?.(),
+    ipcSend
+  };
 }
 
 function setInputScrollHeight(input: HTMLTextAreaElement, value: number) {
@@ -106,9 +117,12 @@ it('toggles the persisted hint visibility from the footer buttons', () => {
 });
 
 it('submits Enter and keeps Shift+Enter for newlines', () => {
-  const { ipcSend } = executePanelPreload();
+  const { emitFocus, ipcSend } = executePanelPreload();
   const input = document.getElementById('capture') as HTMLTextAreaElement;
   input.value = 'quick thought';
+  document.body.focus();
+  emitFocus();
+  expect(document.activeElement).toBe(input);
 
   input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
   input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter', shiftKey: true }));

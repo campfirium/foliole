@@ -4,6 +4,7 @@ const { ipcRenderer } = require('electron');
 
 const SUBMIT_CHANNEL = 'foliole:global-capture-panel:submit';
 const CANCEL_CHANNEL = 'foliole:global-capture-panel:cancel';
+const FOCUS_CHANNEL = 'foliole:global-capture-panel:focus';
 const READY_CHANNEL = 'foliole:global-capture-panel:ready';
 const RESIZE_CHANNEL = 'foliole:global-capture-panel:resize';
 const HINT_VISIBLE_CHANNEL = 'foliole:global-capture-panel:hint-visible';
@@ -43,6 +44,12 @@ function resizeCaptureSurface() {
   ipcRenderer.send(RESIZE_CHANNEL, surfaceHeight + GUTTER * 2);
 }
 
+function focusCaptureInput() {
+  const input = document.getElementById('capture');
+  input?.focus();
+  resizeCaptureSurface();
+}
+
 function runAfterInitialPaint(callback) {
   let completed = false;
   const finish = () => {
@@ -66,9 +73,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const hideHint = document.getElementById('hide-hint');
   const showHint = document.getElementById('show-hint');
   const close = document.getElementById('close');
-  input?.focus();
-  resizeCaptureSurface();
+  focusCaptureInput();
   runAfterInitialPaint(() => ipcRenderer.send(READY_CHANNEL));
+  ipcRenderer.on(FOCUS_CHANNEL, focusCaptureInput);
   input?.addEventListener('input', resizeCaptureSurface);
   form?.addEventListener('submit', (event) => {
     event.preventDefault();
