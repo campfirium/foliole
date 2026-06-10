@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 
 import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
-import guidesViteConfig from '../vite.guides.config.ts';
+import guidesViteConfig, { webGuidesManifestPlugin } from '../vite.guides.config.ts';
 import viteConfig from '../vite.config.ts';
 
 describe('vite config', () => {
@@ -41,6 +41,36 @@ describe('vite config', () => {
     expect(String(guidesViteConfig.root)).toMatch(/src\/web-guides$/);
     expect(String(guidesViteConfig.build?.outDir)).toMatch(/dist-guides$/);
     expect(guidesViteConfig.build?.emptyOutDir).toBe(true);
+  });
+
+  it('emits the Web Guides manifest from public bundle asset names', () => {
+    const emitted = [];
+    const plugin = webGuidesManifestPlugin();
+
+    plugin.generateBundle.call(
+      { emitFile: (asset) => emitted.push(asset) },
+      {},
+      {
+        'assets/index-abc.js': { type: 'chunk', fileName: 'assets/index-abc.js' },
+        'assets/index-def.css': { type: 'asset', fileName: 'assets/index-def.css', source: '' },
+        'assets/logo.png': { type: 'asset', fileName: 'assets/logo.png', source: '' }
+      }
+    );
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toMatchObject({ fileName: 'guides-manifest.json', type: 'asset' });
+    const manifest = JSON.parse(emitted[0].source);
+    expect(manifest.runtime).toEqual({
+      entry: 'index.html',
+      assets: [
+        { path: 'assets/index-abc.js', type: 'script' },
+        { path: 'assets/index-def.css', type: 'style' }
+      ]
+    });
+    expect(manifest.guides[0]).toMatchObject({
+      slug: 'focused-reading-review',
+      canonicalPath: '/guides/focused-reading-review/'
+    });
   });
 
   it('unwraps Tailwind cascade layers for the Android 9 WebView CSS parser', () => {
