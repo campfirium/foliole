@@ -20,10 +20,17 @@ const floatingItemBaseClassName = [
 const floatingSectionHeaderBaseClassName =
   'px-3 pb-1 pt-3 text-ui-xs font-semibold uppercase tracking-[0.08em] text-foreground/50';
 const floatingEmptyStateBaseClassName = 'px-3 py-8 text-center text-ui-md text-foreground/60';
-const floatingStateSurfaceBaseClassName = 'px-3 py-8 text-center text-ui-md text-foreground/60';
+const floatingStateSurfaceBaseClassName = [
+  'rounded-md border border-[var(--app-floating-border-color)] bg-[var(--app-floating-surface-bg)] shadow-control',
+  'px-3 py-8 text-center text-ui-md text-foreground/60'
+].join(' ');
 const floatingMetaBadgeBaseClassName = [
   'truncate rounded-full border border-[var(--app-floating-border-color)] bg-[var(--app-floating-muted-bg)]',
   'px-2 py-0.5 text-ui-xs font-medium text-foreground/65'
+].join(' ');
+const floatingToolbarBaseClassName = [
+  'pointer-events-auto absolute left-1/2 top-3 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4',
+  'rounded-full px-4 py-2 transition-[opacity,transform] duration-200 ease-out'
 ].join(' ');
 
 export function appFloatingSurfaceClassName(
@@ -31,7 +38,7 @@ export function appFloatingSurfaceClassName(
   className?: string
 ) {
   const elevationClassName =
-    elevation === 'panel' ? 'rounded-lg shadow-panel' : 'rounded-lg shadow-none';
+    elevation === 'panel' ? 'rounded-lg shadow-panel' : 'rounded-lg shadow-popover';
   return cn(floatingSurfaceBaseClassName, elevationClassName, className);
 }
 
@@ -65,4 +72,8 @@ export function appFloatingStateSurfaceClassName(className?: string) {
 
 export function appFloatingMetaBadgeClassName(className?: string) {
   return cn(floatingMetaBadgeBaseClassName, className);
+}
+
+export function appFloatingToolbarClassName(className?: string) {
+  return cn(appFloatingSurfaceClassName('popover'), floatingToolbarBaseClassName, className);
 }

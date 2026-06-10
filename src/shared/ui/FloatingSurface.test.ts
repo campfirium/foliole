@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { expect, it } from 'vitest';
 
 import {
@@ -7,12 +10,19 @@ import {
   appFloatingMetaBadgeClassName,
   appFloatingOverlayClassName,
   appFloatingStateSurfaceClassName,
-  appFloatingSurfaceClassName
+  appFloatingSurfaceClassName,
+  appFloatingToolbarClassName
 } from './FloatingSurface';
+
+function readWorkspaceFile(path: string) {
+  return readFileSync(join(process.cwd(), path), 'utf8');
+}
 
 it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingOverlayClassName()).toContain('bg-[var(--app-floating-overlay-bg)]');
   expect(appFloatingSurfaceClassName('panel')).toContain('bg-[var(--app-floating-surface-bg)]');
+  expect(appFloatingSurfaceClassName('panel')).toContain('shadow-panel');
+  expect(appFloatingSurfaceClassName('popover')).toContain('shadow-popover');
   expect(appFloatingInputClassName()).toContain('bg-[var(--app-floating-input-bg)]');
   expect(appFloatingInputClassName()).toContain('border-b');
   expect(appFloatingInputClassName()).toContain('border-[var(--app-floating-divider-color)]');
@@ -28,6 +38,28 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   );
   expect(appFloatingMetaBadgeClassName()).toContain('text-ui-xs');
   expect(appFloatingMetaBadgeClassName()).not.toContain('text-[10px]');
+  expect(appFloatingStateSurfaceClassName()).toContain('bg-[var(--app-floating-surface-bg)]');
+  expect(appFloatingStateSurfaceClassName()).toContain('border-[var(--app-floating-border-color)]');
+  expect(appFloatingStateSurfaceClassName()).toContain('shadow-control');
   expect(appFloatingStateSurfaceClassName()).toContain('text-ui-md');
   expect(appFloatingStateSurfaceClassName()).toContain('py-8');
+  expect(appFloatingToolbarClassName()).toContain('bg-[var(--app-floating-surface-bg)]');
+  expect(appFloatingToolbarClassName()).toContain('border-[var(--app-floating-border-color)]');
+  expect(appFloatingToolbarClassName()).toContain('rounded-full');
+  expect(appFloatingToolbarClassName()).not.toContain('bg-bg-elevated');
+});
+
+it('keeps formal floating menus from defining private surface colors', () => {
+  const files = [
+    'src/shared/ui/DropdownMenu.tsx',
+    'src/features/nodes/components/NodeListContextMenu.tsx',
+    'src/app/components/WorkspaceVirtualSavedSearchContextMenu.tsx',
+    'src/features/nodes/components/nodeListContextMenuPresentation.tsx',
+    'src/features/editor/adapters/liveMarkdownImageContextMenu.ts'
+  ];
+  const combined = files.map(readWorkspaceFile).join('\n');
+
+  expect(combined).not.toContain('bg-[color-mix(in_oklab,var(--app-floating-surface-bg)');
+  expect(combined).not.toContain('--node-context-menu-item-hover-bg');
+  expect(combined).not.toContain('--app-selection-surface-color');
 });

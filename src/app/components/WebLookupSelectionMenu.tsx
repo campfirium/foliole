@@ -8,7 +8,7 @@ import {
   resolveWebLookupAction,
   type WebLookupEntry
 } from '../../shared/platform/webLookupEntries';
-import { AppButton, AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
+import { AppButton, appFloatingStateSurfaceClassName, AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { SelectionCommandPayload } from '../contextCommands';
 
 type WebLookupActionEntry = NonNullable<ReturnType<typeof resolveWebLookupAction>>;
@@ -74,7 +74,7 @@ function WebLookupNotice(props: {
   return (
     <div
       aria-live="polite"
-      className="mx-2 my-1 max-w-72 rounded border border-border/50 bg-bg-elevated px-2 py-1.5 text-xs leading-5 text-foreground/72"
+      className={appFloatingStateSurfaceClassName('mx-2 my-1 max-w-72 px-2 py-1.5 text-ui-xs leading-5 text-foreground/72')}
       role="status"
     >
       <div className="flex items-start gap-2">
