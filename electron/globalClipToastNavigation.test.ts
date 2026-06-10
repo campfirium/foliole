@@ -38,6 +38,7 @@ function createWindow(id: number, overrides: Partial<{
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useRealTimers();
   vi.resetModules();
   waitForRendererAppReady.mockResolvedValue(undefined);
 });
@@ -94,4 +95,22 @@ it('waits for the renderer app-ready marker before sending the clicked toast tar
     'foliole:global-capture-navigate',
     { nodeId: 'node-imported' }
   ));
+});
+
+it('sends the clicked toast target after a short timeout when app-ready is not observed', async () => {
+  vi.useFakeTimers();
+  waitForRendererAppReady.mockReturnValue(new Promise<void>(() => undefined));
+  const targetWindow = createWindow(1);
+  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([targetWindow]);
+  const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
+
+  openGlobalCaptureTarget('node-imported', 2);
+
+  expect(targetWindow.webContents.send).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(300);
+
+  expect(targetWindow.webContents.send).toHaveBeenCalledWith(
+    'foliole:global-capture-navigate',
+    { nodeId: 'node-imported' }
+  );
 });

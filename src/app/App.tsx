@@ -137,8 +137,12 @@ function runStartupPrewarmQueue(tasks: Array<() => Promise<unknown>>) {
     if (cancelled || index >= tasks.length) {
       return;
     }
+    const nextTask = tasks[index];
+    if (!nextTask) {
+      return;
+    }
     cancelScheduledTask = scheduleIdleTask(() => {
-      void tasks[index]().catch(() => undefined).finally(() => runNextTask(index + 1));
+      void nextTask().catch(() => undefined).finally(() => runNextTask(index + 1));
     });
   };
 

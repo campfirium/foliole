@@ -10,6 +10,7 @@ export type WorkspaceRefreshSource =
   | 'content-changed'
   | 'external-document-import'
   | 'formal-import'
+  | 'global-capture-navigation'
   | 'guided-sample'
   | 'import-overview-reset'
   | 'managed-inbox'

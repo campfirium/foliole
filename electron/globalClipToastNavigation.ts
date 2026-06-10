@@ -5,15 +5,30 @@ import { waitForRendererAppReady } from './ipc/boot.js';
 import { IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL } from './ipc/contracts.js';
 
 let hasInstalledToastOpenHandler = false;
+const RENDERER_APP_READY_WAIT_MS = 300;
+
+declare global {
+  var __folioleGlobalCaptureToastOpenForTests: { nodeId: string; senderId: number } | undefined;
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => globalThis.setTimeout(resolve, ms));
+}
 
 async function sendGlobalCaptureNavigation(window: BrowserWindow, nodeId: string) {
-  await waitForRendererAppReady();
+  await Promise.race([
+    waitForRendererAppReady(),
+    delay(RENDERER_APP_READY_WAIT_MS)
+  ]);
   if (!window.isDestroyed()) {
     window.webContents.send(IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL, { nodeId });
   }
 }
 
 export function openGlobalCaptureTarget(nodeId: string, senderId: number) {
+  if (process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1') {
+    globalThis.__folioleGlobalCaptureToastOpenForTests = { nodeId, senderId };
+  }
   for (const window of BrowserWindow.getAllWindows()) {
     if (window.isDestroyed() || window.webContents.id === senderId) {
       continue;

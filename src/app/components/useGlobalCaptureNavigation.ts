@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { onGlobalCaptureNavigate } from '../../shared/platform/runtimeShellEvents';
+import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -20,7 +21,10 @@ export function useGlobalCaptureNavigation(onSelectNode: (nodeId: string) => Pro
         }
         await onSelectNodeRef.current(nodeId);
         if (!isDisposed && useWorkspaceStore.getState().activeNodeId !== nodeId) {
-          useWorkspaceStore.getState().openNode(nodeId);
+          const prepared = await openWorkspaceNodeWithPreparedDocument(nodeId, { forceLoad: true, keepWarm: true });
+          if (!prepared && !isDisposed && useWorkspaceStore.getState().activeNodeId !== nodeId) {
+            useWorkspaceStore.getState().openNode(nodeId);
+          }
         }
       });
     }).then((nextUnlisten) => {

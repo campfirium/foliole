@@ -10,7 +10,6 @@ import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { useDesktopResizeRemeasureBridge } from './useDesktopResizeRemeasureBridge';
-import { useGlobalCaptureNavigation } from './useGlobalCaptureNavigation';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { useWorkspaceActivityNotice } from './useWorkspaceActivityNotice';
 import { WorkspaceActivityNotice } from './WorkspaceActivityNotice';
@@ -129,7 +128,6 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
     onOpenTrashView: trash.onOpenTrashView,
     onSelectNode: navigation.onSelectNode
   });
-  useGlobalCaptureNavigation(handleSelectNode);
   const workspaceGridStyle = buildWorkspaceGridStyle(layoutChrome);
 
   useEffect(() => {

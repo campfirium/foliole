@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { BrowserWindow, screen } from 'electron';
+import { BrowserWindow, nativeTheme, screen } from 'electron';
 
 import { GLOBAL_CAPTURE_TOAST_TARGET_CHANNEL } from './globalCaptureChannels.js';
 import {
@@ -18,7 +18,7 @@ import {
   type GlobalClipDesktopToast,
   type GlobalClipToastStatus
 } from './globalClipDesktopToastState.js';
-import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigation.js';
+import { installGlobalCaptureToastOpenHandler, openGlobalCaptureTarget } from './globalClipToastNavigation.js';
 
 const TOAST_GUTTER = 22;
 const TOAST_HEIGHT = 72;
@@ -26,6 +26,7 @@ const TOAST_MARGIN = 18;
 const TOAST_WIDTH = 340;
 const TOAST_WINDOW_HEIGHT = TOAST_HEIGHT + TOAST_GUTTER * 2;
 const TOAST_WINDOW_WIDTH = TOAST_WIDTH + TOAST_GUTTER * 2;
+const WM_LBUTTONUP = 0x0202;
 
 function closeToastAfterDisplay(toastWindow: BrowserWindow, status: GlobalClipToastStatus) {
   if (status === 'pending') {
@@ -66,8 +67,8 @@ function buildToastHtml(theme: GlobalCaptureFloatingTheme, status: GlobalClipToa
     '.brand-fallback{display:block;width:14px;height:16px;border-radius:6px;background:color-mix(in srgb,var(--capture-accent) 20%,transparent);}',
     '.toast[data-clickable="true"]{cursor:pointer;}',
     '</style>',
-    `<div class="capture-surface toast" data-clickable="false" data-status="${status}" role="status"><span class="mark"></span><span class="content"><span class="title">${escapeHtml(text.title)}</span><span class="meta">${escapeHtml(text.meta)}</span></span><span class="brand">${buildBrandMarkHtml()}</span></div>`,
-    '<script>document.addEventListener("click",()=>{if(document.querySelector(".toast")?.dataset.clickable==="true"){window.globalCaptureToast?.open();}});</script>'
+    `<div class="capture-surface toast" data-clickable="false" data-status="${status}" onclick="window.__globalCaptureToastClickCount+=1;if(this.dataset.clickable==='true'){window.globalCaptureToast?.open(this.dataset.targetNodeId);}" role="status"><span class="mark"></span><span class="content"><span class="title">${escapeHtml(text.title)}</span><span class="meta">${escapeHtml(text.meta)}</span></span><span class="brand">${buildBrandMarkHtml()}</span></div>`,
+    '<script>window.__globalCaptureToastClickCount=0;</script>'
   ].join('');
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
@@ -86,6 +87,7 @@ function buildToastUpdateScript(status: GlobalClipToastStatus, targetNodeId: str
       if (!toast || !title || !meta) return;
       toast.dataset.status = state.status;
       toast.dataset.clickable = state.status === 'success' && Boolean(targetNodeId) ? 'true' : 'false';
+      toast.dataset.targetNodeId = targetNodeId ?? '';
       title.textContent = titleText;
       meta.textContent = metaText;
     })()
@@ -97,14 +99,14 @@ function createToastWindow() {
   const { x, y, width, height } = display.workArea;
   const toastWindow = new BrowserWindow({
     alwaysOnTop: true,
-    backgroundColor: '#00000000',
-    focusable: false,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#2a2d29' : '#ffffff',
+    focusable: true,
     frame: false,
     height: TOAST_WINDOW_HEIGHT,
     resizable: false,
     show: false,
     skipTaskbar: true,
-    transparent: true,
+    transparent: false,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -116,8 +118,16 @@ function createToastWindow() {
     y: y + height - TOAST_HEIGHT - TOAST_MARGIN - TOAST_GUTTER
   });
   toastWindow.setAlwaysOnTop(true, 'screen-saver');
-  toastWindow.setIgnoreMouseEvents(true);
+  toastWindow.setIgnoreMouseEvents(false);
   return toastWindow;
+}
+
+function openToastTarget(toastWindow: BrowserWindow, targetNodeId: string | null) {
+  if (!targetNodeId || toastWindow.isDestroyed()) {
+    return;
+  }
+  openGlobalCaptureTarget(targetNodeId, toastWindow.webContents.id);
+  toastWindow.close();
 }
 
 export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'success'): GlobalClipDesktopToast {
@@ -128,6 +138,9 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
   let navigationTargetNodeId: string | null = null;
   let isLoaded = false;
   let closeScheduled = false;
+  toastWindow.hookWindowMessage?.(WM_LBUTTONUP, () => {
+    openToastTarget(toastWindow, navigationTargetNodeId);
+  });
   const scheduleClose = () => {
     if (closeScheduled || currentStatus === 'pending') {
       return;
@@ -140,7 +153,7 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
     navigationTargetNodeId = nextStatus === 'success' && targetNodeId ? targetNodeId : null;
     currentPreviewTitle = nextStatus === 'success' ? previewTitle ?? currentPreviewTitle : null;
     if (isLoaded && !toastWindow.isDestroyed()) {
-      toastWindow.setIgnoreMouseEvents(!navigationTargetNodeId);
+      toastWindow.setIgnoreMouseEvents(false);
       if (navigationTargetNodeId) {
         toastWindow.moveTop();
       }
@@ -165,5 +178,50 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
       }
     },
     update
+  };
+}
+
+type GlobalClipDesktopToastTestHook = (input: {
+  previewTitle?: string;
+  status?: GlobalClipToastStatus;
+  targetNodeId: string;
+}) => Promise<{
+  bounds: Electron.Rectangle;
+  clickPoint: Electron.Point;
+  hwndHex: string;
+  webContentsId: number;
+}>;
+
+declare global {
+  var __folioleShowGlobalClipDesktopToastForTests: GlobalClipDesktopToastTestHook | undefined;
+}
+
+function isIsolatedDesktopTestRuntime() {
+  const workdir = process.env.FOLIOLE_WORKDIR?.trim();
+  return process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && Boolean(workdir) && workdir !== process.cwd();
+}
+
+if (isIsolatedDesktopTestRuntime()) {
+  globalThis.__folioleShowGlobalClipDesktopToastForTests = async (input) => {
+    const toast = showGlobalClipDesktopToast(input.status ?? 'pending');
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 250));
+    toast.update('success', input.targetNodeId, input.previewTitle ?? null);
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 250));
+    const toastWindow = BrowserWindow.getAllWindows().find((window) =>
+      !window.isDestroyed() && window.webContents.getURL().startsWith('data:text/html')
+    );
+    if (!toastWindow) {
+      throw new Error('global capture toast window was not created');
+    }
+    const bounds = toastWindow.getBounds();
+    return {
+      bounds,
+      clickPoint: screen.dipToScreenPoint({
+        x: bounds.x + bounds.width / 2,
+        y: bounds.y + bounds.height / 2
+      }),
+      hwndHex: toastWindow.getNativeWindowHandle().toString('hex'),
+      webContentsId: toastWindow.webContents.id
+    };
   };
 }

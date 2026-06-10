@@ -29,8 +29,10 @@ vi.mock('electron', () => electronMocks);
 import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 
 function createToastWindow() {
+  const hookWindowMessage = vi.fn();
   return {
     close: vi.fn(),
+    hookWindowMessage,
     isDestroyed: vi.fn(() => false),
     loadURL: vi.fn<(_url: string) => Promise<void>>(async () => undefined),
     moveTop: vi.fn(),
@@ -71,18 +73,19 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
 
   expect(electronMocks.BrowserWindow).toHaveBeenCalledWith(expect.objectContaining({
     alwaysOnTop: true,
-    backgroundColor: '#00000000',
-    focusable: false,
+    backgroundColor: '#ffffff',
+    focusable: true,
     frame: false,
     height: 116,
     skipTaskbar: true,
-    transparent: true,
+    transparent: false,
     width: 384,
     x: 1020,
     y: 788
   }));
   expect(toastWindow.setAlwaysOnTop).toHaveBeenCalledWith(true, 'screen-saver');
-  expect(toastWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(true);
+  expect(toastWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(false);
+  expect(toastWindow.hookWindowMessage).toHaveBeenCalledWith(0x0202, expect.any(Function));
   expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
   const loadedUrl = toastWindow.loadURL.mock.calls[0]?.[0] ?? '';
   const html = decodeURIComponent(loadedUrl);
@@ -164,91 +167,4 @@ it('keeps the success preview when import finishes before the toast loads', asyn
     { nodeId: 'node-1' }
   );
   expect(toastWindow.setIgnoreMouseEvents).toHaveBeenLastCalledWith(false);
-});
-
-it('uses the current app floating theme for the desktop toast', async () => {
-  vi.useFakeTimers();
-  const executeJavaScript = vi.fn(async () => ({
-    accent: 'rgb(127, 177, 141)',
-    background: 'rgb(42, 45, 41)',
-    border: 'rgb(80, 84, 78)',
-    foreground: 'rgb(232, 230, 223)',
-    hasAppTheme: true,
-    inputBackground: 'rgb(36, 39, 35)',
-    mutedForeground: 'rgb(165, 164, 159)'
-  }));
-  const toastWindow = createToastWindow();
-  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([{
-    isDestroyed: vi.fn(() => false),
-    webContents: { executeJavaScript }
-  }]);
-  electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
-    return toastWindow;
-  });
-
-  showGlobalClipDesktopToast();
-  await flushToastLoad(toastWindow);
-
-  expect(executeJavaScript).toHaveBeenCalledTimes(1);
-  const loadedUrl = toastWindow.loadURL.mock.calls[0]?.[0] ?? '';
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-bg:rgb(42, 45, 41);');
-  expect(decodeURIComponent(loadedUrl)).toContain('--capture-fg:rgb(232, 230, 223);');
-  expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
-});
-
-it('falls back and shows the toast when app theme reading stalls', async () => {
-  vi.useFakeTimers();
-  const toastWindow = createToastWindow();
-  const neverResolves = new Promise(() => undefined);
-  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([{
-    isDestroyed: vi.fn(() => false),
-    webContents: { executeJavaScript: vi.fn(() => neverResolves) }
-  }]);
-  electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
-    return toastWindow;
-  });
-
-  showGlobalClipDesktopToast();
-  await Promise.resolve();
-  expect(toastWindow.showInactive).not.toHaveBeenCalled();
-
-  vi.advanceTimersByTime(120);
-  await flushToastLoad(toastWindow);
-
-  expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
-  expect(toastWindow.close).not.toHaveBeenCalled();
-
-  vi.advanceTimersByTime(3000);
-
-  expect(toastWindow.close).toHaveBeenCalledTimes(1);
-});
-
-it('does not read the theme from the toast window itself', async () => {
-  vi.useFakeTimers();
-  const toastWindow = createToastWindow();
-  const executeJavaScript = vi.fn(async () => ({
-    accent: 'rgb(63, 143, 104)',
-    background: 'rgb(255, 255, 255)',
-    border: 'rgb(188, 189, 187)',
-    foreground: 'rgb(32, 33, 36)',
-    hasAppTheme: true,
-    inputBackground: 'rgb(246, 246, 246)',
-    mutedForeground: 'rgb(94, 95, 97)'
-  }));
-  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([
-    toastWindow,
-    {
-      isDestroyed: vi.fn(() => false),
-      webContents: { executeJavaScript }
-    }
-  ]);
-  electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
-    return toastWindow;
-  });
-
-  showGlobalClipDesktopToast();
-  await flushToastLoad(toastWindow);
-
-  expect(executeJavaScript).toHaveBeenCalledTimes(1);
-  expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
 });

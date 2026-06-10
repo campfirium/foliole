@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const onGlobalCaptureNavigate = vi.hoisted(() => vi.fn());
+const openWorkspaceNodeWithPreparedDocument = vi.hoisted(() => vi.fn());
 const refreshWorkspaceState = vi.hoisted(() => vi.fn());
 const workspaceStoreState = vi.hoisted(() => ({
   activeNodeId: 'node-old',
@@ -14,6 +15,10 @@ vi.mock('../../shared/platform/runtimeShellEvents', () => ({
 
 vi.mock('../../store/workspaceRefreshScheduler', () => ({
   refreshWorkspaceState
+}));
+
+vi.mock('../../store/workspaceNodePreparation', () => ({
+  openWorkspaceNodeWithPreparedDocument
 }));
 
 vi.mock('../../store/workspaceStore', () => ({
@@ -42,6 +47,7 @@ function createDeferred() {
 beforeEach(() => {
   vi.clearAllMocks();
   workspaceStoreState.activeNodeId = 'node-old';
+  openWorkspaceNodeWithPreparedDocument.mockResolvedValue(null);
 });
 
 it('refreshes the workspace before opening a clicked global clip toast target', async () => {
@@ -64,6 +70,10 @@ it('refreshes the workspace before opening a clicked global clip toast target', 
 
   refresh.resolve();
   await waitFor(() => expect(onSelectNode).toHaveBeenCalledWith('node-clipped'));
+  expect(openWorkspaceNodeWithPreparedDocument).toHaveBeenCalledWith('node-clipped', {
+    forceLoad: true,
+    keepWarm: true
+  });
   expect(workspaceStoreState.openNode).toHaveBeenCalledWith('node-clipped');
   view.unmount();
   expect(unlisten).toHaveBeenCalledTimes(1);
@@ -86,6 +96,33 @@ it('does not reopen the target when the normal selection path already changed ac
   triggerNavigate(navigateHandler, 'node-clipped');
 
   await waitFor(() => expect(onSelectNode).toHaveBeenCalledWith('node-clipped'));
+  expect(openWorkspaceNodeWithPreparedDocument).not.toHaveBeenCalled();
+  expect(workspaceStoreState.openNode).not.toHaveBeenCalled();
+  view.unmount();
+});
+
+it('does not reopen the target when prepared navigation handled it', async () => {
+  let navigateHandler: ((payload: { nodeId: string }) => void) | null = null;
+  const unlisten = vi.fn();
+  const onSelectNode = vi.fn();
+  onGlobalCaptureNavigate.mockImplementation(async (handler: (payload: { nodeId: string }) => void) => {
+    navigateHandler = handler;
+    return unlisten;
+  });
+  refreshWorkspaceState.mockResolvedValue(undefined);
+  openWorkspaceNodeWithPreparedDocument.mockImplementation(async () => {
+    workspaceStoreState.activeNodeId = 'node-clipped';
+    return { focusAnchor: null, nodeId: 'node-clipped' };
+  });
+
+  const view = renderHook(() => useGlobalCaptureNavigation(onSelectNode));
+  await waitFor(() => expect(onGlobalCaptureNavigate).toHaveBeenCalledTimes(1));
+  triggerNavigate(navigateHandler, 'node-clipped');
+
+  await waitFor(() => expect(openWorkspaceNodeWithPreparedDocument).toHaveBeenCalledWith('node-clipped', {
+    forceLoad: true,
+    keepWarm: true
+  }));
   expect(workspaceStoreState.openNode).not.toHaveBeenCalled();
   view.unmount();
 });

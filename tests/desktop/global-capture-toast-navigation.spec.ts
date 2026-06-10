@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 import { test, expect, type Page } from '@playwright/test';
 
 import { launchDesktopSession } from '../../scripts/windows/playwright-desktop-harness.mjs';
@@ -7,6 +9,16 @@ const TARGET_NODE_ID = 'desktop-global-capture-target';
 const TOAST_TARGET_NODE_ID = 'desktop-global-capture-toast-target';
 
 type DesktopSession = Awaited<ReturnType<typeof launchDesktopSession>>;
+
+interface ScreenPoint {
+  x: number;
+  y: number;
+}
+
+interface ToastClickInfo {
+  clickPoint: ScreenPoint;
+  hwndHex: string;
+}
 
 async function seedGlobalCaptureNodes(page: Page) {
   return page.evaluate(async ({ pivotNodeId, targetNodeId, toastTargetNodeId }) => {
@@ -52,39 +64,54 @@ async function sendGlobalCaptureNavigation(session: DesktopSession) {
   }, TARGET_NODE_ID);
 }
 
+function clickWindowsScreenPoint(toastInfo: ToastClickInfo) {
+  const script = `
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class FolioleNativeMouse {
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int X, int Y);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
+}
+"@
+$hex = "${toastInfo.hwndHex}"
+$bytes = for ($index = 0; $index -lt $hex.Length; $index += 2) { [Convert]::ToByte($hex.Substring($index, 2), 16) }
+$hwnd = [IntPtr]([BitConverter]::ToInt64([byte[]]$bytes, 0))
+[FolioleNativeMouse]::SetForegroundWindow($hwnd) | Out-Null
+Start-Sleep -Milliseconds 120
+[FolioleNativeMouse]::SetCursorPos(${Math.round(toastInfo.clickPoint.x)}, ${Math.round(toastInfo.clickPoint.y)}) | Out-Null
+Start-Sleep -Milliseconds 80
+[FolioleNativeMouse]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
+Start-Sleep -Milliseconds 80
+[FolioleNativeMouse]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+[FolioleNativeMouse]::SendMessage($hwnd, 0x0202, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+`;
+  const result = spawnSync('powershell.exe', [
+    '-NoProfile',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    script
+  ], { encoding: 'utf8' });
+  if (result.status !== 0) {
+    throw new Error(`native mouse click failed: ${result.stderr || result.stdout}`);
+  }
+}
+
 async function showAndClickGlobalCaptureToast(session: DesktopSession) {
-  const toastPage = await session.electronApp.evaluate(async ({ BrowserWindow }, toastTargetNodeId) => {
-    const toastWindow = new BrowserWindow({
-      focusable: false,
-      frame: false,
-      height: 120,
-      show: false,
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false,
-        preload: `${process.cwd()}\\electron\\globalCaptureToastPreload.cjs`,
-        sandbox: true
-      },
-      width: 360
+  const toastInfo = await session.electronApp.evaluate(async (_, toastTargetNodeId) => {
+    const hook = globalThis.__folioleShowGlobalClipDesktopToastForTests;
+    if (!hook) {
+      throw new Error('missing global capture toast test hook');
+    }
+    return hook({
+      previewTitle: 'Global Capture Toast Target',
+      targetNodeId: toastTargetNodeId
     });
-    await toastWindow.loadURL(`data:text/html;charset=utf-8,${
-      encodeURIComponent('<button class="toast" data-clickable="true" onclick="window.globalCaptureToast?.open()">Open</button>')
-    }`);
-    toastWindow.webContents.send('foliole:global-capture-toast:target', { nodeId: toastTargetNodeId });
-    toastWindow.showInactive();
-    toastWindow.setIgnoreMouseEvents(false);
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    return BrowserWindow.getAllWindows()
-      .filter((window) => !window.isDestroyed())
-      .map((window) => ({
-        id: window.webContents.id,
-        title: window.getTitle(),
-        url: window.webContents.getURL()
-      }));
   }, TOAST_TARGET_NODE_ID);
 
-  const toastWindow = toastPage.find((window) => window.url.startsWith('data:text/html'));
-  expect(toastWindow, JSON.stringify(toastPage, null, 2)).toBeTruthy();
   const toastRendererPage = session.electronApp.windows().find((windowPage) =>
     windowPage.url().startsWith('data:text/html')
   );
@@ -92,8 +119,33 @@ async function showAndClickGlobalCaptureToast(session: DesktopSession) {
   await expect.poll(async () => toastRendererPage?.evaluate(() =>
     Boolean(window.globalCaptureToast)
   )).toBe(true);
-  await toastRendererPage?.evaluate(() => window.globalCaptureToast?.open());
-  await toastRendererPage?.locator('.toast').click();
+  await expect.poll(async () => toastRendererPage?.evaluate(() => {
+    const toast = document.querySelector('.toast') as HTMLElement | null;
+    return {
+      clickable: toast?.dataset.clickable ?? '',
+      targetNodeId: toast?.dataset.targetNodeId ?? ''
+    };
+  })).toEqual({
+    clickable: 'true',
+    targetNodeId: TOAST_TARGET_NODE_ID
+  });
+  await toastRendererPage?.bringToFront();
+  const toastBox = await toastRendererPage?.locator('.toast').boundingBox();
+  expect(toastBox).toBeTruthy();
+  const hitDiagnostics = await toastRendererPage?.evaluate(({ x, y }) => {
+    const hit = document.elementFromPoint(x, y) as HTMLElement | null;
+    return {
+      hitClassName: hit?.className ?? null,
+      hitTagName: hit?.tagName ?? null
+    };
+  }, {
+    x: (toastBox?.x ?? 0) + (toastBox?.width ?? 0) / 2,
+    y: (toastBox?.y ?? 0) + (toastBox?.height ?? 0) / 2
+  });
+  if (!hitDiagnostics?.hitTagName) {
+    throw new Error(`toast click target is missing: ${JSON.stringify(hitDiagnostics)}`);
+  }
+  clickWindowsScreenPoint(toastInfo);
 }
 
 async function expectCapturedTarget(page: Page, targetNodeId: string) {
@@ -122,6 +174,15 @@ test('opens the clipped target from the global capture toast navigation route', 
     TARGET_NODE_ID)).toBe('Global Capture Target');
 
     await showAndClickGlobalCaptureToast(session);
+    await expect.poll(async () => {
+      try {
+        return await session.electronApp.evaluate(() =>
+          globalThis.__folioleGlobalCaptureToastOpenForTests?.nodeId ?? null
+        );
+      } catch {
+        return null;
+      }
+    }).toBe(TOAST_TARGET_NODE_ID);
     await expectCapturedTarget(page, TOAST_TARGET_NODE_ID);
   } finally {
     await session.close();

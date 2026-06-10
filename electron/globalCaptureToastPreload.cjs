@@ -10,9 +10,10 @@ ipcRenderer.on(TARGET_CHANNEL, (_event, payload) => {
 });
 
 contextBridge.exposeInMainWorld('globalCaptureToast', {
-  open: () => {
-    if (targetNodeId) {
-      ipcRenderer.send(OPEN_CHANNEL, { nodeId: targetNodeId });
+  open: (nextNodeId) => {
+    const nodeId = typeof nextNodeId === 'string' && nextNodeId.trim() ? nextNodeId : targetNodeId;
+    if (nodeId) {
+      ipcRenderer.send(OPEN_CHANNEL, { nodeId });
     }
   }
 });
