@@ -8,7 +8,7 @@ const DEFAULT_LOG_ROOT = path.join('.tmp', 'logs', 'quality-gate');
 const TELEMETRY_FILE = 'telemetry.jsonl';
 
 function parseArgs(argv) {
-  const args = { runDir: '', logRoot: DEFAULT_LOG_ROOT, limit: 10 };
+  const args = { runDir: '', logRoot: process.env.QUALITY_GATE_LOG_ROOT || DEFAULT_LOG_ROOT, limit: 10 };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--run-dir') {
@@ -27,7 +27,7 @@ function parseArgs(argv) {
   return args;
 }
 
-function resolveLatestRunDir(logRoot) {
+export function resolveLatestRunDir(logRoot) {
   if (!existsSync(logRoot)) {
     return '';
   }
@@ -35,7 +35,10 @@ function resolveLatestRunDir(logRoot) {
     .map((entry) => path.join(logRoot, entry))
     .filter((entryPath) => statSync(entryPath).isDirectory())
     .sort((left, right) => right.localeCompare(left));
-  return runDirs[0] ?? '';
+  return runDirs.find((runDir) => {
+    const telemetryPath = path.join(runDir, TELEMETRY_FILE);
+    return existsSync(telemetryPath) && statSync(telemetryPath).size > 0;
+  }) ?? runDirs[0] ?? '';
 }
 
 export function readTelemetryEntries(runDir) {

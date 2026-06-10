@@ -39,13 +39,12 @@ async function writePackageJson(rootDir, scripts) {
   };
   for (const bucket of [
     'test:desktop',
-    'test:desktop:src',
+    'test:release:desktop-src',
     'test:desktop:electron',
     'test:windows:core',
     'test:windows:preview-recovery',
-    'test:android',
-    'test:shared',
-    'test:sync-pack',
+    'test:release:android',
+    'test:release:shared',
     'test:quality',
     'test:quality:core',
     'test:quality:gate',
@@ -70,7 +69,7 @@ describe('quality-gate-target.sh failure reporting', () => {
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'test full ok\')"',
-        build: 'node -e "console.log(\'build failed details\'); process.exit(1)"',
+        'build:vite-only': 'node -e "console.log(\'build failed details\'); process.exit(1)"',
         'electron:compile': 'node -e "console.log(\'electron failed details\'); process.exit(1)"',
         'android:web:build': 'node -e "console.log(\'android web build ok\')"'
       });
@@ -78,7 +77,7 @@ describe('quality-gate-target.sh failure reporting', () => {
       const result = await runTargetGate(tempRoot, 'full');
 
       expect(result.code).toBe(1);
-      expect(result.stdout).toContain('[quality-gate:full] build failed:');
+      expect(result.stdout).toContain('[quality-gate:full] build:vite-only failed:');
       expect(result.stdout).toContain('[quality-gate:full] electron:compile failed:');
       expect(result.stdout).toContain('build failed details');
       expect(result.stdout).toContain('electron failed details');
@@ -96,7 +95,7 @@ describe('quality-gate-target.sh failure reporting', () => {
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'test full ok\')"',
-        build: 'node -e "console.log(\'build ok\')"',
+        'build:vite-only': 'node -e "console.log(\'build ok\')"',
         'android:web:build': 'node -e "console.log(\'android web build ok\')"'
       });
 
@@ -118,7 +117,7 @@ describe('quality-gate-target.sh failure reporting', () => {
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'test full ok\')"',
-        build: 'node -e "setTimeout(() => console.log(\'build ok\'), 2100)"',
+        'build:vite-only': 'node -e "setTimeout(() => console.log(\'build ok\'), 2100)"',
         'electron:compile': 'node -e "setTimeout(() => console.log(\'electron ok\'), 2100)"',
         'android:web:build': 'node -e "setTimeout(() => console.log(\'android web ok\'), 2100)"'
       });

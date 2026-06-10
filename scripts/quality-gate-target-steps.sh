@@ -36,12 +36,12 @@ run_release_static_gate_steps() {
 }
 
 run_release_test_gate_steps() {
-  run_gate_steps_parallel test:desktop:src test:desktop:electron test:windows:core test:android test:shared test:sync-pack test:quality:core test:quality:gate test:quality:node
+  run_gate_steps_parallel test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:node
 }
 
 run_release_build_gate_steps() {
   run_gate_steps test:quality:preview
-  run_gate_steps_parallel build electron:compile android:web:build
+  run_gate_steps_parallel build:vite-only electron:compile android:web:build
   run_workspace_boundary_check_if_present
 }
 

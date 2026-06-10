@@ -9,11 +9,14 @@ import { describe, expect, it } from 'vitest';
 import { releaseScripts, runTargetGate, writePackageJson } from './quality-gate-release-targets.support.mjs';
 
 describe('quality-gate release split targets', () => {
-  it('exposes release core, fail-fast, base, and tail package aliases', () => {
+  it('exposes release core and tail package aliases', () => {
     expect(packageJson.scripts['quality:release:core']).toBe('bash scripts/quality-gate-target.sh release-core');
     expect(packageJson.scripts['quality:release:fail-fast']).toBe('bash scripts/quality-gate-target.sh release --fail-fast');
-    expect(packageJson.scripts['quality:release:base']).toBe('bash scripts/quality-gate-target.sh release-base');
-    expect(packageJson.scripts['quality:release:windows:tail']).toBe('bash scripts/quality-gate-target.sh release-windows-tail');
+    expect(packageJson.scripts['quality:release:preview-recovery']).toBe(
+      'bash scripts/quality-gate-target.sh release-preview-recovery'
+    );
+    expect(packageJson.scripts['quality:release:base']).toBeUndefined();
+    expect(packageJson.scripts['quality:release:windows:tail']).toBeUndefined();
   });
 
   it('keeps release-core isolated from preview recovery and android host checks', async () => {
@@ -29,13 +32,12 @@ describe('quality-gate release split targets', () => {
       expect(result.stdout).toContain('release windows core test ok');
       expect(result.stdout).toContain('release android test ok');
       expect(result.stdout).toContain('release shared test ok');
-      expect(result.stdout).toContain('release sync-pack test ok');
       expect(result.stdout).toContain('release quality core test ok');
       expect(result.stdout).toContain('release quality gate test ok');
       expect(result.stdout).toContain('release quality node test ok');
       expect(result.stdout).toContain('release quality preview test ok');
       expect(result.stdout).toContain(
-        '[quality-gate:release-core] running in parallel: test:desktop:src test:desktop:electron test:windows:core test:android test:shared test:sync-pack test:quality:core test:quality:gate test:quality:node'
+        '[quality-gate:release-core] running in parallel: test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:node'
       );
       expect(result.stdout).not.toContain('release windows preview recovery test ok');
       expect(result.stdout).not.toContain('release android sync ok');
@@ -49,17 +51,17 @@ describe('quality-gate release split targets', () => {
     {
       expected: ['android boundary ok', 'release lint ok', 'release desktop typecheck ok', 'release android typecheck ok'],
       name: 'guards, lint, and typecheck',
-      rejected: ['release desktop src test ok', 'release build ok'],
+      rejected: ['release desktop src test ok', 'release vite build ok'],
       target: 'release-static'
     },
     {
-      expected: ['release desktop src test ok', 'release windows core test ok', 'release android test ok', 'release shared test ok', 'release sync-pack test ok', 'release quality gate test ok'],
+      expected: ['release desktop src test ok', 'release windows core test ok', 'release android test ok', 'release shared test ok', 'release quality gate test ok'],
       name: 'non-preview test buckets',
-      rejected: ['release quality preview test ok', 'release preview recovery test ok', 'release build ok'],
+      rejected: ['release quality preview test ok', 'release preview recovery test ok', 'release vite build ok'],
       target: 'release-tests'
     },
     {
-      expected: ['release quality preview test ok', 'release build ok', 'release electron compile ok', 'release android web build ok'],
+      expected: ['release quality preview test ok', 'release vite build ok', 'release electron compile ok', 'release android web build ok'],
       name: 'release build outputs',
       rejected: ['release desktop src test ok', 'release windows preview recovery test ok'],
       target: 'release-build'
@@ -121,12 +123,11 @@ describe('quality-gate release split targets', () => {
       expect(result.stdout).toContain('release windows preview recovery test ok');
       expect(result.stdout).toContain('release android test ok');
       expect(result.stdout).toContain('release shared test ok');
-      expect(result.stdout).toContain('release sync-pack test ok');
       expect(result.stdout).toContain('release quality core test ok');
       expect(result.stdout).toContain('release quality gate test ok');
       expect(result.stdout).toContain('release quality node test ok');
       expect(result.stdout).toContain('release quality preview test ok');
-      expect(result.stdout).toContain('release build ok');
+      expect(result.stdout).toContain('release vite build ok');
       expect(result.stdout).toContain('release electron compile ok');
       expect(result.stdout).toContain('release android web build ok');
       expect(result.stdout).not.toContain('release android sync ok');
@@ -169,7 +170,7 @@ describe('quality-gate release split targets', () => {
       expect(result.stdout).toContain('release android host lint ok');
       expect(result.stdout).toContain('release android host test ok');
       expect(result.stdout).not.toContain('release lint ok');
-      expect(result.stdout).not.toContain('release sync-pack test ok');
+      expect(result.stdout).not.toContain('release shared test ok');
       expect(result.stdout).not.toContain('release android web build ok');
       expect(result.stdout).toContain('[quality-gate:release-android-host] all checks passed.');
     } finally {

@@ -157,10 +157,11 @@ run_quality_gate_script() {
 
   if ! has_package_script "${script_name}"; then
     echo "[${prefix}] missing script: ${script_name}"
+    local missing_output_file
+    missing_output_file="$(create_quality_gate_log_file "${script_name}")"
+    printf '[%s] missing script: %s\n' "${prefix}" "${script_name}" >"${missing_output_file}"
+    append_quality_gate_telemetry "${prefix}" "${script_name}" "${script_name}" 1 0 0 "${missing_output_file}"
     if quality_gate_collect_failures_enabled; then
-      local missing_output_file
-      missing_output_file="$(create_quality_gate_log_file "${script_name}")"
-      printf '[%s] missing script: %s\n' "${prefix}" "${script_name}" >"${missing_output_file}"
       record_quality_gate_failure "${prefix}" "${script_name}" "${script_name}" "${missing_output_file}" "npm run ${script_name}"
       mark_quality_gate_collected_failure
       return 0

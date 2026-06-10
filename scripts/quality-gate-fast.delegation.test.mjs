@@ -68,8 +68,17 @@ describe('quality-gate-fast.sh delegation', () => {
         'lint:full': 'node -e "console.log(\'full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
-        'test:full': 'node -e "console.log(\'full deduped test ok\')"',
-        build: 'node -e "console.log(\'full build ok\')"',
+        'test:release:desktop-src': 'node -e "console.log(\'full deduped test ok\')"',
+        'test:desktop:electron': 'node -e "console.log(\'full electron test ok\')"',
+        'test:windows:core': 'node -e "console.log(\'full windows test ok\')"',
+        'test:release:android': 'node -e "console.log(\'full android test ok\')"',
+        'test:release:shared': 'node -e "console.log(\'full shared test ok\')"',
+        'test:quality:core': 'node -e "console.log(\'full quality core ok\')"',
+        'test:quality:gate': 'node -e "console.log(\'full quality gate ok\')"',
+        'test:quality:node': 'node -e "console.log(\'full quality node ok\')"',
+        'test:quality:preview': 'node -e "console.log(\'full quality preview ok\')"',
+        'test:windows:preview-recovery': 'node -e "console.log(\'full preview recovery ok\')"',
+        'build:vite-only': 'node -e "console.log(\'full vite build ok\')"',
         'electron:compile': 'node -e "console.log(\'full electron compile ok\')"',
         'android:web:build': 'node -e "console.log(\'full android web build ok\')"',
         'android:sync': 'node -e "console.log(\'full android sync ok\')"',
@@ -86,7 +95,7 @@ describe('quality-gate-fast.sh delegation', () => {
       expect(result.stdout).toContain('full desktop typecheck ok');
       expect(result.stdout).toContain('full android typecheck ok');
       expect(result.stdout).toContain('full deduped test ok');
-      expect(result.stdout).toContain('full build ok');
+      expect(result.stdout).toContain('full vite build ok');
       expect(result.stdout).toContain('full electron compile ok');
       expect(result.stdout).toContain('full android web build ok');
       expect(result.stdout).not.toContain('full android sync ok');
@@ -104,8 +113,17 @@ describe('quality-gate-fast.sh delegation', () => {
         'lint:full': 'node -e "console.log(\'release lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
-        'test:full': 'node -e "console.log(\'release deduped test ok\')"',
-        build: 'node -e "console.log(\'release build ok\')"',
+        'test:release:desktop-src': 'node -e "console.log(\'release deduped test ok\')"',
+        'test:desktop:electron': 'node -e "console.log(\'release electron test ok\')"',
+        'test:windows:core': 'node -e "console.log(\'release windows test ok\')"',
+        'test:release:android': 'node -e "console.log(\'release android test ok\')"',
+        'test:release:shared': 'node -e "console.log(\'release shared test ok\')"',
+        'test:quality:core': 'node -e "console.log(\'release quality core ok\')"',
+        'test:quality:gate': 'node -e "console.log(\'release quality gate ok\')"',
+        'test:quality:node': 'node -e "console.log(\'release quality node ok\')"',
+        'test:quality:preview': 'node -e "console.log(\'release quality preview ok\')"',
+        'test:windows:preview-recovery': 'node -e "console.log(\'release preview recovery ok\')"',
+        'build:vite-only': 'node -e "console.log(\'release vite build ok\')"',
         'electron:compile': 'node -e "console.log(\'release electron compile ok\')"',
         'android:web:build': 'node -e "console.log(\'release android web build ok\')"',
         'android:sync': 'node -e "console.log(\'release android sync ok\')"',
@@ -122,7 +140,7 @@ describe('quality-gate-fast.sh delegation', () => {
       expect(result.stdout).toContain('release desktop typecheck ok');
       expect(result.stdout).toContain('release android typecheck ok');
       expect(result.stdout).toContain('release deduped test ok');
-      expect(result.stdout).toContain('release build ok');
+      expect(result.stdout).toContain('release vite build ok');
       expect(result.stdout).toContain('release electron compile ok');
       expect(result.stdout).toContain('release android web build ok');
       expect(result.stdout).toContain('release android sync ok');

@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { buildQualityGateCostReport, readTelemetryEntries } from './quality-gate-cost-report.mjs';
+import { buildQualityGateCostReport, readTelemetryEntries, resolveLatestRunDir } from './quality-gate-cost-report.mjs';
 import { createQualityGateTempRoot, runQualityGate, writeExecutable, writeFixtureFile, writePackageJson } from './quality-gate-fast.test-support.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -85,18 +85,17 @@ describe('quality gate telemetry', () => {
               'lint:full': 'node -e "console.log(\'lint full ok\')"',
               'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
               'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
-              'test:desktop:src': 'node -e "console.log(\'desktop src ok\')"',
+              'test:release:desktop-src': 'node -e "console.log(\'desktop src ok\')"',
               'test:desktop:electron': 'node -e "console.log(\'desktop electron ok\')"',
               'test:windows:core': 'node -e "console.log(\'windows core ok\')"',
               'test:windows:preview-recovery': 'node -e "console.log(\'windows preview recovery ok\')"',
-              'test:android': 'node -e "console.log(\'android test ok\')"',
-              'test:shared': 'node -e "console.log(\'shared test ok\')"',
-              'test:sync-pack': 'node -e "console.log(\'sync pack ok\')"',
+              'test:release:android': 'node -e "console.log(\'android test ok\')"',
+              'test:release:shared': 'node -e "console.log(\'shared test ok\')"',
               'test:quality:core': 'node -e "console.log(\'quality core ok\')"',
               'test:quality:gate': 'node -e "console.log(\'quality gate ok\')"',
               'test:quality:node': 'node -e "console.log(\'quality node ok\')"',
               'test:quality:preview': 'node -e "console.log(\'quality preview ok\')"',
-              build: 'node -e "console.log(\'build ok\')"',
+              'build:vite-only': 'node -e "console.log(\'build ok\')"',
               'electron:compile': 'node -e "console.log(\'electron compile ok\')"',
               'android:web:build': 'node -e "console.log(\'android web build ok\')"'
             }
@@ -114,7 +113,7 @@ describe('quality gate telemetry', () => {
       expect(result.code).toBe(0);
       expect(entries.some((entry) => entry.scriptName === 'lint:full')).toBe(true);
       expect(entries.some((entry) => entry.scriptName === 'typecheck:android')).toBe(true);
-      expect(entries.some((entry) => entry.scriptName === 'build')).toBe(true);
+      expect(entries.some((entry) => entry.scriptName === 'build:vite-only')).toBe(true);
       expect(report).toContain('[quality-gate-cost] slowest steps: top 3');
       expect(report).toContain('[quality-gate-cost] benefit review candidates:');
     } finally {
@@ -134,4 +133,64 @@ describe('quality gate telemetry', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('prefers the latest non-empty telemetry run over newer log-only runs', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-report-'));
+    try {
+      const logRoot = path.join(tempRoot, '.tmp', 'logs', 'quality-gate');
+      const telemetryRun = path.join(logRoot, '20260610-110000-1');
+      const logOnlyRun = path.join(logRoot, '20260610-120000-2');
+      await mkdir(telemetryRun, { recursive: true });
+      await mkdir(logOnlyRun, { recursive: true });
+      await writeFile(path.join(telemetryRun, 'telemetry.jsonl'), '{"scriptName":"lint"}\n', 'utf8');
+      await writeFile(path.join(logOnlyRun, 'lint.log'), 'lint ok\n', 'utf8');
+
+      expect(resolveLatestRunDir(logRoot)).toBe(telemetryRun);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('records missing target-gate scripts as failed telemetry entries', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-telemetry-'));
+    try {
+      await writeFile(
+        path.join(tempRoot, 'package.json'),
+        `${JSON.stringify(
+          {
+            name: 'quality-gate-missing-script-fixture',
+            private: true,
+            scripts: {
+              'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+              'lint:full': 'node -e "console.log(\'lint full ok\')"',
+              'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
+              'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
+              'test:release:desktop-src': 'node -e "console.log(\'desktop src ok\')"',
+              'test:desktop:electron': 'node -e "console.log(\'desktop electron ok\')"',
+              'test:windows:core': 'node -e "console.log(\'windows core ok\')"',
+              'test:release:android': 'node -e "console.log(\'android test ok\')"',
+              'test:release:shared': 'node -e "console.log(\'shared test ok\')"',
+              'test:quality:core': 'node -e "console.log(\'quality core ok\')"',
+              'test:quality:gate': 'node -e "console.log(\'quality gate ok\')"',
+              'test:quality:node': 'node -e "console.log(\'quality node ok\')"',
+              'test:quality:preview': 'node -e "console.log(\'quality preview ok\')"',
+              'android:web:build': 'node -e "console.log(\'android web build ok\')"',
+              'test:windows:preview-recovery': 'node -e "console.log(\'windows preview recovery ok\')"'
+            }
+          },
+          null,
+          2
+        )}\n`,
+        'utf8'
+      );
+
+      const result = await runTargetGate(tempRoot, 'full');
+      const { entries } = await readTelemetryRun(tempRoot);
+
+      expect(result.code).toBe(1);
+      expect(entries.some((entry) => entry.scriptName === 'build:vite-only' && entry.exitCode === 1)).toBe(true);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 30000);
 });

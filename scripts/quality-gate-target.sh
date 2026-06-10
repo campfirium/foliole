@@ -75,8 +75,16 @@ run_gate_steps() {
   done
 }
 
+resolve_quality_gate_parallel_max_jobs() {
+  local max_jobs="${QUALITY_GATE_PARALLEL_MAX_JOBS:-4}"
+  if [[ ! "${max_jobs}" =~ ^[0-9]+$ || "${max_jobs}" -le 0 ]]; then
+    max_jobs=4
+  fi
+  printf '%s' "${max_jobs}"
+}
+
 run_gate_steps_parallel() {
-  local mode step log_file status_file pid exit_code failed=0 index pending now next_heartbeat heartbeat_seconds
+  local mode step log_file status_file pid exit_code failed=0 index pending now next_heartbeat heartbeat_seconds max_jobs launched=0 active_jobs=0
   local -a steps=("$@")
   local -a pids=()
   local -a logs=()
@@ -93,46 +101,52 @@ run_gate_steps_parallel() {
     heartbeat_seconds=30
   fi
   next_heartbeat=$((SECONDS + heartbeat_seconds))
+  max_jobs="$(resolve_quality_gate_parallel_max_jobs)"
 
   if quality_gate_should_print_step; then
     echo "[${prefix}] running in parallel: ${steps[*]}"
+    echo "[${prefix}] parallel max jobs: ${max_jobs}"
   fi
 
-  for step in "${steps[@]}"; do
-    log_file="$(create_quality_gate_log_file "${step}.parallel")"
-    status_file="${log_file}.status"
-    : >"${log_file}"
-    rm -f "${status_file}"
-    (
-      trap 'if [[ -n "${QUALITY_GATE_ACTIVE_PGID:-}" ]]; then terminate_process_group "${QUALITY_GATE_ACTIVE_PGID}"; fi' EXIT INT TERM
-      set +e
-      ( QUALITY_GATE_COLLECT_FAILURES=0 run_quality_gate_script "${prefix}" "${pm}" "${step}" ) >"${log_file}" 2>&1
-      exit_code=$?
-      set -e
-      printf '%s\n' "${exit_code}" >"${status_file}"
-      exit "${exit_code}"
-    ) &
-    pid=$!
-    pids+=("${pid}")
-    logs+=("${log_file}")
-    status_files+=("${status_file}")
-    completed+=("0")
-  done
-
   while true; do
+    while (( launched < ${#steps[@]} && active_jobs < max_jobs )); do
+      step="${steps[${launched}]}"
+      log_file="$(create_quality_gate_log_file "${step}.parallel")"
+      status_file="${log_file}.status"
+      : >"${log_file}"
+      rm -f "${status_file}"
+      (
+        trap 'if [[ -n "${QUALITY_GATE_ACTIVE_PGID:-}" ]]; then terminate_process_group "${QUALITY_GATE_ACTIVE_PGID}"; fi' EXIT INT TERM
+        set +e
+        ( QUALITY_GATE_COLLECT_FAILURES=0 run_quality_gate_script "${prefix}" "${pm}" "${step}" ) >"${log_file}" 2>&1
+        exit_code=$?
+        set -e
+        printf '%s\n' "${exit_code}" >"${status_file}"
+        exit "${exit_code}"
+      ) &
+      pid=$!
+      pids[${launched}]="${pid}"
+      logs[${launched}]="${log_file}"
+      status_files[${launched}]="${status_file}"
+      completed[${launched}]="0"
+      launched=$((launched + 1))
+      active_jobs=$((active_jobs + 1))
+    done
+
     pending=()
-    for index in "${!steps[@]}"; do
+    for ((index = 0; index < launched; index += 1)); do
       if [[ "${completed[${index}]}" == "1" ]]; then
         continue
       fi
       if [[ -f "${status_files[${index}]}" ]]; then
         completed[${index}]="1"
+        active_jobs=$((active_jobs - 1))
         continue
       fi
       pending+=("${steps[${index}]}")
     done
 
-    if [[ "${#pending[@]}" -eq 0 ]]; then
+    if (( launched >= ${#steps[@]} && active_jobs == 0 )); then
       break
     fi
 
@@ -145,12 +159,7 @@ run_gate_steps_parallel() {
   done
 
   for index in "${!steps[@]}"; do
-    exit_code=0
-    if wait "${pids[${index}]}"; then
-      exit_code=0
-    else
-      exit_code=$?
-    fi
+    wait "${pids[${index}]}" || true
   done
 
   for index in "${!steps[@]}"; do
