@@ -20,7 +20,6 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
     reviewCompletedCount: 0,
     reviewCurrentNodeId: 'node-1',
     reviewCurrentTitle: 'Review topic',
-    reviewDueCount: 2,
     reviewProgressCounts: progressCounts(0, 0, 2, 0),
     reviewQueueCount: 2,
     reviewSummary: {

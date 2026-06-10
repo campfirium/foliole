@@ -10,7 +10,6 @@ import { useControllerReviewEditingState } from './appControllerReviewEditingSta
 import { useControllerStartupEffects } from './appControllerStartupEffects';
 import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import type { AppControllerResult } from './appControllerTypes';
-import { countDueReviewNodes } from './layoutPropsBuilder';
 import { useCommandShortcutState } from './reviewHotkeysState';
 import { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import { useControllerPaletteItems } from './useControllerPaletteItems';
@@ -39,20 +38,7 @@ function useDerivedControllerState(args: {
   startStudyMode: ReturnType<typeof useWorkspaceControllerState>['study']['startStudyMode'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
-  const reviewDueCount = measureSelectionComputation(
-    args.ws.activeNodeId,
-    args.ws.nodeOrder.length,
-    'review_due_count',
-    () =>
-      countDueReviewNodes(
-        args.ws.nodeOrder,
-        args.ws.nodesById,
-        args.ws.trashedNodeIds,
-        args.nowIso,
-        args.reviewSettings.reviewSchedulerSettings.pushQueue
-      )
-  );
-  const paletteItems = useControllerPaletteItems({ ...args, reviewDueCount });
+  const paletteItems = useControllerPaletteItems(args);
   const layoutProps = measureSelectionComputation(args.ws.activeNodeId, args.ws.nodeOrder.length, 'layout_props', () =>
     buildControllerLayoutState({
       controller: args.controller,
@@ -64,7 +50,6 @@ function useDerivedControllerState(args: {
       nowIso: args.nowIso,
       priorityQuickSet: args.priorityQuickSet,
       reviewTopicDelayPanel: args.reviewTopicDelayPanel,
-      reviewDueCount,
       reviewPreview: args.reviewPreview,
       reviewSettings: args.reviewSettings,
       resumeReviewItem: args.resumeReviewItem,
@@ -85,7 +70,6 @@ function buildControllerLayoutState(args: {
   nowIso: string;
   priorityQuickSet: ReturnType<typeof useControllerPriorityQuickSet>;
   reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
-  reviewDueCount: number;
   reviewPreview: ReturnType<typeof useReviewSessionRuntime>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
   resumeReviewItem: () => void;
@@ -105,7 +89,6 @@ function buildControllerLayoutState(args: {
     nowIso: args.nowIso,
     priorityQuickSet: args.priorityQuickSet,
     reviewTopicDelayPanel: args.reviewTopicDelayPanel,
-    reviewDueCount: args.reviewDueCount,
     reviewPreview: args.reviewPreview,
     reviewSettings: args.reviewSettings,
     resumeReviewItem: args.resumeReviewItem,

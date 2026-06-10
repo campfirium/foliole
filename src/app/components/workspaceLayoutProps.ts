@@ -73,7 +73,6 @@ export interface WorkspaceLayoutFlatProps {
   editorNodeViewState?: NodeViewState;
   priorityQuickSetShortcutLabel: string;
   canStartStudyMode: boolean;
-  reviewDueCount: number;
   reviewPreview: SchedulerPreviewResult | null;
   isStudyMode: boolean;
   isImportManagementOpen: boolean;

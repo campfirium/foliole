@@ -16,7 +16,6 @@ function createImmersiveProps(): WorkspaceBottomReviewToolbarProps {
     reviewCompletedCount: 0,
     reviewCurrentNodeId: 'node-1',
     reviewCurrentTitle: 'Review topic',
-    reviewDueCount: 2,
     reviewProgressCounts: {
       completedItemCount: 0,
       completedTopicCount: 0,
@@ -59,9 +58,9 @@ it('uses an opaque overlay surface in immersive review mode', () => {
   expect(container.firstElementChild).not.toHaveClass('row-start-2');
   expect(container.querySelector('.workspace-bottom-region-grid')).toBeNull();
   expect(toolbar).toHaveAttribute('data-surface', 'overlay');
-  expect(toolbar).toHaveClass('bg-bg-elevated');
+  expect(toolbar.className).toContain('--app-floating-surface-bg');
   expect(toolbar).toHaveClass('border');
-  expect(toolbar).toHaveClass('shadow-control');
+  expect(toolbar).toHaveClass('shadow-popover');
   expect(toolbar).toHaveClass('w-fit');
   expect(toolbar).toHaveClass('max-w-[calc(100vw-3rem)]');
   expect(toolbar).toHaveClass('col-start-1');

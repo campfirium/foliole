@@ -12,7 +12,6 @@ export function useControllerPaletteItems(args: {
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isCurrentReviewItemGradable: boolean;
   isStudyMode: boolean;
-  reviewDueCount: number;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   return useAppPaletteItems({
@@ -26,7 +25,6 @@ export function useControllerPaletteItems(args: {
     isStudyMode: args.isStudyMode,
     nav: args.controller.nav,
     reviewSession: args.ws.reviewSession,
-    reviewDueCount: args.reviewDueCount,
     study: args.controller.study,
     ws: args.ws
   });

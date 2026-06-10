@@ -27,7 +27,6 @@ function createPaletteArgs(activeNodeId: string | null) {
     isViewingTrashNode: false,
     nav: { canGoBack: false, canGoForward: false, canGoParent: false },
     reviewSession: { isAnswerRevealed: false },
-    reviewDueCount: 0,
     study: { canStartStudyMode: false, isDevReviewStatusBarPersistenceEnabled: false },
     ws: {
       appActionHistory: initial.appActionHistory,
@@ -66,7 +65,6 @@ it('enables review mode from the directory list when the review queue can start 
     useAppPaletteItems({
       ...createPaletteArgs(null),
       activeNodeId: null,
-      reviewDueCount: 0,
       study: { canStartStudyMode: true, isDevReviewStatusBarPersistenceEnabled: false }
     } as unknown as Parameters<typeof useAppPaletteItems>[0]), { wrapper }
   );
@@ -76,12 +74,11 @@ it('enables review mode from the directory list when the review queue can start 
   });
 });
 
-it('does not enable review mode from due count alone', () => {
+it('does not enable review mode without a startable review queue', () => {
   const { result } = renderHook(() =>
     useAppPaletteItems({
       ...createPaletteArgs(null),
       activeNodeId: null,
-      reviewDueCount: 2,
       study: { canStartStudyMode: false, isDevReviewStatusBarPersistenceEnabled: false }
     } as unknown as Parameters<typeof useAppPaletteItems>[0]), { wrapper }
   );

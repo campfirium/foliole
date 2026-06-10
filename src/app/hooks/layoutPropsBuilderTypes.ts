@@ -136,7 +136,6 @@ export interface BuildLayoutPropsArgs {
   onRunImportFolder: WorkspaceLayoutFlatProps['onRunImportFolder'];
   onStartClipboardImport: WorkspaceLayoutFlatProps['onStartClipboardImport'];
   priorityQuickSetShortcutLabel: string;
-  reviewDueCount: number;
   reviewPreview: SchedulerPreviewResult | null;
   reviewSession: WorkspaceState['reviewSession'];
   reviewSessionMode: WorkspaceState['reviewSessionMode'];

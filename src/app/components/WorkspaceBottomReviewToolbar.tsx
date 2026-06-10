@@ -22,7 +22,6 @@ export interface WorkspaceBottomReviewToolbarProps {
   reviewCompletedCount: number;
   reviewCurrentNodeId: string | null;
   reviewCurrentTitle: string | undefined;
-  reviewDueCount: number;
   reviewProgressCounts?: ReviewToolbarProgressCounts;
   reviewQueueCount: number;
   reviewSummary: WorkspaceLayoutProps['review']['reviewSummary'];
@@ -142,7 +141,6 @@ export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomRe
     reviewCompletedCount: review.reviewCompletedCount,
     reviewCurrentNodeId: review.reviewCurrentNodeId,
     reviewCurrentTitle: getReviewCurrentTitle(props),
-    reviewDueCount: review.reviewDueCount,
     reviewProgressCounts: getReviewProgressCounts(props),
     reviewQueueCount: review.reviewQueueCount,
     reviewSummary: review.reviewSummary,
@@ -208,7 +206,6 @@ export function WorkspaceBottomReviewToolbar(props: WorkspaceBottomReviewToolbar
               canStartStudyMode={props.canStartStudyMode}
               isStudyMode={props.isStudyMode}
               onToggleReviewSession={props.onToggleReviewSession}
-              reviewDueCount={props.reviewDueCount}
             />
           </div>
         )}

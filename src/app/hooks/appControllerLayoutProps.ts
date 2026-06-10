@@ -58,7 +58,6 @@ export interface BuildControllerLayoutPropsArgs {
   listResize: ReturnType<typeof useListResizer>;
   nav: ReturnType<typeof useWorkspaceNavigation>;
   nowIso: string;
-  reviewDueCount: number;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReviewSchedulerSettingsContextValue;
   resumeReviewItem: () => void;

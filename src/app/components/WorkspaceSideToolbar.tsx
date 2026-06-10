@@ -21,7 +21,6 @@ interface WorkspaceSideToolbarProps {
   canStartStudyMode: boolean;
   isStudyMode: boolean;
   isSettingsOpen: boolean;
-  reviewDueCount: number;
   showStudyDock?: boolean;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
@@ -204,7 +203,6 @@ export function WorkspaceStudyDockTrigger(props: {
   canStartStudyMode: boolean;
   isStudyMode: boolean;
   onToggleReviewSession: () => void;
-  reviewDueCount: number;
 }) {
   return (
     <div

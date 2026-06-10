@@ -101,7 +101,6 @@ export interface WorkspaceLayoutProps {
   >;
   review: Pick<WorkspaceLayoutFlatProps,
     | 'canStartStudyMode'
-    | 'reviewDueCount'
     | 'reviewPreview'
     | 'isStudyMode'
     | 'isAnswerRevealed'

@@ -72,7 +72,6 @@ function createLayoutReviewData(args: BuildControllerLayoutPropsArgs) {
     exitStudyMode: args.exitStudyMode,
     nowIso: args.nowIso,
     revealReviewAnswer: args.ws.revealReviewAnswer,
-    reviewDueCount: args.reviewDueCount,
     reviewPreview: args.reviewPreview,
     reviewSession: args.ws.reviewSession,
     reviewSessionMode: args.ws.reviewSessionMode,

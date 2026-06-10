@@ -198,7 +198,6 @@ export function useAppPaletteItems(args: {
   isStudyMode: boolean;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   reviewSession: ReturnType<typeof useWorkspaceSelectors>['reviewSession'];
-  reviewDueCount: number;
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
   ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'appActionHistory' | 'editorOperationHistory' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
 }) {
