@@ -59,6 +59,7 @@ ensure_quality_gate_run_dir() {
   log_root="$(resolve_quality_gate_log_root)"
   run_id="${QUALITY_GATE_RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
   QUALITY_GATE_RUN_DIR="${log_root}/${run_id}"
+  export QUALITY_GATE_RUN_DIR
   mkdir -p "${QUALITY_GATE_RUN_DIR}"
   prune_quality_gate_logs "${log_root}" "${run_id}"
 }

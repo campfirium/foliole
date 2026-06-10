@@ -12,8 +12,14 @@ DEFAULT_ANDROID_SYNC_TIMEOUT_SECONDS=1200
 DEFAULT_ANDROID_HOST_TIMEOUT_SECONDS=1200
 DEFAULT_ANDROID_HOST_DEVICE_TEST_TIMEOUT_SECONDS=1800
 
+if [[ -z "${QUALITY_GATE_RUN_ID:-}" ]]; then
+  QUALITY_GATE_RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"
+fi
+export QUALITY_GATE_RUN_ID
+
 QUALITY_GATE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${QUALITY_GATE_LIB_DIR}/quality-gate-log.sh"
+source "${QUALITY_GATE_LIB_DIR}/quality-gate-telemetry.sh"
 source "${QUALITY_GATE_LIB_DIR}/quality-gate-failure-summary.sh"
 source "${QUALITY_GATE_LIB_DIR}/quality-gate-process.sh"
 
@@ -95,7 +101,7 @@ run_quality_gate_command() {
   shift 3
 
   local mode
-  local timeout_seconds max_rss_kb output_file exit_code rerun_command
+  local timeout_seconds max_rss_kb output_file exit_code rerun_command started_at_epoch ended_at_epoch duration_seconds peak_rss_kb
   mode="$(resolve_quality_gate_log_mode)"
   timeout_seconds="$(resolve_quality_gate_limit "${script_name}" timeout_seconds)"
   max_rss_kb="$(resolve_quality_gate_limit "${script_name}" max_rss_kb)"
@@ -107,11 +113,18 @@ run_quality_gate_command() {
     echo "[${prefix}] limits for ${display_name}: timeout=${timeout_seconds}s, max-rss=${max_rss_kb}KiB"
   fi
 
+  QUALITY_GATE_CURRENT_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  started_at_epoch="${SECONDS}"
   if run_command_with_limits "${prefix}" "${output_file}" "${timeout_seconds}" "${max_rss_kb}" "${display_name}" "$@"; then
     exit_code=0
   else
     exit_code=$?
   fi
+  ended_at_epoch="${SECONDS}"
+  duration_seconds=$((ended_at_epoch - started_at_epoch))
+  peak_rss_kb="${QUALITY_GATE_LAST_PEAK_RSS_KB:-0}"
+  append_quality_gate_telemetry "${prefix}" "${script_name}" "${display_name}" "${exit_code}" "${duration_seconds}" "${peak_rss_kb}" "${output_file}"
+  QUALITY_GATE_CURRENT_STARTED_AT=""
 
   if [[ "${exit_code}" -ne 0 ]]; then
     rerun_command="$(resolve_quality_gate_rerun_command "${script_name}" "${output_file}" "$@")"

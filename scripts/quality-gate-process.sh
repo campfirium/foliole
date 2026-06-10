@@ -44,6 +44,7 @@ run_command_with_limits() {
   started_at="$(date +%s)"
   heartbeat_seconds="$(resolve_quality_gate_heartbeat_seconds)"
   local peak_rss_kb=0
+  QUALITY_GATE_LAST_PEAK_RSS_KB=0
 
   while kill -0 "${child_pid}" 2>/dev/null; do
     local now elapsed current_rss_kb
@@ -65,6 +66,7 @@ run_command_with_limits() {
       echo "[${prefix}] peak ${command_label} memory: ${peak_rss_kb} KiB"
       terminate_process_group "${child_pgid}"
       QUALITY_GATE_ACTIVE_PGID=""
+      QUALITY_GATE_LAST_PEAK_RSS_KB="${peak_rss_kb}"
       wait "${child_pid}" 2>/dev/null || true
       return 1
     fi
@@ -75,6 +77,7 @@ run_command_with_limits() {
       echo "[${prefix}] peak ${command_label} memory: ${peak_rss_kb} KiB"
       terminate_process_group "${child_pgid}"
       QUALITY_GATE_ACTIVE_PGID=""
+      QUALITY_GATE_LAST_PEAK_RSS_KB="${peak_rss_kb}"
       wait "${child_pid}" 2>/dev/null || true
       return 1
     fi
@@ -94,6 +97,7 @@ run_command_with_limits() {
   fi
 
   QUALITY_GATE_ACTIVE_PGID=""
+  QUALITY_GATE_LAST_PEAK_RSS_KB="${peak_rss_kb}"
 
   return "${exit_code}"
 }
