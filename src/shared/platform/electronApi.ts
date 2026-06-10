@@ -3,13 +3,13 @@ import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import type { DiagnosticLogPayload } from './runtimeLogging';
 import type { WorkspaceNodeMutationPatchResult } from './workspaceRuntimeTypes';
 
-export interface ElectronDebugMetadata {
+interface ElectronDebugMetadata {
   preloadPath: string | null;
   runtimeHead: string | null;
   workspaceDebugBridge?: boolean;
 }
 
-export interface ElectronRuntimeConfig {
+interface ElectronRuntimeConfig {
   guidedSampleLocale: 'en-US' | 'zh-CN' | null;
 }
 
@@ -51,13 +51,13 @@ export interface WorkspaceContentChangedPayload {
   scope: 'workspace';
 }
 
-export interface SearchIndexRebuildStatusPayload {
+interface SearchIndexRebuildStatusPayload {
   error?: string;
   status: 'failed' | 'ready' | 'rebuilding';
   strategy: 'cjk-trigram' | 'word-based';
 }
 
-export interface ExternalDocumentFileOpenedPayload {
+interface ExternalDocumentFileOpenedPayload {
   absolutePath: string;
   folderId: string;
 }

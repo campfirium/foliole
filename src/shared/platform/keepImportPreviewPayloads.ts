@@ -1,6 +1,6 @@
 import type { NativeReadwiseDetectionSample } from '../../../lib/platform/nativeReadwiseContract';
 
-export interface RuntimeKeepImportPreviewEntry {
+interface RuntimeKeepImportPreviewEntry {
   contentPreview: string | null;
   detail: string | null;
   detectedHighlightCount: number;

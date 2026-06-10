@@ -1,4 +1,4 @@
-export interface ComponentRenderCounts {
+interface ComponentRenderCounts {
   documentPanel: number;
   nodeListTree: number;
   rightSidebar: number;

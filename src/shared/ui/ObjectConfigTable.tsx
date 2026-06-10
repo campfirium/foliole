@@ -1,5 +1,4 @@
 import { FolderOpen, RotateCcw } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import { useTranslation } from '../localization/LocalizationProvider';
 
@@ -11,23 +10,6 @@ import {
   settingsButtonClassName,
   settingsResetButtonClassName
 } from './SettingsLayout';
-
-import { cn } from '@/shared/lib/utils';
-
-interface ObjectConfigTableProps {
-  children: ReactNode;
-  minWidthClassName?: string;
-}
-
-interface ObjectConfigHeaderProps {
-  columns: Array<{ align?: 'left' | 'right'; label: string }>;
-  columnsClassName: string;
-}
-
-interface ObjectConfigRowProps {
-  children: ReactNode;
-  columnsClassName: string;
-}
 
 interface ObjectConfigPathButtonProps {
   className?: string;
@@ -55,42 +37,6 @@ function compactPathLabel(path: string, emptyLabel: string) {
 
 function pathTooltip(path: string) {
   return path.trim().length > 0 ? path : undefined;
-}
-
-export function ObjectConfigTable({
-  children,
-  minWidthClassName = 'min-w-0'
-}: ObjectConfigTableProps) {
-  return (
-    <div className="overflow-x-hidden border-y border-settings-divider">
-      <div className={cn(minWidthClassName)}>{children}</div>
-    </div>
-  );
-}
-
-export function ObjectConfigHeader({ columns, columnsClassName }: ObjectConfigHeaderProps) {
-  return (
-    <div
-      className={cn(
-        'grid gap-4 px-2 py-3 text-ui-xs font-semibold uppercase tracking-[0.08em] text-foreground/48',
-        columnsClassName
-      )}
-    >
-      {columns.map((column) => (
-        <span className={column.align === 'right' ? 'text-right' : undefined} key={column.label}>
-          {column.label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-export function ObjectConfigRow({ children, columnsClassName }: ObjectConfigRowProps) {
-  return (
-    <div className={cn('grid gap-4 border-t border-settings-divider px-2 py-4', columnsClassName)}>
-      {children}
-    </div>
-  );
 }
 
 export function ObjectConfigPathButton({

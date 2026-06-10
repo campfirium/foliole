@@ -3,7 +3,7 @@ import {
   formatHighlightCardContent
 } from '../../lib/core/annotations/textAnnotationContent';
 
-export interface SelectionAnnotationTextLocator {
+interface SelectionAnnotationTextLocator {
   from: number;
   originalText: string;
   to: number;

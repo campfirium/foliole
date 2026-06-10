@@ -5,7 +5,7 @@ import { collectMarkdownInlineRanges } from '../features/editor/model/markdownIn
 import type { MarkdownInlineRange } from '../features/editor/model/markdownInlineProjectionTypes';
 import type { NodeImageRegionGroup, TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 
-export interface SelectionCommandEntry {
+interface SelectionCommandEntry {
   anchorId: string;
   clozeContent: string;
   locator: TextAnchorLocator;

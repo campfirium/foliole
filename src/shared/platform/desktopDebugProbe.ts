@@ -5,7 +5,7 @@ const MAX_RECENT_INVOKES = 20;
 
 export type DesktopDebugInvokeStatus = 'resolved' | 'rejected';
 
-export interface DesktopDebugInvokeRecord {
+interface DesktopDebugInvokeRecord {
   args?: unknown;
   command: string;
   durationMs: number;
@@ -17,7 +17,7 @@ export interface DesktopDebugInvokeRecord {
   timestamp: string;
 }
 
-export interface DesktopDebugInvokeFailure {
+interface DesktopDebugInvokeFailure {
   args?: unknown;
   command: string;
   error: {

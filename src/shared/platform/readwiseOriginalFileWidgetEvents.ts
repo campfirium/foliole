@@ -1,6 +1,6 @@
 export const READWISE_ORIGINAL_FILE_WIDGET_ACTION_EVENT = 'foliole:readwise-original-file-action';
 
-export type ReadwiseOriginalFileWidgetAction = 'download' | 'load';
+type ReadwiseOriginalFileWidgetAction = 'download' | 'load';
 
 export interface ReadwiseOriginalFileWidgetActionDetail {
   action: ReadwiseOriginalFileWidgetAction;

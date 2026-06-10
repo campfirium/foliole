@@ -3,14 +3,14 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
-export type RuntimeDatabaseMaintenanceKey = 'main-data' | 'search-data' | 'external-sources-data';
-export type RuntimeDatabaseMaintenanceState = 'present' | 'absent' | 'unreadable';
-export type RuntimeDatabaseMaintenanceBackupRole = 'included' | 'excluded';
-export type RuntimeDatabaseMaintenanceRebuildRole =
+type RuntimeDatabaseMaintenanceKey = 'main-data' | 'search-data' | 'external-sources-data';
+type RuntimeDatabaseMaintenanceState = 'present' | 'absent' | 'unreadable';
+type RuntimeDatabaseMaintenanceBackupRole = 'included' | 'excluded';
+type RuntimeDatabaseMaintenanceRebuildRole =
   | 'not-applicable'
   | 'rebuildable-from-main-data';
 
-export interface RuntimeDatabaseMaintenanceEntry {
+interface RuntimeDatabaseMaintenanceEntry {
   backupRole: RuntimeDatabaseMaintenanceBackupRole;
   key: RuntimeDatabaseMaintenanceKey;
   rebuildRole: RuntimeDatabaseMaintenanceRebuildRole;
@@ -116,7 +116,3 @@ export async function loadRuntimeDatabaseMaintenanceStatus(): Promise<RuntimeDat
     return null;
   }
 }
-
-export const databaseMaintenanceStatusBridgeTestExports = {
-  toRuntimeDatabaseMaintenanceStatus
-};

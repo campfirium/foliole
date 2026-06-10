@@ -13,18 +13,13 @@ import { logRuntimeWarning } from './runtimeLogging';
 
 export type ImportHighlightPolicy = 'adopt' | 'reference_only';
 export type ImportNodeTitleStrategy = 'file_name' | 'heading';
-export type ImportSequentialReadingMode = 'free' | 'sequential';
+type ImportSequentialReadingMode = 'free' | 'sequential';
 export interface RuntimeTextImportOptions {
   filePath?: string;
   sequentialReadingMode?: ImportSequentialReadingMode;
   targetParentNodeId?: string;
 }
-export type {
-  RuntimeDirectoryImportEntry,
-  RuntimeDirectoryImportResult,
-  RuntimeImportedTextFile,
-  RuntimeTextImportResult
-} from './importRuntimePayloads';
+export type { RuntimeDirectoryImportResult, RuntimeImportedTextFile, RuntimeTextImportResult } from './importRuntimePayloads';
 
 function toImportArgs(
   highlightPolicy?: ImportHighlightPolicy,

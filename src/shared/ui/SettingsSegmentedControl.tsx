@@ -8,7 +8,7 @@ import {
 
 import { cn } from '@/shared/lib/utils';
 
-export interface SettingsSegmentedOption {
+interface SettingsSegmentedOption {
   ariaLabel?: string;
   label: ReactNode;
   value: string;

@@ -25,7 +25,7 @@ export interface RuntimeTextImportResult {
   sourceName: string;
 }
 
-export interface RuntimeDirectoryImportEntry extends RuntimeTextImportResult {
+interface RuntimeDirectoryImportEntry extends RuntimeTextImportResult {
   adapter: 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
 }
 

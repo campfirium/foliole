@@ -35,11 +35,11 @@ export function hexColorToRgbChannels(value: string): string {
   return `${red} ${green} ${blue}`;
 }
 
-export function rgbChannelsToTuple(value: string) {
+function rgbChannelsToTuple(value: string) {
   return value.split(' ').map((channel) => Number(channel)) as [number, number, number];
 }
 
-export function blendRgbChannels(sourceRgb: string, targetRgb: string, sourceWeight: number) {
+function blendRgbChannels(sourceRgb: string, targetRgb: string, sourceWeight: number) {
   const source = rgbChannelsToTuple(sourceRgb);
   const target = rgbChannelsToTuple(targetRgb);
   return source.map((channel, index) => Math.round(channel * sourceWeight + target[index]! * (1 - sourceWeight))).join(' ');

@@ -138,17 +138,9 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   desktopDeviceSyncEnabled: 'foliole-desktop-device-sync-enabled'
 } as const;
 
-export const APP_SETTINGS_OPTIONS = {
-  markdownSyntaxVisibility: ['hidden', 'visible'] as const,
-  frontmatterDisplayMode: ['compact', 'full'] as const,
-  editorDisplayMode: ['preview', 'source'] as const,
-  pdfReadingMode: ['original', 'inverted', 'warm'] as const
-} as const;
-
-export type MarkdownSyntaxVisibility = (typeof APP_SETTINGS_OPTIONS.markdownSyntaxVisibility)[number];
-export type FrontmatterDisplayMode = (typeof APP_SETTINGS_OPTIONS.frontmatterDisplayMode)[number];
-export type EditorDisplayMode = (typeof APP_SETTINGS_OPTIONS.editorDisplayMode)[number];
-export type PdfReadingMode = (typeof APP_SETTINGS_OPTIONS.pdfReadingMode)[number];
+export type MarkdownSyntaxVisibility = 'hidden' | 'visible';
+export type FrontmatterDisplayMode = 'compact' | 'full';
+export type EditorDisplayMode = 'preview' | 'source';
 
 export interface PersistedAppSettings {
   autoLocalizeRemoteImages: boolean;

@@ -49,7 +49,7 @@ export function parseExternalLibraryFolderOrder(raw: string | null | undefined):
   }
 }
 
-export function serializeExternalLibraryFolderOrder(folders: Array<Pick<ExternalLibraryFolder, 'folderPath' | 'id'>>) {
+function serializeExternalLibraryFolderOrder(folders: Array<Pick<ExternalLibraryFolder, 'folderPath' | 'id'>>) {
   return JSON.stringify(folders.map(toOrderItem));
 }
 

@@ -44,7 +44,7 @@ export interface ExternalLibraryFolderBrowseState {
   selectedDirectoryPath: string | null;
 }
 
-export function compareNaturalName(left: string, right: string) {
+function compareNaturalName(left: string, right: string) {
   return left.trim().localeCompare(right.trim(), undefined, { numeric: true, sensitivity: 'base' });
 }
 

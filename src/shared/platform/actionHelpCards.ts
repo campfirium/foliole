@@ -7,7 +7,7 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 const ACTION_HELP_CARDS_STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.actionHelpCardsEnabled;
 const ACTION_HELP_CARDS_CHANGED_EVENT = 'foliole:action-help-cards-changed';
 
-export function getActionHelpCardsEnabled() {
+function getActionHelpCardsEnabled() {
   return getWhitelistedLocalStorageItem(ACTION_HELP_CARDS_STORAGE_KEY) !== 'false';
 }
 

@@ -39,7 +39,7 @@ export function getNextFixedReminderTime(value: string | null, now = new Date())
   return next;
 }
 
-export function getShortReminderTime(delay: HandoffReminderDelay, now = new Date()) {
+function getShortReminderTime(delay: HandoffReminderDelay, now = new Date()) {
   if (delay === 'off') {
     return null;
   }

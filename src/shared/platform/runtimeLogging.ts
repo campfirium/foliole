@@ -1,6 +1,6 @@
 import { getElectronAPI } from './electronApi';
 
-export type DiagnosticLogLevel = 'warn' | 'error' | 'info' | 'debug';
+type DiagnosticLogLevel = 'warn' | 'error' | 'info' | 'debug';
 export type RuntimeLogArea = 'bridge' | 'native' | 'persistence';
 
 export interface DiagnosticLogPayload {

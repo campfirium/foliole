@@ -14,12 +14,7 @@ import {
 } from '../workspaceCanonicalSelectors';
 
 import { resolveCompanionArticleContentPaddingTop } from './companionReadableArticleTitleSlot';
-export type {
-  CompanionFolderListEntry,
-  CompanionFolderView,
-  CompanionRecentArticle,
-  CompanionRootDirectoryView
-} from './companionBrowseLists';
+export type { CompanionRecentArticle } from './companionBrowseLists';
 
 export interface CompanionReadableArticle {
   bodyBlobHash?: string | null;

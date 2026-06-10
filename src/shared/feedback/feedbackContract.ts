@@ -8,7 +8,7 @@ export const FEEDBACK_LIMITS = {
 
 export const FEEDBACK_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 
-export type FeedbackImageType = (typeof FEEDBACK_IMAGE_TYPES)[number];
+type FeedbackImageType = (typeof FEEDBACK_IMAGE_TYPES)[number];
 
 export interface FeedbackAttachmentPayload {
   contentBase64: string;
@@ -17,7 +17,7 @@ export interface FeedbackAttachmentPayload {
   type: string;
 }
 
-export interface FeedbackMetadataPayload {
+interface FeedbackMetadataPayload {
   appVersion?: string;
   language?: string;
   platform?: string;
@@ -38,7 +38,7 @@ export type FeedbackValidationResult =
   | { ok: true; value: NormalizedFeedbackSubmission }
   | { errors: string[]; ok: false };
 
-export interface NormalizedFeedbackSubmission {
+interface NormalizedFeedbackSubmission {
   attachments: FeedbackAttachmentPayload[];
   contact: string;
   honeypot: string;

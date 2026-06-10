@@ -7,15 +7,8 @@ import {
 } from './companionSyncObjects';
 
 export const ATTACHMENT_RESOURCE_BATCH_LIMIT = 64;
-export const ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC = 20;
-export {
-  COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS,
-  COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS,
-  CONTENT_BLOB_BATCH_LIMIT,
-  CONTENT_BLOB_CONCURRENT_FETCH_LIMIT,
-  pullMissingContentBlobs,
-  syncCompanionContentBlobFromDesktop
-} from './companionDesktopSyncContentBlobs';
+const ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC = 20;
+export { COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS, CONTENT_BLOB_BATCH_LIMIT, CONTENT_BLOB_CONCURRENT_FETCH_LIMIT, pullMissingContentBlobs, syncCompanionContentBlobFromDesktop } from './companionDesktopSyncContentBlobs';
 
 type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;
 type AttachmentBreakdown = NonNullable<CompanionDesktopSyncProgress['attachmentBreakdown']>;

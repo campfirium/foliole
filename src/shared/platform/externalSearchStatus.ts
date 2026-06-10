@@ -3,19 +3,6 @@ interface ExternalSearchStatusLike {
   status: 'error' | 'idle' | 'indexing' | 'ready';
 }
 
-export function resolveExternalSearchStatusLabel(folder: ExternalSearchStatusLike) {
-  if (folder.status === 'error' || Boolean(folder.lastError)) {
-    return 'Folder unavailable';
-  }
-  if (folder.status === 'indexing') {
-    return 'Updating';
-  }
-  if (folder.status === 'ready') {
-    return 'Ready';
-  }
-  return 'Waiting to update';
-}
-
 export function resolveExternalSectionStatusLabel(folders: ExternalSearchStatusLike[]) {
   if (folders.some((folder) => folder.status === 'error' || Boolean(folder.lastError))) {
     return 'Folder unavailable';

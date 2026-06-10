@@ -7,10 +7,6 @@ import { getRuntimeInvoke } from './runtimeInvoke';
 
 const FALLBACK_APP_VERSION = packageJson.version;
 
-export function getFallbackAppVersion() {
-  return FALLBACK_APP_VERSION;
-}
-
 export async function loadAppVersion() {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) return FALLBACK_APP_VERSION;

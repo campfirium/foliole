@@ -1,7 +1,6 @@
 import type { NativeCompanionSyncEvent } from '../../../lib/platform/nativeCompanionSyncContract';
 
 export type CompanionSyncRunResult = NonNullable<NativeCompanionSyncEvent['result']>;
-export type CompanionSyncEventKind = NonNullable<NativeCompanionSyncEvent['kind']>;
 
 export function createCompanionSyncRunId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {

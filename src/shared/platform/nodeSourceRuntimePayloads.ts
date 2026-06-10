@@ -1,6 +1,6 @@
 import { toRuntimeTextImportResult, type RuntimeTextImportResult } from './importRuntimePayloads';
 
-export interface RuntimeNodeImportSource {
+interface RuntimeNodeImportSource {
   firstImportedAt: string;
   lastContentFingerprint: string;
   lastImportedAt: string;
@@ -14,7 +14,7 @@ export interface RuntimeNodeImportSource {
   sourceName: string;
 }
 
-export interface RuntimeKeepImportItemDetails {
+interface RuntimeKeepImportItemDetails {
   firstSeenAt: string;
   hasSourceUpdate: boolean;
   highlightPath: string | null;

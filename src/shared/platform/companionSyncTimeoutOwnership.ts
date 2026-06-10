@@ -5,7 +5,7 @@ export type CompanionSyncTimeoutKey =
   | 'attachment_resource_downloads'
   | 'workspace_snapshot_refresh';
 
-export interface CompanionSyncTimeoutOwnership {
+interface CompanionSyncTimeoutOwnership {
   allowsNewRunBeforeUnderlyingWorkSettles: boolean;
   cancelsUnderlyingWork: boolean;
   key: CompanionSyncTimeoutKey;

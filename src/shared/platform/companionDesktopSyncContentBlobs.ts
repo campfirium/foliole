@@ -9,16 +9,13 @@ import {
   loadCompanionMissingContentBlobs,
   syncCompanionContentBlobs
 } from './companionSyncObjects';
-import { companionSyncTimeoutOwnership } from './companionSyncTimeoutOwnership';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 
 const CONTENT_BLOB_BATCH_PATH = '/companion/content-blobs';
 const CONTENT_BLOB_ACK_PATH = '/companion/content-blob/ack';
 export const CONTENT_BLOB_BATCH_LIMIT = 32;
-export const CONTENT_BLOB_MAX_BATCHES_PER_SYNC = 20;
+const CONTENT_BLOB_MAX_BATCHES_PER_SYNC = 20;
 export const CONTENT_BLOB_CONCURRENT_FETCH_LIMIT = 6;
-export const COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS =
-  companionSyncTimeoutOwnership('content_body_downloads').timeoutMs;
 export const COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS = 45_000;
 
 type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;

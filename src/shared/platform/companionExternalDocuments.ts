@@ -26,12 +26,12 @@ export interface CompanionExternalDocument {
   updated_at: string;
 }
 
-export interface CompanionExternalDocumentSearchResult extends CompanionExternalDocument {
+interface CompanionExternalDocumentSearchResult extends CompanionExternalDocument {
   excerpt: string;
   match_start: number;
 }
 
-export interface CompanionExternalDirectoryEntry extends ExternalLibraryBrowseEntry {
+interface CompanionExternalDirectoryEntry extends ExternalLibraryBrowseEntry {
   documentId: string;
 }
 

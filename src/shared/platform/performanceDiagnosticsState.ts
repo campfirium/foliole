@@ -20,7 +20,7 @@ export const state: PerformanceDiagnosticsState = {
   sourceDetailsCache: { entries: 0, hits: 0, misses: 0 }
 };
 
-export function createComponentRenderCounts() {
+function createComponentRenderCounts() {
   return {
     documentPanel: 0,
     nodeListTree: 0,
@@ -29,7 +29,7 @@ export function createComponentRenderCounts() {
   };
 }
 
-export function createImageState() {
+function createImageState() {
   return {
     firstReadyAt: null,
     loadedCount: 0,
@@ -72,7 +72,7 @@ export function createNodeSelectionFlow(args: {
   } satisfies NodeSelectionFlow;
 }
 
-export function isPerformanceDebugEnabled() {
+function isPerformanceDebugEnabled() {
   if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
     return true;
   }
@@ -144,7 +144,7 @@ function resolveImageStatus(flow: NodeSelectionFlow) {
   return flow.imageState.readyAt === null ? 'pending' : 'done';
 }
 
-export function resolveFlowSnapshot(flow: NodeSelectionFlow | null): FlowDiagnosticsSnapshot {
+function resolveFlowSnapshot(flow: NodeSelectionFlow | null): FlowDiagnosticsSnapshot {
   if (!flow) {
     return createEmptyFlowSnapshot();
   }
@@ -195,7 +195,7 @@ export function resolveFlowSnapshot(flow: NodeSelectionFlow | null): FlowDiagnos
   };
 }
 
-export function ensurePerformanceDiagnosticsDebugApi(
+function ensurePerformanceDiagnosticsDebugApi(
   readSnapshot: PerformanceDiagnosticsDebugApi['getSnapshot'],
   reset: () => void,
   resetTotals: () => void
@@ -266,7 +266,7 @@ export function resetPerformanceDiagnosticsProbe() {
   state.sourceDetailsCache = { entries: 0, hits: 0, misses: 0 };
 }
 
-export function resetPerformanceDiagnosticsTotals() {
+function resetPerformanceDiagnosticsTotals() {
   ensurePerformanceDiagnosticsDebugApi(
     readPerformanceDiagnosticsProbe,
     resetPerformanceDiagnosticsProbe,

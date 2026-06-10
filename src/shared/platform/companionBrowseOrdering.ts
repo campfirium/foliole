@@ -16,7 +16,7 @@ function resolveCompanionImportAt(node: CompanionBrowseNode) {
   return node.createdAt.trim() || node.updatedAt.trim();
 }
 
-export function compareCompanionLastOpened(snapshot: WorkspaceSnapshot, left: CompanionBrowseNode, right: CompanionBrowseNode) {
+function compareCompanionLastOpened(snapshot: WorkspaceSnapshot, left: CompanionBrowseNode, right: CompanionBrowseNode) {
   const leftOpenedAt = resolveCompanionLastOpenedAt(snapshot, left.id);
   const rightOpenedAt = resolveCompanionLastOpenedAt(snapshot, right.id);
   if (leftOpenedAt && rightOpenedAt && leftOpenedAt !== rightOpenedAt) {

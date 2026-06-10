@@ -1,7 +1,6 @@
 import {
   loadRuntimeExternalSearchBrowseEntries,
   loadRuntimeExternalSearchFolders,
-  openRuntimeExternalDocumentFile,
   rebuildRuntimeExternalSearchIndex,
   subscribeRuntimeExternalDocumentFileOpened,
   subscribeRuntimeExternalSearchFolders,
@@ -26,10 +25,6 @@ export function subscribeExternalLibraryFolders(listener: (folders: ExternalLibr
 
 export function rebuildExternalLibraryIndex(folderId?: string) {
   return rebuildRuntimeExternalSearchIndex(folderId);
-}
-
-export function openExternalLibraryDocumentFile(path: string) {
-  return openRuntimeExternalDocumentFile(path);
 }
 
 export function subscribeExternalLibraryDocumentFileOpened(

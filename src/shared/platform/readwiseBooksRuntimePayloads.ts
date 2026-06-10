@@ -45,7 +45,7 @@ function isNodeStatus(value: unknown): value is RuntimeReadwiseBookInventoryItem
   return value === 'generated' || value === 'missing';
 }
 
-export function toRuntimeReadwiseBookInventoryItem(value: unknown): RuntimeReadwiseBookInventoryItem | null {
+function toRuntimeReadwiseBookInventoryItem(value: unknown): RuntimeReadwiseBookInventoryItem | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }

@@ -5,7 +5,7 @@ import {
   isSyncEventConfirmedProgress
 } from './companionSyncActivityEvents';
 
-export const WEB_SYNC_STATE_KEY = 'foliole-companion-workspace-sync-state';
+const WEB_SYNC_STATE_KEY = 'foliole-companion-workspace-sync-state';
 
 export type CompanionSyncOnboardingStatus = NativeCompanionWorkspaceSyncState['sync_onboarding_status'];
 
@@ -23,7 +23,6 @@ function normalizeSyncOnboardingStatus(raw: Record<string, unknown>): CompanionS
   }
   return 'pending';
 }
-
 
 function normalizeSyncEvent(value: unknown): NativeCompanionSyncEvent | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {

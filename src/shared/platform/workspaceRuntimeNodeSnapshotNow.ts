@@ -15,7 +15,7 @@ import type {
   WorkspaceRuntimeNodeSnapshot
 } from './workspaceRuntimeTypes';
 
-export async function createLoadedNodeSnapshot(args: {
+async function createLoadedNodeSnapshot(args: {
   isDocumentLoaded: (node: WorkspaceRuntimeNode) => boolean;
   mergeDocument: (node: WorkspaceRuntimeNode, document: WorkspaceRuntimeNodeDocument) => WorkspaceRuntimeNode;
   node: WorkspaceRuntimeNode;

@@ -1,7 +1,7 @@
 import { formatShortcutLabel, getShortcutSignature } from './shortcuts';
 import type { CommandShortcut } from './types';
 
-export type ShortcutConflictSeverity = 'warning' | 'error';
+type ShortcutConflictSeverity = 'warning' | 'error';
 
 export interface ShortcutConflictEntry {
   commandId: string;

@@ -7,10 +7,6 @@ import type {
 import { refreshRuntimeExternalSearchFolders } from './externalSearchRuntimeRepository';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
-export function hasReadwiseImportCleanupRuntimeRepository() {
-  return Boolean(getRuntimeInvoke());
-}
-
 export async function previewReadwiseImportCleanupInRuntime() {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {

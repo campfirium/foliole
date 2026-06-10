@@ -1,4 +1,4 @@
-export type ExternalLinkOpenTarget = 'browser' | 'panel';
+type ExternalLinkOpenTarget = 'browser' | 'panel';
 
 export interface ExternalLinkOpenRequest {
   anchorPoint?: {

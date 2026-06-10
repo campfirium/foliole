@@ -10,7 +10,7 @@ import {
 import { runSyncConvergenceCheck } from './companionSyncConvergence';
 import { loadCompanionPairingState } from './companionWorkspacePairing';
 
-export const PRIMARY_DEVICE_TAKEOVER_PATH = '/companion/primary-device/takeover';
+const PRIMARY_DEVICE_TAKEOVER_PATH = '/companion/primary-device/takeover';
 
 function requireNumber(value: number | null | undefined, field: string) {
   if (typeof value !== 'number' || !Number.isFinite(value)) {

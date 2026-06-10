@@ -25,8 +25,6 @@ import {
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 
 const SYNC_PACK_PATH = '/companion/sync-pack';
-export const COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS =
-  companionSyncTimeoutOwnership('push_local_changes').timeoutMs;
 export const COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS =
   companionSyncTimeoutOwnership('structure_pack_apply').timeoutMs;
 export {

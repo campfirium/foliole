@@ -4,28 +4,20 @@ import {
   setWhitelistedLocalStorageItem
 } from '../platform/storage';
 
-export const APP_LOCALES = ['en', 'zh-Hans'] as const;
+const APP_LOCALES = ['en', 'zh-Hans'] as const;
 export type AppLocale = (typeof APP_LOCALES)[number];
-export const APP_LANGUAGE_PREFERENCES = ['system', ...APP_LOCALES] as const;
+const APP_LANGUAGE_PREFERENCES = ['system', ...APP_LOCALES] as const;
 export type AppLanguagePreference = (typeof APP_LANGUAGE_PREFERENCES)[number];
 
-export const DEFAULT_APP_LOCALE: AppLocale = 'en';
-export const DEFAULT_APP_LANGUAGE_PREFERENCE: AppLanguagePreference = 'system';
+const DEFAULT_APP_LOCALE: AppLocale = 'en';
+const DEFAULT_APP_LANGUAGE_PREFERENCE: AppLanguagePreference = 'system';
 export const APP_LANGUAGE_STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.appLanguage;
-
-export function isAppLocale(value: string): value is AppLocale {
-  return APP_LOCALES.includes(value as AppLocale);
-}
 
 export function isAppLanguagePreference(value: string): value is AppLanguagePreference {
   return APP_LANGUAGE_PREFERENCES.includes(value as AppLanguagePreference);
 }
 
-export function normalizeAppLocale(value: string | null | undefined): AppLocale {
-  return value && isAppLocale(value) ? value : DEFAULT_APP_LOCALE;
-}
-
-export function normalizeAppLanguagePreference(value: string | null | undefined): AppLanguagePreference {
+function normalizeAppLanguagePreference(value: string | null | undefined): AppLanguagePreference {
   return value && isAppLanguagePreference(value) ? value : DEFAULT_APP_LANGUAGE_PREFERENCE;
 }
 

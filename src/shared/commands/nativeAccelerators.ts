@@ -46,7 +46,7 @@ function formatAcceleratorKey(key: string) {
   return key.length === 1 ? key.toUpperCase() : key;
 }
 
-export function formatNativeMenuAccelerator(shortcut: CommandShortcut) {
+function formatNativeMenuAccelerator(shortcut: CommandShortcut) {
   const parts: string[] = [];
   if (shortcut.metaKey) {
     parts.push('Command');

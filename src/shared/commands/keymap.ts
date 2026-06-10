@@ -4,7 +4,7 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 import { parseShortcutLabel, serializeShortcut } from './shortcuts';
 import type { CommandShortcut, CommandShortcutSet } from './types';
 
-export interface CommandShortcutOverrideEntry {
+interface CommandShortcutOverrideEntry {
   primary?: string;
   secondary?: string;
 }

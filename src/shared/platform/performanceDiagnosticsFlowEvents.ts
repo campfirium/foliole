@@ -186,10 +186,6 @@ export function markSelectionComputationAt(nodeId: string, name: string, atMs: n
   });
 }
 
-export function markPreviousNodeTrimmed(nodeId: string) {
-  markFlowEventByNode(nodeId, 'previous_node_trimmed');
-}
-
 export function markNodePositionRequested(nodeId: string) {
   const flow = getFlow(nodeId);
   if (flow) {

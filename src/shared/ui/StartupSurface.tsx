@@ -136,10 +136,6 @@ function appendActionButton(
   parent.append(button);
 }
 
-export function renderStartupBootView(rootElement: HTMLElement) {
-  renderStartupSurface(rootElement, createStartupBootSurfaceModel());
-}
-
 export function renderStartupErrorView(
   rootElement: HTMLElement,
   input: string | StartupErrorViewModel,

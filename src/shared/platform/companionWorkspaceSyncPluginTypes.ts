@@ -20,7 +20,7 @@ import type { CompanionAttachmentResourceSyncPlugin } from './companionAttachmen
 import type { CompanionContentBlobSyncPlugin } from './companionContentBlobSyncPluginTypes';
 import type { SyncPushAck } from './companionSyncPushProtocol';
 
-export interface CompanionDiscoveryCandidatesPayload {
+interface CompanionDiscoveryCandidatesPayload {
   endpoint_urls: string[];
 }
 

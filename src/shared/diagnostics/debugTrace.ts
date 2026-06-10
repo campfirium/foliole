@@ -161,11 +161,3 @@ export function pushDebugTrace(event: string, payload: unknown) {
   lastPersistedTraceSignature = signature;
   appendReadingPositionTraceLog(entry);
 }
-
-export function readDebugTraces() {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-  const targetWindow = window as FolioleWindow;
-  return targetWindow.__folioleDebug?.getTraces?.() ?? [];
-}

@@ -1,4 +1,4 @@
-export class BoundedCache<K, V> {
+class BoundedCache<K, V> {
   private readonly entries = new Map<K, V>();
 
   constructor(private readonly limit: number) {

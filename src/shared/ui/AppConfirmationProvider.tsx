@@ -34,7 +34,7 @@ interface ActiveTextInput {
 
 type ActiveDialog = ActiveConfirmation | ActiveTextInput;
 
-export const AppConfirmationContext = createContext(null);
+const AppConfirmationContext = createContext(null);
 
 function normalizeDescription(description: AppConfirmationOptions['description']) {
   if (!description) {

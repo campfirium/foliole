@@ -122,7 +122,7 @@ function formatAriaShortcutKey(key: string) {
   return normalized.length === 1 ? normalized.toUpperCase() : normalized;
 }
 
-export function formatAriaShortcut(shortcut: CommandShortcut) {
+function formatAriaShortcut(shortcut: CommandShortcut) {
   const parts: string[] = [];
   if (shortcut.ctrlKey) {
     parts.push('Control');

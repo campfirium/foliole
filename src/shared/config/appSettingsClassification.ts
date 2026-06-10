@@ -8,7 +8,7 @@ export const APP_SETTINGS_PERSISTENCE_KINDS = {
   uiSessionOnly: 'ui-session-only'
 } as const;
 
-export type AppSettingsPersistenceKind =
+type AppSettingsPersistenceKind =
   (typeof APP_SETTINGS_PERSISTENCE_KINDS)[keyof typeof APP_SETTINGS_PERSISTENCE_KINDS];
 export type AppSettingsStorageName = keyof typeof APP_SETTINGS_STORAGE_KEYS;
 
@@ -18,7 +18,7 @@ export interface AppSettingsClassification {
   allowRuntimeAppSettings: boolean;
 }
 
-export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
+const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'markdownSyntaxVisibility',
   'frontmatterDisplayMode',
   'frontmatterMetaFields',
@@ -154,12 +154,12 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'devReviewStatusBarOpen'
 ] as const satisfies readonly AppSettingsStorageName[];
 
-export const RENDERER_PREFERENCE_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];
-export const DESKTOP_RUNTIME_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];
-export const CROSS_HOST_SYNC_APP_SETTING_NAMES = [
+const RENDERER_PREFERENCE_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];
+const DESKTOP_RUNTIME_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];
+const CROSS_HOST_SYNC_APP_SETTING_NAMES = [
   'desktopDeviceSyncEnabled'
 ] as const satisfies readonly AppSettingsStorageName[];
-export const UI_SESSION_ONLY_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];
+const UI_SESSION_ONLY_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];
 
 function createClassification(kind: AppSettingsPersistenceKind): AppSettingsClassification {
   return {
@@ -197,11 +197,11 @@ addClassifications(classifications, UI_SESSION_ONLY_APP_SETTING_NAMES, APP_SETTI
 
 export const APP_SETTINGS_CLASSIFICATIONS = classifications as Record<AppSettingsStorageName, AppSettingsClassification>;
 
-export function getAppSettingsKey(name: AppSettingsStorageName) {
+function getAppSettingsKey(name: AppSettingsStorageName) {
   return APP_SETTINGS_STORAGE_KEYS[name];
 }
 
-export function getClassifiedAppSettingsKeys(predicate: (classification: AppSettingsClassification) => boolean) {
+function getClassifiedAppSettingsKeys(predicate: (classification: AppSettingsClassification) => boolean) {
   return Object.entries(APP_SETTINGS_CLASSIFICATIONS)
     .filter(([, classification]) => predicate(classification))
     .map(([name]) => getAppSettingsKey(name as AppSettingsStorageName));

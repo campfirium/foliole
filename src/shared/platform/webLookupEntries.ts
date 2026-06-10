@@ -15,13 +15,7 @@ import {
 } from './webLookupEntryDefaults';
 import { isValidUrlTemplate, normalizeTemplatePlaceholder } from './webLookupTemplateResolution';
 
-export {
-  WEB_LOOKUP_PROMPT_MAX_ENCODED_LENGTH,
-  WEB_LOOKUP_QUERY_MAX_LENGTH,
-  WEB_LOOKUP_SELECTION_PLACEHOLDER,
-  WEB_LOOKUP_TITLE_PLACEHOLDER,
-  type WebLookupEntry
-} from './webLookupEntryDefaults';
+export { WEB_LOOKUP_PROMPT_MAX_ENCODED_LENGTH, WEB_LOOKUP_QUERY_MAX_LENGTH, type WebLookupEntry } from './webLookupEntryDefaults';
 export { resolveWebLookupAction } from './webLookupActionResolution';
 export { resolveWebLookupUrl } from './webLookupTemplateResolution';
 

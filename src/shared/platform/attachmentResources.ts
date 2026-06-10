@@ -28,7 +28,7 @@ const attachmentResourceResolutionCache = createBoundedCache<
   Promise<NativeAttachmentResourceResolution | null>
 >(MAX_ATTACHMENT_RESOURCE_RESOLUTIONS);
 
-export function parseAttachmentId(resourceUrl: string) {
+function parseAttachmentId(resourceUrl: string) {
   return parseAssetMarkdownUrl(resourceUrl);
 }
 

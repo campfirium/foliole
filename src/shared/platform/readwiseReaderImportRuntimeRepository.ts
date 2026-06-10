@@ -9,10 +9,6 @@ import type {
 import { refreshRuntimeExternalSearchFolders } from './externalSearchRuntimeRepository';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
-export function hasReadwiseReaderImportRuntimeRepository() {
-  return Boolean(getRuntimeInvoke());
-}
-
 export async function previewReadwiseReaderImportInRuntime(
   settings: ImportManagerSettings
 ): Promise<NativeReadwiseSyncPreviewResult | null> {

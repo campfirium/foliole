@@ -224,7 +224,6 @@ export {
   AppDropdownMenuContent,
   AppDropdownMenuItem,
   AppDropdownMenuLabel,
-  AppDropdownMenuPortal,
   AppDropdownMenuSeparator,
   AppDropdownMenuTrigger,
   AppSelectionDropdownMenu,

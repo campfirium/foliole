@@ -22,7 +22,7 @@ function isPdfNodeStatus(value: unknown): value is RuntimePdfImportInventoryItem
   return value === 'deleted' || value === 'generated' || value === 'missing';
 }
 
-export function toRuntimePdfImportInventoryItem(value: unknown): RuntimePdfImportInventoryItem | null {
+function toRuntimePdfImportInventoryItem(value: unknown): RuntimePdfImportInventoryItem | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }

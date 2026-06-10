@@ -10,7 +10,7 @@ import {
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceRuntimeRepository';
 
-export const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
+const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
 
 export interface CombinedSyncDiagnosticResult {
   android: SyncDiagnosticSnapshot | null;

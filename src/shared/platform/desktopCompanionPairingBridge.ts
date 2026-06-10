@@ -1,11 +1,1 @@
-export {
-  approveDesktopCompanionPairRequest,
-  clearDesktopCompanionPairedDevices,
-  disableDesktopCompanionSync,
-  enableDesktopCompanionSync,
-  loadDesktopCompanionPairingOverview,
-  onDesktopCompanionPairingRequestsChanged,
-  rejectDesktopCompanionPairRequest,
-  removeDesktopCompanionPairedDevice,
-  setDesktopAsPrimaryDevice
-} from './desktopCompanionPairingRuntimeRepository';
+export { approveDesktopCompanionPairRequest, clearDesktopCompanionPairedDevices, disableDesktopCompanionSync, enableDesktopCompanionSync, loadDesktopCompanionPairingOverview, rejectDesktopCompanionPairRequest, removeDesktopCompanionPairedDevice, setDesktopAsPrimaryDevice } from './desktopCompanionPairingRuntimeRepository';

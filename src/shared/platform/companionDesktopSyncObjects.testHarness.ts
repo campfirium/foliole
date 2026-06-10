@@ -50,7 +50,7 @@ export const attachmentResolutionMock = {
   invalidateAttachmentResourceResolution: vi.fn()
 };
 
-export const pairingMock = {
+const pairingMock = {
   createSignedRequestHeaders: vi.fn(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
     'X-Device-Id': 'android-test-device',
     'X-Signature': `signed:${pathWithQuery}`

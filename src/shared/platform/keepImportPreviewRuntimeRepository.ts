@@ -4,7 +4,7 @@ import { toRuntimeKeepImportPreviewResult, type RuntimeKeepImportPreviewResult }
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
-export type { RuntimeKeepImportPreviewEntry, RuntimeKeepImportPreviewResult } from './keepImportPreviewPayloads';
+export type { RuntimeKeepImportPreviewResult } from './keepImportPreviewPayloads';
 
 export async function previewRuntimeKeepImportRule(args: {
   directoryPath: string;
