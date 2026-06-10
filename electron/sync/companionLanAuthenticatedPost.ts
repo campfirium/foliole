@@ -28,26 +28,61 @@ function writeBinary(response: http.ServerResponse, statusCode: number, body: Bu
   response.end(body);
 }
 
+function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
+  if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
+  if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
+  if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
+  if (parsedRequestUrl.pathname === PRIMARY_DEVICE_TAKEOVER_PATH) return 'primary-device-takeover';
+  if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
+  return null;
+}
+
+async function readAuthenticatedPostBody(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  writeJson: WriteJson
+) {
+  try {
+    return await readCompanionRequestBody(request);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'invalid_request_body';
+    writeJson(request, response, message === 'request_too_large' ? 413 : 400, { error: message }, 'POST, OPTIONS');
+    return null;
+  }
+}
+
 export async function handleAuthenticatedPost(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   parsedRequestUrl: URL,
   writeJson: WriteJson
 ) {
-  const bodyText = await readCompanionRequestBody(request);
+  const route = resolveAuthenticatedPostRoute(parsedRequestUrl);
+  if (route === 'retired-sync-json') {
+    writeJson(request, response, 410, { error: 'sync_json_endpoint_retired' }, 'POST, OPTIONS');
+    return true;
+  }
+  if (!route) {
+    writeJson(request, response, 404, { error: 'not_found' }, 'POST, OPTIONS');
+    return true;
+  }
+  const bodyText = await readAuthenticatedPostBody(request, response, writeJson);
+  if (bodyText === null) {
+    return true;
+  }
   const auth = authenticateCompanionRequest({ bodyText, request });
   if (!auth.ok) {
     writeJson(request, response, auth.status_code, { error: auth.error });
     return true;
   }
-  if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) {
+  if (route === 'content-blob-ack') {
     const ack = acknowledgeCompanionContentBlobs(bodyText);
     writeJson(request, response, ack.status === 'ok' ? 200 : ack.statusCode, ack.status === 'ok' ? ack : {
       error: ack.error
     }, 'POST, OPTIONS');
     return true;
   }
-  if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) {
+  if (route === 'content-blob-batch') {
     const batch = loadCompanionContentBlobBatch(bodyText);
     if (batch.status === 'ready') {
       writeBinary(response, 200, batch.body, batch.mimeType);
@@ -56,7 +91,7 @@ export async function handleAuthenticatedPost(
     }
     return true;
   }
-  if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) {
+  if (route === 'sync-push') {
     try {
       writeJson(request, response, 200, await handleCompanionSyncPush(bodyText), 'POST, OPTIONS');
     } catch (error) {
@@ -66,15 +101,10 @@ export async function handleAuthenticatedPost(
     }
     return true;
   }
-  if (parsedRequestUrl.pathname === PRIMARY_DEVICE_TAKEOVER_PATH) {
+  if (route === 'primary-device-takeover') {
     const result = handlePrimaryDeviceTakeover(bodyText, auth.device_id);
     writeJson(request, response, result.statusCode, result.value, 'POST, OPTIONS');
     return true;
   }
-  if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) {
-    writeJson(request, response, 410, { error: 'sync_json_endpoint_retired' }, 'POST, OPTIONS');
-    return true;
-  }
-  writeJson(request, response, 404, { error: 'not_found' }, 'POST, OPTIONS');
   return true;
 }

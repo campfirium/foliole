@@ -27,6 +27,9 @@ const primaryDeviceTakeoverMock = vi.hoisted(() => ({
     }
   }))
 }));
+const syncPushMock = vi.hoisted(() => ({
+  handleCompanionSyncPush: vi.fn()
+}));
 
 vi.mock('./companionRequestAuth.js', () => ({
   authenticateCompanionRequest: authMock.authenticateCompanionRequest
@@ -42,7 +45,7 @@ vi.mock('./companionLanSyncObjects.js', () => ({
 }));
 vi.mock('./companionLanSyncPush.js', () => ({
   SYNC_PUSH_PATH: '/companion/sync-push',
-  handleCompanionSyncPush: vi.fn()
+  handleCompanionSyncPush: syncPushMock.handleCompanionSyncPush
 }));
 vi.mock('./companionLanPrimaryDeviceTakeover.js', () => ({
   PRIMARY_DEVICE_TAKEOVER_PATH: '/companion/primary-device/takeover',
@@ -102,6 +105,47 @@ function createResponse() {
   };
   return response as unknown as http.ServerResponse & typeof response;
 }
+
+function createWriteJson() {
+  return vi.fn((_request, targetResponse, statusCode, payload) => {
+    targetResponse.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
+    targetResponse.end(JSON.stringify(payload));
+  });
+}
+
+function createOversizedRequest(url: string) {
+  const request = Readable.from([Buffer.alloc((1024 * 1024) + 1)]) as http.IncomingMessage;
+  request.headers = {};
+  request.method = 'POST';
+  request.url = url;
+  return request;
+}
+
+it('returns unknown post paths before reading oversized bodies', async () => {
+  const response = createResponse();
+  const writeJson = createWriteJson();
+  const request = createOversizedRequest('/companion/unknown-post');
+
+  await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
+
+  expect(writeJson).toHaveBeenCalledWith(request, response, 404, { error: 'not_found' }, 'POST, OPTIONS');
+  expect(authMock.authenticateCompanionRequest).not.toHaveBeenCalled();
+  expect(contentBlobMock.loadCompanionContentBlobBatch).not.toHaveBeenCalled();
+  expect(primaryDeviceTakeoverMock.handlePrimaryDeviceTakeover).not.toHaveBeenCalled();
+  expect(syncPushMock.handleCompanionSyncPush).not.toHaveBeenCalled();
+});
+
+it('returns controlled json for oversized known post bodies before auth', async () => {
+  const response = createResponse();
+  const writeJson = createWriteJson();
+  const request = createOversizedRequest('/companion/content-blobs');
+
+  await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
+
+  expect(writeJson).toHaveBeenCalledWith(request, response, 413, { error: 'request_too_large' }, 'POST, OPTIONS');
+  expect(authMock.authenticateCompanionRequest).not.toHaveBeenCalled();
+  expect(contentBlobMock.loadCompanionContentBlobBatch).not.toHaveBeenCalled();
+});
 
 it('serves signed content body blob batches', async () => {
   const response = createResponse();
