@@ -48,7 +48,7 @@ function createToastWindow() {
     showInactive: vi.fn(),
     webContents: {
       id: 42,
-      executeJavaScript: vi.fn(),
+      executeJavaScript: vi.fn(async () => undefined),
       send: vi.fn()
     }
   };

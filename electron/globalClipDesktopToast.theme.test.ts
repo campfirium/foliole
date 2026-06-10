@@ -28,7 +28,11 @@ const waitForRendererAppReady = vi.hoisted(() => vi.fn<() => Promise<void>>(asyn
 vi.mock('electron', () => electronMocks);
 vi.mock('./ipc/boot.js', () => ({ waitForRendererAppReady }));
 
-import { resetGlobalClipDesktopToastWindowForTests, showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
+import {
+  prepareGlobalClipDesktopToastWindow,
+  resetGlobalClipDesktopToastWindowForTests,
+  showGlobalClipDesktopToast
+} from './globalClipDesktopToast.js';
 
 function createToastWindow() {
   return {
@@ -43,7 +47,7 @@ function createToastWindow() {
     showInactive: vi.fn(),
     webContents: {
       id: 42,
-      executeJavaScript: vi.fn(),
+      executeJavaScript: vi.fn(async () => undefined),
       send: vi.fn()
     }
   };
@@ -58,6 +62,28 @@ const zhHansStrings = {
   save: '保存',
   showHint: '?',
   showHintLabel: '显示提示'
+};
+
+const darkTheme = {
+  accent: 'rgb(127, 177, 141)',
+  background: 'rgb(42, 45, 41)',
+  border: 'rgb(80, 84, 78)',
+  foreground: 'rgb(232, 230, 223)',
+  hasAppTheme: true,
+  inputBackground: 'rgb(36, 39, 35)',
+  mutedForeground: 'rgb(165, 164, 159)',
+  strings: zhHansStrings
+};
+
+const lightTheme = {
+  accent: 'rgb(63, 143, 104)',
+  background: 'rgb(255, 255, 255)',
+  border: 'rgb(188, 189, 187)',
+  foreground: 'rgb(32, 33, 36)',
+  hasAppTheme: true,
+  inputBackground: 'rgb(246, 246, 246)',
+  mutedForeground: 'rgb(94, 95, 97)',
+  strings: zhHansStrings
 };
 
 async function flushToastLoad(toastWindow: ReturnType<typeof createToastWindow>) {
@@ -77,16 +103,7 @@ beforeEach(() => {
 
 it('uses the current app floating theme for the desktop toast', async () => {
   vi.useFakeTimers();
-  const executeJavaScript = vi.fn(async () => ({
-    accent: 'rgb(127, 177, 141)',
-    background: 'rgb(42, 45, 41)',
-    border: 'rgb(80, 84, 78)',
-    foreground: 'rgb(232, 230, 223)',
-    hasAppTheme: true,
-    inputBackground: 'rgb(36, 39, 35)',
-    mutedForeground: 'rgb(165, 164, 159)',
-    strings: zhHansStrings
-  }));
+  const executeJavaScript = vi.fn(async () => darkTheme);
   const toastWindow = createToastWindow();
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([{
     isDestroyed: vi.fn(() => false),
@@ -110,16 +127,7 @@ it('uses the current app floating theme for the desktop toast', async () => {
 
 it('keeps localized toast status text when the notification updates', async () => {
   vi.useFakeTimers();
-  const executeJavaScript = vi.fn(async () => ({
-    accent: 'rgb(127, 177, 141)',
-    background: 'rgb(42, 45, 41)',
-    border: 'rgb(80, 84, 78)',
-    foreground: 'rgb(232, 230, 223)',
-    hasAppTheme: true,
-    inputBackground: 'rgb(36, 39, 35)',
-    mutedForeground: 'rgb(165, 164, 159)',
-    strings: zhHansStrings
-  }));
+  const executeJavaScript = vi.fn(async () => darkTheme);
   const toastWindow = createToastWindow();
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([{
     isDestroyed: vi.fn(() => false),
@@ -133,9 +141,38 @@ it('keeps localized toast status text when the notification updates', async () =
   await flushToastLoad(toastWindow);
   toast.update('success', 'node-1', 'Captured source preview');
 
-  const latestScript = toastWindow.webContents.executeJavaScript.mock.calls.at(-1)?.[0] ?? '';
+  const latestCall = toastWindow.webContents.executeJavaScript.mock.calls.at(-1) as [string, boolean] | undefined;
+  const latestScript = latestCall?.[0] ?? '';
   expect(latestScript).toContain('已保存到收件箱');
   expect(latestScript).not.toContain('Saved to Inbox');
+});
+
+it('refreshes a prewarmed toast with the current theme before first display', async () => {
+  vi.useFakeTimers();
+  const toastWindow = createToastWindow();
+  const executeJavaScript = vi.fn()
+    .mockResolvedValueOnce(darkTheme)
+    .mockResolvedValueOnce(lightTheme);
+  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([{
+    isDestroyed: vi.fn(() => false),
+    webContents: { executeJavaScript }
+  }]);
+  electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
+    return toastWindow;
+  });
+
+  prepareGlobalClipDesktopToastWindow();
+  await flushToastLoad(toastWindow);
+  showGlobalClipDesktopToast();
+  await flushToastLoad(toastWindow);
+
+  const loadedUrl = toastWindow.loadURL.mock.calls[0]?.[0] ?? '';
+  expect(decodeURIComponent(loadedUrl)).toContain('--capture-bg:rgb(42, 45, 41);');
+  expect(toastWindow.webContents.executeJavaScript).toHaveBeenCalledWith(
+    expect.stringContaining('--capture-bg:rgb(255, 255, 255);'),
+    true
+  );
+  expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
 });
 
 it('falls back and shows the toast when app theme reading stalls', async () => {
@@ -168,15 +205,7 @@ it('falls back and shows the toast when app theme reading stalls', async () => {
 it('does not read the theme from the toast window itself', async () => {
   vi.useFakeTimers();
   const toastWindow = createToastWindow();
-  const executeJavaScript = vi.fn(async () => ({
-    accent: 'rgb(63, 143, 104)',
-    background: 'rgb(255, 255, 255)',
-    border: 'rgb(188, 189, 187)',
-    foreground: 'rgb(32, 33, 36)',
-    hasAppTheme: true,
-    inputBackground: 'rgb(246, 246, 246)',
-    mutedForeground: 'rgb(94, 95, 97)'
-  }));
+  const executeJavaScript = vi.fn(async () => lightTheme);
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([
     toastWindow,
     {

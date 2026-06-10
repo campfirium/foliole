@@ -25,6 +25,7 @@ import {
   type GlobalClipToastStatus
 } from './globalClipDesktopToastState.js';
 import { installGlobalClipDesktopToastTestHook } from './globalClipDesktopToastTestHook.js';
+import { refreshToastWindowTheme } from './globalClipDesktopToastTheme.js';
 import { installGlobalCaptureToastOpenHandler, openGlobalCaptureTarget } from './globalClipToastNavigation.js';
 
 const TOAST_GUTTER = 22;
@@ -60,8 +61,10 @@ function buildToastHtml(theme: GlobalCaptureFloatingTheme, status: GlobalClipToa
   const html = [
     '<!doctype html>',
     '<meta charset="utf-8">',
-    '<style>',
+    '<style data-capture-theme="true">',
     buildFloatingThemeStyle(theme),
+    '</style>',
+    '<style>',
     'body{padding:22px;}',
     '.toast{display:grid;grid-template-columns:16px 1fr 18px;align-items:center;gap:12px;width:100%;height:100%;padding:0 18px;font-size:14px;}',
     '.mark{justify-self:center;width:8px;height:8px;border-radius:999px;background:var(--capture-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--capture-accent) 16%,transparent);}',
@@ -139,6 +142,17 @@ function loadToastWindow(toastWindow: BrowserWindow, status: GlobalClipToastStat
     .then((theme) => toastWindow.loadURL(buildToastHtml(theme, status)).then(() => theme));
 }
 
+function resolveToastWindowForDisplay(
+  toastWindow: BrowserWindow,
+  preparedLoad: Promise<GlobalCaptureFloatingTheme> | undefined,
+  status: GlobalClipToastStatus
+) {
+  if (preparedLoad) {
+    return preparedLoad.then(() => refreshToastWindowTheme(toastWindow));
+  }
+  return loadToastWindow(toastWindow, status);
+}
+
 export function prepareGlobalClipDesktopToastWindow() {
   preparePrewarmedToastWindow(createToastWindow, loadToastWindow);
 }
@@ -195,7 +209,7 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
     }
     scheduleClose();
   };
-  void (prepared?.load ?? loadToastWindow(toastWindow, currentStatus))
+  void resolveToastWindowForDisplay(toastWindow, prepared?.load, currentStatus)
     .then((theme) => {
       if (!toastWindow.isDestroyed()) {
         activeLocale = theme.strings.locale;
