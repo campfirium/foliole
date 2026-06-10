@@ -140,6 +140,7 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.reviewActions.grade.hard': 'Hard',
   'desktop.reviewActions.grade.good': 'Good',
   'desktop.reviewActions.grade.easy': 'Easy',
+  'desktop.reviewActions.grade.nextDue': 'Next review {due}',
   'desktop.reviewActions.retry': 'Retry',
   'desktop.reviewActions.reveal.group': 'Item reveal actions',
   'desktop.reviewActions.showAnswer': 'Show Answer',

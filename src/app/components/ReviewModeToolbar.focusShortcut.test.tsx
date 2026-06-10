@@ -24,6 +24,7 @@ function renderResumeToolbar(onResumeReviewItem = vi.fn()) {
       reviewCompletedCount={0}
       reviewCurrentNodeId={null}
       reviewCurrentTitle={undefined}
+      reviewPreview={null}
       reviewQueueCount={3}
       reviewSessionMode="recommended"
       reviewStatus="idle"

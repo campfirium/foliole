@@ -94,6 +94,7 @@ function getReviewSessionSummary(
     readTopicCount: reviewSession.readTopicCount ?? 0,
     reviewElapsedMs: reviewSession.reviewElapsedMs ?? 0,
     reviewedItemCount: reviewSession.reviewedItemCount ?? 0,
+    nextReviewDueAt: reviewSession.nextReviewDueAt ?? null,
     sessionStartedAt: reviewSession.sessionStartedAt ?? null
   };
   return { reviewCompletedCount, reviewQueueCount, reviewStatus, reviewSummary };

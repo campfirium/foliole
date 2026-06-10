@@ -26,6 +26,7 @@ function renderOverlayResume(overrides: Partial<Parameters<typeof ReviewModeTool
       onSetReviewSessionMode={vi.fn()}
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle="Current topic"
+      reviewPreview={null}
       reviewQueueCount={3}
       reviewStatus="awaiting-answer"
       reviewSessionMode="recommended"

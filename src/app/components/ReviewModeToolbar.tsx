@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
-import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
@@ -28,6 +28,7 @@ interface ReviewModeToolbarProps {
   reviewCurrentNodeId: string | null;
   reviewCurrentTitle: string | undefined;
   reviewProgressCounts?: ReviewToolbarProgressCounts;
+  reviewPreview: SchedulerPreviewResult | null;
   reviewQueueCount: number;
   reviewSummary?: ReviewToolbarSessionSummaryValues;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';

@@ -50,6 +50,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.reviewComplete.reviewed': 'Reviewed',
   'desktop.reviewComplete.read': 'Read',
   'desktop.reviewComplete.created': 'Created',
+  'desktop.reviewComplete.nextReview': 'Next review',
   'desktop.reviewComplete.item.one': 'item',
   'desktop.reviewComplete.item.many': 'items',
   'desktop.reviewComplete.topic.one': 'topic',

@@ -142,6 +142,7 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.reviewActions.grade.hard': '困难',
   'desktop.reviewActions.grade.good': '良好',
   'desktop.reviewActions.grade.easy': '简单',
+  'desktop.reviewActions.grade.nextDue': '下次复习 {due}',
   'desktop.reviewActions.retry': '重试',
   'desktop.reviewActions.reveal.group': '检测项显示操作',
   'desktop.reviewActions.showAnswer': '显示答案',

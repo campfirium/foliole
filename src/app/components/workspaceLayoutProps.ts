@@ -99,6 +99,7 @@ export interface WorkspaceLayoutFlatProps {
     readTopicCount: number;
     reviewElapsedMs: number;
     reviewedItemCount: number;
+    nextReviewDueAt: string | null;
     sessionStartedAt: string | null;
   };
   reviewSessionMode: ReviewSessionMode;

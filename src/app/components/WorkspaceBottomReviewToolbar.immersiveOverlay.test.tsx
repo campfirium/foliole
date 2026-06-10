@@ -22,6 +22,7 @@ function createImmersiveProps(): WorkspaceBottomReviewToolbarProps {
       queuedItemCount: 2,
       queuedTopicCount: 0
     },
+    reviewPreview: null,
     reviewQueueCount: 2,
     reviewSummary: {
       completedAt: null,
@@ -32,6 +33,7 @@ function createImmersiveProps(): WorkspaceBottomReviewToolbarProps {
       readTopicCount: 0,
       reviewElapsedMs: 0,
       reviewedItemCount: 0,
+      nextReviewDueAt: null,
       sessionStartedAt: '2026-03-10T12:00:00.000Z'
     },
     reviewStatus: 'awaiting-answer',

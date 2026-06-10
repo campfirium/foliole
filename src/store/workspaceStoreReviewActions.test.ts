@@ -88,6 +88,7 @@ it('ends session when grading the last review node', async () => {
   expect(harness.getState().activeNodeId).toBe('qa-1');
 });
 
+
 it('treats cloze review nodes as gradable review cards', async () => {
   const due = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(

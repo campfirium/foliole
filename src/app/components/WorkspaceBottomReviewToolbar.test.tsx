@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
-import { selectWorkspaceBottomReviewToolbarProps, WorkspaceBottomReviewToolbar, type WorkspaceBottomReviewToolbarProps } from './WorkspaceBottomReviewToolbar';
+import { WorkspaceBottomReviewToolbar, type WorkspaceBottomReviewToolbarProps } from './WorkspaceBottomReviewToolbar';
 
 const progressCounts = (completedItemCount: number, completedTopicCount: number, queuedItemCount: number, queuedTopicCount: number) => ({ completedItemCount, completedTopicCount, queuedItemCount, queuedTopicCount });
 
@@ -21,6 +21,7 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
     reviewCurrentNodeId: 'node-1',
     reviewCurrentTitle: 'Review topic',
     reviewProgressCounts: progressCounts(0, 0, 2, 0),
+    reviewPreview: null,
     reviewQueueCount: 2,
     reviewSummary: {
       completedAt: null,
@@ -31,6 +32,7 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
       readTopicCount: 2,
       reviewElapsedMs: 18 * 60 * 1000,
       reviewedItemCount: 4,
+      nextReviewDueAt: '2026-03-11T09:30:00.000Z',
       sessionStartedAt: '2026-03-10T12:00:00.000Z'
     },
     reviewStatus: 'awaiting-answer',
@@ -199,55 +201,4 @@ it('hides the footer progress line while handling pushed reading topics', () => 
 
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
   expect(screen.queryByLabelText('i 0/12')).not.toBeInTheDocument();
-});
-
-it('treats external, trash, and virtual surfaces as paused review surfaces', () => {
-  const onOpenNotesView = vi.fn();
-  const onSelectNode = vi.fn();
-  const onResumeReviewItem = vi.fn();
-  const source = {
-    externalLibrary: { isExternalViewOpen: true },
-    layoutChrome: { isImmersiveMode: false, isListCollapsed: false },
-    navigation: { activeNodeId: 'node-1', onSelectNode },
-    nodeList: { nodesById: { 'node-1': { title: 'Review topic' } }, onOpenNotesView },
-    review: createProps({ onResumeReviewItem }),
-    trash: { isTrashViewOpen: false, isViewingTrashNode: false },
-    virtualView: { isVirtualViewOpen: false }
-  };
-
-  const externalProps = selectWorkspaceBottomReviewToolbarProps(source as never);
-  expect(externalProps.isCurrentReviewItemVisible).toBe(false);
-
-  const trashProps = selectWorkspaceBottomReviewToolbarProps({
-    ...source,
-    externalLibrary: { isExternalViewOpen: false },
-    trash: { isTrashViewOpen: true, isViewingTrashNode: true }
-  } as never);
-  expect(trashProps.isCurrentReviewItemVisible).toBe(false);
-
-  const virtualProps = selectWorkspaceBottomReviewToolbarProps({
-    ...source,
-    externalLibrary: { isExternalViewOpen: false },
-    virtualView: { isVirtualViewOpen: true }
-  } as never);
-  expect(virtualProps.isCurrentReviewItemVisible).toBe(false);
-
-  externalProps.onResumeReviewItem();
-  expect(onResumeReviewItem).toHaveBeenCalledTimes(1);
-  expect(onOpenNotesView).not.toHaveBeenCalled();
-  expect(onSelectNode).not.toHaveBeenCalled();
-});
-
-it('treats a different queued topic as a paused review surface', () => {
-  const source = {
-    externalLibrary: { isExternalViewOpen: false },
-    layoutChrome: { isImmersiveMode: false, isListCollapsed: false },
-    navigation: { activeNodeId: 'node-2', onSelectNode: vi.fn() },
-    nodeList: { nodesById: { 'node-1': { title: 'Review topic' } }, onOpenNotesView: vi.fn() },
-    review: createProps({ reviewCurrentNodeId: 'node-1' }),
-    trash: { isTrashViewOpen: false, isViewingTrashNode: false },
-    virtualView: { isVirtualViewOpen: false }
-  };
-
-  expect(selectWorkspaceBottomReviewToolbarProps(source as never).isCurrentReviewItemVisible).toBe(false);
 });

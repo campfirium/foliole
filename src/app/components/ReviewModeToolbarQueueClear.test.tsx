@@ -32,6 +32,7 @@ it('shows queue clear controls while continuing reading after review items are d
         queuedItemCount: 0,
         queuedTopicCount: 7
       }}
+      reviewPreview={null}
       reviewQueueCount={7}
       reviewSessionMode="recommended"
       reviewSummary={{

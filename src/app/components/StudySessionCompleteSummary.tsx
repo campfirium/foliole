@@ -9,6 +9,7 @@ export interface StudySessionCompleteSummaryProps {
   readTopicCount: number;
   reviewElapsedMs: number;
   reviewedItemCount: number;
+  nextReviewDueAt: string | null;
   reviewSessionMode: ReviewSessionMode;
   sessionStartedAt: string | null;
 }
@@ -67,16 +68,30 @@ function getCompletionTitle(mode: ReviewSessionMode, t: Translate) {
   return t('desktop.reviewComplete.title.default');
 }
 
+function formatNextReviewDue(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    month: 'short'
+  }).format(date);
+}
+
 export function StudySessionCompleteSummary({
   createdItemCount,
   createdTopicCount,
   readingElapsedMs,
   readTopicCount,
   reviewElapsedMs,
+  nextReviewDueAt,
   reviewSessionMode,
   reviewedItemCount
 }: StudySessionCompleteSummaryProps) {
   const t = useTranslation();
+  const nextReviewDue = reviewedItemCount > 0 ? formatNextReviewDue(nextReviewDueAt) : null;
   return (
     <div className="flex min-h-0 flex-1 items-start justify-center bg-canvas px-8 pt-[18vh] text-foreground">
       <div className="w-full max-w-[520px]">
@@ -96,6 +111,14 @@ export function StudySessionCompleteSummary({
               {createdTopicCount > 0 ? (
                 <SummaryRow count={createdTopicCount} label={createdItemCount > 0 ? '' : t('desktop.reviewComplete.created')} unit="topic" />
               ) : null}
+            </div>
+          ) : null}
+          {nextReviewDue ? (
+            <div className="mt-7 border-t border-border/60 pt-4">
+              <div className="grid min-h-10 grid-cols-[minmax(6rem,1fr)_auto] items-baseline gap-x-5">
+                <div className="text-sm font-normal text-muted-foreground">{t('desktop.reviewComplete.nextReview')}</div>
+                <div className="text-right text-base font-medium tabular-nums text-accent">{nextReviewDue}</div>
+              </div>
             </div>
           ) : null}
         </div>

@@ -1,13 +1,12 @@
-import type { ReactNode } from 'react';
-
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { useTranslation } from '../localization/LocalizationProvider';
 import type { TranslationKey } from '../localization/translations';
 
-import { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
+import { ActionHelpCard } from './ActionHelpCard';
 import { AppButton } from './Button';
 import { REVIEW_GRADE_ACTION_HELP } from './reviewActionHelp';
 import { overlayDividerClass, type ReviewActionSurface } from './reviewActionLayout';
+import { formatReviewGradePreviewDue, ReviewGradePreviewTooltip } from './ReviewGradePreviewTooltip';
 import { renderOverlayDividedActions, ReviewOverlayActionButton } from './ReviewOverlayActionButton';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
 
@@ -25,13 +24,21 @@ function ReviewGradeButton(props: {
   buttonClassName?: string;
   buttonVariant: 'ghost' | 'default';
   disabled: boolean;
+  dueLabel?: string | undefined;
   grade: ReviewGrade;
   label: string;
   surface: ReviewActionSurface;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
   if (props.surface === 'overlay') {
-    return <ReviewOverlayActionButton disabled={props.disabled} label={props.label} onClick={() => void props.submitGrade(props.grade)} />;
+    return (
+      <ReviewOverlayActionButton
+        disabled={props.disabled}
+        label={props.label}
+        onClick={() => void props.submitGrade(props.grade)}
+        title={props.dueLabel}
+      />
+    );
   }
 
   return (
@@ -41,6 +48,7 @@ function ReviewGradeButton(props: {
       disabled={props.disabled}
       onClick={() => void props.submitGrade(props.grade)}
       size="md"
+      title={props.dueLabel}
       variant={props.buttonVariant}
     >
       {props.label}
@@ -73,6 +81,51 @@ function ReviewGradeErrorFeedback(props: {
   );
 }
 
+interface ReviewGradeActionsProps {
+  buttonClassName?: string;
+  buttonVariant?: 'ghost' | 'default';
+  errorMessage: string | null;
+  groupClassName?: string;
+  isSubmitting: boolean;
+  onRetry?: () => void;
+  previewDueByGrade?: Partial<Record<ReviewGrade, string | undefined>>;
+  showActionHelp?: boolean;
+  surface?: ReviewActionSurface;
+  submitGrade: (grade: ReviewGrade) => Promise<void>;
+}
+
+function createReviewGradeActionNode(args: {
+  buttonClassName?: string;
+  buttonVariant: 'ghost' | 'default';
+  dueLabel?: string | undefined;
+  gradeButton: (typeof reviewGradeButtons)[number];
+  isSubmitting: boolean;
+  showActionHelp: boolean;
+  surface: ReviewActionSurface;
+  submitGrade: (grade: ReviewGrade) => Promise<void>;
+  t: ReturnType<typeof useTranslation>;
+}) {
+  const button = (
+    <ReviewGradePreviewTooltip dueLabel={args.dueLabel}>
+      <ReviewGradeButton
+        {...(args.buttonClassName !== undefined ? { buttonClassName: args.buttonClassName } : {})}
+        buttonVariant={args.buttonVariant}
+        disabled={args.isSubmitting}
+        dueLabel={args.dueLabel}
+        grade={args.gradeButton.grade}
+        label={args.t(args.gradeButton.labelKey)}
+        surface={args.surface}
+        submitGrade={args.submitGrade}
+      />
+    </ReviewGradePreviewTooltip>
+  );
+  return args.showActionHelp ? (
+    <ActionHelpCard help={REVIEW_GRADE_ACTION_HELP[args.gradeButton.helpKey]} placement="above">
+      {button}
+    </ActionHelpCard>
+  ) : button;
+}
+
 export function ReviewGradeActions({
   buttonClassName,
   buttonVariant = 'default',
@@ -80,45 +133,33 @@ export function ReviewGradeActions({
   groupClassName,
   isSubmitting,
   onRetry,
+  previewDueByGrade,
   showActionHelp = false,
   surface = 'panel',
   submitGrade
-}: {
-  buttonClassName?: string;
-  buttonVariant?: 'ghost' | 'default';
-  errorMessage: string | null;
-  groupClassName?: string;
-  isSubmitting: boolean;
-  onRetry?: () => void;
-  showActionHelp?: boolean;
-  surface?: ReviewActionSurface;
-  submitGrade: (grade: ReviewGrade) => Promise<void>;
-}) {
+}: ReviewGradeActionsProps) {
   const t = useTranslation();
-  const wrapWithHelpCard = (button: ReactNode, help: ActionHelpCardCopy) =>
-    showActionHelp ? (
-      <ActionHelpCard help={help} placement="above">
-        {button}
-      </ActionHelpCard>
-    ) : button;
+  const getDueLabel = (grade: ReviewGrade) => {
+    const due = formatReviewGradePreviewDue(previewDueByGrade?.[grade]);
+    return due ? t('desktop.reviewActions.grade.nextDue', { due }) : undefined;
+  };
   return (
     <div className="flex items-center gap-2">
       <ToolbarActionGroup ariaLabel={t('desktop.reviewActions.grade.group')} className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`}>
         {renderOverlayDividedActions(
           reviewGradeButtons.map((gradeButton) => ({
             key: String(gradeButton.grade),
-            node: wrapWithHelpCard(
-              <ReviewGradeButton
-                {...(buttonClassName !== undefined ? { buttonClassName } : {})}
-                buttonVariant={buttonVariant}
-                disabled={isSubmitting}
-                grade={gradeButton.grade}
-                label={t(gradeButton.labelKey)}
-                surface={surface}
-                submitGrade={submitGrade}
-              />,
-              REVIEW_GRADE_ACTION_HELP[gradeButton.helpKey]
-            )
+            node: createReviewGradeActionNode({
+              ...(buttonClassName !== undefined ? { buttonClassName } : {}),
+              buttonVariant,
+              dueLabel: getDueLabel(gradeButton.grade),
+              gradeButton,
+              isSubmitting,
+              showActionHelp,
+              surface,
+              submitGrade,
+              t
+            })
           })),
           surface
         )}

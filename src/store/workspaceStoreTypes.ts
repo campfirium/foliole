@@ -153,6 +153,7 @@ export interface ReviewSessionState {
   readTopicCount?: number;
   reviewElapsedMs?: number;
   reviewedItemCount?: number;
+  nextReviewDueAt?: string | null;
   sessionStartedAt?: string | null;
   soonNodeIds?: string[];
   totalNodeCount: number;

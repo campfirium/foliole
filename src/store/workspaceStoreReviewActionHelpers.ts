@@ -16,6 +16,7 @@ import type { WorkspaceState } from './workspaceStore';
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
+type ReviewSession = WorkspaceState['reviewSession'];
 
 export async function persistReviewGradeMutation(args: {
   currentNodeId: string;
@@ -32,6 +33,35 @@ export async function persistReviewGradeMutation(args: {
     schedulerVersion: args.schedulerVersion,
     cardBefore: args.cardBefore,
     cardAfter: args.cardAfter
+  });
+}
+
+function buildReviewSessionAfterGrade(args: {
+  continueNodeId: string | null;
+  nextDueAt: string;
+  nextNodeId: string | null;
+  now: string;
+  queueNodeIds: string[];
+  reviewElapsedMsDelta: number;
+  reviewSession: ReviewSession;
+  reviewedItemDelta: number;
+}): ReviewSession {
+  if (args.nextNodeId) {
+    return advanceReviewSession(args.reviewSession, {
+      handledAt: args.now,
+      nextReviewDueAt: args.nextDueAt,
+      nextNodeId: args.nextNodeId,
+      queueNodeIds: args.queueNodeIds,
+      reviewElapsedMsDelta: args.reviewElapsedMsDelta,
+      reviewedItemDelta: args.reviewedItemDelta
+    });
+  }
+  return completeReviewSession(args.reviewSession, {
+    completedAt: args.now,
+    continueNodeId: args.continueNodeId,
+    nextReviewDueAt: args.nextDueAt,
+    reviewElapsedMsDelta: args.reviewElapsedMsDelta,
+    reviewedItemDelta: args.reviewedItemDelta
   });
 }
 
@@ -61,46 +91,30 @@ export function applyGradedReviewState(args: {
     const reviewElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
     const reviewedItemDelta = nextQueue.taskNodeIds.includes(args.currentNodeId) ? 0 : 1;
     const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
+    const nextReviewSession = buildReviewSessionAfterGrade({
+      continueNodeId,
+      nextDueAt: args.nodePatch.review.due,
+      nextNodeId,
+      now: args.now,
+      queueNodeIds: nextQueue.taskNodeIds,
+      reviewElapsedMsDelta,
+      reviewSession: args.snapshot.reviewSession,
+      reviewedItemDelta
+    });
     return {
       activeNodeId: nextNodeId ?? continueNodeId ?? state.activeNodeId,
       appActionHistory: pushWorkspaceUndoEntry(
         state.appActionHistory,
         createReviewGradeHistoryEntry({
           afterReview: args.nodePatch.review,
-          afterReviewSession: nextNodeId
-            ? advanceReviewSession(args.snapshot.reviewSession, {
-                handledAt: args.now,
-                nextNodeId,
-                queueNodeIds: nextQueue.taskNodeIds,
-                reviewElapsedMsDelta,
-                reviewedItemDelta
-              })
-            : completeReviewSession(args.snapshot.reviewSession, {
-                completedAt: args.now,
-                continueNodeId,
-                reviewElapsedMsDelta,
-                reviewedItemDelta
-              }),
+          afterReviewSession: nextReviewSession,
           beforeReview: args.snapshot.nodesById[args.currentNodeId]!.review!,
           beforeReviewSession: args.snapshot.reviewSession,
           nodeId: args.currentNodeId
         })
       ),
       nodesById: nextNodesById,
-      reviewSession: nextNodeId
-        ? advanceReviewSession(args.snapshot.reviewSession, {
-            handledAt: args.now,
-            nextNodeId,
-            queueNodeIds: nextQueue.taskNodeIds,
-            reviewElapsedMsDelta,
-            reviewedItemDelta
-          })
-        : completeReviewSession(args.snapshot.reviewSession, {
-            completedAt: args.now,
-            continueNodeId,
-            reviewElapsedMsDelta,
-            reviewedItemDelta
-          })
+      reviewSession: nextReviewSession
     };
   });
 }

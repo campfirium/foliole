@@ -23,6 +23,7 @@ export interface WorkspaceBottomReviewToolbarProps {
   reviewCurrentNodeId: string | null;
   reviewCurrentTitle: string | undefined;
   reviewProgressCounts?: ReviewToolbarProgressCounts;
+  reviewPreview: WorkspaceLayoutProps['review']['reviewPreview'];
   reviewQueueCount: number;
   reviewSummary: WorkspaceLayoutProps['review']['reviewSummary'];
   reviewStatus: WorkspaceLayoutProps['review']['reviewStatus'];
@@ -89,6 +90,7 @@ function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
       reviewCurrentNodeId={props.reviewCurrentNodeId}
       reviewCurrentTitle={props.reviewCurrentTitle}
       {...definedProps({ reviewProgressCounts: props.reviewProgressCounts })}
+      reviewPreview={props.reviewPreview}
       reviewQueueCount={props.reviewQueueCount}
       reviewSummary={props.reviewSummary}
       reviewStatus={props.reviewStatus}
@@ -142,6 +144,7 @@ export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomRe
     reviewCurrentNodeId: review.reviewCurrentNodeId,
     reviewCurrentTitle: getReviewCurrentTitle(props),
     reviewProgressCounts: getReviewProgressCounts(props),
+    reviewPreview: review.reviewPreview,
     reviewQueueCount: review.reviewQueueCount,
     reviewSummary: review.reviewSummary,
     reviewStatus: review.reviewStatus,

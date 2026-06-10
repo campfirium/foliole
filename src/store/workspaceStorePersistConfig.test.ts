@@ -29,6 +29,7 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
     reviewSession: {
       currentNodeId: INBOX_NODE_ID,
       isAnswerRevealed: true,
+      nextReviewDueAt: '2026-05-14T09:30:00.000Z',
       queueNodeIds: [INBOX_NODE_ID],
       totalNodeCount: 1
     },
@@ -61,12 +62,34 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
   expect(merged?.reviewSession).toMatchObject({
     currentNodeId: INBOX_NODE_ID,
     isAnswerRevealed: true,
+    nextReviewDueAt: '2026-05-14T09:30:00.000Z',
     queueNodeIds: [INBOX_NODE_ID],
     totalNodeCount: 1
   });
   expect(partialized).not.toHaveProperty('reviewSessionMode');
   expect(merged?.reviewSessionMode).toBe('recommended');
   expect(merged?.nodesById[INBOX_NODE_ID]?.id).toBe(INBOX_NODE_ID);
+});
+
+it('drops invalid persisted review next due values', () => {
+  const current = createTestWorkspaceState();
+  const merged = createConfig().merge?.(
+    {
+      activeNodeId: INBOX_NODE_ID,
+      nodeOrder: current.nodeOrder,
+      nodesById: current.nodesById,
+      reviewSession: {
+        currentNodeId: INBOX_NODE_ID,
+        isAnswerRevealed: true,
+        nextReviewDueAt: 'not-a-date',
+        queueNodeIds: [INBOX_NODE_ID],
+        totalNodeCount: 1
+      }
+    },
+    current
+  );
+
+  expect(merged?.reviewSession.nextReviewDueAt).toBeUndefined();
 });
 
 it('does not hydrate legacy persisted temporary session mode', () => {

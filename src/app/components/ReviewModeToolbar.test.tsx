@@ -29,6 +29,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle={undefined}
       reviewProgressCounts={progressCounts(0, 0, 3, 0)}
+      reviewPreview={null}
       reviewQueueCount={3}
       reviewSummary={{
         readingElapsedMs: 34 * 60 * 1000,
@@ -113,6 +114,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       onSetReviewSessionMode={vi.fn()}
       reviewCurrentNodeId="node-1"
       reviewCurrentTitle={undefined}
+      reviewPreview={null}
       reviewQueueCount={1}
       reviewSummary={{
         readingElapsedMs: 34 * 60 * 1000,

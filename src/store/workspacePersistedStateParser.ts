@@ -147,6 +147,12 @@ function parseReviewSession(value: unknown): ReviewSessionState | undefined {
   ) {
     return undefined;
   }
+  const nextReviewDueAt =
+    typeof value.nextReviewDueAt === 'string' && Number.isFinite(Date.parse(value.nextReviewDueAt))
+      ? value.nextReviewDueAt
+      : value.nextReviewDueAt === null
+        ? null
+        : undefined;
   return {
     ...(typeof value.completedAt === 'string' || value.completedAt === null ? { completedAt: value.completedAt } : {}),
     ...(typeof value.continueNodeId === 'string' || value.continueNodeId === null ? { continueNodeId: value.continueNodeId } : {}),
@@ -158,6 +164,7 @@ function parseReviewSession(value: unknown): ReviewSessionState | undefined {
     ...(typeof value.readTopicCount === 'number' ? { readTopicCount: value.readTopicCount } : {}),
     ...(typeof value.reviewElapsedMs === 'number' ? { reviewElapsedMs: value.reviewElapsedMs } : {}),
     ...(typeof value.reviewedItemCount === 'number' ? { reviewedItemCount: value.reviewedItemCount } : {}),
+    ...(nextReviewDueAt !== undefined ? { nextReviewDueAt } : {}),
     ...(typeof value.sessionStartedAt === 'string' || value.sessionStartedAt === null ? { sessionStartedAt: value.sessionStartedAt } : {}),
     totalNodeCount: value.totalNodeCount
   };

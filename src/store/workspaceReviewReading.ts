@@ -53,6 +53,7 @@ export function advanceReviewSession(
     nextNodeId: string;
     queueNodeIds: string[];
     handledAt?: string;
+    nextReviewDueAt?: string | null;
     readingElapsedMsDelta?: number;
     readTopicDelta?: number;
     reviewElapsedMsDelta?: number;
@@ -79,6 +80,7 @@ export function completeReviewSession(
   args: {
     completedAt: string;
     continueNodeId?: string | null;
+    nextReviewDueAt?: string | null;
     readingElapsedMsDelta?: number;
     readTopicDelta?: number;
     reviewElapsedMsDelta?: number;

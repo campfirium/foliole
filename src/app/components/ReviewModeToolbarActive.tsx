@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
-import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useActionHelpCardsEnabled } from '../../shared/platform/actionHelpCards';
 import { ReviewActionBar } from '../../shared/ui';
@@ -25,6 +25,7 @@ export interface ActiveReviewActionBarProps {
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
   onRevisitReviewTopicSoon: () => Promise<boolean>;
   retryGrade?: () => Promise<void>;
+  reviewPreview: SchedulerPreviewResult | null;
   reviewCompletedCount: number;
   reviewProgressCounts?: ReviewToolbarProgressCounts;
   reviewQueueCount: number;
@@ -65,6 +66,7 @@ function createActiveReviewActions(props: Pick<
   | 'onRevealAnswer'
   | 'onRevisitReviewTopicSoon'
   | 'retryGrade'
+  | 'reviewPreview'
   | 'surface'
   | 'submitGrade'
 > & { showActionHelp: boolean }) {
@@ -84,11 +86,17 @@ function createActiveReviewActions(props: Pick<
     return <FsrsRevealAction onRevealAnswer={props.onRevealAnswer} />;
   }
   return (
-    <ReviewGradeActions
-      errorMessage={props.errorMessage}
-      isSubmitting={props.isSubmitting}
-      {...definedProps({ onRetry: props.retryGrade })}
-      showActionHelp={props.showActionHelp}
+      <ReviewGradeActions
+        errorMessage={props.errorMessage}
+        isSubmitting={props.isSubmitting}
+        {...definedProps({ onRetry: props.retryGrade })}
+        previewDueByGrade={{
+          1: props.reviewPreview?.Again.card.due,
+          2: props.reviewPreview?.Hard.card.due,
+          3: props.reviewPreview?.Good.card.due,
+          4: props.reviewPreview?.Easy.card.due
+        }}
+        showActionHelp={props.showActionHelp}
       {...definedProps({ surface: props.surface })}
       submitGrade={props.submitGrade}
     />
@@ -107,6 +115,7 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps, showAction
     onRevealAnswer: props.onRevealAnswer,
     onRevisitReviewTopicSoon: props.onRevisitReviewTopicSoon,
     ...definedProps({ retryGrade: props.retryGrade }),
+    reviewPreview: props.reviewPreview,
     showActionHelp,
     ...definedProps({ surface: props.surface }),
     submitGrade: props.submitGrade
