@@ -15,7 +15,6 @@ export {
   discoverDirectoryImportSources,
   MANAGED_INBOX_SUPPORTED_KINDS,
   resolveImportKind,
-  type DirectoryImportAdapterId,
   type DirectoryImportSourceDescriptor,
   type ImportSourceDescriptor
 } from './importSourceDiscovery.js';

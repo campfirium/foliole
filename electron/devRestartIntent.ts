@@ -16,9 +16,7 @@ import { requestShellManagedDevRestart } from './devShellManagedRestart.js';
 export const DEV_RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 export const DEV_RESTART_INTENT_KIND = 'foliole.electron.dev.restart-intent.v1';
 export {
-  DEV_RESTART_DELIVERY_FILE,
-  DEV_RESTART_DELIVERY_KIND,
-  resolveDevRestartDeliveryPath
+  DEV_RESTART_DELIVERY_FILE
 } from './devRestartDelivery.js';
 
 interface RestartIntent {
