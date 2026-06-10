@@ -23,8 +23,10 @@ const { electronMocks } = vi.hoisted(() => {
     }
   };
 });
+const waitForRendererAppReady = vi.hoisted(() => vi.fn<() => Promise<void>>(async () => undefined));
 
 vi.mock('electron', () => electronMocks);
+vi.mock('./ipc/boot.js', () => ({ waitForRendererAppReady }));
 
 import {
   prepareGlobalClipDesktopToastWindow,
@@ -62,8 +64,29 @@ beforeEach(() => {
   resetGlobalClipDesktopToastWindowForTests();
   vi.clearAllMocks();
   vi.useRealTimers();
+  waitForRendererAppReady.mockResolvedValue(undefined);
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([]);
   electronMocks.nativeTheme.shouldUseDarkColors = false;
+});
+
+it('waits for renderer app readiness before preloading the desktop toast', async () => {
+  let resolveReady: (() => void) | undefined;
+  waitForRendererAppReady.mockReturnValue(new Promise<void>((resolve) => {
+    resolveReady = resolve;
+  }));
+  const toastWindow = createToastWindow();
+  electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
+    return toastWindow;
+  });
+
+  prepareGlobalClipDesktopToastWindow();
+  await Promise.resolve();
+
+  expect(electronMocks.BrowserWindow).not.toHaveBeenCalled();
+
+  resolveReady?.();
+  await vi.waitFor(() => expect(electronMocks.BrowserWindow).toHaveBeenCalledTimes(1));
+  expect(toastWindow.loadURL).toHaveBeenCalledTimes(1);
 });
 
 it('shows an app-owned desktop toast and closes it automatically', async () => {

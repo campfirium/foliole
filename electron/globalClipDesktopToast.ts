@@ -12,6 +12,11 @@ import {
 } from './globalCaptureFloatingSurface.js';
 import { buildBrandMarkHtml } from './globalClipDesktopToastBrand.js';
 import {
+  prepareGlobalClipDesktopToastWindow as preparePrewarmedToastWindow,
+  resetGlobalClipDesktopToastWindowForTests as resetPrewarmedToastWindowForTests,
+  takePreparedGlobalClipDesktopToastWindow
+} from './globalClipDesktopToastPrewarm.js';
+import {
   resolveToastText,
   resolveToastDisplayMs,
   serializeToastState,
@@ -28,13 +33,6 @@ const TOAST_WIDTH = 340;
 const TOAST_WINDOW_HEIGHT = TOAST_HEIGHT + TOAST_GUTTER * 2;
 const TOAST_WINDOW_WIDTH = TOAST_WIDTH + TOAST_GUTTER * 2;
 const WM_LBUTTONUP = 0x0202;
-
-interface PreparedToastWindow {
-  load: Promise<void>;
-  window: BrowserWindow;
-}
-
-let preparedToastWindow: PreparedToastWindow | null = null;
 
 function closeToastAfterDisplay(toastWindow: BrowserWindow, status: GlobalClipToastStatus) {
   if (status === 'pending') {
@@ -136,33 +134,12 @@ function loadToastWindow(toastWindow: BrowserWindow, status: GlobalClipToastStat
     .then(() => undefined);
 }
 
-function takePreparedToastWindow() {
-  const prepared = preparedToastWindow;
-  preparedToastWindow = null;
-  if (!prepared || prepared.window.isDestroyed()) {
-    return null;
-  }
-  return prepared;
-}
-
 export function prepareGlobalClipDesktopToastWindow() {
-  if (preparedToastWindow && !preparedToastWindow.window.isDestroyed()) {
-    return;
-  }
-  const toastWindow = createToastWindow();
-  const load = loadToastWindow(toastWindow, 'pending').catch(() => {
-    if (!toastWindow.isDestroyed()) {
-      toastWindow.close();
-    }
-  });
-  preparedToastWindow = { load, window: toastWindow };
+  preparePrewarmedToastWindow(createToastWindow, loadToastWindow);
 }
 
 export function resetGlobalClipDesktopToastWindowForTests() {
-  if (preparedToastWindow && !preparedToastWindow.window.isDestroyed()) {
-    preparedToastWindow.window.close();
-  }
-  preparedToastWindow = null;
+  resetPrewarmedToastWindowForTests();
 }
 
 function openToastTarget(toastWindow: BrowserWindow, targetNodeId: string | null) {
@@ -178,7 +155,7 @@ function openToastTarget(toastWindow: BrowserWindow, targetNodeId: string | null
 
 export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'success'): GlobalClipDesktopToast {
   installGlobalCaptureToastOpenHandler();
-  const prepared = takePreparedToastWindow();
+  const prepared = takePreparedGlobalClipDesktopToastWindow();
   const toastWindow = prepared?.window ?? createToastWindow();
   let currentStatus = status;
   let currentPreviewTitle: string | null = null;

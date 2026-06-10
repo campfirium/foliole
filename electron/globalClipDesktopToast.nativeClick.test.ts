@@ -23,8 +23,10 @@ const { electronMocks } = vi.hoisted(() => {
     }
   };
 });
+const waitForRendererAppReady = vi.hoisted(() => vi.fn<() => Promise<void>>(async () => undefined));
 
 vi.mock('electron', () => electronMocks);
+vi.mock('./ipc/boot.js', () => ({ waitForRendererAppReady }));
 
 import { resetGlobalClipDesktopToastWindowForTests, showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 
@@ -63,6 +65,7 @@ beforeEach(() => {
   resetGlobalClipDesktopToastWindowForTests();
   vi.clearAllMocks();
   vi.useRealTimers();
+  waitForRendererAppReady.mockResolvedValue(undefined);
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([]);
 });
 
