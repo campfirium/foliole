@@ -29,6 +29,13 @@ const TOAST_WINDOW_HEIGHT = TOAST_HEIGHT + TOAST_GUTTER * 2;
 const TOAST_WINDOW_WIDTH = TOAST_WIDTH + TOAST_GUTTER * 2;
 const WM_LBUTTONUP = 0x0202;
 
+interface PreparedToastWindow {
+  load: Promise<void>;
+  window: BrowserWindow;
+}
+
+let preparedToastWindow: PreparedToastWindow | null = null;
+
 function closeToastAfterDisplay(toastWindow: BrowserWindow, status: GlobalClipToastStatus) {
   if (status === 'pending') {
     return;
@@ -123,6 +130,41 @@ function createToastWindow() {
   return toastWindow;
 }
 
+function loadToastWindow(toastWindow: BrowserWindow, status: GlobalClipToastStatus) {
+  return resolveFloatingTheme(toastWindow)
+    .then((theme) => toastWindow.loadURL(buildToastHtml(theme, status)))
+    .then(() => undefined);
+}
+
+function takePreparedToastWindow() {
+  const prepared = preparedToastWindow;
+  preparedToastWindow = null;
+  if (!prepared || prepared.window.isDestroyed()) {
+    return null;
+  }
+  return prepared;
+}
+
+export function prepareGlobalClipDesktopToastWindow() {
+  if (preparedToastWindow && !preparedToastWindow.window.isDestroyed()) {
+    return;
+  }
+  const toastWindow = createToastWindow();
+  const load = loadToastWindow(toastWindow, 'pending').catch(() => {
+    if (!toastWindow.isDestroyed()) {
+      toastWindow.close();
+    }
+  });
+  preparedToastWindow = { load, window: toastWindow };
+}
+
+export function resetGlobalClipDesktopToastWindowForTests() {
+  if (preparedToastWindow && !preparedToastWindow.window.isDestroyed()) {
+    preparedToastWindow.window.close();
+  }
+  preparedToastWindow = null;
+}
+
 function openToastTarget(toastWindow: BrowserWindow, targetNodeId: string | null) {
   if (!targetNodeId || toastWindow.isDestroyed()) {
     return;
@@ -136,7 +178,8 @@ function openToastTarget(toastWindow: BrowserWindow, targetNodeId: string | null
 
 export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'success'): GlobalClipDesktopToast {
   installGlobalCaptureToastOpenHandler();
-  const toastWindow = createToastWindow();
+  const prepared = takePreparedToastWindow();
+  const toastWindow = prepared?.window ?? createToastWindow();
   let currentStatus = status;
   let currentPreviewTitle: string | null = null;
   let navigationTargetNodeId: string | null = null;
@@ -166,13 +209,13 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
     }
     scheduleClose();
   };
-  void resolveFloatingTheme(toastWindow)
-    .then((theme) => toastWindow.loadURL(buildToastHtml(theme, currentStatus)))
+  void (prepared?.load ?? loadToastWindow(toastWindow, currentStatus))
     .then(() => {
       if (!toastWindow.isDestroyed()) {
         isLoaded = true;
         update(currentStatus, navigationTargetNodeId, currentPreviewTitle);
         toastWindow.showInactive();
+        globalThis.setTimeout(() => prepareGlobalClipDesktopToastWindow(), 0);
       }
     });
   return {

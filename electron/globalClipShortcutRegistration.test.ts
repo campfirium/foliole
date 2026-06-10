@@ -37,6 +37,7 @@ beforeEach(() => {
 it('registers and unregisters the Windows global clip shortcut', () => {
   const appRef = { on: vi.fn() };
   const prepareCapturePanel = vi.fn();
+  const prepareDesktopToast = vi.fn();
   const globalShortcutRef = {
     register: vi.fn(() => true),
     unregister: vi.fn()
@@ -46,11 +47,13 @@ it('registers and unregisters the Windows global clip shortcut', () => {
     appRef,
     globalShortcutRef,
     prepareCapturePanel,
+    prepareDesktopToast,
     platform: 'win32'
   })).toBe(true);
 
   expect(globalShortcutRef.register).toHaveBeenCalledWith('Alt+Shift+C', expect.any(Function));
   expect(prepareCapturePanel).toHaveBeenCalledTimes(1);
+  expect(prepareDesktopToast).toHaveBeenCalledTimes(1);
   const willQuit = appRef.on.mock.calls.find(([event]) => event === 'will-quit')?.[1] as (() => void) | undefined;
   expect(willQuit).toBeTypeOf('function');
   willQuit?.();

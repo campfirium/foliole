@@ -23,7 +23,7 @@ import {
   readClipboardSnapshot,
   type ClipboardSnapshot
 } from './globalClipClipboardEvidence.js';
-import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
+import { prepareGlobalClipDesktopToastWindow, showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 import type { GlobalClipDesktopToast, GlobalClipToastStatus } from './globalClipDesktopToastState.js';
 import { handleGlobalCapturePanelResult, importWithGlobalClipToast } from './globalClipImportRunner.js';
 import { detectWindowsTextSelection } from './globalClipTextSelection.js';
@@ -50,6 +50,7 @@ export interface GlobalClipToInboxDeps {
   runImport?: typeof runClipboardImport;
   sendCopyShortcut?: () => Promise<boolean>;
   prepareCapturePanel?: () => void;
+  prepareDesktopToast?: () => void;
   showCapturePanel?: () => Promise<GlobalCapturePanelResult>;
   showDesktopToast?: (status: GlobalClipToastStatus) => GlobalClipDesktopToast;
   shortcut?: string;
@@ -206,6 +207,7 @@ export function installGlobalClipToInboxShortcut(deps: GlobalClipToInboxDeps = {
     globalShortcutRef.unregister(shortcut);
   });
   (deps.prepareCapturePanel ?? prepareGlobalCapturePanelWindow)();
+  (deps.prepareDesktopToast ?? prepareGlobalClipDesktopToastWindow)();
   log('global_clip_shortcut_registered', { shortcut });
   return true;
 }

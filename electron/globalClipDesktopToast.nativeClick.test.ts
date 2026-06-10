@@ -26,7 +26,7 @@ const { electronMocks } = vi.hoisted(() => {
 
 vi.mock('electron', () => electronMocks);
 
-import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
+import { resetGlobalClipDesktopToastWindowForTests, showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 
 function createToastWindow() {
   const closedHandlers: Array<() => void> = [];
@@ -60,6 +60,7 @@ async function flushToastLoad(toastWindow: ReturnType<typeof createToastWindow>)
 }
 
 beforeEach(() => {
+  resetGlobalClipDesktopToastWindowForTests();
   vi.clearAllMocks();
   vi.useRealTimers();
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([]);

@@ -26,7 +26,11 @@ const { electronMocks } = vi.hoisted(() => {
 
 vi.mock('electron', () => electronMocks);
 
-import { showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
+import {
+  prepareGlobalClipDesktopToastWindow,
+  resetGlobalClipDesktopToastWindowForTests,
+  showGlobalClipDesktopToast
+} from './globalClipDesktopToast.js';
 
 function createToastWindow() {
   const hookWindowMessage = vi.fn();
@@ -55,6 +59,7 @@ async function flushToastLoad(toastWindow: ReturnType<typeof createToastWindow>)
 }
 
 beforeEach(() => {
+  resetGlobalClipDesktopToastWindowForTests();
   vi.clearAllMocks();
   vi.useRealTimers();
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([]);
@@ -102,6 +107,27 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
   vi.advanceTimersByTime(3000);
 
   expect(toastWindow.close).toHaveBeenCalledTimes(1);
+});
+
+it('uses a preloaded desktop toast window for the next notification', async () => {
+  vi.useFakeTimers();
+  const toastWindow = createToastWindow();
+  const nextToastWindow = createToastWindow();
+  electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
+    return electronMocks.BrowserWindow.mock.calls.length === 1 ? toastWindow : nextToastWindow;
+  });
+
+  prepareGlobalClipDesktopToastWindow();
+  await Promise.resolve();
+  showGlobalClipDesktopToast('pending');
+  await flushToastLoad(toastWindow);
+  await vi.advanceTimersByTimeAsync(0);
+
+  expect(electronMocks.BrowserWindow).toHaveBeenCalledTimes(2);
+  expect(toastWindow.loadURL).toHaveBeenCalledTimes(1);
+  expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
+  expect(nextToastWindow.loadURL).toHaveBeenCalledTimes(1);
+  expect(nextToastWindow.showInactive).not.toHaveBeenCalled();
 });
 
 it('updates the same pending toast before closing it', async () => {
