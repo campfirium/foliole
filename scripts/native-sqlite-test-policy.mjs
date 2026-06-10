@@ -17,6 +17,7 @@ const controlledElectronSqliteTests = [
   'scripts/android/android-reset-sync-data.test.mjs',
   'scripts/android/android-sync-audit-core.test.mjs',
   'scripts/android/android-sync-cleanup-device-private.test.mjs',
+  'scripts/sqlite-recovery-drill.test.mjs',
   'scripts/sqlite-maintenance-cleanup-main-fts.test.mjs',
   'scripts/sqlite-maintenance.test.mjs',
   'src/shared/platform/companionSyncNodeVersions.sequentialReading.test.ts',
