@@ -49,6 +49,17 @@ function createToastWindow() {
   };
 }
 
+const zhHansStrings = {
+  hideHint: '×',
+  hideHintLabel: '隐藏提示',
+  hint: '回车保存，空白时导入剪贴板',
+  locale: 'zh-Hans' as const,
+  placeholder: '...',
+  save: '保存',
+  showHint: '?',
+  showHintLabel: '显示提示'
+};
+
 async function flushToastLoad(toastWindow: ReturnType<typeof createToastWindow>) {
   for (let index = 0; index < 10 && toastWindow.showInactive.mock.calls.length === 0; index += 1) {
     await Promise.resolve();
@@ -73,7 +84,8 @@ it('uses the current app floating theme for the desktop toast', async () => {
     foreground: 'rgb(232, 230, 223)',
     hasAppTheme: true,
     inputBackground: 'rgb(36, 39, 35)',
-    mutedForeground: 'rgb(165, 164, 159)'
+    mutedForeground: 'rgb(165, 164, 159)',
+    strings: zhHansStrings
   }));
   const toastWindow = createToastWindow();
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([{
@@ -91,7 +103,39 @@ it('uses the current app floating theme for the desktop toast', async () => {
   const loadedUrl = toastWindow.loadURL.mock.calls[0]?.[0] ?? '';
   expect(decodeURIComponent(loadedUrl)).toContain('--capture-bg:rgb(42, 45, 41);');
   expect(decodeURIComponent(loadedUrl)).toContain('--capture-fg:rgb(232, 230, 223);');
+  expect(decodeURIComponent(loadedUrl)).toContain('已剪辑');
+  expect(decodeURIComponent(loadedUrl)).toContain('已保存到收件箱');
   expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
+});
+
+it('keeps localized toast status text when the notification updates', async () => {
+  vi.useFakeTimers();
+  const executeJavaScript = vi.fn(async () => ({
+    accent: 'rgb(127, 177, 141)',
+    background: 'rgb(42, 45, 41)',
+    border: 'rgb(80, 84, 78)',
+    foreground: 'rgb(232, 230, 223)',
+    hasAppTheme: true,
+    inputBackground: 'rgb(36, 39, 35)',
+    mutedForeground: 'rgb(165, 164, 159)',
+    strings: zhHansStrings
+  }));
+  const toastWindow = createToastWindow();
+  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([{
+    isDestroyed: vi.fn(() => false),
+    webContents: { executeJavaScript }
+  }]);
+  electronMocks.BrowserWindow.mockImplementation(function BrowserWindow() {
+    return toastWindow;
+  });
+
+  const toast = showGlobalClipDesktopToast('pending');
+  await flushToastLoad(toastWindow);
+  toast.update('success', 'node-1', 'Captured source preview');
+
+  const latestScript = toastWindow.webContents.executeJavaScript.mock.calls.at(-1)?.[0] ?? '';
+  expect(latestScript).toContain('已保存到收件箱');
+  expect(latestScript).not.toContain('Saved to Inbox');
 });
 
 it('falls back and shows the toast when app theme reading stalls', async () => {

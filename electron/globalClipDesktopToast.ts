@@ -21,6 +21,7 @@ import {
   resolveToastDisplayMs,
   serializeToastState,
   type GlobalClipDesktopToast,
+  type GlobalClipToastLocale,
   type GlobalClipToastStatus
 } from './globalClipDesktopToastState.js';
 import { installGlobalClipDesktopToastTestHook } from './globalClipDesktopToastTestHook.js';
@@ -45,8 +46,8 @@ function closeToastAfterDisplay(toastWindow: BrowserWindow, status: GlobalClipTo
   }, resolveToastDisplayMs(status));
 }
 
-function resolveToastView(status: GlobalClipToastStatus, previewTitle?: string | null) {
-  const text = resolveToastText(status);
+function resolveToastView(status: GlobalClipToastStatus, previewTitle?: string | null, locale?: GlobalClipToastLocale) {
+  const text = resolveToastText(status, locale);
   const preview = previewTitle ? truncateCapturePreview(previewTitle) : '';
   return {
     meta: text.meta,
@@ -55,7 +56,7 @@ function resolveToastView(status: GlobalClipToastStatus, previewTitle?: string |
 }
 
 function buildToastHtml(theme: GlobalCaptureFloatingTheme, status: GlobalClipToastStatus) {
-  const text = resolveToastView(status);
+  const text = resolveToastView(status, null, theme.strings.locale);
   const html = [
     '<!doctype html>',
     '<meta charset="utf-8">',
@@ -79,11 +80,16 @@ function buildToastHtml(theme: GlobalCaptureFloatingTheme, status: GlobalClipToa
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
 
-function buildToastUpdateScript(status: GlobalClipToastStatus, targetNodeId: string | null, previewTitle: string | null) {
-  const text = resolveToastView(status, previewTitle);
+function buildToastUpdateScript(
+  status: GlobalClipToastStatus,
+  targetNodeId: string | null,
+  previewTitle: string | null,
+  locale?: GlobalClipToastLocale
+) {
+  const text = resolveToastView(status, previewTitle, locale);
   return `
     (() => {
-      const state = ${serializeToastState(status)};
+      const state = ${serializeToastState(status, locale)};
       const titleText = ${JSON.stringify(text.title)};
       const metaText = ${JSON.stringify(text.meta)};
       const targetNodeId = ${JSON.stringify(targetNodeId)};
@@ -130,8 +136,7 @@ function createToastWindow() {
 
 function loadToastWindow(toastWindow: BrowserWindow, status: GlobalClipToastStatus) {
   return resolveFloatingTheme(toastWindow)
-    .then((theme) => toastWindow.loadURL(buildToastHtml(theme, status)))
-    .then(() => undefined);
+    .then((theme) => toastWindow.loadURL(buildToastHtml(theme, status)).then(() => theme));
 }
 
 export function prepareGlobalClipDesktopToastWindow() {
@@ -160,6 +165,7 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
   let currentStatus = status;
   let currentPreviewTitle: string | null = null;
   let navigationTargetNodeId: string | null = null;
+  let activeLocale: GlobalClipToastLocale = 'en';
   let isLoaded = false;
   let closeScheduled = false;
   toastWindow.hookWindowMessage?.(WM_LBUTTONUP, () => {
@@ -182,13 +188,17 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
         toastWindow.moveTop();
       }
       toastWindow.webContents.send(GLOBAL_CAPTURE_TOAST_TARGET_CHANNEL, { nodeId: navigationTargetNodeId });
-      void toastWindow.webContents.executeJavaScript(buildToastUpdateScript(nextStatus, navigationTargetNodeId, currentPreviewTitle), true);
+      void toastWindow.webContents.executeJavaScript(
+        buildToastUpdateScript(nextStatus, navigationTargetNodeId, currentPreviewTitle, activeLocale),
+        true
+      );
     }
     scheduleClose();
   };
   void (prepared?.load ?? loadToastWindow(toastWindow, currentStatus))
-    .then(() => {
+    .then((theme) => {
       if (!toastWindow.isDestroyed()) {
+        activeLocale = theme.strings.locale;
         isLoaded = true;
         update(currentStatus, navigationTargetNodeId, currentPreviewTitle);
         toastWindow.showInactive();

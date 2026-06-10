@@ -1,13 +1,14 @@
 import type { BrowserWindow } from 'electron';
 
+import type { GlobalCaptureFloatingTheme } from './globalCaptureFloatingSurface.js';
 import type { GlobalClipToastStatus } from './globalClipDesktopToastState.js';
 import { waitForRendererAppReady } from './ipc/boot.js';
 
 type CreateToastWindow = () => BrowserWindow;
-type LoadToastWindow = (window: BrowserWindow, status: GlobalClipToastStatus) => Promise<void>;
+type LoadToastWindow = (window: BrowserWindow, status: GlobalClipToastStatus) => Promise<GlobalCaptureFloatingTheme>;
 
 interface PreparedToastWindow {
-  load: Promise<void>;
+  load: Promise<GlobalCaptureFloatingTheme>;
   window: BrowserWindow;
 }
 
@@ -35,10 +36,11 @@ export function prepareGlobalClipDesktopToastWindow(createWindow: CreateToastWin
       return;
     }
     const toastWindow = createWindow();
-    const load = loadWindow(toastWindow, 'pending').catch(() => {
+    const load = loadWindow(toastWindow, 'pending').catch((error) => {
       if (!toastWindow.isDestroyed()) {
         toastWindow.close();
       }
+      throw error;
     });
     preparedToastWindow = { load, window: toastWindow };
   }).finally(() => {

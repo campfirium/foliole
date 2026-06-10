@@ -40,6 +40,7 @@ export interface GlobalCaptureStrings {
   hideHint: string;
   hideHintLabel: string;
   hint: string;
+  locale: 'en' | 'zh-Hans';
   showHint: string;
   showHintLabel: string;
   placeholder: string;
@@ -115,6 +116,7 @@ function resolveCaptureStrings(locale: string): GlobalCaptureStrings {
       hideHint: '×',
       hideHintLabel: '隐藏提示',
       hint: '回车保存，空白时导入剪贴板',
+      locale: 'zh-Hans',
       showHint: '?',
       showHintLabel: '显示提示',
       placeholder: '...',
@@ -125,6 +127,7 @@ function resolveCaptureStrings(locale: string): GlobalCaptureStrings {
     hideHint: '×',
     hideHintLabel: 'Hide shortcut hint',
     hint: 'Enter saves. Empty input imports the clipboard.',
+    locale: 'en',
     showHint: '?',
     showHintLabel: 'Show shortcut hint',
     placeholder: '...',
@@ -165,7 +168,9 @@ function normalizeFloatingTheme(input: unknown): GlobalCaptureFloatingTheme | nu
     uiFontFamily: isCssValue(candidate.uiFontFamily) ? candidate.uiFontFamily : fallback.uiFontFamily,
     divider: isCssValue(candidate.divider) ? candidate.divider : fallback.divider,
     hintVisible: typeof candidate.hintVisible === 'boolean' ? candidate.hintVisible : fallback.hintVisible,
-    strings: isCaptureStrings(candidate.strings) ? candidate.strings : fallback.strings
+    strings: isCaptureStrings(candidate.strings)
+      ? { ...candidate.strings, locale: candidate.strings.locale === 'zh-Hans' ? 'zh-Hans' : 'en' }
+      : fallback.strings
   };
 }
 

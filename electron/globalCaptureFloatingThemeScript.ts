@@ -72,7 +72,7 @@ function buildThemeStringsScript() {
             const languages = Array.from(navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).filter(Boolean);
             const usesChinese = preference === 'zh-Hans' || (preference !== 'en' && languages.some((language) => language.toLowerCase().startsWith('zh')));
             return usesChinese
-              ? { hideHint: '×', hideHintLabel: '隐藏提示', hint: '回车保存，空白时导入剪贴板', showHint: '?', showHintLabel: '显示提示', placeholder: '...', save: '保存' }
-              : { hideHint: '×', hideHintLabel: 'Hide shortcut hint', hint: 'Enter saves. Empty input imports the clipboard.', showHint: '?', showHintLabel: 'Show shortcut hint', placeholder: '...', save: 'Save' };
+              ? { hideHint: '×', hideHintLabel: '隐藏提示', hint: '回车保存，空白时导入剪贴板', locale: 'zh-Hans', showHint: '?', showHintLabel: '显示提示', placeholder: '...', save: '保存' }
+              : { hideHint: '×', hideHintLabel: 'Hide shortcut hint', hint: 'Enter saves. Empty input imports the clipboard.', locale: 'en', showHint: '?', showHintLabel: 'Show shortcut hint', placeholder: '...', save: 'Save' };
           })()`;
 }
