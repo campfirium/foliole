@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
@@ -7,6 +7,7 @@ import { ReviewActionBar } from '../../shared/ui';
 
 import { ResumeReviewAction } from './ReviewModeToolbarActions';
 import { ActiveReviewActionBar } from './ReviewModeToolbarActive';
+import { useGradeFeedback, useReadingReviewFeedback } from './reviewModeToolbarFeedback';
 import { ReviewNoCurrentItemBar } from './ReviewModeToolbarNoCurrent';
 import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import {
@@ -46,58 +47,6 @@ interface ReviewModeToolbarProps {
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
   showProgress?: boolean;
   style?: CSSProperties;
-}
-
-function useGradeFeedback(onGrade: ReviewModeToolbarProps['onGrade'], reviewCurrentNodeId: string | null, isAnswerRevealed: boolean) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [failedGrade, setFailedGrade] = useState<ReviewGrade | null>(null);
-  useEffect(() => {
-    if (!reviewCurrentNodeId || !isAnswerRevealed) {
-      setIsSubmitting(false);
-      setErrorMessage(null);
-      setFailedGrade(null);
-    }
-  }, [isAnswerRevealed, reviewCurrentNodeId]);
-
-  const submitGrade = useCallback(
-    async (grade: ReviewGrade) => {
-      if (isSubmitting) {
-        return;
-      }
-      setIsSubmitting(true);
-      try {
-        const graded = await onGrade(grade);
-        if (!graded) {
-          setFailedGrade(grade);
-          setErrorMessage('Failed to save grade. Please retry.');
-          setIsSubmitting(false);
-          return;
-        }
-        setFailedGrade(null);
-        setErrorMessage(null);
-        setIsSubmitting(false);
-      } catch {
-        setFailedGrade(grade);
-        setErrorMessage('Failed to save grade. Please retry.');
-        setIsSubmitting(false);
-      }
-    },
-    [isSubmitting, onGrade]
-  );
-
-  const retryGrade = useCallback(async () => {
-    if (failedGrade) {
-      await submitGrade(failedGrade);
-    }
-  }, [failedGrade, submitGrade]);
-
-  return {
-    errorMessage,
-    isSubmitting,
-    retryGrade: failedGrade ? retryGrade : undefined,
-    submitGrade
-  };
 }
 
 function ReviewPausedSummary({ reviewCurrentTitle }: Pick<ReviewModeToolbarProps, 'reviewCurrentTitle'>) {
@@ -169,7 +118,18 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
     showSessionModeControl: props.showSessionModeControl ?? false,
     showSummary: props.showSummary ?? true
   };
-  const feedback = useGradeFeedback(toolbarProps.onGrade, toolbarProps.reviewCurrentNodeId, toolbarProps.isAnswerRevealed);
+  const gradeFeedback = useGradeFeedback({
+    isAnswerRevealed: toolbarProps.isAnswerRevealed,
+    onGrade: toolbarProps.onGrade,
+    reviewCurrentNodeId: toolbarProps.reviewCurrentNodeId
+  });
+  const readingFeedback = useReadingReviewFeedback({
+    isReadingActive: !toolbarProps.isCurrentItemGradable && toolbarProps.isCurrentReviewItemVisible,
+    onDismissReviewTopic: toolbarProps.onDismissReviewTopic,
+    onPostponeReviewTopic: toolbarProps.onPostponeReviewTopic,
+    onReadReviewTopic: toolbarProps.onReadReviewTopic,
+    reviewCurrentNodeId: toolbarProps.reviewCurrentNodeId
+  });
 
   if (!toolbarProps.isStudyMode) return null;
 
@@ -200,11 +160,15 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
   return (
     <ActiveReviewActionBar
       {...activeToolbarProps}
-      errorMessage={feedback.errorMessage}
-      isSubmitting={feedback.isSubmitting}
-      submitGrade={feedback.submitGrade}
+      errorMessage={gradeFeedback.errorMessage}
+      isSubmitting={gradeFeedback.isSubmitting}
+      readingErrorMessage={readingFeedback.errorMessage}
+      readingIsSubmitting={readingFeedback.isSubmitting}
+      submitGrade={gradeFeedback.submitGrade}
+      submitReadingAction={readingFeedback.submitReadingAction}
       {...definedProps({ reviewSummary: withSummaryStatus(toolbarProps.reviewSummary, 'in-progress') })}
-      {...definedProps({ retryGrade: feedback.retryGrade })}
+      {...definedProps({ retryGrade: gradeFeedback.retryGrade })}
+      {...definedProps({ retryReadingAction: readingFeedback.retryReadingAction })}
     />
   );
 }

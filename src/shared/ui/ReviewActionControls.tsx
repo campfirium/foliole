@@ -4,6 +4,7 @@ import type { TranslationKey } from '../localization/translations';
 
 import { ActionHelpCard } from './ActionHelpCard';
 import { AppButton } from './Button';
+import { ReviewActionFeedback } from './ReviewActionFeedback';
 import { REVIEW_GRADE_ACTION_HELP } from './reviewActionHelp';
 import { overlayDividerClass, type ReviewActionSurface } from './reviewActionLayout';
 import { formatReviewGradePreviewDue, ReviewGradePreviewTooltip } from './ReviewGradePreviewTooltip';
@@ -53,31 +54,6 @@ function ReviewGradeButton(props: {
     >
       {props.label}
     </AppButton>
-  );
-}
-
-function ReviewGradeErrorFeedback(props: {
-  errorMessage: string | null;
-  isSubmitting: boolean;
-  onRetry?: () => void;
-}) {
-  const t = useTranslation();
-
-  if (!props.errorMessage) {
-    return null;
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <p aria-live="assertive" className="text-ui-sm text-error">
-        {props.errorMessage}
-      </p>
-      {props.onRetry ? (
-        <AppButton disabled={props.isSubmitting} onClick={props.onRetry} size="sm" variant="ghost">
-          {t('desktop.reviewActions.retry')}
-        </AppButton>
-      ) : null}
-    </div>
   );
 }
 
@@ -164,7 +140,7 @@ export function ReviewGradeActions({
           surface
         )}
       </ToolbarActionGroup>
-      <ReviewGradeErrorFeedback errorMessage={errorMessage} isSubmitting={isSubmitting} {...(onRetry ? { onRetry } : {})} />
+      <ReviewActionFeedback errorMessage={errorMessage} isSubmitting={isSubmitting} {...(onRetry ? { onRetry } : {})} />
     </div>
   );
 }

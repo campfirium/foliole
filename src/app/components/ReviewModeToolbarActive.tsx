@@ -7,6 +7,7 @@ import { useActionHelpCardsEnabled } from '../../shared/platform/actionHelpCards
 import { ReviewActionBar } from '../../shared/ui';
 
 import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from './ReviewModeToolbarActions';
+import type { ReadingReviewFeedbackAction } from './reviewModeToolbarFeedback';
 import { QueueClearFlowControl } from './ReviewSessionModeControl';
 import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarProgressLine, ReviewToolbarSessionActions, type ReviewToolbarSessionSummary } from './ReviewToolbarSessionFrame';
@@ -24,6 +25,9 @@ export interface ActiveReviewActionBarProps {
   onRevealAnswer: () => void;
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
   onRevisitReviewTopicSoon: () => Promise<boolean>;
+  readingErrorMessage: string | null;
+  readingIsSubmitting: boolean;
+  retryReadingAction?: () => Promise<void>;
   retryGrade?: () => Promise<void>;
   reviewPreview: SchedulerPreviewResult | null;
   reviewCompletedCount: number;
@@ -37,6 +41,7 @@ export interface ActiveReviewActionBarProps {
   surface?: 'panel' | 'overlay';
   style?: CSSProperties;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
+  submitReadingAction: (action: ReadingReviewFeedbackAction) => Promise<void>;
 }
 
 function ActiveReviewProgress(props: Pick<
@@ -65,17 +70,24 @@ function createActiveReviewActions(props: Pick<
   | 'onDismissReviewTopic'
   | 'onRevealAnswer'
   | 'onRevisitReviewTopicSoon'
+  | 'readingErrorMessage'
+  | 'readingIsSubmitting'
+  | 'retryReadingAction'
   | 'retryGrade'
   | 'reviewPreview'
   | 'surface'
   | 'submitGrade'
+  | 'submitReadingAction'
 > & { showActionHelp: boolean }) {
   if (!props.isCurrentItemGradable) {
     return (
       <ReadingReviewActions
-        onReadReviewTopic={props.onReadReviewTopic}
-        onPostponeReviewTopic={props.onPostponeReviewTopic}
-        onDismissReviewTopic={props.onDismissReviewTopic}
+        errorMessage={props.readingErrorMessage}
+        isSubmitting={props.readingIsSubmitting}
+        onDismissReviewTopic={() => void props.submitReadingAction('dismiss')}
+        onPostponeReviewTopic={() => void props.submitReadingAction('later')}
+        onReadReviewTopic={() => void props.submitReadingAction('read')}
+        {...definedProps({ onRetry: props.retryReadingAction })}
         onRevisitReviewTopicSoon={props.onRevisitReviewTopicSoon}
         showActionHelp={props.showActionHelp}
         {...definedProps({ surface: props.surface })}
@@ -114,11 +126,15 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps, showAction
     onDismissReviewTopic: props.onDismissReviewTopic,
     onRevealAnswer: props.onRevealAnswer,
     onRevisitReviewTopicSoon: props.onRevisitReviewTopicSoon,
+    readingErrorMessage: props.readingErrorMessage,
+    readingIsSubmitting: props.readingIsSubmitting,
+    ...definedProps({ retryReadingAction: props.retryReadingAction }),
     ...definedProps({ retryGrade: props.retryGrade }),
     reviewPreview: props.reviewPreview,
     showActionHelp,
     ...definedProps({ surface: props.surface }),
-    submitGrade: props.submitGrade
+    submitGrade: props.submitGrade,
+    submitReadingAction: props.submitReadingAction
   });
   if (!props.showSessionModeControl || (props.isCurrentItemGradable && !props.isAnswerRevealed)) {
     return actions;

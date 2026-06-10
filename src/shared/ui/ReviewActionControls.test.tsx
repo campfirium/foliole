@@ -57,6 +57,44 @@ it('renders an optional retry action next to grade errors', () => {
   expect(onRetry).toHaveBeenCalledTimes(1);
 });
 
+it('renders an optional retry action next to reading action errors', () => {
+  const onRetry = vi.fn();
+
+  renderWithLocalization(
+    <ReadingReviewActions
+      errorMessage="Failed to save. Please retry."
+      isSubmitting={false}
+      onDismissReviewTopic={vi.fn()}
+      onPostponeReviewTopic={vi.fn()}
+      onReadReviewTopic={vi.fn()}
+      onRetry={onRetry}
+    />
+  );
+
+  expect(screen.getByText('Failed to save. Please retry.')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+  expect(onRetry).toHaveBeenCalledTimes(1);
+});
+
+it('disables reading actions while saving', () => {
+  renderWithLocalization(
+    <ReadingReviewActions
+      isSubmitting
+      onDismissReviewTopic={vi.fn()}
+      onPostponeReviewTopic={vi.fn()}
+      onReadReviewTopic={vi.fn()}
+      onRevisitReviewTopicSoon={vi.fn()}
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Soon' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Later' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Read' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Dismiss' })).toBeDisabled();
+});
+
 it('adds short overlay dividers between grade actions only for overlay surface', () => {
   renderWithLocalization(
     <ReviewGradeActions
