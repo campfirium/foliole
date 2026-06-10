@@ -34,7 +34,7 @@ vi.mock('./ReadwiseBookActionsPanel', () => ({
 const documentSourceUpdatePanelMocks = vi.hoisted(() => ({
   documentSourceUpdatePanelMock: vi.fn()
 }));
-export const documentSourceUpdatePanelMock = documentSourceUpdatePanelMocks.documentSourceUpdatePanelMock;
+const documentSourceUpdatePanelMock = documentSourceUpdatePanelMocks.documentSourceUpdatePanelMock;
 
 vi.mock('./DocumentSourceUpdatePanel', () => ({
   DocumentSourceUpdatePanel: (props: { open: boolean; onCurrentContentChange: (content: string) => void; onOpenChange: (open: boolean) => void }) => {
@@ -49,7 +49,7 @@ const sourceUpdatePreviewMocks = vi.hoisted(() => ({
     value: null
   }))
 }));
-export const useNodeSourceUpdatePreview = sourceUpdatePreviewMocks.useNodeSourceUpdatePreview;
+const useNodeSourceUpdatePreview = sourceUpdatePreviewMocks.useNodeSourceUpdatePreview;
 
 vi.mock('./useNodeSourceUpdatePreview', () => ({
   useNodeSourceUpdatePreview: sourceUpdatePreviewMocks.useNodeSourceUpdatePreview

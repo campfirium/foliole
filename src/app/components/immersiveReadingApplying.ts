@@ -7,7 +7,7 @@ import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 
 import { getViewportReadingSelection, syncParagraphMarkerToReadingPosition } from './immersiveReadingMarker';
 
-export const APPLYING_READING_POSITION_TIMEOUT_MS = 500;
+const APPLYING_READING_POSITION_TIMEOUT_MS = 500;
 const IMMERSIVE_READING_ANCHOR_RATIO = 0.15;
 const IMMERSIVE_READING_CHECK_START_DELAY_FRAMES = 2;
 const IMMERSIVE_READING_MAX_CHECK_ATTEMPTS = 12;
@@ -36,7 +36,7 @@ export function isApplyingReadingPosition(props: ApplyingSelectionStateSource) {
   return props.getReadingPositionSyncState() !== null;
 }
 
-export function completeApplyingFromViewport(
+function completeApplyingFromViewport(
   props: ApplyingViewportSource,
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
   reason: string

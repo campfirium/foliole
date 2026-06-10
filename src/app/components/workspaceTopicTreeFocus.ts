@@ -8,9 +8,6 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState } from '../../store/workspaceStore';
 
-import type { WorkspaceTopicTreeProps } from './WorkspaceTopicTree';
-import { useWorkspaceTopicTreeCollapse } from './workspaceTopicTreeContent';
-
 function rangeContainsSelectionPoint(locator: { from: number; to: number }, selection: NonNullable<NodeViewState['selection']>) {
   const point = Math.min(selection.from, selection.to);
   return point >= locator.from && point <= locator.to;
@@ -53,25 +50,6 @@ export function resolveWorkspaceTopicTreeFocusNodeId(args: {
     return args.activeNodeId;
   }
   return args.rows.find((row) => nodeMatchesSelection(row.node.id, args.nodesById, selection))?.node.id ?? args.activeNodeId;
-}
-
-export function useWorkspaceTopicTreeFocusState(
-  props: WorkspaceTopicTreeProps,
-  tree: { parentById: Record<string, string | null>; rows: NodeTreeRow[] },
-  nodeViewById: Record<string, NodeViewState | undefined>
-) {
-  const candidateFocusedNodeId = resolveWorkspaceTopicTreeFocusNodeId({
-    activeNodeId: props.activeNodeId,
-    nodeViewState: props.activeNodeId ? nodeViewById[props.activeNodeId] : undefined,
-    nodesById: props.nodesById,
-    rows: tree.rows
-  });
-  const collapse = useWorkspaceTopicTreeCollapse(
-    props.activeFolderId,
-    candidateFocusedNodeId,
-    tree.rows
-  );
-  return collapse;
 }
 
 export function useWorkspaceTopicTreeAutoScroll(args: {

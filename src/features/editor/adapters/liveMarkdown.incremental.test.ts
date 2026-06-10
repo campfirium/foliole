@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const spies = vi.hoisted(() => ({
-  buildFrontmatterDecorationState: vi.fn()
+  buildFrontmatterDecorationSet: vi.fn()
 }));
 
 const bridgeSpies = vi.hoisted(() => ({
@@ -20,9 +20,9 @@ vi.mock('./liveMarkdownFrontmatter', async () => {
   const actual = await vi.importActual<typeof import('./liveMarkdownFrontmatter')>('./liveMarkdownFrontmatter');
   return {
     ...actual,
-    buildFrontmatterDecorationState: (...args: Parameters<typeof actual.buildFrontmatterDecorationState>) => {
-      spies.buildFrontmatterDecorationState();
-      return actual.buildFrontmatterDecorationState(...args);
+    buildFrontmatterDecorationSet: (...args: Parameters<typeof actual.buildFrontmatterDecorationSet>) => {
+      spies.buildFrontmatterDecorationSet();
+      return actual.buildFrontmatterDecorationSet(...args);
     }
   };
 });
@@ -47,7 +47,7 @@ function createHost() {
 afterEach(() => {
   document.body.innerHTML = '';
   setMarkdownSyntaxVisibility('hidden');
-  spies.buildFrontmatterDecorationState.mockClear();
+  spies.buildFrontmatterDecorationSet.mockClear();
 });
 
 describe('liveMarkdown inline rendering', () => {

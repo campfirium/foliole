@@ -12,7 +12,7 @@ import {
 
 type ReadwiseSetupDraft = ReturnType<typeof useReadwiseSetupDraft>;
 
-export interface ReadwiseManualSyncFailedSource {
+interface ReadwiseManualSyncFailedSource {
   reason: string;
   sourceKind: string;
   sourcePath: string;

@@ -1,4 +1,4 @@
-export function normalizeImportSearchQuery(query: string) {
+function normalizeImportSearchQuery(query: string) {
   return query.trim().toLowerCase();
 }
 

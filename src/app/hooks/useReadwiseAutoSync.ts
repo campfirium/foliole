@@ -28,7 +28,7 @@ function canRunReadwiseAutoSync(settings: ImportManagerSettings) {
   );
 }
 
-export function resolveReadwiseAutoSyncIntervalMs(frequency: ReadwiseSyncFrequency) {
+function resolveReadwiseAutoSyncIntervalMs(frequency: ReadwiseSyncFrequency) {
   return SYNC_INTERVAL_MS[frequency];
 }
 

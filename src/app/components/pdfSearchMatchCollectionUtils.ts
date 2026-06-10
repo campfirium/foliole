@@ -10,19 +10,6 @@ export function resolvePageBounds(shell: HTMLDivElement) {
   return shell.querySelector<HTMLElement>('.react-pdf__Page') ?? shell;
 }
 
-export function collectQueryPositions(text: string, query: string) {
-  if (!text || !query) return [];
-  const positions: number[] = [];
-  let index = 0;
-  while (index < text.length) {
-    const next = text.indexOf(query, index);
-    if (next < 0) break;
-    positions.push(next);
-    index = next + 1;
-  }
-  return positions;
-}
-
 interface SearchProjection {
   indexMap: number[];
   text: string;

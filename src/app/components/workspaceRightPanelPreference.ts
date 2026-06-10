@@ -7,7 +7,7 @@ import {
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-export const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
+const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
   'review-queue',
   'outline',
   'highlights',

@@ -4,12 +4,6 @@ import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ImportCatalogSortOption } from './ImportCatalogSortControls';
 
-export const IMPORT_CATALOG_SORT_OPTIONS: ImportCatalogSortOption[] = [
-  { ascLabel: 'Older -> Recent', descLabel: 'Recent -> Older', key: 'dateLastOpened', label: 'Last opened' },
-  { ascLabel: 'Older -> Recent', descLabel: 'Recent -> Older', key: 'dateImported', label: 'Date imported' },
-  { ascLabel: 'A -> Z', descLabel: 'Z -> A', key: 'title', label: 'Title' }
-];
-
 type ImportCatalogTranslate = ReturnType<typeof useTranslation>;
 
 export function getImportCatalogSortOptions(t: ImportCatalogTranslate): ImportCatalogSortOption[] {

@@ -13,7 +13,7 @@ function resolveNode(nodeId: string | null | undefined, nodesById?: Record<strin
   return nodesById?.[nodeId] ?? null;
 }
 
-export function resolveImportDisplayTitle(input: {
+function resolveImportDisplayTitle(input: {
   fallbackTitle: string;
   nodeId?: string | null;
   nodesById?: Record<string, Node>;
@@ -22,7 +22,7 @@ export function resolveImportDisplayTitle(input: {
   return node?.title ?? input.fallbackTitle;
 }
 
-export function resolveImportDisplayAuthor(input: {
+function resolveImportDisplayAuthor(input: {
   nodeId?: string | null;
   nodesById?: Record<string, Node>;
 }) {
@@ -30,7 +30,7 @@ export function resolveImportDisplayAuthor(input: {
   return node ? getWorkspaceListNodeAuthor(node) : null;
 }
 
-export function resolveImportDisplayOpening(input: {
+function resolveImportDisplayOpening(input: {
   fallbackOpening: string;
   nodeId?: string | null;
   nodesById?: Record<string, Node>;
@@ -44,7 +44,7 @@ export function resolveImportDisplayOpening(input: {
   return opening === WORKSPACE_LIST_OPENING_FALLBACK ? input.fallbackOpening : opening;
 }
 
-export function resolveImportDisplayDate(input: {
+function resolveImportDisplayDate(input: {
   fallbackDate: string;
   nodeId?: string | null;
   nodesById?: Record<string, Node>;
@@ -53,7 +53,7 @@ export function resolveImportDisplayDate(input: {
   return node ? getWorkspaceListNodeDateLabel(node) : input.fallbackDate;
 }
 
-export function resolveImportMetaLine(input: {
+function resolveImportMetaLine(input: {
   fallbackPath: string;
   fallbackType: string;
   nodeId?: string | null;

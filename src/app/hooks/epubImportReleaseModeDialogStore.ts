@@ -8,7 +8,7 @@ import {
   type EpubImportReleaseMode
 } from './epubImportReleaseMode';
 
-export interface EpubImportReleaseModeDialogSnapshot {
+interface EpubImportReleaseModeDialogSnapshot {
   file: RuntimeImportedTextFile;
   hasHighlights: boolean;
   recommendedMode: EpubImportReleaseMode;
@@ -94,13 +94,6 @@ function toSnapshot(selection: PendingSelection): EpubImportReleaseModeDialogSna
     recommendedMode: selection.recommendedMode,
     selectedMode: selection.selectedMode
   };
-}
-
-export function selectEpubImportReleaseMode(mode: EpubImportReleaseMode) {
-  if (!currentSelection) return;
-  currentSelection = { ...currentSelection, selectedMode: mode };
-  currentSnapshot = toSnapshot(currentSelection);
-  emitChange();
 }
 
 export function closeEpubImportReleaseModeDialog(mode: EpubImportReleaseMode | null) {

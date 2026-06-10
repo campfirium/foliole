@@ -18,7 +18,7 @@ export interface HarnessProps {
   setNodeViewState?: (nodeId: string, viewState: NodeViewState) => void;
 }
 
-export function createEditorRef(
+function createEditorRef(
   scrollTop: number,
   selection: { from: number; to: number }
 ): MutableRefObject<{

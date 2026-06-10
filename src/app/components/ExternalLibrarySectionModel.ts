@@ -185,7 +185,7 @@ export function buildExternalTreeRows(
   ];
 }
 
-export function createKeyboardRow(row: ExternalTreeRowRecord): TreeKeyboardRow {
+function createKeyboardRow(row: ExternalTreeRowRecord): TreeKeyboardRow {
   return {
     depth: row.depth,
     hasChildren: row.hasChildren,

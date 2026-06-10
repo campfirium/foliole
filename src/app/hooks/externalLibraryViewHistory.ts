@@ -11,19 +11,19 @@ export interface ExternalLibraryViewHistory {
   forwardStack: ExternalLibraryViewTarget[];
 }
 
-export const INITIAL_EXTERNAL_LIBRARY_VIEW_HISTORY: ExternalLibraryViewHistory = {
+const INITIAL_EXTERNAL_LIBRARY_VIEW_HISTORY: ExternalLibraryViewHistory = {
   backStack: [],
   forwardStack: []
 };
 
-export function createExternalLibraryViewTarget(
+function createExternalLibraryViewTarget(
   isExternalViewOpen: boolean,
   selection: ExternalLibrarySelection
 ): ExternalLibraryViewTarget {
   return isExternalViewOpen ? { kind: 'external', selection } : { kind: 'notes' };
 }
 
-export function areExternalLibrarySelectionsEqual(left: ExternalLibrarySelection, right: ExternalLibrarySelection) {
+function areExternalLibrarySelectionsEqual(left: ExternalLibrarySelection, right: ExternalLibrarySelection) {
   if (left.kind !== right.kind) {
     return false;
   }
@@ -42,7 +42,7 @@ export function areExternalLibrarySelectionsEqual(left: ExternalLibrarySelection
   return left.kind === 'folder' && right.kind === 'folder';
 }
 
-export function areExternalLibraryViewTargetsEqual(left: ExternalLibraryViewTarget, right: ExternalLibraryViewTarget) {
+function areExternalLibraryViewTargetsEqual(left: ExternalLibraryViewTarget, right: ExternalLibraryViewTarget) {
   if (left.kind !== right.kind) {
     return false;
   }
@@ -52,7 +52,7 @@ export function areExternalLibraryViewTargetsEqual(left: ExternalLibraryViewTarg
   return areExternalLibrarySelectionsEqual(left.selection, right.selection);
 }
 
-export function pushExternalLibraryViewHistory(
+function pushExternalLibraryViewHistory(
   history: ExternalLibraryViewHistory,
   currentTarget: ExternalLibraryViewTarget,
   nextTarget: ExternalLibraryViewTarget

@@ -12,7 +12,6 @@ import {
 } from '../contextCommands';
 import { resolveImageContextMenuState, type ImageContextMenuState } from '../editorImageContextMenu';
 
-import type { LongClozeGuardOptions } from './editorClozeGuardrail';
 import { resolveEditorRepairTableEdit, selectionFromRepairPayload } from './editorRepairTableCommand';
 import { refreshSelectionHighlight } from './selectionHighlightRefresh';
 import type { LocatorHighlightMatch } from './selectionHighlightToggleSupport';
@@ -26,28 +25,6 @@ export interface SelectionContextMenuState extends WorkspaceEditorContextMenu {
 }
 
 export type EditorContextMenuState = ImageContextMenuState | SelectionContextMenuState;
-
-export interface EditorContextCommandsResult {
-  closeContextMenu: () => void;
-  contextMenu: EditorContextMenuState | null;
-  handleCopyImage: () => Promise<void>;
-  handleCreateCloze: (options?: LongClozeGuardOptions) => void;
-  handleCreateClozeFromPayload: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
-  handleCreateHighlight: () => void;
-  handleCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
-  handleCreateNote: (note: string) => void;
-  handleOpenSelectionNote: () => void;
-  handleRepairTable: () => boolean;
-  handleToggleSelectionHighlightFromPayload: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
-  handleAddNoteToSelectionHighlightFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
-  handleCreateNoteFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
-  handleDeleteExistingHighlight: () => void;
-  handleOpenExistingHighlight: () => void;
-  handleCutImage: () => Promise<void>;
-  handleDeleteImage: () => void;
-  handleEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
-  handleExportImage: () => Promise<void>;
-}
 
 function selectionPayloadOverlapsImage(
   payload: SelectionCommandPayload | null,

@@ -18,7 +18,7 @@ export function resolveSecondVisibleRowScrollPadding(
   return Math.max(0, containerHeight - rowSize * visibleRowsToReserve);
 }
 
-export function useSecondVisibleRowScrollPadding(args: {
+function useSecondVisibleRowScrollPadding(args: {
   enabled: boolean;
   placement?: WorkspaceTopicTreeScrollPlacement | undefined;
   rowGap: number;

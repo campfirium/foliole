@@ -1,5 +1,4 @@
 export type {
-  SelectionCommandEntry,
   SelectionCommandPayload
 } from '../shared/selectionCommandPayload';
 export {

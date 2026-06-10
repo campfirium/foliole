@@ -17,7 +17,7 @@ export type LocatorHighlightMatch = {
   nodeId: string;
 };
 
-export function normalizeSelection(selection: EditorSelection): NormalizedSelection {
+function normalizeSelection(selection: EditorSelection): NormalizedSelection {
   return {
     from: Math.min(selection.from, selection.to),
     to: Math.max(selection.from, selection.to)
@@ -97,8 +97,4 @@ export function findTextAnchorAtPosition(
       }));
   });
   return matches.length === 1 ? matches[0] ?? null : null;
-}
-
-export function isAdjustableTextHighlight(match: LocatorHighlightMatch | null | undefined) {
-  return Boolean(match?.canAdjustRange && match.locator.to > match.locator.from);
 }

@@ -1,16 +1,10 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import type { RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { AppListSectionHeader, AppListSurface } from '../../shared/ui';
 
 import { ReadwiseBookInventoryItem } from './ImportInventoryListItems';
-import {
-  collectRecentInboxEntries,
-  formatImportTime,
-  InboxImportedNodeRow,
-  InboxRecentRunRow
-} from './ImportOverviewSections';
+import { formatImportTime } from './ImportOverviewSections';
 
 export function ReadwiseBooksInventorySection({
   inventory,
@@ -53,46 +47,6 @@ export function ReadwiseBooksInventorySection({
             scannedAt={formatImportTime(inventory?.scannedAt ?? '')}
             {...(resettingNodeId !== undefined ? { resettingNodeId } : {})}
           />
-        ))}
-      </ul>
-    </AppListSurface>
-  );
-}
-
-export function InboxImportsSection({
-  entries,
-  nodesById,
-  onOpenNode
-}: {
-  entries: RuntimeTextImportResult[];
-  nodesById: Record<string, Node>;
-  onOpenNode: (nodeId: string) => void;
-}) {
-  const t = useTranslation();
-  const recentNodes = collectRecentInboxEntries(entries);
-  const itemCount = recentNodes.length + entries.length;
-
-  return (
-    <AppListSurface
-      ariaLabel={t('desktop.importOverview.inbox.aria')}
-      className="border-0 bg-transparent"
-      emptyState={{ description: t('desktop.importOverview.inbox.empty.description'), title: t('desktop.importOverview.inbox.empty.title') }}
-      headerSeparated={false}
-      header={
-        <AppListSectionHeader
-          countLabel={t('desktop.importOverview.count.items', { count: itemCount })}
-          description={t('desktop.importOverview.inbox.description')}
-          title={t('desktop.importOverview.inbox.title')}
-        />
-      }
-      isEmpty={itemCount === 0}
-    >
-      <ul className="flex flex-col gap-3 px-1 py-1">
-        {recentNodes.map((entry) => (
-          <InboxImportedNodeRow entry={entry} key={`linked-${entry.importId}`} nodesById={nodesById} onOpenNode={onOpenNode} />
-        ))}
-        {entries.map((entry) => (
-          <InboxRecentRunRow entry={entry} key={`run-${entry.importId}`} nodesById={nodesById} onOpenNode={onOpenNode} />
         ))}
       </ul>
     </AppListSurface>

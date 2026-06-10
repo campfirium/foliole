@@ -2,8 +2,6 @@ import { useState } from 'react';
 
 import type { KeepImportPreviewSummary } from '../../../lib/core/import/importManagerSettings';
 
-import { ReadwiseReaderConfigDialog } from './ReadwiseReaderConfigDialog';
-import { inspectReadwiseReaderSetup } from './readwiseReaderSetupInspection';
 import { useImportSourceWorkspaceState } from './useImportSourceWorkspaceState';
 
 export type KeepPreviewDialogState = {
@@ -18,34 +16,6 @@ export type KeepDisableDialogState = {
   scope: 'readwiseSources' | 'sources';
   sourceId: string;
 };
-
-export function ReadwiseReaderConfigDialogHost(props: {
-  configDialogOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  readwiseReaderConfig: ReturnType<typeof useImportSourceWorkspaceState>['readwiseReaderConfig'];
-  readwiseRootPath: string;
-  readwiseSources: ReturnType<typeof useImportSourceWorkspaceState>['readwiseSources'];
-  onSave: ReturnType<typeof useImportSourceWorkspaceState>['handleSaveReadwiseReaderSetup'];
-}) {
-  return (
-    <ReadwiseReaderConfigDialog
-      config={props.readwiseReaderConfig}
-      onPreview={(input) =>
-        inspectReadwiseReaderSetup({
-          articleDirectoryPath: input.articleDirectoryPath,
-          config: input.config,
-          fullDocumentDirectoryPath: input.fullDocumentDirectoryPath,
-          sources: input.sources
-        })
-      }
-      onOpenChange={props.onOpenChange}
-      onSave={props.onSave}
-      open={props.configDialogOpen}
-      readwiseRootPath={props.readwiseRootPath}
-      readwiseSources={props.readwiseSources}
-    />
-  );
-}
 
 export function useKeepPreviewDialog(props: {
   handleConfirmKeepImport: ReturnType<typeof useImportSourceWorkspaceState>['handleConfirmKeepImport'];

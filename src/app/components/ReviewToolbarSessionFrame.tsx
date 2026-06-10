@@ -108,7 +108,7 @@ export function ReviewSessionProgress({
   );
 }
 
-export function ReviewToolbarSessionFrame({
+function ReviewToolbarSessionFrame({
   actions,
   className,
   modeControl,

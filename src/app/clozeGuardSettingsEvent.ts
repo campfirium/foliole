@@ -1,4 +1,4 @@
-export const OPEN_CLOZE_GUARD_SETTINGS_EVENT = 'foliole:open-cloze-guard-settings';
+const OPEN_CLOZE_GUARD_SETTINGS_EVENT = 'foliole:open-cloze-guard-settings';
 
 export function dispatchOpenClozeGuardSettings() {
   if (typeof window === 'undefined') return;

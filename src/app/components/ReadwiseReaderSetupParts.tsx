@@ -13,10 +13,6 @@ import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { formatReadwiseSourceLabel } from './importSourceWorkspaceModel';
 import { FolderButton, resolveFolderPathHint, resolveFolderPathLabel } from './ImportSourceWorkspaceTableParts';
 
-export function getArticlesSource(sources: DraftImportSource[]) {
-  return sources.find((source) => source.kind === 'articles') ?? null;
-}
-
 function ReadwiseFolderMatrix(props: {
   onChooseFolder: (sourceId: string, field: 'highlightPath' | 'primaryPath') => void;
   sources: Array<{ id: string; label: string; highlightPath: string; primaryPath: string }>;
@@ -133,7 +129,6 @@ export function ReadwiseDirectorySection(props: {
     </>
   );
 }
-
 
 function getReadwiseTextInputWidth(value: string) {
   return `${Math.max(12, Math.min(34, value.length + 2))}ch`;

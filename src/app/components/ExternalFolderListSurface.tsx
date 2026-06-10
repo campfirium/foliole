@@ -12,7 +12,7 @@ import {
 import { resolveExternalSurfaceTitle } from './externalLibraryDocumentSurfaceSupport';
 import { FolderListView } from './FolderListView';
 
-export function toExternalDocumentNode(entry: Pick<ExternalLibraryBrowseEntry, 'absolutePath' | 'folderId' | 'modifiedAt' | 'openingText' | 'title'>): Node {
+function toExternalDocumentNode(entry: Pick<ExternalLibraryBrowseEntry, 'absolutePath' | 'folderId' | 'modifiedAt' | 'openingText' | 'title'>): Node {
   return {
     content: '',
     createdAt: entry.modifiedAt,

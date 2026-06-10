@@ -80,7 +80,7 @@ function resolveEditorSelectionContext(
   };
 }
 
-export function resolveExistingHighlightMatch(
+function resolveExistingHighlightMatch(
   activeNodeId: string | null,
   payload: SelectionCommandPayload,
   editorRef: MutableRefObject<EditorAdapter | null>,

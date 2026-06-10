@@ -5,14 +5,14 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
 
-export interface WorkspaceRightPanelDefinition {
+interface WorkspaceRightPanelDefinition {
   icon: JSX.Element;
   menuLabel: string;
   panelId: WorkspaceRightPanelId;
   visibleInTitlebar?: boolean;
 }
 
-export const WORKSPACE_RIGHT_PANEL_DEFINITIONS: WorkspaceRightPanelDefinition[] = [
+const WORKSPACE_RIGHT_PANEL_DEFINITIONS: WorkspaceRightPanelDefinition[] = [
   {
     icon: <Waypoints aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
     menuLabel: 'Flow',
@@ -45,14 +45,6 @@ export const WORKSPACE_RIGHT_PANEL_DEFINITIONS: WorkspaceRightPanelDefinition[] 
     panelId: 'dev'
   }
 ];
-
-export const WORKSPACE_VISIBLE_RIGHT_PANEL_IDS = WORKSPACE_RIGHT_PANEL_DEFINITIONS
-  .filter((item) => item.visibleInTitlebar !== false)
-  .map((item) => item.panelId);
-
-export function getWorkspaceRightPanelAriaLabel(panelId: WorkspaceRightPanelId) {
-  return `${getWorkspaceRightPanelDefinition(panelId).menuLabel} panel`;
-}
 
 export function getWorkspaceRightPanelDefinition(panelId: WorkspaceRightPanelId) {
   const definition = WORKSPACE_RIGHT_PANEL_DEFINITIONS.find((item) => item.panelId === panelId);

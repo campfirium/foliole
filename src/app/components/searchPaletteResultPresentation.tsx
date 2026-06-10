@@ -126,7 +126,7 @@ function resolveWatchedFolderFallback(details: RuntimeNodeSourceDetails) {
   return segments[segments.length - 1] ?? pathValue;
 }
 
-export function resolveSearchResultSourceLabel(
+function resolveSearchResultSourceLabel(
   details: RuntimeNodeSourceDetails | null | undefined
 ) {
   if (!details) {

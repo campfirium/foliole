@@ -57,7 +57,7 @@ export function getReadingPositionSelection(
   return persistedSelection;
 }
 
-export function getViewportReadingPosition(props: ViewportReadingSource) {
+function getViewportReadingPosition(props: ViewportReadingSource) {
   const editor = props.editorAdapterRef.current;
   const visiblePosition = editor?.getPrimaryVisiblePosition?.();
   if (typeof visiblePosition === 'number') {
@@ -100,20 +100,4 @@ export function syncParagraphMarkerToReadingPosition(props: ReadingMarkerSource)
   }
   const currentSelection = getReadingPositionSelection(props, editor.getSelection());
   editor.setParagraphMarker?.(resolveCurrentParagraphSelection(editor.getContent(), currentSelection));
-}
-
-export function syncReadingSelectionToViewport(props: ReadingMarkerSource) {
-  const editor = props.editorAdapterRef.current;
-  const position = getViewportReadingPosition(props);
-  if (!editor || typeof position !== 'number') {
-    return null;
-  }
-  const currentSelection = editor.getSelection();
-  if (currentSelection.from === position && currentSelection.to === position) {
-    return currentSelection;
-  }
-  const selection = { from: position, to: position };
-  editor.setSelection(selection);
-  syncParagraphMarkerToReadingPosition(props);
-  return selection;
 }

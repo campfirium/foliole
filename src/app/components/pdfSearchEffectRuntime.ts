@@ -55,7 +55,7 @@ export function toSearchHighlights(matches: PdfSearchMatch[], activeMatchId: str
   }));
 }
 
-export function resolveNextCursor(request: PdfSearchRequest | null, current: number, total: number) {
+function resolveNextCursor(request: PdfSearchRequest | null, current: number, total: number) {
   if (!request) {
     return current;
   }
@@ -65,7 +65,7 @@ export function resolveNextCursor(request: PdfSearchRequest | null, current: num
   return (current + 1) % total;
 }
 
-export function resolveTargetCursor(matches: PdfSearchMatch[], target: PdfSearchTarget) {
+function resolveTargetCursor(matches: PdfSearchMatch[], target: PdfSearchTarget) {
   const exactIndex = matches.findIndex((match) => match.page === target.page && match.matchStart === target.matchStart);
   if (exactIndex >= 0) {
     return exactIndex;

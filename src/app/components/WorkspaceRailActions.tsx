@@ -12,7 +12,6 @@ import {
   AppSelectionDropdownMenu,
   AppSelectionDropdownMenuItem,
   LucideCatalogIcon,
-  LUCIDE_ICON_OPTIONS,
   ToolbarActionGroup
 } from '../../shared/ui';
 
@@ -21,8 +20,6 @@ import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 const RAIL_BUTTON_CLASS_NAME =
   'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 const PLATFORM_DEFAULT_APP_COMMAND_SHORTCUTS = getPlatformDefaultCommandShortcuts();
-
-export const WORKSPACE_RAIL_ICON_OPTIONS = LUCIDE_ICON_OPTIONS;
 
 export function RailItemIcon({
   iconId,

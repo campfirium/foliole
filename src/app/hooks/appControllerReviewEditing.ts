@@ -32,7 +32,7 @@ function buildReviewShortcutBindings(shortcutMap: ReviewShortcutMap) {
   };
 }
 
-export function useReviewEditingState(args: {
+function useReviewEditingState(args: {
   isExternalViewOpen: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isCurrentReviewItemGradable: boolean;

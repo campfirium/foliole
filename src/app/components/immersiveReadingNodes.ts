@@ -15,7 +15,7 @@ interface ReadableNodeNavigationSource {
   onSelectNode: (nodeId: string) => void;
 }
 
-export function openNextReadableNode(props: ReadableNodeNavigationSource, readableNodeIds: string[]) {
+function openNextReadableNode(props: ReadableNodeNavigationSource, readableNodeIds: string[]) {
   const currentIndex = props.activeNodeId ? readableNodeIds.indexOf(props.activeNodeId) : -1;
   const nextNodeId = currentIndex >= 0 ? readableNodeIds[currentIndex + 1] : undefined;
   if (nextNodeId) {
@@ -23,7 +23,7 @@ export function openNextReadableNode(props: ReadableNodeNavigationSource, readab
   }
 }
 
-export function openPreviousReadableNode(props: ReadableNodeNavigationSource, readableNodeIds: string[]) {
+function openPreviousReadableNode(props: ReadableNodeNavigationSource, readableNodeIds: string[]) {
   const currentIndex = props.activeNodeId ? readableNodeIds.indexOf(props.activeNodeId) : -1;
   const previousNodeId = currentIndex > 0 ? readableNodeIds[currentIndex - 1] : undefined;
   if (previousNodeId) {

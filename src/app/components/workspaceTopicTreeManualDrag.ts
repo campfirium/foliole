@@ -1,6 +1,6 @@
 export type WorkspaceTopicTreeManualMoveIntent = 'before' | 'after' | 'child' | 'root';
 
-export function canApplyWorkspaceTopicTreeManualDrag(args: {
+function canApplyWorkspaceTopicTreeManualDrag(args: {
   activeFolderId: string;
   sourceNodeIds: readonly string[];
   targetNodeId: string | null;
@@ -16,7 +16,7 @@ export function canApplyWorkspaceTopicTreeManualDrag(args: {
   return args.sourceNodeIds.every((nodeId) => args.parentNodeIdById[nodeId] === args.activeFolderId);
 }
 
-export function canApplyWorkspaceTopicTreeStructuralDrag(args: {
+function canApplyWorkspaceTopicTreeStructuralDrag(args: {
   derivedNodeIds: ReadonlySet<string>;
   sourceNodeIds: readonly string[];
   targetNodeId: string | null;

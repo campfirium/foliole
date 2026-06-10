@@ -1,11 +1,11 @@
-export interface SourceUpdateSummaryItem {
+interface SourceUpdateSummaryItem {
   addedLineCount: number;
   endLine: number;
   removedLineCount: number;
   startLine: number;
 }
 
-export interface SourceUpdateDisplayLine {
+interface SourceUpdateDisplayLine {
   isChanged: boolean;
   lineNumber: number;
   text: string;

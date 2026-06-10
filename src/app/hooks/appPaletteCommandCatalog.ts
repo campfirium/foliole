@@ -150,7 +150,7 @@ function isNavigationCommandEnabled(id: string, options: BuildAppPaletteItemsOpt
   return null;
 }
 
-export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
   const enabled = [
     isWorkspaceCommandEnabled,
     isImportCommandEnabled,

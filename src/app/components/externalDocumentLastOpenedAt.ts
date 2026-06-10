@@ -27,7 +27,7 @@ function parseExternalDocumentLastOpenedAt(raw: string | null): ExternalDocument
   }
 }
 
-export function loadExternalDocumentLastOpenedAt() {
+function loadExternalDocumentLastOpenedAt() {
   return parseExternalDocumentLastOpenedAt(
     getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.externalDocumentLastOpenedAt)
   );
@@ -43,7 +43,7 @@ export function markExternalDocumentOpened(absolutePath: string, now = new Date(
   return next;
 }
 
-export function subscribeExternalDocumentLastOpenedAt(listener: (value: ExternalDocumentLastOpenedAtByPath) => void) {
+function subscribeExternalDocumentLastOpenedAt(listener: (value: ExternalDocumentLastOpenedAtByPath) => void) {
   const handler = (event: Event) => {
     listener(event instanceof CustomEvent ? event.detail as ExternalDocumentLastOpenedAtByPath : loadExternalDocumentLastOpenedAt());
   };

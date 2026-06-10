@@ -6,10 +6,6 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 const appliedImportPatchIds = new Set<string>();
 const handledImportWorkspaceIds = new Set<string>();
 
-export function hasAppliedImportWorkspacePatch(importId: string | null | undefined) {
-  return Boolean(importId && appliedImportPatchIds.has(importId));
-}
-
 export function hasHandledImportWorkspaceChange(importId: string | null | undefined) {
   return Boolean(importId && handledImportWorkspaceIds.has(importId));
 }

@@ -4,7 +4,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 
-export type WorkspaceDocumentSurfaceSource = Pick<
+type WorkspaceDocumentSurfaceSource = Pick<
   WorkspaceLayoutProps,
   | 'document'
   | 'editorCommands'

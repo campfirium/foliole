@@ -111,7 +111,7 @@ export function buildFolderNavigationNodesById(
   );
 }
 
-export function resolveActiveFolderNodeId(
+function resolveActiveFolderNodeId(
   activeNodeId: string | null,
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: readonly string[]
@@ -172,20 +172,6 @@ export function resolveActiveFolderColumnNodeId(
   }
 
   return activeNode.parentNodeId ?? null;
-}
-
-export function collectFolderColumnNodeIds(
-  folderNodeId: string | null,
-  nodeOrder: string[],
-  nodesById: WorkspaceListNodesById,
-  trashedNodeIds: readonly string[]
-) {
-  return nodeOrder.filter((nodeId) => {
-    if (!isCanonicalVisibleNodeId({ nodeOrder, nodesById, trashedNodeIds }, nodeId)) {
-      return false;
-    }
-    return (nodesById[nodeId]?.parentNodeId ?? null) === folderNodeId;
-  });
 }
 
 export function buildTopicNavigationNodesById(

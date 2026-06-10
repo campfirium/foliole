@@ -13,7 +13,7 @@ export interface WorkspaceContentSortState {
   key: WorkspaceContentSortKey;
 }
 
-export const DEFAULT_WORKSPACE_CONTENT_SORT: WorkspaceContentSortState = {
+const DEFAULT_WORKSPACE_CONTENT_SORT: WorkspaceContentSortState = {
   direction: 'desc',
   key: 'modifiedAt'
 };
@@ -147,7 +147,7 @@ export function sortTrashContentRows(
   });
 }
 
-export function compareExternalDocuments(
+function compareExternalDocuments(
   left: ExternalLibraryDocumentItem,
   right: ExternalLibraryDocumentItem,
   sort: WorkspaceContentSortState,

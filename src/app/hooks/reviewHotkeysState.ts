@@ -42,10 +42,6 @@ export const DOCUMENT_SHORTCUT_COMMAND_IDS = [APP_COMMAND_IDS.findInTopic, APP_C
 
 export const APP_SHORTCUT_COMMAND_IDS = Object.values(APP_COMMAND_IDS);
 
-export function isReviewShortcutCommand(commandId: string) {
-  return REVIEW_SHORTCUT_COMMAND_IDS.includes(commandId as (typeof REVIEW_SHORTCUT_COMMAND_IDS)[number]);
-}
-
 export function mapPaletteItemsToHotkeyItems(items: CommandPaletteItem[], overrides: CommandShortcutOverrides): HotkeySettingItem[] {
   return items.map((item) => {
     const shortcutDisplayEntries = formatShortcutSetDisplayEntries(item.shortcuts);

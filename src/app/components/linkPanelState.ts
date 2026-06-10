@@ -21,7 +21,7 @@ function resolvePanelTitle(url: string) {
   }
 }
 
-export function createLinkPanel(request: ExternalLinkOpenRequest): LinkPanelRecord {
+function createLinkPanel(request: ExternalLinkOpenRequest): LinkPanelRecord {
   return {
     anchorPoint: request.anchorPoint,
     canGoBack: false,

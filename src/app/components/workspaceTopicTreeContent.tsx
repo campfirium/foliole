@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState, type Dispatch, type MouseEvent as React
 import { NodeListStateSurface } from '../../features/nodes/components/NodeListStateSurface';
 import { type NodeListContextMenuController } from '../../features/nodes/components/NodeListTreeHooks';
 import { useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
-import { buildNodeTree, buildVisibleNodeTreeRows, filterNodeTreeRowsByTitle } from '../../features/nodes/model/nodeTree';
+import { buildNodeTree, buildVisibleNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 
@@ -145,27 +145,6 @@ function syncCollapseState(args: {
     activeNodeId: args.activeNodeId,
     collapsedNodeIds: new Set(pruned)
   };
-}
-
-export function useWorkspaceTopicTreeRows(
-  treeRows: ReturnType<typeof buildNodeTree>['rows'],
-  collapsedNodeIds: ReadonlySet<string>
-) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const filteredRows = useMemo(
-    () => (searchQuery.trim() ? filterNodeTreeRowsByTitle(treeRows, searchQuery) : treeRows),
-    [searchQuery, treeRows]
-  );
-  const visibleRows = useMemo(
-    () => (searchQuery.trim() ? filteredRows : buildVisibleNodeTreeRows(filteredRows, collapsedNodeIds)),
-    [collapsedNodeIds, filteredRows, searchQuery]
-  );
-  const collapsibleNodeIds = useMemo(
-    () => treeRows.filter((row) => row.hasChildren).map((row) => row.node.id),
-    [treeRows]
-  );
-
-  return { collapsibleNodeIds, searchQuery, setSearchQuery, visibleRows };
 }
 
 export function toggleCollapsedNode(nodeId: string, setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>) {

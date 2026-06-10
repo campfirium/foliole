@@ -25,7 +25,7 @@ export interface PendingNodeViewStateMap {
 
 export type ReadingProgressCaptureMode = 'snapshot' | 'user-scroll';
 
-export function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
+function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
   return {
     scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
     selection: viewState.selection
@@ -37,7 +37,7 @@ export function normalizeNodeViewState(viewState: NodeViewState): NodeViewState 
   };
 }
 
-export function isSameNodeViewState(left: NodeViewState | undefined, right: NodeViewState): boolean {
+function isSameNodeViewState(left: NodeViewState | undefined, right: NodeViewState): boolean {
   if (!left) {
     return false;
   }
