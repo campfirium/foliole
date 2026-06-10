@@ -1,11 +1,19 @@
 import { canonicalGuidePath, DEFAULT_WEB_GUIDE, WEB_GUIDES, type WebGuideSeed } from './webGuidesContent';
 
 export function resolveWebGuideFromPath(pathname: string, guides: WebGuideSeed[] = WEB_GUIDES) {
-  return guides.find((guide) => canonicalGuidePath(guide.slug) === pathname) ?? guides[0] ?? DEFAULT_WEB_GUIDE;
+  return requireWebGuide(guides.find((guide) => canonicalGuidePath(guide.slug) === pathname) ?? guides[0] ?? DEFAULT_WEB_GUIDE);
+}
+
+function requireWebGuide(guide: WebGuideSeed | undefined) {
+  if (!guide) {
+    throw new Error('Web guides require at least one guide.');
+  }
+  return guide;
 }
 
 export function WebGuidesApp() {
-  const pathname = typeof window === 'undefined' ? canonicalGuidePath(DEFAULT_WEB_GUIDE.slug) : window.location.pathname;
+  const defaultGuide = requireWebGuide(DEFAULT_WEB_GUIDE);
+  const pathname = typeof window === 'undefined' ? canonicalGuidePath(defaultGuide.slug) : window.location.pathname;
   const guide = resolveWebGuideFromPath(pathname);
 
   return (

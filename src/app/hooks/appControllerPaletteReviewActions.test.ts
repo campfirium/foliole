@@ -6,11 +6,10 @@ import { resolveReviewDeleteTargetNodeId } from './appControllerPaletteReviewAct
 import type { useWorkspaceSelectors } from './appControllerState';
 
 function createNode(overrides: Partial<Node>): Node {
-  return {
+  const node: Node = {
     id: overrides.id ?? 'topic-1',
     parentNodeId: overrides.parentNodeId ?? null,
     kind: overrides.kind ?? 'topic',
-    specialKind: overrides.specialKind,
     title: overrides.title ?? 'Topic',
     content: overrides.content ?? '',
     reveal: overrides.reveal ?? null,
@@ -18,6 +17,12 @@ function createNode(overrides: Partial<Node>): Node {
     createdAt: overrides.createdAt ?? '2026-06-10T00:00:00.000Z',
     updatedAt: overrides.updatedAt ?? '2026-06-10T00:00:00.000Z'
   };
+
+  if (overrides.specialKind !== undefined) {
+    node.specialKind = overrides.specialKind;
+  }
+
+  return node;
 }
 
 function createWorkspaceSelectorStub(args: {

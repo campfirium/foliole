@@ -18,8 +18,15 @@ it('marks settings empty, loading, and error surfaces with shared state tones', 
     </>
   );
 
-  expect(screen.getAllByRole('status')[1]).toHaveAttribute('data-state-surface-tone', 'loading');
-  expect(screen.getAllByRole('status')[1]).toHaveAttribute('data-state-surface-scope', 'settings');
+  const loadingStatus = screen.getAllByRole('status')[1];
+  expect(loadingStatus).toBeDefined();
+  if (!loadingStatus) {
+    throw new Error('Expected loading status surface to render.');
+  }
+
+  expect(loadingStatus).toHaveAttribute('data-state-surface-tone', 'loading');
+  expect(loadingStatus).toHaveAttribute('data-state-surface-scope', 'settings');
+  expect(loadingStatus.querySelector('.animate-spin')?.className).toContain('border-t-foreground/55');
   expect(screen.getByText('No backups').closest('[data-settings-state-surface]')).toHaveAttribute('data-state-surface-tone', 'empty');
   expect(screen.getByText('No backups').closest('[data-settings-state-surface]')).toHaveAttribute('data-state-surface-scope', 'settings');
   expect(screen.getByText('No backups').closest('[data-settings-state-surface]')?.className).toContain('min-h-settings-row');
