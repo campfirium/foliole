@@ -79,6 +79,7 @@ function renderStandardContentColumn(
       <TrashResultListPanel
         nodeOrder={props.nodeOrder}
         nodesById={props.listNodesById}
+        onSelectNode={props.onSelectNode}
         onSelectTrashNode={props.onSelectTrashNode}
         selectedTrashNodeId={props.selectedTrashNodeId}
         trashedNodeIds={props.trashedNodeIds}

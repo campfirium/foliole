@@ -20,6 +20,7 @@ import { normalizeWorkspaceContentSort, sortTrashContentRows } from './workspace
 interface TrashResultListPanelProps {
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
+  onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
@@ -91,6 +92,7 @@ function TrashContextMenu(props: {
   contextMenu: ReturnType<typeof useNodeListContextMenu>;
   listState: ReturnType<typeof useNodeListState>;
   nodesById: WorkspaceListNodesById;
+  onSelectNode: (nodeId: string) => void;
   selectTrashNode: ReturnType<typeof useNodeSelectionHandler>;
   workspaceActions: ReturnType<typeof useTrashWorkspaceActions>;
 }) {
@@ -107,7 +109,10 @@ function TrashContextMenu(props: {
       nodesById={props.nodesById}
       onOpenMoveToNode={() => undefined}
       onSelect={props.selectTrashNode}
-      restoreNode={props.workspaceActions.restoreNode}
+      restoreNode={async (nodeId) => {
+        const targetNodeId = await props.workspaceActions.restoreNode(nodeId);
+        props.onSelectNode(targetNodeId ?? nodeId);
+      }}
       returnNode={props.workspaceActions.returnNode}
       setNodeSequentialReading={props.workspaceActions.setNodeSequentialReading}
       shelveNode={props.workspaceActions.shelveNode}
@@ -189,6 +194,7 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
         contextMenu={contextMenu}
         listState={renderedListState}
         nodesById={props.nodesById}
+        onSelectNode={props.onSelectNode}
         selectTrashNode={selectTrashNode}
         workspaceActions={workspaceActions}
       />

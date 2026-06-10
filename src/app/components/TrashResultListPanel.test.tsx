@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
@@ -30,6 +30,7 @@ function createNode(args: {
 function renderTrashPanel(args: {
   nodeOrder?: string[];
   nodesById?: Record<string, WorkspaceListNode>;
+  onSelectNode?: (nodeId: string) => void;
   onSelectTrashNode?: (nodeId: string) => void;
   selectedTrashNodeId?: string | null;
   sort?: WorkspaceContentSortState;
@@ -54,6 +55,7 @@ function renderTrashPanel(args: {
     <TrashResultListPanel
       nodeOrder={args.nodeOrder ?? ['folder', 'topic', 'item', 'solo']}
       nodesById={nodesById}
+      onSelectNode={args.onSelectNode ?? (() => undefined)}
       onSelectTrashNode={args.onSelectTrashNode ?? (() => undefined)}
       selectedTrashNodeId={args.selectedTrashNodeId ?? null}
       trashedNodeIds={args.trashedNodeIds}
@@ -166,4 +168,24 @@ it('selects shift ranges using the visible trash row order', () => {
   expect(within(trashTree).getByRole('treeitem', { name: /Beta topic/ })).toHaveAttribute('aria-selected', 'true');
   expect(within(trashTree).getByRole('treeitem', { name: /Delta topic/ })).toHaveAttribute('aria-selected', 'true');
   expect(within(trashTree).getByRole('treeitem', { name: /Zulu topic/ })).toHaveAttribute('aria-selected', 'false');
+});
+
+it('opens the restored topic from the trash row context menu', async () => {
+  const onSelectNode = vi.fn();
+  const restoreNode = vi.fn().mockResolvedValue('restored-topic');
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    restoreNode
+  }));
+  renderTrashPanel({
+    onSelectNode,
+    selectedTrashNodeId: 'solo',
+    trashedNodeIds: ['solo']
+  });
+
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: /Solo item/ }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
+
+  await waitFor(() => expect(restoreNode).toHaveBeenCalledWith('solo'));
+  expect(onSelectNode).toHaveBeenCalledWith('restored-topic');
 });
