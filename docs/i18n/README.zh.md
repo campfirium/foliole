@@ -104,14 +104,15 @@ macOS 和 iOS alpha 预计在 8 月左右发布。
 
 特别感谢 Piotr Woźniak 和 Jarrett Ye。没有 SuperMemo、渐进阅读和 FSRS，就没有 Foliole。
 
-也非常感谢以下优秀的开源项目和组件：
+也非常感谢以下优秀的开源项目、组件和社区：
 
-- better-sqlite3
-- Capacitor
-- CodeMirror 6
-- Drizzle ORM
-- Electron
-- React
-- SQLite
-- TypeScript
-- Vite
+- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
+- [Capacitor](https://capacitorjs.com)
+- [CodeMirror 6](https://codemirror.net)
+- [Drizzle ORM](https://orm.drizzle.team)
+- [Electron](https://www.electronjs.org)
+- [Linux.do](https://linux.do)
+- [React](https://react.dev)
+- [SQLite](https://www.sqlite.org)
+- [TypeScript](https://www.typescriptlang.org)
+- [Vite](https://vite.dev)

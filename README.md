@@ -104,14 +104,15 @@ Supports Markdown, PDF, EPUB, LaTeX math, code blocks, and other content renderi
 
 Special thanks to Piotr Woźniak and Jarrett Ye. Without SuperMemo, incremental reading, and FSRS, Foliole would not exist.
 
-Many thanks to the following open-source projects and components:
+Many thanks to the following open-source projects, components, and communities:
 
-- better-sqlite3
-- Capacitor
-- CodeMirror 6
-- Drizzle ORM
-- Electron
-- React
-- SQLite
-- TypeScript
-- Vite
+- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
+- [Capacitor](https://capacitorjs.com)
+- [CodeMirror 6](https://codemirror.net)
+- [Drizzle ORM](https://orm.drizzle.team)
+- [Electron](https://www.electronjs.org)
+- [Linux.do](https://linux.do)
+- [React](https://react.dev)
+- [SQLite](https://www.sqlite.org)
+- [TypeScript](https://www.typescriptlang.org)
+- [Vite](https://vite.dev)
