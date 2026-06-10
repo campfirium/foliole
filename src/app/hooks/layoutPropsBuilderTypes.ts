@@ -4,7 +4,17 @@ import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import type { WorkspaceState } from '../../store/workspaceStore';
-import type { WorkspaceLayoutFlatProps } from '../components/workspaceLayoutProps';
+import type {
+  WorkspaceLayoutChromeProps,
+  WorkspaceLayoutDocumentProps,
+  WorkspaceLayoutEditorCommandProps,
+  WorkspaceLayoutExternalLibraryProps,
+  WorkspaceLayoutImportProps,
+  WorkspaceLayoutNavigationProps,
+  WorkspaceLayoutReadingPositionProps,
+  WorkspaceLayoutReviewProps,
+  WorkspaceLayoutTrashProps
+} from '../components/workspaceLayoutPropGroups';
 
 import type { StartStudyModeOptions } from './reviewModeSessionActions';
 
@@ -19,10 +29,10 @@ export interface BuildLayoutPropsArgs {
   canGoForward: boolean;
   canGoParent: boolean;
   canStartStudyMode: boolean;
-  contextMenu: WorkspaceLayoutFlatProps['contextMenu'];
+  contextMenu: WorkspaceLayoutDocumentProps['contextMenu'];
   documentNode?: { content: string };
   editorAdapterRef: { current: EditorAdapter | null };
-  editorCtx: Pick<WorkspaceLayoutFlatProps,
+  editorCtx: Pick<WorkspaceLayoutEditorCommandProps & WorkspaceLayoutDocumentProps,
     | 'onCloseContextMenu'
     | 'onCopyImage'
     | 'onCreateCloze'
@@ -45,7 +55,7 @@ export interface BuildLayoutPropsArgs {
     | 'onExportImage'
   >;
   editorNodeId: string | null;
-  editorNodeViewState: WorkspaceLayoutFlatProps['editorNodeViewState'];
+  editorNodeViewState: WorkspaceLayoutDocumentProps['editorNodeViewState'];
   isResizingList: boolean;
   isResizingRightSidebar: boolean;
   isImportManagementOpen: boolean;
@@ -66,7 +76,7 @@ export interface BuildLayoutPropsArgs {
   listWidth: number;
   nowIso: string;
   rightSidebarWidth: number;
-  nav: Pick<WorkspaceLayoutFlatProps,
+  nav: Pick<WorkspaceLayoutNavigationProps,
     | 'onGoBack'
     | 'onGoForward'
     | 'onGoParent'
@@ -77,25 +87,25 @@ export interface BuildLayoutPropsArgs {
   >;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
-  externalFolders: WorkspaceLayoutFlatProps['externalFolders'];
-  externalEntriesByFolderId: WorkspaceLayoutFlatProps['externalEntriesByFolderId'];
-  externalSelection: WorkspaceLayoutFlatProps['externalSelection'];
-  nodeViewById: WorkspaceLayoutFlatProps['nodeViewById'];
-  onNodeDesiredRetentionChange: WorkspaceLayoutFlatProps['onNodeDesiredRetentionChange'];
-  onNodePriorityChange: WorkspaceLayoutFlatProps['onNodePriorityChange'];
-  onNodeShortTermChange: WorkspaceLayoutFlatProps['onNodeShortTermChange'];
-  onAnswerChange: WorkspaceLayoutFlatProps['onAnswerChange'];
-  onEditorChange: WorkspaceLayoutFlatProps['onEditorChange'];
-  onEditorUndo: WorkspaceLayoutFlatProps['onEditorUndo'];
-  onEditorRedo: WorkspaceLayoutFlatProps['onEditorRedo'];
-  onFinalizeNodeTitle: WorkspaceLayoutFlatProps['onFinalizeNodeTitle'];
-  onRegisterEditorDraftFlush: WorkspaceLayoutFlatProps['onRegisterEditorDraftFlush'];
-  onPastedTextAnchors: WorkspaceLayoutFlatProps['onPastedTextAnchors'];
-  onEnterPriorityQuickSet: WorkspaceLayoutFlatProps['onEnterPriorityQuickSet'];
-  onOpenPostponeTopicPanel: WorkspaceLayoutFlatProps['onOpenPostponeTopicPanel'];
-  onNodeContentChange: WorkspaceLayoutFlatProps['onNodeContentChange'];
-  setNodeViewState: WorkspaceLayoutFlatProps['setNodeViewState'];
-  onEditorReady: WorkspaceLayoutFlatProps['onEditorReady'];
+  externalFolders: WorkspaceLayoutExternalLibraryProps['externalFolders'];
+  externalEntriesByFolderId: WorkspaceLayoutExternalLibraryProps['externalEntriesByFolderId'];
+  externalSelection: WorkspaceLayoutExternalLibraryProps['externalSelection'];
+  nodeViewById: WorkspaceLayoutDocumentProps['nodeViewById'];
+  onNodeDesiredRetentionChange: WorkspaceLayoutDocumentProps['onNodeDesiredRetentionChange'];
+  onNodePriorityChange: WorkspaceLayoutDocumentProps['onNodePriorityChange'];
+  onNodeShortTermChange: WorkspaceLayoutDocumentProps['onNodeShortTermChange'];
+  onAnswerChange: WorkspaceLayoutDocumentProps['onAnswerChange'];
+  onEditorChange: WorkspaceLayoutDocumentProps['onEditorChange'];
+  onEditorUndo: WorkspaceLayoutDocumentProps['onEditorUndo'];
+  onEditorRedo: WorkspaceLayoutDocumentProps['onEditorRedo'];
+  onFinalizeNodeTitle: WorkspaceLayoutDocumentProps['onFinalizeNodeTitle'];
+  onRegisterEditorDraftFlush: WorkspaceLayoutDocumentProps['onRegisterEditorDraftFlush'];
+  onPastedTextAnchors: WorkspaceLayoutDocumentProps['onPastedTextAnchors'];
+  onEnterPriorityQuickSet: WorkspaceLayoutDocumentProps['onEnterPriorityQuickSet'];
+  onOpenPostponeTopicPanel: WorkspaceLayoutReviewProps['onOpenPostponeTopicPanel'];
+  onNodeContentChange: WorkspaceLayoutDocumentProps['onNodeContentChange'];
+  setNodeViewState: WorkspaceLayoutDocumentProps['setNodeViewState'];
+  onEditorReady: WorkspaceLayoutDocumentProps['onEditorReady'];
   onOpenNotesView: () => void;
   onOpenMoveToNode: () => void;
   onOpenImportManagement: () => void;
@@ -107,35 +117,35 @@ export interface BuildLayoutPropsArgs {
   onExitImmersiveMode: () => void;
   onOpenTrashView: () => void;
   onOpenVirtualView: () => void;
-  onOpenExternalSelection: WorkspaceLayoutFlatProps['onOpenExternalSelection'];
-  onOpenExternalLibrarySettings: WorkspaceLayoutFlatProps['onOpenExternalLibrarySettings'];
-  onOpenExternalView: WorkspaceLayoutFlatProps['onOpenExternalView'];
+  onOpenExternalSelection: WorkspaceLayoutExternalLibraryProps['onOpenExternalSelection'];
+  onOpenExternalLibrarySettings: WorkspaceLayoutExternalLibraryProps['onOpenExternalLibrarySettings'];
+  onOpenExternalView: WorkspaceLayoutExternalLibraryProps['onOpenExternalView'];
   onResetLayout: () => void;
-  onSelectTrashNode: WorkspaceLayoutFlatProps['onSelectTrashNode'];
-  onRevealAnchorInDocument: WorkspaceLayoutFlatProps['onRevealAnchorInDocument'];
-  onPersistPdfViewState: WorkspaceLayoutFlatProps['onPersistPdfViewState'];
-  onRevealDocumentPosition: WorkspaceLayoutFlatProps['onRevealDocumentPosition'];
-  onRevealDocumentSelection: WorkspaceLayoutFlatProps['onRevealDocumentSelection'];
-  onResolveDocumentPositionAtViewportY: WorkspaceLayoutFlatProps['onResolveDocumentPositionAtViewportY'];
-  beginApplyingReadingPosition: WorkspaceLayoutFlatProps['beginApplyingReadingPosition'];
-  completeApplyingReadingPosition: WorkspaceLayoutFlatProps['completeApplyingReadingPosition'];
-  getReadingPositionRestoreCommand: WorkspaceLayoutFlatProps['getReadingPositionRestoreCommand'];
-  getReadingPositionSelection: WorkspaceLayoutFlatProps['getReadingPositionSelection'];
-  getReadingPositionSyncState: WorkspaceLayoutFlatProps['getReadingPositionSyncState'];
-  getReadingPositionTargetViewportMode: WorkspaceLayoutFlatProps['getReadingPositionTargetViewportMode'];
-  getReadingPositionTargetViewportRatio: WorkspaceLayoutFlatProps['getReadingPositionTargetViewportRatio'];
-  setReadingPositionSelection: WorkspaceLayoutFlatProps['setReadingPositionSelection'];
-  onRightSidebarSplitterKeyDown: WorkspaceLayoutFlatProps['onRightSidebarSplitterKeyDown'];
-  onRightSidebarSplitterPointerDown: WorkspaceLayoutFlatProps['onRightSidebarSplitterPointerDown'];
-  onSplitterKeyDown: WorkspaceLayoutFlatProps['onSplitterKeyDown'];
-  onSplitterPointerDown: WorkspaceLayoutFlatProps['onSplitterPointerDown'];
+  onSelectTrashNode: WorkspaceLayoutTrashProps['onSelectTrashNode'];
+  onRevealAnchorInDocument: WorkspaceLayoutDocumentProps['onRevealAnchorInDocument'];
+  onPersistPdfViewState: WorkspaceLayoutDocumentProps['onPersistPdfViewState'];
+  onRevealDocumentPosition: WorkspaceLayoutDocumentProps['onRevealDocumentPosition'];
+  onRevealDocumentSelection: WorkspaceLayoutDocumentProps['onRevealDocumentSelection'];
+  onResolveDocumentPositionAtViewportY: WorkspaceLayoutDocumentProps['onResolveDocumentPositionAtViewportY'];
+  beginApplyingReadingPosition: WorkspaceLayoutReadingPositionProps['beginApplyingReadingPosition'];
+  completeApplyingReadingPosition: WorkspaceLayoutReadingPositionProps['completeApplyingReadingPosition'];
+  getReadingPositionRestoreCommand: WorkspaceLayoutReadingPositionProps['getReadingPositionRestoreCommand'];
+  getReadingPositionSelection: WorkspaceLayoutReadingPositionProps['getReadingPositionSelection'];
+  getReadingPositionSyncState: WorkspaceLayoutReadingPositionProps['getReadingPositionSyncState'];
+  getReadingPositionTargetViewportMode: WorkspaceLayoutReadingPositionProps['getReadingPositionTargetViewportMode'];
+  getReadingPositionTargetViewportRatio: WorkspaceLayoutReadingPositionProps['getReadingPositionTargetViewportRatio'];
+  setReadingPositionSelection: WorkspaceLayoutReadingPositionProps['setReadingPositionSelection'];
+  onRightSidebarSplitterKeyDown: WorkspaceLayoutChromeProps['onRightSidebarSplitterKeyDown'];
+  onRightSidebarSplitterPointerDown: WorkspaceLayoutChromeProps['onRightSidebarSplitterPointerDown'];
+  onSplitterKeyDown: WorkspaceLayoutChromeProps['onSplitterKeyDown'];
+  onSplitterPointerDown: WorkspaceLayoutChromeProps['onSplitterPointerDown'];
   onToggleListVisibility: () => void;
   onToggleBothSidebarVisibility: () => void;
   onToggleImmersiveMode: () => void;
   onToggleRightSidebarVisibility: () => void;
-  onRunImportFile: WorkspaceLayoutFlatProps['onRunImportFile'];
-  onRunImportFolder: WorkspaceLayoutFlatProps['onRunImportFolder'];
-  onStartClipboardImport: WorkspaceLayoutFlatProps['onStartClipboardImport'];
+  onRunImportFile: WorkspaceLayoutImportProps['onRunImportFile'];
+  onRunImportFolder: WorkspaceLayoutImportProps['onRunImportFolder'];
+  onStartClipboardImport: WorkspaceLayoutImportProps['onStartClipboardImport'];
   priorityQuickSetShortcutLabel: string;
   reviewPreview: SchedulerPreviewResult | null;
   reviewSession: WorkspaceState['reviewSession'];

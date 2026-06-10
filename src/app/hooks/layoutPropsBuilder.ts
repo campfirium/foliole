@@ -14,7 +14,7 @@ import type { WorkspaceState } from '../../store/workspaceStore';
 import { buildReviewQueueVisibility } from '../components/reviewQueueVisibility';
 import { groupWorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
 import type { WorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
-import type { WorkspaceLayoutFlatProps } from '../components/workspaceLayoutProps';
+import type { WorkspaceLayoutFlatProps, WorkspaceLayoutReviewProps } from '../components/workspaceLayoutPropGroups';
 
 import type { BuildLayoutPropsArgs } from './layoutPropsBuilderTypes';
 import { enterReviewModeSession } from './reviewModeSessionActions';
@@ -85,14 +85,14 @@ function getReviewSessionSummary(
 ) {
   const { reviewCompletedCount, reviewQueueCount } = resolveReviewSessionProgress(reviewSession);
   const createdCounts = countCreatedNodesDuringSession(reviewSession, nodesById);
-  const reviewStatus: WorkspaceLayoutFlatProps['reviewStatus'] = reviewSession.currentNodeId
+  const reviewStatus: WorkspaceLayoutReviewProps['reviewStatus'] = reviewSession.currentNodeId
     ? reviewSession.isAnswerRevealed
       ? 'answer-revealed'
       : 'awaiting-answer'
     : isReviewSessionCompleted(reviewSession)
       ? 'completed'
       : 'idle';
-  const reviewSummary: WorkspaceLayoutFlatProps['reviewSummary'] = {
+  const reviewSummary: WorkspaceLayoutReviewProps['reviewSummary'] = {
     completedAt: reviewSession.completedAt ?? null,
     continueNodeId: reviewSession.continueNodeId ?? null,
     createdItemCount: createdCounts.createdItemCount,

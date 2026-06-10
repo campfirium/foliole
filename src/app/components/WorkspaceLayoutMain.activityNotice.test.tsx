@@ -58,7 +58,7 @@ import {
 } from './importActivityRequests';
 import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
-import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
+import type { WorkspaceLayoutFlatProps } from './workspaceLayoutPropGroups';
 
 import { renderWithLocalization } from '@/shared/localization/testLocalization';
 

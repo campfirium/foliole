@@ -20,7 +20,7 @@ import { useWorkspaceDualListState } from './workspaceDualListState';
 import { useWorkspaceDualListViewRoot } from './workspaceDualListViewRoot';
 import { renderVirtualContentColumn } from './workspaceDualListVirtualContent';
 import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
-import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
+import type { WorkspaceLayoutNodeListProps, WorkspaceLayoutReviewProps } from './workspaceLayoutPropGroups';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 export interface WorkspaceDualListContentProps {
@@ -36,8 +36,8 @@ export interface WorkspaceDualListContentProps {
   listNodesById: WorkspaceListNodesById;
   nodesById: Record<string, Node>;
   nodeOrder: string[];
-  onOpenMoveToNode: WorkspaceLayoutFlatProps['onOpenMoveToNode'];
-  onOpenPostponeTopicPanel?: WorkspaceLayoutFlatProps['onOpenPostponeTopicPanel'];
+  onOpenMoveToNode: WorkspaceLayoutNodeListProps['onOpenMoveToNode'];
+  onOpenPostponeTopicPanel?: WorkspaceLayoutReviewProps['onOpenPostponeTopicPanel'];
   onOpenNotesView: () => void;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings?: () => void;

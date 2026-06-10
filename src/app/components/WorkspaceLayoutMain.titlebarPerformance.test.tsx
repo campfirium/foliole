@@ -58,7 +58,7 @@ vi.mock('./useImmersiveReadingMode', () => ({
 
 import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
-import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
+import type { WorkspaceLayoutFlatProps } from './workspaceLayoutPropGroups';
 
 function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'kind' | 'parentNodeId' | 'title'>): Node {
   const { id, kind, parentNodeId, title, ...rest } = overrides;

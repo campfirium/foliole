@@ -1,33 +1,30 @@
-import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
+import type {
+  WorkspaceLayoutChromeProps,
+  WorkspaceLayoutDocumentProps,
+  WorkspaceLayoutEditorCommandProps,
+  WorkspaceLayoutExternalLibraryProps,
+  WorkspaceLayoutFlatProps,
+  WorkspaceLayoutImportProps,
+  WorkspaceLayoutNavigationProps,
+  WorkspaceLayoutNodeListProps,
+  WorkspaceLayoutReadingPositionProps,
+  WorkspaceLayoutReviewProps,
+  WorkspaceLayoutSettingsProps,
+  WorkspaceLayoutTrashProps,
+  WorkspaceLayoutVirtualViewProps
+} from './workspaceLayoutPropGroups';
 
-export type LayoutStateKeys =
-  | 'isWorkspaceHydrated'
-  | 'isImmersiveMode'
-  | 'isResizingList'
-  | 'isResizingRightSidebar'
-  | 'isListCollapsed'
-  | 'isRightSidebarCollapsed'
-  | 'listWidth'
-  | 'rightSidebarWidth'
-  | 'onResetLayout'
-  | 'onSplitterKeyDown'
-  | 'onSplitterPointerDown'
-  | 'onRightSidebarSplitterKeyDown'
-  | 'onRightSidebarSplitterPointerDown'
-  | 'onEnterImmersiveEdit'
-  | 'onEnterImmersiveMode'
-  | 'onExitImmersiveMode'
-  | 'onToggleImmersiveMode'
-  | 'onToggleListVisibility'
-  | 'onToggleBothSidebarVisibility'
-  | 'onToggleRightSidebarVisibility';
+type ExactKeys<T, K extends readonly (keyof T)[]> =
+  Exclude<keyof T, K[number]> extends never ? K : never;
 
-export const NAVIGATION_KEYS = [
+const defineLayoutKeys = <T>() => <const K extends readonly (keyof T)[]>(keys: ExactKeys<T, K>) => keys;
+
+export const NAVIGATION_KEYS = defineLayoutKeys<WorkspaceLayoutNavigationProps>()([
   'activeNodeId', 'canGoBack', 'canGoForward', 'canGoParent', 'onGoBack', 'onGoForward', 'onGoParent',
   'onSelectBreadcrumbNode', 'onSelectNode', 'onSelectNodeInVirtualView', 'shouldSuppressNavigationSelectionRestore'
-] as const;
+] as const);
 
-export const DOCUMENT_KEYS = [
+export const DOCUMENT_KEYS = defineLayoutKeys<WorkspaceLayoutDocumentProps>()([
   'contextMenu', 'editorAdapterRef', 'editorContent', 'isEditorReadOnly', 'isPriorityQuickSetActive', 'editorNodeId',
   'editorNodeViewState', 'priorityQuickSetShortcutLabel', 'showAnswerSection', 'nodeViewById', 'onAnswerChange',
   'onEditorChange', 'onEditorUndo', 'onEditorRedo', 'onFinalizeNodeTitle', 'onRegisterEditorDraftFlush',
@@ -35,23 +32,23 @@ export const DOCUMENT_KEYS = [
   'onNodeDesiredRetentionChange', 'onNodeShortTermChange', 'onEnterPriorityQuickSet', 'onRevealAnchorInDocument',
   'onPersistPdfViewState', 'onRevealDocumentPosition', 'onRevealDocumentSelection', 'onResolveDocumentPositionAtViewportY',
   'onPastedTextAnchors'
-] as const;
+] as const);
 
-export const EDITOR_COMMAND_KEYS = [
+export const EDITOR_COMMAND_KEYS = defineLayoutKeys<WorkspaceLayoutEditorCommandProps>()([
   'onCloseContextMenu', 'onCopyImage', 'onCreateHighlight', 'onCreateNote', 'onOpenSelectionNote',
   'onDeleteExistingHighlight', 'onOpenExistingHighlight', 'onRepairTable', 'onAdjustExistingHighlightRange',
   'onCreateSelectionHighlight', 'onToggleSelectionHighlight', 'onCreateSelectionNote', 'onCreatePdfHighlight',
   'onCreateCloze', 'onCreateClozeFromPayload', 'onCreateHighlightFromPayload', 'onCutImage', 'onDeleteImage',
   'onExportImage'
-] as const;
+] as const);
 
-export const READING_POSITION_KEYS = [
+export const READING_POSITION_KEYS = defineLayoutKeys<WorkspaceLayoutReadingPositionProps>()([
   'beginApplyingReadingPosition', 'completeApplyingReadingPosition', 'getReadingPositionRestoreCommand',
   'getReadingPositionSelection', 'getReadingPositionSyncState', 'getReadingPositionTargetViewportMode',
   'getReadingPositionTargetViewportRatio', 'setReadingPositionSelection'
-] as const;
+] as const);
 
-export const REVIEW_KEYS = [
+export const REVIEW_KEYS = defineLayoutKeys<WorkspaceLayoutReviewProps>()([
   'canStartStudyMode', 'reviewPreview', 'isStudyMode', 'isAnswerRevealed', 'isCurrentReviewItemGradable',
   'isReviewEditing', 'reviewCurrentNodeId', 'reviewFlowWindow', 'reviewPanelQueueNodeIds', 'reviewQueueNodeIds',
   'reviewQueueVisibility', 'reviewQueueCount', 'reviewCompletedCount', 'reviewStatus', 'reviewSummary',
@@ -59,43 +56,43 @@ export const REVIEW_KEYS = [
   'onReadReviewTopic', 'onPostponeReviewTopic', 'onOpenPostponeTopicPanel', 'onDismissReviewTopic',
   'onRevisitReviewTopicSoon', 'onContinueReading', 'onResumeReviewItem', 'onExitReviewMode',
   'onSetReviewSessionMode', 'reviewSchedulerSettings'
-] as const;
+] as const);
 
-export const LAYOUT_CHROME_KEYS = [
+export const LAYOUT_CHROME_KEYS = defineLayoutKeys<WorkspaceLayoutChromeProps>()([
   'isWorkspaceHydrated', 'isImmersiveMode', 'isResizingList', 'isResizingRightSidebar', 'isListCollapsed',
   'isRightSidebarCollapsed', 'listWidth', 'rightSidebarWidth', 'onResetLayout', 'onSplitterKeyDown',
   'onSplitterPointerDown', 'onRightSidebarSplitterKeyDown', 'onRightSidebarSplitterPointerDown',
   'onEnterImmersiveEdit', 'onEnterImmersiveMode', 'onExitImmersiveMode', 'onToggleImmersiveMode',
   'onToggleListVisibility', 'onToggleBothSidebarVisibility', 'onToggleRightSidebarVisibility'
-] as const;
+] as const);
 
-export const IMPORT_KEYS = [
+export const IMPORT_KEYS = defineLayoutKeys<WorkspaceLayoutImportProps>()([
   'isImportManagementOpen', 'onOpenImportManagement', 'onCloseImportManagement', 'onRunImportFile',
   'onRunImportFolder', 'onStartClipboardImport'
-] as const;
+] as const);
 
-export const EXTERNAL_LIBRARY_KEYS = [
+export const EXTERNAL_LIBRARY_KEYS = defineLayoutKeys<WorkspaceLayoutExternalLibraryProps>()([
   'isExternalViewOpen', 'externalFolders', 'externalEntriesByFolderId', 'externalSelection',
   'onOpenExternalSelection', 'onOpenExternalLibrarySettings', 'onOpenExternalView'
-] as const;
+] as const);
 
-export const SETTINGS_KEYS = [
+export const SETTINGS_KEYS = defineLayoutKeys<WorkspaceLayoutSettingsProps>()([
   'isSettingsOpen', 'requestedSettingsCategory', 'requestedSettingsDialog', 'onOpenSettings', 'onRunRailAction',
   'onCloseSettings'
-] as const;
+] as const);
 
-export const NODE_LIST_KEYS = [
+export const NODE_LIST_KEYS = defineLayoutKeys<WorkspaceLayoutNodeListProps>()([
   'nodeOrder', 'nodesById', 'onOpenNotesView', 'onOpenMoveToNode'
-] as const;
+] as const);
 
-export const TRASH_KEYS = [
+export const TRASH_KEYS = defineLayoutKeys<WorkspaceLayoutTrashProps>()([
   'isTrashViewOpen', 'isViewingTrashNode', 'trashedNodeIds', 'onSelectTrashNode', 'onOpenTrashView',
   'selectedTrashNodeId'
-] as const;
+] as const);
 
-export const VIRTUAL_VIEW_KEYS = [
+export const VIRTUAL_VIEW_KEYS = defineLayoutKeys<WorkspaceLayoutVirtualViewProps>()([
   'isVirtualViewOpen', 'activeVirtualNodeId', 'onOpenVirtualView'
-] as const;
+] as const);
 
 export function pickLayoutProps<K extends keyof WorkspaceLayoutFlatProps>(
   flatProps: WorkspaceLayoutFlatProps,

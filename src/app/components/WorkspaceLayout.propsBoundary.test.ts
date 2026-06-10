@@ -17,7 +17,7 @@ import {
   VIRTUAL_VIEW_KEYS
 } from './workspaceLayoutGroupedPropKeys';
 import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
-import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
+import type { WorkspaceLayoutFlatProps } from './workspaceLayoutPropGroups';
 
 const groupedPropsSource = readFileSync(
   'src/app/components/workspaceLayoutGroupedProps.ts',

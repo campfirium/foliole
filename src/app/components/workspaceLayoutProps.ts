@@ -53,7 +53,7 @@ export interface WorkspaceEditorContextMenu {
   webLookupTitle?: string | null;
 }
 
-export interface WorkspaceLayoutFlatProps {
+export interface WorkspaceLayoutFieldTypes {
   activeNodeId: string | null;
   isWorkspaceHydrated?: boolean;
   canGoBack: boolean;
