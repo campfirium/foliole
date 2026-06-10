@@ -5,13 +5,13 @@ import type { NodeViewState } from '../../../store/workspaceStore';
 import type { PdfJumpRequest } from './pdfSystemApi';
 
 export const PDF_PAGE_MIN = 1;
-export const PDF_ZOOM_DEFAULT = 100;
+const PDF_ZOOM_DEFAULT = 100;
 export const PDF_ZOOM_MAX = 200;
 export const PDF_ZOOM_MIN = 50;
 export const PDF_ZOOM_STEP = 10;
 export const PDF_ZOOM_MODE_FIT_WIDTH = 'fit-width';
 export const PDF_ZOOM_MODE_CUSTOM = 'custom';
-export const PDF_ZOOM_FIT_WIDTH_SENTINEL = 0;
+const PDF_ZOOM_FIT_WIDTH_SENTINEL = 0;
 const PDF_POSITION_PRECISION = 1000;
 
 export type PdfZoomMode = 'custom' | 'fit-width';

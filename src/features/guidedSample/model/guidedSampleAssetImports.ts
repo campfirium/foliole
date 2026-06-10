@@ -7,7 +7,7 @@ function toAssetBaseUrl() {
   return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 }
 
-export function toGuidedSampleAssetUrl(assetId: string) {
+function toGuidedSampleAssetUrl(assetId: string) {
   return `${toAssetBaseUrl()}guided-sample-assets/${assetId}.png`;
 }
 

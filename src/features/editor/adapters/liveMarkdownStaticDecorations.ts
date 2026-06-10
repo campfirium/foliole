@@ -1,1 +1,0 @@
-export { markdownStaticPlugin } from './liveMarkdownStaticPlugin';

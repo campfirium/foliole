@@ -79,11 +79,11 @@ export interface TextAnchorLocator {
   to: number;
 }
 
-export interface TextAnchorLocatorGroup {
+interface TextAnchorLocatorGroup {
   ranges: TextAnchorLocator[];
 }
 
-export interface NodeImageRegion {
+interface NodeImageRegion {
   id: string;
   height: number;
   width: number;
@@ -104,7 +104,7 @@ export interface NodeAnchorLink {
 
 export type NodeSpecialKind = 'home' | 'inbox' | 'trash' | 'virtual-root' | 'virtual';
 
-export interface NodeAttachment {
+interface NodeAttachment {
   attachmentId: string;
   mimeType: string | null;
   originalName: string | null;
@@ -164,7 +164,7 @@ export function isTextAnchorLocator(locator: NodeAnchorLink['locator'] | null | 
   );
 }
 
-export function isTextAnchorLocatorGroup(locator: NodeAnchorLink['locator'] | null | undefined): locator is TextAnchorLocatorGroup {
+function isTextAnchorLocatorGroup(locator: NodeAnchorLink['locator'] | null | undefined): locator is TextAnchorLocatorGroup {
   return Boolean(
     locator &&
       'ranges' in locator &&

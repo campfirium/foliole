@@ -11,7 +11,7 @@ export interface InlineCodeDelimiterRange extends SemanticRange {
   contentTo: number;
 }
 
-export interface InlineTextMarkRange extends SemanticRange {
+interface InlineTextMarkRange extends SemanticRange {
   className: 'cm-md-emphasis' | 'cm-md-source-highlight' | 'cm-md-strong' | 'cm-md-strikethrough' | 'cm-md-syntax-visible';
 }
 

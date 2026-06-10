@@ -3,7 +3,7 @@ import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { collectDismissEntireTopicTargets } from './nodeListContextMenuReview';
 
-export function confirmReturnNodeReset(targetCount: number) {
+function confirmReturnNodeReset(targetCount: number) {
   return requestAppConfirmation({
     confirmLabel: 'Relearn',
     description:

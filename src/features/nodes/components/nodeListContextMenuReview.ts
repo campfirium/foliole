@@ -33,11 +33,11 @@ function isNativeEntryTopic(node: WorkspaceListNode | undefined, nodesById: Work
   return nodesById[node.parentNodeId]?.kind === 'folder';
 }
 
-export function canShelveTopic(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
+function canShelveTopic(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
   return Boolean(isNativeEntryTopic(node, nodesById) && !node?.shelvedAt);
 }
 
-export function canUnshelveTopic(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
+function canUnshelveTopic(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {
   return Boolean(isNativeEntryTopic(node, nodesById) && node?.shelvedAt);
 }
 

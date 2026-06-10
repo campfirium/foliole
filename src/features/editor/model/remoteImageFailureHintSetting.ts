@@ -1,7 +1,7 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
-export const REMOTE_IMAGE_FAILURE_HINT_DISMISSED_KEY = APP_SETTINGS_STORAGE_KEYS.remoteImageFailureHintDismissed;
+const REMOTE_IMAGE_FAILURE_HINT_DISMISSED_KEY = APP_SETTINGS_STORAGE_KEYS.remoteImageFailureHintDismissed;
 
 let sessionDismissed = false;
 

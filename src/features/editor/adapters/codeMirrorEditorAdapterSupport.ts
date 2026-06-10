@@ -66,7 +66,7 @@ export function createEmptyDecorationsEffect(compartment: Compartment) {
   return compartment.reconfigure(EditorView.decorations.of(Decoration.none));
 }
 
-export function createReadOnlyReconfigureEffect(compartment: Compartment, readOnly: boolean): StateEffect<unknown> {
+function createReadOnlyReconfigureEffect(compartment: Compartment, readOnly: boolean): StateEffect<unknown> {
   return compartment.reconfigure(createReadOnlyExtensions(readOnly));
 }
 

@@ -1,4 +1,4 @@
-export const ANCHOR_VIEWPORT_RATIO_DEFAULT = 0.4;
+const ANCHOR_VIEWPORT_RATIO_DEFAULT = 0.4;
 
 interface AlignScrollParams {
   currentScrollTop: number;

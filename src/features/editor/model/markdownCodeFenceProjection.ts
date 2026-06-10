@@ -10,7 +10,7 @@ export interface MarkdownCodeFenceProjection {
 }
 
 export type MarkdownCodeFenceLanguage = 'css' | 'html' | 'javascript' | 'json' | 'typescript';
-export type MarkdownCodeFenceDiagramKind = 'mermaid';
+type MarkdownCodeFenceDiagramKind = 'mermaid';
 
 export interface MarkdownCodeFenceBlock {
   blockFrom: number;

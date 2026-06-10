@@ -6,7 +6,7 @@ export interface PdfJumpRequest {
   positionY?: number;
 }
 
-export interface PdfSystemState {
+interface PdfSystemState {
   loadError: string | null;
   maxPage: number;
   page: number;

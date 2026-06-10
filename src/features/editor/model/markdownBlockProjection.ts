@@ -23,7 +23,7 @@ export interface MarkdownLineClassRange {
   priority: number;
 }
 
-export type MarkdownPrefixKind = 'heading' | 'quote' | 'unordered-list' | 'ordered-list' | 'task-list';
+type MarkdownPrefixKind = 'heading' | 'quote' | 'unordered-list' | 'ordered-list' | 'task-list';
 
 export interface MarkdownPrefixRange {
   checked?: boolean;

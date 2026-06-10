@@ -138,7 +138,7 @@ export function createClipboardExportPayload(
   });
 }
 
-export async function ensureClipboardAssetsDirLoaded() {
+async function ensureClipboardAssetsDirLoaded() {
   if (cachedAssetsDir !== undefined) {
     return cachedAssetsDir;
   }

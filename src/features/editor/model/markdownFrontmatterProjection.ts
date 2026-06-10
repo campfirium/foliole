@@ -14,7 +14,7 @@ export interface FrontmatterEntry {
   values: FrontmatterValue[];
 }
 
-export interface FrontmatterValue {
+interface FrontmatterValue {
   href?: string;
   text: string;
 }
@@ -135,7 +135,7 @@ function resolveEntryValues(rawValue: string) {
   return value ? [value] : [];
 }
 
-export function buildFrontmatterSummary(entries: readonly FrontmatterEntry[]) {
+function buildFrontmatterSummary(entries: readonly FrontmatterEntry[]) {
   return entries.map((entry) => entry.key).join('  ·  ');
 }
 

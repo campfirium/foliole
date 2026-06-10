@@ -3,7 +3,6 @@ import { Decoration, WidgetType } from '@codemirror/view';
 
 import { buildFootnotePresentation } from '../model/footnotePresentation';
 import type { AiCitationMarkerMatch, FootnoteMatch } from '../model/inlineMarkdownMatches';
-export { collectFootnoteMatches } from '../model/inlineMarkdownMatches';
 
 class MarkdownFootnoteWidget extends WidgetType {
   readonly footnote: FootnoteMatch;

@@ -1,6 +1,6 @@
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 
-export const BASE_COLOR_OPTIONS = ['light', 'dark', 'system'] as const;
+const BASE_COLOR_OPTIONS = ['light', 'dark', 'system'] as const;
 export type BaseColorMode = (typeof BASE_COLOR_OPTIONS)[number];
 export type ResolvedBaseColorMode = Exclude<BaseColorMode, 'system'>;
 

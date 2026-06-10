@@ -12,7 +12,7 @@ import {
 
 export type WorkspaceRailSection = 'top' | 'bottom' | 'fixed';
 
-export type WorkspaceRailItemSource = 'system' | 'user';
+type WorkspaceRailItemSource = 'system' | 'user';
 
 export interface WorkspaceRailItemConfig {
   id: string;
@@ -29,7 +29,7 @@ export interface WorkspaceRailItemConfig {
 const WORKSPACE_RAIL_SECTIONS: WorkspaceRailSection[] = ['top', 'bottom', 'fixed'];
 const RETIRED_IMPORT_MANAGEMENT_COMMAND_ID = 'import.openManagement';
 
-export { DEFAULT_WORKSPACE_RAIL_ITEMS, WORKSPACE_RAIL_COMMAND_LABELS };
+export { DEFAULT_WORKSPACE_RAIL_ITEMS };
 
 export function getWorkspaceRailItemLabel(item: WorkspaceRailItemConfig) {
   return item.labelOverride ?? WORKSPACE_RAIL_COMMAND_LABELS[item.commandId] ?? item.commandId;

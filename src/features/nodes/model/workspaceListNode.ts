@@ -18,7 +18,6 @@ export {
   getWorkspaceListNodeOpening,
   getWorkspaceListNodeSummary,
   WORKSPACE_LIST_DATE_FALLBACK,
-  WORKSPACE_LIST_LAST_OPENED_FALLBACK,
   WORKSPACE_LIST_OPENING_FALLBACK,
   WORKSPACE_LIST_SUMMARY_FALLBACK
 } from './workspaceListNodeMetadata';
@@ -183,7 +182,7 @@ export function isInactiveWorkspaceListReadingTopic(node: WorkspaceListNode | nu
   return Boolean(node?.kind === 'topic' && (node.reading?.state === 'dismissed' || node.shelvedAt));
 }
 
-export function hasShelvedWorkspaceListTopicAncestor(
+function hasShelvedWorkspaceListTopicAncestor(
   node: WorkspaceListNode | null | undefined,
   nodesById: WorkspaceListNodesById
 ) {

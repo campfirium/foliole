@@ -36,7 +36,7 @@ function measureWidth(fontFamily: string, canvas: HTMLCanvasElement, context: Ca
   return context.measureText(TEST_TEXT).width;
 }
 
-export function detectSystemFonts(): string[] {
+function detectSystemFonts(): string[] {
   if (typeof document === 'undefined') {
     return [];
   }

@@ -80,7 +80,7 @@ function findEntry(entries: readonly FrontmatterEntry[], fieldName: string) {
   return entries.find((entry) => entry.key.toLowerCase() === normalized && entry.values.length > 0) ?? null;
 }
 
-export function resolveFrontmatterMetaItems(
+function resolveFrontmatterMetaItems(
   entries: readonly FrontmatterEntry[],
   fields: string
 ): FrontmatterMetaItem[] {

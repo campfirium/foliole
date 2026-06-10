@@ -18,9 +18,7 @@ export {
   DEFAULT_NODE_ICON_BASE_APPEARANCE,
   DEFAULT_NODE_ICON_BASE_APPEARANCE_BY_KIND,
   DEFAULT_NODE_ICON_STATE_APPEARANCE,
-  DEFAULT_NODE_ICON_STATE_APPEARANCE_BY_KIND,
-  NODE_ICON_EFFECT_OPTIONS,
-  NODE_ICON_SHAPE_OPTIONS
+  NODE_ICON_EFFECT_OPTIONS
 } from './nodeIconAppearanceModel';
 export type {
   NodeIconBaseAppearance,
@@ -31,7 +29,7 @@ export type {
 
 type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 
-export function getDefaultNodeIconStateAppearance(state: NodeTreeRowIconState): NodeIconStateAppearance {
+function getDefaultNodeIconStateAppearance(state: NodeTreeRowIconState): NodeIconStateAppearance {
   return DEFAULT_NODE_ICON_STATE_APPEARANCE[state];
 }
 

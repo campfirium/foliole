@@ -11,7 +11,7 @@ import {
 import { deriveDocumentTokenSurfaceColor } from './workspaceSurfaceDocumentTokens';
 import { deriveScrollbarThumbColor } from './workspaceSurfaceScrollbars';
 
-export const WORKSPACE_SURFACE_REGION_IDS = [
+const WORKSPACE_SURFACE_REGION_IDS = [
   'titlebar-rail',
   'titlebar-folder',
   'titlebar-topic',

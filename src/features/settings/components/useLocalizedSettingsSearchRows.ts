@@ -4,7 +4,7 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import type { SettingsSearchRowMeta } from '../model/settingsSearch';
 import { createSettingsSearchRows } from '../model/settingsSearchRowCatalog';
 
-export function useLocalizedSettingsSearchRows() {
+function useLocalizedSettingsSearchRows() {
   const t = useTranslation();
   return useMemo(() => createSettingsSearchRows(t), [t]);
 }

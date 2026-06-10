@@ -18,7 +18,7 @@ export function createInitialNodeListDragState(): NodeListDragState {
   };
 }
 
-export function shouldKeepNodeListDropTarget(event: ReactDragEvent<HTMLElement>) {
+function shouldKeepNodeListDropTarget(event: ReactDragEvent<HTMLElement>) {
   const nextTarget = event.relatedTarget;
   return nextTarget instanceof Node && event.currentTarget.contains(nextTarget);
 }

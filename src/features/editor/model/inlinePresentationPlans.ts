@@ -5,7 +5,7 @@ import type { AutolinkMatch, EmbedMatch, InlineCodeMatch, InlineLinkMatch, WikiL
 import type { SemanticRange } from './inlineSemanticMarks';
 import { isSafeMarkdownLinkHref } from './markdownLinkSafety';
 
-export interface InlinePresentationMarkRange extends SemanticRange {
+interface InlinePresentationMarkRange extends SemanticRange {
   attributes?: Record<string, string>;
   className: string;
 }

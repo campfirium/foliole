@@ -1,7 +1,7 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
-export const DEFAULT_EXTERNAL_FOLDERS_ENABLED = true;
+const DEFAULT_EXTERNAL_FOLDERS_ENABLED = true;
 
 const EXTERNAL_FOLDERS_ENABLED_KEY = APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled;
 

@@ -20,7 +20,7 @@ import { activeNodeIdFacet } from './liveMarkdownState';
 
 export { extractFrontmatterEntries, resolveFrontmatterBounds } from '../model/markdownFrontmatterProjection';
 
-export interface FrontmatterDecorationState {
+interface FrontmatterDecorationState {
   decorations: DecorationSet;
   inspectedUntilLine: number;
 }
@@ -92,7 +92,7 @@ function resolveFrontmatterTitleLine(state: EditorState, bounds: FrontmatterBoun
   return null;
 }
 
-export function buildFrontmatterDecorationState(
+function buildFrontmatterDecorationState(
   viewOrState: EditorView | EditorState,
   override: FrontmatterModeOverride | null = null
 ): FrontmatterDecorationState {

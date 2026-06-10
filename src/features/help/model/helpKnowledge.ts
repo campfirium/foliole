@@ -1,7 +1,7 @@
 import { REVIEW_ACTION_HELP, type ReviewActionHelpCopy } from '../../../shared/ui/reviewActionHelp';
 import { NODE_LIST_CONTEXT_ACTION_HELP, type NodeListActionHelpCopy } from '../../nodes/components/nodeListContextActionHelp';
 
-export type HelpKnowledgeKind = 'action';
+type HelpKnowledgeKind = 'action';
 type HelpKnowledgeCopy = NodeListActionHelpCopy | ReviewActionHelpCopy;
 
 export interface HelpKnowledgeItem {

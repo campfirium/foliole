@@ -2,9 +2,9 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
-export const LONG_CLOZE_FRONT_GUARD_THRESHOLD = 500;
-export const LONG_CLOZE_SELECTION_GUARD_MIN = 20;
-export const LONG_CLOZE_FRONT_GUARD_MODE_OPTIONS = ['remind', 'convert', 'off'] as const;
+const LONG_CLOZE_FRONT_GUARD_THRESHOLD = 500;
+const LONG_CLOZE_SELECTION_GUARD_MIN = 20;
+const LONG_CLOZE_FRONT_GUARD_MODE_OPTIONS = ['remind', 'convert', 'off'] as const;
 
 export type LongClozeFrontGuardMode = (typeof LONG_CLOZE_FRONT_GUARD_MODE_OPTIONS)[number];
 

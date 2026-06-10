@@ -13,7 +13,6 @@ export {
   resetSourceDispositions,
   restoreSourceDispositions
 } from './sourceDispositionBackups';
-export type { SourceDispositionActionResult } from './sourceDispositionBackups';
 
 export interface DatabaseBackupEntry {
   fileName: string;
@@ -25,17 +24,17 @@ export interface DatabaseBackupEntry {
   updatedAt: string;
 }
 
-export interface DatabaseBackupErrorResult {
+interface DatabaseBackupErrorResult {
   ok: false;
   errorMessage: string;
 }
 
-export interface DatabaseBackupSuccessResult {
+interface DatabaseBackupSuccessResult {
   ok: true;
   value: RuntimeSqliteBackupResult;
 }
 
-export interface DatabaseRestoreSuccessResult {
+interface DatabaseRestoreSuccessResult {
   ok: true;
   value: RuntimeSqliteRestoreResult;
 }

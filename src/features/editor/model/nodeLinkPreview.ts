@@ -1,4 +1,4 @@
-export interface EditorNodeLinkPreviewRect {
+interface EditorNodeLinkPreviewRect {
   bottom: number;
   height: number;
   left: number;

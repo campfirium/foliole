@@ -4,7 +4,7 @@ import {
 } from '../../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
-export const FRONTMATTER_META_FIELDS_KEY = APP_SETTINGS_STORAGE_KEYS.frontmatterMetaFields;
+const FRONTMATTER_META_FIELDS_KEY = APP_SETTINGS_STORAGE_KEYS.frontmatterMetaFields;
 export const FRONTMATTER_META_FIELDS_DEFAULT = DEFAULT_PERSISTED_APP_SETTINGS.frontmatterMetaFields;
 
 export function parseFrontmatterMetaFieldGroups(value: string): string[][] {

@@ -14,7 +14,7 @@ interface WorkspaceNodeSnapshot {
   trashedNodeIds: string[];
 }
 
-export function createInboxNode(timestamp: string): Node {
+function createInboxNode(timestamp: string): Node {
   return {
     id: INBOX_NODE_ID,
     parentNodeId: null,
@@ -30,7 +30,7 @@ export function createInboxNode(timestamp: string): Node {
   };
 }
 
-export function createHomeNode(timestamp: string): Node {
+function createHomeNode(timestamp: string): Node {
   return {
     id: HOME_NODE_ID,
     parentNodeId: null,
@@ -46,7 +46,7 @@ export function createHomeNode(timestamp: string): Node {
   };
 }
 
-export function createVirtualRootNode(timestamp: string): Node {
+function createVirtualRootNode(timestamp: string): Node {
   return {
     id: VIRTUAL_ROOT_NODE_ID,
     parentNodeId: null,

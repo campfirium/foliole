@@ -12,12 +12,12 @@ export interface EditorDiffSpacerLine {
   text: string;
 }
 
-export interface EditorDiffLineDecoration {
+interface EditorDiffLineDecoration {
   kind: EditorDiffLineKind;
   lineNumber: number;
 }
 
-export interface EditorDiffSpacerDecoration {
+interface EditorDiffSpacerDecoration {
   beforeLineNumber: number;
   kind: EditorDiffLineKind;
   measuredHeightPx?: number;

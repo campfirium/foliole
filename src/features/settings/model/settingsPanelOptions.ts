@@ -55,7 +55,7 @@ export function getSettingsCategories(t: Translate): SettingsCategoryOption[] {
   }));
 }
 
-export const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategoryId[]; labelKey: TranslationKey }> = [
+const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategoryId[]; labelKey: TranslationKey }> = [
   {
     labelKey: 'settings.group.workspace',
     categoryIds: ['about', 'general', 'appearance', 'editor', 'web-lookup', 'review', 'hotkeys', 'mouse-gestures', 'rail']
@@ -94,7 +94,7 @@ export const MONOSPACE_PRESET_OPTION_VALUES: MonospaceFontPreset[] = [
   'sarasa'
 ];
 
-export function isSettingsCategoryId(value: string): value is SettingsCategoryId {
+function isSettingsCategoryId(value: string): value is SettingsCategoryId {
   return SETTINGS_CATEGORY_DEFINITIONS.some((category) => category.id === value);
 }
 

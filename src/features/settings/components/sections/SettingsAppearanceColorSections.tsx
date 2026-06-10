@@ -36,7 +36,7 @@ function defaultModeColor(light: string, dark: string, appearance: AppearanceSet
   return appearance.resolvedBaseColorMode === 'dark' ? dark : light;
 }
 
-export function AppearancePdfReadingModeRow(props: { appearance: AppearanceSettings }) {
+function AppearancePdfReadingModeRow(props: { appearance: AppearanceSettings }) {
   const t = useTranslation();
 
   return (
@@ -54,7 +54,7 @@ export function AppearancePdfReadingModeRow(props: { appearance: AppearanceSetti
   );
 }
 
-export function DimImagesInDarkModeRow(props: { appearance: AppearanceSettings }) {
+function DimImagesInDarkModeRow(props: { appearance: AppearanceSettings }) {
   const t = useTranslation();
   const { appearance } = props;
 

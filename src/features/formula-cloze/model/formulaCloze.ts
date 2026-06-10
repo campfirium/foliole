@@ -26,7 +26,7 @@ export interface FormulaClozePresentationRegion {
   selection: FormulaDomSelectionDescriptor;
 }
 
-export function isFormulaClozeAnchorLink(
+function isFormulaClozeAnchorLink(
   anchorLink: NodeAnchorLink | null | undefined
 ): anchorLink is NodeAnchorLink & { locator: FormulaAnchorLocator } {
   return anchorLink?.kind === 'cloze' && isFormulaAnchorLocator(anchorLink.locator);

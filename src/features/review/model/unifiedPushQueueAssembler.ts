@@ -77,11 +77,11 @@ function bucketPriorityQueueEntries<T extends { priority: PushQueuePriority }>(
   return { absolute, regular };
 }
 
-export function bucketFsrsPushQueueEntries<T extends FsrsPushQueueEntry>(entries: readonly T[]) {
+function bucketFsrsPushQueueEntries<T extends FsrsPushQueueEntry>(entries: readonly T[]) {
   return bucketPriorityQueueEntries(entries, compareFsrsForgettingDescending);
 }
 
-export function bucketReadingPushQueueEntries<T extends ReadingPushQueueEntry>(entries: readonly T[]) {
+function bucketReadingPushQueueEntries<T extends ReadingPushQueueEntry>(entries: readonly T[]) {
   return bucketPriorityQueueEntries(entries, compareReadingNextAtAscending);
 }
 
@@ -108,7 +108,7 @@ export function selectRouletteBucketPriority<T>(
   return activePriorities.at(-1) ?? null;
 }
 
-export function assembleRouletteBuckets<T>(
+function assembleRouletteBuckets<T>(
   buckets: Readonly<RegularPriorityBuckets<T>>,
   options: RouletteSelectionOptions = {}
 ) {

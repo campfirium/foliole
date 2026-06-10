@@ -14,7 +14,7 @@ export const EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS = ['disabled', 'scroll-
 export const EDITOR_MOUSE_GESTURE_AREA_OPTIONS = ['main-panel'] as const;
 
 export type EditorMouseGestureActionSetting = (typeof EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS)[number];
-export type EditorMouseGestureAreaId = (typeof EDITOR_MOUSE_GESTURE_AREA_OPTIONS)[number];
+type EditorMouseGestureAreaId = (typeof EDITOR_MOUSE_GESTURE_AREA_OPTIONS)[number];
 
 export interface EditorMouseGestureSettings {
   area: EditorMouseGestureAreaId;

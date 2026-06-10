@@ -4,20 +4,11 @@ import {
 } from '../../../../lib/core/review/index.js';
 import type { NodeReviewProfile } from '../../nodes/model/nodeTypes';
 
-export {
-  createInitialSchedulerCard
-} from '../../../../lib/core/review/index.js';
-export {
-  mapGradeToRustRating
-} from '../../../../lib/core/review/index.js';
 export type {
   ReviewGrade,
   ReviewSchedulerAdapter,
-  ReviewState,
   SchedulerCard,
   SchedulerGradeInput,
-  SchedulerGradeResult,
-  SchedulerPreviewInput,
   SchedulerPreviewResult
 } from '../../../../lib/core/review/index.js';
 

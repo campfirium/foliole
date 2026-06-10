@@ -17,10 +17,7 @@ export {
   PUSH_QUEUE_PRIORITIES,
   REGULAR_PUSH_QUEUE_PRIORITIES,
   isAbsolutePushQueuePriority,
-  normalizePriorityRatio,
-  normalizePushQueueMixRatio,
   normalizePushQueuePriority,
-  normalizeReadingIntervalGrowthFactorRange,
   normalizeRegularPushQueuePriority,
   normalizeUnifiedPushQueueRules,
   resolveInheritedPushQueuePriority,
@@ -28,7 +25,6 @@ export {
 } from '../../../../lib/core/review/unifiedPushQueueRules';
 export type {
   PushQueueKind,
-  PushQueueMixRatio,
   PushQueuePriority,
   ReadingIntervalGrowthFactorRange,
   RegularPushQueuePriority,

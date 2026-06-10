@@ -32,7 +32,7 @@ export function startMarkdownEditorDiagnostic(
   };
 }
 
-export function useMarkdownEditorRenderDiagnostic(
+function useMarkdownEditorRenderDiagnostic(
   event: string,
   values: Record<string, DiagnosticValue>
 ) {

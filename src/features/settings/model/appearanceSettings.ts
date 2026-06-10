@@ -33,7 +33,6 @@ export {
   READING_CONTENT_WIDTH_STEP,
   setReadingContentWidth
 } from './appearanceReadingWidth';
-import { BASE_COLOR_OPTIONS, type BaseColorMode, type ResolvedBaseColorMode } from './baseColorMode';
 import {
   DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE,
   DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS,
@@ -46,11 +45,8 @@ import {
   type WorkspaceSurfacePalette
 } from './workspaceSurfaceSettings';
 export {
-  applyWorkspaceDividerOpacityPercent,
   getWorkspaceDividerOpacityPercent,
-  normalizeWorkspaceDividerOpacityPercent,
   setWorkspaceDividerOpacityPercent,
-  WORKSPACE_DIVIDER_OPACITY_PERCENT_DEFAULT,
   WORKSPACE_DIVIDER_OPACITY_PERCENT_MAX,
   WORKSPACE_DIVIDER_OPACITY_PERCENT_MIN,
   WORKSPACE_DIVIDER_OPACITY_PERCENT_STEP
@@ -58,8 +54,6 @@ export {
 export { applyAppearanceSettings } from './applyAppearanceSettings';
 export {
   type AccentColorPreset,
-  BASE_COLOR_OPTIONS,
-  type BaseColorMode,
   type ClozeColorPreset,
   type FontColorPreset,
   type HighlightColorPreset,
@@ -89,7 +83,6 @@ export {
   DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS,
   DEFAULT_WORKSPACE_SURFACE_PALETTE,
   DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE,
-  type ResolvedBaseColorMode,
   getWorkspaceSurfaceAssignments,
   getWorkspaceSurfacePalette,
   setWorkspaceSurfaceAssignments,
@@ -115,22 +108,16 @@ export {
   getBaseColorMode,
   getDimImagesInDarkMode,
   getPdfReadingMode,
-  resolvePdfReadingModeForColorMode,
   setBaseColorMode,
   setDimImagesInDarkMode,
   setPdfReadingMode
 } from './appearanceReadingModeSettings';
 export {
-  DEFAULT_DIM_IMAGES_IN_DARK_MODE,
-  DEFAULT_PDF_READING_MODE,
   DEFAULT_READING_LINE_HEIGHT,
   DEFAULT_READING_PARAGRAPH_SPACING,
-  INTERFACE_FONT_OPTIONS,
   INTERFACE_FONT_SIZE_DEFAULT,
   INTERFACE_FONT_SIZE_MAX,
   INTERFACE_FONT_SIZE_MIN,
-  MONOSPACE_FONT_OPTIONS,
-  PDF_READING_MODE_OPTIONS,
   READING_LINE_HEIGHT_MAX,
   READING_LINE_HEIGHT_MIN,
   READING_LINE_HEIGHT_STEP,

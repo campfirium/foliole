@@ -9,14 +9,14 @@ export const GUIDED_SAMPLE_ASSET_IDS = [
   '58536364fbf6f93cf0ada37f58121eacff907adc9b1a57193c9ebc0cb77d270b'
 ] as const;
 
-export type GuidedSampleAssetId = (typeof GUIDED_SAMPLE_ASSET_IDS)[number];
+type GuidedSampleAssetId = (typeof GUIDED_SAMPLE_ASSET_IDS)[number];
 
 export interface GuidedSampleTopicTemplate {
   attachmentIds?: GuidedSampleAssetId[];
   content: string;
 }
 
-export interface GuidedSampleTopicContent {
+interface GuidedSampleTopicContent {
   children: GuidedSampleTopicTemplate[];
   root: GuidedSampleTopicTemplate;
   rootTitle: string;

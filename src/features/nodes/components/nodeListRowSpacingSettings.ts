@@ -10,7 +10,7 @@ const MIN_NODE_LIST_ROW_SPACING = 0;
 const MAX_NODE_LIST_ROW_SPACING = 24;
 const NODE_TREE_ROW_BASE_HEIGHT = 20;
 
-export function normalizeNodeListRowSpacing(value: string | null): number {
+function normalizeNodeListRowSpacing(value: string | null): number {
   if (value === null || value.trim() === '') {
     return DEFAULT_NODE_LIST_ROW_SPACING;
   }

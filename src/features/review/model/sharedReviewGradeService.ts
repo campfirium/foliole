@@ -22,7 +22,7 @@ type ReviewGradeNode = ReviewItemNodeLike & {
   parentNodeId: string | null;
 };
 
-export interface SharedReviewGradeLog {
+interface SharedReviewGradeLog {
   cardAfter: SchedulerCard;
   cardBefore: SchedulerCard;
   grade: ReviewGrade;

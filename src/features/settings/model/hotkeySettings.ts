@@ -1,6 +1,6 @@
 import type { ShortcutDisplayEntry } from '../../../shared/commands/shortcutDisplay';
 
-export type HotkeyValidationStatus = 'applied' | 'blocked' | 'invalid';
+type HotkeyValidationStatus = 'applied' | 'blocked' | 'invalid';
 
 export interface HotkeySettingItem {
   commandId: string;

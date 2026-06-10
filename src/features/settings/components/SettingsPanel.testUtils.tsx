@@ -33,7 +33,7 @@ export function createProps() {
   return { ...DEFAULT_SETTINGS_PANEL_PROPS };
 }
 
-export function createHotkeySettings(overrides?: Partial<typeof DEFAULT_HOTKEY_SETTINGS>) {
+function createHotkeySettings(overrides?: Partial<typeof DEFAULT_HOTKEY_SETTINGS>) {
   return { ...DEFAULT_HOTKEY_SETTINGS, ...overrides };
 }
 

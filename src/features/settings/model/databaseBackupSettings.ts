@@ -25,7 +25,7 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-export function normalizeDatabaseBackupSettings(value: unknown): DatabaseBackupSettings {
+function normalizeDatabaseBackupSettings(value: unknown): DatabaseBackupSettings {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return DEFAULT_BACKUP_SETTINGS;
   }

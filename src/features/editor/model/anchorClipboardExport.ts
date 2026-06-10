@@ -124,7 +124,7 @@ function convertExternalMarkdownToHtml(value: string) {
     .join('');
 }
 
-export function convertInternalMarkdownForExternal(
+function convertInternalMarkdownForExternal(
   value: string,
   assetsDir: string | null,
   parseAssetUrl: (assetUrl: string) => string | null

@@ -15,7 +15,7 @@ interface NodeListStateSurfaceProps {
   hasRows: boolean;
 }
 
-export function useNodeListLoadState() {
+function useNodeListLoadState() {
   const errorMessage = useWorkspaceStore((state) => state.workspaceHydrationError);
   const isHydrated = useWorkspaceStore((state) => state.isHydrated);
   return { errorMessage, isHydrated };

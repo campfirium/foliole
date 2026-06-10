@@ -82,7 +82,7 @@ function resolveNodeTreeRowDataAttributes(props: {
   };
 }
 
-export function renderNodeTreeRowContent(props: {
+function renderNodeTreeRowContent(props: {
   descendantCount: number;
   isMuted: boolean;
   label: string;

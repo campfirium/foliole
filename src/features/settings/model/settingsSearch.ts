@@ -1,6 +1,6 @@
 import type { SettingsCategoryId, SettingsCategoryOption } from './settingsPanelOptions';
 
-export type SettingsSearchResultKind = 'category' | 'row';
+type SettingsSearchResultKind = 'category' | 'row';
 
 export interface SettingsSearchRowMeta {
   categoryId: SettingsCategoryId;

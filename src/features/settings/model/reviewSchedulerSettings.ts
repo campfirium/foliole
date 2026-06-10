@@ -63,7 +63,6 @@ export {
   DEFAULT_REVIEW_SCHEDULER_SETTINGS,
   PUSH_QUEUE_SETTINGS_SCOPE,
   getReviewSchedulerSettingsSignature,
-  getReviewSchedulerVersion,
-  normalizeReviewSchedulerSettings
+  getReviewSchedulerVersion
 };
 export type { ReviewSchedulerSettings, ReviewSchedulerSettingsSavePatch };

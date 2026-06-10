@@ -8,7 +8,7 @@ function normalizeLanguageTag(language: string) {
   return language.trim().toLowerCase().replace('_', '-');
 }
 
-export function isSimplifiedChineseLanguage(language: string) {
+function isSimplifiedChineseLanguage(language: string) {
   const normalized = normalizeLanguageTag(language);
   return SIMPLIFIED_CHINESE_LANGUAGE_TAGS.has(normalized) || normalized.startsWith('zh-hans-');
 }

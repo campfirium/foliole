@@ -7,8 +7,8 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 
 export type { FrontmatterDisplayMode } from '../../../shared/config/appSettings';
 
-export const FRONTMATTER_DISPLAY_MODE_KEY = APP_SETTINGS_STORAGE_KEYS.frontmatterDisplayMode;
-export const FRONTMATTER_DISPLAY_MODE_DEFAULT: FrontmatterDisplayMode =
+const FRONTMATTER_DISPLAY_MODE_KEY = APP_SETTINGS_STORAGE_KEYS.frontmatterDisplayMode;
+const FRONTMATTER_DISPLAY_MODE_DEFAULT: FrontmatterDisplayMode =
   DEFAULT_PERSISTED_APP_SETTINGS.frontmatterDisplayMode;
 
 function isFrontmatterDisplayMode(value: string): value is FrontmatterDisplayMode {

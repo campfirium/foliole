@@ -2,7 +2,7 @@ import type { Translate } from '../../../shared/localization/LocalizationProvide
 
 const DEFAULT_EDITOR_OPERATION_HISTORY_LIMIT = 50;
 
-export interface EditorOperationSelectionSnapshot {
+interface EditorOperationSelectionSnapshot {
   from: number;
   to: number;
 }
@@ -25,14 +25,14 @@ export interface EditorTextEditOperationEntry {
   type: 'text.edit';
 }
 
-export interface EditorAnnotationCreateOperationEntry {
+interface EditorAnnotationCreateOperationEntry {
   annotations: EditorAnnotationOperationSnapshot[];
   nodeId: string;
   title: 'Create Annotation';
   type: 'annotation.create';
 }
 
-export interface EditorAnnotationDeleteOperationEntry {
+interface EditorAnnotationDeleteOperationEntry {
   annotations: EditorAnnotationOperationSnapshot[];
   nodeId: string;
   title: 'Delete Annotation';

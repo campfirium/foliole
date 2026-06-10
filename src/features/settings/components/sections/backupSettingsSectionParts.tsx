@@ -24,7 +24,7 @@ const BACKUP_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   hour12: false
 });
 
-export const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
+const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
 
 const SETTINGS_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
 
@@ -54,7 +54,7 @@ export function getBackupFileName(filePath: string) {
   return filePath.split(/[/\\]/).at(-1) || filePath;
 }
 
-export function toGigabytes(value: number) {
+function toGigabytes(value: number) {
   return Number((value / (1024 * 1024 * 1024)).toFixed(1)).toString();
 }
 

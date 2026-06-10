@@ -162,7 +162,7 @@ function dispatchFormulaSelection(
   }));
 }
 
-export function buildFormulaOccurrenceKey(mathRange: MarkdownMathRange) {
+function buildFormulaOccurrenceKey(mathRange: MarkdownMathRange) {
   return `${mathRange.display}:${mathRange.from}:${mathRange.to}:${mathRange.tex}`;
 }
 

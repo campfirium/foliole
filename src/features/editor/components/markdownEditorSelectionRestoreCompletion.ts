@@ -19,7 +19,7 @@ const RATIO_COMPLETION_MAX_ATTEMPTS = 12;
 const RATIO_COMPLETION_TIMEOUT_MS = 300;
 type RestoreSelection = NonNullable<EditorViewState['selection']> | null;
 
-export function finishRestoreApplying(args: {
+function finishRestoreApplying(args: {
   activeRestoreCommandIdRef: MutableRefObject<string | null>;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>, commandId?: string) => void) | undefined;
@@ -49,7 +49,7 @@ export function finishRestoreApplying(args: {
   }, RESTORE_UNLOCK_COOLDOWN_MS);
 }
 
-export function markRestoreSelectionSettled(args: {
+function markRestoreSelectionSettled(args: {
   adapter: CodeMirrorEditorAdapter;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string;

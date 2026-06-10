@@ -115,7 +115,7 @@ export function isImageClozeLocator(value: unknown): value is ImageClozeLocator 
   );
 }
 
-export function isImageClozeAnchorLink(anchorLink: NodeAnchorLink | null | undefined) {
+function isImageClozeAnchorLink(anchorLink: NodeAnchorLink | null | undefined) {
   return anchorLink?.kind === 'cloze' && isImageClozeLocator(anchorLink.locator);
 }
 
