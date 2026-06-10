@@ -91,7 +91,7 @@ function WorkspaceSurfaceColorEditorBody(props: {
   return (
     <div
       aria-label={t('settings.appearance.surface.colorEditor.dialog')}
-      className={cn(appFloatingSurfaceClassName('popover'), 'absolute z-popover-elevated w-[280px] rounded-md p-3 shadow-panel')}
+      className={cn(appFloatingSurfaceClassName('popover'), 'absolute z-popover-elevated w-[280px] p-3')}
       data-workspace-color-editor
       ref={containerRef}
       role="dialog"

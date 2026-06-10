@@ -27,7 +27,7 @@ import {
 
 import { cn } from '@/shared/lib/utils';
 import { useAppVersion } from '@/shared/platform/appVersion';
-import { AppButton, AppPanel } from '@/shared/ui';
+import { AppButton, AppPanel, settingsSidebarBadgeClassName, settingsSidebarItemClassName } from '@/shared/ui';
 
 const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   about: Info,
@@ -91,7 +91,7 @@ function SettingsSidebarBrand() {
       <div className="min-w-0 flex-1">
         <div className="truncate text-[1.05rem] font-semibold leading-5 text-foreground">Foliole</div>
       </div>
-      <span className="ml-auto shrink-0 rounded-md border border-settings-control-border bg-settings-control px-2 py-0.5 text-[0.72rem] font-medium leading-5 text-foreground/62">
+      <span className={settingsSidebarBadgeClassName('ml-auto')}>
         v{appVersion}
       </span>
     </div>
@@ -135,12 +135,7 @@ function SettingsSidebarItem(props: {
   return (
     <AppButton
       aria-current={props.active ? 'page' : undefined}
-      className={cn(
-        'min-h-0 cursor-pointer gap-2.5 rounded-md border px-3 py-[7px] text-[0.9rem] leading-5 transition-colors',
-        props.active
-          ? 'border-transparent bg-settings-selected font-semibold text-foreground'
-          : 'border-transparent bg-transparent text-foreground/70 hover:bg-settings-selected hover:text-foreground active:bg-settings-control-active'
-      )}
+      className={settingsSidebarItemClassName(props.active)}
       onClick={() => props.onSelect(props.category.id)}
       variant="list"
     >

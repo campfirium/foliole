@@ -8,7 +8,9 @@ import type { SettingsSearchResult } from '../model/settingsSearch';
 import { cn } from '@/shared/lib/utils';
 import { onWindowEscape } from '@/shared/platform/keyboard';
 import {
-  settingsFieldClassName
+  settingsFieldClassName,
+  settingsPopoverSurfaceClassName,
+  settingsSelectableOptionClassName
 } from '@/shared/ui';
 
 export interface SettingsSearchBoxProps {
@@ -32,11 +34,7 @@ function SettingsSearchResultButton(props: {
   return (
     <button
       aria-selected={props.active}
-      className={cn(
-        'flex w-full cursor-pointer flex-col items-start gap-0 rounded-md border border-transparent bg-transparent px-3 py-2 text-left text-foreground/72 transition-colors',
-        'hover:bg-settings-selected hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-        props.active && 'bg-settings-selected text-foreground'
-      )}
+      className={settingsSelectableOptionClassName(props.active, 'flex w-full flex-col items-start gap-0 px-3 py-2 text-left')}
       onClick={props.onSelect}
       role="option"
       type="button"
@@ -58,7 +56,7 @@ function SettingsSearchPopover(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="absolute right-0 top-10 z-10 w-full rounded-md border border-settings-outline bg-settings-shell p-2 shadow-settings">
+    <div className={settingsPopoverSurfaceClassName('shell', 'absolute right-0 top-10 z-10 w-full p-2')}>
       {props.hasQuery ? (
         <div aria-label={t('settings.search.results.aria')} className="mt-2 max-h-[360px] space-y-1 overflow-auto" role="listbox">
           {props.results.length ? props.results.map((result, index) => (
@@ -171,7 +169,7 @@ export function SettingsSearchBox(props: SettingsSearchBoxProps) {
         <input
           aria-label={props.placeholder}
           className={settingsFieldClassName(
-            'h-8 rounded-md border-border/35 bg-settings-control pl-8 pr-3 text-[0.86rem] text-foreground/82 opacity-60 shadow-none transition-[background-color,border-color,opacity] placeholder:text-foreground/38 hover:border-border/45 hover:bg-settings-control-hover hover:opacity-80 focus:border-border/55 focus:opacity-100 focus-visible:border-border/55 focus-visible:bg-settings-control-hover focus-visible:ring-border/45'
+            'h-8 pl-8 pr-3 text-ui-sm text-foreground/82 opacity-60 shadow-none transition-[background-color,border-color,opacity] placeholder:text-foreground/38 hover:opacity-80 focus:opacity-100'
           )}
           onChange={(event) => {
             props.onQueryChange(event.target.value);

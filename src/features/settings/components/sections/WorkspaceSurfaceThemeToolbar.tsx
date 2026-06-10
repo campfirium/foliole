@@ -6,7 +6,7 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 
 import { WorkspaceSurfaceThemeFavoritesPopover, type ThemeFavoritesPopoverPosition } from './WorkspaceSurfaceThemeFavoritesPopover';
 
-import { settingsColorSwatchClassName, settingsPaletteButtonClassName, settingsUtilityIconButtonClassName, settingsValueBoxClassName } from '@/shared/ui';
+import { settingsColorSwatchClassName, settingsCompactUtilityIconButtonClassName, settingsPaletteButtonClassName, settingsValueBoxClassName } from '@/shared/ui';
 
 function isSamePalette(left: string[], right: string[]) {
   return left.length === right.length && left.every((color, index) => color === right[index]);
@@ -39,7 +39,7 @@ function IconToggleButton(props: {
     <button
       aria-label={props.ariaLabel}
       aria-pressed={props.active}
-      className={settingsUtilityIconButtonClassName(props.active, 'size-8 rounded-sm px-0')}
+      className={settingsCompactUtilityIconButtonClassName(props.active)}
       onClick={props.onClick}
       ref={props.triggerRef}
       title={props.title}

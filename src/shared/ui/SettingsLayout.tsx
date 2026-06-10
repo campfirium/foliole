@@ -63,6 +63,10 @@ export function settingsFieldClassName(className?: string) {
   );
 }
 
+export function settingsCompactFieldClassName(className?: string) {
+  return settingsFieldClassName(cn('h-8 rounded-sm px-2 text-center', className));
+}
+
 export function settingsButtonClassName(className?: string) {
   return cn(
     'inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground/88 transition-colors',
@@ -71,6 +75,14 @@ export function settingsButtonClassName(className?: string) {
     'disabled:pointer-events-none disabled:opacity-45',
     className
   );
+}
+
+export function settingsCompactButtonClassName(className?: string) {
+  return settingsButtonClassName(cn('size-8 rounded-sm px-0', className));
+}
+
+export function settingsCompactUtilityIconButtonClassName(active = false, className?: string) {
+  return settingsUtilityIconButtonClassName(active, cn('size-8 rounded-sm px-0', className));
 }
 
 export function settingsSwitchClassName(active: boolean, className?: string) {
@@ -130,6 +142,44 @@ export function settingsControlValueClassName(className?: string) {
 
 export function settingsValueBoxClassName(className?: string) {
   return cn('rounded-md border border-transparent bg-settings-control px-3 py-2 text-ui-md text-foreground/75', className);
+}
+
+export function settingsSidebarBadgeClassName(className?: string) {
+  return cn('shrink-0 rounded-sm border border-settings-control-border bg-settings-control px-2 py-0.5 text-ui-xs font-medium leading-5 text-foreground/62', className);
+}
+
+export function settingsSidebarItemClassName(active: boolean, className?: string) {
+  return cn(
+    'min-h-0 cursor-pointer gap-2.5 rounded-md border border-transparent bg-transparent px-3 py-[7px] text-ui-md leading-5 transition-colors',
+    active
+      ? 'bg-settings-selected font-semibold text-foreground'
+      : 'text-foreground/70 hover:bg-settings-selected hover:text-foreground active:bg-settings-control-active',
+    className
+  );
+}
+
+export function settingsSelectableOptionClassName(active: boolean, className?: string) {
+  return cn(
+    'cursor-pointer rounded-md border border-transparent bg-transparent transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    active
+      ? 'bg-settings-selected text-foreground'
+      : 'text-foreground/72 hover:bg-settings-selected hover:text-foreground',
+    className
+  );
+}
+
+export function settingsIconGridButtonClassName(active: boolean, className?: string) {
+  return cn(
+    'inline-flex aspect-square w-full items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    active
+      ? 'border-settings-control-border-hover bg-settings-control-active text-foreground/82'
+      : 'border-transparent bg-settings-control/45 text-foreground/70 hover:bg-settings-control-hover hover:text-foreground',
+    className
+  );
+}
+
+export function settingsPickerTrackClassName(className?: string) {
+  return cn('relative rounded-md', className);
 }
 
 export function SettingsGroup({ children, className }: { children: ReactNode; className?: string }) {

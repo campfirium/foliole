@@ -3,7 +3,20 @@ import { beforeAll, expect, it } from 'vitest';
 
 import { preloadTranslationCatalog } from '../localization/translations';
 
-import { SettingsControlSlot, SettingsGroup, SettingsRow, SettingsSection } from './SettingsLayout';
+import {
+  SettingsControlSlot,
+  SettingsGroup,
+  SettingsRow,
+  SettingsSection,
+  settingsCompactButtonClassName,
+  settingsCompactFieldClassName,
+  settingsCompactUtilityIconButtonClassName,
+  settingsIconGridButtonClassName,
+  settingsPickerTrackClassName,
+  settingsSelectableOptionClassName,
+  settingsSidebarBadgeClassName,
+  settingsSidebarItemClassName
+} from './SettingsLayout';
 
 beforeAll(async () => {
   await preloadTranslationCatalog('en');
@@ -48,4 +61,21 @@ it('passes row DOM props through to the settings row element', () => {
   );
 
   expect(screen.getByTestId('draggable-row')).toHaveAttribute('draggable', 'true');
+});
+
+it('keeps compact settings control helpers on shared token chrome', () => {
+  expect(settingsCompactFieldClassName('w-20')).toContain('bg-settings-control');
+  expect(settingsCompactFieldClassName()).toContain('focus-visible:ring-ring');
+  expect(settingsCompactButtonClassName()).toContain('border-settings-control-border');
+  expect(settingsCompactUtilityIconButtonClassName(true)).toContain('text-settings-icon-active');
+  expect(settingsCompactUtilityIconButtonClassName(false)).toContain('hover:text-settings-icon-hover');
+});
+
+it('keeps settings selection helpers on shared token states', () => {
+  expect(settingsSelectableOptionClassName(true)).toContain('bg-settings-selected');
+  expect(settingsSelectableOptionClassName(false)).toContain('hover:bg-settings-selected');
+  expect(settingsSidebarBadgeClassName()).toContain('border-settings-control-border');
+  expect(settingsSidebarItemClassName(true)).toContain('bg-settings-selected');
+  expect(settingsIconGridButtonClassName(false)).toContain('hover:bg-settings-control-hover');
+  expect(settingsPickerTrackClassName('h-5')).toContain('rounded-md');
 });

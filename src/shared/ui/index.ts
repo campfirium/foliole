@@ -4,10 +4,7 @@ export { AppButton } from './Button';
 export { AppDialog, AppDialogClose, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
 export { AppIconButton } from './IconButton';
 export { AppInput } from './Input';
-export {
-  appInputBorderFocusVisibleClassName,
-  appInputFocusVisibleClassName
-} from './InputFocus';
+export { appInputBorderFocusVisibleClassName, appInputFocusVisibleClassName } from './InputFocus';
 export { LucideCatalogIcon, LUCIDE_ICON_OPTIONS } from './LucideIconCatalog';
 export { AppPanel } from './Panel';
 export { AppToolbar } from './Toolbar';
@@ -17,12 +14,7 @@ export { TruncatedTextTooltip } from './TruncatedTextTooltip';
 
 // Feedback and status surfaces: empty, loading, error, badges, confirmation, and startup fallback.
 export { AppConfirmationProvider } from './AppConfirmationProvider';
-export {
-  requestAppConfirmation,
-  requestAppTextInput,
-  type AppConfirmationOptions,
-  type AppTextInputOptions
-} from './appConfirmation';
+export { requestAppConfirmation, requestAppTextInput, type AppConfirmationOptions, type AppTextInputOptions } from './appConfirmation';
 export { AppEmptyState, AppErrorState, AppLoadingState, AppSpinner } from './EmptyState';
 export { AppStatusBadge } from './StatusBadge';
 
@@ -44,24 +36,13 @@ export { ObjectConfigPathButton, ObjectConfigPathControl } from './ObjectConfigT
 export { VirtualListSurface, type VirtualListRenderMeta } from './VirtualListSurface';
 
 // Review patterns: action hierarchy consumers for desktop review and companion review shell.
-export {
-  ContinueReadingAction,
-  FsrsRevealAction,
-  ReadingReviewActions,
-  ReviewCompleteAction,
-  ResumeReviewAction,
-  ReviewGradeActions
-} from './ReviewActionControls';
+export { ContinueReadingAction, FsrsRevealAction, ReadingReviewActions, ReviewCompleteAction, ResumeReviewAction, ReviewGradeActions } from './ReviewActionControls';
 export { ReviewActionBar } from './ReviewActionBar';
 
 // Settings patterns: shared only because settings pages reuse them; do not treat as generic controls.
 export { SETTINGS_ACTION_TABLE_EXTERNAL_LIBRARY_COLUMNS_CLASS_NAME, SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME, settingsActionTableAddButtonClassName, settingsActionTableClassName, settingsActionTableHeaderClassName, settingsActionTableRowClassName } from './SettingsActionTable';
-export { SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME, SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME, SETTINGS_INPUT_WIDTH_CLASS_NAME, SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME, SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME, SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME, SETTINGS_RANGE_WIDTH_CLASS_NAME, SETTINGS_SELECT_WIDTH_CLASS_NAME, SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME, settingsHotkeyChipClassName, settingsHotkeyChipClearClassName, settingsHotkeyRowClassName, settingsHotkeySearchFieldClassName, settingsHotkeySearchPanelClassName, SETTINGS_VALUE_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow, SettingsSection, settingsButtonClassName, settingsFieldClassName, settingsControlValueClassName, settingsPaletteButtonClassName, settingsSwitchClassName, settingsRangeClassName, settingsResetButtonClassName, settingsSwitchKnobClassName, settingsUtilityIconButtonClassName, settingsColorSwatchClassName, settingsValueBoxClassName } from './SettingsLayout';
+export { SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME, SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME, SETTINGS_INPUT_WIDTH_CLASS_NAME, SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME, SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME, SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME, SETTINGS_RANGE_WIDTH_CLASS_NAME, SETTINGS_SELECT_WIDTH_CLASS_NAME, SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME, settingsHotkeyChipClassName, settingsHotkeyChipClearClassName, settingsHotkeyRowClassName, settingsHotkeySearchFieldClassName, settingsHotkeySearchPanelClassName, SETTINGS_VALUE_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow, SettingsSection, settingsButtonClassName, settingsCompactButtonClassName, settingsCompactFieldClassName, settingsCompactUtilityIconButtonClassName, settingsFieldClassName, settingsControlValueClassName, settingsPaletteButtonClassName, settingsSwitchClassName, settingsRangeClassName, settingsResetButtonClassName, settingsSwitchKnobClassName, settingsUtilityIconButtonClassName, settingsColorSwatchClassName, settingsIconGridButtonClassName, settingsPickerTrackClassName, settingsSelectableOptionClassName, settingsSidebarBadgeClassName, settingsSidebarItemClassName, settingsValueBoxClassName } from './SettingsLayout';
 
 export { SettingsSegmentedControl, SettingsSegmentedRow } from './SettingsSegmentedControl';
-export {
-  SettingsEmptyState,
-  SettingsErrorState,
-  SettingsLoadingState,
-  SettingsStateAction
-} from './SettingsStateSurface';
+export { SettingsEmptyState, SettingsErrorState, SettingsLoadingState, SettingsStateAction } from './SettingsStateSurface';
+export { settingsDialogSurfaceClassName, settingsNestedDialogSurfaceClassName, settingsPopoverSurfaceClassName } from './SettingsDialogSurface';

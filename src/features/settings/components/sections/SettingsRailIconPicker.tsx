@@ -7,6 +7,7 @@ import {
   AppInput,
   LucideCatalogIcon,
   LUCIDE_ICON_OPTIONS,
+  settingsIconGridButtonClassName,
   settingsResetButtonClassName
 } from '../../../../shared/ui';
 import type { HotkeySettingItem } from '../../model/hotkeySettings';
@@ -26,18 +27,7 @@ export function IconGrid(props: {
   const gridClassName = props.compact
     ? 'grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] justify-items-center gap-1.5'
     : 'grid grid-cols-[repeat(auto-fill,minmax(52px,1fr))] justify-items-center gap-2';
-  const buttonClassName = (selected: boolean) =>
-    props.compact
-      ? `inline-flex aspect-square w-full max-w-12 items-center justify-center rounded-md border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-          selected
-            ? 'bg-settings-control-hover text-foreground'
-            : 'bg-settings-control/35 text-foreground/66 hover:bg-settings-control-hover hover:text-foreground'
-        }`
-      : `inline-flex aspect-square w-full max-w-14 items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-          selected
-            ? 'border-settings-control-border-hover bg-settings-control-active text-foreground/82'
-            : 'border-transparent bg-settings-control/45 text-foreground/70 hover:bg-settings-control-hover hover:text-foreground'
-        }`;
+  const buttonClassName = (selected: boolean) => settingsIconGridButtonClassName(selected, props.compact ? 'max-w-12' : 'max-w-14');
   return (
     <div className={`app-scrollbar mt-3 overflow-auto pr-2 ${props.compact ? 'max-h-[240px]' : 'max-h-[320px]'}`}>
       <div className={gridClassName}>

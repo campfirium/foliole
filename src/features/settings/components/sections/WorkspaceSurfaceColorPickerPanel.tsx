@@ -2,7 +2,7 @@ import { Pipette } from 'lucide-react';
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { settingsButtonClassName, settingsColorSwatchClassName } from '../../../../shared/ui';
+import { settingsButtonClassName, settingsColorSwatchClassName, settingsPickerTrackClassName } from '../../../../shared/ui';
 import { formatWorkspaceSurfaceColorCss, formatWorkspaceSurfaceColorHex, parseWorkspaceSurfaceColor, type WorkspaceSurfaceColorValue, workspaceSurfaceColorFromHsv, workspaceSurfaceColorToHsv } from '../../model/workspaceSurfaceColor';
 
 function clampPercent(value: number) {
@@ -88,7 +88,7 @@ function WorkspaceSurfaceColorSliderSection(props: {
         <div className={settingsColorSwatchClassName('size-12 rounded-full')} style={{ backgroundColor: formatWorkspaceSurfaceColorCss(props.color) }} />
         <div
           aria-label={t('settings.appearance.surface.colorPicker.hueSlider')}
-          className="relative h-6 flex-1 rounded-md"
+          className={settingsPickerTrackClassName('h-6 flex-1')}
           onPointerDown={(event) => {
             trackSlider(event, (percent) => {
               props.onColorChange(workspaceSurfaceColorFromHsv({ a: props.color.a, h: Math.round((percent / 100) * 360), s: hsv.s, v: hsv.v }));
@@ -102,7 +102,7 @@ function WorkspaceSurfaceColorSliderSection(props: {
       </div>
       <div
         aria-label={t('settings.appearance.surface.colorPicker.alphaSlider')}
-        className="relative h-5 rounded-md bg-[linear-gradient(45deg,rgb(var(--color-foreground)_/_0.08)_25%,transparent_25%,transparent_50%,rgb(var(--color-foreground)_/_0.08)_50%,rgb(var(--color-foreground)_/_0.08)_75%,transparent_75%,transparent_100%)] bg-[length:16px_16px]"
+        className={settingsPickerTrackClassName('h-5 bg-[linear-gradient(45deg,rgb(var(--color-foreground)_/_0.08)_25%,transparent_25%,transparent_50%,rgb(var(--color-foreground)_/_0.08)_50%,rgb(var(--color-foreground)_/_0.08)_75%,transparent_75%,transparent_100%)] bg-[length:16px_16px]')}
         onPointerDown={(event) => trackSlider(event, (percent) => props.onAlphaChange(Math.round(percent)))}
         role="presentation"
       >

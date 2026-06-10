@@ -2,7 +2,7 @@ import { ChevronsUpDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME, settingsButtonClassName, settingsFieldClassName } from '../../../../shared/ui';
+import { SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME, settingsCompactButtonClassName, settingsCompactFieldClassName } from '../../../../shared/ui';
 import {
   formatWorkspaceSurfaceColorHex,
   parseWorkspaceSurfaceColor,
@@ -29,7 +29,7 @@ function ModeIconButton(props: {
   return (
     <button
       aria-label={t('settings.appearance.surface.colorEditor.switchMode', { mode: props.channelMode })}
-      className={settingsButtonClassName(props.compact ? 'size-5 rounded-sm px-0' : 'h-9 w-8 rounded-sm px-0')}
+      className={settingsCompactButtonClassName(props.compact ? 'size-5' : 'h-9 w-8')}
       onClick={(event) => {
         event.preventDefault();
         props.setChannelMode(nextWorkspaceSurfaceChannelMode(props.channelMode));
@@ -53,7 +53,7 @@ function ChannelInput(props: {
     <label className="space-y-1 text-sm text-foreground/72">
       <input
         aria-label={props.ariaLabel}
-        className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} rounded-sm px-2 text-center`)}
+        className={settingsCompactFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
         max={props.max}
         min={0}
         onChange={(event) => props.onChange(Number(event.target.value))}
@@ -106,7 +106,7 @@ function HexField(props: {
     <label className="text-sm text-foreground/72">
       <input
         aria-label={t('settings.appearance.surface.colorEditor.visibleHex')}
-        className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} rounded-sm px-2 text-center`)}
+        className={settingsCompactFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
         onChange={(event) => {
           const parsed = parseWorkspaceSurfaceColor(event.target.value.trim());
           if (!parsed) return;
@@ -157,7 +157,7 @@ function HexModeRow(props: {
         <label className="text-sm text-foreground/72">
           <input
             aria-label={t('settings.appearance.surface.colorEditor.opacity')}
-            className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} rounded-sm px-2 text-center`)}
+            className={settingsCompactFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
             max={100}
             min={0}
             onChange={(event) => applyWorkspaceSurfaceOpacity({
