@@ -29,13 +29,6 @@ const TOAST_WINDOW_HEIGHT = TOAST_HEIGHT + TOAST_GUTTER * 2;
 const TOAST_WINDOW_WIDTH = TOAST_WIDTH + TOAST_GUTTER * 2;
 const WM_LBUTTONUP = 0x0202;
 
-function waitForNextPaint(toastWindow: BrowserWindow) {
-  return toastWindow.webContents.executeJavaScript(
-    'new Promise((resolve)=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',
-    true
-  );
-}
-
 function closeToastAfterDisplay(toastWindow: BrowserWindow, status: GlobalClipToastStatus) {
   if (status === 'pending') {
     return;
@@ -127,7 +120,6 @@ function createToastWindow() {
   });
   toastWindow.setAlwaysOnTop(true, 'screen-saver');
   toastWindow.setIgnoreMouseEvents(false);
-  toastWindow.setOpacity(0);
   return toastWindow;
 }
 
@@ -176,12 +168,10 @@ export function showGlobalClipDesktopToast(status: GlobalClipToastStatus = 'succ
   };
   void resolveFloatingTheme(toastWindow)
     .then((theme) => toastWindow.loadURL(buildToastHtml(theme, currentStatus)))
-    .then(() => waitForNextPaint(toastWindow))
     .then(() => {
       if (!toastWindow.isDestroyed()) {
         isLoaded = true;
         update(currentStatus, navigationTargetNodeId, currentPreviewTitle);
-        toastWindow.setOpacity(1);
         toastWindow.showInactive();
       }
     });

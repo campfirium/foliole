@@ -44,7 +44,6 @@ function createToastWindow() {
     }),
     setAlwaysOnTop: vi.fn(),
     setIgnoreMouseEvents: vi.fn(),
-    setOpacity: vi.fn(),
     showInactive: vi.fn(),
     webContents: {
       id: 42,

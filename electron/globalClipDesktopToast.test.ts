@@ -39,7 +39,6 @@ function createToastWindow() {
     on: vi.fn(),
     setAlwaysOnTop: vi.fn(),
     setIgnoreMouseEvents: vi.fn(),
-    setOpacity: vi.fn(),
     showInactive: vi.fn(),
     webContents: {
       id: 42,
@@ -86,11 +85,6 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
   }));
   expect(toastWindow.setAlwaysOnTop).toHaveBeenCalledWith(true, 'screen-saver');
   expect(toastWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(false);
-  expect(toastWindow.setOpacity).toHaveBeenNthCalledWith(1, 0);
-  expect(toastWindow.setOpacity).toHaveBeenLastCalledWith(1);
-  expect(toastWindow.setOpacity.mock.invocationCallOrder.at(-1)).toBeLessThan(
-    toastWindow.showInactive.mock.invocationCallOrder[0] ?? 0
-  );
   expect(toastWindow.hookWindowMessage).toHaveBeenCalledWith(0x0202, expect.any(Function));
   expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
   const loadedUrl = toastWindow.loadURL.mock.calls[0]?.[0] ?? '';
