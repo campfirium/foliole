@@ -46,6 +46,8 @@ vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({
   startExternalSearchBackgroundRefresh: vi.fn(),
   stopExternalSearchBackgroundRefresh: vi.fn()
 }));
+vi.mock('./globalClipToastNavigation.js', () => ({ installGlobalCaptureToastOpenHandler: vi.fn() }));
+vi.mock('./globalClipToInbox.js', () => ({ installGlobalClipToInboxShortcut: vi.fn() }));
 vi.mock('./import/keepImportMonitor.js', () => ({ startKeepImportMonitor: vi.fn(), stopKeepImportMonitor: vi.fn() }));
 vi.mock('./import/managedInboxMonitor.js', () => ({ startManagedInboxMonitor: vi.fn(), stopManagedInboxMonitor: vi.fn() }));
 vi.mock('./ipc/boot.js', () => ({ appendBootEvent: mocks.appendBootEvent }));

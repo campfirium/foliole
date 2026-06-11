@@ -14,6 +14,7 @@ import {
 import { registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
 import { registerExtDocImageProtocolScheme } from './attachments/extDocImageProtocol.js';
 import { registerRemoteImageProtocolScheme } from './attachments/remoteImageProtocol.js';
+import { isAppQuittingForBackgroundPresence } from './backgroundPresence.js';
 import { installMainWindowContentSecurityPolicy } from './contentSecurityPolicy.js';
 import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnostics/diagnosticLog.js';
 import { appendMainProcessDiagnosticLog, startLocalCrashReporter } from './diagnostics/mainProcessDiagnostics.js';
@@ -193,7 +194,16 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
   });
   bindWindowIpc(window);
   bindHotkeyRecorderInput(window);
-  bindWindowReadingProgressFlush(window);
+  bindWindowReadingProgressFlush(window, process.platform === 'win32'
+    ? {
+        onCloseAfterFlush: (targetWindow) => {
+          if (!targetWindow.isDestroyed()) {
+            targetWindow.hide();
+          }
+        },
+        shouldAllowClose: isAppQuittingForBackgroundPresence
+      }
+    : {});
   bindWindowStatePersistence(window);
   bindMenuToWindow(window);
   bindWindowRuntimeDiagnostics(window);

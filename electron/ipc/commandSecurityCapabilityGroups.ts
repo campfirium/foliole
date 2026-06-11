@@ -32,6 +32,9 @@ const READ_COMMANDS = [
   NATIVE_COMMANDS.loadLibraryPathSettings,
   NATIVE_COMMANDS.loadDatabaseMaintenanceStatus,
   NATIVE_COMMANDS.loadBackupSettings,
+  NATIVE_COMMANDS.loadLoginItemSettings,
+  NATIVE_COMMANDS.listLocalFiles,
+  NATIVE_COMMANDS.readLocalFile,
   NATIVE_COMMANDS.reviewGrade,
   NATIVE_COMMANDS.reviewPreview,
   NATIVE_COMMANDS.windowIsMaximized,
@@ -129,7 +132,8 @@ const SETTINGS_MUTATION_COMMANDS = [
   NATIVE_COMMANDS.saveAppSettingsState,
   NATIVE_COMMANDS.saveSyncPeers,
   NATIVE_COMMANDS.saveImportManagerSettings,
-  NATIVE_COMMANDS.saveReviewSchedulerSettings
+  NATIVE_COMMANDS.saveReviewSchedulerSettings,
+  NATIVE_COMMANDS.saveLoginItemSettings
 ] as const satisfies readonly NativeCommandName[];
 
 const RESTORE_MUTATION_COMMANDS = [
@@ -157,6 +161,7 @@ const FILESYSTEM_OPEN_COMMANDS = [
 
 const FILESYSTEM_WRITE_COMMANDS = [
   NATIVE_COMMANDS.exportAttachmentImage,
+  NATIVE_COMMANDS.saveLocalFile,
   NATIVE_COMMANDS.backupSqliteDatabase,
   NATIVE_COMMANDS.exportSourceDispositions
 ] as const satisfies readonly NativeCommandName[];

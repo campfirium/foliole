@@ -52,6 +52,14 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
     args: undefined;
     result: NativeSystemFontCatalog;
   };
+  [NATIVE_COMMANDS.loadLoginItemSettings]: {
+    args: undefined;
+    result: {
+      enabled: boolean;
+      effective: boolean;
+      supported: boolean;
+    };
+  };
   [NATIVE_COMMANDS.openExternalUrl]: {
     args: {
       url: string;
@@ -159,6 +167,14 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
   [NATIVE_COMMANDS.saveAppSettingsState]: {
     args: { settings: Record<string, string> };
     result: null;
+  };
+  [NATIVE_COMMANDS.saveLoginItemSettings]: {
+    args: { enabled: boolean };
+    result: {
+      enabled: boolean;
+      effective: boolean;
+      supported: boolean;
+    };
   };
   [NATIVE_COMMANDS.loadReviewSchedulerSettings]: {
     args: undefined;

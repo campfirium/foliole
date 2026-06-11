@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 
 import { resolveFolioleAppVersion } from './appVersion.js';
+import { installBackgroundTray, markAppQuittingForBackgroundPresence } from './backgroundPresence.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
@@ -21,21 +22,21 @@ import { appendBootEvent } from './ipc/boot.js';
 import { installAppMenu } from './ipc/menu.js';
 import { resolveAppPaths } from './ipc/paths.js';
 import { startInitialMainWindow } from './mainStartup.js';
+import { installPairingFocusHandler, openOrCreateMainWindow, startCompanionSyncIfEnabled } from './mainWindowLifecycle.js';
+import { getMainWindow, setMainWindow } from './mainWindowRegistry.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import type { StartupRendererView } from './rendererLoader.js';
-import { bindEmbeddedLinkPanelContents, focusWindow, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
+import { bindEmbeddedLinkPanelContents, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
-import { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler, stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
-import { presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
-
-const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
+import { stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 
 export interface MainLifecycleArgs {
   activateMainWindow: (window: BrowserWindow) => Promise<void>;
   createMainWindow: (startupAppearance?: { backgroundColor: string } | null) => Promise<BrowserWindow>;
   installInvokeHandler: () => void;
   loadMainWindow: (window: BrowserWindow, startupView?: StartupRendererView | null) => Promise<void>;
+  prepareStartupAppearance?: () => { backgroundColor: string } | null;
   runtimeMode: RuntimeMode;
 }
 
@@ -54,6 +55,7 @@ function installBeforeQuitLifecycle() {
   const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({ getWindows: () => BrowserWindow.getAllWindows() });
   let mirrorFlushed = false;
   app.on('before-quit', (event) => {
+    markAppQuittingForBackgroundPresence();
     devRestartIntentWatcher?.close();
     devRendererReloadIntentWatcher?.close();
     stopExternalSearchBackgroundRefresh();
@@ -155,23 +157,6 @@ async function loadStartupErrorSurface(args: {
   }
 }
 
-async function startCompanionSyncIfEnabled() {
-  if (!isDesktopCompanionSyncEnabled()) {
-    return;
-  }
-  await ensureLanWorkspaceSyncServer({ appVersion: resolveFolioleAppVersion(app), peerId: loadOrCreateDesktopDeviceId() });
-}
-
-function installPairingFocusHandler() {
-  setLanWorkspaceSyncPairRequestHandler(() => {
-    const window = BrowserWindow.getAllWindows()[0];
-    if (!window) return;
-    if (!window.isVisible()) window.show();
-    focusWindow(window);
-    window.webContents.send(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL);
-  });
-}
-
 function installAppProcessDiagnostics() {
   installMainRuntimeDiagnostics();
   app.on('render-process-gone', (_, webContents, details) => appendMainProcessDiagnosticLog('render_process_gone', { ...details, url: webContents.getURL() }));
@@ -185,14 +170,7 @@ function installActivateLifecycle(
 ) {
   app.on('activate', async () => {
     notifyExternalSearchUserActivity();
-    if (BrowserWindow.getAllWindows().length !== 0) {
-      return;
-    }
-    const window = await args.createMainWindow();
-    await args.loadMainWindow(window);
-    await presentInitialRendererWindow(window);
-    await args.activateMainWindow(window);
-    onWindowReady(window);
+    await openOrCreateMainWindow(args, onWindowReady);
   });
 }
 
@@ -201,7 +179,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
   installSingleInstanceGate(args.runtimeMode);
   installBeforeQuitLifecycle();
   app.on('second-instance', (_event, argv) => {
-    focusWindow(BrowserWindow.getAllWindows()[0]);
+    void openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow);
     externalDocumentFileOpen.enqueueFromArgv(argv);
     notifyExternalSearchSecondInstance();
   });
@@ -210,21 +188,30 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     args.installInvokeHandler();
     installGlobalClipToInboxShortcut();
     installGlobalCaptureToastOpenHandler();
+    installBackgroundTray({
+      getMainWindow,
+      openMainWindow: () => openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow)
+    });
     await appendBootEvent('app_when_ready');
     beginDatabaseStartup();
-    const mainWindow = await args.createMainWindow();
+    const mainWindow = await args.createMainWindow(args.prepareStartupAppearance?.() ?? null);
+    setMainWindow(mainWindow);
     await startInitialMainWindow(args, {
       failDatabaseStartup: markDatabaseStartupFailed,
       initializeRuntimeServices,
-      installPairingFocusHandler,
+      installPairingFocusHandler: () => installPairingFocusHandler(() => openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow)),
       loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),
       mainWindow,
-      startCompanionSyncIfEnabled
+      startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
+        appVersion: resolveFolioleAppVersion(app),
+        isEnabled: isDesktopCompanionSyncEnabled,
+        peerId: loadOrCreateDesktopDeviceId()
+      })
     });
     externalDocumentFileOpen.setReadyWindow(mainWindow);
     installActivateLifecycle(args, externalDocumentFileOpen.setReadyWindow);
   });
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
+    if (process.platform !== 'darwin' && process.platform !== 'win32') app.quit();
   });
 }

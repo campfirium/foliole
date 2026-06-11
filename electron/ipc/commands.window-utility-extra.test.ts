@@ -37,13 +37,19 @@ const {
   },
   mockApp: {
     exit: vi.fn(),
+    getLoginItemSettings: vi.fn(() => ({
+      executableWillLaunchAtLogin: true,
+      openAtLogin: false
+    })),
     getPath: vi.fn((name: string) => ({ crashDumps: '/crash', desktop: '/desktop', logs: '/log' })[name] ?? '/tmp'),
     getVersion: () => '1.0.0',
     isPackaged: false,
-    relaunch: vi.fn()
+    relaunch: vi.fn(),
+    setLoginItemSettings: vi.fn()
   },
   mockWindow: {
     close: vi.fn(),
+    hide: vi.fn(),
     isDestroyed: vi.fn(() => false),
     isMaximized: vi.fn(() => false),
     maximize: vi.fn(),
@@ -120,7 +126,34 @@ beforeEach(() => {
   vi.clearAllMocks();
   requestDevShellRestart.mockReturnValue(false);
   mockApp.isPackaged = false;
+  mockApp.getLoginItemSettings.mockReturnValue({
+    executableWillLaunchAtLogin: true,
+    openAtLogin: false
+  });
   mockWindow.isMaximized.mockReturnValue(false);
+});
+
+it('loads unsupported login item settings outside the packaged Windows app', async () => {
+  await expect(handleInvokeRequest({ command: 'load_login_item_settings' })).resolves.toEqual({
+    enabled: false,
+    effective: false,
+    supported: false
+  });
+
+  expect(mockApp.getLoginItemSettings).not.toHaveBeenCalled();
+});
+
+it('saves login item settings only when supported', async () => {
+  await expect(handleInvokeRequest({
+    command: 'save_login_item_settings',
+    args: { enabled: true }
+  })).resolves.toEqual({
+    enabled: false,
+    effective: false,
+    supported: false
+  });
+
+  expect(mockApp.setLoginItemSettings).not.toHaveBeenCalled();
 });
 
 it('handles typed native utility commands', async () => {

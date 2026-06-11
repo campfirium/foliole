@@ -3,9 +3,11 @@ import { BrowserWindow, app, shell } from 'electron';
 import { normalizeOpenExternalUrl } from '../../lib/platform/externalUrl.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
+import { isAppQuittingForBackgroundPresence } from '../backgroundPresence.js';
 import { requestDevShellRestart } from '../devShellRestartRequest.js';
 import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
+import { loadLoginItemSettingsState, saveLoginItemSettingsState } from '../loginItemSettings.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 import { allowWindowCloseWithoutReadingProgressFlush, flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
 
@@ -40,6 +42,17 @@ function resolveTargetWindow(context?: InvokeContext) {
     }
   }
   return BrowserWindow.getFocusedWindow();
+}
+
+async function closeWindowToBackground(window: BrowserWindow | null) {
+  if (!window || process.platform !== 'win32' || isAppQuittingForBackgroundPresence()) {
+    return false;
+  }
+  await flushWindowReadingProgress(window);
+  if (!window.isDestroyed()) {
+    window.hide();
+  }
+  return true;
 }
 
 async function handleWindowCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
@@ -89,6 +102,9 @@ async function handleWindowCommand(request: InvokeRequest, context?: InvokeConte
     return null;
   }
   if (request.command === NATIVE_COMMANDS.windowClose) {
+    if (await closeWindowToBackground(window)) {
+      return null;
+    }
     window?.close();
     return null;
   }
@@ -127,6 +143,12 @@ function handleUtilityCommand(request: InvokeRequest) {
   }
   if (request.command === NATIVE_COMMANDS.listSystemFonts) {
     return listSystemFonts();
+  }
+  if (request.command === NATIVE_COMMANDS.loadLoginItemSettings) {
+    return loadLoginItemSettingsState();
+  }
+  if (request.command === NATIVE_COMMANDS.saveLoginItemSettings) {
+    return saveLoginItemSettingsState(args.enabled === true);
   }
   if (request.command === NATIVE_COMMANDS.loadPerformanceMemorySnapshot) {
     return {

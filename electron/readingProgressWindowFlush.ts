@@ -5,6 +5,11 @@ const WINDOW_CLOSE_FLUSH_TIMEOUT_MS = 800;
 
 type FlushableWindow = Pick<BrowserWindow, 'close' | 'isDestroyed' | 'webContents'>;
 
+export interface WindowReadingProgressFlushOptions {
+  onCloseAfterFlush?: (window: BrowserWindow) => void;
+  shouldAllowClose?: () => boolean;
+}
+
 function canFlushWindow(window: FlushableWindow) {
   return !window.isDestroyed() && !window.webContents.isDestroyed();
 }
@@ -52,8 +57,11 @@ export async function flushReadingProgressForWindows(windows: FlushableWindow[])
   }
 }
 
-export function bindWindowReadingProgressFlush(window: BrowserWindow) {
+export function bindWindowReadingProgressFlush(window: BrowserWindow, options: WindowReadingProgressFlushOptions = {}) {
   window.on('close', (event) => {
+    if (options.shouldAllowClose?.() === true) {
+      return;
+    }
     if (windowsAllowedToClose.has(window)) {
       windowsAllowedToClose.delete(window);
       return;
@@ -61,6 +69,10 @@ export function bindWindowReadingProgressFlush(window: BrowserWindow) {
     event.preventDefault();
     void flushWindowReadingProgress(window).finally(() => {
       if (!canFlushWindow(window)) {
+        return;
+      }
+      if (options.onCloseAfterFlush) {
+        options.onCloseAfterFlush(window);
         return;
       }
       allowWindowCloseWithoutReadingProgressFlush(window);
