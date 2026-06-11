@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -18,19 +19,30 @@ function appendWslenv(env, key, suffix = '') {
   }
 }
 
-function createSlotClientEnv(slot, action, extraEnv = {}) {
+export function createSlotClientEnv(slot, action, extraEnv = {}) {
   const p = paths(slot);
   const windowsWorkdir = toWindowsPath(p.slotDir);
   const env = {
     ...process.env,
     ...extraEnv,
     FOLIOLE_NATIVE_LIBRARY_HOME: toWindowsPath(p.libraryDir),
-    FOLIOLE_NATIVE_USER_DATA_PATH: `${windowsWorkdir}\\.tmp\\electron-user-data-${slot}`,
+    FOLIOLE_NATIVE_PREVIEW_SLOT_ROOT: toWindowsPath(p.root),
+    FOLIOLE_NATIVE_PREVIEW_TEMP_LIBRARY: '1',
+    FOLIOLE_NATIVE_USER_DATA_PATH: toWindowsPath(p.userDataDir),
     WINDOWS_CLIENT_ACTION: action,
     WINDOWS_WORKDIR: windowsWorkdir
   };
   appendWslenv(env, 'FOLIOLE_NATIVE_LIBRARY_HOME', '/w');
+  appendWslenv(env, 'FOLIOLE_NATIVE_PREVIEW_SLOT_ROOT', '/w');
+  appendWslenv(env, 'FOLIOLE_NATIVE_PREVIEW_TEMP_LIBRARY');
   appendWslenv(env, 'FOLIOLE_NATIVE_USER_DATA_PATH', '/w');
+  appendWslenv(env, 'FOLIOLE_PREVIEW_LABEL');
+  appendWslenv(env, 'FOLIOLE_VITE_PORT');
+  appendWslenv(env, 'FOLIOLE_VITE_PORT_STRICT');
+  if (env.FOLIOLE_VITE_PORT && !env.FOLIOLE_DEV_SCREENSHOT_PORT) {
+    env.FOLIOLE_DEV_SCREENSHOT_PORT = String(38642 + Number.parseInt(env.FOLIOLE_VITE_PORT, 10) - 24600);
+  }
+  appendWslenv(env, 'FOLIOLE_DEV_SCREENSHOT_PORT');
   return { env, repo: p.repo };
 }
 
@@ -162,4 +174,31 @@ export function compileElectronInSlot(slot) {
   if (result.status !== 0) {
     throw new Error(`slot electron compile failed code=${result.status ?? 'unknown'}`);
   }
+}
+
+function copyDirectory(source, target) {
+  if (!fs.existsSync(source)) return false;
+  fs.rmSync(target, { force: true, recursive: true });
+  fs.cpSync(source, target, { recursive: true });
+  return true;
+}
+
+export function ensureElectronDistInSlot(slot, { requiresRuntimeRestart = false } = {}) {
+  const p = paths(slot);
+  const slotMain = path.join(p.slotDir, 'electron-dist', 'electron', 'main.js');
+  if (fs.existsSync(slotMain) && !requiresRuntimeRestart) return 'present';
+  if (requiresRuntimeRestart) {
+    compileElectronInSlot(slot);
+    return 'compiled';
+  }
+
+  const mirrorDist = path.join(p.mainMirrorDir, 'electron-dist');
+  const slotDist = path.join(p.slotDir, 'electron-dist');
+  if (copyDirectory(mirrorDist, slotDist) && fs.existsSync(slotMain)) {
+    console.log(`[preview-slot] copied electron-dist from main mirror slot=${slot}`);
+    return 'copied';
+  }
+
+  compileElectronInSlot(slot);
+  return 'compiled';
 }

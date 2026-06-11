@@ -19,6 +19,7 @@ export function resolveMainWindowIconPath(preloadPath: string) {
 }
 
 export function createMainWindowOptions(preloadPath: string): BrowserWindowConstructorOptions {
+  const previewTitle = resolvePreviewWindowTitle();
   return {
     width: 1400,
     height: 900,
@@ -29,6 +30,7 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
     autoHideMenuBar: false,
     icon: resolveMainWindowIconPath(preloadPath),
     show: false,
+    ...(previewTitle ? { title: previewTitle } : {}),
     webPreferences: {
       backgroundThrottling: false,
       devTools: !app.isPackaged,
@@ -39,6 +41,10 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
       webviewTag: true
     }
   };
+}
+
+export function resolvePreviewWindowTitle(env: NodeJS.ProcessEnv = process.env) {
+  return env.FOLIOLE_PREVIEW_LABEL?.trim() ?? '';
 }
 
 export function focusWindow(window: import('electron').BrowserWindow | undefined) {
@@ -82,6 +88,25 @@ export function bindMainWindowNavigationGuard(window: import('electron').Browser
     event.preventDefault();
   });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  const previewTitle = resolvePreviewWindowTitle();
+  if (previewTitle) {
+    const restorePreviewTitle = () => {
+      window.setTitle(previewTitle);
+    };
+    const preventRendererTitle = (event: { preventDefault: () => void }) => {
+      event.preventDefault();
+      restorePreviewTitle();
+    };
+    restorePreviewTitle();
+    window.on('page-title-updated', preventRendererTitle);
+    window.webContents.on('page-title-updated', preventRendererTitle);
+    window.webContents.on('dom-ready', restorePreviewTitle);
+    window.webContents.on('did-finish-load', restorePreviewTitle);
+    window.once('ready-to-show', restorePreviewTitle);
+    globalThis.setTimeout(() => {
+      if (!window.isDestroyed()) restorePreviewTitle();
+    }, 1000);
+  }
 }
 
 export function bindMainWindowWebviewAttachGuard(window: import('electron').BrowserWindow) {

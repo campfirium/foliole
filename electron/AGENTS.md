@@ -42,7 +42,8 @@
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
 - 涉及环境变量、后台进程、重定向、路径拼接、Electron 启动或多步 Windows 命令时，必须优先写成 Node `.mjs` runner；确实需要 Windows 宿主能力时，使用已提交的 `.ps1` / `.cmd` 文件入口，并通过简单 `-File` 或脚本路径调用。
 - Windows 原生 Codex 检查或控制 Windows Electron dev runtime 时，优先使用 `npm run windows:client:native -- <status|start|stop|restart|full-restart>`；该入口参照既有 ready marker / bridge marker 信任语义，但用 Node 原生进程控制直接启动 `electron-dev-native.mjs`，避免 Bash `wslpath`、WSL mirror 默认目录、旧 PowerShell client wrapper 和 inline command 转义。
-- WSL 主开发会话需要执行桌面预览分流时，优先使用 `npm run windows:preview`；该入口先把 WSL 主仓库同步到 Windows 验收 mirror，再复用既有 client control、restart intent、renderer reload intent、ready marker 与 native ABI preflight 语义。
+- WSL 主开发会话执行普通对话内桌面验收时，优先使用线程预览 slot：先按本线程实际 touched files 记录到 `node scripts/windows/thread-preview-slot.mjs record ...`，再执行 `node scripts/windows/thread-preview-slot.mjs preview --label <对话标题或外链预览> --thread "$CODEX_THREAD_ID"`；该入口使用独立 Windows slot、独立 userData、独立临时库和端口登记，避免多个 Codex 对话互相抢占全局客户端。
+- WSL 主开发会话只有在阶段验收、发布前验收、全局 sync / mirror 链路验收、用户明确要求“全局预览 / Windows mirror 预览 / npm run windows:preview”，或线程 slot 无法代表本轮验收面时，才使用 `npm run windows:preview`；该入口先把 WSL 主仓库同步到 Windows 验收 mirror，再复用既有 client control、restart intent、renderer reload intent、ready marker 与 native ABI preflight 语义。
 - Windows 原生 Codex 会话直接站在 Windows checkout 内诊断时，才使用 `npm run windows:preview:native`；该入口复用既有 client control、restart intent、renderer reload intent、ready marker 与 native ABI preflight 语义，但不做 WSL mirror 同步，不得作为 WSL 主开发会话的默认预览入口。
 - Windows 原生 Codex 需要快速确认本机环境与脚本入口时，优先使用 `npm run windows:native:check`；该入口覆盖 native preflight 与核心路径测试，不替代本轮能力闭环所需的最小相关验证。
 - `electron-dev-native.mjs` 只负责设置 Windows 原生试点的独立 userData / session，然后复用已验证的 `scripts/electron-dev.mjs`；不得为原生试点另写一套 Electron/Vite 启动协议，除非先证明旧 dev runner 在 Windows 原生下不可用。
@@ -54,6 +55,6 @@
 ## Validation
 
 - 桌面相关改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared` 或 `npm run quality:full`；需要 Android 原生宿主一起验收时才升级到 `npm run quality:release`。
-- WSL 主开发会话执行 Windows 桌面预览时使用 `npm run windows:preview`；Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。根 `AGENTS.md` 决定是否需要预览：非连续推进且本轮改动存在用户可见预览验收面时，只要 `.lab/internal/runtime/windows-preview.flag` 为 `ON` 或用户当次明确要求 Windows 预览，相关验证通过后就必须执行；阶段验收即使 flag 为 `OFF` 也必须执行；连续推进期间除非用户当次明确要求，否则不自动执行。
+- WSL 主开发会话执行 Windows 桌面预览时，普通对话内验收默认走线程预览 slot；阶段验收、发布前验收、全局 sync / mirror 链路验收或用户明确要求全局预览时使用 `npm run windows:preview`；Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。根 `AGENTS.md` 决定是否需要预览：非连续推进且本轮改动存在用户可见预览验收面时，只要 `.lab/internal/runtime/windows-preview.flag` 为 `ON` 或用户当次明确要求 Windows 预览，相关验证通过后就必须执行对应入口；阶段验收即使 flag 为 `OFF` 也必须执行；连续推进期间除非用户当次明确要求，否则不自动执行。
 - Electron Playwright、桌面自动化回归、性能诊断与时序采样默认一律走 Windows 侧现成脚本链路：`scripts/windows/windows-desktop-test.sh`、`scripts/windows/run-playwright-desktop.ps1` 与 `playwright.desktop.config.ts`；除非用户当次明确要求排查 WSL 本地运行时，否则不得把 WSL 内直接拉起的 Electron 当成默认诊断或验收入口。
 - `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。

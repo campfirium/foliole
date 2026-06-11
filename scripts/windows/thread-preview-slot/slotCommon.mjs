@@ -5,7 +5,6 @@ import path from 'node:path';
 export const STATE_VERSION = 1;
 export const DEFAULT_ROOT = '/mnt/d/C/foliole-preview';
 export const DEFAULT_MAIN_MIRROR = '/mnt/d/C/foliole';
-export const DEFAULT_LIBRARY_SOURCE = '/mnt/d/X/U/Foliole';
 
 export function repoRoot() {
   return path.resolve(process.env.FOLIOLE_REPO_ROOT || process.cwd());
@@ -20,25 +19,56 @@ export function mainMirror() {
 }
 
 export function paths(slot) {
+  validateSlotId(slot);
   const root = previewRoot();
   const repo = repoRoot();
-  const runtimeDir = path.join(repo, '.lab', 'internal', 'runtime', 'preview-slots', slot);
+  const previewRuntimeDir = path.join(repo, '.lab', 'internal', 'runtime', 'preview-slots');
+  const runtimeDir = path.join(previewRuntimeDir, slot);
   const slotDir = path.join(root, 'slots', slot);
   return {
     appReadyFile: path.join(slotDir, '.windows-native-boot-ready.json'),
     baselineDir: path.join(root, 'baseline'),
+    bindingFile: path.join(previewRuntimeDir, 'thread-bindings.json'),
     bridgeReadyFile: path.join(slotDir, '.windows-native-bridge-ready.json'),
     clientStateFile: path.join(slotDir, '.windows-native-client-state.json'),
-    libraryDir: path.join(root, 'library', slot),
+    currentSlotFile: path.join(previewRuntimeDir, 'current-slot.json'),
+    libraryDir: path.join(slotDir, '.tmp', 'library'),
     mainMirrorDir: mainMirror(),
+    portRegistryFile: path.join(root, 'runtime', 'ports.json'),
+    previewRuntimeDir,
     repo,
     root,
     runtimeDir,
     slotDir,
     stateFile: path.join(runtimeDir, 'state.json'),
+    userDataDir: path.join(slotDir, '.tmp', 'electron-user-data'),
     windowVisibleFile: path.join(slotDir, '.windows-native-window-visible.json'),
     windowsSyncStamp: path.join('.lab', 'internal', 'runtime', 'preview-slots', slot, 'windows-sync.stamp')
   };
+}
+
+export function validateSlotId(slot) {
+  if (
+    typeof slot !== 'string' ||
+    !/^[A-Za-z0-9_-]+$/u.test(slot) ||
+    !/[A-Za-z0-9]/u.test(slot) ||
+    slot === '.' ||
+    slot === '..'
+  ) {
+    throw new Error(`invalid slot id: ${slot}`);
+  }
+  return slot;
+}
+
+export function resolveSafeSlotDir(slot) {
+  const p = paths(slot);
+  const slotsRoot = path.resolve(p.root, 'slots');
+  const resolvedSlotDir = path.resolve(p.slotDir);
+  const requiredPrefix = `${slotsRoot}${path.sep}`;
+  if (!resolvedSlotDir.startsWith(requiredPrefix)) {
+    throw new Error(`refusing unsafe slot path: ${resolvedSlotDir}`);
+  }
+  return resolvedSlotDir;
 }
 
 export function run(command, args, options = {}) {
@@ -76,7 +106,9 @@ export function readJson(filePath, fallback) {
 
 export function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+  const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`);
+  fs.renameSync(tmp, filePath);
 }
 
 export function ensureDir(dirPath) {

@@ -6,6 +6,12 @@ import { fileURLToPath } from 'node:url';
 
 import { isViteServerReady } from '../electron-dev-server.mjs';
 import {
+  candidateVitePorts,
+  isStrictVitePort,
+  resolveRequestedPort,
+  resolveViteUrl
+} from '../electron-dev-vite-port.mjs';
+import {
   readMarker,
   resetReadyMarkers,
   verifyRendererReload,
@@ -15,9 +21,6 @@ import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const nativePaths = resolveWindowsNativePaths(repoRoot);
-const VITE_HOST = '127.0.0.1';
-const VITE_PORT_DEFAULT = 24600;
-const VITE_PORT_MAX_ATTEMPTS = 8;
 const CHECK_TIMEOUT_MS = Number.parseInt(process.env.FOLIOLE_NATIVE_HEALTH_TIMEOUT_MS ?? '60000', 10);
 const OUTPUT_TAIL_LIMIT = 120;
 
@@ -51,15 +54,6 @@ function npmRunCommand(scriptName) {
   };
 }
 
-function resolveRequestedPort() {
-  const parsed = Number.parseInt(process.env.FOLIOLE_VITE_PORT ?? '', 10);
-  return Number.isFinite(parsed) && parsed > 0 && parsed < 65536 ? parsed : VITE_PORT_DEFAULT;
-}
-
-function resolveViteUrl(port) {
-  return `http://${VITE_HOST}:${port}`;
-}
-
 export function resolveElectronExecutablePath(appRoot = repoRoot, platform = process.platform) {
   const executable = platform === 'win32' ? 'electron.exe' : 'electron';
   return path.join(appRoot, 'node_modules', 'electron', 'dist', executable);
@@ -67,17 +61,6 @@ export function resolveElectronExecutablePath(appRoot = repoRoot, platform = pro
 
 export function canRunGuiHealth(env = process.env, platform = process.platform) {
   return platform === 'win32' || Boolean(env.DISPLAY || env.WAYLAND_DISPLAY);
-}
-
-function candidateVitePorts() {
-  const preferredPort = resolveRequestedPort();
-  const ports = new Set([preferredPort]);
-  for (let offset = 0; offset < VITE_PORT_MAX_ATTEMPTS; offset += 1) {
-    ports.add(preferredPort + 100 + offset);
-    ports.add(5173 + offset);
-    ports.add(3000 + offset);
-  }
-  return [...ports];
 }
 
 async function runChecked(command, args, label, options = {}) {
@@ -95,9 +78,13 @@ async function runChecked(command, args, label, options = {}) {
 }
 
 async function startVite() {
-  for (const port of candidateVitePorts()) {
+  const strictPort = isStrictVitePort();
+  for (const port of candidateVitePorts(resolveRequestedPort())) {
     const viteUrl = resolveViteUrl(port);
     if (await isViteServerReady(viteUrl)) {
+      if (strictPort) {
+        throw new Error(`strict Vite port already has a ready server: ${viteUrl}`);
+      }
       return { owned: false, proc: null, viteUrl };
     }
     const proc = run(process.execPath, ['node_modules/vite/bin/vite.js'], {
@@ -118,7 +105,7 @@ async function startVite() {
     }
     stopChild(proc);
   }
-  throw new Error('vite dev server did not become ready');
+  throw new Error(strictPort ? `vite dev server did not become ready on strict port ${resolveRequestedPort()}` : 'vite dev server did not become ready');
 }
 
 function stopChild(child) {

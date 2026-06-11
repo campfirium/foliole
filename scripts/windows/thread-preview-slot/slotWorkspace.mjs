@@ -2,12 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { ensureBaselineExists, resetSlotFromBaseline } from './slotBaseline.mjs';
+import { bindSlot } from './slotBinding.mjs';
 import {
-  compileElectronInSlot,
+  ensureElectronDistInSlot,
   runSlotClientUntilReady,
   slotStatus
 } from './slotClient.mjs';
+import { syncMissingLocalDependencies } from './slotDependencies.mjs';
 import { ensureSlotLibraryExists } from './slotLibrary.mjs';
+import { acquireSlotPort } from './slotPorts.mjs';
 import {
   ensureDir,
   gitHead,
@@ -75,33 +78,40 @@ export function prepare(slot, reset) {
     resetSlotFromBaseline(slot);
   }
   const files = overlayFiles(slot, state.touchedFiles);
+  const dependencyFiles = syncMissingLocalDependencies(slot, files);
+  const preparedFiles = uniqueSorted([...files, ...dependencyFiles]);
   ensureDir(path.dirname(path.join(p.repo, p.windowsSyncStamp)));
   fs.closeSync(fs.openSync(path.join(p.repo, p.windowsSyncStamp), 'a'));
   writeState(slot, {
     baselineHead: state.baselineHead || gitHead(p.repo),
     lastPreparedAt: new Date().toISOString(),
-    touchedFiles: files
+    touchedFiles: preparedFiles
   });
-  console.log(`[preview-slot] prepared slot=${slot} files=${files.length}`);
+  console.log(`[preview-slot] prepared slot=${slot} files=${preparedFiles.length}`);
 }
 
-export async function preview(slot, reset) {
+export async function preview(slot, { label = '', reset = false, thread = '' } = {}) {
   ensureSlotLibraryExists(slot);
+  const binding = bindSlot(slot, { label, thread });
+  const port = await acquireSlotPort(slot, binding);
   prepare(slot, reset);
   const state = readState(slot);
   const touchedFiles = state.touchedFiles.map(normalizeRelPath);
   const requiresShellRestart = hasMatchingFile(touchedFiles, isShellConfigFile);
   const requiresRuntimeRestart = requiresShellRestart || hasMatchingFile(touchedFiles, isRuntimeFile);
-  if (requiresRuntimeRestart) compileElectronInSlot(slot);
+  ensureElectronDistInSlot(slot, { requiresRuntimeRestart });
   const running = slotStatus(slot).running;
   const action = running ? (requiresShellRestart ? 'full-restart' : (requiresRuntimeRestart ? 'restart' : 'status')) : 'start';
   if (running && action === 'status') {
     console.log(`[preview-slot] status: RUNNING slot=${slot} update=hmr-or-existing-vite-watch`);
   } else {
     await runSlotClientUntilReady(slot, action, {
+      FOLIOLE_PREVIEW_LABEL: binding.label,
+      FOLIOLE_VITE_PORT: String(port),
+      FOLIOLE_VITE_PORT_STRICT: '1',
       WINDOWS_NATIVE_PREFLIGHT_STAMP_FILE: path.join('.lab', 'internal', 'runtime', 'preview-slots', slot, 'preflight.json')
     });
   }
-  writeState(slot, { lastPreviewAt: new Date().toISOString() });
+  writeState(slot, { lastPreviewAt: new Date().toISOString(), port });
   console.log(`[preview-slot] preview finished slot=${slot} action=${action} files=${touchedFiles.length}`);
 }
