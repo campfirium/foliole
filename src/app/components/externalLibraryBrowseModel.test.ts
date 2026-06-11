@@ -127,9 +127,9 @@ it('uses stable Readwise labels for managed external folders', () => {
   expect(resolveReadwiseExternalChildLabel(folder)).toBe('Articles');
 });
 
-it('uses a stable recent-files label even when cached rows still carry the old folder path', () => {
+it('uses a stable opened-files label even when cached rows still carry the old folder path', () => {
   expect(resolveExternalFolderDisplayLabel({
     folderPath: 'Opened in Foliole',
     id: 'opened-external-documents'
-  })).toBe('Recent');
+  })).toBe('Opened');
 });

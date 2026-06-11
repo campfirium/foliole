@@ -72,7 +72,7 @@ const READWISE_EXTERNAL_CHILD_LABELS: Record<string, string> = {
 };
 
 const OPENED_EXTERNAL_FOLDER_LABELS: Record<string, string> = {
-  'opened-external-documents': 'Recent'
+  'opened-external-documents': 'Opened'
 };
 
 export function isReadwiseExternalFolder(folder: Pick<ExternalLibraryFolder, 'id'>) {

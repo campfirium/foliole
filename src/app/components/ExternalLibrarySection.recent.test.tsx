@@ -30,7 +30,7 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-it('keeps Recent above manually ordered external folders without a special trailing icon', () => {
+it('keeps Opened above manually ordered external folders without a special trailing icon', () => {
   window.localStorage.setItem(
     APP_SETTINGS_STORAGE_KEYS.externalLibraryFolderOrder,
     JSON.stringify([
@@ -55,15 +55,34 @@ it('keeps Recent above manually ordered external folders without a special trail
   );
 
   expect(screen.getAllByRole('treeitem').map((row) => row.textContent)).toEqual([
-    expect.stringContaining('Recent'),
+    expect.stringContaining('Opened'),
     expect.stringContaining('2think'),
     expect.stringContaining('1act')
   ]);
-  expect(screen.getByRole('treeitem', { name: /^Recent$/i }).querySelector('.lucide-history')).toBeNull();
-  expect(screen.getByRole('treeitem', { name: /^Recent$/i }).querySelector('[aria-label="External folder"]')).toBeNull();
+  expect(screen.getByRole('treeitem', { name: /^Opened$/i }).querySelector('.lucide-history')).toBeNull();
+  expect(screen.getByRole('treeitem', { name: /^Opened$/i }).querySelector('[aria-label="External folder"]')).toBeNull();
 });
 
-it('shows recent files as one folder and only keeps the last compact path segment below it', () => {
+it('explains Opened as files opened from disk', async () => {
+  renderWithLocalization(
+    <ExternalLibrarySection
+      entriesByFolderId={{ 'opened-external-documents': [] }}
+      folders={[externalFolder('opened-external-documents', 'Recent')]}
+      isExternalViewOpen={false}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ kind: 'root' }}
+    />
+  );
+
+  const openedLabel = screen.getByText('Opened');
+  expect(openedLabel).toHaveAttribute('data-truncated-text-tooltip-trigger', 'true');
+  fireEvent.pointerMove(openedLabel, { pointerType: 'mouse' });
+  fireEvent.pointerEnter(openedLabel, { pointerType: 'mouse' });
+
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('Files opened from disk in Foliole.');
+});
+
+it('shows opened files as one folder and only keeps the last compact path segment below it', () => {
   renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{
@@ -86,7 +105,7 @@ it('shows recent files as one folder and only keeps the last compact path segmen
     />
   );
 
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: /Recent/i }), { key: 'ArrowRight' });
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: /Opened/i }), { key: 'ArrowRight' });
 
   expect(screen.getByRole('treeitem', { name: /^› test$/i })).toHaveAttribute('aria-level', '2');
   expect(screen.getByRole('treeitem', { name: /^› test$/i }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
@@ -95,7 +114,7 @@ it('shows recent files as one folder and only keeps the last compact path segmen
   expect(screen.queryByRole('treeitem', { name: /^T$/i })).toBeNull();
 });
 
-it('shows the full compact path in the tooltip text for recent path rows', async () => {
+it('shows the full compact path in the tooltip text for opened file path rows', async () => {
   const scrollWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth');
   const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
   Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 80 });
@@ -126,7 +145,7 @@ it('shows the full compact path in the tooltip text for recent path rows', async
       />
     );
 
-    fireEvent.keyDown(screen.getByRole('treeitem', { name: /Recent/i }), { key: 'ArrowRight' });
+    fireEvent.keyDown(screen.getByRole('treeitem', { name: /Opened/i }), { key: 'ArrowRight' });
 
     const pathLabel = screen.getByText('› experiments');
     expect(pathLabel).toHaveAttribute('data-truncated-text-tooltip-trigger', 'true');

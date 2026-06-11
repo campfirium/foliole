@@ -83,6 +83,36 @@ it('opens the link panel when an external document preview link is clicked', asy
   expect(screen.getByTestId('link-panel-count')).toHaveTextContent('1');
 });
 
+it('shows the Opened label for opened-file breadcrumbs even when cached rows still carry Recent', () => {
+  renderWithLocalization(
+    <ExternalLibraryPreviewSurface
+      canGoBack={false}
+      canGoForward={false}
+      documentMaxWidth={760}
+      editorAppearanceKey="preview"
+      isImporting={false}
+      onGoBack={vi.fn()}
+      onGoForward={vi.fn()}
+      onHandleImport={vi.fn()}
+      onOpenImportedNodeId={vi.fn()}
+      onOpenSelection={vi.fn()}
+      onPreviewEditorReady={vi.fn()}
+      preview={{
+        absolutePath: 'D:/T/test/topic.md',
+        content: '# Topic',
+        extension: 'md',
+        fileName: 'topic.md',
+        folderId: 'opened-external-documents',
+        folderPath: 'Recent',
+        relativePath: 'D:/T/test/topic.md'
+      }}
+    />
+  );
+
+  expect(screen.getByText('Opened')).toBeInTheDocument();
+  expect(screen.queryByText('Recent')).not.toBeInTheDocument();
+});
+
 it('remounts the external library preview editor when editor appearance changes', async () => {
   mocks.markdownEditorMounted.mockReset();
   const preview = {

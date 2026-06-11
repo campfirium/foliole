@@ -17,6 +17,7 @@ import {
 
 const READWISE_GROUP_ROW_ID = 'external-library-readwise-group';
 const RECENT_EXTERNAL_FOLDER_ID = 'opened-external-documents';
+const RECENT_EXTERNAL_FOLDER_TOOLTIP = 'Files opened from disk in Foliole.';
 
 export interface ExternalTreeRowRecord {
   depth: number;
@@ -114,6 +115,7 @@ function buildFolderTreeRows(
       selection.folderId === folder.id &&
       (selection.kind === 'folder' || browseState.selectedDirectoryPath === null),
     label: options.label,
+    ...(folder.id === RECENT_EXTERNAL_FOLDER_ID ? { labelTooltipText: RECENT_EXTERNAL_FOLDER_TOOLTIP } : {}),
     documentCount: folder.documentCount,
     secondaryIconKind: folder.id === RECENT_EXTERNAL_FOLDER_ID ? 'recent' : 'external-folder',
     selection: { folderId: folder.id, kind: 'folder' }

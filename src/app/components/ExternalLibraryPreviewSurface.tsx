@@ -12,7 +12,7 @@ import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/u
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import {
   normalizeExternalDirectoryPath,
-  resolveExternalFolderLabel,
+  resolveExternalFolderDisplayLabel,
   type ExternalLibrarySelection
 } from './externalLibraryBrowseModel';
 import { LinkPanelStack } from './LinkPanelStack';
@@ -201,7 +201,11 @@ function buildExternalBreadcrumbModel(preview: ExternalDocumentPreview) {
   const selectionsByNodeId: Record<string, ExternalLibrarySelection> = {};
   const rootId = `external:${preview.folderId}`;
   let parentNodeId: string | null = rootId;
-  nodesById[rootId] = createExternalHeaderNode(rootId, null, resolveExternalFolderLabel(preview.folderPath), 'folder');
+  const folderTitle = resolveExternalFolderDisplayLabel({
+    folderPath: preview.folderPath,
+    id: preview.folderId
+  });
+  nodesById[rootId] = createExternalHeaderNode(rootId, null, folderTitle, 'folder');
   selectionsByNodeId[rootId] = { folderId: preview.folderId, kind: 'folder' };
 
   resolveExternalDirectorySegments(preview.relativePath).forEach((segment, index, segments) => {
