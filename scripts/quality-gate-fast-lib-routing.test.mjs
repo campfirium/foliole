@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-fast.sh');
+const QUALITY_GATE_ROUTING_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-fast-routing.sh');
 const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 30_000;
 
 function runQualityGate(cwd, env = {}, args = []) {
@@ -18,6 +19,26 @@ function runQualityGate(cwd, env = {}, args = []) {
     const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
       cwd,
       env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env }
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('close', (code) => {
+      resolve({ code, stderr, stdout });
+    });
+  });
+}
+
+function runRoutingHelper(expression) {
+  return new Promise((resolve) => {
+    const child = spawn('bash', ['-lc', `source "${QUALITY_GATE_ROUTING_SCRIPT}"; ${expression}`], {
+      cwd: REPO_ROOT,
+      env: process.env
     });
     let stdout = '';
     let stderr = '';
@@ -52,6 +73,18 @@ async function writeFixtureFile(rootDir, relativePath, content) {
 }
 
 describe('quality-gate-fast lib routing', () => {
+  it('matches skip lint only for test or skip-governance changes', async () => {
+    await expect(
+      runRoutingHelper("quality_skip_lint_changed_files_match $'src/app/example.test.ts\\nsrc/app/example.ts'")
+    ).resolves.toMatchObject({ code: 0 });
+    await expect(
+      runRoutingHelper("quality_skip_lint_changed_files_match 'scripts/quality-skip-lint.mjs'")
+    ).resolves.toMatchObject({ code: 0 });
+    await expect(
+      runRoutingHelper("quality_skip_lint_changed_files_match 'src/app/example.ts'")
+    ).resolves.toMatchObject({ code: 1 });
+  }, 15000);
+
   it('delegates lib changes to the shared gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
     try {

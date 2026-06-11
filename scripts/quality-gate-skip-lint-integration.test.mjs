@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -14,9 +14,9 @@ const FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-fast.sh');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-target.sh');
 const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 30_000;
 
-function runBash(args, cwd) {
+function runBash(args, cwd, env = {}) {
   return new Promise((resolve) => {
-    const child = spawn('bash', args, { cwd, env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary' } });
+    const child = spawn('bash', args, { cwd, env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env } });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (chunk) => {
@@ -45,8 +45,16 @@ async function writeSkipLintScript(rootDir, body) {
   await writeFile(path.join(scriptsDir, 'quality-skip-lint.mjs'), body, 'utf8');
 }
 
+async function writeEslintShim(rootDir) {
+  const eslintBinDir = path.join(rootDir, 'node_modules', 'eslint', 'bin');
+  const eslintPath = path.join(eslintBinDir, 'eslint.js');
+  await mkdir(eslintBinDir, { recursive: true });
+  await writeFile(eslintPath, "console.log('eslint ok')\n", 'utf8');
+  await chmod(eslintPath, 0o755);
+}
+
 describe('quality gate skip lint integration', () => {
-  it('runs skip lint before quality-gate-fast completes', async () => {
+  it('runs skip lint for skip-governance changes before quality-gate-fast completes', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-skip-lint-'));
     try {
       await writePackageJson(tempRoot, {
@@ -54,8 +62,11 @@ describe('quality gate skip lint integration', () => {
         typecheck: 'node -e "console.log(\'typecheck ok\')"'
       });
       await writeSkipLintScript(tempRoot, "console.log('skip lint ok')\n");
+      await writeEslintShim(tempRoot);
 
-      const result = await runBash([FAST_SCRIPT], tempRoot);
+      const result = await runBash([FAST_SCRIPT], tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: 'scripts/quality-skip-lint.mjs'
+      });
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('skip lint ok');
@@ -65,7 +76,29 @@ describe('quality gate skip lint integration', () => {
     }
   }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
 
-  it('blocks target quality gates before target steps run', async () => {
+  it('skips skip lint for source-only fast changes', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-skip-lint-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'lint ok\')"',
+        typecheck: 'node -e "console.log(\'typecheck ok\')"'
+      });
+      await writeSkipLintScript(tempRoot, "console.error('skip lint should not run'); process.exit(1)\n");
+      await writeEslintShim(tempRoot);
+
+      const result = await runBash([FAST_SCRIPT], tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: 'src/example/example.ts'
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).not.toContain('skip lint should not run');
+      expect(result.stdout).toContain('[quality-gate-fast] all checks passed.');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
+
+  it('blocks full target quality gates before target steps run', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-skip-lint-'));
     try {
       await writePackageJson(tempRoot, {
@@ -77,7 +110,7 @@ describe('quality gate skip lint integration', () => {
       });
       await writeSkipLintScript(tempRoot, "console.error('skip lint failed'); process.exit(1)\n");
 
-      const result = await runBash([TARGET_SCRIPT, 'desktop'], tempRoot);
+      const result = await runBash([TARGET_SCRIPT, 'full'], tempRoot);
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('skip lint failed');

@@ -123,6 +123,23 @@ collect_critical_test_files() {
   printf '%s\n' "${changed}" | node scripts/quality-critical-test-routes.mjs 2>/dev/null || true
 }
 
+quality_skip_lint_changed_files_match() {
+  local changed="$1"
+  [[ -n "${changed}" ]] || return 1
+  printf '%s\n' "${changed}" | grep -E -q '(^scripts/quality-skip-lint\.mjs$|\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$)'
+}
+
+quality_skip_lint_target_requires_full_scan() {
+  case "$1" in
+    full|release|release-core|release-tests|release-tooling)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 collect_related_test_files() {
   local changed="$1"
   local source_changed direct_tests source_files inferred_tests critical_tests

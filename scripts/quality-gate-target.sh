@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/quality-gate-lib.sh"
+source "${SCRIPT_DIR}/quality-gate-fast-routing.sh"
 
 if [[ ! -f "package.json" ]]; then
   echo "[quality-gate-target] package.json not found."
@@ -196,7 +197,11 @@ run_layer_dependency_boundary_check_if_present
 run_settings_classification_check_if_present
 run_reading_typography_check_if_present
 
-[[ ! -f "scripts/quality-skip-lint.mjs" ]] || run_quality_gate_command "${prefix}" "quality-skip-lint" "quality skip lint" node scripts/quality-skip-lint.mjs
+changed_files_for_skip_lint="$(collect_changed_files)"
+if [[ -f "scripts/quality-skip-lint.mjs" ]] &&
+  { quality_skip_lint_target_requires_full_scan "${target}" || quality_skip_lint_changed_files_match "${changed_files_for_skip_lint}"; }; then
+  run_quality_gate_command "${prefix}" "quality-skip-lint" "quality skip lint" node scripts/quality-skip-lint.mjs
+fi
 
 case "${target}" in
   desktop)

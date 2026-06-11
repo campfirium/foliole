@@ -224,7 +224,9 @@ if [[ -f "scripts/check-layer-dependency-boundary.mjs" ]]; then
     "layer dependency boundary" \
     node scripts/check-layer-dependency-boundary.mjs
 fi
-[[ ! -f "scripts/quality-skip-lint.mjs" ]] || run_quality_gate_command "quality-gate-fast" "quality-skip-lint" "quality skip lint" node scripts/quality-skip-lint.mjs
+if [[ -f "scripts/quality-skip-lint.mjs" ]] && quality_skip_lint_changed_files_match "${all_changed}"; then
+  run_quality_gate_command "quality-gate-fast" "quality-skip-lint" "quality skip lint" node scripts/quality-skip-lint.mjs
+fi
 
 lint_targets="$(collect_lint_targets "${all_changed}")"
 if [[ "${level}" == "mid" ]]; then
