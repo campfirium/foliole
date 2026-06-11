@@ -716,6 +716,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
           'fi',
           'if [ "${WINDOWS_CLIENT_ACTION}" = "start" ]; then',
           '  : > "${STARTED_MARKER}"',
+          '  node -e \'const fs=require("node:fs"); const path=require("node:path"); const root=process.argv[1]; const now=new Date().toISOString(); for (const [file, stage, payload] of [[".windows-native-boot-ready.json","app_ready",{}],[".windows-native-bridge-ready.json","bridge_ready",{bridgeAvailable:true}],[".windows-native-window-visible.json","window_visible",{isVisible:true}]]) fs.writeFileSync(path.join(root,file), JSON.stringify({head:"current-head", payload, pid:501, session:"session-1", stage, timestamp:now})+"\\n");\' "${WINDOWS_RESTART_INTENT_ROOT}"',
           '  echo "[windows-restart-client] electron:dev shell launched with visible terminal"',
           '  sleep 10',
           '  exit 0',
@@ -732,6 +733,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/components/SearchPalette.tsx',
+        WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_TIMEOUT_START_SECONDS: '5'
       });
 

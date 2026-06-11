@@ -48,6 +48,10 @@ resolve_bridge_ready_path() {
   printf '%s/%s' "$(resolve_restart_intent_root)" "${BRIDGE_READY_FILE}"
 }
 
+resolve_window_visible_path() {
+  printf '%s/%s' "$(resolve_restart_intent_root)" "${WINDOW_VISIBLE_FILE}"
+}
+
 cancel_pending_renderer_reload_intent() {
   local intent_path=""
   intent_path="$(resolve_renderer_reload_intent_path)"

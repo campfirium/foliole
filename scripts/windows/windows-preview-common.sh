@@ -73,6 +73,36 @@ status_is_started_or_running_trusted() {
   echo "$1" | grep -qE 'status:\s*STARTED' || status_is_running_trusted "$1"
 }
 
+ready_markers_fresh_after() {
+  local requested_at="$1"
+  local boot_ready_path=""
+  local bridge_ready_path=""
+  local window_visible_path=""
+  local boot_timestamp=""
+  local bridge_timestamp=""
+  local window_timestamp=""
+
+  boot_ready_path="$(resolve_boot_ready_path)"
+  bridge_ready_path="$(resolve_bridge_ready_path)"
+  window_visible_path="$(resolve_window_visible_path)"
+
+  set +e
+  boot_timestamp="$(read_json_field "${boot_ready_path}" timestamp 2>/dev/null)"
+  local boot_exit=$?
+  bridge_timestamp="$(read_json_field "${bridge_ready_path}" timestamp 2>/dev/null)"
+  local bridge_exit=$?
+  window_timestamp="$(read_json_field "${window_visible_path}" timestamp 2>/dev/null)"
+  local window_exit=$?
+  set -e
+
+  [ "${boot_exit}" -eq 0 ] &&
+    [ "${bridge_exit}" -eq 0 ] &&
+    [ "${window_exit}" -eq 0 ] &&
+    iso_timestamp_gte "${boot_timestamp}" "${requested_at}" &&
+    iso_timestamp_gte "${bridge_timestamp}" "${requested_at}" &&
+    iso_timestamp_gte "${window_timestamp}" "${requested_at}"
+}
+
 print_startup_failure_diagnostics() {
   if [ -f "${WINDOWS_STARTUP_DIAGNOSTICS_SCRIPT}" ]; then
     node "${WINDOWS_STARTUP_DIAGNOSTICS_SCRIPT}" || true

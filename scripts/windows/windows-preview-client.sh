@@ -7,6 +7,7 @@ run_windows_client_action() {
   local action_pid=0
   local elapsed_seconds=0
   local exit_code=0
+  local requested_at=""
   if [ "${action}" = "status" ]; then
     timeout_seconds="${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS}"
   fi
@@ -18,6 +19,7 @@ run_windows_client_action() {
   fi
 
   output_file="$(mktemp)"
+  requested_at="$(iso_now)"
   WINDOWS_CLIENT_ACTION="${action}" bash "${WINDOWS_CLIENT_SCRIPT}" >"${output_file}" 2>&1 &
   action_pid=$!
   while kill -0 "${action_pid}" 2>/dev/null; do
@@ -48,8 +50,21 @@ run_windows_client_action() {
       rm -f "${output_file}"
       return 0
     fi
+    if [ "${action}" = "start" ] && ready_markers_fresh_after "${requested_at}"; then
+      kill "${action_pid}" 2>/dev/null || true
+      sleep 1
+      kill -9 "${action_pid}" 2>/dev/null || true
+      if [ -n "${current_output}" ]; then
+        printf '%s\n[windows-restart-client] status: STARTED' "${current_output}"
+      else
+        printf '%s' '[windows-restart-client] status: STARTED'
+      fi
+      rm -f "${output_file}"
+      return 0
+    fi
     if [ "${action}" = "start" ] &&
-      status_probe_output="$(probe_running_status_detail)"; then
+      status_probe_output="$(probe_running_status_detail)" &&
+      ready_markers_fresh_after "${requested_at}"; then
       kill "${action_pid}" 2>/dev/null || true
       sleep 1
       kill -9 "${action_pid}" 2>/dev/null || true

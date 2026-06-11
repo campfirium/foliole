@@ -1,8 +1,6 @@
 /* global console, process, setTimeout */
-
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
 import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } from './windows-client-native-logs.mjs';
 import { forceRestartClient } from './windows-client-native-force-restart.mjs';
 import { runCapture } from './windows-client-native-process.mjs';
@@ -10,17 +8,11 @@ import { recoverClientStateFromReady } from './windows-client-native-recovered-s
 import { restartRuntimeClient } from './windows-client-native-runtime-restart.mjs';
 import { removeShellRestartRequest } from './windows-client-native-shell-request.mjs';
 import { startNativeDevRunner } from './windows-client-native-start-runner.mjs';
+import { createStatusPrinter } from './windows-client-native-status.mjs';
 import { stopNativeClient } from './windows-client-native-stop.mjs';
+import { readNativeWindowHealth } from './windows-client-native-window-health.mjs';
 import { resolveWindowsClientAction } from './windows-client-native-actions.mjs';
-import {
-  readClientState as readClientStateFile,
-  processAlive,
-  readReadyStateFromBootEvents,
-  readReadyState as readReadyStateFiles,
-  removeClientState,
-  resetReadyMarkers,
-  saveClientState
-} from './windows-client-native-state.mjs';
+import * as nativeState from './windows-client-native-state.mjs';
 import { formatStartupHealthFailure, readStartupFailureFromBootEvents } from './windows-client-native-startup-failure.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
@@ -30,13 +22,14 @@ const {
   bridgeReadyFile,
   logDir,
   nativeStartScript,
+  nativeWindowHealthScript,
   repoRoot,
   restartDeliveryFile,
   shellRestartRequestFile,
   stateFile,
   windowVisibleFile
 } = resolveWindowsNativePaths();
-const healthTimeoutMs = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '180000', 10);
+const healthTimeoutMs = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000', 10);
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -45,13 +38,13 @@ function wait(ms) {
 }
 
 function readClientState() {
-  return readClientStateFile(stateFile);
+  return nativeState.readClientState(stateFile);
 }
 
 function readReadyState() {
   const state = readClientState();
-  return readReadyStateFiles({ appReadyFile, bridgeReadyFile, windowVisibleFile }) ??
-    readReadyStateFromBootEvents(bootEventLogFile, { session: state?.session });
+  return nativeState.readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFile }) ??
+    nativeState.readReadyStateFromBootEvents(bootEventLogFile, { session: state?.session });
 }
 
 async function currentHead() {
@@ -61,37 +54,34 @@ async function currentHead() {
   return result.code === 0 ? result.stdout.trim() : '';
 }
 
-function printStatus() {
-  const state = readClientState();
-  const ready = readReadyState();
-  if (ready) {
-    const runtimeHead = ready.appReady.head ?? state?.head;
-    const head = runtimeHead ? ` head=${runtimeHead}` : '';
-    console.log(`[windows-restart-client] status: RUNNING trust=OK shell_pid=${state?.shellPid ?? 'unknown'} runtime_pid=${ready.windowVisible.pid}${head}`);
-    return { ok: true, ready, state };
-  }
-  if (state?.shellPid) {
-    console.log(`[windows-restart-client] status: STOPPED trust=FAILED reason=no-runtime shell_pid=${state.shellPid}`);
-    return { ok: false, ready: null, state };
-  }
-  console.log('[windows-restart-client] status: STOPPED trust=FAILED reason=no-runtime');
-  return { ok: false, ready: null, state };
-}
+const printStatus = createStatusPrinter({
+  nativeWindowHealthScript,
+  readClientState,
+  readReadyState,
+  repoRoot
+});
 
 async function resetMarkers() {
-  await resetReadyMarkers({ appReadyFile, bridgeReadyFile, windowVisibleFile });
+  await nativeState.resetReadyMarkers({ appReadyFile, bridgeReadyFile, windowVisibleFile });
 }
 
-const saveState = (state) => saveClientState(stateFile, state);
+const saveState = (state) => nativeState.saveClientState(stateFile, state);
 
 async function waitForReady(session, shellPid) {
   const deadline = Date.now() + healthTimeoutMs;
   while (Date.now() < deadline) {
     const ready = readReadyState();
     if (ready?.appReady.session === session) {
-      return ready;
+      const windowHealth = await readNativeWindowHealth({
+        nativeWindowHealthScript,
+        repoRoot,
+        runtimePid: ready.windowVisible.pid
+      });
+      if (windowHealth.ok) {
+        return ready;
+      }
     }
-    if (!processAlive(shellPid)) {
+    if (!nativeState.processAlive(shellPid)) {
       return null;
     }
     await wait(500);
@@ -101,7 +91,7 @@ async function waitForReady(session, shellPid) {
 
 async function startClient({ print = true } = {}) {
   const head = await currentHead();
-  const existing = printStatus();
+  const existing = await printStatus();
   if (existing.ok) {
     if (existing.ready.appReady.head === head) {
       return { alreadyRunning: true, ready: existing.ready, state: existing.state };
@@ -132,7 +122,7 @@ async function startClient({ print = true } = {}) {
       bootEvent: readStartupFailureFromBootEvents(bootEventLogFile, { session }),
       stderrLog: logs.stderrLog
     });
-    if (processAlive(shellPid)) {
+    if (nativeState.processAlive(shellPid)) {
       await saveState({
         failedAt: new Date().toISOString(),
         head,
@@ -144,7 +134,7 @@ async function startClient({ print = true } = {}) {
         stdoutLog: logs.stdoutLog
       });
     } else {
-      await removeClientState(stateFile);
+      await nativeState.removeClientState(stateFile);
     }
     await resetMarkers();
     throw new Error(`startup health check failed: ${failureReason} shell_pid=${shellPid} left-for-inspection`);
@@ -169,14 +159,14 @@ async function stopClient({ print = true } = {}) {
     print,
     readClientState,
     readReadyState,
-    removeClientState: () => removeClientState(stateFile),
+    removeClientState: () => nativeState.removeClientState(stateFile),
     repoRoot,
     resetMarkers
   });
 }
 
 async function restartClient() {
-  const existing = printStatus();
+  const existing = await printStatus();
   if (!existing.ok) {
     const started = await startClient({ print: false });
     console.log(`[windows-restart-client] status: STARTED shell_pid=${started.state.shellPid} runtime_pid=${started.ready.windowVisible.pid}`);
@@ -188,7 +178,7 @@ async function restartClient() {
     readClientState,
     readReadyState,
     recoverClientStateFromReady,
-    removeClientState: () => removeClientState(stateFile),
+    removeClientState: () => nativeState.removeClientState(stateFile),
     repoRoot,
     restartDeliveryFile,
     resetMarkers,
@@ -204,7 +194,7 @@ async function main() {
   console.log(`[windows-client-native] action=${action}`);
   console.log(`[windows-client-native] workdir=${repoRoot}`);
   if (action === 'status') {
-    printStatus();
+    await printStatus();
   } else if (action === 'start') {
     await startClient();
   } else if (action === 'stop') {
@@ -218,7 +208,7 @@ async function main() {
       readClientState,
       readReadyState,
       recoverClientStateFromReady,
-      removeClientState: () => removeClientState(stateFile),
+      removeClientState: () => nativeState.removeClientState(stateFile),
       repoRoot,
       resetMarkers,
       restartDeliveryFile,

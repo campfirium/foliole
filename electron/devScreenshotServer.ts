@@ -56,6 +56,16 @@ function writeJson(response: http.ServerResponse, statusCode: number, payload: o
   response.end(`${JSON.stringify(payload)}\n`);
 }
 
+function logServerError(error: unknown, port: number) {
+  const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
+  const message = error instanceof Error ? error.message : String(error);
+  if (code === 'EADDRINUSE') {
+    console.log(`[dev-screenshot] server unavailable reason=port-in-use port=${port}`);
+    return;
+  }
+  console.warn(`[dev-screenshot] server failed reason=${message}`);
+}
+
 export function startDevScreenshotServer(args: DevScreenshotServerArgs) {
   const env = args.env ?? process.env;
   if (activeServer || !isDevelopmentScreenshotEnabled(env)) {
@@ -101,12 +111,18 @@ export function startDevScreenshotServer(args: DevScreenshotServerArgs) {
     }
   });
 
+  const port = resolvePort(env);
   server.on('error', (error) => {
     activeServer = activeServer === server ? null : activeServer;
-    console.warn('[dev-screenshot] server failed', error);
+    logServerError(error, port);
   });
-  server.listen(resolvePort(env), '127.0.0.1');
-  activeServer = server;
+  try {
+    server.listen(port, '127.0.0.1');
+    activeServer = server;
+  } catch (error) {
+    activeServer = null;
+    logServerError(error, port);
+  }
 }
 
 export async function stopDevScreenshotServer() {

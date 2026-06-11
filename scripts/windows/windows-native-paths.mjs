@@ -23,6 +23,7 @@ export function resolveWindowsNativePaths(repoRoot = WINDOWS_NATIVE_REPO_ROOT) {
     logDir: joinHostPath(repoRoot, '.tmp', 'windows-native-client'),
     nativeAbiScript: joinHostPath(repoRoot, 'scripts', 'windows', 'native-abi-preflight.ps1'),
     nativeStartScript: joinHostPath(repoRoot, 'scripts', 'windows', 'start-electron-dev-native.ps1'),
+    nativeWindowHealthScript: joinHostPath(repoRoot, 'scripts', 'windows', 'query-native-window-health.ps1'),
     reloadDeliveryFile: joinHostPath(repoRoot, '.windows-dev-renderer-reload-delivered.json'),
     repoRoot,
     restartDeliveryFile: joinHostPath(repoRoot, '.windows-dev-restart-delivered.json'),

@@ -124,7 +124,9 @@ run_restart_intent() {
 run_fallback_start() {
   local start_output=""
   local start_exit=0
+  local requested_at=""
   echo "[windows-preview] selected action: fallback-start"
+  requested_at="$(iso_now)"
   set +e
   start_output="$(run_windows_client_action start)"
   start_exit=$?
@@ -139,7 +141,7 @@ run_fallback_start() {
     return $?
   fi
   local recovery_status=""
-  if recovery_status="$(probe_running_status_detail)"; then
+  if ready_markers_fresh_after "${requested_at}" && recovery_status="$(probe_running_status_detail)"; then
     echo "[windows-preview] fallback start recovery status: $(extract_status_detail "${recovery_status}")"
     echo "[windows-preview] status: STARTED"
     return 0
