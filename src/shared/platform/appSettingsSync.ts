@@ -1,3 +1,5 @@
+import { applyStartupSkeletonSettings } from '../../startupSkeletonDom';
+
 import { loadRuntimeAppSettingsState } from './appSettingsState';
 import { getLocalStorageWhitelist } from './storage';
 
@@ -44,6 +46,7 @@ function readWhitelistedLocalSettings() {
 
 export async function syncAppSettingsWithRuntime() {
   const localSnapshot = readWhitelistedLocalSettings();
+  applyStartupSkeletonSettings(localSnapshot);
   const runtimeSnapshot = await loadRuntimeAppSettingsState();
   if (!runtimeSnapshot) {
     return;
@@ -55,4 +58,5 @@ export async function syncAppSettingsWithRuntime() {
     ...normalizedRuntimeSnapshot
   };
   writeWhitelistedLocalSettings(mergedSnapshot);
+  applyStartupSkeletonSettings(mergedSnapshot);
 }

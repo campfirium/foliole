@@ -63,3 +63,30 @@ it('keeps existing local values without writing runtime when the runtime startup
   expect(invoke).toHaveBeenCalledWith('load_app_settings_state');
   expect(invoke).toHaveBeenCalledTimes(1);
 });
+
+it('applies local startup skeleton colors before waiting for the runtime snapshot', async () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.baseColor, 'dark');
+  const invoke = vi.fn(() => new Promise(() => undefined));
+  window.electronAPI = createMockElectronApi(invoke);
+
+  void syncAppSettingsWithRuntime();
+  await Promise.resolve();
+
+  expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
+  expect(document.documentElement.style.getPropertyValue('--startup-region-main-document-bg')).toBe('#1f211f');
+});
+
+it('applies runtime startup skeleton colors before the app mounts', async () => {
+  const invoke = vi.fn().mockResolvedValueOnce({
+    [APP_SETTINGS_STORAGE_KEYS.baseColor]: 'dark',
+    [APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePaletteDark]: '["#111111","#222222","#333333","#444444","#555555"]',
+    [APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignmentsDark]: '{"main-document":3}'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await syncAppSettingsWithRuntime();
+
+  expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
+  expect(document.documentElement.style.getPropertyValue('--startup-region-main-document-bg')).toBe('#444444');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.baseColor)).toBe('dark');
+});
