@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { inspectorListInsetClassName } from '../../shared/ui';
 
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
 
@@ -71,6 +72,7 @@ it('allows long markdown link tokens to wrap inside the highlights sidebar', () 
   expect(screen.queryByText(/github\.com\/ks233\/ja-learner\/issues/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/asset:\/\//i)).not.toBeInTheDocument();
   expect(screen.getByText('HIGHLIGHTS(1)')).toBeInTheDocument();
+  expect(screen.getByText('HIGHLIGHTS(1)').parentElement).toHaveClass(inspectorListInsetClassName);
 });
 
 it('keeps highlight summaries stable when child node content changes', () => {

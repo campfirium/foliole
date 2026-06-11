@@ -147,6 +147,7 @@ export default {
       },
       spacing: {
         'panel-header': '3rem',
+        'inspector-list-inset': '1rem',
         'settings-row': '5.125rem',
         'settings-panel-x': '1.25rem',
         'settings-panel-y': '1.25rem',

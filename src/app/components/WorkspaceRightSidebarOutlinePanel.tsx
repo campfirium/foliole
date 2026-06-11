@@ -3,7 +3,7 @@ import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { InspectorList, InspectorListRow, InspectorSection } from '../../shared/ui';
+import { InspectorList, InspectorListRow, InspectorSection, inspectorListInsetClassName, inspectorPanelSectionClassName } from '../../shared/ui';
 
 import { mayHaveOutline, resolveActiveIndex, resolveDisplayItems } from './DocumentOutlineLayerModel';
 import { measureWorkspaceDiagnostic, useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
@@ -117,10 +117,18 @@ function OutlineEmptyState(props: {
   const t = useTranslation();
   return (
     <InspectorSection
+      className={inspectorPanelSectionClassName}
       description={props.emptyDescription ?? t(props.emptyDescriptionKind === 'document' ? 'desktop.rightPanel.outline.empty.document' : 'desktop.rightPanel.outline.empty.topic')}
       title={t('desktop.rightPanel.outline')}
     />
   );
+}
+
+function resolveOutlineItemPaddingLeft(level: number, hasNestedLevels: boolean) {
+  if (!hasNestedLevels || level <= 1) {
+    return '0rem';
+  }
+  return `${(level - 1) * 1.15}rem`;
 }
 
 function OutlineItemsNav(props: {
@@ -132,7 +140,7 @@ function OutlineItemsNav(props: {
 }) {
   const t = useTranslation();
   return (
-    <nav aria-label={t('desktop.rightPanel.outline.navigation')} className="relative min-h-full px-1 py-1">
+    <nav aria-label={t('desktop.rightPanel.outline.navigation')} className={cn('relative min-h-full py-1', inspectorListInsetClassName)}>
       <InspectorList className="relative m-0 list-none p-0">
         {props.treeItems.map((item, index) => (
           <li className="relative" key={`${item.from}-${item.text}`}>
@@ -147,7 +155,7 @@ function OutlineItemsNav(props: {
               ref={(element) => {
                 if (index === props.activeIndex) props.activeItemRef.current = element;
               }}
-              style={{ paddingLeft: props.hasNestedLevels ? `${0.45 + (item.level - 1) * 1.15}rem` : '0.75rem' }}
+              style={{ paddingLeft: resolveOutlineItemPaddingLeft(item.level, props.hasNestedLevels) }}
               type="button"
             >
               {props.hasNestedLevels ? (

@@ -1,6 +1,6 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppButton, AppErrorState, AppLoadingState, InspectorSection } from '../../shared/ui';
+import { AppButton, AppErrorState, AppLoadingState, InspectorSection, inspectorPanelSectionClassName } from '../../shared/ui';
 
 import { NodeBacklinksList } from './NodeBacklinksList';
 import { useNodeBacklinks } from './useNodeBacklinks';
@@ -15,7 +15,7 @@ interface WorkspaceRightSidebarBacklinksPanelProps {
 
 function EmptyBacklinksState({ description }: { description: string }) {
   const t = useTranslation();
-  return <InspectorSection description={description} title={t('desktop.backlinks.title')} />;
+  return <InspectorSection className={inspectorPanelSectionClassName} description={description} title={t('desktop.backlinks.title')} />;
 }
 
 function BacklinksErrorState({ onRetry }: { onRetry: () => void }) {
@@ -58,7 +58,7 @@ export function WorkspaceRightSidebarBacklinksPanel(props: WorkspaceRightSidebar
   return (
     <div className="flex min-h-0 flex-col gap-3">
       {backlinks.errorMessage ? <BacklinksErrorState onRetry={backlinks.retry} /> : null}
-      <InspectorSection description={t('desktop.backlinks.found', { count: backlinks.value.length })} title={t('desktop.backlinks.title')}>
+      <InspectorSection className={inspectorPanelSectionClassName} description={t('desktop.backlinks.found', { count: backlinks.value.length })} title={t('desktop.backlinks.title')}>
         <NodeBacklinksList
           backlinks={backlinks.value}
           emptyLabel={t('desktop.backlinks.empty.list')}

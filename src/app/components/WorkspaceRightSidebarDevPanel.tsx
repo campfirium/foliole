@@ -2,12 +2,14 @@ import type { ReactNode } from 'react';
 
 import type { Node, NodeReadingProfile } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { cn } from '../../shared/lib/utils';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import {
   inspectorDefinitionListClassName,
   inspectorDefinitionTermClassName,
   inspectorDefinitionValueClassName,
   inspectorListHeadingClassName,
+  inspectorListInsetClassName,
   inspectorListMetaClassName,
   inspectorListTopDividerClassName,
   inspectorListTitleClassName
@@ -42,8 +44,8 @@ function SchedulingInfoRow({ label, value }: { label: string; value: string }) {
 
 function SchedulingSection({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <section className={`mx-1 py-4 first:pt-0 ${inspectorListTopDividerClassName}`}>
-      <h3 className={`mb-2 px-3 pb-0 ${inspectorListHeadingClassName}`}>{title}</h3>
+    <section className={cn(inspectorListInsetClassName, 'py-4 first:pt-0', inspectorListTopDividerClassName)}>
+      <h3 className={cn(inspectorListHeadingClassName, 'mb-2 pb-0')}>{title}</h3>
       <dl className={inspectorDefinitionListClassName}>{children}</dl>
     </section>
   );
@@ -71,7 +73,7 @@ function ReadingProfileSection({ reading, t }: { reading: NodeReadingProfile | n
 
 function EmptyDevPanelState({ t }: { t: SchedulingTranslate }) {
   return (
-    <section className="px-1 py-3">
+    <section className={cn(inspectorListInsetClassName, 'py-3')}>
       <h3 className={inspectorListTitleClassName}>{t('desktop.diagnostics.scheduling.title')}</h3>
       <p className={`mt-1 ${inspectorListMetaClassName}`}>{t('desktop.diagnostics.scheduling.empty')}</p>
     </section>
@@ -107,7 +109,7 @@ function ReadingTopicContent({ data, t }: { data: SchedulingPanelData; t: Schedu
 
 function SchedulingHeader({ subtitle, t }: { subtitle: string; t: SchedulingTranslate }) {
   return (
-    <section className="px-1 pb-4">
+    <section className={cn(inspectorListInsetClassName, 'pb-4')}>
       <div className="min-w-0">
         <h3 className={inspectorListTitleClassName}>{t('desktop.diagnostics.scheduling.title')}</h3>
         <p className={`mt-1 ${inspectorListMetaClassName}`}>{subtitle}</p>

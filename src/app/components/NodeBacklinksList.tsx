@@ -25,7 +25,7 @@ export function NodeBacklinksList({ backlinks, emptyLabel, onSelectNode }: NodeB
       {backlinks.map((backlink) => (
         <li key={backlink.sourceNodeId}>
           <InspectorListRow
-            className="flex-col items-start gap-2 rounded-md bg-transparent px-2 py-2"
+            className="flex-col items-start gap-2 rounded-md bg-transparent px-0 py-2"
             onClick={() => onSelectNode(backlink.sourceNodeId)}
             type="button"
           >

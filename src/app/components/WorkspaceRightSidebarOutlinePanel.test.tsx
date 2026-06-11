@@ -2,6 +2,7 @@ import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { inspectorListInsetClassName, inspectorPanelSectionClassName } from '../../shared/ui';
 
 import {
   resolveOutlineActiveScrollTop,
@@ -30,10 +31,20 @@ it('keeps all outline entries at normal font weight', () => {
 
   const outlineNav = screen.getByRole('navigation', { name: 'Document outline' });
 
+  expect(outlineNav).toHaveClass(inspectorListInsetClassName);
   expect(screen.getByRole('button', { name: 'First section' })).toHaveClass('font-normal');
+  expect(screen.getByRole('button', { name: 'First section' })).toHaveStyle({ paddingLeft: '0rem' });
   expect(screen.getByRole('button', { name: 'Detail' })).toHaveClass('font-normal');
   expect(outlineNav.querySelector('[class*="font-semibold"]')).toBeNull();
   expect(outlineNav.querySelector('[class*="font-medium"]')).toBeNull();
+});
+
+it('keeps the outline empty state on the right panel inset', () => {
+  renderOutline('Plain body without headings.');
+
+  const section = screen.getByRole('heading', { name: 'Outline' }).closest('section');
+  expect(section).toHaveClass(inspectorPanelSectionClassName);
+  expect(section).toHaveClass('bg-transparent');
 });
 
 it('hides hierarchy arrows when the outline has only one visible level', () => {

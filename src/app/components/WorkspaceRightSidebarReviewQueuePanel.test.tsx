@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { inspectorListInsetClassName, inspectorListInsetPaddingClassName } from '../../shared/ui';
 
 import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
 
@@ -205,10 +206,13 @@ it('separates queue and ready flow entries with dividers only', () => {
   const items = within(screen.getByRole('list', { name: 'Flow items' })).getAllByRole('listitem');
 
   expect(screen.getByText('Flow')).toBeInTheDocument();
+  expect(screen.getByText('Flow').closest('header')).toHaveClass(inspectorListInsetPaddingClassName);
   expect(screen.queryByText('Queue')).not.toBeInTheDocument();
   expect(screen.queryByText('Ready now')).not.toBeInTheDocument();
   expect(screen.queryByText('Upcoming')).not.toBeInTheDocument();
   expect(screen.getAllByRole('presentation')).toHaveLength(1);
+  expect(screen.getAllByRole('presentation')[0]).toHaveClass(inspectorListInsetClassName);
+  expect(items[0]!).toHaveClass(inspectorListInsetPaddingClassName);
   expect(items[0]!).toHaveTextContent('1Reading 1');
   expect(items[1]!).toHaveTextContent('2Reading 2');
 });

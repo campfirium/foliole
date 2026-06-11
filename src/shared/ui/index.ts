@@ -29,7 +29,24 @@ export { appShelllessActionBarClassName, appShelllessControlClassName, appShelll
 export { AppListSectionHeader, AppListSurface } from './ListSurface';
 export { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
 export { InspectorSection } from './InspectorSection';
-export { InspectorList, InspectorListHeading, InspectorListRow, inspectorDefinitionListClassName, inspectorDefinitionTermClassName, inspectorDefinitionValueClassName, inspectorListBodyClassName, inspectorListDividerClassName, inspectorListDividerLineClassName, inspectorListHeadingClassName, inspectorListMetaClassName, inspectorListTopDividerClassName, inspectorListTitleClassName } from './InspectorList';
+export {
+  InspectorList,
+  InspectorListHeading,
+  InspectorListRow,
+  inspectorDefinitionListClassName,
+  inspectorDefinitionTermClassName,
+  inspectorDefinitionValueClassName,
+  inspectorListBodyClassName,
+  inspectorListDividerClassName,
+  inspectorListDividerLineClassName,
+  inspectorListHeadingClassName,
+  inspectorListInsetClassName,
+  inspectorListInsetPaddingClassName,
+  inspectorListMetaClassName,
+  inspectorListTopDividerClassName,
+  inspectorListTitleClassName,
+  inspectorPanelSectionClassName
+} from './InspectorList';
 export { NodeBrowseList, type NodeBrowseListItem } from './NodeBrowseList';
 export { appSurfaceControlClassName } from './SurfaceControl';
 export { ObjectConfigPathButton, ObjectConfigPathControl } from './ObjectConfigTable';

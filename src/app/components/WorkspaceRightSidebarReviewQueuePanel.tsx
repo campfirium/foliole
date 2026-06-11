@@ -5,6 +5,8 @@ import {
   AppErrorState,
   inspectorListDividerLineClassName,
   inspectorListHeadingClassName,
+  inspectorListInsetClassName,
+  inspectorListInsetPaddingClassName,
   inspectorListMetaClassName,
   inspectorListTitleClassName
 } from '../../shared/ui';
@@ -39,7 +41,7 @@ function getQueueItemTitle(node: Node | undefined, t: Translate) {
 function QueueHeader() {
   const t = useTranslation();
   return (
-    <header className="px-4 pb-2 pt-3">
+    <header className={`${inspectorListInsetPaddingClassName} pb-2 pt-3`}>
       <h2 className={`m-0 px-0 pb-0 ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
     </header>
   );
@@ -50,7 +52,7 @@ function EmptyQueueState() {
   return (
     <section className="min-h-0">
       <QueueHeader />
-      <p className={`px-4 py-3 ${inspectorListMetaClassName}`}>{t('desktop.rightPanel.flow.empty')}</p>
+      <p className={`${inspectorListInsetPaddingClassName} py-3 ${inspectorListMetaClassName}`}>{t('desktop.rightPanel.flow.empty')}</p>
     </section>
   );
 }
@@ -79,7 +81,7 @@ function QueueRow(props: {
   const t = useTranslation();
   const kind = isFsrsReviewItemNode(props.node) ? 'item' : 'topic';
   return (
-    <li className="grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)] items-center gap-2 px-4 py-1.5 hover:bg-[var(--app-inspector-list-row-hover-bg)]">
+    <li className={`grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)] items-center gap-2 py-1.5 hover:bg-[var(--app-inspector-list-row-hover-bg)] ${inspectorListInsetPaddingClassName}`}>
       <span className={`${inspectorListMetaClassName} text-right tabular-nums text-foreground/28`}>{props.index + 1}</span>
       <QueueKindIcon kind={kind} />
       <button
@@ -105,7 +107,7 @@ function FlowSection(props: {
   }
   return (
     <>
-      {props.showDivider ? <li className={`mx-4 my-1.5 h-px list-none ${inspectorListDividerLineClassName}`} role="presentation" /> : null}
+      {props.showDivider ? <li className={`${inspectorListInsetClassName} my-1.5 h-px list-none ${inspectorListDividerLineClassName}`} role="presentation" /> : null}
       {props.nodeIds.map((nodeId, index) => (
         <QueueRow
           index={props.indexOffset + index}

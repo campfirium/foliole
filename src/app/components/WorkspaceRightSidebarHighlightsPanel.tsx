@@ -15,7 +15,8 @@ import {
   InspectorListHeading,
   InspectorListRow,
   inspectorListBodyClassName,
-  inspectorListDividerClassName
+  inspectorListDividerClassName,
+  inspectorListInsetClassName
 } from '../../shared/ui';
 
 interface WorkspaceRightSidebarHighlightsPanelProps {
@@ -212,7 +213,7 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
   }
 
   return (
-    <div className="min-w-0 px-1">
+    <div className={`min-w-0 ${inspectorListInsetClassName}`}>
       <InspectorListHeading>
         {t('desktop.rightPanel.highlights.count', { count: highlights.length })}
       </InspectorListHeading>
@@ -220,7 +221,7 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
         {highlights.map((highlight) => (
           <li className={`min-w-0 ${inspectorListDividerClassName}`} key={highlight.nodeId}>
             <InspectorListRow
-              className="flex-col items-start px-1 py-4"
+              className="flex-col items-start px-0 py-4"
               onClick={() => props.onRevealHighlight(highlight.nodeId)}
               type="button"
             >

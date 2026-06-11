@@ -3,14 +3,17 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 
 const inspectorListClassName = 'flex min-w-0 flex-col';
+export const inspectorListInsetClassName = 'mx-inspector-list-inset';
+export const inspectorListInsetPaddingClassName = 'px-inspector-list-inset';
+export const inspectorPanelSectionClassName = `${inspectorListInsetClassName} bg-transparent shadow-none [border-color:transparent] [border-width:0]`;
 export const inspectorListDividerClassName = 'border-b border-border/40 last:border-b-0';
 export const inspectorListDividerLineClassName = 'bg-border/40';
 export const inspectorListTopDividerClassName = 'border-t border-border/40 first:border-t-0';
-export const inspectorListHeadingClassName = 'px-1 pb-2 text-ui-sm font-medium uppercase tracking-wide text-foreground/55';
+export const inspectorListHeadingClassName = 'pb-2 text-ui-sm font-medium uppercase tracking-wide text-foreground/55';
 export const inspectorListMetaClassName = 'text-ui-sm leading-5 text-foreground/52';
 export const inspectorListTitleClassName = 'min-w-0 text-ui-md font-medium leading-5 text-foreground/88';
 export const inspectorListBodyClassName = 'min-w-0 text-ui-md leading-6 text-foreground/68';
-export const inspectorDefinitionListClassName = 'grid grid-cols-[minmax(112px,1fr)_max-content] gap-x-4 gap-y-2.5 px-3 text-ui-md';
+export const inspectorDefinitionListClassName = 'grid grid-cols-[minmax(112px,1fr)_max-content] gap-x-4 gap-y-2.5 px-0 text-ui-md';
 export const inspectorDefinitionTermClassName = 'text-foreground/55';
 export const inspectorDefinitionValueClassName = 'min-w-[4.75rem] whitespace-nowrap text-right tabular-nums text-foreground/84';
 

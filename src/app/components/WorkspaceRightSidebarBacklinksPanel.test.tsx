@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { inspectorPanelSectionClassName } from '../../shared/ui';
 
 import { WorkspaceRightSidebarBacklinksPanel } from './WorkspaceRightSidebarBacklinksPanel';
 
@@ -78,6 +79,13 @@ function expectNoHookOrderWarning(messages: string[]) {
   expect(messages.join('\n')).not.toMatch(/Rendered (more|fewer) hooks|change in the order of Hooks/i);
 }
 
+function expectBacklinksPanelInset() {
+  const section = screen.getByRole('heading', { name: 'Backlinks' }).closest('section');
+  expect(section).toHaveClass(inspectorPanelSectionClassName);
+  expect(section).toHaveClass('bg-transparent');
+  expect(screen.getByRole('button', { name: /source topic/i }).className).not.toContain('px-2');
+}
+
 beforeEach(() => {
   loadRuntimeNodeBacklinks.mockReset();
   loadRuntimeNodeBacklinks.mockResolvedValue(null);
@@ -114,6 +122,7 @@ it('keeps hook order stable while the active topic changes', async () => {
     </StrictMode>
   );
   expect(await screen.findByRole('button', { name: /source topic/i })).toBeInTheDocument();
+  expectBacklinksPanelInset();
 
   view.rerender(
     <StrictMode>

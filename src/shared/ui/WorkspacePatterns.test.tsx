@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { render, screen } from '@testing-library/react';
 import { beforeAll, expect, it } from 'vitest';
 
@@ -8,7 +11,11 @@ import {
   InspectorListHeading,
   InspectorListRow,
   inspectorDefinitionListClassName,
-  inspectorListDividerClassName
+  inspectorListDividerClassName,
+  inspectorListHeadingClassName,
+  inspectorListInsetClassName,
+  inspectorListInsetPaddingClassName,
+  inspectorPanelSectionClassName
 } from './InspectorList';
 import { InspectorSection } from './InspectorSection';
 import { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
@@ -18,6 +25,10 @@ import { ToolbarActionGroup } from './ToolbarActionGroup';
 beforeAll(async () => {
   await preloadTranslationCatalog('en');
 });
+
+function readWorkspaceFile(path: string) {
+  return readFileSync(join(process.cwd(), path), 'utf8');
+}
 
 it('renders inspector section with shared header and body copy', () => {
   render(
@@ -53,6 +64,20 @@ it('renders flat inspector list rows without a panel shell', () => {
   expect(screen.getByRole('list', { name: 'Inspector items' }).className).not.toContain('bg-bg-panel');
   expect(screen.getByRole('button', { name: 'Active entry' }).className).toContain('--app-surface');
   expect(screen.getByText('Timing').parentElement?.className).toBe(inspectorDefinitionListClassName);
+});
+
+it('keeps inspector spacing tokens aligned for right sidebar panels', () => {
+  const tailwindConfig = readWorkspaceFile('tailwind.config.js');
+
+  expect(tailwindConfig).toContain("'inspector-list-inset': '1rem'");
+  expect(inspectorListInsetClassName).toBe('mx-inspector-list-inset');
+  expect(inspectorListInsetPaddingClassName).toBe('px-inspector-list-inset');
+  expect(inspectorPanelSectionClassName).toContain(inspectorListInsetClassName);
+  expect(inspectorPanelSectionClassName).toContain('bg-transparent');
+  expect(inspectorPanelSectionClassName).toContain('shadow-none');
+  expect(inspectorListHeadingClassName).not.toContain('px-');
+  expect(inspectorDefinitionListClassName).toContain('px-0');
+  expect(inspectorDefinitionListClassName).not.toContain('px-3');
 });
 
 it('renders review action bar with primary, secondary, and status slots', () => {
