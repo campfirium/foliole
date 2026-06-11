@@ -94,6 +94,20 @@ it('injects startup tokens and a file base tag into packaged renderer html', () 
   expect(result).not.toContain('/*STARTUP_INJECTED_CSS*/');
 });
 
+it('replaces build-time startup theme attributes when runtime settings generate custom startup html', () => {
+  const html =
+    '<html data-base-color="light" data-resolved-base-color="light" style="--startup-document-bg:#ffffff;"><head><style>:root{--startup-document-bg:#ffffff;}</style></head><body></body></html>';
+
+  const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/index.html', '--startup-document-bg:#1f211f;', 'dark');
+
+  expect(result.match(/data-base-color=/g)).toHaveLength(1);
+  expect(result.match(/data-resolved-base-color=/g)).toHaveLength(1);
+  expect(result).toContain('data-base-color="dark"');
+  expect(result).toContain('data-resolved-base-color="dark"');
+  expect(result).not.toContain('data-base-color="light"');
+  expect(result).not.toContain('data-resolved-base-color="light"');
+});
+
 it('loads the prebuilt dev renderer html without waiting for Vite to render the first page', async () => {
   const originalUrl = process.env.ELECTRON_RENDERER_URL;
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
@@ -158,29 +172,6 @@ it('falls back to the Vite dev renderer when no prebuilt startup html exists', a
   }
 });
 
-it('loads prebuilt packaged startup html when it exists', async () => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
-  tempRoots.push(tempRoot);
-  const runtimeDir = path.join(tempRoot, 'electron-dist', 'electron');
-  const packagedIndexPath = path.join(tempRoot, 'dist', 'index.html');
-  const runtimeHtmlDir = path.join(tempRoot, 'userData');
-  const runtimeIndexPath = path.join(runtimeHtmlDir, 'runtime-renderer-index.html');
-  runtimeMocks.userDataPath = runtimeHtmlDir;
-  await fs.mkdir(path.dirname(packagedIndexPath), { recursive: true });
-  await fs.mkdir(runtimeHtmlDir, { recursive: true });
-  await fs.writeFile(packagedIndexPath, '<html><body>packaged</body></html>', 'utf8');
-  await fs.writeFile(
-    runtimeIndexPath,
-    '<html><head><base href="file:///app/dist/"></head><body>themed shell</body></html>',
-    'utf8'
-  );
-  const window = { loadFile: vi.fn().mockResolvedValue(undefined) };
-
-  await loadRenderer(window as never, runtimeDir);
-
-  expect(window.loadFile).toHaveBeenCalledWith(runtimeIndexPath);
-});
-
 it('keeps startup skeleton variables isolated from workspace css defaults', async () => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
   tempRoots.push(tempRoot);
@@ -237,4 +228,28 @@ it('prebuilds the startup skeleton with the persisted folder column width', asyn
   expect(prebuiltHtml).toContain('--workspace-list-folder-current-width: min(var(--workspace-folder-column-width), var(--workspace-list-current-width));');
   expect(prebuiltHtml).toContain('style="');
   expect(prebuiltHtml).toContain('--startup-list-width: 484px;');
+});
+
+it('resolves system base color to dark for prebuilt startup html', async () => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
+  tempRoots.push(tempRoot);
+  const runtimeDir = path.join(tempRoot, 'electron-dist', 'electron');
+  const indexPath = path.join(tempRoot, 'index.html');
+  const runtimeHtmlDir = path.join(tempRoot, 'userData');
+  const runtimeIndexPath = path.join(runtimeHtmlDir, 'runtime-renderer-index.html');
+  await fs.mkdir(runtimeDir, { recursive: true });
+  await fs.copyFile(path.join(process.cwd(), 'index.html'), indexPath);
+
+  expect(writePrebuiltRendererHtmlForSettings(
+    runtimeDir,
+    { 'foliole-base-color': 'system' },
+    'http://127.0.0.1:24600/',
+    runtimeHtmlDir,
+    'dark'
+  )).toBe(true);
+
+  const prebuiltHtml = await fs.readFile(runtimeIndexPath, 'utf8');
+
+  expect(prebuiltHtml).toContain('data-resolved-base-color="dark"');
+  expect(prebuiltHtml).toContain('--startup-region-main-document-bg: #1f211f;');
 });

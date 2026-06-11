@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import { app, type BrowserWindow } from 'electron';
 
 import { formatRuntimeDiagnosticsSnapshot, resolveRendererTargetUrl, type RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
-import { resolveRendererFilePath, resolveRuntimeRendererIndexPath } from './runtimeRendererHtml.js';
+import { resolveUsableRuntimeRendererIndex } from './runtimeRendererIndexCache.js';
+import { resolveRendererFilePath } from './runtimeRendererHtml.js';
 
 export {
   injectDevRendererIntoHtml,
@@ -135,8 +136,7 @@ async function loadDevRenderer(window: BrowserWindow, devUrl: string) {
 }
 
 function resolveExistingRuntimeRendererIndex() {
-  const runtimeIndexPath = resolveRuntimeRendererIndexPath(app.getPath('userData'));
-  return fs.existsSync(runtimeIndexPath) ? runtimeIndexPath : null;
+  return resolveUsableRuntimeRendererIndex(app.getPath('userData'));
 }
 
 export async function loadRenderer(

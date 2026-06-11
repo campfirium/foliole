@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
 import guidesViteConfig, { webGuidesManifestPlugin } from '../vite.guides.config.ts';
 import viteConfig from '../vite.config.ts';
+import { injectDefaultStartupSkeletonHtml } from '../vite.shared.ts';
 
 describe('vite config', () => {
   it('uses relative asset paths for desktop file loading', () => {
@@ -29,6 +30,22 @@ describe('vite config', () => {
         './src/app/App.tsx'
       ])
     );
+  });
+
+  it('injects the default startup skeleton tokens before packaging desktop html', () => {
+    const html =
+      '<html lang="en"><head><style>:root{/*STARTUP_INJECTED_CSS*/}</style></head><body><section id="boot-skeleton" class="startup-shell"></section><div id="root"></div></body></html>';
+    const transformed = injectDefaultStartupSkeletonHtml(html);
+
+    expect(transformed).toContain('id="boot-skeleton"');
+    expect(transformed).toContain('data-base-color="light"');
+    expect(transformed).not.toContain('<html lang="en" style=');
+    expect(transformed).toContain('--startup-region-main-rail-bg: #b9b1a7;');
+    expect(transformed).toContain('--startup-region-main-folder-bg: #e7e3dd;');
+    expect(transformed).toContain('--startup-region-main-topic-bg: #f3eee8;');
+    expect(transformed).toContain('--startup-region-main-document-bg: #ffffff;');
+    expect(transformed).toContain('--startup-region-main-sidebar-bg: #fbf9f7;');
+    expect(transformed).not.toContain('STARTUP_INJECTED_CSS');
   });
 
   it('targets Android 9 WebView-compatible syntax for the companion bundle', () => {

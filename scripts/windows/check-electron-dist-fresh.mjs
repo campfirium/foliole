@@ -75,6 +75,11 @@ function isExcludedSource(repoRoot, filePath, sourceExcludes) {
   return sourceExcludes.some((pattern) => matchesSourceExclude(relativePath, pattern));
 }
 
+function isTestSource(filePath) {
+  const basename = path.basename(filePath);
+  return basename.includes('.test.') || basename.includes('.spec.');
+}
+
 function resolveSourceRoots(repoRoot, sourceRoots) {
   return sourceRoots.map((sourceRoot) => (path.isAbsolute(sourceRoot) ? sourceRoot : path.join(repoRoot, sourceRoot)));
 }
@@ -97,7 +102,7 @@ export function inspectElectronDistFreshness({
   const resolvedSourceRoots = resolveSourceRoots(repoRoot, sourceRoots);
   const sourceFiles = resolvedSourceRoots.flatMap((sourceRoot) =>
     collectFiles(sourceRoot).filter((filePath) => SOURCE_EXTENSIONS.has(path.extname(filePath)))
-  ).filter((filePath) => !isExcludedSource(repoRoot, filePath, sourceExcludes));
+  ).filter((filePath) => !isTestSource(filePath) && !isExcludedSource(repoRoot, filePath, sourceExcludes));
   const distFiles = collectFiles(distRoot);
   const newestSource = getNewestFile(sourceFiles);
   const newestDist = getNewestFile(distFiles);

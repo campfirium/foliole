@@ -125,6 +125,10 @@ function resolveVitePrewarmStartupBudgetMs() {
   return VITE_PREWARM_STARTUP_BUDGET_MS;
 }
 
+function isEnabledEnv(name) {
+  return process.env[name] === '1';
+}
+
 async function startViteWithPortFallback() {
   const preferredPort = resolveRequestedPort();
   const strictPort = isStrictVitePort();
@@ -138,10 +142,14 @@ async function startViteWithPortFallback() {
       return { viteUrl, viteProc: null };
     }
 
-    await waitForSuccessfulExit(
-      runNodeScript(['--experimental-strip-types', 'scripts/generate-appearance-colors.ts']),
-      'appearance colors generation'
-    );
+    if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION')) {
+      console.info('[electron-dev] appearance colors generation skipped by FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION');
+    } else {
+      await waitForSuccessfulExit(
+        runNodeScript(['--experimental-strip-types', 'scripts/generate-appearance-colors.ts']),
+        'appearance colors generation'
+      );
+    }
     const viteProc = runNodeScript([path.join('node_modules', 'vite', 'bin', 'vite.js')], {
       env: {
         ...process.env,
@@ -170,19 +178,28 @@ async function startViteWithPortFallback() {
   throw new Error(strictPort ? `vite dev server did not become ready on strict port ${preferredPort}` : 'vite dev server did not become ready');
 }
 
-const compile = runNodeScript([path.join('node_modules', 'typescript', 'bin', 'tsc'), '-p', 'electron/tsconfig.json']);
-await waitForSuccessfulExit(compile, 'electron compile');
+if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_SKIP_COMPILE')) {
+  console.info('[electron-dev] electron compile skipped by FOLIOLE_ELECTRON_DEV_SKIP_COMPILE');
+} else {
+  const compile = runNodeScript([path.join('node_modules', 'typescript', 'bin', 'tsc'), '-p', 'electron/tsconfig.json']);
+  await waitForSuccessfulExit(compile, 'electron compile');
+}
 
 const viteState = await startViteWithPortFallback();
 const vite = viteState.viteProc;
-const prewarmAbortController = new AbortController();
-const prewarmStatus = await waitForPrewarmStartupBudget(
-  prewarmViteRendererEntries(viteState.viteUrl, globalThis.fetch, { signal: prewarmAbortController.signal }),
-  {
-    abortController: prewarmAbortController,
-    budgetMs: resolveVitePrewarmStartupBudgetMs()
-  }
-);
+let prewarmStatus = { elapsedMs: 0, status: 'skipped' };
+if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_SKIP_VITE_PREWARM')) {
+  console.info('[electron-dev] startup timing prewarm_skipped reason=FOLIOLE_ELECTRON_DEV_SKIP_VITE_PREWARM');
+} else {
+  const prewarmAbortController = new AbortController();
+  prewarmStatus = await waitForPrewarmStartupBudget(
+    prewarmViteRendererEntries(viteState.viteUrl, globalThis.fetch, { signal: prewarmAbortController.signal }),
+    {
+      abortController: prewarmAbortController,
+      budgetMs: resolveVitePrewarmStartupBudgetMs()
+    }
+  );
+}
 console.info(
   `[electron-dev] startup timing electron_launch prewarmStatus=${prewarmStatus.status} prewarmElapsedMs=${prewarmStatus.elapsedMs}`
 );

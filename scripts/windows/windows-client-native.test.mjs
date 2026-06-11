@@ -33,7 +33,7 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(startRunnerScript).toContain("'powershell.exe'");
   expect(startRunnerScript).toContain("'-File'");
   expect(script).toContain('nativeStartScript');
-  expect(script).toContain("FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '180000'");
+  expect(script).toContain("FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000'");
   expect(script).toContain('closeClientLogStreams(logs)');
   expect(startRunnerScript).toContain('native dev runner start failed');
   expect(script).toContain('if (existing.ready.appReady.head === head)');
@@ -76,8 +76,8 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).toContain('const ready = await waitForReady(session, shellPid)');
   expect(script).toContain('lastError: failureReason');
   expect(script).toContain('startup health check failed: ${failureReason}');
-  expect(script).toContain('if (processAlive(shellPid))');
-  expect(script).toContain('await removeClientState(stateFile);');
+  expect(script).toContain('if (nativeState.processAlive(shellPid))');
+  expect(script).toContain('await nativeState.removeClientState(stateFile);');
   expect(script).not.toContain('ready ??= readReadyState()');
   expect(restartScript).not.toContain('forced-cleanup');
   expect(script).toContain('recoverClientStateFromReady');
@@ -86,7 +86,7 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(recoveredStateScript).toContain('runtimePid: ready.windowVisible.pid');
   expect(script).toContain('resetMarkers');
   expect(script).toContain('windowVisibleFile');
-  expect(script).toContain('readReadyStateFiles({ appReadyFile, bridgeReadyFile, windowVisibleFile })');
+  expect(script).toContain('nativeState.readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFile })');
   expect(script).not.toContain('.pipe(logs.');
   expect(script).not.toContain('restart-electron-dev.ps1');
   expect(script).not.toContain('buildPowerShellArgs');
@@ -94,12 +94,19 @@ it('starts the native dev runner through a Windows-owned process', async () => {
 
 it('routes the clickable Windows launcher through WSL preview by default', async () => {
   const launcher = await readFile(path.resolve(process.cwd(), 'Start-Foliole.cmd'), 'utf8');
+  const previewLauncher = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-windows-preview.cmd'), 'utf8');
 
   expect(launcher).toContain('if "%FOLIOLE_ACTION%"=="" set "FOLIOLE_ACTION=start"');
   expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev" set "FOLIOLE_ACTION=start"');
   expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev-direct"');
   expect(launcher).toContain('call "%~dp0scripts\\windows\\start-windows-preview.cmd"');
   expect(launcher).toContain('npm run windows:client:native -- %FOLIOLE_ACTION%');
+  expect(previewLauncher).toContain('set "SCRIPT_DIR=%~dp0"');
+  expect(previewLauncher).not.toContain('set "SCRIPT_DIR=%~dp0."');
+  expect(previewLauncher).toContain('if not defined WINDOWS_MIRROR_WSL set "WINDOWS_MIRROR_WSL=/mnt/d/C/foliole"');
+  expect(previewLauncher).toContain('npm.cmd run windows:client:native -- start');
+  expect(previewLauncher).toContain('set "FOLIOLE_ELECTRON_DEV_SKIP_COMPILE=1"');
+  expect(previewLauncher).toContain('set "FOLIOLE_ELECTRON_DEV_SKIP_VITE_PREWARM=1"');
 });
 
 it('routes WSL preview client actions through the native client controller', async () => {

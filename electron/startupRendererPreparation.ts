@@ -1,4 +1,8 @@
-import { writePrebuiltRendererHtmlForSettings } from './runtimeRendererHtml.js';
+import fs from 'node:fs';
+
+import { nativeTheme } from 'electron';
+
+import { resolveRuntimeRendererIndexPath, writePrebuiltRendererHtmlForSettings } from './runtimeRendererHtml.js';
 
 export interface StartupRendererAppearance {
   backgroundColor: string;
@@ -8,13 +12,34 @@ function resolveRendererUrl() {
   return process.env.ELECTRON_RENDERER_URL ?? null;
 }
 
+function extractHtmlTag(html: string) {
+  return html.match(/<html\b[^>]*>/iu)?.[0] ?? '';
+}
+
+function extractLastStartupDocumentBackground(html: string) {
+  const tag = extractHtmlTag(html);
+  const matches = [...tag.matchAll(/--startup-region-main-document-bg:\s*(#[0-9a-f]{6})\s*;/giu)];
+  return matches.at(-1)?.[1] ?? null;
+}
+
+function readStartupDocumentBackground(runtimeHtmlDir: string) {
+  try {
+    return extractLastStartupDocumentBackground(fs.readFileSync(resolveRuntimeRendererIndexPath(runtimeHtmlDir), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
 export function writeStartupRendererHtml(runtimeDir: string, settings: Record<string, unknown>, runtimeHtmlDir: string) {
-  return writePrebuiltRendererHtmlForSettings(runtimeDir, settings, resolveRendererUrl(), runtimeHtmlDir);
+  const systemColorMode = nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+  return writePrebuiltRendererHtmlForSettings(runtimeDir, settings, resolveRendererUrl(), runtimeHtmlDir, systemColorMode);
 }
 
 export function prepareStartupRendererAppearance(
   _runtimeDir: string,
-  _runtimeHtmlDir: string
+  runtimeHtmlDir: string
 ): StartupRendererAppearance | null {
-  return null;
+  return {
+    backgroundColor: readStartupDocumentBackground(runtimeHtmlDir) ?? (nativeTheme.shouldUseDarkColors ? '#1f211f' : '#ffffff')
+  };
 }

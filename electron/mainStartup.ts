@@ -36,8 +36,7 @@ interface InitialMainWindowStartupArgs {
 const STARTUP_SHELL_READY_TIMEOUT_MS = 2500;
 
 async function waitForRendererShellReady(window: BrowserWindow, rendererLoadPromise: Promise<void>) {
-  const webContents = window.webContents;
-  if (typeof webContents?.once !== 'function') {
+  if (typeof window.once !== 'function') {
     await rendererLoadPromise.catch(() => undefined);
     return;
   }
@@ -47,11 +46,11 @@ async function waitForRendererShellReady(window: BrowserWindow, rendererLoadProm
       if (settled) return;
       settled = true;
       globalThis.clearTimeout(timeout);
-      webContents.off('dom-ready', finish);
+      window.off('ready-to-show', finish);
       resolve();
     };
     const timeout = globalThis.setTimeout(finish, STARTUP_SHELL_READY_TIMEOUT_MS);
-    webContents.once('dom-ready', finish);
+    window.once('ready-to-show', finish);
     void rendererLoadPromise.then(finish, finish);
   });
 }

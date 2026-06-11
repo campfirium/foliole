@@ -9,9 +9,9 @@ const MIN_RIGHT_SIDEBAR_WIDTH = 240;
 const DEFAULT_LIGHT_SURFACES = {
   document: '#ffffff',
   divider: 'rgba(32, 33, 36, 0.18)',
-  list: '#f6f6f6',
-  sidebar: '#f6f6f6',
-  titlebar: '#fcfcfc'
+  list: '#e7e3dd',
+  sidebar: '#fbf9f7',
+  titlebar: '#ffffff'
 };
 const DEFAULT_DARK_SURFACES = {
   document: '#1f211f',
@@ -44,19 +44,19 @@ const WORKSPACE_SURFACE_REGION_IDS = [
   'main-document',
   'main-sidebar'
 ] as const;
-const DEFAULT_LIGHT_WORKSPACE_SURFACE_PALETTE = ['#ffffff', '#fcfcfc', '#f6f6f6', '#f5f5f3', '#ececea'];
-const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE = ['#1f211f', '#252824', '#2b2f2a', '#171817', '#30362f'];
+const DEFAULT_LIGHT_WORKSPACE_SURFACE_PALETTE = ['#b9b1a7', '#e7e3dd', '#f3eee8', '#ffffff', '#fbf9f7'];
+const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE = ['#2b2f2a', '#252824', '#2b2f2a', '#1f211f', '#30362f'];
 const DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS = {
-  'titlebar-rail': 1,
+  'titlebar-rail': 0,
   'titlebar-folder': 1,
-  'titlebar-topic': 1,
-  'titlebar-document': 1,
-  'titlebar-sidebar': 1,
-  'main-rail': 2,
-  'main-folder': 2,
+  'titlebar-topic': 2,
+  'titlebar-document': 3,
+  'titlebar-sidebar': 4,
+  'main-rail': 0,
+  'main-folder': 1,
   'main-topic': 2,
-  'main-document': 0,
-  'main-sidebar': 2
+  'main-document': 3,
+  'main-sidebar': 4
 } as const;
 
 export interface StartupSkeletonLayout {
@@ -74,6 +74,10 @@ export interface StartupSkeletonAppearance {
   themeSource: 'dark' | 'light';
 }
 
+export interface StartupSkeletonLayoutOptions {
+  systemColorMode?: 'dark' | 'light';
+}
+
 function readBooleanSetting(settings: Record<string, unknown>, key: string) {
   return settings[key] === 'true';
 }
@@ -86,8 +90,12 @@ function readNumberSetting(settings: Record<string, unknown>, key: string, minVa
   return Math.min(maxValue, Math.max(minValue, Math.round(value)));
 }
 
-export function createStartupSkeletonLayoutFromSettings(settings: Record<string, unknown>): StartupSkeletonLayout {
-  const mode = settings[APP_SETTINGS_STORAGE_KEYS.baseColor] === 'dark' ? 'dark' : 'light';
+export function createStartupSkeletonLayoutFromSettings(
+  settings: Record<string, unknown>,
+  options: StartupSkeletonLayoutOptions = {}
+): StartupSkeletonLayout {
+  const baseColor = settings[APP_SETTINGS_STORAGE_KEYS.baseColor];
+  const mode = baseColor === 'dark' || (baseColor === 'system' && options.systemColorMode === 'dark') ? 'dark' : 'light';
   return {
     dualListWidth: readNumberSetting(settings, APP_SETTINGS_STORAGE_KEYS.dualListWidth, MIN_DUAL_LIST_WIDTH, MAX_DUAL_LIST_WIDTH),
     isListCollapsed: readBooleanSetting(settings, APP_SETTINGS_STORAGE_KEYS.listCollapsed),

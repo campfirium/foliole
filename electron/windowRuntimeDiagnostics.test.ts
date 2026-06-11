@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { EventEmitter } from 'node:events';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -54,6 +55,7 @@ function createWindowMock() {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
+  fs.rmSync(path.join(os.tmpdir(), 'foliole-test-logs'), { force: true, recursive: true });
 });
 
 describe('window runtime startup visibility', () => {
@@ -108,5 +110,40 @@ describe('window runtime startup visibility', () => {
       'window_visible',
       expect.objectContaining({ isVisible: true })
     );
+  });
+
+});
+
+describe('window runtime diagnostics redaction', () => {
+  it('redacts renderer state snapshots before writing the diagnostic log', async () => {
+    const window = createWindowMock();
+    window.webContents.executeJavaScript.mockResolvedValue({
+      bodyTextSample: 'Private body',
+      href: 'file:///Users/alice/private.md',
+      message: 'Failed at /Users/alice/private.md',
+      readyState: 'complete'
+    });
+    const { bindWindowRuntimeDiagnostics } = await import('./windowRuntimeDiagnostics.js');
+
+    bindWindowRuntimeDiagnostics(window as never);
+    window.webContents.emit('dom-ready');
+    await vi.runAllTimersAsync();
+
+    await vi.waitFor(() => {
+      expect(fs.existsSync(path.join(os.tmpdir(), 'foliole-test-logs', 'renderer-state.ndjson'))).toBe(true);
+    });
+    const records = fs
+      .readFileSync(path.join(os.tmpdir(), 'foliole-test-logs', 'renderer-state.ndjson'), 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as { label: string; snapshot: unknown });
+    const record = records.find((entry) => entry.label === 'dom-ready');
+
+    expect(record?.snapshot).toEqual({
+      bodyTextSample: '[redacted-body-sample]',
+      href: '[redacted-url]',
+      message: 'Failed at [redacted-path]',
+      readyState: 'complete'
+    });
   });
 });

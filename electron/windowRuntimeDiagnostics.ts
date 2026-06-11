@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { BrowserWindow } from 'electron';
 
+import { redactDiagnosticValue } from './diagnostics/diagnosticRedactor.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { resolveWindowsDiagnosticLogPath } from './diagnostics/windowsDiagnosticPaths.js';
 import { appendBootEvent } from './ipc/boot.js';
@@ -22,7 +23,7 @@ function appendRendererStateLog(label: string, snapshot: unknown) {
   fs.mkdirSync(path.dirname(logPath), { recursive: true });
   fs.appendFileSync(
     logPath,
-    `${JSON.stringify({ label, snapshot, timestamp: new Date().toISOString() })}\n`,
+    `${JSON.stringify({ label, snapshot: redactDiagnosticValue(snapshot), timestamp: new Date().toISOString() })}\n`,
     'utf8'
   );
 }
@@ -51,7 +52,6 @@ function logRendererStateSnapshot(window: BrowserWindow, label: string) {
             disabled: backupButton.disabled,
             text: backupButton.textContent?.trim() ?? ''
           } : null,
-          bodyTextSample: document.body?.innerText?.slice(0, 200) ?? '',
           bridgeAvailable: typeof window.electronAPI !== 'undefined',
           debugProbeAvailable: typeof window.__FOLIOLE_DESKTOP_DEBUG_PROBE__ !== 'undefined',
           href: window.location.href,

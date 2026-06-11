@@ -22,6 +22,10 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).not.toContain('library-path-settings.json');
   expect(runner).not.toContain('ensureLocalLibraryPathSettings();');
   expect(runner).toContain('assertLocalDatabaseWritable();');
+  expect(runner).toContain('assertTemporaryLibraryPath(localLibraryHome);');
+  expect(runner).toContain('FOLIOLE_NATIVE_PREVIEW_SLOT_ROOT');
+  expect(runner).toContain('temporary native preview library requires FOLIOLE_NATIVE_PREVIEW_SLOT_ROOT');
+  expect(runner).toContain('refusing temporary native preview library outside slot root');
   expect(runner).toContain("fs.openSync(databasePath, useTemporaryLibrary ? 'a+' : 'r+')");
   expect(runner).toContain("process.env.FOLIOLE_NATIVE_PREVIEW_TEMP_LIBRARY === '1'");
   expect(runner).toContain('native preview process cannot open the live database for write');
@@ -39,6 +43,9 @@ it('keeps the proven Electron dev runner while scoping native user data', async 
   expect(runner).toContain("process.env.FOLIOLE_SKIP_STARTUP_NODE_SYNC_FLUSH ??= '1'");
   expect(runner).not.toContain('FOLIOLE_SKIP_STARTUP_SCHEMA_INIT');
   expect(runner).toContain("process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE ??= '1'");
+  expect(runner).toContain("process.env.FOLIOLE_ELECTRON_DEV_SKIP_COMPILE ??= '1'");
+  expect(runner).toContain("process.env.FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION ??= '1'");
+  expect(runner).toContain("process.env.FOLIOLE_ELECTRON_DEV_SKIP_VITE_PREWARM ??= '1'");
   expect(runner).not.toContain('FOLIOLE_SKIP_STARTUP_WINDOW_STATE');
   expect(runner).toContain("await import('../electron-dev.mjs');");
   expect(main).toContain("process.env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION === '1'");

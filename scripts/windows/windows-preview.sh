@@ -19,6 +19,7 @@ WINDOWS_NATIVE_ABI_REPAIR_SCRIPT="${WINDOWS_NATIVE_ABI_REPAIR_SCRIPT:-scripts/wi
 WINDOWS_RESTART_INTENT_ROOT="${WINDOWS_RESTART_INTENT_ROOT:-}"
 WINDOWS_RENDERER_RELOAD_INTENT_ROOT="${WINDOWS_RENDERER_RELOAD_INTENT_ROOT:-}"
 WINDOWS_PREVIEW_SYNC_STAMP_FILE="${WINDOWS_PREVIEW_SYNC_STAMP_FILE:-.lab/internal/runtime/windows-sync.stamp}"
+WINDOWS_MIRROR_DIR="${WINDOWS_MIRROR_DIR:-/mnt/d/C/foliole}"
 WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-D:\\C\\foliole}"
 WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
 WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS:-${WINDOWS_PREVIEW_TIMEOUT_SECONDS}}"
@@ -47,8 +48,12 @@ echo "[windows-preview] step 1/4: verify electron-dist freshness"
 ensure_fresh_electron_dist
 
 echo "[windows-preview] step 2/4: sync to windows mirror"
-changed_files="$(resolve_changed_files)"
-if has_runtime_code_changes "${changed_files}"; then
+changed_files=""
+if [ "$(realpath -m "${REPO_ROOT}")" = "$(realpath -m "${WINDOWS_MIRROR_DIR}")" ]; then
+  echo "[windows-preview] sync skipped: running inside windows mirror"
+elif changed_files="$(resolve_changed_files)" && [ -z "${changed_files}" ] && [ -f "${WINDOWS_PREVIEW_SYNC_STAMP_FILE}" ]; then
+  echo "[windows-preview] sync skipped: no changed files since last mirror sync"
+elif has_runtime_code_changes "${changed_files}"; then
   set +e
   WINDOWS_PREVIEW_CHANGED_FILES="${changed_files}" node "${WINDOWS_ELECTRON_DIST_SYNC_SCRIPT}"
   electron_dist_sync_exit=$?

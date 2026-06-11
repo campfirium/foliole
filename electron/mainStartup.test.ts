@@ -80,15 +80,17 @@ it('waits for renderer app_ready before starting desktop followup tasks', async 
   expect(mocks.startFollowupTasks).toHaveBeenCalledTimes(1);
 });
 
-it('presents the startup shell on dom-ready before the full renderer load completes', async () => {
+it('presents the startup shell on ready-to-show before the full renderer load completes', async () => {
   const rendererLoad = createDeferred();
-  const mainWindow = { webContents: new EventEmitter() } as Parameters<typeof startInitialMainWindow>[1]['mainWindow'];
+  const mainWindow = Object.assign(new EventEmitter(), {
+    webContents: new EventEmitter()
+  }) as Parameters<typeof startInitialMainWindow>[1]['mainWindow'];
   const startup = createStartupArgs({ mainWindow });
   mainWindowArgs.loadMainWindow.mockReturnValueOnce(rendererLoad.promise);
 
   const startupPromise = startInitialMainWindow(mainWindowArgs, startup);
   await vi.waitFor(() => expect(mainWindowArgs.loadMainWindow).toHaveBeenCalledTimes(1));
-  mainWindow.webContents.emit('dom-ready');
+  mainWindow.emit('ready-to-show');
 
   await vi.waitFor(() => expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(mainWindow));
   expect(mocks.appendBootEvent).toHaveBeenCalledWith('main_window_shell_ready');

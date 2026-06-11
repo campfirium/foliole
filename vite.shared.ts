@@ -6,6 +6,8 @@ import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
+import { createStartupSkeletonAppearance, createStartupSkeletonLayoutFromSettings } from './electron/startupSkeletonLayout';
+
 const WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = 'virtual:workspace-change-timestamp';
 const RESOLVED_WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = `\0${WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID}`;
 const WORKSPACE_TIMESTAMP_ROOTS = ['src', 'electron'];
@@ -125,6 +127,26 @@ function workspaceChangeTimestampPlugin(projectRoot: string): Plugin {
   };
 }
 
+export function injectDefaultStartupSkeletonHtml(html: string) {
+  const appearance = createStartupSkeletonAppearance(createStartupSkeletonLayoutFromSettings({}), {});
+  return html.replace('/*STARTUP_INJECTED_CSS*/', appearance.css).replace(
+    /<html\b([^>]*)>/,
+    (_match, attributes: string) => `<html${attributes} data-base-color="${appearance.themeSource}" data-resolved-base-color="${appearance.themeSource}">`
+  );
+}
+
+function defaultStartupSkeletonPlugin(): Plugin {
+  return {
+    name: 'default-startup-skeleton',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        return injectDefaultStartupSkeletonHtml(html);
+      }
+    }
+  };
+}
+
 interface SharedViteConfigOptions {
   warmupClientFiles?: string[];
 }
@@ -132,7 +154,7 @@ interface SharedViteConfigOptions {
 export function createSharedViteConfig(projectRoot: string, options: SharedViteConfigOptions = {}) {
   return defineConfig({
     base: './',
-    plugins: [react(), tailwindcss(), workspaceChangeTimestampPlugin(projectRoot)],
+    plugins: [defaultStartupSkeletonPlugin(), react(), tailwindcss(), workspaceChangeTimestampPlugin(projectRoot)],
     resolve: {
       alias: {
         '@': path.resolve(projectRoot, './src')

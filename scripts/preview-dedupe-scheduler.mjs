@@ -10,7 +10,7 @@ import { isPidAlive, withStateLock } from './preview-dedupe-state-store.mjs';
 import { readMaxSettleMs, readSettleMs, readTotalTimeoutMs, readWindowMs } from './preview-dedupe-time-budget.mjs';
 import { createPreviewWaitAnnouncer } from './preview-dedupe-wait-status.mjs';
 
-const RESULT_POLL_MS = 200; export const STATE_STALE_MS = 15 * 60_000;
+const RESULT_POLL_MS = 200; export const STATE_STALE_MS = 90_000;
 
 export function shouldForcePreview(env = process.env) {
   return env.PREVIEW_DEDUPE_FORCE === '1';

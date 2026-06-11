@@ -17,9 +17,11 @@
         --startup-folder-column-width: 200px;
         --startup-divider: rgba(32, 33, 36, 0.18);
         --startup-titlebar-bg: #fcfcfc;
-        --startup-list-bg: #eef0ec;
+        --startup-rail-bg: #b9b1a7;
+        --startup-folder-bg: #e7e3dd;
+        --startup-topic-bg: #f3eee8;
         --startup-document-bg: #ffffff;
-        --startup-sidebar-bg: #f6f6f6;
+        --startup-sidebar-bg: #fbf9f7;
         --workspace-rail-width: var(--startup-rail-width);
         --workspace-folder-column-width: var(--startup-folder-column-width);
         --workspace-list-current-width: var(--startup-list-current-width);
@@ -29,24 +31,24 @@
         --workspace-right-sidebar-current-width: var(--startup-right-sidebar-current-width);
         --workspace-divider-mix-target: black;
         --workspace-divider-subtle-surface-weight: 92%;
-        --workspace-region-titlebar-rail-bg: var(--startup-titlebar-bg);
-        --workspace-region-titlebar-folder-bg: var(--startup-titlebar-bg);
-        --workspace-region-titlebar-topic-bg: var(--startup-titlebar-bg);
-        --workspace-region-titlebar-document-bg: var(--startup-titlebar-bg);
-        --workspace-region-titlebar-sidebar-bg: var(--startup-titlebar-bg);
-        --workspace-region-main-rail-bg: var(--startup-list-bg);
-        --workspace-region-main-folder-bg: var(--startup-list-bg);
-        --workspace-region-main-topic-bg: var(--startup-list-bg);
+        --workspace-region-titlebar-rail-bg: var(--startup-rail-bg);
+        --workspace-region-titlebar-folder-bg: var(--startup-folder-bg);
+        --workspace-region-titlebar-topic-bg: var(--startup-topic-bg);
+        --workspace-region-titlebar-document-bg: var(--startup-document-bg);
+        --workspace-region-titlebar-sidebar-bg: var(--startup-sidebar-bg);
+        --workspace-region-main-rail-bg: var(--startup-rail-bg);
+        --workspace-region-main-folder-bg: var(--startup-folder-bg);
+        --workspace-region-main-topic-bg: var(--startup-topic-bg);
         --workspace-region-main-document-bg: var(--startup-document-bg);
         --workspace-region-main-sidebar-bg: var(--startup-sidebar-bg);
-        --startup-region-titlebar-rail-bg: var(--startup-titlebar-bg);
-        --startup-region-titlebar-folder-bg: var(--startup-titlebar-bg);
-        --startup-region-titlebar-topic-bg: var(--startup-titlebar-bg);
-        --startup-region-titlebar-document-bg: var(--startup-titlebar-bg);
-        --startup-region-titlebar-sidebar-bg: var(--startup-titlebar-bg);
-        --startup-region-main-rail-bg: var(--startup-list-bg);
-        --startup-region-main-folder-bg: var(--startup-list-bg);
-        --startup-region-main-topic-bg: var(--startup-list-bg);
+        --startup-region-titlebar-rail-bg: var(--startup-rail-bg);
+        --startup-region-titlebar-folder-bg: var(--startup-folder-bg);
+        --startup-region-titlebar-topic-bg: var(--startup-topic-bg);
+        --startup-region-titlebar-document-bg: var(--startup-document-bg);
+        --startup-region-titlebar-sidebar-bg: var(--startup-sidebar-bg);
+        --startup-region-main-rail-bg: var(--startup-rail-bg);
+        --startup-region-main-folder-bg: var(--startup-folder-bg);
+        --startup-region-main-topic-bg: var(--startup-topic-bg);
         --startup-region-main-document-bg: var(--startup-document-bg);
         --startup-region-main-sidebar-bg: var(--startup-sidebar-bg);
         /*STARTUP_INJECTED_CSS*/
@@ -55,6 +57,39 @@
           -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC',
           'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC',
           sans-serif;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --startup-divider: rgba(232, 230, 223, 0.18);
+          --startup-titlebar-bg: #252824;
+          --startup-rail-bg: #2b2f2a;
+          --startup-folder-bg: #252824;
+          --startup-topic-bg: #2b2f2a;
+          --startup-document-bg: #1f211f;
+          --startup-sidebar-bg: #30362f;
+          --workspace-region-titlebar-rail-bg: var(--startup-rail-bg);
+          --workspace-region-titlebar-folder-bg: var(--startup-folder-bg);
+          --workspace-region-titlebar-topic-bg: var(--startup-topic-bg);
+          --workspace-region-titlebar-document-bg: var(--startup-document-bg);
+          --workspace-region-titlebar-sidebar-bg: var(--startup-sidebar-bg);
+          --workspace-region-main-rail-bg: var(--startup-rail-bg);
+          --workspace-region-main-folder-bg: var(--startup-folder-bg);
+          --workspace-region-main-topic-bg: var(--startup-topic-bg);
+          --workspace-region-main-document-bg: var(--startup-document-bg);
+          --workspace-region-main-sidebar-bg: var(--startup-sidebar-bg);
+          --startup-region-titlebar-rail-bg: var(--startup-rail-bg);
+          --startup-region-titlebar-folder-bg: var(--startup-folder-bg);
+          --startup-region-titlebar-topic-bg: var(--startup-topic-bg);
+          --startup-region-titlebar-document-bg: var(--startup-document-bg);
+          --startup-region-titlebar-sidebar-bg: var(--startup-sidebar-bg);
+          --startup-region-main-rail-bg: var(--startup-rail-bg);
+          --startup-region-main-folder-bg: var(--startup-folder-bg);
+          --startup-region-main-topic-bg: var(--startup-topic-bg);
+          --startup-region-main-document-bg: var(--startup-document-bg);
+          --startup-region-main-sidebar-bg: var(--startup-sidebar-bg);
+          color: #e8e6df;
+        }
       }
 
       html,
@@ -78,41 +113,15 @@
         position: fixed;
         inset: 0;
         min-height: 100%;
-        grid-template-rows: var(--startup-titlebar-height) minmax(0, 1fr);
-        background: var(--startup-document-bg);
-        overflow: hidden;
-        z-index: 2147483647;
-      }
-
-      .startup-shell__titlebar {
-        background:
-          linear-gradient(
-            to right,
-            var(--startup-region-titlebar-rail-bg) 0,
-            var(--startup-region-titlebar-rail-bg) var(--workspace-rail-width),
-            var(--startup-region-titlebar-folder-bg) var(--workspace-rail-width),
-            var(--startup-region-titlebar-folder-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width)),
-            var(--startup-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width)),
-            var(--startup-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width)),
-            var(--startup-region-titlebar-document-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width)),
-            var(--startup-region-titlebar-document-bg) calc(100% - var(--workspace-right-sidebar-current-width)),
-            var(--startup-region-titlebar-sidebar-bg) calc(100% - var(--workspace-right-sidebar-current-width)),
-            var(--startup-region-titlebar-sidebar-bg) 100%
-          );
-        min-height: var(--startup-titlebar-height);
-        position: relative;
-      }
-
-      .startup-shell__body {
-        display: grid;
         grid-template-columns:
           var(--workspace-rail-width)
           var(--workspace-list-folder-current-width)
           minmax(0, calc(var(--workspace-list-current-width) - var(--workspace-list-folder-current-width)))
           minmax(0, 1fr)
           var(--workspace-right-sidebar-current-width);
-        min-height: 0;
+        background: var(--startup-document-bg);
         overflow: hidden;
+        z-index: 2147483647;
       }
 
       .startup-shell__rail {
@@ -138,62 +147,15 @@
       .startup-shell__sidebar {
         background: var(--startup-region-main-sidebar-bg);
       }
-
-      .startup-shell__divider {
-        display: none;
-      }
-
-      @media (max-width: 1279px) {
-        :root {
-          --startup-right-sidebar-current-width: 0px;
-          --workspace-right-sidebar-current-width: 0px;
-        }
-
-        .startup-shell__body {
-          grid-template-columns:
-            var(--workspace-rail-width)
-            var(--workspace-list-folder-current-width)
-            minmax(0, calc(var(--workspace-list-current-width) - var(--workspace-list-folder-current-width)))
-            minmax(0, 1fr);
-        }
-
-        .startup-shell__sidebar {
-          display: none;
-        }
-      }
-
-      @media (max-width: 1079px) {
-        :root {
-          --startup-list-current-width: 0px;
-          --workspace-list-current-width: 0px;
-          --workspace-list-folder-current-width: 0px;
-          --workspace-titlebar-folder-column-width: 0px;
-          --workspace-titlebar-list-current-width: 0px;
-        }
-
-        .startup-shell__body {
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        .startup-shell__rail,
-        .startup-shell__folder,
-        .startup-shell__topic,
-        .startup-shell__sidebar {
-          display: none;
-        }
-      }
     </style>
   </head>
   <body>
     <section id="boot-skeleton" aria-hidden="true" class="startup-shell">
-      <div class="startup-shell__titlebar"></div>
-      <div class="startup-shell__body">
-        <div class="startup-shell__rail"></div>
-        <div class="startup-shell__folder"></div>
-        <div class="startup-shell__topic"></div>
-        <main class="startup-shell__document"></main>
-        <aside class="startup-shell__sidebar"></aside>
-      </div>
+      <div class="startup-shell__rail"></div>
+      <div class="startup-shell__folder"></div>
+      <div class="startup-shell__topic"></div>
+      <main class="startup-shell__document"></main>
+      <aside class="startup-shell__sidebar"></aside>
     </section>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

@@ -14,6 +14,7 @@ const localLibraryHome = process.env.FOLIOLE_NATIVE_LIBRARY_HOME?.trim() ||
   (isSandboxPreview ? sandboxLibraryHome : mainLibraryHome);
 const userDataPath = process.env.FOLIOLE_NATIVE_USER_DATA_PATH?.trim() ||
   (isSandboxPreview ? path.join(repoRoot, '.tmp', 'electron-user-data-sandbox') : defaultUserDataPath);
+const previewSlotRoot = process.env.FOLIOLE_NATIVE_PREVIEW_SLOT_ROOT?.trim() || '';
 
 function assertSandboxPath(value, label) {
   if (!isSandboxPreview) return;
@@ -34,6 +35,9 @@ function resetSandboxState() {
 function assertLocalDatabaseWritable() {
   const databasePath = path.join(localLibraryHome, 'Data', 'foliole.db');
   const useTemporaryLibrary = process.env.FOLIOLE_NATIVE_PREVIEW_TEMP_LIBRARY === '1';
+  if (useTemporaryLibrary) {
+    assertTemporaryLibraryPath(localLibraryHome);
+  }
   let handle = null;
   try {
     if (useTemporaryLibrary) {
@@ -47,6 +51,17 @@ function assertLocalDatabaseWritable() {
     if (handle !== null) {
       fs.closeSync(handle);
     }
+  }
+}
+
+function assertTemporaryLibraryPath(libraryHome) {
+  if (!previewSlotRoot) {
+    throw new Error('temporary native preview library requires FOLIOLE_NATIVE_PREVIEW_SLOT_ROOT');
+  }
+  const root = path.resolve(previewSlotRoot, 'slots');
+  const resolved = path.resolve(libraryHome);
+  if (!resolved.startsWith(`${root}${path.sep}`)) {
+    throw new Error(`refusing temporary native preview library outside slot root: ${libraryHome}`);
   }
 }
 
@@ -66,6 +81,9 @@ process.env.FOLIOLE_DISABLE_CHROMIUM_SANDBOX_FOR_DEBUG ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_NODE_SYNC_FLUSH ??= '1';
 process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE ??= '1';
+process.env.FOLIOLE_ELECTRON_DEV_SKIP_COMPILE ??= '1';
+process.env.FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION ??= '1';
+process.env.FOLIOLE_ELECTRON_DEV_SKIP_VITE_PREWARM ??= '1';
 assertLocalDatabaseWritable();
 
 await import('../electron-dev.mjs');

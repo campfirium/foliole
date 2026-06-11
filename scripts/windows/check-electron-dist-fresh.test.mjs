@@ -78,4 +78,25 @@ describe('check-electron-dist-fresh', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('ignores test sources that are excluded from the electron compile', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-test-source-'));
+    const sourceRoot = path.join(tempRoot, 'electron');
+    const distRoot = path.join(tempRoot, 'electron-dist');
+
+    try {
+      await writeTimestampedFile(path.join(sourceRoot, 'main.ts'), 'export {};\n', 1_000);
+      await writeTimestampedFile(path.join(sourceRoot, 'main.test.ts'), 'export {};\n', 3_000);
+      await writeTimestampedFile(path.join(sourceRoot, 'main.spec.ts'), 'export {};\n', 3_000);
+      await writeTimestampedFile(path.join(distRoot, 'electron', 'main.js'), 'export {};\n', 2_000);
+
+      const result = inspectElectronDistFreshness({ distRoot, repoRoot: tempRoot, sourceRoots: [sourceRoot] });
+
+      expect(result.ok).toBe(true);
+      expect(result.problems).toEqual([]);
+      expect(result.checkedSourceCount).toBe(1);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

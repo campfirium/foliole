@@ -35,6 +35,9 @@ it('passes native GPU disable switches before the Electron app path', async () =
   expect(vitePort).toContain('FOLIOLE_VITE_PORT_STRICT');
   expect(vitePort).toContain('return [preferredPort]');
   expect(runner).toContain('resolveVitePrewarmStartupBudgetMs()');
+  expect(runner).toContain('FOLIOLE_ELECTRON_DEV_SKIP_COMPILE');
+  expect(runner).toContain('FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION');
+  expect(runner).toContain('FOLIOLE_ELECTRON_DEV_SKIP_VITE_PREWARM');
   expect(runner).toContain('const prewarmAbortController = new AbortController();');
   expect(runner).toContain('signal: prewarmAbortController.signal');
   expect(runner).toContain('abortController: prewarmAbortController');

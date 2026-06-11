@@ -23,7 +23,7 @@ describe('preview-dedupe scheduler defaults', () => {
   });
 
   it('budgets the default Windows total timeout to include preview execution', () => {
-    expect(readTotalTimeoutMs('windows', 0, {})).toBe(4 * 60_000);
+    expect(readTotalTimeoutMs('windows', 0, {})).toBe(90_000);
   });
 
   it('ignores a stored validation window when the window is disabled', async () => {

@@ -6,6 +6,7 @@ import { resolveRendererIndexPath } from './runtimePaths.js';
 import { createStartupSkeletonAppearance, createStartupSkeletonLayoutFromSettings } from './startupSkeletonLayout.js';
 
 const RUNTIME_RENDERER_INDEX_FILENAME = 'runtime-renderer-index.html';
+export const RUNTIME_RENDERER_INDEX_CACHE_MARKER = '<meta name="foliole-runtime-renderer-index" content="1">';
 
 export function resolveRendererFilePath(runtimeDir: string) {
   return resolveRendererIndexPath(runtimeDir, fs.existsSync);
@@ -79,12 +80,27 @@ function appendStyleAttribute(attributes: string, css: string) {
   return `${attributes.slice(0, styleMatch.index)}${nextStyle}${attributes.slice(styleMatch.index + styleMatch[0].length)}`;
 }
 
+function removeStartupDocumentStateAttributes(attributes: string) {
+  return attributes
+    .replace(/\sdata-base-color=(["'])(.*?)\1/gu, '')
+    .replace(/\sdata-resolved-base-color=(["'])(.*?)\1/gu, '');
+}
+
 function injectStartupDocumentState(html: string, themeSource: 'dark' | 'light', startupCss: string) {
   return html.replace(
     /<html\b([^>]*)>/,
-    (_match, attributes: string) =>
-      `<html${appendStyleAttribute(attributes, startupCss)} data-base-color="${themeSource}" data-resolved-base-color="${themeSource}">`
+    (_match, attributes: string) => {
+      const cleanAttributes = removeStartupDocumentStateAttributes(attributes);
+      return `<html${appendStyleAttribute(cleanAttributes, startupCss)} data-base-color="${themeSource}" data-resolved-base-color="${themeSource}">`;
+    }
   );
+}
+
+function markRuntimeRendererIndex(html: string) {
+  if (html.includes(RUNTIME_RENDERER_INDEX_CACHE_MARKER)) {
+    return html;
+  }
+  return html.replace('<head>', `<head>\n    ${RUNTIME_RENDERER_INDEX_CACHE_MARKER}`);
 }
 
 function injectStartupTokensIntoHtml(html: string, startupCss: string, themeSource: 'dark' | 'light') {
@@ -132,19 +148,20 @@ export function writePrebuiltRendererHtmlForSettings(
   runtimeDir: string,
   settings: Record<string, unknown>,
   devUrl: string | null,
-  runtimeHtmlDir: string
+  runtimeHtmlDir: string,
+  systemColorMode: 'dark' | 'light' = 'light'
 ) {
   const normalizedDevUrl = normalizeDevUrl(devUrl);
   const indexPath = normalizedDevUrl ? resolveSourceRendererIndexPath(runtimeDir) : resolveRendererFilePath(runtimeDir);
   if (!fs.existsSync(indexPath)) {
     return false;
   }
-  const appearance = createStartupSkeletonAppearance(createStartupSkeletonLayoutFromSettings(settings), settings);
+  const appearance = createStartupSkeletonAppearance(createStartupSkeletonLayoutFromSettings(settings, { systemColorMode }), settings);
   const sourceHtml = fs.readFileSync(indexPath, 'utf8');
   const runtimeHtml = normalizedDevUrl
     ? injectDevRendererIntoHtml(sourceHtml, normalizedDevUrl, appearance.css, appearance.themeSource)
     : injectStartupTokensIntoRendererHtml(sourceHtml, indexPath, appearance.css, appearance.themeSource);
   fs.mkdirSync(runtimeHtmlDir, { recursive: true });
-  writeRuntimeRendererHtml(resolveRuntimeRendererIndexPath(runtimeHtmlDir), runtimeHtml);
+  writeRuntimeRendererHtml(resolveRuntimeRendererIndexPath(runtimeHtmlDir), markRuntimeRendererIndex(runtimeHtml));
   return true;
 }
