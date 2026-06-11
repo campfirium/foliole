@@ -27,7 +27,7 @@ vi.mock('electron', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
-import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
+import { hasStartupRendererSettingChange, loadAppSettingsState, saveAppSettingsState } from './storage.js';
 
 let tempRoot = '';
 
@@ -178,4 +178,18 @@ it('does not let the legacy workspace file override a new sqlite width', async (
   await expect(loadAppSettingsState()).resolves.toEqual({
     'foliole-workspace-list-width': '450'
   });
+});
+
+it('does not treat unrelated renderer settings as startup renderer changes', () => {
+  expect(hasStartupRendererSettingChange(
+    { 'foliole-update-check-state': 'old' },
+    { 'foliole-update-check-state': 'new' }
+  )).toBe(false);
+});
+
+it('treats startup layout settings as startup renderer changes', () => {
+  expect(hasStartupRendererSettingChange(
+    { 'foliole-workspace-dual-list-width': '190' },
+    { 'foliole-workspace-dual-list-width': '224' }
+  )).toBe(true);
 });

@@ -131,6 +131,7 @@ export async function launchDesktopSession({
   electronLauncher = undefined,
   env = process.env,
   existsSync = fs.existsSync,
+  extraArgs = [],
   timeoutMs = resolveTimeoutMs(
     env.FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS ?? env.FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS
   )
@@ -144,7 +145,7 @@ export async function launchDesktopSession({
   const launcher = electronLauncher ?? (await loadElectronLauncher());
   const isolation = createDesktopIsolationContext(env);
   target.runtimeStateRoot = isolation.runtimeStateRoot;
-  const launchOptions = createDesktopLaunchOptions(target, timeoutMs, env, isolation, existsSync);
+  const launchOptions = createDesktopLaunchOptions(target, timeoutMs, env, isolation, existsSync, extraArgs);
   const deadline = Date.now() + timeoutMs;
   let electronApp;
   try {

@@ -26,6 +26,10 @@ describe('playwright desktop launch target', () => {
     );
   });
 
+  it('normalizes drive-relative configured windows workdirs before deriving the mirror root', () => {
+    expect(resolveDesktopAppRoot({ FOLIOLE_WINDOWS_WORKDIR: 'D:C\\foliole' })).toBe('/mnt/d/C/foliole');
+  });
+
   it('resolves current build output paths in args launch mode', () => {
     expect(resolveDesktopLaunchTarget('/workspace/foliole', () => true)).toEqual({
       appRoot: '/workspace/foliole',
@@ -35,6 +39,30 @@ describe('playwright desktop launch target', () => {
       preloadPath: '/workspace/foliole/electron/preload.cjs',
       rendererIndexPath: '/workspace/foliole/dist/index.html'
     });
+  });
+
+  it('keeps Windows app roots on win32 paths when resolving launch outputs', () => {
+    expect(resolveDesktopLaunchTarget('D:\\C\\foliole', () => true)).toEqual({
+      appRoot: 'D:\\C\\foliole',
+      launchMode: 'args',
+      mainEntry: 'D:\\C\\foliole\\electron-dist\\electron\\main.js',
+      missingPaths: [],
+      preloadPath: 'D:\\C\\foliole\\electron\\preload.cjs',
+      rendererIndexPath: 'D:\\C\\foliole\\dist\\index.html'
+    });
+  });
+
+  it('normalizes drive-relative Windows roots before resolving launch outputs', () => {
+    expect(resolveDesktopLaunchTarget('D:C\\foliole', () => true)).toMatchObject({
+      appRoot: 'D:\\C\\foliole',
+      mainEntry: 'D:\\C\\foliole\\electron-dist\\electron\\main.js'
+    });
+  });
+
+  it('keeps Windows executable paths absolute without appending them to the current app root', () => {
+    expect(resolveElectronExecutablePath('D:\\C\\foliole', {}, (filePath) =>
+      filePath === 'D:\\C\\foliole\\node_modules\\electron\\dist\\electron.exe'
+    )).toBe('D:\\C\\foliole\\node_modules\\electron\\dist\\electron.exe');
   });
 
   it('requires the current preload entry instead of historical electron-dist fallback paths', () => {
@@ -71,6 +99,14 @@ describe('playwright desktop launch target', () => {
       env: { ...isolationEnv, FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1' },
       executablePath: '/workspace/foliole/node_modules/electron/dist/electron',
       timeout: 12_345
+    });
+
+    expect(
+      createDesktopLaunchOptions(target, 12_345, {
+        FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot
+      }, undefined, (filePath) => filePath === '/workspace/foliole/node_modules/electron/dist/electron', ['/tmp/opened.md'])
+    ).toMatchObject({
+      args: ['/workspace/foliole/electron-dist/electron/main.js', '/tmp/opened.md']
     });
 
     expect(

@@ -8,6 +8,7 @@ import { expect, it } from 'vitest';
 
 it('passes native GPU disable switches before the Electron app path', async () => {
   const runner = await readFile(path.resolve(process.cwd(), 'scripts/electron-dev.mjs'), 'utf8');
+  const vitePort = await readFile(path.resolve(process.cwd(), 'scripts/electron-dev-vite-port.mjs'), 'utf8');
 
   expect(runner).toContain("args.push('--disable-gpu', '--disable-gpu-compositing', '--disable-gpu-sandbox');");
   expect(runner).toContain("process.env.FOLIOLE_DISABLE_CHROMIUM_SANDBOX_FOR_DEBUG === '1'");
@@ -27,6 +28,13 @@ it('passes native GPU disable switches before the Electron app path', async () =
   expect(runner).toContain('windowsHide: true');
   expect(runner).toContain('windowsHide: false');
   expect(runner).toContain('VITE_PREWARM_STARTUP_BUDGET_MS');
+  expect(runner).toContain('const VITE_PREWARM_STARTUP_BUDGET_MS = 8000;');
+  expect(runner).toContain('FOLIOLE_VITE_PREWARM_STARTUP_BUDGET_MS');
+  expect(runner).toContain('strict Vite port already has a ready server');
+  expect(runner).toContain('candidateVitePorts(preferredPort)');
+  expect(vitePort).toContain('FOLIOLE_VITE_PORT_STRICT');
+  expect(vitePort).toContain('return [preferredPort]');
+  expect(runner).toContain('resolveVitePrewarmStartupBudgetMs()');
   expect(runner).toContain('const prewarmAbortController = new AbortController();');
   expect(runner).toContain('signal: prewarmAbortController.signal');
   expect(runner).toContain('abortController: prewarmAbortController');

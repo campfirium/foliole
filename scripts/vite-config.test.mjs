@@ -11,6 +11,10 @@ describe('vite config', () => {
     expect(viteConfig.base).toBe('./');
   });
 
+  it('does not reload the dev renderer when Electron rewrites its runtime startup html', () => {
+    expect(viteConfig.server?.watch?.ignored).toContain('**/.tmp/electron-user-data*/runtime-renderer-index.html');
+  });
+
   it('keeps Electron dev renderer updates behind explicit preview reload intents', () => {
     expect(viteConfig.server?.hmr).toBe(false);
   });

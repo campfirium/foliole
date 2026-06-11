@@ -11,11 +11,14 @@ import {
   prewarmViteRendererEntries,
   waitForPrewarmStartupBudget
 } from './electron-dev-server.mjs';
+import {
+  candidateVitePorts,
+  isStrictVitePort,
+  resolveRequestedPort,
+  resolveViteUrl
+} from './electron-dev-vite-port.mjs';
 
-const VITE_HOST = '127.0.0.1';
-const VITE_PORT_DEFAULT = 24600;
-const VITE_PORT_MAX_ATTEMPTS = 8;
-const VITE_PREWARM_STARTUP_BUDGET_MS = 2500;
+const VITE_PREWARM_STARTUP_BUDGET_MS = 8000;
 const DEV_SHELL_RESTART_REQUEST_FILE = path.resolve('.foliole-dev-shell-restart-request.json');
 
 process.env.FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE ??= DEV_SHELL_RESTART_REQUEST_FILE;
@@ -113,31 +116,25 @@ function wait(ms) {
   });
 }
 
-function resolveRequestedPort() {
-  const raw = process.env.FOLIOLE_VITE_PORT;
+function resolveVitePrewarmStartupBudgetMs() {
+  const raw = process.env.FOLIOLE_VITE_PREWARM_STARTUP_BUDGET_MS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  if (Number.isFinite(parsed) && parsed > 0 && parsed < 65536) {
+  if (Number.isFinite(parsed) && parsed > 0) {
     return parsed;
   }
-  return VITE_PORT_DEFAULT;
-}
-
-function resolveViteUrl(port) {
-  return `http://${VITE_HOST}:${port}`;
+  return VITE_PREWARM_STARTUP_BUDGET_MS;
 }
 
 async function startViteWithPortFallback() {
   const preferredPort = resolveRequestedPort();
-  const candidatePorts = new Set([preferredPort]);
-  for (let offset = 0; offset < VITE_PORT_MAX_ATTEMPTS; offset += 1) {
-    candidatePorts.add(preferredPort + 100 + offset);
-    candidatePorts.add(5173 + offset);
-    candidatePorts.add(3000 + offset);
-  }
+  const strictPort = isStrictVitePort();
 
-  for (const port of candidatePorts) {
+  for (const port of candidateVitePorts(preferredPort)) {
     const viteUrl = resolveViteUrl(port);
     if (await isViteServerReady(viteUrl)) {
+      if (strictPort) {
+        throw new Error(`strict Vite port already has a ready server: ${viteUrl}`);
+      }
       return { viteUrl, viteProc: null };
     }
 
@@ -170,7 +167,7 @@ async function startViteWithPortFallback() {
     }
   }
 
-  throw new Error('vite dev server did not become ready');
+  throw new Error(strictPort ? `vite dev server did not become ready on strict port ${preferredPort}` : 'vite dev server did not become ready');
 }
 
 const compile = runNodeScript([path.join('node_modules', 'typescript', 'bin', 'tsc'), '-p', 'electron/tsconfig.json']);
@@ -183,7 +180,7 @@ const prewarmStatus = await waitForPrewarmStartupBudget(
   prewarmViteRendererEntries(viteState.viteUrl, globalThis.fetch, { signal: prewarmAbortController.signal }),
   {
     abortController: prewarmAbortController,
-    budgetMs: VITE_PREWARM_STARTUP_BUDGET_MS
+    budgetMs: resolveVitePrewarmStartupBudgetMs()
   }
 );
 console.info(

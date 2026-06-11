@@ -6,6 +6,7 @@ import {
   APP_SETTINGS_PERSISTENCE_KINDS
 } from '../config/appSettingsClassification';
 
+import { saveRuntimeAppSettingsState } from './appSettingsState';
 import { getLocalStorageWhitelist, setWhitelistedLocalStorageItem } from './storage';
 
 vi.mock('./appSettingsState', () => ({
@@ -13,6 +14,7 @@ vi.mock('./appSettingsState', () => ({
 }));
 
 beforeEach(() => {
+  vi.clearAllMocks();
   window.localStorage.clear();
 });
 
@@ -33,4 +35,12 @@ it('rejects settings that are not classified for localStorage', () => {
   expect(() => setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncEnabled, 'true')).toThrow(
     '[storage] key is not in localStorage whitelist: foliole-desktop-device-sync-enabled'
   );
+});
+
+it('does not persist the runtime snapshot again when the local value is unchanged', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.uiFont, 'inter');
+
+  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.uiFont, 'inter');
+
+  expect(saveRuntimeAppSettingsState).not.toHaveBeenCalled();
 });

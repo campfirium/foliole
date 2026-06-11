@@ -1,4 +1,4 @@
-import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from './appSettingsState';
+import { loadRuntimeAppSettingsState } from './appSettingsState';
 import { getLocalStorageWhitelist } from './storage';
 
 function normalizeSettingsPayload(value: unknown) {
@@ -49,10 +49,10 @@ export async function syncAppSettingsWithRuntime() {
     return;
   }
 
+  const normalizedRuntimeSnapshot = normalizeSettingsPayload(runtimeSnapshot);
   const mergedSnapshot = {
     ...localSnapshot,
-    ...normalizeSettingsPayload(runtimeSnapshot)
+    ...normalizedRuntimeSnapshot
   };
   writeWhitelistedLocalSettings(mergedSnapshot);
-  await saveRuntimeAppSettingsState(mergedSnapshot);
 }

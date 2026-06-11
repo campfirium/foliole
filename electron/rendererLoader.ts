@@ -1,9 +1,15 @@
 import fs from 'node:fs';
 
-import type { BrowserWindow } from 'electron';
+import { app, type BrowserWindow } from 'electron';
 
 import { formatRuntimeDiagnosticsSnapshot, resolveRendererTargetUrl, type RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
-import { resolveRendererFilePath } from './runtimeRendererHtml.js';
+import { resolveRendererFilePath, resolveRuntimeRendererIndexPath } from './runtimeRendererHtml.js';
+
+export {
+  injectDevRendererIntoHtml,
+  injectStartupTokensIntoRendererHtml,
+  writePrebuiltRendererHtmlForSettings
+} from './runtimeRendererHtml.js';
 
 export interface StartupRendererView {
   errorSummary: string;
@@ -116,11 +122,21 @@ function appendRendererParamsToUrl(url: string, startupView?: StartupRendererVie
 
 async function loadPackagedRenderer(window: BrowserWindow, runtimeDir: string) {
   const indexPath = resolveRendererFilePath(runtimeDir);
-  await window.loadFile(indexPath);
+  await window.loadFile(resolveExistingRuntimeRendererIndex() ?? indexPath);
 }
 
 async function loadDevRenderer(window: BrowserWindow, devUrl: string) {
+  const runtimeIndexPath = resolveExistingRuntimeRendererIndex();
+  if (runtimeIndexPath) {
+    await window.loadFile(runtimeIndexPath);
+    return;
+  }
   await window.loadURL(devUrl);
+}
+
+function resolveExistingRuntimeRendererIndex() {
+  const runtimeIndexPath = resolveRuntimeRendererIndexPath(app.getPath('userData'));
+  return fs.existsSync(runtimeIndexPath) ? runtimeIndexPath : null;
 }
 
 export async function loadRenderer(
