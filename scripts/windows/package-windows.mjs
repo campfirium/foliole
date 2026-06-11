@@ -149,7 +149,7 @@ function isInstallerArtifact(fileName, packageVersion) {
 }
 
 export function collectInstallerArtifactPaths(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
-  const releaseDir = resolve(rootDir, 'release');
+  const releaseDir = resolve(rootDir, 'release-artifacts');
   if (!existsSync(releaseDir)) {
     return [];
   }
@@ -174,14 +174,14 @@ export function resolveReleaseArtifactPaths(rootDir = repoRoot, packageVersion =
   const installerArtifacts = collectInstallerArtifactPaths(rootDir, packageVersion);
   const installerBlockmaps = installerArtifacts.map((artifactPath) => `${artifactPath}.blockmap`);
   return [
-    resolve(rootDir, 'release/win-unpacked'),
-    resolve(rootDir, 'release/win-unpacked.tmp'),
-    resolve(rootDir, `release/${installerBaseName}.exe`),
-    resolve(rootDir, `release/${installerBaseName}.exe.blockmap`),
+    resolve(rootDir, 'release-artifacts/win-unpacked'),
+    resolve(rootDir, 'release-artifacts/win-unpacked.tmp'),
+    resolve(rootDir, `release-artifacts/${installerBaseName}.exe`),
+    resolve(rootDir, `release-artifacts/${installerBaseName}.exe.blockmap`),
     ...installerArtifacts,
     ...installerBlockmaps,
-    resolve(rootDir, 'release/latest.yml'),
-    resolve(rootDir, 'release/builder-debug.yml')
+    resolve(rootDir, 'release-artifacts/latest.yml'),
+    resolve(rootDir, 'release-artifacts/builder-debug.yml')
   ];
 }
 
@@ -193,8 +193,8 @@ export function cleanReleaseArtifacts(rootDir = repoRoot) {
 
 export function collectArtifactSummary(rootDir = process.cwd(), packageVersion = readPackageVersion(rootDir)) {
   const installerPath = collectInstallerArtifactPaths(rootDir, packageVersion)[0] ??
-    resolve(rootDir, `release/${resolveInstallerBaseName(packageVersion)}.exe`);
-  const unpackedPath = resolve(rootDir, 'release/win-unpacked');
+    resolve(rootDir, `release-artifacts/${resolveInstallerBaseName(packageVersion)}.exe`);
+  const unpackedPath = resolve(rootDir, 'release-artifacts/win-unpacked');
   return {
     installer: existsSync(installerPath) ? formatBytes(statSync(installerPath).size) : 'missing',
     unpacked: existsSync(unpackedPath) ? formatBytes(directorySizeBytes(unpackedPath)) : 'missing'
@@ -207,7 +207,7 @@ export async function installPackagedApp(rootDir = repoRoot, packageVersion = re
   await runStep({
     args: ['/S'],
     command: installerPath,
-    cwd: resolve(rootDir, 'release'),
+    cwd: resolve(rootDir, 'release-artifacts'),
     label: 'silent install'
   });
 }

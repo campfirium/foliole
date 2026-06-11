@@ -3,7 +3,7 @@
   "productName": "Foliole",
   "copyright": "Copyright (c) 2026 Foliole",
   "directories": {
-    "output": "release"
+    "output": "release-artifacts"
   },
   "electronDist": "node_modules/electron/dist",
   "asar": true,

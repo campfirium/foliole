@@ -12,6 +12,7 @@ const EXEMPT_ROOTS = new Set([
   'node_modules',
   'ref',
   'release',
+  'release-artifacts',
   'src-tauri',
   'trees'
 ]);

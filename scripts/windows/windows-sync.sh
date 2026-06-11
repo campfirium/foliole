@@ -72,6 +72,7 @@ RSYNC_ARGS=(
   --exclude "src-tauri/"
   --exclude "node_modules/"
   --exclude "release/"
+  --exclude "release-artifacts/"
   --exclude "coverage/"
   --exclude "android/.gradle/"
   --exclude "android/build/"

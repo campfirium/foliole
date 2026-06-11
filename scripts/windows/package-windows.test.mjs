@@ -113,31 +113,31 @@ describe('windows package runner', () => {
 
   it('cleans only known release artifacts before native packaging', () => {
     expect(resolveReleaseArtifactPaths('/repo', '9.8.7')).toEqual([
-      '/repo/release/win-unpacked',
-      '/repo/release/win-unpacked.tmp',
-      '/repo/release/Foliole Setup 9.8.7.exe',
-      '/repo/release/Foliole Setup 9.8.7.exe.blockmap',
-      '/repo/release/latest.yml',
-      '/repo/release/builder-debug.yml'
+      '/repo/release-artifacts/win-unpacked',
+      '/repo/release-artifacts/win-unpacked.tmp',
+      '/repo/release-artifacts/Foliole Setup 9.8.7.exe',
+      '/repo/release-artifacts/Foliole Setup 9.8.7.exe.blockmap',
+      '/repo/release-artifacts/latest.yml',
+      '/repo/release-artifacts/builder-debug.yml'
     ]);
   });
 
   it('finds the current electron-builder Windows installer artifact', () => {
     const root = mkdtempSync(join(tmpdir(), 'foliole-package-test-'));
     try {
-      mkdirSync(join(root, 'release'));
-      writeFileSync(join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe'), '');
-      writeFileSync(join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap'), '');
-      writeFileSync(join(root, 'release', 'Other-Setup-9.8.7-win-x64.exe'), '');
+      mkdirSync(join(root, 'release-artifacts'));
+      writeFileSync(join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe'), '');
+      writeFileSync(join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap'), '');
+      writeFileSync(join(root, 'release-artifacts', 'Other-Setup-9.8.7-win-x64.exe'), '');
 
       expect(collectInstallerArtifactPaths(root, '9.8.7')).toEqual([
-        join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe')
+        join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe')
       ]);
       expect(resolvePackagedInstallerPath(root, '9.8.7')).toBe(
-        join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe')
+        join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe')
       );
       expect(resolveReleaseArtifactPaths(root, '9.8.7')).toContain(
-        join(root, 'release', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap')
+        join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap')
       );
     } finally {
       rmSync(root, { force: true, recursive: true });

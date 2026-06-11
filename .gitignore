@@ -6,6 +6,7 @@ dist/
 dist-guides/
 electron-dist/
 release/
+release-artifacts/
 coverage/
 blob-report/
 *.tsbuildinfo

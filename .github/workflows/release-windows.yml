@@ -37,18 +37,18 @@ jobs:
       - name: Generate installer checksum
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -Path release -Filter "*.exe" | Select-Object -First 1
+          $installer = Get-ChildItem -Path release-artifacts -Filter "*.exe" | Select-Object -First 1
           if (-not $installer) {
             throw "Windows installer was not generated."
           }
 
           $hash = (Get-FileHash -Algorithm SHA256 $installer.FullName).Hash.ToLowerInvariant()
-          "$hash *$($installer.Name)" | Set-Content -Path release/SHA256SUMS.txt -Encoding ascii
+          "$hash *$($installer.Name)" | Set-Content -Path release-artifacts/SHA256SUMS.txt -Encoding ascii
 
       - name: Generate artifact attestation
         uses: actions/attest@v4
         with:
-          subject-checksums: release/SHA256SUMS.txt
+          subject-checksums: release-artifacts/SHA256SUMS.txt
 
       - name: Publish installer draft release
         shell: pwsh
@@ -56,8 +56,8 @@ jobs:
           $package = Get-Content package.json | ConvertFrom-Json
           $tagName = "v$($package.version)"
           $releaseTitle = $package.version
-          $installer = Get-ChildItem -Path release -Filter "*.exe" | Select-Object -First 1
-          $checksums = Get-Item -Path release/SHA256SUMS.txt
+          $installer = Get-ChildItem -Path release-artifacts -Filter "*.exe" | Select-Object -First 1
+          $checksums = Get-Item -Path release-artifacts/SHA256SUMS.txt
           if (-not $installer) {
             throw "Windows installer was not generated."
           }
@@ -87,7 +87,7 @@ jobs:
         with:
           name: foliole-windows-release
           path: |
-            release/*.exe
-            release/SHA256SUMS.txt
+            release-artifacts/*.exe
+            release-artifacts/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14

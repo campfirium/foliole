@@ -36,6 +36,7 @@ async function createFixtureRoot() {
     'logs',
     'ref',
     'release',
+    'release-artifacts',
     'public',
     'scripts',
     'src',
@@ -90,6 +91,7 @@ describe('check-repository-root-boundary', () => {
     expect(output).not.toContain('ref');
     expect(output).not.toContain('src-tauri');
     expect(output).not.toContain('unauthorized=release');
+    expect(output).not.toContain('unauthorized=release-artifacts');
     expect(output).not.toContain('trees');
   });
 });
