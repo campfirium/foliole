@@ -47,6 +47,7 @@ it('does not expose writable workspace debug for normal desktop debug metadata',
   });
 
   expect(electronApi.debug.workspaceDebugBridge).toBe(false);
+  expect(electronApi.debug.workspaceDebugSeedPersistence).toBeUndefined();
 });
 
 it('exposes writable workspace debug only for isolated desktop test instances', () => {
@@ -57,4 +58,33 @@ it('exposes writable workspace debug only for isolated desktop test instances', 
   });
 
   expect(electronApi.debug.workspaceDebugBridge).toBe(true);
+  expect(electronApi.debug.workspaceDebugSeedPersistence).toBeUndefined();
+});
+
+it('exposes debug seed persistence only inside the Playwright test state root', () => {
+  const electronApi = executePreload({
+    ELECTRON_RENDERER_URL: 'http://127.0.0.1:24600/',
+    FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+    FOLIOLE_ELECTRON_TEST_STATE_ROOT: 'D:\\Temp\\foliole-playwright-state',
+    FOLIOLE_SESSION_DATA_PATH: 'D:\\Temp\\foliole-playwright-state\\session-data',
+    FOLIOLE_USER_DATA_PATH: 'D:\\Temp\\foliole-playwright-state\\user-data',
+    FOLIOLE_WORKDIR: 'D:\\Temp\\foliole-playwright-state'
+  });
+
+  expect(electronApi.debug.workspaceDebugBridge).toBe(true);
+  expect(electronApi.debug.workspaceDebugSeedPersistence).toBe(true);
+});
+
+it('does not expose debug seed persistence when the runtime is outside the test state root', () => {
+  const electronApi = executePreload({
+    ELECTRON_RENDERER_URL: 'http://127.0.0.1:24600/',
+    FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+    FOLIOLE_ELECTRON_TEST_STATE_ROOT: 'D:\\Temp\\foliole-playwright-state',
+    FOLIOLE_SESSION_DATA_PATH: 'D:\\X\\U\\Foliole\\Data',
+    FOLIOLE_USER_DATA_PATH: 'D:\\X\\U\\Foliole\\Data',
+    FOLIOLE_WORKDIR: 'D:\\X\\U\\Foliole'
+  });
+
+  expect(electronApi.debug.workspaceDebugBridge).toBe(true);
+  expect(electronApi.debug.workspaceDebugSeedPersistence).toBeUndefined();
 });

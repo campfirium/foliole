@@ -28,6 +28,7 @@ beforeEach(() => {
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-04-09T00:00:00.000Z')));
   useWorkspaceStore.getState().createRootNode('');
   delete (window as Window & { __folioleWorkspaceDebug?: unknown }).__folioleWorkspaceDebug;
+  delete (window as Window & { electronAPI?: unknown }).electronAPI;
 });
 
 function getSeedNodeId() {
@@ -188,6 +189,11 @@ it('persists seeded debug nodes and imports debug attachments through the native
     return null;
   });
   getRuntimeInvoke.mockReturnValue(runtimeInvoke);
+  (window as unknown as {
+    electronAPI?: { debug: { preloadPath: string | null; runtimeHead: string | null; workspaceDebugSeedPersistence: boolean } };
+  }).electronAPI = {
+    debug: { preloadPath: null, runtimeHead: null, workspaceDebugSeedPersistence: true }
+  };
 
   installWorkspaceDebugBridge();
   const debugApi = getDebugApi();

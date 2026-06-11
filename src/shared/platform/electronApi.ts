@@ -7,6 +7,7 @@ interface ElectronDebugMetadata {
   preloadPath: string | null;
   runtimeHead: string | null;
   workspaceDebugBridge?: boolean;
+  workspaceDebugSeedPersistence?: boolean;
 }
 
 interface ElectronRuntimeConfig {

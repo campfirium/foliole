@@ -22,6 +22,7 @@ export function createDesktopIsolationContext(env = process.env) {
     },
     env: {
       FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: runtimeStateRoot,
       FOLIOLE_SESSION_DATA_PATH: sessionDataPath,
       FOLIOLE_USER_DATA_PATH: userDataPath,
       FOLIOLE_WORKDIR: runtimeStateRoot

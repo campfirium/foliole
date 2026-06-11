@@ -34,7 +34,7 @@ function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode
   );
 }
 
-export function createSeedNodeDebugApi(): SeedNodeDebugApi {
+export function createSeedNodeDebugApi(canPersistSeeds: () => boolean = () => false): SeedNodeDebugApi {
   return {
     seedNodes: async (nodes, options) => {
       const initial = createInitialWorkspaceState(new Date('2026-04-08T00:00:00.000Z'));
@@ -51,7 +51,7 @@ export function createSeedNodeDebugApi(): SeedNodeDebugApi {
         nodesById: seededNodesById,
         trashedNodeIds: []
       });
-      if (options?.persist !== false) {
+      if (options?.persist !== false && canPersistSeeds()) {
         await persistSeedNodes(nodes);
       }
     }

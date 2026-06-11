@@ -37,7 +37,19 @@ describe('playwright desktop harness', () => {
           runtimeHead: 'head-123'
         })
       };
-      return _pageFunction();
+      const previousLocation = globalThis.location;
+      const previousDocument = globalThis.document;
+      globalThis.location = { href: 'file:///workspace/foliole/dist/index.html' };
+      globalThis.document = {
+        getElementById: (id) => id === 'root' ? {} : null,
+        readyState: 'complete'
+      };
+      try {
+        return _pageFunction();
+      } finally {
+        globalThis.location = previousLocation;
+        globalThis.document = previousDocument;
+      }
     };
     windowPage.title = async () => 'Foliole';
     windowPage.url = () => 'file:///workspace/foliole/dist/index.html';
@@ -78,6 +90,9 @@ describe('playwright desktop harness', () => {
             expect(timeout).toBeGreaterThan(0);
             expect(timeout).toBeLessThanOrEqual(12_345);
             return windowPage;
+          },
+          windows() {
+            return [windowPage];
           }
         };
       }
@@ -145,8 +160,8 @@ describe('playwright desktop harness', () => {
       nativeInvokeHistory: [expect.objectContaining({ command: 'resolve_app_paths', status: 'resolved' })],
       rendererPage: {
         pageUrl: 'file:///workspace/foliole/dist/index.html',
-        readyState: null,
-        rootPresent: false,
+        readyState: 'complete',
+        rootPresent: true,
         title: null,
         url: 'file:///workspace/foliole/dist/index.html'
       },

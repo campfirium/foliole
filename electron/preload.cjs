@@ -33,6 +33,11 @@ function isWorkspaceDebugBridgeEnabled() {
   return process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && Boolean(workdir) && workdir !== process.cwd?.();
 }
 
+function isWorkspaceDebugSeedPersistenceEnabled() {
+  const stateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
+  return isWorkspaceDebugBridgeEnabled() && Boolean(stateRoot?.trim() && process.env.FOLIOLE_WORKDIR === stateRoot);
+}
+
 function resolveGuidedSampleLocaleOverride() {
   const value = process.env.FOLIOLE_GUIDED_SAMPLE_LOCALE?.trim();
   return value === 'en-US' || value === 'zh-CN' ? value : null;
@@ -208,7 +213,8 @@ if (isDesktopDebugProbeEnabled()) {
   electronApi.debug = {
     preloadPath,
     runtimeHead: process.env.FOLIOLE_RUNTIME_HEAD ?? null,
-    workspaceDebugBridge: isWorkspaceDebugBridgeEnabled()
+    workspaceDebugBridge: isWorkspaceDebugBridgeEnabled(),
+    ...(isWorkspaceDebugSeedPersistenceEnabled() ? { workspaceDebugSeedPersistence: true } : {})
   };
 }
 

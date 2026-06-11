@@ -50,7 +50,10 @@ interface WorkspaceDebugApi {
   updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }
 
-type WorkspaceDebugWindow = Window & { electronAPI?: { debug?: { workspaceDebugBridge?: boolean } }; __folioleWorkspaceDebug?: WorkspaceDebugApi };
+type WorkspaceDebugWindow = Window & {
+  electronAPI?: { debug?: { workspaceDebugBridge?: boolean; workspaceDebugSeedPersistence?: boolean } };
+  __folioleWorkspaceDebug?: WorkspaceDebugApi;
+};
 
 function isWorkspaceDebugEnabled() {
   if (typeof window === 'undefined') {
@@ -61,6 +64,10 @@ function isWorkspaceDebugEnabled() {
     isTest: import.meta.env.MODE === 'test',
     workspaceDebugBridge: (window as WorkspaceDebugWindow).electronAPI?.debug?.workspaceDebugBridge
   });
+}
+
+function canPersistWorkspaceDebugSeeds() {
+  return (window as WorkspaceDebugWindow).electronAPI?.debug?.workspaceDebugSeedPersistence === true;
 }
 
 function getExistingNodeState(nodeId: string) {
@@ -167,7 +174,7 @@ function createWorkspaceDebugApi(): WorkspaceDebugApi {
     ...createNodeMutationDebugApi(),
     ...createNodeReadDebugApi(),
     importClipboardImageAttachment: createClipboardImportHandler(),
-    ...createSeedNodeDebugApi(),
+    ...createSeedNodeDebugApi(canPersistWorkspaceDebugSeeds),
     ...createWorkspaceSyncDebugApi()
   };
 }
