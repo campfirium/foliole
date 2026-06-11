@@ -14,6 +14,7 @@ import {
   resolveDatabasePath
 } from './connection.js';
 import type { DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
+import { clearOpenedExternalSearchCache } from './externalSearchCacheMaintenance.js';
 import {
   isDatabaseCorruptionError,
   moveDatabaseToPreRebuildSnapshot,
@@ -83,6 +84,7 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
   reportStage?.('database_schema_init_start');
   createPreMigrationSnapshotIfNeeded(connection);
   const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
+  clearOpenedExternalSearchCache();
   reportStage?.('database_schema_init_complete');
   seedInitialWorkspace(initializedConnection);
   return initializedConnection;
@@ -141,6 +143,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     enableDatabaseWriteAheadLog(connection);
     reportStage?.('database_recovery_schema_init_start');
     const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
+    clearOpenedExternalSearchCache();
     reportStage?.('database_recovery_schema_init_complete');
     seedInitialWorkspace(initializedConnection);
     return initializedConnection;
@@ -169,6 +172,7 @@ function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: Da
   });
   reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
   const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
+  clearOpenedExternalSearchCache();
   reportStage?.('database_legacy_rebuild_schema_init_complete');
   seedInitialWorkspace(initializedConnection);
   return initializedConnection;

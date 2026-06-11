@@ -11,6 +11,10 @@ const { loadReadwiseExternalSearchFolders } = vi.hoisted(() => ({
 }));
 
 const SAVE_EXTERNAL_SEARCH_FOLDERS = 'save_external_search_folders';
+const LOAD_EXTERNAL_SEARCH_BROWSE_ENTRIES = 'load_external_search_browse_entries';
+const LOAD_EXTERNAL_SEARCH_FOLDERS = 'load_external_search_folders';
+const LOAD_EXTERNAL_SEARCH_PREVIEW = 'load_external_search_preview';
+const REBUILD_EXTERNAL_SEARCH_INDEX = 'rebuild_external_search_index';
 let mockedAppDataDir = '/tmp/foliole-storage-external-search-commands';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -23,7 +27,10 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 vi.mock('../database/readwiseManagedExternalDocuments.js', () => ({
-  loadReadwiseExternalSearchFolders
+  isReadwiseExternalFolderId: () => false,
+  loadReadwiseExternalSearchBrowseEntries: () => [],
+  loadReadwiseExternalSearchFolders,
+  loadReadwiseExternalSearchPreview: () => null
 }));
 
 vi.mock('../externalSearchBackgroundRefreshRuntime.js', () => ({
@@ -33,6 +40,7 @@ vi.mock('../externalSearchBackgroundRefreshRuntime.js', () => ({
 import { closeDatabaseConnection } from '../database/connection.js';
 import { recordOpenedExternalDocument } from '../database/externalOpenedDocuments.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
+import { readLocalFile } from '../database/localFiles.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
@@ -94,22 +102,117 @@ async function saveExternalFolders() {
   return result as Array<{ id: string }>;
 }
 
-it('keeps the opened external documents folder between saved and Readwise folders after settings save', async () => {
+async function saveExternalFolder(folderPath: string) {
+  const result = await Promise.resolve(
+    handleExternalSearchStorageCommand(SAVE_EXTERNAL_SEARCH_FOLDERS, {
+      folders: [{ ...createSavedFolderInput(), folder_path: folderPath }]
+    })
+  );
+  expect(Array.isArray(result)).toBe(true);
+}
+
+it('clears legacy opened external documents after settings save', async () => {
   const openedPath = path.join(tempRoot, 'opened', 'recent.md');
   await writeTextFile(openedPath, '# Recent\nOpened body');
   await recordOpenedExternalDocument(openedPath);
 
   const result = await saveExternalFolders();
 
-  expect(result.map((folder) => folder.id)).toEqual([
-    'saved-folder',
-    'opened-external-documents',
-    'readwise-folder'
-  ]);
+  expect(result.map((folder) => folder.id)).toEqual(['saved-folder', 'readwise-folder']);
 });
 
 it('does not add an empty opened external documents folder after settings save', async () => {
   const result = await saveExternalFolders();
 
   expect(result.map((folder) => folder.id)).toEqual(['saved-folder', 'readwise-folder']);
+});
+
+it('shows local file metadata in the opened files folder without an external content mirror', async () => {
+  const localPath = path.join(tempRoot, 'loose', 'local.md');
+  await writeTextFile(localPath, '# Local\nEditable body');
+  await readLocalFile(localPath);
+
+  const folders = await Promise.resolve(handleExternalSearchStorageCommand(LOAD_EXTERNAL_SEARCH_FOLDERS, {}));
+  expect((folders as Array<{ document_count: number; folder_path: string; id: string }>)).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      document_count: 1,
+      folder_path: 'Local',
+      id: 'opened-external-documents'
+    })
+  ]));
+
+  const entries = handleExternalSearchStorageCommand(LOAD_EXTERNAL_SEARCH_BROWSE_ENTRIES, {
+    folder_id: 'opened-external-documents'
+  }) as Array<{ absolute_path: string; editable: boolean; source_kind: string }>;
+  expect(entries).toEqual([
+    expect.objectContaining({
+      absolute_path: localPath,
+      editable: true,
+      source_kind: 'local_file'
+    })
+  ]);
+});
+
+it('prefers editable opened local file entries over read-only external rows for the same path', async () => {
+  const libraryPath = path.join(tempRoot, 'library');
+  const localPath = path.join(libraryPath, 'topic.md');
+  await writeTextFile(localPath, '# Cached\nOld body');
+  await saveExternalFolder(libraryPath);
+  await Promise.resolve(handleExternalSearchStorageCommand(REBUILD_EXTERNAL_SEARCH_INDEX, {}));
+  await readLocalFile(localPath);
+
+  const entries = handleExternalSearchStorageCommand(LOAD_EXTERNAL_SEARCH_BROWSE_ENTRIES, {
+    folder_id: 'opened-external-documents'
+  }) as Array<{ absolute_path: string; editable: boolean; source_kind: string }>;
+
+  expect(entries).toEqual([
+    expect.objectContaining({
+      absolute_path: localPath,
+      editable: true,
+      source_kind: 'local_file'
+    })
+  ]);
+});
+
+it('loads editable disk content for opened local file previews even when external cache has the same path', async () => {
+  const libraryPath = path.join(tempRoot, 'library');
+  const localPath = path.join(libraryPath, 'topic.md');
+  await writeTextFile(localPath, '# Cached\nOld body');
+  await saveExternalFolder(libraryPath);
+  await Promise.resolve(handleExternalSearchStorageCommand(REBUILD_EXTERNAL_SEARCH_INDEX, {}));
+  await writeTextFile(localPath, '# Current\nEditable body');
+  await readLocalFile(localPath);
+
+  const preview = await Promise.resolve(handleExternalSearchStorageCommand(LOAD_EXTERNAL_SEARCH_PREVIEW, {
+    absolute_path: localPath,
+    folder_id: 'opened-external-documents',
+    source_kind: 'local_file'
+  })) as { content: string; editable: boolean; source_kind: string };
+
+  expect(preview).toEqual(expect.objectContaining({
+    content: '# Current\nEditable body',
+    editable: true,
+    source_kind: 'local_file'
+  }));
+});
+
+it('uses opened local file metadata when preview source kind is missing', async () => {
+  const libraryPath = path.join(tempRoot, 'library');
+  const localPath = path.join(libraryPath, 'topic.md');
+  await writeTextFile(localPath, '# Cached\nOld body');
+  await saveExternalFolder(libraryPath);
+  await Promise.resolve(handleExternalSearchStorageCommand(REBUILD_EXTERNAL_SEARCH_INDEX, {}));
+  await writeTextFile(localPath, '# Current\nEditable body');
+  await readLocalFile(localPath);
+
+  const preview = await Promise.resolve(handleExternalSearchStorageCommand(LOAD_EXTERNAL_SEARCH_PREVIEW, {
+    absolute_path: localPath,
+    folder_id: 'opened-external-documents'
+  })) as { content: string; editable: boolean; source_kind: string };
+
+  expect(preview).toEqual(expect.objectContaining({
+    content: '# Current\nEditable body',
+    editable: true,
+    source_kind: 'local_file'
+  }));
 });

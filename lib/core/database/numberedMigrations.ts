@@ -6,7 +6,7 @@ import {
   migrateNodeViewStateDeviceScope
 } from './numberedMigrationDeviceIdentity.js';
 import { addColumnIfMissing, execOptionalIndex, tableExists } from './numberedMigrationHelpers.js';
-import { migrateLocalFilesRegistry } from './numberedMigrationLocalFiles.js';
+import { migrateLocalFilesRegistry, resetOpenedLocalFileHistory } from './numberedMigrationLocalFiles.js';
 import { TEXT_BODY_NUMBERED_MIGRATIONS } from './numberedMigrationTextBodyRegistry.js';
 import { migrateSearchIndexInvalidationTypes } from './searchIndexInvalidationSchemaMigration.js';
 import { SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS } from './searchIndexInvalidationSchemaStatements.js';
@@ -160,6 +160,10 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 47,
     migrate: migrateLocalFilesRegistry
+  },
+  {
+    version: 48,
+    migrate: resetOpenedLocalFileHistory
   }
 ];
 
