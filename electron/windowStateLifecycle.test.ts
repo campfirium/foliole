@@ -68,3 +68,30 @@ it('keeps restored coordinates that intersect a display work area', () => {
     y: 80
   });
 });
+
+it('starts maximized windows at the matching display work area before presentation', () => {
+  expect(
+    applyWindowStateToOptions(
+      { backgroundColor: '#ffffff', show: false },
+      {
+        height: 900,
+        isFullScreen: false,
+        isMaximized: true,
+        width: 1400,
+        x: 120,
+        y: 80
+      },
+      [
+        { height: 1040, width: 1920, x: 0, y: 0 },
+        { height: 1440, width: 2560, x: 1920, y: 0 }
+      ]
+    )
+  ).toEqual({
+    backgroundColor: '#ffffff',
+    height: 1040,
+    show: false,
+    width: 1920,
+    x: 0,
+    y: 0
+  });
+});

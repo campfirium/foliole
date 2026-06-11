@@ -23,7 +23,45 @@ function hasVisibleIntersection(bounds: WorkAreaBounds, workArea: WorkAreaBounds
   return horizontal > 80 && vertical > 80;
 }
 
+function calculateIntersectionArea(bounds: WorkAreaBounds, workArea: WorkAreaBounds) {
+  const horizontal = Math.min(bounds.x + bounds.width, workArea.x + workArea.width) - Math.max(bounds.x, workArea.x);
+  const vertical = Math.min(bounds.y + bounds.height, workArea.y + workArea.height) - Math.max(bounds.y, workArea.y);
+  return Math.max(0, horizontal) * Math.max(0, vertical);
+}
+
+function resolveMaximizedStartupBounds(state: PersistedWindowState, workAreas: WorkAreaBounds[]) {
+  if (!state.isMaximized || workAreas.length === 0) {
+    return null;
+  }
+  if (typeof state.x !== 'number' || typeof state.y !== 'number') {
+    return workAreas[0] ?? null;
+  }
+  const normalBounds = {
+    height: Math.max(640, Math.round(state.height)),
+    width: Math.max(960, Math.round(state.width)),
+    x: Math.round(state.x),
+    y: Math.round(state.y)
+  };
+  const match = workAreas
+    .map((candidate) => ({ area: calculateIntersectionArea(normalBounds, candidate), bounds: candidate }))
+    .sort((left, right) => right.area - left.area)[0];
+  if (!match || match.area <= 0) {
+    return null;
+  }
+  const workArea = match.bounds;
+  return {
+    height: workArea.height,
+    width: workArea.width,
+    x: workArea.x,
+    y: workArea.y
+  };
+}
+
 function resolveVisibleBounds(state: PersistedWindowState, workAreas: WorkAreaBounds[]): ResolvedWindowBounds {
+  const maximizedBounds = resolveMaximizedStartupBounds(state, workAreas);
+  if (maximizedBounds) {
+    return maximizedBounds;
+  }
   const width = Math.max(960, Math.round(state.width));
   const height = Math.max(640, Math.round(state.height));
   const x = typeof state.x === 'number' ? Math.round(state.x) : undefined;
