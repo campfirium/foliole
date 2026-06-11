@@ -121,9 +121,7 @@ describe('electron-builder release packaging config', () => {
     ]);
 
     expect(config.publish).toBeUndefined();
-    expect(packageJson.scripts['release:windows:package']).toBe(
-      'npm run build && npm run electron:compile && electron-builder --config electron/builder.json --win nsis --publish never'
-    );
+    expect(packageJson.scripts['release:windows:package']).toBe('node scripts/windows/package-windows.mjs --native');
     expect(workflow).toContain('permissions:\n  contents: write');
     expect(workflow).toContain('id-token: write');
     expect(workflow).toContain('attestations: write');

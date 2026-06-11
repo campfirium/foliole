@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertBuiltArtifactsFresh } from './package-built-artifacts.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '../..');
@@ -19,6 +20,10 @@ export function resolveInstallMode(argv = process.argv) {
   return argv.includes('--install');
 }
 
+export function resolveBuiltArtifactMode(argv = process.argv) {
+  return argv.includes('--from-built');
+}
+
 export function resolvePackageStatusLabel(install) {
   return install ? 'PACKAGED_AND_INSTALLED' : 'PACKAGED';
 }
@@ -31,23 +36,41 @@ function createCmdStep(label, command) {
   };
 }
 
-export function createNativePackageSteps() {
-  return [
+export function createNativePackageSteps(fromBuilt = resolveBuiltArtifactMode()) {
+  const buildSteps = fromBuilt ? [] : [
     createCmdStep('renderer build', 'npm run build'),
-    createCmdStep('electron compile', 'npm run electron:compile'),
-    createCmdStep('electron-builder nsis', 'npm exec -- electron-builder --config electron/builder.json --win nsis')
+    createCmdStep('electron compile', 'npm run electron:compile')
+  ];
+  return [
+    ...buildSteps,
+    createCmdStep('electron-builder nsis', 'npm exec -- electron-builder --config electron/builder.json --win nsis --publish never')
   ];
 }
 
-export function createWslPackageSteps(rootDir = repoRoot, install = resolveInstallMode()) {
-  const installFlag = install ? ' -- --install' : '';
+export function createWslPackageSteps(rootDir = repoRoot, install = resolveInstallMode(), fromBuilt = resolveBuiltArtifactMode()) {
+  const nativeArgs = [];
+  if (fromBuilt) {
+    nativeArgs.push('--from-built', '--skip-built-artifact-check');
+  }
+  if (install) {
+    nativeArgs.push('--install');
+  }
+  const nativeArgText = nativeArgs.length > 0 ? ` -- ${nativeArgs.join(' ')}` : '';
+  const preflightSteps = fromBuilt ? [{
+    args: ['scripts/windows/package-built-artifacts.mjs'],
+    command: 'node',
+    cwd: rootDir,
+    label: 'verify built artifacts'
+  }] : [];
   return [
+    ...preflightSteps,
     {
       args: ['scripts/windows/windows-sync.sh'],
       command: 'bash',
       cwd: rootDir,
       env: {
         WINDOWS_SYNC_FORCE_FULL: '1',
+        WINDOWS_SYNC_INCLUDE_DIST: fromBuilt ? '1' : '',
         WINDOWS_SYNC_INCLUDE_ELECTRON_DIST: '1'
       },
       label: 'sync Windows checkout'
@@ -57,7 +80,7 @@ export function createWslPackageSteps(rootDir = repoRoot, install = resolveInsta
         '/d',
         '/s',
         '/c',
-        `cd /d ${WINDOWS_REPO_ROOT} && set "PATH=${WINDOWS_NODE_DIR};%PATH%" && npm run windows:package:native${installFlag}`
+        `cd /d ${WINDOWS_REPO_ROOT} && set "PATH=${WINDOWS_NODE_DIR};%PATH%" && npm run windows:package:native${nativeArgText}`
       ],
       command: 'cmd.exe',
       cwd: '/mnt/c/Windows/System32',
@@ -192,11 +215,16 @@ export async function installPackagedApp(rootDir = repoRoot, packageVersion = re
 async function main() {
   const mode = resolvePackageMode();
   const install = resolveInstallMode();
+  const fromBuilt = resolveBuiltArtifactMode();
   const steps = mode === 'native' ? createNativePackageSteps() : createWslPackageSteps();
   console.log(`[windows-package] mode: ${mode}`);
   console.log(`[windows-package] install: ${install ? 'yes' : 'no'}`);
+  console.log(`[windows-package] from-built: ${fromBuilt ? 'yes' : 'no'}`);
   if (mode === 'native') {
     cleanReleaseArtifacts();
+    if (fromBuilt && !process.argv.includes('--skip-built-artifact-check')) {
+      assertBuiltArtifactsFresh();
+    }
   }
   for (const step of steps) {
     await runStep(step);

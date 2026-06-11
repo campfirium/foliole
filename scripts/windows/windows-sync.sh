@@ -7,6 +7,7 @@ WINDOWS_MIRROR_DIR="${WINDOWS_MIRROR_DIR:-/mnt/d/C/foliole}"
 WINDOWS_SYNC_CHANGE_LOG="${WINDOWS_SYNC_CHANGE_LOG:-}"
 WINDOWS_SYNC_CHANGED_FILES="${WINDOWS_SYNC_CHANGED_FILES:-}"
 WINDOWS_SYNC_FORCE_FULL="${WINDOWS_SYNC_FORCE_FULL:-}"
+WINDOWS_SYNC_INCLUDE_DIST="${WINDOWS_SYNC_INCLUDE_DIST:-}"
 WINDOWS_SYNC_INCLUDE_ELECTRON_DIST="${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST:-}"
 WINDOWS_SYNC_LOCK_FILE="${WINDOWS_SYNC_LOCK_FILE:-/tmp/foliole-windows-mirror.lock}"
 WINDOWS_SYNC_STAMP_FILE="${WINDOWS_SYNC_STAMP_FILE:-.lab/internal/runtime/windows-sync.stamp}"
@@ -70,7 +71,6 @@ RSYNC_ARGS=(
   --exclude "trees/"
   --exclude "src-tauri/"
   --exclude "node_modules/"
-  --exclude "dist/"
   --exclude "release/"
   --exclude "coverage/"
   --exclude "android/.gradle/"
@@ -89,6 +89,10 @@ RSYNC_ARGS=(
   --exclude "blob-report/"
   --exclude "logs/"
 )
+
+if [[ -z "${WINDOWS_SYNC_INCLUDE_DIST}" ]]; then
+  RSYNC_ARGS+=(--exclude "dist/")
+fi
 
 if [[ -z "${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST}" ]]; then
   RSYNC_ARGS+=(--exclude "electron-dist/")
