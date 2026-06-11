@@ -189,3 +189,26 @@ it('opens the restored topic from the trash row context menu', async () => {
   await waitFor(() => expect(restoreNode).toHaveBeenCalledWith('solo'));
   expect(onSelectNode).toHaveBeenCalledWith('restored-topic');
 });
+
+it('keeps the trash view active when restoring multiple selected trash rows', async () => {
+  const onSelectNode = vi.fn();
+  const restoreNode = vi.fn().mockResolvedValue('restored-topic');
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    restoreNode
+  }));
+  renderTrashPanel({
+    onSelectNode,
+    trashedNodeIds: ['folder', 'solo']
+  });
+
+  fireEvent.click(screen.getByRole('treeitem', { name: /Folder A/ }));
+  fireEvent.click(screen.getByRole('treeitem', { name: /Solo item/ }), { ctrlKey: true });
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: /Solo item/ }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
+
+  await waitFor(() => expect(restoreNode).toHaveBeenCalledTimes(2));
+  expect(restoreNode).toHaveBeenCalledWith('folder');
+  expect(restoreNode).toHaveBeenCalledWith('solo');
+  expect(onSelectNode).not.toHaveBeenCalled();
+});

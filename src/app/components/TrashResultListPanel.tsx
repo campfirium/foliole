@@ -110,8 +110,11 @@ function TrashContextMenu(props: {
       onOpenMoveToNode={() => undefined}
       onSelect={props.selectTrashNode}
       restoreNode={async (nodeId) => {
+        const shouldStayInTrash = props.listState.selectedNodeIds.length > 1;
         const targetNodeId = await props.workspaceActions.restoreNode(nodeId);
-        props.onSelectNode(targetNodeId ?? nodeId);
+        if (!shouldStayInTrash) {
+          props.onSelectNode(targetNodeId ?? nodeId);
+        }
       }}
       returnNode={props.workspaceActions.returnNode}
       setNodeSequentialReading={props.workspaceActions.setNodeSequentialReading}
