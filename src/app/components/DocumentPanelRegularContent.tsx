@@ -12,7 +12,6 @@ import { LinkPanelStack } from './LinkPanelStack';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import { ReadwiseBookDocumentGate } from './ReadwiseBookDocumentGate';
-import { TrashDocumentRestoreAction } from './TrashDocumentRestoreAction';
 
 function renderPdfLoadingSurface(t: Translate) {
   return (
@@ -41,11 +40,10 @@ function renderDocumentBody(activeNodeId: string | null, bodyProps: ComponentPro
   );
 }
 
-function renderPdfOrBodyShell(contentAreaRef: RefObject<HTMLDivElement | null>, pdfCache: JSX.Element, action: ReactNode, content: ReactNode, panelStack: JSX.Element) {
+function renderPdfOrBodyShell(contentAreaRef: RefObject<HTMLDivElement | null>, pdfCache: JSX.Element, content: ReactNode, panelStack: JSX.Element) {
   return (
     <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef as ComponentProps<'div'>['ref']}>
       {pdfCache}
-      {action}
       {content}
       {panelStack}
     </div>
@@ -72,14 +70,6 @@ export function renderPdfOrBodyContent(args: {
   t: Translate;
   trashedNodeIds: string[];
 }) {
-  const action = (
-    <TrashDocumentRestoreAction
-      activeNodeId={args.activeNodeId}
-      isTrashViewOpen={args.isTrashViewOpen}
-      onSelectNode={args.onSelectNode}
-      trashedNodeIds={args.trashedNodeIds}
-    />
-  );
   const panelStack = (
     <LinkPanelStack
       anchorRootRef={args.contentAreaRef}
@@ -93,11 +83,11 @@ export function renderPdfOrBodyContent(args: {
     const content = args.shouldHideEditorBodyDuringSourceLoad
       ? renderPdfLoadingSurface(args.t)
       : renderDocumentBody(args.activeNodeId, args.bodyProps);
-    return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, action, content, panelStack);
+    return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, content, panelStack);
   }
 
   if (args.pdfDocumentSurface.state === 'ready') {
-    return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, action, null, panelStack);
+    return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, null, panelStack);
   }
 
   const content = !args.isActivePdfCachedVisible
@@ -111,5 +101,5 @@ export function renderPdfOrBodyContent(args: {
         args.t
       )
     : null;
-  return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, action, content, panelStack);
+  return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, content, panelStack);
 }

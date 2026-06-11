@@ -13,6 +13,7 @@ import { DocumentPanelBody } from './DocumentPanelBody';
 import { startDocumentPanelContentDiagnostic } from './documentPanelContentDiagnostic';
 import { createDocumentPanelPdfCache } from './documentPanelPdfCache';
 import { resolvePdfDocumentSurface } from './documentPanelPdfView';
+import { isLikelyPdfSourceReference } from './documentPanelSourceHelpers';
 import { resolveDocumentPanelContentBody } from './documentPanelSpecialContent';
 import type { LinkPanelRecord } from './linkPanelState';
 import { collectPdfHighlightLocators, type PdfHighlightLocator } from './pdfHighlightLocators';
@@ -44,19 +45,6 @@ interface DocumentPanelContentProps {
     panelId: string,
     state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>
   ) => void;
-}
-
-const PDF_READER_PLACEHOLDER_TEXT = 'Linked PDF source ready for the reader surface.';
-
-function isLikelyPdfSourceReference(content: string) {
-  const normalized = content.trim();
-  if (normalized.includes(PDF_READER_PLACEHOLDER_TEXT)) {
-    return true;
-  }
-  const withoutOptionalTitle = normalized.replace(/^# .+\n+/, '').trim();
-  return /^(?:https?:\/\/|file:\/\/|[A-Za-z]:[\\/]|\/|\.{1,2}\/|[^:\n]+)[^\n]*[.][Pp][Dd][Ff](?:[?#][^\n\s)]*)?$/.test(
-    withoutOptionalTitle
-  );
 }
 
 function getDocumentPanelFlags(args: {

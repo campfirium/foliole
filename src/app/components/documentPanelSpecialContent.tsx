@@ -56,6 +56,10 @@ export function resolveDocumentPanelContentBody(args: {
     return specialContent;
   }
 
+  return renderRegularDocumentContent(args);
+}
+
+function renderRegularDocumentContent(args: Parameters<typeof resolveDocumentPanelContentBody>[0]) {
   return renderPdfOrBodyContent({
     activeNodeId: args.activeNodeId,
     bodyProps: args.bodyProps,

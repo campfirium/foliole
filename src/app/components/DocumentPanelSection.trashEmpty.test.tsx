@@ -1,12 +1,60 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { useWorkspaceStore } from '../../store/workspaceStore';
+
+const sourceDetailsMocks = vi.hoisted(() => ({
+  importExternalDocument: vi.fn(),
+  loadRuntimeNodeSourceDetails: vi.fn(),
+  refreshWorkspaceState: vi.fn()
+}));
+
+vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
+  loadRuntimeNodeSourceDetails: sourceDetailsMocks.loadRuntimeNodeSourceDetails
+}));
+
+vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
+  importExternalDocument: sourceDetailsMocks.importExternalDocument
+}));
+
+vi.mock('../../store/workspaceRefreshScheduler', () => ({
+  refreshWorkspaceState: sourceDetailsMocks.refreshWorkspaceState
+}));
 
 import {
   baseNode,
   renderSectionWithProps
 } from './DocumentPanelSection.testSupport';
+
+function createSourceDetails(sourceLocator: string) {
+  return {
+    importRuns: [],
+    importSource: {
+      firstImportedAt: '2026-04-02T09:00:00.000Z',
+      lastContentFingerprint: 'fingerprint-1',
+      lastImportedAt: '2026-04-02T09:00:00.000Z',
+      latestNodeId: 'topic',
+      provider: 'desktop_text_file',
+      sourceFingerprint: 'source-fingerprint-1',
+      sourceKind: 'markdown',
+      sourceLocator,
+      sourceName: 'Deleted topic.md'
+    },
+    inheritedFromParent: false,
+    keepImportItem: null,
+    pdfPageDimensions: [],
+    sourceNodeId: 'topic'
+  };
+}
+
+beforeEach(() => {
+  sourceDetailsMocks.importExternalDocument.mockReset();
+  sourceDetailsMocks.loadRuntimeNodeSourceDetails.mockReset();
+  sourceDetailsMocks.refreshWorkspaceState.mockReset();
+  sourceDetailsMocks.importExternalDocument.mockResolvedValue(null);
+  sourceDetailsMocks.loadRuntimeNodeSourceDetails.mockResolvedValue(null);
+  sourceDetailsMocks.refreshWorkspaceState.mockResolvedValue(undefined);
+});
 
 it('shows the trash directory list when the trash view has no selected topic', () => {
   const onSelectTrashNode = vi.fn();
@@ -79,10 +127,17 @@ it('offers permanent delete for the current trash directory list', () => {
   expect(deleteNodesPermanently).toHaveBeenCalledWith(['folder']);
 });
 
-it('shows a Trash breadcrumb and Restore action for a selected deleted topic', async () => {
+it('shows a Trash breadcrumb and Import action for a selected deleted source topic', async () => {
   const restoreNode = vi.fn();
   const onSelectNode = vi.fn();
   useWorkspaceStore.setState((state) => ({ ...state, restoreNode }));
+  sourceDetailsMocks.loadRuntimeNodeSourceDetails.mockResolvedValue(createSourceDetails('/library/deleted-topic.md'));
+  sourceDetailsMocks.importExternalDocument.mockResolvedValue({
+    imported_at: '2026-04-02T09:30:00.000Z',
+    node_id: 'imported-topic',
+    source_name: 'Deleted topic.md'
+  });
+  sourceDetailsMocks.refreshWorkspaceState.mockResolvedValue(undefined);
 
   renderSectionWithProps({
     activeNodeId: 'topic',
@@ -102,8 +157,12 @@ it('shows a Trash breadcrumb and Restore action for a selected deleted topic', a
 
   expect(screen.getByRole('button', { name: 'Trash' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Original folder' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Restore' })).toBeNull();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
-  expect(restoreNode).toHaveBeenCalledWith('topic');
-  await waitFor(() => expect(onSelectNode).toHaveBeenCalledWith('topic'));
+  fireEvent.click(await screen.findByRole('button', { name: 'Import to Foliole' }));
+
+  await waitFor(() => expect(sourceDetailsMocks.importExternalDocument).toHaveBeenCalledWith('/library/deleted-topic.md'));
+  expect(sourceDetailsMocks.refreshWorkspaceState).toHaveBeenCalledWith('external-document-import');
+  expect(onSelectNode).toHaveBeenCalledWith('imported-topic');
+  expect(restoreNode).not.toHaveBeenCalled();
 });

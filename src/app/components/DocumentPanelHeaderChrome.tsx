@@ -6,6 +6,7 @@ import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+import { TrashDocumentHeaderImportAction } from './TrashDocumentRestoreAction';
 
 const TRASH_HEADER_NODE_ID = 'trash-preview-root';
 const TRASH_HEADER_ACTIVE_NODE_ID = 'trash-preview-active';
@@ -85,6 +86,16 @@ export function renderDocumentPanelHeader(args: {
       onToggleSourceUpdatePanel={args.onToggleSourceUpdatePanel}
       priorityQuickSetShortcutLabel={args.props.priorityQuickSetShortcutLabel ?? ''}
       reviewSchedulerSettings={args.props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS}
+      rightSlot={
+        args.props.isTrashViewOpen ? (
+          <TrashDocumentHeaderImportAction
+            activeNodeId={args.props.activeNodeId}
+            isTrashViewOpen={args.props.isTrashViewOpen}
+            onSelectNode={args.props.onSelectNode}
+            trashedNodeIds={args.props.trashedNodeIds}
+          />
+        ) : undefined
+      }
       showDocumentControls
       showSourceUpdateAction={args.showSourceUpdateAction}
     />
