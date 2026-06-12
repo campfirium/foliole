@@ -6,7 +6,7 @@ import { folioleMarkdownParser } from '../model/folioleMarkdownParser';
 
 import { buildPreviewAtomicRangeSet } from './liveMarkdownAtomicRanges';
 import { buildPreviewDecorationSet, buildSourceDecorationSet } from './liveMarkdownDecorations';
-import { shouldReparsePreviewMarkdown } from './liveMarkdownLinePlugin';
+import { shouldMapLocalDocumentInputDecorations, shouldReparsePreviewMarkdown } from './liveMarkdownLinePlugin';
 
 describe('live Markdown parse reuse', () => {
   afterEach(() => {
@@ -30,6 +30,30 @@ describe('live Markdown parse reuse', () => {
     expect(shouldReparsePreviewMarkdown({ docChanged: false })).toBe(false);
   });
 
+  it('maps existing decorations while typing in an opened local document', () => {
+    expect(shouldMapLocalDocumentInputDecorations({
+      docChanged: true,
+      editedMathRangeChanged: false,
+      imageClozePresentationChanged: false,
+      localDocumentPath: 'D:/library/topic.md',
+      localDocumentPathChanged: false,
+      nodeIdChanged: false,
+      textAnchorDecorationsChanged: false
+    })).toBe(true);
+  });
+
+  it('rebuilds local document decorations for structural presentation changes', () => {
+    expect(shouldMapLocalDocumentInputDecorations({
+      docChanged: true,
+      editedMathRangeChanged: false,
+      imageClozePresentationChanged: true,
+      localDocumentPath: 'D:/library/topic.md',
+      localDocumentPathChanged: false,
+      nodeIdChanged: false,
+      textAnchorDecorationsChanged: false
+    })).toBe(false);
+  });
+
   it('builds preview decorations from pre-parsed markdown without internal reparses', () => {
     const view = createView(COMPLEX_MARKDOWN);
     const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');
@@ -42,14 +66,14 @@ describe('live Markdown parse reuse', () => {
     view.destroy();
   });
 
-  it('builds source decorations with one shared markdown parse', () => {
+  it('builds source decorations from CodeMirror syntax tree without a direct parser reparse', () => {
     const view = createView(COMPLEX_MARKDOWN);
     const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');
     parseSpy.mockClear();
 
     buildSourceDecorationSet(view);
 
-    expect(countFullSourceParses(parseSpy)).toBe(1);
+    expect(countFullSourceParses(parseSpy)).toBe(0);
     view.destroy();
   });
 });

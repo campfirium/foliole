@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { className?: string; nodeId: string | null; onOpenExternalLink?: (request: { href: string }) => void }) => {
+  MarkdownEditor: (props: { className?: string; liveMarkdownEnabled?: boolean; nodeId: string | null; onOpenExternalLink?: (request: { href: string }) => void; readOnly?: boolean }) => {
     React.useEffect(() => {
       mocks.markdownEditorMounted();
     }, []);
@@ -41,6 +41,17 @@ vi.mock('./LinkPanelStack', () => ({
 
 const { ExternalLibraryPreviewSurface } = await import('./ExternalLibraryPreviewSurface');
 
+function createLocalFileEditingProps() {
+  return {
+    content: '',
+    flushSave: vi.fn(async () => true),
+    handleChange: vi.fn(),
+    isEditable: false,
+    reloadFromDisk: vi.fn(async () => undefined),
+    status: 'saved' as const
+  };
+}
+
 it('opens the link panel when an external document preview link is clicked', async () => {
   renderWithLocalization(
     <ExternalLibraryPreviewSurface
@@ -55,6 +66,7 @@ it('opens the link panel when an external document preview link is clicked', asy
       onOpenImportedNodeId={vi.fn()}
       onOpenSelection={vi.fn()}
       onPreviewEditorReady={vi.fn()}
+      localFileEditing={createLocalFileEditingProps()}
       preview={{
         absolutePath: '/library/topic.md',
         content: '[docs](https://example.com/docs)',
@@ -71,19 +83,20 @@ it('opens the link panel when an external document preview link is clicked', asy
   expect(screen.getByText('folder')).toBeInTheDocument();
   expect(screen.getByTestId('external-preview-editor').parentElement).toHaveClass('pl-4', 'pt-2');
   expect(screen.getByTestId('document-header-content-rail')).toHaveClass('px-[var(--document-content-inline-padding)]');
-  expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveClass('p-0', 'text-sm', 'leading-[1.25]');
+  expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveClass('min-h-8', 'px-3', 'text-ui-md');
   expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveTextContent('Import');
   expect(screen.getByRole('button', { name: 'Import to Foliole' }).closest('[data-testid="document-header-content-rail"]')).toBeInTheDocument();
   expect(screen.queryByText('/library/to sync/folder/topic.md')).not.toBeInTheDocument();
   expect(screen.getByTestId('link-panel-count')).toHaveTextContent('0');
   expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.objectContaining({ nodeId: null, readOnly: true }));
+  expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.not.objectContaining({ liveMarkdownEnabled: false }));
 
   fireEvent.click(screen.getByRole('button', { name: 'Open external link' }));
 
   expect(screen.getByTestId('link-panel-count')).toHaveTextContent('1');
 });
 
-it('shows the Opened label for opened-file breadcrumbs even when cached rows still carry Recent', () => {
+it('keeps routine local-file save state out of the preview toolbar', () => {
   renderWithLocalization(
     <ExternalLibraryPreviewSurface
       canGoBack={false}
@@ -97,20 +110,58 @@ it('shows the Opened label for opened-file breadcrumbs even when cached rows sti
       onOpenImportedNodeId={vi.fn()}
       onOpenSelection={vi.fn()}
       onPreviewEditorReady={vi.fn()}
+      localFileEditing={{ ...createLocalFileEditingProps(), isEditable: true, status: 'saved' }}
+      preview={{
+        absolutePath: '/library/topic.md',
+        content: '# Topic',
+        editable: true,
+        extension: 'md',
+        fileName: 'topic.md',
+        folderId: 'folder-1',
+        folderPath: '/library',
+        relativePath: 'topic.md',
+        sourceKind: 'local_file'
+      }}
+    />
+  );
+
+  expect(screen.queryByText('Saved')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveTextContent('Import');
+  expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.objectContaining({ readOnly: false }));
+  expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.not.objectContaining({ liveMarkdownEnabled: false }));
+});
+
+it('shows the Opened label for opened-file breadcrumbs even when cached rows still carry Local', () => {
+  renderWithLocalization(
+    <ExternalLibraryPreviewSurface
+      canGoBack={false}
+      canGoForward={false}
+      documentMaxWidth={760}
+      editorAppearanceKey="preview"
+      isImporting={false}
+      onGoBack={vi.fn()}
+      onGoForward={vi.fn()}
+      onHandleImport={vi.fn()}
+      onOpenImportedNodeId={vi.fn()}
+      onOpenSelection={vi.fn()}
+      onPreviewEditorReady={vi.fn()}
+      localFileEditing={createLocalFileEditingProps()}
       preview={{
         absolutePath: 'D:/T/test/topic.md',
         content: '# Topic',
+        editable: true,
         extension: 'md',
         fileName: 'topic.md',
         folderId: 'opened-external-documents',
-        folderPath: 'Recent',
-        relativePath: 'D:/T/test/topic.md'
+        folderPath: 'Local',
+        relativePath: 'D:/T/test/topic.md',
+        sourceKind: 'local_file'
       }}
     />
   );
 
   expect(screen.getByText('Opened')).toBeInTheDocument();
-  expect(screen.queryByText('Recent')).not.toBeInTheDocument();
+  expect(screen.queryByText('Local')).not.toBeInTheDocument();
 });
 
 it('remounts the external library preview editor when editor appearance changes', async () => {
@@ -135,6 +186,7 @@ it('remounts the external library preview editor when editor appearance changes'
     onOpenImportedNodeId: vi.fn(),
     onOpenSelection: vi.fn(),
     onPreviewEditorReady: vi.fn(),
+    localFileEditing: createLocalFileEditingProps(),
     preview
   };
   const { rerender } = renderWithLocalization(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="preview" />);

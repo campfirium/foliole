@@ -5,8 +5,10 @@ import { markdownCompatibilityExtensions } from './markdownCompatibilityExtensio
 import { markdownMathExtension } from './markdownMathExtension';
 import { folioleMarkdownExtensions } from './markdownOblikeExtension';
 
-export const folioleMarkdownParser = (markdownLanguage.parser as MarkdownParser).configure([
+export const folioleMarkdownLanguageExtensions = [
   ...markdownCompatibilityExtensions,
   markdownMathExtension,
   ...folioleMarkdownExtensions
-]);
+];
+
+export const folioleMarkdownParser = (markdownLanguage.parser as MarkdownParser).configure(folioleMarkdownLanguageExtensions);

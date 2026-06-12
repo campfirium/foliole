@@ -4,7 +4,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
-import { folioleMarkdownExtensions } from '../model/markdownOblikeExtension';
+import { folioleMarkdownLanguageExtensions } from '../model/folioleMarkdownParser';
 
 import {
   type CodeMirrorEditorAdapterOptions,
@@ -51,7 +51,7 @@ export function createCodeMirrorEditorExtensions(args: {
   textAnchorDecorationsCompartment: import('@codemirror/state').Compartment;
 }): Extension[] {
   return [
-    markdown({ base: markdownLanguage, extensions: folioleMarkdownExtensions }),
+    markdown({ base: markdownLanguage, extensions: folioleMarkdownLanguageExtensions }),
     EditorState.allowMultipleSelections.of(true),
     keymap.of(folioleDefaultKeymap),
     args.readOnlyCompartment.of(createReadOnlyExtensions(args.options.readOnly === true)),
@@ -62,7 +62,7 @@ export function createCodeMirrorEditorExtensions(args: {
     args.paragraphMarkerCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.searchDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.textAnchorDecorationsCompartment.of(createTextAnchorDecorationsExtension(args.textAnchorDecorations)),
-    args.liveMarkdownCompartment.of(createLiveMarkdownExtensions()),
+    args.liveMarkdownCompartment.of(args.options.liveMarkdownEnabled === false ? [] : createLiveMarkdownExtensions()),
     trailingDividerFacet.of(args.options.trailingDivider === true),
     trailingDividerExtension,
     args.liveMarkdownStateCompartment.of(

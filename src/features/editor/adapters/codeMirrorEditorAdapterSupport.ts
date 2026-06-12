@@ -16,6 +16,7 @@ export interface CodeMirrorEditorAdapterOptions {
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   hideTitleHeading?: boolean;
   initialContent: string;
+  liveMarkdownEnabled?: boolean;
   localDocumentPath?: string | null;
   onChange?: (content: string, meta?: EditorContentChangeMeta) => void;
   onDocumentInput?: (meta: EditorDocumentChangeMeta) => void;

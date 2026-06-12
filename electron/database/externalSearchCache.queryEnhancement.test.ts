@@ -71,3 +71,26 @@ it('keeps external document punctuation literal while adding uppercase boolean r
   expect(lowercaseResults).toContain(literalPath);
   expect(lowercaseResults).not.toContain(advancedPath);
 });
+
+it('finds external documents by combining split Chinese search terms', async () => {
+  const libraryRoot = path.join(tempRoot, 'library');
+  const combinedPath = path.join(libraryRoot, 'combined.md');
+  const partialPath = path.join(libraryRoot, 'partial.md');
+  await writeTextFile(combinedPath, '哈哈哈哈一二三');
+  await writeTextFile(partialPath, '哈哈哈哈但是没有后半段');
+  saveExternalSearchFolders([
+    {
+      attachment_mode: 'document_relative_first_then_fixed_root',
+      attachment_root_path: null,
+      excluded_dirs: [],
+      folder_path: libraryRoot,
+      id: 'folder-1'
+    }
+  ]);
+
+  await refreshExternalSearchIndexes();
+
+  const resultIds = searchExternalDocuments('哈哈哈哈 一二三').map((result) => result.id);
+  expect(resultIds).toContain(combinedPath);
+  expect(resultIds).not.toContain(partialPath);
+});

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const mockKeymapOf = vi.hoisted(() => vi.fn((value) => value));
+const mockCreateLiveMarkdownExtensions = vi.hoisted(() => vi.fn(() => 'live-markdown-extensions'));
 const mockToggleComment = vi.hoisted(() => vi.fn());
 
 vi.mock('@codemirror/commands', () => ({
@@ -13,7 +14,11 @@ vi.mock('@codemirror/commands', () => ({
 
 vi.mock('@codemirror/lang-markdown', () => ({
   markdown: vi.fn(() => 'markdown-extension'),
-  markdownLanguage: {}
+  markdownLanguage: {
+    parser: {
+      configure: vi.fn(() => 'foliole-markdown-parser')
+    }
+  }
 }));
 
 vi.mock('@codemirror/state', () => ({
@@ -34,8 +39,8 @@ vi.mock('@codemirror/view', () => ({
   keymap: { of: mockKeymapOf }
 }));
 
-vi.mock('../model/markdownOblikeExtension', () => ({
-  folioleMarkdownExtensions: []
+vi.mock('../model/folioleMarkdownParser', () => ({
+  folioleMarkdownLanguageExtensions: []
 }));
 
 vi.mock('./codeMirrorEditorAdapterSupport', () => ({
@@ -48,7 +53,7 @@ vi.mock('./codeMirrorTextAnchorState', () => ({
 }));
 
 vi.mock('./liveMarkdown', () => ({
-  createLiveMarkdownExtensions: vi.fn(() => 'live-markdown-extensions')
+  createLiveMarkdownExtensions: mockCreateLiveMarkdownExtensions
 }));
 
 vi.mock('./liveMarkdownState', () => ({
@@ -70,49 +75,53 @@ function createCompartment() {
   return { of: vi.fn((value) => value) };
 }
 
+function createEditorExtensionArgs(options: { initialContent: string; liveMarkdownEnabled?: boolean } = { initialContent: 'abc' }) {
+  return {
+    diffDecorationsCompartment: createCompartment() as never,
+    hideTitleHeading: false,
+    imageClozePresentationVersion: 0,
+    liveMarkdownCompartment: createCompartment() as never,
+    liveMarkdownStateCompartment: createCompartment() as never,
+    nodeId: 'node-1',
+    onCompositionEnd: vi.fn(),
+    onDocChanged: vi.fn(),
+    options,
+    paragraphMarkerCompartment: createCompartment() as never,
+    readOnlyCompartment: createCompartment() as never,
+    searchDecorationsCompartment: createCompartment() as never,
+    textAnchorDecorations: [],
+    textAnchorDecorationsCompartment: createCompartment() as never
+  };
+}
+
 describe('CodeMirror editor keymap', () => {
+  beforeEach(() => {
+    mockCreateLiveMarkdownExtensions.mockClear();
+    mockKeymapOf.mockClear();
+  });
+
   it('does not install CodeMirror history or bind its history keymap', () => {
-    const extensions = createCodeMirrorEditorExtensions({
-      diffDecorationsCompartment: createCompartment() as never,
-      hideTitleHeading: false,
-      imageClozePresentationVersion: 0,
-      liveMarkdownCompartment: createCompartment() as never,
-      liveMarkdownStateCompartment: createCompartment() as never,
-      nodeId: 'node-1',
-      onCompositionEnd: vi.fn(),
-      onDocChanged: vi.fn(),
-      options: { initialContent: 'abc' },
-      paragraphMarkerCompartment: createCompartment() as never,
-      readOnlyCompartment: createCompartment() as never,
-      searchDecorationsCompartment: createCompartment() as never,
-      textAnchorDecorations: [],
-      textAnchorDecorationsCompartment: createCompartment() as never
-    });
+    const extensions = createCodeMirrorEditorExtensions(createEditorExtensionArgs());
 
     expect(mockKeymapOf).toHaveBeenCalledWith([{ key: 'Mod-a', run: expect.any(Function) }]);
     expect(extensions).not.toContain('history-extension');
   });
 
   it('does not install CodeMirror comment toggling shortcut', () => {
-    createCodeMirrorEditorExtensions({
-      diffDecorationsCompartment: createCompartment() as never,
-      hideTitleHeading: false,
-      imageClozePresentationVersion: 0,
-      liveMarkdownCompartment: createCompartment() as never,
-      liveMarkdownStateCompartment: createCompartment() as never,
-      nodeId: 'node-1',
-      onCompositionEnd: vi.fn(),
-      onDocChanged: vi.fn(),
-      options: { initialContent: 'abc' },
-      paragraphMarkerCompartment: createCompartment() as never,
-      readOnlyCompartment: createCompartment() as never,
-      searchDecorationsCompartment: createCompartment() as never,
-      textAnchorDecorations: [],
-      textAnchorDecorationsCompartment: createCompartment() as never
-    });
+    createCodeMirrorEditorExtensions(createEditorExtensionArgs());
 
     const installedKeymap = mockKeymapOf.mock.calls.at(-1)?.[0] ?? [];
     expect(installedKeymap).not.toContainEqual({ key: 'Mod-/', run: mockToggleComment });
+  });
+
+  it('can skip live markdown decorations for lightweight local-file editing', () => {
+    const liveMarkdownCompartment = createCompartment();
+    const args = createEditorExtensionArgs({ initialContent: 'abc', liveMarkdownEnabled: false });
+    const extensions = createCodeMirrorEditorExtensions({ ...args, liveMarkdownCompartment: liveMarkdownCompartment as never });
+
+    expect(mockCreateLiveMarkdownExtensions).not.toHaveBeenCalled();
+    expect(liveMarkdownCompartment.of).toHaveBeenCalledWith([]);
+    expect(extensions).not.toContain('live-markdown-extensions');
   });
 
 });

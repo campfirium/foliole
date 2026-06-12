@@ -9,6 +9,10 @@ import type {
 } from '../../lib/platform/nativeLocalFileCommandMap.js';
 
 import { openDatabaseConnection } from './connection.js';
+import {
+  markLocalDocumentSearchIndexMissing,
+  upsertLocalDocumentSearchIndex
+} from './localDocumentSearchIndex.js';
 
 interface LocalFileRow extends Record<string, unknown> {
   absolute_path: string;
@@ -25,6 +29,7 @@ interface LocalFileRow extends Record<string, unknown> {
 interface FileStatSnapshot {
   fileSize: number;
   modifiedAt: string;
+  modifiedMs: number;
 }
 
 function isSupportedLocalFilePath(filePath: string) {
@@ -52,6 +57,17 @@ function toEntry(row: LocalFileRow): NativeLocalFileEntry {
     modifiedAt: row.modified_at,
     title: row.title
   };
+}
+
+function indexReadyLocalDocument(row: LocalFileRow, content: string, stat: FileStatSnapshot) {
+  upsertLocalDocumentSearchIndex({
+    absolutePath: row.absolute_path,
+    content,
+    fileSize: stat.fileSize,
+    lastOpenedAt: row.last_opened_at,
+    modifiedAt: stat.modifiedAt,
+    modifiedMs: stat.modifiedMs
+  });
 }
 
 function readLocalFileRow(absolutePath: string) {
@@ -104,7 +120,7 @@ async function statLocalFile(absolutePath: string): Promise<FileStatSnapshot | n
   if (!stat.isFile()) {
     return null;
   }
-  return { fileSize: stat.size, modifiedAt: toModifiedAt(stat) };
+  return { fileSize: stat.size, modifiedAt: toModifiedAt(stat), modifiedMs: Math.round(stat.mtimeMs) };
 }
 
 export function listLocalFiles() {
@@ -115,6 +131,11 @@ export function listLocalFiles() {
      ORDER BY last_opened_at DESC, title COLLATE NOCASE ASC`
   );
   return rows.map(toEntry);
+}
+
+export function getLocalFileMetadata(filePath: string) {
+  const row = readLocalFileRow(path.resolve(filePath));
+  return row ? toEntry(row) : null;
 }
 
 export async function readLocalFile(filePath: string): Promise<NativeLocalFileReadResult> {
@@ -134,10 +155,12 @@ export async function readLocalFile(filePath: string): Promise<NativeLocalFileRe
       missingAt: null,
       modifiedAt: stat.modifiedAt
     });
+    indexReadyLocalDocument(row!, content, stat);
     return { ...toEntry(row!), content, status: 'ready' };
   } catch {
     const missingAt = new Date().toISOString();
     upsertLocalFileMetadata({ absolutePath, fileSize: null, missingAt, modifiedAt: null });
+    markLocalDocumentSearchIndexMissing(absolutePath, missingAt);
     return { absolutePath, missingAt, status: 'missing', title: toTitle(absolutePath) };
   }
 }
@@ -156,6 +179,7 @@ export async function saveLocalFile(args: {
   try {
     const current = await statLocalFile(absolutePath);
     if (!current) {
+      markLocalDocumentSearchIndexMissing(absolutePath, new Date().toISOString());
       return { errorCode: 'missing', message: 'Local file is missing.', status: 'error' };
     }
     if (
@@ -169,7 +193,13 @@ export async function saveLocalFile(args: {
     if (!next) {
       return { errorCode: 'missing', message: 'Local file is missing after save.', status: 'error' };
     }
-    upsertLocalFileMetadata({ absolutePath, fileSize: next.fileSize, missingAt: null, modifiedAt: next.modifiedAt });
+    const row = upsertLocalFileMetadata({
+      absolutePath,
+      fileSize: next.fileSize,
+      missingAt: null,
+      modifiedAt: next.modifiedAt
+    });
+    indexReadyLocalDocument(row!, args.content, next);
     return { ...next, status: 'saved' };
   } catch {
     return { errorCode: 'write_failed', message: 'Failed to save local file.', status: 'error' };

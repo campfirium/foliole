@@ -10,6 +10,7 @@ export function createMarkdownEditorAdapter(args: {
   hideTitleHeading: boolean;
   host: HTMLDivElement;
   initialContent: string;
+  liveMarkdownEnabled: boolean | undefined;
   localDocumentPath?: string | null;
   onChange: MarkdownEditorProps['onChange'];
   onDocumentInput: MarkdownEditorProps['onDocumentInput'];
@@ -25,6 +26,7 @@ export function createMarkdownEditorAdapter(args: {
   return new CodeMirrorEditorAdapter(args.host, {
     hideTitleHeading: args.hideTitleHeading,
     initialContent: args.initialContent,
+    ...(args.liveMarkdownEnabled !== undefined ? { liveMarkdownEnabled: args.liveMarkdownEnabled } : {}),
     localDocumentPath: args.localDocumentPath ?? null,
     onChange: args.onChange,
     ...(args.onDocumentInput ? { onDocumentInput: args.onDocumentInput } : {}),

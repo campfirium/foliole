@@ -138,6 +138,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.onReady,
     props.value,
     props.localDocumentPath,
+    props.liveMarkdownEnabled,
     props.textAnchorDecorations,
     props.hideTitleHeading ?? false,
     props.onMissingAttachmentResource,

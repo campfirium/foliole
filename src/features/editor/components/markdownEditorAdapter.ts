@@ -23,6 +23,7 @@ function syncEditorAdapterInputRefs(
   refs.onDocumentInputRef.current = args.onDocumentInput;
   refs.onMissingAttachmentResourceRef.current = args.onMissingAttachmentResource;
   refs.initialValueRef.current = args.initialValue;
+  refs.liveMarkdownEnabledRef.current = args.liveMarkdownEnabled;
   refs.localDocumentPathRef.current = args.localDocumentPath ?? null;
   refs.onOpenExternalLinkRef.current = args.onOpenExternalLink;
   refs.onOpenNodeLinkRef.current = args.onOpenNodeLink;
@@ -38,6 +39,7 @@ function syncEditorAdapterInputRefs(
 function useEditorAdapterInputs(args: {
   hideTitleHeading: boolean;
   initialValue: string;
+  liveMarkdownEnabled: boolean | undefined;
   localDocumentPath?: string | null;
   onChange: MarkdownEditorProps['onChange'];
   onDocumentInput: MarkdownEditorProps['onDocumentInput'];
@@ -52,6 +54,7 @@ function useEditorAdapterInputs(args: {
   trailingDivider: boolean | undefined;
 }) {
   const initialValueRef = useRef(args.initialValue);
+  const liveMarkdownEnabledRef = useRef(args.liveMarkdownEnabled);
   const localDocumentPathRef = useRef(args.localDocumentPath ?? null);
   const onChangeRef = useRef(args.onChange);
   const onDocumentInputRef = useRef(args.onDocumentInput);
@@ -70,6 +73,7 @@ function useEditorAdapterInputs(args: {
   const refs = {
     hideTitleHeadingRef,
     initialValueRef,
+    liveMarkdownEnabledRef,
     localDocumentPathRef,
     onChangeRef,
     onDocumentInputRef,
@@ -106,6 +110,7 @@ function useEditorAdapterLifecycle(args: {
       hideTitleHeading: inputs.hideTitleHeadingRef.current,
       host,
       initialContent: inputs.initialValueRef.current,
+      liveMarkdownEnabled: inputs.liveMarkdownEnabledRef.current,
       localDocumentPath: inputs.localDocumentPathRef.current,
       onChange: (nextValue, meta) => inputs.onChangeRef.current(nextValue, meta),
       onDocumentInput: (meta) => inputs.onDocumentInputRef.current?.(meta),
@@ -143,6 +148,7 @@ export function useEditorAdapter(
   onReady: ((adapter: EditorAdapter | null) => void) | undefined,
   initialValue: string,
   localDocumentPath: string | null | undefined,
+  liveMarkdownEnabled: boolean | undefined,
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'],
   hideTitleHeading: boolean,
   onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'],
@@ -157,6 +163,7 @@ export function useEditorAdapter(
   const inputs = useEditorAdapterInputs({
     hideTitleHeading,
     initialValue,
+    liveMarkdownEnabled,
     localDocumentPath: localDocumentPath ?? null,
     onChange,
     onDocumentInput,

@@ -216,3 +216,24 @@ it('uses opened local file metadata when preview source kind is missing', async 
     source_kind: 'local_file'
   }));
 });
+
+it('prefers opened local document previews when the path also belongs to an external folder', async () => {
+  const libraryPath = path.join(tempRoot, 'library');
+  const localPath = path.join(libraryPath, 'topic.md');
+  await writeTextFile(localPath, '# Cached\nOld body');
+  await saveExternalFolder(libraryPath);
+  await Promise.resolve(handleExternalSearchStorageCommand(REBUILD_EXTERNAL_SEARCH_INDEX, {}));
+  await writeTextFile(localPath, '# Current\nEditable body');
+  await readLocalFile(localPath);
+
+  const preview = await Promise.resolve(handleExternalSearchStorageCommand(LOAD_EXTERNAL_SEARCH_PREVIEW, {
+    absolute_path: localPath,
+    folder_id: 'saved-folder'
+  })) as { content: string; editable: boolean; source_kind: string };
+
+  expect(preview).toEqual(expect.objectContaining({
+    content: '# Current\nEditable body',
+    editable: true,
+    source_kind: 'local_file'
+  }));
+});

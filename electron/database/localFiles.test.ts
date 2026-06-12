@@ -20,6 +20,8 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { searchExternalDocuments } from './externalSearchCache.js';
+import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { listLocalFiles, readLocalFile, saveLocalFile } from './localFiles.js';
 
 let tempRoot = '';
@@ -31,6 +33,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  closeExternalSearchCacheDatabase();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
@@ -63,4 +66,51 @@ it('saves through mtime and size guards so external edits become conflicts', asy
 
   await expect(saveLocalFile({ content: 'my change', force: true, path: filePath })).resolves.toMatchObject({ status: 'saved' });
   await expect(fs.readFile(filePath, 'utf8')).resolves.toBe('my change');
+});
+
+it('indexes opened local documents without storing content in local_files', async () => {
+  const filePath = path.join(tempRoot, 'searchable.md');
+  await fs.writeFile(filePath, '# Local\nSearchable local-only marker', 'utf8');
+
+  await readLocalFile(filePath);
+
+  expect(searchExternalDocuments('local-only')).toEqual([
+    expect.objectContaining({
+      externalMatch: expect.objectContaining({ absolutePath: filePath }),
+      title: 'searchable.md'
+    })
+  ]);
+});
+
+it('updates the local document search index after save', async () => {
+  const filePath = path.join(tempRoot, 'indexed.md');
+  await fs.writeFile(filePath, '# Local\nOld searchable marker', 'utf8');
+  const opened = await readLocalFile(filePath);
+  expect(opened.status).toBe('ready');
+
+  await saveLocalFile({
+    content: '# Local\nNew searchable marker',
+    expectedFileSize: opened.status === 'ready' ? opened.fileSize : null,
+    expectedModifiedAt: opened.status === 'ready' ? opened.modifiedAt : null,
+    path: filePath
+  });
+
+  expect(searchExternalDocuments('new searchable')).toEqual([
+    expect.objectContaining({ externalMatch: expect.objectContaining({ absolutePath: filePath }) })
+  ]);
+  expect(searchExternalDocuments('old searchable')).toEqual([]);
+});
+
+it('finds local documents by combining split Chinese search terms', async () => {
+  const filePath = path.join(tempRoot, 'combined-cjk.md');
+  const partialPath = path.join(tempRoot, 'partial-cjk.md');
+  await fs.writeFile(filePath, '哈哈哈哈一二三', 'utf8');
+  await fs.writeFile(partialPath, '哈哈哈哈但是没有后半段', 'utf8');
+
+  await readLocalFile(filePath);
+  await readLocalFile(partialPath);
+
+  const resultIds = searchExternalDocuments('哈哈哈哈 一二三').map((result) => result.id);
+  expect(resultIds).toContain(filePath);
+  expect(resultIds).not.toContain(partialPath);
 });

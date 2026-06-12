@@ -1,7 +1,7 @@
 import { markdown } from '@codemirror/lang-markdown';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { folioleMarkdownExtensions } from '../model/markdownOblikeExtension';
+import { folioleMarkdownLanguageExtensions } from '../model/folioleMarkdownParser';
 
 const {
   mockCompartmentReconfigure,
@@ -214,7 +214,7 @@ describe('CodeMirrorEditorAdapter construction', () => {
           configure: expect.any(Function)
         }
       },
-      extensions: folioleMarkdownExtensions
+      extensions: folioleMarkdownLanguageExtensions
     });
   });
 

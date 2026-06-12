@@ -1,4 +1,4 @@
-import { buildFtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
+import { buildFtsSearchQueryPlan, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 
 import {
   isExternalDocumentVisible,
@@ -38,6 +38,89 @@ function readShortExternalSearchRows(db: import('better-sqlite3').Database, norm
     .all(normalizedQuery, normalizedQuery, normalizedQuery) as ExternalSearchRow[];
 }
 
+function readExternalSearchFtsRowsSafely(db: import('better-sqlite3').Database, ftsQuery: string | null) {
+  if (!ftsQuery) {
+    return [];
+  }
+  try {
+    return readExternalSearchFtsRows(db, ftsQuery);
+  } catch {
+    return [];
+  }
+}
+
+function readTermExternalSearchRows(db: import('better-sqlite3').Database, queryPlan: FtsSearchQueryPlan) {
+  const rows = readExternalSearchFtsRowsSafely(db, queryPlan.termQuery);
+  if (queryPlan.shortTerms.length === 0) {
+    return rows;
+  }
+  return rows.filter((row) => queryPlan.shortTerms.every((term) =>
+    `${row.file_name} ${row.relative_path} ${row.text}`.toLowerCase().includes(term)
+  ));
+}
+
+function readPairExternalSearchRows(db: import('better-sqlite3').Database, queryPlan: FtsSearchQueryPlan) {
+  return queryPlan.pairQueries.flatMap((pairQuery) => readExternalSearchFtsRowsSafely(db, pairQuery));
+}
+
+function readShortTermExternalSearchRows(db: import('better-sqlite3').Database, queryPlan: FtsSearchQueryPlan) {
+  if (queryPlan.ftsTerms.length >= 2 || queryPlan.shortTerms.length === 0) {
+    return [];
+  }
+  const clauses = queryPlan.shortTerms.map(() =>
+    `instr(lower(file_name || ' ' || relative_path || ' ' || content), ?) > 0`
+  );
+  return db
+    .prepare(
+      `SELECT
+        absolute_path,
+        file_name,
+        folder_id,
+        folder_path,
+        relative_path,
+        content AS text,
+        modified_at,
+        950 AS rank
+       FROM external_search_documents
+       WHERE is_present = 1
+         AND ${clauses.join(' AND ')}
+       ORDER BY modified_ms DESC
+       LIMIT 20`
+    )
+    .all(...queryPlan.shortTerms) as ExternalSearchRow[];
+}
+
+function readCombinedTermFallbackExternalSearchRows(db: import('better-sqlite3').Database, queryPlan: FtsSearchQueryPlan) {
+  if (queryPlan.advancedQuery) {
+    return [];
+  }
+  const terms = [...queryPlan.ftsTerms, ...queryPlan.shortTerms];
+  if (terms.length <= 1) {
+    return [];
+  }
+  const clauses = terms.map(() =>
+    `instr(lower(file_name || ' ' || relative_path || ' ' || content), ?) > 0`
+  );
+  return db
+    .prepare(
+      `SELECT
+        absolute_path,
+        file_name,
+        folder_id,
+        folder_path,
+        relative_path,
+        content AS text,
+        modified_at,
+        925 AS rank
+       FROM external_search_documents
+       WHERE is_present = 1
+         AND ${clauses.join(' AND ')}
+       ORDER BY modified_ms DESC
+       LIMIT 20`
+    )
+    .all(...terms) as ExternalSearchRow[];
+}
+
 export function searchExternalDocuments(query: string) {
   const db = openExternalSearchCacheDatabase();
   const queryPlan = buildFtsSearchQueryPlan(query);
@@ -50,6 +133,10 @@ export function searchExternalDocuments(query: string) {
       ? readShortExternalSearchRows(db, normalizedQuery)
       : mergeExternalSearchRows([
           ...readExternalSearchFtsRows(db, queryPlan.literalQuery),
+          ...readPairExternalSearchRows(db, queryPlan),
+          ...readTermExternalSearchRows(db, queryPlan),
+          ...readCombinedTermFallbackExternalSearchRows(db, queryPlan),
+          ...readShortTermExternalSearchRows(db, queryPlan),
           ...readAdvancedExternalSearchRows(db, queryPlan.advancedQuery)
         ]);
   const activeImportedLocators = loadActiveImportedSourceLocators();
