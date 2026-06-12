@@ -22,7 +22,7 @@ export interface CleanupLegacyMainFtsResult<TSnapshot> {
 export function cleanupLegacyMainFtsTables<TSnapshot>({
   createSnapshot,
   sourceDatabase,
-  vacuum = true
+  vacuum = false
 }: CleanupLegacyMainFtsOptions): CleanupLegacyMainFtsResult<TSnapshot> {
   const legacyObjectNamesBefore = listLegacyMainFtsObjectNames(sourceDatabase);
   if (legacyObjectNamesBefore.length === 0) {

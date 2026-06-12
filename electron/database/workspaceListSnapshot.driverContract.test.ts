@@ -131,6 +131,7 @@ it('queries lightweight list fields and reads opening_text instead of long-lived
   expect(workspaceListSql).not.toContain('content_blob_data');
   expect(workspaceListSql).toContain('LEFT JOIN content_blobs cb');
   expect(workspaceListSql).toContain('node_reading_device_state');
+  expect(workspaceListSql).not.toContain('CAST(cbd.data AS TEXT)');
   expect(workspaceListSql).not.toContain('n.reveal,');
   expect(workspaceListSql).not.toContain('n.content,');
 });

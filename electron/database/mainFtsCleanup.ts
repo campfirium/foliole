@@ -32,7 +32,7 @@ export function cleanupMainFtsTables({
   snapshotDirectory,
   sourceDatabase,
   sourcePath,
-  vacuum = true
+  vacuum = false
 }: CleanupMainFtsOptions): CleanupMainFtsResult {
   return cleanupLegacyMainFtsTables<InternalDatabaseSnapshotResult>({
     createSnapshot: () => createInternalDatabaseSnapshot({

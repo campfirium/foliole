@@ -1,8 +1,10 @@
 import fs from 'node:fs';
+import { promises as fsPromises } from 'node:fs';
 import path from 'node:path';
 
 import { ensureManagedBackupDirectory, resolveManagedBackupDirectory } from './backupSettings.js';
 import type { SqliteDatabase } from './connection.js';
+import { backupSqliteDatabase } from './sqliteBackupRestore.js';
 
 export const INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT = 5;
 
@@ -68,6 +70,45 @@ export function createInternalDatabaseSnapshot({
   };
 }
 
+export async function createInternalDatabaseSnapshotWithBackup({
+  destinationDirectory,
+  now = new Date(),
+  reason,
+  retentionLimit = INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT,
+  sourceDatabase,
+  sourcePath
+}: CreateInternalDatabaseSnapshotOptions): Promise<InternalDatabaseSnapshotResult> {
+  const resolvedSourcePath = path.resolve(sourcePath);
+  const resolvedDestinationDirectory = destinationDirectory
+    ? path.resolve(destinationDirectory)
+    : resolveInternalDatabaseSnapshotDirectory(resolvedSourcePath);
+  const destinationPath = path.join(
+    resolvedDestinationDirectory,
+    `${reason}-${snapshotTimestamp(now)}.db`
+  );
+
+  try {
+    await backupSqliteDatabase({
+      destinationPath,
+      sourceDatabase,
+      sourcePath: resolvedSourcePath
+    });
+    if (!destinationDirectory) {
+      await pruneInternalDatabaseSnapshotsAsync(resolvedSourcePath, retentionLimit);
+    }
+  } catch (error) {
+    throw new Error(
+      `failed to create ${reason} snapshot at ${destinationPath}: ${formatErrorMessage(error)}`
+    );
+  }
+
+  return {
+    destinationPath,
+    reason,
+    sourcePath: resolvedSourcePath
+  };
+}
+
 function pruneInternalDatabaseSnapshots(sourcePath: string, retentionLimit = INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT) {
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(sourcePath);
   const snapshotEntries = fs
@@ -86,6 +127,30 @@ function pruneInternalDatabaseSnapshots(sourcePath: string, retentionLimit = INT
   for (const entry of snapshotEntries.slice(Math.max(1, retentionLimit))) {
     fs.rmSync(entry.filePath, { force: true });
   }
+}
+
+async function pruneInternalDatabaseSnapshotsAsync(
+  sourcePath: string,
+  retentionLimit = INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT
+) {
+  const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(sourcePath);
+  const fileNames = await fsPromises.readdir(snapshotDirectory);
+  const snapshotEntries = await Promise.all(
+    fileNames
+      .filter((fileName) => fileName.endsWith('.db') && /^pre-(?:cleanup|migration|restore)-/.test(fileName))
+      .map(async (fileName) => {
+        const filePath = path.join(snapshotDirectory, fileName);
+        const stats = await fsPromises.stat(filePath);
+        return {
+          filePath,
+          updatedAtMs: stats.mtimeMs
+        };
+      })
+  );
+  snapshotEntries.sort((left, right) => right.updatedAtMs - left.updatedAtMs);
+  await Promise.all(
+    snapshotEntries.slice(Math.max(1, retentionLimit)).map((entry) => fsPromises.rm(entry.filePath, { force: true }))
+  );
 }
 
 function snapshotTimestamp(now: Date) {

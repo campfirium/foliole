@@ -12,7 +12,7 @@ import {
 } from './backupSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
-import { createInternalDatabaseSnapshot } from './internalSnapshots.js';
+import { createInternalDatabaseSnapshotWithBackup } from './internalSnapshots.js';
 import { initializeDatabase } from './migrate.js';
 import {
   backupSqliteDatabase,
@@ -167,7 +167,7 @@ export async function restoreApplicationDatabaseBackup(
 ): Promise<SqliteRestoreResult> {
   const connection = openDatabaseConnection();
   const targetPath = connection.dbPath;
-  createInternalDatabaseSnapshot({
+  await createInternalDatabaseSnapshotWithBackup({
     reason: 'pre-restore',
     sourceDatabase: connection.sqlite,
     sourcePath: targetPath

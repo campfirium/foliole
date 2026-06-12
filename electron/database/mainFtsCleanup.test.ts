@@ -48,7 +48,8 @@ it('drops legacy main FTS tables and their shadow tables after creating a snapsh
   const result = cleanupMainFtsTables({
     now: new Date('2026-05-26T00:00:00.000Z'),
     sourceDatabase: connection.sqlite,
-    sourcePath: connection.dbPath
+    sourcePath: connection.dbPath,
+    vacuum: true
   });
 
   expect(result.status).toBe('cleaned');
