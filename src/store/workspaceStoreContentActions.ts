@@ -128,7 +128,12 @@ function collectUpdateNodeContentLocalState(args: {
   return localState;
 }
 
-async function updateNodeContent(set: WorkspaceSet, nodeId: string, content: string) {
+async function updateNodeContent(
+  set: WorkspaceSet,
+  nodeId: string,
+  content: string,
+  options: { publishLocal?: boolean } = {}
+) {
   const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
   const metrics = createUpdateNodeContentMetrics(diagnosticsEnabled);
   const localState = collectUpdateNodeContentLocalState({ content, diagnosticsEnabled, metrics, nodeId, set });
@@ -140,13 +145,15 @@ async function updateNodeContent(set: WorkspaceSet, nodeId: string, content: str
   }
   const nextNodeForSync = localState.nextNodeForSync;
   const runtimePatchStartedAt = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-  const applied = applyNodeContentLocalPatch({
-    ...localState,
-    diagnosticsEnabled,
-    metrics,
-    nextNodeForSync,
-    set
-  });
+  const applied = options.publishLocal === false
+    ? true
+    : applyNodeContentLocalPatch({
+      ...localState,
+      diagnosticsEnabled,
+      metrics,
+      nextNodeForSync,
+      set
+    });
   metrics.runtimePatchMs = diagnosticsEnabled ? readEditorInputDiagnosticTime() - runtimePatchStartedAt : 0;
   scheduleNodeContentRuntimePersist({
     contentLength: content.length,
@@ -168,5 +175,5 @@ async function updateNodeContent(set: WorkspaceSet, nodeId: string, content: str
 }
 
 export function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceState['updateNodeContent'] {
-  return (nodeId, content) => updateNodeContent(set, nodeId, content);
+  return (nodeId, content, options) => updateNodeContent(set, nodeId, content, options);
 }

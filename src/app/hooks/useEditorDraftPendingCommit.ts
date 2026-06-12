@@ -1,4 +1,4 @@
-import { useCallback, useRef, type MutableRefObject } from 'react';
+import { startTransition, useCallback, useRef, type MutableRefObject } from 'react';
 
 import {
   isEditorInputDiagnosticEnabled,
@@ -10,7 +10,7 @@ export interface PendingDraftCommit {
   committedContent: string | null;
   content: string;
   nodeId: string | null;
-  onCommit: (nodeId: string | null, content: string) => void;
+  onCommit: (nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => void;
 }
 
 export interface PendingTitleRefresh {
@@ -77,7 +77,13 @@ function flushPendingDraft(args: FlushPendingDraftArgs): DraftFlushResult {
     }
     return { flushed: false, pendingTitle };
   }
-  pendingCommit.onCommit(pendingCommit.nodeId, pendingCommit.content);
+  const commitPendingDraft = (options?: { publishLocal?: boolean }) =>
+    pendingCommit.onCommit(pendingCommit.nodeId, pendingCommit.content, options);
+  if (args.finalizeTitle) {
+    commitPendingDraft();
+  } else {
+    startTransition(() => commitPendingDraft({ publishLocal: false }));
+  }
   if (diagnosticsEnabled) {
     logDraftFlushDiagnostic({
       contentLength: pendingCommit.content.length,

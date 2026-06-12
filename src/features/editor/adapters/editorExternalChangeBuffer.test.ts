@@ -149,6 +149,31 @@ describe('EditorExternalChangeBuffer flush boundaries', () => {
     expect(onFlush).not.toHaveBeenCalled();
   });
 
+  it('captures lazy pending content before an applying-external flush is deferred across node switch', () => {
+    vi.useFakeTimers();
+    const onFlush = vi.fn();
+    let currentContent = 'Alpha draft';
+    let currentNodeId = 'node-1';
+    let applyingExternalContent = true;
+    const buffer = new EditorExternalChangeBuffer({
+      flushDelayMs: 300,
+      getCurrentContent: () => currentContent,
+      getCurrentNodeId: () => currentNodeId,
+      isApplyingExternalContent: () => applyingExternalContent,
+      onFlush
+    });
+
+    buffer.handleDocumentChange(null, { contentLength: 11, isComposing: false, nodeId: 'node-1' });
+    buffer.flushNow();
+    currentContent = 'Beta body';
+    currentNodeId = 'node-2';
+    applyingExternalContent = false;
+    vi.runAllTimers();
+
+    expect(onFlush).toHaveBeenCalledWith('Alpha draft', 'node-1');
+    expect(onFlush).not.toHaveBeenCalledWith('Beta body', 'node-1');
+  });
+
   it('flushes pending content synchronously through flushNow', () => {
     vi.useFakeTimers();
     const onFlush = vi.fn();

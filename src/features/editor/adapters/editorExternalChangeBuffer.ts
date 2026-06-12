@@ -84,6 +84,10 @@ export class EditorExternalChangeBuffer {
 
   private flush() {
     if (this.pendingChange === null || this.args.isApplyingExternalContent()) {
+      this.capturePendingContentBeforeDeferredFlush();
+      if (this.pendingChange !== null && this.args.isApplyingExternalContent()) {
+        this.scheduleFlush();
+      }
       return;
     }
 
@@ -103,6 +107,16 @@ export class EditorExternalChangeBuffer {
       return this.args.getCurrentContent();
     }
     return change.content;
+  }
+
+  private capturePendingContentBeforeDeferredFlush() {
+    const pendingChange = this.pendingChange;
+    if (
+      pendingChange?.content === null &&
+      pendingChange.nodeId === this.args.getCurrentNodeId()
+    ) {
+      this.pendingChange = { ...pendingChange, content: this.args.getCurrentContent() };
+    }
   }
 
   private logInputChange(args: {

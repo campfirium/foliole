@@ -1,11 +1,9 @@
 import { type Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, type EditorView } from '@codemirror/view';
 
-import { folioleMarkdownParser } from '../model/folioleMarkdownParser';
 import type { InlinePresentationPlan } from '../model/inlinePresentationPlans';
 import type { InlineTextDecorationPlan } from '../model/inlineTextDecorationPlans';
 import { collectPreviewViewportPlans, collectSourceViewportPlans } from '../model/liveMarkdownViewportPlans';
-import { collectMarkdownForumTitleLinkRanges } from '../model/markdownForumTitleLinkProjection';
 import { collectImageMatchesFromTree } from '../model/markdownImageMatches';
 import { collectMarkdownInlineLinkRangesFromTree } from '../model/markdownInlineLinkProjection';
 import type { MarkdownInlineLinkRange } from '../model/markdownInlineProjectionTypes';
@@ -17,6 +15,7 @@ import {
 import { collectMarkdownMathRangesFromTree } from '../model/markdownMathRanges';
 import { collectMultilineLinkPresentationPlans } from '../model/markdownMultilineLinkPresentation';
 
+import { readVisibleMarkdownSyntaxTree } from './codeMirrorMarkdownSyntaxTree';
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { addPreviewBlockDecorations, collectPreviewMermaidLineFroms } from './liveMarkdownBlockDecorations';
 import { addCodeFenceCopyDecorations } from './liveMarkdownCodeFenceCopy';
@@ -33,6 +32,7 @@ import {
 } from './liveMarkdownDecorationCollections';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addForumTitleLinkDecorations } from './liveMarkdownForumTitleLinkDecorations';
+import { collectViewportForumTitleLinks } from './liveMarkdownForumTitleLinkViewport';
 import type { EditedMathRange } from './liveMarkdownMathEditState';
 import { addEditedMathSourceDecorations } from './liveMarkdownMathSource';
 import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
@@ -125,9 +125,7 @@ function collectPreviewDecorationData(view: EditorView, parsed: PreviewMarkdownP
   return {
     codeFenceProjection,
     calloutPrefixRangeByLineFrom: collectCalloutPrefixRangeByLineFrom(markdownTree, source),
-    forumTitleLinks: collectMarkdownForumTitleLinkRanges(source).filter(
-      (link) => !(codeFenceProjection.codeLineFroms.has(link.from) || codeFenceProjection.codeLineFroms.has(link.urlLineFrom))
-    ),
+    forumTitleLinks: collectViewportForumTitleLinks(view, viewport, codeFenceProjection.codeLineFroms),
     inlineLinks: collectMarkdownInlineLinkRangesFromTree(markdownTree, source, 0, linkReferences),
     linkReferenceRangeByLineFrom,
     mathRanges: collectMarkdownMathRangesFromTree(markdownTree, source),
@@ -196,7 +194,7 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const source = view.state.doc.toString();
-  const markdownTree = folioleMarkdownParser.parse(source);
+  const markdownTree = readVisibleMarkdownSyntaxTree(view);
   const codeFenceProjection = collectCodeFenceProjection(markdownTree, source);
   const linkReferences = collectMarkdownLinkReferencesFromTree(markdownTree, source);
   const inlineLinks = collectMarkdownInlineLinkRangesFromTree(markdownTree, source, 0, linkReferences);
