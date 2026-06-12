@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import { lazy, Suspense, type ComponentProps } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -9,12 +9,15 @@ import { AppEmptyState, AppSpinner } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
-import { PdfDocumentSurface } from './PdfDocumentSurface';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import type { PdfPageDimensions } from './pdfPageDimensions';
 
 export type PdfDocumentSurfaceState = 'empty' | 'failed' | 'loading' | 'ready';
 type PdfIndexStatus = 'failed' | 'indexing' | 'pending' | 'ready' | null;
+
+const PdfDocumentSurface = lazy(() =>
+  import('./PdfDocumentSurface').then((module) => ({ default: module.PdfDocumentSurface }))
+);
 
 function isPdfPath(value: string | null | undefined) {
   return typeof value === 'string' && value.trim().toLowerCase().endsWith('.pdf');
@@ -121,23 +124,25 @@ export function renderPdfDocumentSurface(
 ) {
   if (pdfDocumentSurface.state === 'ready') {
     return (
-      <PdfDocumentSurface
-        highlightLocators={highlightLocators}
-        isVisible
-        onCreateHighlightFromSelection={onCreatePdfHighlight}
-        onOpenExternalLink={onOpenExternalLink}
-        onPersistViewState={(viewState) => {
-          if (pdfViewContext.editorNodeId) {
-            onPersistPdfViewState(pdfViewContext.editorNodeId, viewState);
-          }
-        }}
-        nodeId={pdfViewContext.editorNodeId}
-        persistedPageCount={resolvePersistedPdfPageCount(pdfDocumentSurface.details)}
-        persistedPageDimensions={resolvePersistedPdfPageDimensions(pdfDocumentSurface.details)}
-        pdfIndexStatus={pdfDocumentSurface.pdfIndexStatus}
-        sourceHint={pdfDocumentSurface.sourceHint ?? ''}
-        {...definedProps({ nodeViewState: pdfViewContext.editorNodeViewState })}
-      />
+      <Suspense fallback={renderPdfStateSurface('loading', t)}>
+        <PdfDocumentSurface
+          highlightLocators={highlightLocators}
+          isVisible
+          onCreateHighlightFromSelection={onCreatePdfHighlight}
+          onOpenExternalLink={onOpenExternalLink}
+          onPersistViewState={(viewState) => {
+            if (pdfViewContext.editorNodeId) {
+              onPersistPdfViewState(pdfViewContext.editorNodeId, viewState);
+            }
+          }}
+          nodeId={pdfViewContext.editorNodeId}
+          persistedPageCount={resolvePersistedPdfPageCount(pdfDocumentSurface.details)}
+          persistedPageDimensions={resolvePersistedPdfPageDimensions(pdfDocumentSurface.details)}
+          pdfIndexStatus={pdfDocumentSurface.pdfIndexStatus}
+          sourceHint={pdfDocumentSurface.sourceHint ?? ''}
+          {...definedProps({ nodeViewState: pdfViewContext.editorNodeViewState })}
+        />
+      </Suspense>
     );
   }
 

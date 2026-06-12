@@ -40,7 +40,7 @@ const WorkspaceRightSidebarReviewQueuePanel = lazy(() =>
 
 type WorkspaceRightSidebarNodesById = Record<string, Node>;
 
-export interface WorkspaceRightSidebarOutlineDocument {
+interface WorkspaceRightSidebarOutlineDocument {
   activePosition: number;
   content: string;
   onRevealPosition: (position: number) => void;

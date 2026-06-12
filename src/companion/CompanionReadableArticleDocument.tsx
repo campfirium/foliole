@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
@@ -9,13 +9,15 @@ import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 
 import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 import type { EditorViewState } from '@/features/editor/components/markdownEditorTypes';
-import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
 import { definedProps } from '@/shared/lib/definedProps';
 import { syncCompanionAttachmentResourceFromDesktop } from '@/shared/platform/companionDesktopAttachmentResources';
 import { saveCompanionSyncActiveViewState } from '@/shared/platform/companionSyncObjects';
 import { AppButton } from '@/shared/ui';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
+const SimplePdfDocument = lazy(() =>
+  import('@/features/pdf/components/SimplePdfDocument').then((module) => ({ default: module.SimplePdfDocument }))
+);
 
 function toEditorViewState(article: ReadableArticle): EditorViewState | undefined {
   const persistedState = article.persistedNodeViewState;
@@ -35,12 +37,14 @@ function renderOriginalPdf(
   onBackToText: () => void
 ) {
   return (
-    <SimplePdfDocument
-      attachmentId={article.pdfAttachmentId ?? ''}
-      onBackToText={onBackToText}
-      onMissingResource={onMissingResource}
-      title={article.title}
-    />
+    <Suspense fallback={null}>
+      <SimplePdfDocument
+        attachmentId={article.pdfAttachmentId ?? ''}
+        onBackToText={onBackToText}
+        onMissingResource={onMissingResource}
+        title={article.title}
+      />
+    </Suspense>
   );
 }
 

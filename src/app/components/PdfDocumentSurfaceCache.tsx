@@ -1,16 +1,18 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { updatePdfSurfaceCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeViewState } from '../../store/workspaceStore';
 
-import { PdfDocumentSurface } from './PdfDocumentSurface';
 import type { PdfPageDimensions } from './pdfPageDimensions';
 
 type PdfDocumentSurfaceState = 'empty' | 'failed' | 'loading' | 'ready';
 
 const MAX_CACHED_SURFACES = 3;
+const PdfDocumentSurface = lazy(() =>
+  import('./PdfDocumentSurface').then((module) => ({ default: module.PdfDocumentSurface }))
+);
 
 interface CachedPdfSurface {
   nodeId: string;
@@ -121,22 +123,24 @@ function renderCachedSurfaceEntry(
   const isVisible = shouldDisplayCachedSurface(props.activeNodeId, entry.nodeId, props.activePdfState);
   return (
     <div className={isVisible ? 'flex min-h-0 flex-1 flex-col' : 'hidden'} key={entry.nodeId}>
-      <PdfDocumentSurface
-        highlightLocators={isActiveNode ? props.highlightLocators : []}
-        isVisible={isVisible}
-        nodeId={entry.nodeId}
-        {...definedProps({ nodeViewState: isActiveNode ? props.editorNodeViewState : undefined })}
-        onCreateHighlightFromSelection={props.onCreatePdfHighlight}
-        onPersistViewState={(viewState) => {
-          if (isActiveNode) {
-            props.onPersistPdfViewState(entry.nodeId, viewState);
-          }
-        }}
-        persistedPageCount={entry.persistedPageCount}
-        persistedPageDimensions={entry.persistedPageDimensions}
-        pdfIndexStatus={null}
-        sourceHint={entry.sourceHint}
-      />
+      <Suspense fallback={null}>
+        <PdfDocumentSurface
+          highlightLocators={isActiveNode ? props.highlightLocators : []}
+          isVisible={isVisible}
+          nodeId={entry.nodeId}
+          {...definedProps({ nodeViewState: isActiveNode ? props.editorNodeViewState : undefined })}
+          onCreateHighlightFromSelection={props.onCreatePdfHighlight}
+          onPersistViewState={(viewState) => {
+            if (isActiveNode) {
+              props.onPersistPdfViewState(entry.nodeId, viewState);
+            }
+          }}
+          persistedPageCount={entry.persistedPageCount}
+          persistedPageDimensions={entry.persistedPageDimensions}
+          pdfIndexStatus={null}
+          sourceHint={entry.sourceHint}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -157,14 +157,14 @@ function renderSurface(surface: unknown, workspaceSync: unknown = createWorkspac
   return render(renderSurfaceElement(surface, workspaceSync));
 }
 
-function testPrimaryPdfReadingSurface() {
+async function testPrimaryPdfReadingSurface() {
   renderSurface(createPdfReadableSurface());
 
   expect(screen.getByText('Text version')).toBeInTheDocument();
   expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
   expect(screen.queryByText('PDF original viewer')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Open PDF' }));
-  expect(screen.getByText('PDF original viewer')).toBeInTheDocument();
+  expect(await screen.findByText('PDF original viewer')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Text' }));
   expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
 }
